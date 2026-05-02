@@ -321,3 +321,24 @@ Confirmed the AC's grep gate (`memory/[0-9]{4}-[0-9]{2}-[0-9]{2}\.md`) already r
 - **The cron-runtime body of `crons/cleanup-tasks.md` already uses the directory form** (`memory/$TODAY/tasks/<taskdesc>/`, `memory/$TODAY/log.md`) — so no edits were needed in `crons/`. Same for `crons/heartbeat.md` (`memory/<today>/log.md`). The croner-side substrate is already SPEC v0.7-compliant; only the docs/ surface needed alignment.
 
 ---
+
+## US-015 — 2026-05-02 15:21 UTC
+
+**Title**: Archive tasks/install-prereq-detection
+**Files changed**: tasks/install-prereq-detection/{prd.json,prd.md} → memory/2026-05-02/tasks/install-prereq-detection/{prd.json,prd.md} (renamed via git mv), tasks/openharness-v07-convergence/prd.json (passes:true + notes)
+**Commit**: 2ebd0a8
+**Result**: PASS
+
+### What I did
+
+Moved the completed task folder to its SPEC v0.7 weekly-cleanup destination per `.claude/specs/structure-spec-v0.7.md` §"Weekly cleanup cron" (`tasks/<taskdesc>/` whose `progress.txt` ends with `STATUS: COMPLETE` → `memory/<today>/tasks/<taskdesc>/`). Confirmed all 7 source stories in `tasks/install-prereq-detection/prd.json` already had `passes:true`; the folder is functionally complete but missing `prompt.md` and `progress.txt` per the convergence PRD's US-015 description, so the cron's automated cleanup would have skipped it (it checks for the `STATUS: COMPLETE` sentinel) — manual archive is the cleanup path. Used `git mv` to preserve history (rename detection: 100%); created `memory/2026-05-02/tasks/` as the archive parent (first use of the root-level `memory/` directory in tracked content). Verified zero broken references in CHANGELOG, `.claude/skills/`, or open GitHub issues; the two remaining `tasks/install-prereq-detection` mentions are descriptive text inside this convergence PRD's own `prd.json`/`prd.md` (the AC for US-015 itself) — not broken references. No CHANGELOG entry: per `.claude/rules/git.md` §Changelog, "Skip entries only for pure chores with no runtime or workflow effect" — this is a folder relocation with zero user-visible impact. Lint clean; 9/9 cron-runtime tests pass.
+
+### Learnings for future iterations
+
+- **The cron-driven cleanup contract is `STATUS: COMPLETE` in `progress.txt`, not "all stories pass".** The `tasks/install-prereq-detection/` folder had all 7 stories at `passes:true` but no `progress.txt` at all — so the SPEC v0.7 cron would have skipped it forever (the cron's `tail -1 progress.txt` test returns "no such file" → not COMPLETE → leave in place). That's why US-015 needs a *manual* archive — the automated weekly-cleanup convention deliberately doesn't act on contracts that don't ship with a sentinel-bearing progress.txt. Future tasks should always carry `progress.txt` with a final `STATUS: COMPLETE` line so they are eligible for automatic archival; orphaned PRD-only folders need a manual sweep.
+- **`git mv` across an entire directory is one command.** `git mv tasks/install-prereq-detection memory/2026-05-02/tasks/install-prereq-detection` works on the directory as a unit; the rename detection threshold (100% on this move since neither file changed content) keeps history intact. Don't `mkdir + mv + rm -rf` — that loses rename detection at git-blame time.
+- **`memory/` at the harness root is gitignored-by-default-but-not-actually.** There's no `memory/` line in `.gitignore`; the directory simply hadn't existed in the tracked tree before US-015. After this iteration `memory/2026-05-02/tasks/install-prereq-detection/` is the first tracked content under root-level `memory/`. Future stories that produce daily logs (e.g., a real heartbeat run that writes `memory/<today>/log.md`) should expect their state to land at the harness root, not under `workspace/` (US-013 deleted `workspace/memory/` for exactly this reason).
+- **The orchestrator harness uses `memory/<today>/tasks/<taskdesc>/`, not `memory/<today>/<taskdesc>/`.** The SPEC's `tasks/` segment between the date and the task description matters — it scopes archived task folders separately from the day's log/decisions/artifacts. If a future cron writes there, preserve the `tasks/` segment.
+- **Pre-commit hook output now confirms test pass via the `git commit` shell return.** Husky runs `pnpm run lint && pnpm run test` against the staged tree as part of commit; the test summary appears in commit-output stderr and a non-zero exit aborts the commit. No need to also run `pnpm run test` separately before the commit unless you want to see the result earlier.
+
+---

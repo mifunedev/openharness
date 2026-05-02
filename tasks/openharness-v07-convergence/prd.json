@@ -75,8 +75,8 @@
                 "Typecheck passes"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 4 on 2026-05-02; crons/heartbeat.md (0 * * * *) + crons/cleanup-tasks.md (0 23 * * 0) seeded with SPEC v0.7-conformant frontmatter (id/schedule/timezone/enabled/overlap/catchup); verified parseCronFile + croner accept both; .gitignore extended to skip crons/.pid + crons/cron-runtime.log; commit 28aef83"
         },
         {
             "id": "US-005",

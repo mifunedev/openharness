@@ -5,11 +5,11 @@ title: "Cloudflare"
 
 # Cloudflare
 
-Open Harness supports two Cloudflare exposure methods: the `oh expose` gateway command for local and remote routing, and named Cloudflare Tunnels for persistent public URLs via `install/cloudflared-tunnel.sh`.
+Open Harness supports two Cloudflare exposure methods: the Caddy gateway overlay for local and remote routing, and named Cloudflare Tunnels for persistent public URLs via `install/cloudflared-tunnel.sh`.
 
-## oh expose
+## Gateway routing via Caddy
 
-`oh expose <name> <port>` is the primary command for routing traffic from outside the sandbox to a listening port inside it. The Caddy gateway handles TLS and reverse-proxying automatically.
+When the gateway overlay is enabled, the sandbox runs a Caddy reverse proxy that exposes in-sandbox dev servers via HTTPS. Routes live in `.openharness/exposures.json`; Caddy reloads in-process when the file changes.
 
 The URL shape depends on your host mode:
 
@@ -26,26 +26,18 @@ Start your app inside the sandbox in a tmux session:
 tmux new-session -d -s app-docs 'pnpm dev -p 3000 2>&1 | tee /tmp/app-docs.log'
 ```
 
-Then expose it from the host:
+Then declare the route by editing `.openharness/exposures.json` (one JSON entry per `{ name, port }` pair). Caddy picks up the change and starts serving `https://docs.<sandbox>.localhost:8443` (laptop mode) or `https://docs.<sandbox>.<PUBLIC_DOMAIN>` (remote mode).
 
-```bash
-oh expose docs 3000
-```
-
-On a laptop this produces `https://docs.oh-local.localhost:8443`. On a remote server with `PUBLIC_DOMAIN=example.com` it produces `https://docs.oh-local.example.com`.
-
-To remove a route:
-
-```bash
-oh unexpose docs
-```
+To remove a route, delete its entry from `.openharness/exposures.json`.
 
 ### Gateway constraints
 
-- Routes are regenerated in `/.openharness/Caddyfile` — never hand-edit that file.
+- Routes are regenerated in `.openharness/Caddyfile` — never hand-edit that file.
 - Route names must match `/^[a-z][a-z0-9-]{0,30}$/` and cannot be `admin`, `www`, `gateway`, or `api-internal`.
-- `oh expose` reloads Caddy in-process and never restarts the sandbox container.
+- Caddy reloads in-process and never restarts the sandbox container.
 - Two sandboxes exposing the same route name do not collide because the sandbox name is always included in the hostname.
+
+See `.claude/rules/gateway-routing.md` (rendered in the Architecture section) for the complete routing contract.
 
 ## Enabling the cloudflared overlay
 

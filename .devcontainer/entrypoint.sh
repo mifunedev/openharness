@@ -188,65 +188,21 @@ if echo "$@" | grep -q sshd; then
   fi
 fi
 
-# Build and link openharness CLI (from bind-mounted repo)
-# Runs on every boot: install deps + build only if dist is missing or stale,
-# always re-symlink so container recreation (fresh /usr/local/bin/) re-establishes PATH entries.
-CLI_TARGET="$HARNESS/packages/sandbox/dist/src/cli/index.js"
-HB_TARGET="$HARNESS/packages/sandbox/dist/src/cli/heartbeat-daemon.js"
-
-if [ -f "$HARNESS/packages/sandbox/package.json" ]; then
-  if [ ! -f "$CLI_TARGET" ] || [ "$HARNESS/packages/sandbox/package.json" -nt "$CLI_TARGET" ]; then
-    echo "[entrypoint] building openharness CLI..."
-    (
-      cd "$HARNESS"
-      gosu sandbox pnpm install --frozen-lockfile \
-        || gosu sandbox pnpm install \
-        || echo "[entrypoint] WARN: pnpm install failed"
-      gosu sandbox pnpm --filter @openharness/sandbox run build \
-        || echo "[entrypoint] WARN: pnpm build failed"
-    )
-  fi
-
-  if [ -f "$CLI_TARGET" ]; then
-    ln -sf "$CLI_TARGET" /usr/local/bin/openharness
-    ln -sf "$CLI_TARGET" /usr/local/bin/oh
-    ln -sf "$HB_TARGET" /usr/local/bin/heartbeat-daemon
-    chmod +x /usr/local/bin/openharness /usr/local/bin/oh /usr/local/bin/heartbeat-daemon
-    echo "[entrypoint] openharness CLI (alias: oh) + heartbeat-daemon installed"
+# ─── Start cron runtime in tmux session ────────────────────────────
+# Per SPEC v0.7 §"Croner runtime" + .claude/rules/sandbox-processes.md.
+# Replaces the legacy heartbeat-daemon watchdog. Runs as sandbox user
+# inside the system-cron tmux session; logs tee to /tmp/system-cron.log.
+CRONS_DIR="$HARNESS/crons"
+mkdir -p "$CRONS_DIR"
+chown -R sandbox:sandbox "$CRONS_DIR" 2>/dev/null || true
+if [ -f "$HARNESS/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
+  if ! gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
+    gosu sandbox tmux new-session -d -s system-cron \
+      "cd $HARNESS && node --experimental-strip-types scripts/cron-runtime.ts 2>&1 | tee /tmp/system-cron.log"
+    echo "[entrypoint] system-cron tmux session started (cron-runtime.ts)"
   else
-    echo "[entrypoint] ERROR: $CLI_TARGET not found after build — CLI not installed"
+    echo "[entrypoint] system-cron tmux session already running — skipping"
   fi
-fi
-
-# ─── Start heartbeat daemon (with watchdog) ──────────────────────
-WORKSPACE="/home/sandbox/harness/workspace"
-DAEMON_SCRIPT="/home/sandbox/harness/packages/sandbox/dist/src/cli/heartbeat-daemon.js"
-HB_LOG="$WORKSPACE/heartbeats/heartbeat.log"
-mkdir -p "$WORKSPACE/heartbeats"
-# Ensure heartbeat.log is sandbox-writable (entrypoint's tee runs as root and
-# would otherwise create it root-owned, making the daemon crash-loop on EACCES).
-touch "$HB_LOG" 2>/dev/null || true
-chown sandbox:sandbox "$HB_LOG" 2>/dev/null || true
-if command -v heartbeat-daemon &>/dev/null; then
-  (
-    while true; do
-      gosu sandbox heartbeat-daemon start 2>&1 | tee -a "$HB_LOG"
-      EXIT_CODE=$?
-      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] heartbeat-daemon exited ($EXIT_CODE), restarting in 5s..." >> "$HB_LOG"
-      sleep 5
-    done
-  ) &
-  echo "[entrypoint] heartbeat daemon started with watchdog (pid $!)"
-elif [ -f "$DAEMON_SCRIPT" ]; then
-  (
-    while true; do
-      gosu sandbox node "$DAEMON_SCRIPT" start 2>&1 | tee -a "$HB_LOG"
-      EXIT_CODE=$?
-      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] heartbeat-daemon exited ($EXIT_CODE), restarting in 5s..." >> "$HB_LOG"
-      sleep 5
-    done
-  ) &
-  echo "[entrypoint] heartbeat daemon started with watchdog via fallback (pid $!)"
 fi
 
 # ─── Optional: agent-browser (opt-in via INSTALL_AGENT_BROWSER=true) ──

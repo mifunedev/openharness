@@ -5,31 +5,31 @@ title: "Architecture Overview"
 
 # Architecture Overview
 
-Open Harness runs every AI agent inside a single Docker container. That container hosts multiple git worktrees side by side, one per agent branch. A heartbeat daemon watches all worktrees and fires scheduled tasks. The orchestration layer — the `oh` CLI and the Docker Compose configuration — lives on the host and manages the container lifecycle without entering it for day-to-day work.
+Open Harness runs every AI agent inside a single Docker container. That container hosts multiple git worktrees side by side, one per agent branch. A croner runtime watches `crons/*.md` and fires scheduled tasks. The orchestration layer is plain `docker compose` against `.devcontainer/docker-compose.yml` on the host — no host CLI, no host Node toolchain.
 
 ## The Shape of the System
 
 ```mermaid
 graph TD
   subgraph Host
-    CLI["oh CLI<br/>(openharness)"]
+    User["Developer<br/>(docker compose, docker exec)"]
     Compose[".devcontainer/<br/>docker-compose.yml"]
   end
 
   subgraph Container["Docker Container (openharness)"]
     Agent1["Agent: claude<br/>(worktree: main)"]
-    Agent2["Agent: pi<br/>(worktree: task/164)"]
+    Agent2["Agent: pack-supplied<br/>(worktree: task/164)"]
     AgentN["Agent: codex<br/>(worktree: feat/42)"]
-    Daemon["Heartbeat Daemon<br/>(node daemon.ts)"]
+    Cron["Croner Runtime<br/>(scripts/cron-runtime.ts)"]
     Caddy["Caddy Gateway<br/>(port 8443)"]
   end
 
-  CLI --> Compose
+  User --> Compose
   Compose --> Container
-  CLI -->|"oh shell / oh expose"| Container
-  Daemon -->|"watches heartbeats/"| Agent1
-  Daemon -->|"watches heartbeats/"| Agent2
-  Daemon -->|"watches heartbeats/"| AgentN
+  User -->|"docker exec / compose ps"| Container
+  Cron -->|"reads crons/*.md"| Agent1
+  Cron -->|"reads crons/*.md"| Agent2
+  Cron -->|"reads crons/*.md"| AgentN
   Caddy -->|"reverse proxy"| Agent1
 ```
 
@@ -39,8 +39,8 @@ graph TD
 ┌─────────────────────────────────────────────────────────┐
 │  HOST                                                   │
 │  ┌──────────────────┐   ┌──────────────────────────┐   │
-│  │  oh CLI          │   │  docker-compose.yml       │   │
-│  │  (openharness)   │──▶│  (.devcontainer/)         │   │
+│  │  docker compose  │   │  docker-compose.yml       │   │
+│  │  + docker exec   │──▶│  (.devcontainer/)         │   │
 │  └──────────────────┘   └────────────┬─────────────┘   │
 │                                      │ builds/starts    │
 └──────────────────────────────────────┼─────────────────┘
@@ -49,8 +49,8 @@ graph TD
 │  DOCKER CONTAINER  (openharness)                         │
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐  │
-│  │  Orchestration Layer                               │  │
-│  │  oh CLI (inside) · gh · docker CLI · tmux          │  │
+│  │  In-sandbox tooling                                │  │
+│  │  gh · docker CLI · tmux · claude · codex           │  │
 │  └───────────┬────────────────────────────────────────┘  │
 │              │                                           │
 │  ┌───────────▼──────────────────────────────────────┐   │
@@ -62,13 +62,13 @@ graph TD
 │              │                                           │
 │  ┌───────────▼──────────────────────────────────────┐   │
 │  │  Agents (tmux sessions)                           │   │
-│  │  agent-claude  ·  agent-pi  ·  agent-codex        │   │
+│  │  agent-claude  ·  agent-codex  ·  pack agents     │   │
 │  └───────────┬──────────────────────────────────────┘   │
 │              │                                           │
 │  ┌───────────▼──────────────────────────────────────┐   │
-│  │  Heartbeat Daemon                                 │   │
-│  │  Watches workspace/heartbeats/ in every worktree  │   │
-│  │  Fires cron jobs → invokes agent CLI              │   │
+│  │  Croner Runtime (system-cron tmux session)        │   │
+│  │  Watches crons/*.md frontmatter                   │   │
+│  │  Fires schedules → invokes agent CLI              │   │
 │  └──────────────────────────────────────────────────┘   │
 │                                                          │
 │  ┌──────────────────────────────────────────────────┐   │
@@ -80,13 +80,13 @@ graph TD
 
 ## Key Principles
 
-**One container, many agents.** All AI agent CLIs — Claude Code, Pi, Codex — share the same sandbox image built from `.devcontainer/Dockerfile`. There is no separate image per agent. Isolation is achieved through git worktrees and tmux sessions, not separate containers.
+**One container, many agents.** All AI agent CLIs — Claude Code, Codex, plus any pack-supplied agents — share the same sandbox image built from `.devcontainer/Dockerfile`. There is no separate image per agent. Isolation is achieved through git worktrees and tmux sessions, not separate containers.
 
-**Host stays thin.** The host only runs Docker and the `oh` CLI. No Node runtime, no Python, and no agent toolchain is required on the developer's machine. The project root is bind-mounted into the container at `/home/sandbox/harness`, so files written inside the container are immediately visible on the host and in git.
+**Host stays thin.** The host only runs Docker. No host CLI, no Node runtime, no Python, and no agent toolchain is required on the developer's machine. The project root is bind-mounted into the container at `/home/sandbox/harness`, so files written inside the container are immediately visible on the host and in git.
 
-**Worktrees are the unit of isolation.** Each in-flight branch maps to a worktree under `.worktrees/`. The heartbeat daemon discovers all active worktrees and manages schedules independently per worktree. Agents work in their own branch without touching each other's working tree.
+**Worktrees are the unit of isolation.** Each in-flight branch maps to a worktree under `.worktrees/`. The croner runtime discovers `crons/*.md` and fires schedules from `crons/` at the repo root. Agents work in their own branch without touching each other's working tree.
 
-**Process lifecycle is owned by tmux.** Every long-running process — dev servers, agents, tunnels, heartbeat daemon — runs in a named tmux session. This enables attach/detach, log capture via `tee /tmp/<session>.log`, and deterministic restart without `nohup` or background processes.
+**Process lifecycle is owned by tmux.** Every long-running process — dev servers, agents, tunnels, the croner runtime — runs in a named tmux session. This enables attach/detach, log capture via `tee /tmp/<session>.log`, and deterministic restart without `nohup` or background processes.
 
 ## Where to go next
 

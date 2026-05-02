@@ -12,13 +12,13 @@ Workspace files give agents persistent identity and durable memory across sessio
 |------|---------|-------------|
 | `SOUL.md` | Agent persona, tone, boundaries | User (seeded with template) |
 | `MEMORY.md` | Curated long-term memory | Agent (distilled from daily logs) |
-| `memory/YYYY-MM-DD.md` | Daily append-only logs | Agent |
+| `memory/YYYY-MM-DD/log.md` | Daily append-only logs | Agent |
 
 ## How memory works
 
 Agents read `MEMORY.md` at session start for accumulated context and distill daily logs into it periodically. When the user says "remember this," agents write to `MEMORY.md` immediately.
 
-Daily logs in `memory/` are append-only — agents add structured entries during work sessions. These logs serve as training data for self-improvement via the memory distillation process.
+Daily logs live at `memory/YYYY-MM-DD/log.md` — agents append structured entries during work sessions. Other artifacts for that day (decisions, archived task folders, transcripts) sit alongside `log.md` in the same directory. The directory-per-day layout is canonical per SPEC v0.7 §"Memory structure"; flat `memory/<date>.md` files are deprecated.
 
 ## SOUL.md
 
@@ -34,7 +34,7 @@ Memory stores **operational self-awareness** — what the agent learned from doi
 
 At the end of every task (heartbeat, skill, or interactive session):
 
-1. **Log**: Append a structured entry to `memory/YYYY-MM-DD.md`
+1. **Log**: Append a structured entry to `memory/YYYY-MM-DD/log.md`
 2. **Qualify**: Did I learn something durable? Is there a recurring pattern?
 3. **Improve**: If yes, update `MEMORY.md`. If no, move on.
 4. **Never skip**: Even no-ops get logged.

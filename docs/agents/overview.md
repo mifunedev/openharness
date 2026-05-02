@@ -5,7 +5,7 @@ title: "Agents Overview"
 
 # Agents Overview
 
-Open Harness ships with Claude Code and Codex preinstalled in the sandbox image. Additional agents (Gemini CLI, Pi Agent + Mom Slack bot) are available as opt-in installs or via [harness packs](../guide/bring-your-own-harness.md) like [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune). All agents can run side-by-side in the same sandbox, each in its own git worktree, with its own identity and its own cron schedule.
+Open Harness ships with Claude Code preinstalled in the sandbox image as the default agent. Additional agents (Codex, Gemini CLI, Pi Agent + Mom Slack bot) are available via [harness packs](../guide/bring-your-own-harness.md) like [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune). Packs add their agents to the same sandbox, each in its own git worktree, with its own identity and its own cron schedule.
 
 ## Why run multiple agents at once?
 
@@ -15,7 +15,7 @@ Open Harness makes this practical by giving each agent:
 
 - **Its own worktree** — separate branch, no merge conflicts mid-task.
 - **Its own SOUL** — a `SOUL.md` persona file that shapes the agent's tone and priorities.
-- **Its own schedule** — heartbeat files in `workspace/heartbeats/` drive cron-based autonomous runs independent of what other agents are doing.
+- **Its own schedule** — `.md` files in `crons/` drive cron-based autonomous runs through the croner runtime.
 
 ## Supported agents
 

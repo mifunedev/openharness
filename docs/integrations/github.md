@@ -62,4 +62,4 @@ For most users, `gh auth login` and `gh auth setup-git` are sufficient and no SS
 
 ## Persisting credentials across restarts
 
-The `gh` token is stored inside the container at `~/.config/gh/`. Because this path is inside the container, it is lost when the container is removed. To persist credentials across `oh clean` cycles, either re-run `gh auth login` after each rebuild, or bind-mount a host directory to `~/.config/gh/` via a custom compose overlay.
+The `gh` token is stored inside the container at `~/.config/gh/`. Because this path is inside the container, it is lost when the container is removed. To persist credentials across `docker compose down -v` cycles, either re-run `gh auth login` after each rebuild, or bind-mount a host directory to `~/.config/gh/` via a custom compose overlay.

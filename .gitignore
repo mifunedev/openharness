@@ -21,6 +21,10 @@ tasks/*/archive/
 # Heartbeat runtime log
 **/heartbeat.log
 
+# Croner runtime artifacts (keep crons/*.md tracked)
+crons/.pid
+crons/cron-runtime.log
+
 # Ralph runtime files (keep prd.json + progress.txt tracked for recovery)
 workspace/.ralph/.last-branch
 workspace/.ralph/ralph-*.log
@@ -44,6 +48,7 @@ workspace/startup.sh
 **/.claude/plans
 **/.claude/specs/*
 !**/.claude/specs/install-prereq-detection.md
+!**/.claude/specs/structure-spec-v0.7.md
 **/auth.json
 **/.credentials.json
 **/scheduled_tasks.lock

@@ -1,4 +1,3 @@
 packages:
-  - packages/sandbox
   - packages/slack
   - apps/docs

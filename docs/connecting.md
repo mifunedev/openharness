@@ -10,34 +10,28 @@ Once a sandbox is running, there are three ways to open a shell inside it. Choos
 All three options assume the sandbox is already started. If it is not, run:
 
 ```bash
-oh sandbox my-agent
+docker compose -f .devcontainer/docker-compose.yml up -d
 ```
 
-See [Sandbox Lifecycle](./sandbox-lifecycle) for more on the `oh sandbox` command.
+See [Sandbox Lifecycle](./sandbox-lifecycle) for the full set of `docker compose` commands.
 
 ## Option A — Terminal (works everywhere)
 
-Use `oh shell` to open an interactive bash login shell inside the sandbox:
+Use `docker exec` to open an interactive shell as the `sandbox` user:
 
 ```bash
-oh shell my-agent
+docker exec -it -u sandbox openharness zsh
 ```
 
-This is the fastest option and works on any machine with the `oh` CLI and Docker installed.
+Replace `openharness` with your `SANDBOX_NAME`. You land in `/home/sandbox/harness`.
 
-If you do not have the `oh` CLI, use `docker exec` directly:
+To use bash instead of zsh:
 
 ```bash
-docker exec -it -u sandbox my-agent bash --login
+docker exec -it -u sandbox openharness bash --login
 ```
 
-Replace `my-agent` with your `SANDBOX_NAME`. You land in `/home/sandbox/harness` as the `sandbox` user.
-
-To use zsh instead of bash:
-
-```bash
-docker exec -it -u sandbox my-agent zsh
-```
+This is the fastest option and works on any machine with Docker installed.
 
 ## Option B — VS Code Attach to Container (local)
 
@@ -46,7 +40,7 @@ Use this option when Docker is running on the same machine as VS Code.
 1. Install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension in VS Code.
 2. Open the Command Palette: `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Linux / Windows).
 3. Run **"Dev Containers: Attach to Running Container"**.
-4. Select your sandbox from the list (it appears as the container name, e.g. `my-agent`).
+4. Select your sandbox from the list (it appears as the container name, e.g. `openharness`).
 
 VS Code opens a new window attached to the sandbox. You can use the integrated terminal, install extensions, and edit files as if you were working locally. The workspace folder inside the container is `/home/sandbox/harness`.
 
@@ -97,10 +91,10 @@ tmux new-session -d -s agent-claude 'claude'
 tmux attach -t agent-claude
 ```
 
-See the process lifecycle documentation in the Architecture section for naming conventions and best practices.
+See `.claude/rules/sandbox-processes.md` (rendered in the Architecture section) for naming conventions and best practices.
 
 ## Next steps
 
 - [Onboarding](./onboarding) — authenticate services inside the sandbox after connecting for the first time.
-- [Sandbox Lifecycle](./sandbox-lifecycle) — full reference for all `oh` commands.
+- [Sandbox Lifecycle](./sandbox-lifecycle) — full reference for `docker compose` commands.
 - [Quickstart](./quickstart) — end-to-end walkthrough from install to first agent session.

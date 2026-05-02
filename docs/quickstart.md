@@ -11,15 +11,13 @@ This guide takes you from zero to a running sandbox with an interactive shell in
 
 Install Docker with the Compose plugin: [docs.docker.com/get-docker](https://docs.docker.com/get-docker/). Everything else runs inside the container.
 
-If you also want the `oh` CLI on your host machine (recommended), see [Installation](./installation) first.
-
 ## Option A — One-line install (recommended)
 
 ```bash
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
-The installer detects whether Node.js 20+ is present. If found, it builds and links the `oh` binary on the host (CLI-first). If Node is missing or too old, it shows a 3-way prompt: install Node 22 via nvm and then the CLI (default), continue Docker-only, or abort. After the installer finishes, skip to [Step 3](#step-3-provision-your-sandbox).
+The installer clones the repo into `~/openharness`, prompts for `SANDBOX_NAME` and `SANDBOX_PASSWORD`, writes `.devcontainer/.env`, and brings the sandbox up via `docker compose`. After the installer finishes, skip to [Step 4](#step-4-open-a-shell).
 
 ## Option B — Manual setup
 
@@ -34,45 +32,33 @@ cp .devcontainer/.example.env .devcontainer/.env
 Open `.devcontainer/.env` and set at minimum:
 
 ```bash
-SANDBOX_NAME=my-agent   # any name you like
-GH_TOKEN=ghp_...        # optional but skips one onboard step
+SANDBOX_NAME=openharness   # any name you like; this becomes the container name
+GH_TOKEN=ghp_...           # optional but skips one onboarding step
 ```
 
 ### Step 2: Build and start the sandbox
 
 ```bash
-oh sandbox my-agent
-```
-
-`oh sandbox` is an alias for `openharness sandbox`. It runs `docker compose up -d --build` behind the scenes and waits until the container is healthy. On a cold Docker cache this takes around ten minutes; subsequent starts are a few seconds.
-
-If you do not have the `oh` CLI, use Docker Compose directly:
-
-```bash
 docker compose -f .devcontainer/docker-compose.yml up -d --build
 ```
 
-### Step 3: Provision your sandbox
+This is the canonical command for bringing the sandbox up. On a cold Docker cache it takes around ten minutes; subsequent starts are a few seconds.
 
-From the directory where you cloned the repo (note: `oh sandbox` resolves
-compose paths relative to the current working directory):
+### Step 3: Confirm it's healthy
 
 ```bash
-cd ~/openharness    # or wherever the installer cloned the repo
-oh sandbox my-agent
+docker compose -f .devcontainer/docker-compose.yml ps
 ```
 
-`oh sandbox` runs `docker compose up -d --build` behind the scenes and waits
-until the container is healthy. On a cold Docker cache this takes around ten
-minutes; subsequent starts are a few seconds.
+You should see the sandbox container with status `running` (and `healthy` once the healthcheck passes).
 
 ### Step 4: Open a shell
 
 ```bash
-oh shell my-agent
+docker exec -it -u sandbox openharness zsh
 ```
 
-You are now inside the sandbox as the `sandbox` user. The working directory is `/home/sandbox/harness`.
+Replace `openharness` with whatever you set as `SANDBOX_NAME` in `.devcontainer/.env`. You're now inside the sandbox as the `sandbox` user; the working directory is `/home/sandbox/harness`.
 
 ### Step 5: One-time setup (inside the sandbox)
 
@@ -85,38 +71,34 @@ gh auth setup-git        # git credential helper (no SSH keys needed)
 
 These write credentials into the sandbox home directory, not your host home.
 
-### Step 6: Start an agent
+### Step 6: Start the agent
 
 ```bash
 claude                   # Claude Code — terminal coding agent
-# or
-codex                    # OpenAI Codex
 ```
 
-For Slack-driven Pi+Mom, install the mifune harness pack:
-
-```bash
-oh harness add @ryaneggz/mifune
-```
+For Slack-driven Pi+Mom and other multi-agent setups, install the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack inside the sandbox.
 
 You now have a working sandbox with an active agent session.
 
 ## Tear down
 
-When you are finished, exit the shell and clean up from the host:
+When you're finished, exit the shell and clean up from the host:
 
 ```bash
-oh clean my-agent
+docker compose -f .devcontainer/docker-compose.yml down -v
 ```
 
 This stops the container and removes its volumes. To keep auth credentials across rebuilds, stop without removing volumes:
 
 ```bash
-oh stop my-agent
+docker compose -f .devcontainer/docker-compose.yml stop
 ```
+
+Bring it back later with `docker compose -f .devcontainer/docker-compose.yml up -d`.
 
 ## Next steps
 
 - [Onboarding](./onboarding) — detailed walkthrough of each auth step.
-- [Sandbox Lifecycle](./sandbox-lifecycle) — full reference for `oh sandbox`, `oh list`, `oh shell`, `oh stop`, and `oh clean`.
-- [Connecting](./connecting) — VS Code and SSH alternatives to `oh shell`.
+- [Sandbox Lifecycle](./sandbox-lifecycle) — full reference for `docker compose` lifecycle commands.
+- [Connecting](./connecting) — VS Code and SSH alternatives to `docker exec`.

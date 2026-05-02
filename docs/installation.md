@@ -5,7 +5,7 @@ title: "Installation"
 
 # Installation
 
-Open Harness has two components: the sandbox image (Docker-only) and the optional `oh` host CLI. Most users need both. This page covers all installation paths.
+Open Harness is a Docker-based sandbox image. Installation is `docker compose` against `.devcontainer/docker-compose.yml` — there is no host CLI, agent, or Node toolchain required on the host.
 
 ## Prerequisites
 
@@ -13,10 +13,8 @@ Open Harness has two components: the sandbox image (Docker-only) and the optiona
 |---|---|---|
 | Docker (with Compose plugin) | Sandbox image | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
 | git | Cloning the repo | [git-scm.com](https://git-scm.com/) |
-| Node.js 20+ | `oh` host CLI (recommended) | [nodejs.org](https://nodejs.org/) |
-| pnpm | Building the host CLI | `npm install -g pnpm` |
 
-Node.js 20+ is **recommended but not required**. If it is absent, the installer offers to install Node 22 via nvm or to fall back to a Docker-only sandbox — you choose at the prompt.
+That is the entire host requirement. Node.js, pnpm, and any AI CLI live inside the sandbox.
 
 ## One-line installer (recommended)
 
@@ -24,40 +22,24 @@ Node.js 20+ is **recommended but not required**. If it is absent, the installer 
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
-This checks for Docker and git, prompts for a container name, clones the repo, and starts the sandbox. No Node.js required.
+The installer:
 
-The installer detects whether Node.js 20+ is present and branches accordingly:
+1. Verifies Docker and git are present.
+2. Clones the repo into `~/openharness` (or pulls latest if the directory already exists).
+3. Prompts for `SANDBOX_NAME` and `SANDBOX_PASSWORD`, then writes `.devcontainer/.env`.
+4. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
+5. Prints the next-step commands (open a shell, stop, tear down).
 
-- **Node 20+ found** — CLI-first path. Builds and links the `oh` binary on the host.
-- **Node missing or too old** — Interactive 3-way prompt:
-  1. Install Node 22 via nvm, then the CLI (default).
-  2. Continue Docker-only.
-  3. Abort.
+### Environment overrides
 
-See the [install.sh spec](https://github.com/ryaneggz/open-harness/blob/main/.claude/specs/install-prereq-detection.md) for the full decision flow.
-
-### Override auto-detection
-
-Pass flags to skip the prompt and force a specific path:
-
-| Flag / Variable | Effect |
+| Variable | Effect |
 |---|---|
-| `--cli` | Force CLI-first. Hard-fails if Node 20+ is absent (does not auto-install nvm). |
-| `--docker-only` (alias `--no-cli`) | Force Docker-only. Skips Node detection. |
-| `--install-node` | Force nvm + Node 22 install, then CLI. Skips detection. |
-| `-y` / `--yes` | Accept the default at every prompt (installs Node via nvm if absent). |
-| `-n` / `--no` | Abort at every prompt. |
-| `--yes --docker-only` | Non-interactive Docker-only install. |
 | `OH_INSTALL_REF=<git-ref>` | Pin the cloned repo to a specific tag or SHA instead of `main`. |
-| `OH_ASSUME_YES=1` | Same as `--yes`. |
+| `OH_ASSUME_YES=1` | Accept defaults at every prompt. |
 | `SANDBOX_NAME=<name>` | Skip the "Container name" prompt. |
-| `SANDBOX_PASSWORD=<value>` | Skip the credential prompt (used by the optional sshd overlay). |
+| `SANDBOX_PASSWORD=<value>` | Skip the credential prompt (used by the optional `sshd` overlay). |
 
-The two `SANDBOX_*` env vars resolve **independently** — set only `SANDBOX_NAME` and the passphrase prompt still fires, and vice versa. Both fall back to defaults (`openharness` and `changeme`) when no TTY is available.
-
-### Deprecated flag
-
-`--with-cli` is a deprecated alias for `--cli`. It still works and prints a deprecation warning directing you to use `--cli` instead.
+`SANDBOX_NAME` and `SANDBOX_PASSWORD` resolve independently — set one and the other still prompts. Both fall back to defaults (`openharness` and `changeme`) when no TTY is available.
 
 ## Manual installation
 
@@ -78,59 +60,25 @@ cp .devcontainer/.example.env .devcontainer/.env
 
 Edit `.devcontainer/.env` and set your `SANDBOX_NAME` and any optional tokens. See the comments in `.example.env` for all available variables.
 
-### 3. Install Node dependencies
+### 3. Build and start the sandbox
 
 ```bash
-pnpm install
-```
-
-This installs workspace dependencies for all packages under `packages/` and `apps/`.
-
-### 4. Build the CLI
-
-```bash
-pnpm build
-```
-
-This compiles the `@openharness/sandbox` package (TypeScript to ESM) and any other workspace packages.
-
-### 5. Link the CLI globally
-
-```bash
-cd packages/sandbox && pnpm link --global && cd ../..
-```
-
-After linking, `oh` and `openharness` are available as host commands. They are aliases for the same binary.
-
-### 6. Verify
-
-```bash
-oh --version
-```
-
-Expected output (version will vary):
-
-```
-openharness 0.1.0 (pi x.y.z)
-```
-
-## Docker-only manual fallback
-
-If you only have Docker and git — no Node, no pnpm — and prefer not to use the installer, you can manage Open Harness directly with `docker compose`. This is the manual equivalent of the installer's `--docker-only` path:
-
-```bash
-git clone https://github.com/ryaneggz/open-harness.git && cd open-harness
-cp .devcontainer/.example.env .devcontainer/.env
-# Edit .devcontainer/.env: set SANDBOX_NAME and any optional tokens
 docker compose -f .devcontainer/docker-compose.yml up -d --build
-docker compose -f .devcontainer/docker-compose.yml exec -u sandbox sandbox zsh
 ```
 
-In this mode you manage the sandbox lifecycle with `docker compose` commands directly rather than the `oh` CLI. The one-line installer's `--docker-only` flag automates these same steps. The one-line installer's `--docker-only` flag automates these same steps.
+On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds.
+
+### 4. Open a shell
+
+```bash
+docker exec -it -u sandbox openharness zsh
+```
+
+Replace `openharness` with whatever you set as `SANDBOX_NAME`.
 
 ## Next step
 
-Once installed, proceed to the [Quickstart](./quickstart) to provision your first sandbox and open a shell.
+Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside the sandbox and start an agent.
 
 ## What's Installed
 
@@ -148,8 +96,7 @@ Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
 | OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --full-auto`) |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents |
 
-Pi Agent + Mom Slack bot are available via the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack:
-`oh harness add @ryaneggz/mifune`.
+Pi Agent + Mom Slack bot ship in the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack. Install by cloning the pack into your sandbox and following its README.
 
 ### Runtimes & package managers
 
@@ -168,7 +115,7 @@ Pi Agent + Mom Slack bot are available via the [`@ryaneggz/mifune`](https://gith
 | GitHub CLI (`gh`) | PRs, issues, releases from the terminal |
 | cloudflared | Cloudflare Tunnel for public URLs to dev servers |
 | tmux | Detachable terminal sessions for long-running agents |
-| cron | Heartbeat scheduling for autonomous agent tasks |
+| croner | Markdown-frontmatter cron scheduler for autonomous agent tasks |
 
 ### Utilities
 
@@ -189,8 +136,6 @@ The sandbox user's `.bashrc` includes convenience aliases:
 ```
 claude  → claude --dangerously-skip-permissions
 codex   → codex --full-auto
-pi      → pi
-mom     → mom --sandbox=host ~/harness/workspace/.slack
 ```
 
 ### Persistent volumes

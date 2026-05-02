@@ -86,7 +86,7 @@ printf '    %-6s %-11s %s\n' "$claude_status" "claude"      "$claude_detail"
 printf '    %-6s %-11s %s\n' "$pi_status"     "pi"          "$pi_detail"
 printf '    %-6s %-11s %s\n' "$oh_status"     "openharness" "$oh_detail"
 printf '\n'
-printf '  Shortcuts: claude · pi · heartbeat-daemon status\n'
+printf '  Shortcuts: claude · pi · tmux attach -t system-cron\n'
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'
 

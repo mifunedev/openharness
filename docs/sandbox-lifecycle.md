@@ -5,142 +5,121 @@ title: "Sandbox Lifecycle"
 
 # Sandbox Lifecycle
 
-A sandbox is a Docker container built from the Open Harness devcontainer image. This page covers every `oh` command for creating, inspecting, connecting to, and tearing down sandboxes. All lifecycle commands run from the host machine, not inside a container.
+A sandbox is a Docker container built from the Open Harness devcontainer image. This page covers every `docker compose` command for creating, inspecting, connecting to, and tearing down a sandbox. All lifecycle commands run from the host machine, against `.devcontainer/docker-compose.yml`.
 
-`oh` is an alias for `openharness`. Both names refer to the same binary.
+To save typing, set an alias once per shell:
+
+```bash
+alias dc='docker compose -f .devcontainer/docker-compose.yml'
+```
+
+Examples below use the long form so they are copy-pasteable without the alias.
 
 ## Create
 
-### `oh sandbox [name]`
+### Build and start
 
-Build the image and start the container. This is the primary provisioning command.
-
-```bash
-oh sandbox my-agent
-```
-
-What happens under the hood:
-1. Reads compose files from `.devcontainer/` (plus any overlays in `.openharness/config.json`).
-2. Runs `docker compose up -d --build`.
-3. Waits for the container to reach a running state.
-4. Prints the connection commands once healthy.
-
-If you omit the name, `oh sandbox` uses the `SANDBOX_NAME` value from `.devcontainer/.env`. On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds.
-
-### `oh run [name]`
-
-Start a container that has already been built but is not running. Unlike `oh sandbox`, `oh run` does not rebuild the image.
+Build the image (if needed) and start the container:
 
 ```bash
-oh run my-agent
+docker compose -f .devcontainer/docker-compose.yml up -d --build
 ```
+
+What happens:
+
+1. Docker reads `.devcontainer/docker-compose.yml` plus any overlays (see `.openharness/config.json` for active overlays).
+2. The image is built or rebuilt as needed.
+3. The container starts in detached mode.
+4. The healthcheck eventually flips status to `healthy`.
+
+The container name is whatever you set as `SANDBOX_NAME` in `.devcontainer/.env` (default `openharness`). On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds.
+
+### Restart without rebuilding
+
+If the image already exists and you only want to start the stopped container:
+
+```bash
+docker compose -f .devcontainer/docker-compose.yml up -d
+```
+
+Without `--build`, Docker reuses the existing image.
 
 ## Inspect
 
-### `oh list`
-
-List all running sandboxes managed by Open Harness.
+### List the sandbox state
 
 ```bash
-oh list
+docker compose -f .devcontainer/docker-compose.yml ps
 ```
 
-Output is a table of container names, status, and port mappings. Sandboxes that were stopped with `oh stop` do not appear.
+Shows the container name, status, and port mappings. Use the broader `docker ps` to see every container on the host (helpful when you have multiple sandboxes from different repos).
 
-### `oh ports [name]`
+### See in-sandbox tmux sessions
 
-Show every TCP port being listened on inside the sandbox and map each listener back to the tmux session that owns it. Useful for checking which dev servers are running.
+The system-cron runtime, dev servers, and agents all live inside named tmux sessions (per `.claude/rules/sandbox-processes.md`). List them from the host:
 
 ```bash
-oh ports my-agent
+docker exec -u sandbox openharness tmux ls
 ```
+
+Attach interactively from inside the sandbox shell with `tmux attach -t <name>`.
 
 ## Connect
 
-### `oh shell <name>`
-
-Open an interactive bash login shell inside the named sandbox as the `sandbox` user. The working directory is `/home/sandbox/harness`.
-
 ```bash
-oh shell my-agent
+docker exec -it -u sandbox openharness zsh
 ```
 
-This is the primary way to interact with a sandbox from the command line. For VS Code and SSH alternatives, see [Connecting](./connecting).
+You land in `/home/sandbox/harness` as the `sandbox` user. Replace `openharness` with your `SANDBOX_NAME`.
+
+For VS Code Attach to Container and Remote SSH alternatives, see [Connecting](./connecting).
 
 ## Expose
 
-### `oh expose <name> <port>`
+Publishing a sandbox port through the Caddy gateway is handled by the optional gateway overlay. With the overlay enabled, edits to `.openharness/exposures.json` regenerate the Caddyfile and reload Caddy in-process. See `.claude/rules/gateway-routing.md` (rendered in the Architecture section) for the routing contract.
 
-Route a port inside the sandbox through the Caddy gateway so it is accessible from your browser.
-
-```bash
-oh expose docs 8080
-```
-
-On a laptop (no `PUBLIC_DOMAIN` set), this creates a local HTTPS route:
-
-```
-https://docs.my-agent.localhost:8443
-```
-
-On a remote host (with `PUBLIC_DOMAIN` set in `.devcontainer/.env`), the route uses your public domain:
-
-```
-https://docs.my-agent.example.com
-```
-
-### `oh unexpose <name>`
-
-Remove a Caddy route created by `oh expose`.
+A typical flow once the overlay is enabled:
 
 ```bash
-oh unexpose docs
+# Inside the sandbox: start the dev server in a named tmux session.
+tmux new-session -d -s app-docs 'pnpm --filter @openharness/docs dev -p 8080 2>&1 | tee /tmp/app-docs.log'
+
+# Edit .openharness/exposures.json on the host, then reload Caddy.
 ```
 
-### `oh open <name|port>`
-
-Open a route's URL in the default browser.
-
-```bash
-oh open docs
-oh open 8080   # resolves port to route name automatically
-```
+On a laptop (no `PUBLIC_DOMAIN` set), the route is `https://docs.<sandbox>.localhost:8443`. On a remote host with `PUBLIC_DOMAIN` set, it is `https://docs.<sandbox>.<PUBLIC_DOMAIN>`.
 
 ## Stop and clean up
 
-### `oh stop [name]`
-
-Stop and remove the container but preserve named Docker volumes. Auth credentials (Claude Code, GitHub CLI, Cloudflare) survive in their volumes and are available when you start the sandbox again.
+### Stop, keep volumes
 
 ```bash
-oh stop my-agent
+docker compose -f .devcontainer/docker-compose.yml stop
 ```
 
-### `oh clean [name]`
+Auth credentials (Claude Code, GitHub CLI, Cloudflare) survive in their named volumes and are available the next time you `up -d`.
 
-Full teardown: stop the container and remove all associated volumes.
+### Stop and remove volumes (full teardown)
 
 ```bash
-oh clean my-agent
+docker compose -f .devcontainer/docker-compose.yml down -v
 ```
 
-Use `oh clean` when you want a completely fresh environment. Use `oh stop` when you plan to restart soon and want to keep your credentials.
+Use `down -v` when you want a completely fresh environment. Use `stop` when you plan to restart soon and want to keep your credentials.
 
 ## Summary
 
 | Command | When to use |
 |---|---|
-| `oh sandbox [name]` | First start or after changing the image |
-| `oh run [name]` | Restart a stopped container without rebuilding |
-| `oh list` | See what is running |
-| `oh ports [name]` | Check which ports and sessions are active |
-| `oh shell <name>` | Open an interactive shell |
-| `oh expose <name> <port>` | Make a port accessible via HTTPS |
-| `oh unexpose <name>` | Remove a port route |
-| `oh stop [name]` | Stop, keep volumes |
-| `oh clean [name]` | Stop and remove everything |
+| `docker compose -f .devcontainer/docker-compose.yml up -d --build` | First start or after changing the image |
+| `docker compose -f .devcontainer/docker-compose.yml up -d` | Restart a stopped container without rebuilding |
+| `docker compose -f .devcontainer/docker-compose.yml ps` | See whether the sandbox is running |
+| `docker exec -u sandbox openharness tmux ls` | List in-sandbox tmux sessions |
+| `docker exec -it -u sandbox openharness zsh` | Open an interactive shell |
+| `docker compose -f .devcontainer/docker-compose.yml stop` | Stop, keep volumes |
+| `docker compose -f .devcontainer/docker-compose.yml down -v` | Stop and remove everything |
 
 ## Next steps
 
-- [Connecting](./connecting) — VS Code Attach and Remote SSH alternatives to `oh shell`.
-- [Onboarding](./onboarding) — run after your first `oh sandbox` to authenticate services.
+- [Connecting](./connecting) — VS Code Attach and Remote SSH alternatives to `docker exec`.
+- [Onboarding](./onboarding) — run after your first `docker compose up` to authenticate services.

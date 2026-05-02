@@ -70,7 +70,7 @@ gh api "repos/ryaneggz/open-harness/actions/jobs/$JOB_ID/logs" 2>&1 \
 
 ## CI Pipeline Steps
 
-This project's CI (`CI: openharness`) runs these steps in order:
+This project's CI (`CI: Harness`) runs these steps in order:
 
 1. Lint (`pnpm run lint`)
 2. Format check (`pnpm run format:check`)

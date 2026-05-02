@@ -1,1 +1,1 @@
-cd packages/sandbox && pnpm exec lint-staged && pnpm run build && pnpm run test
+pnpm run lint && pnpm run test

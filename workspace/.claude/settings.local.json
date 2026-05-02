@@ -1,36 +1,4 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash $CLAUDE_CODE_PROJECT_DIR/.claude/hooks/notify_slack.sh"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "permission_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash $CLAUDE_CODE_PROJECT_DIR/.claude/hooks/notify_slack.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "idle_prompt",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash $CLAUDE_CODE_PROJECT_DIR/.claude/hooks/notify_slack.sh"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": [

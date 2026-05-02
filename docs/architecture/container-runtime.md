@@ -55,18 +55,18 @@ The container mounts the project root and several named volumes:
 
 The bind-mount of the repo root at `/home/sandbox/harness` means files written inside the container appear immediately on the host filesystem (and vice versa). This is how git worktrees created with `git worktree add .worktrees/<branch> <branch>` are visible to both the host and all processes inside the container without any copy step.
 
-The Docker socket mount gives the `oh` CLI inside the container access to the host Docker daemon, enabling nested container management — starting, stopping, and inspecting sibling containers from inside the sandbox.
+The Docker socket mount gives the in-sandbox `docker` CLI access to the host Docker daemon, enabling nested container management — starting, stopping, and inspecting sibling containers from inside the sandbox.
 
 ## Caddy Gateway Overlay
 
-The gateway overlay (`docker-compose.gateway.yml`, loaded when configured) runs a Caddy reverse proxy that routes HTTPS traffic to listening ports inside the sandbox. Routes are managed by `oh expose <name> <port>` and stored in `.openharness/exposures.json`. Caddy reloads its configuration in-process via its admin API on `127.0.0.1:2019` — `oh expose` never recreates the sandbox container.
+The gateway overlay (`docker-compose.gateway.yml`, loaded when configured) runs a Caddy reverse proxy that routes HTTPS traffic to listening ports inside the sandbox. Routes are stored in `.openharness/exposures.json` and Caddy reloads its configuration in-process via its admin API on `127.0.0.1:2019` — never recreating the sandbox container.
 
 URL shape depends on mode:
 
 - **Laptop mode** (no `PUBLIC_DOMAIN`): `https://<name>.<sandbox>.localhost:8443` with self-signed TLS (`tls internal`).
 - **Remote mode** (`PUBLIC_DOMAIN` set in `.devcontainer/.env`): `https://<name>.<sandbox>.<PUBLIC_DOMAIN>` with ACME or a Cloudflare named tunnel.
 
-The Caddyfile at `.openharness/Caddyfile` is regenerated on every `oh expose` / `oh unexpose` call and is gitignored. Do not hand-edit it.
+The Caddyfile at `.openharness/Caddyfile` is regenerated whenever `.openharness/exposures.json` changes and is gitignored. Do not hand-edit it.
 
 ## Environment Variables
 

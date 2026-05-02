@@ -102,7 +102,7 @@ Enable it by adding the overlay path to your existing
 }
 ```
 
-Then rebuild: `oh clean <name> && oh sandbox <name>`. Setting
+Then rebuild: `docker compose -f .devcontainer/docker-compose.yml down -v && docker compose -f .devcontainer/docker-compose.yml up -d --build`. Setting
 `HOST_CLAUDE_DIR` alone does nothing — the overlay must be listed in
 `composeOverrides`.
 

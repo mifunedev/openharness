@@ -5,43 +5,19 @@ title: "Onboarding"
 
 # Onboarding
 
-The onboarding wizard runs once after your first sandbox start. It auto-detects what is already configured and only prompts for steps that still need attention. Run it from the host:
+Onboarding is a manual checklist run inside the sandbox after your first `docker compose up`. There is no host-side wizard — every step runs against an interactive shell in the container.
+
+Open a shell first:
 
 ```bash
-oh onboard
+docker exec -it -u sandbox openharness zsh
 ```
 
-To target a specific named sandbox:
-
-```bash
-oh onboard my-agent
-```
-
-To re-run a single step (useful after rotating credentials):
-
-```bash
-oh onboard slack
-oh onboard github
-oh onboard llm
-```
-
-To force all steps even if already configured:
-
-```bash
-oh onboard --force
-```
+Replace `openharness` with whatever you set as `SANDBOX_NAME` in `.devcontainer/.env`. Then walk the steps below in order. Each step is idempotent — re-run any single step to refresh that credential.
 
 ## Steps
 
-### Step 1 — LLM provider
-
-Authenticates with an LLM provider (Anthropic, OpenAI, Google, or another supported provider) so Claude Code and Codex can make API calls.
-
-The wizard launches the agent CLIs in interactive mode to complete the OAuth flow.
-
-**Skipped when:** the agent CLI's auth file already exists, or `OPENAI_API_KEY` is set in the environment.
-
-### Step 2 — GitHub CLI
+### Step 1 — GitHub CLI
 
 Authenticates the `gh` CLI so the agent can create PRs, open issues, and push branches directly from the sandbox.
 
@@ -49,72 +25,80 @@ Authenticates the `gh` CLI so the agent can create PRs, open issues, and push br
 gh auth login && gh auth setup-git
 ```
 
-When prompted for a preferred protocol, choose SSH. The CLI generates an ed25519 key and uploads it to your GitHub account, which means Step 4 (SSH) can fast-path.
+Pick HTTPS as the protocol (the credential helper installed by `gh auth setup-git` makes `git push` / `git fetch` "just work" without SSH keys). If you prefer SSH, choose SSH at the prompt and the CLI will generate an ed25519 key and upload it to GitHub for you.
 
-**Skipped when:** `gh auth status` succeeds.
+Verify with `gh auth status`. If it succeeds, you are done with this step.
 
-### Step 3 — Slack (Mom bot, opt-in via `@ryaneggz/mifune` pack)
+### Step 2 — LLM provider
 
-The Slack onboarding step ships with the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack, not core openharness. Install with `oh harness add @ryaneggz/mifune` to register the step.
+Authenticate Claude Code (and Codex if you use it) so they can make API calls.
 
-The pack configures the Mom Slack bot with a Socket Mode app token (`SLACK_APP_TOKEN`) and a bot token (`SLACK_BOT_TOKEN`).
+```bash
+claude   # opens the OAuth flow on first run; follow the printed URL
+codex    # OpenAI auth, only if you intend to use Codex
+```
 
-To set tokens manually, add them to `.devcontainer/.env`:
+Both write tokens to their respective directories under the sandbox home (`~/.claude/`, `~/.codex/`). With the persistent named volumes, credentials survive container rebuilds.
+
+If you prefer API keys over OAuth, set the relevant variables in `.devcontainer/.env` (e.g. `OPENAI_API_KEY`) before bringing the sandbox up.
+
+### Step 3 — SSH key (optional)
+
+If you chose HTTPS in Step 1 you can skip this. Otherwise, verify the GitHub SSH path:
+
+```bash
+ssh -T git@github.com
+```
+
+If the response says GitHub recognizes your key, you are done. If it does not, generate a new key (`ssh-keygen -t ed25519`) and add the public key at [github.com/settings/keys](https://github.com/settings/keys).
+
+### Step 4 — Cloudflare tunnel (optional)
+
+Only relevant when you want public URLs for in-sandbox dev servers. The image ships `cloudflared`; create a named tunnel from inside the sandbox:
+
+```bash
+cloudflared login
+cloudflared tunnel create openharness
+```
+
+See the [Cloudflare integration guide](./integrations/cloudflare) for ingress configuration. Skip if you only run locally.
+
+### Step 5 — Slack bot (optional, via pack)
+
+Slack-driven Pi+Mom is not part of core OpenHarness. Install the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack inside the sandbox and follow its README — it owns its own onboarding (Socket Mode app token, bot token, named tmux session for the worker).
+
+To set tokens manually for a future pack install, add them to `.devcontainer/.env`:
 
 ```bash
 SLACK_APP_TOKEN=xapp-...
 SLACK_BOT_TOKEN=xoxb-...
 ```
 
-### Step 4 — SSH key
-
-Checks for `~/.ssh/id_ed25519.pub` inside the sandbox and generates a new key if missing. Then verifies GitHub SSH access:
-
-```bash
-ssh -T git@github.com
-```
-
-If Step 2 ran `gh auth login` with the SSH protocol, the key is already uploaded and this step is a no-op.
-
-**Skipped when:** the key exists and GitHub SSH access is verified.
-
-### Step 5 — Cloudflare tunnel (optional)
-
-Only runs if `cloudflared` is installed in the sandbox image. Creates a named tunnel for public URL access to dev servers running inside the sandbox.
-
-**Skipped when:** `cloudflared` is not installed or a tunnel config already exists in `~/.cloudflared/`.
-
-### Step 6 — Claude Code
-
-Checks for Claude Code credentials in `~/.claude/` and triggers the OAuth flow if missing.
-
-**Skipped when:** credentials exist, or the `claude-host` compose overlay is active (which mounts host `~/.claude` directly into the sandbox).
-
 ## After onboarding
 
-Once all configured steps pass, agents are ready:
+Start the agent in a named tmux session so it survives shell disconnects:
 
 ```bash
-claude     # terminal coding agent
-pi         # automations — Slack, heartbeats, extensions
+tmux new-session -d -s agent-claude 'claude'
+tmux attach -t agent-claude
 ```
 
-The wizard also installs project dependencies and writes an onboarded marker so it does not run again on the next container start.
+See `.claude/rules/sandbox-processes.md` (rendered in the Architecture section) for the full session-naming convention.
 
 ## Troubleshooting
 
-**SSH key not recognized by GitHub:** Copy the public key printed during Step 4 and add it at [github.com/settings/keys](https://github.com/settings/keys). Alternatively, re-run `oh onboard github` to redo the GitHub step.
+**`gh auth login` fails:** Try `gh auth login --web` for browser-based auth, or use a [personal access token](https://github.com/settings/tokens).
 
-**GitHub CLI auth fails:** Try `gh auth login --web` for browser-based auth, or use a [personal access token](https://github.com/settings/tokens).
+**SSH key not recognized by GitHub:** Copy the public key (`cat ~/.ssh/id_ed25519.pub`) and add it at [github.com/settings/keys](https://github.com/settings/keys).
 
-**Cloudflare login opens no browser:** Run `cloudflared login` manually inside the sandbox. It prints a URL you can paste into any browser.
+**Cloudflare login opens no browser:** `cloudflared login` prints a URL — paste it into any browser on your laptop.
 
-**Claude Code auth fails:** Run `claude` directly inside the sandbox to trigger the OAuth flow interactively.
+**Claude Code auth fails:** Run `claude` directly inside the sandbox to retrigger the OAuth flow interactively. If you mounted host `~/.claude` via the `claude-host` overlay, your laptop's existing credentials are reused and no in-sandbox flow is needed.
 
-**Slack bot not responding:** Attach to the tmux session to see error output:
+**Slack bot not responding (mifune pack):** Attach to the agent's tmux session to see error output:
 
 ```bash
 tmux attach -t agent-mom
 ```
 
-Common causes: LLM auth missing (complete Step 1 first), invalid tokens, or the Slack app is not installed to your workspace.
+Common causes: LLM auth missing (complete Step 2 first), invalid tokens, or the Slack app is not installed to your workspace.

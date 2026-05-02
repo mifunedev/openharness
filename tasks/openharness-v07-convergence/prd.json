@@ -163,8 +163,8 @@
                 "Typecheck passes"
             ],
             "priority": 9,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 9 on 2026-05-02; rewrote docs/installation.md (oh→docker compose), docs/onboarding.md (host wizard→in-sandbox manual checklist), docs/sandbox-lifecycle.md (oh sandbox/run/list/shell/expose/stop/clean→docker compose up/ps/exec/stop/down -v), docs/connecting.md (oh shell→docker exec); deleted docs/cli/ entirely (5 oh-CLI reference pages); fixed stray oh expose/oh clean mentions in docs/integrations/{cloudflare,github,postgres}.md, docs/architecture/{overview,container-runtime}.md, docs/guide/overlays.md; grep gate passes (zero hits)"
         },
         {
             "id": "US-010",

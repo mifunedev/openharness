@@ -60,7 +60,7 @@ psql
 
 ## Data persistence
 
-Database files are stored in the `pgdata` named Docker volume. The volume survives `docker compose down` but is removed by `oh clean` (which removes volumes). To back up data before cleaning, dump it first:
+Database files are stored in the `pgdata` named Docker volume. The volume survives `docker compose down` but is removed by `docker compose down -v`. To back up data before tearing down with volumes, dump it first:
 
 ```bash
 pg_dump -Fc sandbox > /workspace/backup.dump

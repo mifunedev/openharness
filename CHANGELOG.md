@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Removed
+- **BREAKING**: heartbeat daemon removed. Deleted `packages/sandbox/src/lib/heartbeat/` (~1,752 LOC), `packages/sandbox/src/cli/heartbeat-daemon.ts`, `packages/sandbox/src/cli/actions/heartbeat.ts`, `packages/sandbox/src/tools/heartbeat.ts`, the `oh heartbeat {start,stop,status}` command group, the `heartbeat-daemon` package bin, the seven `heartbeat-*.test.ts` suites, and `.claude/skills/heartbeat/`. Heartbeat env vars (`HEARTBEAT_ACTIVE_START`/`_END`/`_AGENT`) stripped from `.devcontainer/docker-compose.yml`; the legacy daemon-startup blocks in `install/entrypoint.sh` and the `/usr/local/bin/heartbeat-daemon` symlink in `.devcontainer/entrypoint.sh` are gone; `install/banner.sh` no longer advertises `heartbeat-daemon status`. The croner runtime (`scripts/cron-runtime.ts`, US-002/US-003/US-004) is the canonical replacement per SPEC v0.7 §"Croner runtime". ([#210](https://github.com/ryaneggz/open-harness/issues/210))
 - **BREAKING**: `@mariozechner/pi-coding-agent` is no longer a dependency. The pi agent CLI and Mom Slack bot have been extracted to a separate harness pack at [`ryaneggz/mifune`](https://github.com/ryaneggz/mifune) (npm: `@ryaneggz/mifune`). Install with `oh harness add @ryaneggz/mifune`. ([#208](https://github.com/ryaneggz/open-harness/pull/208))
 
 ### Added

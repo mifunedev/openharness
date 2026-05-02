@@ -19,7 +19,6 @@ describe("Commander program structure", () => {
       "shell",
       "list",
       "onboard",
-      "heartbeat",
       "worktree",
       "ports",
       "expose",
@@ -42,24 +41,11 @@ describe("Commander program structure", () => {
   });
 });
 
-describe("heartbeat subcommand group", () => {
-  it("registers start, stop, status — and not the legacy sync/migrate flat names", () => {
+describe("heartbeat subcommand group is gone", () => {
+  it("does not register a top-level heartbeat command", () => {
     const program = buildProgram();
-    const heartbeat = program.commands.find((c) => c.name() === "heartbeat");
-    expect(heartbeat).toBeDefined();
-    const subnames = heartbeat!.commands.map((c) => c.name());
-    expect(subnames.sort()).toEqual(["start", "status", "stop"]);
-  });
-
-  it("each heartbeat subcommand requires a <name> arg", () => {
-    const program = buildProgram();
-    const heartbeat = program.commands.find((c) => c.name() === "heartbeat");
-    for (const sub of heartbeat!.commands) {
-      const args = sub.registeredArguments;
-      expect(args.length).toBeGreaterThanOrEqual(1);
-      expect(args[0].name()).toBe("name");
-      expect(args[0].required).toBe(true);
-    }
+    const names = program.commands.map((c) => c.name());
+    expect(names).not.toContain("heartbeat");
   });
 });
 
@@ -196,7 +182,6 @@ describe("HOST_ONLY_COMMANDS", () => {
 
   it("does not include sandbox-side commands", () => {
     expect(HOST_ONLY_COMMANDS.has("onboard")).toBe(false);
-    expect(HOST_ONLY_COMMANDS.has("heartbeat")).toBe(false);
     expect(HOST_ONLY_COMMANDS.has("expose")).toBe(false);
     expect(HOST_ONLY_COMMANDS.has("harness")).toBe(false);
   });

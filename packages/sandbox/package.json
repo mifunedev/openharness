@@ -1,12 +1,11 @@
 {
   "name": "@openharness/sandbox",
   "version": "0.1.0",
-  "description": "Open Harness CLI and sandbox tools — Docker containers, git worktrees, heartbeats",
+  "description": "Open Harness CLI and sandbox tools — Docker containers, git worktrees",
   "type": "module",
   "bin": {
     "openharness": "./dist/src/cli/index.js",
-    "oh": "./dist/src/cli/index.js",
-    "heartbeat-daemon": "./dist/src/cli/heartbeat-daemon.js"
+    "oh": "./dist/src/cli/index.js"
   },
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
@@ -18,7 +17,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc && chmod +x dist/src/cli/index.js dist/src/cli/heartbeat-daemon.js",
+    "build": "tsc && chmod +x dist/src/cli/index.js",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",

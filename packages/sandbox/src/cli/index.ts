@@ -113,30 +113,6 @@ export function buildProgram(): Command {
       await onboardAction(target, { force: opts.force, only: opts.only });
     });
 
-  // ─── Heartbeat group (start | stop | status) ────────────────────────
-  const heartbeat = program.command("heartbeat").description("manage the heartbeat daemon");
-  heartbeat
-    .command("start <name>")
-    .description("re-read heartbeat .md files and apply schedules")
-    .action(async (name: string) => {
-      const { heartbeatStartAction } = await import("./actions/heartbeat.js");
-      await heartbeatStartAction(name);
-    });
-  heartbeat
-    .command("stop <name>")
-    .description("remove all heartbeat schedules")
-    .action(async (name: string) => {
-      const { heartbeatStopAction } = await import("./actions/heartbeat.js");
-      await heartbeatStopAction(name);
-    });
-  heartbeat
-    .command("status <name>")
-    .description("show schedules and recent logs")
-    .action(async (name: string) => {
-      const { heartbeatStatusAction } = await import("./actions/heartbeat.js");
-      await heartbeatStatusAction(name);
-    });
-
   // ─── Worktree ───────────────────────────────────────────────────────
   program
     .command("worktree <name>")

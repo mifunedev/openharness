@@ -6,7 +6,6 @@ export {
   stopTool,
   cleanTool,
   sandboxTool,
-  heartbeatTool,
   worktreeTool,
   onboardTool,
 } from "./tools/index.js";

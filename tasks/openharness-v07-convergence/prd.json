@@ -262,8 +262,8 @@
                 "Typecheck passes"
             ],
             "priority": 15,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 15 on 2026-05-02; git mv tasks/install-prereq-detection/ → memory/2026-05-02/tasks/install-prereq-detection/ per SPEC v0.7 §'Weekly cleanup cron' (archive completed tasks under memory/<today>/tasks/<taskdesc>/); all 7 source stories already passed; created memory/2026-05-02/tasks/ archive parent (first use); no broken refs in CHANGELOG, open issues, or .claude/skills/; remaining tracked mentions of 'tasks/install-prereq-detection' are descriptive text inside this convergence PRD itself"
         },
         {
             "id": "US-016",

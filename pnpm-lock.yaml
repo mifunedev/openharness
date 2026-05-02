@@ -13,6 +13,10 @@ overrides:
 importers:
 
   .:
+    dependencies:
+      croner:
+        specifier: ^9.1.0
+        version: 9.1.0
     devDependencies:
       vitest:
         specifier: ^3.0.0

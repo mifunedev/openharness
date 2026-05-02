@@ -8,13 +8,17 @@
     "setup": "pnpm install && pnpm -r --if-present run build",
     "link:cli": "pnpm --dir packages/sandbox link --global",
     "build": "pnpm -r --if-present run build",
-    "test": "pnpm -r --if-present run test",
+    "test": "pnpm -r --if-present run test && vitest run",
+    "test:scripts": "vitest run",
     "lint": "pnpm -r --if-present run lint",
     "format:check": "pnpm -r --if-present run format:check",
     "format": "pnpm -r --if-present run format",
     "docs:build": "pnpm --dir apps/docs build",
     "docs:dev": "pnpm --dir apps/docs start",
     "docs:serve": "pnpm --dir apps/docs serve"
+  },
+  "dependencies": {
+    "croner": "^9.1.0"
   },
   "devDependencies": {
     "vitest": "^3.0.0"

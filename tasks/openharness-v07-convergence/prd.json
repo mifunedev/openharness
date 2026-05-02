@@ -45,8 +45,8 @@
                 "Typecheck passes"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 2 on 2026-05-02; scripts/cron-runtime.ts (119 LOC) + 9 vitest tests at scripts/__tests__/, croner added as root dep, root vitest.config.ts wires the script tests into pnpm run test"
         },
         {
             "id": "US-003",

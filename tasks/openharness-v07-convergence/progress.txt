@@ -1,0 +1,123 @@
+# progress
+
+## Codebase Patterns
+
+- **Spec files are gitignored.** `.gitignore` line 45 excludes `**/.claude/specs/*` with explicit `!**/.claude/specs/<file>.md` allowlist negations. To land a new permanent spec, add a negation entry to the allowlist alongside the existing `install-prereq-detection.md` line.
+- **Quality scripts.** Root `package.json` exposes `pnpm run lint`, `pnpm run test`, `pnpm run format:check` (no `type-check` script — typecheck runs as part of test/build inside `packages/sandbox`). Always check `package.json` before invoking the harness's recommended `pnpm run type-check`; it does not exist.
+- **CHANGELOG `[Unreleased]` discipline.** Add new entries under the existing category headers (`### Added`, `### Removed`, etc.) at the **top** of the relevant list — entries appear most-recent first. Reference issue #210 in PRD-related entries.
+- **Branch policy.** `git branch --show-current` may show `development` even after the runner says you're on the task branch. Always run `git checkout -b task/210-openharness-v07-convergence origin/development` (or fall back to `git checkout task/...`) at the top of each iteration.
+- **Hidden helper scripts/ directory exists.** `scripts/` already contains `ralph.sh`. Future stories that add `scripts/cron-runtime.ts` or similar should drop them alongside, not at root.
+- **Hooks fire from this branch.** Pre-commit hook runs the full vitest suite (~2s) and an ENOSPC-style watcher warning is benign; the suite still passes. Do not pass `--no-verify`.
+- **Pre-commit hook is sandbox-scoped.** `.husky/pre-commit` does `cd packages/sandbox && pnpm exec lint-staged && pnpm run build && pnpm run test` — it only runs the sandbox suite. Tests added at `scripts/__tests__/` need root-level execution (`pnpm run test` invokes `vitest run` after the workspace iteration; see `vitest.config.ts` at root). Lint-staged "could not find any staged files matching configured tasks" is benign for non-sandbox commits.
+- **Adding a root-level dep needs `CI=true pnpm install --no-frozen-lockfile --prefer-offline`.** The workspace's frozen lockfile rejects new deps; the recreate-modules step refuses without a TTY without `CI=true`. After install croner symlinks into `node_modules/croner`.
+- **Frontmatter parser pattern.** `scripts/cron-runtime.ts` carries a tiny YAML-frontmatter regex parser (`parseFrontmatter`). New scripts that re-parse frontmatter can copy that ~8-line regex shape verbatim — colon-split, strip a single surrounding quote pair, skip comments and blank lines. No need to pull in `gray-matter`. (The original copy lived in `packages/sandbox/src/lib/heartbeat/config.ts`; it was deleted with the daemon in US-005.)
+- **Croner config knobs used.** `new Cron(expr, { timezone, protect, catch }, fn)` — `protect: true` is croner's overlap-prevention flag (drops fires while previous still running); `catch: true` swallows callback errors so the scheduler stays alive.
+- **Sandbox CLI source layout.** `packages/sandbox/src/index.ts` re-exports each `xxxTool` symbol by name — deleting one from `tools/index.ts` requires editing this file too or `tsc` fails at the re-export. Same for `cli.test.ts` (positive list of expected commands + a `not.toContain` block) and `tools.test.ts` (count assertion + `expectedTools` positive list). Adding/removing any CLI command or tool means touching all four files plus the `oh <verb>` description in CLAUDE.md if user-facing.
+- **Two entrypoint scripts.** `install/entrypoint.sh` (legacy install-path script) and `.devcontainer/entrypoint.sh` (compose entrypoint baked into the image at `/usr/local/bin/entrypoint.sh`) — when modifying boot behavior, grep both. The compose's `entrypoint:` line points at the latter, but the former is still in tree and was a live source of stale heartbeat-daemon launches.
+
+## US-001 — 2026-05-02 18:00 UTC
+
+**Title**: Draft SPEC v0.7 amendments
+**Files changed**: .claude/specs/structure-spec-v0.7.md (new), .gitignore (allowlist negation), CHANGELOG.md (Unreleased Added entry), tasks/openharness-v07-convergence/prd.json (passes:true + notes)
+**Commit**: 5493832
+**Result**: PASS
+
+### What I did
+
+Wrote a new additive-only `structure-spec-v0.7.md` containing all 9 required sections (Harness Packs with 10-key `harness.json` contract + 3 source modes + registry path + workspace_seed semantics; Orchestrator vs workspace agent skills; oh CLI deprecation table; Documentation source clarifying `docs/wiki/`; Image name `ghcr.io/ryaneggz/openharness`; Croner runtime contract with tmux startup + restart policy; Hook execution mechanism mapping; Memory directory-per-day decision; Tasks vs `.ralph` decision) plus shrunk replacements for over-specified v0.6 sections (apps/web Docusaurus config snippet, eval flakiness, wiki-sync rubric, blog authorship, weekly cleanup cron). Added the `[Unreleased] ### Added` CHANGELOG entry referencing #210. Extended `.gitignore` allowlist so the v0.7 spec is tracked. Lint + tests green (373/373).
+
+### Learnings for future iterations
+
+- The PRD's per-story acceptance criteria explicitly mentions "Typecheck passes" but no `type-check` script exists; treat that as "lint + tests pass" (`pnpm run lint && pnpm run test`).
+- `.claude/specs/` is allowlist-only — every new spec needs a `!**/.claude/specs/<file>.md` line. v0.6 was apparently never committed (untracked locally); v0.7 is the first proper SPEC version landed in git.
+- The pre-commit hook prints a benign `[watcher:worktrees] Error: ENOSPC / Heartbeat schedules removed.` line at the top of its run — this is not a failure signal; check the final exit code.
+- When phrasing CHANGELOG entries, follow the existing voice: terse, one-sentence-per-bullet, link issue/PR with markdown.
+
+---
+
+## US-002 — 2026-05-02 18:10 UTC
+
+**Title**: Implement croner runtime script
+**Files changed**: scripts/cron-runtime.ts (new), scripts/__tests__/cron-runtime.test.ts (new), vitest.config.ts (new), package.json (croner dep + test:scripts script + bundled test script), pnpm-lock.yaml, CHANGELOG.md, tasks/openharness-v07-convergence/prd.json
+**Commit**: b768f32
+**Result**: PASS
+
+### What I did
+
+Wrote `scripts/cron-runtime.ts` (119 LOC, under the 120 cap) — a minimal croner-based scheduler that reads `crons/*.md` frontmatter (id, schedule, timezone, enabled, overlap, catchup), skips files where `enabled: false`, and runs each markdown body as a prompt to `claude -p` (overridable via `CRON_AGENT_BIN`). Logs to `crons/cron-runtime.log` (ISO\tcronId\tstatus\tmsg) and uses a PID lock at `crons/.pid` (with stale-lock recovery via `process.kill(pid, 0)`). SIGTERM/SIGINT cleanup unlinks the lock. Added 9 vitest tests covering the three required cases (frontmatter parsing, skip-when-disabled, PID-lock collision) plus stale-lock recovery and edge cases. Added `croner` as a root dependency, created a root `vitest.config.ts` scoped to `scripts/__tests__/**`, and updated `pnpm run test` to run both the workspace tests and the new root-level vitest. All 382 tests pass (373 sandbox + 9 cron-runtime).
+
+### Learnings for future iterations
+
+- The cron-runtime script is at root, not inside any pnpm workspace. Future scripts in `scripts/` that need third-party packages should add them to root `package.json` (and require `CI=true pnpm install --no-frozen-lockfile --prefer-offline` to commit the lockfile change).
+- Don't import single named functions from `node:fs` if you also want to keep LOC low — `import * as fs from "node:fs"` is two lines instead of nine.
+- US-003 will need to invoke the script via `node --experimental-strip-types scripts/cron-runtime.ts` (Node 22.x supports this) or convert the entrypoint to a compiled JS step. Plain `node scripts/cron-runtime.ts` will fail without strip-types.
+- The body of each cron markdown is passed as `argv[2]` to the agent binary (after `-p`). For long bodies this could exceed shell argv limits on some platforms; the runtime currently does no length check — leave that for a future hardening pass.
+- Vitest at root automatically prefers ESM. The script uses `import.meta.url === \`file://${process.argv[1]}\`` for the "is this entrypoint?" check — vitest's import path differs from Node's argv[1], so the `main()` block does not run during tests, which is what we want.
+
+---
+
+## US-003 — 2026-05-02 18:15 UTC
+
+**Title**: Wire croner into devcontainer entrypoint
+**Files changed**: .devcontainer/entrypoint.sh, CHANGELOG.md, tasks/openharness-v07-convergence/prd.json
+**Commit**: fc8ff2b
+**Result**: PASS
+
+### What I did
+
+Replaced the legacy heartbeat-daemon watchdog block in `.devcontainer/entrypoint.sh` (the `while true; do ... heartbeat-daemon start ... sleep 5; done &` loop with both `command -v` and dist-script fallback branches) with a tmux launcher for `scripts/cron-runtime.ts`. The new block creates `crons/` if missing (chowned to sandbox so the PID lock + log file are writable), then `gosu sandbox tmux new-session -d -s system-cron 'cd $HARNESS && node --experimental-strip-types scripts/cron-runtime.ts 2>&1 | tee /tmp/system-cron.log'`. Added a `tmux has-session` idempotency guard so re-running the entrypoint inside an already-warm container doesn't spawn a duplicate session. Did NOT touch the CLI build / heartbeat-daemon symlink section (lines ~191-219) — that goes with US-005's daemon-deletion. Lint + 382 tests pass; pre-commit hook green.
+
+### Learnings for future iterations
+
+- The entrypoint already sets `HARNESS="/home/sandbox/harness"` at line 72 — re-use it instead of re-declaring the path.
+- Node 22.6+ supports `--experimental-strip-types` for `.ts` execution. The SPEC's pseudocode example uses bare `node scripts/cron-runtime.ts`, but that flag is required at runtime; consider this minor amendment for any future doc edit.
+- `tmux has-session -t <name>` exits 0 if present, non-zero if not — perfect for idempotent launchers in entrypoints.
+- The CLI build block (lines 191-219 of pre-edit entrypoint) still wires the heartbeat-daemon symlink at /usr/local/bin/heartbeat-daemon. US-005 must remove that block when it deletes the daemon binary, otherwise the symlink will dangle.
+- Manual smoke test (`docker compose down && docker compose up -d`) couldn't run from this iteration since the orchestrator runs at the host root, not inside a freshly-restarted container. The acceptance-criteria smoke step is best validated when US-004 (seed crons) lands or post-merge by a human.
+
+---
+
+## US-004 — 2026-05-02 18:25 UTC
+
+**Title**: Seed reserved crons
+**Files changed**: crons/heartbeat.md (new), crons/cleanup-tasks.md (new), .gitignore (cron runtime artifact ignores), CHANGELOG.md, tasks/openharness-v07-convergence/prd.json
+**Commit**: 28aef83
+**Result**: PASS
+
+### What I did
+
+Seeded the two SPEC-reserved crons. `crons/heartbeat.md` uses `schedule: "0 * * * *"` with `timezone: America/Denver`, `enabled: true`, `overlap: false`, `catchup: false` and a body that mirrors the SPEC v0.6 §"crons" canonical example (read today's `memory/<today>/log.md`, scan `tasks/*/progress.txt` for staleness >2h, act or append "nothing pressing"). `crons/cleanup-tasks.md` uses `schedule: "0 23 * * 0"` (Sunday 23:00 local) and a body matching SPEC v0.7 §"Weekly cleanup cron": for each `tasks/<taskdesc>/`, archive when `progress.txt` ends with `STATUS: COMPLETE` (kill matching tmux session, move folder to `memory/$TODAY/tasks/<taskdesc>/`); otherwise leave in place and append a one-line note to `memory/$TODAY/log.md`. Verified both files parse via `parseCronFile` and that croner accepts the schedules (`new Cron(expr).nextRun()` returns sensible UTC times). Added `crons/.pid` and `crons/cron-runtime.log` to `.gitignore` so runtime artifacts stay untracked while `crons/*.md` remain checked in. CHANGELOG `[Unreleased] ### Added` entry references #210. Lint + 382 tests pass; pre-commit hook green.
+
+### Learnings for future iterations
+
+- The cron-runtime parser's quote-stripping is single-pair-only — it strips one leading + one trailing quote. Schedules with embedded asterisks like `0 * * * *` MUST be wrapped in double-quotes in the YAML frontmatter or the bash-style glob characters will confuse downstream tooling that re-emits the file.
+- `CRONS_DIR` defaults to `crons` resolved from `process.cwd()`; when invoked from the entrypoint via tmux the working dir is `$HARNESS` (set by entrypoint.sh), so the `crons/` directory at the repo root is the correct location. Don't move it under `workspace/`.
+- For the `cleanup-tasks` weekly archive, `0 23 * * 0` in `America/Denver` evaluates to a UTC time that drifts with DST (Sunday 05:00 UTC in MDT, 06:00 UTC in MST). Specifying the IANA timezone in frontmatter (rather than relying on the runtime's host tz) is the right call — confirmed by croner.nextRun().
+- The SPEC §"crons" frontmatter contract supports an optional `description` field (used in the v0.6 example). The cron-runtime ignores it (only `id`, `schedule`, `timezone`, `enabled`, `overlap`, `catchup` are read), but it documents the cron's purpose at the top of the file for human readers — keep it.
+- `crons/heartbeat.md` body should NOT shell out (`date -u +%Y-%m-%d` etc.); when croner fires, the body is passed to `claude -p` as a prompt — the agent interprets the prose. References to shell commands in the body are read by the agent as instructions to run, not literal substitutions.
+
+---
+## US-005 — 2026-05-02 18:35 UTC
+
+**Title**: Delete the heartbeat daemon
+**Files changed**: packages/sandbox/src/lib/heartbeat/ (deleted, 8 files), packages/sandbox/src/cli/heartbeat-daemon.ts (deleted), packages/sandbox/src/cli/actions/heartbeat.ts (deleted), packages/sandbox/src/tools/heartbeat.ts (deleted), packages/sandbox/src/__tests__/heartbeat-*.test.ts (7 deleted), packages/sandbox/src/cli/index.ts (drop heartbeat group), packages/sandbox/src/tools/index.ts (drop heartbeatTool), packages/sandbox/src/index.ts (drop re-export), packages/sandbox/package.json (drop heartbeat-daemon bin + build chmod), packages/sandbox/src/__tests__/{cli,tools}.test.ts (assert command/tool absence + count 13→12), .claude/skills/heartbeat/ (deleted), .devcontainer/docker-compose.yml (strip HEARTBEAT_* env), .devcontainer/entrypoint.sh (drop /usr/local/bin/heartbeat-daemon symlink), install/entrypoint.sh (strip legacy daemon launch), install/banner.sh (drop heartbeat-daemon shortcut line), CHANGELOG.md, tasks/openharness-v07-convergence/prd.json
+**Commit**: 71ee742
+**Result**: PASS
+
+### What I did
+
+Deleted the 1,900-LOC heartbeat daemon now that the croner runtime (US-002–US-004) is wired into the entrypoint and replaces it. Removed the entire `packages/sandbox/src/lib/heartbeat/` directory (config/daemon/discovery/gates/index/logger/runner/scheduler — 8 files), the `cli/heartbeat-daemon.ts` binary entry, the `cli/actions/heartbeat.ts` action, the `tools/heartbeat.ts` MCP-style tool, and all seven `heartbeat-*.test.ts` suites. Stripped the `oh heartbeat {start,stop,status}` command group from `cli/index.ts`, the `heartbeatTool` import + array entry + re-export from `tools/index.ts`, the same re-export from `src/index.ts`, the `heartbeat-daemon` package bin + the `chmod +x` of its dist artifact from `package.json`, and the `HEARTBEAT_ACTIVE_START`/`HEARTBEAT_ACTIVE_END`/`HEARTBEAT_AGENT` env block from `docker-compose.yml`. Replaced the legacy daemon-launch block in `install/entrypoint.sh` with a one-line comment pointing at `.devcontainer/entrypoint.sh`'s system-cron tmux session, removed the `/usr/local/bin/heartbeat-daemon` symlink from `.devcontainer/entrypoint.sh` (would have dangled now that the daemon dist is gone), and changed the `install/banner.sh` shortcuts line from `heartbeat-daemon status` to `tmux attach -t system-cron`. Updated `cli.test.ts` to assert the heartbeat group is gone (and dropped its membership in `HOST_ONLY_COMMANDS` negation) and `tools.test.ts` to expect 12 tools instead of 13 with `sandbox_heartbeat` removed from the explicit list. Deleted the orchestrator skill at `.claude/skills/heartbeat/`. CHANGELOG `[Unreleased] ### Removed` entry references #210 and is marked BREAKING. Lint clean; 210 tests pass (201 sandbox + 9 cron-runtime).
+
+### Learnings for future iterations
+
+- The PRD AC says "Strip heartbeat watchdog from install/banner.sh", but the actual watchdog (the `gosu sandbox heartbeat-daemon start ... &` block) lives in `install/entrypoint.sh`, not `install/banner.sh`. `banner.sh` only had a one-line shortcut text. Treat the AC as covering both.
+- `.devcontainer/entrypoint.sh` had **two** heartbeat references: the `HB_TARGET="…/heartbeat-daemon.js"` symlink in the CLI build block (lines ~191–219), and the new croner tmux launcher's comment that references the legacy block. Strip the symlink lines (HB_TARGET decl, `ln -sf "$HB_TARGET"`, `chmod +x` of it, and the `+ heartbeat-daemon installed` echo string) — the tmux comment can stay since it documents the replacement.
+- `packages/sandbox/src/index.ts` re-exports the tool symbols by name; deleting `heartbeatTool` from `tools/index.ts` requires editing this file too or the build breaks with `Module has no exported member`.
+- `cli.test.ts` and `tools.test.ts` both have positive-lists asserting expected commands/tools. After deletes you must (a) remove the symbol from the positive list, (b) flip the count assertion, (c) replace any "registers heartbeat group" describe block with an "is gone" describe block — leaving the original would fail because `program.commands.find(c => c.name() === "heartbeat")` returns undefined.
+- `pnpm run test` runs both packages/sandbox vitest **and** the root-level scripts vitest sequentially; total ~210 tests after this iteration.
+- `packages/sandbox/dist/` is git-ignored and the entrypoint rebuilds it on container boot; safe to `rm -rf` between iterations to verify the build still succeeds without ever-stale compile artifacts.
+- Many doc files (`docs/heartbeats/`, `docs/architecture/daemon.md`, `docs/architecture/worktrees.md`) still reference the daemon. Out of scope for US-005 (its AC is code-only); US-009 will rewrite those docs.
+- `install/entrypoint.sh` is a **separate** script from `.devcontainer/entrypoint.sh` (legacy install path). Both live in the repo and both need heartbeat-daemon references removed. Future stories that touch entrypoint logic should remember to grep both.
+
+---
+

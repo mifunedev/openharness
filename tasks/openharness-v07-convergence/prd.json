@@ -179,8 +179,8 @@
                 "Typecheck passes"
             ],
             "priority": 10,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 10 on 2026-05-02; CLAUDE.md rewritten (Setup/Validate/Teardown use docker compose; Skills table trimmed to release/ci-status/cloudflared-tunnel/agent-browser; Permissions+What-You-Do drop oh/openharness CLI; Project Structure drops packages/sandbox + adds scripts/+crons/); .claude/skills/cloudflared-tunnel/SKILL.md drops the oh expose intro; .claude/skills/ci-status/SKILL.md updates workflow name to 'CI: Harness'; workspace/AGENTS.md already had no oh references; grep gate passes"
         },
         {
             "id": "US-011",

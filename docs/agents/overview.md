@@ -15,7 +15,7 @@ Open Harness makes this practical by giving each agent:
 
 - **Its own worktree** — separate branch, no merge conflicts mid-task.
 - **Its own SOUL** — a `SOUL.md` persona file that shapes the agent's tone and priorities.
-- **Its own schedule** — heartbeat files in `workspace/heartbeats/` drive cron-based autonomous runs independent of what other agents are doing.
+- **Its own schedule** — `.md` files in `crons/` drive cron-based autonomous runs through the croner runtime.
 
 ## Supported agents
 

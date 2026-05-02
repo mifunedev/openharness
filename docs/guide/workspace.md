@@ -81,9 +81,9 @@ The `memory/` directory contains daily logs in `YYYY-MM-DD.md` format. Each entr
 
 Logs are append-only. Agents distill durable lessons from them into `MEMORY.md` periodically.
 
-## Heartbeats
+## Scheduled work
 
-The `heartbeats/` directory contains heartbeat task definitions — markdown files with YAML frontmatter (`schedule`, `agent`, `active` fields). See the [Heartbeats guide](../heartbeats/overview.md) for details.
+Recurring tasks live in `crons/` at the repo root, not inside `workspace/`. Each `.md` file has YAML frontmatter (`id`, `schedule`, `timezone`, `enabled`, `overlap`, `catchup`) and a body that is passed to the agent CLI when the schedule fires. The croner runtime starts in the `system-cron` tmux session via `.devcontainer/entrypoint.sh`. See SPEC v0.7 §"Croner runtime" for the full contract.
 
 ## Application code
 

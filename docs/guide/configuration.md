@@ -31,14 +31,13 @@ The `.example.env` file contains all available variables with comments explainin
 |----------|---------|-------------|
 | `TZ` | `America/Denver` | Container timezone. Affects cron schedules, log timestamps, and time-aware tools inside the sandbox. |
 
-### Heartbeats
+### Crons
 
-Heartbeats are cron-scheduled tasks that run an AI agent CLI inside the sandbox on a recurring schedule (e.g., hourly issue triage). Each heartbeat is a `.md` file in `workspace/heartbeats/` with YAML frontmatter defining its schedule, agent, and active hours. See the [heartbeats guide](../heartbeats/overview.md) for details.
+Recurring tasks are `.md` files in `crons/` at the repo root, parsed by the croner runtime (see SPEC v0.7 §"Croner runtime"). Each file's YAML frontmatter sets `id`, `schedule`, `timezone`, `enabled`, `overlap`, `catchup`; the body is passed to the agent CLI when the schedule fires. The runtime launches in the `system-cron` tmux session at container start.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HEARTBEAT_AGENT` | `claude` | Default agent CLI for heartbeats without an `agent` frontmatter field. Options: `claude`, `codex`, `pi`. |
-| `HEARTBEAT_INTERVAL` | `1800` | Default interval (seconds) for legacy `HEARTBEAT.md` fallback. Only used when `workspace/heartbeats/` does not exist. |
+| `CRON_AGENT_BIN` | `claude` | Agent binary the croner runtime invokes when a schedule fires. The body of the `.md` is passed as the prompt. |
 
 ### SSH (overlay)
 

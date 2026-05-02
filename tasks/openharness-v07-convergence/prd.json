@@ -212,8 +212,8 @@
                 "Typecheck passes"
             ],
             "priority": 12,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 12 on 2026-05-02; deleted .claude/skills/{delegate,harness-audit,strategic-proposal,skill-lint,prd,ralph}/, converted .claude/skills/{provision,destroy,repair}/ to docs/operations/{provision,destroy,repair}.md (docker compose-based equivalents), deleted stale heartbeat/daemon/worktree-discovery docs (docs/heartbeats/, docs/architecture/daemon.md, docs/architecture/worktrees.md), patched incidental heartbeat refs in docs/guide/{configuration,workspace}.md + docs/agents/{overview,claude-code}.md to point at croner+crons/, opened ryaneggz/mifune#1 (cloudflared-tunnel pack-side counterpart) and ryaneggz/mifune#2 (agent-browser pack-side counterpart); orchestrator skill set is now exactly 4 (release, ci-status, cloudflared-tunnel, agent-browser); grep gate passes; CLAUDE.md skills table already aligned in US-010"
         },
         {
             "id": "US-013",

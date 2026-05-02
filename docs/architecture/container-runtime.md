@@ -122,7 +122,7 @@ open-harness/
 │   ├── MEMORY.md               # long-term memory (learned decisions, lessons)
 │   ├── heartbeats/             # heartbeat task definitions (frontmatter .md files)
 │   ├── startup.sh              # runs on container boot after onboarding
-│   ├── memory/                 # daily activity logs (YYYY-MM-DD.md)
+│   ├── memory/                 # daily activity logs (memory/YYYY-MM-DD/log.md)
 │   ├── .claude/
 │   │   ├── rules/              # coding standards (git, code-quality, nextjs, api, etc.)
 │   │   ├── skills/             # reusable skill definitions

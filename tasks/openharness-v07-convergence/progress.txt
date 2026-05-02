@@ -300,3 +300,24 @@ Stripped the workspace template down to an agent-runtime-agnostic skeleton per S
 - **pnpm `--if-present run lint`** silently passes when no workspace package has a `lint` script. Root `package.json` doesn't define `lint`, and neither do the surviving sandbox packages — so `pnpm run lint` is a no-op now. The actual lint coverage from US-013's deletion mass is `pnpm run test` (which runs the cron-runtime vitest at root). If any future story adds a real linter, this will start producing output again.
 
 ---
+
+## US-014 — 2026-05-02 15:18 UTC
+
+**Title**: Migrate memory structure to directory-per-day
+**Files changed**: docs/guide/workspace.md (tree comment + daily-logs paragraph), docs/guide/identity.md (3 lines: file table + how-memory-works + memory-protocol step), docs/architecture/container-runtime.md (workspace tree comment), CHANGELOG.md (Unreleased Changed entry), tasks/openharness-v07-convergence/prd.json (passes:true)
+**Commit**: <pending>
+**Result**: PASS
+
+### What I did
+
+Confirmed the AC's grep gate (`memory/[0-9]{4}-[0-9]{2}-[0-9]{2}\.md`) already returns zero hits in tracked files — `workspace/memory/` was deleted in US-013 and a root-level `memory/` directory never existed. The only remaining flat-format references were placeholder strings (`memory/YYYY-MM-DD.md`) in three tracked docs files; aligned them all to the canonical `memory/YYYY-MM-DD/log.md` directory-per-day form per SPEC v0.7 §"Memory structure". Patched `docs/guide/workspace.md` (the tree-comment line and the daily-logs paragraph that described entry format), `docs/guide/identity.md` (the file table row, the how-it-works paragraph, and the memory-protocol step), and `docs/architecture/container-runtime.md` (one workspace-tree comment). The two AC items about updating `.claude/skills/repair/SKILL.md` and `CLAUDE.md` were no-ops: repair was deleted in US-012, and CLAUDE.md never referenced memory format. CHANGELOG `[Unreleased] ### Changed` entry references #210. Lint clean; 9 cron-runtime tests pass.
+
+### Learnings for future iterations
+
+- **The grep gate's regex is the literal date pattern (`[0-9]{4}-[0-9]{2}-[0-9]{2}\.md`), not the placeholder string `YYYY-MM-DD.md`.** Tracked files had only placeholder hits (which the regex doesn't match), so the AC's grep gate was already passing before any edits. Future stories with grep-gate ACs: read the regex carefully and verify whether the gate is the actual coverage objective or whether placeholder/example strings are also in scope. For US-014 I went beyond the literal gate to align placeholder strings — the SPEC migration's intent is clearly to make directory-per-day canonical everywhere, not just in dated examples.
+- **`.claude/plans/` and `.worktrees/` both have stale flat-format references but are gitignored** — `.claude/plans/txt-yes-in-fluttering-sutton.md` (gitignored) and several `.worktrees/agent/*` checkouts carry the old `memory/YYYY-MM-DD.md` form. Use `git ls-files | xargs grep` (not `grep -rn`) when verifying tracked-file gates so worktree leaks don't false-positive.
+- **`docs/guide/workspace.md` and `docs/architecture/container-runtime.md` are very stale post-US-013.** They still describe the old pi-coupled workspace template (HEARTBEAT.md/IDENTITY.md/MEMORY.md/SOUL.md/TOOLS.md/USER.md, .slack/MEMORY.md, packages/sandbox/) — all deleted. US-014's scope is narrowly memory-format, so I left the broader staleness untouched. A follow-up editorial story (or US-016/017's pre-release sweep) should rewrite the workspace tree to match the post-US-013 stub. Same for `docs/architecture/container-runtime.md` lines ~95-140 which describe the deleted CLI source layout.
+- **CHANGELOG `### Changed` for editorial-only stories goes ABOVE the BREAKING block.** I placed the new entry as the first bullet under `### Changed` (above the CLAUDE.md/install.sh/README BREAKINGs). This matches "most-recent first" within each category — the codebase pattern at the top of progress.txt confirms this. Don't append to the bottom.
+- **The cron-runtime body of `crons/cleanup-tasks.md` already uses the directory form** (`memory/$TODAY/tasks/<taskdesc>/`, `memory/$TODAY/log.md`) — so no edits were needed in `crons/`. Same for `crons/heartbeat.md` (`memory/<today>/log.md`). The croner-side substrate is already SPEC v0.7-compliant; only the docs/ surface needed alignment.
+
+---

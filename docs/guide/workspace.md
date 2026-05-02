@@ -22,7 +22,7 @@ workspace/
   heartbeats/           # Heartbeat task definitions (frontmatter .md files)
   startup.sh            # Runs on container boot after onboarding
 
-  memory/               # Daily activity logs (YYYY-MM-DD.md)
+  memory/               # Daily activity logs (memory/YYYY-MM-DD/log.md)
   wiki/                 # LLM-maintained knowledge base
     index.md            # Master catalog of all wiki pages
     log.md              # Operations log (append-only)
@@ -68,7 +68,7 @@ When the agent learns something new, it writes to the appropriate file:
 
 ## Daily activity logs
 
-The `memory/` directory contains daily logs in `YYYY-MM-DD.md` format. Each entry follows a structured format:
+The `memory/` directory uses one directory per day (`memory/YYYY-MM-DD/`). The day's append-only log is `log.md`; ad-hoc artifacts (decisions, transcripts, archived task folders) live alongside it. Per SPEC v0.7 §"Memory structure" the directory-per-day form is canonical; flat `memory/<date>.md` files are deprecated. Each `log.md` entry follows a structured format:
 
 ```markdown
 ## [Activity] — HH:MM UTC

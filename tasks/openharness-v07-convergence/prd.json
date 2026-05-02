@@ -130,8 +130,8 @@
                 "Typecheck passes"
             ],
             "priority": 7,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 7 on 2026-05-02; install.sh rewritten as docker-compose-only installer (654→291 LOC); removed detect_node/install_nvm/choose_path/resolve_mode, --cli/--with-cli/--install-node flags, packages/sandbox detection, pnpm setup + pnpm link --global block; next-steps now print docker exec + docker compose down -v; lint clean + 9 cron-runtime tests pass"
         },
         {
             "id": "US-008",

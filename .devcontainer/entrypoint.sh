@@ -218,35 +218,21 @@ if [ -f "$HARNESS/packages/sandbox/package.json" ]; then
   fi
 fi
 
-# ─── Start heartbeat daemon (with watchdog) ──────────────────────
-WORKSPACE="/home/sandbox/harness/workspace"
-DAEMON_SCRIPT="/home/sandbox/harness/packages/sandbox/dist/src/cli/heartbeat-daemon.js"
-HB_LOG="$WORKSPACE/heartbeats/heartbeat.log"
-mkdir -p "$WORKSPACE/heartbeats"
-# Ensure heartbeat.log is sandbox-writable (entrypoint's tee runs as root and
-# would otherwise create it root-owned, making the daemon crash-loop on EACCES).
-touch "$HB_LOG" 2>/dev/null || true
-chown sandbox:sandbox "$HB_LOG" 2>/dev/null || true
-if command -v heartbeat-daemon &>/dev/null; then
-  (
-    while true; do
-      gosu sandbox heartbeat-daemon start 2>&1 | tee -a "$HB_LOG"
-      EXIT_CODE=$?
-      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] heartbeat-daemon exited ($EXIT_CODE), restarting in 5s..." >> "$HB_LOG"
-      sleep 5
-    done
-  ) &
-  echo "[entrypoint] heartbeat daemon started with watchdog (pid $!)"
-elif [ -f "$DAEMON_SCRIPT" ]; then
-  (
-    while true; do
-      gosu sandbox node "$DAEMON_SCRIPT" start 2>&1 | tee -a "$HB_LOG"
-      EXIT_CODE=$?
-      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] heartbeat-daemon exited ($EXIT_CODE), restarting in 5s..." >> "$HB_LOG"
-      sleep 5
-    done
-  ) &
-  echo "[entrypoint] heartbeat daemon started with watchdog via fallback (pid $!)"
+# ─── Start cron runtime in tmux session ────────────────────────────
+# Per SPEC v0.7 §"Croner runtime" + .claude/rules/sandbox-processes.md.
+# Replaces the legacy heartbeat-daemon watchdog. Runs as sandbox user
+# inside the system-cron tmux session; logs tee to /tmp/system-cron.log.
+CRONS_DIR="$HARNESS/crons"
+mkdir -p "$CRONS_DIR"
+chown -R sandbox:sandbox "$CRONS_DIR" 2>/dev/null || true
+if [ -f "$HARNESS/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
+  if ! gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
+    gosu sandbox tmux new-session -d -s system-cron \
+      "cd $HARNESS && node --experimental-strip-types scripts/cron-runtime.ts 2>&1 | tee /tmp/system-cron.log"
+    echo "[entrypoint] system-cron tmux session started (cron-runtime.ts)"
+  else
+    echo "[entrypoint] system-cron tmux session already running — skipping"
+  fi
 fi
 
 # ─── Optional: agent-browser (opt-in via INSTALL_AGENT_BROWSER=true) ──

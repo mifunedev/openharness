@@ -276,8 +276,8 @@
                 "Typecheck passes"
             ],
             "priority": 16,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 16 on 2026-05-02; confirmed packages/sandbox/src/harness/ no longer exists (deleted with US-006); opened ryaneggz/open-harness#211 capturing v0.8 pack-contract redesign requirements (URL allowlisting, signature/SHA verification, sandboxed install, command-injection-safe spawnSync, path-traversal validation for overlays, atomic registry write); added CHANGELOG [Unreleased] ### Removed entry tagged BREAKING + referencing #210 + #211 per AC #3"
         },
         {
             "id": "US-017",

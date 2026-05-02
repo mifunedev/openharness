@@ -188,34 +188,6 @@ if echo "$@" | grep -q sshd; then
   fi
 fi
 
-# Build and link openharness CLI (from bind-mounted repo)
-# Runs on every boot: install deps + build only if dist is missing or stale,
-# always re-symlink so container recreation (fresh /usr/local/bin/) re-establishes PATH entries.
-CLI_TARGET="$HARNESS/packages/sandbox/dist/src/cli/index.js"
-
-if [ -f "$HARNESS/packages/sandbox/package.json" ]; then
-  if [ ! -f "$CLI_TARGET" ] || [ "$HARNESS/packages/sandbox/package.json" -nt "$CLI_TARGET" ]; then
-    echo "[entrypoint] building openharness CLI..."
-    (
-      cd "$HARNESS"
-      gosu sandbox pnpm install --frozen-lockfile \
-        || gosu sandbox pnpm install \
-        || echo "[entrypoint] WARN: pnpm install failed"
-      gosu sandbox pnpm --filter @openharness/sandbox run build \
-        || echo "[entrypoint] WARN: pnpm build failed"
-    )
-  fi
-
-  if [ -f "$CLI_TARGET" ]; then
-    ln -sf "$CLI_TARGET" /usr/local/bin/openharness
-    ln -sf "$CLI_TARGET" /usr/local/bin/oh
-    chmod +x /usr/local/bin/openharness /usr/local/bin/oh
-    echo "[entrypoint] openharness CLI (alias: oh) installed"
-  else
-    echo "[entrypoint] ERROR: $CLI_TARGET not found after build — CLI not installed"
-  fi
-fi
-
 # ─── Start cron runtime in tmux session ────────────────────────────
 # Per SPEC v0.7 §"Croner runtime" + .claude/rules/sandbox-processes.md.
 # Replaces the legacy heartbeat-daemon watchdog. Runs as sandbox user

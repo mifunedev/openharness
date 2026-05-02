@@ -114,8 +114,8 @@
                 "Typecheck passes"
             ],
             "priority": 6,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 6 on 2026-05-02; deleted packages/sandbox/ (44MB workspace), .github/workflows/build.yml (duplicate ghcr.io/ryaneggz/open-harness image producer), .github/workflows/ci.yml (sandbox-only CI now stale), the link:cli script from root package.json, the packages/sandbox entry from pnpm-workspace.yaml, and the CLI build/symlink block in .devcontainer/entrypoint.sh; pnpm-lock.yaml regenerated (-49 packages); release.yml stands alone as image producer for ghcr.io/ryaneggz/openharness; tests 9/9 lint clean"
         },
         {
             "id": "US-007",

@@ -305,7 +305,7 @@ Stripped the workspace template down to an agent-runtime-agnostic skeleton per S
 
 **Title**: Migrate memory structure to directory-per-day
 **Files changed**: docs/guide/workspace.md (tree comment + daily-logs paragraph), docs/guide/identity.md (3 lines: file table + how-memory-works + memory-protocol step), docs/architecture/container-runtime.md (workspace tree comment), CHANGELOG.md (Unreleased Changed entry), tasks/openharness-v07-convergence/prd.json (passes:true)
-**Commit**: <pending>
+**Commit**: 32436cc
 **Result**: PASS
 
 ### What I did

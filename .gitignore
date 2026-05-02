@@ -44,6 +44,7 @@ workspace/startup.sh
 **/.claude/plans
 **/.claude/specs/*
 !**/.claude/specs/install-prereq-detection.md
+!**/.claude/specs/structure-spec-v0.7.md
 **/auth.json
 **/.credentials.json
 **/scheduled_tasks.lock

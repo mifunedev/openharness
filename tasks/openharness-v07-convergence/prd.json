@@ -296,5 +296,6 @@
             "priority": 17,
             "passes": false,
             "notes": "BLOCKED iteration 17 on 2026-05-02; release tagging is human-gated and out of the Ralph loop's reach from a task branch — AC#1 requires PR merge to development then to main (orchestrator cannot merge); AC#3 requires pushing release/<VERSION> branch + tag <VERSION> from the source branch (.claude/rules/git.md § Releases), which the orchestrator is forbidden from doing from dev/main; ACs #4-7 depend on the tag triggering release.yml. CHANGELOG promotion is intentionally NOT done on this task branch (the /release skill performs the promotion on the source branch at tag time). Handoff: after this task branch merges into development → main, a maintainer runs /release from main; the skill computes VERSION = 2026.5.2 (today's first release; 2026.5.1 already exists), promotes [Unreleased] → [2026.5.2], pushes release/2026.5.2 + tag 2026.5.2, and verifies via docker run --rm ghcr.io/ryaneggz/openharness:latest which pi/oh both return non-zero. STATUS: COMPLETE appended to progress.txt because all in-loop convergence work is done (16/17 stories pass); only the post-merge release tag remains."
+        }
     ]
 }

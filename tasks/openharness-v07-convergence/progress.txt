@@ -342,3 +342,24 @@ Moved the completed task folder to its SPEC v0.7 weekly-cleanup destination per 
 - **Pre-commit hook output now confirms test pass via the `git commit` shell return.** Husky runs `pnpm run lint && pnpm run test` against the staged tree as part of commit; the test summary appears in commit-output stderr and a non-zero exit aborts the commit. No need to also run `pnpm run test` separately before the commit unless you want to see the result earlier.
 
 ---
+
+## US-016 — 2026-05-02 15:23 UTC
+
+**Title**: Defer pack security gaps to v0.8 issue
+**Files changed**: CHANGELOG.md (Unreleased Removed entry, BREAKING), tasks/openharness-v07-convergence/prd.json (passes:true + notes)
+**Commit**: 0575619
+**Result**: PASS
+
+### What I did
+
+Confirmed `packages/sandbox/src/harness/` no longer exists (deleted in US-006 with the rest of `packages/sandbox/`). Opened `ryaneggz/open-harness#211` (`feat: v0.8 pack contract redesign (security-first installer)`) capturing the security requirements for the eventual v0.8 redesign per US-016 AC #2: URL allowlisting (npm + git+https-with-sha + file: only), signature/SHA verification (npm tarball SHA, git immutable commit SHA — tag/branch refs rejected), sandboxed install (sandbox user, never root; writes scoped to `~/.openharness/packs/<rev>/` + merge targets), command-injection-safe `spawnSync` (array argv, never shell strings, regex-anchored input validation), path-traversal validation for compose overlays (`path.resolve` + `startsWith(packRoot)` ancestor check, symlink rejection), atomic registry write (temp + rename). Issue body cross-references SPEC v0.7 §"Harness Packs" + §"Pack mechanism status in v0.7" and #210; AC checklist mirrors the security invariants. Added CHANGELOG `[Unreleased] ### Removed` entry tagged BREAKING noting the v1 install path is `git clone` + manual `cp` per the pack's README, with a forward link to #211 for the v0.8 redesign. Lint clean; 9/9 cron-runtime tests pass.
+
+### Learnings for future iterations
+
+- **Issue templates use markdown filenames, not labels.** `.github/ISSUE_TEMPLATE/feat.md` exists but `gh issue create` doesn't auto-pick it; pass `--label enhancement` (the `feat.md` template's frontmatter `labels:` field) explicitly. Available repo labels: `bug`, `enhancement`, `task`, `agent`, `documentation`, `roadmap`, etc. — there's no `feat` label, so pre-existing v0.7 convergence tickets are filed under `task` with `[TASK]` title prefix; new feature requests use `enhancement`.
+- **Cross-repo issue linking via `Refs:` body line.** Mifune issues #1 and #2 in US-012 used the form `Refs: ryaneggz/open-harness#210` (dash-separated). I followed the same shape in #211's body for the back-reference to #210. This style produces clean back-references in both directions even when the target is the same repo (#211's `Refs: #210` would also work, but the cross-repo form is more durable if the issue ever migrates).
+- **The v0.7 convergence intentionally trades security exposure for code-deletion.** US-006 deleted the vulnerable `packages/sandbox/src/harness/` outright rather than patching the gaps in place — the rationale is in SPEC v0.7 §"Pack mechanism status in v0.7": there are no users of `oh harness add` yet, so removing the surface is a safer migration than fixing it. The v0.8 redesign happens after v0.7 ships and the contract is locked. Future stories that consider patching legacy code should weigh "delete-then-rebuild" against "patch-in-place" — for low-traffic surfaces the former is often cleaner.
+- **The CHANGELOG `### Removed` "no-op deletion" pattern.** US-016's CHANGELOG entry doesn't change shipped code (the deletion landed in US-006). It documents what's *no longer available* via the `oh harness add` interface and forward-links the v0.8 successor. This is the right shape for editorial-only stories that conclude a deletion arc — they belong in `### Removed` not `### Changed` because the user-facing surface (the command/contract) is permanently gone in this release. The v0.8 redesign will land in a separate (post-v0.7) release with its own CHANGELOG entry.
+- **`gh issue create` exits with the URL to stdout** — capture it (or `--json` it) for the progress log. The created-issue number can also be retrieved post-hoc via `gh issue list --search '<title-substring>'`.
+
+---

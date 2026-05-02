@@ -238,7 +238,7 @@ Rewrote CLAUDE.md (the orchestrator instruction file) for docker-compose-only fl
 
 **Title**: Archive multi-agent blogs and write anti-ICP
 **Files changed**: blog/2026-04-29-worktree-per-agent.md (deleted), blog/2026-04-28-byoh.md → blog/archive/2026-04-28-byoh.md (moved + archived:true frontmatter + v1-framing top note), .claude/ICP.md (new), docs/agents/overview.md (drop side-by-side wording), CHANGELOG.md (Unreleased Removed + Added entries), tasks/openharness-v07-convergence/prd.json (passes:true)
-**Commit**: <to-fill>
+**Commit**: 9a0ea70
 **Result**: PASS
 
 ### What I did

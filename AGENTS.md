@@ -140,7 +140,7 @@ docs/                 # Plain markdown documentation (GitHub-rendered, no build 
 install/              # Provisioning scripts (entrypoint.sh, cloudflared-tunnel.sh, setup.sh, tmux-agent.sh)
 scripts/              # Root-level orchestrator scripts (cron-runtime.ts, ralph.sh)
 crons/                # Markdown-frontmatter cron definitions (heartbeat.md, cleanup-tasks.md)
-workspace/            # Template for the agent workspace (bind-mounted into the sandbox)
+workspace/            # Minimal agent-runtime template (bind-mounted; pack supplies identity, skills, agents)
 .github/ISSUE_TEMPLATE/  # agent, audit, bug, feature, skill, task
 .claude/skills/          # Orchestrator skills (release, ci-status, cloudflared-tunnel, agent-browser)
 .claude/specs/           # Architecture specs and decision records

@@ -1,161 +1,24 @@
-# Operating Procedures
+# Workspace
 
-## Rules
+The agent's working area, bind-mounted into the sandbox at `/home/sandbox/harness/workspace`. State persists across container restarts.
 
-1. Read IDENTITY.md, USER.md, MEMORY.md at session start
-2. Work within `workspace/` — persists across restarts
-3. Don't modify `~/install/` (provisioning scripts)
-4. `.claude/rules/` loads automatically
-5. After `git push`, run `/ci-status` — work not done until CI green
-6. Never push `main` or `development` — feature branches + PRs
-7. Never skip pre-commit hooks (`--no-verify`)
-8. Memory protocol end of every task (below)
-9. `CLAUDE.md` symlinks `AGENTS.md`; `MEMORY.md` symlinks `.slack/MEMORY.md`
-10. Run `/repair` end of session — verify stack health
+This template ships intentionally minimal — agent identity, memory, skills, and routines are supplied by a harness pack you install (e.g. `@ryaneggz/mifune`), not by this directory.
 
-## File Responsibilities
+## What lives here
 
-| File | Owns | Does NOT contain |
-|------|------|-----------------|
-| IDENTITY.md | Name, role, mission, stack, URLs | Procedures, personality |
-| USER.md | Owner prefs, constraints, goals | Stack details, procedures |
-| SOUL.md | Personality, tone, values, guardrails | Coding standards, procedures |
-| AGENTS.md | Operating procedures, decision rules | Environment details, tool reference |
-| TOOLS.md | Environment, tools, services, workflows | Personality, procedures |
-| HEARTBEAT.md | Meta-maintenance routines | Task heartbeats (in `heartbeats/`) |
-| MEMORY.md | Learned decisions, lessons, triage history | Static stack info (in IDENTITY.md) |
+- `.claude/rules/` — coding rules auto-loaded by Claude Code (`code-quality.md`, `git.md`, `token-conservation.md`).
+- `.claude/.example.env.claude` — template for credentials the agent runtime needs.
+- `.claude/settings.local.json` — Claude Code project-local settings (permissions, hooks).
+- `startup.sh` — dev-server bootstrap, called from the container entrypoint.
 
-## Decision Rules
+## Where things go that aren't here
 
-- Personality/tone -> SOUL.md
-- User preference/constraint -> USER.md
-- Tool/service/workflow -> TOOLS.md
-- Operating rule/procedure -> AGENTS.md
-- Learned fact/pattern -> MEMORY.md
-- Domain knowledge from external doc -> docs/wiki/pages/
-- Maintenance check -> HEARTBEAT.md
-- Coding standard -> `.claude/rules/`
+- Scheduled tasks → `crons/*.md` at the repo root, executed by `scripts/cron-runtime.ts`.
+- Memory → `memory/YYYY-MM-DD/` directories at the repo root, created on demand.
+- Pack-supplied identity, skills, and sub-agents → wherever the pack's README specifies.
 
-## Response Style
+## Operating rules
 
-- Lead with code, not explanations
-- Terse. Fragments OK. See `token-conservation.md` rule.
-- Commits: `<type>(#<issue>): <description>`
-- PRs target `development`
-
-## Memory Protocol
-
-End of every task (heartbeat, skill, interactive):
-
-1. **Log**: Append to `memory/YYYY-MM-DD.md`
-2. **Qualify**: Durable learning? Recurring pattern? Skill improvement?
-3. **Improve**: Yes → update MEMORY.md. No → move on.
-4. **Never skip**: Even no-ops logged.
-
-```markdown
-## [Activity] — HH:MM UTC
-- **Result**: OP | NO-OP | SKIP
-- **Item**: #<N> "<description>" (or "none")
-- **Action**: [what was done]
-- **Duration**: ~Xs
-- **Observation**: [one sentence]
-```
-
-## Wiki Protocol
-
-Wiki = persistent, LLM-maintained knowledge base for structured domain knowledge from external sources. Lives in `docs/wiki/`. Distinct from memory system.
-
-**Memory vs Wiki:**
-- **Memory** (MEMORY.md + memory/) = operational self-awareness — decisions, patterns, lessons from work
-- **Wiki** (docs/wiki/) = structured domain knowledge — entities, concepts, synthesis from external docs
-
-### Directory Structure
-
-| Path | Contents |
-|------|----------|
-| `docs/wiki/index.md` | Master catalog — titles, types, tags, dates |
-| `docs/wiki/log.md` | Operations log (append-only, rotated at 200) |
-| `docs/wiki/sources/` | Raw input docs (immutable after ingest) |
-| `docs/wiki/pages/` | LLM-generated pages (entity, concept, synthesis) |
-
-### Page Types
-
-| Type | Sources | Description |
-|------|---------|-------------|
-| `entity` | Raw sources | Person, org, project, tool, product |
-| `concept` | Raw sources | Idea, framework, methodology, pattern |
-| `synthesis` | Other pages | Cross-cutting theme connecting multiple pages |
-
-### Operations
-
-- **Ingest** (`/wiki-ingest`): source → extract topics → create/update pages → update index + log
-- **Query** (`/wiki-query`): question → search index → read pages → synthesize → optionally file back as synthesis
-- **Lint** (`/wiki-lint`): health-check — index corruption, orphans, phantoms, stale pages, broken refs, tag drift
-
-### Where Does This Go?
-
-| Signal | Destination |
-|--------|-------------|
-| Learned from work | MEMORY.md |
-| Extracted from external doc | docs/wiki/pages/ |
-| Operational decision/preference | MEMORY.md |
-| Domain fact/entity info | docs/wiki/pages/ |
-| Recurring behavioral pattern | MEMORY.md |
-| Relationship between external concepts | docs/wiki/pages/ (synthesis) |
-
-## Skills
-
-| Skill | When |
-|-------|------|
-| `/ci-status` | After `git push` — poll CI, report pass/fail |
-| `/repair` | Repair stack — detect env, test, auto-remediate |
-| `/release` | CalVer release — branch, tag, push, GHCR |
-| `/destroy` | Tear down — stop containers, remove volumes |
-| `/delegate` | Decompose plan → parallel worker agents |
-| `/heartbeat` | Create heartbeat and sync daemon — immediately live |
-| `/compress` | Compress identity files/rules (~46% token savings) |
-| `/prd` | Generate Product Requirements Document |
-| `/ralph` | Convert PRD to `.ralph/prd.json` |
-| `/quality-gate` | Validate decisions against thresholds |
-| `/strategy-review` | Measure decision quality over time |
-| `/backlog-rank` | Rank issues by PM criteria |
-| `/strategic-proposal` | 5 experts + AI council → roadmap |
-| `/implement` | Top roadmap item → Ralph loop → draft PR |
-| `/issue-triage` | Triage issues with sub-agents + council |
-| `/wiki-ingest` | Process sources into wiki pages — `docs/wiki/sources/` → `docs/wiki/pages/` |
-| `/wiki-query` | Search wiki, synthesize answers, optionally file back as synthesis |
-| `/wiki-lint` | Health-check wiki — orphans, broken refs, stale pages, tag drift, index integrity |
-| `/eval-conciseness` | Score conciseness — filler-word density gate |
-
-After `git push` → `/ci-status`. Not done until CI green.
-
-## Heartbeats
-
-- Definition: YAML frontmatter in `heartbeats/*.md` (`schedule`, `agent`, `active` fields)
-- Create: `/heartbeat <description>` — writes file + syncs daemon automatically
-- Tasks: `heartbeats/` directory
-- Logs: `heartbeats/heartbeat.log`
-- Nothing to do → `HEARTBEAT_OK`
-
-## Sub-Agents
-
-Parallel agents in `.claude/agents/`:
-
-| Agent | Perspective |
-|-------|------------|
-| Implementer | "How I'd build this" |
-| Critic | "What could go wrong" |
-| PM | "How to break it down" |
-| Council | Synthesizes all three (opus) |
-| Expert: Product | Data models + features |
-| Expert: Docs | Docs + fork showcase |
-| Expert: Security | Auth + access control |
-| Expert: Registry | Docker registry + licensing |
-| Expert: Agent Systems | Agent capabilities |
-| Strategic Critic | Challenges roadmap |
-| Strategic Council | Synthesizes 5 proposals → roadmap (opus) |
-
-## Slack
-
-Slack bot: `tmux attach -t slack`. Shares skills, memory, agent config.
-Auto-starts when `SLACK_APP_TOKEN` + `SLACK_BOT_TOKEN` set.
+- Branch: feature branches off `development`; never push `main` or `development` directly.
+- Pre-commit hooks run lint + test; never use `--no-verify`.
+- After `git push`, run `/ci-status` (orchestrator skill) — work is not done until CI is green.

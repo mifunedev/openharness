@@ -352,8 +352,16 @@ in a future blog-authorship decision doc.
 `crons/cleanup-tasks.md` runs Sunday 23:00 local. For each
 `tasks/<taskdesc>/` whose `progress.txt` ends with `STATUS: COMPLETE`,
 it kills the matching tmux session (if any) and moves the folder to
-`memory/<today>/tasks/<taskdesc>/`. Incomplete tasks are left alone
+`tasks/archive/<today>/<taskdesc>/`. Incomplete tasks are left alone
 with a note appended to `memory/<today>/log.md`.
+
+This supersedes v0.6's `memory/<today>/tasks/<taskdesc>/` archive
+location: tasks live in one root (`tasks/`) at all times — active in
+`tasks/<taskdesc>/`, archived in `tasks/archive/<YYYY-MM-DD>/<taskdesc>/`.
+`memory/` is reserved for daily journal artifacts (`log.md`,
+`decisions.md`, `artifacts/`); it does not carry a `tasks/` subfolder.
+The two-namespace overload in v0.6 (root `tasks/` for active, daily
+`memory/.../tasks/` for archived) was a source of agent confusion.
 
 ## Open questions for v0.8
 

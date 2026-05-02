@@ -14,6 +14,9 @@
 - **Croner config knobs used.** `new Cron(expr, { timezone, protect, catch }, fn)` — `protect: true` is croner's overlap-prevention flag (drops fires while previous still running); `catch: true` swallows callback errors so the scheduler stays alive.
 - **Sandbox CLI source layout.** `packages/sandbox/src/index.ts` re-exports each `xxxTool` symbol by name — deleting one from `tools/index.ts` requires editing this file too or `tsc` fails at the re-export. Same for `cli.test.ts` (positive list of expected commands + a `not.toContain` block) and `tools.test.ts` (count assertion + `expectedTools` positive list). Adding/removing any CLI command or tool means touching all four files plus the `oh <verb>` description in CLAUDE.md if user-facing.
 - **Two entrypoint scripts.** `install/entrypoint.sh` (legacy install-path script) and `.devcontainer/entrypoint.sh` (compose entrypoint baked into the image at `/usr/local/bin/entrypoint.sh`) — when modifying boot behavior, grep both. The compose's `entrypoint:` line points at the latter, but the former is still in tree and was a live source of stale heartbeat-daemon launches.
+- **Pre-commit hook now runs root-level scripts.** `.husky/pre-commit` was rewritten in US-006 to `pnpm run lint && pnpm run test` (root) — it used to `cd packages/sandbox` which broke the moment that package was deleted. Future iterations that touch test infrastructure should expect lint+test to run via the root scripts, not from a workspace dir. Lockfile regen + frozen-lockfile install both work after the deletion.
+- **`pnpm-workspace.yaml` references stale husks.** `packages/slack` and `packages/web-ui` still exist as `dist/` + `node_modules/` directories with no `package.json`. `pnpm-workspace.yaml` lists `packages/slack` (but not `web-ui`); pnpm tolerates the mismatch silently (it scopes `--if-present`). Don't be surprised if a story instructs cleanup of these — they're not tracked in any current story but `git ls-files packages/` returns empty so they have no committed contents.
+- **CHANGELOG `### Removed` should consolidate per-story.** When a deletion-heavy story like US-006 lands, write the CHANGELOG entry as a single dense bullet rather than one bullet per file removed. Compare US-005's heartbeat entry (one paragraph naming all deletions) vs splitting into many bullets — the former reads better in release notes.
 
 ## US-001 — 2026-05-02 18:00 UTC
 
@@ -118,6 +121,28 @@ Deleted the 1,900-LOC heartbeat daemon now that the croner runtime (US-002–US-
 - `packages/sandbox/dist/` is git-ignored and the entrypoint rebuilds it on container boot; safe to `rm -rf` between iterations to verify the build still succeeds without ever-stale compile artifacts.
 - Many doc files (`docs/heartbeats/`, `docs/architecture/daemon.md`, `docs/architecture/worktrees.md`) still reference the daemon. Out of scope for US-005 (its AC is code-only); US-009 will rewrite those docs.
 - `install/entrypoint.sh` is a **separate** script from `.devcontainer/entrypoint.sh` (legacy install path). Both live in the repo and both need heartbeat-daemon references removed. Future stories that touch entrypoint logic should remember to grep both.
+
+---
+
+## US-006 — 2026-05-02 18:50 UTC
+
+**Title**: Delete packages/sandbox and build.yml workflow
+**Files changed**: packages/sandbox/ (deleted entire workspace; ~80 files), .github/workflows/build.yml (deleted), .github/workflows/ci.yml (deleted), pnpm-workspace.yaml (drop packages/sandbox entry), package.json (drop link:cli script), .devcontainer/entrypoint.sh (drop CLI build/symlink block, ~28 lines), .husky/pre-commit (rewrite to root-level lint+test), pnpm-lock.yaml (regen, -49 packages), CHANGELOG.md (Unreleased Removed entry), tasks/openharness-v07-convergence/prd.json (passes:true)
+**Commit**: d6c4886
+**Result**: PASS
+
+### What I did
+
+Deleted the `packages/sandbox/` workspace package (CLI binary, harness/, onboard/, lib/, tools/, tests, configs — 44MB on disk) and the duplicate `.github/workflows/build.yml` workflow that had been pushing `ghcr.io/ryaneggz/open-harness` (with hyphen) alongside the canonical `ghcr.io/ryaneggz/openharness` produced by `release.yml`. Also removed the now-stale `.github/workflows/ci.yml` (sandbox-only CI), the `link:cli` script from root `package.json`, and the `packages/sandbox` entry from `pnpm-workspace.yaml`. Stripped the CLI build/symlink block (lines 191-217 of pre-edit) from `.devcontainer/entrypoint.sh` that wired `/usr/local/bin/openharness` and `/usr/local/bin/oh` — without this strip, every container boot would have spawned a `pnpm --filter @openharness/sandbox run build` against a missing package. Rewrote `.husky/pre-commit` from `cd packages/sandbox && pnpm exec lint-staged && pnpm run build && pnpm run test` to `pnpm run lint && pnpm run test` (it was broken the moment the workspace was deleted). Regenerated `pnpm-lock.yaml` via `CI=true pnpm install --no-frozen-lockfile --prefer-offline` (-49 packages reused; install drops from 2 workspace projects to 1). Lint clean; 9/9 cron-runtime tests pass. The first-boot banner in entrypoint.sh that says `openharness onboard <name>` is left for US-010 (orchestrator-instructions editorial pass).
+
+### Learnings for future iterations
+
+- After removing `packages/sandbox/`, the **pre-commit hook breaks** until `.husky/pre-commit` is rewritten — so the deletion + hook fix must commit together. If you split them, the first commit will fail with `cd: can't cd to packages/sandbox`.
+- `pnpm install --frozen-lockfile` succeeded **after** the package deletion only because `pnpm-lock.yaml` was regenerated with `--no-frozen-lockfile` first. Future stories that delete a workspace must regen the lockfile in the same commit or CI will fail with `ERR_PNPM_OUTDATED_LOCKFILE`.
+- `release.yml` line 63-64 hardcodes `ghcr.io/ryaneggz/openharness` (no hyphen). This is the canonical image per SPEC v0.7 §"Image name". Verified `release.yml` is now the *sole* image producer in `.github/workflows/`. The drift between `open-harness` (hyphen) and `openharness` (no hyphen) is finally resolved.
+- The `.devcontainer/entrypoint.sh` first-boot banner still says `openharness onboard <name>` — a stale CLI reference. US-010 (orchestrator instructions) is the natural home for fixing it; treating it as editorial work kept US-006 focused on file-deletion mass per the story description.
+- Root `pnpm run test` is now: `pnpm -r --if-present run test && vitest run`. With `--if-present`, packages without `test` script (or no `package.json` at all in `packages/slack/`, `packages/web-ui/`) are silently skipped. Only the root-level `vitest run` for `scripts/__tests__/**` actually executes — 9 tests after this iteration.
+- The `link:cli` script (`pnpm --dir packages/sandbox link --global`) was the entry point for `oh` to be a globally-linked dev binary on the host. With the package gone, this script is meaningless. Any docs / install.sh that called `pnpm run link:cli` will fail; US-007 should account for this when rewriting `install.sh`.
 
 ---
 

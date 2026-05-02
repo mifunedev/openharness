@@ -147,8 +147,8 @@
                 "Typecheck passes"
             ],
             "priority": 8,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 8 on 2026-05-02; README.md/docs/intro.md/docs/quickstart.md rewritten for single-project framing; multi-agent CLI list dropped, Quickstart leads with docker compose up -d --build, all oh CLI references gone in these three files; grep side-by-side|comparison-shop returns zero hits"
         },
         {
             "id": "US-009",

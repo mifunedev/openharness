@@ -194,8 +194,8 @@
                 "Typecheck passes"
             ],
             "priority": 11,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 11 on 2026-05-02; deleted blog/2026-04-29-worktree-per-agent.md, moved blog/2026-04-28-byoh.md to blog/archive/ with archived:true + v1-framing note, created .claude/ICP.md with primary persona + JTBD + top-3 needs + 4-row anti-ICP table; stripped residual 'side-by-side' wording from docs/agents/overview.md; grep gate passes (zero hits in README/docs/blog excluding archive)"
         },
         {
             "id": "US-012",

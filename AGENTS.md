@@ -92,6 +92,12 @@ Remove the sandbox.
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
 | `/cloudflared-tunnel` | One-time named tunnel setup (remote mode) |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
+| `/prd` | Generate a new PRD from a feature description |
+| `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
+| `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
+| `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
+| `/skill-lint` | Score skills for staleness across 5 dimensions |
+| `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 
 For provision/destroy/repair workflows see `docs/operations/` — they are
 plain `docker compose` commands now, not skills.

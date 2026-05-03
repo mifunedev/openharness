@@ -94,9 +94,10 @@ Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
 |------|---------|-------------|
 | Claude Code | `claude` | Anthropic's coding agent (aliased to `claude --dangerously-skip-permissions`) |
 | OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --full-auto`) |
+| Pi | `pi` | `@mariozechner/pi-coding-agent` — local-first coding agent |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents |
 
-Pi Agent + Mom Slack bot ship in the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack. Install by cloning the pack into your sandbox and following its README.
+The Mom Slack bot ships in the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack. Install by cloning the pack into your sandbox and following its README.
 
 ### Runtimes & package managers
 
@@ -143,5 +144,7 @@ codex   → codex --full-auto
 Auth credentials survive container rebuilds via named Docker volumes:
 
 - `claude-auth` → `~/.claude` (Claude Code OAuth) — or, with the [`claude-host` overlay](./guide/overlays.md#sharing-host-claude-state-claude-host), a RW bind-mount of your host `~/.claude`.
+- `codex-auth` → `~/.codex` (Codex OAuth) — or, with the `codex-host` overlay, a RW bind-mount of your host `~/.codex`.
+- `pi-auth` → `~/.pi` (Pi Agent OAuth) — or, with the `pi-host` overlay, a RW bind-mount of your host `~/.pi`.
 - `cloudflared-auth` → `~/.cloudflared` (Cloudflare credentials)
 - `gh-config` → `~/.config/gh` (GitHub CLI tokens)

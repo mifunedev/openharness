@@ -42,7 +42,5 @@ bindkey -e
 # Aliases (mirror .bashrc)
 alias claude='claude --dangerously-skip-permissions'
 alias codex='codex --full-auto'
-alias pi='pi'
-alias mom='mom --sandbox=host ~/harness/workspace/.slack'
 
 cd ~/harness 2>/dev/null

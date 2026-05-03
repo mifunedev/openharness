@@ -2,6 +2,7 @@
 
 ## Codebase Patterns
 
+- PR/issue housekeeping stories may have no local code diff; use an explicit empty audit commit to record the external GitHub action and put the critic Risk Assessment in that commit body, then record Ralph state in a follow-up task commit.
 - Remote-branch prune stories need an explicit deletion set: if the age/PR gates produce zero eligible branches, run only local `git remote prune`/`fetch --prune` and document preserved backup branches with unique commits rather than broadening scope.
 - Worktree registrations can point at host-only paths while ignored in-repo directories with `.git` pointer files still exist; if the registered path is unreachable and there is no open PR, treat the local directory plus admin registration as stale cleanup candidates.
 - Deleting a script can leave dangling basename-only references even after exact `install/...` path greps pass; grep both the full path and the basename for removed helpers.
@@ -82,5 +83,20 @@ Generated the PRD candidate list and found zero remote branches meeting the >60-
 
 ### Learnings for future iterations
 Do not widen stale-branch deletion scope from the exact gated candidate list just because the planning narrative mentions >30-day branches; the structured AC uses a stricter >60-day gate. Backup branches need reachability checks, and a non-empty `development..origin/backup/...` log is a hard preserve signal.
+
+---
+
+## US-006 — 2026-05-03 01:33 UTC
+
+**Title**: Decide stale open PRs #131 and #69 (critic-gated)
+**Files changed**: tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt; GitHub PR #131; GitHub PR #69
+**Commit**: 7c21fb7
+**Result**: PASS
+
+### What I did
+Read issues #130 and #66 plus the open PR metadata/diffs for #131 and #69, then ran the critic gate through read-only `codex exec` because the Task tool is unavailable in this pi session. The critic recommended close-with-comment for both PRs rather than v0.8 deferral, with the only high-severity finding tied to leaving #69 open. Closed both PRs with comments that link US-006, cite `.claude/ICP.md`, and point future deepagents/web-UI work toward SPEC v0.7 Harness Packs.
+
+### Learnings for future iterations
+For cross-team GitHub housekeeping, comments should distinguish "not core scope" from "bad idea" and preserve stale PRs as pack prior art when appropriate. External-only actions still need an audit commit so the critic decision and GitHub-side state transition have durable repository history.
 
 ---

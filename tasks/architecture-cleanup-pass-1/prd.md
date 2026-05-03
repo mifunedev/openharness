@@ -19,12 +19,12 @@ Tracks GitHub issue [#213](https://github.com/ryaneggz/open-harness/issues/213).
 
 ### US-001: Delete obsolete spec v0.6 from disk + fix call-graph claim
 
-**Description:** As a maintainer, I want `.claude/specs/structure-spec-v0.6.md` removed from disk and the spec v0.7 self-contained so anyone exploring `.claude/specs/` sees only canonical content, and I want the factually-wrong call-graph claim in `docs/architecture/container-runtime.md` corrected.
+**Description:** As a maintainer, I want the obsolete v0.6 structure spec removed from disk and the spec v0.7 self-contained so anyone exploring `.claude/specs/` sees only canonical content, and I want the factually-wrong call-graph claim in `docs/architecture/container-runtime.md` corrected.
 
 **Acceptance Criteria:**
 
-- [ ] `rm /home/sandbox/harness/.claude/specs/structure-spec-v0.6.md` (untracked; `.gitignore:49-51` allowlist confirms only v0.7 + install-prereq-detection are tracked)
-- [ ] Edit `.claude/specs/structure-spec-v0.7.md:6` — replace `**Builds on:** [structure-spec-v0.6.md](structure-spec-v0.6.md)` with a one-paragraph self-contained summary of what v0.6 established (so v0.7 stands alone)
+- [ ] Remove the obsolete v0.6 structure spec from `.claude/specs/` (untracked; `.gitignore:49-51` allowlist confirms only v0.7 + install-prereq-detection are tracked)
+- [ ] Edit `.claude/specs/structure-spec-v0.7.md:6` — replace the old Builds-on pointer to the v0.6 structure spec with a one-paragraph self-contained summary of what v0.6 established (so v0.7 stands alone)
 - [ ] Edit `docs/architecture/container-runtime.md:26` — remove the false claim that `.devcontainer/entrypoint.sh` "calls `install/entrypoint.sh`"; describe the actual call graph: Dockerfile `ENTRYPOINT ["entrypoint.sh"]` → `.devcontainer/entrypoint.sh` (which sources `install/banner.sh` for shell prompt only)
 - [ ] `git ls-files | xargs grep -l 'structure-spec-v0\.6'` returns no hits
 - [ ] CHANGELOG `### Removed` and `### Fixed` entries under `[Unreleased]`

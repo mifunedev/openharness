@@ -23,7 +23,7 @@ The Dockerfile at `.devcontainer/Dockerfile` starts from `debian:bookworm-slim`.
 | pnpm | Via corepack — package manager for the harness monorepo |
 | Agent CLIs | Claude Code, Pi (`oh`/`pi`), and Codex installed globally via npm |
 
-The entrypoint script at `.devcontainer/entrypoint.sh` (which calls `install/entrypoint.sh`) initializes git config, ensures pnpm deps are installed, and runs optional onboarding on first start.
+The Dockerfile copies `.devcontainer/entrypoint.sh` into the image as `/usr/local/bin/entrypoint.sh` and sets `ENTRYPOINT ["entrypoint.sh"]`, so container startup runs `.devcontainer/entrypoint.sh` directly. That script initializes git and auth state, reconciles host/container permissions, starts the cron runtime when enabled, and only sources `install/banner.sh` from the sandbox user's shell profile for interactive prompt status.
 
 ## Docker Compose Configuration
 

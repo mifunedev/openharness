@@ -11,7 +11,7 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
 1. **Read context** — in this order:
    - `tasks/openharness-v07-convergence/prd.json` — find the lowest-`priority` story where `passes: false`. That is your story for this iteration.
    - `tasks/openharness-v07-convergence/progress.txt` — read the "Codebase patterns" section at the top (if any) and the most recent few iterations to see what's been done.
-   - `.claude/specs/structure-spec-v0.6.md` and `.claude/specs/structure-spec-v0.7.md` (the latter exists only after US-001 lands).
+   - the legacy v0.6 structure spec and `.claude/specs/structure-spec-v0.7.md` (the latter exists only after US-001 lands).
    - `.claude/rules/git.md` for branch + commit conventions.
    - `.claude/rules/sandbox-processes.md` for tmux session conventions if your story spawns processes.
 

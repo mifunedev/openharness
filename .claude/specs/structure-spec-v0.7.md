@@ -3,22 +3,21 @@
 **Version:** 0.7
 **Status:** Draft
 **Repository:** github.com/ryaneggz/open-harness
-**Builds on:** [`structure-spec-v0.6.md`](structure-spec-v0.6.md)
+**Prior baseline:** The previous structure revision established the harness as a Docker-first, single-repository agent workspace with a stable `.devcontainer/` runtime, root-level documentation and task records, cron-backed maintenance prompts, memory stored as dated directories, and an explicit split between orchestrator responsibilities and in-sandbox agent work.
 
 ## Purpose of this version
 
 v0.7 is **additive only** — no folder renames, no removed contracts, no breaking
-frontmatter changes from v0.6. It resolves seven conflicts that surfaced
-between v0.6 prose and shipped code, and it adds first-class sections for
+frontmatter changes from the prior baseline. It resolves seven conflicts that surfaced
+between earlier prose and shipped code, and it adds first-class sections for
 harness packs, orchestrator-vs-workspace skill scope, the `oh` CLI's
 deprecation, the canonical docs path, the canonical image name, the croner
 runtime, the hook-execution mechanism, the memory directory format, and the
 `tasks/<taskdesc>/` ↔ `.ralph/` distinction.
 
-Where a v0.7 section restates a v0.6 topic in shorter form (`apps/web/`
+Where a v0.7 section restates an earlier topic in shorter form (`apps/web/`
 Docusaurus config, eval-flakiness budget, wiki-sync rubric, blog authorship,
-weekly cleanup), the v0.7 prose **supersedes** the v0.6 prose for that topic.
-Everything else in v0.6 stands.
+weekly cleanup), the v0.7 prose **supersedes** the earlier prose for that topic.
 
 ## Conflicts resolved by v0.7
 

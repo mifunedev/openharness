@@ -4,7 +4,7 @@
 
 OpenHarness has accumulated structural slop over 552 commits in the last quarter — a CLI surface that wraps `docker compose` thinly, a 1,900 LOC heartbeat daemon, marketing that doesn't match the product, and a workspace template carrying prior-agent state. The pi/Slack/heartbeat extraction to `@ryaneggz/mifune` (#208/#209) forced the question: what is the harness's substrate, separate from any pack?
 
-SPEC v0.6 (`.claude/specs/structure-spec-v0.6.md`) sketched a single-project, agent-tended scaffold as the answer — but predates the pack mechanism and contradicts shipped decisions (`docs/` consolidation #178, image name `ryaneggz/openharness`). Three critic reports converged on a single sequence: SPEC v0.7 must land first as additive amendments; then strip the project to that target.
+SPEC v0.6 (the legacy structure spec) sketched a single-project, agent-tended scaffold as the answer — but predates the pack mechanism and contradicts shipped decisions (`docs/` consolidation #178, image name `ryaneggz/openharness`). Three critic reports converged on a single sequence: SPEC v0.7 must land first as additive amendments; then strip the project to that target.
 
 This PRD covers the convergence work in six phases: SPEC v0.7, croner runtime, atomic CLI deletion, marketing rewrite, skill triage and workspace alignment, security closure and release.
 

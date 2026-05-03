@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Removed
+- Pruned four orphaned files in `.openharness/` left over from the v0.7 convergence: `agents` (broken symlink to deleted `workspace/.claude/agents/`), `agent/settings.json` (referenced non-existent `gpt-5.4` model and `lastChangelogVersion: 0.66.1`; no loader on `main`), `banner.json` (custom-banner skill deleted in `fb71365`), and `settings.json` (pointed at non-existent `./.claude/skills/`). Refreshed `.openharness/.gitignore` header and added `.openharness/README.md` documenting the remaining live file (`config.json`) and the dormant status of `Caddyfile` / `exposures.json`. The directory's load-bearing role — `composeOverrides` consumed by `install.sh` and the container build — is unchanged. ([#222](https://github.com/ryaneggz/open-harness/issues/222))
 - Remove 0 eligible stale remote branches after critic-gated review; preserve all live remote branches because none met the >60-day deletion gate, and the backup branch still contains unique commits. ([#213](https://github.com/ryaneggz/open-harness/issues/213))
 - Remove five stale or corrupted `.worktrees/` agent directories and stale worktree registrations, reducing the ignored worktree footprint below 100 MB. ([#213](https://github.com/ryaneggz/open-harness/issues/213))
 - Remove the dead legacy install-side setup, entrypoint, and tmux wrapper scripts now that the Dockerfile wires `.devcontainer/entrypoint.sh` directly. ([#213](https://github.com/ryaneggz/open-harness/issues/213))

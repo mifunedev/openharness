@@ -2,6 +2,8 @@
 
 ## Codebase Patterns
 
+- Deleting a script can leave dangling basename-only references even after exact `install/...` path greps pass; grep both the full path and the basename for removed helpers.
+- `pnpm -r --if-present run typecheck` is not part of the pre-commit hook but PRD quality gates may still require it; the docs app currently typechecks under TypeScript 5.6 with `ignoreDeprecations: "5.0"`.
 - Untracked workspace husks (for example ignored `dist/` + `node_modules/` directories) do not appear in `git status`; verify cleanup with `find`/`du` plus `git ls-files <path>` rather than expecting a staged deletion.
 - `git ls-files | xargs grep ...` can surface tracked directory symlink errors from `.codex/` / `.openharness/`; redirect stderr or use `git ls-files -z | xargs -0 grep ... 2>/dev/null` when checking for real content hits.
 - When a cleanup acceptance criterion requires a removed filename to have zero tracked references, check task docs too; PRD/prompt text can be the remaining match even after code/docs are clean.
@@ -33,5 +35,20 @@ Removed the empty untracked `packages/web-ui/` and `packages/slack/` husks and r
 
 ### Learnings for future iterations
 Deleting ignored/untracked directories is invisible to `git status`; use `find packages`, `du -sh packages`, and `git ls-files packages/` to prove both the disk footprint and tracked-file state. `pnpm install` remained lockfile-clean because `packages/slack` had no importer in `pnpm-lock.yaml`; only `pnpm-workspace.yaml` needed a tracked update.
+
+---
+
+## US-003 — 2026-05-03 01:18 UTC
+
+**Title**: Delete dead install scripts (critic-gated)
+**Files changed**: legacy install entrypoint (removed); legacy setup script (removed); legacy tmux wrapper (removed); AGENTS.md; CHANGELOG.md; .claude/skills/harness-audit/SKILL.md; .claude/skills/cloudflared-tunnel/SKILL.md; .claude/specs/install-prereq-detection.md; docs/architecture/container-runtime.md; install/cloudflared-tunnel.sh; apps/docs/tsconfig.json; apps/docs/src/pages/index.tsx; task reference docs
+**Commit**: e7baab2
+**Result**: PASS
+
+### What I did
+Removed the dead legacy install-side setup, entrypoint, and tmux wrapper scripts after a critic-gate review found no unmitigated high-severity risks. Updated the audit skill, architecture docs, AGENTS project structure, prereq spec, cloudflared guidance, changelog, and task references so tracked greps no longer point at the deleted install scripts. Fixed the docs app typecheck gate that was failing under TypeScript 5.6, then verified compose config, lint, typecheck, tests, and the required tracked grep.
+
+### Learnings for future iterations
+The Claude Task tool was not exposed in this pi API session and Claude CLI was rate-limited, so the critic rubric was executed read-only through `codex exec`; the commit body records that substitution and the full Risk Assessment. Pre-commit only runs lint and tests, so run the recursive typecheck explicitly when the PRD lists it.
 
 ---

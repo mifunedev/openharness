@@ -90,8 +90,7 @@ open-harness/
 │   ├── Dockerfile              # sandbox image: Debian + Node 22 + agent CLIs + pnpm
 │   ├── docker-compose.yml      # base compose: SSH + workspace mount
 │   ├── docker-compose.*.yml    # overlays: postgres, cloudflared, docker, ssh, git, slack
-│   ├── entrypoint.sh           # Docker GID matching + cron runtime + banner wiring
-│   └── init-env.sh             # seed .devcontainer/.env on first provision (SANDBOX_NAME, GIT_COMMON_DIR)
+│   └── entrypoint.sh           # Docker GID matching + cron runtime + banner wiring
 ├── packages/sandbox/           # @openharness/sandbox (CLI + container lifecycle tools)
 │   ├── src/
 │   │   ├── cli/

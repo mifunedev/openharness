@@ -166,7 +166,7 @@ gh issue create \
 
 Capture the returned issue URL; extract `<N>` (issue number) for downstream use.
 
-If `gh label create <prefix>` is needed (label doesn't exist), create it first with a sensible color. Prefer `--body-file` over heredoc — heredocs in long Bash commands can trip the `deny-env-dump.sh` PreToolUse hook.
+If `gh label create <prefix>` is needed (label doesn't exist), create it first with a sensible color. Heredoc bodies are safe — the `deny-env-dump.sh` hook strips heredoc bodies before pattern-scanning, so `--body "$(cat <<'EOF' ... EOF)"` is fine.
 
 ### Stage 6 — `/ralph` → `tasks/<slug>/prd.json`
 

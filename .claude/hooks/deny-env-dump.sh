@@ -13,6 +13,15 @@ set -euo pipefail
 input=$(cat)
 cmd=$(jq -r '.tool_input.command // ""' <<<"$input")
 
+# Strip HEREDOC bodies before any pattern matching. PR / issue / commit
+# bodies passed via `gh ... --body "$(cat <<'EOF' ... EOF)"` are prose, not
+# shell commands — words like "history" or phrases like "cat .env" inside
+# that prose otherwise match command-shape regexes below and produce false
+# denies. Handles `<<DELIM`, `<<'DELIM'`, `<<"DELIM"`, and `<<-DELIM`.
+if command -v perl >/dev/null 2>&1; then
+  cmd=$(perl -0777 -pe 's{<<-?\s*(["\x27]?)(\w+)\1(.*?)\n\s*\2\b}{<<HEREDOC_STRIPPED}gs' <<<"$cmd")
+fi
+
 # Collapse newlines to spaces so character classes don't need to care about
 # them (and so grep's line-oriented regex doesn't split the pattern string
 # either). The literal \n written inside [^#\n] would mean "not \ or n",
@@ -79,7 +88,12 @@ DENY+="|\\b${READ_CMD}\\b[^#|]*${SECRET_PATH}"
 
 # Tier 2 — ask (narrow / possibly legitimate).
 ASK='\bprintenv[[:space:]]+[A-Za-z_]'                # printenv VAR [VAR ...]
-ASK+="|\\b(echo|printf)\\b[^#]*\\\$\\{?[A-Z][A-Z0-9_]*\\}?"  # echo of any $VAR (catch-all below deny tier)
+# Note: the previous catch-all `echo|printf` of any $UPPERCASE_VAR was too
+# broad — it asked on benign `echo "Branch: $BRANCH"` / `echo $SHA` /
+# `echo $VERSION` patterns used throughout skills. The deny tier above
+# already catches `echo`/`printf` of secret-named variables (TOKEN, SECRET,
+# AUTH, KEY, GH_TOKEN, AWS_*, …) with prefix/suffix tolerance, which covers
+# the actual leak surface. Trust other uppercase vars.
 
 emit() {
   jq -n --arg d "$1" --arg r "$2" '{

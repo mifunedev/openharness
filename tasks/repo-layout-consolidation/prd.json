@@ -1,0 +1,150 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/235-repo-layout-consolidation",
+    "description": "Consolidate repository layout documentation into docs/architecture/container-runtime.md#repo-layout as the single canonical source. Reduce duplicate tree blocks in AGENTS.md and README.md to one-line pointers (or 3-line orientation in AGENTS.md). Purge phantom heartbeat env vars. Fix broken README spec link. Add .claude/rules/repo-layout-source.md to prevent future drift. PR-A of a two-PR stack; PR-B (crons & heartbeats canonical doc) stacks on this branch.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Rewrite the canonical tree in docs/architecture/container-runtime.md",
+            "description": "As a contributor reading repo docs, I need a single accurate directory tree that matches the actual filesystem so I do not get a misleading mental model from stale paths.",
+            "acceptanceCriteria": [
+                "Lines 74-75 env-vars table no longer reference HEARTBEAT_ACTIVE_START, HEARTBEAT_ACTIVE_END, or HEARTBEAT_AGENT (all phantom — not read by any runtime code)",
+                "Tree block at lines 80-124 replaced with the canonical tree from .claude/plans/we-can-focus-on-cuddly-harp.md (PR-A canonical tree section)",
+                "New tree includes top-level entries: Makefile, package.json, pnpm-workspace.yaml, pnpm-lock.yaml, vitest.config.ts, .nvmrc, CHANGELOG.md, README.md, AGENTS.md, CLAUDE.md, LICENSE, CNAME, .dockerignore, .gitignore, .husky, .github, .devcontainer, .openharness, .claude, .codex, apps, blog, context, crons, docs, install, scripts, tasks, workspace",
+                "Annotation for pnpm-workspace.yaml correctly states it declares apps/docs (not glob apps/*)",
+                "Section heading carries a {#repo-layout} anchor so cross-references resolve",
+                "crons/ tree annotation reads `# markdown-frontmatter cron defs — see crons doc (PR-B)` (PR-B replaces parenthetical with a real link)",
+                "git grep -nE 'HEARTBEAT_ACTIVE_START|HEARTBEAT_ACTIVE_END|HEARTBEAT_AGENT|HEARTBEAT_INTERVAL' docs/architecture/container-runtime.md returns zero hits",
+                "git grep -nE 'exposures\\.json|Caddyfile|docker-compose\\.gateway|packages/sandbox' docs/architecture/container-runtime.md returns zero hits",
+                "grep -n '{#repo-layout}\\|repo-layout' docs/architecture/container-runtime.md returns at least one hit",
+                "Markdown lint passes (pnpm run lint if applicable, otherwise pre-commit hook accepts the change)"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Reduce AGENTS.md Project Structure to orientation block + canonical pointer",
+            "description": "As a session-loaded orchestrator agent, I need ambient awareness of the repo shape without maintaining a parallel tree that drifts from the canonical source.",
+            "acceptanceCriteria": [
+                "Fenced tree block at lines 151-164 replaced with: HTML guard comment marking the canonical source path, a 3-line prose orientation block naming the harness root path and the four primary subtrees (scripts/, crons/, .devcontainer/, workspace/), and a markdown link to docs/architecture/container-runtime.md#repo-layout",
+                "Exact replacement text per .claude/plans/we-can-focus-on-cuddly-harp.md §AGENTS.md lines 151-164",
+                "awk '/## Project Structure/,/^## [^#]/' AGENTS.md | grep -c '```' returns 0",
+                "grep -q 'CANONICAL LAYOUT SOURCE' AGENTS.md succeeds",
+                "[ -L CLAUDE.md ] && readlink CLAUDE.md returns AGENTS.md (regression check — symlink intact)",
+                "Markdown lint passes"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Reduce README.md Project layout to a pointer and fix broken croner spec link",
+            "description": "As a new visitor reading the README, I need accurate paths and unbroken links — the highest-visibility doc in the repo currently has a third (drifted) tree copy and a broken croner spec link.",
+            "acceptanceCriteria": [
+                "## Project layout fenced tree block (lines 78-85) replaced with a single pointer: 'See [Repo Layout](docs/architecture/container-runtime.md#repo-layout) for the annotated tree.'",
+                "Line 6 broken link target changed from .claude/specs/structure-spec-v0.7.md (file is at .claude/specs/archive/structure-spec-v0.7.md) to docs/architecture/crons-and-heartbeats.md",
+                "Stub file docs/architecture/crons-and-heartbeats.md created as a one-line placeholder ('Coming in PR-B') so the README link does not 404 in the interim",
+                "awk '/## Project layout/,/^##[^#]/' README.md | grep -c '```' returns 0",
+                "git grep -n 'specs/structure-spec-v0.7' README.md returns zero hits",
+                "test -s docs/architecture/crons-and-heartbeats.md succeeds",
+                "Markdown lint passes"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "Add forward link to canonical anchor in docs/architecture/overview.md",
+            "description": "As a reader of the overview architecture doc, I need a forward pointer to the canonical tree so I can navigate to it without searching.",
+            "acceptanceCriteria": [
+                "One prose line appended at the end of the topology section: 'For the repository file tree, see [Repo Layout](container-runtime.md#repo-layout).'",
+                "Topology ASCII diagram untouched (no structural changes)",
+                "grep -q 'container-runtime.md#repo-layout' docs/architecture/overview.md succeeds",
+                "Markdown lint passes"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-005",
+            "title": "Update .devcontainer/.example.env comment block to reflect live crons model",
+            "description": "As every new installer (this file is propagated by install.sh on first run), I need accurate documentation of the cron system instead of stale references to workspace/heartbeats and phantom HEARTBEAT_AGENT/HEARTBEAT_INTERVAL env vars.",
+            "acceptanceCriteria": [
+                "Comment block at lines 43-51 currently referencing workspace/heartbeats/, HEARTBEAT_AGENT, and HEARTBEAT_INTERVAL replaced with comment that points at the live crons/ model and at docs/architecture/crons-and-heartbeats.md (PR-B target)",
+                "Phantom env vars HEARTBEAT_AGENT and HEARTBEAT_INTERVAL no longer referenced in the file (entrypoint.sh does not read them)",
+                "git grep -nE 'HEARTBEAT_AGENT|HEARTBEAT_INTERVAL|workspace/heartbeats' .devcontainer/.example.env returns zero hits",
+                "No behavioural changes to .devcontainer/ — comment block edits only",
+                "Coordinate merge order with the parallel .devcontainer/ session if same-line conflicts arise"
+            ],
+            "priority": 5,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-006",
+            "title": "Verify and remove orphan heartbeat.log glob in .gitignore",
+            "description": "As a maintainer auditing gitignore patterns, I need to remove orphan rules that no longer match anything (the runtime now writes crons/cron.log, not **/heartbeat.log).",
+            "acceptanceCriteria": [
+                "Confirm **/heartbeat.log at .gitignore:22 is orphaned (find the runtime's actual log path: scripts/cron-runtime.ts:21 writes to crons/cron.log)",
+                "If orphaned: remove the line",
+                "If still load-bearing for some downstream tool: leave with an inline comment explaining why",
+                "Either git grep -n 'heartbeat\\.log' .gitignore returns zero hits, OR a clarifying comment is present at that line"
+            ],
+            "priority": 6,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-007",
+            "title": "Drift cleanup in workspace docs (workspace.md, uat-testing.md)",
+            "description": "As a reader of the workspace and UAT-testing docs, I need stale heartbeats/ references removed so the docs match the live workspace template.",
+            "acceptanceCriteria": [
+                "docs/guide/workspace.md line 22: heartbeats/ entry removed from the workspace template description (workspace/heartbeats/ no longer exists)",
+                "docs/guide/uat-testing.md line 166: heartbeats/uat-report.md path reference removed (replace with current artifact path or drop the line)",
+                "git grep -nE '(^|[^a-z])heartbeats/' -- 'docs/guide/workspace.md' 'docs/guide/uat-testing.md' returns zero hits",
+                "Markdown lint passes"
+            ],
+            "priority": 7,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-008",
+            "title": "Add .claude/rules/repo-layout-source.md auto-loaded rule",
+            "description": "As the harness orchestrator, I need an auto-loaded rule that documents the single-source layout convention so the next contributor does not reintroduce a directory tree elsewhere.",
+            "acceptanceCriteria": [
+                "New file .claude/rules/repo-layout-source.md created with the contents specified in .claude/plans/we-can-focus-on-cuddly-harp.md §New rule: .claude/rules/repo-layout-source.md",
+                "Rule mentions the canonical anchor path docs/architecture/container-runtime.md#repo-layout",
+                "Rule includes a do-not list (no trees in AGENTS.md / CLAUDE.md / README.md / docs / etc.)",
+                "Rule includes a do list (update canonical when adding directories; replace duplicates with pointers)",
+                "Rule includes a Why section referencing the three drifted copies that motivated the rule",
+                "test -s .claude/rules/repo-layout-source.md succeeds",
+                "File matches the shape of existing rules (.claude/rules/git.md, .claude/rules/sandbox-processes.md)",
+                "Markdown lint passes"
+            ],
+            "priority": 8,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-009",
+            "title": "Add CHANGELOG entry under [Unreleased] Changed",
+            "description": "As a release reviewer, I need a changelog entry capturing this PR's user-visible impact (consolidated tree, phantom env vars purged, broken link fixed, drift-prevention rule added).",
+            "acceptanceCriteria": [
+                "Add ### Changed block under ## [Unreleased] with the wording from .claude/plans/we-can-focus-on-cuddly-harp.md §PR-A CHANGELOG entry (single bullet covering: tree consolidation, AGENTS.md and README.md pointer reduction, .claude/rules/repo-layout-source.md addition, phantom heartbeat env-var purge, README spec link fix)",
+                "If a ### Changed section already exists under [Unreleased], append the bullet rather than creating a duplicate heading",
+                "awk '/## \\[Unreleased\\]/,/^## \\[/' CHANGELOG.md | grep -q 'Consolidate repository layout' succeeds",
+                "Markdown lint passes"
+            ],
+            "priority": 9,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

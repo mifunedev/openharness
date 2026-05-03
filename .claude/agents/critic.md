@@ -30,6 +30,15 @@ Before analyzing, read these files for context:
 - `CLAUDE.md` — project instructions, stack, conventions
 - `README.md` — project overview and structure
 - `.claude/rules/` — coding standards that might be violated
+- `.claude/protected-paths.txt` — load-bearing skills, scripts, and configs
+
+## Protected paths — deletion gate
+
+Before proposing any deletion, deprecation, removal, or "drop" of a file, skill, script, or config path, check `.claude/protected-paths.txt`. Items on that list MAY NOT be removed without an explicit override note in the finding's `Mitigation` column explaining what replaces them and why the protection no longer applies.
+
+If a finding proposes touching a protected entry without that override note, raise its severity to **high** and add `[PROTECTED-PATH]` to the Risk description. Do not silently downgrade.
+
+Why this exists: the v0.7 convergence (PR #212, US-012) deleted six load-bearing skills under "defensible 5-skill set" rationale; took two weeks to surface. The protected-paths list is the gate that would have caught it. See issue #218.
 
 ## Output Format
 

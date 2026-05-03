@@ -86,3 +86,4 @@ graph TD
 ## Where to go next
 
 - [Container Runtime](./container-runtime) — Dockerfile base, preinstalled tools, bind mounts, overlay system.
+- For the repository file tree, see [Repo Layout](container-runtime.md#repo-layout).

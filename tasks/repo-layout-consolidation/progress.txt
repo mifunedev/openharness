@@ -118,3 +118,18 @@ Added the auto-loaded repository layout single-source rule under `.claude/rules/
 Use `.claude/rules/*.md` for durable process conventions; rules should state the canonical source, explicit do/do-not lists, and the historical failure that motivated them.
 
 ---
+## US-009 — 2026-05-03 23:57 UTC
+
+**Title**: Add CHANGELOG entry under [Unreleased] Changed
+**Files changed**: CHANGELOG.md
+**Commit**: 6b771eb
+**Result**: PASS
+
+### What I did
+Added the PR-A changelog bullet under the existing `[Unreleased]` `### Changed` section. The entry summarizes the canonical layout consolidation, pointer reductions, drift-prevention rule, phantom heartbeat env-var purge, and README croner-link fix.
+
+### Learnings for future iterations
+Keep the `## [Unreleased]` heading exact; the release skill matches that line when promoting the changelog.
+
+---
+STATUS: COMPLETE

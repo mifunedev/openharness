@@ -26,14 +26,14 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
 1. Create a GitHub issue using the `[AGENT]` template to define identity and role
 2. Start the sandbox:
    ```bash
-   docker compose -f .devcontainer/docker-compose.yml up -d --build
+   make sandbox
    ```
 
 3. Connect to the sandbox:
 
    **Option A — Terminal:**
    ```bash
-   docker exec -it -u sandbox openharness zsh     # default; bash also available
+   make shell     # default; bash also available
    ```
 
    **Option B — VS Code Attach to Container (local):**
@@ -62,11 +62,11 @@ Verify the sandbox is healthy.
 
 1. **Check the running container**:
    ```bash
-   docker compose -f .devcontainer/docker-compose.yml ps
+   make ps
    ```
 2. **Verify workspace** (inside the sandbox):
    ```bash
-   docker exec -it -u sandbox openharness zsh
+   make shell
    ```
    - `AGENTS.md` exists in `workspace/`
    - Target agent CLI is installed (`claude --version`)
@@ -83,7 +83,7 @@ Remove the sandbox.
 
 1. **Stop and clean up**:
    ```bash
-   docker compose -f .devcontainer/docker-compose.yml down -v   # stop containers + remove volumes
+   make destroy   # stop containers + remove volumes
    ```
 
 ## Git Workflow

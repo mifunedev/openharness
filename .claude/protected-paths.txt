@@ -49,6 +49,12 @@ crons/cleanup-tasks.md
 .claude/specs/structure-spec-v0.7.md
 .claude/ICP.md
 
+# --- Orchestrator identity layer (session-loaded by AGENTS.md bootloader) ---
+context/SOUL.md
+context/IDENTITY.md
+context/TOOLS.md
+context/USER.md
+
 # --- Sub-agents invoked by skills ---
 .claude/agents/critic.md
 .claude/agents/implementer.md

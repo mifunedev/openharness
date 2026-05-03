@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Removed
+- Remove 0 eligible stale remote branches after critic-gated review; preserve all live remote branches because none met the >60-day deletion gate, and the backup branch still contains unique commits. ([#213](https://github.com/ryaneggz/open-harness/issues/213))
 - Remove five stale or corrupted `.worktrees/` agent directories and stale worktree registrations, reducing the ignored worktree footprint below 100 MB. ([#213](https://github.com/ryaneggz/open-harness/issues/213))
 - Remove the dead legacy install-side setup, entrypoint, and tmux wrapper scripts now that the Dockerfile wires `.devcontainer/entrypoint.sh` directly. ([#213](https://github.com/ryaneggz/open-harness/issues/213))
 - Remove the empty untracked `packages/web-ui/` and `packages/slack/` husks, plus the stale Slack workspace and entrypoint references. ([#213](https://github.com/ryaneggz/open-harness/issues/213))

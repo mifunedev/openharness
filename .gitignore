@@ -23,7 +23,7 @@ tasks/*/archive/
 
 # Croner runtime artifacts (keep crons/*.md tracked)
 crons/.pid
-crons/cron-runtime.log
+crons/*.log
 
 # Ralph runtime files (keep prd.json + progress.txt tracked for recovery)
 workspace/.ralph/.last-branch

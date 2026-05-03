@@ -89,3 +89,18 @@ Confirmed the runtime writes `crons/cron.log`, not `**/heartbeat.log`, and remov
 For cleanup stories, verify the live runtime path before deleting stale ignore/doc references.
 
 ---
+
+## US-007 — 2026-05-03 23:42 UTC
+
+**Title**: Drift cleanup in workspace docs (workspace.md, uat-testing.md)
+**Files changed**: docs/guide/workspace.md, docs/guide/uat-testing.md
+**Commit**: 748e807
+**Result**: PASS
+
+### What I did
+Removed the obsolete `workspace/heartbeats/` entry from the workspace template tree. Replaced the UAT heartbeat example that pointed at missing `heartbeats/uat-report.md` with current guidance to define recurring reports as repo-root `crons/*.md` files.
+
+### Learnings for future iterations
+Do not invent a replacement artifact path when the stale heartbeat file has no live equivalent; use the repo-root `crons/*.md` model instead.
+
+---

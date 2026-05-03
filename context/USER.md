@@ -29,6 +29,10 @@ Encodes how to work effectively with the maintainer. **Living document** — pro
 - **Closing other contributors' PRs** — critic-gated; surface decision rationale in the comment
 - **Remote branch prune** — critic-gated; never raw automated
 
+## Tracking deferred follow-ups
+
+When the maintainer asks for something to be tracked across sessions ("check on X next week", "make sure Y ships", "follow up if Z hasn't merged"), append a line to `## Active items` in `crons/heartbeat.md`. The hourly heartbeat validates completion on subsequent pulses; format, entry/exit policy, and permitted validation checks all live in that section.
+
 ## Working context
 
 - **Primary project**: `open-harness` (this repo) — the orchestrator + harness packs scaffolding

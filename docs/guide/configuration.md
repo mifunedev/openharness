@@ -49,7 +49,7 @@ Only applies when an SSH overlay is enabled. See [overlays](./overlays.md#ssh-ke
 
 ### Slack bot (via [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) pack)
 
-The Slack bot ships with the `@ryaneggz/mifune` harness pack — install with `oh harness add @ryaneggz/mifune`. The bot (Mom) connects to a Slack workspace via Socket Mode and responds to messages using an AI agent.
+The Slack bot ships with the `@ryaneggz/mifune` harness pack — install by cloning it into your workspace (`git clone https://github.com/ryaneggz/mifune workspace/mifune`) and following the pack's README. The bot (Mom) connects to a Slack workspace via Socket Mode and responds to messages using an AI agent.
 
 | Variable | Default | Description |
 |----------|---------|-------------|

@@ -7,6 +7,8 @@ title: "Architecture Overview"
 
 Open Harness runs every AI agent inside a single Docker container. That container hosts multiple git worktrees side by side, one per agent branch. A croner runtime watches `crons/*.md` and fires scheduled tasks. The orchestration layer is plain `docker compose` against `.devcontainer/docker-compose.yml` on the host — no host CLI, no host Node toolchain.
 
+There is no first-class exposure tool right now. Apps that need external access opt into the `cloudflared` overlay or run their own reverse proxy.
+
 ## The Shape of the System
 
 ```mermaid
@@ -21,7 +23,6 @@ graph TD
     Agent2["Agent: pack-supplied<br/>(worktree: task/164)"]
     AgentN["Agent: codex<br/>(worktree: feat/42)"]
     Cron["Croner Runtime<br/>(scripts/cron-runtime.ts)"]
-    Caddy["Caddy Gateway<br/>(port 8443)"]
   end
 
   User --> Compose
@@ -30,7 +31,6 @@ graph TD
   Cron -->|"reads crons/*.md"| Agent1
   Cron -->|"reads crons/*.md"| Agent2
   Cron -->|"reads crons/*.md"| AgentN
-  Caddy -->|"reverse proxy"| Agent1
 ```
 
 **ASCII version** (for terminal-friendly viewing):
@@ -70,11 +70,6 @@ graph TD
 │  │  Watches crons/*.md frontmatter                   │   │
 │  │  Fires schedules → invokes agent CLI              │   │
 │  └──────────────────────────────────────────────────┘   │
-│                                                          │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  Caddy Gateway (port 8443)                        │   │
-│  │  Routes https://<name>.<sandbox>.localhost → app  │   │
-│  └──────────────────────────────────────────────────┘   │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -90,6 +85,4 @@ graph TD
 
 ## Where to go next
 
-- [Container Runtime](./container-runtime) — Dockerfile base, preinstalled tools, bind mounts, Caddy overlay.
-- [Worktrees](./worktrees) — Branch naming, `.worktrees/` path, isolation rules.
-- [Daemon](./daemon) — Heartbeat polling, config location, sync command.
+- [Container Runtime](./container-runtime) — Dockerfile base, preinstalled tools, bind mounts, overlay system.

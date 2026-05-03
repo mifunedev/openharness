@@ -1,6 +1,6 @@
 # Provision
 
-Bring the sandbox up from scratch. Replaces the deprecated `/provision` skill — `docker compose` is the canonical substrate per SPEC v0.7.
+Bring the sandbox up from scratch. `docker compose` is the canonical substrate for sandbox bring-up (SPEC v0.7).
 
 ## TL;DR
 

@@ -1,6 +1,1 @@
-# Per-host runtime artifacts. Local to each developer; not maintained on `main` after
-# the v0.7 removal of the `oh` CLI (see CHANGELOG entry referencing US-006). A future
-# v0.8 reintroduction of an exposure CLI will regenerate these. Until then: edit at
-# your own risk; nothing on `main` reads or writes them.
-Caddyfile
-exposures.json
+

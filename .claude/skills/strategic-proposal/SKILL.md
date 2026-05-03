@@ -58,8 +58,8 @@ If this fails, log `[strategic-proposal] SKIP: gh CLI not authenticated` → Mem
 Read the following to build the briefing:
 - `IDENTITY.md` — stack, mission, URLs
 - `MEMORY.md` — past decisions, lessons learned
-- `packages/sandbox/src/` — sandbox CLI surface and tools
-- `packages/slack/src/` — Slack bot capabilities
+- `Makefile`, `scripts/`, `install/` — orchestrator entrypoints and provisioning surface
+- `apps/docs/` — documentation site source
 - Open issues: `gh api "repos/ryaneggz/open-harness/issues?state=open&per_page=50"`
 - Repo stats: `gh api repos/ryaneggz/open-harness --jq '{stars: .stargazers_count, forks: .forks_count}'`
 

@@ -85,7 +85,7 @@ Scan the SKILL.md body for references to paths and skill invocations, then verif
 # Extract all bare absolute paths (e.g. /home/sandbox/harness/...)
 PATH_REFS=$(grep -oP '`[^`]*`|"[^"]*"' "<skill-file>" | grep -oP '/[a-zA-Z0-9_./-]+' | sort -u)
 
-# Extract skill invocations (e.g. /provision, /delegate, /wiki-ingest)
+# Extract skill invocations (e.g. /release, /ci-status, /agent-browser)
 SKILL_REFS=$(grep -oP '/[a-z][a-z0-9-]+' "<skill-file>" | grep -v '^/home' | sort -u)
 ```
 

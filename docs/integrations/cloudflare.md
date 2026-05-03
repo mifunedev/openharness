@@ -5,39 +5,7 @@ title: "Cloudflare"
 
 # Cloudflare
 
-Open Harness supports two Cloudflare exposure methods: the Caddy gateway overlay for local and remote routing, and named Cloudflare Tunnels for persistent public URLs via `install/cloudflared-tunnel.sh`.
-
-## Gateway routing via Caddy
-
-When the gateway overlay is enabled, the sandbox runs a Caddy reverse proxy that exposes in-sandbox dev servers via HTTPS. Routes live in `.openharness/exposures.json`; Caddy reloads in-process when the file changes.
-
-The URL shape depends on your host mode:
-
-| Mode | Condition | URL |
-|---|---|---|
-| Laptop | No `PUBLIC_DOMAIN` set | `https://<name>.<sandbox>.localhost:8443` |
-| Remote | `PUBLIC_DOMAIN` set in `.devcontainer/.env` | `https://<name>.<sandbox>.<PUBLIC_DOMAIN>` |
-
-### Example workflow
-
-Start your app inside the sandbox in a tmux session:
-
-```bash
-tmux new-session -d -s app-docs 'pnpm dev -p 3000 2>&1 | tee /tmp/app-docs.log'
-```
-
-Then declare the route by editing `.openharness/exposures.json` (one JSON entry per `{ name, port }` pair). Caddy picks up the change and starts serving `https://docs.<sandbox>.localhost:8443` (laptop mode) or `https://docs.<sandbox>.<PUBLIC_DOMAIN>` (remote mode).
-
-To remove a route, delete its entry from `.openharness/exposures.json`.
-
-### Gateway constraints
-
-- Routes are regenerated in `.openharness/Caddyfile` — never hand-edit that file.
-- Route names must match `/^[a-z][a-z0-9-]{0,30}$/` and cannot be `admin`, `www`, `gateway`, or `api-internal`.
-- Caddy reloads in-process and never restarts the sandbox container.
-- Two sandboxes exposing the same route name do not collide because the sandbox name is always included in the hostname.
-
-See `.claude/rules/gateway-routing.md` (rendered in the Architecture section) for the complete routing contract.
+Open Harness exposes sandbox apps to the public internet via **Cloudflare named tunnels**. Use the `/cloudflared-tunnel` skill (or run `install/cloudflared-tunnel.sh` directly) to create a tunnel, write its ingress config, and route DNS — all in one idempotent step.
 
 ## Enabling the cloudflared overlay
 
@@ -54,7 +22,7 @@ This sets `INSTALL_CLOUDFLARED=true` in the container environment. The entrypoin
 
 ## Named tunnels via cloudflared-tunnel.sh
 
-For persistent public URLs tied to a Cloudflare-managed domain, use `install/cloudflared-tunnel.sh`. This script creates a named tunnel, writes the ingress config, and routes DNS — all idempotently.
+For persistent public URLs tied to a Cloudflare-managed domain, use `install/cloudflared-tunnel.sh`. This script creates a named tunnel, writes the ingress config, and routes DNS — all idempotently. The `/cloudflared-tunnel` skill drives this same script with the canonical onboarding flow (prereq checks, multi-ingress YAML, DNS routing, optional `--run`, post-start verification).
 
 ### Prerequisites
 
@@ -98,3 +66,7 @@ Attach to inspect logs:
 ```bash
 tmux attach -t expose-public-3000
 ```
+
+### Driving the flow with the skill
+
+Prefer the `/cloudflared-tunnel` skill when working interactively — it parses arguments, checks prerequisites, creates or reuses the tunnel, writes `~/.cloudflared/config-<tunnel-name>.yml`, routes DNS for every hostname, and (with `--run`) starts the tunnel and verifies each hostname end-to-end. See `.claude/skills/cloudflared-tunnel/SKILL.md` for the canonical step-by-step.

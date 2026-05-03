@@ -55,8 +55,8 @@ ls /home/sandbox/harness/workspace/memory/ 2>/dev/null | tail -10
 ls /home/sandbox/harness/docs/wiki/ 2>/dev/null | head -20
 
 # Package health
-cat /home/sandbox/harness/packages/slack/package.json 2>/dev/null | head -30
-cat /home/sandbox/harness/packages/sandbox/package.json 2>/dev/null | head -30
+cat /home/sandbox/harness/package.json 2>/dev/null | head -30
+cat /home/sandbox/harness/apps/docs/package.json 2>/dev/null | head -30
 
 # CI definition
 ls /home/sandbox/harness/.github/workflows/ 2>/dev/null
@@ -89,8 +89,8 @@ Assemble a **Context Snapshot** (compact markdown, ~300 words):
 [list or "none"]
 
 ### Packages
-- slack: [version, dep count]
-- sandbox: [version, dep count]
+- root: [version, dep count]
+- apps/docs: [version, dep count]
 
 ### CI workflows
 [list]
@@ -114,7 +114,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Developer onboarding friction** — Read `.devcontainer/`, `packages/sandbox/src/onboard/`, `CLAUDE.md`, `workspace/AGENTS.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
+> 1. **Developer onboarding friction** — Read `.devcontainer/`, `Makefile`, `install/`, `CLAUDE.md`, `workspace/AGENTS.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
 >
 > 2. **Skill consistency** — Read every `SKILL.md` under `.claude/skills/` and `workspace/.claude/skills/`. Check: does each have valid YAML frontmatter (name, description)? Does each follow imperative instructions? Are any stale (no recent invocation evidence in memory logs)?
 >
@@ -142,11 +142,11 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml`, `.devcontainer/entrypoint.sh`, `workspace/startup.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), missing healthchecks on compose services.
 >
-> 2. **Test coverage** — Check `packages/slack/` and `packages/sandbox/` for test files. Run `ls packages/slack/src/__tests__/ 2>/dev/null` and `ls packages/sandbox/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are packages tested in CI?
+> 2. **Test coverage** — Check `scripts/__tests__/` and `apps/docs/` for test files. Run `ls scripts/__tests__/ 2>/dev/null` and `ls apps/docs/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are the orchestrator scripts and docs app tested in CI?
 >
 > 3. **CI/CD completeness** — Read each workflow file. Are there gaps: missing lint, missing type-check, no test job, no release job, no deploy step?
 >
-> 4. **Package health** — For each `packages/*/package.json`, check: pinned vs caret deps for sibling packages, presence of `build` script, presence of `test` script, whether `dist/` is committed (expected for slack package).
+> 4. **Package health** — For root `package.json` and each `apps/*/package.json`, check: pinned vs caret deps, presence of `build` script, presence of `test` script.
 >
 > 5. **Compose overlay fragility** — Read `.devcontainer/docker-compose*.yml` files. Look for: hardcoded paths, missing `restart: unless-stopped` on long-lived services, volumes without named mounts, environment variables without defaults.
 >
@@ -306,5 +306,5 @@ If actionable patterns emerge (recurring finding type, systemic gap), append to 
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |
 | CI workflows | `.github/workflows/` |
-| Slack package | `packages/slack/` |
-| Sandbox package | `packages/sandbox/` |
+| Docs app | `apps/docs/` |
+| Orchestrator scripts | `scripts/` (with tests in `scripts/__tests__/`) |

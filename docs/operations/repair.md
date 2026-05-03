@@ -44,15 +44,15 @@ If the container itself is down, `docker exec` returns non-zero. Bring it back w
 | `codex --version` fails | `docker exec -u sandbox openharness sudo npm install -g @openai/codex` |
 | `pi --version` fails | `docker exec -u sandbox openharness sudo npm install -g @mariozechner/pi-coding-agent` |
 | Node version wrong | Image is stale. Rebuild: `docker compose ... down -v && docker compose ... up -d --build` |
-| `docker ps` fails inside sandbox | Add `docker-compose.docker.yml` to `.openharness/config.json` and re-provision |
+| `docker ps` fails inside sandbox | Verify the `/var/run/docker.sock` bind mount in `.devcontainer/docker-compose.yml` is intact; usually a host-side socket permission issue, not a missing overlay |
 | `tmux ls` missing `system-cron` | Restart entrypoint: `docker compose ... restart` (the cron runtime launches in tmux from `.devcontainer/entrypoint.sh`) |
 | Croner not firing | `docker exec -it -u sandbox openharness tmux attach -t system-cron` to inspect logs |
 
 ## Front-to-back URL check (when tunnels are configured)
 
-If the sandbox exposes hostnames via cloudflared or the Caddy gateway, verify them end-to-end so failures are attributed to the right layer.
+If the sandbox exposes hostnames via the optional `cloudflared` overlay, verify them end-to-end so failures are attributed to the right layer.
 
-1. **Enumerate** — Parse `~/.cloudflared/config-*.yml` for `hostname → service` pairs (or read `.openharness/exposures.json` for Caddy routes).
+1. **Enumerate** — Parse `~/.cloudflared/config-*.yml` for `hostname → service` pairs.
 2. **Front check** — Browse each public URL (use `/agent-browser` or `curl -I`) to confirm DNS → edge → tunnel → origin → render works.
 3. **Localize** — When the front check fails, run a `curl` pair: public URL vs. local service.
 

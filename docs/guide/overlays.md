@@ -37,7 +37,7 @@ Edit `.openharness/config.json` to enable or disable overlays:
 
 Default enabled: `cloudflared`, `slack`. Docker socket is mounted in the base compose file.
 
-After editing, run `openharness sandbox` or `/provision` to apply changes.
+After editing, run `make sandbox` (or `make destroy && make sandbox` if the container is already up) to apply changes.
 
 ## SSH key strategy
 
@@ -70,7 +70,7 @@ The password is set from the `SANDBOX_PASSWORD` environment variable (default: `
 To add PostgreSQL to your sandbox:
 
 1. Add `".devcontainer/docker-compose.postgres.yml"` to `composeOverrides` in `.openharness/config.json`
-2. Run `openharness sandbox` or `/provision`
+2. Run `make sandbox`
 3. The database is available at `postgresql://sandbox:sandbox@postgres:5432/sandbox`
 
 ## Sharing host Claude state (`claude-host`)

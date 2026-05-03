@@ -44,10 +44,10 @@ The sandbox alias runs Codex in fully autonomous mode by default:
 codex "Add input validation to the user registration endpoint"
 
 # Explicit full-auto flag
-codex --full-auto "Write unit tests for packages/sandbox/src/cli/"
+codex --full-auto "Write unit tests for scripts/cron-runtime.ts"
 
 # Approval mode: Codex proposes each change and waits for confirmation
-codex --approval-mode "Refactor the Caddy config generation to use a template"
+codex --approval-mode "Refactor scripts/install.sh to use a single prompt helper"
 ```
 
 Run inside a dedicated tmux session:

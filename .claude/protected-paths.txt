@@ -42,7 +42,6 @@ crons/cleanup-tasks.md
 # --- Rules consumed by skills + agents at runtime ---
 .claude/rules/git.md
 .claude/rules/sandbox-processes.md
-.claude/rules/gateway-routing.md
 .claude/rules/advisor-model.md
 
 # --- Specs that other artifacts cross-reference ---

@@ -31,14 +31,15 @@ Verify with `gh auth status`. If it succeeds, you are done with this step.
 
 ### Step 2 — LLM provider
 
-Authenticate Claude Code (and Codex if you use it) so they can make API calls.
+Authenticate Claude Code, Codex, and Pi (each ships in the base sandbox) so they can make API calls.
 
 ```bash
 claude   # opens the OAuth flow on first run; follow the printed URL
 codex    # OpenAI auth, only if you intend to use Codex
+pi       # @mariozechner/pi-coding-agent; OAuth on first run
 ```
 
-Both write tokens to their respective directories under the sandbox home (`~/.claude/`, `~/.codex/`). With the persistent named volumes, credentials survive container rebuilds.
+Each writes tokens to its directory under the sandbox home (`~/.claude/`, `~/.codex/`, `~/.pi/`). With the persistent named volumes, credentials survive container rebuilds. The `*-host` overlays (enabled by default in `.openharness/config.json`) bind-mount the matching host directories so your laptop's existing auth carries straight in — see [provision.md](./operations/provision.md).
 
 If you prefer API keys over OAuth, set the relevant variables in `.devcontainer/.env` (e.g. `OPENAI_API_KEY`) before bringing the sandbox up.
 

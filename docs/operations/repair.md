@@ -41,6 +41,8 @@ If the container itself is down, `docker exec` returns non-zero. Bring it back w
 | Container not running | `docker compose -f .devcontainer/docker-compose.yml up -d` |
 | Container restart-loops | `docker logs openharness` — usually a missing env var or volume permission issue |
 | `claude --version` fails | `docker exec -u sandbox openharness sudo npm install -g @anthropic-ai/claude-code` |
+| `codex --version` fails | `docker exec -u sandbox openharness sudo npm install -g @openai/codex` |
+| `pi --version` fails | `docker exec -u sandbox openharness sudo npm install -g @mariozechner/pi-coding-agent` |
 | Node version wrong | Image is stale. Rebuild: `docker compose ... down -v && docker compose ... up -d --build` |
 | `docker ps` fails inside sandbox | Add `docker-compose.docker.yml` to `.openharness/config.json` and re-provision |
 | `tmux ls` missing `system-cron` | Restart entrypoint: `docker compose ... restart` (the cron runtime launches in tmux from `.devcontainer/entrypoint.sh`) |

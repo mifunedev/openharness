@@ -13,17 +13,20 @@ if [ -S "$SOCK" ]; then
 fi
 
 # Fix ownership of mounted volumes (created as root by Docker).
-# Skip .claude / .codex when their host-mount overlays are active —
+# Skip .claude / .codex / .pi when their host-mount overlays are active —
 # they're host bind-mounts and chown would rewrite host file ownership
-# (see docker-compose.claude-host.yml, docker-compose.codex-host.yml).
+# (see docker-compose.{claude,codex,pi}-host.yml).
 # Harness packs that introduce their own host-mount overlays should add
 # their own skip clauses or run a *-entrypoint-hook.sh.
-for dir in .claude .codex .cloudflared .config/gh .ssh .openharness; do
+for dir in .claude .codex .pi .cloudflared .config/gh .ssh .openharness; do
   if [ -d "/home/sandbox/$dir" ]; then
     if [ "$dir" = ".claude" ] && [ "${CLAUDE_HOST_BIND_MOUNT:-0}" = "1" ]; then
       continue
     fi
     if [ "$dir" = ".codex" ] && [ "${CODEX_HOST_BIND_MOUNT:-0}" = "1" ]; then
+      continue
+    fi
+    if [ "$dir" = ".pi" ] && [ "${PI_HOST_BIND_MOUNT:-0}" = "1" ]; then
       continue
     fi
     chown -R sandbox:sandbox "/home/sandbox/$dir" 2>/dev/null || true

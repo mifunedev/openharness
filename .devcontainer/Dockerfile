@@ -60,16 +60,17 @@ RUN corepack enable && corepack prepare pnpm@latest --activate \
 # by default without extra configuration.
 #
 # AGENTS is a comma-separated list of agent CLI keys to install. The default
-# is claude-code + codex (vendor-neutral). Downstream harness packs (e.g.
+# is claude-code + codex + pi-coding-agent. Downstream harness packs (e.g.
 # @ryaneggz/mifune) install additional CLIs via their install-hook.sh.
 SHELL ["/bin/bash", "-c"]
 
-ARG AGENTS="claude-code,codex"
+ARG AGENTS="claude-code,codex,pi-coding-agent"
 
 RUN set -e; \
     declare -A PKG=( \
         [claude-code]=@anthropic-ai/claude-code \
         [codex]=@openai/codex \
+        [pi-coding-agent]=@mariozechner/pi-coding-agent \
     ); \
     IFS=',' read -ra agents <<< "$AGENTS"; \
     for a in "${agents[@]}"; do \

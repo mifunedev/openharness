@@ -1,0 +1,119 @@
+# progress
+
+## Codebase Patterns
+
+- PR/issue housekeeping stories may have no local code diff; use an explicit empty audit commit to record the external GitHub action and put the critic Risk Assessment in that commit body, then record Ralph state in a follow-up task commit.
+- Remote-branch prune stories need an explicit deletion set: if the age/PR gates produce zero eligible branches, run only local `git remote prune`/`fetch --prune` and document preserved backup branches with unique commits rather than broadening scope.
+- Worktree registrations can point at host-only paths while ignored in-repo directories with `.git` pointer files still exist; if the registered path is unreachable and there is no open PR, treat the local directory plus admin registration as stale cleanup candidates.
+- Deleting a script can leave dangling basename-only references even after exact `install/...` path greps pass; grep both the full path and the basename for removed helpers.
+- `pnpm -r --if-present run typecheck` is not part of the pre-commit hook but PRD quality gates may still require it; the docs app currently typechecks under TypeScript 5.6 with `ignoreDeprecations: "5.0"`.
+- Untracked workspace husks (for example ignored `dist/` + `node_modules/` directories) do not appear in `git status`; verify cleanup with `find`/`du` plus `git ls-files <path>` rather than expecting a staged deletion.
+- `git ls-files | xargs grep ...` can surface tracked directory symlink errors from `.codex/` / `.openharness/`; redirect stderr or use `git ls-files -z | xargs -0 grep ... 2>/dev/null` when checking for real content hits.
+- When a cleanup acceptance criterion requires a removed filename to have zero tracked references, check task docs too; PRD/prompt text can be the remaining match even after code/docs are clean.
+
+## US-001 — 2026-05-03 01:05 UTC
+
+**Title**: Delete obsolete spec v0.6 from disk + fix call-graph claim
+**Files changed**: .claude/specs/structure-spec-v0.7.md; docs/architecture/container-runtime.md; CHANGELOG.md; tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/prd.md; tasks/openharness-v07-convergence/prd.md; tasks/openharness-v07-convergence/prompt.md
+**Commit**: 9b540b9
+**Result**: PASS
+
+### What I did
+Removed the obsolete untracked v0.6 structure spec from disk and made SPEC v0.7 self-contained with a prior-baseline summary instead of a stale Builds-on link. Corrected the container runtime docs to describe the actual Dockerfile entrypoint path into `.devcontainer/entrypoint.sh` and the banner-only relationship to `install/banner.sh`. Added Unreleased changelog entries for the removal and fix, then cleaned task references so the tracked grep for the deleted filename has no content hits.
+
+### Learnings for future iterations
+The literal grep acceptance check includes tracked task documentation, not only source docs, so filename cleanup may require rewording PRD/prompt references that would otherwise keep matching. The exact `git ls-files | xargs grep` command emits stderr for tracked directory symlinks, but stdout is the useful signal for content hits.
+
+---
+
+## US-002 — 2026-05-03 01:08 UTC
+
+**Title**: Resolve packages/web-ui + packages/slack + dangling references
+**Files changed**: packages/web-ui/ (removed untracked); packages/slack/ (removed untracked); pnpm-workspace.yaml; legacy install entrypoint; .github/ISSUE_TEMPLATE/feat.md; CHANGELOG.md; tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt
+**Commit**: 6c24b86
+**Result**: PASS
+
+### What I did
+Removed the empty untracked `packages/web-ui/` and `packages/slack/` husks and removed the stale `packages/slack` workspace entry so the workspace now contains only `apps/docs`. Deleted the dead Slack build/link block from `legacy install entrypoint` and updated the feature issue template's area hint to list current harness surfaces. Added the Unreleased changelog removal entry, verified `pnpm install` and `docker compose -f .devcontainer/docker-compose.yml config`, and reran lint/test.
+
+### Learnings for future iterations
+Deleting ignored/untracked directories is invisible to `git status`; use `find packages`, `du -sh packages`, and `git ls-files packages/` to prove both the disk footprint and tracked-file state. `pnpm install` remained lockfile-clean because `packages/slack` had no importer in `pnpm-lock.yaml`; only `pnpm-workspace.yaml` needed a tracked update.
+
+---
+
+## US-003 — 2026-05-03 01:18 UTC
+
+**Title**: Delete dead install scripts (critic-gated)
+**Files changed**: legacy install entrypoint (removed); legacy setup script (removed); legacy tmux wrapper (removed); AGENTS.md; CHANGELOG.md; .claude/skills/harness-audit/SKILL.md; .claude/skills/cloudflared-tunnel/SKILL.md; .claude/specs/install-prereq-detection.md; docs/architecture/container-runtime.md; install/cloudflared-tunnel.sh; apps/docs/tsconfig.json; apps/docs/src/pages/index.tsx; task reference docs
+**Commit**: e7baab2
+**Result**: PASS
+
+### What I did
+Removed the dead legacy install-side setup, entrypoint, and tmux wrapper scripts after a critic-gate review found no unmitigated high-severity risks. Updated the audit skill, architecture docs, AGENTS project structure, prereq spec, cloudflared guidance, changelog, and task references so tracked greps no longer point at the deleted install scripts. Fixed the docs app typecheck gate that was failing under TypeScript 5.6, then verified compose config, lint, typecheck, tests, and the required tracked grep.
+
+### Learnings for future iterations
+The Claude Task tool was not exposed in this pi API session and Claude CLI was rate-limited, so the critic rubric was executed read-only through `codex exec`; the commit body records that substitution and the full Risk Assessment. Pre-commit only runs lint and tests, so run the recursive typecheck explicitly when the PRD lists it.
+
+---
+
+## US-004 — 2026-05-03 01:21 UTC
+
+**Title**: .worktrees/ cleanup + policy
+**Files changed**: .worktrees/ (ignored cleanup); .claude/rules/git.md; CHANGELOG.md; tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt
+**Commit**: 2444041
+**Result**: PASS
+
+### What I did
+Pruned stale worktree metadata, removed five stale/corrupted ignored agent worktree directories, and reduced `.worktrees/` from 3.0 GB to 3.6 MB while preserving the open PR worktree for `feat/130-deepagents-cli-optional`. Added a stale worktree policy to `.claude/rules/git.md` and recorded the removal count in the Unreleased changelog. Verified the remaining worktree list, `du -sh .worktrees/`, open-PR checks for removed branches, lint, typecheck, and tests.
+
+### Learnings for future iterations
+Some registered worktrees were locked to host-only paths unavailable inside this sandbox, while their ignored local directories still consumed disk; removing both the stale registration and the local husk is necessary to reclaim space. Keep open-PR worktrees even when they are under `.worktrees/`, because later stories still need PR context.
+
+---
+
+## US-005 — 2026-05-03 01:27 UTC
+
+**Title**: Stale remote branch prune (critic-gated)
+**Files changed**: CHANGELOG.md; tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt
+**Commit**: 5fd67b6
+**Result**: PASS
+
+### What I did
+Generated the PRD candidate list and found zero remote branches meeting the >60-day deletion gate; the older 31-35 day branches had no open PRs but were below the destructive-action threshold. Ran the critic gate through read-only `codex exec` because the Task tool is unavailable in this pi session, then preserved all live remote branches and ran only safe `git remote prune origin && git fetch --prune`. Verified the named backup branch still has 12 unique commits, documented the zero-delete outcome in the changelog, and reran lint, typecheck, and tests.
+
+### Learnings for future iterations
+Do not widen stale-branch deletion scope from the exact gated candidate list just because the planning narrative mentions >30-day branches; the structured AC uses a stricter >60-day gate. Backup branches need reachability checks, and a non-empty `development..origin/backup/...` log is a hard preserve signal.
+
+---
+
+## US-006 — 2026-05-03 01:33 UTC
+
+**Title**: Decide stale open PRs #131 and #69 (critic-gated)
+**Files changed**: tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt; GitHub PR #131; GitHub PR #69
+**Commit**: 7c21fb7
+**Result**: PASS
+
+### What I did
+Read issues #130 and #66 plus the open PR metadata/diffs for #131 and #69, then ran the critic gate through read-only `codex exec` because the Task tool is unavailable in this pi session. The critic recommended close-with-comment for both PRs rather than v0.8 deferral, with the only high-severity finding tied to leaving #69 open. Closed both PRs with comments that link US-006, cite `.claude/ICP.md`, and point future deepagents/web-UI work toward SPEC v0.7 Harness Packs.
+
+### Learnings for future iterations
+For cross-team GitHub housekeeping, comments should distinguish "not core scope" from "bad idea" and preserve stale PRs as pack prior art when appropriate. External-only actions still need an audit commit so the critic decision and GitHub-side state transition have durable repository history.
+
+---
+
+## US-007 — 2026-05-03 01:39 UTC
+
+**Title**: Dogfood /harness-audit against the cleaned codebase
+**Files changed**: tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt; GitHub issue #213
+**Commit**: 101b67c
+**Result**: PASS
+
+### What I did
+Dogfooded `/harness-audit` against the cleaned branch by following the restored skill's read-only checklist and posted the synthesized findings to issue #213. The pass-1 cleanup targets now score 0-1, with the remaining score-2 follow-ups limited to root-skill reference rot, tmux process-lifecycle alignment, and package-less CI reconciliation. Dry-run scaffolded `tasks/architecture-cleanup-pass-2/prd.md` for those follow-ups, validated the shape, and removed it before commit.
+
+### Learnings for future iterations
+In this Pi API session the slash command's Task/Agent mechanics are not directly exposed, so capstone dogfood should cite `.claude/skills/harness-audit/SKILL.md`, run the deterministic repo checks, and make any substitution explicit in the GitHub issue comment. For final Ralph stories, keep `STATUS: COMPLETE` as the last standalone line so `crons/cleanup-tasks.md` can archive the task on its Sunday sweep.
+
+---
+
+STATUS: COMPLETE

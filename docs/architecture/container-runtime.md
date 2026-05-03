@@ -23,7 +23,7 @@ The Dockerfile at `.devcontainer/Dockerfile` starts from `debian:bookworm-slim`.
 | pnpm | Via corepack — package manager for the harness monorepo |
 | Agent CLIs | Claude Code, Pi (`oh`/`pi`), and Codex installed globally via npm |
 
-The entrypoint script at `.devcontainer/entrypoint.sh` (which calls `install/entrypoint.sh`) initializes git config, ensures pnpm deps are installed, and runs optional onboarding on first start.
+The Dockerfile copies `.devcontainer/entrypoint.sh` into the image as `/usr/local/bin/entrypoint.sh` and sets `ENTRYPOINT ["entrypoint.sh"]`, so container startup runs `.devcontainer/entrypoint.sh` directly. That script initializes git and auth state, reconciles host/container permissions, starts the cron runtime when enabled, and only sources `install/banner.sh` from the sandbox user's shell profile for interactive prompt status.
 
 ## Docker Compose Configuration
 
@@ -90,7 +90,7 @@ open-harness/
 │   ├── Dockerfile              # sandbox image: Debian + Node 22 + agent CLIs + pnpm
 │   ├── docker-compose.yml      # base compose: SSH + workspace mount
 │   ├── docker-compose.*.yml    # overlays: postgres, cloudflared, docker, ssh, git, slack
-│   ├── entrypoint.sh           # Docker GID matching + heartbeat daemon + CLI install
+│   ├── entrypoint.sh           # Docker GID matching + cron runtime + banner wiring
 │   └── init-env.sh             # seed .devcontainer/.env on first provision (SANDBOX_NAME, GIT_COMMON_DIR)
 ├── packages/sandbox/           # @openharness/sandbox (CLI + container lifecycle tools)
 │   ├── src/
@@ -105,12 +105,10 @@ open-harness/
 │   └── extensions/
 │       └── sandbox.ts          # Pi Agent extension (tool + command registration)
 ├── install/
-│   ├── onboard.sh              # interactive first-time setup wizard
-│   ├── entrypoint.sh           # late-stage container setup (starts heartbeat daemon)
-│   ├── setup.sh                # environment setup utilities
-│   ├── tmux-agent.sh           # tmux session management for agents
-│   ├── cloudflared-tunnel.sh   # cloudflare tunnel configuration
-│   └── slack-manifest.json     # Slack app manifest for Socket Mode
+│   ├── .tmux.conf              # default tmux configuration copied into the image
+│   ├── .zshrc                  # default shell configuration copied into the image
+│   ├── banner.sh               # interactive shell status banner
+│   └── cloudflared-tunnel.sh   # Cloudflare named-tunnel setup helper
 ├── workspace/                  # template workspace copied into each harness's worktree
 │   ├── AGENTS.md               # operating procedures — decision rules, skills, sub-agents
 │   ├── CLAUDE.md               # symlink → AGENTS.md (Claude Code reads this automatically)

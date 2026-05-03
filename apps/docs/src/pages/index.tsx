@@ -102,7 +102,7 @@ export default function Home(): React.ReactElement {
                 <span className={`${styles.terminalDot} ${styles.terminalDotG}`} aria-hidden="true" />
                 <span className={styles.terminalLabel}>~/open-harness — zsh</span>
               </div>
-              <CodeBlock language="bash">{QUICKSTART}</CodeBlock>
+              <CodeBlock language="bash" children={QUICKSTART} />
             </aside>
           </div>
         </section>

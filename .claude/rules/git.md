@@ -90,6 +90,10 @@ Cleanup: `git worktree remove .worktrees/<branch>`.
 
 `.worktrees/` gitignored (see `.gitignore`); only `.worktrees/.gitkeep` tracked.
 
+### Stale worktree policy
+
+Worktrees older than 30 days without a corresponding open PR may be removed via `git worktree remove`; corrupted worktree directories may be removed with `rm -rf` after confirming they are not valid `git worktree list` entries. The `/harness-audit` skill flags stale-worktree candidates for review before cleanup.
+
 ### Isolating in-flight work
 
 When main checkout has unstaged changes you shouldn't commit in current PR, do **not** stash-and-switch-branches (risk of losing context). Instead:

@@ -1,2 +1,22 @@
 # progress
 
+## Codebase Patterns
+
+- `git ls-files | xargs grep ...` can surface tracked directory symlink errors from `.codex/` / `.openharness/`; redirect stderr or use `git ls-files -z | xargs -0 grep ... 2>/dev/null` when checking for real content hits.
+- When a cleanup acceptance criterion requires a removed filename to have zero tracked references, check task docs too; PRD/prompt text can be the remaining match even after code/docs are clean.
+
+## US-001 — 2026-05-03 01:05 UTC
+
+**Title**: Delete obsolete spec v0.6 from disk + fix call-graph claim
+**Files changed**: .claude/specs/structure-spec-v0.7.md; docs/architecture/container-runtime.md; CHANGELOG.md; tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/prd.md; tasks/openharness-v07-convergence/prd.md; tasks/openharness-v07-convergence/prompt.md
+**Commit**: 9b540b9
+**Result**: PASS
+
+### What I did
+Removed the obsolete untracked v0.6 structure spec from disk and made SPEC v0.7 self-contained with a prior-baseline summary instead of a stale Builds-on link. Corrected the container runtime docs to describe the actual Dockerfile entrypoint path into `.devcontainer/entrypoint.sh` and the banner-only relationship to `install/banner.sh`. Added Unreleased changelog entries for the removal and fix, then cleaned task references so the tracked grep for the deleted filename has no content hits.
+
+### Learnings for future iterations
+The literal grep acceptance check includes tracked task documentation, not only source docs, so filename cleanup may require rewording PRD/prompt references that would otherwise keep matching. The exact `git ls-files | xargs grep` command emits stderr for tracked directory symlinks, but stdout is the useful signal for content hits.
+
+---
+

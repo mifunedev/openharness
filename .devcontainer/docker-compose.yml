@@ -29,7 +29,7 @@
 #                    -f .devcontainer/docker-compose.postgres.yml \
 #                    -f .devcontainer/docker-compose.slack.yml up -d
 #
-# Overlays in .openharness/config.json composeOverrides are auto-loaded by the /provision skill
+# Overlays in .openharness/config.json composeOverrides are auto-loaded by `make sandbox` and `scripts/install.sh` via jq.
 
 name: ${SANDBOX_NAME:-openharness}
 

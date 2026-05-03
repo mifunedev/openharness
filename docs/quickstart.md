@@ -64,7 +64,7 @@ safe defaults during install. The most-edited values:
 
 Apply changes with `make destroy && make sandbox`.
 
-For Postgres, Slack, SSH, the Caddy gateway, etc., chain compose overlays
+For Postgres, Cloudflare tunnels, SSH, etc., chain compose overlays
 — see [Compose overlays](./guide/overlays).
 
 ## Tear down

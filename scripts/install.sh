@@ -306,7 +306,7 @@ fi
 # (1) is checked below and surfaced as a warning — the user must opt
 # out by hand if their host UID isn't 1000.
 banner "Preparing host auth dirs for sandbox bind-mounts"
-for d in .claude .codex; do
+for d in .claude .codex .pi; do
   if [ ! -d "$HOME/$d" ]; then
     mkdir -p "$HOME/$d"
     ok "Created ~/$d (empty — first-time auth will populate it)"
@@ -369,7 +369,13 @@ unset __HOST_UID
 # ─── 5. Bring up the sandbox ─────────────────────────────────────────
 banner "Building and starting sandbox"
 printf "${CYAN}==> Building image — ~10 min on cold cache, ~30s on warm cache. Compose output below.${NC}\n"
-docker compose -f .devcontainer/docker-compose.yml up -d --build
+COMPOSE_FILES="-f .devcontainer/docker-compose.yml"
+if command -v jq >/dev/null 2>&1 && [ -f "$REPO_DIR/.openharness/config.json" ]; then
+  while IFS= read -r override; do
+    [ -n "$override" ] && COMPOSE_FILES="$COMPOSE_FILES -f $override"
+  done < <(jq -r '.composeOverrides[]?' "$REPO_DIR/.openharness/config.json")
+fi
+docker compose $COMPOSE_FILES up -d --build
 ok "Sandbox '$SANDBOX_NAME' started"
 
 # ─── Next Steps ──────────────────────────────────────────────────────

@@ -76,18 +76,7 @@ For VS Code Attach to Container and Remote SSH alternatives, see [Connecting](./
 
 ## Expose
 
-Publishing a sandbox port through the Caddy gateway is handled by the optional gateway overlay. With the overlay enabled, edits to `.openharness/exposures.json` regenerate the Caddyfile and reload Caddy in-process. See `.claude/rules/gateway-routing.md` (rendered in the Architecture section) for the routing contract.
-
-A typical flow once the overlay is enabled:
-
-```bash
-# Inside the sandbox: start the dev server in a named tmux session.
-tmux new-session -d -s app-docs 'pnpm --filter @openharness/docs dev -p 8080 2>&1 | tee /tmp/app-docs.log'
-
-# Edit .openharness/exposures.json on the host, then reload Caddy.
-```
-
-On a laptop (no `PUBLIC_DOMAIN` set), the route is `https://docs.<sandbox>.localhost:8443`. On a remote host with `PUBLIC_DOMAIN` set, it is `https://docs.<sandbox>.<PUBLIC_DOMAIN>`.
+There is no first-class exposure mechanism — use the `cloudflared` overlay (see [Cloudflare integration](./integrations/cloudflare.md)) or stand up your own reverse proxy.
 
 ## Stop and clean up
 

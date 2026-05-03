@@ -9,39 +9,62 @@ This guide covers the workflow for contributing to Open Harness: creating branch
 
 ## Setup
 
-Clone the repository and install dependencies:
+Clone the repository:
 
 ```bash
 git clone https://github.com/ryaneggz/open-harness.git
 cd open-harness
-pnpm install
 ```
 
-If you are working inside the orchestrator sandbox, the `oh` CLI and git credentials are already configured. For local development on your laptop, authenticate with GitHub first:
+Open Harness has no host-side build step. The orchestrator runs at the project root (Docker + `make`), and all application work happens inside the sandbox container. You only need:
+
+- Docker (with `docker compose`)
+- `make`
+- `git` and the GitHub CLI (`gh`)
+
+### Provision the sandbox
+
+The lifecycle is driven entirely by the root `Makefile`:
+
+```bash
+make sandbox    # provision and start the sandbox (docker compose up -d --build)
+make shell      # enter the sandbox as the `sandbox` user
+make ps         # show service status
+make logs       # tail compose logs
+make stop       # stop the sandbox, preserving volumes
+make destroy    # stop and remove the sandbox (volumes wiped)
+make restart    # restart the service
+make help       # list all targets
+```
+
+A first-run helper is available at `scripts/install.sh` — it prompts for the values written to `.devcontainer/.env` (GitHub token autodetect, idempotent re-runs) before you call `make sandbox`.
+
+### Onboard inside the sandbox
+
+After `make shell`, complete one-time GitHub auth so `git push` and `gh` work from within the container:
 
 ```bash
 gh auth login && gh auth setup-git
 ```
 
-### Build and link the CLI for development
-
-The `oh` CLI is published as `@openharness/sandbox`. To use the in-tree version of the CLI globally during development:
+Then start an agent. The default is the `pi` CLI; `claude` and `codex` are also installed:
 
 ```bash
-# 1. Install deps + build all workspace packages
-pnpm run setup
-
-# 2. Make `oh` available globally (uses pnpm's global link)
-pnpm run link:cli
-
-# 3. Verify
-oh --version    # → 0.1.0
-oh --help       # → Commander-generated help with all subcommands
+pi          # default agent CLI
+claude      # Claude Code
+codex       # OpenAI Codex CLI
 ```
 
-**Inside the orchestrator sandbox**, the entrypoint script (`/.devcontainer/entrypoint.sh`) automatically rebuilds the CLI on container boot and symlinks it into `/usr/local/bin/{oh,openharness,heartbeat-daemon}`. Running `pnpm run link:cli` is only needed on a local laptop checkout.
+### Installing a harness pack
 
-**npm publish path** (for downstream packs that depend on `@openharness/sandbox`): the `bin`, `files`, and `exports` fields are configured so `npm publish` from `packages/sandbox/` produces a fully-installable package.
+Multi-agent setups (e.g. Pi+Mom Slack bot) ship as harness packs. Install one by cloning it into the workspace and following its README:
+
+```bash
+git clone <pack-repo> workspace/<pack>
+# then follow workspace/<pack>/README.md
+```
+
+The canonical example is [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune), which defines the pack contract.
 
 ## Branch Naming
 

@@ -36,7 +36,7 @@ Key configuration choices:
 - `command: sleep infinity` — keeps the container alive; actual work happens inside named tmux sessions, not in the foreground process.
 - `stdin_open: true` and `tty: true` — required for interactive shells via `docker exec`.
 
-Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon, Slack bot) and are activated by listing them in `.openharness/config.json` under `composeOverrides`. The `/provision` skill reads that file and passes the correct `-f` flags to `docker compose up`.
+Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon, Slack bot) and are activated by listing them in `.openharness/config.json` under `composeOverrides`. `make sandbox` and `scripts/install.sh` read that file via `jq` and pass the corresponding `-f` flags to `docker compose up`.
 
 ## Bind Mounts
 
@@ -45,7 +45,7 @@ The container mounts the project root and several named volumes:
 | Mount | Host path | Container path | Purpose |
 |-------|-----------|---------------|---------|
 | Project root | `..` (repo root) | `/home/sandbox/harness` | Source code, worktrees, workspace |
-| OH config | `../.openharness` | `/home/sandbox/.openharness` | Sandbox config, Caddyfile, exposures |
+| OH config | `../.openharness` | `/home/sandbox/.openharness` | Sandbox config, compose overlay selection |
 | Docker socket | `/var/run/docker.sock` | `/var/run/docker.sock` | Nested docker for the `oh` CLI |
 | Claude auth | named volume `claude-auth` | `/home/sandbox/.claude` | Claude Code credentials — persists across rebuilds |
 | Pi auth | named volume `pi-auth` | `/home/sandbox/.pi` | Pi Agent OAuth tokens |
@@ -57,16 +57,9 @@ The bind-mount of the repo root at `/home/sandbox/harness` means files written i
 
 The Docker socket mount gives the in-sandbox `docker` CLI access to the host Docker daemon, enabling nested container management — starting, stopping, and inspecting sibling containers from inside the sandbox.
 
-## Caddy Gateway Overlay
+## Exposing Ports
 
-The gateway overlay (`docker-compose.gateway.yml`, loaded when configured) runs a Caddy reverse proxy that routes HTTPS traffic to listening ports inside the sandbox. Routes are stored in `.openharness/exposures.json` and Caddy reloads its configuration in-process via its admin API on `127.0.0.1:2019` — never recreating the sandbox container.
-
-URL shape depends on mode:
-
-- **Laptop mode** (no `PUBLIC_DOMAIN`): `https://<name>.<sandbox>.localhost:8443` with self-signed TLS (`tls internal`).
-- **Remote mode** (`PUBLIC_DOMAIN` set in `.devcontainer/.env`): `https://<name>.<sandbox>.<PUBLIC_DOMAIN>` with ACME or a Cloudflare named tunnel.
-
-The Caddyfile at `.openharness/Caddyfile` is regenerated whenever `.openharness/exposures.json` changes and is gitignored. Do not hand-edit it.
+There is no first-class exposure mechanism. Use the `cloudflared` overlay or stand up your own reverse proxy.
 
 ## Environment Variables
 
@@ -86,29 +79,23 @@ Key variables the sandbox reads at runtime (set in `.devcontainer/.env` or passe
 
 ```
 open-harness/
+├── Makefile                    # top-level lifecycle commands (sandbox, shell, ps, destroy)
 ├── .devcontainer/
 │   ├── Dockerfile              # sandbox image: Debian + Node 22 + agent CLIs + pnpm
 │   ├── docker-compose.yml      # base compose: SSH + workspace mount
 │   ├── docker-compose.*.yml    # overlays: postgres, cloudflared, docker, ssh, git, slack
 │   └── entrypoint.sh           # Docker GID matching + cron runtime + banner wiring
-├── packages/sandbox/           # @openharness/sandbox (CLI + container lifecycle tools)
-│   ├── src/
-│   │   ├── cli/
-│   │   │   ├── cli.ts          # subcommand routing, arg parsing, help text
-│   │   │   └── index.ts        # CLI entry point (argv, exit codes)
-│   │   ├── lib/
-│   │   │   ├── config.ts       # SandboxConfig: name, compose files, env
-│   │   │   ├── docker.ts       # compose command builders
-│   │   │   └── exec.ts         # run/runSafe/capture helpers
-│   │   └── tools/              # sandbox, run, stop, clean, shell, list, etc.
-│   └── extensions/
-│       └── sandbox.ts          # Pi Agent extension (tool + command registration)
+├── scripts/                    # orchestrator scripts (cron-runtime, ralph runner, helpers)
+│   └── __tests__/              # vitest unit tests for orchestrator scripts
+├── apps/
+│   └── docs/                   # Docusaurus documentation site (only pnpm workspace package)
+├── crons/                      # markdown-frontmatter cron definitions (heartbeat, cleanup)
 ├── install/
 │   ├── .tmux.conf              # default tmux configuration copied into the image
 │   ├── .zshrc                  # default shell configuration copied into the image
 │   ├── banner.sh               # interactive shell status banner
 │   └── cloudflared-tunnel.sh   # Cloudflare named-tunnel setup helper
-├── workspace/                  # template workspace copied into each harness's worktree
+├── workspace/                  # minimal agent-runtime template (bind-mounted into sandbox)
 │   ├── AGENTS.md               # operating procedures — decision rules, skills, sub-agents
 │   ├── CLAUDE.md               # symlink → AGENTS.md (Claude Code reads this automatically)
 │   ├── SOUL.md                 # agent personality, tone, values, guardrails
@@ -133,7 +120,7 @@ open-harness/
 │   └── ISSUE_TEMPLATE/         # agent, audit, bug, feature, skill, task
 ├── .openharness/
 │   └── config.json             # compose overlay selection
-└── .claude/skills/             # orchestrator skills (/provision, /repair, /release, etc.)
+└── .claude/skills/             # orchestrator skills (/release, /ci-status, /cloudflared-tunnel, /agent-browser)
 ```
 
 ### Workspace identity files
@@ -152,4 +139,4 @@ The `workspace/` directory contains markdown files that define the agent's ident
 
 `CLAUDE.md` is a symlink to `AGENTS.md` so Claude Code loads operating procedures automatically.
 
-See the [Workspace guide](../guide/workspace.md) for full details on each file and the ownership model. For how multiple agents share one sandbox via git worktrees, see [Worktrees](./worktrees.md).
+See the [Workspace guide](../guide/workspace.md) for full details on each file and the ownership model.

@@ -117,7 +117,7 @@ Yes if it has side effects, is invoked deliberately by the user, and runs end-to
 ls .claude/skills/
 ```
 
-Pick 2-3 task-shaped exemplars (e.g., this project's `release`, `heartbeat`, `provision`) and read their SKILL.md to match house style — section structure, command-quoting conventions, how reports are formatted.
+Pick 2-3 task-shaped exemplars (e.g., this project's `release`, `ci-status`, `cloudflared-tunnel`) and read their SKILL.md to match house style — section structure, command-quoting conventions, how reports are formatted.
 
 ### Phase 3 — Author SKILL.md
 
@@ -144,8 +144,7 @@ Look at these in the current repo for canonical task-skill structure:
 | Skill | Why it's a good template |
 |-------|--------------------------|
 | `.claude/skills/release/SKILL.md` | CalVer release with pre-flight, tag, CI poll. Uses `argument-hint`, narrow `allowed-tools`, references a sibling rule (`.claude/rules/git.md`). |
-| `.claude/skills/heartbeat/SKILL.md` | Creates and activates a heartbeat. Uses `$ARGUMENTS`, parses task description from invocation. |
-| `.claude/skills/provision/SKILL.md` | Reads project config, builds image, waits for startup, runs validation. |
+| `.claude/skills/release/SKILL.md` | Computes version, runs pre-flight, pushes release branch + tag, polls CI, verifies GitHub Release + GHCR image. |
 | `.claude/skills/ci-status/SKILL.md` | Polls CI after `git push`, reports pass/fail with failure details. |
 
 These do NOT use synthetic "Variables / Workflow / Report" section headers or `_DETERMINE_` / `_RUN_` action verbs — those are not Claude Code conventions. Match the actual exemplars, not invented patterns.

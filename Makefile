@@ -3,14 +3,23 @@
 
 -include .devcontainer/.env
 
-SANDBOX_NAME ?= openharness
-COMPOSE      := docker compose -f .devcontainer/docker-compose.yml
+SANDBOX_NAME      ?= openharness
+COMPOSE_BASE      := -f .devcontainer/docker-compose.yml
+COMPOSE_OVERRIDES := $(shell jq -r '.composeOverrides[]?' \
+    .openharness/config.json 2>/dev/null | sed 's|^|-f |' | tr '\n' ' ')
+COMPOSE           := docker compose $(COMPOSE_BASE) $(COMPOSE_OVERRIDES)
 
 .DEFAULT_GOAL := help
 
-.PHONY: sandbox shell destroy stop logs ps restart help
+.PHONY: sandbox shell destroy stop logs ps restart help _check-jq
 
-sandbox: ## Provision and start the sandbox
+_check-jq:
+	@command -v jq >/dev/null 2>&1 || { \
+	  echo "ERROR: jq is required to expand .openharness/config.json composeOverrides."; \
+	  echo "Install jq (e.g. apt install jq, brew install jq) and re-run."; \
+	  exit 1; }
+
+sandbox: _check-jq ## Provision and start the sandbox
 	$(COMPOSE) up -d --build
 
 shell: ## Connect to the sandbox (agent choice happens inside)

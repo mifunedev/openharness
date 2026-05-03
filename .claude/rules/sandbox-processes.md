@@ -52,8 +52,9 @@ sessions into one is not.
 
 ## Why
 
-- `oh ports` cross-references listening sockets to tmux sessions so every
-  listener can be traced back to the command that owns it.
+- Named sessions let any listener be traced back to the command that owns
+  it: `tmux ls` shows what's running, `tmux attach -t <name>` shows the
+  live output.
 - Terminal-bound processes survive disconnects; reattach with
   `tmux attach -t <name>`.
 - Restart is deterministic: `tmux kill-session -t <name>` then relaunch
@@ -69,13 +70,14 @@ Inside the sandbox:
 tmux new-session -d -s app-docs 'pnpm --filter @openharness/docs dev 2>&1 | tee /tmp/app-docs.log'
 ```
 
-The `tee` to `/tmp/<session>.log` is the convention — `oh` tooling may
-read those paths in the future.
+The `tee` to `/tmp/<session>.log` is the convention — one log file per
+session keeps later inspection straightforward.
 
-From the host:
+From the host, drive tmux inside the container with `docker exec`:
 
 ```bash
-oh run oh-local 'tmux new-session -d -s app-docs "pnpm ... 2>&1 | tee /tmp/app-docs.log"'
+docker exec -it -u sandbox openharness \
+  tmux new-session -d -s app-docs 'pnpm ... 2>&1 | tee /tmp/app-docs.log'
 ```
 
 ## Anti-patterns
@@ -83,23 +85,8 @@ oh run oh-local 'tmux new-session -d -s app-docs "pnpm ... 2>&1 | tee /tmp/app-d
 - **Foregrounded inside another session** — starting a dev server in the
   foreground of an `agent-*` pane makes logs shared, restart awkward.
 - **`nohup cmd &`** — orphans the process, lost on container restart,
-  invisible to `oh ports` / tmux listing.
+  invisible to `tmux ls`.
 - **Running as root** — breaks `/proc/<pid>/fd/*` resolution for the
-  sandbox user, so `oh ports` can't surface the PROCESS column.
+  sandbox user, hiding which process owns which socket.
 - **Unnamed sessions** (`tmux` with no `-s`) — shows as `0`, `1`, `2` in
-  `tmux ls`; `oh ports` can't match them back to an app.
-
-## Interaction With `oh expose`
-
-`oh expose <name> <port>` routes traffic to a listening port. The *port*
-is what the gateway cares about; the *process* behind that port should
-still be managed via tmux. A typical flow:
-
-```bash
-# Start the app in tmux (inside sandbox):
-tmux new-session -d -s app-docs 'pnpm dev -p 8080'
-
-# Route to it via Caddy (from host):
-oh expose docs 8080
-# → https://docs.oh-local.localhost:8443
-```
+  `tmux ls`; impossible to map back to an app.

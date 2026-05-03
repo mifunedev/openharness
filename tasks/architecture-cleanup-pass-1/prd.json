@@ -2,7 +2,7 @@
     "schemaVersion": 1,
     "project": "open-harness",
     "branchName": "audit/213-architecture-cleanup-pass-1",
-    "description": "Architecture Cleanup Pass 1 \u2014 first cleanup after the v0.7 convergence. Targets verified slop and stale artifacts mapped during planning at .claude/plans/i-want-to-improve-delightful-honey.md. The recurring measurement substrate (/harness-audit, /skill-lint, /prd, /ralph) was restored from regression in commit 392ce76; this pass acts on the concrete findings that prompted the planning conversation. Tracks GitHub issue #213.",
+    "description": "Architecture Cleanup Pass 1 — first cleanup after the v0.7 convergence. Targets verified slop and stale artifacts mapped during planning at .claude/plans/i-want-to-improve-delightful-honey.md. The recurring measurement substrate (/harness-audit, /skill-lint, /prd, /ralph) was restored from regression in commit 392ce76; this pass acts on the concrete findings that prompted the planning conversation. Tracks GitHub issue #213.",
     "userStories": [
         {
             "id": "US-001",
@@ -10,8 +10,8 @@
             "description": "As a maintainer, I want the obsolete v0.6 structure spec removed from disk and spec v0.7 self-contained so anyone exploring .claude/specs/ sees only canonical content, and the factually-wrong call-graph claim in docs/architecture/container-runtime.md corrected.",
             "acceptanceCriteria": [
                 "rm the obsolete v0.6 structure spec from .claude/specs/ (untracked; .gitignore lines 49-51 allowlist confirms only v0.7 + install-prereq-detection are tracked)",
-                "Edit .claude/specs/structure-spec-v0.7.md line 6 \u2014 replace the old Builds-on pointer to the v0.6 structure spec with a one-paragraph self-contained summary of what v0.6 established",
-                "Edit docs/architecture/container-runtime.md line 26 \u2014 remove the false claim that .devcontainer/entrypoint.sh 'calls legacy install entrypoint'; describe the actual call graph: Dockerfile ENTRYPOINT [\"entrypoint.sh\"] \u2192 .devcontainer/entrypoint.sh (which sources install/banner.sh for shell prompt only)",
+                "Edit .claude/specs/structure-spec-v0.7.md line 6 — replace the old Builds-on pointer to the v0.6 structure spec with a one-paragraph self-contained summary of what v0.6 established",
+                "Edit docs/architecture/container-runtime.md line 26 — remove the false claim that .devcontainer/entrypoint.sh 'calls legacy install entrypoint'; describe the actual call graph: Dockerfile ENTRYPOINT [\"entrypoint.sh\"] → .devcontainer/entrypoint.sh (which sources install/banner.sh for shell prompt only)",
                 "git ls-files | xargs grep -l 'structure-spec-v0\\.6' returns no hits",
                 "CHANGELOG ### Removed and ### Fixed entries under [Unreleased]",
                 "Lint passes",
@@ -27,7 +27,7 @@
             "title": "Resolve packages/web-ui + packages/slack + dangling references",
             "description": "As a maintainer, I want the empty packages/web-ui and packages/slack directories removed (both have zero tracked files), the pnpm-workspace.yaml slack entry dropped, and the dangling references across install/, .github/ISSUE_TEMPLATE/, and similar files cleaned up so pnpm install and docker compose config reflect reality.",
             "acceptanceCriteria": [
-                "rm -rf packages/web-ui packages/slack (both fully untracked \u2014 git ls-files packages/ returns empty)",
+                "rm -rf packages/web-ui packages/slack (both fully untracked — git ls-files packages/ returns empty)",
                 "rmdir packages if it ends up empty",
                 "pnpm-workspace.yaml: remove the '- packages/slack' line; if no packages remain, drop the 'packages' key (only apps/docs survives)",
                 "legacy install entrypoint line 68: delete the SLACK_PKG block (build-and-link packages/slack flow). Note: US-003 deletes this file entirely, so this AC is moot if US-003 lands first",
@@ -51,7 +51,7 @@
                 "Spawn .claude/agents/critic.md via the Task tool with the proposed deletion list (legacy setup script, legacy install entrypoint, optionally legacy tmux wrapper script) and the grep evidence; capture Risk Assessment in the commit body",
                 "git rm legacy setup script legacy install entrypoint",
                 "Investigate legacy tmux wrapper script (358 bytes) the same way; git rm if no live references found, otherwise document its caller in AGENTS.md",
-                "Update AGENTS.md line 140 (project structure block) \u2014 remove the legacy script references; describe what actually lives in install/ post-cleanup (banner.sh, cloudflared-tunnel.sh, .tmux.conf, .zshrc, plus the tmux wrapper if kept)",
+                "Update AGENTS.md line 140 (project structure block) — remove the legacy script references; describe what actually lives in install/ post-cleanup (banner.sh, cloudflared-tunnel.sh, .tmux.conf, .zshrc, plus the tmux wrapper if kept)",
                 "git ls-files | xargs grep -l 'install/setup\\.sh\\|install/entrypoint\\.sh' returns no hits",
                 "docker compose -f .devcontainer/docker-compose.yml config validates (entrypoint resolves to .devcontainer/entrypoint.sh only)",
                 "CHANGELOG ### Removed entry",
@@ -70,9 +70,9 @@
             "acceptanceCriteria": [
                 "git worktree prune --verbose",
                 "For each .worktrees/<name> whose git worktree list entry is broken or whose branch HEAD is >30 days old AND has no associated open PR: git worktree remove --force (recoverable) or rm -rf (corrupted)",
-                ".worktrees/agent/uat-tester/ has no .git symlink \u2014 rm -rf it specifically",
-                "After cleanup, du -sh .worktrees/ \u2264 100 MB",
-                "Add a one-paragraph 'Stale worktree policy' section to .claude/rules/git.md after the existing \u00a7 Worktrees block: 'worktrees older than 30 days without a corresponding open PR may be removed via git worktree remove; the /harness-audit skill flags candidates'",
+                ".worktrees/agent/uat-tester/ has no .git symlink — rm -rf it specifically",
+                "After cleanup, du -sh .worktrees/ ≤ 100 MB",
+                "Add a one-paragraph 'Stale worktree policy' section to .claude/rules/git.md after the existing § Worktrees block: 'worktrees older than 30 days without a corresponding open PR may be removed via git worktree remove; the /harness-audit skill flags candidates'",
                 "CHANGELOG ### Removed entry (count, not list)",
                 "Lint passes",
                 "Typecheck passes",
@@ -92,23 +92,23 @@
                 "Spawn .claude/agents/critic.md with the full candidate list; require Risk Assessment with no high-severity findings (or explicit mitigation note in commit body) before any git push origin --delete",
                 "Verify backup/development-before-main-sync-2026-03-30 has no unique commits (git log development..origin/backup/development-before-main-sync-2026-03-30 returns empty) before pruning",
                 "After prune: git remote prune origin && git fetch --prune",
-                "CHANGELOG ### Removed entry (count only, not branch list \u2014 names rot in the changelog)",
+                "CHANGELOG ### Removed entry (count only, not branch list — names rot in the changelog)",
                 "Lint passes",
                 "Typecheck passes",
                 "Tests pass"
             ],
             "priority": 5,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 5 on 2026-05-03; commit 5fd67b6"
         },
         {
             "id": "US-006",
             "title": "Decide stale open PRs #131 and #69 (critic-gated)",
-            "description": "As a maintainer, I want PR #131 (deepagents-cli) and PR #69 (web-UI) decided \u2014 close-with-comment or label v0.8 for explicit deferral \u2014 because both contradict the v1 ICP framing in .claude/ICP.md (single working developer, one project). Critic-gated because closing other contributors' PRs is cross-team.",
+            "description": "As a maintainer, I want PR #131 (deepagents-cli) and PR #69 (web-UI) decided — close-with-comment or label v0.8 for explicit deferral — because both contradict the v1 ICP framing in .claude/ICP.md (single working developer, one project). Critic-gated because closing other contributors' PRs is cross-team.",
             "acceptanceCriteria": [
                 "gh issue view 130 (deepagents-cli) and gh issue view 66 (web-UI) read for context",
                 "Spawn .claude/agents/critic.md with each PR's diff and .claude/ICP.md content; capture decision rationale",
-                "Per PR: either gh pr close --comment (with v0.7 framing rationale + link to .claude/ICP.md and SPEC v0.7 \u00a7'Harness Packs'), or gh pr edit --add-label 'v0.8' (defer)",
+                "Per PR: either gh pr close --comment (with v0.7 framing rationale + link to .claude/ICP.md and SPEC v0.7 §'Harness Packs'), or gh pr edit --add-label 'v0.8' (defer)",
                 "Both PRs receive a comment linking tasks/architecture-cleanup-pass-1/prd.json US-006",
                 "No CHANGELOG entry (PR housekeeping is pure chore per .claude/rules/git.md line 65)",
                 "Lint passes",
@@ -122,11 +122,11 @@
         {
             "id": "US-007",
             "title": "Dogfood /harness-audit against the cleaned codebase",
-            "description": "As a maintainer, I want to validate the recurring measurement substrate end-to-end by running /harness-audit against the just-cleaned codebase and confirming most catalog items score 0-1; any remaining \u2265 2 items are documented for the next pass. Append STATUS: COMPLETE to terminate the Ralph loop.",
+            "description": "As a maintainer, I want to validate the recurring measurement substrate end-to-end by running /harness-audit against the just-cleaned codebase and confirming most catalog items score 0-1; any remaining ≥ 2 items are documented for the next pass. Append STATUS: COMPLETE to terminate the Ralph loop.",
             "acceptanceCriteria": [
                 "Run /harness-audit (the skill restored in commit 392ce76); capture findings in a comment on issue #213",
                 "Optionally run /skill-lint to score skills for staleness; comment results on #213",
-                "Expected: most findings score 0-1 because US-001..US-006 just shipped; any score \u2265 2 surfaces future work",
+                "Expected: most findings score 0-1 because US-001..US-006 just shipped; any score ≥ 2 surfaces future work",
                 "Run /prd against any actionable findings to scaffold a tasks/<future-pass>/prd.md (do not commit; dry-run validation only)",
                 "Confirm crons/cleanup-tasks.md (Sunday 23:00) will archive tasks/architecture-cleanup-pass-1/ next Sunday after progress.txt ends with STATUS: COMPLETE",
                 "Append STATUS: COMPLETE as the final line of tasks/architecture-cleanup-pass-1/progress.txt after this story passes (terminates the Ralph loop)",

@@ -16,41 +16,41 @@
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
-Only host dependency: [Docker](https://docs.docker.com/get-docker/). The installer clones the repo into `~/openharness`, writes `.devcontainer/.env`, and brings the sandbox up via `docker compose`. There is no host CLI to install.
+The installer clones into `~/openharness`, offers to share your host
+`gh` token, writes `.devcontainer/.env`, and builds the image (~10 min
+cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-docker/).
 
-## 🚀 Quickstart
-
-The full sandbox lifecycle is three commands:
+## 🚀 Use it
 
 ```bash
-docker compose -f .devcontainer/docker-compose.yml up -d --build   # provision and start
-docker exec -it -u sandbox openharness zsh                         # connect (interactive shell)
-docker compose -f .devcontainer/docker-compose.yml down -v         # tear down
+cd ~/openharness
+make shell       # enter the isolated sandbox
+# inside the sandbox, launch any agent you have installed:
+#   claude   # Claude Code
+#   codex    # OpenAI Codex CLI
+#   pi       # Pi Coding Agent
+make destroy     # stop and remove the sandbox
+make help        # all targets
 ```
 
 Prefer VS Code or remote SSH? See [Connecting to a sandbox](https://oh.mifune.dev/docs/connecting).
 
-Inside the shell, start working:
+## ⚙️ Configure (optional)
 
-```bash
-gh auth login && gh auth setup-git    # one-time, if GH_TOKEN wasn't set in .env
-claude                                # terminal coding agent
-```
+`.devcontainer/.env` is generated with safe defaults during install. Open
+it any time to change `SANDBOX_NAME`, set a different `GH_TOKEN`, change
+`TZ`, or enable overlay-specific vars (`SANDBOX_PASSWORD` for sshd,
+`SLACK_*` for the Slack overlay). Apply with `make destroy && make sandbox`.
 
-## 🐳 Docker only (no installer)
-
-Alternative path for hosts with only Docker + git — no `bash` piping:
+<details><summary>Manual setup (no installer)</summary>
 
 ```bash
 git clone https://github.com/ryaneggz/open-harness.git && cd open-harness
-cp .devcontainer/.example.env .devcontainer/.env
-# edit .devcontainer/.env: set GH_TOKEN, optionally rename SANDBOX_NAME,
-# and set INSTALL_AGENT_BROWSER=false unless you need headless Chromium
-docker compose -f .devcontainer/docker-compose.yml up -d --build  # ~10 min on cold cache
-docker compose -f .devcontainer/docker-compose.yml exec -u sandbox sandbox zsh
+make sandbox
+make shell
 ```
 
-For Postgres, Slack, SSH, or the Caddy gateway, chain overlay files with extra `-f` flags — see [Compose overlays](https://oh.mifune.dev/docs/guide/overlays).
+</details>
 
 ## ✨ What you get
 
@@ -89,7 +89,7 @@ For Pi+Slack functionality, install the [`@ryaneggz/mifune`](https://github.com/
 ## 🧹 Cleanup
 
 ```bash
-docker compose -f .devcontainer/docker-compose.yml down -v
+make destroy
 ```
 
 ## 🤝 Contributing & community

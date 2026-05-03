@@ -11,91 +11,77 @@ This guide takes you from zero to a running sandbox with an interactive shell in
 
 Install Docker with the Compose plugin: [docs.docker.com/get-docker](https://docs.docker.com/get-docker/). Everything else runs inside the container.
 
-## Option A — One-line install (recommended)
+## Install
 
 ```bash
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
-The installer clones the repo into `~/openharness`, prompts for `SANDBOX_NAME` and `SANDBOX_PASSWORD`, writes `.devcontainer/.env`, and brings the sandbox up via `docker compose`. After the installer finishes, skip to [Step 4](#step-4-open-a-shell).
+The installer clones into `~/openharness`, prompts to share your host
+`gh` token, writes `.devcontainer/.env` with safe defaults, and brings
+the sandbox up via `docker compose`.
 
-## Option B — Manual setup
-
-### Step 1: Clone and configure
-
-```bash
-git clone https://github.com/ryaneggz/open-harness.git
-cd open-harness
-cp .devcontainer/.example.env .devcontainer/.env
-```
-
-Open `.devcontainer/.env` and set at minimum:
+## Enter the sandbox
 
 ```bash
-SANDBOX_NAME=openharness   # any name you like; this becomes the container name
-GH_TOKEN=ghp_...           # optional but skips one onboarding step
+cd ~/openharness
+make shell
 ```
 
-### Step 2: Build and start the sandbox
+You're now inside the isolated sandbox as the `sandbox` user. Working
+directory: `/home/sandbox/harness`.
+
+## Pick your agent
+
+The sandbox ships with several agent CLIs preinstalled. Launch whichever
+you prefer:
 
 ```bash
-docker compose -f .devcontainer/docker-compose.yml up -d --build
+claude        # Claude Code
+codex         # OpenAI Codex CLI
+pi            # Pi Coding Agent
 ```
 
-This is the canonical command for bringing the sandbox up. On a cold Docker cache it takes around ten minutes; subsequent starts are a few seconds.
-
-### Step 3: Confirm it's healthy
+If `GH_TOKEN` was set during install, the entrypoint already ran
+`gh auth login` and `gh auth setup-git` for you. Otherwise run them once
+inside the shell:
 
 ```bash
-docker compose -f .devcontainer/docker-compose.yml ps
+gh auth login && gh auth setup-git
 ```
 
-You should see the sandbox container with status `running` (and `healthy` once the healthcheck passes).
+## Configuration
 
-### Step 4: Open a shell
+`.devcontainer/.env` is the single customization surface — generated with
+safe defaults during install. The most-edited values:
 
-```bash
-docker exec -it -u sandbox openharness zsh
-```
+| Var | Purpose |
+|-----|---------|
+| `SANDBOX_NAME` | Container/compose project name |
+| `GH_TOKEN` | GitHub token for non-interactive auth |
+| `TZ` | Container timezone |
+| `INSTALL_AGENT_BROWSER` | Set `true` to install Chromium (~1 GB) |
 
-Replace `openharness` with whatever you set as `SANDBOX_NAME` in `.devcontainer/.env`. You're now inside the sandbox as the `sandbox` user; the working directory is `/home/sandbox/harness`.
+Apply changes with `make destroy && make sandbox`.
 
-### Step 5: One-time setup (inside the sandbox)
-
-Run these once, inside the shell you just opened:
-
-```bash
-gh auth login            # GitHub CLI — lets the agent open PRs and issues
-gh auth setup-git        # git credential helper (no SSH keys needed)
-```
-
-These write credentials into the sandbox home directory, not your host home.
-
-### Step 6: Start the agent
-
-```bash
-claude                   # Claude Code — terminal coding agent
-```
-
-For Slack-driven Pi+Mom and other multi-agent setups, install the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack inside the sandbox.
-
-You now have a working sandbox with an active agent session.
+For Postgres, Slack, SSH, the Caddy gateway, etc., chain compose overlays
+— see [Compose overlays](./guide/overlays).
 
 ## Tear down
 
 When you're finished, exit the shell and clean up from the host:
 
 ```bash
-docker compose -f .devcontainer/docker-compose.yml down -v
+make destroy
 ```
 
 This stops the container and removes its volumes. To keep auth credentials across rebuilds, stop without removing volumes:
 
 ```bash
-docker compose -f .devcontainer/docker-compose.yml stop
+make stop
 ```
 
-Bring it back later with `docker compose -f .devcontainer/docker-compose.yml up -d`.
+Bring it back later with `make sandbox`.
 
 ## Next steps
 

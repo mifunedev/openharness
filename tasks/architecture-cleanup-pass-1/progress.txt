@@ -2,6 +2,7 @@
 
 ## Codebase Patterns
 
+- Worktree registrations can point at host-only paths while ignored in-repo directories with `.git` pointer files still exist; if the registered path is unreachable and there is no open PR, treat the local directory plus admin registration as stale cleanup candidates.
 - Deleting a script can leave dangling basename-only references even after exact `install/...` path greps pass; grep both the full path and the basename for removed helpers.
 - `pnpm -r --if-present run typecheck` is not part of the pre-commit hook but PRD quality gates may still require it; the docs app currently typechecks under TypeScript 5.6 with `ignoreDeprecations: "5.0"`.
 - Untracked workspace husks (for example ignored `dist/` + `node_modules/` directories) do not appear in `git status`; verify cleanup with `find`/`du` plus `git ls-files <path>` rather than expecting a staged deletion.
@@ -50,5 +51,20 @@ Removed the dead legacy install-side setup, entrypoint, and tmux wrapper scripts
 
 ### Learnings for future iterations
 The Claude Task tool was not exposed in this pi API session and Claude CLI was rate-limited, so the critic rubric was executed read-only through `codex exec`; the commit body records that substitution and the full Risk Assessment. Pre-commit only runs lint and tests, so run the recursive typecheck explicitly when the PRD lists it.
+
+---
+
+## US-004 — 2026-05-03 01:21 UTC
+
+**Title**: .worktrees/ cleanup + policy
+**Files changed**: .worktrees/ (ignored cleanup); .claude/rules/git.md; CHANGELOG.md; tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt
+**Commit**: 2444041
+**Result**: PASS
+
+### What I did
+Pruned stale worktree metadata, removed five stale/corrupted ignored agent worktree directories, and reduced `.worktrees/` from 3.0 GB to 3.6 MB while preserving the open PR worktree for `feat/130-deepagents-cli-optional`. Added a stale worktree policy to `.claude/rules/git.md` and recorded the removal count in the Unreleased changelog. Verified the remaining worktree list, `du -sh .worktrees/`, open-PR checks for removed branches, lint, typecheck, and tests.
+
+### Learnings for future iterations
+Some registered worktrees were locked to host-only paths unavailable inside this sandbox, while their ignored local directories still consumed disk; removing both the stale registration and the local husk is necessary to reclaim space. Keep open-PR worktrees even when they are under `.worktrees/`, because later stories still need PR context.
 
 ---

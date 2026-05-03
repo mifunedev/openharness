@@ -21,10 +21,10 @@ Compose the existing primitives (`/prd`, `.claude/agents/critic.md`, `/ralph`, `
 ```mermaid
 flowchart TD
     A["1. Parse args + derive slug"] --> B["2. /prd → tasks/<slug>/prd.md"]
-    B --> C["3. Open GH issue → #N"]
-    C --> D["4. Spawn 2 critics in parallel<br/>(implementer + user lens)"]
-    D --> E["5. Resolve critique<br/>HALT if high-severity"]
-    E --> F["6. /ralph → tasks/<slug>/prd.json"]
+    B --> D["3. Spawn 2 critics in parallel<br/>(implementer + user lens)<br/>cross-check vs .claude/protected-paths.txt"]
+    D --> E["4. Resolve critique<br/>HALT if high-severity"]
+    E --> C["5. Open GH issue → #N<br/>(only after PROCEED)"]
+    C --> F["6. /ralph → tasks/<slug>/prd.json"]
     F --> G["7. Scaffold prompt.md + progress.txt"]
     G --> H["8. Branch + commit + push"]
     H --> I["9. gh pr create --draft"]
@@ -32,6 +32,8 @@ flowchart TD
 
     style J stroke-dasharray: 5 5
 ```
+
+**Stage ordering rationale**: critics run BEFORE the GH issue is opened (this was reordered in v1.1, issue #218). The earlier ordering created dangling issues when critics halted; now no GitHub-side state changes until the spec passes the critic gate.
 
 ## Stages
 
@@ -61,41 +63,15 @@ If `--plan <path>` was provided, pass the plan content with explicit instruction
 
 Verify output exists at `tasks/<slug>/prd.md` before proceeding.
 
-### Stage 3 — Open GH issue → `#N`
-
-Compose issue body from the prd.md introduction + goals sections. Title format per `.claude/rules/git.md`:
-
-```bash
-gh issue create \
-  --title "<prefix>: <slug-as-prose>" \
-  --label "<prefix>" \
-  --body "$(cat <<'EOF'
-## Summary
-<from prd.md introduction>
-
-## Goals
-<from prd.md goals>
-
-## PRD
-- tasks/<slug>/prd.md (this branch)
-
-## Tracking
-This issue tracks the work scaffolded by /ship-spec. The PR will be opened as draft once the task scaffold is committed.
-EOF
-)"
-```
-
-Capture the returned issue URL; extract `<N>` (issue number) for downstream use.
-
-If `gh label create <prefix>` is needed (label doesn't exist), create it first with a sensible color.
-
-### Stage 4 — Two critics in parallel
+### Stage 3 — Two critics in parallel
 
 Launch **two `Agent` tool calls in a single message** (parallel execution) with `subagent_type: "critic"`. Different framings — symmetric critics waste context.
 
+Both critics receive an additional cross-check instruction: read `.claude/protected-paths.txt` and flag any proposed deletion of an entry on that list as `SEVERITY: H` unless the AC has an explicit override note. This is the gate that would have caught the v0.7 convergence regression (PR #212, US-012).
+
 #### Critic A — Implementer's lens
 
-> You are an adversarial implementer reviewing a PRD before any code is written. Read `tasks/<slug>/prd.md`. Your job: surface technical risks BEFORE implementation begins.
+> You are an adversarial implementer reviewing a PRD before any code is written. Read `tasks/<slug>/prd.md`. Read `.claude/protected-paths.txt` and treat its entries as MUST-NOT-DELETE without an override note. Your job: surface technical risks BEFORE implementation begins.
 >
 > Focus on:
 > 1. **Vague acceptance criteria** — flag any AC that isn't directly verifiable
@@ -103,6 +79,7 @@ Launch **two `Agent` tool calls in a single message** (parallel execution) with 
 > 3. **Pattern conflicts** — does any story break an existing convention in this repo? Read `.claude/rules/*.md` and `tasks/openharness-v07-convergence/prd.json` for established patterns.
 > 4. **Scope creep within stories** — are any "single iteration" stories actually 2+ stories?
 > 5. **Hidden destructive operations** — does any story imply file deletion / branch deletion / PR closure that isn't explicitly gated?
+> 6. **Protected-path violations** — does any story propose touching a `.claude/protected-paths.txt` entry without override note? If yes, raise SEVERITY: H and tag the finding with `[PROTECTED-PATH]`.
 >
 > Return:
 > ```
@@ -113,7 +90,7 @@ Launch **two `Agent` tool calls in a single message** (parallel execution) with 
 
 #### Critic B — User's lens
 
-> You are an adversarial user reviewing a PRD before implementation. Read `tasks/<slug>/prd.md` and `.claude/ICP.md`. Your job: surface scope and framing risks BEFORE the team commits.
+> You are an adversarial user reviewing a PRD before implementation. Read `tasks/<slug>/prd.md` and `.claude/ICP.md`. Read `.claude/protected-paths.txt` and treat its entries as MUST-NOT-DELETE without an override note. Your job: surface scope and framing risks BEFORE the team commits.
 >
 > Focus on:
 > 1. **Scope ambiguity** — what's NOT in the Non-Goals section that should be?
@@ -121,6 +98,7 @@ Launch **two `Agent` tool calls in a single message** (parallel execution) with 
 > 3. **Hidden expectations** — what would a user reasonably expect this to do that the PRD doesn't address?
 > 4. **Premature optimization** — any story that solves a problem the user doesn't have yet?
 > 5. **Missing rollback/escape hatch** — for destructive stories, is there a documented way to undo?
+> 6. **Protected-path violations** — does any story propose touching a `.claude/protected-paths.txt` entry without override note? If yes, raise SEVERITY: H and tag the finding with `[PROTECTED-PATH]`.
 >
 > Return:
 > ```
@@ -148,17 +126,47 @@ Generated <date>; reviews `prd.md` post-/prd, pre-/ralph.
 - **Recommendation**: PROCEED | REVISE-PRD | HALT
 ```
 
-### Stage 5 — Resolve critique
+### Stage 4 — Resolve critique
 
 Read `tasks/<slug>/critique.md`. Apply the gate:
 
 | Condition | Action |
 |---|---|
-| Any finding `SEVERITY: H` with no AC-level mitigation | **HALT.** Print critique.md path + summary. User must revise prd.md and re-run `/ship-spec` (resumes from stage 6 since prior artifacts exist) |
-| Only `SEVERITY: M` or `L` findings | **PROCEED.** Append synthesis paragraph to prd.md noting the medium/low risks were acknowledged; continue to stage 6 |
+| Any finding `SEVERITY: H` with no AC-level mitigation (including `[PROTECTED-PATH]` violations) | **HALT.** Print critique.md path + summary. User must revise prd.md and re-run `/ship-spec` (resumes from stage 3 since prior artifacts exist; nothing GitHub-side has happened yet) |
+| Only `SEVERITY: M` or `L` findings | **PROCEED.** Append synthesis paragraph to prd.md noting the medium/low risks were acknowledged; continue to stage 5 |
 | No findings | **PROCEED.** Append "Critics found no issues" line to prd.md; continue |
 
-The HALT path is the whole point. Critics are the short feedback loop; honoring their high-severity findings is what makes this safer than the v0.7 convergence pattern.
+The HALT path is the whole point. Critics are the short feedback loop; honoring their high-severity findings is what makes this safer than the v0.7 convergence pattern. Note: stages 1-4 produce ONLY local artifacts (prd.md, critique.md). No GitHub-side state exists until stage 5 — meaning a HALT is fully reversible with `rm -rf tasks/<slug>/`.
+
+### Stage 5 — Open GH issue → `#N`
+
+Only reached after stage 4 PROCEED. Compose issue body from the prd.md introduction + goals sections. Title format per `.claude/rules/git.md`:
+
+```bash
+gh issue create \
+  --title "<prefix>: <slug-as-prose>" \
+  --label "<prefix>" \
+  --body-file <(printf '%s\n' \
+    "## Summary" \
+    "<from prd.md introduction>" \
+    "" \
+    "## Goals" \
+    "<from prd.md goals>" \
+    "" \
+    "## PRD" \
+    "- tasks/<slug>/prd.md (this branch)" \
+    "" \
+    "## Critique" \
+    "- High: <count>, Medium: <count>, Low: <count>" \
+    "- Recommendation: PROCEED" \
+    "" \
+    "## Tracking" \
+    "Scaffolded by /ship-spec. Critics ran clean (or with mitigated findings) before this issue was opened. Draft PR to follow.")
+```
+
+Capture the returned issue URL; extract `<N>` (issue number) for downstream use.
+
+If `gh label create <prefix>` is needed (label doesn't exist), create it first with a sensible color. Prefer `--body-file` over heredoc — heredocs in long Bash commands can trip the `deny-env-dump.sh` PreToolUse hook.
 
 ### Stage 6 — `/ralph` → `tasks/<slug>/prd.json`
 
@@ -269,9 +277,9 @@ Capture the PR URL; print it as the final pipeline output.
 |---|---|---|
 | 1 | Slug invalid (>5 words, contains `/`, equals `archive`) | Ask user for shorter name; re-invoke |
 | 2 | `/prd` fails or produces empty file | Inspect skill error; user revises feature description |
-| 3 | `gh issue create` fails (auth, label, repo perms) | Diagnose; manual issue creation; re-run from stage 4 with `--issue <N>` |
-| 4 | Either critic crashes or returns malformed output | Re-spawn the failed critic alone; partial critique.md is acceptable |
-| 5 | High-severity finding without mitigation | **HALT.** User revises prd.md; re-runs `/ship-spec` (idempotency picks up from stage 6) |
+| 3 | Either critic crashes or returns malformed output | Re-spawn the failed critic alone; partial critique.md is acceptable |
+| 4 | High-severity finding without mitigation (incl. `[PROTECTED-PATH]` violations) | **HALT.** User revises prd.md; re-runs `/ship-spec` (idempotency picks up from stage 3 to re-run critics on revised PRD). No GitHub-side state was created. |
+| 5 | `gh issue create` fails (auth, label, repo perms) | Diagnose; manual issue creation; re-run from stage 6 with `--issue <N>` |
 | 6 | `/ralph` hard-fails (missing `--issue`, malformed prd.md) | Inspect skill error; revise inputs; re-run from stage 6 |
 | 7 | Four-file contract incomplete | Print missing files; abort; user investigates |
 | 8 | Pre-commit hook fails (lint, tests) | Fix issue; re-run from stage 8 |
@@ -284,8 +292,9 @@ Every stage checks for prior state and resumes rather than duplicating:
 | Stage | Resume check | Behavior |
 |---|---|---|
 | 2 | `tasks/<slug>/prd.md` exists | `/prd` runs in update mode (existing skill behavior) |
-| 3 | Issue with title/label exists | Reuse existing `#N`; don't create duplicate |
-| 4 | `tasks/<slug>/critique.md` exists and is recent (<24h) | Skip; reuse |
+| 3 | `tasks/<slug>/critique.md` exists and is recent (<24h) AND prd.md unchanged since | Skip; reuse |
+| 4 | (no resume — pure decision step) | Re-evaluate critique.md every run |
+| 5 | Issue with matching title/label exists | Reuse existing `#N`; don't create duplicate |
 | 6 | `tasks/<slug>/prd.json` exists | `/ralph` archives prior + regenerates (existing skill behavior) |
 | 7 | `prompt.md` / `progress.txt` exist | Skip if present |
 | 8 | Branch exists on origin | Checkout + commit on top |
@@ -332,4 +341,5 @@ v1 stops at draft PR because the loop launch is the highest-blast-radius step in
 | `scripts/ralph.sh` | `scripts/ralph.sh` | (v2 — loop launcher) |
 | `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | (v2 — CI verification) |
 | advisor-model rule | `.claude/rules/advisor-model.md` | Critic-gate pattern (3-step variant) |
+| Protected-paths list | `.claude/protected-paths.txt` | Stage 3 — load-bearing items critics must not propose deleting |
 | Convergence task template | `tasks/openharness-v07-convergence/` | Stage 7 — prompt.md template |

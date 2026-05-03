@@ -1,0 +1,55 @@
+# Protected paths — load-bearing skills, scripts, and config that critics
+# must NOT propose for deletion or deprecation without an explicit override
+# note in the finding's RECOMMENDATION column.
+#
+# When you ship a new orchestrator-load-bearing skill or script, ADD it
+# here in the same PR. When something on this list becomes truly obsolete,
+# remove it here in a separate PR with a CHANGELOG entry explaining why.
+#
+# Format: one entry per line. Skill names are bare (e.g., "release"), not
+# slash-prefixed. Scripts and files use repo-relative paths.
+# Lines starting with # are comments. Blank lines are ignored.
+#
+# Last reviewed: 2026-05-03 (issue #218)
+
+# --- Orchestrator skills (.claude/skills/) ---
+release
+ci-status
+cloudflared-tunnel
+agent-browser
+prd
+ralph
+harness-audit
+skill-lint
+delegate
+strategic-proposal
+ship-spec
+
+# --- Orchestrator scripts (scripts/) ---
+scripts/ralph.sh
+scripts/cron-runtime.ts
+
+# --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
+install/banner.sh
+install/cloudflared-tunnel.sh
+.devcontainer/entrypoint.sh
+.devcontainer/Dockerfile
+
+# --- Crons (referenced by scripts/cron-runtime.ts) ---
+crons/heartbeat.md
+crons/cleanup-tasks.md
+
+# --- Rules consumed by skills + agents at runtime ---
+.claude/rules/git.md
+.claude/rules/sandbox-processes.md
+.claude/rules/gateway-routing.md
+.claude/rules/advisor-model.md
+
+# --- Specs that other artifacts cross-reference ---
+.claude/specs/structure-spec-v0.7.md
+.claude/ICP.md
+
+# --- Sub-agents invoked by skills ---
+.claude/agents/critic.md
+.claude/agents/implementer.md
+.claude/agents/pm.md

@@ -4,14 +4,14 @@ import Link from "@docusaurus/Link";
 import CodeBlock from "@theme/CodeBlock";
 import styles from "./index.module.css";
 
-const QUICKSTART = `# install — auto-detects Node 20+ and configures accordingly
+const QUICKSTART = `# install (only host dep: Docker)
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 
-# authenticate Claude, Codex, Gemini
-oh onboard
+# enter the isolated sandbox
+cd ~/openharness && make shell
 
-# drop into your isolated sandbox
-oh shell`;
+# inside the sandbox, pick your agent
+claude        # or codex, pi`;
 
 const AGENTS: Array<{
   name: string;
@@ -32,31 +32,31 @@ const AGENTS: Array<{
     icon: <img src="/img/agents/codex.png" alt="" width={28} height={28} />,
   },
   {
-    name: "Gemini",
-    description: "Google's command-line agent.",
-    href: "/docs/agents/gemini",
-    icon: <img src="/img/agents/gemini.png" alt="" width={28} height={28} />,
+    name: "Pi",
+    description: "A lightweight, customizable harness.",
+    href: "/docs/agents/pi",
+    icon: <img src="/img/agents/pi.svg" alt="" width={28} height={28} />,
   },
 ];
 
 const WHY: Array<{ title: string; body: string }> = [
   {
     title: "Isolation by default",
-    body: "Each agent gets its own Docker-isolated worktree. No shared filesystem, no leaked env vars, no host pollution.",
+    body: "Your project's agent lives in a Docker-isolated sandbox. No leaked env vars, no host pollution, no toolchain rot on your laptop.",
   },
   {
-    title: "Parallel, not serialized",
-    body: "Claude, Codex, and Gemini run side-by-side. One container, N worktrees, all working at once.",
+    title: "Persistent and patient",
+    body: "The sandbox is long-lived. Authenticate once, restart never. A markdown-defined cron runtime keeps the agent working while you sleep.",
   },
   {
-    title: "Per-agent state",
-    body: "Identity, memory, and skills live with each agent. Restart-safe, branch-aware, agent-owned.",
+    title: "Composable substrate",
+    body: "Postgres, Cloudflare tunnels, SSH, the Caddy gateway — cherry-pick via Compose overlays. Multi-agent setups ship as separate harness packs.",
   },
 ];
 
 export default function Home(): React.ReactElement {
   return (
-    <Layout description="Give every AI coding agent its own sandbox. Open Harness runs Claude, Codex, Gemini, and Pi in Docker-isolated worktrees — parallel, persistent, and never touching your host.">
+    <Layout description="We provide the sandbox; you choose the agent. Open Harness is a long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, or Pi inside.">
       <main>
         <section className={styles.hero}>
           <div className={styles.heroBg} aria-hidden="true" />
@@ -64,14 +64,13 @@ export default function Home(): React.ReactElement {
             <div className={styles.heroCopy}>
               <p className={styles.heroEyebrow}>
                 <span className={styles.heroEyebrowDot} aria-hidden="true" />
-                Multi-agent dev infrastructure
+                Per-project agent sandbox
               </p>
               <h1 className={styles.heroTitle}>
-                Give every AI coding agent its own sandbox.
+                We provide the sandbox. You choose the harness.
               </h1>
               <p className={styles.heroSubtitle}>
-                Open Harness runs Claude, Codex, Gemini, and Pi in Docker-isolated
-                worktrees — parallel, persistent, and never touching your host.
+                A long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, or Pi inside, and let it work on demand or on a cron while you sleep.
               </p>
               <div className={styles.heroButtons}>
                 <Link
@@ -92,7 +91,7 @@ export default function Home(): React.ReactElement {
                 <span aria-hidden="true">·</span>
                 <span>Self-hosted</span>
                 <span aria-hidden="true">·</span>
-                <span>One container, N worktrees</span>
+                <span>Only Docker on your host</span>
               </div>
             </div>
             <aside className={styles.heroTerminal} aria-label="Quickstart commands">
@@ -109,10 +108,9 @@ export default function Home(): React.ReactElement {
 
         <section className={styles.section}>
           <div className={styles.container}>
-            <h2 className={styles.sectionTitle}>Bring any agent. Or all of them.</h2>
+            <h2 className={styles.sectionTitle}>Pick your agent.</h2>
             <p className={styles.sectionLede}>
-              Every supported coding agent runs in its own worktree, with its own
-              identity and memory.
+              Claude Code, Codex, and Pi ship preinstalled. Switch between them inside the sandbox — or add your own by editing the Dockerfile.
             </p>
             <div className={styles.agentGrid}>
               {AGENTS.map((agent) => (
@@ -132,7 +130,7 @@ export default function Home(): React.ReactElement {
 
         <section className={styles.sectionAlt}>
           <div className={styles.container}>
-            <h2 className={styles.sectionTitle}>Why a harness instead of running them on your laptop?</h2>
+            <h2 className={styles.sectionTitle}>Why a sandbox instead of running it on your laptop?</h2>
             <div className={styles.whyGrid}>
               {WHY.map((item) => (
                 <article key={item.title} className={styles.whyCard}>
@@ -149,23 +147,16 @@ export default function Home(): React.ReactElement {
 
         <section className={styles.section}>
           <div className={styles.container}>
-            <h2 className={styles.sectionTitle}>One container. N worktrees. One daemon.</h2>
+            <h2 className={styles.sectionTitle}>One project. One sandbox.</h2>
             <div className={styles.archCard}>
               <p>
-                Open Harness runs as a single long-lived Docker container hosting
-                an arbitrary number of git worktrees. Each worktree is a complete,
-                isolated workspace — its own branch, its own filesystem, its own
-                agent state.
+                Open Harness runs as a single long-lived Docker container dedicated to your project. The bind-mounted <code>workspace/</code> houses whatever your project needs — one repo, several, side-by-side branches, scratch dirs. The agent owns its workspace; your laptop stays clean.
               </p>
               <p>
-                A single orchestrator daemon manages provisioning, shells, and
-                cleanup. A heartbeat scheduler runs background work on a cron
-                inside each worktree. Caddy handles ingress when you need to
-                expose a service.
+                A markdown cron runtime reads <code>crons/*.md</code> and wakes the agent on a schedule — issue triage, PR review, background grooming, anything you want running while you sleep. Configure the sandbox via <code>.devcontainer/.env</code>; add infra (Postgres, Cloudflare tunnels, SSH, Caddy gateway) via Compose overlays.
               </p>
               <p>
-                The result is a reproducible, auditable, multi-agent workspace
-                you can spin up in one command and tear down just as fast.
+                Multi-agent setups — like a Pi+Mom Slack bot — ship as separate harness packs you <code>git clone</code> into the workspace.
               </p>
               <Link className={styles.archLink} to="/docs/architecture/overview">
                 Read the architecture docs →
@@ -197,7 +188,7 @@ export default function Home(): React.ReactElement {
               <Link className={styles.linkCard} to="/docs">
                 <span className={styles.linkCardLabel}>Documentation</span>
                 <span className={styles.linkCardSub}>
-                  Quickstart, CLI, architecture
+                  Quickstart, architecture, overlays
                 </span>
               </Link>
             </div>

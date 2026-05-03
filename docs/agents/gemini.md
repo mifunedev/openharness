@@ -1,6 +1,7 @@
 ---
 sidebar_position: 4
 title: "Gemini"
+unlisted: true
 ---
 
 # Gemini CLI

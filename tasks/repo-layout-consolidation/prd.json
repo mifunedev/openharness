@@ -21,8 +21,8 @@
                 "Markdown lint passes (pnpm run lint if applicable, otherwise pre-commit hook accepts the change)"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-05-03; commit 235b330"
         },
         {
             "id": "US-002",
@@ -37,8 +37,8 @@
                 "Markdown lint passes"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 2 on 2026-05-03; commit 732ce67"
         },
         {
             "id": "US-003",
@@ -54,8 +54,8 @@
                 "Markdown lint passes"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 3 on 2026-05-03; commit bd07712"
         },
         {
             "id": "US-004",
@@ -68,8 +68,8 @@
                 "Markdown lint passes"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 4 on 2026-05-03; commit 05be240"
         },
         {
             "id": "US-005",
@@ -83,8 +83,8 @@
                 "Coordinate merge order with the parallel .devcontainer/ session if same-line conflicts arise"
             ],
             "priority": 5,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 5 on 2026-05-03; commit 05f03dd"
         },
         {
             "id": "US-006",
@@ -97,8 +97,8 @@
                 "Either git grep -n 'heartbeat\\.log' .gitignore returns zero hits, OR a clarifying comment is present at that line"
             ],
             "priority": 6,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 6 on 2026-05-03; commit b1e78d9"
         },
         {
             "id": "US-007",

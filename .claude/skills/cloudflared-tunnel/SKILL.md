@@ -46,7 +46,7 @@ If no ingress pairs provided, suggest defaults:
 command -v cloudflared >/dev/null 2>&1 && echo "cloudflared: installed" || echo "cloudflared: NOT FOUND"
 ```
 
-If cloudflared is not installed, **stop** and tell the user to install it (`setup.sh --cloudflared` or the system package manager).
+If cloudflared is not installed, **stop** and tell the user to install it via the system package manager or rebuild the sandbox with `INSTALL_CLOUDFLARED=true`.
 
 ```bash
 ls ~/.cloudflared/cert.pem 2>/dev/null && echo "cert.pem: found" || echo "cert.pem: NOT FOUND"

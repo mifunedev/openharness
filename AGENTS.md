@@ -143,7 +143,7 @@ apps as stacked panes — see `.claude/rules/sandbox-processes.md`.
 ```
 .devcontainer/        # Sandbox environment (Dockerfile, compose, overlays, entrypoint)
 docs/                 # Plain markdown documentation (GitHub-rendered, no build step)
-install/              # Provisioning scripts (entrypoint.sh, cloudflared-tunnel.sh, setup.sh, tmux-agent.sh)
+install/              # Provisioning assets (banner.sh, cloudflared-tunnel.sh, .tmux.conf, .zshrc)
 scripts/              # Root-level orchestrator scripts (cron-runtime.ts, ralph.sh)
 crons/                # Markdown-frontmatter cron definitions (heartbeat.md, cleanup-tasks.md)
 workspace/            # Minimal agent-runtime template (bind-mounted; pack supplies identity, skills, agents)

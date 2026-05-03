@@ -24,12 +24,12 @@ The literal grep acceptance check includes tracked task documentation, not only 
 ## US-002 — 2026-05-03 01:08 UTC
 
 **Title**: Resolve packages/web-ui + packages/slack + dangling references
-**Files changed**: packages/web-ui/ (removed untracked); packages/slack/ (removed untracked); pnpm-workspace.yaml; install/entrypoint.sh; .github/ISSUE_TEMPLATE/feat.md; CHANGELOG.md; tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt
+**Files changed**: packages/web-ui/ (removed untracked); packages/slack/ (removed untracked); pnpm-workspace.yaml; legacy install entrypoint; .github/ISSUE_TEMPLATE/feat.md; CHANGELOG.md; tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt
 **Commit**: 6c24b86
 **Result**: PASS
 
 ### What I did
-Removed the empty untracked `packages/web-ui/` and `packages/slack/` husks and removed the stale `packages/slack` workspace entry so the workspace now contains only `apps/docs`. Deleted the dead Slack build/link block from `install/entrypoint.sh` and updated the feature issue template's area hint to list current harness surfaces. Added the Unreleased changelog removal entry, verified `pnpm install` and `docker compose -f .devcontainer/docker-compose.yml config`, and reran lint/test.
+Removed the empty untracked `packages/web-ui/` and `packages/slack/` husks and removed the stale `packages/slack` workspace entry so the workspace now contains only `apps/docs`. Deleted the dead Slack build/link block from `legacy install entrypoint` and updated the feature issue template's area hint to list current harness surfaces. Added the Unreleased changelog removal entry, verified `pnpm install` and `docker compose -f .devcontainer/docker-compose.yml config`, and reran lint/test.
 
 ### Learnings for future iterations
 Deleting ignored/untracked directories is invisible to `git status`; use `find packages`, `du -sh packages`, and `git ls-files packages/` to prove both the disk footprint and tracked-file state. `pnpm install` remained lockfile-clean because `packages/slack` had no importer in `pnpm-lock.yaml`; only `pnpm-workspace.yaml` needed a tracked update.

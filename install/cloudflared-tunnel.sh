@@ -5,7 +5,7 @@ set -euo pipefail
 # Creates a named tunnel, configures ingress, and routes DNS.
 #
 # Prerequisites:
-#   - cloudflared installed (via setup.sh --cloudflared)
+#   - cloudflared installed (system package manager or INSTALL_CLOUDFLARED=true sandbox rebuild)
 #   - User authenticated: cloudflared login (opens browser, saves cert.pem)
 #
 # Usage:
@@ -54,7 +54,7 @@ done
 CFLARED_DIR="$HOME/.cloudflared"
 
 # ─── Check prerequisites ─────────────────────────────────────────
-command -v cloudflared >/dev/null 2>&1 || die "cloudflared is not installed. Run setup.sh with cloudflared enabled."
+command -v cloudflared >/dev/null 2>&1 || die "cloudflared is not installed. Install it via your system package manager or rebuild the sandbox with INSTALL_CLOUDFLARED=true."
 
 if [ ! -f "$CFLARED_DIR/cert.pem" ]; then
   banner "Authenticating with Cloudflare"

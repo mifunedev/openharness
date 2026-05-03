@@ -25,7 +25,7 @@ Tracks GitHub issue [#213](https://github.com/ryaneggz/open-harness/issues/213).
 
 - [ ] Remove the obsolete v0.6 structure spec from `.claude/specs/` (untracked; `.gitignore:49-51` allowlist confirms only v0.7 + install-prereq-detection are tracked)
 - [ ] Edit `.claude/specs/structure-spec-v0.7.md:6` — replace the old Builds-on pointer to the v0.6 structure spec with a one-paragraph self-contained summary of what v0.6 established (so v0.7 stands alone)
-- [ ] Edit `docs/architecture/container-runtime.md:26` — remove the false claim that `.devcontainer/entrypoint.sh` "calls `install/entrypoint.sh`"; describe the actual call graph: Dockerfile `ENTRYPOINT ["entrypoint.sh"]` → `.devcontainer/entrypoint.sh` (which sources `install/banner.sh` for shell prompt only)
+- [ ] Edit `docs/architecture/container-runtime.md:26` — remove the false claim that `.devcontainer/entrypoint.sh` "calls `legacy install entrypoint`"; describe the actual call graph: Dockerfile `ENTRYPOINT ["entrypoint.sh"]` → `.devcontainer/entrypoint.sh` (which sources `install/banner.sh` for shell prompt only)
 - [ ] `git ls-files | xargs grep -l 'structure-spec-v0\.6'` returns no hits
 - [ ] CHANGELOG `### Removed` and `### Fixed` entries under `[Unreleased]`
 - [ ] Lint passes
@@ -40,7 +40,7 @@ Tracks GitHub issue [#213](https://github.com/ryaneggz/open-harness/issues/213).
 - [ ] `rm -rf packages/web-ui packages/slack` (both fully untracked — `git ls-files packages/` returns empty)
 - [ ] `rmdir packages` if it ends up empty
 - [ ] `pnpm-workspace.yaml`: remove the `- packages/slack` line; if no packages remain, drop the `packages` key (only `apps/docs` survives)
-- [ ] `install/entrypoint.sh:68`: delete the SLACK_PKG block (build-and-link `packages/slack` flow). Note: US-003 deletes this file entirely, so this AC is moot if US-003 lands first
+- [ ] `legacy install entrypoint:68`: delete the SLACK_PKG block (build-and-link `packages/slack` flow). Note: US-003 deletes this file entirely, so this AC is moot if US-003 lands first
 - [ ] `.github/ISSUE_TEMPLATE/feat.md:20`: remove `packages/sandbox, packages/slack` from the "Which area" hint; reflect actual current areas (`.devcontainer/`, `install/`, `docs/`, `workspace/` template, `scripts/`, `crons/`)
 - [ ] `pnpm install` exits 0 at root
 - [ ] `docker compose -f .devcontainer/docker-compose.yml config` validates (no unknown package references)
@@ -50,15 +50,15 @@ Tracks GitHub issue [#213](https://github.com/ryaneggz/open-harness/issues/213).
 
 ### US-003: Delete dead install scripts (critic-gated)
 
-**Description:** As a maintainer, I want `install/setup.sh` and `install/entrypoint.sh` removed because the Dockerfile (`COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh; ENTRYPOINT ["entrypoint.sh"]`) wires `.devcontainer/entrypoint.sh` directly. Grep confirms zero live references outside `.worktrees/` and CHANGELOG history. Critic must review before deletion (destructive, file-removal scope warrants adversarial review per `.claude/rules/advisor-model.md`).
+**Description:** As a maintainer, I want `legacy setup script` and `legacy install entrypoint` removed because the Dockerfile (`COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh; ENTRYPOINT ["entrypoint.sh"]`) wires `.devcontainer/entrypoint.sh` directly. Grep confirms zero live references outside `.worktrees/` and CHANGELOG history. Critic must review before deletion (destructive, file-removal scope warrants adversarial review per `.claude/rules/advisor-model.md`).
 
 **Acceptance Criteria:**
 
-- [ ] Spawn `.claude/agents/critic.md` via the Task tool with the proposed deletion list (`install/setup.sh`, `install/entrypoint.sh`, optionally `install/tmux-agent.sh`) and the grep evidence; capture Risk Assessment in the commit body
-- [ ] `git rm install/setup.sh install/entrypoint.sh`
-- [ ] Investigate `install/tmux-agent.sh` (358 bytes) the same way; `git rm` if no live references found, otherwise document its caller in `AGENTS.md`
-- [ ] Update `AGENTS.md:140` (project structure block) — remove the `entrypoint.sh, setup.sh` references; describe what actually lives in `install/` post-cleanup (`banner.sh`, `cloudflared-tunnel.sh`, `.tmux.conf`, `.zshrc`, plus `tmux-agent.sh` if kept)
-- [ ] `git ls-files | xargs grep -l 'install/setup\.sh\|install/entrypoint\.sh'` returns no hits
+- [ ] Spawn `.claude/agents/critic.md` via the Task tool with the proposed deletion list (`legacy setup script`, `legacy install entrypoint`, optionally `legacy tmux wrapper script`) and the grep evidence; capture Risk Assessment in the commit body
+- [ ] `git rm legacy setup script legacy install entrypoint`
+- [ ] Investigate `legacy tmux wrapper script` (358 bytes) the same way; `git rm` if no live references found, otherwise document its caller in `AGENTS.md`
+- [ ] Update `AGENTS.md:140` (project structure block) — remove the legacy script references; describe what actually lives in `install/` post-cleanup (`banner.sh`, `cloudflared-tunnel.sh`, `.tmux.conf`, `.zshrc`, plus the tmux wrapper if kept)
+- [ ] `git ls-files | xargs grep -l 'install/legacy-setup-script\|install/legacy-install-entrypoint'` returns no hits
 - [ ] `docker compose -f .devcontainer/docker-compose.yml config` validates (entrypoint resolves to `.devcontainer/entrypoint.sh` only)
 - [ ] CHANGELOG `### Removed` entry
 - [ ] Lint passes
@@ -166,4 +166,4 @@ Tracks GitHub issue [#213](https://github.com/ryaneggz/open-harness/issues/213).
 
 - US-006: should #131 (deepagents-cli) and #69 (web-UI) be closed or labeled `v0.8`? Critic decides per `.claude/ICP.md` content during the iteration
 - US-005: critic may flag specific branches as "preserve" — those stay; commit body documents the carve-out
-- US-003: `install/tmux-agent.sh` (358 bytes) — keep or delete? Critic-driven decision based on grep evidence during the iteration
+- US-003: `legacy tmux wrapper script` (358 bytes) — keep or delete? Critic-driven decision based on grep evidence during the iteration

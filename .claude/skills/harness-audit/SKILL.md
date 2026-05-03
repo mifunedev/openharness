@@ -140,7 +140,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml`, `install/entrypoint.sh`, `workspace/startup.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), missing healthchecks on compose services.
+> 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml`, `.devcontainer/entrypoint.sh`, `workspace/startup.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), missing healthchecks on compose services.
 >
 > 2. **Test coverage** — Check `packages/slack/` and `packages/sandbox/` for test files. Run `ls packages/slack/src/__tests__/ 2>/dev/null` and `ls packages/sandbox/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are packages tested in CI?
 >
@@ -304,7 +304,7 @@ If actionable patterns emerge (recurring finding type, systemic gap), append to 
 | Long-term memory | `workspace/MEMORY.md` |
 | Wiki | `docs/wiki/` |
 | Compose | `.devcontainer/docker-compose.yml` |
-| Entrypoint | `install/entrypoint.sh` |
+| Entrypoint | `.devcontainer/entrypoint.sh` |
 | CI workflows | `.github/workflows/` |
 | Slack package | `packages/slack/` |
 | Sandbox package | `packages/sandbox/` |

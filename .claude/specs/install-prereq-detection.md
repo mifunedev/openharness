@@ -486,7 +486,7 @@ These three issues will cause real users to fail if the implementer follows the 
 The current `install.sh:80` writes `.env` to the **repo root** (`$REPO_DIR/.env`). This is wrong. Verified facts:
 
 - `packages/sandbox/src/lib/config.ts:7` hard-codes `ENV_FILE = ".devcontainer/.env"`.
-- `install/entrypoint.sh` and `init-env.sh` seed `.devcontainer/.env`.
+- The legacy installer-side entrypoint helper and `init-env.sh` seeded `.devcontainer/.env`.
 - `docker-compose.yml` reads env via `--env-file .devcontainer/.env`.
 
 Consequence today: `oh sandbox <name>` after a curl-install silently falls back to the default sandbox name `"sandbox"` (config.ts:42) because the user-typed name was written to the wrong file. **Fix in the same change**: the spec's "write .env" step writes to `$REPO_DIR/.devcontainer/.env`, not `$REPO_DIR/.env`. Update both the new logic and the existing heredoc.

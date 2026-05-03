@@ -104,3 +104,17 @@ Removed the obsolete `workspace/heartbeats/` entry from the workspace template t
 Do not invent a replacement artifact path when the stale heartbeat file has no live equivalent; use the repo-root `crons/*.md` model instead.
 
 ---
+## US-008 — 2026-05-03 23:49 UTC
+
+**Title**: Add .claude/rules/repo-layout-source.md auto-loaded rule
+**Files changed**: .claude/rules/repo-layout-source.md
+**Commit**: 6e0c9c7
+**Result**: PASS
+
+### What I did
+Added the auto-loaded repository layout single-source rule under `.claude/rules/`. The rule points contributors to `docs/architecture/container-runtime.md#repo-layout`, blocks duplicate directory trees elsewhere, and records why the guard exists.
+
+### Learnings for future iterations
+Use `.claude/rules/*.md` for durable process conventions; rules should state the canonical source, explicit do/do-not lists, and the historical failure that motivated them.
+
+---

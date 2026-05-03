@@ -129,8 +129,8 @@
                 "Markdown lint passes"
             ],
             "priority": 8,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 8 on 2026-05-03; commit 6e0c9c7"
         },
         {
             "id": "US-009",

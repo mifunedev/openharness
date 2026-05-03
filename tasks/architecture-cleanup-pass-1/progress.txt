@@ -100,3 +100,20 @@ Read issues #130 and #66 plus the open PR metadata/diffs for #131 and #69, then 
 For cross-team GitHub housekeeping, comments should distinguish "not core scope" from "bad idea" and preserve stale PRs as pack prior art when appropriate. External-only actions still need an audit commit so the critic decision and GitHub-side state transition have durable repository history.
 
 ---
+
+## US-007 — 2026-05-03 01:39 UTC
+
+**Title**: Dogfood /harness-audit against the cleaned codebase
+**Files changed**: tasks/architecture-cleanup-pass-1/prd.json; tasks/architecture-cleanup-pass-1/progress.txt; GitHub issue #213
+**Commit**: 101b67c
+**Result**: PASS
+
+### What I did
+Dogfooded `/harness-audit` against the cleaned branch by following the restored skill's read-only checklist and posted the synthesized findings to issue #213. The pass-1 cleanup targets now score 0-1, with the remaining score-2 follow-ups limited to root-skill reference rot, tmux process-lifecycle alignment, and package-less CI reconciliation. Dry-run scaffolded `tasks/architecture-cleanup-pass-2/prd.md` for those follow-ups, validated the shape, and removed it before commit.
+
+### Learnings for future iterations
+In this Pi API session the slash command's Task/Agent mechanics are not directly exposed, so capstone dogfood should cite `.claude/skills/harness-audit/SKILL.md`, run the deterministic repo checks, and make any substitution explicit in the GitHub issue comment. For final Ralph stories, keep `STATUS: COMPLETE` as the last standalone line so `crons/cleanup-tasks.md` can archive the task on its Sunday sweep.
+
+---
+
+STATUS: COMPLETE

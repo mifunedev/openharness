@@ -11,7 +11,7 @@ curl -fsSL https://oh.mifune.dev/install.sh | bash
 cd ~/openharness && make shell
 
 # inside the sandbox, pick your agent
-claude        # or codex, opencode, pi`;
+claude        # or codex, opencode, pi, deepagents`;
 
 const AGENTS: Array<{
   name: string;
@@ -43,6 +43,19 @@ const AGENTS: Array<{
     href: "/docs/agents/pi",
     icon: <PiIcon />,
   },
+  {
+    name: "DeepAgents",
+    description: "LangChain's multi-provider terminal agent.",
+    href: "/docs/agents/deepagents",
+    icon: (
+      <img
+        src="https://avatars.githubusercontent.com/u/126733545?s=200&v=4"
+        alt=""
+        width={28}
+        height={28}
+      />
+    ),
+  },
 ];
 
 const WHY: Array<{ title: string; body: string }> = [
@@ -62,7 +75,7 @@ const WHY: Array<{ title: string; body: string }> = [
 
 export default function Home(): React.ReactElement {
   return (
-    <Layout description="We provide the sandbox; you choose the agent. Open Harness is a long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, OpenCode, or Pi inside.">
+    <Layout description="We provide the sandbox; you choose the agent. Open Harness is a long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, OpenCode, Pi, or DeepAgents inside.">
       <main>
         <section className={styles.hero}>
           <div className={styles.heroBg} aria-hidden="true" />
@@ -76,7 +89,7 @@ export default function Home(): React.ReactElement {
                 We provide the sandbox. You choose the harness.
               </h1>
               <p className={styles.heroSubtitle}>
-                A long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, OpenCode, or Pi inside, and let it work on demand or on a cron while you sleep.
+                A long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, OpenCode, Pi, or DeepAgents inside, and let it work on demand or on a cron while you sleep.
               </p>
               <div className={styles.heroButtons}>
                 <Link
@@ -116,7 +129,7 @@ export default function Home(): React.ReactElement {
           <div className={styles.container}>
             <h2 className={styles.sectionTitle}>Pick your agent.</h2>
             <p className={styles.sectionLede}>
-              Claude Code, Codex, OpenCode, and Pi ship preinstalled. Switch between them inside the sandbox — or add your own by editing the Dockerfile.
+              Claude Code, Codex, OpenCode, Pi, and DeepAgents ship preinstalled. Switch between them inside the sandbox — or add your own by editing the Dockerfile.
             </p>
             <div className={styles.agentGrid}>
               {AGENTS.map((agent) => (
@@ -205,9 +218,8 @@ export default function Home(): React.ReactElement {
   );
 }
 
-/* ---------- Pi icon ----------
- * Inlined so `currentColor` adapts to light/dark theme. The other agents
- * have official PNG/SVG marks with their own colors (see /img/agents/). */
+/* ---------- Inline agent icons ----------
+ * Inlined so `currentColor` adapts to light/dark theme. */
 
 function PiIcon(): React.ReactElement {
   return (

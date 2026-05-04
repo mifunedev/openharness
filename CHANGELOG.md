@@ -9,6 +9,8 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Fixed
+- Docs landing page supported-agent copy and agent grid now include DeepAgents with a matching icon tile.
+- `opencode --version` (and any `opencode` invocation) failing with `EACCES: permission denied, mkdir '/home/sandbox/.config/opencode'` on a fresh sandbox. Docker auto-creates `~/.config` as root to satisfy the `gh-config:/home/sandbox/.config/gh` named-volume mount, which then blocks the sandbox user from creating siblings like `~/.config/opencode`. The entrypoint's non-recursive parent-chown loop now also covers `~/.config` alongside the existing `~/.local` / `~/.local/share` parents, while leaving the bind-mounted `~/.config/gh` contents untouched. ([#247](https://github.com/ryaneggz/open-harness/issues/247))
 - `opencode` and `opencode /connect` failing with `EACCES: permission denied, mkdir '/home/sandbox/.local/state'` on a fresh sandbox. Docker auto-creates `~/.local` and `~/.local/share` as root to satisfy the `opencode-host` bind-mount path; the entrypoint now non-recursively chowns those parent dirs to `sandbox:sandbox` so the user can create siblings like `.local/state`. The bind-mounted `~/.local/share/opencode` itself stays untouched. Re-applies a fix that was lost when [#241](https://github.com/ryaneggz/open-harness/pull/241) merged a conflicting `entrypoint.sh`. ([#245](https://github.com/ryaneggz/open-harness/issues/245))
 
 ### Added

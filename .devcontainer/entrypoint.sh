@@ -34,6 +34,17 @@ for dir in .claude .codex .pi .cloudflared .config/gh .ssh .openharness; do
   fi
 done
 
+# Fix ownership of /home/sandbox/.local and /home/sandbox/.local/share —
+# Docker auto-creates these as root to satisfy the opencode bind-mount path,
+# which then blocks `opencode` from creating siblings like `.local/state`.
+# Non-recursive so the bind-mounted `.local/share/opencode` stays untouched
+# when OPENCODE_HOST_BIND_MOUNT=1.
+for parent in /home/sandbox/.local /home/sandbox/.local/share; do
+  if [ -d "$parent" ]; then
+    chown sandbox:sandbox "$parent" 2>/dev/null || true
+  fi
+done
+
 OPENCODE_STATE="/home/sandbox/.local/share/opencode"
 if [ -d "$OPENCODE_STATE" ]; then
   if [ "${OPENCODE_HOST_BIND_MOUNT:-0}" != "1" ]; then

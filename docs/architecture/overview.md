@@ -75,7 +75,7 @@ graph TD
 
 ## Key Principles
 
-**One container, many agents.** All AI agent CLIs — Claude Code, Codex, plus any pack-supplied agents — share the same sandbox image built from `.devcontainer/Dockerfile`. There is no separate image per agent. Isolation is achieved through git worktrees and tmux sessions, not separate containers.
+**One container, many agents.** All AI agent CLIs — Claude Code (default), Codex, OpenCode, Pi, DeepAgents, plus any pack-supplied agents — share the same sandbox image built from `.devcontainer/Dockerfile`. There is no separate image per agent. Isolation is achieved through git worktrees and tmux sessions, not separate containers. The product surface is one developer, one project, one harness — preinstalled alternatives exist so you can pick the right tool for the task, not race them.
 
 **Host stays thin.** The host only runs Docker. No host CLI, no Node runtime, no Python, and no agent toolchain is required on the developer's machine. The project root is bind-mounted into the container at `/home/sandbox/harness`, so files written inside the container are immediately visible on the host and in git.
 

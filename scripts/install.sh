@@ -295,8 +295,10 @@ fi
 
 # ─── Pre-create host auth source dirs ────────────────────────────────
 # Default config enables host-bind overlays (claude-host.yml, codex-host.yml,
-# pi-host.yml, opencode-host.yml) that bind host agent state into the container. Two
-# preconditions (each documented in the overlay headers):
+# pi-host.yml, opencode-host.yml) that bind host agent state into the container.
+# The DeepAgents host overlay (deepagents-host.yml) is opt-in but we still
+# pre-create ~/.deepagents so the overlay works the moment a user enables it.
+# Two preconditions (each documented in the overlay headers):
 #   1. Host UID == 1000 (credential files are mode 0600 — group-membership
 #      trick in entrypoint.sh cannot bypass owner-only reads).
 #   2. Host source dir pre-exists. Otherwise docker auto-creates it as
@@ -306,7 +308,7 @@ fi
 # (1) is checked below and surfaced as a warning — the user must opt
 # out by hand if their host UID isn't 1000.
 banner "Preparing host auth dirs for sandbox bind-mounts"
-for d in .claude .codex .pi .local/share/opencode; do
+for d in .claude .codex .pi .deepagents .local/share/opencode; do
   if [ ! -d "$HOME/$d" ]; then
     mkdir -p "$HOME/$d"
     ok "Created ~/$d (empty — first-time auth will populate it)"
@@ -355,11 +357,13 @@ if [ "$__HOST_UID" != "1000" ]; then
     warn "the sandbox WILL NOT be able to read them despite the bind-mount."
     warn ""
     warn "Install jq, OR edit $REPO_DIR/.openharness/config.json"
-    warn "and remove these overlays from composeOverrides:"
+    warn "and remove these overlays from composeOverrides (any that you"
+    warn "have enabled — deepagents-host.yml is opt-in by default):"
     warn "    .devcontainer/docker-compose.claude-host.yml"
     warn "    .devcontainer/docker-compose.codex-host.yml"
     warn "    .devcontainer/docker-compose.pi-host.yml"
     warn "    .devcontainer/docker-compose.opencode-host.yml"
+    warn "    .devcontainer/docker-compose.deepagents-host.yml"
     warn ""
     warn "The base named volumes will take over"
     warn "and entrypoint.sh chowns them to UID 1000 on boot."

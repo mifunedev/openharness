@@ -47,6 +47,15 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
  && cp /root/.local/bin/uv /usr/local/bin/uv \
  && cp /root/.local/bin/uvx /usr/local/bin/uvx
 
+# ─── DeepAgents CLI ────────────────────────────────────────────────
+# Install via `uv tool install` into image-level locations so the
+# `deepagents` executable is on PATH for the sandbox user. Avoid
+# user-home installs that would land in /root/.local/bin only.
+ENV UV_TOOL_DIR=/opt/uv/tools
+ENV UV_TOOL_BIN_DIR=/usr/local/bin
+RUN mkdir -p "$UV_TOOL_DIR" \
+ && uv tool install deepagents-cli
+
 # ─── pnpm (via corepack) ───────────────────────────────────────────
 ENV PNPM_HOME="/usr/local/share/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"

@@ -25,10 +25,11 @@ Overlays live in `.devcontainer/docker-compose.*.yml` and are selected through `
 | `docker-compose.codex-host.yml` | Bind-mount host `~/.codex` (trust tradeoff) |
 | `docker-compose.opencode-host.yml` | Bind-mount host `~/.local/share/opencode` (trust tradeoff) |
 | `docker-compose.pi-host.yml` | Bind-mount host `~/.pi` (trust tradeoff) |
+| `docker-compose.deepagents-host.yml` | Bind-mount host `~/.deepagents` — opt-in, wider blast radius (raw provider keys) |
 | `docker-compose.ssh.yml` | Mount host `~/.ssh` read-only — git-over-SSH, mutually exclusive with `ssh-generate` |
 | `docker-compose.ssh-generate.yml` | Generate persistent ED25519 keypair in named volume |
 
-> The `claude-host`, `codex-host`, `opencode-host`, and `pi-host` overlays all require host UID = 1000 and pre-existing host directories (`~/.claude` + `~/.claude.json` for claude; `~/.codex` for codex; `~/.local/share/opencode` for OpenCode; `~/.pi` for pi). See the trust tradeoffs in each `.devcontainer/docker-compose.*-host.yml` file.
+> The `claude-host`, `codex-host`, `opencode-host`, `pi-host`, and `deepagents-host` overlays all require host UID = 1000 and pre-existing host directories (`~/.claude` + `~/.claude.json` for claude; `~/.codex` for codex; `~/.local/share/opencode` for OpenCode; `~/.pi` for pi; `~/.deepagents` for deepagents). See the trust tradeoffs in each `.devcontainer/docker-compose.*-host.yml` file. `scripts/install.sh` pre-creates the host directories and strips `*-host.yml` overlays from `composeOverrides` automatically when host UID is not 1000.
 
 To enable an overlay, add its path to `.openharness/config.json`:
 

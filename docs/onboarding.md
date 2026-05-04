@@ -31,18 +31,32 @@ Verify with `gh auth status`. If it succeeds, you are done with this step.
 
 ### Step 2 — LLM provider
 
-Authenticate Claude Code, Codex, OpenCode, and Pi (each ships in the base sandbox) so they can make API calls.
+Authenticate Claude Code, Codex, OpenCode, Pi, and (optionally) DeepAgents — each ships in the base sandbox — so they can make API calls.
 
 ```bash
-claude   # opens the OAuth flow on first run; follow the printed URL
-codex    # OpenAI auth, only if you intend to use Codex
-opencode # run /connect, then choose OpenAI
-pi       # @mariozechner/pi-coding-agent; OAuth on first run
+claude       # opens the OAuth flow on first run; follow the printed URL
+codex        # OpenAI auth, only if you intend to use Codex
+opencode     # run /connect, then choose OpenAI
+pi           # @mariozechner/pi-coding-agent; OAuth on first run
+deepagents   # optional runtime; configure provider keys (see below)
 ```
 
 OpenCode's recommended default for ChatGPT Plus and Pro users is OpenAI OAuth through `/connect` → OpenAI. It writes auth to `~/.local/share/opencode/auth.json`.
 
-Each agent writes tokens to its directory under the sandbox home (`~/.claude/`, `~/.codex/`, `~/.local/share/opencode/`, `~/.pi/`). With persistent named volumes, credentials survive container rebuilds. The `*-host` overlays (enabled by default in `.openharness/config.json`) bind-mount matching host directories so your laptop's existing auth carries straight in — see [provision.md](./operations/provision.md).
+Each agent writes tokens to its directory under the sandbox home (`~/.claude/`, `~/.codex/`, `~/.local/share/opencode/`, `~/.pi/`, `~/.deepagents/`). With persistent named volumes, credentials survive container rebuilds. The `*-host` overlays (Claude/Codex/OpenCode/Pi enabled by default in `.openharness/config.json`; DeepAgents opt-in) bind-mount matching host directories so your laptop's existing auth carries straight in — see [provision.md](./operations/provision.md).
+
+DeepAgents is an optional supported runtime; Claude remains the default. DeepAgents reads provider keys from `~/.deepagents/.env`. Create it on first use:
+
+```bash
+mkdir -p ~/.deepagents
+cat > ~/.deepagents/.env <<'EOF'
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+EOF
+chmod 600 ~/.deepagents/.env
+```
+
+The sandbox banner reports `deepagents` as `installed` once `command -v deepagents` succeeds and as `configured` only when `~/.deepagents/.env` or `~/.deepagents/config.toml` is non-empty.
 
 If you prefer API keys or provider env over OAuth, set the relevant variables in `.devcontainer/.env` (e.g. `OPENAI_API_KEY`) before bringing the sandbox up.
 

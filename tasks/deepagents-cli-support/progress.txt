@@ -1,2 +1,308 @@
 # progress
 
+## Codebase Patterns
+
+- The Dockerfile installs `uv` to `/usr/local/bin` already (line 47-48). Adding
+  Python tools via `uv tool install` should set `UV_TOOL_DIR=/opt/uv/tools`
+  and `UV_TOOL_BIN_DIR=/usr/local/bin` so the resulting executable lands on
+  the system PATH and is usable by the unprivileged `sandbox` user. Avoid
+  installing into `/root/.local/bin` or `/home/sandbox/.local/bin`.
+- npm-based agent CLIs are installed via the `AGENTS` build arg loop near the
+  bottom of the Dockerfile (claude-code, codex, pi-coding-agent). DeepAgents
+  is a Python package via `uv tool install` so it lives in its own layer next
+  to the `uv` install, NOT in the AGENTS arg array.
+- Project root has root `package.json` with `lint` (delegates to package-level
+  lints if present) and `test` (vitest). No per-package lint configured yet;
+  `pnpm run lint` is a no-op until packages add their own.
+- Pre-commit hook runs `pnpm run lint && pnpm run test` automatically — do
+  NOT use `--no-verify`. Tests in `scripts/__tests__/cron-runtime.test.ts`
+  must keep passing.
+- The orchestrator-protected paths in `.claude/protected-paths.txt` include
+  `.devcontainer/Dockerfile`, `.devcontainer/entrypoint.sh`, `install/banner.sh`,
+  and `scripts/ralph.sh` — modify additively, do not delete.
+- DeepAgents Ralph env-var contract (set by US-004): `RALPH_DEEPAGENTS_FLAGS`
+  controls the flag string before the task; the per-call turn cap is set
+  exclusively via `RALPH_DEEPAGENTS_MAX_TURNS` and is always appended
+  AFTER the flag string. Operators must NOT include `--max-turns` in
+  `RALPH_DEEPAGENTS_FLAGS`. Default flags:
+  `-y --shell-allow-list recommended -q --no-stream`. Default max turns: 25.
+  US-005 docs and US-006 changelog must restate this contract.
+
+---
+
+## US-001 — 2026-05-03 19:51 UTC
+
+**Title**: Install DeepAgents in the sandbox image
+**Files changed**: .devcontainer/Dockerfile
+**Commit**: 180e07f
+**Result**: PASS
+
+### What I did
+
+Added a dedicated DeepAgents install layer in `.devcontainer/Dockerfile`
+immediately after the `uv` install. The layer sets
+`UV_TOOL_DIR=/opt/uv/tools` and `UV_TOOL_BIN_DIR=/usr/local/bin` as ENV (so
+they're available to the rest of the image, not just the RUN), creates the
+tool dir, and runs `uv tool install deepagents-cli`. This puts the
+`deepagents` shim on `/usr/local/bin`, which is on PATH for the sandbox
+user. The npm-based agent CLI block (claude, codex, pi) below is
+unchanged.
+
+### Learnings for future iterations
+
+- `uv tool install` writes a shim to `$UV_TOOL_BIN_DIR`. Setting that to
+  `/usr/local/bin` is the cleanest way to surface a Python CLI to all
+  users in the image — no PATH rewriting needed.
+- Future iterations that touch the Dockerfile should keep the layer ordering
+  stable: system pkgs → Node → gh → Docker CLI → cloudflared → bun → uv →
+  DeepAgents → pnpm → npm-based agents → sandbox user → oh-my-zsh → COPY →
+  entrypoint. Adding new tools too late in the file means they can't be
+  invoked during user-config steps; too early misses dependencies.
+- The pre-commit hook re-runs the full lint+test suite on commit. Keep
+  iterations small so the hook stays fast.
+- US-002 will need a named volume entry in `.devcontainer/docker-compose.yml`
+  and an `entrypoint.sh` ownership pass tweak. The entrypoint already loops
+  over a list of mounted dirs — extending that list is the right pattern.
+
+---
+
+## US-002 — 2026-05-03 19:54 UTC
+
+**Title**: Persist DeepAgents state
+**Files changed**: .devcontainer/docker-compose.yml, .devcontainer/entrypoint.sh
+**Commit**: 1cfea26
+**Result**: PASS
+
+### What I did
+
+Added `deepagents-auth` named volume to `.devcontainer/docker-compose.yml`,
+mounted at `/home/sandbox/.deepagents`, with a comment block stating that
+v1 persists ONLY this path (repo-local `.deepagents/` is project data
+and follows normal git review/ignore rules — no secrets there). Extended
+the entrypoint ownership-pass loop to include `.deepagents`, with a skip
+clause for `DEEPAGENTS_HOST_BIND_MOUNT=1` matching the existing
+Claude/Codex/Pi pattern. Existing `claude-auth`, `codex-auth`, `pi-auth`,
+`cloudflared-auth`, and `gh-config` volumes are unchanged; OpenCode has
+no auth volume in the current compose file (nothing to preserve).
+
+### Learnings for future iterations
+
+- The `for dir in ...` ownership loop in `entrypoint.sh` is the canonical
+  pattern for new mounted dirs. Add a `[ "$dir" = ".X" ] && [ "${X_HOST_BIND_MOUNT:-0}" = "1" ]`
+  skip clause when adding a host-overlay companion. US-003 will create
+  `docker-compose.deepagents-host.yml` that flips this env var.
+- The compose file's top-of-file comment block is the right place to
+  document each volume's purpose and persistence semantics; it surfaces
+  during code review without needing a separate doc page.
+- `docker compose ... config --quiet` is a fast validity check for
+  compose changes without booting the container.
+- The persistence story splits cleanly: `~/.deepagents` (named volume,
+  rebuild-stable) vs. repo-local `.deepagents/` (project data, gitignore
+  rules apply). US-005 docs should restate this separation.
+
+---
+
+## US-003 — 2026-05-03 20:00 UTC
+
+**Title**: Add a DeepAgents host-state overlay
+**Files changed**: .devcontainer/docker-compose.deepagents-host.yml, scripts/install.sh, docs/guide/overlays.md
+**Commit**: 8f81e24
+**Result**: PASS
+
+### What I did
+
+Added `.devcontainer/docker-compose.deepagents-host.yml` modeled on the
+existing pi-host overlay. It bind-mounts `${HOST_DEEPAGENTS_DIR:-~/.deepagents}`
+into `/home/sandbox/.deepagents` and sets `DEEPAGENTS_HOST_BIND_MOUNT=1` so the
+entrypoint chown loop (already extended in US-002) leaves host file ownership
+intact. Header comments call out the wider blast radius vs. claude/codex —
+DeepAgents stores raw provider API keys (no expiry, no scope) — and the
+specific `--shell-allow-list all` + Docker socket combo risk that US-004
+will surface in `scripts/ralph.sh`.
+
+Updated `scripts/install.sh` to (1) include `.deepagents` in the host-auth
+pre-create loop alongside `.claude/.codex/.pi`, and (2) extend the UID-guard
+fallback warning with the deepagents-host overlay path and the
+`deepagents-auth` named volume, so non-UID-1000 hosts get a coherent
+fallback message. The existing `jq` filter already strips any `*-host.yml`
+overlay automatically, so behavior change is limited to comments + warnings.
+
+Documented the overlay in `docs/guide/overlays.md`: enabling, the host-state
+pre-flight, credential blast-radius tradeoffs, disable-and-return-to-named-volume
+flow, and how to reset the `deepagents-auth` volume without touching host
+`~/.deepagents`. Did not enable the overlay by default — DeepAgents itself is
+an optional supported runtime (Claude is the documented default), so opt-in
+matches the PRD framing.
+
+### Learnings for future iterations
+
+- `scripts/install.sh` already has a generic `*-host.yml` jq filter for the
+  UID guard, so adding new host overlays is mostly a documentation/warning
+  exercise, not a code-flow change. Only the user-facing fallback warning
+  needs the new overlay path so the manual instructions match the auto path.
+- The deepagents-host overlay's blast radius is genuinely larger than
+  claude-host/codex-host because raw provider API keys have no scope/expiry.
+  Future docs (US-005) and the Ralph harness story (US-004) should restate
+  this when discussing `--shell-allow-list all` + the Docker socket.
+- `.openharness/config.json` keeps DeepAgents host overlay opt-out by
+  default; do NOT add it to `composeOverrides` in a future iteration unless
+  the PRD changes.
+- `docker compose ... config --quiet` with both base + overlay is the fast
+  smoke test for new overlay files; it caught a YAML mistake in seconds
+  during this iteration.
+- The pi-host overlay header is the cleanest single-mount template to copy
+  for future single-dir agent overlays — claude-host's two-mount layout is
+  the special case (because of the sibling `~/.claude.json`).
+
+---
+
+## US-004 — 2026-05-04 02:05 UTC
+
+**Title**: Add DeepAgents to Ralph harness selection
+**Files changed**: scripts/ralph.sh
+**Commit**: 1fb1e37
+**Result**: PASS
+
+### What I did
+
+Added `deepagents` to `normalize_harness`, `usage`, top-of-file usage docs,
+and the iteration banner. Implemented `run_deepagents` with a default
+flag set of `-y --shell-allow-list recommended -q --no-stream` and
+appended `--max-turns "$RALPH_DEEPAGENTS_MAX_TURNS"` (default 25) plus
+`-n "$task"` so a single DeepAgents call cannot hang the iteration.
+`RALPH_DEEPAGENTS_FLAGS` overrides the safety/output flag string but the
+turn cap is always appended. Inline comments restate that
+`--shell-allow-list all` combined with the mounted Docker socket can
+affect sibling containers or host Docker. Existing Claude/Pi/Codex
+fallback paths and `claude_limit_detected` are untouched. Smoke-tested
+`--harness=deepagents`, `RALPH_HARNESS=deepagents`, unknown-harness
+rejection, and the `command -v deepagents` requirement.
+
+### Learnings for future iterations
+
+- `run_<harness>` functions in `scripts/ralph.sh` follow a stable shape:
+  pull flags from an env-var override, document the unquoted-flags
+  shellcheck disable, pass the task last. Match this exactly for any
+  future harness — the `run_iteration` switch just dispatches to the
+  matching `run_<harness>`.
+- The protected-paths reminder in AC #8 is satisfied by the Critical
+  rules block in `tasks/deepagents-cli-support/prompt.md` ("Do not
+  delete protected paths…"), which already restates the constraint.
+  No prompt-generation skill produces a separate prompt.
+- `--max-turns` is intentionally appended after `$deepagents_flags` so
+  the cap is never silently dropped by an operator override.
+  RALPH_DEEPAGENTS_FLAGS should NOT include `--max-turns`; if it does,
+  DeepAgents sees two values and the result is undefined. Document this
+  explicitly in US-005.
+- `resolve_initial_harness` only auto-falls-back from `pi`. New
+  harnesses default to "hard fail when not on PATH", which is the
+  correct posture for explicit opt-in selection — DeepAgents inherits
+  this for free without code changes.
+- The pre-commit hook re-runs lint+test on every commit; tests in
+  `scripts/__tests__/cron-runtime.test.ts` are the only coverage today,
+  so harness changes need their own bash-level smoke tests during
+  iteration before the hook runs.
+
+---
+
+## US-005 — 2026-05-04 02:13 UTC
+
+**Title**: Document DeepAgents support
+**Files changed**: install/banner.sh, docs/agents/deepagents.md (new),
+docs/agents/overview.md, docs/quickstart.md, docs/onboarding.md,
+docs/installation.md, docs/operations/{provision,destroy,repair}.md,
+docs/guide/{permissions,configuration}.md,
+docs/architecture/{container-runtime,overview}.md, README.md
+**Commit**: 51ab9c5
+**Result**: PASS
+
+### What I did
+
+Added DeepAgents to the user-facing docs surface alongside Claude/Codex/
+OpenCode/Pi without dropping OpenCode from the supported set. Created
+`docs/agents/deepagents.md` with purpose, install verification,
+provider-key setup (`~/.deepagents/.env`), interactive + non-interactive
+usage, tmux usage, Ralph usage, the `RALPH_DEEPAGENTS_FLAGS` /
+`RALPH_DEEPAGENTS_MAX_TURNS` env contract, and an explicit
+`--shell-allow-list all` warning that calls out the Docker socket +
+`deepagents-host` overlay blast radius. Updated the overview/installation/
+operations/guide/architecture docs to enumerate the
+`deepagents-auth` named volume, the `deepagents-host` overlay, the Ralph
+selection flag, and the repo-local `.deepagents/` "project data, never
+secrets" boundary. Reframed the multi-agent posture as "preinstalled
+alternatives, pick the right tool" rather than racing/stacking, per
+Critic B's v1 ICP guidance.
+
+Extended `install/banner.sh` so DeepAgents status is `installed` only
+when `command -v deepagents` succeeds and `configured` only when
+`~/.deepagents/.env` or `~/.deepagents/config.toml` is non-empty — an
+empty mounted directory (named volume on first boot) is no longer
+treated as authenticated. Verified `pnpm docs:build`, `pnpm run lint`,
+`pnpm run test`, and `bash -n install/banner.sh` all pass.
+
+### Learnings for future iterations
+
+- `apps/docs` Docusaurus uses `onBrokenLinks: "warn"` and
+  `onBrokenMarkdownLinks: "warn"`, so a typo in a relative link will
+  silently warn instead of failing the build. Watch the build output
+  for `[WARNING] Broken link…` lines when adding inter-doc anchors.
+- The overlays page already had a complete `deepagents-host` section
+  from US-003 (lines 145–242); US-005 only needed to thread it into the
+  rest of the doc set. Future doc passes should grep for an existing
+  section before duplicating content.
+- `docs/agents/overview.md` previously listed only Claude/Codex/Pi and
+  omitted OpenCode entirely; that was the stale-inventory finding from
+  the critique. Always reconcile preinstalled-agent tables against the
+  Dockerfile when adding a new agent — drift between the two is the
+  most common doc bug for this feature class.
+- The banner status pattern is `[installed]` from `command -v` and
+  `[configured]` from a non-empty config file — never from directory
+  existence alone. The `deepagents-auth` named volume creates an empty
+  `~/.deepagents/` on first boot, so an existence check would always be
+  green. US-006 changelog should not need to restate this.
+- US-006 is the only remaining story; it owns the CHANGELOG entry per
+  the iteration spec (no earlier story added one).
+
+---
+
+## US-006 — 2026-05-03 20:16 UTC
+
+**Title**: Add release note
+**Files changed**: CHANGELOG.md
+**Commit**: 22641c4
+**Result**: PASS
+
+### What I did
+
+Appended a single comprehensive bullet to the first existing `### Added`
+section under `## [Unreleased]` (no duplicate heading created, per AC).
+The entry covers the Dockerfile install layer (US-001), the
+`deepagents-auth` named volume + entrypoint chown skip (US-002), the
+opt-in `docker-compose.deepagents-host.yml` overlay and its wider
+blast radius (US-003), the Ralph harness selector with the
+`-y --shell-allow-list recommended -q --no-stream` default,
+`RALPH_DEEPAGENTS_FLAGS` override, and `RALPH_DEEPAGENTS_MAX_TURNS`
+cap (US-004), and the docs/onboarding updates plus the corrected
+`install/banner.sh` `[installed]`/`[configured]` semantics (US-005).
+Linked issue #237. Verified `pnpm run lint`, `pnpm run test`, and
+`pnpm docs:build` all pass; pre-commit hook re-ran lint+test on commit.
+
+### Learnings for future iterations
+
+- The `[Unreleased]` block in `CHANGELOG.md` is unusual: it has
+  multiple `### Added` subsections (lines 11, 23, 46) interleaved with
+  `### Changed`/`### Removed` blocks rather than a single normalized
+  set. The iteration spec rule "append to existing `### Added`"
+  refers to the FIRST one — putting the new bullet at the top of the
+  first `### Added` section (line 11) keeps recent entries together
+  and matches how prior PRs (#233, etc.) seeded that section.
+- One-shot release-note iterations are still subject to the
+  pre-commit hook (lint + test), so even a doc-only commit re-runs
+  the vitest suite. Budget ~5s per commit.
+- Final iteration must terminate with a literal `STATUS: COMPLETE`
+  line on its own at the very end of `progress.txt` — that's the
+  Ralph loop's exit sentinel.
+
+---
+
+STATUS: COMPLETE

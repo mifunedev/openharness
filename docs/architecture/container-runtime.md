@@ -21,7 +21,7 @@ The Dockerfile at `.devcontainer/Dockerfile` starts from `debian:bookworm-slim`.
 | Bun | Fast JS runtime and package manager |
 | uv + uvx | Python package management (for Python-based agent tasks) |
 | pnpm | Via corepack — package manager for the harness monorepo |
-| Agent CLIs | Claude Code, Pi (`oh`/`pi`), and Codex installed globally via npm |
+| Agent CLIs | Claude Code, Pi (`oh`/`pi`), and Codex installed globally via npm; DeepAgents (`deepagents`) installed via `uv tool install deepagents-cli` into `/usr/local/bin` |
 
 The Dockerfile copies `.devcontainer/entrypoint.sh` into the image as `/usr/local/bin/entrypoint.sh` and sets `ENTRYPOINT ["entrypoint.sh"]`, so container startup runs `.devcontainer/entrypoint.sh` directly. That script initializes git and auth state, reconciles host/container permissions, starts the cron runtime when enabled, and only sources `install/banner.sh` from the sandbox user's shell profile for interactive prompt status.
 
@@ -50,6 +50,7 @@ The container mounts the project root and several named volumes:
 | Claude auth | named volume `claude-auth` | `/home/sandbox/.claude` | Claude Code credentials — persists across rebuilds |
 | Pi auth | named volume `pi-auth` | `/home/sandbox/.pi` | Pi Agent OAuth tokens |
 | Codex auth | named volume `codex-auth` | `/home/sandbox/.codex` | Codex credentials |
+| DeepAgents state | named volume `deepagents-auth` | `/home/sandbox/.deepagents` | DeepAgents provider keys (`.env`), CLI defaults (`config.toml`), memory, skills, sessions. v1 persists only this path; repo-local `.deepagents/` is project data subject to normal git rules. |
 | Cloudflared | named volume `cloudflared-auth` | `/home/sandbox/.cloudflared` | Cloudflare tunnel credentials |
 | GitHub CLI | named volume `gh-config` | `/home/sandbox/.config/gh` | `gh` auth tokens |
 

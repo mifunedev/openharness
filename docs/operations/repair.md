@@ -46,6 +46,8 @@ If the container itself is down, `docker exec` returns non-zero. Bring it back w
 | `codex --version` fails | `docker exec -u sandbox openharness sudo npm install -g @openai/codex` |
 | `opencode --version` fails | `docker exec -u sandbox openharness sudo npm install -g opencode-ai` |
 | `pi --version` fails | `docker exec -u sandbox openharness sudo npm install -g @mariozechner/pi-coding-agent` |
+| `deepagents -v` fails | `docker exec -u sandbox openharness sudo env UV_TOOL_DIR=/opt/uv/tools UV_TOOL_BIN_DIR=/usr/local/bin uv tool install deepagents-cli` |
+| `deepagents` reports "not configured" | Create `~/.deepagents/.env` with provider keys (e.g. `ANTHROPIC_API_KEY=...`); `chmod 600`. The named `deepagents-auth` volume preserves it across rebuilds. |
 | Node version wrong | Image is stale. Rebuild: `docker compose ... down -v && docker compose ... up -d --build` |
 | `docker ps` fails inside sandbox | Verify the `/var/run/docker.sock` bind mount in `.devcontainer/docker-compose.yml` is intact; usually a host-side socket permission issue, not a missing overlay |
 | `tmux ls` missing `system-cron` | Restart entrypoint: `docker compose ... restart` (the cron runtime launches in tmux from `.devcontainer/entrypoint.sh`) |

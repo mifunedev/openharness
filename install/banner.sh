@@ -77,6 +77,21 @@ if [ -s "${HOME}/.local/share/opencode/auth.json" ]; then
   opencode_detail="authenticated"
 fi
 
+# deepagents — installed status from PATH; configured status from
+# ~/.deepagents/.env or ~/.deepagents/config.toml so that an empty mounted
+# directory (named volume on first boot) is not treated as authenticated.
+deepagents_status="[✗]"
+deepagents_detail="not installed"
+if command -v deepagents >/dev/null 2>&1; then
+  if [ -s "${HOME}/.deepagents/.env" ] || [ -s "${HOME}/.deepagents/config.toml" ]; then
+    deepagents_status="[✓]"
+    deepagents_detail="configured"
+  else
+    deepagents_status="[✓]"
+    deepagents_detail="installed — configure ~/.deepagents/.env or run: deepagents"
+  fi
+fi
+
 # openharness CLI — verify the bind-mounted package built and symlinked
 oh_status="[✗]"
 oh_detail="not installed — check entrypoint logs"
@@ -97,14 +112,15 @@ printf '  Timezone:  %s\n' "$timezone"
 printf '  Overlays:  %s\n' "$overlays"
 printf '\n'
 printf '  Onboarding:\n'
-printf '    %-6s %-11s %s\n' "$gh_status"     "gh"          "$gh_detail"
-printf '    %-6s %-11s %s\n' "$claude_status" "claude"      "$claude_detail"
-printf '    %-6s %-11s %s\n' "$codex_status"  "codex"       "$codex_detail"
-printf '    %-6s %-11s %s\n' "$opencode_status" "opencode"  "$opencode_detail"
-printf '    %-6s %-11s %s\n' "$pi_status"     "pi"          "$pi_detail"
-printf '    %-6s %-11s %s\n' "$oh_status"     "openharness" "$oh_detail"
+printf '    %-6s %-11s %s\n' "$gh_status"         "gh"          "$gh_detail"
+printf '    %-6s %-11s %s\n' "$claude_status"     "claude"      "$claude_detail"
+printf '    %-6s %-11s %s\n' "$codex_status"      "codex"       "$codex_detail"
+printf '    %-6s %-11s %s\n' "$opencode_status"   "opencode"    "$opencode_detail"
+printf '    %-6s %-11s %s\n' "$pi_status"         "pi"          "$pi_detail"
+printf '    %-6s %-11s %s\n' "$deepagents_status" "deepagents"  "$deepagents_detail"
+printf '    %-6s %-11s %s\n' "$oh_status"         "openharness" "$oh_detail"
 printf '\n'
-printf '  Shortcuts: claude · codex · opencode · pi · tmux attach -t system-cron\n'
+printf '  Shortcuts: claude · codex · opencode · pi · deepagents · tmux attach -t system-cron\n'
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'
 

@@ -98,7 +98,7 @@
       ],
       "priority": 5,
       "passes": true,
-      "notes": "Completed iteration 5 on 2026-05-03; commit pending"
+      "notes": "Completed iteration 5 on 2026-05-03; commit 51ab9c5"
     },
     {
       "id": "US-006",
@@ -112,8 +112,8 @@
         "Typecheck passes."
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed iteration 6 on 2026-05-03; commit 22641c4"
     }
   ]
 }

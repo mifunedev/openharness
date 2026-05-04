@@ -13,13 +13,6 @@ argument-hint: "<tunnel-name> <hostname:port> [<hostname:port> ...] [--run]"
 
 Create a named Cloudflare tunnel, write multi-ingress config, route DNS, and optionally start it. Supports multiple hostname:port pairs for routing several services through one tunnel.
 
-> **Relationship to the gateway**: The Caddy gateway (see
-> `.claude/rules/gateway-routing.md`) is the primary in-network reverse
-> proxy for sandbox apps. This skill is the *one-time setup* for a
-> persistent named tunnel when remote mode (`PUBLIC_DOMAIN` set) is
-> configured behind NAT or wants Cloudflare Access auth. Run it during
-> onboarding, not per-exposure.
-
 ## Instructions
 
 ### Step 1 — Parse arguments

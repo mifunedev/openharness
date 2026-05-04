@@ -21,7 +21,7 @@ The Dockerfile at `.devcontainer/Dockerfile` starts from `debian:bookworm-slim`.
 | Bun | Fast JS runtime and package manager |
 | uv + uvx | Python package management (for Python-based agent tasks) |
 | pnpm | Via corepack — package manager for the harness monorepo |
-| Agent CLIs | Claude Code, Pi (`oh`/`pi`), and Codex installed globally via npm |
+| Agent CLIs | Claude Code, Pi (`oh`/`pi`), and Codex installed globally via npm; DeepAgents (`deepagents`) installed via `uv tool install deepagents-cli` into `/usr/local/bin` |
 
 The Dockerfile copies `.devcontainer/entrypoint.sh` into the image as `/usr/local/bin/entrypoint.sh` and sets `ENTRYPOINT ["entrypoint.sh"]`, so container startup runs `.devcontainer/entrypoint.sh` directly. That script initializes git and auth state, reconciles host/container permissions, starts the cron runtime when enabled, and only sources `install/banner.sh` from the sandbox user's shell profile for interactive prompt status.
 
@@ -36,7 +36,7 @@ Key configuration choices:
 - `command: sleep infinity` — keeps the container alive; actual work happens inside named tmux sessions, not in the foreground process.
 - `stdin_open: true` and `tty: true` — required for interactive shells via `docker exec`.
 
-Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon, Slack bot) and are activated by listing them in `.openharness/config.json` under `composeOverrides`. The `/provision` skill reads that file and passes the correct `-f` flags to `docker compose up`.
+Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon, Slack bot) and are activated by listing them in `.openharness/config.json` under `composeOverrides`. `make sandbox` and `scripts/install.sh` read that file via `jq` and pass the corresponding `-f` flags to `docker compose up`.
 
 ## Bind Mounts
 
@@ -45,11 +45,12 @@ The container mounts the project root and several named volumes:
 | Mount | Host path | Container path | Purpose |
 |-------|-----------|---------------|---------|
 | Project root | `..` (repo root) | `/home/sandbox/harness` | Source code, worktrees, workspace |
-| OH config | `../.openharness` | `/home/sandbox/.openharness` | Sandbox config, Caddyfile, exposures |
+| OH config | `../.openharness` | `/home/sandbox/.openharness` | Sandbox config, compose overlay selection |
 | Docker socket | `/var/run/docker.sock` | `/var/run/docker.sock` | Nested docker for the `oh` CLI |
 | Claude auth | named volume `claude-auth` | `/home/sandbox/.claude` | Claude Code credentials — persists across rebuilds |
 | Pi auth | named volume `pi-auth` | `/home/sandbox/.pi` | Pi Agent OAuth tokens |
 | Codex auth | named volume `codex-auth` | `/home/sandbox/.codex` | Codex credentials |
+| DeepAgents state | named volume `deepagents-auth` | `/home/sandbox/.deepagents` | DeepAgents provider keys (`.env`), CLI defaults (`config.toml`), memory, skills, sessions. v1 persists only this path; repo-local `.deepagents/` is project data subject to normal git rules. |
 | Cloudflared | named volume `cloudflared-auth` | `/home/sandbox/.cloudflared` | Cloudflare tunnel credentials |
 | GitHub CLI | named volume `gh-config` | `/home/sandbox/.config/gh` | `gh` auth tokens |
 
@@ -57,16 +58,9 @@ The bind-mount of the repo root at `/home/sandbox/harness` means files written i
 
 The Docker socket mount gives the in-sandbox `docker` CLI access to the host Docker daemon, enabling nested container management — starting, stopping, and inspecting sibling containers from inside the sandbox.
 
-## Caddy Gateway Overlay
+## Exposing Ports
 
-The gateway overlay (`docker-compose.gateway.yml`, loaded when configured) runs a Caddy reverse proxy that routes HTTPS traffic to listening ports inside the sandbox. Routes are stored in `.openharness/exposures.json` and Caddy reloads its configuration in-process via its admin API on `127.0.0.1:2019` — never recreating the sandbox container.
-
-URL shape depends on mode:
-
-- **Laptop mode** (no `PUBLIC_DOMAIN`): `https://<name>.<sandbox>.localhost:8443` with self-signed TLS (`tls internal`).
-- **Remote mode** (`PUBLIC_DOMAIN` set in `.devcontainer/.env`): `https://<name>.<sandbox>.<PUBLIC_DOMAIN>` with ACME or a Cloudflare named tunnel.
-
-The Caddyfile at `.openharness/Caddyfile` is regenerated whenever `.openharness/exposures.json` changes and is gitignored. Do not hand-edit it.
+There is no first-class exposure mechanism. Use the `cloudflared` overlay or stand up your own reverse proxy.
 
 ## Environment Variables
 
@@ -78,78 +72,88 @@ Key variables the sandbox reads at runtime (set in `.devcontainer/.env` or passe
 | `TZ` | Timezone for cron scheduling (default: `America/Denver`) |
 | `GH_TOKEN` | Pre-loaded GitHub token for `gh auth` automation |
 | `GIT_USER_NAME`, `GIT_USER_EMAIL` | Git commit identity |
-| `HEARTBEAT_ACTIVE_START`, `HEARTBEAT_ACTIVE_END` | Active window hours for heartbeat scheduling |
-| `HEARTBEAT_AGENT` | Default agent CLI used by heartbeat tasks (default: `claude`) |
+| `CRONS_DIR` | Override directory scanned by `scripts/cron-runtime.ts` (default: `crons`) |
+| `CRON_AGENT_BIN` | Agent binary invoked by cron fires (default: `claude`) |
 | `INSTALL_AGENT_BROWSER` | Set to `true` to install Chromium at startup (opt-in) |
 
-## Repo Layout
+## Repo Layout {#repo-layout}
 
 ```
 open-harness/
-├── .devcontainer/
-│   ├── Dockerfile              # sandbox image: Debian + Node 22 + agent CLIs + pnpm
-│   ├── docker-compose.yml      # base compose: SSH + workspace mount
-│   ├── docker-compose.*.yml    # overlays: postgres, cloudflared, docker, ssh, git, slack
-│   └── entrypoint.sh           # Docker GID matching + cron runtime + banner wiring
-├── packages/sandbox/           # @openharness/sandbox (CLI + container lifecycle tools)
-│   ├── src/
-│   │   ├── cli/
-│   │   │   ├── cli.ts          # subcommand routing, arg parsing, help text
-│   │   │   └── index.ts        # CLI entry point (argv, exit codes)
-│   │   ├── lib/
-│   │   │   ├── config.ts       # SandboxConfig: name, compose files, env
-│   │   │   ├── docker.ts       # compose command builders
-│   │   │   └── exec.ts         # run/runSafe/capture helpers
-│   │   └── tools/              # sandbox, run, stop, clean, shell, list, etc.
-│   └── extensions/
-│       └── sandbox.ts          # Pi Agent extension (tool + command registration)
-├── install/
-│   ├── .tmux.conf              # default tmux configuration copied into the image
-│   ├── .zshrc                  # default shell configuration copied into the image
-│   ├── banner.sh               # interactive shell status banner
-│   └── cloudflared-tunnel.sh   # Cloudflare named-tunnel setup helper
-├── workspace/                  # template workspace copied into each harness's worktree
-│   ├── AGENTS.md               # operating procedures — decision rules, skills, sub-agents
-│   ├── CLAUDE.md               # symlink → AGENTS.md (Claude Code reads this automatically)
-│   ├── SOUL.md                 # agent personality, tone, values, guardrails
-│   ├── IDENTITY.md             # name, role, mission, tech stack, URLs
-│   ├── USER.md                 # owner preferences, constraints, goals
-│   ├── TOOLS.md                # environment, available tools, service endpoints
-│   ├── HEARTBEAT.md            # meta-maintenance routines
-│   ├── MEMORY.md               # long-term memory (learned decisions, lessons)
-│   ├── heartbeats/             # heartbeat task definitions (frontmatter .md files)
-│   ├── startup.sh              # runs on container boot after onboarding
-│   ├── memory/                 # daily activity logs (memory/YYYY-MM-DD/log.md)
-│   ├── .claude/
-│   │   ├── rules/              # coding standards (git, code-quality, nextjs, api, etc.)
-│   │   ├── skills/             # reusable skill definitions
-│   │   └── agents/             # sub-agent prompts (implementer, critic, pm, council)
-│   ├── .slack/
-│   │   └── MEMORY.md           # Slack-specific memory
-│   └── projects/               # bring-your-own application code (gitignored or per-project)
-├── docs/                       # plain markdown docs (GitHub-rendered, no build step)
+├── Makefile                    # top-level lifecycle (sandbox, shell, ps, destroy)
+├── package.json                # root pnpm workspace + script entry points
+├── pnpm-workspace.yaml         # declares apps/docs as the (only) workspace package
+├── pnpm-lock.yaml              # pnpm lockfile
+├── vitest.config.ts            # tests for scripts/__tests__/**/*.test.ts
+├── .nvmrc                      # node version pin
+├── CHANGELOG.md                # keep-a-changelog; CalVer at release
+├── README.md                   # project intro + quickstart
+├── AGENTS.md                   # orchestrator operating procedures (auto-loaded)
+├── CLAUDE.md                   # symlink → AGENTS.md
+├── LICENSE
+├── CNAME                       # docs site DNS alias (Cloudflare Pages)
+├── .dockerignore
+├── .gitignore
+├── .husky/                     # git hooks (pre-commit lint + test gate)
 ├── .github/
-│   ├── workflows/              # CI, Build, Release, Docs
-│   └── ISSUE_TEMPLATE/         # agent, audit, bug, feature, skill, task
+│   ├── workflows/              # CI: lint, test, build, release, docs deploy
+│   └── ISSUE_TEMPLATE/         # agent / audit / bug / feature / skill / task
+├── .devcontainer/
+│   ├── Dockerfile              # Debian + Node 22 + agent CLIs + pnpm
+│   ├── docker-compose.yml      # base compose
+│   ├── docker-compose.*.yml    # overlays (postgres, cloudflared, ssh, …)
+│   ├── entrypoint.sh           # boot: docker GID, cron runtime, banner
+│   └── .example.env            # template copied by install.sh on first run
 ├── .openharness/
-│   └── config.json             # compose overlay selection
-└── .claude/skills/             # orchestrator skills (/provision, /repair, /release, etc.)
+│   └── config.json             # composeOverrides[] consumed by Makefile + install.sh
+├── .claude/
+│   ├── rules/                  # auto-loaded coding/process rules
+│   ├── skills/                 # /release, /ci-status, /cloudflared-tunnel, /agent-browser
+│   ├── agents/                 # sub-agent definitions (pm, critic, implementer, …)
+│   ├── hooks/                  # security hooks (deny-env-dump, etc.)
+│   └── specs/                  # architecture decision records
+├── .codex/                     # parallel agent harness (mirrors .claude/ shape)
+├── apps/
+│   └── docs/                   # Docusaurus documentation site (only workspace pkg)
+├── blog/                       # Docusaurus blog source
+├── context/                    # session-start identity (SOUL, IDENTITY, TOOLS, USER)
+├── crons/                      # markdown-frontmatter cron defs — see crons doc (PR-B)
+├── docs/                       # plain markdown (GitHub-rendered + Docusaurus source)
+│   ├── architecture/           # runtime, layout, crons reference
+│   ├── operations/             # provision, destroy, repair
+│   └── guide/                  # configuration, workspace, exposure, …
+├── install/                    # files baked into the sandbox image
+│   ├── banner.sh               # interactive shell banner
+│   ├── cloudflared-tunnel.sh   # named-tunnel setup helper
+│   ├── .tmux.conf              # default tmux config
+│   └── .zshrc                  # default shell config
+├── scripts/                    # orchestrator scripts
+│   ├── cron-runtime.ts         # croner runtime — reads crons/*.md, schedules, fires
+│   ├── ralph.sh                # Ralph PRD executor
+│   ├── install.sh              # curl-piped installer
+│   └── __tests__/              # vitest unit tests
+├── tasks/                      # Ralph task workdirs (prd.json + progress.txt)
+│   └── archive/                # weekly cleanup destination (cleanup-tasks cron)
+└── workspace/                  # bind-mounted agent template
+    ├── AGENTS.md               # agent operating procedures
+    ├── CLAUDE.md               # symlink → AGENTS.md
+    ├── startup.sh              # runs on container boot after onboarding
+    └── .claude/                # workspace-scoped rules, skills, settings
 ```
+
+**Excluded from this tree** (gitignored or build artefacts): `node_modules/`, `.pnpm-store/`, `.worktrees/` (per-branch git worktrees, transient).
 
 ### Workspace identity files
 
-The `workspace/` directory contains markdown files that define the agent's identity, procedures, and memory. The orchestrator scaffolds these during provisioning; the agent owns and evolves them once running.
+The `workspace/` directory is a minimal bind-mounted template. It contains the agent's operating procedures and a workspace-scoped `.claude/` directory; the agent owns and evolves these once running.
 
 | File | Purpose | Owner |
 |------|---------|-------|
-| `IDENTITY.md` | Name, role, mission, tech stack, URLs | Orchestrator → Agent |
-| `SOUL.md` | Personality, tone, values, guardrails | Orchestrator → Agent |
-| `USER.md` | Owner preferences, constraints, goals | User |
-| `TOOLS.md` | Environment, tools, service endpoints | Orchestrator |
 | `AGENTS.md` | Decision rules, skills, sub-agents | Orchestrator → Agent |
-| `HEARTBEAT.md` | Meta-maintenance routines | Agent |
-| `MEMORY.md` | Learned facts, decisions, lessons | Agent |
+| `CLAUDE.md` | Symlink → `AGENTS.md` (Claude Code reads automatically) | Orchestrator |
+| `startup.sh` | Runs on container boot after onboarding | Orchestrator |
+| `.claude/` | Workspace-scoped rules, skills, settings | Orchestrator → Agent |
 
-`CLAUDE.md` is a symlink to `AGENTS.md` so Claude Code loads operating procedures automatically.
+Session-start identity files (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`) live in the top-level `context/` directory, not inside `workspace/`.
 
-See the [Workspace guide](../guide/workspace.md) for full details on each file and the ownership model. For how multiple agents share one sandbox via git worktrees, see [Worktrees](./worktrees.md).
+See the [Workspace guide](../guide/workspace.md) for full details on each file and the ownership model.

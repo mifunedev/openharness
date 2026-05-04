@@ -47,6 +47,15 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
  && cp /root/.local/bin/uv /usr/local/bin/uv \
  && cp /root/.local/bin/uvx /usr/local/bin/uvx
 
+# ─── DeepAgents CLI ────────────────────────────────────────────────
+# Install via `uv tool install` into image-level locations so the
+# `deepagents` executable is on PATH for the sandbox user. Avoid
+# user-home installs that would land in /root/.local/bin only.
+ENV UV_TOOL_DIR=/opt/uv/tools
+ENV UV_TOOL_BIN_DIR=/usr/local/bin
+RUN mkdir -p "$UV_TOOL_DIR" \
+ && uv tool install deepagents-cli
+
 # ─── pnpm (via corepack) ───────────────────────────────────────────
 ENV PNPM_HOME="/usr/local/share/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -60,17 +69,18 @@ RUN corepack enable && corepack prepare pnpm@latest --activate \
 # by default without extra configuration.
 #
 # AGENTS is a comma-separated list of agent CLI keys to install. The default
-# is claude-code + codex + pi-coding-agent. Downstream harness packs (e.g.
+# is claude-code + codex + pi-coding-agent + opencode. Downstream harness packs (e.g.
 # @ryaneggz/mifune) install additional CLIs via their install-hook.sh.
 SHELL ["/bin/bash", "-c"]
 
-ARG AGENTS="claude-code,codex,pi-coding-agent"
+ARG AGENTS="claude-code,codex,pi-coding-agent,opencode"
 
 RUN set -e; \
     declare -A PKG=( \
         [claude-code]=@anthropic-ai/claude-code \
         [codex]=@openai/codex \
         [pi-coding-agent]=@mariozechner/pi-coding-agent \
+        [opencode]=opencode-ai \
     ); \
     IFS=',' read -ra agents <<< "$AGENTS"; \
     for a in "${agents[@]}"; do \
@@ -109,7 +119,7 @@ RUN printf '%s\n' \
 
 # Shell aliases for agent CLIs (bash fallback — .zshrc ships with these baked in)
 RUN echo "alias claude='claude --dangerously-skip-permissions'" >> /home/sandbox/.bashrc \
- && echo "alias codex='codex --full-auto'" >> /home/sandbox/.bashrc
+ && echo "alias codex='codex --dangerously-bypass-approvals-and-sandbox'" >> /home/sandbox/.bashrc
 
 # Git safe.directory for bind-mounted project
 RUN su - sandbox -c "git config --global --add safe.directory /home/sandbox/harness"

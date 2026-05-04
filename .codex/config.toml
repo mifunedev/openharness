@@ -1,51 +1,13 @@
 # Project-local Codex CLI defaults for Open Harness.
-# This is the closest Codex-native match for .claude/settings.json:
-# autonomous operation, workspace writes, and explicit secret-read denials.
+# Docker is the isolation boundary, so Codex runs without prompts or its own
+# workspace sandbox. Keep permission-profile changes validated against `codex`;
+# the old glob-based shape makes Codex 0.118+ abort at startup.
 
 model = "gpt-5.5"
 approval_policy = "never"
-sandbox_mode = "workspace-write"
-default_permissions = "workspace"
+sandbox_mode = "danger-full-access"
 
 model_reasoning_effort = "xhigh"
 
 [features]
 codex_hooks = true
-
-[permissions.workspace.filesystem]
-glob_scan_max_depth = 5
-
-[permissions.workspace.filesystem.":project_roots"]
-"." = "write"
-"**/.env*" = "none"
-"**/*.pem" = "none"
-"**/*.key" = "none"
-"**/*.cert" = "none"
-"**/*.p12" = "none"
-"**/*id_rsa*" = "none"
-"**/*id_ed25519*" = "none"
-"**/docker-compose*.yml" = "none"
-"**/.aws/credentials" = "none"
-"**/.aws/config" = "none"
-"**/.gcp/**" = "none"
-"**/.config/gcloud/**" = "none"
-"**/.azure/**" = "none"
-"**/.kube/config" = "none"
-"**/.docker/config.json" = "none"
-"**/.npmrc" = "none"
-"**/.pypirc" = "none"
-"**/.cargo/credentials*" = "none"
-"**/.git-credentials" = "none"
-"**/.netrc" = "none"
-"**/.config/gh/hosts.yml" = "none"
-"**/.config/gh/config.yml" = "none"
-"**/.claude/.credentials.json" = "none"
-"**/.anthropic/**" = "none"
-"**/.pi/**/auth.json" = "none"
-"**/.gnupg/**" = "none"
-"**/.bash_history" = "none"
-"**/.zsh_history" = "none"
-"**/.psql_history" = "none"
-"**/.python_history" = "none"
-"**/.node_repl_history" = "none"
-"**/.wget-hsts" = "none"

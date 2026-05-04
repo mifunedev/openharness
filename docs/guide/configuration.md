@@ -39,6 +39,24 @@ Recurring tasks are `.md` files in `crons/` at the repo root, parsed by the cron
 |----------|---------|-------------|
 | `CRON_AGENT_BIN` | `claude` | Agent binary the croner runtime invokes when a schedule fires. The body of the `.md` is passed as the prompt. |
 
+### Ralph harness selection
+
+`scripts/ralph.sh` accepts an explicit harness via `--harness=<name>` or `RALPH_HARNESS=<name>`. Supported values: `claude` (default), `pi`, `codex`, `deepagents`. The DeepAgents harness must be selected explicitly — it is never auto-selected by Ralph fallback.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RALPH_HARNESS` | _(unset; falls back to `claude`)_ | Pick the active Ralph harness when the `--harness=` flag is not supplied. |
+| `RALPH_DEEPAGENTS_FLAGS` | `-y --shell-allow-list recommended -q --no-stream` | Flag string passed to `deepagents` before the task. **Do not include `--max-turns` here.** Operators can switch to `--shell-allow-list all` here when they accept unrestricted shell execution risk — see [permissions](./permissions.md#deepagents-shell-allow-list) for the trust boundary. |
+| `RALPH_DEEPAGENTS_MAX_TURNS` | `25` | Per-call turn cap appended as `--max-turns "$RALPH_DEEPAGENTS_MAX_TURNS"` so one DeepAgents call cannot hang the iteration. |
+
+### DeepAgents host state (overlay)
+
+Only applies when the `deepagents-host` overlay is enabled. See [overlays](./overlays.md#sharing-host-deepagents-state-deepagents-host) for trust tradeoffs and the disable flow.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HOST_DEEPAGENTS_DIR` | `~/.deepagents` | Path to your host DeepAgents directory. The overlay bind-mounts it RW into `/home/sandbox/.deepagents`. **Setting this alone does nothing** — the overlay must also be listed in `.openharness/config.json` `composeOverrides`. |
+
 ### SSH (overlay)
 
 Only applies when an SSH overlay is enabled. See [overlays](./overlays.md#ssh-key-strategy).
@@ -49,7 +67,7 @@ Only applies when an SSH overlay is enabled. See [overlays](./overlays.md#ssh-ke
 
 ### Slack bot (via [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) pack)
 
-The Slack bot ships with the `@ryaneggz/mifune` harness pack — install with `oh harness add @ryaneggz/mifune`. The bot (Mom) connects to a Slack workspace via Socket Mode and responds to messages using an AI agent.
+The Slack bot ships with the `@ryaneggz/mifune` harness pack — install by cloning it into your workspace (`git clone https://github.com/ryaneggz/mifune workspace/mifune`) and following the pack's README. The bot (Mom) connects to a Slack workspace via Socket Mode and responds to messages using an AI agent.
 
 | Variable | Default | Description |
 |----------|---------|-------------|

@@ -10,6 +10,12 @@
 #   - claude-auth:/home/sandbox/.claude — Persistent Claude CLI auth
 #   - codex-auth:/home/sandbox/.codex — Persistent Codex CLI auth
 #   - pi-auth:/home/sandbox/.pi — Persistent Pi Agent (oh/pi CLI) auth
+#   - opencode-auth:/home/sandbox/.local/share/opencode — Persistent OpenCode auth
+#   - deepagents-auth:/home/sandbox/.deepagents — Persistent DeepAgents CLI state
+#       (provider keys, model config, memory, skills, sessions). v1 persists
+#       ONLY this path; repo-local .deepagents/ under the bind-mounted project
+#       root is project data and follows normal git review/ignore rules — do
+#       not place secrets there.
 #   - cloudflared-auth:/home/sandbox/.cloudflared — Cloudflare credentials
 #   - gh-config:/home/sandbox/.config/gh — GitHub CLI config
 #
@@ -29,7 +35,7 @@
 #                    -f .devcontainer/docker-compose.postgres.yml \
 #                    -f .devcontainer/docker-compose.slack.yml up -d
 #
-# Overlays in .openharness/config.json composeOverrides are auto-loaded by the /provision skill
+# Overlays in .openharness/config.json composeOverrides are auto-loaded by `make sandbox` and `scripts/install.sh` via jq.
 
 name: ${SANDBOX_NAME:-openharness}
 
@@ -46,6 +52,8 @@ services:
       - claude-auth:/home/sandbox/.claude
       - codex-auth:/home/sandbox/.codex
       - pi-auth:/home/sandbox/.pi
+      - opencode-auth:/home/sandbox/.local/share/opencode
+      - deepagents-auth:/home/sandbox/.deepagents
       - cloudflared-auth:/home/sandbox/.cloudflared
       - gh-config:/home/sandbox/.config/gh
     extra_hosts:
@@ -70,5 +78,7 @@ volumes:
   claude-auth:
   codex-auth:
   pi-auth:
+  opencode-auth:
+  deepagents-auth:
   cloudflared-auth:
   gh-config:

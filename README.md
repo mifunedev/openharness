@@ -3,7 +3,7 @@
 **Open Harness** is a Docker-based agent harness for **one project**, agent-tended over time. One `docker compose up` gives you a long-lived sandbox where Claude (or another agent of your choice) runs against a single repo, branch, and identity — not a multi-tenant comparison rig.
 
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
-- **Agents that work while you sleep.** A tiny [croner runtime](.claude/specs/structure-spec-v0.7.md) reads `crons/*.md` markdown and wakes the agent on a schedule.
+- **Agents that work while you sleep.** A tiny [croner runtime](docs/architecture/crons-and-heartbeats.md) reads `crons/*.md` markdown and wakes the agent on a schedule.
 - **Only host dependency: Docker.** No Node, no Python, no toolchain rot on your laptop.
 - **Composable infra.** Cherry-pick Postgres, Cloudflare tunnels, SSH, Slack, Caddy gateway via Compose overlays.
 - **Multi-agent? Add a pack.** Slack-driven Pi+Mom and other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
@@ -25,10 +25,12 @@ cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-doc
 ```bash
 cd ~/openharness
 make shell       # enter the isolated sandbox
-# inside the sandbox, launch any agent you have installed:
-#   claude   # Claude Code
-#   codex    # OpenAI Codex CLI
-#   pi       # Pi Coding Agent
+# inside the sandbox, launch any core agent:
+#   claude     # Claude Code (default)
+#   codex      # OpenAI Codex CLI
+#   opencode   # OpenCode
+#   pi         # Pi Coding Agent
+#   deepagents # LangChain DeepAgents (multi-provider)
 make destroy     # stop and remove the sandbox
 make help        # all targets
 ```
@@ -56,7 +58,7 @@ make shell
 
 | | |
 |---|---|
-| **Default agent** | Claude Code (terminal coding agent) |
+| **Core agents** | Claude Code, Codex, OpenCode, Pi |
 | **Runtimes** | Node 22, pnpm, Bun, uv (Python) |
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |
@@ -75,14 +77,7 @@ make shell
 
 ## 🗂️ Project layout
 
-```
-.devcontainer/    # Sandbox environment (Dockerfile, compose, overlays)
-crons/            # Markdown-defined schedules (read by scripts/cron-runtime.ts)
-docs/             # Plain-markdown documentation (GitHub-rendered)
-install/          # Provisioning scripts
-scripts/          # Host-and-sandbox helper scripts (e.g. cron-runtime.ts)
-workspace/        # Agent workspace template (bind-mounted)
-```
+See [Repo Layout](docs/architecture/container-runtime.md#repo-layout) for the annotated tree.
 
 For Pi+Slack functionality, install the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack from inside the sandbox.
 

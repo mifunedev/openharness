@@ -294,9 +294,11 @@ ENVEOF
 fi
 
 # ─── Pre-create host auth source dirs ────────────────────────────────
-# Default config enables host-bind overlays (claude-host.yml, codex-host.yml)
-# that bind ~/.claude and ~/.codex from the host into the container. Two
-# preconditions (each documented in the overlay headers):
+# Default config enables host-bind overlays (claude-host.yml, codex-host.yml,
+# pi-host.yml, opencode-host.yml) that bind host agent state into the container.
+# The DeepAgents host overlay (deepagents-host.yml) is opt-in but we still
+# pre-create ~/.deepagents so the overlay works the moment a user enables it.
+# Two preconditions (each documented in the overlay headers):
 #   1. Host UID == 1000 (credential files are mode 0600 — group-membership
 #      trick in entrypoint.sh cannot bypass owner-only reads).
 #   2. Host source dir pre-exists. Otherwise docker auto-creates it as
@@ -306,7 +308,7 @@ fi
 # (1) is checked below and surfaced as a warning — the user must opt
 # out by hand if their host UID isn't 1000.
 banner "Preparing host auth dirs for sandbox bind-mounts"
-for d in .claude .codex; do
+for d in .claude .codex .pi .deepagents .local/share/opencode; do
   if [ ! -d "$HOME/$d" ]; then
     mkdir -p "$HOME/$d"
     ok "Created ~/$d (empty — first-time auth will populate it)"
@@ -324,9 +326,9 @@ if [ "$__HOST_UID" != "1000" ]; then
   __OH_CONFIG="$REPO_DIR/.openharness/config.json"
   if command -v jq >/dev/null 2>&1 && [ -f "$__OH_CONFIG" ]; then
     # Filter *-host.yml entries out of composeOverrides. Mode-0600
-    # credential files in ~/.claude / ~/.codex can't be read by the
+    # credential files in host agent state dirs can't be read by the
     # sandbox user (UID 1000) when the host UID differs. Drop the
-    # overlays so the base named volumes (claude-auth, codex-auth)
+    # overlays so the base named volumes
     # take over; entrypoint.sh chowns those to UID 1000.
     __OH_TMP="$(mktemp)"
     if jq '.composeOverrides |= map(select(test("-host\\.yml$") | not))' \
@@ -334,7 +336,7 @@ if [ "$__HOST_UID" != "1000" ]; then
       if ! cmp -s "$__OH_CONFIG" "$__OH_TMP"; then
         mv "$__OH_TMP" "$__OH_CONFIG"
         ok "Host UID $__HOST_UID ≠ 1000 — disabled host-bind overlays in $__OH_CONFIG"
-        ok "Auth will live in named volumes; first run of claude/codex inside the sandbox will authenticate"
+        ok "Auth will live in named volumes; first run of each agent inside the sandbox will authenticate"
         warn "$__OH_CONFIG now has a local diff — \`git pull\` in $REPO_DIR will be skipped until you commit or revert it"
       else
         rm -f "$__OH_TMP"
@@ -351,15 +353,19 @@ if [ "$__HOST_UID" != "1000" ]; then
   fi
   if [ "${__OH_FALLBACK:-0}" = "1" ]; then
     warn "Host UID is $__HOST_UID — sandbox user is UID 1000."
-    warn "Credential files in ~/.claude / ~/.codex are mode 0600;"
+    warn "Credential files in host agent state dirs may be mode 0600;"
     warn "the sandbox WILL NOT be able to read them despite the bind-mount."
     warn ""
     warn "Install jq, OR edit $REPO_DIR/.openharness/config.json"
-    warn "and remove these overlays from composeOverrides:"
+    warn "and remove these overlays from composeOverrides (any that you"
+    warn "have enabled — deepagents-host.yml is opt-in by default):"
     warn "    .devcontainer/docker-compose.claude-host.yml"
     warn "    .devcontainer/docker-compose.codex-host.yml"
+    warn "    .devcontainer/docker-compose.pi-host.yml"
+    warn "    .devcontainer/docker-compose.opencode-host.yml"
+    warn "    .devcontainer/docker-compose.deepagents-host.yml"
     warn ""
-    warn "The base named volumes (claude-auth, codex-auth) will take over"
+    warn "The base named volumes will take over"
     warn "and entrypoint.sh chowns them to UID 1000 on boot."
   fi
   unset __OH_CONFIG __OH_FALLBACK
@@ -369,7 +375,13 @@ unset __HOST_UID
 # ─── 5. Bring up the sandbox ─────────────────────────────────────────
 banner "Building and starting sandbox"
 printf "${CYAN}==> Building image — ~10 min on cold cache, ~30s on warm cache. Compose output below.${NC}\n"
-docker compose -f .devcontainer/docker-compose.yml up -d --build
+COMPOSE_FILES="-f .devcontainer/docker-compose.yml"
+if command -v jq >/dev/null 2>&1 && [ -f "$REPO_DIR/.openharness/config.json" ]; then
+  while IFS= read -r override; do
+    [ -n "$override" ] && COMPOSE_FILES="$COMPOSE_FILES -f $override"
+  done < <(jq -r '.composeOverrides[]?' "$REPO_DIR/.openharness/config.json")
+fi
+docker compose $COMPOSE_FILES up -d --build
 ok "Sandbox '$SANDBOX_NAME' started"
 
 # ─── Next Steps ──────────────────────────────────────────────────────
@@ -383,7 +395,7 @@ printf "  ${CYAN}Lifecycle (from %s)${NC}\n" "$REPO_DIR"
 printf "  ──────────────────────────────────────\n"
 printf "       cd %s\n" "$REPO_DIR"
 printf "       make shell        # enter the sandbox\n"
-printf "                         # then pick your agent: claude, codex, pi, ...\n"
+printf "                         # then pick your agent: claude, codex, opencode, pi, ...\n"
 printf "       make help         # all targets\n"
 printf "       make destroy      # tear down later\n"
 printf "\n"

@@ -9,7 +9,7 @@ import { terminalDark, terminalLight } from "./src/theme/prism-terminal";
 const config: Config = {
   title: "Open Harness",
   tagline:
-    "Run Claude, Codex, Gemini, and Pi side-by-side from one Docker-powered agent harness.",
+    "A Docker sandbox for Claude, Codex, OpenCode, or Pi.",
   favicon: "img/favicon.svg",
 
   url: "https://oh.mifune.dev",

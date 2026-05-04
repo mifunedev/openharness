@@ -8,7 +8,9 @@ Tear down the sandbox. Replaces the deprecated `/destroy` skill — `docker comp
 docker compose -f .devcontainer/docker-compose.yml down -v
 ```
 
-Stops the container(s), removes the network, and **removes named volumes** (`pgdata`, `cloudflared`, `gh-config`, `ssh-keys`, …). Drop the `-v` flag to preserve volumes for a faster next provision.
+Stops the container(s), removes the network, and **removes named volumes** declared in the base compose: `claude-auth`, `codex-auth`, `pi-auth`, `deepagents-auth`, `cloudflared-auth`, `gh-config`. Overlays add their own (e.g. `pgdata` from `docker-compose.postgres.yml`, `ssh-keys` from `docker-compose.ssh-generate.yml`) — pass those overlay files to `down -v` to clean them too. Drop the `-v` flag to preserve volumes for a faster next provision.
+
+> To reset only the DeepAgents named volume without touching host `~/.deepagents` (when the `deepagents-host` overlay is enabled), see [Resetting the named volume without deleting host `~/.deepagents`](../guide/overlays.md#sharing-host-deepagents-state-deepagents-host).
 
 ## With overlays
 

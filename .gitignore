@@ -18,9 +18,6 @@ tasks/*/archive/
 **/.claude/screenshots/*
 !**/.claude/screenshots/.gitkeep
 
-# Heartbeat runtime log
-**/heartbeat.log
-
 # Croner runtime artifacts (keep crons/*.md tracked)
 crons/.pid
 crons/*.log

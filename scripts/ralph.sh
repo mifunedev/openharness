@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # scripts/ralph.sh — Ralph loop runner per SPEC §scripts.
 #
-# Usage:   scripts/ralph.sh [--harness=claude|pi|codex] <taskdesc>
+# Usage:   scripts/ralph.sh [--harness=claude|pi|codex|opencode|deepagents] <taskdesc>
 # Example: scripts/ralph.sh openharness-v07-convergence
 # Example: scripts/ralph.sh --harness=pi openharness-v07-convergence
 # Example: scripts/ralph.sh --harness=codex openharness-v07-convergence
+# Example: scripts/ralph.sh --harness=opencode openharness-v07-convergence
+# Example: scripts/ralph.sh --harness=deepagents openharness-v07-convergence
 #
 # Validates the four-file contract (prd.md, prd.json, prompt.md, progress.txt),
 # launches a named tmux session running the loop. Each iteration sends prompt.md
@@ -16,35 +18,56 @@
 # Idempotent: re-invoking on an existing session attaches instead of duplicating.
 #
 # Harnesses:
-#   --harness=claude   run Claude first (default); fall back to Pi after a
-#                      recognized Claude usage-limit message; Codex is fallback
-#                      after Pi if Pi is unavailable
-#   --harness=pi       run Pi for every iteration; fall back to Codex if Pi is
-#                      unavailable
-#   --harness=codex    run Codex for every iteration
+#   --harness=claude     run Claude first (default); fall back to Pi after a
+#                        recognized Claude usage-limit message; Codex is fallback
+#                        after Pi if Pi is unavailable
+#   --harness=pi         run Pi for every iteration; fall back to Codex if Pi is
+#                        unavailable
+#   --harness=codex      run Codex for every iteration
+#   --harness=opencode   run OpenCode for every iteration
+#   --harness=deepagents run DeepAgents for every iteration; explicit opt-in only,
+#                        no automatic fallback. Default flags use
+#                        --shell-allow-list recommended (constrained shell);
+#                        unrestricted shell requires an explicit operator
+#                        override via RALPH_DEEPAGENTS_FLAGS — combined with the
+#                        mounted Docker socket, --shell-allow-list all can affect
+#                        sibling containers or host Docker, so use only for
+#                        trusted tasks.
 #
 # Configuration (env vars):
-#   RALPH_HARNESS        default harness if --harness is omitted (claude|pi|codex)
-#   RALPH_CLAUDE_FLAGS   Claude flags (default: --dangerously-skip-permissions --print)
-#   RALPH_AGENT_FLAGS    backwards-compatible alias for RALPH_CLAUDE_FLAGS
-#   RALPH_PI_FLAGS       Pi flags (default: --print)
-#   RALPH_MAX_ITERATIONS safety cap (default: 50)
-#   RALPH_SLEEP          seconds between iterations (default: 2)
+#   RALPH_HARNESS              default harness if --harness is omitted
+#                              (claude|pi|codex|opencode|deepagents)
+#   RALPH_CLAUDE_FLAGS         Claude flags (default: --dangerously-skip-permissions --print)
+#   RALPH_AGENT_FLAGS          backwards-compatible alias for RALPH_CLAUDE_FLAGS
+#   RALPH_PI_FLAGS             Pi flags (default: --print)
+#   RALPH_OPENCODE_FLAGS       OpenCode run flags (default: empty)
+#   RALPH_DEEPAGENTS_FLAGS     DeepAgents flags excluding the task and turn cap.
+#                              Default: "-y --shell-allow-list recommended -q --no-stream".
+#                              To allow unrestricted shell, set this to
+#                              "-y --shell-allow-list all -q --no-stream"; combined with
+#                              the mounted Docker socket, that can affect sibling
+#                              containers or host Docker — only use for trusted tasks.
+#   RALPH_DEEPAGENTS_MAX_TURNS per-call turn cap passed to DeepAgents as --max-turns
+#                              (default: 25). Prevents a single DeepAgents call from
+#                              hanging an iteration; always appended after the
+#                              flag string above.
+#   RALPH_MAX_ITERATIONS       safety cap (default: 50)
+#   RALPH_SLEEP                seconds between iterations (default: 2)
 
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 [--harness=claude|pi|codex] <taskdesc>" >&2
+  echo "Usage: $0 [--harness=claude|pi|codex|opencode|deepagents] <taskdesc>" >&2
 }
 
 normalize_harness() {
   local harness="$1"
   case "$harness" in
-    claude|pi|codex)
+    claude|pi|codex|opencode|deepagents)
       printf '%s\n' "$harness"
       ;;
     *)
-      echo "Error: unknown harness '$harness' (expected: claude, pi, or codex)." >&2
+      echo "Error: unknown harness '$harness' (expected: claude, pi, codex, opencode, or deepagents)." >&2
       exit 2
       ;;
   esac
@@ -62,7 +85,7 @@ parse_args() {
       --harness)
         shift
         if [ "${1-}" = "" ]; then
-          echo "Error: --harness requires a value (claude, pi, or codex)." >&2
+          echo "Error: --harness requires a value (claude, pi, codex, opencode, or deepagents)." >&2
           exit 2
         fi
         HARNESS="$1"
@@ -188,6 +211,36 @@ run_codex() {
   codex exec --sandbox danger-full-access "$task"
 }
 
+run_opencode() {
+  local task="$1"
+  local opencode_flags="${RALPH_OPENCODE_FLAGS:-}"
+
+  # Intentionally leave flags unquoted so callers can provide multiple flags.
+  # shellcheck disable=SC2086
+  opencode run $opencode_flags "$task"
+}
+
+run_deepagents() {
+  local task="$1"
+  local max_turns="${RALPH_DEEPAGENTS_MAX_TURNS:-25}"
+  # Default flags: non-interactive (-n is added below with the task), clean buffered
+  # output (-q --no-stream), confirm-on-edits skipped (-y), and shell calls limited to
+  # the recommended allow list. --shell-allow-list all opens unrestricted shell
+  # execution; combined with the mounted Docker socket it can affect sibling
+  # containers or the host Docker daemon, so it must be an explicit operator opt-in
+  # via RALPH_DEEPAGENTS_FLAGS, never the default.
+  local default_flags="-y --shell-allow-list recommended -q --no-stream"
+  local deepagents_flags="${RALPH_DEEPAGENTS_FLAGS:-$default_flags}"
+
+  # --max-turns is always appended (even if the operator overrides
+  # RALPH_DEEPAGENTS_FLAGS) so a single DeepAgents call cannot hang the iteration.
+  # Operators who set RALPH_DEEPAGENTS_FLAGS should not include --max-turns there;
+  # adjust the cap via RALPH_DEEPAGENTS_MAX_TURNS instead.
+  # Intentionally leave flags unquoted so callers can provide multiple flags.
+  # shellcheck disable=SC2086
+  deepagents $deepagents_flags --max-turns "$max_turns" -n "$task"
+}
+
 run_iteration() {
   local harness="$1"
   local task="$2"
@@ -206,6 +259,14 @@ run_iteration() {
       ;;
     codex)
       run_codex "$task" 2>&1 | tee "$output_file"
+      status=${PIPESTATUS[0]}
+      ;;
+    opencode)
+      run_opencode "$task" 2>&1 | tee "$output_file"
+      status=${PIPESTATUS[0]}
+      ;;
+    deepagents)
+      run_deepagents "$task" 2>&1 | tee "$output_file"
       status=${PIPESTATUS[0]}
       ;;
     *)
@@ -229,6 +290,8 @@ if [ "${1-}" = "--loop" ]; then
   PROGRESS="$TASK_DIR/progress.txt"
   ACTIVE_HARNESS="$(resolve_initial_harness "$HARNESS")"
   CLAUDE_FLAGS="${RALPH_CLAUDE_FLAGS:-${RALPH_AGENT_FLAGS:---dangerously-skip-permissions --print}}"
+  DEEPAGENTS_FLAGS="${RALPH_DEEPAGENTS_FLAGS:--y --shell-allow-list recommended -q --no-stream}"
+  DEEPAGENTS_MAX_TURNS="${RALPH_DEEPAGENTS_MAX_TURNS:-25}"
   MAX_ITER="${RALPH_MAX_ITERATIONS:-50}"
   SLEEP_SECONDS="${RALPH_SLEEP:-2}"
 
@@ -240,6 +303,8 @@ if [ "${1-}" = "--loop" ]; then
   printf '│  claude: claude %s\n' "$CLAUDE_FLAGS"
   printf '│  pi: pi %s <task>\n' "${RALPH_PI_FLAGS:---print}"
   printf '│  codex: codex exec --sandbox danger-full-access <task>\n'
+  printf '│  opencode: opencode run %s <task>\n' "${RALPH_OPENCODE_FLAGS:-}"
+  printf '│  deepagents: deepagents %s --max-turns %s -n <task>\n' "$DEEPAGENTS_FLAGS" "$DEEPAGENTS_MAX_TURNS"
   printf '│  max iterations: %s\n' "$MAX_ITER"
   printf '│  progress: %s\n╰─\n\n' "$PROGRESS"
 
@@ -254,7 +319,7 @@ if [ "${1-}" = "--loop" ]; then
     printf '\n── iteration %d / %s (%s) ──────────────────────────────\n' "$i" "$MAX_ITER" "$ACTIVE_HARNESS"
 
     # All harnesses receive the same Ralph task text from prompt.md. Claude gets
-    # it on stdin (matching historical behavior); Pi and Codex get it as the
+    # it on stdin (matching historical behavior); Pi, Codex, and OpenCode get it as the
     # prompt/task argument required by their CLIs.
     TASK_TEXT="$(cat "$PROMPT")"
     ITERATION_OUTPUT="$(mktemp -t "ralph-$TASKDESC-$i.XXXXXX")"

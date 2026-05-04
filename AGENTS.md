@@ -105,6 +105,7 @@ Remove the sandbox.
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
+| `/ship-spec` | End-to-end spec: `/prd` → critics → `/ralph` → gh issue → branch → draft PR |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
 | `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
@@ -115,12 +116,10 @@ plain `docker compose` commands now, not skills.
 
 ## Exposing apps
 
-The Caddy gateway routes sandbox apps. Routes live in
-`.openharness/exposures.json` and the regenerated `.openharness/Caddyfile`.
-Laptop mode → `https://<name>.<sandbox>.localhost:8443`; remote mode (when
-`PUBLIC_DOMAIN` is set in `.devcontainer/.env`) →
-`https://<name>.<sandbox>.<PUBLIC_DOMAIN>`. See
-`.claude/rules/gateway-routing.md` for invariants.
+There is no first-class exposure tool right now. For external access,
+either enable the `cloudflared` compose overlay (see
+`docs/integrations/cloudflare.md`) or stand up your own reverse proxy
+in front of the sandbox.
 
 Long-running apps inside the sandbox go in named tmux sessions, related
 apps as stacked panes — see `.claude/rules/sandbox-processes.md`.
@@ -132,7 +131,7 @@ apps as stacked panes — see `.claude/rules/sandbox-processes.md`.
 - Review diffs across agent branches
 - Provision, validate, and tear down the sandbox (`docker compose up -d --build`, `docker compose down -v`, `docker exec`, etc.)
 - Create and manage GitHub issues for agent tracking
-- Run skills (`/release`, `/ci-status`, `/cloudflared-tunnel`, `/agent-browser`) for the supported lifecycle steps
+- Run orchestrator skills (see Skills table above) for supported lifecycle steps
 - **Scaffold the agent workspace** after provisioning — write the seed files (e.g. `AGENTS.md`, identity scaffolding, initial cron entries under `crons/`) based on the agent's role. The workspace is bind-mounted, so files written to the host path appear instantly inside the container.
 
 ## What You Do NOT Do
@@ -151,15 +150,11 @@ apps as stacked panes — see `.claude/rules/sandbox-processes.md`.
 
 ## Project Structure
 
-```
-.devcontainer/        # Sandbox environment (Dockerfile, compose, overlays, entrypoint)
-docs/                 # Plain markdown documentation (GitHub-rendered, no build step)
-install/              # Provisioning assets (banner.sh, cloudflared-tunnel.sh, .tmux.conf, .zshrc)
-scripts/              # Root-level orchestrator scripts (cron-runtime.ts, ralph.sh)
-crons/                # Markdown-frontmatter cron definitions (heartbeat.md, cleanup-tasks.md)
-workspace/            # Minimal agent-runtime template (bind-mounted; pack supplies identity, skills, agents)
-.github/ISSUE_TEMPLATE/  # agent, audit, bug, feature, skill, task
-.claude/skills/          # Orchestrator skills (release, ci-status, cloudflared-tunnel, agent-browser)
-.claude/specs/           # Architecture specs and decision records
-.claude/rules/           # Coding rules (auto-loaded)
-```
+<!-- CANONICAL LAYOUT SOURCE: docs/architecture/container-runtime.md#repo-layout
+     Do NOT add a directory tree here. Update container-runtime.md instead. -->
+
+The harness root is `/home/sandbox/harness` inside the sandbox.
+Orchestrator scripts live in `scripts/`, scheduled agents in `crons/`,
+sandbox environment in `.devcontainer/`, and the agent template in
+`workspace/`. See [docs/architecture/container-runtime.md#repo-layout](docs/architecture/container-runtime.md#repo-layout)
+for the full annotated tree.

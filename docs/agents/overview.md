@@ -5,49 +5,40 @@ title: "Agents Overview"
 
 # Agents Overview
 
-Open Harness ships with Claude Code preinstalled in the sandbox image as the default agent. Additional agents (Codex, Gemini CLI, Pi Agent + Mom Slack bot) are available via [harness packs](../guide/bring-your-own-harness.md) like [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune). Packs add their agents to the same sandbox, each in its own git worktree, with its own identity and its own cron schedule.
+Open Harness ships with five agent CLIs preinstalled in the sandbox image: **Claude Code** (default), **Codex**, **OpenCode**, **Pi**, and **DeepAgents**. Inside the sandbox, launch whichever you prefer — switch between them at any time, or keep long-running sessions in tmux.
 
-## Why run multiple agents at once?
-
-Different agents have different strengths. Running them in parallel lets you route tasks by capability — long-horizon planning in one agent, rapid iteration in another, Slack-driven automation in a third — without spinning up separate machines or fighting over a shared working tree.
-
-Open Harness makes this practical by giving each agent:
-
-- **Its own worktree** — separate branch, no merge conflicts mid-task.
-- **Its own SOUL** — a `SOUL.md` persona file that shapes the agent's tone and priorities.
-- **Its own schedule** — `.md` files in `crons/` drive cron-based autonomous runs through the croner runtime.
+The sandbox is the product; the harness is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a [harness pack](../guide/bring-your-own-harness.md) like [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) (Pi+Mom Slack bot). The product surface is one developer, one project, one harness — not racing or stacking multiple CLIs against each other.
 
 ## Supported agents
 
 | Agent | Role | Start command | Source |
 |---|---|---|---|
-| [Claude Code](./claude-code.md) | General-purpose terminal coding agent | `claude` | preinstalled |
-| [Codex](./codex.md) | Fully autonomous code generation and editing | `codex` | preinstalled |
-| [Gemini CLI](./gemini.md) | Google Gemini-powered CLI agent | `gemini` | opt-in install |
-| Pi Agent | Automations, Slack, heartbeats, and extensions | `pi` | [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack |
+| [Claude Code](./claude-code.md) | Anthropic's terminal coding agent (default) | `claude` | preinstalled |
+| [Codex](./codex.md) | OpenAI's CLI coding agent | `codex` | preinstalled |
+| [OpenCode](./opencode.md) | Terminal coding agent with OpenAI OAuth support | `opencode` | preinstalled |
+| [Pi](./pi.md) | Lightweight, customizable harness | `pi` | preinstalled |
+| [DeepAgents](./deepagents.md) | LangChain's multi-provider terminal agent | `deepagents` | preinstalled |
 
-## Installation
-
-Claude Code and Codex are installed in the base sandbox image and available system-wide after provisioning:
+## Verifying installation
 
 ```bash
 claude --version
 codex --version
+opencode --version
+pi --version
+deepagents -v
 ```
 
-For Pi Agent + the Mom Slack bot, install the mifune harness pack:
+## Running an agent in tmux
+
+Use named tmux sessions so each agent's output stays isolated and survives disconnects:
 
 ```bash
-oh harness add @ryaneggz/mifune
-```
-
-## Running agents in parallel
-
-Use separate tmux sessions so each agent's output stays isolated and survives disconnects:
-
-```bash
-tmux new-session -d -s agent-claude 'claude'
-tmux new-session -d -s agent-codex  'codex --full-auto'
+tmux new-session -d -s agent-claude     'claude'
+tmux new-session -d -s agent-codex      'codex --dangerously-bypass-approvals-and-sandbox'
+tmux new-session -d -s agent-opencode   'opencode'
+tmux new-session -d -s agent-pi         'pi'
+tmux new-session -d -s agent-deepagents 'deepagents'
 ```
 
 Attach to any session at any time:

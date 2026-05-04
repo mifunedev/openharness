@@ -26,9 +26,21 @@ AI coding agents normally prompt for permission before running commands or editi
 | Agent | Flag | Alias |
 |-------|------|-------|
 | Claude Code | `--dangerously-skip-permissions` | `claude` (aliased in .bashrc) |
-| OpenAI Codex | `--full-auto` | `codex` (aliased in .bashrc) |
+| OpenAI Codex | `--dangerously-bypass-approvals-and-sandbox` | `codex` (aliased in .bashrc) |
+| DeepAgents | `-y --shell-allow-list recommended` (Ralph default) | none — call `deepagents` directly |
 
 The env var `CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true` is also set in the base compose file so Claude Code operates without prompts even when invoked by heartbeats or the Slack bot.
+
+### DeepAgents shell allow list
+
+DeepAgents **disables shell execution in non-interactive (`-n`) mode unless a shell allow list is configured** via `-S`/`--shell-allow-list` or the `DEEPAGENTS_CLI_SHELL_ALLOW_LIST` env var. Open Harness defaults to `recommended` (a curated safe set), never `all`.
+
+The Ralph harness (`scripts/ralph.sh --harness=deepagents`) exposes two overrides:
+
+- `RALPH_DEEPAGENTS_FLAGS` — override the flag string (default `-y --shell-allow-list recommended -q --no-stream`). Operators can opt into `--shell-allow-list all` here when they accept unrestricted shell execution. **Do not include `--max-turns` in this string** — the cap is appended separately.
+- `RALPH_DEEPAGENTS_MAX_TURNS` — per-call turn cap (default `25`), always appended as `--max-turns "$RALPH_DEEPAGENTS_MAX_TURNS"` so a single DeepAgents call cannot hang the iteration.
+
+> **`--shell-allow-list all` warning.** Combined with the mounted Docker socket (enabled by default in the base compose file), unrestricted shell execution can affect sibling containers or the host Docker daemon. Combined with the `deepagents-host` overlay, it can also reach raw host provider keys. Only use `all` for trusted tasks where you have accepted that risk.
 
 ## Docker socket access
 
@@ -44,7 +56,7 @@ This is enabled by default. If your agent doesn't need Docker access, remove the
 | Boundary | What it protects |
 |----------|-----------------|
 | Docker container | Host filesystem, host processes, host network (by default) |
-| Named volumes | Agent auth tokens (claude-auth, gh-config, cloudflared-auth) survive rebuilds but are container-scoped |
+| Named volumes | Agent auth tokens (claude-auth, codex-auth, pi-auth, deepagents-auth, gh-config, cloudflared-auth) survive rebuilds but are container-scoped |
 | Bind mount | workspace/ is shared between host and container — the only intentional bridge |
 | Network | Containers are on the default Docker bridge. Overlays like postgres create dedicated networks. |
 

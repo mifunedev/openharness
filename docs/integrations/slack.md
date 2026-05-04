@@ -5,10 +5,10 @@ title: Slack
 
 # Slack
 
-The Slack integration has moved to the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack. Install it into a sandbox with:
+The Slack integration lives in the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack. Install it into a sandbox by cloning the pack into your workspace and following its README:
 
 ```bash
-oh harness add @ryaneggz/mifune
+git clone https://github.com/ryaneggz/mifune workspace/mifune
 ```
 
-See the [mifune repo](https://github.com/ryaneggz/mifune) for setup instructions, architecture, tools, skills, events, memory, and security details.
+Then follow the [mifune README](https://github.com/ryaneggz/mifune#readme) for setup instructions, architecture, tools, skills, events, memory, and security details.

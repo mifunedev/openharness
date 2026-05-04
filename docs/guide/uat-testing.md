@@ -158,15 +158,9 @@ The agent follows the [Karpathy autoresearch pattern](https://github.com/karpath
 
 Effectiveness is tracked in MEMORY.md with tables for skill runs/findings, agent spawns/findings, and rule enforcements/true positives/false positives.
 
-## Heartbeat
+## Scheduled reporting
 
-The `uat-report` heartbeat runs every 4 hours during active hours (9am-9pm):
-
-```
-0 */4 * * * | heartbeats/uat-report.md | claude | 9-21
-```
-
-It reports: open findings by severity per project, new pages discovered, stale findings (>7 days without recheck), and recommendations for next actions.
+No UAT-specific scheduled report ships by default. Recurring UAT reporting should be defined as a repo-root `crons/*.md` file and can report open findings by severity per project, new pages discovered, stale findings (>7 days without recheck), and recommendations for next actions.
 
 ## Architecture
 

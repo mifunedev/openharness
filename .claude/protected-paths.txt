@@ -29,6 +29,9 @@ ship-spec
 scripts/ralph.sh
 scripts/cron-runtime.ts
 
+# --- Root lifecycle entrypoints ---
+Makefile
+
 # --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
 install/banner.sh
 install/cloudflared-tunnel.sh
@@ -42,7 +45,6 @@ crons/cleanup-tasks.md
 # --- Rules consumed by skills + agents at runtime ---
 .claude/rules/git.md
 .claude/rules/sandbox-processes.md
-.claude/rules/gateway-routing.md
 .claude/rules/advisor-model.md
 
 # --- Specs that other artifacts cross-reference ---

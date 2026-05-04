@@ -29,6 +29,9 @@ ship-spec
 scripts/ralph.sh
 scripts/cron-runtime.ts
 
+# --- Root lifecycle entrypoints ---
+Makefile
+
 # --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
 install/banner.sh
 install/cloudflared-tunnel.sh

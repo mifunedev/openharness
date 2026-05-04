@@ -26,10 +26,11 @@ cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-doc
 cd ~/openharness
 make shell       # enter the isolated sandbox
 # inside the sandbox, launch any core agent:
-#   claude   # Claude Code
-#   codex    # OpenAI Codex CLI
-#   opencode # OpenCode
-#   pi       # Pi Coding Agent
+#   claude     # Claude Code (default)
+#   codex      # OpenAI Codex CLI
+#   opencode   # OpenCode
+#   pi         # Pi Coding Agent
+#   deepagents # LangChain DeepAgents (multi-provider)
 make destroy     # stop and remove the sandbox
 make help        # all targets
 ```

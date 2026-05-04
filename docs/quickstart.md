@@ -37,11 +37,16 @@ The sandbox ships with several agent CLIs preinstalled. Launch whichever
 you prefer:
 
 ```bash
-claude        # Claude Code
+claude        # Claude Code (default)
 codex         # OpenAI Codex CLI
 opencode      # OpenCode
 pi            # Pi Coding Agent
+deepagents    # LangChain DeepAgents (multi-provider)
 ```
+
+DeepAgents is an optional supported runtime — Claude Code remains the
+documented default. See [the agents overview](./agents/overview) for the
+full list and per-agent setup.
 
 If `GH_TOKEN` was set during install, the entrypoint already ran
 `gh auth login` and `gh auth setup-git` for you. Otherwise run them once

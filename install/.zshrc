@@ -41,6 +41,6 @@ bindkey -e
 
 # Aliases (mirror .bashrc)
 alias claude='claude --dangerously-skip-permissions'
-alias codex='codex --full-auto'
+alias codex='codex --dangerously-bypass-approvals-and-sandbox'
 
 cd ~/harness 2>/dev/null

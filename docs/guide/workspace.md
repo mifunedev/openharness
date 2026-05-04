@@ -19,7 +19,6 @@ workspace/
   HEARTBEAT.md          # Meta-maintenance routines
   MEMORY.md             # Long-term memory (learned decisions, lessons)
 
-  heartbeats/           # Heartbeat task definitions (frontmatter .md files)
   startup.sh            # Runs on container boot after onboarding
 
   memory/               # Daily activity logs (memory/YYYY-MM-DD/log.md)

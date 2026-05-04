@@ -18,7 +18,7 @@ export interface CronEntry {
 
 const CRONS_DIR = path.resolve(process.env.CRONS_DIR ?? "crons");
 const PID_FILE = path.join(CRONS_DIR, ".pid");
-const LOG_FILE = path.join(CRONS_DIR, "cron.log");
+const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN = process.env.CRON_AGENT_BIN ?? "claude";
 
 export function parseCronFile(content: string, file: string): CronEntry | null {

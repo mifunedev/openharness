@@ -150,15 +150,11 @@ apps as stacked panes — see `.claude/rules/sandbox-processes.md`.
 
 ## Project Structure
 
-```
-.devcontainer/        # Sandbox environment (Dockerfile, compose, overlays, entrypoint)
-docs/                 # Plain markdown documentation (GitHub-rendered, no build step)
-install/              # Provisioning assets (banner.sh, cloudflared-tunnel.sh, .tmux.conf, .zshrc)
-scripts/              # Root-level orchestrator scripts (cron-runtime.ts, ralph.sh)
-crons/                # Markdown-frontmatter cron definitions (heartbeat.md, cleanup-tasks.md)
-workspace/            # Minimal agent-runtime template (bind-mounted; pack supplies identity, skills, agents)
-.github/ISSUE_TEMPLATE/  # agent, audit, bug, feature, skill, task
-.claude/skills/          # Orchestrator skills (release, ci-status, cloudflared-tunnel, agent-browser)
-.claude/specs/           # Architecture specs and decision records
-.claude/rules/           # Coding rules (auto-loaded)
-```
+<!-- CANONICAL LAYOUT SOURCE: docs/architecture/container-runtime.md#repo-layout
+     Do NOT add a directory tree here. Update container-runtime.md instead. -->
+
+The harness root is `/home/sandbox/harness` inside the sandbox.
+Orchestrator scripts live in `scripts/`, scheduled agents in `crons/`,
+sandbox environment in `.devcontainer/`, and the agent template in
+`workspace/`. See [docs/architecture/container-runtime.md#repo-layout](docs/architecture/container-runtime.md#repo-layout)
+for the full annotated tree.

@@ -93,7 +93,7 @@ Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
 | Tool | Command | Description |
 |------|---------|-------------|
 | Claude Code | `claude` | Anthropic's coding agent (aliased to `claude --dangerously-skip-permissions`) |
-| OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --full-auto`) |
+| OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --dangerously-bypass-approvals-and-sandbox`) |
 | Pi | `pi` | `@mariozechner/pi-coding-agent` — local-first coding agent |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents |
 
@@ -136,7 +136,7 @@ The sandbox user's `.bashrc` includes convenience aliases:
 
 ```
 claude  → claude --dangerously-skip-permissions
-codex   → codex --full-auto
+codex   → codex --dangerously-bypass-approvals-and-sandbox
 ```
 
 ### Persistent volumes

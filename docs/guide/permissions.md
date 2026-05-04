@@ -26,7 +26,7 @@ AI coding agents normally prompt for permission before running commands or editi
 | Agent | Flag | Alias |
 |-------|------|-------|
 | Claude Code | `--dangerously-skip-permissions` | `claude` (aliased in .bashrc) |
-| OpenAI Codex | `--full-auto` | `codex` (aliased in .bashrc) |
+| OpenAI Codex | `--dangerously-bypass-approvals-and-sandbox` | `codex` (aliased in .bashrc) |
 
 The env var `CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true` is also set in the base compose file so Claude Code operates without prompts even when invoked by heartbeats or the Slack bot.
 

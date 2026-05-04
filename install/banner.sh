@@ -53,12 +53,28 @@ if [ -s "${HOME}/.claude/.credentials.json" ]; then
   claude_detail="authenticated"
 fi
 
+# codex — check for populated auth.json
+codex_status="[✗]"
+codex_detail="not authenticated — run: codex"
+if [ -s "${HOME}/.codex/auth.json" ]; then
+  codex_status="[✓]"
+  codex_detail="authenticated"
+fi
+
 # pi — check for populated .pi directory
 pi_status="[✗]"
 pi_detail="not authenticated — run: pi"
 if [ -s "${HOME}/.pi/agent/auth.json" ]; then
   pi_status="[✓]"
   pi_detail="authenticated"
+fi
+
+# opencode — check for populated provider auth file
+opencode_status="[✗]"
+opencode_detail="not authenticated — run: opencode, then /connect"
+if [ -s "${HOME}/.local/share/opencode/auth.json" ]; then
+  opencode_status="[✓]"
+  opencode_detail="authenticated"
 fi
 
 # openharness CLI — verify the bind-mounted package built and symlinked
@@ -83,10 +99,12 @@ printf '\n'
 printf '  Onboarding:\n'
 printf '    %-6s %-11s %s\n' "$gh_status"     "gh"          "$gh_detail"
 printf '    %-6s %-11s %s\n' "$claude_status" "claude"      "$claude_detail"
+printf '    %-6s %-11s %s\n' "$codex_status"  "codex"       "$codex_detail"
+printf '    %-6s %-11s %s\n' "$opencode_status" "opencode"  "$opencode_detail"
 printf '    %-6s %-11s %s\n' "$pi_status"     "pi"          "$pi_detail"
 printf '    %-6s %-11s %s\n' "$oh_status"     "openharness" "$oh_detail"
 printf '\n'
-printf '  Shortcuts: claude · pi · tmux attach -t system-cron\n'
+printf '  Shortcuts: claude · codex · opencode · pi · tmux attach -t system-cron\n'
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'
 

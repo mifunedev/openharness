@@ -31,17 +31,20 @@ Verify with `gh auth status`. If it succeeds, you are done with this step.
 
 ### Step 2 — LLM provider
 
-Authenticate Claude Code, Codex, and Pi (each ships in the base sandbox) so they can make API calls.
+Authenticate Claude Code, Codex, OpenCode, and Pi (each ships in the base sandbox) so they can make API calls.
 
 ```bash
 claude   # opens the OAuth flow on first run; follow the printed URL
 codex    # OpenAI auth, only if you intend to use Codex
+opencode # run /connect, then choose OpenAI
 pi       # @mariozechner/pi-coding-agent; OAuth on first run
 ```
 
-Each writes tokens to its directory under the sandbox home (`~/.claude/`, `~/.codex/`, `~/.pi/`). With the persistent named volumes, credentials survive container rebuilds. The `*-host` overlays (enabled by default in `.openharness/config.json`) bind-mount the matching host directories so your laptop's existing auth carries straight in — see [provision.md](./operations/provision.md).
+OpenCode's recommended default for ChatGPT Plus and Pro users is OpenAI OAuth through `/connect` → OpenAI. It writes auth to `~/.local/share/opencode/auth.json`.
 
-If you prefer API keys over OAuth, set the relevant variables in `.devcontainer/.env` (e.g. `OPENAI_API_KEY`) before bringing the sandbox up.
+Each agent writes tokens to its directory under the sandbox home (`~/.claude/`, `~/.codex/`, `~/.local/share/opencode/`, `~/.pi/`). With persistent named volumes, credentials survive container rebuilds. The `*-host` overlays (enabled by default in `.openharness/config.json`) bind-mount matching host directories so your laptop's existing auth carries straight in — see [provision.md](./operations/provision.md).
+
+If you prefer API keys or provider env over OAuth, set the relevant variables in `.devcontainer/.env` (e.g. `OPENAI_API_KEY`) before bringing the sandbox up.
 
 ### Step 3 — SSH key (optional)
 
@@ -95,6 +98,8 @@ See `.claude/rules/sandbox-processes.md` (rendered in the Architecture section) 
 **Cloudflare login opens no browser:** `cloudflared login` prints a URL — paste it into any browser on your laptop.
 
 **Claude Code auth fails:** Run `claude` directly inside the sandbox to retrigger the OAuth flow interactively. If you mounted host `~/.claude` via the `claude-host` overlay, your laptop's existing credentials are reused and no in-sandbox flow is needed.
+
+**OpenCode auth fails:** Run `opencode`, then `/connect` → OpenAI. If you mounted host `~/.local/share/opencode` via the `opencode-host` overlay, your laptop's existing OpenCode auth is reused.
 
 **Slack bot not responding (mifune pack):** Attach to the agent's tmux session to see error output:
 

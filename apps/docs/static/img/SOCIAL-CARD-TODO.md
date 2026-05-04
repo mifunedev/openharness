@@ -7,7 +7,7 @@ To generate the PNG from the SVG, run the following command:
 ```bash
 convert -size 1200x630 xc:'#0b1220' \
   -fill '#f1f5fb' -gravity center -font DejaVu-Sans-Bold -pointsize 110 -annotate +0-40 'Open Harness' \
-  -fill '#92a0b6' -font DejaVu-Sans -pointsize 36 -annotate +0+80 'Run Claude, Codex, and Pi side-by-side.' \
+  -fill '#92a0b6' -font DejaVu-Sans -pointsize 36 -annotate +0+80 'A Docker sandbox for Claude, Codex, OpenCode, or Pi.' \
   -fill '#4e9af1' -draw 'rectangle 0,618 1200,630' \
   apps/docs/static/img/social-card.png
 ```

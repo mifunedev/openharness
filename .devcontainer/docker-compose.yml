@@ -10,6 +10,7 @@
 #   - claude-auth:/home/sandbox/.claude — Persistent Claude CLI auth
 #   - codex-auth:/home/sandbox/.codex — Persistent Codex CLI auth
 #   - pi-auth:/home/sandbox/.pi — Persistent Pi Agent (oh/pi CLI) auth
+#   - opencode-auth:/home/sandbox/.local/share/opencode — Persistent OpenCode auth
 #   - cloudflared-auth:/home/sandbox/.cloudflared — Cloudflare credentials
 #   - gh-config:/home/sandbox/.config/gh — GitHub CLI config
 #
@@ -46,6 +47,7 @@ services:
       - claude-auth:/home/sandbox/.claude
       - codex-auth:/home/sandbox/.codex
       - pi-auth:/home/sandbox/.pi
+      - opencode-auth:/home/sandbox/.local/share/opencode
       - cloudflared-auth:/home/sandbox/.cloudflared
       - gh-config:/home/sandbox/.config/gh
     extra_hosts:
@@ -70,5 +72,6 @@ volumes:
   claude-auth:
   codex-auth:
   pi-auth:
+  opencode-auth:
   cloudflared-auth:
   gh-config:

@@ -4,9 +4,9 @@ sidebar_position: 2
 ---
 
 
-All sandboxes are built from `.devcontainer/Dockerfile` — a Debian Bookworm image with Node.js 22, pnpm, agent CLIs (Claude Code, Codex), and dev tools pre-installed.
+All sandboxes are built from `.devcontainer/Dockerfile` — a Debian Bookworm image with Node.js 22, pnpm, agent CLIs (Claude Code, Codex, OpenCode, Pi), and dev tools pre-installed.
 
-Compose overlays in `.devcontainer/` add optional services. Enable them in `.openharness/config.json`.
+Compose overlays in `.devcontainer/` add optional services or host-state mounts. Enable or disable them in `.openharness/config.json`.
 
 ## Available overlays
 
@@ -18,7 +18,10 @@ Compose overlays in `.devcontainer/` add optional services. Enable them in `.ope
 | `docker-compose.ssh.yml` | Mount host `~/.ssh` read-only |
 | `docker-compose.ssh-generate.yml` | Generate keypair in persistent volume |
 | `docker-compose.sshd.yml` | SSH server daemon (port 2222, password auth) |
-| `docker-compose.claude-host.yml` | Bind-mount host `~/.claude` (auth, memory, projects) — opt-in |
+| `docker-compose.claude-host.yml` | Bind-mount host `~/.claude` (auth, memory, projects) |
+| `docker-compose.codex-host.yml` | Bind-mount host `~/.codex` (auth, config) |
+| `docker-compose.opencode-host.yml` | Bind-mount host `~/.local/share/opencode` (auth) |
+| `docker-compose.pi-host.yml` | Bind-mount host `~/.pi` (auth, config) |
 | `docker-compose.gateway.yml` | [Caddy reverse-proxy sidecar](./exposure.md) (auto-activated by first `openharness expose`) |
 
 ## Configuration
@@ -28,14 +31,13 @@ Edit `.openharness/config.json` to enable or disable overlays:
 ```json
 {
   "composeOverrides": [
-    ".devcontainer/docker-compose.cloudflared.yml",
-    ".devcontainer/docker-compose.slack.yml",
+    ".devcontainer/docker-compose.postgres.yml",
     ".devcontainer/docker-compose.ssh-generate.yml"
   ]
 }
 ```
 
-Default enabled: `cloudflared`, `slack`. Docker socket is mounted in the base compose file.
+Default enabled: `claude-host`, `codex-host`, `opencode-host`, and `pi-host` when the install host UID is 1000. `scripts/install.sh` disables host auth overlays on other UIDs so named Docker volumes take over. Docker socket is mounted in the base compose file.
 
 After editing, run `make sandbox` (or `make destroy && make sandbox` if the container is already up) to apply changes.
 
@@ -95,8 +97,7 @@ Enable it by adding the overlay path to your existing
 ```json
 {
   "composeOverrides": [
-    ".devcontainer/docker-compose.cloudflared.yml",
-    ".devcontainer/docker-compose.slack.yml",
+    ".devcontainer/docker-compose.codex-host.yml",
     ".devcontainer/docker-compose.claude-host.yml"
   ]
 }
@@ -138,3 +139,34 @@ group-based access reconciliation does not help. The overlay sets
 1000, the sandbox user cannot read `.credentials.json` and `claude`
 will prompt for auth anyway. Check with `id -u` on the host before
 enabling.
+
+## Sharing host OpenCode state (`opencode-host`)
+
+Without the host overlay, each sandbox stores OpenCode auth in a named Docker volume mounted at `~/.local/share/opencode`. OpenCode writes OpenAI OAuth credentials to `~/.local/share/opencode/auth.json`.
+
+The `opencode-host` overlay replaces that volume with a read-write bind-mount of your host state:
+
+- `~/.local/share/opencode/` — OpenCode auth and provider state
+
+Enable it by adding the overlay path to your existing `composeOverrides` array:
+
+```json
+{
+  "composeOverrides": [
+    ".devcontainer/docker-compose.cloudflared.yml",
+    ".devcontainer/docker-compose.opencode-host.yml"
+  ]
+}
+```
+
+Override the default via `.devcontainer/.env` if your state lives elsewhere:
+
+- `HOST_OPENCODE_DIR` — alternate path for the directory (default `~/.local/share/opencode`)
+
+Pre-flight:
+
+```bash
+test -d ~/.local/share/opencode && echo OK
+```
+
+Only enable host auth overlays for trusted workflows. OAuth tokens are readable by any code running in the sandbox, and sandbox writes propagate to the host directory.

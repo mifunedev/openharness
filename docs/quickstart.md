@@ -39,6 +39,7 @@ you prefer:
 ```bash
 claude        # Claude Code
 codex         # OpenAI Codex CLI
+opencode      # OpenCode
 pi            # Pi Coding Agent
 ```
 

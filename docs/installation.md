@@ -94,6 +94,7 @@ Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
 |------|---------|-------------|
 | Claude Code | `claude` | Anthropic's coding agent (aliased to `claude --dangerously-skip-permissions`) |
 | OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --dangerously-bypass-approvals-and-sandbox`) |
+| OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support |
 | Pi | `pi` | `@mariozechner/pi-coding-agent` — local-first coding agent |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents |
 
@@ -145,6 +146,7 @@ Auth credentials survive container rebuilds via named Docker volumes:
 
 - `claude-auth` → `~/.claude` (Claude Code OAuth) — or, with the [`claude-host` overlay](./guide/overlays.md#sharing-host-claude-state-claude-host), a RW bind-mount of your host `~/.claude`.
 - `codex-auth` → `~/.codex` (Codex OAuth) — or, with the `codex-host` overlay, a RW bind-mount of your host `~/.codex`.
+- `opencode-auth` → `~/.local/share/opencode` (OpenCode OAuth; `auth.json`) — or, with the [`opencode-host` overlay](./guide/overlays.md#sharing-host-opencode-state-opencode-host), a RW bind-mount of your host `~/.local/share/opencode`.
 - `pi-auth` → `~/.pi` (Pi Agent OAuth) — or, with the `pi-host` overlay, a RW bind-mount of your host `~/.pi`.
 - `cloudflared-auth` → `~/.cloudflared` (Cloudflare credentials)
 - `gh-config` → `~/.config/gh` (GitHub CLI tokens)

@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- OpenCode as a core sandbox agent: install `opencode-ai` in the base image, persist `~/.local/share/opencode`, add the `opencode-host` overlay, support `scripts/ralph.sh --harness=opencode`, and document OpenAI OAuth as the default OpenCode provider path.
 - `docs/agents/pi.md` stub (linking upstream to `badlogic/pi-mono`) and a Pi entry in the home-page agent grid at `apps/docs/src/pages/index.tsx`, matching Pi's restoration as a default-installed CLI. ([#233](https://github.com/ryaneggz/open-harness/pull/233))
 - Top-level `Makefile` wrapping `docker compose -f .devcontainer/docker-compose.yml` so users type `make sandbox` / `make shell` / `make destroy` instead of the 50-character compose lines. Targets: `sandbox`, `shell`, `destroy`, `stop`, `logs`, `ps`, `restart`, `help` (default, self-documenting via awk). Uses `-include .devcontainer/.env` so `SANDBOX_NAME` flows through. No agent-CLI targets — the harness's value is sandbox isolation, agent choice (`claude` / `codex` / `pi`) happens inside `make shell`.
 

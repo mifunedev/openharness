@@ -37,12 +37,18 @@ for dir in .claude .codex .pi .deepagents .cloudflared .config/gh .ssh .openharn
   fi
 done
 
-# Fix ownership of /home/sandbox/.local and /home/sandbox/.local/share —
-# Docker auto-creates these as root to satisfy the opencode bind-mount path,
-# which then blocks `opencode` from creating siblings like `.local/state`
-# (EACCES on first run). Non-recursive so the bind-mounted
-# `.local/share/opencode` stays untouched when OPENCODE_HOST_BIND_MOUNT=1.
-for parent in /home/sandbox/.local /home/sandbox/.local/share; do
+# Fix ownership of parents Docker auto-creates as root to satisfy named-volume
+# or bind-mount targets, which then block the sandbox user from creating
+# sibling dirs (EACCES on first run). Two known cases:
+#   • `.local` / `.local/share` — parents of the opencode state mount; without
+#     this `opencode` can't create `.local/state`.
+#   • `.config` — parent of the `gh-config` named volume (see
+#     docker-compose.yml); without this `opencode` can't create
+#     `.config/opencode`, and any other tool writing under `~/.config/<tool>`
+#     would hit the same wall.
+# Non-recursive so the bind-mounted children (`.local/share/opencode`,
+# `.config/gh`) stay untouched.
+for parent in /home/sandbox/.local /home/sandbox/.local/share /home/sandbox/.config; do
   if [ -d "$parent" ]; then
     chown sandbox:sandbox "$parent" 2>/dev/null || true
   fi

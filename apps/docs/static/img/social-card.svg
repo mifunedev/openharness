@@ -14,6 +14,6 @@
   <rect width="1280" height="720" fill="url(#glow)"/>
   <text x="640" y="280" font-family="DejaVu Sans, Inter, sans-serif" font-size="32" font-weight="700" fill="#6faef3" text-anchor="middle" letter-spacing="6">OPEN SOURCE AGENT HARNESS</text>
   <text x="640" y="400" font-family="DejaVu Sans, Inter, sans-serif" font-size="140" font-weight="800" fill="#f1f5fb" text-anchor="middle" letter-spacing="-3">Open Harness</text>
-  <text x="640" y="470" font-family="DejaVu Sans, Inter, sans-serif" font-size="40" font-weight="400" fill="#92a0b6" text-anchor="middle">Run Claude, Codex, and Pi side-by-side.</text>
+  <text x="640" y="470" font-family="DejaVu Sans, Inter, sans-serif" font-size="40" font-weight="400" fill="#92a0b6" text-anchor="middle">A Docker sandbox for Claude, Codex, OpenCode, or Pi.</text>
   <rect x="0" y="706" width="1280" height="14" fill="url(#stripe)"/>
 </svg>

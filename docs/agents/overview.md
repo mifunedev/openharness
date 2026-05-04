@@ -5,9 +5,9 @@ title: "Agents Overview"
 
 # Agents Overview
 
-Open Harness ships with three agent CLIs preinstalled in the sandbox image: **Claude Code**, **Codex**, and **Pi**. Inside the sandbox, launch whichever you prefer — switch between them at any time, or stack them in tmux sessions for parallel work.
+Open Harness ships with four agent CLIs preinstalled in the sandbox image: **Claude Code**, **Codex**, **OpenCode**, and **Pi**. Inside the sandbox, launch whichever you prefer and keep long-running sessions in tmux.
 
-The sandbox is the product; the harness is your call. To go beyond the three preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a [harness pack](../guide/bring-your-own-harness.md) like [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) (Pi+Mom Slack bot).
+The sandbox is the product; the harness is your call. To go beyond the four preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a [harness pack](../guide/bring-your-own-harness.md) like [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) (Pi+Mom Slack bot).
 
 ## Supported agents
 
@@ -15,6 +15,7 @@ The sandbox is the product; the harness is your call. To go beyond the three pre
 |---|---|---|---|
 | [Claude Code](./claude-code.md) | Anthropic's terminal coding agent | `claude` | preinstalled |
 | [Codex](./codex.md) | OpenAI's CLI coding agent | `codex` | preinstalled |
+| [OpenCode](./opencode.md) | Terminal coding agent with OpenAI OAuth support | `opencode` | preinstalled |
 | [Pi](./pi.md) | Lightweight, customizable harness | `pi` | preinstalled |
 
 ## Verifying installation
@@ -22,6 +23,7 @@ The sandbox is the product; the harness is your call. To go beyond the three pre
 ```bash
 claude --version
 codex --version
+opencode --version
 pi --version
 ```
 
@@ -32,6 +34,7 @@ Use separate tmux sessions so each agent's output stays isolated and survives di
 ```bash
 tmux new-session -d -s agent-claude 'claude'
 tmux new-session -d -s agent-codex  'codex --dangerously-bypass-approvals-and-sandbox'
+tmux new-session -d -s agent-opencode 'opencode'
 tmux new-session -d -s agent-pi     'pi'
 ```
 

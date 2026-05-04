@@ -12,7 +12,7 @@ That single command builds the image (Node 22, agent CLIs, procps, tmux), starts
 
 ## Compose overlays
 
-Overlays live in `.devcontainer/docker-compose.*.yml` and are opt-in via `.openharness/config.json` → `composeOverrides`. Each entry adds another `-f <file>` to the compose invocation.
+Overlays live in `.devcontainer/docker-compose.*.yml` and are selected through `.openharness/config.json` → `composeOverrides`. Each entry adds another `-f <file>` to the compose invocation.
 
 | Overlay | Purpose |
 |---|---|
@@ -23,11 +23,12 @@ Overlays live in `.devcontainer/docker-compose.*.yml` and are opt-in via `.openh
 | `docker-compose.sshd.yml` | sshd as main process, port 2222:22 |
 | `docker-compose.claude-host.yml` | Bind-mount host `~/.claude` (trust tradeoff) |
 | `docker-compose.codex-host.yml` | Bind-mount host `~/.codex` (trust tradeoff) |
+| `docker-compose.opencode-host.yml` | Bind-mount host `~/.local/share/opencode` (trust tradeoff) |
 | `docker-compose.pi-host.yml` | Bind-mount host `~/.pi` (trust tradeoff) |
 | `docker-compose.ssh.yml` | Mount host `~/.ssh` read-only — git-over-SSH, mutually exclusive with `ssh-generate` |
 | `docker-compose.ssh-generate.yml` | Generate persistent ED25519 keypair in named volume |
 
-> The `claude-host`, `codex-host`, and `pi-host` overlays all require host UID = 1000 and pre-existing host directories (`~/.claude` + `~/.claude.json` for claude; `~/.codex` for codex; `~/.pi` for pi). See the trust tradeoffs in each `.devcontainer/docker-compose.*-host.yml` file.
+> The `claude-host`, `codex-host`, `opencode-host`, and `pi-host` overlays all require host UID = 1000 and pre-existing host directories (`~/.claude` + `~/.claude.json` for claude; `~/.codex` for codex; `~/.local/share/opencode` for OpenCode; `~/.pi` for pi). See the trust tradeoffs in each `.devcontainer/docker-compose.*-host.yml` file.
 
 To enable an overlay, add its path to `.openharness/config.json`:
 

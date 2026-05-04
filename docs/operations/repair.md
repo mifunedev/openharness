@@ -17,6 +17,7 @@ The remediation paths differ slightly: from the host you wrap commands in `docke
 ```bash
 node --version                             # expect >= 22
 command -v claude && claude --version      # default agent CLI
+command -v opencode && opencode --version  # OpenCode CLI
 docker ps >/dev/null 2>&1 && echo OK       # docker socket (if docker overlay enabled)
 tmux ls                                    # expect system-cron session
 ```
@@ -27,6 +28,7 @@ tmux ls                                    # expect system-cron session
 docker exec -u sandbox openharness bash -c '
   node --version
   command -v claude && claude --version
+  command -v opencode && opencode --version
   docker ps >/dev/null 2>&1 && echo OK
   tmux ls
 '
@@ -42,6 +44,7 @@ If the container itself is down, `docker exec` returns non-zero. Bring it back w
 | Container restart-loops | `docker logs openharness` — usually a missing env var or volume permission issue |
 | `claude --version` fails | `docker exec -u sandbox openharness sudo npm install -g @anthropic-ai/claude-code` |
 | `codex --version` fails | `docker exec -u sandbox openharness sudo npm install -g @openai/codex` |
+| `opencode --version` fails | `docker exec -u sandbox openharness sudo npm install -g opencode-ai` |
 | `pi --version` fails | `docker exec -u sandbox openharness sudo npm install -g @mariozechner/pi-coding-agent` |
 | Node version wrong | Image is stale. Rebuild: `docker compose ... down -v && docker compose ... up -d --build` |
 | `docker ps` fails inside sandbox | Verify the `/var/run/docker.sock` bind mount in `.devcontainer/docker-compose.yml` is intact; usually a host-side socket permission issue, not a missing overlay |

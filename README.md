@@ -25,9 +25,10 @@ cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-doc
 ```bash
 cd ~/openharness
 make shell       # enter the isolated sandbox
-# inside the sandbox, launch any agent you have installed:
+# inside the sandbox, launch any core agent:
 #   claude   # Claude Code
 #   codex    # OpenAI Codex CLI
+#   opencode # OpenCode
 #   pi       # Pi Coding Agent
 make destroy     # stop and remove the sandbox
 make help        # all targets
@@ -56,7 +57,7 @@ make shell
 
 | | |
 |---|---|
-| **Default agent** | Claude Code (terminal coding agent) |
+| **Core agents** | Claude Code, Codex, OpenCode, Pi |
 | **Runtimes** | Node 22, pnpm, Bun, uv (Python) |
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |

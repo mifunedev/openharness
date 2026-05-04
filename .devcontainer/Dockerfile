@@ -109,7 +109,7 @@ RUN printf '%s\n' \
 
 # Shell aliases for agent CLIs (bash fallback — .zshrc ships with these baked in)
 RUN echo "alias claude='claude --dangerously-skip-permissions'" >> /home/sandbox/.bashrc \
- && echo "alias codex='codex --full-auto'" >> /home/sandbox/.bashrc
+ && echo "alias codex='codex --dangerously-bypass-approvals-and-sandbox'" >> /home/sandbox/.bashrc
 
 # Git safe.directory for bind-mounted project
 RUN su - sandbox -c "git config --global --add safe.directory /home/sandbox/harness"

@@ -9,7 +9,7 @@ Codex is OpenAI's CLI coding agent. It takes a natural-language task description
 
 ## Purpose
 
-Codex is designed for fully autonomous operation. Give it a task and it works through it end-to-end, making it a good fit for well-scoped tickets, automated refactors, and batch code generation. Its `--full-auto` mode (the sandbox default) requires no confirmation prompts.
+Codex is designed for autonomous operation. Give it a task and it works through it end-to-end, making it a good fit for well-scoped tickets, automated refactors, and batch code generation. The sandbox default uses `--dangerously-bypass-approvals-and-sandbox` because Docker is the isolation boundary.
 
 ## Install
 
@@ -37,23 +37,23 @@ Add the export to `~/.zshrc` or `~/.bashrc` to persist it across sessions. You c
 
 ## Common usage
 
-The sandbox alias runs Codex in fully autonomous mode by default:
+The sandbox alias runs Codex with prompts disabled and Codex's own sandbox disabled:
 
 ```bash
-# Run a task autonomously (alias: --full-auto)
+# Run a task autonomously (alias: --dangerously-bypass-approvals-and-sandbox)
 codex "Add input validation to the user registration endpoint"
 
-# Explicit full-auto flag
-codex --full-auto "Write unit tests for scripts/cron-runtime.ts"
+# Explicit no-prompt/no-Codex-sandbox invocation
+codex --dangerously-bypass-approvals-and-sandbox "Write unit tests for scripts/cron-runtime.ts"
 
-# Approval mode: Codex proposes each change and waits for confirmation
-codex --approval-mode "Refactor scripts/install.sh to use a single prompt helper"
+# Prompt before higher-risk actions and keep Codex workspace sandboxing enabled
+codex --ask-for-approval on-request --sandbox workspace-write "Refactor scripts/install.sh to use a single prompt helper"
 ```
 
 Run inside a dedicated tmux session:
 
 ```bash
-tmux new-session -d -s agent-codex 'codex --full-auto "your task here"'
+tmux new-session -d -s agent-codex 'codex --dangerously-bypass-approvals-and-sandbox "your task here"'
 tmux attach -t agent-codex
 ```
 

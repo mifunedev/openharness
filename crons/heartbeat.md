@@ -41,8 +41,8 @@ that catches anything time-sensitive without doing real work.
   `RESOLVED: <item> — remove the line in next session`.
 - Append the result to `memory/<today>/log.md` either way.
 - **Mandatory closing step (do this even after long action chains):**
-  append one liveness line to `crons/cron.log`:
-  `printf '[%s] heartbeat: %s\n' "$(date -Iseconds)" "<status>" >> crons/cron.log`
+  append one liveness line to `crons/.cron.log`:
+  `printf '[%s] heartbeat: %s\n' "$(date -Iseconds)" "<status>" >> crons/.cron.log`
   where `<status>` is one of `OK`, `OK (N watching)`, `OK (stale ralph: <name>)`,
   `OK (resolved: <item-snippet>)`. This is the cron's only liveness
   signal — it MUST execute every pulse regardless of what else happened.

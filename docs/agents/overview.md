@@ -31,7 +31,7 @@ Use separate tmux sessions so each agent's output stays isolated and survives di
 
 ```bash
 tmux new-session -d -s agent-claude 'claude'
-tmux new-session -d -s agent-codex  'codex --full-auto'
+tmux new-session -d -s agent-codex  'codex --dangerously-bypass-approvals-and-sandbox'
 tmux new-session -d -s agent-pi     'pi'
 ```
 

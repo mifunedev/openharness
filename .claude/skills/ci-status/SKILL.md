@@ -66,7 +66,13 @@ gh api "repos/ryaneggz/open-harness/actions/jobs/$JOB_ID/logs" 2>&1 \
 
 - **PASS**: Report "CI green" with the run URL
 - **FAIL**: Report the failing step, error message, and suggest a fix. Then fix the issue, commit, push, and run `/ci-status` again
-- **NO RUN**: If no CI run exists for the current commit, the push may not have triggered CI (check branch filter in `.github/workflows/ci.yml`)
+- **NO RUN**: No workflow's `on:` filter matched the push. This repo's CI is mostly PATH-filtered, not branch-filtered:
+  - `ci-harness.yml` — push only: `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, itself
+  - `docs.yml` — PR or push-to-main: `docs/**`, `apps/docs/**`, `blog/**`, itself
+  - `conciseness.yml` — push or PR: `workspace/*.md`, `workspace/.claude/rules/*.md`, itself
+  - `release.yml` — tag push only
+
+  Infrastructure-only PRs (devcontainer/scripts/install/) trigger NOTHING on push — that's expected. `pull_request`-event workflows still fire when the PR opens. Diagnose with: `git diff --name-only HEAD~1 HEAD` and compare against each workflow's `on:` block.
 
 ## CI Pipeline Steps
 

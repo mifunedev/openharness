@@ -134,14 +134,22 @@ open-harness/
 │   └── __tests__/              # vitest unit tests
 ├── tasks/                      # Ralph task workdirs (prd.json + progress.txt)
 │   └── archive/                # weekly cleanup destination (cleanup-tasks cron)
-└── workspace/                  # bind-mounted agent template
-    ├── AGENTS.md               # agent operating procedures
-    ├── CLAUDE.md               # symlink → AGENTS.md
-    ├── startup.sh              # runs on container boot after onboarding
-    └── .claude/                # workspace-scoped rules, skills, settings
+├── workspace/                  # bind-mounted agent template
+│   ├── AGENTS.md               # agent operating procedures
+│   ├── CLAUDE.md               # symlink → AGENTS.md
+│   ├── startup.sh              # runs on container boot after onboarding
+│   └── .claude/                # workspace-scoped rules, skills, settings
+└── .worktrees/                 # README only — branch worktrees + project clones gitignored
+    └── README.md               # § Worktrees + project/<name>/ convention
 ```
 
-**Excluded from this tree** (gitignored or build artefacts): `node_modules/`, `.pnpm-store/`, `.worktrees/` (per-branch git worktrees, transient).
+Each top-level directory whose intent isn't obvious from its name carries
+a `README.md` per `.claude/rules/directory-readme.md` — currently
+`apps/`, `crons/`, `scripts/`, `tasks/`, and `.worktrees/`. The
+`.worktrees/` README is the only file tracked under that path; everything
+else inside is gitignored.
+
+**Excluded from this tree** (gitignored or build artefacts): `node_modules/`, `.pnpm-store/`, transient contents of `.worktrees/` (per-branch worktrees + `.worktrees/project/<name>/` clones).
 
 ### Workspace identity files
 

@@ -75,7 +75,7 @@ At release time, `/release` promotes `[Unreleased]` to new `## [<VERSION>] - YYY
 
 ## Worktrees
 
-Default path: `.worktrees/<branch>` at project root. Create `.worktrees/` if missing.
+Default path: `.worktrees/<branch>` at project root. Create `.worktrees/` if missing. Independent project clones (own `.git`, not harness branches) live under `.worktrees/project/<project-name>/<repo>/` — see `.worktrees/README.md`.
 
 ```bash
 mkdir -p .worktrees
@@ -88,7 +88,7 @@ Example path: `.worktrees/feat/42-slack-thread-replies`
 
 Cleanup: `git worktree remove .worktrees/<branch>`.
 
-`.worktrees/` gitignored (see `.gitignore`); only `.worktrees/.gitkeep` tracked.
+`.worktrees/` gitignored (see `.gitignore`); only `.worktrees/README.md` tracked.
 
 ### Stale worktree policy
 

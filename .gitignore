@@ -2,7 +2,7 @@
 .worktrees/*
 .claude/worktrees/
 tasks/*/archive/
-!.worktrees/.gitkeep
+!.worktrees/README.md
 
 # Build artifacts
 **/.venv/

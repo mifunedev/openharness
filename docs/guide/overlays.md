@@ -6,7 +6,7 @@ sidebar_position: 2
 
 All sandboxes are built from `.devcontainer/Dockerfile` — a Debian Bookworm image with Node.js 22, pnpm, agent CLIs (Claude Code, Codex, OpenCode, Pi), and dev tools pre-installed.
 
-Compose overlays in `.devcontainer/` add optional services or host-state mounts. Enable or disable them in `.openharness/config.json`.
+Compose overlays in `.devcontainer/` add optional services or host-state mounts. Enable or disable them in `config.json` (at the repo root, gitignored — copy from `config.example.json` if missing).
 
 ## Available overlays
 
@@ -27,7 +27,7 @@ Compose overlays in `.devcontainer/` add optional services or host-state mounts.
 
 ## Configuration
 
-Edit `.openharness/config.json` to enable or disable overlays:
+Edit `config.json` (at the repo root, gitignored — copy from `config.example.json` if missing) to enable or disable overlays:
 
 ```json
 {
@@ -72,7 +72,7 @@ The password is set from the `SANDBOX_PASSWORD` environment variable (default: `
 
 To add PostgreSQL to your sandbox:
 
-1. Add `".devcontainer/docker-compose.postgres.yml"` to `composeOverrides` in `.openharness/config.json`
+1. Add `".devcontainer/docker-compose.postgres.yml"` to `composeOverrides` in `config.json`
 2. Run `make sandbox`
 3. The database is available at `postgresql://sandbox:sandbox@postgres:5432/sandbox`
 
@@ -184,7 +184,7 @@ your host state:
   `config.toml` (CLI defaults), memory, skills, sessions
 
 The overlay is **opt-in** and is NOT listed in the default
-`.openharness/config.json` `composeOverrides`. DeepAgents itself is an
+`config.json` `composeOverrides`. DeepAgents itself is an
 optional supported runtime; Claude remains the default agent path.
 
 Enable it by adding the overlay path to your existing
@@ -239,7 +239,7 @@ mkdir -p ~/.deepagents
 **Disabling the overlay (returning to the named volume):**
 
 1. Remove `".devcontainer/docker-compose.deepagents-host.yml"` from
-   `composeOverrides` in `.openharness/config.json`.
+   `composeOverrides` in `config.json`.
 2. Run `make sandbox` (or `make destroy && make sandbox`).
 
 The base `deepagents-auth` named volume reattaches at

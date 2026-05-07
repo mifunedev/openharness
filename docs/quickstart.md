@@ -17,14 +17,14 @@ Install Docker with the Compose plugin: [docs.docker.com/get-docker](https://doc
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
-The installer clones into `~/openharness`, prompts to share your host
+The installer clones into `~/.openharness`, prompts to share your host
 `gh` token, writes `.devcontainer/.env` with safe defaults, and brings
 the sandbox up via `docker compose`.
 
 ## Enter the sandbox
 
 ```bash
-cd ~/openharness
+cd ~/.openharness
 make shell
 ```
 

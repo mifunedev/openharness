@@ -12,7 +12,7 @@ That single command builds the image (Node 22, agent CLIs, procps, tmux), starts
 
 ## Compose overlays
 
-Overlays live in `.devcontainer/docker-compose.*.yml` and are selected through `.openharness/config.json` → `composeOverrides`. Each entry adds another `-f <file>` to the compose invocation.
+Overlays live in `.devcontainer/docker-compose.*.yml` and are selected through `config.json` (at the repo root, gitignored — copy from `config.example.json` if missing) → `composeOverrides`. Each entry adds another `-f <file>` to the compose invocation.
 
 | Overlay | Purpose |
 |---|---|
@@ -31,7 +31,7 @@ Overlays live in `.devcontainer/docker-compose.*.yml` and are selected through `
 
 > The `claude-host`, `codex-host`, `opencode-host`, `pi-host`, and `deepagents-host` overlays all require host UID = 1000 and pre-existing host directories (`~/.claude` + `~/.claude.json` for claude; `~/.codex` for codex; `~/.local/share/opencode` for OpenCode; `~/.pi` for pi; `~/.deepagents` for deepagents). See the trust tradeoffs in each `.devcontainer/docker-compose.*-host.yml` file. `scripts/install.sh` pre-creates the host directories and strips `*-host.yml` overlays from `composeOverrides` automatically when host UID is not 1000.
 
-To enable an overlay, add its path to `.openharness/config.json`:
+To enable an overlay, add its path to `config.json`:
 
 ```json
 {
@@ -46,7 +46,7 @@ Then provision with the overlay list expanded:
 
 ```bash
 COMPOSE_FILES="-f .devcontainer/docker-compose.yml"
-for f in $(jq -r '.composeOverrides[]' .openharness/config.json); do
+for f in $(jq -r '.composeOverrides[]' config.json); do
   COMPOSE_FILES="$COMPOSE_FILES -f $f"
 done
 docker compose --env-file .devcontainer/.env $COMPOSE_FILES up -d --build

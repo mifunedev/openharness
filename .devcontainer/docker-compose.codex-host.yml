@@ -27,7 +27,7 @@
 # into a container that may execute untrusted agent code. Enable only for
 # trusted workflows. OAuth login is the expected default auth path for
 # codex in this harness, so the overlay is enabled by default in
-# .openharness/config.json.
+# config.json.
 #
 # Bleed-through: ~/.codex/sessions/, history.jsonl, and memories/ from
 # other host work will be visible inside the sandbox. Acknowledged cost
@@ -43,7 +43,7 @@
 # skips its recursive chown on /home/sandbox/.codex (which would otherwise
 # rewrite host file ownership).
 #
-# Usage: enable via .openharness/config.json composeOverrides[]:
+# Usage: enable via config.json composeOverrides[]:
 #   ".devcontainer/docker-compose.codex-host.yml"
 
 services:

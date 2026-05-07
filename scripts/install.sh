@@ -92,7 +92,7 @@ Usage:
   curl -fsSL https://oh.mifune.dev/install.sh | bash [-s -- <flags>]
   ./scripts/install.sh [<flags>]
 
-Clones (or pulls) the repo into ~/openharness, prepares host auth dirs,
+Clones (or pulls) the repo into ~/.openharness, prepares host auth dirs,
 and brings up the sandbox via 'docker compose'. Per SPEC v0.7, docker
 compose is the canonical substrate; the legacy 'oh' CLI is removed.
 
@@ -175,18 +175,60 @@ if [ -n "$REPO_CANDIDATE" ] && [ -f "$REPO_CANDIDATE/.devcontainer/docker-compos
   REPO_DIR="$REPO_CANDIDATE"
   ok "Using local repo: $REPO_DIR"
 else
-  REPO_DIR="$HOME/openharness"
-  # One-time migration: legacy curl-pipe installs cloned to ~/.openharness,
-  # which collides visually with the in-repo `.openharness/` config dir.
-  # If the new path is absent and the old one is a clone, move it.
-  LEGACY_REPO="$HOME/.openharness"
-  if [ ! -d "$REPO_DIR" ] && [ -d "$LEGACY_REPO/.git" ]; then
-    mv "$LEGACY_REPO" "$REPO_DIR"
-    ok "Migrated $LEGACY_REPO → $REPO_DIR"
+  # Install target is ~/.openharness (hidden dir, no collision with repo subdirs).
+  # OLD_REPO is the post-#200 path that was briefly the install target.
+  OLD_REPO="$HOME/openharness"
+  REPO_DIR="$HOME/.openharness"
+
+  # ── Population classification + migration ─────────────────────────────
+  __HAS_OLD=0; __HAS_NEW=0
+  [ -d "$OLD_REPO/.git" ] && __HAS_OLD=1
+  if [ -d "$REPO_DIR" ] && [ ! -d "$REPO_DIR/.git" ]; then
+    die "~/.openharness exists but is not a git clone. Inspect and remove it, then re-run."
   fi
-  unset LEGACY_REPO
+  [ -d "$REPO_DIR/.git" ] && __HAS_NEW=1
+
+  if [ "$__HAS_OLD" = "1" ] && [ "$__HAS_NEW" = "1" ]; then
+    # ── B+C collision: both paths exist ───────────────────────────────────
+    __OLD_DIRTY=0; __NEW_DIRTY=0
+    git -C "$OLD_REPO" diff --quiet 2>/dev/null && git -C "$OLD_REPO" diff --cached --quiet 2>/dev/null || __OLD_DIRTY=1
+    git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null || __NEW_DIRTY=1
+    if [ "$__OLD_DIRTY" = "1" ] && [ "$__NEW_DIRTY" = "0" ]; then
+      # OLD has changes; keep OLD as active (rename to new), archive NEW
+      __ARCHIVE="${REPO_DIR}.legacy.$(date +%Y%m%d%H%M%S)"
+      mv "$REPO_DIR" "$__ARCHIVE"
+      warn "Archived $REPO_DIR → $__ARCHIVE"
+      git -C "$OLD_REPO" stash push -u -m "install.sh: pre-rename autostash" 2>/dev/null || true
+      mv "$OLD_REPO" "$REPO_DIR"
+      ok "Migrated $OLD_REPO → $REPO_DIR (had local changes — autostashed)"
+    elif [ "$__NEW_DIRTY" = "1" ] && [ "$__OLD_DIRTY" = "0" ]; then
+      # NEW has changes; keep NEW, archive OLD
+      __ARCHIVE="${OLD_REPO}.legacy.$(date +%Y%m%d%H%M%S)"
+      mv "$OLD_REPO" "$__ARCHIVE"
+      warn "Archived $OLD_REPO → $__ARCHIVE"
+      ok "Keeping $REPO_DIR (had local changes)"
+    else
+      # Neither (or both) dirty: prefer OLD_REPO (post-#200, more recent install)
+      __ARCHIVE="${REPO_DIR}.legacy.$(date +%Y%m%d%H%M%S)"
+      mv "$REPO_DIR" "$__ARCHIVE"
+      warn "Archived $REPO_DIR → $__ARCHIVE"
+      git -C "$OLD_REPO" stash push -u -m "install.sh: pre-rename autostash" 2>/dev/null || true
+      mv "$OLD_REPO" "$REPO_DIR"
+      ok "Migrated $OLD_REPO → $REPO_DIR"
+    fi
+    unset __OLD_DIRTY __NEW_DIRTY __ARCHIVE
+  elif [ "$__HAS_OLD" = "1" ] && [ "$__HAS_NEW" = "0" ]; then
+    # ── Population B: ~/openharness only — rename to ~/.openharness ────────
+    git -C "$OLD_REPO" stash push -u -m "install.sh: pre-rename autostash" 2>/dev/null || true
+    mv "$OLD_REPO" "$REPO_DIR"
+    ok "Migrated $OLD_REPO → $REPO_DIR"
+  fi
+  # Population C (~/.openharness only) and A (neither) fall through to the
+  # pull / clone logic below.
+  unset __HAS_OLD __HAS_NEW OLD_REPO
+
   if [ -d "$REPO_DIR/.git" ]; then
-    # Gate pull on clean working tree — don't abort on local edits.
+    # ── Pull (clean tree only) ─────────────────────────────────────────────
     if git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
       printf "  Repository exists — pulling latest changes...\n"
       git -C "$REPO_DIR" pull --ff-only
@@ -195,6 +237,7 @@ else
       warn "Local changes detected in $REPO_DIR — skipping git pull. Stash or commit them, then re-run if you want the latest main."
     fi
   else
+    # ── Population A: fresh clone ──────────────────────────────────────────
     if [ -n "${OH_INSTALL_REF:-}" ]; then
       git clone --branch "$OH_INSTALL_REF" https://github.com/ryaneggz/open-harness.git "$REPO_DIR"
       ok "Repository cloned at ref '$OH_INSTALL_REF': $REPO_DIR"
@@ -203,6 +246,18 @@ else
       ok "Repository cloned: $REPO_DIR"
     fi
   fi
+
+  # ── Seed config.json from example if missing ──────────────────────────
+  if [ ! -f "$REPO_DIR/config.json" ] && [ -f "$REPO_DIR/config.example.json" ]; then
+    cp "$REPO_DIR/config.example.json" "$REPO_DIR/config.json"
+    ok "Seeded config.json from config.example.json"
+  fi
+
+  # ── Shell CWD notice (for B migration) ────────────────────────────────
+  # If the user's shell was open in ~/openharness, that path no longer exists.
+  printf "\n"
+  warn "If your current shell is still in ~/openharness, run: cd ~/.openharness"
+  printf "\n"
 fi
 
 cd "$REPO_DIR"
@@ -323,7 +378,7 @@ fi
 
 __HOST_UID="$(id -u)"
 if [ "$__HOST_UID" != "1000" ]; then
-  __OH_CONFIG="$REPO_DIR/.openharness/config.json"
+  __OH_CONFIG="$REPO_DIR/config.json"
   if command -v jq >/dev/null 2>&1 && [ -f "$__OH_CONFIG" ]; then
     # Filter *-host.yml entries out of composeOverrides. Mode-0600
     # credential files in host agent state dirs can't be read by the
@@ -337,7 +392,6 @@ if [ "$__HOST_UID" != "1000" ]; then
         mv "$__OH_TMP" "$__OH_CONFIG"
         ok "Host UID $__HOST_UID ≠ 1000 — disabled host-bind overlays in $__OH_CONFIG"
         ok "Auth will live in named volumes; first run of each agent inside the sandbox will authenticate"
-        warn "$__OH_CONFIG now has a local diff — \`git pull\` in $REPO_DIR will be skipped until you commit or revert it"
       else
         rm -f "$__OH_TMP"
         ok "Host UID $__HOST_UID ≠ 1000 — host-bind overlays already disabled"
@@ -356,7 +410,7 @@ if [ "$__HOST_UID" != "1000" ]; then
     warn "Credential files in host agent state dirs may be mode 0600;"
     warn "the sandbox WILL NOT be able to read them despite the bind-mount."
     warn ""
-    warn "Install jq, OR edit $REPO_DIR/.openharness/config.json"
+    warn "Install jq, OR edit $REPO_DIR/config.json"
     warn "and remove these overlays from composeOverrides (any that you"
     warn "have enabled — deepagents-host.yml is opt-in by default):"
     warn "    .devcontainer/docker-compose.claude-host.yml"
@@ -376,10 +430,10 @@ unset __HOST_UID
 banner "Building and starting sandbox"
 printf "${CYAN}==> Building image — ~10 min on cold cache, ~30s on warm cache. Compose output below.${NC}\n"
 COMPOSE_FILES="-f .devcontainer/docker-compose.yml"
-if command -v jq >/dev/null 2>&1 && [ -f "$REPO_DIR/.openharness/config.json" ]; then
+if command -v jq >/dev/null 2>&1 && [ -f "$REPO_DIR/config.json" ]; then
   while IFS= read -r override; do
     [ -n "$override" ] && COMPOSE_FILES="$COMPOSE_FILES -f $override"
-  done < <(jq -r '.composeOverrides[]?' "$REPO_DIR/.openharness/config.json")
+  done < <(jq -r '.composeOverrides[]?' "$REPO_DIR/config.json")
 fi
 docker compose $COMPOSE_FILES up -d --build
 ok "Sandbox '$SANDBOX_NAME' started"

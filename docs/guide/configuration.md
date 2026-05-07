@@ -55,7 +55,7 @@ Only applies when the `deepagents-host` overlay is enabled. See [overlays](./ove
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HOST_DEEPAGENTS_DIR` | `~/.deepagents` | Path to your host DeepAgents directory. The overlay bind-mounts it RW into `/home/sandbox/.deepagents`. **Setting this alone does nothing** — the overlay must also be listed in `.openharness/config.json` `composeOverrides`. |
+| `HOST_DEEPAGENTS_DIR` | `~/.deepagents` | Path to your host DeepAgents directory. The overlay bind-mounts it RW into `/home/sandbox/.deepagents`. **Setting this alone does nothing** — the overlay must also be listed in `config.json` `composeOverrides`. |
 
 ### SSH (overlay)
 

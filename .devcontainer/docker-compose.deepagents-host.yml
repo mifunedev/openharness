@@ -36,7 +36,7 @@
 # Provider keys are NOT OAuth tokens — they typically have no expiry and
 # no per-request scope, so a leak from this overlay has a wider blast
 # radius than `claude-host` or `codex-host`. The overlay is opt-in: it is
-# NOT listed in the default `.openharness/config.json` `composeOverrides`.
+# NOT listed in the default `config.json` `composeOverrides`.
 #
 # Bleed-through: ~/.deepagents/sessions/, memory, and skills from other
 # host work will be visible inside the sandbox. Acknowledged cost of
@@ -48,7 +48,7 @@
 # stays in the base compose — it becomes orphaned (unmounted) while this
 # overlay is active and is reinstated when the overlay is removed. To
 # return to the named volume, remove this overlay from
-# `.openharness/config.json` `composeOverrides` and rerun `make sandbox`
+# `config.json` `composeOverrides` and rerun `make sandbox`
 # (or `make destroy && make sandbox` if the container is already up).
 # Resetting the `deepagents-auth` named volume only (without touching
 # host `~/.deepagents`) is `docker volume rm <project>_deepagents-auth`.
@@ -57,7 +57,7 @@
 # entrypoint.sh skips its recursive chown on /home/sandbox/.deepagents
 # (which would otherwise rewrite host file ownership).
 #
-# Usage: enable via .openharness/config.json composeOverrides[]:
+# Usage: enable via config.json composeOverrides[]:
 #   ".devcontainer/docker-compose.deepagents-host.yml"
 
 services:

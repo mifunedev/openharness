@@ -5,7 +5,6 @@
 #
 # Core volumes:
 #   - ..:/home/sandbox/harness — Project root (bind-mount)
-#   - ../.openharness:/home/sandbox/.openharness — Config overlay
 #   - /var/run/docker.sock:/var/run/docker.sock — Docker daemon access (nested docker)
 #   - claude-auth:/home/sandbox/.claude — Persistent Claude CLI auth
 #   - codex-auth:/home/sandbox/.codex — Persistent Codex CLI auth
@@ -19,7 +18,7 @@
 #   - cloudflared-auth:/home/sandbox/.cloudflared — Cloudflare credentials
 #   - gh-config:/home/sandbox/.config/gh — GitHub CLI config
 #
-# Core env vars (see .openharness/config.json for overlay toggles):
+# Core env vars (see config.json for overlay toggles):
 #   - TZ: Timezone (default America/Denver)
 #   - GIT_USER_NAME, GIT_USER_EMAIL: Git commit author
 #   - GH_TOKEN: GitHub token for `gh auth` automation
@@ -35,7 +34,7 @@
 #                    -f .devcontainer/docker-compose.postgres.yml \
 #                    -f .devcontainer/docker-compose.slack.yml up -d
 #
-# Overlays in .openharness/config.json composeOverrides are auto-loaded by `make sandbox` and `scripts/install.sh` via jq.
+# Overlays in config.json composeOverrides are auto-loaded by `make sandbox` and `scripts/install.sh` via jq.
 
 name: ${SANDBOX_NAME:-openharness}
 
@@ -47,7 +46,6 @@ services:
       dockerfile: .devcontainer/Dockerfile
     volumes:
       - ..:/home/sandbox/harness
-      - ../.openharness:/home/sandbox/.openharness
       - /var/run/docker.sock:/var/run/docker.sock
       - claude-auth:/home/sandbox/.claude
       - codex-auth:/home/sandbox/.codex

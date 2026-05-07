@@ -25,7 +25,7 @@ curl -fsSL https://oh.mifune.dev/install.sh | bash
 The installer:
 
 1. Verifies Docker and git are present.
-2. Clones the repo into `~/openharness` (or pulls latest if the directory already exists).
+2. Clones the repo into `~/.openharness` (or pulls latest if the directory already exists).
 3. Prompts for `SANDBOX_NAME` and `SANDBOX_PASSWORD`, then writes `.devcontainer/.env`.
 4. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
 5. Prints the next-step commands (open a shell, stop, tear down).

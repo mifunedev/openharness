@@ -3,7 +3,7 @@
 # Purpose: Run sshd as the main process, replacing the sleep-infinity default.
 # Enables: Remote SSH access to the sandbox container (host port 2222 → container port 22)
 # Auth: Entrypoint auto-configures password auth (SANDBOX_PASSWORD env var) and host keys on startup
-# Requirements: Add to .openharness/config.json composeOverrides to activate
+# Requirements: Add to config.json composeOverrides to activate
 # Usage: docker compose -f docker-compose.yml -f docker-compose.sshd.yml up
 # Provides: SSH access at ssh -p 2222 sandbox@localhost with password from SANDBOX_PASSWORD
 

@@ -23,7 +23,7 @@
 # into a container that may execute untrusted agent code. Enable only for
 # trusted workflows. OpenAI OAuth through OpenCode's /connect flow is the
 # expected default auth path for opencode in this harness, so the overlay
-# is enabled by default in .openharness/config.json.
+# is enabled by default in config.json.
 #
 # Permissions: Read-write (sandbox writes host sessions/provider state).
 # Replaces: opencode-auth named volume from base docker-compose.yml at the
@@ -36,7 +36,7 @@
 # entrypoint.sh skips recursive chown on /home/sandbox/.local/share/opencode
 # (which would otherwise rewrite host file ownership).
 #
-# Usage: enable via .openharness/config.json composeOverrides[]:
+# Usage: enable via config.json composeOverrides[]:
 #   ".devcontainer/docker-compose.opencode-host.yml"
 
 services:

@@ -14,11 +14,11 @@ Stops the container(s), removes the network, and **removes named volumes** decla
 
 ## With overlays
 
-If you provisioned with overlays from `.openharness/config.json`, pass them to `down` as well so all services from the merged compose graph are cleaned up:
+If you provisioned with overlays from `config.json`, pass them to `down` as well so all services from the merged compose graph are cleaned up:
 
 ```bash
 COMPOSE_FILES="-f .devcontainer/docker-compose.yml"
-for f in $(jq -r '.composeOverrides[]' .openharness/config.json); do
+for f in $(jq -r '.composeOverrides[]' config.json); do
   COMPOSE_FILES="$COMPOSE_FILES -f $f"
 done
 docker compose --env-file .devcontainer/.env $COMPOSE_FILES down -v

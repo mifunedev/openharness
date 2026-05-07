@@ -49,7 +49,7 @@ The `docker` compose overlay mounts `/var/run/docker.sock` into the container, a
 - Manage sibling containers on the same host
 - Access `host.docker.internal` for host networking
 
-This is enabled by default. If your agent doesn't need Docker access, remove the docker overlay from `.openharness/config.json`.
+This is enabled by default. If your agent doesn't need Docker access, remove the docker overlay from `config.json`.
 
 ## Isolation model
 

@@ -136,7 +136,6 @@ LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/s
 # ─── Copy install scripts + workspace (for CI; bind mount overrides at runtime)
 COPY --chown=sandbox:sandbox install/ /home/sandbox/install/
 RUN chmod +x /home/sandbox/install/*.sh
-COPY --chown=sandbox:sandbox .openharness/ /home/sandbox/.openharness/
 COPY --chown=sandbox:sandbox workspace/ /home/sandbox/harness/workspace/
 
 # ─── Entrypoint ────────────────────────────────────────────────────

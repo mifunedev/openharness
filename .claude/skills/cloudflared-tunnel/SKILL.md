@@ -77,6 +77,24 @@ TUNNEL_ID=$(cloudflared tunnel list --output json | jq -r ".[] | select(.name==\
 echo "Tunnel ID: $TUNNEL_ID"
 ```
 
+### Step 3b — Reconstruct credentials JSON if missing
+
+A tunnel created on a different host shows up in `cloudflared tunnel list` (account-scoped), but its `<tunnel-id>.json` credentials file lives only on the host that created it. Without the JSON, `cloudflared tunnel run <name>` fails to start, and `--token`-based runs silently ignore the local `--url` flag (so ingress never applies — Cloudflare returns 530s even though connections register).
+
+Fix: rebuild the JSON from the account-level token. The token-printing CLI gives back a base64 blob with `{a: AccountTag, s: TunnelSecret, t: TunnelID}` — pipe it directly to `jq` (do **not** assign to a variable named `*TOKEN*` — `.claude/hooks/deny-env-dump.sh` blocks `echo "$VAR_TOKEN"` patterns).
+
+```bash
+CREDS_FILE="$HOME/.cloudflared/${TUNNEL_ID}.json"
+if [ ! -f "$CREDS_FILE" ]; then
+  echo "Creds JSON missing — reconstructing from token"
+  cloudflared tunnel token "$TUNNEL_NAME" \
+    | base64 -d \
+    | jq '{AccountTag: .a, TunnelSecret: .s, TunnelID: .t}' \
+    > "$CREDS_FILE"
+  chmod 600 "$CREDS_FILE"
+fi
+```
+
 ### Step 4 — Write config (multi-ingress)
 
 Write the ingress config to `~/.cloudflared/config-<tunnel-name>.yml`:

@@ -37,6 +37,11 @@ When the maintainer asks for something to be tracked across sessions ("check on 
 
 - **Primary project**: `open-harness` (this repo) — the orchestrator + harness packs scaffolding
 - **Collateral projects**: `@ryaneggz/mifune` (harness pack with Pi/Mom Slack bot, extracted from this repo in v0.7)
+- **Brand architecture**: Mifune is the company; Open Harness is the current product focus. Copy should avoid making `@ryaneggz/mifune`/Mom the primary product unless the task is explicitly about the pack.
+- **Social voice**: Emoji are welcome when they add structure and scanability. Marketing posts should use concrete product truth, one clear thesis, defensible claims, and platform-specific copy.
+- **Social quality gate**: For external marketing posts, use at least two critics (brand/positioning and skeptical-buyer) and revise until both clear the agreed bar. If core inputs are missing, research first, then grill the maintainer before scheduling.
+- **Social accounts**: Until brand pages are explicitly supported, schedule through the maintainer's personal LinkedIn (`Ryan Eggleston`) and X (`@JohnEggz`) accounts.
+- **X constraints**: Treat X as non-Premium unless the user confirms the blue check / longer-post entitlement is active. Validate scheduled X copy against the 280 weighted-character limit, not raw string length.
 - **Time zone**: America/Denver (per `crons/heartbeat.md` timezone field)
 - **Single-user harness** — per `.claude/ICP.md`, this is a single working developer's project, not multi-tenant
 
@@ -47,4 +52,4 @@ When the maintainer asks for something to be tracked across sessions ("check on 
 - **Don't add features beyond what was asked.** Bug fix doesn't need surrounding cleanup; one-shot operation doesn't need a helper.
 - **Don't write planning docs unless asked.** Work from conversation context.
 
-This file is updated after sessions that produce new patterns. Last updated: 2026-05-03 (post-session that produced PRs #214, #216, #219, and this file via #220).
+This file is updated after sessions that produce new patterns. Last updated: 2026-05-05 (social scheduling session: Mifune/Open Harness brand architecture, emoji structure, personal social accounts, X non-Premium validation).

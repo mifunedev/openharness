@@ -36,7 +36,7 @@ Key configuration choices:
 - `command: sleep infinity` — keeps the container alive; actual work happens inside named tmux sessions, not in the foreground process.
 - `stdin_open: true` and `tty: true` — required for interactive shells via `docker exec`.
 
-Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon, Slack bot) and are activated by listing them in `.openharness/config.json` under `composeOverrides`. `make sandbox` and `scripts/install.sh` read that file via `jq` and pass the corresponding `-f` flags to `docker compose up`.
+Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon, Slack bot) and are activated by listing them in `config.json` (at the repo root, gitignored — copy from `config.example.json` if missing) under `composeOverrides`. `make sandbox` and `scripts/install.sh` read that file via `jq` and pass the corresponding `-f` flags to `docker compose up`.
 
 ## Bind Mounts
 
@@ -45,7 +45,6 @@ The container mounts the project root and several named volumes:
 | Mount | Host path | Container path | Purpose |
 |-------|-----------|---------------|---------|
 | Project root | `..` (repo root) | `/home/sandbox/harness` | Source code, worktrees, workspace |
-| OH config | `../.openharness` | `/home/sandbox/.openharness` | Sandbox config, compose overlay selection |
 | Docker socket | `/var/run/docker.sock` | `/var/run/docker.sock` | Nested docker for the `oh` CLI |
 | Claude auth | named volume `claude-auth` | `/home/sandbox/.claude` | Claude Code credentials — persists across rebuilds |
 | Pi auth | named volume `pi-auth` | `/home/sandbox/.pi` | Pi Agent OAuth tokens |
@@ -98,14 +97,13 @@ open-harness/
 ├── .github/
 │   ├── workflows/              # CI: lint, test, build, release, docs deploy
 │   └── ISSUE_TEMPLATE/         # agent / audit / bug / feature / skill / task
+├── config.json                 # composeOverrides[] consumed by Makefile + install.sh (gitignored; copy from config.example.json)
 ├── .devcontainer/
 │   ├── Dockerfile              # Debian + Node 22 + agent CLIs + pnpm
 │   ├── docker-compose.yml      # base compose
 │   ├── docker-compose.*.yml    # overlays (postgres, cloudflared, ssh, …)
 │   ├── entrypoint.sh           # boot: docker GID, cron runtime, banner
 │   └── .example.env            # template copied by install.sh on first run
-├── .openharness/
-│   └── config.json             # composeOverrides[] consumed by Makefile + install.sh
 ├── .claude/
 │   ├── rules/                  # auto-loaded coding/process rules
 │   ├── skills/                 # /release, /ci-status, /cloudflared-tunnel, /agent-browser
@@ -134,14 +132,22 @@ open-harness/
 │   └── __tests__/              # vitest unit tests
 ├── tasks/                      # Ralph task workdirs (prd.json + progress.txt)
 │   └── archive/                # weekly cleanup destination (cleanup-tasks cron)
-└── workspace/                  # bind-mounted agent template
-    ├── AGENTS.md               # agent operating procedures
-    ├── CLAUDE.md               # symlink → AGENTS.md
-    ├── startup.sh              # runs on container boot after onboarding
-    └── .claude/                # workspace-scoped rules, skills, settings
+├── workspace/                  # bind-mounted agent template
+│   ├── AGENTS.md               # agent operating procedures
+│   ├── CLAUDE.md               # symlink → AGENTS.md
+│   ├── startup.sh              # runs on container boot after onboarding
+│   └── .claude/                # workspace-scoped rules, skills, settings
+└── .worktrees/                 # README only — branch worktrees + project clones gitignored
+    └── README.md               # § Worktrees + project/<name>/ convention
 ```
 
-**Excluded from this tree** (gitignored or build artefacts): `node_modules/`, `.pnpm-store/`, `.worktrees/` (per-branch git worktrees, transient).
+Each top-level directory whose intent isn't obvious from its name carries
+a `README.md` per `.claude/rules/directory-readme.md` — currently
+`apps/`, `crons/`, `scripts/`, `tasks/`, and `.worktrees/`. The
+`.worktrees/` README is the only file tracked under that path; everything
+else inside is gitignored.
+
+**Excluded from this tree** (gitignored or build artefacts): `node_modules/`, `.pnpm-store/`, transient contents of `.worktrees/` (per-branch worktrees + `.worktrees/project/<name>/` clones).
 
 ### Workspace identity files
 

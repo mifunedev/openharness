@@ -18,7 +18,7 @@ fi
 # host file ownership (see docker-compose.{claude,codex,pi,deepagents,opencode}-host.yml).
 # Harness packs that introduce their own host-mount overlays should add
 # their own skip clauses or run a *-entrypoint-hook.sh.
-for dir in .claude .codex .pi .deepagents .cloudflared .config/gh .ssh .openharness; do
+for dir in .claude .codex .pi .deepagents .cloudflared .config/gh .ssh; do
   if [ -d "/home/sandbox/$dir" ]; then
     if [ "$dir" = ".claude" ] && [ "${CLAUDE_HOST_BIND_MOUNT:-0}" = "1" ]; then
       continue

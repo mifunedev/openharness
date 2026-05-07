@@ -1,4 +1,5 @@
 **/.env*
+/config.json
 .worktrees/*
 .claude/worktrees/
 tasks/*/archive/

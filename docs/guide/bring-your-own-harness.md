@@ -10,7 +10,7 @@ Clone the pack into your sandbox workspace and follow its README:
 git clone https://github.com/<owner>/<repo> workspace/<pack-name>
 ```
 
-The pack's README is the source of truth for what to do next — typically: register any compose overlays in `.openharness/config.json`, run an install script to pull agent CLIs, and copy any seed files into `workspace/`. Each pack documents its own steps so the harness itself stays minimal.
+The pack's README is the source of truth for what to do next — typically: register any compose overlays in `config.json` (at the repo root, gitignored — copy from `config.example.json` if missing), run an install script to pull agent CLIs, and copy any seed files into `workspace/`. Each pack documents its own steps so the harness itself stays minimal.
 
 ## Pack layout
 
@@ -22,7 +22,7 @@ A pack is a self-contained directory. Conventional layout:
   harness.json            # Manifest (optional, informational)
   install-hook.sh         # Pulls agent CLIs / sets up the sandbox
   entrypoint-hook.sh      # Sourced by openharness entrypoint at runtime
-  overlays/*.yml          # Compose overlays — register in .openharness/config.json
+  overlays/*.yml          # Compose overlays — register in config.json
   workspace-seed/         # Files to copy into the sandbox workspace
   Dockerfile              # OPTIONAL: derived image FROM openharness base
 ```
@@ -53,7 +53,7 @@ A pack MAY ship a `harness.json` describing itself for discoverability. The file
 | `description` | string | One-line summary. |
 | `openharness` | string | Minimum compatible openharness version (semver range). |
 | `agents` | string[] | Agent CLIs the pack wires in. Informational. |
-| `compose_overlays` | string[] | Paths-within-pack to docker-compose YAML overlays — user adds these to `.openharness/config.json`. |
+| `compose_overlays` | string[] | Paths-within-pack to docker-compose YAML overlays — user adds these to `config.json`. |
 | `prebuilt_image` | string? | Optional GHCR image tag for a fast Docker-only on-ramp. |
 
 ## Distribution

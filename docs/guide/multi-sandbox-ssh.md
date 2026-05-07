@@ -22,7 +22,7 @@ Run multiple sandboxes on a single host, each reachable via SSH on a unique port
 
 ### 1. Enable the sshd overlay
 
-Add to each sandbox's `.openharness/config.json`:
+Add to each sandbox's `config.json` (at the repo root, gitignored — copy from `config.example.json` if missing):
 
 ```json
 {

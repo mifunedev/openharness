@@ -42,7 +42,7 @@
 # rewrite host file ownership). The chown loop only matches directories,
 # so ~/.claude.json (a file) is untouched regardless.
 #
-# Usage: enable via .openharness/config.json composeOverrides[]:
+# Usage: enable via config.json composeOverrides[]:
 #   ".devcontainer/docker-compose.claude-host.yml"
 
 services:

@@ -27,7 +27,7 @@ docker compose -f .devcontainer/docker-compose.yml up -d --build
 
 What happens:
 
-1. Docker reads `.devcontainer/docker-compose.yml` plus any overlays (see `.openharness/config.json` for active overlays).
+1. Docker reads `.devcontainer/docker-compose.yml` plus any overlays (see `config.json` at the repo root for active overlays).
 2. The image is built or rebuilt as needed.
 3. The container starts in detached mode.
 4. The healthcheck eventually flips status to `healthy`.

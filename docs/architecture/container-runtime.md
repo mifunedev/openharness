@@ -36,7 +36,7 @@ Key configuration choices:
 - `command: sleep infinity` — keeps the container alive; actual work happens inside named tmux sessions, not in the foreground process.
 - `stdin_open: true` and `tty: true` — required for interactive shells via `docker exec`.
 
-Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon, Slack bot) and are activated by listing them in `.openharness/config.json` under `composeOverrides`. `make sandbox` and `scripts/install.sh` read that file via `jq` and pass the corresponding `-f` flags to `docker compose up`.
+Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon, Slack bot) and are activated by listing them in `config.json` (at the repo root, gitignored — copy from `config.example.json` if missing) under `composeOverrides`. `make sandbox` and `scripts/install.sh` read that file via `jq` and pass the corresponding `-f` flags to `docker compose up`.
 
 ## Bind Mounts
 
@@ -45,7 +45,6 @@ The container mounts the project root and several named volumes:
 | Mount | Host path | Container path | Purpose |
 |-------|-----------|---------------|---------|
 | Project root | `..` (repo root) | `/home/sandbox/harness` | Source code, worktrees, workspace |
-| OH config | `../.openharness` | `/home/sandbox/.openharness` | Sandbox config, compose overlay selection |
 | Docker socket | `/var/run/docker.sock` | `/var/run/docker.sock` | Nested docker for the `oh` CLI |
 | Claude auth | named volume `claude-auth` | `/home/sandbox/.claude` | Claude Code credentials — persists across rebuilds |
 | Pi auth | named volume `pi-auth` | `/home/sandbox/.pi` | Pi Agent OAuth tokens |
@@ -98,14 +97,13 @@ open-harness/
 ├── .github/
 │   ├── workflows/              # CI: lint, test, build, release, docs deploy
 │   └── ISSUE_TEMPLATE/         # agent / audit / bug / feature / skill / task
+├── config.json                 # composeOverrides[] consumed by Makefile + install.sh (gitignored; copy from config.example.json)
 ├── .devcontainer/
 │   ├── Dockerfile              # Debian + Node 22 + agent CLIs + pnpm
 │   ├── docker-compose.yml      # base compose
 │   ├── docker-compose.*.yml    # overlays (postgres, cloudflared, ssh, …)
 │   ├── entrypoint.sh           # boot: docker GID, cron runtime, banner
 │   └── .example.env            # template copied by install.sh on first run
-├── .openharness/
-│   └── config.json             # composeOverrides[] consumed by Makefile + install.sh
 ├── .claude/
 │   ├── rules/                  # auto-loaded coding/process rules
 │   ├── skills/                 # /release, /ci-status, /cloudflared-tunnel, /agent-browser

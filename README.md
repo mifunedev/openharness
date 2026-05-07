@@ -16,14 +16,14 @@
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
-The installer clones into `~/openharness`, offers to share your host
+The installer clones into `~/.openharness`, offers to share your host
 `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min
 cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-docker/).
 
 ## 🚀 Use it
 
 ```bash
-cd ~/openharness
+cd ~/.openharness
 make shell       # enter the isolated sandbox
 # inside the sandbox, launch any core agent:
 #   claude     # Claude Code (default)

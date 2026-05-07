@@ -43,7 +43,7 @@ deepagents   # optional runtime; configure provider keys (see below)
 
 OpenCode's recommended default for ChatGPT Plus and Pro users is OpenAI OAuth through `/connect` → OpenAI. It writes auth to `~/.local/share/opencode/auth.json`.
 
-Each agent writes tokens to its directory under the sandbox home (`~/.claude/`, `~/.codex/`, `~/.local/share/opencode/`, `~/.pi/`, `~/.deepagents/`). With persistent named volumes, credentials survive container rebuilds. The `*-host` overlays (Claude/Codex/OpenCode/Pi enabled by default in `.openharness/config.json`; DeepAgents opt-in) bind-mount matching host directories so your laptop's existing auth carries straight in — see [provision.md](./operations/provision.md).
+Each agent writes tokens to its directory under the sandbox home (`~/.claude/`, `~/.codex/`, `~/.local/share/opencode/`, `~/.pi/`, `~/.deepagents/`). With persistent named volumes, credentials survive container rebuilds. The `*-host` overlays (Claude/Codex/OpenCode/Pi enabled by default in `config.json`; DeepAgents opt-in) bind-mount matching host directories so your laptop's existing auth carries straight in — see [provision.md](./operations/provision.md).
 
 DeepAgents is an optional supported runtime; Claude remains the default. DeepAgents reads provider keys from `~/.deepagents/.env`. Create it on first use:
 

@@ -22,7 +22,7 @@ overlays=""
 if command -v jq >/dev/null 2>&1; then
   overlays=$(jq -r \
     '.composeOverrides[]? | sub("^\\.devcontainer/docker-compose\\."; "") | sub("\\.yml$"; "")' \
-    "${HOME}/harness/.openharness/config.json" 2>/dev/null \
+    "${HOME}/harness/config.json" 2>/dev/null \
     | paste -sd, -)
 fi
 [ -z "$overlays" ] && overlays="(none)"

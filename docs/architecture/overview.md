@@ -33,46 +33,6 @@ graph TD
   Cron -->|"reads crons/*.md"| AgentN
 ```
 
-**ASCII version** (for terminal-friendly viewing):
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│  HOST                                                   │
-│  ┌──────────────────┐   ┌──────────────────────────┐   │
-│  │  docker compose  │   │  docker-compose.yml       │   │
-│  │  + docker exec   │──▶│  (.devcontainer/)         │   │
-│  └──────────────────┘   └────────────┬─────────────┘   │
-│                                      │ builds/starts    │
-└──────────────────────────────────────┼─────────────────┘
-                                       ▼
-┌──────────────────────────────────────────────────────────┐
-│  DOCKER CONTAINER  (openharness)                         │
-│                                                          │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │  In-sandbox tooling                                │  │
-│  │  gh · docker CLI · tmux · claude · codex           │  │
-│  └───────────┬────────────────────────────────────────┘  │
-│              │                                           │
-│  ┌───────────▼──────────────────────────────────────┐   │
-│  │  Worktrees (bind-mounted from host)               │   │
-│  │  /home/sandbox/harness/                (main)     │   │
-│  │  /home/sandbox/harness/.worktrees/task/164  (PR)  │   │
-│  │  /home/sandbox/harness/.worktrees/feat/42   (PR)  │   │
-│  └───────────┬──────────────────────────────────────┘   │
-│              │                                           │
-│  ┌───────────▼──────────────────────────────────────┐   │
-│  │  Agents (tmux sessions)                           │   │
-│  │  agent-claude  ·  agent-codex  ·  pack agents     │   │
-│  └───────────┬──────────────────────────────────────┘   │
-│              │                                           │
-│  ┌───────────▼──────────────────────────────────────┐   │
-│  │  Croner Runtime (system-cron tmux session)        │   │
-│  │  Watches crons/*.md frontmatter                   │   │
-│  │  Fires schedules → invokes agent CLI              │   │
-│  └──────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────┘
-```
-
 ## Key Principles
 
 **One container, many agents.** All AI agent CLIs — Claude Code (default), Codex, OpenCode, Pi, DeepAgents, plus any pack-supplied agents — share the same sandbox image built from `.devcontainer/Dockerfile`. There is no separate image per agent. Isolation is achieved through git worktrees and tmux sessions, not separate containers. The product surface is one developer, one project, one harness — preinstalled alternatives exist so you can pick the right tool for the task, not race them.

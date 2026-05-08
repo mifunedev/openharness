@@ -56,9 +56,11 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    claude                           # terminal coding agent
    ```
 
-   For multi-agent setups (e.g., Pi+Mom Slack bot), install a harness pack
-   by `git clone`-ing it into the workspace and following its README. See
-   the `@ryaneggz/mifune` repo for the canonical pack contract.
+   For multi-agent setups (e.g., Pi+Slack), the recommended path is to enable
+   the Slack Pi extension in `.pi/extensions/slack/` (see
+   [docs/integrations/slack.md](docs/integrations/slack.md)). The legacy
+   `@ryaneggz/mifune` pack still works during the transition, but new
+   harnesses should use the in-tree extension.
 
 ### Validate
 

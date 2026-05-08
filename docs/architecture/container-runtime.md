@@ -105,7 +105,7 @@ open-harness/
 │   ├── entrypoint.sh           # boot: docker GID, cron runtime, banner
 │   └── .example.env            # template copied by install.sh on first run
 ├── .claude/
-│   ├── rules/                  # auto-loaded coding/process rules
+│   ├── rules/                  # symlink → context/rules/
 │   ├── skills/                 # /release, /ci-status, /cloudflared-tunnel, /agent-browser
 │   ├── agents/                 # sub-agent definitions (pm, critic, implementer, …)
 │   ├── hooks/                  # security hooks (deny-env-dump, etc.)
@@ -114,7 +114,12 @@ open-harness/
 ├── apps/
 │   └── docs/                   # Docusaurus documentation site (only workspace pkg)
 ├── blog/                       # Docusaurus blog source
-├── context/                    # session-start identity (SOUL, IDENTITY, TOOLS, USER)
+├── context/                    # session-start identity files + canonical rules
+│   ├── SOUL.md                 # voice and disposition
+│   ├── IDENTITY.md             # operating principles + lessons learned
+│   ├── TOOLS.md                # environment inventory
+│   ├── USER.md                 # working-relationship patterns
+│   └── rules/                  # auto-loaded coding/process rules — canonical, tool-agnostic
 ├── crons/                      # markdown-frontmatter cron defs — see crons doc (PR-B)
 ├── docs/                       # plain markdown (GitHub-rendered + Docusaurus source)
 │   ├── architecture/           # runtime, layout, crons reference
@@ -140,6 +145,8 @@ open-harness/
 └── .worktrees/                 # README only — branch worktrees + project clones gitignored
     └── README.md               # § Worktrees + project/<name>/ convention
 ```
+
+Claude Code auto-loads `context/rules/` via the `.claude/rules` symlink at the repo root. Codex and Pi have no rules-loading feature; tools that want the conventions read `context/rules/` directly.
 
 Each top-level directory whose intent isn't obvious from its name carries
 a `README.md` per `.claude/rules/directory-readme.md` — currently

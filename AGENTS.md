@@ -11,7 +11,7 @@ Read these files at the start of every session — they encode voice, principles
 - `context/TOOLS.md` — environment inventory; skip rediscovery
 - `context/USER.md` — working-relationship patterns; living document
 
-Auto-loaded rules (no explicit read needed): `.claude/rules/*.md`.
+Auto-loaded rules (no explicit read needed): `context/rules/*.md`.
 
 ## Permissions
 
@@ -122,7 +122,7 @@ either enable the `cloudflared` compose overlay (see
 in front of the sandbox.
 
 Long-running apps inside the sandbox go in named tmux sessions, related
-apps as stacked panes — see `.claude/rules/sandbox-processes.md`.
+apps as stacked panes — see `context/rules/sandbox-processes.md`.
 
 ## What You Do
 

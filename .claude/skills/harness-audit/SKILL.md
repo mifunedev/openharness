@@ -51,7 +51,7 @@ Read the following before spawning agents. Pass the assembled snapshot to every 
 ls /home/sandbox/harness/.claude/skills/
 ls /home/sandbox/harness/.claude/agents/ 2>/dev/null || echo "no agents dir"
 ls /home/sandbox/harness/workspace/heartbeats/ 2>/dev/null || echo "no heartbeats"
-ls /home/sandbox/harness/workspace/memory/ 2>/dev/null | tail -10
+ls /home/sandbox/harness/memory/ 2>/dev/null | tail -10
 ls /home/sandbox/harness/docs/wiki/ 2>/dev/null | head -20
 
 # Package health
@@ -65,7 +65,7 @@ ls /home/sandbox/harness/.github/workflows/ 2>/dev/null
 git -C /home/sandbox/harness worktree list 2>/dev/null
 
 # Recent memory
-tail -40 /home/sandbox/harness/workspace/MEMORY.md 2>/dev/null
+tail -40 /home/sandbox/harness/MEMORY.md 2>/dev/null
 ```
 
 Assemble a **Context Snapshot** (compact markdown, ~300 words):
@@ -120,7 +120,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 3. **Issue template completeness** — List `.github/ISSUE_TEMPLATE/` files. For each template, check: does it have required fields, clear labels, and assignment guidance?
 >
-> 4. **Wiki/memory utilization** — Count wiki pages under `docs/wiki/`. Count daily memory logs under `workspace/memory/`. Are logs recent (within 7 days)? Are wiki pages populated or placeholder-empty?
+> 4. **Wiki/memory utilization** — Count wiki pages under `docs/wiki/`. Count daily memory logs under `memory/`. Are logs recent (within 7 days)? Are wiki pages populated or placeholder-empty?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -196,7 +196,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Memory system quality** — Read the 5 most recent daily logs in `workspace/memory/`. Are entries following the Memory Improvement Protocol (Result/Action/Observation/Duration)? Is quality declining over time (shorter entries, missing fields)? Are entries actually present?
+> 1. **Memory system quality** — Read the 5 most recent daily logs in `memory/`. Are entries following the Memory Improvement Protocol (Result/Action/Observation/Duration)? Is quality declining over time (shorter entries, missing fields)? Are entries actually present?
 >
 > 2. **Wiki utilization** — List all files under `docs/wiki/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
 >
@@ -204,7 +204,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 4. **Agent worktree status** — Run `git -C /home/sandbox/harness worktree list` and `git -C /home/sandbox/harness branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
 >
-> 5. **Skill usage patterns** — Read `workspace/MEMORY.md` and recent daily logs. Which skills appear in memory entries (evidence of use)? Which skills exist in `.claude/skills/` but never appear in logs (potentially stale or unknown)?
+> 5. **Skill usage patterns** — Read `MEMORY.md` and recent daily logs. Which skills appear in memory entries (evidence of use)? Which skills exist in `.claude/skills/` but never appear in logs (potentially stale or unknown)?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -263,7 +263,7 @@ After all 4 auditors return, synthesize into the output format:
 
 ### 6. Memory Protocol
 
-Append to `workspace/memory/YYYY-MM-DD.md`:
+Append to `memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d`:
 
 ```markdown
 ## [Harness Audit] — HH:MM UTC
@@ -272,7 +272,7 @@ Append to `workspace/memory/YYYY-MM-DD.md`:
 - **Observation**: [one sentence — top finding]
 ```
 
-If actionable patterns emerge (recurring finding type, systemic gap), append to `workspace/MEMORY.md > Lessons Learned`.
+See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 
 ## Reference
 
@@ -300,8 +300,8 @@ If actionable patterns emerge (recurring finding type, systemic gap), append to 
 | Orchestrator skills | `.claude/skills/` |
 | Workspace skills | `workspace/.claude/skills/` |
 | Heartbeats | `workspace/heartbeats/` |
-| Memory logs | `workspace/memory/YYYY-MM-DD.md` |
-| Long-term memory | `workspace/MEMORY.md` |
+| Memory logs | `memory/YYYY-MM-DD/log.md` |
+| Long-term memory | `MEMORY.md` |
 | Wiki | `docs/wiki/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |

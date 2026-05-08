@@ -66,7 +66,7 @@ AGE_DAYS=$(( (NOW - MTIME) / 86400 ))
 ```bash
 # Count daily memory logs that mention this skill name (case-insensitive)
 SKILL_NAME="<skill-name>"
-MENTION_COUNT=$(grep -rli "$SKILL_NAME" /home/sandbox/harness/workspace/memory/ 2>/dev/null | wc -l)
+MENTION_COUNT=$(grep -rli "$SKILL_NAME" /home/sandbox/harness/memory/ 2>/dev/null | wc -l)
 ```
 
 | Mentions | Score |
@@ -194,7 +194,7 @@ Sort the Scores table by Total ascending (worst first). Omit CURRENT skills from
 
 ### 7. Memory Protocol
 
-Append to `workspace/memory/YYYY-MM-DD.md`:
+Append to `memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d`:
 
 ```markdown
 ## [Skill Lint] — HH:MM UTC
@@ -204,7 +204,7 @@ Append to `workspace/memory/YYYY-MM-DD.md`:
 - **Observation**: [one sentence — top finding]
 ```
 
-If the audit reveals a systemic pattern (e.g., multiple skills missing memory protocol, or a whole scope never triggered), append to `workspace/MEMORY.md > Lessons Learned`.
+See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 
 ## Guidelines
 

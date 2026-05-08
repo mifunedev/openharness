@@ -10,6 +10,10 @@ Read these files at the start of every session — they encode voice, principles
 - `context/IDENTITY.md` — operating principles + lessons learned (append-only)
 - `context/TOOLS.md` — environment inventory; skip rediscovery
 - `context/USER.md` — working-relationship patterns; living document
+- `memory/MEMORY.md` — long-term lessons learned (append-only)
+- Today's `memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
+
+See `context/rules/memory.md` for the write-side Memory Improvement Protocol.
 
 Auto-loaded rules (no explicit read needed): `context/rules/*.md`.
 

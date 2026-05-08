@@ -187,7 +187,7 @@ Parse the council's FINAL roadmap table and write it to `docs/roadmap.md` as a s
 
 ### 10. Memory Improvement Protocol
 
-**a) Log** — append to `memory/YYYY-MM-DD.md`:
+**a) Log** — append to `memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d`:
 
 ```markdown
 ## Strategic Proposal — HH:MM UTC
@@ -198,15 +198,9 @@ Parse the council's FINAL roadmap table and write it to `docs/roadmap.md` as a s
 - **Observation**: [one sentence — what signal was strongest, what surprised you]
 ```
 
-**b) Qualify** — ask:
-- Did signal data reveal unexpected demand? → Note it
-- Are there items with zero signal that experts rated highly? → Note the disconnect
-- Did the council merge or drop any proposals? → Note why
+See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 
-**c) Improve** — if something actionable:
-- Append to `MEMORY.md > Lessons Learned`
-
-**d) Report**:
+**b) Report**:
 - `HEARTBEAT_OK` (if skipped)
 - Full report: pinned issue # + top 3 "Now" items + signal summary
 
@@ -226,4 +220,4 @@ Parse the council's FINAL roadmap table and write it to `docs/roadmap.md` as a s
 | Roadmap data | `docs/roadmap.md` |
 | Identity | `IDENTITY.md` |
 | Memory | `MEMORY.md` |
-| Daily Logs | `memory/YYYY-MM-DD.md` |
+| Daily Logs | `memory/YYYY-MM-DD/log.md` |

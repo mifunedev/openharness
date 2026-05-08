@@ -199,7 +199,7 @@ Output a structured summary:
 
 Run at the end of **every** execution -- op, dry-run, or error.
 
-**a) Log** -- append to `memory/YYYY-MM-DD.md`:
+**a) Log** -- append to `memory/<today>/log.md` where today = `date -u +%Y-%m-%d`:
 
 ```markdown
 ## Delegate -- HH:MM UTC
@@ -210,12 +210,7 @@ Run at the end of **every** execution -- op, dry-run, or error.
 - **Observation**: [one sentence]
 ```
 
-**b) Qualify** -- ask:
-- Did dependency analysis reveal unexpected coupling?
-- Did a worker fail on a task that seemed straightforward?
-- Was parallelism limited by dependencies more than expected?
-
-**c) Improve** -- if actionable, append to `MEMORY.md > Lessons Learned`
+See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 
 ## Reference
 
@@ -238,4 +233,4 @@ Run at the end of **every** execution -- op, dry-run, or error.
 | Agent: Council | `.claude/agents/council.md` |
 | Identity | `IDENTITY.md` |
 | Memory | `MEMORY.md` |
-| Daily Logs | `memory/YYYY-MM-DD.md` |
+| Daily Logs | `memory/YYYY-MM-DD/log.md` |

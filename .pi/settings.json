@@ -15,5 +15,5 @@
   "prompts": ["./prompts"],
   "themes": ["./themes"],
   "enableSkillCommands": true,
-  "packages": []
+  "packages": ["npm:@tintinweb/pi-subagents@0.7.1"]
 }

@@ -10,8 +10,12 @@ Read these files at the start of every session — they encode voice, principles
 - `context/IDENTITY.md` — operating principles + lessons learned (append-only)
 - `context/TOOLS.md` — environment inventory; skip rediscovery
 - `context/USER.md` — working-relationship patterns; living document
+- `memory/MEMORY.md` — long-term lessons learned (append-only)
+- Today's `memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
 
-Auto-loaded rules (no explicit read needed): `.claude/rules/*.md`.
+See `context/rules/memory.md` for the write-side Memory Improvement Protocol.
+
+Auto-loaded rules (no explicit read needed): `context/rules/*.md`.
 
 ## Permissions
 
@@ -52,9 +56,11 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    claude                           # terminal coding agent
    ```
 
-   For multi-agent setups (e.g., Pi+Mom Slack bot), install a harness pack
-   by `git clone`-ing it into the workspace and following its README. See
-   the `@ryaneggz/mifune` repo for the canonical pack contract.
+   For multi-agent setups (e.g., Pi+Slack), the recommended path is to enable
+   the Slack Pi extension in `.pi/extensions/slack/` (see
+   [docs/integrations/slack.md](docs/integrations/slack.md)). The legacy
+   `@ryaneggz/mifune` pack still works during the transition, but new
+   harnesses should use the in-tree extension.
 
 ### Validate
 
@@ -122,7 +128,7 @@ either enable the `cloudflared` compose overlay (see
 in front of the sandbox.
 
 Long-running apps inside the sandbox go in named tmux sessions, related
-apps as stacked panes — see `.claude/rules/sandbox-processes.md`.
+apps as stacked panes — see `context/rules/sandbox-processes.md`.
 
 ## What You Do
 

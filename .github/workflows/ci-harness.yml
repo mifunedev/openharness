@@ -5,9 +5,12 @@ on:
   push:
     paths:
       - "packages/**"
+      - "scripts/**"
+      - ".pi/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "vitest.config.ts"
       - ".github/workflows/ci-harness.yml"
 
 permissions:
@@ -52,3 +55,6 @@ jobs:
 
       - name: Test
         run: pnpm --filter './packages/**' -r run test
+
+      - name: Root tests (scripts + .pi extensions)
+        run: pnpm test:scripts

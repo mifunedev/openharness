@@ -53,16 +53,16 @@ describe("mifune-banner extension", () => {
       const lines = buildHeader(fakeTheme);
       const joined = lines.join("\n");
       expect(joined).toContain("MIFUNE");
-      expect(joined).toContain("pi harness");
+      expect(joined).toContain("agent harness");
       expect(joined).toContain("github.com/ryaneggz/mifune");
     });
 
-    it("includes the brand emojis (⚔ on wordmark, 🎬 on subtitle)", () => {
+    it("uses a plain wordmark with a text divider", () => {
       const lines = buildHeader(fakeTheme);
-      const wordmarkLine = lines.find((l) => l.includes("MIFUNE"));
-      const subtitleLine = lines.find((l) => l.includes("ryaneggz/mifune"));
-      expect(wordmarkLine).toContain("⚔");
-      expect(subtitleLine).toContain("🎬");
+      expect(lines[0]).toBe("MIFUNE");
+      expect(lines[1]).toBe("-------------------------------");
+      expect(lines.join("\n")).not.toContain("⚔");
+      expect(lines.join("\n")).not.toContain("🎬");
     });
 
     it("uses theme roles for color (accent for wordmark, muted for subtitle)", () => {

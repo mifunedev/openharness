@@ -1,12 +1,13 @@
 import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 
 const WORDMARK = "MIFUNE";
-const SUBTITLE = "pi harness · github.com/ryaneggz/mifune";
+const SUBTITLE = "agent harness · github.com/ryaneggz/mifune";
 
 export function buildHeader(theme: Theme): string[] {
   return [
-    `⚔ ${theme.fg("accent", WORDMARK)}`,
-    `🎬 ${theme.fg("muted", SUBTITLE)}`,
+    `${theme.fg("accent", WORDMARK)}`,
+    `-------------------------------`,
+    `${theme.fg("muted", SUBTITLE)}`,
   ];
 }
 

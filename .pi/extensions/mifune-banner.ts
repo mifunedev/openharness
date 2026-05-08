@@ -1,13 +1,48 @@
-import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
+type Theme = {
+  fg(role: string, text: string): string;
+};
 
-const WORDMARK = "MIFUNE";
-const SUBTITLE = "agent harness · github.com/ryaneggz/mifune";
+type HeaderComponent = {
+  render(): string[];
+  invalidate(): void;
+};
+
+type HeaderFactory = (tui: unknown, theme: Theme) => HeaderComponent;
+
+type ExtensionContext = {
+  hasUI: boolean;
+  ui: {
+    setHeader(factory?: HeaderFactory): void;
+    notify(message: string, level: string): void;
+  };
+};
+
+type CommandDefinition = {
+  description: string;
+  handler(args: unknown, ctx: ExtensionContext): void | Promise<void>;
+};
+
+type ExtensionAPI = {
+  on(event: "session_start", handler: (event: unknown, ctx: ExtensionContext) => void | Promise<void>): void;
+  registerCommand(name: string, definition: CommandDefinition): void;
+};
+
+const WORDMARK_LINES: string[] = [
+  "███╗   ███╗██╗███████╗██╗   ██╗███╗   ██╗███████╗",
+  "████╗ ████║██║██╔════╝██║   ██║████╗  ██║██╔════╝",
+  "██╔████╔██║██║█████╗  ██║   ██║██╔██╗ ██║█████╗  ",
+  "██║╚██╔╝██║██║██╔══╝  ██║   ██║██║╚██╗██║██╔══╝  ",
+  "██║ ╚═╝ ██║██║██║     ╚██████╔╝██║ ╚████║███████╗",
+  "╚═╝     ╚═╝╚═╝╚═╝      ╚═════╝ ╚═╝  ╚═══╝╚══════╝",
+];
+const TAGLINE = "  agent harness · https://x.com/mifunedev";
+const SOURCE  = "  https://github.com/ryaneggz/mifune";
 
 export function buildHeader(theme: Theme): string[] {
   return [
-    `${theme.fg("accent", WORDMARK)}`,
-    `-------------------------------`,
-    `${theme.fg("muted", SUBTITLE)}`,
+    ...WORDMARK_LINES.map((line) => theme.fg("accent", line)),
+    theme.fg("muted", TAGLINE),
+    theme.fg("muted", SOURCE),
   ];
 }
 

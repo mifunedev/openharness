@@ -292,7 +292,9 @@ export default function singleLineFooter(pi: ExtensionAPI): void {
         },
         invalidate() {},
         render(width: number): string[] {
-          return [buildFooterLine(ctx, runtimeState, theme, footerData, width)];
+          const pad = " ";
+          const line = buildFooterLine(ctx, runtimeState, theme, footerData, Math.max(0, width - pad.length));
+          return [`${pad}${line}`];
         },
       };
     });

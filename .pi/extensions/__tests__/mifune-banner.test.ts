@@ -49,23 +49,27 @@ describe("mifune-banner extension", () => {
   });
 
   describe("buildHeader", () => {
-    it("includes the wordmark and the repo URL in the subtitle", () => {
+    it("includes the ASCII wordmark, social URL, and repo URL", () => {
       const lines = buildHeader(fakeTheme);
       const joined = lines.join("\n");
-      expect(joined).toContain("MIFUNE");
+      expect(lines[0]).toContain("███╗");
       expect(joined).toContain("agent harness");
+      expect(joined).toContain("https://x.com/mifunedev");
       expect(joined).toContain("github.com/ryaneggz/mifune");
     });
 
-    it("uses a plain wordmark with a text divider", () => {
+    it("uses an ASCII wordmark without emoji or a text divider", () => {
       const lines = buildHeader(fakeTheme);
-      expect(lines[0]).toBe("MIFUNE");
-      expect(lines[1]).toBe("-------------------------------");
+      expect(lines).toHaveLength(8);
+      expect(lines[0]).toBe("███╗   ███╗██╗███████╗██╗   ██╗███╗   ██╗███████╗");
+      expect(lines[6]).toBe("  agent harness · https://x.com/mifunedev");
+      expect(lines[7]).toBe("  https://github.com/ryaneggz/mifune");
+      expect(lines.join("\n")).not.toContain("-------------------------------");
       expect(lines.join("\n")).not.toContain("⚔");
       expect(lines.join("\n")).not.toContain("🎬");
     });
 
-    it("uses theme roles for color (accent for wordmark, muted for subtitle)", () => {
+    it("uses theme roles for color (accent for wordmark, muted for links)", () => {
       const calls: Array<[string, string]> = [];
       const trackingTheme = {
         fg: (role: string, text: string) => {
@@ -74,10 +78,12 @@ describe("mifune-banner extension", () => {
         },
       } as unknown as Parameters<typeof buildHeader>[0];
       buildHeader(trackingTheme);
-      const wordmarkCall = calls.find(([, t]) => t === "MIFUNE");
-      expect(wordmarkCall?.[0]).toBe("accent");
-      const subtitleCall = calls.find(([, t]) => t.includes("ryaneggz/mifune"));
-      expect(subtitleCall?.[0]).toBe("muted");
+      const wordmarkCalls = calls.slice(0, 6);
+      expect(wordmarkCalls).toHaveLength(6);
+      expect(wordmarkCalls.every(([role]) => role === "accent")).toBe(true);
+      const linkCalls = calls.filter(([, t]) => t.includes("mifunedev") || t.includes("ryaneggz/mifune"));
+      expect(linkCalls).toHaveLength(2);
+      expect(linkCalls.every(([role]) => role === "muted")).toBe(true);
     });
   });
 
@@ -95,7 +101,7 @@ describe("mifune-banner extension", () => {
 
       const lines = headerObj.render(80);
       expect(Array.isArray(lines)).toBe(true);
-      expect(lines.join("\n")).toContain("MIFUNE");
+      expect(lines.join("\n")).toContain("https://x.com/mifunedev");
     });
 
     it("is a no-op when the UI is not available (e.g. RPC mode)", async () => {

@@ -1,0 +1,22 @@
+# `memory/`
+
+Long-term persistent notes and session logs from harness orchestration. Tracked structured docs; daily logs gitignored.
+
+## Directory Structure
+
+| Item | Purpose |
+|------|---------|
+| `MEMORY.md` | Append-only lessons learned across sessions. See `context/rules/memory.md`. |
+| `<topic>.md` (top-level) | Tracked persistent subject notes (e.g., `x-campaign.md`). Named in kebab-case. Evolve per usual git workflow. |
+| `YYYY-MM-DD/log.md` | Daily session logs. One log per calendar day. Gitignored (materializes only on active work). |
+
+## Conventions
+
+- **Date format**: `date -u +%Y-%m-%d` (UTC, ISO 8601).
+- **One log per day**: Each `YYYY-MM-DD/` folder holds a single `log.md` covering that calendar day's session notes, decisions, and context. If a day sees multiple sessions, log entries are sequential within the same file.
+- **Topic naming**: Kebab-case, lowercase (e.g., `x-campaign.md`, `agent-onboarding.md`).
+- **Gitignore**: All `YYYY-MM-DD/` folders and their contents are gitignored. Only `README.md`, `MEMORY.md`, and tracked `<topic>.md` files appear in git.
+
+## Memory Improvement Protocol
+
+See `context/rules/memory.md` for the full protocol governing when to add lessons to `MEMORY.md`, how to structure them, and append-only discipline.

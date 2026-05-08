@@ -7,7 +7,7 @@ title: "Agents Overview"
 
 Open Harness ships with five agent CLIs preinstalled in the sandbox image: **Claude Code** (default), **Codex**, **OpenCode**, **Pi**, and **DeepAgents**. Inside the sandbox, launch whichever you prefer — switch between them at any time, or keep long-running sessions in tmux.
 
-The sandbox is the product; the harness is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a [harness pack](../guide/bring-your-own-harness.md) like [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) (Pi+Mom Slack bot). The product surface is one developer, one project, one harness — not racing or stacking multiple CLIs against each other.
+The sandbox is the product; the harness is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a [harness pack](../guide/bring-your-own-harness.md). For Pi+Slack specifically, the recommended path is the in-tree extension at [`.pi/extensions/slack/`](../integrations/slack.md); the legacy [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) pack still works during the transition. The product surface is one developer, one project, one harness — not racing or stacking multiple CLIs against each other.
 
 ## Supported agents
 

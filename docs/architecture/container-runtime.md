@@ -111,6 +111,17 @@ open-harness/
 │   ├── hooks/                  # security hooks (deny-env-dump, etc.)
 │   └── specs/                  # architecture decision records
 ├── .codex/                     # parallel agent harness (mirrors .claude/ shape)
+├── .pi/                        # Project-local Pi configuration + extensions
+│   ├── extensions/             # Pi extension packages
+│   │   ├── slack/              # Slack Socket Mode bridge as a Pi extension
+│   │   ├── mifune-banner.ts    # (existing)
+│   │   ├── single-line-footer.ts # (existing)
+│   │   └── path-guard.ts       # (existing)
+│   ├── install/                # Installation assets (Slack manifest, etc.)
+│   ├── overlays/               # docker-compose overlay snippets (Slack env wiring, etc.)
+│   ├── onboard-steps/          # Interactive onboarding helpers (Slack token setup, etc.)
+│   ├── APPEND_SYSTEM.md        # System prompt addendum (agent guidance)
+│   └── UPSTREAM.md             # Tracking behavioral source for Slack extension
 ├── apps/
 │   └── docs/                   # Docusaurus documentation site (only workspace pkg)
 ├── blog/                       # Docusaurus blog source

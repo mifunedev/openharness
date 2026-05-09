@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "bug/263-t3-npx-silent-install",
+  "description": "Document the upstream t3code npx silent-failure investigation as durable harness knowledge: a topic memory note linking to the filed upstream issue (https://github.com/pingdotgg/t3code/issues/2621), a generalized 'silent npx install failure' troubleshooting recipe under docs/troubleshooting/, a one-line lesson in memory/MEMORY.md, and a CHANGELOG entry. Documentation-only; no application code; no fork/PR against the third-party repo.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Capture the investigation as a topic memory note",
+      "description": "As an orchestrator agent picking up this thread later, I want a single source-of-truth note documenting the t3code triage so I do not re-derive the reproduction or root cause from npm logs.",
+      "acceptanceCriteria": [
+        "File exists at memory/t3-npx-silent-install.md",
+        "Note contains the verbatim reproduction command (npx --yes -p t3@0.0.22 t3 --help) with observed exit code and zero-byte stdout/stderr counts",
+        "Note contains the verbatim smoking-gun excerpt from Appendix A of prd.md (lines 1401-1416 of the npm debug log plus the gyp ERR! stack)",
+        "Note links to the upstream issue: https://github.com/pingdotgg/t3code/issues/2621",
+        "Note documents the proof that the CLI itself is reachable (npm install --ignore-scripts t3@0.0.22 + direct node node_modules/t3/dist/bin.mjs --help)",
+        "Note follows the topic-note conventions in context/rules/memory.md (placed under memory/<topic>.md, not under a daily-log subdir)",
+        "Pre-commit hook exits 0 when committing only this file"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add a generalized silent npx install failure troubleshooting recipe",
+      "description": "As a future agent or contributor staring at a silently-failing npx <pkg>, I want a documented diagnostic recipe so I can identify and work around the failure in minutes instead of an hour.",
+      "acceptanceCriteria": [
+        "File exists at docs/troubleshooting/npx-silent-install-failure.md",
+        "Recipe is generic — covers the pattern (silent npx exit, native dep without prebuilds, install-hook stderr suppression), not just the t3code instance; t3code is referenced as the canonical example with a link to the upstream issue",
+        "Recipe documents Symptoms (exit 1 + zero-byte output), Diagnose (npm debug log location, scan latest *-debug-0.log for 'install { code: 1'), Confirm (install with --ignore-scripts then run the bin directly), Causes (no matching prebuild for platform/arch, missing build toolchain), Workarounds (install build tools, --ignore-scripts if dep is non-essential, file upstream issue requesting optionalDependencies), and Example (link to t3code investigation)",
+        "docs/troubleshooting/README.md exists (one-line directory-intent + bullet list of recipes per context/rules/directory-readme.md); links the new recipe",
+        "If docs/troubleshooting/ is genuinely new in git at commit time (git ls-files docs/troubleshooting/ returns empty pre-commit), a one-line annotation is added to docs/architecture/container-runtime.md under the ## Repo Layout {#repo-layout} heading per context/rules/repo-layout-source.md",
+        "Pre-commit hook exits 0 when committing only the US-002 files"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Append a one-line lesson to memory/MEMORY.md",
+      "description": "As the orchestrator running the qualify/improve loop after this session, I want the takeaway distilled to a single bullet under ## Lessons Learned so future sessions auto-load it without reading the full topic note.",
+      "acceptanceCriteria": [
+        "Idempotency precheck: run grep -nE 'npm/_logs|npx swallow|silent.*npx' memory/MEMORY.md; if a semantically equivalent bullet exists, mark this AC satisfied without appending and document the existing line number in the commit message",
+        "If precheck returns no matches, append exactly one bullet to memory/MEMORY.md under the existing ## Lessons Learned heading",
+        "Bullet is one line, dated (YYYY-MM-DD), captures the lesson: 'When npx <pkg> exits silently with code 1, scan the npm debug log (default ~/.npm/_logs/, latest *-debug-0.log) for install { code: 1 — npm/npx swallow install-script stderr.'",
+        "Bullet links the topic note (memory/t3-npx-silent-install.md) and the upstream issue",
+        "No duplication with context/IDENTITY.md principles per context/rules/memory.md boundary",
+        "Append-only — no edits to existing entries"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Add a CHANGELOG entry under [Unreleased]",
+      "description": "As a maintainer reviewing the next release, I want the new troubleshooting doc surfaced in the changelog per context/rules/git.md changelog policy.",
+      "acceptanceCriteria": [
+        "Prerequisite check: harness tracking issue #263 exists (gh issue view 263 returns the tracking issue body)",
+        "One bullet appended under ## [Unreleased] → ### Added in CHANGELOG.md (create the ### Added subheading only if not already present under [Unreleased])",
+        "Bullet is imperative, mentions the new troubleshooting doc, links the tracking issue using the format ([#263](https://github.com/ryaneggz/open-harness/issues/263)) per context/rules/git.md § Changelog",
+        "No edits to versioned (## [X.Y.Z]) sections",
+        "No placeholder issue number — implementer must halt and surface a blocker if issue retrieval fails rather than guess"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

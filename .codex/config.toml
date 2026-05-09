@@ -10,4 +10,4 @@ sandbox_mode = "danger-full-access"
 model_reasoning_effort = "xhigh"
 
 [features]
-codex_hooks = true
+hooks = true

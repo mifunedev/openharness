@@ -218,6 +218,29 @@ if echo "$@" | grep -q sshd; then
   fi
 fi
 
+# ─── pnpm install at harness root ──────────────────────────────────
+# Root package.json declares deps that aren't bundled into Pi or any
+# global CLI: `croner` for scripts/cron-runtime.ts, plus the four sibling
+# packages the in-tree Slack Pi extension imports (`@slack/socket-mode`,
+# `@slack/web-api`, `chalk`, and `@sinclair/typebox` for tooling parity).
+# Pi loads extensions via jiti, which falls back to Node's node_modules
+# walk for non-aliased imports — without these installed at the harness
+# root, `pi` fails to load `.pi/extensions/slack/` on a fresh container.
+# The harness is bind-mounted, so a Dockerfile-time install gets shadowed
+# at runtime; we install on first boot here, idempotently. Set
+# SKIP_PNPM_INSTALL=1 to opt out (e.g. air-gapped envs managing deps
+# externally).
+if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
+  if [ ! -d "$HARNESS/node_modules" ]; then
+    echo "[entrypoint] node_modules missing — running pnpm install at $HARNESS"
+    if gosu sandbox bash -c "cd $HARNESS && pnpm install --prefer-offline" >/tmp/pnpm-install.log 2>&1; then
+      echo "[entrypoint] pnpm install completed (log: /tmp/pnpm-install.log)"
+    else
+      echo "[entrypoint] pnpm install failed — see /tmp/pnpm-install.log; cron-runtime and Slack Pi extension will not load"
+    fi
+  fi
+fi
+
 # ─── Start cron runtime in tmux session ────────────────────────────
 # Per SPEC v0.7 §"Croner runtime" + .claude/rules/sandbox-processes.md.
 # Replaces the legacy heartbeat-daemon watchdog. Runs as sandbox user

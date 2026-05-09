@@ -135,7 +135,8 @@ open-harness/
 ├── docs/                       # plain markdown (GitHub-rendered + Docusaurus source)
 │   ├── architecture/           # runtime, layout, crons reference
 │   ├── operations/             # provision, destroy, repair
-│   └── guide/                  # configuration, workspace, exposure, …
+│   ├── guide/                  # configuration, workspace, exposure, …
+│   └── troubleshooting/        # reactive recipes — silent npx install, …
 ├── memory/                     # Long-term `MEMORY.md` and daily session logs (`YYYY-MM-DD/log.md`); see `context/rules/memory.md`
 ├── install/                    # files baked into the sandbox image
 │   ├── banner.sh               # interactive shell banner

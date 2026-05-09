@@ -1,2 +1,96 @@
 # progress
 
+## Codebase Patterns
+
+- **FR-6 allowlist is enforced by convention, not tooling.** Stick strictly to the file targets the chosen story names. Other paths (especially `context/rules/`, `.claude/`, `crons/`) are off-limits even if they would simplify the work.
+- **Topic memory notes are flat under `memory/<topic>.md`** (per `context/rules/memory.md`), not under daily-log subdirs. `memory/x-campaign.md` is the canonical style anchor — terse, link-heavy, factual, no first-person narrative.
+- **Pre-commit hook runs `pnpm lint` + `pnpm test`** on every commit. Markdown-only changes pass cleanly; do not use `--no-verify`.
+- **Stage files explicitly by path** (`git add <file>`), never `git add -A` — the harness has many concurrent moving parts and broad staging risks pulling in unrelated changes (e.g. `.worktrees/`, daily memory logs, devcontainer state).
+- **`prd.json` is the only metadata file you touch per iteration.** Update `passes` and `notes` for the completed story; do not edit other stories' fields.
+- **Per-iteration metadata edits accumulate uncommitted.** Per the loop's "stage only files touched by this story" rule, neither `prd.json` nor `progress.txt` are committed — they live as workspace state across iterations. Don't be alarmed by their presence in `git status` at iteration start.
+- **CHANGELOG `[Unreleased]` may carry multiple `### Added` subheadings** due to drift; new entries go at the **top** of the topmost `### Added` block to preserve newest-first ordering. Issue-link format per `context/rules/git.md` § Changelog: `([#N](https://github.com/ryaneggz/open-harness/issues/N))`.
+
+---
+
+## US-004 — 2026-05-09 12:01 UTC
+
+**Title**: Add a CHANGELOG entry under [Unreleased]
+**Files changed**: CHANGELOG.md
+**Commit**: 95dbf05
+**Result**: PASS
+
+### What I did
+
+Verified tracking issue #263 exists via `gh issue view 263` (open, authored by ryaneggz, scoped to the t3 npx silent-install harness deliverable) — satisfying the prerequisite check before any edit. Appended one bullet at the **top** of the existing `### Added` subheading directly under `## [Unreleased]` in `CHANGELOG.md`: an imperative-mood line referencing the new troubleshooting doc (`docs/troubleshooting/npx-silent-install-failure.md`), the topic memory note, and the upstream `pingdotgg/t3code` investigation, with the tracking issue linked as `([#263](https://github.com/ryaneggz/open-harness/issues/263))` per `context/rules/git.md` § Changelog and prd.json AC #3. No edits to versioned (`## [X.Y.Z]`) sections — `[Unreleased]` is the only section touched. Pre-commit hook (lint + 114 tests) exited 0.
+
+### Learnings for future iterations
+
+- The `[Unreleased]` section in this repo's `CHANGELOG.md` already carries multiple `### Added` subheadings (lines 17, 42, 66 at iteration time). Append to the **topmost** one immediately under `## [Unreleased]` (line 17) to preserve newest-at-top ordering — don't try to consolidate the duplicates from inside a documentation-only PRD.
+- `gh issue view <N>` prints title/state/labels in the first ~10 lines and body below — a `head -40` is enough to confirm prerequisite + scope without flooding context.
+- prd.json and prd.md may disagree on minor link details (here: prd.md US-004 used `/pull/N` while prd.json AC #3 used `/issues/N`). The structured prd.json wins at AC-check time; the prose PRD is reference, the JSON is the contract.
+- Imperative mood for `### Added` is interpreted loosely in this changelog — "Add X" works, but noun-phrase entries ("Slack integration as a Pi extension...") are equally accepted; the AC-mandated "imperative" is best-effort, not strict verb-first.
+
+---
+
+## US-003 — 2026-05-09 11:58 UTC
+
+**Title**: Append a one-line lesson to memory/MEMORY.md
+**Files changed**: memory/MEMORY.md
+**Commit**: e5210de
+**Result**: PASS
+
+### What I did
+
+Ran the AC-mandated idempotency precheck (`grep -nE 'npm/_logs|npx swallow|silent.*npx' memory/MEMORY.md`) — no matches. Also confirmed `context/IDENTITY.md` carries no semantically equivalent principle, satisfying the no-duplication boundary in `context/rules/memory.md`. Appended exactly one dated bullet under the existing `## Lessons Learned` heading capturing the actionable lesson, with inline links to the topic note (`memory/t3-npx-silent-install.md`) and the upstream issue (`pingdotgg/t3code#2621`). Pre-commit hook (lint + 114 tests) exited 0.
+
+### Learnings for future iterations
+
+- `memory/MEMORY.md` ships with a sentinel HTML comment (`<!-- Append entries below... -->`) immediately under `## Lessons Learned`. Append BELOW the comment with a blank line before the bullet — keep the comment in place; it is the contract for future appenders.
+- The idempotency precheck regex (`npm/_logs|npx swallow|silent.*npx`) is the literal AC text; run it verbatim rather than improvising, so the audit trail in the commit message can quote the exact command if needed.
+- One-line lesson formatting: `- (YYYY-MM-DD) <sentence>. See <link>` mirrors the conventions implied by `context/rules/memory.md`'s "one bullet per lesson" rule. Inline-code-fence the file paths and the grep token so they survive markdown rendering.
+- Branch state at iteration start was clean save the loop's own metadata files (`prd.json`, `progress.txt`); the staging-by-explicit-path discipline kept those out of the US-003 commit.
+
+---
+
+## US-002 — 2026-05-09 11:57 UTC
+
+**Title**: Add a generalized silent npx install failure troubleshooting recipe
+**Files changed**: docs/troubleshooting/npx-silent-install-failure.md, docs/troubleshooting/README.md, docs/architecture/container-runtime.md
+**Commit**: fd0a9d4
+**Result**: PASS
+
+### What I did
+
+Created `docs/troubleshooting/npx-silent-install-failure.md` with the canonical six level-2 sections (Symptoms / Diagnose / Confirm / Causes / Workarounds / Example) per FR-2. The recipe is generic — t3code is referenced only under Example, and every other section reads platform-and-package-agnostic per FR-3. Created `docs/troubleshooting/README.md` (one-line intent + recipe bullet + conventions) per the directory-readme rule. Since `git ls-files docs/troubleshooting/` returned empty pre-commit, added a one-line `troubleshooting/` annotation to the `docs/` block in `docs/architecture/container-runtime.md#repo-layout` per the conditional AC and the repo-layout-source rule. Pre-commit hook (lint + 114 tests) exited 0.
+
+### Learnings for future iterations
+
+- The Repo Layout block uses ASCII tree with `├──` / `└──` characters — when inserting a new sub-bullet under an existing parent, swap the previous trailing `└──` to `├──` and append the new entry as the new `└──`. Don't try to add a row in the middle.
+- `docs/architecture/container-runtime.md` has the canonical Repo Layout heading at line 78; this is the only place box-drawing trees may live per `context/rules/repo-layout-source.md`. New troubleshooting recipes should NOT add their own trees in their content body.
+- `pnpm -r --if-present run lint` is currently a no-op for markdown (no `.md` linter configured at the workspace level). The pre-commit guarantee is "lint exits 0 + tests pass" — a markdown-only change has no real lint signal.
+- For directory READMEs under `docs/`, the `context/rules/directory-readme.md` rule technically targets top-level dirs, but the AC applied it here — keep the README terse (intent + list + conventions + pointer), don't paraphrase the canonical rule.
+
+---
+
+## US-001 — 2026-05-09 11:54 UTC
+
+**Title**: Capture the investigation as a topic memory note
+**Files changed**: memory/t3-npx-silent-install.md
+**Commit**: 053bbf6
+**Result**: PASS
+
+### What I did
+
+Created `memory/t3-npx-silent-install.md` as the topic-tier durable record of the `npx t3@0.0.22` silent-failure triage. Followed the FR-1 section ordering (Reproduction, Smoking Gun, Root Cause, Upstream Issue, Proof the CLI Itself Is Reachable) and copied the verbatim debug-log excerpt from PRD Appendix A so the note stands alone without the original host log. The pre-commit hook (lint + 114 tests) passed cleanly on the markdown-only change.
+
+### Learnings for future iterations
+
+- Appendix A in `prd.md` contains the verbatim smoking-gun lines — copy them as-is rather than fishing through `~/.npm/_logs/`. The PRD author embedded them precisely so executors don't need access to the original host.
+- `memory/x-campaign.md` is the closest existing topic-note style precedent; mirror its structure (brief intro paragraph + level-2 sections) when the story is silent on tone.
+- `pnpm lint` is currently a no-op (no markdown linter wired up), but the test suite (vitest, ~114 tests across `.pi/extensions/` + `scripts/`) does run. Build budget for the pre-commit hook on each commit: ~10s.
+- The branch `bug/263-t3-npx-silent-install` was already checked out and clean at the start; the loop scaffolds correctly.
+
+---
+
+STATUS: COMPLETE
+

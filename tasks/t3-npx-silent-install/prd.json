@@ -18,8 +18,8 @@
         "Pre-commit hook exits 0 when committing only this file"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-05-09; commit 053bbf6"
     },
     {
       "id": "US-002",
@@ -34,8 +34,8 @@
         "Pre-commit hook exits 0 when committing only the US-002 files"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed iteration 2 on 2026-05-09; commit fd0a9d4"
     },
     {
       "id": "US-003",
@@ -50,8 +50,8 @@
         "Append-only — no edits to existing entries"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed iteration 3 on 2026-05-09; commit e5210de"
     },
     {
       "id": "US-004",
@@ -65,8 +65,8 @@
         "No placeholder issue number — implementer must halt and surface a blocker if issue retrieval fails rather than guess"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed iteration 4 on 2026-05-09; commit 95dbf05"
     }
   ]
 }

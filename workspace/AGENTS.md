@@ -23,19 +23,19 @@ Template ships intentionally minimal — agent identity, memory, skills, and rou
 `workspace/.claude/settings.json` enables Claude Code's experimental
 agent-teams feature (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`,
 `teammateMode: "in-process"`) for sessions invoked from this directory.
-The orchestrator at the harness root does NOT have it enabled — and the
-cron runtime explicitly disables it for non-interactive automation.
+Orchestrator at harness root is NOT enabled, and cron runtime forces it
+off for non-interactive automation.
 
 | Use | When |
 |-----|------|
-| Sub-agents (`Agent` tool, `/delegate`) | Fire-and-forget workers that report back to the caller. No peer messaging, no shared task list. Right for parallel research, audits, and any task where only the final result matters. |
-| Agent teams | Peers that message each other directly through a shared mailbox + task list. Right for cross-layer implementation (frontend + backend + tests owned by different teammates), adversarial debate over competing hypotheses, and review work where reviewers should challenge each other's findings. |
+| Sub-agents (`Agent` tool, `/delegate`) | Fire-and-forget workers reporting back to caller. No peer messaging, no shared task list. Right for parallel research, audits, and any task where only final result matters. |
+| Agent teams | Peers messaging each other directly through shared mailbox + task list. Right for cross-layer implementation (frontend + backend + tests owned by different teammates), adversarial debate over competing hypotheses, and review work where reviewers challenge each other's findings. |
 
-Start with sub-agents. Reach for an agent team only when teammates would
-actually need to talk to each other or claim work from a shared queue —
-otherwise the coordination overhead and token cost (each teammate is a
-full Claude instance) exceed the parallel benefit. Agent teams require
-Claude Code ≥ 2.1.32; the sandbox Dockerfile documents this floor.
+Start with sub-agents. Reach for agent teams only when teammates need to
+talk to each other or claim work from shared queue — otherwise
+coordination overhead and token cost (each teammate is full Claude
+instance) exceed parallel benefit. Agent teams require Claude Code ≥
+2.1.32; sandbox Dockerfile documents this floor.
 
 ## Operating rules
 

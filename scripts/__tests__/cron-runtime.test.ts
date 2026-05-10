@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { acquireLock, loadCrons, parseCronFile } from "../cron-runtime";
+import { acquireLock, buildCronEnv, loadCrons, parseCronFile } from "../cron-runtime";
 
 let tmp: string;
 
@@ -105,5 +105,21 @@ describe("acquireLock", () => {
     writeFileSync(pidFile, "999999");
     expect(acquireLock(pidFile)).toBe(true);
     expect(existsSync(pidFile)).toBe(true);
+  });
+});
+
+describe("buildCronEnv", () => {
+  it("forces CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=0 even when the parent env enables it", () => {
+    const env = buildCronEnv({
+      PATH: "/usr/bin",
+      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "1",
+    });
+    expect(env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS).toBe("0");
+    expect(env.PATH).toBe("/usr/bin");
+  });
+
+  it("sets the override when the parent env does not mention the var", () => {
+    const env = buildCronEnv({ PATH: "/usr/bin" });
+    expect(env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS).toBe("0");
   });
 });

@@ -85,9 +85,22 @@ function log(id: string, status: string, msg = ""): void {
   }
 }
 
+// Cron-spawned agent sessions are non-interactive: there is no operator to
+// drive the in-process teammate switcher (Shift+Down), so the experimental
+// agent-teams feature must stay off here even if a future operator exports
+// CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 globally. See issue #267.
+export function buildCronEnv(
+  base: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+  return { ...base, CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "0" };
+}
+
 function fire(entry: CronEntry): void {
   log(entry.id, "FIRE");
-  const child = spawn(AGENT_BIN, ["-p", entry.body], { stdio: "inherit" });
+  const child = spawn(AGENT_BIN, ["-p", entry.body], {
+    stdio: "inherit",
+    env: buildCronEnv(),
+  });
   child.on("exit", (code: number | null) => log(entry.id, code === 0 ? "OK" : `EXIT_${code}`));
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
 }

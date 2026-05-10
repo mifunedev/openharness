@@ -71,6 +71,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate \
 # AGENTS is a comma-separated list of agent CLI keys to install. The default
 # is claude-code + codex + pi-coding-agent + opencode. Downstream harness packs (e.g.
 # @ryaneggz/mifune) install additional CLIs via their install-hook.sh.
+#
+# claude-code minimum: 2.1.32 (required for the experimental agent-teams feature
+# enabled in workspace/.claude/settings.json — see issue #267). The npm install
+# below pulls latest, so rebuild the image periodically; bump this comment if a
+# higher floor becomes required.
 SHELL ["/bin/bash", "-c"]
 
 ARG AGENTS="claude-code,codex,pi-coding-agent,opencode"

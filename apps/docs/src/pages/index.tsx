@@ -8,7 +8,7 @@ const QUICKSTART = `# install (only host dep: Docker)
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 
 # enter the isolated sandbox
-cd ~/openharness && make shell
+cd ~/.openharness && make shell
 
 # inside the sandbox, pick your agent
 claude        # or codex, opencode, pi, deepagents`;

@@ -15,7 +15,13 @@ subfolders mirror the harness branch prefix:
 | `task/`   | `task/<issue#>-...` — chores / maintenance         |
 | `audit/`  | `audit/<issue#>-...` — review / audit branches     |
 | `skill/`  | `skill/<issue#>-...` — skill authoring             |
-| `agent/`  | `agent/<agent-name>` — long-running agent branches |
+| `agent/`  | `agent/<agent-name>` — agent worktrees or clones   |
+
+The `agent/` subfolder holds two patterns: harness branch worktrees
+(legacy in-tree agents) and standalone agent-repo clones with their own
+`.git` (post-graduation agents). Example: `dc-designer` is cloned from
+`https://github.com/ryaneggz/dc-designer` to `.worktrees/agent/dc-designer/`
+as a full clone. Both patterns coexist.
 
 See `.claude/rules/git.md` § Worktrees for the canonical workflow,
 including the stale-worktree policy.

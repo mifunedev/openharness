@@ -47,6 +47,53 @@ structure on 2026-05-04.
 | 2026-05-07T18:30:00Z | `4397c0c9-1476-4af8-ab12-81f326575839` | scheduled | Heartbeats as markdown cron tasks |
 | 2026-05-09T17:00:00Z | `6df45de4-a2eb-47ee-890f-51df6769eaf9` | scheduled | Ralph task loop with `prd.json`, `prompt.md`, `progress.txt`, and `scripts/ralph.sh` |
 
+## Week 2 Scheduled Posts
+
+Created in Post Bridge on 2026-05-10.
+
+| Date UTC | Post Bridge id | Status | Topic |
+|---|---|---|---|
+| 2026-05-12T18:30:00Z | `147aff3c-666c-4af3-8742-dd33c144aaec` | scheduled | Compose overlays — modular docker-compose stacks |
+| 2026-05-14T18:30:00Z | `d23a5b93-eceb-4e8c-96f6-402f00e864f3` | scheduled | Slack Pi extension at `.pi/extensions/slack/` |
+| 2026-05-16T17:00:00Z | `58b60ffc-26c7-4ce9-80fc-e45ca81e6545` | scheduled | Cloudflare named tunnels via `/cloudflared-tunnel` |
+
+## Week 2 Captions
+
+Tuesday:
+
+> 🧩 Open Harness sandboxes are modular docker compose stacks.
+>
+> 🌐 `cloudflared` for tunnels
+> 🐘 `postgres` for a dev DB
+> 🔑 `ssh` to share host keys
+> 🪞 `*-host` to share agent auth
+>
+> All flipped on in one config.
+>
+> Docs: https://oh.mifune.dev/docs/guide/overlays
+
+Thursday:
+
+> 💬 Open Harness can live in Slack.
+>
+> 🧩 Drop the Pi Slack extension into `.pi/extensions/slack/`
+> 🔑 Add bot + app tokens to env
+> 📨 Mention the bot or DM it
+>
+> Your sandbox agent talks where your team already does.
+>
+> Docs: https://oh.mifune.dev/docs/integrations/slack
+
+Saturday:
+
+> 🌐 Expose a sandbox app to a real URL in one step.
+>
+> 🚇 `/cloudflared-tunnel` builds a named tunnel
+> 📝 Writes the ingress config
+> 🧭 Routes DNS — all idempotent
+>
+> Docs: https://oh.mifune.dev/docs/integrations/cloudflare
+
 ## Week 1 Captions
 
 Tuesday:

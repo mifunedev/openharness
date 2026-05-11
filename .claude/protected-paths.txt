@@ -46,6 +46,7 @@ crons/cleanup-tasks.md
 .claude/rules/git.md
 .claude/rules/sandbox-processes.md
 .claude/rules/advisor-model.md
+.claude/rules/recursive-delegation.md
 
 # --- Specs that other artifacts cross-reference ---
 .claude/specs/structure-spec-v0.7.md

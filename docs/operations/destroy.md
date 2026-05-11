@@ -29,10 +29,10 @@ docker compose --env-file .devcontainer/.env $COMPOSE_FILES down -v
 `docker compose down` does not remove the image. To free disk space (or force a fresh build next time):
 
 ```bash
-docker rmi openharness-sandbox 2>/dev/null || true
+docker rmi sandbox-openharness 2>/dev/null || true
 ```
 
-The image name follows `<container>-sandbox`; substitute your `SANDBOX_NAME` from `.devcontainer/.env`.
+The image name follows `sandbox-<container>`; substitute your `SANDBOX_NAME` from `.devcontainer/.env`.
 
 ## Verify clean state
 

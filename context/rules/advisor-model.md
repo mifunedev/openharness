@@ -70,6 +70,7 @@ Keep the briefing tight. If a point is generic best-practice (not instance-speci
 | **2-step** | Straightforward delegation | Advisor writes briefing → `Agent` tool with briefing prepended to prompt |
 | **3-step** | First attempt needs steering | Executor makes attempt → advisor reviews output → advisor writes targeted critique as a second briefing → executor revises |
 | **Multi-turn agentic** | Long runs (>10 steps) | Advisor provides a briefing every N steps, receiving the executor's intermediate observations before writing the next guidance block |
+| **Multi-level (recursive)** | A child's task is itself multi-step and could be parallelized further | The executor is authorized to itself become an advisor at depth+1. See `context/rules/recursive-delegation.md` for the bounding / structured-return / Context-block protocol. |
 
 ## Mapping to This Harness
 

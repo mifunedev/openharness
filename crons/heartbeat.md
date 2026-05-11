@@ -77,7 +77,6 @@ If an item maps to none of these, it is un-checkable. Sessions must
 either rephrase it to fit a check or accept it will surface
 indefinitely until manually removed.
 
-- [ ] 2026-05-04: On 2026-05-10, schedule Open Harness X campaign week 2 through Post Bridge; keep X automated only, 2-3 posts max, Tuesday/Thursday/optional Saturday, with tasteful emoji structure. (source: weekly Sunday campaign scheduling)
 - [ ] 2026-05-04: On 2026-05-17, schedule Open Harness X campaign week 3 through Post Bridge; keep X automated only, 2-3 posts max, Tuesday/Thursday/optional Saturday, with tasteful emoji structure. (source: weekly Sunday campaign scheduling)
 - [ ] 2026-05-04: On 2026-05-24, schedule Open Harness X campaign week 4 through Post Bridge; keep X automated only, 2-3 posts max, Tuesday/Thursday/optional Saturday, with tasteful emoji structure. (source: weekly Sunday campaign scheduling)
 - [ ] 2026-05-04: On 2026-06-01, review the Open Harness X campaign and decide whether to extend, pause, or do a Product Hunt/HN push. (source: weekly Sunday campaign scheduling)

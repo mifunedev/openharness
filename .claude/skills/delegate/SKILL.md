@@ -128,6 +128,16 @@ Worker configuration:
 - **Model**: as specified in the task decomposition (haiku/sonnet/opus)
 - **run_in_background**: true (for waves with 2+ tasks)
 
+**a.1) Recursion-authorization gate**
+
+If any worker's task description authorizes recursive delegation (`Max depth: N` with N ≥ 2), confirm before spawning that **all three** fields are present in that worker's briefing:
+
+- `Max depth: N`
+- `Max children per level: M` (M ≤ 5)
+- `Step budget: S`
+
+If any field is missing, either add it or downgrade the task to flat execution (`Max depth: 1`). Workers without all three fields MUST stay flat — they have no authority to spawn grandchildren regardless of how the task is described in prose. See `context/rules/recursive-delegation.md` for the full protocol.
+
 **b) Collect results**
 
 After all agents in the wave complete, update each task via `TaskUpdate`:

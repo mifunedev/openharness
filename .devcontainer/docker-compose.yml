@@ -32,7 +32,7 @@
 #   Basic: docker compose -f .devcontainer/docker-compose.yml up -d
 #   With overlays: docker compose -f .devcontainer/docker-compose.yml \
 #                    -f .devcontainer/docker-compose.postgres.yml \
-#                    -f .devcontainer/docker-compose.slack.yml up -d
+#                    -f .devcontainer/docker-compose.cloudflared.yml up -d
 #
 # Overlays in config.json composeOverrides are auto-loaded by `make sandbox` and `scripts/install.sh` via jq.
 

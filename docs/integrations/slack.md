@@ -17,26 +17,39 @@ Slack support ships as a Pi extension at `.pi/extensions/slack/`. Once your sand
 4. Copy the **App-Level Token** (starts with `xapp-`) from the **Basic Information** page.
 5. Copy the **Bot User OAuth Token** (starts with `xoxb-`) from the **OAuth & Permissions** page.
 
-### 2. Set Environment Variables
+### 2. Add Tokens to `.devcontainer/.env`
 
-Add these to `.devcontainer/.env`:
+Add these lines (no `export` prefix — Compose's `.env` format, same as the rest of the file):
 
 ```bash
-export SLACK_APP_TOKEN=xapp-...
-export SLACK_BOT_TOKEN=xoxb-...
+SLACK_APP_TOKEN=xapp-...
+SLACK_BOT_TOKEN=xoxb-...
+SLACK_ALLOW_USERS=U01ABCD2345        # at least one allowlist is required
+# SLACK_ALLOW_CHANNELS=C01ABCD2345   # optional; see § Allowlist
 ```
 
-Optionally set channel and user allowlists (see § Allowlist below).
+See § Allowlist for how to obtain user/channel IDs and the deny-by-default rules.
 
-### 3. (Optional) Enable the Docker Compose Overlay
+### 3. Launch `pi` Inside the Sandbox
 
-If you want the `.devcontainer/docker-compose.slack.yml` overlay to handle Slack env wiring for you:
+The extension reads tokens from `process.env` at `session_start`, so the `pi` process must inherit them. `.devcontainer/.env` uses Compose's `KEY=value` format (not shell `export`), so you need `set -a` to auto-export everything as you source it. Per [`context/rules/sandbox-processes.md`](https://github.com/ryaneggz/open-harness/blob/main/context/rules/sandbox-processes.md), long-running agents live in a named tmux session.
 
-1. Copy `config.example.json` to `config.json` at the harness root (if not already present).
-2. Add `.pi/overlays/docker-compose.slack.yml` to the `composeOverrides[]` list in `config.json`.
-3. Run `make sandbox` (or re-up the container).
+```bash
+make shell
+set -a; source /home/sandbox/harness/.devcontainer/.env; set +a
+tmux new-session -d -s agent-pi 'pi 2>&1 | tee /tmp/agent-pi.log'
+tmux attach -t agent-pi
+```
 
-The overlay wires `SLACK_APP_TOKEN` and `SLACK_BOT_TOKEN` from `.devcontainer/.env` into the running container.
+Detach with `Ctrl-b d`; reattach any time with `tmux attach -t agent-pi`.
+
+No Docker Compose overlay is required — the in-tree Pi extension at `.pi/extensions/slack/` consumes these env vars directly. See `.pi/extensions/slack/README.md` for the full env var reference.
+
+### 4. Smoke Test
+
+1. `env | grep SLACK` from the same shell should list `SLACK_APP_TOKEN`, `SLACK_BOT_TOKEN`, and your allowlist var. If they're missing here, the `set -a` step did not run in the same shell.
+2. `curl -s -H "Authorization: Bearer $SLACK_BOT_TOKEN" https://slack.com/api/auth.test | jq` should return `"ok": true`.
+3. From an allow-listed user, DM the bot or `@mention` it in a channel where it's a member. `tmux attach -t agent-pi` to watch `pi` receive the message and post the reply back to Slack.
 
 ## Allowlist
 

@@ -36,7 +36,7 @@ Key configuration choices:
 - `command: sleep infinity` — keeps the container alive; actual work happens inside named tmux sessions, not in the foreground process.
 - `stdin_open: true` and `tty: true` — required for interactive shells via `docker exec`.
 
-Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon, Slack bot) and are activated by listing them in `config.json` (at the repo root, gitignored — copy from `config.example.json` if missing) under `composeOverrides`. `make sandbox` and `scripts/install.sh` read that file via `jq` and pass the corresponding `-f` flags to `docker compose up`.
+Optional overlays in `.devcontainer/` add services (Postgres, Cloudflare tunnel, SSH daemon) and are activated by listing them in `config.json` (at the repo root, gitignored — copy from `config.example.json` if missing) under `composeOverrides`. `make sandbox` and `scripts/install.sh` read that file via `jq` and pass the corresponding `-f` flags to `docker compose up`. Slack integration is provided by the in-tree Pi extension at `.pi/extensions/slack/` and does not require a compose overlay — see [Slack integration](../integrations/slack.md).
 
 ## Bind Mounts
 
@@ -118,7 +118,6 @@ open-harness/
 │   │   ├── single-line-footer.ts # (existing)
 │   │   └── path-guard.ts       # (existing)
 │   ├── install/                # Installation assets (Slack manifest, etc.)
-│   ├── overlays/               # docker-compose overlay snippets (Slack env wiring, etc.)
 │   ├── onboard-steps/          # Interactive onboarding helpers (Slack token setup, etc.)
 │   ├── APPEND_SYSTEM.md        # System prompt addendum (agent guidance)
 │   └── UPSTREAM.md             # Tracking behavioral source for Slack extension

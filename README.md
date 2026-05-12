@@ -5,8 +5,9 @@
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
 - **Agents that work while you sleep.** A tiny [croner runtime](docs/architecture/crons-and-heartbeats.md) reads `crons/*.md` markdown and wakes the agent on a schedule.
 - **Only host dependency: Docker.** No Node, no Python, no toolchain rot on your laptop.
-- **Composable infra.** Cherry-pick Postgres, Cloudflare tunnels, SSH, Slack, Caddy gateway via Compose overlays.
-- **Multi-agent? Add a pack.** Slack-driven Pi+Mom and other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
+- **Composable infra.** Cherry-pick Postgres, Cloudflare tunnels, SSH, Caddy gateway via Compose overlays.
+- **Slack-ready.** The in-tree Pi extension at `.pi/extensions/slack/` bridges Slack to a Pi agent — see [docs/integrations/slack.md](docs/integrations/slack.md).
+- **Multi-agent? Add a pack.** Other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
 
 ---
 
@@ -41,8 +42,8 @@ Prefer VS Code or remote SSH? See [Connecting to a sandbox](https://oh.mifune.de
 
 `.devcontainer/.env` is generated with safe defaults during install. Open
 it any time to change `SANDBOX_NAME`, set a different `GH_TOKEN`, change
-`TZ`, or enable overlay-specific vars (`SANDBOX_PASSWORD` for sshd,
-`SLACK_*` for the Slack overlay). Apply with `make destroy && make sandbox`.
+`TZ`, set `SANDBOX_PASSWORD` (sshd overlay), or set `SLACK_*` tokens for
+the Pi Slack extension. Apply with `make destroy && make sandbox`.
 
 <details><summary>Manual setup (no installer)</summary>
 

@@ -39,8 +39,7 @@ A pack MAY ship a `harness.json` describing itself for discoverability. The file
   "openharness": ">=2026.5.2",
   "agents": ["pi"],
   "compose_overlays": [
-    "overlays/docker-compose.pi-host.yml",
-    "overlays/docker-compose.slack.yml"
+    "overlays/docker-compose.pi-host.yml"
   ],
   "prebuilt_image": "ghcr.io/ryaneggz/mifune:latest"
 }

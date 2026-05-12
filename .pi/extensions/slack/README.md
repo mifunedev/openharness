@@ -56,26 +56,37 @@ SLACK_ALLOW_USERS=U789
 
 ## How to Run
 
-1. **Install Pi** (if not already done):
+1. **Verify Pi is installed**:
    ```bash
-   # Inside the harness
    pi --version
    ```
 
-2. **Set Slack tokens** in `.devcontainer/.env`:
+2. **Add Slack tokens to `.devcontainer/.env`** (Compose `KEY=value` format — no `export` prefix):
    ```bash
-   export SLACK_APP_TOKEN=xapp-...
-   export SLACK_BOT_TOKEN=xoxb-...
-   # Optionally set the allow-lists:
-   export SLACK_ALLOW_CHANNELS=C123,C456
+   SLACK_APP_TOKEN=xapp-...
+   SLACK_BOT_TOKEN=xoxb-...
+   # At least one allowlist is required (deny-by-default — see below):
+   SLACK_ALLOW_USERS=U01ABCD2345
+   # SLACK_ALLOW_CHANNELS=C01ABCD2345
    ```
 
-3. **Start Pi**:
+3. **Enter the sandbox, auto-export env, and launch Pi in a tmux session**:
    ```bash
-   pi
+   make shell
+   set -a; source /home/sandbox/harness/.devcontainer/.env; set +a
+   tmux new-session -d -s agent-pi 'pi 2>&1 | tee /tmp/agent-pi.log'
+   tmux attach -t agent-pi
    ```
 
-   The extension loads automatically on `session_start`. If tokens are missing, the extension logs a warning and disables itself. The bridge is ready to receive Slack messages once Pi is idle.
+   `set -a` is needed because `.devcontainer/.env` is Compose-formatted (no `export` prefix); without it, sourced vars stay in the shell but aren't inherited by `pi`. The tmux session keeps `pi` alive across SSH/VS Code disconnects (see [`context/rules/sandbox-processes.md`](../../context/rules/sandbox-processes.md)).
+
+   The extension loads on `session_start`. If `SLACK_APP_TOKEN` or `SLACK_BOT_TOKEN` is missing from `process.env`, the extension logs `Slack extension: missing SLACK_APP_TOKEN/SLACK_BOT_TOKEN; not connecting` and disables itself for the session.
+
+4. **Verify**:
+   ```bash
+   env | grep SLACK   # confirm vars are exported
+   ```
+   Then DM the bot or `@mention` it from an allow-listed user. Watch the round-trip in `tmux attach -t agent-pi` or `tail -f /tmp/agent-pi.log`.
 
 ## Build and Test
 

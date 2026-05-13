@@ -65,9 +65,10 @@ not treated as authenticated.
 
 If you already use DeepAgents on the host, opt in to the
 `deepagents-host` overlay to bind-mount your host `~/.deepagents` into the
-sandbox. See [Sharing host DeepAgents state](../guide/overlays.md#sharing-host-deepagents-state-deepagents-host)
-for the trust tradeoffs, UID-1000 requirement, disable flow, and how to
-reset the named volume without touching host `~/.deepagents`.
+sandbox. The overlay requires host UID 1000 and a pre-existing host
+`~/.deepagents` directory; DeepAgents stores raw provider API keys with no
+scope or expiry, so enable it only when you've accepted that blast radius
+explicitly.
 
 ## State persistence and repo-local `.deepagents/`
 
@@ -163,8 +164,7 @@ Two environment overrides apply:
 
 - Keep provider keys in `~/.deepagents/.env`. Never commit a repo-local
   `.deepagents/.env`.
-- Pair DeepAgents with a [worktree](../guide/workspace.md) so its branch
-  is isolated.
+- Pair DeepAgents with a git worktree so its branch is isolated.
 - Inspect non-interactive runs with `tmux attach -t agent-deepagents` (or
   the Ralph-launched session) to see live progress.
 

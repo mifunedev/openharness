@@ -2,7 +2,7 @@
 // TypeBox schemas (inline per tool) define parameter shapes; ExtensionAPI
 // wires them into the Pi agent's available tool set.
 import { Type } from "@sinclair/typebox";
-import type { AgentToolResult, ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { AgentToolResult, ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { SlackBot } from "./client.js";
 
 // ============================================================================

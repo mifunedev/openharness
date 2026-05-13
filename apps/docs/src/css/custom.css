@@ -43,6 +43,10 @@
   --oh-accent-green: #16a34a;
   --oh-accent-amber: #d97706;
   --oh-accent-red:   #dc2626;
+
+  /* Links: distinct from body text (which uses --ifm-color-primary) */
+  --ifm-link-color: #15803d;
+  --ifm-link-hover-color: #166534;
 }
 
 html[data-theme="dark"] {
@@ -68,6 +72,10 @@ html[data-theme="dark"] {
 
   --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.05);
   --oh-hero-bg-2: rgba(255, 255, 255, 0.03);
+
+  /* Brighter green so links read against pure-black background */
+  --ifm-link-color: #4ade80;
+  --ifm-link-hover-color: #86efac;
 }
 
 /* Navbar: flat surface that matches body, subtle bottom border only */
@@ -162,6 +170,18 @@ button:focus-visible {
   outline: 2px solid var(--ifm-color-primary);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Underline prose links so the affordance is unambiguous.
+   Sidebar / navbar / TOC / footer / breadcrumb links rely on position,
+   so they keep the default underline-on-hover. */
+.markdown a:not(.hash-link) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.markdown a:not(.hash-link):hover {
+  text-decoration-thickness: 2px;
 }
 
 /* Headings: tighten letter-spacing */

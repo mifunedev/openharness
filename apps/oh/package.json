@@ -1,0 +1,20 @@
+{
+  "name": "@openharness/oh",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Open Harness CLI — in-sandbox configuration wizards.",
+  "type": "module",
+  "bin": {
+    "oh": "./dist/oh.js"
+  },
+  "scripts": {
+    "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/oh.js --banner:js='#!/usr/bin/env node'",
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  }
+}

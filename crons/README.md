@@ -6,8 +6,8 @@ job; the runtime scans this directory at boot, schedules every enabled
 job via [Croner](https://github.com/Hexagon/croner), and re-fires the
 file's body as the next prompt to the active agent.
 
-See `docs/architecture/crons-and-heartbeats.md` for the authoritative
-reference (frontmatter spec, lifecycle, overlap/catchup semantics).
+See `scripts/cron-runtime.ts` for the runtime implementation
+(frontmatter parsing, scheduling, overlap/catchup semantics).
 
 ## File shape
 

@@ -44,7 +44,6 @@ mkdir -p "memory/$TODAY"
 ```
 
 For directory anchor and gitignore conventions see `context/rules/directory-readme.md`.
-For the repo layout source of truth see `context/rules/repo-layout-source.md`.
 
 ## Read
 
@@ -145,7 +144,6 @@ goes in `IDENTITY.md`.
 | Resource | Path |
 |----------|------|
 | Directory README convention | `context/rules/directory-readme.md` |
-| Repo layout source of truth | `context/rules/repo-layout-source.md` |
 | Heartbeat cron (daily log writer) | `crons/heartbeat.md` |
 | Long-term lessons (instance) | `memory/MEMORY.md` |
 | Identity / operating principles | `context/IDENTITY.md` |

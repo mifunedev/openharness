@@ -117,8 +117,8 @@ Remove the sandbox.
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 
-For provision/destroy/repair workflows see `docs/operations/` — they are
-plain `docker compose` commands now, not skills.
+Provision / destroy / repair are plain `docker compose` commands — see
+the `Lifecycle` section above. There is no dedicated skill.
 
 ## Exposing apps
 
@@ -156,11 +156,8 @@ apps as stacked panes — see `context/rules/sandbox-processes.md`.
 
 ## Project Structure
 
-<!-- CANONICAL LAYOUT SOURCE: docs/architecture/container-runtime.md#repo-layout
-     Do NOT add a directory tree here. Update container-runtime.md instead. -->
-
 The harness root is `/home/sandbox/harness` inside the sandbox.
 Orchestrator scripts live in `scripts/`, scheduled agents in `crons/`,
 sandbox environment in `.devcontainer/`, and the agent template in
-`workspace/`. See [docs/architecture/container-runtime.md#repo-layout](docs/architecture/container-runtime.md#repo-layout)
-for the full annotated tree.
+`workspace/`. Per-directory `README.md` files explain anything whose
+purpose isn't obvious from the name.

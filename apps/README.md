@@ -14,9 +14,7 @@ root.
   short identifier (not its scoped npm name).
 - All build artefacts (`build/`, `.docusaurus/`, `node_modules/`) are
   gitignored — see root `.gitignore`.
-- New apps must be added to `pnpm-workspace.yaml` *and* to the layout
-  tree in `docs/architecture/container-runtime.md` (single source of
-  truth for repo layout).
+- New apps must be added to `pnpm-workspace.yaml`.
 
 ## Working in an app
 

@@ -11,5 +11,3 @@ Seed files encoding voice, operating principles, environment inventory, and work
 - `rules/` — auto-loaded coding and process rules (canonical, tool-agnostic)
 
 Claude Code auto-loads `rules/` via the `.claude/rules` symlink at the repo root.
-
-See `context/rules/repo-layout-source.md` for the layout single-source-of-truth rule.

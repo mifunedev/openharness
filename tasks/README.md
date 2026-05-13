@@ -32,6 +32,4 @@ A task directory typically contains:
 - `archive/` contents are gitignored except for archived task files
   themselves (see root `.gitignore`).
 
-See `docs/architecture/container-runtime.md#repo-layout` for where this
-sits in the broader tree, and `scripts/ralph.sh` for the runner entry
-point.
+See `scripts/ralph.sh` for the runner entry point.

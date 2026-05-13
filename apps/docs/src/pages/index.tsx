@@ -56,6 +56,19 @@ const AGENTS: Array<{
       />
     ),
   },
+  {
+    name: "T3 Code",
+    description: "Browser UI over Claude/Codex/OpenCode (port 3773).",
+    href: "/docs/agents/t3code",
+    icon: (
+      <img
+        src="https://github.com/pingdotgg.png"
+        alt=""
+        width={28}
+        height={28}
+      />
+    ),
+  },
 ];
 
 const WHY: Array<{ title: string; body: string }> = [

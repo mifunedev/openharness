@@ -27,13 +27,21 @@ codex --version
 
 ## Authentication
 
-Codex reads your OpenAI API key from the environment. Set it in the sandbox before running:
+Run `codex login` once and follow the prompts:
+
+```bash
+codex login
+```
+
+This signs you in with your ChatGPT account (or an OpenAI API key) and writes credentials to `~/.codex/`. They survive container rebuilds when the auth volume is mounted.
+
+If you'd rather use a raw API key non-interactively (CI, headless agents), export it instead:
 
 ```bash
 export OPENAI_API_KEY=<your-key>
 ```
 
-Add the export to `~/.zshrc` or `~/.bashrc` to persist it across sessions. You can also set it in `.devcontainer/.env` before provisioning so it is injected automatically.
+Add the export to `~/.zshrc`, `~/.bashrc`, or `.devcontainer/.env` to persist it across sessions.
 
 ## Common usage
 

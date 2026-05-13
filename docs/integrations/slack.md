@@ -3,96 +3,182 @@ sidebar_position: 1
 title: Slack
 ---
 
+> Slack UI labels accurate as of 2026-05-12.
+
 # Slack
 
-Slack support ships as a Pi extension at `.pi/extensions/slack/`. Once your sandbox has Pi installed and Slack tokens in env, mention the bot or DM it to start a conversation.
+The Slack integration ships as a Pi extension at `.pi/extensions/slack/`. Once
+your sandbox is up and Slack tokens are in env, DM the bot or mention it in a
+channel to start a conversation. The extension opens a Socket Mode WebSocket on
+startup and bridges inbound Slack events into the Pi agent, then posts the
+agent's response back to Slack.
 
-## Setup
+## 1. Prerequisites
 
-### 1. Create a Slack App
+- Sandbox is running (`make ps` shows the `openharness` container).
+- `pi --version` works inside the sandbox (`make shell` to verify).
+- A Slack workspace where you can create apps (workspace admin or equivalent).
+  If you are on a company Slack that restricts app creation, create a free
+  personal workspace at [slack.com/get-started](https://slack.com/get-started)
+  and use it for testing.
 
-1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App**.
-2. Choose **From an app manifest** and paste the manifest from `.pi/install/slack-manifest.json` in the harness.
-3. Install the app to your workspace.
-4. Copy the **App-Level Token** (starts with `xapp-`) from the **Basic Information** page.
-5. Copy the **Bot User OAuth Token** (starts with `xoxb-`) from the **OAuth & Permissions** page.
+## 2. Find Your Slack IDs
 
-### 2. Add Tokens to `.devcontainer/.env`
+You need these before filling in the allowlist env vars.
 
-Add these lines (no `export` prefix — Compose's `.env` format, same as the rest of the file):
+**User ID (`U…`)**
+
+1. Open Slack and go to your profile (or the profile of the user to allow).
+2. Click the **...** (More) menu in the top-right of the profile panel.
+3. Click **Copy member ID**. The value starts with `U`.
+
+**Channel ID (`C…`)**
+
+1. Open the channel in Slack.
+2. Click the channel name at the top to open the **About** panel.
+3. Scroll to the bottom of the panel — the channel ID starts with `C` and is
+   listed there.
+
+Collect all user and channel IDs you want to allow before moving to env setup.
+
+## 3. Create the Slack App
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click
+   **Create New App**.
+2. Choose **From an app manifest**.
+3. Select your workspace and paste the contents of
+   `.pi/install/slack-manifest.json` from this repo.
+4. Click through the confirmation screens and then **Install to Workspace**.
+5. Approve the requested OAuth scopes.
+
+## 4. Capture Tokens
+
+After installation, collect two tokens from the Slack app settings. They are
+not interchangeable — the wrong token in the wrong variable causes a silent
+auth failure.
+
+| Token | Prefix | Where to find it |
+|-------|--------|-----------------|
+| App-Level Token | `xapp-` | **Basic Information** page → **App-Level Tokens** section → generate one with `connections:write` scope |
+| Bot User OAuth Token | `xoxb-` | **OAuth & Permissions** page → **Bot User OAuth Token** |
+
+Keep both values ready for the next step.
+
+## 5. Run the wizard — `oh config slack`
+
+Inside the sandbox, run the wizard. It prompts for the two tokens, asks
+which allowlist mode to use (users / channels / both), validates IDs,
+writes `.devcontainer/.env` atomically, and offers to restart the
+`agent-pi` tmux session.
 
 ```bash
-SLACK_APP_TOKEN=xapp-...
-SLACK_BOT_TOKEN=xoxb-...
-SLACK_ALLOW_USERS=U01ABCD2345        # at least one allowlist is required
-# SLACK_ALLOW_CHANNELS=C01ABCD2345   # optional; see § Allowlist
+make shell           # enter the sandbox
+oh config slack      # interactive wizard
 ```
 
-See § Allowlist for how to obtain user/channel IDs and the deny-by-default rules.
+The wizard:
+- Validates token prefixes (`xapp-` / `xoxb-`) before writing — swapped
+  tokens are caught at the prompt, not after launch.
+- Enforces the deny-default allowlist rule (at least one of
+  `SLACK_ALLOW_USERS` / `SLACK_ALLOW_CHANNELS` is required).
+- Writes only the Slack keys; unrelated entries (`GH_TOKEN`, `TZ`, etc.)
+  are preserved.
+- **Starts the Slack bridge for you** — at the end, it kills any
+  existing `agent-pi` tmux session and launches a fresh one running
+  `pi` with the new env sourced. `pi` loads the Slack extension on boot
+  and opens the Socket Mode connection. The wizard polls for the
+  `"connected and listening"` log line and prints `✓ Slack bridge is live`
+  on success (up to 15s).
 
-### 3. Launch `pi` Inside the Sandbox
+If you decline the start step, the wizard prints the exact commands to
+launch the bridge manually later.
 
-The extension reads tokens from `process.env` at `session_start`, so the `pi` process must inherit them. `.devcontainer/.env` uses Compose's `KEY=value` format (not shell `export`), so you need `set -a` to auto-export everything as you source it. Per [`context/rules/sandbox-processes.md`](https://github.com/ryaneggz/open-harness/blob/main/context/rules/sandbox-processes.md), long-running agents live in a named tmux session.
+### Manual fallback
+
+If `oh` isn't available (older sandbox image, or you'd rather edit by
+hand), the manual procedure still works:
+
+<details>
+<summary>Hand-edit <code>.devcontainer/.env</code> + relaunch <code>agent-pi</code></summary>
+
+`.devcontainer/.env` uses Docker Compose `KEY=value` format — no `export`
+prefix. This file is gitignored, so your tokens will not be committed.
+
+```
+SLACK_APP_TOKEN=xapp-...
+SLACK_BOT_TOKEN=xoxb-...
+
+# At least one of the two allowlist vars must be set (deny-default if both absent).
+# When both are set: message passes only if channel AND user both match.
+SLACK_ALLOW_USERS=U01ABCD2345,U02EFGH6789
+# SLACK_ALLOW_CHANNELS=C01ABCD2345,C02EFGH6789
+
+# Optional vars:
+# SLACK_BASE_DIR=/custom/path    # default: ~/.pi/cache/slack
+# SLACK_BACKFILL=C01ABCD2345     # comma-separated channel IDs to backfill on startup (slow)
+```
+
+Then launch Pi in tmux. `.devcontainer/.env` is Compose-formatted (no
+`export`), so `set -a` is required to auto-export vars as they are
+sourced. **`set -a` is shell-local — the `tmux new-session` command must
+run in the same shell that ran `set -a`**, or `pi` will not inherit the
+vars. This is the most common manual-mode failure.
 
 ```bash
-make shell
 set -a; source /home/sandbox/harness/.devcontainer/.env; set +a
 tmux new-session -d -s agent-pi 'pi 2>&1 | tee /tmp/agent-pi.log'
 tmux attach -t agent-pi
 ```
 
-Detach with `Ctrl-b d`; reattach any time with `tmux attach -t agent-pi`.
+Detach with `Ctrl-b d`. The session name `agent-pi` follows the `agent-`
+prefix convention in
+[`context/rules/sandbox-processes.md`](https://github.com/ryaneggz/open-harness/blob/development/context/rules/sandbox-processes.md).
 
-No Docker Compose overlay is required — the in-tree Pi extension at `.pi/extensions/slack/` consumes these env vars directly. See `.pi/extensions/slack/README.md` for the full env var reference.
+</details>
 
-### 4. Smoke Test
+## 6. Smoke Test
 
-1. `env | grep SLACK` from the same shell should list `SLACK_APP_TOKEN`, `SLACK_BOT_TOKEN`, and your allowlist var. If they're missing here, the `set -a` step did not run in the same shell.
-2. `curl -s -H "Authorization: Bearer $SLACK_BOT_TOKEN" https://slack.com/api/auth.test | jq` should return `"ok": true`.
-3. From an allow-listed user, DM the bot or `@mention` it in a channel where it's a member. `tmux attach -t agent-pi` to watch `pi` receive the message and post the reply back to Slack.
+Run these checks in order. The first two run in the shell where you sourced
+the env (before attaching to tmux).
 
-## Allowlist
+1. **Vars present in the current shell:**
+   ```bash
+   env | grep SLACK
+   ```
+   Expected: `SLACK_APP_TOKEN`, `SLACK_BOT_TOKEN`, and your allowlist var are
+   all listed. If any are missing, `set -a` did not run in this shell — repeat
+   step 6 from the beginning.
 
-By default, the extension denies all Slack events unless you explicitly set at least one of these:
+2. **Socket Mode connected** (the real connectivity check):
+   ```bash
+   tmux capture-pane -t agent-pi -p | grep -i 'socket\|connected\|listening'
+   ```
+   Look for lines indicating the Socket Mode client connected or is listening.
+   Note: `curl https://slack.com/api/auth.test` only validates the bot token
+   (`xoxb-`), not the Socket Mode app token (`xapp-`). An invalid
+   `SLACK_APP_TOKEN` can pass `auth.test` and still fail to open a Socket Mode
+   connection. Use the tmux log check above as the authoritative test.
 
-| Env Var | Purpose |
-|---------|---------|
-| `SLACK_ALLOW_CHANNELS` | Comma-separated channel IDs to allow (e.g., `C123,C456`). If unset, allows any channel. |
-| `SLACK_ALLOW_USERS` | Comma-separated user IDs to allow (e.g., `U789,U101`). If unset, allows any user. |
+3. **Round-trip test:**
+   From an allow-listed user account, DM the bot or `@mention` it in an
+   allow-listed channel. Watch `tmux attach -t agent-pi` — you should see the
+   inbound event logged and the agent's reply posted back to Slack.
 
-**Fail-safe deny-default**: If both are unset, the extension blocks all messages. Set at least one to enable bridging.
+## 7. Troubleshooting
 
-Examples:
-```bash
-# Allow specific channels only
-SLACK_ALLOW_CHANNELS=C123,C456
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Bot doesn't respond; allowlist is set | `pi` did not inherit the vars — `set -a` ran in a different shell than `tmux new-session` | Kill the session (`tmux kill-session -t agent-pi`), run `set -a; source …; set +a`, then relaunch `tmux new-session` in the same shell |
+| Bot doesn't respond; no allowlist set | Deny-default: both `SLACK_ALLOW_CHANNELS` and `SLACK_ALLOW_USERS` are unset | Add at least one allowlist var to `.devcontainer/.env` and relaunch |
+| `invalid_auth` or `not_authed` in log | `xapp-` and `xoxb-` tokens are swapped | `SLACK_APP_TOKEN` must be the `xapp-` token; `SLACK_BOT_TOKEN` must be the `xoxb-` token — correct in `.devcontainer/.env` and relaunch |
+| Socket Mode crashes / reconnects in a loop | Network interruption or token revoked | `tmux kill-session -t agent-pi`, verify tokens in `.devcontainer/.env`, then relaunch |
+| Bot is in allow-list but channel messages ignored | Bot is not a member of the channel | In Slack, type `/invite @OpenHarness` in the target channel |
 
-# Allow specific users only
-SLACK_ALLOW_USERS=U789,U101
+## 8. Architecture Pointer
 
-# Allow both specific channels AND specific users (both must match)
-SLACK_ALLOW_CHANNELS=C123
-SLACK_ALLOW_USERS=U789
-```
+The extension is self-contained under `.pi/extensions/slack/`. For the full
+file inventory, env var reference, and build/test instructions, see
+[`.pi/extensions/slack/README.md`](https://github.com/ryaneggz/open-harness/blob/development/.pi/extensions/slack/README.md).
 
-## Architecture
-
-The extension opens a Socket Mode WebSocket on `session_start` and listens for:
-- `app_mention` events (when the bot is mentioned in a channel)
-- `message` events (DMs to the bot)
-
-Inbound messages are injected into the Pi agent via `pi.sendUserMessage()` with a `[Slack #channel] user:` prefix. The agent processes the message normally. On `turn_end`, if the agent did not explicitly call a slack tool, the extension automatically posts the agent's final text response back to Slack.
-
-Four tools are available for explicit Slack actions:
-- `slack_post(channel, text, threadTs?)` — post to a specific channel
-- `slack_reply(text, threadTs?)` — reply to the current Slack thread
-- `slack_react(emoji, ts?)` — add a reaction to a Slack message
-- `slack_upload(filename, content, channel?, threadTs?)` — upload a file to Slack
-
-Cleanup happens on `session_shutdown` — the Socket Mode connection is closed and watchers are stopped.
-
-## Full Details
-
-For a complete file inventory, env var reference, and build/test instructions, see `.pi/extensions/slack/README.md`.
-
-For tracking upstream changes and divergence history, see `.pi/UPSTREAM.md`.
+For upstream lineage, sync model, and divergence history, see
+[`.pi/UPSTREAM.md`](https://github.com/ryaneggz/open-harness/blob/development/.pi/UPSTREAM.md).

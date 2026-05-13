@@ -31,22 +31,22 @@ make shell
 You're now inside the isolated sandbox as the `sandbox` user. Working
 directory: `/home/sandbox/harness`.
 
-## Pick your agent
+## Pick your harness
 
-The sandbox ships with several agent CLIs preinstalled. Launch whichever
-you prefer:
+The sandbox ships with Claude Code, Codex, OpenCode, Pi, and DeepAgents
+preinstalled, plus T3 Code on demand via `npx`. Authenticate at least one
+before use:
 
-```bash
-claude        # Claude Code (default)
-codex         # OpenAI Codex CLI
-opencode      # OpenCode
-pi            # Pi Coding Agent
-deepagents    # LangChain DeepAgents (multi-provider)
-```
+- **[Claude Code](./agents/claude-code.md)**: run `claude` and follow the OAuth prompt
+- **[Codex](./agents/codex.md)**: run `codex login`
+- **[OpenCode](./agents/opencode.md)**: run `opencode auth login`
+- **[Pi](./agents/pi.md)**: configure provider keys via environment variables
+- **[DeepAgents](./agents/deepagents.md)**: write provider keys to `~/.deepagents/.env`
+- **[T3 Code](./agents/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `npx t3` (browser UI on port 3773)
 
-DeepAgents is an optional supported runtime — Claude Code remains the
-documented default. See [the agents overview](./agents/overview) for the
-full list and per-agent setup.
+Claude Code remains the documented default. See
+[the harnesses overview](./agents/overview) for the full list and
+per-harness setup.
 
 If `GH_TOKEN` was set during install, the entrypoint already ran
 `gh auth login` and `gh auth setup-git` for you. Otherwise run them once
@@ -70,8 +70,16 @@ safe defaults during install. The most-edited values:
 
 Apply changes with `make destroy && make sandbox`.
 
-For Postgres, Cloudflare tunnels, SSH, etc., chain compose overlays
-— see [Compose overlays](./guide/overlays).
+For Postgres, Cloudflare tunnels, SSH, etc., chain compose overlays from `.devcontainer/`.
+
+## Next steps
+
+With the sandbox running, here's what to wire up next:
+
+- Slack bridge for your sandbox agent → [integrations/slack.md](./integrations/slack.md)
+- GitHub auth (only if you skipped `GH_TOKEN` at install) → [integrations/github.md](./integrations/github.md)
+- Postgres via Compose overlay → [integrations/postgres.md](./integrations/postgres.md)
+- Cloudflare tunnels for external access → [integrations/cloudflare.md](./integrations/cloudflare.md)
 
 ## Tear down
 
@@ -88,9 +96,3 @@ make stop
 ```
 
 Bring it back later with `make sandbox`.
-
-## Next steps
-
-- [Onboarding](./onboarding) — detailed walkthrough of each auth step.
-- [Sandbox Lifecycle](./sandbox-lifecycle) — full reference for `docker compose` lifecycle commands.
-- [Connecting](./connecting) — VS Code and SSH alternatives to `docker exec`.

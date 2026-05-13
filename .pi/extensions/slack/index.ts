@@ -11,8 +11,8 @@ import type {
 	SessionStartEvent,
 	SessionShutdownEvent,
 	TurnEndEvent,
-} from "@mariozechner/pi-coding-agent";
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
+} from "@earendil-works/pi-coding-agent";
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import { SlackBot, type SlackEvent } from "./client.js";
 import { ChannelStore } from "./store.js";
 import { EventsWatcher, createEventsWatcher } from "./events.js";

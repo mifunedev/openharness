@@ -95,11 +95,9 @@ Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
 | Claude Code | `claude` | Anthropic's coding agent (aliased to `claude --dangerously-skip-permissions`) — default |
 | OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --dangerously-bypass-approvals-and-sandbox`) |
 | OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support |
-| Pi | `pi` | `@mariozechner/pi-coding-agent` — local-first coding agent |
+| Pi | `pi` | `@earendil-works/pi-coding-agent` — local-first coding agent (was `@mariozechner/pi-coding-agent`, now deprecated) |
 | DeepAgents | `deepagents` | LangChain's multi-provider terminal agent (`deepagents-cli` via `uv tool install`) — optional supported runtime |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents |
-
-The Mom Slack bot ships in the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack. Install by cloning the pack into your sandbox and following its README.
 
 ### Runtimes & package managers
 
@@ -145,10 +143,10 @@ codex   → codex --dangerously-bypass-approvals-and-sandbox
 
 Auth credentials survive container rebuilds via named Docker volumes:
 
-- `claude-auth` → `~/.claude` (Claude Code OAuth) — or, with the [`claude-host` overlay](./guide/overlays.md#sharing-host-claude-state-claude-host), a RW bind-mount of your host `~/.claude`.
+- `claude-auth` → `~/.claude` (Claude Code OAuth) — or, with the `claude-host` overlay, a RW bind-mount of your host `~/.claude`.
 - `codex-auth` → `~/.codex` (Codex OAuth) — or, with the `codex-host` overlay, a RW bind-mount of your host `~/.codex`.
-- `opencode-auth` → `~/.local/share/opencode` (OpenCode OAuth; `auth.json`) — or, with the [`opencode-host` overlay](./guide/overlays.md#sharing-host-opencode-state-opencode-host), a RW bind-mount of your host `~/.local/share/opencode`.
+- `opencode-auth` → `~/.local/share/opencode` (OpenCode OAuth; `auth.json`) — or, with the `opencode-host` overlay, a RW bind-mount of your host `~/.local/share/opencode`.
 - `pi-auth` → `~/.pi` (Pi Agent OAuth) — or, with the `pi-host` overlay, a RW bind-mount of your host `~/.pi`.
-- `deepagents-auth` → `~/.deepagents` (DeepAgents provider keys, memory, skills, sessions) — or, with the [`deepagents-host` overlay](./guide/overlays.md#sharing-host-deepagents-state-deepagents-host), a RW bind-mount of your host `~/.deepagents`. Repo-local `.deepagents/` is **project data** and follows normal `.gitignore` and code-review rules — never put secrets there.
+- `deepagents-auth` → `~/.deepagents` (DeepAgents provider keys, memory, skills, sessions) — or, with the `deepagents-host` overlay, a RW bind-mount of your host `~/.deepagents`. Repo-local `.deepagents/` is **project data** and follows normal `.gitignore` and code-review rules — never put secrets there.
 - `cloudflared-auth` → `~/.cloudflared` (Cloudflare credentials)
 - `gh-config` → `~/.config/gh` (GitHub CLI tokens)

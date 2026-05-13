@@ -4,7 +4,7 @@
 
 | Property | Value |
 |----------|-------|
-| **Upstream** | `badlogic/pi-mono` (historical; not directly used) |
+| **Upstream** | `earendil-works/pi-mono` (formerly `badlogic/pi-mono`; not directly used) |
 | **Reference Source** | `.worktrees/agent/portfolio-advisor/packages/slack/` (Pi harness agent worktree) |
 | **Reference Commit** | Latest on `portfolio-advisor` main branch as of 2026-05-07 |
 | **Vendored** | No — this is a port, not a vendor |

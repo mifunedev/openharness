@@ -65,16 +65,12 @@ make shell
 | **Browser** | agent-browser + Chromium (headless) |
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
 | **Crons** | Markdown-defined schedules in `crons/*.md` driven by the in-container croner runtime |
-| **Multi-agent** | Install a [harness pack](https://oh.mifune.dev/docs/guide/bring-your-own-harness) such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) for Pi+Mom + Slack |
+| **Multi-agent** | Install a harness pack such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) for additional multi-agent setups |
 
 ## 📚 Where to go next
 
 - [Quickstart](https://oh.mifune.dev/docs/quickstart) — full step-by-step
-- [Compose overlays](https://oh.mifune.dev/docs/guide/overlays) — Postgres, SSH, gateway, Cloudflare
-- [Bring your own harness](https://oh.mifune.dev/docs/guide/bring-your-own-harness) — install harness packs (e.g. [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) for the Pi+Mom Slack bot)
 - [Crons](https://oh.mifune.dev/docs/crons/overview) — markdown-defined autonomous tasks
-
-For Pi+Slack functionality, install the [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) harness pack from inside the sandbox.
 
 ## 🧹 Cleanup
 

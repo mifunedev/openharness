@@ -190,8 +190,8 @@ export default function Home(): React.ReactElement {
               <p>
                 Multi-agent setups — like a Pi+Mom Slack bot — ship as separate harness packs you <code>git clone</code> into the workspace.
               </p>
-              <Link className={styles.archLink} to="/docs/architecture/overview">
-                Read the architecture docs →
+              <Link className={styles.archLink} to="/docs/quickstart">
+                Read the quickstart →
               </Link>
             </div>
           </div>

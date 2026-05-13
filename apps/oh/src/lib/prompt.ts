@@ -48,16 +48,41 @@ export async function ask(question: string): Promise<string> {
 
 export async function askSecret(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  // Suppress echo by intercepting the output writer
+
+  // Suppress echo by intercepting the output writer. Without this, every
+  // keystroke would be echoed to the terminal and the token would be
+  // visible mid-entry.
   const stdoutWrite = process.stdout.write.bind(process.stdout);
   let prompted = false;
-  (process.stdout as unknown as { write: (chunk: string | Uint8Array) => boolean }).write = (chunk) => {
+  const patched = (chunk: string | Uint8Array): boolean => {
     if (!prompted) {
       prompted = true;
       return stdoutWrite(chunk);
     }
     return true; // swallow keystroke echoes
   };
+  type WritableHole = { write: (chunk: string | Uint8Array) => boolean };
+  (process.stdout as unknown as WritableHole).write = patched;
+
+  // Restore terminal state on any exit path — normal return, throw, or
+  // SIGINT. Without the SIGINT handler, Ctrl-C during token entry would
+  // leave the terminal with echo suppressed for the rest of the shell
+  // session.
+  let restored = false;
+  const restore = (): void => {
+    if (restored) return;
+    restored = true;
+    (process.stdout as unknown as WritableHole).write = stdoutWrite;
+    try { rl.close(); } catch { /* ignore */ }
+  };
+
+  const onSigint = (): void => {
+    restore();
+    process.stdout.write("\n");
+    process.exit(130); // 128 + SIGINT(2) — conventional shell-interrupt code
+  };
+  process.on("SIGINT", onSigint);
+
   try {
     return await new Promise<string>((resolve) => {
       rl.question(`  ${question} `, (answer) => {
@@ -66,8 +91,8 @@ export async function askSecret(question: string): Promise<string> {
       });
     });
   } finally {
-    (process.stdout as unknown as { write: (chunk: string | Uint8Array) => boolean }).write = stdoutWrite;
-    rl.close();
+    process.removeListener("SIGINT", onSigint);
+    restore();
   }
 }
 

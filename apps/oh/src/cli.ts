@@ -1,8 +1,39 @@
 import { runSlack } from "./config/slack.js";
 
-const VERSION = "0.1.0";
+// Injected at build time from package.json#version (see build.mjs).
+declare const __OH_VERSION__: string;
+const VERSION: string = typeof __OH_VERSION__ === "string" ? __OH_VERSION__ : "0.0.0-dev";
 
-function printHelp(): void {
+interface Integration {
+  description: string;
+  runner: () => Promise<number>;
+}
+
+const INTEGRATIONS: Record<string, Integration> = {
+  slack: {
+    description: "Slack bridge tokens + allowlist",
+    runner: runSlack,
+  },
+};
+
+function isHelpFlag(arg: string | undefined): boolean {
+  return arg === "--help" || arg === "-h" || arg === "help";
+}
+
+function isVersionFlag(arg: string | undefined): boolean {
+  return arg === "--version" || arg === "-v";
+}
+
+function integrationLines(): string {
+  const names = Object.keys(INTEGRATIONS);
+  if (names.length === 0) return "  (none)";
+  const width = Math.max(...names.map((n) => n.length));
+  return names
+    .map((n) => `  ${n.padEnd(width)}  ${INTEGRATIONS[n].description}`)
+    .join("\n");
+}
+
+function printOhHelp(): void {
   process.stdout.write(`oh — Open Harness CLI (v${VERSION})
 
 Usage:
@@ -11,7 +42,7 @@ Usage:
   oh --help                 Show this help
 
 Integrations:
-  slack                     Slack bridge tokens + allowlist
+${integrationLines()}
 
 Examples:
   oh config slack
@@ -23,51 +54,76 @@ function printConfigHelp(): void {
 
 Usage:
   oh config <integration>
+  oh config <integration> --help
 
 Integrations:
-  slack                     Slack bridge tokens + allowlist
+${integrationLines()}
 
 Examples:
   oh config slack
 `);
 }
 
-async function main(argv: string[]): Promise<number> {
-  const [first, second] = argv;
+function printIntegrationHelp(name: string, integration: Integration): void {
+  process.stdout.write(`oh config ${name} — ${integration.description}
 
-  if (!first || first === "--help" || first === "-h" || first === "help") {
-    printHelp();
+Usage:
+  oh config ${name}
+
+This launches an interactive wizard. It takes no flags.
+`);
+}
+
+async function main(argv: string[]): Promise<number> {
+  const [first, second, third] = argv;
+
+  if (!first || isHelpFlag(first)) {
+    printOhHelp();
     return 0;
   }
-  if (first === "--version" || first === "-v") {
+  if (isVersionFlag(first)) {
     process.stdout.write(`${VERSION}\n`);
     return 0;
   }
 
   if (first === "config") {
-    if (!second || second === "--help" || second === "-h") {
+    if (!second || isHelpFlag(second)) {
       printConfigHelp();
       return second ? 0 : 1;
     }
-    switch (second) {
-      case "slack":
-        return await runSlack();
-      default:
-        process.stderr.write(`oh config: unknown integration "${second}"\n`);
-        printConfigHelp();
-        return 1;
+
+    const integration = INTEGRATIONS[second];
+    if (!integration) {
+      process.stderr.write(`oh config: unknown integration "${second}"\n\n`);
+      printConfigHelp();
+      return 1;
     }
+
+    if (third && isHelpFlag(third)) {
+      printIntegrationHelp(second, integration);
+      return 0;
+    }
+
+    if (third !== undefined) {
+      process.stderr.write(
+        `oh config ${second}: unexpected argument "${third}". This wizard takes no flags.\n`,
+      );
+      return 1;
+    }
+
+    return await integration.runner();
   }
 
-  process.stderr.write(`oh: unknown command "${first}"\n`);
-  printHelp();
+  process.stderr.write(`oh: unknown command "${first}"\n\n`);
+  printOhHelp();
   return 1;
 }
 
 main(process.argv.slice(2)).then(
   (code) => process.exit(code),
   (err) => {
-    process.stderr.write(`oh: ${(err as Error).message ?? err}\n`);
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`oh: ${msg}\n`);
     process.exit(2);
   },
 );

@@ -9,6 +9,15 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.5.14] - 2026-05-14
+
+### Added
 - `.devcontainer/docker-compose.yml` publishes container port 1455 to the host loopback (`127.0.0.1:1455:1455`) for the **Pi harness** login flow, whose OAuth callback binds `http://localhost:1455`. With the port on the host loopback, VS Code Remote SSH's automatic port-forwarding carries the redirect back to the laptop and Pi login completes out of the box; direct-terminal (plain `ssh`) users still need to forward the port manually with `ssh -L 1455:localhost:1455 user@host`. The Codex CLI is unaffected — it has its own headless path via `codex login --device-auth`. ([#287](https://github.com/ryaneggz/open-harness/issues/287))
 
 ### Removed

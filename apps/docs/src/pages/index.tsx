@@ -56,6 +56,19 @@ const AGENTS: Array<{
       />
     ),
   },
+  {
+    name: "T3 Code",
+    description: "Browser UI over Claude/Codex/OpenCode (port 3773).",
+    href: "/docs/agents/t3code",
+    icon: (
+      <img
+        src="https://github.com/pingdotgg.png"
+        alt=""
+        width={28}
+        height={28}
+      />
+    ),
+  },
 ];
 
 const WHY: Array<{ title: string; body: string }> = [
@@ -69,7 +82,7 @@ const WHY: Array<{ title: string; body: string }> = [
   },
   {
     title: "Composable substrate",
-    body: "Postgres, Cloudflare tunnels, SSH, the Caddy gateway — cherry-pick via Compose overlays. Multi-agent setups ship as separate harness packs.",
+    body: "Postgres ships as an opt-in compose overlay; add tunnels, reverse proxies, or multi-agent setups as harness packs.",
   },
 ];
 
@@ -172,13 +185,13 @@ export default function Home(): React.ReactElement {
                 Open Harness runs as a single long-lived Docker container dedicated to your project. The bind-mounted <code>workspace/</code> houses whatever your project needs — one repo, several, side-by-side branches, scratch dirs. The agent owns its workspace; your laptop stays clean.
               </p>
               <p>
-                A markdown cron runtime reads <code>crons/*.md</code> and wakes the agent on a schedule — issue triage, PR review, background grooming, anything you want running while you sleep. Configure the sandbox via <code>.devcontainer/.env</code>; add infra (Postgres, Cloudflare tunnels, SSH, Caddy gateway) via Compose overlays.
+                A markdown cron runtime reads <code>crons/*.md</code> and wakes the agent on a schedule — issue triage, PR review, background grooming, anything you want running while you sleep. Configure the sandbox via <code>.devcontainer/.env</code>; Postgres ships as an opt-in compose overlay, and additional infra (tunnels, reverse proxies) is registered via harness-pack overlays in <code>config.json</code>.
               </p>
               <p>
                 Multi-agent setups — like a Pi+Mom Slack bot — ship as separate harness packs you <code>git clone</code> into the workspace.
               </p>
-              <Link className={styles.archLink} to="/docs/architecture/overview">
-                Read the architecture docs →
+              <Link className={styles.archLink} to="/docs/quickstart">
+                Read the quickstart →
               </Link>
             </div>
           </div>
@@ -207,7 +220,7 @@ export default function Home(): React.ReactElement {
               <Link className={styles.linkCard} to="/docs">
                 <span className={styles.linkCardLabel}>Documentation</span>
                 <span className={styles.linkCardSub}>
-                  Quickstart, architecture, overlays
+                  Quickstart, architecture, agents
                 </span>
               </Link>
             </div>

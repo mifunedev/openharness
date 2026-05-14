@@ -4,7 +4,7 @@ ENV TZ=America/Denver
 
 # ─── System packages ────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssh-server build-essential ca-certificates curl wget sudo gosu git jq gnupg \
+    openssh-client build-essential ca-certificates curl wget sudo gosu git jq gnupg \
     lsb-release nano ripgrep tmux unzip bash-completion procps less \
     iproute2 zsh \
  && rm -rf /var/lib/apt/lists/*
@@ -69,7 +69,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate \
 # by default without extra configuration.
 #
 # AGENTS is a comma-separated list of agent CLI keys to install. The default
-# is claude-code + codex + pi-coding-agent + opencode. Downstream harness packs (e.g.
+# is claude-code + codex + pi-coding-agent + opencode. The pi-coding-agent key
+# resolves to @earendil-works/pi-coding-agent (the @mariozechner/... package
+# is deprecated upstream as of late 2026). Downstream harness packs (e.g.
 # @ryaneggz/mifune) install additional CLIs via their install-hook.sh.
 SHELL ["/bin/bash", "-c"]
 
@@ -79,7 +81,7 @@ RUN set -e; \
     declare -A PKG=( \
         [claude-code]=@anthropic-ai/claude-code \
         [codex]=@openai/codex \
-        [pi-coding-agent]=@mariozechner/pi-coding-agent \
+        [pi-coding-agent]=@earendil-works/pi-coding-agent \
         [opencode]=opencode-ai \
     ); \
     IFS=',' read -ra agents <<< "$AGENTS"; \
@@ -88,6 +90,16 @@ RUN set -e; \
         if [ -n "$pkg" ]; then npm install -g "$pkg"; \
         else echo "Unknown agent: $a"; exit 1; fi; \
     done
+
+# ─── Open Harness `oh` CLI ──────────────────────────────────────────
+# Build the in-tree `oh` CLI (apps/oh/) into a self-contained bundle,
+# install onto $PATH. Source is COPY'd to /opt/oh (outside the
+# bind-mount) so the bundled binary survives the bind-mount overlay.
+# v1 ships `oh config slack` (Slack integration setup wizard).
+COPY apps/oh/ /opt/oh/
+RUN cd /opt/oh && npm install --no-audit --no-fund && npm run build \
+ && chmod +x /opt/oh/dist/oh.js \
+ && ln -sf /opt/oh/dist/oh.js /usr/local/bin/oh
 
 # ─── Sandbox user ──────────────────────────────────────────────────
 RUN useradd -m -s /bin/zsh sandbox \

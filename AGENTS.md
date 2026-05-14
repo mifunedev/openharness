@@ -107,7 +107,6 @@ Remove the sandbox.
 |-------|------|
 | `/release` | CalVer release — branch, tag, push, GHCR |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
-| `/cloudflared-tunnel` | One-time named tunnel setup (remote mode) |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
@@ -117,15 +116,15 @@ Remove the sandbox.
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 
-For provision/destroy/repair workflows see `docs/operations/` — they are
-plain `docker compose` commands now, not skills.
+Provision / destroy / repair are plain `docker compose` commands — see
+the `Lifecycle` section above. There is no dedicated skill.
 
 ## Exposing apps
 
-There is no first-class exposure tool right now. For external access,
-either enable the `cloudflared` compose overlay (see
-`docs/integrations/cloudflare.md`) or stand up your own reverse proxy
-in front of the sandbox.
+There is no first-class exposure tool. For external access, stand up
+your own reverse proxy (nginx/Caddy/Traefik) or tunnel (cloudflared,
+ngrok, tailscale-funnel) in front of the sandbox — the base ships
+without any of these.
 
 Long-running apps inside the sandbox go in named tmux sessions, related
 apps as stacked panes — see `context/rules/sandbox-processes.md`.
@@ -156,11 +155,8 @@ apps as stacked panes — see `context/rules/sandbox-processes.md`.
 
 ## Project Structure
 
-<!-- CANONICAL LAYOUT SOURCE: docs/architecture/container-runtime.md#repo-layout
-     Do NOT add a directory tree here. Update container-runtime.md instead. -->
-
 The harness root is `/home/sandbox/harness` inside the sandbox.
 Orchestrator scripts live in `scripts/`, scheduled agents in `crons/`,
 sandbox environment in `.devcontainer/`, and the agent template in
-`workspace/`. See [docs/architecture/container-runtime.md#repo-layout](docs/architecture/container-runtime.md#repo-layout)
-for the full annotated tree.
+`workspace/`. Per-directory `README.md` files explain anything whose
+purpose isn't obvious from the name.

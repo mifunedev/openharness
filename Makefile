@@ -5,26 +5,19 @@
 
 SANDBOX_NAME      ?= openharness
 COMPOSE_BASE      := -f .devcontainer/docker-compose.yml
-COMPOSE_OVERRIDES := $(shell jq -r '.composeOverrides[]?' \
-    config.json 2>/dev/null | sed 's|^|-f |' | tr '\n' ' ')
+# Base ships with no required overlays. Downstream packs (Pi extensions,
+# BYO harness packs) register their own by appending paths to
+# composeOverrides[] in config.json; jq is only invoked when both jq and
+# config.json are present.
+COMPOSE_OVERRIDES := $(shell command -v jq >/dev/null 2>&1 && [ -f config.json ] && \
+    jq -r '.composeOverrides[]?' config.json 2>/dev/null | sed 's|^|-f |' | tr '\n' ' ')
 COMPOSE           := docker compose $(COMPOSE_BASE) $(COMPOSE_OVERRIDES)
 
 .DEFAULT_GOAL := help
 
-.PHONY: sandbox shell destroy stop logs ps restart help _check-jq _check-config
+.PHONY: sandbox shell destroy stop logs ps restart help
 
-_check-jq:
-	@command -v jq >/dev/null 2>&1 || { \
-	  echo "ERROR: jq is required to expand config.json composeOverrides."; \
-	  echo "Install jq (e.g. apt install jq, brew install jq) and re-run."; \
-	  exit 1; }
-
-_check-config:
-	@[ -f config.json ] || { \
-	  echo "ERROR: config.json missing. Run scripts/install.sh, OR: cp config.example.json config.json"; \
-	  exit 1; }
-
-sandbox: _check-jq _check-config ## Provision and start the sandbox
+sandbox: ## Provision and start the sandbox
 	$(COMPOSE) up -d --build
 
 shell: ## Connect to the sandbox (agent choice happens inside)
@@ -48,3 +41,6 @@ restart: ## Restart the service
 help: ## List available targets with descriptions
 	@printf "Open Harness — Make targets:\n"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@printf "\nConfiguration wizards (run \033[36minside\033[0m the sandbox after \033[36mmake shell\033[0m):\n"
+	@printf "  \033[36moh config slack\033[0m  Slack integration setup wizard\n"
+	@printf "  \033[36moh --help\033[0m         List all \033[36moh\033[0m subcommands\n"

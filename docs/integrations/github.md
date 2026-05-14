@@ -40,26 +40,6 @@ gh run list --branch feat/my-feature
 gh issue view 42
 ```
 
-## Optional SSH overlays
-
-For cases where Git-over-SSH is required (custom Git servers, deploy keys, or workflows that do not support HTTPS), two compose overlays are available:
-
-| Overlay | Behavior |
-|---|---|
-| `docker-compose.ssh.yml` | Mounts your host `~/.ssh` directory into the sandbox read-only. Uses your existing SSH keys without copying them. |
-| `docker-compose.ssh-generate.yml` | Generates a new persistent ED25519 keypair in a named Docker volume. The public key must be added to GitHub manually before use. |
-
-These overlays are mutually exclusive — use at most one. Both are off by default. Add one when starting the sandbox:
-
-```bash
-docker compose \
-  -f .devcontainer/docker-compose.yml \
-  -f .devcontainer/docker-compose.ssh.yml \
-  up -d --build
-```
-
-For most users, `gh auth login` and `gh auth setup-git` are sufficient and no SSH overlay is needed.
-
 ## Persisting credentials across restarts
 
-The `gh` token is stored inside the container at `~/.config/gh/`. Because this path is inside the container, it is lost when the container is removed. To persist credentials across `docker compose down -v` cycles, either re-run `gh auth login` after each rebuild, or bind-mount a host directory to `~/.config/gh/` via a custom compose overlay.
+The `gh` token is stored inside the container at `~/.config/gh/`, backed by the named `gh-config` volume. The token survives `docker compose down` and `docker compose up` cycles. `docker compose down -v` removes the volume — re-run `gh auth login` after a `down -v`, or register your own compose overlay in `config.json` `composeOverrides[]` to bind-mount a host directory to `~/.config/gh/`.

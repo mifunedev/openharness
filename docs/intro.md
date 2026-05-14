@@ -32,13 +32,9 @@ If you are new, follow this order:
 
 1. [Installation](/docs/installation) — install Docker.
 2. [Quickstart](/docs/quickstart) — go from zero to a running sandbox in under five minutes.
-3. [Onboarding](/docs/onboarding) — authenticate GitHub, your LLM provider, and optional Slack integration.
-4. [Sandbox Lifecycle](/docs/sandbox-lifecycle) — bring sandboxes up, inspect them, attach, and clean up.
-5. [Connecting](/docs/connecting) — three ways to open a shell inside a running sandbox.
 
 If you already have a sandbox running, jump directly to the page you need.
 
 ## Where to get help
 
 - Source code and issues: [github.com/ryaneggz/open-harness](https://github.com/ryaneggz/open-harness)
-- Architecture deep-dive: see the Architecture section in the sidebar.

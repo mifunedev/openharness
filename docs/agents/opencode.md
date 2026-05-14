@@ -23,16 +23,15 @@ opencode --version
 
 ## Authentication
 
-For ChatGPT Plus and Pro users, the recommended default is OpenAI OAuth through OpenCode:
+Run `opencode auth login` once and follow the prompts:
 
 ```bash
-opencode
-/connect
+opencode auth login
 ```
 
-Choose **OpenAI** in the `/connect` flow. OpenCode stores auth at `~/.local/share/opencode/auth.json` inside the sandbox.
+For ChatGPT Plus and Pro users, choose **OpenAI** at the provider prompt to authenticate via OAuth. OpenCode stores credentials at `~/.local/share/opencode/auth.json` inside the sandbox. The same flow is reachable from inside an interactive `opencode` session via the `/connect` slash command.
 
-API key and provider environment variables are secondary. Use them when you need a non-OAuth provider or service-account style setup.
+Provider API key environment variables are secondary. Use them when you need a non-OAuth provider or a service-account style setup.
 
 ## Common usage
 
@@ -50,10 +49,6 @@ Run inside a dedicated tmux session to keep the agent alive across disconnects:
 tmux new-session -d -s agent-opencode 'opencode'
 tmux attach -t agent-opencode
 ```
-
-## Host auth overlay
-
-The `opencode-host` overlay bind-mounts your host OpenCode state from `~/.local/share/opencode` into the sandbox. Enable it only for trusted workflows, because any code running in the sandbox can read those credentials.
 
 ## Upstream documentation
 

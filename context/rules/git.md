@@ -34,13 +34,6 @@ Detect via `git show-ref --verify --quiet refs/heads/<name>` (or remote `refs/re
 
 Inside sandbox, run `gh auth login && gh auth setup-git` during onboarding. GitHub CLI installs credential helper — `git push` / `git fetch` use your GitHub token — no SSH keys required.
 
-Advanced opt-ins (only when git-over-SSH explicitly needed):
-
-- `docker-compose.ssh.yml` — mounts host `~/.ssh` read-only (reuses existing keys)
-- `docker-compose.ssh-generate.yml` — generates persistent ED25519 keypair in named volume (add to GitHub manually)
-
-Mutually exclusive — pick at most one. Both off by default.
-
 ## PR Titles
 
 Format: `FROM <source-branch> TO <target-branch>` (literal)

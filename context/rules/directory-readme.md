@@ -22,17 +22,15 @@ doc + folder anchor) without the empty-file smell.
 3. **Conventions** — naming, lifecycle, gitignore behaviour, anything
    non-obvious to someone landing fresh in the directory.
 4. **Pointer to canonical docs** — link to the rule or doc that owns
-   the deeper detail (`.claude/rules/git.md` § Worktrees,
-   `docs/architecture/crons-and-heartbeats.md`, etc.).
+   the deeper detail (`.claude/rules/git.md` § Worktrees, `scripts/cron-runtime.ts`,
+   etc.).
 
 ## What the README MUST NOT contain
 
-- **Directory trees with box-drawing** (`├──`, `└──`, `│`). Per
-  `.claude/rules/repo-layout-source.md`, the only annotated tree lives
-  at `docs/architecture/container-runtime.md#repo-layout`. Local
-  example layouts (a few lines, no box-drawing) are fine when they
-  illustrate a *contained* convention specific to that directory
-  (e.g. `project/foo/web/`).
+- **Large box-drawing trees** (`├──`, `└──`, `│`) reproducing the whole
+  repo. Local example layouts (a few lines, no box-drawing) are fine
+  when they illustrate a *contained* convention specific to that
+  directory (e.g. `project/foo/web/`).
 - **Duplicated rule content** — link to the canonical rule rather than
   paraphrasing it. Paraphrases drift.
 
@@ -54,15 +52,6 @@ mydir/*
 
 ## When NOT to add a README
 
-- Directory's name + a one-line annotation in the canonical layout
-  tree is enough (e.g. `blog/` for Docusaurus posts).
+- Directory's name alone is enough (e.g. `blog/` for Docusaurus posts).
 - Directory is auto-managed by tooling and not meant for human
   navigation (e.g. `node_modules/`).
-
-## Pairing with the layout source
-
-A new top-level directory still requires a one-line annotation in
-`docs/architecture/container-runtime.md#repo-layout` per
-`.claude/rules/repo-layout-source.md`. The README documents the
-*inside* of the directory; the layout tree documents *where* it
-sits. Both are required when intent isn't obvious.

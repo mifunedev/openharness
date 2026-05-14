@@ -1,13 +1,13 @@
 ---
 sidebar_position: 1
-title: "Agents Overview"
+title: "Harnesses Overview"
 ---
 
-# Agents Overview
+# Harnesses Overview
 
-Open Harness ships with five agent CLIs preinstalled in the sandbox image: **Claude Code** (default), **Codex**, **OpenCode**, **Pi**, and **DeepAgents**. Inside the sandbox, launch whichever you prefer — switch between them at any time, or keep long-running sessions in tmux.
+Open Harness ships with five agent CLIs preinstalled in the sandbox image: **Claude Code** (default), **Codex**, **OpenCode**, **Pi**, and **DeepAgents**. A sixth harness, **T3 Code**, runs on demand via `npx t3` as a browser UI on port 3773. Inside the sandbox, launch whichever you prefer — switch between them at any time, or keep long-running sessions in tmux.
 
-The sandbox is the product; the harness is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a [harness pack](../guide/bring-your-own-harness.md). For Pi+Slack specifically, the recommended path is the in-tree extension at [`.pi/extensions/slack/`](../integrations/slack.md); the legacy [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) pack still works during the transition. The product surface is one developer, one project, one harness — not racing or stacking multiple CLIs against each other.
+The sandbox is the product; the harness is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a harness pack such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune). For Pi+Slack specifically, the recommended path is the in-tree extension at [`.pi/extensions/slack/`](../integrations/slack.md). The product surface is one developer, one project, one harness — not racing or stacking multiple CLIs against each other.
 
 ## Supported agents
 
@@ -18,6 +18,7 @@ The sandbox is the product; the harness is your call. To go beyond the preinstal
 | [OpenCode](./opencode.md) | Terminal coding agent with OpenAI OAuth support | `opencode` | preinstalled |
 | [Pi](./pi.md) | Lightweight, customizable harness | `pi` | preinstalled |
 | [DeepAgents](./deepagents.md) | LangChain's multi-provider terminal agent | `deepagents` | preinstalled |
+| [T3 Code](./t3code.md) | Browser UI over Claude/Codex/OpenCode (port 3773) | `npx t3` | on-demand |
 
 ## Verifying installation
 
@@ -27,7 +28,19 @@ codex --version
 opencode --version
 pi --version
 deepagents -v
+npx t3 --version    # T3 Code (not preinstalled — fetched on demand)
 ```
+
+## Authentication
+
+Open Harness ships Claude Code, Codex, OpenCode, Pi, and DeepAgents preinstalled. Authenticate at least one harness before use:
+
+- **Claude Code**: run `claude` and follow the OAuth prompt (see [Claude Code](./claude-code.md)).
+- **Codex**: run `codex login` (see [Codex](./codex.md)).
+- **OpenCode**: run `opencode auth login` (see [OpenCode](./opencode.md)).
+- **Pi**: configure provider keys via environment variables (see [Pi](./pi.md)).
+- **DeepAgents**: write provider keys to `~/.deepagents/.env` (see [DeepAgents](./deepagents.md)).
+- **T3 Code**: authenticate one of Claude / Codex / OpenCode first, then `npx t3` and open the printed pairing URL (see [T3 Code](./t3code.md)).
 
 ## Running an agent in tmux
 
@@ -39,6 +52,7 @@ tmux new-session -d -s agent-codex      'codex --dangerously-bypass-approvals-an
 tmux new-session -d -s agent-opencode   'opencode'
 tmux new-session -d -s agent-pi         'pi'
 tmux new-session -d -s agent-deepagents 'deepagents'
+tmux new-session -d -s agent-t3code     'npx t3 2>&1 | tee /tmp/agent-t3code.log'
 ```
 
 Attach to any session at any time:

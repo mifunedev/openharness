@@ -61,14 +61,6 @@ on PATH and **configured** only when `~/.deepagents/.env` or
 `~/.deepagents/config.toml` is non-empty — an empty mounted directory is
 not treated as authenticated.
 
-### Reusing host DeepAgents state
-
-If you already use DeepAgents on the host, opt in to the
-`deepagents-host` overlay to bind-mount your host `~/.deepagents` into the
-sandbox. See [Sharing host DeepAgents state](../guide/overlays.md#sharing-host-deepagents-state-deepagents-host)
-for the trust tradeoffs, UID-1000 requirement, disable flow, and how to
-reset the named volume without touching host `~/.deepagents`.
-
 ## State persistence and repo-local `.deepagents/`
 
 Two separate directories carry DeepAgents state, with very different
@@ -76,7 +68,7 @@ durability and review semantics:
 
 | Path | Scope | Persistence | Notes |
 |---|---|---|---|
-| `~/.deepagents/` | Per-sandbox user state | Survives rebuilds via the `deepagents-auth` volume (or host bind-mount) | Provider keys, model defaults, memory, skills, sessions live here. **Only place secrets here.** |
+| `~/.deepagents/` | Per-sandbox user state | Survives rebuilds via the `deepagents-auth` volume | Provider keys, model defaults, memory, skills, sessions live here. **Only place secrets here.** |
 | `<repo>/.deepagents/` | Per-project | Whatever git decides | Project memory and skills the agent may load from the workspace root. **Treat as project data — follows normal `.gitignore` and code-review rules.** |
 
 A repo-local `.deepagents/` directory may be read by the agent and may be
@@ -155,16 +147,14 @@ Two environment overrides apply:
 > via `RALPH_DEEPAGENTS_FLAGS` grants unrestricted non-interactive shell
 > execution. Combined with the mounted Docker socket (enabled by default
 > in the base compose file), this can affect sibling containers or the
-> host Docker daemon, and combined with the `deepagents-host` overlay can
-> reach raw host provider keys. Only use `all` for trusted tasks where
+> host Docker daemon. Only use `all` for trusted tasks where
 > you have accepted that risk explicitly.
 
 ## Tips
 
 - Keep provider keys in `~/.deepagents/.env`. Never commit a repo-local
   `.deepagents/.env`.
-- Pair DeepAgents with a [worktree](../guide/workspace.md) so its branch
-  is isolated.
+- Pair DeepAgents with a git worktree so its branch is isolated.
 - Inspect non-interactive runs with `tmux attach -t agent-deepagents` (or
   the Ralph-launched session) to see live progress.
 

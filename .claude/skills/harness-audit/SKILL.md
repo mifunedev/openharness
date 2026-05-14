@@ -176,8 +176,6 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 4. **State corruption risks** — Look for: shared files written by multiple agents concurrently (e.g., `MEMORY.md`), no file locking on append operations, mid-commit crash scenarios (partial writes to critical files), compose volumes that could diverge.
 >
-> 5. **Tunnel fragility** — Check `.claude/skills/cloudflared-tunnel/SKILL.md` and any compose services named `tunnel` or `cloudflared`. Is there auto-restart? Health monitoring? What happens if the tunnel drops silently?
->
 > **Return format (Ultra compression):**
 > ```
 > CRITIC_FINDINGS
@@ -282,7 +280,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 |---------|--------------|
 | PM | Onboarding, skill consistency, issue templates, wiki/memory utilization |
 | Implementer | Startup reliability, test coverage, CI/CD, package health, compose overlays |
-| Critic | Security, heartbeat reliability, worktree cleanup, state corruption, tunnel |
+| Critic | Security, heartbeat reliability, worktree cleanup, state corruption |
 | Explorer | Memory quality, wiki utilization, heartbeat health, worktree status, skill usage |
 
 ### Severity and effort definitions

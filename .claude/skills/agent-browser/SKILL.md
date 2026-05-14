@@ -74,8 +74,8 @@ Rationale for the pins:
 - **0.8.5** — later majors have breaking CLI changes; the rest of this
   skill targets 0.8.5's flags.
 
-Or rebuild the image with `INSTALL_BROWSER=true` in the compose overlay
-to bake this in.
+Or rebuild the image with `INSTALL_AGENT_BROWSER=true` in
+`.devcontainer/.env` to bake this in.
 
 After installing, resume the health check from step 2b — **do not stop**.
 
@@ -123,7 +123,7 @@ agent-browser close
 
 ### Step 2d — DNS resolution check (tunnel hostnames)
 
-If the URL contains a hostname that routes through a cloudflared tunnel (any `<name>.<your-domain>` served via cloudflared), the container's DNS may not resolve it. Check and fix:
+If the URL contains a hostname served by a tunnel or reverse proxy, the container's DNS may not resolve it yet. Check and fix:
 
 ```bash
 HOSTNAME=$(echo "$URL" | sed 's|https\?://||; s|/.*||; s|:.*||')
@@ -135,7 +135,7 @@ if ! getent hosts "$HOSTNAME" &>/dev/null; then
     echo "$IP $HOSTNAME" | sudo tee -a /etc/hosts >/dev/null
     echo "Added $HOSTNAME -> $IP to /etc/hosts (container DNS didn't resolve it)"
   else
-    echo "FAIL: $HOSTNAME does not resolve. Check cloudflared tunnel DNS routing."
+    echo "FAIL: $HOSTNAME does not resolve. Check tunnel/DNS routing."
     # Stop here
   fi
 fi
@@ -177,7 +177,7 @@ FILENAME=$(echo "$URL" | sed 's|https\?://||; s|/|--|g; s|--$||; s|[^a-zA-Z0-9._
 agent-browser screenshot ".claude/screenshots/${FILENAME}.png"
 ```
 
-Example: `https://my-app.oh-local.localhost:8443/guide/exposure/` → `.claude/screenshots/my-app.oh-local.localhost-8443--guide--exposure.png`
+Example: `https://my-app.oh-local.localhost:8443/guide/configuration/` → `.claude/screenshots/my-app.oh-local.localhost-8443--guide--configuration.png`
 
 ### Step 5 — Report
 

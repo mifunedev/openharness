@@ -117,7 +117,7 @@ Yes if it has side effects, is invoked deliberately by the user, and runs end-to
 ls .claude/skills/
 ```
 
-Pick 2-3 task-shaped exemplars (e.g., this project's `release`, `ci-status`, `cloudflared-tunnel`) and read their SKILL.md to match house style — section structure, command-quoting conventions, how reports are formatted.
+Pick 2-3 task-shaped exemplars (e.g., this project's `release`, `ci-status`, `agent-browser`) and read their SKILL.md to match house style — section structure, command-quoting conventions, how reports are formatted.
 
 ### Phase 3 — Author SKILL.md
 

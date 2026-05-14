@@ -1,0 +1,49 @@
+# PostgreSQL Service Overlay
+# ===========================
+# Purpose: Run PostgreSQL 16 as a sibling service for sandbox database operations.
+# Default credentials: user=sandbox, password=sandbox, database=sandbox
+# Network: Sandbox and postgres share isolated network (devnet) for inter-service communication
+# Storage: pgdata volume persists database across container restarts
+# Health: Includes healthcheck; sandbox waits for postgres to be ready before starting
+# Environment vars injected into sandbox: DATABASE_URL, PGHOST, PGUSER, PGPASSWORD, PGDATABASE
+# Usage: docker compose -f docker-compose.yml -f docker-compose.postgres.yml up
+# Connection: psql postgresql://sandbox:sandbox@postgres:5432/sandbox (from inside sandbox)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${SANDBOX_NAME:-openharness}-postgres
+    environment:
+      POSTGRES_USER: sandbox
+      POSTGRES_PASSWORD: sandbox
+      POSTGRES_DB: sandbox
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sandbox"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devnet
+
+  sandbox:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://sandbox:sandbox@postgres:5432/sandbox
+      - PGHOST=postgres
+      - PGUSER=sandbox
+      - PGPASSWORD=sandbox
+      - PGDATABASE=sandbox
+    networks:
+      - devnet
+
+networks:
+  devnet:
+    name: ${SANDBOX_NAME:-openharness}-devnet
+    driver: bridge
+
+volumes:
+  pgdata:

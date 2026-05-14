@@ -50,10 +50,6 @@ tmux new-session -d -s agent-opencode 'opencode'
 tmux attach -t agent-opencode
 ```
 
-## Host auth overlay
-
-The `opencode-host` overlay bind-mounts your host OpenCode state from `~/.local/share/opencode` into the sandbox. Enable it only for trusted workflows, because any code running in the sandbox can read those credentials.
-
 ## Upstream documentation
 
 - [OpenCode CLI](https://opencode.ai/docs/cli/)

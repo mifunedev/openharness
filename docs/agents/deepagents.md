@@ -61,15 +61,6 @@ on PATH and **configured** only when `~/.deepagents/.env` or
 `~/.deepagents/config.toml` is non-empty — an empty mounted directory is
 not treated as authenticated.
 
-### Reusing host DeepAgents state
-
-If you already use DeepAgents on the host, opt in to the
-`deepagents-host` overlay to bind-mount your host `~/.deepagents` into the
-sandbox. The overlay requires host UID 1000 and a pre-existing host
-`~/.deepagents` directory; DeepAgents stores raw provider API keys with no
-scope or expiry, so enable it only when you've accepted that blast radius
-explicitly.
-
 ## State persistence and repo-local `.deepagents/`
 
 Two separate directories carry DeepAgents state, with very different
@@ -156,8 +147,7 @@ Two environment overrides apply:
 > via `RALPH_DEEPAGENTS_FLAGS` grants unrestricted non-interactive shell
 > execution. Combined with the mounted Docker socket (enabled by default
 > in the base compose file), this can affect sibling containers or the
-> host Docker daemon, and combined with the `deepagents-host` overlay can
-> reach raw host provider keys. Only use `all` for trusted tasks where
+> host Docker daemon. Only use `all` for trusted tasks where
 > you have accepted that risk explicitly.
 
 ## Tips

@@ -26,7 +26,7 @@ The installer:
 
 1. Verifies Docker and git are present.
 2. Clones the repo into `~/.openharness` (or pulls latest if the directory already exists).
-3. Prompts for `SANDBOX_NAME` and `SANDBOX_PASSWORD`, then writes `.devcontainer/.env`.
+3. Prompts for `SANDBOX_NAME`, then writes `.devcontainer/.env`.
 4. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
 5. Prints the next-step commands (open a shell, stop, tear down).
 
@@ -37,9 +37,8 @@ The installer:
 | `OH_INSTALL_REF=<git-ref>` | Pin the cloned repo to a specific tag or SHA instead of `main`. |
 | `OH_ASSUME_YES=1` | Accept defaults at every prompt. |
 | `SANDBOX_NAME=<name>` | Skip the "Container name" prompt. |
-| `SANDBOX_PASSWORD=<value>` | Skip the credential prompt (used by the optional `sshd` overlay). |
 
-`SANDBOX_NAME` and `SANDBOX_PASSWORD` resolve independently — set one and the other still prompts. Both fall back to defaults (`openharness` and `changeme`) when no TTY is available.
+`SANDBOX_NAME` falls back to the default (`openharness`) when no TTY is available.
 
 ## Manual installation
 
@@ -112,9 +111,8 @@ Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
 
 | Tool | Purpose |
 |------|---------|
-| Docker CLI + Compose | Container management from inside the sandbox (with docker overlay) |
+| Docker CLI + Compose | Container management from inside the sandbox (host docker socket bind-mounted by the base compose) |
 | GitHub CLI (`gh`) | PRs, issues, releases from the terminal |
-| cloudflared | Cloudflare Tunnel for public URLs to dev servers |
 | tmux | Detachable terminal sessions for long-running agents |
 | croner | Markdown-frontmatter cron scheduler for autonomous agent tasks |
 
@@ -127,7 +125,7 @@ Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
 | ripgrep (`rg`) | Fast code search |
 | curl, wget | HTTP clients |
 | nano | Text editor |
-| openssh-server | SSH server (enabled via sshd overlay) |
+| openssh-client | `ssh-keygen` for GitHub auth flows |
 | bash-completion | Tab completion |
 
 ### Shell aliases
@@ -143,10 +141,12 @@ codex   → codex --dangerously-bypass-approvals-and-sandbox
 
 Auth credentials survive container rebuilds via named Docker volumes:
 
-- `claude-auth` → `~/.claude` (Claude Code OAuth) — or, with the `claude-host` overlay, a RW bind-mount of your host `~/.claude`.
-- `codex-auth` → `~/.codex` (Codex OAuth) — or, with the `codex-host` overlay, a RW bind-mount of your host `~/.codex`.
-- `opencode-auth` → `~/.local/share/opencode` (OpenCode OAuth; `auth.json`) — or, with the `opencode-host` overlay, a RW bind-mount of your host `~/.local/share/opencode`.
-- `pi-auth` → `~/.pi` (Pi Agent OAuth) — or, with the `pi-host` overlay, a RW bind-mount of your host `~/.pi`.
-- `deepagents-auth` → `~/.deepagents` (DeepAgents provider keys, memory, skills, sessions) — or, with the `deepagents-host` overlay, a RW bind-mount of your host `~/.deepagents`. Repo-local `.deepagents/` is **project data** and follows normal `.gitignore` and code-review rules — never put secrets there.
-- `cloudflared-auth` → `~/.cloudflared` (Cloudflare credentials)
+- `claude-auth` → `~/.claude` (Claude Code OAuth)
+- `codex-auth` → `~/.codex` (Codex OAuth)
+- `opencode-auth` → `~/.local/share/opencode` (OpenCode OAuth; `auth.json`)
+- `pi-auth` → `~/.pi` (Pi Agent OAuth)
+- `deepagents-auth` → `~/.deepagents` (DeepAgents provider keys, memory, skills, sessions). Repo-local `.deepagents/` is **project data** and follows normal `.gitignore` and code-review rules — never put secrets there.
+- `cloudflared-auth` → `~/.cloudflared` (Cloudflare tunnel credentials, when used)
 - `gh-config` → `~/.config/gh` (GitHub CLI tokens)
+
+Downstream harness packs and Pi extensions can introduce additional volumes or bind-mount overlays by adding their own compose file to `composeOverrides[]` in `config.json`.

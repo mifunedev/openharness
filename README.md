@@ -42,8 +42,8 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 `.devcontainer/.env` is generated with safe defaults during install. Open
 it any time to change `SANDBOX_NAME`, set a different `GH_TOKEN`, change
-`TZ`, set `SANDBOX_PASSWORD` (sshd overlay), or set `SLACK_*` tokens for
-the Pi Slack extension. Apply with `make destroy && make sandbox`.
+`TZ`, or set `SLACK_*` tokens for the Pi Slack extension. Apply with
+`make destroy && make sandbox`.
 
 <details><summary>Manual setup (no installer)</summary>
 

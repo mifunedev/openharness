@@ -82,7 +82,7 @@ Assemble a structured markdown briefing to pass to ALL 5 experts:
 - API routes: none
 
 ### Infrastructure
-- Docker Compose + PostgreSQL 16 + cloudflared tunnel
+- Docker Compose base image (Debian + Node 22 + agent CLIs)
 - CI/CD: GitHub Actions (lint, format, type-check, build, test, E2E)
 - Release: CalVer → GHCR Docker image
 - Agent: 8 skills, 7 sub-agents, 4 heartbeats, memory protocol

@@ -107,7 +107,6 @@ Remove the sandbox.
 |-------|------|
 | `/release` | CalVer release — branch, tag, push, GHCR |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
-| `/cloudflared-tunnel` | One-time named tunnel setup (remote mode) |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
@@ -122,10 +121,10 @@ the `Lifecycle` section above. There is no dedicated skill.
 
 ## Exposing apps
 
-There is no first-class exposure tool right now. For external access,
-either enable the `cloudflared` compose overlay (see
-`docs/integrations/cloudflare.md`) or stand up your own reverse proxy
-in front of the sandbox.
+There is no first-class exposure tool. For external access, stand up
+your own reverse proxy (nginx/Caddy/Traefik) or tunnel (cloudflared,
+ngrok, tailscale-funnel) in front of the sandbox — the base ships
+without any of these.
 
 Long-running apps inside the sandbox go in named tmux sessions, related
 apps as stacked panes — see `context/rules/sandbox-processes.md`.

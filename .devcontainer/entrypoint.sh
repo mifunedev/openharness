@@ -13,25 +13,8 @@ if [ -S "$SOCK" ]; then
 fi
 
 # Fix ownership of mounted volumes (created as root by Docker).
-# Skip .claude / .codex / .pi / .deepagents / opencode when their host-mount
-# overlays are active — they're host bind-mounts and chown would rewrite
-# host file ownership (see docker-compose.{claude,codex,pi,deepagents,opencode}-host.yml).
-# Harness packs that introduce their own host-mount overlays should add
-# their own skip clauses or run a *-entrypoint-hook.sh.
 for dir in .claude .codex .pi .deepagents .cloudflared .config/gh .ssh; do
   if [ -d "/home/sandbox/$dir" ]; then
-    if [ "$dir" = ".claude" ] && [ "${CLAUDE_HOST_BIND_MOUNT:-0}" = "1" ]; then
-      continue
-    fi
-    if [ "$dir" = ".codex" ] && [ "${CODEX_HOST_BIND_MOUNT:-0}" = "1" ]; then
-      continue
-    fi
-    if [ "$dir" = ".pi" ] && [ "${PI_HOST_BIND_MOUNT:-0}" = "1" ]; then
-      continue
-    fi
-    if [ "$dir" = ".deepagents" ] && [ "${DEEPAGENTS_HOST_BIND_MOUNT:-0}" = "1" ]; then
-      continue
-    fi
     chown -R sandbox:sandbox "/home/sandbox/$dir" 2>/dev/null || true
     [ "$dir" = ".ssh" ] && chmod 700 "/home/sandbox/$dir" 2>/dev/null || true
   fi
@@ -56,36 +39,42 @@ done
 
 OPENCODE_STATE="/home/sandbox/.local/share/opencode"
 if [ -d "$OPENCODE_STATE" ]; then
-  if [ "${OPENCODE_HOST_BIND_MOUNT:-0}" != "1" ]; then
-    chown -R sandbox:sandbox "$OPENCODE_STATE" 2>/dev/null || true
-  fi
+  chown -R sandbox:sandbox "$OPENCODE_STATE" 2>/dev/null || true
 fi
 
 # ─── Host UID reconciliation ────────────────────────────────────────
 # The repo is bind-mounted at /home/sandbox/harness with its host UID/GID.
-# If the host user's UID differs from the container sandbox user (1000),
-# pnpm / git operations would fail with EACCES. Add sandbox to the host
-# owning group so it can write via group permissions (repo is mode 775).
+# To avoid permission drift between host and container (host edits files
+# created in-container and vice versa; git authorship stays consistent),
+# we sync the sandbox user's UID/GID to the host owner. After the sync,
+# anything sandbox creates inside the container is owned by the host
+# user on the host filesystem — no chown handoff needed.
 HARNESS_DIR="/home/sandbox/harness"
 if [ -d "$HARNESS_DIR" ]; then
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
   HOST_GID=$(stat -c '%g' "$HARNESS_DIR")
   SANDBOX_UID=$(id -u sandbox)
+  SANDBOX_GID=$(id -g sandbox)
+  if [ "$HOST_GID" != "$SANDBOX_GID" ]; then
+    if getent group "$HOST_GID" >/dev/null 2>&1; then
+      EXISTING_GROUP=$(getent group "$HOST_GID" | cut -d: -f1)
+      if [ "$EXISTING_GROUP" != "sandbox" ]; then
+        usermod -g "$HOST_GID" sandbox 2>/dev/null || true
+      fi
+    else
+      groupmod -g "$HOST_GID" sandbox 2>/dev/null || true
+    fi
+  fi
   if [ "$HOST_UID" != "$SANDBOX_UID" ]; then
-    if ! getent group "$HOST_GID" >/dev/null 2>&1; then
-      groupadd -g "$HOST_GID" hostuser 2>/dev/null || true
-    fi
-    HOST_GROUP=$(getent group "$HOST_GID" | cut -d: -f1)
-    if [ -n "$HOST_GROUP" ] && ! id -nG sandbox | tr ' ' '\n' | grep -qx "$HOST_GROUP"; then
-      usermod -aG "$HOST_GROUP" sandbox
-      echo "[entrypoint] sandbox added to host group $HOST_GROUP (gid=$HOST_GID) for bind-mount write access"
-    fi
+    usermod -u "$HOST_UID" sandbox 2>/dev/null || true
+    find /home/sandbox -xdev -uid "$SANDBOX_UID" -exec chown -h "$HOST_UID:$HOST_GID" {} + 2>/dev/null || true
+    echo "[entrypoint] sandbox UID synced to host ($SANDBOX_UID → $HOST_UID, $SANDBOX_GID → $HOST_GID)"
   fi
 fi
 
 # ─── Attach banner wiring (idempotent) ──────────────────────────────
 # Source install/banner.sh from the sandbox user's .bashrc so every
-# interactive shell (docker exec, SSH via sshd overlay, VS Code) shows
+# interactive shell (docker exec, VS Code) shows
 # sandbox + onboarding status. Safe to run on every boot.
 BASHRC="/home/sandbox/.bashrc"
 if [ -f "$BASHRC" ] && ! grep -q 'source.*install/banner.sh' "$BASHRC"; then
@@ -93,28 +82,7 @@ if [ -f "$BASHRC" ] && ! grep -q 'source.*install/banner.sh' "$BASHRC"; then
   echo "[entrypoint] attach banner wired into .bashrc"
 fi
 
-# ─── Git worktree resolution ────────────────────────────────────────
-# When the sandbox runs from a git worktree, .git is a file (not a dir)
-# pointing to the main repo's .git/worktrees/<name>. The main .git/ is
-# outside the bind mount, so we mount it separately at /home/sandbox/.git-main
-# (via docker-compose.git.yml) and rewrite the .git file to resolve inside
-# the container.
 HARNESS="/home/sandbox/harness"
-GIT_MAIN="/home/sandbox/.git-main"
-
-if [ -f "$HARNESS/.git" ] && [ -d "$GIT_MAIN" ]; then
-  WORKTREE_NAME=$(sed -n 's|.*worktrees/||p' "$HARNESS/.git")
-  if [ -n "$WORKTREE_NAME" ] && [ -d "$GIT_MAIN/worktrees/$WORKTREE_NAME" ]; then
-    echo "gitdir: $GIT_MAIN/worktrees/$WORKTREE_NAME" > "$HARNESS/.git"
-    chown sandbox:sandbox "$HARNESS/.git"
-    chown -R sandbox:sandbox "$GIT_MAIN" 2>/dev/null || true
-    gosu sandbox git config --global --add safe.directory "$HARNESS"
-    echo "[entrypoint] git worktree resolved → $GIT_MAIN/worktrees/$WORKTREE_NAME"
-  fi
-elif [ -d "$HARNESS/.git" ]; then
-  # Regular repo (not a worktree) — just fix ownership
-  chown -R sandbox:sandbox "$HARNESS/.git" 2>/dev/null || true
-fi
 
 # ─── GitHub CLI auth via PAT (optional) ─────────────────────────────
 # When GH_TOKEN is provided, persist it into ~/.config/gh/hosts.yml on
@@ -200,24 +168,6 @@ if [ -n "${GH_TOKEN:-}" ] && gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh aut
   fi
 fi
 
-# ─── SSH server setup (only when sshd overlay is active) ──────────
-if echo "$@" | grep -q sshd; then
-  # Set password for SSH login from env var
-  echo "sandbox:${SANDBOX_PASSWORD:-changeme}" | chpasswd 2>/dev/null || true
-  # Configure sshd for password + environment auth
-  mkdir -p /run/sshd
-  sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config 2>/dev/null || true
-  sed -i 's/#PermitUserEnvironment no/PermitUserEnvironment yes/' /etc/ssh/sshd_config 2>/dev/null || true
-  # Generate SSH host keys if missing
-  if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
-    ssh-keygen -A
-  fi
-  # Generate SSH keypair if none exists
-  if [ -d "/home/sandbox/.ssh" ] && [ ! -f "/home/sandbox/.ssh/id_ed25519" ]; then
-    gosu sandbox ssh-keygen -t ed25519 -f /home/sandbox/.ssh/id_ed25519 -N "" -C "sandbox@$(hostname)" 2>/dev/null || true
-  fi
-fi
-
 # ─── pnpm install at harness root ──────────────────────────────────
 # Root package.json declares deps that aren't bundled into Pi or any
 # global CLI: `croner` for scripts/cron-runtime.ts, plus the four sibling
@@ -247,7 +197,7 @@ fi
 # inside the system-cron tmux session; logs tee to /tmp/system-cron.log.
 CRONS_DIR="$HARNESS/crons"
 mkdir -p "$CRONS_DIR"
-chown -R sandbox:sandbox "$CRONS_DIR" 2>/dev/null || true
+# Bind-mounted; sandbox UID is synced to host UID above, so no chown.
 if [ -f "$HARNESS/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
   if ! gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
     gosu sandbox tmux new-session -d -s system-cron \

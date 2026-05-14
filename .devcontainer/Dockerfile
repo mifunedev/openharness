@@ -4,7 +4,7 @@ ENV TZ=America/Denver
 
 # ─── System packages ────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssh-server build-essential ca-certificates curl wget sudo gosu git jq gnupg \
+    openssh-client build-essential ca-certificates curl wget sudo gosu git jq gnupg \
     lsb-release nano ripgrep tmux unzip bash-completion procps less \
     iproute2 zsh \
  && rm -rf /var/lib/apt/lists/*

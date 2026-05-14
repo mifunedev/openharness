@@ -70,7 +70,9 @@ safe defaults during install. The most-edited values:
 
 Apply changes with `make destroy && make sandbox`.
 
-For Postgres, Cloudflare tunnels, SSH, etc., chain compose overlays from `.devcontainer/`.
+For additional services (Postgres, tunnels, SSH, etc.), register your
+own compose overlay by appending it to `composeOverrides[]` in
+`config.json` — the base ships with zero in-tree overlays.
 
 ## Next steps
 
@@ -78,8 +80,6 @@ With the sandbox running, here's what to wire up next:
 
 - Slack bridge for your sandbox agent → [integrations/slack.md](./integrations/slack.md)
 - GitHub auth (only if you skipped `GH_TOKEN` at install) → [integrations/github.md](./integrations/github.md)
-- Postgres via Compose overlay → [integrations/postgres.md](./integrations/postgres.md)
-- Cloudflare tunnels for external access → [integrations/cloudflare.md](./integrations/cloudflare.md)
 
 ## Tear down
 

@@ -29,6 +29,12 @@ services:
       - deepagents-auth:/home/sandbox/.deepagents
       - cloudflared-auth:/home/sandbox/.cloudflared
       - gh-config:/home/sandbox/.config/gh
+    ports:
+      # Codex (ChatGPT) OAuth login callback. Bound to host loopback only —
+      # lets an editor's auto-port-forwarding (e.g. VS Code Remote SSH) carry
+      # the redirect back to your laptop, removing the manual
+      # `ssh -L 1455:localhost:1455` step.
+      - "127.0.0.1:1455:1455"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:

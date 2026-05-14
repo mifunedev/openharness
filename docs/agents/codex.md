@@ -35,18 +35,13 @@ codex login
 
 This signs you in with your ChatGPT account (or an OpenAI API key) and writes credentials to `~/.codex/`. They survive container rebuilds when the auth volume is mounted.
 
-A working `codex login` is also a prerequisite for the **Pi harness** — without it, Pi can't reach the Codex subscription backend.
+On a headless or remote sandbox where the browser callback can't reach the container, use device-code auth instead — it prints a code to enter on another device, no port forwarding needed:
 
-### OAuth callback inside the container
+```bash
+codex login --device-auth
+```
 
-`codex login` starts a local callback server on `http://localhost:1455/auth/callback`. For the browser on your laptop to reach it, port 1455 has to be forwarded back from the container.
-
-- **VS Code Remote SSH (works out of the box):** the base `.devcontainer/docker-compose.yml` publishes `127.0.0.1:1455:1455`, and VS Code automatically forwards that loopback port to your laptop. Just run `codex login` — the redirect completes with no extra step.
-- **Direct terminal (plain `ssh`):** plain SSH does not auto-forward ports. Open the tunnel yourself before running `codex login`:
-
-  ```bash
-  ssh -L 1455:localhost:1455 user@your-host
-  ```
+> Note: the [Pi harness](./pi.md) has its own login flow that binds `localhost:1455` and *does* need that port forwarded — see [Pi § Authentication](./pi.md#authentication).
 
 If you'd rather use a raw API key non-interactively (CI, headless agents), export it instead:
 

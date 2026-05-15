@@ -10,6 +10,15 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ### Added
 ### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.5.15] - 2026-05-15
+
+### Added
+### Changed
 - `oh config slack` wizard UX overhaul. Token prompts now echo `●` per keystroke (was: silent — looked frozen) via a TTY-aware raw-mode `askSecret` that handles backspace, Ctrl-U, and Ctrl-C; piped/non-TTY stdin still uses the legacy readline fallback as `askSecretPiped` so `echo "" | oh config slack` keeps working. Flow is reframed into four numbered steps `[1/4] … [4/4]` with inline "Where:" hints and clickable URLs (OSC 8 hyperlinks; fall back to `label (url)` on legacy terminals). Each input shows `✓ valid prefix` / `✓ N user(s) accepted` after validation. A final summary screen lists the keys (tokens redacted, IDs visible) and gates the env-file write behind a `Proceed? [Y/n]` confirmation. New helpers exported from `apps/oh/src/lib/prompt.ts`: `step()`, `link()`, `bold()`. Zero new runtime dependencies. ([#290](https://github.com/ryaneggz/open-harness/issues/290))
 ### Fixed
 ### Removed

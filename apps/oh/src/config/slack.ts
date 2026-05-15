@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { loadEnvInto, upsertEnvFile } from "../lib/env.js";
 import {
-  ok, warn, fail, info, header,
+  ok, warn, fail, info, header, step, link, bold,
   ask, askSecret, askChoice, confirm,
   redact,
 } from "../lib/prompt.js";
@@ -72,19 +72,23 @@ async function promptTokens(env: Record<string, string | undefined>): Promise<{ 
     }
   }
 
+  step(1, 4, "Slack App Token (xapp-…)");
+  info(`  Where: ${link("https://api.slack.com/apps", "api.slack.com/apps")} → Basic Information → App-Level Tokens`);
   while (true) {
-    appToken = await askSecret("Slack App Token (xapp-...):");
+    appToken = await askSecret("Token:");
     const e = validateAppToken(appToken);
-    if (!e) break;
+    if (!e) { ok("valid prefix"); break; }
     fail(e);
   }
+
+  step(2, 4, "Slack Bot Token (xoxb-…)");
+  info(`  Where: ${link("https://api.slack.com/apps", "api.slack.com/apps")} → OAuth & Permissions → Bot User OAuth Token`);
   while (true) {
-    botToken = await askSecret("Slack Bot Token (xoxb-...):");
+    botToken = await askSecret("Token:");
     const e = validateBotToken(botToken);
-    if (!e) break;
+    if (!e) { ok("valid prefix"); break; }
     fail(e);
   }
-  ok(`Captured: App=${redact(appToken)}, Bot=${redact(botToken)}`);
   return { appToken, botToken };
 }
 
@@ -101,26 +105,38 @@ async function promptAllowlist(env: Record<string, string | undefined>): Promise
     }
   }
 
-  const mode = await askChoice("Allowlist mode (deny-default — at least one is required):", [
+  step(3, 4, "Allowlist mode");
+  const mode = await askChoice("Pick (deny-default — at least one is required):", [
     { label: "Users only — only listed users can talk to the bot", value: "users" },
     { label: "Channels only — only in listed channels", value: "channels" },
     { label: "Both — message must match user AND channel", value: "both" },
   ]);
 
+  step(4, 4, "Allowed IDs");
   const result: { users?: string; channels?: string } = {};
   if (mode === "users" || mode === "both") {
+    info(`  Users:    Slack profile → ⋯ menu → Copy member ID`);
     while (true) {
       const ids = await ask("User IDs (comma-separated, U…):");
       const e = validateIds(ids, "U");
-      if (!e) { result.users = normalizeIds(ids); break; }
+      if (!e) {
+        result.users = normalizeIds(ids);
+        ok(`${result.users.split(",").length} user(s) accepted`);
+        break;
+      }
       fail(e);
     }
   }
   if (mode === "channels" || mode === "both") {
+    info(`  Channels: channel header → About → bottom of panel`);
     while (true) {
       const ids = await ask("Channel IDs (comma-separated, C…):");
       const e = validateIds(ids, "C");
-      if (!e) { result.channels = normalizeIds(ids); break; }
+      if (!e) {
+        result.channels = normalizeIds(ids);
+        ok(`${result.channels.split(",").length} channel(s) accepted`);
+        break;
+      }
       fail(e);
     }
   }
@@ -165,7 +181,8 @@ export async function runSlack(): Promise<number> {
 
   const harnessRoot = findHarnessRoot();
   const envPath = resolve(harnessRoot, ".devcontainer/.env");
-  info(`Target env file: ${envPath}`);
+  info(`Target: ${envPath}`);
+  info(`Guide:  ${link("https://github.com/ryaneggz/open-harness/blob/development/docs/integrations/slack.md", "docs/integrations/slack.md")}`);
 
   // Ensure .devcontainer/ exists so we can write to it
   const devcontainerDir = dirname(envPath);
@@ -194,6 +211,17 @@ export async function runSlack(): Promise<number> {
   };
   if (config.allowUsers !== undefined) vars.SLACK_ALLOW_USERS = config.allowUsers;
   if (config.allowChannels !== undefined) vars.SLACK_ALLOW_CHANNELS = config.allowChannels;
+
+  info("");
+  info(bold(`Ready to write to ${envPath}:`));
+  for (const [k, v] of Object.entries(vars)) {
+    if (k.endsWith("_TOKEN")) info(`  ${k}=${redact(v)}`);
+    else                       info(`  ${k}=${v}`);
+  }
+  if (!(await confirm("Proceed?", true))) {
+    warn("Aborted. Nothing written.");
+    return 0;
+  }
 
   try {
     upsertEnvFile(envPath, vars);

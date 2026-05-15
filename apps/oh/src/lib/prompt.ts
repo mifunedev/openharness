@@ -30,6 +30,23 @@ export function header(msg: string): void {
   process.stdout.write(`\n${COLORS.bold}${msg}${COLORS.reset}\n\n`);
 }
 
+export function step(n: number, total: number, label: string): void {
+  const bar = "─".repeat(4);
+  process.stdout.write(`\n  ${bar} [${n}/${total}] ${COLORS.bold}${label}${COLORS.reset} ${bar}\n`);
+}
+
+export function bold(s: string): string {
+  return `${COLORS.bold}${s}${COLORS.reset}`;
+}
+
+export function link(url: string, label: string): string {
+  // OSC 8 hyperlink — supported by VS Code, iTerm2, GNOME Terminal, Windows
+  // Terminal. Unsupported terminals show only the label, so fall back to
+  // "label (url)" so the URL is still copy-pasteable.
+  if (!process.stdout.isTTY) return `${label} (${url})`;
+  return `\x1b]8;;${url}\x1b\\${label}\x1b]8;;\x1b\\`;
+}
+
 export function redact(token: string): string {
   if (token.length <= 8) return "****";
   return token.slice(0, 5) + "*".repeat(token.length - 5);
@@ -47,6 +64,54 @@ export async function ask(question: string): Promise<string> {
 }
 
 export async function askSecret(question: string): Promise<string> {
+  // Non-TTY (piped stdin, tests): the raw-mode path can't be used — fall back
+  // to the readline-based echo-suppressed implementation.
+  if (!process.stdin.isTTY) return askSecretPiped(question);
+
+  process.stdout.write(`  ${question} `);
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+
+  const bytes: number[] = [];
+  return await new Promise<string>((resolve) => {
+    const cleanup = (): void => {
+      try { process.stdin.setRawMode(false); } catch { /* ignore */ }
+      process.stdin.pause();
+      process.stdin.removeListener("data", onData);
+    };
+    const onData = (data: Buffer): void => {
+      for (const byte of data) {
+        if (byte === 0x03) {                            // Ctrl-C
+          cleanup();
+          process.stdout.write("\n");
+          process.exit(130);                             // 128 + SIGINT(2)
+        } else if (byte === 0x0d || byte === 0x0a) {    // Enter
+          cleanup();
+          process.stdout.write("\n");
+          resolve(Buffer.from(bytes).toString("utf8").trim());
+          return;
+        } else if (byte === 0x7f || byte === 0x08) {    // Backspace / DEL
+          if (bytes.length > 0) {
+            bytes.pop();
+            process.stdout.write("\b \b");
+          }
+        } else if (byte === 0x15) {                     // Ctrl-U → clear line
+          while (bytes.length > 0) {
+            bytes.pop();
+            process.stdout.write("\b \b");
+          }
+        } else if (byte >= 0x20) {                      // printable + UTF-8 cont.
+          bytes.push(byte);
+          process.stdout.write("●");
+        }
+        // Silently drop other control bytes (Tab, Esc sequences, etc.).
+      }
+    };
+    process.stdin.on("data", onData);
+  });
+}
+
+async function askSecretPiped(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
   // Suppress echo by intercepting the output writer. Without this, every
@@ -64,10 +129,6 @@ export async function askSecret(question: string): Promise<string> {
   type WritableHole = { write: (chunk: string | Uint8Array) => boolean };
   (process.stdout as unknown as WritableHole).write = patched;
 
-  // Restore terminal state on any exit path — normal return, throw, or
-  // SIGINT. Without the SIGINT handler, Ctrl-C during token entry would
-  // leave the terminal with echo suppressed for the rest of the shell
-  // session.
   let restored = false;
   const restore = (): void => {
     if (restored) return;
@@ -79,7 +140,7 @@ export async function askSecret(question: string): Promise<string> {
   const onSigint = (): void => {
     restore();
     process.stdout.write("\n");
-    process.exit(130); // 128 + SIGINT(2) — conventional shell-interrupt code
+    process.exit(130);
   };
   process.on("SIGINT", onSigint);
 

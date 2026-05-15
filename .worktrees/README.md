@@ -23,11 +23,11 @@ or a legacy agent-owned clone that has not yet graduated to the project
 layout. Do **not** put new long-lived external repos here just because an
 agent will work on them.
 
-Why this needed clarification: the first Mifune extraction clone went to
-`.worktrees/agent/mifune` because this README previously allowed
-"standalone agent-repo clones" under `agent/`. Mifune is a standalone
-`ryaneggz/mifune` project repo, so its durable home is now
-`.worktrees/project/ryaneggz/mifune/`.
+Why this needed clarification: this README previously allowed
+"standalone agent-repo clones" under `agent/`, which blurred the line
+between agent identity and project ownership. New standalone repos should
+use `project/<owner>/<repo>/` so the path reflects the remote project, not
+which agent happened to clone it first.
 
 See `.claude/rules/git.md` § Worktrees for the canonical workflow,
 including the stale-worktree policy.
@@ -46,12 +46,11 @@ Example layout:
 
 ```
 project/
-  ryaneggz/
-    mifune/             # https://github.com/ryaneggz/mifune.git
-    portfolio-advisor/  # https://github.com/ryaneggz/portfolio-advisor.git
-  acme/
-    web/                # https://github.com/acme/web.git
-    api/                # https://github.com/acme/api.git
+  <owner>/
+    <repo>/       # https://github.com/<owner>/<repo>.git
+    <other-repo>/ # https://github.com/<owner>/<other-repo>.git
+  <org>/
+    <repo>/       # https://github.com/<org>/<repo>.git
 ```
 
 Create on demand:

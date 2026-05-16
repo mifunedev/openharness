@@ -1,0 +1,208 @@
+{
+    "schemaVersion": 1,
+    "project": "mifunedev/skills",
+    "branchName": "feat/304-mifune-skills-library",
+    "description": "V0 bootstrap of the mifunedev/skills portable cross-agent skill library. Authors three seed skills (open-harness-review, docker-sandbox-debug, github-prd), a hand-written registry.json, a Bash install.sh, a validate.sh, README, and CI — all living under .worktrees/project/mifunedev/skills/ on the harness branch.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Scaffold repo skeleton at .worktrees/project/mifunedev/skills/",
+            "description": "As an installer-author, I want the repo layout from 01-architecture.md to exist on disk so subsequent stories can drop files into known locations.",
+            "acceptanceCriteria": [
+                "Directory .worktrees/project/mifunedev/skills/ exists with subdirectories: skills/, scripts/, template/, docs/, .github/ISSUE_TEMPLATE/, .github/workflows/",
+                "Top-level LICENSE file contains Apache-2.0 text",
+                "Top-level CHANGELOG.md exists with an empty ## [Unreleased] header (Keep a Changelog format)",
+                "Top-level .gitignore excludes node_modules/, dist/, .DS_Store, and any build artifacts",
+                "Top-level .github/PULL_REQUEST_TEMPLATE.md exists (uppercase, GitHub-recognized) with sections: Summary, Skill changes, Testing",
+                "Top-level .github/ISSUE_TEMPLATE/new-skill.md and .github/ISSUE_TEMPLATE/bug.md exist (templates may be minimal)",
+                "All paths are case-sensitive matches for 01-architecture.md § Target repo layout"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Foundational — every other story drops files under this path."
+        },
+        {
+            "id": "US-002b",
+            "title": "Scaffold .claude-plugin/ placeholder directory",
+            "description": "As V1 implementer, I want the .claude-plugin/ directory present from V0 so the V1 generator has a known location to write marketplace.json without disrupting layout.",
+            "acceptanceCriteria": [
+                "Directory .worktrees/project/mifunedev/skills/.claude-plugin/ exists",
+                "Contains a README.md (per context/rules/directory-readme.md) explaining the directory is reserved for V1's marketplace.json and is intentionally empty in V0",
+                "No marketplace.json file is written in V0"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": "Depends on US-001 scaffold."
+        },
+        {
+            "id": "US-003",
+            "title": "Author seed skill open-harness-review",
+            "description": "As an Open Harness user, I want a portable version of harness-audit so I can run the same pre-merge review from any Agent-Skills-compliant client.",
+            "acceptanceCriteria": [
+                "Folder .worktrees/project/mifunedev/skills/skills/open-harness-review/ exists with SKILL.md",
+                "SKILL.md frontmatter has all required fields per 01-architecture.md § Frontmatter rules: name, description (≤ 1024 chars, includes both what + when), license (Apache-2.0), metadata.mifune.version (0.1.0), metadata.mifune.category (open-harness), metadata.mifune.requires-tools (array)",
+                "Body is ≤ 500 lines (progressive disclosure)",
+                "No Claude-Code-specific keys at top level; any client-specific extensions are nested under metadata.mifune.claude-code.*",
+                "No $CLAUDE_SKILL_DIR references — use relative paths only",
+                "Source content adapted from .claude/skills/harness-audit/SKILL.md with HTML comment attribution at the top of the body",
+                "Scores CURRENT under this harness's /skill-lint (using the recipe documented in US-010 pre-flight)",
+                ".claude/skills/harness-audit/ is byte-unchanged (verified by git diff --exit-code in US-010)"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": "Parallelizable with US-004, US-005. Source attribution required; original is protected-path."
+        },
+        {
+            "id": "US-004",
+            "title": "Author seed skill docker-sandbox-debug",
+            "description": "As a sandbox operator, I want a portable skill for diagnosing common Docker sandbox failures so any agent can guide me through them.",
+            "acceptanceCriteria": [
+                "Folder .worktrees/project/mifunedev/skills/skills/docker-sandbox-debug/ exists with SKILL.md",
+                "Frontmatter conforms to the same rules as US-003 with category: dev-workflow, requires-tools: [\"docker\"]",
+                "Body covers at minimum: container not starting, port collisions, volume mount issues, tmux session lookup, log retrieval via docker logs / tmux capture-pane",
+                "No platform-locked instructions (works on Linux + macOS; Windows callout if relevant)",
+                "No Claude-Code-specific top-level frontmatter keys",
+                "Scores CURRENT under /skill-lint (using the recipe documented in US-010 pre-flight)"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": "Parallelizable with US-003, US-005. No protected-path source."
+        },
+        {
+            "id": "US-005",
+            "title": "Author seed skill github-prd",
+            "description": "As any AI agent user, I want a portable version of the /prd skill so I can generate PRDs from outside Claude Code.",
+            "acceptanceCriteria": [
+                "Folder .worktrees/project/mifunedev/skills/skills/github-prd/ exists with SKILL.md",
+                "Frontmatter conforms to the rules with category: dev-workflow, requires-tools: [\"gh\"]",
+                "Body adapted from .claude/skills/prd/SKILL.md with HTML comment attribution; sections preserved: clarifying questions, PRD structure, output rules",
+                "All Claude-Code-specific argument-hint / paths / hook references are either removed or moved to metadata.mifune.claude-code.*",
+                "No $CLAUDE_SKILL_DIR references",
+                "Scores CURRENT under /skill-lint (using the recipe documented in US-010 pre-flight)",
+                ".claude/skills/prd/ is byte-unchanged (verified by git diff --exit-code in US-010)"
+            ],
+            "priority": 5,
+            "passes": false,
+            "notes": "Parallelizable with US-003, US-004. Source attribution required; original is protected-path."
+        },
+        {
+            "id": "US-002",
+            "title": "Hand-write registry.json v1 (V0 seed)",
+            "description": "As a CLI implementer (future V1), I want registry.json to describe the three seed skills so the eventual generator has a reference to match. V0 override: file is hand-written; generator + drift-parity CI deferred to V1.",
+            "acceptanceCriteria": [
+                "File .worktrees/project/mifunedev/skills/registry.json exists",
+                "First key in the file is a _v0_note string explaining the hand-written status and pointing at the V1 generator deferral",
+                "Top-level fields present: $schema (commit-relative path: ./docs/schema/registry.v1.json — V0 ships the schema in-repo), name (mifunedev-skills), description, version (CalVer matching today's date), owner.name, owner.url",
+                "skills array has exactly 3 entries: open-harness-review, docker-sandbox-debug, github-prd",
+                "Each skill entry has all fields from 01-architecture.md § registry.json format: name, path, version, checksum (sha256 of folder, algorithm below), description, category, requires-tools, clients, license, added, updated",
+                "node -e \"JSON.parse(require('fs').readFileSync('registry.json'))\" exits 0",
+                "docs/checksum.md exists and documents the exact algorithm: find skills/<name> -type f -not -path '*/.*' | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1",
+                "docs/schema/registry.v1.json exists as a placeholder JSON Schema file (V0 may ship a minimal schema or a TODO schema); marked V0-seed in a top-of-file comment"
+            ],
+            "priority": 6,
+            "passes": false,
+            "notes": "Depends on US-003/US-004/US-005 (needs actual skill folders for checksum computation) AND US-001 scaffold."
+        },
+        {
+            "id": "US-006",
+            "title": "Author scripts/install.sh (Bash installer)",
+            "description": "As a no-Node, no-Docker user, I want a Bash one-liner that pulls a skill from the registry to my project, so I can adopt the library without any toolchain.",
+            "acceptanceCriteria": [
+                "File .worktrees/project/mifunedev/skills/scripts/install.sh exists and is chmod +x",
+                "First line is #!/usr/bin/env bash and second line is set -euo pipefail",
+                "Accepts CLI: install.sh install <skill-name> [--scope project|user] [--client agents|claude|harness]",
+                "Default scope is project; default client is agents (writes to .agents/skills/<name>/)",
+                "--client claude writes to .claude/skills/<name>/; --client harness writes to BOTH paths using documented staging+rename+rollback sequence; cross-filesystem invocations exit non-zero with ERR: install path on different filesystem from working tree",
+                "Open-harness safeguard: when --client is claude or harness, abort with exit code 3 if cwd or any walk-up parent contains BOTH .claude/protected-paths.txt AND context/SOUL.md (this is the open-harness repo)",
+                "Resolves git working tree root by walking up from cwd looking for .git; if absent and --scope project, exit code 4 with ERR: --scope project requires a git working tree",
+                "After git clone --depth 1 --branch main, captures commit_sha = git rev-parse HEAD and writes that SHA to the lock file's commit field (V0 mitigation for P6)",
+                "Copies only the requested skills/<name>/ folder; verifies SKILL.md exists before declaring success",
+                "Writes a lock entry to .mifune/skills.lock per 02-install-system.md § Lock file schema at the resolved git root",
+                "Re-running is idempotent: prints \"already installed at <path> (commit <sha>)\" and exits 0 without overwriting; idempotency keyed on (skill-name, scope, client, commit-sha)",
+                "On failure exits non-zero with single-line error to stderr; leaves no partial files",
+                "Has a --help flag that prints synopsis and exits 0",
+                "Symlink mode and --scope user|system not supported in V0; passing them errors with exit code 5",
+                "Lints clean under shellcheck -x scripts/install.sh",
+                "Negative-test script scripts/test-install.sh exercises the four error paths (harness-safeguard, no-git-root, cross-filesystem, symlink/user-scope) and the happy path; exits 0 only when all six produce documented exit codes"
+            ],
+            "priority": 7,
+            "passes": false,
+            "notes": "Depends on US-002 (lock schema knowledge + skill list) and US-001 scripts/ dir."
+        },
+        {
+            "id": "US-007",
+            "title": "Author scripts/validate.sh (CI gatekeeper)",
+            "description": "As a CI maintainer, I want a single script that runs all skill validations so CI is a one-liner.",
+            "acceptanceCriteria": [
+                "File .worktrees/project/mifunedev/skills/scripts/validate.sh exists, chmod +x, set -euo pipefail",
+                "Iterates every skills/*/SKILL.md and runs skills-ref validate against each (using the pinned invocation from US-010 pre-flight)",
+                "Verifies registry.json parses as JSON and lists every skill folder under skills/",
+                "Checksum integrity check: for every entry in registry.json[].skills, recomputes the folder checksum using the algorithm in docs/checksum.md and compares against the registry value; exits non-zero on drift with ERR: checksum drift in skills/<name>/ ...",
+                "Verifies no skill body exceeds 500 lines",
+                "Verifies no SKILL.md references $CLAUDE_SKILL_DIR",
+                "Verifies no Claude-Code-specific frontmatter keys at top level (deny-list: disable-model-invocation, user-invocable, paths, context, agent, argument-hint, arguments, hooks); deny-list rationale documented in docs/portability.md and at top of validate.sh",
+                "Exits non-zero with a clear summary listing every offending skill and rule",
+                "Lints clean under shellcheck -x scripts/validate.sh",
+                "Helper scripts/refresh-checksums.sh exists, recomputes all checksums in-place in registry.json, and is the V0 manual workflow for \"skill file changed\"; documented in docs/checksum.md"
+            ],
+            "priority": 8,
+            "passes": false,
+            "notes": "Depends on US-002 (registry + checksum doc) and US-003/US-004/US-005 (skills to validate)."
+        },
+        {
+            "id": "US-008",
+            "title": "Author repo README.md",
+            "description": "As a new contributor or first-time user, I want a README that explains what the library is, how to install a skill, and how to add a new skill in <10 minutes.",
+            "acceptanceCriteria": [
+                "File .worktrees/project/mifunedev/skills/README.md exists",
+                "Sections present: One-line intent, Install (curl one-liner with the exact command), Skill catalog (table of the 3 V0 skills with descriptions), Add a skill (numbered ≤10-step procedure), Layout (self-contained description; do NOT link to harness-internal spec paths), License (Apache-2.0)",
+                "Install one-liner uses exact pattern: curl -fsSL https://raw.githubusercontent.com/mifunedev/skills/main/scripts/install.sh | bash -s -- install <skill-name> --scope project",
+                "Includes a prominent NOTE block stating the GitHub raw URL becomes live after the manual one-time push to mifunedev/skills (which is out of V0 scope)",
+                "Includes a one-line explanation of the | bash -s -- pattern so first-time users understand how to pass arguments to a piped script",
+                "Add a skill steps are numbered and each ≤1 sentence; a person following them top-to-bottom can produce a passing skill folder + registry.json entry without consulting any other doc",
+                "No box-drawing tree (per context/rules/directory-readme.md)",
+                "Time-to-add target stated explicitly: \"Adding a new skill should take <10 minutes\""
+            ],
+            "priority": 9,
+            "passes": false,
+            "notes": "Depends on US-006 (install command) and US-002 (catalog). Parallelizable with US-009."
+        },
+        {
+            "id": "US-009",
+            "title": "Author CI workflow .github/workflows/ci.yml",
+            "description": "As a maintainer, I want every PR validated automatically so we never merge a broken skill.",
+            "acceptanceCriteria": [
+                "File .worktrees/project/mifunedev/skills/.github/workflows/ci.yml exists",
+                "Triggers on pull_request and push to main",
+                "Runs on ubuntu-latest",
+                "Steps in order: checkout, install skills-ref (using the EXACT pinned invocation documented in US-010 pre-flight — no \"per upstream docs\" hand-waving), install shellcheck, run scripts/validate.sh, run shellcheck -x scripts/*.sh",
+                "Workflow is < 60 lines and uses pinned action versions (no @main or @master)",
+                "Passes actionlint clean (if available; otherwise YAML lint clean)"
+            ],
+            "priority": 10,
+            "passes": false,
+            "notes": "Depends on US-007 (validate.sh) + US-010 pre-flight (skills-ref pin). Parallelizable with US-008."
+        },
+        {
+            "id": "US-010",
+            "title": "V0 acceptance verification (incl. blocking pre-flight)",
+            "description": "As the release captain, I want every V0 acceptance gate from 06-roadmap.md § V0 verified locally so we can declare V0 done before the harness PR merges. Includes blocking pre-flight that MUST complete before US-003/US-004/US-005/US-007/US-009 land their CURRENT/PASS claims.",
+            "acceptanceCriteria": [
+                "PRE-FLIGHT 1: Resolve Q3 — determine the exact invocation that runs this harness's /skill-lint against a skill folder at an arbitrary path. Document the recipe in tasks/mifune-skills-library/verification.md § skill-lint recipe.",
+                "PRE-FLIGHT 2: Resolve Q2 — determine the exact skills-ref install command + pin its version. Record the chosen invocation in verification.md § skills-ref invocation.",
+                "Fresh temp dir test: tmp=$(mktemp -d); cd \"$tmp\"; git init -q; bash <path-to-worktree>/scripts/install.sh install open-harness-review --scope project --client agents. Verify .agents/skills/open-harness-review/SKILL.md is written, .mifune/skills.lock has a 40-char commit SHA (not a branch name), script exits 0.",
+                "Idempotency: re-run the same command in the same $tmp. Verify prints \"already installed at .agents/skills/open-harness-review (commit <sha>)\", exits 0, and find output before/after matches.",
+                "Open-harness safeguard test: from /home/sandbox/harness, run bash .worktrees/project/mifunedev/skills/scripts/install.sh install open-harness-review --client harness. Verify exit code 3, documented ERR message, and .claude/skills/open-harness-review/ does NOT exist after the failed run.",
+                "No-git-root test: tmp2=$(mktemp -d); cd \"$tmp2\" (no git init); run install.sh install open-harness-review --scope project. Verify exit code 4.",
+                "Validation gate: run scripts/validate.sh; verify exits 0 with all three skills reported PASS and checksum integrity green.",
+                "Skill-lint gate: run /skill-lint against each of the three seed skill folders using the recipe documented in pre-flight 1; verify all three score CURRENT (record exact invocation + result in verification.md).",
+                "Source-skill integrity: run git diff --exit-code .claude/skills/harness-audit/ .claude/skills/prd/ from harness root; verify exits 0; record in verification.md.",
+                "Time-to-add: time the README's Add-a-skill procedure using a fresh test skill (hello-world); verify <10 minutes wall clock (record start + end timestamps). After timing, remove the test skill folder and revert any registry edit BEFORE final commit.",
+                "Write tasks/mifune-skills-library/verification.md with one section per gate, each containing the command run and observed output"
+            ],
+            "priority": 11,
+            "passes": false,
+            "notes": "Pre-flight 1 + 2 are blocking dependencies for any other story claiming CURRENT/PASS. Final story; depends on all others for the verification ACs."
+        }
+    ]
+}

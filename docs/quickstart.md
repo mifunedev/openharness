@@ -23,12 +23,20 @@ the sandbox up via `docker compose`.
 
 ## Enter the sandbox
 
+**Recommended: attach with VS Code's Dev Containers extension.** Works identically whether the sandbox is on your laptop or on a remote host you're SSH'd into (with VS Code's Remote-SSH extension). One window, your normal editor, integrated terminal, file tree — the most consistent and productive setup across environments.
+
+1. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+2. Open the Command Palette with `Ctrl+Shift+P` (`Cmd+Shift+P` on macOS) → **Dev Containers: Attach to Running Container...** → select `openharness`.
+3. When the new VS Code window opens, set the workspace folder to `/home/sandbox/harness`.
+
+**Terminal fallback** for when VS Code isn't available or you just need a shell:
+
 ```bash
 cd ~/.openharness
 make shell
 ```
 
-You're now inside the isolated sandbox as the `sandbox` user. Working
+Either way you're inside the isolated sandbox as the `sandbox` user. Working
 directory: `/home/sandbox/harness`.
 
 ## Pick your harness

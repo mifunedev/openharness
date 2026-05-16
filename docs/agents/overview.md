@@ -42,23 +42,51 @@ Open Harness ships Claude Code, Codex, OpenCode, Pi, and DeepAgents preinstalled
 - **DeepAgents**: write provider keys to `~/.deepagents/.env` (see [DeepAgents](./deepagents.md)).
 - **T3 Code**: authenticate one of Claude / Codex / OpenCode first, then `npx t3` and open the printed pairing URL (see [T3 Code](./t3code.md)).
 
-## Running an agent in tmux
+## Default surfaces
 
-Use named tmux sessions so each agent's output stays isolated and survives disconnects:
+Three surfaces cover most day-to-day use:
+
+- **Pi+Slack** — chat with the agent from Slack instead of the terminal.
+- **T3 Code** — browser UI on port `3773` driving Claude / Codex / OpenCode.
+- **Docs app** — the Docusaurus site you're reading now, on port `3000`.
+
+Each runs in its own named tmux session per [`context/rules/sandbox-processes.md`](https://github.com/ryaneggz/open-harness/blob/development/context/rules/sandbox-processes.md). For the two browser surfaces, open them in **VS Code's Simple Browser** (`Ctrl+Shift+P` → `Simple Browser: Show`; `Cmd+Shift+P` on macOS) so the live UI sits in a tab next to the code you're editing.
+
+### Pi+Slack
+
+The Pi agent with the Slack bridge loaded. The wizard writes `.devcontainer/.env`, launches the `harness-pi` session, and waits for the Socket Mode connection to come up:
 
 ```bash
-tmux new-session -d -s agent-claude     'claude'
-tmux new-session -d -s agent-codex      'codex --dangerously-bypass-approvals-and-sandbox'
-tmux new-session -d -s agent-opencode   'opencode'
-tmux new-session -d -s agent-pi         'pi'
-tmux new-session -d -s agent-deepagents 'deepagents'
-tmux new-session -d -s agent-t3code     'npx t3 2>&1 | tee /tmp/agent-t3code.log'
+oh config slack              # interactive wizard
+tmux attach -t harness-pi      # watch the live log
 ```
 
-Attach to any session at any time:
+Talk to the agent from Slack (DM or `@mention` in an allow-listed channel). Full setup: [Slack integration](../integrations/slack.md).
+
+### T3 Code
+
+Web UI on `http://localhost:3773` over an already-authenticated provider:
 
 ```bash
-tmux attach -t agent-claude
+tmux new-session -d -s harness-t3code 'npx t3 2>&1 | tee /tmp/harness-t3code.log'
+tmux capture-pane -t harness-t3code -p | grep -i pairingUrl
 ```
 
-See the individual agent pages for auth setup and usage examples.
+Open the printed pairing URL (`http://localhost:3773/pair#token=…`) in the Simple Browser tab. Full setup: [T3 Code](./t3code.md).
+
+### Docs app
+
+The site you're reading now, served locally:
+
+```bash
+tmux new-session -d -s app-docs 'pnpm --filter @openharness/docs dev 2>&1 | tee /tmp/app-docs.log'
+```
+
+Open `http://localhost:3000` in the Simple Browser tab for hot-reload feedback on doc edits without leaving the editor.
+
+### Reattach to any session
+
+```bash
+tmux ls                          # list sessions
+tmux attach -t <session-name>    # reattach (Ctrl-b d to detach)
+```

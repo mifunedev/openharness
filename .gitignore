@@ -55,3 +55,7 @@ workspace/startup.sh
 apps/*/build/
 apps/*/.docusaurus/
 apps/*/node_modules/
+
+# Mifune skills worktree — allow tracked scaffolding files under project/
+!.worktrees/project/
+!.worktrees/project/**

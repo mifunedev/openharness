@@ -1,2 +1,63 @@
 # progress
 
+## Codebase Patterns
+
+- **Worktree placement**: V0 work lives at `.worktrees/project/mifunedev/skills/` per `context/rules/git.md` § Worktrees convention for independent project clones. The root `.gitignore` includes `!.worktrees/project/**` so the subtree is trackable on the harness branch.
+- **Branch ref for install.sh**: the existing `mifunedev/skills` GitHub remote uses `master` (not `main`) as its only branch. `install.sh` therefore defaults `REGISTRY_BRANCH=master` and accepts a `MIFUNE_REGISTRY_BRANCH` env override.
+- **Checksum algorithm** (DRY across install.sh, validate.sh, refresh-checksums.sh): `find skills/<name> -type f -not -path '*/.*' | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1`. Canonical doc at `docs/checksum.md`.
+- **skills-ref invocation** (pinned per Wave 0 pre-flight): `npx skills-ref@0.1.5 validate <path>`. Recorded in `tasks/mifune-skills-library/verification.md` § skills-ref invocation.
+- **/skill-lint external-folder recipe** (per Wave 0 pre-flight): `/skill-lint` is a pure-LLM skill with no `--path` flag; the V0 recipe is stage-to-`.claude/skills/<name>/`, invoke `/skill-lint`, then `rm -rf` the staging path. End-to-end run is gated on Claude Code session, NOT subagent.
+- **Frontmatter portability deny-list** (stricter than upstream spec): `disable-model-invocation`, `user-invocable`, `paths`, `context`, `agent`, `argument-hint`, `arguments`, `hooks` are forbidden at top level. Lift to `metadata.mifune.claude-code.*` if needed. Rationale: `docs/portability.md`.
+
+## /delegate execution — 2026-05-16 UTC
+
+Single-session /delegate run. Six waves executed serially; within each wave, sub-agents ran in parallel where dependencies permitted.
+
+### Wave 0 — pre-flight (single agent)
+Commit `3307dcb` — Resolved Q2 (skills-ref) + Q3 (/skill-lint recipe); wrote `verification.md` § skills-ref invocation and § skill-lint recipe. `skills-ref@0.1.5` empirically verified (installed, exits 0 on valid, exit 1 on invalid).
+
+### Wave 1 — layout + .claude-plugin (2 agents parallel)
+- Commit `51854d5` — US-001 — repo skeleton: LICENSE, CHANGELOG, .gitignore, PR/issue templates, per-dir READMEs
+- Commit `0a345bf` — US-002b — `.claude-plugin/README.md` placeholder
+
+### Wave 2 — seed skills (3 agents parallel)
+- Commit `5293ac8` — US-003 — `skills/open-harness-review/SKILL.md`, 310 lines, adapted from `.claude/skills/harness-audit/SKILL.md` with attribution
+- Commit `3757761` — US-004 — `skills/docker-sandbox-debug/SKILL.md`, 337 lines, net-new content
+- Commit `78a9782` — US-005 — `skills/github-prd/SKILL.md`, 265 lines, adapted from `.claude/skills/prd/SKILL.md` with attribution
+
+### Wave 3 — registry + installer (2 agents parallel)
+- Commit `9f98669` — US-002 — `registry.json` (3 skills, real sha256, CalVer 2026.5.16), `docs/checksum.md`, `docs/schema/registry.v1.json`
+- Commit `d12eb50` — US-006 — `scripts/install.sh` + `scripts/test-install.sh`; 6/6 hermetic test scenarios pass (happy, idempotent, harness-safeguard exit 3, no-git-root exit 4, user-scope exit 5, symlink exit 5); shellcheck clean
+
+### Wave 4 — validate + README + CI (3 agents parallel)
+- Commit `de99279` — US-007 — `scripts/validate.sh` + `scripts/refresh-checksums.sh` + `docs/portability.md`; live run reports PASS (19 checks: JSON validity, registry parity, skills-ref, line count, $CLAUDE_SKILL_DIR check, deny-list, checksum integrity across all 3 skills)
+- Commit `f866be7` — US-008 — `README.md`, 74 lines, all required sections (intent, install one-liner with NOTE block + `| bash -s --` explainer, 3-skill catalog, 8-step add-a-skill procedure, layout, license)
+- Commit `a2fc295` — US-009 — `.github/workflows/ci.yml`, 33 lines, pinned `actions/checkout@v4`, YAML parses
+
+### Wave 5 — verification (single agent + orchestrator fix-up)
+- Commit `2de103c` — US-010 — `verification.md` results section; 6/8 ACs PASS, AC1 + AC2 BLOCKED (revealed install.sh hardcoded `--branch main` but real remote uses `master`)
+- Commit `2938a5e` — fix-up — install.sh now defaults to `master` with `MIFUNE_REGISTRY_BRANCH` env override; README + test-install.sh aligned; 6/6 test scenarios + 19/19 validate checks re-pass
+
+## Final state
+
+| Story | Status | Commit |
+|-------|--------|--------|
+| US-001 | PASS | 51854d5 |
+| US-002b | PASS | 0a345bf |
+| US-003 | PASS | 5293ac8 |
+| US-004 | PASS | 3757761 |
+| US-005 | PASS | 78a9782 |
+| US-002 | PASS | 9f98669 |
+| US-006 | PASS (fixed in 2938a5e) | d12eb50 |
+| US-007 | PASS | de99279 |
+| US-008 | PASS (fixed in 2938a5e) | f866be7 |
+| US-009 | PASS | a2fc295 |
+| US-010 | PASS (with caveats below) | 2de103c |
+
+## Open caveats (not blockers for V0 sign-off, but tracked)
+
+1. **US-010 AC 1 + AC 2** (curl install against the public URL): cannot be empirically PASSed in this PR because the V0 content has not yet been pushed to the `mifunedev/skills` GitHub remote — that push is a Non-Goal per the PRD. The hermetic 6/6 `scripts/test-install.sh` run is the operative verification of `install.sh` logic. AC 1+2 are recorded as DEFERRED-ON-UPSTREAM-PUSH in `verification.md`.
+2. **US-010 AC 6** (`/skill-lint` end-to-end CURRENT verdict): the orchestrator's Claude Code session must invoke `/skill-lint` interactively against each of the 3 seed skill folders using the stage-lint-restore recipe in `verification.md` § skill-lint recipe. The subagent cannot perform this gate.
+3. **PRD US-008 AC literal `main`**: superseded by empirical reality. The README and install.sh use `master` to match the live remote. Recorded as a minor deviation in commit `2938a5e`.
+
+STATUS: COMPLETE

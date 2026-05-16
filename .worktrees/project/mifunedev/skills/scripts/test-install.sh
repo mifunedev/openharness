@@ -87,7 +87,7 @@ SKILLEOF
   git -C "$mock_dir" config user.name "Test"
   git -C "$mock_dir" add .
   git -C "$mock_dir" commit -q -m "init mock registry"
-  git -C "$mock_dir" branch -m main 2>/dev/null || true
+  git -C "$mock_dir" branch -m master 2>/dev/null || true
 }
 
 # ---- setup: create mock registry once used by all tests --------------------

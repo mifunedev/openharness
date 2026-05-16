@@ -7,7 +7,7 @@ A portable, cross-agent skill library. Each skill is a plain folder containing a
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mifunedev/skills/main/scripts/install.sh | bash -s -- install <skill-name> --scope project
+curl -fsSL https://raw.githubusercontent.com/mifunedev/skills/master/scripts/install.sh | bash -s -- install <skill-name> --scope project
 ```
 
 The `| bash -s --` pattern sends the downloaded script to bash. Everything after `--` is passed as arguments to the script itself, not to bash.

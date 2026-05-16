@@ -5,7 +5,8 @@ set -euo pipefail
 # Usage: install.sh install <skill-name> [--scope project|user] [--client agents|claude|harness]
 # See: https://github.com/mifunedev/skills
 
-REGISTRY_REPO="https://github.com/mifunedev/skills"
+REGISTRY_REPO="${MIFUNE_REGISTRY_REPO:-https://github.com/mifunedev/skills}"
+REGISTRY_BRANCH="${MIFUNE_REGISTRY_BRANCH:-master}"
 CLI_VERSION="0.1.0"
 PROG="$(basename "$0")"
 
@@ -202,7 +203,7 @@ cleanup_clone() {
 trap cleanup_clone EXIT
 
 echo "Cloning mifunedev/skills (depth 1)..." >&2
-if ! git clone --quiet --depth 1 --branch main "$REGISTRY_REPO" "$TMPDIR_CLONE" 2>&1; then
+if ! git clone --quiet --depth 1 --branch "$REGISTRY_BRANCH" "$REGISTRY_REPO" "$TMPDIR_CLONE" 2>&1; then
   echo "ERR: failed to clone $REGISTRY_REPO" >&2
   exit 1
 fi

@@ -66,3 +66,31 @@ for every skill folder and write the result into `registry.json`. The CI
 workflow `registry.yml` will then verify that the committed file matches
 the regenerated output, failing the build on drift. For V0, checksums are
 computed manually and hand-written.
+
+## Updating Checksums After a Skill Change (V0)
+
+In V0, checksums are computed and committed manually. After editing any file
+inside a skill folder, run:
+
+```bash
+./scripts/refresh-checksums.sh
+```
+
+This script:
+1. Walks `skills/*/` using the same algorithm as above
+2. Compares each computed hash to the value in `registry.json`
+3. Updates `registry.json` in-place for any skill where the hash has changed
+4. Prints `OK`, `UPD`, or `SKIP` for each skill
+
+After the script reports changes, commit `registry.json`:
+
+```bash
+git add registry.json
+git commit -m "task: refresh checksums"
+```
+
+`scripts/validate.sh` (the CI gatekeeper) uses the identical `compute_checksum`
+function — both scripts are kept in sync to guarantee they produce the same hash.
+
+In V1, `scripts/publish-registry.sh` will subsume this workflow and run
+automatically in CI (see `registry.yml`).

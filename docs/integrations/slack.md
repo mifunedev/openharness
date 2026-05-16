@@ -182,3 +182,5 @@ file inventory, env var reference, and build/test instructions, see
 
 For upstream lineage, sync model, and divergence history, see
 [`.pi/UPSTREAM.md`](https://github.com/ryaneggz/open-harness/blob/development/.pi/UPSTREAM.md).
+
+[Connecting to the Sandbox](/docs/connecting)

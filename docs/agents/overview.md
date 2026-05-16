@@ -1,92 +1,53 @@
 ---
+id: overview
+title: "Agents Overview"
 sidebar_position: 1
-title: "Harnesses Overview"
 ---
 
-# Harnesses Overview
+# Agents Overview
 
-Open Harness ships with five agent CLIs preinstalled in the sandbox image: **Claude Code** (default), **Codex**, **OpenCode**, **Pi**, and **DeepAgents**. A sixth harness, **T3 Code**, runs on demand via `npx t3` as a browser UI on port 3773. Inside the sandbox, launch whichever you prefer — switch between them at any time, or keep long-running sessions in tmux.
+Open Harness ships a set of pre-built agent identities on public `agent/*` branches. Each branch contains a fully-scaffolded `workspace/` — identity files (`SOUL.md`, `AGENTS.md`), skills, heartbeats, and memory — that gives a harness a specific purpose. Check out the branch, run `make sandbox`, and the agent is live.
 
-The sandbox is the product; the harness is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a harness pack such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune). For Pi+Slack specifically, the recommended path is the in-tree extension at [`.pi/extensions/slack/`](../integrations/slack.md). The product surface is one developer, one project, one harness — not racing or stacking multiple CLIs against each other.
+## Agents vs. Harnesses
 
-## Supported agents
+| | Harnesses | Agents |
+|---|---|---|
+| **What** | The CLI engine you run (`claude`, `codex`, `pi`, …) | A configured workspace that gives an engine purpose |
+| **Where** | Preinstalled in the sandbox image | `agent/*` branches; `workspace/` bind-mounted at runtime |
+| **Analogy** | The interpreter | The program |
 
-| Agent | Role | Start command | Source |
-|---|---|---|---|
-| [Claude Code](./claude-code.md) | Anthropic's terminal coding agent (default) | `claude` | preinstalled |
-| [Codex](./codex.md) | OpenAI's CLI coding agent | `codex` | preinstalled |
-| [OpenCode](./opencode.md) | Terminal coding agent with OpenAI OAuth support | `opencode` | preinstalled |
-| [Pi](./pi.md) | Lightweight, customizable harness | `pi` | preinstalled |
-| [DeepAgents](./deepagents.md) | LangChain's multi-provider terminal agent | `deepagents` | preinstalled |
-| [T3 Code](./t3code.md) | Browser UI over Claude/Codex/OpenCode (port 3773) | `npx t3` | on-demand |
+An agent identity is engine-agnostic: the same `workspace/` can drive Claude Code, Codex, or Pi — whichever harness is authenticated. See [Harnesses](../harnesses/overview.md) for the engine-level docs.
 
-## Verifying installation
+## Adopting an agent
 
-```bash
-claude --version
-codex --version
-opencode --version
-pi --version
-deepagents -v
-npx t3 --version    # T3 Code (not preinstalled — fetched on demand)
-```
-
-## Authentication
-
-Open Harness ships Claude Code, Codex, OpenCode, Pi, and DeepAgents preinstalled. Authenticate at least one harness before use:
-
-- **Claude Code**: run `claude` and follow the OAuth prompt (see [Claude Code](./claude-code.md)).
-- **Codex**: run `codex login` (see [Codex](./codex.md)).
-- **OpenCode**: run `opencode auth login` (see [OpenCode](./opencode.md)).
-- **Pi**: configure provider keys via environment variables (see [Pi](./pi.md)).
-- **DeepAgents**: write provider keys to `~/.deepagents/.env` (see [DeepAgents](./deepagents.md)).
-- **T3 Code**: authenticate one of Claude / Codex / OpenCode first, then `npx t3` and open the printed pairing URL (see [T3 Code](./t3code.md)).
-
-## Default surfaces
-
-Three surfaces cover most day-to-day use:
-
-- **Pi+Slack** — chat with the agent from Slack instead of the terminal.
-- **T3 Code** — browser UI on port `3773` driving Claude / Codex / OpenCode.
-- **Docs app** — the Docusaurus site you're reading now, on port `3000`.
-
-Each runs in its own named tmux session per [`context/rules/sandbox-processes.md`](https://github.com/ryaneggz/open-harness/blob/development/context/rules/sandbox-processes.md). For the two browser surfaces, open them in **VS Code's Simple Browser** (`Ctrl+Shift+P` → `Simple Browser: Show`; `Cmd+Shift+P` on macOS) so the live UI sits in a tab next to the code you're editing.
-
-### Pi+Slack
-
-The Pi agent with the Slack bridge loaded. The wizard writes `.devcontainer/.env`, launches the `harness-pi` session, and waits for the Socket Mode connection to come up:
+**Option A — worktree (keeps your main checkout intact):**
 
 ```bash
-oh config slack              # interactive wizard
-tmux attach -t harness-pi      # watch the live log
+git fetch origin
+git worktree add .worktrees/agent/<name> agent/<name>
+cd .worktrees/agent/<name>
+make sandbox
 ```
 
-Talk to the agent from Slack (DM or `@mention` in an allow-listed channel). Full setup: [Slack integration](../integrations/slack.md).
-
-### T3 Code
-
-Web UI on `http://localhost:3773` over an already-authenticated provider:
+**Option B — fresh clone:**
 
 ```bash
-tmux new-session -d -s harness-t3code 'npx t3 2>&1 | tee /tmp/harness-t3code.log'
-tmux capture-pane -t harness-t3code -p | grep -i pairingUrl
+git clone https://github.com/ryaneggz/open-harness.git
+cd open-harness
+git checkout agent/<name>
+make sandbox
 ```
 
-Open the printed pairing URL (`http://localhost:3773/pair#token=…`) in the Simple Browser tab. Full setup: [T3 Code](./t3code.md).
+Both paths land you at the standard `make sandbox` flow described in [Installation](/docs/installation).
 
-### Docs app
+## Available agents
 
-The site you're reading now, served locally:
+| Agent | Description | Branch |
+|---|---|---|
+| [Blog Writer](./blog-writer) | Writes technical blog posts for ruska.ai in Ryan Eggleston's voice — developer-bookmark quality, SMB-forward | [agent/blog-writer](https://github.com/ryaneggz/open-harness/tree/agent/blog-writer) |
+| [DC Designer](./dc-designer) | Provisions and maintains a sandbox for an AI-driven 50MW–200MW hyperscale datacenter facility design | [agent/dc-designer](https://github.com/ryaneggz/open-harness/tree/agent/dc-designer) |
+| [LinkedIn Ghostwriter](./linkedin-ghostwriter) | General-purpose coding agent scaffolded for LinkedIn content drafting workflows | [agent/linkedin-ghostwriter](https://github.com/ryaneggz/open-harness/tree/agent/linkedin-ghostwriter) |
+| [Portfolio Manager](./portfolio-mgr) | Runs a mock $100K portfolio informed by Bridgewater's 13F filing and Ray Dalio's All Weather strategy | [agent/portfolio-mgr](https://github.com/ryaneggz/open-harness/tree/agent/portfolio-mgr) |
+| [UAT Tester](./uat-tester) | Visual acceptance testing agent — methodical, screenshot-driven, ranked by user impact | [agent/uat-tester](https://github.com/ryaneggz/open-harness/tree/agent/uat-tester) |
 
-```bash
-tmux new-session -d -s app-docs 'pnpm --filter @openharness/docs dev 2>&1 | tee /tmp/app-docs.log'
-```
-
-Open `http://localhost:3000` in the Simple Browser tab for hot-reload feedback on doc edits without leaving the editor.
-
-### Reattach to any session
-
-```bash
-tmux ls                          # list sessions
-tmux attach -t <session-name>    # reattach (Ctrl-b d to detach)
-```
+Each page documents the agent's purpose, workspace layout, and any setup steps beyond `make sandbox`.

@@ -22,31 +22,31 @@ const AGENTS: Array<{
   {
     name: "Claude Code",
     description: "Anthropic's terminal coding agent.",
-    href: "/docs/agents/claude-code",
+    href: "/docs/harnesses/claude-code",
     icon: <img src="/img/agents/claude-code.png" alt="" width={28} height={28} />,
   },
   {
     name: "Codex",
     description: "OpenAI's CLI coding agent.",
-    href: "/docs/agents/codex",
+    href: "/docs/harnesses/codex",
     icon: <img src="/img/agents/codex.png" alt="" width={28} height={28} />,
   },
   {
     name: "OpenCode",
     description: "Terminal agent with OpenAI OAuth support.",
-    href: "/docs/agents/opencode",
+    href: "/docs/harnesses/opencode",
     icon: <OpenCodeIcon />,
   },
   {
     name: "Pi",
     description: "A lightweight, customizable harness.",
-    href: "/docs/agents/pi",
+    href: "/docs/harnesses/pi",
     icon: <PiIcon />,
   },
   {
     name: "DeepAgents",
     description: "LangChain's multi-provider terminal agent.",
-    href: "/docs/agents/deepagents",
+    href: "/docs/harnesses/deepagents",
     icon: (
       <img
         src="https://avatars.githubusercontent.com/u/126733545?s=200&v=4"
@@ -59,7 +59,7 @@ const AGENTS: Array<{
   {
     name: "T3 Code",
     description: "Browser UI over Claude/Codex/OpenCode (port 3773).",
-    href: "/docs/agents/t3code",
+    href: "/docs/harnesses/t3code",
     icon: (
       <img
         src="https://github.com/pingdotgg.png"

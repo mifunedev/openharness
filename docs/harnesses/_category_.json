@@ -1,10 +1,10 @@
 {
-  "label": "Agents",
-  "position": 10,
+  "label": "Harnesses",
+  "position": 9,
   "collapsible": true,
   "collapsed": true,
   "link": {
     "type": "doc",
-    "id": "agents/overview"
+    "id": "harnesses/overview"
   }
 }

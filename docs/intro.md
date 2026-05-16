@@ -38,3 +38,5 @@ If you already have a sandbox running, jump directly to the page you need.
 ## Where to get help
 
 - Source code and issues: [github.com/ryaneggz/open-harness](https://github.com/ryaneggz/open-harness)
+
+[Connecting to the Sandbox](/docs/connecting)

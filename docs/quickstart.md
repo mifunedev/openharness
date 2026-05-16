@@ -37,16 +37,18 @@ The sandbox ships with Claude Code, Codex, OpenCode, Pi, and DeepAgents
 preinstalled, plus T3 Code on demand via `npx`. Authenticate at least one
 before use:
 
-- **[Claude Code](./agents/claude-code.md)**: run `claude` and follow the OAuth prompt
-- **[Codex](./agents/codex.md)**: run `codex login`
-- **[OpenCode](./agents/opencode.md)**: run `opencode auth login`
-- **[Pi](./agents/pi.md)**: configure provider keys via environment variables
-- **[DeepAgents](./agents/deepagents.md)**: write provider keys to `~/.deepagents/.env`
-- **[T3 Code](./agents/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `npx t3` (browser UI on port 3773)
+- **[Claude Code](./harnesses/claude-code.md)**: run `claude` and follow the OAuth prompt
+- **[Codex](./harnesses/codex.md)**: run `codex login`
+- **[OpenCode](./harnesses/opencode.md)**: run `opencode auth login`
+- **[Pi](./harnesses/pi.md)**: configure provider keys via environment variables
+- **[DeepAgents](./harnesses/deepagents.md)**: write provider keys to `~/.deepagents/.env`
+- **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `npx t3` (browser UI on port 3773)
 
 Claude Code remains the documented default. See
-[the harnesses overview](./agents/overview) for the full list and
+[the harnesses overview](./harnesses/overview) for the full list and
 per-harness setup.
+
+[Connecting to the Sandbox](/docs/connecting)
 
 If `GH_TOKEN` was set during install, the entrypoint already ran
 `gh auth login` and `gh auth setup-git` for you. Otherwise run them once

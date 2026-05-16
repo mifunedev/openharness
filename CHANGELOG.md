@@ -9,6 +9,15 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.5.16] - 2026-05-16
+
+### Added
 - `docs/connecting.md` — new runbook documenting the VSCode Attach + port-forwarding workflow for remote dev servers. Covers the "machine unreachable" debugging pattern: VS Code Remote SSH's automatic port-forwarding, manual fallback for direct-terminal users, and the `localhost:` prefix convention for accessing services on the Docker host. Referenced from `intro.md`, `quickstart.md`, `harnesses/overview.md`, `harnesses/t3code.md`, and `integrations/slack.md`. ([#300](https://github.com/ryaneggz/open-harness/issues/300))
 - **Agents catalog**: new `docs/agents/` section (renamed from `docs/agents/` → `docs/harnesses/` after initial creation to match sidebar label). Includes `_category_.json` organizing the section, `overview.md` as the hub page, and five per-branch playbook pages (`portfolio-mgr.md`, `blog-writer.md`, `linkedin-ghostwriter.md`, `dc-designer.md`, `uat-tester.md`), each documenting use-case, harness selection, auth flow, and tmux launch pattern. ([#300](https://github.com/ryaneggz/open-harness/issues/300))
 

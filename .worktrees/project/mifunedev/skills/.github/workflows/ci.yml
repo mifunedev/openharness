@@ -1,0 +1,33 @@
+name: "CI"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate skills
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install skills-ref
+        run: npm install skills-ref@0.1.5
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+
+      - name: Run validate.sh
+        run: bash scripts/validate.sh
+
+      - name: Run shellcheck
+        run: shellcheck -x scripts/*.sh

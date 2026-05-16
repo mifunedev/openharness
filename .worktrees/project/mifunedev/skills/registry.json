@@ -1,0 +1,52 @@
+{
+  "_v0_note": "This registry.json is hand-written for the V0 seed release. The automated generator (scripts/publish-registry.sh) and drift-parity CI check are deferred to V1 per the project PRD Non-Goals. Do not edit checksum values manually — recompute using the algorithm documented in docs/checksum.md.",
+  "$schema": "./docs/schema/registry.v1.json",
+  "name": "mifunedev-skills",
+  "description": "Cross-agent skill library curated by Mifune Dev.",
+  "version": "2026.5.16",
+  "owner": {
+    "name": "Mifune Dev",
+    "url": "https://mifune.dev"
+  },
+  "skills": [
+    {
+      "name": "open-harness-review",
+      "path": "skills/open-harness-review",
+      "version": "0.1.0",
+      "checksum": "sha256:5bfdf8c40e27571da62b19fea6def9fbf0bbf4f4d3674c9c81c1908812d76a26",
+      "description": "Spawn 4 parallel sub-agents (PM, Implementer, Critic, Explorer) to audit an Open Harness instance and produce a tier-ranked improvement report. Synthesizes findings and outputs the recommended next 3 actions. Invoke when asked to audit an Open Harness repo, review harness health, find improvements, triage \"what should we fix\", or run a periodic system check on an OH-based project.",
+      "category": "open-harness",
+      "requires-tools": ["gh", "git"],
+      "clients": [],
+      "license": "Apache-2.0",
+      "added": "2026-05-16",
+      "updated": "2026-05-16"
+    },
+    {
+      "name": "docker-sandbox-debug",
+      "path": "skills/docker-sandbox-debug",
+      "version": "0.1.0",
+      "checksum": "sha256:9cc6cdc25d75bf572355cd8a89387d2f549db0f879469a136402253aa30d8b04",
+      "description": "Diagnose and fix common Docker sandbox failures: containers that won't start, port collisions, volume mount errors, network issues, and log retrieval. Use when a container exits unexpectedly, a port is already in use, a bind mount shows empty or permission-denied errors, or you need to capture logs from a running container or in-sandbox tmux session.",
+      "category": "dev-workflow",
+      "requires-tools": ["docker"],
+      "clients": [],
+      "license": "Apache-2.0",
+      "added": "2026-05-16",
+      "updated": "2026-05-16"
+    },
+    {
+      "name": "github-prd",
+      "path": "skills/github-prd",
+      "version": "0.1.0",
+      "checksum": "sha256:c449e9fcd084a7d68b4fdddec0d624efe5863f8ee52c4e2041400813ce8f45ec",
+      "description": "Generate a Product Requirements Document (PRD) for a new feature and save it to the project task directory. Use when planning a feature, starting a new project, or when asked to create a PRD. Triggers on: create a prd, write prd for, plan this feature, requirements for, spec out.",
+      "category": "dev-workflow",
+      "requires-tools": ["gh"],
+      "clients": [],
+      "license": "Apache-2.0",
+      "added": "2026-05-16",
+      "updated": "2026-05-16"
+    }
+  ]
+}

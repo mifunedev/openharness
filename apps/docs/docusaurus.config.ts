@@ -74,6 +74,27 @@ const config: Config = {
     ],
   ],
 
+  plugins: [
+    [
+      "@docusaurus/plugin-client-redirects",
+      {
+        // Redirects for the renamed engine pages: docs/agents/ was renamed
+        // to docs/harnesses/. A new "Agents" section now lives at
+        // docs/agents/, so /docs/agents and /docs/agents/overview are real
+        // pages again and cannot be redirected. The 6 engine-name redirects
+        // below preserve old deep-links into the harness pages.
+        redirects: [
+          { from: "/docs/agents/claude-code", to: "/docs/harnesses/claude-code" },
+          { from: "/docs/agents/codex", to: "/docs/harnesses/codex" },
+          { from: "/docs/agents/deepagents", to: "/docs/harnesses/deepagents" },
+          { from: "/docs/agents/opencode", to: "/docs/harnesses/opencode" },
+          { from: "/docs/agents/pi", to: "/docs/harnesses/pi" },
+          { from: "/docs/agents/t3code", to: "/docs/harnesses/t3code" },
+        ],
+      },
+    ],
+  ],
+
   presets: [
     [
       "classic",

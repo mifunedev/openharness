@@ -67,3 +67,5 @@ If you can't reach `localhost:3773` from the host, expose port 3773 from the san
 ## Upstream documentation
 
 - [`pingdotgg/t3code` on GitHub](https://github.com/pingdotgg/t3code)
+
+[Connecting to the Sandbox](/docs/connecting)

@@ -21,7 +21,7 @@ root.
 From the repo root:
 
 ```bash
-pnpm --filter @openharness/docs dev      # run a workspace package
+pnpm --filter @openharness/docs start    # run a workspace package
 pnpm --filter @openharness/docs build    # build it
 ```
 

@@ -23,12 +23,20 @@ the sandbox up via `docker compose`.
 
 ## Enter the sandbox
 
+**Recommended: attach with VS Code's Dev Containers extension.** Works identically whether the sandbox is on your laptop or on a remote host you're SSH'd into (with VS Code's Remote-SSH extension). One window, your normal editor, integrated terminal, file tree — the most consistent and productive setup across environments.
+
+1. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
+2. Open the Command Palette with `Ctrl+Shift+P` (`Cmd+Shift+P` on macOS) → **Dev Containers: Attach to Running Container...** → select `openharness`.
+3. When the new VS Code window opens, set the workspace folder to `/home/sandbox/harness`.
+
+**Terminal fallback** for when VS Code isn't available or you just need a shell:
+
 ```bash
 cd ~/.openharness
 make shell
 ```
 
-You're now inside the isolated sandbox as the `sandbox` user. Working
+Either way you're inside the isolated sandbox as the `sandbox` user. Working
 directory: `/home/sandbox/harness`.
 
 ## Pick your harness
@@ -37,16 +45,18 @@ The sandbox ships with Claude Code, Codex, OpenCode, Pi, and DeepAgents
 preinstalled, plus T3 Code on demand via `npx`. Authenticate at least one
 before use:
 
-- **[Claude Code](./agents/claude-code.md)**: run `claude` and follow the OAuth prompt
-- **[Codex](./agents/codex.md)**: run `codex login`
-- **[OpenCode](./agents/opencode.md)**: run `opencode auth login`
-- **[Pi](./agents/pi.md)**: configure provider keys via environment variables
-- **[DeepAgents](./agents/deepagents.md)**: write provider keys to `~/.deepagents/.env`
-- **[T3 Code](./agents/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `npx t3` (browser UI on port 3773)
+- **[Claude Code](./harnesses/claude-code.md)**: run `claude` and follow the OAuth prompt
+- **[Codex](./harnesses/codex.md)**: run `codex login`
+- **[OpenCode](./harnesses/opencode.md)**: run `opencode auth login`
+- **[Pi](./harnesses/pi.md)**: configure provider keys via environment variables
+- **[DeepAgents](./harnesses/deepagents.md)**: write provider keys to `~/.deepagents/.env`
+- **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `npx t3` (browser UI on port 3773)
 
 Claude Code remains the documented default. See
-[the harnesses overview](./agents/overview) for the full list and
+[the harnesses overview](./harnesses/overview) for the full list and
 per-harness setup.
+
+[Connecting to the Sandbox](/docs/connecting)
 
 If `GH_TOKEN` was set during install, the entrypoint already ran
 `gh auth login` and `gh auth setup-git` for you. Otherwise run them once

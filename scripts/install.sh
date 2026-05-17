@@ -13,6 +13,26 @@ ok()     { printf "${GREEN} ✓  %s${NC}\n" "$*"; }
 warn()   { printf "${YELLOW}WARN: %s${NC}\n" "$*" >&2; }
 die()    { printf "${RED}ERROR: %s${NC}\n" "$*" >&2; exit 1; }
 
+# ─── normalize_gh_slug: strip GitHub URL decoration → owner/repo ─────
+# Handles four forms:
+#   https://github.com/owner/repo.git  →  owner/repo
+#   https://github.com/owner/repo      →  owner/repo
+#   git@github.com:owner/repo.git      →  owner/repo
+#   git@github.com:owner/repo          →  owner/repo
+normalize_gh_slug() {
+  local _url="$1"
+  # Strip https://github.com/ prefix (case-insensitive via tr would add
+  # complexity; GitHub slugs are case-insensitive but we preserve original case
+  # for comparison — OH_GITHUB_REPO is user-supplied already normalized).
+  _url="${_url#https://github.com/}"
+  # Strip git@github.com: prefix
+  _url="${_url#git@github.com:}"
+  # Strip trailing .git suffix
+  _url="${_url%.git}"
+  printf '%s' "$_url"
+}
+
+
 # ─── prompt_input: env-var > /dev/tty > default fallback > die ──────
 # Args: $1=varname, $2=prompt msg, $3=default (optional), $4=-s for secret
 # Reads from /dev/tty so curl-piped installs still get keystrokes (stdin
@@ -105,11 +125,15 @@ Env vars:
   OH_INSTALL_REF       Git ref (tag/SHA) to clone instead of main
   OH_ASSUME_YES        Set to 1 for --yes
   SANDBOX_NAME         Skip the "Container name" prompt
+  OH_GITHUB_REPO       GitHub repo to clone (default: ryaneggz/open-harness)
+  OH_GITHUB_REF        Git ref to clone (alias: OH_INSTALL_REF)
 
 Examples:
   curl -fsSL https://oh.mifune.dev/install.sh | bash
   curl -fsSL https://oh.mifune.dev/install.sh | bash -s -- --yes
   ./scripts/install.sh
+  OH_GITHUB_REPO=myorg/my-harness curl -fsSL \
+    https://raw.githubusercontent.com/myorg/my-harness/main/scripts/install.sh | bash
 HELPEOF
 }
 
@@ -179,6 +203,21 @@ else
   OLD_REPO="$HOME/openharness"
   REPO_DIR="$HOME/.openharness"
 
+  # ── OH_GITHUB_REPO: fork-parameterized clone source ───────────────────
+  OH_GITHUB_REPO="${OH_GITHUB_REPO:-ryaneggz/open-harness}"
+  if [[ ! "$OH_GITHUB_REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+    die "OH_GITHUB_REPO must be <owner>/<repo>: got '$OH_GITHUB_REPO'"
+  fi
+  if [ "$OH_GITHUB_REPO" != "ryaneggz/open-harness" ]; then
+    warn "Cloning from fork: $OH_GITHUB_REPO"
+  fi
+
+  # ── OH_GITHUB_REF: alias for OH_INSTALL_REF (OH_GITHUB_REF wins if set) ─
+  if [ -n "${OH_GITHUB_REF:-}" ] && [ -n "${OH_INSTALL_REF:-}" ] && [ "$OH_GITHUB_REF" != "$OH_INSTALL_REF" ]; then
+    warn "OH_GITHUB_REF and OH_INSTALL_REF both set with different values; OH_GITHUB_REF wins."
+  fi
+  OH_GITHUB_REF="${OH_GITHUB_REF:-${OH_INSTALL_REF:-}}"
+
   # ── Population classification + migration ─────────────────────────────
   __HAS_OLD=0; __HAS_NEW=0
   [ -d "$OLD_REPO/.git" ] && __HAS_OLD=1
@@ -227,21 +266,35 @@ else
   unset __HAS_OLD __HAS_NEW OLD_REPO
 
   if [ -d "$REPO_DIR/.git" ]; then
-    # ── Pull (clean tree only) ─────────────────────────────────────────────
-    if git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
-      printf "  Repository exists — pulling latest changes...\n"
-      git -C "$REPO_DIR" pull --ff-only
-      ok "Repository updated: $REPO_DIR"
+    # ── US-003: Validate remote origin matches OH_GITHUB_REPO ─────────────
+    __ORIGIN_RAW="$(git -C "$REPO_DIR" remote get-url origin 2>/dev/null || true)"
+    __ORIGIN_SLUG="$(normalize_gh_slug "${__ORIGIN_RAW:-}")"
+    __EXPECTED_SLUG="$(normalize_gh_slug "$OH_GITHUB_REPO")"
+    if [ -z "$__ORIGIN_RAW" ] || [ "$__ORIGIN_SLUG" != "$__EXPECTED_SLUG" ]; then
+      warn "Existing clone origin (${__ORIGIN_RAW:-<none>}) does not match OH_GITHUB_REPO=${OH_GITHUB_REPO}."
+      warn "Skipping pull. To switch sources:"
+      warn "  1. Back up customizations:  cp ~/.openharness/.devcontainer/.env /tmp/oh.env.bak"
+      warn "  2. Remove the clone:        rm -rf ~/.openharness"
+      warn "  3. Re-run with the desired OH_GITHUB_REPO and (if needed) OH_GITHUB_REF."
+      warn "  Note: rm -rf also discards any local changes and pinned OH_INSTALL_REF state."
     else
-      warn "Local changes detected in $REPO_DIR — skipping git pull. Stash or commit them, then re-run if you want the latest main."
+      # ── Pull (clean tree only) ─────────────────────────────────────────────
+      if git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
+        printf "  Repository exists — pulling latest changes...\n"
+        git -C "$REPO_DIR" pull --ff-only
+        ok "Repository updated: $REPO_DIR"
+      else
+        warn "Local changes detected in $REPO_DIR — skipping git pull. Stash or commit them, then re-run if you want the latest main."
+      fi
     fi
+    unset __ORIGIN_RAW __ORIGIN_SLUG __EXPECTED_SLUG
   else
     # ── Population A: fresh clone ──────────────────────────────────────────
-    if [ -n "${OH_INSTALL_REF:-}" ]; then
-      git clone --branch "$OH_INSTALL_REF" https://github.com/ryaneggz/open-harness.git "$REPO_DIR"
-      ok "Repository cloned at ref '$OH_INSTALL_REF': $REPO_DIR"
+    if [ -n "$OH_GITHUB_REF" ]; then
+      git clone --branch "$OH_GITHUB_REF" "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
+      ok "Repository cloned at ref '$OH_GITHUB_REF': $REPO_DIR"
     else
-      git clone https://github.com/ryaneggz/open-harness.git "$REPO_DIR"
+      git clone "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
       ok "Repository cloned: $REPO_DIR"
     fi
   fi

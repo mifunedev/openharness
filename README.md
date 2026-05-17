@@ -21,6 +21,21 @@ The installer clones into `~/.openharness`, offers to share your host
 `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min
 cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-docker/).
 
+### 📦 For forks / self-host
+
+> **Forking this repo?** The block above pulls upstream code. Use the block below to install your fork instead.
+
+```bash
+OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh | bash
+```
+
+If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL.
+
+`curl | bash` from a branch HEAD is mutable — pin to a tag/SHA for production installs.
+
+> **Note:** Forks restructuring `.devcontainer/` should also patch the local-run detection in `scripts/install.sh` (the `-f .devcontainer/docker-compose.yml` check near line 173) — update the paths to match the new layout.
+
 ## 🚀 Use it
 
 ```bash

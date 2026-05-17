@@ -34,11 +34,24 @@ The installer:
 
 | Variable | Effect |
 |---|---|
-| `OH_INSTALL_REF=<git-ref>` | Pin the cloned repo to a specific tag or SHA instead of `main`. |
+| `OH_GITHUB_REPO=<owner>/<repo>` | GitHub repository to clone (default: `ryaneggz/open-harness`). Set to your fork's slug to install your fork's code. |
+| `OH_GITHUB_REF=<git-ref>` | Pin the cloned repo to a specific tag, branch, or SHA instead of `main`. |
+| `OH_INSTALL_REF=<git-ref>` | Back-compat alias for `OH_GITHUB_REF`. Both names work; `OH_GITHUB_REF` takes precedence when both are set. |
 | `OH_ASSUME_YES=1` | Accept defaults at every prompt. |
 | `SANDBOX_NAME=<name>` | Skip the "Container name" prompt. |
 
 `SANDBOX_NAME` falls back to the default (`openharness`) when no TTY is available.
+
+### Forking this harness
+
+To install your fork instead of the upstream repo, run the installer directly from your fork's raw URL and set `OH_GITHUB_REPO` to your fork's slug:
+
+```bash
+OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh | bash
+```
+
+If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. Forks restructuring `.devcontainer/` should also patch the local-run detection in `scripts/install.sh` (the `-f .devcontainer/docker-compose.yml` check near line 173) to match the new layout.
 
 ## Manual installation
 
@@ -47,6 +60,7 @@ Use this path when you want more control or are setting up a CI environment.
 ### 1. Clone the repository
 
 ```bash
+# Forkers: substitute your fork URL here.
 git clone https://github.com/ryaneggz/open-harness.git
 cd open-harness
 ```

@@ -1,2 +1,19 @@
 # progress
 
+
+## US-005 — 2026-05-17
+- **Status**: PASS
+- **Commit**: pending
+- **Change**: Inserted `### 📦 For forks / self-host` subsection into `README.md` after the closing paragraph of `## 📦 Install`, before `## 🚀 Use it`.
+- **Verified**: line 17 unchanged; blockquote callout present; same `<your-org>/<your-fork>` placeholder in both URL path and `OH_GITHUB_REPO` env var; branch/trust/footnote content present; 10 balanced code fences (5 pairs).
+
+## US-006 — 2026-05-17
+- **Result**: PASS
+- **Story**: docs/installation.md env-overrides table + Forking section
+- **Changes**:
+  - Added OH_GITHUB_REPO and OH_GITHUB_REF rows to env-overrides table
+  - Annotated OH_INSTALL_REF row as back-compat alias of OH_GITHUB_REF
+  - Added "Forking this harness" subsection (4 lines + code block) after env-overrides section
+  - Added "Forkers: substitute your fork URL here." comment above git clone in Manual Installation
+- **Verified**: git diff -- docs/quickstart.md shows no changes; grep confirms curl line present
+- **grep -c '^|' docs/installation.md**: 40

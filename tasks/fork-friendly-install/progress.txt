@@ -22,7 +22,7 @@
 
 **Title**: OH_GITHUB_REPO env var parameterizes the clone
 **Files changed**: scripts/install.sh, tasks/fork-friendly-install/prd.json, tasks/fork-friendly-install/progress.txt
-**Commit**: (see below)
+**Commit**: dbf8623
 **Result**: PASS
 
 ### What I did

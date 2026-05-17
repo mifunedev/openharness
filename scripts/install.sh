@@ -125,11 +125,15 @@ Env vars:
   OH_INSTALL_REF       Git ref (tag/SHA) to clone instead of main
   OH_ASSUME_YES        Set to 1 for --yes
   SANDBOX_NAME         Skip the "Container name" prompt
+  OH_GITHUB_REPO       GitHub repo to clone (default: ryaneggz/open-harness)
+  OH_GITHUB_REF        Git ref to clone (alias: OH_INSTALL_REF)
 
 Examples:
   curl -fsSL https://oh.mifune.dev/install.sh | bash
   curl -fsSL https://oh.mifune.dev/install.sh | bash -s -- --yes
   ./scripts/install.sh
+  OH_GITHUB_REPO=myorg/my-harness curl -fsSL \
+    https://raw.githubusercontent.com/myorg/my-harness/main/scripts/install.sh | bash
 HELPEOF
 }
 

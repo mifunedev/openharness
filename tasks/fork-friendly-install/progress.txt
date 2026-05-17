@@ -85,3 +85,31 @@ In the pull branch (`if [ -d "$REPO_DIR/.git" ]`, now lines 264-296), inserted t
 - **shellcheck**: 11 warnings (no regression vs baseline of 11). PASS.
 
 ---
+
+## US-004 — 2026-05-17 UTC
+
+**Title**: Help text documents the new env vars
+**Files changed**: scripts/install.sh, tasks/fork-friendly-install/prd.json, tasks/fork-friendly-install/progress.txt
+**Commit**: (pending)
+**Result**: PASS
+
+### What I did
+Added two lines to the `Env vars:` block inside the `print_help` heredoc in `scripts/install.sh`:
+- `OH_GITHUB_REPO       GitHub repo to clone (default: ryaneggz/open-harness)`
+- `OH_GITHUB_REF        Git ref to clone (alias: OH_INSTALL_REF)`
+
+Added one fork-flow example to the `Examples:` block:
+```
+OH_GITHUB_REPO=myorg/my-harness curl -fsSL \
+  https://raw.githubusercontent.com/myorg/my-harness/main/scripts/install.sh | bash
+```
+
+### Acceptance criteria verification
+- **Env vars block**: both OH_GITHUB_REPO and OH_GITHUB_REF present with correct descriptions. PASS.
+- **Examples block**: fork-flow example present with correct raw-GitHub URL pattern. PASS.
+- **Usage line preserved**: `grep -c 'oh.mifune.dev' scripts/install.sh` returns 3. PASS.
+- **bash -n**: PASS.
+- **shellcheck**: 62 lines (no regression vs baseline of 62). PASS.
+- **--help output**: verified both vars and fork example appear in `bash scripts/install.sh --help`. PASS.
+
+---

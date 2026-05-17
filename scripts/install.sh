@@ -188,6 +188,12 @@ else
     warn "Cloning from fork: $OH_GITHUB_REPO"
   fi
 
+  # ── OH_GITHUB_REF: alias for OH_INSTALL_REF (OH_GITHUB_REF wins if set) ─
+  if [ -n "${OH_GITHUB_REF:-}" ] && [ -n "${OH_INSTALL_REF:-}" ] && [ "$OH_GITHUB_REF" != "$OH_INSTALL_REF" ]; then
+    warn "OH_GITHUB_REF and OH_INSTALL_REF both set with different values; OH_GITHUB_REF wins."
+  fi
+  OH_GITHUB_REF="${OH_GITHUB_REF:-${OH_INSTALL_REF:-}}"
+
   # ── Population classification + migration ─────────────────────────────
   __HAS_OLD=0; __HAS_NEW=0
   [ -d "$OLD_REPO/.git" ] && __HAS_OLD=1
@@ -246,9 +252,9 @@ else
     fi
   else
     # ── Population A: fresh clone ──────────────────────────────────────────
-    if [ -n "${OH_INSTALL_REF:-}" ]; then
-      git clone --branch "$OH_INSTALL_REF" "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
-      ok "Repository cloned at ref '$OH_INSTALL_REF': $REPO_DIR"
+    if [ -n "$OH_GITHUB_REF" ]; then
+      git clone --branch "$OH_GITHUB_REF" "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
+      ok "Repository cloned at ref '$OH_GITHUB_REF': $REPO_DIR"
     else
       git clone "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
       ok "Repository cloned: $REPO_DIR"

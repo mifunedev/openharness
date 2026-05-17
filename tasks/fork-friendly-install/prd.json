@@ -1,0 +1,126 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/308-fork-friendly-install",
+    "description": "Fork-Friendly Install — parameterize the curl-pipe installer via OH_GITHUB_REPO env var so a forked Open Harness installs the forker's code, not upstream's. Keeps the canonical upstream one-liner (oh.mifune.dev) unchanged.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "OH_GITHUB_REPO env var parameterizes the clone",
+            "description": "As a forker of Open Harness, I want the installer to clone from my fork instead of ryaneggz/open-harness so that running the install command on my fork yields my code in ~/.openharness.",
+            "acceptanceCriteria": [
+                "scripts/install.sh defines OH_GITHUB_REPO=\"${OH_GITHUB_REPO:-ryaneggz/open-harness}\" immediately after REPO_DIR is determined and before the migration block (between the 'Install target is ~/.openharness' log around line 181 and the migration logic starting at line 183) — placing it BEFORE any filesystem-mutating logic so a bad value dies before mv/git stash/archive run",
+                "OH_GITHUB_REPO is validated using the bash regex form [[ \"$OH_GITHUB_REPO\" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] (NOT grep -E or echo | grep — anchors ^...$ in bash =~ match the full string; grep substring matching is forbidden here). On mismatch: die \"OH_GITHUB_REPO must be <owner>/<repo>: got '$OH_GITHUB_REPO'\". Exit code non-zero",
+                "When $OH_GITHUB_REPO differs from ryaneggz/open-harness, the installer emits warn \"Cloning from fork: $OH_GITHUB_REPO\" before the clone runs",
+                "Both hardcoded clone URLs at current scripts/install.sh:241 (with --branch \"$OH_INSTALL_REF\") and :244 (no branch) are replaced with \"https://github.com/${OH_GITHUB_REPO}.git\"",
+                "With OH_GITHUB_REPO unset, the upstream install path produces an identical clone URL to today (https://github.com/ryaneggz/open-harness.git)",
+                "With OH_GITHUB_REPO=ryaneggz/open-harness (explicitly set to default), no fork-warn fires; behavior matches the unset case",
+                "bash -n scripts/install.sh passes (no syntax errors)",
+                "shellcheck scripts/install.sh exits 0 (or, if the baseline already has warnings, the warning count does not increase — capture baseline count in the PR description)",
+                "Typecheck passes",
+                "Tests pass"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "OH_GITHUB_REF aliases OH_INSTALL_REF",
+            "description": "As a forker, I want to pin to a tag or SHA in my fork using the same naming pattern as the repo var so that the env-var surface is internally consistent.",
+            "acceptanceCriteria": [
+                "scripts/install.sh accepts OH_GITHUB_REF as an alias for OH_INSTALL_REF: OH_GITHUB_REF=\"${OH_GITHUB_REF:-${OH_INSTALL_REF:-}}\"",
+                "The existing branch-clone guard at lines 240-246 (which currently keys on OH_INSTALL_REF) MUST also fire when only OH_GITHUB_REF is set. Concretely: after the alias resolution above, the guard checks if [ -n \"$OH_GITHUB_REF\" ] (or the equivalent) so either variable triggers the --branch clone form",
+                "Concrete back-compat test (executable): with git shimmed to print its arguments, OH_INSTALL_REF=v1.2.3 bash scripts/install.sh produces a clone command containing --branch v1.2.3",
+                "Precedence test: with both set, OH_GITHUB_REF=v2.0 OH_INSTALL_REF=v1.0 bash scripts/install.sh produces a clone with --branch v2.0 (newer var wins). When both are set to differing values, the installer emits warn \"OH_GITHUB_REF and OH_INSTALL_REF both set with different values; OH_GITHUB_REF wins.\"",
+                "The help-text Env vars: block (current lines 104-107) lists both names; OH_GITHUB_REF is canonical in docs; OH_INSTALL_REF is documented as a back-compat alias",
+                "No deprecation warning emitted in this release",
+                "Typecheck passes",
+                "Tests pass"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Pull path validates remote against OH_GITHUB_REPO",
+            "description": "As a user re-running the installer, I want the installer to detect when my existing clone's origin doesn't match the OH_GITHUB_REPO I just supplied so that I don't silently mix upstream + fork code in ~/.openharness.",
+            "acceptanceCriteria": [
+                "In the pull branch (current scripts/install.sh:229-237, gated by [ -d \"$REPO_DIR/.git\" ]), before git pull --ff-only at line 233, the installer reads git -C \"$REPO_DIR\" remote get-url origin 2>/dev/null || true (the || true is REQUIRED because set -e would otherwise abort if no origin exists)",
+                "Both URLs are normalized to owner/repo slug form before comparison. Acceptable input forms that MUST normalize to the same slug: https://github.com/owner/repo.git → owner/repo; https://github.com/owner/repo → owner/repo; git@github.com:owner/repo.git → owner/repo; git@github.com:owner/repo → owner/repo; case-insensitive owner/repo per GitHub URL semantics",
+                "Implementation: normalize via a small inline function that strips https://github.com/ or git@github.com: prefix and trailing .git. Compare the normalized values against OH_GITHUB_REPO",
+                "If git remote get-url origin failed or returned empty, treat that as a mismatch (existing clone is broken/incomplete — same recovery path as a true mismatch)",
+                "On mismatch: warn with both URLs printed (raw, not normalized — so SSH users see their actual remote), skip the pull, print multi-line recovery guidance starting with 'WARN: Existing clone origin (<raw origin URL>) does not match OH_GITHUB_REPO=<value>.' followed by numbered steps (1. back up .devcontainer/.env, 2. rm -rf ~/.openharness, 3. re-run with desired OH_GITHUB_REPO and OH_GITHUB_REF) and a note that rm -rf also discards local changes and pinned OH_INSTALL_REF state",
+                "The installer does NOT modify the remote automatically — the user must do that explicitly",
+                "On match: pull proceeds as today (no behavior change for upstream users — SSH-cloned upstream users included)",
+                "Typecheck passes",
+                "Tests pass"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "Help text documents the new env vars",
+            "description": "As a user running scripts/install.sh --help, I want to see OH_GITHUB_REPO and OH_GITHUB_REF documented so that I can discover the fork-flow without reading the source.",
+            "acceptanceCriteria": [
+                "print_help Env vars: block (current lines 104-107) gains two lines: 'OH_GITHUB_REPO       GitHub repo to clone (default: ryaneggz/open-harness)' and 'OH_GITHUB_REF        Git ref to clone (alias: OH_INSTALL_REF)'",
+                "The Examples: block (current lines 109+) gains one fork-flow example showing the raw-GitHub URL + env-var pattern, e.g. 'OH_GITHUB_REPO=myorg/my-harness curl -fsSL https://raw.githubusercontent.com/myorg/my-harness/main/scripts/install.sh | bash'",
+                "The existing curl-pipe URL in usage (current line 92) remains https://oh.mifune.dev/install.sh",
+                "Typecheck passes"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-005",
+            "title": "README adds a 'For forks / self-host' block",
+            "description": "As a forker reading the README, I want a clear, copy-pasteable fork-install snippet adjacent to the hero install command so that I'm not tempted to copy the upstream redirect URL.",
+            "acceptanceCriteria": [
+                "README.md line 17 (curl -fsSL https://oh.mifune.dev/install.sh | bash) is UNCHANGED",
+                "Structural insertion (not line-numbered): a new subsection titled '📦 For forks / self-host' is inserted after the closing paragraph of the '## 📦 Install' section, before the '## 🚀 Use it' heading",
+                "Visual hierarchy guard: immediately above the new fork code block, a one-line blockquote callout reads '> **Forking this repo?** The block above pulls upstream code. Use the block below to install your fork instead.'",
+                "The fork block's curl-pipe and env-var literal MUST use the same placeholder owner/repo (e.g., <your-org>/<your-fork> in both positions) — they must not diverge in the example",
+                "The block contains: the literal forker curl-pipe (raw.githubusercontent.com of the fork + OH_GITHUB_REPO=<your-org>/<your-fork> env var); one line about non-main default branches setting OH_GITHUB_REF; one trust caveat about curl | bash from branch HEAD being mutable; one footnote about restructuring .devcontainer/ requiring patching the local-run detection in scripts/install.sh near line 173",
+                "Markdown renders without errors (no broken headers, no unclosed code fences)",
+                "Verify rendering in browser using agent-browser skill (or grep for unbalanced fences) — frontend story"
+            ],
+            "priority": 5,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-006",
+            "title": "docs/installation.md env-overrides table + Forking section",
+            "description": "As a user reading the long-form install docs, I want the env-overrides reference table to include the new variables so that I have a canonical, complete reference.",
+            "acceptanceCriteria": [
+                "The env-overrides table in docs/installation.md (around line 36) gains rows for OH_GITHUB_REPO and OH_GITHUB_REF",
+                "OH_INSTALL_REF row is annotated as a back-compat alias of OH_GITHUB_REF",
+                "A new short subsection titled 'Forking this harness' (3-4 lines) is added after the Environment Overrides section, mirroring the README block and pointing to the scripts/install.sh:173 local-run note",
+                "The Manual Installation block's hardcoded git clone https://github.com/ryaneggz/open-harness.git at docs/installation.md:50 MUST gain a one-line comment immediately above it (or inline) noting 'Forkers: substitute your fork URL here.' — keeping the upstream default copy-pasteable while flagging the substitution",
+                "Content-anchored, not line-numbered: the line 'curl -fsSL https://oh.mifune.dev/install.sh | bash' in docs/quickstart.md is unchanged (verify by content match, not line number)",
+                "Typecheck passes"
+            ],
+            "priority": 6,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-007",
+            "title": "CHANGELOG.md [Unreleased] records the change",
+            "description": "As a future release-cutter, I want the unreleased changes documented per Keep-a-Changelog so that the next /release promotes a complete entry.",
+            "acceptanceCriteria": [
+                "CHANGELOG.md ## [Unreleased] block gains: ### Added row 'OH_GITHUB_REPO and OH_GITHUB_REF env vars for fork-friendly installs'; ### Changed row 'README and docs/installation.md add a For forks / self-host section; canonical upstream oh.mifune.dev URL unchanged'",
+                "Entries follow existing Keep-a-Changelog format (imperative mood, one line each)",
+                "PR link uses (#TBD) placeholder at commit time; immediately after gh pr create returns the PR number, a follow-up commit on the same branch replaces #TBD with the actual PR number before merge",
+                "Typecheck passes"
+            ],
+            "priority": 7,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

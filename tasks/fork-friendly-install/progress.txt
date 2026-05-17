@@ -113,3 +113,21 @@ OH_GITHUB_REPO=myorg/my-harness curl -fsSL \
 - **--help output**: verified both vars and fork example appear in `bash scripts/install.sh --help`. PASS.
 
 ---
+
+## US-007 — 2026-05-17 UTC
+
+**Title**: CHANGELOG.md [Unreleased] records the change
+**Files changed**: CHANGELOG.md, tasks/fork-friendly-install/prd.json, tasks/fork-friendly-install/progress.txt
+**Commit**: (pending)
+**Result**: PASS
+
+### What I did
+Added two entries to the `## [Unreleased]` block in `CHANGELOG.md`:
+- `### Added`: `OH_GITHUB_REPO` and `OH_GITHUB_REF` env vars for fork-friendly installs ([#309](https://github.com/ryaneggz/open-harness/pull/309)).
+- `### Changed`: README and `docs/installation.md` add a "For forks / self-host" section; canonical upstream `oh.mifune.dev` URL unchanged ([#309](https://github.com/ryaneggz/open-harness/pull/309)).
+
+Both entries prepended to their respective sections (first after `### Added` header, first after `### Changed` header), matching existing one-line imperative-mood Keep-a-Changelog style with PR link at end.
+
+---
+
+STATUS: COMPLETE

@@ -179,6 +179,15 @@ else
   OLD_REPO="$HOME/openharness"
   REPO_DIR="$HOME/.openharness"
 
+  # ── OH_GITHUB_REPO: fork-parameterized clone source ───────────────────
+  OH_GITHUB_REPO="${OH_GITHUB_REPO:-ryaneggz/open-harness}"
+  if [[ ! "$OH_GITHUB_REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+    die "OH_GITHUB_REPO must be <owner>/<repo>: got '$OH_GITHUB_REPO'"
+  fi
+  if [ "$OH_GITHUB_REPO" != "ryaneggz/open-harness" ]; then
+    warn "Cloning from fork: $OH_GITHUB_REPO"
+  fi
+
   # ── Population classification + migration ─────────────────────────────
   __HAS_OLD=0; __HAS_NEW=0
   [ -d "$OLD_REPO/.git" ] && __HAS_OLD=1
@@ -238,10 +247,10 @@ else
   else
     # ── Population A: fresh clone ──────────────────────────────────────────
     if [ -n "${OH_INSTALL_REF:-}" ]; then
-      git clone --branch "$OH_INSTALL_REF" https://github.com/ryaneggz/open-harness.git "$REPO_DIR"
+      git clone --branch "$OH_INSTALL_REF" "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
       ok "Repository cloned at ref '$OH_INSTALL_REF': $REPO_DIR"
     else
-      git clone https://github.com/ryaneggz/open-harness.git "$REPO_DIR"
+      git clone "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
       ok "Repository cloned: $REPO_DIR"
     fi
   fi

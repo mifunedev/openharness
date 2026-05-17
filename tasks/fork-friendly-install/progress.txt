@@ -17,3 +17,21 @@
   - Added "Forkers: substitute your fork URL here." comment above git clone in Manual Installation
 - **Verified**: git diff -- docs/quickstart.md shows no changes; grep confirms curl line present
 - **grep -c '^|' docs/installation.md**: 40
+
+## US-001 — 2026-05-17 UTC
+
+**Title**: OH_GITHUB_REPO env var parameterizes the clone
+**Files changed**: scripts/install.sh, tasks/fork-friendly-install/prd.json, tasks/fork-friendly-install/progress.txt
+**Commit**: (see below)
+**Result**: PASS
+
+### What I did
+Inserted `OH_GITHUB_REPO="${OH_GITHUB_REPO:-ryaneggz/open-harness}"` with bash `=~` regex validation immediately after `REPO_DIR="$HOME/.openharness"` on line 180 and before the migration block comment at line 182. Added a fork-warn `if [ "$OH_GITHUB_REPO" != "ryaneggz/open-harness" ]` block. Replaced both hardcoded clone URLs at old lines 241 and 244 with `"https://github.com/${OH_GITHUB_REPO}.git"` in lockstep.
+
+### Learnings for future iterations
+- The local-run detection at line 173 fires when script is run from within the harness directory (SCRIPT_DIR parent has .devcontainer/docker-compose.yml). Our validation lives in the `else` branch — only fires for real-world installs, not local test runs from the repo root.
+- Both clone URL lines (with and without `--branch`) must be replaced in the same edit — missing one is a silent partial fix.
+- shellcheck baseline: 11 warnings (pre-existing). Post-edit: 11 (no regression).
+- bash `[[ =~ ]]` anchors `^...$` match the full string; grep substring matching is forbidden per AC and Critic A H1/H2.
+
+---

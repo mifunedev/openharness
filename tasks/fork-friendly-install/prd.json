@@ -2,27 +2,27 @@
     "schemaVersion": 1,
     "project": "Open Harness",
     "branchName": "feat/308-fork-friendly-install",
-    "description": "Fork-Friendly Install \u2014 parameterize the curl-pipe installer via OH_GITHUB_REPO env var so a forked Open Harness installs the forker's code, not upstream's. Keeps the canonical upstream one-liner (oh.mifune.dev) unchanged.",
+    "description": "Fork-Friendly Install — parameterize the curl-pipe installer via OH_GITHUB_REPO env var so a forked Open Harness installs the forker's code, not upstream's. Keeps the canonical upstream one-liner (oh.mifune.dev) unchanged.",
     "userStories": [
         {
             "id": "US-001",
             "title": "OH_GITHUB_REPO env var parameterizes the clone",
             "description": "As a forker of Open Harness, I want the installer to clone from my fork instead of ryaneggz/open-harness so that running the install command on my fork yields my code in ~/.openharness.",
             "acceptanceCriteria": [
-                "scripts/install.sh defines OH_GITHUB_REPO=\"${OH_GITHUB_REPO:-ryaneggz/open-harness}\" immediately after REPO_DIR is determined and before the migration block (between the 'Install target is ~/.openharness' log around line 181 and the migration logic starting at line 183) \u2014 placing it BEFORE any filesystem-mutating logic so a bad value dies before mv/git stash/archive run",
-                "OH_GITHUB_REPO is validated using the bash regex form [[ \"$OH_GITHUB_REPO\" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] (NOT grep -E or echo | grep \u2014 anchors ^...$ in bash =~ match the full string; grep substring matching is forbidden here). On mismatch: die \"OH_GITHUB_REPO must be <owner>/<repo>: got '$OH_GITHUB_REPO'\". Exit code non-zero",
+                "scripts/install.sh defines OH_GITHUB_REPO=\"${OH_GITHUB_REPO:-ryaneggz/open-harness}\" immediately after REPO_DIR is determined and before the migration block (between the 'Install target is ~/.openharness' log around line 181 and the migration logic starting at line 183) — placing it BEFORE any filesystem-mutating logic so a bad value dies before mv/git stash/archive run",
+                "OH_GITHUB_REPO is validated using the bash regex form [[ \"$OH_GITHUB_REPO\" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] (NOT grep -E or echo | grep — anchors ^...$ in bash =~ match the full string; grep substring matching is forbidden here). On mismatch: die \"OH_GITHUB_REPO must be <owner>/<repo>: got '$OH_GITHUB_REPO'\". Exit code non-zero",
                 "When $OH_GITHUB_REPO differs from ryaneggz/open-harness, the installer emits warn \"Cloning from fork: $OH_GITHUB_REPO\" before the clone runs",
                 "Both hardcoded clone URLs at current scripts/install.sh:241 (with --branch \"$OH_INSTALL_REF\") and :244 (no branch) are replaced with \"https://github.com/${OH_GITHUB_REPO}.git\"",
                 "With OH_GITHUB_REPO unset, the upstream install path produces an identical clone URL to today (https://github.com/ryaneggz/open-harness.git)",
                 "With OH_GITHUB_REPO=ryaneggz/open-harness (explicitly set to default), no fork-warn fires; behavior matches the unset case",
                 "bash -n scripts/install.sh passes (no syntax errors)",
-                "shellcheck scripts/install.sh exits 0 (or, if the baseline already has warnings, the warning count does not increase \u2014 capture baseline count in the PR description)",
+                "shellcheck scripts/install.sh exits 0 (or, if the baseline already has warnings, the warning count does not increase — capture baseline count in the PR description)",
                 "Typecheck passes",
                 "Tests pass"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-05-17; OH_GITHUB_REPO assign+validate inserted after REPO_DIR line 180 before migration block; both clone URLs replaced with ${OH_GITHUB_REPO}; bash -n passes; shellcheck: baseline 11, post 11 (no regression)."
         },
         {
             "id": "US-002",
@@ -48,12 +48,12 @@
             "description": "As a user re-running the installer, I want the installer to detect when my existing clone's origin doesn't match the OH_GITHUB_REPO I just supplied so that I don't silently mix upstream + fork code in ~/.openharness.",
             "acceptanceCriteria": [
                 "In the pull branch (current scripts/install.sh:229-237, gated by [ -d \"$REPO_DIR/.git\" ]), before git pull --ff-only at line 233, the installer reads git -C \"$REPO_DIR\" remote get-url origin 2>/dev/null || true (the || true is REQUIRED because set -e would otherwise abort if no origin exists)",
-                "Both URLs are normalized to owner/repo slug form before comparison. Acceptable input forms that MUST normalize to the same slug: https://github.com/owner/repo.git \u2192 owner/repo; https://github.com/owner/repo \u2192 owner/repo; git@github.com:owner/repo.git \u2192 owner/repo; git@github.com:owner/repo \u2192 owner/repo; case-insensitive owner/repo per GitHub URL semantics",
+                "Both URLs are normalized to owner/repo slug form before comparison. Acceptable input forms that MUST normalize to the same slug: https://github.com/owner/repo.git → owner/repo; https://github.com/owner/repo → owner/repo; git@github.com:owner/repo.git → owner/repo; git@github.com:owner/repo → owner/repo; case-insensitive owner/repo per GitHub URL semantics",
                 "Implementation: normalize via a small inline function that strips https://github.com/ or git@github.com: prefix and trailing .git. Compare the normalized values against OH_GITHUB_REPO",
-                "If git remote get-url origin failed or returned empty, treat that as a mismatch (existing clone is broken/incomplete \u2014 same recovery path as a true mismatch)",
-                "On mismatch: warn with both URLs printed (raw, not normalized \u2014 so SSH users see their actual remote), skip the pull, print multi-line recovery guidance starting with 'WARN: Existing clone origin (<raw origin URL>) does not match OH_GITHUB_REPO=<value>.' followed by numbered steps (1. back up .devcontainer/.env, 2. rm -rf ~/.openharness, 3. re-run with desired OH_GITHUB_REPO and OH_GITHUB_REF) and a note that rm -rf also discards local changes and pinned OH_INSTALL_REF state",
-                "The installer does NOT modify the remote automatically \u2014 the user must do that explicitly",
-                "On match: pull proceeds as today (no behavior change for upstream users \u2014 SSH-cloned upstream users included)",
+                "If git remote get-url origin failed or returned empty, treat that as a mismatch (existing clone is broken/incomplete — same recovery path as a true mismatch)",
+                "On mismatch: warn with both URLs printed (raw, not normalized — so SSH users see their actual remote), skip the pull, print multi-line recovery guidance starting with 'WARN: Existing clone origin (<raw origin URL>) does not match OH_GITHUB_REPO=<value>.' followed by numbered steps (1. back up .devcontainer/.env, 2. rm -rf ~/.openharness, 3. re-run with desired OH_GITHUB_REPO and OH_GITHUB_REF) and a note that rm -rf also discards local changes and pinned OH_INSTALL_REF state",
+                "The installer does NOT modify the remote automatically — the user must do that explicitly",
+                "On match: pull proceeds as today (no behavior change for upstream users — SSH-cloned upstream users included)",
                 "Typecheck passes",
                 "Tests pass"
             ],
@@ -81,16 +81,16 @@
             "description": "As a forker reading the README, I want a clear, copy-pasteable fork-install snippet adjacent to the hero install command so that I'm not tempted to copy the upstream redirect URL.",
             "acceptanceCriteria": [
                 "README.md line 17 (curl -fsSL https://oh.mifune.dev/install.sh | bash) is UNCHANGED",
-                "Structural insertion (not line-numbered): a new subsection titled '\ud83d\udce6 For forks / self-host' is inserted after the closing paragraph of the '## \ud83d\udce6 Install' section, before the '## \ud83d\ude80 Use it' heading",
+                "Structural insertion (not line-numbered): a new subsection titled '📦 For forks / self-host' is inserted after the closing paragraph of the '## 📦 Install' section, before the '## 🚀 Use it' heading",
                 "Visual hierarchy guard: immediately above the new fork code block, a one-line blockquote callout reads '> **Forking this repo?** The block above pulls upstream code. Use the block below to install your fork instead.'",
-                "The fork block's curl-pipe and env-var literal MUST use the same placeholder owner/repo (e.g., <your-org>/<your-fork> in both positions) \u2014 they must not diverge in the example",
+                "The fork block's curl-pipe and env-var literal MUST use the same placeholder owner/repo (e.g., <your-org>/<your-fork> in both positions) — they must not diverge in the example",
                 "The block contains: the literal forker curl-pipe (raw.githubusercontent.com of the fork + OH_GITHUB_REPO=<your-org>/<your-fork> env var); one line about non-main default branches setting OH_GITHUB_REF; one trust caveat about curl | bash from branch HEAD being mutable; one footnote about restructuring .devcontainer/ requiring patching the local-run detection in scripts/install.sh near line 173",
                 "Markdown renders without errors (no broken headers, no unclosed code fences)",
-                "Verify rendering in browser using agent-browser skill (or grep for unbalanced fences) \u2014 frontend story"
+                "Verify rendering in browser using agent-browser skill (or grep for unbalanced fences) — frontend story"
             ],
             "priority": 5,
             "passes": true,
-            "notes": "Implemented 2026-05-17. Inserted ### \ud83d\udce6 For forks / self-host subsection after closing paragraph of ## \ud83d\udce6 Install, before ## \ud83d\ude80 Use it. All ACs verified: line 17 unchanged, blockquote callout present, matching placeholders in both curl URL path and OH_GITHUB_REPO env var, branch/trust/footnote content present, 10 balanced code fences."
+            "notes": "Implemented 2026-05-17. Inserted ### 📦 For forks / self-host subsection after closing paragraph of ## 📦 Install, before ## 🚀 Use it. All ACs verified: line 17 unchanged, blockquote callout present, matching placeholders in both curl URL path and OH_GITHUB_REPO env var, branch/trust/footnote content present, 10 balanced code fences."
         },
         {
             "id": "US-006",
@@ -100,7 +100,7 @@
                 "The env-overrides table in docs/installation.md (around line 36) gains rows for OH_GITHUB_REPO and OH_GITHUB_REF",
                 "OH_INSTALL_REF row is annotated as a back-compat alias of OH_GITHUB_REF",
                 "A new short subsection titled 'Forking this harness' (3-4 lines) is added after the Environment Overrides section, mirroring the README block and pointing to the scripts/install.sh:173 local-run note",
-                "The Manual Installation block's hardcoded git clone https://github.com/ryaneggz/open-harness.git at docs/installation.md:50 MUST gain a one-line comment immediately above it (or inline) noting 'Forkers: substitute your fork URL here.' \u2014 keeping the upstream default copy-pasteable while flagging the substitution",
+                "The Manual Installation block's hardcoded git clone https://github.com/ryaneggz/open-harness.git at docs/installation.md:50 MUST gain a one-line comment immediately above it (or inline) noting 'Forkers: substitute your fork URL here.' — keeping the upstream default copy-pasteable while flagging the substitution",
                 "Content-anchored, not line-numbered: the line 'curl -fsSL https://oh.mifune.dev/install.sh | bash' in docs/quickstart.md is unchanged (verify by content match, not line number)",
                 "Typecheck passes"
             ],

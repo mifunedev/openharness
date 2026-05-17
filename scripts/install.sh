@@ -13,6 +13,26 @@ ok()     { printf "${GREEN} ✓  %s${NC}\n" "$*"; }
 warn()   { printf "${YELLOW}WARN: %s${NC}\n" "$*" >&2; }
 die()    { printf "${RED}ERROR: %s${NC}\n" "$*" >&2; exit 1; }
 
+# ─── normalize_gh_slug: strip GitHub URL decoration → owner/repo ─────
+# Handles four forms:
+#   https://github.com/owner/repo.git  →  owner/repo
+#   https://github.com/owner/repo      →  owner/repo
+#   git@github.com:owner/repo.git      →  owner/repo
+#   git@github.com:owner/repo          →  owner/repo
+normalize_gh_slug() {
+  local _url="$1"
+  # Strip https://github.com/ prefix (case-insensitive via tr would add
+  # complexity; GitHub slugs are case-insensitive but we preserve original case
+  # for comparison — OH_GITHUB_REPO is user-supplied already normalized).
+  _url="${_url#https://github.com/}"
+  # Strip git@github.com: prefix
+  _url="${_url#git@github.com:}"
+  # Strip trailing .git suffix
+  _url="${_url%.git}"
+  printf '%s' "$_url"
+}
+
+
 # ─── prompt_input: env-var > /dev/tty > default fallback > die ──────
 # Args: $1=varname, $2=prompt msg, $3=default (optional), $4=-s for secret
 # Reads from /dev/tty so curl-piped installs still get keystrokes (stdin
@@ -242,14 +262,28 @@ else
   unset __HAS_OLD __HAS_NEW OLD_REPO
 
   if [ -d "$REPO_DIR/.git" ]; then
-    # ── Pull (clean tree only) ─────────────────────────────────────────────
-    if git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
-      printf "  Repository exists — pulling latest changes...\n"
-      git -C "$REPO_DIR" pull --ff-only
-      ok "Repository updated: $REPO_DIR"
+    # ── US-003: Validate remote origin matches OH_GITHUB_REPO ─────────────
+    __ORIGIN_RAW="$(git -C "$REPO_DIR" remote get-url origin 2>/dev/null || true)"
+    __ORIGIN_SLUG="$(normalize_gh_slug "${__ORIGIN_RAW:-}")"
+    __EXPECTED_SLUG="$(normalize_gh_slug "$OH_GITHUB_REPO")"
+    if [ -z "$__ORIGIN_RAW" ] || [ "$__ORIGIN_SLUG" != "$__EXPECTED_SLUG" ]; then
+      warn "Existing clone origin (${__ORIGIN_RAW:-<none>}) does not match OH_GITHUB_REPO=${OH_GITHUB_REPO}."
+      warn "Skipping pull. To switch sources:"
+      warn "  1. Back up customizations:  cp ~/.openharness/.devcontainer/.env /tmp/oh.env.bak"
+      warn "  2. Remove the clone:        rm -rf ~/.openharness"
+      warn "  3. Re-run with the desired OH_GITHUB_REPO and (if needed) OH_GITHUB_REF."
+      warn "  Note: rm -rf also discards any local changes and pinned OH_INSTALL_REF state."
     else
-      warn "Local changes detected in $REPO_DIR — skipping git pull. Stash or commit them, then re-run if you want the latest main."
+      # ── Pull (clean tree only) ─────────────────────────────────────────────
+      if git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
+        printf "  Repository exists — pulling latest changes...\n"
+        git -C "$REPO_DIR" pull --ff-only
+        ok "Repository updated: $REPO_DIR"
+      else
+        warn "Local changes detected in $REPO_DIR — skipping git pull. Stash or commit them, then re-run if you want the latest main."
+      fi
     fi
+    unset __ORIGIN_RAW __ORIGIN_SLUG __EXPECTED_SLUG
   else
     # ── Population A: fresh clone ──────────────────────────────────────────
     if [ -n "$OH_GITHUB_REF" ]; then

@@ -56,3 +56,32 @@ Inserted OH_GITHUB_REF alias resolution block (lines 191-195 in install.sh) imme
 - **shellcheck**: 11 warnings (no regression vs baseline of 11).
 
 ---
+
+## US-003 — 2026-05-17 UTC
+
+**Title**: Pull path validates remote against OH_GITHUB_REPO
+**Files changed**: scripts/install.sh, tasks/fork-friendly-install/prd.json, tasks/fork-friendly-install/progress.txt
+**Commit**: (pending)
+**Result**: PASS
+
+### What I did
+Added `normalize_gh_slug()` helper function (lines 16-33) immediately after the `die()` helper in the colours/helpers block. The function strips `https://github.com/` or `git@github.com:` prefix and trailing `.git` suffix using bash parameter expansion, yielding an `owner/repo` slug.
+
+In the pull branch (`if [ -d "$REPO_DIR/.git" ]`, now lines 264-296), inserted the remote-check block before the clean-tree diff check:
+1. Reads `git -C "$REPO_DIR" remote get-url origin 2>/dev/null || true` into `__ORIGIN_RAW` — the `|| true` is required because `set -e` would otherwise abort if no `origin` exists.
+2. Normalizes `__ORIGIN_RAW` and `OH_GITHUB_REPO` to slugs via `normalize_gh_slug`.
+3. If origin is empty or slugs don't match: emits 5-line multi-part WARN (raw URL, skip notice, 3 numbered steps, rm -rf state note) and skips pull entirely.
+4. If match: delegates to the existing clean-tree pull path (no behavior change for upstream users).
+5. Cleans up temp vars with `unset`.
+
+### Acceptance criteria verification
+- **git remote get-url with 2>/dev/null || true**: present at line 266.
+- **Normalize all 4 forms**: tested — `https://github.com/owner/repo.git`, `https://github.com/owner/repo`, `git@github.com:owner/repo.git`, `git@github.com:owner/repo` all normalize to `owner/repo`. PASS (5/5).
+- **Empty origin → mismatch**: `[ -z "$__ORIGIN_RAW" ]` guard at line 269 routes to warn+skip path. PASS.
+- **Multi-line recovery message**: 5 warn() calls covering raw URL, skip notice, 3 numbered steps (backup, rm -rf, re-run), and rm -rf state note. PASS.
+- **git pull skipped on mismatch**: `git pull --ff-only` is in the `else` branch (line 280); unreachable when mismatch condition is true. Verified by code-path inspection. PASS.
+- **No remote modification**: no `git remote set-url` anywhere in the block. PASS.
+- **bash -n**: PASS.
+- **shellcheck**: 11 warnings (no regression vs baseline of 11). PASS.
+
+---

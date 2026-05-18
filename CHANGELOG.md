@@ -9,8 +9,16 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `OH_GITHUB_REPO` and `OH_GITHUB_REF` env vars for fork-friendly installs ([#309](https://github.com/ryaneggz/open-harness/pull/309)).
+- `/worktrees` skill (`.claude/skills/worktrees/SKILL.md`) — orchestrator skill for managing `.worktrees/` lifecycle: create, list, remove, clean, stale audit, project clones.
+
 ### Changed
+- README and `docs/installation.md` add a "For forks / self-host" section; canonical upstream `oh.mifune.dev` URL unchanged ([#309](https://github.com/ryaneggz/open-harness/pull/309)).
+- `/release` skill now pushes the source branch back to origin immediately after the CHANGELOG promotion commit, before cutting the release branch. Without this, the promotion commit lived only on `release/*`, so the next round of work on `development` re-carried already-released `[Unreleased]` entries and the next `/release` would double-promote them ([#297](https://github.com/ryaneggz/open-harness/issues/297)).
+
 ### Fixed
+- Repaired `CHANGELOG.md` drift between `development` and `main`: prior to the `/release` fix above, three releases (`2026.5.14`, `2026.5.15`, `2026.5.16`) had promoted versioned sections on `main` but never landed those promotions back on `development`, leaving stale `[Unreleased]` entries that duplicated already-shipped content. This commit restores the versioned sections to `development` from `main` and trims `[Unreleased]` to the genuinely new (post-`2026.5.16`) entries ([#297](https://github.com/ryaneggz/open-harness/issues/297)).
+
 ### Removed
 ### Deprecated
 ### Security

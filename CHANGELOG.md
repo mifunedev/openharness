@@ -9,6 +9,8 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `htop` and `cron` preinstalled in the sandbox base image so process inspection and scheduled jobs work without a manual `apt-get install` ([#312](https://github.com/ryaneggz/open-harness/issues/312)).
+
 ### Changed
 ### Fixed
 ### Removed

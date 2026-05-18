@@ -115,6 +115,7 @@ Remove the sandbox.
 | `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
+| `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
 
 Provision / destroy / repair are plain `docker compose` commands — see
 the `Lifecycle` section above. There is no dedicated skill.

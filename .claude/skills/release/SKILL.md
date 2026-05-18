@@ -78,8 +78,15 @@ awk -v ver="$VERSION" -v rdate="$RELEASE_DATE" '
   { print }
 ' CHANGELOG.md > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
 
+PREV_BRANCH=$(git branch --show-current)
 git add CHANGELOG.md
 git commit -m "task: promote CHANGELOG for $VERSION"
+
+# CRITICAL: push the promotion commit back to the source branch BEFORE cutting
+# the release branch (issue #297). If we only push the release branch, the
+# next round of work on $PREV_BRANCH will re-carry already-released entries
+# under [Unreleased] and the next /release will double-promote them.
+git push origin "$PREV_BRANCH"
 ```
 
 The `[$VERSION]` section is the source of truth for the GitHub Release body — `release.yml` extracts it via `body_path` (no `generate_release_notes`).
@@ -87,7 +94,6 @@ The `[$VERSION]` section is the source of truth for the GitHub Release body — 
 ### Step 4 — Push release branch + tag
 
 ```bash
-PREV_BRANCH=$(git branch --show-current)
 git checkout -b "release/$VERSION"
 git push origin "release/$VERSION"
 git tag "$VERSION" && git push origin "$VERSION"    # triggers release.yml

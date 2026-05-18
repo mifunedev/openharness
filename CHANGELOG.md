@@ -9,6 +9,15 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.5.18] - 2026-05-18
+
+### Added
 - `OH_GITHUB_REPO` and `OH_GITHUB_REF` env vars for fork-friendly installs ([#309](https://github.com/ryaneggz/open-harness/pull/309)).
 - `/worktrees` skill (`.claude/skills/worktrees/SKILL.md`) — orchestrator skill for managing `.worktrees/` lifecycle: create, list, remove, clean, stale audit, project clones.
 

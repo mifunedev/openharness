@@ -9,6 +9,8 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `/render-html` skill (`.claude/skills/render-html/SKILL.md`) — orchestrator skill for rendering an artifact as a bespoke, self-contained HTML file under `memory/<UTC-date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest). Output is gitignored via existing `memory/[0-9]*/` rule ([#314](https://github.com/ryaneggz/open-harness/issues/314)).
+
 ### Changed
 ### Fixed
 ### Removed

@@ -108,6 +108,7 @@ Remove the sandbox.
 | `/release` | CalVer release — branch, tag, push, GHCR |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
+| `/interview` | Adaptive pre-work clarifier — batches 2–4 task-specific questions via `AskUserQuestion`, then proceeds |
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
 | `/ship-spec` | End-to-end spec: `/prd` → critics → `/ralph` → gh issue → branch → draft PR |

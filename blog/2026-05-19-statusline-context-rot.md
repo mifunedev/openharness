@@ -45,9 +45,46 @@ The JSON is generous. The fields that matter:
 
 `context_window.used_percentage` is the one Claude Code hides from you. It is the gauge you've been driving without.
 
-## The 30-second fix
+## Three sizes — pick the smallest that works
 
-Drop this at `~/.claude/bin/statusline.sh`:
+### Tiny: one line, just the gauge
+
+Paste this into `~/.claude/settings.json`. No script file, no PATH, nothing to chmod:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "printf 'ctx %s%%' $(jq -r '.context_window.used_percentage // 0')"
+  }
+}
+```
+
+Reload Claude Code. You now see `ctx 67%` at the bottom of the TUI. Ten seconds.
+
+Want the 5-hour gauge too? Same shape:
+
+```json
+"command": "jq -r '\"ctx \\(.context_window.used_percentage // 0)% | 5h \\(.rate_limits.five_hour.used_percentage // 0)%\"'"
+```
+
+(The `\\(` is JSON escaping the backslash; jq sees `\(...)`.)
+
+### Lazy: describe it, let Claude write it
+
+`/statusline` is itself a slash command that **accepts a natural-language prompt**:
+
+```
+/statusline show ctx in red above 70%, plus 5h rate-limit and current worktree
+```
+
+Claude Code spawns a `statusline-setup` sub-agent. It writes the script, drops it on your PATH, and edits `settings.json`. You describe the bar; it generates the bash. No jq manual.
+
+This is the one to share with teammates who don't want to read this post.
+
+### Full: the colour-coded script
+
+When you outgrow the one-liner, drop this at `~/.claude/bin/statusline.sh`:
 
 ```bash
 #!/usr/bin/env bash
@@ -68,24 +105,29 @@ printf "%s | %s%s | ctx %s%d%%%s" \
 [ -n "$RL5" ] && printf " | 5h %s%%" "$RL5"
 ```
 
-`chmod +x` it, then in Claude Code: `/statusline` → point it at the script. Or set it directly in `~/.claude/settings.json`:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "~/.claude/bin/statusline.sh"
-  }
-}
-```
-
-You now see, in real time:
+`chmod +x`, then point `/statusline` at it (or set the `command` directly in `settings.json`). You now see, in real time:
 
 ```
 Claude Opus 4.7 | ~/repo @feat/foo | ctx 67% | 5h 23%
 ```
 
 The `ctx` number is the one that matters. When it goes red, you `/compact` or hand off — **before** the next response degrades, not after.
+
+## Beyond `ctx`: fields worth a slot
+
+The statusline JSON ships more than the context gauge. Pick what matches the mistakes you keep making — then prompt `/statusline` to add it.
+
+| Field | The mistake it prevents |
+|-------|------------------------|
+| `model.display_name` | You `/model` mid-session and forget you swapped down to Haiku |
+| `workspace.git_worktree` | You edit on the wrong branch because every worktree looks the same |
+| `output_style.name` | You left "Explanatory" on after one experiment; every response is bloated |
+| `rate_limits.seven_day.used_percentage` | You start a Friday-night marathon at 88% weekly burn |
+| `context_window.current_usage.cache_read_input_tokens` | Cache hit rate cratered after `/clear` — you're paying full price for context you already had |
+| `workspace.added_dirs` | `/add-dir` left scope attached you forgot about |
+| `version` | You're on an old Claude Code; the field you want shipped two releases ago |
+
+Rule of thumb: anything you've ever guessed wrong about — *which model is this? which worktree? am I still in Learning mode?* — deserves a slot. The cost is one more `jq` line; the saving is one more session you don't burn finding out the hard way.
 
 ## Why this punches above its weight
 

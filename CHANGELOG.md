@@ -11,6 +11,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Added
 - `/render-html` skill (`.claude/skills/render-html/SKILL.md`) — orchestrator skill for rendering an artifact as a bespoke, self-contained HTML file under `memory/<UTC-date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest). Output is gitignored via existing `memory/[0-9]*/` rule ([#314](https://github.com/ryaneggz/open-harness/issues/314)).
 - `/interview` skill (`.claude/skills/interview/SKILL.md`) — adaptive pre-work clarifier that batches 2–4 task-specific questions through `AskUserQuestion`, echoes a 2–3 sentence scope brief, and proceeds. Skips trivial tasks with an announcement. Serves as the in-tree reference pattern for `AskUserQuestion`-based elicitation in future skills ([#316](https://github.com/ryaneggz/open-harness/issues/316)).
+- Blog post `blog/2026-05-19-statusline-context-rot.md` — frames `/statusline` as the fix for the context-rot problem Ralph-loop users already grok; includes a copy-pasteable shell-script statusline that surfaces `context_window.used_percentage` and `rate_limits.five_hour.used_percentage` from the Claude Code statusline JSON ([#318](https://github.com/ryaneggz/open-harness/issues/318)).
 
 ### Changed
 ### Fixed

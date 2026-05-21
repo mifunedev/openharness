@@ -121,5 +121,10 @@
     ]
   },
   "effortLevel": "high",
-  "model": "claude-opus-4-7[1m]"
+  "model": "claude-opus-4-7[1m]",
+  "statusLine": {
+    "type": "command",
+    "command": "jq -r '\"[\\(.model.display_name)] \\(.context_window.used_percentage // 0)% context\"'",
+    "padding": 0
+  }
 }

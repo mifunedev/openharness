@@ -1,7 +1,0 @@
-{
-  "composeOverrides": [
-    ".devcontainer/docker-compose.claude-host.yml",
-    ".devcontainer/docker-compose.codex-host.yml",
-    ".devcontainer/docker-compose.opencode-host.yml"
-  ]
-}

@@ -15,6 +15,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Changed
 ### Fixed
 ### Removed
+- `config.example.json` and its install-time seeding step (`scripts/install.sh`); the base ships zero compose overlays and all readers tolerate a missing `config.json`, so the example template was dead weight. Packs that need overlays create their own `config.json` ([#323](https://github.com/ryaneggz/open-harness/issues/323)).
 ### Deprecated
 ### Security
 

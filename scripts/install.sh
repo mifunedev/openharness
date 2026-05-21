@@ -299,12 +299,6 @@ else
     fi
   fi
 
-  # ── Seed config.json from example if missing ──────────────────────────
-  if [ ! -f "$REPO_DIR/config.json" ] && [ -f "$REPO_DIR/config.example.json" ]; then
-    cp "$REPO_DIR/config.example.json" "$REPO_DIR/config.json"
-    ok "Seeded config.json from config.example.json"
-  fi
-
   # ── Shell CWD notice (for B migration) ────────────────────────────────
   # If the user's shell was open in ~/openharness, that path no longer exists.
   printf "\n"

@@ -6,6 +6,14 @@
   "generated_by": "git-sync/manual",
   "generated_at": "2026-05-22T00:00:00Z",
   "skills": {
+    "context-audit": {
+      "source": "github:mifunedev/skills",
+      "registry_version": "2026.5.22",
+      "skill_version": "0.1.0",
+      "commit": "1af15c40d8ddb1e76b22af2b1b0db724258a1586",
+      "checksum": "sha256:53667528b352d239470147611a97d5882c05edca82c22c86fdaccaf36b9c7b05",
+      "installed_paths": [".claude/skills/context-audit"]
+    },
     "agent-browser": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",

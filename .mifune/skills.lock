@@ -6,6 +6,15 @@
   "generated_by": "git-sync/manual",
   "generated_at": "2026-05-22T00:00:00Z",
   "skills": {
+    "reflect": {
+      "source": "github:mifunedev/skills",
+      "registry_version": "pending",
+      "skill_version": "0.1.0",
+      "commit": "pending-upstream",
+      "checksum": "sha256:d0809ed01ce80278f895ca0105ccd200ba9ddf55e9f864307d3db9450c818f7e",
+      "installed_paths": [".claude/skills/reflect"],
+      "note": "Authored in-tree for github:mifunedev/skills; not yet contributed to the registry. Backfill commit + registry_version on upstream merge (same flow as interview/render-html)."
+    },
     "context-audit": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.22",

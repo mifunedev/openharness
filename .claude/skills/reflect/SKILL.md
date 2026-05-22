@@ -9,7 +9,6 @@ description: |
   as an explicit, session-closing skill rather than a per-run afterthought.
   TRIGGER when: /reflect invoked explicitly, or when the session is closing
   and contains decisions, surprises, or failure modes worth preserving.
-argument-hint: "[--dry-run]"
 ---
 
 # Reflect

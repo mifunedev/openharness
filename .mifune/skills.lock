@@ -10,104 +10,120 @@
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:3be662c146f8272c6db0c8e83fbf0d1fe5d7806e0a0a422d5bc8d254f48e4175",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:78608b3bf75e85cbe3043c57cdbfd025d458f2cca605c6fafbfd0404e8653dee",
       "installed_paths": [".claude/skills/agent-browser"]
     },
     "ci-status": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:8aab544a281db20f43eb16b6642af23c73baa5dbe396ad4ce62b377a2ff524c8",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:775f79f521cca6455bfb14716962d168f0daa42649c8d09b78f61db36775691a",
       "installed_paths": [".claude/skills/ci-status"]
     },
     "delegate": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:b69369b19694ae11fbe1ef963c5918486e261583edba2144730036813824bb64",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:c69144a47afb43b4df9e726b7e8c0fc7f6458c4b4654a380f24d3ef6d682f03f",
       "installed_paths": [".claude/skills/delegate"]
     },
     "harness-audit": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:16d069610c3ec495a19256c5186e3fdfa4b435c134616464626b7650b393bcdf",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:b720c40b4ce483c78fe30ce864598747834e0775a29048a9f93b8566d4013a7d",
       "installed_paths": [".claude/skills/harness-audit"]
     },
     "harness-context": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:c81913917877459516ff13a283ddfd6d4b649a165b3f45226e69241087c1301e",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:fce344dc3fa6052fa650e13405d610eb519472f611054596eda46ac98e56cc4a",
       "installed_paths": [".claude/skills/harness-context"]
+    },
+    "interview": {
+      "source": "github:mifunedev/skills",
+      "registry_version": "2026.5.17",
+      "skill_version": "0.1.0",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:b3e563d025d0c3f27edf5ca3c0d4b955399ff71fc303461f000ca92fc9b361bd",
+      "installed_paths": [".claude/skills/interview"]
     },
     "post-bridge": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:7d4b0f4549cbe58a8889ffe287b7eff0fb9f43d9328ec6268a7538b8878247df",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:b6ce466ea638fbdb03d6f66bff44c5f90c22f86fed4ff0bfe84d0219e1d39eda",
       "installed_paths": [".claude/skills/post-bridge"]
     },
     "prd": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:6ea5e8655dbc7cccba54e73f37331e84cb041e02ce41f428f7e759bd9757dc63",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:72a5877e59b76abaf28443f3034c360842768562c6a1e0e6dcb5f92944b102c8",
       "installed_paths": [".claude/skills/prd"]
     },
     "ralph": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:4352ae2c3ef16f0789bf615e96531c8d10d3445ec576f54c12932408ed204104",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:cfba2c8fc999e082d48d637d78d7425482cd726da5026198e53b3b89ca0f5256",
       "installed_paths": [".claude/skills/ralph"]
     },
     "release": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:a985859b879cf2f528aaa51bda4cbe8dcd289ce36885ffcca5a5e33d63925b5c",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:57ffd3a2bfb2fa3bb53e086e8e7951bc4f6fe95b071179740bd10dfcb16c6e64",
       "installed_paths": [".claude/skills/release"]
+    },
+    "render-html": {
+      "source": "github:mifunedev/skills",
+      "registry_version": "2026.5.17",
+      "skill_version": "0.1.0",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:e3e709b06cc06f1e9f3203e2520bf90b5352f50fc5aa01ea35e379d42926f17f",
+      "installed_paths": [".claude/skills/render-html"]
     },
     "ship-spec": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:a36c9a5464066541a90f0e781a7b333bafe23c992edff3e7ba8583454aa6119e",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:a3c4fb446a435aa14d4d3e55549d9890020f53ff40995f69d02f73240aa719b8",
       "installed_paths": [".claude/skills/ship-spec"]
     },
     "skill-lint": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:b410932658c3eca1b4e82d6df48f8082a171b615afd82d938d6881085209244e",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:8db714bc34ffa35c81363721b69733014e80b1c82e6dd4b3fe4b75f3367f182d",
       "installed_paths": [".claude/skills/skill-lint"]
     },
     "strategic-proposal": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:c2b8bf71deb937c5e72cb38b1e599e42e4829ab89ed91cca450e847fd7e659aa",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:941f425f4a612e8d36a4d870ddf90f7cb6a8d9aa40efe596111c0eb78ddabe20",
       "installed_paths": [".claude/skills/strategic-proposal"]
     },
     "worktrees": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",
       "skill_version": "0.1.0",
-      "commit": "b2cca806860fe7af9d6f83b3761a95548dc530e0",
-      "checksum": "sha256:6cbb6c36ae20bfeea3451a696f233a1448a1b6241e8571e191e2227865239cb3",
+      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
+      "checksum": "sha256:ca2ce1bb4da6acc956f69181788faa3444487da0485156929f82d1754725d9b8",
       "installed_paths": [".claude/skills/worktrees"]
     }
   }

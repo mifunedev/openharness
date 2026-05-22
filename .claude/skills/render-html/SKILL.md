@@ -100,7 +100,7 @@ Use the `Write` tool. Confirm the byte size is plausible (>2 KB for any non-triv
 Return three lines:
 1. Absolute path: `memory/<date>/<slug>.html`
 2. A one-sentence summary of what was rendered (so the user knows what they'll see).
-3. The open command suggestion: `/agent-browser file:///home/sandbox/harness/memory/<date>/<slug>.html` (or `open file://...` if running locally).
+3. The open command suggestion: `/agent-browser file://$(pwd)/memory/<date>/<slug>.html` (or `open file://...` if running locally).
 
 ### 7. Memory Protocol
 

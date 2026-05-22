@@ -13,6 +13,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - `/interview` skill (`.claude/skills/interview/SKILL.md`) — adaptive pre-work clarifier that batches 2–4 task-specific questions through `AskUserQuestion`, echoes a 2–3 sentence scope brief, and proceeds. Skips trivial tasks with an announcement. Serves as the in-tree reference pattern for `AskUserQuestion`-based elicitation in future skills ([#316](https://github.com/ryaneggz/open-harness/issues/316)).
 
 ### Changed
+- 13 skills in `.claude/skills/` now sourced from and version-pinned to `github.com/mifunedev/skills` (commit `b2cca806`) via `.mifune/skills.lock`; `interview` and `render-html` remain local-only ([#327](https://github.com/ryaneggz/open-harness/issues/327)).
 ### Fixed
 ### Removed
 - `config.example.json` and its install-time seeding step (`scripts/install.sh`); the base ships zero compose overlays and all readers tolerate a missing `config.json`, so the example template was dead weight. Packs that need overlays create their own `config.json` ([#323](https://github.com/ryaneggz/open-harness/issues/323)).

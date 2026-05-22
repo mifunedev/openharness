@@ -18,6 +18,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - All 15 skills in `.claude/skills/` now sourced from and version-pinned to `github.com/mifunedev/skills` (commit `c559c100`) via `.mifune/skills.lock`; `interview` and `render-html` contributed upstream and added to the lock ([#327](https://github.com/ryaneggz/open-harness/issues/327)).
 - `README.md`, `docs/installation.md`, and `docs/quickstart.md` restructured to surface fork-and-clone and clone-and-own as first-class install paths alongside the upstream one-liner; `scripts/install.sh` local-run detection is now the documented bootstrap for self-hosters ([#331](https://github.com/ryaneggz/open-harness/issues/331)).
 - Skill `LICENSE` files updated to `Copyright (c) 2026 Mifune Dev (mifune.dev)` to match upstream correction.
+- Re-synced `context-audit` to the portable upstream form ([mifunedev/skills#6](https://github.com/mifunedev/skills/pull/6)): removed the top-level `argument-hint` frontmatter key, repinned `.mifune/skills.lock` (`commit` `f95011fe`, checksum `02dd6324`), and added the previously-missing `LICENSE` for folder parity ([#339](https://github.com/ryaneggz/open-harness/issues/339)).
 ### Fixed
 ### Removed
 - `config.example.json` and its install-time seeding step (`scripts/install.sh`); the base ships zero compose overlays and all readers tolerate a missing `config.json`, so the example template was dead weight. Packs that need overlays create their own `config.json` ([#323](https://github.com/ryaneggz/open-harness/issues/323)).

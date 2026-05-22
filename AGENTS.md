@@ -119,6 +119,7 @@ Remove the sandbox.
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 | `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
 | `/reflect` | Deliberate whole-session memory pass — scan the conversation for durable patterns, qualify-filter them, classify by tier, and propose `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `context/rules/memory.md` |
+| `/caveman` | Token-compression output mode (`lite`/`full`/`ultra`/`wenyan`); subcommands `/caveman-commit`, `/caveman-review`, `/caveman-compress <file>`, `/caveman-stats`. Never compresses code, security warnings, or irreversible-action confirmations |
 
 Provision / destroy / repair are plain `docker compose` commands — see
 the `Lifecycle` section above. There is no dedicated skill.

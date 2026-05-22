@@ -9,7 +9,8 @@ Tracks skills installed from external registries (github.com/mifunedev/skills).
 ## Managed skills
 
 13 skills in `.claude/skills/` are sourced from `github.com/mifunedev/skills`. Two skills
-(`interview`, `render-html`) remain local-only and are not tracked here.
+(`interview`, `render-html`) are being contributed upstream (mifunedev/skills PR #3) and will
+be tracked here once that PR merges.
 
 ## Update workflow
 

@@ -8,7 +8,6 @@ description: |
   TRIGGER when: asked to audit context window, check default context load,
   "what's in my context", evaluate rules for signal vs noise, or before/after
   any change to context/rules/ or CLAUDE.md.
-argument-hint: "all | --baseline | --ablate <relative-path>"
 ---
 
 # Context Audit

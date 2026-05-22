@@ -10,8 +10,8 @@
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.22",
       "skill_version": "0.1.0",
-      "commit": "1af15c40d8ddb1e76b22af2b1b0db724258a1586",
-      "checksum": "sha256:53667528b352d239470147611a97d5882c05edca82c22c86fdaccaf36b9c7b05",
+      "commit": "f95011fe743994778ab2a01b16d31bae21f0ca38",
+      "checksum": "sha256:02dd6324bb7ab62331a42fa414e2325bbb293c4e6f0ebb8aeead09f3948595a1",
       "installed_paths": [".claude/skills/context-audit"]
     },
     "agent-browser": {

@@ -38,7 +38,7 @@
       "registry_version": "vendored",
       "skill_version": "0.1.0",
       "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
-      "checksum": "sha256:ff9dfbe2b4c66b9e8aeaa088148731b12a3cbdbbfb4605b29866c7093bd85c67",
+      "checksum": "sha256:ed2c75566301ec8b00756e3d4a16030aba94d1a1a6c56c5de2330456d1464695",
       "installed_paths": [".claude/skills/caveman-compress"],
       "note": "Vendored caveman subcommand; see caveman entry."
     },

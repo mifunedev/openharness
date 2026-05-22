@@ -16,7 +16,45 @@ Open Harness is a Docker-based sandbox image. Installation is `docker compose` a
 
 That is the entire host requirement. Node.js, pnpm, and any AI CLI live inside the sandbox.
 
-## One-line installer (recommended)
+## Self-hosting: I already have a clone
+
+If you've already cloned your fork — or cloned upstream and re-pointed the remote — run the installer from inside the directory. It auto-detects the local repo and skips any network clone:
+
+```bash
+cd <your-clone>
+bash scripts/install.sh
+```
+
+The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and starts the sandbox. No `OH_GITHUB_REPO` environment variable required.
+
+### Fork-and-clone
+
+1. Fork `ryaneggz/open-harness` on GitHub.
+2. Clone your fork:
+   ```bash
+   git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
+   ```
+3. Run the installer — it detects the local clone automatically:
+   ```bash
+   bash scripts/install.sh
+   ```
+
+### Clone-and-own (re-point)
+
+1. Clone upstream:
+   ```bash
+   git clone https://github.com/ryaneggz/open-harness.git my-harness && cd my-harness
+   ```
+2. Re-point origin to your repo:
+   ```bash
+   git remote set-url origin https://github.com/<your-org>/<your-repo>.git
+   ```
+3. Run the installer:
+   ```bash
+   bash scripts/install.sh
+   ```
+
+## One-line installer (upstream only)
 
 ```bash
 curl -fsSL https://oh.mifune.dev/install.sh | bash

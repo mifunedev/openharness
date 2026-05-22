@@ -8,12 +8,12 @@
   "skills": {
     "reflect": {
       "source": "github:mifunedev/skills",
-      "registry_version": "pending",
+      "registry_version": "2026.5.22",
       "skill_version": "0.1.0",
-      "commit": "pending-upstream",
+      "commit": "d35ad8d6deec8f418873d73c0a5bf46e42644b23",
       "checksum": "sha256:9be176e0dc115ab40ea839d1155a3e21a42105553020d5270cc88453f47c270e",
       "installed_paths": [".claude/skills/reflect"],
-      "note": "Contributed to github:mifunedev/skills via PR #5 (branch skill/reflect); awaiting merge. Checksum is the registry folder-algorithm value (matches the upstream entry). Backfill commit + registry_version when PR #5 merges to master."
+      "note": "Merged to github:mifunedev/skills master via PR #5. Checksum is the registry folder-algorithm value (matches the upstream entry)."
     },
     "context-audit": {
       "source": "github:mifunedev/skills",

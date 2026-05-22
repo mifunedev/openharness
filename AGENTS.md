@@ -118,6 +118,7 @@ Remove the sandbox.
 | `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 | `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
+| `/caveman` | Token-compression output mode (`lite`/`full`/`ultra`/`wenyan`); subcommands `/caveman-commit`, `/caveman-review`, `/caveman-compress <file>`, `/caveman-stats`. Never compresses code, security warnings, or irreversible-action confirmations |
 
 Provision / destroy / repair are plain `docker compose` commands — see
 the `Lifecycle` section above. There is no dedicated skill.

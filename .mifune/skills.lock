@@ -6,6 +6,51 @@
   "generated_by": "git-sync/manual",
   "generated_at": "2026-05-22T00:00:00Z",
   "skills": {
+    "caveman": {
+      "source": "github:JuliusBrussee/caveman",
+      "registry_version": "vendored",
+      "skill_version": "0.1.0",
+      "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
+      "checksum": "sha256:afb7d709f83d3d7f259fe50ad08c1e55ec1574631d68d84b9ded98147eb29405",
+      "installed_paths": [".claude/skills/caveman"],
+      "note": "Manual/vendored adaptation of JuliusBrussee/caveman (MIT) to harness skill conventions; not from the mifunedev registry. Upstream curl|bash installer intentionally not used."
+    },
+    "caveman-commit": {
+      "source": "github:JuliusBrussee/caveman",
+      "registry_version": "vendored",
+      "skill_version": "0.1.0",
+      "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
+      "checksum": "sha256:17994cce8cc17e575eb1e54bbc3f7b2aca5d27294fd190952f430d9c8ebfae1a",
+      "installed_paths": [".claude/skills/caveman-commit"],
+      "note": "Vendored caveman subcommand; see caveman entry."
+    },
+    "caveman-review": {
+      "source": "github:JuliusBrussee/caveman",
+      "registry_version": "vendored",
+      "skill_version": "0.1.0",
+      "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
+      "checksum": "sha256:54728d3d76648c902a7ac57554e2123c14a258a6825532381bffcc11efb89701",
+      "installed_paths": [".claude/skills/caveman-review"],
+      "note": "Vendored caveman subcommand; see caveman entry."
+    },
+    "caveman-compress": {
+      "source": "github:JuliusBrussee/caveman",
+      "registry_version": "vendored",
+      "skill_version": "0.1.0",
+      "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
+      "checksum": "sha256:ff9dfbe2b4c66b9e8aeaa088148731b12a3cbdbbfb4605b29866c7093bd85c67",
+      "installed_paths": [".claude/skills/caveman-compress"],
+      "note": "Vendored caveman subcommand; see caveman entry."
+    },
+    "caveman-stats": {
+      "source": "github:JuliusBrussee/caveman",
+      "registry_version": "vendored",
+      "skill_version": "0.1.0",
+      "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
+      "checksum": "sha256:4cd48e8539635574309cf9bf124a98d1b9f48c4476751b11fabda7e6f7c34d98",
+      "installed_paths": [".claude/skills/caveman-stats"],
+      "note": "Vendored caveman subcommand; see caveman entry."
+    },
     "context-audit": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.22",

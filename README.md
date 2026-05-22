@@ -13,28 +13,41 @@
 
 ## 📦 Install
 
+**Option A — Upstream (try it without any setup):**
+
 ```bash
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
-The installer clones into `~/.openharness`, offers to share your host
-`gh` token, writes `.devcontainer/.env`, and builds the image (~10 min
-cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-docker/).
+Clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-docker/).
 
-### 📦 For forks / self-host
+**Option B — Fork and clone (recommended for self-hosting):**
 
-> **Forking this repo?** The block above pulls upstream code. Use the block below to install your fork instead.
+```bash
+# 1. Fork on GitHub, then clone YOUR fork:
+git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
+# 2. Bootstrap — installer auto-detects the local clone, no env vars needed:
+bash scripts/install.sh
+```
+
+**Option C — Clone upstream, then re-point to your repo:**
+
+```bash
+git clone https://github.com/ryaneggz/open-harness.git my-harness && cd my-harness
+git remote set-url origin https://github.com/<your-org>/<your-repo>.git
+bash scripts/install.sh
+```
+
+<details><summary>Advanced: install directly from your fork without cloning first</summary>
 
 ```bash
 OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
   https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh | bash
 ```
 
-If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL.
+If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](https://oh.mifune.dev/docs/installation) for all environment overrides.
 
-`curl | bash` from a branch HEAD is mutable — pin to a tag/SHA for production installs.
-
-> **Note:** Forks restructuring `.devcontainer/` should also patch the local-run detection in `scripts/install.sh` (the `-f .devcontainer/docker-compose.yml` check near line 173) — update the paths to match the new layout.
+</details>
 
 ## 🚀 Use it
 

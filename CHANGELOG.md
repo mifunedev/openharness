@@ -14,6 +14,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ### Changed
 - All 15 skills in `.claude/skills/` now sourced from and version-pinned to `github.com/mifunedev/skills` (commit `c559c100`) via `.mifune/skills.lock`; `interview` and `render-html` contributed upstream and added to the lock ([#327](https://github.com/ryaneggz/open-harness/issues/327)).
+- `README.md`, `docs/installation.md`, and `docs/quickstart.md` restructured to surface fork-and-clone and clone-and-own as first-class install paths alongside the upstream one-liner; `scripts/install.sh` local-run detection is now the documented bootstrap for self-hosters ([#331](https://github.com/ryaneggz/open-harness/issues/331)).
 - Skill `LICENSE` files updated to `Copyright (c) 2026 Mifune Dev (mifune.dev)` to match upstream correction.
 ### Fixed
 ### Removed

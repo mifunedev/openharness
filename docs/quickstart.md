@@ -17,6 +17,8 @@ Install Docker with the Compose plugin: [docs.docker.com/get-docker](https://doc
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
+> **Self-hosting?** If you've already cloned your fork or re-pointed origin, skip the curl command above and run `bash scripts/install.sh` from inside the directory instead — the installer detects the local clone automatically.
+
 The installer clones into `~/.openharness`, prompts to share your host
 `gh` token, writes `.devcontainer/.env` with safe defaults, and brings
 the sandbox up via `docker compose`.

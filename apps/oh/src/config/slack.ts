@@ -10,7 +10,7 @@ import {
   hasSession, killSession, newSession, capturePane, isInstalled as tmuxAvailable,
 } from "../lib/tmux.js";
 
-const AGENT_PI_SESSION = "agent-pi";
+const CLIENT_SLACK_SESSION = "client-slack";
 const CONNECTED_MARKER = "connected and listening";
 const POLL_INTERVAL_MS = 1000;
 const MAX_POLLS = 15;
@@ -143,37 +143,37 @@ async function promptAllowlist(env: Record<string, string | undefined>): Promise
   return result;
 }
 
-async function relaunchAgentPi(envPath: string): Promise<void> {
+async function relaunchClientSlack(envPath: string): Promise<void> {
   if (!tmuxAvailable()) {
-    warn("tmux not found in PATH — skipping agent-pi restart. Restart it manually after this exits.");
+    warn("tmux not found in PATH — skipping client-slack restart. Restart it manually after this exits.");
     return;
   }
-  const wasRunning = hasSession(AGENT_PI_SESSION);
+  const wasRunning = hasSession(CLIENT_SLACK_SESSION);
   if (wasRunning) {
-    info(`Killing existing tmux session "${AGENT_PI_SESSION}"…`);
-    killSession(AGENT_PI_SESSION);
+    info(`Killing existing tmux session "${CLIENT_SLACK_SESSION}"…`);
+    killSession(CLIENT_SLACK_SESSION);
   }
-  info(`Starting tmux session "${AGENT_PI_SESSION}"…`);
+  info(`Starting tmux session "${CLIENT_SLACK_SESSION}"…`);
   // The session sources .env via `set -a` so child pi inherits the new vars.
-  const cmd = `bash -c 'set -a; source ${envPath}; set +a; pi 2>&1 | tee /tmp/agent-pi.log'`;
-  newSession(AGENT_PI_SESSION, cmd);
+  const cmd = `bash -c 'set -a; source ${envPath}; set +a; pi 2>&1 | tee /tmp/client-slack.log'`;
+  newSession(CLIENT_SLACK_SESSION, cmd);
 
   info("Validating Slack connection (up to 15s)…");
   for (let i = 0; i < MAX_POLLS; i++) {
-    const out = capturePane(AGENT_PI_SESSION);
+    const out = capturePane(CLIENT_SLACK_SESSION);
     if (out.includes(CONNECTED_MARKER)) {
       ok("Slack extension connected.");
       return;
     }
     if (/Run error|Missing env/.test(out)) {
-      fail("Slack extension reported an error. Check `tmux attach -t agent-pi`.");
+      fail("Slack extension reported an error. Check `tmux attach -t client-slack`.");
       return;
     }
     await new Promise<void>((r) => setTimeout(r, POLL_INTERVAL_MS));
     process.stdout.write(".");
   }
   process.stdout.write("\n");
-  warn("Did not see 'connected and listening' within 15s. Check `tmux attach -t agent-pi`.");
+  warn("Did not see 'connected and listening' within 15s. Check `tmux attach -t client-slack`.");
 }
 
 export async function runSlack(): Promise<number> {
@@ -231,20 +231,20 @@ export async function runSlack(): Promise<number> {
     return 1;
   }
 
-  info("Next step: start the Slack bridge by (re)launching the agent-pi tmux session.");
-  info("This kills any existing agent-pi session, then starts pi with the new tokens;");
+  info("Next step: start the Slack bridge by (re)launching the client-slack tmux session.");
+  info("This kills any existing client-slack session, then starts pi with the new tokens;");
   info("pi loads the slack extension on boot and opens the Socket Mode connection.");
 
   if (await confirm("Start the Slack bridge now?")) {
-    await relaunchAgentPi(envPath);
+    await relaunchClientSlack(envPath);
     info("");
     info("Slack bridge is live. Test it: DM your bot or @mention it in an allow-listed channel.");
-    info("Tail the live log: tmux attach -t agent-pi   (detach: Ctrl-b d)");
+    info("Tail the live log: tmux attach -t client-slack   (detach: Ctrl-b d)");
   } else {
     info("Skipped. Start the bridge manually when ready:");
-    info("  tmux kill-session -t agent-pi 2>/dev/null; \\");
+    info("  tmux kill-session -t client-slack 2>/dev/null; \\");
     info(`  set -a; source ${envPath}; set +a; \\`);
-    info("  tmux new-session -d -s agent-pi 'pi 2>&1 | tee /tmp/agent-pi.log'");
+    info("  tmux new-session -d -s client-slack 'pi 2>&1 | tee /tmp/client-slack.log'");
   }
 
   return 0;

@@ -47,7 +47,8 @@ workspace/.pi/
 # Startup script (contains runtime config, tokens sourced from env)
 workspace/startup.sh
 **/.pnpm-store
-**/.claude/plans
+**/.claude/plans/*
+!**/.claude/plans/karpathy-llm-wiki.md
 **/.claude/specs/*
 **/auth.json
 **/.credentials.json

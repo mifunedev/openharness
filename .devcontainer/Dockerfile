@@ -58,7 +58,8 @@ RUN mkdir -p "$UV_TOOL_DIR" \
 
 # ─── pnpm (via corepack) ───────────────────────────────────────────
 ENV PNPM_HOME="/usr/local/share/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV NPM_USER_PREFIX="/home/sandbox/.local"
+ENV PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable && corepack prepare pnpm@latest --activate \
  && pnpm setup --force 2>/dev/null || true
@@ -69,10 +70,12 @@ RUN corepack enable && corepack prepare pnpm@latest --activate \
 # by default without extra configuration.
 #
 # AGENTS is a comma-separated list of agent CLI keys to install. The default
-# is claude-code + codex + pi-coding-agent + opencode. The pi-coding-agent key
-# resolves to @earendil-works/pi-coding-agent (the @mariozechner/... package
-# is deprecated upstream as of late 2026). Downstream harness packs (e.g.
-# @ryaneggz/mifune) install additional CLIs via their install-hook.sh.
+# is claude-code + codex + pi-coding-agent + opencode. pi-coding-agent is
+# installed later under the sandbox user's npm prefix so `pi update` can
+# self-update without sudo. The pi-coding-agent key resolves to
+# @earendil-works/pi-coding-agent (the @mariozechner/... package is deprecated
+# upstream as of late 2026). Downstream harness packs (e.g. @ryaneggz/mifune)
+# install additional CLIs via their install-hook.sh.
 SHELL ["/bin/bash", "-c"]
 
 ARG AGENTS="claude-code,codex,pi-coding-agent,opencode"
@@ -86,6 +89,7 @@ RUN set -e; \
     ); \
     IFS=',' read -ra agents <<< "$AGENTS"; \
     for a in "${agents[@]}"; do \
+        if [ "$a" = "pi-coding-agent" ]; then continue; fi; \
         pkg="${PKG[$a]:-}"; \
         if [ -n "$pkg" ]; then npm install -g "$pkg"; \
         else echo "Unknown agent: $a"; exit 1; fi; \
@@ -107,6 +111,15 @@ RUN useradd -m -s /bin/zsh sandbox \
  && chmod 0440 /etc/sudoers.d/sandbox \
  && groupadd -f docker && usermod -aG docker sandbox
 
+# Pi self-updates only when its package directory and parent are writable.
+# Install it under sandbox's npm prefix, and put that bin directory before
+# /usr/bin so `pi update` updates the active executable without sudo.
+RUN set -e; \
+    install -d -o sandbox -g sandbox "$NPM_USER_PREFIX"; \
+    if [[ ",${AGENTS}," == *",pi-coding-agent,"* ]]; then \
+        su - sandbox -c 'npm --prefix "$HOME/.local" install -g --ignore-scripts @earendil-works/pi-coding-agent'; \
+    fi
+
 # ─── oh-my-zsh + plugins ───────────────────────────────────────────
 # Install as sandbox so $HOME resolves and files land with correct ownership.
 # RUNZSH/CHSH=no keeps the installer from trying to exec zsh or re-run chsh.
@@ -121,11 +134,12 @@ COPY --chown=sandbox:sandbox install/.tmux.conf /home/sandbox/.tmux.conf
 # Default .zshrc for sandbox user (overrides the oh-my-zsh template)
 COPY --chown=sandbox:sandbox install/.zshrc /home/sandbox/.zshrc
 
-# Ensure PNPM_HOME is on PATH for login shells (SSH, openharness shell).
+# Ensure user npm bin + PNPM_HOME are on PATH for login shells (SSH, openharness shell).
 # bash reads .profile; zsh reads .zprofile — mirror the exports into both.
 RUN printf '%s\n' \
+      'export NPM_USER_PREFIX="/home/sandbox/.local"' \
       'export PNPM_HOME="/usr/local/share/pnpm"' \
-      'export PATH="$PNPM_HOME:$PATH"' \
+      'export PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"' \
       | tee -a /home/sandbox/.profile /home/sandbox/.zprofile \
  && chown sandbox:sandbox /home/sandbox/.profile /home/sandbox/.zprofile
 

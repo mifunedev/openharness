@@ -9,7 +9,7 @@
       "title": "Install fast-check and extend vitest include glob",
       "description": "As a sandbox worker, I add fast-check to root devDependencies (and apps/oh devDependencies if root hoisting does not satisfy apps/oh typecheck) and extend vitest.config.ts to cover the apps/oh test directory, so all subsequent property tests run under the existing npm test script with no additional CI configuration.",
       "acceptanceCriteria": [
-        "fast-check added to devDependencies in /home/sandbox/harness/package.json (pin to current stable ^3.x — confirm with `npm view fast-check version`)",
+        "fast-check added to devDependencies in /home/sandbox/harness/package.json (pin to current stable ^3.x \u2014 confirm with `npm view fast-check version`)",
         "If npm test from repo root cannot typecheck apps/oh/src/__tests__/cli.property.test.ts (added in US-008) due to module resolution, also add fast-check to apps/oh/package.json devDependencies",
         "package-lock.json (or pnpm-lock.yaml) updated by running the appropriate install command",
         "vitest.config.ts include glob extended to add 'apps/**/__tests__/**/*.test.ts' (existing entries for scripts/__tests__/ and .pi/**/__tests__/ unchanged)",
@@ -45,15 +45,15 @@
       "acceptanceCriteria": [
         "In same file scripts/__tests__/cron-runtime.property.test.ts, add a second property test",
         "Constructs baseline valid frontmatter with `schedule: \"* * * * *\"` and body",
-        "Appends 1–5 arbitrary `key: value` pairs using constrained arbitraries: keys = `fc.stringMatching(/^[a-zA-Z_][a-zA-Z0-9_]*$/)`, values = `fc.stringMatching(/^[^\\n:#]+$/)`",
+        "Appends 1\u20135 arbitrary `key: value` pairs using constrained arbitraries: keys = `fc.stringMatching(/^[a-zA-Z_][a-zA-Z0-9_]*$/)`, values = `fc.stringMatching(/^[^\\n:#]+$/)`",
         "Calls parseCronFile(extendedContent, 'test.md') and asserts result is non-null and result.schedule === '* * * * *'",
         "No modifications to scripts/cron-runtime.ts source (FR-11; verified at scripts/cron-runtime.ts:27-33)",
         "`npm test` passes",
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "Blocks: none. Blocked by: US-001. Can run in parallel with US-002, US-004."
+      "passes": true,
+      "notes": "Completed 2026-05-24; commit 39c521f. Wave 3."
     },
     {
       "id": "US-004",
@@ -61,7 +61,7 @@
       "description": "As a sandbox worker, I add a property test asserting loadCrons(dir) returns entries in deterministic alphabetical order by filename EVEN WHEN files are written in non-alphabetical order. loadCrons already sorts (scripts/cron-runtime.ts:50); test prevents accidental removal in future refactoring. Critical: the reverse-write fixture is what actually exercises the sort invariant.",
       "acceptanceCriteria": [
         "In scripts/__tests__/cron-runtime.property.test.ts, add a third property test",
-        "Generates 2–8 unique filenames using `fc.uniqueArray(fc.stringMatching(/^[a-z]{1,8}\\.md$/), { minLength: 2, maxLength: 8 })`",
+        "Generates 2\u20138 unique filenames using `fc.uniqueArray(fc.stringMatching(/^[a-z]{1,8}\\.md$/), { minLength: 2, maxLength: 8 })`",
         "Creates temp directory with `fs.mkdtempSync(path.join(os.tmpdir(), 'cron-prop-'))`",
         "WRITES files in REVERSE-alphabetical order (sort filenames descending) with minimal valid frontmatter `---\\nschedule: \"* * * * *\"\\n---\\n`",
         "Calls loadCrons(tmpDir), extracts returned entries' filePath values",
@@ -84,7 +84,7 @@
         "`.pi/extensions/path-guard.ts` exports `export function isSensitivePath(path: string): boolean { return SENSITIVE_PATHS.some((re) => re.test(path)); }`",
         "Default export's internal sensitive-path check at line 55 is replaced with `isSensitivePath(path)` call",
         "Existing .pi/extensions/__tests__/path-guard.test.ts example tests continue to pass with no modifications",
-        "path-guard.ts is NOT on .claude/protected-paths.txt (verified) — no override note required",
+        "path-guard.ts is NOT on .claude/protected-paths.txt (verified) \u2014 no override note required",
         "`npm test` passes",
         "Typecheck passes"
       ],
@@ -98,7 +98,7 @@
       "description": "As a sandbox worker, I add a property test asserting isSensitivePath(path) returns false for any arbitrary path string that does not match any sensitive-path regex.",
       "acceptanceCriteria": [
         "New file .pi/extensions/__tests__/path-guard.property.test.ts exists",
-        "Imports `isSensitivePath` AND `SENSITIVE_PATHS` (both added in US-005) directly from `.pi/extensions/path-guard` — no re-declaration",
+        "Imports `isSensitivePath` AND `SENSITIVE_PATHS` (both added in US-005) directly from `.pi/extensions/path-guard` \u2014 no re-declaration",
         "Property: generates arbitrary path strings using regex non-match filter (NOT substring exclusion): `fc.string().filter((s) => !SENSITIVE_PATHS.some((re) => re.test(s)))`",
         "Asserts `isSensitivePath(s) === false` for every such generated path",
         "Uses fast-check default numRuns (100)",
@@ -114,10 +114,10 @@
       "title": "Add export to isHelpFlag and isVersionFlag in apps/oh/src/cli.ts",
       "description": "As a sandbox worker, I add the `export` keyword to isHelpFlag and isVersionFlag in apps/oh/src/cli.ts so they can be imported from a property test file. No behavior changes.",
       "acceptanceCriteria": [
-        "apps/oh/src/cli.ts line 19: `function isHelpFlag(...)` → `export function isHelpFlag(...)`",
-        "apps/oh/src/cli.ts line 23: `function isVersionFlag(...)` → `export function isVersionFlag(...)`",
+        "apps/oh/src/cli.ts line 19: `function isHelpFlag(...)` \u2192 `export function isHelpFlag(...)`",
+        "apps/oh/src/cli.ts line 23: `function isVersionFlag(...)` \u2192 `export function isVersionFlag(...)`",
         "No other changes to cli.ts (existing local call sites continue to work)",
-        "cli.ts is NOT on .claude/protected-paths.txt (verified) — no override note required",
+        "cli.ts is NOT on .claude/protected-paths.txt (verified) \u2014 no override note required",
         "apps/oh build succeeds: `cd apps/oh && npm run build`",
         "apps/oh typecheck passes: `cd apps/oh && npm run typecheck`",
         "Smoke test: after build, `node apps/oh/dist/oh.js --help` exits 0 (verifies export change did not break tree-shaking or entry-point behavior)"
@@ -151,11 +151,11 @@
       "description": "As a sandbox worker, I add docs/property-testing.md documenting the file-naming convention, arbitrary patterns, default numRuns, the per-surface ledger, and the decision tree for when to use property vs example tests. Link from root README.md for discoverability.",
       "acceptanceCriteria": [
         "New file docs/property-testing.md exists",
-        "Section 'Convention' — file naming (*.property.test.ts), where tests live, what gets discovered by vitest",
-        "Section 'Arbitrary patterns' — fc.string, fc.array, fc.record, fc.stringMatching; when to write custom arbitraries (link to fast-check.dev)",
-        "Section 'numRuns' — default 100; when to tune",
-        "Section 'Decision tree' — one-paragraph: property test vs example test",
-        "Section 'Surface ledger' — markdown table listing 3 v1 surfaces (parseCronFile, path-guard, oh-cli-flags) with property names and which PR added each",
+        "Section 'Convention' \u2014 file naming (*.property.test.ts), where tests live, what gets discovered by vitest",
+        "Section 'Arbitrary patterns' \u2014 fc.string, fc.array, fc.record, fc.stringMatching; when to write custom arbitraries (link to fast-check.dev)",
+        "Section 'numRuns' \u2014 default 100; when to tune",
+        "Section 'Decision tree' \u2014 one-paragraph: property test vs example test",
+        "Section 'Surface ledger' \u2014 markdown table listing 3 v1 surfaces (parseCronFile, path-guard, oh-cli-flags) with property names and which PR added each",
         "Root README.md has a 'Testing' section (create if absent) with one-line link to docs/property-testing.md",
         "CHANGELOG.md [Unreleased] entry references this work",
         "Document does not duplicate fast-check upstream docs; links to fast-check.dev for reference",

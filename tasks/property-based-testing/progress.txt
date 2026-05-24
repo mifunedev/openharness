@@ -35,3 +35,22 @@ Created `scripts/__tests__/cron-runtime.property.test.ts` with a single property
 - Property test files use `.property.test.ts` suffix, live alongside example tests in `scripts/__tests__/`.
 
 ---
+
+---
+
+## US-003 — 2026-05-24 06:08 UTC
+
+**Title**: Forward-compatibility regression-prevention property for parseCronFile
+**Files changed**: scripts/__tests__/cron-runtime.property.test.ts (extended), CHANGELOG.md
+**Commit**: 39c521f
+**Result**: PASS
+
+### What I did
+Added a second `describe` block to the existing `scripts/__tests__/cron-runtime.property.test.ts` file (created in US-002). The new property test uses constrained arbitraries: keys from `fc.stringMatching(/^[a-zA-Z_][a-zA-Z0-9_]*$/)` and values from `fc.stringMatching(/^[^\n:#]+$/)` to avoid injecting structural YAML characters (`:`, `\n`, `#`) that would corrupt the parser's line-splitting logic and produce false failures. The test builds baseline frontmatter with `schedule: "* * * * *"`, appends 1–5 arbitrary unknown key-value pairs, calls `parseCronFile(extendedContent, "test.md")`, and asserts result is non-null and `result.schedule === "* * * * *"`. No modifications to `scripts/cron-runtime.ts`. `pnpm test` passes (116 tests, 10 files).
+
+### Learnings for future iterations
+- Constrained arbitraries are critical for YAML property tests — `fc.stringMatching` with explicit regex guards prevents structural characters from causing false-positive test failures unrelated to the invariant under test.
+- The pattern `fc.array(fc.tuple(keyArb, valueArb), { minLength: 1, maxLength: 5 })` cleanly generates 1–N extra key-value pairs.
+- Constructing the YAML content string inline in the test (baseline + extras join + closing `---`) is readable and avoids a YAML library dependency.
+
+---

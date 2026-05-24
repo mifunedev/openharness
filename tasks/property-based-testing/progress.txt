@@ -61,7 +61,7 @@ Added a second `describe` block to the existing `scripts/__tests__/cron-runtime.
 
 **Title**: Ordering-stability regression-prevention property for loadCrons
 **Files changed**: scripts/__tests__/cron-runtime.property.test.ts (extended), CHANGELOG.md, tasks/property-based-testing/prd.json, tasks/property-based-testing/progress.txt
-**Commit**: TBD
+**Commit**: 037879d
 **Result**: PASS
 
 ### What I did

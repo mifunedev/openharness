@@ -106,8 +106,8 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "Blocked by: US-005 (named exports must exist)."
+      "passes": true,
+      "notes": "Completed 2026-05-24. Created .pi/extensions/__tests__/path-guard.property.test.ts with regex non-match filter (fc.string().filter(...)) and isSensitivePath(s) === false assertion. Imports both isSensitivePath and SENSITIVE_PATHS from ../path-guard. pnpm test passes (118 tests, 11 files)."
     },
     {
       "id": "US-007",

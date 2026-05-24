@@ -89,3 +89,19 @@ Three precise edits to `.pi/extensions/path-guard.ts`: (1) added `export` keywor
 - The three edits are entirely additive to the module's API surface — existing callers (including the test file importing the default export via `factory`) are unaffected.
 - Using Python heredoc `<< 'PYEOF'` avoids shell permission-denied warnings on backtick-quoted strings inside python -c single-line invocations.
 - `isSensitivePath` is now importable by US-006 as a named import from `../path-guard` (no `.js` extension needed under the vitest module resolution used by the `.pi/extensions/__tests__/` suite).
+
+---
+
+## US-006 — 2026-05-24 06:13 UTC
+
+**Title**: No-false-positives property for isSensitivePath
+**Files changed**: .pi/extensions/__tests__/path-guard.property.test.ts (new), CHANGELOG.md, tasks/property-based-testing/prd.json, tasks/property-based-testing/progress.txt
+**Commit**: (see below)
+**Result**: PASS
+
+### What I did
+Created `.pi/extensions/__tests__/path-guard.property.test.ts` with a single describe/it block. Imports both `isSensitivePath` and `SENSITIVE_PATHS` as named imports from `../path-guard` (no re-declaration). The property uses `fc.string().filter((s) => !SENSITIVE_PATHS.some((re) => re.test(s)))` — the regex non-match filter specified in the AC — and asserts `expect(isSensitivePath(s)).toBe(false)`. Fast-check default numRuns (100). `pnpm test` passes: 118 tests across 11 files (1 new property test added to the path-guard suite).
+
+### Learnings for future iterations
+- The regex non-match filter pattern `fc.string().filter(...)` is the correct approach; substring exclusion would be insufficient and incorrect (regex anchors like `(^|\/)` require structural matching, not substring exclusion).
+- No `.js` extension needed in the import path `../path-guard` under the vitest module resolution used by the `.pi/extensions/__tests__/` suite.

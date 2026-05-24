@@ -23,7 +23,7 @@ Ran `pnpm add -D fast-check@^4.8.0` at the repo root (the package manager is pnp
 
 **Title**: Never-throw regression-prevention property for parseCronFile
 **Files changed**: scripts/__tests__/cron-runtime.property.test.ts (new), CHANGELOG.md
-**Commit**: SHA pending
+**Commit**: 9fe093e
 **Result**: PASS
 
 ### What I did

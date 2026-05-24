@@ -54,3 +54,21 @@ Added a second `describe` block to the existing `scripts/__tests__/cron-runtime.
 - Constructing the YAML content string inline in the test (baseline + extras join + closing `---`) is readable and avoids a YAML library dependency.
 
 ---
+
+---
+
+## US-004 — 2026-05-24 06:10 UTC
+
+**Title**: Ordering-stability regression-prevention property for loadCrons
+**Files changed**: scripts/__tests__/cron-runtime.property.test.ts (extended), CHANGELOG.md, tasks/property-based-testing/prd.json, tasks/property-based-testing/progress.txt
+**Commit**: TBD
+**Result**: PASS
+
+### What I did
+Added a third `describe` block to `scripts/__tests__/cron-runtime.property.test.ts`. The test generates 2–8 unique `.md` filenames via `fc.uniqueArray(fc.stringMatching(/^[a-z]{1,8}\.md$/), { minLength: 2, maxLength: 8 })`, creates a temp dir with `fs.mkdtempSync(path.join(os.tmpdir(), "cron-prop-"))`, writes files in REVERSE-alphabetical order (sort descending before writing), calls `loadCrons(tmpDir)`, and asserts the returned `entry.filePath` values equal the ASCENDING sort of the input filenames. Cleanup runs in `try/finally` with `fs.rmSync(tmpDir, { recursive: true, force: true })`. No source changes to `scripts/cron-runtime.ts`. `pnpm test` passes with 117 tests across 10 files.
+
+### Learnings for future iterations
+- `loadCrons` sets `entry.filePath` to the bare filename (not full path) — confirmed at `scripts/cron-runtime.ts:52`: `parseCronFile(readFileSync(...), f)` where `f` is the result of `readdirSync` (filename only).
+- The reverse-write fixture is critical: without writing in reverse order, the test cannot distinguish "sort is working" from "filesystem returned alphabetical order by coincidence."
+- `fs.mkdtempSync` + `try/finally` + `fs.rmSync({ recursive, force })` is the correct pattern for temp dir cleanup in property tests that may fail mid-run.
+- `loadCrons` only includes entries where `entry.enabled` is `true` (default when `enabled` key is absent from frontmatter); minimal frontmatter `---\nschedule: "* * * * *"\n---\n` satisfies this.

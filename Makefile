@@ -1,9 +1,12 @@
 # Open Harness — Makefile
 # Override sandbox name: make shell SANDBOX_NAME=mycontainer
+# Connect to a different running container: make shell portfolio-advisor
+# Connect as a specific user: make shell some-container SHELL_USER=postgres
 
 -include .devcontainer/.env
 
 SANDBOX_NAME      ?= openharness
+SHELL_USER        ?= sandbox
 COMPOSE_BASE      := -f .devcontainer/docker-compose.yml
 # Base ships with no required overlays. Downstream packs (Pi extensions,
 # BYO harness packs) register their own by appending paths to
@@ -13,6 +16,15 @@ COMPOSE_OVERRIDES := $(shell command -v jq >/dev/null 2>&1 && [ -f config.json ]
     jq -r '.composeOverrides[]?' config.json 2>/dev/null | sed 's|^|-f |' | tr '\n' ' ')
 COMPOSE           := docker compose $(COMPOSE_BASE) $(COMPOSE_OVERRIDES)
 
+SHELL_CONTAINER ?= $(SANDBOX_NAME)
+ifeq ($(firstword $(MAKECMDGOALS)),shell)
+  SHELL_POS_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  ifneq ($(SHELL_POS_ARGS),)
+    SHELL_CONTAINER := $(firstword $(SHELL_POS_ARGS))
+    $(foreach a,$(SHELL_POS_ARGS),$(eval $a:;@:))
+  endif
+endif
+
 .DEFAULT_GOAL := help
 
 .PHONY: sandbox shell destroy stop logs ps restart help
@@ -20,8 +32,8 @@ COMPOSE           := docker compose $(COMPOSE_BASE) $(COMPOSE_OVERRIDES)
 sandbox: ## Provision and start the sandbox
 	$(COMPOSE) up -d --build
 
-shell: ## Connect to the sandbox (agent choice happens inside)
-	docker exec -it -u sandbox $(SANDBOX_NAME) zsh
+shell: ## Connect to a running container (default: $(SANDBOX_NAME)). Usage: make shell [container] [SHELL_USER=user]
+	docker exec -it -u $(SHELL_USER) $(SHELL_CONTAINER) zsh
 
 destroy: ## Stop and remove the sandbox (volumes wiped)
 	$(COMPOSE) down -v

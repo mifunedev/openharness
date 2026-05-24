@@ -39,6 +39,7 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    ```bash
    make shell     # default; bash also available
    ```
+   Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
 
    **Option B — VS Code Attach to Container (local):**
    Dev Containers extension → "Attach to Running Container" → select the `openharness` container
@@ -74,6 +75,7 @@ Verify the sandbox is healthy.
    ```bash
    make shell
    ```
+   Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
    - `AGENTS.md` exists in `workspace/`
    - Target agent CLI is installed (`claude --version`)
    - Docker socket accessible if needed (`docker ps`)

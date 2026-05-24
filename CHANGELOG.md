@@ -20,6 +20,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Changed
 - `.pi/extensions/path-guard.ts` refactored to expose `SENSITIVE_PATHS` as a named export and extract the sensitive-path check into a new `isSensitivePath(p: string): boolean` named export; default-export behavior unchanged ([#354](https://github.com/ryaneggz/open-harness/issues/354)).
 - Export `isHelpFlag` and `isVersionFlag` from `apps/oh/src/cli.ts` for testability (#354).
+- `make shell [container]` now accepts an optional running container name and runs `docker exec`; defaults to `$(SANDBOX_NAME)`. Pair with `SHELL_USER=<user>` for containers without a `sandbox` user.
 ### Fixed
 - Secret-exposure hooks (`.claude/hooks/{deny-env-dump,deny-secret-paths}.sh`) no longer deny operations on tracked template env files (`.example.env`, `.env.example`, `.env.sample`, `.env.template`); real `.env`, `.env.local`, `.env.production` continue to deny. Path-branch was split out of monolithic `DENY` so allowlist applies only to `READ_CMD`-anchored secret-path matches; `\benv\b` patterns retightened to `(^|[^A-Za-z0-9._/-])env` (command-position) to fix a pre-existing false-positive on any path ending in `.env`. Codex wrapper inherits the fix ([#356](https://github.com/ryaneggz/open-harness/issues/356)).
 ### Removed

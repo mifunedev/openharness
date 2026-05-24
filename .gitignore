@@ -56,3 +56,5 @@ workspace/startup.sh
 apps/*/build/
 apps/*/.docusaurus/
 apps/*/node_modules/
+wiki/raw/*
+!wiki/raw/README.md

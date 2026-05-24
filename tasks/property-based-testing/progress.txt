@@ -1,0 +1,177 @@
+# progress
+
+
+## US-001 — 2026-05-24 06:05 UTC
+
+**Title**: Install fast-check and extend vitest include glob
+**Files changed**: package.json, pnpm-lock.yaml, vitest.config.ts, CHANGELOG.md
+**Commit**: 3aafeaf
+**Result**: PASS
+
+### What I did
+Ran `pnpm add -D fast-check@^4.8.0` at the repo root (the package manager is pnpm per `packageManager` field in root `package.json` and `pnpm-lock.yaml` lockfile). The PRD stated "^3.x" but `npm view fast-check version` returned `4.8.0` (current stable is 4.x), so pinned to `^4.8.0` per the AC "confirm with npm view fast-check version". Added `"apps/**/__tests__/**/*.test.ts"` to the `include` array in `vitest.config.ts` without touching the existing two entries. Ran `pnpm test` — all 9 existing test files and 114 tests pass. `pnpm exec vitest list` confirms `scripts/__tests__/cron-runtime.test.ts` (9 tests) and `.pi/extensions/__tests__/path-guard.test.ts` (32 tests) are still discovered with no regression.
+
+### Learnings for future iterations
+- Package manager is **pnpm** (not npm) — use `pnpm add -D` for installs and `pnpm test` for the test script.
+- fast-check current stable is **4.x** (not 3.x as the PRD draft stated). Imports and API are compatible; no changes needed for future stories using fc.
+- Root hoisting works: `fast-check` installed at root is available without adding it to `apps/oh/package.json`.
+- `pnpm exec vitest list` produces one line per test (not per file) — 114 lines for 9 files.
+
+---
+
+## US-002 — 2026-05-24 06:05 UTC
+
+**Title**: Never-throw regression-prevention property for parseCronFile
+**Files changed**: scripts/__tests__/cron-runtime.property.test.ts (new), CHANGELOG.md
+**Commit**: 9fe093e
+**Result**: PASS
+
+### What I did
+Created `scripts/__tests__/cron-runtime.property.test.ts` with a single property test using `fc.assert(fc.property(fc.string(), fc.string(), ...))`. The test asserts `parseCronFile(content, filePath)` never throws for any arbitrary string inputs. Used fast-check default numRuns (100). No modifications to `scripts/cron-runtime.ts`. Ran `pnpm test` — all 115 tests pass (114 pre-existing + 1 new property test). Typecheck passes.
+
+### Learnings for future iterations
+- fast-check default import (`import fc from "fast-check"`) works correctly with v4.x.
+- The `globals: true` vitest config means `describe`, `expect`, `it` are available globally, but explicitly importing from `vitest` is the existing style convention — follow it.
+- Property test files use `.property.test.ts` suffix, live alongside example tests in `scripts/__tests__/`.
+
+---
+
+---
+
+## US-003 — 2026-05-24 06:08 UTC
+
+**Title**: Forward-compatibility regression-prevention property for parseCronFile
+**Files changed**: scripts/__tests__/cron-runtime.property.test.ts (extended), CHANGELOG.md
+**Commit**: 39c521f
+**Result**: PASS
+
+### What I did
+Added a second `describe` block to the existing `scripts/__tests__/cron-runtime.property.test.ts` file (created in US-002). The new property test uses constrained arbitraries: keys from `fc.stringMatching(/^[a-zA-Z_][a-zA-Z0-9_]*$/)` and values from `fc.stringMatching(/^[^\n:#]+$/)` to avoid injecting structural YAML characters (`:`, `\n`, `#`) that would corrupt the parser's line-splitting logic and produce false failures. The test builds baseline frontmatter with `schedule: "* * * * *"`, appends 1–5 arbitrary unknown key-value pairs, calls `parseCronFile(extendedContent, "test.md")`, and asserts result is non-null and `result.schedule === "* * * * *"`. No modifications to `scripts/cron-runtime.ts`. `pnpm test` passes (116 tests, 10 files).
+
+### Learnings for future iterations
+- Constrained arbitraries are critical for YAML property tests — `fc.stringMatching` with explicit regex guards prevents structural characters from causing false-positive test failures unrelated to the invariant under test.
+- The pattern `fc.array(fc.tuple(keyArb, valueArb), { minLength: 1, maxLength: 5 })` cleanly generates 1–N extra key-value pairs.
+- Constructing the YAML content string inline in the test (baseline + extras join + closing `---`) is readable and avoids a YAML library dependency.
+
+---
+
+---
+
+## US-004 — 2026-05-24 06:10 UTC
+
+**Title**: Ordering-stability regression-prevention property for loadCrons
+**Files changed**: scripts/__tests__/cron-runtime.property.test.ts (extended), CHANGELOG.md, tasks/property-based-testing/prd.json, tasks/property-based-testing/progress.txt
+**Commit**: 037879d
+**Result**: PASS
+
+### What I did
+Added a third `describe` block to `scripts/__tests__/cron-runtime.property.test.ts`. The test generates 2–8 unique `.md` filenames via `fc.uniqueArray(fc.stringMatching(/^[a-z]{1,8}\.md$/), { minLength: 2, maxLength: 8 })`, creates a temp dir with `fs.mkdtempSync(path.join(os.tmpdir(), "cron-prop-"))`, writes files in REVERSE-alphabetical order (sort descending before writing), calls `loadCrons(tmpDir)`, and asserts the returned `entry.filePath` values equal the ASCENDING sort of the input filenames. Cleanup runs in `try/finally` with `fs.rmSync(tmpDir, { recursive: true, force: true })`. No source changes to `scripts/cron-runtime.ts`. `pnpm test` passes with 117 tests across 10 files.
+
+### Learnings for future iterations
+- `loadCrons` sets `entry.filePath` to the bare filename (not full path) — confirmed at `scripts/cron-runtime.ts:52`: `parseCronFile(readFileSync(...), f)` where `f` is the result of `readdirSync` (filename only).
+- The reverse-write fixture is critical: without writing in reverse order, the test cannot distinguish "sort is working" from "filesystem returned alphabetical order by coincidence."
+- `fs.mkdtempSync` + `try/finally` + `fs.rmSync({ recursive, force })` is the correct pattern for temp dir cleanup in property tests that may fail mid-run.
+- `loadCrons` only includes entries where `entry.enabled` is `true` (default when `enabled` key is absent from frontmatter); minimal frontmatter `---\nschedule: "* * * * *"\n---\n` satisfies this.
+
+---
+
+## US-005 — 2026-05-24 06:12 UTC
+
+**Title**: Refactor path-guard.ts to expose isSensitivePath and SENSITIVE_PATHS as named exports
+**Files changed**: .pi/extensions/path-guard.ts, CHANGELOG.md
+**Commit**: ccff7a1
+**Result**: PASS
+
+### What I did
+Three precise edits to `.pi/extensions/path-guard.ts`: (1) added `export` keyword to `const SENSITIVE_PATHS: RegExp[] = [` at line 3; (2) inserted `export function isSensitivePath(p: string): boolean { return SENSITIVE_PATHS.some((re) => re.test(p)); }` after the closing `];` of SENSITIVE_PATHS and before the RISKY_BASH comment block; (3) replaced the inline `SENSITIVE_PATHS.some((re) => re.test(path))` predicate at line 59 with `isSensitivePath(path)`. No changes to the default-export function flow, RISKY_BASH, or any test file. `pnpm test` passes — 117 tests across 10 files (32 path-guard example tests all pass unchanged).
+
+### Learnings for future iterations
+- The three edits are entirely additive to the module's API surface — existing callers (including the test file importing the default export via `factory`) are unaffected.
+- Using Python heredoc `<< 'PYEOF'` avoids shell permission-denied warnings on backtick-quoted strings inside python -c single-line invocations.
+- `isSensitivePath` is now importable by US-006 as a named import from `../path-guard` (no `.js` extension needed under the vitest module resolution used by the `.pi/extensions/__tests__/` suite).
+
+---
+
+## US-006 — 2026-05-24 06:13 UTC
+
+**Title**: No-false-positives property for isSensitivePath
+**Files changed**: .pi/extensions/__tests__/path-guard.property.test.ts (new), CHANGELOG.md, tasks/property-based-testing/prd.json, tasks/property-based-testing/progress.txt
+**Commit**: 16f6146
+**Result**: PASS
+
+### What I did
+Created `.pi/extensions/__tests__/path-guard.property.test.ts` with a single describe/it block. Imports both `isSensitivePath` and `SENSITIVE_PATHS` as named imports from `../path-guard` (no re-declaration). The property uses `fc.string().filter((s) => !SENSITIVE_PATHS.some((re) => re.test(s)))` — the regex non-match filter specified in the AC — and asserts `expect(isSensitivePath(s)).toBe(false)`. Fast-check default numRuns (100). `pnpm test` passes: 118 tests across 11 files (1 new property test added to the path-guard suite).
+
+### Learnings for future iterations
+- The regex non-match filter pattern `fc.string().filter(...)` is the correct approach; substring exclusion would be insufficient and incorrect (regex anchors like `(^|\/)` require structural matching, not substring exclusion).
+- No `.js` extension needed in the import path `../path-guard` under the vitest module resolution used by the `.pi/extensions/__tests__/` suite.
+
+## US-007 — 2026-05-24 UTC
+
+**Title**: Add export to isHelpFlag and isVersionFlag in apps/oh/src/cli.ts
+**Files changed**: apps/oh/src/cli.ts, CHANGELOG.md
+**Commit**: dc83430
+**Result**: PASS
+
+### What I did
+Added the `export` keyword to two functions in `apps/oh/src/cli.ts`: 
+- Line 19: `export function isHelpFlag(arg: string | undefined): boolean` 
+- Line 23: `export function isVersionFlag(arg: string | undefined): boolean`
+
+No other changes to the file. Verified: `npm run typecheck` passes, `npm run build` succeeds (dist/oh.js at 17.8kb), and the smoke test `node apps/oh/dist/oh.js --help` exits 0. All acceptance criteria met.
+
+### Learnings for future iterations
+- apps/oh uses its own `npm run build` / `npm run typecheck` commands (not pnpm from root) — must cd into apps/oh before running.
+- The build output (`dist/oh.js`) is gitignored; only stage source files (cli.ts) and CHANGELOG.md.
+- Adding `export` to a function that is only called locally does not break the local call site — exports are purely additive to module scope.
+
+## US-008 — 2026-05-24 06:18 UTC
+
+**Title**: Determinism and no-throw property for oh CLI flag detection
+**Files changed**: apps/oh/src/__tests__/cli.property.test.ts (new), CHANGELOG.md, tasks/property-based-testing/prd.json, tasks/property-based-testing/progress.txt
+**Result**: PASS
+
+### What I did
+Created `apps/oh/src/__tests__/cli.property.test.ts` with three property tests:
+1. `isHelpFlag` determinism: `expect(isHelpFlag(s)).toBe(isHelpFlag(s))` for all `string | undefined` inputs
+2. `isVersionFlag` determinism: same pattern
+3. Combined no-throw: `expect(() => isHelpFlag(s)).not.toThrow()` and `expect(() => isVersionFlag(s)).not.toThrow()` in a single property
+
+The import uses `../cli.js` per NodeNext ESM resolution. `fc.oneof(fc.string(), fc.constant(undefined))` covers the full `string | undefined` signature. Mutual exclusion assertion explicitly excluded per AC.
+
+Key challenge: `cli.ts` has a top-level `main(process.argv.slice(2)).then(process.exit)` call. Vitest intercepts `process.exit` in its fork pool and surfaces it as an unhandled error even when all tests pass. Fixed with `vi.mock("../cli.js", async (importOriginal) => { ... })` — the factory stubs `process.exit` to a no-op, awaits the original module import (triggering main()), allows one microtask tick for the promise to resolve, then restores the original. Dynamic `import("../cli.js")` is used in test scope to consume the mocked module.
+
+No fast-check added to `apps/oh/package.json` — root hoisting confirmed working (same as US-001 note). `pnpm test` passes: 121 tests across 12 files. Typecheck passes.
+
+### Learnings for future iterations
+- `cli.ts`-style modules with top-level `main().then(process.exit)` require `vi.mock` factory hoisting to suppress vitest's `process.exit` interception — a plain `vi.spyOn` set up before a static import is too late (ESM hoisting runs imports first).
+- The `vi.mock(module, async (importOriginal) => { stub process.exit; await importOriginal(); await microtask; restore; return mod })` pattern is the correct solution for modules with async top-level side effects.
+- NodeNext ESM imports in vitest tests do require the `.js` extension in the import path (`../cli.js`) even though source is `.ts`.
+
+## US-009 — 2026-05-24 23:59 UTC
+
+**Title**: Document the property-testing convention
+**Files changed**: docs/property-testing.md (new), README.md, CHANGELOG.md
+**Commit**: (pending)
+**Result**: PASS
+
+### What I did
+Created `docs/property-testing.md` with five required sections:
+1. **Convention** — documents *.property.test.ts naming, directory locations (scripts/__tests__/, .pi/extensions/__tests__/, apps/oh/src/__tests__/), and vitest glob coverage
+2. **Arbitrary patterns** — covers fc.string, fc.array, fc.record, fc.stringMatching with examples; links to https://fast-check.dev for upstream docs (no duplication)
+3. **numRuns** — documents default 100, when to tune (rare; only if real regression slips through); includes code example
+4. **Decision tree** — one-paragraph prose comparing property tests (general invariants, regression prevention) vs example tests (specific I/O pairs, edge cases, bug fixes)
+5. **Surface ledger** — markdown table listing the 5 v1 properties across 3 surfaces (parseCronFile never-throw + forward-compat, loadCrons ordering-stability, isSensitivePath no-false-positives, isHelpFlag+isVersionFlag determinism+no-throw), all in PR #355
+
+Updated root README.md: added "## 🧪 Testing" section after "Use it" with one-line link to docs/property-testing.md.
+
+Updated CHANGELOG.md [Unreleased] ### Added: entry documenting the new docs with link to #354.
+
+All sections are non-empty and accurate per the PRD and progress notes from T1-T8.
+
+### Learnings for future iterations
+- The existing vitest config already includes `apps/**/__tests__/**/*.test.ts` (US-001), so no changes needed there — just documented it accurately.
+- The five property tests are distributed across three surfaces: two properties on parseCronFile (never-throw and forward-compat), one on loadCrons (ordering-stability), one on isSensitivePath (no-false-positives), and two on the oh CLI flags combined (determinism + no-throw).
+- Documentation is a docs-only story — no code changes, no refactors, just markdown additions.
+
+STATUS: COMPLETE

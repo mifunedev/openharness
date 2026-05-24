@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-const SENSITIVE_PATHS: RegExp[] = [
+export const SENSITIVE_PATHS: RegExp[] = [
   /(^|\/)\.env(\..+)?$/,
   /(^|\/)secrets?\//,
   /(^|\/)credentials?\.(json|ya?ml)$/,
@@ -8,6 +8,10 @@ const SENSITIVE_PATHS: RegExp[] = [
   /\.key$/,
   /(^|\/)id_(rsa|ed25519|ecdsa)$/,
 ];
+
+export function isSensitivePath(p: string): boolean {
+  return SENSITIVE_PATHS.some((re) => re.test(p));
+}
 
 // Fix #2: All regexes now carry the `i` flag for case-insensitive matching.
 // Fix #3: Block-device redirection regex updated to match bare `> /dev/...`
@@ -52,7 +56,7 @@ export default function (pi: ExtensionAPI) {
 
     if (MUTATING_TOOLS.has(toolName)) {
       const path = pickPath(event.input as Record<string, unknown>);
-      if (path && SENSITIVE_PATHS.some((re) => re.test(path))) {
+      if (path && isSensitivePath(path)) {
         const ok = await ctx.ui.confirm(
           "Sensitive path",
           `Allow ${toolName} on ${path}?`,

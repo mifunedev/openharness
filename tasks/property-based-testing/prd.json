@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/354-property-based-testing",
+  "description": "Adopt fast-check property-based testing across the three TypeScript surfaces in the harness (parseCronFile/loadCrons, path-guard sensitive-path matching, oh CLI flag detection). Property tests serve as regression prevention; source review confirmed all target invariants already hold. Two small refactors expose currently module-private functions for testing. All stories execute via /delegate (sandbox-side workers); orchestrator only scaffolds and reviews.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install fast-check and extend vitest include glob",
+      "description": "As a sandbox worker, I add fast-check to root devDependencies (and apps/oh devDependencies if root hoisting does not satisfy apps/oh typecheck) and extend vitest.config.ts to cover the apps/oh test directory, so all subsequent property tests run under the existing npm test script with no additional CI configuration.",
+      "acceptanceCriteria": [
+        "fast-check added to devDependencies in /home/sandbox/harness/package.json (pin to current stable ^3.x — confirm with `npm view fast-check version`)",
+        "If npm test from repo root cannot typecheck apps/oh/src/__tests__/cli.property.test.ts (added in US-008) due to module resolution, also add fast-check to apps/oh/package.json devDependencies",
+        "package-lock.json (or pnpm-lock.yaml) updated by running the appropriate install command",
+        "vitest.config.ts include glob extended to add 'apps/**/__tests__/**/*.test.ts' (existing entries for scripts/__tests__/ and .pi/**/__tests__/ unchanged)",
+        "Paste `npx vitest list` output in the PR description confirming all property test files (US-002 through US-008) are discovered by vitest",
+        "`npm test` (or `pnpm test`) from repo root completes successfully with no new failures",
+        "No changes to existing example tests",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Never-throw regression-prevention property for parseCronFile",
+      "description": "As a sandbox worker, I add a property test asserting parseCronFile(content, filePath) returns either null or a valid CronEntry but never throws, for any arbitrary string inputs. Current implementation already satisfies this; test is regression prevention against future YAML-parser-library adoption.",
+      "acceptanceCriteria": [
+        "New file scripts/__tests__/cron-runtime.property.test.ts exists",
+        "Contains: `fc.assert(fc.property(fc.string(), fc.string(), (content, filePath) => { expect(() => parseCronFile(content, filePath)).not.toThrow(); }))`",
+        "Uses fast-check default numRuns (100); no tuning",
+        "No modifications to scripts/cron-runtime.ts source (FR-11)",
+        "`npm test` passes",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Blocks: none. Blocked by: US-001."
+    },
+    {
+      "id": "US-003",
+      "title": "Forward-compatibility regression-prevention property for parseCronFile",
+      "description": "As a sandbox worker, I add a property test asserting that valid cron frontmatter remains parseable when arbitrary unknown YAML keys are appended. Current implementation already ignores unknown keys (parser only reads named keys); test is regression prevention.",
+      "acceptanceCriteria": [
+        "In same file scripts/__tests__/cron-runtime.property.test.ts, add a second property test",
+        "Constructs baseline valid frontmatter with `schedule: \"* * * * *\"` and body",
+        "Appends 1–5 arbitrary `key: value` pairs using constrained arbitraries: keys = `fc.stringMatching(/^[a-zA-Z_][a-zA-Z0-9_]*$/)`, values = `fc.stringMatching(/^[^\\n:#]+$/)`",
+        "Calls parseCronFile(extendedContent, 'test.md') and asserts result is non-null and result.schedule === '* * * * *'",
+        "No modifications to scripts/cron-runtime.ts source (FR-11; verified at scripts/cron-runtime.ts:27-33)",
+        "`npm test` passes",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Blocks: none. Blocked by: US-001. Can run in parallel with US-002, US-004."
+    },
+    {
+      "id": "US-004",
+      "title": "Ordering-stability regression-prevention property for loadCrons",
+      "description": "As a sandbox worker, I add a property test asserting loadCrons(dir) returns entries in deterministic alphabetical order by filename EVEN WHEN files are written in non-alphabetical order. loadCrons already sorts (scripts/cron-runtime.ts:50); test prevents accidental removal in future refactoring. Critical: the reverse-write fixture is what actually exercises the sort invariant.",
+      "acceptanceCriteria": [
+        "In scripts/__tests__/cron-runtime.property.test.ts, add a third property test",
+        "Generates 2–8 unique filenames using `fc.uniqueArray(fc.stringMatching(/^[a-z]{1,8}\\.md$/), { minLength: 2, maxLength: 8 })`",
+        "Creates temp directory with `fs.mkdtempSync(path.join(os.tmpdir(), 'cron-prop-'))`",
+        "WRITES files in REVERSE-alphabetical order (sort filenames descending) with minimal valid frontmatter `---\\nschedule: \"* * * * *\"\\n---\\n`",
+        "Calls loadCrons(tmpDir), extracts returned entries' filePath values",
+        "Asserts returned order is ASCENDING alphabetical sort of input filenames",
+        "Cleans up with `fs.rmSync(tmpDir, { recursive: true, force: true })` inside try/finally",
+        "No modifications to scripts/cron-runtime.ts source (FR-11)",
+        "`npm test` passes",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Blocks: none. Blocked by: US-001. Can run in parallel with US-002, US-003."
+    },
+    {
+      "id": "US-005",
+      "title": "Refactor path-guard.ts to expose isSensitivePath and SENSITIVE_PATHS as named exports",
+      "description": "As a sandbox worker, I refactor .pi/extensions/path-guard.ts to extract the sensitive-path check into a named exported pure function isSensitivePath(path: string): boolean, and export the SENSITIVE_PATHS regex list as a named constant, so US-006 can test against the same compiled regexes without duplication-drift risk. Existing default-export extension function unchanged in behavior.",
+      "acceptanceCriteria": [
+        "`.pi/extensions/path-guard.ts` adds `export` to existing `const SENSITIVE_PATHS: RegExp[] = [ ... ];` declaration at line 3",
+        "`.pi/extensions/path-guard.ts` exports `export function isSensitivePath(path: string): boolean { return SENSITIVE_PATHS.some((re) => re.test(path)); }`",
+        "Default export's internal sensitive-path check at line 55 is replaced with `isSensitivePath(path)` call",
+        "Existing .pi/extensions/__tests__/path-guard.test.ts example tests continue to pass with no modifications",
+        "path-guard.ts is NOT on .claude/protected-paths.txt (verified) — no override note required",
+        "`npm test` passes",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Blocks: US-006. Blocked by: US-001."
+    },
+    {
+      "id": "US-006",
+      "title": "No-false-positives property for isSensitivePath",
+      "description": "As a sandbox worker, I add a property test asserting isSensitivePath(path) returns false for any arbitrary path string that does not match any sensitive-path regex.",
+      "acceptanceCriteria": [
+        "New file .pi/extensions/__tests__/path-guard.property.test.ts exists",
+        "Imports `isSensitivePath` AND `SENSITIVE_PATHS` (both added in US-005) directly from `.pi/extensions/path-guard` — no re-declaration",
+        "Property: generates arbitrary path strings using regex non-match filter (NOT substring exclusion): `fc.string().filter((s) => !SENSITIVE_PATHS.some((re) => re.test(s)))`",
+        "Asserts `isSensitivePath(s) === false` for every such generated path",
+        "Uses fast-check default numRuns (100)",
+        "`npm test` passes",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Blocked by: US-005 (named exports must exist)."
+    },
+    {
+      "id": "US-007",
+      "title": "Add export to isHelpFlag and isVersionFlag in apps/oh/src/cli.ts",
+      "description": "As a sandbox worker, I add the `export` keyword to isHelpFlag and isVersionFlag in apps/oh/src/cli.ts so they can be imported from a property test file. No behavior changes.",
+      "acceptanceCriteria": [
+        "apps/oh/src/cli.ts line 19: `function isHelpFlag(...)` → `export function isHelpFlag(...)`",
+        "apps/oh/src/cli.ts line 23: `function isVersionFlag(...)` → `export function isVersionFlag(...)`",
+        "No other changes to cli.ts (existing local call sites continue to work)",
+        "cli.ts is NOT on .claude/protected-paths.txt (verified) — no override note required",
+        "apps/oh build succeeds: `cd apps/oh && npm run build`",
+        "apps/oh typecheck passes: `cd apps/oh && npm run typecheck`",
+        "Smoke test: after build, `node apps/oh/dist/oh.js --help` exits 0 (verifies export change did not break tree-shaking or entry-point behavior)"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Blocks: US-008. Blocked by: US-001."
+    },
+    {
+      "id": "US-008",
+      "title": "Determinism and no-throw property for oh CLI flag detection",
+      "description": "As a sandbox worker, I add a property test asserting isHelpFlag and isVersionFlag (now exported per US-007) are deterministic pure functions that never throw for any input.",
+      "acceptanceCriteria": [
+        "New file apps/oh/src/__tests__/cli.property.test.ts exists",
+        "Imports `isHelpFlag`, `isVersionFlag` from `../cli.js` (NodeNext ESM extension per apps/oh/tsconfig.json)",
+        "Property tests using `fc.string()` and `fc.constant(undefined)` for the `string | undefined` signature:",
+        "  - Determinism: `isHelpFlag(s) === isHelpFlag(s)` across repeated calls",
+        "  - Determinism: `isVersionFlag(s) === isVersionFlag(s)` across repeated calls",
+        "  - No-throw: neither function throws on any input",
+        "Mutual exclusion assertion explicitly NOT included (vacuously true for non-flag strings)",
+        "`npm test` from repo root passes, discovering the file via the extended vitest glob from US-001",
+        "Typecheck passes: `cd apps/oh && npm run typecheck`"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Blocked by: US-001 (vitest glob extension) and US-007 (named exports)."
+    },
+    {
+      "id": "US-009",
+      "title": "Document the property-testing convention",
+      "description": "As a sandbox worker, I add docs/property-testing.md documenting the file-naming convention, arbitrary patterns, default numRuns, the per-surface ledger, and the decision tree for when to use property vs example tests. Link from root README.md for discoverability.",
+      "acceptanceCriteria": [
+        "New file docs/property-testing.md exists",
+        "Section 'Convention' — file naming (*.property.test.ts), where tests live, what gets discovered by vitest",
+        "Section 'Arbitrary patterns' — fc.string, fc.array, fc.record, fc.stringMatching; when to write custom arbitraries (link to fast-check.dev)",
+        "Section 'numRuns' — default 100; when to tune",
+        "Section 'Decision tree' — one-paragraph: property test vs example test",
+        "Section 'Surface ledger' — markdown table listing 3 v1 surfaces (parseCronFile, path-guard, oh-cli-flags) with property names and which PR added each",
+        "Root README.md has a 'Testing' section (create if absent) with one-line link to docs/property-testing.md",
+        "CHANGELOG.md [Unreleased] entry references this work",
+        "Document does not duplicate fast-check upstream docs; links to fast-check.dev for reference",
+        "No code changes (docs-only story)"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Independent of other stories. Can run in parallel with any wave."
+    }
+  ]
+}

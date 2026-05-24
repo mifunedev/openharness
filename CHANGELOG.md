@@ -17,6 +17,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - `.pi/extensions/__tests__/path-guard.property.test.ts` — no-false-positives property test for `isSensitivePath`: generates arbitrary strings guaranteed not to match any `SENSITIVE_PATHS` regex and asserts `isSensitivePath(s) === false`; imports both `isSensitivePath` and `SENSITIVE_PATHS` from `path-guard` (no re-declaration drift) ([#354](https://github.com/ryaneggz/open-harness/issues/354)).
 ### Changed
 - `.pi/extensions/path-guard.ts` refactored to expose `SENSITIVE_PATHS` as a named export and extract the sensitive-path check into a new `isSensitivePath(p: string): boolean` named export; default-export behavior unchanged ([#354](https://github.com/ryaneggz/open-harness/issues/354)).
+- Export `isHelpFlag` and `isVersionFlag` from `apps/oh/src/cli.ts` for testability (#354).
 ### Fixed
 ### Removed
 ### Deprecated

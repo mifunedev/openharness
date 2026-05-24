@@ -16,11 +16,11 @@ const INTEGRATIONS: Record<string, Integration> = {
   },
 };
 
-function isHelpFlag(arg: string | undefined): boolean {
+export function isHelpFlag(arg: string | undefined): boolean {
   return arg === "--help" || arg === "-h" || arg === "help";
 }
 
-function isVersionFlag(arg: string | undefined): boolean {
+export function isVersionFlag(arg: string | undefined): boolean {
   return arg === "--version" || arg === "-v";
 }
 

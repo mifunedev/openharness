@@ -12,6 +12,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - `/imagine` skill (`.claude/skills/imagine/SKILL.md`) — one-shot draft PRD sketch generator. Takes a free-text `<scenario>`, derives a slug via `/prd`'s rule, and writes a 7-section sketch (Scenario / Intent / Sketch / mermaid Diagram / Rough goals / Story seeds / Open questions for /prd) to `.claude/specs/<slug>/spec.md`. Output is gitignored scratch (`.gitignore:51`); purpose-built as input for `/ship-spec --plan <path>`. No clarifying questions — ambiguities go into the spec body so the user can edit before formalizing.
 ### Changed
 ### Fixed
+- Secret-exposure hooks (`.claude/hooks/{deny-env-dump,deny-secret-paths}.sh`) no longer deny operations on tracked template env files (`.example.env`, `.env.example`, `.env.sample`, `.env.template`); real `.env`, `.env.local`, `.env.production` continue to deny. Path-branch was split out of monolithic `DENY` so allowlist applies only to `READ_CMD`-anchored secret-path matches; `\benv\b` patterns retightened to `(^|[^A-Za-z0-9._/-])env` (command-position) to fix a pre-existing false-positive on any path ending in `.env`. Codex wrapper inherits the fix ([#356](https://github.com/ryaneggz/open-harness/issues/356)).
 ### Removed
 ### Deprecated
 ### Security

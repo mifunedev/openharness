@@ -64,6 +64,10 @@ make destroy     # stop and remove the sandbox
 make help        # all targets
 ```
 
+## 🧪 Testing
+
+- Property-based testing convention: [docs/property-testing.md](docs/property-testing.md)
+
 Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Running Container" against `openharness`, or SSH into your host first and then attach.
 
 ## ⚙️ Configure (optional)

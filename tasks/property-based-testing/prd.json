@@ -162,8 +162,8 @@
         "No code changes (docs-only story)"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": "Independent of other stories. Can run in parallel with any wave."
+      "passes": true,
+      "notes": "Completed 2026-05-24; commit 18c8634. Wave 9 (docs-only)."
     }
   ]
 }

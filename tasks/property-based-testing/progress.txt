@@ -147,3 +147,29 @@ No fast-check added to `apps/oh/package.json` — root hoisting confirmed workin
 - `cli.ts`-style modules with top-level `main().then(process.exit)` require `vi.mock` factory hoisting to suppress vitest's `process.exit` interception — a plain `vi.spyOn` set up before a static import is too late (ESM hoisting runs imports first).
 - The `vi.mock(module, async (importOriginal) => { stub process.exit; await importOriginal(); await microtask; restore; return mod })` pattern is the correct solution for modules with async top-level side effects.
 - NodeNext ESM imports in vitest tests do require the `.js` extension in the import path (`../cli.js`) even though source is `.ts`.
+
+## US-009 — 2026-05-24 23:59 UTC
+
+**Title**: Document the property-testing convention
+**Files changed**: docs/property-testing.md (new), README.md, CHANGELOG.md
+**Commit**: (pending)
+**Result**: PASS
+
+### What I did
+Created `docs/property-testing.md` with five required sections:
+1. **Convention** — documents *.property.test.ts naming, directory locations (scripts/__tests__/, .pi/extensions/__tests__/, apps/oh/src/__tests__/), and vitest glob coverage
+2. **Arbitrary patterns** — covers fc.string, fc.array, fc.record, fc.stringMatching with examples; links to https://fast-check.dev for upstream docs (no duplication)
+3. **numRuns** — documents default 100, when to tune (rare; only if real regression slips through); includes code example
+4. **Decision tree** — one-paragraph prose comparing property tests (general invariants, regression prevention) vs example tests (specific I/O pairs, edge cases, bug fixes)
+5. **Surface ledger** — markdown table listing the 5 v1 properties across 3 surfaces (parseCronFile never-throw + forward-compat, loadCrons ordering-stability, isSensitivePath no-false-positives, isHelpFlag+isVersionFlag determinism+no-throw), all in PR #355
+
+Updated root README.md: added "## 🧪 Testing" section after "Use it" with one-line link to docs/property-testing.md.
+
+Updated CHANGELOG.md [Unreleased] ### Added: entry documenting the new docs with link to #354.
+
+All sections are non-empty and accurate per the PRD and progress notes from T1-T8.
+
+### Learnings for future iterations
+- The existing vitest config already includes `apps/**/__tests__/**/*.test.ts` (US-001), so no changes needed there — just documented it accurately.
+- The five property tests are distributed across three surfaces: two properties on parseCronFile (never-throw and forward-compat), one on loadCrons (ordering-stability), one on isSensitivePath (no-false-positives), and two on the oh CLI flags combined (determinism + no-throw).
+- Documentation is a docs-only story — no code changes, no refactors, just markdown additions.

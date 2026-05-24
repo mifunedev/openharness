@@ -39,6 +39,7 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    ```bash
    make shell     # default; bash also available
    ```
+   Pass an optional compose service to scope to a different container, e.g. `make shell postgres SHELL_USER=postgres`.
 
    **Option B — VS Code Attach to Container (local):**
    Dev Containers extension → "Attach to Running Container" → select the `openharness` container
@@ -74,6 +75,7 @@ Verify the sandbox is healthy.
    ```bash
    make shell
    ```
+   Pass an optional compose service to scope to a different container, e.g. `make shell postgres SHELL_USER=postgres`.
    - `AGENTS.md` exists in `workspace/`
    - Target agent CLI is installed (`claude --version`)
    - Docker socket accessible if needed (`docker ps`)

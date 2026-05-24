@@ -9,6 +9,15 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.5.24] - 2026-05-24
+
+### Added
 - `wiki/` directory + `context/rules/wiki.md` schema for Karpathy LLM Wiki pattern ([#351](https://github.com/ryaneggz/open-harness/pull/351)).
 - `/wiki-ingest` skill (`.claude/skills/wiki-ingest/SKILL.md`) — captures `WebFetch` snapshots and authors/updates wiki entries; supports URL/path ingest + `--from-draft` promotion; orchestrator-only writes; body-merge per `context/rules/wiki.md` § 7 ([#351](https://github.com/ryaneggz/open-harness/pull/351)).
 - `/wiki-query` skill (`.claude/skills/wiki-query/SKILL.md`) — frontmatter-only grep against `wiki/*.md` (title, slug, tags) using the canonical extraction from `context/rules/wiki.md` § 6; multi-word OR semantics; sub-cap reads all when < 3, top 3 by `updated:` descending otherwise ([#351](https://github.com/ryaneggz/open-harness/pull/351)).

@@ -105,3 +105,45 @@ Created `.pi/extensions/__tests__/path-guard.property.test.ts` with a single des
 ### Learnings for future iterations
 - The regex non-match filter pattern `fc.string().filter(...)` is the correct approach; substring exclusion would be insufficient and incorrect (regex anchors like `(^|\/)` require structural matching, not substring exclusion).
 - No `.js` extension needed in the import path `../path-guard` under the vitest module resolution used by the `.pi/extensions/__tests__/` suite.
+
+## US-007 — 2026-05-24 UTC
+
+**Title**: Add export to isHelpFlag and isVersionFlag in apps/oh/src/cli.ts
+**Files changed**: apps/oh/src/cli.ts, CHANGELOG.md
+**Commit**: dc83430
+**Result**: PASS
+
+### What I did
+Added the `export` keyword to two functions in `apps/oh/src/cli.ts`: 
+- Line 19: `export function isHelpFlag(arg: string | undefined): boolean` 
+- Line 23: `export function isVersionFlag(arg: string | undefined): boolean`
+
+No other changes to the file. Verified: `npm run typecheck` passes, `npm run build` succeeds (dist/oh.js at 17.8kb), and the smoke test `node apps/oh/dist/oh.js --help` exits 0. All acceptance criteria met.
+
+### Learnings for future iterations
+- apps/oh uses its own `npm run build` / `npm run typecheck` commands (not pnpm from root) — must cd into apps/oh before running.
+- The build output (`dist/oh.js`) is gitignored; only stage source files (cli.ts) and CHANGELOG.md.
+- Adding `export` to a function that is only called locally does not break the local call site — exports are purely additive to module scope.
+
+## US-008 — 2026-05-24 06:18 UTC
+
+**Title**: Determinism and no-throw property for oh CLI flag detection
+**Files changed**: apps/oh/src/__tests__/cli.property.test.ts (new), CHANGELOG.md, tasks/property-based-testing/prd.json, tasks/property-based-testing/progress.txt
+**Result**: PASS
+
+### What I did
+Created `apps/oh/src/__tests__/cli.property.test.ts` with three property tests:
+1. `isHelpFlag` determinism: `expect(isHelpFlag(s)).toBe(isHelpFlag(s))` for all `string | undefined` inputs
+2. `isVersionFlag` determinism: same pattern
+3. Combined no-throw: `expect(() => isHelpFlag(s)).not.toThrow()` and `expect(() => isVersionFlag(s)).not.toThrow()` in a single property
+
+The import uses `../cli.js` per NodeNext ESM resolution. `fc.oneof(fc.string(), fc.constant(undefined))` covers the full `string | undefined` signature. Mutual exclusion assertion explicitly excluded per AC.
+
+Key challenge: `cli.ts` has a top-level `main(process.argv.slice(2)).then(process.exit)` call. Vitest intercepts `process.exit` in its fork pool and surfaces it as an unhandled error even when all tests pass. Fixed with `vi.mock("../cli.js", async (importOriginal) => { ... })` — the factory stubs `process.exit` to a no-op, awaits the original module import (triggering main()), allows one microtask tick for the promise to resolve, then restores the original. Dynamic `import("../cli.js")` is used in test scope to consume the mocked module.
+
+No fast-check added to `apps/oh/package.json` — root hoisting confirmed working (same as US-001 note). `pnpm test` passes: 121 tests across 12 files. Typecheck passes.
+
+### Learnings for future iterations
+- `cli.ts`-style modules with top-level `main().then(process.exit)` require `vi.mock` factory hoisting to suppress vitest's `process.exit` interception — a plain `vi.spyOn` set up before a static import is too late (ESM hoisting runs imports first).
+- The `vi.mock(module, async (importOriginal) => { stub process.exit; await importOriginal(); await microtask; restore; return mod })` pattern is the correct solution for modules with async top-level side effects.
+- NodeNext ESM imports in vitest tests do require the `.js` extension in the import path (`../cli.js`) even though source is `.ts`.

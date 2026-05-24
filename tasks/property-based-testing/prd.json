@@ -123,8 +123,8 @@
         "Smoke test: after build, `node apps/oh/dist/oh.js --help` exits 0 (verifies export change did not break tree-shaking or entry-point behavior)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Blocks: US-008. Blocked by: US-001."
+      "passes": true,
+      "notes": "Completed 2026-05-24; commit dc83430. Added export to isHelpFlag (line 19) and isVersionFlag (line 23) in apps/oh/src/cli.ts. Typecheck and build pass; smoke test verifies --help exits 0."
     },
     {
       "id": "US-008",
@@ -142,8 +142,8 @@
         "Typecheck passes: `cd apps/oh && npm run typecheck`"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": "Blocked by: US-001 (vitest glob extension) and US-007 (named exports)."
+      "passes": true,
+      "notes": "Completed 2026-05-24. Created apps/oh/src/__tests__/cli.property.test.ts with three property tests: isHelpFlag determinism, isVersionFlag determinism, and combined no-throw. Used vi.mock hoisting to stub process.exit before module import (cli.ts has a top-level main() call that fires process.exit). No fast-check added to apps/oh/package.json \u2014 root hoisting works. pnpm test passes: 121 tests, 12 files. Typecheck passes."
     },
     {
       "id": "US-009",

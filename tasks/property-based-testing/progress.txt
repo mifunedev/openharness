@@ -72,3 +72,20 @@ Added a third `describe` block to `scripts/__tests__/cron-runtime.property.test.
 - The reverse-write fixture is critical: without writing in reverse order, the test cannot distinguish "sort is working" from "filesystem returned alphabetical order by coincidence."
 - `fs.mkdtempSync` + `try/finally` + `fs.rmSync({ recursive, force })` is the correct pattern for temp dir cleanup in property tests that may fail mid-run.
 - `loadCrons` only includes entries where `entry.enabled` is `true` (default when `enabled` key is absent from frontmatter); minimal frontmatter `---\nschedule: "* * * * *"\n---\n` satisfies this.
+
+---
+
+## US-005 — 2026-05-24 06:12 UTC
+
+**Title**: Refactor path-guard.ts to expose isSensitivePath and SENSITIVE_PATHS as named exports
+**Files changed**: .pi/extensions/path-guard.ts, CHANGELOG.md
+**Commit**: ccff7a1
+**Result**: PASS
+
+### What I did
+Three precise edits to `.pi/extensions/path-guard.ts`: (1) added `export` keyword to `const SENSITIVE_PATHS: RegExp[] = [` at line 3; (2) inserted `export function isSensitivePath(p: string): boolean { return SENSITIVE_PATHS.some((re) => re.test(p)); }` after the closing `];` of SENSITIVE_PATHS and before the RISKY_BASH comment block; (3) replaced the inline `SENSITIVE_PATHS.some((re) => re.test(path))` predicate at line 59 with `isSensitivePath(path)`. No changes to the default-export function flow, RISKY_BASH, or any test file. `pnpm test` passes — 117 tests across 10 files (32 path-guard example tests all pass unchanged).
+
+### Learnings for future iterations
+- The three edits are entirely additive to the module's API surface — existing callers (including the test file importing the default export via `factory`) are unaffected.
+- Using Python heredoc `<< 'PYEOF'` avoids shell permission-denied warnings on backtick-quoted strings inside python -c single-line invocations.
+- `isSensitivePath` is now importable by US-006 as a named import from `../path-guard` (no `.js` extension needed under the vitest module resolution used by the `.pi/extensions/__tests__/` suite).

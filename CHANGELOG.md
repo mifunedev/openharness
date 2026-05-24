@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `/imagine` skill (`.claude/skills/imagine/SKILL.md`) — one-shot draft PRD sketch generator. Takes a free-text `<scenario>`, derives a slug via `/prd`'s rule, and writes a 7-section sketch (Scenario / Intent / Sketch / mermaid Diagram / Rough goals / Story seeds / Open questions for /prd) to `.claude/specs/<slug>/spec.md`. Output is gitignored scratch (`.gitignore:51`); purpose-built as input for `/ship-spec --plan <path>`. No clarifying questions — ambiguities go into the spec body so the user can edit before formalizing.
 ### Changed
 ### Fixed
 ### Removed

@@ -109,6 +109,7 @@ Remove the sandbox.
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
 | `/interview` | Adaptive pre-work clarifier — batches 2–4 task-specific questions via `AskUserQuestion`, then proceeds |
+| `/imagine` | One-shot draft PRD sketch from a fuzzy scenario → `.claude/specs/<slug>/spec.md` (gitignored scratch, includes mermaid diagram); feeds `/ship-spec --plan <path>` |
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
 | `/ship-spec` | End-to-end spec: `/prd` → critics → `/ralph` → gh issue → branch → draft PR |

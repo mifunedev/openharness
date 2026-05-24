@@ -23,7 +23,7 @@ The sandbox is a Docker container running on your host (or a remote server). Get
 cd ~/.openharness
 make shell
 ```
-Pass an optional compose service to scope to a different container, e.g. `make shell postgres SHELL_USER=postgres`.
+Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
 
 You land inside the container as the `sandbox` user. This is enough to run CLI agents and configure Slack. Container ports are **not** forwarded to your laptop — you cannot open `localhost:3000` in your browser via this method alone.
 

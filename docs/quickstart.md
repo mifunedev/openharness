@@ -37,7 +37,7 @@ the sandbox up via `docker compose`.
 cd ~/.openharness
 make shell
 ```
-Pass an optional compose service to scope to a different container, e.g. `make shell postgres SHELL_USER=postgres`.
+Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
 
 Either way you're inside the isolated sandbox as the `sandbox` user. Working
 directory: `/home/sandbox/harness`.

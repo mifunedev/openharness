@@ -1,2 +1,37 @@
 # progress
 
+
+## US-001 — 2026-05-24 06:05 UTC
+
+**Title**: Install fast-check and extend vitest include glob
+**Files changed**: package.json, pnpm-lock.yaml, vitest.config.ts, CHANGELOG.md
+**Commit**: 3aafeaf
+**Result**: PASS
+
+### What I did
+Ran `pnpm add -D fast-check@^4.8.0` at the repo root (the package manager is pnpm per `packageManager` field in root `package.json` and `pnpm-lock.yaml` lockfile). The PRD stated "^3.x" but `npm view fast-check version` returned `4.8.0` (current stable is 4.x), so pinned to `^4.8.0` per the AC "confirm with npm view fast-check version". Added `"apps/**/__tests__/**/*.test.ts"` to the `include` array in `vitest.config.ts` without touching the existing two entries. Ran `pnpm test` — all 9 existing test files and 114 tests pass. `pnpm exec vitest list` confirms `scripts/__tests__/cron-runtime.test.ts` (9 tests) and `.pi/extensions/__tests__/path-guard.test.ts` (32 tests) are still discovered with no regression.
+
+### Learnings for future iterations
+- Package manager is **pnpm** (not npm) — use `pnpm add -D` for installs and `pnpm test` for the test script.
+- fast-check current stable is **4.x** (not 3.x as the PRD draft stated). Imports and API are compatible; no changes needed for future stories using fc.
+- Root hoisting works: `fast-check` installed at root is available without adding it to `apps/oh/package.json`.
+- `pnpm exec vitest list` produces one line per test (not per file) — 114 lines for 9 files.
+
+---
+
+## US-002 — 2026-05-24 06:05 UTC
+
+**Title**: Never-throw regression-prevention property for parseCronFile
+**Files changed**: scripts/__tests__/cron-runtime.property.test.ts (new), CHANGELOG.md
+**Commit**: SHA pending
+**Result**: PASS
+
+### What I did
+Created `scripts/__tests__/cron-runtime.property.test.ts` with a single property test using `fc.assert(fc.property(fc.string(), fc.string(), ...))`. The test asserts `parseCronFile(content, filePath)` never throws for any arbitrary string inputs. Used fast-check default numRuns (100). No modifications to `scripts/cron-runtime.ts`. Ran `pnpm test` — all 115 tests pass (114 pre-existing + 1 new property test). Typecheck passes.
+
+### Learnings for future iterations
+- fast-check default import (`import fc from "fast-check"`) works correctly with v4.x.
+- The `globals: true` vitest config means `describe`, `expect`, `it` are available globally, but explicitly importing from `vitest` is the existing style convention — follow it.
+- Property test files use `.property.test.ts` suffix, live alongside example tests in `scripts/__tests__/`.
+
+---

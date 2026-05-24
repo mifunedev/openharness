@@ -19,8 +19,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-05-24; commit 3aafeaf. Wave 1."
     },
     {
       "id": "US-002",
@@ -35,8 +35,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Blocks: none. Blocked by: US-001."
+      "passes": true,
+      "notes": "Completed 2026-05-24; commit SHA pending. Wave 2."
     },
     {
       "id": "US-003",

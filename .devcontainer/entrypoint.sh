@@ -208,6 +208,29 @@ if [ -f "$HARNESS/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; the
   fi
 fi
 
+# ─── Restore client-slack session if Slack is configured ──────────────
+# Tokens live in .devcontainer/.env (Compose KEY=value format). When both
+# SLACK_APP_TOKEN and SLACK_BOT_TOKEN are set AND `pi` is installed for
+# the sandbox user, restore the session that `oh config slack` created.
+# Sourcing happens inside the tmux command (same pattern the wizard uses)
+# so the child `pi` process inherits the exported vars.
+SLACK_ENV="$HARNESS/.devcontainer/.env"
+if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
+  # shellcheck disable=SC1090
+  SLACK_APP_TOKEN=$(grep -E '^SLACK_APP_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
+  SLACK_BOT_TOKEN=$(grep -E '^SLACK_BOT_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
+  if [ -n "$SLACK_APP_TOKEN" ] && [ -n "$SLACK_BOT_TOKEN" ] \
+     && gosu sandbox bash -lc 'command -v pi' &>/dev/null; then
+    if ! gosu sandbox tmux has-session -t client-slack 2>/dev/null; then
+      gosu sandbox tmux new-session -d -s client-slack \
+        "bash -c 'set -a; source $SLACK_ENV; set +a; pi 2>&1 | tee /tmp/client-slack.log'"
+      echo "[entrypoint] client-slack tmux session started (Slack bridge)"
+    else
+      echo "[entrypoint] client-slack tmux session already running — skipping"
+    fi
+  fi
+fi
+
 # ─── Optional: agent-browser (opt-in via INSTALL_AGENT_BROWSER=true) ──
 if [ "${INSTALL_AGENT_BROWSER:-false}" = "true" ] && ! command -v agent-browser &>/dev/null; then
   echo "[entrypoint] Installing agent-browser (INSTALL_AGENT_BROWSER=true)..."

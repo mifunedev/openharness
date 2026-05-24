@@ -12,6 +12,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - `fast-check` ^4.8.0 added to root devDependencies and vitest include glob extended to cover `apps/**/__tests__/**/*.test.ts` — enables property-based tests across all TypeScript surfaces ([#354](https://github.com/ryaneggz/open-harness/issues/354)).
 - `/imagine` skill (`.claude/skills/imagine/SKILL.md`) — one-shot draft PRD sketch generator. Takes a free-text `<scenario>`, derives a slug via `/prd`'s rule, and writes a 7-section sketch (Scenario / Intent / Sketch / mermaid Diagram / Rough goals / Story seeds / Open questions for /prd) to `.claude/specs/<slug>/spec.md`. Output is gitignored scratch (`.gitignore:51`); purpose-built as input for `/ship-spec --plan <path>`. No clarifying questions — ambiguities go into the spec body so the user can edit before formalizing.
 - `scripts/__tests__/cron-runtime.property.test.ts` — never-throw regression-prevention property test for `parseCronFile` using fast-check; 100 arbitrary string pairs, zero source changes ([#354](https://github.com/ryaneggz/open-harness/issues/354)).
+- `scripts/__tests__/cron-runtime.property.test.ts` — forward-compatibility regression-prevention property test for `parseCronFile`: asserts that valid frontmatter with 1–5 arbitrary unknown keys is parsed correctly with `result.schedule === "* * * * *"`; constrained arbitraries prevent structural-YAML-character false failures ([#354](https://github.com/ryaneggz/open-harness/issues/354)).
 ### Changed
 ### Fixed
 ### Removed

@@ -1,2 +1,100 @@
 # progress
 
+## Codebase Patterns
+
+- **Canonical frontmatter extraction** (locked across `/wiki-query` and `/wiki-lint`): `awk '/^---$/{f=!f; next} f{print}' wiki/<slug>.md`. Defined in `context/rules/wiki.md` § 6. Any future wiki-touching skill must source from § 6, not redefine.
+- **CLAUDE.md symlink discipline**: `CLAUDE.md` symlinks to `AGENTS.md` (inode 3408085 on this checkout). Edit tool refuses to write through symlinks. Verify symlink intact before/after edits via `ls -li CLAUDE.md AGENTS.md` (inodes match = OK).
+- **Body-merge for `/wiki-ingest` updates** (per `context/rules/wiki.md` § 7): replace `## Summary` + `## Detail` in-place; append new snapshot to `sources:`; append deduplicated `[[link]]` candidates to `## See Also`; update `updated:`; never touch `created:`; never concatenate bodies.
+- **`/wiki-lint` reports `confidence: deprecated` entries but never autonomously sets the flag** (per § 5 confidence lifecycle). Orchestrator sets the flag manually only.
+- **Contradiction detection in `/wiki-lint` is explicitly descoped for v1**: ships as a stub printing `contradiction detection: not yet implemented — see wiki-lint follow-up tracking`. Tracking issue may be filed post-merge but is not a blocker.
+- **`.gitignore` directory exemption pattern**: `mydir/*` then `!mydir/README.md` (the bare-directory form `mydir/` silently ignores the README — same gotcha hit on PR #347's `.claude/plans/*` exemption).
+
+---
+
+## US-001 — 2026-05-24 22:30 UTC
+
+**Title**: Scaffold wiki/ + context/rules/wiki.md schema rule + wiki/README.md template
+**Files changed**: wiki/README.md (new), wiki/raw/README.md (new), context/rules/wiki.md (new, 201 lines / 1567 words), .gitignore (+2 lines), CHANGELOG.md (+1 line)
+**Commit**: e7b410e
+**Wave**: 1 (Sonnet sub-agent; no deps)
+**Result**: PASS
+
+### What I did
+Scaffolded the top-level `wiki/` + `wiki/raw/` directories with README anchors per `context/rules/directory-readme.md`. Wrote the complete `context/rules/wiki.md` schema rule with all 7 required non-empty sections: boundary table (verbatim from plan), entry schema, slug derivation rule (URL path's last non-UUID segment + `--slug <override>` flag for UUID URLs + `[a-z0-9-]+` charset), cross-link convention, confidence lifecycle (orchestrator-only sets), canonical frontmatter extraction awk command, and body-merge strategy. Appended the two-line `wiki/raw/*` + `!wiki/raw/README.md` exemption to `.gitignore`. Added the CHANGELOG entry.
+
+### Learnings for future iterations
+- `context/rules/wiki.md` auto-loads via `context/rules/*.md` glob in every session — keep it tight; 201 lines is the upper bound for a healthy ruleset of this size.
+- The Sonnet model choice was correct (Haiku would have risked shipping section headings without substantive content).
+- `git check-ignore` semantics: `-v` flag returns the *matching pattern* (and exit 0 even for negation rules); plain form returns exit 1 with no output when the file is NOT ignored. Use plain form to assert "tracked" status.
+
+---
+
+## US-002 — 2026-05-24 22:45 UTC
+
+**Title**: Implement /wiki-ingest skill (URL + path + --from-draft + update-existing)
+**Files changed**: .claude/skills/wiki-ingest/SKILL.md (new, 295 lines)
+**Commit**: 92c8797 (shared with US-003)
+**Wave**: 2 (Sonnet sub-agent; parallel with US-003)
+**Result**: PASS
+
+### What I did
+Authored `/wiki-ingest` SKILL.md with frozen argument interface `<url|path> [--slug <override>] | --from-draft <slug> [--allow-stale]`. URL ingest WebFetches and writes immutable snapshot to `wiki/raw/<yyyy-mm-dd>-<slug>.md`; path ingest copies; both `mkdir -p wiki/raw/` first. Draft promotion globs `memory/*/wiki-drafts/<slug>.md`, sorts by ISO date in parent directory name (NOT filesystem mtime, which is unreliable across docker mounts), excludes `.skip` files, errors STALE if > 7 days old unless `--allow-stale`. All schema/body-merge/slug logic defers to `context/rules/wiki.md`.
+
+### Learnings for future iterations
+- The orchestrator-only write boundary is enforced socially (skill says "orchestrator-only") not mechanically. Sub-agents that read this SKILL.md should respect the boundary.
+- Daily log shape: `## /wiki-ingest -- HH:MM UTC` with fields Source, Slug-Created, Slugs-Updated, Snapshot-Path, Result, Observation.
+
+---
+
+## US-003 — 2026-05-24 22:45 UTC
+
+**Title**: Implement /wiki-query skill (frontmatter grep + top-3 read cap)
+**Files changed**: .claude/skills/wiki-query/SKILL.md (new, 299 lines)
+**Commit**: 92c8797 (shared with US-002)
+**Wave**: 2 (Sonnet sub-agent; parallel with US-002)
+**Result**: PASS
+
+### What I did
+Authored `/wiki-query` SKILL.md with argument interface `<topic>`. Multi-word OR semantics: split on whitespace, match if ANY term in frontmatter `title`/`slug`/`tags`. Greps only frontmatter using the locked canonical awk command from § 6 (byte-identical to `/wiki-lint`). Empty result prints `No wiki entries matched <topic>` and exits 0. Sub-cap: < 3 reads all; >= 3 reads top 3 by `updated:` descending. Cap hardcoded.
+
+### Learnings for future iterations
+- Multi-word semantics are intentionally OR (recall over precision) on a small corpus; the 3-entry read cap constrains context regardless.
+- "Top 3" tie-breaking is `updated:` descending — keep `updated:` accurate when editing entries.
+
+---
+
+## US-004 — 2026-05-24 23:00 UTC
+
+**Title**: Implement /wiki-lint skill (stale + orphan + broken-link + atomic README regen)
+**Files changed**: .claude/skills/wiki-lint/SKILL.md (new, 525 lines)
+**Commit**: 1e6ab78
+**Wave**: 3 (Sonnet sub-agent; depends on US-001 + US-002 + US-003)
+**Result**: PASS
+
+### What I did
+Authored `/wiki-lint` SKILL.md with argument interface `[--dry-run]`. Five distinct check types (NEVER conflated): stale-90d, deprecated (reports only, never sets), orphan (two-pass: enumerate + grep `[[slug]]`), broken outbound link (separate from orphan), contradiction (stub — descoped). Atomic README regeneration: tmp file → validate non-empty + grep for exact header `| Slug | Title | Tags | Updated |` → atomic rename; on failure exits non-zero, leaves original intact. Daily log shape with all 5 finding-count fields.
+
+### Learnings for future iterations
+- Single-entry corpus orphan is a TRUE positive, not false positive. Smoke test "zero false positives" refers only to stale + deprecated + broken-link checks on a fresh entry.
+- The atomic write pattern (tmp + validate + rename) is a Critic-B mitigation that should generalize: any skill regenerating a tracked file should follow this pattern.
+
+---
+
+## US-005 — 2026-05-24 23:15 UTC
+
+**Title**: Register /wiki-ingest, /wiki-query, /wiki-lint in AGENTS.md skills table
+**Files changed**: AGENTS.md (+3 rows), CHANGELOG.md (+1 ### Changed line)
+**Commit**: dc64711
+**Wave**: 4 (Haiku sub-agent; depends on US-002 + US-003 + US-004)
+**Result**: PASS
+
+### What I did
+Appended 3 rows to the AGENTS.md skills table for `/wiki-ingest`, `/wiki-query`, `/wiki-lint`. No new category header (flat table convention). Verified `CLAUDE.md` symlink integrity before and after: `ls -li` showed inode 3408085 unchanged. Added CHANGELOG `### Changed` entry for the registration action itself; per-skill `### Added` entries already shipped in US-001/2/3/4 commits.
+
+### Learnings for future iterations
+- The symlink discipline is enforceable: `ls -li` before and after each AGENTS.md edit catches accidental symlink breaks instantly.
+- AGENTS.md "When" entries reference the locked argument interface from the SKILL.md so future readers learn the right invocation form.
+
+---
+
+STATUS: COMPLETE

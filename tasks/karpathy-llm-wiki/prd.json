@@ -20,8 +20,8 @@
                 "Typecheck passes (satisfied by clean git status on this AC scope)"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": "Wave 1. No deps. Model recommendation: Sonnet (Haiku risks shipping a stub satisfying section names but failing the 'each non-empty' requirement)."
+            "passes": true,
+            "notes": "Completed 2026-05-24 via /delegate Wave 1; commit e7b410e. context/rules/wiki.md ships 201 lines / 1567 words across all 7 required sections (boundary table, entry schema, slug derivation, cross-link, confidence lifecycle, canonical extraction awk command, body-merge strategy). .gitignore + wiki/README.md + wiki/raw/README.md as specified. Sonnet."
         },
         {
             "id": "US-002",
@@ -43,8 +43,8 @@
                 "Typecheck passes (no project type-check; satisfied by clean git diff + SKILL.md frontmatter parses as valid YAML)"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": "Wave 2. Depends on US-001. Can run in parallel with US-003 (same wave). Model: Sonnet. NOTE: smoke test must commit before US-003 smoke runs — /delegate wave planner must enforce this ordering."
+            "passes": true,
+            "notes": "Completed 2026-05-24 via /delegate Wave 2 (parallel with US-003); commit 92c8797. SKILL.md = 295 lines; argument-hint set; defers to context/rules/wiki.md §§ 3, 7, 2 for slug/body-merge/schema. Sonnet."
         },
         {
             "id": "US-003",
@@ -65,8 +65,8 @@
                 "Typecheck passes (satisfied by clean git diff + SKILL.md frontmatter parses as valid YAML)"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": "Wave 2 (parallel with US-002). Depends on US-001. Smoke test runs AFTER US-002 smoke commits. Model: Sonnet."
+            "passes": true,
+            "notes": "Completed 2026-05-24 via /delegate Wave 2 (parallel with US-002); commit 92c8797. SKILL.md = 299 lines; argument-hint set; uses canonical awk extraction from context/rules/wiki.md § 6 (byte-identical to /wiki-lint). Sonnet."
         },
         {
             "id": "US-004",
@@ -88,8 +88,8 @@
                 "Typecheck passes (satisfied by clean git diff + SKILL.md frontmatter parses as valid YAML)"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": "Wave 3. Depends on US-001, US-002, US-003 (needs canonical extraction + at least one ingested entry for smoke). Model: Sonnet."
+            "passes": true,
+            "notes": "Completed 2026-05-24 via /delegate Wave 3; commit 1e6ab78. SKILL.md = 525 lines; argument-hint set; atomic README regen (tmp + validate + rename); contradiction detection shipped as stub with literal text 'contradiction detection: not yet implemented — see wiki-lint follow-up tracking'. Sonnet."
         },
         {
             "id": "US-005",
@@ -105,8 +105,8 @@
                 "Typecheck passes (satisfied by clean git diff)"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": "Wave 4 (serial; not parallelizable). Depends on US-002, US-003, US-004 all committing first. Model: Haiku."
+            "passes": true,
+            "notes": "Completed 2026-05-24 via /delegate Wave 4 (serial); commit dc64711. 3 rows appended to AGENTS.md skills table (no new category header). CLAUDE.md symlink integrity verified intact (inode 3408085 unchanged before/after edit). CHANGELOG Changed entry added. Haiku."
         }
     ]
 }

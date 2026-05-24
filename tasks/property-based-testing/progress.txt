@@ -96,7 +96,7 @@ Three precise edits to `.pi/extensions/path-guard.ts`: (1) added `export` keywor
 
 **Title**: No-false-positives property for isSensitivePath
 **Files changed**: .pi/extensions/__tests__/path-guard.property.test.ts (new), CHANGELOG.md, tasks/property-based-testing/prd.json, tasks/property-based-testing/progress.txt
-**Commit**: (see below)
+**Commit**: 16f6146
 **Result**: PASS
 
 ### What I did

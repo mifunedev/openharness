@@ -173,3 +173,5 @@ All sections are non-empty and accurate per the PRD and progress notes from T1-T
 - The existing vitest config already includes `apps/**/__tests__/**/*.test.ts` (US-001), so no changes needed there — just documented it accurately.
 - The five property tests are distributed across three surfaces: two properties on parseCronFile (never-throw and forward-compat), one on loadCrons (ordering-stability), one on isSensitivePath (no-false-positives), and two on the oh CLI flags combined (determinism + no-throw).
 - Documentation is a docs-only story — no code changes, no refactors, just markdown additions.
+
+STATUS: COMPLETE

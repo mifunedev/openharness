@@ -58,5 +58,10 @@ emit() {
 }
 
 if grep -qEi -- "$DENY_PATH" <<<"$path"; then
+  # Template env files (.example.env, .env.example, etc.) are tracked and hold no real secrets — allow.
+  base=$(basename "$path")
+  if grep -qiE '\.env' <<<"$base" && grep -qiE '(example|sample|template)' <<<"$base"; then
+    exit 0
+  fi
   emit deny "Secret-exposure guard (deny): refusing to access $path — matches a credential / secret file pattern (env file, private key, cert, cloud credentials, shell history, or similar). This mirrors the permissions.deny list in .claude/settings.json; it's enforced as a hook so it still blocks under bypassPermissions mode. If you genuinely need a specific non-secret value from this file, ask the user to paste only that value into the chat."
 fi

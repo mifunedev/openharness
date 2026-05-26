@@ -60,6 +60,7 @@ make shell       # enter the isolated sandbox
 #   opencode   # OpenCode
 #   pi         # Pi Coding Agent
 #   deepagents # LangChain DeepAgents (multi-provider)
+#   hermes     # Nous Research Hermes (opt-in: set INSTALL_HERMES=true)
 make destroy     # stop and remove the sandbox
 make help        # all targets
 ```
@@ -91,7 +92,7 @@ make shell
 
 | | |
 |---|---|
-| **Core agents** | Claude Code, Codex, OpenCode, Pi |
+| **Core agents** | Claude Code, Codex, OpenCode, Pi, DeepAgents (preinstalled); Hermes (opt-in) |
 | **Runtimes** | Node 22, pnpm, Bun, uv (Python) |
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |

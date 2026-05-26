@@ -11,3 +11,14 @@ model_reasoning_effort = "xhigh"
 
 [features]
 hooks = true
+
+[tui]
+status_line = [
+  "model-with-reasoning",
+  "run-state",
+  "context-used",
+  "context-window-size",
+  "git-branch",
+  "current-dir",
+]
+status_line_use_colors = true

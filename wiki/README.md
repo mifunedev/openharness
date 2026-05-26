@@ -26,4 +26,5 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| learn-harness-engineering | Learn Harness Engineering (Walking Labs course) | [harness, agents, education, course, open-harness] | 2026-05-26 |
 | sequoia-capital-the-next-1t-company | Sequoia $1T AI Services Thesis | [ai, services, strategy, venture, open-harness] | 2026-05-26 |

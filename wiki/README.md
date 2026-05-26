@@ -26,3 +26,4 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| sequoia-capital-the-next-1t-company | Sequoia $1T AI Services Thesis | [ai, services, strategy, venture, open-harness] | 2026-05-26 |

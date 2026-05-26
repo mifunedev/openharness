@@ -3,8 +3,8 @@
 # Base sandbox compose. The base ships with zero in-tree overlays;
 # agent auth and tool state persist in named volumes managed by Docker
 # (claude-auth, codex-auth, pi-auth, opencode-auth, deepagents-auth,
-# cloudflared-auth, gh-config), and the bind-mounted repo's UID is
-# synced into the sandbox user by entrypoint.sh on first boot.
+# hermes-auth, cloudflared-auth, gh-config), and the bind-mounted repo's
+# UID is synced into the sandbox user by entrypoint.sh on first boot.
 #
 # Downstream harness packs and Pi extensions can register additional
 # overlays by appending paths to composeOverrides[] in config.json;
@@ -27,6 +27,7 @@ services:
       - pi-auth:/home/sandbox/.pi
       - opencode-auth:/home/sandbox/.local/share/opencode
       - deepagents-auth:/home/sandbox/.deepagents
+      - hermes-auth:/home/sandbox/.hermes
       - cloudflared-auth:/home/sandbox/.cloudflared
       - gh-config:/home/sandbox/.config/gh
     ports:
@@ -47,6 +48,7 @@ services:
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
       - GH_TOKEN=${GH_TOKEN:-}
       - INSTALL_AGENT_BROWSER=${INSTALL_AGENT_BROWSER:-false}
+      - INSTALL_HERMES=${INSTALL_HERMES:-false}
     stdin_open: true
     tty: true
     init: true
@@ -60,5 +62,6 @@ volumes:
   pi-auth:
   opencode-auth:
   deepagents-auth:
+  hermes-auth:
   cloudflared-auth:
   gh-config:

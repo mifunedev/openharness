@@ -92,6 +92,21 @@ if command -v deepagents >/dev/null 2>&1; then
   fi
 fi
 
+# hermes — opt-in via INSTALL_HERMES=true; installed status from PATH;
+# configured status falls back to "any non-empty contents in ~/.hermes"
+# because the upstream README does not name a single sentinel file.
+hermes_status="[✗]"
+hermes_detail="not installed — set INSTALL_HERMES=true and restart"
+if command -v hermes >/dev/null 2>&1; then
+  if [ -d "${HOME}/.hermes" ] && [ -n "$(ls -A "${HOME}/.hermes" 2>/dev/null)" ]; then
+    hermes_status="[✓]"
+    hermes_detail="configured"
+  else
+    hermes_status="[✓]"
+    hermes_detail="installed — run: hermes setup"
+  fi
+fi
+
 # openharness CLI — verify the bind-mounted package built and symlinked
 oh_status="[✗]"
 oh_detail="not installed — check entrypoint logs"
@@ -118,9 +133,10 @@ printf '    %-6s %-11s %s\n' "$codex_status"      "codex"       "$codex_detail"
 printf '    %-6s %-11s %s\n' "$opencode_status"   "opencode"    "$opencode_detail"
 printf '    %-6s %-11s %s\n' "$pi_status"         "pi"          "$pi_detail"
 printf '    %-6s %-11s %s\n' "$deepagents_status" "deepagents"  "$deepagents_detail"
+printf '    %-6s %-11s %s\n' "$hermes_status"     "hermes"      "$hermes_detail"
 printf '    %-6s %-11s %s\n' "$oh_status"         "openharness" "$oh_detail"
 printf '\n'
-printf '  Shortcuts: claude · codex · opencode · pi · deepagents · tmux attach -t system-cron\n'
+printf '  Shortcuts: claude · codex · opencode · pi · deepagents · hermes · tmux attach -t system-cron\n'
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'
 

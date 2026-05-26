@@ -13,7 +13,7 @@ if [ -S "$SOCK" ]; then
 fi
 
 # Fix ownership of mounted volumes (created as root by Docker).
-for dir in .claude .codex .pi .deepagents .cloudflared .config/gh .ssh; do
+for dir in .claude .codex .pi .deepagents .hermes .cloudflared .config/gh .ssh; do
   if [ -d "/home/sandbox/$dir" ]; then
     chown -R sandbox:sandbox "/home/sandbox/$dir" 2>/dev/null || true
     [ "$dir" = ".ssh" ] && chmod 700 "/home/sandbox/$dir" 2>/dev/null || true
@@ -239,6 +239,25 @@ if [ "${INSTALL_AGENT_BROWSER:-false}" = "true" ] && ! command -v agent-browser 
     && agent-browser install --with-deps 2>&1 | tail -5 \
     && echo "[entrypoint] agent-browser installed" \
     || echo "[entrypoint] agent-browser install failed — skipping"
+fi
+
+# ─── Optional: hermes agent CLI (opt-in via INSTALL_HERMES=true) ──────
+# Curl-piped installer must run as the sandbox user (not root) so the
+# binary lands in user-scope locations and any state written to ~/.hermes
+# is owned by sandbox, matching the named-volume permissions handled by
+# the chown loop above. The `command -v hermes` guard keeps re-boots
+# idempotent — once installed, the curl re-run is skipped.
+if [ "${INSTALL_HERMES:-false}" = "true" ]; then
+  if ! gosu sandbox bash -lc 'command -v hermes >/dev/null 2>&1'; then
+    echo "[entrypoint] Installing Hermes agent CLI (INSTALL_HERMES=true)..."
+    if gosu sandbox bash -lc 'curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash' 2>&1 | tail -10; then
+      echo "[entrypoint] hermes install completed"
+    else
+      echo "[entrypoint] WARN: hermes install failed — continuing boot"
+    fi
+  else
+    echo "[entrypoint] hermes already installed — skipping install"
+  fi
 fi
 
 # Run workspace startup (dev server + tunnel) as sandbox user

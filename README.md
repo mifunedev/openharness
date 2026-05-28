@@ -57,10 +57,10 @@ make shell       # enter the isolated sandbox
 # inside the sandbox, launch any core agent:
 #   claude     # Claude Code (default)
 #   codex      # OpenAI Codex CLI
-#   opencode   # OpenCode
+#   opencode   # OpenCode (optional: set INSTALL_OPENCODE=true and rebuild)
 #   pi         # Pi Coding Agent
-#   deepagents # LangChain DeepAgents (multi-provider)
-#   hermes     # Nous Research Hermes (opt-in: set INSTALL_HERMES=true)
+#   deepagents # LangChain DeepAgents (optional: set INSTALL_DEEPAGENTS=true and rebuild)
+#   hermes     # Nous Research Hermes (optional: set INSTALL_HERMES=true and rebuild)
 make destroy     # stop and remove the sandbox
 make help        # all targets
 ```
@@ -92,7 +92,7 @@ make shell
 
 | | |
 |---|---|
-| **Core agents** | Claude Code, Codex, OpenCode, Pi, DeepAgents (preinstalled); Hermes (opt-in) |
+| **Core agents** | Defaults: Claude Code, Codex, Pi. Optional: OpenCode, DeepAgents, Hermes |
 | **Runtimes** | Node 22, pnpm, Bun, uv (Python) |
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |

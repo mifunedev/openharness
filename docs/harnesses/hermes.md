@@ -11,11 +11,10 @@ skills from experience, scheduled task automation, sub-agent delegation,
 container sandboxing across multiple backends, and bridges to chat
 platforms (Telegram, Discord, Slack, WhatsApp, Signal, Email).
 
-Hermes is an **optional, opt-in runtime** in Open Harness. It sits
-alongside `claude`, `codex`, `pi`, `opencode`, and `deepagents` as a
-sandbox-image-layer CLI primitive; it is not installed in the default
-sandbox image. Canonical facts about Hermes live in the wiki entry
-`wiki/hermes-agent.md`.
+Hermes is an **optional image-level runtime** in Open Harness. When
+enabled with `INSTALL_HERMES=true`, it sits alongside `claude`, `codex`,
+`pi`, `opencode`, and `deepagents` as a sandbox CLI primitive. Canonical
+facts about Hermes live in the wiki entry `wiki/hermes-agent.md`.
 
 ## Purpose
 
@@ -30,35 +29,38 @@ sandbox image. Canonical facts about Hermes live in the wiki entry
   unless you have a specific reason to enable a bridge.
 - MIT-licensed; current upstream release is v0.14.0.
 
-## Install (opt-in)
+## Install (optional)
 
-Hermes is **disabled by default**. To enable, set the runtime flag in
+Hermes is disabled by default. To install it into the sandbox image, set
 `.devcontainer/.env`:
 
 ```env
 INSTALL_HERMES=true
 ```
 
-Then restart the container:
+Then rebuild/restart the sandbox:
 
 ```bash
 make stop && make sandbox
 ```
 
-On first boot with `INSTALL_HERMES=true`, the entrypoint runs the
-official curl-piped installer as the `sandbox` user:
+The executable is installed during image build, not at container boot, so
+an enabled sandbox has `hermes` on PATH immediately:
 
 ```bash
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+hermes --version
 ```
 
-The flag mirrors the existing `INSTALL_AGENT_BROWSER` precedent — flipping
-it does not require a Dockerfile rebuild. A subsequent restart with the
-binary already present skips the install via a `command -v hermes` guard.
+At image build time, Open Harness runs the official installer with setup
+and browser installation disabled:
 
-If the install fails, you'll see `WARN: hermes install failed` in
-`docker logs openharness`; the rest of the entrypoint continues to boot
-unaffected.
+```bash
+curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
+  | bash -s -- --skip-setup --skip-browser
+```
+
+That keeps `make sandbox` non-interactive. User setup remains explicit
+inside the running sandbox.
 
 ## Authentication
 
@@ -70,24 +72,38 @@ hermes setup --portal   # Nous Portal OAuth integration
 hermes doctor           # health check
 ```
 
-Credentials and config write to `~/.hermes/`. The exact sentinel files
-inside that directory are not documented upstream; the sandbox banner
-uses an "any non-empty contents" heuristic to distinguish `installed`
-from `configured`.
+Config, memory, skills, and sessions write to `~/harness/.hermes/`
+through `HERMES_HOME=/home/sandbox/harness/.hermes`. On first boot with
+Hermes enabled, the entrypoint seeds `config.yaml` so
+`skills.external_dirs` includes `/home/sandbox/harness/.claude/skills`,
+making the harness' in-repo skills visible to Hermes by default.
+
+Auth remains home-scoped at `~/.hermes/auth.json` via the `hermes-auth`
+named volume; the entrypoint creates `~/harness/.hermes/auth.json` as a
+symlink into that auth volume so Hermes can keep using one home directory
+without committing credentials. The sandbox banner mirrors the Claude
+Code pattern: it reports Hermes as authenticated only when
+`~/.hermes/auth.json` exists and is non-empty; generated config files
+alone do not count as authentication.
 
 ## State persistence
 
-`~/.hermes/` is mounted from the `hermes-auth` named Docker volume, so
-authentication, generated skills, and accumulated memory survive
-`make stop` and `make sandbox` rebuilds. `make destroy` removes the
-volume — re-running setup is required after a destroy.
+`~/harness/.hermes/` is part of the bind-mounted checkout, so Hermes
+configuration, generated skills, memory, and sessions survive container
+rebuilds and follow the project directory. Credentials stay in the
+`~/.hermes` named volume. The project-local runtime contents are ignored
+by git; do not commit secrets from this directory.
 
-The Hermes binary itself is installed by the curl-piped script as the
-`sandbox` user on first boot; depending on the installer's choice
-(`~/.local/bin`, a `~/.hermes/bin/` shim, etc.), it may or may not
-survive `make destroy`. The entrypoint's idempotent re-install handles
-the worst case — a fresh sandbox with `INSTALL_HERMES=true` will
-re-install on next boot.
+`make destroy` removes the `hermes-auth` Docker volume and therefore
+Hermes credentials, but it does not delete the bind-mounted `.hermes/`
+directory from the checkout. Remove that directory manually if you want a
+full Hermes project-state reset.
+
+The Hermes binary itself is installed in the image when
+`INSTALL_HERMES=true`, under the installer's root Linux FHS layout
+(`/usr/local/lib/hermes-agent` with a `/usr/local/bin/hermes` launcher).
+Disabling the flag on a future rebuild omits the executable; project-local
+state remains in `.hermes/` until removed.
 
 ## Common usage
 
@@ -122,11 +138,12 @@ configuration.
 
 The sandbox onboarding banner reports Hermes as:
 
-- `[✗] not installed — set INSTALL_HERMES=true and restart` — when the
-  binary is absent from PATH (default state).
+- `[✗] not installed — set INSTALL_HERMES=true and rebuild` — when the
+  binary is absent from PATH.
 - `[✓] installed — run: hermes setup` — when the binary is on PATH but
-  `~/.hermes/` is empty.
-- `[✓] configured` — when `~/.hermes/` has non-empty contents.
+  `~/.hermes/auth.json` is absent or empty.
+- `[✓] authenticated` — when `~/.hermes/auth.json` exists and is
+  non-empty.
 
 ## Upstream documentation
 

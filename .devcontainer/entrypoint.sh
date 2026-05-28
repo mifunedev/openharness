@@ -72,6 +72,91 @@ if [ -d "$HARNESS_DIR" ]; then
   fi
 fi
 
+# Hermes keeps non-auth runtime state project-local while auth stays in
+# the normal home-scoped ~/.hermes volume. HERMES_HOME points at the
+# checkout-local directory; auth.json is a symlink into ~/.hermes so
+# `hermes setup` still writes credentials to the auth volume.
+if [ "${INSTALL_HERMES:-false}" = "true" ]; then
+  HERMES_RUNTIME="${HERMES_HOME:-/home/sandbox/harness/.hermes}"
+  HERMES_AUTH_DIR="/home/sandbox/.hermes"
+
+  mkdir -p "$HERMES_RUNTIME" "$HERMES_AUTH_DIR"
+
+  if [ -f "$HERMES_RUNTIME/auth.json" ] && [ ! -L "$HERMES_RUNTIME/auth.json" ]; then
+    if [ ! -e "$HERMES_AUTH_DIR/auth.json" ]; then
+      mv "$HERMES_RUNTIME/auth.json" "$HERMES_AUTH_DIR/auth.json"
+    else
+      mv "$HERMES_RUNTIME/auth.json" "$HERMES_RUNTIME/auth.json.project-local.bak"
+    fi
+  fi
+
+  if [ ! -e "$HERMES_RUNTIME/auth.json" ] && [ ! -L "$HERMES_RUNTIME/auth.json" ]; then
+    ln -s "$HERMES_AUTH_DIR/auth.json" "$HERMES_RUNTIME/auth.json"
+  fi
+
+  # Seed Hermes with the harness' in-repo skills. Preserve any user config
+  # created by `hermes setup`; only add the external skill directory when it
+  # is absent.
+  HERMES_CONFIG="$HERMES_RUNTIME/config.yaml"
+  HERMES_EXTERNAL_SKILLS_DIR="/home/sandbox/harness/.claude/skills"
+  python3 - "$HERMES_CONFIG" "$HERMES_EXTERNAL_SKILLS_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+config_path = Path(sys.argv[1])
+skills_dir = sys.argv[2]
+config_path.parent.mkdir(parents=True, exist_ok=True)
+
+if not config_path.exists():
+    config_path.write_text(
+        "skills:\n"
+        "  external_dirs:\n"
+        f"    - {skills_dir}\n",
+        encoding="utf-8",
+    )
+    raise SystemExit(0)
+
+text = config_path.read_text(encoding="utf-8")
+if skills_dir in text:
+    raise SystemExit(0)
+
+lines = text.splitlines()
+
+def is_top_level(line: str) -> bool:
+    return line and not line.startswith((" ", "\t")) and not line.lstrip().startswith("#")
+
+skills_start = next((i for i, line in enumerate(lines) if line == "skills:"), None)
+if skills_start is None:
+    if lines and lines[-1].strip():
+        lines.append("")
+    lines.extend(["skills:", "  external_dirs:", f"    - {skills_dir}"])
+else:
+    skills_end = len(lines)
+    for i in range(skills_start + 1, len(lines)):
+        if is_top_level(lines[i]):
+            skills_end = i
+            break
+
+    external_idx = next(
+        (i for i in range(skills_start + 1, skills_end) if lines[i].strip().startswith("external_dirs:")),
+        None,
+    )
+    if external_idx is None:
+        lines[skills_start + 1:skills_start + 1] = ["  external_dirs:", f"    - {skills_dir}"]
+    elif lines[external_idx].strip() == "external_dirs: []":
+        lines[external_idx:external_idx + 1] = ["  external_dirs:", f"    - {skills_dir}"]
+    else:
+        insert_at = external_idx + 1
+        while insert_at < skills_end and lines[insert_at].startswith("    - "):
+            insert_at += 1
+        lines.insert(insert_at, f"    - {skills_dir}")
+
+config_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PY
+
+  chown -R sandbox:sandbox "$HERMES_RUNTIME" "$HERMES_AUTH_DIR" 2>/dev/null || true
+fi
+
 # ─── Attach banner wiring (idempotent) ──────────────────────────────
 # Source install/banner.sh from the sandbox user's .bashrc so every
 # interactive shell (docker exec, VS Code) shows
@@ -239,25 +324,6 @@ if [ "${INSTALL_AGENT_BROWSER:-false}" = "true" ] && ! command -v agent-browser 
     && agent-browser install --with-deps 2>&1 | tail -5 \
     && echo "[entrypoint] agent-browser installed" \
     || echo "[entrypoint] agent-browser install failed — skipping"
-fi
-
-# ─── Optional: hermes agent CLI (opt-in via INSTALL_HERMES=true) ──────
-# Curl-piped installer must run as the sandbox user (not root) so the
-# binary lands in user-scope locations and any state written to ~/.hermes
-# is owned by sandbox, matching the named-volume permissions handled by
-# the chown loop above. The `command -v hermes` guard keeps re-boots
-# idempotent — once installed, the curl re-run is skipped.
-if [ "${INSTALL_HERMES:-false}" = "true" ]; then
-  if ! gosu sandbox bash -lc 'command -v hermes >/dev/null 2>&1'; then
-    echo "[entrypoint] Installing Hermes agent CLI (INSTALL_HERMES=true)..."
-    if gosu sandbox bash -lc 'curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash' 2>&1 | tail -10; then
-      echo "[entrypoint] hermes install completed"
-    else
-      echo "[entrypoint] WARN: hermes install failed — continuing boot"
-    fi
-  else
-    echo "[entrypoint] hermes already installed — skipping install"
-  fi
 fi
 
 # Run workspace startup (dev server + tunnel) as sandbox user

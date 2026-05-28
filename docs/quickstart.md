@@ -44,15 +44,16 @@ directory: `/home/sandbox/harness`.
 
 ## Pick your harness
 
-The sandbox ships with Claude Code, Codex, OpenCode, Pi, and DeepAgents
-preinstalled, plus T3 Code on demand via `npx`. Authenticate at least one
-before use:
+The default sandbox ships with Claude Code, Codex, and Pi. OpenCode,
+DeepAgents, and Hermes are optional image-level installs; T3 Code runs on
+demand via `npx`. Authenticate at least one harness before use:
 
 - **[Claude Code](./harnesses/claude-code.md)**: run `claude` and follow the OAuth prompt
 - **[Codex](./harnesses/codex.md)**: run `codex login`
-- **[OpenCode](./harnesses/opencode.md)**: run `opencode auth login`
+- **[OpenCode](./harnesses/opencode.md)**: set `INSTALL_OPENCODE=true`, rebuild, then run `opencode auth login`
 - **[Pi](./harnesses/pi.md)**: configure provider keys via environment variables
-- **[DeepAgents](./harnesses/deepagents.md)**: write provider keys to `~/.deepagents/.env`
+- **[DeepAgents](./harnesses/deepagents.md)**: set `INSTALL_DEEPAGENTS=true`, rebuild, then write provider keys to `~/.deepagents/.env`
+- **[Hermes](./harnesses/hermes.md)**: set `INSTALL_HERMES=true`, rebuild, then run `hermes setup`
 - **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `npx t3` (browser UI on port 3773)
 
 Claude Code remains the documented default. See
@@ -80,6 +81,9 @@ safe defaults during install. The most-edited values:
 | `GH_TOKEN` | GitHub token for non-interactive auth |
 | `TZ` | Container timezone |
 | `INSTALL_AGENT_BROWSER` | Set `true` to install Chromium (~1 GB) |
+| `INSTALL_OPENCODE` | Set `true` to include OpenCode in the sandbox image |
+| `INSTALL_DEEPAGENTS` | Set `true` to include DeepAgents in the sandbox image |
+| `INSTALL_HERMES` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
 
 Apply changes with `make destroy && make sandbox`.
 

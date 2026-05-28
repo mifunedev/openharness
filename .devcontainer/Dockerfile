@@ -47,14 +47,32 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
  && cp /root/.local/bin/uv /usr/local/bin/uv \
  && cp /root/.local/bin/uvx /usr/local/bin/uvx
 
+# ─── Hermes Agent CLI ───────────────────────────────────────────────
+# Optional image-level install. When INSTALL_HERMES=true, install the
+# executable during image build (like the other image-level CLIs), not at
+# container boot. Runtime config/auth uses the project-local
+# /home/sandbox/harness/.hermes directory via HERMES_HOME.
+ARG INSTALL_HERMES=false
+RUN if [ "${INSTALL_HERMES}" = "true" ]; then \
+      curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
+        | bash -s -- --skip-setup --skip-browser; \
+      rm -rf /root/.hermes; \
+    else \
+      echo "Skipping Hermes Agent CLI install (INSTALL_HERMES=false)"; \
+    fi
+
 # ─── DeepAgents CLI ────────────────────────────────────────────────
-# Install via `uv tool install` into image-level locations so the
-# `deepagents` executable is on PATH for the sandbox user. Avoid
-# user-home installs that would land in /root/.local/bin only.
+# Optional image-level install. Avoid user-home installs that would land
+# in /root/.local/bin only.
 ENV UV_TOOL_DIR=/opt/uv/tools
 ENV UV_TOOL_BIN_DIR=/usr/local/bin
+ARG INSTALL_DEEPAGENTS=false
 RUN mkdir -p "$UV_TOOL_DIR" \
- && uv tool install deepagents-cli
+ && if [ "${INSTALL_DEEPAGENTS}" = "true" ]; then \
+      uv tool install deepagents-cli; \
+    else \
+      echo "Skipping DeepAgents CLI install (INSTALL_DEEPAGENTS=false)"; \
+    fi
 
 # ─── pnpm (via corepack) ───────────────────────────────────────────
 ENV PNPM_HOME="/usr/local/share/pnpm"
@@ -69,16 +87,19 @@ RUN corepack enable && corepack prepare pnpm@latest --activate \
 # postinstall scripts to download platform-native binaries; npm executes these
 # by default without extra configuration.
 #
-# AGENTS is a comma-separated list of agent CLI keys to install. The default
-# is claude-code + codex + pi-coding-agent + opencode. pi-coding-agent is
-# installed later under the sandbox user's npm prefix so `pi update` can
-# self-update without sudo. The pi-coding-agent key resolves to
-# @earendil-works/pi-coding-agent (the @mariozechner/... package is deprecated
-# upstream as of late 2026). Downstream harness packs (e.g. @ryaneggz/mifune)
-# install additional CLIs via their install-hook.sh.
+# AGENTS is a comma-separated list of default agent CLI keys to install.
+# The default is claude-code + codex + pi-coding-agent. Optional CLIs
+# such as OpenCode, DeepAgents, and Hermes are controlled by their own
+# INSTALL_* build flags. pi-coding-agent is installed later under the
+# sandbox user's npm prefix so `pi update` can self-update without sudo.
+# The pi-coding-agent key resolves to @earendil-works/pi-coding-agent
+# (the @mariozechner/... package is deprecated upstream as of late 2026).
+# Downstream harness packs (e.g. @ryaneggz/mifune) install additional CLIs
+# via their install-hook.sh.
 SHELL ["/bin/bash", "-c"]
 
-ARG AGENTS="claude-code,codex,pi-coding-agent,opencode"
+ARG AGENTS="claude-code,codex,pi-coding-agent"
+ARG INSTALL_OPENCODE=false
 
 RUN set -e; \
     declare -A PKG=( \
@@ -93,7 +114,9 @@ RUN set -e; \
         pkg="${PKG[$a]:-}"; \
         if [ -n "$pkg" ]; then npm install -g "$pkg"; \
         else echo "Unknown agent: $a"; exit 1; fi; \
-    done
+    done; \
+    if [ "${INSTALL_OPENCODE}" = "true" ]; then npm install -g opencode-ai; \
+    else echo "Skipping OpenCode CLI install (INSTALL_OPENCODE=false)"; fi
 
 # ─── Open Harness `oh` CLI ──────────────────────────────────────────
 # Build the in-tree `oh` CLI (apps/oh/) into a self-contained bundle,

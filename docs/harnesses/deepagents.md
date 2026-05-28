@@ -9,10 +9,9 @@ DeepAgents is LangChain's terminal coding agent. It runs interactive
 conversational sessions and one-shot non-interactive tasks against multiple
 LLM providers, with optional shell tool use gated by an explicit allow list.
 
-DeepAgents is an **optional supported runtime** in Open Harness. Claude Code
-remains the default agent path; DeepAgents is preinstalled so it can be
-selected when its provider mix or non-interactive shell-allow-list model is
-the right fit for a task.
+DeepAgents is an **optional supported runtime** in Open Harness. The default
+agent set is Claude Code, Codex, and Pi; enable DeepAgents when its provider
+mix or non-interactive shell-allow-list model is the right fit for a task.
 
 ## Purpose
 
@@ -23,20 +22,38 @@ the right fit for a task.
 - Project-aware: optionally reads memory and skills from a repo-local
   `.deepagents/` directory at the workspace root.
 
-## Install
+## Install (optional)
 
-DeepAgents is preinstalled in the base sandbox image via `uv tool install`.
+Enable DeepAgents in `.devcontainer/.env`:
+
+```env
+INSTALL_DEEPAGENTS=true
+```
+
+Then rebuild/restart the sandbox:
+
+```bash
+make stop && make sandbox
+```
+
+Open Harness installs the upstream CLI during image build via `uv tool
+install` into image-level paths:
+
+```bash
+uv tool install deepagents-cli
+```
+
 The `deepagents` shim lands on `/usr/local/bin` so it is on PATH for the
-`sandbox` user out of the box.
+`sandbox` user when the flag is enabled.
 
-Verify the install:
+Verify the install inside the sandbox:
 
 ```bash
 deepagents -v
 ```
 
-If the command is not found, the sandbox image is stale — rebuild with
-`make destroy && make sandbox`.
+If the command is not found, confirm `INSTALL_DEEPAGENTS=true` is present
+in `.devcontainer/.env`, then rebuild with `make stop && make sandbox`.
 
 ## Authentication and provider keys
 
@@ -160,6 +177,7 @@ Two environment overrides apply:
 
 ## Upstream documentation
 
+- [DeepAgents documentation](https://docs.langchain.com/oss/python/deepagents/overview)
 - [DeepAgents CLI overview](https://docs.langchain.com/oss/python/deepagents/cli/overview)
 - [DeepAgents CLI configuration](https://docs.langchain.com/oss/python/deepagents/cli/configuration)
 - [`langchain-ai/deepagents` on GitHub](https://github.com/langchain-ai/deepagents/tree/main/libs/cli)

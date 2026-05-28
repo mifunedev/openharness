@@ -28,7 +28,8 @@ conventions, git workflow, or where files live.
    - `sandbox-processes.md` — tmux sessions for long-running processes
    - `directory-readme.md` — when a directory needs a README
    - `advisor-model.md` — pattern for delegating to sub-agents
-4. Answer with `path:line` citations.
+4. For optional sandbox agent/runtime integrations, audit the full runtime/config/auth surface together: compose mounts and env, entrypoint setup/migration, default config seeding, banner sentinels, `.gitignore`, docs/wiki/changelog, and compose config validation. If Hermes is involved, load `references/hermes-state-auth-split.md` for the established project-local runtime + home-scoped auth + external skills pattern.
+5. Answer with `path:line` citations.
 
 ## Output shape
 

@@ -5,17 +5,29 @@ title: "OpenCode"
 
 # OpenCode
 
-OpenCode is a terminal coding agent that can run interactively or execute one-shot tasks. It ships preinstalled in the sandbox image alongside Claude Code, Codex, and Pi.
+OpenCode is a terminal coding agent that can run interactively or execute one-shot tasks. It is an optional image-level runtime in Open Harness; the default sandbox image ships Claude Code, Codex, and Pi only.
 
-## Install
+## Install (optional)
 
-OpenCode is installed by default during sandbox provisioning. The npm package is `opencode-ai`, installed globally with npm in the sandbox image:
+Enable OpenCode in `.devcontainer/.env`:
+
+```env
+INSTALL_OPENCODE=true
+```
+
+Then rebuild/restart the sandbox:
+
+```bash
+make stop && make sandbox
+```
+
+Open Harness installs the upstream npm package globally during image build:
 
 ```bash
 npm install -g opencode-ai
 ```
 
-Verify the install:
+Verify the install inside the sandbox:
 
 ```bash
 opencode --version
@@ -52,5 +64,7 @@ tmux attach -t agent-opencode
 
 ## Upstream documentation
 
+- [OpenCode documentation](https://opencode.ai/docs/)
 - [OpenCode CLI](https://opencode.ai/docs/cli/)
 - [OpenCode providers](https://opencode.ai/docs/providers/)
+- [`sst/opencode` on GitHub](https://github.com/sst/opencode)

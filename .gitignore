@@ -51,6 +51,11 @@ workspace/startup.sh
 **/.claude/specs/*
 **/auth.json
 **/.credentials.json
+
+# Hermes project-local runtime state (keep README tracked)
+/.hermes/*
+!/.hermes/README.md
+
 **/scheduled_tasks.lock
 # Workspace app build artifacts (Docusaurus + future apps/*)
 apps/*/build/

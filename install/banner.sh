@@ -71,17 +71,22 @@ fi
 
 # opencode — check for populated provider auth file
 opencode_status="[✗]"
-opencode_detail="not authenticated — run: opencode, then /connect"
-if [ -s "${HOME}/.local/share/opencode/auth.json" ]; then
-  opencode_status="[✓]"
-  opencode_detail="authenticated"
+opencode_detail="not installed — set INSTALL_OPENCODE=true and rebuild"
+if command -v opencode >/dev/null 2>&1; then
+  if [ -s "${HOME}/.local/share/opencode/auth.json" ]; then
+    opencode_status="[✓]"
+    opencode_detail="authenticated"
+  else
+    opencode_status="[✓]"
+    opencode_detail="installed — run: opencode auth login"
+  fi
 fi
 
 # deepagents — installed status from PATH; configured status from
 # ~/.deepagents/.env or ~/.deepagents/config.toml so that an empty mounted
 # directory (named volume on first boot) is not treated as authenticated.
 deepagents_status="[✗]"
-deepagents_detail="not installed"
+deepagents_detail="not installed — set INSTALL_DEEPAGENTS=true and rebuild"
 if command -v deepagents >/dev/null 2>&1; then
   if [ -s "${HOME}/.deepagents/.env" ] || [ -s "${HOME}/.deepagents/config.toml" ]; then
     deepagents_status="[✓]"
@@ -89,6 +94,21 @@ if command -v deepagents >/dev/null 2>&1; then
   else
     deepagents_status="[✓]"
     deepagents_detail="installed — configure ~/.deepagents/.env or run: deepagents"
+  fi
+fi
+
+# hermes — optional image-level CLI; auth status uses the home-scoped
+# ~/.hermes credential-pool file rather than project-local config.yaml/.env,
+# because setup can seed config files before the user authenticates.
+hermes_status="[✗]"
+hermes_detail="not installed — set INSTALL_HERMES=true and rebuild"
+if command -v hermes >/dev/null 2>&1; then
+  if [ -s "${HOME}/.hermes/auth.json" ]; then
+    hermes_status="[✓]"
+    hermes_detail="authenticated"
+  else
+    hermes_status="[✓]"
+    hermes_detail="installed — run: hermes setup"
   fi
 fi
 
@@ -118,9 +138,14 @@ printf '    %-6s %-11s %s\n' "$codex_status"      "codex"       "$codex_detail"
 printf '    %-6s %-11s %s\n' "$opencode_status"   "opencode"    "$opencode_detail"
 printf '    %-6s %-11s %s\n' "$pi_status"         "pi"          "$pi_detail"
 printf '    %-6s %-11s %s\n' "$deepagents_status" "deepagents"  "$deepagents_detail"
+printf '    %-6s %-11s %s\n' "$hermes_status"     "hermes"      "$hermes_detail"
 printf '    %-6s %-11s %s\n' "$oh_status"         "openharness" "$oh_detail"
 printf '\n'
-printf '  Shortcuts: claude · codex · opencode · pi · deepagents · tmux attach -t system-cron\n'
+shortcuts="claude · codex · pi"
+command -v opencode >/dev/null 2>&1 && shortcuts="$shortcuts · opencode"
+command -v deepagents >/dev/null 2>&1 && shortcuts="$shortcuts · deepagents"
+command -v hermes >/dev/null 2>&1 && shortcuts="$shortcuts · hermes"
+printf '  Shortcuts: %s · tmux attach -t system-cron\n' "$shortcuts"
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'
 

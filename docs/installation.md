@@ -141,14 +141,17 @@ Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
 
 ### AI agent CLIs
 
-| Tool | Command | Description |
-|------|---------|-------------|
-| Claude Code | `claude` | Anthropic's coding agent (aliased to `claude --dangerously-skip-permissions`) — default |
-| OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --dangerously-bypass-approvals-and-sandbox`) |
-| OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support |
-| Pi | `pi` | `@earendil-works/pi-coding-agent` — local-first coding agent (was `@mariozechner/pi-coding-agent`, now deprecated) |
-| DeepAgents | `deepagents` | LangChain's multi-provider terminal agent (`deepagents-cli` via `uv tool install`) — optional supported runtime |
-| agent-browser | `agent-browser` | Headless Chromium for web-capable agents |
+Default CLIs are always present. Optional CLIs are installed at image build time when their `.devcontainer/.env` flag is `true`.
+
+| Tool | Command | Source | Status |
+|------|---------|--------|--------|
+| Claude Code | `claude` | Anthropic's coding agent (aliased to `claude --dangerously-skip-permissions`) | default |
+| OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --dangerously-bypass-approvals-and-sandbox`) | default |
+| Pi | `pi` | `@earendil-works/pi-coding-agent` — local-first coding agent (was `@mariozechner/pi-coding-agent`, now deprecated) | default |
+| OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support | optional: `INSTALL_OPENCODE=true` |
+| DeepAgents | `deepagents` | LangChain's multi-provider terminal agent (`deepagents-cli` via `uv tool install`) | optional: `INSTALL_DEEPAGENTS=true` |
+| Hermes | `hermes` | Nous Research's self-improving agent CLI | optional: `INSTALL_HERMES=true` |
+| agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: `INSTALL_AGENT_BROWSER=true` |
 
 ### Runtimes & package managers
 
@@ -197,8 +200,11 @@ Auth credentials survive container rebuilds via named Docker volumes:
 - `codex-auth` → `~/.codex` (Codex OAuth)
 - `opencode-auth` → `~/.local/share/opencode` (OpenCode OAuth; `auth.json`)
 - `pi-auth` → `~/.pi` (Pi Agent OAuth)
-- `deepagents-auth` → `~/.deepagents` (DeepAgents provider keys, memory, skills, sessions). Repo-local `.deepagents/` is **project data** and follows normal `.gitignore` and code-review rules — never put secrets there.
+- `deepagents-auth` → `~/.deepagents` (DeepAgents provider keys, memory, skills, sessions; used when `INSTALL_DEEPAGENTS=true`). Repo-local `.deepagents/` is **project data** and follows normal `.gitignore` and code-review rules — never put secrets there.
+- `hermes-auth` → `~/.hermes` (Hermes auth only; non-auth runtime state defaults to project-local `~/harness/.hermes` when `INSTALL_HERMES=true`)
 - `cloudflared-auth` → `~/.cloudflared` (Cloudflare tunnel credentials, when used)
 - `gh-config` → `~/.config/gh` (GitHub CLI tokens)
+
+Hermes is split: when `INSTALL_HERMES=true`, `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/` directory, while auth remains in the `~/.hermes` named volume and is linked into the project-local home as `auth.json`. The entrypoint also seeds `config.yaml` with `skills.external_dirs: ["/home/sandbox/harness/.claude/skills"]` so Hermes can load the harness' in-repo skills by default. Project-local runtime contents are gitignored except `.hermes/README.md`; `make destroy` removes the auth volume but not the bind-mounted project runtime directory.
 
 Downstream harness packs and Pi extensions can introduce additional volumes or bind-mount overlays by adding their own compose file to `composeOverrides[]` in `config.json`.

@@ -121,7 +121,8 @@
     ]
   },
   "effortLevel": "high",
-  "model": "claude-opus-4-7[1m]",
+  "plansDirectory": ".claude/plans",
+  "model": "claude-opus-4-8[1m]",
   "statusLine": {
     "type": "command",
     "command": "bash -lc 'input=$(cat); model=$(jq -r \".model.display_name // \\\"Claude\\\"\" <<<\"$input\"); pct=$(jq -r \"(.context_window.used_percentage // 0 | tostring)\" <<<\"$input\"); branch=$(git branch --show-current 2>/dev/null); [ -n \"$branch\" ] || branch=$(git rev-parse --short HEAD 2>/dev/null || echo detached); printf \"[%s] %s%% context | %s\\n\" \"$model\" \"$pct\" \"$branch\"'",

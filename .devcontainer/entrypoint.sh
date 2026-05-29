@@ -72,26 +72,26 @@ if [ -d "$HARNESS_DIR" ]; then
   fi
 fi
 
-# Hermes keeps non-auth runtime state project-local while auth stays in
-# the normal home-scoped ~/.hermes volume. HERMES_HOME points at the
-# checkout-local directory; auth.json is a symlink into ~/.hermes so
-# `hermes setup` still writes credentials to the auth volume.
+# Hermes keeps all runtime state — including auth.json — inside the
+# project-local HERMES_HOME directory. An earlier design symlinked
+# auth.json into the home-scoped ~/.hermes named volume, but that volume
+# is a different filesystem from the bind-mounted checkout, so hermes'
+# atomic_replace() (write-temp-then-os.replace) died with EXDEV on every
+# auth write. Keeping auth on the same device as its temp file fixes it;
+# HERMES_HOME is gitignored, so credentials stay out of version control.
 if [ "${INSTALL_HERMES:-false}" = "true" ]; then
   HERMES_RUNTIME="${HERMES_HOME:-/home/sandbox/harness/.hermes}"
-  HERMES_AUTH_DIR="/home/sandbox/.hermes"
+  HERMES_LEGACY_AUTH="/home/sandbox/.hermes/auth.json"
 
-  mkdir -p "$HERMES_RUNTIME" "$HERMES_AUTH_DIR"
+  mkdir -p "$HERMES_RUNTIME"
 
-  if [ -f "$HERMES_RUNTIME/auth.json" ] && [ ! -L "$HERMES_RUNTIME/auth.json" ]; then
-    if [ ! -e "$HERMES_AUTH_DIR/auth.json" ]; then
-      mv "$HERMES_RUNTIME/auth.json" "$HERMES_AUTH_DIR/auth.json"
-    else
-      mv "$HERMES_RUNTIME/auth.json" "$HERMES_RUNTIME/auth.json.project-local.bak"
+  # Heal the legacy cross-device symlink: drop it and restore any
+  # credentials that reached the old volume as a real file.
+  if [ -L "$HERMES_RUNTIME/auth.json" ]; then
+    rm -f "$HERMES_RUNTIME/auth.json"
+    if [ -s "$HERMES_LEGACY_AUTH" ]; then
+      cp "$HERMES_LEGACY_AUTH" "$HERMES_RUNTIME/auth.json"
     fi
-  fi
-
-  if [ ! -e "$HERMES_RUNTIME/auth.json" ] && [ ! -L "$HERMES_RUNTIME/auth.json" ]; then
-    ln -s "$HERMES_AUTH_DIR/auth.json" "$HERMES_RUNTIME/auth.json"
   fi
 
   # Seed Hermes with the harness' in-repo skills. Preserve any user config
@@ -154,7 +154,16 @@ else:
 config_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
 
-  chown -R sandbox:sandbox "$HERMES_RUNTIME" "$HERMES_AUTH_DIR" 2>/dev/null || true
+  chown -R sandbox:sandbox "$HERMES_RUNTIME" 2>/dev/null || true
+
+  # The venv is a system path (outside /home/sandbox) that the Dockerfile
+  # chowned to the build-time sandbox UID. If the UID-sync above remapped
+  # sandbox to the host UID, the venv is left orphaned and ad-hoc
+  # `uv pip install --python .../venv 'hermes-agent[slack]'` fails EACCES.
+  # Re-chown the install dir + uv tools to the current sandbox UID.
+  for d in /usr/local/lib/hermes-agent /opt/uv; do
+    [ -d "$d" ] && chown -R sandbox:sandbox "$d" 2>/dev/null || true
+  done
 fi
 
 # ─── Attach banner wiring (idempotent) ──────────────────────────────

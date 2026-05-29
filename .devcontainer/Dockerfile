@@ -50,24 +50,25 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
 # ─── Hermes Agent CLI ───────────────────────────────────────────────
 # Optional image-level install. When INSTALL_HERMES=true, install the
 # executable during image build (like the other image-level CLIs), not at
-# container boot. Runtime config/auth uses the project-local
-# /home/sandbox/harness/.hermes directory via HERMES_HOME.
+# container boot. The Slack messaging extra ships by default so the gateway's
+# Slack adapter works without a post-install step. Runtime config/auth uses
+# the project-local /home/sandbox/harness/.hermes directory via HERMES_HOME.
 ARG INSTALL_HERMES=false
 RUN if [ "${INSTALL_HERMES}" = "true" ]; then \
       curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
         | bash -s -- --skip-setup --skip-browser; \
       rm -rf /root/.hermes; \
+      uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack]'; \
     else \
       echo "Skipping Hermes Agent CLI install (INSTALL_HERMES=false)"; \
     fi
 
 # ─── DeepAgents CLI ────────────────────────────────────────────────
-# Optional image-level install. Avoid user-home installs that would land
-# in /root/.local/bin only.
-ENV UV_TOOL_DIR=/opt/uv/tools
-ENV UV_TOOL_BIN_DIR=/usr/local/bin
+# Optional image-level install. Use build-only uv tool paths so root-owned
+# image paths do not leak into the sandbox user's runtime environment.
 ARG INSTALL_DEEPAGENTS=false
-RUN mkdir -p "$UV_TOOL_DIR" \
+RUN export UV_TOOL_DIR=/opt/uv/tools UV_TOOL_BIN_DIR=/usr/local/bin \
+ && mkdir -p "$UV_TOOL_DIR" \
  && if [ "${INSTALL_DEEPAGENTS}" = "true" ]; then \
       uv tool install deepagents-cli; \
     else \
@@ -133,6 +134,16 @@ RUN useradd -m -s /bin/zsh sandbox \
  && echo "sandbox ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/sandbox \
  && chmod 0440 /etc/sudoers.d/sandbox \
  && groupadd -f docker && usermod -aG docker sandbox
+
+# Runtime uv operations should be owned by the default in-container user.
+# Image-level installs may still place launchers in /usr/local/bin, but
+# ad-hoc `uv tool install` and `uv pip install --python ...` from a shell
+# must not target root-owned tool dirs by default.
+ENV UV_TOOL_DIR=/home/sandbox/.local/share/uv/tools
+ENV UV_TOOL_BIN_DIR=/home/sandbox/.local/bin
+RUN install -d -o sandbox -g sandbox "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" \
+ && chown -R sandbox:sandbox /opt/uv 2>/dev/null || true \
+ && if [ -d /usr/local/lib/hermes-agent ]; then chown -R sandbox:sandbox /usr/local/lib/hermes-agent; fi
 
 # Pi self-updates only when its package directory and parent are writable.
 # Install it under sandbox's npm prefix, and put that bin directory before

@@ -9,6 +9,15 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.5.29] - 2026-05-29
+
+### Added
 - Optional Hermes agent CLI image integration (`INSTALL_HERMES=true`) with project-local runtime state under `~/harness/.hermes`, auth isolated at `~/.hermes`, and default `skills.external_dirs` pointing at `/home/sandbox/harness/.claude/skills`; OpenCode and DeepAgents are now documented as optional image-level installs (`INSTALL_OPENCODE=true`, `INSTALL_DEEPAGENTS=true`) while the default agent set remains Claude Code, Codex, and Pi; optional harness docs/wiki entries include install steps and upstream docs ([#364](https://github.com/ryaneggz/open-harness/issues/364)).
 - `wiki/sequoia-capital-the-next-1t-company.md` captures the Sequoia/AI Opportunities thesis that AI-native winners may sell completed services work rather than software tools ([#362](https://github.com/ryaneggz/open-harness/issues/362)).
 - `wiki/learn-harness-engineering.md` captures the Walking Labs *Learn Harness Engineering* course as an entity page; `docs/resources.md` + `docs/intro.md` link the external course as the human-facing entry point ([#341](https://github.com/ryaneggz/open-harness/issues/341)).

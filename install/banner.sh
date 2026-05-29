@@ -97,13 +97,13 @@ if command -v deepagents >/dev/null 2>&1; then
   fi
 fi
 
-# hermes — optional image-level CLI; auth status uses the home-scoped
-# ~/.hermes credential-pool file rather than project-local config.yaml/.env,
+# hermes — optional image-level CLI; auth status checks HERMES_HOME's
+# auth.json (project-local, gitignored) rather than config.yaml/.env,
 # because setup can seed config files before the user authenticates.
 hermes_status="[✗]"
 hermes_detail="not installed — set INSTALL_HERMES=true and rebuild"
 if command -v hermes >/dev/null 2>&1; then
-  if [ -s "${HOME}/.hermes/auth.json" ]; then
+  if [ -s "${HERMES_HOME:-/home/sandbox/harness/.hermes}/auth.json" ]; then
     hermes_status="[✓]"
     hermes_detail="authenticated"
   else

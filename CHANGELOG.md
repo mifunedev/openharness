@@ -9,6 +9,8 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `cron` preinstalled in the sandbox base image so scheduled jobs work without a manual `apt-get install` ([#312](https://github.com/ryaneggz/open-harness/issues/312)).
+
 ### Changed
 - Release process now promotes `development` → `main` (fast-forward) before cutting the release branch and tag, keeping `main` as the authoritative release line; `/release` skill and `.claude/rules/git.md` § Releases document the `development → main → release → tag → sync` flow and abort if `main` has diverged.
 ### Fixed

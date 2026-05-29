@@ -84,14 +84,39 @@ git commit -m "task: promote CHANGELOG for $VERSION"
 
 The `[$VERSION]` section is the source of truth for the GitHub Release body — `release.yml` extracts it via `body_path` (no `generate_release_notes`).
 
-### Step 4 — Push release branch + tag
+### Step 4 — Promote `development` → `main`, then cut release branch + tag
+
+`development` is the integration branch; `main` is the release line. Push
+the promotion commit to `development`, fast-forward `main` to it, then cut
+the release branch from `main` (see `.claude/rules/git.md` § Releases for
+the branch model).
 
 ```bash
-PREV_BRANCH=$(git branch --show-current)
-git checkout -b "release/$VERSION"
+PREV_BRANCH=$(git branch --show-current)               # expected: development
+
+# Push the CHANGELOG promotion commit to development.
+git push origin "$PREV_BRANCH"
+
+# Promote development → main. main MUST be strictly behind development
+# (fast-forwardable). Abort if it has diverged — reconcile manually first.
+git fetch origin main "$PREV_BRANCH"
+if git merge-base --is-ancestor origin/main "origin/$PREV_BRANCH"; then
+  git push origin "origin/$PREV_BRANCH:main"           # clean fast-forward
+  echo "main fast-forwarded to $PREV_BRANCH"
+else
+  echo "Aborting: main has diverged from $PREV_BRANCH — reconcile before releasing." >&2
+  exit 1
+fi
+
+# Cut the release branch from main and tag it.
+git checkout -b "release/$VERSION" origin/main
 git push origin "release/$VERSION"
 git tag "$VERSION" && git push origin "$VERSION"    # triggers release.yml
 ```
+
+After step 4, `main` and `development` are converged (both at the
+promotion commit). No extra back-sync is needed when step 4 was a
+fast-forward.
 
 ### Step 5 — Poll CI (up to 10 min)
 
@@ -131,7 +156,8 @@ Release $VERSION complete!
 
   Repo:     $REPO
   Tag:      $VERSION
-  Branch:   release/$VERSION
+  Branch:   release/$VERSION (cut from main)
+  main:     fast-forwarded to $VERSION (in sync with development)
   Image:    ghcr.io/$REPO:$VERSION
   Release:  https://github.com/$REPO/releases/tag/$VERSION
   CI:       <pass/fail with run URL>

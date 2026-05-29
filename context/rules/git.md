@@ -129,19 +129,53 @@ Release branch: `release/<VERSION>` (e.g., `release/2026.4.18-2`).
 
 Pushing tag triggers `.github/workflows/release.yml` — runs lint + type-check + tests, builds `ghcr.io/ryaneggz/openharness:<VERSION>`, pushes to GHCR, creates GitHub Release.
 
+Branch model: `development` is the integration branch; `main` is the
+release line. A release **promotes `development` into `main`**, cuts the
+release branch from `main`, tags it, then leaves both branches converged.
+The full flow is:
+
+```
+development → main → release/<VERSION> → tag <VERSION> → main & development in sync
+```
+
+`release.yml` triggers purely on the tag push and checks out the **tagged
+commit** (branch-agnostic), so the build is correct regardless of which
+branch the tag sits on. The `main` promotion is what keeps the release
+line authoritative — skipping it silently drifts `main` behind every
+release.
+
 Pre-flight before tagging:
-- On intended source branch, no uncommitted changes
+- On intended source branch (`development`), no uncommitted changes
+- `development` pushed and CI green
 
 Procedure:
 
 ```bash
 VERSION=$(date '+%Y.%-m.%-d')                             # append -N if tag exists
-git checkout -b "release/$VERSION"
+
+# 1. Promote CHANGELOG [Unreleased] → [VERSION], commit on development, push.
+#    (the /release skill automates this; see § Changelog)
+git push origin development
+
+# 2. Promote development → main (fast-forward; main is the release line).
+#    main must be strictly behind development — verify it is fast-forwardable:
+git fetch origin main development
+git merge-base --is-ancestor origin/main origin/development \
+  && echo "FF-safe" || echo "DIVERGED — reconcile before releasing"
+git push origin origin/development:main                   # clean FF, no merge commit
+
+# 3. Cut the release branch from main and tag.
+git checkout -b "release/$VERSION" origin/main
 git push origin "release/$VERSION"
 git tag "$VERSION" && git push origin "$VERSION"          # triggers CI release
+
+# 4. After tag CI passes, main and development are already converged
+#    (both at the promotion commit). No extra sync needed when step 2
+#    was a fast-forward. If main had diverged and a merge was required,
+#    merge main back into development to re-converge.
 ```
 
-After pushing tag, monitor `.github/workflows/release.yml` and verify both GitHub Release and GHCR image. Use `/release` skill for full automated procedure (version detection, pre-flight, tag, CI polling, verification).
+After pushing tag, monitor `.github/workflows/release.yml` and verify both GitHub Release and GHCR image. Use `/release` skill for full automated procedure (version detection, pre-flight, **main promotion**, tag, CI polling, verification).
 
 ## After Push
 

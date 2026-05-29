@@ -14,4 +14,4 @@ skills:
 
 That makes the harness' in-repo Claude-style skills visible to Hermes by default.
 
-Hermes auth does not live here as a committed or project-local file. The sandbox mounts the `hermes-auth` named volume at `~/.hermes`, and the entrypoint links `.hermes/auth.json` to `~/.hermes/auth.json` so credentials stay in the home-scoped auth volume.
+Hermes auth lives here as a project-local `auth.json`, gitignored and never committed. An earlier design symlinked it into the home-scoped `~/.hermes` named volume, but that volume is a different filesystem from the bind-mounted checkout, so Hermes' atomic credential writes (write-temp-then-rename) failed with a cross-device-link error (`EXDEV`). Keeping `auth.json` on the same device as `HERMES_HOME` resolves it; the entrypoint heals any leftover legacy symlink on boot.

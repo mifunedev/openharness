@@ -3,10 +3,10 @@
 # Base sandbox compose. The base ships with zero in-tree overlays;
 # agent auth and tool state persist in named volumes managed by Docker
 # (claude-auth, codex-auth, pi-auth, opencode-auth, deepagents-auth,
-# hermes-auth, cloudflared-auth, gh-config), and the bind-mounted repo's
-# UID is synced into the sandbox user by entrypoint.sh on first boot.
+# cloudflared-auth, gh-config), and the bind-mounted repo's UID is synced
+# into the sandbox user by entrypoint.sh on first boot.
 # Hermes uses the project-local bind-mounted `.hermes/` directory as
-# HERMES_HOME while keeping auth in the `~/.hermes` named volume.
+# HERMES_HOME for all runtime state, including auth.json (gitignored).
 #
 # Downstream harness packs and Pi extensions can register additional
 # overlays by appending paths to composeOverrides[] in config.json;
@@ -33,17 +33,8 @@ services:
       - pi-auth:/home/sandbox/.pi
       - opencode-auth:/home/sandbox/.local/share/opencode
       - deepagents-auth:/home/sandbox/.deepagents
-      - hermes-auth:/home/sandbox/.hermes
       - cloudflared-auth:/home/sandbox/.cloudflared
       - gh-config:/home/sandbox/.config/gh
-    ports:
-      # Pi harness OAuth login callback (binds localhost:1455). Bound to
-      # host loopback only — lets an editor's auto-port-forwarding (e.g.
-      # VS Code Remote SSH) carry the redirect back to your laptop,
-      # removing the manual `ssh -L 1455:localhost:1455` step. The Codex
-      # CLI is unaffected — it has `codex login --device-auth` for
-      # headless use.
-      - "127.0.0.1:1455:1455"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -69,6 +60,5 @@ volumes:
   pi-auth:
   opencode-auth:
   deepagents-auth:
-  hermes-auth:
   cloudflared-auth:
   gh-config:

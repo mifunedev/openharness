@@ -154,7 +154,16 @@ else:
 config_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
 
-  chown -R sandbox:sandbox "$HERMES_RUNTIME" "$HERMES_AUTH_DIR" 2>/dev/null || true
+  chown -R sandbox:sandbox "$HERMES_RUNTIME" 2>/dev/null || true
+
+  # The venv is a system path (outside /home/sandbox) that the Dockerfile
+  # chowned to the build-time sandbox UID. If the UID-sync above remapped
+  # sandbox to the host UID, the venv is left orphaned and ad-hoc
+  # `uv pip install --python .../venv 'hermes-agent[slack]'` fails EACCES.
+  # Re-chown the install dir + uv tools to the current sandbox UID.
+  for d in /usr/local/lib/hermes-agent /opt/uv; do
+    [ -d "$d" ] && chown -R sandbox:sandbox "$d" 2>/dev/null || true
+  done
 fi
 
 # ─── Attach banner wiring (idempotent) ──────────────────────────────

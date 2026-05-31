@@ -13,6 +13,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ### Changed
 - Release process now promotes `development` → `main` (fast-forward) before cutting the release branch and tag, keeping `main` as the authoritative release line; `/release` skill and `.claude/rules/git.md` § Releases document the `development → main → release → tag → sync` flow and abort if `main` has diverged.
+- Renamed the top-level `apps/` directory to `packages/` and updated workspace, docs, Dockerfile, CI, and test discovery paths to match.
 ### Fixed
 ### Removed
 ### Deprecated

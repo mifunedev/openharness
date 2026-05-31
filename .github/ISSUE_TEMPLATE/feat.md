@@ -17,7 +17,7 @@ assignees: ""
 ## Proposed Implementation
 
 <!-- Describe the approach. Consider:
-  - Which area of the harness does this affect? (.devcontainer/, install/, docs/, workspace/ template, scripts/, crons/)
+  - Which area of the harness does this affect? (.devcontainer/, install/, docs/, packages/, workspace/ template, scripts/, crons/)
   - New skill, rule, or heartbeat needed?
   - Compose overlay change? Dockerfile change?
   - Any new commands or CLI surface?

@@ -3,7 +3,7 @@ name: "Docs: build & deploy"
 on:
   pull_request:
     paths:
-      - "apps/docs/**"
+      - "packages/docs/**"
       - "docs/**"
       - "blog/**"
       - ".github/workflows/docs.yml"
@@ -11,7 +11,7 @@ on:
     branches:
       - main
     paths:
-      - "apps/docs/**"
+      - "packages/docs/**"
       - "docs/**"
       - "blog/**"
       - ".github/workflows/docs.yml"
@@ -47,7 +47,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build site
-        working-directory: apps/docs
+        working-directory: packages/docs
         run: pnpm run build
 
       - name: Configure Pages
@@ -58,7 +58,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/docs/build
+          path: packages/docs/build
 
   deploy:
     name: Deploy to GitHub Pages

@@ -57,9 +57,9 @@ workspace/startup.sh
 !/.hermes/README.md
 
 **/scheduled_tasks.lock
-# Workspace app build artifacts (Docusaurus + future apps/*)
-apps/*/build/
-apps/*/.docusaurus/
-apps/*/node_modules/
+# Workspace package build artifacts (Docusaurus + future packages/*)
+packages/*/build/
+packages/*/.docusaurus/
+packages/*/node_modules/
 wiki/raw/*
 !wiki/raw/README.md

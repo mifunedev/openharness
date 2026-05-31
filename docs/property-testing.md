@@ -7,14 +7,14 @@ Property-based tests in this harness follow the `*.property.test.ts` naming conv
 **File locations:**
 - Cron runtime tests: `scripts/__tests__/cron-runtime.property.test.ts`
 - Path guard tests: `.pi/extensions/__tests__/path-guard.property.test.ts`
-- CLI tests: `apps/oh/src/__tests__/cli.property.test.ts`
+- CLI tests: `packages/oh/src/__tests__/cli.property.test.ts`
 
 Vitest's include glob covers all property test files via the `*.test.ts` suffix:
 ```
 include: [
   "scripts/__tests__/**/*.test.ts",
   ".pi/**/__tests__/**/*.test.ts",
-  "apps/**/__tests__/**/*.test.ts",
+  "packages/**/__tests__/**/*.test.ts",
 ]
 ```
 
@@ -93,4 +93,4 @@ The following TypeScript surfaces have property tests in v1:
 | `scripts/cron-runtime.ts` (`parseCronFile`) | forward-compat (unknown keys) | #355 |
 | `scripts/cron-runtime.ts` (`loadCrons`) | ordering-stability | #355 |
 | `.pi/extensions/path-guard.ts` (`isSensitivePath`) | no-false-positives | #355 |
-| `apps/oh/src/cli.ts` (`isHelpFlag`, `isVersionFlag`) | determinism + no-throw | #355 |
+| `packages/oh/src/cli.ts` (`isHelpFlag`, `isVersionFlag`) | determinism + no-throw | #355 |

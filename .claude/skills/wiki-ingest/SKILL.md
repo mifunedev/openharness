@@ -100,8 +100,14 @@ Slug derivation follows `context/rules/wiki.md` § 3 verbatim. Summary for refer
    Re-run with --slug <override>, e.g.:
      /wiki-ingest <url> --slug karpathy-llm-wiki
    ```
-4. **File paths**: use the basename without extension, slugified per rule 2. `--slug <override>` is optional; if absent, the basename is used.
-5. **Charset constraint**: the final slug must match `[a-z0-9-]+`. Reject before any file is written.
+4. **Social / share URLs**: if the URL host is a known social platform (`linkedin.com`, `x.com`, `twitter.com`, `threads.net`, `facebook.com`, `instagram.com`), OR the last path segment contains a run of ≥ 10 consecutive digits (an embedded share/activity ID), OR the slugified segment would exceed 60 characters, the segment contains no meaningful label. `/wiki-ingest` MUST require `--slug <override>` and exit with an error if it is absent:
+   ```
+   ERROR: URL segment is a social/share URL with no meaningful label (social host, >=10-digit share/activity ID, or >60-char slug).
+   Re-run with --slug <override>, e.g.:
+     /wiki-ingest <url> --slug inspectable-agent-harness
+   ```
+5. **File paths**: use the basename without extension, slugified per rule 2. `--slug <override>` is optional; if absent, the basename is used.
+6. **Charset constraint**: the final slug must match `[a-z0-9-]+`. Reject before any file is written.
 
 If `--slug <override>` is provided, use it directly (still validate charset).
 
@@ -110,19 +116,23 @@ If `--slug <override>` is provided, use it directly (still validate charset).
 #### 4a. URL ingest
 
 1. WebFetch the URL to retrieve the page body.
-2. Get today's UTC date:
+   - For LinkedIn/social pages, inspect embedded metadata and JSON-LD (`articleBody`, `headline`, `comment`, `og:description`, `twitter:description`) when the visible DOM is gated or duplicated. Capture useful comments only when they materially clarify the source claim; keep the wiki page bounded and point to the raw snapshot for the full capture.
+2. Normalize the displayed source URL before writing synthesized wiki/log text:
+   - Strip common tracking-only query params (`utm_*`, `rcm`, `fbclid`, `gclid`, etc.) when they are not needed for retrieval.
+   - If preserving a raw fetched URL for provenance, redact secret-like/tracking values in human-facing summaries/logs (e.g. `rcm=[REDACTED]`).
+3. Get today's UTC date:
    ```bash
    TODAY=$(date -u +%Y-%m-%d)
    ```
-3. Ensure `wiki/raw/` exists (§ 2).
-4. Write snapshot to `wiki/raw/<yyyy-mm-dd>-<slug>.md`:
+4. Ensure `wiki/raw/` exists (§ 2).
+5. Write snapshot to `wiki/raw/<yyyy-mm-dd>-<slug>.md`:
    ```
    # Source: <url>
 
    <fetched body>
    ```
-   The header line `# Source: <url>` is mandatory. The fetched body follows on the next line after a blank line. Snapshots are immutable once written — do not overwrite an existing snapshot. If `wiki/raw/<today>-<slug>.md` already exists, generate a unique path (e.g., append `-2`, `-3`).
-5. Proceed to § 6 (write or update `wiki/<slug>.md`).
+   The header line `# Source: <url>` is mandatory. Prefer the normalized/redacted URL in this header unless the exact retrieval URL is essential to reproduce the fetch. The fetched body follows on the next line after a blank line. Snapshots are immutable once written — do not overwrite an existing snapshot. If `wiki/raw/<today>-<slug>.md` already exists, generate a unique path (e.g., append `-2`, `-3`).
+6. Proceed to § 6 (write or update `wiki/<slug>.md`).
 
 #### 4b. File path ingest
 
@@ -258,6 +268,7 @@ Then apply the qualify/improve pass per `context/rules/memory.md` § Write:
 
 ## Anti-patterns
 
+- **Monolithic ingest scripts when a safety gate is likely** — avoid bundling network fetch, raw snapshot write, wiki synthesis, and log append into one large `execute_code` call. If approval or shell-safety friction appears, split the ingest into auditable steps: fetch/snapshot with a small `terminal` command, create or update `wiki/<slug>.md` with `write_file`/`patch`, then append the memory log separately. The invariant is the same (raw snapshot + bounded synthesized entry + log), but smaller tool calls are easier to approve, verify, and recover.
 - **Writing directly to `wiki/` from a sub-agent context** — always use the draft path + `--from-draft` promotion. The orchestrator is the sole writer.
 - **Hardcoding today's date in `--from-draft` resolution** — glob `memory/*/wiki-drafts/<slug>.md` and sort by the ISO date in the directory name, not by mtime and not by assuming today.
 - **Using mtime for stale detection** — mtime is unreliable across git checkouts and Docker volume remounts. Always derive staleness from the ISO date in the parent directory name.

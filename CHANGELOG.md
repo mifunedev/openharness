@@ -14,7 +14,9 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Changed
 - Release process now promotes `development` → `main` (fast-forward) before cutting the release branch and tag, keeping `main` as the authoritative release line; `/release` skill and `.claude/rules/git.md` § Releases document the `development → main → release → tag → sync` flow and abort if `main` has diverged.
 - Renamed the top-level `apps/` directory to `packages/` and updated workspace, docs, Dockerfile, CI, and test discovery paths to match.
+- `/wiki-ingest` now requires an explicit `--slug` override for social/share URLs (`linkedin.com`, `x.com`, etc.), segments with a ≥10-digit share/activity ID, or slugs over 60 chars — closing a `context/rules/wiki.md` §3 gap that let raw LinkedIn share slugs through ([#373](https://github.com/ryaneggz/open-harness/issues/373)).
 ### Fixed
+- Renamed three wiki entries ingested from LinkedIn share URLs to short semantic slugs (`inspectable-agent-harness`, `latmd-knowledge-graph`, `codegraph-mcp`), fixed their cross-links, and regenerated the stale `wiki/README.md` index ([#373](https://github.com/ryaneggz/open-harness/issues/373)).
 ### Removed
 ### Deprecated
 ### Security

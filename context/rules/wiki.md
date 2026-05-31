@@ -92,8 +92,14 @@ Slugs are derived from the source URL or file path. Rules, in order:
 2. **Lowercased kebab-case**: lowercase the segment; replace non-`[a-z0-9]` runs with a single `-`; strip leading/trailing `-`.
 3. **Gist / UUID URLs**: if the last path segment is a UUID or hash (e.g., `https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f`), the segment contains no meaningful label. `/wiki-ingest` MUST require `--slug <override>` and exit with an error if it is absent.
    - Example: `/wiki-ingest https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f --slug karpathy-llm-wiki`
-4. **File paths**: use the basename without extension, slugified per rule 2. `--slug <override>` is optional; without it, the basename is used.
-5. **Charset constraint**: the final slug MUST match `[a-z0-9-]+`. Any slug that does not pass this check is rejected by `/wiki-ingest` before any file is written.
+4. **Social / share URLs**: if the URL host is a known social platform (`linkedin.com`, `x.com`, `twitter.com`, `threads.net`, `facebook.com`, `instagram.com`), OR the last path segment contains a run of ≥ 10 consecutive digits (an embedded share/activity ID), OR the slugified segment would exceed 60 characters, the segment contains no meaningful label. `/wiki-ingest` MUST require `--slug <override>` and exit with an error if it is absent:
+   ```
+   ERROR: URL segment is a social/share URL with no meaningful label (social host, >=10-digit share/activity ID, or >60-char slug).
+   Re-run with --slug <override>, e.g.:
+     /wiki-ingest <url> --slug inspectable-agent-harness
+   ```
+5. **File paths**: use the basename without extension, slugified per rule 2. `--slug <override>` is optional; without it, the basename is used.
+6. **Charset constraint**: the final slug MUST match `[a-z0-9-]+`. Any slug that does not pass this check is rejected by `/wiki-ingest` before any file is written.
 
 ---
 

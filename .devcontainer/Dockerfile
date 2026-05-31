@@ -120,11 +120,11 @@ RUN set -e; \
     else echo "Skipping OpenCode CLI install (INSTALL_OPENCODE=false)"; fi
 
 # ─── Open Harness `oh` CLI ──────────────────────────────────────────
-# Build the in-tree `oh` CLI (apps/oh/) into a self-contained bundle,
+# Build the in-tree `oh` CLI (packages/oh/) into a self-contained bundle,
 # install onto $PATH. Source is COPY'd to /opt/oh (outside the
 # bind-mount) so the bundled binary survives the bind-mount overlay.
 # v1 ships `oh config slack` (Slack integration setup wizard).
-COPY apps/oh/ /opt/oh/
+COPY packages/oh/ /opt/oh/
 RUN cd /opt/oh && npm install --no-audit --no-fund && npm run build \
  && chmod +x /opt/oh/dist/oh.js \
  && ln -sf /opt/oh/dist/oh.js /usr/local/bin/oh

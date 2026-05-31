@@ -13,9 +13,9 @@
     "lint": "pnpm -r --if-present run lint",
     "format:check": "pnpm -r --if-present run format:check",
     "format": "pnpm -r --if-present run format",
-    "docs:build": "pnpm --dir apps/docs build",
-    "docs:dev": "pnpm --dir apps/docs start",
-    "docs:serve": "pnpm --dir apps/docs serve"
+    "docs:build": "pnpm --dir packages/docs build",
+    "docs:dev": "pnpm --dir packages/docs start",
+    "docs:serve": "pnpm --dir packages/docs serve"
   },
   "dependencies": {
     "croner": "^9.1.0"

@@ -69,6 +69,15 @@ describe("harness-config.sh env mode", () => {
     expect(stdout.trim()).toBe("INSTALL_OPENCODE=true");
   });
 
+  it("maps hermes dashboard controls to HERMES_DASHBOARD env vars", () => {
+    const f = fixture("hermes:\n  dashboard: true\n  dashboard_port: 9120\n");
+    const { stdout } = run(["env", f]);
+    expect(stdout.trim().split("\n")).toEqual([
+      "HERMES_DASHBOARD=true",
+      "HERMES_DASHBOARD_PORT=9120",
+    ]);
+  });
+
   it("maps install.grok_build: true → INSTALL_GROK_BUILD=true", () => {
     const f = fixture("install:\n  grok_build: true\n");
     const { stdout } = run(["env", f]);

@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- Hermes web dashboard opt-in: set `hermes.dashboard: true` in `harness.yaml` (or legacy `HERMES_DASHBOARD=true`), with Hermes installed, to auto-launch the dashboard in the `app-hermes-dashboard` tmux session — published loopback-only on `HERMES_DASHBOARD_PORT` (default 9119) via a compose overlay ([#376](https://github.com/mifunedev/openharness/issues/376)).
 - `ERR_JOB` cron-runtime status line — `scripts/cron-runtime.ts` replaces croner's silent `catch: true` with an injectable `onJobError(id, err)` handler that records a `<id>\tERR_JOB\t<error-string>` line to `crons/.cron.log`, so a synchronous job-callback throw is now distinguishable from an idle cron while preserving croner's crash-resistance ([#49](https://github.com/ryaneggz/openharness/issues/49)).
 - Context fitness-function eval corpus (`evals/`) — deterministic probes with a 3-state exit oracle (PASS/REGRESSION/SKIPPED) and a `RESULTS.md` benchmark scoreboard ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 - `/eval` runner skill (`.claude/skills/eval/`) — runs the probe suite against real state, writes the benchmark, surfaces green→red regressions naming the lesson each closes ([#1](https://github.com/ryaneggz/openharness/issues/1)).

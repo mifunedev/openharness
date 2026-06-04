@@ -58,7 +58,7 @@ RUN if [ "${INSTALL_HERMES}" = "true" ]; then \
       curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
         | bash -s -- --skip-setup --skip-browser; \
       rm -rf /root/.hermes; \
-      uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack]'; \
+      uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack,web,pty]'; \
     else \
       echo "Skipping Hermes Agent CLI install (INSTALL_HERMES=false)"; \
     fi

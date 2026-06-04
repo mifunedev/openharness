@@ -67,6 +67,8 @@ BEGIN {
     envmap["install.deepagents"]    = "INSTALL_DEEPAGENTS"
     envmap["install.hermes"]        = "INSTALL_HERMES"
     envmap["install.agent_browser"] = "INSTALL_AGENT_BROWSER"
+    envmap["hermes.dashboard"]      = "HERMES_DASHBOARD"
+    envmap["hermes.dashboard_port"] = "HERMES_DASHBOARD_PORT"
     envmap["crons.dir"]             = "CRONS_DIR"
     envmap["crons.agent_bin"]       = "CRON_AGENT_BIN"
     envmap["slack.allow_users"]     = "SLACK_ALLOW_USERS"

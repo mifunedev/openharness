@@ -164,6 +164,37 @@ PY
   for d in /usr/local/lib/hermes-agent /opt/uv; do
     [ -d "$d" ] && chown -R sandbox:sandbox "$d" 2>/dev/null || true
   done
+
+  # ─── Start Hermes dashboard in tmux session (opt-in) ────────────────
+  # Guard: HERMES_DASHBOARD=true AND hermes binary on PATH AND tmux on PATH.
+  # Idempotent: skip if the session already exists.
+  # Runs as sandbox user via gosu; logs tee to /tmp/app-hermes-dashboard.log.
+  # HERMES_DASHBOARD_HOST defaults to 127.0.0.1; set to 0.0.0.0 when the
+  # compose overlay publishes the port (Docker's published-port path requires
+  # the process to bind a non-loopback interface).
+  if [ "${HERMES_DASHBOARD:-false}" = "true" ] && command -v hermes &>/dev/null \
+     && command -v tmux &>/dev/null; then
+    _dash_port="${HERMES_DASHBOARD_PORT:-9119}"
+    case "$_dash_port" in
+      *[!0-9]|"")
+        echo "[entrypoint] HERMES_DASHBOARD_PORT='${_dash_port}' is not numeric — skipping dashboard launch"
+        ;;
+      *)
+        if ! gosu sandbox tmux has-session -t app-hermes-dashboard 2>/dev/null; then
+          _dash_host="${HERMES_DASHBOARD_HOST:-127.0.0.1}"
+          _dash_insecure=""
+          case "${HERMES_DASHBOARD_INSECURE:-}" in
+            [Tt][Rr][Uu][Ee]|1|[Yy][Ee][Ss]|[Oo][Nn]) _dash_insecure=" --insecure" ;;
+          esac
+          gosu sandbox tmux new-session -d -s app-hermes-dashboard \
+            "hermes dashboard --no-open --host \"${_dash_host}\" --port \"${_dash_port}\"${_dash_insecure} 2>&1 | tee /tmp/app-hermes-dashboard.log"
+          echo "[entrypoint] starting Hermes dashboard on ${_dash_host}:${_dash_port}"
+        else
+          echo "[entrypoint] app-hermes-dashboard tmux session already running — skipping"
+        fi
+        ;;
+    esac
+  fi
 fi
 
 # ─── Attach banner wiring (idempotent) ──────────────────────────────

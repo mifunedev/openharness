@@ -1,481 +1,398 @@
-# Claude Code Dynamic Workflows Implementation Plan
+# Claude Code Dynamic Workflows Wiki Research Plan
 
-> **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task after the draft PR is reviewed and Ryan confirms. Use `/delegate`-style wave execution. Do **not** use haiku; use the default capable model or sonnet where a model must be explicit.
+> **For Hermes:** Use subagent-driven-development skill to execute this plan after Ryan confirms. Use `/delegate`-style wave execution for research and review only. Do **not** use haiku; use the default capable model or sonnet where a model must be explicit.
 
-**Goal:** Add inspectable Claude Code dynamic workflow support to Open Harness so scheduled harness tasks can opt into bounded, reviewable multi-agent workflow prompts instead of raw one-shot prompts.
+**Goal:** Thoroughly research Claude Code dynamic workflows, starting from `https://code.claude.com/docs/en/workflows`, and preserve the deep understanding in the Open Harness wiki.
 
-**Architecture:** Treat dynamic workflows as a prompt/workflow layer around the existing cron runtime rather than introducing a separate orchestration engine. The cron runtime remains the trigger; optional `workflow:` frontmatter selects a built-in wrapper that instructs Claude Code to decompose, gate, execute, verify, and summarize work while preserving current behavior when no workflow is configured.
+**Architecture:** This is a knowledge-capture task, not a runtime feature. The implementation scope is limited to wiki surfaces: raw source snapshot(s), a dedicated `wiki/claude-code-dynamic-workflows.md` entry, and cross-links from the existing inspectable/Pi workflow entry so Claude Code dynamic workflows and Pi dynamic workflows are represented as related counterparts.
 
-**Tech Stack:** TypeScript runtime under `scripts/cron-runtime.ts`, Vitest tests, Markdown docs under `crons/README.md` and `docs/harnesses/claude-code.md`, Open Harness wiki for source synthesis.
-
----
-
-## Research Summary
-
-### Source: Claude Code dynamic workflows docs
-
-Public Claude Code documentation describes dynamic workflows as JavaScript orchestration scripts that coordinate subagents at scale. Relevant capabilities:
-
-- Workflows are intended for high-fanout research, audits, and migrations.
-- Claude can generate workflow scripts, but the workflow should be inspectable before execution.
-- Workflow-spawned subagents have isolated contexts and return summarized results.
-- Subagents can run in background and can use worktree isolation for write-capable tasks.
-- Permissions, tool allowlists, sandboxing, hooks, and explicit approval gates remain required safety layers.
-- Built-in skills such as `/batch`, `/deep-research`, `/verify`, and `/code-review` demonstrate the pattern: plan first, require approval, run bounded parallel agents, gather artifacts, then verify.
-
-### Source: LinkedIn share
-
-The linked post metadata frames the same opportunity: agent workflows are valuable when the process is inspectable. It mentions visible workflow patterns around chains, parallel review, background runs, forked context, worktrees, artifacts, saved flows, review gates, human-in-the-loop checkpoints, and provider choice.
-
-### Open Harness implication
-
-Open Harness already has most of the primitives:
-
-- `.claude/skills/delegate/SKILL.md` defines dependency analysis, wave execution, validation, and report format.
-- `.claude/skills/harness-audit/SKILL.md`, `.claude/skills/strategic-proposal/SKILL.md`, and `.claude/skills/ship-spec/SKILL.md` model staged multi-agent workflows.
-- `scripts/cron-runtime.ts` already runs cron bodies through `claude -p`.
-- Existing tests cover cron parsing, loading, and lock behavior.
-
-The smallest useful implementation is a first-class `workflow:` cron frontmatter field with built-in workflow prompt wrappers, plus tests and docs. This gives Ryan an inspectable/opt-in path without changing default cron behavior or introducing a new CLI surface prematurely.
+**Tech Stack:** Open Harness wiki schema (`context/rules/wiki.md`), `/wiki-ingest` rules, Markdown source snapshots under `wiki/raw/`, entity pages under `wiki/`, and the daily memory log required by wiki ingest.
 
 ---
 
-## Proposed User-Facing Behavior
+## Corrected Scope
 
-### Existing cron behavior remains unchanged
+This plan intentionally does **not** add cron runtime support, docs changes, CLI changes, workflow wrappers, tests for code behavior, or any Open Harness product feature. The only intended repository changes are wiki knowledge-retention artifacts.
 
-```md
----
-id: heartbeat
-schedule: "0 * * * *"
-enabled: true
----
+The research should start with the official Claude Code dynamic workflows page:
 
-Say hello.
-```
+- `https://code.claude.com/docs/en/workflows`
+- Prefer the markdown source when available: `https://code.claude.com/docs/en/workflows.md`
 
-Runtime still spawns:
+Then cross-check related official Claude Code docs only where they clarify dynamic workflows:
 
-```bash
-claude -p "Say hello."
-```
+- `https://code.claude.com/docs/en/agents`
+- `https://code.claude.com/docs/en/sub-agents`
+- `https://code.claude.com/docs/en/agent-teams`
+- `https://code.claude.com/docs/en/worktrees`
+- `https://code.claude.com/docs/en/hooks`
+- `https://code.claude.com/docs/en/permissions`
+- `https://code.claude.com/docs/en/sandboxing`
+- `https://code.claude.com/docs/en/settings`
+- `https://code.claude.com/docs/en/commands`
+- `https://code.claude.com/docs/en/claude-directory`
 
-### New dynamic workflow opt-in
-
-```md
----
-id: weekly-repo-audit
-schedule: "0 9 * * 1"
-timezone: America/Denver
-enabled: true
-overlap: false
-workflow: delegate
----
-
-Audit the harness docs and wiki for stale Claude Code guidance. Propose fixes, verify them, and summarize artifacts.
-```
-
-Runtime spawns `claude -p <wrapped prompt>`, where the wrapper:
-
-1. Preserves the original user task exactly.
-2. Requires an inspectable plan before execution.
-3. Uses dependency analysis and wave execution for independent subtasks.
-4. Uses bounded parallelism and default capable model / no haiku.
-5. Requires review/verification gates before finalizing.
-6. Produces a structured artifact summary.
-
-### Unknown workflow names fail clearly
-
-If a cron declares `workflow: does-not-exist`, the runtime should log `ERR` for that cron fire and avoid silently falling back to raw prompt execution.
+The existing wiki entry `wiki/inspectable-agent-harness.md` should be treated as the umbrella/Pi-side context because it captures the LinkedIn post about Pi, pi-subagents, pi-dynamic-workflows, Atomic, and inspectable agent harnesses. The new Claude Code entry should be related to it, not replace it.
 
 ---
 
-## Implementation Tasks
+## Research Questions
 
-### Task 1: Add cron workflow parsing and prompt construction tests
+The final wiki entry should answer these questions with source-backed detail:
 
-**Objective:** Define the behavior with failing tests before touching runtime logic.
-
-**Files:**
-- Modify: `scripts/__tests__/cron-runtime.test.ts`
-- Modify: `scripts/__tests__/cron-runtime.property.test.ts` if needed
-
-**Step 1: Add parser test for `workflow:`**
-
-Add a test under `describe("parseCronFile", ...)`:
-
-```ts
-it("parses optional workflow frontmatter", () => {
-  const entry = parseCronFile(
-    `---\nid: weekly-audit\nschedule: "0 9 * * 1"\nworkflow: delegate\n---\nAudit docs.\n`,
-    "weekly-audit.md",
-  );
-
-  expect(entry?.workflow).toBe("delegate");
-});
-```
-
-**Step 2: Add prompt builder tests**
-
-Import `buildAgentPrompt` from `../cron-runtime` and add tests:
-
-```ts
-import { acquireLock, buildAgentPrompt, loadCrons, parseCronFile } from "../cron-runtime";
-```
-
-Add cases:
-
-```ts
-describe("buildAgentPrompt", () => {
-  it("returns the raw body when no workflow is configured", () => {
-    const entry = parseCronFile(`---\nschedule: "* * * * *"\n---\nRaw task.\n`, "raw.md")!;
-    expect(buildAgentPrompt(entry)).toBe("Raw task.\n");
-  });
-
-  it("wraps delegate workflow prompts with bounded inspectable orchestration", () => {
-    const entry = parseCronFile(
-      `---\nschedule: "* * * * *"\nworkflow: delegate\n---\nAudit docs.\n`,
-      "audit.md",
-    )!;
-
-    const prompt = buildAgentPrompt(entry);
-    expect(prompt).toContain("Audit docs.");
-    expect(prompt).toContain("inspectable plan");
-    expect(prompt).toContain("bounded parallelism");
-    expect(prompt).not.toMatch(/haiku/i);
-  });
-
-  it("throws for unknown workflow names", () => {
-    const entry = parseCronFile(
-      `---\nschedule: "* * * * *"\nworkflow: mystery\n---\nTask.\n`,
-      "mystery.md",
-    )!;
-
-    expect(() => buildAgentPrompt(entry)).toThrow(/Unknown cron workflow/);
-  });
-});
-```
-
-**Step 3: Run tests and verify failure**
-
-Run:
-
-```bash
-pnpm exec vitest run scripts/__tests__/cron-runtime.test.ts scripts/__tests__/cron-runtime.property.test.ts
-```
-
-Expected before implementation: fail because `workflow` and `buildAgentPrompt` do not exist.
-
-**Step 4: Commit after green implementation in Task 2**
-
-Do not commit red tests alone unless explicitly asked.
+1. What are Claude Code dynamic workflows?
+2. What version/plan requirements and availability constraints apply?
+3. How are workflows invoked?
+   - `/deep-research`
+   - prompt-triggered workflow / `ultracode`
+   - `/effort ultracode`
+   - saved workflow commands
+4. How does the runtime work?
+   - JavaScript orchestration script
+   - isolated runtime separate from the main conversation
+   - background execution
+   - intermediate results in script variables
+   - final result returned to conversation
+5. What is known about workflow script semantics?
+   - Claude-written JavaScript
+   - `args` input for saved workflows
+   - script coordinates subagents but has no direct filesystem/shell access
+   - public docs do not expose a stable manual workflow authoring API
+6. How do workflows relate to subagents, skills, agent teams, and `/batch`?
+7. How do permissions and sandboxing apply?
+   - launch approval prompt
+   - permission-mode differences
+   - workflow subagents running in `acceptEdits`
+   - inherited tool allowlist
+   - no interactive prompt in `claude -p` / Agent SDK
+   - sandboxed Bash as separate protection layer
+8. What inspectability surfaces exist?
+   - view raw script before run
+   - `Ctrl+G` editor flow
+   - scripts written under `~/.claude/projects/`
+   - `/workflows` run list and progress view
+   - drill-down into phases, agent prompts, tool calls, results, tokens
+9. What artifacts/results are documented, and what is not documented?
+10. How do pause/resume/stop/restart/save controls work?
+11. How are workflows disabled or governed?
+12. What limits/cost risks exist?
+   - max concurrent agents
+   - max total agents
+   - no mid-run user input
+   - session-bound resume
+   - token/rate-limit concerns
+13. How should this entry relate to Pi dynamic workflows / `wiki/inspectable-agent-harness.md`?
 
 ---
 
-### Task 2: Implement built-in `delegate` cron workflow wrapper
+## Proposed Wiki Shape
 
-**Objective:** Add runtime support for `workflow: delegate` while preserving all existing raw cron behavior.
+### New entry: `wiki/claude-code-dynamic-workflows.md`
 
-**Files:**
-- Modify: `scripts/cron-runtime.ts`
-
-**Step 1: Extend `CronEntry`**
-
-Add:
-
-```ts
-workflow?: string;
-```
-
-**Step 2: Parse optional workflow frontmatter**
-
-In the returned object from `parseCronFile`, add:
-
-```ts
-workflow: fm.workflow || undefined,
-```
-
-**Step 3: Add a prompt builder**
-
-Add an exported function near `loadCrons`:
-
-```ts
-export function buildAgentPrompt(entry: CronEntry): string {
-  if (!entry.workflow) return entry.body;
-
-  if (entry.workflow !== "delegate") {
-    throw new Error(`Unknown cron workflow: ${entry.workflow}`);
-  }
-
-  return `You are running an Open Harness scheduled dynamic workflow.
-
-Workflow: delegate
-Cron ID: ${entry.id}
-
-Original task:
-${entry.body}
-
-Before making changes or taking side-effecting actions, create an inspectable plan. Then execute the plan using bounded parallelism only where subtasks are independent. Keep concurrency conservative; prefer correctness, isolation, and reviewability over fanout.
-
-Requirements:
-- Use the default capable model for delegated reasoning; do not downshift models.
-- Build a dependency graph before spawning agents.
-- Use isolated contexts for independent subtasks.
-- Use worktree isolation for write-capable parallel work when available.
-- Add review gates before finalizing changes.
-- Run relevant verification commands and include real outputs in the final report.
-- Return a structured summary with tasks, artifacts, changed files, verification, and blockers.
-`;
-}
-```
-
-Important: the prompt must not include the string `haiku`, because Ryan explicitly requested no haiku and the tests should enforce that.
-
-**Step 4: Use `buildAgentPrompt` in `fire`**
-
-Replace:
-
-```ts
-const child = spawn(AGENT_BIN, ["-p", entry.body], { stdio: "inherit" });
-```
-
-with:
-
-```ts
-let prompt: string;
-try {
-  prompt = buildAgentPrompt(entry);
-} catch (e) {
-  log(entry.id, "ERR", e instanceof Error ? e.message : String(e));
-  return;
-}
-const child = spawn(AGENT_BIN, ["-p", prompt], { stdio: "inherit" });
-```
-
-**Step 5: Run focused tests**
-
-Run:
-
-```bash
-pnpm exec vitest run scripts/__tests__/cron-runtime.test.ts scripts/__tests__/cron-runtime.property.test.ts
-```
-
-Expected: pass.
-
-**Step 6: Commit**
-
-```bash
-git add scripts/cron-runtime.ts scripts/__tests__/cron-runtime.test.ts scripts/__tests__/cron-runtime.property.test.ts
-git commit -m "feat: add cron workflow prompt wrapper"
-```
-
----
-
-### Task 3: Document dynamic workflow crons and Claude Code guidance
-
-**Objective:** Make the feature discoverable and explain safety/inspection expectations.
-
-**Files:**
-- Modify: `crons/README.md`
-- Modify: `docs/harnesses/claude-code.md`
-- Modify: `CHANGELOG.md`
-
-**Step 1: Update `crons/README.md`**
-
-Add `workflow` to the frontmatter table or example:
-
-```md
-workflow: delegate   # optional; wraps the body in an inspectable dynamic workflow prompt
-```
-
-Document:
-
-- Omit `workflow` for raw `claude -p` behavior.
-- `workflow: delegate` asks Claude Code to plan, decompose, run bounded parallel subagents, verify, and summarize.
-- Unknown workflow names are logged as errors and are not run.
-
-**Step 2: Update `docs/harnesses/claude-code.md`**
-
-Add a section `## Dynamic workflows` covering:
-
-- Claude Code can run workflow-like multi-agent tasks through skills/subagents.
-- Open Harness exposes an opt-in scheduled path via cron `workflow: delegate`.
-- Workflows must be inspectable, bounded, and verified.
-- Write-capable parallel work should use worktrees.
-- The wrapper uses the default capable model and does not downshift.
-
-**Step 3: Update `CHANGELOG.md`**
-
-Add an Unreleased bullet:
-
-```md
-- Add opt-in `workflow: delegate` cron prompts for inspectable Claude Code dynamic workflows.
-```
-
-Preserve the existing changelog format.
-
-**Step 4: Run docs/runtime tests**
-
-Run:
-
-```bash
-pnpm exec vitest run scripts/__tests__/cron-runtime.test.ts scripts/__tests__/cron-runtime.property.test.ts
-pnpm docs:build
-```
-
-If `pnpm docs:build` is too slow or fails due to pre-existing environment issues, capture the exact failure and run the narrower relevant docs checks if available.
-
-**Step 5: Commit**
-
-```bash
-git add crons/README.md docs/harnesses/claude-code.md CHANGELOG.md
-git commit -m "docs: describe Claude dynamic workflow crons"
-```
-
----
-
-### Task 4: Add wiki synthesis for the LinkedIn/source research
-
-**Objective:** Capture the LinkedIn share and research synthesis in the harness wiki so future agents can load it without re-researching.
-
-**Files:**
-- Create: `wiki/raw/<today>-claude-code-dynamic-workflows.md`
-- Create or modify: `wiki/claude-code-dynamic-workflows.md`
-- Modify: `memory/<today>/log.md`
-
-**Step 1: Snapshot source research**
-
-Use `/wiki-ingest` rules. Because the source is LinkedIn/social, use an explicit slug:
-
-```bash
-mkdir -p wiki/raw
-```
-
-Create `wiki/raw/<today>-claude-code-dynamic-workflows.md` with:
-
-```md
-# Source: https://www.linkedin.com/posts/alindnbrg_claudecode-agentharness-codingagents-share-7466225009481637888-zQxE/
-
-<captured metadata and research notes, including Claude Code docs URLs used>
-```
-
-**Step 2: Create wiki entry**
-
-Create `wiki/claude-code-dynamic-workflows.md` with valid frontmatter and ≤600-word body:
+Create a dedicated entry with valid frontmatter:
 
 ```yaml
 ---
 title: "Claude Code Dynamic Workflows"
 slug: claude-code-dynamic-workflows
-tags: [claude-code, workflows, agents, orchestration]
-created: <today>
-updated: <today>
+tags: [claude-code, dynamic-workflows, subagents, agent-harness, inspectable-workflows]
+created: 2026-06-04
+updated: 2026-06-04
 sources:
-  - raw/<today>-claude-code-dynamic-workflows.md
+  - raw/2026-06-04-claude-code-dynamic-workflows.md
 related: [inspectable-agent-harness]
 confidence: provisional
 ---
 ```
 
-Include sections:
+The body must follow wiki schema order:
 
-- `## Summary`
-- `## Detail`
-- `## See Also`
+```md
+# Claude Code Dynamic Workflows
 
-**Step 3: Log the ingest**
+## Summary
+<2-3 sentence synthesis.>
 
-Append a `/wiki-ingest` style entry to `memory/<today>/log.md` per `context/rules/memory.md` and `wiki-ingest` skill.
+## Detail
+<Bounded prose, ≤600 words total for the entry, with dense factual synthesis.>
 
-**Step 4: Verify schema**
-
-Run:
-
-```bash
-awk '/^---$/{f=!f; next} f{print}' wiki/claude-code-dynamic-workflows.md
+## See Also
+- [[inspectable-agent-harness]]
 ```
 
-Manually confirm required fields exist and `confidence: provisional`.
+### Raw snapshot: `wiki/raw/2026-06-04-claude-code-dynamic-workflows.md`
 
-**Step 5: Commit**
+Capture the official docs and research notes in a raw snapshot. Include:
+
+- Source header for `https://code.claude.com/docs/en/workflows`
+- Retrieved markdown or normalized excerpts from `workflows.md`
+- Related official docs URLs used for cross-checking
+- Notes that distinguish documented facts from inferences
+- The LinkedIn URL only as prior context if used, not as the primary source
+
+The raw snapshot can be longer than the wiki entry. It is the provenance trail for future agents.
+
+### Existing entry update: `wiki/inspectable-agent-harness.md`
+
+Update the existing umbrella entry minimally:
+
+- Add `claude-code-dynamic-workflows` to `related`.
+- Add `- [[claude-code-dynamic-workflows]]` under `## See Also`.
+- If there is room under the 600-word cap, add one sentence explaining the relationship:
+  - Pi/pi-dynamic-workflows is the Pi-side example from the LinkedIn post.
+  - Claude Code dynamic workflows are the Claude Code-specific first-party mechanism.
+
+Do not rewrite this page into a Claude Code details page. It should remain the umbrella/Pi-side inspectable harness note.
+
+### Wiki index update: `wiki/README.md`
+
+If the project expects wiki index updates, add `claude-code-dynamic-workflows` to the table consistently with existing entries. If the index is regenerated by `/wiki-lint`, use that path instead of hand-editing if available.
+
+### Daily log
+
+Append a `/wiki-ingest`-style log entry to `memory/2026-06-04/log.md` per the wiki-ingest skill.
+
+---
+
+## Implementation Tasks
+
+### Task 1: Research official Claude Code workflow docs deeply
+
+**Objective:** Gather source-backed facts from official Claude Code documentation, starting with the workflows page.
+
+**Files:**
+- Read: `wiki/inspectable-agent-harness.md`
+- Read: `context/rules/wiki.md`
+- No writes in this task
+
+**Steps:**
+
+1. Fetch `https://code.claude.com/docs/en/workflows`.
+2. If HTML fetch is blocked or noisy, fetch `https://code.claude.com/docs/en/workflows.md` with a browser-like user agent.
+3. Cross-check only the related official docs needed to clarify workflows:
+   - agents, sub-agents, agent-teams, worktrees, hooks, permissions, sandboxing, settings, commands, claude-directory.
+4. Extract facts under the research questions above.
+5. Mark uncertain or undocumented items explicitly. In particular, do not invent a public workflow JavaScript API if docs only describe Claude-written saved scripts.
+
+**Verification:**
+
+- Research notes include URLs for every source.
+- Research starts with the workflows page.
+- Notes distinguish documented facts from inference.
+- No repository files modified.
+
+---
+
+### Task 2: Write raw source snapshot
+
+**Objective:** Preserve the research provenance in `wiki/raw/`.
+
+**Files:**
+- Create: `wiki/raw/2026-06-04-claude-code-dynamic-workflows.md`
+
+**Steps:**
+
+1. Ensure raw directory exists:
 
 ```bash
-git add wiki/claude-code-dynamic-workflows.md wiki/raw/<today>-claude-code-dynamic-workflows.md memory/<today>/log.md
-git commit -m "docs: add Claude workflow research wiki entry"
+mkdir -p wiki/raw
+```
+
+2. Write the raw snapshot with this shape:
+
+```md
+# Source: https://code.claude.com/docs/en/workflows
+
+Fetched/primary source:
+- https://code.claude.com/docs/en/workflows
+- https://code.claude.com/docs/en/workflows.md
+
+Related official docs consulted:
+- <urls>
+
+## Captured workflow facts
+...
+
+## Notes and caveats
+...
+```
+
+3. Include enough detail for future agents to reconstruct how Claude Code dynamic workflows work without repeating the web research.
+
+**Verification:**
+
+```bash
+test -s wiki/raw/2026-06-04-claude-code-dynamic-workflows.md
 ```
 
 ---
 
-### Task 5: Final integration audit
+### Task 3: Create dedicated Claude Code dynamic workflows wiki entry
 
-**Objective:** Verify the complete implementation is coherent, tested, and ready for review.
+**Objective:** Add a concise, schema-valid entity page that captures how dynamic workflows work in Claude Code.
 
 **Files:**
-- Review all changed files from Tasks 2-4
+- Create: `wiki/claude-code-dynamic-workflows.md`
 
-**Step 1: Run focused runtime tests**
+**Steps:**
 
-```bash
-pnpm exec vitest run scripts/__tests__/cron-runtime.test.ts scripts/__tests__/cron-runtime.property.test.ts
-```
+1. Write frontmatter exactly matching the wiki schema.
+2. Set `confidence: provisional`.
+3. Use `related: [inspectable-agent-harness]`.
+4. Keep the body ≤600 words total, excluding frontmatter.
+5. Include the most important details:
+   - JavaScript runtime orchestration
+   - invocation modes
+   - approval and inspectability
+   - subagents and permissions
+   - `/workflows` management controls
+   - limits and caveats
+   - relationship to `/batch` and worktrees
 
-**Step 2: Run broader project checks**
-
-```bash
-pnpm test:scripts
-pnpm docs:build
-```
-
-**Step 3: Inspect git diff**
-
-```bash
-git diff origin/development...HEAD --stat
-git diff origin/development...HEAD -- scripts/cron-runtime.ts scripts/__tests__/cron-runtime.test.ts crons/README.md docs/harnesses/claude-code.md CHANGELOG.md wiki/claude-code-dynamic-workflows.md
-```
-
-**Step 4: Delegate audit**
-
-Use a fresh reviewer subagent to audit:
-
-- spec compliance against this plan
-- no haiku/model downshift references
-- default behavior preserved for crons without `workflow`
-- unknown workflow error behavior
-- docs match runtime behavior
-- wiki schema valid
-
-**Step 5: Fix any audit findings and re-run relevant checks**
-
-Do not proceed with known critical or important audit findings.
-
-**Step 6: Push implementation commits to the existing draft PR**
+**Verification:**
 
 ```bash
-git push
+awk '/^---$/{f=!f; next} f{print}' wiki/claude-code-dynamic-workflows.md
+python3 - <<'PY'
+from pathlib import Path
+p=Path('wiki/claude-code-dynamic-workflows.md')
+text=p.read_text()
+body=text.split('---',2)[-1]
+words=[w for w in body.replace('#',' ').split() if w]
+print(len(words))
+assert len(words) <= 600
+for s in ['## Summary','## Detail','## See Also','[[inspectable-agent-harness]]']:
+    assert s in text
+PY
 ```
 
-Then report the PR link and verification outputs.
+---
+
+### Task 4: Link the existing inspectable/Pi workflow entry
+
+**Objective:** Relate the Claude Code entry to the existing Pi/inspectable harness wiki entry without changing that page’s identity.
+
+**Files:**
+- Modify: `wiki/inspectable-agent-harness.md`
+
+**Steps:**
+
+1. Add `claude-code-dynamic-workflows` to the `related:` frontmatter list.
+2. Add `- [[claude-code-dynamic-workflows]]` under `## See Also`.
+3. Optionally add one concise sentence in `## Detail` if the entry remains under 600 words:
+
+```md
+Claude Code dynamic workflows are the Claude Code-specific first-party counterpart to the Pi/pi-dynamic-workflows pattern described here.
+```
+
+4. Do not replace the Pi/LinkedIn synthesis with Claude Code details.
+
+**Verification:**
+
+```bash
+awk '/^---$/{f=!f; next} f{print}' wiki/inspectable-agent-harness.md
+python3 - <<'PY'
+from pathlib import Path
+text=Path('wiki/inspectable-agent-harness.md').read_text()
+assert 'claude-code-dynamic-workflows' in text
+body=text.split('---',2)[-1]
+assert len([w for w in body.replace('#',' ').split() if w]) <= 600
+PY
+```
+
+---
+
+### Task 5: Update wiki index and daily log
+
+**Objective:** Keep the wiki navigable and satisfy the wiki-ingest logging rule.
+
+**Files:**
+- Modify: `wiki/README.md` if manually maintained or regenerated
+- Modify/Create: `memory/2026-06-04/log.md`
+
+**Steps:**
+
+1. Update `wiki/README.md` to include `claude-code-dynamic-workflows`, or run the repo’s wiki index regeneration path if available.
+2. Append a `/wiki-ingest` style log entry:
+
+```md
+## /wiki-ingest -- <HH:MM> UTC
+- **Result**: OP
+- **Source**: https://code.claude.com/docs/en/workflows
+- **Slug-Created**: claude-code-dynamic-workflows
+- **Slugs-Updated**: inspectable-agent-harness
+- **Snapshot-Path**: wiki/raw/2026-06-04-claude-code-dynamic-workflows.md
+- **Observation**: Captured Claude Code dynamic workflows as the Claude-specific counterpart to the Pi dynamic workflow/inspectable harness entry.
+```
+
+**Verification:**
+
+```bash
+grep -n 'claude-code-dynamic-workflows' wiki/README.md wiki/inspectable-agent-harness.md memory/2026-06-04/log.md
+```
+
+---
+
+### Task 6: Final wiki audit
+
+**Objective:** Verify the wiki changes are accurate, bounded, linked, and schema-compliant before reporting back.
+
+**Files:**
+- Review all changed wiki/log files
+
+**Steps:**
+
+1. Run schema/frontmatter checks:
+
+```bash
+awk '/^---$/{f=!f; next} f{print}' wiki/claude-code-dynamic-workflows.md
+awk '/^---$/{f=!f; next} f{print}' wiki/inspectable-agent-harness.md
+```
+
+2. Check links:
+
+```bash
+grep -R "\[\[claude-code-dynamic-workflows\]\]\|\[\[inspectable-agent-harness\]\]" -n wiki/*.md
+```
+
+3. Check word counts for both touched wiki entries.
+4. Use a fresh reviewer subagent to audit:
+   - source faithfulness to Claude Code docs
+   - no unsupported claims about JavaScript API or automatic worktree isolation
+   - wiki schema compliance
+   - clear relationship between Claude Code dynamic workflows and Pi dynamic workflows
+5. Fix any audit findings and repeat checks.
+
+**Verification:**
+
+- New wiki entry exists and is ≤600 words.
+- Raw snapshot exists and cites `https://code.claude.com/docs/en/workflows` first.
+- `inspectable-agent-harness` links to the new entry.
+- New entry links back to `inspectable-agent-harness`.
+- Daily log contains the ingest entry.
+- Final reviewer finds no critical/important issues.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] The plan is committed first and opened as a draft PR before implementation.
-- [ ] Existing crons without `workflow` continue to pass their body unchanged to `claude -p`.
-- [ ] `workflow: delegate` wraps the cron body in a bounded, inspectable, review-gated dynamic workflow prompt.
-- [ ] Unknown workflow names log an `ERR` and do not execute the raw task.
-- [ ] Tests cover parsing, default prompt behavior, delegate prompt behavior, and unknown workflow handling.
-- [ ] The workflow wrapper does not mention or select haiku.
-- [ ] Docs explain the feature and safety model.
-- [ ] Wiki entry captures the LinkedIn/source research with valid schema.
-- [ ] Focused runtime tests pass.
-- [ ] Docs build passes or any blocker is reported with exact output.
-- [ ] Final implementation is audited by a fresh subagent before asking for merge review.
+- [ ] Research starts from `https://code.claude.com/docs/en/workflows` / `workflows.md`.
+- [ ] Repository changes are scoped to wiki knowledge-retention surfaces and required ingest log only.
+- [ ] No cron runtime, CLI, docs harness, or product implementation changes are made.
+- [ ] `wiki/raw/2026-06-04-claude-code-dynamic-workflows.md` captures source-backed research notes.
+- [ ] `wiki/claude-code-dynamic-workflows.md` exists with valid schema, `confidence: provisional`, and ≤600-word body.
+- [ ] `wiki/claude-code-dynamic-workflows.md` explains how workflows work in Claude Code: invocation, runtime, scripts, subagents, permissions, inspectability, management, disable controls, cost, and limits.
+- [ ] `wiki/inspectable-agent-harness.md` is related to the new Claude Code entry and remains the umbrella/Pi-side inspectable workflow note.
+- [ ] Unsupported claims are avoided, especially around a stable public JS authoring API and automatic worktree isolation for workflow-spawned agents.
+- [ ] Wiki index/log are updated if required.
+- [ ] Final audit passes before reporting completion.
 
 ## Deferred / Explicitly Out of Scope
 
-- No new `oh workflow` CLI command in the MVP.
-- No generated JavaScript workflow execution engine in this pass.
-- No automatic PR creation from cron workflow runs.
-- No change to Claude Code permissions or `--dangerously-skip-permissions` behavior.
-- No recursive unbounded agent fanout.
+- No `workflow:` cron frontmatter.
+- No `scripts/cron-runtime.ts` changes.
+- No Vitest tests.
+- No `oh workflow` CLI.
+- No docs changes under `docs/`.
+- No changes to Claude Code permissions or sandbox behavior.
+- No generated workflow engine or workflow execution code.

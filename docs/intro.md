@@ -68,5 +68,6 @@ If you already have a sandbox running, jump directly to the page you need.
 
 - Source code and issues: [github.com/ryaneggz/open-harness](https://github.com/ryaneggz/open-harness)
 - Learning material: [Resources](/docs/resources)
+- Philosophy: [How Open Harness embodies compound engineering](/blog/compound-engineering) — why each unit of work here should make the next one easier.
 
 [Connecting to the Sandbox](/docs/connecting)

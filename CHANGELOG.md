@@ -18,6 +18,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - `CI: Harness` now runs on pull requests and harness infrastructure paths, adds workspace and standalone `packages/oh` typecheck gates, cancels superseded runs, and adds boot-path linting with `shellcheck`/`hadolint` ([#408](https://github.com/mifunedev/openharness/issues/408)).
 - `release.yml` now validates lint, format, typecheck, build, package tests, and root script tests before publishing release artifacts ([#408](https://github.com/mifunedev/openharness/issues/408)).
 - `SECURITY.md` documents supported versions, private vulnerability reporting, automated hardening, and the sandbox trust boundary ([#408](https://github.com/mifunedev/openharness/issues/408)).
+- Hermes web dashboard opt-in: set `hermes.dashboard: true` in `harness.yaml` (or legacy `HERMES_DASHBOARD=true`), with Hermes installed, to auto-launch the dashboard in the `app-hermes-dashboard` tmux session — published loopback-only on `HERMES_DASHBOARD_PORT` (default 9119) via a compose overlay ([#376](https://github.com/mifunedev/openharness/issues/376)).
 
 ### Changed
 

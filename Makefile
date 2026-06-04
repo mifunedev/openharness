@@ -16,6 +16,8 @@ ENV_FILES         := $(if $(wildcard .devcontainer/.env),--env-file .devcontaine
 # Command-line "make ... SANDBOX_NAME=x" overrides all assignments automatically.
 SANDBOX_NAME_YAML := $(shell [ -f $(HARNESS_YAML) ] && sh scripts/harness-config.sh get sandbox.name $(HARNESS_YAML))
 SANDBOX_NAME      := $(or $(SANDBOX_NAME_YAML),$(SANDBOX_NAME),openharness)
+HERMES_DASHBOARD_YAML := $(shell [ -f $(HARNESS_YAML) ] && sh scripts/harness-config.sh get hermes.dashboard $(HARNESS_YAML))
+HERMES_DASHBOARD_OVERLAY := $(shell v='$(HERMES_DASHBOARD_YAML)'; [ -z "$$v" ] && v='$(HERMES_DASHBOARD)'; case "$$(printf '%s' "$$v" | tr '[:upper:]' '[:lower:]')" in 1|true|yes|on) printf '%s' '-f .devcontainer/docker-compose.hermes-dashboard.yml';; esac)
 
 SHELL_USER        ?= sandbox
 COMPOSE_BASE      := -f .devcontainer/docker-compose.yml
@@ -24,7 +26,7 @@ COMPOSE_BASE      := -f .devcontainer/docker-compose.yml
 #   2. config.json composeOverrides[]   — user-local overlays (beat tracked)
 # jq is only invoked when both jq and config.json are present.
 HARNESS_YAML_OVERRIDES := $(shell [ -f $(HARNESS_YAML) ] && sh scripts/harness-config.sh compose-overrides $(HARNESS_YAML) | sed 's|^|-f |' | tr '\n' ' ')
-COMPOSE_OVERRIDES := $(HARNESS_YAML_OVERRIDES) $(shell command -v jq >/dev/null 2>&1 && [ -f config.json ] && \
+COMPOSE_OVERRIDES := $(HERMES_DASHBOARD_OVERLAY) $(HARNESS_YAML_OVERRIDES) $(shell command -v jq >/dev/null 2>&1 && [ -f config.json ] && \
     jq -r '.composeOverrides[]?' config.json 2>/dev/null | sed 's|^|-f |' | tr '\n' ' ')
 COMPOSE           := docker compose $(ENV_FILES) $(COMPOSE_BASE) $(COMPOSE_OVERRIDES)
 

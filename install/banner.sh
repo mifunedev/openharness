@@ -112,6 +112,24 @@ if command -v hermes >/dev/null 2>&1; then
   fi
 fi
 
+# dashboard — hermes-related dashboard service; leave empty if hermes not installed
+dashboard_status=""
+dashboard_detail=""
+if command -v hermes >/dev/null 2>&1; then
+  if echo "${HERMES_DASHBOARD:-}" | grep -qiE '^(true|1|yes|on)$'; then
+    if tmux has-session -t app-hermes-dashboard 2>/dev/null; then
+      dashboard_status="[✓]"
+      dashboard_detail="dashboard — http://127.0.0.1:${HERMES_DASHBOARD_PORT:-9119}"
+    else
+      dashboard_status="[✗]"
+      dashboard_detail="dashboard — enabled but not running (see /tmp/app-hermes-dashboard.log)"
+    fi
+  else
+    dashboard_status="[ ]"
+    dashboard_detail="dashboard — disabled (set hermes.dashboard: true)"
+  fi
+fi
+
 # openharness CLI — verify the bind-mounted package built and symlinked
 oh_status="[✗]"
 oh_detail="not installed — check entrypoint logs"
@@ -139,6 +157,7 @@ printf '    %-6s %-11s %s\n' "$opencode_status"   "opencode"    "$opencode_detai
 printf '    %-6s %-11s %s\n' "$pi_status"         "pi"          "$pi_detail"
 printf '    %-6s %-11s %s\n' "$deepagents_status" "deepagents"  "$deepagents_detail"
 printf '    %-6s %-11s %s\n' "$hermes_status"     "hermes"      "$hermes_detail"
+[ -n "$dashboard_status" ] && printf '    %-6s %-11s %s\n' "$dashboard_status" "dashboard" "$dashboard_detail"
 printf '    %-6s %-11s %s\n' "$oh_status"         "openharness" "$oh_detail"
 printf '\n'
 shortcuts="claude · codex · pi"

@@ -27,6 +27,10 @@ install:
   # hermes: false              # INSTALL_HERMES — Hermes CLI (build arg + runtime)
   # agent_browser: false       # INSTALL_AGENT_BROWSER — agent-browser + Chromium (~1 GB)
 
+hermes:
+  # dashboard: false           # HERMES_DASHBOARD — auto-start web dashboard when Hermes is installed
+  # dashboard_port: 9119       # HERMES_DASHBOARD_PORT — host loopback port for the dashboard
+
 crons:
   # dir: crons                 # CRONS_DIR — directory the cron runtime scans
   # agent_bin: claude          # CRON_AGENT_BIN — binary that fires scheduled tasks

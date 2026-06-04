@@ -11,6 +11,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Added
 - `cron` preinstalled in the sandbox base image so scheduled jobs work without a manual `apt-get install` ([#312](https://github.com/ryaneggz/open-harness/issues/312)).
 - Documented "compound engineering" (the Every / Kieran Klaassen AI-native methodology) and how Open Harness embodies it: a `wiki/compound-engineering.md` entry mapping it onto the harness's append-only memory, critic gate, protected-paths accumulation, and recursive delegation; a public blog post (`blog/2026-06-04-compound-engineering.md`); and light pointers added to `docs/intro.md` and `docs/resources.md`. Deliberately no new `context/rules/` file — the concept only names mechanisms the harness already enforces ([#378](https://github.com/ryaneggz/open-harness/issues/378)).
+- `/health-check` skill: triage host memory/swap/disk/CPU and Docker usage before starting or building a stack, rank reclaim levers by safety×yield (auto-prune regenerable build cache, confirm before destructive container/volume removal), and report a RAG verdict naming the binding constraint ([#380](https://github.com/ryaneggz/open-harness/issues/380)).
 
 ### Changed
 - Release process now promotes `development` → `main` (fast-forward) before cutting the release branch and tag, keeping `main` as the authoritative release line; `/release` skill and `.claude/rules/git.md` § Releases document the `development → main → release → tag → sync` flow and abort if `main` has diverged.

@@ -14,7 +14,7 @@ The sharp test: *Is this a fact or synthesis about a topic, intended to be read 
 | --- | --- | --- | --- |
 | `context/rules/*.md` | Behavioral norms (prescriptive) | Deliberate orchestrator revision | Wiki holds **facts**, rules hold **how to behave** |
 | `context/IDENTITY.md` | Cross-session operating principles | Orchestrator, deliberate | Wiki is codebase/domain knowledge; IDENTITY is "always do X" |
-| `memory/MEMORY.md` | Distilled experiential lessons ("run on date X showed Y") | Orchestrator via `/reflect` | Wiki entries are **reference**; memory is **journal** |
+| `memory/MEMORY.md` | Distilled experiential lessons ("run on date X showed Y") | Orchestrator via `/retro` | Wiki entries are **reference**; memory is **journal** |
 | `memory/<topic>.md` | Ad-hoc reference notes, no schema, no retrieval | Any session | Wiki wins after a note is re-derived twice and earns a schema |
 | `docs/` (Docusaurus) | Human-facing prose | Orchestrator / contributors | Wiki is LLM-readable; docs are human-readable |
 | `.claude/skills/*/SKILL.md` | Executable procedures | Orchestrator | Skills are *how to do*; wiki is *what is true* |

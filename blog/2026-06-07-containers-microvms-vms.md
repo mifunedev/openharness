@@ -19,6 +19,26 @@ Every isolation technology is a trade between two things: **how strong the wall 
 
 Containers max out the second axis. Full VMs max out the first. The microVM is the interesting one because it refuses to fully concede either. What actually moves along that first axis is one thing: the **kernel boundary** — does the workload get its own kernel, or does it share the host's?
 
+```mermaid
+flowchart TB
+    subgraph vm["Full VM"]
+        vmA[/"Agent"/] --> vmK["Own guest kernel"] --> vmD["Emulated BIOS · PCI<br/>disks · NICs"]
+    end
+    subgraph mv["microVM"]
+        mvA[/"Agent"/] --> mvK["Own minimal kernel"] --> mvD["virtio only<br/>net · block · vsock"]
+    end
+    subgraph ct["Container"]
+        ctA[/"Agent"/] --> ctF["namespaces · cgroups<br/>seccomp"]
+    end
+    HK["<b>Host kernel</b>"]
+    HW[("Hardware")]
+    vmD ==>|hypervisor| HW
+    mvD ==>|KVM| HW
+    ctF ==>|syscalls| HK ==> HW
+```
+
+*One difference drives the rest: the container (what Open Harness runs today) shares the **host kernel**, while the full VM and the Firecracker microVM each get their own. The microVM keeps a kernel but sheds the heavy device model — and, as the price, trades the live bind-mount for a virtio-fs/vsock sync.*
+
 ## The full VM: the wall that costs the most
 
 A virtual machine asks the hardware to pretend to be a whole second computer. A hypervisor (KVM, VMware, Hyper-V) gives each guest its own kernel, its own emulated BIOS, a virtual PCI bus, virtual disks and NICs — the full pantomime of physical hardware. Nothing the guest does reaches the host kernel, because the guest *has its own kernel*. That's the strongest isolation in common use.
@@ -69,6 +89,25 @@ It is not free, and the research was mostly about cataloguing the bill:
 | Right when… | You need a full second OS | You trust the code, want speed | You're running code you don't trust |
 
 The decision collapses to one question: **do you trust the code, and is the machine only yours?**
+
+```mermaid
+flowchart TB
+    Q1{"Trust the code<br/>AND the machine<br/>is only yours?"}
+    Q2{"Just need a full or<br/>different OS?<br/><i>(low churn)</i>"}
+    Q3{"Host has /dev/kvm?<br/><i>(bare metal)</i>"}
+    C["<b>Container</b><br/><i>optimal, not a compromise</i><br/>instant · live bind-mount"]
+    VM["<b>Full VM</b><br/>a whole second OS"]
+    MV["<b>microVM</b><br/>own-kernel wall<br/>at container speed"]
+    Gap["microVM not available here<br/><i>needs a KVM-capable host</i>"]
+    Q1 -->|yes| C
+    Q1 -->|"no · untrusted or multi-tenant"| Q2
+    Q2 -->|yes| VM
+    Q2 -->|no| Q3
+    Q3 -->|yes| MV
+    Q3 -->|no| Gap
+```
+
+*Supply-chain trust of the base image is a separate problem on every path.*
 
 - **Yes to both** — a developer running their own agent on their own box. Container, every time. The microVM's wall guards against a threat that isn't present; the VM's cost buys nothing. This is most agent work happening today, and the container isn't the budget option for it — it's optimal.
 - **No** — untrusted, model-generated, or third-party agents, especially many tenants on shared hardware. That's the microVM's entire reason to exist: VM-grade isolation cheap enough to run per-request at fleet scale.

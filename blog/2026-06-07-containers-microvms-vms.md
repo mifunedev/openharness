@@ -1,15 +1,15 @@
 ---
 title: "Containers, microVMs, and VMs: where should an AI agent actually run?"
-description: "I spent last week researching whether Open Harness should run agents in Firecracker microVMs. The answer is 'sometimes' — and it turns into a clean way to reason about isolation for any agent platform."
+description: "I spent last week researching whether a Firecracker microVM should replace the container Open Harness runs agents in. It shouldn't — but the question turns into a clean way to reason about isolation for any agent platform."
 date: 2026-06-07
 authors: [ryan]
 tags: [agents, docker, firecracker, security]
 slug: containers-microvms-vms
 ---
 
-Open Harness runs every coding agent inside a Docker container — one sandbox per repo, your workspace bind-mounted in, the agent free to thrash around without ever touching your laptop. It works. So I surprised myself by spending last week researching whether it should run agents in *virtual machines* instead.
+Open Harness runs every coding agent inside a Docker container — one sandbox per repo, your workspace bind-mounted in, the agent free to thrash around without ever touching your laptop. That a container beats a full VM for this was already settled. What I spent last week researching was the next contender: whether a Firecracker **microVM** should *replace* the container underneath it.
 
-The honest answer is "sometimes, for a job Open Harness doesn't do yet." But getting there forced me to lay out the three ways you can put a box around an AI agent — a full VM, a container, and the microVM in between — and the result is a clean mental model for anyone deciding where their agents should run. So here it is.
+The honest answer was no — not because the microVM is weak, but because it's built for a job Open Harness doesn't do yet (running untrusted agents for many tenants on shared hardware) and is a worse fit for the one it does. Chasing that down only reinforced the container as the right default: the instant, live-editable sandbox you get the moment you point the harness at a repo is exactly what a microVM would take away. Getting there forced me to lay out the three ways you can put a box around an AI agent — a full VM, a container, and the microVM in between — so here's the whole mental model.
 
 <!-- truncate -->
 

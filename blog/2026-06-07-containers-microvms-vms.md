@@ -119,6 +119,10 @@ Open Harness stays a container, and that's a deliberate call, not a default I ne
 
 The microVM doesn't replace that; it's an **added isolation tier** for when the trust assumption flips — running untrusted agents, or eventually a multi-tenant hosted sandbox on mifune.dev. The shape is a config switch, `isolation: docker` (default) or `microvm`, reusing the same image pipeline, with the Docker socket dropped on the harder tier. It's still desk research — a go/no-go, not shipped code — and a microVM that breaks live editing has to earn its place against everything the container already does for free. But the principle is clear: pick the box that matches the threat, and for the threat most people actually have, the container wins.
 
+## Where to run it
+
+There's a second axis this piece sets aside on purpose: *where the container runs*. Isolation is the box around the agent; the host is the machine that box sits on — independent choices. Your laptop is the fastest way to start, and the best first move: clone, `make sandbox`, and an agent is working in seconds. But the better long-term home is a small always-on VM with Docker as its only dependency. Move the same container there and the agent keeps grinding through a long task with your laptop lid shut, survives a reboot, and is reachable from wherever you SSH in. Notice the role the VM plays here — it's the *host running Docker*, not a per-agent isolation wall. Same word as the heavyweight box up top, opposite job: the container is still the box; the VM is just what keeps it powered on.
+
 ## Try it
 
 The container harness is open today. Start at the [installation guide](/docs/installation) or the [quickstart](/docs/quickstart) — clone it, point it at a repo, and watch an agent work in a box that boots before you've let go of the Enter key. The microVM tier is being researched in the open; the trade-offs above are the whole reason it's a tier and not a replacement.

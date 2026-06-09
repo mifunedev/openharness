@@ -113,7 +113,7 @@ make destroy
 
 ## 🤝 Contributing & community
 
-Issues and PRs welcome at [github.com/mifunedev/openharness](https://github.com/mifunedev/openharness). If Open Harness is useful to you, please [give us a star](https://github.com/mifunedev/openharness/stargazers).
+Open Harness is maintained under the [`mifunedev`](https://github.com/mifunedev) org — the canonical repo is [github.com/mifunedev/openharness](https://github.com/mifunedev/openharness). To run your own, fork it (see **Option B** above) and open PRs back upstream. Issues and PRs welcome; if Open Harness is useful to you, please [give us a star](https://github.com/mifunedev/openharness/stargazers).
 
 ## 📄 License
 

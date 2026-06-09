@@ -15,6 +15,12 @@ Run 4 parallel audit perspectives (PM, Implementer, Critic, Explorer), synthesiz
 
 **Core principle: evidence over opinion.** Every finding must cite a specific file, observed behavior, or gap — no speculative items.
 
+## External proposal implementation audits
+
+When the user asks whether an external article, repo, or social post should be implemented into Open Harness, use this skill as a decision audit rather than a generic repo-health audit. If the request also says “Add to Wiki,” ingest the source first (or in parallel) and cite the resulting wiki entry/snapshot in the GitHub issue. Convene at least three perspectives — product/alignment, implementer/feasibility, and critic/security/reliability — then synthesize a recommendation with non-goals, acceptance criteria, and gating criteria before any larger implementation.
+
+Use `references/external-proposal-implementation-audit.md` for the detailed reusable pattern and the Lat.md/CodeGraph case studies.
+
 ## Decision Flow
 
 ```mermaid

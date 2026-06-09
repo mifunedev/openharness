@@ -10,13 +10,13 @@ The LinkedIn Ghostwriter is a content agent that drafts LinkedIn posts in Ryan E
 
 ## Branch
 
-[github.com/ryaneggz/open-harness@agent/linkedin-ghostwriter](https://github.com/ryaneggz/open-harness/tree/agent/linkedin-ghostwriter)
+[github.com/mifunedev/openharness@agent/linkedin-ghostwriter](https://github.com/mifunedev/openharness/tree/agent/linkedin-ghostwriter)
 
 ## Spin up
 
 ```bash
 # Clone the harness and check out this agent's branch in a worktree:
-git clone https://github.com/ryaneggz/open-harness.git ~/.openharness
+git clone https://github.com/mifunedev/openharness.git ~/.openharness
 cd ~/.openharness
 mkdir -p .worktrees/agent
 git worktree add .worktrees/agent/linkedin-ghostwriter origin/agent/linkedin-ghostwriter
@@ -26,31 +26,31 @@ make shell
 ```
 
 First files to read inside the sandbox:
-- [`AGENTS.md`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/AGENTS.md)
-- [`workspace/AGENTS.md`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/AGENTS.md)
+- [`AGENTS.md`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/AGENTS.md)
+- [`workspace/AGENTS.md`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/AGENTS.md)
 
 ## Workspace contents
 
 **Skills:**
-- [`workspace/.claude/skills/linkedin-ghostwriter/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/SKILL.md) — primary skill: content pillar rotation, mandatory checklist, post structure, draft save workflow
-- [`workspace/.claude/skills/post-bridge/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/post-bridge/SKILL.md) — Post Bridge API integration for social publishing
+- [`workspace/.claude/skills/linkedin-ghostwriter/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/SKILL.md) — primary skill: content pillar rotation, mandatory checklist, post structure, draft save workflow
+- [`workspace/.claude/skills/post-bridge/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/post-bridge/SKILL.md) — Post Bridge API integration for social publishing
 
 **Reference library:**
-- [`workspace/.claude/skills/linkedin-ghostwriter/references/style-guide.md`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/references/style-guide.md) — voice and content strategy guide
-- [`workspace/.claude/skills/linkedin-ghostwriter/references/open-harness.md`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/references/open-harness.md) — repo context and business goals
-- [`workspace/.claude/skills/linkedin-ghostwriter/references/posts/`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/references/posts/) — 9 reference posts with screenshots for voice calibration
-- [`workspace/.claude/skills/linkedin-ghostwriter/assets/drafts/`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/assets/drafts/) — timestamped draft output (100+ drafts generated)
-- [`workspace/.claude/skills/linkedin-ghostwriter/assets/drafts/queue.md`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/assets/drafts/queue.md) — pending/done topic queue
+- [`workspace/.claude/skills/linkedin-ghostwriter/references/style-guide.md`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/references/style-guide.md) — voice and content strategy guide
+- [`workspace/.claude/skills/linkedin-ghostwriter/references/open-harness.md`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/references/open-harness.md) — repo context and business goals
+- [`workspace/.claude/skills/linkedin-ghostwriter/references/posts/`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/references/posts/) — 9 reference posts with screenshots for voice calibration
+- [`workspace/.claude/skills/linkedin-ghostwriter/assets/drafts/`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/assets/drafts/) — timestamped draft output (100+ drafts generated)
+- [`workspace/.claude/skills/linkedin-ghostwriter/assets/drafts/queue.md`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/.claude/skills/linkedin-ghostwriter/assets/drafts/queue.md) — pending/done topic queue
 
 **Heartbeat:**
-- [`workspace/HEARTBEAT.md`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/HEARTBEAT.md) — heartbeat instructions (LinkedIn Ghostwriter task runs each cycle)
+- [`workspace/HEARTBEAT.md`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/HEARTBEAT.md) — heartbeat instructions (LinkedIn Ghostwriter task runs each cycle)
 
 **Custom banner:**
-- [`workspace/.pi/banner.json`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/.pi/banner.json) — Pi agent custom banner
-- [`workspace/.pi/extensions/custom-banner.ts`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/.pi/extensions/custom-banner.ts) — Pi banner extension
+- [`workspace/.pi/banner.json`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/.pi/banner.json) — Pi agent custom banner
+- [`workspace/.pi/extensions/custom-banner.ts`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/.pi/extensions/custom-banner.ts) — Pi banner extension
 
 **Memory:**
-- [`workspace/memory/linkedin-ghostwriter-iterations.md`](https://github.com/ryaneggz/open-harness/blob/agent/linkedin-ghostwriter/workspace/memory/linkedin-ghostwriter-iterations.md) — per-cycle iteration log (pillar balance, checklist pass/fail, lessons)
+- [`workspace/memory/linkedin-ghostwriter-iterations.md`](https://github.com/mifunedev/openharness/blob/agent/linkedin-ghostwriter/workspace/memory/linkedin-ghostwriter-iterations.md) — per-cycle iteration log (pillar balance, checklist pass/fail, lessons)
 
 ## How to use it
 

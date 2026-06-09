@@ -12,8 +12,8 @@ This guide covers the workflow for contributing to Open Harness: creating branch
 Clone the repository:
 
 ```bash
-git clone https://github.com/ryaneggz/open-harness.git
-cd open-harness
+git clone https://github.com/mifunedev/openharness.git
+cd openharness
 ```
 
 Open Harness has no host-side build step. The orchestrator runs at the project root (Docker + `make`), and all application work happens inside the sandbox container. You only need:
@@ -110,7 +110,7 @@ Example:
 
 ```markdown
 ### Added
-- Slack thread replies in multi-channel mode ([#42](https://github.com/ryaneggz/open-harness/pull/42)).
+- Slack thread replies in multi-channel mode ([#42](https://github.com/mifunedev/openharness/pull/42)).
 ```
 
 Skip CHANGELOG entries only for pure chores with no runtime or workflow effect (refactors, test fixes, typos). When in doubt, add an entry.

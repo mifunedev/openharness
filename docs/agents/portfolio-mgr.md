@@ -10,13 +10,13 @@ Portfolio Manager is a quantitative portfolio-management agent that tracks and r
 
 ## Branch
 
-[github.com/ryaneggz/open-harness@agent/portfolio-mgr](https://github.com/ryaneggz/open-harness/tree/agent/portfolio-mgr)
+[github.com/mifunedev/openharness@agent/portfolio-mgr](https://github.com/mifunedev/openharness/tree/agent/portfolio-mgr)
 
 ## Spin up
 
 ```bash
 # Clone the harness and check out this agent's branch in a worktree:
-git clone https://github.com/ryaneggz/open-harness.git ~/.openharness
+git clone https://github.com/mifunedev/openharness.git ~/.openharness
 cd ~/.openharness
 mkdir -p .worktrees/agent
 git worktree add .worktrees/agent/portfolio-mgr origin/agent/portfolio-mgr
@@ -26,24 +26,24 @@ make shell
 ```
 
 First files to read inside the sandbox:
-- [`AGENTS.md`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/AGENTS.md)
-- [`workspace/AGENTS.md`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/AGENTS.md)
+- [`AGENTS.md`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/AGENTS.md)
+- [`workspace/AGENTS.md`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/AGENTS.md)
 
 ## Workspace contents
 
 - **Skills**
-  - [`/allocation-check`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/.claude/skills/allocation-check/SKILL.md) — validate current weights against target allocation before any rebalance
-  - [`/risk-metrics`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/.claude/skills/risk-metrics/SKILL.md) — compute Sharpe, Sortino, max drawdown, beta, and volatility
-  - [`/sentiment-score`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/.claude/skills/sentiment-score/SKILL.md) — WebSearch-driven macro sentiment composite
-  - [`/strategy-review`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/.claude/skills/strategy-review/SKILL.md) — measure decision quality over rolling periods
-- **Heartbeats** (defined in [`heartbeats.conf`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/heartbeats.conf))
-  - [`market-check.md`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/heartbeats/market-check.md) — daily at 4:30 PM ET after market close: fetch prices, compute P&L, run risk-metrics and sentiment-score, flag drift > 3%
-  - [`rebalance-review.md`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/heartbeats/rebalance-review.md) — Friday 5 PM MT: weekly rebalance decision
-  - [`monthly-retro.md`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/heartbeats/monthly-retro.md) — 1st of each month: rolling performance retrospective
-  - [`memory-distill.md`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/heartbeats/memory-distill.md) — Sunday 8 PM MT: distill daily logs into MEMORY.md
-- **Portfolio data** — [`portfolio/state.json`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/portfolio/state.json) (current holdings), [`portfolio/ledger.json`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/portfolio/ledger.json) (strategy versions + forward performance), [`portfolio/scorecard.md`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/portfolio/scorecard.md) (rolling summary)
-- **Pi banner** — [`workspace/.pi/banner.json`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/.pi/banner.json) with a custom extension at [`workspace/.pi/extensions/custom-banner.ts`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/.pi/extensions/custom-banner.ts)
-- **Sub-agents** — agent-builder, command-builder, skill-builder under [`workspace/.claude/agents/`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/.claude/agents/)
+  - [`/allocation-check`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/.claude/skills/allocation-check/SKILL.md) — validate current weights against target allocation before any rebalance
+  - [`/risk-metrics`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/.claude/skills/risk-metrics/SKILL.md) — compute Sharpe, Sortino, max drawdown, beta, and volatility
+  - [`/sentiment-score`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/.claude/skills/sentiment-score/SKILL.md) — WebSearch-driven macro sentiment composite
+  - [`/strategy-review`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/.claude/skills/strategy-review/SKILL.md) — measure decision quality over rolling periods
+- **Heartbeats** (defined in [`heartbeats.conf`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/heartbeats.conf))
+  - [`market-check.md`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/heartbeats/market-check.md) — daily at 4:30 PM ET after market close: fetch prices, compute P&L, run risk-metrics and sentiment-score, flag drift > 3%
+  - [`rebalance-review.md`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/heartbeats/rebalance-review.md) — Friday 5 PM MT: weekly rebalance decision
+  - [`monthly-retro.md`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/heartbeats/monthly-retro.md) — 1st of each month: rolling performance retrospective
+  - [`memory-distill.md`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/heartbeats/memory-distill.md) — Sunday 8 PM MT: distill daily logs into MEMORY.md
+- **Portfolio data** — [`portfolio/state.json`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/portfolio/state.json) (current holdings), [`portfolio/ledger.json`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/portfolio/ledger.json) (strategy versions + forward performance), [`portfolio/scorecard.md`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/portfolio/scorecard.md) (rolling summary)
+- **Pi banner** — [`workspace/.pi/banner.json`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/.pi/banner.json) with a custom extension at [`workspace/.pi/extensions/custom-banner.ts`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/.pi/extensions/custom-banner.ts)
+- **Sub-agents** — agent-builder, command-builder, skill-builder under [`workspace/.claude/agents/`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/.claude/agents/)
 
 ## How to use it
 
@@ -51,10 +51,10 @@ Once the sandbox is running and Claude Code is started (`claude`), the agent ent
 
 ## Customization tips
 
-The target tickers and allocation weights are stored in `MEMORY.md` and `portfolio/state.json` on the branch — update them to swap the underlying 13F or All Weather mix. The heartbeat schedule (market-close time, rebalance day) is in [`heartbeats.conf`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/heartbeats.conf); edit the cron expressions there and run `make heartbeat` to re-sync the daemon. See `workspace/AGENTS.md` on the branch for the full environment and tool reference.
+The target tickers and allocation weights are stored in `MEMORY.md` and `portfolio/state.json` on the branch — update them to swap the underlying 13F or All Weather mix. The heartbeat schedule (market-close time, rebalance day) is in [`heartbeats.conf`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/heartbeats.conf); edit the cron expressions there and run `make heartbeat` to re-sync the daemon. See `workspace/AGENTS.md` on the branch for the full environment and tool reference.
 
 ## Best practices observed
 
 - Dual-skill quality gate (`/risk-metrics` → `/allocation-check`) runs before every rebalance decision, preventing premature trades on noisy single-day moves.
-- Market-check heartbeat scheduled via [`heartbeats/market-check.md`](https://github.com/ryaneggz/open-harness/blob/agent/portfolio-mgr/workspace/heartbeats/market-check.md) fires daily at 4:30 PM ET after market close, keeping the agent on a market-hours rhythm without manual triggers.
+- Market-check heartbeat scheduled via [`heartbeats/market-check.md`](https://github.com/mifunedev/openharness/blob/agent/portfolio-mgr/workspace/heartbeats/market-check.md) fires daily at 4:30 PM ET after market close, keeping the agent on a market-hours rhythm without manual triggers.
 - `portfolio/ledger.json` tracks strategy versions alongside forward performance, enabling before/after comparison whenever the All Weather weights are changed.

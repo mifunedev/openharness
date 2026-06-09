@@ -33,7 +33,7 @@ bash scripts/install.sh
 **Option C — Clone upstream, then re-point to your repo:**
 
 ```bash
-git clone https://github.com/ryaneggz/open-harness.git my-harness && cd my-harness
+git clone https://github.com/mifunedev/openharness.git my-harness && cd my-harness
 git remote set-url origin https://github.com/<your-org>/<your-repo>.git
 bash scripts/install.sh
 ```
@@ -81,7 +81,7 @@ timezone, optional installs, Slack allowlists, compose overlays).
 <details><summary>Manual setup (no installer)</summary>
 
 ```bash
-git clone https://github.com/ryaneggz/open-harness.git && cd open-harness
+git clone https://github.com/mifunedev/openharness.git && cd openharness
 make sandbox
 make shell
 ```
@@ -113,7 +113,7 @@ make destroy
 
 ## 🤝 Contributing & community
 
-Issues and PRs welcome at [github.com/ryaneggz/open-harness](https://github.com/ryaneggz/open-harness). If Open Harness is useful to you, please [give us a star](https://github.com/ryaneggz/open-harness/stargazers).
+Issues and PRs welcome at [github.com/mifunedev/openharness](https://github.com/mifunedev/openharness). If Open Harness is useful to you, please [give us a star](https://github.com/mifunedev/openharness/stargazers).
 
 ## 📄 License
 

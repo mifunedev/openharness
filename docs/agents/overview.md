@@ -32,8 +32,8 @@ make sandbox
 **Option B — fresh clone:**
 
 ```bash
-git clone https://github.com/ryaneggz/open-harness.git
-cd open-harness
+git clone https://github.com/mifunedev/openharness.git
+cd openharness
 git checkout agent/<name>
 make sandbox
 ```
@@ -44,10 +44,10 @@ Both paths land you at the standard `make sandbox` flow described in [Installati
 
 | Agent | Description | Branch |
 |---|---|---|
-| [Blog Writer](./blog-writer) | Writes technical blog posts for ruska.ai in Ryan Eggleston's voice — developer-bookmark quality, SMB-forward | [agent/blog-writer](https://github.com/ryaneggz/open-harness/tree/agent/blog-writer) |
-| [DC Designer](./dc-designer) | Provisions and maintains a sandbox for an AI-driven 50MW–200MW hyperscale datacenter facility design | [agent/dc-designer](https://github.com/ryaneggz/open-harness/tree/agent/dc-designer) |
-| [LinkedIn Ghostwriter](./linkedin-ghostwriter) | General-purpose coding agent scaffolded for LinkedIn content drafting workflows | [agent/linkedin-ghostwriter](https://github.com/ryaneggz/open-harness/tree/agent/linkedin-ghostwriter) |
-| [Portfolio Manager](./portfolio-mgr) | Runs a mock $100K portfolio informed by Bridgewater's 13F filing and Ray Dalio's All Weather strategy | [agent/portfolio-mgr](https://github.com/ryaneggz/open-harness/tree/agent/portfolio-mgr) |
-| [UAT Tester](./uat-tester) | Visual acceptance testing agent — methodical, screenshot-driven, ranked by user impact | [agent/uat-tester](https://github.com/ryaneggz/open-harness/tree/agent/uat-tester) |
+| [Blog Writer](./blog-writer) | Writes technical blog posts for ruska.ai in Ryan Eggleston's voice — developer-bookmark quality, SMB-forward | [agent/blog-writer](https://github.com/mifunedev/openharness/tree/agent/blog-writer) |
+| [DC Designer](./dc-designer) | Provisions and maintains a sandbox for an AI-driven 50MW–200MW hyperscale datacenter facility design | [agent/dc-designer](https://github.com/mifunedev/openharness/tree/agent/dc-designer) |
+| [LinkedIn Ghostwriter](./linkedin-ghostwriter) | General-purpose coding agent scaffolded for LinkedIn content drafting workflows | [agent/linkedin-ghostwriter](https://github.com/mifunedev/openharness/tree/agent/linkedin-ghostwriter) |
+| [Portfolio Manager](./portfolio-mgr) | Runs a mock $100K portfolio informed by Bridgewater's 13F filing and Ray Dalio's All Weather strategy | [agent/portfolio-mgr](https://github.com/mifunedev/openharness/tree/agent/portfolio-mgr) |
+| [UAT Tester](./uat-tester) | Visual acceptance testing agent — methodical, screenshot-driven, ranked by user impact | [agent/uat-tester](https://github.com/mifunedev/openharness/tree/agent/uat-tester) |
 
 Each page documents the agent's purpose, workspace layout, and any setup steps beyond `make sandbox`.

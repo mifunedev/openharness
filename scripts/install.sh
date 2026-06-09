@@ -125,7 +125,7 @@ Env vars:
   OH_INSTALL_REF       Git ref (tag/SHA) to clone instead of main
   OH_ASSUME_YES        Set to 1 for --yes
   SANDBOX_NAME         Skip the "Container name" prompt
-  OH_GITHUB_REPO       GitHub repo to clone (default: ryaneggz/open-harness)
+  OH_GITHUB_REPO       GitHub repo to clone (default: mifunedev/openharness)
   OH_GITHUB_REF        Git ref to clone (alias: OH_INSTALL_REF)
 
 Examples:
@@ -204,11 +204,11 @@ else
   REPO_DIR="$HOME/.openharness"
 
   # ── OH_GITHUB_REPO: fork-parameterized clone source ───────────────────
-  OH_GITHUB_REPO="${OH_GITHUB_REPO:-ryaneggz/open-harness}"
+  OH_GITHUB_REPO="${OH_GITHUB_REPO:-mifunedev/openharness}"
   if [[ ! "$OH_GITHUB_REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
     die "OH_GITHUB_REPO must be <owner>/<repo>: got '$OH_GITHUB_REPO'"
   fi
-  if [ "$OH_GITHUB_REPO" != "ryaneggz/open-harness" ]; then
+  if [ "$OH_GITHUB_REPO" != "mifunedev/openharness" ]; then
     warn "Cloning from fork: $OH_GITHUB_REPO"
   fi
 

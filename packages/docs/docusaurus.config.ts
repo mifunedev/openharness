@@ -3,8 +3,8 @@ import type * as Preset from "@docusaurus/preset-classic";
 import { terminalDark, terminalLight } from "./src/theme/prism-terminal";
 
 // To deploy via GitHub Pages without custom domain, swap to:
-// url: "https://ryaneggz.github.io"
-// baseUrl: "/open-harness/"
+// url: "https://mifunedev.github.io"
+// baseUrl: "/openharness/"
 
 const config: Config = {
   title: "Open Harness",
@@ -15,8 +15,8 @@ const config: Config = {
   url: "https://oh.mifune.dev",
   baseUrl: "/",
 
-  organizationName: "ryaneggz",
-  projectName: "open-harness",
+  organizationName: "mifunedev",
+  projectName: "openharness",
 
   trailingSlash: false,
 
@@ -103,7 +103,7 @@ const config: Config = {
           path: "../../docs",
           sidebarPath: "./sidebars.ts",
           editUrl: ({ docPath }) =>
-            `https://github.com/ryaneggz/open-harness/edit/main/docs/${docPath}`,
+            `https://github.com/mifunedev/openharness/edit/main/docs/${docPath}`,
           routeBasePath: "docs",
           showLastUpdateTime: true,
         },
@@ -115,7 +115,7 @@ const config: Config = {
           postsPerPage: 10,
           feedOptions: { type: ["rss", "atom"], title: "Open Harness Blog" },
           editUrl: ({ blogPath }) =>
-            `https://github.com/ryaneggz/open-harness/edit/main/blog/${blogPath}`,
+            `https://github.com/mifunedev/openharness/edit/main/blog/${blogPath}`,
           routeBasePath: "blog",
         },
         theme: {
@@ -177,7 +177,7 @@ const config: Config = {
           position: "left",
         },
         {
-          href: "https://github.com/ryaneggz/open-harness",
+          href: "https://github.com/mifunedev/openharness",
           label: "GitHub",
           position: "right",
         },
@@ -200,11 +200,11 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/ryaneggz/open-harness",
+              href: "https://github.com/mifunedev/openharness",
             },
             {
               label: "License",
-              href: "https://github.com/ryaneggz/open-harness/blob/main/LICENSE",
+              href: "https://github.com/mifunedev/openharness/blob/main/LICENSE",
             },
           ],
         },

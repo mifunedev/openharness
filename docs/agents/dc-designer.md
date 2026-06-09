@@ -10,13 +10,13 @@ The DC Designer is a datacenter design engineering agent that autonomously devel
 
 ## Branch
 
-[github.com/ryaneggz/open-harness@agent/dc-designer](https://github.com/ryaneggz/open-harness/tree/agent/dc-designer)
+[github.com/mifunedev/openharness@agent/dc-designer](https://github.com/mifunedev/openharness/tree/agent/dc-designer)
 
 ## Spin up
 
 ```bash
 # Clone the harness and check out this agent's branch in a worktree:
-git clone https://github.com/ryaneggz/open-harness.git ~/.openharness
+git clone https://github.com/mifunedev/openharness.git ~/.openharness
 cd ~/.openharness
 mkdir -p .worktrees/agent
 git worktree add .worktrees/agent/dc-designer origin/agent/dc-designer
@@ -26,29 +26,29 @@ make shell
 ```
 
 First files to read inside the sandbox:
-- [`AGENTS.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/AGENTS.md)
-- [`workspace/AGENTS.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/AGENTS.md)
+- [`AGENTS.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/AGENTS.md)
+- [`workspace/AGENTS.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/AGENTS.md)
 
 ## Workspace contents
 
 **Skills (7 pipeline-specific + 2 templates + 1 utility):**
-- [`workspace/.claude/skills/design-consistency/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.claude/skills/design-consistency/SKILL.md) — 7-gate cross-document validation (power budget, cooling match, space allocation, cost coherence, phase alignment, redundancy claims, PUE feasibility)
-- [`workspace/.claude/skills/model-review/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.claude/skills/model-review/SKILL.md) — code quality and plan alignment audit for `model_datacenter.py`
-- [`workspace/.claude/skills/enhancement-quality-tracker/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.claude/skills/enhancement-quality-tracker/SKILL.md) — quality scoring and trend analysis across features
-- [`workspace/.claude/skills/implementation-drift-gate/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.claude/skills/implementation-drift-gate/SKILL.md) — 7-gate plan/model/viewer drift detection
-- [`workspace/.claude/skills/pre-merge-gate/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.claude/skills/pre-merge-gate/SKILL.md) — hard gate checking artifact completeness before PR merge
-- [`workspace/.claude/skills/iteration-closeout/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.claude/skills/iteration-closeout/SKILL.md) — post-merge workflow enforcer
-- [`workspace/.claude/skills/pipeline-strategy-review/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.claude/skills/pipeline-strategy-review/SKILL.md) — strategy effectiveness tracker
-- [`workspace/.claude/skills/tunnel-setup/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.claude/skills/tunnel-setup/SKILL.md) — Cloudflare tunnel management
+- [`workspace/.claude/skills/design-consistency/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.claude/skills/design-consistency/SKILL.md) — 7-gate cross-document validation (power budget, cooling match, space allocation, cost coherence, phase alignment, redundancy claims, PUE feasibility)
+- [`workspace/.claude/skills/model-review/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.claude/skills/model-review/SKILL.md) — code quality and plan alignment audit for `model_datacenter.py`
+- [`workspace/.claude/skills/enhancement-quality-tracker/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.claude/skills/enhancement-quality-tracker/SKILL.md) — quality scoring and trend analysis across features
+- [`workspace/.claude/skills/implementation-drift-gate/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.claude/skills/implementation-drift-gate/SKILL.md) — 7-gate plan/model/viewer drift detection
+- [`workspace/.claude/skills/pre-merge-gate/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.claude/skills/pre-merge-gate/SKILL.md) — hard gate checking artifact completeness before PR merge
+- [`workspace/.claude/skills/iteration-closeout/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.claude/skills/iteration-closeout/SKILL.md) — post-merge workflow enforcer
+- [`workspace/.claude/skills/pipeline-strategy-review/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.claude/skills/pipeline-strategy-review/SKILL.md) — strategy effectiveness tracker
+- [`workspace/.claude/skills/tunnel-setup/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.claude/skills/tunnel-setup/SKILL.md) — Cloudflare tunnel management
 
 **Heartbeats:**
-- [`workspace/heartbeats/enhance-datacenter.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/heartbeats/enhance-datacenter.md) — hourly autonomous feature pipeline (24/7)
-- [`workspace/heartbeats/design-review.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/heartbeats/design-review.md) — weekly design review (Wednesdays 10am MT)
-- [`workspace/heartbeats/memory-distill.md`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/heartbeats/memory-distill.md) — weekly memory distillation (Sundays 8pm MT)
+- [`workspace/heartbeats/enhance-datacenter.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/heartbeats/enhance-datacenter.md) — hourly autonomous feature pipeline (24/7)
+- [`workspace/heartbeats/design-review.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/heartbeats/design-review.md) — weekly design review (Wednesdays 10am MT)
+- [`workspace/heartbeats/memory-distill.md`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/heartbeats/memory-distill.md) — weekly memory distillation (Sundays 8pm MT)
 
 **Custom extension:**
-- [`workspace/.openharness/banner.json`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.openharness/banner.json) — custom banner configuration
-- [`workspace/.openharness/extensions/custom-banner.ts`](https://github.com/ryaneggz/open-harness/blob/agent/dc-designer/workspace/.openharness/extensions/custom-banner.ts) — custom banner extension
+- [`workspace/.openharness/banner.json`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.openharness/banner.json) — custom banner configuration
+- [`workspace/.openharness/extensions/custom-banner.ts`](https://github.com/mifunedev/openharness/blob/agent/dc-designer/workspace/.openharness/extensions/custom-banner.ts) — custom banner extension
 
 ## How to use it
 

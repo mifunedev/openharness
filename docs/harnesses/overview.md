@@ -56,7 +56,7 @@ Three surfaces cover most day-to-day use:
 - **T3 Code** — browser UI on port `3773` driving Claude / Codex / OpenCode.
 - **Docs app** — the Docusaurus site you're reading now, on port `3000`.
 
-Each runs in its own named tmux session per [`context/rules/sandbox-processes.md`](https://github.com/ryaneggz/open-harness/blob/development/context/rules/sandbox-processes.md). For the two browser surfaces, open them in **VS Code's Simple Browser** (`Ctrl+Shift+P` → `Simple Browser: Show`; `Cmd+Shift+P` on macOS) so the live UI sits in a tab next to the code you're editing.
+Each runs in its own named tmux session per [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md). For the two browser surfaces, open them in **VS Code's Simple Browser** (`Ctrl+Shift+P` → `Simple Browser: Show`; `Cmd+Shift+P` on macOS) so the live UI sits in a tab next to the code you're editing.
 
 ### Pi+Slack
 

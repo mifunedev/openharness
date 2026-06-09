@@ -116,7 +116,7 @@ hermes
 ```
 
 For long-running interactive sessions, wrap in a tmux session per
-[`context/rules/sandbox-processes.md`](https://github.com/ryaneggz/open-harness/blob/development/context/rules/sandbox-processes.md):
+[`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md):
 
 ```bash
 tmux new-session -d -s agent-hermes 'hermes'

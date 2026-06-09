@@ -10,13 +10,13 @@ The Blog Writer is a technical content agent that writes for [ruska.ai/blog](htt
 
 ## Branch
 
-[github.com/ryaneggz/open-harness@agent/blog-writer](https://github.com/ryaneggz/open-harness/tree/agent/blog-writer)
+[github.com/mifunedev/openharness@agent/blog-writer](https://github.com/mifunedev/openharness/tree/agent/blog-writer)
 
 ## Spin up
 
 ```bash
 # Clone the harness and check out this agent's branch in a worktree:
-git clone https://github.com/ryaneggz/open-harness.git ~/.openharness
+git clone https://github.com/mifunedev/openharness.git ~/.openharness
 cd ~/.openharness
 mkdir -p .worktrees/agent
 git worktree add .worktrees/agent/blog-writer origin/agent/blog-writer
@@ -26,21 +26,21 @@ make shell
 ```
 
 First files to read inside the sandbox:
-- [`AGENTS.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/AGENTS.md)
-- [`workspace/AGENTS.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/AGENTS.md)
+- [`AGENTS.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/AGENTS.md)
+- [`workspace/AGENTS.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/AGENTS.md)
 
 ## Workspace contents
 
-- [`workspace/.claude/skills/blog-writing/SKILL.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/.claude/skills/blog-writing/SKILL.md) — primary skill: blog post creation, social media derivation, PR workflow, and exact frontmatter format
-- [`workspace/.claude/agents/agent-builder.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/.claude/agents/agent-builder.md) — sub-agent for scaffolding new agents
-- [`workspace/.claude/agents/command-builder.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/.claude/agents/command-builder.md) — sub-agent for building CLI commands
-- [`workspace/.claude/agents/skill-builder.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/.claude/agents/skill-builder.md) — sub-agent for building new skills
-- [`workspace/.claude/posts/linkedin-template.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/.claude/posts/linkedin-template.md) — LinkedIn post template
-- [`workspace/.claude/posts/x-template.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/.claude/posts/x-template.md) — X.com post template
-- [`workspace/heartbeats/blog-writer.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/heartbeats/blog-writer.md) — weekly blog post heartbeat (Mondays 9am MT)
-- [`workspace/heartbeats/memory-distill.md`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/heartbeats/memory-distill.md) — Sunday memory distillation heartbeat
-- [`workspace/.pi/banner.json`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/.pi/banner.json) — custom Pi agent banner
-- [`workspace/.pi/extensions/custom-banner.ts`](https://github.com/ryaneggz/open-harness/blob/agent/blog-writer/workspace/.pi/extensions/custom-banner.ts) — Pi banner extension
+- [`workspace/.claude/skills/blog-writing/SKILL.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/.claude/skills/blog-writing/SKILL.md) — primary skill: blog post creation, social media derivation, PR workflow, and exact frontmatter format
+- [`workspace/.claude/agents/agent-builder.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/.claude/agents/agent-builder.md) — sub-agent for scaffolding new agents
+- [`workspace/.claude/agents/command-builder.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/.claude/agents/command-builder.md) — sub-agent for building CLI commands
+- [`workspace/.claude/agents/skill-builder.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/.claude/agents/skill-builder.md) — sub-agent for building new skills
+- [`workspace/.claude/posts/linkedin-template.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/.claude/posts/linkedin-template.md) — LinkedIn post template
+- [`workspace/.claude/posts/x-template.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/.claude/posts/x-template.md) — X.com post template
+- [`workspace/heartbeats/blog-writer.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/heartbeats/blog-writer.md) — weekly blog post heartbeat (Mondays 9am MT)
+- [`workspace/heartbeats/memory-distill.md`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/heartbeats/memory-distill.md) — Sunday memory distillation heartbeat
+- [`workspace/.pi/banner.json`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/.pi/banner.json) — custom Pi agent banner
+- [`workspace/.pi/extensions/custom-banner.ts`](https://github.com/mifunedev/openharness/blob/agent/blog-writer/workspace/.pi/extensions/custom-banner.ts) — Pi banner extension
 
 ## How to use it
 

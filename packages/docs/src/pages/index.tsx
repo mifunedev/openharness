@@ -113,7 +113,7 @@ export default function Home(): React.ReactElement {
                 </Link>
                 <Link
                   className="button button--secondary button--lg"
-                  href="https://github.com/ryaneggz/open-harness"
+                  href="https://github.com/mifunedev/openharness"
                 >
                   View on GitHub
                 </Link>
@@ -203,7 +203,7 @@ export default function Home(): React.ReactElement {
             <div className={styles.linkGrid}>
               <Link
                 className={styles.linkCard}
-                href="https://github.com/ryaneggz/open-harness"
+                href="https://github.com/mifunedev/openharness"
               >
                 <span className={styles.linkCardLabel}>GitHub</span>
                 <span className={styles.linkCardSub}>
@@ -212,7 +212,7 @@ export default function Home(): React.ReactElement {
               </Link>
               <Link
                 className={styles.linkCard}
-                href="https://github.com/ryaneggz/open-harness/blob/main/LICENSE"
+                href="https://github.com/mifunedev/openharness/blob/main/LICENSE"
               >
                 <span className={styles.linkCardLabel}>License</span>
                 <span className={styles.linkCardSub}>MIT — use freely</span>

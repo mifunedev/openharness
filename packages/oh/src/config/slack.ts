@@ -182,7 +182,7 @@ export async function runSlack(): Promise<number> {
   const harnessRoot = findHarnessRoot();
   const envPath = resolve(harnessRoot, ".devcontainer/.env");
   info(`Target: ${envPath}`);
-  info(`Guide:  ${link("https://github.com/ryaneggz/open-harness/blob/development/docs/integrations/slack.md", "docs/integrations/slack.md")}`);
+  info(`Guide:  ${link("https://github.com/mifunedev/openharness/blob/development/docs/integrations/slack.md", "docs/integrations/slack.md")}`);
 
   // Ensure .devcontainer/ exists so we can write to it
   const devcontainerDir = dirname(envPath);

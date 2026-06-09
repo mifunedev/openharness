@@ -29,7 +29,7 @@ The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and start
 
 ### Fork-and-clone
 
-1. Fork `ryaneggz/open-harness` on GitHub.
+1. Fork `mifunedev/openharness` on GitHub.
 2. Clone your fork:
    ```bash
    git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
@@ -43,7 +43,7 @@ The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and start
 
 1. Clone upstream:
    ```bash
-   git clone https://github.com/ryaneggz/open-harness.git my-harness && cd my-harness
+   git clone https://github.com/mifunedev/openharness.git my-harness && cd my-harness
    ```
 2. Re-point origin to your repo:
    ```bash
@@ -72,7 +72,7 @@ The installer:
 
 | Variable | Effect |
 |---|---|
-| `OH_GITHUB_REPO=<owner>/<repo>` | GitHub repository to clone (default: `ryaneggz/open-harness`). Set to your fork's slug to install your fork's code. |
+| `OH_GITHUB_REPO=<owner>/<repo>` | GitHub repository to clone (default: `mifunedev/openharness`). Set to your fork's slug to install your fork's code. |
 | `OH_GITHUB_REF=<git-ref>` | Pin the cloned repo to a specific tag, branch, or SHA instead of `main`. |
 | `OH_INSTALL_REF=<git-ref>` | Back-compat alias for `OH_GITHUB_REF`. Both names work; `OH_GITHUB_REF` takes precedence when both are set. |
 | `OH_ASSUME_YES=1` | Accept defaults at every prompt. |
@@ -99,8 +99,8 @@ Use this path when you want more control or are setting up a CI environment.
 
 ```bash
 # Forkers: substitute your fork URL here.
-git clone https://github.com/ryaneggz/open-harness.git
-cd open-harness
+git clone https://github.com/mifunedev/openharness.git
+cd openharness
 ```
 
 ### 2. Configure the environment

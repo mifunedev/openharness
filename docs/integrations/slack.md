@@ -143,7 +143,7 @@ tmux attach -t client-slack
 
 Detach with `Ctrl-b d`. The session name `client-slack` follows the `client-`
 prefix convention in
-[`context/rules/sandbox-processes.md`](https://github.com/ryaneggz/open-harness/blob/development/context/rules/sandbox-processes.md).
+[`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
 
 </details>
 
@@ -189,9 +189,9 @@ the env (before attaching to tmux).
 
 The extension is self-contained under `.pi/extensions/slack/`. For the full
 file inventory, env var reference, and build/test instructions, see
-[`.pi/extensions/slack/README.md`](https://github.com/ryaneggz/open-harness/blob/development/.pi/extensions/slack/README.md).
+[`.pi/extensions/slack/README.md`](https://github.com/mifunedev/openharness/blob/development/.pi/extensions/slack/README.md).
 
 For upstream lineage, sync model, and divergence history, see
-[`.pi/UPSTREAM.md`](https://github.com/ryaneggz/open-harness/blob/development/.pi/UPSTREAM.md).
+[`.pi/UPSTREAM.md`](https://github.com/mifunedev/openharness/blob/development/.pi/UPSTREAM.md).
 
 [Connecting to the Sandbox](/docs/connecting)

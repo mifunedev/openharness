@@ -25,7 +25,7 @@ echo "Branch: $BRANCH | Commit: $SHA"
 2. **Find the latest CI run for this branch:**
 
 ```bash
-gh api "repos/ryaneggz/open-harness/actions/runs?branch=$BRANCH&per_page=1" \
+gh api "repos/mifunedev/openharness/actions/runs?branch=$BRANCH&per_page=1" \
   --jq '.workflow_runs[0] | {id: .id, status: .status, conclusion: .conclusion, head_sha: .head_sha[:7], name: .name}'
 ```
 
@@ -34,7 +34,7 @@ gh api "repos/ryaneggz/open-harness/actions/runs?branch=$BRANCH&per_page=1" \
 ```bash
 RUN_ID=<id from step 2>
 for i in $(seq 1 20); do
-  STATUS=$(gh api "repos/ryaneggz/open-harness/actions/runs/$RUN_ID" --jq '.status')
+  STATUS=$(gh api "repos/mifunedev/openharness/actions/runs/$RUN_ID" --jq '.status')
   if [ "$STATUS" = "completed" ]; then
     break
   fi
@@ -46,7 +46,7 @@ done
 4. **Check the result:**
 
 ```bash
-gh api "repos/ryaneggz/open-harness/actions/runs/$RUN_ID" \
+gh api "repos/mifunedev/openharness/actions/runs/$RUN_ID" \
   --jq '{status: .status, conclusion: .conclusion, url: .html_url}'
 ```
 
@@ -54,11 +54,11 @@ gh api "repos/ryaneggz/open-harness/actions/runs/$RUN_ID" \
 
 ```bash
 # Get the failed job ID
-JOB_ID=$(gh api "repos/ryaneggz/open-harness/actions/runs/$RUN_ID/jobs" \
+JOB_ID=$(gh api "repos/mifunedev/openharness/actions/runs/$RUN_ID/jobs" \
   --jq '.jobs[] | select(.conclusion == "failure") | .id')
 
 # Get the failure context (15 lines before the error)
-gh api "repos/ryaneggz/open-harness/actions/jobs/$JOB_ID/logs" 2>&1 \
+gh api "repos/mifunedev/openharness/actions/jobs/$JOB_ID/logs" 2>&1 \
   | grep -B 15 "Process completed with exit code" | head -25
 ```
 

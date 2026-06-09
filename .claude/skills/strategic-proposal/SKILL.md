@@ -76,8 +76,8 @@ Read the following to build the briefing:
 - `MEMORY.md` — past decisions, lessons learned
 - `Makefile`, `scripts/`, `install/` — orchestrator entrypoints and provisioning surface
 - `apps/docs/` — documentation site source
-- Open issues: `gh api "repos/ryaneggz/open-harness/issues?state=open&per_page=50"`
-- Repo stats: `gh api repos/ryaneggz/open-harness --jq '{stars: .stargazers_count, forks: .forks_count}'`
+- Open issues: `gh api "repos/mifunedev/openharness/issues?state=open&per_page=50"`
+- Repo stats: `gh api repos/mifunedev/openharness --jq '{stars: .stargazers_count, forks: .forks_count}'`
 
 ### 3. Compose the Current State Briefing
 
@@ -176,25 +176,25 @@ The council's final output becomes the pinned issue body.
 
 Search for existing:
 ```bash
-gh api "repos/ryaneggz/open-harness/issues?state=open&labels=roadmap&per_page=10" \
+gh api "repos/mifunedev/openharness/issues?state=open&labels=roadmap&per_page=10" \
   --jq '[.[] | select(.title == "Product Roadmap")] | first'
 ```
 
 If none exists:
 ```bash
-gh label create roadmap --repo ryaneggz/open-harness \
+gh label create roadmap --repo mifunedev/openharness \
   --description "Product roadmap tracking" --color "0075ca" 2>/dev/null || true
 
-gh issue create --repo ryaneggz/open-harness \
+gh issue create --repo mifunedev/openharness \
   --title "Product Roadmap" --label roadmap \
   --body "<council output>"
 ```
 
-Then pin it: `gh issue pin <NUMBER> --repo ryaneggz/open-harness`
+Then pin it: `gh issue pin <NUMBER> --repo mifunedev/openharness`
 
 If it already exists, update:
 ```bash
-gh issue edit <NUMBER> --repo ryaneggz/open-harness --body "<council output>"
+gh issue edit <NUMBER> --repo mifunedev/openharness --body "<council output>"
 ```
 
 ### 9. Write roadmap data to docs/roadmap.md

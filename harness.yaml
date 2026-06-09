@@ -18,8 +18,8 @@ sandbox:
   timezone: America/Denver   # TZ — cron schedules, log timestamps
 
 git:
-  user_name: Your Name           # GIT_USER_NAME (spaces OK)
-  user_email: you@example.com    # GIT_USER_EMAIL
+  # user_name: Your Name           # GIT_USER_NAME (spaces OK)
+  # user_email: you@example.com    # GIT_USER_EMAIL
 
 install:
   # opencode: false            # INSTALL_OPENCODE — OpenCode CLI (build arg)

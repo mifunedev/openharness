@@ -14,8 +14,8 @@
 # Apply changes with: make destroy && make sandbox
 
 sandbox:
-  name: openharness          # SANDBOX_NAME — container + compose project name
-  timezone: America/Denver   # TZ — cron schedules, log timestamps
+  # name: openharness          # SANDBOX_NAME — container + compose project name
+  # timezone: America/Denver   # TZ — cron schedules, log timestamps
 
 git:
   # user_name: Your Name           # GIT_USER_NAME (spaces OK)

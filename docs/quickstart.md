@@ -50,10 +50,10 @@ demand via `npx`. Authenticate at least one harness before use:
 
 - **[Claude Code](./harnesses/claude-code.md)**: run `claude` and follow the OAuth prompt
 - **[Codex](./harnesses/codex.md)**: run `codex login`
-- **[OpenCode](./harnesses/opencode.md)**: set `INSTALL_OPENCODE=true`, rebuild, then run `opencode auth login`
+- **[OpenCode](./harnesses/opencode.md)**: set `install.opencode: true` in `harness.yaml` (or `INSTALL_OPENCODE=true` in `.devcontainer/.env`), rebuild, then run `opencode auth login`
 - **[Pi](./harnesses/pi.md)**: configure provider keys via environment variables
-- **[DeepAgents](./harnesses/deepagents.md)**: set `INSTALL_DEEPAGENTS=true`, rebuild, then write provider keys to `~/.deepagents/.env`
-- **[Hermes](./harnesses/hermes.md)**: set `INSTALL_HERMES=true`, rebuild, then run `hermes setup`
+- **[DeepAgents](./harnesses/deepagents.md)**: set `install.deepagents: true` in `harness.yaml` (or `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env`), rebuild, then write provider keys to `~/.deepagents/.env`
+- **[Hermes](./harnesses/hermes.md)**: set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`), rebuild, then run `hermes setup`
 - **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `npx t3` (browser UI on port 3773)
 
 Claude Code remains the documented default. See
@@ -72,25 +72,46 @@ gh auth login && gh auth setup-git
 
 ## Configuration
 
-`.devcontainer/.env` is the single customization surface — generated with
-safe defaults during install. The most-edited values:
+`harness.yaml` at the repo root is the master config for all non-secret settings. `.devcontainer/.env` holds secrets only. Every key in the shipped file is commented out (defaults shown) — uncomment a key to activate it; an active key overrides the same setting in `.devcontainer/.env`.
+
+```yaml
+# harness.yaml — non-secret settings (example)
+sandbox:
+  name: openharness
+  timezone: UTC
+install:
+  opencode: false
+  deepagents: false
+  hermes: false
+  agent_browser: false
+```
+
+**Secrets** — keep in `.devcontainer/.env` only (gitignored):
 
 | Var | Purpose |
 |-----|---------|
-| `SANDBOX_NAME` | Container/compose project name |
 | `GH_TOKEN` | GitHub token for non-interactive auth |
-| `TZ` | Container timezone |
-| `INSTALL_AGENT_BROWSER` | Set `true` to install Chromium (~1 GB) |
-| `INSTALL_OPENCODE` | Set `true` to include OpenCode in the sandbox image |
-| `INSTALL_DEEPAGENTS` | Set `true` to include DeepAgents in the sandbox image |
-| `INSTALL_HERMES` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
+| `SLACK_APP_TOKEN` | Slack Socket Mode app token (`xapp-`) |
+| `SLACK_BOT_TOKEN` | Slack bot token (`xoxb-`) |
+
+**Non-secret settings** — set in `harness.yaml` (`harness.yaml` takes precedence over `.devcontainer/.env`):
+
+| `harness.yaml` key | Purpose |
+|--------------------|---------|
+| `sandbox.name` | Container/compose project name |
+| `sandbox.timezone` | Container timezone |
+| `install.agent_browser` | Set `true` to install Chromium (~1 GB) |
+| `install.opencode` | Set `true` to include OpenCode in the sandbox image |
+| `install.deepagents` | Set `true` to include DeepAgents in the sandbox image |
+| `install.hermes` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
 
 Apply changes with `make destroy && make sandbox`.
 
 For additional services, the base ships with an opt-in Postgres overlay
-at `.devcontainer/docker-compose.postgres.yml`; for anything else
-(tunnels, reverse proxies), register your own compose overlay by
-appending it to `composeOverrides[]` in `config.json`.
+at `.devcontainer/docker-compose.postgres.yml`. For anything else
+(tunnels, reverse proxies), add tracked overlays under `compose.overrides:` in
+`harness.yaml`, or add user-local overlays to `composeOverrides[]` in
+`config.json` (gitignored, last wins).
 
 ## Next steps
 

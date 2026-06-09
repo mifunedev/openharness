@@ -289,8 +289,11 @@ fi
 # Per SPEC v0.7 §"Croner runtime" + .claude/rules/sandbox-processes.md.
 # Replaces the legacy heartbeat-daemon watchdog. Runs as sandbox user
 # inside the system-cron tmux session; logs tee to /tmp/system-cron.log.
-CRONS_DIR="$HARNESS/crons"
-mkdir -p "$CRONS_DIR"
+case "${CRONS_DIR:-crons}" in
+  /*) CRONS_PATH="${CRONS_DIR}" ;;
+  *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-crons}" ;;
+esac
+mkdir -p "$CRONS_PATH"
 # Bind-mounted; sandbox UID is synced to host UID above, so no chown.
 if [ -f "$HARNESS/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
   if ! gosu sandbox tmux has-session -t system-cron 2>/dev/null; then

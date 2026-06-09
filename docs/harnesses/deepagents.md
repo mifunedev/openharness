@@ -24,11 +24,14 @@ mix or non-interactive shell-allow-list model is the right fit for a task.
 
 ## Install (optional)
 
-Enable DeepAgents in `.devcontainer/.env`:
+Enable DeepAgents in `harness.yaml`:
 
-```env
-INSTALL_DEEPAGENTS=true
+```yaml
+install:
+  deepagents: true
 ```
+
+Or set `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env` (legacy).
 
 Then rebuild/restart the sandbox:
 
@@ -52,8 +55,8 @@ Verify the install inside the sandbox:
 deepagents -v
 ```
 
-If the command is not found, confirm `INSTALL_DEEPAGENTS=true` is present
-in `.devcontainer/.env`, then rebuild with `make stop && make sandbox`.
+If the command is not found, confirm `install.deepagents: true` is set in
+`harness.yaml` (or `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env`), then rebuild with `make stop && make sandbox`.
 
 ## Authentication and provider keys
 

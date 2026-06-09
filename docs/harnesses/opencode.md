@@ -9,11 +9,14 @@ OpenCode is a terminal coding agent that can run interactively or execute one-sh
 
 ## Install (optional)
 
-Enable OpenCode in `.devcontainer/.env`:
+Enable OpenCode in `harness.yaml`:
 
-```env
-INSTALL_OPENCODE=true
+```yaml
+install:
+  opencode: true
 ```
+
+Or set `INSTALL_OPENCODE=true` in `.devcontainer/.env` (legacy).
 
 Then rebuild/restart the sandbox:
 

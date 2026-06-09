@@ -80,7 +80,7 @@ The wizard:
 - Validates token prefixes (`xapp-` / `xoxb-`) before writing — swapped
   tokens are caught at the prompt, not after launch.
 - Enforces the deny-default allowlist rule (at least one of
-  `SLACK_ALLOW_USERS` / `SLACK_ALLOW_CHANNELS` is required).
+  `SLACK_ALLOW_USERS` / `SLACK_ALLOW_CHANNELS` is required; set under `slack:` in `harness.yaml` or in `.devcontainer/.env`).
 - Writes only the Slack keys; unrelated entries (`GH_TOKEN`, `TZ`, etc.)
   are preserved.
 - **Starts the Slack bridge for you** — at the end, it kills any
@@ -103,6 +103,17 @@ hand), the manual procedure still works:
 
 `.devcontainer/.env` uses Docker Compose `KEY=value` format — no `export`
 prefix. This file is gitignored, so your tokens will not be committed.
+Keep secrets (`SLACK_APP_TOKEN`, `SLACK_BOT_TOKEN`) here. Allowlists can be
+set here too, or (preferred) under `slack:` in `harness.yaml`:
+
+```yaml
+# harness.yaml — allowlists (non-secret, tracked)
+slack:
+  allow_users: "U01ABCD2345,U02EFGH6789"
+  # allow_channels: "C01ABCD2345,C02EFGH6789"
+```
+
+Or in `.devcontainer/.env` (legacy):
 
 ```
 SLACK_APP_TOKEN=xapp-...
@@ -169,7 +180,7 @@ the env (before attaching to tmux).
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Bot doesn't respond; allowlist is set | `pi` did not inherit the vars — `set -a` ran in a different shell than `tmux new-session` | Kill the session (`tmux kill-session -t client-slack`), run `set -a; source …; set +a`, then relaunch `tmux new-session` in the same shell |
-| Bot doesn't respond; no allowlist set | Deny-default: both `SLACK_ALLOW_CHANNELS` and `SLACK_ALLOW_USERS` are unset | Add at least one allowlist var to `.devcontainer/.env` and relaunch |
+| Bot doesn't respond; no allowlist set | Deny-default: both `SLACK_ALLOW_CHANNELS` and `SLACK_ALLOW_USERS` are unset | Set at least one allowlist under `slack:` in `harness.yaml` (and rebuild), or add to `.devcontainer/.env` and relaunch |
 | `invalid_auth` or `not_authed` in log | `xapp-` and `xoxb-` tokens are swapped | `SLACK_APP_TOKEN` must be the `xapp-` token; `SLACK_BOT_TOKEN` must be the `xoxb-` token — correct in `.devcontainer/.env` and relaunch |
 | Socket Mode crashes / reconnects in a loop | Network interruption or token revoked | `tmux kill-session -t client-slack`, verify tokens in `.devcontainer/.env`, then relaunch |
 | Bot is in allow-list but channel messages ignored | Bot is not a member of the channel | In Slack, type `/invite @OpenHarness` in the target channel |

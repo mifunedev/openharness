@@ -57,10 +57,10 @@ make shell       # enter the isolated sandbox
 # inside the sandbox, launch any core agent:
 #   claude     # Claude Code (default)
 #   codex      # OpenAI Codex CLI
-#   opencode   # OpenCode (optional: set INSTALL_OPENCODE=true and rebuild)
+#   opencode   # OpenCode (optional: set install.opencode: true in harness.yaml and rebuild)
 #   pi         # Pi Coding Agent
-#   deepagents # LangChain DeepAgents (optional: set INSTALL_DEEPAGENTS=true and rebuild)
-#   hermes     # Nous Research Hermes (optional: set INSTALL_HERMES=true and rebuild)
+#   deepagents # LangChain DeepAgents (optional: set install.deepagents: true in harness.yaml and rebuild)
+#   hermes     # Nous Research Hermes (optional: set install.hermes: true in harness.yaml and rebuild)
 make destroy     # stop and remove the sandbox
 make help        # all targets
 ```
@@ -73,10 +73,10 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 ## ⚙️ Configure (optional)
 
-`.devcontainer/.env` is generated with safe defaults during install. Open
-it any time to change `SANDBOX_NAME`, set a different `GH_TOKEN`, change
-`TZ`, or set `SLACK_*` tokens for the Pi Slack extension. Apply with
-`make destroy && make sandbox`.
+`harness.yaml` is the master config for non-secret settings (sandbox name,
+timezone, optional installs, Slack allowlists, compose overlays).
+`.devcontainer/.env` holds secrets only (`GH_TOKEN`, `SLACK_APP_TOKEN`,
+`SLACK_BOT_TOKEN`). Apply changes with `make destroy && make sandbox`.
 
 <details><summary>Manual setup (no installer)</summary>
 

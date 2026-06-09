@@ -1,0 +1,42 @@
+# harness.yaml — Open Harness master config (tracked).
+#
+# Everything non-secret lives here. Secrets (GH_TOKEN, SLACK_APP_TOKEN,
+# SLACK_BOT_TOKEN) live ONLY in gitignored .devcontainer/.env.
+# Keys set here OVERRIDE .devcontainer/.env for the same setting.
+#
+# Format: flat two-level section/key only — parsed by
+# scripts/harness-config.sh (plain awk; no yq). No anchors or nesting
+# beyond the compose.overrides list. Commented keys are inactive
+# (.env / compose defaults apply) — every key ships commented with its
+# default shown, so a fresh clone changes nothing; uncomment to take over
+# a setting from .env.
+#
+# Apply changes with: make destroy && make sandbox
+
+sandbox:
+  name: openharness          # SANDBOX_NAME — container + compose project name
+  timezone: America/Denver   # TZ — cron schedules, log timestamps
+
+git:
+  # user_name: Your Name           # GIT_USER_NAME (spaces OK)
+  # user_email: you@example.com    # GIT_USER_EMAIL
+
+install:
+  # opencode: false            # INSTALL_OPENCODE — OpenCode CLI (build arg)
+  # deepagents: false          # INSTALL_DEEPAGENTS — DeepAgents CLI (build arg)
+  # hermes: false              # INSTALL_HERMES — Hermes CLI (build arg + runtime)
+  # agent_browser: false       # INSTALL_AGENT_BROWSER — agent-browser + Chromium (~1 GB)
+
+crons:
+  # dir: crons                 # CRONS_DIR — directory the cron runtime scans
+  # agent_bin: claude          # CRON_AGENT_BIN — binary that fires scheduled tasks
+
+slack:
+  # allow_users: U01ABCD2345       # SLACK_ALLOW_USERS — comma-separated user IDs
+  # allow_channels: C01ABCD2345    # SLACK_ALLOW_CHANNELS — comma-separated channel IDs
+
+compose:
+  # Tracked overlay paths, applied before user-local config.json
+  # composeOverrides[] (last -f wins → user-local beats tracked).
+  # overrides:
+  #   - .devcontainer/docker-compose.example.yml

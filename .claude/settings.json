@@ -120,7 +120,7 @@
       }
     ]
   },
-  "effortLevel": "high",
+  "effortLevel": "xhigh",
   "plansDirectory": ".claude/plans",
   "model": "claude-opus-4-8[1m]",
   "statusLine": {

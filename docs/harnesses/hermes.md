@@ -11,8 +11,7 @@ skills from experience, scheduled task automation, sub-agent delegation,
 container sandboxing across multiple backends, and bridges to chat
 platforms (Telegram, Discord, Slack, WhatsApp, Signal, Email).
 
-Hermes is an **optional image-level runtime** in Open Harness. When
-enabled with `INSTALL_HERMES=true`, it sits alongside `claude`, `codex`,
+Hermes is an **optional image-level runtime** in Open Harness. When enabled (set `install.hermes: true` in `harness.yaml` or `INSTALL_HERMES=true` in `.devcontainer/.env`), it sits alongside `claude`, `codex`,
 `pi`, `opencode`, and `deepagents` as a sandbox CLI primitive. Canonical
 facts about Hermes live in the wiki entry `wiki/hermes-agent.md`.
 
@@ -32,11 +31,14 @@ facts about Hermes live in the wiki entry `wiki/hermes-agent.md`.
 ## Install (optional)
 
 Hermes is disabled by default. To install it into the sandbox image, set
-`.devcontainer/.env`:
+`harness.yaml`:
 
-```env
-INSTALL_HERMES=true
+```yaml
+install:
+  hermes: true
 ```
+
+Or set `INSTALL_HERMES=true` in `.devcontainer/.env` (legacy).
 
 Then rebuild/restart the sandbox:
 
@@ -100,7 +102,7 @@ directory from the checkout. Remove that directory manually if you want a
 full Hermes project-state reset.
 
 The Hermes binary itself is installed in the image when
-`INSTALL_HERMES=true`, under the installer's root Linux FHS layout
+`install.hermes: true` is set in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`), under the installer's root Linux FHS layout
 (`/usr/local/lib/hermes-agent` with a `/usr/local/bin/hermes` launcher).
 Disabling the flag on a future rebuild omits the executable; project-local
 state remains in `.hermes/` until removed.
@@ -138,8 +140,7 @@ configuration.
 
 The sandbox onboarding banner reports Hermes as:
 
-- `[✗] not installed — set INSTALL_HERMES=true and rebuild` — when the
-  binary is absent from PATH.
+- `[✗] not installed` — set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`) and rebuild — when the binary is absent from PATH.
 - `[✓] installed — run: hermes setup` — when the binary is on PATH but
   `~/.hermes/auth.json` is absent or empty.
 - `[✓] authenticated` — when `~/.hermes/auth.json` exists and is

@@ -47,6 +47,10 @@ services:
       - INSTALL_AGENT_BROWSER=${INSTALL_AGENT_BROWSER:-false}
       - INSTALL_HERMES=${INSTALL_HERMES:-false}
       - HERMES_HOME=/home/sandbox/harness/.hermes
+      - CRONS_DIR=${CRONS_DIR:-crons}
+      - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
+      - SLACK_ALLOW_USERS=${SLACK_ALLOW_USERS:-}
+      - SLACK_ALLOW_CHANNELS=${SLACK_ALLOW_CHANNELS:-}
     stdin_open: true
     tty: true
     init: true

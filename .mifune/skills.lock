@@ -6,14 +6,13 @@
   "generated_by": "git-sync/manual",
   "generated_at": "2026-05-22T00:00:00Z",
   "skills": {
-    "reflect": {
+    "retro": {
       "source": "github:mifunedev/skills",
-      "registry_version": "2026.5.22",
+      "registry_version": "in-tree",
       "skill_version": "0.1.0",
-      "commit": "d35ad8d6deec8f418873d73c0a5bf46e42644b23",
-      "checksum": "sha256:9be176e0dc115ab40ea839d1155a3e21a42105553020d5270cc88453f47c270e",
-      "installed_paths": [".claude/skills/reflect"],
-      "note": "Merged to github:mifunedev/skills master via PR #5. Checksum is the registry folder-algorithm value (matches the upstream entry)."
+      "commit": "pending-upstream",
+      "installed_paths": [".claude/skills/retro"],
+      "note": "In-tree fork of upstream mifunedev/skills `reflect`, rewritten as `/retro`; diverged from registry so checksum dropped and commit marked pending-upstream."
     },
     "caveman": {
       "source": "github:JuliusBrussee/caveman",

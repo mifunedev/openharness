@@ -14,6 +14,22 @@ Spawn 5 specialized expert sub-agents in parallel, each proposing roadmap items 
 
 **Core principle: SIGNAL OVER FEATURES.** Items require evidence of user demand before entering "Build Now" phase. Infrastructure prerequisites are exempt. The Critic ensures the council isn't inflating signal or sandbagging complexity.
 
+## Variant: V2MOM / strategic operating model → wiki plan
+
+Use this variant when the user asks for a council to define a V2MOM, operating model, strategic principles, or a plan to add strategic synthesis to the wiki. Do **not** force the full roadmap/GitHub-issue publishing flow unless the user explicitly asks for a roadmap update.
+
+1. Gather current product truth from README/docs/context/wiki plus live external signal if available.
+2. Spawn a small lens-diverse council (e.g. Product/Founder, Systems/Ops, Market/Docs) rather than the roadmap-specific five expert roles.
+3. Run one adversarial Strategy Critic after the council draft. The critic must challenge overreach, weak measures, contradictions, and wiki-scope mistakes.
+4. Final synthesis should separate:
+   - **Council decision**: Vision, Values, Methods, Obstacles, Measures.
+   - **Wiki plan**: exact target entry, draft frontmatter/body, verification, and rejected scope.
+5. Prefer one bounded provisional wiki entry first. Extra positioning/docs-IA entries are premature unless they hold distinct durable facts.
+6. Keep wiki output as synthesis, not council minutes. Raw/source material belongs under `wiki/raw/`; the tracked entry stays within the wiki word cap and starts `confidence: provisional`.
+7. Add explicit approval gates for contested strategic wording (e.g. tagline, key nouns, whether a constraint is too narrow) before implementing file changes.
+
+Session example and final V2MOM synthesis: `references/open-harness-v2mom-council.md`.
+
 ## Decision Flow
 
 ```mermaid

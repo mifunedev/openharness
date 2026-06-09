@@ -58,6 +58,7 @@ No other forms are documented or supported. `argument-hint` frontmatter above en
 - Capturing a new source: page, article, gist, local file.
 - Re-ingesting a source to refresh an existing wiki entry (update path).
 - Promoting a sub-agent draft to a tracked wiki entry.
+- Researching a broader topic from a seed link or "add to wiki" request; see `references/official-docs-research-wiki.md` for the official-docs research pattern.
 
 ## When NOT to use
 
@@ -269,6 +270,7 @@ Then apply the qualify/improve pass per `context/rules/memory.md` § Write:
 ## Anti-patterns
 
 - **Monolithic ingest scripts when a safety gate is likely** — avoid bundling network fetch, raw snapshot write, wiki synthesis, and log append into one large `execute_code` call. If approval or shell-safety friction appears, split the ingest into auditable steps: fetch/snapshot with a small `terminal` command, create or update `wiki/<slug>.md` with `write_file`/`patch`, then append the memory log separately. The invariant is the same (raw snapshot + bounded synthesized entry + log), but smaller tool calls are easier to approve, verify, and recover.
+- **Consent-gated write recovery** — if a multi-file ingest is blocked by a consent/approval gate, report exactly which files would be written and wait for explicit approval. Prefer splitting the approved recovery into the smallest direct file operations (`write_file` for the wiki entry/raw snapshots, `patch`/append for the log) rather than wrapping all writes in `execute_code`; approval state may not carry cleanly into a monolithic script retry. If the tool explicitly says not to retry or not to attempt the same outcome via another tool, stop and report the blocker. Otherwise, after approval, complete the intended ingest and verify the synthesized wiki entry, the raw snapshot size, and the log entry before declaring success. Do not treat the pre-approval fetch metadata as an ingest; no wiki operation is complete until raw snapshot + entity page + log all exist.
 - **Writing directly to `wiki/` from a sub-agent context** — always use the draft path + `--from-draft` promotion. The orchestrator is the sole writer.
 - **Hardcoding today's date in `--from-draft` resolution** — glob `memory/*/wiki-drafts/<slug>.md` and sort by the ISO date in the directory name, not by mtime and not by assuming today.
 - **Using mtime for stale detection** — mtime is unreliable across git checkouts and Docker volume remounts. Always derive staleness from the ISO date in the parent directory name.

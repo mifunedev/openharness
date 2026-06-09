@@ -55,6 +55,7 @@ workspace/startup.sh
 # Hermes project-local runtime state (keep README tracked)
 /.hermes/*
 !/.hermes/README.md
+!/.hermes/hooks/
 
 **/scheduled_tasks.lock
 # Workspace package build artifacts (Docusaurus + future packages/*)

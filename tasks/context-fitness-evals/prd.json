@@ -1,0 +1,137 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/1-context-fitness-evals",
+    "description": "Context fitness-function eval system: deterministic Tier-A probes (exit-code oracle, real-state) registered per lesson, a shared ablation gate generalizing /context-audit Tier-2's restore mechanics, an evals/RESULTS.md benchmark, a /eval runner skill + weekly cron, and a harden/proceduralize/eval triage. Tier-B behavioral evals are out of scope for v1.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Establish evals/ corpus and probe contract",
+            "description": "As the orchestrator, I need a defined home and convention for probes so every later story has a contract to target.",
+            "acceptanceCriteria": [
+                "evals/ directory created with a tracked README.md per context/rules/directory-readme.md (intent, subfolder table, conventions, pointer to this PRD)",
+                "Probe convention documented: a probe is evals/probes/<id>.sh; 3-state exit oracle is 0=PASS, 1=REGRESSION, 2=SKIPPED/not-applicable; stderr carries a one-line reason",
+                "Probe header convention: comment lines '# tier: A|ablation', '# source: <ref>', '# desc: <one line>'; exact extraction contract is grep -E '^# (tier|source|desc):'",
+                "evals/RESULTS.md schema defined (columns: probe id | tier | last-run UTC | status | source); policy is OVERWRITE the current-status row per probe-id, git history is the time series (no unbounded append) [M-4]",
+                ".gitignore reviewed: probe scripts and RESULTS.md are tracked; ablation temp copies are not",
+                "shellcheck passes on any example probe shipped"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Foundation. Resolves §9 RESULTS.md policy + header-grep open questions per §10 M-4."
+        },
+        {
+            "id": "US-002",
+            "title": "/eval runner skill",
+            "description": "As the orchestrator, I want one command that runs the probe suite against real state and records results so the benchmark is a single invocation.",
+            "acceptanceCriteria": [
+                ".claude/skills/eval/SKILL.md created; discovers evals/probes/*.sh, executes each wrapped in timeout (default 30s; hung probe marked TIMEOUT, non-PASS) [M-6]",
+                "Collects the 3-state exit code (0/1/2) + stderr reason; renders SKIPPED distinctly from PASS in RESULTS.md and never counts SKIPPED as PASS or REGRESSION [M-5]",
+                "Writes/updates evals/RESULTS.md with per-probe status and an explicit delta vs previous run; on FIRST run (no prior file) every probe is new-pass/new-fail and NO REGRESSION is raised without prior state [M-4]",
+                "A green->red transition is reported as a REGRESSION line naming the probe's source, at the top of the run summary",
+                "On startup, detects orphaned *.bak from a crashed prior ablation and restores them before running [M-2]",
+                "Supports --probe <id> and --tier A filters",
+                "Appends a Memory Improvement Protocol log entry per context/rules/memory.md",
+                "Adds bare entries eval, health-check, retro under 'Orchestrator skills' in .claude/protected-paths.txt in this same change [M-3]",
+                "Registered in the orchestrator skills table in AGENTS.md (edit the symlink target via readlink -f CLAUDE.md, not a resolved copy)",
+                "shellcheck / markdown structure check passes"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": "Depends on US-001 contract. Folds M-2/M-3/M-4/M-5/M-6."
+        },
+        {
+            "id": "US-003",
+            "title": "Seed probe next-dev-prod (Tier-A state probe)",
+            "description": "As the orchestrator, I want the recurring next dev leak encoded as a probe so the omission can never be silently re-paid.",
+            "acceptanceCriteria": [
+                "evals/probes/next-dev-prod.sh inspects real state (running processes / tmux pane serving public mifunedev/website) and exits 1 (REGRESSION) while the public site is served by next dev",
+                "When the website sandbox is absent it exits 2 (SKIPPED) with a clear stderr reason; exit 0 on an absent sandbox is FORBIDDEN [M-5]",
+                "Completes within the default probe timeout; no hang on an unreachable sandbox [M-6]",
+                "Header declares '# tier: A', '# source: memory/MEMORY.md 2026-06-04'",
+                "Running /eval --probe next-dev-prod records the probe in RESULTS.md (expected current status: REGRESSION)",
+                "shellcheck passes"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": "Catches the omission failure that motivated the system."
+        },
+        {
+            "id": "US-004",
+            "title": "Harden the /dev/tcp-in-zsh lesson (hook + unit-test probe)",
+            "description": "As the orchestrator, I want the /dev/tcp foot-gun warned-on deterministically rather than relied on as a remembered rule.",
+            "acceptanceCriteria": [
+                "A PreToolUse Bash hook under .claude/hooks/ detects /dev/tcp/ in a command and emits a NON-BLOCKING warning (stderr, exit 0) recommending ss/curl/nc; it must not deny the command [M-7]",
+                "Hook registered in .claude/settings.json under hooks.PreToolUse following the existing deny-env-dump.sh pattern (bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/<script>) [M-7]",
+                "No false-positive on substrings like .devcontainer or paths merely containing dev (explicit command-position class, not \\b)",
+                "evals/probes/devtcp-hook.sh unit-tests the hook via the file-fixture driver pattern (tokens in shell vars, driver written to a file) and asserts the warning fires; exit 0=PASS",
+                "Header declares '# tier: A', '# source: memory/MEMORY.md 2026-06-10 (zsh /dev/tcp)'",
+                "shellcheck passes on hook + probe"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": "Harden surface (not a behavioral eval). settings.json wiring confirmed to exist."
+        },
+        {
+            "id": "US-005",
+            "title": "Proceduralize docker stats into /health-check (step + doc-lint probe)",
+            "description": "As the orchestrator, I want the diagnose-RAM-with-docker-stats technique baked into the skill, guarded by a probe that the step still exists.",
+            "acceptanceCriteria": [
+                ".claude/skills/health-check/SKILL.md gains an explicit step: when memory is the binding constraint, run docker stats per-container and drop into the heaviest container's process list — EXTENDS, does not remove any existing ladder step [FR-10]",
+                "evals/probes/health-check-docker-stats.sh doc-lints the skill: greps for the docker stats step and exits 1 if absent, 0 if present",
+                "Header declares '# tier: A', '# source: memory/MEMORY.md 2026-06-10 (docker stats vs ps Size)'",
+                "shellcheck passes; /health-check skill structure intact"
+            ],
+            "priority": 5,
+            "passes": false,
+            "notes": "Proceduralize surface. The doc-lint probe is the regression guard for the added step."
+        },
+        {
+            "id": "US-006",
+            "title": "Ablation gate via shared scripts/ablate.sh",
+            "description": "As a context curator, I want to run a probe with and without a target context file so I can prove the file load-bearing before deleting it.",
+            "acceptanceCriteria": [
+                "scripts/ablate.sh extracts ONLY the file swap/restore/trap mechanics from /context-audit SKILL.md:255-268 (cp .bak -> trap mv EXIT -> swap -> restore); both /eval and /context-audit source it — no duplication, and the claude -p oracle is NOT reused [M-1]",
+                "/eval --ablate <context-file> --probe <id> runs the probe with the target file present and removed; the oracle is the shell probe's exit code; reports LOAD-BEARING (regression on removal) or PRUNABLE (no change) [M-1]",
+                "git diff --exit-code HEAD passes after each run; ablate.sh writes the .bak path to stderr at start so /eval can recover orphans after a hard kill [M-2]",
+                "/context-audit existing Tier-2 behavior is unchanged (it now sources the shared helper instead of inlining it)",
+                "Result recorded distinctly in RESULTS.md (tier 'ablation')",
+                "shellcheck / markdown check passes"
+            ],
+            "priority": 6,
+            "passes": false,
+            "notes": "Prune-half of the fitness function. Reuse boundary corrected per §10 M-1 (mechanics not oracle)."
+        },
+        {
+            "id": "US-007",
+            "title": "Weekly cron: scheduled benchmark + regression surfacing",
+            "description": "As the orchestrator, I want the suite to run unattended weekly so regressions surface without a human remembering to run /eval.",
+            "acceptanceCriteria": [
+                "Implementer FIRST reads scripts/cron-runtime.ts to confirm how a cron task runs a skill; if skill-delegation is unsupported, crons/eval-weekly.md INLINES probe discovery+run rather than delegating to /eval [M-8]",
+                "crons/eval-weekly.md created following the existing cron spec shape (compatible with scripts/cron-runtime.ts), overlap: false",
+                "On any REGRESSION the cron writes a dated entry to memory/<UTC-date>/log.md naming the regressed probe and its source; log-only is accepted v1 behavior (auto-issue/notification is v2) [M-8]",
+                "Does not modify or remove crons/heartbeat.md or crons/cleanup-tasks.md [FR-10]",
+                "A crons/README.md row documents the new entry",
+                "shellcheck / markdown check passes"
+            ],
+            "priority": 7,
+            "passes": false,
+            "notes": "Depends on /eval. Cron executability gated on reading cron-runtime.ts first."
+        },
+        {
+            "id": "US-008",
+            "title": "/retro integration — minimal triage tag (v1)",
+            "description": "As the orchestrator closing a session, I want /retro to route each supported lesson to its cheapest correction surface so lessons become closeable instead of becoming bullets.",
+            "acceptanceCriteria": [
+                "v1 ships ONLY the minimal triage tag: .claude/skills/retro/SKILL.md tags each supported promotable lesson with harden|proceduralize|eval and proposes a probe id (or hook/skill-step) [M-9]",
+                "The triage defaults away from behavioral evals; proposing a Tier-B eval requires an explicit note",
+                "/retro existing scientific loop AND propose-then-confirm gate are PRESERVED, not replaced; recurrence-escalation + deeper integration are explicitly split to a follow-up [M-9]",
+                "A follow-up note is recorded in the PRD/issue for the split-out recurrence-escalation work",
+                "Markdown structure check passes"
+            ],
+            "priority": 8,
+            "passes": false,
+            "notes": "Scope split per §10 M-9 to protect the confirm gate."
+        }
+    ]
+}

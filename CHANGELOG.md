@@ -11,6 +11,18 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Added
 
 ### Changed
+
+### Fixed
+
+### Removed
+
+### Deprecated
+
+### Security
+
+## [2026.6.10] - 2026-06-10
+
+### Changed
 - Separate the maintainer's personal/instance state from the public template so it ships clean and fork-ready: `memory/MEMORY.md` reset to an empty stub, the `context/IDENTITY.md` lessons list emptied, `context/USER.md` "Working context" genericized to placeholders, the social account-ID line dropped from `context/TOOLS.md`, and `crons/heartbeat.md` timezone set to `America/Los_Angeles`. The private fork (`ryaneggz/openharness`) retains the full content ([#400](https://github.com/mifunedev/openharness/issues/400)).
 - Default sandbox timezone changed from `America/Denver` to `America/Los_Angeles` across the image, compose, install script, and cron docs/config — overridable via `harness.yaml`/`.devcontainer/.env` ([#400](https://github.com/mifunedev/openharness/issues/400)).
 
@@ -20,10 +32,6 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Removed
 - Maintainer's research wiki (11 `wiki/*.md` entries plus tracked `wiki/raw/` snapshots) and accumulated task history (`tasks/archive/**`, in-flight `tasks/make-shell-service-arg/`) from the public template — moved to the private fork ([#400](https://github.com/mifunedev/openharness/issues/400)).
 - Personal agent-fleet docs (`docs/agents/`) and their matching `agent/*` workspace branches from the public template — moved to the private fork ([#400](https://github.com/mifunedev/openharness/issues/400)).
-
-### Deprecated
-
-### Security
 
 ## [2026.6.9] - 2026-06-09
 

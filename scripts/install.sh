@@ -321,7 +321,7 @@ if [ -f "$REPO_DIR/.devcontainer/.env" ]; then
   ok "Existing .devcontainer/.env preserved (delete it to regenerate)"
 else
   # Detect host values for harness.yaml pre-population
-  __TZ="$(cat /etc/timezone 2>/dev/null || echo America/Denver)"
+  __TZ="$(cat /etc/timezone 2>/dev/null || echo America/Los_Angeles)"
   __GIT_NAME="$(git config --get user.name 2>/dev/null || true)"
   __GIT_EMAIL="$(git config --get user.email 2>/dev/null || true)"
 

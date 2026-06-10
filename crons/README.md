@@ -15,7 +15,7 @@ See `scripts/cron-runtime.ts` for the runtime implementation
 ---
 id: <unique-id>          # must match filename, kebab-case
 schedule: "0 23 * * 0"   # 5-field cron expression
-timezone: America/Denver
+timezone: America/Los_Angeles
 enabled: true
 overlap: false           # skip new fire if previous still running
 catchup: false           # don't replay missed fires after downtime

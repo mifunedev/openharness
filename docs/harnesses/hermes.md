@@ -12,8 +12,8 @@ container sandboxing across multiple backends, and bridges to chat
 platforms (Telegram, Discord, Slack, WhatsApp, Signal, Email).
 
 Hermes is an **optional image-level runtime** in Open Harness. When enabled (set `install.hermes: true` in `harness.yaml` or `INSTALL_HERMES=true` in `.devcontainer/.env`), it sits alongside `claude`, `codex`,
-`pi`, `opencode`, and `deepagents` as a sandbox CLI primitive. Canonical
-facts about Hermes live in the wiki entry `wiki/hermes-agent.md`.
+`pi`, `opencode`, and `deepagents` as a sandbox CLI primitive. See the
+upstream documentation below for canonical facts about Hermes.
 
 ## Purpose
 
@@ -151,4 +151,3 @@ The sandbox onboarding banner reports Hermes as:
 - [Hermes landing page](https://hermes-agent.nousresearch.com/)
 - [Hermes documentation](https://hermes-agent.nousresearch.com/docs/)
 - [`NousResearch/hermes-agent` on GitHub](https://github.com/NousResearch/hermes-agent)
-- Open Harness wiki: `wiki/hermes-agent.md`

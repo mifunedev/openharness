@@ -35,15 +35,13 @@ When the maintainer asks for something to be tracked across sessions ("check on 
 
 ## Working context
 
-- **Primary project**: `open-harness` (this repo) — the orchestrator + harness packs scaffolding
-- **Collateral projects**: `@ryaneggz/mifune` (harness pack with Pi/Mom Slack bot, extracted from this repo in v0.7)
-- **Brand architecture**: Mifune is the company; Open Harness is the current product focus. Copy should avoid making `@ryaneggz/mifune`/Mom the primary product unless the task is explicitly about the pack.
-- **Social voice**: Emoji are welcome when they add structure and scanability. Marketing posts should use concrete product truth, one clear thesis, defensible claims, and platform-specific copy.
-- **Social quality gate**: For external marketing posts, use at least two critics (brand/positioning and skeptical-buyer) and revise until both clear the agreed bar. If core inputs are missing, research first, then grill the maintainer before scheduling.
-- **Social accounts**: Until brand pages are explicitly supported, schedule through the maintainer's personal LinkedIn (`Ryan Eggleston`) and X (`@JohnEggz`) accounts.
-- **X constraints**: Treat X as non-Premium unless the user confirms the blue check / longer-post entitlement is active. Validate scheduled X copy against the 280 weighted-character limit, not raw string length.
-- **Time zone**: America/Denver (per `crons/heartbeat.md` timezone field)
-- **Single-user harness** — per `.claude/ICP.md`, this is a single working developer's project, not multi-tenant
+Project-specific context the orchestrator needs each session. A fork replaces the placeholders below with its own.
+
+- **Primary project**: `<your-repo>` — what this harness tends.
+- **Collateral projects**: `<related repos or packs, if any>`.
+- **Time zone**: `<IANA tz>` — keep in sync with the `timezone` field in `crons/heartbeat.md`.
+- **Single vs. multi-user**: note whether this is a single-developer harness or shared.
+- **External surfaces**: list any social / publishing / notification accounts the agent may act through, plus their guardrails (e.g. require critic review before posting). Keep concrete account IDs and handles OUT of this tracked file — reference a gitignored or secret store instead.
 
 ## What to NOT do
 
@@ -52,4 +50,4 @@ When the maintainer asks for something to be tracked across sessions ("check on 
 - **Don't add features beyond what was asked.** Bug fix doesn't need surrounding cleanup; one-shot operation doesn't need a helper.
 - **Don't write planning docs unless asked.** Work from conversation context.
 
-This file is updated after sessions that produce new patterns. Last updated: 2026-05-05 (social scheduling session: Mifune/Open Harness brand architecture, emoji structure, personal social accounts, X non-Premium validation).
+This file is updated after sessions that produce new patterns.

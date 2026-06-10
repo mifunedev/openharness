@@ -1,7 +1,7 @@
 ---
 id: heartbeat
 schedule: "0 * * * *"
-timezone: America/Denver
+timezone: America/Los_Angeles
 enabled: true
 overlap: false
 catchup: false

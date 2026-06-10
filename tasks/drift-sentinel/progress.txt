@@ -1,2 +1,14 @@
 # progress
 
+## US-001..US-004 — 2026-06-10 (via /autopilot → /delegate)
+
+**Files changed**: .claude/skills/drift-check/SKILL.md (new), AGENTS.md, .claude/protected-paths.txt, crons/heartbeat.md, CHANGELOG.md
+**Result**: PASS (all 4 stories)
+
+### What I did
+Implemented the drift-sentinel feature in one /delegate wave (4 parallel general-purpose workers, disjoint files). Authored the read-only /drift-check skill (framework/branch-behind/cron-staleness), registered it in the Skills table + protected-paths, wired a step-2.7 heartbeat invocation (step-2.5 allowlist preserved byte-identical), and added a CHANGELOG entry. Orchestrator corrected two workers' drifted prose (changelog + heartbeat parentheticals) to match the skill's real semantics.
+
+### Learnings for future iterations
+File-writing /delegate workers must be subagent_type general-purpose; workers can hallucinate prose specifics (drift-class semantics) — the advisor must verify worker output against the authored artifact, not just AC checkboxes.
+
+STATUS: COMPLETE

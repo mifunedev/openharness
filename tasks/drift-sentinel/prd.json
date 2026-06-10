@@ -19,8 +19,8 @@
                 "Pre-commit hook (lint + tests) passes"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Done 2026-06-10; .claude/skills/drift-check/SKILL.md authored (3 sections, read-only)."
         },
         {
             "id": "US-002",
@@ -33,8 +33,8 @@
                 "Pre-commit hook (lint + tests) passes"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Done 2026-06-10; AGENTS.md Skills row + protected-paths.txt entry."
         },
         {
             "id": "US-003",
@@ -48,8 +48,8 @@
                 "Pre-commit hook (lint + tests) passes"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Done 2026-06-10; crons/heartbeat.md step 2.7 added, allowlist byte-identical."
         },
         {
             "id": "US-004",
@@ -61,8 +61,8 @@
                 "Pre-commit hook (lint + tests) passes"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Done 2026-06-10; CHANGELOG [Unreleased]/Added entry linking #7."
         }
     ]
 }

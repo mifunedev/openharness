@@ -27,6 +27,7 @@ ship-spec
 eval
 health-check
 retro
+drift-check
 
 # --- Orchestrator scripts (scripts/) ---
 scripts/ralph.sh

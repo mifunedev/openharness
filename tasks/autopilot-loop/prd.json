@@ -16,7 +16,7 @@
         "grep '- \\[ \\]' crons/autopilot-backlog.md returns the Drift Sentinel line"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "No deps. Format precedent: crons/heartbeat.md '## Active items'."
     },
     {
@@ -31,7 +31,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "No deps. Cron shape precedent: crons/heartbeat.md."
     },
     {
@@ -50,7 +50,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Deps US-001, US-002. Precedents: health-check/SKILL.md, skill-lint/SKILL.md; heartbeat.md closing liveness line."
     },
     {
@@ -63,7 +63,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Deps US-003 (needs the description text)."
     },
     {
@@ -77,7 +77,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Deps US-001, US-002."
     },
     {
@@ -90,7 +90,7 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Deps US-003, US-004, US-005."
     }
   ]

@@ -42,9 +42,14 @@ Body becomes the agent prompt at fire time.
 
 | File | Schedule | Description |
 |------|----------|-------------|
+| `autopilot.md` | `5 * * * *` (every hour at +5 min) | Self-improving loop — select backlog item, build through full pipeline, finalize ready-for-review PR (kill-switch: `enabled: false`) |
 | `heartbeat.md` | `0 * * * *` (hourly) | Hourly pulse — review memory, surface anything urgent |
 | `cleanup-tasks.md` | `0 23 * * 0` (Sun 23:00 MT) | Weekly Ralph session sweep — archive completed tasks |
 | `eval-weekly.md` | `0 6 * * 0` (Sun 06:00 MT) | Weekly eval suite — run probes, log any regressions to memory |
+
+## Curated backlog
+
+`autopilot-backlog.md` is a **reference file, not a scheduled job**. It contains a curated checklist of harness-infra improvements that the autopilot loop reads to select its next work item. It has no `schedule:` field and is never processed by the cron runtime. Maintain it by hand to steer autopilot's priorities without touching code.
 
 ## Override
 

@@ -26,6 +26,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - Autopilot one-PR stall: shipped backlog items are now checked off after finalize (with a §2 self-heal for merged-but-unchecked items), dedupe hits advance to the next candidate instead of ending the run, dedupe also matches merged PRs so shipped work is never rebuilt, and the §1 pre-check fast-forwards `development` to origin before selecting ([#9](https://github.com/ryaneggz/openharness/issues/9)).
 - Removed the dangling `.claude/ICP.md` entry from `.claude/protected-paths.txt` — the file was deleted in `9241da6` ("sweep README/ICP refs") but its protection entry was left behind, so critic gates flagged a protected path that no longer exists.
 - De-referenced the deleted `.claude/ICP.md` from its two remaining live consumers: `/ship-spec` critic-B now reads `context/USER.md` for the single-developer / single-project framing (the lens that lived in ICP.md), and `context/USER.md` drops the dangling `per .claude/ICP.md` citation while keeping the fact.
+- Add `pull_request` trigger and expanded `paths:` filter (`.claude/skills/**`, `crons/**`, `context/**`) to `ci-harness.yml` so autopilot PRs touching skills, crons, or context get a real CI status check ([#12](https://github.com/ryaneggz/openharness/issues/12)).
 ### Removed
 ### Deprecated
 ### Security

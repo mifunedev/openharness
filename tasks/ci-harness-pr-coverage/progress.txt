@@ -16,3 +16,19 @@ Added `pull_request:` as a sibling of `push:` and `workflow_dispatch:` in the `o
 - Workflow-level concurrency block (sibling of on:/jobs:) is different from job-level placement (inside jobs.ci:).
 
 ---
+## US-002 — 2026-06-10 00:00 UTC
+
+**Title**: Record the CI coverage fix in CHANGELOG
+**Files changed**: CHANGELOG.md, tasks/ci-harness-pr-coverage/prd.json, tasks/ci-harness-pr-coverage/progress.txt
+**Commit**: TBD
+**Result**: PASS
+
+### What I did
+Added exactly one new line under the existing `### Fixed` subheading inside `## [Unreleased]` in `CHANGELOG.md`. The line describes adding the `pull_request` trigger and expanded `paths:` filter (`.claude/skills/**`, `crons/**`, `context/**`) to `ci-harness.yml` so autopilot PRs touching those paths get a real CI status check. The link points to `#12` on the `ryaneggz/openharness` repo. No other sections of CHANGELOG.md were modified.
+
+### Learnings for future iterations
+- The `[Unreleased]` `### Fixed` section already existed; do not create a new subheading, just append under the existing one.
+- Use a node/python insertion approach rather than sed for multi-line CHANGELOG edits to avoid escaping issues.
+
+---
+STATUS: COMPLETE

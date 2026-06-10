@@ -20,7 +20,7 @@
             ],
             "priority": 1,
             "passes": true,
-            "notes": "Completed on 2026-06-10; added pull_request trigger, branches filter on push, concurrency block, and 3 new paths; jobs section byte-identical"
+            "notes": "Completed on 2026-06-10; added pull_request trigger, branches filter on push, concurrency block, and 3 new paths; jobs section byte-identical; commit 26c0ee2"
         },
         {
             "id": "US-002",
@@ -32,8 +32,8 @@
                 "No other sections of CHANGELOG.md are modified; the existing ### Fixed subheading under [Unreleased] is reused (not duplicated)"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-06-10; added one Fixed entry under [Unreleased] with #12 link; no other sections touched"
         }
     ]
 }

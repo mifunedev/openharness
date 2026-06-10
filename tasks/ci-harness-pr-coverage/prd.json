@@ -1,0 +1,39 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/12-ci-harness-pr-coverage",
+    "description": "ci-harness-pr-coverage — add a pull_request trigger, scope push to development/main, add a workflow-level concurrency block, and expand the paths filter (.claude/skills, crons, context) in .github/workflows/ci-harness.yml so autopilot PRs get a real CI status check without duplicate runs. Trigger/paths only — CI job steps unchanged.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Add pull_request trigger, scope push, add concurrency, and expand paths in ci-harness.yml",
+            "description": "As the autopilot loop, I want CI to run on PRs that edit skills/crons/context so my green-CI finalize gate reflects a real check instead of a no-op, without doubling runner usage.",
+            "acceptanceCriteria": [
+                "The on: block of .github/workflows/ci-harness.yml contains workflow_dispatch:, push:, and pull_request: as sibling keys",
+                "push: carries `branches: [development, main]` (a list of development and main) so feature-branch pushes no longer fire a redundant run alongside the pull_request event",
+                "push: and pull_request: apply the IDENTICAL paths: list, written as explicit duplicated literal blocks — YAML anchors MUST NOT be used",
+                "The paths: list ADDS exactly these three entries: '.claude/skills/**', 'crons/**', 'context/**'. It does NOT add 'docs/**' or 'packages/docs/**' (already covered by docs.yml)",
+                "All original paths: entries are retained (none removed): 'packages/**', 'scripts/**', '.pi/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'vitest.config.ts', '.github/workflows/ci-harness.yml'",
+                "A top-level concurrency: block is added (sibling of on:/permissions:/jobs:) with `group: ci-harness-${{ github.ref }}` and `cancel-in-progress: true` (workflow-level placement, intentional — do not copy docs.yml job-level placement)",
+                "The jobs: section is byte-unchanged: `git diff -- .github/workflows/ci-harness.yml` shows changes confined to the on: block and the new concurrency: block, with zero additions/deletions under jobs:",
+                "The file parses as valid YAML: `python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/ci-harness.yml'))\"` exits 0"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed on 2026-06-10; added pull_request trigger, branches filter on push, concurrency block, and 3 new paths; jobs section byte-identical; commit 26c0ee2"
+        },
+        {
+            "id": "US-002",
+            "title": "Record the CI coverage fix in CHANGELOG",
+            "description": "As a maintainer, I want the CI coverage fix recorded under [Unreleased] so release notes reflect it.",
+            "acceptanceCriteria": [
+                "CHANGELOG.md gains exactly one new line under '## [Unreleased] → ### Fixed', imperative mood, with a valid ([#12](https://github.com/ryaneggz/openharness/issues/12)) link (no placeholder)",
+                "The line describes adding the pull_request trigger + expanded paths so autopilot PRs touching skills/crons/context get a CI status check",
+                "No other sections of CHANGELOG.md are modified; the existing ### Fixed subheading under [Unreleased] is reused (not duplicated)"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Completed on 2026-06-10; added one Fixed entry under [Unreleased] with #12 link; no other sections touched"
+        }
+    ]
+}

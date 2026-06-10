@@ -1,0 +1,68 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/7-drift-sentinel",
+    "description": "drift-sentinel — a read-only /drift-check skill detecting framework (origin↔upstream), branch-behind/append-file, and cron-staleness drift, with heartbeat integration. Detect-and-report only.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Author the /drift-check skill",
+            "description": "As the orchestrator, I want a /drift-check skill that detects framework, branch-behind, and cron-staleness drift so I catch silent divergence before it costs a session.",
+            "acceptanceCriteria": [
+                ".claude/skills/drift-check/SKILL.md exists with YAML frontmatter (name: drift-check; description block ending in a 'TRIGGER when:' line), mirroring .claude/skills/ci-status/SKILL.md shape",
+                "## Instructions has three labeled subsections; grep -cE '^### \\((A|B|C)\\)' .claude/skills/drift-check/SKILL.md returns 3: (A) Framework drift (origin↔upstream), (B) Branch-behind / append-file drift, (C) Host/state drift (cron-staleness)",
+                "Section (A): preflight 'git remote get-url upstream' (skip with a diagnostic if absent); timeout-wrapped offline-safe 'git fetch upstream'; on success 'git rev-list --left-right --count origin/development...upstream/development' reports N-behind, derives paths via 'git diff --name-only origin/development...upstream/development', and prints remediation 'git checkout upstream/development -- <those-paths>' (never a pathless checkout, never executed)",
+                "Section (B): uses 'git branch --show-current', timeout-wrapped 'git fetch origin', 'git rev-list --left-right --count HEAD...origin/<branch>', 'git status --porcelain'; reports behind/ahead, dirty-tree, and unexpected-branch (expected=development; OK if branch matches ^(feat|fix|task|audit|skill|agent)/)",
+                "Section (C): resolves system-cron runtime start time via crons/.pid + /proc/<pid>/stat, falls back to tmux '#{session_created}', else surfaces an 'unavailable' message; reports crons/*.md with mtime strictly after start time as 'inert until restart' and recommends restarting the runtime; defers deep host triage to /health-check with a cross-reference",
+                "Read-only guarantee: file contains no commit/push/pull/reset/merge/rebase, no working-tree-mutating checkout/restore, no host-mutating command; 'git fetch' (remote-tracking refs only) is the sole permitted, non-destructive write; the skill states it never mutates branches/tree/history/host",
+                "Output contract: prints a one-line-per-class summary; a clean class prints a single 'OK' token (no multi-line block)",
+                "Pre-commit hook (lint + tests) passes"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Register /drift-check in the Skills table and protected-paths",
+            "description": "As the orchestrator, I want /drift-check listed in the root Skills table and protected from accidental deletion, since the heartbeat now depends on it.",
+            "acceptanceCriteria": [
+                "AGENTS.md Skills table gains exactly one new row for /drift-check with a ≤15-word trigger description; grep -c '`/drift-check`' AGENTS.md returns 1",
+                "Existing table rows unchanged; Markdown pipe-alignment / table validity preserved (AGENTS.md is session-load-bearing)",
+                ".claude/protected-paths.txt gains a bare 'drift-check' entry under the '# --- Orchestrator skills' section",
+                "Pre-commit hook (lint + tests) passes"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Integrate /drift-check into the heartbeat",
+            "description": "As the orchestrator, I want the hourly heartbeat to run /drift-check and surface findings so drift is caught automatically.",
+            "acceptanceCriteria": [
+                "crons/heartbeat.md gains a new task step numbered 2.7 (after step 2.5, before step 3) invoking /drift-check and surfacing findings in the log + reply as 'DRIFT: <summary>'; on an all-clean result the heartbeat appends nothing extra (HEARTBEAT_OK unchanged)",
+                "The '### Permitted validation checks (step 2.5 must use only these)' block is byte-identical to its pre-edit content",
+                "The new step references /drift-check by name and does not duplicate the skill's command logic inline",
+                "Change is additive-only — no existing heartbeat content is deleted or deprecated; rollback is a plain git revert",
+                "Pre-commit hook (lint + tests) passes"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "Record the change in the changelog",
+            "description": "As the orchestrator, I want the changelog to note the new skill so release notes capture it.",
+            "acceptanceCriteria": [
+                "CHANGELOG.md gains one entry under '## [Unreleased] → ### Added' describing the /drift-check skill + heartbeat integration in imperative mood, with a valid ([#7](url)) link to issue #7 (no placeholder)",
+                "No duplicate changelog entry; the '### Added' subheading is created under [Unreleased] only if absent",
+                "Pre-commit hook (lint + tests) passes"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

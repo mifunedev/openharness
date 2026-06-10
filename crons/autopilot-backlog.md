@@ -21,4 +21,4 @@ Checked items (`- [x]`) are considered done and may be removed or archived by ha
 
 ## Active items
 
-- [ ] drift-sentinel: /drift-check skill + heartbeat integration detecting framework (origin↔upstream), branch-behind append-file, and host/state drift (source: memory/MEMORY.md 2026-06-10)
+- [x] drift-sentinel: /drift-check skill + heartbeat integration detecting framework (origin↔upstream), branch-behind append-file, and host/state drift (source: memory/MEMORY.md 2026-06-10) — shipped as PR #8, merged 2026-06-10

@@ -5,7 +5,7 @@
 /config.json
 .worktrees/*
 .claude/worktrees/
-tasks/*/archive/
+tasks/archive/
 !.worktrees/README.md
 
 # Build artifacts

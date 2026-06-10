@@ -18,7 +18,16 @@ This skill exists for the parts that are tedious to run by hand: version auto-in
 ### Step 1 — Resolve repo + version
 
 ```bash
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+# Resolve the canonical remote: prefer 'upstream' (fork layout where origin is
+# a private fork), else 'origin' (standard single-remote layout). All release
+# pushes target $REMOTE so a release never lands on a private fork by accident.
+if git remote get-url upstream >/dev/null 2>&1; then
+  REMOTE=upstream
+else
+  REMOTE=origin
+fi
+REPO=$(gh repo view "$(git remote get-url "$REMOTE")" --json nameWithOwner -q .nameWithOwner)
+git fetch "$REMOTE" --tags --quiet                     # version detection needs canonical tags
 TODAY=$(date '+%Y.%-m.%-d')
 
 if ! git tag --list "$TODAY" | grep -q .; then
@@ -95,13 +104,13 @@ the branch model).
 PREV_BRANCH=$(git branch --show-current)               # expected: development
 
 # Push the CHANGELOG promotion commit to development.
-git push origin "$PREV_BRANCH"
+git push "$REMOTE" "$PREV_BRANCH"
 
 # Promote development → main. main MUST be strictly behind development
 # (fast-forwardable). Abort if it has diverged — reconcile manually first.
-git fetch origin main "$PREV_BRANCH"
-if git merge-base --is-ancestor origin/main "origin/$PREV_BRANCH"; then
-  git push origin "origin/$PREV_BRANCH:main"           # clean fast-forward
+git fetch "$REMOTE" main "$PREV_BRANCH"
+if git merge-base --is-ancestor "$REMOTE/main" "$REMOTE/$PREV_BRANCH"; then
+  git push "$REMOTE" "$REMOTE/$PREV_BRANCH:main"       # clean fast-forward
   echo "main fast-forwarded to $PREV_BRANCH"
 else
   echo "Aborting: main has diverged from $PREV_BRANCH — reconcile before releasing." >&2
@@ -109,9 +118,9 @@ else
 fi
 
 # Cut the release branch from main and tag it.
-git checkout -b "release/$VERSION" origin/main
-git push origin "release/$VERSION"
-git tag "$VERSION" && git push origin "$VERSION"    # triggers release.yml
+git checkout -b "release/$VERSION" "$REMOTE/main"
+git push "$REMOTE" "release/$VERSION"
+git tag "$VERSION" && git push "$REMOTE" "$VERSION"    # triggers release.yml
 ```
 
 After step 4, `main` and `development` are converged (both at the
@@ -141,8 +150,16 @@ done
 
 ```bash
 gh release view "$VERSION" --repo "$REPO"
-gh api "users/${REPO%%/*}/packages/container/${REPO##*/}/versions" \
-  --jq '.[0] | {tags: .metadata.container.tags, created: .created_at}'
+
+# GHCR package owner may be an org or a user — try org first, fall back to user.
+# Listing needs the read:packages scope; the release.yml docker-push step is the
+# authoritative confirmation if the token lacks it.
+OWNER=${REPO%%/*}; PKG=${REPO##*/}
+gh api "orgs/$OWNER/packages/container/$PKG/versions" \
+    --jq '.[0] | {tags: .metadata.container.tags, created: .created_at}' 2>/dev/null \
+  || gh api "users/$OWNER/packages/container/$PKG/versions" \
+    --jq '.[0] | {tags: .metadata.container.tags, created: .created_at}' 2>/dev/null \
+  || echo "(package listing needs read:packages scope — verify via the release.yml run's docker push step)"
 ```
 
 ### Step 7 — Return to previous branch + report

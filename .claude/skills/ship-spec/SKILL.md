@@ -76,7 +76,7 @@ Both critics receive an additional cross-check instruction: read `.claude/protec
 > Focus on:
 > 1. **Vague acceptance criteria** — flag any AC that isn't directly verifiable
 > 2. **Missing dependencies** — what does each story silently assume exists?
-> 3. **Pattern conflicts** — does any story break an existing convention in this repo? Read `.claude/rules/*.md` and `tasks/openharness-v07-convergence/prd.json` for established patterns.
+> 3. **Pattern conflicts** — does any story break an existing convention in this repo? Read `.claude/rules/*.md` (and any sibling `tasks/*/prd.json`, if present) for established patterns.
 > 4. **Scope creep within stories** — are any "single iteration" stories actually 2+ stories?
 > 5. **Hidden destructive operations** — does any story imply file deletion / branch deletion / PR closure that isn't explicitly gated?
 > 6. **Protected-path violations** — does any story propose touching a `.claude/protected-paths.txt` entry without override note? If yes, raise SEVERITY: H and tag the finding with `[PROTECTED-PATH]`.
@@ -181,11 +181,11 @@ The skill produces `tasks/<slug>/prd.json` with `branchName: <prefix>/<N>-<slug>
 
 ### Stage 7 — Scaffold `prompt.md` + `progress.txt`
 
-Clone `tasks/openharness-v07-convergence/prompt.md` as the template. Adapt:
-- Replace `openharness-v07-convergence` with `<slug>` throughout
-- Replace `task/210-openharness-v07-convergence` with `<prefix>/<N>-<slug>`
-- Update the read-context list (step 1) to point at this task's prd.md, prd.json, critique.md, progress.txt
-- Reference `.claude/rules/advisor-model.md` for any critic-gated stories
+Clone `.claude/skills/ship-spec/templates/prompt.md` as the template (it ships with `<slug>`, `<prefix>/<N>-<slug>`, `<NNN>`, and `#<issue>` placeholders). Adapt:
+- Replace `<slug>` with this task's slug throughout
+- Replace `<prefix>/<N>-<slug>` with the real branch name
+- Replace `#<issue>` with the tracking issue number
+- Confirm the read-context list (step 1) points at this task's prd.md, prd.json, critique.md, progress.txt (the template already references `.claude/rules/advisor-model.md` for critic-gated stories)
 
 Write `tasks/<slug>/progress.txt` with header only:
 
@@ -342,4 +342,4 @@ v1 stops at draft PR because the loop launch is the highest-blast-radius step in
 | `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | (v2 — CI verification) |
 | advisor-model rule | `.claude/rules/advisor-model.md` | Critic-gate pattern (3-step variant) |
 | Protected-paths list | `.claude/protected-paths.txt` | Stage 3 — load-bearing items critics must not propose deleting |
-| Convergence task template | `tasks/openharness-v07-convergence/` | Stage 7 — prompt.md template |
+| Ralph prompt template | `.claude/skills/ship-spec/templates/prompt.md` | Stage 7 — prompt.md template |

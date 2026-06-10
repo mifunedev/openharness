@@ -13,6 +13,8 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Changed
 
 ### Fixed
+- `/release` skill now resolves the canonical remote (prefers `upstream`, else `origin`) for `REPO` and all release pushes, so a release can't accidentally land on a private fork; GHCR verification tries the org package path before the user path ([#402](https://github.com/mifunedev/openharness/issues/402)).
+- `/ship-spec` Stage 7 now clones a self-contained `.claude/skills/ship-spec/templates/prompt.md` instead of the deleted `tasks/archive/openharness-v07-convergence/prompt.md`; repointed the two other dead references to that task ([#402](https://github.com/mifunedev/openharness/issues/402)).
 
 ### Removed
 

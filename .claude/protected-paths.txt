@@ -24,6 +24,9 @@ skill-lint
 delegate
 strategic-proposal
 ship-spec
+eval
+health-check
+retro
 
 # --- Orchestrator scripts (scripts/) ---
 scripts/ralph.sh

@@ -252,11 +252,13 @@ Back up the target file, run all probes, restore. Use `trap` to guarantee restor
 
 ```bash
 TARGET="$HARNESS/$ARGUMENTS_FILE"   # the <file> arg from --ablate
-cp "$TARGET" "${TARGET}.bak"
-trap 'mv "${TARGET}.bak" "$TARGET" 2>/dev/null; echo "restored $TARGET"' EXIT
 
-mv "${TARGET}.bak.tmp" "${TARGET}.bak" 2>/dev/null || true
-mv "$TARGET" "${TARGET}.bak"
+# Swap/restore/trap mechanics are shared with /eval — see scripts/ablate.sh
+# (prd.md §10 M-1). ablate_swap_out backs up + removes TARGET and arms an EXIT
+# trap (plus a crash-recovery sentinel /eval restores on startup). Only the
+# mechanics are shared; the `claude -p` marker oracle below stays /context-audit's own.
+source "$HARNESS/scripts/ablate.sh"
+ablate_swap_out "$TARGET"
 
 for probe in "$PROBE_DIR"/*.md; do
   pname=$(basename "$probe" .md)
@@ -265,7 +267,7 @@ for probe in "$PROBE_DIR"/*.md; do
   echo "ablation: $pname → $RESULTS/ablation-${pname}.txt"
 done
 
-# trap fires on EXIT and restores the file
+# the EXIT trap armed by ablate_swap_out restores TARGET
 ```
 
 #### 6c. Evaluate degradation

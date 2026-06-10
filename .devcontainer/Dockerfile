@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim
 
-ENV TZ=Etc/UTC
+ENV TZ=America/Los_Angeles
 
 # ─── System packages ────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \

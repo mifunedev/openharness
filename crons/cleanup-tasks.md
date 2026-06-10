@@ -1,7 +1,7 @@
 ---
 id: cleanup-tasks
 schedule: "0 23 * * 0"
-timezone: Etc/UTC
+timezone: America/Los_Angeles
 enabled: true
 overlap: false
 catchup: false

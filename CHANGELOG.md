@@ -11,6 +11,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Added
 ### Changed
 ### Fixed
+- Removed the dangling `.claude/ICP.md` entry from `.claude/protected-paths.txt` — the file was deleted in `9241da6` ("sweep README/ICP refs") but its protection entry was left behind, so critic gates flagged a protected path that no longer exists.
 ### Removed
 ### Deprecated
 ### Security

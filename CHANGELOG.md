@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- Context fitness-function eval corpus (`evals/`) — deterministic probes with a 3-state exit oracle (PASS/REGRESSION/SKIPPED) and a `RESULTS.md` benchmark scoreboard ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 ### Changed
 ### Fixed
 ### Removed

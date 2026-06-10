@@ -17,8 +17,8 @@
                 "shellcheck passes on any example probe shipped"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": "Foundation. Resolves §9 RESULTS.md policy + header-grep open questions per §10 M-4."
+            "passes": true,
+            "notes": "Done 2026-06-10 (Wave 1): evals/README.md (contract: 3-state oracle, header grep, triage), evals/RESULTS.md (overwrite-row schema)."
         },
         {
             "id": "US-002",

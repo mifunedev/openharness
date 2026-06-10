@@ -1,0 +1,85 @@
+# evals/ — Context fitness-function probe corpus
+
+This directory is the harness's **fitness function**: a corpus of deterministic
+**probes** that turn lessons into runnable, exit-code-scored checks against
+*real state*. A rectification is provably "done" when its probe is green; a
+recurrence surfaces as a was-green-now-red regression. See
+`tasks/context-fitness-evals/prd.md` for the full design and `context/rules/memory.md`
+for how lessons map to probes.
+
+## Subfolders
+
+| Path | Holds |
+|------|-------|
+| `probes/` | One `<id>.sh` per probe (Tier-A deterministic + `ablation`). |
+| `RESULTS.md` | The benchmark scoreboard — current status per probe id (see schema below). |
+
+## Probe contract
+
+A probe is an executable shell script at `evals/probes/<id>.sh` with a
+**3-state exit-code oracle**:
+
+| Exit | Meaning | Counts toward benchmark? |
+|------|---------|--------------------------|
+| `0` | **PASS** — desired state present / bad condition absent | yes (pass) |
+| `1` | **REGRESSION** — the bad condition is present | yes (fail) |
+| `2` | **SKIPPED** — not applicable in this environment (e.g. target sandbox absent) | no — neither pass nor regression |
+
+Exit `0` when a probe *cannot verify anything* (e.g. an absent sandbox) is
+**forbidden** — use `2` so a silent green never masks an unverifiable check.
+Any other non-zero exit is treated as an error (non-PASS). `stderr` MUST carry a
+one-line human reason for the result.
+
+### Probe header (metadata)
+
+Every probe declares three comment lines (the runner extracts them with the
+exact contract `grep -E '^# (tier|source|desc):'`):
+
+```sh
+#!/usr/bin/env bash
+# tier: A          # A | ablation
+# source: memory/MEMORY.md 2026-06-04   # the lesson/rule this probe closes
+# desc: public mifune.dev is not served by `next dev`
+set -euo pipefail
+# ... inspect REAL state (running processes, actual files, live sandbox) — never mocks ...
+```
+
+Probes MUST inspect real state/artifacts, never synthetic fixtures — except
+hook-unit-test probes, which use the documented file-fixture driver pattern
+(test driver written to a script file, sensitive tokens in shell variables).
+
+### Timeout
+
+Every probe must complete within a bounded time; the `/eval` runner wraps each
+in `timeout` (default 30s) and marks a hung probe `TIMEOUT` (non-PASS).
+
+## RESULTS.md schema
+
+`RESULTS.md` is the benchmark. Policy: **overwrite the current-status row per
+probe id**; git history is the time series (no unbounded append). On the first
+run (no prior rows) every probe is emitted as `new-pass`/`new-fail` and NO
+`REGRESSION` is raised without a prior state.
+
+| Column | Meaning |
+|--------|---------|
+| `probe` | probe id (`<id>` of `evals/probes/<id>.sh`) |
+| `tier` | `A` \| `ablation` |
+| `last-run (UTC)` | timestamp of the most recent `/eval` that ran it |
+| `status` | `PASS` \| `REGRESSION` \| `SKIPPED` \| `TIMEOUT` |
+| `source` | the lesson/rule the probe closes |
+
+## Correction-surface triage
+
+Not every lesson becomes a probe. Route each lesson to the **cheapest reliable
+surface** first:
+
+| Surface | Use when | Artifact |
+|---------|----------|----------|
+| **harden** | the lesson is a guardrail | a hook + a unit-test probe |
+| **proceduralize** | the lesson is a technique | a skill step + a doc-lint probe |
+| **eval** | genuine judgment residue only | (Tier-B — deferred; never a hard gate in v1) |
+
+## Runner
+
+`/eval` (`.claude/skills/eval/`) discovers `evals/probes/*.sh`, runs each, and
+writes `RESULTS.md`. A weekly cron (`crons/eval-weekly.md`) runs it unattended.

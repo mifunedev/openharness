@@ -50,19 +50,22 @@ jobs:
         working-directory: packages/docs
         run: pnpm run build
 
+      # Pages deploy only runs on the canonical repo. Forks build-validate docs
+      # (the build job above) but skip deploy — they have no Pages site enabled,
+      # and configure-pages would fail with "Resource not accessible by integration".
       - name: Configure Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'mifunedev/openharness'
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'mifunedev/openharness'
         uses: actions/upload-pages-artifact@v3
         with:
           path: packages/docs/build
 
   deploy:
     name: Deploy to GitHub Pages
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'mifunedev/openharness'
     needs: build
     runs-on: ubuntu-latest
     concurrency:

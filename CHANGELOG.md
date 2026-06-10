@@ -13,6 +13,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Changed
 
 ### Fixed
+- `Docs: build & deploy` workflow no longer fails on forks: the Pages `Configure`/`Upload`/`Deploy` steps are gated to the canonical repo (`github.repository == 'mifunedev/openharness'`), so forks build-validate docs without attempting a Pages deploy. Also removed a dangling `docs/harnesses/t3code.md` link to the deleted `integrations/cloudflare.md` ([#404](https://github.com/mifunedev/openharness/issues/404)).
 - `/release` skill now resolves the canonical remote (prefers `upstream`, else `origin`) for `REPO` and all release pushes, so a release can't accidentally land on a private fork; GHCR verification tries the org package path before the user path ([#402](https://github.com/mifunedev/openharness/issues/402)).
 - `/ship-spec` Stage 7 now clones a self-contained `.claude/skills/ship-spec/templates/prompt.md` instead of the deleted `tasks/archive/openharness-v07-convergence/prompt.md`; repointed the two other dead references to that task ([#402](https://github.com/mifunedev/openharness/issues/402)).
 

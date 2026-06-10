@@ -1,2 +1,18 @@
 # progress
 
+## US-001 — 2026-06-10 00:00 UTC
+
+**Title**: Add pull_request trigger, scope push, add concurrency, and expand paths in ci-harness.yml
+**Files changed**: .github/workflows/ci-harness.yml, tasks/ci-harness-pr-coverage/prd.json, tasks/ci-harness-pr-coverage/progress.txt
+**Commit**: TBD
+**Result**: PASS
+
+### What I did
+Added `pull_request:` as a sibling of `push:` and `workflow_dispatch:` in the `on:` block of `.github/workflows/ci-harness.yml`. Added `branches: [development, main]` to `push:` to prevent duplicate runs on feature branches. Added 3 new paths (`.claude/skills/**`, `crons/**`, `context/**`) to both `push:` and `pull_request:` as identical duplicated literal blocks (no YAML anchors). Added a top-level `concurrency:` block (`group: ci-harness-${{ github.ref }}`, `cancel-in-progress: true`) as a sibling of `on:`, `permissions:`, and `jobs:`. The `jobs:` section was not touched.
+
+### Learnings for future iterations
+- The `**` glob in YAML paths is not a YAML anchor — grep for actual YAML anchor syntax `&name` / `*name` separately.
+- GitHub Actions does not support YAML anchors, so paths lists must be explicitly duplicated between push and pull_request.
+- Workflow-level concurrency block (sibling of on:/jobs:) is different from job-level placement (inside jobs.ci:).
+
+---

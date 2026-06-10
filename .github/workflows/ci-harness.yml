@@ -3,6 +3,9 @@ name: "CI: Harness"
 on:
   workflow_dispatch:
   push:
+    branches:
+      - development
+      - main
     paths:
       - "packages/**"
       - "scripts/**"
@@ -12,6 +15,26 @@ on:
       - "pnpm-workspace.yaml"
       - "vitest.config.ts"
       - ".github/workflows/ci-harness.yml"
+      - ".claude/skills/**"
+      - "crons/**"
+      - "context/**"
+  pull_request:
+    paths:
+      - "packages/**"
+      - "scripts/**"
+      - ".pi/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "vitest.config.ts"
+      - ".github/workflows/ci-harness.yml"
+      - ".claude/skills/**"
+      - "crons/**"
+      - "context/**"
+
+concurrency:
+  group: ci-harness-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

@@ -19,8 +19,8 @@
                 "The file parses as valid YAML: `python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/ci-harness.yml'))\"` exits 0"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-06-10; added pull_request trigger, branches filter on push, concurrency block, and 3 new paths; jobs section byte-identical"
         },
         {
             "id": "US-002",

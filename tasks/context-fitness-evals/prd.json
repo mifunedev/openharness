@@ -37,7 +37,7 @@
                 "shellcheck / markdown structure check passes"
             ],
             "priority": 2,
-            "passes": false,
+            "passes": true,
             "notes": "Depends on US-001 contract. Folds M-2/M-3/M-4/M-5/M-6."
         },
         {
@@ -53,7 +53,7 @@
                 "shellcheck passes"
             ],
             "priority": 3,
-            "passes": false,
+            "passes": true,
             "notes": "Catches the omission failure that motivated the system."
         },
         {
@@ -69,7 +69,7 @@
                 "shellcheck passes on hook + probe"
             ],
             "priority": 4,
-            "passes": false,
+            "passes": true,
             "notes": "Harden surface (not a behavioral eval). settings.json wiring confirmed to exist."
         },
         {
@@ -83,7 +83,7 @@
                 "shellcheck passes; /health-check skill structure intact"
             ],
             "priority": 5,
-            "passes": false,
+            "passes": true,
             "notes": "Proceduralize surface. The doc-lint probe is the regression guard for the added step."
         },
         {
@@ -130,7 +130,7 @@
                 "Markdown structure check passes"
             ],
             "priority": 8,
-            "passes": false,
+            "passes": true,
             "notes": "Scope split per §10 M-9 to protect the confirm gate."
         }
     ]

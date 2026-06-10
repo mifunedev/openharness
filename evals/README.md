@@ -48,6 +48,14 @@ Probes MUST inspect real state/artifacts, never synthetic fixtures — except
 hook-unit-test probes, which use the documented file-fixture driver pattern
 (test driver written to a script file, sensitive tokens in shell variables).
 
+A probe that references repo files MUST resolve the repo root from
+`${BASH_SOURCE[0]}` — never cwd, never a hard-coded absolute path. `/eval` runs
+probes from an arbitrary working directory, so the canonical preamble is:
+
+```sh
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"   # evals/probes/<id>.sh -> root
+```
+
 ### Timeout
 
 Every probe must complete within a bounded time; the `/eval` runner wraps each

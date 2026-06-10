@@ -10,7 +10,12 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ### Added
 - Context fitness-function eval corpus (`evals/`) — deterministic probes with a 3-state exit oracle (PASS/REGRESSION/SKIPPED) and a `RESULTS.md` benchmark scoreboard ([#1](https://github.com/ryaneggz/openharness/issues/1)).
+- `/eval` runner skill (`.claude/skills/eval/`) — runs the probe suite against real state, writes the benchmark, surfaces green→red regressions naming the lesson each closes ([#1](https://github.com/ryaneggz/openharness/issues/1)).
+- `warn-devtcp` PreToolUse hook — non-blocking warning when a Bash command uses `/dev/tcp` (suggests `ss`/`curl`/`nc`, since zsh lacks the pseudo-device) ([#1](https://github.com/ryaneggz/openharness/issues/1)).
+- Seed probes `next-dev-prod`, `devtcp-hook`, `health-check-docker-stats` ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 ### Changed
+- `/health-check` gains an in-container RAM-reclaim step (`docker stats` per-container; RAM ≠ `docker ps` Size) ([#1](https://github.com/ryaneggz/openharness/issues/1)).
+- `/retro` gains a correction-surface triage tag (harden/proceduralize/eval) routing each promotable lesson to its cheapest closing artifact ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 ### Fixed
 ### Removed
 ### Deprecated

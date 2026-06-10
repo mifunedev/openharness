@@ -39,7 +39,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - SANDBOX_NAME=${SANDBOX_NAME:-openharness}
-      - TZ=${TZ:-America/Denver}
+      - TZ=${TZ:-Etc/UTC}
       - CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true
       - GIT_USER_NAME=${GIT_USER_NAME:-}
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}

@@ -23,14 +23,4 @@ This directory holds structured entity pages compiled and maintained by the orch
 Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wiki.md`
 ## Index
 
-| Slug | Title | Tags | Updated |
-| --- | --- | --- | --- |
-| compound-engineering | Compound Engineering | [compound-engineering, agent-harness, ai-engineering, feedback-loops, self-improvement, methodology] | 2026-06-04 |
-| codegraph-mcp | CodeGraph MCP for Reducing Agent Code-Exploration Tool Calls | [codegraph, mcp, code-exploration, tree-sitter, sqlite, tool-calls] | 2026-05-30 |
-| latmd-knowledge-graph | Lat.md Project Knowledge Graph for Agent Context | [agent-context, knowledge-graph, markdown, test-specs, semantic-search] | 2026-05-30 |
-| inspectable-agent-harness | Inspectable Agent Harness Workflows | [claude-code, agent-harness, coding-agents, ai-engineering] | 2026-05-29 |
-| deepagents | DeepAgents CLI | [agent, cli, langchain, deepagents, optional, primitive] | 2026-05-28 |
-| opencode | OpenCode CLI | [agent, cli, opencode, optional, primitive] | 2026-05-28 |
-| hermes-agent | Hermes Agent CLI | [agent, cli, nousresearch, hermes, primitive] | 2026-05-26 |
-| learn-harness-engineering | Learn Harness Engineering (Walking Labs course) | [harness, agents, education, course, open-harness] | 2026-05-26 |
-| sequoia-capital-the-next-1t-company | Sequoia $1T AI Services Thesis | [ai, services, strategy, venture, open-harness] | 2026-05-26 |
+_(No entries yet.)_

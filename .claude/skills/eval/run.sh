@@ -12,11 +12,13 @@ TIMEOUT_SECS=30
 
 FILTER_PROBE=""
 FILTER_TIER=""
+ABLATE_TARGET=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --probe) FILTER_PROBE="${2:-}"; shift 2 ;;
-    --tier)  FILTER_TIER="${2:-}"; shift 2 ;;
-    -h|--help) echo "usage: run.sh [--probe <id>] [--tier A|ablation]"; exit 0 ;;
+    --probe)  FILTER_PROBE="${2:-}"; shift 2 ;;
+    --tier)   FILTER_TIER="${2:-}"; shift 2 ;;
+    --ablate) ABLATE_TARGET="${2:-}"; shift 2 ;;
+    -h|--help) echo "usage: run.sh [--probe <id>] [--tier A|ablation] [--ablate <file> --probe <id>]"; exit 0 ;;
     *) echo "unknown arg: $1" >&2; exit 64 ;;
   esac
 done
@@ -32,6 +34,19 @@ if [ -f "$SENTINEL" ]; then
     fi
   done < "$SENTINEL"
   rm -f "$SENTINEL"
+fi
+
+# --- ablation mode (M-1): run one probe with/without a target file via the shared
+#     swap/restore/trap mechanics in scripts/ablate.sh; reports LOAD-BEARING|PRUNABLE ---
+if [ -n "$ABLATE_TARGET" ]; then
+  [ -n "$FILTER_PROBE" ] || { echo "--ablate requires --probe <id>" >&2; exit 64; }
+  ABL_PROBE="$PROBES_DIR/$FILTER_PROBE.sh"
+  [ -f "$ABL_PROBE" ] || { echo "no such probe: $FILTER_PROBE" >&2; exit 64; }
+  case "$ABLATE_TARGET" in
+    /*) ABL_TGT="$ABLATE_TARGET" ;;                 # absolute — use as-is
+    *)  ABL_TGT="$ROOT/$ABLATE_TARGET" ;;           # relative — resolve against eval repo root, NOT cwd
+  esac
+  exec bash "$ROOT/scripts/ablate.sh" "$ABL_TGT" "$ABL_PROBE"
 fi
 
 hdr() { grep -E "^# $1:" "$2" 2>/dev/null | head -1 | sed "s/^# $1:[[:space:]]*//" || true; }

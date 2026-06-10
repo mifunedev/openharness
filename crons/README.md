@@ -38,6 +38,14 @@ Body becomes the agent prompt at fire time.
 - Runtime artefacts in this directory (`.cron.log`, `.pid`) are
   gitignored; markdown definitions are tracked.
 
+## Scheduled jobs
+
+| File | Schedule | Description |
+|------|----------|-------------|
+| `heartbeat.md` | `0 * * * *` (hourly) | Hourly pulse — review memory, surface anything urgent |
+| `cleanup-tasks.md` | `0 23 * * 0` (Sun 23:00 MT) | Weekly Ralph session sweep — archive completed tasks |
+| `eval-weekly.md` | `0 6 * * 0` (Sun 06:00 MT) | Weekly eval suite — run probes, log any regressions to memory |
+
 ## Override
 
 Set `CRONS_DIR=<path>` to point the runtime at a different directory

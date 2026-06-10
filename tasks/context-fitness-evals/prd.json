@@ -99,7 +99,7 @@
                 "shellcheck / markdown check passes"
             ],
             "priority": 6,
-            "passes": false,
+            "passes": true,
             "notes": "Prune-half of the fitness function. Reuse boundary corrected per §10 M-1 (mechanics not oracle)."
         },
         {
@@ -115,7 +115,7 @@
                 "shellcheck / markdown check passes"
             ],
             "priority": 7,
-            "passes": false,
+            "passes": true,
             "notes": "Depends on /eval. Cron executability gated on reading cron-runtime.ts first."
         },
         {

@@ -15,6 +15,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - Seed probes `next-dev-prod`, `devtcp-hook`, `health-check-docker-stats` ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 - Shared ablation mechanics (`scripts/ablate.sh`) + `/eval --ablate <file> --probe <id>` — the prune-half, reporting `LOAD-BEARING`/`PRUNABLE` ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 - Weekly `eval-weekly` cron that runs the suite and logs regressions ([#1](https://github.com/ryaneggz/openharness/issues/1)).
+- Autopilot loop: hourly cron + `/autopilot` skill that selects the next harness-infra item, builds it via `/ship-spec` + `/delegate`, and finalizes a ready-for-review PR ([#4](https://github.com/ryaneggz/openharness/issues/4)).
 ### Changed
 - `/health-check` gains an in-container RAM-reclaim step (`docker stats` per-container; RAM ≠ `docker ps` Size) ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 - `/retro` gains a correction-surface triage tag (harden/proceduralize/eval) routing each promotable lesson to its cheapest closing artifact ([#1](https://github.com/ryaneggz/openharness/issues/1)).

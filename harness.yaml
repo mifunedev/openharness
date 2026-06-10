@@ -23,6 +23,7 @@ git:
 
 install:
   # opencode: false            # INSTALL_OPENCODE — OpenCode CLI (build arg)
+  # grok_build: false          # INSTALL_GROK_BUILD — Grok Build CLI (build arg)
   # deepagents: false          # INSTALL_DEEPAGENTS — DeepAgents CLI (build arg)
   # hermes: false              # INSTALL_HERMES — Hermes CLI (build arg + runtime)
   # agent_browser: false       # INSTALL_AGENT_BROWSER — agent-browser + Chromium (~1 GB)

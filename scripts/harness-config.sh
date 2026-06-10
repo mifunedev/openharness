@@ -63,6 +63,7 @@ BEGIN {
     envmap["git.user_name"]         = "GIT_USER_NAME"
     envmap["git.user_email"]        = "GIT_USER_EMAIL"
     envmap["install.opencode"]      = "INSTALL_OPENCODE"
+    envmap["install.grok_build"]    = "INSTALL_GROK_BUILD"
     envmap["install.deepagents"]    = "INSTALL_DEEPAGENTS"
     envmap["install.hermes"]        = "INSTALL_HERMES"
     envmap["install.agent_browser"] = "INSTALL_AGENT_BROWSER"

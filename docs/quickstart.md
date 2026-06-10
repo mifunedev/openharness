@@ -45,7 +45,7 @@ directory: `/home/sandbox/harness`.
 ## Pick your harness
 
 The default sandbox ships with Claude Code, Codex, and Pi. OpenCode,
-DeepAgents, and Hermes are optional image-level installs; T3 Code runs on
+DeepAgents, Hermes, and Grok Build are optional image-level installs; T3 Code runs on
 demand via `npx`. Authenticate at least one harness before use:
 
 - **[Claude Code](./harnesses/claude-code.md)**: run `claude` and follow the OAuth prompt
@@ -54,6 +54,7 @@ demand via `npx`. Authenticate at least one harness before use:
 - **[Pi](./harnesses/pi.md)**: configure provider keys via environment variables
 - **[DeepAgents](./harnesses/deepagents.md)**: set `install.deepagents: true` in `harness.yaml` (or `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env`), rebuild, then write provider keys to `~/.deepagents/.env`
 - **[Hermes](./harnesses/hermes.md)**: set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`), rebuild, then run `hermes setup`
+- **[Grok Build](./harnesses/grok-build.md)**: set `install.grok_build: true` in `harness.yaml` (or `INSTALL_GROK_BUILD=true` in `.devcontainer/.env`), rebuild, verify `grok --version`, then run `grok login --device-auth` (headless/remote) or `grok login`
 - **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `npx t3` (browser UI on port 3773)
 
 Claude Code remains the documented default. See
@@ -83,6 +84,7 @@ install:
   opencode: false
   deepagents: false
   hermes: false
+  grok_build: false
   agent_browser: false
 ```
 
@@ -104,6 +106,7 @@ install:
 | `install.opencode` | Set `true` to include OpenCode in the sandbox image |
 | `install.deepagents` | Set `true` to include DeepAgents in the sandbox image |
 | `install.hermes` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
+| `install.grok_build` | Set `true` to include Grok Build in the sandbox image; all Grok user state lives in the persisted `~/.grok` volume |
 
 Apply changes with `make destroy && make sandbox`.
 

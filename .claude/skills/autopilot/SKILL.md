@@ -6,7 +6,8 @@ description: |
   the pm agent, scaffolds a branch + draft PR with /ship-spec, executes it
   in-process with /delegate, and finalizes a ready-for-review PR with green CI.
   Harness-infra only (skills/rules/docs/scripts/crons/wiki) — never sandbox
-  application code. Cap of 6 autopilot PRs created per UTC day; never auto-merges.
+  application code. Cap of 6 concurrently-open autopilot PRs created per UTC
+  day — a same-day close or merge frees the slot; never auto-merges.
   TRIGGER when: the hourly crons/autopilot.md fires, or invoked manually on
   demand (e.g. /autopilot --dry-run to preview the next selection).
 argument-hint: "[--dry-run]"
@@ -16,7 +17,7 @@ argument-hint: "[--dry-run]"
 
 Unattended self-improvement loop for the harness. Each run picks one harness-infra item, builds it end-to-end through `pm decompose → /ship-spec → /delegate`, and lands a ready-for-review PR. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
 
-`--dry-run` prints the selected item and today's autopilot-PR creation count, then exits without calling `/ship-spec` or `/delegate`.
+`--dry-run` prints the selected item and the count of today's autopilot PRs still open, then exits without calling `/ship-spec` or `/delegate`.
 
 ## Instructions
 
@@ -28,20 +29,20 @@ Unattended self-improvement loop for the harness. Each run picks one harness-inf
 gh label create autopilot --color 6E40C9 --description "Opened by the autopilot loop" 2>/dev/null || true
 ```
 
-**Daily-cap check** — count autopilot PRs **created today** (UTC). Any state counts toward the quota — open, merged, and closed alike — so merging PRs during the day does not raise the ceiling:
+**Daily-cap check** — count autopilot PRs created today (UTC) that are **still open**. A PR closed or merged the same day it was created frees its slot, so the next fire can build another:
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d)
-CREATED_TODAY=$(gh pr list --state all --search "label:autopilot created:>=$TODAY" --json number --jq 'length')
-echo "autopilot PRs created today: $CREATED_TODAY (cap 6)"
+OPEN_TODAY=$(gh pr list --state open --search "label:autopilot created:>=$TODAY" --json number --jq 'length')
+echo "open autopilot PRs created today: $OPEN_TODAY (cap 6)"
 ```
 
-If `$CREATED_TODAY` ≥ 6:
+If `$OPEN_TODAY` ≥ 6:
 - Append memory log entry (see §7 Memory Log) with `Result: SKIPPED-CAP-DAILY`.
 - Append liveness line: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "SKIPPED-CAP-DAILY" >> crons/.cron.log`
 - **EXIT** — do NOT proceed to §2, do NOT run `/harness-audit`.
 
-If `--dry-run`: print `autopilot PRs created today: $CREATED_TODAY (cap 6)` now (the selection is printed after §2), then **continue** to §2 to determine the selection but exit before §4.
+If `--dry-run`: print `open autopilot PRs created today: $OPEN_TODAY (cap 6)` now (the selection is printed after §2), then **continue** to §2 to determine the selection but exit before §4.
 
 **Require clean state**:
 ```bash
@@ -121,7 +122,7 @@ DUPE_MERGED_PR=$(gh pr list --state merged --limit 50 --json number,title,headRe
 
 ```
 [dry-run] selected: $SLUG (source: $SOURCE)
-[dry-run] autopilot PRs created today: $CREATED_TODAY (cap 6)
+[dry-run] open autopilot PRs created today: $OPEN_TODAY (cap 6)
 [dry-run] exiting without calling /ship-spec or /delegate
 ```
 
@@ -281,7 +282,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - **Idempotent label creation**: the `autopilot` label `gh label create ... 2>/dev/null || true` pattern is safe to run every pulse.
 - **Liveness on every path**: the `crons/.cron.log` `printf` line is mandatory on every exit — skip, halt, error, and success. A missing liveness line looks like a crash; never skip it.
 - **Branch restore**: `git checkout development` must execute on every path that changes the working branch (i.e., all paths that reach §4 or later). The guardrail in §1 only passes when HEAD is `development`.
-- **Throttle discipline**: the daily cap (6 autopilot PRs created per UTC day) gates the entire run; the `/harness-audit` fallback fires at most once per 4h, tracked via the `AUDIT-RUN` liveness marker. Together they bound the loop's worst-case output to 6 PRs/day with no runaway audit invocations.
+- **Throttle discipline**: the daily cap (6 concurrently-open autopilot PRs created per UTC day; same-day closes/merges free slots) gates the entire run; the `/harness-audit` fallback fires at most once per 4h, tracked via the `AUDIT-RUN` liveness marker. Together they bound the loop to at most 6 unreviewed same-day PRs at any moment, with no runaway audit invocations.
 - **Backlog lifecycle**: every shipped backlog item MUST end up checked off (`- [x]` + PR annotation) — by §6 on the normal path, by the §2 self-heal when a merged-but-unchecked item is found. An unchecked shipped item is the loop's primary stall mode.
 
 ## Reference
@@ -291,7 +292,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Token | Meaning |
 |-------|---------|
 | `OK` | Reserved for future use (successful sub-step logging; prefer specific tokens below) |
-| `SKIPPED-CAP-DAILY` | ≥6 autopilot PRs already created this UTC day; run skipped to stay under the daily cap |
+| `SKIPPED-CAP-DAILY` | ≥6 autopilot PRs created this UTC day are still open; run skipped until one closes/merges or the day rolls over |
 | `SKIPPED-DEDUPE` | Every candidate (backlog + audit) already covered by an open issue/PR or merged PR; nothing selectable this pulse |
 | `NOTHING-TO-BUILD` | Both backlog and `/harness-audit` fallback exhausted/fully deduped |
 | `AUDIT-RUN` | Marker only (not an exit status): `/harness-audit` fallback was invoked; used for the 4h throttle |

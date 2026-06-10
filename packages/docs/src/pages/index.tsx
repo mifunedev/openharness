@@ -11,7 +11,7 @@ curl -fsSL https://oh.mifune.dev/install.sh | bash
 cd ~/.openharness && make shell
 
 # inside the sandbox, pick your agent
-claude        # or codex, opencode, pi, deepagents`;
+claude        # or codex, opencode, pi, deepagents, hermes, grok`;
 
 const AGENTS: Array<{
   name: string;
@@ -57,6 +57,18 @@ const AGENTS: Array<{
     ),
   },
   {
+    name: "Hermes",
+    description: "Nous Research's self-improving agent CLI.",
+    href: "/docs/harnesses/hermes",
+    icon: <img src="https://hermes-agent.nousresearch.com/favicon.ico" alt="" width={28} height={28} />,
+  },
+  {
+    name: "Grok Build",
+    description: "xAI's terminal coding agent and CLI.",
+    href: "/docs/harnesses/grok-build",
+    icon: <img src="https://x.ai/favicon.ico" alt="" width={28} height={28} />,
+  },
+  {
     name: "T3 Code",
     description: "Browser UI over Claude/Codex/OpenCode (port 3773).",
     href: "/docs/harnesses/t3code",
@@ -88,7 +100,7 @@ const WHY: Array<{ title: string; body: string }> = [
 
 export default function Home(): React.ReactElement {
   return (
-    <Layout description="We provide the sandbox; you choose the agent. Open Harness is a long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, OpenCode, Pi, or DeepAgents inside.">
+    <Layout description="We provide the sandbox; you choose the agent. Open Harness is a long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, OpenCode, Pi, DeepAgents, Hermes, or Grok Build inside.">
       <main>
         <section className={styles.hero}>
           <div className={styles.heroBg} aria-hidden="true" />
@@ -102,7 +114,7 @@ export default function Home(): React.ReactElement {
                 We provide the sandbox. You choose the harness.
               </h1>
               <p className={styles.heroSubtitle}>
-                A long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, OpenCode, Pi, or DeepAgents inside, and let it work on demand or on a cron while you sleep.
+                A long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, OpenCode, Pi, DeepAgents, Hermes, or Grok Build inside, and let it work on demand or on a cron while you sleep.
               </p>
               <div className={styles.heroButtons}>
                 <Link
@@ -142,7 +154,7 @@ export default function Home(): React.ReactElement {
           <div className={styles.container}>
             <h2 className={styles.sectionTitle}>Pick your agent.</h2>
             <p className={styles.sectionLede}>
-              Claude Code, Codex, OpenCode, Pi, and DeepAgents ship preinstalled. Switch between them inside the sandbox — or add your own by editing the Dockerfile.
+              Claude Code, Codex, and Pi ship preinstalled. OpenCode, DeepAgents, Hermes, and Grok Build are opt-in image installs. Switch between them inside the sandbox — or add your own by editing the Dockerfile.
             </p>
             <div className={styles.agentGrid}>
               {AGENTS.map((agent) => (

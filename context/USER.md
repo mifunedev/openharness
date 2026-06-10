@@ -43,7 +43,7 @@ When the maintainer asks for something to be tracked across sessions ("check on 
 - **Social accounts**: Until brand pages are explicitly supported, schedule through the maintainer's personal LinkedIn (`Ryan Eggleston`) and X (`@JohnEggz`) accounts.
 - **X constraints**: Treat X as non-Premium unless the user confirms the blue check / longer-post entitlement is active. Validate scheduled X copy against the 280 weighted-character limit, not raw string length.
 - **Time zone**: America/Denver (per `crons/heartbeat.md` timezone field)
-- **Single-user harness** — per `.claude/ICP.md`, this is a single working developer's project, not multi-tenant
+- **Single-user harness** — this is a single working developer's project, not multi-tenant
 
 ## What to NOT do
 

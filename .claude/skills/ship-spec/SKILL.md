@@ -90,11 +90,11 @@ Both critics receive an additional cross-check instruction: read `.claude/protec
 
 #### Critic B — User's lens
 
-> You are an adversarial user reviewing a PRD before implementation. Read `tasks/<slug>/prd.md` and `.claude/ICP.md`. Read `.claude/protected-paths.txt` and treat its entries as MUST-NOT-DELETE without an override note. Your job: surface scope and framing risks BEFORE the team commits.
+> You are an adversarial user reviewing a PRD before implementation. Read `tasks/<slug>/prd.md` and `context/USER.md` (the single-developer / single-project framing). Read `.claude/protected-paths.txt` and treat its entries as MUST-NOT-DELETE without an override note. Your job: surface scope and framing risks BEFORE the team commits.
 >
 > Focus on:
 > 1. **Scope ambiguity** — what's NOT in the Non-Goals section that should be?
-> 2. **ICP misalignment** — does any story drift from `.claude/ICP.md` v1 framing?
+> 2. **Audience misalignment** — does any story drift from the single-developer, single-project framing in `context/USER.md`?
 > 3. **Hidden expectations** — what would a user reasonably expect this to do that the PRD doesn't address?
 > 4. **Premature optimization** — any story that solves a problem the user doesn't have yet?
 > 5. **Missing rollback/escape hatch** — for destructive stories, is there a documented way to undo?

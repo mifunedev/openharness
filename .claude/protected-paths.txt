@@ -53,7 +53,6 @@ crons/cleanup-tasks.md
 
 # --- Specs that other artifacts cross-reference ---
 .claude/specs/structure-spec-v0.7.md
-.claude/ICP.md
 
 # --- Orchestrator identity layer (session-loaded by AGENTS.md bootloader) ---
 context/SOUL.md

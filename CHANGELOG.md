@@ -20,6 +20,8 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - `/retro` gains a correction-surface triage tag (harden/proceduralize/eval) routing each promotable lesson to its cheapest closing artifact ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 - `/context-audit` Tier-2 ablation now sources the shared `scripts/ablate.sh` mechanics (observable behavior unchanged) ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 ### Fixed
+- Removed the dangling `.claude/ICP.md` entry from `.claude/protected-paths.txt` — the file was deleted in `9241da6` ("sweep README/ICP refs") but its protection entry was left behind, so critic gates flagged a protected path that no longer exists.
+- De-referenced the deleted `.claude/ICP.md` from its two remaining live consumers: `/ship-spec` critic-B now reads `context/USER.md` for the single-developer / single-project framing (the lens that lived in ICP.md), and `context/USER.md` drops the dangling `per .claude/ICP.md` citation while keeping the fact.
 ### Removed
 ### Deprecated
 ### Security

@@ -129,6 +129,7 @@ Remove the sandbox.
 | `/wiki-ingest` | Capture a source (URL or file path) or promote a sub-agent draft into the wiki; supports `<url\|path> [--slug <override>]` and `--from-draft <slug>` forms |
 | `/wiki-query` | Search the wiki by topic and load top matches into context; splits multi-word topics into OR terms, caps reads at 3 entries by `updated:` descending |
 | `/wiki-lint` | Health-check the wiki corpus for staleness, deprecated entries, orphans, and broken links; regenerates `wiki/README.md` atomically (supports `--dry-run`) |
+| `/drift-check` | Detect framework (origin↔upstream), branch-behind, and cron-staleness drift; report remediation — never mutates state |
 
 Provision / destroy / repair are plain `docker compose` commands — see
 the `Lifecycle` section above. There is no dedicated skill.

@@ -6,7 +6,7 @@ description: |
   the pm agent, scaffolds a branch + draft PR with /ship-spec, executes it
   in-process with /delegate, and finalizes a ready-for-review PR with green CI.
   Harness-infra only (skills/rules/docs/scripts/crons/wiki) — never sandbox
-  application code. Cap of 2 open autopilot-labeled PRs; never auto-merges.
+  application code. Cap of 6 autopilot PRs created per UTC day; never auto-merges.
   TRIGGER when: the hourly crons/autopilot.md fires, or invoked manually on
   demand (e.g. /autopilot --dry-run to preview the next selection).
 argument-hint: "[--dry-run]"
@@ -16,7 +16,7 @@ argument-hint: "[--dry-run]"
 
 Unattended self-improvement loop for the harness. Each run picks one harness-infra item, builds it end-to-end through `pm decompose → /ship-spec → /delegate`, and lands a ready-for-review PR. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
 
-`--dry-run` prints the selected item and the current open-`autopilot`-PR count, then exits without calling `/ship-spec` or `/delegate`.
+`--dry-run` prints the selected item and today's autopilot-PR creation count, then exits without calling `/ship-spec` or `/delegate`.
 
 ## Instructions
 
@@ -28,19 +28,20 @@ Unattended self-improvement loop for the harness. Each run picks one harness-inf
 gh label create autopilot --color 6E40C9 --description "Opened by the autopilot loop" 2>/dev/null || true
 ```
 
-**Cap-2 check** — query open PRs carrying the `autopilot` label:
+**Daily-cap check** — count autopilot PRs **created today** (UTC). Any state counts toward the quota — open, merged, and closed alike — so merging PRs during the day does not raise the ceiling:
 
 ```bash
-OPEN_COUNT=$(gh pr list --label autopilot --state open --json number --jq 'length')
-echo "open autopilot PRs: $OPEN_COUNT"
+TODAY=$(date -u +%Y-%m-%d)
+CREATED_TODAY=$(gh pr list --state all --search "label:autopilot created:>=$TODAY" --json number --jq 'length')
+echo "autopilot PRs created today: $CREATED_TODAY (cap 6)"
 ```
 
-If `$OPEN_COUNT` ≥ 2:
-- Append memory log entry (see §7 Memory Log) with `Result: SKIPPED-CAP2`.
-- Append liveness line: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "SKIPPED-CAP2" >> crons/.cron.log`
+If `$CREATED_TODAY` ≥ 6:
+- Append memory log entry (see §7 Memory Log) with `Result: SKIPPED-CAP-DAILY`.
+- Append liveness line: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "SKIPPED-CAP-DAILY" >> crons/.cron.log`
 - **EXIT** — do NOT proceed to §2, do NOT run `/harness-audit`.
 
-If `--dry-run`: print `open autopilot PRs: $OPEN_COUNT` now (the selection is printed after §2), then **continue** to §2 to determine the selection but exit before §4.
+If `--dry-run`: print `autopilot PRs created today: $CREATED_TODAY (cap 6)` now (the selection is printed after §2), then **continue** to §2 to determine the selection but exit before §4.
 
 **Require clean state**:
 ```bash
@@ -51,56 +52,76 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 If either check fails, log `Result: FAIL` + `Observation: dirty working tree or wrong branch` and exit 1 without touching GitHub.
 
+**Sync with origin** (mandatory — a stale `development` base means dedupe misses fresh merges and the run branches off old code):
+
+```bash
+git fetch origin development
+git merge --ff-only origin/development || { echo "ERROR: development diverged from origin"; exit 1; }
+```
+
+If the fast-forward fails, log `Result: FAIL` + `Observation: development diverged from origin/development; manual reconcile needed` and exit 1 without touching GitHub.
+
 ### 2. Select item
 
-**Source A — curated backlog** (`crons/autopilot-backlog.md`):
+Build a candidate list and **advance past dedupe hits** — a blocked candidate must never end the run while other candidates remain (the 2026-06-10 one-PR stall was exactly this: one in-flight item head-of-line-blocked every subsequent pulse).
+
+**Source A — curated backlog** (`crons/autopilot-backlog.md`): iterate ALL unchecked items in file order:
 
 ```bash
-BACKLOG_LINE=$(grep -m1 '^\- \[ \]' crons/autopilot-backlog.md 2>/dev/null || true)
+grep '^\- \[ \]' crons/autopilot-backlog.md 2>/dev/null
 ```
 
-If `$BACKLOG_LINE` is non-empty, extract its slug token (the first word after `- [ ] `):
+For each line, extract its slug token (the first word after `- [ ] `):
 
 ```bash
-SLUG=$(echo "$BACKLOG_LINE" | sed 's/^- \[ \] //' | awk '{print $1}' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//')
-SOURCE="backlog"
+SLUG=$(echo "$LINE" | sed 's/^- \[ \] //' | awk '{print $1}' | tr -d ':' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//')
 ```
 
-**Source B — `/harness-audit` fallback** (only when backlog is empty/exhausted):
+Run the **dedupe check** (below) on each candidate in order. Select the FIRST candidate that passes; set `SOURCE="backlog"`.
 
-Check if a recent autopilot-audit entry exists to enforce the 6h throttle:
+**Source B — `/harness-audit` fallback** (only when no backlog candidate survives dedupe):
+
+Throttle: at most one audit per **4 hours** — paired with the daily cap, hourly fires on an empty backlog yield at most 6 audit-driven builds/day. The throttle is tracked by the explicit `AUDIT-RUN` liveness marker, not by grepping prose in the memory log:
 
 ```bash
-TODAY=$(date -u +%Y-%m-%d)
-LAST_AUDIT_TS=$(grep -m1 'autopilot.*harness-audit\|harness-audit.*autopilot' "memory/$TODAY/log.md" 2>/dev/null \
-  | grep -oP '\d{2}:\d{2}' | head -1 || true)
+LAST_AUDIT=$(grep 'autopilot: AUDIT-RUN' crons/.cron.log | tail -1 | sed 's/^\[\([^]]*\)\].*/\1/' || true)
+if [ -n "$LAST_AUDIT" ]; then
+  AGE_H=$(( ($(date +%s) - $(date -d "$LAST_AUDIT" +%s)) / 3600 ))
+  [ "$AGE_H" -lt 4 ] && AUDIT_THROTTLED=1
+fi
 ```
 
-If `$LAST_AUDIT_TS` is non-empty, compare to current UTC hour — if the entry is <6h old, skip the audit and fall through to the exhausted path below. Otherwise run `/harness-audit` and take the top-ranked finding slug from its output. Map any spaces to `-` and lowercase to produce a deterministic kebab slug. Record the audit in the memory log so subsequent fires respect the throttle.
-
-**Dedupe** — check whether an open issue or PR already covers this slug:
+If throttled, fall through to the exhausted path. Otherwise run `/harness-audit` and immediately append the marker:
 
 ```bash
-DUPE_ISSUE=$(gh issue list --state open --json title,body --jq '.[].title' | grep -i "$SLUG" || true)
-DUPE_PR=$(gh pr list --state open --json title,headRefName \
+printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "AUDIT-RUN" >> crons/.cron.log
+```
+
+Take the top **3** ranked harness-infra findings, derive a deterministic kebab slug for each (lowercase, spaces → `-`), and dedupe-check them in rank order. Select the first that passes; `SOURCE="audit"`.
+
+**Dedupe check** (per candidate) — a candidate is blocked if an open issue, an open PR, **or a merged PR** already covers its slug (merged matters: minutes after a merge, open-state-only dedupe goes blind and the loop rebuilds shipped work):
+
+```bash
+DUPE_OPEN_ISSUE=$(gh issue list --state open --json title --jq '.[].title' | grep -i "$SLUG" || true)
+DUPE_OPEN_PR=$(gh pr list --state open --json title,headRefName \
   --jq '.[] | "\(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
+DUPE_MERGED_PR=$(gh pr list --state merged --limit 50 --json number,title,headRefName \
+  --jq '.[] | "\(.number) \(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
 ```
 
-If either is non-empty:
-- Log `Result: SKIPPED-DEDUPE`, `Selected: $SLUG`, `Observation: open issue/PR already covers this slug`.
-- Append liveness: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "SKIPPED-DEDUPE" >> crons/.cron.log`
-- Exit 0.
+- Any hit → record the candidate + reason, **continue to the next candidate** (do NOT exit the run).
+- **Self-heal**: if a *backlog* candidate's only hit is a merged PR, the item shipped but was never checked off. Mark it now — flip its line to `- [x] <slug>: …` and append ` — shipped as PR #<N> (deduped <UTC date>)`, then commit to `development` with `task: check off <slug> in autopilot backlog (merged PR #<N>)` and push. Continue to the next candidate.
 
-**Both sources exhausted / fully deduped** — if no slug was produced from either source (backlog empty AND audit throttled or all audit findings already deduped):
-- Log `Result: NOTHING-TO-BUILD`, `Observation: backlog empty and no new harness-audit findings`.
-- Append liveness: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "NOTHING-TO-BUILD" >> crons/.cron.log`
-- Exit 0 **without touching git or GitHub**.
+**All candidates blocked / both sources exhausted**:
+
+- At least one candidate existed but every one hit dedupe → log `Result: SKIPPED-DEDUPE`, `Selected: none`, `Observation: all candidates already covered by open or merged work`; liveness `SKIPPED-DEDUPE`; exit 0.
+- No candidate existed at all (backlog empty AND audit throttled or empty) → log `Result: NOTHING-TO-BUILD`, `Observation: backlog empty and no new harness-audit findings`; liveness `NOTHING-TO-BUILD`; exit 0 **without touching git or GitHub**.
 
 **`--dry-run` exit** — at this point print:
 
 ```
 [dry-run] selected: $SLUG (source: $SOURCE)
-[dry-run] open autopilot PRs: $OPEN_COUNT
+[dry-run] autopilot PRs created today: $CREATED_TODAY (cap 6)
 [dry-run] exiting without calling /ship-spec or /delegate
 ```
 
@@ -218,6 +239,19 @@ git checkout development
 
 This step runs on EVERY exit path that reaches §6 (including `PR-DRAFT-CI-RED`).
 
+**Check off the built item** (mandatory when `SOURCE="backlog"`; skip for `SOURCE="audit"`). Runs after the branch restore, on `development`:
+
+```bash
+git pull --ff-only origin development
+sed -i "s/^- \[ \] $SLUG:/- [x] $SLUG:/" crons/autopilot-backlog.md
+sed -i "/^- \[x\] $SLUG:/ s/$/ — shipped as PR #$PR_NUM ($(date -u +%Y-%m-%d))/" crons/autopilot-backlog.md
+git add crons/autopilot-backlog.md
+git commit -m "task: check off $SLUG in autopilot backlog (PR #$PR_NUM)"
+git push origin development
+```
+
+Without this step the next fire re-selects the same item forever — this was the 2026-06-10 one-PR stall.
+
 ### 7. Memory Log
 
 Append to `memory/<today>/log.md` on **every** exit path (including skips, halts, and errors):
@@ -227,7 +261,7 @@ TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "memory/$TODAY"
 cat >> "memory/$TODAY/log.md" <<EOF
 
 ## Autopilot -- $TIME UTC
-- **Result**: <OK | SKIPPED-CAP2 | SKIPPED-DEDUPE | NOTHING-TO-BUILD | PR-READY | PR-DRAFT-CI-RED | HALT-CRITIC-GATE | DELEGATE-FAIL | FAIL>
+- **Result**: <OK | SKIPPED-CAP-DAILY | SKIPPED-DEDUPE | NOTHING-TO-BUILD | PR-READY | PR-DRAFT-CI-RED | HALT-CRITIC-GATE | DELEGATE-FAIL | FAIL>
 - **Selected**: <slug or "none">
 - **Action**: <one-line summary of what was done>
 - **Observation**: <one sentence — key finding or outcome>
@@ -247,7 +281,8 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - **Idempotent label creation**: the `autopilot` label `gh label create ... 2>/dev/null || true` pattern is safe to run every pulse.
 - **Liveness on every path**: the `crons/.cron.log` `printf` line is mandatory on every exit — skip, halt, error, and success. A missing liveness line looks like a crash; never skip it.
 - **Branch restore**: `git checkout development` must execute on every path that changes the working branch (i.e., all paths that reach §4 or later). The guardrail in §1 only passes when HEAD is `development`.
-- **Throttle discipline**: the `/harness-audit` fallback fires at most once per 6h. The cap-2 check gates the entire run. Together they bound the hourly loop's worst-case output to 2 open PRs with no runaway audit invocations.
+- **Throttle discipline**: the daily cap (6 autopilot PRs created per UTC day) gates the entire run; the `/harness-audit` fallback fires at most once per 4h, tracked via the `AUDIT-RUN` liveness marker. Together they bound the loop's worst-case output to 6 PRs/day with no runaway audit invocations.
+- **Backlog lifecycle**: every shipped backlog item MUST end up checked off (`- [x]` + PR annotation) — by §6 on the normal path, by the §2 self-heal when a merged-but-unchecked item is found. An unchecked shipped item is the loop's primary stall mode.
 
 ## Reference
 
@@ -256,9 +291,10 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Token | Meaning |
 |-------|---------|
 | `OK` | Reserved for future use (successful sub-step logging; prefer specific tokens below) |
-| `SKIPPED-CAP2` | ≥2 open `autopilot` PRs; run skipped to stay under cap |
-| `SKIPPED-DEDUPE` | Selected slug already has an open issue or PR; dedupe guard triggered |
+| `SKIPPED-CAP-DAILY` | ≥6 autopilot PRs already created this UTC day; run skipped to stay under the daily cap |
+| `SKIPPED-DEDUPE` | Every candidate (backlog + audit) already covered by an open issue/PR or merged PR; nothing selectable this pulse |
 | `NOTHING-TO-BUILD` | Both backlog and `/harness-audit` fallback exhausted/fully deduped |
+| `AUDIT-RUN` | Marker only (not an exit status): `/harness-audit` fallback was invoked; used for the 4h throttle |
 | `PR-READY` | End-to-end success; PR marked ready with green CI |
 | `PR-DRAFT-CI-RED` | PR left draft because CI was red or `/ci-status` timed out |
 | `HALT-CRITIC-GATE` | `/ship-spec` critic gate rejected the spec; no PR opened |

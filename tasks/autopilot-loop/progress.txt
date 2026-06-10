@@ -1,0 +1,16 @@
+# progress
+
+## Delegation summary — 2026-06-10
+
+Executed via /delegate (not Ralph runner) in 3 waves:
+- W1: US-001 (backlog), US-002 (cron)
+- W2: US-003 (/autopilot skill), US-005 (crons/README)
+- W3: US-004 (CLAUDE.md/AGENTS.md row), US-006 (CHANGELOG)
+
+All six stories PASS; acceptance criteria verified by the orchestrator
+(grep/awk checks) before each per-story commit. Critic-gate HIGH findings
+were resolved in prd.md before implementation; the skill implements every
+mitigation (cap-2, slug dedupe, in-process delegate, CI-red->draft, branch
+restore, failure compensation, halt visibility, --dry-run).
+
+STATUS: COMPLETE

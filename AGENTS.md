@@ -117,6 +117,7 @@ Remove the sandbox.
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
 | `/ship-spec` | End-to-end spec: `/prd` → critics → `/ralph` → gh issue → branch → draft PR |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
+| `/autopilot` | Self-improvement loop — select harness-infra item, scaffold + execute via /ship-spec + /delegate, finalize ready-for-review PR (cap 2, no auto-merge) |
 | `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |

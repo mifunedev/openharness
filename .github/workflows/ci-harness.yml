@@ -18,6 +18,8 @@ on:
       - ".claude/skills/**"
       - "crons/**"
       - "context/**"
+      - ".devcontainer/**"
+      - "install/**"
   pull_request:
     paths:
       - "packages/**"
@@ -31,6 +33,8 @@ on:
       - ".claude/skills/**"
       - "crons/**"
       - "context/**"
+      - ".devcontainer/**"
+      - "install/**"
 
 concurrency:
   group: ci-harness-${{ github.ref }}
@@ -81,3 +85,23 @@ jobs:
 
       - name: Root tests (scripts + .pi extensions)
         run: pnpm test:scripts
+
+  boot-lint:
+    name: Boot Path Lint (shellcheck + hadolint)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Shellcheck boot scripts
+        run: |
+          command -v shellcheck >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y shellcheck; }
+          shellcheck --version
+          shellcheck -S warning .devcontainer/*.sh install/*.sh
+
+      - name: Hadolint Dockerfile
+        uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0
+        with:
+          dockerfile: .devcontainer/Dockerfile
+          config: .hadolint.yaml

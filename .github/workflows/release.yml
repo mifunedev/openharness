@@ -1,18 +1,62 @@
 name: Release
 
-permissions:
-  contents: write
-  packages: write
-
 on:
   push:
     tags:
       - "[0-9][0-9][0-9][0-9].[0-9]*.[0-9]*"
 
 jobs:
+  validate:
+    name: "Validate"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store/v3
+          key: pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter './packages/**' -r --if-present run lint
+
+      - name: Format check
+        run: pnpm --filter './packages/**' -r --if-present run format:check
+
+      - name: Build
+        run: pnpm --filter './packages/**' -r --if-present run build
+
+      - name: Test
+        run: pnpm --filter './packages/**' -r --if-present run test
+
+      - name: Root tests (scripts + .pi extensions)
+        run: pnpm test:scripts
+
   release:
     name: Build & Release
     runs-on: ubuntu-latest
+    needs: [validate]
+    permissions:
+      contents: write
+      packages: write
 
     steps:
       - name: Checkout

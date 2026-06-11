@@ -19,8 +19,8 @@
                 "release.yml parses as valid YAML: python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/release.yml'))\" exits 0"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 via /delegate; validate job mirrors ci-harness.yml (10 steps byte-identical), needs:[validate], permissions split."
         },
         {
             "id": "US-002",

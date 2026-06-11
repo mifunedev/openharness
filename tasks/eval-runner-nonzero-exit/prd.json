@@ -1,0 +1,72 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/29-eval-runner-nonzero-exit",
+    "description": "/eval runner exits non-zero on a green→red regression, documented in README + SKILL.md and pinned by a new guard probe. Closes the implementation half of #22 (the autopilot §6 gate's non-zero-exit branch was dead code because run.sh always exits 0).",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Patch run.sh to exit non-zero on a new green→red regression (+ CHANGELOG)",
+            "description": "As an autopilot/eval-weekly caller, I want the /eval runner to exit 1 on a NEW green→red regression so I can gate on $? instead of parsing stdout.",
+            "acceptanceCriteria": [
+                "In .claude/skills/eval/run.sh, immediately after the existing final summary line `echo \"ran $ran probe(s); wrote $RESULTS\"`, append a terminal gate: `if [ \"${#regressions[@]}\" -gt 0 ]; then exit 1; fi` then `exit 0`.",
+                "The gate is the FINAL construct in the file — the summary echo immediately followed by the gate, with NO command between them, so the echo always runs and set -e cannot abort before the gate.",
+                "Pre-existing reds keep exit 0: the gate keys on ${#regressions[@]} which is populated ONLY on prior==PASS green→red transitions (run.sh line ~94); pre-existing reds (prior!=PASS) are excluded.",
+                "The per-probe exit oracle (0/1/2/124/other), the --ablate exec path (early `exec bash ablate.sh`), and the RESULTS.md rewrite/carry-forward block are byte-for-byte unchanged.",
+                "In CHANGELOG.md, append ONE imperative-mood bullet under the EXISTING `### Fixed` heading inside `## [Unreleased]` (do not create a second `### Fixed` heading), linking issue #29. This lands in the SAME commit as the run.sh patch per context/rules/git.md.",
+                "Manual verification (without clobbering the live board): a synthetic PASS→fail transition via a temp PROBES_DIR/RESULTS yields $?==1; an all-PASS/pre-existing-red/SKIPPED-only run yields $?==0.",
+                "shellcheck is clean on run.sh (no new warnings)."
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Document the aggregate runner exit code in evals/README.md",
+            "description": "As a reader of the eval contract, I want the runner's aggregate exit code documented so I know it differs from the per-probe oracle.",
+            "acceptanceCriteria": [
+                "In evals/README.md under the `## Runner` section, append a short `### Runner aggregate exit code` note (or equivalent labeled paragraph).",
+                "The note states: 0 = no NEW green→red regression this run (pre-existing reds are unchanged-delta and do NOT trigger non-zero); 1 = one or more NEW green→red regressions.",
+                "The note is clearly distinguished from the per-probe 3-state oracle table already in the file.",
+                "Markdown renders without breaking the existing section structure."
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Note the aggregate runner exit in eval/SKILL.md",
+            "description": "As a caller invoking /eval, I want SKILL.md to mention the runner's own exit code so I gate on the process result, not only stdout.",
+            "acceptanceCriteria": [
+                "In .claude/skills/eval/SKILL.md, extend the INLINE `Exit-code oracle (per probe):` sentence in the `## Usage` block (≈ line 30) with a follow-on sentence/line — do not invent a new heading.",
+                "State the runner aggregate exit: 0 when no NEW regression, 1 when ${#regressions[@]} > 0.",
+                "Document observability: when invoked via `bash …/run.sh`, check $? (the Bash-tool result surfaces the non-zero exit to an agent caller such as the autopilot §6 gate); the printed REGRESSIONS stdout block and stderr lines remain the human-readable signal.",
+                "Note that the eval-weekly cron is an intentional legacy stdout-grep caller (`… || true` + grep) that does NOT consume the exit code, so it is not mistaken for broken.",
+                "A reader can determine BOTH the per-probe oracle AND the runner aggregate exit from SKILL.md alone."
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "Add the eval-runner-exit guard probe",
+            "description": "As the harness, I want a deterministic probe that asserts run.sh implements the non-zero exit so the contract cannot silently regress. Depends on US-001.",
+            "acceptanceCriteria": [
+                "Create evals/probes/eval-runner-exit.sh, executable (chmod +x), AFTER US-001 is in place.",
+                "Header carries three comment lines: `# tier: A`, `# source: memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29`, `# desc: <one line>`.",
+                "Resolves repo root via BASH_SOURCE[0]: `ROOT=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/../..\" && pwd)\"` — not cwd, not hard-coded.",
+                "3-state oracle: exit 2 (SKIPPED) if run.sh absent; exit 1 (REGRESSION) if the assertion below fails; exit 0 (PASS) when it holds. stderr carries a one-line reason.",
+                "Exact assertion (no false-PASS): read only the file tail (e.g. `tail -n 12` of run.sh) and require BOTH `${#regressions[@]}` AND a `-gt 0`-gated `exit 1` to appear co-located in that window — a bare `exit 1` elsewhere must NOT pass.",
+                "STATIC source check only — MUST NOT execute run.sh, run the probe suite, or write evals/RESULTS.md.",
+                "PASS against the patched run.sh (`bash evals/probes/eval-runner-exit.sh; echo $?` → 0); would be REGRESSION against the pre-patch run.sh.",
+                "shellcheck is clean on the new probe."
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": "Depends on US-001 (the run.sh patch) being in place first."
+        }
+    ]
+}

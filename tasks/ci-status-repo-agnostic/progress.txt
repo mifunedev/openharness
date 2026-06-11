@@ -1,2 +1,10 @@
 # progress
 
+## US-001 — 2026-06-11 02:15 UTC
+Title: Parameterize the repo and add a PR-first status path in /ci-status
+Files changed: .claude/skills/ci-status/SKILL.md, CHANGELOG.md, tasks/ci-status-repo-agnostic/prd.json, tasks/ci-status-repo-agnostic/progress.txt
+Result: PASS
+What I did: Rewrote SKILL.md to (1) derive REPO from gh repo view with an explicit --repo override and an empty-REPO halt guard, (2) insert a new Step 2 PR-first path that derives PR_NUMBER via gh pr list and calls gh pr checks before the branch-runs fallback, (3) renumbered the original branch-runs steps 3–6, (4) replaced all repos/mifunedev/openharness/ occurrences with repos/$REPO/, and (5) added instance-scope caveats to the NO-RUN diagnostic and CI Pipeline Steps heading. All 11 acceptance criteria verified.
+Learnings: The PR-first/branch-fallback ordering is critical for forks — pr checks captures pull_request-triggered workflows the actions/runs branch filter misses.
+
+STATUS: COMPLETE

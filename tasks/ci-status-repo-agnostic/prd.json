@@ -22,8 +22,8 @@
                 "The YAML frontmatter parses without error and the numbered instruction sequence stays coherent with no dangling references"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11; this commit"
         }
     ]
 }

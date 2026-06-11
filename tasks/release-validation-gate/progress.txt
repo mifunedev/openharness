@@ -30,3 +30,22 @@ steps). There is no automated drift detector — future ci-harness.yml changes m
 be mirrored into release.yml's validate job by hand.
 
 ---
+
+## US-002 — 2026-06-11 (via /delegate)
+
+**Title**: Reconcile the git.md release description
+**Files changed**: context/rules/git.md
+**Result**: PASS
+
+### What I did
+Reworded `context/rules/git.md:130` from "runs lint + type-check + tests" to
+"its `validate` job runs lint, format check, build, test, and the root-scripts
+tests (mirroring CI)…". `type-check` no longer appears anywhere in the file; the
+`.claude/rules/git.md` symlink resolves clean (`diff` exit 0). PROTECTED-PATH:
+permitted documentation correction (not a deletion) per the deletion-only gate.
+
+### Learnings for future iterations
+git.md is a protected path via the `.claude/rules` symlink — content edits are
+fine; only deletion/deprecation needs an override note.
+
+---

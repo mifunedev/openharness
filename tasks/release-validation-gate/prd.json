@@ -34,8 +34,8 @@
                 "The edit is made to the canonical file context/rules/git.md (never the symlink); diff context/rules/git.md .claude/rules/git.md exits 0 afterward"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 via /delegate; git.md:130 reworded (type-check removed), symlink diff clean."
         },
         {
             "id": "US-003",

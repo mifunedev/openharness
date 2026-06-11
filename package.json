@@ -37,7 +37,6 @@
       "d3-array": "^3.2.0",
       "d3-shape": "^3.2.0",
       "d3-path": "^3.1.0",
-      "webpack": "5.98.0",
       "shell-quote": "^1.8.4",
       "@babel/plugin-transform-modules-systemjs": "^7.29.4",
       "fast-uri": "^3.1.2",

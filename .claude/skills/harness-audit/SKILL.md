@@ -56,9 +56,9 @@ Read the following before spawning agents. Pass the assembled snapshot to every 
 # Harness structure
 ls /home/sandbox/harness/.claude/skills/
 ls /home/sandbox/harness/.claude/agents/ 2>/dev/null || echo "no agents dir"
-ls /home/sandbox/harness/workspace/heartbeats/ 2>/dev/null || echo "no heartbeats"
+ls /home/sandbox/harness/crons/ 2>/dev/null || echo "no crons"
 ls /home/sandbox/harness/memory/ 2>/dev/null | tail -10
-ls /home/sandbox/harness/docs/wiki/ 2>/dev/null | head -20
+ls /home/sandbox/harness/wiki/ 2>/dev/null | head -20
 
 # Package health
 cat /home/sandbox/harness/package.json 2>/dev/null | head -30
@@ -126,7 +126,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 3. **Issue template completeness** — List `.github/ISSUE_TEMPLATE/` files. For each template, check: does it have required fields, clear labels, and assignment guidance?
 >
-> 4. **Wiki/memory utilization** — Count wiki pages under `docs/wiki/`. Count daily memory logs under `memory/`. Are logs recent (within 7 days)? Are wiki pages populated or placeholder-empty?
+> 4. **Wiki/memory utilization** — Count wiki pages under `wiki/`. Count daily memory logs under `memory/`. Are logs recent (within 7 days)? Are wiki pages populated or placeholder-empty?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -176,7 +176,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Security posture** — Check: is the Docker socket mounted into containers (`/var/run/docker.sock`)? Are any containers running with `--privileged` or `user: root`? Are there default passwords or hardcoded secrets in compose files or entrypoints? Is sudo unrestricted inside the sandbox?
 >
-> 2. **Heartbeat reliability** — Read all files in `workspace/heartbeats/`. For each: is there a watchdog/restart mechanism? What happens if the heartbeat process crashes — does it auto-recover? Is the cron/daemon config present and valid?
+> 2. **Cron reliability** — Read all cron definitions in `crons/`. For each: is there a watchdog/restart mechanism? What happens if the cron runtime crashes — does it auto-recover? Is the cron/daemon config present and valid?
 >
 > 3. **Worktree cleanup** — Run `git -C /home/sandbox/harness worktree list`. Identify orphaned agent branches (`agent/*`) with no recent commits (check `git log --since="7 days ago"`). Is there any automated cleanup?
 >
@@ -202,9 +202,9 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Memory system quality** — Read the 5 most recent daily logs in `memory/`. Are entries following the Memory Improvement Protocol (Result/Action/Observation/Duration)? Is quality declining over time (shorter entries, missing fields)? Are entries actually present?
 >
-> 2. **Wiki utilization** — List all files under `docs/wiki/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
+> 2. **Wiki utilization** — List all files under `wiki/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
 >
-> 3. **Heartbeat health** — For each heartbeat file in `workspace/heartbeats/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check memory logs for heartbeat execution traces.
+> 3. **Cron health** — For each cron definition in `crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check memory logs for cron execution traces.
 >
 > 4. **Agent worktree status** — Run `git -C /home/sandbox/harness worktree list` and `git -C /home/sandbox/harness branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
 >
@@ -303,10 +303,10 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 |----------|------|
 | Orchestrator skills | `.claude/skills/` |
 | Workspace skills | `workspace/.claude/skills/` |
-| Heartbeats | `workspace/heartbeats/` |
+| Crons | `crons/` |
 | Memory logs | `memory/YYYY-MM-DD/log.md` |
 | Long-term memory | `MEMORY.md` |
-| Wiki | `docs/wiki/` |
+| Wiki | `wiki/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |
 | CI workflows | `.github/workflows/` |

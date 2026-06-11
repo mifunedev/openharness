@@ -31,8 +31,8 @@
                 "Only the PR-DRAFT-EVAL-RED row content changed"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "iter1 2026-06-11: PR-DRAFT-EVAL-RED status-token row reworded to NEW (green→red) regression or non-zero runner exit; only that row changed, table row count unchanged."
         },
         {
             "id": "US-003",

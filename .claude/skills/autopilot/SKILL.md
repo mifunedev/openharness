@@ -318,7 +318,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | `NOTHING-NEW` | Queue empty and `/harness-audit` produced no finding that survives dedupe |
 | `PR-READY` | End-to-end success; PR marked ready with green CI |
 | `PR-DRAFT-CI-RED` | PR left draft because CI was red or `/ci-status` timed out |
-| `PR-DRAFT-EVAL-RED` | PR left draft because `/eval` reported a probe regression |
+| `PR-DRAFT-EVAL-RED` | PR left draft because `/eval` reported a NEW (green→red) probe regression or a non-zero runner exit |
 | `HALT-CRITIC-GATE` | `/ship-spec` critic gate rejected the spec; ticket labeled `autopilot-blocked`, no PR opened |
 | `DELEGATE-FAIL` | `/delegate` failed after `/ship-spec` opened a PR; PR left draft |
 | `SKIPPED_OVERLAP` | Emitted by the cron runtime (not this skill): a previous fire of this id was still running with `overlap: false` |

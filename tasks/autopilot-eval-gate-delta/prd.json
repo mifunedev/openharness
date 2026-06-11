@@ -18,8 +18,8 @@
                 "grep -n 'Any `REGRESSION`' .claude/skills/autopilot/SKILL.md returns no match inside §6"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "iter1 2026-06-11 93620ce: §6 rewritten to key on green→red delta + runner exit code; bare \"Any `REGRESSION`\" gate removed."
         },
         {
             "id": "US-002",

@@ -229,12 +229,21 @@ After `/delegate` completes, **while still on the work branch**, run the probe s
   ```bash
   git add evals/RESULTS.md && git commit -m "task: refresh evals benchmark" || true
   ```
-- **Any `REGRESSION`** → leave the PR draft, name the regressed probe(s) on the PR, persist the session, restore, and stop:
+
+**Decision rule** — key on the runner's exit code and the green→red **delta**, NOT on the bare presence of a `REGRESSION` row in `evals/RESULTS.md`. A probe that was already red on the base (`origin/development`) is **pre-existing** — this PR did not cause it, so it must not block. **PROCEED** to §7 when BOTH of these hold:
+
+1. the `/eval` runner exited `0`, AND
+2. every regressed probe's delta is `unchanged` vs the base (already-red — NOT a NEW green→red transition).
+
+**Keep the PR draft** (status `PR-DRAFT-EVAL-RED`) only on a **NEW (green→red) regression OR a non-zero runner exit**:
   ```bash
-  gh pr comment "$PR_NUM" --body "autopilot: /eval reported a probe regression (<probe ids>). PR left draft; resolve before marking ready."
+  gh pr comment "$PR_NUM" --body "autopilot: /eval reported a NEW (green→red) probe regression (<probe ids>) or a non-zero runner exit. PR left draft; resolve before marking ready."
   ```
   Memory log `Result: PR-DRAFT-EVAL-RED`, liveness `PR-DRAFT-EVAL-RED`, then `[ -n "$KEEP" ] && touch "$KEEP"`, `git checkout development`, exit.
-- **Green / SKIPPED-only** → proceed to §7.
+
+> **Diagnostic note (non-gating):** file-scope overlap does not gate. If a regressed probe reads a file this PR changed, the runner-exit + delta signal still governs — a self-referential probe (e.g. `eval-gate` on an autopilot edit) whose delta is `unchanged` does NOT block. The delta is the authoritative causation signal.
+
+- **All clear, or only pre-existing reds (`unchanged` delta) with runner exit 0** → when a pre-existing red is present, **post it on the PR** for honesty (do not claim an all-green board), then proceed to §7.
 
 ### 7. Finalize
 

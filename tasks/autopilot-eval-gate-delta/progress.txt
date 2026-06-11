@@ -1,2 +1,5 @@
 # progress
 
+
+## US-001 -- 2026-06-11
+- Rewrote .claude/skills/autopilot/SKILL.md §6 eval gate: PROCEED iff runner exit 0 AND every regressed probe's delta is `unchanged` (pre-existing red); keep PR draft (PR-DRAFT-EVAL-RED) only on a NEW green→red regression OR non-zero runner exit. Added non-gating diagnostic note (self-referential probe with `unchanged` delta does not block) and a post-pre-existing-red-on-PR-for-honesty instruction. Removed the bare "Any `REGRESSION`" gate.

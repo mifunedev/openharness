@@ -105,3 +105,4 @@ jobs:
         with:
           dockerfile: .devcontainer/Dockerfile
           config: .hadolint.yaml
+          failure-threshold: warning

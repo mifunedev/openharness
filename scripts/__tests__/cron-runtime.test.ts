@@ -9,7 +9,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { acquireLock, loadCrons, parseCronFile } from "../cron-runtime";
+import {
+  acquireLock,
+  buildTmuxWrapper,
+  loadCrons,
+  parseCronFile,
+  tmuxSessionName,
+} from "../cron-runtime";
 
 let tmp: string;
 
@@ -59,6 +65,63 @@ Heartbeat body.
 
   it("returns null when schedule is missing", () => {
     expect(parseCronFile(`---\nid: x\n---\nbody\n`, "x.md")).toBeNull();
+  });
+
+  it("parses tmux: true and defaults to false otherwise", () => {
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\ntmux: true\n---\nbody\n`, "a.md")
+        ?.tmux,
+    ).toBe(true);
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\ntmux: false\n---\nbody\n`, "b.md")
+        ?.tmux,
+    ).toBe(false);
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.tmux,
+    ).toBe(false);
+  });
+});
+
+describe("tmuxSessionName", () => {
+  it("formats <id>-<MMDD>-<HHMM> from local time, zero-padded", () => {
+    // 2026-06-10 18:05 local (month is 0-indexed → 5 = June).
+    expect(tmuxSessionName("autopilot", new Date(2026, 5, 10, 18, 5))).toBe(
+      "autopilot-0610-1805",
+    );
+    // Single-digit month/day/hour/minute all pad to two digits.
+    expect(tmuxSessionName("x", new Date(2026, 0, 2, 3, 4))).toBe("x-0102-0304");
+  });
+});
+
+describe("buildTmuxWrapper", () => {
+  const wrapper = buildTmuxWrapper({
+    session: "autopilot-0610-1805",
+    id: "autopilot",
+    agentBin: "claude",
+    promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
+  });
+
+  it("writes the per-id pidfile and cleans it up", () => {
+    expect(wrapper).toContain("echo $$ > /tmp/cron-autopilot.pid;");
+    expect(wrapper).toContain("rm -f /tmp/cron-autopilot.pid;");
+  });
+
+  it("exports the session + keep-marker env vars", () => {
+    expect(wrapper).toContain(
+      "export CRON_TMUX_SESSION=autopilot-0610-1805 CRON_KEEP_MARKER=/tmp/autopilot-0610-1805.keep;",
+    );
+  });
+
+  it("runs the agent against the prompt file and tees the log", () => {
+    expect(wrapper).toContain(
+      'claude -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee /tmp/autopilot-0610-1805.log;',
+    );
+  });
+
+  it("persists the session only when the keep marker exists", () => {
+    expect(wrapper).toContain(
+      "[ -f /tmp/autopilot-0610-1805.keep ] && exec bash",
+    );
   });
 });
 

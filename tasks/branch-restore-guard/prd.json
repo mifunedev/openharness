@@ -1,0 +1,90 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/45-branch-restore-guard",
+    "description": "Harden autopilot branch-restore: replace bare `git checkout development` with a canonical force-checkout + post-restore assertion in autopilot SKILL.md (§5/§6/§7), add a §1 self-heal for a clean-but-stranded branch, and add a regression probe.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Define the canonical clean-restore procedure in Guidelines",
+            "description": "As the autopilot loop, I need one documented restore procedure so all restore sites behave identically and a failed restore is loud, not silent.",
+            "acceptanceCriteria": [
+                "The Guidelines 'Branch restore' bullet (~line 307) in .claude/skills/autopilot/SKILL.md defines the canonical procedure: `git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo \"ERROR: autopilot restore left a dirty tree\"; exit 1; }`",
+                "The bullet states committed work is preserved (lives on the feature branch / draft PR) and only the run's own uncommitted tracked residue (staged AND unstaged) is discarded",
+                "The bullet remains a single, copy-verbatim canonical reference for §5/§6/§7",
+                "All edits to SKILL.md across US-001..US-006 are made by a single worker (no parallel edits to the same file)"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Apply canonical restore at §5 (DELEGATE-FAIL)",
+            "description": "As the autopilot loop, when /delegate fails I must return to a clean development so the next fire is not blocked.",
+            "acceptanceCriteria": [
+                "The bare `git checkout development` at §5 DELEGATE-FAIL (~line 217) is replaced with the canonical two-step (force checkout + post-restore assertion)",
+                "No bare (no `-f`) `git checkout development` remains in §5",
+                "The DELEGATE-FAIL exit semantics (memory log, liveness token, keep-marker touch, non-zero exit) are unchanged apart from the restore command"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Apply canonical restore at §6 (PR-DRAFT-EVAL-RED) without vocabulary drift",
+            "description": "As the autopilot loop, when the eval gate keeps a PR draft I must restore cleanly while leaving the eval-gate vocabulary intact.",
+            "acceptanceCriteria": [
+                "The inline `git checkout development` in the §6 PR-DRAFT-EVAL-RED path (~line 242) is replaced with the canonical restore, changing ONLY the `git checkout development` token (not surrounding prose)",
+                "The §6 eval-gate decision-rule vocabulary strings `NEW (green→red)`, `non-zero runner exit`/`runner non-zero exit`, `delta`, and `unchanged` are byte-stable",
+                "`bash evals/probes/eval-gate.sh` exits 0 after the change"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "Apply canonical restore at §7 (Finalize)",
+            "description": "As the autopilot loop, on the finalize path I must restore cleanly so the next fire's §1 guard passes.",
+            "acceptanceCriteria": [
+                "The `git checkout development` code block at §7 Finalize (~lines 271-273) is replaced with the canonical restore (force checkout + post-restore assertion)",
+                "After this story, every line in SKILL.md containing `git checkout` and `development` also contains `-f development` (no bare form remains anywhere)"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-006",
+            "title": "Self-heal a clean-but-stranded branch at §1 pre-flight",
+            "description": "As the autopilot loop, if a prior run was interrupted before reaching a restore site and left HEAD on a clean feature branch, I must recover to development myself rather than FAIL every hour.",
+            "acceptanceCriteria": [
+                "The §1 pre-flight in SKILL.md gains a self-heal BEFORE the existing hard guards: if branch is not `development` AND tree is clean (`git diff --quiet && git diff --cached --quiet`), run `git checkout -f development` then re-derive BRANCH",
+                "The existing hard guards are preserved and run after the self-heal: a dirty tree still hard-FAILs (never auto-discarded at §1); a still-non-development branch still hard-FAILs",
+                "The self-heal only runs when the tree is clean (nothing to lose), so it cannot discard human work",
+                "The self-heal checkout uses the `-f development` form (consistent with the canonical restore and the US-005 probe invariant)"
+            ],
+            "priority": 5,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-005",
+            "title": "Add a regression probe for the hardened restore",
+            "description": "As a maintainer, I want a probe that fails if any restore site loses the force flag or the assertion, so the fix cannot silently regress.",
+            "acceptanceCriteria": [
+                "New file evals/probes/clean-restore.sh uses the 3-state oracle: exit 0 = PASS, 1 = REGRESSION (REGRESSION:-prefixed reason on stderr), 2 = SKIPPED (reason) when .claude/skills/autopilot/SKILL.md is absent",
+                "Probe asserts `git checkout -f development` appears at least 3 times AND the assertion substring `restore left a dirty tree` is present",
+                "Probe robust negative check: every line containing `git checkout` and `development`, after filtering out `git checkout -f development`, must be empty (no bare form remains)",
+                "`bash evals/probes/clean-restore.sh; echo exit=$?` prints exit=0 against the post-change skill file; removing `-f` from any restore site makes it exit 1",
+                "Probe file is executable (chmod +x) and uses `set -euo pipefail`",
+                "`bash evals/probes/clean-restore.sh` exits 0 and `bash evals/probes/eval-gate.sh` exits 0"
+            ],
+            "priority": 6,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

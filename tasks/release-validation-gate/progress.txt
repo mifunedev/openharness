@@ -1,0 +1,72 @@
+# progress
+
+## Codebase Patterns
+
+- GitHub Actions jobs run on separate runners and do not share state, so the
+  publish job keeps its own Setup Node + Install pnpm steps even though the
+  `validate` job also runs them — this duplication is intentional, not a smell.
+- `.claude/rules/` is a symlink to `context/rules/`; edit the canonical
+  `context/rules/<file>` and the `.claude/rules/<file>` path resolves to the
+  same inode (verify with `diff` exit 0).
+- No host PyYAML; validate workflow YAML with the repo's bundled `js-yaml`
+  (`node -e "require('js-yaml').load(...)"`).
+
+## US-001 — 2026-06-11 (via /delegate)
+
+**Title**: Add a validate job that gates the publish job in release.yml
+**Files changed**: .github/workflows/release.yml
+**Result**: PASS
+
+### What I did
+Added a `validate` job (job-level `permissions: contents: read`) as the first
+job, mirroring `ci-harness.yml`'s `ci` job step-for-step (10 steps, byte-identical
+`run:`/`uses:`/cache). Added `needs: [validate]` to the publish (`release`) job and
+moved the workflow-level `contents: write` + `packages: write` permissions onto it.
+No publish step removed or reordered.
+
+### Learnings for future iterations
+Verified validate↔ci step parity programmatically (js-yaml diff of normalized
+steps). There is no automated drift detector — future ci-harness.yml changes must
+be mirrored into release.yml's validate job by hand.
+
+---
+
+## US-002 — 2026-06-11 (via /delegate)
+
+**Title**: Reconcile the git.md release description
+**Files changed**: context/rules/git.md
+**Result**: PASS
+
+### What I did
+Reworded `context/rules/git.md:130` from "runs lint + type-check + tests" to
+"its `validate` job runs lint, format check, build, test, and the root-scripts
+tests (mirroring CI)…". `type-check` no longer appears anywhere in the file; the
+`.claude/rules/git.md` symlink resolves clean (`diff` exit 0). PROTECTED-PATH:
+permitted documentation correction (not a deletion) per the deletion-only gate.
+
+### Learnings for future iterations
+git.md is a protected path via the `.claude/rules` symlink — content edits are
+fine; only deletion/deprecation needs an override note.
+
+---
+
+## US-003 — 2026-06-11 (via /delegate)
+
+**Title**: Add the CHANGELOG entry
+**Files changed**: CHANGELOG.md
+**Result**: PASS
+
+### What I did
+Appended one bullet to `## [Unreleased]` → `### Changed`: "Release pipeline now
+validates (lint, format check, build, test, root tests) before building/pushing
+the Docker image or creating the GitHub Release ([#24](...))." Uses the
+ryaneggz/openharness namespace (matches all current [Unreleased] links). No
+existing entry removed or reordered.
+
+### Learnings for future iterations
+Current [Unreleased] links all use the ryaneggz/openharness namespace; older
+released sections use mifunedev — leave historical entries untouched.
+
+---
+
+STATUS: COMPLETE

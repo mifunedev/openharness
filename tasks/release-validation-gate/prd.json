@@ -1,0 +1,54 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/24-release-validation-gate",
+    "description": "Add a validate job to .github/workflows/release.yml that gates the Docker build/push and GitHub Release on the same checks CI runs (lint, format check, build, test, root scripts tests), and reconcile the context/rules/git.md doc claim to match what actually runs.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Add a validate job that gates the publish job in release.yml",
+            "description": "As the maintainer, I want the release workflow to run the same lint/build/test checks as CI before it publishes anything, so a broken commit on a tag can never ship an image to GHCR.",
+            "acceptanceCriteria": [
+                "release.yml defines a new job 'validate' (runs-on: ubuntu-latest) with permissions: contents: read only",
+                "validate job steps mirror ci-harness.yml's ci job exactly, in order: Checkout (actions/checkout@v4), Setup Node 22.x (actions/setup-node@v4, node-version '22'), Install pnpm (pnpm/action-setup@v4), Cache pnpm store (actions/cache@v4, path: ~/.local/share/pnpm/store/v3, key pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}, restore-keys pnpm-store-), Install (pnpm install --frozen-lockfile), Lint (pnpm --filter './packages/**' -r --if-present run lint), Format check (format:check), Build (build), Test (test), Root tests (pnpm test:scripts)",
+                "The cache step includes the explicit path: ~/.local/share/pnpm/store/v3 (omitting it causes a cache miss every run)",
+                "The existing publish job (name 'Build & Release') declares needs: [validate]; verifiable via grep -A2 'name: Build & Release' .github/workflows/release.yml showing needs referencing validate",
+                "The top-level workflow permissions block is removed; contents: write + packages: write are moved onto the publish job body (grep-verifiable on the job, not just the file)",
+                "The publish job keeps its OWN Setup Node + Install pnpm steps (jobs do not share runner state); the apparent duplication is expected and must not be deduplicated",
+                "No publish-side steps are removed or reordered: tag trigger, Parse tag, Extract release notes, Setup Node, Install pnpm, Buildx, GHCR login, Build & push, Create GitHub Release all remain",
+                "release.yml parses as valid YAML: python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/release.yml'))\" exits 0"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed 2026-06-11 via /delegate; validate job mirrors ci-harness.yml (10 steps byte-identical), needs:[validate], permissions split."
+        },
+        {
+            "id": "US-002",
+            "title": "Reconcile the git.md release description",
+            "description": "As the maintainer, I want context/rules/git.md to accurately describe what the release workflow runs, so the docs match reality.",
+            "acceptanceCriteria": [
+                "PROTECTED-PATH override: this is a documentation correction (not a deletion/deprecation) of context/rules/git.md (== .claude/rules/git.md via symlink, protected-paths:50); permitted under the deletion-only gate",
+                "The phrase 'runs lint + type-check + tests' on context/rules/git.md:130 is replaced with wording matching the actual gate (lint, format check, build, test, root-scripts tests)",
+                "The string 'type-check' no longer appears on that line; no type-check script is invented",
+                "The surrounding sentence still reads correctly (tag push triggers release.yml, which now validates then builds/pushes to GHCR and creates a GitHub Release)",
+                "The edit is made to the canonical file context/rules/git.md (never the symlink); diff context/rules/git.md .claude/rules/git.md exits 0 afterward"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Completed 2026-06-11 via /delegate; git.md:130 reworded (type-check removed), symlink diff clean."
+        },
+        {
+            "id": "US-003",
+            "title": "Add the CHANGELOG entry",
+            "description": "As the maintainer, I want the release-gate change recorded in the changelog so it surfaces in the next release notes.",
+            "acceptanceCriteria": [
+                "A new bullet exists under ## [Unreleased] -> ### Changed: 'Release pipeline now validates (lint, format check, build, test, root tests) before building/pushing the Docker image or creating the GitHub Release ([#24](https://github.com/ryaneggz/openharness/issues/24)).'",
+                "The bullet links issue #24 using the ryaneggz/openharness namespace (matches all current [Unreleased] links)",
+                "No existing [Unreleased] entries are removed or reordered"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Completed 2026-06-11 via /delegate; CHANGELOG [Unreleased] Changed bullet added, links #24."
+        }
+    ]
+}

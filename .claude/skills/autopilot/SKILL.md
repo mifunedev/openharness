@@ -20,7 +20,7 @@ argument-hint: "[--dry-run]"
 
 Unattended self-improvement loop for the harness. Each run picks one harness-infra item from the GitHub `autopilot` issue queue (or researches and files one when the queue is empty), builds it end-to-end through `pm decompose → /ship-spec --issue → /delegate → /eval`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
 
-When fired by the hourly cron, the run lives in its own detached tmux session (`tmux: true` in `crons/autopilot.md`); the session persists for you to attach and read **iff** the run produced a PR (see § Session lifecycle).
+When fired by the hourly cron, the run lives in its own detached tmux session (`tmux: true` in `crons/autopilot.md`); **iff** the run produced a PR the session persists and resumes the run's own conversation as a live agent you can `tmux attach` and drive — attach and proceed if a run needs a judgment call (see § Session lifecycle).
 
 `--dry-run` prints the selection decision (queue ticket or research finding) plus the open-PR counts, then exits without calling `/ship-spec` or `/delegate` and without touching git or GitHub.
 

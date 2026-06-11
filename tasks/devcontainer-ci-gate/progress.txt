@@ -1,2 +1,41 @@
 # progress
 
+## Codebase Patterns
+- `.github/workflows/ci-harness.yml` gates harness changes by `paths:` filters on BOTH `push` and `pull_request`. Any new tracked surface that needs CI coverage must be added to BOTH blocks or it silently merges green.
+- hadolint config lives at repo-root `.hadolint.yaml`; the `hadolint/hadolint-action` auto-discovers it (we also pass `config:` explicitly). Validate the ignore list mount-free with `docker run --rm -i hadolint/hadolint hadolint --ignore <CODE>... - < Dockerfile` (host bind-mounts to the docker daemon fail in this sandbox; stdin works).
+- shellcheck `-S warning` excludes info/style notes (e.g. the intentional SC2015 `A && B || C` idiom in entrypoint.sh) so the gate is green without `# shellcheck disable` clutter.
+- `actionlint` (via `docker run --rm -i rhysd/actionlint -no-color - < workflow.yml`) is the authoritative local validator: YAML + Actions schema + embedded shellcheck on `run:` steps in one pass.
+
+## US-002 — 2026-06-11 (autopilot /delegate, Wave 1)
+
+**Title**: Add a curated .hadolint.yaml ignore list
+**Files changed**: .hadolint.yaml (new)
+**Result**: PASS
+
+### What I did
+Created repo-root `.hadolint.yaml` with `ignored: [DL4006, DL3008, DL3016, DL3003, DL3059, SC2016]`, each with a one-line rationale and a version header. Validated locally: the 6 codes suppress all 16 current Dockerfile findings → hadolint exits 0.
+
+## US-004 — 2026-06-11 (autopilot /delegate, Wave 1)
+
+**Title**: Record the change in the CHANGELOG
+**Files changed**: CHANGELOG.md
+**Result**: PASS
+
+### What I did
+Added one `### Added` bullet under `## [Unreleased]` referencing #26, describing the boot-lint gate. Placed as the last Added bullet, before `### Changed`. No versioned section touched.
+
+## US-001 + US-003 — 2026-06-11 (autopilot /delegate, Wave 2)
+
+**Title**: Extend CI path filters to cover the boot path + add the boot-lint job
+**Files changed**: .github/workflows/ci-harness.yml
+**Result**: PASS
+
+### What I did
+Added `.devcontainer/**` and `install/**` to both `push.paths` and `pull_request.paths`. Added an independent `boot-lint` job (no `needs:`) that runs `shellcheck -S warning .devcontainer/*.sh install/*.sh` (with an install-if-missing guard) and `hadolint/hadolint-action@<sha> # v3.1.0` against `.devcontainer/Dockerfile` with `config: .hadolint.yaml`. Validated: grep counts 2/2, shellcheck green locally, actionlint exit 0, `boot-lint.needs` is none, workflow `permissions: contents: read` preserved.
+
+### Learnings for future iterations
+US-001 and US-003 share `ci-harness.yml`, so they were implemented by one worker (single file) rather than parallel workers, to avoid a same-file edit collision.
+
+---
+
+STATUS: COMPLETE

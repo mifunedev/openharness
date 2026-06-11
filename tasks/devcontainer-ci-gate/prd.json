@@ -16,8 +16,8 @@
                 "YAML still parses without error"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 via autopilot /delegate; both push+pull_request paths extended; grep==2; actionlint exit 0."
         },
         {
             "id": "US-002",
@@ -32,8 +32,8 @@
                 "File parses as valid YAML"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 via autopilot /delegate; validated locally with hadolint 2.x (the 6 ignore codes suppress all 16 Dockerfile findings -> exit 0)."
         },
         {
             "id": "US-003",
@@ -50,8 +50,8 @@
                 "YAML still parses without error"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 via autopilot /delegate; boot-lint job has no needs:, inherits contents:read; shellcheck green locally; actionlint exit 0."
         },
         {
             "id": "US-004",
@@ -63,8 +63,8 @@
                 "No versioned section is hand-edited"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 via autopilot /delegate; bullet added as last item under [Unreleased] ### Added; grep -c 'boot-lint.*#26' == 1."
         }
     ]
 }

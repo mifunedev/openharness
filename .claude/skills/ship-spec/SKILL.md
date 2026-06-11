@@ -7,7 +7,7 @@ description: |
   TRIGGER when: asked to scaffold a spec end-to-end, "ship a spec",
   "set up a task PR", or after planning a feature and ready to formalize.
   v1 stops at draft PR creation; loop launch + CI verification stay manual.
-argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent]"
+argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent] [--issue <N>]"
 ---
 
 # Ship Spec
@@ -45,6 +45,7 @@ Extract:
 - **`<feature-description>`** (required) — the first positional arg, free text
 - **`--plan <path>`** (optional) — if provided, use the file content as comprehensive input to `/prd` and skip clarifying questions
 - **`--prefix <type>`** (optional, default `feat`) — branch + issue prefix per `.claude/rules/git.md` (`feat | bug | task | audit | skill | agent`)
+- **`--issue <N>`** (optional) — link an EXISTING GitHub issue instead of creating one. When present, set `ISSUE_NUM=<N>` and skip Stage 5's `gh issue create`; `<N>` flows into the branch (`<prefix>/<N>-<slug>`), `/ralph --issue <N>`, `prompt.md`, and the PR `Closes #<N>` link, exactly as a freshly-created issue number would
 
 Derive `<slug>` per `/prd` rules: lowercase, kebab-case, `[a-z0-9-]+`, **≤5 words**, not `archive`. Reject and ask for a shorter name if invalid.
 
@@ -140,7 +141,11 @@ The HALT path is the whole point. Critics are the short feedback loop; honoring 
 
 ### Stage 5 — Open GH issue → `#N`
 
-Only reached after stage 4 PROCEED. Compose issue body from the prd.md introduction + goals sections. Title format per `.claude/rules/git.md`:
+Only reached after stage 4 PROCEED.
+
+**If `--issue <N>` was provided**: skip issue creation entirely — set `N=<N>`, print `Using existing issue #<N> (--issue); skipping creation.`, optionally confirm it exists with `gh issue view <N>`, and continue to Stage 6. Everything below in this stage applies ONLY when creating a fresh issue (no `--issue` flag).
+
+Compose issue body from the prd.md introduction + goals sections. Title format per `.claude/rules/git.md`:
 
 ```bash
 gh issue create \
@@ -294,7 +299,7 @@ Every stage checks for prior state and resumes rather than duplicating:
 | 2 | `tasks/<slug>/prd.md` exists | `/prd` runs in update mode (existing skill behavior) |
 | 3 | `tasks/<slug>/critique.md` exists and is recent (<24h) AND prd.md unchanged since | Skip; reuse |
 | 4 | (no resume — pure decision step) | Re-evaluate critique.md every run |
-| 5 | Issue with matching title/label exists | Reuse existing `#N`; don't create duplicate |
+| 5 | `--issue <N>` provided, or issue with matching title/label exists | If `--issue <N>`: skip creation, reuse `<N>`. Else reuse the matching issue; never create a duplicate |
 | 6 | `tasks/<slug>/prd.json` exists | `/ralph` archives prior + regenerates (existing skill behavior) |
 | 7 | `prompt.md` / `progress.txt` exist | Skip if present |
 | 8 | Branch exists on origin | Checkout + commit on top |

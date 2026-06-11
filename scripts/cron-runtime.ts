@@ -12,6 +12,7 @@ export interface CronEntry {
   enabled: boolean;
   overlap: boolean;
   catchup: boolean;
+  tmux: boolean;
   body: string;
   filePath: string;
 }
@@ -39,6 +40,7 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
     enabled: fm.enabled !== "false",
     overlap: fm.overlap === "true",
     catchup: fm.catchup === "true",
+    tmux: fm.tmux === "true",
     body: m[2],
     filePath: file,
   };
@@ -85,7 +87,70 @@ function log(id: string, status: string, msg = ""): void {
   }
 }
 
+export function tmuxSessionName(id: string, now: Date): string {
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  const mm = pad(now.getMonth() + 1);
+  const dd = pad(now.getDate());
+  const hh = pad(now.getHours());
+  const min = pad(now.getMinutes());
+  return `${id}-${mm}${dd}-${hh}${min}`;
+}
+
+export function buildTmuxWrapper(opts: {
+  session: string;
+  id: string;
+  agentBin: string;
+  promptFile: string;
+}): string {
+  const { session, id, agentBin, promptFile } = opts;
+  return (
+    `echo $$ > /tmp/cron-${id}.pid; ` +
+    `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep; ` +
+    `${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee /tmp/${session}.log; ` +
+    `rm -f /tmp/cron-${id}.pid; ` +
+    `[ -f /tmp/${session}.keep ] && exec bash`
+  );
+}
+
+function fireTmux(entry: CronEntry): void {
+  const pidFile = `/tmp/cron-${entry.id}.pid`;
+  if (!entry.overlap && fs.existsSync(pidFile)) {
+    const existing = parseInt(fs.readFileSync(pidFile, "utf-8").trim(), 10);
+    if (!isNaN(existing)) {
+      try {
+        process.kill(existing, 0);
+        log(entry.id, "SKIPPED_OVERLAP");
+        return;
+      } catch {
+        /* stale — fall through */
+      }
+    }
+  }
+  const session = tmuxSessionName(entry.id, new Date());
+  const promptFile = `/tmp/cron-${session}.prompt`;
+  fs.writeFileSync(promptFile, entry.body);
+  const child = spawn(
+    "tmux",
+    [
+      "new-session",
+      "-d",
+      "-s",
+      session,
+      "-c",
+      process.cwd(),
+      buildTmuxWrapper({ session, id: entry.id, agentBin: AGENT_BIN, promptFile }),
+    ],
+    { stdio: "ignore" },
+  );
+  child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
+  log(entry.id, "SPAWNED", session);
+}
+
 function fire(entry: CronEntry): void {
+  if (entry.tmux) {
+    fireTmux(entry);
+    return;
+  }
   log(entry.id, "FIRE");
   const child = spawn(AGENT_BIN, ["-p", entry.body], { stdio: "inherit" });
   child.on("exit", (code: number | null) => log(entry.id, code === 0 ? "OK" : `EXIT_${code}`));

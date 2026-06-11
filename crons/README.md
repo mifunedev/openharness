@@ -19,6 +19,7 @@ timezone: America/Denver
 enabled: true
 overlap: false           # skip new fire if previous still running
 catchup: false           # don't replay missed fires after downtime
+tmux: false              # optional — run each fire in its own detached tmux session
 description: <one-line>
 ---
 
@@ -42,14 +43,21 @@ Body becomes the agent prompt at fire time.
 
 | File | Schedule | Description |
 |------|----------|-------------|
-| `autopilot.md` | `5 * * * *` (every hour at +5 min) | Self-improving loop — select backlog item, build through full pipeline, finalize ready-for-review PR (kill-switch: `enabled: false`) |
+| `autopilot.md` | `5 * * * *` (every hour at +5 min) | Self-improving loop — issue-queue-first selection (build the oldest open `autopilot` issue; research + file a ticket when the queue is empty), eval gate before ready, finalized in a per-run tmux session (kill-switch: `enabled: false`) |
 | `heartbeat.md` | `0 * * * *` (hourly) | Hourly pulse — review memory, surface anything urgent |
 | `cleanup-tasks.md` | `0 23 * * 0` (Sun 23:00 MT) | Weekly Ralph session sweep — archive completed tasks |
 | `eval-weekly.md` | `0 6 * * 0` (Sun 06:00 MT) | Weekly eval suite — run probes, log any regressions to memory |
 
-## Curated backlog
+## tmux sessions
 
-`autopilot-backlog.md` is a **reference file, not a scheduled job**. It contains a curated checklist of harness-infra improvements that the autopilot loop reads to select its next work item. It has no `schedule:` field and is never processed by the cron runtime. Maintain it by hand to steer autopilot's priorities without touching code.
+A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
+
+- **Session name**: `<id>-<MMDD>-<HHMM>` (e.g. `autopilot-0610-1805`), derived from the fire time. The runtime logs `SPAWNED <session>` to `.cron.log`.
+- **Env exported into the agent**: `CRON_TMUX_SESSION=<session>` and `CRON_KEEP_MARKER=/tmp/<session>.keep`.
+- **Keep-marker contract**: if the agent `touch`es `$CRON_KEEP_MARKER` before exiting, the session persists with a live shell (attach via `tmux attach -t <session>`); otherwise it auto-closes when the agent finishes. By convention a job keeps its session only when the run produced something worth revisiting (e.g. autopilot keeps it when a PR was opened).
+- **Overlap guard**: a per-id pidfile `/tmp/cron-<id>.pid` blocks a new fire while a previous one is still running when `overlap: false`; the skipped fire logs `SKIPPED_OVERLAP`.
+
+Jobs with `tmux` absent or `false` keep the default in-process spawn. Steer autopilot's priorities by filing GitHub issues labeled `autopilot` (the work queue) — no in-repo backlog file.
 
 ## Override
 

@@ -1,13 +1,16 @@
 ---
 name: autopilot
 description: |
-  Self-improvement loop: selects the next harness-infra improvement from the
-  curated backlog (or a throttled /harness-audit fallback), decomposes it via
-  the pm agent, scaffolds a branch + draft PR with /ship-spec, executes it
-  in-process with /delegate, and finalizes a ready-for-review PR with green CI.
+  Self-improvement loop: each hourly run implements the oldest open issue
+  labeled `autopilot` that has no open PR. When the queue is empty it runs
+  first-principles `/harness-audit` research, files its own `autopilot`
+  ticket from the top-ranked finding, and builds that. Decomposes via the pm
+  agent, scaffolds against the ticket with `/ship-spec --issue`, executes
+  in-process with `/delegate`, runs an `/eval` regression gate, and finalizes
+  a ready-for-review PR whose description states why this item was selected.
   Harness-infra only (skills/rules/docs/scripts/crons/wiki) — never sandbox
-  application code. Cap of 6 concurrently-open autopilot PRs created per UTC
-  day — a same-day close or merge frees the slot; never auto-merges.
+  application code. Runs in its own per-run tmux session. Caps: 6 open
+  autopilot PRs created per UTC day AND 10 total open; never auto-merges.
   TRIGGER when: the hourly crons/autopilot.md fires, or invoked manually on
   demand (e.g. /autopilot --dry-run to preview the next selection).
 argument-hint: "[--dry-run]"
@@ -15,21 +18,35 @@ argument-hint: "[--dry-run]"
 
 # Autopilot
 
-Unattended self-improvement loop for the harness. Each run picks one harness-infra item, builds it end-to-end through `pm decompose → /ship-spec → /delegate`, and lands a ready-for-review PR. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
+Unattended self-improvement loop for the harness. Each run picks one harness-infra item from the GitHub `autopilot` issue queue (or researches and files one when the queue is empty), builds it end-to-end through `pm decompose → /ship-spec --issue → /delegate → /eval`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
 
-`--dry-run` prints the selected item and the count of today's autopilot PRs still open, then exits without calling `/ship-spec` or `/delegate`.
+When fired by the hourly cron, the run lives in its own detached tmux session (`tmux: true` in `crons/autopilot.md`); the session persists for you to attach and read **iff** the run produced a PR (see § Session lifecycle).
+
+`--dry-run` prints the selection decision (queue ticket or research finding) plus the open-PR counts, then exits without calling `/ship-spec` or `/delegate` and without touching git or GitHub.
 
 ## Instructions
 
-### 1. Guardrail pre-check
+### 1. Guardrails
 
-**Ensure the `autopilot` GitHub label exists** (idempotent — safe to run every pulse):
+Order matters — cheapest exits first.
+
+**Ensure the GitHub labels exist** (idempotent — safe every pulse):
 
 ```bash
 gh label create autopilot --color 6E40C9 --description "Opened by the autopilot loop" 2>/dev/null || true
+gh label create autopilot-blocked --color B60205 --description "Autopilot ticket blocked by a critic gate; remove to retry" 2>/dev/null || true
 ```
 
-**Daily-cap check** — count autopilot PRs created today (UTC) that are **still open**. A PR closed or merged the same day it was created frees its slot, so the next fire can build another:
+**Total-open ceiling** — at most 10 open autopilot PRs at any time (any age):
+
+```bash
+TOTAL_OPEN=$(gh pr list --state open --label autopilot --json number --jq 'length')
+echo "total open autopilot PRs: $TOTAL_OPEN (ceiling 10)"
+```
+
+If `$TOTAL_OPEN` ≥ 10 → memory log `Result: SKIPPED-CAP-TOTAL`, liveness `SKIPPED-CAP-TOTAL`, **EXIT** (no PR produced → do not touch the keep-marker; the session auto-closes).
+
+**Daily cap** — at most 6 autopilot PRs created today (UTC) still open; a same-day close/merge frees a slot:
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d)
@@ -37,12 +54,9 @@ OPEN_TODAY=$(gh pr list --state open --search "label:autopilot created:>=$TODAY"
 echo "open autopilot PRs created today: $OPEN_TODAY (cap 6)"
 ```
 
-If `$OPEN_TODAY` ≥ 6:
-- Append memory log entry (see §7 Memory Log) with `Result: SKIPPED-CAP-DAILY`.
-- Append liveness line: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "SKIPPED-CAP-DAILY" >> crons/.cron.log`
-- **EXIT** — do NOT proceed to §2, do NOT run `/harness-audit`.
+If `$OPEN_TODAY` ≥ 6 → memory log `Result: SKIPPED-CAP-DAILY`, liveness `SKIPPED-CAP-DAILY`, **EXIT** (no keep-marker).
 
-If `--dry-run`: print `open autopilot PRs created today: $OPEN_TODAY (cap 6)` now (the selection is printed after §2), then **continue** to §2 to determine the selection but exit before §4.
+If `--dry-run`: print both counts now (the selection is printed after §2), then **continue** to §2 to determine the selection but exit before §4.
 
 **Require clean state**:
 ```bash
@@ -62,80 +76,79 @@ git merge --ff-only origin/development || { echo "ERROR: development diverged fr
 
 If the fast-forward fails, log `Result: FAIL` + `Observation: development diverged from origin/development; manual reconcile needed` and exit 1 without touching GitHub.
 
-### 2. Select item
-
-Build a candidate list and **advance past dedupe hits** — a blocked candidate must never end the run while other candidates remain (the 2026-06-10 one-PR stall was exactly this: one in-flight item head-of-line-blocked every subsequent pulse).
-
-**Source A — curated backlog** (`crons/autopilot-backlog.md`): iterate ALL unchecked items in file order:
+**Capture the tmux session context** (set by the cron runtime when `tmux: true`; EMPTY when invoked manually — every tmux step below must no-op when empty):
 
 ```bash
-grep '^\- \[ \]' crons/autopilot-backlog.md 2>/dev/null
+SESSION="$CRON_TMUX_SESSION"        # e.g. autopilot-0610-1805, or empty
+KEEP="$CRON_KEEP_MARKER"            # e.g. /tmp/autopilot-0610-1805.keep, or empty
 ```
 
-For each line, extract its slug token (the first word after `- [ ] `):
+### 2. Select — issue queue first, research only when empty
+
+GitHub issues labeled `autopilot` ARE the work queue. There are no time throttles and no in-repo backlog — the user steers by filing `autopilot`-labeled issues.
+
+**Queue check** — actionable = open, labeled `autopilot`, NOT labeled `autopilot-blocked`, and with no linked PR (GitHub's `linked:pr` qualifier matches PRs with closing keywords — our `Closes #N` convention):
 
 ```bash
-SLUG=$(echo "$LINE" | sed 's/^- \[ \] //' | awk '{print $1}' | tr -d ':' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//')
+gh issue list --state open --label autopilot \
+  --search "-linked:pr -label:autopilot-blocked" \
+  --json number,title,createdAt --jq 'sort_by(.createdAt)'
 ```
 
-Run the **dedupe check** (below) on each candidate in order. Select the FIRST candidate that passes; set `SOURCE="backlog"`.
+- **Oldest actionable issue wins** → `ISSUE_NUM`, `TITLE`, `CREATED`. Derive `SLUG` from the title (kebab-case, ≤5 words). Set:
+  ```
+  SELECTION_MODE=queue
+  SELECTION_RATIONALE="Queue selection: implementing open autopilot issue #$ISSUE_NUM (\"$TITLE\") — the oldest actionable ticket (filed $CREATED) with no open PR."
+  ```
+  If `[ -n "$SESSION" ]`, rename the session for readability: `tmux rename-session "autopilot-$SLUG"`. Leave `$KEEP` unchanged — the keep-marker path is fixed at spawn time and the session wrapper checks that original path.
+- **Queue non-empty but every open ticket already has an open PR** (nothing actionable) → memory log `Result: IN-FLIGHT`, liveness `IN-FLIGHT`, exit 0 (awaiting review; no PR produced → no keep-marker → session auto-closes).
 
-**Source B — `/harness-audit` fallback** (only when no backlog candidate survives dedupe):
+**Queue empty → research** (first-principles pass):
 
-Throttle: at most one audit per **4 hours** — paired with the daily cap, hourly fires on an empty backlog yield at most 6 audit-driven builds/day. The throttle is tracked by the explicit `AUDIT-RUN` liveness marker, not by grepping prose in the memory log:
+1. Run `/harness-audit`. Rank its harness-infra findings by impact.
+2. Dedupe each finding (in rank order) against open issues, open PRs, **and merged PRs** — advance past any hit (a blocked candidate must never end the run while others remain):
+   ```bash
+   DUPE_OPEN_ISSUE=$(gh issue list --state open --json title --jq '.[].title' | grep -i "$SLUG" || true)
+   DUPE_OPEN_PR=$(gh pr list --state open --json title,headRefName --jq '.[] | "\(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
+   DUPE_MERGED_PR=$(gh pr list --state merged --limit 50 --json number,title,headRefName --jq '.[] | "\(.number) \(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
+   ```
+3. **No survivor** → memory log `Result: NOTHING-NEW`, liveness `NOTHING-NEW`, exit 0 (no keep-marker). Research fires only when the queue has drained (a merge auto-closes its ticket via `Closes #N`); worst case an hourly audit yields `NOTHING-NEW` repeatedly — accepted cost.
+4. **Top survivor** → file the ticket from the plan. Write a body to `/tmp/autopilot-research-$$.md` containing (a) the finding, (b) the first-principles rationale, (c) a 3–7-bullet plan sketch:
+   ```bash
+   gh issue create --label autopilot --title "feat: <finding>" --body-file /tmp/autopilot-research-$$.md
+   ```
+   Capture `ISSUE_NUM`; derive `SLUG` from the title. Set:
+   ```
+   SELECTION_MODE=research
+   SELECTION_RATIONALE="Research selection: queue was empty; /harness-audit ranked this finding #1 by impact among harness-infra candidates. First-principles rationale: <reasoning>. Filed as #$ISSUE_NUM."
+   ```
+   Rename the session as above. Then **implement it this same run** (§3 onward).
 
-```bash
-LAST_AUDIT=$(grep 'autopilot: AUDIT-RUN' crons/.cron.log | tail -1 | sed 's/^\[\([^]]*\)\].*/\1/' || true)
-if [ -n "$LAST_AUDIT" ]; then
-  AGE_H=$(( ($(date +%s) - $(date -d "$LAST_AUDIT" +%s)) / 3600 ))
-  [ "$AGE_H" -lt 4 ] && AUDIT_THROTTLED=1
-fi
-```
-
-If throttled, fall through to the exhausted path. Otherwise run `/harness-audit` and immediately append the marker:
-
-```bash
-printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "AUDIT-RUN" >> crons/.cron.log
-```
-
-Take the top **3** ranked harness-infra findings, derive a deterministic kebab slug for each (lowercase, spaces → `-`), and dedupe-check them in rank order. Select the first that passes; `SOURCE="audit"`.
-
-**Dedupe check** (per candidate) — a candidate is blocked if an open issue, an open PR, **or a merged PR** already covers its slug (merged matters: minutes after a merge, open-state-only dedupe goes blind and the loop rebuilds shipped work):
-
-```bash
-DUPE_OPEN_ISSUE=$(gh issue list --state open --json title --jq '.[].title' | grep -i "$SLUG" || true)
-DUPE_OPEN_PR=$(gh pr list --state open --json title,headRefName \
-  --jq '.[] | "\(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
-DUPE_MERGED_PR=$(gh pr list --state merged --limit 50 --json number,title,headRefName \
-  --jq '.[] | "\(.number) \(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
-```
-
-- Any hit → record the candidate + reason, **continue to the next candidate** (do NOT exit the run).
-- **Self-heal**: if a *backlog* candidate's only hit is a merged PR, the item shipped but was never checked off. Mark it now — flip its line to `- [x] <slug>: …` and append ` — shipped as PR #<N> (deduped <UTC date>)`, then commit to `development` with `task: check off <slug> in autopilot backlog (merged PR #<N>)` and push. Continue to the next candidate.
-
-**All candidates blocked / both sources exhausted**:
-
-- At least one candidate existed but every one hit dedupe → log `Result: SKIPPED-DEDUPE`, `Selected: none`, `Observation: all candidates already covered by open or merged work`; liveness `SKIPPED-DEDUPE`; exit 0.
-- No candidate existed at all (backlog empty AND audit throttled or empty) → log `Result: NOTHING-TO-BUILD`, `Observation: backlog empty and no new harness-audit findings`; liveness `NOTHING-TO-BUILD`; exit 0 **without touching git or GitHub**.
-
-**`--dry-run` exit** — at this point print:
+**`--dry-run` exit** — print:
 
 ```
-[dry-run] selected: $SLUG (source: $SOURCE)
-[dry-run] open autopilot PRs created today: $OPEN_TODAY (cap 6)
+[dry-run] mode: $SELECTION_MODE
+[dry-run] selected: #$ISSUE_NUM ($SLUG)        # research path: "would file + build: <finding>"
+[dry-run] open autopilot PRs created today: $OPEN_TODAY (cap 6); total open: $TOTAL_OPEN (ceiling 10)
 [dry-run] exiting without calling /ship-spec or /delegate
 ```
 
-Then exit 0.
+In `--dry-run`, the research path ranks findings but MUST NOT `gh issue create` — print the would-be finding instead. Then exit 0.
 
 ### 3. pm decompose
 
-Invoke the `pm` agent via the `Agent` tool with `subagent_type: pm`. Pass a 5-field advisor-model briefing:
+Invoke the `pm` agent via the `Agent` tool with `subagent_type: pm`. The input is the **ticket body** — identical for queue tickets (user- or prior-run-filed) and just-created research tickets:
+
+```bash
+gh issue view "$ISSUE_NUM" --json title,body --jq '"\(.title)\n\n\(.body)"'
+```
+
+Pass a 5-field advisor-model briefing:
 
 ```
 ## Advisor Briefing
 
-**Goal**: Decompose the harness-infra improvement item "$SLUG" into a concrete implementation plan.
+**Goal**: Decompose the harness-infra ticket #$ISSUE_NUM into a concrete implementation plan.
 
 **Constraints / gotchas**:
 - Scope: harness-infra only (skills/rules/docs/scripts/crons/wiki) — do NOT touch sandbox application code.
@@ -143,43 +156,48 @@ Invoke the `pm` agent via the `Agent` tool with `subagent_type: pm`. Pass a 5-fi
 - Keep the plan to 3–7 concrete acceptance-criteria bullets; do not over-specify.
 
 **Acceptance criteria**:
-- A one-sentence feature description suitable for /ship-spec (no longer than ~120 chars).
+- A one-sentence feature description suitable for /ship-spec (≤ ~120 chars).
 - A bullet-list implementation plan (3–7 items).
 
-**Start here**: crons/autopilot-backlog.md (the item's full text), memory/MEMORY.md (recent context).
+**Start here**: the ticket body (`gh issue view $ISSUE_NUM`), memory/MEMORY.md (recent context).
 
 **Out of scope**: PRD JSON generation, branch creation, git operations.
 ```
 
-Capture the pm agent's output as `PM_PLAN` and `PM_DESC` (the first sentence from its output as the description, the rest as the plan).
+Capture the pm output as `PM_DESC` (the first sentence) and `PM_PLAN` (the rest).
 
-### 4. /ship-spec
+### 4. /ship-spec --issue
 
-Run `/ship-spec` with the pm decomposition output:
+Run `/ship-spec` against the existing ticket (the `--issue` flag links it instead of opening a duplicate):
 
 ```
-/ship-spec "$PM_DESC" --plan <pm-plan-content> --prefix feat
+/ship-spec "$PM_DESC" --plan <PM_PLAN content> --prefix feat --issue $ISSUE_NUM
 ```
 
-`/ship-spec` will:
-1. Run `/prd` to generate the spec.
-2. Run 2 critics against the spec; a critic HALT exits the pipeline.
-3. Run `/ralph` to convert to `tasks/<slug>/prd.json`.
-4. Create a GitHub issue.
-5. Create a branch.
-6. Open a **draft** PR.
-
-**Capture the PR number** from `/ship-spec` output: `PR_NUM=<N>`.
+`/ship-spec` runs `/prd` → 2 critics → (skips issue creation, reuses #$ISSUE_NUM) → `/ralph` → branch `feat/$ISSUE_NUM-$SLUG` → **draft** PR. **Capture `PR_NUM`.**
 
 **Critic HALT handling** — if `/ship-spec` emits `HALT` (critic gate rejected the spec):
-- Log `Result: HALT-CRITIC-GATE`, `Selected: $SLUG`, `Action: /ship-spec critic gate rejected spec`, `Observation: spec rejected by critic; no PR opened`.
-- Append liveness: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "HALT-CRITIC-GATE" >> crons/.cron.log`
-- Exit 0 (no git state to restore; no PR was opened).
+- Comment the verdict on the ticket and block it so it can't retry-loop hourly:
+  ```bash
+  gh issue comment "$ISSUE_NUM" --body "autopilot: /ship-spec critic gate rejected the spec. Verdict: <summary>. Labeled autopilot-blocked; remove the label to retry."
+  gh issue edit "$ISSUE_NUM" --add-label autopilot-blocked
+  ```
+- Memory log `Result: HALT-CRITIC-GATE`, liveness `HALT-CRITIC-GATE`, exit 0 (no PR → no keep-marker).
 
-**Add the `autopilot` label** to the PR immediately after it is created:
-
+**Add the `autopilot` label** to the PR:
 ```bash
 gh pr edit "$PR_NUM" --add-label autopilot
+```
+
+**State the selection rationale in the PR description** (mandatory — every autopilot PR explains why this item was chosen this session). Idempotent; prepends a `## Selection rationale` section so it is the first thing a reviewer reads:
+
+```bash
+if ! gh pr view "$PR_NUM" --json body --jq .body | grep -q "## Selection rationale"; then
+  BODY=$(gh pr view "$PR_NUM" --json body --jq .body)
+  printf '## Selection rationale\n\n%s\n\n---\n\n%s\n' "$SELECTION_RATIONALE" "$BODY" > "/tmp/autopilot-pr-$PR_NUM.md"
+  gh pr edit "$PR_NUM" --body-file "/tmp/autopilot-pr-$PR_NUM.md"
+  rm -f "/tmp/autopilot-pr-$PR_NUM.md"
+fi
 ```
 
 ### 5. /delegate
@@ -187,103 +205,97 @@ gh pr edit "$PR_NUM" --add-label autopilot
 Run `/delegate` to execute the prd.json stories **in-process**:
 
 ```
-/delegate --plan tasks/<slug>/prd.json
+/delegate --plan tasks/$SLUG/prd.json
 ```
 
-**Critical**: do NOT use `run_in_background` for autopilot delegate waves. Await all workers before proceeding to §6. Rationale: `overlap: false` in `crons/autopilot.md` guards on the foreground process exiting; backgrounded workers would allow the next hourly fire to overlap, creating concurrent commits on the same branch.
+**Critical**: do NOT use `run_in_background` for autopilot delegate waves. Await all workers before §6. Rationale: `overlap: false` in `crons/autopilot.md` guards on the foreground process exiting; backgrounded workers would let the next hourly fire overlap, creating concurrent commits on the same branch.
 
-Wait for `/delegate` to report completion (all waves finalized).
+**Delegate failure compensation** — if `/delegate` errors or exits non-zero:
+- `gh pr comment "$PR_NUM" --body "autopilot aborted mid-run: /delegate failed. PR left as draft for manual inspection. Status: DELEGATE-FAIL."`
+- Memory log `Result: DELEGATE-FAIL`, liveness `DELEGATE-FAIL`.
+- **Persist the session** (a PR exists): `[ -n "$KEEP" ] && touch "$KEEP"`.
+- Restore branch: `git checkout development`.
+- Exit 1 (non-destructive — never auto-close the issue or PR).
 
-**Delegate failure compensation** — if `/delegate` exits with a non-zero status or reports an error:
-- Post a comment on the PR explaining the abort:
+### 6. Eval gate
+
+After `/delegate` completes, **while still on the work branch**, run the probe suite:
+
+```
+/eval
+```
+
+- If `/eval` updates `evals/RESULTS.md`, commit it on the branch:
   ```bash
-  gh pr comment "$PR_NUM" --body "autopilot aborted mid-run: /delegate failed. PR left as draft for manual inspection. Status: DELEGATE-FAIL."
+  git add evals/RESULTS.md && git commit -m "task: refresh evals benchmark" || true
   ```
-- Log `Result: DELEGATE-FAIL`, `Selected: $SLUG`, `Action: /delegate failed; PR $PR_NUM left draft`, `Observation: mid-run failure; human inspection required`.
-- Append liveness: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "DELEGATE-FAIL" >> crons/.cron.log`
-- Restore branch: `git checkout development`
-- Exit 1 (non-destructive — do NOT close the issue or PR automatically).
+- **Any `REGRESSION`** → leave the PR draft, name the regressed probe(s) on the PR, persist the session, restore, and stop:
+  ```bash
+  gh pr comment "$PR_NUM" --body "autopilot: /eval reported a probe regression (<probe ids>). PR left draft; resolve before marking ready."
+  ```
+  Memory log `Result: PR-DRAFT-EVAL-RED`, liveness `PR-DRAFT-EVAL-RED`, then `[ -n "$KEEP" ] && touch "$KEEP"`, `git checkout development`, exit.
+- **Green / SKIPPED-only** → proceed to §7.
 
-### 6. Finalize
+### 7. Finalize
 
 **Push the branch**:
-
 ```bash
 git push origin HEAD
 ```
 
-**CI gate** — run `/ci-status` and capture its result:
+**CI gate** — run `/ci-status`:
 
-- If `/ci-status` reports **green** (all checks passing):
+- **Green** (all checks passing):
   ```bash
   gh pr ready "$PR_NUM"
   ```
-  Log `Result: PR-READY`.
-  Append liveness: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "PR-READY" >> crons/.cron.log`
-
-- If `/ci-status` reports **red** OR `/ci-status` times out (no result within its configured timeout):
-  - Leave the PR as **draft** (do NOT call `gh pr ready`).
-  - Post a comment:
-    ```bash
-    gh pr comment "$PR_NUM" --body "autopilot: CI is red or timed out. PR left as draft. Resolve failures and mark ready manually."
-    ```
-  - Log `Result: PR-DRAFT-CI-RED`.
-  - Append liveness: `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "PR-DRAFT-CI-RED" >> crons/.cron.log`
+  Memory log `Result: PR-READY`, liveness `PR-READY`.
+- **Red OR `/ci-status` times out**:
+  - Leave the PR **draft** (do NOT call `gh pr ready`).
+  - `gh pr comment "$PR_NUM" --body "autopilot: CI is red or timed out. PR left as draft. Resolve failures and mark ready manually."`
+  - Memory log `Result: PR-DRAFT-CI-RED`, liveness `PR-DRAFT-CI-RED`.
 
 **Never call `gh pr merge`** — autopilot does not auto-merge under any condition.
 
-**Restore branch** (mandatory — ensures the next cron fire passes §1's branch guard):
+**Persist the session** (a PR exists on every §7 path): `[ -n "$KEEP" ] && touch "$KEEP"`.
 
+**Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`):
 ```bash
 git checkout development
 ```
 
-This step runs on EVERY exit path that reaches §6 (including `PR-DRAFT-CI-RED`).
+### 8. Memory Log
 
-**Check off the built item** (mandatory when `SOURCE="backlog"`; skip for `SOURCE="audit"`). Runs after the branch restore, on `development`:
-
-```bash
-git pull --ff-only origin development
-sed -i "s/^- \[ \] $SLUG:/- [x] $SLUG:/" crons/autopilot-backlog.md
-sed -i "/^- \[x\] $SLUG:/ s/$/ — shipped as PR #$PR_NUM ($(date -u +%Y-%m-%d))/" crons/autopilot-backlog.md
-git add crons/autopilot-backlog.md
-git commit -m "task: check off $SLUG in autopilot backlog (PR #$PR_NUM)"
-git push origin development
-```
-
-Without this step the next fire re-selects the same item forever — this was the 2026-06-10 one-PR stall.
-
-### 7. Memory Log
-
-Append to `memory/<today>/log.md` on **every** exit path (including skips, halts, and errors):
+Append to `memory/<today>/log.md` on **every** exit path (skips, halts, errors included):
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "memory/$TODAY"
 cat >> "memory/$TODAY/log.md" <<EOF
 
 ## Autopilot -- $TIME UTC
-- **Result**: <OK | SKIPPED-CAP-DAILY | SKIPPED-DEDUPE | NOTHING-TO-BUILD | PR-READY | PR-DRAFT-CI-RED | HALT-CRITIC-GATE | DELEGATE-FAIL | FAIL>
-- **Selected**: <slug or "none">
+- **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | IN-FLIGHT | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | DELEGATE-FAIL | FAIL>
+- **Selected**: <#issue + slug, or "none">
+- **Session**: <tmux session name, or "none">
 - **Action**: <one-line summary of what was done>
 - **Observation**: <one sentence — key finding or outcome>
 EOF
 ```
 
-Map `Result` to the appropriate status token from the liveness set. A successful end-to-end run that produces a ready PR uses `Result: PR-READY`. A run that produces a draft PR (CI red or timed out) uses `Result: PR-DRAFT-CI-RED`.
-
 See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 
 ## Guidelines
 
-- **Scope guard**: autopilot operates on harness-infra only — skills, rules, docs, scripts, crons, wiki. It MUST never write or modify sandbox application code (Python modules, APIs, tests, business logic). This boundary is identical to the `CLAUDE.md` § What You Do NOT Do constraint.
-- **No auto-merge**: autopilot finalizes a *ready-for-review* PR. A human reviews and merges. The word "merge" must never appear in an autopilot-generated commit message, PR description, or `gh` command.
-- **In-process delegate only**: `/delegate` waves run synchronously. `run_in_background` is forbidden for autopilot delegate calls. The `overlap: false` cron setting is the concurrency guard; background workers would defeat it.
-- **Non-destructive failure**: autopilot never auto-closes issues or PRs. On failure, it comments and logs. Human inspection is always the recovery path.
-- **Idempotent label creation**: the `autopilot` label `gh label create ... 2>/dev/null || true` pattern is safe to run every pulse.
-- **Liveness on every path**: the `crons/.cron.log` `printf` line is mandatory on every exit — skip, halt, error, and success. A missing liveness line looks like a crash; never skip it.
-- **Branch restore**: `git checkout development` must execute on every path that changes the working branch (i.e., all paths that reach §4 or later). The guardrail in §1 only passes when HEAD is `development`.
-- **Throttle discipline**: the daily cap (6 concurrently-open autopilot PRs created per UTC day; same-day closes/merges free slots) gates the entire run; the `/harness-audit` fallback fires at most once per 4h, tracked via the `AUDIT-RUN` liveness marker. Together they bound the loop to at most 6 unreviewed same-day PRs at any moment, with no runaway audit invocations.
-- **Backlog lifecycle**: every shipped backlog item MUST end up checked off (`- [x]` + PR annotation) — by §6 on the normal path, by the §2 self-heal when a merged-but-unchecked item is found. An unchecked shipped item is the loop's primary stall mode.
+- **Scope guard**: harness-infra only — skills, rules, docs, scripts, crons, wiki. Never write or modify sandbox application code. Same boundary as `CLAUDE.md` § What You Do NOT Do.
+- **Selection rationale**: every PR autopilot opens MUST carry a `## Selection rationale` section as the FIRST section of its description, stating why this item was chosen this session (queue position, or the research finding + impact ranking).
+- **No auto-merge**: autopilot finalizes a *ready-for-review* PR; a human merges. The word "merge" must never appear in an autopilot-generated commit message, PR body, or `gh` command.
+- **Caps**: at most 6 open autopilot PRs created per UTC day AND 10 total open at any time. A close/merge frees a slot.
+- **In-process delegate only**: `/delegate` waves run synchronously. `run_in_background` is forbidden; `overlap: false` is the concurrency guard.
+- **Non-destructive failure**: never auto-close issues or PRs. On failure, comment + log. Human inspection is the recovery path.
+- **autopilot-blocked**: a critic HALT labels the ticket `autopilot-blocked`, excluding it from the queue query until a human removes the label — a bad ticket can't retry-loop hourly.
+- **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.
+- **Liveness on every path**: every exit appends `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "<TOKEN>" >> crons/.cron.log` — skip, halt, error, success. A missing liveness line looks like a crash.
+- **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `DELEGATE-FAIL`). No-PR paths never touch the keep-marker, so their sessions auto-close. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
+- **Branch restore**: `git checkout development` must run on every path that changed the working branch (all paths reaching §4+).
 
 ## Reference
 
@@ -291,22 +303,24 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 
 | Token | Meaning |
 |-------|---------|
-| `OK` | Reserved for future use (successful sub-step logging; prefer specific tokens below) |
-| `SKIPPED-CAP-DAILY` | ≥6 autopilot PRs created this UTC day are still open; run skipped until one closes/merges or the day rolls over |
-| `SKIPPED-DEDUPE` | Every candidate (backlog + audit) already covered by an open issue/PR or merged PR; nothing selectable this pulse |
-| `NOTHING-TO-BUILD` | Both backlog and `/harness-audit` fallback exhausted/fully deduped |
-| `AUDIT-RUN` | Marker only (not an exit status): `/harness-audit` fallback was invoked; used for the 4h throttle |
+| `SKIPPED-CAP-TOTAL` | ≥10 open autopilot PRs (any age); run skipped until one closes/merges |
+| `SKIPPED-CAP-DAILY` | ≥6 autopilot PRs created this UTC day are still open; skipped until one closes/merges or the day rolls over |
+| `IN-FLIGHT` | Queue non-empty but every open ticket already has an open PR; nothing actionable this pulse (awaiting review) |
+| `NOTHING-NEW` | Queue empty and `/harness-audit` produced no finding that survives dedupe |
 | `PR-READY` | End-to-end success; PR marked ready with green CI |
 | `PR-DRAFT-CI-RED` | PR left draft because CI was red or `/ci-status` timed out |
-| `HALT-CRITIC-GATE` | `/ship-spec` critic gate rejected the spec; no PR opened |
+| `PR-DRAFT-EVAL-RED` | PR left draft because `/eval` reported a probe regression |
+| `HALT-CRITIC-GATE` | `/ship-spec` critic gate rejected the spec; ticket labeled `autopilot-blocked`, no PR opened |
 | `DELEGATE-FAIL` | `/delegate` failed after `/ship-spec` opened a PR; PR left draft |
+| `SKIPPED_OVERLAP` | Emitted by the cron runtime (not this skill): a previous fire of this id was still running with `overlap: false` |
+| `FAIL` | Pre-flight failure (dirty tree, wrong branch, diverged `development`) before any PR |
 
 ### Key paths
 
 | Path | Purpose |
 |------|---------|
-| `crons/autopilot-backlog.md` | Curated improvement backlog (reference file, NOT a scheduled cron) |
-| `crons/autopilot.md` | Cron definition that fires this skill hourly |
+| `crons/autopilot.md` | Cron definition (`tmux: true`) that fires this skill hourly |
 | `crons/.cron.log` | Append-only liveness log read by the cron runtime |
 | `memory/<today>/log.md` | Daily session log; autopilot appends an entry each run |
 | `.claude/agents/pm.md` | pm agent definition (invoked via `Agent subagent_type: pm`) |
+| `$CRON_TMUX_SESSION` / `$CRON_KEEP_MARKER` | Per-run tmux session name + keep-marker path, set by the cron runtime (empty on manual runs) |

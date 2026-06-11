@@ -117,7 +117,7 @@ Remove the sandbox.
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
 | `/ship-spec` | End-to-end spec: `/prd` → critics → `/ralph` → gh issue → branch → draft PR |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
-| `/autopilot` | Self-improvement loop — select harness-infra item, scaffold + execute via /ship-spec + /delegate, finalize ready-for-review PR (cap 6 open PRs/day, same-day closes free slots, no auto-merge) |
+| `/autopilot` | Self-improvement loop — issue-queue-first selection (build the oldest open `autopilot` issue; researches + files its own `autopilot` ticket when the queue is empty), scaffold + execute via /ship-spec + /delegate, eval gate before ready, finalize ready-for-review PR; every PR states its selection rationale; per-run tmux sessions; cap 6 open PRs/day + 10 total open, no auto-merge |
 | `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |

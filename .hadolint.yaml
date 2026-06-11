@@ -1,0 +1,12 @@
+# hadolint config for Open Harness — gates .devcontainer/Dockerfile in CI
+# (consumed by the `boot-lint` job in .github/workflows/ci-harness.yml).
+# Validated against hadolint 2.x (the binary bundled in hadolint/hadolint-action@v3.1.0).
+# Every rule below is an accepted dev-sandbox tradeoff; the gate still fails on
+# any rule NOT listed here.
+ignored:
+  - DL4006  # SHELL pipefail not set on every RUN — base /bin/sh handles our pipes; a global SHELL directive isn't warranted.
+  - DL3008  # apt packages intentionally unpinned — a dev sandbox tracks latest security patches, not reproducible version pins.
+  - DL3016  # npm packages intentionally unpinned, same rationale as DL3008.
+  - DL3003  # `cd` inside a one-off RUN instead of WORKDIR — deliberate, keeps the directory change layer-local.
+  - DL3059  # consecutive RUN instructions kept separate for readability/cache granularity, not consolidated.
+  - SC2016  # single-quoted expressions are intentional (literal $VAR written into a file at runtime, expanded later, not at build).

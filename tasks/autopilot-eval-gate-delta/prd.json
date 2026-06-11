@@ -1,0 +1,70 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/22-autopilot-eval-gate-delta",
+    "description": "Harden the autopilot §6 eval-gate to key on the green→red regression delta + runner exit code (not the bare presence of a REGRESSION row), and add an eval-gate probe that pins the corrected rule.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Rewrite §6 eval-gate decision rule",
+            "description": "As the autopilot loop, I want my eval gate to proceed on a pre-existing red probe so that an unrelated host-state regression does not permanently block every PR from reaching ready.",
+            "acceptanceCriteria": [
+                "In .claude/skills/autopilot/SKILL.md §6, the gate PROCEEDS to §7 when BOTH: (a) the /eval runner exits 0, AND (b) every regressed probe's delta is `unchanged` vs base (already-red, not a NEW green→red transition)",
+                "The two PROCEED conditions appear as an explicit bulleted/numbered decision list, not buried in prose",
+                "The gate keeps the PR draft (PR-DRAFT-EVAL-RED) only on a NEW (green→red) regression OR a non-zero runner exit",
+                "§6 includes a non-gating diagnostic note: a self-referential probe (e.g. eval-gate on an autopilot edit) with file overlap still proceeds because runner-exit + delta govern",
+                "§6 instructs posting any pre-existing red as a PR comment for honesty (no all-green claim)",
+                "The phrase \"Any `REGRESSION`\" no longer appears as the gate condition in §6",
+                "grep -n 'Any `REGRESSION`' .claude/skills/autopilot/SKILL.md returns no match inside §6"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "iter1 2026-06-11 93620ce: §6 rewritten to key on green→red delta + runner exit code; bare \"Any `REGRESSION`\" gate removed."
+        },
+        {
+            "id": "US-002",
+            "title": "Align PR-DRAFT-EVAL-RED status-token description",
+            "description": "As a reviewer reading the autopilot reference table, I want the PR-DRAFT-EVAL-RED token to match the new gate semantics so the doc is internally consistent.",
+            "acceptanceCriteria": [
+                "The PR-DRAFT-EVAL-RED row in the §Reference status-token table reads that the PR was left draft because /eval reported a NEW (green→red) probe regression or a non-zero runner exit",
+                "The status-token table retains its existing row count — no other rows added, removed, or reworded (verify with a `grep -c` row-count before/after)",
+                "Only the PR-DRAFT-EVAL-RED row content changed"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "iter1 2026-06-11: PR-DRAFT-EVAL-RED status-token row reworded to NEW (green→red) regression or non-zero runner exit; only that row changed, table row count unchanged."
+        },
+        {
+            "id": "US-003",
+            "title": "Add the eval-gate probe",
+            "description": "As the eval suite, I want a probe that asserts the autopilot §6 rule is the corrected one so the lesson cannot silently regress.",
+            "acceptanceCriteria": [
+                "evals/probes/eval-gate.sh exists and is executable (chmod +x)",
+                "It follows the existing probe pattern (evals/probes/devtcp-hook.sh): `#!/usr/bin/env bash`, `set -euo pipefail`, header comments `# tier: A` / `# source: memory/MEMORY.md 2026-06-11 (eval-gate)` / `# desc:`, and root resolution ROOT=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/../..\" && pwd)\"",
+                "It is a 3-state oracle: exit 0 = PASS, exit 1 = REGRESSION, exit 2 = SKIPPED; it emits a PASS/REGRESSION/SKIPPED line on stderr",
+                "It SKIPs (exit 2) if .claude/skills/autopilot/SKILL.md is absent",
+                "PASS uses POSITIVE AND-logic assertions: the §6 region must contain the corrected-vocabulary tokens (the literal `delta` and `unchanged` and a NEW-green→red phrasing) AND must NOT contain the bare \"Any `REGRESSION`\" gate phrasing; REGRESSION (exit 1) if either assertion fails",
+                "bash evals/probes/eval-gate.sh exits 0 with PASS against the corrected skill (run directly)",
+                "The reverted-text check (old §6 text → exit 1) is verified inside a throwaway git worktree, never by editing the live main-checkout skill file",
+                "bash -n evals/probes/eval-gate.sh is clean (no shell syntax errors)"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "iter1 2026-06-11: added evals/probes/eval-gate.sh (chmod +x); bash -n clean; direct run exits 0 (PASS); corrected-probe-vs-base-worktree run exits 1 (REGRESSION on old §6)."
+        },
+        {
+            "id": "US-004",
+            "title": "Refresh the eval benchmark",
+            "description": "As the autopilot run, I want the eval benchmark refreshed so the new probe is recorded green with no new regressions.",
+            "acceptanceCriteria": [
+                "/eval runs; evals/RESULTS.md contains an eval-gate row with status PASS",
+                "The /eval runner exits 0; no previously-PASS probe changes to REGRESSION/TIMEOUT/ERROR (PASS→SKIPPED for an absent-environment dependency is permitted)",
+                "eval-gate's green status is additionally confirmed by a direct bash evals/probes/eval-gate.sh → exit 0 (the delta is vacuous for a brand-new probe)",
+                "The refreshed evals/RESULTS.md is committed on the work branch via the single /eval invocation — no duplicate benchmark commit"
+            ],
+            "priority": 4,
+            "passes": true,
+            "notes": "iter1 2026-06-11 ebca4a4: /eval ran (runner exit 0); eval-gate row PASS (new-pass); next-dev-prod pre-existing red with delta unchanged (host-state, not caused by this PR) — corrected §6 gate proceeds; benchmark committed."
+        }
+    ]
+}

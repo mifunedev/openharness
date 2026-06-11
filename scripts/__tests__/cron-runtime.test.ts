@@ -118,9 +118,9 @@ describe("buildTmuxWrapper", () => {
     );
   });
 
-  it("persists the session only when the keep marker exists", () => {
+  it("persists a kept session as a resumed live agent, falling back to a shell", () => {
     expect(wrapper).toContain(
-      "[ -f /tmp/autopilot-0610-1805.keep ] && exec bash",
+      "[ -f /tmp/autopilot-0610-1805.keep ] && { claude --continue; exec bash; }",
     );
   });
 });

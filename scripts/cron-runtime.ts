@@ -108,7 +108,9 @@ export function buildTmuxWrapper(opts: {
     `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep; ` +
     `${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee /tmp/${session}.log; ` +
     `rm -f /tmp/cron-${id}.pid; ` +
-    `[ -f /tmp/${session}.keep ] && exec bash`
+    // Kept session: resume the run's own conversation as a live, attachable
+    // agent (idle until driven); fall back to a shell if that exits.
+    `[ -f /tmp/${session}.keep ] && { ${agentBin} --continue; exec bash; }`
   );
 }
 

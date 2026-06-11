@@ -6,9 +6,9 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 
 | probe | tier | last-run (UTC) | status | source |
 |-------|------|----------------|--------|--------|
-| devtcp-hook | A | 2026-06-11 03:30 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
-| eval-gate | A | 2026-06-11 03:30 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
-| health-check-docker-stats | A | 2026-06-11 03:30 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
-| next-dev-prod | A | 2026-06-11 03:30 | REGRESSION | memory/MEMORY.md 2026-06-04 |
+| devtcp-hook | A | 2026-06-11 04:30 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
+| eval-gate | A | 2026-06-11 04:30 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
+| health-check-docker-stats | A | 2026-06-11 04:30 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
+| next-dev-prod | A | 2026-06-11 04:30 | REGRESSION | memory/MEMORY.md 2026-06-04 |
 
 <!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->

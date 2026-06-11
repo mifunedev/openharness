@@ -38,6 +38,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - Curated autopilot backlog (`crons/autopilot-backlog.md`) and the 4h `/harness-audit` throttle (`AUDIT-RUN` marker) — autopilot is now steered via GitHub `autopilot` issues, so the in-repo backlog file is gone ([#14](https://github.com/ryaneggz/openharness/issues/14)).
 ### Deprecated
 ### Security
+- Resolve all open critical & high Dependabot alerts in the root `pnpm-lock.yaml` via `pnpm.overrides`: `shell-quote` →1.8.4 (GHSA-w7jw-789q-3m8p), `@babel/plugin-transform-modules-systemjs` →7.29.4 (GHSA-fv7c-fp4j-7gwp), `fast-uri` →3.1.2 (GHSA-v39h-62p7-jpjc, GHSA-q3j6-qgpj-74h6), `serialize-javascript` →7.0.3 (GHSA-5c6j-r48x-rmvq); `vitest` →3.2.6 already landed in [#28](https://github.com/ryaneggz/openharness/pull/28) ([#30](https://github.com/ryaneggz/openharness/issues/30)).
 
 ## [2026.6.9] - 2026-06-09
 

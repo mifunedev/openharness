@@ -1,0 +1,15 @@
+# progress
+
+## US-001..US-004 — 2026-06-11 (delegate, in-process)
+
+**Files changed**: .claude/skills/harness-audit/SKILL.md, .claude/skills/skill-lint/SKILL.md, evals/probes/skill-paths.sh (new), CHANGELOG.md
+**Result**: PASS
+
+### What I did
+US-001: 8 stale-path replacements in harness-audit/SKILL.md (docs/wiki/→wiki/, workspace/heartbeats/→crons/, with prose reworded to "cron definitions"). US-002: 1 replacement in skill-lint/SKILL.md (workspace/heartbeats/→crons/), dual-scope workspace/.claude/skills/ lines preserved. US-003: added evals/probes/skill-paths.sh (3-state oracle; full-path grep -v exclusion of harness-context); PASS on clean tree, REGRESSION verified via injection then reverted; shellcheck clean. US-004: appended one bullet to the existing [Unreleased] → ### Fixed block linking #43.
+
+### Learnings for future iterations
+The probe deliberately guards ONLY docs/wiki/ and workspace/heartbeats/ (truly-dead renames). apps/docs/, bare MEMORY.md, and workspace/.claude/skills/ were investigated and left out of scope (intentional dual-scope or multi-skill concern) — see prd.md Non-Goals.
+
+---
+STATUS: COMPLETE

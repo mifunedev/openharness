@@ -1,0 +1,54 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/49-cron-job-error-logging",
+    "description": "Log cron-runtime job errors (ERR_JOB) instead of silently swallowing them — replace croner's boolean catch:true with a named, injectable onJobError handler that records an ERR_JOB line to crons/.cron.log, preserving crash-resistance.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Replace silent catch:true with onJobError handler",
+            "description": "As a harness operator, I want a cron job-callback error recorded so a failed cron is distinguishable from an idle one in crons/.cron.log.",
+            "acceptanceCriteria": [
+                "scripts/cron-runtime.ts defines and exports onJobError(id: string, err: unknown, logFn = log): void that calls logFn(id, \"ERR_JOB\", String(err)); logFn defaults to the internal log helper and exists only for test injection.",
+                "The module-private log helper is NOT exported; only onJobError becomes a new export. Existing internal log call sites unchanged.",
+                "Line 180 new Cron(...) replaces `catch: true` with `catch: (err: unknown) => onJobError(e.id, err)` closing over e.id; timezone and protect options unchanged.",
+                "onJobError fires only on a synchronous job-callback throw; overlap handling unchanged (a skipped fire still logs SKIPPED_OVERLAP, never ERR_JOB).",
+                "No `catch: true` literal remains: grep -n \"catch: true\" scripts/cron-runtime.ts returns nothing.",
+                "Lint passes",
+                "Tests pass (pnpm test:scripts green)"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Deterministic unit test for onJobError",
+            "description": "As a maintainer, I want a deterministic test for onJobError so the ERR_JOB logging contract is regression-protected.",
+            "acceptanceCriteria": [
+                "A new describe(\"onJobError\") block in scripts/__tests__/cron-runtime.test.ts calls onJobError(\"testjob\", new Error(\"disk full\"), spy) with an injected spy logger and asserts the spy received exactly (\"testjob\", \"ERR_JOB\", \"Error: disk full\").",
+                "Test is deterministic and touches no filesystem; it must not rely on setting process.env.CRONS_DIR after the top-level import (LOG_FILE is captured at module load).",
+                "onJobError is added to the destructured import from ../cron-runtime; existing imports preserved.",
+                "All existing tests still pass; the run does not write to the repo's real crons/.cron.log.",
+                "Tests pass (pnpm test:scripts green)"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Document the ERR_JOB status token",
+            "description": "As a reader of the cron runtime, I want ERR_JOB documented so the new log lines are self-explanatory.",
+            "acceptanceCriteria": [
+                "crons/README.md gains a concise status-token list (e.g. a `## Status tokens` section) enumerating SPAWNED, FIRE, OK, EXIT_n, ERR, ERR_JOB, SKIPPED_OVERLAP, BOOT, each with a one-line meaning.",
+                "ERR_JOB is described as firing when a synchronous cron job-callback throws, with log format `<id>\\tERR_JOB\\t<error-string>`.",
+                "grep -n \"ERR_JOB\" crons/README.md returns a hit; existing prose/sections are additive-only (not deleted).",
+                "Lint passes"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

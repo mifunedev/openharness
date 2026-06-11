@@ -60,8 +60,14 @@ If `--dry-run`: print both counts now (the selection is printed after §2), then
 
 **Require clean state**:
 ```bash
-git diff --quiet && git diff --cached --quiet || { echo "ERROR: dirty working tree"; exit 1; }
+# Self-heal a clean-but-stranded branch from a prior interrupted run (nothing to lose):
+# a crash before §5/§6/§7 can leave HEAD on a clean feature branch; recover it rather
+# than FAIL every hour. A *dirty* tree is NOT auto-cleaned here (it may be human WIP).
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" != "development" ] && git diff --quiet && git diff --cached --quiet; then
+  git checkout -f development && BRANCH=$(git rev-parse --abbrev-ref HEAD)
+fi
+git diff --quiet && git diff --cached --quiet || { echo "ERROR: dirty working tree"; exit 1; }
 [ "$BRANCH" = "development" ] || { echo "ERROR: not on development (on $BRANCH)"; exit 1; }
 ```
 
@@ -214,7 +220,7 @@ Run `/delegate` to execute the prd.json stories **in-process**:
 - `gh pr comment "$PR_NUM" --body "autopilot aborted mid-run: /delegate failed. PR left as draft for manual inspection. Status: DELEGATE-FAIL."`
 - Memory log `Result: DELEGATE-FAIL`, liveness `DELEGATE-FAIL`.
 - **Persist the session** (a PR exists): `[ -n "$KEEP" ] && touch "$KEEP"`.
-- Restore branch: `git checkout development`.
+- Restore branch (canonical clean restore — discards only this run's own uncommitted residue; committed work is safe in the draft PR): `git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`.
 - Exit 1 (non-destructive — never auto-close the issue or PR).
 
 ### 6. Eval gate
@@ -239,7 +245,7 @@ After `/delegate` completes, **while still on the work branch**, run the probe s
   ```bash
   gh pr comment "$PR_NUM" --body "autopilot: /eval reported a NEW (green→red) probe regression (<probe ids>) or a non-zero runner exit. PR left draft; resolve before marking ready."
   ```
-  Memory log `Result: PR-DRAFT-EVAL-RED`, liveness `PR-DRAFT-EVAL-RED`, then `[ -n "$KEEP" ] && touch "$KEEP"`, `git checkout development`, exit.
+  Memory log `Result: PR-DRAFT-EVAL-RED`, liveness `PR-DRAFT-EVAL-RED`, then `[ -n "$KEEP" ] && touch "$KEEP"`, the canonical clean restore (`git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`), exit.
 
 > **Diagnostic note (non-gating):** file-scope overlap does not gate. If a regressed probe reads a file this PR changed, the runner-exit + delta signal still governs — a self-referential probe (e.g. `eval-gate` on an autopilot edit) whose delta is `unchanged` does NOT block. The delta is the authoritative causation signal.
 
@@ -268,9 +274,10 @@ git push origin HEAD
 
 **Persist the session** (a PR exists on every §7 path): `[ -n "$KEEP" ] && touch "$KEEP"`.
 
-**Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`):
+**Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical clean restore — the force checkout discards only this run's own uncommitted residue (committed work is safe on the branch / draft PR); the assertion mirrors the §1 guard:
 ```bash
-git checkout development
+git checkout -f development
+git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }
 ```
 
 ### 8. Memory Log
@@ -304,7 +311,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.
 - **Liveness on every path**: every exit appends `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "<TOKEN>" >> crons/.cron.log` — skip, halt, error, success. A missing liveness line looks like a crash.
 - **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `DELEGATE-FAIL`). No-PR paths never touch the keep-marker, so their sessions auto-close. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
-- **Branch restore**: `git checkout development` must run on every path that changed the working branch (all paths reaching §4+).
+- **Branch restore (canonical clean restore)**: every path that changed the working branch (all paths reaching §4+) must run `git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`. The force checkout discards only the run's own uncommitted residue — staged AND unstaged tracked changes (it does not remove untracked files, which do not trip the §1 guard); committed work is preserved on the feature branch / draft PR. The assertion mirrors the §1 guard, so "assertion passes" ≡ "the next fire's §1 guard will pass". §1 additionally self-heals a *clean*-but-stranded branch; a *dirty* tree at §1 still hard-FAILs to protect any human WIP.
 
 ## Reference
 

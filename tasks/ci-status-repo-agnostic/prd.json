@@ -1,0 +1,29 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/20-ci-status-repo-agnostic",
+    "description": "Make /ci-status repo-agnostic — derive $REPO at runtime instead of hardcoding mifunedev/openharness, and add a PR-first status path via gh pr checks.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Parameterize the repo and add a PR-first status path in /ci-status",
+            "description": "As an agent running /ci-status from a fork, I want the skill to derive its target repo at runtime and check an open PR's checks directly, so that CI status is reported for the real branch/PR instead of failing silently against the wrong upstream repo.",
+            "acceptanceCriteria": [
+                "Step 1 of .claude/skills/ci-status/SKILL.md derives REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner), honors an explicit --repo owner/name override, and notes gh repo view resolves the checkout's origin repo",
+                "Step 1 includes an empty-$REPO guard: if $REPO is empty after derivation, the skill halts with a diagnostic (e.g. 'ERROR: could not derive repo — is gh authenticated? Try: gh auth login') instead of issuing a repos//... call",
+                "The skill derives PR_NUMBER explicitly via gh pr list --head \"$BRANCH\" --state open --repo \"$REPO\" --json number --jq '.[0].number' before any gh pr checks call; states that with multiple open PRs sharing the head branch the first/most-recent is used, and empty PR_NUMBER routes to the branch-runs fallback",
+                "A PR-first status path is an explicit ordered instruction step: when PR_NUMBER is non-empty the skill uses gh pr checks \"$PR_NUMBER\" --repo \"$REPO\" (and/or gh pr view --json statusCheckRollup) BEFORE any gh api repos/$REPO/actions/runs call",
+                "When PR_NUMBER is non-empty but gh pr checks reports no checks, the skill reports NO-RUN (reusing the existing NO-RUN diagnostic), not a false PASS",
+                "Every literal repos/mifunedev/openharness/ occurrence is replaced with repos/$REPO/, preserving the existing poll/result/failure-detail logic for the no-PR fallback",
+                "The NO-RUN diagnostic and CI Pipeline Steps sections carry a one-line caveat that their workflow names/steps reflect this harness's layout and may differ in other checkouts",
+                "When --repo is supplied with a value not matching owner/name format, the skill emits an error before making any gh call",
+                "grep -c 'mifunedev/openharness' .claude/skills/ci-status/SKILL.md returns 0",
+                "grep 'gh repo view' .claude/skills/ci-status/SKILL.md returns at least one hit; grep 'gh pr checks' .claude/skills/ci-status/SKILL.md returns at least one hit",
+                "The YAML frontmatter parses without error and the numbered instruction sequence stays coherent with no dangling references"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed 2026-06-11; this commit"
+        }
+    ]
+}

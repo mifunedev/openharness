@@ -132,3 +132,5 @@ if [ "${#regressions[@]}" -gt 0 ]; then
   for r in "${regressions[@]}"; do echo "  - $r"; done
 fi
 echo "ran $ran probe(s); wrote $RESULTS"
+if [ "${#regressions[@]}" -gt 0 ]; then exit 1; fi
+exit 0

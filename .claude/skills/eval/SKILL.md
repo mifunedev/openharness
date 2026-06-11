@@ -29,7 +29,14 @@ bash .claude/skills/eval/run.sh --tier A        # run only Tier-A probes
 
 Exit-code oracle (per probe): `0`=PASS, `1`=REGRESSION, `2`=SKIPPED (not
 applicable — excluded from pass-rate), `124`=TIMEOUT, other=ERROR. Each probe is
-wrapped in `timeout 30s`.
+wrapped in `timeout 30s`. Runner aggregate exit (the process `$?` of `run.sh`
+itself): `0` when no new green→red regression occurred this run, `1` when one or
+more new regressions were detected (`${#regressions[@]} > 0`). When invoked via the
+Bash tool as `bash .claude/skills/eval/run.sh`, the agent caller reads `$?` directly
+to gate on success — the printed `REGRESSIONS (...)` stdout block and per-probe stderr
+lines remain the human-readable signal. Note: the `eval-weekly` cron is an intentional
+legacy caller that appends `|| true` then greps stdout; it does not consume the exit
+code by design — this is not a bug.
 
 ## What the runner does
 

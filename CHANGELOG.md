@@ -34,6 +34,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - Removed the dangling `.claude/ICP.md` entry from `.claude/protected-paths.txt` — the file was deleted in `9241da6` ("sweep README/ICP refs") but its protection entry was left behind, so critic gates flagged a protected path that no longer exists.
 - De-referenced the deleted `.claude/ICP.md` from its two remaining live consumers: `/ship-spec` critic-B now reads `context/USER.md` for the single-developer / single-project framing (the lens that lived in ICP.md), and `context/USER.md` drops the dangling `per .claude/ICP.md` citation while keeping the fact.
 - Add `pull_request` trigger and expanded `paths:` filter (`.claude/skills/**`, `crons/**`, `context/**`) to `ci-harness.yml` so autopilot PRs touching skills, crons, or context get a real CI status check ([#12](https://github.com/ryaneggz/openharness/issues/12)).
+- `/eval` runner now exits non-zero (exit 1) when any green→red regression is detected, so CI and autopilot gates receive an unambiguous failure signal ([#29](https://github.com/ryaneggz/openharness/issues/29)).
 ### Removed
 - Curated autopilot backlog (`crons/autopilot-backlog.md`) and the 4h `/harness-audit` throttle (`AUDIT-RUN` marker) — autopilot is now steered via GitHub `autopilot` issues, so the in-repo backlog file is gone ([#14](https://github.com/ryaneggz/openharness/issues/14)).
 ### Deprecated

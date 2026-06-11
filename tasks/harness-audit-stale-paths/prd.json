@@ -1,0 +1,66 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/43-harness-audit-stale-paths",
+    "description": "Fix stale docs/wiki/ and workspace/heartbeats/ path references in harness-audit and skill-lint skills so audit sub-agents inspect real directories; add a guard probe so the drift cannot silently return.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Correct stale paths in harness-audit/SKILL.md",
+            "description": "As an orchestrator running /harness-audit, I want the audit sub-agents to inspect the real wiki/ and crons/ directories so the audit reports accurate findings instead of false negatives.",
+            "acceptanceCriteria": [
+                "Replace all 4 `docs/wiki/` occurrences (lines ~61, 129, 205, 309) with `wiki/` in .claude/skills/harness-audit/SKILL.md",
+                "Replace all 4 `workspace/heartbeats/` occurrences (lines ~59, 179, 207, 306) with `crons/`, rewording adjacent prose so 'heartbeat files' reads as 'cron definitions in `crons/`' where the phrasing would otherwise be wrong (incl. the Key paths table row label: 'Heartbeats | crons/')",
+                "Do NOT touch the apps/docs/, workspace/.claude/skills/, or bare MEMORY.md lines (out of scope per Non-Goals)",
+                "`grep -E 'docs/wiki/|workspace/heartbeats/' .claude/skills/harness-audit/SKILL.md` returns zero matches",
+                "The audit-area intent is preserved (wiki-utilization and heartbeat/cron-health checks still make sense against the new paths)"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Correct stale path in skill-lint/SKILL.md",
+            "description": "As an orchestrator running /skill-lint, I want the heartbeat-coverage bonus signal to look at the real crons/ directory so the lint scoring is not permanently short-circuited.",
+            "acceptanceCriteria": [
+                "Replace the single `workspace/heartbeats/` occurrence (line ~216) with `crons/` in .claude/skills/skill-lint/SKILL.md, rewording the bullet so it reads 'no heartbeat/cron reference in `crons/`'",
+                "Leave skill-lint lines 26 and 225 (`workspace/.claude/skills/`) untouched — that is intentional dual-scope, not a restructure bug",
+                "`grep -E 'workspace/heartbeats/' .claude/skills/skill-lint/SKILL.md` returns zero matches",
+                ".claude/skills/harness-context/SKILL.md is left unchanged"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Add guard probe evals/probes/skill-paths.sh",
+            "description": "As a maintainer, I want a deterministic probe that REGRESSES if the two retired renamed-directory tokens reappear in the skills tree, so this drift cannot silently return.",
+            "acceptanceCriteria": [
+                "Create evals/probes/skill-paths.sh, executable (chmod +x), with shebang + `set -euo pipefail` and repo-root detection via ${BASH_SOURCE[0]} (no hardcoded /home/sandbox/harness)",
+                "Match command exactly: `grep -rnE 'docs/wiki/|workspace/heartbeats/' \"$ROOT/.claude/skills/\" | grep -v 'harness-context/SKILL.md'` — non-empty result exits 1 (REGRESSION) and prints the offending lines",
+                "Mirror the 3-state oracle of evals/probes/eval-gate.sh: PASS=0, REGRESSION=1, SKIPPED=2; if .claude/skills/ is absent, exit 2 and print SKIPPED",
+                "On the clean post-fix tree, `bash evals/probes/skill-paths.sh` exits 0 and prints PASS",
+                "Temporarily reintroduce a retired token into a skill file, confirm the probe exits 1 and prints REGRESSION, then revert and confirm it exits 0 again",
+                "`bash -n evals/probes/skill-paths.sh` passes (and shellcheck is clean if available)"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "Record the fix in CHANGELOG.md",
+            "description": "As a reviewer, I want the change recorded in the changelog so the fix is discoverable in release notes.",
+            "acceptanceCriteria": [
+                "Append a one-line bullet to the EXISTING `### Fixed` block under `## [Unreleased]` in CHANGELOG.md (do NOT create a second `### Fixed` heading)",
+                "Bullet is imperative mood and links issue #43 as [#43](https://github.com/ryaneggz/openharness/issues/43)",
+                "`grep -c '^### Fixed' CHANGELOG.md` count is unchanged (no duplicate heading introduced under Unreleased)"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

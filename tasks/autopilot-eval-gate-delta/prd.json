@@ -63,8 +63,8 @@
                 "The refreshed evals/RESULTS.md is committed on the work branch via the single /eval invocation — no duplicate benchmark commit"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "iter1 2026-06-11 ebca4a4: /eval ran (runner exit 0); eval-gate row PASS (new-pass); next-dev-prod pre-existing red with delta unchanged (host-state, not caused by this PR) — corrected §6 gate proceeds; benchmark committed."
         }
     ]
 }

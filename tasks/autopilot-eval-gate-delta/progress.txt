@@ -9,3 +9,24 @@
 
 ## US-003 -- 2026-06-11
 - Added evals/probes/eval-gate.sh following the devtcp-hook.sh pattern (3-state oracle: 0=PASS, 1=REGRESSION, 2=SKIPPED). Extracts the §6 section, fails if the bare "Any `REGRESSION`" gate remains, and PASS requires AND-logic on the corrected vocabulary (delta, unchanged, green→red, exit). Verified: chmod +x; bash -n clean; direct run exit 0; corrected probe copied into a detached worktree off origin/development reads the old §6 and exits 1.
+
+## US-004 — 2026-06-11 03:30 UTC
+
+**Title**: Refresh the eval benchmark
+**Files changed**: evals/RESULTS.md
+**Commit**: ebca4a4
+**Result**: PASS
+
+### What I did
+Ran the full /eval suite on the branch (runner exit 0). eval-gate is PASS (new-pass);
+next-dev-prod is a pre-existing host-state REGRESSION with delta `unchanged` (reads
+next.js project files, not anything this PR touches). Per the corrected §6 rule this PR
+ships, the gate PROCEEDS (runner exit 0 + only regressed probe is delta-unchanged); the
+pre-existing red is posted on the PR for honesty.
+
+### Learnings for future iterations
+This PR is self-validating: under the old "Any REGRESSION" rule it would have jammed on
+next-dev-prod; under the new delta/exit-code rule it correctly proceeds.
+
+---
+STATUS: COMPLETE

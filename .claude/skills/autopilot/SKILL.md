@@ -101,9 +101,9 @@ gh issue list --state open --label autopilot \
   SELECTION_RATIONALE="Queue selection: implementing open autopilot issue #$ISSUE_NUM (\"$TITLE\") — the oldest actionable ticket (filed $CREATED) with no open PR."
   ```
   If `[ -n "$SESSION" ]`, rename the session for readability: `tmux rename-session "autopilot-$SLUG"`. Leave `$KEEP` unchanged — the keep-marker path is fixed at spawn time and the session wrapper checks that original path.
-- **Queue non-empty but every open ticket already has an open PR** (nothing actionable) → memory log `Result: IN-FLIGHT`, liveness `IN-FLIGHT`, exit 0 (awaiting review; no PR produced → no keep-marker → session auto-closes).
+- **No actionable item** — the queue is empty, OR every open `autopilot` ticket already has an open PR — → **fall through to research** (below). A single in-flight PR MUST NOT starve the loop: the §1 caps (6 open created/day, 10 total) are the pile-up guard, not an in-flight check. Those caps were already enforced above, so research here is cap-bounded by construction. Do **not** un-draft, finalize, or otherwise mutate a PR opened by a different run while idling on it — surface it (the heartbeat watches for stuck-green drafts) and proceed to research instead.
 
-**Queue empty → research** (first-principles pass):
+**No actionable queue item → research** (first-principles pass — fires whenever the queue is empty *or* every open ticket already has a PR):
 
 1. Run `/harness-audit`. Rank its harness-infra findings by impact.
 2. Dedupe each finding (in rank order) against open issues, open PRs, **and merged PRs** — advance past any hit (a blocked candidate must never end the run while others remain):
@@ -112,7 +112,7 @@ gh issue list --state open --label autopilot \
    DUPE_OPEN_PR=$(gh pr list --state open --json title,headRefName --jq '.[] | "\(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
    DUPE_MERGED_PR=$(gh pr list --state merged --limit 50 --json number,title,headRefName --jq '.[] | "\(.number) \(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
    ```
-3. **No survivor** → memory log `Result: NOTHING-NEW`, liveness `NOTHING-NEW`, exit 0 (no keep-marker). Research fires only when the queue has drained (a merge auto-closes its ticket via `Closes #N`); worst case an hourly audit yields `NOTHING-NEW` repeatedly — accepted cost.
+3. **No survivor** → memory log `Result: NOTHING-NEW`, liveness `NOTHING-NEW`, exit 0 (no keep-marker). Research fires whenever no actionable ticket exists — both when the queue is fully drained AND when open tickets are all awaiting review. Dedupe (against open issues, open PRs, and merged PRs) plus the §1 caps bound the output: an already-filed finding dedupes to `NOTHING-NEW`; worst case an hourly audit yields `NOTHING-NEW` repeatedly — accepted cost.
 4. **Top survivor** → file the ticket from the plan. Write a body to `/tmp/autopilot-research-$$.md` containing (a) the finding, (b) the first-principles rationale, (c) a 3–7-bullet plan sketch:
    ```bash
    gh issue create --label autopilot --title "feat: <finding>" --body-file /tmp/autopilot-research-$$.md
@@ -282,7 +282,7 @@ TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "memory/$TODAY"
 cat >> "memory/$TODAY/log.md" <<EOF
 
 ## Autopilot -- $TIME UTC
-- **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | IN-FLIGHT | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | DELEGATE-FAIL | FAIL>
+- **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | DELEGATE-FAIL | FAIL>
 - **Selected**: <#issue + slug, or "none">
 - **Session**: <tmux session name, or "none">
 - **Action**: <one-line summary of what was done>
@@ -314,8 +314,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 |-------|---------|
 | `SKIPPED-CAP-TOTAL` | ≥10 open autopilot PRs (any age); run skipped until one closes/merges |
 | `SKIPPED-CAP-DAILY` | ≥6 autopilot PRs created this UTC day are still open; skipped until one closes/merges or the day rolls over |
-| `IN-FLIGHT` | Queue non-empty but every open ticket already has an open PR; nothing actionable this pulse (awaiting review) |
-| `NOTHING-NEW` | Queue empty and `/harness-audit` produced no finding that survives dedupe |
+| `NOTHING-NEW` | No actionable ticket (queue empty, or all open tickets already have PRs) AND `/harness-audit` produced no finding that survives dedupe — research ran but had nothing fresh to file. _(Replaces the retired `IN-FLIGHT` token: a single in-flight PR no longer ends the run; it falls through to research.)_ |
 | `PR-READY` | End-to-end success; PR marked ready with green CI |
 | `PR-DRAFT-CI-RED` | PR left draft because CI was red or `/ci-status` timed out |
 | `PR-DRAFT-EVAL-RED` | PR left draft because `/eval` reported a NEW (green→red) probe regression or a non-zero runner exit |

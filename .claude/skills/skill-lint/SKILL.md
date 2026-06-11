@@ -213,7 +213,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - When checking integrity references, skip references to standard Unix paths (`/bin`, `/usr`, `/home/sandbox/harness` itself as a directory) — only flag references to specific files or skills that do not exist.
 - A skill that is the target of `argument-hint: "all | root | workspace | <skill-name>"` style hints should not be penalized for referencing those placeholder tokens.
 - For the single-skill target mode (`$ARGUMENTS` = a skill name), run all 5 dimensions and emit the same table for just that skill, plus its recommendation.
-- Heartbeat coverage is a bonus signal, not a scored dimension — note it in the Recommendation line if a skill has 0 usage and no heartbeat reference in `workspace/heartbeats/`.
+- Heartbeat/cron coverage is a bonus signal, not a scored dimension — note it in the Recommendation line if a skill has 0 usage and no cron reference in `crons/`.
 
 ## Reference
 

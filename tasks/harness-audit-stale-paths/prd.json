@@ -16,8 +16,8 @@
                 "The audit-area intent is preserved (wiki-utilization and heartbeat/cron-health checks still make sense against the new paths)"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed via /delegate in-process on 2026-06-11"
         },
         {
             "id": "US-002",
@@ -30,8 +30,8 @@
                 ".claude/skills/harness-context/SKILL.md is left unchanged"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed via /delegate in-process on 2026-06-11"
         },
         {
             "id": "US-003",
@@ -46,8 +46,8 @@
                 "`bash -n evals/probes/skill-paths.sh` passes (and shellcheck is clean if available)"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed via /delegate in-process on 2026-06-11"
         },
         {
             "id": "US-004",
@@ -59,8 +59,8 @@
                 "`grep -c '^### Fixed' CHANGELOG.md` count is unchanged (no duplicate heading introduced under Unreleased)"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed via /delegate in-process on 2026-06-11"
         }
     ]
 }

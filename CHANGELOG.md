@@ -40,6 +40,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Deprecated
 ### Security
 - Resolve all open critical & high Dependabot alerts in the root `pnpm-lock.yaml` via `pnpm.overrides`: `shell-quote` →1.8.4 (GHSA-w7jw-789q-3m8p), `@babel/plugin-transform-modules-systemjs` →7.29.4 (GHSA-fv7c-fp4j-7gwp), `fast-uri` →3.1.2 (GHSA-v39h-62p7-jpjc, GHSA-q3j6-qgpj-74h6), `serialize-javascript` →7.0.3 (GHSA-5c6j-r48x-rmvq); `vitest` →3.2.6 already landed in [#28](https://github.com/ryaneggz/openharness/pull/28) ([#30](https://github.com/ryaneggz/openharness/issues/30)).
+- Resolve moderate & low Dependabot alerts whose patched version is compatible with the Docusaurus 3.7 bundler: root `pnpm-lock.yaml` via `pnpm.overrides` — `qs` →6.15.2, `uuid` →11.1.1, `ws` →8.20.1 (scoped to the 8.x line so the `ws@7` consumer is untouched), `mermaid` →11.15.0, `postcss` →8.5.10; and `packages/oh` `esbuild` devDependency →0.25.0. The `webpack` (low) and `webpack-dev-server` (moderate) alerts are deferred to a Docusaurus 3.7→3.10 upgrade — webpack 5.107's stricter `ProgressPlugin` schema breaks the Docusaurus 3.7 `docs:build`, so the `webpack` pin stays at `5.98.0` here ([#35](https://github.com/ryaneggz/openharness/issues/35)).
 
 ## [2026.6.9] - 2026-06-09
 

@@ -6,12 +6,12 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 
 | probe | tier | last-run (UTC) | status | source |
 |-------|------|----------------|--------|--------|
-| clean-restore | A | 2026-06-11 20:36 | PASS | memory/MEMORY.md 2026-06-11 (branch-restore-guard) #45 |
-| devtcp-hook | A | 2026-06-11 20:36 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
-| eval-gate | A | 2026-06-11 20:36 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
-| eval-runner-exit | A | 2026-06-11 20:36 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
-| health-check-docker-stats | A | 2026-06-11 20:36 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
-| next-dev-prod | A | 2026-06-11 20:36 | REGRESSION | memory/MEMORY.md 2026-06-04 |
-| skill-paths | A | 2026-06-11 19:27 | PASS | issue #43 — harness-audit & skill-lint stale path references |
+| clean-restore | A | 2026-06-11 21:36 | PASS | memory/MEMORY.md 2026-06-11 (branch-restore-guard) #45 |
+| devtcp-hook | A | 2026-06-11 21:36 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
+| eval-gate | A | 2026-06-11 21:36 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
+| eval-runner-exit | A | 2026-06-11 21:36 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
+| health-check-docker-stats | A | 2026-06-11 21:36 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
+| next-dev-prod | A | 2026-06-11 21:36 | REGRESSION | memory/MEMORY.md 2026-06-04 |
+| skill-paths | A | 2026-06-11 21:36 | PASS | issue #43 — harness-audit & skill-lint stale path references |
 
 <!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->

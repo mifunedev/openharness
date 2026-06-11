@@ -1,2 +1,45 @@
 # progress
 
+## Codebase Patterns
+- `git checkout -f development` clears BOTH the staged index and the working tree
+  (experiment-confirmed); untracked files survive but do not trip the autopilot §1
+  guard (`git diff --quiet && git diff --cached --quiet`), so they do not jam the loop.
+- `evals/probes/eval-gate.sh` greps the `### 6. Eval gate` section for the strings
+  `delta`, `unchanged`, `green.*red`, `exit` and forbids `Any REGRESSION` — when editing
+  §6, change only the `git checkout development` token and leave that vocabulary intact.
+
+## US-001..US-006 — 2026-06-11 (in-process orchestrator)
+
+**Title**: Harden autopilot branch-restore (canonical forced clean restore + §1 self-heal + probe)
+**Files changed**:
+- `.claude/skills/autopilot/SKILL.md` (§1 self-heal; §5/§6/§7 + Guidelines canonical restore)
+- `evals/probes/clean-restore.sh` (new regression probe)
+- `CHANGELOG.md` (Added: clean-restore probe; Fixed: dirty-tree deadlock)
+**Result**: PASS
+
+### What I did
+Replaced the bare `git checkout development` at §5 (DELEGATE-FAIL), §6 (PR-DRAFT-EVAL-RED),
+and §7 (Finalize), plus the Guidelines "Branch restore" bullet, with a canonical forced
+clean restore: `git checkout -f development` then
+`git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`
+(the assertion mirrors the §1 guard exactly). Added a §1 self-heal that recovers a
+clean-but-stranded branch (clean tree, not `development`) while preserving the hard FAIL on
+a dirty tree (protects human WIP). Added `evals/probes/clean-restore.sh` (3-state oracle)
+asserting every restore site is forced (≥3 `git checkout -f development`, no bare form) and
+the assertion message is present. The §6 edit changed only the `git checkout development`
+token, leaving the eval-gate vocabulary byte-stable.
+
+### Verification
+- `bash evals/probes/clean-restore.sh` → PASS (exit 0; 5 forced sites, no bare form)
+- `bash evals/probes/eval-gate.sh` → PASS (exit 0; §6 vocabulary intact)
+- Negative test: removing `-f` from a restore site → probe exits 1 (REGRESSION) naming the line
+- Scratch-repo experiment: `git checkout -f development` from a tree with staged+unstaged
+  changes → both `git diff --quiet` and `git diff --cached --quiet` clean afterward
+
+### Learnings for future iterations
+- The autopilot critic-gate (2 critics) is worth running even on a tiny one-file change: it
+  surfaced the staged-index gap in the assertion (must mirror §1 with `--cached`) and the
+  adjacent clean-but-stranded-branch jam vector (→ US-006), and an experiment refuted the
+  "staged survives `git checkout -f`" claim, avoiding an unnecessary `git reset --hard`.
+
+STATUS: COMPLETE

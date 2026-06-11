@@ -15,8 +15,8 @@
                 "All edits to SKILL.md across US-001..US-006 are made by a single worker (no parallel edits to the same file)"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 by in-process orchestrator (advisor-as-executor); single-file serialized edits + probe."
         },
         {
             "id": "US-002",
@@ -28,8 +28,8 @@
                 "The DELEGATE-FAIL exit semantics (memory log, liveness token, keep-marker touch, non-zero exit) are unchanged apart from the restore command"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 by in-process orchestrator (advisor-as-executor); single-file serialized edits + probe."
         },
         {
             "id": "US-003",
@@ -41,8 +41,8 @@
                 "`bash evals/probes/eval-gate.sh` exits 0 after the change"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 by in-process orchestrator (advisor-as-executor); single-file serialized edits + probe."
         },
         {
             "id": "US-004",
@@ -53,8 +53,8 @@
                 "After this story, every line in SKILL.md containing `git checkout` and `development` also contains `-f development` (no bare form remains anywhere)"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 by in-process orchestrator (advisor-as-executor); single-file serialized edits + probe."
         },
         {
             "id": "US-006",
@@ -67,8 +67,8 @@
                 "The self-heal checkout uses the `-f development` form (consistent with the canonical restore and the US-005 probe invariant)"
             ],
             "priority": 5,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 by in-process orchestrator (advisor-as-executor); single-file serialized edits + probe."
         },
         {
             "id": "US-005",
@@ -83,8 +83,8 @@
                 "`bash evals/probes/clean-restore.sh` exits 0 and `bash evals/probes/eval-gate.sh` exits 0"
             ],
             "priority": 6,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 by in-process orchestrator (advisor-as-executor); single-file serialized edits + probe."
         }
     ]
 }

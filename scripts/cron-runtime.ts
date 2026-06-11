@@ -51,7 +51,7 @@ export function loadCrons(dir: string = CRONS_DIR): CronEntry[] {
   const out: CronEntry[] = [];
   for (const f of fs.readdirSync(dir).filter((n: string) => n.endsWith(".md")).sort()) {
     try {
-      const entry = parseCronFile(fs.readFileSync(path.join(dir, f), "utf-8"), f);
+      const entry = parseCronFile(fs.readFileSync(path.join(dir, f), "utf-8"), path.join(dir, f));
       if (entry && entry.enabled) out.push(entry);
     } catch {
       /* skip unreadable */
@@ -75,6 +75,23 @@ export function acquireLock(pidFile: string = PID_FILE): boolean {
   fs.mkdirSync(path.dirname(pidFile), { recursive: true });
   fs.writeFileSync(pidFile, String(process.pid));
   return true;
+}
+
+export function reloadBody(entry: CronEntry): string {
+  let fresh: string | undefined;
+  try {
+    const parsed = parseCronFile(
+      fs.readFileSync(entry.filePath, "utf-8"),
+      path.basename(entry.filePath),
+    );
+    fresh = parsed?.body;
+    if (fresh == null) throw new Error("parseCronFile returned no body");
+  } catch (e) {
+    log(entry.id, "BODY_RELOAD_ERR", `${path.basename(entry.filePath)}: ${String(e)}`);
+    return entry.body;
+  }
+  if (fresh !== entry.body) log(entry.id, "BODY_RELOADED", path.basename(entry.filePath));
+  return fresh;
 }
 
 function log(id: string, status: string, msg = ""): void {
@@ -130,7 +147,8 @@ function fireTmux(entry: CronEntry): void {
   }
   const session = tmuxSessionName(entry.id, new Date());
   const promptFile = `/tmp/cron-${session}.prompt`;
-  fs.writeFileSync(promptFile, entry.body);
+  const body = reloadBody(entry);
+  fs.writeFileSync(promptFile, body);
   const child = spawn(
     "tmux",
     [
@@ -154,7 +172,7 @@ function fire(entry: CronEntry): void {
     return;
   }
   log(entry.id, "FIRE");
-  const child = spawn(AGENT_BIN, ["-p", entry.body], { stdio: "inherit" });
+  const child = spawn(AGENT_BIN, ["-p", reloadBody(entry)], { stdio: "inherit" });
   child.on("exit", (code: number | null) => log(entry.id, code === 0 ? "OK" : `EXIT_${code}`));
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
 }

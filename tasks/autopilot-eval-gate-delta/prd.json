@@ -49,8 +49,8 @@
                 "bash -n evals/probes/eval-gate.sh is clean (no shell syntax errors)"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "iter1 2026-06-11: added evals/probes/eval-gate.sh (chmod +x); bash -n clean; direct run exits 0 (PASS); corrected-probe-vs-base-worktree run exits 1 (REGRESSION on old §6)."
         },
         {
             "id": "US-004",

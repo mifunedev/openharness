@@ -6,3 +6,6 @@
 
 ## US-002 -- 2026-06-11
 - Reworded the PR-DRAFT-EVAL-RED row in the §Reference status-token table to "PR left draft because /eval reported a NEW (green→red) probe regression or a non-zero runner exit". Only that one row changed; table row count unchanged (11 token rows + header).
+
+## US-003 -- 2026-06-11
+- Added evals/probes/eval-gate.sh following the devtcp-hook.sh pattern (3-state oracle: 0=PASS, 1=REGRESSION, 2=SKIPPED). Extracts the §6 section, fails if the bare "Any `REGRESSION`" gate remains, and PASS requires AND-logic on the corrected vocabulary (delta, unchanged, green→red, exit). Verified: chmod +x; bash -n clean; direct run exit 0; corrected probe copied into a detached worktree off origin/development reads the old §6 and exits 1.

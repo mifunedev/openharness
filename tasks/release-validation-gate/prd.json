@@ -47,8 +47,8 @@
                 "No existing [Unreleased] entries are removed or reordered"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-11 via /delegate; CHANGELOG [Unreleased] Changed bullet added, links #24."
         }
     ]
 }

@@ -49,3 +49,24 @@ git.md is a protected path via the `.claude/rules` symlink — content edits are
 fine; only deletion/deprecation needs an override note.
 
 ---
+
+## US-003 — 2026-06-11 (via /delegate)
+
+**Title**: Add the CHANGELOG entry
+**Files changed**: CHANGELOG.md
+**Result**: PASS
+
+### What I did
+Appended one bullet to `## [Unreleased]` → `### Changed`: "Release pipeline now
+validates (lint, format check, build, test, root tests) before building/pushing
+the Docker image or creating the GitHub Release ([#24](...))." Uses the
+ryaneggz/openharness namespace (matches all current [Unreleased] links). No
+existing entry removed or reordered.
+
+### Learnings for future iterations
+Current [Unreleased] links all use the ryaneggz/openharness namespace; older
+released sections use mifunedev — leave historical entries untouched.
+
+---
+
+STATUS: COMPLETE

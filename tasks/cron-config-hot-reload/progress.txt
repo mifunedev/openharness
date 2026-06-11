@@ -1,2 +1,26 @@
 # progress
 
+## US-001..US-005 — 2026-06-11 21:35 UTC
+
+**Title**: Cron config hot-reload (all stories)
+**Files changed**: scripts/cron-runtime.ts, scripts/__tests__/cron-runtime.test.ts, scripts/__tests__/cron-runtime.property.test.ts (1 filePath assertion), crons/README.md, CHANGELOG.md
+**Result**: PASS
+
+### What I did
+Executed via /delegate in 2 waves. Wave 1: implemented loadCrons dir-qualified
+filePath (US-001), exported reloadBody owning read+diff+log+fallback (US-002),
+swapped fire()/fireTmux() to reloadBody (US-003) + CHANGELOG; documented the
+contract in crons/README.md (US-005). Wave 2: added reloadBody tests (US-004)
+using a no-op vi.mock of node:fs appendFileSync to observe BODY_RELOADED /
+BODY_RELOAD_ERR. Full suite green: 143 tests (cron-runtime.test.ts 15→17).
+
+### Learnings for future iterations
+- CronEntry.filePath was a bare basename (loadCrons passed `f`, not `path.join(dir,f)`);
+  the dir-qualified fix is a prerequisite for any fire-time file re-read.
+- LOG_FILE is a module-const bound at import; redirect-via-env does not work in tests.
+  node:fs namespace props are non-configurable, so vi.spyOn fails — use vi.mock with
+  importOriginal and wrap appendFileSync (no-op to avoid writing the real .cron.log).
+- Schedule/enabled/timezone changes still need a runtime restart — only the body hot-reloads.
+
+---
+STATUS: COMPLETE

@@ -16,8 +16,8 @@
                 "Tests pass"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
         },
         {
             "id": "US-002",
@@ -32,8 +32,8 @@
                 "Typecheck passes (tsc --noEmit)"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
         },
         {
             "id": "US-003",
@@ -47,8 +47,8 @@
                 "Typecheck passes (tsc --noEmit)"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
         },
         {
             "id": "US-004",
@@ -64,8 +64,8 @@
                 "Typecheck passes (tsc --noEmit)"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
         },
         {
             "id": "US-005",
@@ -78,8 +78,8 @@
                 "No existing crons/README.md content is removed or reordered (additive section only)"
             ],
             "priority": 5,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
         }
     ]
 }

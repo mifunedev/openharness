@@ -27,6 +27,21 @@
   that file — `expect(stderr).toContain(\`${omitted} is missing\`)` is reliable
   regardless of the omitted file's position in the list. No harness stub: the
   dir check (:361) and four-file check (:369) precede harness resolution (:375).
+- **Source guard (US-003) is a `[ "${BASH_SOURCE[0]}" != "$0" ]; return 0`
+  block placed between the function definitions and the loop/normal-mode
+  body.** Sourcing makes `$0` the parent shell (`bash`) ≠ `BASH_SOURCE[0]`
+  (the script path) → early `return 0` (valid in a sourced context). All
+  three real paths execute the file (`$0` == `BASH_SOURCE[0]`) so the guard
+  is a no-op. **US-004 should source the script in fresh `bash -c 'source
+  scripts/ralph.sh; <call>'` subshells** so `set -euo pipefail` is scoped to
+  that subshell, not the test runner.
+- **Verifying the no-tmux foreground fallback (path 3) needs a PATH with no
+  `tmux`.** Build a temp bin, symlink `/usr/bin/*` + `/bin/*` into it, `rm`
+  the `tmux` symlink, then run with `PATH=$tmpbin` from a non-git temp cwd
+  holding a scaffolded `tasks/<slug>/` whose `progress.txt` already contains
+  `STATUS: COMPLETE` (so the loop prints its banner, detects COMPLETE, and
+  exits 0 instead of invoking a real harness). `codex` is on the live PATH
+  in this env, so a real harness resolves even without a stub.
 
 ## US-001 — 2026-06-12 07:26 UTC
 
@@ -83,6 +98,41 @@ re-entry at :279; (3) the no-tmux foreground fallback `exec bash "$SCRIPT_PATH"
 a `BASH_SOURCE == $0` guard should be a clean no-op for all three. If
 `set -euo pipefail` fires noisily on source, DROP US-003 and skip US-004 per
 the conditional-drop branch.
+
+---
+
+## US-003 — 2026-06-12 05:17 UTC
+
+**Title**: Behavior-preserving source guard in ralph.sh (conditional)
+**Files changed**: scripts/ralph.sh
+**Commit**: b57e746
+**Result**: PASS
+
+### What I did
+Added a `[ "${BASH_SOURCE[0]}" != "$0" ]; return 0` source guard between the
+function definitions and the loop/normal-mode body. The guard landed cleanly —
+`set -euo pipefail` does NOT fire noisily on source (function definitions don't
+execute their bodies, so `set -u` never trips), so the conditional-drop branch
+was NOT taken. Verified all three real invocation paths are strict no-ops:
+(1) `bash scripts/ralph.sh Bad_Name` still exits 2 `/must match/`; (2) `bash
+"$SCRIPT" --loop --harness=codex …` still prints the loop banner (enters loop
+mode, not rejected as an unknown option); (3) with `tmux` absent from PATH the
+foreground fallback prints "tmux not found" then transitions to `--loop` mode
+and prints the loop banner. Sourcing now defines the functions (`type
+claude_limit_detected` → function) without running the body. 157 tests pass;
+typecheck, lint, and `shellcheck scripts/ralph.sh` all clean.
+
+### Learnings for future iterations
+US-004's GATE is now OPEN (guard landed cleanly). Implement US-004 next:
+source the script in fresh `bash -c 'source scripts/ralph.sh; <call>'`
+subshells (see Codebase Patterns). Functions to cover: `claude_limit_detected`
+(AND of two greps — positive fixture needs BOTH 'hit … limit' AND 'resets?';
+a one-phrase negative + a neither negative both exit 1), `fallback_after_harness`
+(claude→codex, pi→codex with a fake `codex` on PATH; codex absent → non-zero +
+`/not on PATH/`; opencode → non-zero + `/no fallback/`), and `normalize_harness`
+(each valid harness echoes; invalid exits 2 `/unknown harness/`). PATH stubs:
+an executable `codex` shell file (`#!/usr/bin/env bash` + `exit 0`) in a temp
+dir prepended to PATH.
 
 ---
 

@@ -52,8 +52,8 @@
                 "Typecheck passes"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 3 on 2026-06-12; commit b57e746. Guard landed cleanly (no drop); all three invocation paths verified no-op, source defines functions without running body. US-004 GATE OPEN."
         },
         {
             "id": "US-004",

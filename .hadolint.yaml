@@ -1,0 +1,16 @@
+# hadolint config for Open Harness — gates .devcontainer/Dockerfile in CI
+# (consumed by the `boot-lint` job in .github/workflows/ci-harness.yml).
+#
+# Two-layer gate:
+#   1. The boot-lint job sets `failure-threshold: warning`, so info/style notes
+#      (SC2015, SC2016, DL3059, …) never block the build — they vary with the
+#      shellcheck/hadolint version bundled in the action and carry little signal.
+#   2. This `ignored:` list then accepts the specific WARNING-level dev-sandbox
+#      tradeoffs that remain. The gate still fails on any warning/error NOT here.
+#
+# Validated against hadolint 2.12.0 (the binary in hadolint/hadolint-action@v3.1.0).
+ignored:
+  - DL4006  # SHELL pipefail not set on every RUN — base /bin/sh handles our pipes; a global SHELL directive isn't warranted.
+  - DL3008  # apt packages intentionally unpinned — a dev sandbox tracks latest security patches, not reproducible version pins.
+  - DL3016  # npm packages intentionally unpinned, same rationale as DL3008.
+  - DL3003  # `cd` inside a one-off RUN instead of WORKDIR — deliberate, keeps the directory change layer-local.

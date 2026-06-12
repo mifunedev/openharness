@@ -12,6 +12,7 @@
     "test:scripts": "vitest run",
     "lint": "pnpm -r --if-present run lint",
     "format:check": "pnpm -r --if-present run format:check",
+    "typecheck": "pnpm --filter './packages/**' -r --if-present run typecheck && npm --prefix packages/oh run typecheck",
     "format": "pnpm -r --if-present run format",
     "docs:build": "pnpm --dir packages/docs build",
     "docs:dev": "pnpm --dir packages/docs start",
@@ -37,7 +38,16 @@
       "d3-array": "^3.2.0",
       "d3-shape": "^3.2.0",
       "d3-path": "^3.1.0",
-      "webpack": "5.98.0"
+      "shell-quote": "^1.8.4",
+      "@babel/plugin-transform-modules-systemjs": "^7.29.4",
+      "fast-uri": "^3.1.2",
+      "serialize-javascript": "^7.0.3",
+      "qs": "^6.15.2",
+      "uuid": "^11.1.1",
+      "ws@>=8.0.0 <9.0.0": "^8.20.1",
+      "mermaid": "^11.15.0",
+      "postcss": "^8.5.10",
+      "joi": "^18.2.1"
     }
   }
 }

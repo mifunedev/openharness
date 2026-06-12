@@ -43,3 +43,23 @@ Added `onJobError` to the destructured import from `../cron-runtime` (alphabetic
 - US-003 is docs-only: add a `## Status tokens` section to `crons/README.md` enumerating SPAWNED, FIRE, OK, EXIT_n, ERR, ERR_JOB, SKIPPED_OVERLAP, BOOT (additive-only, don't delete existing prose). ERR_JOB format is `<id>\tERR_JOB\t<error-string>`. No CHANGELOG entry was needed for US-002 (test-only change, exempt per git.md).
 
 ---
+
+## US-003 — 2026-06-12 01:03 UTC
+
+**Title**: Document the ERR_JOB status token
+**Files changed**: crons/README.md
+**Commit**: e02b6f3
+**Result**: PASS
+
+### What I did
+Added a `## Status tokens` section to `crons/README.md` (between Conventions and Scheduled jobs) — a table enumerating the eight required tokens (BOOT, SPAWNED, FIRE, OK, EXIT_n, ERR, ERR_JOB, SKIPPED_OVERLAP), each with a one-line meaning derived from the actual `log(...)` call sites in `scripts/cron-runtime.ts`. ERR_JOB is described as firing on a synchronous cron job-callback throw with format `<id>\tERR_JOB\t<error-string>`. The section also notes the full line shape (`<iso-timestamp>\t<id>\t<status>\t<msg>`) and cross-references Hot-reload for the two `BODY_RELOAD*` tokens. Additive-only; no existing prose deleted.
+
+### Learnings for future iterations
+- Token meanings were verified against source, not the PRD: `grep -nE '"(SPAWNED|FIRE|OK|EXIT|ERR|ERR_JOB|SKIPPED_OVERLAP|BOOT)' scripts/cron-runtime.ts`. Note `ERR` covers BOTH the tmux-spawn `child.on("error")` (line 173) and the in-process-spawn `child.on("error")` (line 185) — it's a process-spawn failure, distinct from `ERR_JOB` (a job-callback throw).
+- The runtime emits two more tokens not in the AC's list — `BODY_RELOADED` / `BODY_RELOAD_ERR` — already covered by the existing Hot-reload section; I linked to it rather than duplicating.
+- Docs-only change: lint passes, no CHANGELOG entry (the ERR_JOB feature's `### Added` entry was already added in US-001; git.md exempts pure docs with no runtime effect).
+- All three stories now pass — this is the final iteration.
+
+---
+
+STATUS: COMPLETE

@@ -42,6 +42,31 @@
   `STATUS: COMPLETE` (so the loop prints its banner, detects COMPLETE, and
   exits 0 instead of invoking a real harness). `codex` is on the live PATH
   in this env, so a real harness resolves even without a stub.
+- **Source-call unit tests (US-004): launch bash by ABSOLUTE path, not bare
+  `"bash"`.** `spawnSync` resolves a bare command name against the *child*
+  env PATH, so tests that strip PATH to a temp dir (to toggle `codex`
+  visibility) would ENOENT on `spawnSync("bash", …)`. Resolve bash once via
+  the parent PATH (`spawnSync("bash",["-c","command -v bash"])`) and reuse the
+  absolute path. `sourceCall(snippet, {env})` runs
+  `spawnSync(BASH,["-c",\`source '${SCRIPT}'\n${snippet}\`],{env})`. The
+  US-003 guard returns before the loop body, so only functions load; `set -euo
+  pipefail` is scoped to that subshell. The function-under-test as the LAST
+  command makes its return value the subshell exit status (read via `status`).
+- **PATH control for `codex`-presence tests.** `codex` IS a real binary on the
+  live PATH here, so toggle it via `{ ...process.env, PATH: <tmpBin> }`:
+  present = a tmpBin holding an executable `codex` stub (`#!/usr/bin/env bash`
+  + `exit 0`, `chmodSync 0o755`); absent = an empty tmpBin. `fallback_after_harness`
+  and `normalize_harness` use only the `command -v`/`printf`/`case` builtins, so
+  a PATH of just the stub dir is enough — no coreutils needed. `claude_limit_detected`
+  needs real `grep`, so leave its env unset (inherits the parent PATH).
+- **No repo-enforced formatter on `scripts/`.** Root `format:check`/`lint`/`typecheck`
+  all run `pnpm -r --if-present run …` (workspace packages only) — `scripts/__tests__`
+  is covered by `pnpm test:scripts` (vitest, no type-check) alone. A bare
+  `npx prettier --check` installs default prettier and flags the COMMITTED
+  baseline (`harness-config.test.ts`) too, so its warnings are not a gate.
+  Verify strict types directly: `npx tsc --noEmit --strict --skipLibCheck
+  --module esnext --target es2022 --moduleResolution bundler --typeRoots
+  ./packages/oh/node_modules/@types --types node scripts/__tests__/ralph.test.ts`.
 
 ## US-001 — 2026-06-12 07:26 UTC
 
@@ -136,3 +161,37 @@ dir prepended to PATH.
 
 ---
 
+## US-004 — 2026-06-12 05:28 UTC
+
+**Title**: Resilience-function unit tests (depends on US-003)
+**Files changed**: scripts/__tests__/ralph.test.ts
+**Commit**: fcee379
+**Result**: PASS
+
+### What I did
+Added three `describe` blocks (15 tests) exercising the resilience functions in
+isolation via a new `sourceCall(snippet, {env})` helper that runs
+`spawnSync(BASH, ["-c", \`source '${SCRIPT}'\\n${snippet}\`])` — the US-003
+guard returns before the loop body, so only the functions load. `normalize_harness`:
+5 valid harnesses echo unchanged + an invalid value exits 2 `/unknown harness/`.
+`fallback_after_harness`: claude/pi → `codex` with a stub `codex` on a temp PATH;
+claude/pi with an empty PATH return non-zero `/not on PATH/`; opencode returns
+non-zero `/no fallback/`. `claude_limit_detected`: both phrases → exit 0; limit-only
+and reset-only → exit 1 (proving the AND of two greps); neither → exit 1. All 172
+tests pass; `pnpm run typecheck`, `pnpm run lint`, and a direct strict-tsc check
+of the file are clean.
+
+### Learnings for future iterations
+Launch bash by ABSOLUTE path in `sourceCall` — `spawnSync` resolves a bare
+`"bash"` against the *child* PATH, which these tests strip to an empty/stub-only
+temp dir to toggle `codex` visibility (it IS a real binary on the live PATH).
+With `set -euo pipefail` active after sourcing, making the function-under-test the
+LAST command of `bash -c` lets the subshell exit status carry the function's
+return — no `if`/echo marshalling needed. `scripts/` has no repo-enforced
+formatter; `pnpm test:scripts` is the gate. This is the final story —
+US-001/002/003/004 all pass.
+
+---
+
+
+STATUS: COMPLETE

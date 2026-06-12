@@ -70,8 +70,8 @@
                 "Typecheck passes"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 4 on 2026-06-12; commit fcee379. Source-call unit tests for normalize_harness (5 valid echoes + invalid exit-2), fallback_after_harness (claude/pi->codex present, claude/pi absent /not on PATH/, opencode /no fallback/), and claude_limit_detected (both-phrases exit 0; limit-only/reset-only/neither exit 1 prove AND-logic). 172 tests pass; typecheck, lint, strict tsc clean."
         }
     ]
 }

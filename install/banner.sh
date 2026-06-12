@@ -82,6 +82,23 @@ if command -v opencode >/dev/null 2>&1; then
   fi
 fi
 
+# grok — optional image-level CLI; auth state lives under ~/.grok, with
+# XAI_API_KEY as a secret-only non-interactive fallback.
+grok_status="[✗]"
+grok_detail="not installed — enable via install.grok_build / INSTALL_GROK_BUILD"
+if command -v grok >/dev/null 2>&1; then
+  if [ -s "${HOME}/.grok/auth.json" ]; then
+    grok_status="[✓]"
+    grok_detail="authenticated"
+  elif [ -n "${XAI_API_KEY:-}" ]; then
+    grok_status="[✓]"
+    grok_detail="configured via XAI_API_KEY"
+  else
+    grok_status="[✓]"
+    grok_detail="installed — run: grok login --device-auth (or grok login)"
+  fi
+fi
+
 # deepagents — installed status from PATH; configured status from
 # ~/.deepagents/.env or ~/.deepagents/config.toml so that an empty mounted
 # directory (named volume on first boot) is not treated as authenticated.
@@ -136,6 +153,7 @@ printf '    %-6s %-11s %s\n' "$gh_status"         "gh"          "$gh_detail"
 printf '    %-6s %-11s %s\n' "$claude_status"     "claude"      "$claude_detail"
 printf '    %-6s %-11s %s\n' "$codex_status"      "codex"       "$codex_detail"
 printf '    %-6s %-11s %s\n' "$opencode_status"   "opencode"    "$opencode_detail"
+printf '    %-6s %-11s %s\n' "$grok_status"       "grok"        "$grok_detail"
 printf '    %-6s %-11s %s\n' "$pi_status"         "pi"          "$pi_detail"
 printf '    %-6s %-11s %s\n' "$deepagents_status" "deepagents"  "$deepagents_detail"
 printf '    %-6s %-11s %s\n' "$hermes_status"     "hermes"      "$hermes_detail"
@@ -143,6 +161,7 @@ printf '    %-6s %-11s %s\n' "$oh_status"         "openharness" "$oh_detail"
 printf '\n'
 shortcuts="claude · codex · pi"
 command -v opencode >/dev/null 2>&1 && shortcuts="$shortcuts · opencode"
+command -v grok >/dev/null 2>&1 && shortcuts="$shortcuts · grok"
 command -v deepagents >/dev/null 2>&1 && shortcuts="$shortcuts · deepagents"
 command -v hermes >/dev/null 2>&1 && shortcuts="$shortcuts · hermes"
 printf '  Shortcuts: %s · tmux attach -t system-cron\n' "$shortcuts"

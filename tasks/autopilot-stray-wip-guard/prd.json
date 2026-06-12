@@ -107,8 +107,8 @@
                 "Probe exits 0 against the updated SKILL.md AND exits 1 against an unmodified SKILL.md (symmetric oracle, matching US-006)"
             ],
             "priority": 7,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 7 on 2026-06-12; commit 00386f2"
         },
         {
             "id": "US-008",

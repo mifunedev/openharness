@@ -51,6 +51,45 @@
   run it there (the probe resolves ROOT from its own `$BASH_SOURCE` dir, so it reads the temp
   skill). Exit 0 against the live skill, exit 1 against the temp old skill. SKIPPED (exit 2) is
   reachable by copying the probe alone into an empty temp dir (no skill present).
+- **Negative "no unscoped leak" assertion = double `grep -v` (US-007+).** To prove the
+  MAIN check has NO tree-wide `git diff --quiet` while exempting the §1 self-heal: list every
+  `git diff --quiet` line (`grep -n`), drop the scoped lines (`grep -vF -- '-- $OWNED_PATHS'`),
+  then drop the self-heal (`grep -vE 'BRANCH" != "development"|rev-parse --abbrev-ref HEAD'`);
+  anything left is a leak. The scoped/self-heal forms share the token `git diff --quiet`, so a
+  plain presence grep can't distinguish them — the subtractive double-`-v` does. Guard the
+  pipeline with `|| true` (under `pipefail` an empty final grep returns 1).
+
+---
+
+## US-007 — 2026-06-12 06:47 UTC
+
+**Title**: Add evals/probes/owned-surface-guard.sh
+**Files changed**: evals/probes/owned-surface-guard.sh (new, chmod +x)
+**Commit**: 00386f2
+**Result**: PASS
+
+### What I did
+Added the new tier-A 3-state probe asserting the §1 guard + restore are owned-scoped
+(issue #63): (a) `git diff --quiet -- $OWNED_PATHS` present AND no unscoped tree-wide
+`git diff --quiet` outside the self-heal (via the subtractive double-`grep -v` technique),
+(b) `BLOCKED-OWNED-WIP` present, (c) `git checkout development -- $OWNED_PATHS` present AND
+`rev-parse --abbrev-ref HEAD` present. Mirrors clean-restore.sh's `grep -F` discipline and
+shellcheck-disable comments. Verified the symmetric oracle: exit 0 against the live SKILL.md,
+exit 1 against `git show origin/development:…SKILL.md` (the positive scoped-form grep is the
+anchor — absent on the unmodified tree-wide skill), exit 2 when the skill is absent.
+shellcheck clean; `pnpm run lint` clean.
+
+### Learnings for future iterations
+- **US-008 (final story) just runs the suite + regenerates RESULTS.md.** Both new/rewritten
+  probes (`owned-surface-guard`, `clean-restore`) are green against the live skill; run
+  `evals/run.sh` or `/eval` and confirm no previously-green probe went red. The row label for
+  this probe will be `owned-surface-guard` (filename stem).
+- The symmetric-oracle test recipe (temp ROOT from `git show origin/development:…`) confirmed
+  again — the probe resolves ROOT from its own `$BASH_SOURCE` dir, so copying it into
+  `$TMP/evals/probes/` makes it read `$TMP/.claude/skills/autopilot/SKILL.md`. No tree mutation.
+- No CHANGELOG entry: a new internal eval probe is test-only infra (git.md skips chores/test-only
+  changes), consistent with US-001..006 in this task deferring the user-visible CHANGELOG line
+  to PR finalize.
 
 ---
 

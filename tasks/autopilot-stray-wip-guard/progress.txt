@@ -281,3 +281,34 @@ surface is known-complete. No check or restore logic was changed (that is US-002
 - Verifying fences: total ` ``` ` markers in the file stayed even (40), so §1 still renders.
 
 ---
+
+## US-008 — 2026-06-12 06:50 UTC
+
+**Title**: Refresh evals/RESULTS.md via the probe suite
+**Files changed**: evals/RESULTS.md
+**Commit**: 2eb78f9
+**Result**: PASS
+
+### What I did
+Ran the real probe suite via `bash .claude/skills/eval/run.sh` (not hand-faked),
+regenerating `evals/RESULTS.md`. Both #63 probes are green: `owned-surface-guard`
+(new-pass row) and the rewritten `clean-restore` (PASS, unchanged). Aggregate exit
+0 — no new green→red regressions. The lone `next-dev-prod` REGRESSION is
+pre-existing (it was already REGRESSION at 04:08 before this task; the runner
+reports it `unchanged`), so no previously-green probe went newly red.
+
+### Learnings for future iterations
+- **A pre-existing REGRESSION is not a violation of "no previously-green probe newly
+  red".** The runner only raises (and only exit-1s) on a `prior==PASS && now!=PASS`
+  transition; a probe that was already REGRESSION stays REGRESSION (`unchanged`) and
+  does not trip the gate. `next-dev-prod` is unrelated to #63 — do not "fix" it here.
+- **The eval runner lives at `.claude/skills/eval/run.sh`, not `evals/run.sh`.** It
+  resolves ROOT as `$SCRIPT_DIR/../../..` and overwrites one row per probe id in
+  RESULTS.md (git history is the time series). Run it bare to refresh all rows; the
+  `source` column is pulled from each probe's `# source:` header.
+- This was the final story (US-008); all 8 now `passes: true`. `STATUS: COMPLETE`
+  appended below terminates the Ralph loop.
+
+---
+
+STATUS: COMPLETE

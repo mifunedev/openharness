@@ -93,8 +93,8 @@
                 "Probe exits 0 against the updated SKILL.md and exits 1 against an unmodified SKILL.md (verifiable: stash the skill edit or test against git show origin/development:.claude/skills/autopilot/SKILL.md)"
             ],
             "priority": 6,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 6 on 2026-06-12; commit c90c985"
         },
         {
             "id": "US-007",

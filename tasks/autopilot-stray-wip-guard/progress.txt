@@ -39,6 +39,53 @@
   must describe the self-heal WITHOUT writing the exact substring `git checkout -f development`
   (say "its forced tree-wide checkout / the `-f` form") — otherwise the prose mention inflates
   `grep -c 'git checkout -f development'` above 1 and breaks US-006's exactly-1 probe assertion.
+- **Grep `$OWNED_PATHS` literally → use `grep -F` (US-006+).** Matching the skill substring
+  `git checkout development -- $OWNED_PATHS` with default BRE returns 0: GNU grep treats the
+  bare `$` mid-pattern as an end-of-line anchor, so the match silently fails. Use `grep -Fc`
+  (fixed-string) or escape as `\$OWNED_PATHS`. The probes MUST use `grep -F` for any
+  `$OWNED_PATHS`-bearing literal — US-007's owned-surface-guard probe needs the same. Add
+  `# shellcheck disable=SC2016` on the single-quoted line (the literal must NOT expand).
+- **Symmetric-oracle test recipe (US-006/US-007).** Verify exit-1-against-unmodified without
+  mutating the tree: build a temp ROOT — `git show origin/development:.claude/skills/autopilot/SKILL.md`
+  into `$TMP/.claude/skills/autopilot/SKILL.md`, copy the probe into `$TMP/evals/probes/`, and
+  run it there (the probe resolves ROOT from its own `$BASH_SOURCE` dir, so it reads the temp
+  skill). Exit 0 against the live skill, exit 1 against the temp old skill. SKIPPED (exit 2) is
+  reachable by copying the probe alone into an empty temp dir (no skill present).
+
+---
+
+## US-006 — 2026-06-12 08:14 UTC
+
+**Title**: Rewrite evals/probes/clean-restore.sh for the scoped restore
+**Files changed**: evals/probes/clean-restore.sh
+**Commit**: c90c985
+**Result**: PASS
+
+### What I did
+Rewrote the probe to assert the post-#63 SCOPED restore instead of the old
+"forced restore at every site". Dropped both removed assertions (`>=3` of
+`git checkout -f development`, and "no bare `git checkout development`"). New
+assertions: `>= 3` of the literal `git checkout development -- $OWNED_PATHS`
+(via `grep -Fc`), the `restore left a dirty owned tree` message, the
+`rev-parse --abbrev-ref HEAD` HEAD assertion, EXACTLY 1 `git checkout -f
+development` remaining, AND that the lone forced form is the §1 self-heal
+(BRANCH/rev-parse context within ±2 lines). Updated `# source:` → issue #63,
+kept `tier: A`, kept the 3-state oracle. Verified symmetric: exit 0 against the
+live SKILL.md (4 scoped sites), exit 1 against `origin/development`'s unmodified
+skill, exit 2 when the skill is absent. shellcheck + `pnpm run lint` clean.
+
+### Learnings for future iterations
+- **US-007 (owned-surface-guard.sh) mirrors this probe's grep discipline**: it
+  also matches `git checkout development -- $OWNED_PATHS` and
+  `git diff --quiet -- $OWNED_PATHS`, so it MUST use `grep -F` (see the new
+  Codebase Pattern) and exempt the self-heal `if [ "$BRANCH" != "development" ]`
+  line via BRANCH/rev-parse context — same ±2-line window trick used here.
+- The self-heal currently lives on ONE line (`git checkout -f development &&
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)`, line 81), so `grep -B2 -A2 …` +
+  `grep -qE 'BRANCH|rev-parse'` confirms it. If a later edit splits that line,
+  widen the window — but US-004 froze the forced form at count 1, so it is stable.
+- US-008 will run the suite and regenerate RESULTS.md; this probe is now green and
+  the row label stays `clean-restore` (filename unchanged — rewrite in place).
 
 ---
 

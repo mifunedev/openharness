@@ -271,6 +271,65 @@ function fire(entry: CronEntry): void {
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
 }
 
+export interface BootResult {
+  scheduled: number;
+  skipped: number;
+}
+
+// Construct a single live Cron for `entry`. Extracted from main()'s loop so the
+// construction is both individually fault-isolatable (scheduleAll wraps each
+// call in try/catch) and injectable in tests (scheduleAll takes `mkCron`), so a
+// test can drive the loop without arming a real timer or simulate a
+// construction throw.
+function constructCron(entry: CronEntry): void {
+  new Cron(
+    entry.schedule,
+    {
+      timezone: entry.timezone,
+      protect: !entry.overlap,
+      catch: (err: unknown) => onJobError(entry.id, err),
+    },
+    () => fire(entry),
+  );
+}
+
+// Load every cron under `dir` and schedule each one, fault-isolating each
+// `new Cron()` construction so a residual constructor throw skips only that one
+// cron and the loop continues. This construction catch is DEFENSE-IN-DEPTH:
+// loadCrons already drops invalid schedules at load time (US-002), so it never
+// fires in normal operation — it guards a future load-path bypass or a croner
+// edge case. Logs a `BOOT` summary `"<N> scheduled, <M> skipped"` and returns
+// the counts. `M` is not double-counted: a cron dropped at load time is counted
+// once (loadSkips) and never reaches the construction loop, while a cron that
+// survives load but throws at construction is counted once (constructSkips) —
+// the two sets are disjoint. `logFn`/`mkCron` exist only for test injection and
+// default to the real `log` / `constructCron`.
+export function scheduleAll(
+  dir: string = CRONS_DIR,
+  logFn = log,
+  mkCron: (entry: CronEntry) => void = constructCron,
+): BootResult {
+  let loadSkips = 0;
+  const entries = loadCrons(dir, (id, status, msg) => {
+    if (status === "SCHED_INVALID") loadSkips++;
+    logFn(id, status, msg);
+  });
+  let scheduled = 0;
+  let constructSkips = 0;
+  for (const entry of entries) {
+    try {
+      mkCron(entry);
+      scheduled++;
+    } catch (err) {
+      logFn(entry.id, "SCHED_INVALID", String(err));
+      constructSkips++;
+    }
+  }
+  const skipped = loadSkips + constructSkips;
+  logFn("system", "BOOT", `${scheduled} scheduled, ${skipped} skipped`);
+  return { scheduled, skipped };
+}
+
 function main(): void {
   if (!acquireLock()) {
     process.stderr.write("cron-runtime: another instance is running\n");
@@ -286,15 +345,7 @@ function main(): void {
   };
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
-  const entries = loadCrons();
-  log("system", "BOOT", `${entries.length} crons`);
-  for (const e of entries) {
-    new Cron(
-      e.schedule,
-      { timezone: e.timezone, protect: !e.overlap, catch: (err: unknown) => onJobError(e.id, err) },
-      () => fire(e),
-    );
-  }
+  scheduleAll();
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

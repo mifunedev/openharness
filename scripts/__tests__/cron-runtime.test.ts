@@ -19,6 +19,7 @@ import {
   onJobError,
   parseCronFile,
   reloadBody,
+  scheduleAll,
   tmuxSessionName,
 } from "../cron-runtime";
 
@@ -250,6 +251,75 @@ describe("loadCrons", () => {
     expect(id).toBe("badcron");
     expect(status).toBe("SCHED_INVALID");
     expect(String(msg)).toContain("not-a-cron");
+  });
+});
+
+describe("scheduleAll", () => {
+  const cron = (id: string, schedule: string): string =>
+    `---\nid: ${id}\nschedule: "${schedule}"\nenabled: true\n---\nbody\n`;
+
+  it("schedules valid crons, skips an invalid sibling, and logs an accurate BOOT summary", () => {
+    // Files load in alphabetical order: a-good (valid), b-bad (invalid → dropped
+    // at load time by US-002's filter), c-good (valid).
+    writeFileSync(path.join(tmp, "a-good.md"), cron("agood", "0 * * * *"));
+    writeFileSync(path.join(tmp, "b-bad.md"), cron("bbad", "not-a-cron"));
+    writeFileSync(path.join(tmp, "c-good.md"), cron("cgood", "*/5 * * * *"));
+
+    const spy = vi.fn();
+    const constructed: string[] = [];
+    // Inject a no-op mkCron so no real croner timer is armed in the test.
+    const result = scheduleAll(tmp, spy, (e) => {
+      constructed.push(e.id);
+    });
+
+    // The two valid crons are constructed; the invalid one never reaches mkCron.
+    expect(constructed).toEqual(["agood", "cgood"]);
+    expect(result).toEqual({ scheduled: 2, skipped: 1 });
+    // The BOOT summary preserves the token and reads "2 scheduled, 1 skipped";
+    // logging it at all proves the loop completed without exiting early.
+    expect(spy).toHaveBeenCalledWith("system", "BOOT", "2 scheduled, 1 skipped");
+  });
+
+  it("fault-isolates a construction throw (defense-in-depth): skips only the throwing cron", () => {
+    // All three schedules are VALID, so they pass the load-time filter — this
+    // bypasses US-002 and exercises the construction try/catch directly via an
+    // injected mkCron that simulates a residual croner construction throw.
+    writeFileSync(path.join(tmp, "a-ok.md"), cron("aok", "0 * * * *"));
+    writeFileSync(path.join(tmp, "b-boom.md"), cron("bboom", "0 * * * *"));
+    writeFileSync(path.join(tmp, "c-ok.md"), cron("cok", "0 * * * *"));
+
+    const spy = vi.fn();
+    const constructed: string[] = [];
+    const result = scheduleAll(tmp, spy, (e) => {
+      if (e.id === "bboom") throw new Error("croner blew up");
+      constructed.push(e.id);
+    });
+
+    // The throwing cron is skipped; construction continues for the rest.
+    expect(constructed).toEqual(["aok", "cok"]);
+    expect(result).toEqual({ scheduled: 2, skipped: 1 });
+    // The construction throw is logged SCHED_INVALID for that id, with the error.
+    const invalid = spy.mock.calls.find(
+      (c) => c[0] === "bboom" && c[1] === "SCHED_INVALID",
+    );
+    expect(invalid).toBeTruthy();
+    expect(String(invalid![2])).toContain("croner blew up");
+    expect(spy).toHaveBeenCalledWith("system", "BOOT", "2 scheduled, 1 skipped");
+  });
+
+  it("does not double-count: a load-time skip and a construction skip sum disjointly", () => {
+    writeFileSync(path.join(tmp, "a-ok.md"), cron("aok", "0 * * * *"));
+    writeFileSync(path.join(tmp, "b-loadbad.md"), cron("bload", "not-a-cron"));
+    writeFileSync(path.join(tmp, "c-boom.md"), cron("cboom", "0 * * * *"));
+
+    const spy = vi.fn();
+    const result = scheduleAll(tmp, spy, (e) => {
+      if (e.id === "cboom") throw new Error("construct fail");
+    });
+
+    // bload dropped at load time, cboom dropped at construction, aok scheduled.
+    expect(result).toEqual({ scheduled: 1, skipped: 2 });
+    expect(spy).toHaveBeenCalledWith("system", "BOOT", "1 scheduled, 2 skipped");
   });
 });
 

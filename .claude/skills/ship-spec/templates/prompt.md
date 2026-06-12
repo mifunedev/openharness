@@ -37,8 +37,11 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
 5. **Commit** with this message format (per `.claude/rules/git.md`):
    ```
    <type>: US-<NNN> — <story title>
+
+   Submitted-by: <active submitter>
    ```
    Where `<type>` is `task` for most stories, `feat` for net-new functionality, `fix` for bugs. Example: `task: US-001 — <story title>`. Stage only files touched by this story.
+   The `Submitted-by:` trailer is mandatory. It must name the model/agent that actually submits the commit, using the active harness identity when available (`$RALPH_HARNESS`, e.g. `Claude`, `Codex`, or `Pi`). If Ralph fell back from Claude to Codex, use `Submitted-by: Codex`.
 
 6. **Update `prd.json`** — set `passes: true` for the completed story, and set `notes` to a one-line summary including iteration number and date:
    ```json

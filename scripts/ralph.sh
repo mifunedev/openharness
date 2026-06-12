@@ -275,6 +275,19 @@ run_iteration() {
   return "$status"
 }
 
+# ─── Source guard ────────────────────────────────────────────────────
+# When this file is sourced (e.g. unit tests exercising the functions
+# above in isolation) rather than executed, return here so the loop /
+# normal-mode body below does not run — sourcing only defines functions.
+# All three real invocation paths execute the file directly, keeping
+# BASH_SOURCE[0] == "$0", so the guard is a strict no-op for them:
+#   1. direct execution:       scripts/ralph.sh <taskdesc>
+#   2. the --loop re-entry:     bash "$SCRIPT_PATH" --loop ...
+#   3. the no-tmux foreground:  exec bash "$SCRIPT_PATH" --loop ...
+if [ "${BASH_SOURCE[0]}" != "$0" ]; then
+  return 0
+fi
+
 # ─── Loop mode (re-entry from inside tmux) ───────────────────────────
 if [ "${1-}" = "--loop" ]; then
   shift

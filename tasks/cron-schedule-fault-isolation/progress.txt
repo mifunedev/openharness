@@ -62,3 +62,22 @@ Changed `loadCrons(dir = CRONS_DIR)` → `loadCrons(dir = CRONS_DIR, logFn = log
 - US-003 carries the CHANGELOG `### Added`/`### Fixed` line (the user-visible behavior change) per the Ralph prompt; CHANGELOG.md is added to the touched-files allowance for that one commit only.
 
 ---
+
+## US-004 — 2026-06-12 06:39 UTC
+
+**Title**: Document the SCHED_INVALID token in crons/README.md
+**Files changed**: crons/README.md
+**Commit**: 9c24689
+**Result**: PASS
+
+### What I did
+Added a `SCHED_INVALID` row to the existing status-tokens table in `crons/README.md` (placed directly after the `BOOT` row, since both are scheduling/boot-time events that precede any fire) with the description "A cron was skipped because its `schedule:` is not a valid cron expression (`msg` contains the offending schedule string)". Added an explanatory sentence after the table noting that a cron with an invalid `schedule:` string is skipped at load time, logs `SCHED_INVALID`, never enters the scheduled set, and so cannot crash the runtime while other crons keep running. Left every other status-token row untouched.
+
+### Learnings for future iterations
+- The `BOOT` row description still reads "`msg` is the cron count", which is mildly stale after US-003 changed the BOOT message to "`<N> scheduled, <M> skipped`" — but US-004's AC explicitly forbids reformatting other rows ("only the `SCHED_INVALID` row is added"), so I deliberately left it. A future docs-only story could refresh the BOOT row wording if desired.
+- Docs-only change: `pnpm run typecheck` and `pnpm run test:scripts` (157 tests, 13 files) both stay green — no code touched. No CHANGELOG entry needed (US-003 already carried the user-visible line).
+- This is the final story. All four (US-001…US-004) now have `passes: true`; the runtime fault-isolation feature is complete end-to-end (helper → load-time filter → construction guard + boot summary → operator docs).
+
+---
+
+STATUS: COMPLETE

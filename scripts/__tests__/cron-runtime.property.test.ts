@@ -63,7 +63,8 @@ describe("loadCrons — property: ordering-stability (alphabetical regardless of
             const returnedFilePaths = entries.map((e) => e.filePath);
 
             // Assert returned order is ascending alphabetical sort of input filenames
-            const expectedOrder = [...filenames].sort();
+            // filePath is now dir-qualified (path.join(dir, f)) so compare against full paths
+            const expectedOrder = [...filenames].sort().map((f) => path.join(tmpDir, f));
             expect(returnedFilePaths).toEqual(expectedOrder);
           } finally {
             fs.rmSync(tmpDir, { recursive: true, force: true });

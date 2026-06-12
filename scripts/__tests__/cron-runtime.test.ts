@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { spawn } from "node:child_process";
+import * as fsModule from "node:fs";
 import {
   existsSync,
   mkdtempSync,
@@ -9,7 +10,23 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { acquireLock, loadCrons, parseCronFile } from "../cron-runtime";
+import {
+  acquireLock,
+  buildTmuxWrapper,
+  loadCrons,
+  onJobError,
+  parseCronFile,
+  reloadBody,
+  tmuxSessionName,
+} from "../cron-runtime";
+
+// Mock only appendFileSync (the log() writer) as a no-op spy so reloadBody's
+// BODY_RELOADED / BODY_RELOAD_ERR signals are observable without polluting the
+// real crons/.cron.log during test runs. All other node:fs exports pass through.
+vi.mock("node:fs", async (importOriginal) => {
+  const real = await importOriginal<typeof import("node:fs")>();
+  return { ...real, appendFileSync: vi.fn() };
+});
 
 let tmp: string;
 
@@ -60,6 +77,63 @@ Heartbeat body.
   it("returns null when schedule is missing", () => {
     expect(parseCronFile(`---\nid: x\n---\nbody\n`, "x.md")).toBeNull();
   });
+
+  it("parses tmux: true and defaults to false otherwise", () => {
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\ntmux: true\n---\nbody\n`, "a.md")
+        ?.tmux,
+    ).toBe(true);
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\ntmux: false\n---\nbody\n`, "b.md")
+        ?.tmux,
+    ).toBe(false);
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.tmux,
+    ).toBe(false);
+  });
+});
+
+describe("tmuxSessionName", () => {
+  it("formats <id>-<MMDD>-<HHMM> from local time, zero-padded", () => {
+    // 2026-06-10 18:05 local (month is 0-indexed → 5 = June).
+    expect(tmuxSessionName("autopilot", new Date(2026, 5, 10, 18, 5))).toBe(
+      "autopilot-0610-1805",
+    );
+    // Single-digit month/day/hour/minute all pad to two digits.
+    expect(tmuxSessionName("x", new Date(2026, 0, 2, 3, 4))).toBe("x-0102-0304");
+  });
+});
+
+describe("buildTmuxWrapper", () => {
+  const wrapper = buildTmuxWrapper({
+    session: "autopilot-0610-1805",
+    id: "autopilot",
+    agentBin: "claude",
+    promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
+  });
+
+  it("writes the per-id pidfile and cleans it up", () => {
+    expect(wrapper).toContain("echo $$ > /tmp/cron-autopilot.pid;");
+    expect(wrapper).toContain("rm -f /tmp/cron-autopilot.pid;");
+  });
+
+  it("exports the session + keep-marker env vars", () => {
+    expect(wrapper).toContain(
+      "export CRON_TMUX_SESSION=autopilot-0610-1805 CRON_KEEP_MARKER=/tmp/autopilot-0610-1805.keep;",
+    );
+  });
+
+  it("runs the agent against the prompt file and tees the log", () => {
+    expect(wrapper).toContain(
+      'claude -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee /tmp/autopilot-0610-1805.log;',
+    );
+  });
+
+  it("persists a kept session as a resumed live agent, falling back to a shell", () => {
+    expect(wrapper).toContain(
+      "[ -f /tmp/autopilot-0610-1805.keep ] && { claude --continue; exec bash; }",
+    );
+  });
 });
 
 describe("loadCrons", () => {
@@ -105,5 +179,76 @@ describe("acquireLock", () => {
     writeFileSync(pidFile, "999999");
     expect(acquireLock(pidFile)).toBe(true);
     expect(existsSync(pidFile)).toBe(true);
+  });
+});
+
+describe("reloadBody", () => {
+  afterEach(() => {
+    vi.mocked(fsModule.appendFileSync).mockClear();
+  });
+
+  it("returns the on-disk body when it has been mutated after CronEntry was built", () => {
+    // Write the initial cron file and load it via loadCrons to get a dir-qualified CronEntry.
+    const cronFile = path.join(tmp, "hot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\noriginal body\n`,
+    );
+    const [entry] = loadCrons(tmp);
+    expect(entry.body).toBe("original body\n");
+
+    // Mutate only the body on disk — keep frontmatter intact so parseCronFile succeeds.
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nupdated body\n`,
+    );
+
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+    const result = reloadBody(entry);
+
+    // Should return the fresh on-disk body, not the cached entry.body.
+    expect(result).toBe("updated body\n");
+
+    // BODY_RELOADED must be logged because the on-disk body differed from entry.body.
+    const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
+    expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
+  });
+
+  it("returns cached entry.body and logs BODY_RELOAD_ERR when filePath is unreadable", () => {
+    // Build a hand-crafted entry pointing at a nonexistent path.
+    const missingPath = path.join(tmp, "ghost.md");
+    const entry = {
+      id: "ghost",
+      schedule: "* * * * *",
+      enabled: true,
+      overlap: false,
+      catchup: false,
+      tmux: false,
+      body: "cached body\n",
+      filePath: missingPath,
+    };
+
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+    const result = reloadBody(entry);
+
+    // Should fall back to the cached body.
+    expect(result).toBe("cached body\n");
+
+    // BODY_RELOAD_ERR must appear in at least one appendFileSync call.
+    const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
+    expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(true);
+  });
+});
+
+describe("onJobError", () => {
+  it("logs an ERR_JOB line through the injected logger", () => {
+    // Inject a spy logger so the test is fully deterministic and never touches
+    // the filesystem or the real crons/.cron.log (the default logger is log()).
+    const spy = vi.fn();
+    onJobError("testjob", new Error("disk full"), spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith("testjob", "ERR_JOB", "Error: disk full");
   });
 });

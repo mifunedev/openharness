@@ -81,7 +81,25 @@ docker ps -a --filter status=exited --format '{{.ID}}\t{{.Names}}\t{{.Status}}\t
 
 Cross-check names against the running sandboxes before proposing removal. An "Exited (255) N days ago" sandbox that isn't one of the live ones is the prototypical safe-to-reclaim target — but still confirm, per the don't-delete-what-you-didn't-create rule.
 
-### 5. Run tier 1, then report the verdict
+### 5. In-container RAM reclaim (when memory is the binding constraint)
+
+When memory — not disk — is the binding constraint, the reclaimable RAM may be **in-container process accumulation** that is invisible to the Docker-object ladder above. `docker system df` and `docker ps --size` report layer/diff sizes on disk; they do **not** predict per-container resident-set memory. Use `docker stats` to find it:
+
+```bash
+docker stats --no-stream
+```
+
+This emits one row per running container showing live **MEM USAGE / LIMIT** and **%MEM**. Identify the heaviest consumer(s). Then drop into that container's process list to find stale processes or leaked dev servers that can be killed to reclaim RAM without removing the container:
+
+```bash
+docker exec <container> ps -eo rss,args --sort=-rss | head -20
+```
+
+Typical findings: stale `node` / `python` dev servers from a previous session, a hung test runner, or an orphaned build worker that was never cleaned up. Killing the process (not the container) reclaims its RSS immediately and is safer than any tier-2+ ladder action.
+
+Propose the kill to the user with the process name, RSS, and estimated RAM freed — do not auto-kill. This step is **memory-only**; skip it when disk is the sole binding constraint.
+
+### 6. Run tier 1, then report the verdict
 
 Unless `--dry-run`, run the build-cache prune and show before/after:
 
@@ -103,7 +121,7 @@ Then emit a verdict table — one row per resource, RAG-rated against the sized 
 
 Rating guide: 🔴 if starting the target would cross a hard limit (disk → ~90%+, OOM with no swap); 🟡 if it fits but with thin margin (no cushion, transient spikes possible); 🟢 if comfortable. State the **binding constraint** explicitly — it's usually one resource, not all three.
 
-### 6. Propose-then-confirm for tiers 2–4
+### 7. Propose-then-confirm for tiers 2–4
 
 If tier-1 reclaim already clears the target, say so and present the rest as **optional headroom** — don't push destructive removal that isn't needed. When you do propose it, quote the concrete artifact (container name, age, size) so the user can judge:
 
@@ -114,7 +132,7 @@ Optional further reclaim:
 
 Then ask (use `AskUserQuestion`). Run the removal only on explicit approval. With `--dry-run`, propose everything and write nothing — including skipping the tier-1 prune.
 
-### 7. Log (Memory Improvement Protocol)
+### 8. Log (Memory Improvement Protocol)
 
 Always, per `context/rules/memory.md`:
 

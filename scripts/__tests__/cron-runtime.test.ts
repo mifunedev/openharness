@@ -14,6 +14,7 @@ import {
   acquireLock,
   buildTmuxWrapper,
   loadCrons,
+  onJobError,
   parseCronFile,
   reloadBody,
   tmuxSessionName,
@@ -238,5 +239,16 @@ describe("reloadBody", () => {
     // BODY_RELOAD_ERR must appear in at least one appendFileSync call.
     const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(true);
+  });
+});
+
+describe("onJobError", () => {
+  it("logs an ERR_JOB line through the injected logger", () => {
+    // Inject a spy logger so the test is fully deterministic and never touches
+    // the filesystem or the real crons/.cron.log (the default logger is log()).
+    const spy = vi.fn();
+    onJobError("testjob", new Error("disk full"), spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith("testjob", "ERR_JOB", "Error: disk full");
   });
 });

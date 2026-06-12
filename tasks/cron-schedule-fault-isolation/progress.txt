@@ -1,2 +1,28 @@
 # progress
 
+## Codebase Patterns
+
+- **croner v9.1.0 has no `Cron.validate`** (`typeof Cron.validate === "undefined"`). Validate a schedule by constructing `new Cron(schedule)` with NO callback and NO `name` option inside try/catch: it parses synchronously and throws on a bad pattern, arms no timer (croner only calls `schedule()` when a function is passed), and registers nothing in the module-level named-jobs array (no `name`). `.stop()` is defensive only.
+- **Verified probe outcomes**: `''` throws, `'not-a-cron'` throws, `'0 * * * *'` constructs OK. So `isValidSchedule('')===false`, `isValidSchedule('not-a-cron')===false`, `isValidSchedule('0 * * * *')===true`.
+- **Test harness style** (`scripts/__tests__/cron-runtime.test.ts`): vitest; `node:fs` is mocked so ONLY `appendFileSync` is a no-op spy (all other fs exports pass through) — assert log writes via `vi.mocked(fsModule.appendFileSync).mock.calls`. `mkdtempSync` temp dir per test in `beforeEach`, `rmSync` in `afterEach`. There is also a `cron-runtime.property.test.ts` (fast-check) in the same dir — keep it green.
+- **Injectable-logFn seam**: `onJobError(id, err, logFn = log)` is the established pattern for test-injecting the logger. US-002 must mirror it: `loadCrons(dir?, logFn = log)`.
+- **`pnpm run test:scripts`** is the authoritative gate (runs all 13 vitest files, currently 151 tests). `pnpm run typecheck` and `pnpm run lint` both pass clean.
+
+---
+
+## US-001 — 2026-06-12 06:28 UTC
+
+**Title**: Add a pure isValidSchedule helper
+**Files changed**: scripts/cron-runtime.ts, scripts/__tests__/cron-runtime.test.ts
+**Commit**: 21ef653
+**Result**: PASS
+
+### What I did
+Added exported `isValidSchedule(schedule: string): boolean` to `scripts/cron-runtime.ts`, placed between `parseCronFile` and `loadCrons` (so US-002's `loadCrons` can call it top-down). Implemented as a try/catch probe over `new Cron(schedule)` with no callback / no name, `.stop()` in a `finally` for defensive cleanup, `return false` in catch. Added a `describe("isValidSchedule")` block with the three mandated cases (valid / malformed / empty) plus a never-throws guard over mixed inputs.
+
+### Learnings for future iterations
+- The `finally { probe?.stop() }` runs after the `return` is evaluated but does not override it — `probe` is `undefined` in the throw path (construction failed), so `probe?.stop()` is a safe no-op there.
+- `isValidSchedule` is exported and ready for US-002 to filter inside `loadCrons`, and for US-003 to stub (return `true` for a bad schedule) to exercise the defense-in-depth construction catch.
+- US-001 is harness-infra runtime behavior but adds no operator-visible CHANGELOG line on its own; per the Ralph prompt the CHANGELOG entry lands with US-003 (the behavior change).
+
+---

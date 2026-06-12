@@ -26,3 +26,21 @@ Added exported `isValidSchedule(schedule: string): boolean` to `scripts/cron-run
 - US-001 is harness-infra runtime behavior but adds no operator-visible CHANGELOG line on its own; per the Ralph prompt the CHANGELOG entry lands with US-003 (the behavior change).
 
 ---
+
+## US-002 — 2026-06-12 06:31 UTC
+
+**Title**: Skip and log invalid-schedule crons at load time
+**Files changed**: scripts/cron-runtime.ts, scripts/__tests__/cron-runtime.test.ts
+**Commit**: 49d9634
+**Result**: PASS
+
+### What I did
+Changed `loadCrons(dir = CRONS_DIR)` → `loadCrons(dir = CRONS_DIR, logFn = log)` (injectable-logFn seam mirroring `onJobError`). Restructured the per-file loop so the filesystem read+parse stays inside the silent try/catch (unreadable → `continue`), then validates the schedule OUTSIDE that try/catch after the non-null+enabled check: an invalid schedule logs `logFn(id, "SCHED_INVALID", "invalid schedule: <sched>")` and is skipped, never entering the returned entries. Added 3 tests to the `loadCrons` describe block (malformed excluded + no-throw; valid sibling still returned; injected spy receives the SCHED_INVALID contract).
+
+### Learnings for future iterations
+- The two skip paths are now physically distinct in code: the `catch { continue }` is silent (unreadable file); the `if (!isValidSchedule) { logFn(...); continue }` after the try logs SCHED_INVALID. US-003 must NOT collapse these — they are the load-time-filter half of the belt-and-suspenders design.
+- Files are processed in `.sort()` order, so an alphabetically-earlier invalid file (e.g. `bad.md`) is skipped before a later valid `good.md` is pushed — order-stable for the sibling test's `["good"]` assertion.
+- `loadCrons` now drops invalid crons at load time, so in normal operation US-003's construction catch is dead code (defense-in-depth). US-003's `2 scheduled, 1 skipped` BOOT count is the count of crons present-but-dropped; the simplest accurate source is comparing total `*.md`/enabled crons found vs `loadCrons` output length, or having `loadCrons` surface a skip count. Avoid double-counting: a cron dropped here must not also be counted at construction.
+- US-003 carries the CHANGELOG `### Added`/`### Fixed` line (the user-visible behavior change) per the Ralph prompt; CHANGELOG.md is added to the touched-files allowance for that one commit only.
+
+---

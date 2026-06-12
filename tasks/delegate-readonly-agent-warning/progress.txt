@@ -1,2 +1,23 @@
 # progress
 
+## Codebase Patterns
+
+- `.claude/skills/delegate/SKILL.md` "Worker configuration:" block lives under **§5 Execute waves → sub-step (a)** (around the Model / run_in_background bullets). Anchor edits by that heading text, not line number.
+- The §Reference "Key Resources" table is a **2-column** `| Resource | Path |` table near the end of the file. The `Agent: Council` row is a known-stale reference — leave it untouched (out of scope).
+- Repo quality gates: `pnpm run lint` and `pnpm run format:check` both delegate to `pnpm -r --if-present` and pass cleanly for docs/skill edits.
+
+## US-001 — 2026-06-12 02:22 UTC
+
+**Title**: Warn at point of use (Worker configuration block)
+**Files changed**: .claude/skills/delegate/SKILL.md
+**Commit**: 3f23d21
+**Result**: PASS
+
+### What I did
+Added a `**subagent_type** (read-only trap)` bullet to the Worker-configuration block under §5 Execute waves. It states that `implementer`/`pm`/`critic` are read-only (`tools: Read, Glob, Grep, Bash`) and silently make zero file changes, and directs the reader to use `subagent_type: general-purpose` (or `claude`) for any worker that must Write/Edit files. Verified `read-only` and `general-purpose` both land on the same bullet (line 130) via grep; lint + format clean.
+
+### Learnings for future iterations
+- The new warning bullet is line 130; US-003's probe must scope its region check to this Worker-configuration block (and/or the §Reference table US-002 will annotate), not a whole-file grep.
+- US-002 next: annotate the Implementer/Critic/PM rows in the 2-column Key Resources table via an inline note appended to the Path cell (no new column), plus a note naming `general-purpose` as a built-in type with no agent file.
+
+---

@@ -10,6 +10,23 @@
 
 ---
 
+## US-003 — 2026-06-12 16:28 UTC
+
+**Title**: Preserve unchanged sections and template validity
+**Files changed**: tasks/agent-template-make-commands/{prd.json,progress.txt} (no agent.md edit — guard story)
+**Commit**: e54eb45
+**Result**: PASS
+
+### What I did
+
+Verified US-003's guard criteria hold after US-001/US-002 landed; no edit to `agent.md` was required since prior iterations confined their changes to sections 1–3. AC1: `diff` of lines 1–33 (everything above `### 1. Provision the agent`, which is at line 34 in both base and HEAD) vs `origin/development` is IDENTICAL — frontmatter, `## Identity`, `## Context`, `## Workspace Setup` → `### Metadata` (incl. preserved `branch`/`worktree_path`) all unchanged. AC2: `head -n 7 | grep -c "^---$"` = 2. AC3: working tree clean; cumulative branch diff touches only `agent.md` + Ralph task-state files. AC4: `pnpm format:check` exits 0.
+
+### Learnings for future iterations
+
+A pure verification/guard story produces no deliverable-file edit — the commit carries only `tasks/` state files, which is expected and allowed (Ralph instructions stage `agent.md` *and* the task state files). When the prior stories already satisfy the guard, do not manufacture an edit to `agent.md` just to have a diff; that would risk reopening US-003's own constraints. Boundary confirmed: `### 1. Provision the agent` sits at line 34 in both base and HEAD, so the preserved region is lines 1–33. Regression guards from US-001 (`quickstart|NAME=`) and US-002 (`make list`) both still return no matches. All three stories now pass → loop complete.
+
+---
+
 ## US-002 — 2026-06-12 16:41 UTC
 
 **Title**: Correct the verify checklist
@@ -43,3 +60,5 @@ Replaced `make NAME=<agent-name> quickstart` with `make sandbox` and rewrote the
 `grep -nE "quickstart|NAME=" .github/ISSUE_TEMPLATE/agent.md` returns no matches (AC5 green). Section 3 (Verify) is deliberately left alone — it still contains `make list` and the `SOUL.md and MEMORY.md are present` assertion, which are US-002's job. `pnpm format:check` passes cleanly. Two stories remain: US-002 (verify checklist), US-003 (preserve/validity guard).
 
 ---
+
+STATUS: COMPLETE

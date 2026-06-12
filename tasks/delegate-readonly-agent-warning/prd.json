@@ -31,8 +31,8 @@
                 "Table still renders: every row has exactly 2 pipe-delimited cells"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 2 on 2026-06-11; commit cb01372"
         },
         {
             "id": "US-003",

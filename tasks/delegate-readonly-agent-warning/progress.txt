@@ -21,3 +21,19 @@ Added a `**subagent_type** (read-only trap)` bullet to the Worker-configuration 
 - US-002 next: annotate the Implementer/Critic/PM rows in the 2-column Key Resources table via an inline note appended to the Path cell (no new column), plus a note naming `general-purpose` as a built-in type with no agent file.
 
 ---
+
+## US-002 — 2026-06-12 02:23 UTC
+
+**Title**: Annotate the Key Resources table
+**Files changed**: .claude/skills/delegate/SKILL.md
+**Commit**: cb01372
+**Result**: PASS
+
+### What I did
+Appended `— read-only (no Write/Edit)` inline to the Path cell of the Implementer/Critic/PM rows in the §Reference "Key Resources" table (no new column; each row keeps exactly 2 pipe-delimited cells). Added a sentence directly under the table naming `subagent_type: general-purpose` (or `claude`) as the type for file-writing workers, noting both are built-in agent types with no `.claude/agents/` path. Left the stale `Agent: Council` row untouched per scope. Verified `read-only` greps in the table region (lines 243-245, 251), cell counts all 2, and lint + format:check clean.
+
+### Learnings for future iterations
+- `read-only` now appears in TWO regions: the Worker-configuration bullet (line 130, US-001) and the §Reference table (lines 243-245 + the note at 251). US-003's probe should scope to the warning region(s) and the AC allows either the Worker-config block OR the §Reference table — both now satisfy the (a) read-only + (b) general-purpose requirement independently.
+- The under-table note (line 251) is plain prose, not a table row, so it does not affect the "every row has 2 cells" check; an awk region scan from `^### Key Resources` to the next `^### ` or `^## ` captures both the table and the note.
+
+---

@@ -131,11 +131,48 @@ export function buildTmuxWrapper(opts: {
   return (
     `echo $$ > /tmp/cron-${id}.pid; ` +
     `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep; ` +
-    `${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee /tmp/${session}.log; ` +
+    buildCronAgentCommand({
+      agentBin,
+      promptFile,
+      logFile: `/tmp/${session}.log`,
+      resumeFile: `/tmp/${session}.agent`,
+    }) +
+    `; ` +
     `rm -f /tmp/cron-${id}.pid; ` +
     // Kept session: resume the run's own conversation as a live, attachable
     // agent (idle until driven); fall back to a shell if that exits.
-    `[ -f /tmp/${session}.keep ] && { ${agentBin} --continue; exec bash; }`
+    `[ -f /tmp/${session}.keep ] && { ` +
+    `if [ "$(cat /tmp/${session}.agent 2>/dev/null || echo ${agentBin})" = codex ]; then codex; else ${agentBin} --continue; fi; ` +
+    `exec bash; }`
+  );
+}
+
+export function buildCronAgentCommand(opts: {
+  agentBin: string;
+  promptFile: string;
+  logFile: string;
+  resumeFile?: string;
+}): string {
+  const { agentBin, promptFile, logFile, resumeFile } = opts;
+  const resumeInit = resumeFile ? `printf '%s' ${agentBin} > ${resumeFile}; ` : "";
+  if (agentBin !== "claude") {
+    return `${resumeInit}${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}`;
+  }
+  const resumeCodex = resumeFile ? `printf '%s' codex > ${resumeFile}; ` : "";
+  return (
+    `${resumeInit}` +
+    `set +e; ` +
+    `set -o pipefail; ` +
+    `claude -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}; ` +
+    `status=$?; ` +
+    `if grep -Eiq '(usage|session|hit (your |the )?limit)' ${logFile} && grep -Eiq '(limit|resets?|/upgrade)' ${logFile}; then ` +
+    `echo "cron-runtime: Claude limit detected; retrying with Codex" | tee -a ${logFile}; ` +
+    `export RALPH_HARNESS=codex; ` +
+    `${resumeCodex}` +
+    `codex exec --sandbox danger-full-access "$(cat ${promptFile})" 2>&1 | tee -a ${logFile}; ` +
+    `status=$?; ` +
+    `fi; ` +
+    `exit $status`
   );
 }
 
@@ -180,7 +217,22 @@ function fire(entry: CronEntry): void {
     return;
   }
   log(entry.id, "FIRE");
-  const child = spawn(AGENT_BIN, ["-p", reloadBody(entry)], { stdio: "inherit" });
+  const session = tmuxSessionName(entry.id, new Date());
+  const promptFile = `/tmp/cron-${session}.prompt`;
+  const logFile = `/tmp/${session}.log`;
+  fs.writeFileSync(promptFile, reloadBody(entry));
+  const child = spawn(
+    "bash",
+    [
+      "-lc",
+      buildCronAgentCommand({
+        agentBin: AGENT_BIN,
+        promptFile,
+        logFile,
+      }),
+    ],
+    { stdio: "inherit" },
+  );
   child.on("exit", (code: number | null) => log(entry.id, code === 0 ? "OK" : `EXIT_${code}`));
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
 }

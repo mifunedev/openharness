@@ -18,9 +18,8 @@
 # Idempotent: re-invoking on an existing session attaches instead of duplicating.
 #
 # Harnesses:
-#   --harness=claude     run Claude first (default); fall back to Pi after a
-#                        recognized Claude usage-limit message; Codex is fallback
-#                        after Pi if Pi is unavailable
+#   --harness=claude     run Claude first (default); fall back to Codex after a
+#                        recognized Claude usage-limit message
 #   --harness=pi         run Pi for every iteration; fall back to Codex if Pi is
 #                        unavailable
 #   --harness=codex      run Codex for every iteration
@@ -135,15 +134,11 @@ fallback_after_harness() {
 
   case "$harness" in
     claude)
-      if command -v pi >/dev/null 2>&1; then
-        printf 'pi\n'
-        return 0
-      fi
       if command -v codex >/dev/null 2>&1; then
         printf 'codex\n'
         return 0
       fi
-      echo "Error: Claude usage limit detected, but fallback harnesses 'pi' and 'codex' are not on PATH." >&2
+      echo "Error: Claude usage limit detected, but fallback harness 'codex' is not on PATH." >&2
       return 1
       ;;
     pi)
@@ -247,6 +242,7 @@ run_iteration() {
   local output_file="$3"
   local status
 
+  export RALPH_HARNESS="$harness"
   set +e
   case "$harness" in
     claude)

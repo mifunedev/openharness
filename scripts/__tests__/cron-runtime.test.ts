@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   acquireLock,
+  buildCronAgentCommand,
   buildTmuxWrapper,
   loadCrons,
   onJobError,
@@ -125,14 +126,48 @@ describe("buildTmuxWrapper", () => {
 
   it("runs the agent against the prompt file and tees the log", () => {
     expect(wrapper).toContain(
-      'claude -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee /tmp/autopilot-0610-1805.log;',
+      'claude -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee /tmp/autopilot-0610-1805.log',
+    );
+    expect(wrapper).toContain("cron-runtime: Claude limit detected; retrying with Codex");
+    expect(wrapper).toContain(
+      'codex exec --sandbox danger-full-access "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee -a /tmp/autopilot-0610-1805.log',
+    );
+    expect(wrapper).toContain("export RALPH_HARNESS=codex;");
+  });
+
+  it("persists a kept session as a resumed live agent, using Codex after fallback", () => {
+    expect(wrapper).toContain(
+      '[ "$(cat /tmp/autopilot-0610-1805.agent 2>/dev/null || echo claude)" = codex ]; then codex; else claude --continue; fi;',
+    );
+  });
+});
+
+describe("buildCronAgentCommand", () => {
+  it("wraps default Claude with Codex fallback for tmux and non-tmux callers", () => {
+    const command = buildCronAgentCommand({
+      agentBin: "claude",
+      promptFile: "/tmp/cron-global.prompt",
+      logFile: "/tmp/cron-global.log",
+    });
+
+    expect(command).toContain('claude -p "$(cat /tmp/cron-global.prompt)"');
+    expect(command).toContain("grep -Eiq");
+    expect(command).toContain("export RALPH_HARNESS=codex;");
+    expect(command).toContain(
+      'codex exec --sandbox danger-full-access "$(cat /tmp/cron-global.prompt)"',
     );
   });
 
-  it("persists a kept session as a resumed live agent, falling back to a shell", () => {
-    expect(wrapper).toContain(
-      "[ -f /tmp/autopilot-0610-1805.keep ] && { claude --continue; exec bash; }",
-    );
+  it("preserves explicit non-Claude CRON_AGENT_BIN behavior without Codex fallback", () => {
+    const command = buildCronAgentCommand({
+      agentBin: "pi",
+      promptFile: "/tmp/cron-custom.prompt",
+      logFile: "/tmp/cron-custom.log",
+    });
+
+    expect(command).toContain('pi -p "$(cat /tmp/cron-custom.prompt)"');
+    expect(command).not.toContain("codex exec");
+    expect(command).not.toContain("RALPH_HARNESS=codex");
   });
 });
 

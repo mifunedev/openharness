@@ -209,7 +209,7 @@ fi
 
 ### 5. Implement — Ralph runner
 
-`/ship-spec` (§4) scaffolds the four-file Ralph contract at `tasks/$SLUG/` (`prd.md`, `prd.json`, `prompt.md`, `progress.txt`). Execute the stories with the **Ralph loop runner** rather than an in-process `/delegate` wave: the loop persists per-story state (`prd.json` `passes` + `progress.txt`), so a mid-run Claude usage-limit or crash **resumes from the last passing story** instead of losing the whole run and leaving a spec-only draft PR (the in-process failure mode — `memory/MEMORY.md` 2026-06-11/06-12). Ralph also falls back `claude→pi→codex` when Claude is throttled.
+`/ship-spec` (§4) scaffolds the four-file Ralph contract at `tasks/$SLUG/` (`prd.md`, `prd.json`, `prompt.md`, `progress.txt`). Execute the stories with the **Ralph loop runner** rather than an in-process `/delegate` wave: the loop persists per-story state (`prd.json` `passes` + `progress.txt`), so a mid-run Claude usage-limit or crash **resumes from the last passing story** instead of losing the whole run and leaving a spec-only draft PR (the in-process failure mode — `memory/MEMORY.md` 2026-06-11/06-12). Ralph also falls back `claude→codex` when Claude is throttled; explicit `--harness=pi` remains available and can fall back to Codex.
 
 The main checkout is already on `feat/$ISSUE_NUM-$SLUG` (§4) and has `node_modules`, so launch the loop here — it runs in its own tmux session named `$SLUG`, committing one story per iteration to the branch:
 
@@ -251,7 +251,7 @@ After Ralph completes (§5), **while still on the work branch**, run the probe s
 
 - If `/eval` updates `evals/RESULTS.md`, commit it on the branch:
   ```bash
-  git add evals/RESULTS.md && git commit -m "task: refresh evals benchmark" || true
+  git add evals/RESULTS.md && git commit -m "$(printf 'task: refresh evals benchmark\n\nSubmitted-by: %s\n' "${RALPH_HARNESS:-Claude}")" || true
   ```
 
 **Decision rule** — key on the runner's exit code and the green→red **delta**, NOT on the bare presence of a `REGRESSION` row in `evals/RESULTS.md`. A probe that was already red on the base (`origin/development`) is **pre-existing** — this PR did not cause it, so it must not block. **PROCEED** to §7 when BOTH of these hold:
@@ -323,7 +323,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - **Selection rationale**: every PR autopilot opens MUST carry a `## Selection rationale` section as the FIRST section of its description, stating why this item was chosen this session (queue position, or the research finding + impact ranking).
 - **No auto-merge**: autopilot finalizes a *ready-for-review* PR; a human merges. The word "merge" must never appear in an autopilot-generated commit message, PR body, or `gh` command.
 - **Caps**: at most 6 open autopilot PRs created per UTC day AND 10 total open at any time. A close/merge frees a slot.
-- **Implementation executor**: §5 launches the Ralph loop (`scripts/ralph.sh "$SLUG"`) and bash-polls `tasks/$SLUG/progress.txt` — the autopilot's own session blocks on the poll (no `run_in_background`), so `overlap: false` still guards the next fire. Ralph's resumable per-story state + `claude→pi→codex` fallback survive a mid-run usage-limit; `/delegate` is the documented fallback for genuinely parallelizable multi-story tasks (Ralph is strictly sequential).
+- **Implementation executor**: §5 launches the Ralph loop (`scripts/ralph.sh "$SLUG"`) and bash-polls `tasks/$SLUG/progress.txt` — the autopilot's own session blocks on the poll (no `run_in_background`), so `overlap: false` still guards the next fire. Ralph's resumable per-story state + `claude→codex` fallback survive a mid-run usage-limit; `/delegate` is the documented fallback for genuinely parallelizable multi-story tasks (Ralph is strictly sequential).
 - **Non-destructive failure**: never auto-close issues or PRs. On failure, comment + log. Human inspection is the recovery path.
 - **autopilot-blocked**: a critic HALT labels the ticket `autopilot-blocked`, excluding it from the queue query until a human removes the label — a bad ticket can't retry-loop hourly.
 - **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.

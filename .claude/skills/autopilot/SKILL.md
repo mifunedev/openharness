@@ -87,11 +87,20 @@ fi
 # a stray edit OUTSIDE the owned surface leaves it clean and the run proceeds; only a
 # dirty OWNED path blocks. (Repro: stage an unrelated `.codex/config.toml` edit — the
 # MAIN check below evaluates clean and does NOT take the exit-1 branch.)
-git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: dirty working tree"; exit 1; }
+# Dirty OWNED surface → skip non-destructively with a DISTINCT liveness token
+# (BLOCKED-OWNED-WIP, not bare FAIL) so a heartbeat watcher reads a real owned-WIP
+# stall as a stall, not idleness. The .cron.log append is guarded (2>/dev/null || true)
+# so a missing/unwritable log never crashes the skill — same convention as § Guidelines
+# "Liveness on every path". A stray edit OUTSIDE $OWNED_PATHS never reaches here (US-002).
+if ! { git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS; }; then
+  printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "BLOCKED-OWNED-WIP" >> crons/.cron.log 2>/dev/null || true
+  echo "BLOCKED-OWNED-WIP: dirty owned surface — run skipped (foreign WIP left untouched)"
+  exit 1
+fi
 [ "$BRANCH" = "development" ] || { echo "ERROR: not on development (on $BRANCH)"; exit 1; }
 ```
 
-If either check fails, log `Result: FAIL` + `Observation: dirty working tree or wrong branch` and exit 1 without touching GitHub.
+If the OWNED surface is dirty, log `Result: BLOCKED-OWNED-WIP` + `Observation: dirty owned surface; run skipped until it is clean (foreign WIP untouched)` and exit 1 without touching GitHub — the distinct token (not bare `FAIL`) keeps a genuine owned-WIP stall visible to the heartbeat rather than looking idle. If instead HEAD is not on `development`, log `Result: FAIL` + `Observation: wrong branch` and exit 1.
 
 **Sync with origin** (mandatory — a stale `development` base means dedupe misses fresh merges and the run branches off old code):
 

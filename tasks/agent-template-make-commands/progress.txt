@@ -1,2 +1,28 @@
 # progress
 
+## Codebase Patterns
+
+- **Real Makefile targets** (source of truth, `Makefile:44`): `sandbox, shell, destroy, stop, logs, ps, restart, config, help`. No `quickstart`, no `list`. `make sandbox` = `docker compose up -d --build` (`Makefile:46-47`).
+- **`make shell` takes a positional container arg** (`Makefile:33-40`), NOT `NAME=`. Default container is `$(SANDBOX_NAME)` → `openharness` or `sandbox.name` from `harness.yaml` (`Makefile:15-18`). User override is the env var `SHELL_USER=<user>` (`Makefile:22,49-50`).
+- **`format:check` is per-package** (`pnpm -r --if-present run format:check`); the repo-root `.github/ISSUE_TEMPLATE/agent.md` is not inside any workspace package, so it is not reformatted by the formatter — the check passes regardless. Don't expect prettier to touch this file.
+- **Per-agent branch/worktree are manual conventions** (`context/rules/git.md` §Worktrees): `git worktree add -b agent/<name> .worktrees/<name> development`. The Metadata `branch`/`worktree_path` fields are intentionally preserved (US-003 guards them); no make target auto-creates them.
+- **Story boundaries**: US-001 = sections 1–2 only; US-002 = section 3 (Verify, still has `make list`/`SOUL.md`); US-003 = guard frontmatter + everything above section 1. Stay in your section.
+
+---
+
+## US-001 — 2026-06-12 16:22 UTC
+
+**Title**: Correct the provisioning and enter-sandbox commands
+**Files changed**: .github/ISSUE_TEMPLATE/agent.md (sections 1–2), tasks/agent-template-make-commands/{prd.json,progress.txt}
+**Commit**: 10dd8c0
+**Result**: PASS
+
+### What I did
+
+Replaced `make NAME=<agent-name> quickstart` with `make sandbox` and rewrote the "This will:" bullets to describe the real behavior (`docker compose up -d --build`; mount workspace + run setup), dropping the false claim that the target auto-creates a worktree/branch. Added a paragraph noting the per-agent `branch`/`worktree_path` from the Metadata block are created manually via `git worktree add` per `context/rules/git.md`, keeping the preserved Metadata fields coherent. Replaced `make NAME=<agent-name> shell` with the positional `make shell <agent-name>` and added a parenthetical on the container-name default (`openharness`/`harness.yaml` `sandbox.name`) and the `SHELL_USER=<user>` override.
+
+### Learnings for future iterations
+
+`grep -nE "quickstart|NAME=" .github/ISSUE_TEMPLATE/agent.md` returns no matches (AC5 green). Section 3 (Verify) is deliberately left alone — it still contains `make list` and the `SOUL.md and MEMORY.md are present` assertion, which are US-002's job. `pnpm format:check` passes cleanly. Two stories remain: US-002 (verify checklist), US-003 (preserve/validity guard).
+
+---

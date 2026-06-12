@@ -99,9 +99,12 @@ Remove the sandbox.
 | Item | Convention |
 |------|-----------|
 | Base branch | `development` |
-| Agent branches | `agent/<agent-name>` |
+| Feature/task branches | `feat/<short-slug>` |
+| Persistent agent branches | `agent/<agent-name>` |
 | PR target | `development` |
 | Commit format | `<type>: <description>` (`feat`, `fix`, `task`, `audit`, `skill`) |
+
+Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspaces. Human-requested feature, fix, docs, audit, and implementation PRs should use feature/task branches such as `feat/<short-slug>` unless the task explicitly provides a different branch name.
 
 ## Skills
 

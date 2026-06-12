@@ -61,6 +61,18 @@ If `--dry-run`: print both counts now (the selection is printed after §2), then
 
 **Require clean state**:
 ```bash
+# OWNED_PATHS — the canonical harness-infra surface autopilot mutates. The §1 MAIN
+# clean-state check and every restore site (§5/§6/§7) scope to this list, so a stray
+# foreign edit OUTSIDE it neither blocks a run nor gets clobbered by the restore.
+# NOTE: OWNED_PATHS MUST be used UNQUOTED (bare `-- $OWNED_PATHS`) so word-splitting
+# expands it to multiple pathspec arguments. Quoting it ("$OWNED_PATHS") collapses the
+# list to ONE pathspec that matches nothing, making the clean check vacuously PASS.
+# Write-surface cross-check (known-complete): every tracked path autopilot writes in
+# §2–§7 is within OWNED_PATHS — tasks/, evals/, memory/, CHANGELOG.md, and .claude/ are
+# the autopilot-written tracked dirs, all in the set — else it is committed by Ralph on
+# the feature branch or lives under /tmp. No autopilot write lands outside this surface.
+OWNED_PATHS=".claude/ context/ docs/ scripts/ crons/ wiki/ evals/ memory/ tasks/ CHANGELOG.md"
+
 # Self-heal a clean-but-stranded branch from a prior interrupted run (nothing to lose):
 # a crash before §5/§6/§7 can leave HEAD on a clean feature branch; recover it rather
 # than FAIL every hour. A *dirty* tree is NOT auto-cleaned here (it may be human WIP).

@@ -27,6 +27,39 @@
 
 ---
 
+## US-002 — 2026-06-12 06:31 UTC
+
+**Title**: Scope the §1 MAIN clean-state check to owned paths
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: 0f63c3c
+**Result**: PASS
+
+### What I did
+Replaced the tree-wide MAIN §1 clean assertion (`git diff --quiet && git diff --cached
+--quiet || { echo "ERROR: dirty working tree"; exit 1; }`) with the owned-scoped form
+`git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || …`
+(OWNED_PATHS bare/unquoted). Left the self-heal stranded-branch conditional (line 80)
+tree-wide and untouched. Added a `# NOTE:` documenting that the self-heal and MAIN check
+are now DIFFERENT predicates — the self-heal needs a WHOLE-tree-clean state to fire, so
+it can never run (and never clobber) while foreign WIP is present — and inlined the
+`.codex/config.toml` repro into that note.
+
+### Learnings for future iterations
+- **Repro MUST run under bash, never zsh.** The Bash tool's shell is zsh, which does NOT
+  word-split unquoted `$OWNED_PATHS` — it collapses to one no-match pathspec, so a zsh
+  repro reports "clean" for BOTH foreign and owned dirt (false pass). Wrap repros in
+  `bash -c '…'`. Verified under bash: staged `.codex/config.toml` → MAIN check CLEAN
+  (proceeds); dirty `.claude/seed` → MAIN check DIRTY (blocks). This is the same
+  word-splitting hazard the OWNED_PATHS NOTE warns about, surfacing in the test harness.
+- The MAIN check still emits the original `ERROR: dirty working tree` message; US-003
+  swaps that failure path to the `BLOCKED-OWNED-WIP` liveness token (do not pre-empt it).
+- AC#4's "no tree-wide git diff --quiet in the MAIN check" is satisfied: only line 80
+  (self-heal, exempt) is tree-wide; lines 259/285/317/351 are §5/§6/§7/Guidelines RESTORE
+  sites — those are US-004's scope, not the §1 MAIN check.
+- Fence count stayed 40 (even) — the NOTE was added inside the existing §1 bash fence.
+
+---
+
 ## US-001 — 2026-06-12 00:00 UTC
 
 **Title**: Define the owned-surface constant in §1

@@ -32,8 +32,8 @@
                 "Manual repro documented/verifiable: with an unrelated .codex/config.toml edit staged, the MAIN §1 check evaluates clean and does not take the exit-1 branch"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 2 on 2026-06-12; commit 0f63c3c"
         },
         {
             "id": "US-003",

@@ -66,16 +66,30 @@ export function isValidSchedule(schedule: string): boolean {
   }
 }
 
-export function loadCrons(dir: string = CRONS_DIR): CronEntry[] {
+// `logFn` defaults to the module-private `log` and exists ONLY for test
+// injection (mirrors onJobError(id, err, logFn = log)); it carries no
+// external-stability guarantee. Existing loadCrons(dir) call sites stay valid.
+export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
   if (!fs.existsSync(dir)) return [];
   const out: CronEntry[] = [];
   for (const f of fs.readdirSync(dir).filter((n: string) => n.endsWith(".md")).sort()) {
+    let entry: CronEntry | null;
     try {
-      const entry = parseCronFile(fs.readFileSync(path.join(dir, f), "utf-8"), path.join(dir, f));
-      if (entry && entry.enabled) out.push(entry);
+      entry = parseCronFile(fs.readFileSync(path.join(dir, f), "utf-8"), path.join(dir, f));
     } catch {
-      /* skip unreadable */
+      /* skip unreadable — silent, distinct from the invalid-schedule path below */
+      continue;
     }
+    if (!entry || !entry.enabled) continue;
+    // Invalid-schedule skip is a DISTINCT path from the silent unreadable-file
+    // catch above: it runs after a non-null entry and OUTSIDE that try/catch, and
+    // it logs SCHED_INVALID so the misconfiguration surfaces in crons/.cron.log
+    // instead of poisoning the entries list and crashing main()'s new Cron() loop.
+    if (!isValidSchedule(entry.schedule)) {
+      logFn(entry.id, "SCHED_INVALID", `invalid schedule: ${entry.schedule}`);
+      continue;
+    }
+    out.push(entry);
   }
   return out;
 }

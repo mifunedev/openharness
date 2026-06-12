@@ -212,6 +212,45 @@ describe("loadCrons", () => {
   it("returns [] when the directory is missing", () => {
     expect(loadCrons(path.join(tmp, "nope"))).toEqual([]);
   });
+
+  it("excludes a cron whose schedule is malformed and does not throw", () => {
+    writeFileSync(
+      path.join(tmp, "bad.md"),
+      `---\nid: bad\nschedule: "not-a-cron"\nenabled: true\n---\nbody\n`,
+    );
+    let out: ReturnType<typeof loadCrons> = [];
+    expect(() => {
+      out = loadCrons(tmp, vi.fn());
+    }).not.toThrow();
+    expect(out).toEqual([]);
+  });
+
+  it("returns a valid cron alongside an invalid sibling", () => {
+    writeFileSync(
+      path.join(tmp, "good.md"),
+      `---\nid: good\nschedule: "0 * * * *"\nenabled: true\n---\nbody\n`,
+    );
+    writeFileSync(
+      path.join(tmp, "bad.md"),
+      `---\nid: bad\nschedule: "not-a-cron"\nenabled: true\n---\nbody\n`,
+    );
+    const out = loadCrons(tmp, vi.fn());
+    expect(out.map((e) => e.id)).toEqual(["good"]);
+  });
+
+  it("logs SCHED_INVALID through the injected logFn naming the bad schedule", () => {
+    writeFileSync(
+      path.join(tmp, "bad.md"),
+      `---\nid: badcron\nschedule: "not-a-cron"\nenabled: true\n---\nbody\n`,
+    );
+    const spy = vi.fn();
+    loadCrons(tmp, spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    const [id, status, msg] = spy.mock.calls[0];
+    expect(id).toBe("badcron");
+    expect(status).toBe("SCHED_INVALID");
+    expect(String(msg)).toContain("not-a-cron");
+  });
 });
 
 describe("acquireLock", () => {

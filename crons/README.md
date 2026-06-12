@@ -48,6 +48,7 @@ status column is one of:
 | Token | Meaning |
 |-------|---------|
 | `BOOT` | Runtime started and scheduled its crons (`id` is `system`; `msg` is the cron count). |
+| `SCHED_INVALID` | A cron was skipped because its `schedule:` is not a valid cron expression (`msg` contains the offending schedule string). |
 | `SPAWNED` | A `tmux: true` fire launched its detached session (`msg` is the session name). |
 | `FIRE` | A scheduled job fired and began running its body. |
 | `OK` | The fired child process exited cleanly (exit code 0). |
@@ -55,6 +56,11 @@ status column is one of:
 | `ERR` | The child process failed to spawn (process-level error, not a job throw). |
 | `ERR_JOB` | A synchronous cron job-callback threw; recorded instead of being swallowed. Format: `<id>\tERR_JOB\t<error-string>`. |
 | `SKIPPED_OVERLAP` | A fire was skipped because the previous run was still in flight (`overlap: false`). |
+
+A cron whose `schedule:` string is not a valid cron expression is skipped
+at load time — it logs `SCHED_INVALID` and never enters the scheduled set,
+so a single malformed schedule cannot crash the runtime and the other crons
+keep running.
 
 `BODY_RELOADED` and `BODY_RELOAD_ERR` are documented under
 [Hot-reload](#hot-reload).

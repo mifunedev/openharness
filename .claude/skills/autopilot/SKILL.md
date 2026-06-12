@@ -80,7 +80,14 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 if [ "$BRANCH" != "development" ] && git diff --quiet && git diff --cached --quiet; then
   git checkout -f development && BRANCH=$(git rev-parse --abbrev-ref HEAD)
 fi
-git diff --quiet && git diff --cached --quiet || { echo "ERROR: dirty working tree"; exit 1; }
+# NOTE: the self-heal (above) and this MAIN check are now DIFFERENT predicates. The
+# self-heal force-checks-out only when the WHOLE tree is clean (tree-wide git diff
+# --quiet), so it can never fire while foreign WIP is present — therefore it never
+# destroys foreign WIP. This MAIN check is scoped to $OWNED_PATHS (bare, unquoted), so
+# a stray edit OUTSIDE the owned surface leaves it clean and the run proceeds; only a
+# dirty OWNED path blocks. (Repro: stage an unrelated `.codex/config.toml` edit — the
+# MAIN check below evaluates clean and does NOT take the exit-1 branch.)
+git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: dirty working tree"; exit 1; }
 [ "$BRANCH" = "development" ] || { echo "ERROR: not on development (on $BRANCH)"; exit 1; }
 ```
 

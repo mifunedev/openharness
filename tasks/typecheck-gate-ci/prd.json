@@ -1,0 +1,52 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/51-typecheck-gate-ci",
+    "description": "Add a Typecheck gate to the harness CI ci job covering both TypeScript packages — packages/docs (pnpm workspace) and packages/oh (npm standalone) — plus a matching root typecheck script for local-dev parity.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Add Typecheck steps to the CI ci job",
+            "description": "As a maintainer, I want CI to run tsc --noEmit for both TypeScript packages so a type regression in either fails the PR instead of shipping silently.",
+            "acceptanceCriteria": [
+                "In .github/workflows/ci-harness.yml, a step named 'Typecheck (workspace packages)' exists in the ci job, immediately after the 'Format check' step and before 'Build', with command verbatim: pnpm --filter './packages/**' -r --if-present run typecheck",
+                "A second step named 'Typecheck (oh CLI — npm standalone)' follows it (still before 'Build'), running: npm --prefix packages/oh ci then npm --prefix packages/oh run typecheck",
+                "The ci job name: (line 49) is updated from 'Lint, Build & Test' to include Typecheck (e.g. 'Lint, Typecheck, Build & Test')",
+                "grep -n 'Typecheck' .github/workflows/ci-harness.yml returns the new step lines",
+                "The workflow file remains valid YAML (parses without error)",
+                "Typecheck passes"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-12; two Typecheck steps + job-name update in ci-harness.yml; YAML validated (js-yaml)."
+        },
+        {
+            "id": "US-002",
+            "title": "Add a root typecheck script for local-dev parity",
+            "description": "As a developer, I want a single pnpm typecheck command at the repo root so I can run the same type checks locally that CI runs.",
+            "acceptanceCriteria": [
+                "Root package.json scripts block contains a 'typecheck' script: pnpm --filter './packages/**' -r --if-present run typecheck && npm --prefix packages/oh run typecheck",
+                "package.json remains valid JSON (node -e require parses it)",
+                "pnpm typecheck at the repo root exits 0 on the current tree (oh deps installed)",
+                "Typecheck passes"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-12; root typecheck script added; pnpm typecheck exit 0."
+        },
+        {
+            "id": "US-003",
+            "title": "Record the change in the changelog",
+            "description": "As a maintainer, I want the changelog to note the new CI gate so the change is traceable per the repo's Keep-a-Changelog convention.",
+            "acceptanceCriteria": [
+                "One bullet is appended to the END of the '### Added' list under '## [Unreleased]' in CHANGELOG.md, describing the typecheck gate (both packages) + root script, linking issue #51",
+                "The bullet falls within the '## [Unreleased]' block (between '## [Unreleased]' and the next '## [' heading) — verified by a range check, not an unanchored grep",
+                "CHANGELOG.md still renders as valid Keep-a-Changelog markdown (no broken headings)",
+                "Typecheck passes"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-12; Added bullet linking #51 inside [Unreleased]."
+        }
+    ]
+}

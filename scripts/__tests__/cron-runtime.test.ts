@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { spawn } from "node:child_process";
+import * as fsModule from "node:fs";
 import {
   existsSync,
   mkdtempSync,
@@ -14,8 +15,17 @@ import {
   buildTmuxWrapper,
   loadCrons,
   parseCronFile,
+  reloadBody,
   tmuxSessionName,
 } from "../cron-runtime";
+
+// Mock only appendFileSync (the log() writer) as a no-op spy so reloadBody's
+// BODY_RELOADED / BODY_RELOAD_ERR signals are observable without polluting the
+// real crons/.cron.log during test runs. All other node:fs exports pass through.
+vi.mock("node:fs", async (importOriginal) => {
+  const real = await importOriginal<typeof import("node:fs")>();
+  return { ...real, appendFileSync: vi.fn() };
+});
 
 let tmp: string;
 
@@ -168,5 +178,65 @@ describe("acquireLock", () => {
     writeFileSync(pidFile, "999999");
     expect(acquireLock(pidFile)).toBe(true);
     expect(existsSync(pidFile)).toBe(true);
+  });
+});
+
+describe("reloadBody", () => {
+  afterEach(() => {
+    vi.mocked(fsModule.appendFileSync).mockClear();
+  });
+
+  it("returns the on-disk body when it has been mutated after CronEntry was built", () => {
+    // Write the initial cron file and load it via loadCrons to get a dir-qualified CronEntry.
+    const cronFile = path.join(tmp, "hot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\noriginal body\n`,
+    );
+    const [entry] = loadCrons(tmp);
+    expect(entry.body).toBe("original body\n");
+
+    // Mutate only the body on disk — keep frontmatter intact so parseCronFile succeeds.
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nupdated body\n`,
+    );
+
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+    const result = reloadBody(entry);
+
+    // Should return the fresh on-disk body, not the cached entry.body.
+    expect(result).toBe("updated body\n");
+
+    // BODY_RELOADED must be logged because the on-disk body differed from entry.body.
+    const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
+    expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
+  });
+
+  it("returns cached entry.body and logs BODY_RELOAD_ERR when filePath is unreadable", () => {
+    // Build a hand-crafted entry pointing at a nonexistent path.
+    const missingPath = path.join(tmp, "ghost.md");
+    const entry = {
+      id: "ghost",
+      schedule: "* * * * *",
+      enabled: true,
+      overlap: false,
+      catchup: false,
+      tmux: false,
+      body: "cached body\n",
+      filePath: missingPath,
+    };
+
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+    const result = reloadBody(entry);
+
+    // Should fall back to the cached body.
+    expect(result).toBe("cached body\n");
+
+    // BODY_RELOAD_ERR must appear in at least one appendFileSync call.
+    const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
+    expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(true);
   });
 });

@@ -69,6 +69,15 @@ describe("harness-config.sh env mode", () => {
     expect(stdout.trim()).toBe("INSTALL_OPENCODE=true");
   });
 
+  it("maps hermes dashboard controls to HERMES_DASHBOARD env vars", () => {
+    const f = fixture("hermes:\n  dashboard: true\n  dashboard_port: 9120\n");
+    const { stdout } = run(["env", f]);
+    expect(stdout.trim().split("\n")).toEqual([
+      "HERMES_DASHBOARD=true",
+      "HERMES_DASHBOARD_PORT=9120",
+    ]);
+  });
+
   it("handles values with spaces: git.user_name → GIT_USER_NAME", () => {
     const f = fixture("git:\n  user_name: Ryan Eggz\n");
     const { stdout } = run(["env", f]);

@@ -442,6 +442,16 @@ fi
 banner "Building and starting sandbox"
 printf "${CYAN}==> Building image — ~10 min on cold cache, ~30s on warm cache. Compose output below.${NC}\n"
 COMPOSE_FILES="-f .devcontainer/docker-compose.yml"
+# ── hermes dashboard overlay (mirrors Makefile HERMES_DASHBOARD_OVERLAY logic) ──
+_hermes_val=""
+if [ -f "$REPO_DIR/harness.yaml" ] && [ -f "$REPO_DIR/scripts/harness-config.sh" ]; then
+  _hermes_val=$(sh "$REPO_DIR/scripts/harness-config.sh" get hermes.dashboard "$REPO_DIR/harness.yaml")
+fi
+[ -z "$_hermes_val" ] && _hermes_val="${HERMES_DASHBOARD:-}"
+case "$(printf '%s' "$_hermes_val" | tr '[:upper:]' '[:lower:]')" in
+  1|true|yes|on) COMPOSE_FILES="$COMPOSE_FILES -f .devcontainer/docker-compose.hermes-dashboard.yml" ;;
+esac
+unset _hermes_val
 HARNESS_ENV_FILE=""
 # ── harness.yaml overlays + env (applied before config.json so user-local wins) ──
 if [ -f "$REPO_DIR/harness.yaml" ] && [ -f "$REPO_DIR/scripts/harness-config.sh" ]; then

@@ -1,0 +1,16 @@
+# Hermes dashboard overlay.
+#
+# Included automatically by Makefile/install.sh only when HERMES_DASHBOARD is
+# truthy via harness.yaml or legacy .devcontainer/.env. The host bind stays
+# loopback-only; the in-container process binds all interfaces so Docker's port
+# publishing can reach it.
+
+services:
+  sandbox:
+    ports:
+      - "127.0.0.1:${HERMES_DASHBOARD_PORT:-9119}:${HERMES_DASHBOARD_PORT:-9119}"
+    environment:
+      - HERMES_DASHBOARD=true
+      - HERMES_DASHBOARD_HOST=0.0.0.0
+      - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
+      - HERMES_DASHBOARD_INSECURE=true

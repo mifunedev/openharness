@@ -80,26 +80,29 @@ Hermes enabled, the entrypoint seeds `config.yaml` so
 `skills.external_dirs` includes `/home/sandbox/harness/.claude/skills`,
 making the harness' in-repo skills visible to Hermes by default.
 
-Auth remains home-scoped at `~/.hermes/auth.json` via the `hermes-auth`
-named volume; the entrypoint creates `~/harness/.hermes/auth.json` as a
-symlink into that auth volume so Hermes can keep using one home directory
-without committing credentials. The sandbox banner mirrors the Claude
-Code pattern: it reports Hermes as authenticated only when
-`~/.hermes/auth.json` exists and is non-empty; generated config files
-alone do not count as authentication.
+Auth lives directly inside `HERMES_HOME` (`~/harness/.hermes/auth.json`).
+No symlink or named volume is involved: an earlier design symlinked
+`auth.json` into a home-scoped `hermes-auth` Docker volume, but that
+volume sits on a different filesystem from the bind-mounted checkout and
+caused Hermes' atomic-replace writes to fail with `EXDEV`. Keeping auth
+on the same bind-mount device fixes this; the entrypoint heals any
+leftover symlink on startup by removing it and copying credentials to
+the real path. The sandbox banner mirrors the Claude Code pattern: it
+reports Hermes as authenticated only when `~/harness/.hermes/auth.json`
+exists and is non-empty; generated config files alone do not count as
+authentication.
 
 ## State persistence
 
 `~/harness/.hermes/` is part of the bind-mounted checkout, so Hermes
-configuration, generated skills, memory, and sessions survive container
-rebuilds and follow the project directory. Credentials stay in the
-`~/.hermes` named volume. The project-local runtime contents are ignored
-by git; do not commit secrets from this directory.
+configuration, credentials, generated skills, memory, and sessions
+survive container rebuilds and follow the project directory. The
+project-local runtime contents are ignored by git; do not commit
+secrets from this directory.
 
-`make destroy` removes the `hermes-auth` Docker volume and therefore
-Hermes credentials, but it does not delete the bind-mounted `.hermes/`
-directory from the checkout. Remove that directory manually if you want a
-full Hermes project-state reset.
+`make destroy` stops containers and removes volumes but does not delete
+the bind-mounted `.hermes/` directory from the checkout. Remove that
+directory manually if you want a full Hermes project-state reset.
 
 The Hermes binary itself is installed in the image when
 `install.hermes: true` is set in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`), under the installer's root Linux FHS layout
@@ -135,6 +138,96 @@ Open Harness does not currently wire Hermes into the in-tree Pi Slack
 extension — they are independent surfaces. If you enable a Hermes
 messaging gateway, the bridge runs entirely under Hermes' own
 configuration.
+
+## Web dashboard
+
+Hermes ships a local web UI (`hermes dashboard`) that provides config and
+`.env` editing, session browsing, cron job management, and an embedded TUI.
+It is **disabled by default** and opt-in per sandbox.
+
+### Enabling
+
+In `harness.yaml`, set alongside `install.hermes: true`:
+
+```yaml
+hermes:
+  dashboard: true
+  dashboard_port: 9119   # optional; 9119 is the default
+```
+
+Then rebuild:
+
+```bash
+make stop && make sandbox
+```
+
+The legacy `.devcontainer/.env` vars `HERMES_DASHBOARD=true` /
+`HERMES_DASHBOARD_PORT=9119` still work as a fallback (migrated to
+`harness.yaml`). Both paths require `install.hermes: true` (or
+`INSTALL_HERMES=true`) to take effect.
+
+### What auto-launches
+
+When both `install.hermes: true` and `hermes.dashboard: true` are set (or
+the equivalent legacy env vars), the entrypoint starts the dashboard in a
+named tmux session:
+
+- **tmux session**: `app-hermes-dashboard`
+- **Container bind**: `0.0.0.0:<port>` (all container interfaces — required so Docker's published port can reach the process; set via `HERMES_DASHBOARD_HOST=0.0.0.0` and `HERMES_DASHBOARD_INSECURE=true` in the compose overlay)
+- **Host publish**: `127.0.0.1:9119 → container:9119` (loopback-only on the host)
+- **URL** (from the host browser): `http://127.0.0.1:9119`
+
+### Inspect and restart
+
+```bash
+# Attach to live output
+tmux attach -t app-hermes-dashboard
+
+# Tail the log
+tail -f /tmp/app-hermes-dashboard.log
+
+# Restart (kill session, then relaunch manually or rebuild sandbox)
+tmux kill-session -t app-hermes-dashboard
+tmux new-session -d -s app-hermes-dashboard \
+  "hermes dashboard --port ${HERMES_DASHBOARD_PORT:-9119} --host 0.0.0.0 --insecure --no-open 2>&1 | tee /tmp/app-hermes-dashboard.log"
+```
+
+### Security
+
+The dashboard reads and writes `.env` secrets and `config.yaml`. The
+compose overlay intentionally binds the **in-container** process to
+`0.0.0.0` (via `HERMES_DASHBOARD_HOST=0.0.0.0` and
+`HERMES_DASHBOARD_INSECURE=true`) — this non-loopback container bind is
+required for Docker's port publishing mechanism to forward traffic from
+the host into the container. The **host-side** publish is loopback-only
+(`127.0.0.1:9119`), so the port is never reachable from the LAN.
+
+Because only processes on the local machine can reach `127.0.0.1:9119`,
+**no additional authentication is required** — access is equivalent to
+existing host-shell access and does not widen the attack surface.
+
+Do **not** change the host bind to `0.0.0.0` — that would expose the
+dashboard (and the `.env` secrets it reads) to the LAN without auth.
+
+### Remote access
+
+To reach the dashboard from another machine:
+
+- **Tunnel (recommended)** — put cloudflared or tailscale-funnel in front
+  of the loopback bind. The tunnel handles auth and TLS; the dashboard
+  itself stays on loopback.
+- **Non-loopback bind (advanced)** — if you must expose via `--host 0.0.0.0`,
+  the upstream fail-closed auth gate requires credentials. Set at minimum:
+
+  ```env
+  HERMES_DASHBOARD_BASIC_AUTH_USERNAME=admin
+  HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=change-me   # plain-text, or use _HASH
+  HERMES_DASHBOARD_SECRET=a-random-32-char-string   # session signing key
+  ```
+
+  OAuth is also supported via `HERMES_DASHBOARD_OAUTH_CLIENT_ID` and related
+  vars — see upstream Hermes documentation for the full list.
+
 
 ## Banner status
 

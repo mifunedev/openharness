@@ -1,0 +1,77 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/65-ralph-runner-test-coverage",
+    "description": "Add hermetic vitest coverage for scripts/ralph.sh's deterministic surface (arg parsing, taskdesc validation, four-file contract) via black-box spawnSync tests, plus optional behavior-preserving source-guard unit tests for the resilience functions.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Black-box argument-validation tests",
+            "description": "As a harness maintainer, I want ralph.sh's argument parsing covered by tests so that a regression in parse_args/normalize_harness fails CI instead of breaking the next autopilot run.",
+            "acceptanceCriteria": [
+                "Create scripts/__tests__/ralph.test.ts modeled on scripts/__tests__/harness-config.test.ts (vitest, spawnSync, mkdtempSync/rmSync fixtures)",
+                "Add a run(args: string[], opts?: { env?: NodeJS.ProcessEnv, cwd?: string }) helper that invokes via spawnSync('bash', [SCRIPT, ...args], opts) — MUST be bash, not sh (ralph.sh uses [[ ]], BASH_SOURCE, arrays, PIPESTATUS) — returning { stdout, stderr, status }",
+                "Assert --harness=foo (unknown) exits 2 with stderr matching /unknown harness/",
+                "Assert --harness with no value AND no RALPH_HARNESS in the child env exits 2 with stderr matching /requires a value/",
+                "Assert zero positional args exits 2 (usage printed to stderr)",
+                "Assert more than one positional arg exits 2",
+                "Assert taskdesc not matching ^[a-z0-9-]+$ (e.g. Bad_Name) exits 2 with stderr matching /must match/",
+                "Tests pass (pnpm test:scripts); no pre-existing suite regresses",
+                "Typecheck passes"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Four-file contract tests",
+            "description": "As a harness maintainer, I want the four-file contract enforcement tested so that a silent change to the required-files check is caught.",
+            "acceptanceCriteria": [
+                "Hermeticity (load-bearing): spawn the child with cwd set to a non-git temp dir, e.g. spawnSync('bash', [SCRIPT, ...args], { cwd: tmpDir, env: { ...process.env, REPO_ROOT: tmpDir } }) — normal mode re-derives REPO_ROOT via git rev-parse at ralph.sh:358 and ignores the env var, so cwd (where git rev-parse fails and falls back to pwd) is what points the task-dir lookup at the fixture; mkdtempSync(os.tmpdir()) is non-git",
+                "A valid taskdesc with a missing tasks/<desc>/ dir exits 1 with stderr matching /does not exist/",
+                "With the task dir present but each of {prd.md, prd.json, prompt.md, progress.txt} omitted in turn, exits 1 with stderr matching /is missing/ (four separate assertions; a sub-loop is allowed)",
+                "No harness stub required: the task-dir check (ralph.sh:361) and four-file check (:369) run BEFORE harness resolution (:375); do NOT add a claude/codex stub for these cases",
+                "Tests are hermetic — no network, no claude/codex/pi/tmux dependency; the temp cwd keeps the real repo untouched",
+                "Tests pass (pnpm test:scripts)",
+                "Typecheck passes"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Behavior-preserving source guard in ralph.sh (conditional)",
+            "description": "As a harness maintainer, I want to source ralph.sh to call its functions in isolation, without launching the loop, so that the resilience functions can be unit-tested.",
+            "acceptanceCriteria": [
+                "Modify scripts/ralph.sh so that source-ing it defines its functions WITHOUT executing the top-level normal-mode body (standard [ \"${BASH_SOURCE[0]}\" = \"$0\" ] idiom or equivalent)",
+                "The guard is a strict no-op for all three real invocation paths, each verified: (1) direct scripts/ralph.sh <slug> — bash scripts/ralph.sh Bad_Name still exits 2; (2) the internal bash \"$SCRIPT_PATH\" --loop re-entry (ralph.sh:279) still enters loop mode; (3) the no-tmux foreground fallback (ralph.sh:389) still transitions to --loop mode",
+                "If a clean guard proves infeasible (e.g. set -euo pipefail fires noisily on source), DROP this story, skip US-004 entirely, and leave ralph.sh unchanged (see Non-Goals conditional-drop branch)",
+                "Tests pass (pnpm test:scripts)",
+                "Typecheck passes"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "Resilience-function unit tests (depends on US-003)",
+            "description": "As a harness maintainer, I want the throttle-detection and fallback logic unit-tested so that the autopilot's documented resilience guarantee is regression-guarded.",
+            "acceptanceCriteria": [
+                "GATE: implement ONLY if US-003's source guard landed cleanly; if US-003 was dropped, skip US-004 entirely (no partial coverage)",
+                "claude_limit_detected ANDs two greps (ralph.sh:182: 'hit (your |the )?limit' AND 'resets?'): positive fixture contains BOTH phrases -> exit 0; a negative fixture with only ONE phrase -> exit 1 (proves AND-logic); ordinary output with neither -> exit 1",
+                "fallback_after_harness: with a fake codex on PATH, claude->codex and pi->codex; with codex absent, non-zero return + stderr matching /not on PATH/; an unsupported harness (e.g. opencode) -> non-zero return + stderr matching /no fallback/",
+                "normalize_harness: each of claude|pi|codex|opencode|deepagents echoes the value; an invalid value exits 2 with stderr matching /unknown harness/",
+                "PATH stubs use an executable shell file named codex (#!/usr/bin/env bash + exit 0) in a temp dir prepended to PATH",
+                "At least one positive and one negative assertion per function",
+                "Tests pass (pnpm test:scripts)",
+                "Typecheck passes"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

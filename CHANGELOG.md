@@ -9,6 +9,15 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.6.12] - 2026-06-12
+
+### Added
 - `/autopilot` skill and hourly `crons/autopilot.md` loop: issue-queue-first harness-infra selection, `/ship-spec --issue`, Ralph implementation, `/eval` gate, conservative PR caps, and no auto-merge behavior ([#412](https://github.com/mifunedev/openharness/issues/412)).
 - Heartbeat autopilot nudge logic surfaces green/mergeable autopilot PRs, long-lived sessions, and kills only sessions frozen at an unambiguous interactive/usage prompt ([#412](https://github.com/mifunedev/openharness/issues/412)).
 - Autopilot-specific eval probes guard the forced clean branch restore and the corrected eval-gate decision rule ([#412](https://github.com/mifunedev/openharness/issues/412)).

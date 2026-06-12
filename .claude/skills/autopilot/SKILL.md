@@ -265,7 +265,7 @@ done
 tmux kill-session -t "$SLUG" 2>/dev/null || true
 gh pr comment "$PR_NUM" --body "autopilot: Ralph loop did not reach STATUS: COMPLETE (timeout / exhausted / error). PR left draft; tasks/$SLUG/ state is resumable — re-run \`scripts/ralph.sh $SLUG\` to continue. Status: RALPH-INCOMPLETE."
 ```
-- Memory log `Result: RALPH-INCOMPLETE`, liveness `RALPH-INCOMPLETE`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), the canonical clean restore (`git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`), exit 1 (non-destructive — never auto-close the issue or PR).
+- Memory log `Result: RALPH-INCOMPLETE`, liveness `RALPH-INCOMPLETE`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), the canonical scoped restore (`git checkout development -- $OWNED_PATHS` then `git checkout development`, then assert `git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit 1 (non-destructive — never auto-close the issue or PR).
 
 > **Why Ralph, not `/delegate`**: the in-process wave dies wholesale on a mid-run usage-limit (documented — `memory/MEMORY.md` 2026-06-11), leaving an un-implemented draft. Ralph's resumable per-story state + harness fallback survive it, and it **relocates** the implementation work (does not duplicate it) into a loop whose fallback can run off Claude. `/delegate` remains the better tool for a task whose stories are genuinely **independent and parallelizable** (Ralph is strictly sequential, one story/iteration) — an operator may swap §5 back for such a task. `overlap: false` still holds: the autopilot's foreground session blocks on the poll until Ralph finishes, so the next hourly fire cannot overlap (it logs `SKIPPED_OVERLAP`).
 
@@ -291,7 +291,7 @@ After Ralph completes (§5), **while still on the work branch**, run the probe s
   ```bash
   gh pr comment "$PR_NUM" --body "autopilot: /eval reported a NEW (green→red) probe regression (<probe ids>) or a non-zero runner exit. PR left draft; resolve before marking ready."
   ```
-  Memory log `Result: PR-DRAFT-EVAL-RED`, liveness `PR-DRAFT-EVAL-RED`, then `[ -n "$KEEP" ] && touch "$KEEP"`, the canonical clean restore (`git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`), exit.
+  Memory log `Result: PR-DRAFT-EVAL-RED`, liveness `PR-DRAFT-EVAL-RED`, then `[ -n "$KEEP" ] && touch "$KEEP"`, the canonical scoped restore (`git checkout development -- $OWNED_PATHS` then `git checkout development`, then assert `git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit.
 
 > **Diagnostic note (non-gating):** file-scope overlap does not gate. If a regressed probe reads a file this PR changed, the runner-exit + delta signal still governs — a self-referential probe (e.g. `eval-gate` on an autopilot edit) whose delta is `unchanged` does NOT block. The delta is the authoritative causation signal.
 
@@ -320,10 +320,12 @@ git push origin HEAD
 
 **Persist the session** (a PR exists on every §7 path): `[ -n "$KEEP" ] && touch "$KEEP"`.
 
-**Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical clean restore — the force checkout discards only this run's own uncommitted residue (committed work is safe on the branch / draft PR); the assertion mirrors the §1 guard:
+**Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical **scoped restore** — a non-destructive two-step that discards only this run's own OWNED-path residue, then switches HEAD. Committed work is safe on the branch / draft PR. The scope step MUST precede the branch switch (it clears owned residue that would otherwise make a non-forced `git checkout development` refuse). It touches only **tracked** files, so an untracked owned-path orphan from a mid-run crash is NOT auto-removed (`git clean` is deliberately NOT used — too destructive across `tasks/`, `memory/`, `.claude/`); clean such orphans manually. Any **foreign** change OUTSIDE the owned surface — modified or staged (e.g. `.codex/config.toml`) — survives byte-for-byte (left in place / left staged) and is ignored by the scoped assertion and the next §1 check:
 ```bash
-git checkout -f development
-git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }
+git checkout development -- $OWNED_PATHS   # 1. discard own owned-path residue (tracked only; OWNED_PATHS unquoted)
+git checkout development                    # 2. switch HEAD (residue cleared above → non-forced switch succeeds; foreign WIP unaffected)
+git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }
+[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || { echo "ERROR: autopilot restore did not land on development"; exit 1; }
 ```
 
 ### 8. Memory Log
@@ -357,7 +359,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.
 - **Liveness on every path**: every exit appends `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "<TOKEN>" >> crons/.cron.log` — skip, halt, error, success. A missing liveness line looks like a crash.
 - **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `RALPH-INCOMPLETE`, `DELEGATE-FAIL`). No-PR paths never touch the keep-marker, so their sessions auto-close. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
-- **Branch restore (canonical clean restore)**: every path that changed the working branch (all paths reaching §4+) must run `git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`. The force checkout discards only the run's own uncommitted residue — staged AND unstaged tracked changes (it does not remove untracked files, which do not trip the §1 guard); committed work is preserved on the feature branch / draft PR. The assertion mirrors the §1 guard, so "assertion passes" ≡ "the next fire's §1 guard will pass". §1 additionally self-heals a *clean*-but-stranded branch; a *dirty* tree at §1 still hard-FAILs to protect any human WIP.
+- **Branch restore (canonical scoped restore)**: every path that changed the working branch (all paths reaching §4+) must run the two-step `git checkout development -- $OWNED_PATHS` (discard own owned-path residue — tracked staged AND unstaged) THEN `git checkout development` (switch HEAD), then assert BOTH `git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` AND `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`. The scope step MUST precede the switch (it clears owned residue that a non-forced `git checkout development` would otherwise refuse to overwrite). It discards only the run's own owned-path residue (committed work is preserved on the feature branch / draft PR); it touches only tracked files, so an untracked owned-path orphan from a mid-run crash is cleaned manually (`git clean` is deliberately NOT used); and any foreign change OUTSIDE the owned surface survives byte-for-byte (left in place / left staged), ignored by the scoped assertion and the next §1 check. The owned-scoped assertion mirrors the §1 owned check, so "assertion passes" ≡ "the next fire's §1 guard will pass". §1 additionally self-heals a *clean*-but-stranded branch (its forced tree-wide checkout is the only remaining `-f` form); a *dirty* owned tree at §1 still blocks (BLOCKED-OWNED-WIP) to protect any owned WIP.
 
 ## Reference
 

@@ -42,6 +42,38 @@
 
 ---
 
+## US-005 — 2026-06-12 07:42 UTC
+
+**Title**: Document BLOCKED-OWNED-WIP in token table + §8 log enum
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: be9c201
+**Result**: PASS
+
+### What I did
+Added a `BLOCKED-OWNED-WIP` row to the `### Status tokens` table (Reference §)
+with an accurate one-liner (dirty owned surface → run skipped until clean,
+non-destructive to foreign WIP), and inserted `BLOCKED-OWNED-WIP` into the §8
+memory-log `Result:` enumeration between `DELEGATE-FAIL` and `FAIL`. Also
+trimmed "dirty tree" from the `FAIL` row description since a dirty OWNED tree
+now emits `BLOCKED-OWNED-WIP` (US-003), keeping the table accurate. No check or
+restore logic touched — this story is pure documentation.
+
+### Learnings for future iterations
+- `grep -c 'BLOCKED-OWNED-WIP' SKILL.md` is now 7 (4 from the §1 failure path +
+  token-table row + §8 enum; the §8 enum line and table row each add 1, plus the
+  FAIL-row edit did not add an occurrence). US-005 AC needs ≥3 — satisfied.
+- Token-table ordering: new tokens go just before the catch-all `FAIL` row in
+  both the `### Status tokens` table and the §8 enum. The two lists are parallel;
+  keep them in sync when adding a token.
+- Fence parity held at 56 (even) — both edits are single-line table/enum changes,
+  no code fences opened. The skill still renders.
+- US-005 added NO CHANGELOG entry: the prd.md US-005 section does not spell one
+  out, and no prior story (US-001..004) in this task added a `#63` CHANGELOG line
+  — this task evidently handles the user-visible CHANGELOG line elsewhere (PR
+  finalize), not per-story. Stay confined to each story's stated ACs.
+
+---
+
 ## US-004 — 2026-06-12 00:39 UTC
 
 **Title**: Non-destructive two-step restore scoped to owned paths

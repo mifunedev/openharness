@@ -77,8 +77,8 @@
                 "grep -c 'BLOCKED-OWNED-WIP' .claude/skills/autopilot/SKILL.md returns at least 3 (failure path + token table + §8 enum)"
             ],
             "priority": 5,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 5 on 2026-06-12; commit be9c201"
         },
         {
             "id": "US-006",

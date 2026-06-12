@@ -127,6 +127,7 @@ Launch N `Agent` tool calls **in a single message** for parallel execution. Each
 Worker configuration:
 - **Model**: as specified in the task decomposition (haiku/sonnet/opus)
 - **run_in_background**: true (for waves with 2+ tasks)
+- **subagent_type** (read-only trap): the `implementer`, `pm`, and `critic` sub-agent types are **read-only** (`tools: Read, Glob, Grep, Bash` — no `Write`/`Edit`) and will **silently make zero file changes** if a worker is told to create or edit files. For any worker that must `Write`/`Edit` files, set `subagent_type: general-purpose` (or `claude`) in the `Agent` tool call; reserve `implementer`/`pm`/`critic` for analysis-only workers.
 
 **a.1) Recursion-authorization gate**
 
@@ -239,10 +240,12 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 
 | Resource | Path |
 |----------|------|
-| Agent: Implementer | `.claude/agents/implementer.md` |
-| Agent: Critic | `.claude/agents/critic.md` |
-| Agent: PM | `.claude/agents/pm.md` |
+| Agent: Implementer | `.claude/agents/implementer.md` — read-only (no Write/Edit) |
+| Agent: Critic | `.claude/agents/critic.md` — read-only (no Write/Edit) |
+| Agent: PM | `.claude/agents/pm.md` — read-only (no Write/Edit) |
 | Agent: Council | `.claude/agents/council.md` |
 | Identity | `IDENTITY.md` |
 | Memory | `MEMORY.md` |
 | Daily Logs | `memory/YYYY-MM-DD/log.md` |
+
+The `implementer`/`pm`/`critic` agent types above are read-only and will silently make zero file changes. For any worker that must `Write`/`Edit` files, set `subagent_type: general-purpose` (or `claude`) — both are built-in agent types with no agent-definition file, so there is no `.claude/agents/` path to reference.

@@ -24,6 +24,46 @@
   commit that. `Submitted-by:` trailer is mandatory (value from `$RALPH_HARNESS`, e.g.
   `Claude`). Quality gate: `pnpm run lint` works; there is no `type-check` script (it's
   `typecheck`), irrelevant for markdown-only edits.
+- **Repros: never `rm -rf .codex` / a tracked dir.** `.codex/` already EXISTS as a tracked
+  directory (config.toml, hooks/, agents, …). A foreign-edit repro that does
+  `mkdir .codex; … ; rm -rf .codex` DESTROYS the real tracked tree (shows up as a wall of
+  ` D .codex/*` in `git status`). Recovery: `git restore --staged .codex && git checkout
+  -- .codex`. Use a guaranteed-untracked sentinel path for foreign-edit repros, or better,
+  test the predicate logic in isolation without mutating the real tree.
+- **Liveness convention** (§ Guidelines "Liveness on every path"): the canonical append is
+  `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "<TOKEN>" >> crons/.cron.log` — guard
+  it with a trailing `2>/dev/null || true` so a missing/unwritable log never crashes the
+  skill. Reuse this exact shape for any new status token (US-003 did for BLOCKED-OWNED-WIP).
+
+---
+
+## US-003 — 2026-06-12 07:08 UTC
+
+**Title**: Emit BLOCKED-OWNED-WIP on a genuine owned-surface block
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: d1e3d42
+**Result**: PASS
+
+### What I did
+Replaced the §1 dirty-owned failure path (`… || { echo "ERROR: dirty working tree";
+exit 1; }`) with an `if ! { … }` block that, on a dirty OWNED surface, appends the
+distinct liveness token `BLOCKED-OWNED-WIP` to `crons/.cron.log` (guarded with
+`2>/dev/null || true`, matching the § Guidelines convention) and exits 1 — non-destructive,
+no GitHub touched. The wrong-branch check is left as bare `FAIL`. Updated the §1 prose to
+split the two predicates: dirty-owned → `Result: BLOCKED-OWNED-WIP`, not-on-development →
+`Result: FAIL`. Verified under bash: owned-dirty (SKILL.md edit) trips the token; a
+foreign staged `.codex/config.toml` evaluates CLEAN and would proceed (AC#4 / US-002).
+
+### Learnings for future iterations
+- `grep -c 'BLOCKED-OWNED-WIP' SKILL.md` is now 4 (comment + printf + echo + prose), all in
+  the §1 failure path. US-005's AC needs `>= 3` total AFTER it adds the token-table row and
+  §8 enum line — already satisfied by §1 alone, but US-005 must still add both for its own
+  ACs (`### Status tokens` row + §8 `Result:` enum). Do not pre-empt US-005 here.
+- Fence count after this edit is 56 (even — `if/fi` and `printf` live inside the existing §1
+  bash fence; no new fence opened). `git checkout -f development` count is still 5 (US-004
+  scopes the restore sites down to 1; untouched here). `OWNED_PATHS=` still 1.
+- The `# NOTE:` predicate-divergence comment and the unquoted-`$OWNED_PATHS` hazard from
+  US-001/US-002 are unchanged; this story only rewired the failure branch, not the predicate.
 
 ---
 

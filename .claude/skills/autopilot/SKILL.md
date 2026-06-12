@@ -337,7 +337,7 @@ TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "memory/$TODAY"
 cat >> "memory/$TODAY/log.md" <<EOF
 
 ## Autopilot -- $TIME UTC
-- **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | RALPH-INCOMPLETE | DELEGATE-FAIL | FAIL>
+- **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | RALPH-INCOMPLETE | DELEGATE-FAIL | BLOCKED-OWNED-WIP | FAIL>
 - **Selected**: <#issue + slug, or "none">
 - **Session**: <tmux session name, or "none">
 - **Action**: <one-line summary of what was done>
@@ -377,7 +377,8 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | `RALPH-INCOMPLETE` | §5 Ralph loop did not reach `STATUS: COMPLETE` (timeout, loop died, or all harnesses exhausted) after `/ship-spec` opened a PR; PR left draft — `tasks/$SLUG/` state is resumable via `scripts/ralph.sh $SLUG` |
 | `DELEGATE-FAIL` | the optional `/delegate` fallback executor failed after `/ship-spec` opened a PR; PR left draft |
 | `SKIPPED_OVERLAP` | Emitted by the cron runtime (not this skill): a previous fire of this id was still running with `overlap: false` |
-| `FAIL` | Pre-flight failure (dirty tree, wrong branch, diverged `development`) before any PR |
+| `BLOCKED-OWNED-WIP` | §1 found the OWNED surface (`$OWNED_PATHS`) dirty; run skipped until the owned surface is clean — non-destructive to foreign WIP (a stray edit outside the owned set proceeds normally) |
+| `FAIL` | Pre-flight failure (wrong branch, diverged `development`) before any PR |
 
 ### Key paths
 

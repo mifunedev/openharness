@@ -46,6 +46,26 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
   };
 }
 
+// Side-effect-free probe: does `schedule` parse as a valid cron expression?
+// croner v9.1.0 exposes no static Cron.validate, so we construct a Cron with
+// NO callback function and NO `name` option. croner only arms the internal
+// setTimeout when a function is passed, and only pushes to its module-level
+// named-jobs array when `name` is set — so this probe schedules nothing and
+// registers nothing. The constructor parses the pattern and throws
+// synchronously on an invalid one; we catch that and return false. `.stop()`
+// in the finally is defensive cleanup. Never throws for any string input.
+export function isValidSchedule(schedule: string): boolean {
+  let probe: Cron | undefined;
+  try {
+    probe = new Cron(schedule);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    probe?.stop();
+  }
+}
+
 export function loadCrons(dir: string = CRONS_DIR): CronEntry[] {
   if (!fs.existsSync(dir)) return [];
   const out: CronEntry[] = [];

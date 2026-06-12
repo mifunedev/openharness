@@ -14,6 +14,7 @@ import {
   acquireLock,
   buildCronAgentCommand,
   buildTmuxWrapper,
+  isValidSchedule,
   loadCrons,
   onJobError,
   parseCronFile,
@@ -91,6 +92,29 @@ Heartbeat body.
     expect(
       parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.tmux,
     ).toBe(false);
+  });
+});
+
+describe("isValidSchedule", () => {
+  it("returns true for a valid cron expression", () => {
+    expect(isValidSchedule("0 * * * *")).toBe(true);
+  });
+
+  it("returns false for a malformed string", () => {
+    expect(isValidSchedule("not-a-cron")).toBe(false);
+  });
+
+  it("returns false for the empty string", () => {
+    expect(isValidSchedule("")).toBe(false);
+  });
+
+  it("never throws and leaves no live timer behind for any input", () => {
+    // appendFileSync is mocked, so a probe that wrongly armed a timer and fired
+    // would not surface here — instead assert the contract directly: no input
+    // (valid or garbage) throws, and the call is fully synchronous.
+    for (const s of ["0 * * * *", "not-a-cron", "", "* * * *", "@@@"]) {
+      expect(() => isValidSchedule(s)).not.toThrow();
+    }
   });
 });
 

@@ -17,6 +17,16 @@
   argument shape. Empirically confirmed: `--harness=foo`→2/`unknown harness`,
   `--harness`(empty)→2/`requires a value`, 0 positional→2/`Usage:`,
   2 positional→2/`Usage:`, `Bad_Name`→2/`must match`.
+- **Hermetic four-file contract (US-002, verified):** spawn the child with
+  `{ cwd: tmpDir, env: { ...process.env, REPO_ROOT: tmpDir } }` where `tmpDir`
+  is `mkdtempSync(os.tmpdir())`. `ralph.sh:358` re-derives REPO_ROOT via
+  `git rev-parse --show-toplevel 2>/dev/null || pwd`; from a non-git tmp cwd the
+  rev-parse fails and falls back to `pwd`, redirecting the task-dir lookup
+  (:359) to the fixture. The four-file loop (:368-373) exits on the FIRST
+  missing file, so omitting exactly one (others present) makes the error name
+  that file — `expect(stderr).toContain(\`${omitted} is missing\`)` is reliable
+  regardless of the omitted file's position in the list. No harness stub: the
+  dir check (:361) and four-file check (:369) precede harness resolution (:375).
 
 ## US-001 — 2026-06-12 07:26 UTC
 
@@ -41,6 +51,38 @@ is a non-git `mkdtempSync` dir — `ralph.sh:358` re-derives REPO_ROOT via
 `git rev-parse ... || pwd`, so a non-git cwd is what redirects the task-dir
 lookup at `:359` to the fixture. No harness stub needed: the task-dir (:361)
 and four-file (:369) checks precede harness resolution (:375).
+
+---
+
+## US-002 — 2026-06-12 11:11 UTC
+
+**Title**: Four-file contract tests
+**Files changed**: scripts/__tests__/ralph.test.ts
+**Commit**: f36d13d
+**Result**: PASS
+
+### What I did
+Added the `ralph.sh four-file contract` describe block to the existing test
+file. It uses a `runHermetic(args)` wrapper (`run` with `cwd: tmpDir` +
+`REPO_ROOT: tmpDir`) and a `scaffoldTask(taskdesc, files)` helper that creates
+`tasks/<desc>/` under the temp fixture with a chosen subset of files present.
+One case asserts a missing task dir exits 1 with `/does not exist/`; a sub-loop
+over the four files omits each in turn and asserts exit 1 with `/is missing/`
+naming the omitted file. All 157 tests pass; typecheck + lint clean.
+
+### Learnings for future iterations
+The cwd-based hermeticity from US-001's notes is confirmed working in practice
+(see the Codebase Patterns entry above). US-003 is next: the gate is to add a
+`[ "${BASH_SOURCE[0]}" = "$0" ]` source guard to `scripts/ralph.sh` so the
+top-level normal-mode body (`parse_args "$@"` at :350 onward) only runs on
+direct execution, not on source. The three real invocation paths to re-verify
+no-op against: (1) direct `bash scripts/ralph.sh <slug>`; (2) the `--loop`
+re-entry at :279; (3) the no-tmux foreground fallback `exec bash "$SCRIPT_PATH"
+--loop` at :389. Note ralph.sh's `--loop`/foreground re-entries go through
+`exec bash "$SCRIPT_PATH"` (a fresh process where `$0` == the script path), so
+a `BASH_SOURCE == $0` guard should be a clean no-op for all three. If
+`set -euo pipefail` fires noisily on source, DROP US-003 and skip US-004 per
+the conditional-drop branch.
 
 ---
 

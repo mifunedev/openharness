@@ -26,3 +26,20 @@ Added `export function onJobError(id, err, logFn = log)` right after the module-
 - US-002 will add a `describe("onJobError")` block. The injected-spy strategy is mandated (the only required approach per the critique) — call `onJobError("testjob", new Error("disk full"), spy)` and assert the spy got exactly `("testjob", "ERR_JOB", "Error: disk full")`. `String(new Error("disk full"))` === `"Error: disk full"`. Add `onJobError` to the destructured import at the top of the test file.
 
 ---
+
+## US-002 — 2026-06-11 19:02 UTC
+
+**Title**: Deterministic unit test for onJobError
+**Files changed**: scripts/__tests__/cron-runtime.test.ts
+**Commit**: 7bee758
+**Result**: PASS
+
+### What I did
+Added `onJobError` to the destructured import from `../cron-runtime` (alphabetical, existing imports preserved). Added a `describe("onJobError")` block that injects a `vi.fn()` spy as the third arg — `onJobError("testjob", new Error("disk full"), spy)` — and asserts the spy was called exactly once with `("testjob", "ERR_JOB", "Error: disk full")`. Injecting the spy keeps the test deterministic and off the filesystem (no default `log()` call, no real `crons/.cron.log` write).
+
+### Learnings for future iterations
+- `String(new Error("disk full"))` === `"Error: disk full"` — the assertion matches the runtime's `String(err)` exactly.
+- cron-runtime.test.ts now reports 18 tests (was 17); full `pnpm test:scripts` is 144 (was 143). Lint clean.
+- US-003 is docs-only: add a `## Status tokens` section to `crons/README.md` enumerating SPAWNED, FIRE, OK, EXIT_n, ERR, ERR_JOB, SKIPPED_OVERLAP, BOOT (additive-only, don't delete existing prose). ERR_JOB format is `<id>\tERR_JOB\t<error-string>`. No CHANGELOG entry was needed for US-002 (test-only change, exempt per git.md).
+
+---

@@ -1,0 +1,85 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/47-cron-config-hot-reload",
+    "description": "Hot-reload cron body at fire time by re-reading filePath via parseCronFile, with cached-body fallback on error, so crons/*.md edits apply without a runtime restart. Harness-infra only (scripts/, crons/, tests, docs).",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "loadCrons stores a dir-qualified filePath",
+            "description": "As the cron runtime, I need each CronEntry.filePath to be a path re-readable from any cwd, because today it is a bare basename that would break reloadBody.",
+            "acceptanceCriteria": [
+                "loadCrons populates filePath with path.join(dir, f) (e.g. crons/heartbeat.md), not the bare filename f (currently parseCronFile receives f at line 54 and stores it verbatim as filePath at line 45)",
+                "Derived id is unchanged: parseCronFile derives id via path.basename(file, '.md'), identical for 'crons/heartbeat.md' and 'heartbeat.md'",
+                "Existing loadCrons tests still pass (suite uses loadCrons(tmp), so filePath becomes <tmp>/<name>.md); update only an assertion that checks the exact filePath value, if any exists",
+                "Typecheck passes (tsc --noEmit)",
+                "Tests pass"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
+        },
+        {
+            "id": "US-002",
+            "title": "Export reloadBody helper owning read + diff + log + fallback",
+            "description": "As the cron runtime, I want one exported helper that returns the latest on-disk body, emits the reload/error log signals itself, and degrades safely on a read/parse error.",
+            "acceptanceCriteria": [
+                "A helper reloadBody(entry: CronEntry): string is exported from scripts/cron-runtime.ts (exported so tests can call it directly; fire/fireTmux are module-private and LOG_FILE is import-time bound)",
+                "On success it returns parseCronFile(fs.readFileSync(entry.filePath, 'utf-8'), path.basename(entry.filePath))?.body",
+                "reloadBody owns BOTH log signals (no diff/log logic at call sites): logs BODY_RELOADED when the fresh body differs from cached entry.body; logs BODY_RELOAD_ERR and returns cached entry.body on any read/parse error (missing, unreadable, unparseable, or null parse)",
+                "BODY_RELOAD_ERR message includes the cron id/filename and a truncated error string (log() truncates msg to 200 chars)",
+                "Helper does NOT mutate entry in place (entry.body stays the boot-time cached value)",
+                "Typecheck passes (tsc --noEmit)"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
+        },
+        {
+            "id": "US-003",
+            "title": "fire() and fireTmux() use reloadBody",
+            "description": "As an operator, I want each fire to use the freshly-read body so cron edits deploy at the next fire without a restart.",
+            "acceptanceCriteria": [
+                "fireTmux() computes const body = reloadBody(entry) once and writes body to the prompt file instead of entry.body (replacing line-133 usage); exactly one prompt file written per fire, no extra temp file",
+                "fire() computes reloadBody(entry) once and passes it to spawn instead of entry.body (replacing line-157 usage)",
+                "Call sites contain NO diff or logging logic — BODY_RELOADED is emitted inside reloadBody (per US-002)",
+                "No change to schedule registration, the overlap/SKIPPED_OVERLAP guard, lock semantics, or tmux session naming",
+                "Typecheck passes (tsc --noEmit)"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
+        },
+        {
+            "id": "US-004",
+            "title": "Tests for reload + fallback via appendFileSync spy",
+            "description": "As a maintainer, I want tests proving an edited body is used and an unreadable file falls back safely.",
+            "acceptanceCriteria": [
+                "cron-runtime.test.ts imports the exported reloadBody and adds a case asserting a body mutated on disk after the CronEntry was built (via loadCrons(tmp) or a hand-built entry with a dir-qualified filePath) is the body returned by reloadBody",
+                "A second case asserts an unreadable/removed filePath makes reloadBody return cached entry.body and emit BODY_RELOAD_ERR; the log assertion uses vi.spyOn(fs, 'appendFileSync') to capture the call, NOT a tmp-dir log file (LOG_FILE is import-time bound)",
+                "A third assertion (may share a case) confirms BODY_RELOADED is emitted when the on-disk body differs, via the same spy",
+                "parseCronFile signature and throw-safety are unchanged, so cron-runtime.property.test.ts needs no edits",
+                "Existing tests in cron-runtime.test.ts and cron-runtime.property.test.ts are not modified or removed (new it()/describe() blocks allowed)",
+                "Tests pass (vitest run green, including new cases)",
+                "Typecheck passes (tsc --noEmit)"
+            ],
+            "priority": 4,
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
+        },
+        {
+            "id": "US-005",
+            "title": "Document hot-reload in crons/README.md",
+            "description": "As a reader of the cron docs, I want the hot-reload contract documented so the old 'restart the runtime to apply' assumption is retired.",
+            "acceptanceCriteria": [
+                "crons/README.md gains a ## Hot-reload section (<=6 lines of prose)",
+                "It states: body edits apply at the next fire without a restart; an unreadable file falls back to the cached body and logs BODY_RELOAD_ERR; a BODY_RELOADED line marks a fire whose body drifted from the boot-time body (recurs each fire until restart); schedule/enabled/timezone changes require a runtime restart — no watcher is implemented",
+                "It includes the one-line rollback (drop reloadBody, restore the two entry.body usages; no config flag)",
+                "No existing crons/README.md content is removed or reordered (additive section only)"
+            ],
+            "priority": 5,
+            "passes": true,
+            "notes": "Completed via /delegate on 2026-06-11"
+        }
+    ]
+}

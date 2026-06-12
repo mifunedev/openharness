@@ -59,6 +59,10 @@ A job with `tmux: true` in its frontmatter runs each fire in its own detached tm
 
 Jobs with `tmux` absent or `false` keep the default in-process spawn. Steer autopilot's priorities by filing GitHub issues labeled `autopilot` (the work queue) — no in-repo backlog file.
 
+## Hot-reload
+
+A cron definition's **body** (the agent prompt) hot-reloads at fire time: the runtime re-reads the file just before each fire, so edits take effect at the next scheduled fire without a restart. On a read/parse error, the runtime falls back to the cached boot-time body and logs `BODY_RELOAD_ERR`. When a fire's body differs from the boot-time cached version, a `BODY_RELOADED` line appears in `crons/.cron.log` — this signal recurs on every fire after an edit until the runtime is restarted (which re-baselines). Frontmatter changes (`schedule`, `enabled`, `timezone`, `overlap`) require a runtime restart; no watcher is implemented. Rollback: remove the `reloadBody` call and restore the two `entry.body` usages in `scripts/cron-runtime.ts`.
+
 ## Override
 
 Set `CRONS_DIR=<path>` to point the runtime at a different directory

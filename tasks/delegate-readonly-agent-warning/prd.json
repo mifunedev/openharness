@@ -48,8 +48,8 @@
                 "bash evals/probes/rl-delegation-write-worker.sh against the updated skill exits 0 and prints PASS; temporarily stripping the warning makes it exit 1 REGRESSION (spot-check, then revert)"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 3 on 2026-06-11; commit d9f6f11"
         },
         {
             "id": "US-004",

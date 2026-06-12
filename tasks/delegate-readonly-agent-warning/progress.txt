@@ -5,6 +5,9 @@
 - `.claude/skills/delegate/SKILL.md` "Worker configuration:" block lives under **§5 Execute waves → sub-step (a)** (around the Model / run_in_background bullets). Anchor edits by that heading text, not line number.
 - The §Reference "Key Resources" table is a **2-column** `| Resource | Path |` table near the end of the file. The `Agent: Council` row is a known-stale reference — leave it untouched (out of scope).
 - Repo quality gates: `pnpm run lint` and `pnpm run format:check` both delegate to `pnpm -r --if-present` and pass cleanly for docs/skill edits.
+- Probe region-scoping (US-003): extract the two warning regions with awk and check their union — `awk '/^Worker configuration:/{f=1} f{print} f && /^[[:space:]]*$/{exit}'` for the bullet block, `awk '/^### Key Resources/{f=1; next} f && /^(### |## )/{exit} f{print}'` for the table. A whole-file grep would over-pass (Critic A finding). Distinguish empty-region (region-not-found) from non-empty-but-missing-phrase REGRESSIONs.
+- Non-destructive probe spot-check pattern: build a throwaway `mktemp -d` ROOT (`$TMP/evals/probes/`, `$TMP/.claude/skills/delegate/`), copy the probe in, and `sed` a stripped SKILL.md into place. The probe's `ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"` resolves to `$TMP`, so all four exit states (0/1/1/2) can be exercised without ever dirtying the real tree.
+- The eval runner (`.claude/skills/eval/run.sh --probe <id>`) rewrites `evals/RESULTS.md` even for a single-probe run (carries prior rows for the rest). When running it from a non-US-004 story, `git checkout -- evals/RESULTS.md` afterward to keep the commit scoped — US-004 owns that artifact.
 
 ## US-001 — 2026-06-12 02:22 UTC
 
@@ -35,5 +38,21 @@ Appended `— read-only (no Write/Edit)` inline to the Path cell of the Implemen
 ### Learnings for future iterations
 - `read-only` now appears in TWO regions: the Worker-configuration bullet (line 130, US-001) and the §Reference table (lines 243-245 + the note at 251). US-003's probe should scope to the warning region(s) and the AC allows either the Worker-config block OR the §Reference table — both now satisfy the (a) read-only + (b) general-purpose requirement independently.
 - The under-table note (line 251) is plain prose, not a table row, so it does not affect the "every row has 2 cells" check; an awk region scan from `^### Key Resources` to the next `^### ` or `^## ` captures both the table and the note.
+
+---
+
+## US-003 — 2026-06-12 02:27 UTC
+
+**Title**: Add the guard probe
+**Files changed**: evals/probes/rl-delegation-write-worker.sh (new, +x)
+**Commit**: d9f6f11
+**Result**: PASS
+
+### What I did
+Added the deterministic 3-state guard probe mirroring `clean-restore.sh` (shebang, `# tier: A`, canonical `# source: memory/MEMORY.md 2026-06-10 (rl-delegation) #57`, `# desc:`, `set -euo pipefail`, `ROOT` two levels up, all messages to stderr). It SKIPs (exit 2) when the skill is absent, scopes its grep to the union of the Worker-configuration bullet block and the §Reference Key Resources block via awk (not a whole-file grep), and PASSes only when that region carries (a) `read-only` + an agent name and (b) a `general-purpose` recommendation. REGRESSION (exit 1) distinguishes "region not found" from "phrase missing". Verified all four states against a throwaway temp ROOT (PASS/region-missing/phrase-missing/SKIPPED → 0/1/1/2) and confirmed the runner discovers it as `new-pass` with aggregate exit 0; restored RESULTS.md so this commit stays scoped to the probe.
+
+### Learnings for future iterations
+- US-004 is next: run the FULL suite via `bash .claude/skills/eval/run.sh` (no `--probe` filter) and COMMIT the regenerated `evals/RESULTS.md`. The new row should read `rl-delegation-write-worker | A | … | PASS | …`. Gate "no new regression" on the runner's aggregate exit code (`$? == 0`), NOT on the absence of REGRESSION rows — the pre-existing `next-dev-prod` host-state REGRESSION is expected and does not count.
+- The probe's `pm` match uses `(^|[^a-z])pm([^a-z]|$)` to avoid matching `pm` inside other words; `read-only`/`general-purpose` use plain `grep -qi` since hyphens are stable intentional phrases (benign rewording won't trip a false REGRESSION).
 
 ---

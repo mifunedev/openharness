@@ -45,7 +45,7 @@ permissions:
 
 jobs:
   ci:
-    name: Lint, Build & Test
+    name: "Lint, Typecheck, Build & Test"
     runs-on: ubuntu-latest
 
     steps:
@@ -76,6 +76,14 @@ jobs:
 
       - name: Format check
         run: pnpm --filter './packages/**' -r --if-present run format:check
+
+      - name: Typecheck (workspace packages)
+        run: pnpm --filter './packages/**' -r --if-present run typecheck
+
+      - name: Typecheck (oh CLI — npm standalone)
+        run: |
+          npm --prefix packages/oh ci
+          npm --prefix packages/oh run typecheck
 
       - name: Build
         run: pnpm --filter './packages/**' -r --if-present run build

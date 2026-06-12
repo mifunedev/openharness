@@ -18,8 +18,8 @@
                 "Tests pass (pnpm test:scripts green)"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-11; commit ecb8ebf"
         },
         {
             "id": "US-002",

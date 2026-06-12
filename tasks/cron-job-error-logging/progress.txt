@@ -1,2 +1,28 @@
 # progress
 
+## Codebase Patterns
+
+- **Line numbers in the PRD drift.** The PRD/prd.json reference "line 180" for the `new Cron(...)` call, but the live `scripts/cron-runtime.ts` has it at ~line 198/206 (the file grew). Locate call sites by content (`grep -n "new Cron"`, `grep -n "catch: true"`), not by the PRD's stated line number.
+- **`scripts/cron-runtime.ts` runs under `node --experimental-strip-types` — no `tsc`.** Keep types simple (`unknown` for errors). The CI gate for this file is `pnpm test:scripts` (vitest), NOT a typecheck of the script.
+- **`pnpm run typecheck` fails in this worktree for an unrelated reason** — `packages/docs` has no `node_modules` installed (`WARN ... node_modules missing`), so its `tsc --noEmit` errors out on JSX/`prism-react-renderer`. This is pre-existing and unrelated to scripts/ changes. The relevant gates are `pnpm run lint` (passes) and `pnpm test:scripts` (green). Root script is `typecheck` (no hyphen); the Ralph step's `pnpm run type-check` is a no-op here.
+- **`log()` is module-private and stays that way.** Tests observe logging two ways: (1) the suite `vi.mock("node:fs")` to spy `appendFileSync` (see existing reloadBody tests), or (2) inject a spy `logFn` into a function like `onJobError`. `LOG_FILE`/`CRONS_DIR` are captured ONCE at module import — setting `process.env.CRONS_DIR` in `beforeEach` does NOT redirect the real log. Prefer logger injection for determinism.
+- **Test file** is `scripts/__tests__/cron-runtime.test.ts`; it destructures named exports from `../cron-runtime`. Add new exports to that import list when testing them.
+
+---
+
+## US-001 — 2026-06-12 01:00 UTC
+
+**Title**: Replace silent catch:true with onJobError handler
+**Files changed**: scripts/cron-runtime.ts, CHANGELOG.md
+**Commit**: ecb8ebf
+**Result**: PASS
+
+### What I did
+Added `export function onJobError(id, err, logFn = log)` right after the module-private `log` helper — it calls `logFn(id, "ERR_JOB", String(err))`, with `logFn` defaulting to `log` purely for test injection (US-002). Replaced the `new Cron(...)` option `catch: true` with `catch: (err: unknown) => onJobError(e.id, err)`, closing over the loop's `e.id`; `timezone` and `protect` are unchanged. `log` is NOT exported. Added a CHANGELOG `### Added` entry per git.md (operator-visible new log line).
+
+### Learnings for future iterations
+- `grep -n "catch: true" scripts/cron-runtime.ts` now returns nothing (exit 1) — the AC is satisfied.
+- All 143 tests pass (`pnpm test:scripts`), incl. the existing 17 cron-runtime tests; lint passes.
+- US-002 will add a `describe("onJobError")` block. The injected-spy strategy is mandated (the only required approach per the critique) — call `onJobError("testjob", new Error("disk full"), spy)` and assert the spy got exactly `("testjob", "ERR_JOB", "Error: disk full")`. `String(new Error("disk full"))` === `"Error: disk full"`. Add `onJobError` to the destructured import at the top of the test file.
+
+---

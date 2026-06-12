@@ -39,6 +39,26 @@ Body becomes the agent prompt at fire time.
 - Runtime artefacts in this directory (`.cron.log`, `.pid`) are
   gitignored; markdown definitions are tracked.
 
+## Status tokens
+
+The runtime appends one tab-separated line per event to the gitignored
+`crons/.cron.log`, shaped `<iso-timestamp>\t<id>\t<status>\t<msg>`. The
+status column is one of:
+
+| Token | Meaning |
+|-------|---------|
+| `BOOT` | Runtime started and scheduled its crons (`id` is `system`; `msg` is the cron count). |
+| `SPAWNED` | A `tmux: true` fire launched its detached session (`msg` is the session name). |
+| `FIRE` | A scheduled job fired and began running its body. |
+| `OK` | The fired child process exited cleanly (exit code 0). |
+| `EXIT_n` | The fired child process exited non-zero with code `n`. |
+| `ERR` | The child process failed to spawn (process-level error, not a job throw). |
+| `ERR_JOB` | A synchronous cron job-callback threw; recorded instead of being swallowed. Format: `<id>\tERR_JOB\t<error-string>`. |
+| `SKIPPED_OVERLAP` | A fire was skipped because the previous run was still in flight (`overlap: false`). |
+
+`BODY_RELOADED` and `BODY_RELOAD_ERR` are documented under
+[Hot-reload](#hot-reload).
+
 ## Scheduled jobs
 
 | File | Schedule | Description |

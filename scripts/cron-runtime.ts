@@ -104,6 +104,14 @@ function log(id: string, status: string, msg = ""): void {
   }
 }
 
+// Croner's `catch` handler for a scheduled job: records a synchronous
+// job-callback throw as an ERR_JOB line instead of swallowing it silently.
+// `logFn` defaults to the module-private `log` and exists ONLY for test
+// injection — onJobError carries no external-stability guarantee.
+export function onJobError(id: string, err: unknown, logFn = log): void {
+  logFn(id, "ERR_JOB", String(err));
+}
+
 export function tmuxSessionName(id: string, now: Date): string {
   const pad = (n: number): string => String(n).padStart(2, "0");
   const mm = pad(now.getMonth() + 1);
@@ -195,7 +203,11 @@ function main(): void {
   const entries = loadCrons();
   log("system", "BOOT", `${entries.length} crons`);
   for (const e of entries) {
-    new Cron(e.schedule, { timezone: e.timezone, protect: !e.overlap, catch: true }, () => fire(e));
+    new Cron(
+      e.schedule,
+      { timezone: e.timezone, protect: !e.overlap, catch: (err: unknown) => onJobError(e.id, err) },
+      () => fire(e),
+    );
   }
 }
 

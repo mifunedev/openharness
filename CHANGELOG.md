@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `ERR_JOB` cron-runtime status line — `scripts/cron-runtime.ts` replaces croner's silent `catch: true` with an injectable `onJobError(id, err)` handler that records a `<id>\tERR_JOB\t<error-string>` line to `crons/.cron.log`, so a synchronous job-callback throw is now distinguishable from an idle cron while preserving croner's crash-resistance ([#49](https://github.com/ryaneggz/openharness/issues/49)).
 - Context fitness-function eval corpus (`evals/`) — deterministic probes with a 3-state exit oracle (PASS/REGRESSION/SKIPPED) and a `RESULTS.md` benchmark scoreboard ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 - `/eval` runner skill (`.claude/skills/eval/`) — runs the probe suite against real state, writes the benchmark, surfaces green→red regressions naming the lesson each closes ([#1](https://github.com/ryaneggz/openharness/issues/1)).
 - `warn-devtcp` PreToolUse hook — non-blocking warning when a Bash command uses `/dev/tcp` (suggests `ss`/`curl`/`nc`, since zsh lacks the pseudo-device) ([#1](https://github.com/ryaneggz/openharness/issues/1)).

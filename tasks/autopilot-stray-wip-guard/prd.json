@@ -64,8 +64,8 @@
                 "A documented note states a foreign change (e.g. .codex/config.toml), modified or staged, survives the restore byte-for-byte (left in place / left staged) and is ignored by the scoped assertion and next §1 check"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 4 on 2026-06-12; commit 93296ce"
         },
         {
             "id": "US-005",

@@ -34,6 +34,45 @@
   `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "<TOKEN>" >> crons/.cron.log` — guard
   it with a trailing `2>/dev/null || true` so a missing/unwritable log never crashes the
   skill. Reuse this exact shape for any new status token (US-003 did for BLOCKED-OWNED-WIP).
+- **`git checkout -f development` is a count-1 invariant (US-004+).** Only the §1 self-heal
+  (line ~81) may carry the literal forced form. Restore-site PROSE in §5/§6/§7/Guidelines
+  must describe the self-heal WITHOUT writing the exact substring `git checkout -f development`
+  (say "its forced tree-wide checkout / the `-f` form") — otherwise the prose mention inflates
+  `grep -c 'git checkout -f development'` above 1 and breaks US-006's exactly-1 probe assertion.
+
+---
+
+## US-004 — 2026-06-12 00:39 UTC
+
+**Title**: Non-destructive two-step restore scoped to owned paths
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: 93296ce
+**Result**: PASS
+
+### What I did
+Replaced all four tree-wide restore sites (§7 finalize code block, §5 RALPH-INCOMPLETE prose,
+§6 PR-DRAFT-EVAL-RED prose, Guidelines paragraph) with the canonical scoped two-step:
+`git checkout development -- $OWNED_PATHS` (discard own owned-path residue, tracked only) THEN
+`git checkout development` (switch HEAD), followed by a dual assertion — owned-tree-clean
+(`… || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }`) AND HEAD-on-development
+(`[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`). The §7 block and Guidelines
+paragraph carry the two required notes: scoped restore is tracked-only (untracked owned orphan
+cleaned manually, `git clean` deliberately not used) and foreign WIP survives byte-for-byte.
+`git checkout -f development` count is now exactly 1 (the §1 self-heal). No `git restore --source`,
+no `git add -A`/`.`. Lint + full test suite (147) green.
+
+### Learnings for future iterations
+- **The clean-restore.sh probe is now RED on purpose.** It still asserts `>= 3` of
+  `git checkout -f development` (now 1) and "no bare git checkout development" — both intentionally
+  broken by this story. US-006 rewrites it to assert the scoped form (`>= 3` of
+  `git checkout development -- $OWNED_PATHS`, the `dirty owned tree` message, and `rev-parse
+  --abbrev-ref HEAD`) plus exactly-1 self-heal. Do NOT touch the probe in US-004's scope.
+- Two-step ORDER is load-bearing: scope step FIRST (`-- $OWNED_PATHS`) clears owned residue so
+  the subsequent non-forced `git checkout development` won't refuse; a foreign change in a path
+  identical across branches is carried across the switch untouched (survives byte-for-byte).
+- Fence count stayed even (56) — the §7 swap kept the same single ```bash fence; prose edits
+  added none. `git checkout development -- $OWNED_PATHS` appears 4×, `dirty owned tree` 4×,
+  `rev-parse --abbrev-ref HEAD` 6× (incl. §1 self-heal + the 4 new HEAD assertions + the §1 line).
 
 ---
 

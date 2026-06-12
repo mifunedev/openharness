@@ -78,6 +78,12 @@ describe("harness-config.sh env mode", () => {
     ]);
   });
 
+  it("maps install.grok_build: true → INSTALL_GROK_BUILD=true", () => {
+    const f = fixture("install:\n  grok_build: true\n");
+    const { stdout } = run(["env", f]);
+    expect(stdout.trim()).toBe("INSTALL_GROK_BUILD=true");
+  });
+
   it("handles values with spaces: git.user_name → GIT_USER_NAME", () => {
     const f = fixture("git:\n  user_name: Ryan Eggz\n");
     const { stdout } = run(["env", f]);

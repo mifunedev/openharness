@@ -61,6 +61,7 @@ make shell       # enter the isolated sandbox
 #   pi         # Pi Coding Agent
 #   deepagents # LangChain DeepAgents (optional: set install.deepagents: true in harness.yaml and rebuild)
 #   hermes     # Nous Research Hermes (optional: set install.hermes: true in harness.yaml and rebuild)
+#   grok       # xAI Grok Build (optional: set install.grok_build: true in harness.yaml and rebuild)
 make destroy     # stop and remove the sandbox
 make help        # all targets
 ```
@@ -92,7 +93,7 @@ make shell
 
 | | |
 |---|---|
-| **Core agents** | Defaults: Claude Code, Codex, Pi. Optional: OpenCode, DeepAgents, Hermes |
+| **Core agents** | Defaults: Claude Code, Codex, Pi. Optional: OpenCode, DeepAgents, Hermes, Grok Build |
 | **Runtimes** | Node 22, pnpm, Bun, uv (Python) |
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |

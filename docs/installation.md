@@ -141,7 +141,7 @@ Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
 
 ### AI agent CLIs
 
-Default CLIs are always present. Optional CLIs are installed at image build time when their `.devcontainer/.env` flag is `true`.
+Default CLIs are always present. Optional CLIs are excluded from the default image and installed at image build time when their `harness.yaml` install key (or legacy `.devcontainer/.env` flag) is enabled.
 
 | Tool | Command | Source | Status |
 |------|---------|--------|--------|
@@ -151,6 +151,7 @@ Default CLIs are always present. Optional CLIs are installed at image build time
 | OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support | optional: set `install.opencode: true` in `harness.yaml` (or `INSTALL_OPENCODE=true` in `.devcontainer/.env`) |
 | DeepAgents | `deepagents` | LangChain's multi-provider terminal agent (`deepagents-cli` via `uv tool install`) | optional: set `install.deepagents: true` in `harness.yaml` (or `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env`) |
 | Hermes | `hermes` | Nous Research's self-improving agent CLI | optional: set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`) |
+| Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | optional: set `install.grok_build: true` in `harness.yaml` (or `INSTALL_GROK_BUILD=true` in `.devcontainer/.env`) |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: set `install.agent_browser: true` in `harness.yaml` (or `INSTALL_AGENT_BROWSER=true` in `.devcontainer/.env`) |
 
 ### Runtimes & package managers
@@ -202,9 +203,12 @@ Auth credentials survive container rebuilds via named Docker volumes:
 - `pi-auth` → `~/.pi` (Pi Agent OAuth)
 - `deepagents-auth` → `~/.deepagents` (DeepAgents provider keys, memory, skills, sessions; used when DeepAgents is enabled (`install.deepagents: true` in `harness.yaml`)). Repo-local `.deepagents/` is **project data** and follows normal `.gitignore` and code-review rules — never put secrets there.
 - `hermes-auth` → `~/.hermes` (Hermes auth only; non-auth runtime state defaults to project-local `~/harness/.hermes` when Hermes is enabled (`install.hermes: true` in `harness.yaml`))
+- `grok-auth` → `~/.grok` (all Grok Build user state: auth, config, sessions, memory, skills/plugins, logs; mounted alongside the other agent auth volumes and used by Grok Build when `install.grok_build: true` in `harness.yaml`). Cached OAuth/session state in `~/.grok/auth.json` takes precedence over `XAI_API_KEY`; if an API key seems ignored, run `grok logout` or reset the volume.
 - `cloudflared-auth` → `~/.cloudflared` (Cloudflare tunnel credentials, when used)
 - `gh-config` → `~/.config/gh` (GitHub CLI tokens)
 
 Hermes is split: when Hermes is enabled (`install.hermes: true` in `harness.yaml`), `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/` directory, while auth remains in the `~/.hermes` named volume and is linked into the project-local home as `auth.json`. The entrypoint also seeds `config.yaml` with `skills.external_dirs: ["/home/sandbox/harness/.claude/skills"]` so Hermes can load the harness' in-repo skills by default. Project-local runtime contents are gitignored except `.hermes/README.md`; `make destroy` removes the auth volume but not the bind-mounted project runtime directory.
+
+`make destroy` and `docker compose down -v` remove named volumes, including `grok-auth`; use `make stop` when you want Grok Build credentials and state to survive.
 
 Downstream harness packs and Pi extensions can introduce additional volumes or bind-mount overlays by listing tracked compose files under `compose.overrides:` in `harness.yaml`, or by adding user-local files to `composeOverrides[]` in `config.json` (gitignored).

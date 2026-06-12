@@ -90,7 +90,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate \
 #
 # AGENTS is a comma-separated list of default agent CLI keys to install.
 # The default is claude-code + codex + pi-coding-agent. Optional CLIs
-# such as OpenCode, DeepAgents, and Hermes are controlled by their own
+# such as OpenCode, Grok Build, DeepAgents, and Hermes are controlled by their own
 # INSTALL_* build flags. pi-coding-agent is installed later under the
 # sandbox user's npm prefix so `pi update` can self-update without sudo.
 # The pi-coding-agent key resolves to @earendil-works/pi-coding-agent
@@ -101,6 +101,7 @@ SHELL ["/bin/bash", "-c"]
 
 ARG AGENTS="claude-code,codex,pi-coding-agent"
 ARG INSTALL_OPENCODE=false
+ARG INSTALL_GROK_BUILD=false
 
 RUN set -e; \
     declare -A PKG=( \
@@ -117,7 +118,12 @@ RUN set -e; \
         else echo "Unknown agent: $a"; exit 1; fi; \
     done; \
     if [ "${INSTALL_OPENCODE}" = "true" ]; then npm install -g opencode-ai; \
-    else echo "Skipping OpenCode CLI install (INSTALL_OPENCODE=false)"; fi
+    else echo "Skipping OpenCode CLI install (INSTALL_OPENCODE=false)"; fi; \
+    if [ "${INSTALL_GROK_BUILD}" = "true" ]; then \
+        curl -fsSL https://x.ai/cli/install.sh | HOME=/opt/grok-build GROK_BIN_DIR=/opt/grok-build/bin bash -s 0.2.39; \
+        ln -sf /opt/grok-build/bin/grok /usr/local/bin/grok; \
+        rm -f /usr/local/bin/agent; \
+    else echo "Skipping Grok Build CLI install (INSTALL_GROK_BUILD=false)"; fi
 
 # ─── Open Harness `oh` CLI ──────────────────────────────────────────
 # Build the in-tree `oh` CLI (packages/oh/) into a self-contained bundle,

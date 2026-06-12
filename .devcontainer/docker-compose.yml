@@ -2,9 +2,10 @@
 # ===========================================
 # Base sandbox compose. The base ships with zero in-tree overlays;
 # agent auth and tool state persist in named volumes managed by Docker
-# (claude-auth, codex-auth, pi-auth, opencode-auth, deepagents-auth,
-# cloudflared-auth, gh-config), and the bind-mounted repo's UID is synced
-# into the sandbox user by entrypoint.sh on first boot.
+# (claude-auth, codex-auth, pi-auth, opencode-auth, grok-auth,
+# deepagents-auth, cloudflared-auth, gh-config), and the bind-mounted
+# repo's UID is synced into the sandbox user by entrypoint.sh on first boot.
+# Grok Build uses ~/.grok for user state/auth, persisted by grok-auth.
 # Hermes uses the project-local bind-mounted `.hermes/` directory as
 # HERMES_HOME for all runtime state, including auth.json (gitignored).
 #
@@ -23,6 +24,7 @@ services:
       dockerfile: .devcontainer/Dockerfile
       args:
         INSTALL_OPENCODE: ${INSTALL_OPENCODE:-false}
+        INSTALL_GROK_BUILD: ${INSTALL_GROK_BUILD:-false}
         INSTALL_DEEPAGENTS: ${INSTALL_DEEPAGENTS:-false}
         INSTALL_HERMES: ${INSTALL_HERMES:-false}
     volumes:
@@ -32,6 +34,7 @@ services:
       - codex-auth:/home/sandbox/.codex
       - pi-auth:/home/sandbox/.pi
       - opencode-auth:/home/sandbox/.local/share/opencode
+      - grok-auth:/home/sandbox/.grok
       - deepagents-auth:/home/sandbox/.deepagents
       - cloudflared-auth:/home/sandbox/.cloudflared
       - gh-config:/home/sandbox/.config/gh
@@ -44,6 +47,7 @@ services:
       - GIT_USER_NAME=${GIT_USER_NAME:-}
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
       - GH_TOKEN=${GH_TOKEN:-}
+      - XAI_API_KEY=${XAI_API_KEY:-}
       - INSTALL_AGENT_BROWSER=${INSTALL_AGENT_BROWSER:-false}
       - INSTALL_HERMES=${INSTALL_HERMES:-false}
       - HERMES_HOME=/home/sandbox/harness/.hermes
@@ -65,6 +69,7 @@ volumes:
   codex-auth:
   pi-auth:
   opencode-auth:
+  grok-auth:
   deepagents-auth:
   cloudflared-auth:
   gh-config:

@@ -9,6 +9,9 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `/eval` skill and `evals/` probe corpus: deterministic shell probes with a 3-state oracle, an overwrite-row `evals/RESULTS.md` benchmark, and an aggregate non-zero exit only for new green→red regressions ([#410](https://github.com/mifunedev/openharness/issues/410)).
+- `scripts/ablate.sh` provides shared swap/restore/trap mechanics for evaluating whether a context file is load-bearing under a deterministic probe ([#410](https://github.com/mifunedev/openharness/issues/410)).
+- `/drift-check` detects framework drift, branch/append-file drift, and cron-staleness drift without mutating local state; the heartbeat now surfaces its findings when present ([#410](https://github.com/mifunedev/openharness/issues/410)).
 - `CI: Harness` now runs on pull requests and harness infrastructure paths, adds workspace and standalone `packages/oh` typecheck gates, cancels superseded runs, and adds boot-path linting with `shellcheck`/`hadolint` ([#408](https://github.com/mifunedev/openharness/issues/408)).
 - `release.yml` now validates lint, format, typecheck, build, package tests, and root script tests before publishing release artifacts ([#408](https://github.com/mifunedev/openharness/issues/408)).
 - `SECURITY.md` documents supported versions, private vulnerability reporting, automated hardening, and the sandbox trust boundary ([#408](https://github.com/mifunedev/openharness/issues/408)).

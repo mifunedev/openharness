@@ -10,7 +10,7 @@ description: |
 
 # Strategic Proposal
 
-Spawn 5 specialized expert sub-agents in parallel, each proposing roadmap items from their domain. An Expert AI Council drafts the roadmap, a Strategic Critic challenges it with adversarial backpressure, and the Council finalizes with revisions. The result is published as a pinned GitHub issue and written to `src/data/roadmap.ts`.
+Spawn 5 specialized expert sub-agents in parallel, each proposing roadmap items from their domain. An Expert AI Council drafts the roadmap, a Strategic Critic challenges it with adversarial backpressure, and the Council finalizes with revisions. The result is published as a pinned GitHub issue and written to `docs/roadmap.md`.
 
 **Core principle: SIGNAL OVER FEATURES.** Items require evidence of user demand before entering "Build Now" phase. Infrastructure prerequisites are exempt. The Critic ensures the council isn't inflating signal or sandbagging complexity.
 
@@ -54,7 +54,7 @@ flowchart TD
     CRITIC --> F2["Strategic Council FINAL (opus)<br>Incorporate critique, revise or defend"]
     F2 --> G["Find/create pinned issue (label: roadmap)"]
     G --> H["Update pinned issue body"]
-    H --> I["Write roadmap data to src/data/roadmap.ts"]
+    H --> I["Write roadmap data to docs/roadmap.md"]
     I --> MEM_OP[Memory Protocol]
     MEM_OP --> Z_OP["Report: roadmap updated"]
 ```
@@ -75,7 +75,7 @@ Read the following to build the briefing:
 - `IDENTITY.md` — stack, mission, URLs
 - `MEMORY.md` — past decisions, lessons learned
 - `Makefile`, `scripts/`, `install/` — orchestrator entrypoints and provisioning surface
-- `apps/docs/` — documentation site source
+- `packages/docs/` — documentation site source
 - Open issues: `gh api "repos/mifunedev/openharness/issues?state=open&per_page=50"`
 - Repo stats: `gh api repos/mifunedev/openharness --jq '{stars: .stargazers_count, forks: .forks_count}'`
 

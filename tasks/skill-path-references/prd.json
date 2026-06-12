@@ -18,8 +18,8 @@
                 "packages/docs/src/__tests__/ token-swap is intentional even though the dir does not exist (2>/dev/null-guarded probe); fixing the probe logic is out of scope"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-12 (ship-spec direct implementation; harness-infra precision edits)"
         },
         {
             "id": "US-002",
@@ -33,8 +33,8 @@
                 "grep -nE 'apps/docs|src/data/roadmap' .claude/skills/strategic-proposal/SKILL.md returns zero matches"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-12 (ship-spec direct implementation; harness-infra precision edits)"
         },
         {
             "id": "US-003",
@@ -45,8 +45,8 @@
                 "grep -n 'apps/docs' .claude/skills/ci-status/SKILL.md returns zero matches"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-12 (ship-spec direct implementation; harness-infra precision edits)"
         },
         {
             "id": "US-004",
@@ -57,8 +57,8 @@
                 "grep -n 'apps/README' .claude/skills/harness-context/SKILL.md returns zero matches"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-12 (ship-spec direct implementation; harness-infra precision edits)"
         },
         {
             "id": "US-005",
@@ -69,8 +69,8 @@
                 "/eval probe suite shows no NEW (green->red) regression vs the base"
             ],
             "priority": 5,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-12 (ship-spec direct implementation; harness-infra precision edits)"
         },
         {
             "id": "US-006",
@@ -84,8 +84,8 @@
                 "evals/ is harness-infra and not named in this PRD's Non-Goals"
             ],
             "priority": 6,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed 2026-06-12 (ship-spec direct implementation; harness-infra precision edits)"
         }
     ]
 }

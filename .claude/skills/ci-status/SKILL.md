@@ -102,7 +102,7 @@ gh api "repos/$REPO/actions/jobs/$JOB_ID/logs" 2>&1 \
 - **FAIL**: Report the failing step, error message, and suggest a fix. Then fix the issue, commit, push, and run `/ci-status` again
 - **NO RUN**: No workflow's `on:` filter matched the push, or `PR_NUMBER` was set but `gh pr checks` returned no rows (the PR exists but no workflows were triggered yet). *(Note: the workflow names below reflect this harness's layout and may differ in other checkouts.)*
   - `ci-harness.yml` — push only: `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, itself
-  - `docs.yml` — PR or push-to-main: `docs/**`, `apps/docs/**`, `blog/**`, itself
+  - `docs.yml` — PR or push-to-main: `packages/docs/**`, `docs/**`, `blog/**`, itself
   - `conciseness.yml` — push or PR: `workspace/*.md`, `workspace/.claude/rules/*.md`, itself
   - `release.yml` — tag push only
 

@@ -1,2 +1,46 @@
 # progress
 
+## Codebase Patterns
+
+- **Invoke the script under test via `bash`, not `sh`.** `scripts/ralph.sh`
+  uses `[[ ]]`, `BASH_SOURCE`, arrays (`POSITIONAL+=`), and `PIPESTATUS` —
+  none POSIX. `harness-config.test.ts` uses `sh`; ralph must use `bash`.
+- **`run(args, opts?)` helper** mirrors `harness-config.test.ts` but extends
+  the signature to `run(args: string[], opts?: { env?, cwd? })` via
+  `spawnSync("bash", [SCRIPT, ...args], { encoding, env, cwd })`. The
+  `env`/`cwd` knobs are needed downstream by US-002's hermeticity setup.
+- **`envWithout(...keys)`** returns `{...process.env}` with keys deleted —
+  used to unmask the `--harness` no-value guard (RALPH_HARNESS is set to
+  `claude` in the live Ralph loop env, which would otherwise seed a default).
+- **US-001 arg-validation cases all exit before `ralph.sh:358`** (REPO_ROOT
+  derivation), so they need no temp cwd or fixture — failures fire purely on
+  argument shape. Empirically confirmed: `--harness=foo`→2/`unknown harness`,
+  `--harness`(empty)→2/`requires a value`, 0 positional→2/`Usage:`,
+  2 positional→2/`Usage:`, `Bad_Name`→2/`must match`.
+
+## US-001 — 2026-06-12 07:26 UTC
+
+**Title**: Black-box argument-validation tests
+**Files changed**: scripts/__tests__/ralph.test.ts (new)
+**Commit**: e601d75
+**Result**: PASS
+
+### What I did
+Created `scripts/__tests__/ralph.test.ts` modeled on
+`harness-config.test.ts`, with a `bash`-based `run(args, opts?)` helper and an
+`envWithout()` env-stripper. Added 5 assertions covering `normalize_harness`
+rejection, the `--harness` empty-value guard, zero/multi positional usage
+errors, and the taskdesc regex check — each asserting exit 2 and a
+message-locked stderr match. All 152 tests pass; typecheck clean.
+
+### Learnings for future iterations
+US-002 should reuse the same `run`/`envWithout` helpers (already export the
+`opts.cwd` knob it needs). For US-002 hermeticity, spawn with
+`{ cwd: tmpDir, env: { ...process.env, REPO_ROOT: tmpDir } }` where `tmpDir`
+is a non-git `mkdtempSync` dir — `ralph.sh:358` re-derives REPO_ROOT via
+`git rev-parse ... || pwd`, so a non-git cwd is what redirects the task-dir
+lookup at `:359` to the fixture. No harness stub needed: the task-dir (:361)
+and four-file (:369) checks precede harness resolution (:375).
+
+---
+

@@ -59,6 +59,12 @@ The positional argument to `make shell` is the **container name** (defaults to `
 
 ### 3. Verify
 
-- [ ] Container is running (`make list`)
-- [ ] Agent can access workspace (`ls ~/harness/workspace`)
-- [ ] SOUL.md and MEMORY.md are present
+Run from the **host** (orchestrator side):
+
+- [ ] Container is running (`make ps`)
+
+Run **inside the sandbox** (after `make shell <agent-name>`):
+
+- [ ] Workspace is accessible (`ls ~/harness/workspace`)
+- [ ] `workspace/AGENTS.md` is present (the workspace also holds `startup.sh` and `.claude/`, among others — non-exhaustive)
+- [ ] Harness identity and memory live at the repo root, **not** under `workspace/`: `context/SOUL.md` and `memory/MEMORY.md` are present

@@ -10,6 +10,23 @@
 
 ---
 
+## US-002 — 2026-06-12 16:41 UTC
+
+**Title**: Correct the verify checklist
+**Files changed**: .github/ISSUE_TEMPLATE/agent.md (section 3 Verify), tasks/agent-template-make-commands/{prd.json,progress.txt}
+**Commit**: 99ce22b
+**Result**: PASS
+
+### What I did
+
+Rewrote `### 3. Verify`: `make list` → `make ps`; split the checklist into a **host** group (`make ps`) and an **inside-the-sandbox** group (after `make shell <agent-name>`) so each command runs in its real context. Dropped the false `SOUL.md and MEMORY.md are present` under-workspace assertion — narrowed the workspace check to `workspace/AGENTS.md is present` (non-exhaustive note: also `startup.sh` + `.claude/`), and added a checkbox reflecting the real layout: `context/SOUL.md` and `memory/MEMORY.md` live at the repo root, not under `workspace/`.
+
+### Learnings for future iterations
+
+Verified on-disk: host `workspace/` template ships minimal (AGENTS.md, CLAUDE.md→AGENTS.md symlink, startup.sh) — no physical `.claude/`, but `workspace/AGENTS.md`/`CLAUDE.md` documents `.claude/rules,settings,example-env` as the in-sandbox workspace layout, so the AC's `.claude/` note is the *inside-the-sandbox* (`ls ~/harness/workspace`) execution context, not the host template — consistent with AC4. `context/SOUL.md` + `memory/MEMORY.md` confirmed present at repo root. `make list` grep returns no matches (AC5 green); `pnpm format:check` clean (root template file is outside any workspace package, so prettier never touches it). Only US-003 (preserve/validity guard) remains.
+
+---
+
 ## US-001 — 2026-06-12 16:22 UTC
 
 **Title**: Correct the provisioning and enter-sandbox commands

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -41,6 +41,35 @@ function envWithout(...keys: string[]): NodeJS.ProcessEnv {
   const env = { ...process.env };
   for (const key of keys) delete env[key];
   return env;
+}
+
+// Absolute path to bash, resolved once via the parent's PATH. The US-004 tests
+// below launch bash by this absolute path (not a bare "bash") because they
+// fully control the *child* env PATH to toggle `codex` visibility — and
+// spawnSync resolves a bare command name against that stripped child PATH,
+// which would ENOENT when the PATH is an empty fixture dir.
+const BASH = (() => {
+  const r = spawnSync("bash", ["-c", "command -v bash"], { encoding: "utf-8" });
+  return (r.stdout ?? "").trim() || "/usr/bin/bash";
+})();
+
+// Source ralph.sh in a fresh subshell and run `snippet`. The US-003 source
+// guard returns before the loop/normal-mode body, so sourcing only defines the
+// functions — the snippet then invokes one in isolation. `set -euo pipefail`
+// (ralph.sh:56) is scoped to this subshell, never the test runner.
+function sourceCall(
+  snippet: string,
+  opts: { env?: NodeJS.ProcessEnv } = {},
+): RunResult {
+  const result = spawnSync(BASH, ["-c", `source '${SCRIPT}'\n${snippet}`], {
+    encoding: "utf-8",
+    env: opts.env,
+  });
+  return {
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    status: result.status ?? -1,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -150,4 +179,144 @@ describe("ralph.sh four-file contract", () => {
       expect(stderr).toContain(`${omitted} is missing`);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// US-004 — resilience-function unit tests (depends on the US-003 source guard)
+//
+// These source ralph.sh via `sourceCall` and invoke one resilience function in
+// isolation. The functions covered run BEFORE any harness launches, so no
+// real claude/codex/pi is needed: `codex` presence is faked with an executable
+// stub on a controlled PATH, and `claude_limit_detected` reads a temp fixture.
+// ---------------------------------------------------------------------------
+
+describe("ralph.sh normalize_harness", () => {
+  // Each supported harness echoes its own name unchanged (positive cases).
+  for (const harness of ["claude", "pi", "codex", "opencode", "deepagents"]) {
+    it(`echoes '${harness}' unchanged`, () => {
+      const { status, stdout } = sourceCall(`normalize_harness ${harness}`);
+      expect(status).toBe(0);
+      expect(stdout.trim()).toBe(harness);
+    });
+  }
+
+  it("exits 2 with /unknown harness/ on an invalid value (negative case)", () => {
+    const { status, stderr } = sourceCall("normalize_harness bogus");
+    expect(status).toBe(2);
+    expect(stderr).toMatch(/unknown harness/);
+  });
+});
+
+describe("ralph.sh fallback_after_harness", () => {
+  let bin: string;
+
+  beforeEach(() => {
+    bin = mkdtempSync(path.join(tmpdir(), "ralph-bin-"));
+  });
+
+  afterEach(() => {
+    rmSync(bin, { recursive: true, force: true });
+  });
+
+  // Drop an executable `codex` stub (#!/usr/bin/env bash + exit 0) into `bin`.
+  function stubCodex(): void {
+    const codex = path.join(bin, "codex");
+    writeFileSync(codex, "#!/usr/bin/env bash\nexit 0\n");
+    chmodSync(codex, 0o755);
+  }
+
+  // Child env whose PATH is exactly `bin`. fallback_after_harness uses only the
+  // `command -v` builtin, so no real coreutils are needed — `bin` having (or
+  // lacking) the codex stub is the entire fixture.
+  const withBin = (): NodeJS.ProcessEnv => ({ ...process.env, PATH: bin });
+
+  it("falls back claude -> codex when codex is on PATH (positive)", () => {
+    stubCodex();
+    const { status, stdout } = sourceCall("fallback_after_harness claude", {
+      env: withBin(),
+    });
+    expect(status).toBe(0);
+    expect(stdout.trim()).toBe("codex");
+  });
+
+  it("falls back pi -> codex when codex is on PATH (positive)", () => {
+    stubCodex();
+    const { status, stdout } = sourceCall("fallback_after_harness pi", {
+      env: withBin(),
+    });
+    expect(status).toBe(0);
+    expect(stdout.trim()).toBe("codex");
+  });
+
+  it("returns non-zero with /not on PATH/ when codex is absent (claude)", () => {
+    // `bin` is empty — no codex stub written.
+    const { status, stderr } = sourceCall("fallback_after_harness claude", {
+      env: withBin(),
+    });
+    expect(status).not.toBe(0);
+    expect(stderr).toMatch(/not on PATH/);
+  });
+
+  it("returns non-zero with /not on PATH/ when codex is absent (pi)", () => {
+    const { status, stderr } = sourceCall("fallback_after_harness pi", {
+      env: withBin(),
+    });
+    expect(status).not.toBe(0);
+    expect(stderr).toMatch(/not on PATH/);
+  });
+
+  it("returns non-zero with /no fallback/ for an unsupported harness", () => {
+    // codex present, to prove the rejection is by harness, not codex absence.
+    stubCodex();
+    const { status, stderr } = sourceCall("fallback_after_harness opencode", {
+      env: withBin(),
+    });
+    expect(status).not.toBe(0);
+    expect(stderr).toMatch(/no fallback/);
+  });
+});
+
+describe("ralph.sh claude_limit_detected", () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(path.join(tmpdir(), "ralph-"));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  // Write `contents` to a fixture file and return its path. claude_limit_detected
+  // ANDs two greps (ralph.sh:182): 'hit (your |the )?limit' AND 'resets?'. Real
+  // `grep` is required, so the parent PATH is left intact (env unset).
+  function fixture(contents: string): string {
+    const f = path.join(tmp, "out.log");
+    writeFileSync(f, contents);
+    return f;
+  }
+
+  it("exits 0 when BOTH the limit and reset phrases are present", () => {
+    const f = fixture("You've hit your limit. It resets at 5pm.\n");
+    const { status } = sourceCall(`claude_limit_detected '${f}'`);
+    expect(status).toBe(0);
+  });
+
+  it("exits 1 when only the limit phrase is present (proves AND-logic)", () => {
+    const f = fixture("You've hit your limit. Try again later.\n");
+    const { status } = sourceCall(`claude_limit_detected '${f}'`);
+    expect(status).toBe(1);
+  });
+
+  it("exits 1 when only the reset phrase is present (proves AND-logic)", () => {
+    const f = fixture("Your quota resets at midnight.\n");
+    const { status } = sourceCall(`claude_limit_detected '${f}'`);
+    expect(status).toBe(1);
+  });
+
+  it("exits 1 on ordinary output with neither phrase", () => {
+    const f = fixture("All good, iteration complete.\n");
+    const { status } = sourceCall(`claude_limit_detected '${f}'`);
+    expect(status).toBe(1);
+  });
 });

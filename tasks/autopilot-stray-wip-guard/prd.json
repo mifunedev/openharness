@@ -17,8 +17,8 @@
                 "All shell/markdown code fences in §1 remain well-formed (the skill still renders)"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-12; commit 5b4eeeb"
         },
         {
             "id": "US-002",

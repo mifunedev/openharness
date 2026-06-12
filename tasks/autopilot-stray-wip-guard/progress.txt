@@ -1,2 +1,53 @@
 # progress
 
+## Codebase Patterns
+
+- **Single edited file**: this task touches one skill (`.claude/skills/autopilot/SKILL.md`)
+  plus two probes (`evals/probes/{clean-restore,owned-surface-guard}.sh`) and
+  `evals/RESULTS.md`. The PRD's Non-Goals forbid touching `crons/autopilot.md`,
+  `scripts/cron-runtime.ts`, any other skill, or sandbox app code.
+- **`OWNED_PATHS` is load-bearing-unquoted**: it is `.claude/ context/ docs/ scripts/
+  crons/ wiki/ evals/ memory/ tasks/ CHANGELOG.md` and MUST be passed bare
+  (`-- $OWNED_PATHS`). Quoting (`"$OWNED_PATHS"`) collapses it to one pathspec that
+  matches nothing → the clean check passes vacuously. Defined once at the top of the
+  §1 "Require clean state" bash block (`grep -c 'OWNED_PATHS=' SKILL.md` must stay 1).
+- **§1 self-heal vs MAIN check diverge (US-002+)**: the self-heal stranded-branch
+  conditional (`if [ "$BRANCH" != "development" ] && git diff --quiet …`) stays
+  tree-wide and is the ONLY permitted tree-wide `git diff --quiet`; the MAIN owned check
+  gets scoped. Probes must exempt the self-heal line via BRANCH/rev-parse context.
+- **Restore is a two-step (US-004)**: `git checkout development -- $OWNED_PATHS` (scope
+  first) THEN `git checkout development` (switch HEAD). After the change exactly 1
+  `git checkout -f development` remains (the self-heal). Do NOT use `git restore --source=`
+  (it does not switch HEAD — the HIGH critic finding).
+- **SHA-accurate bookkeeping = 2 commits/iteration**: commit the implementation first to
+  obtain the short SHA, then record `passes:true` + SHA in `prd.json`/`progress.txt` and
+  commit that. `Submitted-by:` trailer is mandatory (value from `$RALPH_HARNESS`, e.g.
+  `Claude`). Quality gate: `pnpm run lint` works; there is no `type-check` script (it's
+  `typecheck`), irrelevant for markdown-only edits.
+
+---
+
+## US-001 — 2026-06-12 00:00 UTC
+
+**Title**: Define the owned-surface constant in §1
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: 5b4eeeb
+**Result**: PASS
+
+### What I did
+Added the canonical `OWNED_PATHS` shell variable once at the top of the §1
+"Require clean state" bash block in `.claude/skills/autopilot/SKILL.md`, enumerating
+exactly `.claude/ context/ docs/ scripts/ crons/ wiki/ evals/ memory/ tasks/ CHANGELOG.md`.
+Added a `# NOTE:` warning that it MUST be used UNQUOTED (quoting collapses it to one
+no-match pathspec → vacuous pass) and a write-surface cross-check note proving the owned
+surface is known-complete. No check or restore logic was changed (that is US-002/US-004).
+
+### Learnings for future iterations
+- The definition is purely additive this story — US-002 will wire the MAIN check to
+  `$OWNED_PATHS`, US-004 the restore sites. Placing the definition before the self-heal
+  block means it is already in scope when US-002 scopes the check.
+- `grep -c 'OWNED_PATHS=' SKILL.md` is an AC for US-001 (must be 1) — keep comment prose
+  referencing `OWNED_PATHS` (no `=`) so future edits don't inflate the count.
+- Verifying fences: total ` ``` ` markers in the file stayed even (40), so §1 still renders.
+
+---

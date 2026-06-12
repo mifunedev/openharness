@@ -9,10 +9,14 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `CI: Harness` now runs on pull requests and harness infrastructure paths, adds workspace and standalone `packages/oh` typecheck gates, cancels superseded runs, and adds boot-path linting with `shellcheck`/`hadolint` ([#408](https://github.com/mifunedev/openharness/issues/408)).
+- `release.yml` now validates lint, format, typecheck, build, package tests, and root script tests before publishing release artifacts ([#408](https://github.com/mifunedev/openharness/issues/408)).
+- `SECURITY.md` documents supported versions, private vulnerability reporting, automated hardening, and the sandbox trust boundary ([#408](https://github.com/mifunedev/openharness/issues/408)).
 
 ### Changed
 
 ### Fixed
+- Cron runtime execution now reloads cron bodies at fire time, records synchronous job callback failures as `ERR_JOB`, supports opt-in tmux-backed cron runs, and has focused tests for the new behavior ([#408](https://github.com/mifunedev/openharness/issues/408)).
 - `Docs: build & deploy` workflow no longer fails on forks: the Pages `Configure`/`Upload`/`Deploy` steps are gated to the canonical repo (`github.repository == 'mifunedev/openharness'`), so forks build-validate docs without attempting a Pages deploy. Also removed a dangling `docs/harnesses/t3code.md` link to the deleted `integrations/cloudflare.md` ([#404](https://github.com/mifunedev/openharness/issues/404)).
 - `/release` skill now resolves the canonical remote (prefers `upstream`, else `origin`) for `REPO` and all release pushes, so a release can't accidentally land on a private fork; GHCR verification tries the org package path before the user path ([#402](https://github.com/mifunedev/openharness/issues/402)).
 - `/ship-spec` Stage 7 now clones a self-contained `.claude/skills/ship-spec/templates/prompt.md` instead of the deleted `tasks/archive/openharness-v07-convergence/prompt.md`; repointed the two other dead references to that task ([#402](https://github.com/mifunedev/openharness/issues/402)).
@@ -22,6 +26,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Deprecated
 
 ### Security
+- Dependency manifests and lockfiles are refreshed with Docusaurus/Vitest upgrades and scoped `pnpm.overrides` for current transitive advisory remediation ([#408](https://github.com/mifunedev/openharness/issues/408)).
 
 ## [2026.6.10] - 2026-06-10
 

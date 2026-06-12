@@ -12,6 +12,7 @@ export interface CronEntry {
   enabled: boolean;
   overlap: boolean;
   catchup: boolean;
+  tmux: boolean;
   body: string;
   filePath: string;
 }
@@ -39,6 +40,7 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
     enabled: fm.enabled !== "false",
     overlap: fm.overlap === "true",
     catchup: fm.catchup === "true",
+    tmux: fm.tmux === "true",
     body: m[2],
     filePath: file,
   };
@@ -49,7 +51,7 @@ export function loadCrons(dir: string = CRONS_DIR): CronEntry[] {
   const out: CronEntry[] = [];
   for (const f of fs.readdirSync(dir).filter((n: string) => n.endsWith(".md")).sort()) {
     try {
-      const entry = parseCronFile(fs.readFileSync(path.join(dir, f), "utf-8"), f);
+      const entry = parseCronFile(fs.readFileSync(path.join(dir, f), "utf-8"), path.join(dir, f));
       if (entry && entry.enabled) out.push(entry);
     } catch {
       /* skip unreadable */
@@ -75,6 +77,23 @@ export function acquireLock(pidFile: string = PID_FILE): boolean {
   return true;
 }
 
+export function reloadBody(entry: CronEntry): string {
+  let fresh: string | undefined;
+  try {
+    const parsed = parseCronFile(
+      fs.readFileSync(entry.filePath, "utf-8"),
+      path.basename(entry.filePath),
+    );
+    fresh = parsed?.body;
+    if (fresh == null) throw new Error("parseCronFile returned no body");
+  } catch (e) {
+    log(entry.id, "BODY_RELOAD_ERR", `${path.basename(entry.filePath)}: ${String(e)}`);
+    return entry.body;
+  }
+  if (fresh !== entry.body) log(entry.id, "BODY_RELOADED", path.basename(entry.filePath));
+  return fresh;
+}
+
 function log(id: string, status: string, msg = ""): void {
   const line = `${new Date().toISOString()}\t${id}\t${status}\t${msg.replace(/\s+/g, " ").slice(0, 200)}\n`;
   try {
@@ -85,9 +104,83 @@ function log(id: string, status: string, msg = ""): void {
   }
 }
 
+// Croner's `catch` handler for a scheduled job: records a synchronous
+// job-callback throw as an ERR_JOB line instead of swallowing it silently.
+// `logFn` defaults to the module-private `log` and exists ONLY for test
+// injection — onJobError carries no external-stability guarantee.
+export function onJobError(id: string, err: unknown, logFn = log): void {
+  logFn(id, "ERR_JOB", String(err));
+}
+
+export function tmuxSessionName(id: string, now: Date): string {
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  const mm = pad(now.getMonth() + 1);
+  const dd = pad(now.getDate());
+  const hh = pad(now.getHours());
+  const min = pad(now.getMinutes());
+  return `${id}-${mm}${dd}-${hh}${min}`;
+}
+
+export function buildTmuxWrapper(opts: {
+  session: string;
+  id: string;
+  agentBin: string;
+  promptFile: string;
+}): string {
+  const { session, id, agentBin, promptFile } = opts;
+  return (
+    `echo $$ > /tmp/cron-${id}.pid; ` +
+    `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep; ` +
+    `${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee /tmp/${session}.log; ` +
+    `rm -f /tmp/cron-${id}.pid; ` +
+    // Kept session: resume the run's own conversation as a live, attachable
+    // agent (idle until driven); fall back to a shell if that exits.
+    `[ -f /tmp/${session}.keep ] && { ${agentBin} --continue; exec bash; }`
+  );
+}
+
+function fireTmux(entry: CronEntry): void {
+  const pidFile = `/tmp/cron-${entry.id}.pid`;
+  if (!entry.overlap && fs.existsSync(pidFile)) {
+    const existing = parseInt(fs.readFileSync(pidFile, "utf-8").trim(), 10);
+    if (!isNaN(existing)) {
+      try {
+        process.kill(existing, 0);
+        log(entry.id, "SKIPPED_OVERLAP");
+        return;
+      } catch {
+        /* stale — fall through */
+      }
+    }
+  }
+  const session = tmuxSessionName(entry.id, new Date());
+  const promptFile = `/tmp/cron-${session}.prompt`;
+  const body = reloadBody(entry);
+  fs.writeFileSync(promptFile, body);
+  const child = spawn(
+    "tmux",
+    [
+      "new-session",
+      "-d",
+      "-s",
+      session,
+      "-c",
+      process.cwd(),
+      buildTmuxWrapper({ session, id: entry.id, agentBin: AGENT_BIN, promptFile }),
+    ],
+    { stdio: "ignore" },
+  );
+  child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
+  log(entry.id, "SPAWNED", session);
+}
+
 function fire(entry: CronEntry): void {
+  if (entry.tmux) {
+    fireTmux(entry);
+    return;
+  }
   log(entry.id, "FIRE");
-  const child = spawn(AGENT_BIN, ["-p", entry.body], { stdio: "inherit" });
+  const child = spawn(AGENT_BIN, ["-p", reloadBody(entry)], { stdio: "inherit" });
   child.on("exit", (code: number | null) => log(entry.id, code === 0 ? "OK" : `EXIT_${code}`));
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
 }
@@ -110,7 +203,11 @@ function main(): void {
   const entries = loadCrons();
   log("system", "BOOT", `${entries.length} crons`);
   for (const e of entries) {
-    new Cron(e.schedule, { timezone: e.timezone, protect: !e.overlap, catch: true }, () => fire(e));
+    new Cron(
+      e.schedule,
+      { timezone: e.timezone, protect: !e.overlap, catch: (err: unknown) => onJobError(e.id, err) },
+      () => fire(e),
+    );
   }
 }
 

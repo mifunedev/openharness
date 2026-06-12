@@ -56,3 +56,19 @@ Added the deterministic 3-state guard probe mirroring `clean-restore.sh` (sheban
 - The probe's `pm` match uses `(^|[^a-z])pm([^a-z]|$)` to avoid matching `pm` inside other words; `read-only`/`general-purpose` use plain `grep -qi` since hyphens are stable intentional phrases (benign rewording won't trip a false REGRESSION).
 
 ---
+
+## US-004 — 2026-06-12 02:29 UTC
+
+**Title**: Eval gate green (no new regression)
+**Files changed**: evals/RESULTS.md
+**Commit**: c515680
+**Result**: PASS
+
+### What I did
+Ran the full suite via `bash .claude/skills/eval/run.sh` (no `--probe` filter). The runner discovered all 8 probes; `rl-delegation-write-worker` reported `new-pass` and is now committed in `evals/RESULTS.md` as a PASS row. The pre-existing `next-dev-prod` REGRESSION stayed `unchanged` (host-state probe, red on base), so it did NOT trigger a green→red — runner aggregate exit code was `0`. lint + format:check clean. Committed the regenerated RESULTS.md (timestamps + the new row, diff scoped to that one file).
+
+### Learnings for future iterations
+- US-005 is the last story: add a one-line `## [Unreleased]` → `### Changed` (or `### Added`) entry to `CHANGELOG.md`, imperative mood, linking issue #57, noting the `/delegate` read-only sub-agent-type warning + guard probe. After committing it, all stories pass → append `STATUS: COMPLETE` to terminate the loop.
+- Confirmed the "no new regression" gate is the runner's exit code (`$? == 0`), not RESULTS.md contents — `next-dev-prod` will always show REGRESSION on this host but is `unchanged`, so the gate stays green.
+
+---

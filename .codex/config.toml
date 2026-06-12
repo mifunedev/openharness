@@ -7,7 +7,7 @@ model = "gpt-5.5"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "medium"
 
 [features]
 hooks = true

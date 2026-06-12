@@ -34,6 +34,43 @@ that catches anything time-sensitive without doing real work.
     `DRIFT: <summary>`. When `/drift-check` reports all classes clean,
     append nothing extra — the existing `HEARTBEAT_OK` reply stays
     unchanged; do NOT add a per-pulse "no drift" block on clean runs.
+2.8. **Autopilot health (nudge).** Check the hourly `/autopilot` loop for
+    stuck per-run sessions and a jammed queue, and nudge where the signal
+    is unambiguous. Three checks, only the first acts autonomously:
+
+    - **Stuck sessions (KILL — autonomous nudge).** For each `autopilot-*`
+      tmux session, read the pane tail for a terminal interactive prompt the
+      run can never clear on its own — a usage/session limit, a
+      `Resume from summary` menu, `/upgrade`, or a fatal error banner. A
+      detached cron run frozen there will never finish and, under
+      `overlap: false`, blocks every later `:05` fire:
+      ```bash
+      for s in $(tmux ls 2>/dev/null | grep -oE '^autopilot[^:]*'); do
+        if tmux capture-pane -p -t "$s" 2>/dev/null | tail -25 \
+             | grep -qiE 'hit your (usage|session) limit|session limit|/usage-credits|/upgrade|Resume from summary|Resume full session'; then
+          tmux kill-session -t "$s"; rm -f "/tmp/$s.keep"
+          echo "NUDGE: killed stuck autopilot session $s (frozen at a usage-limit/resume prompt)"
+        fi
+      done
+      # sweep orphaned keep-markers (session already gone)
+      for m in /tmp/autopilot-*.keep; do [ -e "$m" ] || continue; \
+        s=$(basename "$m" .keep); tmux has-session -t "$s" 2>/dev/null || rm -f "$m"; done
+      ```
+    - **Long-lived sessions (SURFACE — never kill on age).** An `autopilot-*`
+      session alive > 90 min with no stuck marker may be a persisted
+      ready-PR session the operator is driving, or a slow build. Surface
+      `WATCHING: autopilot session <s> alive <age> — verify it is not hung`
+      and leave it. Age alone never justifies a kill.
+    - **Ready / jammed-loop PR (SURFACE — never merge).** A green, mergeable,
+      non-draft open `autopilot` PR sitting unreviewed wants an operator
+      merge (the loop self-merges nothing):
+      ```bash
+      gh pr list --state open --label autopilot \
+        --json number,isDraft,mergeable,mergeStateStatus \
+        --jq '.[] | select(.isDraft==false and .mergeable=="MERGEABLE" and .mergeStateStatus=="CLEAN") | .number'
+      ```
+      Surface each as `NUDGE: autopilot PR #<n> is green + mergeable — merge
+      to free the queue`. Do NOT run `gh pr merge`.
 3. Decide whether anything needs action right now.
 4. If yes, act. If no, append a brief "nothing pressing" note to
    `memory/<today>/log.md` and exit.
@@ -49,12 +86,17 @@ that catches anything time-sensitive without doing real work.
 - Drift detected by `/drift-check` → include in reply as
   `DRIFT: <summary>` and note in `memory/<today>/log.md`. Clean run →
   no extra output.
+- Autopilot nudge (step 2.8) → killed stuck session or a surfaced
+  ready/long-lived signal → include in reply as `NUDGE: <action>` (and
+  `WATCHING: autopilot ...` for surfaced-only items) and note in
+  `memory/<today>/log.md`. No stuck session and no ready PR → no extra
+  output.
 - Append the result to `memory/<today>/log.md` either way.
 - **Mandatory closing step (do this even after long action chains):**
   append one liveness line to `crons/.cron.log`:
   `printf '[%s] heartbeat: %s\n' "$(date -Iseconds)" "<status>" >> crons/.cron.log`
   where `<status>` is one of `OK`, `OK (N watching)`, `OK (stale ralph: <name>)`,
-  `OK (resolved: <item-snippet>)`. This is the cron's only liveness
+  `OK (resolved: <item-snippet>)`, `OK (nudged autopilot: <session>)`. This is the cron's only liveness
   signal — it MUST execute every pulse regardless of what else happened.
 
 ## Active items

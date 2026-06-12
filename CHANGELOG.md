@@ -9,6 +9,9 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `/autopilot` skill and hourly `crons/autopilot.md` loop: issue-queue-first harness-infra selection, `/ship-spec --issue`, Ralph implementation, `/eval` gate, conservative PR caps, and no auto-merge behavior ([#412](https://github.com/mifunedev/openharness/issues/412)).
+- Heartbeat autopilot nudge logic surfaces green/mergeable autopilot PRs, long-lived sessions, and kills only sessions frozen at an unambiguous interactive/usage prompt ([#412](https://github.com/mifunedev/openharness/issues/412)).
+- Autopilot-specific eval probes guard the forced clean branch restore and the corrected eval-gate decision rule ([#412](https://github.com/mifunedev/openharness/issues/412)).
 - `/eval` skill and `evals/` probe corpus: deterministic shell probes with a 3-state oracle, an overwrite-row `evals/RESULTS.md` benchmark, and an aggregate non-zero exit only for new green→red regressions ([#410](https://github.com/mifunedev/openharness/issues/410)).
 - `scripts/ablate.sh` provides shared swap/restore/trap mechanics for evaluating whether a context file is load-bearing under a deterministic probe ([#410](https://github.com/mifunedev/openharness/issues/410)).
 - `/drift-check` detects framework drift, branch/append-file drift, and cron-staleness drift without mutating local state; the heartbeat now surfaces its findings when present ([#410](https://github.com/mifunedev/openharness/issues/410)).

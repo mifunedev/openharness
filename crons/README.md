@@ -63,6 +63,7 @@ status column is one of:
 
 | File | Schedule | Description |
 |------|----------|-------------|
+| `autopilot.md` | `5 * * * *` (hourly at +5 min) | Issue-queue-first self-improvement loop for harness-infra changes; disabled by editing `enabled: false` |
 | `heartbeat.md` | `0 * * * *` (hourly) | Hourly pulse — review memory, surface anything urgent |
 | `cleanup-tasks.md` | `0 23 * * 0` (Sun 23:00 PT by default) | Weekly Ralph session sweep — archive completed tasks |
 
@@ -77,7 +78,9 @@ read its scrollback, and reattach later.
 - **Keep-marker contract**: if the agent `touch`es `$CRON_KEEP_MARKER` before exiting, the session persists by resuming the run's own conversation as a live, attachable agent (`claude --continue` — idle until you `tmux attach -t <session>` and drive it), falling back to a shell if that exits; otherwise it auto-closes when the agent finishes.
 - **Overlap guard**: a per-id pidfile `/tmp/cron-<id>.pid` blocks a new fire while a previous one is still running when `overlap: false`; the skipped fire logs `SKIPPED_OVERLAP`.
 
-Jobs with `tmux` absent or `false` keep the default in-process spawn.
+Jobs with `tmux` absent or `false` keep the default in-process spawn. Steer
+autopilot's priorities by filing GitHub issues labeled `autopilot`; no in-repo
+backlog file is used.
 
 ## Hot-reload
 

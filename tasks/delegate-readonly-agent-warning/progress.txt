@@ -72,3 +72,21 @@ Ran the full suite via `bash .claude/skills/eval/run.sh` (no `--probe` filter). 
 - Confirmed the "no new regression" gate is the runner's exit code (`$? == 0`), not RESULTS.md contents — `next-dev-prod` will always show REGRESSION on this host but is `unchanged`, so the gate stays green.
 
 ---
+
+## US-005 — 2026-06-11 02:34 UTC
+
+**Title**: Changelog entry
+**Files changed**: CHANGELOG.md
+**Commit**: d5f1eb8
+**Result**: PASS
+
+### What I did
+Added a one-line entry under `## [Unreleased]` → `### Changed` (last bullet, just before `### Fixed`), imperative mood, linking issue #57. It notes the `/delegate` read-only sub-agent-type warning at both the Worker-configuration block and the §Reference Key Resources table, the `general-purpose`/`claude` recommendation for file-writing workers, and the new `rl-delegation-write-worker` `/eval` guard probe. Staged only `CHANGELOG.md`; `pnpm run lint` and `pnpm run format:check` both exit 0.
+
+### Learnings for future iterations
+- This was the final story. All five US now have `passes: true`, so the loop terminates (`STATUS: COMPLETE` appended below).
+- Changelog convention: the `### Changed` block is a contiguous run of bullets with no blank line before the next `### Fixed` heading — insert the new bullet immediately above `### Fixed` to keep it inside the section.
+
+---
+
+STATUS: COMPLETE

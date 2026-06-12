@@ -27,6 +27,13 @@ that catches anything time-sensitive without doing real work.
     `WATCHING: <item> (un-checkable)` and skip — do not invent ad-hoc
     checks. Do NOT edit `crons/heartbeat.md` yourself; sessions own
     that file.
+2.7. Run `/drift-check`. If it reports any findings (framework drift
+    `origin`↔`upstream`, branch-behind/append-file drift, or
+    cron-staleness drift), surface each finding in
+    `memory/<today>/log.md` and include it in the reply as
+    `DRIFT: <summary>`. When `/drift-check` reports all classes clean,
+    append nothing extra — the existing `HEARTBEAT_OK` reply stays
+    unchanged; do NOT add a per-pulse "no drift" block on clean runs.
 3. Decide whether anything needs action right now.
 4. If yes, act. If no, append a brief "nothing pressing" note to
    `memory/<today>/log.md` and exit.
@@ -39,6 +46,9 @@ that catches anything time-sensitive without doing real work.
 - Pending `## Active items` → include in reply as
   `WATCHING: <item> (added <date>, age <Nd>)`. Resolved-this-pulse →
   `RESOLVED: <item> — remove the line in next session`.
+- Drift detected by `/drift-check` → include in reply as
+  `DRIFT: <summary>` and note in `memory/<today>/log.md`. Clean run →
+  no extra output.
 - Append the result to `memory/<today>/log.md` either way.
 - **Mandatory closing step (do this even after long action chains):**
   append one liveness line to `crons/.cron.log`:

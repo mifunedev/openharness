@@ -120,6 +120,7 @@ Remove the sandbox.
 | `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |
+| `/eval` | Run the context fitness-function probe suite (`evals/probes/*.sh`) against real state, write the `evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 | `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
 | `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `context/rules/memory.md` |
@@ -127,6 +128,7 @@ Remove the sandbox.
 | `/wiki-ingest` | Capture a source (URL or file path) or promote a sub-agent draft into the wiki; supports `<url\|path> [--slug <override>]` and `--from-draft <slug>` forms |
 | `/wiki-query` | Search the wiki by topic and load top matches into context; splits multi-word topics into OR terms, caps reads at 3 entries by `updated:` descending |
 | `/wiki-lint` | Health-check the wiki corpus for staleness, deprecated entries, orphans, and broken links; regenerates `wiki/README.md` atomically (supports `--dry-run`) |
+| `/drift-check` | Detect framework (origin↔upstream), branch-behind, and cron-staleness drift; report remediation — never mutates state |
 
 Provision / destroy / repair are plain `docker compose` commands — see
 the `Lifecycle` section above. There is no dedicated skill.

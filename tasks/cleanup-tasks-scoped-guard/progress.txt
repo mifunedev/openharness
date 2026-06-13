@@ -21,6 +21,15 @@
   `BLOCKED-TASKS-WIP` (dirty-`tasks/` abort, step 2). The abort path must NOT
   fall through to step 7's `OK` line.
 - `$RALPH_HARNESS=claude` this run → `Submitted-by: Claude`.
+- **Worktree isolation in `crons/cleanup-tasks.md`**: archive work runs in
+  `.worktrees/archive/$TODAY` (branch `archive/$TODAY` off `origin/$BASE`), driven
+  by `git -C .worktrees/archive/$TODAY <cmd>` — never `cd`. Lifecycle is
+  prune-stale-first → `git worktree add` → `trap ... EXIT` (error/abort) +
+  explicit step-7 teardown (normal/N=0). The `archive/` subfolder is documented
+  in `.worktrees/README.md`'s branch-worktree table.
+- **Step numbers are load-bearing**: prose cross-references steps by number
+  (e.g. step 2 → "step 7's `OK` line"). Add sub-bullets, not new numbered steps,
+  to avoid invalidating those references.
 
 ## US-001 — 2026-06-13 04:18 UTC
 
@@ -48,5 +57,43 @@ task under `tasks/` blocks; foreign WIP elsewhere does not.
 - US-002 still operates against the SHARED checkout's `tasks/` for the dirt
   check (this story), while the actual archive moves (US-002) will run in a
   worktree off `origin/$BASE`. Don't conflate the two surfaces.
+
+---
+
+## US-002 — 2026-06-13 04:22 UTC
+
+**Title**: Isolate the archive branch + commit work in a crash-safe worktree
+**Files changed**: crons/cleanup-tasks.md, .worktrees/README.md
+**Commit**: 21d5b47
+**Result**: PASS
+
+### What I did
+
+Replaced the shared-checkout `git switch -c "archive/$TODAY"` (step 3) with a
+dedicated worktree flow: prune-stale-first (`git worktree remove --force` +
+`git branch -D` + `git worktree prune`) for same-day re-run idempotency, then
+`git worktree add .worktrees/archive/$TODAY -b archive/$TODAY origin/$BASE`, with
+a `trap '... git worktree remove --force ...' EXIT` armed for crash-safe
+teardown. Steps 4–5 now run every `git mv`/`add`/`commit`/`push` via
+`git -C .worktrees/archive/$TODAY`, scanning the worktree's committed
+`origin/$BASE` checkout; the `git mv` → `mv` + `git add` fallback and the
+`gh pr view` PR-idempotency fallback are preserved. Step 7 gained an always-run
+worktree teardown (covers N=0 and partial runs) alongside the unchanged `OK`
+liveness line. Added an `archive/` row to `.worktrees/README.md`.
+
+### Learnings for future iterations
+
+- **Don't renumber steps.** US-001's step-2 prose references "step 7's `OK`
+  line"; I folded the worktree teardown INTO step 7 (rather than adding a new
+  step 8) so that cross-reference stays valid. If US-003/US-004 need a new step,
+  prefer sub-bullets over renumbering.
+- **Two teardown paths by design**: the step-3 `trap ... EXIT` handles
+  error/abort exits (shell-script execution); the explicit step-7 teardown
+  handles normal completion + N=0 + step-by-step runners where a trap's process
+  scope doesn't span discrete bash blocks. Both call the idempotent
+  `git worktree remove --force ... || true`.
+- **US-003 probe targets are all present now**: `git worktree add` (×1),
+  `git worktree remove` (×3: prune-first, trap, step-7), zero `git switch -c`,
+  and the scoped `git status --porcelain -- tasks/` with no bare survivor.
 
 ---

@@ -27,6 +27,56 @@
   `constructSkips` (throws at `mkCron`); `scheduled++` fires on every successful
   `mkCron` regardless of handle truthiness, so a `() => void` test spy still
   counts as scheduled.
+- **`CRONS_DIR` is a module-load const — redirect it via `vi.hoisted` to test
+  default-dir functions.** `CRONS_DIR = path.resolve(process.env.CRONS_DIR ||
+  "crons")` is frozen at import. To make `sighupHandler()` (which calls
+  `scheduleAll()` with NO dir arg) read a tmp dir instead of the repo's real
+  `crons/`, set `process.env.CRONS_DIR` inside a `vi.hoisted(() => {...})` block —
+  it runs before the static `import "../cron-runtime"`, so the const captures the
+  tmp path. Per-pid path avoids parallel-worker collisions. This is the only way
+  to retarget the default dir without changing the (frozen-by-AC) `sighupHandler`
+  signature.
+- **The real `constructCron` arms un-unref'd croner timers — neutralize them in
+  tests.** croner's `unref` option defaults to false, so a real `new Cron(sched,
+  opts, fn)` keeps the event loop alive. Two defenses used in the SIGHUP tests:
+  (a) inject a fake `mkCron` (`() => ({ stop: spy }) as unknown as Cron`) when you
+  only need to seed `activeJobs`; (b) when the handler MUST run real
+  `constructCron` (it has no `mkCron` seam), use a far-future schedule
+  (`0 0 1 1 *`) so nothing fires, and in `afterEach` empty the dir + call
+  `sighupHandler()` once more so the handler `.stop()`s the last (otherwise
+  unreachable, module-private) generation. Never use `* * * * *` in a real-Cron
+  test — it can actually `fire()` and spawn the agent.
+
+## US-004 — 2026-06-13 12:45 UTC
+
+**Title**: Test coverage for the SIGHUP reload path
+**Files changed**: scripts/__tests__/cron-runtime.test.ts
+**Commit**: 4dd3b18
+**Result**: PASS
+
+### What I did
+Added a `describe("SIGHUP reload")` block (6 tests) that drives the exported
+`sighupHandler()` directly. A `vi.hoisted` block repoints the runtime's
+module-load-captured `CRONS_DIR` at an isolated per-pid `/tmp` path BEFORE
+`../cron-runtime` is imported, so the handler's internal `scheduleAll()` re-reads
+that tmp dir instead of the repo's real `crons/` (AC #7). Tests cover: `.stop()`
+on every prior handle, added-file-picked-up / removed-file-dropped via the RELOAD
+count, malformed-file isolation during reload, the RELOAD liveness line (id
+`system`), empty-registry no-throw, and the re-entrancy lock (a `.stop` that
+re-enters mid-reload is a no-op). Suite: 192 tests (was 186), all green; lint and
+typecheck clean.
+
+### Learnings for future iterations
+- **US-005 is the only remaining story** — docs/CHANGELOG only
+  (`crons/README.md` + `CHANGELOG.md`). No code/test changes; US-001..US-004 are
+  complete and green. After US-005, all five stories pass → append the completion
+  marker.
+- **The two new Codebase Patterns at the top** (CRONS_DIR `vi.hoisted` redirect;
+  un-unref'd croner timer neutralization) are the load-bearing test techniques —
+  read them before touching these tests.
+- **Test count is now 40 in cron-runtime.test.ts / 192 total.** US-005 should not
+  change either number (it touches no test files); if a US-005 edit moves them,
+  something leaked outside the docs scope.
 
 ## US-003 — 2026-06-13 12:35 UTC
 

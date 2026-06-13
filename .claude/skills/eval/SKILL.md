@@ -48,8 +48,13 @@ code by design — this is not a bug.
    row) emits `new-pass`/`new-fail` and raises NO regression without prior state.
 4. **Surface regressions** — any `PASS → (REGRESSION|TIMEOUT|ERROR)` transition is
    printed first, naming the probe's `source`.
-5. **Rewrite `RESULTS.md`** — overwrite the row for each probe run; carry prior
-   rows for probes not run this invocation (so the scoreboard stays complete).
+5. **Rewrite `RESULTS.md` atomically** — build the full scoreboard into a temp
+   sibling file (`RESULTS.md.tmp.$$`) and replace the live file in one `mv -f`
+   (never truncate-then-append in place), so a crash or concurrent run can't leave
+   a partial scoreboard. Overwrite the row for each probe run; carry prior rows for
+   probes not run this invocation from a **pre-write snapshot (`RESULTS_ORIG`)**
+   captured before the rewrite — not the live file — so a filtered run never erases
+   untouched rows and the scoreboard stays complete.
 
 ## Ablation (added by US-006)
 

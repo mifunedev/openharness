@@ -90,7 +90,13 @@ surface** first:
 ## Runner
 
 `/eval` (`.claude/skills/eval/`) discovers `evals/probes/*.sh`, runs each, and
-writes `RESULTS.md`. A weekly cron (`crons/eval-weekly.md`) runs it unattended.
+writes `RESULTS.md`. The scoreboard is **built into a temp sibling file
+(`RESULTS.md.tmp.$$`) and swapped in with a single atomic `mv -f`** — never
+truncated-then-appended in place — so a crash or concurrent run can never leave a
+partially-written scoreboard. Carry-forward rows for probes not run this
+invocation are read from a pre-write snapshot of the original file taken before
+the rewrite, never from the live file being replaced, so a filtered run cannot
+erase untouched rows. A weekly cron (`crons/eval-weekly.md`) runs it unattended.
 
 ### Runner aggregate exit code
 

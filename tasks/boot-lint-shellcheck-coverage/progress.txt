@@ -1,0 +1,77 @@
+# progress
+
+## Codebase Patterns
+
+- **shellcheck baseline**: `shellcheck -S warning` is the gate (shellcheck 0.9.0 on `ubuntu-latest`). Of the 7 boot scripts, only `scripts/install.sh:225` (SC2088) was non-clean; the other six pass cleanly.
+- **SC2088 fix style**: scoped `# shellcheck disable=SC2088  # <rationale>` comment placed on the line immediately above the offending statement, matching that line's indentation. The tilde in `~/.openharness` is intentional user-facing display text — do NOT substitute `$HOME`.
+- **Root tests**: `pnpm test:scripts` runs the vitest suite (186 tests across scripts/, packages/oh, .pi/extensions). Fast (~3.6s). Run before every commit.
+- **Commit trailer**: `Submitted-by: <RALPH_HARNESS>` is mandatory; env var `RALPH_HARNESS=claude` → `Submitted-by: Claude`.
+- **Probe convention** (`evals/probes/*.sh`): all tier `A`. Header is 3 comment lines after the shebang — `# tier:`, `# source:`, `# desc:` — then `set -euo pipefail`. Resolve repo root with `ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"`. Exit codes are a 3-state oracle: `0`=PASS, `1`=REGRESSION, `2`=SKIPPED (guarded resource absent). All human output (PASS/REGRESSION/SKIPPED) goes to **stderr** (`>&2`). Guard greps against `set -e` with `|| true`. The `/eval` runner auto-discovers any `evals/probes/*.sh` and writes its row to `evals/RESULTS.md` — no registration step.
+
+## US-001 — 2026-06-13 13:26 UTC
+
+**Title**: Fix the SC2088 warning in scripts/install.sh
+**Files changed**: scripts/install.sh
+**Commit**: 3f8c485
+**Result**: PASS
+
+### What I did
+Added a scoped `# shellcheck disable=SC2088` comment with a one-line rationale immediately above the `die()` line at `scripts/install.sh:225`, preserving the user-facing literal `~/.openharness` in the message. No installer logic or message-string changes. Verified `shellcheck -S warning scripts/install.sh` exits 0 and `pnpm test:scripts` passes (186/186).
+
+### Learnings for future iterations
+- The disable comment sits at 4-space indentation (matching the `die()` call inside the nested `if`). shellcheck respects a `disable` directive on the line directly preceding the flagged statement.
+- US-002 next: extend the `ci-harness.yml` shellcheck glob to four segments AND add `workspace/**` to both path-filter arrays. The full-set `shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh workspace/*.sh` should now exit 0 (US-001 cleared the only blocker).
+
+---
+
+## US-002 — 2026-06-13 07:28 UTC
+
+**Title**: Extend the CI boot-lint shellcheck glob and its trigger paths
+**Files changed**: .github/workflows/ci-harness.yml
+**Commit**: d6ef212
+**Result**: PASS
+
+### What I did
+Extended the `shellcheck -S warning` invocation in the `boot-lint` job to all four glob segments (`.devcontainer/*.sh install/*.sh scripts/*.sh workspace/*.sh`), and added `workspace/**` to BOTH `on.push.paths` and `on.pull_request.paths`. Left the hadolint step and every `ci` job step untouched. Verified `shellcheck -S warning` over all 7 boot scripts exits 0 (US-001 cleared the only blocker) and `pnpm test:scripts` passes 186/186.
+
+### Learnings for future iterations
+- The 7 boot scripts the glob now covers: `.devcontainer/entrypoint.sh`, `install/banner.sh`, `scripts/{ablate,harness-config,install,ralph}.sh`, `workspace/startup.sh`.
+- No offline YAML parser is available (no python `yaml`/`pyyaml`, no `yaml`/`js-yaml` in node_modules, no `ruby`, pip/network blocked). Validate workflow edits structurally by Reading the edited region for indentation consistency rather than parsing.
+- The shellcheck `run:` line is indented inside a `run: |` block — US-003's probe must use an UNANCHORED grep (a `^` anchor matches nothing). The line to match now reads: `          shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh workspace/*.sh`.
+
+---
+
+## US-003 — 2026-06-13 07:31 UTC
+
+**Title**: Add the boot-lint-glob coverage probe
+**Files changed**: evals/probes/boot-lint-glob.sh (new, +x)
+**Commit**: 8c684ce
+**Result**: PASS
+
+### What I did
+Added `evals/probes/boot-lint-glob.sh` — a tier-A 3-state oracle that locates the `shellcheck -S warning` line in `.github/workflows/ci-harness.yml` via an unanchored grep and asserts the glob covers all four boot-script dirs (`.devcontainer/`, `install/`, `scripts/`, `workspace/`). Verified every exit path: 0=PASS against the repo, 1=REGRESSION when any segment is dropped, 1=REGRESSION on zero-match (lint line removed but file present), 2=SKIPPED when the workflow file is renamed/absent. Restored the workflow byte-for-byte after each fault-injection. shellcheck-clean and `pnpm test:scripts` 186/186.
+
+### Learnings for future iterations
+- The zero-match guard matters: with `grep ... | head -1 || true`, an empty `line` would skip the dir loop and fall through to PASS — the explicit `[[ -z "$line" ]]` check is what prevents a false PASS when the lint line is deleted entirely.
+- Matched the four dirs with a `case "$line" in *"$dir"*)` substring test rather than per-dir `grep`, so a single captured line is checked in-process (no re-reading the file four times).
+- US-004 next: run the `/eval` suite (which auto-discovers this probe) so `evals/RESULTS.md` gains a `boot-lint-glob` PASS row — do NOT hand-edit the row; leave the pre-existing `next-dev-prod` REGRESSION row untouched. Then add the `## [Unreleased]` → `### Fixed` CHANGELOG entry referencing #90.
+
+---
+
+## US-004 — 2026-06-13 13:33 UTC
+
+**Title**: Refresh evals/RESULTS.md and CHANGELOG.md
+**Files changed**: evals/RESULTS.md, CHANGELOG.md
+**Commit**: 79316f4
+**Result**: PASS
+
+### What I did
+Ran the full `/eval` suite (`bash .claude/skills/eval/run.sh`), which auto-discovered `boot-lint-glob` and wrote a real `PASS` row to `evals/RESULTS.md` (`new-pass`, runner exit 0). The pre-existing `next-dev-prod` REGRESSION row stayed `REGRESSION` (unchanged delta) and no rows were removed. Added a one-line `## [Unreleased]` → `### Fixed` CHANGELOG entry referencing #90 that summarizes the whole task (glob extension, `workspace/**` path triggers, the SC2088 lint-disable, and the coverage probe). Verified probe PASS, full-set `shellcheck -S warning` exit 0, and `pnpm test:scripts` 186/186.
+
+### Learnings for future iterations
+- The `/eval` runner re-runs **every** probe and refreshes all `last-run` timestamps, but its aggregate exit only flags NEW green→red transitions — a probe already red on the prior row (`next-dev-prod`) re-runs to `REGRESSION` with an `unchanged` delta, so the runner still exits 0. A pre-existing red row therefore does not block a clean eval gate.
+- This was the terminal story (US-001→US-004 all `passes: true`); the task is complete.
+
+---
+
+STATUS: COMPLETE

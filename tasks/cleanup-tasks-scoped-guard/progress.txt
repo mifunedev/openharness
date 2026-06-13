@@ -60,6 +60,43 @@ task under `tasks/` blocks; foreign WIP elsewhere does not.
 
 ---
 
+## US-003 — 2026-06-13 10:25 UTC
+
+**Title**: Add an eval probe guarding the scoped pre-flight + worktree isolation
+**Files changed**: evals/probes/cleanup-tasks-scoped-guard.sh
+**Commit**: f4daced
+**Result**: PASS
+
+### What I did
+
+Added `evals/probes/cleanup-tasks-scoped-guard.sh` (executable, mode 100755),
+modeled on `owned-surface-guard.sh`: a 3-state static-grep oracle (PASS=0 /
+REGRESSION=1 / SKIPPED=2 when the cron is absent) over `crons/cleanup-tasks.md`.
+It asserts (a) the scoped `git status --porcelain -- tasks/` is present, (b) no
+bare unscoped `git status --porcelain` survives (list-then-`grep -v -- '-- tasks/'`
+subtraction), (c) the `BLOCKED-TASKS-WIP` token is present, (d) both
+`git worktree add` and `git worktree remove` are present, and (e) the old
+shared-checkout `git switch -c "archive/` is absent (asymmetric oracle). Includes
+the required `# tier:`/`# source: issue #85`/`# desc:` headers, `set -euo pipefail`,
+and a `# NOTE:` recording the static-grep-not-runtime limitation. Verified PASS
+(exit 0) against the current cron and exit 1 on each mutated regression case +
+exit 2 on the absent-cron path.
+
+### Learnings for future iterations
+
+- The probe is hardcoded to `$ROOT/crons/cleanup-tasks.md` (ROOT derived from
+  `BASH_SOURCE` two dirs up). To negative-test it, copy the script into a temp
+  `evals/probes/` mirror with a sibling `crons/` and mutate the copied cron —
+  don't try to repoint ROOT.
+- `grep -Fq 'git status --porcelain -- tasks/'` is safe: the pattern begins with
+  `git`, so grep never mis-parses the `--porcelain`/`--` as options; `-F` keeps
+  them literal. Same for `grep -Fq 'git switch -c "archive/'` (literal `"`).
+- All 12 existing probes are `tier: A`; this one follows suit. Pre-commit runs
+  `pnpm run lint` (no-op) + `pnpm run test` (186 tests) — green; adding a probe
+  file does not touch the vitest suite.
+
+---
+
 ## US-002 — 2026-06-13 04:22 UTC
 
 **Title**: Isolate the archive branch + commit work in a crash-safe worktree

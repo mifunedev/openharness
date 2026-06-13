@@ -33,8 +33,8 @@
                 "Typecheck passes"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 2 on 2026-06-13; commit e611d5f — Output Contract + Step C-2 lead-in now describe the inert set as 'schedulable cron files' (predicate-based, not name-based); aggregate count clarified; example uses crons/heartbeat.md; (C) OK clean token unchanged."
         },
         {
             "id": "US-003",

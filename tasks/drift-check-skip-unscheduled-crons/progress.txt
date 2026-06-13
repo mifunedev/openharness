@@ -44,3 +44,32 @@ quoted). Non-qualifying files are skipped silently. Added a `### Fixed` CHANGELO
   left for US-002 — the code carries a self-documenting comment in the meantime.
 
 ---
+
+## US-002 — 2026-06-13 18:20 UTC
+
+**Title**: Update drift-check Output Contract wording to 'schedulable cron files'
+**Files changed**: .claude/skills/drift-check/SKILL.md
+**Commit**: e611d5f
+**Result**: PASS
+
+### What I did
+Updated the Step C-2 lead-in prose and the Output Contract section so both describe the
+inert-file set as "schedulable cron files" (files passing the predicate), predicate-based not
+name-based. Added a Class-(C) Output-Contract bullet stating non-scheduled docs like
+`crons/README.md` are never evaluated/emitted/counted, and a bullet clarifying the aggregate
+`cron-staleness drift (N inert file)` term counts only schedulable cron files. The existing
+inline example already used `crons/heartbeat.md`. Left the `**Step C-2 — compare cron file
+mtimes:**` heading and the fenced ```bash block byte-identical so US-003's extract-and-run probe
+anchor stays valid. Pure docs/wording — no CHANGELOG entry (US-001's `### Fixed` already covers
+the behavior change; US-003 adds `### Added`).
+
+### Learnings for future iterations
+- The README.md mentions I added are explanatory *negations* ("never evaluated / never counted"),
+  which satisfy AC-3 ("no text implies README is evaluated") — the AC bans text that *includes*
+  README in the evaluated set, not text that explicitly excludes it.
+- Verified post-edit that the extraction awk still captures the bash block and it iterates
+  `crons/*.md` (grep -c = 2). Any future wording edit between the heading and the bash fence is
+  safe; editing the heading text or the fence is NOT — it would break US-003's probe anchor.
+- `pnpm run typecheck`: exit 0 (no TS touched).
+
+---

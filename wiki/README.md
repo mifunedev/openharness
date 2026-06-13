@@ -6,7 +6,7 @@ This directory holds structured entity pages compiled and maintained by the orch
 
 | Subdirectory | Purpose |
 | --- | --- |
-| `raw/` | Immutable `WebFetch` snapshots of source URLs and fetched documents. Contents are gitignored; `raw/README.md` is tracked as the directory anchor. Each snapshot file is named `<yyyy-mm-dd>-<slug>.md` and cited in wiki entry `sources:` frontmatter. |
+| `raw/` | Immutable `WebFetch` snapshots of source URLs and fetched documents. Contents are gitignored by default; `raw/README.md` is tracked as the directory anchor, and cited snapshots may be force-added when a tracked wiki entry needs in-repo provenance. Each snapshot file is named `<yyyy-mm-dd>-<slug>.md` and cited in wiki entry `sources:` frontmatter. |
 
 ## Conventions
 
@@ -25,6 +25,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| pi-tasks | Pi Tasks | [pi, tasks, coordination, subagents, agent-harness] | 2026-06-13 |
 | repo2rlenv | Repo2RLEnv | [reinforcement-learning, evaluation, agent-harness, harbor, datasets, openharness] | 2026-06-13 |
 | overnight-drift | The Overnight Drift (NY Fed Staff Report 917) | [finance, market-microstructure, equity-returns, overnight-returns, inventory-risk, trading, liquidity] | 2026-06-10 |
 | turbovec-turboquant-rag | turbovec and TurboQuant for compressed RAG retrieval | [vector-search, rag, quantization, ai-infra, local-retrieval] | 2026-06-07 |

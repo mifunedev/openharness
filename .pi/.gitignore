@@ -1,3 +1,5 @@
 sessions/
 git/
 npm/
+tasks/
+tasks-config.json

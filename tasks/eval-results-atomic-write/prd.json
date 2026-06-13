@@ -1,0 +1,57 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/83-eval-results-atomic-write",
+    "description": "Fix the /eval runner (.claude/skills/eval/run.sh) to build evals/RESULTS.md into a temp file and replace it with a single atomic mv -f, reading carry-forward rows from a pre-write snapshot — eliminating partial-write corruption and filtered-run carry-forward erasure.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Atomic temp-file write + carry-forward fix in run.sh",
+            "description": "As the autopilot eval gate, I want RESULTS.md rewritten atomically from a temp file with carry-forward rows read from a pre-write snapshot, so a crash or concurrent run never leaves a partial scoreboard and a filtered run never erases untouched rows.",
+            "acceptanceCriteria": [
+                "Before the write block, run.sh captures the original RESULTS.md content once with a set -e-safe idiom that cannot abort on a missing file: RESULTS_ORIG=\"\"; [ -f \"$RESULTS\" ] && RESULTS_ORIG=\"$(cat \"$RESULTS\")\" (or equivalent).",
+                "prior_row()/prior_status() resolve carry-forward from the RESULTS_ORIG snapshot (e.g. grep ... <<<\"$RESULTS_ORIG\"), NOT from the live $RESULTS; every grep over the snapshot keeps a trailing || true so a no-match cannot abort under set -euo pipefail; prior_row()'s body contains no live grep/[ -f ] read of $RESULTS after capture.",
+                "tmp is initialized empty (tmp=\"\") BEFORE the --ablate guard and the EXIT trap is the guarded form trap '[ -n \"$tmp\" ] && rm -f \"$tmp\"' EXIT so it is harmless on the ablation exec path (run.sh:49); the real temp path tmp=\"$RESULTS.tmp.$$\" is a SIBLING of $RESULTS in evals/ (never a /tmp/ path) and is assigned at the start of the write block.",
+                "The header heredoc and every per-probe row append write to $tmp not $RESULTS; the file is replaced in one step with mv -f \"$tmp\" \"$RESULTS\" after all rows and the trailing benchmark comment; no bare cat > \"$RESULTS\" truncation remains anywhere in the script.",
+                "Structural equivalence: a full run (no filter) produces a RESULTS.md identical to a pre-change full run except for the per-run last-run (UTC) timestamp column — same header, same row set and order (probe glob order), same trailing benchmark comment, same regressions-to-stdout summary, same exit code (0 normally, 1 on green->red regression per PR #32). Verify by diffing with the timestamp column masked.",
+                "The if [ \"${#regressions[@]}\" -gt 0 ]; then exit 1; fi block stays within the LAST 12 LINES of run.sh (eval-runner-exit.sh asserts this via tail -n 12); if the refactor would push it out, eval-runner-exit.sh is updated in this same story so it does not falsely REGRESSION.",
+                "A filtered run (bash .claude/skills/eval/run.sh --probe <id>) leaves every other probe's row intact (carried from RESULTS_ORIG), not reset to (not run).",
+                "bash -n .claude/skills/eval/run.sh passes and the existing scripts/__tests__ vitest suite stays green (run: pnpm test:scripts)."
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "iter 1 (2026-06-13): run.sh now builds RESULTS.md into $RESULTS.tmp.$$ and replaces via atomic mv -f; prior_row reads RESULTS_ORIG snapshot; guarded EXIT trap + tmp='' before --ablate guard; verified structural equivalence (masked diff identical), filtered-run carry-forward (0 '(not run)' vs OLD's 4), --ablate path intact, exit-1 guard in last 12 lines, eval-runner-exit PASS, pnpm test:scripts 186 green. commit 4fed39e."
+        },
+        {
+            "id": "US-002",
+            "title": "Tier-A probe locking in the atomic-write invariant",
+            "description": "As the harness fitness suite, I want a probe that fails if the non-atomic write pattern is reintroduced, so the US-001 fix cannot silently regress.",
+            "acceptanceCriteria": [
+                "New executable file evals/probes/eval-results-atomic.sh with headers # tier: A, # source: issue #83 (eval-results-atomic-write), and a # desc: noting it is a STATIC-pattern probe coupled to run.sh implementation tokens (a deliberate refactor must update it) — matching evals/probes/eval-runner-exit.sh header style.",
+                "The probe statically asserts against .claude/skills/eval/run.sh: (a) no bare cat > \"$RESULTS\" truncation present, (b) mv -f ... \"$RESULTS\" present for the final replacement, (c) a trap ... EXIT referencing the temp file present, (d) the prior_row() function body contains no live grep ... \"$RESULTS\" read.",
+                "Probe exit-code oracle honored: exit 0 = PASS (all four invariants hold), exit 1 = REGRESSION (failing invariant named on stderr), exit 2 = SKIPPED (run.sh absent).",
+                "Behavioral check: the probe exits 0 against the US-001-refactored run.sh and exits 1 when the cat > \"$RESULTS\" truncation token is re-introduced (demonstrable against a doctored copy).",
+                "On the first run that includes it, the new probe's own row appears as PASS (not (not run)) and all other probe rows are preserved.",
+                "bash -n evals/probes/eval-results-atomic.sh passes and the scripts/__tests__ vitest suite stays green."
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "iter 2 (2026-06-13): added evals/probes/eval-results-atomic.sh (tier A, source issue #83); statically asserts no `cat > \"$RESULTS\"`, mv -f present, EXIT trap referencing $tmp, prior_row() free of live $RESULTS grep. All 4 invariants fire independently (exit 1, named on stderr); exit 0 vs refactored run.sh, exit 1 vs doctored cat-truncation copy, exit 2 when run.sh absent; first --tier A run scored its row PASS with all 13 prior rows preserved (0 '(not run)'); bash -n OK, pnpm test:scripts 186 green. commit 07a5480."
+        },
+        {
+            "id": "US-003",
+            "title": "Doc + CHANGELOG updates for the atomic-write semantics",
+            "description": "As a maintainer reading the eval docs, I want the write-semantics prose to describe the atomic temp-rename pattern, so the docs match the code.",
+            "acceptanceCriteria": [
+                "evals/README.md and .claude/skills/eval/SKILL.md describe the RESULTS.md write as build-into-a-temp-file-then-replace-atomically-with-mv-f; no surviving prose says truncate-then-append (or equivalent) for that write.",
+                "The SKILL.md carry-forward description (the step covering carrying prior rows for probes not run this invocation) states carry-forward reads the pre-write snapshot (RESULTS_ORIG), not the live file.",
+                "No behavioral spec wording changes: the exit-code oracle, the pass-rate formula, and the overwrite-row-per-probe policy keep their current intent (manual review item).",
+                "CHANGELOG.md gains exactly one entry under ### Fixed in the ## [Unreleased] section, imperative mood, linking issue #83; no other CHANGELOG sections are modified.",
+                "After all edits, regenerate the scoreboard once (bash .claude/skills/eval/run.sh) so the new eval-results-atomic row is scored, and stage the updated evals/RESULTS.md; the runner exits 0 (a pre-existing next-dev-prod red with unchanged delta is acceptable per the documented eval-gate rule)."
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "iter 3 (2026-06-13): evals/README.md Runner + SKILL.md step 5 now describe the build-into-temp-then-mv-f atomic write and carry-forward from the pre-write RESULTS_ORIG snapshot (no truncate-then-append prose survives); one ### Fixed CHANGELOG entry under [Unreleased] links #83; regenerated evals/RESULTS.md (runner exit 0) so the new eval-results-atomic row scores PASS with all 12 prior rows preserved (next-dev-prod pre-existing REGRESSION, unchanged delta — acceptable per eval-gate rule)."
+        }
+    ]
+}

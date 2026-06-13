@@ -323,6 +323,11 @@ function constructCron(entry: CronEntry): Cron {
 // registered, so a test injecting a `() => void` mkCron registers nothing.
 let activeJobs: Cron[] = [];
 
+// Re-entrancy guard for sighupHandler: true while a reload is in progress so a
+// second SIGHUP arriving mid-reload is a safe no-op rather than re-stopping and
+// re-arming a half-built generation. Cleared in sighupHandler's finally block.
+let reloading = false;
+
 // Test-only seam: clear the module-level activeJobs registry between cases so
 // state from one test cannot leak into the next. Carries no external-stability
 // guarantee (mirrors loadCrons/onJobError's injection-only seams).
@@ -375,6 +380,38 @@ export function scheduleAll(
   return { scheduled, skipped };
 }
 
+// SIGHUP reschedule entry point. Stops the prior generation of armed Cron
+// handles, then re-reads crons/ and re-arms via scheduleAll() — so schedule
+// edits and added/removed crons/*.md files take effect without restarting the
+// system-cron session. Exported (not buried in main()) so tests can invoke it
+// directly without going through process signals or acquireLock side effects.
+//
+// .stop() halts a handle's FUTURE fires but cannot kill a callback already in
+// flight; a non-tmux fire mid-reload may briefly overlap the new generation.
+// That window is best-effort only — croner's overlap guard (protect:!overlap)
+// remains the sole protection against concurrent fires. See Non-Goals in the PRD.
+//
+// Does NOT call process.exit() and does NOT remove the PID file: a reload keeps
+// the same process alive (unlike SIGTERM/SIGINT cleanup). The reentrancy lock
+// makes a rapid double-SIGHUP safe — the second call is a no-op while the first
+// reload is still in progress.
+export function sighupHandler(): void {
+  if (reloading) return;
+  reloading = true;
+  try {
+    for (const job of activeJobs) {
+      try {
+        job.stop();
+      } catch {
+        /* best-effort: a handle that fails to stop must not abort the reload */
+      }
+    }
+    scheduleAll();
+  } finally {
+    reloading = false;
+  }
+}
+
 function main(): void {
   if (!acquireLock()) {
     process.stderr.write("cron-runtime: another instance is running\n");
@@ -390,6 +427,10 @@ function main(): void {
   };
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
+  // Defer the reschedule out of the signal-callback context via setImmediate so
+  // its synchronous file I/O (loadCrons readdir/readFile) runs on the next tick
+  // rather than inside the OS signal handler. SIGHUP reloads; it never exits.
+  process.on("SIGHUP", () => setImmediate(sighupHandler));
   scheduleAll();
 }
 

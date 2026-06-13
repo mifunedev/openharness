@@ -1,0 +1,59 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/73-cron-failure-reason",
+    "description": "Capture cron job failure reason by appending a bounded tail of the job's log to the EXIT_<code> liveness line in crons/.cron.log.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Export a best-effort readFailureTail helper",
+            "description": "As a harness operator, I want a small, well-tested helper that returns a bounded tail of a log file (and an empty string when the file is missing, empty, or unreadable) so the exit handler can enrich its message without ever throwing.",
+            "acceptanceCriteria": [
+                "scripts/cron-runtime.ts exports readFailureTail(logFile: string, maxChars = 200): string — return type is string, never undefined, so log()'s msg.replace() can never throw on its result",
+                "The maxChars default is 200, matching the existing log() slice cap; the parameter exists for direct test injection, mirroring the existing exported-for-testing onJobError(logFn = log) convention",
+                "Returns the last maxChars characters of the file's content for a populated file",
+                "Returns \"\" for a nonexistent path, an empty file, or any fs error — never throws on any input",
+                "Uses the already-imported node:fs — no new imports",
+                "New unit tests in scripts/__tests__/cron-runtime.test.ts (a dedicated describe block) reuse the existing beforeEach temp-dir fixture (path.join(tmp, ...)) and cover: (a) a populated file returns a non-empty tail containing the file's trailing text; (b) a nonexistent path returns \"\" without throwing; (c) an empty file returns \"\"; (d) a file longer than maxChars returns exactly the last maxChars characters",
+                "Tests pass",
+                "Typecheck passes"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-12; commit e81d016"
+        },
+        {
+            "id": "US-002",
+            "title": "Enrich fire()'s exit handler with the failure tail",
+            "description": "As a harness operator, I want a non-zero cron child exit to append the failure tail to the EXIT_<code> liveness line so I can diagnose a failure from crons/.cron.log alone.",
+            "acceptanceCriteria": [
+                "In fire(), child.on(\"exit\") calls readFailureTail(logFile) only when code !== 0 and passes the result as the third (msg) argument to log(), i.e. log(entry.id, `EXIT_${code}`, readFailureTail(logFile))",
+                "The code === 0 branch still calls log(entry.id, \"OK\") with no third argument — behavior byte-identical to today",
+                "The signal-kill case (code === null) is preserved: null !== 0 is true, so the status string remains EXIT_null exactly as today and the tail is appended to it (no new special-casing of null)",
+                "No change to the log() helper itself; the enriched line stays bounded by the existing whitespace-collapse + 200-char slice",
+                "fireTmux is left functionally unchanged; a one-line comment is added immediately above its terminal log(entry.id, \"SPAWNED\", session) call noting the detached tmux path cannot observe the agent's exit and therefore cannot capture a reason",
+                "No other lines in fire() change",
+                "Tests pass (existing suite stays green)",
+                "Typecheck passes"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Completed iteration 2 on 2026-06-12; commit 9860178"
+        },
+        {
+            "id": "US-003",
+            "title": "Document the enriched EXIT_n liveness format",
+            "description": "As a harness operator reading crons/README.md, I want the status-tokens table to describe the enriched EXIT_n line so the new format is discoverable.",
+            "acceptanceCriteria": [
+                "The EXIT_n row in the crons/README.md status-tokens table notes that, when the job's log file is populated, a bounded tail of the job's output is appended to the message (the 4th msg column, already used by ERR_JOB/ERR/BODY_RELOADED) — additive to an existing optional field, not a new line shape",
+                "A concrete format example is shown in a fenced code block below the table (not as inline literal tabs in a cell), to keep the table lint-clean",
+                "Only the EXIT_n row plus the new fenced example are changed — no other rows or sections are modified",
+                "Markdown remains lint-clean",
+                "Typecheck passes"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Completed iteration 3 on 2026-06-12; commit 364f812"
+        }
+    ]
+}

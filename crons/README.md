@@ -52,10 +52,17 @@ status column is one of:
 | `SPAWNED` | A `tmux: true` fire launched its detached session (`msg` is the session name). |
 | `FIRE` | A scheduled job fired and began running its body. |
 | `OK` | The fired child process exited cleanly (exit code 0). |
-| `EXIT_n` | The fired child process exited non-zero with code `n`. |
+| `EXIT_n` | The fired child process exited non-zero with code `n`. When the job's log file is populated, a bounded tail of the job's trailing output is appended as the `msg` (4th column) — the optional field already used by `ERR_JOB`/`ERR`/`BODY_RELOADED` — so the failure is diagnosable from `.cron.log` alone (see example below). |
 | `ERR` | The child process failed to spawn (process-level error, not a job throw). |
 | `ERR_JOB` | A synchronous cron job-callback threw; recorded instead of being swallowed. Format: `<id>\tERR_JOB\t<error-string>`. |
 | `SKIPPED_OVERLAP` | A fire was skipped because the previous run was still in flight (`overlap: false`). |
+
+An enriched `EXIT_n` line (tab-separated, tail whitespace-collapsed and
+bounded to 200 chars):
+
+```text
+2026-06-12T23:30:00.000Z\theartbeat\tEXIT_1\tError: connect ECONNREFUSED 127.0.0.1:5432 … (bounded tail of the job's log)
+```
 
 A cron whose `schedule:` string is not a valid cron expression is skipped
 at load time — it logs `SCHED_INVALID` and never enters the scheduled set,

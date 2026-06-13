@@ -18,6 +18,7 @@ import {
   loadCrons,
   onJobError,
   parseCronFile,
+  readFailureTail,
   reloadBody,
   scheduleAll,
   tmuxSessionName,
@@ -418,5 +419,35 @@ describe("onJobError", () => {
     onJobError("testjob", new Error("disk full"), spy);
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledWith("testjob", "ERR_JOB", "Error: disk full");
+  });
+});
+
+describe("readFailureTail", () => {
+  it("returns a non-empty tail containing the file's trailing text", () => {
+    const logFile = path.join(tmp, "job.log");
+    writeFileSync(logFile, "first line\nsecond line\nlast line: boom\n");
+    const tail = readFailureTail(logFile);
+    expect(tail).not.toBe("");
+    expect(tail).toContain("boom");
+  });
+
+  it('returns "" for a nonexistent path without throwing', () => {
+    const missing = path.join(tmp, "nope.log");
+    expect(() => readFailureTail(missing)).not.toThrow();
+    expect(readFailureTail(missing)).toBe("");
+  });
+
+  it('returns "" for an empty file', () => {
+    const empty = path.join(tmp, "empty.log");
+    writeFileSync(empty, "");
+    expect(readFailureTail(empty)).toBe("");
+  });
+
+  it("returns exactly the last maxChars characters when the file is longer", () => {
+    const logFile = path.join(tmp, "long.log");
+    writeFileSync(logFile, "x".repeat(50) + "TAIL");
+    const tail = readFailureTail(logFile, 4);
+    expect(tail).toBe("TAIL");
+    expect(tail.length).toBe(4);
   });
 });

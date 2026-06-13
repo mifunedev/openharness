@@ -138,6 +138,21 @@ function log(id: string, status: string, msg = ""): void {
   }
 }
 
+// Best-effort tail of a job's tee'd log, used by fire()'s exit handler to
+// enrich an EXIT_<code> liveness line with the failing job's trailing output.
+// Returns the last `maxChars` characters of the file, or "" when the file is
+// missing, empty, or unreadable — it never throws, so log()'s msg.replace()
+// can never throw on its result. The 200 default matches log()'s own slice
+// cap; the parameter exists for direct test injection (cf. onJobError's logFn)
+// and carries no external-stability guarantee.
+export function readFailureTail(logFile: string, maxChars = 200): string {
+  try {
+    return fs.readFileSync(logFile, "utf-8").slice(-maxChars);
+  } catch {
+    return "";
+  }
+}
+
 // Croner's `catch` handler for a scheduled job: records a synchronous
 // job-callback throw as an ERR_JOB line instead of swallowing it silently.
 // `logFn` defaults to the module-private `log` and exists ONLY for test
@@ -242,6 +257,8 @@ function fireTmux(entry: CronEntry): void {
     { stdio: "ignore" },
   );
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
+  // Detached tmux path: we observe only the spawn, not the agent's eventual
+  // exit, so no EXIT_<code> reason tail can be captured here (cf. fire()).
   log(entry.id, "SPAWNED", session);
 }
 
@@ -267,7 +284,11 @@ function fire(entry: CronEntry): void {
     ],
     { stdio: "inherit" },
   );
-  child.on("exit", (code: number | null) => log(entry.id, code === 0 ? "OK" : `EXIT_${code}`));
+  child.on("exit", (code: number | null) =>
+    code === 0
+      ? log(entry.id, "OK")
+      : log(entry.id, `EXIT_${code}`, readFailureTail(logFile)),
+  );
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
 }
 

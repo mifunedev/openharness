@@ -245,8 +245,13 @@ Then print a single `OK` token for class C:
 
 **Step C-2 — compare cron file mtimes:**
 
-When `RUNTIME_START` is set, check each `crons/*.md` for a mtime strictly
-after the runtime start time:
+When `RUNTIME_START` is set, check each **schedulable cron file** for a
+mtime strictly after the runtime start time. A `crons/*.md` file qualifies
+only if it passes the predicate below (a leading `---` frontmatter block
+declaring an anchored `schedule:` key and not `enabled: false`) — so
+non-cron docs like `crons/README.md` are skipped by the predicate, never
+mtime-compared, and never counted. Qualification is property-based, not a
+hard-coded name list:
 
 ```bash
 INERT=()
@@ -304,13 +309,16 @@ is an intentional operator action, not performed by this skill).
 
 ## Output Contract
 
-- Each class prints exactly one summary line when clean: `(A) Framework drift: OK`, `(B) Branch-behind drift: OK`, `(C) Cron-staleness drift: OK`.
+- Each class prints exactly one summary line when clean: `(A) Framework drift: OK`, `(B) Branch-behind drift: OK`, `(C) Cron-staleness drift: OK`. The `(C) Cron-staleness drift: OK` clean token is unchanged by the predicate — it still prints whenever no schedulable cron is inert.
 - When a class has findings, it prints one or more `DRIFT-CHECK (<letter>): ...` detail lines followed by a `Recommended:` block.
+- Class (C) evaluates only **schedulable cron files** — `crons/*.md` files that pass the Step C-2 predicate (a leading `---` frontmatter block declaring a `schedule:` key and not `enabled: false`). Non-scheduled docs such as `crons/README.md` are never evaluated, never emitted as a `DRIFT-CHECK (C)` line, and never counted toward the inert aggregate. Qualification is predicate-based, not a hard-coded name list, so a future non-cron file dropped into `crons/` is handled generically.
 - When at least one class is non-clean, print a final aggregate line:
 
 ```
 DRIFT: <comma-separated summary of non-clean classes>
 ```
+
+- The aggregate's `cron-staleness drift (N inert file)` term counts only **schedulable cron files**; a non-scheduled doc such as `crons/README.md` never increments it, and any inline example names a real cron (e.g. `crons/heartbeat.md`).
 
 Example (all clean):
 

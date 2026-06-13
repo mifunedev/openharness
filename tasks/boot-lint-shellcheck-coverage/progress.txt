@@ -22,3 +22,20 @@ Added a scoped `# shellcheck disable=SC2088` comment with a one-line rationale i
 - US-002 next: extend the `ci-harness.yml` shellcheck glob to four segments AND add `workspace/**` to both path-filter arrays. The full-set `shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh workspace/*.sh` should now exit 0 (US-001 cleared the only blocker).
 
 ---
+
+## US-002 — 2026-06-13 07:28 UTC
+
+**Title**: Extend the CI boot-lint shellcheck glob and its trigger paths
+**Files changed**: .github/workflows/ci-harness.yml
+**Commit**: d6ef212
+**Result**: PASS
+
+### What I did
+Extended the `shellcheck -S warning` invocation in the `boot-lint` job to all four glob segments (`.devcontainer/*.sh install/*.sh scripts/*.sh workspace/*.sh`), and added `workspace/**` to BOTH `on.push.paths` and `on.pull_request.paths`. Left the hadolint step and every `ci` job step untouched. Verified `shellcheck -S warning` over all 7 boot scripts exits 0 (US-001 cleared the only blocker) and `pnpm test:scripts` passes 186/186.
+
+### Learnings for future iterations
+- The 7 boot scripts the glob now covers: `.devcontainer/entrypoint.sh`, `install/banner.sh`, `scripts/{ablate,harness-config,install,ralph}.sh`, `workspace/startup.sh`.
+- No offline YAML parser is available (no python `yaml`/`pyyaml`, no `yaml`/`js-yaml` in node_modules, no `ruby`, pip/network blocked). Validate workflow edits structurally by Reading the edited region for indentation consistency rather than parsing.
+- The shellcheck `run:` line is indented inside a `run: |` block — US-003's probe must use an UNANCHORED grep (a `^` anchor matches nothing). The line to match now reads: `          shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh workspace/*.sh`.
+
+---

@@ -31,9 +31,15 @@ Body becomes the agent prompt at fire time.
 ## Conventions
 
 - Filename = `<id>.md`, kebab-case.
-- Heartbeats follow the `heartbeat-<name>.md` naming convention; their
-  tmux session is `heartbeat-<name>`
-  (see `.claude/rules/sandbox-processes.md`).
+- Cron tmux sessions follow the `cron-<name>` category-prefix convention:
+  the runtime is `cron-system`, and detached job fires are
+  `cron-<id>-<MMDD>-<HHMM>` (see `.claude/rules/sandbox-processes.md`).
+- Migration note: older sandboxes used runtime session `system-cron` and
+  autopilot run sessions/markers named `autopilot-*`. New sandboxes use
+  `cron-system` and `cron-autopilot-*`. During the transition, heartbeat scans
+  and sweeps both old and new autopilot names. To complete migration, kill the
+  legacy `system-cron` session once, then restart/relaunch the sandbox so the
+  entrypoint starts `cron-system` without running duplicate cron runtimes.
 - Disable a job by setting `enabled: false` — do not delete the file
   (preserves history).
 - Runtime artefacts in this directory (`.cron.log`, `.pid`) are
@@ -89,7 +95,7 @@ keep running.
 
 A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
 
-- **Session name**: `<id>-<MMDD>-<HHMM>` (e.g. `autopilot-0610-1805`), derived from the fire time. The runtime logs `SPAWNED <session>` to `.cron.log`.
+- **Session name**: `cron-<id>-<MMDD>-<HHMM>` (e.g. `cron-autopilot-0610-1805`), derived from the fire time. The runtime logs `SPAWNED <session>` to `.cron.log`.
 - **Agent attribution**: the shell wrapper logs `AGENT_START agent=<name>` and `AGENT_DONE agent=<name> exit=<code>` from inside the run. If default Claude falls back to Codex, `.cron.log` shows `AGENT_START agent=claude`, `AGENT_FALLBACK from=claude to=codex`, `AGENT_START agent=codex`, then `AGENT_DONE agent=codex exit=<code>`.
 - **Env exported into the agent**: `CRON_TMUX_SESSION=<session>` and `CRON_KEEP_MARKER=/tmp/<session>.keep`.
 - **Keep-marker contract**: if the agent `touch`es `$CRON_KEEP_MARKER` before exiting, the session persists by resuming the run's own conversation as a live, attachable agent (`claude --continue` for a Claude run, or `codex` after a Claude→Codex fallback), falling back to a shell if that exits; otherwise it auto-closes when the agent finishes. The autonomous run itself is always headless (`claude -p`, or `codex exec --sandbox danger-full-access` after a usage/session-limit fallback); the resumed agent does nothing until a human attaches, so it adds no unattended-permission exposure. By convention a job keeps its session only when the run produced something worth revisiting (e.g. autopilot keeps it when a PR was opened).
@@ -103,7 +109,7 @@ A cron definition's **body** (the agent prompt) hot-reloads at fire time: the ru
 
 ## Reload schedules (SIGHUP)
 
-The runtime installs a `SIGHUP` handler: on signal it stops the live croner jobs, re-reads every `crons/*.md`, and re-arms the schedules — so schedule/frontmatter edits and added/removed cron files apply without restarting the `system-cron` tmux session. Each successful reload appends a `RELOAD` line (`id` `system`, `msg` the cron count) to `crons/.cron.log`. A malformed `schedule:` present during a reload is dropped (`SCHED_INVALID`) exactly as at boot; the rest stay scheduled and the runtime does not exit. In-flight fires are not interrupted — `overlap: false` remains the only protection against a reschedule racing a still-running fire.
+The runtime installs a `SIGHUP` handler: on signal it stops the live croner jobs, re-reads every `crons/*.md`, and re-arms the schedules — so schedule/frontmatter edits and added/removed cron files apply without restarting the `cron-system` tmux session. Each successful reload appends a `RELOAD` line (`id` `system`, `msg` the cron count) to `crons/.cron.log`. A malformed `schedule:` present during a reload is dropped (`SCHED_INVALID`) exactly as at boot; the rest stay scheduled and the runtime does not exit. In-flight fires are not interrupted — `overlap: false` remains the only protection against a reschedule racing a still-running fire.
 
 The runtime runs inside the container, so reload from the host via `docker exec`:
 
@@ -115,7 +121,7 @@ docker exec -u sandbox openharness sh -c 'kill -0 "$(cat crons/.pid)" 2>/dev/nul
 docker exec -u sandbox openharness kill -HUP "$(cat crons/.pid)"
 ```
 
-The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t system-cron`, then relaunch it from the repo root: `node --experimental-strip-types scripts/cron-runtime.ts` (the documented `system-cron` start, per `.devcontainer/entrypoint.sh`).
+The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`, then relaunch it from the repo root: `node --experimental-strip-types scripts/cron-runtime.ts` (the documented `cron-system` start, per `.devcontainer/entrypoint.sh`).
 
 ## Override
 

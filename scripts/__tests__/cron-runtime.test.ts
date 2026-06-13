@@ -138,19 +138,19 @@ describe("isValidSchedule", () => {
 });
 
 describe("tmuxSessionName", () => {
-  it("formats <id>-<MMDD>-<HHMM> from local time, zero-padded", () => {
+  it("formats cron-<id>-<MMDD>-<HHMM> from local time, zero-padded", () => {
     // 2026-06-10 18:05 local (month is 0-indexed → 5 = June).
     expect(tmuxSessionName("autopilot", new Date(2026, 5, 10, 18, 5))).toBe(
-      "autopilot-0610-1805",
+      "cron-autopilot-0610-1805",
     );
     // Single-digit month/day/hour/minute all pad to two digits.
-    expect(tmuxSessionName("x", new Date(2026, 0, 2, 3, 4))).toBe("x-0102-0304");
+    expect(tmuxSessionName("x", new Date(2026, 0, 2, 3, 4))).toBe("cron-x-0102-0304");
   });
 });
 
 describe("buildTmuxWrapper", () => {
   const wrapper = buildTmuxWrapper({
-    session: "autopilot-0610-1805",
+    session: "cron-autopilot-0610-1805",
     id: "autopilot",
     agentBin: "claude",
     promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
@@ -232,19 +232,19 @@ describe("buildTmuxWrapper", () => {
 
   it("exports the session + keep-marker env vars", () => {
     expect(wrapper).toContain(
-      "export CRON_TMUX_SESSION=autopilot-0610-1805 CRON_KEEP_MARKER=/tmp/autopilot-0610-1805.keep;",
+      "export CRON_TMUX_SESSION=cron-autopilot-0610-1805 CRON_KEEP_MARKER=/tmp/cron-autopilot-0610-1805.keep;",
     );
   });
 
   it("runs the agent against the prompt file and tees the log", () => {
     expect(wrapper).toContain(
-      'claude -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee /tmp/autopilot-0610-1805.log',
+      'claude -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee /tmp/cron-autopilot-0610-1805.log',
     );
     expect(wrapper).toContain("AGENT_START");
     expect(wrapper).toContain("cron-runtime: Claude limit detected; retrying with Codex");
     expect(wrapper).toContain("AGENT_FALLBACK");
     expect(wrapper).toContain(
-      'codex exec --sandbox danger-full-access "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee -a /tmp/autopilot-0610-1805.log',
+      'codex exec --sandbox danger-full-access "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee -a /tmp/cron-autopilot-0610-1805.log',
     );
     expect(wrapper).toContain("export RALPH_HARNESS=codex;");
     expect(wrapper).toContain("AGENT_DONE");
@@ -253,7 +253,7 @@ describe("buildTmuxWrapper", () => {
 
   it("persists a kept session as a resumed live agent, using Codex after fallback", () => {
     expect(wrapper).toContain(
-      '[ "$(cat /tmp/autopilot-0610-1805.agent 2>/dev/null || echo claude)" = codex ]; then codex; else claude --continue; fi;',
+      '[ "$(cat /tmp/cron-autopilot-0610-1805.agent 2>/dev/null || echo claude)" = codex ]; then codex; else claude --continue; fi;',
     );
   });
 });

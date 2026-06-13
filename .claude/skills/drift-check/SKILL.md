@@ -189,7 +189,7 @@ When behind count > 0, print:
 
 ### (C) Host/state drift (cron-staleness)
 
-**Goal**: detect crons that were merged after the running `system-cron`
+**Goal**: detect crons that were merged after the running `cron-system`
 runtime started (they are inert until the runtime is restarted). This is
 the cron boot-load gap: `scripts/cron-runtime.ts` calls `loadCrons()` once
 at boot, so a newly-merged `crons/*.md` file is not picked up until the
@@ -218,12 +218,12 @@ fi
 ```
 
 If `/proc/<pid>/stat` is inaccessible (PID namespace isolation, non-Linux
-host, stale PID), fall back to the `system-cron` tmux session creation
+host, stale PID), fall back to the `cron-system` tmux session creation
 time:
 
 ```bash
 if [ -z "$RUNTIME_START" ]; then
-  TMUX_START=$(tmux display-message -p '#{session_created}' -t system-cron 2>/dev/null)
+  TMUX_START=$(tmux display-message -p '#{session_created}' -t cron-system 2>/dev/null)
   if [ -n "$TMUX_START" ] && [ "$TMUX_START" -gt 0 ] 2>/dev/null; then
     RUNTIME_START=$TMUX_START
     echo "DRIFT-CHECK (C): cron runtime start time (from tmux session): $(date -d @$RUNTIME_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo $RUNTIME_START)"
@@ -270,8 +270,8 @@ If `INERT` is empty, print a single `OK` token for class C:
 Print (do not execute):
 
 ```
-  Recommended: restart the system-cron tmux session
-    tmux kill-session -t system-cron
+  Recommended: restart the cron-system tmux session
+    tmux kill-session -t cron-system
     # then relaunch via the documented runtime-start procedure in scripts/cron-runtime.ts
 ```
 
@@ -307,7 +307,7 @@ DRIFT-CHECK (A): origin/development is 3 behind upstream/development (0 ahead)
 DRIFT-CHECK (B): ...
 (B) Branch-behind drift: OK
 DRIFT-CHECK (C): crons/heartbeat.md modified after runtime start — inert until runtime restart
-  Recommended: restart the system-cron tmux session ...
+  Recommended: restart the cron-system tmux session ...
 DRIFT: framework drift (3 behind upstream), cron-staleness drift (1 inert file)
 ```
 

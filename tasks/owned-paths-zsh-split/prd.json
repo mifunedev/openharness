@@ -26,8 +26,8 @@
                 "bash evals/probes/owned-surface-guard.sh exits 0 AND bash evals/probes/clean-restore.sh exits 0 against the fixed SKILL.md"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": "Use the Edit tool or a sed delimiter other than \" (the replacement text contains double-quotes). SKILL fix + both probes MUST land in this one story so the committed state is self-consistent."
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-13; commit 5bdfdca. SKILL.md declaration→array + all 9 expansion sites fixed; both probes assert array form, guard against bare-form reintroduction (plain+--cached), and owned-surface-guard adds a zsh-fidelity check. Error-injection confirmed all three regression guards fire."
         },
         {
             "id": "US-002",

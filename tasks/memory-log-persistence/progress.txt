@@ -26,6 +26,11 @@
 - Do NOT add `evals/probes/` to the CI boot-lint shellcheck glob — that flips the
   `boot-lint-glob` probe to REGRESSION (it asserts the glob covers exactly the four
   boot-script dirs). Run `shellcheck -S warning` on new probes manually instead.
+- `CHANGELOG.md` `## [Unreleased]` subsection order is Added → Changed → Fixed (Keep
+  a Changelog); newest bullet goes at the TOP of its subsection. Link fork issues as
+  `https://github.com/ryaneggz/openharness/issues/N` (NOT the mifunedev upstream).
+  Commit `<type>` per `.claude/rules/git.md` is `feat·fix·task·audit·skill` ONLY —
+  `docs` is NOT valid; use `fix` for a changelog-records-a-fix commit.
 
 ---
 
@@ -90,3 +95,33 @@ to stderr, exit 0.
   stories pass -> append `STATUS: COMPLETE`.
 
 ---
+
+## US-003 — 2026-06-13 22:35 UTC
+
+**Title**: Record the fix in CHANGELOG
+**Files changed**: CHANGELOG.md
+**Commit**: 1db1cf3
+**Result**: PASS
+
+### What I did
+Added a one-line imperative bullet at the top of the existing `### Fixed`
+subsection under `## [Unreleased]` in CHANGELOG.md describing the corrected
+`context/rules/memory.md` daily-log persistence claim (false "tracked inside")
+and the new `memory-gitignore-claim` guard probe, linking issue #101. The
+`### Fixed` subsection already existed and is correctly ordered (Added →
+Changed → Fixed per Keep a Changelog), so no new subsection was created.
+
+### Learnings for future iterations
+- `<type>` for this commit: git.md allows only `feat·fix·task·audit·skill`;
+  `docs` is NOT in the set despite the iter prompt's "docs/fix" wording — used
+  `fix` (a changelog entry that records a fix).
+- Newest CHANGELOG bullet goes at the TOP of its subsection (descending issue
+  order in practice); fork issues link `ryaneggz/openharness`, not upstream.
+- This was the final story — all three (US-001/002/003) now pass; appended
+  `STATUS: COMPLETE` to signal loop termination. No probe to run for a
+  CHANGELOG-only change; the quality trio (typecheck/lint/test:scripts 196)
+  was the full gate.
+
+---
+
+STATUS: COMPLETE

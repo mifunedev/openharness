@@ -52,8 +52,8 @@
                 "Typecheck passes"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Iter 3 (2026-06-13): added a '### Fixed' bullet under [Unreleased] in CHANGELOG.md describing the corrected memory.md daily-log persistence claim + the memory-gitignore-claim guard probe, linking #101; quality trio green. Commit 1db1cf3."
         }
     ]
 }

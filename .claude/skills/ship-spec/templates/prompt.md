@@ -72,9 +72,9 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
    ```
    STATUS: COMPLETE
    ```
-   This terminates the Ralph loop. The loop runner reads `progress.txt` for this exact string at the start of each iteration.
+   This terminates the Ralph loop. The runner reads for this exact whole-line string in **two** places — `progress.txt` (at the start of each iteration) and your iteration output (after each iteration) — so either channel ends the loop.
 
-10. **End response normally** — do not emit any completion sentinel in your reply text. Only the `STATUS: COMPLETE` line in `progress.txt` matters.
+10. **Signal completion in your output only when terminal** — when (and only when) you have just appended `STATUS: COMPLETE` to `progress.txt`, also print `STATUS: COMPLETE` as the sole content of your final line. This lets the runner exit even if the file write was missed. Never print that bare standalone line for any other reason; to refer to it in prose, call it "the completion marker."
 
 ## Blocked or deferred stories
 

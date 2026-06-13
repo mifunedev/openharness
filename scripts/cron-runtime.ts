@@ -46,16 +46,50 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
   };
 }
 
-export function loadCrons(dir: string = CRONS_DIR): CronEntry[] {
+// Side-effect-free probe: does `schedule` parse as a valid cron expression?
+// croner v9.1.0 exposes no static Cron.validate, so we construct a Cron with
+// NO callback function and NO `name` option. croner only arms the internal
+// setTimeout when a function is passed, and only pushes to its module-level
+// named-jobs array when `name` is set — so this probe schedules nothing and
+// registers nothing. The constructor parses the pattern and throws
+// synchronously on an invalid one; we catch that and return false. `.stop()`
+// in the finally is defensive cleanup. Never throws for any string input.
+export function isValidSchedule(schedule: string): boolean {
+  let probe: Cron | undefined;
+  try {
+    probe = new Cron(schedule);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    probe?.stop();
+  }
+}
+
+// `logFn` defaults to the module-private `log` and exists ONLY for test
+// injection (mirrors onJobError(id, err, logFn = log)); it carries no
+// external-stability guarantee. Existing loadCrons(dir) call sites stay valid.
+export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
   if (!fs.existsSync(dir)) return [];
   const out: CronEntry[] = [];
   for (const f of fs.readdirSync(dir).filter((n: string) => n.endsWith(".md")).sort()) {
+    let entry: CronEntry | null;
     try {
-      const entry = parseCronFile(fs.readFileSync(path.join(dir, f), "utf-8"), path.join(dir, f));
-      if (entry && entry.enabled) out.push(entry);
+      entry = parseCronFile(fs.readFileSync(path.join(dir, f), "utf-8"), path.join(dir, f));
     } catch {
-      /* skip unreadable */
+      /* skip unreadable — silent, distinct from the invalid-schedule path below */
+      continue;
     }
+    if (!entry || !entry.enabled) continue;
+    // Invalid-schedule skip is a DISTINCT path from the silent unreadable-file
+    // catch above: it runs after a non-null entry and OUTSIDE that try/catch, and
+    // it logs SCHED_INVALID so the misconfiguration surfaces in crons/.cron.log
+    // instead of poisoning the entries list and crashing main()'s new Cron() loop.
+    if (!isValidSchedule(entry.schedule)) {
+      logFn(entry.id, "SCHED_INVALID", `invalid schedule: ${entry.schedule}`);
+      continue;
+    }
+    out.push(entry);
   }
   return out;
 }
@@ -258,6 +292,65 @@ function fire(entry: CronEntry): void {
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
 }
 
+export interface BootResult {
+  scheduled: number;
+  skipped: number;
+}
+
+// Construct a single live Cron for `entry`. Extracted from main()'s loop so the
+// construction is both individually fault-isolatable (scheduleAll wraps each
+// call in try/catch) and injectable in tests (scheduleAll takes `mkCron`), so a
+// test can drive the loop without arming a real timer or simulate a
+// construction throw.
+function constructCron(entry: CronEntry): void {
+  new Cron(
+    entry.schedule,
+    {
+      timezone: entry.timezone,
+      protect: !entry.overlap,
+      catch: (err: unknown) => onJobError(entry.id, err),
+    },
+    () => fire(entry),
+  );
+}
+
+// Load every cron under `dir` and schedule each one, fault-isolating each
+// `new Cron()` construction so a residual constructor throw skips only that one
+// cron and the loop continues. This construction catch is DEFENSE-IN-DEPTH:
+// loadCrons already drops invalid schedules at load time (US-002), so it never
+// fires in normal operation — it guards a future load-path bypass or a croner
+// edge case. Logs a `BOOT` summary `"<N> scheduled, <M> skipped"` and returns
+// the counts. `M` is not double-counted: a cron dropped at load time is counted
+// once (loadSkips) and never reaches the construction loop, while a cron that
+// survives load but throws at construction is counted once (constructSkips) —
+// the two sets are disjoint. `logFn`/`mkCron` exist only for test injection and
+// default to the real `log` / `constructCron`.
+export function scheduleAll(
+  dir: string = CRONS_DIR,
+  logFn = log,
+  mkCron: (entry: CronEntry) => void = constructCron,
+): BootResult {
+  let loadSkips = 0;
+  const entries = loadCrons(dir, (id, status, msg) => {
+    if (status === "SCHED_INVALID") loadSkips++;
+    logFn(id, status, msg);
+  });
+  let scheduled = 0;
+  let constructSkips = 0;
+  for (const entry of entries) {
+    try {
+      mkCron(entry);
+      scheduled++;
+    } catch (err) {
+      logFn(entry.id, "SCHED_INVALID", String(err));
+      constructSkips++;
+    }
+  }
+  const skipped = loadSkips + constructSkips;
+  logFn("system", "BOOT", `${scheduled} scheduled, ${skipped} skipped`);
+  return { scheduled, skipped };
+}
+
 function main(): void {
   if (!acquireLock()) {
     process.stderr.write("cron-runtime: another instance is running\n");
@@ -273,15 +366,7 @@ function main(): void {
   };
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
-  const entries = loadCrons();
-  log("system", "BOOT", `${entries.length} crons`);
-  for (const e of entries) {
-    new Cron(
-      e.schedule,
-      { timezone: e.timezone, protect: !e.overlap, catch: (err: unknown) => onJobError(e.id, err) },
-      () => fire(e),
-    );
-  }
+  scheduleAll();
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

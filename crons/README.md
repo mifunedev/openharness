@@ -48,6 +48,7 @@ status column is one of:
 | Token | Meaning |
 |-------|---------|
 | `BOOT` | Runtime started and scheduled its crons (`id` is `system`; `msg` is the cron count). |
+| `SCHED_INVALID` | A cron was skipped because its `schedule:` is not a valid cron expression (`msg` contains the offending schedule string). |
 | `SPAWNED` | A `tmux: true` fire launched its detached session (`msg` is the session name). |
 | `FIRE` | A scheduled job fired and began running its body. |
 | `OK` | The fired child process exited cleanly (exit code 0). |
@@ -62,6 +63,11 @@ bounded to 200 chars):
 ```text
 2026-06-12T23:30:00.000Z\theartbeat\tEXIT_1\tError: connect ECONNREFUSED 127.0.0.1:5432 … (bounded tail of the job's log)
 ```
+
+A cron whose `schedule:` string is not a valid cron expression is skipped
+at load time — it logs `SCHED_INVALID` and never enters the scheduled set,
+so a single malformed schedule cannot crash the runtime and the other crons
+keep running.
 
 `BODY_RELOADED` and `BODY_RELOAD_ERR` are documented under
 [Hot-reload](#hot-reload).

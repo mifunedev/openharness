@@ -16,6 +16,7 @@ subfolders mirror the harness branch prefix:
 | `audit/`  | `audit/<issue#>-...` — review / audit branches     |
 | `skill/`  | `skill/<issue#>-...` — skill authoring             |
 | `agent/`  | `agent/<agent-name>` — harness agent branches only |
+| `archive/`| `archive/<YYYY-MM-DD>` — weekly cleanup-tasks archive sweeps |
 
 The `agent/` subfolder is for work tied to a named AI agent identity in
 this harness: either a true harness branch worktree (`agent/<agent-name>`)

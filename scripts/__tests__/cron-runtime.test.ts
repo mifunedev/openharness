@@ -1,8 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { spawn } from "node:child_process";
+import type { Cron } from "croner";
 import * as fsModule from "node:fs";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -10,6 +12,19 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
+// Repoint the runtime's CRONS_DIR — a const captured at module-load time from
+// process.env.CRONS_DIR — at an isolated tmp path BEFORE ../cron-runtime is
+// imported. vi.hoisted runs ahead of all imports, so the exported
+// sighupHandler()'s internal scheduleAll() (called with no dir arg) re-reads
+// THIS dir and never the repo's real crons/ directory (US-004 AC). Per-pid keeps
+// parallel vitest workers from colliding on the path.
+const SIGHUP_CRONS_DIR = vi.hoisted(() => {
+  const dir = `/tmp/cron-sighup-test-crons-${process.pid}`;
+  process.env.CRONS_DIR = dir;
+  return dir;
+});
+
 import {
   acquireLock,
   buildCronAgentCommand,
@@ -20,7 +35,9 @@ import {
   parseCronFile,
   readFailureTail,
   reloadBody,
+  resetActiveJobs,
   scheduleAll,
+  sighupHandler,
   tmuxSessionName,
 } from "../cron-runtime";
 
@@ -449,5 +466,128 @@ describe("readFailureTail", () => {
     const tail = readFailureTail(logFile, 4);
     expect(tail).toBe("TAIL");
     expect(tail.length).toBe(4);
+  });
+});
+
+describe("SIGHUP reload", () => {
+  // These tests drive the exported sighupHandler() directly (not scheduleAll) per
+  // US-004. The handler calls scheduleAll() with no dir arg, so it re-reads
+  // SIGHUP_CRONS_DIR — repointed via the vi.hoisted block at the top of this file
+  // — instead of the repo's real crons/. resetActiveJobs() clears the
+  // module-private registry between cases.
+  const appendSpy = () => vi.mocked(fsModule.appendFileSync);
+  const loggedLines = (): string[] =>
+    appendSpy().mock.calls.map((c) => String(c[1]));
+  const reloadLines = (): string[] =>
+    loggedLines().filter((l) => l.includes("\tRELOAD\t"));
+  const validCron = (id: string, schedule = "0 * * * *"): string =>
+    `---\nid: ${id}\nschedule: "${schedule}"\nenabled: true\n---\nbody\n`;
+  // A valid 5-field pattern whose next run (next Jan 1) is far enough out that a
+  // real croner timer armed by the handler's private constructCron never fires
+  // during the test; the afterEach safety-reschedule stops it afterward.
+  const FAR_FUTURE = "0 0 1 1 *";
+
+  const emptyCronsDir = (): void => {
+    rmSync(SIGHUP_CRONS_DIR, { recursive: true, force: true });
+    mkdirSync(SIGHUP_CRONS_DIR, { recursive: true });
+  };
+
+  beforeEach(() => {
+    resetActiveJobs();
+    emptyCronsDir();
+    appendSpy().mockClear();
+  });
+
+  afterEach(() => {
+    // The handler arms REAL croner timers (via the private constructCron, which
+    // croner does not unref) for any file left in SIGHUP_CRONS_DIR; those handles
+    // live in the module-private activeJobs registry and aren't otherwise
+    // reachable to .stop(). Empty the dir and run one more reschedule so the
+    // handler stops the last generation (and arms nothing), leaving no live timer.
+    emptyCronsDir();
+    sighupHandler();
+    resetActiveJobs();
+    appendSpy().mockClear();
+  });
+
+  afterAll(() => {
+    rmSync(SIGHUP_CRONS_DIR, { recursive: true, force: true });
+  });
+
+  it("stops every prior job handle before re-arming (.stop on each)", () => {
+    // Seed activeJobs with two fake handles via an injected mkCron so no real
+    // timer is armed and each handle carries an observable .stop spy.
+    writeFileSync(path.join(tmp, "a.md"), validCron("a"));
+    writeFileSync(path.join(tmp, "b.md"), validCron("b"));
+    const stops = [vi.fn(), vi.fn()];
+    let i = 0;
+    scheduleAll(tmp, vi.fn(), () => ({ stop: stops[i++] }) as unknown as Cron);
+
+    sighupHandler();
+
+    expect(stops[0]).toHaveBeenCalledTimes(1);
+    expect(stops[1]).toHaveBeenCalledTimes(1);
+  });
+
+  it("picks up an added cron file and drops a removed one on reload", () => {
+    writeFileSync(path.join(SIGHUP_CRONS_DIR, "one.md"), validCron("one", FAR_FUTURE));
+    sighupHandler();
+    expect(reloadLines().at(-1)).toContain("1 scheduled, 0 skipped");
+
+    // Add a second file: the next reload re-reads the dir and counts both.
+    appendSpy().mockClear();
+    writeFileSync(path.join(SIGHUP_CRONS_DIR, "two.md"), validCron("two", FAR_FUTURE));
+    sighupHandler();
+    expect(reloadLines().at(-1)).toContain("2 scheduled, 0 skipped");
+
+    // Remove the first file: the next reload drops it.
+    appendSpy().mockClear();
+    rmSync(path.join(SIGHUP_CRONS_DIR, "one.md"));
+    sighupHandler();
+    expect(reloadLines().at(-1)).toContain("1 scheduled, 0 skipped");
+  });
+
+  it("isolates a malformed cron file during reload without crashing", () => {
+    // A valid sibling plus a file with an invalid schedule: loadCrons drops the
+    // bad one (SCHED_INVALID) at reload time exactly as at boot, the good one
+    // stays scheduled, and the handler neither throws nor exits.
+    writeFileSync(path.join(SIGHUP_CRONS_DIR, "good.md"), validCron("good", FAR_FUTURE));
+    writeFileSync(path.join(SIGHUP_CRONS_DIR, "bad.md"), validCron("bad", "not-a-cron"));
+
+    expect(() => sighupHandler()).not.toThrow();
+    expect(reloadLines().at(-1)).toContain("1 scheduled, 1 skipped");
+  });
+
+  it("writes a RELOAD liveness line via the appendFileSync spy", () => {
+    sighupHandler();
+    expect(loggedLines().some((l) => l.includes("\tRELOAD\t"))).toBe(true);
+    // RELOAD reuses the private log() format with id "system" (BOOT precedent).
+    expect(reloadLines().at(-1)).toContain("\tsystem\tRELOAD\t");
+  });
+
+  it("does not throw when the prior activeJobs registry is empty", () => {
+    resetActiveJobs();
+    expect(() => sighupHandler()).not.toThrow();
+    expect(reloadLines()).toHaveLength(1);
+  });
+
+  it("is re-entrancy-safe: a SIGHUP arriving mid-reload is a no-op", () => {
+    // Seed one fake handle whose .stop re-enters sighupHandler() while the first
+    // reload is still in progress; the reload-lock must make that second call a
+    // no-op so the reschedule runs exactly once.
+    writeFileSync(path.join(tmp, "a.md"), validCron("a"));
+    const stop = vi.fn(() => {
+      sighupHandler(); // mid-reload: must return immediately (reloading === true)
+    });
+    scheduleAll(tmp, vi.fn(), () => ({ stop }) as unknown as Cron);
+
+    sighupHandler();
+
+    // The handle is stopped exactly once: the re-entrant call returned before the
+    // stop loop, so it neither re-stopped the handle nor re-ran scheduleAll.
+    expect(stop).toHaveBeenCalledTimes(1);
+    // Exactly one reschedule completed → exactly one BOOT and one RELOAD line.
+    expect(reloadLines()).toHaveLength(1);
+    expect(loggedLines().filter((l) => l.includes("\tBOOT\t"))).toHaveLength(1);
   });
 });

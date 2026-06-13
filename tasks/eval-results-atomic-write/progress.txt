@@ -1,2 +1,34 @@
 # progress
 
+## Codebase Patterns
+
+- **`run.sh` ROOT derivation is location-sensitive.** `ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"` resolves the repo root from the script's own path (`.claude/skills/eval/`). When testing a *copy* of run.sh, it MUST sit at that same relative depth or `$RESULTS` resolves to garbage (`//evals/RESULTS.md`). To compare OLD vs NEW, swap the file in the canonical path — don't drop the old copy at the scratch root.
+- **Real probes are non-deterministic across back-to-back runs.** They reach the live repo via cwd and mutate shared state, so two sequential full runs can yield different statuses. To test the *runner's* file-writing behavior (structural equivalence), replace probes with trivial deterministic stubs that `exit 0|1|2|7` — hold probe statuses constant so any diff is attributable to the runner.
+- **Mask the timestamp column when diffing RESULTS.md.** `sed -E 's/\| [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} \|/| TS |/'` — the per-run `last-run (UTC)` column is the only legitimate diff between two structurally-equivalent scoreboards. `(not run)` rows use `| — |` (no date) and are unaffected.
+- **`eval-runner-exit.sh` asserts the exit-1 gate via `tail -n 12` + regex `regressions\[@\].*-gt 0.*exit 1`.** Any run.sh refactor must keep `if [ "${#regressions[@]}" -gt 0 ]; then exit 1; fi` within the last 12 lines, or update that probe in the same change.
+- **The `--ablate` path `exec`s and replaces the shell (run.sh:~55).** EXIT traps set before it never fire on that path; `tmp=""` makes the guarded trap a no-op there regardless.
+
+---
+
+## US-001 — 2026-06-13 08:29 UTC
+
+**Title**: Atomic temp-file write + carry-forward fix in run.sh
+**Files changed**: .claude/skills/eval/run.sh
+**Commit**: 4fed39e
+**Result**: PASS
+
+### What I did
+Refactored the `/eval` runner so RESULTS.md is built into a sibling temp file (`$RESULTS.tmp.$$`) and replaced in one atomic `mv -f`, eliminating the `cat > "$RESULTS"` truncation. Added a `RESULTS_ORIG` pre-write snapshot (set -e-safe `[ -f ] && cat` idiom) that `prior_row()` greps via here-string with `|| true` — so carry-forward never reads the live file. Initialized `tmp=""` + a guarded `trap '[ -n "$tmp" ] && rm -f "$tmp"' EXIT` before the `--ablate` exec guard so the ablation path is unaffected.
+
+### Verification (all green)
+- Structural equivalence: full run with deterministic stub probes produces a RESULTS.md byte-identical (timestamp-masked) to the pre-change runner, with identical stdout summary and exit code (both exit 1 on a green→red stub).
+- Carry-forward fix: filtered run `--probe p1-pass` leaves the other rows intact (0 `(not run)`); the OLD runner reset 4 rows to `(not run)`.
+- `--ablate dummy --probe p1-pass` exits 0, restores the target, leaves RESULTS.md untouched, no temp leak.
+- Exit-1 guard stays in the last 12 lines; `eval-runner-exit.sh` PASS; `bash -n` OK; `pnpm test:scripts` 186/186 green.
+
+### Learnings for future iterations
+- US-002's new probe will statically assert the four invariants now present: no `cat > "$RESULTS"`, `mv -f ... "$RESULTS"` present, `trap ... EXIT` referencing the temp, and `prior_row()` body free of a live `grep ... "$RESULTS"`. All four hold in the committed run.sh (`mv -f "$tmp" "$RESULTS"` at line 144; `prior_row` greps `<<<"$RESULTS_ORIG"`).
+- US-003 must regenerate the real `evals/RESULTS.md` (the only step that runs the live runner) and add the CHANGELOG `### Fixed` entry linking #83.
+- See the Codebase Patterns section above for the scratch-test methodology (canonical-path swap, deterministic stubs, timestamp masking).
+
+---

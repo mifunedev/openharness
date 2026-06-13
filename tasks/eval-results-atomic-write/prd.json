@@ -19,8 +19,8 @@
                 "bash -n .claude/skills/eval/run.sh passes and the existing scripts/__tests__ vitest suite stays green (run: pnpm test:scripts)."
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "iter 1 (2026-06-13): run.sh now builds RESULTS.md into $RESULTS.tmp.$$ and replaces via atomic mv -f; prior_row reads RESULTS_ORIG snapshot; guarded EXIT trap + tmp='' before --ablate guard; verified structural equivalence (masked diff identical), filtered-run carry-forward (0 '(not run)' vs OLD's 4), --ablate path intact, exit-1 guard in last 12 lines, eval-runner-exit PASS, pnpm test:scripts 186 green. commit 4fed39e."
         },
         {
             "id": "US-002",

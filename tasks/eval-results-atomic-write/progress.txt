@@ -35,6 +35,28 @@ Refactored the `/eval` runner so RESULTS.md is built into a sibling temp file (`
 
 ---
 
+## US-003 — 2026-06-13 08:35 UTC
+
+**Title**: Doc + CHANGELOG updates for the atomic-write semantics
+**Files changed**: evals/README.md, .claude/skills/eval/SKILL.md, CHANGELOG.md, evals/RESULTS.md
+**Commit**: 86cf67b
+**Result**: PASS
+
+### What I did
+Updated the eval docs so the write-semantics prose matches the US-001 code: `evals/README.md`'s Runner section and `.claude/skills/eval/SKILL.md` step 5 now describe RESULTS.md as built into a temp sibling file and swapped in with a single atomic `mv -f` (never truncate-then-append), and the SKILL.md carry-forward step states it reads the pre-write `RESULTS_ORIG` snapshot, not the live file. Added exactly one `### Fixed` CHANGELOG entry under `## [Unreleased]` linking #83. Regenerated `evals/RESULTS.md` via the live runner (exit 0) and staged it — the new `eval-results-atomic` row scored PASS in glob order with all 12 prior rows preserved.
+
+### Verification (all green)
+- `bash -n` on run.sh + the probe OK; `pnpm test:scripts` 186/186 green.
+- Full `bash .claude/skills/eval/run.sh` exited 0: `eval-results-atomic` = new-pass; `next-dev-prod` = pre-existing REGRESSION with `unchanged` delta (acceptable per the eval-gate rule); no new green→red transition.
+- Timestamp-masked `git diff evals/RESULTS.md` shows the ONLY structural change is the inserted `eval-results-atomic` row (between `eval-gate` and `eval-runner-exit`, probe-glob order); every other row is byte-identical apart from its timestamp.
+- No surviving `truncate-then-append` (or equivalent) prose for the file write; the per-probe overwrite-row policy and exit-code/pass-rate behavioral spec wording are unchanged.
+
+### Learnings for future iterations
+- This is the terminal story — all three US now `passes: true`. The committed RESULTS.md is the post-US-002 regeneration: US-002 deliberately restored RESULTS.md to the pre-probe state so US-003 is the single story that commits the real scoreboard (one regeneration, one stage).
+- The runner inserts a new probe's row in `evals/probes/*.sh` glob order, not append order — `eval-results-atomic` lands alphabetically between `eval-gate` and `eval-runner-exit`. Reviewers diffing RESULTS.md should mask the timestamp column (pattern in Codebase Patterns) to see the row insertion is the only real delta.
+
+---
+
 ## US-002 — 2026-06-13 08:33 UTC
 
 **Title**: Tier-A probe locking in the atomic-write invariant
@@ -56,3 +78,5 @@ Added `evals/probes/eval-results-atomic.sh` (tier A, `# source: issue #83 (eval-
 - See the two new Codebase Patterns (RUN_SH override; `"\$RESULTS"` vs `"$RESULTS_ORIG"` grep disambiguation) for the probe-authoring idioms.
 
 ---
+
+STATUS: COMPLETE

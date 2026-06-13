@@ -50,8 +50,8 @@
                 "After all edits, regenerate the scoreboard once (bash .claude/skills/eval/run.sh) so the new eval-results-atomic row is scored, and stage the updated evals/RESULTS.md; the runner exits 0 (a pre-existing next-dev-prod red with unchanged delta is acceptable per the documented eval-gate rule)."
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "iter 3 (2026-06-13): evals/README.md Runner + SKILL.md step 5 now describe the build-into-temp-then-mv-f atomic write and carry-forward from the pre-write RESULTS_ORIG snapshot (no truncate-then-append prose survives); one ### Fixed CHANGELOG entry under [Unreleased] links #83; regenerated evals/RESULTS.md (runner exit 0) so the new eval-results-atomic row scores PASS with all 12 prior rows preserved (next-dev-prod pre-existing REGRESSION, unchanged delta — acceptable per eval-gate rule)."
         }
     ]
 }

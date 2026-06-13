@@ -20,10 +20,23 @@ subfolder.
 
 1. Compute `TODAY=$(date -u +%Y-%m-%d)` and ensure
    `tasks/archive/$TODAY/` exists.
-2. **Pre-flight:** verify the working tree is clean
-   (`git status --porcelain` empty). If dirty, abort the sweep, append
-   a note to `memory/$TODAY/log.md`, and skip to step 7. Do not
-   contaminate the archive branch with unrelated changes.
+2. **Pre-flight (scoped to `tasks/`):** check only the surface this job
+   mutates — run `git status --porcelain -- tasks/ ':!tasks/archive/'`.
+   Only a mid-write task under `tasks/` (the `tasks/archive/`
+   destination is excluded so an in-progress archive write never
+   self-flags the sweep) blocks the run; foreign WIP elsewhere in the
+   shared checkout — an in-flight feature branch, a concurrent session's
+   edits — is untouched and does NOT abort the sweep, mirroring the
+   autopilot loop's `BLOCKED-OWNED-WIP` owned-surface convention. If that
+   scoped status is non-empty, abort: append a note to
+   `memory/$TODAY/log.md`, emit the distinct liveness token to
+   `crons/.cron.log`
+   (`printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "BLOCKED-TASKS-WIP" >> crons/.cron.log`),
+   and stop here — do NOT fall through to step 7's `OK` line. This
+   `BLOCKED-TASKS-WIP` token is intentionally distinct from the
+   `OK (archived N, skipped M)` success token and the `HEARTBEAT_OK`
+   nothing-to-do reply. Do not contaminate the archive branch with
+   unrelated changes.
 3. Resolve `$BASE` = default target branch per `context/rules/git.md`
    (`development` → `main` → `master`, whichever exists). Fetch it
    (`git fetch origin "$BASE"`) and create the archive branch off

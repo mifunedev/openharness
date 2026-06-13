@@ -171,11 +171,15 @@ describe("buildTmuxWrapper", () => {
     expect(wrapper).toContain(
       'claude -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee /tmp/autopilot-0610-1805.log',
     );
+    expect(wrapper).toContain("AGENT_START");
     expect(wrapper).toContain("cron-runtime: Claude limit detected; retrying with Codex");
+    expect(wrapper).toContain("AGENT_FALLBACK");
     expect(wrapper).toContain(
       'codex exec --sandbox danger-full-access "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee -a /tmp/autopilot-0610-1805.log',
     );
     expect(wrapper).toContain("export RALPH_HARNESS=codex;");
+    expect(wrapper).toContain("AGENT_DONE");
+    expect(wrapper).toContain('agent=$active_agent exit=$status');
   });
 
   it("persists a kept session as a resumed live agent, using Codex after fallback", () => {
@@ -195,10 +199,14 @@ describe("buildCronAgentCommand", () => {
 
     expect(command).toContain('claude -p "$(cat /tmp/cron-global.prompt)"');
     expect(command).toContain("grep -Eiq");
+    expect(command).toContain("AGENT_START");
     expect(command).toContain("export RALPH_HARNESS=codex;");
+    expect(command).toContain("AGENT_FALLBACK");
     expect(command).toContain(
       'codex exec --sandbox danger-full-access "$(cat /tmp/cron-global.prompt)"',
     );
+    expect(command).toContain("AGENT_DONE");
+    expect(command).toContain('agent=$active_agent exit=$status');
   });
 
   it("preserves explicit non-Claude CRON_AGENT_BIN behavior without Codex fallback", () => {
@@ -209,8 +217,25 @@ describe("buildCronAgentCommand", () => {
     });
 
     expect(command).toContain('pi -p "$(cat /tmp/cron-custom.prompt)"');
+    expect(command).toContain("AGENT_START");
+    expect(command).toContain("AGENT_DONE");
+    expect(command).toContain('agent=$active_agent exit=$status');
     expect(command).not.toContain("codex exec");
     expect(command).not.toContain("RALPH_HARNESS=codex");
+    expect(command).not.toContain("AGENT_FALLBACK");
+  });
+
+  it("names the cron id in the shell-level agent attribution lines", () => {
+    const command = buildCronAgentCommand({
+      id: "heartbeat",
+      agentBin: "claude",
+      promptFile: "/tmp/cron-heartbeat.prompt",
+      logFile: "/tmp/heartbeat.log",
+    });
+
+    expect(command).toContain("'heartbeat' 'AGENT_START'");
+    expect(command).toContain("'heartbeat' 'AGENT_FALLBACK'");
+    expect(command).toContain("'heartbeat' 'AGENT_DONE'");
   });
 });
 

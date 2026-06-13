@@ -1,2 +1,48 @@
 # progress
 
+## Codebase Patterns
+
+- `.gitignore` ignores daily-log dirs via `memory/[0-9]*/` (line 44). Only
+  `memory/MEMORY.md`, `memory/README.md`, and topic notes persist in git;
+  daily `memory/YYYY-MM-DD/log.md` is a local-only working journal.
+- Two pre-ignore logs (`memory/2026-05-03/log.md`, `memory/2026-05-04/log.md`)
+  remain tracked as a historical vestige — `git ls-files memory/` confirms they
+  are the ONLY tracked daily dirs. Do NOT remove them (PRD Non-Goal).
+- `context/rules/memory.md` IS `.claude/rules/memory.md` via symlink — edit the
+  canonical `context/rules/` path; both views update.
+- Quality gate trio: `pnpm typecheck`, `pnpm lint`, `pnpm test:scripts` (196
+  tests, ~3s) all green on this branch. Shell is zsh — `${PIPESTATUS[0]}` does
+  not capture as in bash; judge pass/fail by the command's own output.
+- Commit trailer is mandatory: `Submitted-by: Claude` (from `$RALPH_HARNESS`).
+
+---
+
+## US-001 — 2026-06-13 22:31 UTC
+
+**Title**: Correct the false 'tracked inside' claim in memory.md
+**Files changed**: context/rules/memory.md
+**Commit**: b9e8b47
+**Result**: PASS
+
+### What I did
+Replaced the Layout code-block comment `daily append log (gitignored
+directory; log.md tracked inside)` with `daily append log (gitignored -
+local-only; not committed)`, and added a paragraph directly below the Layout
+fence stating the `memory/[0-9]*/` gitignore rule, that daily logs are a
+local-only journal, that only MEMORY.md/README.md/topic notes persist, and
+that the two pre-ignore logs remain tracked as a historical vestige.
+
+### Learnings for future iterations
+- AC5 grep (`grep -rniE 'log\.md.*track|track.*log\.md|tracked inside'
+  context/ .claude/skills/`) returns exit 1 / no matches on the corrected
+  tree — that is the PASS condition US-002's probe Assertion B mirrors.
+- Fence balance check: `grep -c '^\`\`\`' context/rules/memory.md` = 6 (even =
+  all fences closed). The added prose sits between the Layout fence's close and
+  the "Date format:" line, so the block still renders cleanly.
+- US-002 next: mirror `evals/probes/boot-lint-glob.sh` exactly (shebang, `# tier:
+  A` / `# source: issue #101` / `# desc:` headers, `set -euo pipefail`,
+  BASH_SOURCE-relative repo root, 3-state oracle). Do NOT expand the CI
+  boot-lint glob to `evals/probes/` — that would flip boot-lint-glob to
+  REGRESSION; run shellcheck manually instead.
+
+---

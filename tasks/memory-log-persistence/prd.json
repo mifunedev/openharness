@@ -18,8 +18,8 @@
                 "Typecheck passes"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Iter 1 (2026-06-13): removed 'tracked inside' from Layout block, added gitignore/local-only/vestige note; grep ACs + typecheck/lint/test:scripts green. Commit b9e8b47."
         },
         {
             "id": "US-002",

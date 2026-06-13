@@ -35,8 +35,8 @@
                 "bash -n evals/probes/eval-results-atomic.sh passes and the scripts/__tests__ vitest suite stays green."
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "iter 2 (2026-06-13): added evals/probes/eval-results-atomic.sh (tier A, source issue #83); statically asserts no `cat > \"$RESULTS\"`, mv -f present, EXIT trap referencing $tmp, prior_row() free of live $RESULTS grep. All 4 invariants fire independently (exit 1, named on stderr); exit 0 vs refactored run.sh, exit 1 vs doctored cat-truncation copy, exit 2 when run.sh absent; first --tier A run scored its row PASS with all 13 prior rows preserved (0 '(not run)'); bash -n OK, pnpm test:scripts 186 green. commit 07a5480."
         },
         {
             "id": "US-003",

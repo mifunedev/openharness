@@ -319,7 +319,7 @@ fi
 # ─── Start cron runtime in tmux session ────────────────────────────
 # Per SPEC v0.7 §"Croner runtime" + .claude/rules/sandbox-processes.md.
 # Replaces the legacy heartbeat-daemon watchdog. Runs as sandbox user
-# inside the system-cron tmux session; logs tee to /tmp/system-cron.log.
+# inside the cron-system tmux session; logs tee to /tmp/cron-system.log.
 case "${CRONS_DIR:-crons}" in
   /*) CRONS_PATH="${CRONS_DIR}" ;;
   *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-crons}" ;;
@@ -327,12 +327,14 @@ esac
 mkdir -p "$CRONS_PATH"
 # Bind-mounted; sandbox UID is synced to host UID above, so no chown.
 if [ -f "$HARNESS/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
-  if ! gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
-    gosu sandbox tmux new-session -d -s system-cron \
-      "cd $HARNESS && node --experimental-strip-types scripts/cron-runtime.ts 2>&1 | tee /tmp/system-cron.log"
-    echo "[entrypoint] system-cron tmux session started (cron-runtime.ts)"
+  if gosu sandbox tmux has-session -t cron-system 2>/dev/null; then
+    echo "[entrypoint] cron-system tmux session already running — skipping"
+  elif gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
+    echo "[entrypoint] legacy system-cron tmux session detected — not starting cron-system; kill system-cron and restart/relaunch the sandbox when ready to migrate"
   else
-    echo "[entrypoint] system-cron tmux session already running — skipping"
+    gosu sandbox tmux new-session -d -s cron-system \
+      "cd $HARNESS && node --experimental-strip-types scripts/cron-runtime.ts 2>&1 | tee /tmp/cron-system.log"
+    echo "[entrypoint] cron-system tmux session started (cron-runtime.ts)"
   fi
 fi
 

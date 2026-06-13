@@ -99,6 +99,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ### Removed
 ### Deprecated
 ### Security
+- Bump root test tooling and the `@openharness/oh` CLI build dependency to clear the remaining `esbuild <0.28.1` Dependabot alerts across `pnpm-lock.yaml` and `packages/oh/package-lock.json` ([#92](https://github.com/ryaneggz/openharness/issues/92)).
 
 ## [2026.5.29] - 2026-05-29
 

@@ -1,0 +1,216 @@
+# progress
+
+## Codebase Patterns
+
+- **No tsconfig at root.** `scripts/*.ts` is transpiled by vitest/esbuild (type
+  stripping, no type-check) and editor TS. The root `pnpm run typecheck` only
+  covers `packages/**` + `packages/oh`. `@types/node` is NOT installed, so an
+  isolated `tsc` on `scripts/cron-runtime.ts` fails to resolve `node:*` imports.
+  To genuinely type-check a snippet, drop a temp `.ts` under `scripts/`, run the
+  local `./node_modules/.bin/tsc --noEmit --strict --skipLibCheck
+  --moduleResolution bundler --module esnext --target es2022 <file>` (avoid
+  `--types node`), then delete it. The real CI gate for scripts is
+  `pnpm run test:scripts` (vitest, 14 files / 186 tests).
+- **`Cron | void` narrows cleanly.** `if (handle) activeJobs.push(handle)` where
+  `handle: Cron | void` narrows to `Cron` under `--strict` — no cast needed.
+- **Test-injection seams convention.** `loadCrons(dir, logFn=log)`,
+  `onJobError(id, err, logFn=log)`, and now `scheduleAll(dir, logFn, mkCron)`
+  expose optional last params that default to module-private impls purely so
+  tests can drive behavior without real side effects. New seams (e.g.
+  `resetActiveJobs()`) should carry a "no external-stability guarantee" comment
+  to match the existing ones.
+- **Logging is `log(id, status, msg)`** → one tab-separated line to
+  `crons/.cron.log` via `appendFileSync`. Tests mock only `appendFileSync`
+  (vi.mock("node:fs") pass-through) to observe status tokens. Reuse the private
+  `log()` helper for any new token (US-003 RELOAD) — never inline appendFileSync.
+- **`scheduleAll` counting is disjoint:** `loadSkips` (invalid at load) +
+  `constructSkips` (throws at `mkCron`); `scheduled++` fires on every successful
+  `mkCron` regardless of handle truthiness, so a `() => void` test spy still
+  counts as scheduled.
+- **`CRONS_DIR` is a module-load const — redirect it via `vi.hoisted` to test
+  default-dir functions.** `CRONS_DIR = path.resolve(process.env.CRONS_DIR ||
+  "crons")` is frozen at import. To make `sighupHandler()` (which calls
+  `scheduleAll()` with NO dir arg) read a tmp dir instead of the repo's real
+  `crons/`, set `process.env.CRONS_DIR` inside a `vi.hoisted(() => {...})` block —
+  it runs before the static `import "../cron-runtime"`, so the const captures the
+  tmp path. Per-pid path avoids parallel-worker collisions. This is the only way
+  to retarget the default dir without changing the (frozen-by-AC) `sighupHandler`
+  signature.
+- **The real `constructCron` arms un-unref'd croner timers — neutralize them in
+  tests.** croner's `unref` option defaults to false, so a real `new Cron(sched,
+  opts, fn)` keeps the event loop alive. Two defenses used in the SIGHUP tests:
+  (a) inject a fake `mkCron` (`() => ({ stop: spy }) as unknown as Cron`) when you
+  only need to seed `activeJobs`; (b) when the handler MUST run real
+  `constructCron` (it has no `mkCron` seam), use a far-future schedule
+  (`0 0 1 1 *`) so nothing fires, and in `afterEach` empty the dir + call
+  `sighupHandler()` once more so the handler `.stop()`s the last (otherwise
+  unreachable, module-private) generation. Never use `* * * * *` in a real-Cron
+  test — it can actually `fire()` and spawn the agent.
+
+## US-005 — 2026-06-13 13:05 UTC
+
+**Title**: Document the SIGHUP reload path
+**Files changed**: crons/README.md, CHANGELOG.md
+**Commit**: 3d59a3a
+**Result**: PASS
+
+### What I did
+Documented the new SIGHUP reschedule path: added a `RELOAD` row to the
+status-tokens table (`id` `system`, msg = cron count), corrected the stale
+Hot-reload sentence (schedule/frontmatter + added/removed cron files now reload
+via SIGHUP; full restart only for runtime *code* changes), and added a new
+`## Reload schedules (SIGHUP)` section with the container-boundary reload command
+(`docker exec -u sandbox openharness kill -HUP "$(cat crons/.pid)"`), the
+`kill -0` health check, the PID-namespace caveat, and the zero-crons escape hatch
+(`tmux kill-session -t system-cron` → `node --experimental-strip-types
+scripts/cron-runtime.ts`). Added the `[Unreleased] → Added` CHANGELOG entry
+linking #88. Docs-only — no source/test files touched; typecheck clean.
+
+### Learnings for future iterations
+- **Task complete.** All five stories (US-001..US-005) now `passes: true`; this is
+  the terminal iteration — appended the completion marker below.
+- **No source/test changes in US-005**, as the prior iteration predicted: the diff
+  is exactly `crons/README.md` (+19/-1) and `CHANGELOG.md` (+1). Test count stays
+  192 (the docs story touches no test files).
+- **README anchor convention**: the new section heading `## Reload schedules
+  (SIGHUP)` renders the GitHub anchor `#reload-schedules-sighup` (lowercase,
+  parens dropped, spaces→hyphens) — the RELOAD table row and the Hot-reload
+  cross-link both target it; the existing `## Hot-reload` heading is `#hot-reload`.
+- **Issue links use the fork origin** `github.com/ryaneggz/openharness` (matching
+  the recent `[Unreleased]` entries), not the upstream `mifunedev` org.
+
+---
+
+## US-004 — 2026-06-13 12:45 UTC
+
+**Title**: Test coverage for the SIGHUP reload path
+**Files changed**: scripts/__tests__/cron-runtime.test.ts
+**Commit**: 4dd3b18
+**Result**: PASS
+
+### What I did
+Added a `describe("SIGHUP reload")` block (6 tests) that drives the exported
+`sighupHandler()` directly. A `vi.hoisted` block repoints the runtime's
+module-load-captured `CRONS_DIR` at an isolated per-pid `/tmp` path BEFORE
+`../cron-runtime` is imported, so the handler's internal `scheduleAll()` re-reads
+that tmp dir instead of the repo's real `crons/` (AC #7). Tests cover: `.stop()`
+on every prior handle, added-file-picked-up / removed-file-dropped via the RELOAD
+count, malformed-file isolation during reload, the RELOAD liveness line (id
+`system`), empty-registry no-throw, and the re-entrancy lock (a `.stop` that
+re-enters mid-reload is a no-op). Suite: 192 tests (was 186), all green; lint and
+typecheck clean.
+
+### Learnings for future iterations
+- **US-005 is the only remaining story** — docs/CHANGELOG only
+  (`crons/README.md` + `CHANGELOG.md`). No code/test changes; US-001..US-004 are
+  complete and green. After US-005, all five stories pass → append the completion
+  marker.
+- **The two new Codebase Patterns at the top** (CRONS_DIR `vi.hoisted` redirect;
+  un-unref'd croner timer neutralization) are the load-bearing test techniques —
+  read them before touching these tests.
+- **Test count is now 40 in cron-runtime.test.ts / 192 total.** US-005 should not
+  change either number (it touches no test files); if a US-005 edit moves them,
+  something leaked outside the docs scope.
+
+## US-003 — 2026-06-13 12:35 UTC
+
+**Title**: Reload is fault-isolated and logs a RELOAD liveness line
+**Files changed**: scripts/cron-runtime.ts
+**Commit**: 7e7e430
+**Result**: PASS
+
+### What I did
+Captured `scheduleAll()`'s `BootResult` in `sighupHandler` as `const { scheduled,
+skipped } = scheduleAll()` and emit one `log("system", "RELOAD", `${scheduled}
+scheduled, ${skipped} skipped`)` line on a successful reschedule — reusing the
+private `log()` helper (no inline appendFileSync, no duplicated format), id
+"system" matching the BOOT precedent. Fault-isolation (AC #1) required no code:
+`scheduleAll()` already routes through `loadCrons()`, which drops invalid-schedule
+files as SCHED_INVALID at reload time exactly as at boot, so a malformed file
+present during a SIGHUP can't crash the reload. Expanded the handler comment to
+document the RELOAD line and the fault-isolation guarantee.
+
+### Learnings for future iterations
+- **The RELOAD log is the US-004 assertion target**: it is the only line written
+  by `sighupHandler` itself (everything else comes from `scheduleAll`/`loadCrons`).
+  US-004's "asserts a RELOAD line is written via the existing appendFileSync spy"
+  AC should grep the spy's captured lines for a `\tRELOAD\t` token after calling
+  `sighupHandler()` — but note: `sighupHandler` calls the *real* module-private
+  `log()` (not an injected `logFn`), so the test must spy on `appendFileSync`
+  (the vi.mock("node:fs") pass-through pattern), NOT pass a fake logFn. The BOOT
+  line from the nested `scheduleAll()` is also written through the same `log()`,
+  so assert on RELOAD specifically, not just "any appendFileSync call".
+- **RELOAD only fires on success**: the `log()` call sits AFTER `scheduleAll()`
+  inside the try, so if `scheduleAll()` ever throws, the finally still clears the
+  `reloading` lock but no RELOAD line is written — matching the "on a successful
+  reschedule" AC. US-004's empty-registry and re-entrancy tests should expect
+  RELOAD to appear once per *completed* handler call (the re-entrant no-op path
+  returns before reaching it).
+- **US-004 is now the only remaining code story**; US-005 is docs/CHANGELOG only.
+  The implementation surface (US-001..US-003) is complete and green at 186 tests.
+
+---
+
+## US-002 — 2026-06-13 06:33 UTC
+
+**Title**: Exported, testable SIGHUP handler reschedules without exiting
+**Files changed**: scripts/cron-runtime.ts
+**Commit**: a542e2a
+**Result**: PASS
+
+### What I did
+Added an exported `sighupHandler()` that stops every handle in the module-level
+`activeJobs` registry via `.stop()` (each wrapped in try/catch so one stubborn
+handle can't abort the reload), then calls `scheduleAll()` to re-read crons/ and
+re-arm. Guarded it with a module-level `reloading` boolean lock cleared in a
+`finally` so a rapid double-SIGHUP is a safe no-op. Registered it in `main()` via
+`process.on("SIGHUP", () => setImmediate(sighupHandler))` (deferred off the
+signal-callback context); SIGTERM/SIGINT cleanup is untouched. The handler never
+calls process.exit() and never unlinks the PID file.
+
+### Learnings for future iterations
+- **US-003 hook point**: `sighupHandler` currently calls `scheduleAll()` and
+  discards its `BootResult`. US-003 should capture `const { scheduled, skipped }
+  = scheduleAll()` and add `log("system", "RELOAD", \`${scheduled} scheduled,
+  ${skipped} skipped\`)` after it. This is the one explicit modification to
+  US-002's completed body that a later story is allowed to make.
+- **US-004 re-entrancy test seam**: the `reloading` lock is module-private. To
+  test the "second invocation mid-reload is a no-op" AC, drive re-entry from
+  inside the reload — e.g. inject an `mkCron` (via the scheduleAll the handler
+  calls is not directly injectable, so) instead make the FIRST `activeJobs`
+  handle's `.stop()` spy call `sighupHandler()` again, then assert scheduleAll
+  ran once. Handles are seeded into `activeJobs` by calling `scheduleAll(tmp,
+  spy, () => fakeHandleWithStopSpy)` before invoking `sighupHandler()`.
+- **Type-check caveat (confirmed)**: standalone `tsc` on cron-runtime.ts reports
+  only the documented missing-`@types/node` class (`process`, `setImmediate`,
+  `node:*`). My new `setImmediate` usage adds one such line — expected, not a
+  real error. `pnpm run test:scripts` (186 tests) is the true gate and passed.
+
+---
+
+## US-001 — 2026-06-13 06:28 UTC
+
+**Title**: Track live job handles so the prior generation can be stopped
+**Files changed**: scripts/cron-runtime.ts
+**Commit**: 3d2fdea
+**Result**: PASS
+
+### What I did
+Changed `constructCron` to return the live `Cron` handle instead of `void`,
+widened `scheduleAll`'s `mkCron` param to `(entry: CronEntry) => Cron | void`
+(default still `constructCron`), and added a module-level `activeJobs: Cron[]`
+registry cleared at the start of each `scheduleAll()` call that collects only
+truthy handles. Added an exported `resetActiveJobs()` test seam. `BootResult`
+and the disjoint load/construct skip counting are unchanged.
+
+### Learnings for future iterations
+US-002's `sighupHandler` should iterate `activeJobs` calling `.stop()` on each,
+then call `scheduleAll()` (which re-clears + repopulates `activeJobs`). The
+registry is module-private; tests reach it indirectly via the `mkCron` spy
+(handles pushed) + `resetActiveJobs()`. The existing `scheduleAll` tests already
+prove the widened signature keeps `() => void` spies compiling and the counting
+intact — no US-001-specific tests were added (that is US-004's job).
+
+---
+
+STATUS: COMPLETE

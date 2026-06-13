@@ -34,6 +34,12 @@ Body becomes the agent prompt at fire time.
 - Cron tmux sessions follow the `cron-<name>` category-prefix convention:
   the runtime is `cron-system`, and detached job fires are
   `cron-<id>-<MMDD>-<HHMM>` (see `.claude/rules/sandbox-processes.md`).
+- Migration note: older sandboxes used runtime session `system-cron` and
+  autopilot run sessions/markers named `autopilot-*`. New sandboxes use
+  `cron-system` and `cron-autopilot-*`. During the transition, heartbeat scans
+  and sweeps both old and new autopilot names. To complete migration, kill the
+  legacy `system-cron` session once, then restart/relaunch the sandbox so the
+  entrypoint starts `cron-system` without running duplicate cron runtimes.
 - Disable a job by setting `enabled: false` — do not delete the file
   (preserves history).
 - Runtime artefacts in this directory (`.cron.log`, `.pid`) are

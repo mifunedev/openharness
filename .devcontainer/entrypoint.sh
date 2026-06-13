@@ -327,12 +327,14 @@ esac
 mkdir -p "$CRONS_PATH"
 # Bind-mounted; sandbox UID is synced to host UID above, so no chown.
 if [ -f "$HARNESS/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
-  if ! gosu sandbox tmux has-session -t cron-system 2>/dev/null; then
+  if gosu sandbox tmux has-session -t cron-system 2>/dev/null; then
+    echo "[entrypoint] cron-system tmux session already running — skipping"
+  elif gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
+    echo "[entrypoint] legacy system-cron tmux session detected — not starting cron-system; kill system-cron and restart/relaunch the sandbox when ready to migrate"
+  else
     gosu sandbox tmux new-session -d -s cron-system \
       "cd $HARNESS && node --experimental-strip-types scripts/cron-runtime.ts 2>&1 | tee /tmp/cron-system.log"
     echo "[entrypoint] cron-system tmux session started (cron-runtime.ts)"
-  else
-    echo "[entrypoint] cron-system tmux session already running — skipping"
   fi
 fi
 

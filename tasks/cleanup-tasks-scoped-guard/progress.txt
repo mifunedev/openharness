@@ -134,3 +134,35 @@ liveness line. Added an `archive/` row to `.worktrees/README.md`.
   and the scoped `git status --porcelain -- tasks/` with no bare survivor.
 
 ---
+
+## US-004 — 2026-06-13 10:27 UTC
+
+**Title**: Add CHANGELOG entry referencing issue #85
+**Files changed**: CHANGELOG.md
+**Commit**: 2d4e5c7
+**Result**: PASS
+
+### What I did
+
+Added one imperative bullet as the first entry under `## [Unreleased]` →
+`### Fixed` describing the scoped `cleanup-tasks` pre-flight (`tasks/`,
+excluding `tasks/archive/`) plus the crash-safe `.worktrees/archive/<date>`
+isolation, the `BLOCKED-TASKS-WIP` skip token, and the guarding probe, linked
+to `[#85](https://github.com/ryaneggz/openharness/issues/85)`. Pre-write checks:
+`grep -c '#85'` returned 0 (no duplicate of this fix).
+
+### Learnings for future iterations
+
+- The `cleanup-tasks` scan returns 1, NOT 0, because of a pre-existing released
+  entry (line ~288: "Seeded the two SPEC-reserved crons … `crons/cleanup-tasks.md`",
+  issue #210). That historical seeding entry is unrelated to this fix — the
+  no-duplicate criterion is really satisfied by the `#85`-count = 0 check, not
+  the broad `cleanup-tasks` substring scan. Don't be tripped up by it.
+- `### Fixed` already existed under `## [Unreleased]`, so no section creation
+  was needed — just insert the bullet at the top of it.
+- CHANGELOG is docs-only; the 186-test vitest pre-commit suite is unaffected
+  (green).
+
+---
+
+STATUS: COMPLETE

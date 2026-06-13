@@ -2,12 +2,13 @@
 name: pr-audit
 description: |
   Audit all open PRs in one bulk query and triage them into actionable
-  buckets: ready-to-merge, needs-review, CI-failing, conflicting/behind,
-  stale, draft-limbo, and convention violations. Read-only by default;
-  --deep escalates flagged PRs to parallel diff reviewers, --proof writes
-  each PR's verdict + evidence back as a comment for human reviewers, and
-  opt-in flags (--label-apply/--close-stale) apply triage actions after
-  confirmation.
+  buckets: ready-to-merge, needs-review, CI-failing, conflicting/behind, plus
+  stale/convention flags. Draft PRs are split out as a separate work-in-progress
+  class (promotable / WIP / limbo), checked first and never mixed into the
+  actionable buckets. Read-only by default; --deep escalates flagged PRs to
+  parallel diff reviewers, --proof writes each PR's verdict + evidence back as a
+  comment for human reviewers, and opt-in flags (--label-apply/--close-stale)
+  apply triage actions after confirmation.
   TRIGGER when: asked to audit open PRs, "check the open PRs", "what PRs
   are stuck", "triage the PR queue", PR backlog review, or before a merge sweep.
 argument-hint: "[--deep] [--proof] [--label <l>] [--author <a>] [--mine] [--base <b>] [--stale-days <n>] [--label-apply] [--close-stale <n>] [--dry-run]"
@@ -121,7 +122,13 @@ jq -r --argjson stale "$STALE_DAYS" --arg base "$BASE_DEFAULT" '
       base_ok: (.baseRefName == $base),
       reviewers: ((.reviewDecision // "") | length > 0)
     }
-  | [ .number, .ci, .age, .isDraft, .mergeable, .mergeStateStatus,
+  | . + {
+      draft_sub: (if .isDraft then
+                    (if (.mergeable=="MERGEABLE" and .mergeStateStatus=="CLEAN" and .ci=="PASS")
+                     then "promotable" else "wip" end)
+                  else "" end)
+    }
+  | [ .number, .ci, .age, .isDraft, .draft_sub, .mergeable, .mergeStateStatus,
       (.reviewDecision // "NONE"), .title_ok, .base_ok, .baseRefName,
       .changedFiles, (.author.login), .title ]
   | @tsv
@@ -137,48 +144,71 @@ the same green PR; flags annotate whatever state the PR is in.
 
 | State | Rule |
 |-------|------|
+| 📝 **Draft** | `isDraft==true` — checked **first**. A draft is intentional WIP, so its CI/conflict/review state is *expected*, not actionable; drafts never enter the buckets below. Classify their readiness with the **draft sub-status** table instead. |
 | ❌ **CI failing** | `ci=="FAIL"` |
 | ⚠ **Conflicting / behind** | `mergeable=="CONFLICTING"` \|\| `mergeStateStatus ∈ {DIRTY, BEHIND}` |
 | 🔴 **Changes requested** | `reviewDecision=="CHANGES_REQUESTED"` |
-| 📝 **Draft** | `isDraft==true` (tag 📝→💤 *draft-limbo* when also stale) |
 | 👀 **Needs review** | `reviewDecision=="REVIEW_REQUIRED"` (review is *required* but not yet given) |
 | ✅ **Ready to merge** | `mergeable=="MERGEABLE"` && `mergeStateStatus=="CLEAN"` && `ci=="PASS"` && `reviewDecision ∈ {APPROVED, "", null}` — the same selector `crons/heartbeat.md` uses to nudge merges |
 | ⏳ **Pending / other** | none of the above (e.g. `ci=="PEND"`, or `mergeable=="UNKNOWN"` — re-check shortly) |
+
+Because Draft wins first, the actionable states below it (CI-failing … pending)
+describe **ready-for-review PRs only** — a draft's red CI or conflict is WIP, and
+surfaces as a draft sub-status, never as an actionable alarm.
 
 > Note on empty `reviewDecision`: a repo without required reviews returns `""`,
 > so a green PR is **Ready**, not Needs-review. Only `REVIEW_REQUIRED` (branch
 > protection awaiting a review) lands in Needs-review — this is why #70-style
 > solo-dev PRs read as Ready rather than nagging for a reviewer that isn't required.
 
+**Draft sub-status — classify each 📝 Draft (the `draft_sub` column) by
+*readiness*, not actionability:**
+
+| Sub-status | Rule | Meaning |
+|------------|------|---------|
+| ✅ **promotable** | `mergeable=="MERGEABLE" && mergeStateStatus=="CLEAN" && ci=="PASS"` | green WIP — could be marked ready (`gh pr ready <N>`) |
+| 🚧 **still-WIP** | otherwise (red/pending CI, or `CONFLICTING`/`DIRTY`/`BEHIND`) | expected work-in-progress; informational only, never a "fix me" alarm |
+
+A stale draft (💤, below) is *draft-limbo* — promote or close.
+
 **Orthogonal flags — tag any PR regardless of its primary state:**
 
 | Flag | Rule |
 |------|------|
-| 💤 **Stale** | `age > STALE_DAYS` (days since `updatedAt`) |
+| 💤 **Stale** | `age > STALE_DAYS` (days since `updatedAt`); on a 📝 Draft this is *draft-limbo* |
 | 📐 **Convention** | `title_ok==false` (not `FROM … TO …`), or `base_ok==false` (base ≠ `development`), or oversized (`changedFiles > 50`) — see `context/rules/git.md` |
 
 ### 4. Emit the triage report
 
-One section per **non-empty primary state**, most-actionable first. Each PR is
-one line, carries its 💤/📐 flags inline, and lists the recommended read-only
-command (report-and-recommend, like `/drift-check` — never auto-run):
+One section per **non-empty primary state**, most-actionable first. Drafts get
+their own block **after** the actionable (ready-for-review) sections — least
+urgent, never mixed in. Each PR is one line, carries its 💤/📐 flags inline, and
+lists the recommended read-only command (report-and-recommend, like
+`/drift-check` — never auto-run):
 
 ```
 ## Open PR Audit — YYYY-MM-DD  (N open · filters: <…>)
 
-### ❌ CI failing (F)
+### ❌ CI failing (ready-for-review)
 | PR | Title | CI | Age | Flags | Recommend |
 |----|-------|----|-----|-------|-----------|
-| #70 | … | ✗ build | 3d | — | fix branch (`--deep` for root cause) |
+| #81 | … | ✗ build | 3d | — | fix branch (`--deep` for root cause) |
 
-### ⚠ Conflicting / behind · 🔴 Changes requested · 👀 Needs review · 📝 Draft · ✅ Ready to merge
-…one section per non-empty state, same column shape…
+### ⚠ Conflicting / behind · 🔴 Changes requested · 👀 Needs review · ✅ Ready to merge
+…one section per non-empty actionable state, same column shape (ready-for-review PRs only)…
+
+### 📝 Drafts — work-in-progress (not actionable)
+| PR | Title | Sub-status | Age | Flags | Recommend |
+|----|-------|-----------|-----|-------|-----------|
+| #68 | … | ✅ promotable | 2d | — | mark ready (`gh pr ready 68`) |
+| #72 | … | 🚧 still-WIP  | 1d | — | finish work; no action |
+| #41 | … | 🚧 still-WIP  | 21d | 💤 limbo | promote or close |
 
 ### Flag rollup
-💤 stale: #68 #41   📐 convention: #73 (title), #55 (base≠development)
+💤 stale: #41   📐 convention: #73 (title), #55 (base≠development)
 
 ### Summary
-ci-fail F · conflict C · changes-req X · draft D · needs-review R · ready M · pending P  ·  flagged: stale S, conv V
+ci-fail F · conflict C · changes-req X · needs-review R · ready M · pending P · draft D (✅ promotable Dp · 🚧 wip Dw)  ·  flagged: stale S, conv V
 ```
 
 A flag never moves a PR out of its state section — `#68` stale + ready shows
@@ -229,6 +259,10 @@ Body template (the hidden marker on line 1 is load-bearing — see idempotency):
 _Read-only audit; verdict is advisory. Re-run updates this comment._
 ```
 
+For a **draft**, `bucket:` carries the sub-status — `Draft (promotable)` or
+`Draft (WIP)` — so a green draft gets a "consider marking ready" nudge while a
+WIP draft's verdict stays purely informational.
+
 **Idempotency** — re-runs must update the same comment, not stack duplicates.
 Find a prior proof by the `<!-- pr-audit-proof -->` marker and edit it; create
 only if none exists:
@@ -263,7 +297,7 @@ Append to `memory/$(date -u +%Y-%m-%d)/log.md` (create the dir first):
 ## PR Audit -- HH:MM UTC
 - **Result**: OP | DRY-RUN | PARTIAL | FAIL
 - **Scope**: [N open PRs; filters]
-- **Triage**: ready M | review R | ci-fail F | conflict C | stale S | draft D
+- **Triage**: ready M | review R | ci-fail F | conflict C | stale S | draft D (promotable Dp)
 - **Actions**: [none | proof posted X | labeled Y | closed Z]
 - **Observation**: [one sentence — top finding]
 ```
@@ -281,7 +315,7 @@ Then run the qualify/improve pass per `context/rules/memory.md`.
 | ⚠ Conflicting / behind | CONFLICTING / DIRTY / BEHIND | rebase on `development` |
 | 🔴 Changes requested | review demands changes | address review |
 | 👀 Needs review | `REVIEW_REQUIRED` pending | request a reviewer |
-| 📝 Draft | work-in-progress (💤 *limbo* when stale) | mark ready or close |
+| 📝 Draft (separate WIP class) | `isDraft` — checked first; sub-status ✅ promotable (green+clean) / 🚧 still-WIP / 💤 limbo (stale) | `gh pr ready <N>` to promote, or close |
 | ⏳ Pending / other | CI running / mergeable unknown | re-check shortly |
 | 💤 Stale (flag) | no update > `--stale-days` | ping or `--close-stale` |
 | 📐 Convention (flag) | title/base/size off-spec | fix title/base per `git.md` |

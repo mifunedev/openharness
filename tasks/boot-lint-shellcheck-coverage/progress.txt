@@ -57,3 +57,21 @@ Added `evals/probes/boot-lint-glob.sh` — a tier-A 3-state oracle that locates 
 - US-004 next: run the `/eval` suite (which auto-discovers this probe) so `evals/RESULTS.md` gains a `boot-lint-glob` PASS row — do NOT hand-edit the row; leave the pre-existing `next-dev-prod` REGRESSION row untouched. Then add the `## [Unreleased]` → `### Fixed` CHANGELOG entry referencing #90.
 
 ---
+
+## US-004 — 2026-06-13 13:33 UTC
+
+**Title**: Refresh evals/RESULTS.md and CHANGELOG.md
+**Files changed**: evals/RESULTS.md, CHANGELOG.md
+**Commit**: 79316f4
+**Result**: PASS
+
+### What I did
+Ran the full `/eval` suite (`bash .claude/skills/eval/run.sh`), which auto-discovered `boot-lint-glob` and wrote a real `PASS` row to `evals/RESULTS.md` (`new-pass`, runner exit 0). The pre-existing `next-dev-prod` REGRESSION row stayed `REGRESSION` (unchanged delta) and no rows were removed. Added a one-line `## [Unreleased]` → `### Fixed` CHANGELOG entry referencing #90 that summarizes the whole task (glob extension, `workspace/**` path triggers, the SC2088 lint-disable, and the coverage probe). Verified probe PASS, full-set `shellcheck -S warning` exit 0, and `pnpm test:scripts` 186/186.
+
+### Learnings for future iterations
+- The `/eval` runner re-runs **every** probe and refreshes all `last-run` timestamps, but its aggregate exit only flags NEW green→red transitions — a probe already red on the prior row (`next-dev-prod`) re-runs to `REGRESSION` with an `unchanged` delta, so the runner still exits 0. A pre-existing red row therefore does not block a clean eval gate.
+- This was the terminal story (US-001→US-004 all `passes: true`); the task is complete.
+
+---
+
+STATUS: COMPLETE

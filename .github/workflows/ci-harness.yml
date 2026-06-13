@@ -20,6 +20,7 @@ on:
       - "context/**"
       - ".devcontainer/**"
       - "install/**"
+      - "workspace/**"
   pull_request:
     paths:
       - "packages/**"
@@ -35,6 +36,7 @@ on:
       - "context/**"
       - ".devcontainer/**"
       - "install/**"
+      - "workspace/**"
 
 concurrency:
   group: ci-harness-${{ github.ref }}
@@ -106,7 +108,7 @@ jobs:
         run: |
           command -v shellcheck >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y shellcheck; }
           shellcheck --version
-          shellcheck -S warning .devcontainer/*.sh install/*.sh
+          shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh workspace/*.sh
 
       - name: Hadolint Dockerfile
         uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0

@@ -138,6 +138,19 @@ function log(id: string, status: string, msg = ""): void {
   }
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function cronLogCommand(id: string, status: string, msgExpr: string): string {
+  return (
+    `mkdir -p ${shellQuote(path.dirname(LOG_FILE))}; ` +
+    `printf '%s\\t%s\\t%s\\t%s\\n' ` +
+    `"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" ` +
+    `${shellQuote(id)} ${shellQuote(status)} ${msgExpr} >> ${shellQuote(LOG_FILE)}; `
+  );
+}
+
 // Best-effort tail of a job's tee'd log, used by fire()'s exit handler to
 // enrich an EXIT_<code> liveness line with the failing job's trailing output.
 // Returns the last `maxChars` characters of the file, or "" when the file is
@@ -181,10 +194,12 @@ export function buildTmuxWrapper(opts: {
     `echo $$ > /tmp/cron-${id}.pid; ` +
     `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep; ` +
     buildCronAgentCommand({
+      id,
       agentBin,
       promptFile,
       logFile: `/tmp/${session}.log`,
       resumeFile: `/tmp/${session}.agent`,
+      exitOnComplete: false,
     }) +
     `; ` +
     `rm -f /tmp/cron-${id}.pid; ` +
@@ -192,36 +207,69 @@ export function buildTmuxWrapper(opts: {
     // agent (idle until driven); fall back to a shell if that exits.
     `[ -f /tmp/${session}.keep ] && { ` +
     `if [ "$(cat /tmp/${session}.agent 2>/dev/null || echo ${agentBin})" = codex ]; then codex; else ${agentBin} --continue; fi; ` +
-    `exec bash; }`
+    `exec bash; }; ` +
+    `exit $status`
   );
 }
 
 export function buildCronAgentCommand(opts: {
+  id?: string;
   agentBin: string;
   promptFile: string;
   logFile: string;
   resumeFile?: string;
+  exitOnComplete?: boolean;
 }): string {
-  const { agentBin, promptFile, logFile, resumeFile } = opts;
+  const {
+    id = "cron",
+    agentBin,
+    promptFile,
+    logFile,
+    resumeFile,
+    exitOnComplete = true,
+  } = opts;
+  const exitOrReturn = exitOnComplete ? `exit $status` : `true`;
   const resumeInit = resumeFile ? `printf '%s' ${agentBin} > ${resumeFile}; ` : "";
+  const logAgentStart = cronLogCommand(id, "AGENT_START", '"agent=$active_agent"');
+  const logAgentDone = cronLogCommand(
+    id,
+    "AGENT_DONE",
+    '"agent=$active_agent exit=$status"',
+  );
   if (agentBin !== "claude") {
-    return `${resumeInit}${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}`;
+    return (
+      `${resumeInit}` +
+      `active_agent=${shellQuote(agentBin)}; ` +
+      logAgentStart +
+      `set +e; ` +
+      `set -o pipefail; ` +
+      `${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}; ` +
+      `status=$?; ` +
+      logAgentDone +
+      exitOrReturn
+    );
   }
   const resumeCodex = resumeFile ? `printf '%s' codex > ${resumeFile}; ` : "";
   return (
     `${resumeInit}` +
+    `active_agent=claude; ` +
+    logAgentStart +
     `set +e; ` +
     `set -o pipefail; ` +
     `claude -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}; ` +
     `status=$?; ` +
     `if grep -Eiq '(usage|session|hit (your |the )?limit)' ${logFile} && grep -Eiq '(limit|resets?|/upgrade)' ${logFile}; then ` +
     `echo "cron-runtime: Claude limit detected; retrying with Codex" | tee -a ${logFile}; ` +
+    cronLogCommand(id, "AGENT_FALLBACK", "'from=claude to=codex'") +
+    `active_agent=codex; ` +
     `export RALPH_HARNESS=codex; ` +
     `${resumeCodex}` +
+    logAgentStart +
     `codex exec --sandbox danger-full-access "$(cat ${promptFile})" 2>&1 | tee -a ${logFile}; ` +
     `status=$?; ` +
     `fi; ` +
-    `exit $status`
+    logAgentDone +
+    exitOrReturn
   );
 }
 
@@ -277,6 +325,7 @@ function fire(entry: CronEntry): void {
     [
       "-lc",
       buildCronAgentCommand({
+        id: entry.id,
         agentBin: AGENT_BIN,
         promptFile,
         logFile,

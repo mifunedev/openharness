@@ -2,12 +2,13 @@
 # tier: A
 # source: issue #98
 # desc: extract the LIVE Step C-2 bash block from drift-check SKILL.md and RUN it
-#       against three fixtures (README-style, valid scheduled cron, disabled cron)
-#       with RUNTIME_START before their mtimes; PASS only if the inert set includes
-#       the valid cron and excludes the README + disabled fixtures. This is a
-#       behavioral extract-and-run probe (not a text-presence grep): a revert of
-#       Step C-2 to the raw `for f in crons/*.md` glob flags all three fixtures and
-#       flips the probe to REGRESSION.
+#       against fixtures (README-style, valid scheduled cron, disabled cron,
+#       missing schedule, empty schedules, invalid schedule) with RUNTIME_START
+#       before their mtimes; PASS only if the inert set includes the valid cron
+#       and excludes the README, disabled, missing, empty, and invalid fixtures.
+#       This is a behavioral extract-and-run probe (not a text-presence grep): a
+#       revert of Step C-2 to the raw `for f in crons/*.md` glob flags all
+#       fixtures and flips the probe to REGRESSION.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -100,15 +101,85 @@ enabled: false
 Body.
 EOF_C
 
+# (d) Missing schedule: parseCronFile returns null because fm.schedule is absent.
+#     Must be EXCLUDED.
+cat > "$WORK/crons/ddd-missing-schedule.md" <<'EOF_D'
+---
+id: probe-missing
+enabled: true
+---
+
+# Missing schedule cron
+
+Body.
+EOF_D
+
+# (e) Empty bare schedule: parseCronFile returns null because fm.schedule is empty.
+#     Must be EXCLUDED.
+cat > "$WORK/crons/eee-empty-schedule-bare.md" <<'EOF_E'
+---
+id: probe-empty-bare
+schedule:
+enabled: true
+---
+
+# Empty bare schedule cron
+
+Body.
+EOF_E
+
+# (f) Empty double-quoted schedule: parseCronFile strips quotes to empty.
+#     Must be EXCLUDED.
+cat > "$WORK/crons/fff-empty-schedule-double-quoted.md" <<'EOF_F'
+---
+id: probe-empty-double
+schedule: ""
+enabled: true
+---
+
+# Empty double-quoted schedule cron
+
+Body.
+EOF_F
+
+# (g) Empty single-quoted schedule: parseCronFile strips quotes to empty.
+#     Must be EXCLUDED.
+cat > "$WORK/crons/ggg-empty-schedule-single-quoted.md" <<'EOF_G'
+---
+id: probe-empty-single
+schedule: ''
+enabled: true
+---
+
+# Empty single-quoted schedule cron
+
+Body.
+EOF_G
+
+# (h) Invalid cron: frontmatter and schedule key exist, but Croner rejects it.
+#     loadCrons logs SCHED_INVALID and drops it, so it must be EXCLUDED.
+cat > "$WORK/crons/hhh-invalid-schedule-not-a-cron.md" <<'EOF_H'
+---
+id: probe-invalid
+schedule: "not-a-cron"
+enabled: true
+---
+
+# Invalid cron
+
+Body.
+EOF_H
+
 printf '%s' "$BLOCK" > "$WORK/block.sh"
 
 # --- Run the extracted predicate against the fixtures ----------------------
 # RUNTIME_START=1 (epoch 1s) sits before every freshly-written fixture mtime, so
-# under the OLD raw-glob logic ALL three fixtures would be flagged inert; only
-# the corrected predicate excludes the non-cron (a) and the disabled cron (c).
+# under the OLD raw-glob logic ALL fixtures would be flagged inert; only the
+# corrected predicate excludes the non-cron (a), disabled cron (c), missing
+# schedule (d), empty schedules (e-g), and invalid schedule (h).
 # The block prints one `DRIFT-CHECK (C): crons/<file> ...` line per inert file —
 # we read that observable contract rather than the internal INERT array name.
-output="$(cd "$WORK" && RUNTIME_START=1 bash block.sh 2>/dev/null)" || true
+output="$(cd "$WORK" && DRIFT_CHECK_ROOT="$ROOT" RUNTIME_START=1 bash block.sh 2>/dev/null)" || true
 
 inert_contains() { printf '%s\n' "$output" | grep -q "$1"; }
 
@@ -125,6 +196,26 @@ if inert_contains "ccc-disabled.md"; then
   echo "REGRESSION: disabled cron (enabled: false) was flagged inert — predicate ignores the enabled toggle" >&2
   fail=1
 fi
+if inert_contains "ddd-missing-schedule.md"; then
+  echo "REGRESSION: missing schedule was flagged inert — predicate diverges from parseCronFile/loadCrons skip" >&2
+  fail=1
+fi
+if inert_contains "eee-empty-schedule-bare.md"; then
+  echo "REGRESSION: empty bare schedule was flagged inert — predicate diverges from parseCronFile/loadCrons skip" >&2
+  fail=1
+fi
+if inert_contains "fff-empty-schedule-double-quoted.md"; then
+  echo "REGRESSION: empty double-quoted schedule was flagged inert — predicate diverges from parseCronFile/loadCrons skip" >&2
+  fail=1
+fi
+if inert_contains "ggg-empty-schedule-single-quoted.md"; then
+  echo "REGRESSION: empty single-quoted schedule was flagged inert — predicate diverges from parseCronFile/loadCrons skip" >&2
+  fail=1
+fi
+if inert_contains "hhh-invalid-schedule-not-a-cron.md"; then
+  echo "REGRESSION: invalid schedule was flagged inert — predicate diverges from runtime SCHED_INVALID skip" >&2
+  fail=1
+fi
 
 if (( fail )); then
   {
@@ -136,5 +227,5 @@ if (( fail )); then
   exit 1
 fi
 
-echo "PASS: drift-check Step C-2 includes the valid scheduled cron and excludes the README-style + disabled fixtures" >&2
+echo "PASS: drift-check Step C-2 includes the valid scheduled cron and excludes README-style, disabled, missing, empty, and invalid fixtures" >&2
 exit 0

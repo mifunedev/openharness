@@ -117,8 +117,8 @@ If the fast-forward fails, log `Result: FAIL` + `Observation: development diverg
 **Capture the tmux session context** (set by the cron runtime when `tmux: true`; EMPTY when invoked manually — every tmux step below must no-op when empty):
 
 ```bash
-SESSION="$CRON_TMUX_SESSION"        # e.g. autopilot-0610-1805, or empty
-KEEP="$CRON_KEEP_MARKER"            # e.g. /tmp/autopilot-0610-1805.keep, or empty
+SESSION="$CRON_TMUX_SESSION"        # e.g. cron-autopilot-0610-1805, or empty
+KEEP="$CRON_KEEP_MARKER"            # e.g. /tmp/cron-autopilot-0610-1805.keep, or empty
 ```
 
 ### 2. Select — issue queue first, research only when empty
@@ -138,7 +138,7 @@ gh issue list --state open --label autopilot \
   SELECTION_MODE=queue
   SELECTION_RATIONALE="Queue selection: implementing open autopilot issue #$ISSUE_NUM (\"$TITLE\") — the oldest actionable ticket (filed $CREATED) with no open PR."
   ```
-  If `[ -n "$SESSION" ]`, rename the session for readability: `tmux rename-session "autopilot-$SLUG"`. Leave `$KEEP` unchanged — the keep-marker path is fixed at spawn time and the session wrapper checks that original path.
+  If `[ -n "$SESSION" ]`, rename the session for readability: `tmux rename-session "cron-autopilot-$SLUG"`. Leave `$KEEP` unchanged — the keep-marker path is fixed at spawn time and the session wrapper checks that original path.
 - **No actionable item** — the queue is empty, OR every open `autopilot` ticket already has an open PR — → **fall through to research** (below). A single in-flight PR MUST NOT starve the loop: the §1 caps (6 open created/day, 10 total) are the pile-up guard, not an in-flight check. Those caps were already enforced above, so research here is cap-bounded by construction. Do **not** un-draft, finalize, or otherwise mutate a PR opened by a different run while idling on it — surface it (the heartbeat watches for stuck-green drafts) and proceed to research instead.
 
 **No actionable queue item → research** (first-principles pass — fires whenever the queue is empty *or* every open ticket already has a PR):

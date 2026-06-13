@@ -183,7 +183,7 @@ command -v opencode >/dev/null 2>&1 && shortcuts="$shortcuts · opencode"
 command -v grok >/dev/null 2>&1 && shortcuts="$shortcuts · grok"
 command -v deepagents >/dev/null 2>&1 && shortcuts="$shortcuts · deepagents"
 command -v hermes >/dev/null 2>&1 && shortcuts="$shortcuts · hermes"
-printf '  Shortcuts: %s · tmux attach -t system-cron\n' "$shortcuts"
+printf '  Shortcuts: %s · tmux attach -t cron-system\n' "$shortcuts"
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'
 

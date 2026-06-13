@@ -32,7 +32,7 @@ What's available in the orchestrator's runtime. Read at session start to skip re
 ## Long-running processes (tmux convention)
 
 Per `.claude/rules/sandbox-processes.md`:
-- `system-cron` — `scripts/cron-runtime.ts`, started by `.devcontainer/entrypoint.sh`
+- `cron-system` — `scripts/cron-runtime.ts`, started by `.devcontainer/entrypoint.sh`
 - `app-*` — user dev servers
 - `agent-*` — AI agent processes
 - `expose-public-*` — Cloudflare quick tunnels

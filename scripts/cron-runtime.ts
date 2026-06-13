@@ -167,7 +167,7 @@ export function tmuxSessionName(id: string, now: Date): string {
   const dd = pad(now.getDate());
   const hh = pad(now.getHours());
   const min = pad(now.getMinutes());
-  return `${id}-${mm}${dd}-${hh}${min}`;
+  return `cron-${id}-${mm}${dd}-${hh}${min}`;
 }
 
 export function buildTmuxWrapper(opts: {
@@ -240,7 +240,7 @@ function fireTmux(entry: CronEntry): void {
     }
   }
   const session = tmuxSessionName(entry.id, new Date());
-  const promptFile = `/tmp/cron-${session}.prompt`;
+  const promptFile = `/tmp/${session}.prompt`;
   const body = reloadBody(entry);
   fs.writeFileSync(promptFile, body);
   const child = spawn(
@@ -269,7 +269,7 @@ function fire(entry: CronEntry): void {
   }
   log(entry.id, "FIRE");
   const session = tmuxSessionName(entry.id, new Date());
-  const promptFile = `/tmp/cron-${session}.prompt`;
+  const promptFile = `/tmp/${session}.prompt`;
   const logFile = `/tmp/${session}.log`;
   fs.writeFileSync(promptFile, reloadBody(entry));
   const child = spawn(
@@ -383,7 +383,7 @@ export function scheduleAll(
 // SIGHUP reschedule entry point. Stops the prior generation of armed Cron
 // handles, then re-reads crons/ and re-arms via scheduleAll() — so schedule
 // edits and added/removed crons/*.md files take effect without restarting the
-// system-cron session. Exported (not buried in main()) so tests can invoke it
+// cron-system session. Exported (not buried in main()) so tests can invoke it
 // directly without going through process signals or acquireLock side effects.
 //
 // .stop() halts a handle's FUTURE fires but cannot kill a callback already in

@@ -82,7 +82,7 @@ Verify the sandbox is healthy.
 3. **Check the cron runtime** (if heartbeats configured under `crons/`):
    ```bash
    docker exec -it -u sandbox openharness tmux ls
-   # → expect "system-cron" session
+   # → expect "cron-system" session
    ```
 
 ### Teardown

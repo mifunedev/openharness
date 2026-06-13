@@ -38,14 +38,14 @@ that catches anything time-sensitive without doing real work.
     stuck per-run sessions and a jammed queue, and nudge where the signal
     is unambiguous. Three checks, only the first acts autonomously:
 
-    - **Stuck sessions (KILL — autonomous nudge).** For each `autopilot-*`
+    - **Stuck sessions (KILL — autonomous nudge).** For each `cron-autopilot-*`
       tmux session, read the pane tail for a terminal interactive prompt the
       run can never clear on its own — a Claude usage/session limit, a
       `Resume from summary` menu, `/upgrade`, or a fatal error banner. A
       detached cron run frozen there will never finish and, under
       `overlap: false`, blocks every later `:05` fire:
       ```bash
-      for s in $(tmux ls 2>/dev/null | grep -oE '^autopilot[^:]*'); do
+      for s in $(tmux ls 2>/dev/null | grep -oE '^cron-autopilot[^:]*'); do
         if tmux capture-pane -p -t "$s" 2>/dev/null | tail -25 \
              | grep -qiE 'hit your (usage|session) limit|session limit|/usage-credits|/upgrade|Resume from summary|Resume full session'; then
           tmux kill-session -t "$s"; rm -f "/tmp/$s.keep"
@@ -53,10 +53,10 @@ that catches anything time-sensitive without doing real work.
         fi
       done
       # sweep orphaned keep-markers (session already gone)
-      for m in /tmp/autopilot-*.keep; do [ -e "$m" ] || continue; \
+      for m in /tmp/cron-autopilot-*.keep; do [ -e "$m" ] || continue; \
         s=$(basename "$m" .keep); tmux has-session -t "$s" 2>/dev/null || rm -f "$m"; done
       ```
-    - **Long-lived sessions (SURFACE — never kill on age).** An `autopilot-*`
+    - **Long-lived sessions (SURFACE — never kill on age).** A `cron-autopilot-*`
       session alive > 90 min with no stuck marker may be a persisted
       ready-PR session the operator is driving, or a slow build. Surface
       `WATCHING: autopilot session <s> alive <age> — verify it is not hung`

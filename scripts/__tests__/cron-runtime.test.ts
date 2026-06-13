@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import type { Cron } from "croner";
 import * as fsModule from "node:fs";
 import {
@@ -156,9 +156,78 @@ describe("buildTmuxWrapper", () => {
     promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
   });
 
+  const runWrapper = (opts: { agentBin: string; status: number }) => {
+    const session = `vitest-cron-wrapper-${process.pid}-${Date.now()}-${Math.random()
+      .toString(16)
+      .slice(2)}`;
+    const id = `vitest-${process.pid}-${Math.random().toString(16).slice(2)}`;
+    const promptFile = path.join(tmp, `${session}.prompt`);
+    const binDir = path.join(tmp, `${session}-bin`);
+    const agentPath = path.isAbsolute(opts.agentBin)
+      ? opts.agentBin
+      : path.join(binDir, opts.agentBin);
+    mkdirSync(path.dirname(agentPath), { recursive: true });
+    writeFileSync(promptFile, "prompt body");
+    writeFileSync(
+      agentPath,
+      `#!/usr/bin/env bash\nprintf 'agent-ran:%s\\n' "$1"\nexit ${opts.status}\n`,
+      { mode: 0o755 },
+    );
+    const command = buildTmuxWrapper({
+      session,
+      id,
+      agentBin: opts.agentBin,
+      promptFile,
+    });
+    const result = spawnSync("bash", ["-lc", command], {
+      env: { ...process.env, PATH: `${binDir}:${process.env.PATH ?? ""}` },
+      encoding: "utf-8",
+    });
+    const pidFile = `/tmp/cron-${id}.pid`;
+    const logFile = `/tmp/${session}.log`;
+    const keepFile = `/tmp/${session}.keep`;
+    const resumeFile = `/tmp/${session}.agent`;
+    const logText = existsSync(logFile) ? readFileSync(logFile, "utf-8") : "";
+    rmSync(pidFile, { force: true });
+    rmSync(logFile, { force: true });
+    rmSync(keepFile, { force: true });
+    rmSync(resumeFile, { force: true });
+    return { result, command, pidFile, logText };
+  };
+
   it("writes the per-id pidfile and cleans it up", () => {
     expect(wrapper).toContain("echo $$ > /tmp/cron-autopilot.pid;");
     expect(wrapper).toContain("rm -f /tmp/cron-autopilot.pid;");
+  });
+
+  it("runs cleanup after a non-Claude agent command instead of bypassing it", () => {
+    const { result, command, pidFile, logText } = runWrapper({
+      agentBin: path.join(tmp, "pi-agent"),
+      status: 7,
+    });
+
+    expect(command).not.toContain("exit $status; rm -f");
+    expect(command.indexOf("status=$?;")).toBeLessThan(command.indexOf("rm -f"));
+    expect(command.indexOf("rm -f")).toBeLessThan(command.lastIndexOf("exit $status"));
+    expect(result.status).toBe(7);
+    expect(result.stderr).toBe("");
+    expect(existsSync(pidFile)).toBe(false);
+    expect(logText).toContain("agent-ran:-p");
+  });
+
+  it("runs cleanup after the Claude command path and preserves the original status", () => {
+    const { result, command, pidFile, logText } = runWrapper({
+      agentBin: "claude",
+      status: 9,
+    });
+
+    expect(command).not.toContain("exit $status; rm -f");
+    expect(command.indexOf("status=$?;")).toBeLessThan(command.indexOf("rm -f"));
+    expect(command.indexOf("rm -f")).toBeLessThan(command.lastIndexOf("exit $status"));
+    expect(result.status).toBe(9);
+    expect(result.stderr).toBe("");
+    expect(existsSync(pidFile)).toBe(false);
+    expect(logText).toContain("agent-ran:-p");
   });
 
   it("exports the session + keep-marker env vars", () => {

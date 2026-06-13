@@ -199,6 +199,7 @@ export function buildTmuxWrapper(opts: {
       promptFile,
       logFile: `/tmp/${session}.log`,
       resumeFile: `/tmp/${session}.agent`,
+      exitOnComplete: false,
     }) +
     `; ` +
     `rm -f /tmp/cron-${id}.pid; ` +
@@ -206,7 +207,8 @@ export function buildTmuxWrapper(opts: {
     // agent (idle until driven); fall back to a shell if that exits.
     `[ -f /tmp/${session}.keep ] && { ` +
     `if [ "$(cat /tmp/${session}.agent 2>/dev/null || echo ${agentBin})" = codex ]; then codex; else ${agentBin} --continue; fi; ` +
-    `exec bash; }`
+    `exec bash; }; ` +
+    `exit $status`
   );
 }
 
@@ -216,8 +218,17 @@ export function buildCronAgentCommand(opts: {
   promptFile: string;
   logFile: string;
   resumeFile?: string;
+  exitOnComplete?: boolean;
 }): string {
-  const { id = "cron", agentBin, promptFile, logFile, resumeFile } = opts;
+  const {
+    id = "cron",
+    agentBin,
+    promptFile,
+    logFile,
+    resumeFile,
+    exitOnComplete = true,
+  } = opts;
+  const exitOrReturn = exitOnComplete ? `exit $status` : `true`;
   const resumeInit = resumeFile ? `printf '%s' ${agentBin} > ${resumeFile}; ` : "";
   const logAgentStart = cronLogCommand(id, "AGENT_START", '"agent=$active_agent"');
   const logAgentDone = cronLogCommand(
@@ -235,7 +246,7 @@ export function buildCronAgentCommand(opts: {
       `${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}; ` +
       `status=$?; ` +
       logAgentDone +
-      `exit $status`
+      exitOrReturn
     );
   }
   const resumeCodex = resumeFile ? `printf '%s' codex > ${resumeFile}; ` : "";
@@ -258,7 +269,7 @@ export function buildCronAgentCommand(opts: {
     `status=$?; ` +
     `fi; ` +
     logAgentDone +
-    `exit $status`
+    exitOrReturn
   );
 }
 

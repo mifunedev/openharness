@@ -1,2 +1,54 @@
 # progress
 
+## Codebase Patterns
+
+- **No tsconfig at root.** `scripts/*.ts` is transpiled by vitest/esbuild (type
+  stripping, no type-check) and editor TS. The root `pnpm run typecheck` only
+  covers `packages/**` + `packages/oh`. `@types/node` is NOT installed, so an
+  isolated `tsc` on `scripts/cron-runtime.ts` fails to resolve `node:*` imports.
+  To genuinely type-check a snippet, drop a temp `.ts` under `scripts/`, run the
+  local `./node_modules/.bin/tsc --noEmit --strict --skipLibCheck
+  --moduleResolution bundler --module esnext --target es2022 <file>` (avoid
+  `--types node`), then delete it. The real CI gate for scripts is
+  `pnpm run test:scripts` (vitest, 14 files / 186 tests).
+- **`Cron | void` narrows cleanly.** `if (handle) activeJobs.push(handle)` where
+  `handle: Cron | void` narrows to `Cron` under `--strict` — no cast needed.
+- **Test-injection seams convention.** `loadCrons(dir, logFn=log)`,
+  `onJobError(id, err, logFn=log)`, and now `scheduleAll(dir, logFn, mkCron)`
+  expose optional last params that default to module-private impls purely so
+  tests can drive behavior without real side effects. New seams (e.g.
+  `resetActiveJobs()`) should carry a "no external-stability guarantee" comment
+  to match the existing ones.
+- **Logging is `log(id, status, msg)`** → one tab-separated line to
+  `crons/.cron.log` via `appendFileSync`. Tests mock only `appendFileSync`
+  (vi.mock("node:fs") pass-through) to observe status tokens. Reuse the private
+  `log()` helper for any new token (US-003 RELOAD) — never inline appendFileSync.
+- **`scheduleAll` counting is disjoint:** `loadSkips` (invalid at load) +
+  `constructSkips` (throws at `mkCron`); `scheduled++` fires on every successful
+  `mkCron` regardless of handle truthiness, so a `() => void` test spy still
+  counts as scheduled.
+
+## US-001 — 2026-06-13 06:28 UTC
+
+**Title**: Track live job handles so the prior generation can be stopped
+**Files changed**: scripts/cron-runtime.ts
+**Commit**: 3d2fdea
+**Result**: PASS
+
+### What I did
+Changed `constructCron` to return the live `Cron` handle instead of `void`,
+widened `scheduleAll`'s `mkCron` param to `(entry: CronEntry) => Cron | void`
+(default still `constructCron`), and added a module-level `activeJobs: Cron[]`
+registry cleared at the start of each `scheduleAll()` call that collects only
+truthy handles. Added an exported `resetActiveJobs()` test seam. `BootResult`
+and the disjoint load/construct skip counting are unchanged.
+
+### Learnings for future iterations
+US-002's `sighupHandler` should iterate `activeJobs` calling `.stop()` on each,
+then call `scheduleAll()` (which re-clears + repopulates `activeJobs`). The
+registry is module-private; tests reach it indirectly via the `mkCron` spy
+(handles pushed) + `resetActiveJobs()`. The existing `scheduleAll` tests already
+prove the widened signature keeps `() => void` spies compiling and the counting
+intact — no US-001-specific tests were added (that is US-004's job).
+
+---

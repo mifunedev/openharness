@@ -1,0 +1,71 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/85-cleanup-tasks-scoped-guard",
+    "description": "Scope the cleanup-tasks weekly cron pre-flight to tasks/ and isolate the archive branch/commit work in a crash-safe git worktree, so foreign WIP can neither abort the sweep nor leak into the archive commit. Tracks #85.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Scope the cleanup-tasks pre-flight to tasks/ with a distinct liveness token",
+            "description": "As the harness operator, I want the cleanup-tasks pre-flight to abort only when an in-flight task under tasks/ is mid-write, not when unrelated foreign WIP is present elsewhere, so the weekly sweep actually runs.",
+            "acceptanceCriteria": [
+                "Step 2 of crons/cleanup-tasks.md replaces the bare tree-wide `git status --porcelain` with the path-scoped, archive-excluded form `git status --porcelain -- tasks/ ':!tasks/archive/'`",
+                "No bare unscoped `git status --porcelain` (with no pathspec) remains anywhere in crons/cleanup-tasks.md",
+                "When tasks/ (excluding tasks/archive/) is dirty, the abort path emits the distinct liveness token `BLOCKED-TASKS-WIP` to crons/.cron.log and notes it in memory/$TODAY/log.md, distinct from the existing `OK (archived N, skipped M)` success token and the `HEARTBEAT_OK` nothing-to-do reply",
+                "Step-2 prose explains: only a mid-write task under tasks/ blocks the sweep; foreign WIP elsewhere is untouched and does not block (mirrors the autopilot BLOCKED-OWNED-WIP convention)",
+                "Pre-commit lint/format hook passes"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Isolate the archive branch + commit work in a crash-safe worktree",
+            "description": "As the harness operator, I want the archive branch creation, moves, commit, and push to happen in a dedicated git worktree so the shared checkout's dirty state can neither block a branch switch nor leak into the archive commit, and so a crashed run never strands a worktree that blocks future sweeps.",
+            "acceptanceCriteria": [
+                "Stale-prune first: before creating the worktree, steps 3-5 remove any stale archive worktree/branch from a prior failed run (`git worktree remove --force .worktrees/archive/$TODAY 2>/dev/null || true` then `git worktree prune`), making a same-day re-run idempotent (tear-down-and-recreate, never reuse a possibly-dirty worktree)",
+                "Create: the sweep creates a dedicated worktree at .worktrees/archive/$TODAY off origin/$BASE (`git worktree add .worktrees/archive/$TODAY -b archive/$TODAY origin/$BASE`); git commands resolve paths from the repo root, not the cron's ambient cwd",
+                "Operate in the worktree: all `git mv` / `git add` / `git commit` / `git push` for the archive run inside the worktree path, not the shared checkout; the sweep scans the worktree's origin/$BASE checkout for tasks/<taskdesc>/progress.txt ending in `STATUS: COMPLETE`; the `git mv` -> `mv` + `git add` untracked fallback is preserved",
+                "Crash-safe teardown: the worktree is removed with `git worktree remove --force .worktrees/archive/$TODAY` on completion AND on the abort/error path (cleanup block / trap), so a failed push or PR step never strands the worktree",
+                "No `git switch -c \"archive/$TODAY\"` against the shared checkout remains in steps 3-5",
+                "The existing PR idempotency fallback is preserved: if `gh pr create` reports the PR already exists, capture its URL via `gh pr view --json url -q .url`",
+                ".worktrees/README.md gains an `archive/` row in the branch-worktree subfolder table (archive/ -> archive/<YYYY-MM-DD> weekly cleanup-tasks archive sweeps)",
+                "Pre-commit lint/format hook passes"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Add an eval probe guarding the scoped pre-flight + worktree isolation",
+            "description": "As the harness operator, I want a deterministic probe that fails if the scoped guard or worktree isolation regresses, so the fix can't silently revert to the tree-wide check.",
+            "acceptanceCriteria": [
+                "New file evals/probes/cleanup-tasks-scoped-guard.sh, executable (chmod +x), modeled structurally on evals/probes/owned-surface-guard.sh, with `# tier:`, `# source: issue #85`, and `# desc:` header lines and `set -euo pipefail`",
+                "It is a 3-state oracle: PASS exit 0, REGRESSION exit 1, SKIPPED exit 2; SKIPPED when crons/cleanup-tasks.md is absent",
+                "REGRESSION (exit 1) when any of: (a) the scoped `git status --porcelain -- tasks/` is missing; (b) a bare unscoped `git status --porcelain` remains (detected by listing every `git status --porcelain` line and subtracting pathspec-scoped ones via `grep -v -- '-- tasks/'`, failing on any survivor); (c) the BLOCKED-TASKS-WIP token is missing; (d) `git worktree add` or `git worktree remove` is missing; (e) the old `git switch -c \"archive/` shared-checkout pattern is still present",
+                "PASS (exit 0) against the updated crons/cleanup-tasks.md; running `bash evals/probes/cleanup-tasks-scoped-guard.sh` exits 0",
+                "A `# NOTE:` comment records that the probe is a static grep oracle over markdown, not a runtime execution test (same limitation as owned-surface-guard.sh)",
+                "Pre-commit lint/format hook passes"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "Add CHANGELOG entry referencing issue #85",
+            "description": "As a reader of the changelog, I want a one-line record of this fix under ## [Unreleased].",
+            "acceptanceCriteria": [
+                "One bullet under `## [Unreleased]` -> `### Fixed` (create the section if absent in [Unreleased])",
+                "The entry is an imperative one-liner describing the scoped pre-flight + worktree isolation and references issue #85",
+                "No duplicate entry — verify `grep -c '#85' CHANGELOG.md` and a `cleanup-tasks` scan return 0 before writing",
+                "Pre-commit lint/format hook passes"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

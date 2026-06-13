@@ -1,0 +1,48 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/81-owned-paths-zsh-split",
+    "description": "Fix the autopilot skill's $OWNED_PATHS owned-surface guard (§1) and scoped restore (§5/§6/§7) so pathspec expansion is correct under zsh (which does not word-split unquoted vars): convert OWNED_PATHS to a native array and expand as \"${OWNED_PATHS[@]}\", and update the two coupled eval probes in the same atomic story. Tracks issue #81.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Convert OWNED_PATHS to an array, fix all expansion sites, and update both probes (atomic)",
+            "description": "As the autopilot operator, I want the owned-surface guard and scoped restore to word-split OWNED_PATHS correctly under zsh, with the eval probes updated in lockstep, so the guard actually detects a dirty owned tree instead of being vacuously satisfied and a regression cannot silently reintroduce the bug.",
+            "acceptanceCriteria": [
+                "In .claude/skills/autopilot/SKILL.md the declaration (~L74) becomes the array form: OWNED_PATHS=(.claude/ context/ docs/ scripts/ crons/ wiki/ evals/ memory/ tasks/ CHANGELOG.md) — same 10 tokens, parenthesized, no surrounding quotes",
+                "Every `git diff --quiet -- $OWNED_PATHS` and `git diff --cached --quiet -- $OWNED_PATHS` is replaced with the array form using \"${OWNED_PATHS[@]}\" (§1 guard ~L95, §5 ~L268, §6 ~L294, §7 assertion ~L327, Guidelines ~L362)",
+                "Every `git checkout development -- $OWNED_PATHS` is replaced with `git checkout development -- \"${OWNED_PATHS[@]}\"` (>= 4 occurrences)",
+                "The OWNED_PATHS= inline comment is rewritten to name BOTH hazards: quoting collapses to one pathspec (bash+zsh) AND bare-unquoted collapses under zsh (no SH_WORD_SPLIT); it endorses the array form",
+                "grep -F 'bare, unquoted' SKILL.md returns nothing AND grep -F 'used UNQUOTED' SKILL.md returns nothing (stale guidance removed); the §1 NOTE block and §7 'OWNED_PATHS unquoted' end-of-line comment describe the array form",
+                "Prose mentions of $OWNED_PATHS without the '-- ' prefix (the §1 NOTE block and the BLOCKED-OWNED-WIP Reference-table row ~L380) are updated to ${OWNED_PATHS[@]}; the bare word OWNED_PATHS in prose may remain",
+                "All four absence greps over SKILL.md return empty: 'git diff --quiet -- $OWNED_PATHS', 'git diff --cached --quiet -- $OWNED_PATHS', 'git checkout development -- $OWNED_PATHS', and the quoted '-- \"$OWNED_PATHS\"'",
+                "grep -Fc 'git checkout development -- \"${OWNED_PATHS[@]}\"' SKILL.md returns >= 4; the lone §1 self-heal `git checkout -f development` is unchanged and uses no OWNED_PATHS",
+                "evals/probes/owned-surface-guard.sh: positive assertions match the array form (git diff --quiet -- \"${OWNED_PATHS[@]}\" and git checkout development -- \"${OWNED_PATHS[@]}\"); unscoped-leak drop-filter updated to grep -vF -- '-- \"${OWNED_PATHS[@]}\"' and its pipeline confirmed to emit empty output against the fixed SKILL.md",
+                "evals/probes/owned-surface-guard.sh gains a reintroduction guard: exit 1 (named REGRESSION) if EITHER bare form (plain or --cached) is found via grep -Fq",
+                "evals/probes/owned-surface-guard.sh gains a zsh-fidelity assertion guarded by `command -v zsh` (exit 2 SKIPPED if absent): extract the array via anchored grep (^OWNED_PATHS=(), run under zsh -c, capture the arg count explicitly (no set -e reliance), exit 1 with a named REGRESSION if the count < 2",
+                "evals/probes/clean-restore.sh: scoped-restore count assertion counts the array form and requires >= 4, and exits 1 (named message) if the bare `git checkout development -- $OWNED_PATHS` form is present",
+                "Both probes keep set -euo pipefail, ROOT from ${BASH_SOURCE[0]}, the 3-state oracle (0/1/2), grep -F for every literal pathspec match, and all prior assertions (BLOCKED-OWNED-WIP, rev-parse --abbrev-ref HEAD, 'restore left a dirty owned tree', exactly one self-heal with BRANCH/rev-parse context)",
+                "Each probe's # source: header references issue #81 alongside #63, and each # desc: line no longer documents the bare $OWNED_PATHS form as the expected pattern",
+                "bash evals/probes/owned-surface-guard.sh exits 0 AND bash evals/probes/clean-restore.sh exits 0 against the fixed SKILL.md"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Use the Edit tool or a sed delimiter other than \" (the replacement text contains double-quotes). SKILL fix + both probes MUST land in this one story so the committed state is self-consistent."
+        },
+        {
+            "id": "US-002",
+            "title": "Validate the fix under zsh and document",
+            "description": "As the autopilot operator, I want documented proof that the guard detects a dirty owned path under zsh and the restore lands back on development, so the safety guarantee the skill documents is restored and verified.",
+            "acceptanceCriteria": [
+                "Dirty an EXISTING tracked owned file (tasks/README.md, not a new file) by appending a line, then evaluate the §1 guard expression (array form) under zsh -c and confirm it takes the BLOCKED-OWNED-WIP branch",
+                "Restore the dirtied file with `git checkout -- tasks/README.md`; git diff --quiet -- tasks/README.md is clean afterward (no residue, no git clean)",
+                "Record the validation outcome (command + observed result) as an entry in memory/<today>/log.md",
+                "Add a CHANGELOG.md entry under ## [Unreleased] in a ### Fixed subsection (create it if absent), one line, imperative mood, referencing issue #81",
+                "bash evals/probes/owned-surface-guard.sh and bash evals/probes/clean-restore.sh both still exit 0 after the validation"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": "evals/RESULTS.md refresh is handled by the autopilot §6 /eval gate, not this story."
+        }
+    ]
+}

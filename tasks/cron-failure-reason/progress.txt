@@ -75,3 +75,32 @@ observe the agent's exit. Added the `### Changed` CHANGELOG entry. `fireTmux`,
 
 ---
 
+## US-003 — 2026-06-13 05:22 UTC
+
+**Title**: Document the enriched EXIT_n liveness format
+**Files changed**: crons/README.md
+**Commit**: 364f812
+**Result**: PASS
+
+### What I did
+Documented the enriched `EXIT_n` liveness line in `crons/README.md`. Extended the
+single `EXIT_n` row in the status-tokens table to note that, when the job's log
+file is populated, a bounded tail of the job's trailing output is appended as the
+optional `msg` (4th) column — the same field used by `ERR_JOB`/`ERR`/`BODY_RELOADED`
+— so a failure is diagnosable from `.cron.log` alone. Added a fenced `text` example
+below the table (using the README's existing `\t`-escape notation) rather than
+literal tabs in a cell, keeping the table lint-clean. No other rows or sections changed.
+
+### Learnings for future iterations
+- Docs-only story: no CHANGELOG entry (the user-visible `### Changed` line landed
+  in US-002). `pnpm run lint` and `pnpm run typecheck` both green; the docs change
+  doesn't touch any TS so typecheck is unaffected.
+- The README's convention is to write tab separators as the literal `\t` escape
+  (see line 45 and the `ERR_JOB` row), not actual tab characters — matched that in
+  the fenced example to avoid the markdown-table-tab lint hazard the critic flagged.
+- Note the script is `pnpm run typecheck` (no dash); `type-check` does not exist.
+
+---
+
+STATUS: COMPLETE
+

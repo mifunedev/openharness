@@ -18,8 +18,8 @@
                 "Typecheck passes"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-13; commit 4fb1d7d — Step C-2 now qualifies schedulable crons (line-1 ---, closing ---, anchored schedule:, not enabled:false) before mtime; verified against real tree + 7 edge-case fixtures."
         },
         {
             "id": "US-002",

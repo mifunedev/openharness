@@ -1,2 +1,46 @@
 # progress
 
+## Codebase Patterns
+
+- **Extract the live Step C-2 block** (for US-003's probe and for testing): anchor on the
+  heading line `**Step C-2 — compare cron file mtimes:**`, then capture the lines between the
+  next ` ```bash ` fence and its closing ` ``` `. Working awk:
+  `awk '/\*\*Step C-2 — compare cron file mtimes:\*\*/{hit=1;next} hit&&/^```bash$/{cap=1;next} cap&&/^```$/{exit} cap{print}' .claude/skills/drift-check/SKILL.md`
+- **Schedulable-cron predicate** mirrors `scripts/cron-runtime.ts` `parseCronFile`+`loadCrons`:
+  line-1 `---` (strip trailing `\r`), a closing `---`, an anchored non-comment
+  `^[[:space:]]*schedule:`, and not `enabled:` false (bare/quoted). Comment lines (`# schedule:`)
+  and substring keys (`pre_schedule:`) are excluded naturally by the `^[[:space:]]*schedule:` anchor.
+- The predicate function is invoked as `is_schedulable_cron "$f" || continue`, so under
+  `set -e` the `||` context suspends `-e` for the whole function body — intermediate
+  `... || return 1` lines are safe.
+- Real tree (2026-06-13): schedulable = autopilot, cleanup-tasks, eval-weekly, heartbeat;
+  excluded = README.md. `crons/README.md`'s `---` lines are at file lines 15/24 inside a code
+  fence — line 1 is an H1, so the line-1 guard excludes it.
+
+---
+
+## US-001 — 2026-06-13 18:00 UTC
+
+**Title**: Add a schedulable-cron predicate to drift-check Step C-2
+**Files changed**: .claude/skills/drift-check/SKILL.md, CHANGELOG.md
+**Commit**: 4fb1d7d
+**Result**: PASS
+
+### What I did
+Replaced the raw `for f in crons/*.md` glob in SKILL.md Step C-2 with an `is_schedulable_cron()`
+predicate applied before the mtime comparison. The predicate qualifies a file IFF: line 1 is
+literally `---` (trailing `\r` stripped, CRLF-safe), a closing `---` exists, the leading
+frontmatter has an anchored non-comment `schedule:` key, and it is not `enabled:` false (bare or
+quoted). Non-qualifying files are skipped silently. Added a `### Fixed` CHANGELOG entry under
+`[Unreleased]`.
+
+### Learnings for future iterations
+- Verified by extracting the live block and running its function against 7 fixtures: README-style,
+  valid, disabled, quoted-false, CRLF-valid, no-closing-`---`, commented/substring-only — only the
+  valid and CRLF cases qualified. This fixture matrix is directly reusable by US-003's probe (which
+  must EXTRACT and RUN the live block, not text-grep it).
+- `bash -n` on the extracted block: OK. `pnpm run typecheck`: exit 0 (no TS touched).
+- The lead-in prose ("check each crons/*.md ...") and the Output Contract wording are intentionally
+  left for US-002 — the code carries a self-documenting comment in the meantime.
+
+---

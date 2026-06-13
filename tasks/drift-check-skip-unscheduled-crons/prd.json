@@ -51,8 +51,8 @@
                 "Typecheck passes"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed iteration 3 on 2026-06-13; commit f2f7320 — extract-and-run Tier-A probe builds 3 fixtures (README-style/valid/disabled), runs the live Step C-2 block with RUNTIME_START=1; PASS exit 0 on fixed skill, REGRESSION exit 1 on a reverted raw-glob block, SKIPPED exit 2 on missing skill; shellcheck clean; /eval scores new-pass."
         }
     ]
 }

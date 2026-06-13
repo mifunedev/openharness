@@ -16,6 +16,14 @@
 - Real tree (2026-06-13): schedulable = autopilot, cleanup-tasks, eval-weekly, heartbeat;
   excluded = README.md. `crons/README.md`'s `---` lines are at file lines 15/24 inside a code
   fence — line 1 is an H1, so the line-1 guard excludes it.
+- **Behavioral extract-and-run probe** (US-003 pattern, reusable for any "lock a SKILL.md bash
+  block" probe): (1) extract the live block, echo it to stderr, REGRESSION if empty or it no
+  longer iterates the expected glob; (2) build fixtures in a `mktemp -d` with the cleanup `trap`
+  registered BEFORE any fixture; (3) write the block to `$WORK/block.sh` and run it as
+  `output="$(cd "$WORK" && RUNTIME_START=1 bash block.sh 2>/dev/null)" || true`; (4) assert on the
+  block's *observable stdout contract* (`DRIFT-CHECK (C): <file> ...` lines), never the internal
+  array name, so the probe survives a rename of `INERT`. A `DRIFT_CHECK_SKILL=<path>` env override
+  (default = live path) makes the REGRESSION/SKIPPED paths testable without editing the real skill.
 
 ---
 
@@ -42,6 +50,45 @@ quoted). Non-qualifying files are skipped silently. Added a `### Fixed` CHANGELO
 - `bash -n` on the extracted block: OK. `pnpm run typecheck`: exit 0 (no TS touched).
 - The lead-in prose ("check each crons/*.md ...") and the Output Contract wording are intentionally
   left for US-002 — the code carries a self-documenting comment in the meantime.
+
+---
+
+## US-003 — 2026-06-13 15:45 UTC
+
+**Title**: Add the drift-check-cron-staleness-glob eval probe
+**Files changed**: evals/probes/drift-check-cron-staleness-glob.sh (new), CHANGELOG.md
+**Commit**: f2f7320
+**Result**: PASS
+
+### What I did
+Added the Tier-A behavioral probe that EXTRACTS the live Step C-2 bash block from
+`.claude/skills/drift-check/SKILL.md` (anchored on the `^**Step C-2 ` heading + the following
+` ```bash ` fence), echoes it to stderr, and RUNS it against three fixtures in a temp `crons/`
+(README-style with no line-1 `---`; valid scheduled cron; disabled `enabled: false` cron) with
+`RUNTIME_START=1` (before every fresh mtime). The probe reads the observable `DRIFT-CHECK (C):`
+output lines (not the internal `INERT` array) and PASSes (exit 0) only when the valid cron is
+inert and both the README + disabled fixtures are excluded; REGRESSION (exit 1) on empty/wrong
+extraction or any predicate mismatch; SKIPPED (exit 2) only if SKILL.md or `stat` is absent.
+Added the `### Added` CHANGELOG entry; reverted the out-of-scope `evals/RESULTS.md` scoreboard
+change after confirming the runner scores the probe `new-pass`.
+
+### Learnings for future iterations
+- **REGRESSION wiring demonstrated** (AC requirement): built a temp skill whose Step C-2 block is
+  the raw `for f in crons/*.md` glob (no predicate) and ran the probe against it via the
+  `DRIFT_CHECK_SKILL=<path>` override — it flagged all three fixtures inert (README + disabled
+  included) and exited **1**, confirming the corrected predicate is what the probe locks. The
+  missing-skill path exited **2**, the fixed live skill exited **0**.
+- Added a `DRIFT_CHECK_SKILL` env override (default = the live canonical path) purely so the
+  REGRESSION/SKIPPED paths are testable without touching the real skill — the default is unchanged,
+  satisfying "extracts from the live SKILL.md".
+- `RUNTIME_START=1` (epoch 1s) is the cleanest way to guarantee every freshly-written fixture is
+  "newer than runtime start" deterministically — no `date` arithmetic, no clock-skew flakiness, and
+  it makes the old raw-glob behavior (flag everything) maximally visible.
+- Running the extracted block: write it to `$WORK/block.sh`, then
+  `output="$(cd "$WORK" && RUNTIME_START=1 bash block.sh 2>/dev/null)" || true` — the `|| true`
+  protects the probe's `set -e` from the block's loop exit status while still capturing stdout.
+- `shellcheck -S warning` clean; `pnpm run typecheck` exit 0; `pnpm run test:scripts` 195/195;
+  `bash .claude/skills/eval/run.sh --probe drift-check-cron-staleness-glob` → `PASS new-pass`.
 
 ---
 
@@ -73,3 +120,5 @@ the behavior change; US-003 adds `### Added`).
 - `pnpm run typecheck`: exit 0 (no TS touched).
 
 ---
+
+STATUS: COMPLETE

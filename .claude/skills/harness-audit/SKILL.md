@@ -62,7 +62,7 @@ ls /home/sandbox/harness/wiki/ 2>/dev/null | head -20
 
 # Package health
 cat /home/sandbox/harness/package.json 2>/dev/null | head -30
-cat /home/sandbox/harness/apps/docs/package.json 2>/dev/null | head -30
+cat /home/sandbox/harness/packages/docs/package.json 2>/dev/null | head -30
 
 # CI definition
 ls /home/sandbox/harness/.github/workflows/ 2>/dev/null
@@ -96,7 +96,7 @@ Assemble a **Context Snapshot** (compact markdown, ~300 words):
 
 ### Packages
 - root: [version, dep count]
-- apps/docs: [version, dep count]
+- packages/docs: [version, dep count]
 
 ### CI workflows
 [list]
@@ -148,11 +148,11 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml`, `.devcontainer/entrypoint.sh`, `workspace/startup.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), missing healthchecks on compose services.
 >
-> 2. **Test coverage** — Check `scripts/__tests__/` and `apps/docs/` for test files. Run `ls scripts/__tests__/ 2>/dev/null` and `ls apps/docs/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are the orchestrator scripts and docs app tested in CI?
+> 2. **Test coverage** — Check `scripts/__tests__/` and `packages/docs/` for test files. Run `ls scripts/__tests__/ 2>/dev/null` and `ls packages/docs/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are the orchestrator scripts and docs app tested in CI?
 >
 > 3. **CI/CD completeness** — Read each workflow file. Are there gaps: missing lint, missing type-check, no test job, no release job, no deploy step?
 >
-> 4. **Package health** — For root `package.json` and each `apps/*/package.json`, check: pinned vs caret deps, presence of `build` script, presence of `test` script.
+> 4. **Package health** — For root `package.json` and each `packages/*/package.json`, check: pinned vs caret deps, presence of `build` script, presence of `test` script.
 >
 > 5. **Compose overlay fragility** — Read `.devcontainer/docker-compose*.yml` files. Look for: hardcoded paths, missing `restart: unless-stopped` on long-lived services, volumes without named mounts, environment variables without defaults.
 >
@@ -310,5 +310,5 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |
 | CI workflows | `.github/workflows/` |
-| Docs app | `apps/docs/` |
+| Docs app | `packages/docs/` |
 | Orchestrator scripts | `scripts/` (with tests in `scripts/__tests__/`) |

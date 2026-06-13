@@ -1,0 +1,314 @@
+# progress
+
+## Codebase Patterns
+
+- **Single edited file**: this task touches one skill (`.claude/skills/autopilot/SKILL.md`)
+  plus two probes (`evals/probes/{clean-restore,owned-surface-guard}.sh`) and
+  `evals/RESULTS.md`. The PRD's Non-Goals forbid touching `crons/autopilot.md`,
+  `scripts/cron-runtime.ts`, any other skill, or sandbox app code.
+- **`OWNED_PATHS` is load-bearing-unquoted**: it is `.claude/ context/ docs/ scripts/
+  crons/ wiki/ evals/ memory/ tasks/ CHANGELOG.md` and MUST be passed bare
+  (`-- $OWNED_PATHS`). Quoting (`"$OWNED_PATHS"`) collapses it to one pathspec that
+  matches nothing → the clean check passes vacuously. Defined once at the top of the
+  §1 "Require clean state" bash block (`grep -c 'OWNED_PATHS=' SKILL.md` must stay 1).
+- **§1 self-heal vs MAIN check diverge (US-002+)**: the self-heal stranded-branch
+  conditional (`if [ "$BRANCH" != "development" ] && git diff --quiet …`) stays
+  tree-wide and is the ONLY permitted tree-wide `git diff --quiet`; the MAIN owned check
+  gets scoped. Probes must exempt the self-heal line via BRANCH/rev-parse context.
+- **Restore is a two-step (US-004)**: `git checkout development -- $OWNED_PATHS` (scope
+  first) THEN `git checkout development` (switch HEAD). After the change exactly 1
+  `git checkout -f development` remains (the self-heal). Do NOT use `git restore --source=`
+  (it does not switch HEAD — the HIGH critic finding).
+- **SHA-accurate bookkeeping = 2 commits/iteration**: commit the implementation first to
+  obtain the short SHA, then record `passes:true` + SHA in `prd.json`/`progress.txt` and
+  commit that. `Submitted-by:` trailer is mandatory (value from `$RALPH_HARNESS`, e.g.
+  `Claude`). Quality gate: `pnpm run lint` works; there is no `type-check` script (it's
+  `typecheck`), irrelevant for markdown-only edits.
+- **Repros: never `rm -rf .codex` / a tracked dir.** `.codex/` already EXISTS as a tracked
+  directory (config.toml, hooks/, agents, …). A foreign-edit repro that does
+  `mkdir .codex; … ; rm -rf .codex` DESTROYS the real tracked tree (shows up as a wall of
+  ` D .codex/*` in `git status`). Recovery: `git restore --staged .codex && git checkout
+  -- .codex`. Use a guaranteed-untracked sentinel path for foreign-edit repros, or better,
+  test the predicate logic in isolation without mutating the real tree.
+- **Liveness convention** (§ Guidelines "Liveness on every path"): the canonical append is
+  `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "<TOKEN>" >> crons/.cron.log` — guard
+  it with a trailing `2>/dev/null || true` so a missing/unwritable log never crashes the
+  skill. Reuse this exact shape for any new status token (US-003 did for BLOCKED-OWNED-WIP).
+- **`git checkout -f development` is a count-1 invariant (US-004+).** Only the §1 self-heal
+  (line ~81) may carry the literal forced form. Restore-site PROSE in §5/§6/§7/Guidelines
+  must describe the self-heal WITHOUT writing the exact substring `git checkout -f development`
+  (say "its forced tree-wide checkout / the `-f` form") — otherwise the prose mention inflates
+  `grep -c 'git checkout -f development'` above 1 and breaks US-006's exactly-1 probe assertion.
+- **Grep `$OWNED_PATHS` literally → use `grep -F` (US-006+).** Matching the skill substring
+  `git checkout development -- $OWNED_PATHS` with default BRE returns 0: GNU grep treats the
+  bare `$` mid-pattern as an end-of-line anchor, so the match silently fails. Use `grep -Fc`
+  (fixed-string) or escape as `\$OWNED_PATHS`. The probes MUST use `grep -F` for any
+  `$OWNED_PATHS`-bearing literal — US-007's owned-surface-guard probe needs the same. Add
+  `# shellcheck disable=SC2016` on the single-quoted line (the literal must NOT expand).
+- **Symmetric-oracle test recipe (US-006/US-007).** Verify exit-1-against-unmodified without
+  mutating the tree: build a temp ROOT — `git show origin/development:.claude/skills/autopilot/SKILL.md`
+  into `$TMP/.claude/skills/autopilot/SKILL.md`, copy the probe into `$TMP/evals/probes/`, and
+  run it there (the probe resolves ROOT from its own `$BASH_SOURCE` dir, so it reads the temp
+  skill). Exit 0 against the live skill, exit 1 against the temp old skill. SKIPPED (exit 2) is
+  reachable by copying the probe alone into an empty temp dir (no skill present).
+- **Negative "no unscoped leak" assertion = double `grep -v` (US-007+).** To prove the
+  MAIN check has NO tree-wide `git diff --quiet` while exempting the §1 self-heal: list every
+  `git diff --quiet` line (`grep -n`), drop the scoped lines (`grep -vF -- '-- $OWNED_PATHS'`),
+  then drop the self-heal (`grep -vE 'BRANCH" != "development"|rev-parse --abbrev-ref HEAD'`);
+  anything left is a leak. The scoped/self-heal forms share the token `git diff --quiet`, so a
+  plain presence grep can't distinguish them — the subtractive double-`-v` does. Guard the
+  pipeline with `|| true` (under `pipefail` an empty final grep returns 1).
+
+---
+
+## US-007 — 2026-06-12 06:47 UTC
+
+**Title**: Add evals/probes/owned-surface-guard.sh
+**Files changed**: evals/probes/owned-surface-guard.sh (new, chmod +x)
+**Commit**: 00386f2
+**Result**: PASS
+
+### What I did
+Added the new tier-A 3-state probe asserting the §1 guard + restore are owned-scoped
+(issue #63): (a) `git diff --quiet -- $OWNED_PATHS` present AND no unscoped tree-wide
+`git diff --quiet` outside the self-heal (via the subtractive double-`grep -v` technique),
+(b) `BLOCKED-OWNED-WIP` present, (c) `git checkout development -- $OWNED_PATHS` present AND
+`rev-parse --abbrev-ref HEAD` present. Mirrors clean-restore.sh's `grep -F` discipline and
+shellcheck-disable comments. Verified the symmetric oracle: exit 0 against the live SKILL.md,
+exit 1 against `git show origin/development:…SKILL.md` (the positive scoped-form grep is the
+anchor — absent on the unmodified tree-wide skill), exit 2 when the skill is absent.
+shellcheck clean; `pnpm run lint` clean.
+
+### Learnings for future iterations
+- **US-008 (final story) just runs the suite + regenerates RESULTS.md.** Both new/rewritten
+  probes (`owned-surface-guard`, `clean-restore`) are green against the live skill; run
+  `evals/run.sh` or `/eval` and confirm no previously-green probe went red. The row label for
+  this probe will be `owned-surface-guard` (filename stem).
+- The symmetric-oracle test recipe (temp ROOT from `git show origin/development:…`) confirmed
+  again — the probe resolves ROOT from its own `$BASH_SOURCE` dir, so copying it into
+  `$TMP/evals/probes/` makes it read `$TMP/.claude/skills/autopilot/SKILL.md`. No tree mutation.
+- No CHANGELOG entry: a new internal eval probe is test-only infra (git.md skips chores/test-only
+  changes), consistent with US-001..006 in this task deferring the user-visible CHANGELOG line
+  to PR finalize.
+
+---
+
+## US-006 — 2026-06-12 08:14 UTC
+
+**Title**: Rewrite evals/probes/clean-restore.sh for the scoped restore
+**Files changed**: evals/probes/clean-restore.sh
+**Commit**: c90c985
+**Result**: PASS
+
+### What I did
+Rewrote the probe to assert the post-#63 SCOPED restore instead of the old
+"forced restore at every site". Dropped both removed assertions (`>=3` of
+`git checkout -f development`, and "no bare `git checkout development`"). New
+assertions: `>= 3` of the literal `git checkout development -- $OWNED_PATHS`
+(via `grep -Fc`), the `restore left a dirty owned tree` message, the
+`rev-parse --abbrev-ref HEAD` HEAD assertion, EXACTLY 1 `git checkout -f
+development` remaining, AND that the lone forced form is the §1 self-heal
+(BRANCH/rev-parse context within ±2 lines). Updated `# source:` → issue #63,
+kept `tier: A`, kept the 3-state oracle. Verified symmetric: exit 0 against the
+live SKILL.md (4 scoped sites), exit 1 against `origin/development`'s unmodified
+skill, exit 2 when the skill is absent. shellcheck + `pnpm run lint` clean.
+
+### Learnings for future iterations
+- **US-007 (owned-surface-guard.sh) mirrors this probe's grep discipline**: it
+  also matches `git checkout development -- $OWNED_PATHS` and
+  `git diff --quiet -- $OWNED_PATHS`, so it MUST use `grep -F` (see the new
+  Codebase Pattern) and exempt the self-heal `if [ "$BRANCH" != "development" ]`
+  line via BRANCH/rev-parse context — same ±2-line window trick used here.
+- The self-heal currently lives on ONE line (`git checkout -f development &&
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)`, line 81), so `grep -B2 -A2 …` +
+  `grep -qE 'BRANCH|rev-parse'` confirms it. If a later edit splits that line,
+  widen the window — but US-004 froze the forced form at count 1, so it is stable.
+- US-008 will run the suite and regenerate RESULTS.md; this probe is now green and
+  the row label stays `clean-restore` (filename unchanged — rewrite in place).
+
+---
+
+## US-005 — 2026-06-12 07:42 UTC
+
+**Title**: Document BLOCKED-OWNED-WIP in token table + §8 log enum
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: be9c201
+**Result**: PASS
+
+### What I did
+Added a `BLOCKED-OWNED-WIP` row to the `### Status tokens` table (Reference §)
+with an accurate one-liner (dirty owned surface → run skipped until clean,
+non-destructive to foreign WIP), and inserted `BLOCKED-OWNED-WIP` into the §8
+memory-log `Result:` enumeration between `DELEGATE-FAIL` and `FAIL`. Also
+trimmed "dirty tree" from the `FAIL` row description since a dirty OWNED tree
+now emits `BLOCKED-OWNED-WIP` (US-003), keeping the table accurate. No check or
+restore logic touched — this story is pure documentation.
+
+### Learnings for future iterations
+- `grep -c 'BLOCKED-OWNED-WIP' SKILL.md` is now 7 (4 from the §1 failure path +
+  token-table row + §8 enum; the §8 enum line and table row each add 1, plus the
+  FAIL-row edit did not add an occurrence). US-005 AC needs ≥3 — satisfied.
+- Token-table ordering: new tokens go just before the catch-all `FAIL` row in
+  both the `### Status tokens` table and the §8 enum. The two lists are parallel;
+  keep them in sync when adding a token.
+- Fence parity held at 56 (even) — both edits are single-line table/enum changes,
+  no code fences opened. The skill still renders.
+- US-005 added NO CHANGELOG entry: the prd.md US-005 section does not spell one
+  out, and no prior story (US-001..004) in this task added a `#63` CHANGELOG line
+  — this task evidently handles the user-visible CHANGELOG line elsewhere (PR
+  finalize), not per-story. Stay confined to each story's stated ACs.
+
+---
+
+## US-004 — 2026-06-12 00:39 UTC
+
+**Title**: Non-destructive two-step restore scoped to owned paths
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: 93296ce
+**Result**: PASS
+
+### What I did
+Replaced all four tree-wide restore sites (§7 finalize code block, §5 RALPH-INCOMPLETE prose,
+§6 PR-DRAFT-EVAL-RED prose, Guidelines paragraph) with the canonical scoped two-step:
+`git checkout development -- $OWNED_PATHS` (discard own owned-path residue, tracked only) THEN
+`git checkout development` (switch HEAD), followed by a dual assertion — owned-tree-clean
+(`… || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }`) AND HEAD-on-development
+(`[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`). The §7 block and Guidelines
+paragraph carry the two required notes: scoped restore is tracked-only (untracked owned orphan
+cleaned manually, `git clean` deliberately not used) and foreign WIP survives byte-for-byte.
+`git checkout -f development` count is now exactly 1 (the §1 self-heal). No `git restore --source`,
+no `git add -A`/`.`. Lint + full test suite (147) green.
+
+### Learnings for future iterations
+- **The clean-restore.sh probe is now RED on purpose.** It still asserts `>= 3` of
+  `git checkout -f development` (now 1) and "no bare git checkout development" — both intentionally
+  broken by this story. US-006 rewrites it to assert the scoped form (`>= 3` of
+  `git checkout development -- $OWNED_PATHS`, the `dirty owned tree` message, and `rev-parse
+  --abbrev-ref HEAD`) plus exactly-1 self-heal. Do NOT touch the probe in US-004's scope.
+- Two-step ORDER is load-bearing: scope step FIRST (`-- $OWNED_PATHS`) clears owned residue so
+  the subsequent non-forced `git checkout development` won't refuse; a foreign change in a path
+  identical across branches is carried across the switch untouched (survives byte-for-byte).
+- Fence count stayed even (56) — the §7 swap kept the same single ```bash fence; prose edits
+  added none. `git checkout development -- $OWNED_PATHS` appears 4×, `dirty owned tree` 4×,
+  `rev-parse --abbrev-ref HEAD` 6× (incl. §1 self-heal + the 4 new HEAD assertions + the §1 line).
+
+---
+
+## US-003 — 2026-06-12 07:08 UTC
+
+**Title**: Emit BLOCKED-OWNED-WIP on a genuine owned-surface block
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: d1e3d42
+**Result**: PASS
+
+### What I did
+Replaced the §1 dirty-owned failure path (`… || { echo "ERROR: dirty working tree";
+exit 1; }`) with an `if ! { … }` block that, on a dirty OWNED surface, appends the
+distinct liveness token `BLOCKED-OWNED-WIP` to `crons/.cron.log` (guarded with
+`2>/dev/null || true`, matching the § Guidelines convention) and exits 1 — non-destructive,
+no GitHub touched. The wrong-branch check is left as bare `FAIL`. Updated the §1 prose to
+split the two predicates: dirty-owned → `Result: BLOCKED-OWNED-WIP`, not-on-development →
+`Result: FAIL`. Verified under bash: owned-dirty (SKILL.md edit) trips the token; a
+foreign staged `.codex/config.toml` evaluates CLEAN and would proceed (AC#4 / US-002).
+
+### Learnings for future iterations
+- `grep -c 'BLOCKED-OWNED-WIP' SKILL.md` is now 4 (comment + printf + echo + prose), all in
+  the §1 failure path. US-005's AC needs `>= 3` total AFTER it adds the token-table row and
+  §8 enum line — already satisfied by §1 alone, but US-005 must still add both for its own
+  ACs (`### Status tokens` row + §8 `Result:` enum). Do not pre-empt US-005 here.
+- Fence count after this edit is 56 (even — `if/fi` and `printf` live inside the existing §1
+  bash fence; no new fence opened). `git checkout -f development` count is still 5 (US-004
+  scopes the restore sites down to 1; untouched here). `OWNED_PATHS=` still 1.
+- The `# NOTE:` predicate-divergence comment and the unquoted-`$OWNED_PATHS` hazard from
+  US-001/US-002 are unchanged; this story only rewired the failure branch, not the predicate.
+
+---
+
+## US-002 — 2026-06-12 06:31 UTC
+
+**Title**: Scope the §1 MAIN clean-state check to owned paths
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: 0f63c3c
+**Result**: PASS
+
+### What I did
+Replaced the tree-wide MAIN §1 clean assertion (`git diff --quiet && git diff --cached
+--quiet || { echo "ERROR: dirty working tree"; exit 1; }`) with the owned-scoped form
+`git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || …`
+(OWNED_PATHS bare/unquoted). Left the self-heal stranded-branch conditional (line 80)
+tree-wide and untouched. Added a `# NOTE:` documenting that the self-heal and MAIN check
+are now DIFFERENT predicates — the self-heal needs a WHOLE-tree-clean state to fire, so
+it can never run (and never clobber) while foreign WIP is present — and inlined the
+`.codex/config.toml` repro into that note.
+
+### Learnings for future iterations
+- **Repro MUST run under bash, never zsh.** The Bash tool's shell is zsh, which does NOT
+  word-split unquoted `$OWNED_PATHS` — it collapses to one no-match pathspec, so a zsh
+  repro reports "clean" for BOTH foreign and owned dirt (false pass). Wrap repros in
+  `bash -c '…'`. Verified under bash: staged `.codex/config.toml` → MAIN check CLEAN
+  (proceeds); dirty `.claude/seed` → MAIN check DIRTY (blocks). This is the same
+  word-splitting hazard the OWNED_PATHS NOTE warns about, surfacing in the test harness.
+- The MAIN check still emits the original `ERROR: dirty working tree` message; US-003
+  swaps that failure path to the `BLOCKED-OWNED-WIP` liveness token (do not pre-empt it).
+- AC#4's "no tree-wide git diff --quiet in the MAIN check" is satisfied: only line 80
+  (self-heal, exempt) is tree-wide; lines 259/285/317/351 are §5/§6/§7/Guidelines RESTORE
+  sites — those are US-004's scope, not the §1 MAIN check.
+- Fence count stayed 40 (even) — the NOTE was added inside the existing §1 bash fence.
+
+---
+
+## US-001 — 2026-06-12 00:00 UTC
+
+**Title**: Define the owned-surface constant in §1
+**Files changed**: .claude/skills/autopilot/SKILL.md
+**Commit**: 5b4eeeb
+**Result**: PASS
+
+### What I did
+Added the canonical `OWNED_PATHS` shell variable once at the top of the §1
+"Require clean state" bash block in `.claude/skills/autopilot/SKILL.md`, enumerating
+exactly `.claude/ context/ docs/ scripts/ crons/ wiki/ evals/ memory/ tasks/ CHANGELOG.md`.
+Added a `# NOTE:` warning that it MUST be used UNQUOTED (quoting collapses it to one
+no-match pathspec → vacuous pass) and a write-surface cross-check note proving the owned
+surface is known-complete. No check or restore logic was changed (that is US-002/US-004).
+
+### Learnings for future iterations
+- The definition is purely additive this story — US-002 will wire the MAIN check to
+  `$OWNED_PATHS`, US-004 the restore sites. Placing the definition before the self-heal
+  block means it is already in scope when US-002 scopes the check.
+- `grep -c 'OWNED_PATHS=' SKILL.md` is an AC for US-001 (must be 1) — keep comment prose
+  referencing `OWNED_PATHS` (no `=`) so future edits don't inflate the count.
+- Verifying fences: total ` ``` ` markers in the file stayed even (40), so §1 still renders.
+
+---
+
+## US-008 — 2026-06-12 06:50 UTC
+
+**Title**: Refresh evals/RESULTS.md via the probe suite
+**Files changed**: evals/RESULTS.md
+**Commit**: 2eb78f9
+**Result**: PASS
+
+### What I did
+Ran the real probe suite via `bash .claude/skills/eval/run.sh` (not hand-faked),
+regenerating `evals/RESULTS.md`. Both #63 probes are green: `owned-surface-guard`
+(new-pass row) and the rewritten `clean-restore` (PASS, unchanged). Aggregate exit
+0 — no new green→red regressions. The lone `next-dev-prod` REGRESSION is
+pre-existing (it was already REGRESSION at 04:08 before this task; the runner
+reports it `unchanged`), so no previously-green probe went newly red.
+
+### Learnings for future iterations
+- **A pre-existing REGRESSION is not a violation of "no previously-green probe newly
+  red".** The runner only raises (and only exit-1s) on a `prior==PASS && now!=PASS`
+  transition; a probe that was already REGRESSION stays REGRESSION (`unchanged`) and
+  does not trip the gate. `next-dev-prod` is unrelated to #63 — do not "fix" it here.
+- **The eval runner lives at `.claude/skills/eval/run.sh`, not `evals/run.sh`.** It
+  resolves ROOT as `$SCRIPT_DIR/../../..` and overwrites one row per probe id in
+  RESULTS.md (git history is the time series). Run it bare to refresh all rows; the
+  `source` column is pulled from each probe's `# source:` header.
+- This was the final story (US-008); all 8 now `passes: true`. `STATUS: COMPLETE`
+  appended below terminates the Ralph loop.
+
+---
+
+STATUS: COMPLETE

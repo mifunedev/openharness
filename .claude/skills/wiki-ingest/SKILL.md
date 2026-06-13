@@ -59,6 +59,7 @@ No other forms are documented or supported. `argument-hint` frontmatter above en
 - Re-ingesting a source to refresh an existing wiki entry (update path).
 - Promoting a sub-agent draft to a tracked wiki entry.
 - Researching a broader topic from a seed link or "add to wiki" request; see `references/official-docs-research-wiki.md` for the official-docs research pattern.
+- Running concurrent wiki ingests or preserving unrelated branch state; see `references/concurrent-ingest-worktrees.md` for the isolated-worktree pattern.
 
 ## When NOT to use
 
@@ -221,7 +222,13 @@ Use the `Edit` tool to perform in-place section replacement. Extract the canonic
 awk '/^---$/{f=!f; next} f{print}' wiki/<slug>.md
 ```
 
-### 7. Orchestrator-only write gate
+### 7. Regenerate the wiki index when the entry is part of a deliverable
+
+`wiki/README.md` is the human/LLM index and is owned by `/wiki-lint`, not by hand edits. After creating or updating a tracked `wiki/<slug>.md` entry for a user-facing deliverable (especially when the user asked to "add to the wiki", or when you will commit/push the wiki change), run `/wiki-lint` or follow its atomic regeneration protocol so the index includes the new entry before finalizing. Remember that `wiki/raw/*` snapshots are gitignored by design; the tracked deliverable is usually `wiki/<slug>.md` plus the regenerated `wiki/README.md`, while the raw snapshot remains local provenance unless policy changes.
+
+If you cannot run the full `/wiki-lint` skill, do not hand-maintain the table casually: enumerate `wiki/*.md`, extract frontmatter with the canonical `awk '/^---$/{f=!f; next} f{print}'` command, sort by `updated:` descending, write `wiki/README.md.tmp`, validate it is non-empty and contains `| Slug | Title | Tags | Updated |`, then atomically rename it to `wiki/README.md`. Log the lint/index refresh separately per `/wiki-lint`'s Memory Improvement Protocol.
+
+### 8. Orchestrator-only write gate
 
 This skill's write operations (`wiki/raw/` snapshots and `wiki/<slug>.md` writes) are **orchestrator-only**. The orchestrator is the only session authorized to write to tracked wiki surfaces.
 
@@ -233,7 +240,7 @@ Sub-agents may propose new entries by writing drafts to `memory/<today>/wiki-dra
 
 This gate preserves the concurrency invariant from `context/rules/memory.md`: only the orchestrator writes to tracked knowledge surfaces. A sub-agent that bypasses this by writing directly to `wiki/` is out of scope — the orchestrator may revert such writes.
 
-### 8. Memory Improvement Protocol
+### 9. Memory Improvement Protocol
 
 Always run this step, regardless of outcome. Get the current UTC time:
 

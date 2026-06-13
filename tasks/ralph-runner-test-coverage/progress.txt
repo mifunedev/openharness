@@ -1,0 +1,197 @@
+# progress
+
+## Codebase Patterns
+
+- **Invoke the script under test via `bash`, not `sh`.** `scripts/ralph.sh`
+  uses `[[ ]]`, `BASH_SOURCE`, arrays (`POSITIONAL+=`), and `PIPESTATUS` —
+  none POSIX. `harness-config.test.ts` uses `sh`; ralph must use `bash`.
+- **`run(args, opts?)` helper** mirrors `harness-config.test.ts` but extends
+  the signature to `run(args: string[], opts?: { env?, cwd? })` via
+  `spawnSync("bash", [SCRIPT, ...args], { encoding, env, cwd })`. The
+  `env`/`cwd` knobs are needed downstream by US-002's hermeticity setup.
+- **`envWithout(...keys)`** returns `{...process.env}` with keys deleted —
+  used to unmask the `--harness` no-value guard (RALPH_HARNESS is set to
+  `claude` in the live Ralph loop env, which would otherwise seed a default).
+- **US-001 arg-validation cases all exit before `ralph.sh:358`** (REPO_ROOT
+  derivation), so they need no temp cwd or fixture — failures fire purely on
+  argument shape. Empirically confirmed: `--harness=foo`→2/`unknown harness`,
+  `--harness`(empty)→2/`requires a value`, 0 positional→2/`Usage:`,
+  2 positional→2/`Usage:`, `Bad_Name`→2/`must match`.
+- **Hermetic four-file contract (US-002, verified):** spawn the child with
+  `{ cwd: tmpDir, env: { ...process.env, REPO_ROOT: tmpDir } }` where `tmpDir`
+  is `mkdtempSync(os.tmpdir())`. `ralph.sh:358` re-derives REPO_ROOT via
+  `git rev-parse --show-toplevel 2>/dev/null || pwd`; from a non-git tmp cwd the
+  rev-parse fails and falls back to `pwd`, redirecting the task-dir lookup
+  (:359) to the fixture. The four-file loop (:368-373) exits on the FIRST
+  missing file, so omitting exactly one (others present) makes the error name
+  that file — `expect(stderr).toContain(\`${omitted} is missing\`)` is reliable
+  regardless of the omitted file's position in the list. No harness stub: the
+  dir check (:361) and four-file check (:369) precede harness resolution (:375).
+- **Source guard (US-003) is a `[ "${BASH_SOURCE[0]}" != "$0" ]; return 0`
+  block placed between the function definitions and the loop/normal-mode
+  body.** Sourcing makes `$0` the parent shell (`bash`) ≠ `BASH_SOURCE[0]`
+  (the script path) → early `return 0` (valid in a sourced context). All
+  three real paths execute the file (`$0` == `BASH_SOURCE[0]`) so the guard
+  is a no-op. **US-004 should source the script in fresh `bash -c 'source
+  scripts/ralph.sh; <call>'` subshells** so `set -euo pipefail` is scoped to
+  that subshell, not the test runner.
+- **Verifying the no-tmux foreground fallback (path 3) needs a PATH with no
+  `tmux`.** Build a temp bin, symlink `/usr/bin/*` + `/bin/*` into it, `rm`
+  the `tmux` symlink, then run with `PATH=$tmpbin` from a non-git temp cwd
+  holding a scaffolded `tasks/<slug>/` whose `progress.txt` already contains
+  `STATUS: COMPLETE` (so the loop prints its banner, detects COMPLETE, and
+  exits 0 instead of invoking a real harness). `codex` is on the live PATH
+  in this env, so a real harness resolves even without a stub.
+- **Source-call unit tests (US-004): launch bash by ABSOLUTE path, not bare
+  `"bash"`.** `spawnSync` resolves a bare command name against the *child*
+  env PATH, so tests that strip PATH to a temp dir (to toggle `codex`
+  visibility) would ENOENT on `spawnSync("bash", …)`. Resolve bash once via
+  the parent PATH (`spawnSync("bash",["-c","command -v bash"])`) and reuse the
+  absolute path. `sourceCall(snippet, {env})` runs
+  `spawnSync(BASH,["-c",\`source '${SCRIPT}'\n${snippet}\`],{env})`. The
+  US-003 guard returns before the loop body, so only functions load; `set -euo
+  pipefail` is scoped to that subshell. The function-under-test as the LAST
+  command makes its return value the subshell exit status (read via `status`).
+- **PATH control for `codex`-presence tests.** `codex` IS a real binary on the
+  live PATH here, so toggle it via `{ ...process.env, PATH: <tmpBin> }`:
+  present = a tmpBin holding an executable `codex` stub (`#!/usr/bin/env bash`
+  + `exit 0`, `chmodSync 0o755`); absent = an empty tmpBin. `fallback_after_harness`
+  and `normalize_harness` use only the `command -v`/`printf`/`case` builtins, so
+  a PATH of just the stub dir is enough — no coreutils needed. `claude_limit_detected`
+  needs real `grep`, so leave its env unset (inherits the parent PATH).
+- **No repo-enforced formatter on `scripts/`.** Root `format:check`/`lint`/`typecheck`
+  all run `pnpm -r --if-present run …` (workspace packages only) — `scripts/__tests__`
+  is covered by `pnpm test:scripts` (vitest, no type-check) alone. A bare
+  `npx prettier --check` installs default prettier and flags the COMMITTED
+  baseline (`harness-config.test.ts`) too, so its warnings are not a gate.
+  Verify strict types directly: `npx tsc --noEmit --strict --skipLibCheck
+  --module esnext --target es2022 --moduleResolution bundler --typeRoots
+  ./packages/oh/node_modules/@types --types node scripts/__tests__/ralph.test.ts`.
+
+## US-001 — 2026-06-12 07:26 UTC
+
+**Title**: Black-box argument-validation tests
+**Files changed**: scripts/__tests__/ralph.test.ts (new)
+**Commit**: e601d75
+**Result**: PASS
+
+### What I did
+Created `scripts/__tests__/ralph.test.ts` modeled on
+`harness-config.test.ts`, with a `bash`-based `run(args, opts?)` helper and an
+`envWithout()` env-stripper. Added 5 assertions covering `normalize_harness`
+rejection, the `--harness` empty-value guard, zero/multi positional usage
+errors, and the taskdesc regex check — each asserting exit 2 and a
+message-locked stderr match. All 152 tests pass; typecheck clean.
+
+### Learnings for future iterations
+US-002 should reuse the same `run`/`envWithout` helpers (already export the
+`opts.cwd` knob it needs). For US-002 hermeticity, spawn with
+`{ cwd: tmpDir, env: { ...process.env, REPO_ROOT: tmpDir } }` where `tmpDir`
+is a non-git `mkdtempSync` dir — `ralph.sh:358` re-derives REPO_ROOT via
+`git rev-parse ... || pwd`, so a non-git cwd is what redirects the task-dir
+lookup at `:359` to the fixture. No harness stub needed: the task-dir (:361)
+and four-file (:369) checks precede harness resolution (:375).
+
+---
+
+## US-002 — 2026-06-12 11:11 UTC
+
+**Title**: Four-file contract tests
+**Files changed**: scripts/__tests__/ralph.test.ts
+**Commit**: f36d13d
+**Result**: PASS
+
+### What I did
+Added the `ralph.sh four-file contract` describe block to the existing test
+file. It uses a `runHermetic(args)` wrapper (`run` with `cwd: tmpDir` +
+`REPO_ROOT: tmpDir`) and a `scaffoldTask(taskdesc, files)` helper that creates
+`tasks/<desc>/` under the temp fixture with a chosen subset of files present.
+One case asserts a missing task dir exits 1 with `/does not exist/`; a sub-loop
+over the four files omits each in turn and asserts exit 1 with `/is missing/`
+naming the omitted file. All 157 tests pass; typecheck + lint clean.
+
+### Learnings for future iterations
+The cwd-based hermeticity from US-001's notes is confirmed working in practice
+(see the Codebase Patterns entry above). US-003 is next: the gate is to add a
+`[ "${BASH_SOURCE[0]}" = "$0" ]` source guard to `scripts/ralph.sh` so the
+top-level normal-mode body (`parse_args "$@"` at :350 onward) only runs on
+direct execution, not on source. The three real invocation paths to re-verify
+no-op against: (1) direct `bash scripts/ralph.sh <slug>`; (2) the `--loop`
+re-entry at :279; (3) the no-tmux foreground fallback `exec bash "$SCRIPT_PATH"
+--loop` at :389. Note ralph.sh's `--loop`/foreground re-entries go through
+`exec bash "$SCRIPT_PATH"` (a fresh process where `$0` == the script path), so
+a `BASH_SOURCE == $0` guard should be a clean no-op for all three. If
+`set -euo pipefail` fires noisily on source, DROP US-003 and skip US-004 per
+the conditional-drop branch.
+
+---
+
+## US-003 — 2026-06-12 05:17 UTC
+
+**Title**: Behavior-preserving source guard in ralph.sh (conditional)
+**Files changed**: scripts/ralph.sh
+**Commit**: b57e746
+**Result**: PASS
+
+### What I did
+Added a `[ "${BASH_SOURCE[0]}" != "$0" ]; return 0` source guard between the
+function definitions and the loop/normal-mode body. The guard landed cleanly —
+`set -euo pipefail` does NOT fire noisily on source (function definitions don't
+execute their bodies, so `set -u` never trips), so the conditional-drop branch
+was NOT taken. Verified all three real invocation paths are strict no-ops:
+(1) `bash scripts/ralph.sh Bad_Name` still exits 2 `/must match/`; (2) `bash
+"$SCRIPT" --loop --harness=codex …` still prints the loop banner (enters loop
+mode, not rejected as an unknown option); (3) with `tmux` absent from PATH the
+foreground fallback prints "tmux not found" then transitions to `--loop` mode
+and prints the loop banner. Sourcing now defines the functions (`type
+claude_limit_detected` → function) without running the body. 157 tests pass;
+typecheck, lint, and `shellcheck scripts/ralph.sh` all clean.
+
+### Learnings for future iterations
+US-004's GATE is now OPEN (guard landed cleanly). Implement US-004 next:
+source the script in fresh `bash -c 'source scripts/ralph.sh; <call>'`
+subshells (see Codebase Patterns). Functions to cover: `claude_limit_detected`
+(AND of two greps — positive fixture needs BOTH 'hit … limit' AND 'resets?';
+a one-phrase negative + a neither negative both exit 1), `fallback_after_harness`
+(claude→codex, pi→codex with a fake `codex` on PATH; codex absent → non-zero +
+`/not on PATH/`; opencode → non-zero + `/no fallback/`), and `normalize_harness`
+(each valid harness echoes; invalid exits 2 `/unknown harness/`). PATH stubs:
+an executable `codex` shell file (`#!/usr/bin/env bash` + `exit 0`) in a temp
+dir prepended to PATH.
+
+---
+
+## US-004 — 2026-06-12 05:28 UTC
+
+**Title**: Resilience-function unit tests (depends on US-003)
+**Files changed**: scripts/__tests__/ralph.test.ts
+**Commit**: fcee379
+**Result**: PASS
+
+### What I did
+Added three `describe` blocks (15 tests) exercising the resilience functions in
+isolation via a new `sourceCall(snippet, {env})` helper that runs
+`spawnSync(BASH, ["-c", \`source '${SCRIPT}'\\n${snippet}\`])` — the US-003
+guard returns before the loop body, so only the functions load. `normalize_harness`:
+5 valid harnesses echo unchanged + an invalid value exits 2 `/unknown harness/`.
+`fallback_after_harness`: claude/pi → `codex` with a stub `codex` on a temp PATH;
+claude/pi with an empty PATH return non-zero `/not on PATH/`; opencode returns
+non-zero `/no fallback/`. `claude_limit_detected`: both phrases → exit 0; limit-only
+and reset-only → exit 1 (proving the AND of two greps); neither → exit 1. All 172
+tests pass; `pnpm run typecheck`, `pnpm run lint`, and a direct strict-tsc check
+of the file are clean.
+
+### Learnings for future iterations
+Launch bash by ABSOLUTE path in `sourceCall` — `spawnSync` resolves a bare
+`"bash"` against the *child* PATH, which these tests strip to an empty/stub-only
+temp dir to toggle `codex` visibility (it IS a real binary on the live PATH).
+With `set -euo pipefail` active after sourcing, making the function-under-test the
+LAST command of `bash -c` lets the subshell exit status carry the function's
+return — no `if`/echo marshalling needed. `scripts/` has no repo-enforced
+formatter; `pnpm test:scripts` is the gate. This is the final story —
+US-001/002/003/004 all pass.
+
+---
+
+
+STATUS: COMPLETE

@@ -1,0 +1,109 @@
+# progress
+
+## Codebase Patterns
+- Skill path references degrade *silently* (a `2>/dev/null` no-op, a blank audit
+  section, a write to a non-existent target) — they never error. Grep is the only
+  reliable detector; pair every such fix with an `evals/probes/*.sh` guard.
+- `strategic-proposal/SKILL.md` §9 (the real write logic) creates `docs/roadmap.md`
+  on first run, so the file's absence on disk is expected — the canonical target is
+  `docs/roadmap.md`, not `src/data/roadmap.ts`.
+- This task was implemented directly by the orchestrator (not the Ralph loop): 11
+  precision-sensitive text substitutions where automated first-match-vs-global
+  substitution was a critic-flagged hazard, and Ralph's resumability buys nothing
+  at this size. The four-file contract + draft PR were still produced for parity.
+
+## US-001 — 2026-06-12 UTC
+
+**Title**: Fix harness-audit/SKILL.md stale paths
+**Files changed**: .claude/skills/harness-audit/SKILL.md
+**Result**: PASS
+
+### What I did
+Replaced all 5 stale references: `apps/docs/package.json` → `packages/docs/package.json`
+(absolute `/home/sandbox/harness/` prefix preserved), the `apps/docs:` snapshot label,
+both `apps/docs/` occurrences on the Implementer test-coverage line (global replace),
+`apps/*/package.json` → `packages/*/package.json`, and the Key Paths "Docs app" row.
+
+### Learnings for future iterations
+The Implementer prompt line held two `apps/docs` occurrences — verified with a
+per-file `grep -nE 'apps/docs|apps/\*'` returning zero.
+
+---
+
+## US-002 — 2026-06-12 UTC
+
+**Title**: Fix strategic-proposal/SKILL.md stale paths
+**Files changed**: .claude/skills/strategic-proposal/SKILL.md
+**Result**: PASS
+
+### What I did
+Reconciled both `src/data/roadmap.ts` references (intro prose + mermaid node) to the
+skill's actual `docs/roadmap.md` write target, and `apps/docs/` → `packages/docs/`.
+Left the line-6 `/roadmap page data` prose untouched (descriptive, not a path).
+
+### Learnings for future iterations
+Internal contradiction fixed: §9 already wrote to `docs/roadmap.md`; lines 13/57 now
+agree with it.
+
+---
+
+## US-003 — 2026-06-12 UTC
+
+**Title**: Fix ci-status/SKILL.md docs.yml trigger doc
+**Files changed**: .claude/skills/ci-status/SKILL.md
+**Result**: PASS
+
+### What I did
+Replaced the whole trigger-list string atomically: `docs/**, apps/docs/**, blog/**`
+→ `packages/docs/**, docs/**, blog/**` (matching `.github/workflows/docs.yml`),
+preserving the `itself` suffix.
+
+### Learnings for future iterations
+This was a reorder, not a token swap (critic A finding) — `docs/**` moved position.
+
+---
+
+## US-004 — 2026-06-12 UTC
+
+**Title**: Fix harness-context/SKILL.md stale README path
+**Files changed**: .claude/skills/harness-context/SKILL.md
+**Result**: PASS
+
+### What I did
+`apps/README.md` → `packages/README.md` (the file that exists post-rename).
+
+---
+
+## US-005 — 2026-06-12 UTC
+
+**Title**: Repo-wide verification gate
+**Files changed**: (verification only)
+**Result**: PASS
+
+### What I did
+`grep -rnE 'apps/docs|apps/README|apps/\*|src/data/roadmap' .claude/skills/` returns
+zero matches (pattern broadened to include the `apps/*` wildcard per critic findings).
+Confirmed no botched replacements (`packages/packages`, `pacakges`, `package/docs`).
+
+---
+
+## US-006 — 2026-06-12 UTC
+
+**Title**: Add a regression guard to evals/probes/skill-paths.sh (critic-driven)
+**Files changed**: evals/probes/skill-paths.sh
+**Result**: PASS
+
+### What I did
+Added Guard 2 to the probe — greps `.claude/skills/` for
+`apps/docs|apps/README|apps/\*|src/data/roadmap` and exits 1 (REGRESSION) on any hit.
+Replaced the now-false comment claiming `apps/docs/` "has legitimate uses". Preserved
+Guard 1 (docs/wiki, workspace/heartbeats) + the harness-context exclusion.
+
+### Learnings for future iterations
+Error-injection verified: temp-adding `apps/docs/foo` makes the probe exit 1; clean
+tree exits 0. Makes US-005's `/eval` criterion non-vacuous and closes the PR #44 →
+#69 silent-drift loop permanently.
+
+---
+
+STATUS: COMPLETE

@@ -250,7 +250,28 @@ after the runtime start time:
 
 ```bash
 INERT=()
+# Qualify each crons/*.md as a SCHEDULABLE cron BEFORE the mtime check, mirroring
+# scripts/cron-runtime.ts parseCronFile + loadCrons: a file the runtime never
+# loads cannot be "inert". A file qualifies IFF all of:
+#   1. first line is literally '---' (trailing \r stripped, CRLF-safe) — so a
+#      '---' inside a fenced code block (the crons/README.md trap) cannot match,
+#   2. a closing '---' delimiter exists on a later line (well-formed frontmatter),
+#   3. the leading frontmatter has an anchored, comment-excluding schedule: key
+#      (^[[:space:]]*schedule: — skips '# schedule:' and substring 'pre_schedule:'),
+#   4. it is not disabled (no enabled: set to false, bare or quoted).
+# Non-qualifying files (e.g. crons/README.md) are skipped silently — never
+# mtime-compared, never counted toward the inert aggregate. The predicate is
+# property-based: no hard-coded cron name list or count.
+is_schedulable_cron() {
+  local f="$1" fm
+  [ "$(head -n1 "$f" | tr -d '\r')" = '---' ] || return 1
+  awk 'NR>1 { sub(/\r$/,""); if ($0 ~ /^---[[:space:]]*$/) { ok=1; exit } } END { exit !ok }' "$f" || return 1
+  fm=$(awk 'NR>1 { sub(/\r$/,""); if ($0 ~ /^---[[:space:]]*$/) exit; print }' "$f")
+  printf '%s\n' "$fm" | grep -Eq '^[[:space:]]*schedule:' || return 1
+  ! printf '%s\n' "$fm" | grep -Eq "^[[:space:]]*enabled:[[:space:]]*[\"']?false[\"']?[[:space:]]*\$"
+}
 for f in crons/*.md; do
+  is_schedulable_cron "$f" || continue
   FILE_MTIME=$(stat -c '%Y' "$f" 2>/dev/null || stat -f '%m' "$f" 2>/dev/null)
   if [ -n "$FILE_MTIME" ] && [ "$FILE_MTIME" -gt "$RUNTIME_START" ]; then
     INERT+=("$f")

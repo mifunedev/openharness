@@ -301,9 +301,11 @@ export interface BootResult {
 // construction is both individually fault-isolatable (scheduleAll wraps each
 // call in try/catch) and injectable in tests (scheduleAll takes `mkCron`), so a
 // test can drive the loop without arming a real timer or simulate a
-// construction throw.
-function constructCron(entry: CronEntry): void {
-  new Cron(
+// construction throw. Returns the live Cron handle so scheduleAll can register
+// it in `activeJobs`, letting a SIGHUP reschedule (US-002) stop the prior
+// generation before re-arming.
+function constructCron(entry: CronEntry): Cron {
+  return new Cron(
     entry.schedule,
     {
       timezone: entry.timezone,
@@ -312,6 +314,25 @@ function constructCron(entry: CronEntry): void {
     },
     () => fire(entry),
   );
+}
+
+// Module-level registry of the live Cron handles armed by scheduleAll's most
+// recent call. A SIGHUP reschedule (US-002) stops every handle here before
+// re-arming, so a reload never leaves duplicate overlapping timers. It is
+// cleared at the START of each scheduleAll() call; only truthy handles are
+// registered, so a test injecting a `() => void` mkCron registers nothing.
+let activeJobs: Cron[] = [];
+
+// Re-entrancy guard for sighupHandler: true while a reload is in progress so a
+// second SIGHUP arriving mid-reload is a safe no-op rather than re-stopping and
+// re-arming a half-built generation. Cleared in sighupHandler's finally block.
+let reloading = false;
+
+// Test-only seam: clear the module-level activeJobs registry between cases so
+// state from one test cannot leak into the next. Carries no external-stability
+// guarantee (mirrors loadCrons/onJobError's injection-only seams).
+export function resetActiveJobs(): void {
+  activeJobs = [];
 }
 
 // Load every cron under `dir` and schedule each one, fault-isolating each
@@ -328,8 +349,12 @@ function constructCron(entry: CronEntry): void {
 export function scheduleAll(
   dir: string = CRONS_DIR,
   logFn = log,
-  mkCron: (entry: CronEntry) => void = constructCron,
+  mkCron: (entry: CronEntry) => Cron | void = constructCron,
 ): BootResult {
+  // Clear the prior generation's handles at the START of each call so a reload
+  // (US-002) registers only this call's jobs; the prior handles are stopped by
+  // the SIGHUP handler before it re-invokes scheduleAll.
+  activeJobs = [];
   let loadSkips = 0;
   const entries = loadCrons(dir, (id, status, msg) => {
     if (status === "SCHED_INVALID") loadSkips++;
@@ -339,7 +364,11 @@ export function scheduleAll(
   let constructSkips = 0;
   for (const entry of entries) {
     try {
-      mkCron(entry);
+      const handle = mkCron(entry);
+      // Register only truthy handles: a test's `() => void` mkCron returns
+      // undefined and is intentionally not tracked, while the real
+      // constructCron returns a live Cron that a reload must later stop.
+      if (handle) activeJobs.push(handle);
       scheduled++;
     } catch (err) {
       logFn(entry.id, "SCHED_INVALID", String(err));
@@ -349,6 +378,47 @@ export function scheduleAll(
   const skipped = loadSkips + constructSkips;
   logFn("system", "BOOT", `${scheduled} scheduled, ${skipped} skipped`);
   return { scheduled, skipped };
+}
+
+// SIGHUP reschedule entry point. Stops the prior generation of armed Cron
+// handles, then re-reads crons/ and re-arms via scheduleAll() — so schedule
+// edits and added/removed crons/*.md files take effect without restarting the
+// system-cron session. Exported (not buried in main()) so tests can invoke it
+// directly without going through process signals or acquireLock side effects.
+//
+// .stop() halts a handle's FUTURE fires but cannot kill a callback already in
+// flight; a non-tmux fire mid-reload may briefly overlap the new generation.
+// That window is best-effort only — croner's overlap guard (protect:!overlap)
+// remains the sole protection against concurrent fires. See Non-Goals in the PRD.
+//
+// Does NOT call process.exit() and does NOT remove the PID file: a reload keeps
+// the same process alive (unlike SIGTERM/SIGINT cleanup). The reentrancy lock
+// makes a rapid double-SIGHUP safe — the second call is a no-op while the first
+// reload is still in progress.
+//
+// A malformed cron file present during the reload is dropped by scheduleAll's
+// loadCrons() path (logged SCHED_INVALID) exactly as at boot, so one bad file
+// never crashes the reload — surviving crons stay scheduled. On a successful
+// reschedule the handler emits one `RELOAD` liveness line via the private log()
+// helper (id "system", matching the BOOT precedent) reusing scheduleAll's
+// disjoint scheduled/skipped counts — no inline appendFileSync, no duplicated
+// format.
+export function sighupHandler(): void {
+  if (reloading) return;
+  reloading = true;
+  try {
+    for (const job of activeJobs) {
+      try {
+        job.stop();
+      } catch {
+        /* best-effort: a handle that fails to stop must not abort the reload */
+      }
+    }
+    const { scheduled, skipped } = scheduleAll();
+    log("system", "RELOAD", `${scheduled} scheduled, ${skipped} skipped`);
+  } finally {
+    reloading = false;
+  }
 }
 
 function main(): void {
@@ -366,6 +436,10 @@ function main(): void {
   };
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
+  // Defer the reschedule out of the signal-callback context via setImmediate so
+  // its synchronous file I/O (loadCrons readdir/readFile) runs on the next tick
+  // rather than inside the OS signal handler. SIGHUP reloads; it never exits.
+  process.on("SIGHUP", () => setImmediate(sighupHandler));
   scheduleAll();
 }
 

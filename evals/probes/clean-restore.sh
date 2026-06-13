@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #63 (autopilot-stray-wip-guard) 2026-06-12
+# source: issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13
 # desc: autopilot branch-restore uses the canonical SCOPED restore at every restore
-#       site — a non-destructive two-step `git checkout development -- $OWNED_PATHS`
+#       site — a non-destructive two-step `git checkout development -- "${OWNED_PATHS[@]}"`
 #       then `git checkout development`, asserting an owned-clean tree + HEAD on
 #       development — and exactly one forced tree-wide `git checkout -f development`
-#       remains (the §1 self-heal). Supersedes the pre-#63 "forced restore everywhere".
+#       remains (the §1 self-heal). The array form `"${OWNED_PATHS[@]}"` word-splits to
+#       10 pathspecs under BOTH bash and zsh; the broken bare `$OWNED_PATHS` form (which
+#       collapses under zsh) must NOT be present. Supersedes the pre-#63 "forced restore
+#       everywhere" and the pre-#81 bare-string form.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -16,14 +19,24 @@ if [[ ! -f "$SKILL" ]]; then
   exit 2
 fi
 
-# --- positive assertion: the scoped restore appears at every restore site (>= 3) ---
-# Literal match REQUIRES `grep -F`: `$OWNED_PATHS` is a literal dollar-string in the
-# skill, and default BRE treats the bare `$` as an end-of-line anchor and misses it —
-# the exact grep form is load-bearing here (mirrors the owned-surface-guard probe).
+# --- regression guard: the broken bare (zsh-collapsing) restore form must NOT return ---
+# zsh has no SH_WORD_SPLIT by default, so `git checkout development -- $OWNED_PATHS`
+# collapses to ONE bogus pathspec and the restore errors mid-run (issue #81).
 # shellcheck disable=SC2016  # the literal $OWNED_PATHS must NOT expand — it is matched verbatim
-scoped_count="$(grep -Fc 'git checkout development -- $OWNED_PATHS' "$SKILL" || true)"
-if (( scoped_count < 3 )); then
-  echo "REGRESSION: expected >= 3 'git checkout development -- \$OWNED_PATHS' scoped-restore sites, found $scoped_count" >&2
+if grep -Fq 'git checkout development -- $OWNED_PATHS' "$SKILL"; then
+  echo "REGRESSION: broken bare 'git checkout development -- \$OWNED_PATHS' form present — collapses to ONE pathspec under zsh; use the array form '\"\${OWNED_PATHS[@]}\"'" >&2
+  exit 1
+fi
+
+# --- positive assertion: the scoped restore appears at every restore site (>= 4) ---
+# Literal match REQUIRES `grep -F`: the `[`/`]`/`@` in `${OWNED_PATHS[@]}` are BRE
+# metacharacters and a non-`-F` grep would silently mis-match — the exact grep form is
+# load-bearing here (mirrors the owned-surface-guard probe). The threshold is 4 to match
+# the §5/§6/§7-code/Guidelines restore sites in SKILL.md exactly (issue #81).
+# shellcheck disable=SC2016  # the literal ${OWNED_PATHS[@]} must NOT expand — it is matched verbatim
+scoped_count="$(grep -Fc 'git checkout development -- "${OWNED_PATHS[@]}"' "$SKILL" || true)"
+if (( scoped_count < 4 )); then
+  echo "REGRESSION: expected >= 4 'git checkout development -- \"\${OWNED_PATHS[@]}\"' scoped-restore sites, found $scoped_count" >&2
   exit 1
 fi
 
@@ -53,5 +66,5 @@ if ! grep -B2 -A2 'git checkout -f development' "$SKILL" | grep -qE 'BRANCH|rev-
   exit 1
 fi
 
-echo "PASS: autopilot restore scoped to \$OWNED_PATHS at $scoped_count sites (owned-clean + HEAD asserted); exactly 1 forced self-heal remains" >&2
+echo "PASS: autopilot restore scoped to \"\${OWNED_PATHS[@]}\" (array form) at $scoped_count sites (owned-clean + HEAD asserted); no bare \$OWNED_PATHS form; exactly 1 forced self-heal remains" >&2
 exit 0

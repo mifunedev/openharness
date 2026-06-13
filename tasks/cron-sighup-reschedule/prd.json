@@ -1,0 +1,95 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/88-cron-sighup-reschedule",
+    "description": "Add a SIGHUP handler to scripts/cron-runtime.ts so schedule edits and added/removed crons/*.md files take effect without restarting the system-cron session (closes the documented schedule hot-reload gap left by #47).",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Track live job handles so the prior generation can be stopped",
+            "description": "As the cron runtime, I need references to the croner jobs I create so a reschedule can stop them before arming new ones, avoiding duplicate overlapping timers.",
+            "acceptanceCriteria": [
+                "constructCron(entry) returns the live Cron handle it creates instead of void",
+                "The mkCron parameter type in scheduleAll is widened to exactly `(entry: CronEntry) => Cron | void` (NOT `=> Cron`) so existing `() => void` test spies still compile; default stays constructCron",
+                "scheduleAll() collects truthy handles from each successful mkCron(entry) call into a module-level activeJobs registry, cleared at the START of each call; void/undefined returns are not registered",
+                "An exported resetActiveJobs() (or equivalent reset seam) lets tests clear the module-level registry between cases",
+                "scheduleAll() still returns BootResult { scheduled, skipped } with unchanged disjoint counting semantics",
+                "Typecheck passes",
+                "Tests pass"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-13; commit 3d2fdea"
+        },
+        {
+            "id": "US-002",
+            "title": "Exported, testable SIGHUP handler reschedules without exiting",
+            "description": "As an operator, I want to send SIGHUP to the cron runtime so it re-reads crons/ and re-arms all schedules without restarting the tmux session.",
+            "acceptanceCriteria": [
+                "An exported function (e.g. `export function sighupHandler(): void`) holds the reschedule logic so tests invoke it directly without calling main()",
+                "main() registers it via `process.on(\"SIGHUP\", () => setImmediate(sighupHandler))` (deferred out of the signal-callback context)",
+                "sighupHandler stops every handle in the activeJobs registry via .stop(), then calls scheduleAll() to re-read and re-arm crons/",
+                "sighupHandler does NOT call process.exit() and does NOT remove the PID file",
+                "A module-level boolean reload-lock makes the handler re-entrancy-safe: a SIGHUP arriving while a reload is in progress is a no-op; the lock is cleared in a finally block",
+                "SIGTERM/SIGINT continue to run the existing cleanup (unlink PID file, exit 0) unchanged",
+                "Typecheck passes",
+                "Tests pass"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Completed iteration 2 on 2026-06-13; commit a542e2a"
+        },
+        {
+            "id": "US-003",
+            "title": "Reload is fault-isolated and logs a RELOAD liveness line",
+            "description": "As the unattended harness, I want a malformed cron file present during a reload to be isolated (not crash the runtime) and each successful reload recorded.",
+            "acceptanceCriteria": [
+                "A cron file with an invalid schedule present during a SIGHUP reload is dropped by the existing loadCrons() path (logged SCHED_INVALID); other crons remain scheduled and the process does not exit/crash",
+                "On a successful reschedule, sighupHandler calls the existing private log() helper directly as `log(\"system\", \"RELOAD\", \"<N> scheduled, <M> skipped\")` (no inline appendFileSync, no duplicated format)",
+                "id is \"system\" matching the BOOT precedent",
+                "Typecheck passes",
+                "Tests pass"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Completed iteration 3 on 2026-06-13; commit 7e7e430"
+        },
+        {
+            "id": "US-004",
+            "title": "Test coverage for the SIGHUP reload path",
+            "description": "As a maintainer, I want the reschedule behavior covered by the existing test suite so a refactor can't silently regress it.",
+            "acceptanceCriteria": [
+                "A new describe(\"SIGHUP reload\") block in scripts/__tests__/cron-runtime.test.ts calls the exported sighupHandler directly (not scheduleAll), with resetActiveJobs() between cases",
+                "A test asserts prior job handles have .stop() called on reschedule (mkCron returning fake handles with a .stop spy)",
+                "A test asserts a newly-added cron file in the tmp crons dir is picked up, and a removed file is dropped, after invoking the handler against updated directory state",
+                "A test asserts a RELOAD line is written via the existing appendFileSync spy on reload",
+                "A test asserts a reload with an empty prior activeJobs registry does not throw",
+                "A test asserts the re-entrancy lock: a second invocation while a reload is in progress is a safe no-op (does not double-register)",
+                "No test touches the real crons/ directory (uses the existing beforeEach/afterEach tmp dir pattern); no new external dependencies",
+                "vitest run (root test:scripts) passes with zero failures",
+                "Typecheck passes",
+                "Tests pass"
+            ],
+            "priority": 4,
+            "passes": true,
+            "notes": "Completed iteration 4 on 2026-06-13; commit 4dd3b18"
+        },
+        {
+            "id": "US-005",
+            "title": "Document the SIGHUP reload path",
+            "description": "As an operator reading the docs, I want to know how to reload cron schedules without a restart, including from the host where the runtime runs inside the container.",
+            "acceptanceCriteria": [
+                "crons/README.md documents the reload command as `docker exec -u sandbox openharness kill -HUP \"$(cat crons/.pid)\"`, noting the bare host-side form only works from inside the container (PID namespace), and uses the correct PID path crons/.pid (not .cron.lock)",
+                "The note includes a pre-send health check: `docker exec -u sandbox openharness sh -c 'kill -0 \"$(cat crons/.pid)\" 2>/dev/null && echo alive || echo \"not running\"'`",
+                "The note includes an escape hatch: if a reload arms zero crons, restart the runtime (tmux kill-session -t system-cron then the documented start) to restore the last good state",
+                "A new RELOAD row is added to the status-tokens table in crons/README.md (id is system; msg is the cron count)",
+                "The stale Hot-reload sentence ('Frontmatter changes ... require a runtime restart; no watcher is implemented.') is corrected to say schedule/frontmatter changes and added/removed cron files now take effect via a SIGHUP reload (still no auto-watcher); a full restart is only for runtime code changes",
+                "A CHANGELOG.md [Unreleased] entry under ### Added records the SIGHUP cron-reload capability, linking issue #88",
+                "Typecheck passes"
+            ],
+            "priority": 5,
+            "passes": true,
+            "notes": "Completed iteration 5 on 2026-06-13; commit 3d59a3a"
+        }
+    ]
+}

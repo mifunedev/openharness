@@ -6,18 +6,18 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 
 | probe | tier | last-run (UTC) | status | source |
 |-------|------|----------------|--------|--------|
-| clean-restore | A | 2026-06-13 08:35 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12 |
-| cron-claude-codex-fallback | A | 2026-06-13 08:35 | PASS | conversation 2026-06-12 (default Codex fallback for crons) |
-| devtcp-hook | A | 2026-06-13 08:35 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
-| eval-gate | A | 2026-06-13 08:35 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
-| eval-results-atomic | A | 2026-06-13 08:35 | PASS | issue #83 (eval-results-atomic-write) |
-| eval-runner-exit | A | 2026-06-13 08:35 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
-| health-check-docker-stats | A | 2026-06-13 08:35 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
-| next-dev-prod | A | 2026-06-13 08:35 | REGRESSION | memory/MEMORY.md 2026-06-04 |
-| owned-surface-guard | A | 2026-06-13 08:35 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12 |
-| ralph-fallback-order | A | 2026-06-13 08:35 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
-| rl-delegation-write-worker | A | 2026-06-13 08:35 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
-| skill-paths | A | 2026-06-13 08:35 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
-| submitted-by-trailers | A | 2026-06-13 08:35 | PASS | conversation 2026-06-12 (commit attribution trailers) |
+| boot-lint-glob | A | 2026-06-13 13:32 | PASS | issue #90 |
+| clean-restore | A | 2026-06-13 13:32 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12 |
+| cron-claude-codex-fallback | A | 2026-06-13 13:32 | PASS | conversation 2026-06-12 (default Codex fallback for crons) |
+| devtcp-hook | A | 2026-06-13 13:32 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
+| eval-gate | A | 2026-06-13 13:32 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
+| eval-runner-exit | A | 2026-06-13 13:32 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
+| health-check-docker-stats | A | 2026-06-13 13:32 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
+| next-dev-prod | A | 2026-06-13 13:32 | REGRESSION | memory/MEMORY.md 2026-06-04 |
+| owned-surface-guard | A | 2026-06-13 13:32 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12 |
+| ralph-fallback-order | A | 2026-06-13 13:32 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
+| rl-delegation-write-worker | A | 2026-06-13 13:32 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
+| skill-paths | A | 2026-06-13 13:32 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
+| submitted-by-trailers | A | 2026-06-13 13:32 | PASS | conversation 2026-06-12 (commit attribution trailers) |
 
 <!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->

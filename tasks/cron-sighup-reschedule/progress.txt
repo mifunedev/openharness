@@ -28,6 +28,43 @@
   `mkCron` regardless of handle truthiness, so a `() => void` test spy still
   counts as scheduled.
 
+## US-002 — 2026-06-13 06:33 UTC
+
+**Title**: Exported, testable SIGHUP handler reschedules without exiting
+**Files changed**: scripts/cron-runtime.ts
+**Commit**: a542e2a
+**Result**: PASS
+
+### What I did
+Added an exported `sighupHandler()` that stops every handle in the module-level
+`activeJobs` registry via `.stop()` (each wrapped in try/catch so one stubborn
+handle can't abort the reload), then calls `scheduleAll()` to re-read crons/ and
+re-arm. Guarded it with a module-level `reloading` boolean lock cleared in a
+`finally` so a rapid double-SIGHUP is a safe no-op. Registered it in `main()` via
+`process.on("SIGHUP", () => setImmediate(sighupHandler))` (deferred off the
+signal-callback context); SIGTERM/SIGINT cleanup is untouched. The handler never
+calls process.exit() and never unlinks the PID file.
+
+### Learnings for future iterations
+- **US-003 hook point**: `sighupHandler` currently calls `scheduleAll()` and
+  discards its `BootResult`. US-003 should capture `const { scheduled, skipped }
+  = scheduleAll()` and add `log("system", "RELOAD", \`${scheduled} scheduled,
+  ${skipped} skipped\`)` after it. This is the one explicit modification to
+  US-002's completed body that a later story is allowed to make.
+- **US-004 re-entrancy test seam**: the `reloading` lock is module-private. To
+  test the "second invocation mid-reload is a no-op" AC, drive re-entry from
+  inside the reload — e.g. inject an `mkCron` (via the scheduleAll the handler
+  calls is not directly injectable, so) instead make the FIRST `activeJobs`
+  handle's `.stop()` spy call `sighupHandler()` again, then assert scheduleAll
+  ran once. Handles are seeded into `activeJobs` by calling `scheduleAll(tmp,
+  spy, () => fakeHandleWithStopSpy)` before invoking `sighupHandler()`.
+- **Type-check caveat (confirmed)**: standalone `tsc` on cron-runtime.ts reports
+  only the documented missing-`@types/node` class (`process`, `setImmediate`,
+  `node:*`). My new `setImmediate` usage adds one such line — expected, not a
+  real error. `pnpm run test:scripts` (186 tests) is the true gate and passed.
+
+---
+
 ## US-001 — 2026-06-13 06:28 UTC
 
 **Title**: Track live job handles so the prior generation can be stopped

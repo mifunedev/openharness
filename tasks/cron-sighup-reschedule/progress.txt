@@ -47,6 +47,40 @@
   unreachable, module-private) generation. Never use `* * * * *` in a real-Cron
   test — it can actually `fire()` and spawn the agent.
 
+## US-005 — 2026-06-13 13:05 UTC
+
+**Title**: Document the SIGHUP reload path
+**Files changed**: crons/README.md, CHANGELOG.md
+**Commit**: 3d59a3a
+**Result**: PASS
+
+### What I did
+Documented the new SIGHUP reschedule path: added a `RELOAD` row to the
+status-tokens table (`id` `system`, msg = cron count), corrected the stale
+Hot-reload sentence (schedule/frontmatter + added/removed cron files now reload
+via SIGHUP; full restart only for runtime *code* changes), and added a new
+`## Reload schedules (SIGHUP)` section with the container-boundary reload command
+(`docker exec -u sandbox openharness kill -HUP "$(cat crons/.pid)"`), the
+`kill -0` health check, the PID-namespace caveat, and the zero-crons escape hatch
+(`tmux kill-session -t system-cron` → `node --experimental-strip-types
+scripts/cron-runtime.ts`). Added the `[Unreleased] → Added` CHANGELOG entry
+linking #88. Docs-only — no source/test files touched; typecheck clean.
+
+### Learnings for future iterations
+- **Task complete.** All five stories (US-001..US-005) now `passes: true`; this is
+  the terminal iteration — appended the completion marker below.
+- **No source/test changes in US-005**, as the prior iteration predicted: the diff
+  is exactly `crons/README.md` (+19/-1) and `CHANGELOG.md` (+1). Test count stays
+  192 (the docs story touches no test files).
+- **README anchor convention**: the new section heading `## Reload schedules
+  (SIGHUP)` renders the GitHub anchor `#reload-schedules-sighup` (lowercase,
+  parens dropped, spaces→hyphens) — the RELOAD table row and the Hot-reload
+  cross-link both target it; the existing `## Hot-reload` heading is `#hot-reload`.
+- **Issue links use the fork origin** `github.com/ryaneggz/openharness` (matching
+  the recent `[Unreleased]` entries), not the upstream `mifunedev` org.
+
+---
+
 ## US-004 — 2026-06-13 12:45 UTC
 
 **Title**: Test coverage for the SIGHUP reload path
@@ -178,3 +212,5 @@ prove the widened signature keeps `() => void` spies compiling and the counting
 intact — no US-001-specific tests were added (that is US-004's job).
 
 ---
+
+STATUS: COMPLETE

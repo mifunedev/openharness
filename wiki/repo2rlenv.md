@@ -3,10 +3,10 @@ title: "Repo2RLEnv"
 slug: repo2rlenv
 tags: [reinforcement-learning, evaluation, agent-harness, harbor, datasets, openharness]
 created: 2026-06-12
-updated: 2026-06-12
+updated: 2026-06-13
 sources:
   - raw/2026-06-12-repo2rlenv.md
-related: []
+related: [hermes-agent, opencode, deepagents, compound-engineering]
 confidence: provisional
 ---
 
@@ -23,3 +23,7 @@ The output is a portable dataset/environment: tasks carry verifiers, content has
 For Open Harness architecture, Repo2RLEnv should sit below the agent CLI surface and alongside `evals/`: a future `eval-environments` or `benchmarks` capability that synthesizes Harbor task corpora from a target repo, then runs sandboxed Open Harness-supported agents against those tasks and records reward traces. The integration boundary should preserve Open Harness' product model—one developer, one project, one harness—while adding a repeatable fitness function for agent work rather than embedding Repo2RLEnv into `docs/harnesses/` as if it were an agent CLI.
 
 ## See Also
+- [[hermes-agent]] — an Open Harness agent CLI primitive of the kind Repo2RLEnv environments evaluate via Harbor
+- [[opencode]] — another optional agent CLI primitive in the same evaluable set
+- [[deepagents]] — another optional agent CLI primitive in the same evaluable set
+- [[compound-engineering]] — Repo2RLEnv's executable-reward environments are a fitness-function feedback mechanism in the compound-engineering sense

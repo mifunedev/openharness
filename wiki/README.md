@@ -25,7 +25,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
-| repo2rlenv | Repo2RLEnv | [reinforcement-learning, evaluation, agent-harness, harbor, datasets, openharness] | 2026-06-12 |
+| repo2rlenv | Repo2RLEnv | [reinforcement-learning, evaluation, agent-harness, harbor, datasets, openharness] | 2026-06-13 |
 | overnight-drift | The Overnight Drift (NY Fed Staff Report 917) | [finance, market-microstructure, equity-returns, overnight-returns, inventory-risk, trading, liquidity] | 2026-06-10 |
 | turbovec-turboquant-rag | turbovec and TurboQuant for compressed RAG retrieval | [vector-search, rag, quantization, ai-infra, local-retrieval] | 2026-06-07 |
 | rubricrefine-agent-reliability | RubricRefine: Improving Tool-Use Agent Reliability with Training-Free Pre-Execution Refinement |  | 2026-06-06 |

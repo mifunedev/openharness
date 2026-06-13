@@ -39,8 +39,8 @@
                 "Typecheck passes"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Iter 2 (2026-06-13): added evals/probes/memory-gitignore-claim.sh mirroring boot-lint-glob.sh — dual-file SKIPPED guard, uncommented Assertion A, literal Assertion B; bash -n + shellcheck clean, PASS exit 0, both negative tests exit 1 and reverted; quality trio green. Commit 82c9f7b."
         },
         {
             "id": "US-003",

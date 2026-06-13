@@ -14,6 +14,18 @@
   tests, ~3s) all green on this branch. Shell is zsh — `${PIPESTATUS[0]}` does
   not capture as in bash; judge pass/fail by the command's own output.
 - Commit trailer is mandatory: `Submitted-by: Claude` (from `$RALPH_HARNESS`).
+- Probe convention (`evals/probes/*.sh`): mirror `boot-lint-glob.sh` exactly —
+  `#!/usr/bin/env bash`, `# tier:` / `# source:` / `# desc:` header trio,
+  `set -euo pipefail`, `ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"`,
+  3-state oracle (0 PASS / 1 REGRESSION / 2 SKIPPED), all human-readable lines to
+  stderr. Grep a missing file silently false-PASSes a "must NOT contain" assertion
+  (`grep -q` exits non-zero) — guard with an explicit `[[ ! -f ]]` → exit 2 SKIPPED
+  per input file. Use `grep -qF` for literal patterns (e.g. `memory/[0-9]*/`,
+  `tracked inside`); strip comment lines with `grep -v '^[[:space:]]*#'` before a
+  "rule present" assertion so a commented-out line can't false-PASS.
+- Do NOT add `evals/probes/` to the CI boot-lint shellcheck glob — that flips the
+  `boot-lint-glob` probe to REGRESSION (it asserts the glob covers exactly the four
+  boot-script dirs). Run `shellcheck -S warning` on new probes manually instead.
 
 ---
 
@@ -44,5 +56,37 @@ that the two pre-ignore logs remain tracked as a historical vestige.
   BASH_SOURCE-relative repo root, 3-state oracle). Do NOT expand the CI
   boot-lint glob to `evals/probes/` — that would flip boot-lint-glob to
   REGRESSION; run shellcheck manually instead.
+
+---
+
+## US-002 — 2026-06-13 16:33 UTC
+
+**Title**: Add a tier-A probe guarding the corrected claim
+**Files changed**: evals/probes/memory-gitignore-claim.sh (new, +x)
+**Commit**: 82c9f7b
+**Result**: PASS
+
+### What I did
+Wrote `evals/probes/memory-gitignore-claim.sh` mirroring `boot-lint-glob.sh`:
+shebang + `# tier: A` / `# source: issue #101` / `# desc:` header trio +
+`set -euo pipefail`, BASH_SOURCE-relative `ROOT`, 3-state oracle. SKIPPED (exit
+2) if either `.gitignore` or `context/rules/memory.md` is absent. Assertion A:
+an uncommented `memory/[0-9]*/` line exists (comment lines stripped via
+`grep -v '^[[:space:]]*#'`, matched with `grep -qF`). Assertion B:
+`context/rules/memory.md` does not contain literal `tracked inside`. PASS line
+to stderr, exit 0.
+
+### Learnings for future iterations
+- Verified the 3-state oracle end to end: PASS exit 0 on the corrected tree;
+  negative test 1 (reintroduce `tracked inside`) -> exit 1; negative test 2
+  (delete the gitignore rule) -> exit 1; both temp edits reverted via `cp`
+  backup and re-confirmed exit 0. `git status --porcelain` showed only the new
+  probe.
+- `bash -n` + `shellcheck -S warning` both clean; quality trio (typecheck/lint/
+  test:scripts 196) green.
+- US-003 next (and final): add a `### Fixed` bullet under `## [Unreleased]` in
+  CHANGELOG.md describing the corrected daily-log persistence claim + the new
+  guard probe, linking issue #101 — type `docs`/`fix`. After it lands, all three
+  stories pass -> append `STATUS: COMPLETE`.
 
 ---

@@ -1,0 +1,168 @@
+# progress
+
+## Codebase Patterns
+
+- **Pre-commit hook** (`.husky/pre-commit`) runs `pnpm run lint && pnpm run test`.
+  `lint` is a recursive `--if-present` no-op (no per-package lint scripts), but
+  `test` runs the full vitest suite (186 tests, ~3s). A commit will fail if any
+  test breaks, so keep changes test-clean. There is no markdownlint/prettier in
+  the hook — markdown edits only need to keep the test suite green.
+- **No bare `git status --porcelain`**: the US-003 probe will subtract scoped
+  lines via `grep -v -- '-- tasks/'` and fail on any survivor. Keep the scoped
+  form `git status --porcelain -- tasks/ ':!tasks/archive/'` as the ONLY
+  occurrence of that substring in `crons/cleanup-tasks.md` — never reference a
+  bare `git status --porcelain` in prose.
+- **Probe template** `evals/probes/owned-surface-guard.sh`: static grep oracle,
+  3-state (PASS=0/REGRESSION=1/SKIPPED=2), uses `grep -F` for literal patterns
+  with shell metacharacters and `# tier:`/`# source:`/`# desc:` headers +
+  `set -euo pipefail`. Mirror it for US-003.
+- **Liveness tokens** in `crons/cleanup-tasks.md`: `OK (archived N, skipped M)`
+  (success, step 7), `HEARTBEAT_OK` (nothing-to-do reply), and now
+  `BLOCKED-TASKS-WIP` (dirty-`tasks/` abort, step 2). The abort path must NOT
+  fall through to step 7's `OK` line.
+- `$RALPH_HARNESS=claude` this run → `Submitted-by: Claude`.
+- **Worktree isolation in `crons/cleanup-tasks.md`**: archive work runs in
+  `.worktrees/archive/$TODAY` (branch `archive/$TODAY` off `origin/$BASE`), driven
+  by `git -C .worktrees/archive/$TODAY <cmd>` — never `cd`. Lifecycle is
+  prune-stale-first → `git worktree add` → `trap ... EXIT` (error/abort) +
+  explicit step-7 teardown (normal/N=0). The `archive/` subfolder is documented
+  in `.worktrees/README.md`'s branch-worktree table.
+- **Step numbers are load-bearing**: prose cross-references steps by number
+  (e.g. step 2 → "step 7's `OK` line"). Add sub-bullets, not new numbered steps,
+  to avoid invalidating those references.
+
+## US-001 — 2026-06-13 04:18 UTC
+
+**Title**: Scope the cleanup-tasks pre-flight to tasks/ with a distinct liveness token
+**Files changed**: crons/cleanup-tasks.md
+**Commit**: 2b8d6f3
+**Result**: PASS
+
+### What I did
+
+Replaced step 2's tree-wide `git status --porcelain` with the path-scoped,
+archive-excluded form `git status --porcelain -- tasks/ ':!tasks/archive/'`. The
+abort path now appends a note to `memory/$TODAY/log.md` and emits the distinct
+`BLOCKED-TASKS-WIP` liveness token to `crons/.cron.log`, then stops (no longer
+falls through to step 7's `OK` line). Added prose explaining the scope mirrors
+the autopilot `BLOCKED-OWNED-WIP` owned-surface convention: only a mid-write
+task under `tasks/` blocks; foreign WIP elsewhere does not.
+
+### Learnings for future iterations
+
+- The scoped guard is the ONLY `git status --porcelain` occurrence in the file;
+  verified the US-003-style subtraction (`grep -v -- '-- tasks/'`) leaves zero
+  survivors. Keep it that way.
+- Pre-commit runs `pnpm run test` (full vitest suite, 186 tests) — passed clean.
+- US-002 still operates against the SHARED checkout's `tasks/` for the dirt
+  check (this story), while the actual archive moves (US-002) will run in a
+  worktree off `origin/$BASE`. Don't conflate the two surfaces.
+
+---
+
+## US-003 — 2026-06-13 10:25 UTC
+
+**Title**: Add an eval probe guarding the scoped pre-flight + worktree isolation
+**Files changed**: evals/probes/cleanup-tasks-scoped-guard.sh
+**Commit**: f4daced
+**Result**: PASS
+
+### What I did
+
+Added `evals/probes/cleanup-tasks-scoped-guard.sh` (executable, mode 100755),
+modeled on `owned-surface-guard.sh`: a 3-state static-grep oracle (PASS=0 /
+REGRESSION=1 / SKIPPED=2 when the cron is absent) over `crons/cleanup-tasks.md`.
+It asserts (a) the scoped `git status --porcelain -- tasks/` is present, (b) no
+bare unscoped `git status --porcelain` survives (list-then-`grep -v -- '-- tasks/'`
+subtraction), (c) the `BLOCKED-TASKS-WIP` token is present, (d) both
+`git worktree add` and `git worktree remove` are present, and (e) the old
+shared-checkout `git switch -c "archive/` is absent (asymmetric oracle). Includes
+the required `# tier:`/`# source: issue #85`/`# desc:` headers, `set -euo pipefail`,
+and a `# NOTE:` recording the static-grep-not-runtime limitation. Verified PASS
+(exit 0) against the current cron and exit 1 on each mutated regression case +
+exit 2 on the absent-cron path.
+
+### Learnings for future iterations
+
+- The probe is hardcoded to `$ROOT/crons/cleanup-tasks.md` (ROOT derived from
+  `BASH_SOURCE` two dirs up). To negative-test it, copy the script into a temp
+  `evals/probes/` mirror with a sibling `crons/` and mutate the copied cron —
+  don't try to repoint ROOT.
+- `grep -Fq 'git status --porcelain -- tasks/'` is safe: the pattern begins with
+  `git`, so grep never mis-parses the `--porcelain`/`--` as options; `-F` keeps
+  them literal. Same for `grep -Fq 'git switch -c "archive/'` (literal `"`).
+- All 12 existing probes are `tier: A`; this one follows suit. Pre-commit runs
+  `pnpm run lint` (no-op) + `pnpm run test` (186 tests) — green; adding a probe
+  file does not touch the vitest suite.
+
+---
+
+## US-002 — 2026-06-13 04:22 UTC
+
+**Title**: Isolate the archive branch + commit work in a crash-safe worktree
+**Files changed**: crons/cleanup-tasks.md, .worktrees/README.md
+**Commit**: 21d5b47
+**Result**: PASS
+
+### What I did
+
+Replaced the shared-checkout `git switch -c "archive/$TODAY"` (step 3) with a
+dedicated worktree flow: prune-stale-first (`git worktree remove --force` +
+`git branch -D` + `git worktree prune`) for same-day re-run idempotency, then
+`git worktree add .worktrees/archive/$TODAY -b archive/$TODAY origin/$BASE`, with
+a `trap '... git worktree remove --force ...' EXIT` armed for crash-safe
+teardown. Steps 4–5 now run every `git mv`/`add`/`commit`/`push` via
+`git -C .worktrees/archive/$TODAY`, scanning the worktree's committed
+`origin/$BASE` checkout; the `git mv` → `mv` + `git add` fallback and the
+`gh pr view` PR-idempotency fallback are preserved. Step 7 gained an always-run
+worktree teardown (covers N=0 and partial runs) alongside the unchanged `OK`
+liveness line. Added an `archive/` row to `.worktrees/README.md`.
+
+### Learnings for future iterations
+
+- **Don't renumber steps.** US-001's step-2 prose references "step 7's `OK`
+  line"; I folded the worktree teardown INTO step 7 (rather than adding a new
+  step 8) so that cross-reference stays valid. If US-003/US-004 need a new step,
+  prefer sub-bullets over renumbering.
+- **Two teardown paths by design**: the step-3 `trap ... EXIT` handles
+  error/abort exits (shell-script execution); the explicit step-7 teardown
+  handles normal completion + N=0 + step-by-step runners where a trap's process
+  scope doesn't span discrete bash blocks. Both call the idempotent
+  `git worktree remove --force ... || true`.
+- **US-003 probe targets are all present now**: `git worktree add` (×1),
+  `git worktree remove` (×3: prune-first, trap, step-7), zero `git switch -c`,
+  and the scoped `git status --porcelain -- tasks/` with no bare survivor.
+
+---
+
+## US-004 — 2026-06-13 10:27 UTC
+
+**Title**: Add CHANGELOG entry referencing issue #85
+**Files changed**: CHANGELOG.md
+**Commit**: 2d4e5c7
+**Result**: PASS
+
+### What I did
+
+Added one imperative bullet as the first entry under `## [Unreleased]` →
+`### Fixed` describing the scoped `cleanup-tasks` pre-flight (`tasks/`,
+excluding `tasks/archive/`) plus the crash-safe `.worktrees/archive/<date>`
+isolation, the `BLOCKED-TASKS-WIP` skip token, and the guarding probe, linked
+to `[#85](https://github.com/ryaneggz/openharness/issues/85)`. Pre-write checks:
+`grep -c '#85'` returned 0 (no duplicate of this fix).
+
+### Learnings for future iterations
+
+- The `cleanup-tasks` scan returns 1, NOT 0, because of a pre-existing released
+  entry (line ~288: "Seeded the two SPEC-reserved crons … `crons/cleanup-tasks.md`",
+  issue #210). That historical seeding entry is unrelated to this fix — the
+  no-duplicate criterion is really satisfied by the `#85`-count = 0 check, not
+  the broad `cleanup-tasks` substring scan. Don't be tripped up by it.
+- `### Fixed` already existed under `## [Unreleased]`, so no section creation
+  was needed — just insert the bullet at the top of it.
+- CHANGELOG is docs-only; the 186-test vitest pre-commit suite is unaffected
+  (green).
+
+---
+
+STATUS: COMPLETE

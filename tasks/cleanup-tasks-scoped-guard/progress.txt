@@ -1,2 +1,52 @@
 # progress
 
+## Codebase Patterns
+
+- **Pre-commit hook** (`.husky/pre-commit`) runs `pnpm run lint && pnpm run test`.
+  `lint` is a recursive `--if-present` no-op (no per-package lint scripts), but
+  `test` runs the full vitest suite (186 tests, ~3s). A commit will fail if any
+  test breaks, so keep changes test-clean. There is no markdownlint/prettier in
+  the hook — markdown edits only need to keep the test suite green.
+- **No bare `git status --porcelain`**: the US-003 probe will subtract scoped
+  lines via `grep -v -- '-- tasks/'` and fail on any survivor. Keep the scoped
+  form `git status --porcelain -- tasks/ ':!tasks/archive/'` as the ONLY
+  occurrence of that substring in `crons/cleanup-tasks.md` — never reference a
+  bare `git status --porcelain` in prose.
+- **Probe template** `evals/probes/owned-surface-guard.sh`: static grep oracle,
+  3-state (PASS=0/REGRESSION=1/SKIPPED=2), uses `grep -F` for literal patterns
+  with shell metacharacters and `# tier:`/`# source:`/`# desc:` headers +
+  `set -euo pipefail`. Mirror it for US-003.
+- **Liveness tokens** in `crons/cleanup-tasks.md`: `OK (archived N, skipped M)`
+  (success, step 7), `HEARTBEAT_OK` (nothing-to-do reply), and now
+  `BLOCKED-TASKS-WIP` (dirty-`tasks/` abort, step 2). The abort path must NOT
+  fall through to step 7's `OK` line.
+- `$RALPH_HARNESS=claude` this run → `Submitted-by: Claude`.
+
+## US-001 — 2026-06-13 04:18 UTC
+
+**Title**: Scope the cleanup-tasks pre-flight to tasks/ with a distinct liveness token
+**Files changed**: crons/cleanup-tasks.md
+**Commit**: 2b8d6f3
+**Result**: PASS
+
+### What I did
+
+Replaced step 2's tree-wide `git status --porcelain` with the path-scoped,
+archive-excluded form `git status --porcelain -- tasks/ ':!tasks/archive/'`. The
+abort path now appends a note to `memory/$TODAY/log.md` and emits the distinct
+`BLOCKED-TASKS-WIP` liveness token to `crons/.cron.log`, then stops (no longer
+falls through to step 7's `OK` line). Added prose explaining the scope mirrors
+the autopilot `BLOCKED-OWNED-WIP` owned-surface convention: only a mid-write
+task under `tasks/` blocks; foreign WIP elsewhere does not.
+
+### Learnings for future iterations
+
+- The scoped guard is the ONLY `git status --porcelain` occurrence in the file;
+  verified the US-003-style subtraction (`grep -v -- '-- tasks/'`) leaves zero
+  survivors. Keep it that way.
+- Pre-commit runs `pnpm run test` (full vitest suite, 186 tests) — passed clean.
+- US-002 still operates against the SHARED checkout's `tasks/` for the dirt
+  check (this story), while the actual archive moves (US-002) will run in a
+  worktree off `origin/$BASE`. Don't conflate the two surfaces.
+
+---

@@ -1,0 +1,59 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/101-memory-log-persistence",
+    "description": "Correct context/rules/memory.md's false 'log.md tracked inside' daily-log persistence claim to match .gitignore reality, and guard it with a read-only tier-A eval probe.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Correct the false 'tracked inside' claim in memory.md",
+            "description": "As an agent reading context/rules/memory.md, I want the Layout block to accurately describe daily-log persistence so I am not misled about which memory survives a fresh clone.",
+            "acceptanceCriteria": [
+                "context/rules/memory.md no longer contains the string 'tracked inside' (grep -c 'tracked inside' context/rules/memory.md returns 0)",
+                "The Layout code-block line for log.md accurately states the directory is gitignored and the daily log is local-only (e.g. '# daily append log (gitignored - local-only; not committed)')",
+                "Prose inside or directly below the Layout fenced code block states: the memory/YYYY-MM-DD/ directory is gitignored via .gitignore 'memory/[0-9]*/'; daily logs are a local-only working journal; only MEMORY.md, README.md, and topic notes persist in git",
+                "That same note records that the two pre-ignore logs (memory/2026-05-03, memory/2026-05-04) remain tracked as historical vestige",
+                "No other file under context/ or .claude/skills/ claims daily logs are git-tracked (grep -rniE 'log\\.md.*track|track.*log\\.md|tracked inside' context/ .claude/skills/ returns 0 matches)",
+                "The Layout fenced code block still renders cleanly (opening and closing triple-backtick fences intact)",
+                "Typecheck passes"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-002",
+            "title": "Add a tier-A probe guarding the corrected claim",
+            "description": "As the harness, I want a deterministic probe that fails if the false claim returns or the gitignore rule is removed, so this lesson is retained the way other lessons are.",
+            "acceptanceCriteria": [
+                "evals/probes/memory-gitignore-claim.sh exists and is executable (chmod +x)",
+                "It mirrors evals/probes/boot-lint-glob.sh: '#!/usr/bin/env bash', then header comments '# tier: A', '# source: issue #101', '# desc: <one line>', then 'set -euo pipefail'",
+                "Repo root is resolved relative to BASH_SOURCE (not pwd), matching boot-lint-glob.sh",
+                "3-state oracle: exit 0 PASS, exit 1 REGRESSION, exit 2 SKIPPED",
+                "SKIPPED (exit 2) if EITHER .gitignore OR context/rules/memory.md is absent, printing 'SKIPPED: <which file>' to stderr (guards the grep-on-missing-file false-PASS for Assertion B)",
+                "Assertion A: an UNCOMMENTED 'memory/[0-9]*/' line exists in .gitignore (skip comment lines, e.g. grep -v '^[[:space:]]*#' .gitignore | grep -qF 'memory/[0-9]*/'); REGRESSION if missing",
+                "Assertion B: context/rules/memory.md does NOT contain the literal 'tracked inside'; REGRESSION if present",
+                "On the corrected tree, bash evals/probes/memory-gitignore-claim.sh exits 0 and prints a 'PASS: ...' line",
+                "Negative test confirmed: reintroducing 'tracked inside' makes it exit 1, and removing the .gitignore line makes it exit 1; both temporary edits reverted afterward",
+                "bash -n passes and shellcheck -S warning evals/probes/memory-gitignore-claim.sh is clean (run manually; the CI boot-lint glob is NOT expanded to evals/probes/ because that would flip the boot-lint-glob probe)",
+                "Typecheck passes"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Record the fix in CHANGELOG",
+            "description": "As a maintainer, I want the corrected rule recorded in the changelog per context/rules/git.md.",
+            "acceptanceCriteria": [
+                "CHANGELOG.md has a '### Fixed' subsection under '## [Unreleased]' (created if absent, ordered per Keep a Changelog)",
+                "It has a one-line imperative bullet describing the corrected context/rules/memory.md daily-log persistence claim and the new guard probe, linking issue #101",
+                "Typecheck passes"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

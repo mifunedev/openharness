@@ -60,3 +60,37 @@ assert the array form, add a reintroduction guard against the bare form (plain A
   validates is now in place.
 
 ---
+
+## US-002 — 2026-06-13 07:34 UTC
+
+**Title**: Validate the fix under zsh and document
+**Files changed**: CHANGELOG.md (### Fixed entry, #81); memory/2026-06-13/log.md (validation record, gitignored daily log); tasks/owned-paths-zsh-split/prd.json (passes:true)
+**Commit**: 1dfa3fe
+**Result**: PASS
+
+### What I did
+Validated the US-001 array-form fix under zsh against real state: dirtied an
+EXISTING tracked owned file (`tasks/README.md`) by appending a line, then
+evaluated the §1 guard expression (`if ! { git diff --quiet -- "${OWNED_PATHS[@]}"
+&& git diff --cached --quiet -- "${OWNED_PATHS[@]}"; }`) under `zsh -c` — it
+emitted `BLOCKED-OWNED-WIP` (took the dirty-owned branch), where the pre-fix bare
+`$OWNED_PATHS` would have collapsed to one pathspec and stayed clean. Restored
+with `git checkout -- tasks/README.md` (no `git clean`); `git diff --quiet` exits
+0 afterward. Logged the command+result to `memory/2026-06-13/log.md`, added the
+`### Fixed` CHANGELOG entry referencing #81, and confirmed both probes still exit 0.
+
+### Learnings for future iterations
+- The daily memory log (`memory/[0-9]*/`) is **gitignored** (`.gitignore:44`), so a
+  memory-log AC is satisfied by writing the entry, not by committing it — it never
+  appears in `git status` and must not be force-added.
+- `### Fixed` already existed under `## [Unreleased]` (CHANGELOG.md:48); the new entry
+  goes at the top of that list, no need to create the subsection.
+- The §1 guard's `if ! { ...; }` block contains its own branch, so running it in a
+  `zsh` subprocess prints `BLOCKED-OWNED-WIP` without exiting the parent shell — a
+  clean way to assert branch selection without `exit 1` propagating.
+- US-001 set the precedent of two commits per story (`fix:` for content, `task:` for
+  prd.json/progress.txt bookkeeping); US-002 follows the same split.
+
+---
+
+STATUS: COMPLETE

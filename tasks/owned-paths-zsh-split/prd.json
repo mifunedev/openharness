@@ -41,8 +41,8 @@
                 "bash evals/probes/owned-surface-guard.sh and bash evals/probes/clean-restore.sh both still exit 0 after the validation"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": "evals/RESULTS.md refresh is handled by the autopilot §6 /eval gate, not this story."
+            "passes": true,
+            "notes": "Completed iteration 2 on 2026-06-13; commit 1dfa3fe. Under zsh: dirtied tasks/README.md → §1 guard array form took BLOCKED-OWNED-WIP branch; restored via git checkout -- → clean. Validation logged to memory/2026-06-13/log.md; CHANGELOG ### Fixed entry referencing #81 added; both probes exit 0. (evals/RESULTS.md refresh handled by autopilot §6 /eval gate.)"
         }
     ]
 }

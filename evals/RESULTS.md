@@ -16,6 +16,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | eval-results-atomic | A | 2026-06-13 21:41 | PASS | issue #83 (eval-results-atomic-write) |
 | eval-runner-exit | A | 2026-06-13 21:41 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
 | health-check-docker-stats | A | 2026-06-13 21:41 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
+| memory-gitignore-claim | A | 2026-06-13 23:24 | PASS | issue #101 |
 | next-dev-prod | A | 2026-06-13 21:41 | REGRESSION | memory/MEMORY.md 2026-06-04 |
 | owned-surface-guard | A | 2026-06-13 21:41 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | ralph-fallback-order | A | 2026-06-13 21:41 | PASS | conversation 2026-06-12 (Ralph default fallback order) |

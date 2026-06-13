@@ -223,6 +223,8 @@ function fireTmux(entry: CronEntry): void {
     { stdio: "ignore" },
   );
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
+  // Detached tmux path: we observe only the spawn, not the agent's eventual
+  // exit, so no EXIT_<code> reason tail can be captured here (cf. fire()).
   log(entry.id, "SPAWNED", session);
 }
 
@@ -248,7 +250,11 @@ function fire(entry: CronEntry): void {
     ],
     { stdio: "inherit" },
   );
-  child.on("exit", (code: number | null) => log(entry.id, code === 0 ? "OK" : `EXIT_${code}`));
+  child.on("exit", (code: number | null) =>
+    code === 0
+      ? log(entry.id, "OK")
+      : log(entry.id, `EXIT_${code}`, readFailureTail(logFile)),
+  );
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
 }
 

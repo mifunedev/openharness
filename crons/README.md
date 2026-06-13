@@ -48,6 +48,7 @@ status column is one of:
 | Token | Meaning |
 |-------|---------|
 | `BOOT` | Runtime started and scheduled its crons (`id` is `system`; `msg` is the cron count). |
+| `RELOAD` | A `SIGHUP` reschedule re-read `crons/` and re-armed every schedule without restarting the runtime (`id` is `system`; `msg` is the cron count, e.g. `4 scheduled, 0 skipped`). See [Hot-reload](#hot-reload). |
 | `SCHED_INVALID` | A cron was skipped because its `schedule:` is not a valid cron expression (`msg` contains the offending schedule string). |
 | `SPAWNED` | A `tmux: true` fire launched its detached session (`msg` is the session name). |
 | `FIRE` | A scheduled job fired and began running its body. |
@@ -94,7 +95,23 @@ Jobs with `tmux` absent or `false` keep the default in-process spawn. Steer auto
 
 ## Hot-reload
 
-A cron definition's **body** (the agent prompt) hot-reloads at fire time: the runtime re-reads the file just before each fire, so edits take effect at the next scheduled fire without a restart. On a read/parse error, the runtime falls back to the cached boot-time body and logs `BODY_RELOAD_ERR`. When a fire's body differs from the boot-time cached version, a `BODY_RELOADED` line appears in `crons/.cron.log` — this signal recurs on every fire after an edit until the runtime is restarted (which re-baselines). Frontmatter changes (`schedule`, `enabled`, `timezone`, `overlap`) require a runtime restart; no watcher is implemented. Rollback: remove the `reloadBody` call and restore the two `entry.body` usages in `scripts/cron-runtime.ts`.
+A cron definition's **body** (the agent prompt) hot-reloads at fire time: the runtime re-reads the file just before each fire, so edits take effect at the next scheduled fire without a restart. On a read/parse error, the runtime falls back to the cached boot-time body and logs `BODY_RELOAD_ERR`. When a fire's body differs from the boot-time cached version, a `BODY_RELOADED` line appears in `crons/.cron.log` — this signal recurs on every fire after an edit until the runtime is restarted (which re-baselines). Schedule/frontmatter changes (`schedule`, `enabled`, `timezone`, `overlap`) and added/removed `crons/*.md` files now take effect via a `SIGHUP` reschedule (see [Reload schedules](#reload-schedules-sighup) below) — there is still no auto-watcher, so the reload is operator-triggered. A full runtime restart is only needed for `scripts/cron-runtime.ts` *code* changes. Rollback: remove the `reloadBody` call and restore the two `entry.body` usages in `scripts/cron-runtime.ts`.
+
+## Reload schedules (SIGHUP)
+
+The runtime installs a `SIGHUP` handler: on signal it stops the live croner jobs, re-reads every `crons/*.md`, and re-arms the schedules — so schedule/frontmatter edits and added/removed cron files apply without restarting the `system-cron` tmux session. Each successful reload appends a `RELOAD` line (`id` `system`, `msg` the cron count) to `crons/.cron.log`. A malformed `schedule:` present during a reload is dropped (`SCHED_INVALID`) exactly as at boot; the rest stay scheduled and the runtime does not exit. In-flight fires are not interrupted — `overlap: false` remains the only protection against a reschedule racing a still-running fire.
+
+The runtime runs inside the container, so reload from the host via `docker exec`:
+
+```bash
+# Health check first — confirm the PID file points at a live runtime.
+docker exec -u sandbox openharness sh -c 'kill -0 "$(cat crons/.pid)" 2>/dev/null && echo alive || echo "not running"'
+
+# Reload schedules.
+docker exec -u sandbox openharness kill -HUP "$(cat crons/.pid)"
+```
+
+The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t system-cron`, then relaunch it from the repo root: `node --experimental-strip-types scripts/cron-runtime.ts` (the documented `system-cron` start, per `.devcontainer/entrypoint.sh`).
 
 ## Override
 

@@ -1,2 +1,49 @@
 # progress
 
+## Codebase Patterns
+
+- **No standalone typecheck for `scripts/`.** There is no root `tsconfig.json`
+  and no `@types/node` installed at root. The CI `typecheck` npm script scopes
+  to `packages/` + `packages/oh` only. `scripts/` is validated solely by
+  vitest's esbuild transpile + run — if `npx vitest run` is green, the script
+  type-resolves. Do not try `tsc -p scripts/tsconfig.json` (it doesn't exist).
+- **`node:fs` is partially mocked in `cron-runtime.test.ts`.** The `vi.mock`
+  block overrides ONLY `appendFileSync` (the `log()` writer, to keep tests off
+  the real `crons/.cron.log`); every other fs export — `readFileSync`,
+  `writeFileSync`, etc. — passes through to the real module via `...real`. So
+  temp-file fixtures work directly without further mocking.
+- **Temp-dir fixture.** `beforeEach` sets `tmp = mkdtempSync(...)`; `afterEach`
+  removes it. Reuse `path.join(tmp, "<name>")` for per-test files — no new
+  teardown needed.
+- **Run the focused suite:** `npx vitest run scripts/__tests__/cron-runtime.test.ts`.
+  Full CI parity: `npx vitest run` (currently 176 tests across 14 files).
+- **`log(id, status, msg="")`** writes `<iso>\t<id>\t<status>\t<msg>` where
+  `msg` is whitespace-collapsed and sliced to 200 chars. Passing a tail as the
+  3rd arg is inherently bounded — do not re-bound it in `log()`.
+
+## US-001 — 2026-06-12 23:17 UTC
+
+**Title**: Export a best-effort readFailureTail helper
+**Files changed**: scripts/cron-runtime.ts, scripts/__tests__/cron-runtime.test.ts
+**Commit**: e81d016
+**Result**: PASS
+
+### What I did
+Added `readFailureTail(logFile: string, maxChars = 200): string` to
+`scripts/cron-runtime.ts`, placed just above the `onJobError` block. It returns
+`fs.readFileSync(logFile, "utf-8").slice(-maxChars)` inside a try/catch that
+returns `""` on any error — so it never throws on a missing/empty/unreadable
+path, and an empty file naturally yields `"".slice(-n) === ""`. Added a
+`describe("readFailureTail")` block with the 4 required cases (populated tail,
+nonexistent path, empty file, exact last-`maxChars` truncation).
+
+### Learnings for future iterations
+- The helper is exported but has no consumer yet — **US-002** wires it into
+  `fire()`'s `child.on("exit")` handler as the 3rd `log()` arg on `code !== 0`.
+- `slice(-maxChars)` returns the whole string when shorter than `maxChars`, and
+  `""` for an empty string — no length guard needed.
+- All 176 tests green after the change; lint clean; no CHANGELOG entry (internal
+  helper — the user-visible `### Changed` entry lands in US-002).
+
+---
+

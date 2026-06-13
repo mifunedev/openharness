@@ -395,6 +395,14 @@ export function scheduleAll(
 // the same process alive (unlike SIGTERM/SIGINT cleanup). The reentrancy lock
 // makes a rapid double-SIGHUP safe — the second call is a no-op while the first
 // reload is still in progress.
+//
+// A malformed cron file present during the reload is dropped by scheduleAll's
+// loadCrons() path (logged SCHED_INVALID) exactly as at boot, so one bad file
+// never crashes the reload — surviving crons stay scheduled. On a successful
+// reschedule the handler emits one `RELOAD` liveness line via the private log()
+// helper (id "system", matching the BOOT precedent) reusing scheduleAll's
+// disjoint scheduled/skipped counts — no inline appendFileSync, no duplicated
+// format.
 export function sighupHandler(): void {
   if (reloading) return;
   reloading = true;
@@ -406,7 +414,8 @@ export function sighupHandler(): void {
         /* best-effort: a handle that fails to stop must not abort the reload */
       }
     }
-    scheduleAll();
+    const { scheduled, skipped } = scheduleAll();
+    log("system", "RELOAD", `${scheduled} scheduled, ${skipped} skipped`);
   } finally {
     reloading = false;
   }

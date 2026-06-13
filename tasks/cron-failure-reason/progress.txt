@@ -47,3 +47,31 @@ nonexistent path, empty file, exact last-`maxChars` truncation).
 
 ---
 
+## US-002 — 2026-06-12 23:19 UTC
+
+**Title**: Enrich fire()'s exit handler with the failure tail
+**Files changed**: scripts/cron-runtime.ts, CHANGELOG.md
+**Commit**: 9860178
+**Result**: PASS
+
+### What I did
+Rewrote `fire()`'s `child.on("exit")` handler from a single ternary-arg `log()`
+into a branching call: `code === 0` still calls `log(entry.id, "OK")` (no 3rd
+arg, byte-identical to before), and every non-zero/`null` code calls
+`log(entry.id, \`EXIT_${code}\`, readFailureTail(logFile))`. Added a 2-line
+comment above `fireTmux`'s terminal `SPAWNED` log noting the detached path can't
+observe the agent's exit. Added the `### Changed` CHANGELOG entry. `fireTmux`,
+`log()`, `OK`, `buildCronAgentCommand`, and the `onJobError` path untouched.
+
+### Learnings for future iterations
+- The `EXIT_null` (SIGKILL) case needs no special-casing: `null !== 0` is true,
+  so it flows through the same enriched branch — status stays `EXIT_null` and the
+  tail appends, exactly as the AC requires.
+- The tail is inherently bounded — `log()` already whitespace-collapses + slices
+  to 200, and `readFailureTail`'s own 200 default matches it. No double-bounding.
+- US-003 (docs) is the last story: document the enriched `EXIT_n` row in
+  `crons/README.md`'s status-tokens table + a fenced example. No code change.
+- Full suite still 176 green; lint clean.
+
+---
+

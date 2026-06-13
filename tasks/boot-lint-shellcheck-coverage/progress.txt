@@ -1,2 +1,24 @@
 # progress
 
+## Codebase Patterns
+
+- **shellcheck baseline**: `shellcheck -S warning` is the gate (shellcheck 0.9.0 on `ubuntu-latest`). Of the 7 boot scripts, only `scripts/install.sh:225` (SC2088) was non-clean; the other six pass cleanly.
+- **SC2088 fix style**: scoped `# shellcheck disable=SC2088  # <rationale>` comment placed on the line immediately above the offending statement, matching that line's indentation. The tilde in `~/.openharness` is intentional user-facing display text — do NOT substitute `$HOME`.
+- **Root tests**: `pnpm test:scripts` runs the vitest suite (186 tests across scripts/, packages/oh, .pi/extensions). Fast (~3.6s). Run before every commit.
+- **Commit trailer**: `Submitted-by: <RALPH_HARNESS>` is mandatory; env var `RALPH_HARNESS=claude` → `Submitted-by: Claude`.
+
+## US-001 — 2026-06-13 13:26 UTC
+
+**Title**: Fix the SC2088 warning in scripts/install.sh
+**Files changed**: scripts/install.sh
+**Commit**: 3f8c485
+**Result**: PASS
+
+### What I did
+Added a scoped `# shellcheck disable=SC2088` comment with a one-line rationale immediately above the `die()` line at `scripts/install.sh:225`, preserving the user-facing literal `~/.openharness` in the message. No installer logic or message-string changes. Verified `shellcheck -S warning scripts/install.sh` exits 0 and `pnpm test:scripts` passes (186/186).
+
+### Learnings for future iterations
+- The disable comment sits at 4-space indentation (matching the `die()` call inside the nested `if`). shellcheck respects a `disable` directive on the line directly preceding the flagged statement.
+- US-002 next: extend the `ci-harness.yml` shellcheck glob to four segments AND add `workspace/**` to both path-filter arrays. The full-set `shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh workspace/*.sh` should now exit 0 (US-001 cleared the only blocker).
+
+---

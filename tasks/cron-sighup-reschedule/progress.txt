@@ -28,6 +28,45 @@
   `mkCron` regardless of handle truthiness, so a `() => void` test spy still
   counts as scheduled.
 
+## US-003 — 2026-06-13 12:35 UTC
+
+**Title**: Reload is fault-isolated and logs a RELOAD liveness line
+**Files changed**: scripts/cron-runtime.ts
+**Commit**: 7e7e430
+**Result**: PASS
+
+### What I did
+Captured `scheduleAll()`'s `BootResult` in `sighupHandler` as `const { scheduled,
+skipped } = scheduleAll()` and emit one `log("system", "RELOAD", `${scheduled}
+scheduled, ${skipped} skipped`)` line on a successful reschedule — reusing the
+private `log()` helper (no inline appendFileSync, no duplicated format), id
+"system" matching the BOOT precedent. Fault-isolation (AC #1) required no code:
+`scheduleAll()` already routes through `loadCrons()`, which drops invalid-schedule
+files as SCHED_INVALID at reload time exactly as at boot, so a malformed file
+present during a SIGHUP can't crash the reload. Expanded the handler comment to
+document the RELOAD line and the fault-isolation guarantee.
+
+### Learnings for future iterations
+- **The RELOAD log is the US-004 assertion target**: it is the only line written
+  by `sighupHandler` itself (everything else comes from `scheduleAll`/`loadCrons`).
+  US-004's "asserts a RELOAD line is written via the existing appendFileSync spy"
+  AC should grep the spy's captured lines for a `\tRELOAD\t` token after calling
+  `sighupHandler()` — but note: `sighupHandler` calls the *real* module-private
+  `log()` (not an injected `logFn`), so the test must spy on `appendFileSync`
+  (the vi.mock("node:fs") pass-through pattern), NOT pass a fake logFn. The BOOT
+  line from the nested `scheduleAll()` is also written through the same `log()`,
+  so assert on RELOAD specifically, not just "any appendFileSync call".
+- **RELOAD only fires on success**: the `log()` call sits AFTER `scheduleAll()`
+  inside the try, so if `scheduleAll()` ever throws, the finally still clears the
+  `reloading` lock but no RELOAD line is written — matching the "on a successful
+  reschedule" AC. US-004's empty-registry and re-entrancy tests should expect
+  RELOAD to appear once per *completed* handler call (the re-entrant no-op path
+  returns before reaching it).
+- **US-004 is now the only remaining code story**; US-005 is docs/CHANGELOG only.
+  The implementation surface (US-001..US-003) is complete and green at 186 tests.
+
+---
+
 ## US-002 — 2026-06-13 06:33 UTC
 
 **Title**: Exported, testable SIGHUP handler reschedules without exiting

@@ -61,6 +61,18 @@ If `--dry-run`: print both counts now (the selection is printed after §2), then
 
 **Require clean state**:
 ```bash
+# OWNED_PATHS — the canonical harness-infra surface autopilot mutates. The §1 MAIN
+# clean-state check and every restore site (§5/§6/§7) scope to this list, so a stray
+# foreign edit OUTSIDE it neither blocks a run nor gets clobbered by the restore.
+# NOTE: OWNED_PATHS MUST be used UNQUOTED (bare `-- $OWNED_PATHS`) so word-splitting
+# expands it to multiple pathspec arguments. Quoting it ("$OWNED_PATHS") collapses the
+# list to ONE pathspec that matches nothing, making the clean check vacuously PASS.
+# Write-surface cross-check (known-complete): every tracked path autopilot writes in
+# §2–§7 is within OWNED_PATHS — tasks/, evals/, memory/, CHANGELOG.md, and .claude/ are
+# the autopilot-written tracked dirs, all in the set — else it is committed by Ralph on
+# the feature branch or lives under /tmp. No autopilot write lands outside this surface.
+OWNED_PATHS=".claude/ context/ docs/ scripts/ crons/ wiki/ evals/ memory/ tasks/ CHANGELOG.md"
+
 # Self-heal a clean-but-stranded branch from a prior interrupted run (nothing to lose):
 # a crash before §5/§6/§7 can leave HEAD on a clean feature branch; recover it rather
 # than FAIL every hour. A *dirty* tree is NOT auto-cleaned here (it may be human WIP).
@@ -68,11 +80,27 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 if [ "$BRANCH" != "development" ] && git diff --quiet && git diff --cached --quiet; then
   git checkout -f development && BRANCH=$(git rev-parse --abbrev-ref HEAD)
 fi
-git diff --quiet && git diff --cached --quiet || { echo "ERROR: dirty working tree"; exit 1; }
+# NOTE: the self-heal (above) and this MAIN check are now DIFFERENT predicates. The
+# self-heal force-checks-out only when the WHOLE tree is clean (tree-wide git diff
+# --quiet), so it can never fire while foreign WIP is present — therefore it never
+# destroys foreign WIP. This MAIN check is scoped to $OWNED_PATHS (bare, unquoted), so
+# a stray edit OUTSIDE the owned surface leaves it clean and the run proceeds; only a
+# dirty OWNED path blocks. (Repro: stage an unrelated `.codex/config.toml` edit — the
+# MAIN check below evaluates clean and does NOT take the exit-1 branch.)
+# Dirty OWNED surface → skip non-destructively with a DISTINCT liveness token
+# (BLOCKED-OWNED-WIP, not bare FAIL) so a heartbeat watcher reads a real owned-WIP
+# stall as a stall, not idleness. The .cron.log append is guarded (2>/dev/null || true)
+# so a missing/unwritable log never crashes the skill — same convention as § Guidelines
+# "Liveness on every path". A stray edit OUTSIDE $OWNED_PATHS never reaches here (US-002).
+if ! { git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS; }; then
+  printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "BLOCKED-OWNED-WIP" >> crons/.cron.log 2>/dev/null || true
+  echo "BLOCKED-OWNED-WIP: dirty owned surface — run skipped (foreign WIP left untouched)"
+  exit 1
+fi
 [ "$BRANCH" = "development" ] || { echo "ERROR: not on development (on $BRANCH)"; exit 1; }
 ```
 
-If either check fails, log `Result: FAIL` + `Observation: dirty working tree or wrong branch` and exit 1 without touching GitHub.
+If the OWNED surface is dirty, log `Result: BLOCKED-OWNED-WIP` + `Observation: dirty owned surface; run skipped until it is clean (foreign WIP untouched)` and exit 1 without touching GitHub — the distinct token (not bare `FAIL`) keeps a genuine owned-WIP stall visible to the heartbeat rather than looking idle. If instead HEAD is not on `development`, log `Result: FAIL` + `Observation: wrong branch` and exit 1.
 
 **Sync with origin** (mandatory — a stale `development` base means dedupe misses fresh merges and the run branches off old code):
 
@@ -237,7 +265,7 @@ done
 tmux kill-session -t "$SLUG" 2>/dev/null || true
 gh pr comment "$PR_NUM" --body "autopilot: Ralph loop did not reach STATUS: COMPLETE (timeout / exhausted / error). PR left draft; tasks/$SLUG/ state is resumable — re-run \`scripts/ralph.sh $SLUG\` to continue. Status: RALPH-INCOMPLETE."
 ```
-- Memory log `Result: RALPH-INCOMPLETE`, liveness `RALPH-INCOMPLETE`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), the canonical clean restore (`git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`), exit 1 (non-destructive — never auto-close the issue or PR).
+- Memory log `Result: RALPH-INCOMPLETE`, liveness `RALPH-INCOMPLETE`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), the canonical scoped restore (`git checkout development -- $OWNED_PATHS` then `git checkout development`, then assert `git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit 1 (non-destructive — never auto-close the issue or PR).
 
 > **Why Ralph, not `/delegate`**: the in-process wave dies wholesale on a mid-run usage-limit (documented — `memory/MEMORY.md` 2026-06-11), leaving an un-implemented draft. Ralph's resumable per-story state + harness fallback survive it, and it **relocates** the implementation work (does not duplicate it) into a loop whose fallback can run off Claude. `/delegate` remains the better tool for a task whose stories are genuinely **independent and parallelizable** (Ralph is strictly sequential, one story/iteration) — an operator may swap §5 back for such a task. `overlap: false` still holds: the autopilot's foreground session blocks on the poll until Ralph finishes, so the next hourly fire cannot overlap (it logs `SKIPPED_OVERLAP`).
 
@@ -263,7 +291,7 @@ After Ralph completes (§5), **while still on the work branch**, run the probe s
   ```bash
   gh pr comment "$PR_NUM" --body "autopilot: /eval reported a NEW (green→red) probe regression (<probe ids>) or a non-zero runner exit. PR left draft; resolve before marking ready."
   ```
-  Memory log `Result: PR-DRAFT-EVAL-RED`, liveness `PR-DRAFT-EVAL-RED`, then `[ -n "$KEEP" ] && touch "$KEEP"`, the canonical clean restore (`git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`), exit.
+  Memory log `Result: PR-DRAFT-EVAL-RED`, liveness `PR-DRAFT-EVAL-RED`, then `[ -n "$KEEP" ] && touch "$KEEP"`, the canonical scoped restore (`git checkout development -- $OWNED_PATHS` then `git checkout development`, then assert `git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit.
 
 > **Diagnostic note (non-gating):** file-scope overlap does not gate. If a regressed probe reads a file this PR changed, the runner-exit + delta signal still governs — a self-referential probe (e.g. `eval-gate` on an autopilot edit) whose delta is `unchanged` does NOT block. The delta is the authoritative causation signal.
 
@@ -292,10 +320,12 @@ git push origin HEAD
 
 **Persist the session** (a PR exists on every §7 path): `[ -n "$KEEP" ] && touch "$KEEP"`.
 
-**Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical clean restore — the force checkout discards only this run's own uncommitted residue (committed work is safe on the branch / draft PR); the assertion mirrors the §1 guard:
+**Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical **scoped restore** — a non-destructive two-step that discards only this run's own OWNED-path residue, then switches HEAD. Committed work is safe on the branch / draft PR. The scope step MUST precede the branch switch (it clears owned residue that would otherwise make a non-forced `git checkout development` refuse). It touches only **tracked** files, so an untracked owned-path orphan from a mid-run crash is NOT auto-removed (`git clean` is deliberately NOT used — too destructive across `tasks/`, `memory/`, `.claude/`); clean such orphans manually. Any **foreign** change OUTSIDE the owned surface — modified or staged (e.g. `.codex/config.toml`) — survives byte-for-byte (left in place / left staged) and is ignored by the scoped assertion and the next §1 check:
 ```bash
-git checkout -f development
-git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }
+git checkout development -- $OWNED_PATHS   # 1. discard own owned-path residue (tracked only; OWNED_PATHS unquoted)
+git checkout development                    # 2. switch HEAD (residue cleared above → non-forced switch succeeds; foreign WIP unaffected)
+git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }
+[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || { echo "ERROR: autopilot restore did not land on development"; exit 1; }
 ```
 
 ### 8. Memory Log
@@ -307,7 +337,7 @@ TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "memory/$TODAY"
 cat >> "memory/$TODAY/log.md" <<EOF
 
 ## Autopilot -- $TIME UTC
-- **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | RALPH-INCOMPLETE | DELEGATE-FAIL | FAIL>
+- **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | RALPH-INCOMPLETE | DELEGATE-FAIL | BLOCKED-OWNED-WIP | FAIL>
 - **Selected**: <#issue + slug, or "none">
 - **Session**: <tmux session name, or "none">
 - **Action**: <one-line summary of what was done>
@@ -329,7 +359,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.
 - **Liveness on every path**: every exit appends `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "<TOKEN>" >> crons/.cron.log` — skip, halt, error, success. A missing liveness line looks like a crash.
 - **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `RALPH-INCOMPLETE`, `DELEGATE-FAIL`). No-PR paths never touch the keep-marker, so their sessions auto-close. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
-- **Branch restore (canonical clean restore)**: every path that changed the working branch (all paths reaching §4+) must run `git checkout -f development` then `git diff --quiet && git diff --cached --quiet || { echo "ERROR: autopilot restore left a dirty tree"; exit 1; }`. The force checkout discards only the run's own uncommitted residue — staged AND unstaged tracked changes (it does not remove untracked files, which do not trip the §1 guard); committed work is preserved on the feature branch / draft PR. The assertion mirrors the §1 guard, so "assertion passes" ≡ "the next fire's §1 guard will pass". §1 additionally self-heals a *clean*-but-stranded branch; a *dirty* tree at §1 still hard-FAILs to protect any human WIP.
+- **Branch restore (canonical scoped restore)**: every path that changed the working branch (all paths reaching §4+) must run the two-step `git checkout development -- $OWNED_PATHS` (discard own owned-path residue — tracked staged AND unstaged) THEN `git checkout development` (switch HEAD), then assert BOTH `git diff --quiet -- $OWNED_PATHS && git diff --cached --quiet -- $OWNED_PATHS || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` AND `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`. The scope step MUST precede the switch (it clears owned residue that a non-forced `git checkout development` would otherwise refuse to overwrite). It discards only the run's own owned-path residue (committed work is preserved on the feature branch / draft PR); it touches only tracked files, so an untracked owned-path orphan from a mid-run crash is cleaned manually (`git clean` is deliberately NOT used); and any foreign change OUTSIDE the owned surface survives byte-for-byte (left in place / left staged), ignored by the scoped assertion and the next §1 check. The owned-scoped assertion mirrors the §1 owned check, so "assertion passes" ≡ "the next fire's §1 guard will pass". §1 additionally self-heals a *clean*-but-stranded branch (its forced tree-wide checkout is the only remaining `-f` form); a *dirty* owned tree at §1 still blocks (BLOCKED-OWNED-WIP) to protect any owned WIP.
 
 ## Reference
 
@@ -347,7 +377,8 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | `RALPH-INCOMPLETE` | §5 Ralph loop did not reach `STATUS: COMPLETE` (timeout, loop died, or all harnesses exhausted) after `/ship-spec` opened a PR; PR left draft — `tasks/$SLUG/` state is resumable via `scripts/ralph.sh $SLUG` |
 | `DELEGATE-FAIL` | the optional `/delegate` fallback executor failed after `/ship-spec` opened a PR; PR left draft |
 | `SKIPPED_OVERLAP` | Emitted by the cron runtime (not this skill): a previous fire of this id was still running with `overlap: false` |
-| `FAIL` | Pre-flight failure (dirty tree, wrong branch, diverged `development`) before any PR |
+| `BLOCKED-OWNED-WIP` | §1 found the OWNED surface (`$OWNED_PATHS`) dirty; run skipped until the owned surface is clean — non-destructive to foreign WIP (a stray edit outside the owned set proceeds normally) |
+| `FAIL` | Pre-flight failure (wrong branch, diverged `development`) before any PR |
 
 ### Key paths
 

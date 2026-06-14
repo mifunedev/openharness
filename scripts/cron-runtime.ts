@@ -238,6 +238,21 @@ export function buildCronAgentCommand(opts: {
     "AGENT_DONE",
     '"agent=$active_agent exit=$status"',
   );
+  if (agentBin === "pi" && resumeFile && !exitOnComplete) {
+    return (
+      `${resumeInit}` +
+      `active_agent=pi; ` +
+      logAgentStart +
+      `set +e; ` +
+      // Pi's attachable TUI must own the tmux pane's tty directly. The
+      // headless `-p ... | tee ...` shape is useful for non-tmux jobs, but it
+      // renders as an effectively blank pane when a human attaches mid-run.
+      `pi "$(cat ${promptFile})"; ` +
+      `status=$?; ` +
+      logAgentDone +
+      exitOrReturn
+    );
+  }
   if (agentBin !== "claude") {
     return (
       `${resumeInit}` +

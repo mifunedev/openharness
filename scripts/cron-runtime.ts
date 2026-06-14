@@ -397,8 +397,29 @@ function detectBaseRef(): string | null {
   return null;
 }
 
-// Remove fallback worktrees whose owning tmux session is gone (self-healing),
-// then return the count of those still live. Worktree dir name == session name.
+// Absolute working directory of every live tmux pane. This is how worktree
+// liveness is judged — NOT by matching the worktree dir name to a tmux session
+// name. Autopilot RENAMES its session (cron-autopilot-<ts> → autopilot-<branch>)
+// and ship-spec runs its build in a SEPARATE Advisor session (agent-ship-<slug>),
+// so a name match would falsely declare an active worktree dead and delete it.
+function livePaneCwds(): string[] {
+  const r = spawnSync("tmux", ["list-panes", "-a", "-F", "#{pane_current_path}"], {
+    encoding: "utf-8",
+  });
+  if (r.status !== 0 || !r.stdout) return [];
+  return r.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
+// A worktree is "in use" iff some live tmux pane is working inside it (its own
+// dir or a descendant).
+function worktreeInUse(wtPath: string, cwds: string[]): boolean {
+  const abs = path.resolve(wtPath);
+  return cwds.some((p) => p === abs || p.startsWith(abs + path.sep));
+}
+
+// Remove fallback worktrees that no live tmux pane is working inside (self-healing),
+// then return the count still in use. Pane-cwd liveness (above) is robust to the
+// autopilot session rename and to the Advisor session sharing the worktree.
 function pruneAndCountFallbackWorktrees(id: string): number {
   const dir = path.resolve(FALLBACK_WORKTREE_DIR);
   let names: string[];
@@ -407,15 +428,15 @@ function pruneAndCountFallbackWorktrees(id: string): number {
   } catch {
     return 0;
   }
+  const cwds = livePaneCwds();
   let live = 0;
   for (const name of names) {
     if (!name.startsWith(`cron-${id}-`)) continue;
-    if (spawnSync("tmux", ["has-session", "-t", name], { stdio: "ignore" }).status === 0) {
+    const wt = path.join(dir, name);
+    if (worktreeInUse(wt, cwds)) {
       live++;
     } else {
-      spawnSync("git", ["worktree", "remove", "--force", path.join(dir, name)], {
-        stdio: "ignore",
-      });
+      spawnSync("git", ["worktree", "remove", "--force", wt], { stdio: "ignore" });
     }
   }
   spawnSync("git", ["worktree", "prune"], { stdio: "ignore" });

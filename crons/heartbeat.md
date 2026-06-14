@@ -46,22 +46,27 @@ that catches anything time-sensitive without doing real work.
       `worktree: true` (autopilot's default) it no longer blocks later `:05`
       fires — they spawn fresh worktrees — but it still holds a worktree slot
       toward the concurrency cap (and a non-worktree cron would still stall under
-      `overlap: false`). Reap the session AND remove its worktree:
+      `overlap: false`). Kill the session, then reap its worktree below:
       ```bash
       for s in $(tmux ls 2>/dev/null | grep -oE '^(cron-)?autopilot-[^:]*'); do
         if tmux capture-pane -p -t "$s" 2>/dev/null | tail -25 \
              | grep -qiE 'hit your (usage|session) limit|session limit|/usage-credits|/upgrade|Resume from summary|Resume full session'; then
           tmux kill-session -t "$s"; rm -f "/tmp/$s.keep" "/tmp/$s.pid"
-          git worktree remove --force ".worktrees/cron/$s" 2>/dev/null || true
-          echo "NUDGE: killed stuck autopilot session $s (frozen at a usage-limit/resume prompt); removed its worktree"
+          echo "NUDGE: killed stuck autopilot session $s (frozen at a usage-limit/resume prompt)"
         fi
       done
       # sweep orphaned keep-markers (session already gone)
       for m in /tmp/cron-autopilot-*.keep /tmp/autopilot-*.keep; do [ -e "$m" ] || continue; \
         s=$(basename "$m" .keep); tmux has-session -t "$s" 2>/dev/null || rm -f "$m"; done
-      # sweep orphaned fallback worktrees whose owning session is gone, then prune
+      # reap fallback worktrees that NO live tmux pane is working inside — robust to the
+      # autopilot session rename (cron-autopilot-<ts> → autopilot-<branch>) and to
+      # ship-spec's separate Advisor session (agent-ship-<slug>) sharing the worktree;
+      # matching the worktree dir name to a session name would delete an ACTIVE one.
+      cwds="$(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null)"
       for d in .worktrees/cron/*/; do [ -d "$d" ] || continue; \
-        s=$(basename "$d"); tmux has-session -t "$s" 2>/dev/null || git worktree remove --force "$d" 2>/dev/null || true; done
+        abs="$(cd "$d" && pwd)"; \
+        printf '%s\n' "$cwds" | grep -qxF "$abs" || printf '%s\n' "$cwds" | grep -qF "$abs/" \
+          || git worktree remove --force "$d" 2>/dev/null || true; done
       git worktree prune 2>/dev/null || true
       ```
     - **Long-lived sessions (SURFACE — never kill on age).** A new

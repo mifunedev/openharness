@@ -311,7 +311,8 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
     if gosu sandbox bash -c "cd $HARNESS && pnpm install --prefer-offline" >/tmp/pnpm-install.log 2>&1; then
       echo "[entrypoint] pnpm install completed (log: /tmp/pnpm-install.log)"
     else
-      echo "[entrypoint] pnpm install failed — see /tmp/pnpm-install.log; cron-runtime and Slack Pi extension will not load"
+      echo "[entrypoint] pnpm install failed — see /tmp/pnpm-install.log; aborting sandbox boot"
+      exit 1
     fi
   fi
 fi

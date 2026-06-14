@@ -25,6 +25,11 @@ The canonical schema, frontmatter extraction command, cross-link convention,
 and confidence lifecycle all live in `context/rules/wiki.md`. This skill
 defers to those rules — it does not redefine them.
 
+`wiki/README.md` is generated state, not hand-authored inventory. The tier-A
+`evals/probes/wiki-readme-index.sh` probe reconstructs the expected Index from
+current `wiki/*.md` frontmatter and fails when this skill's committed output
+falls out of sync.
+
 ## When to Use
 
 - `/wiki-lint` to regenerate `wiki/README.md` and surface any health findings.

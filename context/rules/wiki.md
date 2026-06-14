@@ -184,6 +184,14 @@ done
 
 ---
 
+## 6a. README index freshness
+
+`wiki/README.md` is an owned generated index. Its table MUST match the current `wiki/*.md` entry frontmatter exactly: one row per entry slug (excluding `README.md`), row fields derived from `slug`, `title`, `tags`, and `updated`, sorted by `updated` descending with the same deterministic tie behavior as `/wiki-lint`.
+
+The tier-A probe `evals/probes/wiki-readme-index.sh` is the drift guard. It reconstructs the expected table from the canonical § 6 frontmatter extraction and exits REGRESSION when the committed README has missing, extra, stale, or out-of-order rows. Any change to `/wiki-lint` index generation must keep that probe green.
+
+---
+
 ## 7. Body-merge strategy for `/wiki-ingest` updates
 
 When `/wiki-ingest` is invoked with a source whose derived slug matches an existing `wiki/<slug>.md`, the skill MUST update that entry using the following merge strategy — it MUST NOT create a duplicate entry, and it MUST NOT concatenate old and new bodies.

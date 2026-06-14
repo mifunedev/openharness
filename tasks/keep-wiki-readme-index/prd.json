@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/132-keep-wiki-readme-index",
+  "description": "Keep wiki/README.md synchronized with tracked wiki entries and guard the generated index with a Tier-A eval probe.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Regenerate the wiki README index",
+      "description": "As an orchestrator, I want wiki/README.md to list the current tracked wiki corpus so wiki discovery is reliable.",
+      "acceptanceCriteria": [
+        "wiki/README.md Index contains every tracked wiki/*.md entry except README.md",
+        "The stale verifiers and karpathy-llm-wiki rows are removed when no matching entry exists",
+        "Rows for deepagents, hermes-agent, and opencode are present",
+        "Rows are derived from slug/title/tags/updated frontmatter and sorted by updated descending"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Regenerated wiki/README.md from current wiki/*.md frontmatter."
+    },
+    {
+      "id": "US-002",
+      "title": "Add a wiki index drift probe",
+      "description": "As the harness, I want a deterministic eval probe that fails when wiki/README.md drifts from wiki/*.md frontmatter.",
+      "acceptanceCriteria": [
+        "evals/probes/wiki-readme-index.sh exists and is executable",
+        "The probe exits 0 when the committed index matches the current corpus",
+        "The probe exits 1 with a diff when rows are missing, extra, stale, or out of order",
+        "The probe exits 2 only when wiki/ is absent",
+        "The probe uses the canonical frontmatter extraction command from context/rules/wiki.md"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added Tier-A probe and verified positive and negative behavior."
+    },
+    {
+      "id": "US-003",
+      "title": "Document the index freshness contract",
+      "description": "As a maintainer, I want the wiki rule and wiki-lint skill to name the generated-index contract and guard.",
+      "acceptanceCriteria": [
+        "context/rules/wiki.md documents the README index freshness invariant and probe",
+        "Both .claude and .pi wiki-lint skills mention the eval guard",
+        "CHANGELOG.md records the fix under Unreleased"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Updated rules, both skill copies, and changelog."
+    }
+  ]
+}

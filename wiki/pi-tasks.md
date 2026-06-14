@@ -6,7 +6,7 @@ created: 2026-06-13
 updated: 2026-06-13
 sources:
   - raw/2026-06-13-pi-tasks.md
-related: [inspectable-agent-harness, compound-engineering]
+related: [pi-plan-mode, inspectable-agent-harness, compound-engineering]
 confidence: provisional
 ---
 
@@ -27,5 +27,6 @@ Task state can be memory-only, session-scoped, or project-scoped. The default se
 `TaskExecute` integrates with `@tintinweb/pi-subagents`: a pending task with `agentType` set and completed blockers can spawn as an independent background subagent. When auto-cascade is enabled, completed tasks can trigger newly unblocked dependents through the DAG, giving pi a task-graph coordination layer for multi-agent harness work.
 
 ## See Also
+- [[pi-plan-mode]] — default Pi planning package loaded alongside task tracking
 - [[inspectable-agent-harness]] — broader Open Harness pattern for visible, auditable agent workflows
 - [[compound-engineering]] — feedback-loop framing that task DAGs and subagents can support

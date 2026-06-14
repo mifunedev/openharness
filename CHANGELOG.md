@@ -9,8 +9,17 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- Add an `Eval Probe Regression Gate` CI job, new eval self-guard probes, and atomic `/eval` scoreboard writes so green→red probe regressions block public harness changes ([#415](https://github.com/mifunedev/openharness/issues/415)).
+- Load `@tintinweb/pi-goal` and `@tintinweb/pi-tasks` by default in Pi, document their usage, and ignore Pi task runtime state ([#415](https://github.com/mifunedev/openharness/issues/415)).
+- Add the public-safe `/pr-audit` skill for one-shot bulk PR triage; read-only by default with optional deep review, proof comments, label application, and stale close actions ([#415](https://github.com/mifunedev/openharness/issues/415)).
+
 ### Changed
+
 ### Fixed
+- Tighten `/drift-check` cron-staleness detection to compare only schedulable cron files and skip README, disabled, unscheduled, empty, and invalid cron docs ([#415](https://github.com/mifunedev/openharness/issues/415)).
+- Correct `context/rules/memory.md` so daily `memory/YYYY-MM-DD/log.md` files are documented as local/gitignored journals unless force-added ([#415](https://github.com/mifunedev/openharness/issues/415)).
+- Expand boot-path shellcheck coverage to `scripts/*.sh` and `workspace/*.sh` while preserving the intentional literal `~/.openharness` installer message ([#415](https://github.com/mifunedev/openharness/issues/415)).
+
 ### Removed
 ### Deprecated
 ### Security

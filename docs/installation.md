@@ -135,6 +135,8 @@ Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside
 
 The sandbox image ships a complete development environment. The only host dependency is Docker.
 
+Project-local Pi packages are loaded from `.pi/settings.json`; the defaults include `@tintinweb/pi-subagents`, `@tintinweb/pi-tasks`, and `@tintinweb/pi-goal`.
+
 ### Base image
 
 Debian Bookworm (slim). The `sandbox` user has passwordless sudo.

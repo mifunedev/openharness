@@ -245,12 +245,105 @@ Then print a single `OK` token for class C:
 
 **Step C-2 — compare cron file mtimes:**
 
-When `RUNTIME_START` is set, check each `crons/*.md` for a mtime strictly
-after the runtime start time:
+When `RUNTIME_START` is set, check each **schedulable cron file** for a
+mtime strictly after the runtime start time. A `crons/*.md` file qualifies
+only if it passes the predicate below (a leading `---` frontmatter block
+declaring a non-empty, anchored, comment-excluding `schedule:` key that parses
+with the same Croner constructor used by `scripts/cron-runtime.ts`, and not
+`enabled: false`) — so non-cron docs like `crons/README.md` and malformed cron
+files the runtime logs as `SCHED_INVALID` are skipped by the predicate, never
+mtime-compared, and never counted. Qualification is property-based, not a
+hard-coded name list:
 
 ```bash
 INERT=()
+# Qualify each crons/*.md as a SCHEDULABLE cron BEFORE the mtime check, mirroring
+# scripts/cron-runtime.ts parseCronFile + loadCrons: a file the runtime never
+# loads cannot be "inert". A file qualifies IFF all of:
+#   1. first line is literally '---' (trailing \r stripped, CRLF-safe) — so a
+#      '---' inside a fenced code block (the crons/README.md trap) cannot match,
+#   2. a closing '---' delimiter exists on a later line (well-formed frontmatter),
+#   3. the leading frontmatter has a non-empty, anchored, comment-excluding
+#      schedule: key (^[[:space:]]*schedule: — skips '# schedule:' and substring
+#      'pre_schedule:'),
+#   4. it is not disabled (no enabled: set to false, bare or quoted),
+#   5. the schedule parses with Croner, matching the runtime's isValidSchedule()
+#      / SCHED_INVALID path so malformed schedules are skipped, not flagged inert.
+# Non-qualifying files (e.g. crons/README.md or invalid schedules) are skipped
+# silently — never mtime-compared, never counted toward the inert aggregate. The
+# predicate is property-based: no hard-coded cron name list or count.
+cron_fm_value() {
+  local key="$1"
+  awk -v wanted="$key" '
+    /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    {
+      i = index($0, ":")
+      if (i == 0) next
+      k = substr($0, 1, i - 1)
+      v = substr($0, i + 1)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", k)
+      if (k != wanted) next
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", v)
+      sub(/^["\047]/, "", v)
+      sub(/["\047]$/, "", v)
+      print v
+      found = 1
+      exit
+    }
+    END { exit !found }
+  '
+}
+
+is_valid_cron_schedule() {
+  local schedule="$1" root
+  root="${DRIFT_CHECK_ROOT:-}"
+  if [ -z "$root" ]; then
+    root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+  fi
+
+  DRIFT_CHECK_ROOT="$root" node --input-type=module -e '
+    import { createRequire } from "node:module";
+    const schedule = process.argv[1] ?? "";
+    const root = (process.env.DRIFT_CHECK_ROOT || process.cwd()).replace(/\/$/, "");
+    const requireFromRoot = createRequire(`${root}/package.json`);
+    const mod = await import(requireFromRoot.resolve("croner"));
+    const CronCtor = mod.Cron ?? mod.default?.Cron ?? mod.default;
+    let probe;
+    let ok = false;
+    try {
+      probe = new CronCtor(schedule);
+      ok = true;
+    } catch {
+      ok = false;
+    } finally {
+      probe?.stop?.();
+    }
+    process.exit(ok ? 0 : 1);
+  ' "$schedule" >/dev/null 2>&1
+}
+
+is_schedulable_cron() {
+  local f="$1" fm schedule enabled
+
+  [ "$(head -n1 "$f" | tr -d '\r')" = '---' ] || return 1
+  awk 'NR>1 { sub(/\r$/,""); if ($0 ~ /^---[[:space:]]*$/) { ok=1; exit } } END { exit !ok }' "$f" || return 1
+
+  fm=$(awk 'NR>1 { sub(/\r$/,""); if ($0 ~ /^---[[:space:]]*$/) exit; print }' "$f")
+
+  schedule=$(printf '%s\n' "$fm" | cron_fm_value schedule) || return 1
+  [ -n "$schedule" ] || return 1
+  is_valid_cron_schedule "$schedule" || return 1
+
+  if enabled=$(printf '%s\n' "$fm" | cron_fm_value enabled); then
+    [ "$enabled" = "false" ] && return 1
+  fi
+
+  return 0
+}
+
+INERT=()
 for f in crons/*.md; do
+  is_schedulable_cron "$f" || continue
   FILE_MTIME=$(stat -c '%Y' "$f" 2>/dev/null || stat -f '%m' "$f" 2>/dev/null)
   if [ -n "$FILE_MTIME" ] && [ "$FILE_MTIME" -gt "$RUNTIME_START" ]; then
     INERT+=("$f")

@@ -171,11 +171,11 @@ if command -v hermes >/dev/null 2>&1; then
   fi
 fi
 
-# openharness CLI — verify the bind-mounted package built and symlinked
+# oh CLI — verify the bind-mounted package built and symlinked
 oh_status="$status_x"
 oh_detail="not installed — check entrypoint logs"
-if command -v openharness >/dev/null 2>&1; then
-  oh_version=$(openharness --version 2>/dev/null | head -1)
+if command -v oh >/dev/null 2>&1; then
+  oh_version=$(oh --version 2>/dev/null | head -1)
   oh_status="$status_ok"
   oh_detail="${oh_version:-installed}"
 fi
@@ -200,7 +200,7 @@ printf '    %-6s %-11s %s\n' "$pi_status"         "pi"          "$pi_detail"
 printf '    %-6s %-11s %s\n' "$deepagents_status" "deepagents"  "$deepagents_detail"
 printf '    %-6s %-11s %s\n' "$hermes_status"     "hermes"      "$hermes_detail"
 [ -n "$dashboard_status" ] && printf '    %-6s %-11s %s\n' "$dashboard_status" "dashboard" "$dashboard_detail"
-printf '    %-6s %-11s %s\n' "$oh_status"         "openharness" "$oh_detail"
+printf '    %-6s %-11s %s\n' "$oh_status"         "oh"          "$oh_detail"
 printf '\n'
 shortcuts="claude · codex · pi"
 command -v opencode >/dev/null 2>&1 && shortcuts="$shortcuts · opencode"

@@ -1,0 +1,15 @@
+# progress
+
+## Implementation — 2026-06-14
+
+- Updated `.devcontainer/entrypoint.sh` first-boot copy to advertise optional `oh config slack` setup and starting installed agents from the shell.
+- Updated `install/banner.sh` to check, version, and label the installed `oh` CLI.
+- Added `scripts/__tests__/boot-banner.test.ts` regression coverage for stale command names.
+- Added the #124 changelog entry.
+
+Validation:
+- `pnpm test:scripts` — PASS (177 tests)
+- `shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh` — PASS
+- `bash scripts/check-pnpm-pin.sh` — PASS
+
+STATUS: COMPLETE

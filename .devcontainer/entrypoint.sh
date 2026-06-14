@@ -380,10 +380,11 @@ done
 if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo ""
   echo "  ┌─────────────────────────────────────────────────┐"
-  echo "  │  First boot detected. Complete setup:           │"
-  echo "  │    openharness onboard <name>                   │"
-  echo "  │  Or from inside the container:                  │"
-  echo "  │    openharness onboard                          │"
+  echo "  │  First boot detected.                           │"
+  echo "  │  Optional Slack bridge setup:                   │"
+  echo "  │    oh config slack                              │"
+  echo "  │  Start an agent from this shell:                │"
+  echo "  │    claude   # or: codex, pi                     │"
   echo "  └─────────────────────────────────────────────────┘"
   echo ""
 fi

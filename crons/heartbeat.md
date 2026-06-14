@@ -42,19 +42,27 @@ that catches anything time-sensitive without doing real work.
       or legacy `autopilot-*` tmux session, read the pane tail for a terminal
       interactive prompt the run can never clear on its own — a Claude
       usage/session limit, a `Resume from summary` menu, `/upgrade`, or a fatal
-      error banner. A detached cron run frozen there will never finish and,
-      under `overlap: false`, blocks every later `:05` fire:
+      error banner. A detached cron run frozen there will never finish. Under
+      `worktree: true` (autopilot's default) it no longer blocks later `:05`
+      fires — they spawn fresh worktrees — but it still holds a worktree slot
+      toward the concurrency cap (and a non-worktree cron would still stall under
+      `overlap: false`). Reap the session AND remove its worktree:
       ```bash
       for s in $(tmux ls 2>/dev/null | grep -oE '^(cron-)?autopilot-[^:]*'); do
         if tmux capture-pane -p -t "$s" 2>/dev/null | tail -25 \
              | grep -qiE 'hit your (usage|session) limit|session limit|/usage-credits|/upgrade|Resume from summary|Resume full session'; then
-          tmux kill-session -t "$s"; rm -f "/tmp/$s.keep"
-          echo "NUDGE: killed stuck autopilot session $s (frozen at a usage-limit/resume prompt)"
+          tmux kill-session -t "$s"; rm -f "/tmp/$s.keep" "/tmp/$s.pid"
+          git worktree remove --force ".worktrees/cron/$s" 2>/dev/null || true
+          echo "NUDGE: killed stuck autopilot session $s (frozen at a usage-limit/resume prompt); removed its worktree"
         fi
       done
       # sweep orphaned keep-markers (session already gone)
       for m in /tmp/cron-autopilot-*.keep /tmp/autopilot-*.keep; do [ -e "$m" ] || continue; \
         s=$(basename "$m" .keep); tmux has-session -t "$s" 2>/dev/null || rm -f "$m"; done
+      # sweep orphaned fallback worktrees whose owning session is gone, then prune
+      for d in .worktrees/cron/*/; do [ -d "$d" ] || continue; \
+        s=$(basename "$d"); tmux has-session -t "$s" 2>/dev/null || git worktree remove --force "$d" 2>/dev/null || true; done
+      git worktree prune 2>/dev/null || true
       ```
     - **Long-lived sessions (SURFACE — never kill on age).** A new
       `cron-autopilot-*` or legacy `autopilot-*` session alive > 90 min with no

@@ -127,7 +127,7 @@ Versioning: **CalVer** `YYYY.M.D` for first release of day, then `YYYY.M.D-N` (N
 
 Release branch: `release/<VERSION>` (e.g., `release/2026.4.18-2`).
 
-Pushing tag triggers `.github/workflows/release.yml` — its `validate` job runs lint, format check, build, test, and the root-scripts tests (mirroring CI) before it builds `ghcr.io/mifunedev/openharness:<VERSION>`, pushes to GHCR, and creates the GitHub Release.
+Pushing tag triggers `.github/workflows/release.yml` — its release gate runs lint, format check, typecheck, build, test, root-scripts tests, pnpm-pin drift checks, boot-path lint (shellcheck + hadolint), and the eval-probe regression gate (mirroring CI) before it builds `ghcr.io/mifunedev/openharness:<VERSION>`, pushes to GHCR, and creates the GitHub Release.
 
 Branch model: `development` is the integration branch; `main` is the
 release line. A release **promotes `development` into `main`**, cuts the

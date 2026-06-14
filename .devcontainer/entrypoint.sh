@@ -371,12 +371,6 @@ if [ "${INSTALL_AGENT_BROWSER:-false}" = "true" ] && ! command -v agent-browser 
     || echo "[entrypoint] agent-browser install failed — skipping"
 fi
 
-# Run workspace startup (dev server + tunnel) as sandbox user
-STARTUP="/home/sandbox/harness/workspace/startup.sh"
-if [ -f "$STARTUP" ]; then
-  gosu sandbox bash "$STARTUP" 2>&1 | sed 's/^/  /' || true
-fi
-
 # Source any harness-pack entrypoint hooks (installed by `oh harness add`)
 for hook in /usr/local/bin/*-entrypoint-hook.sh; do
   [ -x "$hook" ] && "$hook"

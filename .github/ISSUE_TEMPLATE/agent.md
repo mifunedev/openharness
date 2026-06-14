@@ -66,5 +66,5 @@ Run from the **host** (orchestrator side):
 Run **inside the sandbox** (after `make shell <agent-name>`):
 
 - [ ] Workspace is accessible (`ls ~/harness/workspace`)
-- [ ] `workspace/AGENTS.md` is present (the workspace also holds `startup.sh` and `.claude/`, among others — non-exhaustive)
+- [ ] `workspace/AGENTS.md` is present (the workspace also holds `.claude/`, among others — non-exhaustive)
 - [ ] Harness identity and memory live at the repo root, **not** under `workspace/`: `context/SOUL.md` and `memory/MEMORY.md` are present

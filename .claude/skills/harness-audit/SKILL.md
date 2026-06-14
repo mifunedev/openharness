@@ -146,7 +146,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml`, `.devcontainer/entrypoint.sh`, `workspace/startup.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), missing healthchecks on compose services.
+> 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml` and `.devcontainer/entrypoint.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), stale workspace auto-start hooks, missing healthchecks on compose services.
 >
 > 2. **Test coverage** — Check `scripts/__tests__/` and `packages/docs/` for test files. Run `ls scripts/__tests__/ 2>/dev/null` and `ls packages/docs/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are the orchestrator scripts and docs app tested in CI?
 >

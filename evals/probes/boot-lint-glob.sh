@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #90
-# desc: CI boot-lint shellcheck glob must cover all four boot-script dirs (.devcontainer/, install/, scripts/, workspace/) so the coverage gap cannot silently reopen
+# source: issue #90, issue #120
+# desc: CI boot-lint shellcheck glob must cover active boot-script dirs and must not retain the removed workspace startup hook glob
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -24,7 +24,7 @@ if [[ -z "$line" ]]; then
 fi
 
 missing=()
-for dir in .devcontainer/ install/ scripts/ workspace/; do
+for dir in .devcontainer/ install/ scripts/; do
   case "$line" in
     *"$dir"*) ;;
     *) missing+=("$dir") ;;
@@ -32,10 +32,16 @@ for dir in .devcontainer/ install/ scripts/ workspace/; do
 done
 
 if (( ${#missing[@]} > 0 )); then
-  echo "REGRESSION: boot-lint shellcheck glob dropped boot-script dir(s): ${missing[*]}" >&2
+  echo "REGRESSION: boot-lint shellcheck glob dropped active boot-script dir(s): ${missing[*]}" >&2
   echo "  line: $line" >&2
   exit 1
 fi
 
-echo "PASS: boot-lint shellcheck glob covers all four boot-script dirs (.devcontainer/, install/, scripts/, workspace/)" >&2
+if [[ "$line" == *"workspace/"* ]]; then
+  echo "REGRESSION: boot-lint shellcheck glob still includes removed workspace startup hook dir" >&2
+  echo "  line: $line" >&2
+  exit 1
+fi
+
+echo "PASS: boot-lint shellcheck glob covers active boot-script dirs (.devcontainer/, install/, scripts/) and excludes removed workspace hook dir" >&2
 exit 0

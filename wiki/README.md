@@ -26,6 +26,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
 | pi-recap | Pi Recap | [pi, recap, session-summary, extension] | 2026-06-14 |
+| pi-loop | Pi Loop | [pi, monitor, loop, scheduler, extension] | 2026-06-14 |
 | pi-codex-usage | Pi Codex Usage | [pi, codex, usage, statusline, extension] | 2026-06-14 |
 | repo2rlenv | Repo2RLEnv | [reinforcement-learning, evaluation, agent-harness, harbor, datasets, openharness] | 2026-06-13 |
 | pi-tasks | Pi Tasks | [pi, tasks, coordination, subagents, agent-harness] | 2026-06-13 |

@@ -25,13 +25,13 @@ grep -Fq 'agentBin: fm.agent || undefined' "$RUNTIME" || missing+=("parseCronFil
 grep -Fq 'const agentBin = entry.agentBin || AGENT_BIN;' "$RUNTIME" || missing+=("fire paths prefer per-cron agent over global default")
 grep -Fq 'id: entry.id, agentBin, promptFile' "$RUNTIME" || missing+=("tmux wrapper receives per-cron agent")
 grep -Fq 'agent: pi' "$TESTS" || missing+=("tests cover agent: pi parsing/scheduling")
-grep -Fq 'else pi --continue; fi;' "$TESTS" || missing+=("tests cover kept Pi session resume")
-grep -Fq 'pi "$(cat ${promptFile})";' "$RUNTIME" || missing+=("Pi tmux path uses positional TUI prompt, not headless -p")
+grep -Fq "else \'pi\' --continue; fi;" "$TESTS" || missing+=("tests cover kept Pi session resume")
+grep -Fq '${quotedAgent} "$(cat ${quotedPromptFile})";' "$RUNTIME" || missing+=("Pi tmux path uses positional TUI prompt through the shell-quoted agent token, not headless -p")
 grep -Fq 'renders as an effectively blank pane' "$RUNTIME" || missing+=("runtime documents the blank-pane failure mode")
 # The overlap pidfile is now parameterized (worktree fires use a session-scoped path),
 # but the wrapper still EXPORTS it from `pidFile` and still DEFAULTS to the id-scoped
 # /tmp/cron-<id>.pid for the primary fire — assert both halves of that contract.
-grep -Fq 'CRON_OVERLAP_PIDFILE=${pidFile}' "$RUNTIME" || missing+=("tmux wrapper exports CRON_OVERLAP_PIDFILE from the pidFile arg")
+grep -Fq 'CRON_OVERLAP_PIDFILE=${quotedPidFile}' "$RUNTIME" || missing+=("tmux wrapper exports shell-quoted CRON_OVERLAP_PIDFILE from the pidFile arg")
 grep -Fq '/tmp/cron-${id}.pid' "$RUNTIME" || missing+=("wrapper defaults the overlap pidfile to the id-scoped /tmp/cron-<id>.pid")
 # Worktree-by-default (issue #142): a fire is never silently skipped — worktree:true
 # crons isolate (SPAWNED_WORKTREE) instead of logging SKIPPED_OVERLAP.
@@ -47,7 +47,7 @@ fi
 grep -Fq '[ -z "$OVERLAP_PIDFILE" ] && [ -n "$SESSION" ] && OVERLAP_PIDFILE="/tmp/cron-autopilot.pid"' "$SKILL" || missing+=("autopilot skill falls back before cron runtime restart")
 grep -Fq 'release_overlap_lock()' "$SKILL" || missing+=("autopilot skill defines release_overlap_lock")
 grep -Fq 'release_overlap_lock                         # terminal PR state reached' "$SKILL" || missing+=("terminal PR restore snippet releases overlap lock")
-grep -Fq 'CRON_OVERLAP_PIDFILE=/tmp/cron-autopilot.pid' "$TESTS" || missing+=("tests cover overlap pidfile export")
+grep -Fq "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot.pid'" "$TESTS" || missing+=("tests cover shell-quoted overlap pidfile export")
 grep -Fq 'runs kept Pi tmux sessions as attachable TUI sessions' "$TESTS" || missing+=("tests cover attachable Pi TUI tmux launch")
 
 if (( ${#missing[@]} )); then

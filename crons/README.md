@@ -61,6 +61,7 @@ status column is one of:
 | `ID_INVALID` | A cron was skipped because its resolved `id` or filename basename is not lowercase kebab-case (`^[a-z0-9][a-z0-9-]*$`). |
 | `ID_MISMATCH` | A cron was skipped because its explicit frontmatter `id` does not match the filename basename. |
 | `SCHED_INVALID` | A cron was skipped because its `schedule:` is not a valid cron expression (`msg` contains the offending schedule string). |
+| `AGENT_INVALID` | A cron was skipped because its `agent:` override or effective `CRON_AGENT_BIN` is not a safe executable token/path. |
 | `SPAWNED` | A `tmux: true` fire launched its detached session (`msg` is the session name). |
 | `SPAWNED_WORKTREE` | A `worktree: true` fire launched its detached session inside a fresh isolated `.worktrees/cron/<session>` worktree (`msg` is `<session> <worktree-path>`); the shared root checkout is untouched. |
 | `FIRE` | A scheduled job fired and began running its body. |
@@ -83,10 +84,13 @@ bounded to 200 chars):
 ```
 
 A cron whose resolved `id` or filename basename is unsafe, whose explicit
-`id` does not match the filename basename, or whose `schedule:` string is
-not a valid cron expression is skipped at load time — it logs `ID_INVALID`, `ID_MISMATCH`,
-or `SCHED_INVALID` and never enters the scheduled set. A single malformed
-cron definition cannot crash the runtime and the other crons keep running.
+`id` does not match the filename basename, whose `agent:` override is unsafe,
+or whose `schedule:` string is not a valid cron expression is skipped at load
+time — it logs `ID_INVALID`, `ID_MISMATCH`, `AGENT_INVALID`, or
+`SCHED_INVALID` and never enters the scheduled set. A single malformed cron
+definition cannot crash the runtime and the other crons keep running. If the
+global `CRON_AGENT_BIN` is unsafe, each affected fire logs `AGENT_INVALID` and
+returns before generating a shell wrapper or spawning an agent.
 
 `BODY_RELOADED` and `BODY_RELOAD_ERR` are documented under
 [Hot-reload](#hot-reload).
@@ -107,7 +111,7 @@ The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that check
 A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
 
 - **Session name**: `cron-<id>-<MMDD>-<HHMM>` (e.g. `cron-autopilot-0610-1805`), derived from the fire time. The runtime logs `SPAWNED <session>` to `.cron.log`.
-- **Agent selection**: by default jobs use `CRON_AGENT_BIN` (compose default: `claude`). A cron can set `agent: <binary>` in frontmatter to override that for one job; `autopilot.md` sets `agent: pi` so the run itself and its kept Advisor session are attachable Pi sessions without forcing heartbeat/cleanup/eval onto Pi.
+- **Agent selection**: by default jobs use `CRON_AGENT_BIN` (compose default: `claude`). A cron can set `agent: <binary>` in frontmatter to override that for one job; `autopilot.md` sets `agent: pi` so the run itself and its kept Advisor session are attachable Pi sessions without forcing heartbeat/cleanup/eval onto Pi. Agent binaries must be non-empty executable tokens or paths made from `A-Z`, `a-z`, `0-9`, `_`, `.`, `/`, and `-`; values with whitespace, shell metacharacters, `..`, or leading `-` are rejected with `AGENT_INVALID` before shell wrapper generation.
 - **Agent attribution**: the shell wrapper logs `AGENT_START agent=<name>` and `AGENT_DONE agent=<name> exit=<code>` from inside the run. If default Claude falls back to Codex, `.cron.log` shows `AGENT_START agent=claude`, `AGENT_FALLBACK from=claude to=codex`, `AGENT_START agent=codex`, then `AGENT_DONE agent=codex exit=<code>`.
 - **Env exported into the agent**: `CRON_TMUX_SESSION=<session>`, `CRON_KEEP_MARKER=/tmp/<session>.keep`, and `CRON_OVERLAP_PIDFILE=/tmp/cron-<id>.pid`.
 - **Keep-marker contract**: if the agent `touch`es `$CRON_KEEP_MARKER` before exiting, the session persists by resuming the run's own conversation as a live, attachable agent (`claude --continue` for a Claude run, `pi --continue` for an `agent: pi` run, or `codex` after a Claude→Codex fallback), falling back to a shell if that exits; otherwise it auto-closes when the agent finishes. Claude/Codex tmux runs are headless (`claude -p`, or `codex exec --sandbox danger-full-access` after a Claude usage/session-limit fallback). Pi tmux runs intentionally use the positional TUI shape (`pi "$(cat prompt)"`), matching `tmux new -s <name> pi "<prompt>"`, so attaching mid-run shows the live Pi pane instead of a blank piped/headless screen. By convention a job keeps its session only when the run produced something worth revisiting (e.g. autopilot keeps it when a PR was opened).

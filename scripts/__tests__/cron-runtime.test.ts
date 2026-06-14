@@ -30,6 +30,7 @@ import {
   buildCronAgentCommand,
   buildTmuxWrapper,
   decideOverlap,
+  isValidAgentBin,
   isValidCronId,
   isValidSchedule,
   loadCrons,
@@ -191,6 +192,30 @@ describe("isValidCronId", () => {
   });
 });
 
+describe("isValidAgentBin", () => {
+  it("accepts safe executable tokens and paths", () => {
+    for (const agent of ["claude", "pi", "codex", "opencode", "/usr/local/bin/claude", "./bin/pi-agent"]) {
+      expect(isValidAgentBin(agent)).toBe(true);
+    }
+  });
+
+  it("rejects shell syntax, whitespace, traversal, and flag-shaped values", () => {
+    for (const agent of [
+      "",
+      "-c",
+      "pi agent",
+      "pi;touch-pwned",
+      "$(touch /tmp/pwn)",
+      "pi && bad",
+      "pi\nwhoami",
+      "../bin/pi",
+      "`touch /tmp/pwn`",
+    ]) {
+      expect(isValidAgentBin(agent)).toBe(false);
+    }
+  });
+});
+
 describe("isValidSchedule", () => {
   it("returns true for a valid cron expression", () => {
     expect(isValidSchedule("0 * * * *")).toBe(true);
@@ -273,8 +298,8 @@ describe("buildTmuxWrapper", () => {
   };
 
   it("writes the per-id pidfile and cleans it up", () => {
-    expect(wrapper).toContain("echo $$ > /tmp/cron-autopilot.pid;");
-    expect(wrapper).toContain("rm -f /tmp/cron-autopilot.pid;");
+    expect(wrapper).toContain("echo $$ > '/tmp/cron-autopilot.pid';");
+    expect(wrapper).toContain("rm -f '/tmp/cron-autopilot.pid';");
   });
 
   it("rejects unsafe ids before generating shell wrapper text", () => {
@@ -286,6 +311,17 @@ describe("buildTmuxWrapper", () => {
         promptFile: "/tmp/prompt",
       }),
     ).toThrow("invalid cron id");
+  });
+
+  it("rejects unsafe agent binaries before generating shell wrapper text", () => {
+    expect(() =>
+      buildTmuxWrapper({
+        session: "cron-bad-0101-0000",
+        id: "autopilot",
+        agentBin: "pi;touch-pwned",
+        promptFile: "/tmp/prompt",
+      }),
+    ).toThrow("invalid agent bin");
   });
 
   it("runs cleanup after a non-Claude agent command instead of bypassing it", () => {
@@ -320,7 +356,7 @@ describe("buildTmuxWrapper", () => {
 
   it("exports the session, keep-marker, and overlap pidfile env vars", () => {
     expect(wrapper).toContain(
-      "export CRON_TMUX_SESSION=cron-autopilot-0610-1805 CRON_KEEP_MARKER=/tmp/cron-autopilot-0610-1805.keep CRON_OVERLAP_PIDFILE=/tmp/cron-autopilot.pid;",
+      "export CRON_TMUX_SESSION='cron-autopilot-0610-1805' CRON_KEEP_MARKER='/tmp/cron-autopilot-0610-1805.keep' CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot.pid';",
     );
   });
 
@@ -335,30 +371,30 @@ describe("buildTmuxWrapper", () => {
     });
     // session-scoped lock (NOT the id-scoped /tmp/cron-autopilot.pid) so a worktree
     // fire never clobbers the primary run's overlap lock.
-    expect(wt).toContain("echo $$ > /tmp/cron-autopilot-0610-1805.pid;");
-    expect(wt).toContain("rm -f /tmp/cron-autopilot-0610-1805.pid;");
+    expect(wt).toContain("echo $$ > '/tmp/cron-autopilot-0610-1805.pid';");
+    expect(wt).toContain("rm -f '/tmp/cron-autopilot-0610-1805.pid';");
     expect(wt).not.toContain("/tmp/cron-autopilot.pid");
     // CRON_WORKTREE is exported so the agent (autopilot §1/§7) knows it is isolated.
     expect(wt).toContain(
-      "CRON_OVERLAP_PIDFILE=/tmp/cron-autopilot-0610-1805.pid CRON_WORKTREE=/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805;",
+      "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805';",
     );
   });
 
   it("omits CRON_WORKTREE and defaults to the id-scoped pidfile for a primary fire", () => {
     // No pidFile/worktree opts → byte-identical to the historical primary path.
-    expect(wrapper).toContain("echo $$ > /tmp/cron-autopilot.pid;");
+    expect(wrapper).toContain("echo $$ > '/tmp/cron-autopilot.pid';");
     expect(wrapper).not.toContain("CRON_WORKTREE=");
   });
 
   it("runs the agent against the prompt file and tees the log", () => {
     expect(wrapper).toContain(
-      'claude -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee /tmp/cron-autopilot-0610-1805.log',
+      'claude -p "$(cat \'/tmp/cron-autopilot-0610-1805.prompt\')" 2>&1 | tee \'/tmp/cron-autopilot-0610-1805.log\'',
     );
     expect(wrapper).toContain("AGENT_START");
     expect(wrapper).toContain("cron-runtime: Claude limit detected; retrying with Codex");
     expect(wrapper).toContain("AGENT_FALLBACK");
     expect(wrapper).toContain(
-      'codex exec --sandbox danger-full-access "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee -a /tmp/cron-autopilot-0610-1805.log',
+      'codex exec --sandbox danger-full-access "$(cat \'/tmp/cron-autopilot-0610-1805.prompt\')" 2>&1 | tee -a \'/tmp/cron-autopilot-0610-1805.log\'',
     );
     expect(wrapper).toContain("export RALPH_HARNESS=codex;");
     expect(wrapper).toContain("AGENT_DONE");
@@ -367,7 +403,7 @@ describe("buildTmuxWrapper", () => {
 
   it("persists a kept session as a resumed live agent, using Codex after fallback", () => {
     expect(wrapper).toContain(
-      '[ "$(cat /tmp/cron-autopilot-0610-1805.agent 2>/dev/null || echo claude)" = codex ]; then codex; else claude --continue; fi;',
+      '[ "$(cat \'/tmp/cron-autopilot-0610-1805.agent\' 2>/dev/null || echo \'claude\')" = codex ]; then codex; else \'claude\' --continue; fi;',
     );
   });
 
@@ -379,13 +415,13 @@ describe("buildTmuxWrapper", () => {
       promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
     });
 
-    expect(piWrapper).toContain('pi "$(cat /tmp/cron-autopilot-0610-1805.prompt)";');
+    expect(piWrapper).toContain('\'pi\' "$(cat \'/tmp/cron-autopilot-0610-1805.prompt\')";');
     expect(piWrapper).not.toContain('pi -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)"');
     expect(piWrapper).not.toContain("tee /tmp/cron-autopilot-0610-1805.log");
     expect(piWrapper).toContain("AGENT_START");
     expect(piWrapper).toContain("AGENT_DONE");
     expect(piWrapper).toContain(
-      '[ "$(cat /tmp/cron-autopilot-0610-1805.agent 2>/dev/null || echo pi)" = codex ]; then codex; else pi --continue; fi;',
+      '[ "$(cat \'/tmp/cron-autopilot-0610-1805.agent\' 2>/dev/null || echo \'pi\')" = codex ]; then codex; else \'pi\' --continue; fi;',
     );
   });
 });
@@ -398,13 +434,13 @@ describe("buildCronAgentCommand", () => {
       logFile: "/tmp/cron-global.log",
     });
 
-    expect(command).toContain('claude -p "$(cat /tmp/cron-global.prompt)"');
+    expect(command).toContain('claude -p "$(cat \'/tmp/cron-global.prompt\')"');
     expect(command).toContain("grep -Eiq");
     expect(command).toContain("AGENT_START");
     expect(command).toContain("export RALPH_HARNESS=codex;");
     expect(command).toContain("AGENT_FALLBACK");
     expect(command).toContain(
-      'codex exec --sandbox danger-full-access "$(cat /tmp/cron-global.prompt)"',
+      'codex exec --sandbox danger-full-access "$(cat \'/tmp/cron-global.prompt\')"',
     );
     expect(command).toContain("AGENT_DONE");
     expect(command).toContain('agent=$active_agent exit=$status');
@@ -417,7 +453,7 @@ describe("buildCronAgentCommand", () => {
       logFile: "/tmp/cron-custom.log",
     });
 
-    expect(command).toContain('pi -p "$(cat /tmp/cron-custom.prompt)"');
+    expect(command).toContain('\'pi\' -p "$(cat \'/tmp/cron-custom.prompt\')"');
     expect(command).toContain("AGENT_START");
     expect(command).toContain("AGENT_DONE");
     expect(command).toContain('agent=$active_agent exit=$status');
@@ -448,6 +484,18 @@ describe("buildCronAgentCommand", () => {
         logFile: "/tmp/log",
       }),
     ).toThrow("invalid cron id");
+  });
+
+  it("rejects unsafe agent binaries before generating agent command text", () => {
+    for (const agentBin of ["pi;touch-pwned", "$(touch /tmp/pwn)", "pi && bad", "bad agent"]) {
+      expect(() =>
+        buildCronAgentCommand({
+          agentBin,
+          promptFile: "/tmp/prompt",
+          logFile: "/tmp/log",
+        }),
+      ).toThrow("invalid agent bin");
+    }
   });
 });
 
@@ -563,6 +611,20 @@ describe("loadCrons", () => {
       "invalid cron filename id: bad_id",
     );
   });
+
+  it("skips and logs unsafe per-cron agent overrides before scheduling", () => {
+    writeFileSync(
+      path.join(tmp, "autopilot.md"),
+      `---\nid: autopilot\nschedule: "0 * * * *"\nagent: pi;touch-pwned\nenabled: true\n---\nbody\n`,
+    );
+    const spy = vi.fn();
+    expect(loadCrons(tmp, spy)).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(
+      "autopilot",
+      "AGENT_INVALID",
+      "invalid agent: pi;touch-pwned",
+    );
+  });
 });
 
 describe("scheduleAll", () => {
@@ -657,6 +719,25 @@ describe("scheduleAll", () => {
       "id must match filename: name",
     );
     expect(spy).toHaveBeenCalledWith("system", "BOOT", "1 scheduled, 2 skipped");
+  });
+
+  it("counts invalid agent overrides as load-time skips without constructing them", () => {
+    writeFileSync(path.join(tmp, "good.md"), cron("good", "0 * * * *"));
+    writeFileSync(
+      path.join(tmp, "badagent.md"),
+      `---\nid: badagent\nschedule: "0 * * * *"\nagent: pi && bad\nenabled: true\n---\nbody\n`,
+    );
+
+    const spy = vi.fn();
+    const constructed: string[] = [];
+    const result = scheduleAll(tmp, spy, (e) => {
+      constructed.push(e.id);
+    });
+
+    expect(constructed).toEqual(["good"]);
+    expect(result).toEqual({ scheduled: 1, skipped: 1 });
+    expect(spy).toHaveBeenCalledWith("badagent", "AGENT_INVALID", "invalid agent: pi && bad");
+    expect(spy).toHaveBeenCalledWith("system", "BOOT", "1 scheduled, 1 skipped");
   });
 
   it("does not double-count: a load-time skip and a construction skip sum disjointly", () => {

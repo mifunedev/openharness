@@ -28,9 +28,19 @@ const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";
 const CRON_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+const AGENT_BIN_PATTERN = /^[A-Za-z0-9_./-]+$/;
 
 export function isValidCronId(id: string): boolean {
   return CRON_ID_PATTERN.test(id);
+}
+
+export function isValidAgentBin(agentBin: string): boolean {
+  return (
+    agentBin.length > 0 &&
+    !agentBin.startsWith("-") &&
+    !agentBin.includes("..") &&
+    AGENT_BIN_PATTERN.test(agentBin)
+  );
 }
 
 export function parseCronFile(content: string, file: string): CronEntry | null {
@@ -109,6 +119,10 @@ export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
     }
     if (entry.id !== expectedId) {
       logFn(entry.id, "ID_MISMATCH", `id must match filename: ${expectedId}`);
+      continue;
+    }
+    if (entry.agentBin && !isValidAgentBin(entry.agentBin)) {
+      logFn(entry.id, "AGENT_INVALID", `invalid agent: ${entry.agentBin}`);
       continue;
     }
     // Invalid-schedule skip is a DISTINCT path from the silent unreadable-file
@@ -228,11 +242,14 @@ export function buildTmuxWrapper(opts: {
 }): string {
   const { session, id, agentBin, promptFile } = opts;
   if (!isValidCronId(id)) throw new Error(`invalid cron id: ${id}`);
+  if (!isValidAgentBin(agentBin)) throw new Error(`invalid agent bin: ${agentBin}`);
   const pidFile = opts.pidFile ?? `/tmp/cron-${id}.pid`;
-  const worktreeExport = opts.worktree ? ` CRON_WORKTREE=${opts.worktree}` : "";
+  const quotedAgent = shellQuote(agentBin);
+  const quotedPidFile = shellQuote(pidFile);
+  const worktreeExport = opts.worktree ? ` CRON_WORKTREE=${shellQuote(opts.worktree)}` : "";
   return (
-    `echo $$ > ${pidFile}; ` +
-    `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep CRON_OVERLAP_PIDFILE=${pidFile}${worktreeExport}; ` +
+    `echo $$ > ${quotedPidFile}; ` +
+    `export CRON_TMUX_SESSION=${shellQuote(session)} CRON_KEEP_MARKER=${shellQuote(`/tmp/${session}.keep`)} CRON_OVERLAP_PIDFILE=${quotedPidFile}${worktreeExport}; ` +
     buildCronAgentCommand({
       id,
       agentBin,
@@ -242,11 +259,11 @@ export function buildTmuxWrapper(opts: {
       exitOnComplete: false,
     }) +
     `; ` +
-    `rm -f ${pidFile}; ` +
+    `rm -f ${quotedPidFile}; ` +
     // Kept session: resume the run's own conversation as a live, attachable
     // agent (idle until driven); fall back to a shell if that exits.
-    `[ -f /tmp/${session}.keep ] && { ` +
-    `if [ "$(cat /tmp/${session}.agent 2>/dev/null || echo ${agentBin})" = codex ]; then codex; else ${agentBin} --continue; fi; ` +
+    `[ -f ${shellQuote(`/tmp/${session}.keep`)} ] && { ` +
+    `if [ "$(cat ${shellQuote(`/tmp/${session}.agent`)} 2>/dev/null || echo ${quotedAgent})" = codex ]; then codex; else ${quotedAgent} --continue; fi; ` +
     `exec bash; }; ` +
     `exit $status`
   );
@@ -269,8 +286,14 @@ export function buildCronAgentCommand(opts: {
     exitOnComplete = true,
   } = opts;
   if (!isValidCronId(id)) throw new Error(`invalid cron id: ${id}`);
+  if (!isValidAgentBin(agentBin)) throw new Error(`invalid agent bin: ${agentBin}`);
+  const quotedAgent = shellQuote(agentBin);
+  const quotedPromptFile = shellQuote(promptFile);
+  const quotedLogFile = shellQuote(logFile);
   const exitOrReturn = exitOnComplete ? `exit $status` : `true`;
-  const resumeInit = resumeFile ? `printf '%s' ${agentBin} > ${resumeFile}; ` : "";
+  const resumeInit = resumeFile
+    ? `printf '%s' ${quotedAgent} > ${shellQuote(resumeFile)}; `
+    : "";
   const logAgentStart = cronLogCommand(id, "AGENT_START", '"agent=$active_agent"');
   const logAgentDone = cronLogCommand(
     id,
@@ -286,7 +309,7 @@ export function buildCronAgentCommand(opts: {
       // Pi's attachable TUI must own the tmux pane's tty directly. The
       // headless `-p ... | tee ...` shape is useful for non-tmux jobs, but it
       // renders as an effectively blank pane when a human attaches mid-run.
-      `pi "$(cat ${promptFile})"; ` +
+      `${quotedAgent} "$(cat ${quotedPromptFile})"; ` +
       `status=$?; ` +
       logAgentDone +
       exitOrReturn
@@ -295,33 +318,35 @@ export function buildCronAgentCommand(opts: {
   if (agentBin !== "claude") {
     return (
       `${resumeInit}` +
-      `active_agent=${shellQuote(agentBin)}; ` +
+      `active_agent=${quotedAgent}; ` +
       logAgentStart +
       `set +e; ` +
       `set -o pipefail; ` +
-      `${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}; ` +
+      `${quotedAgent} -p "$(cat ${quotedPromptFile})" 2>&1 | tee ${quotedLogFile}; ` +
       `status=$?; ` +
       logAgentDone +
       exitOrReturn
     );
   }
-  const resumeCodex = resumeFile ? `printf '%s' codex > ${resumeFile}; ` : "";
+  const resumeCodex = resumeFile
+    ? `printf '%s' codex > ${shellQuote(resumeFile)}; `
+    : "";
   return (
     `${resumeInit}` +
     `active_agent=claude; ` +
     logAgentStart +
     `set +e; ` +
     `set -o pipefail; ` +
-    `claude -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}; ` +
+    `claude -p "$(cat ${quotedPromptFile})" 2>&1 | tee ${quotedLogFile}; ` +
     `status=$?; ` +
-    `if grep -Eiq '(usage|session|hit (your |the )?limit)' ${logFile} && grep -Eiq '(limit|resets?|/upgrade)' ${logFile}; then ` +
-    `echo "cron-runtime: Claude limit detected; retrying with Codex" | tee -a ${logFile}; ` +
+    `if grep -Eiq '(usage|session|hit (your |the )?limit)' ${quotedLogFile} && grep -Eiq '(limit|resets?|/upgrade)' ${quotedLogFile}; then ` +
+    `echo "cron-runtime: Claude limit detected; retrying with Codex" | tee -a ${quotedLogFile}; ` +
     cronLogCommand(id, "AGENT_FALLBACK", "'from=claude to=codex'") +
     `active_agent=codex; ` +
     `export RALPH_HARNESS=codex; ` +
     `${resumeCodex}` +
     logAgentStart +
-    `codex exec --sandbox danger-full-access "$(cat ${promptFile})" 2>&1 | tee -a ${logFile}; ` +
+    `codex exec --sandbox danger-full-access "$(cat ${quotedPromptFile})" 2>&1 | tee -a ${quotedLogFile}; ` +
     `status=$?; ` +
     `fi; ` +
     logAgentDone +
@@ -485,6 +510,11 @@ function fireTmux(entry: CronEntry): void {
   let cwd = process.cwd();
   let pidFile = idPidFile;
   let worktree: string | undefined;
+  const agentBin = entry.agentBin || AGENT_BIN;
+  if (!isValidAgentBin(agentBin)) {
+    log(entry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
+    return;
+  }
 
   const pidfileExists = fs.existsSync(idPidFile);
   let holderAlive = false;
@@ -513,7 +543,6 @@ function fireTmux(entry: CronEntry): void {
   // stale/absent pidfile below (the wrapper does `echo $$ > pidFile`).
 
   const promptFile = `/tmp/${session}.prompt`;
-  const agentBin = entry.agentBin || AGENT_BIN;
   const body = reloadBody(entry);
   fs.writeFileSync(promptFile, body);
   const child = spawn(
@@ -549,6 +578,10 @@ function fire(entry: CronEntry): void {
   const promptFile = `/tmp/${session}.prompt`;
   const logFile = `/tmp/${session}.log`;
   const agentBin = entry.agentBin || AGENT_BIN;
+  if (!isValidAgentBin(agentBin)) {
+    log(entry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
+    return;
+  }
   fs.writeFileSync(promptFile, reloadBody(entry));
   const child = spawn(
     "bash",
@@ -636,7 +669,7 @@ export function scheduleAll(
   activeJobs = [];
   let loadSkips = 0;
   const entries = loadCrons(dir, (id, status, msg) => {
-    if (["SCHED_INVALID", "ID_INVALID", "ID_MISMATCH"].includes(status)) loadSkips++;
+    if (["SCHED_INVALID", "ID_INVALID", "ID_MISMATCH", "AGENT_INVALID"].includes(status)) loadSkips++;
     logFn(id, status, msg);
   });
   let scheduled = 0;

@@ -51,6 +51,28 @@ if ! printf '%s' "$BLOCK" | grep -qF 'crons/*.md'; then
   exit 1
 fi
 
+# --- SKIPPED: the behavioral predicate needs node + croner -------------------
+# The extracted Step C-2 block's is_valid_cron_schedule() shells out to `node`
+# and resolves the `croner` package from DRIFT_CHECK_ROOT/package.json (here
+# $ROOT). A cold CI runner (the eval-probes job: checkout + bash, no
+# `pnpm install`) has no node_modules/croner, so the predicate cannot run and the
+# valid-cron fixture would be mis-excluded — a false REGRESSION. SKIP when node or
+# croner is unavailable (the extraction-integrity checks above still gate in CI;
+# the full behavioral predicate is exercised by manual /eval and the weekly cron
+# where deps are installed). Mirrors the block's own croner resolution exactly.
+if ! command -v node >/dev/null 2>&1; then
+  echo "SKIPPED: node unavailable — Step C-2 schedule validation needs node + croner" >&2
+  exit 2
+fi
+if ! DRIFT_CHECK_ROOT="$ROOT" node --input-type=module -e '
+  import { createRequire } from "node:module";
+  const root = (process.env.DRIFT_CHECK_ROOT || process.cwd()).replace(/\/$/, "");
+  createRequire(`${root}/package.json`).resolve("croner");
+' >/dev/null 2>&1; then
+  echo "SKIPPED: croner not resolvable from $ROOT (no node_modules) — Step C-2 needs deps installed; skipping in this environment" >&2
+  exit 2
+fi
+
 # --- Fixtures: trap-based cleanup registered BEFORE any fixture exists ------
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

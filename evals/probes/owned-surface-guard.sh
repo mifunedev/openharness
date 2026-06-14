@@ -82,6 +82,16 @@ if ! command -v zsh >/dev/null 2>&1; then
   echo "SKIPPED: zsh not available — cannot verify zsh word-split fidelity of OWNED_PATHS" >&2
   exit 2
 fi
+# Defensive PCRE guard: the extraction below uses `grep -oP` (PCRE \K). GNU grep on
+# ubuntu-latest is compiled with PCRE, but a grep without it errors on `-P`; the
+# `|| true` would then leave $decl empty and falsely REGRESS. Detect real PCRE
+# support (match a known string) and SKIP if absent so a missing tool can never
+# masquerade as a regression. NB: the `grep -P . /dev/null` idiom is NOT used — an
+# empty file yields exit 1 even when -P IS supported, which would always-skip.
+if ! printf 'x\n' | grep -qP 'x' 2>/dev/null; then
+  echo "SKIPPED: grep -P (PCRE) unavailable — cannot extract OWNED_PATHS for the zsh word-split check" >&2
+  exit 2
+fi
 # Anchored extraction: only the real declaration starts at column 0 (comment lines that
 # mention OWNED_PATHS begin with '#'); pull the tokens between the array parens.
 decl="$(grep -oP '^OWNED_PATHS=\(\K[^)]+' "$SKILL" || true)"

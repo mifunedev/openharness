@@ -14,6 +14,11 @@ Run the context fitness-function probe suite and log any regressions.
 This is a **log-only** run: no issues are opened, no notifications are
 sent.
 
+> **Note:** CI (`eval-probes` in `.github/workflows/ci-harness.yml`) is now the
+> primary green→red regression gate — it runs the suite on every PR and push to
+> `development`/`main`. This weekly cron is a **supplemental** check that catches
+> regressions from non-PR activity (direct commits, drift in live real state).
+
 ## Tasks
 
 1. Compute `TODAY=$(date -u +%Y-%m-%d)` and ensure the log directory

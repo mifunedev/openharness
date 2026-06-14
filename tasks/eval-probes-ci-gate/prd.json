@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/103-eval-probes-ci-gate",
+  "description": "Gate the eval probe suite in CI — add an eval-probes job to ci-harness.yml that runs bash .claude/skills/eval/run.sh on every harness PR and fails on a new green->red regression, without committing RESULTS.md. Probes are made hermetic (PASS or SKIPPED, never ERROR) in a cold CI runner before the blocking job lands.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add evals/** to CI path triggers",
+      "description": "As a harness maintainer, I want changes under evals/ to trigger CI so that probe edits and RESULTS updates are themselves gated.",
+      "acceptanceCriteria": [
+        "Add an evals/** entry (double-quoted, matching existing style) to the push.paths list in .github/workflows/ci-harness.yml",
+        "Add the same evals/** entry to the pull_request.paths list in .github/workflows/ci-harness.yml",
+        "grep -c 'evals/\\*\\*' .github/workflows/ci-harness.yml returns 2",
+        "The workflow YAML still parses: python3 -c \"import yaml; yaml.safe_load(open('.github/workflows/ci-harness.yml'))\" exits 0"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-13; commit fb6a212. grep -c returns 2; YAML parses (verified via js-yaml 4.x — python yaml module unavailable in orchestrator env)."
+    },
+    {
+      "id": "US-002",
+      "title": "Make every probe hermetic in cold CI (audit + classify + fix)",
+      "description": "As a harness maintainer, I want each probe to PASS or SKIP (never ERROR/REGRESS) when a live dependency is absent so the future CI gate does not false-fail on a cold runner. This MUST land before the blocking job (US-003) to avoid bootstrap circularity.",
+      "acceptanceCriteria": [
+        "Write tasks/eval-probes-ci-gate/probe-audit.md with one row per probe in evals/probes/*.sh: dependency class (static-grep | file-exec | process-inspection | extract-and-run | tool-dep), current committed RESULTS.md status, and whether it already exits 2 on a missing dep",
+        "Any probe that would exit non-{0,1,2} OR REGRESS (exit 1) purely because a live dep (docker/tmux/cron-system/running process/PCRE grep) is absent is patched to exit 2 (SKIPPED) with a 'SKIPPED: <reason>' stderr line BEFORE any PASS/REGRESSION verdict",
+        "owned-surface-guard.sh (uses grep -oP): either add a defensive 'grep -P . /dev/null 2>/dev/null || { echo \"SKIPPED: grep -P unavailable\" >&2; exit 2; }' guard, or document in probe-audit.md that ubuntu-latest GNU grep supports -P",
+        "drift-check-cron-staleness-glob.sh (extract-and-run) confirmed deterministic in a clean temp dir with no real cron runtime; documented in probe-audit.md",
+        ".claude/skills/eval/run.sh is NOT modified and no probe's 0/1/2 oracle meaning is changed",
+        "Behavioral proof: bash .claude/skills/eval/run.sh exits 0 with every row PASS or SKIPPED (zero ERROR rows) except the pre-existing next-dev-prod REGRESSION (unchanged); capture the per-probe status lines into probe-audit.md",
+        "Refresh the committed baseline: run the runner once and commit the regenerated evals/RESULTS.md",
+        "shellcheck -S warning is clean on every probe modified by this story"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed iteration 2 on 2026-06-13; commit 2d94904. 15/16 probes are static-grep over committed files or already SKIP on missing live deps; only owned-surface-guard needed a patch (PCRE grep -P guard before the grep -oP zsh-fidelity extraction). probe-audit.md classifies all 16; suite exits 0 with zero ERROR rows; baseline RESULTS.md refreshed (timestamps only, no status transitions)."
+    },
+    {
+      "id": "US-003",
+      "title": "Add the eval-probes CI job",
+      "description": "As a harness maintainer, I want a CI job that runs the eval runner and fails on a new regression so green->red regressions block merge.",
+      "acceptanceCriteria": [
+        "Add a new top-level job 'eval-probes' to ci-harness.yml, runs-on: ubuntu-latest, independent of the ci and boot-lint jobs",
+        "The job checks out the repo (actions/checkout@v4) and its sole substantive step runs exactly: bash .claude/skills/eval/run.sh (no --probe/--tier filter)",
+        "The job fails iff that command exits non-zero — no '|| true', no continue-on-error: true",
+        "The job has NO git write step (no git add/commit/push of evals/RESULTS.md)",
+        "No Node/jq/python setup is added (the suite is pure bash + coreutils; verified in US-002 probe-audit.md)",
+        "The job does not request elevated permissions (inherits workflow 'contents: read')",
+        "The workflow YAML still parses (yaml.safe_load exits 0)"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed iteration 3 on 2026-06-13; commit 457c080. Added third independent top-level job 'eval-probes' (ubuntu-latest, checkout@v4 + sole step 'bash .claude/skills/eval/run.sh'); no || true / continue-on-error / git write / Node setup / per-job permissions. YAML parses (js-yaml); runner exits 0 with only the pre-existing next-dev-prod REGRESSION unchanged."
+    },
+    {
+      "id": "US-004",
+      "title": "Add self-guard probe eval-ci-gate.sh",
+      "description": "As a harness maintainer, I want a probe that fails if the CI gate is removed so the guardrail can't be silently deleted.",
+      "acceptanceCriteria": [
+        "Create evals/probes/eval-ci-gate.sh with header lines '# tier: A', a '# source:' line citing #103, and a '# desc:' line noting it is a string-presence (not semantic) check",
+        "It resolves repo root from ${BASH_SOURCE[0]} (never cwd), same pattern as evals/probes/boot-lint-glob.sh",
+        "It exits 2 (SKIPPED) with a stderr reason if .github/workflows/ci-harness.yml is absent",
+        "It exits 0 (PASS) when that file contains the literal 'bash .claude/skills/eval/run.sh', matched with an UNANCHORED grep (no ^ anchor, indentation-robust like boot-lint-glob.sh)",
+        "It exits 1 (REGRESSION) when that invocation is absent",
+        "bash evals/probes/eval-ci-gate.sh exits 0 against the post-US-003 tree; a temporary removal of the runner line makes it exit 1 (verify, then restore)",
+        "shellcheck -S warning evals/probes/eval-ci-gate.sh is clean"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed iteration 4 on 2026-06-13; commit 3013df4. Mirrors boot-lint-glob.sh (BASH_SOURCE ROOT, unanchored grep, exit 2 on absent workflow). All 3 oracle states verified (PASS=0 against post-US-003 tree, REGRESSION=1 with runner line removed, SKIPPED=2 with workflow absent) in an isolated temp tree. Added the eval-ci-gate PASS row to committed RESULTS.md so prior=PASS — required for run.sh:106 to fire the green->red regression if the gate is ever removed (otherwise the new probe is inert). shellcheck -S warning clean."
+    },
+    {
+      "id": "US-005",
+      "title": "Document the gate, escape hatch, and CHANGELOG",
+      "description": "As a harness maintainer, I want the CI gate, its escape hatch, and the cron relationship documented so I can unblock a false-fail and know which gate is authoritative.",
+      "acceptanceCriteria": [
+        "evals/README.md gains a substantive subsection stating: (a) job name eval-probes, (b) runs on every PR and push to development/main, (c) gates on runner exit code and does NOT commit RESULTS.md, (d) escape hatch: re-run via workflow_dispatch and/or a follow-up commit fixing or temporarily removing the offending probe (no merge-bypass label)",
+        "evals/README.md documents the known limitation that PASS->SKIPPED transitions in CI are silent, so keeping the committed RESULTS.md fresh is the operator's responsibility",
+        "grep -q 'eval-probes' evals/README.md returns success",
+        "crons/eval-weekly.md body gains a one-line note that CI (eval-probes in ci-harness.yml) is now the primary regression gate and the cron is a supplemental weekly check",
+        "CHANGELOG.md [Unreleased] ### Added contains a one-line imperative entry referencing #103",
+        "Any shell snippets added to docs are not executed; no probe or runner behavior changes in this story"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Completed iteration 5 on 2026-06-13; commit 1ab1d82. evals/README.md gains a '## CI gate (eval-probes)' subsection (job name, triggers, git-read-only, escape hatch via workflow_dispatch + follow-up commit, no merge-bypass label) plus a 'PASS->SKIPPED is silent in CI' limitation note naming operator responsibility for RESULTS.md freshness. crons/eval-weekly.md gains a one-line supplemental-gate note. CHANGELOG [Unreleased] ### Added references #103. No probe/runner behavior changed; runner still exits 0 (only pre-existing next-dev-prod REGRESSION unchanged); RESULTS.md churn restored so docs-only commit."
+    }
+  ]
+}

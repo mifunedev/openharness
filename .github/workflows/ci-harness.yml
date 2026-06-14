@@ -21,6 +21,7 @@ on:
       - ".devcontainer/**"
       - "install/**"
       - "workspace/**"
+      - "evals/**"
   pull_request:
     paths:
       - "packages/**"
@@ -37,6 +38,7 @@ on:
       - ".devcontainer/**"
       - "install/**"
       - "workspace/**"
+      - "evals/**"
 
 concurrency:
   group: ci-harness-${{ github.ref }}
@@ -116,3 +118,14 @@ jobs:
           dockerfile: .devcontainer/Dockerfile
           config: .hadolint.yaml
           failure-threshold: warning
+
+  eval-probes:
+    name: "Eval Probe Regression Gate"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run eval probe suite
+        run: bash .claude/skills/eval/run.sh

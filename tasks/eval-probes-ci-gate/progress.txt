@@ -1,0 +1,216 @@
+# progress
+
+## Codebase Patterns
+
+- **YAML parse check in orchestrator env**: the `python3 -c "import yaml"` parse
+  check from the ACs FAILS here — the orchestrator's python3 has no `yaml` module
+  and `pip`/`ruby`/`yq` are absent. Equivalent check: js-yaml is in the pnpm store,
+  require it by full path:
+  `node -e "const y=require('./node_modules/.pnpm/js-yaml@4.2.0/node_modules/js-yaml');const fs=require('fs');y.load(fs.readFileSync('<file>','utf8'))"`.
+  Note js-yaml 4.x uses YAML 1.2, so the `on:` key parses as the STRING `"on"`,
+  NOT boolean `true` (the YAML-1.1 footgun) — access `doc['on'].push.paths`.
+- **ci-harness.yml path lists are duplicated** verbatim across `push.paths` and
+  `pull_request.paths`. To Edit one block at a time, anchor on the differing
+  trailing line: push block ends `…workspace/**"\n  pull_request:`; pull_request
+  block ends `…workspace/**"\n\nconcurrency:`.
+- **PCRE-support detection idiom**: the literal AC snippet `grep -P . /dev/null`
+  is WRONG — an empty file yields exit 1 even when `-P` IS compiled in, so it
+  always-skips. Use `printf 'x\n' | grep -qP 'x' 2>/dev/null` (exit 0 on real
+  PCRE support; non-zero only when `-P` is genuinely absent). Sandbox + ubuntu-latest
+  GNU grep both support `-P`, so owned-surface-guard PASSes in CI; the guard is
+  belt-and-braces for a minimal runner.
+- **Hermeticity demo via PATH shim**: to prove a probe SKIPs (not ERRORs) when a
+  tool is missing, run it under a restricted `PATH` (coreutils-only, omit
+  pgrep/tmux/zsh) or a `grep` shim that rejects `-P`. CAVEAT: a naive `-P` shim
+  that scans ALL args matches the *pattern* `-- "${OWNED_PATHS[@]}"` (starts `-`,
+  contains `P`) as if it were a `-P` flag — a faithful shim must `break` at `--`
+  and only reject option args. Real GNU grep ends options at `--`, so the probe
+  itself is fine; the over-broad shim was a test artifact.
+- **Most probes are static-grep over committed files** → inherently hermetic
+  (PASS in CI; SKIP only if their target file is absent, which never happens in a
+  checkout). Only probes touching live deps (process-inspection: next-dev-prod;
+  extract-and-run: drift-check-cron-staleness-glob; tool-dep: owned-surface-guard)
+  need cold-runner scrutiny. See `probe-audit.md` for the full 16-probe table.
+- **No probe uses node/jq/python/ruby** — confirmed for US-003: checkout + bash
+  suffices, no tooling-setup step needed.
+- **CI job RESULTS.md churn**: the runner rewrites `evals/RESULTS.md` (timestamps)
+  on every invocation. After running the suite locally to verify a story, `git
+  checkout -- evals/RESULTS.md` to drop that churn so it never sneaks into a
+  non-US-002 commit. The CI `eval-probes` job mirrors this — it gates on exit
+  code only and has no `git add/commit/push` of RESULTS.md (AC #4).
+- **Mirror boot-lint for independent jobs**: a self-contained probe/lint job that
+  needs no toolchain is just `runs-on: ubuntu-latest` + `actions/checkout@v4` +
+  one `run:` step. No per-job `permissions:` block → it inherits the workflow's
+  top-level `permissions: contents: read`. boot-lint is the template; eval-probes
+  follows it.
+- **A new probe is INERT until its PASS row is in the committed RESULTS.md**:
+  `run.sh:106` only flags a regression on `prior == "PASS"` (prior = committed
+  baseline status). A probe with no committed row → `prior` empty → a red run is
+  recorded as `new-fail` delta but NEVER added to `regressions[]` → suite still
+  exits 0. So adding a self-guard probe MUST also add its `PASS` row to the
+  committed baseline, or the guard can't fire. The committed RESULTS.md already
+  holds one row per probe (invariant: 16/16 before US-004), so this also keeps
+  that invariant intact.
+- **Add a single baseline row WITHOUT full-suite churn**: run the suite once to
+  verify it integrates + capture the runner's exact row
+  (`grep '^| <id> ' evals/RESULTS.md`), then `git checkout -- evals/RESULTS.md`
+  to drop the 16 timestamp bumps, and `Edit`-insert just that one row in its
+  glob-sorted position. The runner glob-sorts probes in C-locale order, so
+  `eval-ci-gate` sorts BEFORE `eval-gate` (`c` < `g`) — insert between
+  `drift-check-cron-staleness-glob` and `eval-gate`. Result: a 1-line diff.
+- **Verify a 3-state probe's branches in an isolated temp tree, never by editing
+  the real workflow**: build `$TMP/{evals/probes,.github/workflows}`, copy the
+  probe in, and feed it a workflow variant (`grep -v 'runner line'` for the
+  REGRESSION case, `rm` it for the SKIPPED case). The probe resolves
+  `WORKFLOW` via `${BASH_SOURCE[0]}/../../.github/...`, so running the COPY makes
+  it read the temp workflow — zero risk to the committed `ci-harness.yml`.
+
+---
+
+## US-001 — 2026-06-13 18:00 UTC
+
+**Title**: Add evals/** to CI path triggers
+**Files changed**: .github/workflows/ci-harness.yml
+**Commit**: fb6a212
+**Result**: PASS
+
+### What I did
+Added a double-quoted `- "evals/**"` entry to both the `push.paths` and
+`pull_request.paths` lists in `.github/workflows/ci-harness.yml`, matching the
+existing quoting style. No job added (deferred to US-003 per the story note).
+Verified `grep -c 'evals/\*\*'` returns 2 and the workflow still parses as valid
+YAML.
+
+### Learnings for future iterations
+- The python `yaml` module is unavailable in the orchestrator env; use the
+  js-yaml-via-pnpm-path node one-liner above for the parse-check ACs that recur
+  in US-003.
+- The two path lists are identical, so anchor Edits on the line *after* the
+  insertion point to disambiguate the two blocks (see Codebase Patterns).
+- US-005 owns the CHANGELOG entry; US-001 correctly added none.
+
+---
+
+## US-002 — 2026-06-13 23:35 UTC
+
+**Title**: Make every probe hermetic in cold CI (audit + classify + fix)
+**Files changed**: evals/probes/owned-surface-guard.sh, evals/RESULTS.md, tasks/eval-probes-ci-gate/probe-audit.md
+**Commit**: 2d94904
+**Result**: PASS
+
+### What I did
+Audited all 16 probes and wrote `probe-audit.md` with a dependency-class table
+(static-grep / file-exec / process-inspection / extract-and-run / tool-dep),
+each probe's committed RESULTS status, and its missing-dep behavior. Only
+`owned-surface-guard.sh` could PASS→REGRESS on a cold runner (its `grep -oP` PCRE
+extraction would leave `$decl` empty under a PCRE-less grep and fire the
+"could not extract" REGRESSION); patched it with a `printf 'x\n' | grep -qP 'x'`
+support guard that SKIPs (exit 2) before the `grep -oP`. Behaviorally proved
+hermeticity: full suite exits 0 with zero ERROR rows (only the pre-existing
+next-dev-prod REGRESSION, unchanged), plus masked-dep demos (grep -P absent,
+zsh absent, pgrep+tmux absent, drift-check in clean cwd) all SKIP/PASS correctly.
+Refreshed the committed RESULTS.md baseline (timestamps only; no status changes).
+
+### Learnings for future iterations
+- US-003 can rely on: no probe needs node/jq/python — checkout + bash only.
+- The patched probe is `run.sh`-unmodified and 0/1/2 oracle-semantics-preserving
+  (only ADDS a SKIP path) — satisfies the Non-Goal.
+- `next-dev-prod` is REGRESSION in the committed baseline (live website context in
+  the sandbox); in cold CI it SKIPs. REGRESSION→SKIPPED and PASS→SKIPPED are both
+  non-regressing per run.sh:106, so neither gates the future CI job.
+- shellcheck -S warning is clean on the modified probe.
+
+---
+
+## US-003 — 2026-06-13 23:58 UTC
+
+**Title**: Add the eval-probes CI job
+**Files changed**: .github/workflows/ci-harness.yml
+**Commit**: 457c080
+**Result**: PASS
+
+### What I did
+Added a third independent top-level job `eval-probes` to `ci-harness.yml`
+(sibling to `ci` and `boot-lint`), `runs-on: ubuntu-latest`, whose two steps are
+`actions/checkout@v4` and the sole substantive `run: bash .claude/skills/eval/run.sh`
+(no `--probe`/`--tier` filter). No `|| true`, no `continue-on-error`, no
+`git add/commit/push`, no Node/jq/python setup, and no per-job `permissions:`
+block (inherits the workflow's `contents: read`). Verified via js-yaml that all
+three jobs parse and the runner exits 0 locally with only the pre-existing
+`next-dev-prod` REGRESSION unchanged; restored the RESULTS.md timestamp churn
+so only the workflow change was committed.
+
+### Learnings for future iterations
+- US-004 (self-guard probe) asserts the literal `bash .claude/skills/eval/run.sh`
+  is present in `ci-harness.yml` — that string now lives at the `eval-probes`
+  job's `run:` step (indented under YAML), so US-004's grep MUST be unanchored
+  (no `^`), mirroring `boot-lint-glob.sh`.
+- US-005 documents this `eval-probes` job name in `evals/README.md` and the
+  cron note; the job name string is `eval-probes` and the human name is
+  "Eval Probe Regression Gate".
+- The pre-commit hook (lint + tests) passed without changes — the workflow edit
+  doesn't touch any linted package.
+
+---
+
+## US-004 — 2026-06-13 23:45 UTC
+
+**Title**: Add self-guard probe eval-ci-gate.sh
+**Files changed**: evals/probes/eval-ci-gate.sh (new), evals/RESULTS.md
+**Commit**: 3013df4
+**Result**: PASS
+
+### What I did
+Created `evals/probes/eval-ci-gate.sh` mirroring `boot-lint-glob.sh`: `# tier: A`
++ `# source: #103` + a `# desc:` flagging it as a string-presence (not semantic)
+check; ROOT resolved from `${BASH_SOURCE[0]}`; exit 2 (SKIPPED) if
+`ci-harness.yml` is absent; an unanchored `grep -q 'bash .claude/skills/eval/run.sh'`
+→ exit 0 (PASS) when present, exit 1 (REGRESSION) when absent. Verified all three
+oracle states in an isolated temp tree (real workflow untouched), confirmed the
+full suite still exits 0 (`eval-ci-gate` = new-pass, `next-dev-prod` = unchanged
+REGRESSION), and added the probe's `PASS` row to the committed RESULTS.md so the
+guard can actually fire (`run.sh:106` needs `prior == PASS`). shellcheck clean.
+
+### Learnings for future iterations
+- A new probe is INERT until its committed-baseline status is PASS — see the new
+  Codebase Patterns entry. Adding a self-guard probe is a two-part change: the
+  probe file AND its baseline row.
+- US-005 (last story, docs + CHANGELOG only) closes out the task: it adds the
+  `eval-probes` README subsection + escape hatch, the PASS→SKIPPED-silent
+  limitation note, the `crons/eval-weekly.md` supplemental-gate note, and the
+  `#103` CHANGELOG entry. No code/probe behavior changes there.
+- The pre-commit hook (lint + tests) passed; the new probe touches no linted
+  package.
+
+---
+
+## US-005 — 2026-06-13 23:47 UTC
+
+**Title**: Document the gate, escape hatch, and CHANGELOG
+**Files changed**: evals/README.md, crons/eval-weekly.md, CHANGELOG.md
+**Commit**: 1ab1d82
+**Result**: PASS
+
+### What I did
+Docs + CHANGELOG only — zero code/probe/runner changes. Added a substantive
+`## CI gate (eval-probes)` subsection to `evals/README.md` covering the job name,
+PR/push triggers, git-read-only gating (no RESULTS.md commit), and the escape
+hatch (workflow_dispatch re-run or a follow-up fix/temporary-remove commit; no
+merge-bypass label), plus a `### Known limitation: PASS→SKIPPED is silent in CI`
+note assigning RESULTS.md-freshness to the operator. Added a one-line
+supplemental-gate note to `crons/eval-weekly.md` and a `#103` `[Unreleased]
+### Added` CHANGELOG entry. Verified the runner still exits 0 (only the
+pre-existing `next-dev-prod` REGRESSION unchanged) and restored the RESULTS.md
+timestamp churn so the commit is docs-only.
+
+### Learnings for future iterations
+- US-005 is the terminal story; all 5 now pass. No remaining work on this task.
+- The `eval-ci-gate` probe greps `ci-harness.yml`, NOT the README — so writing the
+  literal `bash .claude/skills/eval/run.sh` string into `evals/README.md` prose
+  does not interact with that probe's oracle. Safe to document the invocation.
+- The pre-commit hook (lint + tests) passed on a docs-only change — markdown edits
+  touch no linted package, so no hook friction.
+
+---
+
+STATUS: COMPLETE

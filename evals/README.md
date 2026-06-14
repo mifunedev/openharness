@@ -111,3 +111,42 @@ above, which governs individual probe results).
 
 This `0`/`1` contract is what the autopilot §6 eval gate and the
 `eval-weekly` cron rely on when checking whether a run is clean.
+
+## CI gate (`eval-probes`)
+
+The probe suite is wired into `.github/workflows/ci-harness.yml` as a third
+independent job, **`eval-probes`** (display name "Eval Probe Regression Gate"),
+running in parallel with `ci` and `boot-lint`. Its sole substantive step runs
+`bash .claude/skills/eval/run.sh` (the unfiltered runner), and the job — and so
+the pipeline — fails **iff** the runner exits non-zero (a new green→red
+regression this run). This makes the suite a live PR-time guardrail instead of a
+manual-`/eval`-only check.
+
+- **Triggers.** Runs on every pull request and on every push to
+  `development`/`main` whose changed paths match the workflow's path filters.
+  `evals/**` is one of those filters, so probe and `RESULTS.md` edits gate
+  themselves.
+- **Git read-only.** The runner rewrites `evals/RESULTS.md` in the writable
+  checkout (expected), but the job gates **purely on the exit code** — it has no
+  `git add`/`commit`/`push` step, so the CI run never persists that churn back to
+  the branch.
+- **Escape hatch.** There is no merge-bypass label. To unblock a probe that is
+  false-failing CI, either (a) re-run the job — via the workflow's
+  `workflow_dispatch` trigger (Actions → "CI: Harness" → Run workflow) or by
+  re-running the failed check from the PR's Checks tab — if the failure was
+  transient, or (b) push a follow-up commit that fixes the offending probe, or
+  temporarily removes/SKIPs it (restoring it in a later commit).
+
+The `eval-ci-gate` self-guard probe asserts the runner invocation is still
+present in `ci-harness.yml`, so the gate itself cannot be silently deleted.
+
+### Known limitation: `PASS→SKIPPED` is silent in CI
+
+A probe that is `PASS` in the committed `RESULTS.md` baseline but `SKIPPED`
+(exit 2) in a cold CI runner — no docker/tmux/cron-system/live process — is
+**not** a regression: `run.sh:106` flags only a `PASS → REGRESSION|TIMEOUT|ERROR`
+transition. This is exactly what keeps the gate hermetic, but it also means a
+probe that should be exercising real state can silently degrade to a no-op in CI
+without failing the gate. Keeping the committed `RESULTS.md` fresh — so the
+baseline reflects each probe's true status — is the **operator's
+responsibility**; the `eval-probes` job does not commit or refresh it.

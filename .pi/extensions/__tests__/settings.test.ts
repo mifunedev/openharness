@@ -19,6 +19,7 @@ describe("project Pi settings", () => {
       "npm:@narumitw/pi-goal@0.4.2",
       "npm:@narumitw/pi-plan-mode@0.4.2",
       "npm:@narumitw/pi-codex-usage@0.4.2",
+      "npm:@tifan/pi-recap@0.4.2",
     ]);
   });
 });

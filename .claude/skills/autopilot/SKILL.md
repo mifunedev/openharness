@@ -5,25 +5,27 @@ description: |
   labeled `autopilot` that has no open PR. When the queue is empty it runs
   first-principles `/harness-audit` research, files its own `autopilot`
   ticket from the top-ranked finding, and builds that. Decomposes via the pm
-  agent, scaffolds against the ticket with `/ship-spec --issue`, implements
-  it with the resumable Ralph runner (`scripts/ralph.sh`), runs an `/eval`
-  regression gate, and finalizes
+  agent, scaffolds against the ticket with `/ship-spec --issue`, then defaults
+  to an expert Advisor in the same Pi cron tmux session: compact, execute
+  `tasks/<slug>/prd.json` through `/delegate`, run an `/eval` regression gate, and finalize
   a ready-for-review PR whose description states why this item was selected.
   Harness-infra only (skills/rules/docs/scripts/crons/wiki) — never sandbox
   application code. Runs in its own per-run tmux session. Caps: 6 open
   autopilot PRs created per UTC day AND 10 total open; never auto-merges.
   TRIGGER when: the hourly crons/autopilot.md fires, or invoked manually on
   demand (e.g. /autopilot --dry-run to preview the next selection).
-argument-hint: "[--dry-run]"
+argument-hint: "[--dry-run] [--executor=delegate-advisor|ralph]"
 ---
 
 # Autopilot
 
-Unattended self-improvement loop for the harness. Each run picks one harness-infra item from the GitHub `autopilot` issue queue (or researches and files one when the queue is empty), builds it end-to-end through `pm decompose → /ship-spec --issue → Ralph runner → /eval`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
+Unattended self-improvement loop for the harness. Each run picks one harness-infra item from the GitHub `autopilot` issue queue (or researches and files one when the queue is empty), builds it end-to-end through `pm decompose → /goal Advisor handoff → /ship-spec --issue → /compact → /delegate prd.json → /eval`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
 
-When fired by the hourly cron, the run lives in its own detached tmux session (`tmux: true` in `crons/autopilot.md`); **iff** the run produced a PR the session persists and resumes the run's own conversation as a live agent you can `tmux attach` and drive — attach and proceed if a run needs a judgment call (see § Session lifecycle).
+Executor toggle: `--executor=delegate-advisor|ralph`, or `AUTOPILOT_EXECUTOR=delegate-advisor|ralph`. Default is `delegate-advisor`. Ralph remains a compatibility fallback and uses the existing `scripts/ralph.sh "$SLUG"` loop.
 
-`--dry-run` prints the selection decision (queue ticket or research finding) plus the open-PR counts, then exits without calling `/ship-spec` or the Ralph runner and without touching git or GitHub.
+When fired by the hourly cron, the run lives in its own detached Pi tmux session (`tmux: true` in `crons/autopilot.md`). In `delegate-advisor` mode this same cron-created Pi session is the expert Advisor runtime; do **not** spawn a second advisor session. After the work branch is known, rename the tmux session to `autopilot-<branch>` with slashes sanitized, e.g. `autopilot-feat-123-slug`, so a human can attach and continue. Leave `autopilot-<branch>` sessions alive for manual attach/continue/reap after a PR exists (see § Session lifecycle).
+
+`--dry-run` prints the selection decision (queue ticket or research finding), executor mode, dedupe state, and open-PR counts, then exits without calling `/ship-spec`, `/delegate`, or the Ralph runner and without touching git or GitHub.
 
 ## Instructions
 
@@ -72,8 +74,8 @@ If `--dry-run`: print both counts now (the selection is printed after §2), then
 # vacuously satisfied. The array form "${OWNED_PATHS[@]}" expands correctly in both.
 # Write-surface cross-check (known-complete): every tracked path autopilot writes in
 # §2–§7 is within OWNED_PATHS — tasks/, evals/, memory/, CHANGELOG.md, and .claude/ are
-# the autopilot-written tracked dirs, all in the set — else it is committed by Ralph on
-# the feature branch or lives under /tmp. No autopilot write lands outside this surface.
+# the autopilot-written tracked dirs, all in the set — else it is committed by the
+# selected executor on the feature branch or lives under /tmp. No autopilot write lands outside this surface.
 OWNED_PATHS=(.claude/ context/ docs/ scripts/ crons/ wiki/ evals/ memory/ tasks/ CHANGELOG.md)
 
 # Self-heal a clean-but-stranded branch from a prior interrupted run (nothing to lose):
@@ -117,8 +119,18 @@ If the fast-forward fails, log `Result: FAIL` + `Observation: development diverg
 **Capture the tmux session context** (set by the cron runtime when `tmux: true`; EMPTY when invoked manually — every tmux step below must no-op when empty):
 
 ```bash
-SESSION="$CRON_TMUX_SESSION"        # e.g. cron-autopilot-0610-1805, or empty
-KEEP="$CRON_KEEP_MARKER"            # e.g. /tmp/cron-autopilot-0610-1805.keep, or empty
+SESSION="${CRON_TMUX_SESSION:-}"    # e.g. cron-autopilot-0610-1805, or empty
+KEEP="${CRON_KEEP_MARKER:-}"        # e.g. /tmp/cron-autopilot-0610-1805.keep, or empty
+EXECUTOR="${AUTOPILOT_EXECUTOR:-delegate-advisor}"
+# CLI flag wins over env: /autopilot --executor=ralph
+case "${ARGUMENTS:-}" in
+  *--executor=ralph*) EXECUTOR=ralph ;;
+  *--executor=delegate-advisor*) EXECUTOR=delegate-advisor ;;
+esac
+case "$EXECUTOR" in delegate-advisor|ralph) ;; *) echo "ERROR: invalid AUTOPILOT_EXECUTOR=$EXECUTOR"; exit 1 ;; esac
+echo "autopilot executor: $EXECUTOR"
+
+safe_branch_session() { printf '%s' "autopilot-$1" | tr '/:' '--' | tr '[:space:]' '-' | tr -cd 'A-Za-z0-9_.=-'; }
 ```
 
 ### 2. Select — issue queue first, research only when empty
@@ -138,7 +150,22 @@ gh issue list --state open --label autopilot \
   SELECTION_MODE=queue
   SELECTION_RATIONALE="Queue selection: implementing open autopilot issue #$ISSUE_NUM (\"$TITLE\") — the oldest actionable ticket (filed $CREATED) with no open PR."
   ```
-  If `[ -n "$SESSION" ]`, rename the session for readability: `tmux rename-session "cron-autopilot-$SLUG"`. Leave `$KEEP` unchanged — the keep-marker path is fixed at spawn time and the session wrapper checks that original path.
+  Compute the expected work branch and dedupe before launching work:
+  ```bash
+  BRANCH="feat/$ISSUE_NUM-$SLUG"
+  SAFE_SESSION=$(safe_branch_session "$BRANCH")   # autopilot-feat-123-slug
+  ACTIVE_MARKER="/tmp/$SAFE_SESSION.active"
+  LINKED_PR=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
+  LINKED_ISSUE_PR=$(gh issue list --state open --label autopilot --search "$ISSUE_NUM linked:pr" --json number --jq '.[0].number // empty')
+  if tmux has-session -t "$SAFE_SESSION" 2>/dev/null || [ -n "$LINKED_PR" ] || [ -n "$LINKED_ISSUE_PR" ] || [ -e "$ACTIVE_MARKER" ]; then
+    echo "DEDUPE: issue #$ISSUE_NUM / $SLUG already active (session=$SAFE_SESSION pr=$LINKED_PR linked_issue_pr=$LINKED_ISSUE_PR marker=$ACTIVE_MARKER); skipping"
+    # memory log Result: NOTHING-NEW, liveness NOTHING-NEW, exit 0; do not touch keep-marker.
+    exit 0
+  fi
+  [ -n "$SESSION" ] && tmux rename-session -t "$SESSION" "$SAFE_SESSION" && SESSION="$SAFE_SESSION"
+  touch "$ACTIVE_MARKER"
+  ```
+  Leave `$KEEP` unchanged — the keep-marker path is fixed at spawn time and the session wrapper checks that original path.
 - **No actionable item** — the queue is empty, OR every open `autopilot` ticket already has an open PR — → **fall through to research** (below). A single in-flight PR MUST NOT starve the loop: the §1 caps (6 open created/day, 10 total) are the pile-up guard, not an in-flight check. Those caps were already enforced above, so research here is cap-bounded by construction. Do **not** un-draft, finalize, or otherwise mutate a PR opened by a different run while idling on it — surface it (the heartbeat watches for stuck-green drafts) and proceed to research instead.
 
 **No actionable queue item → research** (first-principles pass — fires whenever the queue is empty *or* every open ticket already has a PR):
@@ -160,15 +187,16 @@ gh issue list --state open --label autopilot \
    SELECTION_MODE=research
    SELECTION_RATIONALE="Research selection: queue was empty; /harness-audit ranked this finding #1 by impact among harness-infra candidates. First-principles rationale: <reasoning>. Filed as #$ISSUE_NUM."
    ```
-   Rename the session as above. Then **implement it this same run** (§3 onward).
+   Run the same `BRANCH` / `SAFE_SESSION` / `ACTIVE_MARKER` duplicate guard and session rename block described above. Then **implement it this same run** (§3 onward).
 
 **`--dry-run` exit** — print:
 
 ```
 [dry-run] mode: $SELECTION_MODE
 [dry-run] selected: #$ISSUE_NUM ($SLUG)        # research path: "would file + build: <finding>"
+[dry-run] executor: $EXECUTOR
 [dry-run] open autopilot PRs created today: $OPEN_TODAY (cap 6); total open: $TOTAL_OPEN (ceiling 10)
-[dry-run] exiting without calling /ship-spec or scripts/ralph.sh
+[dry-run] exiting without calling /ship-spec, /delegate, or scripts/ralph.sh
 ```
 
 In `--dry-run`, the research path ranks findings but MUST NOT `gh issue create` — print the would-be finding instead. Then exit 0.
@@ -202,17 +230,25 @@ Pass a 5-field advisor-model briefing:
 **Out of scope**: PRD JSON generation, branch creation, git operations.
 ```
 
-Capture the pm output as `PM_DESC` (the first sentence) and `PM_PLAN` (the rest).
+Capture the pm output as `PM_DESC` (the first sentence) and `PM_PLAN` (the rest). This PM/advisor plan is constructed **before** the implementation goal is started and becomes the input to the goal prompt.
+
+In `delegate-advisor` mode, set the active goal with this exact phrase (preserve it verbatim for observability and eval coverage):
+
+```text
+/goal Audit plan /w @"pm (agent)" using ultrathink, then /ship-spec and execute prd.json as an expert Advisor to orchestrate /delegate
+```
+
+Include `ISSUE_NUM`, `SLUG`, `BRANCH`, `SELECTION_RATIONALE`, `PM_DESC`, and `PM_PLAN` immediately under the goal prompt so the Advisor can audit the plan, call `/ship-spec`, then execute the generated JSON via `/delegate`.
 
 ### 4. /ship-spec --issue
 
-Run `/ship-spec` against the existing ticket (the `--issue` flag links it instead of opening a duplicate):
+In `delegate-advisor` mode the active `/goal` drives this step from the PM plan. Run `/ship-spec` against the existing ticket (the `--issue` flag links it instead of opening a duplicate):
 
 ```
 /ship-spec "$PM_DESC" --plan <PM_PLAN content> --prefix feat --issue $ISSUE_NUM
 ```
 
-`/ship-spec` runs `/prd` → 2 critics → (skips issue creation, reuses #$ISSUE_NUM) → `/ralph` → branch `feat/$ISSUE_NUM-$SLUG` → **draft** PR. **Capture `PR_NUM`.**
+`/ship-spec` runs `/prd` → 2 critics → (skips issue creation, reuses #$ISSUE_NUM) → `/ralph` (JSON generation only) → branch `feat/$ISSUE_NUM-$SLUG` → **draft** PR with `tasks/$SLUG/prd.json`. **Capture `PR_NUM` and the actual `BRANCH`.** After the branch exists, ensure the cron tmux session is named `$(safe_branch_session "$BRANCH")` (for example `autopilot-feat-123-slug`) and keep `ACTIVE_MARKER=/tmp/$(safe_branch_session "$BRANCH").active` until the run is finalized or left for manual continuation.
 
 **Critic HALT handling** — if `/ship-spec` emits `HALT` (critic gate rejected the spec):
 - Comment the verdict on the ticket and block it so it can't retry-loop hourly:
@@ -238,17 +274,46 @@ if ! gh pr view "$PR_NUM" --json body --jq .body | grep -q "## Selection rationa
 fi
 ```
 
-### 5. Implement — Ralph runner
+### 5. Implement — executor
 
-`/ship-spec` (§4) scaffolds the four-file Ralph contract at `tasks/$SLUG/` (`prd.md`, `prd.json`, `prompt.md`, `progress.txt`). Execute the stories with the **Ralph loop runner** rather than an in-process `/delegate` wave: the loop persists per-story state (`prd.json` `passes` + `progress.txt`), so a mid-run Claude usage-limit or crash **resumes from the last passing story** instead of losing the whole run and leaving a spec-only draft PR (the in-process failure mode — `memory/MEMORY.md` 2026-06-11/06-12). Ralph also falls back `claude→codex` when Claude is throttled; explicit `--harness=pi` remains available and can fall back to Codex.
+`/ship-spec` (§4) scaffolds `tasks/$SLUG/prd.json` plus the task prompt/progress files. Dispatch by executor:
 
-The main checkout is already on `feat/$ISSUE_NUM-$SLUG` (§4) and has `node_modules`, so launch the loop here — it runs in its own tmux session named `$SLUG`, committing one story per iteration to the branch:
+#### `delegate-advisor` (default)
+
+Use the cron-created Pi tmux session as the expert Advisor runtime. Do **not** spawn a second advisor tmux session and do **not** call `scripts/ralph.sh` in this mode. The Advisor must execute the JSON through `/delegate` only after a manual compaction boundary:
+
+1. Verify `tasks/$SLUG/prd.json` exists and commit any `/ship-spec` scaffold changes already staged by that skill.
+2. Run Pi `/compact` before Advisor executes the JSON. This is mandatory; do not call `/delegate` until `/compact` completes. Use this compaction prompt:
+
+   ```text
+   Preserve autopilot Advisor handoff context: issue #$ISSUE_NUM, slug $SLUG, branch $BRANCH, PR #$PR_NUM, selection rationale, PM plan, /ship-spec critique summary, tasks/$SLUG/prd.json path and contents, executor=$EXECUTOR, and finalization requirements (/eval, CI, PR-ready or draft-with-comment, no auto-merge, restore development, leave autopilot-<branch> tmux session alive).
+   ```
+
+3. As the expert Advisor, audit `tasks/$SLUG/prd.json`, decompose it into safe waves, and orchestrate execution with `/delegate`. The invocation contract is:
+
+   ```text
+   /delegate --plan tasks/$SLUG/prd.json
+   ```
+
+   Use `general-purpose` (or an equivalent write-capable worker) for implementation tasks; keep `pm`/`critic` read-only review workers where appropriate. The Advisor remains in the foreground Pi session and coordinates until all acceptance criteria in `prd.json` pass or a blocker is identified.
+
+4. On success, ensure the implementation is committed on `BRANCH` with a `Submitted-by:` trailer tied to the active submitter, then proceed to §6.
+
+**Delegate-advisor failure compensation** — if `/delegate --plan tasks/$SLUG/prd.json` fails, stalls unrecoverably, or leaves acceptance criteria incomplete:
+```bash
+gh pr comment "$PR_NUM" --body "autopilot: delegate-advisor executor did not complete tasks/$SLUG/prd.json. PR left draft; attach to tmux session $SESSION and continue with \`/delegate --plan tasks/$SLUG/prd.json\`. Status: DELEGATE-FAIL."
+```
+- Memory log `Result: DELEGATE-FAIL`, liveness `DELEGATE-FAIL`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), leave `ACTIVE_MARKER` in place for duplicate suppression, the canonical scoped restore (`git checkout development -- "${OWNED_PATHS[@]}"` then `git checkout development`, then assert `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit 1 (non-destructive — never auto-close the issue or PR).
+
+#### `ralph` fallback
+
+When `EXECUTOR=ralph` (from `--executor=ralph` or `AUTOPILOT_EXECUTOR=ralph`), keep the prior resumable runner path. The main checkout is already on `feat/$ISSUE_NUM-$SLUG` (§4) and has `node_modules`, so launch the loop here — it runs in its own tmux session named `$SLUG`, committing one story per iteration to the branch:
 
 ```bash
 scripts/ralph.sh "$SLUG"
 ```
 
-Then **bash-poll** `tasks/$SLUG/progress.txt` for the terminal sentinel. Polling is pure shell — it keeps the autopilot's own session **off Claude** (no token spend) while Ralph does the throttle-prone implementation. Each round is bounded under the Bash tool ceiling; **re-run the round** until it reports `RALPH: DONE` or `RALPH: SESSION-GONE`, up to ~8 rounds (~64 min wall-clock):
+Then **bash-poll** `tasks/$SLUG/progress.txt` for the terminal sentinel. Each round is bounded under the Bash tool ceiling; **re-run the round** until it reports `RALPH: DONE` or `RALPH: SESSION-GONE`, up to ~8 rounds (~64 min wall-clock):
 
 ```bash
 # one poll round — re-run until it prints RALPH: DONE or RALPH: SESSION-GONE
@@ -268,13 +333,11 @@ done
 tmux kill-session -t "$SLUG" 2>/dev/null || true
 gh pr comment "$PR_NUM" --body "autopilot: Ralph loop did not reach STATUS: COMPLETE (timeout / exhausted / error). PR left draft; tasks/$SLUG/ state is resumable — re-run \`scripts/ralph.sh $SLUG\` to continue. Status: RALPH-INCOMPLETE."
 ```
-- Memory log `Result: RALPH-INCOMPLETE`, liveness `RALPH-INCOMPLETE`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), the canonical scoped restore (`git checkout development -- "${OWNED_PATHS[@]}"` then `git checkout development`, then assert `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit 1 (non-destructive — never auto-close the issue or PR).
-
-> **Why Ralph, not `/delegate`**: the in-process wave dies wholesale on a mid-run usage-limit (documented — `memory/MEMORY.md` 2026-06-11), leaving an un-implemented draft. Ralph's resumable per-story state + harness fallback survive it, and it **relocates** the implementation work (does not duplicate it) into a loop whose fallback can run off Claude. `/delegate` remains the better tool for a task whose stories are genuinely **independent and parallelizable** (Ralph is strictly sequential, one story/iteration) — an operator may swap §5 back for such a task. `overlap: false` still holds: the autopilot's foreground session blocks on the poll until Ralph finishes, so the next hourly fire cannot overlap (it logs `SKIPPED_OVERLAP`).
+- Memory log `Result: RALPH-INCOMPLETE`, liveness `RALPH-INCOMPLETE`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), leave `ACTIVE_MARKER` in place for duplicate suppression, the canonical scoped restore (`git checkout development -- "${OWNED_PATHS[@]}"` then `git checkout development`, then assert `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit 1 (non-destructive — never auto-close the issue or PR).
 
 ### 6. Eval gate
 
-After Ralph completes (§5), **while still on the work branch**, run the probe suite:
+After the selected executor completes (§5), **while still on the work branch**, run the probe suite:
 
 ```
 /eval
@@ -341,6 +404,7 @@ cat >> "memory/$TODAY/log.md" <<EOF
 
 ## Autopilot -- $TIME UTC
 - **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | RALPH-INCOMPLETE | DELEGATE-FAIL | BLOCKED-OWNED-WIP | FAIL>
+- **Executor**: <delegate-advisor | ralph>
 - **Selected**: <#issue + slug, or "none">
 - **Session**: <tmux session name, or "none">
 - **Action**: <one-line summary of what was done>
@@ -356,12 +420,12 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - **Selection rationale**: every PR autopilot opens MUST carry a `## Selection rationale` section as the FIRST section of its description, stating why this item was chosen this session (queue position, or the research finding + impact ranking).
 - **No auto-merge**: autopilot finalizes a *ready-for-review* PR; a human merges. The word "merge" must never appear in an autopilot-generated commit message, PR body, or `gh` command.
 - **Caps**: at most 6 open autopilot PRs created per UTC day AND 10 total open at any time. A close/merge frees a slot.
-- **Implementation executor**: §5 launches the Ralph loop (`scripts/ralph.sh "$SLUG"`) and bash-polls `tasks/$SLUG/progress.txt` — the autopilot's own session blocks on the poll (no `run_in_background`), so `overlap: false` still guards the next fire. Ralph's resumable per-story state + `claude→codex` fallback survive a mid-run usage-limit; `/delegate` is the documented fallback for genuinely parallelizable multi-story tasks (Ralph is strictly sequential).
+- **Implementation executor**: default `delegate-advisor` (`AUTOPILOT_EXECUTOR` unset) keeps the cron-created Pi tmux session as the Advisor runtime, runs the exact `/goal Audit plan /w @"pm (agent)" using ultrathink, then /ship-spec and execute prd.json as an expert Advisor to orchestrate /delegate` prompt, requires `/compact` before `/delegate --plan tasks/$SLUG/prd.json`, and leaves `autopilot-<branch>` alive. `ralph` mode is an explicit fallback via `--executor=ralph` or `AUTOPILOT_EXECUTOR=ralph` and launches `scripts/ralph.sh "$SLUG"`.
 - **Non-destructive failure**: never auto-close issues or PRs. On failure, comment + log. Human inspection is the recovery path.
 - **autopilot-blocked**: a critic HALT labels the ticket `autopilot-blocked`, excluding it from the queue query until a human removes the label — a bad ticket can't retry-loop hourly.
 - **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.
 - **Liveness on every path**: every exit appends `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "<TOKEN>" >> crons/.cron.log` — skip, halt, error, success. A missing liveness line looks like a crash.
-- **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `RALPH-INCOMPLETE`, `DELEGATE-FAIL`). No-PR paths never touch the keep-marker, so their sessions auto-close. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
+- **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `RALPH-INCOMPLETE`, `DELEGATE-FAIL`). In delegate-advisor mode, the persisted session name is `autopilot-<branch>` (sanitized, e.g. `autopilot-feat-123-slug`) and is intentionally left alive for manual attach/continue/reap; no separate advisor session is created. No-PR paths never touch the keep-marker, so their sessions auto-close. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
 - **Branch restore (canonical scoped restore)**: every path that changed the working branch (all paths reaching §4+) must run the two-step `git checkout development -- "${OWNED_PATHS[@]}"` (discard own owned-path residue — tracked staged AND unstaged) THEN `git checkout development` (switch HEAD), then assert BOTH `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` AND `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`. The scope step MUST precede the switch (it clears owned residue that a non-forced `git checkout development` would otherwise refuse to overwrite). It discards only the run's own owned-path residue (committed work is preserved on the feature branch / draft PR); it touches only tracked files, so an untracked owned-path orphan from a mid-run crash is cleaned manually (`git clean` is deliberately NOT used); and any foreign change OUTSIDE the owned surface survives byte-for-byte (left in place / left staged), ignored by the scoped assertion and the next §1 check. The owned-scoped assertion mirrors the §1 owned check, so "assertion passes" ≡ "the next fire's §1 guard will pass". §1 additionally self-heals a *clean*-but-stranded branch (its forced tree-wide checkout is the only remaining `-f` form); a *dirty* owned tree at §1 still blocks (BLOCKED-OWNED-WIP) to protect any owned WIP.
 
 ## Reference
@@ -377,8 +441,8 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | `PR-DRAFT-CI-RED` | PR left draft because CI was red or `/ci-status` timed out |
 | `PR-DRAFT-EVAL-RED` | PR left draft because `/eval` reported a NEW (green→red) probe regression or a non-zero runner exit |
 | `HALT-CRITIC-GATE` | `/ship-spec` critic gate rejected the spec; ticket labeled `autopilot-blocked`, no PR opened |
-| `RALPH-INCOMPLETE` | §5 Ralph loop did not reach `STATUS: COMPLETE` (timeout, loop died, or all harnesses exhausted) after `/ship-spec` opened a PR; PR left draft — `tasks/$SLUG/` state is resumable via `scripts/ralph.sh $SLUG` |
-| `DELEGATE-FAIL` | the optional `/delegate` fallback executor failed after `/ship-spec` opened a PR; PR left draft |
+| `RALPH-INCOMPLETE` | §5 Ralph fallback loop did not reach `STATUS: COMPLETE` (timeout, loop died, or all harnesses exhausted) after `/ship-spec` opened a PR; PR left draft — `tasks/$SLUG/` state is resumable via `scripts/ralph.sh $SLUG` |
+| `DELEGATE-FAIL` | the default delegate-advisor executor failed or stalled while executing `tasks/$SLUG/prd.json` via `/delegate`; PR left draft and `autopilot-<branch>` session is left alive for manual continuation |
 | `SKIPPED_OVERLAP` | Emitted by the cron runtime (not this skill): a previous fire of this id was still running with `overlap: false` |
 | `BLOCKED-OWNED-WIP` | §1 found the OWNED surface (`${OWNED_PATHS[@]}`) dirty; run skipped until the owned surface is clean — non-destructive to foreign WIP (a stray edit outside the owned set proceeds normally) |
 | `FAIL` | Pre-flight failure (wrong branch, diverged `development`) before any PR |
@@ -391,4 +455,5 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | `crons/.cron.log` | Append-only liveness log read by the cron runtime |
 | `memory/<today>/log.md` | Daily session log; autopilot appends an entry each run |
 | `.claude/agents/pm.md` | pm agent definition (invoked via `Agent subagent_type: pm`) |
-| `$CRON_TMUX_SESSION` / `$CRON_KEEP_MARKER` | Per-run tmux session name + keep-marker path, set by the cron runtime (empty on manual runs) |
+| `$CRON_TMUX_SESSION` / `$CRON_KEEP_MARKER` | Per-run tmux session name + keep-marker path, set by the cron runtime (empty on manual runs); delegate-advisor renames the session to `autopilot-<branch>` after branch discovery |
+| `AUTOPILOT_EXECUTOR` | Optional executor toggle: `delegate-advisor` (default) or `ralph` fallback |

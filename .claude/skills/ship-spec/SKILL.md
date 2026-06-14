@@ -297,7 +297,9 @@ Capture the PR URL and PR number `<PR>`. This is an observability checkpoint, no
 
 ### Stage 10 — Launch the expert `/worktrees` Advisor (tmux + `/goal`)
 
-The orchestrator does not implement inline. It launches an **expert Advisor on `/worktrees`** in its own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode persists the run to completion. Session name `agent-ship-<slug>` (sanitize slashes/space → `-`), distinct from the `<slug>`-named loop sessions `scripts/ralph.sh` creates.
+**Worktree-mode shortcut (autopilot's default — `$CRON_WORKTREE` set).** When `$CRON_WORKTREE` is set, this run is ALREADY executing inside an isolated worktree, and Stage 8's `git checkout -b <prefix>/<N>-<slug>` already put that worktree on the feature branch. Do **NOT** create a second worktree and do **NOT** launch a separate Advisor session — a second `git worktree add` for the same branch would either nest under the cron worktree (relative path) or fail (`branch already checked out`). Instead build **inline in the current worktree** (the same path as the tmux-unavailable fallback below): run `/delegate --plan tasks/<slug>/prd.json` with `general-purpose` worker(s) that operate in `$CRON_WORKTREE` (= cwd) and run `scripts/ralph.sh <slug>`, monitor `tasks/<slug>/progress.txt` to `STATUS: COMPLETE`, then continue **in the foreground** to Stage 11 (`/eval`), Stage 11.5 (`/compact`), and Stage 12 (`/pr-audit` → `gh pr ready` only if promotable). Skip the rest of this stage. The cron worktree's isolation already satisfies the "keep work off the shared checkout" goal; the runtime/heartbeat reaps the worktree afterward.
+
+Otherwise (standalone/root invocation, no `$CRON_WORKTREE`), the orchestrator does not implement inline. It launches an **expert Advisor on `/worktrees`** in its own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode persists the run to completion. Session name `agent-ship-<slug>` (sanitize slashes/space → `-`), distinct from the `<slug>`-named loop sessions `scripts/ralph.sh` creates.
 
 ```bash
 SESSION="agent-ship-<slug>"   # e.g. printf %s "<slug>" | tr '/:[:space:]' '-'

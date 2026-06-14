@@ -9,6 +9,7 @@ CRON="$ROOT/crons/autopilot.md"
 RUNTIME="$ROOT/scripts/cron-runtime.ts"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
 TESTS="$ROOT/scripts/__tests__/cron-runtime.test.ts"
+SHIPSPEC="$ROOT/.claude/skills/ship-spec/SKILL.md"
 
 missing=()
 
@@ -38,6 +39,11 @@ grep -Eq '^worktree:[[:space:]]*true[[:space:]]*$' "$CRON" || missing+=("crons/a
 grep -Fq 'worktree: fm.worktree === "true"' "$RUNTIME" || missing+=("parseCronFile reads the worktree frontmatter flag")
 grep -Fq '"SPAWNED_WORKTREE"' "$RUNTIME" || missing+=("fireTmux logs SPAWNED_WORKTREE for an isolated worktree fire")
 grep -Fq 'CRON_WORKTREE=' "$RUNTIME" || missing+=("worktree wrapper exports CRON_WORKTREE so the agent knows it is isolated")
+# ship-spec must reuse $CRON_WORKTREE (build inline) instead of nesting/colliding a
+# second worktree when autopilot runs it from inside the cron worktree (issue #142).
+if [[ -f "$SHIPSPEC" ]]; then
+  grep -Fq 'CRON_WORKTREE' "$SHIPSPEC" || missing+=("ship-spec Stage 10 builds inline in \$CRON_WORKTREE instead of nesting a second worktree")
+fi
 grep -Fq '[ -z "$OVERLAP_PIDFILE" ] && [ -n "$SESSION" ] && OVERLAP_PIDFILE="/tmp/cron-autopilot.pid"' "$SKILL" || missing+=("autopilot skill falls back before cron runtime restart")
 grep -Fq 'release_overlap_lock()' "$SKILL" || missing+=("autopilot skill defines release_overlap_lock")
 grep -Fq 'release_overlap_lock                         # terminal PR state reached' "$SKILL" || missing+=("terminal PR restore snippet releases overlap lock")

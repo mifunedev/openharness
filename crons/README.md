@@ -20,6 +20,7 @@ enabled: true
 overlap: false           # skip new fire if previous still running
 catchup: false           # don't replay missed fires after downtime
 tmux: false              # optional — run each fire in its own detached tmux session
+agent: pi                # optional — override CRON_AGENT_BIN for this job only
 description: <one-line>
 ---
 
@@ -96,9 +97,10 @@ keep running.
 A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
 
 - **Session name**: `cron-<id>-<MMDD>-<HHMM>` (e.g. `cron-autopilot-0610-1805`), derived from the fire time. The runtime logs `SPAWNED <session>` to `.cron.log`.
+- **Agent selection**: by default jobs use `CRON_AGENT_BIN` (compose default: `claude`). A cron can set `agent: <binary>` in frontmatter to override that for one job; `autopilot.md` sets `agent: pi` so its kept Advisor session resumes as Pi without forcing heartbeat/cleanup/eval onto Pi.
 - **Agent attribution**: the shell wrapper logs `AGENT_START agent=<name>` and `AGENT_DONE agent=<name> exit=<code>` from inside the run. If default Claude falls back to Codex, `.cron.log` shows `AGENT_START agent=claude`, `AGENT_FALLBACK from=claude to=codex`, `AGENT_START agent=codex`, then `AGENT_DONE agent=codex exit=<code>`.
 - **Env exported into the agent**: `CRON_TMUX_SESSION=<session>` and `CRON_KEEP_MARKER=/tmp/<session>.keep`.
-- **Keep-marker contract**: if the agent `touch`es `$CRON_KEEP_MARKER` before exiting, the session persists by resuming the run's own conversation as a live, attachable agent (`claude --continue` for a Claude run, or `codex` after a Claude→Codex fallback), falling back to a shell if that exits; otherwise it auto-closes when the agent finishes. The autonomous run itself is always headless (`claude -p`, or `codex exec --sandbox danger-full-access` after a usage/session-limit fallback); the resumed agent does nothing until a human attaches, so it adds no unattended-permission exposure. By convention a job keeps its session only when the run produced something worth revisiting (e.g. autopilot keeps it when a PR was opened).
+- **Keep-marker contract**: if the agent `touch`es `$CRON_KEEP_MARKER` before exiting, the session persists by resuming the run's own conversation as a live, attachable agent (`claude --continue` for a Claude run, `pi --continue` for an `agent: pi` run, or `codex` after a Claude→Codex fallback), falling back to a shell if that exits; otherwise it auto-closes when the agent finishes. The autonomous run itself is headless (`<agent> -p`, or `codex exec --sandbox danger-full-access` after a Claude usage/session-limit fallback); the resumed agent does nothing until a human attaches, so it adds no unattended-permission exposure. By convention a job keeps its session only when the run produced something worth revisiting (e.g. autopilot keeps it when a PR was opened).
 - **Overlap guard**: a per-id pidfile `/tmp/cron-<id>.pid` blocks a new fire while a previous one is still running when `overlap: false`; the skipped fire logs `SKIPPED_OVERLAP`.
 
 Jobs with `tmux` absent or `false` keep the default in-process spawn. Steer autopilot's priorities by filing GitHub issues labeled `autopilot` (the work queue) — no in-repo backlog file.

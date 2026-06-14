@@ -6,6 +6,7 @@ enabled: true
 overlap: false
 catchup: false
 tmux: true
+agent: pi
 description: Hourly autopilot — issue-queue-first harness-infra improvements in a Pi tmux Advisor session
 ---
 

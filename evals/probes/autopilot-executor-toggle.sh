@@ -3,7 +3,8 @@
 # source: conversation 2026-06-13 (autopilot delegate-advisor executor)
 # desc: /autopilot defaults to delegate-advisor, keeps Ralph as explicit fallback,
 #       uses the exact Advisor /goal phrase, compacts before prd.json delegation,
-#       renames cron tmux sessions to autopilot-<branch>, and dedupes active work.
+#       renames cron tmux sessions to autopilot-<branch>, dedupes active work,
+#       cleans finalized active markers, and keeps dry-run research non-mutating.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -63,6 +64,16 @@ grep -Fq 'tmux has-session -t "$SAFE_SESSION"' "$SKILL" || missing+=("tmux dupli
 grep -Fq 'LINKED_PR=$(gh pr list --state open --head "$BRANCH"' "$SKILL" || missing+=("branch PR duplicate guard")
 grep -Fq 'LINKED_ISSUE_PR=$(gh issue list --state open --label autopilot --search "$ISSUE_NUM linked:pr"' "$SKILL" || missing+=("linked issue PR duplicate guard")
 grep -Fq '[ -e "$ACTIVE_MARKER" ]' "$SKILL" || missing+=("active marker duplicate guard")
+grep -Fq 'cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER"; }' "$SKILL" || missing+=("active marker cleanup helper")
+grep -Fq 'Clean the active marker on finalized PR paths' "$SKILL" || missing+=("finalized PR paths clean active marker")
+grep -Fq 'Keep `ACTIVE_MARKER` only on incomplete executor paths' "$SKILL" || missing+=("incomplete executor paths keep active marker")
+
+# Dry-run research must not create GitHub issues before the dry-run exit.
+dryrun_line="$(grep -nF 'exit before any `gh issue create` mutation' "$SKILL" | head -1 | cut -d: -f1 || true)"
+issue_create_line="$(grep -nF 'gh issue create --label autopilot' "$SKILL" | head -1 | cut -d: -f1 || true)"
+if [[ -z "$dryrun_line" || -z "$issue_create_line" || "$dryrun_line" -ge "$issue_create_line" ]]; then
+  missing+=("research dry-run guard appears before gh issue create")
+fi
 
 # Top-level docs should advertise the changed operator contract.
 grep -Fq 'AUTOPILOT_EXECUTOR=ralph' "$AGENTS" || missing+=("AGENTS documents Ralph toggle")
@@ -73,5 +84,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS: autopilot defaults to delegate-advisor with exact goal, compact-before-delegate, safe tmux naming, dedupe guard, and Ralph fallback" >&2
+echo "PASS: autopilot defaults to delegate-advisor with exact goal, compact-before-delegate, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard, and Ralph fallback" >&2
 exit 0

@@ -131,6 +131,7 @@ case "$EXECUTOR" in delegate-advisor|ralph) ;; *) echo "ERROR: invalid AUTOPILOT
 echo "autopilot executor: $EXECUTOR"
 
 safe_branch_session() { printf '%s' "autopilot-$1" | tr '/:' '--' | tr '[:space:]' '-' | tr -cd 'A-Za-z0-9_.=-'; }
+cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER"; }
 ```
 
 ### 2. Select — issue queue first, research only when empty
@@ -178,7 +179,7 @@ gh issue list --state open --label autopilot \
    DUPE_MERGED_PR=$(gh pr list --state merged --limit 50 --json number,title,headRefName --jq '.[] | "\(.number) \(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
    ```
 3. **No survivor** → memory log `Result: NOTHING-NEW`, liveness `NOTHING-NEW`, exit 0 (no keep-marker). Research fires whenever no actionable ticket exists — both when the queue is fully drained AND when open tickets are all awaiting review. Dedupe (against open issues, open PRs, and merged PRs) plus the §1 caps bound the output: an already-filed finding dedupes to `NOTHING-NEW`; worst case an hourly audit yields `NOTHING-NEW` repeatedly — accepted cost.
-4. **Top survivor** → file the ticket from the plan. Write a body to `/tmp/autopilot-research-$$.md` containing (a) the finding, (b) the first-principles rationale, (c) a 3–7-bullet plan sketch:
+4. **Top survivor** → write a body to `/tmp/autopilot-research-$$.md` containing (a) the finding, (b) the first-principles rationale, (c) a 3–7-bullet plan sketch. If `--dry-run` is set, print the would-file finding in the dry-run block below and exit before any `gh issue create` mutation. Otherwise file the ticket from the plan:
    ```bash
    gh issue create --label autopilot --title "feat: <finding>" --body-file /tmp/autopilot-research-$$.md
    ```
@@ -255,8 +256,9 @@ In `delegate-advisor` mode the active `/goal` drives this step from the PM plan.
   ```bash
   gh issue comment "$ISSUE_NUM" --body "autopilot: /ship-spec critic gate rejected the spec. Verdict: <summary>. Labeled autopilot-blocked; remove the label to retry."
   gh issue edit "$ISSUE_NUM" --add-label autopilot-blocked
+  cleanup_active_marker
   ```
-- Memory log `Result: HALT-CRITIC-GATE`, liveness `HALT-CRITIC-GATE`, exit 0 (no PR → no keep-marker).
+- Memory log `Result: HALT-CRITIC-GATE`, liveness `HALT-CRITIC-GATE`, exit 0 (no PR → no keep-marker and no active-marker).
 
 **Add the `autopilot` label** to the PR:
 ```bash
@@ -385,6 +387,8 @@ git push origin HEAD
 **Never call `gh pr merge`** — autopilot does not auto-merge under any condition.
 
 **Persist the session** (a PR exists on every §7 path): `[ -n "$KEEP" ] && touch "$KEEP"`.
+
+**Clean the active marker on finalized PR paths**: after §7 creates or updates the PR state (`PR-READY`, `PR-DRAFT-CI-RED`, or `PR-DRAFT-EVAL-RED`), run `cleanup_active_marker`. The open PR and persisted `autopilot-<branch>` session are now the duplicate guards; leaving `/tmp/$SAFE_SESSION.active` behind would permanently suppress a future run after the PR/session is closed. Keep `ACTIVE_MARKER` only on incomplete executor paths (`DELEGATE-FAIL`, `RALPH-INCOMPLETE`) where manual continuation is expected.
 
 **Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical **scoped restore** — a non-destructive two-step that discards only this run's own OWNED-path residue, then switches HEAD. Committed work is safe on the branch / draft PR. The scope step MUST precede the branch switch (it clears owned residue that would otherwise make a non-forced `git checkout development` refuse). It touches only **tracked** files, so an untracked owned-path orphan from a mid-run crash is NOT auto-removed (`git clean` is deliberately NOT used — too destructive across `tasks/`, `memory/`, `.claude/`); clean such orphans manually. Any **foreign** change OUTSIDE the owned surface — modified or staged (e.g. `.codex/config.toml`) — survives byte-for-byte (left in place / left staged) and is ignored by the scoped assertion and the next §1 check:
 ```bash

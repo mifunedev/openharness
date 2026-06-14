@@ -15,6 +15,7 @@ describe("project Pi settings", () => {
 
     expect(settings.packages).toEqual([
       "npm:@tintinweb/pi-subagents@0.7.1",
+      "npm:@tintinweb/pi-tasks@0.7.0",
       "npm:@narumitw/pi-goal@0.4.2",
     ]);
   });

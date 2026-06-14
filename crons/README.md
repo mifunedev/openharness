@@ -13,7 +13,7 @@ See `scripts/cron-runtime.ts` for the runtime implementation
 
 ```markdown
 ---
-id: <unique-id>          # must match filename, kebab-case
+id: <unique-id>          # runtime-enforced: must match filename, kebab-case
 schedule: "0 23 * * 0"   # 5-field cron expression
 timezone: America/Denver
 enabled: true
@@ -56,6 +56,8 @@ status column is one of:
 |-------|---------|
 | `BOOT` | Runtime started and scheduled its crons (`id` is `system`; `msg` is the cron count). |
 | `RELOAD` | A `SIGHUP` reschedule re-read `crons/` and re-armed every schedule without restarting the runtime (`id` is `system`; `msg` is the cron count, e.g. `4 scheduled, 0 skipped`). See [Hot-reload](#hot-reload). |
+| `ID_INVALID` | A cron was skipped because its resolved `id` or filename basename is not lowercase kebab-case (`^[a-z0-9][a-z0-9-]*$`). |
+| `ID_MISMATCH` | A cron was skipped because its explicit frontmatter `id` does not match the filename basename. |
 | `SCHED_INVALID` | A cron was skipped because its `schedule:` is not a valid cron expression (`msg` contains the offending schedule string). |
 | `SPAWNED` | A `tmux: true` fire launched its detached session (`msg` is the session name). |
 | `FIRE` | A scheduled job fired and began running its body. |
@@ -75,10 +77,11 @@ bounded to 200 chars):
 2026-06-12T23:30:00.000Z\theartbeat\tEXIT_1\tError: connect ECONNREFUSED 127.0.0.1:5432 … (bounded tail of the job's log)
 ```
 
-A cron whose `schedule:` string is not a valid cron expression is skipped
-at load time — it logs `SCHED_INVALID` and never enters the scheduled set,
-so a single malformed schedule cannot crash the runtime and the other crons
-keep running.
+A cron whose resolved `id` or filename basename is unsafe, whose explicit
+`id` does not match the filename basename, or whose `schedule:` string is
+not a valid cron expression is skipped at load time — it logs `ID_INVALID`, `ID_MISMATCH`,
+or `SCHED_INVALID` and never enters the scheduled set. A single malformed
+cron definition cannot crash the runtime and the other crons keep running.
 
 `BODY_RELOADED` and `BODY_RELOAD_ERR` are documented under
 [Hot-reload](#hot-reload).

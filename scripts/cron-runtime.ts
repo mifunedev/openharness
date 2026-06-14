@@ -22,6 +22,11 @@ const CRONS_DIR = path.resolve(process.env.CRONS_DIR || "crons");
 const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";
+const CRON_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+
+export function isValidCronId(id: string): boolean {
+  return CRON_ID_PATTERN.test(id);
+}
 
 export function parseCronFile(content: string, file: string): CronEntry | null {
   const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---\s*\r?\n?([\s\S]*)$/);
@@ -83,6 +88,23 @@ export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
       continue;
     }
     if (!entry || !entry.enabled) continue;
+    const expectedId = path.basename(f, ".md");
+    if (!isValidCronId(entry.id)) {
+      logFn(
+        isValidCronId(expectedId) ? expectedId : "cron",
+        "ID_INVALID",
+        `invalid cron id: ${entry.id}`,
+      );
+      continue;
+    }
+    if (!isValidCronId(expectedId)) {
+      logFn(entry.id, "ID_INVALID", `invalid cron filename id: ${expectedId}`);
+      continue;
+    }
+    if (entry.id !== expectedId) {
+      logFn(entry.id, "ID_MISMATCH", `id must match filename: ${expectedId}`);
+      continue;
+    }
     // Invalid-schedule skip is a DISTINCT path from the silent unreadable-file
     // catch above: it runs after a non-null entry and OUTSIDE that try/catch, and
     // it logs SCHED_INVALID so the misconfiguration surfaces in crons/.cron.log
@@ -192,6 +214,7 @@ export function buildTmuxWrapper(opts: {
   promptFile: string;
 }): string {
   const { session, id, agentBin, promptFile } = opts;
+  if (!isValidCronId(id)) throw new Error(`invalid cron id: ${id}`);
   return (
     `echo $$ > /tmp/cron-${id}.pid; ` +
     `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep CRON_OVERLAP_PIDFILE=/tmp/cron-${id}.pid; ` +
@@ -230,6 +253,7 @@ export function buildCronAgentCommand(opts: {
     resumeFile,
     exitOnComplete = true,
   } = opts;
+  if (!isValidCronId(id)) throw new Error(`invalid cron id: ${id}`);
   const exitOrReturn = exitOnComplete ? `exit $status` : `true`;
   const resumeInit = resumeFile ? `printf '%s' ${agentBin} > ${resumeFile}; ` : "";
   const logAgentStart = cronLogCommand(id, "AGENT_START", '"agent=$active_agent"');
@@ -425,7 +449,7 @@ export function scheduleAll(
   activeJobs = [];
   let loadSkips = 0;
   const entries = loadCrons(dir, (id, status, msg) => {
-    if (status === "SCHED_INVALID") loadSkips++;
+    if (["SCHED_INVALID", "ID_INVALID", "ID_MISMATCH"].includes(status)) loadSkips++;
     logFn(id, status, msg);
   });
   let scheduled = 0;

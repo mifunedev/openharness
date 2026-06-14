@@ -29,6 +29,7 @@ import {
   acquireLock,
   buildCronAgentCommand,
   buildTmuxWrapper,
+  isValidCronId,
   isValidSchedule,
   loadCrons,
   onJobError,
@@ -123,6 +124,20 @@ Heartbeat body.
   });
 });
 
+describe("isValidCronId", () => {
+  it("accepts kebab-case ids that begin with a lowercase letter or digit", () => {
+    expect(isValidCronId("heartbeat")).toBe(true);
+    expect(isValidCronId("eval-weekly")).toBe(true);
+    expect(isValidCronId("cron2-task")).toBe(true);
+  });
+
+  it("rejects shell metacharacters, path traversal, uppercase, and empty ids", () => {
+    for (const id of ["", "../evil", "evil;touch-pwned", "bad id", "Bad", "bad_id"]) {
+      expect(isValidCronId(id)).toBe(false);
+    }
+  });
+});
+
 describe("isValidSchedule", () => {
   it("returns true for a valid cron expression", () => {
     expect(isValidSchedule("0 * * * *")).toBe(true);
@@ -207,6 +222,17 @@ describe("buildTmuxWrapper", () => {
   it("writes the per-id pidfile and cleans it up", () => {
     expect(wrapper).toContain("echo $$ > /tmp/cron-autopilot.pid;");
     expect(wrapper).toContain("rm -f /tmp/cron-autopilot.pid;");
+  });
+
+  it("rejects unsafe ids before generating shell wrapper text", () => {
+    expect(() =>
+      buildTmuxWrapper({
+        session: "cron-bad-0101-0000",
+        id: "bad;touch-pwned",
+        agentBin: "claude",
+        promptFile: "/tmp/prompt",
+      }),
+    ).toThrow("invalid cron id");
   });
 
   it("runs cleanup after a non-Claude agent command instead of bypassing it", () => {
@@ -333,6 +359,17 @@ describe("buildCronAgentCommand", () => {
     expect(command).toContain("'heartbeat' 'AGENT_FALLBACK'");
     expect(command).toContain("'heartbeat' 'AGENT_DONE'");
   });
+
+  it("rejects unsafe ids before generating agent command text", () => {
+    expect(() =>
+      buildCronAgentCommand({
+        id: "../evil",
+        agentBin: "claude",
+        promptFile: "/tmp/prompt",
+        logFile: "/tmp/log",
+      }),
+    ).toThrow("invalid cron id");
+  });
 });
 
 describe("loadCrons", () => {
@@ -380,7 +417,7 @@ describe("loadCrons", () => {
 
   it("logs SCHED_INVALID through the injected logFn naming the bad schedule", () => {
     writeFileSync(
-      path.join(tmp, "bad.md"),
+      path.join(tmp, "badcron.md"),
       `---\nid: badcron\nschedule: "not-a-cron"\nenabled: true\n---\nbody\n`,
     );
     const spy = vi.fn();
@@ -391,6 +428,62 @@ describe("loadCrons", () => {
     expect(status).toBe("SCHED_INVALID");
     expect(String(msg)).toContain("not-a-cron");
   });
+
+  it("skips and logs invalid cron ids before schedule validation", () => {
+    writeFileSync(
+      path.join(tmp, "bad.md"),
+      `---\nid: evil;touch-pwned\nschedule: "0 * * * *"\nenabled: true\n---\nbody\n`,
+    );
+    const spy = vi.fn();
+    expect(loadCrons(tmp, spy)).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(
+      "bad",
+      "ID_INVALID",
+      "invalid cron id: evil;touch-pwned",
+    );
+  });
+
+  it("skips and logs ids that do not match the filename basename", () => {
+    writeFileSync(
+      path.join(tmp, "heartbeat.md"),
+      `---\nid: autopilot\nschedule: "0 * * * *"\nenabled: true\n---\nbody\n`,
+    );
+    const spy = vi.fn();
+    expect(loadCrons(tmp, spy)).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(
+      "autopilot",
+      "ID_MISMATCH",
+      "id must match filename: heartbeat",
+    );
+  });
+
+  it("skips derived ids from unsafe filenames", () => {
+    writeFileSync(
+      path.join(tmp, "bad_id.md"),
+      `---\nschedule: "0 * * * *"\nenabled: true\n---\nbody\n`,
+    );
+    const spy = vi.fn();
+    expect(loadCrons(tmp, spy)).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(
+      "cron",
+      "ID_INVALID",
+      "invalid cron id: bad_id",
+    );
+  });
+
+  it("skips unsafe filename basenames even when the explicit id is valid", () => {
+    writeFileSync(
+      path.join(tmp, "bad_id.md"),
+      `---\nid: good\nschedule: "0 * * * *"\nenabled: true\n---\nbody\n`,
+    );
+    const spy = vi.fn();
+    expect(loadCrons(tmp, spy)).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(
+      "good",
+      "ID_INVALID",
+      "invalid cron filename id: bad_id",
+    );
+  });
 });
 
 describe("scheduleAll", () => {
@@ -398,11 +491,11 @@ describe("scheduleAll", () => {
     `---\nid: ${id}\nschedule: "${schedule}"\nenabled: true\n---\nbody\n`;
 
   it("schedules valid crons, skips an invalid sibling, and logs an accurate BOOT summary", () => {
-    // Files load in alphabetical order: a-good (valid), b-bad (invalid → dropped
-    // at load time by US-002's filter), c-good (valid).
-    writeFileSync(path.join(tmp, "a-good.md"), cron("agood", "0 * * * *"));
-    writeFileSync(path.join(tmp, "b-bad.md"), cron("bbad", "not-a-cron"));
-    writeFileSync(path.join(tmp, "c-good.md"), cron("cgood", "*/5 * * * *"));
+    // Files load in alphabetical order: agood (valid), bbad (invalid → dropped
+    // at load time by US-002's filter), cgood (valid).
+    writeFileSync(path.join(tmp, "agood.md"), cron("agood", "0 * * * *"));
+    writeFileSync(path.join(tmp, "bbad.md"), cron("bbad", "not-a-cron"));
+    writeFileSync(path.join(tmp, "cgood.md"), cron("cgood", "*/5 * * * *"));
 
     const spy = vi.fn();
     const constructed: string[] = [];
@@ -438,9 +531,9 @@ describe("scheduleAll", () => {
     // All three schedules are VALID, so they pass the load-time filter — this
     // bypasses US-002 and exercises the construction try/catch directly via an
     // injected mkCron that simulates a residual croner construction throw.
-    writeFileSync(path.join(tmp, "a-ok.md"), cron("aok", "0 * * * *"));
-    writeFileSync(path.join(tmp, "b-boom.md"), cron("bboom", "0 * * * *"));
-    writeFileSync(path.join(tmp, "c-ok.md"), cron("cok", "0 * * * *"));
+    writeFileSync(path.join(tmp, "aok.md"), cron("aok", "0 * * * *"));
+    writeFileSync(path.join(tmp, "bboom.md"), cron("bboom", "0 * * * *"));
+    writeFileSync(path.join(tmp, "cok.md"), cron("cok", "0 * * * *"));
 
     const spy = vi.fn();
     const constructed: string[] = [];
@@ -461,10 +554,36 @@ describe("scheduleAll", () => {
     expect(spy).toHaveBeenCalledWith("system", "BOOT", "2 scheduled, 1 skipped");
   });
 
+  it("counts invalid and mismatched ids as load-time skips without constructing them", () => {
+    writeFileSync(path.join(tmp, "good.md"), cron("good", "0 * * * *"));
+    writeFileSync(path.join(tmp, "bad.md"), cron("bad;touch-pwned", "0 * * * *"));
+    writeFileSync(path.join(tmp, "name.md"), cron("other", "0 * * * *"));
+
+    const spy = vi.fn();
+    const constructed: string[] = [];
+    const result = scheduleAll(tmp, spy, (e) => {
+      constructed.push(e.id);
+    });
+
+    expect(constructed).toEqual(["good"]);
+    expect(result).toEqual({ scheduled: 1, skipped: 2 });
+    expect(spy).toHaveBeenCalledWith(
+      "bad",
+      "ID_INVALID",
+      "invalid cron id: bad;touch-pwned",
+    );
+    expect(spy).toHaveBeenCalledWith(
+      "other",
+      "ID_MISMATCH",
+      "id must match filename: name",
+    );
+    expect(spy).toHaveBeenCalledWith("system", "BOOT", "1 scheduled, 2 skipped");
+  });
+
   it("does not double-count: a load-time skip and a construction skip sum disjointly", () => {
-    writeFileSync(path.join(tmp, "a-ok.md"), cron("aok", "0 * * * *"));
-    writeFileSync(path.join(tmp, "b-loadbad.md"), cron("bload", "not-a-cron"));
-    writeFileSync(path.join(tmp, "c-boom.md"), cron("cboom", "0 * * * *"));
+    writeFileSync(path.join(tmp, "aok.md"), cron("aok", "0 * * * *"));
+    writeFileSync(path.join(tmp, "bload.md"), cron("bload", "not-a-cron"));
+    writeFileSync(path.join(tmp, "cboom.md"), cron("cboom", "0 * * * *"));
 
     const spy = vi.fn();
     const result = scheduleAll(tmp, spy, (e) => {

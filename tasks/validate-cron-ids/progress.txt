@@ -1,0 +1,7 @@
+STATUS: COMPLETE
+Issue: #128
+Branch: feat/128-validate-cron-ids
+Validation:
+- pnpm vitest run scripts/__tests__/cron-runtime.test.ts
+- pnpm test:scripts
+- pnpm typecheck

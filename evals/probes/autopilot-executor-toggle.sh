@@ -66,6 +66,7 @@ grep -Fq 'LINKED_ISSUE_PR=$(gh issue list --state open --label autopilot --searc
 grep -Fq '[ -e "$ACTIVE_MARKER" ]' "$SKILL" || missing+=("active marker duplicate guard")
 grep -Fq 'cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER"; }' "$SKILL" || missing+=("active marker cleanup helper")
 grep -Fq 'Clean the active marker on finalized PR paths' "$SKILL" || missing+=("finalized PR paths clean active marker")
+grep -F 'Memory log `Result: PR-DRAFT-EVAL-RED`' "$SKILL" | grep -Fq '`cleanup_active_marker`' || missing+=("eval-red finalized path cleans active marker before exit")
 grep -Fq 'Keep `ACTIVE_MARKER` only on incomplete executor paths' "$SKILL" || missing+=("incomplete executor paths keep active marker")
 
 # Dry-run research must not create GitHub issues before the dry-run exit.

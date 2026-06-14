@@ -33,10 +33,9 @@ memory/
 
 The `memory/YYYY-MM-DD/` directory is gitignored via `.gitignore`'s
 `memory/[0-9]*/` rule, so daily logs are a **local-only working journal** —
-they do not survive a fresh clone. Only `MEMORY.md`, `README.md`, and topic
-notes persist in git. The two pre-ignore logs (`memory/2026-05-03`,
-`memory/2026-05-04`) predate that rule and remain tracked as a historical
-vestige; do not treat them as evidence that daily logs are committed.
+they do not survive a fresh clone. Only `MEMORY.md`, `README.md`, and explicitly reviewed topic notes should
+persist in git. Public release branches should not carry daily logs or
+maintainer-private notes.
 
 Date format: always `date -u +%Y-%m-%d` (UTC). Never local time.
 

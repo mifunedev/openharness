@@ -1,4 +1,0 @@
-STATUS: COMPLETE
-US-001: PASS — wiki/README.md regenerated from current wiki/*.md frontmatter.
-US-002: PASS — wiki-readme-index eval probe added and validated.
-US-003: PASS — wiki freshness contract documented in rule, skills, and changelog.

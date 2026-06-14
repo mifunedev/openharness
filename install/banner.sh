@@ -31,70 +31,94 @@ fi
 # Onboarding status checks
 # ---------------------------------------------------------------------------
 
+case "${OH_BANNER_STATUS_STYLE:-auto}" in
+  emoji)
+    status_ok="✅"
+    status_x="❌"
+    status_empty="⬜"
+    ;;
+  legacy)
+    status_ok="[✓]"
+    status_x="[✗]"
+    status_empty="[ ]"
+    ;;
+  *)
+    if printf '%s' "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" | grep -qiE 'utf-?8'; then
+      status_ok="✅"
+      status_x="❌"
+      status_empty="⬜"
+    else
+      status_ok="[✓]"
+      status_x="[✗]"
+      status_empty="[ ]"
+    fi
+    ;;
+esac
+
 # gh — check auth status and extract username
-gh_status="[✗]"
+gh_status="$status_x"
 gh_detail="not authenticated — run: gh auth login"
 if command -v gh >/dev/null 2>&1 && gh auth status -h github.com >/dev/null 2>&1; then
   gh_user=$(gh api user --jq .login 2>/dev/null)
   if [ -n "$gh_user" ]; then
-    gh_status="[✓]"
+    gh_status="$status_ok"
     gh_detail="authenticated as ${gh_user}"
   else
-    gh_status="[✓]"
+    gh_status="$status_ok"
     gh_detail="authenticated"
   fi
 fi
 
 # claude — check for populated .credentials.json
-claude_status="[✗]"
+claude_status="$status_x"
 claude_detail="not authenticated — run: claude"
 if [ -s "${HOME}/.claude/.credentials.json" ]; then
-  claude_status="[✓]"
+  claude_status="$status_ok"
   claude_detail="authenticated"
 fi
 
 # codex — check for populated auth.json
-codex_status="[✗]"
+codex_status="$status_x"
 codex_detail="not authenticated — run: codex"
 if [ -s "${HOME}/.codex/auth.json" ]; then
-  codex_status="[✓]"
+  codex_status="$status_ok"
   codex_detail="authenticated"
 fi
 
 # pi — check for populated .pi directory
-pi_status="[✗]"
+pi_status="$status_x"
 pi_detail="not authenticated — run: pi"
 if [ -s "${HOME}/.pi/agent/auth.json" ]; then
-  pi_status="[✓]"
+  pi_status="$status_ok"
   pi_detail="authenticated"
 fi
 
 # opencode — check for populated provider auth file
-opencode_status="[✗]"
+opencode_status="$status_x"
 opencode_detail="not installed — set INSTALL_OPENCODE=true and rebuild"
 if command -v opencode >/dev/null 2>&1; then
   if [ -s "${HOME}/.local/share/opencode/auth.json" ]; then
-    opencode_status="[✓]"
+    opencode_status="$status_ok"
     opencode_detail="authenticated"
   else
-    opencode_status="[✓]"
+    opencode_status="$status_ok"
     opencode_detail="installed — run: opencode auth login"
   fi
 fi
 
 # grok — optional image-level CLI; auth state lives under ~/.grok, with
 # XAI_API_KEY as a secret-only non-interactive fallback.
-grok_status="[✗]"
+grok_status="$status_x"
 grok_detail="not installed — enable via install.grok_build / INSTALL_GROK_BUILD"
 if command -v grok >/dev/null 2>&1; then
   if [ -s "${HOME}/.grok/auth.json" ]; then
-    grok_status="[✓]"
+    grok_status="$status_ok"
     grok_detail="authenticated"
   elif [ -n "${XAI_API_KEY:-}" ]; then
-    grok_status="[✓]"
+    grok_status="$status_ok"
     grok_detail="configured via XAI_API_KEY"
   else
-    grok_status="[✓]"
+    grok_status="$status_ok"
     grok_detail="installed — run: grok login --device-auth (or grok login)"
   fi
 fi
@@ -102,14 +126,14 @@ fi
 # deepagents — installed status from PATH; configured status from
 # ~/.deepagents/.env or ~/.deepagents/config.toml so that an empty mounted
 # directory (named volume on first boot) is not treated as authenticated.
-deepagents_status="[✗]"
+deepagents_status="$status_x"
 deepagents_detail="not installed — set INSTALL_DEEPAGENTS=true and rebuild"
 if command -v deepagents >/dev/null 2>&1; then
   if [ -s "${HOME}/.deepagents/.env" ] || [ -s "${HOME}/.deepagents/config.toml" ]; then
-    deepagents_status="[✓]"
+    deepagents_status="$status_ok"
     deepagents_detail="configured"
   else
-    deepagents_status="[✓]"
+    deepagents_status="$status_ok"
     deepagents_detail="installed — configure ~/.deepagents/.env or run: deepagents"
   fi
 fi
@@ -117,14 +141,14 @@ fi
 # hermes — optional image-level CLI; auth status checks HERMES_HOME's
 # auth.json (project-local, gitignored) rather than config.yaml/.env,
 # because setup can seed config files before the user authenticates.
-hermes_status="[✗]"
+hermes_status="$status_x"
 hermes_detail="not installed — set INSTALL_HERMES=true and rebuild"
 if command -v hermes >/dev/null 2>&1; then
   if [ -s "${HERMES_HOME:-/home/sandbox/harness/.hermes}/auth.json" ]; then
-    hermes_status="[✓]"
+    hermes_status="$status_ok"
     hermes_detail="authenticated"
   else
-    hermes_status="[✓]"
+    hermes_status="$status_ok"
     hermes_detail="installed — run: hermes setup"
   fi
 fi
@@ -135,24 +159,24 @@ dashboard_detail=""
 if command -v hermes >/dev/null 2>&1; then
   if echo "${HERMES_DASHBOARD:-}" | grep -qiE '^(true|1|yes|on)$'; then
     if tmux has-session -t app-hermes-dashboard 2>/dev/null; then
-      dashboard_status="[✓]"
+      dashboard_status="$status_ok"
       dashboard_detail="dashboard — http://127.0.0.1:${HERMES_DASHBOARD_PORT:-9119}"
     else
-      dashboard_status="[✗]"
+      dashboard_status="$status_x"
       dashboard_detail="dashboard — enabled but not running (see /tmp/app-hermes-dashboard.log)"
     fi
   else
-    dashboard_status="[ ]"
+    dashboard_status="$status_empty"
     dashboard_detail="dashboard — disabled (set hermes.dashboard: true)"
   fi
 fi
 
 # openharness CLI — verify the bind-mounted package built and symlinked
-oh_status="[✗]"
+oh_status="$status_x"
 oh_detail="not installed — check entrypoint logs"
 if command -v openharness >/dev/null 2>&1; then
   oh_version=$(openharness --version 2>/dev/null | head -1)
-  oh_status="[✓]"
+  oh_status="$status_ok"
   oh_detail="${oh_version:-installed}"
 fi
 

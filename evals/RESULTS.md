@@ -6,12 +6,12 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 
 | probe | tier | last-run (UTC) | status | source |
 |-------|------|----------------|--------|--------|
-| autopilot-executor-toggle | A | 2026-06-14 04:52 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
-| autopilot-pi-agent | A | 2026-06-14 04:52 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14 |
+| autopilot-executor-toggle | A | 2026-06-14 05:08 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
+| autopilot-pi-agent | A | 2026-06-14 05:08 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14 |
 | boot-lint-glob | A | 2026-06-13 23:56 | PASS | issue #90 |
 | clean-restore | A | 2026-06-14 03:59 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | cleanup-tasks-scoped-guard | A | 2026-06-13 23:56 | PASS | issue #85 |
-| cron-claude-codex-fallback | A | 2026-06-13 23:56 | PASS | conversation 2026-06-12 (default Codex fallback for crons) |
+| cron-claude-codex-fallback | A | 2026-06-14 05:08 | PASS | conversation 2026-06-12 (default Codex fallback for crons) |
 | devtcp-hook | A | 2026-06-13 23:56 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
 | drift-check-cron-staleness-glob | A | 2026-06-13 23:56 | PASS | issue #98 |
 | eval-ci-gate | A | 2026-06-13 23:56 | PASS | #103 — eval probe suite gated in CI |

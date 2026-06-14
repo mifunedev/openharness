@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #116 (autopilot Pi tmux alignment) 2026-06-14
-# desc: autopilot's cron definition explicitly uses Pi and cron-runtime honors per-cron agent overrides.
+# source: issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14
+# desc: autopilot's cron definition explicitly uses Pi, cron-runtime honors per-cron agent overrides, and Pi tmux runs use the attachable TUI invocation.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -23,11 +23,14 @@ grep -Fq 'const agentBin = entry.agentBin || AGENT_BIN;' "$RUNTIME" || missing+=
 grep -Fq 'buildTmuxWrapper({ session, id: entry.id, agentBin, promptFile })' "$RUNTIME" || missing+=("tmux wrapper receives per-cron agent")
 grep -Fq 'agent: pi' "$TESTS" || missing+=("tests cover agent: pi parsing/scheduling")
 grep -Fq 'else pi --continue; fi;' "$TESTS" || missing+=("tests cover kept Pi session resume")
+grep -Fq 'pi "$(cat ${promptFile})";' "$RUNTIME" || missing+=("Pi tmux path uses positional TUI prompt, not headless -p")
+grep -Fq 'renders as an effectively blank pane' "$RUNTIME" || missing+=("runtime documents the blank-pane failure mode")
+grep -Fq 'runs kept Pi tmux sessions as attachable TUI sessions' "$TESTS" || missing+=("tests cover attachable Pi TUI tmux launch")
 
 if (( ${#missing[@]} )); then
   printf 'REGRESSION: autopilot Pi tmux alignment missing: %s\n' "${missing[*]}" >&2
   exit 1
 fi
 
-echo "PASS: autopilot cron sets agent: pi and cron-runtime honors per-cron agent overrides" >&2
+echo "PASS: autopilot cron sets agent: pi and launches Pi tmux runs as attachable TUI sessions" >&2
 exit 0

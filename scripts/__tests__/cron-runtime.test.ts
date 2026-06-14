@@ -266,7 +266,7 @@ describe("buildTmuxWrapper", () => {
     );
   });
 
-  it("persists a kept Pi session as Pi, not the global default agent", () => {
+  it("runs kept Pi tmux sessions as attachable TUI sessions", () => {
     const piWrapper = buildTmuxWrapper({
       session: "cron-autopilot-0610-1805",
       id: "autopilot",
@@ -274,6 +274,11 @@ describe("buildTmuxWrapper", () => {
       promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
     });
 
+    expect(piWrapper).toContain('pi "$(cat /tmp/cron-autopilot-0610-1805.prompt)";');
+    expect(piWrapper).not.toContain('pi -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)"');
+    expect(piWrapper).not.toContain("tee /tmp/cron-autopilot-0610-1805.log");
+    expect(piWrapper).toContain("AGENT_START");
+    expect(piWrapper).toContain("AGENT_DONE");
     expect(piWrapper).toContain(
       '[ "$(cat /tmp/cron-autopilot-0610-1805.agent 2>/dev/null || echo pi)" = codex ]; then codex; else pi --continue; fi;',
     );

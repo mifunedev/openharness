@@ -1,10 +1,11 @@
-# `evals/` — Context fitness-function probe corpus
+# evals/ — Context fitness-function probe corpus
 
 This directory is the harness's **fitness function**: a corpus of deterministic
 **probes** that turn lessons into runnable, exit-code-scored checks against
 *real state*. A rectification is provably "done" when its probe is green; a
 recurrence surfaces as a was-green-now-red regression. See
-`context/rules/memory.md` for how lessons map to probes.
+`tasks/context-fitness-evals/prd.md` for the full design and `context/rules/memory.md`
+for how lessons map to probes.
 
 ## Subfolders
 
@@ -37,8 +38,8 @@ exact contract `grep -E '^# (tier|source|desc):'`):
 ```sh
 #!/usr/bin/env bash
 # tier: A          # A | ablation
-# source: issue #103   # the lesson/rule this probe closes
-# desc: /eval run.sh exits non-zero when a prior PASS regresses
+# source: memory/MEMORY.md 2026-06-04   # the lesson/rule this probe closes
+# desc: public mifune.dev is not served by `next dev`
 set -euo pipefail
 # ... inspect REAL state (running processes, actual files, live sandbox) — never mocks ...
 ```
@@ -95,7 +96,7 @@ truncated-then-appended in place — so a crash or concurrent run can never leav
 partially-written scoreboard. Carry-forward rows for probes not run this
 invocation are read from a pre-write snapshot of the original file taken before
 the rewrite, never from the live file being replaced, so a filtered run cannot
-erase untouched rows.
+erase untouched rows. A weekly cron (`crons/eval-weekly.md`) runs it unattended.
 
 ### Runner aggregate exit code
 
@@ -108,8 +109,8 @@ above, which governs individual probe results).
 | `0` | No new green→red regressions this run. Pre-existing `REGRESSION` rows whose status is unchanged do **not** trigger a non-zero exit. |
 | `1` | One or more probes transitioned from a prior `PASS` to `REGRESSION` in this run. |
 
-This `0`/`1` contract is what the automation gate uses when checking whether a
-run is clean.
+This `0`/`1` contract is what the autopilot §6 eval gate and the
+`eval-weekly` cron rely on when checking whether a run is clean.
 
 ## CI gate (`eval-probes`)
 
@@ -124,14 +125,11 @@ manual-`/eval`-only check.
 - **Triggers.** Runs on every pull request and on every push to
   `development`/`main` whose changed paths match the workflow's path filters.
   `evals/**` is one of those filters, so probe and `RESULTS.md` edits gate
-themselves.
+  themselves.
 - **Git read-only.** The runner rewrites `evals/RESULTS.md` in the writable
   checkout (expected), but the job gates **purely on the exit code** — it has no
   `git add`/`commit`/`push` step, so the CI run never persists that churn back to
   the branch.
-- **Self-guard.** The `eval-ci-gate` probe asserts the workflow still invokes
-  `bash .claude/skills/eval/run.sh`, so the gate itself cannot be silently
-  deleted.
 - **Escape hatch.** There is no merge-bypass label. To unblock a probe that is
   false-failing CI, either (a) re-run the job — via the workflow's
   `workflow_dispatch` trigger (Actions → "CI: Harness" → Run workflow) or by
@@ -139,11 +137,14 @@ themselves.
   transient, or (b) push a follow-up commit that fixes the offending probe, or
   temporarily removes/SKIPs it (restoring it in a later commit).
 
+The `eval-ci-gate` self-guard probe asserts the runner invocation is still
+present in `ci-harness.yml`, so the gate itself cannot be silently deleted.
+
 ### Known limitation: `PASS→SKIPPED` is silent in CI
 
 A probe that is `PASS` in the committed `RESULTS.md` baseline but `SKIPPED`
-(exit 2) in a cold CI runner — no docker/tmux/live process — is **not** a
-regression: `run.sh` flags only a `PASS → REGRESSION|TIMEOUT|ERROR`
+(exit 2) in a cold CI runner — no docker/tmux/cron-system/live process — is
+**not** a regression: `run.sh:106` flags only a `PASS → REGRESSION|TIMEOUT|ERROR`
 transition. This is exactly what keeps the gate hermetic, but it also means a
 probe that should be exercising real state can silently degrade to a no-op in CI
 without failing the gate. Keeping the committed `RESULTS.md` fresh — so the

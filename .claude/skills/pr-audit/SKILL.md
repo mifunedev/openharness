@@ -235,9 +235,9 @@ Start here / Out of scope). Each reviewer:
 - returns a **structured verdict**: first line `ROOT-CAUSE:` (CI red → failing
   job + likely cause; conflict → conflicting files), then a one-line fix hint.
 
-Append each verdict to its PR's row. This **complements, not duplicates, a
-full diff review** — keep this skill focused on triage rather than per-PR code
-review.
+Append each verdict to its PR's row. This **complements, not duplicates,
+`/code-review`** — for full diff-level correctness on a single PR, point the
+user at `/code-review <PR#>` rather than re-implementing diff review here.
 
 ### 6. `--proof` — write each PR's verdict back (human-visibility path)
 
@@ -348,5 +348,5 @@ Then run the qualify/improve pass per `context/rules/memory.md`.
 | PR title / base / size conventions | `context/rules/git.md` |
 | Autopilot caps (10 total / 6 daily) | `.claude/skills/autopilot/SKILL.md` § Guardrails |
 | Parallel-agent briefing format | `context/rules/advisor-model.md` |
-| Per-PR diff correctness (escalate, don't duplicate) | dedicated manual review workflow |
+| Per-PR diff correctness (escalate, don't duplicate) | `/code-review` |
 | Memory Improvement Protocol | `context/rules/memory.md` |

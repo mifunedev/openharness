@@ -233,11 +233,13 @@ To reach the dashboard from another machine:
 
 The sandbox onboarding banner reports Hermes as:
 
-- `[✗] not installed` — set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`) and rebuild — when the binary is absent from PATH.
-- `[✓] installed — run: hermes setup` — when the binary is on PATH but
+- `❌ not installed` — set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`) and rebuild — when the binary is absent from PATH.
+- `✅ installed — run: hermes setup` — when the binary is on PATH but
   `~/.hermes/auth.json` is absent or empty.
-- `[✓] authenticated` — when `~/.hermes/auth.json` exists and is
+- `✅ authenticated` — when `~/.hermes/auth.json` exists and is
   non-empty.
+
+Set `OH_BANNER_STATUS_STYLE=legacy` to force the old `[✗]` / `[✓]` markers when emoji rendering is unavailable.
 
 ## Upstream documentation
 

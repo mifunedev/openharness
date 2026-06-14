@@ -18,9 +18,8 @@
 # Idempotent: re-invoking on an existing session attaches instead of duplicating.
 #
 # Harnesses:
-#   --harness=claude     run Claude first (default); fall back to Pi after a
-#                        recognized Claude usage-limit message; Codex is fallback
-#                        after Pi if Pi is unavailable
+#   --harness=claude     run Claude first (default); fall back to Codex after a
+#                        recognized Claude usage-limit message
 #   --harness=pi         run Pi for every iteration; fall back to Codex if Pi is
 #                        unavailable
 #   --harness=codex      run Codex for every iteration
@@ -135,15 +134,11 @@ fallback_after_harness() {
 
   case "$harness" in
     claude)
-      if command -v pi >/dev/null 2>&1; then
-        printf 'pi\n'
-        return 0
-      fi
       if command -v codex >/dev/null 2>&1; then
         printf 'codex\n'
         return 0
       fi
-      echo "Error: Claude usage limit detected, but fallback harnesses 'pi' and 'codex' are not on PATH." >&2
+      echo "Error: Claude usage limit detected, but fallback harness 'codex' is not on PATH." >&2
       return 1
       ;;
     pi)
@@ -247,6 +242,7 @@ run_iteration() {
   local output_file="$3"
   local status
 
+  export RALPH_HARNESS="$harness"
   set +e
   case "$harness" in
     claude)
@@ -279,6 +275,19 @@ run_iteration() {
   return "$status"
 }
 
+# ─── Source guard ────────────────────────────────────────────────────
+# When this file is sourced (e.g. unit tests exercising the functions
+# above in isolation) rather than executed, return here so the loop /
+# normal-mode body below does not run — sourcing only defines functions.
+# All three real invocation paths execute the file directly, keeping
+# BASH_SOURCE[0] == "$0", so the guard is a strict no-op for them:
+#   1. direct execution:       scripts/ralph.sh <taskdesc>
+#   2. the --loop re-entry:     bash "$SCRIPT_PATH" --loop ...
+#   3. the no-tmux foreground:  exec bash "$SCRIPT_PATH" --loop ...
+if [ "${BASH_SOURCE[0]}" != "$0" ]; then
+  return 0
+fi
+
 # ─── Loop mode (re-entry from inside tmux) ───────────────────────────
 if [ "${1-}" = "--loop" ]; then
   shift
@@ -309,10 +318,12 @@ if [ "${1-}" = "--loop" ]; then
   printf '│  progress: %s\n╰─\n\n' "$PROGRESS"
 
   i=0
+  COMPLETED=0
   while [ "$i" -lt "$MAX_ITER" ]; do
     i=$((i + 1))
     if grep -q '^STATUS: COMPLETE$' "$PROGRESS"; then
       printf '\n✓ STATUS: COMPLETE found in progress.txt — exiting at iteration %d.\n' "$i"
+      COMPLETED=1
       break
     fi
 
@@ -325,6 +336,19 @@ if [ "${1-}" = "--loop" ]; then
     ITERATION_OUTPUT="$(mktemp -t "ralph-$TASKDESC-$i.XXXXXX")"
 
     run_iteration "$ACTIVE_HARNESS" "$TASK_TEXT" "$ITERATION_OUTPUT" || true
+
+    # Second completion channel: an iteration may signal completion in its own
+    # output without (or before) writing progress.txt. Grep the iteration output
+    # for the whole-line sentinel; on match, self-heal progress.txt so resume and
+    # the autopilot poller stay consistent, then exit. Whole-line anchoring keeps
+    # narration like "I appended STATUS: COMPLETE to…" from false-firing.
+    if grep -q '^STATUS: COMPLETE$' "$ITERATION_OUTPUT"; then
+      printf '\n✓ STATUS: COMPLETE detected in iteration output — exiting at iteration %d.\n' "$i"
+      grep -q '^STATUS: COMPLETE$' "$PROGRESS" || printf 'STATUS: COMPLETE\n' >>"$PROGRESS"
+      COMPLETED=1
+      rm -f "$ITERATION_OUTPUT"
+      break
+    fi
 
     if [ "$ACTIVE_HARNESS" = "claude" ] && claude_limit_detected "$ITERATION_OUTPUT"; then
       FALLBACK_HARNESS="$(fallback_after_harness claude)" || {
@@ -342,6 +366,19 @@ if [ "${1-}" = "--loop" ]; then
   if [ "$i" -ge "$MAX_ITER" ] && ! grep -q '^STATUS: COMPLETE$' "$PROGRESS"; then
     printf '\n✗ Reached max iterations (%s) without STATUS: COMPLETE.\n' "$MAX_ITER"
     printf '  Inspect: tail -n 50 %s\n' "$PROGRESS"
+  fi
+
+  # On a clean completion, close our own tmux session instead of lingering as a
+  # zombie — progress.txt and /tmp/ralph-$TASKDESC.log persist for inspection,
+  # and the autopilot poller already treats a gone session + STATUS: COMPLETE as
+  # done. The persist-for-inspection shell below is reserved for the failure
+  # path (max iterations without completion) so a stuck run stays attachable.
+  if [ "$COMPLETED" = "1" ]; then
+    printf '\n✓ Ralph complete — closing session %s.\n' "$TASKDESC"
+    if command -v tmux >/dev/null 2>&1 && [ -n "${TMUX:-}" ]; then
+      tmux kill-session -t "$TASKDESC" 2>/dev/null || true
+    fi
+    exit 0
   fi
 
   printf '\nSession persists for inspection.\n'

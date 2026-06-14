@@ -59,7 +59,7 @@ hdr() { grep -E "^# $1:" "$2" 2>/dev/null | head -1 | sed "s/^# $1:[[:space:]]*/
 prior_row() {
   grep -E "^\| ${1} \|" <<<"$RESULTS_ORIG" 2>/dev/null | head -1 || true
 }
-prior_status() { prior_row "$1" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}'; }
+prior_status() { prior_row "$1" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/,"",$5); print $5}'; }
 
 # Capture the pre-write scoreboard ONCE. Carry-forward (prior_row) reads this
 # snapshot, never the live $RESULTS — so a filtered run can't erase untouched

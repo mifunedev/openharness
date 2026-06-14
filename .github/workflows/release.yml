@@ -58,10 +58,49 @@ jobs:
       - name: Root tests (scripts + .pi extensions)
         run: pnpm test:scripts
 
+      - name: Check pnpm pin drift
+        run: bash scripts/check-pnpm-pin.sh
+
+  boot-lint:
+    name: Boot Path Lint (shellcheck + hadolint)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Shellcheck boot scripts
+        run: |
+          command -v shellcheck >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y shellcheck; }
+          shellcheck --version
+          shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh
+
+      - name: Hadolint Dockerfile
+        uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0
+        with:
+          dockerfile: .devcontainer/Dockerfile
+          config: .hadolint.yaml
+          failure-threshold: warning
+
+  eval-probes:
+    name: "Eval Probe Regression Gate"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run eval probe suite
+        run: bash .claude/skills/eval/run.sh
+
   release:
     name: Build & Release
     runs-on: ubuntu-latest
-    needs: [validate]
+    needs: [validate, boot-lint, eval-probes]
     permissions:
       contents: write
       packages: write

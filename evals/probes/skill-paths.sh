@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #408 — harness-audit & skill-lint stale path references
-# desc: skill instructions must not reference the retired renamed dirs docs/wiki/ or workspace/heartbeats/
+# source: issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard
+# desc: skill instructions must not reference retired renamed paths — docs/wiki/, workspace/heartbeats/, or the apps/->packages/ monorepo-rename tokens (apps/docs, apps/README, apps/*, src/data/roadmap)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -12,11 +12,9 @@ if [[ ! -d "$SKILLS" ]]; then
   exit 2
 fi
 
-# Guard ONLY the two truly-dead renamed-directory tokens from the wiki/cron
-# restructure (docs/wiki/ -> wiki/, workspace/heartbeats/ -> crons/). These have
-# no legitimate use anywhere under .claude/skills/. We deliberately do NOT guard
-# apps/docs/, bare MEMORY.md, or workspace/.claude/skills/ — those have legitimate
-# or intentional (guarded dual-scope) uses in other skills and would false-positive.
+# Guard 1 — the two dead renamed-directory tokens from the wiki/cron restructure
+# (docs/wiki/ -> wiki/, workspace/heartbeats/ -> crons/). No legitimate use anywhere
+# under .claude/skills/.
 #
 # Exclusion: harness-context/SKILL.md contains the prose string "docs/wiki/changelog"
 # (an enumeration of surfaces, not a path). Exclude it by FULL PATH via a piped
@@ -30,5 +28,19 @@ if [[ -n "$hits" ]]; then
   exit 1
 fi
 
-echo "PASS: no retired docs/wiki/ or workspace/heartbeats/ token in .claude/skills/ (excl harness-context prose)" >&2
+# Guard 2 — the apps/->packages/ monorepo rename (issue #69). The `apps/` tree no
+# longer exists; the canonical paths are `packages/docs/`, `packages/README.md`, and
+# `docs/roadmap.md` (the strategic-proposal §9 write target). These tokens have NO
+# legitimate use under .claude/skills/, so any reappearance is the exact drift PR #44
+# left behind — it corrected some apps/ refs but silently missed apps/docs. No
+# exclusion is needed: zero skills legitimately mention these tokens.
+rename_hits=$(grep -rnE 'apps/docs|apps/README|apps/\*|src/data/roadmap' "$SKILLS" || true)
+
+if [[ -n "$rename_hits" ]]; then
+  echo "REGRESSION: stale apps/->packages/ rename token(s) reappeared in .claude/skills/ (apps/docs -> packages/docs, apps/README -> packages/README, apps/* -> packages/*, src/data/roadmap.ts -> docs/roadmap.md):" >&2
+  echo "$rename_hits" >&2
+  exit 1
+fi
+
+echo "PASS: no retired docs/wiki/, workspace/heartbeats/, or apps/->packages/ rename token in .claude/skills/ (excl harness-context prose)" >&2
 exit 0

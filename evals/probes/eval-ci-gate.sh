@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #415 — eval probe suite gated in CI
+# source: #103 — eval probe suite gated in CI
 # desc: string-presence (not semantic) check — the eval-probes CI job's runner invocation `bash .claude/skills/eval/run.sh` must stay in ci-harness.yml so the regression gate can't be silently deleted
 set -euo pipefail
 

@@ -1,7 +1,5 @@
 # Memory
 
-Long-term lessons distilled from session experience. Append-only. See `context/rules/memory.md` for the Memory Improvement Protocol.
+Public template memory starts empty.
 
-## Lessons Learned
-
-<!-- Append entries below. Each entry: bullet with date and one-sentence lesson. Append-only. -->
+Add durable, non-private lessons only after review.

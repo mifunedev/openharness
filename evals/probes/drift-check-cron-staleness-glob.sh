@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #415
+# source: issue #98
 # desc: extract the LIVE Step C-2 bash block from drift-check SKILL.md and RUN it
 #       against fixtures (README-style, valid scheduled cron, disabled cron,
 #       missing schedule, empty schedules, invalid schedule) with RUNTIME_START

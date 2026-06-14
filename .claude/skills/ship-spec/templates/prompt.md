@@ -16,7 +16,7 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
    - `.claude/rules/sandbox-processes.md` for tmux session conventions if your story spawns processes.
    - `.claude/rules/advisor-model.md` for any critic-gated story.
 
-2. **Verify branch** — your branch is `<prefix>/<N>-<slug>` (per `prd.json` `branchName`). If you are not on it:
+2. **Verify branch** — your branch is `<prefix>/<N>-<slug>` (per `prd.json` `branchName`). If `/ship-spec`'s Advisor launched you in an isolated worktree at `.worktrees/<prefix>/<N>-<slug>`, that directory already has the branch checked out — `cd` into it and skip the checkout below. Otherwise, if you are not on the branch:
    ```bash
    git fetch origin
    git checkout -b <prefix>/<N>-<slug> origin/development 2>/dev/null \
@@ -37,8 +37,11 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
 5. **Commit** with this message format (per `.claude/rules/git.md`):
    ```
    <type>: US-<NNN> — <story title>
+
+   Submitted-by: <active submitter>
    ```
    Where `<type>` is `task` for most stories, `feat` for net-new functionality, `fix` for bugs. Example: `task: US-001 — <story title>`. Stage only files touched by this story.
+   The `Submitted-by:` trailer is mandatory. It must name the model/agent that actually submits the commit, using the active harness identity when available (`$RALPH_HARNESS`, e.g. `Claude`, `Codex`, or `Pi`). If Ralph fell back from Claude to Codex, use `Submitted-by: Codex`.
 
 6. **Update `prd.json`** — set `passes: true` for the completed story, and set `notes` to a one-line summary including iteration number and date:
    ```json
@@ -69,9 +72,9 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
    ```
    STATUS: COMPLETE
    ```
-   This terminates the Ralph loop. The loop runner reads `progress.txt` for this exact string at the start of each iteration.
+   This terminates the Ralph loop. The runner reads for this exact whole-line string in **two** places — `progress.txt` (at the start of each iteration) and your iteration output (after each iteration) — so either channel ends the loop.
 
-10. **End response normally** — do not emit any completion sentinel in your reply text. Only the `STATUS: COMPLETE` line in `progress.txt` matters.
+10. **Signal completion in your output only when terminal** — when (and only when) you have just appended `STATUS: COMPLETE` to `progress.txt`, also print `STATUS: COMPLETE` as the sole content of your final line. This lets the runner exit even if the file write was missed. Never print that bare standalone line for any other reason; to refer to it in prose, call it "the completion marker."
 
 ## Blocked or deferred stories
 

@@ -80,7 +80,7 @@ ENV PNPM_HOME="/usr/local/share/pnpm"
 ENV NPM_USER_PREFIX="/home/sandbox/.local"
 ENV PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN corepack enable && corepack prepare pnpm@latest --activate \
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate \
  && pnpm setup --force 2>/dev/null || true
 
 # ─── Agent CLIs ─────────────────────────────────────────────────────

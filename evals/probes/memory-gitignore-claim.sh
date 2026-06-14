@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #415
+# source: issue #101
 # desc: context/rules/memory.md must not claim daily logs are git-tracked, and .gitignore must keep ignoring memory/[0-9]*/ so the false "tracked inside" persistence claim cannot return
 set -euo pipefail
 

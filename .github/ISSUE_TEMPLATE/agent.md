@@ -34,24 +34,37 @@ worktree_path: ".worktrees/<agent-name>"
 ### 1. Provision the agent
 
 ```bash
-make NAME=<agent-name> quickstart
+make sandbox
 ```
 
 This will:
-- Create a git worktree at `.worktrees/<agent-name>` on branch `agent/<agent-name>`, branched from `development`
-- Build the Docker image from the worktree's context
-- Start the container with the worktree's workspace mounted
-- Run the setup script
+
+- Build the Docker image and start the sandbox container (`docker compose up -d --build`)
+- Mount the workspace and run the setup script
+
+`make sandbox` does **not** create the per-agent branch or worktree. The `branch` (`agent/<agent-name>`) and `worktree_path` (`.worktrees/<agent-name>`) fields from the Metadata block above are real conventions you create manually with `git worktree add` per `context/rules/git.md` §Worktrees:
+
+```bash
+git worktree add -b agent/<agent-name> .worktrees/<agent-name> development
+```
 
 ### 2. Enter the sandbox
 
 ```bash
-make NAME=<agent-name> shell
+make shell <agent-name>
 claude
 ```
 
+The positional argument to `make shell` is the **container name** (defaults to `openharness`, or `sandbox.name` from `harness.yaml`). Append `SHELL_USER=<user>` to connect as a non-default user, e.g. `make shell <agent-name> SHELL_USER=postgres`.
+
 ### 3. Verify
 
-- [ ] Container is running (`make list`)
-- [ ] Agent can access workspace (`ls ~/harness/workspace`)
-- [ ] SOUL.md and MEMORY.md are present
+Run from the **host** (orchestrator side):
+
+- [ ] Container is running (`make ps`)
+
+Run **inside the sandbox** (after `make shell <agent-name>`):
+
+- [ ] Workspace is accessible (`ls ~/harness/workspace`)
+- [ ] `workspace/AGENTS.md` is present (the workspace also holds `.claude/`, among others — non-exhaustive)
+- [ ] Harness identity and memory live at the repo root, **not** under `workspace/`: `context/SOUL.md` and `memory/MEMORY.md` are present

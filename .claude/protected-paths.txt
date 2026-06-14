@@ -24,6 +24,10 @@ skill-lint
 delegate
 strategic-proposal
 ship-spec
+eval
+health-check
+retro
+drift-check
 
 # --- Orchestrator scripts (scripts/) ---
 scripts/ralph.sh
@@ -50,7 +54,6 @@ crons/cleanup-tasks.md
 
 # --- Specs that other artifacts cross-reference ---
 .claude/specs/structure-spec-v0.7.md
-.claude/ICP.md
 
 # --- Orchestrator identity layer (session-loaded by AGENTS.md bootloader) ---
 context/SOUL.md

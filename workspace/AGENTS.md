@@ -9,7 +9,6 @@ Template ships intentionally minimal — agent identity, memory, skills, and rou
 - `.claude/rules/` — coding rules auto-loaded by Claude Code (`code-quality.md`, `git.md`, `token-conservation.md`).
 - `.claude/.example.env.claude` — template for credentials your agent runtime needs.
 - `.claude/settings.local.json` — Claude Code project-local settings (permissions, hooks).
-- `startup.sh` — dev-server bootstrap, called from container entrypoint.
 
 ## Where things go that aren't here
 

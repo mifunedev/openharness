@@ -82,7 +82,7 @@ Verify the sandbox is healthy.
 3. **Check the cron runtime** (if heartbeats configured under `crons/`):
    ```bash
    docker exec -it -u sandbox openharness tmux ls
-   # → expect "system-cron" session
+   # → expect "cron-system" session
    ```
 
 ### Teardown
@@ -99,9 +99,39 @@ Remove the sandbox.
 | Item | Convention |
 |------|-----------|
 | Base branch | `development` |
-| Agent branches | `agent/<agent-name>` |
+| Feature/task branches | `feat/<short-slug>` |
+| Persistent agent branches | `agent/<agent-name>` |
 | PR target | `development` |
 | Commit format | `<type>: <description>` (`feat`, `fix`, `task`, `audit`, `skill`) |
+
+Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspaces. Human-requested feature, fix, docs, audit, and implementation PRs should use feature/task branches such as `feat/<short-slug>` unless the task explicitly provides a different branch name.
+
+## The Loop
+
+The harness self-improves on an eight-phase cycle. Each phase is driven by a skill that hands off to the next; the loop closes when grooming surfaces the next thing to research. `/autopilot` walks the whole cycle autonomously; `/ship-spec` covers phases 1–4 for a single item. `/compact` brackets the implement phase on both sides so the implementer and the auditor each start with a clean context.
+
+```mermaid
+flowchart LR
+    R["1 · Research / spec<br/>/harness-audit · /imagine · /prd"] --> P["2 · Plan<br/>/ship-spec · /ralph · pm+critic"]
+    P --> CB(["/compact<br/>before implement"]) --> I["3 · Implement<br/>/delegate → scripts/ralph.sh"]
+    I --> CA(["/compact<br/>after implement"]) --> A["4 · Audit<br/>/pr-audit · /eval · /code-review"]
+    A --> RE["5 · Retro<br/>/retro"]
+    RE --> C["6 · Compound<br/>/wiki-ingest → memory/MEMORY.md"]
+    C --> Z["7 · Compress<br/>/context-audit · /compact · /caveman"]
+    Z --> G["8 · Groom<br/>/skill-lint · /wiki-lint · /drift-check"]
+    G -->|next item| R
+```
+
+| Phase | Intent | Primary skills |
+|---|---|---|
+| 1 · Research / spec | Find the next thing worth building; capture it as a spec | `/harness-audit`, `/imagine`, `/prd` |
+| 2 · Plan | Critic-gate the spec; convert to an executable task | `/ship-spec`, `/ralph`, `pm`+`critic` |
+| 3 · Implement | Build it in isolation | `/delegate` → `scripts/ralph.sh` (worktree) |
+| 4 · Audit | Prove it's correct and promotable | `/pr-audit`, `/eval`, `/code-review` |
+| 5 · Retro | Turn the run into falsifiable lessons | `/retro` |
+| 6 · Compound | Promote durable knowledge so it's reused, not re-derived | `/wiki-ingest`, `memory/MEMORY.md` |
+| 7 · Compress | Keep the always-loaded context lean | `/context-audit`, `/compact`, `/caveman` |
+| 8 · Groom | Health-check skills, wiki, and drift; queue the next item | `/skill-lint`, `/wiki-lint`, `/drift-check` |
 
 ## Skills
 
@@ -109,16 +139,16 @@ Remove the sandbox.
 |-------|------|
 | `/release` | CalVer release — branch, tag, push, GHCR |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
-| `/pr-audit` | Bulk triage open PRs in one query; classify ready / CI-failing / conflicting / changes-requested / needs-review / draft; read-only by default with optional deep review, proof comments, label application, and stale close actions |
+| `/pr-audit` | Triage all open PRs in one bulk `gh pr list --json` query — actionable buckets (ready/CI-failing/conflicting/changes-requested/needs-review) for ready-for-review PRs, with draft PRs split out first as a separate WIP class (promotable/WIP/limbo) + stale/convention flags; read-only by default, `--deep` fans out diff reviewers for flagged PRs, `--proof` writes an idempotent per-PR verdict comment, `--label-apply`/`--close-stale` mutate after confirmation |
 | `/health-check` | Triage host memory/disk/Docker before starting a stack; rank reclaim levers by safety×yield, prune build cache, confirm destructive removal |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
 | `/interview` | Adaptive pre-work clarifier — batches 2–4 task-specific questions via `AskUserQuestion`, then proceeds |
 | `/imagine` | One-shot draft PRD sketch from a fuzzy scenario → `.claude/specs/<slug>/spec.md` (gitignored scratch, includes mermaid diagram); feeds `/ship-spec --plan <path>` |
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
-| `/ship-spec` | End-to-end spec: `/prd` → critics → `/ralph` → gh issue → branch → draft PR |
+| `/ship-spec` | End-to-end spec: `/prd` → critics → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
-| `/autopilot` | Self-improvement loop — issue-queue-first selection, `/ship-spec --issue`, Ralph implementation, `/eval` gate, conservative PR caps, and no auto-merge |
+| `/autopilot` | Self-improvement loop — issue-queue-first selection (build the oldest open `autopilot` issue; researches + files its own ticket when empty), PM plan → exact `/goal` Advisor handoff → `/ship-spec --issue`, which now **owns the whole build** (the two compacts bracketing implement, a worktree Advisor, `/delegate --plan tasks/<slug>/prd.json` + ralph, `/eval`, `/pr-audit` undraft); autopilot **defers** and reconciles the outcome (no inline compact/delegate/eval/finalize). `AUTOPILOT_EXECUTOR=ralph` keeps the legacy inline `scripts/ralph.sh` fallback; every PR states its selection rationale; per-run Pi tmux sessions renamed `autopilot-<branch>` and left alive after PR creation; cap 6 open PRs/day + 10 total open, no auto-merge |
 | `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |

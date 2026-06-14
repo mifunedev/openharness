@@ -16,7 +16,10 @@ describe("project Pi settings", () => {
     expect(settings.packages).toEqual([
       "npm:@tintinweb/pi-subagents@0.7.1",
       "npm:@tintinweb/pi-tasks@0.7.0",
-      "npm:@tintinweb/pi-goal",
+      "npm:@narumitw/pi-goal@0.4.2",
+      "npm:@narumitw/pi-plan-mode@0.4.2",
+      "npm:@narumitw/pi-codex-usage@0.4.2",
+      "npm:@tifan/pi-recap@0.4.2",
     ]);
   });
 });

@@ -29,8 +29,8 @@ Report it privately through one of:
 
 - The repository's **Security → Report a vulnerability** tab (GitHub private
   vulnerability reporting), when available.
-- A private maintainer contact channel listed on the repository owner profile,
-  with `SECURITY` in the subject line.
+- Email the maintainer at <kre8mymedia@gmail.com> with `SECURITY` in the
+  subject line.
 
 Please include where you can:
 

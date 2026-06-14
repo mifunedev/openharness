@@ -28,7 +28,7 @@ The agent session you attach to at the project root is your **orchestrator** —
 
 Stand up a **second sandbox** only when you want isolation — an independent identity, branch, or provider key running on its own. Most users won't need this.
 
-Inside the sandbox, a `system-cron` tmux session runs `scripts/cron-runtime.ts`, which reads `crons/*.md` and fires each body as a prompt to the configured agent on its declared schedule.
+Inside the sandbox, a `cron-system` tmux session runs `scripts/cron-runtime.ts`, which reads `crons/*.md` and fires each body as a prompt to the configured agent on its declared schedule.
 
 ```mermaid
 flowchart TB
@@ -39,7 +39,7 @@ flowchart TB
 
     subgraph sandbox["Sandbox container — default workspace"]
         Orch{{"<b>Orchestrator</b><br/>Claude @ project root<br/>git · lifecycle · file edits"}}
-        Tmux["tmux sessions<br/>client-slack · agent-t3code · app-docs · system-cron"]
+        Tmux["tmux sessions<br/>client-slack · agent-t3code · app-docs · cron-system"]
         Sock(["docker.sock"])
     end
 

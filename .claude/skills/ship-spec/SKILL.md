@@ -1,22 +1,23 @@
 ---
 name: ship-spec
 description: |
-  Compose /prd → 2 critics → /ralph → gh issue → branch → draft PR into a
-  single end-to-end invocation. Produces a fully-scaffolded task ready for
-  the Ralph runner, plus an open draft PR for observability.
+  Compose /prd → 2 critics → /ralph → gh issue → branch → draft PR →
+  implementation/eval/CI → ready-for-review PR into a single end-to-end
+  invocation. Produces a fully-scaffolded task, opens a draft PR for
+  observability while work is pending, then marks the PR ready after the
+  implementation, eval, and CI gates pass.
   TRIGGER when: asked to scaffold a spec end-to-end, "ship a spec",
   "set up a task PR", or after planning a feature and ready to formalize.
-  v1 stops at draft PR creation; loop launch + CI verification stay manual.
-argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent]"
+argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent] [--issue <N>]"
 ---
 
 # Ship Spec
 
-Compose the existing primitives (`/prd`, `.claude/agents/critic.md`, `/ralph`, `gh`, `git`) into one durable invocation that produces a fully-scaffolded task + draft PR. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
+Compose the existing primitives (`/prd`, `.claude/agents/critic.md`, `/ralph`, `gh`, `git`, `/compact`, an expert `/worktrees` Advisor launched via `/goal`, `/delegate` + `scripts/ralph.sh`, `/eval`, `/pr-audit`) into one durable invocation that produces a fully-scaffolded task and a ready-for-review PR. The draft PR is an observability checkpoint while implementation is pending, not the terminal state. After scaffolding, the orchestrator compacts and hands off to an expert Advisor — launched in its own tmux session via a `/goal`-prefixed prompt — that isolates work in a worktree, drives `/delegate` workers each running `scripts/ralph.sh`, then undrafts the PR through a `/pr-audit` promotable gate. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
 
 **Core principle: critic gate before commitment.** Critics review the PRD before the issue is opened, the branch created, or anything is pushed. The cheapest thing to revise is the spec itself — make that the gate.
 
-## Pipeline (v1: stages 1–9)
+## Pipeline (stages 1–13, with two `/compact` checkpoints)
 
 ```mermaid
 flowchart TD
@@ -26,11 +27,14 @@ flowchart TD
     E --> C["5. Open GH issue → #N<br/>(only after PROCEED)"]
     C --> F["6. /ralph → tasks/<slug>/prd.json"]
     F --> G["7. Scaffold prompt.md + progress.txt"]
-    G --> H["8. Branch + commit + push"]
-    H --> I["9. gh pr create --draft"]
-    I --> J["v2: scripts/ralph.sh → tmux loop<br/>→ /ci-status → gh pr ready"]
-
-    style J stroke-dasharray: 5 5
+    G --> G2["7.5 /compact (before implement)<br/>after PRD artifacts"]
+    G2 --> H["8. Branch + commit + push"]
+    H --> I["9. gh pr create --draft<br/>(observability checkpoint)"]
+    I --> J["10. Launch /worktrees Advisor in tmux via /goal<br/>→ /delegate workers each run scripts/ralph.sh<br/>→ Advisor monitors to STATUS: COMPLETE"]
+    J --> K["11. /eval gate"]
+    K --> K2["11.5 /compact (after implement)<br/>before the audit"]
+    K2 --> L["12. /pr-audit (separate executor)<br/>→ promotable?"]
+    L --> M["13. gh pr ready<br/>(only if promotable; else stay draft)"]
 ```
 
 **Stage ordering rationale**: critics run BEFORE the GH issue is opened (this was reordered in v1.1, issue #218). The earlier ordering created dangling issues when critics halted; now no GitHub-side state changes until the spec passes the critic gate.
@@ -45,6 +49,7 @@ Extract:
 - **`<feature-description>`** (required) — the first positional arg, free text
 - **`--plan <path>`** (optional) — if provided, use the file content as comprehensive input to `/prd` and skip clarifying questions
 - **`--prefix <type>`** (optional, default `feat`) — branch + issue prefix per `.claude/rules/git.md` (`feat | bug | task | audit | skill | agent`)
+- **`--issue <N>`** (optional) — link an EXISTING GitHub issue instead of creating one. When present, set `ISSUE_NUM=<N>` and skip Stage 5's `gh issue create`; `<N>` flows into the branch (`<prefix>/<N>-<slug>`), `/ralph --issue <N>`, `prompt.md`, and the PR `Closes #<N>` link, exactly as a freshly-created issue number would
 
 Derive `<slug>` per `/prd` rules: lowercase, kebab-case, `[a-z0-9-]+`, **≤5 words**, not `archive`. Reject and ask for a shorter name if invalid.
 
@@ -90,11 +95,11 @@ Both critics receive an additional cross-check instruction: read `.claude/protec
 
 #### Critic B — User's lens
 
-> You are an adversarial user reviewing a PRD before implementation. Read `tasks/<slug>/prd.md` and `.claude/ICP.md`. Read `.claude/protected-paths.txt` and treat its entries as MUST-NOT-DELETE without an override note. Your job: surface scope and framing risks BEFORE the team commits.
+> You are an adversarial user reviewing a PRD before implementation. Read `tasks/<slug>/prd.md` and `context/USER.md` (the single-developer / single-project framing). Read `.claude/protected-paths.txt` and treat its entries as MUST-NOT-DELETE without an override note. Your job: surface scope and framing risks BEFORE the team commits.
 >
 > Focus on:
 > 1. **Scope ambiguity** — what's NOT in the Non-Goals section that should be?
-> 2. **ICP misalignment** — does any story drift from `.claude/ICP.md` v1 framing?
+> 2. **Audience misalignment** — does any story drift from the single-developer, single-project framing in `context/USER.md`?
 > 3. **Hidden expectations** — what would a user reasonably expect this to do that the PRD doesn't address?
 > 4. **Premature optimization** — any story that solves a problem the user doesn't have yet?
 > 5. **Missing rollback/escape hatch** — for destructive stories, is there a documented way to undo?
@@ -140,7 +145,11 @@ The HALT path is the whole point. Critics are the short feedback loop; honoring 
 
 ### Stage 5 — Open GH issue → `#N`
 
-Only reached after stage 4 PROCEED. Compose issue body from the prd.md introduction + goals sections. Title format per `.claude/rules/git.md`:
+Only reached after stage 4 PROCEED.
+
+**If `--issue <N>` was provided**: skip issue creation entirely — set `N=<N>`, print `Using existing issue #<N> (--issue); skipping creation.`, optionally confirm it exists with `gh issue view <N>`, and continue to Stage 6. Everything below in this stage applies ONLY when creating a fresh issue (no `--issue` flag).
+
+Compose issue body from the prd.md introduction + goals sections. Title format per `.claude/rules/git.md`:
 
 ```bash
 gh issue create \
@@ -204,6 +213,16 @@ done
 
 (critique.md is a fifth file but optional — not part of the SPEC contract; only present when critics ran.)
 
+### Stage 7.5 — `/compact` before implement (after PRD artifacts)
+
+This is the first of two compacts that bracket the implement phase. The PRD artifacts now exist on disk and the heaviest planning context — `/prd` plus the two critics — is already spent. Run `/compact` to reclaim that context before the commit/PR and the implementation handoff. Preserve only the handoff keys:
+
+```text
+Preserve /ship-spec handoff context: slug <slug>, prefix <prefix>, issue #<N>, branch <prefix>/<N>-<slug>, critique H/M/L counts, four-file contract path tasks/<slug>/. Stages 8–9 re-read prd.md/prd.json/critique.md from disk.
+```
+
+Stages 8–9 re-read the files from disk, so a post-compact context is sufficient. `/compact` is an optimization, not a gate — if it is unavailable or errors, log a warning and continue.
+
 ### Stage 8 — Branch + commit + push
 
 ```bash
@@ -226,12 +245,17 @@ Four-file contract per SPEC v0.7 §tasks/:
 Tracks #<N>. PRD generated by /prd; reviewed by 2 critics
 (implementer + user lens); converted by /ralph.
 
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+Submitted-by: <active submitter>
 EOF
 )"
 
 git push -u origin "<prefix>/<N>-<slug>"
 ```
+
+`Submitted-by:` is mandatory and must name the model/agent that actually
+submits the commit (for example `Submitted-by: Claude`, `Submitted-by: Codex`,
+or `Submitted-by: Pi`). Do not hard-code Claude when the active submitter is a
+fallback harness.
 
 Pre-commit hook runs lint + tests; do not bypass.
 
@@ -246,7 +270,7 @@ gh pr create \
   --body "$(cat <<'EOF'
 Closes #<N>.
 
-**Status: DRAFT — ralph loop has not yet been launched.**
+**Status: DRAFT — implementation, /eval, and /pr-audit promotable gates are still pending.**
 
 ## Summary
 <from prd.md introduction, 2-3 lines>
@@ -259,17 +283,68 @@ Closes #<N>.
 - Medium-severity findings: <count>
 - Recommendation: <from critique.md>
 
-## Next steps (manual)
-1. \`scripts/ralph.sh <slug>\` — launch the loop in tmux
-2. Monitor: \`tmux attach -t <slug>\` or \`tail -f tasks/<slug>/progress.txt\`
-3. After STATUS: COMPLETE: \`git push && gh pr ready <pr-number> && /ci-status\`
+## Next steps (automated)
+1. Launch the expert `/worktrees` Advisor in tmux session `agent-ship-<slug>` via `/goal` (the pre-implement `/compact` already ran in Stage 7.5).
+2. Advisor: `/delegate` workers each run `scripts/ralph.sh <slug>` in an isolated worktree; monitor to `STATUS: COMPLETE`; run `/eval`; then `/compact` before the audit.
+3. A separate executor runs `/pr-audit`; this PR is marked ready (`gh pr ready`) only when it is promotable (CI green + mergeable + clean).
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code) via /ship-spec
 EOF
 )"
 ```
 
-Capture the PR URL; print it as the final pipeline output.
+Capture the PR URL and PR number `<PR>`. This is an observability checkpoint, not the final pipeline output.
+
+### Stage 10 — Launch the expert `/worktrees` Advisor (tmux + `/goal`)
+
+The orchestrator does not implement inline. It launches an **expert Advisor on `/worktrees`** in its own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode persists the run to completion. Session name `agent-ship-<slug>` (sanitize slashes/space → `-`), distinct from the `<slug>`-named loop sessions `scripts/ralph.sh` creates.
+
+```bash
+SESSION="agent-ship-<slug>"   # e.g. printf %s "<slug>" | tr '/:[:space:]' '-'
+tmux new-session -d -s "$SESSION" \
+  '<harness> "/goal <advisor-prompt>" 2>&1 | tee /tmp/'"$SESSION"'.log'
+# <harness> = the active agent CLI (pi | claude | codex); pi matches the cron default
+```
+
+**Advisor `/goal` prompt** (one line; fill the placeholders):
+
+> `/goal` As an **expert Advisor on `/worktrees`**, implement `tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) Create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees`. (2) Orchestrate with `/delegate --plan tasks/<slug>/prd.json`: spawn `general-purpose` worker(s) that each `cd` into the worktree and run `scripts/ralph.sh <slug>` (the ralph loop), and **monitor** them by polling `tasks/<slug>/progress.txt` for `STATUS: COMPLETE` and the workers' tmux liveness. (3) Run the `/eval` gate (Stage 11). (4) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (5) In a **separate executor**, run `/pr-audit` for PR `#<PR>` and run `gh pr ready <PR>` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
+
+The Advisor owns Stages 11–13 inside its session. The orchestrator's turn ends after launching it and reporting the session name; the ready-for-review PR is produced asynchronously by the Advisor. Each worker commits the implementation on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer (per `templates/prompt.md`); worktree isolation keeps concurrent work off the shared checkout (avoiding the autopilot shared-checkout contamination class). If `tmux` is unavailable, fall back to running the executor inline (`scripts/ralph.sh <slug>`) and continue to Stage 11 in the foreground.
+
+### Stage 11 — `/eval` gate
+
+Run `/eval` (the Advisor runs this inside its session) while still on the work branch. If it updates `evals/RESULTS.md`, commit the benchmark refresh on the branch. Treat only a NEW green→red probe regression or a non-zero eval runner exit as blocking; a pre-existing red with an unchanged delta is non-gating but should be disclosed in the PR.
+
+### Stage 11.5 — `/compact` after implement (before the audit)
+
+The second of the two compacts that bracket the implement phase. The ralph loop and `/eval` have spent significant context in the Advisor's session; run `/compact` so the `/pr-audit` audit and the undraft decision start clean. Preserve the finalize keys:
+
+```text
+Preserve /ship-spec finalize context: slug <slug>, branch <prefix>/<N>-<slug>, issue #<N>, PR #<PR>, implementation complete (STATUS: COMPLETE), /eval result, undraft gate (/pr-audit promotable → gh pr ready, else comment + stay draft), no auto-merge, tmux session agent-ship-<slug> left alive.
+```
+
+Non-blocking — if `/compact` is unavailable or errors, log a warning and continue to Stage 12.
+
+### Stage 12 — `/pr-audit` promotable gate (separate executor)
+
+Push the branch so CI runs (`git push origin HEAD`). The Advisor then hands off to a **separate executor** (a `/delegate` worker or `Agent` call — "another executor") whose sole job is to run `/pr-audit` focused on PR `#<PR>` and report its draft sub-status. `/pr-audit` is read-only: it classifies the draft as **promotable** only when CI is green AND the PR is mergeable AND clean (it reads the `statusCheckRollup`, so it subsumes a bare `/ci-status` check). The executor returns `promotable` / `still-WIP` / `limbo`. Do not infer green from silence — a no-run CI status is not promotable.
+
+### Stage 13 — `gh pr ready` (undraft only if promotable)
+
+When implementation is complete, `/eval` has no new green→red regression, and Stage 12's `/pr-audit` classified the PR **promotable**, the executor undrafts it:
+
+```bash
+gh pr ready <PR>
+```
+
+Otherwise (not promotable: red/pending CI, conflicts, or a new eval regression) keep the PR draft and add a comment naming the blocking gate plus resume/fix instructions:
+
+```bash
+gh pr comment <PR> --body "ship-spec: PR left draft — <blocking gate>. Resume: <command>."
+```
+
+Never auto-merge. The `agent-ship-<slug>` tmux session is left alive for attach/continue (per `context/rules/sandbox-processes.md`). Print the PR URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline output.
 
 ## Halt conditions
 
@@ -282,8 +357,14 @@ Capture the PR URL; print it as the final pipeline output.
 | 5 | `gh issue create` fails (auth, label, repo perms) | Diagnose; manual issue creation; re-run from stage 6 with `--issue <N>` |
 | 6 | `/ralph` hard-fails (missing `--issue`, malformed prd.md) | Inspect skill error; revise inputs; re-run from stage 6 |
 | 7 | Four-file contract incomplete | Print missing files; abort; user investigates |
+| 7.5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue (stages 8–9 re-read from disk) |
 | 8 | Pre-commit hook fails (lint, tests) | Fix issue; re-run from stage 8 |
 | 9 | `gh pr create` fails (no remote, branch missing on origin) | Verify push from stage 8; re-run from stage 9 |
+| 10 | `tmux` unavailable, or the Advisor/worker stalls, times out, or leaves acceptance criteria incomplete | If `tmux` is missing, run the executor inline; otherwise leave PR draft and comment the resume command (`scripts/ralph.sh <slug>` / attach `agent-ship-<slug>`) |
+| 11 | `/eval` reports a NEW green→red regression or exits non-zero | Leave PR draft; fix or document the regression, then re-run `/eval` |
+| 11.5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue to the audit |
+| 12 | `/pr-audit` cannot classify (gh/API error), or CI is red/pending so the PR is not promotable | Leave PR draft; fix CI and re-run the audit executor |
+| 13 | PR not promotable, or `gh pr ready` fails | Leave draft + comment the blocking gate; diagnose PR state/permissions; never merge |
 
 ## Idempotency
 
@@ -294,26 +375,23 @@ Every stage checks for prior state and resumes rather than duplicating:
 | 2 | `tasks/<slug>/prd.md` exists | `/prd` runs in update mode (existing skill behavior) |
 | 3 | `tasks/<slug>/critique.md` exists and is recent (<24h) AND prd.md unchanged since | Skip; reuse |
 | 4 | (no resume — pure decision step) | Re-evaluate critique.md every run |
-| 5 | Issue with matching title/label exists | Reuse existing `#N`; don't create duplicate |
+| 5 | `--issue <N>` provided, or issue with matching title/label exists | If `--issue <N>`: skip creation, reuse `<N>`. Else reuse the matching issue; never create a duplicate |
 | 6 | `tasks/<slug>/prd.json` exists | `/ralph` archives prior + regenerates (existing skill behavior) |
 | 7 | `prompt.md` / `progress.txt` exist | Skip if present |
+| 7.5 | (no resume — context optimization) | Always safe to run; skip silently if `/compact` is unavailable |
 | 8 | Branch exists on origin | Checkout + commit on top |
 | 9 | Draft PR exists for this branch | Update body + comment-update; don't create duplicate |
+| 10 | `progress.txt` already says `STATUS: COMPLETE`; or the `agent-ship-<slug>`/ralph tmux session is already running | Skip relaunch — attach/monitor the existing session (`scripts/ralph.sh` reattaches idempotently); worktree present → reuse |
+| 11 | `evals/RESULTS.md` already reflects the current probe set and no new regression exists | Continue to the audit step; otherwise re-run `/eval` |
+| 11.5 | (no resume — context optimization) | Always safe to run; skip silently if `/compact` is unavailable |
+| 12 | `/pr-audit` already classified this PR promotable | Continue to the undraft step |
+| 13 | PR is already ready-for-review | Print terminal status; do not mutate |
 
 The whole pipeline can be re-invoked safely. Failed stage = fix + re-run; resume happens automatically.
 
-## v1 vs v2
+## Finalization contract
 
-| Stage | v1 (this skill) | v2 (future) |
-|---|---|---|
-| 1–9 | ✓ included | unchanged |
-| 10 | manual: `scripts/ralph.sh <slug>` | auto-launch tmux loop |
-| 11 | manual: tail progress.txt | auto-poll for `STATUS: COMPLETE` |
-| 12 | manual: `git push` | auto-push iteration commits |
-| 13 | manual: `gh pr ready <M>` | auto-promote when STATUS: COMPLETE + CI green |
-| 14 | manual: `/ci-status` | auto-invoke after final push |
-
-v1 stops at draft PR because the loop launch is the highest-blast-radius step in the pipeline. Two or three real runs of v1 will reveal whether the critic phase catches enough to justify auto-launching the loop.
+`/ship-spec` opens a draft PR early so reviewers can observe the scaffold, but a successful run does not stop there. After scaffolding it compacts and hands off to an expert `/worktrees` Advisor (launched in a tmux session via `/goal`) that drives `/delegate` workers each running `scripts/ralph.sh`. The terminal successful state is a ready-for-review PR, reached only after implementation completes, `/eval` shows no new green→red regression, and a separate `/pr-audit` executor classifies the PR **promotable** (CI green + mergeable + clean) before `gh pr ready`. Draft is reserved for blocked states: critic HALT, incomplete executor, new eval regression, not-promotable PR (red/pending CI or conflicts), or an explicit user stop. Never auto-merge.
 
 ## Reference
 
@@ -338,8 +416,15 @@ v1 stops at draft PR because the loop launch is the highest-blast-radius step in
 | `/prd` skill | `.claude/skills/prd/SKILL.md` | Stage 2 — markdown PRD generation |
 | `critic` agent | `.claude/agents/critic.md` | Stage 4 — adversarial review |
 | `/ralph` skill | `.claude/skills/ralph/SKILL.md` | Stage 6 — markdown → JSON conversion |
-| `scripts/ralph.sh` | `scripts/ralph.sh` | (v2 — loop launcher) |
-| `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | (v2 — CI verification) |
-| advisor-model rule | `.claude/rules/advisor-model.md` | Critic-gate pattern (3-step variant) |
+| `/compact` | (built-in) | Stages 7.5 & 11.5 — bracket the implement phase (before implement after PRD artifacts; after implement before the audit) |
+| `/worktrees` skill | `.claude/skills/worktrees/SKILL.md` | Stage 10 — isolated `.worktrees/<branch>` for the implementation |
+| `/delegate` skill | `.claude/skills/delegate/SKILL.md` | Stage 10 — Advisor spawns workers in waves |
+| `/goal` (Pi extension) | `.pi/settings.json` (`@narumitw/pi-goal`) | Stage 10 — persists the Advisor run to completion |
+| `scripts/ralph.sh` | `scripts/ralph.sh` | Stage 10 — per-worker implementation loop, run inside the worktree |
+| `/eval` skill | `.claude/skills/eval/SKILL.md` | Stage 11 — probe regression gate |
+| `/pr-audit` skill | `.claude/skills/pr-audit/SKILL.md` | Stage 12 — promotable classification (gates the undraft) |
+| `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | CI verification (subsumed by `/pr-audit`'s promotable check) |
+| advisor-model rule | `.claude/rules/advisor-model.md` | Critic-gate pattern (3-step variant); Advisor handoff |
+| sandbox-processes rule | `.claude/rules/sandbox-processes.md` | Stage 10 — tmux session naming for the Advisor |
 | Protected-paths list | `.claude/protected-paths.txt` | Stage 3 — load-bearing items critics must not propose deleting |
 | Ralph prompt template | `.claude/skills/ship-spec/templates/prompt.md` | Stage 7 — prompt.md template |

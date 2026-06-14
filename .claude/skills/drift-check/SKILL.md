@@ -189,7 +189,7 @@ When behind count > 0, print:
 
 ### (C) Host/state drift (cron-staleness)
 
-**Goal**: detect crons that were merged after the running `system-cron`
+**Goal**: detect crons that were merged after the running `cron-system`
 runtime started (they are inert until the runtime is restarted). This is
 the cron boot-load gap: `scripts/cron-runtime.ts` calls `loadCrons()` once
 at boot, so a newly-merged `crons/*.md` file is not picked up until the
@@ -218,12 +218,12 @@ fi
 ```
 
 If `/proc/<pid>/stat` is inaccessible (PID namespace isolation, non-Linux
-host, stale PID), fall back to the `system-cron` tmux session creation
+host, stale PID), fall back to the `cron-system` tmux session creation
 time:
 
 ```bash
 if [ -z "$RUNTIME_START" ]; then
-  TMUX_START=$(tmux display-message -p '#{session_created}' -t system-cron 2>/dev/null)
+  TMUX_START=$(tmux display-message -p '#{session_created}' -t cron-system 2>/dev/null)
   if [ -n "$TMUX_START" ] && [ "$TMUX_START" -gt 0 ] 2>/dev/null; then
     RUNTIME_START=$TMUX_START
     echo "DRIFT-CHECK (C): cron runtime start time (from tmux session): $(date -d @$RUNTIME_START -u '+%Y-%m-%d %H:%M:%S UTC' 2>/dev/null || echo $RUNTIME_START)"
@@ -248,12 +248,11 @@ Then print a single `OK` token for class C:
 When `RUNTIME_START` is set, check each **schedulable cron file** for a
 mtime strictly after the runtime start time. A `crons/*.md` file qualifies
 only if it passes the predicate below (a leading `---` frontmatter block
-declaring a non-empty, anchored, comment-excluding `schedule:` key that parses
-with the same Croner constructor used by `scripts/cron-runtime.ts`, and not
-`enabled: false`) — so non-cron docs like `crons/README.md` and malformed cron
-files the runtime logs as `SCHED_INVALID` are skipped by the predicate, never
-mtime-compared, and never counted. Qualification is property-based, not a
-hard-coded name list:
+declaring a non-empty `schedule:` key that parses with the same Croner
+constructor used by `scripts/cron-runtime.ts`, and not `enabled: false`) — so
+non-cron docs like `crons/README.md` and malformed cron files the runtime logs
+as `SCHED_INVALID` are skipped by the predicate, never mtime-compared, and
+never counted. Qualification is property-based, not a hard-coded name list:
 
 ```bash
 INERT=()
@@ -340,8 +339,6 @@ is_schedulable_cron() {
 
   return 0
 }
-
-INERT=()
 for f in crons/*.md; do
   is_schedulable_cron "$f" || continue
   FILE_MTIME=$(stat -c '%Y' "$f" 2>/dev/null || stat -f '%m' "$f" 2>/dev/null)
@@ -363,8 +360,8 @@ If `INERT` is empty, print a single `OK` token for class C:
 Print (do not execute):
 
 ```
-  Recommended: restart the system-cron tmux session
-    tmux kill-session -t system-cron
+  Recommended: restart the cron-system tmux session
+    tmux kill-session -t cron-system
     # then relaunch via the documented runtime-start procedure in scripts/cron-runtime.ts
 ```
 
@@ -376,13 +373,16 @@ is an intentional operator action, not performed by this skill).
 
 ## Output Contract
 
-- Each class prints exactly one summary line when clean: `(A) Framework drift: OK`, `(B) Branch-behind drift: OK`, `(C) Cron-staleness drift: OK`.
+- Each class prints exactly one summary line when clean: `(A) Framework drift: OK`, `(B) Branch-behind drift: OK`, `(C) Cron-staleness drift: OK`. The `(C) Cron-staleness drift: OK` clean token is unchanged by the predicate — it still prints whenever no schedulable cron is inert.
 - When a class has findings, it prints one or more `DRIFT-CHECK (<letter>): ...` detail lines followed by a `Recommended:` block.
+- Class (C) evaluates only **schedulable cron files** — `crons/*.md` files that pass the Step C-2 predicate (a leading `---` frontmatter block declaring a non-empty, Croner-valid `schedule:` key and not `enabled: false`). Non-scheduled docs such as `crons/README.md` and malformed schedules the runtime would log as `SCHED_INVALID` are never evaluated, never emitted as a `DRIFT-CHECK (C)` line, and never counted toward the inert aggregate. Qualification is predicate-based, not a hard-coded name list, so a future non-cron file dropped into `crons/` is handled generically.
 - When at least one class is non-clean, print a final aggregate line:
 
 ```
 DRIFT: <comma-separated summary of non-clean classes>
 ```
+
+- The aggregate's `cron-staleness drift (N inert file)` term counts only **schedulable cron files**; a non-scheduled doc such as `crons/README.md` never increments it, and any inline example names a real cron (e.g. `crons/heartbeat.md`).
 
 Example (all clean):
 
@@ -400,7 +400,7 @@ DRIFT-CHECK (A): origin/development is 3 behind upstream/development (0 ahead)
 DRIFT-CHECK (B): ...
 (B) Branch-behind drift: OK
 DRIFT-CHECK (C): crons/heartbeat.md modified after runtime start — inert until runtime restart
-  Recommended: restart the system-cron tmux session ...
+  Recommended: restart the cron-system tmux session ...
 DRIFT: framework drift (3 behind upstream), cron-staleness drift (1 inert file)
 ```
 

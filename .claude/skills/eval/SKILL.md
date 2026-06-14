@@ -34,7 +34,9 @@ itself): `0` when no new green→red regression occurred this run, `1` when one 
 more new regressions were detected (`${#regressions[@]} > 0`). When invoked via the
 Bash tool as `bash .claude/skills/eval/run.sh`, the agent caller reads `$?` directly
 to gate on success — the printed `REGRESSIONS (...)` stdout block and per-probe stderr
-lines remain the human-readable signal.
+lines remain the human-readable signal. Note: the `eval-weekly` cron is an intentional
+legacy caller that appends `|| true` then greps stdout; it does not consume the exit
+code by design — this is not a bug.
 
 ## What the runner does
 
@@ -46,15 +48,21 @@ lines remain the human-readable signal.
    row) emits `new-pass`/`new-fail` and raises NO regression without prior state.
 4. **Surface regressions** — any `PASS → (REGRESSION|TIMEOUT|ERROR)` transition is
    printed first, naming the probe's `source`.
-5. **Rewrite `RESULTS.md`** — overwrite the row for each probe run; carry prior
-   rows for probes not run this invocation (so the scoreboard stays complete).
+5. **Rewrite `RESULTS.md` atomically** — build the full scoreboard into a temp
+   sibling file (`RESULTS.md.tmp.$$`) and replace the live file in one `mv -f`
+   (never truncate-then-append in place), so a crash or concurrent run can't leave
+   a partial scoreboard. Overwrite the row for each probe run; carry prior rows for
+   probes not run this invocation from a **pre-write snapshot (`RESULTS_ORIG`)**
+   captured before the rewrite — not the live file — so a filtered run never erases
+   untouched rows and the scoreboard stays complete.
 
-## Ablation
+## Ablation (added by US-006)
 
 `run.sh --ablate <context-file> --probe <id>` runs a probe with and without a
 target rule/memory file loaded (reusing `scripts/ablate.sh`'s swap/restore/trap
 mechanics — NOT the `claude -p` oracle) and reports `LOAD-BEARING` (regression on
-removal) or `PRUNABLE`. This is the prune-half of the fitness function.
+removal) or `PRUNABLE`. This is the prune-half of the fitness function. See
+US-006 in `tasks/context-fitness-evals/prd.md`.
 
 ## When NOT to use
 

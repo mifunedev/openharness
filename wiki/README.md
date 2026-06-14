@@ -25,6 +25,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| pi-codex-usage | Pi Codex Usage | [pi, codex, usage, statusline, extension] | 2026-06-14 |
 | repo2rlenv | Repo2RLEnv | [reinforcement-learning, evaluation, agent-harness, harbor, datasets, openharness] | 2026-06-13 |
 | pi-tasks | Pi Tasks | [pi, tasks, coordination, subagents, agent-harness] | 2026-06-13 |
 | pi-plan-mode | Pi Plan Mode | [pi, plan-mode, planning, approval, agent-harness] | 2026-06-13 |
@@ -32,11 +33,10 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 | turbovec-turboquant-rag | turbovec and TurboQuant for compressed RAG retrieval | [vector-search, rag, quantization, ai-infra, local-retrieval] | 2026-06-07 |
 | rubricrefine-agent-reliability | RubricRefine: Improving Tool-Use Agent Reliability with Training-Free Pre-Execution Refinement |  | 2026-06-06 |
 | compound-engineering | Compound Engineering | [compound-engineering, agent-harness, ai-engineering, feedback-loops, self-improvement, methodology] | 2026-06-04 |
-| latmd-knowledge-graph | Lat.md Project Knowledge Graph for Agent Context | [agent-context, knowledge-graph, markdown, test-specs, semantic-search] | 2026-05-30 |
-| codegraph-mcp | CodeGraph MCP for Reducing Agent Code-Exploration Tool Calls | [codegraph, mcp, code-exploration, tree-sitter, sqlite, tool-calls] | 2026-05-30 |
-| inspectable-agent-harness | Inspectable Agent Harness Workflows | [claude-code, agent-harness, coding-agents, ai-engineering] | 2026-05-29 |
-| opencode | OpenCode CLI | [agent, cli, opencode, optional, primitive] | 2026-05-28 |
-| deepagents | DeepAgents CLI | [agent, cli, langchain, deepagents, optional, primitive] | 2026-05-28 |
-| sequoia-capital-the-next-1t-company | Sequoia $1T AI Services Thesis | [ai, services, strategy, venture, open-harness] | 2026-05-26 |
-| learn-harness-engineering | Learn Harness Engineering (Walking Labs course) | [harness, agents, education, course, open-harness] | 2026-05-26 |
-| hermes-agent | Hermes Agent CLI | [agent, cli, nousresearch, hermes, primitive] | 2026-05-26 |
+| verifiers | verifiers | [reinforcement-learning, evaluation, agent-harness, verifiers, environments] | 2026-06-01 |
+| latmd-knowledge-graph | Latent-Markov Dynamics of LLM Knowledge Graphs | [llm, knowledge-graphs, latent-markov, ai-research, retrieval] | 2026-05-30 |
+| codegraph-mcp | CodeGraph MCP | [codegraph, mcp, code-intelligence, ai-tools] | 2026-05-30 |
+| inspectable-agent-harness | Inspectable Agent Harness | [agent-harness, observability, workflows, pi, claude-code, delegation] | 2026-05-29 |
+| learn-harness-engineering | Learn Harness Engineering | [harness-engineering, education, taxonomy, agent-harness] | 2026-05-26 |
+| sequoia-capital-the-next-1t-company | Sequoia Capital: AI Ascent 2025 — The Next $1T AI Company | [ai-market, startups, sequoia, agents, inference, strategy] | 2026-05-26 |
+| karpathy-llm-wiki | Karpathy LLM Wiki | [llm, wiki, karpathy, agents, education] | 2026-05-23 |

@@ -40,6 +40,7 @@ Open Harness loads these project-local Pi packages from `.pi/settings.json`:
 - [`@tintinweb/pi-tasks`](https://github.com/tintinweb/pi-tasks) — task tracking for Pi with `TaskCreate`, `TaskList`, `TaskGet`, `TaskUpdate`, `TaskOutput`, `TaskStop`, and `TaskExecute` tools; a `/tasks` menu; and a persistent task widget. `TaskExecute` integrates with `@tintinweb/pi-subagents` so tracked tasks can run through configured subagents.
 - [`@narumitw/pi-goal`](https://pi.dev/packages/@narumitw/pi-goal?name=goal) — `/goal <task>` mode that keeps Pi working until it verifies completion and calls the `goal_complete` tool. Use `/goal pause`, `/goal resume`, or `/goal clear` to manage the active goal.
 - [`@narumitw/pi-plan-mode`](https://pi.dev/packages/@narumitw/pi-plan-mode) — Codex-like `/plan` mode for read-only exploration, structured clarification through `plan_mode_question`, and approval-gated implementation. Open Harness uses this upstream package instead of maintaining a local `.pi/extensions/plan-mode/` implementation.
+- [`@narumitw/pi-codex-usage`](https://github.com/narumiruna/pi-extensions/tree/main/extensions/pi-codex-usage) — Codex subscription usage inside Pi via `/codex-status`, including 5-hour session usage, weekly usage, reset times, credits, and an automatic compact statusline for `openai-codex` models.
 
 Pi installs missing project packages automatically on startup after the project is trusted. In Open Harness, start package-backed plan mode with:
 
@@ -47,7 +48,23 @@ Pi installs missing project packages automatically on startup after the project 
 pi --plan
 ```
 
-Outside this project, try the packages manually with `pi -e npm:@narumitw/pi-goal` or `pi -e npm:@narumitw/pi-plan-mode --plan`.
+Outside this project, try the packages manually with `pi -e npm:@narumitw/pi-goal`, `pi -e npm:@narumitw/pi-plan-mode --plan`, or `pi -e npm:@narumitw/pi-codex-usage`.
+
+## Codex usage status
+
+Use `/codex-status` to show ChatGPT Codex subscription usage without leaving Pi:
+
+```text
+/codex-status
+/codex-status --refresh
+/codex-status --no-statusline
+/codex-status --clear-statusline
+/codex-status --timeout 30
+```
+
+When the selected Pi model provider is `openai-codex`, the package refreshes a compact statusline item every five minutes, for example `📊 codex 59% 5h 61% wk`, so 5-hour session usage and weekly usage stay visible during the session. `/codex-status --refresh` bypasses the short in-memory cache.
+
+Auth is layered: the extension uses Pi's own `openai-codex` provider auth first, then falls back to `codex app-server --listen stdio://` only when Pi auth cannot provide usable ChatGPT subscription auth. OpenAI API keys do not expose this quota.
 
 ## Task tracking
 

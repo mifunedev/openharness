@@ -135,7 +135,7 @@ Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside
 
 The sandbox image ships a complete development environment. The only host dependency is Docker.
 
-Project-local Pi packages are loaded from `.pi/settings.json`; the defaults include `@tintinweb/pi-subagents`, `@tintinweb/pi-tasks`, `@narumitw/pi-goal`, and `@narumitw/pi-plan-mode`.
+Project-local Pi packages are loaded from `.pi/settings.json`; the defaults include `@tintinweb/pi-subagents`, `@tintinweb/pi-tasks`, `@narumitw/pi-goal`, `@narumitw/pi-plan-mode`, and `@narumitw/pi-codex-usage` for `/codex-status` plus the Codex 5-hour-session / weekly-usage statusline.
 
 ### Base image
 

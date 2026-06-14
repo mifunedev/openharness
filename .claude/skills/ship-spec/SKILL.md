@@ -1,22 +1,23 @@
 ---
 name: ship-spec
 description: |
-  Compose /prd → 2 critics → /ralph → gh issue → branch → draft PR into a
-  single end-to-end invocation. Produces a fully-scaffolded task ready for
-  the Ralph runner, plus an open draft PR for observability.
+  Compose /prd → 2 critics → /ralph → gh issue → branch → draft PR →
+  implementation/eval/CI → ready-for-review PR into a single end-to-end
+  invocation. Produces a fully-scaffolded task, opens a draft PR for
+  observability while work is pending, then marks the PR ready after the
+  implementation, eval, and CI gates pass.
   TRIGGER when: asked to scaffold a spec end-to-end, "ship a spec",
   "set up a task PR", or after planning a feature and ready to formalize.
-  v1 stops at draft PR creation; loop launch + CI verification stay manual.
 argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent] [--issue <N>]"
 ---
 
 # Ship Spec
 
-Compose the existing primitives (`/prd`, `.claude/agents/critic.md`, `/ralph`, `gh`, `git`) into one durable invocation that produces a fully-scaffolded task + draft PR. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
+Compose the existing primitives (`/prd`, `.claude/agents/critic.md`, `/ralph`, `gh`, `git`, executor loop, `/eval`, `/ci-status`) into one durable invocation that produces a fully-scaffolded task and a ready-for-review PR. The draft PR is an observability checkpoint while implementation is pending, not the terminal state. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
 
 **Core principle: critic gate before commitment.** Critics review the PRD before the issue is opened, the branch created, or anything is pushed. The cheapest thing to revise is the spec itself — make that the gate.
 
-## Pipeline (v1: stages 1–9)
+## Pipeline (stages 1–13)
 
 ```mermaid
 flowchart TD
@@ -27,10 +28,11 @@ flowchart TD
     C --> F["6. /ralph → tasks/<slug>/prd.json"]
     F --> G["7. Scaffold prompt.md + progress.txt"]
     G --> H["8. Branch + commit + push"]
-    H --> I["9. gh pr create --draft"]
-    I --> J["v2: scripts/ralph.sh → tmux loop<br/>→ /ci-status → gh pr ready"]
-
-    style J stroke-dasharray: 5 5
+    H --> I["9. gh pr create --draft<br/>(observability checkpoint)"]
+    I --> J["10. Execute implementation loop"]
+    J --> K["11. /eval gate"]
+    K --> L["12. push + /ci-status"]
+    L --> M["13. gh pr ready<br/>(success only)"]
 ```
 
 **Stage ordering rationale**: critics run BEFORE the GH issue is opened (this was reordered in v1.1, issue #218). The earlier ordering created dangling issues when critics halted; now no GitHub-side state changes until the spec passes the critic gate.
@@ -256,7 +258,7 @@ gh pr create \
   --body "$(cat <<'EOF'
 Closes #<N>.
 
-**Status: DRAFT — ralph loop has not yet been launched.**
+**Status: DRAFT — implementation/eval/CI gates are still pending.**
 
 ## Summary
 <from prd.md introduction, 2-3 lines>
@@ -269,17 +271,43 @@ Closes #<N>.
 - Medium-severity findings: <count>
 - Recommendation: <from critique.md>
 
-## Next steps (manual)
-1. \`scripts/ralph.sh <slug>\` — launch the loop in tmux
-2. Monitor: \`tmux attach -t <slug>\` or \`tail -f tasks/<slug>/progress.txt\`
-3. After STATUS: COMPLETE: \`git push && gh pr ready <pr-number> && /ci-status\`
+## Next steps
+1. Launch the selected executor for `tasks/<slug>/prd.json`.
+2. Run targeted tests plus `/eval`; resolve any new green→red probe regression.
+3. Push final commits, run `/ci-status`, and mark the PR ready only after CI is green.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code) via /ship-spec
 EOF
 )"
 ```
 
-Capture the PR URL; print it as the final pipeline output.
+Capture the PR URL. This is an observability checkpoint, not the final pipeline output.
+
+### Stage 10 — Execute implementation loop
+
+Run the configured executor for `tasks/<slug>/prd.json` (for example `scripts/ralph.sh <slug>` or the active Advisor's `/delegate --plan tasks/<slug>/prd.json`). The executor must commit the implementation on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer.
+
+Proceed only when the task state proves implementation is complete (for Ralph: `tasks/<slug>/progress.txt` contains `STATUS: COMPLETE`; for Advisor/delegate: every `prd.json` acceptance criterion is satisfied). If the executor stalls, times out, or leaves incomplete acceptance criteria, keep the PR draft and comment with the exact resume command and current status.
+
+### Stage 11 — `/eval` gate
+
+Run `/eval` while still on the work branch. If it updates `evals/RESULTS.md`, commit the benchmark refresh on the branch. Treat only a NEW green→red probe regression or a non-zero eval runner exit as blocking; a pre-existing red with an unchanged delta is non-gating but should be disclosed in the PR.
+
+### Stage 12 — Push + `/ci-status`
+
+Push the branch after implementation and eval commits are complete. Run `/ci-status` for the PR branch. A missing/no-run status is handled by `/ci-status`'s repo-specific rules; do not infer green from silence.
+
+### Stage 13 — `gh pr ready`
+
+When implementation is complete, `/eval` has no new green→red regression, and `/ci-status` is green, mark the PR ready:
+
+```bash
+gh pr ready <pr-number>
+```
+
+If eval or CI is red, keep the PR draft and add a PR comment naming the failing gate and resume/fix instructions. Never auto-merge.
+
+Print the PR URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline output.
 
 ## Halt conditions
 
@@ -294,6 +322,10 @@ Capture the PR URL; print it as the final pipeline output.
 | 7 | Four-file contract incomplete | Print missing files; abort; user investigates |
 | 8 | Pre-commit hook fails (lint, tests) | Fix issue; re-run from stage 8 |
 | 9 | `gh pr create` fails (no remote, branch missing on origin) | Verify push from stage 8; re-run from stage 9 |
+| 10 | Executor stalls, times out, or leaves acceptance criteria incomplete | Leave PR draft; comment with resume command and status |
+| 11 | `/eval` reports a NEW green→red regression or exits non-zero | Leave PR draft; fix or document the regression, then re-run `/eval` |
+| 12 | `/ci-status` reports red or times out | Leave PR draft; fix CI and re-run from stage 12 |
+| 13 | `gh pr ready` fails | Diagnose PR state/permissions; do not merge |
 
 ## Idempotency
 
@@ -309,21 +341,16 @@ Every stage checks for prior state and resumes rather than duplicating:
 | 7 | `prompt.md` / `progress.txt` exist | Skip if present |
 | 8 | Branch exists on origin | Checkout + commit on top |
 | 9 | Draft PR exists for this branch | Update body + comment-update; don't create duplicate |
+| 10 | `progress.txt` already says `STATUS: COMPLETE`, or delegate acceptance criteria already pass | Skip executor relaunch; continue to eval |
+| 11 | `evals/RESULTS.md` already reflects the current probe set and no new regression exists | Continue to CI; otherwise re-run `/eval` |
+| 12 | Branch already pushed and CI already green | Continue to ready step |
+| 13 | PR is already ready-for-review | Print terminal status; do not mutate |
 
 The whole pipeline can be re-invoked safely. Failed stage = fix + re-run; resume happens automatically.
 
-## v1 vs v2
+## Finalization contract
 
-| Stage | v1 (this skill) | v2 (future) |
-|---|---|---|
-| 1–9 | ✓ included | unchanged |
-| 10 | manual: `scripts/ralph.sh <slug>` | auto-launch tmux loop |
-| 11 | manual: tail progress.txt | auto-poll for `STATUS: COMPLETE` |
-| 12 | manual: `git push` | auto-push iteration commits |
-| 13 | manual: `gh pr ready <M>` | auto-promote when STATUS: COMPLETE + CI green |
-| 14 | manual: `/ci-status` | auto-invoke after final push |
-
-v1 stops at draft PR because the loop launch is the highest-blast-radius step in the pipeline. Two or three real runs of v1 will reveal whether the critic phase catches enough to justify auto-launching the loop.
+`/ship-spec` opens a draft PR early so reviewers can observe the scaffold, but a successful run does not stop there. The terminal successful state is a ready-for-review PR after implementation, `/eval`, and `/ci-status` gates pass. Draft is reserved for blocked states: critic HALT, incomplete executor, new eval regression, red/timed-out CI, or an explicit user stop. Never auto-merge.
 
 ## Reference
 
@@ -348,8 +375,9 @@ v1 stops at draft PR because the loop launch is the highest-blast-radius step in
 | `/prd` skill | `.claude/skills/prd/SKILL.md` | Stage 2 — markdown PRD generation |
 | `critic` agent | `.claude/agents/critic.md` | Stage 4 — adversarial review |
 | `/ralph` skill | `.claude/skills/ralph/SKILL.md` | Stage 6 — markdown → JSON conversion |
-| `scripts/ralph.sh` | `scripts/ralph.sh` | (v2 — loop launcher) |
-| `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | (v2 — CI verification) |
+| `scripts/ralph.sh` | `scripts/ralph.sh` | Stage 10 — resumable executor option |
+| `/eval` skill | `.claude/skills/eval/SKILL.md` | Stage 11 — probe regression gate |
+| `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | Stage 12 — CI verification |
 | advisor-model rule | `.claude/rules/advisor-model.md` | Critic-gate pattern (3-step variant) |
 | Protected-paths list | `.claude/protected-paths.txt` | Stage 3 — load-bearing items critics must not propose deleting |
 | Ralph prompt template | `.claude/skills/ship-spec/templates/prompt.md` | Stage 7 — prompt.md template |

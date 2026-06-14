@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/134-align-ship-spec-readiness",
+  "description": "Align /ship-spec guidance so successful runs mark PRs ready after implementation, eval, and CI gates pass.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Correct ship-spec finalization contract",
+      "description": "As the harness maintainer, I want /ship-spec to describe implementation, eval, CI, and ready finalization so agents do not leave successful PRs draft-only.",
+      "acceptanceCriteria": [
+        ".claude/skills/ship-spec/SKILL.md no longer says v1 stops at draft PR creation",
+        "Stage 9 remains a draft PR checkpoint for observability",
+        "New finalization stages document executor completion, /eval, /ci-status, and gh pr ready",
+        "Draft status is reserved for blocked gates; successful terminal state is ready-for-review"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Implemented directly by autopilot advisor."
+    },
+    {
+      "id": "US-002",
+      "title": "Align root skill summary",
+      "description": "As the orchestrator, I want AGENTS.md to summarize /ship-spec accurately so the always-loaded contract matches the skill.",
+      "acceptanceCriteria": [
+        "The /ship-spec row says draft PR is a checkpoint, not the end",
+        "The row includes the ready-for-review terminal state"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "AGENTS.md updated."
+    },
+    {
+      "id": "US-003",
+      "title": "Guard the correction with eval coverage",
+      "description": "As the maintainer, I want a deterministic probe so stale draft-only guidance cannot silently return.",
+      "acceptanceCriteria": [
+        "evals/probes/ship-spec-ready-finalization.sh fails on retired draft-only phrases",
+        "The probe requires ready-finalization tokens in the skill and root skill table",
+        "The probe passes locally and under the /eval runner"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Probe added and passes."
+    }
+  ]
+}

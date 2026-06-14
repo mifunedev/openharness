@@ -121,6 +121,10 @@ If the fast-forward fails, log `Result: FAIL` + `Observation: development diverg
 ```bash
 SESSION="${CRON_TMUX_SESSION:-}"    # e.g. cron-autopilot-0610-1805, or empty
 KEEP="${CRON_KEEP_MARKER:-}"        # e.g. /tmp/cron-autopilot-0610-1805.keep, or empty
+OVERLAP_PIDFILE="${CRON_OVERLAP_PIDFILE:-}"  # e.g. /tmp/cron-autopilot.pid, or empty before runtime restart
+# Backward-compatible fallback for an already-running pre-#126 cron runtime: it
+# exports SESSION/KEEP but not CRON_OVERLAP_PIDFILE until the runtime restarts.
+[ -z "$OVERLAP_PIDFILE" ] && [ -n "$SESSION" ] && OVERLAP_PIDFILE="/tmp/cron-autopilot.pid"
 EXECUTOR="${AUTOPILOT_EXECUTOR:-delegate-advisor}"
 # CLI flag wins over env: /autopilot --executor=ralph
 case "${ARGUMENTS:-}" in
@@ -132,6 +136,7 @@ echo "autopilot executor: $EXECUTOR"
 
 safe_branch_session() { printf '%s' "autopilot-$1" | tr '/:' '--' | tr '[:space:]' '-' | tr -cd 'A-Za-z0-9_.=-'; }
 cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER"; }
+release_overlap_lock() { [ -n "${OVERLAP_PIDFILE:-}" ] && rm -f "$OVERLAP_PIDFILE"; }
 ```
 
 ### 2. Select — issue queue first, research only when empty
@@ -390,8 +395,11 @@ git push origin HEAD
 
 **Clean the active marker on finalized PR paths**: after the run creates or updates a terminal PR state (`PR-READY`, `PR-DRAFT-CI-RED`, or `PR-DRAFT-EVAL-RED`), run `cleanup_active_marker` before restore/exit. The open PR and persisted `autopilot-<branch>` session are now the duplicate guards; leaving `/tmp/$SAFE_SESSION.active` behind would permanently suppress a future run after the PR/session is closed. Keep `ACTIVE_MARKER` only on incomplete executor paths (`DELEGATE-FAIL`, `RALPH-INCOMPLETE`) where manual continuation is expected.
 
+**Release the overlap lock before restoring** (mandatory for kept Pi sessions): after any terminal PR state (`PR-READY`, `PR-DRAFT-CI-RED`, or `PR-DRAFT-EVAL-RED`), run `release_overlap_lock` before the restore. Kept Pi sessions intentionally stay alive for manual review, so the cron wrapper may not regain control to remove `/tmp/cron-autopilot.pid`; the skill must clear `$CRON_OVERLAP_PIDFILE` itself once the run is terminal. Incomplete executor paths (`DELEGATE-FAIL`, `RALPH-INCOMPLETE`) keep the lock because manual continuation is expected.
+
 **Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical **scoped restore** — a non-destructive two-step that discards only this run's own OWNED-path residue, then switches HEAD. Committed work is safe on the branch / draft PR. The scope step MUST precede the branch switch (it clears owned residue that would otherwise make a non-forced `git checkout development` refuse). It touches only **tracked** files, so an untracked owned-path orphan from a mid-run crash is NOT auto-removed (`git clean` is deliberately NOT used — too destructive across `tasks/`, `memory/`, `.claude/`); clean such orphans manually. Any **foreign** change OUTSIDE the owned surface — modified or staged (e.g. `.codex/config.toml`) — survives byte-for-byte (left in place / left staged) and is ignored by the scoped assertion and the next §1 check:
 ```bash
+release_overlap_lock                         # terminal PR state reached; clear cron overlap lock before keeping the Pi session alive
 git checkout development -- "${OWNED_PATHS[@]}"   # 1. discard own owned-path residue (tracked only; array form word-splits under bash+zsh)
 git checkout development                    # 2. switch HEAD (residue cleared above → non-forced switch succeeds; foreign WIP unaffected)
 git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }
@@ -460,4 +468,5 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | `memory/<today>/log.md` | Daily session log; autopilot appends an entry each run |
 | `.claude/agents/pm.md` | pm agent definition (invoked via `Agent subagent_type: pm`) |
 | `$CRON_TMUX_SESSION` / `$CRON_KEEP_MARKER` | Per-run tmux session name + keep-marker path, set by the cron runtime (empty on manual runs); delegate-advisor renames the session to `autopilot-<branch>` after branch discovery |
+| `$CRON_OVERLAP_PIDFILE` | Per-id overlap lock path (for autopilot, `/tmp/cron-autopilot.pid`) exported by the cron runtime; terminal PR paths remove it so a kept Pi review session does not trigger hourly `SKIPPED_OVERLAP` |
 | `AUTOPILOT_EXECUTOR` | Optional executor toggle: `delegate-advisor` (default) or `ralph` fallback |

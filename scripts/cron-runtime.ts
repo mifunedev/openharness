@@ -194,7 +194,7 @@ export function buildTmuxWrapper(opts: {
   const { session, id, agentBin, promptFile } = opts;
   return (
     `echo $$ > /tmp/cron-${id}.pid; ` +
-    `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep; ` +
+    `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep CRON_OVERLAP_PIDFILE=/tmp/cron-${id}.pid; ` +
     buildCronAgentCommand({
       id,
       agentBin,

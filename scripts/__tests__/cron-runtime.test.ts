@@ -239,9 +239,9 @@ describe("buildTmuxWrapper", () => {
     expect(logText).toContain("agent-ran:-p");
   });
 
-  it("exports the session + keep-marker env vars", () => {
+  it("exports the session, keep-marker, and overlap pidfile env vars", () => {
     expect(wrapper).toContain(
-      "export CRON_TMUX_SESSION=cron-autopilot-0610-1805 CRON_KEEP_MARKER=/tmp/cron-autopilot-0610-1805.keep;",
+      "export CRON_TMUX_SESSION=cron-autopilot-0610-1805 CRON_KEEP_MARKER=/tmp/cron-autopilot-0610-1805.keep CRON_OVERLAP_PIDFILE=/tmp/cron-autopilot.pid;",
     );
   });
 

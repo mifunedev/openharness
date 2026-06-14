@@ -119,6 +119,9 @@ jobs:
           config: .hadolint.yaml
           failure-threshold: warning
 
+      - name: Check pnpm pin drift
+        run: bash scripts/check-pnpm-pin.sh
+
   eval-probes:
     name: "Eval Probe Regression Gate"
     runs-on: ubuntu-latest

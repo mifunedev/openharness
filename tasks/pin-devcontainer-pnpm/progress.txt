@@ -1,0 +1,44 @@
+# progress
+
+## Codebase Patterns
+- The pnpm version source of truth is `package.json` `packageManager` (`pnpm@10.33.0`); the devcontainer Dockerfile must mirror it. `scripts/check-pnpm-pin.sh` enforces the invariant and is run by CI boot-lint + release validate.
+- `scripts/__tests__/*.test.ts` is the vitest convention for orchestrator scripts; mirror `harness-config.test.ts` (spawnSync + temp fixtures). Run via `pnpm test:scripts`.
+- `ci-harness.yml` boot-lint shellcheck step already globs `scripts/*.sh`, so any new `scripts/*.sh` is auto-shellchecked — don't add a redundant shellcheck step.
+
+## US-001 — 2026-06-14 22:30 UTC
+**Title**: Pin the Dockerfile pnpm version
+**Files changed**: .devcontainer/Dockerfile
+**Result**: PASS
+### What I did
+Changed the corepack line from `pnpm@latest` to `pnpm@10.33.0` (the exact `package.json` packageManager version). One-line additive pin; protected-path override documented in prd.md.
+
+## US-002 — 2026-06-14 22:30 UTC
+**Title**: Add the pnpm-pin drift-guard script
+**Files changed**: scripts/check-pnpm-pin.sh
+**Result**: PASS
+### What I did
+Added a bash guard that extracts both pnpm versions (normalizing any `+sha` suffix), accepts `--dockerfile`/`--package-json` overrides, resolves paths CWD-independently, and exits non-zero on mismatch / missing-line / non-semver. shellcheck -S warning clean.
+
+## US-003 — 2026-06-14 22:30 UTC
+**Title**: Test the drift-guard script
+**Files changed**: scripts/__tests__/check-pnpm-pin.test.ts
+**Result**: PASS
+### What I did
+Added vitest cases A–E (match, mismatch, missing-line, +sha-suffix, @latest) plus a non-repo-root CWD case. `pnpm test:scripts` → 6/6 pass (172 total green).
+
+## US-004 — 2026-06-14 22:30 UTC
+**Title**: Wire the guard into CI and the release validate gate
+**Files changed**: .github/workflows/ci-harness.yml, .github/workflows/release.yml
+**Result**: PASS
+### What I did
+Added a `Check pnpm pin drift` step (after Hadolint in boot-lint; after Root tests in validate). `release` already `needs: [validate]`, so validate gating blocks the image build. Both workflows parse as valid YAML.
+
+## US-005 — 2026-06-14 22:30 UTC
+**Title**: Record the change in the changelog
+**Files changed**: CHANGELOG.md
+**Result**: PASS
+### What I did
+Added a one-line `### Fixed` entry under `[Unreleased]` linking #114, matching the file's heading convention.
+
+---
+STATUS: COMPLETE

@@ -112,6 +112,15 @@ Heartbeat body.
       parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.tmux,
     ).toBe(false);
   });
+
+  it("parses an optional per-cron agent override", () => {
+    const entry = parseCronFile(
+      `---\nschedule: "* * * * *"\nagent: pi\n---\nbody\n`,
+      "autopilot.md",
+    );
+
+    expect(entry?.agentBin).toBe("pi");
+  });
 });
 
 describe("isValidSchedule", () => {
@@ -256,6 +265,19 @@ describe("buildTmuxWrapper", () => {
       '[ "$(cat /tmp/cron-autopilot-0610-1805.agent 2>/dev/null || echo claude)" = codex ]; then codex; else claude --continue; fi;',
     );
   });
+
+  it("persists a kept Pi session as Pi, not the global default agent", () => {
+    const piWrapper = buildTmuxWrapper({
+      session: "cron-autopilot-0610-1805",
+      id: "autopilot",
+      agentBin: "pi",
+      promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
+    });
+
+    expect(piWrapper).toContain(
+      '[ "$(cat /tmp/cron-autopilot-0610-1805.agent 2>/dev/null || echo pi)" = codex ]; then codex; else pi --continue; fi;',
+    );
+  });
 });
 
 describe("buildCronAgentCommand", () => {
@@ -390,6 +412,21 @@ describe("scheduleAll", () => {
     // The BOOT summary preserves the token and reads "2 scheduled, 1 skipped";
     // logging it at all proves the loop completed without exiting early.
     expect(spy).toHaveBeenCalledWith("system", "BOOT", "2 scheduled, 1 skipped");
+  });
+
+  it("preserves per-cron agent overrides through scheduling", () => {
+    writeFileSync(
+      path.join(tmp, "autopilot.md"),
+      `---\nid: autopilot\nschedule: "0 * * * *"\nagent: pi\nenabled: true\n---\nbody\n`,
+    );
+
+    const constructed: Array<string | undefined> = [];
+    const result = scheduleAll(tmp, vi.fn(), (e) => {
+      constructed.push(e.agentBin);
+    });
+
+    expect(result).toEqual({ scheduled: 1, skipped: 0 });
+    expect(constructed).toEqual(["pi"]);
   });
 
   it("fault-isolates a construction throw (defense-in-depth): skips only the throwing cron", () => {

@@ -13,6 +13,7 @@ export interface CronEntry {
   overlap: boolean;
   catchup: boolean;
   tmux: boolean;
+  agentBin?: string;
   body: string;
   filePath: string;
 }
@@ -41,6 +42,7 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
     overlap: fm.overlap === "true",
     catchup: fm.catchup === "true",
     tmux: fm.tmux === "true",
+    agentBin: fm.agent || undefined,
     body: m[2],
     filePath: file,
   };
@@ -289,6 +291,7 @@ function fireTmux(entry: CronEntry): void {
   }
   const session = tmuxSessionName(entry.id, new Date());
   const promptFile = `/tmp/${session}.prompt`;
+  const agentBin = entry.agentBin || AGENT_BIN;
   const body = reloadBody(entry);
   fs.writeFileSync(promptFile, body);
   const child = spawn(
@@ -300,7 +303,7 @@ function fireTmux(entry: CronEntry): void {
       session,
       "-c",
       process.cwd(),
-      buildTmuxWrapper({ session, id: entry.id, agentBin: AGENT_BIN, promptFile }),
+      buildTmuxWrapper({ session, id: entry.id, agentBin, promptFile }),
     ],
     { stdio: "ignore" },
   );
@@ -319,6 +322,7 @@ function fire(entry: CronEntry): void {
   const session = tmuxSessionName(entry.id, new Date());
   const promptFile = `/tmp/${session}.prompt`;
   const logFile = `/tmp/${session}.log`;
+  const agentBin = entry.agentBin || AGENT_BIN;
   fs.writeFileSync(promptFile, reloadBody(entry));
   const child = spawn(
     "bash",
@@ -326,7 +330,7 @@ function fire(entry: CronEntry): void {
       "-lc",
       buildCronAgentCommand({
         id: entry.id,
-        agentBin: AGENT_BIN,
+        agentBin,
         promptFile,
         logFile,
       }),

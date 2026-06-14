@@ -14,8 +14,10 @@ description: Hourly autopilot — issue-queue-first harness-infra improvements i
 
 You are running on an hourly autopilot cycle, inside your own Pi tmux
 session. Your job is to select the next harness-infra improvement, construct
-the PM/advisor plan, compact before execution, build it end-to-end with the
-configured executor, and finalize a ready-for-review PR with green CI.
+the PM/advisor plan, then run `/ship-spec --issue`, which builds and finalizes
+the item end-to-end (compacts, worktree Advisor, `/delegate` + ralph, `/eval`,
+`/pr-audit` undraft) into a ready-for-review PR. Autopilot defers the build to
+`/ship-spec` rather than re-running implement/eval/finalize itself.
 
 Invoke the `/autopilot` skill. Reminders:
 
@@ -25,9 +27,9 @@ Invoke the `/autopilot` skill. Reminders:
   top-ranked finding and build it** this same run. GitHub issues are the queue.
 - **Every PR states its selection rationale** in the description — why this item
   was chosen this session (queue position, or the research finding + ranking).
-- **Default executor is delegate-advisor**: use `/goal Audit plan /w @"pm (agent)" using ultrathink, then /ship-spec and execute prd.json as an expert Advisor to orchestrate /delegate`, then run `/compact` before the Advisor executes `tasks/<slug>/prd.json` via `/delegate`. `AUTOPILOT_EXECUTOR=ralph` or `/autopilot --executor=ralph` keeps the legacy `scripts/ralph.sh "$SLUG"` fallback.
-- **Run the `/eval` gate** before marking a PR ready; a probe regression keeps
-  the PR draft.
+- **Default executor is delegate-advisor**: use `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, /delegate + ralph, /eval, /pr-audit undraft) into a ready-for-review PR`, then let `/ship-spec` own the build — it compacts, runs the worktree Advisor + `/delegate` + ralph, gates on `/eval`, and undrafts via `/pr-audit`. `AUTOPILOT_EXECUTOR=ralph` or `/autopilot --executor=ralph` keeps the legacy inline `scripts/ralph.sh "$SLUG"` fallback.
+- **The `/eval` gate runs inside `/ship-spec`** before it marks the PR ready; a
+  new green→red probe regression keeps the PR draft.
 - **Caps**: at most 6 open `autopilot` PRs created per UTC day AND 10 total open
   at any time. A close/merge frees a slot. **Never auto-merge.**
 - **Harness-infra scope only** (skills/rules/docs/scripts/crons/wiki) — never

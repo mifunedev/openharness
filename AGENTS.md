@@ -106,6 +106,33 @@ Remove the sandbox.
 
 Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspaces. Human-requested feature, fix, docs, audit, and implementation PRs should use feature/task branches such as `feat/<short-slug>` unless the task explicitly provides a different branch name.
 
+## The Loop
+
+The harness self-improves on an eight-phase cycle. Each phase is driven by a skill that hands off to the next; the loop closes when grooming surfaces the next thing to research. `/autopilot` walks the whole cycle autonomously; `/ship-spec` covers phases 1–4 for a single item. `/compact` brackets the implement phase on both sides so the implementer and the auditor each start with a clean context.
+
+```mermaid
+flowchart LR
+    R["1 · Research / spec<br/>/harness-audit · /imagine · /prd"] --> P["2 · Plan<br/>/ship-spec · /ralph · pm+critic"]
+    P --> CB(["/compact<br/>before implement"]) --> I["3 · Implement<br/>/delegate → scripts/ralph.sh"]
+    I --> CA(["/compact<br/>after implement"]) --> A["4 · Audit<br/>/pr-audit · /eval · /code-review"]
+    A --> RE["5 · Retro<br/>/retro"]
+    RE --> C["6 · Compound<br/>/wiki-ingest → memory/MEMORY.md"]
+    C --> Z["7 · Compress<br/>/context-audit · /compact · /caveman"]
+    Z --> G["8 · Groom<br/>/skill-lint · /wiki-lint · /drift-check"]
+    G -->|next item| R
+```
+
+| Phase | Intent | Primary skills |
+|---|---|---|
+| 1 · Research / spec | Find the next thing worth building; capture it as a spec | `/harness-audit`, `/imagine`, `/prd` |
+| 2 · Plan | Critic-gate the spec; convert to an executable task | `/ship-spec`, `/ralph`, `pm`+`critic` |
+| 3 · Implement | Build it in isolation | `/delegate` → `scripts/ralph.sh` (worktree) |
+| 4 · Audit | Prove it's correct and promotable | `/pr-audit`, `/eval`, `/code-review` |
+| 5 · Retro | Turn the run into falsifiable lessons | `/retro` |
+| 6 · Compound | Promote durable knowledge so it's reused, not re-derived | `/wiki-ingest`, `memory/MEMORY.md` |
+| 7 · Compress | Keep the always-loaded context lean | `/context-audit`, `/compact`, `/caveman` |
+| 8 · Groom | Health-check skills, wiki, and drift; queue the next item | `/skill-lint`, `/wiki-lint`, `/drift-check` |
+
 ## Skills
 
 | Skill | When |
@@ -121,7 +148,7 @@ Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspa
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
 | `/ship-spec` | End-to-end spec: `/prd` → critics → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
-| `/autopilot` | Self-improvement loop — issue-queue-first selection (build the oldest open `autopilot` issue; researches + files its own ticket when empty), PM plan → exact `/goal` Advisor handoff → `/ship-spec` → mandatory `/compact` → `/delegate --plan tasks/<slug>/prd.json` by default; `AUTOPILOT_EXECUTOR=ralph` keeps the `scripts/ralph.sh` fallback; eval gate before ready, finalize ready-for-review PR; every PR states its selection rationale; per-run Pi tmux sessions renamed `autopilot-<branch>` and left alive after PR creation; cap 6 open PRs/day + 10 total open, no auto-merge |
+| `/autopilot` | Self-improvement loop — issue-queue-first selection (build the oldest open `autopilot` issue; researches + files its own ticket when empty), PM plan → exact `/goal` Advisor handoff → `/ship-spec --issue`, which now **owns the whole build** (the two compacts bracketing implement, a worktree Advisor, `/delegate --plan tasks/<slug>/prd.json` + ralph, `/eval`, `/pr-audit` undraft); autopilot **defers** and reconciles the outcome (no inline compact/delegate/eval/finalize). `AUTOPILOT_EXECUTOR=ralph` keeps the legacy inline `scripts/ralph.sh` fallback; every PR states its selection rationale; per-run Pi tmux sessions renamed `autopilot-<branch>` and left alive after PR creation; cap 6 open PRs/day + 10 total open, no auto-merge |
 | `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |

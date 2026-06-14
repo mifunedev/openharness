@@ -2,7 +2,8 @@
 # tier: A
 # source: conversation 2026-06-13 (autopilot delegate-advisor executor)
 # desc: /autopilot defaults to delegate-advisor, keeps Ralph as explicit fallback,
-#       uses the exact Advisor /goal phrase, compacts before prd.json delegation,
+#       uses the exact Advisor /goal phrase, defers the whole build to /ship-spec
+#       (no inline compact/delegate/eval — ship-spec owns them + the /pr-audit undraft),
 #       renames cron tmux sessions to autopilot-<branch>, dedupes active work,
 #       cleans finalized active markers, and keeps dry-run research non-mutating.
 set -euo pipefail
@@ -31,23 +32,24 @@ grep -Fq '*--executor=delegate-advisor*) EXECUTOR=delegate-advisor' "$SKILL" || 
 grep -Fq 'scripts/ralph.sh "$SLUG"' "$SKILL" || missing+=("Ralph fallback still launches scripts/ralph.sh")
 grep -Fq '#### `ralph` fallback' "$SKILL" || missing+=("Ralph fallback section")
 
-# Required exact Advisor goal phrase.
-required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then /ship-spec and execute prd.json as an expert Advisor to orchestrate /delegate'
+# Required exact Advisor goal phrase (now hands the whole build to /ship-spec).
+required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, /delegate + ralph, /eval, /pr-audit undraft) into a ready-for-review PR'
 grep -Fq "$required_goal" "$SKILL" || missing+=("exact Advisor /goal phrase in autopilot skill")
 grep -Fq "$required_goal" "$CRON" || missing+=("exact Advisor /goal phrase in cron reminder")
 
-# Mandatory compact-before-delegate handoff inside the delegate-advisor subsection.
+# Delegate-advisor DEFERS the whole build to /ship-spec — no inline compact/delegate/eval.
+grep -Fq '/ship-spec --issue' "$SKILL" || missing+=("autopilot invokes /ship-spec --issue")
 delegate_section="$(awk '/#### `delegate-advisor` \(default\)/,/#### `ralph` fallback/' "$SKILL")"
 [[ -n "$delegate_section" ]] || missing+=("delegate-advisor section")
 if [[ -n "$delegate_section" ]]; then
-  grep -Fq 'Run Pi `/compact` before Advisor executes the JSON' <<<"$delegate_section" || missing+=("mandatory /compact before prd.json execution")
-  grep -Fq 'do not call `/delegate` until `/compact` completes' <<<"$delegate_section" || missing+=("delegate blocked until compact completes")
-  grep -Fq 'tasks/$SLUG/prd.json path and contents' <<<"$delegate_section" || missing+=("compact prompt preserves prd.json")
-  grep -Fq '/delegate --plan tasks/$SLUG/prd.json' <<<"$delegate_section" || missing+=("delegate executes prd.json plan")
-  compact_line="$(grep -nF 'Run Pi `/compact` before Advisor executes the JSON' <<<"$delegate_section" | head -1 | cut -d: -f1 || true)"
-  delegate_line="$(grep -nF '/delegate --plan tasks/$SLUG/prd.json' <<<"$delegate_section" | head -1 | cut -d: -f1 || true)"
-  if [[ -z "$compact_line" || -z "$delegate_line" || "$compact_line" -ge "$delegate_line" ]]; then
-    missing+=("/compact appears before /delegate --plan in delegate-advisor section")
+  grep -Fq 'defer to `/ship-spec`' <<<"$delegate_section" || missing+=("delegate-advisor defers to /ship-spec")
+  grep -Fq 'does **not** run its own' <<<"$delegate_section" || missing+=("delegate-advisor does not re-run compact/delegate/eval")
+  grep -Fq '/pr-audit' <<<"$delegate_section" || missing+=("delegate-advisor references the ship-spec-owned /pr-audit undraft")
+  # ship-spec must own the build BEFORE autopilot reconciles: §4 (/ship-spec) precedes §5 (executor).
+  shipspec_line="$(grep -nF '/ship-spec --issue (owns the full build)' "$SKILL" | head -1 | cut -d: -f1 || true)"
+  executor_line="$(grep -nF '### 5. Implement — executor' "$SKILL" | head -1 | cut -d: -f1 || true)"
+  if [[ -z "$shipspec_line" || -z "$executor_line" || "$shipspec_line" -ge "$executor_line" ]]; then
+    missing+=("/ship-spec --issue stage precedes the executor reconcile stage")
   fi
 fi
 
@@ -85,5 +87,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS: autopilot defaults to delegate-advisor with exact goal, compact-before-delegate, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard, and Ralph fallback" >&2
+echo "PASS: autopilot defaults to delegate-advisor with exact goal, defers the build to /ship-spec, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard, and Ralph fallback" >&2
 exit 0

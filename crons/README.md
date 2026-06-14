@@ -33,8 +33,9 @@ Body becomes the agent prompt at fire time.
 
 - Filename = `<id>.md`, kebab-case.
 - Cron tmux sessions follow the `cron-<name>` category-prefix convention:
-  the runtime is `cron-system`, and detached job fires are
-  `cron-<id>-<MMDD>-<HHMM>` (see `.claude/rules/sandbox-processes.md`).
+  the supervisor is `cron-watchdog`, the runtime is `cron-system`, and
+  detached job fires are `cron-<id>-<MMDD>-<HHMM>` (see
+  `.claude/rules/sandbox-processes.md`).
 - Migration note: older sandboxes used runtime session `system-cron` and
   autopilot run sessions/markers named `autopilot-*`. New sandboxes use
   `cron-system` and `cron-autopilot-*`. During the transition, heartbeat scans
@@ -97,6 +98,8 @@ cron definition cannot crash the runtime and the other crons keep running.
 
 ## tmux sessions
 
+The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that checks for `cron-system` and starts `scripts/cron-runtime.ts` whenever the runtime session is absent. Inspect it with `tmux attach -t cron-watchdog`; watchdog output tees to `/tmp/cron-watchdog.log`, and the runtime still tees to `/tmp/cron-system.log`. During migration, a legacy `system-cron` session blocks both `cron-watchdog` and `cron-system`; kill `system-cron` and restart/relaunch the sandbox to complete the migration.
+
 A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
 
 - **Session name**: `cron-<id>-<MMDD>-<HHMM>` (e.g. `cron-autopilot-0610-1805`), derived from the fire time. The runtime logs `SPAWNED <session>` to `.cron.log`.
@@ -126,7 +129,7 @@ docker exec -u sandbox openharness sh -c 'kill -0 "$(cat crons/.pid)" 2>/dev/nul
 docker exec -u sandbox openharness kill -HUP "$(cat crons/.pid)"
 ```
 
-The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`, then relaunch it from the repo root: `node --experimental-strip-types scripts/cron-runtime.ts` (the documented `cron-system` start, per `.devcontainer/entrypoint.sh`).
+The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`; the `cron-watchdog` session will relaunch `node --experimental-strip-types scripts/cron-runtime.ts` in a fresh `cron-system` session (the documented start path from `.devcontainer/entrypoint.sh`).
 
 ## Override
 

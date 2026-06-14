@@ -1,0 +1,4 @@
+STATUS: COMPLETE
+Issue: #130
+Branch: feat/130-restart-cron-runtime
+Result: cron-watchdog implemented, documented, tested, and eval-guarded.

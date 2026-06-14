@@ -23,6 +23,12 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Temp-file handle for the atomic scoreboard write (assigned at the write block).
+# Initialized empty BEFORE the --ablate guard so the guarded EXIT trap is harmless
+# on the ablation exec path (the exec at run.sh:~49 replaces this shell entirely).
+tmp=""
+trap '[ -n "$tmp" ] && rm -f "$tmp"' EXIT
+
 # --- M-2: recover orphaned ablation backups from a crashed prior run ---
 # scripts/ablate.sh records in-flight "<target>\t<bak>" lines in this sentinel;
 # if a prior ablation was SIGKILLed before its trap fired, restore here.
@@ -51,10 +57,16 @@ fi
 
 hdr() { grep -E "^# $1:" "$2" 2>/dev/null | head -1 | sed "s/^# $1:[[:space:]]*//" || true; }
 prior_row() {
-  [ -f "$RESULTS" ] || return 0
-  grep -E "^\| ${1} \|" "$RESULTS" 2>/dev/null | head -1 || true
+  grep -E "^\| ${1} \|" <<<"$RESULTS_ORIG" 2>/dev/null | head -1 || true
 }
-prior_status() { prior_row "$1" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/,"",$5); print $5}'; }
+prior_status() { prior_row "$1" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $5); print $5}'; }
+
+# Capture the pre-write scoreboard ONCE. Carry-forward (prior_row) reads this
+# snapshot, never the live $RESULTS — so a filtered run can't erase untouched
+# rows, and a crash mid-write leaves the original file intact (atomic mv below).
+# set -e-safe: the [ -f ] short-circuits the cat so a missing file can't abort.
+RESULTS_ORIG=""
+[ -f "$RESULTS" ] && RESULTS_ORIG="$(cat "$RESULTS")"
 
 now="$(date -u +'%Y-%m-%d %H:%M')"
 declare -A NEWROW
@@ -100,8 +112,12 @@ for probe in "$PROBES_DIR"/*.sh; do
   ran=$((ran + 1))
 done
 
-# --- rewrite RESULTS.md: new rows for probes run; carry prior rows for the rest ---
-cat > "$RESULTS" <<'HDR'
+# --- rewrite RESULTS.md: build the full scoreboard into a temp sibling file, then
+#     replace the live file in ONE atomic mv -f. New rows for probes run this
+#     invocation; carry prior rows (from the RESULTS_ORIG snapshot) for the rest.
+#     The temp path is a SIBLING of $RESULTS (same filesystem) so mv -f is atomic. ---
+tmp="$RESULTS.tmp.$$"
+cat > "$tmp" <<'HDR'
 # Probe results — benchmark scoreboard
 
 Current status per probe id, written by `/eval`. Policy: **overwrite the row per
@@ -114,17 +130,19 @@ HDR
 for probe in "$PROBES_DIR"/*.sh; do
   id="$(basename "$probe" .sh)"
   if [ -n "${NEWROW[$id]+x}" ]; then
-    printf '%s\n' "${NEWROW[$id]}" >> "$RESULTS"
+    printf '%s\n' "${NEWROW[$id]}" >> "$tmp"
   else
     pr="$(prior_row "$id")"
     if [ -n "$pr" ]; then
-      printf '%s\n' "$pr" >> "$RESULTS"
+      printf '%s\n' "$pr" >> "$tmp"
     else
-      printf '| %s | %s | — | (not run) | %s |\n' "$id" "$(hdr tier "$probe")" "$(hdr source "$probe")" >> "$RESULTS"
+      printf '| %s | %s | — | (not run) | %s |\n' "$id" "$(hdr tier "$probe")" "$(hdr source "$probe")" >> "$tmp"
     fi
   fi
 done
-printf '\n<!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->\n' >> "$RESULTS"
+printf '\n<!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->\n' >> "$tmp"
+mv -f "$tmp" "$RESULTS"
+tmp=""
 
 # --- summary to stdout: regressions first ---
 if [ "${#regressions[@]}" -gt 0 ]; then

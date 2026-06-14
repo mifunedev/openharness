@@ -6,10 +6,13 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 
 | probe | tier | last-run (UTC) | status | source |
 |-------|------|----------------|--------|--------|
-| clean-restore | A | 2026-06-12 02:34 | PASS | issue #412 — autopilot branch restore guard |
-| eval-gate | A | 2026-06-12 02:34 | PASS | issue #412 — autopilot eval gate |
-| eval-runner-exit | A | 2026-06-12 02:34 | PASS | issue #410 — eval runner aggregate exit contract |
-| health-check-docker-stats | A | 2026-06-12 02:34 | PASS | issue #408 — health-check in-container RAM reclaim |
-| skill-paths | A | 2026-06-12 02:34 | PASS | issue #408 — harness-audit & skill-lint stale path references |
+| clean-restore | A | 2026-06-14 00:44 | PASS | issue #412 — autopilot branch restore guard |
+| drift-check-cron-staleness-glob | A | 2026-06-14 00:44 | PASS | issue #415 |
+| eval-ci-gate | A | 2026-06-14 00:44 | PASS | issue #415 — eval probe suite gated in CI |
+| eval-gate | A | 2026-06-14 00:44 | PASS | issue #412 — autopilot eval gate |
+| eval-runner-exit | A | 2026-06-14 00:44 | PASS | issue #410 — eval runner aggregate exit contract |
+| health-check-docker-stats | A | 2026-06-14 00:44 | PASS | issue #408 — health-check in-container RAM reclaim |
+| memory-gitignore-claim | A | 2026-06-14 00:44 | PASS | issue #415 |
+| skill-paths | A | 2026-06-14 00:44 | PASS | issue #408 — harness-audit & skill-lint stale path references |
 
 <!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->

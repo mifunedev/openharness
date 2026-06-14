@@ -222,6 +222,7 @@ else
   __HAS_OLD=0; __HAS_NEW=0
   [ -d "$OLD_REPO/.git" ] && __HAS_OLD=1
   if [ -d "$REPO_DIR" ] && [ ! -d "$REPO_DIR/.git" ]; then
+    # shellcheck disable=SC2088  # ~ is intentional display text in this user-facing message; do not substitute $HOME
     die "~/.openharness exists but is not a git clone. Inspect and remove it, then re-run."
   fi
   [ -d "$REPO_DIR/.git" ] && __HAS_NEW=1

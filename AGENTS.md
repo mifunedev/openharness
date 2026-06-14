@@ -109,6 +109,7 @@ Remove the sandbox.
 |-------|------|
 | `/release` | CalVer release — branch, tag, push, GHCR |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
+| `/pr-audit` | Bulk triage open PRs in one query; classify ready / CI-failing / conflicting / changes-requested / needs-review / draft; read-only by default with optional deep review, proof comments, label application, and stale close actions |
 | `/health-check` | Triage host memory/disk/Docker before starting a stack; rank reclaim levers by safety×yield, prune build cache, confirm destructive removal |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
 | `/interview` | Adaptive pre-work clarifier — batches 2–4 task-specific questions via `AskUserQuestion`, then proceeds |

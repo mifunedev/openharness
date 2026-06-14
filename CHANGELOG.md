@@ -99,6 +99,66 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - Resolve moderate & low Dependabot alerts whose patched version is compatible with the Docusaurus 3.7 bundler: root `pnpm-lock.yaml` via `pnpm.overrides` — `qs` →6.15.2, `uuid` →11.1.1, `ws` →8.20.1 (scoped to the 8.x line so the `ws@7` consumer is untouched), `mermaid` →11.15.0, `postcss` →8.5.10; and `packages/oh` `esbuild` devDependency →0.25.0. The `webpack` (low) and `webpack-dev-server` (moderate) alerts are deferred to a Docusaurus 3.7→3.10 upgrade — webpack 5.107's stricter `ProgressPlugin` schema breaks the Docusaurus 3.7 `docs:build`, so the `webpack` pin stays at `5.98.0` here ([#35](https://github.com/ryaneggz/openharness/issues/35)).
 - Resolve the `joi` Dependabot alert (uncaught `RangeError` via recursive `link()` schemas, GHSA-q7cg-457f-vx79) by overriding `joi` →18.2.1 in the root `pnpm-lock.yaml`; `joi` is Docusaurus's config-validation transitive, and the 17→18 major builds clean against Docusaurus 3.10 (validated via `docs:build`) ([#39](https://github.com/ryaneggz/openharness/issues/39)).
 
+## [2026.6.13] - 2026-06-13
+
+### Added
+- Add an `Eval Probe Regression Gate` CI job, new eval self-guard probes, and atomic `/eval` scoreboard writes so green→red probe regressions block public harness changes ([#415](https://github.com/mifunedev/openharness/issues/415)).
+- Load `@tintinweb/pi-goal` and `@tintinweb/pi-tasks` by default in Pi, document their usage, and ignore Pi task runtime state ([#415](https://github.com/mifunedev/openharness/issues/415)).
+- Add the public-safe `/pr-audit` skill for one-shot bulk PR triage; read-only by default with optional deep review, proof comments, label application, and stale close actions ([#415](https://github.com/mifunedev/openharness/issues/415)).
+
+### Changed
+
+### Fixed
+- Tighten `/drift-check` cron-staleness detection to compare only schedulable cron files and skip README, disabled, unscheduled, empty, and invalid cron docs ([#415](https://github.com/mifunedev/openharness/issues/415)).
+- Correct `context/rules/memory.md` so daily `memory/YYYY-MM-DD/log.md` files are documented as local/gitignored journals unless force-added ([#415](https://github.com/mifunedev/openharness/issues/415)).
+- Expand boot-path shellcheck coverage to `scripts/*.sh` and `workspace/*.sh` while preserving the intentional literal `~/.openharness` installer message ([#415](https://github.com/mifunedev/openharness/issues/415)).
+
+### Removed
+### Deprecated
+### Security
+
+## [2026.6.12] - 2026-06-12
+
+### Added
+- `/autopilot` skill and hourly `crons/autopilot.md` loop: issue-queue-first harness-infra selection, `/ship-spec --issue`, Ralph implementation, `/eval` gate, conservative PR caps, and no auto-merge behavior ([#412](https://github.com/mifunedev/openharness/issues/412)).
+- Heartbeat autopilot nudge logic surfaces green/mergeable autopilot PRs, long-lived sessions, and kills only sessions frozen at an unambiguous interactive/usage prompt ([#412](https://github.com/mifunedev/openharness/issues/412)).
+- Autopilot-specific eval probes guard the forced clean branch restore and the corrected eval-gate decision rule ([#412](https://github.com/mifunedev/openharness/issues/412)).
+- `/eval` skill and `evals/` probe corpus: deterministic shell probes with a 3-state oracle, an overwrite-row `evals/RESULTS.md` benchmark, and an aggregate non-zero exit only for new green→red regressions ([#410](https://github.com/mifunedev/openharness/issues/410)).
+- `scripts/ablate.sh` provides shared swap/restore/trap mechanics for evaluating whether a context file is load-bearing under a deterministic probe ([#410](https://github.com/mifunedev/openharness/issues/410)).
+- `/drift-check` detects framework drift, branch/append-file drift, and cron-staleness drift without mutating local state; the heartbeat now surfaces its findings when present ([#410](https://github.com/mifunedev/openharness/issues/410)).
+- `CI: Harness` now runs on pull requests and harness infrastructure paths, adds workspace and standalone `packages/oh` typecheck gates, cancels superseded runs, and adds boot-path linting with `shellcheck`/`hadolint` ([#408](https://github.com/mifunedev/openharness/issues/408)).
+- `release.yml` now validates lint, format, typecheck, build, package tests, and root script tests before publishing release artifacts ([#408](https://github.com/mifunedev/openharness/issues/408)).
+- `SECURITY.md` documents supported versions, private vulnerability reporting, automated hardening, and the sandbox trust boundary ([#408](https://github.com/mifunedev/openharness/issues/408)).
+- Hermes web dashboard opt-in: set `hermes.dashboard: true` in `harness.yaml` (or legacy `HERMES_DASHBOARD=true`), with Hermes installed, to auto-launch the dashboard in the `app-hermes-dashboard` tmux session — published loopback-only on `HERMES_DASHBOARD_PORT` (default 9119) via a compose overlay ([#376](https://github.com/mifunedev/openharness/issues/376)).
+
+### Changed
+
+### Fixed
+- Cron runtime execution now reloads cron bodies at fire time, records synchronous job callback failures as `ERR_JOB`, supports opt-in tmux-backed cron runs, and has focused tests for the new behavior ([#408](https://github.com/mifunedev/openharness/issues/408)).
+- `Docs: build & deploy` workflow no longer fails on forks: the Pages `Configure`/`Upload`/`Deploy` steps are gated to the canonical repo (`github.repository == 'mifunedev/openharness'`), so forks build-validate docs without attempting a Pages deploy. Also removed a dangling `docs/harnesses/t3code.md` link to the deleted `integrations/cloudflare.md` ([#404](https://github.com/mifunedev/openharness/issues/404)).
+- `/release` skill now resolves the canonical remote (prefers `upstream`, else `origin`) for `REPO` and all release pushes, so a release can't accidentally land on a private fork; GHCR verification tries the org package path before the user path ([#402](https://github.com/mifunedev/openharness/issues/402)).
+- `/ship-spec` Stage 7 now clones a self-contained `.claude/skills/ship-spec/templates/prompt.md` instead of the deleted `tasks/archive/openharness-v07-convergence/prompt.md`; repointed the two other dead references to that task ([#402](https://github.com/mifunedev/openharness/issues/402)).
+
+### Removed
+
+### Deprecated
+
+### Security
+- Dependency manifests and lockfiles are refreshed with Docusaurus/Vitest upgrades and scoped `pnpm.overrides` for current transitive advisory remediation ([#408](https://github.com/mifunedev/openharness/issues/408)).
+
+## [2026.6.10] - 2026-06-10
+
+### Changed
+- Separate the maintainer's personal/instance state from the public template so it ships clean and fork-ready: `memory/MEMORY.md` reset to an empty stub, the `context/IDENTITY.md` lessons list emptied, `context/USER.md` "Working context" genericized to placeholders, the social account-ID line dropped from `context/TOOLS.md`, and `crons/heartbeat.md` timezone set to `America/Los_Angeles`. The private fork (`ryaneggz/openharness`) retains the full content ([#400](https://github.com/mifunedev/openharness/issues/400)).
+- Default sandbox timezone changed from `America/Denver` to `America/Los_Angeles` across the image, compose, install script, and cron docs/config — overridable via `harness.yaml`/`.devcontainer/.env` ([#400](https://github.com/mifunedev/openharness/issues/400)).
+
+### Fixed
+- `.gitignore` now ignores `tasks/archive/` — the prior `tasks/*/archive/` pattern never matched the real path ([#400](https://github.com/mifunedev/openharness/issues/400)).
+
+### Removed
+- Maintainer's research wiki (11 `wiki/*.md` entries plus tracked `wiki/raw/` snapshots) and accumulated task history (`tasks/archive/**`, in-flight `tasks/make-shell-service-arg/`) from the public template — moved to the private fork ([#400](https://github.com/mifunedev/openharness/issues/400)).
+- Personal agent-fleet docs (`docs/agents/`) and their matching `agent/*` workspace branches from the public template — moved to the private fork ([#400](https://github.com/mifunedev/openharness/issues/400)).
+
 ## [2026.6.9] - 2026-06-09
 
 ### Added

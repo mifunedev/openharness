@@ -106,7 +106,7 @@ gh api "repos/$REPO/actions/jobs/$JOB_ID/logs" 2>&1 \
   - `conciseness.yml` — push or PR: `workspace/*.md`, `workspace/.claude/rules/*.md`, itself
   - `release.yml` — tag push only
 
-  Infrastructure-only PRs (devcontainer/scripts/install/) trigger NOTHING on push — that's expected. `pull_request`-event workflows still fire when the PR opens. Diagnose with: `git diff --name-only HEAD~1 HEAD` and compare against each workflow's `on:` block.
+  Diagnose with: `git diff --name-only HEAD~1 HEAD` and compare against each workflow's `on:` block.
 
 ## CI Pipeline Steps
 
@@ -114,19 +114,26 @@ gh api "repos/$REPO/actions/jobs/$JOB_ID/logs" 2>&1 \
 
 This project's CI (`CI: Harness`) runs these steps in order:
 
-1. Lint (`pnpm run lint`)
-2. Format check (`pnpm run format:check`)
-3. Type check (`pnpm run type-check`)
-4. Prisma generate (`pnpm exec prisma generate`)
-5. Prisma migrate (`npx prisma migrate deploy`)
-6. Build (`pnpm run build`)
-7. Test (`pnpm test`)
-8. Playwright E2E (`pnpm run test:e2e`)
+1. Workspace package lint (`pnpm --filter './packages/**' -r --if-present run lint`)
+2. Workspace package format check (`pnpm --filter './packages/**' -r --if-present run format:check`)
+3. Workspace package typecheck (`pnpm --filter './packages/**' -r --if-present run typecheck`)
+4. Standalone `packages/oh` typecheck (`npm --prefix packages/oh ci && npm --prefix packages/oh run typecheck`)
+5. Workspace package build (`pnpm --filter './packages/**' -r --if-present run build`)
+6. Workspace package tests (`pnpm --filter './packages/**' -r --if-present run test`)
+7. Root script tests (`pnpm test:scripts`)
+8. Boot-path lint (`shellcheck .devcontainer/*.sh install/*.sh` and `hadolint .devcontainer/Dockerfile`)
 
 ## Local Pre-flight
 
 Before pushing, you can run the same checks locally to catch issues early:
 
 ```bash
-pnpm -r run lint && pnpm -r run format:check && pnpm -r run build && pnpm -r run test
+pnpm install --frozen-lockfile
+pnpm --filter './packages/**' -r --if-present run lint
+pnpm --filter './packages/**' -r --if-present run format:check
+pnpm --filter './packages/**' -r --if-present run typecheck
+npm --prefix packages/oh ci && npm --prefix packages/oh run typecheck
+pnpm --filter './packages/**' -r --if-present run build
+pnpm --filter './packages/**' -r --if-present run test
+pnpm test:scripts
 ```

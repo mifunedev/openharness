@@ -48,7 +48,6 @@ Per `.claude/rules/sandbox-processes.md`:
 ## Social tooling
 
 - Post Bridge API key for social scheduling lives in `.codex/skills/post-bridge/.env` when configured. Treat it as secret material: never print it, never echo secret-named variables, and only output sanitized account IDs, usernames, post IDs, statuses, and scheduled times.
-- Current Post Bridge account mapping seen 2026-05-05: LinkedIn personal `Ryan Eggleston` = `41731`; X personal `@JohnEggz` = `41738`; LinkedIn brand `Ruska AI` = `41732`; X brand `@ruska_ai` = `41735`; Instagram `ruska.ai` = `41737`.
 - For X validation, use X's weighted character model. `twitter-text@3.1.0` is the official library and can be installed in a temp prefix (e.g. `/tmp/x-charcheck`) for one-off checks; URLs count as 23 weighted characters.
 
 ## What's NOT available

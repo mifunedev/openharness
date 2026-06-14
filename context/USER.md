@@ -52,4 +52,4 @@ When the maintainer asks for something to be tracked across sessions ("check on 
 - **Don't add features beyond what was asked.** Bug fix doesn't need surrounding cleanup; one-shot operation doesn't need a helper.
 - **Don't write planning docs unless asked.** Work from conversation context.
 
-This file is updated after sessions that produce new patterns. Last updated: 2026-05-05 (social scheduling session: Mifune/Open Harness brand architecture, emoji structure, personal social accounts, X non-Premium validation).
+This file is updated after sessions that produce new patterns.

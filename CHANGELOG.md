@@ -9,6 +9,15 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.6.13] - 2026-06-13
+
+### Added
 - Add an `Eval Probe Regression Gate` CI job, new eval self-guard probes, and atomic `/eval` scoreboard writes so green→red probe regressions block public harness changes ([#415](https://github.com/mifunedev/openharness/issues/415)).
 - Load `@tintinweb/pi-goal` and `@tintinweb/pi-tasks` by default in Pi, document their usage, and ignore Pi task runtime state ([#415](https://github.com/mifunedev/openharness/issues/415)).
 - Add the public-safe `/pr-audit` skill for one-shot bulk PR triage; read-only by default with optional deep review, proof comments, label application, and stale close actions ([#415](https://github.com/mifunedev/openharness/issues/415)).

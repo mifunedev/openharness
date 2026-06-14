@@ -29,6 +29,7 @@ import {
   acquireLock,
   buildCronAgentCommand,
   buildTmuxWrapper,
+  decideOverlap,
   isValidCronId,
   isValidSchedule,
   loadCrons,
@@ -121,6 +122,58 @@ Heartbeat body.
     );
 
     expect(entry?.agentBin).toBe("pi");
+  });
+
+  it("parses worktree: true and defaults to false otherwise", () => {
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\nworktree: true\n---\nbody\n`, "a.md")
+        ?.worktree,
+    ).toBe(true);
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\nworktree: false\n---\nbody\n`, "b.md")
+        ?.worktree,
+    ).toBe(false);
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.worktree,
+    ).toBe(false);
+  });
+});
+
+describe("decideOverlap", () => {
+  // worktree:true ALWAYS isolates (the issue #142 default) — independent of the
+  // overlap flag, whether a pidfile exists, or whether its holder is alive.
+  it("returns 'worktree' for a worktree cron regardless of lock state", () => {
+    for (const pidfileExists of [false, true]) {
+      for (const holderAlive of [false, true]) {
+        for (const overlap of [false, true]) {
+          expect(
+            decideOverlap({ overlap, worktree: true, pidfileExists, holderAlive }),
+          ).toBe("worktree");
+        }
+      }
+    }
+  });
+
+  it("runs (never skips) when overlap is allowed", () => {
+    expect(
+      decideOverlap({ overlap: true, worktree: false, pidfileExists: true, holderAlive: true }),
+    ).toBe("run");
+  });
+
+  it("reclaims (runs) when there is no live holder of the id lock", () => {
+    expect(
+      decideOverlap({ overlap: false, worktree: false, pidfileExists: false, holderAlive: false }),
+    ).toBe("run");
+    // stale pidfile (exists but its pid is dead) → reclaim, do not skip
+    expect(
+      decideOverlap({ overlap: false, worktree: false, pidfileExists: true, holderAlive: false }),
+    ).toBe("run");
+  });
+
+  it("skips a non-worktree cron only when a live holder owns the id lock", () => {
+    expect(
+      decideOverlap({ overlap: false, worktree: false, pidfileExists: true, holderAlive: true }),
+    ).toBe("skip");
   });
 });
 
@@ -269,6 +322,32 @@ describe("buildTmuxWrapper", () => {
     expect(wrapper).toContain(
       "export CRON_TMUX_SESSION=cron-autopilot-0610-1805 CRON_KEEP_MARKER=/tmp/cron-autopilot-0610-1805.keep CRON_OVERLAP_PIDFILE=/tmp/cron-autopilot.pid;",
     );
+  });
+
+  it("uses a session-scoped pidfile and exports CRON_WORKTREE for an isolated worktree fire", () => {
+    const wt = buildTmuxWrapper({
+      session: "cron-autopilot-0610-1805",
+      id: "autopilot",
+      agentBin: "pi",
+      promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
+      pidFile: "/tmp/cron-autopilot-0610-1805.pid",
+      worktree: "/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805",
+    });
+    // session-scoped lock (NOT the id-scoped /tmp/cron-autopilot.pid) so a worktree
+    // fire never clobbers the primary run's overlap lock.
+    expect(wt).toContain("echo $$ > /tmp/cron-autopilot-0610-1805.pid;");
+    expect(wt).toContain("rm -f /tmp/cron-autopilot-0610-1805.pid;");
+    expect(wt).not.toContain("/tmp/cron-autopilot.pid");
+    // CRON_WORKTREE is exported so the agent (autopilot §1/§7) knows it is isolated.
+    expect(wt).toContain(
+      "CRON_OVERLAP_PIDFILE=/tmp/cron-autopilot-0610-1805.pid CRON_WORKTREE=/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805;",
+    );
+  });
+
+  it("omits CRON_WORKTREE and defaults to the id-scoped pidfile for a primary fire", () => {
+    // No pidFile/worktree opts → byte-identical to the historical primary path.
+    expect(wrapper).toContain("echo $$ > /tmp/cron-autopilot.pid;");
+    expect(wrapper).not.toContain("CRON_WORKTREE=");
   });
 
   it("runs the agent against the prompt file and tees the log", () => {
@@ -666,6 +745,7 @@ describe("reloadBody", () => {
       overlap: false,
       catchup: false,
       tmux: false,
+      worktree: false,
       body: "cached body\n",
       filePath: missingPath,
     };

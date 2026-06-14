@@ -6,18 +6,22 @@ enabled: true
 overlap: false
 catchup: false
 tmux: true
+worktree: true
 agent: pi
-description: Hourly autopilot — issue-queue-first harness-infra improvements in a Pi tmux Advisor session
+description: Hourly autopilot — issue-queue-first harness-infra improvements in an isolated-worktree Pi tmux Advisor session
 ---
 
 # Autopilot
 
 You are running on an hourly autopilot cycle, inside your own Pi tmux
-session. Your job is to select the next harness-infra improvement, construct
-the PM/advisor plan, then run `/ship-spec --issue`, which builds and finalizes
-the item end-to-end (compacts, worktree Advisor, `/delegate` + ralph, `/eval`,
-`/pr-audit` undraft) into a ready-for-review PR. Autopilot defers the build to
-`/ship-spec` rather than re-running implement/eval/finalize itself.
+session **in an isolated git worktree** (`$CRON_WORKTREE`, set by the cron
+runtime because this cron declares `worktree: true`). The shared root checkout is
+never touched, so the run can never dirty it or be skipped for overlap. Your job
+is to select the next harness-infra improvement, construct the PM/advisor plan,
+then run `/ship-spec --issue`, which builds and finalizes the item end-to-end
+(compacts, worktree Advisor, `/delegate` + ralph, `/eval`, `/pr-audit` undraft)
+into a ready-for-review PR. Autopilot defers the build to `/ship-spec` rather than
+re-running implement/eval/finalize itself.
 
 Invoke the `/autopilot` skill. Reminders:
 

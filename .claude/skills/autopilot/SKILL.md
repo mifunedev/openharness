@@ -79,34 +79,47 @@ If `--dry-run`: print both counts now (the selection is printed after §2), then
 # selected executor on the feature branch or lives under /tmp. No autopilot write lands outside this surface.
 OWNED_PATHS=(.claude/ context/ docs/ scripts/ crons/ wiki/ evals/ memory/ tasks/ CHANGELOG.md)
 
-# Self-heal a clean-but-stranded branch from a prior interrupted run (nothing to lose):
-# a crash before §5/§6/§7 can leave HEAD on a clean feature branch; recover it rather
-# than FAIL every hour. A *dirty* tree is NOT auto-cleaned here (it may be human WIP).
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [ "$BRANCH" != "development" ] && git diff --quiet && git diff --cached --quiet; then
-  git checkout -f development && BRANCH=$(git rev-parse --abbrev-ref HEAD)
+# Isolated worktree mode (worktree:true cron — the DEFAULT for autopilot): the cron
+# runtime fired this run inside a fresh detached worktree ($CRON_WORKTREE) cut from the
+# base tip, so the shared root checkout is NEVER touched. The root-clean guards below
+# (self-heal, owned-dirty BLOCKED-OWNED-WIP, must-be-on-development) exist only to
+# protect the SHARED root from cross-run contamination; an isolated worktree is always
+# clean, so they are skipped here. The §7 restore is likewise skipped (the worktree is
+# ephemeral — the runtime/heartbeat removes it), and the §1 overlap lock is moot (a
+# worktree run holds no id-scoped /tmp/cron-autopilot.pid). The Sync step below still
+# runs in both modes, fast-forwarding the detached HEAD to the freshest origin tip.
+if [ -n "${CRON_WORKTREE:-}" ]; then
+  echo "autopilot: isolated worktree run at $CRON_WORKTREE (root checkout untouched; §1 root guards + §7 restore skipped)"
+else
+  # Self-heal a clean-but-stranded branch from a prior interrupted run (nothing to lose):
+  # a crash before §5/§6/§7 can leave HEAD on a clean feature branch; recover it rather
+  # than FAIL every hour. A *dirty* tree is NOT auto-cleaned here (it may be human WIP).
+  BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  if [ "$BRANCH" != "development" ] && git diff --quiet && git diff --cached --quiet; then
+    git checkout -f development && BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  fi
+  # NOTE: the self-heal (above) and this MAIN check are now DIFFERENT predicates. The
+  # self-heal force-checks-out only when the WHOLE tree is clean (tree-wide git diff
+  # --quiet), so it can never fire while foreign WIP is present — therefore it never
+  # destroys foreign WIP. This MAIN check is scoped to ${OWNED_PATHS[@]} (array form), so
+  # a stray edit OUTSIDE the owned surface leaves it clean and the run proceeds; only a
+  # dirty OWNED path blocks. (Repro: stage an unrelated `.codex/config.toml` edit — the
+  # MAIN check below evaluates clean and does NOT take the exit-1 branch.)
+  # Dirty OWNED surface → skip non-destructively with a DISTINCT liveness token
+  # (BLOCKED-OWNED-WIP, not bare FAIL) so a heartbeat watcher reads a real owned-WIP
+  # stall as a stall, not idleness. The .cron.log append is guarded (2>/dev/null || true)
+  # so a missing/unwritable log never crashes the skill — same convention as § Guidelines
+  # "Liveness on every path". A stray edit OUTSIDE ${OWNED_PATHS[@]} never reaches here (US-002).
+  if ! { git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}"; }; then
+    printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "BLOCKED-OWNED-WIP" >> crons/.cron.log 2>/dev/null || true
+    echo "BLOCKED-OWNED-WIP: dirty owned surface — run skipped (foreign WIP left untouched)"
+    exit 1
+  fi
+  [ "$BRANCH" = "development" ] || { echo "ERROR: not on development (on $BRANCH)"; exit 1; }
 fi
-# NOTE: the self-heal (above) and this MAIN check are now DIFFERENT predicates. The
-# self-heal force-checks-out only when the WHOLE tree is clean (tree-wide git diff
-# --quiet), so it can never fire while foreign WIP is present — therefore it never
-# destroys foreign WIP. This MAIN check is scoped to ${OWNED_PATHS[@]} (array form), so
-# a stray edit OUTSIDE the owned surface leaves it clean and the run proceeds; only a
-# dirty OWNED path blocks. (Repro: stage an unrelated `.codex/config.toml` edit — the
-# MAIN check below evaluates clean and does NOT take the exit-1 branch.)
-# Dirty OWNED surface → skip non-destructively with a DISTINCT liveness token
-# (BLOCKED-OWNED-WIP, not bare FAIL) so a heartbeat watcher reads a real owned-WIP
-# stall as a stall, not idleness. The .cron.log append is guarded (2>/dev/null || true)
-# so a missing/unwritable log never crashes the skill — same convention as § Guidelines
-# "Liveness on every path". A stray edit OUTSIDE ${OWNED_PATHS[@]} never reaches here (US-002).
-if ! { git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}"; }; then
-  printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "BLOCKED-OWNED-WIP" >> crons/.cron.log 2>/dev/null || true
-  echo "BLOCKED-OWNED-WIP: dirty owned surface — run skipped (foreign WIP left untouched)"
-  exit 1
-fi
-[ "$BRANCH" = "development" ] || { echo "ERROR: not on development (on $BRANCH)"; exit 1; }
 ```
 
-If the OWNED surface is dirty, log `Result: BLOCKED-OWNED-WIP` + `Observation: dirty owned surface; run skipped until it is clean (foreign WIP untouched)` and exit 1 without touching GitHub — the distinct token (not bare `FAIL`) keeps a genuine owned-WIP stall visible to the heartbeat rather than looking idle. If instead HEAD is not on `development`, log `Result: FAIL` + `Observation: wrong branch` and exit 1.
+If the OWNED surface is dirty (root mode only — a worktree run is always clean), log `Result: BLOCKED-OWNED-WIP` + `Observation: dirty owned surface; run skipped until it is clean (foreign WIP untouched)` and exit 1 without touching GitHub — the distinct token (not bare `FAIL`) keeps a genuine owned-WIP stall visible to the heartbeat rather than looking idle. If instead HEAD is not on `development`, log `Result: FAIL` + `Observation: wrong branch` and exit 1.
 
 **Sync with origin** (mandatory — a stale `development` base means dedupe misses fresh merges and the run branches off old code):
 
@@ -255,7 +268,7 @@ In `delegate-advisor` mode the active `/goal` drives this step from the PM plan.
 /ship-spec "$PM_DESC" --plan <PM_PLAN content> --prefix feat --issue $ISSUE_NUM
 ```
 
-`/ship-spec` now runs the **entire pipeline**: `/prd` → 2 critics → (skips issue creation, reuses #$ISSUE_NUM) → `/ralph` (JSON) → branch `feat/$ISSUE_NUM-$SLUG` → draft PR → `/compact` (before implement) → an expert `/worktrees` Advisor in its own `agent-ship-<slug>` tmux session that drives `/delegate` workers each running `scripts/ralph.sh` → `/eval` → `/compact` (after implement) → `/pr-audit` promotable → `gh pr ready` (or left draft with a comment). **Capture `PR_NUM`, the actual `BRANCH`, and ship-spec's terminal status (`READY` or `DRAFT-BLOCKED`).** After the branch exists, ensure the cron tmux session is named `$(safe_branch_session "$BRANCH")` (for example `autopilot-feat-123-slug`) and keep `ACTIVE_MARKER=/tmp/$(safe_branch_session "$BRANCH").active` until the run is finalized or left for manual continuation.
+`/ship-spec` now runs the **entire pipeline**: `/prd` → 2 critics → (skips issue creation, reuses #$ISSUE_NUM) → `/ralph` (JSON) → branch `feat/$ISSUE_NUM-$SLUG` → draft PR → `/compact` (before implement) → the implement phase (in autopilot's default worktree mode, ship-spec detects `$CRON_WORKTREE` and builds **inline in that same worktree** — already on the feature branch — driving `/delegate` workers each running `scripts/ralph.sh`; standalone, it instead launches an expert `/worktrees` Advisor in its own `agent-ship-<slug>` tmux session) → `/eval` → `/compact` (after implement) → `/pr-audit` promotable → `gh pr ready` (or left draft with a comment). **Capture `PR_NUM`, the actual `BRANCH`, and ship-spec's terminal status (`READY` or `DRAFT-BLOCKED`).** After the branch exists, ensure the cron tmux session is named `$(safe_branch_session "$BRANCH")` (for example `autopilot-feat-123-slug`) and keep `ACTIVE_MARKER=/tmp/$(safe_branch_session "$BRANCH").active` until the run is finalized or left for manual continuation.
 
 Because `/ship-spec` owns implement → eval → audit → undraft, **§5–§7 are reconciliation, not re-execution** in `delegate-advisor` mode: autopilot reads ship-spec's outcome and applies its own caps / selection-rationale / session-lifecycle / branch-restore. The `ralph` fallback (§5) is the only path where autopilot drives the loop itself.
 
@@ -392,13 +405,15 @@ git push origin HEAD
 
 **Release the overlap lock before restoring** (mandatory for kept Pi sessions): after any terminal PR state (`PR-READY`, `PR-DRAFT-CI-RED`, or `PR-DRAFT-EVAL-RED`), run `release_overlap_lock` before the restore. Kept Pi sessions intentionally stay alive for manual review, so the cron wrapper may not regain control to remove `/tmp/cron-autopilot.pid`; the skill must clear `$CRON_OVERLAP_PIDFILE` itself once the run is terminal. Incomplete executor paths (`DELEGATE-FAIL`, `RALPH-INCOMPLETE`) keep the lock because manual continuation is expected.
 
-**Restore branch** (mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical **scoped restore** — a non-destructive two-step that discards only this run's own OWNED-path residue, then switches HEAD. Committed work is safe on the branch / draft PR. The scope step MUST precede the branch switch (it clears owned residue that would otherwise make a non-forced `git checkout development` refuse). It touches only **tracked** files, so an untracked owned-path orphan from a mid-run crash is NOT auto-removed (`git clean` is deliberately NOT used — too destructive across `tasks/`, `memory/`, `.claude/`); clean such orphans manually. Any **foreign** change OUTSIDE the owned surface — modified or staged (e.g. `.codex/config.toml`) — survives byte-for-byte (left in place / left staged) and is ignored by the scoped assertion and the next §1 check:
+**Restore branch** (root mode only — when `$CRON_WORKTREE` is set the whole restore is skipped: a worktree run never touched root and its worktree is discarded by the runtime/heartbeat, so there is nothing to restore. In root mode it is mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical **scoped restore** — a non-destructive two-step that discards only this run's own OWNED-path residue, then switches HEAD. Committed work is safe on the branch / draft PR. The scope step MUST precede the branch switch (it clears owned residue that would otherwise make a non-forced `git checkout development` refuse). It touches only **tracked** files, so an untracked owned-path orphan from a mid-run crash is NOT auto-removed (`git clean` is deliberately NOT used — too destructive across `tasks/`, `memory/`, `.claude/`); clean such orphans manually. Any **foreign** change OUTSIDE the owned surface — modified or staged (e.g. `.codex/config.toml`) — survives byte-for-byte (left in place / left staged) and is ignored by the scoped assertion and the next §1 check:
 ```bash
 release_overlap_lock                         # terminal PR state reached; clear cron overlap lock before keeping the Pi session alive
-git checkout development -- "${OWNED_PATHS[@]}"   # 1. discard own owned-path residue (tracked only; array form word-splits under bash+zsh)
-git checkout development                    # 2. switch HEAD (residue cleared above → non-forced switch succeeds; foreign WIP unaffected)
-git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }
-[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || { echo "ERROR: autopilot restore did not land on development"; exit 1; }
+if [ -z "${CRON_WORKTREE:-}" ]; then         # root mode ONLY — a worktree run is ephemeral (runtime/heartbeat removes the worktree); there is nothing in root to restore
+  git checkout development -- "${OWNED_PATHS[@]}"   # 1. discard own owned-path residue (tracked only; array form word-splits under bash+zsh)
+  git checkout development                    # 2. switch HEAD (residue cleared above → non-forced switch succeeds; foreign WIP unaffected)
+  git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }
+  [ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || { echo "ERROR: autopilot restore did not land on development"; exit 1; }
+fi
 ```
 
 ### 8. Memory Log
@@ -424,6 +439,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 ## Guidelines
 
 - **Scope guard**: harness-infra only — skills, rules, docs, scripts, crons, wiki. Never write or modify sandbox application code. Same boundary as `CLAUDE.md` § What You Do NOT Do.
+- **Worktree isolation by default**: `crons/autopilot.md` sets `worktree: true`, so the cron runtime fires every run inside a fresh detached `.worktrees/cron/<session>` worktree (`$CRON_WORKTREE`) and the shared root checkout is NEVER touched. This is what keeps the root clean (no `BLOCKED-OWNED-WIP`-class dirty-env stalls) and means a fire is never silently skipped — it runs isolated, or the runtime surfaces a FAILURE (`ERR_WORKTREE`/`ERR_WORKTREE_CAP`). In worktree mode §1 skips the root-clean guards and §7 skips the branch restore; the overlap lock is moot (no id-scoped pidfile is held). `release_overlap_lock` is retained for root/manual runs (no `$CRON_WORKTREE`) and is a harmless no-op under worktree mode. Stuck/idle worktree sessions and their checkouts are reaped by the heartbeat (and the runtime prunes dead-session worktrees before the concurrency cap).
 - **Selection rationale**: every PR autopilot opens MUST carry a `## Selection rationale` section as the FIRST section of its description, stating why this item was chosen this session (queue position, or the research finding + impact ranking).
 - **No auto-merge**: autopilot finalizes a *ready-for-review* PR; a human merges. The word "merge" must never appear in an autopilot-generated commit message, PR body, or `gh` command.
 - **Caps**: at most 6 open autopilot PRs created per UTC day AND 10 total open at any time. A close/merge frees a slot.
@@ -450,18 +466,22 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | `HALT-CRITIC-GATE` | `/ship-spec` critic gate rejected the spec; ticket labeled `autopilot-blocked`, no PR opened |
 | `RALPH-INCOMPLETE` | §5 Ralph fallback loop did not reach `STATUS: COMPLETE` (timeout, loop died, or all harnesses exhausted) after `/ship-spec` opened a PR; PR left draft — `tasks/$SLUG/` state is resumable via `scripts/ralph.sh $SLUG` |
 | `DELEGATE-FAIL` | `/ship-spec`'s implement/`/delegate` phase failed or stalled on `tasks/$SLUG/prd.json` in delegate-advisor mode; PR left draft and the `autopilot-<branch>` / `agent-ship-<slug>` session is left alive for manual continuation |
-| `SKIPPED_OVERLAP` | Emitted by the cron runtime (not this skill): a previous fire of this id was still running with `overlap: false` |
-| `BLOCKED-OWNED-WIP` | §1 found the OWNED surface (`${OWNED_PATHS[@]}`) dirty; run skipped until the owned surface is clean — non-destructive to foreign WIP (a stray edit outside the owned set proceeds normally) |
+| `SPAWNED_WORKTREE` | Emitted by the cron runtime (not this skill): a `worktree: true` fire spawned in an isolated `.worktrees/cron/<session>` worktree (the default for autopilot) so the root checkout stays clean |
+| `SKIPPED_OVERLAP` | Emitted by the cron runtime (not this skill): a previous fire of this id was still running with `overlap: false`. **No longer reachable for autopilot** (`worktree: true` always isolates instead of skipping); retained for non-worktree crons (heartbeat/cleanup/eval) |
+| `ERR_WORKTREE` | Emitted by the cron runtime (not this skill): a `worktree: true` fire could not create its isolated worktree (no base ref, or `git worktree add` failed). A surfaced FAILURE, never a silent skip |
+| `ERR_WORKTREE_CAP` | Emitted by the cron runtime (not this skill): live worktree runs for this id hit the concurrency cap; the fire is a surfaced FAILURE (retried next fire once the heartbeat reaps a stuck session + its worktree) — never a silent skip |
+| `BLOCKED-OWNED-WIP` | Root mode only — §1 found the OWNED surface (`${OWNED_PATHS[@]}`) dirty; run skipped until the owned surface is clean — non-destructive to foreign WIP (a stray edit outside the owned set proceeds normally). A worktree run (the default) is always clean, so this cannot occur there |
 | `FAIL` | Pre-flight failure (wrong branch, diverged `development`) before any PR |
 
 ### Key paths
 
 | Path | Purpose |
 |------|---------|
-| `crons/autopilot.md` | Cron definition (`tmux: true`) that fires this skill hourly |
+| `crons/autopilot.md` | Cron definition (`tmux: true`, `worktree: true`) that fires this skill hourly in an isolated worktree |
 | `crons/.cron.log` | Append-only liveness log read by the cron runtime |
 | `memory/<today>/log.md` | Daily session log; autopilot appends an entry each run |
 | `.claude/agents/pm.md` | pm agent definition (invoked via `Agent subagent_type: pm`) |
 | `$CRON_TMUX_SESSION` / `$CRON_KEEP_MARKER` | Per-run tmux session name + keep-marker path, set by the cron runtime (empty on manual runs); delegate-advisor renames the session to `autopilot-<branch>` after branch discovery |
-| `$CRON_OVERLAP_PIDFILE` | Per-id overlap lock path (for autopilot, `/tmp/cron-autopilot.pid`) exported by the cron runtime; terminal PR paths remove it so a kept Pi review session does not trigger hourly `SKIPPED_OVERLAP` |
+| `$CRON_OVERLAP_PIDFILE` | Per-id overlap lock path (for autopilot, `/tmp/cron-autopilot.pid`) exported by the cron runtime; terminal PR paths remove it so a kept Pi review session does not trigger hourly `SKIPPED_OVERLAP`. In worktree mode the runtime exports a session-scoped path instead (the id lock is never held), so this is a harmless no-op there |
+| `$CRON_WORKTREE` | Absolute path of the isolated worktree this run executes in, set by the cron runtime for `worktree: true` crons (empty on root/manual runs). When set, §1 skips the root-clean guards and §7 skips the branch restore — the worktree is ephemeral and the root checkout is never touched |
 | `AUTOPILOT_EXECUTOR` | Optional executor toggle: `delegate-advisor` (default) or `ralph` fallback |

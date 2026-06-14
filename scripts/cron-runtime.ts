@@ -1,7 +1,7 @@
 // scripts/cron-runtime.ts — minimal cron runtime per SPEC v0.7 §"Croner runtime".
 // Reads crons/*.md frontmatter, schedules with croner, runs body as agent prompt.
 import { Cron } from "croner";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -13,6 +13,11 @@ export interface CronEntry {
   overlap: boolean;
   catchup: boolean;
   tmux: boolean;
+  // When true, a tmux fire that would otherwise log SKIPPED_OVERLAP (overlap:false
+  // + a genuinely-live previous run) instead runs in an isolated git worktree under
+  // .worktrees/cron/<session>. A fire is then never silently skipped — it either
+  // runs (root or worktree) or surfaces a failure (ERR_WORKTREE/ERR_WORKTREE_CAP).
+  worktree: boolean;
   agentBin?: string;
   body: string;
   filePath: string;
@@ -47,6 +52,7 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
     overlap: fm.overlap === "true",
     catchup: fm.catchup === "true",
     tmux: fm.tmux === "true",
+    worktree: fm.worktree === "true",
     agentBin: fm.agent || undefined,
     body: m[2],
     filePath: file,
@@ -212,12 +218,21 @@ export function buildTmuxWrapper(opts: {
   id: string;
   agentBin: string;
   promptFile: string;
+  // Overlap pidfile written/removed by the wrapper. Defaults to the id-scoped
+  // /tmp/cron-<id>.pid (the primary fire). A worktree-fallback fire passes a
+  // session-scoped path so it does not clobber the primary run's lock.
+  pidFile?: string;
+  // Absolute path of the isolated worktree this fire runs in (worktree-fallback
+  // only). Exported as CRON_WORKTREE so the agent knows it is isolated.
+  worktree?: string;
 }): string {
   const { session, id, agentBin, promptFile } = opts;
   if (!isValidCronId(id)) throw new Error(`invalid cron id: ${id}`);
+  const pidFile = opts.pidFile ?? `/tmp/cron-${id}.pid`;
+  const worktreeExport = opts.worktree ? ` CRON_WORKTREE=${opts.worktree}` : "";
   return (
-    `echo $$ > /tmp/cron-${id}.pid; ` +
-    `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep CRON_OVERLAP_PIDFILE=/tmp/cron-${id}.pid; ` +
+    `echo $$ > ${pidFile}; ` +
+    `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep CRON_OVERLAP_PIDFILE=${pidFile}${worktreeExport}; ` +
     buildCronAgentCommand({
       id,
       agentBin,
@@ -227,7 +242,7 @@ export function buildTmuxWrapper(opts: {
       exitOnComplete: false,
     }) +
     `; ` +
-    `rm -f /tmp/cron-${id}.pid; ` +
+    `rm -f ${pidFile}; ` +
     // Kept session: resume the run's own conversation as a live, attachable
     // agent (idle until driven); fall back to a shell if that exits.
     `[ -f /tmp/${session}.keep ] && { ` +
@@ -314,21 +329,189 @@ export function buildCronAgentCommand(opts: {
   );
 }
 
-function fireTmux(entry: CronEntry): void {
-  const pidFile = `/tmp/cron-${entry.id}.pid`;
-  if (!entry.overlap && fs.existsSync(pidFile)) {
-    const existing = parseInt(fs.readFileSync(pidFile, "utf-8").trim(), 10);
-    if (!isNaN(existing)) {
-      try {
-        process.kill(existing, 0);
-        log(entry.id, "SKIPPED_OVERLAP");
-        return;
-      } catch {
-        /* stale — fall through */
-      }
+// Max concurrent isolated worktree runs per cron id. worktree:true crons spawn a
+// fresh worktree EVERY fire (keeping the root checkout clean), so a genuinely-stuck
+// run (e.g. an idle Pi TUI that never exits) would otherwise accumulate a worktree
+// every hour. The cap turns runaway growth into a surfaced ERR_WORKTREE_CAP failure
+// rather than silent disk/session bloat. Dead-session worktrees are pruned before
+// the count, and the heartbeat reaps stuck sessions + their worktrees hourly, so in
+// steady state the live count tracks in-flight/kept-for-review runs and stays well
+// under this ceiling (aligned with autopilot's 6-PR/day creation cap).
+const WORKTREE_MAX_CONCURRENT = 6;
+
+// Liveness probe: signal 0 throws iff the pid is gone (or unsignalable).
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export type OverlapDecision = "run" | "skip" | "worktree";
+
+// Pure fire policy shared by fireTmux and its tests. Decides how a tmux fire
+// proceeds given the cron's flags and whether a *live* holder owns the id-scoped
+// overlap pidfile:
+//   "worktree" — worktree:true → ALWAYS isolate in a fresh .worktrees/cron/<session>
+//                worktree, every fire, so the shared root checkout never goes dirty
+//                and a fire is never skipped (it runs isolated or fails loudly).
+//   "run"      — no live holder of the id lock (no pidfile, or a stale/dead pid) →
+//                run in root, reclaiming the id-scoped lock.
+//   "skip"     — a live holder and the cron is NOT a worktree cron → SKIPPED_OVERLAP
+//                (legacy serialize-on-root behaviour, e.g. heartbeat/cleanup/eval).
+// worktree:true takes precedence over overlap/pidfile state: an isolated run shares
+// no state with the root or with sibling worktree runs, so the overlap lock is moot.
+export function decideOverlap(opts: {
+  overlap: boolean;
+  worktree: boolean;
+  pidfileExists: boolean;
+  holderAlive: boolean;
+}): OverlapDecision {
+  if (opts.worktree) return "worktree";
+  if (opts.overlap) return "run";
+  if (!opts.pidfileExists || !opts.holderAlive) return "run";
+  return "skip";
+}
+
+const FALLBACK_WORKTREE_DIR = ".worktrees/cron";
+
+// First existing remote (preferred) or local base branch, mirroring the
+// development→main→master precedence in context/rules/git.md. Returns a
+// commit-ish suitable for `git worktree add --detach`, or null if none exist.
+function detectBaseRef(): string | null {
+  for (const ref of ["development", "main", "master"]) {
+    if (
+      spawnSync("git", ["show-ref", "--verify", "--quiet", `refs/remotes/origin/${ref}`])
+        .status === 0
+    ) {
+      return `origin/${ref}`;
     }
   }
+  for (const ref of ["development", "main", "master"]) {
+    if (spawnSync("git", ["show-ref", "--verify", "--quiet", `refs/heads/${ref}`]).status === 0) {
+      return ref;
+    }
+  }
+  return null;
+}
+
+// Absolute working directory of every live tmux pane. This is how worktree
+// liveness is judged — NOT by matching the worktree dir name to a tmux session
+// name. Autopilot RENAMES its session (cron-autopilot-<ts> → autopilot-<branch>)
+// and ship-spec runs its build in a SEPARATE Advisor session (agent-ship-<slug>),
+// so a name match would falsely declare an active worktree dead and delete it.
+function livePaneCwds(): string[] {
+  const r = spawnSync("tmux", ["list-panes", "-a", "-F", "#{pane_current_path}"], {
+    encoding: "utf-8",
+  });
+  if (r.status !== 0 || !r.stdout) return [];
+  return r.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
+// A worktree is "in use" iff some live tmux pane is working inside it (its own
+// dir or a descendant).
+function worktreeInUse(wtPath: string, cwds: string[]): boolean {
+  const abs = path.resolve(wtPath);
+  return cwds.some((p) => p === abs || p.startsWith(abs + path.sep));
+}
+
+// Remove fallback worktrees that no live tmux pane is working inside (self-healing),
+// then return the count still in use. Pane-cwd liveness (above) is robust to the
+// autopilot session rename and to the Advisor session sharing the worktree.
+function pruneAndCountFallbackWorktrees(id: string): number {
+  const dir = path.resolve(FALLBACK_WORKTREE_DIR);
+  let names: string[];
+  try {
+    names = fs.readdirSync(dir);
+  } catch {
+    return 0;
+  }
+  const cwds = livePaneCwds();
+  let live = 0;
+  for (const name of names) {
+    if (!name.startsWith(`cron-${id}-`)) continue;
+    const wt = path.join(dir, name);
+    if (worktreeInUse(wt, cwds)) {
+      live++;
+    } else {
+      spawnSync("git", ["worktree", "remove", "--force", wt], { stdio: "ignore" });
+    }
+  }
+  spawnSync("git", ["worktree", "prune"], { stdio: "ignore" });
+  return live;
+}
+
+// Create an isolated detached worktree at .worktrees/cron/<session> off the base
+// branch for a worktree cron's fire. Returns the absolute path, or null after
+// logging a FAILURE (ERR_WORKTREE_CAP at/over the cap, ERR_WORKTREE otherwise) —
+// the caller must NOT fall back to a skip on null.
+function createFallbackWorktree(entry: CronEntry, session: string): string | null {
+  const live = pruneAndCountFallbackWorktrees(entry.id);
+  if (live >= WORKTREE_MAX_CONCURRENT) {
+    log(
+      entry.id,
+      "ERR_WORKTREE_CAP",
+      `${live} live worktree runs >= cap ${WORKTREE_MAX_CONCURRENT}`,
+    );
+    return null;
+  }
+  const base = detectBaseRef();
+  if (!base) {
+    log(entry.id, "ERR_WORKTREE", "no base ref (development/main/master) found");
+    return null;
+  }
+  const dir = path.resolve(FALLBACK_WORKTREE_DIR);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* git worktree add will surface a hard failure below */
+  }
+  const wtPath = path.join(dir, session);
+  const add = spawnSync("git", ["worktree", "add", "--detach", wtPath, base], {
+    encoding: "utf-8",
+  });
+  if (add.status !== 0) {
+    log(entry.id, "ERR_WORKTREE", `git worktree add failed: ${(add.stderr || "").trim().slice(0, 150)}`);
+    return null;
+  }
+  return wtPath;
+}
+
+function fireTmux(entry: CronEntry): void {
   const session = tmuxSessionName(entry.id, new Date());
+  const idPidFile = `/tmp/cron-${entry.id}.pid`;
+  let cwd = process.cwd();
+  let pidFile = idPidFile;
+  let worktree: string | undefined;
+
+  const pidfileExists = fs.existsSync(idPidFile);
+  let holderAlive = false;
+  if (pidfileExists) {
+    const existing = parseInt(fs.readFileSync(idPidFile, "utf-8").trim(), 10);
+    holderAlive = !isNaN(existing) && isProcessAlive(existing);
+  }
+  const decision = decideOverlap({
+    overlap: entry.overlap,
+    worktree: entry.worktree,
+    pidfileExists,
+    holderAlive,
+  });
+  if (decision === "skip") {
+    log(entry.id, "SKIPPED_OVERLAP");
+    return;
+  }
+  if (decision === "worktree") {
+    const wt = createFallbackWorktree(entry, session);
+    if (wt === null) return; // createFallbackWorktree logged the FAILURE; never a skip
+    cwd = wt;
+    worktree = wt;
+    pidFile = `/tmp/${session}.pid`; // session-scoped: do not clobber the live primary lock
+  }
+  // decision === "run" reclaims the id-scoped lock by simply overwriting the
+  // stale/absent pidfile below (the wrapper does `echo $$ > pidFile`).
+
   const promptFile = `/tmp/${session}.prompt`;
   const agentBin = entry.agentBin || AGENT_BIN;
   const body = reloadBody(entry);
@@ -341,15 +524,19 @@ function fireTmux(entry: CronEntry): void {
       "-s",
       session,
       "-c",
-      process.cwd(),
-      buildTmuxWrapper({ session, id: entry.id, agentBin, promptFile }),
+      cwd,
+      buildTmuxWrapper({ session, id: entry.id, agentBin, promptFile, pidFile, worktree }),
     ],
     { stdio: "ignore" },
   );
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
   // Detached tmux path: we observe only the spawn, not the agent's eventual
   // exit, so no EXIT_<code> reason tail can be captured here (cf. fire()).
-  log(entry.id, "SPAWNED", session);
+  if (worktree) {
+    log(entry.id, "SPAWNED_WORKTREE", `${session} ${worktree}`);
+  } else {
+    log(entry.id, "SPAWNED", session);
+  }
 }
 
 function fire(entry: CronEntry): void {

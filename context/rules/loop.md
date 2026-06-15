@@ -146,7 +146,7 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 | critique | yes (`critic` agent) | ☐ | |
 | approve\|deny | partial (SEVERITY gate) | ☐ | no standalone gate yet |
 | implement | yes (Advisor+`/delegate`+`ralph`) | ☐ | `/delegate` absorbs the task-graph decomposition |
-| audit | gap (`/audit` new) | ☐ | composes `/pr-audit`,`/ci-status`,`/eval`,`/agent-browser` |
+| audit | yes (`/audit`) | ☑ | `STATUS: AUDIT-PASS` → retro · `AUDIT-FAIL` → implement; composes `/pr-audit`,`/ci-status`,`/eval`,`/agent-browser` + prd.json conformance |
 | retro | yes (`/retro`) | ☑ | `STATUS: RETRO-DONE` → compound |
 | compound | yes (`/wiki-ingest`) | ☑ | `STATUS: COMPOUND-DONE` → compress (probe-minting: Layer 2) |
 | compress | yes (`/context-audit`…) | ☐ | clarity metric (new) |

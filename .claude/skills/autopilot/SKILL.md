@@ -41,24 +41,20 @@ gh label create autopilot --color 6E40C9 --description "Opened by the autopilot 
 gh label create autopilot-blocked --color B60205 --description "Autopilot ticket blocked by a critic gate; remove to retry" 2>/dev/null || true
 ```
 
-**Total-open ceiling** — at most 10 open autopilot PRs at any time (any age):
+**Caps (deterministic pre-gate + in-session recheck).** The two autopilot PR caps — **10** total open at any time AND **6** created per UTC day still open (a same-day close/merge frees a slot) — are enforced **before this skill runs** by the cron's `preflight: scripts/autopilot-caps.sh` gate (see `crons/autopilot.md`). Both defaults are configurable in `harness.yaml` (`autopilot.total_cap` / `autopilot.daily_cap`, read live each fire; an `AUTOPILOT_TOTAL_CAP` / `AUTOPILOT_DAILY_CAP` env var still overrides). On a capped hour that gate writes the `SKIPPED-CAP-*` memory + liveness logs and the cron runtime spawns **no session at all** (`SKIPPED_PREFLIGHT`) — so reaching §1 means there was cap headroom at fire time.
+
+`scripts/autopilot-caps.sh` is the **canonical** cap implementation — the cap math plus the byte-faithful `SKIPPED-CAP-TOTAL` / `SKIPPED-CAP-DAILY` memory-block + liveness logging. Re-run it here as defense-in-depth for a long run that crosses a cap mid-flight, and defer to its verdict rather than re-deriving the counts:
 
 ```bash
-TOTAL_OPEN=$(gh pr list --state open --label autopilot --json number --jq 'length')
-echo "total open autopilot PRs: $TOTAL_OPEN (ceiling 10)"
+# Canonical caps gate (single source of truth for the cap math + skip logging):
+#   exit 11 → SKIPPED-CAP-TOTAL (≥10 open)  ·  exit 10 → SKIPPED-CAP-DAILY (≥6 today)
+#   exit 0  → PROCEED (stdout: PROCEED total=…/… today=…/…)
+# On a non-zero exit the gate has ALREADY written the memory log + liveness line,
+# so just EXIT (no keep-marker → the session auto-closes; no PR was produced).
+scripts/autopilot-caps.sh || exit 0
 ```
 
-If `$TOTAL_OPEN` ≥ 10 → memory log `Result: SKIPPED-CAP-TOTAL`, liveness `SKIPPED-CAP-TOTAL`, **EXIT** (no PR produced → do not touch the keep-marker; the session auto-closes).
-
-**Daily cap** — at most 6 autopilot PRs created today (UTC) still open; a same-day close/merge frees a slot:
-
-```bash
-TODAY=$(date -u +%Y-%m-%d)
-OPEN_TODAY=$(gh pr list --state open --search "label:autopilot created:>=$TODAY" --json number --jq 'length')
-echo "open autopilot PRs created today: $OPEN_TODAY (cap 6)"
-```
-
-If `$OPEN_TODAY` ≥ 6 → memory log `Result: SKIPPED-CAP-DAILY`, liveness `SKIPPED-CAP-DAILY`, **EXIT** (no keep-marker).
+For `--dry-run`, do **not** let the gate write skip logs or exit the run: invoke it read-only with the caps raised so it always PROCEEDs and only emits its count line — `AUTOPILOT_TOTAL_CAP=999999 AUTOPILOT_DAILY_CAP=999999 scripts/autopilot-caps.sh` prints `PROCEED total=<n>/… today=<n>/…` (both open-PR counts) without mutating anything.
 
 If `--dry-run`: print both counts now (the selection is printed after §2), then **continue** to §2 to determine the selection but exit before §4.
 

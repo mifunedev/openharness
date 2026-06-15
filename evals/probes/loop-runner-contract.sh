@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #160 — /loop runner contract
-# desc: PINS the /loop runner skill's contract literals in .claude/skills/loop/SKILL.md — the --start/--dry-run/--max-iters args, the context/rules/loop.md route source, the "final STATUS: line is the only routing signal" rule, the honest-halt + invariant-5 wording, and the /autopilot non-interference clause. A future editor who renames or drops one of these silently guts the runner's contract; this probe flips REGRESSION so it can't (honors the eval-probe literal-coupling lesson).
+# source: issue #160 — /loop-runner contract; issue #175 — reserved /loop command rename
+# desc: PINS the /loop-runner skill's contract literals in .claude/skills/loop-runner/SKILL.md — the --start/--dry-run/--max-iters args, the context/rules/loop.md route source, the "final STATUS: line is the only routing signal" rule, the honest-halt + invariant-5 wording, and the /autopilot non-interference clause. A future editor who renames or drops one of these silently guts the runner's contract; this probe flips REGRESSION so it can't (honors the eval-probe literal-coupling lesson).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-SKILL="$ROOT/.claude/skills/loop/SKILL.md"
+SKILL="$ROOT/.claude/skills/loop-runner/SKILL.md"
 
 if [[ ! -f "$SKILL" ]]; then
-  echo "SKIPPED: /loop skill absent: $SKILL" >&2
+  echo "SKIPPED: /loop-runner skill absent: $SKILL" >&2
   exit 2
 fi
 
@@ -33,15 +33,15 @@ for lit in "${LITERALS[@]}"; do
 done
 
 # Frontmatter must declare the skill name.
-grep -qE '^name: loop$' "$SKILL" || missing+=("frontmatter: name: loop")
+grep -qE '^name: loop-runner$' "$SKILL" || missing+=("frontmatter: name: loop-runner")
 
 if [[ ${#missing[@]} -gt 0 ]]; then
-  echo "REGRESSION: /loop runner contract literal(s) missing from $SKILL:" >&2
+  echo "REGRESSION: /loop-runner contract literal(s) missing from $SKILL:" >&2
   for m in "${missing[@]}"; do
     echo "  - $m" >&2
   done
   exit 1
 fi
 
-echo "PASS: /loop runner contract literals present in .claude/skills/loop/SKILL.md" >&2
+echo "PASS: /loop-runner contract literals present in .claude/skills/loop-runner/SKILL.md" >&2
 exit 0

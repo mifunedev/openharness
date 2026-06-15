@@ -157,8 +157,8 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 | compound | yes (`/wiki-ingest`) | ☑ | `STATUS: COMPOUND-DONE` → compress (probe-minting: Layer 2) |
 | compress | yes (`/context-audit`) | ☑ | `STATUS: COMPRESS-DONE` → benchmark; `/context-audit` carries the Handoff — always completes (like `retro`), no branch |
 | benchmark | `/eval` machinery | ☐ | + capability benchmark + `/eval-lint` (new); tokens depend on Layer 2 |
-| repeat | runner-applied (`--max-iters` + autopilot caps) | ☑ | `CYCLE-CONTINUE` → ideate — the **cycle-closing edge**; **no work-skill / no `## Handoff`** (like the runner row): the freshness gate is the runner's `--max-iters` bound + autopilot caps (invariant 4), applied mechanically. Forward walk still halts at the unwired `benchmark`; `repeat` is reachable via `/loop --start repeat` |
-| **runner** | `/loop` (standalone) · `/autopilot` (cron — gated) | ☑ | `/loop` walks the wired spine: reads § 2 as the route table, STATUS-tail routing, honest halt at unwired nodes; the `/autopilot`-as-`/loop`-cron integration stays gated |
+| repeat | runner-applied (`--max-iters` + autopilot caps) | ☑ | `CYCLE-CONTINUE` → ideate — the **cycle-closing edge**; **no work-skill / no `## Handoff`** (like the runner row): the freshness gate is the runner's `--max-iters` bound + autopilot caps (invariant 4), applied mechanically. Forward walk still halts at the unwired `benchmark`; `repeat` is reachable via `/loop-runner --start repeat` |
+| **runner** | `/loop-runner` (standalone) · `/autopilot` (cron — gated) | ☑ | `/loop-runner` walks the wired spine: reads § 2 as the route table, STATUS-tail routing, honest halt at unwired nodes; the `/autopilot`-as-`/loop-runner`-cron integration stays gated |
 
 ---
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #173 — wire the executable-loop `repeat` node (cycle-closing edge)
-# desc: PINS the runner-applied `repeat` continuation gate. loop.md § 2 must give repeat's row the `CYCLE-CONTINUE` → ideate token (the cycle-closing edge, the one forward edge that was tokenless), § 7 must mark repeat ☑ (wired, not ☐), and .claude/skills/loop/SKILL.md must teach the runner to apply repeat as a mechanical continuation gate emitting STATUS: CYCLE-CONTINUE. A revert to the tokenless "→ ideate" row, a ☐ regression, or dropping the runner handling flips this REGRESSION (eval-probe literal-coupling discipline).
+# desc: PINS the runner-applied `repeat` continuation gate. loop.md § 2 must give repeat's row the `CYCLE-CONTINUE` → ideate token (the cycle-closing edge, the one forward edge that was tokenless), § 7 must mark repeat ☑ (wired, not ☐), and .claude/skills/loop-runner/SKILL.md must teach the runner to apply repeat as a mechanical continuation gate emitting STATUS: CYCLE-CONTINUE. A revert to the tokenless "→ ideate" row, a ☐ regression, or dropping the runner handling flips this REGRESSION (eval-probe literal-coupling discipline).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOOP="$ROOT/context/rules/loop.md"
-SKILL="$ROOT/.claude/skills/loop/SKILL.md"
+SKILL="$ROOT/.claude/skills/loop-runner/SKILL.md"
 
 # Not applicable when the manifest is absent (cold runner / pre-merge main).
 [ -f "$LOOP" ] || { echo "SKIPPED: loop.md manifest absent: $LOOP" >&2; exit 2; }

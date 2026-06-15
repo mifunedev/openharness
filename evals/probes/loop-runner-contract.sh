@@ -23,6 +23,8 @@ declare -a LITERALS=(
   'the final `STATUS:` line is the only routing signal'
   'halts the walk'
   'does not modify `/autopilot`'
+  'LOOP MODE: candidate-only'
+  'do not publish roadmap'
   'invariant 5'
 )
 

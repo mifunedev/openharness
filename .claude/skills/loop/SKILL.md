@@ -61,6 +61,7 @@ If `--start <node>` names a node absent from § 2, halt FAIL immediately ("unkno
 Read `context/rules/loop.md` fresh:
 
 - Parse **§ 2** into the route table: for each node, its driver skill/tool and the set of `(STATUS token → next node)` rows. Include the branch edges stated below § 2 (`DENIED → plan`, `AUDIT-FAIL`/`IMPL-INCOMPLETE` → `implement`, `NOT-BENEFICIAL` → revert-then-`repeat`). This parsed table — not any copy embedded in this skill — is the authority for every routing decision.
+- Parse any node-specific loop-mode safety contract. A live node invocation MUST NOT publish, mutate GitHub state, or write durable docs merely to choose the next route unless that mutation is the node's explicit job and the user asked for live mode with that consequence. For the `brainstorm` node, invoke `/strategic-proposal` with: `LOOP MODE: candidate-only; do not publish roadmap, create/edit/pin GitHub issues, or write docs/roadmap.md`.
 - Parse **§ 7** into the wired-state map: each node's `☑` (wired) or `☐` (unwired) marker. A node not yet marked wired is a halt point.
 
 Do not paraphrase or cache the tree across runs; the manifest is re-read every invocation so the runner can never drift from it.
@@ -73,7 +74,7 @@ Set `current = --start node`, `iters = 0`, and an empty ordered `path` list. The
 2. Look up `current` in the § 7 wired-state map. If `current` is unwired (`☐`), halt "node not wired" (step 4a) — do **not** invoke it.
 3. Otherwise act on `current`:
    - **Dry-run**: print `would run <current> via <driver>` (driver from the § 2 row). Do **not** invoke the node skill. Choose the node's **declared happy-path token** — the forward-advancing token in its § 2 row (e.g. `ideate` → `IDEA-READY`, `approve` → `APPROVED`, `audit` → `AUDIT-PASS`) — record it, and set `current` to that token's target.
-   - **Live**: invoke the node's driver skill (via the `Skill` tool for a `/`-skill, or the tool named in the § 2 driver column), capture its output, and read the **final `STATUS:` line** (the tail, per § 3). Validate and route on that token (step 4b/4c); on a valid token, set `current` to its § 2 target.
+   - **Live**: invoke the node's driver skill (via the `Skill` tool for a `/`-skill, or the tool named in the § 2 driver column), applying any loop-mode safety contract from step 2. In particular, when `current=brainstorm`, call `/strategic-proposal` in `LOOP MODE: candidate-only; do not publish roadmap, create/edit/pin GitHub issues, or write docs/roadmap.md`. Capture its output, and read the **final `STATUS:` line** (the tail, per § 3). Validate and route on that token (step 4b/4c); on a valid token, set `current` to its § 2 target.
 4. Append `(node, emitted-token)` to `path` and continue from the top with the new `current`.
 
 The runner only ever reads a node's `STATUS:` tail and looks the token up in § 2. It performs no judgment of the node's body — judgment belongs to the node (§ 6).

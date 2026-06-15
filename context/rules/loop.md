@@ -47,17 +47,17 @@ ideate → brainstorm → plan → critique → approve
 | **plan** | `/prd` → `/ralph` → `prd.json` | `PLAN-READY` → critique |
 | **critique** (`/critique`) | 2× `critic` agents (parallel, implementer + user lens) → `critique.md` | `CRITIQUE-DONE` → approve |
 | **approve** (`/approve`) | critic SEVERITY gate (auto) + optional human, runs before any GitHub-side state | `APPROVED` → implement · `DENIED` → plan |
-| **implement** | **Advisor** orchestrates `/delegate` (decompose `prd.json` → weighted task graph + dependency-wave fan-out, `Task*` tracking) ∥ `ralph` serial (worktree, `STATUS: COMPLETE` + liveness) | `IMPL-COMPLETE` → audit · `IMPL-INCOMPLETE` → resume |
+| **implement** | **Advisor** orchestrates `/delegate` (decompose `prd.json` → weighted task graph + dependency-wave fan-out, `Task*` tracking) ∥ `ralph` serial (worktree, `STATUS: COMPLETE` + liveness) | `IMPL-COMPLETE` → audit · `IMPL-INCOMPLETE` → implement |
 | **audit** (`/audit`) | verdict-owner: task-graph conformance (`prd.json` items vs. impl) + `/eval` green→red gate + `/ci-status` (CI poll) + `/pr-audit` (PR-state) + `/agent-browser` | `AUDIT-PASS` → retro · `AUDIT-FAIL` → implement |
 | **retro** | `/retro` | `RETRO-DONE` → compound |
 | **compound** | `/wiki-ingest` + `MEMORY.md` + mint probes from this cycle's lessons | `COMPOUND-DONE` → compress |
 | **compress** | distill for **clarity** (not just fewer tokens): `/context-audit` + `/compact` + `/caveman` | `COMPRESS-DONE` → benchmark |
-| **benchmark** | capability-benchmark delta vs. counterfactual (driven by `/eval` machinery; probe suite = regression floor) + groom the instrument (`/eval-lint`) | `BENEFICIAL` → repeat · `NOT-BENEFICIAL` → revert |
+| **benchmark** | capability-benchmark delta vs. counterfactual (driven by `/eval` machinery; probe suite = regression floor) + groom the instrument (`/eval-lint`) | `BENEFICIAL` → repeat · `NOT-BENEFICIAL` → repeat (after revert) |
 | **repeat** | freshness gate (caps + queue re-entry) | → ideate |
 
 Branch targets are part of the contract: `DENIED` → `plan`, `AUDIT-FAIL`/`IMPL-INCOMPLETE` → `implement`,
-`NOT-BENEFICIAL` → revert-then-`repeat`. Every emitted token MUST have a target here; a node that can
-emit a token absent from its row is a bug the `/autopilot` runner rejects.
+`NOT-BENEFICIAL` → revert-then-`repeat`. Every emitted token MUST have a node target here; a node that can
+emit a token absent from its row or route to a non-node target is a bug the `/autopilot` runner rejects.
 
 ---
 

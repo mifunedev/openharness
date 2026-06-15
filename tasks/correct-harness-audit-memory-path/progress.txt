@@ -1,0 +1,27 @@
+# progress
+
+## US-001 — 2026-06-15 00:20 UTC
+
+**Title**: Correct harness-audit memory reference
+**Files changed**: `.claude/skills/harness-audit/SKILL.md`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Updated the context snapshot to tail `/home/sandbox/harness/memory/MEMORY.md` and aligned canonical long-term-memory references in the skill reference/prose.
+
+---
+
+## US-002 — 2026-06-15 00:20 UTC
+
+**Title**: Guard the memory path with an eval probe
+**Files changed**: `evals/probes/harness-audit-memory-path.sh`, `CHANGELOG.md`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Added a Tier-A probe that fails on root `MEMORY.md` usage in `/harness-audit` and documented the correction in the changelog.
+
+---
+
+STATUS: COMPLETE

@@ -71,7 +71,7 @@ ls /home/sandbox/harness/.github/workflows/ 2>/dev/null
 git -C /home/sandbox/harness worktree list 2>/dev/null
 
 # Recent memory
-tail -40 /home/sandbox/harness/MEMORY.md 2>/dev/null
+tail -40 /home/sandbox/harness/memory/MEMORY.md 2>/dev/null
 ```
 
 Assemble a **Context Snapshot** (compact markdown, ~300 words):
@@ -208,7 +208,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 4. **Agent worktree status** — Run `git -C /home/sandbox/harness worktree list` and `git -C /home/sandbox/harness branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
 >
-> 5. **Skill usage patterns** — Read `MEMORY.md` and recent daily logs. Which skills appear in memory entries (evidence of use)? Which skills exist in `.claude/skills/` but never appear in logs (potentially stale or unknown)?
+> 5. **Skill usage patterns** — Read `memory/MEMORY.md` and recent daily logs. Which skills appear in memory entries (evidence of use)? Which skills exist in `.claude/skills/` but never appear in logs (potentially stale or unknown)?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -305,7 +305,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Workspace skills | `workspace/.claude/skills/` |
 | Crons | `crons/` |
 | Memory logs | `memory/YYYY-MM-DD/log.md` |
-| Long-term memory | `MEMORY.md` |
+| Long-term memory | `memory/MEMORY.md` |
 | Wiki | `wiki/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |

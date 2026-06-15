@@ -1,0 +1,18 @@
+# progress
+
+## US-001..US-003 — 2026-06-15 03:18 UTC
+
+**Title**: Make harness-audit worktree-aware
+**Files changed**: .claude/skills/harness-audit/SKILL.md, evals/probes/harness-audit-memory-path.sh, CHANGELOG.md, tasks/make-harness-audit-worktree-aware/*
+**Commit**: this commit
+**Result**: PASS
+
+### What I did
+Updated the harness-audit runbook to resolve `AUDIT_ROOT` from `$CRON_WORKTREE` or the current git checkout, while keeping runtime log lookup explicit through `AUDIT_LOG_ROOT`. Updated the eval probe to guard against reintroduced hardcoded root checkout literals.
+
+### Learnings for future iterations
+Cron worktree skills should distinguish source-root inspection from shared runtime-log lookup; the former follows the active worktree, the latter may intentionally point at the shared root.
+
+---
+
+STATUS: COMPLETE

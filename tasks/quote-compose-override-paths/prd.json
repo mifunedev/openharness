@@ -16,8 +16,8 @@
         "Tests pass"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-15; commit 2b8ef51"
     },
     {
       "id": "US-002",
@@ -32,8 +32,8 @@
         "Tests pass"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-15; commit 2b8ef51"
     },
     {
       "id": "US-003",
@@ -47,8 +47,8 @@
         "Tests pass"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-15; commit 2b8ef51"
     },
     {
       "id": "US-004",
@@ -62,8 +62,8 @@
         "Tests pass"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-15; commit 2b8ef51"
     }
   ]
 }

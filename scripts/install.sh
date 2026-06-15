@@ -452,40 +452,12 @@ fi
 # ─── 5. Bring up the sandbox ─────────────────────────────────────────
 banner "Building and starting sandbox"
 printf "${CYAN}==> Building image — ~10 min on cold cache, ~30s on warm cache. Compose output below.${NC}\n"
-COMPOSE_FILES="-f .devcontainer/docker-compose.yml"
-# ── hermes dashboard overlay (mirrors Makefile HERMES_DASHBOARD_OVERLAY logic) ──
-_hermes_val=""
-if [ -f "$REPO_DIR/harness.yaml" ] && [ -f "$REPO_DIR/scripts/harness-config.sh" ]; then
-  _hermes_val=$(sh "$REPO_DIR/scripts/harness-config.sh" get hermes.dashboard "$REPO_DIR/harness.yaml")
-fi
-[ -z "$_hermes_val" ] && _hermes_val="${HERMES_DASHBOARD:-}"
-case "$(printf '%s' "$_hermes_val" | tr '[:upper:]' '[:lower:]')" in
-  1|true|yes|on) COMPOSE_FILES="$COMPOSE_FILES -f .devcontainer/docker-compose.hermes-dashboard.yml" ;;
-esac
-unset _hermes_val
-HARNESS_ENV_FILE=""
-# ── harness.yaml overlays + env (applied before config.json so user-local wins) ──
-if [ -f "$REPO_DIR/harness.yaml" ] && [ -f "$REPO_DIR/scripts/harness-config.sh" ]; then
-  while IFS= read -r _override; do
-    [ -n "$_override" ] && COMPOSE_FILES="$COMPOSE_FILES -f $_override"
-  done < <(sh "$REPO_DIR/scripts/harness-config.sh" compose-overrides "$REPO_DIR/harness.yaml")
-  HARNESS_ENV_FILE="$REPO_DIR/.devcontainer/.harness.yaml.env"
-  sh "$REPO_DIR/scripts/harness-config.sh" env "$REPO_DIR/harness.yaml" > "$HARNESS_ENV_FILE"
-fi
-# ── user-local config.json overlays (last -f wins → beats harness.yaml) ──
-if command -v jq >/dev/null 2>&1 && [ -f "$REPO_DIR/config.json" ]; then
-  while IFS= read -r override; do
-    [ -n "$override" ] && COMPOSE_FILES="$COMPOSE_FILES -f $override"
-  done < <(jq -r '.composeOverrides[]?' "$REPO_DIR/config.json")
-fi
-# ── --env-file flags: .env first, then harness.yaml.env (YAML wins on same key).
-# Explicit --env-file disables compose's automatic .env pickup; both files
-# must be passed when present so neither is silently skipped.
-_env_args=()
-[ -f "$REPO_DIR/.devcontainer/.env" ] && _env_args+=(--env-file "$REPO_DIR/.devcontainer/.env")
-[ -n "$HARNESS_ENV_FILE" ] && [ -f "$HARNESS_ENV_FILE" ] && _env_args+=(--env-file "$HARNESS_ENV_FILE")
-# shellcheck disable=SC2086
-docker compose $COMPOSE_FILES "${_env_args[@]}" up -d --build
+# scripts/docker-compose.sh centralizes env-file + compose-overlay argv construction
+# and preserves each override path as a single literal argument.
+(
+  cd "$REPO_DIR"
+  "$REPO_DIR/scripts/docker-compose.sh" up -d --build
+)
 ok "Sandbox '$SANDBOX_NAME' started"
 
 # ─── Next Steps ──────────────────────────────────────────────────────

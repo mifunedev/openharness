@@ -64,6 +64,25 @@ If `--dry-run`: print both counts now (the selection is printed after §2), then
 
 **Require clean state**:
 ```bash
+# Runtime observability logs are shared state, not feature-branch source. In
+# worktree-mode runs, resolve the root checkout and write memory/liveness logs there
+# so heartbeat and humans can still inspect them after the ephemeral cron worktree is
+# reaped. Source edits, branch commits, and restores stay inside $CRON_WORKTREE.
+resolve_autopilot_log_root() {
+  if [ -n "${AUTOPILOT_LOG_ROOT:-}" ]; then printf '%s\n' "$AUTOPILOT_LOG_ROOT"; return; fi
+  if [ -n "${CRON_WORKTREE:-}" ]; then
+    root=$(git -C "$CRON_WORKTREE" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /, ""); print; exit }' || true)
+    [ -z "$root" ] && root="${CRON_WORKTREE%%/.worktrees/cron/*}"
+    if [ -n "$root" ] && git -C "$root" rev-parse --show-toplevel >/dev/null 2>&1; then
+      git -C "$root" rev-parse --show-toplevel
+      return
+    fi
+  fi
+  git rev-parse --show-toplevel
+}
+AUTOPILOT_LOG_ROOT="$(resolve_autopilot_log_root)"
+log_liveness() { mkdir -p "$AUTOPILOT_LOG_ROOT/crons"; printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "$1" >> "$AUTOPILOT_LOG_ROOT/crons/.cron.log" 2>/dev/null || true; }
+
 # OWNED_PATHS — the canonical harness-infra surface autopilot mutates. The §1 MAIN
 # clean-state check and every restore site (§5/§6/§7) scope to this list, so a stray
 # foreign edit OUTSIDE it neither blocks a run nor gets clobbered by the restore.
@@ -81,7 +100,7 @@ OWNED_PATHS=(.claude/ context/ docs/ scripts/ crons/ wiki/ evals/ memory/ tasks/
 
 # Isolated worktree mode (worktree:true cron — the DEFAULT for autopilot): the cron
 # runtime fired this run inside a fresh detached worktree ($CRON_WORKTREE) cut from the
-# base tip, so the shared root checkout is NEVER touched. The root-clean guards below
+# base tip, so the shared root checkout is NEVER touched for source/branch work (runtime logs route there later via AUTOPILOT_LOG_ROOT). The root-clean guards below
 # (self-heal, owned-dirty BLOCKED-OWNED-WIP, must-be-on-development) exist only to
 # protect the SHARED root from cross-run contamination; an isolated worktree is always
 # clean, so they are skipped here. The §7 restore is likewise skipped (the worktree is
@@ -89,7 +108,7 @@ OWNED_PATHS=(.claude/ context/ docs/ scripts/ crons/ wiki/ evals/ memory/ tasks/
 # worktree run holds no id-scoped /tmp/cron-autopilot.pid). The Sync step below still
 # runs in both modes, fast-forwarding the detached HEAD to the freshest origin tip.
 if [ -n "${CRON_WORKTREE:-}" ]; then
-  echo "autopilot: isolated worktree run at $CRON_WORKTREE (root checkout untouched; §1 root guards + §7 restore skipped)"
+  echo "autopilot: isolated worktree run at $CRON_WORKTREE (root source checkout untouched; §1 root guards + §7 restore skipped)"
 else
   # Self-heal a clean-but-stranded branch from a prior interrupted run (nothing to lose):
   # a crash before §5/§6/§7 can leave HEAD on a clean feature branch; recover it rather
@@ -111,7 +130,7 @@ else
   # so a missing/unwritable log never crashes the skill — same convention as § Guidelines
   # "Liveness on every path". A stray edit OUTSIDE ${OWNED_PATHS[@]} never reaches here (US-002).
   if ! { git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}"; }; then
-    printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "BLOCKED-OWNED-WIP" >> crons/.cron.log 2>/dev/null || true
+    log_liveness "BLOCKED-OWNED-WIP"
     echo "BLOCKED-OWNED-WIP: dirty owned surface — run skipped (foreign WIP left untouched)"
     exit 1
   fi
@@ -418,11 +437,11 @@ fi
 
 ### 8. Memory Log
 
-Append to `memory/<today>/log.md` on **every** exit path (skips, halts, errors included):
+Append to `$AUTOPILOT_LOG_ROOT/memory/<today>/log.md` on **every** exit path (skips, halts, errors included). In worktree-mode runs, `$AUTOPILOT_LOG_ROOT` is the shared root checkout, not the ephemeral cron worktree:
 
 ```bash
-TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "memory/$TODAY"
-cat >> "memory/$TODAY/log.md" <<EOF
+TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "$AUTOPILOT_LOG_ROOT/memory/$TODAY"
+cat >> "$AUTOPILOT_LOG_ROOT/memory/$TODAY/log.md" <<EOF
 
 ## Autopilot -- $TIME UTC
 - **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | RALPH-INCOMPLETE | DELEGATE-FAIL | BLOCKED-OWNED-WIP | FAIL>
@@ -439,7 +458,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 ## Guidelines
 
 - **Scope guard**: harness-infra only — skills, rules, docs, scripts, crons, wiki. Never write or modify sandbox application code. Same boundary as `CLAUDE.md` § What You Do NOT Do.
-- **Worktree isolation by default**: `crons/autopilot.md` sets `worktree: true`, so the cron runtime fires every run inside a fresh detached `.worktrees/cron/<session>` worktree (`$CRON_WORKTREE`) and the shared root checkout is NEVER touched. This is what keeps the root clean (no `BLOCKED-OWNED-WIP`-class dirty-env stalls) and means a fire is never silently skipped — it runs isolated, or the runtime surfaces a FAILURE (`ERR_WORKTREE`/`ERR_WORKTREE_CAP`). In worktree mode §1 skips the root-clean guards and §7 skips the branch restore; the overlap lock is moot (no id-scoped pidfile is held). `release_overlap_lock` is retained for root/manual runs (no `$CRON_WORKTREE`) and is a harmless no-op under worktree mode. Stuck/idle worktree sessions and their checkouts are reaped by the heartbeat (and the runtime prunes dead-session worktrees before the concurrency cap).
+- **Worktree isolation by default**: `crons/autopilot.md` sets `worktree: true`, so the cron runtime fires every run inside a fresh detached `.worktrees/cron/<session>` worktree (`$CRON_WORKTREE`) and the shared root checkout is NEVER touched for source/branch work. This is what keeps the root clean (no `BLOCKED-OWNED-WIP`-class dirty-env stalls) and means a fire is never silently skipped — it runs isolated, or the runtime surfaces a FAILURE (`ERR_WORKTREE`/`ERR_WORKTREE_CAP`). In worktree mode §1 skips the root-clean guards and §7 skips the branch restore; the overlap lock is moot (no id-scoped pidfile is held). `release_overlap_lock` is retained for root/manual runs (no `$CRON_WORKTREE`) and is a harmless no-op under worktree mode. Stuck/idle worktree sessions and their checkouts are reaped by the heartbeat (and the runtime prunes dead-session worktrees before the concurrency cap). **Runtime observability is the exception**: autopilot resolves `$AUTOPILOT_LOG_ROOT` to the shared root checkout and writes `memory/<today>/log.md` plus `crons/.cron.log` there so those logs survive worktree reaping and remain visible to heartbeat.
 - **Selection rationale**: every PR autopilot opens MUST carry a `## Selection rationale` section as the FIRST section of its description, stating why this item was chosen this session (queue position, or the research finding + impact ranking).
 - **No auto-merge**: autopilot finalizes a *ready-for-review* PR; a human merges. The word "merge" must never appear in an autopilot-generated commit message, PR body, or `gh` command.
 - **Caps**: at most 6 open autopilot PRs created per UTC day AND 10 total open at any time. A close/merge frees a slot.
@@ -447,7 +466,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - **Non-destructive failure**: never auto-close issues or PRs. On failure, comment + log. Human inspection is the recovery path.
 - **autopilot-blocked**: a critic HALT labels the ticket `autopilot-blocked`, excluding it from the queue query until a human removes the label — a bad ticket can't retry-loop hourly.
 - **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.
-- **Liveness on every path**: every exit appends `printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "<TOKEN>" >> crons/.cron.log` — skip, halt, error, success. A missing liveness line looks like a crash.
+- **Liveness on every path**: every exit calls `log_liveness "<TOKEN>"`, which appends to `$AUTOPILOT_LOG_ROOT/crons/.cron.log` — skip, halt, error, success. In worktree mode that path is the shared root checkout, not `$CRON_WORKTREE`; a missing liveness line looks like a crash.
 - **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `RALPH-INCOMPLETE`, `DELEGATE-FAIL`). In delegate-advisor mode, the persisted session name is `autopilot-<branch>` (sanitized, e.g. `autopilot-feat-123-slug`) and is intentionally left alive for manual attach/continue/reap; no separate advisor session is created. No-PR paths never touch the keep-marker, so their sessions auto-close. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
 - **Branch restore (canonical scoped restore)**: every path that changed the working branch (all paths reaching §4+) must run the two-step `git checkout development -- "${OWNED_PATHS[@]}"` (discard own owned-path residue — tracked staged AND unstaged) THEN `git checkout development` (switch HEAD), then assert BOTH `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` AND `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`. The scope step MUST precede the switch (it clears owned residue that a non-forced `git checkout development` would otherwise refuse to overwrite). It discards only the run's own owned-path residue (committed work is preserved on the feature branch / draft PR); it touches only tracked files, so an untracked owned-path orphan from a mid-run crash is cleaned manually (`git clean` is deliberately NOT used); and any foreign change OUTSIDE the owned surface survives byte-for-byte (left in place / left staged), ignored by the scoped assertion and the next §1 check. The owned-scoped assertion mirrors the §1 owned check, so "assertion passes" ≡ "the next fire's §1 guard will pass". §1 additionally self-heals a *clean*-but-stranded branch (its forced tree-wide checkout is the only remaining `-f` form); a *dirty* owned tree at §1 still blocks (BLOCKED-OWNED-WIP) to protect any owned WIP.
 
@@ -478,10 +497,11 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Path | Purpose |
 |------|---------|
 | `crons/autopilot.md` | Cron definition (`tmux: true`, `worktree: true`) that fires this skill hourly in an isolated worktree |
-| `crons/.cron.log` | Append-only liveness log read by the cron runtime |
-| `memory/<today>/log.md` | Daily session log; autopilot appends an entry each run |
+| `$AUTOPILOT_LOG_ROOT/crons/.cron.log` | Append-only liveness log read by the cron runtime; resolves to the shared root checkout when `$CRON_WORKTREE` is set |
+| `$AUTOPILOT_LOG_ROOT/memory/<today>/log.md` | Daily session log; autopilot appends an entry each run; resolves to the shared root checkout when `$CRON_WORKTREE` is set |
 | `.claude/agents/pm.md` | pm agent definition (invoked via `Agent subagent_type: pm`) |
 | `$CRON_TMUX_SESSION` / `$CRON_KEEP_MARKER` | Per-run tmux session name + keep-marker path, set by the cron runtime (empty on manual runs); delegate-advisor renames the session to `autopilot-<branch>` after branch discovery |
 | `$CRON_OVERLAP_PIDFILE` | Per-id overlap lock path (for autopilot, `/tmp/cron-autopilot.pid`) exported by the cron runtime; terminal PR paths remove it so a kept Pi review session does not trigger hourly `SKIPPED_OVERLAP`. In worktree mode the runtime exports a session-scoped path instead (the id lock is never held), so this is a harmless no-op there |
-| `$CRON_WORKTREE` | Absolute path of the isolated worktree this run executes in, set by the cron runtime for `worktree: true` crons (empty on root/manual runs). When set, §1 skips the root-clean guards and §7 skips the branch restore — the worktree is ephemeral and the root checkout is never touched |
+| `$CRON_WORKTREE` | Absolute path of the isolated worktree this run executes in, set by the cron runtime for `worktree: true` crons (empty on root/manual runs). When set, §1 skips the root-clean guards and §7 skips the branch restore — the worktree is ephemeral and source work never touches the root checkout |
+| `$AUTOPILOT_LOG_ROOT` | Shared checkout root used only for runtime observability appends (`crons/.cron.log`, `memory/<today>/log.md`); defaults to the current checkout in root/manual mode and resolves above `.worktrees/cron/<session>` in worktree mode |
 | `AUTOPILOT_EXECUTOR` | Optional executor toggle: `delegate-advisor` (default) or `ralph` fallback |

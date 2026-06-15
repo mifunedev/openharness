@@ -91,7 +91,7 @@ Every stop is explicit. Silence is failure, never success (`context/rules/loop.m
 | c | The emitted token is **absent** from that node's § 2 row | HALT FAIL | `unknown token <TOKEN> for <node> — not in loop.md § 2 (a bug the runner rejects)` |
 | d | `iters > --max-iters` | HALT (bound reached) | `max-iters <N> reached` |
 
-Condition (a) is the expected stop today: a live walk from `ideate` runs through `compound`, reaches `compress`, then hits the unwired `benchmark` node (`☐` in § 7) and halts "node not wired". (`repeat` is now wired as the runner-applied continuation gate — § *The `repeat` continuation gate* — so once `benchmark` is wired the walk continues through `repeat`'s `CYCLE-CONTINUE → ideate` close; until then the forward walk halts at `benchmark`, and `repeat` is exercised directly via `/loop-runner --start repeat`.) That honest stop is **correct, not a bug** — the runner refuses to fabricate a transition across an edge that does not yet exist. Conditions (b) and (c) are genuine failures the runner surfaces rather than papering over.
+Condition (a) is now rare on a forward walk: **every** § 2 node is wired (`☑` in § 7), so a live walk from `ideate` runs the full spine `ideate → … → compress → benchmark`, `benchmark`'s `BENEFICIAL`/`NOT-BENEFICIAL` routes to `repeat`, and `repeat`'s `CYCLE-CONTINUE → ideate` closes the cycle — so the walk now terminates on the `--max-iters` bound (condition d), not an unwired halt. Condition (a) remains the **correct** response to any *future* `☐` node (the runner refuses to fabricate a transition across an edge that does not yet exist) — an honest stop, not a bug. Conditions (b) and (c) are genuine failures the runner surfaces rather than papering over.
 
 ### 5. Print the walk summary
 
@@ -152,7 +152,7 @@ When the walk reaches `repeat`:
 - in **cron/autopilot mode** the autopilot caps (10 total · 6 daily) are the additional queue-headroom gate;
 - if continuation is permitted the runner records `STATUS: CYCLE-CONTINUE` and routes to `ideate`; otherwise it honest-halts (caps reached / bound hit).
 
-Because the gate is a threshold check and not a judgment call, applying it keeps the runner faithful to § 6 ("the runner routes, it does not decide"): `repeat` is the sole node whose token the runner emits, and it emits it mechanically. Today the forward walk halts at the unwired `benchmark` before reaching `repeat`; `repeat` is exercised directly via `/loop-runner --start repeat` and becomes the live cycle-close once `benchmark` is wired.
+Because the gate is a threshold check and not a judgment call, applying it keeps the runner faithful to § 6 ("the runner routes, it does not decide"): `repeat` is the sole node whose token the runner emits, and it emits it mechanically. With `benchmark` now wired, the forward walk reaches `repeat` as the live cycle-close (`… → benchmark → repeat → ideate`), bounded by `--max-iters`.
 
 ## `/loop-runner` is the runner, not a node
 

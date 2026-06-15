@@ -26,6 +26,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | eval-runner-exit | A | 2026-06-15 06:39 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
 | harness-audit-memory-path | A | 2026-06-15 06:39 | PASS | issue #176 — /harness-audit must load long-term memory from memory/MEMORY.md |
 | health-check-docker-stats | A | 2026-06-15 06:39 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
+| loop-benchmark-gate | A | 2026-06-15 06:55 | PASS | issue #179 — wire the executable-loop `benchmark` node (close the cycle) |
 | loop-handoff-consistency | A | 2026-06-15 06:39 | PASS | context/rules/loop.md § 4 (executable-loop Handoff convention) |
 | loop-repeat-gate | A | 2026-06-15 06:39 | PASS | issue #173 — wire the executable-loop `repeat` node (cycle-closing edge) |
 | loop-runner-contract | A | 2026-06-15 06:39 | PASS | issue #160 — /loop-runner contract; issue #175 — reserved /loop command rename |

@@ -4,6 +4,7 @@ slug: retro-memory-cycle
 title: "Close a session with a falsifiable retro that compounds a lesson"
 axes: [success, cost-time, unattended]
 skills: [/retro, Memory Improvement Protocol]
+datasets: [DS-020]
 created: 2026-06-15
 ---
 

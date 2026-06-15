@@ -8,6 +8,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 |-------|------|----------------|--------|--------|
 | autopilot-executor-toggle | A | 2026-06-14 21:27 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
 | autopilot-pi-agent | A | 2026-06-14 21:27 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14; issue #126 (kept Pi overlap lock release) 2026-06-14 |
+| autopilot-upstream-default | A | 2026-06-15 16:36 | PASS | issue #420 — future autopilots must target upstream, not personal fork |
 | boot-lint-glob | A | 2026-06-14 21:27 | PASS | issue #90, issue #120 |
 | clean-restore | A | 2026-06-14 21:27 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | cleanup-tasks-scoped-guard | A | 2026-06-14 21:27 | PASS | issue #85 |
@@ -28,6 +29,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | ship-spec-ready-finalization | A | 2026-06-14 21:27 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |
 | skill-paths | A | 2026-06-14 21:27 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
 | submitted-by-trailers | A | 2026-06-14 21:27 | PASS | conversation 2026-06-12 (commit attribution trailers) |
+| watchdog-draft-prs | A | 2026-06-15 16:36 | PASS | conversation 2026-06-15 (generic watchdog + stale draft PR recovery) |
 | wiki-readme-index | A | 2026-06-14 21:27 | PASS | issue #132 — wiki README index drift guard |
 
 <!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->

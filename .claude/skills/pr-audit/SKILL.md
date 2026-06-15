@@ -169,7 +169,7 @@ surfaces as a draft sub-status, never as an actionable alarm.
 | ✅ **promotable** | `mergeable=="MERGEABLE" && mergeStateStatus=="CLEAN" && ci=="PASS"` | green WIP — could be marked ready (`gh pr ready <N>`) |
 | 🚧 **still-WIP** | otherwise (red/pending CI, or `CONFLICTING`/`DIRTY`/`BEHIND`) | expected work-in-progress; informational only, never a "fix me" alarm |
 
-A stale draft (💤, below) is *draft-limbo* — promote or close.
+A stale draft (💤, below) is *draft-limbo* — route to `/watchdog` to complete the branch and mark ready when green, or close only if explicitly abandoned.
 
 **Orthogonal flags — tag any PR regardless of its primary state:**
 
@@ -202,7 +202,7 @@ lists the recommended read-only command (report-and-recommend, like
 |----|-------|-----------|-----|-------|-----------|
 | #68 | … | ✅ promotable | 2d | — | mark ready (`gh pr ready 68`) |
 | #72 | … | 🚧 still-WIP  | 1d | — | finish work; no action |
-| #41 | … | 🚧 still-WIP  | 21d | 💤 limbo | promote or close |
+| #41 | … | 🚧 still-WIP  | 21d | 💤 limbo | `/watchdog`: complete branch, then `gh pr ready` |
 
 ### Flag rollup
 💤 stale: #41   📐 convention: #73 (title), #55 (base≠development)

@@ -237,3 +237,17 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Identity | `IDENTITY.md` |
 | Memory | `MEMORY.md` |
 | Daily Logs | `memory/YYYY-MM-DD/log.md` |
+
+## Handoff
+
+`strategic-proposal` is the `brainstorm` node in the executable loop (`context/rules/loop.md` § 2). After the council finalizes the ranked candidate/roadmap (step 7) and the Memory Protocol logs the run (step 10) — on **successful completion** — emit exactly one terminal line as the **final line of output**:
+
+    STATUS: CANDIDATE-PICKED
+
+Routes (must match `context/rules/loop.md` § 2):
+
+| STATUS | Next node |
+|--------|-----------|
+| `CANDIDATE-PICKED` | `plan` |
+
+The `/loop` runner reads this token to route to `plan`. Emitting nothing — a crash, a stall, or the `gh`-auth SKIP exit — is read as failure, never as success (invariant 5: honest exits). When invoked standalone (not under `/loop`), the trailing `STATUS:` line is harmless.

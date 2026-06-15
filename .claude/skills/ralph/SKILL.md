@@ -299,3 +299,19 @@ Before writing prd.json, verify:
 - [ ] UI stories have "Verify in browser using agent-browser skill" as criterion
 - [ ] Acceptance criteria are verifiable (not vague)
 - [ ] No story depends on a later story
+
+---
+
+## Handoff
+
+`ralph` is the terminal step of the `plan` node in the executable loop (`context/rules/loop.md` § 2) — `plan` is `/prd → /ralph → prd.json`, so `/ralph` carries the node's handoff. On **successful** `prd.json` generation and validation, emit exactly one terminal line as the **final line of output**:
+
+    STATUS: PLAN-READY
+
+Routes (must match `context/rules/loop.md` § 2):
+
+| STATUS | Next node |
+|--------|-----------|
+| `PLAN-READY` | `critique` |
+
+The `/loop` runner reads this token to route to `critique`. Emitting nothing is read as failure, never success (invariant 5). When invoked standalone, the trailing `STATUS:` line is harmless.

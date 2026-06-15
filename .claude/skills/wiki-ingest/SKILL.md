@@ -313,3 +313,17 @@ Expected outcome:
 - `memory/<today>/log.md` has an `## /wiki-ingest -- HH:MM UTC` entry with `Result: OP`.
 
 This smoke test MUST run and its commit must land before US-003's smoke test runs.
+
+## Handoff
+
+`wiki-ingest` is the representative skill of the **compound** node in the executable loop (`context/rules/loop.md` § 2, § 4) — the node that promotes durable knowledge (this skill + `MEMORY.md` promotion + probe-minting). On a **successful** completion (a `wiki/<slug>.md` entry written or updated, i.e. § 9's `Result: OP`), after the § 9 log entry, emit exactly one terminal line as the **final line of output**:
+
+    STATUS: COMPOUND-DONE
+
+Routes (must match `context/rules/loop.md` § 2):
+
+| STATUS | Next node |
+|--------|-----------|
+| `COMPOUND-DONE` | `compress` |
+
+The `/loop` runner reads this token to route to `compress`. Emitting nothing is read as failure, never success (invariant 5) — a STALE or FAIL exit is silent on this token. When invoked standalone, the trailing `STATUS:` line is harmless.

@@ -25,7 +25,7 @@ suite already leans inward (a majority guard its own internals) — this anchor 
 |-------|------|
 | **Capability benchmark** | A small, stable, held-out set of *representative end-to-end harness tasks*, scored on **success rate · cost/time-to-ship · unattended reliability**. It is the progress **ceiling** ("got better"); `evals/probes/*.sh` is the regression **floor** ("don't break"). Distinct instruments. |
 | **Selection** | `ideate`/`brainstorm` rank candidate work by *projected capability-benchmark impact*, not recency ("oldest ticket"). |
-| **eval** | "benefit vs. counterfactual" anchors to the **capability-benchmark delta**. Machinery added with no benchmark movement is `NOT-BENEFICIAL` by definition. |
+| **benchmark** | "benefit vs. counterfactual" anchors to the **capability-benchmark delta**. Machinery added with no benchmark movement is `NOT-BENEFICIAL` by definition. |
 | **Redirect signal** | If the benchmark does not move over N cycles while machinery grows, the loop flags itself for human redirect. This is the one external vote allowed to say "you are building the wrong thing." |
 
 ---
@@ -34,10 +34,10 @@ suite already leans inward (a majority guard its own internals) — this anchor 
 
 ```
 ideate → brainstorm → plan → critique → approve|deny
-  approve → TaskGraph → implement → audit → retro → compound → compress → eval|benchmark → repeat → ideate
+  approve → implement → audit → retro → compound → compress → benchmark → repeat → ideate
   deny ─────────────────────↩ plan (revise)
   audit FAIL ───────────────↩ implement (resume)
-  eval|benchmark NOT-BENEFICIAL ↩ revert (change not worth it)
+  benchmark NOT-BENEFICIAL ↩ revert (change not worth it)
 ```
 
 | Node | Driver | `STATUS` → next |
@@ -46,14 +46,13 @@ ideate → brainstorm → plan → critique → approve|deny
 | **brainstorm** | `Explore` + `/strategic-proposal` → ranked candidate | `CANDIDATE-PICKED` → plan |
 | **plan** | `/prd` → `/ralph` → `prd.json` | `PLAN-READY` → critique |
 | **critique** | 2× `critic` agents (parallel) | `CRITIQUE-DONE` → approve |
-| **approve\|deny** | critic SEVERITY gate (auto) + optional human | `APPROVED` → TaskGraph · `DENIED` → plan |
-| **TaskGraph** | `Task*` tools: decompose `prd.json` → tracked items · priority (waves) · assignments | `GRAPH-READY` → implement |
-| **implement** | **Advisor** orchestrates: `/delegate` fan-out ∥ `ralph` serial (worktree, `STATUS: COMPLETE` + liveness), `TaskUpdate` | `IMPL-COMPLETE` → audit · `IMPL-INCOMPLETE` → resume |
-| **audit** (`/audit`) | verdict-owner: TaskGraph-conformance + `/eval` green→red gate + `/ci-status` (CI poll) + `/pr-audit` (PR-state) + `/agent-browser` | `AUDIT-PASS` → retro · `AUDIT-FAIL` → implement |
+| **approve\|deny** | critic SEVERITY gate (auto) + optional human | `APPROVED` → implement · `DENIED` → plan |
+| **implement** | **Advisor** orchestrates `/delegate` (decompose `prd.json` → weighted task graph + dependency-wave fan-out, `Task*` tracking) ∥ `ralph` serial (worktree, `STATUS: COMPLETE` + liveness) | `IMPL-COMPLETE` → audit · `IMPL-INCOMPLETE` → resume |
+| **audit** (`/audit`) | verdict-owner: task-graph conformance (`prd.json` items vs. impl) + `/eval` green→red gate + `/ci-status` (CI poll) + `/pr-audit` (PR-state) + `/agent-browser` | `AUDIT-PASS` → retro · `AUDIT-FAIL` → implement |
 | **retro** | `/retro` | `RETRO-DONE` → compound |
 | **compound** | `/wiki-ingest` + `MEMORY.md` + mint probes from this cycle's lessons | `COMPOUND-DONE` → compress |
-| **compress** | distill for **clarity** (not just fewer tokens): `/context-audit` + `/compact` + `/caveman` | `COMPRESS-DONE` → eval\|benchmark |
-| **eval \| benchmark** | `/eval` — quantify benefit = capability-benchmark delta (probes = regression floor) + groom the instrument (`/eval-lint`) | `BENEFICIAL` → repeat · `NOT-BENEFICIAL` → revert |
+| **compress** | distill for **clarity** (not just fewer tokens): `/context-audit` + `/compact` + `/caveman` | `COMPRESS-DONE` → benchmark |
+| **benchmark** | capability-benchmark delta vs. counterfactual (driven by `/eval` machinery; probe suite = regression floor) + groom the instrument (`/eval-lint`) | `BENEFICIAL` → repeat · `NOT-BENEFICIAL` → revert |
 | **repeat** | freshness gate (caps + queue re-entry) | → ideate |
 
 Branch targets are part of the contract: `DENIED` → `plan`, `AUDIT-FAIL`/`IMPL-INCOMPLETE` → `implement`,
@@ -141,18 +140,17 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 
 | Node | Skill exists | `## Handoff` wired | Notes |
 |------|:---:|:---:|-------|
-| ideate | partial (`/imagine`) | ☐ | needs `Explore` front end |
-| brainstorm | yes (`/strategic-proposal`) | ☐ | needs `Explore` front end |
-| plan | yes (`/prd`,`/ralph`) | ☐ | |
+| ideate | partial (`/imagine`) | ☑ | `STATUS: IDEA-READY` → brainstorm (`Explore` front end: Layer 2) |
+| brainstorm | yes (`/strategic-proposal`) | ☑ | `STATUS: CANDIDATE-PICKED` → plan (`Explore` front end: Layer 2) |
+| plan | yes (`/prd`,`/ralph`) | ☑ | `/ralph` (terminal step) emits `STATUS: PLAN-READY` → critique |
 | critique | yes (`critic` agent) | ☐ | |
 | approve\|deny | partial (SEVERITY gate) | ☐ | no standalone gate yet |
-| TaskGraph | yes (`Task*`,`/delegate`) | ☐ | wiring of existing pieces |
-| implement | yes (Advisor+`ralph`) | ☐ | |
+| implement | yes (Advisor+`/delegate`+`ralph`) | ☐ | `/delegate` absorbs the task-graph decomposition |
 | audit | gap (`/audit` new) | ☐ | composes `/pr-audit`,`/ci-status`,`/eval`,`/agent-browser` |
-| retro | yes (`/retro`) | ☐ | |
-| compound | yes (`/wiki-ingest`) | ☐ | + probe-minting (new) |
+| retro | yes (`/retro`) | ☑ | `STATUS: RETRO-DONE` → compound |
+| compound | yes (`/wiki-ingest`) | ☑ | `STATUS: COMPOUND-DONE` → compress (probe-minting: Layer 2) |
 | compress | yes (`/context-audit`…) | ☐ | clarity metric (new) |
-| eval \| benchmark | yes (`/eval`) | ☐ | + capability benchmark + `/eval-lint` (new) |
+| benchmark | `/eval` machinery | ☐ | + capability benchmark + `/eval-lint` (new); tokens depend on Layer 2 |
 | repeat | yes (autopilot caps) | ☐ | |
 | **runner** | gap (`/loop` new) | — | walks this file |
 

@@ -1,0 +1,17 @@
+# progress
+
+## US-001/US-002/US-003 — 2026-06-15 00:13 UTC
+
+**Title**: Update agent-browser skill CLI docs and guard with eval
+**Files changed**: `.claude/skills/agent-browser/SKILL.md`, `evals/probes/agent-browser-cli.sh`, `evals/RESULTS.md`, `CHANGELOG.md`, `tasks/update-agent-browser-skill/*`
+**Commit**: this commit
+**Result**: PASS
+
+### What I did
+Updated the runbook to use `agent-browser eval`, require absolute screenshot output paths, and show `$PWD`-based screenshot capture. Added a Tier-A eval probe for the corrected contract, refreshed the eval scoreboard, and recorded traceability artifacts.
+
+### Learnings for future iterations
+For `agent-browser` 0.8.5, screenshot paths must be absolute because relative paths resolve from the daemon cwd rather than the repo cwd.
+
+---
+STATUS: COMPLETE

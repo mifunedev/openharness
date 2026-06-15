@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/148-update-agent-browser-skill",
+  "description": "Update the agent-browser skill docs to match 0.8.5 CLI behavior (eval command and absolute screenshot paths) and add an eval probe that guards against drift.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Correct the agent-browser runbook",
+      "description": "As an orchestrator using /agent-browser, I want the skill to use the current CLI command and screenshot path requirements so browser validation commands work reliably.",
+      "acceptanceCriteria": [
+        ".claude/skills/agent-browser/SKILL.md replaces agent-browser execute with agent-browser eval for viewport resizing or other JavaScript execution examples",
+        "The screenshot section requires an absolute screenshot output path and shows a command that builds an absolute path from $PWD",
+        "The report section displays the absolute screenshot path and the custom screenshot example uses <absolute-path>",
+        "The skill does not mention an unsupported --full-page flag",
+        "The edit preserves the existing install/preflight/session hygiene headings"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed on 2026-06-15; updated agent-browser skill to use eval and absolute screenshot paths. Commit: this commit."
+    },
+    {
+      "id": "US-002",
+      "title": "Add an eval probe for the runbook contract",
+      "description": "As the eval suite, I want a probe that guards the corrected agent-browser skill text so future edits cannot silently reintroduce stale CLI instructions.",
+      "acceptanceCriteria": [
+        "evals/probes/agent-browser-cli.sh exists and is executable",
+        "The probe follows the existing Tier-A 3-state pattern: exit 0 PASS, exit 1 REGRESSION, exit 2 SKIPPED",
+        "It skips if .claude/skills/agent-browser/SKILL.md is absent",
+        "It passes only when the skill contains agent-browser eval, contains absolute output path, contains SCREENSHOT_PATH=\"$PWD/.claude/screenshots/${FILENAME}.png\", contains <absolute-path>, does not contain agent-browser execute, and does not contain --full-page",
+        "bash -n evals/probes/agent-browser-cli.sh passes",
+        "bash evals/probes/agent-browser-cli.sh exits 0 against the corrected skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed on 2026-06-15; added agent-browser-cli Tier-A eval probe and verified bash -n/direct run. Commit: this commit."
+    },
+    {
+      "id": "US-003",
+      "title": "Refresh traceability artifacts",
+      "description": "As a reviewer, I want the change traceable through the task artifacts, changelog, and eval scoreboard.",
+      "acceptanceCriteria": [
+        "CHANGELOG.md notes the agent-browser skill/probe fix under [Unreleased] and links issue #148",
+        "tasks/update-agent-browser-skill/prd.json records every story as passed when complete",
+        "/eval runs through .claude/skills/eval/run.sh and evals/RESULTS.md records agent-browser-cli as PASS with no new green\u2192red regressions",
+        "Pre-existing unrelated reds with unchanged deltas are documented in the PR but not fixed in this task"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed on 2026-06-15; changelog updated and /eval recorded agent-browser-cli PASS. Commit: this commit."
+    }
+  ]
+}

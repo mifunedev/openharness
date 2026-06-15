@@ -314,4 +314,4 @@ Routes (must match `context/rules/loop.md` § 2):
 |--------|-----------|
 | `PLAN-READY` | `critique` |
 
-The `/loop` runner reads this token to route to `critique`. Emitting nothing is read as failure, never success (invariant 5). When invoked standalone, the trailing `STATUS:` line is harmless.
+The `/autopilot` runner reads this token to route to `critique`. Emitting nothing is read as failure, never success (invariant 5). When invoked standalone, the trailing `STATUS:` line is harmless.

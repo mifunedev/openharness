@@ -5,7 +5,7 @@ the Advisor wields), emits a terminal `STATUS:` token, and hands off to the next
 token. This file is the **single source of truth** for that tree — the objective it serves, the nodes,
 the routing tokens, the handoff convention, and the invariants every handoff must preserve.
 
-`AGENTS.md` "The Loop" is the human-facing summary; **this file is the executable spec** the `/loop`
+`AGENTS.md` "The Loop" is the human-facing summary; **this file is the executable spec** the `/autopilot`
 runner walks. Where they disagree, the truth-up of `AGENTS.md` is a separate, eval-gated change — this
 file leads.
 
@@ -57,7 +57,7 @@ ideate → brainstorm → plan → critique → approve|deny
 
 Branch targets are part of the contract: `DENIED` → `plan`, `AUDIT-FAIL`/`IMPL-INCOMPLETE` → `implement`,
 `NOT-BENEFICIAL` → revert-then-`repeat`. Every emitted token MUST have a target here; a node that can
-emit a token absent from its row is a bug the `/loop` runner rejects.
+emit a token absent from its row is a bug the `/autopilot` runner rejects.
 
 ---
 
@@ -69,7 +69,7 @@ Every node's skill prints, as the **final line of its output**, exactly one line
 STATUS: <TOKEN>
 ```
 
-The token is the **only** routing signal the `/loop` runner reads. It extends the sentinels already in
+The token is the **only** routing signal the `/autopilot` runner reads. It extends the sentinels already in
 use — `scripts/ralph.sh`'s `STATUS: COMPLETE` and autopilot's exit tokens (`PR-READY`,
 `HALT-CRITIC-GATE`, …). Rules:
 
@@ -95,10 +95,10 @@ Emit `STATUS: <TOKEN>` as the final line of output. Routes (must match `context/
 | `<TOKEN-B>` | `<node>` |
 ```
 
-A skill **declares** its successor; it does **not** call it — the `/loop` runner routes. This is the
+A skill **declares** its successor; it does **not** call it — the `/autopilot` runner routes. This is the
 core model: **distributed declaration, centralized execution** (§ 6). The declared routes MUST match
-§ 2 exactly; `/eval-lint` (and the `/loop` dry-run) guard the match so a renamed token or a route that
-points off the tree is caught before it runs.
+§ 2 exactly; a tier-A consistency probe (`evals/probes/loop-handoff-consistency.sh`) and `/eval-lint` guard
+the match so a renamed token or a route that points off the tree is caught before it runs.
 
 ---
 
@@ -125,7 +125,7 @@ absence or staleness into an explicit assertion.** Every node and handoff must p
 - **Execution is Advisor-centralized.** A single **Advisor** owns each run. `/delegate` (parallel
   fan-out), `scripts/ralph.sh` (serial story loop), `Explore` (read-only search), and the `Task*` tools
   (tracking) are **tools the Advisor reaches for** — not rival orchestrators competing for control.
-- **The runner routes, it does not decide.** `/loop` reads the current node's `STATUS:` and moves to the
+- **The runner routes, it does not decide.** `/autopilot` reads the current node's `STATUS:` and moves to the
   target in § 2. All judgment lives in the nodes; the runner is mechanical. (Resolves the
   centralized-vs-distributed tension: decisions are distributed into the skills, control flow is central.)
 
@@ -152,7 +152,7 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 | compress | yes (`/context-audit`…) | ☐ | clarity metric (new) |
 | benchmark | `/eval` machinery | ☐ | + capability benchmark + `/eval-lint` (new); tokens depend on Layer 2 |
 | repeat | yes (autopilot caps) | ☐ | |
-| **runner** | gap (`/loop` new) | — | walks this file |
+| **runner** | `/autopilot` (evolve — gated) | ☐ | walks this tree; today walks phases 1–4 only (select → `/ship-spec` → reconcile) |
 
 ---
 

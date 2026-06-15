@@ -166,4 +166,4 @@ Routes (must match `context/rules/loop.md` § 2):
 |--------|-----------|
 | `IDEA-READY` | `brainstorm` |
 
-The `/loop` runner reads this token to route to `brainstorm`. Emitting nothing — a crash or a stall — is read as failure, never as success (invariant 5: honest exits). When `/imagine` is invoked standalone (not under `/loop`), the trailing `STATUS:` line is harmless.
+The `/autopilot` runner reads this token to route to `brainstorm`. Emitting nothing — a crash or a stall — is read as failure, never as success (invariant 5: honest exits). When `/imagine` is invoked standalone (not under `/autopilot`), the trailing `STATUS:` line is harmless.

@@ -326,4 +326,4 @@ Routes (must match `context/rules/loop.md` § 2):
 |--------|-----------|
 | `COMPOUND-DONE` | `compress` |
 
-The `/loop` runner reads this token to route to `compress`. Emitting nothing is read as failure, never success (invariant 5) — a STALE or FAIL exit is silent on this token. When invoked standalone, the trailing `STATUS:` line is harmless.
+The `/autopilot` runner reads this token to route to `compress`. Emitting nothing is read as failure, never success (invariant 5) — a STALE or FAIL exit is silent on this token. When invoked standalone, the trailing `STATUS:` line is harmless.

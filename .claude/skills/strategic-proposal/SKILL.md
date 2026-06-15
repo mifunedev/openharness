@@ -250,4 +250,4 @@ Routes (must match `context/rules/loop.md` § 2):
 |--------|-----------|
 | `CANDIDATE-PICKED` | `plan` |
 
-The `/loop` runner reads this token to route to `plan`. Emitting nothing — a crash, a stall, or the `gh`-auth SKIP exit — is read as failure, never as success (invariant 5: honest exits). When invoked standalone (not under `/loop`), the trailing `STATUS:` line is harmless.
+The `/autopilot` runner reads this token to route to `plan`. Emitting nothing — a crash, a stall, or the `gh`-auth SKIP exit — is read as failure, never as success (invariant 5: honest exits). When invoked standalone (not under `/autopilot`), the trailing `STATUS:` line is harmless.

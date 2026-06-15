@@ -10,7 +10,7 @@ allowed-tools: Bash
 
 # Worktrees
 
-Manage `.worktrees/`. Full policy: `context/rules/git.md` § Worktrees.
+Manage `.worktrees/`. Full policy: `/git-workflow` § Worktrees; `context/rules/git.md` is only a compatibility pointer.
 
 ## DETECT BASE
 

@@ -21,8 +21,8 @@ doc + folder anchor) without the empty-file smell.
    not just "subfolders mirror branch prefixes").
 3. **Conventions** — naming, lifecycle, gitignore behaviour, anything
    non-obvious to someone landing fresh in the directory.
-4. **Pointer to canonical docs** — link to the rule or doc that owns
-   the deeper detail (`.claude/rules/git.md` § Worktrees, `scripts/cron-runtime.ts`,
+4. **Pointer to canonical docs** — link to the skill, rule, or doc that owns
+   the deeper detail (`/git-workflow` § Worktrees, `scripts/cron-runtime.ts`,
    etc.).
 
 ## What the README MUST NOT contain

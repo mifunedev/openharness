@@ -38,7 +38,7 @@ subfolder.
    `OK (archived N, skipped M)` success token and the `HEARTBEAT_OK`
    nothing-to-do reply. Do not contaminate the archive branch with
    unrelated changes.
-3. Resolve `$BASE` = default target branch per `context/rules/git.md`
+3. Resolve `$BASE` = default target branch per `/git-workflow`
    (`development` → `main` → `master`, whichever exists). Fetch it
    (`git fetch origin "$BASE"`), then provision a dedicated, crash-safe
    worktree for the archive work — never branch or commit against the
@@ -87,7 +87,7 @@ subfolder.
    - Commit: `git -C .worktrees/archive/$TODAY commit -m "archive: weekly cleanup $TODAY (N tasks)"`.
    - Push: `git -C .worktrees/archive/$TODAY push -u origin "archive/$TODAY"`.
    - Open a PR (or update an existing one for the same branch) per
-     `context/rules/git.md` conventions:
+     `/git-workflow` conventions:
      `gh pr create --base "$BASE" --head "archive/$TODAY" \
         --title "FROM archive/$TODAY TO $BASE" \
         --body "Weekly task sweep — archived N completed tasks, skipped M still-active.\n\nArchived: <list>\nSkipped: <list>"`.

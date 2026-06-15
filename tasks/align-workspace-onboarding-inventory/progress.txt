@@ -1,0 +1,13 @@
+# progress
+
+STATUS: COMPLETE
+
+## Validation
+
+- `find workspace -maxdepth 1 -mindepth 1 -printf '%f %y\n' | sort`
+- `test -L workspace/CLAUDE.md && test "$(readlink workspace/CLAUDE.md)" = AGENTS.md`
+- `! rg -n "\.claude/rules|\.example\.env\.claude|settings\.local\.json|startup\.sh" workspace/AGENTS.md .claude/skills/harness-audit/SKILL.md`
+- `node -e "JSON.parse(require('fs').readFileSync('tasks/align-workspace-onboarding-inventory/prd.json','utf8')); console.log('prd.json ok')"`
+- `pnpm format:check`
+- `pnpm test:scripts` (17 files, 203 tests; required symlinking root `node_modules` into the isolated cron worktree)
+- `bash .claude/skills/eval/run.sh` (23 PASS, exit 0)

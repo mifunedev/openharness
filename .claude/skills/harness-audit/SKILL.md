@@ -142,7 +142,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Developer onboarding friction** — Read `.devcontainer/`, `Makefile`, `install/`, `CLAUDE.md`, `workspace/AGENTS.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
 >
-> 2. **Skill consistency** — Read every `SKILL.md` under `.claude/skills/` and `workspace/.claude/skills/`. Check: does each have valid YAML frontmatter (name, description)? Does each follow imperative instructions? Are any stale (no recent invocation evidence in memory logs)?
+> 2. **Skill consistency** — Read every `SKILL.md` under `.claude/skills/`; also inspect `workspace/.claude/skills/` if that pack/runtime directory exists. Check: does each have valid YAML frontmatter (name, description)? Does each follow imperative instructions? Are any stale (no recent invocation evidence in memory logs)?
 >
 > 3. **Issue template completeness** — List `.github/ISSUE_TEMPLATE/` files. For each template, check: does it have required fields, clear labels, and assignment guidance?
 >
@@ -322,7 +322,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Resource | Path |
 |----------|------|
 | Orchestrator skills | `.claude/skills/` |
-| Workspace skills | `workspace/.claude/skills/` |
+| Workspace skills | `workspace/.claude/skills/` when created by a pack/runtime (not part of the minimal workspace template) |
 | Crons | `crons/` |
 | Memory logs | `memory/YYYY-MM-DD/log.md` |
 | Long-term memory | `memory/MEMORY.md` |

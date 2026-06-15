@@ -86,16 +86,23 @@ that catches anything time-sensitive without doing real work.
       Surface each as `NUDGE: autopilot PR #<n> is green + mergeable — merge
       to free the queue`. Do NOT run `gh pr merge`.
     - **Stale draft autopilot PRs (WATCHDOG — surface only).** An open draft
-      `autopilot` PR with no update for more than 24 hours may be abandoned,
-      but draft age alone never authorizes mutation. Keep this distinct from
-      the ready non-draft nudge above:
+      `autopilot` PR with no update for more than 24 hours may be abandoned.
+      A draft backlog that saturates autopilot's same-day creation cap is also
+      a jammed-loop signal even before 24h: the loop cannot create another PR
+      until an operator promotes, fixes, closes, or merges one of the drafts.
+      Draft age/backlog alone never authorizes mutation. Keep these signals
+      distinct from the ready non-draft nudge above:
       ```bash
       AUTOPILOT_DRAFT_STALE_HOURS=24
+      AUTOPILOT_DAILY_CAP=6
+      today=$(date -u +%Y-%m-%d)
       now_epoch=$(date -u +%s)
-      gh pr list --state open --label autopilot \
-        --json number,isDraft,updatedAt,headRefName \
-        --jq '.[] | select(.isDraft==true) | [.number,.updatedAt,.headRefName] | @tsv' \
-        | while IFS=$'\t' read -r n updated branch; do
+      draft_rows=$(gh pr list --state open --label autopilot --limit 100 \
+        --json number,isDraft,updatedAt,createdAt,headRefName \
+        --jq '.[] | select(.isDraft==true) | [.number,.updatedAt,.createdAt,.headRefName] | @tsv')
+      printf '%s\n' "$draft_rows" \
+        | while IFS=$'\t' read -r n updated _created branch; do
+            [ -n "$n" ] || continue
             updated_epoch=$(date -u -d "$updated" +%s 2>/dev/null || echo "$now_epoch")
             age_s=$(( now_epoch - updated_epoch ))
             age_h=$(( age_s / 3600 ))
@@ -103,11 +110,18 @@ that catches anything time-sensitive without doing real work.
               echo "WATCHDOG: stale autopilot draft PR #$n updated ${age_h}h ago — investigate branch $branch; do not auto-undraft/close"
             fi
           done
+      today_drafts=$(printf '%s\n' "$draft_rows" | awk -F '\t' -v today="$today" '$3 ~ "^" today { c++ } END { print c+0 }')
+      if [ "$today_drafts" -ge "$AUTOPILOT_DAILY_CAP" ]; then
+        draft_list=$(printf '%s\n' "$draft_rows" | awk -F '\t' '$1 { printf "%s#%s(%s)", sep, $1, $4; sep=", " }')
+        echo "WATCHDOG: autopilot draft backlog saturates daily cap (${today_drafts}/${AUTOPILOT_DAILY_CAP} today) — investigate/promote/close one of: ${draft_list}; do not auto-undraft/close"
+      fi
       ```
-      Surface each as `WATCHDOG: stale autopilot draft PR #<n> updated <Nh>
-      ago — investigate branch <branch>; do not auto-undraft/close`. Do NOT
-      mark the PR ready, close it, merge it, or kill any session based on
-      draft age.
+      Surface stale-age rows as `WATCHDOG: stale autopilot draft PR #<n> updated
+      <Nh> ago — investigate branch <branch>; do not auto-undraft/close`.
+      Surface cap saturation as `WATCHDOG: autopilot draft backlog saturates
+      daily cap (<N>/6 today) — investigate/promote/close one of: <list>; do not
+      auto-undraft/close`. Do NOT mark the PR ready, close it, merge it, or kill
+      any session based on draft age/backlog alone.
 3. Decide whether anything needs action right now.
 4. If yes, act. If no, append a brief "nothing pressing" note to
    `memory/<today>/log.md` and exit.

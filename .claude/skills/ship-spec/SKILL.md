@@ -286,7 +286,7 @@ Closes #<N>.
 ## Next steps (automated)
 1. Launch the expert `/worktrees` Advisor in tmux session `agent-ship-<slug>` via `/goal` (the pre-implement `/compact` already ran in Stage 7.5).
 2. Advisor: `/delegate` workers each run `scripts/ralph.sh <slug>` in an isolated worktree; monitor to `STATUS: COMPLETE`; run `/eval`; then `/compact` before the audit.
-3. A separate executor runs `/pr-audit` immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that fresh audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output is only a resume/investigation hint, never an undraft signal.
+3. A separate executor runs `/pr-audit` immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that fresh audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output — including draft-age and draft-cap/backlog warnings — is only a resume/investigation hint, never an undraft signal.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code) via /ship-spec
 EOF
@@ -335,7 +335,7 @@ Push the branch so CI runs (`git push origin HEAD`). The Advisor then hands off 
 
 ### Stage 13 — `gh pr ready` (undraft only if promotable)
 
-When implementation is complete, `/eval` has no new green→red regression, and an immediately preceding Stage 12 `/pr-audit` classified the PR **promotable**, the executor undrafts it. Do not undraft from stale-draft watchdog output, age, or heartbeat nudges alone:
+When implementation is complete, `/eval` has no new green→red regression, and an immediately preceding Stage 12 `/pr-audit` classified the PR **promotable**, the executor undrafts it. Do not undraft from stale-draft watchdog output, age, draft backlog/cap saturation, or heartbeat nudges alone:
 
 ```bash
 gh pr ready <PR>

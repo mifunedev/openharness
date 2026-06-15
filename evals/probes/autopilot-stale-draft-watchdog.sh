@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #161 — stale autopilot draft watchdog must surface investigation, not undraft
-# desc: heartbeat surfaces stale autopilot draft PRs separately from ready nudges; /ship-spec keeps /pr-audit before gh pr ready and documents stale draft age is not an undraft signal.
+# desc: heartbeat surfaces stale autopilot draft PRs and draft-cap saturation separately from ready nudges; /ship-spec keeps /pr-audit before gh pr ready and documents stale draft age/backlog is not an undraft signal.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -35,6 +35,10 @@ if [[ -n "$stale_block" ]]; then
   grep -Fq 'isDraft==true' <<<"$stale_block" || missing+=("stale draft watchdog filters isDraft==true")
   grep -Fq 'updatedAt' <<<"$stale_block" || missing+=("stale draft watchdog reads updatedAt")
   grep -Eq 'AUTOPILOT_DRAFT_STALE_HOURS|24[[:space:]]*(h|hr|hrs|hour|hours)' <<<"$stale_block" || missing+=("stale draft watchdog exposes a 24h threshold")
+  grep -Fq 'AUTOPILOT_DAILY_CAP=6' <<<"$stale_block" || missing+=("stale draft watchdog checks the autopilot same-day cap")
+  grep -Fq 'createdAt' <<<"$stale_block" || missing+=("draft-cap watchdog reads createdAt")
+  grep -Eiq 'daily cap|cap saturation|saturates' <<<"$stale_block" || missing+=("draft-cap watchdog surfaces cap saturation language")
+  grep -Eiq 'promote/close|investigate/promote/close' <<<"$stale_block" || missing+=("draft-cap watchdog names operator remediation without mutating")
   grep -Eiq 'WATCHDOG|investigate' <<<"$stale_block" || missing+=("stale draft watchdog surfaces WATCHDOG/investigate language")
 
   mutating=$(grep -nE 'gh[[:space:]]+pr[[:space:]]+(ready|close|merge|edit|comment)\b|gh[[:space:]]+api\b|tmux[[:space:]]+kill-session\b' <<<"$stale_block" || true)
@@ -61,8 +65,8 @@ fi
 grep -Eq '/pr-audit[^\n]*(before|gate|gates)[^\n]*gh pr ready|gh pr ready[^\n]*(only|after)[^\n]*/pr-audit' "$SHIP" \
   || missing+=("/ship-spec explicitly gates gh pr ready on /pr-audit")
 
-grep -Eiq '(stale[- ]draft|stale draft|draft age|age alone).*(not|no|never).*(undraft|ready signal|gh pr ready)|(not|no|never).*(undraft|ready signal|gh pr ready).*(stale[- ]draft|stale draft|draft age|age alone)' "$SHIP" \
-  || missing+=("/ship-spec says stale-draft watchdog/age is not an undraft signal")
+grep -Eiq '(stale[- ]draft|stale draft|draft age|draft backlog|age/backlog|backlog alone).*(not|no|never).*(undraft|ready signal|gh pr ready)|(not|no|never).*(undraft|ready signal|gh pr ready).*(stale[- ]draft|stale draft|draft age|draft backlog|age/backlog|backlog alone)' "$SHIP" \
+  || missing+=("/ship-spec says stale-draft watchdog/age/backlog is not an undraft signal")
 
 if (( ${#missing[@]} )); then
   printf 'REGRESSION: autopilot stale draft watchdog contract missing: %s\n' "${missing[*]}" >&2

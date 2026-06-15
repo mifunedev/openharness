@@ -9,7 +9,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | agent-browser-cli | A | 2026-06-15 06:39 | PASS | memory/MEMORY.md 2026-06-07 (agent-browser 0.8.5 CLI) |
 | autopilot-executor-toggle | A | 2026-06-15 06:39 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
 | autopilot-pi-agent | A | 2026-06-15 06:39 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14; issue #126 (kept Pi overlap lock release) 2026-06-14; issue #142 (worktree-by-default, skip→worktree) 2026-06-14 |
-| autopilot-stale-draft-watchdog | A | 2026-06-15 06:39 | PASS | issue #161 — stale autopilot draft watchdog must surface investigation, not undraft |
+| autopilot-stale-draft-watchdog | A | 2026-06-15 15:56 | PASS | issue #161 — stale autopilot draft watchdog must surface investigation, not undraft |
 | autopilot-worktree-log-root | A | 2026-06-15 06:39 | PASS | issue #152 (persist autopilot worktree logs) 2026-06-15 |
 | boot-lint-glob | A | 2026-06-15 06:39 | PASS | issue #90, issue #120 |
 | capability-benchmark-schema | A | 2026-06-15 06:39 | PASS | issue #167 — capability benchmark instrument |

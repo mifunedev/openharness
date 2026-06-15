@@ -13,8 +13,10 @@ description: Weekly Ralph session sweep — archive completed tasks
 Sweep `tasks/` once per week and archive anything that has finished.
 Per SPEC v0.7 §"Weekly cleanup cron": completed tasks move into the
 dated archive under `tasks/`; incomplete tasks are left alone with a
-note. `memory/` carries journal artifacts only — never a `tasks/`
-subfolder.
+note. The same weekly pass also grooms stale `.worktrees/` branch
+checkouts, but it never touches the durable `.worktrees/agent/` or
+`.worktrees/project/` namespaces. `memory/` carries journal artifacts
+only — never a `tasks/` subfolder.
 
 ## Tasks
 
@@ -81,7 +83,36 @@ subfolder.
    - Otherwise, leave the folder in place and append a one-line note to
      `memory/$TODAY/log.md` recording that `<taskdesc>` is still active
      (include the last `progress.txt` modification time).
-5. If anything was archived this run (`N > 0`) — every git step runs
+5. **Groom stale `.worktrees/` branch checkouts** from the shared repo
+   root after the task scan. Initialize `W=0` plus a `GROOMED_WORKTREES`
+   list. This pass is intentionally limited to harness branch worktrees
+   and cron/archive leftovers: it must skip any path under
+   `.worktrees/agent/` and `.worktrees/project/` without inspecting or
+   mutating those namespaces. Also skip the current archive worktree
+   `.worktrees/archive/$TODAY` until step 8 tears it down.
+   - Build the registered-worktree candidate set from
+     `git worktree list --porcelain`. For each worktree path under
+     `$PWD/.worktrees/` that is NOT under `.worktrees/agent/`, NOT under
+     `.worktrees/project/`, and NOT `.worktrees/archive/$TODAY`:
+     - Skip if any live tmux pane is cwd'd inside it:
+       `tmux list-panes -a -F '#{pane_current_path}' | grep -F -- "$path"`.
+     - Skip if its branch has an open PR:
+       `gh pr list --head "$branch" --state open --json number --jq 'length'`.
+     - Skip if the worktree's latest commit is newer than 30 days.
+     - Otherwise remove it with `git worktree remove --force "$path"`,
+       append the path to `GROOMED_WORKTREES`, and increment `W`.
+   - Then prune corrupt/orphan folders that are not registered git
+     worktrees: scan `.worktrees/` directories excluding `.worktrees/agent/`,
+     `.worktrees/project/`, and `.worktrees/archive/$TODAY`; remove only
+     directories older than 30 days with no live tmux pane cwd'd inside
+     them, using `rm -rf "$path"`, then record them in
+     `GROOMED_WORKTREES` and increment `W`.
+   - Remove empty non-reserved namespace directories left behind by the
+     sweep (`find .worktrees -mindepth 1 -maxdepth 1 -type d ! -name agent ! -name project -empty -delete`), then run `git worktree prune`.
+   - Append a one-line note to `memory/$TODAY/log.md` for each skipped
+     registered worktree, recording the reason (`open-pr`, `live-pane`, or
+     `too-new`) and its last commit time.
+6. If anything was archived this run (`N > 0`) — every git step runs
    inside the worktree via `git -C .worktrees/archive/$TODAY`:
    - Stage the moves: `git -C .worktrees/archive/$TODAY add tasks/`.
    - Commit: `git -C .worktrees/archive/$TODAY commit -m "archive: weekly cleanup $TODAY (N tasks)"`.
@@ -90,23 +121,24 @@ subfolder.
      `context/rules/git.md` conventions:
      `gh pr create --base "$BASE" --head "archive/$TODAY" \
         --title "FROM archive/$TODAY TO $BASE" \
-        --body "Weekly task sweep — archived N completed tasks, skipped M still-active.\n\nArchived: <list>\nSkipped: <list>"`.
+        --body "Weekly task sweep — archived N completed tasks, skipped M still-active, groomed W stale worktrees.\n\nArchived: <list>\nSkipped: <list>\nGroomed worktrees: <list>"`.
      If `gh pr create` reports the PR already exists, capture its URL
      via `gh pr view --json url -q .url` instead.
-6. After the sweep, append a single summary line to
-   `memory/$TODAY/log.md`: `cleanup-tasks: archived N, skipped M, pr <url-or-none>`.
-7. **Mandatory closing steps (always run):**
+7. After the sweep, append a single summary line to
+   `memory/$TODAY/log.md`: `cleanup-tasks: archived N, skipped M, groomed W worktrees, pr <url-or-none>`.
+8. **Mandatory closing steps (always run):**
    - **Tear down the worktree** — covers normal completion, the
      nothing-to-archive case (`N = 0`), and partial runs; complements the
      step-3 `trap`, which also fires on any error/abort exit:
      `git worktree remove --force .worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune`.
    - **Liveness line:** append one liveness line to `crons/.cron.log`:
-     `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M)" >> crons/.cron.log`.
+     `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M, groomed W worktrees)" >> crons/.cron.log`.
      Create the file if it does not exist.
 
 ## Reporting
 
-- Nothing to archive and nothing stale → reply `HEARTBEAT_OK` (no
-  branch, no PR).
-- Otherwise → list of archived and skipped task names with counts, plus
-  the PR URL on a final line.
+- Nothing to archive, nothing skipped, and no stale worktrees groomed →
+  reply `HEARTBEAT_OK` (no branch, no PR).
+- Otherwise → list archived tasks, skipped tasks, and groomed worktrees
+  with counts, plus the PR URL (if any tasks were archived) on a final
+  line.

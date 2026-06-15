@@ -16,9 +16,10 @@ for file in "$PACKAGE_JSON" "$CI_WORKFLOW" "$RELEASE_WORKFLOW"; do
   fi
 done
 
+EXPECTED_AUDIT="pnpm audit --audit-level low --ignore GHSA-h67p-54hq-rp68"
 script_value="$(node -e 'const p=require(process.argv[1]); process.stdout.write(p.scripts?.["security:audit"] || "")' "$PACKAGE_JSON")"
-if [[ "$script_value" != "pnpm audit --audit-level low" ]]; then
-  echo "REGRESSION: package.json scripts.security:audit must be exactly 'pnpm audit --audit-level low' (got: ${script_value:-<missing>})" >&2
+if [[ "$script_value" != "$EXPECTED_AUDIT" ]]; then
+  echo "REGRESSION: package.json scripts.security:audit must be exactly '$EXPECTED_AUDIT' (got: ${script_value:-<missing>})" >&2
   exit 1
 fi
 

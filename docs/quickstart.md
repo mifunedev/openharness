@@ -17,6 +17,16 @@ Install Docker with the Compose plugin: [docs.docker.com/get-docker](https://doc
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
+Review-first alternative, without adding a host dependency:
+
+```bash
+curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
+# Review openharness-install.sh in your editor or pager before running it.
+bash openharness-install.sh
+```
+
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides the same fetch/review/approve flow. Docker remains the only required host dependency.
+
 > **Self-hosting?** If you've already cloned your fork or re-pointed origin, skip the curl command above and run `bash scripts/install.sh` from inside the directory instead — the installer detects the local clone automatically.
 
 The installer clones into `~/.openharness`, prompts to share your host

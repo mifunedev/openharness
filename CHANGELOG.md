@@ -9,6 +9,9 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `/watchdog` skill replaces the autopilot-specific watchdog intent with a generic stuck/stale automation watchdog; its first guarded action completes stale autopilot draft PRs and removes draft only after verification, rather than merely nudging for a merge.
+- `autopilot-upstream-default` eval probe — guards that future `/autopilot` and `/ship-spec` runs default GitHub/git operations to upstream `mifunedev/openharness` via `upstream/development`, not the personal fork checkout.
+
 ### Changed
 ### Fixed
 ### Removed

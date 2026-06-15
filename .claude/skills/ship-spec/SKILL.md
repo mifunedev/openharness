@@ -8,7 +8,7 @@ description: |
   implementation, eval, and CI gates pass.
   TRIGGER when: asked to scaffold a spec end-to-end, "ship a spec",
   "set up a task PR", or after planning a feature and ready to formalize.
-argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent] [--issue <N>]"
+argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent] [--issue <N>] [--repo <owner/name>] [--remote <name>] [--base <branch>]"
 ---
 
 # Ship Spec
@@ -50,6 +50,19 @@ Extract:
 - **`--plan <path>`** (optional) — if provided, use the file content as comprehensive input to `/prd` and skip clarifying questions
 - **`--prefix <type>`** (optional, default `feat`) — branch + issue prefix per `.claude/rules/git.md` (`feat | bug | task | audit | skill | agent`)
 - **`--issue <N>`** (optional) — link an EXISTING GitHub issue instead of creating one. When present, set `ISSUE_NUM=<N>` and skip Stage 5's `gh issue create`; `<N>` flows into the branch (`<prefix>/<N>-<slug>`), `/ralph --issue <N>`, `prompt.md`, and the PR `Closes #<N>` link, exactly as a freshly-created issue number would
+- **`--repo <owner/name>`** (optional, default `mifunedev/openharness`) — GitHub repository for issue/PR operations.
+- **`--remote <name>`** (optional, default `upstream`) — git remote to fetch/push work branches.
+- **`--base <branch>`** (optional, default `development`) — PR base and branch start point.
+
+```bash
+SHIP_SPEC_REPO="${SHIP_SPEC_REPO:-mifunedev/openharness}"
+SHIP_SPEC_REMOTE="${SHIP_SPEC_REMOTE:-upstream}"
+SHIP_SPEC_BASE="${SHIP_SPEC_BASE:-development}"
+case "${ARGUMENTS:-}" in *--repo*) SHIP_SPEC_REPO=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--repo[ =]\([^ ]*\).*/\1/p') ;; esac
+case "${ARGUMENTS:-}" in *--remote*) SHIP_SPEC_REMOTE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--remote[ =]\([^ ]*\).*/\1/p') ;; esac
+case "${ARGUMENTS:-}" in *--base*) SHIP_SPEC_BASE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--base[ =]\([^ ]*\).*/\1/p') ;; esac
+echo "ship-spec target: repo=$SHIP_SPEC_REPO remote=$SHIP_SPEC_REMOTE base=$SHIP_SPEC_BASE"
+```
 
 Derive `<slug>` per `/prd` rules: lowercase, kebab-case, `[a-z0-9-]+`, **≤5 words**, not `archive`. Reject and ask for a shorter name if invalid.
 
@@ -147,12 +160,13 @@ The HALT path is the whole point. Critics are the short feedback loop; honoring 
 
 Only reached after stage 4 PROCEED.
 
-**If `--issue <N>` was provided**: skip issue creation entirely — set `N=<N>`, print `Using existing issue #<N> (--issue); skipping creation.`, optionally confirm it exists with `gh issue view <N>`, and continue to Stage 6. Everything below in this stage applies ONLY when creating a fresh issue (no `--issue` flag).
+**If `--issue <N>` was provided**: skip issue creation entirely — set `N=<N>`, print `Using existing issue #<N> (--issue); skipping creation.`, optionally confirm it exists with `gh issue view <N> --repo "$SHIP_SPEC_REPO"`, and continue to Stage 6. Everything below in this stage applies ONLY when creating a fresh issue (no `--issue` flag).
 
 Compose issue body from the prd.md introduction + goals sections. Title format per `.claude/rules/git.md`:
 
 ```bash
 gh issue create \
+  --repo "$SHIP_SPEC_REPO" \
   --title "<prefix>: <slug-as-prose>" \
   --label "<prefix>" \
   --body-file <(printf '%s\n' \
@@ -175,7 +189,7 @@ gh issue create \
 
 Capture the returned issue URL; extract `<N>` (issue number) for downstream use.
 
-If `gh label create <prefix>` is needed (label doesn't exist), create it first with a sensible color. Heredoc bodies are safe — the `deny-env-dump.sh` hook strips heredoc bodies before pattern-scanning, so `--body "$(cat <<'EOF' ... EOF)"` is fine.
+If `gh label create <prefix> --repo "$SHIP_SPEC_REPO"` is needed (label doesn't exist), create it first with a sensible color. Heredoc bodies are safe — the `deny-env-dump.sh` hook strips heredoc bodies before pattern-scanning, so `--body "$(cat <<'EOF' ... EOF)"` is fine.
 
 ### Stage 6 — `/ralph` → `tasks/<slug>/prd.json`
 
@@ -227,8 +241,8 @@ Stages 8–9 re-read the files from disk, so a post-compact context is sufficien
 
 ```bash
 # Resume-safe: checkout existing branch or create new
-git fetch origin
-git checkout -b "<prefix>/<N>-<slug>" origin/development 2>/dev/null \
+git fetch "$SHIP_SPEC_REMOTE" "$SHIP_SPEC_BASE"
+git checkout -b "<prefix>/<N>-<slug>" "$SHIP_SPEC_REMOTE/$SHIP_SPEC_BASE" 2>/dev/null \
   || git checkout "<prefix>/<N>-<slug>"
 
 git add "tasks/<slug>/"
@@ -249,7 +263,7 @@ Submitted-by: <active submitter>
 EOF
 )"
 
-git push -u origin "<prefix>/<N>-<slug>"
+git push -u "$SHIP_SPEC_REMOTE" "<prefix>/<N>-<slug>"
 ```
 
 `Submitted-by:` is mandatory and must name the model/agent that actually
@@ -263,10 +277,11 @@ Pre-commit hook runs lint + tests; do not bypass.
 
 ```bash
 gh pr create \
+  --repo "$SHIP_SPEC_REPO" \
   --draft \
-  --base development \
+  --base "$SHIP_SPEC_BASE" \
   --head "<prefix>/<N>-<slug>" \
-  --title "FROM <prefix>/<N>-<slug> TO development" \
+  --title "FROM <prefix>/<N>-<slug> TO $SHIP_SPEC_BASE" \
   --body "$(cat <<'EOF'
 Closes #<N>.
 
@@ -308,7 +323,7 @@ tmux new-session -d -s "$SESSION" \
 
 **Advisor `/goal` prompt** (one line; fill the placeholders):
 
-> `/goal` As an **expert Advisor on `/worktrees`**, implement `tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) Create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees`. (2) Orchestrate with `/delegate --plan tasks/<slug>/prd.json`: spawn `general-purpose` worker(s) that each `cd` into the worktree and run `scripts/ralph.sh <slug>` (the ralph loop), and **monitor** them by polling `tasks/<slug>/progress.txt` for `STATUS: COMPLETE` and the workers' tmux liveness. (3) Run the `/eval` gate (Stage 11). (4) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (5) In a **separate executor**, run `/pr-audit` for PR `#<PR>` and run `gh pr ready <PR>` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
+> `/goal` As an **expert Advisor on `/worktrees`**, implement `tasks/<slug>/prd.json` for PR `#<PR>` on repo `<repo>` branch `<prefix>/<N>-<slug>`. (1) Create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees`. (2) Orchestrate with `/delegate --plan tasks/<slug>/prd.json`: spawn `general-purpose` worker(s) that each `cd` into the worktree and run `scripts/ralph.sh <slug>` (the ralph loop), and **monitor** them by polling `tasks/<slug>/progress.txt` for `STATUS: COMPLETE` and the workers' tmux liveness. (3) Run the `/eval` gate (Stage 11). (4) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (5) In a **separate executor**, run `/pr-audit` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SHIP_SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
 
 The Advisor owns Stages 11–13 inside its session. The orchestrator's turn ends after launching it and reporting the session name; the ready-for-review PR is produced asynchronously by the Advisor. Each worker commits the implementation on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer (per `templates/prompt.md`); worktree isolation keeps concurrent work off the shared checkout (avoiding the autopilot shared-checkout contamination class). If `tmux` is unavailable, fall back to running the executor inline (`scripts/ralph.sh <slug>`) and continue to Stage 11 in the foreground.
 
@@ -328,20 +343,20 @@ Non-blocking — if `/compact` is unavailable or errors, log a warning and conti
 
 ### Stage 12 — `/pr-audit` promotable gate (separate executor)
 
-Push the branch so CI runs (`git push origin HEAD`). The Advisor then hands off to a **separate executor** (a `/delegate` worker or `Agent` call — "another executor") whose sole job is to run `/pr-audit` focused on PR `#<PR>` and report its draft sub-status. `/pr-audit` is read-only: it classifies the draft as **promotable** only when CI is green AND the PR is mergeable AND clean (it reads the `statusCheckRollup`, so it subsumes a bare `/ci-status` check). The executor returns `promotable` / `still-WIP` / `limbo`. Do not infer green from silence — a no-run CI status is not promotable.
+Push the branch so CI runs (`git push "$SHIP_SPEC_REMOTE" HEAD`). The Advisor then hands off to a **separate executor** (a `/delegate` worker or `Agent` call — "another executor") whose sole job is to run `/pr-audit` focused on PR `#<PR>` in `$SHIP_SPEC_REPO` and report its draft sub-status. `/pr-audit` is read-only: it classifies the draft as **promotable** only when CI is green AND the PR is mergeable AND clean (it reads the `statusCheckRollup`, so it subsumes a bare `/ci-status` check). The executor returns `promotable` / `still-WIP` / `limbo`. Do not infer green from silence — a no-run CI status is not promotable.
 
 ### Stage 13 — `gh pr ready` (undraft only if promotable)
 
 When implementation is complete, `/eval` has no new green→red regression, and Stage 12's `/pr-audit` classified the PR **promotable**, the executor undrafts it:
 
 ```bash
-gh pr ready <PR>
+gh pr ready <PR> --repo "$SHIP_SPEC_REPO"
 ```
 
 Otherwise (not promotable: red/pending CI, conflicts, or a new eval regression) keep the PR draft and add a comment naming the blocking gate plus resume/fix instructions:
 
 ```bash
-gh pr comment <PR> --body "ship-spec: PR left draft — <blocking gate>. Resume: <command>."
+gh pr comment <PR> --repo "$SHIP_SPEC_REPO" --body "ship-spec: PR left draft — <blocking gate>. Resume: <command>."
 ```
 
 Never auto-merge. The `agent-ship-<slug>` tmux session is left alive for attach/continue (per `context/rules/sandbox-processes.md`). Print the PR URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline output.
@@ -359,7 +374,7 @@ Never auto-merge. The `agent-ship-<slug>` tmux session is left alive for attach/
 | 7 | Four-file contract incomplete | Print missing files; abort; user investigates |
 | 7.5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue (stages 8–9 re-read from disk) |
 | 8 | Pre-commit hook fails (lint, tests) | Fix issue; re-run from stage 8 |
-| 9 | `gh pr create` fails (no remote, branch missing on origin) | Verify push from stage 8; re-run from stage 9 |
+| 9 | `gh pr create` fails (no remote, branch missing on target remote) | Verify push from stage 8; re-run from stage 9 |
 | 10 | `tmux` unavailable, or the Advisor/worker stalls, times out, or leaves acceptance criteria incomplete | If `tmux` is missing, run the executor inline; otherwise leave PR draft and comment the resume command (`scripts/ralph.sh <slug>` / attach `agent-ship-<slug>`) |
 | 11 | `/eval` reports a NEW green→red regression or exits non-zero | Leave PR draft; fix or document the regression, then re-run `/eval` |
 | 11.5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue to the audit |
@@ -379,7 +394,7 @@ Every stage checks for prior state and resumes rather than duplicating:
 | 6 | `tasks/<slug>/prd.json` exists | `/ralph` archives prior + regenerates (existing skill behavior) |
 | 7 | `prompt.md` / `progress.txt` exist | Skip if present |
 | 7.5 | (no resume — context optimization) | Always safe to run; skip silently if `/compact` is unavailable |
-| 8 | Branch exists on origin | Checkout + commit on top |
+| 8 | Branch exists on target remote | Checkout + commit on top |
 | 9 | Draft PR exists for this branch | Update body + comment-update; don't create duplicate |
 | 10 | `progress.txt` already says `STATUS: COMPLETE`; or the `agent-ship-<slug>`/ralph tmux session is already running | Skip relaunch — attach/monitor the existing session (`scripts/ralph.sh` reattaches idempotently); worktree present → reuse |
 | 11 | `evals/RESULTS.md` already reflects the current probe set and no new regression exists | Continue to the audit step; otherwise re-run `/eval` |

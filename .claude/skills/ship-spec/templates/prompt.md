@@ -18,8 +18,8 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
 
 2. **Verify branch** — your branch is `<prefix>/<N>-<slug>` (per `prd.json` `branchName`). If `/ship-spec`'s Advisor launched you in an isolated worktree at `.worktrees/<prefix>/<N>-<slug>`, that directory already has the branch checked out — `cd` into it and skip the checkout below. Otherwise, if you are not on the branch:
    ```bash
-   git fetch origin
-   git checkout -b <prefix>/<N>-<slug> origin/development 2>/dev/null \
+   git fetch "${SHIP_SPEC_REMOTE:-upstream}" "${SHIP_SPEC_BASE:-development}"
+   git checkout -b <prefix>/<N>-<slug> "${SHIP_SPEC_REMOTE:-upstream}/${SHIP_SPEC_BASE:-development}" 2>/dev/null \
      || git checkout <prefix>/<N>-<slug>
    ```
    Never push to `development` or `main` directly.

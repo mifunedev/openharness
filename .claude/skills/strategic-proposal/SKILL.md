@@ -1,16 +1,18 @@
 ---
 name: strategic-proposal
+argument-hint: "[--loop-candidate-only]"
 description: |
   Spawn 5 domain experts to propose roadmap items, then an AI council drafts a
   roadmap, a Strategic Critic challenges it, and the council finalizes with
-  revisions. Updates the pinned roadmap issue and /roadmap page data.
+  revisions. By default, updates the pinned roadmap issue and /roadmap page
+  data; in --loop-candidate-only mode, selects a candidate without publishing.
   TRIGGER when: asked to build roadmap, prioritize features, strategic proposal,
   "what should we build next", or rank product priorities.
 ---
 
 # Strategic Proposal
 
-Spawn 5 specialized expert sub-agents in parallel, each proposing roadmap items from their domain. An Expert AI Council drafts the roadmap, a Strategic Critic challenges it with adversarial backpressure, and the Council finalizes with revisions. The result is published as a pinned GitHub issue and written to `docs/roadmap.md`.
+Spawn 5 specialized expert sub-agents in parallel, each proposing roadmap items from their domain. An Expert AI Council drafts the roadmap, a Strategic Critic challenges it with adversarial backpressure, and the Council finalizes with revisions. By default, the result is published as a pinned GitHub issue and written to `docs/roadmap.md`; when invoked by `/loop` with `--loop-candidate-only` / `LOOP MODE: candidate-only`, it selects and reports the ranked candidate without publishing.
 
 **Core principle: SIGNAL OVER FEATURES.** Items require evidence of user demand before entering "Build Now" phase. Infrastructure prerequisites are exempt. The Critic ensures the council isn't inflating signal or sandbagging complexity.
 
@@ -29,6 +31,19 @@ Use this variant when the user asks for a council to define a V2MOM, operating m
 7. Add explicit approval gates for contested strategic wording (e.g. tagline, key nouns, whether a constraint is too narrow) before implementing file changes.
 
 Session example and final V2MOM synthesis: `references/open-harness-v2mom-council.md`.
+
+
+## Loop brainstorm mode: candidate-only, no publishing
+
+Use this mode when `/loop` invokes `strategic-proposal` as the executable loop's `brainstorm` node (`--loop-candidate-only` or an explicit `LOOP MODE: candidate-only` instruction). It is intentionally non-mutating:
+
+1. Run the context gathering, expert fan-out, Strategic Council draft, Strategic Critic, and final council synthesis through step 7.
+2. Select/report the top ranked candidate and enough rationale for `plan` to continue.
+3. **Skip steps 8 and 9**: do not create/edit/pin GitHub issues, do not create labels, and do not write `docs/roadmap.md`.
+4. Run the Memory Improvement Protocol with `Result: OP` and `Action: candidate selected (loop candidate-only; no publish)`.
+5. Emit the normal final handoff line: `STATUS: CANDIDATE-PICKED`.
+
+This keeps `/loop` live mode from causing roadmap/GitHub side effects just because it needed a brainstorm route token. Standalone `/strategic-proposal` without this mode keeps the normal publishing behavior below.
 
 ## Decision Flow
 
@@ -172,6 +187,8 @@ Pass the council:
 
 The council's final output becomes the pinned issue body.
 
+If invoked with `--loop-candidate-only` / `LOOP MODE: candidate-only`, stop the publishing flow here: report the selected candidate, skip steps 8 and 9 entirely, run the Memory Improvement Protocol, and emit `STATUS: CANDIDATE-PICKED`.
+
 ### 8. Find or create the pinned roadmap issue
 
 Search for existing:
@@ -237,3 +254,17 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Identity | `IDENTITY.md` |
 | Memory | `MEMORY.md` |
 | Daily Logs | `memory/YYYY-MM-DD/log.md` |
+
+## Handoff
+
+`strategic-proposal` is the `brainstorm` node in the executable loop (`context/rules/loop.md` § 2). `/loop` MUST invoke it in `--loop-candidate-only` / `LOOP MODE: candidate-only` so this node selects a ranked candidate without creating/editing/pinning GitHub issues or writing `docs/roadmap.md`. After the council finalizes the ranked candidate/roadmap (step 7), skips publishing in loop mode, and the Memory Protocol logs the run (step 10) — on **successful completion** — emit exactly one terminal line as the **final line of output**:
+
+    STATUS: CANDIDATE-PICKED
+
+Routes (must match `context/rules/loop.md` § 2):
+
+| STATUS | Next node |
+|--------|-----------|
+| `CANDIDATE-PICKED` | `plan` |
+
+The `/autopilot` runner reads this token to route to `plan`. Emitting nothing — a crash, a stall, or the `gh`-auth SKIP exit — is read as failure, never as success (invariant 5: honest exits). When invoked standalone (not under `/autopilot`), the trailing `STATUS:` line is harmless.

@@ -36,7 +36,7 @@ that catches anything time-sensitive without doing real work.
     unchanged; do NOT add a per-pulse "no drift" block on clean runs.
 2.8. **Autopilot health (nudge).** Check the hourly `/autopilot` loop for
     stuck per-run sessions and a jammed queue, and nudge where the signal
-    is unambiguous. Three checks, only the first acts autonomously:
+    is unambiguous. Four checks, only the first acts autonomously:
 
     - **Stuck sessions (KILL — autonomous nudge).** For each new `cron-autopilot-*`
       or legacy `autopilot-*` tmux session, read the pane tail for a terminal
@@ -85,6 +85,29 @@ that catches anything time-sensitive without doing real work.
       ```
       Surface each as `NUDGE: autopilot PR #<n> is green + mergeable — merge
       to free the queue`. Do NOT run `gh pr merge`.
+    - **Stale draft autopilot PRs (WATCHDOG — surface only).** An open draft
+      `autopilot` PR with no update for more than 24 hours may be abandoned,
+      but draft age alone never authorizes mutation. Keep this distinct from
+      the ready non-draft nudge above:
+      ```bash
+      AUTOPILOT_DRAFT_STALE_HOURS=24
+      now_epoch=$(date -u +%s)
+      gh pr list --state open --label autopilot \
+        --json number,isDraft,updatedAt,headRefName \
+        --jq '.[] | select(.isDraft==true) | [.number,.updatedAt,.headRefName] | @tsv' \
+        | while IFS=$'\t' read -r n updated branch; do
+            updated_epoch=$(date -u -d "$updated" +%s 2>/dev/null || echo "$now_epoch")
+            age_s=$(( now_epoch - updated_epoch ))
+            age_h=$(( age_s / 3600 ))
+            if [ "$age_s" -gt $(( AUTOPILOT_DRAFT_STALE_HOURS * 3600 )) ]; then
+              echo "WATCHDOG: stale autopilot draft PR #$n updated ${age_h}h ago — investigate branch $branch; do not auto-undraft/close"
+            fi
+          done
+      ```
+      Surface each as `WATCHDOG: stale autopilot draft PR #<n> updated <Nh>
+      ago — investigate branch <branch>; do not auto-undraft/close`. Do NOT
+      mark the PR ready, close it, merge it, or kill any session based on
+      draft age.
 3. Decide whether anything needs action right now.
 4. If yes, act. If no, append a brief "nothing pressing" note to
    `memory/<today>/log.md` and exit.
@@ -100,11 +123,11 @@ that catches anything time-sensitive without doing real work.
 - Drift detected by `/drift-check` → include in reply as
   `DRIFT: <summary>` and note in `memory/<today>/log.md`. Clean run →
   no extra output.
-- Autopilot nudge (step 2.8) → killed stuck session or a surfaced
-  ready/long-lived signal → include in reply as `NUDGE: <action>` (and
-  `WATCHING: autopilot ...` for surfaced-only items) and note in
-  `memory/<today>/log.md`. No stuck session and no ready PR → no extra
-  output.
+- Autopilot nudge/watchdog (step 2.8) → killed stuck session or a surfaced
+  ready/long-lived/stale-draft signal → include in reply as `NUDGE: <action>`,
+  `WATCHING: autopilot ...`, or `WATCHDOG: <action>` as emitted and note in
+  `memory/<today>/log.md`. No stuck session, no ready PR, and no stale draft
+  PR → no extra output.
 - Append the result to `memory/<today>/log.md` either way.
 - **Mandatory closing step (do this even after long action chains):**
   append one liveness line to `crons/.cron.log`:

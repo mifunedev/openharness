@@ -149,10 +149,10 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 | audit | yes (`/audit`) | ☑ | `STATUS: AUDIT-PASS` → retro · `AUDIT-FAIL` → implement; composes `/pr-audit`,`/ci-status`,`/eval`,`/agent-browser` + prd.json conformance |
 | retro | yes (`/retro`) | ☑ | `STATUS: RETRO-DONE` → compound |
 | compound | yes (`/wiki-ingest`) | ☑ | `STATUS: COMPOUND-DONE` → compress (probe-minting: Layer 2) |
-| compress | yes (`/context-audit`…) | ☐ | clarity metric (new) |
+| compress | yes (`/context-audit`) | ☑ | `STATUS: COMPRESS-DONE` → benchmark; `/context-audit` carries the Handoff — always completes (like `retro`), no branch |
 | benchmark | `/eval` machinery | ☐ | + capability benchmark + `/eval-lint` (new); tokens depend on Layer 2 |
 | repeat | yes (autopilot caps) | ☐ | |
-| **runner** | `/autopilot` (evolve — gated) | ☐ | walks this tree; today walks phases 1–4 only (select → `/ship-spec` → reconcile) |
+| **runner** | `/loop` (standalone) · `/autopilot` (cron — gated) | ☑ | `/loop` walks the wired spine: reads § 2 as the route table, STATUS-tail routing, honest halt at unwired nodes; the `/autopilot`-as-`/loop`-cron integration stays gated |
 
 ---
 

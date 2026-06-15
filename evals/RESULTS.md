@@ -21,6 +21,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | eval-runner-exit | A | 2026-06-14 23:47 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
 | health-check-docker-stats | A | 2026-06-14 23:47 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
 | loop-handoff-consistency | A | 2026-06-15 04:03 | PASS | context/rules/loop.md § 4 (executable-loop Handoff convention) |
+| loop-runner-contract | A | 2026-06-15 04:55 | PASS | issue #160 — /loop runner contract |
 | memory-gitignore-claim | A | 2026-06-14 23:47 | PASS | issue #101 |
 | next-dev-prod | A | 2026-06-14 23:47 | PASS | memory/MEMORY.md 2026-06-04 |
 | owned-surface-guard | A | 2026-06-14 23:47 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |

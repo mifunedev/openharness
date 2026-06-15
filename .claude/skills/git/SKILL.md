@@ -1,5 +1,5 @@
 ---
-name: git-workflow
+name: git
 description: |
   Use when creating issues, branches, worktrees, commits, PRs, changelog entries,
   stacked PRs, or releases in Open Harness. Provider-portable source of truth for
@@ -21,7 +21,7 @@ The legacy rules file remains only as a pointer to this skill.
 
 ## When to Use
 
-Load or invoke `/git-workflow` whenever you need to:
+Load or invoke `/git` whenever you need to:
 
 - create or title a GitHub issue
 - name a branch or worktree

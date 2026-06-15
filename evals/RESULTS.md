@@ -20,7 +20,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | eval-gate | A | 2026-06-14 21:27 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
 | eval-results-atomic | A | 2026-06-14 21:27 | PASS | issue #83 (eval-results-atomic-write) |
 | eval-runner-exit | A | 2026-06-14 21:27 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
-| git-workflow-skill | A | 2026-06-15 17:03 | PASS | conversation 2026-06-15 — rules are not always supported; git workflow must be a skill |
+| git-skill | A | 2026-06-15 17:20 | PASS | conversation 2026-06-15 — rules are not always supported; git workflow must be the /git skill |
 | health-check-docker-stats | A | 2026-06-14 21:27 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
 | memory-gitignore-claim | A | 2026-06-14 21:27 | PASS | issue #101 |
 | next-dev-prod | A | 2026-06-14 21:27 | PASS | memory/MEMORY.md 2026-06-04 |

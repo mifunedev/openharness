@@ -157,10 +157,10 @@ Run the skill from inside the orchestrator sandbox:
 /release
 ```
 
-For details on the full workflow and manual procedure, see `/git-workflow`
-(`.claude/skills/git-workflow/SKILL.md`) in the repo.
+For details on the full workflow and manual procedure, see `/git`
+(`.claude/skills/git/SKILL.md`) in the repo.
 
 ---
 
-Need to dive deeper? See `/git-workflow` (`.claude/skills/git-workflow/SKILL.md`)
+Need to dive deeper? See `/git` (`.claude/skills/git/SKILL.md`)
 in the repo for the canonical workflow.

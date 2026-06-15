@@ -286,7 +286,7 @@ Closes #<N>.
 ## Next steps (automated)
 1. Launch the expert `/worktrees` Advisor in tmux session `agent-ship-<slug>` via `/goal` (the pre-implement `/compact` already ran in Stage 7.5).
 2. Advisor: `/delegate` workers each run `scripts/ralph.sh <slug>` in an isolated worktree; monitor to `STATUS: COMPLETE`; run `/eval`; then `/compact` before the audit.
-3. A separate executor runs `/pr-audit`; this PR is marked ready (`gh pr ready`) only when it is promotable (CI green + mergeable + clean).
+3. A separate executor runs `/pr-audit` immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that fresh audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output is only a resume/investigation hint, never an undraft signal.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code) via /ship-spec
 EOF
@@ -313,7 +313,7 @@ tmux new-session -d -s "$SESSION" -c "${WT:-$PWD}" \
 
 > `/goal` As an **expert Advisor on `/worktrees`**, implement `tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) Orchestrate with `/delegate --plan tasks/<slug>/prd.json`: spawn `general-purpose` worker(s) that each `cd` into that worktree and run `scripts/ralph.sh <slug>` (the ralph loop), and **monitor** them by polling `tasks/<slug>/progress.txt` for `STATUS: COMPLETE` and the workers' tmux liveness. (3) Run the `/eval` gate (Stage 11). (4) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (5) In a **separate executor**, run `/pr-audit` for PR `#<PR>` and run `gh pr ready <PR>` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
 
-The Advisor owns Stages 11–13 inside its session. The orchestrator's turn ends after launching it and reporting the session name; the ready-for-review PR is produced asynchronously by the Advisor. Each worker commits the implementation on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer (per `templates/prompt.md`); worktree isolation keeps concurrent work off the shared checkout (avoiding the autopilot shared-checkout contamination class). If `tmux` is unavailable, fall back to running the executor inline (`scripts/ralph.sh <slug>`) and continue to Stage 11 in the foreground.
+The Advisor owns Stages 11–13 inside its session. The orchestrator's turn ends after launching it and reporting the session name; the ready-for-review PR is produced asynchronously by the Advisor. Each worker commits the implementation on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer (per `templates/prompt.md`); worktree isolation keeps concurrent work off the shared checkout (avoiding the autopilot shared-checkout contamination class). If `tmux` is unavailable, fall back to running the executor inline (`scripts/ralph.sh <slug>`) and continue to Stage 11 in the foreground. Stage 13 still requires a fresh Stage 12 `/pr-audit` immediately before `gh pr ready`; stale-draft watchdog/heartbeat output cannot substitute for that audit.
 
 ### Stage 11 — `/eval` gate
 
@@ -331,11 +331,11 @@ Non-blocking — if `/compact` is unavailable or errors, log a warning and conti
 
 ### Stage 12 — `/pr-audit` promotable gate (separate executor)
 
-Push the branch so CI runs (`git push origin HEAD`). The Advisor then hands off to a **separate executor** (a `/delegate` worker or `Agent` call — "another executor") whose sole job is to run `/pr-audit` focused on PR `#<PR>` and report its draft sub-status. `/pr-audit` is read-only: it classifies the draft as **promotable** only when CI is green AND the PR is mergeable AND clean (it reads the `statusCheckRollup`, so it subsumes a bare `/ci-status` check). The executor returns `promotable` / `still-WIP` / `limbo`. Do not infer green from silence — a no-run CI status is not promotable.
+Push the branch so CI runs (`git push origin HEAD`). The Advisor then hands off to a **separate executor** (a `/delegate` worker or `Agent` call — "another executor") whose sole job is to run `/pr-audit` focused on PR `#<PR>` immediately before any undraft attempt and report its draft sub-status. `/pr-audit` is read-only: it classifies the draft as **promotable** only when CI is green AND the PR is mergeable AND clean (it reads the `statusCheckRollup`, so it subsumes a bare `/ci-status` check). The executor returns `promotable` / `still-WIP` / `limbo`. Do not infer green from silence — a no-run CI status is not promotable. Do not treat heartbeat stale-draft watchdog output as promotable evidence; it is only a signal to investigate or resume the draft.
 
 ### Stage 13 — `gh pr ready` (undraft only if promotable)
 
-When implementation is complete, `/eval` has no new green→red regression, and Stage 12's `/pr-audit` classified the PR **promotable**, the executor undrafts it:
+When implementation is complete, `/eval` has no new green→red regression, and an immediately preceding Stage 12 `/pr-audit` classified the PR **promotable**, the executor undrafts it. Do not undraft from stale-draft watchdog output, age, or heartbeat nudges alone:
 
 ```bash
 gh pr ready <PR>
@@ -394,7 +394,7 @@ The whole pipeline can be re-invoked safely. Failed stage = fix + re-run; resume
 
 ## Finalization contract
 
-`/ship-spec` opens a draft PR early so reviewers can observe the scaffold, but a successful run does not stop there. After scaffolding it compacts and hands off to an expert `/worktrees` Advisor (launched in a tmux session via `/goal`) that drives `/delegate` workers each running `scripts/ralph.sh`. The terminal successful state is a ready-for-review PR, reached only after implementation completes, `/eval` shows no new green→red regression, and a separate `/pr-audit` executor classifies the PR **promotable** (CI green + mergeable + clean) before `gh pr ready`. Draft is reserved for blocked states: critic HALT, incomplete executor, new eval regression, not-promotable PR (red/pending CI or conflicts), or an explicit user stop. Never auto-merge.
+`/ship-spec` opens a draft PR early so reviewers can observe the scaffold, but a successful run does not stop there. After scaffolding it compacts and hands off to an expert `/worktrees` Advisor (launched in a tmux session via `/goal`) that drives `/delegate` workers each running `scripts/ralph.sh`. The terminal successful state is a ready-for-review PR, reached only after implementation completes, `/eval` shows no new green→red regression, and a separate `/pr-audit` executor immediately classifies the PR **promotable** (CI green + mergeable + clean) before `gh pr ready`. Draft is reserved for blocked states: critic HALT, incomplete executor, new eval regression, not-promotable PR (red/pending CI or conflicts), or an explicit user stop. Heartbeat stale-draft watchdog output may trigger investigation/resume work, but it never authorizes `gh pr ready`. Never auto-merge.
 
 ## Reference
 

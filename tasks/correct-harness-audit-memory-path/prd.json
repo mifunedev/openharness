@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/176-correct-harness-audit-memory-path",
+  "issue": 176,
+  "description": "Fix harness-audit to load long-term memory from memory/MEMORY.md and guard the path with an eval probe.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Correct harness-audit memory reference",
+      "description": "As the orchestrator, I need /harness-audit to read the actual long-term memory file so research-mode autopilot selections include durable lessons.",
+      "acceptanceCriteria": [
+        ".claude/skills/harness-audit/SKILL.md tails /home/sandbox/harness/memory/MEMORY.md in the context snapshot.",
+        "Other long-term-memory references in the harness-audit skill use memory/MEMORY.md where they point at the canonical file."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed 2026-06-15; harness-audit now points at memory/MEMORY.md."
+    },
+    {
+      "id": "US-002",
+      "title": "Guard the memory path with an eval probe",
+      "description": "As the orchestrator, I need a deterministic guard so stale root-memory references cannot silently return.",
+      "acceptanceCriteria": [
+        "evals/probes/harness-audit-memory-path.sh fails if the harness-audit skill references root MEMORY.md instead of memory/MEMORY.md.",
+        "The probe passes after the fix.",
+        "CHANGELOG.md records the user-visible harness-infra correction under ## [Unreleased]."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed 2026-06-15; probe and changelog added."
+    }
+  ]
+}

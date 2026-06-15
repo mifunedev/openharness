@@ -15,7 +15,7 @@
     "typecheck": "pnpm --filter './packages/**' -r --if-present run typecheck && npm --prefix packages/oh run typecheck",
     "format": "pnpm -r --if-present run format",
     "pnpm:devPreinstall": "pnpm run security:audit",
-    "security:audit": "pnpm audit --audit-level low --ignore GHSA-h67p-54hq-rp68",
+    "security:audit": "pnpm audit --audit-level low",
     "docs:build": "pnpm --dir packages/docs build",
     "docs:dev": "pnpm --dir packages/docs start",
     "docs:serve": "pnpm --dir packages/docs serve"
@@ -54,13 +54,12 @@
       "ws@>=7.0.0 <7.5.11": "^7.5.11",
       "form-data": "^4.0.6",
       "launch-editor": "^2.14.1",
+      "js-yaml": "^4.2.0",
       "dompurify": "^3.4.10",
       "@babel/core": "^7.29.7"
     },
-    "auditConfig": {
-      "ignoreCves": [
-        "GHSA-h67p-54hq-rp68"
-      ]
+    "patchedDependencies": {
+      "gray-matter@4.0.3": "patches/gray-matter@4.0.3.patch"
     }
   }
 }

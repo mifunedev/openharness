@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- Capability benchmark instrument (`evals/capability/`) — the harness's progress *ceiling* (success · cost-time · unattended on representative end-to-end tasks), distinct from the `evals/probes/` regression floor: a README spec, 3 seed task specs (CB-001..003), a baseline scoreboard, and the `capability-benchmark-schema` guard probe. Stands up the instrument + baseline; gate/selection wiring is a follow-on ([#167](https://github.com/ryaneggz/openharness/issues/167)).
 - `/loop` runner skill — standalone walker of the executable-loop decision tree (`context/rules/loop.md` § 2): reads § 2 as the route table, STATUS-tail routing, `--dry-run`/`--start`/`--max-iters`, honest halt at unwired nodes ([#160](https://github.com/ryaneggz/openharness/issues/160)).
 - Wire the `compress` loop node: `/context-audit` emits `STATUS: COMPRESS-DONE` → `benchmark` ([#160](https://github.com/ryaneggz/openharness/issues/160)).
 - `loop-runner-contract` tier-A eval probe guarding the `/loop` runner's contract literals ([#160](https://github.com/ryaneggz/openharness/issues/160)).

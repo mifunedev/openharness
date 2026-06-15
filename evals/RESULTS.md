@@ -10,6 +10,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | autopilot-pi-agent | A | 2026-06-15 05:28 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14; issue #126 (kept Pi overlap lock release) 2026-06-14; issue #142 (worktree-by-default, skip→worktree) 2026-06-14 |
 | autopilot-stale-draft-watchdog | A | 2026-06-15 05:28 | PASS | issue #161 — stale autopilot draft watchdog must surface investigation, not undraft |
 | boot-lint-glob | A | 2026-06-15 05:28 | PASS | issue #90, issue #120 |
+| capability-benchmark-schema | A | 2026-06-15 05:33 | PASS | issue #167 — capability benchmark instrument |
 | clean-restore | A | 2026-06-15 05:28 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | cleanup-tasks-scoped-guard | A | 2026-06-15 05:28 | PASS | issue #85 |
 | cleanup-tasks-worktree-grooming | A | 2026-06-15 05:28 | PASS | issue #168 |

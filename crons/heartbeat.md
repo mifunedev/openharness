@@ -34,94 +34,17 @@ that catches anything time-sensitive without doing real work.
     `DRIFT: <summary>`. When `/drift-check` reports all classes clean,
     append nothing extra — the existing `HEARTBEAT_OK` reply stays
     unchanged; do NOT add a per-pulse "no drift" block on clean runs.
-2.8. **Autopilot health (nudge).** Check the hourly `/autopilot` loop for
-    stuck per-run sessions and a jammed queue, and nudge where the signal
-    is unambiguous. Four checks, only the first acts autonomously:
+2.8. **Autopilot health (watchdog skill).** Run `/autopilot-watchdog` every
+    heartbeat wake and include any emitted `NUDGE:`, `WATCHING:`, or
+    `WATCHDOG:` lines in the heartbeat reply/log. The skill is also the ad-hoc
+    operator entrypoint for this check; do not duplicate its bash here. Its
+    load-bearing contract:
 
-    - **Stuck sessions (KILL — autonomous nudge).** For each new `cron-autopilot-*`
-      or legacy `autopilot-*` tmux session, read the pane tail for a terminal
-      interactive prompt the run can never clear on its own — a Claude
-      usage/session limit, a `Resume from summary` menu, `/upgrade`, or a fatal
-      error banner. A detached cron run frozen there will never finish. Under
-      `worktree: true` (autopilot's default) it no longer blocks later `:05`
-      fires — they spawn fresh worktrees — but it still holds a worktree slot
-      toward the concurrency cap (and a non-worktree cron would still stall under
-      `overlap: false`). Kill the session, then reap its worktree below:
-      ```bash
-      for s in $(tmux ls 2>/dev/null | grep -oE '^(cron-)?autopilot-[^:]*'); do
-        if tmux capture-pane -p -t "$s" 2>/dev/null | tail -25 \
-             | grep -qiE 'hit your (usage|session) limit|session limit|/usage-credits|/upgrade|Resume from summary|Resume full session'; then
-          tmux kill-session -t "$s"; rm -f "/tmp/$s.keep" "/tmp/$s.pid"
-          echo "NUDGE: killed stuck autopilot session $s (frozen at a usage-limit/resume prompt)"
-        fi
-      done
-      # sweep orphaned keep-markers (session already gone)
-      for m in /tmp/cron-autopilot-*.keep /tmp/autopilot-*.keep; do [ -e "$m" ] || continue; \
-        s=$(basename "$m" .keep); tmux has-session -t "$s" 2>/dev/null || rm -f "$m"; done
-      # reap fallback worktrees that NO live tmux pane is working inside — robust to the
-      # autopilot session rename (cron-autopilot-<ts> → autopilot-<branch>) and to
-      # ship-spec's separate Advisor session (agent-ship-<slug>) sharing the worktree;
-      # matching the worktree dir name to a session name would delete an ACTIVE one.
-      cwds="$(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null)"
-      for d in .worktrees/cron/*/; do [ -d "$d" ] || continue; \
-        abs="$(cd "$d" && pwd)"; \
-        printf '%s\n' "$cwds" | grep -qxF "$abs" || printf '%s\n' "$cwds" | grep -qF "$abs/" \
-          || git worktree remove --force "$d" 2>/dev/null || true; done
-      git worktree prune 2>/dev/null || true
-      ```
-    - **Long-lived sessions (SURFACE — never kill on age).** A new
-      `cron-autopilot-*` or legacy `autopilot-*` session alive > 90 min with no
-      stuck marker may be a persisted ready-PR session the operator is driving,
-      or a slow build. Surface
-      `WATCHING: autopilot session <s> alive <age> — verify it is not hung`
-      and leave it. Age alone never justifies a kill.
-    - **Ready / jammed-loop PR (SURFACE — never merge).** A green, mergeable,
-      non-draft open `autopilot` PR sitting unreviewed wants an operator
-      merge (the loop self-merges nothing):
-      ```bash
-      gh pr list --state open --label autopilot \
-        --json number,isDraft,mergeable,mergeStateStatus \
-        --jq '.[] | select(.isDraft==false and .mergeable=="MERGEABLE" and .mergeStateStatus=="CLEAN") | .number'
-      ```
-      Surface each as `NUDGE: autopilot PR #<n> is green + mergeable — merge
-      to free the queue`. Do NOT run `gh pr merge`.
-    - **Stale draft autopilot PRs (WATCHDOG — surface only).** An open draft
-      `autopilot` PR with no update for more than 24 hours may be abandoned.
-      A draft backlog that saturates autopilot's same-day creation cap is also
-      a jammed-loop signal even before 24h: the loop cannot create another PR
-      until an operator promotes, fixes, closes, or merges one of the drafts.
-      Draft age/backlog alone never authorizes mutation. Keep these signals
-      distinct from the ready non-draft nudge above:
-      ```bash
-      AUTOPILOT_DRAFT_STALE_HOURS=24
-      AUTOPILOT_DAILY_CAP=6
-      today=$(date -u +%Y-%m-%d)
-      now_epoch=$(date -u +%s)
-      draft_rows=$(gh pr list --state open --label autopilot --limit 100 \
-        --json number,isDraft,updatedAt,createdAt,headRefName \
-        --jq '.[] | select(.isDraft==true) | [.number,.updatedAt,.createdAt,.headRefName] | @tsv')
-      printf '%s\n' "$draft_rows" \
-        | while IFS=$'\t' read -r n updated _created branch; do
-            [ -n "$n" ] || continue
-            updated_epoch=$(date -u -d "$updated" +%s 2>/dev/null || echo "$now_epoch")
-            age_s=$(( now_epoch - updated_epoch ))
-            age_h=$(( age_s / 3600 ))
-            if [ "$age_s" -gt $(( AUTOPILOT_DRAFT_STALE_HOURS * 3600 )) ]; then
-              echo "WATCHDOG: stale autopilot draft PR #$n updated ${age_h}h ago — investigate branch $branch; do not auto-undraft/close"
-            fi
-          done
-      today_drafts=$(printf '%s\n' "$draft_rows" | awk -F '\t' -v today="$today" '$3 ~ "^" today { c++ } END { print c+0 }')
-      if [ "$today_drafts" -ge "$AUTOPILOT_DAILY_CAP" ]; then
-        draft_list=$(printf '%s\n' "$draft_rows" | awk -F '\t' '$1 { printf "%s#%s(%s)", sep, $1, $4; sep=", " }')
-        echo "WATCHDOG: autopilot draft backlog saturates daily cap (${today_drafts}/${AUTOPILOT_DAILY_CAP} today) — investigate/promote/close one of: ${draft_list}; do not auto-undraft/close"
-      fi
-      ```
-      Surface stale-age rows as `WATCHDOG: stale autopilot draft PR #<n> updated
-      <Nh> ago — investigate branch <branch>; do not auto-undraft/close`.
-      Surface cap saturation as `WATCHDOG: autopilot draft backlog saturates
-      daily cap (<N>/6 today) — investigate/promote/close one of: <list>; do not
-      auto-undraft/close`. Do NOT mark the PR ready, close it, merge it, or kill
-      any session based on draft age/backlog alone.
+    - Draft autopilot PRs are stale after **2 hours** in draft with no update.
+    - Draft stale/backlog findings are surface-only investigation hints; they do
+      not authorize `gh pr ready`, `gh pr close`, or `gh pr merge`.
+    - The only autonomous mutation is killing tmux sessions frozen at known
+      usage-limit/resume prompts.
 3. Decide whether anything needs action right now.
 4. If yes, act. If no, append a brief "nothing pressing" note to
    `memory/<today>/log.md` and exit.

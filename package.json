@@ -14,6 +14,8 @@
     "format:check": "pnpm -r --if-present run format:check",
     "typecheck": "pnpm --filter './packages/**' -r --if-present run typecheck && npm --prefix packages/oh run typecheck",
     "format": "pnpm -r --if-present run format",
+    "pnpm:devPreinstall": "pnpm run security:audit",
+    "security:audit": "pnpm audit --audit-level low",
     "docs:build": "pnpm --dir packages/docs build",
     "docs:dev": "pnpm --dir packages/docs start",
     "docs:serve": "pnpm --dir packages/docs serve"

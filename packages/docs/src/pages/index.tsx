@@ -1,8 +1,12 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
 import CodeBlock from "@theme/CodeBlock";
 import styles from "./index.module.css";
+
+const GITHUB_REPO = "mifunedev/openharness";
+const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
+const FALLBACK_STARS = 18;
 
 const QUICKSTART = `# install (only host dep: Docker)
 curl -fsSL https://oh.mifune.dev/install.sh | bash
@@ -99,6 +103,9 @@ const WHY: Array<{ title: string; body: string }> = [
 ];
 
 export default function Home(): React.ReactElement {
+  const stars = useGitHubStars(FALLBACK_STARS);
+  const starLabel = formatStars(stars);
+
   return (
     <Layout description="We provide the sandbox; you choose the agent. Open Harness is a long-lived Docker sandbox dedicated to your project. Pick Claude Code, Codex, OpenCode, Pi, DeepAgents, Hermes, or Grok Build inside.">
       <main>
@@ -125,12 +132,15 @@ export default function Home(): React.ReactElement {
                 </Link>
                 <Link
                   className="button button--secondary button--lg"
-                  href="https://github.com/mifunedev/openharness"
+                  href={GITHUB_URL}
+                  aria-label={`Star Open Harness on GitHub, ${starLabel} stars`}
                 >
-                  View on GitHub
+                  ★ Star on GitHub
                 </Link>
               </div>
               <div className={styles.heroMeta}>
+                <span>{starLabel} GitHub stars</span>
+                <span aria-hidden="true">·</span>
                 <span>MIT licensed</span>
                 <span aria-hidden="true">·</span>
                 <span>Self-hosted</span>
@@ -147,6 +157,33 @@ export default function Home(): React.ReactElement {
               </div>
               <CodeBlock language="bash" children={QUICKSTART} />
             </aside>
+          </div>
+        </section>
+
+        <section className={styles.starSection} aria-labelledby="github-stars-title">
+          <div className={`${styles.container} ${styles.starBand}`}>
+            <div className={styles.starCopy}>
+              <p className={styles.starEyebrow}>Open source signal</p>
+              <h2 id="github-stars-title" className={styles.starTitle}>
+                Help more agent builders find Open Harness.
+              </h2>
+              <p className={styles.starBody}>
+                If the sandbox model saves you from one broken local agent setup,
+                star the repo so the next Claude Code, Codex, OpenCode, or Hermes user can find it faster.
+              </p>
+            </div>
+            <div className={styles.starPanel} aria-label={`${starLabel} GitHub stars for ${GITHUB_REPO}`}>
+              <span className={styles.starPanelLabel}>GitHub stars</span>
+              <span className={styles.starPanelValue}>★ {starLabel}</span>
+              <span className={styles.starPanelRepo}>{GITHUB_REPO}</span>
+              <Link
+                className={styles.starPanelCta}
+                href={GITHUB_URL}
+                aria-label={`Star Open Harness on GitHub, ${starLabel} stars`}
+              >
+                Star on GitHub →
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -215,11 +252,11 @@ export default function Home(): React.ReactElement {
             <div className={styles.linkGrid}>
               <Link
                 className={styles.linkCard}
-                href="https://github.com/mifunedev/openharness"
+                href={GITHUB_URL}
               >
-                <span className={styles.linkCardLabel}>GitHub</span>
+                <span className={styles.linkCardLabel}>Star Open Harness</span>
                 <span className={styles.linkCardSub}>
-                  Source, issues, and discussions
+                  Help others discover the project on GitHub
                 </span>
               </Link>
               <Link
@@ -241,6 +278,40 @@ export default function Home(): React.ReactElement {
       </main>
     </Layout>
   );
+}
+
+function formatStars(stars: number): string {
+  if (stars >= 1000) {
+    return `${(stars / 1000).toFixed(stars >= 10000 ? 0 : 1)}k`;
+  }
+
+  return new Intl.NumberFormat("en-US").format(stars);
+}
+
+function useGitHubStars(fallback: number): number {
+  const [stars, setStars] = useState(fallback);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`https://api.github.com/repos/${GITHUB_REPO}`, {
+      signal: controller.signal,
+      headers: { Accept: "application/vnd.github+json" },
+    })
+      .then((response) => (response.ok ? response.json() : Promise.reject(response)))
+      .then((repo: { stargazers_count?: number }) => {
+        if (typeof repo.stargazers_count === "number") {
+          setStars(repo.stargazers_count);
+        }
+      })
+      .catch(() => {
+        // Keep the committed fallback if GitHub is rate-limited or unavailable.
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  return stars;
 }
 
 /* ---------- Inline agent icons ----------

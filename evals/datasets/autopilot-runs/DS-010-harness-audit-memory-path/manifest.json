@@ -1,0 +1,28 @@
+{
+  "id": "DS-010",
+  "slug": "harness-audit-memory-path",
+  "dataset": "autopilot-runs",
+  "title": "Correct the /harness-audit long-term memory path",
+  "created": "2026-06-15",
+  "source": {
+    "repo": "ryaneggz/openharness",
+    "pr": 177,
+    "issue": 176,
+    "merge_commit": "ae02aad",
+    "url": "https://github.com/ryaneggz/openharness/pull/177"
+  },
+  "trajectory": {
+    "kind": "autopilot-run",
+    "outcome": "merged"
+  },
+  "skills": ["/autopilot", "/ship-spec", "/harness-audit"],
+  "reward_kind": ["diff_similarity", "artifact_presence"],
+  "oracle": {
+    "summary": "oracle/summary.md",
+    "changed_files": "oracle/changed-files.txt",
+    "changed_file_count": 9
+  },
+  "content_hash": "sha256:9bbffe32d6f06f6a007e27886d6535fbce26baab577a3a975118d7e21574061e",
+  "capability_tasks": ["CB-001"],
+  "notes": "autopilot-run trajectory: research-selected, autopilot-labelled PR #177."
+}

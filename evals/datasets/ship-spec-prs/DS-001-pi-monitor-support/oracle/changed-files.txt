@@ -1,0 +1,9 @@
+.pi/.gitignore
+.pi/extensions/__tests__/settings.test.ts
+.pi/settings.json
+CHANGELOG.md
+docs/harnesses/pi.md
+evals/RESULTS.md
+wiki/README.md
+wiki/pi-loop.md
+wiki/raw/2026-06-14-pi-loop.md

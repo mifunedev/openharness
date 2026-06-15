@@ -18,6 +18,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | cleanup-tasks-worktree-grooming | A | 2026-06-15 06:39 | PASS | issue #168 |
 | cron-claude-codex-fallback | A | 2026-06-15 06:39 | PASS | conversation 2026-06-12 (default Codex fallback for crons) |
 | cron-watchdog | A | 2026-06-15 06:39 | PASS | issue #130 (cron runtime watchdog) 2026-06-14 |
+| datasets-schema | A | 2026-06-15 23:24 | PASS | issue #196 — evals/datasets verifiable trajectory corpus (Repo2RLEnv-inspired) |
 | devtcp-hook | A | 2026-06-15 06:39 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
 | drift-check-cron-staleness-glob | A | 2026-06-15 06:39 | PASS | issue #98 |
 | eval-ci-gate | A | 2026-06-15 06:39 | PASS | #103 — eval probe suite gated in CI |

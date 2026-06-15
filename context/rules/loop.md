@@ -145,7 +145,7 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 | plan | yes (`/prd`,`/ralph`) | ☑ | `/ralph` (terminal step) emits `STATUS: PLAN-READY` → critique |
 | critique | yes (`/critique`) | ☑ | `STATUS: CRITIQUE-DONE` → approve; 2× `critic` agents (implementer + user lens) → `critique.md` |
 | approve | yes (`/approve`) | ☑ | `STATUS: APPROVED` → implement · `DENIED` → plan; reads `critique.md`, gates before any GitHub-side state (invariant 6) |
-| implement | yes (Advisor+`/delegate`+`ralph`) | ☐ | `/delegate` absorbs the task-graph decomposition |
+| implement | yes (Advisor+`/delegate`+`ralph`) | ☑ | `/delegate` (the implement driver) carries the `## Handoff`: `IMPL-COMPLETE` → audit · `IMPL-INCOMPLETE` → implement, from its Delegation Report + `prd.json` conformance; `ralph` serial path = `STATUS: COMPLETE` sentinel |
 | audit | yes (`/audit`) | ☑ | `STATUS: AUDIT-PASS` → retro · `AUDIT-FAIL` → implement; composes `/pr-audit`,`/ci-status`,`/eval`,`/agent-browser` + prd.json conformance |
 | retro | yes (`/retro`) | ☑ | `STATUS: RETRO-DONE` → compound |
 | compound | yes (`/wiki-ingest`) | ☑ | `STATUS: COMPOUND-DONE` → compress (probe-minting: Layer 2) |

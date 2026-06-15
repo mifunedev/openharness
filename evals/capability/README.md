@@ -7,8 +7,9 @@ well the harness actually produced it. A rising suite score is evidence the loop
 **got better**; a flat score while machinery grows is its signal to ask a human.
 
 The originating rationale is the **objective anchor** in `context/rules/loop.md`
-§ 1 (the executable-loop series). That file lands with that series and is not on
-this branch yet — this README is the forward reference that anchor points back to.
+§ 1 (the executable-loop series): this instrument is the *Capability benchmark*
+lever that anchor names. The benchmark **node** that consumes these scores is not
+wired yet (`loop.md` § 7 marks it `☐`) — see *Non-scope*.
 
 ## Ceiling vs. floor
 

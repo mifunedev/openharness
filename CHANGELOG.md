@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- Wire the executable-loop `repeat` node — the **cycle-closing edge** (`context/rules/loop.md` § 2 `repeat → ideate`), previously the one forward edge drawn with no `STATUS:` token, gains its `CYCLE-CONTINUE` token and § 7 marks it ☑. `repeat` is the sole **runner-applied** node (no work-skill / no `## Handoff`, like `/loop` itself): the `/loop` runner applies its freshness gate mechanically — the `--max-iters` bound (standalone) plus autopilot caps (cron mode, invariant 4) — emitting `CYCLE-CONTINUE` → `ideate` to close the cycle, or honest-halting when the bound/caps are hit. Guarded by the new `loop-repeat-gate` tier-A probe. Forward walk still halts at the unwired `benchmark`; `repeat` is reachable via `/loop --start repeat` ([#173](https://github.com/ryaneggz/openharness/issues/173)).
 - `/loop` runner skill — standalone walker of the executable-loop decision tree (`context/rules/loop.md` § 2): reads § 2 as the route table, STATUS-tail routing, `--dry-run`/`--start`/`--max-iters`, honest halt at unwired nodes ([#160](https://github.com/ryaneggz/openharness/issues/160)).
 - Wire the `compress` loop node: `/context-audit` emits `STATUS: COMPRESS-DONE` → `benchmark` ([#160](https://github.com/ryaneggz/openharness/issues/160)).
 - `loop-runner-contract` tier-A eval probe guarding the `/loop` runner's contract literals ([#160](https://github.com/ryaneggz/openharness/issues/160)).

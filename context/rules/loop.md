@@ -53,11 +53,17 @@ ideate → brainstorm → plan → critique → approve
 | **compound** | `/wiki-ingest` + `MEMORY.md` + mint probes from this cycle's lessons | `COMPOUND-DONE` → compress |
 | **compress** | distill for **clarity** (not just fewer tokens): `/context-audit` + `/compact` + `/caveman` | `COMPRESS-DONE` → benchmark |
 | **benchmark** | capability-benchmark delta vs. counterfactual (driven by `/eval` machinery; probe suite = regression floor) + groom the instrument (`/eval-lint`) | `BENEFICIAL` → repeat · `NOT-BENEFICIAL` → repeat (after revert) |
-| **repeat** | freshness gate (caps + queue re-entry) | → ideate |
+| **repeat** | freshness gate (caps + queue re-entry) — runner-applied | `CYCLE-CONTINUE` → ideate · honest halt when caps/`--max-iters` reached |
 
 Branch targets are part of the contract: `DENIED` → `plan`, `AUDIT-FAIL`/`IMPL-INCOMPLETE` → `implement`,
 `NOT-BENEFICIAL` → revert-then-`repeat`. Every emitted token MUST have a node target here; a node that can
 emit a token absent from its row or route to a non-node target is a bug the `/autopilot` runner rejects.
+
+The sole **runner-applied** node is `repeat`: it has no work-skill and no `## Handoff` (like the runner
+itself). The runner applies its freshness gate **mechanically** — a threshold check, not judgment, so it
+stays faithful to § 6 ("the runner routes, it does not decide") — and emits `CYCLE-CONTINUE` itself to close
+the cycle back to `ideate`, bounded by `--max-iters` (standalone) plus the autopilot caps (cron mode,
+invariant 4); when the bound/caps are hit it halts honestly instead.
 
 ---
 
@@ -151,7 +157,7 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 | compound | yes (`/wiki-ingest`) | ☑ | `STATUS: COMPOUND-DONE` → compress (probe-minting: Layer 2) |
 | compress | yes (`/context-audit`) | ☑ | `STATUS: COMPRESS-DONE` → benchmark; `/context-audit` carries the Handoff — always completes (like `retro`), no branch |
 | benchmark | `/eval` machinery | ☐ | + capability benchmark + `/eval-lint` (new); tokens depend on Layer 2 |
-| repeat | yes (autopilot caps) | ☐ | |
+| repeat | runner-applied (`--max-iters` + autopilot caps) | ☑ | `CYCLE-CONTINUE` → ideate — the **cycle-closing edge**; **no work-skill / no `## Handoff`** (like the runner row): the freshness gate is the runner's `--max-iters` bound + autopilot caps (invariant 4), applied mechanically. Forward walk still halts at the unwired `benchmark`; `repeat` is reachable via `/loop --start repeat` |
 | **runner** | `/loop` (standalone) · `/autopilot` (cron — gated) | ☑ | `/loop` walks the wired spine: reads § 2 as the route table, STATUS-tail routing, honest halt at unwired nodes; the `/autopilot`-as-`/loop`-cron integration stays gated |
 
 ---

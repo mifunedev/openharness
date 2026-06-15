@@ -52,7 +52,7 @@ Arguments received: `$ARGUMENTS`
 |-----|---------|---------|
 | `--start <node>` | `ideate` | The node to begin the walk at. Must be a node name from `context/rules/loop.md` § 2. |
 | `--dry-run` | off | Validate the tree and print the route the runner WOULD walk — following each node's **declared happy-path token** from § 2 — **without invoking any node skill**. |
-| `--max-iters <N>` | `12` | Hard cap on the number of node visits. Bounds the walk, especially the `repeat → ideate` loop-back, so a healthy cycle cannot spin forever. |
+| `--max-iters <N>` | `12` | Hard cap on the number of node visits. Bounds the walk, especially the `repeat → ideate` loop-back — the `repeat` continuation gate's `CYCLE-CONTINUE` route (§ *The `repeat` continuation gate*) — so a healthy cycle cannot spin forever. |
 
 If `--start <node>` names a node absent from § 2, halt FAIL immediately ("unknown start node") and go to step 6.
 
@@ -73,6 +73,7 @@ Set `current = --start node`, `iters = 0`, and an empty ordered `path` list. The
 1. Increment `iters`. If `iters > --max-iters`, halt with the max-iters summary (step 4d).
 2. Look up `current` in the § 7 wired-state map. If `current` is unwired (`☐`), halt "node not wired" (step 4a) — do **not** invoke it.
 3. Otherwise act on `current`:
+   - **`repeat` (the runner-applied continuation gate)** — handle this case first, in **either** mode: `repeat` has no work-skill, so do **not** invoke a skill or read a `STATUS:` tail for it. Apply the freshness gate **mechanically** (a threshold check, not judgment — this preserves "the runner routes, it does not decide"): the `iters > --max-iters` bound (step 1) guards the `repeat → ideate` loop-back; in standalone `/loop` that bound *is* the whole freshness gate, and in cron/autopilot mode the autopilot caps (invariant 4) add the queue-headroom gate. If continuation is permitted, record token `CYCLE-CONTINUE` and set `current = ideate` (the cycle closes); otherwise honest-halt. See § *The `repeat` continuation gate*.
    - **Dry-run**: print `would run <current> via <driver>` (driver from the § 2 row). Do **not** invoke the node skill. Choose the node's **declared happy-path token** — the forward-advancing token in its § 2 row (e.g. `ideate` → `IDEA-READY`, `approve` → `APPROVED`, `audit` → `AUDIT-PASS`) — record it, and set `current` to that token's target.
    - **Live**: invoke the node's driver skill (via the `Skill` tool for a `/`-skill, or the tool named in the § 2 driver column), applying any loop-mode safety contract from step 2. In particular, when `current=brainstorm`, call `/strategic-proposal` in `LOOP MODE: candidate-only; do not publish roadmap, create/edit/pin GitHub issues, or write docs/roadmap.md`. Capture its output, and read the **final `STATUS:` line** (the tail, per § 3). Validate and route on that token (step 4b/4c); on a valid token, set `current` to its § 2 target.
 4. Append `(node, emitted-token)` to `path` and continue from the top with the new `current`.
@@ -90,7 +91,7 @@ Every stop is explicit. Silence is failure, never success (`context/rules/loop.m
 | c | The emitted token is **absent** from that node's § 2 row | HALT FAIL | `unknown token <TOKEN> for <node> — not in loop.md § 2 (a bug the runner rejects)` |
 | d | `iters > --max-iters` | HALT (bound reached) | `max-iters <N> reached` |
 
-Condition (a) is the expected stop today: a live walk from `ideate` runs through `compound`, reaches `compress`, then hits the unwired `benchmark`/`repeat` nodes (`☐` in § 7) and halts "node not wired". That honest stop is **correct, not a bug** — the runner refuses to fabricate a transition across an edge that does not yet exist. Conditions (b) and (c) are genuine failures the runner surfaces rather than papering over.
+Condition (a) is the expected stop today: a live walk from `ideate` runs through `compound`, reaches `compress`, then hits the unwired `benchmark` node (`☐` in § 7) and halts "node not wired". (`repeat` is now wired as the runner-applied continuation gate — § *The `repeat` continuation gate* — so once `benchmark` is wired the walk continues through `repeat`'s `CYCLE-CONTINUE → ideate` close; until then the forward walk halts at `benchmark`, and `repeat` is exercised directly via `/loop --start repeat`.) That honest stop is **correct, not a bug** — the runner refuses to fabricate a transition across an edge that does not yet exist. Conditions (b) and (c) are genuine failures the runner surfaces rather than papering over.
 
 ### 5. Print the walk summary
 
@@ -139,6 +140,19 @@ mkdir -p "memory/$TODAY"
 ## Relationship to `/autopilot`
 
 `/loop` is a standalone tree walker. It **does not modify `/autopilot`**. Today `/autopilot` is the scheduled runner that walks phases 1–4 of the cycle (select → `/ship-spec` → reconcile); making `/autopilot` become `/loop`'s scheduled invocation — wiring the cron-driven self-improvement cycle to this runner — is the **gated Layer-3 step in `context/rules/loop.md` and is out of scope for this skill**. `/loop` neither edits nor invokes `/autopilot`; the two coexist until that integration is deliberately taken on.
+
+## The `repeat` continuation gate
+
+`repeat` is the loop's **cycle-closing** node (`context/rules/loop.md` § 2: `repeat → ideate`) and the **one node the runner applies itself** — it has no work-skill and no `## Handoff`, exactly as `/loop` is "the runner, not a node" (below). Its driver is the **freshness gate** (invariant 4): a mechanical threshold check, never judgment.
+
+When the walk reaches `repeat`:
+
+- the `iters > --max-iters` bound (§ 3 step 1) guards the `repeat → ideate` loop-back so the cycle cannot spin forever;
+- in **standalone `/loop`** that bound *is* the whole freshness gate (no PRs are created, so caps do not apply);
+- in **cron/autopilot mode** the autopilot caps (10 total · 6 daily) are the additional queue-headroom gate;
+- if continuation is permitted the runner records `STATUS: CYCLE-CONTINUE` and routes to `ideate`; otherwise it honest-halts (caps reached / bound hit).
+
+Because the gate is a threshold check and not a judgment call, applying it keeps the runner faithful to § 6 ("the runner routes, it does not decide"): `repeat` is the sole node whose token the runner emits, and it emits it mechanically. Today the forward walk halts at the unwired `benchmark` before reaching `repeat`; `repeat` is exercised directly via `/loop --start repeat` and becomes the live cycle-close once `benchmark` is wired.
 
 ## `/loop` is the runner, not a node
 

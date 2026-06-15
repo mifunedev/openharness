@@ -33,7 +33,7 @@ suite already leans inward (a majority guard its own internals) — this anchor 
 ## 2. The decision tree
 
 ```
-ideate → brainstorm → plan → critique → approve|deny
+ideate → brainstorm → plan → critique → approve
   approve → implement → audit → retro → compound → compress → benchmark → repeat → ideate
   deny ─────────────────────↩ plan (revise)
   audit FAIL ───────────────↩ implement (resume)
@@ -45,8 +45,8 @@ ideate → brainstorm → plan → critique → approve|deny
 | **ideate** | `Explore` fan-out + `/imagine` → spec sketch | `IDEA-READY` → brainstorm |
 | **brainstorm** | `Explore` + `/strategic-proposal` → ranked candidate | `CANDIDATE-PICKED` → plan |
 | **plan** | `/prd` → `/ralph` → `prd.json` | `PLAN-READY` → critique |
-| **critique** | 2× `critic` agents (parallel) | `CRITIQUE-DONE` → approve |
-| **approve\|deny** (`/approve`) | critic SEVERITY gate (auto) + optional human, runs before any GitHub-side state | `APPROVED` → implement · `DENIED` → plan |
+| **critique** (`/critique`) | 2× `critic` agents (parallel, implementer + user lens) → `critique.md` | `CRITIQUE-DONE` → approve |
+| **approve** (`/approve`) | critic SEVERITY gate (auto) + optional human, runs before any GitHub-side state | `APPROVED` → implement · `DENIED` → plan |
 | **implement** | **Advisor** orchestrates `/delegate` (decompose `prd.json` → weighted task graph + dependency-wave fan-out, `Task*` tracking) ∥ `ralph` serial (worktree, `STATUS: COMPLETE` + liveness) | `IMPL-COMPLETE` → audit · `IMPL-INCOMPLETE` → resume |
 | **audit** (`/audit`) | verdict-owner: task-graph conformance (`prd.json` items vs. impl) + `/eval` green→red gate + `/ci-status` (CI poll) + `/pr-audit` (PR-state) + `/agent-browser` | `AUDIT-PASS` → retro · `AUDIT-FAIL` → implement |
 | **retro** | `/retro` | `RETRO-DONE` → compound |
@@ -143,8 +143,8 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 | ideate | partial (`/imagine`) | ☑ | `STATUS: IDEA-READY` → brainstorm (`Explore` front end: Layer 2) |
 | brainstorm | yes (`/strategic-proposal`) | ☑ | `STATUS: CANDIDATE-PICKED` → plan (`Explore` front end: Layer 2) |
 | plan | yes (`/prd`,`/ralph`) | ☑ | `/ralph` (terminal step) emits `STATUS: PLAN-READY` → critique |
-| critique | yes (`critic` agent) | ☐ | |
-| approve\|deny | yes (`/approve`) | ☑ | `STATUS: APPROVED` → implement · `DENIED` → plan; reads `critique.md`, gates before any GitHub-side state (invariant 6) |
+| critique | yes (`/critique`) | ☑ | `STATUS: CRITIQUE-DONE` → approve; 2× `critic` agents (implementer + user lens) → `critique.md` |
+| approve | yes (`/approve`) | ☑ | `STATUS: APPROVED` → implement · `DENIED` → plan; reads `critique.md`, gates before any GitHub-side state (invariant 6) |
 | implement | yes (Advisor+`/delegate`+`ralph`) | ☐ | `/delegate` absorbs the task-graph decomposition |
 | audit | yes (`/audit`) | ☑ | `STATUS: AUDIT-PASS` → retro · `AUDIT-FAIL` → implement; composes `/pr-audit`,`/ci-status`,`/eval`,`/agent-browser` + prd.json conformance |
 | retro | yes (`/retro`) | ☑ | `STATUS: RETRO-DONE` → compound |

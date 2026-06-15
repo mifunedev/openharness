@@ -1,21 +1,22 @@
 ---
 name: approve
 description: >-
-  The approve|deny decision gate of the executable loop — read a spec's critique
-  findings and decide go/no-go BEFORE any GitHub-side state exists, then emit a
-  single APPROVED/DENIED verdict. Auto-gates on critic SEVERITY (any unmitigated
-  high → deny), with an optional human override for borderline findings. This is
-  the decision half of the critique→approve|deny pair; the critics that produce
-  the findings are a separate step.
+  The approve (approve|deny) decision gate of the executable loop — read a spec's
+  critique findings and decide go/no-go BEFORE any GitHub-side state exists, then
+  emit a single APPROVED/DENIED verdict. Auto-gates on critic SEVERITY (any
+  unmitigated high → deny), with an optional human override for borderline
+  findings. This is the decision half of the critique→approve pair; the critics
+  that produce the findings are the separate `/critique` node.
   TRIGGER when: a plan/PRD has been critiqued and needs a commitment decision
-  before implementation; the `approve|deny` node of context/rules/loop.md runs;
+  before implementation; the `approve` node of context/rules/loop.md runs;
   "approve this spec", "should we build <slug>", "gate <slug> on its critique".
 argument-hint: "<slug> [--auto]"
 ---
 
 # Approve — the critic-before-commitment gate
 
-The **approve|deny** node of the executable loop (`context/rules/loop.md` § 2). It
+The **approve** node of the executable loop (`context/rules/loop.md` § 2) — the
+`approve|deny` decision point. It
 answers one question: *do the critic findings clear this spec to build, or must it
 go back to planning?* — and emits exactly one verdict the `/autopilot` runner
 routes on.
@@ -129,9 +130,9 @@ After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
 
 ## Handoff
 
-`approve` is the `approve|deny` node of the executable loop (`context/rules/loop.md`
-§ 2). After the decision, emit exactly one terminal line as the **final line of
-output**:
+`approve` is the **approve** node (the `approve|deny` decision point) of the
+executable loop (`context/rules/loop.md` § 2). After the decision, emit exactly one
+terminal line as the **final line of output**:
 
     STATUS: APPROVED
 

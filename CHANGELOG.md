@@ -8,6 +8,9 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ## [Unreleased]
 
+### Removed
+- Stale database-overlay documentation; the base now points database users to pack/user-supplied compose overrides instead, with a regression test guarding documented compose-file paths ([#181](https://github.com/ryaneggz/openharness/issues/181)).
+
 ### Added
 - Deterministic autopilot caps preflight gate — the hourly `autopilot` cron now declares `preflight: scripts/autopilot-caps.sh`, a generic new `preflight:` field in `scripts/cron-runtime.ts` that runs a gate script **before** any worktree/tmux/agent is created. On a capped hour (≥10 open autopilot PRs or ≥6 created today) the gate writes the byte-faithful `SKIPPED-CAP-*` memory + liveness logs and the runtime logs `SKIPPED_PREFLIGHT` and spawns **nothing** — no Pi session, no model query, no worktree — replacing an hourly full gpt-5.5 session that only re-derived "the cap is hit". The caps are configurable defaults in `harness.yaml` (`autopilot.total_cap` / `autopilot.daily_cap`, read live each fire; `AUTOPILOT_TOTAL_CAP`/`AUTOPILOT_DAILY_CAP` env vars still override), the gate fails open (`PREFLIGHT_ERROR` → proceed) so a transient `gh` failure never wedges the loop, and `/autopilot` §1 keeps a thin in-session recheck deferring to the same canonical script. Guarded by the new `autopilot-preflight-gate` tier-A probe ([#194](https://github.com/ryaneggz/openharness/issues/194)).
 - `.github/dependabot.yml` — `ignore` `js-yaml` for Dependabot security updates (its fix `>=4.2.0` is unreachable through `@docusaurus/* → gray-matter → js-yaml`, so the auto security-update job failed every retry with `security_update_not_possible`); version-update PRs stay disabled (`open-pull-requests-limit: 0`). Mirrors the pnpm-side accept of `GHSA-h67p-54hq-rp68` ([#200](https://github.com/ryaneggz/openharness/issues/200)).

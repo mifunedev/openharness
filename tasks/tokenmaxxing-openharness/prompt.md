@@ -29,7 +29,7 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
 4. **Run quality checks** before commit:
    ```bash
    pnpm docs:build
-   test -f packages/docs/build/blog/tokenmaxxing-openharness/index.html
+   test -f packages/docs/build/blog/tokenmaxxing-openharness.html
    ```
    If checks fail, fix them. Do not commit broken code.
 

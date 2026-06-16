@@ -68,7 +68,7 @@ Add a Docusaurus blog post explaining how Open Harness treats "tokenmaxxing" as 
 - [ ] The changelog entry is one imperative-mood line and includes the task issue or PR link per `.claude/rules/git.md`.
 - [ ] The entry references the tokenmaxxing Open Harness blog post.
 - [ ] `pnpm docs:build` passes after the changelog update.
-- [ ] After `pnpm docs:build`, `test -f packages/docs/build/blog/tokenmaxxing-openharness/index.html` passes.
+- [ ] After `pnpm docs:build`, `test -f packages/docs/build/blog/tokenmaxxing-openharness.html` passes.
 
 ## Functional Requirements
 

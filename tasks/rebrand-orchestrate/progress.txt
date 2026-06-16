@@ -13,7 +13,7 @@
 
 **Title**: Rename the runner skill identity
 **Files changed**: `.claude/skills/orchestrate/SKILL.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
-**Commit**: 682c516
+**Commit**: 4d2f787
 **Result**: PASS
 
 ### What I did
@@ -28,7 +28,7 @@ The worktree has `pnpm run typecheck`, not `pnpm run type-check`; the exact Ralp
 
 **Title**: Update sibling runner references
 **Files changed**: `.claude/skills/strategic-proposal/SKILL.md`, `.claude/skills/benchmark/SKILL.md`, `context/rules/loop.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
-**Commit**: a3db582
+**Commit**: add7d9a
 **Result**: PASS
 
 ### What I did
@@ -43,7 +43,7 @@ The protected-path override for `strategic-proposal` is already encoded in the P
 
 **Title**: Rename and update eval probes
 **Files changed**: `evals/probes/orchestrate-contract.sh`, `evals/probes/loop-repeat-gate.sh`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
-**Commit**: ff00559
+**Commit**: 3061f39
 **Result**: PASS
 
 ### What I did
@@ -57,7 +57,7 @@ Use `python3` or direct edits in this environment; `python` is not installed on 
 
 **Title**: Update capability and eval result metadata
 **Files changed**: `evals/capability/tasks/CB-002-walk-the-loop.md`, `evals/capability/RESULTS.md`, `evals/RESULTS.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
-**Commit**: 732c21e
+**Commit**: 01035e6
 **Result**: PASS
 
 ### What I did
@@ -72,7 +72,7 @@ Updated the CB-002 capability task metadata, success signal, rubric, evidence ba
 
 **Title**: Document and verify the rebrand
 **Files changed**: `CHANGELOG.md`, `evals/RESULTS.md`, `tasks/rebrand-orchestrate/critique.md`, `tasks/rebrand-orchestrate/prd.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
-**Commit**: 2e2f9ce
+**Commit**: e94e662
 **Result**: PASS
 
 ### What I did
@@ -87,7 +87,7 @@ For command rebrands, `rg` does not distinguish live docs from tracked task arti
 
 **Title**: Add the teach skill to the loop handoff
 **Files changed**: `.claude/skills/teach/SKILL.md`, `AGENTS.md`, `CHANGELOG.md`, `wiki/claude-code-teacher-skill.md`, `wiki/README.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
-**Commit**: db8f2f1
+**Commit**: 1f1005b
 **Result**: PASS
 
 ### What I did

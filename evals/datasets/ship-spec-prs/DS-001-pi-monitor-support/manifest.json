@@ -1,0 +1,28 @@
+{
+  "id": "DS-001",
+  "slug": "pi-monitor-support",
+  "dataset": "ship-spec-prs",
+  "title": "Add default Pi Monitor support",
+  "created": "2026-06-15",
+  "source": {
+    "repo": "ryaneggz/openharness",
+    "pr": 147,
+    "issue": 146,
+    "merge_commit": "7c92c13",
+    "url": "https://github.com/ryaneggz/openharness/pull/147"
+  },
+  "trajectory": {
+    "kind": "ship-spec-pr",
+    "outcome": "merged"
+  },
+  "skills": ["/ship-spec", "/prd", "/ralph"],
+  "reward_kind": ["diff_similarity", "artifact_presence"],
+  "oracle": {
+    "summary": "oracle/summary.md",
+    "changed_files": "oracle/changed-files.txt",
+    "changed_file_count": 9
+  },
+  "content_hash": "sha256:04a51b5e53933d4ceb517fe19caacfeb47a9fc27d420d0fe2324943cca491625",
+  "capability_tasks": ["CB-001"],
+  "notes": "Mined from merged PR #147 (label: autopilot)."
+}

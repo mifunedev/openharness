@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/212-tokenmaxxing-openharness",
+  "description": "Add a Docusaurus blog post explaining how Open Harness treats tokenmaxxing as a harness-building pattern rather than a productivity leaderboard.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Select and verify the trend-hook sources",
+      "description": "As a maintainer, I want the external tokenmaxxing references verified before drafting so that the post uses the current discourse as context without depending on vague or inaccessible claims.",
+      "acceptanceCriteria": [
+        "Verify at least three pinned source URLs are reachable enough to confirm title/date or source context",
+        "If a source is paywalled or only partially accessible, use it only as a link/context marker and do not make unsupported factual claims from behind the wall",
+        "The post must summarize trend reporting only as the hook; the center of the post must remain Open Harness workflow mechanics",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add the tokenmaxxing blog post",
+      "description": "As a maintainer, I want a concrete Open Harness blog post about tokenmaxxing so that readers understand when frontier-token spend improves the harness and when it becomes a fake productivity metric.",
+      "acceptanceCriteria": [
+        "Create blog/2026-06-16-tokenmaxxing-openharness.md",
+        "Include the exact frontmatter specified in prd.md",
+        "Include <!-- truncate --> near the top",
+        "Reject usage leaderboards and token burn as fake productivity",
+        "Define useful tokenmaxxing as frontier comparison that improves a custom harness",
+        "Include required role claims for Codex xhigh, Pi, Hermes, Claude, and Haiku or similar smaller models",
+        "Frame model and harness roles as situational choices inside one single-developer, single-project workflow",
+        "Distinguish default/current Open Harness behavior from optional Pi/Hermes harness choices",
+        "Close with the claim that frontier models should raise the quality of the harness and spec while implementation increasingly flows through the custom harness",
+        "Do not rank vendors, publish a model benchmark, or claim one harness is universally superior",
+        "Use selected source links only as the hook",
+        "Read AGENTS.md, context/TOOLS.md, context/USER.md, .claude/skills/ship-spec/SKILL.md, and any relevant wiki/*hermes*.md or wiki/*pi*.md entries that exist before writing role claims",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Record and verify the blog addition",
+      "description": "As a maintainer, I want the new public blog post recorded and built so that the release notes include the user-visible documentation addition and the Docusaurus route is known-good.",
+      "acceptanceCriteria": [
+        "Add one CHANGELOG.md entry under ## [Unreleased] -> ### Added",
+        "The changelog entry is one imperative-mood line and includes the task issue or PR link per .claude/rules/git.md",
+        "The entry references the tokenmaxxing Open Harness blog post",
+        "pnpm docs:build passes after the changelog update",
+        "After pnpm docs:build, test -f packages/docs/build/blog/tokenmaxxing-openharness/index.html passes",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

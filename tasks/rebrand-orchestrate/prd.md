@@ -1,13 +1,13 @@
-# PRD: Rebrand /loop-runner to /orchestrate
+# PRD: Rebrand the legacy runner command to /orchestrate
 
 ## Introduction
 
-Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` without changing behavior. The current name was a defensive workaround for a `/loop` collision; `/orchestrate` is collision-free and better describes the skill's role as the mechanical runner that orchestrates loop nodes while not itself being a node.
+Rename the executable-loop runner skill from `the legacy runner command` to `/orchestrate` without changing behavior. The current name was a defensive workaround for a `/loop` collision; `/orchestrate` is collision-free and better describes the skill's role as the mechanical runner that orchestrates loop nodes while not itself being a node.
 
 ## Goals
 
-- Move the skill identity from `.claude/skills/loop-runner/` to `.claude/skills/orchestrate/`.
-- Update only command/skill identity references from `/loop-runner` to `/orchestrate`.
+- Move the skill identity from `the old skill directory` to `.claude/skills/orchestrate/`.
+- Update only command/skill identity references from `the legacy runner command` to `/orchestrate`.
 - Preserve the executable-loop concept, `context/rules/loop.md`, node names, route table, `--loop-candidate-only`, and all probe-pinned contract literals.
 - Rename the contract probe to `orchestrate-contract` and keep the relevant eval probes passing.
 - Document the rebrand in `CHANGELOG.md`.
@@ -19,14 +19,14 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 
 **Description:** As the harness maintainer, I want the runner skill directory and skill metadata to use `/orchestrate` so the command name is intentional rather than defensive.
 
-**Rollback:** This is a rename-only `git mv`, not a deletion or deprecation. If the renamed skill cannot be validated, restore the prior active path with `git mv .claude/skills/orchestrate .claude/skills/loop-runner` before shipping.
+**Rollback:** This is a rename-only `git mv`, not a deletion or deprecation. If the renamed skill cannot be validated, restore the prior active path with `git mv .claude/skills/orchestrate the old skill directory` before shipping.
 
 **Acceptance Criteria:**
 
-- [ ] Move `.claude/skills/loop-runner/` to `.claude/skills/orchestrate/` using `git mv` semantics.
+- [ ] Move `the old skill directory` to `.claude/skills/orchestrate/` using `git mv` semantics.
 - [ ] Update `.claude/skills/orchestrate/SKILL.md` frontmatter `name:` to `orchestrate`.
-- [ ] Update frontmatter `description`, trigger text, and any argument/help text that names `/loop-runner`.
-- [ ] Update the H1 and command-name references in the skill body from `/loop-runner` to `/orchestrate`.
+- [ ] Update frontmatter `description`, trigger text, and any argument/help text that names `the legacy runner command`.
+- [ ] Update the H1 and command-name references in the skill body from `the legacy runner command` to `/orchestrate`.
 - [ ] Preserve all loop concept references, `context/rules/loop.md` references, node names, and probe-pinned contract literals that do not contain the command name.
 - [ ] Typecheck passes.
 - [ ] Tests pass.
@@ -35,13 +35,13 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 
 **Description:** As the harness maintainer, I want skills and loop manifest prose that invoke or name the runner to reference `/orchestrate` so the documented workflow remains coherent.
 
-**Protected-path override:** `.claude/skills/strategic-proposal/SKILL.md` is listed in `.claude/protected-paths.txt`. This story explicitly permits a constrained, non-destructive command-reference edit in that file only: replace references to the runner command `/loop-runner` with `/orchestrate`. Do not delete, deprecate, rename, or restructure the `strategic-proposal` skill, and do not change `--loop-candidate-only` or `LOOP MODE: candidate-only`.
+**Protected-path override:** `.claude/skills/strategic-proposal/SKILL.md` is listed in `.claude/protected-paths.txt`. This story explicitly permits a constrained, non-destructive command-reference edit in that file only: replace references to the runner command `the legacy runner command` with `/orchestrate`. Do not delete, deprecate, rename, or restructure the `strategic-proposal` skill, and do not change `--loop-candidate-only` or `LOOP MODE: candidate-only`.
 
 **Acceptance Criteria:**
 
-- [ ] Update `.claude/skills/strategic-proposal/SKILL.md` references to the runner command from `/loop-runner` to `/orchestrate`.
-- [ ] Update `.claude/skills/benchmark/SKILL.md` references to the runner command from `/loop-runner` to `/orchestrate`.
-- [ ] Update the runner row in `context/rules/loop.md` from `/loop-runner` to `/orchestrate`.
+- [ ] Update `.claude/skills/strategic-proposal/SKILL.md` references to the runner command from `the legacy runner command` to `/orchestrate`.
+- [ ] Update `.claude/skills/benchmark/SKILL.md` references to the runner command from `the legacy runner command` to `/orchestrate`.
+- [ ] Update the runner row in `context/rules/loop.md` from `the legacy runner command` to `/orchestrate`.
 - [ ] Keep `--loop-candidate-only`, `LOOP MODE: candidate-only`, `context/rules/loop.md`, "The Loop", and loop node names unchanged.
 - [ ] Typecheck passes.
 - [ ] Tests pass.
@@ -52,7 +52,7 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 
 **Acceptance Criteria:**
 
-- [ ] Move `evals/probes/loop-runner-contract.sh` to `evals/probes/orchestrate-contract.sh` using `git mv` semantics.
+- [ ] Move the legacy contract probe to `evals/probes/orchestrate-contract.sh` using `git mv` semantics.
 - [ ] Update the renamed probe's `SKILL` path, `name:` assertion, header comments, and PASS/SKIPPED/REGRESSION messages for `/orchestrate`.
 - [ ] Preserve the renamed probe's non-command contract literals verbatim, including the `STATUS:` routing signal, honest halt, invariant 5, `--dry-run`, `--start`, `--max-iters`, `LOOP MODE: candidate-only`, `do not publish roadmap`, and `context/rules/loop.md` literals.
 - [ ] Update `evals/probes/loop-repeat-gate.sh` internal skill path and runner command prose to `/orchestrate` while keeping the filename unchanged.
@@ -67,9 +67,9 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 
 **Acceptance Criteria:**
 
-- [ ] Update `evals/capability/tasks/CB-002-walk-the-loop.md` skill metadata and command examples from `/loop-runner` to `/orchestrate`.
-- [ ] Update `evals/capability/RESULTS.md` CB-002 description from `/loop-runner` to `/orchestrate`.
-- [ ] Update `evals/RESULTS.md` row name from `loop-runner-contract` to `orchestrate-contract` and update that row's source text to `/orchestrate contract`.
+- [ ] Update `evals/capability/tasks/CB-002-walk-the-loop.md` skill metadata and command examples from `the legacy runner command` to `/orchestrate`.
+- [ ] Update `evals/capability/RESULTS.md` CB-002 description from `the legacy runner command` to `/orchestrate`.
+- [ ] Update `evals/RESULTS.md` row name to `orchestrate-contract` and update that row's source text to `/orchestrate contract`.
 - [ ] Permit restoring unrelated `evals/RESULTS.md` rows from base after targeted probe runs so the committed diff stays focused on the renamed row unless a real new probe result exists.
 - [ ] Typecheck passes.
 - [ ] Tests pass.
@@ -80,9 +80,9 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 
 **Acceptance Criteria:**
 
-- [ ] Add a `CHANGELOG.md` `## [Unreleased]` entry documenting the `/loop-runner` to `/orchestrate` rebrand.
-- [ ] Update existing unreleased `/loop-runner` and `loop-runner-contract` entries in place when they describe unreleased work; leave released sections unchanged.
-- [ ] `rg -n "loop-runner"` is clean outside this exact residual set: released `CHANGELOG.md` sections, `.claude/plans/**`, `evals/datasets/**/oracle/**`, gitignored `memory/[0-9]*/**`, and external `pi-loop` references.
+- [ ] Add a `CHANGELOG.md` `## [Unreleased]` entry documenting the `the legacy runner command` to `/orchestrate` rebrand.
+- [ ] Update existing unreleased `the legacy runner command` and `orchestrate-contract` entries in place when they describe unreleased work; leave released sections unchanged.
+- [ ] The residual literal scan is clean outside this exact residual set: released `CHANGELOG.md` sections, `.claude/plans/**`, `evals/datasets/**/oracle/**`, gitignored `memory/[0-9]*/**`, and external `pi-loop` references.
 - [ ] Run the relevant eval probes and the whole eval suite; no new green-to-red regression is introduced.
 - [ ] If the active agent runtime cannot reload the renamed skill in the same session, validate via direct probe/file checks and document that a fresh session is required for live `/orchestrate --dry-run --start ideate` command verification.
 - [ ] Do not rename `context/rules/loop.md`, "The Loop", loop node names, `loop-repeat-gate.sh`, `loop-handoff-consistency.sh`, `loop-benchmark-gate.sh`, `--loop-candidate-only`, or `pi-loop` references.
@@ -108,7 +108,7 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 ## Functional Requirements
 
 - FR-1: The system must expose the runner skill at `.claude/skills/orchestrate/SKILL.md` with `name: orchestrate`.
-- FR-2: The system must remove the active `.claude/skills/loop-runner/` skill path.
+- FR-2: The system must remove the active `the old skill directory` skill path.
 - FR-3: The system must update live runner command references to `/orchestrate`.
 - FR-4: The system must preserve loop-concept names and files that are not runner-command identities.
 - FR-5: The system must rename the contract probe to `orchestrate-contract` and update eval metadata accordingly.
@@ -123,7 +123,7 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 - No behavior changes to the runner algorithm, route table parsing, dry-run behavior, repeat gate, or halt semantics.
 - No rename of `context/rules/loop.md`, "The Loop", loop node names, or loop-concept probe filenames other than the contract probe.
 - No changes to `/autopilot`, cron behavior, or the gated autopilot-as-runner integration.
-- No edits to dataset oracle fixtures solely to rewrite historical `/loop-runner` references.
+- No edits to dataset oracle fixtures solely to rewrite historical `the legacy runner command` references.
 - No broad historical churn outside the exact files and residual surfaces named in the user stories.
 - No migration of auto-managed telemetry such as `.hermes/skills/.usage.json`.
 - No requirement for `/teach` to block merge readiness, replace `/retro`, or perform code review.
@@ -143,7 +143,7 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 - `bash evals/probes/loop-repeat-gate.sh` exits 0.
 - The whole eval suite reports no new green-to-red regression.
 - The active skill directory is `.claude/skills/orchestrate/`, and live command references use `/orchestrate`.
-- Residual `loop-runner` text is limited to documented historical or fixture surfaces.
+- Residual `legacy runner command` text is limited to documented historical or fixture surfaces.
 - `.claude/skills/teach/SKILL.md` exists, is documented in `AGENTS.md`, and connects `/ship-spec` provisional wiki generation to `/orchestrate` final understanding and the teaching pass.
 
 ## Open Questions
@@ -152,4 +152,4 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 
 ## Critic Gate
 
-Two critics reviewed this PRD before any GitHub-side state was created. They found one high-severity protected-path issue: US-002 touches `.claude/skills/strategic-proposal/SKILL.md`, and `strategic-proposal` is listed in `.claude/protected-paths.txt`. The PRD mitigates this at the story level with an explicit protected-path override limiting the edit to non-destructive `/loop-runner` to `/orchestrate` command-reference replacements only. Medium and low findings were acknowledged and folded into rollback, residual-grep, eval-metadata, and runtime-validation acceptance criteria.
+Two critics reviewed this PRD before any GitHub-side state was created. They found one high-severity protected-path issue: US-002 touches `.claude/skills/strategic-proposal/SKILL.md`, and `strategic-proposal` is listed in `.claude/protected-paths.txt`. The PRD mitigates this at the story level with an explicit protected-path override limiting the edit to non-destructive `the legacy runner command` to `/orchestrate` command-reference replacements only. Medium and low findings were acknowledged and folded into rollback, residual-grep, eval-metadata, and runtime-validation acceptance criteria.

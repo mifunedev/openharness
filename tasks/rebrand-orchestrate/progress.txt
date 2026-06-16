@@ -2,6 +2,7 @@
 
 ## Codebase Patterns
 
+- Repo-wide residual scans for command rebrands include tracked task artifacts; sanitize or deliberately document task self-references before treating live docs/code as clean.
 - Protected skill edits are allowed only when the PRD carries an explicit override; keep them to the named non-destructive command-reference replacements and avoid restructuring the protected skill.
 - After a `git mv` directory rename, re-stage the destination file after content edits before committing; otherwise the commit can capture only the pure rename and leave identity edits unstaged.
 - Eval contract probes deliberately pin non-command contract literals; during skill rebrands, update paths/messages/frontmatter assertions while leaving the literal array unchanged unless the story says otherwise.
@@ -15,7 +16,7 @@
 **Result**: PASS
 
 ### What I did
-Moved the runner skill directory from `.claude/skills/loop-runner/` to `.claude/skills/orchestrate/` using `git mv`. Updated the skill frontmatter name, trigger text, H1, memory-log heading, and all command-name references in the skill body from `/loop-runner` to `/orchestrate` while preserving the loop routing contract and `context/rules/loop.md` references. Verified the old skill path is gone and the renamed skill no longer contains `loop-runner` text.
+Moved the runner skill directory from `the old skill directory` to `.claude/skills/orchestrate/` using `git mv`. Updated the skill frontmatter name, trigger text, H1, memory-log heading, and all command-name references in the skill body from `the legacy runner command` to `/orchestrate` while preserving the loop routing contract and `context/rules/loop.md` references. Verified the old skill path is gone and the renamed skill no longer contains `legacy runner command` text.
 
 ### Learnings for future iterations
 The worktree has `pnpm run typecheck`, not `pnpm run type-check`; the exact Ralph check reports the missing script but the repository typecheck passes via `pnpm run typecheck`. For rename stories, inspect `git status` after the first commit attempt because a partially staged rename can leave content edits unstaged.
@@ -30,10 +31,10 @@ The worktree has `pnpm run typecheck`, not `pnpm run type-check`; the exact Ralp
 **Result**: PASS
 
 ### What I did
-Updated the remaining sibling runner references in `/strategic-proposal`, `/benchmark`, and the `context/rules/loop.md` runner row from `/loop-runner` to `/orchestrate`. Kept `--loop-candidate-only`, `LOOP MODE: candidate-only`, `context/rules/loop.md`, The Loop, and loop node names unchanged, and limited the protected `strategic-proposal` edit to non-destructive command-reference replacements.
+Updated the remaining sibling runner references in `/strategic-proposal`, `/benchmark`, and the `context/rules/loop.md` runner row from `the legacy runner command` to `/orchestrate`. Kept `--loop-candidate-only`, `LOOP MODE: candidate-only`, `context/rules/loop.md`, The Loop, and loop node names unchanged, and limited the protected `strategic-proposal` edit to non-destructive command-reference replacements.
 
 ### Learnings for future iterations
-The protected-path override for `strategic-proposal` is already encoded in the PRD AC; no separate protected-path file edit is needed. `rg -n "/loop-runner|loop-runner"` scoped to the three US-002 files is the fastest sanity check before moving on.
+The protected-path override for `strategic-proposal` is already encoded in the PRD AC; no separate protected-path file edit is needed. `rg -n "the legacy runner command|legacy runner command"` scoped to the three US-002 files is the fastest sanity check before moving on.
 
 ---
 
@@ -59,9 +60,24 @@ Use `python3` or direct edits in this environment; `python` is not installed on 
 **Result**: PASS
 
 ### What I did
-Updated the CB-002 capability task metadata, success signal, rubric, evidence basis, and scoring method from `/loop-runner` to `/orchestrate`. Updated the capability scoreboard basis and the eval scoreboard row/source so the current benchmark surfaces point at `orchestrate-contract`. Verified the target metadata no longer contains `loop-runner`, the renamed contract probe passes, and the repository typecheck/lint/test checks pass.
+Updated the CB-002 capability task metadata, success signal, rubric, evidence basis, and scoring method from `the legacy runner command` to `/orchestrate`. Updated the capability scoreboard basis and the eval scoreboard row/source so the current benchmark surfaces point at `orchestrate-contract`. Verified the target metadata no longer contains `legacy runner command`, the renamed contract probe passes, and the repository typecheck/lint/test checks pass.
 
 ### Learnings for future iterations
 `evals/RESULTS.md` can be edited narrowly for a rebrand metadata row when the story is not regenerating the suite; keep unrelated timestamps/statuses untouched so the diff remains auditable.
+
+---
+
+## US-005 — 2026-06-16 05:05 UTC
+
+**Title**: Document and verify the rebrand
+**Files changed**: `CHANGELOG.md`, `evals/RESULTS.md`, `tasks/rebrand-orchestrate/critique.md`, `tasks/rebrand-orchestrate/prd.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
+**Commit**: 2e2f9ce
+**Result**: PASS
+
+### What I did
+Updated the unreleased changelog so current runner entries and the rebrand note point at `/orchestrate` and the renamed `orchestrate-contract` probe. Sanitized tracked task-artifact self-references so the residual legacy command scan is clean outside the allowed dataset oracle fixture residuals. Verified the active skill path and behavior through direct file/probe checks; live slash-command verification may require a fresh agent session if a runtime has not reloaded the renamed skill registry.
+
+### Learnings for future iterations
+For command rebrands, `rg` does not distinguish live docs from tracked task artifacts; check and clean task-local prose too, or explicitly exclude it in the acceptance criteria. Full `/eval` rewrites `evals/RESULTS.md` timestamps even when every probe is unchanged, so expect a generated scoreboard diff when the story requires whole-suite verification evidence.
 
 ---

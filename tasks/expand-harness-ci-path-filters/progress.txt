@@ -1,0 +1,31 @@
+# progress
+
+## US-001 — 2026-06-14 23:50 UTC
+
+**Title**: Cover core sandbox config in harness CI triggers
+**Files changed**: `.github/workflows/ci-harness.yml`, `tasks/expand-harness-ci-path-filters/prd.json`, `tasks/expand-harness-ci-path-filters/progress.txt`
+**Commit**: e058007
+**Result**: PASS
+
+### What I did
+Added `Makefile` and `harness.yaml` to both push and pull-request path filters in the harness CI workflow. Preserved every existing trigger path and job definition.
+
+### Learnings for future iterations
+Keep CI path-filter changes additive and scoped; do not touch protected runtime behavior files just to reference them from workflow triggers.
+
+---
+## US-002 — 2026-06-14 23:55 UTC
+
+**Title**: Guard core path-filter coverage with a probe
+**Files changed**: `evals/probes/harness-ci-core-paths.sh`, `CHANGELOG.md`, `tasks/expand-harness-ci-path-filters/prd.json`, `tasks/expand-harness-ci-path-filters/progress.txt`
+**Commit**: 63b5e78
+**Result**: PASS
+
+### What I did
+Added an executable Tier-A eval probe that extracts the `push.paths` and `pull_request.paths` sections from `.github/workflows/ci-harness.yml` and verifies exact `Makefile` and `harness.yaml` entries in both. Added the changelog entry and verified the new probe, root script tests, and typecheck.
+
+### Learnings for future iterations
+For workflow path-filter probes, parse the relevant event path lists rather than grepping the whole file; this keeps the guard cheap while avoiding false passes from unrelated mentions.
+
+---
+STATUS: COMPLETE

@@ -28,6 +28,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | eval-results-atomic | A | 2026-06-16 02:13 | PASS | issue #83 (eval-results-atomic-write) |
 | eval-runner-exit | A | 2026-06-16 02:13 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
 | harness-audit-memory-path | A | 2026-06-16 02:13 | PASS | issue #183 — /harness-audit must inspect the active worktree, not a hardcoded root |
+| harness-ci-core-paths | A | 2026-06-16 02:13 | PASS | #165 — core sandbox config files must trigger harness CI |
 | harness-ci-hooks-paths | A | 2026-06-16 02:13 | PASS | issue #202 — credential/security hook changes must trigger harness CI |
 | health-check-docker-stats | A | 2026-06-16 02:13 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
 | locked-append-critical-path | A | 2026-06-16 02:13 | PASS | issue #204 (lock shared runtime log appends) 2026-06-15 |

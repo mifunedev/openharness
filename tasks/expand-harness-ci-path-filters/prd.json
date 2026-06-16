@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/165-expand-harness-ci-path-filters",
+  "description": "Trigger harness CI on core sandbox config changes by covering Makefile and harness.yaml in ci-harness.yml.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Cover core sandbox config in harness CI triggers",
+      "description": "As the harness maintainer, I want harness CI to trigger on core sandbox config changes so that provisioning regressions receive automatic feedback.",
+      "acceptanceCriteria": [
+        "Add Makefile to both push.paths and pull_request.paths in .github/workflows/ci-harness.yml",
+        "Add harness.yaml to both push.paths and pull_request.paths in .github/workflows/ci-harness.yml",
+        "Preserve existing workflow path filters and job behavior",
+        "Do not rename, move, delete, or change behavior of Makefile or harness.yaml",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-14; commit e058007"
+    },
+    {
+      "id": "US-002",
+      "title": "Guard core path-filter coverage with a probe",
+      "description": "As the harness maintainer, I want a regression probe for core CI path filters so that future workflow edits cannot silently remove coverage.",
+      "acceptanceCriteria": [
+        "Add an executable eval probe at evals/probes/harness-ci-core-paths.sh",
+        "Probe checks .github/workflows/ci-harness.yml for Makefile and harness.yaml under both on.push.paths and on.pull_request.paths",
+        "Probe includes # tier:, # source:, and # desc: headers and resolves repo root via BASH_SOURCE",
+        "Probe emits PASS/REGRESSION/SKIPPED with one-line diagnostics and exits non-zero only for actionable regression",
+        "Do not modify .claude/skills/eval/** or the eval runner",
+        "bash evals/probes/harness-ci-core-paths.sh passes",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed iteration 2 on 2026-06-14; commit 63b5e78"
+    }
+  ]
+}

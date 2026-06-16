@@ -2,6 +2,7 @@
 
 ## Codebase Patterns
 
+- `.pi/skills` is a symlink to `.claude/skills`; adding a skill under `.claude/skills/<name>/SKILL.md` makes it visible to Pi skill discovery without a separate `.pi` edit.
 - Repo-wide residual scans for command rebrands include tracked task artifacts; sanitize or deliberately document task self-references before treating live docs/code as clean.
 - Protected skill edits are allowed only when the PRD carries an explicit override; keep them to the named non-destructive command-reference replacements and avoid restructuring the protected skill.
 - After a `git mv` directory rename, re-stage the destination file after content edits before committing; otherwise the commit can capture only the pure rename and leave identity edits unstaged.
@@ -81,3 +82,20 @@ Updated the unreleased changelog so current runner entries and the rebrand note 
 For command rebrands, `rg` does not distinguish live docs from tracked task artifacts; check and clean task-local prose too, or explicitly exclude it in the acceptance criteria. Full `/eval` rewrites `evals/RESULTS.md` timestamps even when every probe is unchanged, so expect a generated scoreboard diff when the story requires whole-suite verification evidence.
 
 ---
+
+## US-006 — 2026-06-16 05:11 UTC
+
+**Title**: Add the teach skill to the loop handoff
+**Files changed**: `.claude/skills/teach/SKILL.md`, `AGENTS.md`, `CHANGELOG.md`, `wiki/claude-code-teacher-skill.md`, `wiki/README.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
+**Commit**: db8f2f1
+**Result**: PASS
+
+### What I did
+Created the `/teach` skill as a post-implementation communication and learning pass that reads task artifacts, eval/audit evidence, and the relevant wiki entry before teaching. Documented that `/teach` revises or proposes wiki updates first when implementation changes the `/ship-spec` provisional model, then outputs a mental model, shipped changes, verification evidence, caveats, and 2-4 understanding checks. Added the skill to the harness skill table, documented the pattern in the relevant teacher-skill wiki entry, refreshed the wiki index, and added an unreleased changelog entry.
+
+### Learnings for future iterations
+`.pi/skills` points at `.claude/skills`, so no duplicate Pi-side skill registration is needed when adding a new `.claude` skill. When editing a wiki entry's `updated:` date, refresh `wiki/README.md` and run `evals/probes/wiki-readme-index.sh` to keep the generated index honest.
+
+---
+
+STATUS: COMPLETE

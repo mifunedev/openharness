@@ -3,7 +3,7 @@ title: "Claude Code Teacher Skill"
 slug: claude-code-teacher-skill
 tags: [claude-code, education, skills, ai-assisted-coding]
 created: 2026-06-15
-updated: 2026-06-15
+updated: 2026-06-16
 sources:
   - raw/2026-06-15-claude-code-teacher-skill.md
 related: [inspectable-agent-harness, learn-harness-engineering]
@@ -27,6 +27,8 @@ Core mechanics:
 - Do not end the session until the human demonstrates mastery of the checklist.
 
 As a reusable skill, this is useful after Claude Code, Codex, or any coding agent completes non-trivial work. It complements inspection-oriented agent harness practices: the artifact is not just working code, but a verified transfer of understanding from agent output back to the operator.
+
+In Open Harness, this pattern is now represented by `/teach`: a post-implementation communication pass that reads task artifacts (`tasks/<slug>/prd.md`, `progress.txt`, eval/audit evidence) and the relevant wiki entry before explaining a shipped change. `/teach` is paired with `/ship-spec`'s provisional task/wiki model and `/orchestrate`'s final loop understanding: if execution changed the provisional model, it revises or proposes wiki updates first, then teaches the concise mental model, what changed, why it matters, verification evidence, caveats, and 2-4 understanding checks. It is explicitly not an implementation, audit, merge, or retro gate.
 
 ## See Also
 - [[inspectable-agent-harness]]

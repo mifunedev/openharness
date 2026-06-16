@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/225-detect-cron-frontmatter-drift",
+  "issue": 225,
+  "description": "Detect cron runtime drift from restart-required frontmatter changes, not just cron body/schedule mtimes.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Detect restart-required frontmatter drift",
+      "description": "As the harness operator, I want /drift-check to name restart-required cron frontmatter drift so I know when the live runtime is using stale cron configuration.",
+      "acceptanceCriteria": [
+        ".claude/skills/drift-check/SKILL.md Section C explains that cron body text is hot-reloaded by reloadBody, while frontmatter/config fields are loaded when crons are scheduled and require SIGHUP reschedule or runtime restart.",
+        "The Step C-2 shell block extracts a documented restart-required field set including at least schedule, enabled, agent, tmux, worktree, and preflight from each schedulable cron's leading frontmatter.",
+        "The detector is explicitly conservative: without a runtime snapshot, it does not prove which field changed; it warns that restart-required config may be stale when a schedulable cron file changed after RUNTIME_START.",
+        "A schedulable cron whose file mtime is newer than RUNTIME_START emits a DRIFT-CHECK (C) line that explicitly says restart-required frontmatter/config may be stale until SIGHUP reschedule or runtime restart.",
+        "The aggregate DRIFT: wording still counts only schedulable cron files.",
+        "The implementation remains read-only and does not execute the recommended restart."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; drift-check now extracts the restart-required field set and reports possible stale frontmatter/config with SIGHUP/restart recovery. Commit d6beaf1."
+    },
+    {
+      "id": "US-002",
+      "title": "Preserve the schedulable-cron predicate",
+      "description": "As a maintainer, I want the expanded drift detector to preserve existing false-positive protections.",
+      "acceptanceCriteria": [
+        "README-style markdown in crons/, disabled crons, crons with missing or empty schedule, Croner-invalid schedules, invalid cron ids, basename/id mismatches, and unsafe agent overrides remain excluded before the mtime/frontmatter comparison when those runtime predicates are represented in the drift-check shell block.",
+        "The predicate stays property-based rather than hard-coding cron names.",
+        "Existing probe coverage for drift-check-cron-staleness-glob.sh still passes."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; schedulable predicate still excludes docs, disabled/missing/empty/invalid schedules, and now mirrors id/agent runtime filters. Commit d6beaf1."
+    },
+    {
+      "id": "US-003",
+      "title": "Update operator documentation",
+      "description": "As a future agent, I want drift-check's skill docs and wiki reference to teach the same body-vs-frontmatter model.",
+      "acceptanceCriteria": [
+        ".claude/skills/drift-check/SKILL.md states that body-only edits hot-reload, but changes to schedule, enabled, agent, tmux, worktree, or preflight require SIGHUP reschedule or runtime restart for the live scheduler configuration.",
+        "wiki/cron-runtime.md exists or is updated after implementation with DeepWiki-style source-file citations for cron frontmatter parsing, body hot-reload, SIGHUP reschedule, preflight/worktree behavior, and drift-check detection.",
+        "wiki/README.md is refreshed so the new or updated wiki entry appears in the index."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; drift-check docs, wiki/cron-runtime.md, raw source snapshot, and wiki/README.md now teach the body-vs-frontmatter model. Commit d6beaf1."
+    },
+    {
+      "id": "US-004",
+      "title": "Guard the contract in evals",
+      "description": "As the harness, I want a Tier-A eval probe that catches regressions where non-schedule frontmatter drift is not reported.",
+      "acceptanceCriteria": [
+        "Add or update an eval probe under evals/probes/ that extracts the drift-check Step C-2 block and verifies the source text includes the restart-required field set: schedule, enabled, agent, tmux, worktree, preflight.",
+        "The probe is a deterministic source-shape contract probe, not a live runtime simulation; it fails if the Step C-2 block regresses to schedule-only or mtime-only wording.",
+        "bash evals/probes/drift-check-cron-staleness-glob.sh passes.",
+        "The new or updated probe passes.",
+        "bash .claude/skills/eval/run.sh exits 0 with no new green-to-red regression.",
+        "CHANGELOG.md records the drift-check frontmatter detection fix under ## [Unreleased]."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; drift-check-cron-staleness-glob probe now guards restart-required fields, message wording, and expanded invalid fixtures; changelog updated. Commit d6beaf1."
+    }
+  ]
+}

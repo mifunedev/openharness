@@ -18,8 +18,8 @@
         "The helper rejects missing target arguments with a non-zero exit and usage message."
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-06-15; added executable scripts/locked-append.sh with flock serialization, parent creation, no repo lock artifacts, and degraded fallback warning."
     },
     {
       "id": "US-002",
@@ -33,8 +33,8 @@
         "The adoption preserves existing status tokens and log text byte-for-byte aside from serialization mechanics."
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-06-15; autopilot skill snippets and autopilot-caps logging route critical shared-log writes through scripts/locked-append.sh with safe cap-status fallback."
     },
     {
       "id": "US-003",
@@ -47,8 +47,8 @@
         "The docs explicitly state this change migrates the autopilot/caps critical path first and leaves broader heartbeat/watchdog/manual-writer migration as follow-up work."
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-06-15; context/rules/memory.md documents the shared-root locked append convention and scoped migration."
     },
     {
       "id": "US-004",
@@ -63,8 +63,8 @@
         "CHANGELOG.md records the locked append helper under ## [Unreleased]."
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-06-15; added locked-append vitest coverage, critical-path eval probe, updated autopilot-worktree-log-root, refreshed evals, and changelog."
     }
   ]
 }

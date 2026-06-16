@@ -72,14 +72,27 @@ resolve_autopilot_log_root() {
 # Result: SKIPPED-CAP-*` memory block + `[ISO8601] autopilot: <STATUS>` liveness
 # line the autopilot model wrote by hand on a capped hour — so heartbeat/watchdog
 # parsing is unchanged. Diagnostics → stderr (stdout stays the STATUS token).
+append_runtime_log() {
+  local target="$1"
+  if [ -x "$SCRIPT_DIR/locked-append.sh" ]; then
+    "$SCRIPT_DIR/locked-append.sh" "$target" || {
+      printf 'autopilot-caps: WARNING: locked append failed for %s; log entry dropped\n' "$target" >&2
+      cat >/dev/null || true
+    }
+  else
+    printf 'autopilot-caps: WARNING: missing scripts/locked-append.sh; appending without serialization to %s\n' "$target" >&2
+    cat >> "$target" 2>/dev/null || true
+  fi
+}
+
 log_skip() {
   local status="$1" action="$2" observation="$3" root day time
   root=$(resolve_autopilot_log_root)
   mkdir -p "$root/crons"
-  printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "$status" >> "$root/crons/.cron.log" 2>/dev/null || true
+  printf '[%s] autopilot: %s\n' "$(date -Iseconds)" "$status" | append_runtime_log "$root/crons/.cron.log"
   day=$(date -u +%Y-%m-%d); time=$(date -u +%H:%M)
   mkdir -p "$root/memory/$day"
-  cat >> "$root/memory/$day/log.md" <<EOF
+  append_runtime_log "$root/memory/$day/log.md" <<EOF
 
 ## Autopilot -- $time UTC
 - **Result**: $status

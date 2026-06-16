@@ -1,0 +1,48 @@
+# progress
+
+## US-001 — 2026-06-16 03:14 UTC
+
+**Title**: Define no-PR session close helper
+**Files changed**: `.claude/skills/autopilot/SKILL.md`
+**Commit**: final branch commit (this file is included)
+**Result**: PASS
+
+### What I did
+Added `close_no_pr_session()` to the autopilot skill's early session setup. The helper no-ops without a session, preserves kept PR sessions via `$KEEP`, releases the overlap pidfile, and schedules a best-effort `tmux kill-session -t "$SESSION"` after terminal logging can complete.
+
+### Learnings for future iterations
+No-PR Pi TUI sessions need explicit closure; absence of a keep marker is not enough when the TUI itself remains alive.
+
+---
+
+## US-002 — 2026-06-16 03:15 UTC
+
+**Title**: Call helper on no-PR exits
+**Files changed**: `.claude/skills/autopilot/SKILL.md`
+**Commit**: final branch commit (this file is included)
+**Result**: PASS
+
+### What I did
+Updated cap, owned-WIP, wrong-branch, fast-forward-fail, duplicate, no-survivor research, and critic-HALT guidance to call `close_no_pr_session` on no-PR terminal exits. Kept PR-producing paths unchanged: they still use `$KEEP` and remain attachable.
+
+### Learnings for future iterations
+Session lifecycle prose must name the complete no-PR set; otherwise future edits can preserve one terminal path while leaking another.
+
+---
+
+## US-003 — 2026-06-16 03:16 UTC
+
+**Title**: Guard the contract in evals
+**Files changed**: `evals/probes/autopilot-no-pr-session-close.sh`, `evals/RESULTS.md`, `CHANGELOG.md`
+**Commit**: final branch commit (this file is included)
+**Result**: PASS
+
+### What I did
+Added the `autopilot-no-pr-session-close` probe and ran it directly, then ran the full eval suite. Also ran `pnpm test:scripts`; the first run exposed cron env leakage into an existing caps test, and the env-sanitized rerun passed all 226 tests.
+
+### Learnings for future iterations
+When running root script tests from inside a cron worktree, unset `CRON_TMUX_SESSION`, `CRON_KEEP_MARKER`, `CRON_OVERLAP_PIDFILE`, and `CRON_WORKTREE` to avoid testing the cron runtime's own environment instead of the fixture default.
+
+---
+
+STATUS: COMPLETE

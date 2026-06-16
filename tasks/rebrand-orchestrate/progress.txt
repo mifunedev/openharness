@@ -4,6 +4,7 @@
 
 - Protected skill edits are allowed only when the PRD carries an explicit override; keep them to the named non-destructive command-reference replacements and avoid restructuring the protected skill.
 - After a `git mv` directory rename, re-stage the destination file after content edits before committing; otherwise the commit can capture only the pure rename and leave identity edits unstaged.
+- Eval contract probes deliberately pin non-command contract literals; during skill rebrands, update paths/messages/frontmatter assertions while leaving the literal array unchanged unless the story says otherwise.
 
 ## US-001 — 2026-06-16 04:50 UTC
 
@@ -32,5 +33,20 @@ Updated the remaining sibling runner references in `/strategic-proposal`, `/benc
 
 ### Learnings for future iterations
 The protected-path override for `strategic-proposal` is already encoded in the PRD AC; no separate protected-path file edit is needed. `rg -n "/loop-runner|loop-runner"` scoped to the three US-002 files is the fastest sanity check before moving on.
+
+---
+
+## US-003 — 2026-06-16 04:58 UTC
+
+**Title**: Rename and update eval probes
+**Files changed**: `evals/probes/orchestrate-contract.sh`, `evals/probes/loop-repeat-gate.sh`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
+**Commit**: ff00559
+**Result**: PASS
+
+### What I did
+Renamed the loop runner contract probe to `evals/probes/orchestrate-contract.sh` with `git mv` semantics and updated its skill path, frontmatter assertion, comments, and PASS/SKIPPED/REGRESSION output for `/orchestrate`. Updated `evals/probes/loop-repeat-gate.sh` to read `.claude/skills/orchestrate/SKILL.md` and report `/orchestrate` runner messages while preserving the repeat gate checks. Verified both targeted probes, typecheck, lint, and the full test suite.
+
+### Learnings for future iterations
+Use `python3` or direct edits in this environment; `python` is not installed on PATH. For eval-probe rebrands, keep the fixed-string `LITERALS` list stable unless the acceptance criteria explicitly asks to alter a contract literal.
 
 ---

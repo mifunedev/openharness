@@ -169,7 +169,7 @@ surfaces as a draft sub-status, never as an actionable alarm.
 | ✅ **promotable** | `mergeable=="MERGEABLE" && mergeStateStatus=="CLEAN" && ci=="PASS"` | green WIP — could be marked ready (`gh pr ready <N>`) |
 | 🚧 **still-WIP** | otherwise (red/pending CI, or `CONFLICTING`/`DIRTY`/`BEHIND`) | expected work-in-progress; informational only, never a "fix me" alarm |
 
-A stale draft (💤, below) is *draft-limbo* — an investigation/resume target for the owner or watchdog. It is **not** a ready/actionable PR, not an auto-undraft signal, and must still be classified `Draft (promotable)` by a fresh `/pr-audit` run before any `gh pr ready`.
+A stale draft (💤, below) is *draft-limbo* — route to `/watchdog` to complete the branch and mark ready when green. It is **not** a ready/actionable PR, not an auto-undraft signal, and must still be classified `Draft (promotable)` by a fresh `/pr-audit` run before any `gh pr ready`; close only if explicitly abandoned.
 
 **Orthogonal flags — tag any PR regardless of its primary state:**
 

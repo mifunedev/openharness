@@ -35,17 +35,14 @@ that catches anything time-sensitive without doing real work.
     `DRIFT: <summary>`. When `/drift-check` reports all classes clean,
     append nothing extra — the existing `HEARTBEAT_OK` reply stays
     unchanged; do NOT add a per-pulse "no drift" block on clean runs.
-2.8. **Autopilot health (watchdog skill).** Run `/autopilot-watchdog` every
-    heartbeat wake and include any emitted `NUDGE:`, `WATCHING:`, or
-    `WATCHDOG:` lines in the heartbeat reply/log. The skill is also the ad-hoc
-    operator entrypoint for this check; do not duplicate its bash here. Its
-    load-bearing contract:
-
-    - Draft autopilot PRs are stale after **2 hours** in draft with no update.
-    - Draft stale/backlog findings are surface-only investigation hints; they do
-      not authorize `gh pr ready`, `gh pr close`, or `gh pr merge`.
-    - The only autonomous mutation is killing tmux sessions frozen at known
-      usage-limit/resume prompts.
+2.8. **Watchdog nudge.** Run `/watchdog --action all --repo mifunedev/openharness`.
+    The watchdog is generic, but its current required action is autopilot draft
+    PR recovery: determine whether draft PRs are active, stuck, or stale; if a
+    draft is already green/mergeable/clean, remove draft with `gh pr ready`; if
+    it is stale but not promotable, complete the remaining work on that PR branch,
+    run targeted checks, push, and only then remove draft. It may also kill tmux
+    sessions frozen at usage-limit/resume prompts. It never merges PRs and never
+    kills sessions on age alone.
 3. Decide whether anything needs action right now.
 4. If yes, act. If no, append a brief "nothing pressing" note to
    `memory/<today>/log.md` and exit.
@@ -61,17 +58,16 @@ that catches anything time-sensitive without doing real work.
 - Drift detected by `/drift-check` → include in reply as
   `DRIFT: <summary>` and note in `memory/<today>/log.md`. Clean run →
   no extra output.
-- Autopilot nudge/watchdog (step 2.8) → killed stuck session or a surfaced
-  ready/long-lived/stale-draft signal → include in reply as `NUDGE: <action>`,
-  `WATCHING: autopilot ...`, or `WATCHDOG: <action>` as emitted and note in
-  `memory/<today>/log.md`. No stuck session, no ready PR, and no stale draft
-  PR → no extra output.
+- Watchdog nudge (step 2.8) → completed/undrafted stale PRs, killed stuck
+  sessions, or active-watch signals → include in reply as `NUDGE: <action>`
+  (and `WATCHING: ...` for active-but-not-stale items) and note in
+  `memory/<today>/log.md`. Clean watchdog run → no extra output.
 - Append the result to `memory/<today>/log.md` either way.
 - **Mandatory closing step (do this even after long action chains):**
   append one liveness line to `crons/.cron.log`:
   `printf '[%s] heartbeat: %s\n' "$(date -Iseconds)" "<status>" >> crons/.cron.log`
   where `<status>` is one of `OK`, `OK (N watching)`, `OK (stale ralph: <name>)`,
-  `OK (resolved: <item-snippet>)`, `OK (nudged autopilot: <session>)`. This is the cron's only liveness
+  `OK (resolved: <item-snippet>)`, `OK (watchdog: <summary>)`. This is the cron's only liveness
   signal — it MUST execute every pulse regardless of what else happened.
 
 ## Active items

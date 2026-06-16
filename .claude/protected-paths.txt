@@ -32,6 +32,7 @@ drift-check
 # --- Orchestrator scripts (scripts/) ---
 scripts/ralph.sh
 scripts/cron-runtime.ts
+scripts/sandbox-healthcheck.sh
 
 # --- Root lifecycle entrypoints ---
 Makefile

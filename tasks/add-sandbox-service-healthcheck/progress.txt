@@ -1,0 +1,52 @@
+# progress
+
+## Codebase Patterns
+- Worktree-local validation may need symlinked `node_modules` from the main checkout for TypeScript package checks; remove those symlinks before committing.
+- Tests that exercise Slack token parsing must avoid committing literal token assignment syntax because the secret-exposure guard scans staged diffs.
+
+## US-001 — 2026-06-15 19:18 UTC
+
+**Title**: Healthcheck script
+**Files changed**: `scripts/sandbox-healthcheck.sh`, `scripts/__tests__/sandbox-healthcheck.test.ts`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Added a bash healthcheck that checks tmux sessions via the sandbox user when Docker invokes it as root. The script fails on missing `cron-watchdog`/`cron-system` and on legacy `system-cron`.
+
+### Learnings for future iterations
+Use `TMUX_BIN`/binary injection in tests so shell healthcheck behavior can be exercised without a live tmux server.
+
+---
+
+## US-002 — 2026-06-15 19:18 UTC
+
+**Title**: Optional service gating
+**Files changed**: `scripts/sandbox-healthcheck.sh`, `scripts/__tests__/sandbox-healthcheck.test.ts`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Added conditional checks for `app-hermes-dashboard` and `client-slack`. Hermes is gated by `HERMES_DASHBOARD=true` plus a `hermes` binary; Slack is gated by configured Slack tokens plus a `pi` binary.
+
+### Learnings for future iterations
+Match optional health predicates to entrypoint startup predicates so disabled features do not make the container unhealthy.
+
+---
+
+## US-003 — 2026-06-15 19:18 UTC
+
+**Title**: Compose wiring and validation docs
+**Files changed**: `.devcontainer/docker-compose.yml`, `docs/installation.md`, `.claude/protected-paths.txt`, `CHANGELOG.md`, `scripts/__tests__/sandbox-healthcheck.test.ts`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Wired the script into the sandbox compose healthcheck with a 300-second start period, documented inspection/debug/disable paths, and protected the new load-bearing script.
+
+### Learnings for future iterations
+New scripts referenced by compose/entrypoint belong in `.claude/protected-paths.txt` in the same PR.
+
+---
+
+STATUS: COMPLETE

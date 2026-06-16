@@ -25,6 +25,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| claude-code-teacher-skill | Claude Code Teacher Skill | [claude-code, education, skills, ai-assisted-coding] | 2026-06-15 |
 | pi-recap | Pi Recap | [pi, recap, session-summary, extension] | 2026-06-14 |
 | pi-loop | Pi Loop | [pi, monitor, loop, scheduler, extension] | 2026-06-14 |
 | pi-codex-usage | Pi Codex Usage | [pi, codex, usage, statusline, extension] | 2026-06-14 |

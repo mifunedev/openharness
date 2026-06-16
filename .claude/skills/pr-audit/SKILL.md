@@ -180,6 +180,8 @@ A stale draft (💤, below) is *draft-limbo* — an investigation/resume target 
 
 ### 4. Emit the triage report
 
+When the user asks for a PR link only **after it is verified green by `/pr-audit`**, do not report the link until the fresh audit classifies that PR as `Ready to merge` or otherwise shows `ci=="PASS"`, `mergeable=="MERGEABLE"`, and `mergeStateStatus=="CLEAN"`. Treat `SKIPPED` checks such as PR-context deploy jobs as neutral, but call them out briefly if the user asked for green verification.
+
 One section per **non-empty primary state**, most-actionable first. Drafts get
 their own block **after** the actionable (ready-for-review) sections — least
 urgent, never mixed in. Each PR is one line, carries its 💤/📐 flags inline, and
@@ -224,6 +226,16 @@ they are not ready/actionable PRs and must still pass `/pr-audit`'s
 ```bash
 echo "autopilot caps — total: $(gh pr list --state open --label autopilot --json number --jq 'length')/10 · today: $(gh pr list --state open --search "label:autopilot created:>=$(date -u +%Y-%m-%d)" --json number --jq 'length')/6"
 ```
+
+**Autopilot draft-cap pitfall:** stale-by-age is not the only draft-limbo signal.
+A same-day draft backlog can saturate the autopilot creation cap before any PR is
+24h stale, leaving the loop unable to open another PR. In that case, surface the
+cap saturation explicitly, then look for a draft that is already `Draft
+(promotable)` (green checks + mergeable + clean) and, if the operator asked to
+address the backlog rather than merely audit it, mark only that freshly-audited
+PR ready with `gh pr ready <N>`. Never use cap saturation alone to undraft,
+close, merge, or kill a session; it is a resume/investigate signal until a fresh
+`/pr-audit` classification proves the individual PR is promotable.
 
 ### 5. `--deep` escalation (optional)
 

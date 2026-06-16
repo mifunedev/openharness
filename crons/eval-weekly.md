@@ -5,6 +5,7 @@ timezone: America/Denver
 enabled: true
 overlap: false
 catchup: false
+agent: pi
 description: Weekly eval suite — run probes, log any regressions to memory
 ---
 

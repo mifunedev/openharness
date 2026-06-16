@@ -1,6 +1,6 @@
 ---
 name: autopilot-watchdog
-description: Ad-hoc and heartbeat watchdog for the autopilot loop: kills truly stuck sessions, surfaces long-lived sessions, ready PRs, draft PRs stale after 2h, and draft-cap saturation without auto-undrafting or closing.
+description: "Ad-hoc and heartbeat watchdog for the autopilot loop: kills truly stuck sessions, surfaces long-lived sessions, ready PRs, draft PRs stale after 2h, and draft-cap saturation without auto-undrafting or closing."
 argument-hint: "[--stale-hours <n>] [--daily-cap <n>] [--repo <owner/name>]"
 ---
 

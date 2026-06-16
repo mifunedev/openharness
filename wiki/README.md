@@ -26,6 +26,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
 | vet-run-vet | vet-run/vet | [security, shell, installer, curl-bash, devtools, openharness] | 2026-06-15 |
+| goldman-humanoid-robot-supply-chain | Goldman Humanoid Robot Supply Chain Map | [humanoid-robots, robotics, supply-chain, critical-metals, ai-infrastructure, market-maps] | 2026-06-15 |
 | claude-code-teacher-skill | Claude Code Teacher Skill | [claude-code, education, skills, ai-assisted-coding] | 2026-06-15 |
 | pi-recap | Pi Recap | [pi, recap, session-summary, extension] | 2026-06-14 |
 | pi-loop | Pi Loop | [pi, monitor, loop, scheduler, extension] | 2026-06-14 |

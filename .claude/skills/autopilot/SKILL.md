@@ -41,6 +41,24 @@ gh label create autopilot --color 6E40C9 --description "Opened by the autopilot 
 gh label create autopilot-blocked --color B60205 --description "Autopilot ticket blocked by a critic gate; remove to retry" 2>/dev/null || true
 ```
 
+**Capture no-PR session context early** (needed before cap/clean-state skips; re-used later by the full session block):
+
+```bash
+SESSION="${CRON_TMUX_SESSION:-${SESSION:-}}"
+KEEP="${CRON_KEEP_MARKER:-${KEEP:-}}"
+OVERLAP_PIDFILE="${CRON_OVERLAP_PIDFILE:-${OVERLAP_PIDFILE:-}}"
+[ -z "$OVERLAP_PIDFILE" ] && [ -n "$SESSION" ] && OVERLAP_PIDFILE="/tmp/cron-autopilot.pid"
+release_overlap_lock() { [ -n "${OVERLAP_PIDFILE:-}" ] && rm -f "$OVERLAP_PIDFILE"; }
+close_no_pr_session() {
+  # No-PR terminal paths have no useful manual continuation state. A kept PR
+  # session creates $KEEP; if it exists, never close the session here.
+  [ -n "${SESSION:-}" ] || return 0
+  [ -n "${KEEP:-}" ] && [ -f "$KEEP" ] && return 0
+  release_overlap_lock
+  ( sleep 1; tmux kill-session -t "$SESSION" 2>/dev/null || true ) >/dev/null 2>&1 &
+}
+```
+
 **Caps (deterministic pre-gate + in-session recheck).** The two autopilot PR caps — **10** total open at any time AND **6** created per UTC day still open (a same-day close/merge frees a slot) — are enforced **before this skill runs** by the cron's `preflight: scripts/autopilot-caps.sh` gate (see `crons/autopilot.md`). Both defaults are configurable in `harness.yaml` (`autopilot.total_cap` / `autopilot.daily_cap`, read live each fire; an `AUTOPILOT_TOTAL_CAP` / `AUTOPILOT_DAILY_CAP` env var still overrides). On a capped hour that gate writes the `SKIPPED-CAP-*` memory + liveness logs and the cron runtime spawns **no session at all** (`SKIPPED_PREFLIGHT`) — so reaching §1 means there was cap headroom at fire time.
 
 `scripts/autopilot-caps.sh` is the **canonical** cap implementation — the cap math plus the byte-faithful `SKIPPED-CAP-TOTAL` / `SKIPPED-CAP-DAILY` memory-block + liveness logging. Re-run it here as defense-in-depth for a long run that crosses a cap mid-flight, and defer to its verdict rather than re-deriving the counts:
@@ -49,9 +67,10 @@ gh label create autopilot-blocked --color B60205 --description "Autopilot ticket
 # Canonical caps gate (single source of truth for the cap math + skip logging):
 #   exit 11 → SKIPPED-CAP-TOTAL (≥10 open)  ·  exit 10 → SKIPPED-CAP-DAILY (≥6 today)
 #   exit 0  → PROCEED (stdout: PROCEED total=…/… today=…/…)
-# On a non-zero exit the gate has ALREADY written the memory log + liveness line,
-# so just EXIT (no keep-marker → the session auto-closes; no PR was produced).
-scripts/autopilot-caps.sh || exit 0
+# On a non-zero exit the gate has ALREADY written the memory log + liveness line.
+# This is a no-PR terminal path: call close_no_pr_session after logging (when the
+# session helper is available) so Pi TUI sessions do not linger without a keep-marker.
+scripts/autopilot-caps.sh || { close_no_pr_session 2>/dev/null || true; exit 0; }
 ```
 
 For `--dry-run`, do **not** let the gate write skip logs or exit the run: invoke it read-only with the caps raised so it always PROCEEDs and only emits its count line — `AUTOPILOT_TOTAL_CAP=999999 AUTOPILOT_DAILY_CAP=999999 scripts/autopilot-caps.sh` prints `PROCEED total=<n>/… today=<n>/…` (both open-PR counts) without mutating anything.
@@ -128,22 +147,23 @@ else
   if ! { git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}"; }; then
     log_liveness "BLOCKED-OWNED-WIP"
     echo "BLOCKED-OWNED-WIP: dirty owned surface — run skipped (foreign WIP left untouched)"
+    close_no_pr_session
     exit 1
   fi
-  [ "$BRANCH" = "development" ] || { echo "ERROR: not on development (on $BRANCH)"; exit 1; }
+  [ "$BRANCH" = "development" ] || { echo "ERROR: not on development (on $BRANCH)"; close_no_pr_session; exit 1; }
 fi
 ```
 
-If the OWNED surface is dirty (root mode only — a worktree run is always clean), log `Result: BLOCKED-OWNED-WIP` + `Observation: dirty owned surface; run skipped until it is clean (foreign WIP untouched)` and exit 1 without touching GitHub — the distinct token (not bare `FAIL`) keeps a genuine owned-WIP stall visible to the heartbeat rather than looking idle. If instead HEAD is not on `development`, log `Result: FAIL` + `Observation: wrong branch` and exit 1.
+If the OWNED surface is dirty (root mode only — a worktree run is always clean), log `Result: BLOCKED-OWNED-WIP` + `Observation: dirty owned surface; run skipped until it is clean (foreign WIP untouched)`, call `close_no_pr_session`, and exit 1 without touching GitHub — the distinct token (not bare `FAIL`) keeps a genuine owned-WIP stall visible to the heartbeat rather than looking idle. If instead HEAD is not on `development`, log `Result: FAIL` + `Observation: wrong branch`, call `close_no_pr_session`, and exit 1.
 
 **Sync with origin** (mandatory — a stale `development` base means dedupe misses fresh merges and the run branches off old code):
 
 ```bash
 git fetch origin development
-git merge --ff-only origin/development || { echo "ERROR: development diverged from origin"; exit 1; }
+git merge --ff-only origin/development || { echo "ERROR: development diverged from origin"; close_no_pr_session; exit 1; }
 ```
 
-If the fast-forward fails, log `Result: FAIL` + `Observation: development diverged from origin/development; manual reconcile needed` and exit 1 without touching GitHub.
+If the fast-forward fails, log `Result: FAIL` + `Observation: development diverged from origin/development; manual reconcile needed`, call `close_no_pr_session`, and exit 1 without touching GitHub.
 
 **Capture the tmux session context** (set by the cron runtime when `tmux: true`; EMPTY when invoked manually — every tmux step below must no-op when empty):
 
@@ -194,7 +214,8 @@ gh issue list --state open --label autopilot \
   LINKED_ISSUE_PR=$(gh issue list --state open --label autopilot --search "$ISSUE_NUM linked:pr" --json number --jq '.[0].number // empty')
   if tmux has-session -t "$SAFE_SESSION" 2>/dev/null || [ -n "$LINKED_PR" ] || [ -n "$LINKED_ISSUE_PR" ] || [ -e "$ACTIVE_MARKER" ]; then
     echo "DEDUPE: issue #$ISSUE_NUM / $SLUG already active (session=$SAFE_SESSION pr=$LINKED_PR linked_issue_pr=$LINKED_ISSUE_PR marker=$ACTIVE_MARKER); skipping"
-    # memory log Result: NOTHING-NEW, liveness NOTHING-NEW, exit 0; do not touch keep-marker.
+    # memory log Result: NOTHING-NEW, liveness NOTHING-NEW, close_no_pr_session, exit 0; do not touch keep-marker.
+    close_no_pr_session
     exit 0
   fi
   [ -n "$SESSION" ] && tmux rename-session -t "$SESSION" "$SAFE_SESSION" && SESSION="$SAFE_SESSION"
@@ -212,7 +233,7 @@ gh issue list --state open --label autopilot \
    DUPE_OPEN_PR=$(gh pr list --state open --json title,headRefName --jq '.[] | "\(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
    DUPE_MERGED_PR=$(gh pr list --state merged --limit 50 --json number,title,headRefName --jq '.[] | "\(.number) \(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
    ```
-3. **No survivor** → memory log `Result: NOTHING-NEW`, liveness `NOTHING-NEW`, exit 0 (no keep-marker). Research fires whenever no actionable ticket exists — both when the queue is fully drained AND when open tickets are all awaiting review. Dedupe (against open issues, open PRs, and merged PRs) plus the §1 caps bound the output: an already-filed finding dedupes to `NOTHING-NEW`; worst case an hourly audit yields `NOTHING-NEW` repeatedly — accepted cost.
+3. **No survivor** → memory log `Result: NOTHING-NEW`, liveness `NOTHING-NEW`, then `close_no_pr_session` and exit 0 (no keep-marker). Research fires whenever no actionable ticket exists — both when the queue is fully drained AND when open tickets are all awaiting review. Dedupe (against open issues, open PRs, and merged PRs) plus the §1 caps bound the output: an already-filed finding dedupes to `NOTHING-NEW`; worst case an hourly audit yields `NOTHING-NEW` repeatedly — accepted cost.
 4. **Top survivor** → write a body to `/tmp/autopilot-research-$$.md` containing (a) the finding, (b) the first-principles rationale, (c) a 3–7-bullet plan sketch. If `--dry-run` is set, print the would-file finding in the dry-run block below and exit before any `gh issue create` mutation. Otherwise file the ticket from the plan:
    ```bash
    gh issue create --label autopilot --title "feat: <finding>" --body-file /tmp/autopilot-research-$$.md
@@ -294,7 +315,7 @@ Because `/ship-spec` owns implement → eval → audit → undraft, **§5–§7 
   gh issue edit "$ISSUE_NUM" --add-label autopilot-blocked
   cleanup_active_marker
   ```
-- Memory log `Result: HALT-CRITIC-GATE`, liveness `HALT-CRITIC-GATE`, exit 0 (no PR → no keep-marker and no active-marker).
+- Memory log `Result: HALT-CRITIC-GATE`, liveness `HALT-CRITIC-GATE`, then `close_no_pr_session` and exit 0 (no PR → no keep-marker and no active-marker).
 
 **Add the `autopilot` label** to the PR:
 ```bash
@@ -463,7 +484,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 - **autopilot-blocked**: a critic HALT labels the ticket `autopilot-blocked`, excluding it from the queue query until a human removes the label — a bad ticket can't retry-loop hourly.
 - **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.
 - **Liveness on every path**: every exit calls `log_liveness "<TOKEN>"`, which appends to `$AUTOPILOT_LOG_ROOT/crons/.cron.log` via `scripts/locked-append.sh` — skip, halt, error, success. In worktree mode that path is the shared root checkout, not `$CRON_WORKTREE`; a missing liveness line looks like a crash.
-- **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `RALPH-INCOMPLETE`, `DELEGATE-FAIL`). In delegate-advisor mode, the persisted session name is `autopilot-<branch>` (sanitized, e.g. `autopilot-feat-123-slug`) and is intentionally left alive for manual attach/continue/reap; no separate advisor session is created. No-PR paths never touch the keep-marker, so their sessions auto-close. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
+- **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `RALPH-INCOMPLETE`, `DELEGATE-FAIL`). In delegate-advisor mode, the persisted session name is `autopilot-<branch>` (sanitized, e.g. `autopilot-feat-123-slug`) and is intentionally left alive for manual attach/continue/reap; no separate advisor session is created. No-PR paths never touch the keep-marker and must call `close_no_pr_session` after memory/liveness logging (cap skips, duplicate/NOTHING-NEW, no-survivor research, critic HALT before PR, FAIL, and BLOCKED-OWNED-WIP) so attachable Pi TUI sessions do not linger. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
 - **Branch restore (canonical scoped restore)**: every path that changed the working branch (all paths reaching §4+) must run the two-step `git checkout development -- "${OWNED_PATHS[@]}"` (discard own owned-path residue — tracked staged AND unstaged) THEN `git checkout development` (switch HEAD), then assert BOTH `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` AND `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`. The scope step MUST precede the switch (it clears owned residue that a non-forced `git checkout development` would otherwise refuse to overwrite). It discards only the run's own owned-path residue (committed work is preserved on the feature branch / draft PR); it touches only tracked files, so an untracked owned-path orphan from a mid-run crash is cleaned manually (`git clean` is deliberately NOT used); and any foreign change OUTSIDE the owned surface survives byte-for-byte (left in place / left staged), ignored by the scoped assertion and the next §1 check. The owned-scoped assertion mirrors the §1 owned check, so "assertion passes" ≡ "the next fire's §1 guard will pass". §1 additionally self-heals a *clean*-but-stranded branch (its forced tree-wide checkout is the only remaining `-f` form); a *dirty* owned tree at §1 still blocks (BLOCKED-OWNED-WIP) to protect any owned WIP.
 
 ## Reference

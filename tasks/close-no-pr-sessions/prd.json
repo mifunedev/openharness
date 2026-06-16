@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/209-close-no-pr-sessions",
+  "description": "Close autopilot no-PR tmux sessions after terminal logging so useless cron worktrees do not accumulate.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Define no-PR session close helper",
+      "description": "As the autopilot skill, I need a helper that closes the current cron tmux session only for no-PR terminal paths, so manual runs and PR-producing runs are unaffected.",
+      "acceptanceCriteria": [
+        ".claude/skills/autopilot/SKILL.md defines close_no_pr_session() near the existing session helper functions",
+        "The helper no-ops when $SESSION is empty",
+        "The helper skips closure when a keep marker exists",
+        "The helper removes the session-scoped overlap pidfile before closing",
+        "The helper uses a detached tmux kill-session command against $SESSION so logging can finish before tmux termination"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; added close_no_pr_session helper with SESSION/KEEP guards and overlap lock cleanup."
+    },
+    {
+      "id": "US-002",
+      "title": "Call helper on no-PR exits",
+      "description": "As an operator, I want no-PR terminal outcomes to self-close after logging, so only sessions with useful continuation state remain.",
+      "acceptanceCriteria": [
+        "The canonical no-PR terminal paths document calling close_no_pr_session after memory/liveness logging and active-marker cleanup",
+        "Covered paths include cap skips, duplicate/nothing-new exits, no-survivor research, critic HALT before PR, and preflight fail/owned-WIP exits",
+        "PR-producing paths still touch $KEEP and do not call the helper"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; documented helper calls for cap, duplicate/nothing-new, no-survivor, HALT, FAIL, and BLOCKED-OWNED-WIP no-PR paths."
+    },
+    {
+      "id": "US-003",
+      "title": "Guard the contract in evals",
+      "description": "As a maintainer, I want /eval to catch regressions where the no-PR close contract disappears.",
+      "acceptanceCriteria": [
+        "Add evals/probes/autopilot-no-pr-session-close.sh",
+        "The probe passes only when the autopilot skill defines close_no_pr_session, uses tmux kill-session against $SESSION, checks $KEEP, and documents no-PR paths using the helper",
+        "bash evals/probes/autopilot-no-pr-session-close.sh passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; added autopilot-no-pr-session-close probe and verified /eval plus env-sanitized test:scripts."
+    }
+  ]
+}

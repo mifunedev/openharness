@@ -1,0 +1,45 @@
+{
+  "slug": "align-workspace-onboarding-inventory",
+  "title": "Align workspace onboarding inventory",
+  "issue": 158,
+  "branchName": "feat/158-align-workspace-onboarding-inventory",
+  "status": "ready-for-implementation",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Workspace inventory matches tracked template",
+      "acceptanceCriteria": [
+        "workspace/AGENTS.md lists the shipped template files: AGENTS.md and the CLAUDE.md -> AGENTS.md compatibility symlink.",
+        "workspace/AGENTS.md does not claim that .claude/rules/, .claude/.example.env.claude, or .claude/settings.local.json ship in the minimal template.",
+        "workspace/AGENTS.md does not describe workspace/startup.sh or startup-hook behavior."
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "Ownership guidance stays accurate",
+      "acceptanceCriteria": [
+        "The doc states that packs/agents may create runtime identity, memory, skills, settings, and routines after provisioning.",
+        "Root-owned scheduled tasks and memory paths point at repo-root crons/ and memory/.",
+        "The doc does not instruct workspace agents to edit harness-infra root files as normal application work."
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Audit prompts stop expecting removed workspace skill inventory",
+      "acceptanceCriteria": [
+        ".claude/skills/harness-audit/SKILL.md asks auditors to inspect workspace pack/runtime skills only if that directory exists.",
+        "Its reference table describes workspace skills as optional pack/runtime artifacts, not default template content.",
+        "The harness-audit edit is copy-only and preserves the protected skill behavior."
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Change is documented and validated",
+      "acceptanceCriteria": [
+        "CHANGELOG.md has an Unreleased entry for this fix.",
+        "Targeted grep over workspace/AGENTS.md and .claude/skills/harness-audit/SKILL.md returns no stale default-template claims for removed seed files.",
+        "The actual workspace template inventory and CLAUDE.md symlink are verified."
+      ]
+    }
+  ]
+}

@@ -1,2 +1,20 @@
 # progress
 
+## Codebase Patterns
+
+- After a `git mv` directory rename, re-stage the destination file after content edits before committing; otherwise the commit can capture only the pure rename and leave identity edits unstaged.
+
+## US-001 — 2026-06-16 04:50 UTC
+
+**Title**: Rename the runner skill identity
+**Files changed**: `.claude/skills/orchestrate/SKILL.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
+**Commit**: 682c516
+**Result**: PASS
+
+### What I did
+Moved the runner skill directory from `.claude/skills/loop-runner/` to `.claude/skills/orchestrate/` using `git mv`. Updated the skill frontmatter name, trigger text, H1, memory-log heading, and all command-name references in the skill body from `/loop-runner` to `/orchestrate` while preserving the loop routing contract and `context/rules/loop.md` references. Verified the old skill path is gone and the renamed skill no longer contains `loop-runner` text.
+
+### Learnings for future iterations
+The worktree has `pnpm run typecheck`, not `pnpm run type-check`; the exact Ralph check reports the missing script but the repository typecheck passes via `pnpm run typecheck`. For rename stories, inspect `git status` after the first commit attempt because a partially staged rename can leave content edits unstaged.
+
+---

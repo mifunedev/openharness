@@ -62,6 +62,12 @@ services:
     init: true
     entrypoint: /usr/local/bin/entrypoint.sh
     command: sleep infinity
+    healthcheck:
+      test: ["CMD", "bash", "/home/sandbox/harness/scripts/sandbox-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 300s
     restart: unless-stopped
 
 volumes:

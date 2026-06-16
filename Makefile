@@ -6,30 +6,14 @@
 -include .devcontainer/.env
 
 HARNESS_YAML      := harness.yaml
-# Derived env from harness.yaml (gitignored; regenerated on every make invocation).
-HARNESS_YAML_ENVFILE := $(shell [ -f $(HARNESS_YAML) ] && sh scripts/harness-config.sh env $(HARNESS_YAML) > .devcontainer/.harness.yaml.env && echo .devcontainer/.harness.yaml.env)
-# Explicit --env-file flags: .devcontainer/.env first, YAML-derived file second
-# (later-file wins in docker compose — YAML keys override .env keys).
-ENV_FILES         := $(if $(wildcard .devcontainer/.env),--env-file .devcontainer/.env,) $(if $(HARNESS_YAML_ENVFILE),--env-file $(HARNESS_YAML_ENVFILE),)
+COMPOSE           := scripts/docker-compose.sh
 
 # SANDBOX_NAME resolution: harness.yaml wins over .devcontainer/.env; fallback openharness.
 # Command-line "make ... SANDBOX_NAME=x" overrides all assignments automatically.
 SANDBOX_NAME_YAML := $(shell [ -f $(HARNESS_YAML) ] && sh scripts/harness-config.sh get sandbox.name $(HARNESS_YAML))
 SANDBOX_NAME      := $(or $(SANDBOX_NAME_YAML),$(SANDBOX_NAME),openharness)
-HERMES_DASHBOARD_YAML := $(shell [ -f $(HARNESS_YAML) ] && sh scripts/harness-config.sh get hermes.dashboard $(HARNESS_YAML))
-HERMES_DASHBOARD_OVERLAY := $(shell v='$(HERMES_DASHBOARD_YAML)'; [ -z "$$v" ] && v='$(HERMES_DASHBOARD)'; case "$$(printf '%s' "$$v" | tr '[:upper:]' '[:lower:]')" in 1|true|yes|on) printf '%s' '-f .devcontainer/docker-compose.hermes-dashboard.yml';; esac)
 
 SHELL_USER        ?= sandbox
-COMPOSE_BASE      := -f .devcontainer/docker-compose.yml
-# Compose overlay ordering (last -f wins → later-registered beats earlier):
-#   1. harness.yaml compose.overrides[] — tracked overlays
-#   2. config.json composeOverrides[]   — user-local overlays (beat tracked)
-# jq is only invoked when both jq and config.json are present.
-HARNESS_YAML_OVERRIDES := $(shell [ -f $(HARNESS_YAML) ] && sh scripts/harness-config.sh compose-overrides $(HARNESS_YAML) | sed 's|^|-f |' | tr '\n' ' ')
-COMPOSE_OVERRIDES := $(HERMES_DASHBOARD_OVERLAY) $(HARNESS_YAML_OVERRIDES) $(shell command -v jq >/dev/null 2>&1 && [ -f config.json ] && \
-    jq -r '.composeOverrides[]?' config.json 2>/dev/null | sed 's|^|-f |' | tr '\n' ' ')
-COMPOSE           := docker compose $(ENV_FILES) $(COMPOSE_BASE) $(COMPOSE_OVERRIDES)
-
 SHELL_CONTAINER ?= $(SANDBOX_NAME)
 ifeq ($(firstword $(MAKECMDGOALS)),shell)
   SHELL_POS_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
@@ -66,6 +50,7 @@ restart: ## Restart the service
 
 config: ## Print effective harness.yaml-derived env and resolved compose config
 	@if [ -f $(HARNESS_YAML) ]; then \
+		sh scripts/harness-config.sh env $(HARNESS_YAML) > .devcontainer/.harness.yaml.env; \
 		printf "==> Derived env from $(HARNESS_YAML):\n"; \
 		cat .devcontainer/.harness.yaml.env; \
 		printf "\n"; \

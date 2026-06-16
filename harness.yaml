@@ -36,6 +36,14 @@ crons:
   # dir: crons                 # CRONS_DIR — directory the cron runtime scans
   # agent_bin: claude          # CRON_AGENT_BIN — binary that fires scheduled tasks
 
+autopilot:
+  # Configurable defaults for the deterministic caps gate
+  # (scripts/autopilot-caps.sh, wired as the autopilot cron's `preflight:`).
+  # Read live at each fire — uncomment to change without a rebuild. An
+  # AUTOPILOT_TOTAL_CAP / AUTOPILOT_DAILY_CAP env var still overrides these.
+  # total_cap: 10              # AUTOPILOT_TOTAL_CAP — max open autopilot PRs at any time
+  # daily_cap: 6               # AUTOPILOT_DAILY_CAP — max open autopilot PRs created per UTC day
+
 slack:
   # allow_users: U01ABCD2345       # SLACK_ALLOW_USERS — comma-separated user IDs
   # allow_channels: C01ABCD2345    # SLACK_ALLOW_CHANNELS — comma-separated channel IDs

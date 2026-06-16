@@ -1,7 +1,7 @@
 // scripts/cron-runtime.ts — minimal cron runtime per SPEC v0.7 §"Croner runtime".
 // Reads crons/*.md frontmatter, schedules with croner, runs body as agent prompt.
 import { Cron } from "croner";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -13,7 +13,17 @@ export interface CronEntry {
   overlap: boolean;
   catchup: boolean;
   tmux: boolean;
+  // When true, a tmux fire that would otherwise log SKIPPED_OVERLAP (overlap:false
+  // + a genuinely-live previous run) instead runs in an isolated git worktree under
+  // .worktrees/cron/<session>. A fire is then never silently skipped — it either
+  // runs (root or worktree) or surfaces a failure (ERR_WORKTREE/ERR_WORKTREE_CAP).
+  worktree: boolean;
   agentBin?: string;
+  // Optional repo-relative path to a deterministic pre-fire gate script. When
+  // set, fire() runs it BEFORE any worktree/tmux/agent is created; a non-zero
+  // exit skips the fire (SKIPPED_PREFLIGHT) with no session, no model query, no
+  // worktree. A fail-open optimization — a gate error proceeds (PREFLIGHT_ERROR).
+  preflight?: string;
   body: string;
   filePath: string;
 }
@@ -23,9 +33,19 @@ const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";
 const CRON_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+const AGENT_BIN_PATTERN = /^[A-Za-z0-9_./-]+$/;
 
 export function isValidCronId(id: string): boolean {
   return CRON_ID_PATTERN.test(id);
+}
+
+export function isValidAgentBin(agentBin: string): boolean {
+  return (
+    agentBin.length > 0 &&
+    !agentBin.startsWith("-") &&
+    !agentBin.includes("..") &&
+    AGENT_BIN_PATTERN.test(agentBin)
+  );
 }
 
 export function parseCronFile(content: string, file: string): CronEntry | null {
@@ -47,7 +67,9 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
     overlap: fm.overlap === "true",
     catchup: fm.catchup === "true",
     tmux: fm.tmux === "true",
+    worktree: fm.worktree === "true",
     agentBin: fm.agent || undefined,
+    preflight: fm.preflight || undefined,
     body: m[2],
     filePath: file,
   };
@@ -103,6 +125,10 @@ export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
     }
     if (entry.id !== expectedId) {
       logFn(entry.id, "ID_MISMATCH", `id must match filename: ${expectedId}`);
+      continue;
+    }
+    if (entry.agentBin && !isValidAgentBin(entry.agentBin)) {
+      logFn(entry.id, "AGENT_INVALID", `invalid agent: ${entry.agentBin}`);
       continue;
     }
     // Invalid-schedule skip is a DISTINCT path from the silent unreadable-file
@@ -212,12 +238,24 @@ export function buildTmuxWrapper(opts: {
   id: string;
   agentBin: string;
   promptFile: string;
+  // Overlap pidfile written/removed by the wrapper. Defaults to the id-scoped
+  // /tmp/cron-<id>.pid (the primary fire). A worktree-fallback fire passes a
+  // session-scoped path so it does not clobber the primary run's lock.
+  pidFile?: string;
+  // Absolute path of the isolated worktree this fire runs in (worktree-fallback
+  // only). Exported as CRON_WORKTREE so the agent knows it is isolated.
+  worktree?: string;
 }): string {
   const { session, id, agentBin, promptFile } = opts;
   if (!isValidCronId(id)) throw new Error(`invalid cron id: ${id}`);
+  if (!isValidAgentBin(agentBin)) throw new Error(`invalid agent bin: ${agentBin}`);
+  const pidFile = opts.pidFile ?? `/tmp/cron-${id}.pid`;
+  const quotedAgent = shellQuote(agentBin);
+  const quotedPidFile = shellQuote(pidFile);
+  const worktreeExport = opts.worktree ? ` CRON_WORKTREE=${shellQuote(opts.worktree)}` : "";
   return (
-    `echo $$ > /tmp/cron-${id}.pid; ` +
-    `export CRON_TMUX_SESSION=${session} CRON_KEEP_MARKER=/tmp/${session}.keep CRON_OVERLAP_PIDFILE=/tmp/cron-${id}.pid; ` +
+    `echo $$ > ${quotedPidFile}; ` +
+    `export CRON_TMUX_SESSION=${shellQuote(session)} CRON_KEEP_MARKER=${shellQuote(`/tmp/${session}.keep`)} CRON_OVERLAP_PIDFILE=${quotedPidFile}${worktreeExport}; ` +
     buildCronAgentCommand({
       id,
       agentBin,
@@ -227,11 +265,11 @@ export function buildTmuxWrapper(opts: {
       exitOnComplete: false,
     }) +
     `; ` +
-    `rm -f /tmp/cron-${id}.pid; ` +
+    `rm -f ${quotedPidFile}; ` +
     // Kept session: resume the run's own conversation as a live, attachable
     // agent (idle until driven); fall back to a shell if that exits.
-    `[ -f /tmp/${session}.keep ] && { ` +
-    `if [ "$(cat /tmp/${session}.agent 2>/dev/null || echo ${agentBin})" = codex ]; then codex; else ${agentBin} --continue; fi; ` +
+    `[ -f ${shellQuote(`/tmp/${session}.keep`)} ] && { ` +
+    `if [ "$(cat ${shellQuote(`/tmp/${session}.agent`)} 2>/dev/null || echo ${quotedAgent})" = codex ]; then codex; else ${quotedAgent} --continue; fi; ` +
     `exec bash; }; ` +
     `exit $status`
   );
@@ -254,8 +292,14 @@ export function buildCronAgentCommand(opts: {
     exitOnComplete = true,
   } = opts;
   if (!isValidCronId(id)) throw new Error(`invalid cron id: ${id}`);
+  if (!isValidAgentBin(agentBin)) throw new Error(`invalid agent bin: ${agentBin}`);
+  const quotedAgent = shellQuote(agentBin);
+  const quotedPromptFile = shellQuote(promptFile);
+  const quotedLogFile = shellQuote(logFile);
   const exitOrReturn = exitOnComplete ? `exit $status` : `true`;
-  const resumeInit = resumeFile ? `printf '%s' ${agentBin} > ${resumeFile}; ` : "";
+  const resumeInit = resumeFile
+    ? `printf '%s' ${quotedAgent} > ${shellQuote(resumeFile)}; `
+    : "";
   const logAgentStart = cronLogCommand(id, "AGENT_START", '"agent=$active_agent"');
   const logAgentDone = cronLogCommand(
     id,
@@ -271,7 +315,7 @@ export function buildCronAgentCommand(opts: {
       // Pi's attachable TUI must own the tmux pane's tty directly. The
       // headless `-p ... | tee ...` shape is useful for non-tmux jobs, but it
       // renders as an effectively blank pane when a human attaches mid-run.
-      `pi "$(cat ${promptFile})"; ` +
+      `${quotedAgent} "$(cat ${quotedPromptFile})"; ` +
       `status=$?; ` +
       logAgentDone +
       exitOrReturn
@@ -280,33 +324,35 @@ export function buildCronAgentCommand(opts: {
   if (agentBin !== "claude") {
     return (
       `${resumeInit}` +
-      `active_agent=${shellQuote(agentBin)}; ` +
+      `active_agent=${quotedAgent}; ` +
       logAgentStart +
       `set +e; ` +
       `set -o pipefail; ` +
-      `${agentBin} -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}; ` +
+      `${quotedAgent} -p "$(cat ${quotedPromptFile})" 2>&1 | tee ${quotedLogFile}; ` +
       `status=$?; ` +
       logAgentDone +
       exitOrReturn
     );
   }
-  const resumeCodex = resumeFile ? `printf '%s' codex > ${resumeFile}; ` : "";
+  const resumeCodex = resumeFile
+    ? `printf '%s' codex > ${shellQuote(resumeFile)}; `
+    : "";
   return (
     `${resumeInit}` +
     `active_agent=claude; ` +
     logAgentStart +
     `set +e; ` +
     `set -o pipefail; ` +
-    `claude -p "$(cat ${promptFile})" 2>&1 | tee ${logFile}; ` +
+    `claude -p "$(cat ${quotedPromptFile})" 2>&1 | tee ${quotedLogFile}; ` +
     `status=$?; ` +
-    `if grep -Eiq '(usage|session|hit (your |the )?limit)' ${logFile} && grep -Eiq '(limit|resets?|/upgrade)' ${logFile}; then ` +
-    `echo "cron-runtime: Claude limit detected; retrying with Codex" | tee -a ${logFile}; ` +
+    `if grep -Eiq '(usage|session|hit (your |the )?limit)' ${quotedLogFile} && grep -Eiq '(limit|resets?|/upgrade)' ${quotedLogFile}; then ` +
+    `echo "cron-runtime: Claude limit detected; retrying with Codex" | tee -a ${quotedLogFile}; ` +
     cronLogCommand(id, "AGENT_FALLBACK", "'from=claude to=codex'") +
     `active_agent=codex; ` +
     `export RALPH_HARNESS=codex; ` +
     `${resumeCodex}` +
     logAgentStart +
-    `codex exec --sandbox danger-full-access "$(cat ${promptFile})" 2>&1 | tee -a ${logFile}; ` +
+    `codex exec --sandbox danger-full-access "$(cat ${quotedPromptFile})" 2>&1 | tee -a ${quotedLogFile}; ` +
     `status=$?; ` +
     `fi; ` +
     logAgentDone +
@@ -314,23 +360,195 @@ export function buildCronAgentCommand(opts: {
   );
 }
 
-function fireTmux(entry: CronEntry): void {
-  const pidFile = `/tmp/cron-${entry.id}.pid`;
-  if (!entry.overlap && fs.existsSync(pidFile)) {
-    const existing = parseInt(fs.readFileSync(pidFile, "utf-8").trim(), 10);
-    if (!isNaN(existing)) {
-      try {
-        process.kill(existing, 0);
-        log(entry.id, "SKIPPED_OVERLAP");
-        return;
-      } catch {
-        /* stale — fall through */
-      }
+// Max concurrent isolated worktree runs per cron id. worktree:true crons spawn a
+// fresh worktree EVERY fire (keeping the root checkout clean), so a genuinely-stuck
+// run (e.g. an idle Pi TUI that never exits) would otherwise accumulate a worktree
+// every hour. The cap turns runaway growth into a surfaced ERR_WORKTREE_CAP failure
+// rather than silent disk/session bloat. Dead-session worktrees are pruned before
+// the count, and the heartbeat reaps stuck sessions + their worktrees hourly, so in
+// steady state the live count tracks in-flight/kept-for-review runs and stays well
+// under this ceiling (aligned with autopilot's 6-PR/day creation cap).
+const WORKTREE_MAX_CONCURRENT = 6;
+
+// Liveness probe: signal 0 throws iff the pid is gone (or unsignalable).
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export type OverlapDecision = "run" | "skip" | "worktree";
+
+// Pure fire policy shared by fireTmux and its tests. Decides how a tmux fire
+// proceeds given the cron's flags and whether a *live* holder owns the id-scoped
+// overlap pidfile:
+//   "worktree" — worktree:true → ALWAYS isolate in a fresh .worktrees/cron/<session>
+//                worktree, every fire, so the shared root checkout never goes dirty
+//                and a fire is never skipped (it runs isolated or fails loudly).
+//   "run"      — no live holder of the id lock (no pidfile, or a stale/dead pid) →
+//                run in root, reclaiming the id-scoped lock.
+//   "skip"     — a live holder and the cron is NOT a worktree cron → SKIPPED_OVERLAP
+//                (legacy serialize-on-root behaviour, e.g. heartbeat/cleanup/eval).
+// worktree:true takes precedence over overlap/pidfile state: an isolated run shares
+// no state with the root or with sibling worktree runs, so the overlap lock is moot.
+export function decideOverlap(opts: {
+  overlap: boolean;
+  worktree: boolean;
+  pidfileExists: boolean;
+  holderAlive: boolean;
+}): OverlapDecision {
+  if (opts.worktree) return "worktree";
+  if (opts.overlap) return "run";
+  if (!opts.pidfileExists || !opts.holderAlive) return "run";
+  return "skip";
+}
+
+const FALLBACK_WORKTREE_DIR = ".worktrees/cron";
+
+// First existing remote (preferred) or local base branch, mirroring the
+// development→main→master precedence in context/rules/git.md. Returns a
+// commit-ish suitable for `git worktree add --detach`, or null if none exist.
+function detectBaseRef(): string | null {
+  for (const ref of ["development", "main", "master"]) {
+    if (
+      spawnSync("git", ["show-ref", "--verify", "--quiet", `refs/remotes/origin/${ref}`])
+        .status === 0
+    ) {
+      return `origin/${ref}`;
     }
   }
+  for (const ref of ["development", "main", "master"]) {
+    if (spawnSync("git", ["show-ref", "--verify", "--quiet", `refs/heads/${ref}`]).status === 0) {
+      return ref;
+    }
+  }
+  return null;
+}
+
+// Absolute working directory of every live tmux pane. This is how worktree
+// liveness is judged — NOT by matching the worktree dir name to a tmux session
+// name. Autopilot RENAMES its session (cron-autopilot-<ts> → autopilot-<branch>)
+// and ship-spec runs its build in a SEPARATE Advisor session (agent-ship-<slug>),
+// so a name match would falsely declare an active worktree dead and delete it.
+function livePaneCwds(): string[] {
+  const r = spawnSync("tmux", ["list-panes", "-a", "-F", "#{pane_current_path}"], {
+    encoding: "utf-8",
+  });
+  if (r.status !== 0 || !r.stdout) return [];
+  return r.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
+// A worktree is "in use" iff some live tmux pane is working inside it (its own
+// dir or a descendant).
+function worktreeInUse(wtPath: string, cwds: string[]): boolean {
+  const abs = path.resolve(wtPath);
+  return cwds.some((p) => p === abs || p.startsWith(abs + path.sep));
+}
+
+// Remove fallback worktrees that no live tmux pane is working inside (self-healing),
+// then return the count still in use. Pane-cwd liveness (above) is robust to the
+// autopilot session rename and to the Advisor session sharing the worktree.
+function pruneAndCountFallbackWorktrees(id: string): number {
+  const dir = path.resolve(FALLBACK_WORKTREE_DIR);
+  let names: string[];
+  try {
+    names = fs.readdirSync(dir);
+  } catch {
+    return 0;
+  }
+  const cwds = livePaneCwds();
+  let live = 0;
+  for (const name of names) {
+    if (!name.startsWith(`cron-${id}-`)) continue;
+    const wt = path.join(dir, name);
+    if (worktreeInUse(wt, cwds)) {
+      live++;
+    } else {
+      spawnSync("git", ["worktree", "remove", "--force", wt], { stdio: "ignore" });
+    }
+  }
+  spawnSync("git", ["worktree", "prune"], { stdio: "ignore" });
+  return live;
+}
+
+// Create an isolated detached worktree at .worktrees/cron/<session> off the base
+// branch for a worktree cron's fire. Returns the absolute path, or null after
+// logging a FAILURE (ERR_WORKTREE_CAP at/over the cap, ERR_WORKTREE otherwise) —
+// the caller must NOT fall back to a skip on null.
+function createFallbackWorktree(entry: CronEntry, session: string): string | null {
+  const live = pruneAndCountFallbackWorktrees(entry.id);
+  if (live >= WORKTREE_MAX_CONCURRENT) {
+    log(
+      entry.id,
+      "ERR_WORKTREE_CAP",
+      `${live} live worktree runs >= cap ${WORKTREE_MAX_CONCURRENT}`,
+    );
+    return null;
+  }
+  const base = detectBaseRef();
+  if (!base) {
+    log(entry.id, "ERR_WORKTREE", "no base ref (development/main/master) found");
+    return null;
+  }
+  const dir = path.resolve(FALLBACK_WORKTREE_DIR);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* git worktree add will surface a hard failure below */
+  }
+  const wtPath = path.join(dir, session);
+  const add = spawnSync("git", ["worktree", "add", "--detach", wtPath, base], {
+    encoding: "utf-8",
+  });
+  if (add.status !== 0) {
+    log(entry.id, "ERR_WORKTREE", `git worktree add failed: ${(add.stderr || "").trim().slice(0, 150)}`);
+    return null;
+  }
+  return wtPath;
+}
+
+function fireTmux(entry: CronEntry): void {
   const session = tmuxSessionName(entry.id, new Date());
-  const promptFile = `/tmp/${session}.prompt`;
+  const idPidFile = `/tmp/cron-${entry.id}.pid`;
+  let cwd = process.cwd();
+  let pidFile = idPidFile;
+  let worktree: string | undefined;
   const agentBin = entry.agentBin || AGENT_BIN;
+  if (!isValidAgentBin(agentBin)) {
+    log(entry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
+    return;
+  }
+
+  const pidfileExists = fs.existsSync(idPidFile);
+  let holderAlive = false;
+  if (pidfileExists) {
+    const existing = parseInt(fs.readFileSync(idPidFile, "utf-8").trim(), 10);
+    holderAlive = !isNaN(existing) && isProcessAlive(existing);
+  }
+  const decision = decideOverlap({
+    overlap: entry.overlap,
+    worktree: entry.worktree,
+    pidfileExists,
+    holderAlive,
+  });
+  if (decision === "skip") {
+    log(entry.id, "SKIPPED_OVERLAP");
+    return;
+  }
+  if (decision === "worktree") {
+    const wt = createFallbackWorktree(entry, session);
+    if (wt === null) return; // createFallbackWorktree logged the FAILURE; never a skip
+    cwd = wt;
+    worktree = wt;
+    pidFile = `/tmp/${session}.pid`; // session-scoped: do not clobber the live primary lock
+  }
+  // decision === "run" reclaims the id-scoped lock by simply overwriting the
+  // stale/absent pidfile below (the wrapper does `echo $$ > pidFile`).
+
+  const promptFile = `/tmp/${session}.prompt`;
   const body = reloadBody(entry);
   fs.writeFileSync(promptFile, body);
   const child = spawn(
@@ -341,18 +559,77 @@ function fireTmux(entry: CronEntry): void {
       "-s",
       session,
       "-c",
-      process.cwd(),
-      buildTmuxWrapper({ session, id: entry.id, agentBin, promptFile }),
+      cwd,
+      buildTmuxWrapper({ session, id: entry.id, agentBin, promptFile, pidFile, worktree }),
     ],
     { stdio: "ignore" },
   );
   child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
   // Detached tmux path: we observe only the spawn, not the agent's eventual
   // exit, so no EXIT_<code> reason tail can be captured here (cf. fire()).
-  log(entry.id, "SPAWNED", session);
+  if (worktree) {
+    log(entry.id, "SPAWNED_WORKTREE", `${session} ${worktree}`);
+  } else {
+    log(entry.id, "SPAWNED", session);
+  }
 }
 
-function fire(entry: CronEntry): void {
+// Wall-clock bound for a preflight gate. The normal path is two ~1s `gh` calls;
+// the timeout caps worst-case scheduler-loop latency for co-firing crons since
+// spawnSync blocks the single-threaded event loop. The `timeoutMs` parameter
+// exists ONLY for test injection (mirrors loadCrons/onJobError's logFn seam) and
+// carries no external-stability guarantee.
+const PREFLIGHT_TIMEOUT_MS = 60_000;
+
+// Run a cron's `preflight:` gate synchronously and decide whether to skip the
+// fire. The gate's exit code is authoritative: a non-zero status means "skip"
+// and the final stdout line is the human-readable reason (e.g. SKIPPED-CAP-DAILY).
+// FAIL-CLOSED: an invalid path, an exec error, or a timeout returns a non-zero
+// status and logs a distinct PREFLIGHT_ERROR liveness line. A configured preflight
+// is a safety gate, not an optimization — if the gate cannot be evaluated, the
+// cron must not spawn a worktree/tmux/agent. Validation reuses isValidAgentBin
+// (relative/charset-safe path, no `..`, no flag-shaped value).
+export function runPreflight(
+  entry: CronEntry,
+  timeoutMs: number = PREFLIGHT_TIMEOUT_MS,
+): { status: number; reason: string } {
+  const scriptPath = entry.preflight;
+  if (!scriptPath || !isValidAgentBin(scriptPath)) {
+    log(entry.id, "PREFLIGHT_ERROR", `invalid preflight: ${scriptPath}`);
+    return { status: 12, reason: "preflight-error: invalid-path" }; // fail-closed
+  }
+  const abs = path.resolve(process.cwd(), scriptPath);
+  const r = spawnSync(abs, [], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: "utf-8",
+    timeout: timeoutMs,
+  });
+  if (r.error || typeof r.status !== "number") {
+    log(
+      entry.id,
+      "PREFLIGHT_ERROR",
+      `${scriptPath}: ${r.error ? String(r.error) : "no exit status"}`,
+    );
+    return { status: 12, reason: "preflight-error: exec-error" }; // fail-closed
+  }
+  const out = (r.stdout || "").trim();
+  const reason = out ? out.split("\n").pop()!.trim() : `exit ${r.status}`;
+  return { status: r.status, reason };
+}
+
+export function fire(entry: CronEntry): void {
+  // Pre-fire gate: a deterministic preflight check that runs BEFORE any
+  // worktree/tmux/agent is created. A non-zero exit skips the fire entirely
+  // (SKIPPED_PREFLIGHT), mirroring the SKIPPED_OVERLAP short-circuit in
+  // fireTmux — no session, no model query, no worktree.
+  if (entry.preflight) {
+    const { status, reason } = runPreflight(entry);
+    if (status !== 0) {
+      log(entry.id, "SKIPPED_PREFLIGHT", reason);
+      return;
+    }
+  }
   if (entry.tmux) {
     fireTmux(entry);
     return;
@@ -362,6 +639,10 @@ function fire(entry: CronEntry): void {
   const promptFile = `/tmp/${session}.prompt`;
   const logFile = `/tmp/${session}.log`;
   const agentBin = entry.agentBin || AGENT_BIN;
+  if (!isValidAgentBin(agentBin)) {
+    log(entry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
+    return;
+  }
   fs.writeFileSync(promptFile, reloadBody(entry));
   const child = spawn(
     "bash",
@@ -449,7 +730,7 @@ export function scheduleAll(
   activeJobs = [];
   let loadSkips = 0;
   const entries = loadCrons(dir, (id, status, msg) => {
-    if (["SCHED_INVALID", "ID_INVALID", "ID_MISMATCH"].includes(status)) loadSkips++;
+    if (["SCHED_INVALID", "ID_INVALID", "ID_MISMATCH", "AGENT_INVALID"].includes(status)) loadSkips++;
     logFn(id, status, msg);
   });
   let scheduled = 0;

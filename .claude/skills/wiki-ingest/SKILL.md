@@ -59,6 +59,8 @@ No other forms are documented or supported. `argument-hint` frontmatter above en
 - Re-ingesting a source to refresh an existing wiki entry (update path).
 - Promoting a sub-agent draft to a tracked wiki entry.
 - Researching a broader topic from a seed link or "add to wiki" request; see `references/official-docs-research-wiki.md` for the official-docs research pattern.
+- Studying a social post image, screenshot, chart, or attached visual artifact; see `references/social-image-wiki-ingest.md` for the capture packet, OCR/metadata pattern, and README regeneration pitfall.
+- Studying a GitHub repository for technique, integration fit, or quantified judgment; see `references/github-repo-research-wiki.md` for the API/raw-content research packet and synthesis shape.
 - Running concurrent wiki ingests or preserving unrelated branch state; see `references/concurrent-ingest-worktrees.md` for the isolated-worktree pattern.
 
 ## When NOT to use
@@ -119,6 +121,7 @@ If `--slug <override>` is provided, use it directly (still validate charset).
 
 1. WebFetch the URL to retrieve the page body.
    - For LinkedIn/social pages, inspect embedded metadata and JSON-LD (`articleBody`, `headline`, `comment`, `og:description`, `twitter:description`) when the visible DOM is gated or duplicated. Capture useful comments only when they materially clarify the source claim; keep the wiki page bounded and point to the raw snapshot for the full capture.
+   - If a material comment or metadata field contains the actual referenced artifact (for example, "Link to the prompt" pointing to a gist/raw file), fetch that artifact too and include a concise quoted copy or excerpt in the raw snapshot. Synthesize the wiki entry from both the social wrapper and the linked primary artifact; cite the social post as the source and mention the linked artifact in Detail when it carries the technique.
 2. Normalize the displayed source URL before writing synthesized wiki/log text:
    - Strip common tracking-only query params (`utm_*`, `rcm`, `fbclid`, `gclid`, etc.) when they are not needed for retrieval.
    - If preserving a raw fetched URL for provenance, redact secret-like/tracking values in human-facing summaries/logs (e.g. `rcm=[REDACTED]`).
@@ -143,6 +146,25 @@ If `--slug <override>` is provided, use it directly (still validate charset).
 3. Ensure `wiki/raw/` exists (§ 2).
 4. Write snapshot to `wiki/raw/<yyyy-mm-dd>-<basename>.md` (same format as URL ingest, but use `# Source: <path>` as the header). The snapshot filename uses the basename of the path unless `--slug` overrides the slug; if `--slug` is used, the snapshot filename uses the slug.
 5. Proceed to § 6.
+
+#### 4b-i. Attached image / screenshot ingest
+
+When the user's primary source is an attached image or screenshot, especially one acquired from a social URL:
+
+1. Use a meaningful `--slug` for social/share URLs; do not derive the slug from the platform ID.
+2. Preserve the image itself under `wiki/raw/<yyyy-mm-dd>-<slug>.<ext>` when it is the primary source artifact.
+3. Create the markdown raw snapshot at `wiki/raw/<yyyy-mm-dd>-<slug>.md` with:
+   - `# Source: <normalized acquisition URL>` header;
+   - original acquisition URL if useful for provenance;
+   - local image path, checksum, dimensions, and fetched social metadata (`og:title`, `og:description`, `og:image`) when available;
+   - OCR/vision extraction of visible text, chart/table structure, source attribution, and explicit uncertainty notes.
+4. Write the wiki entry from the durable synthesis, not from the promotional wrapper: capture the reusable taxonomy, analysis frame, or diligence checklist; put long OCR lists and metadata in the raw snapshot.
+5. See `references/social-image-wiki-ingest.md` for the compact checklist and README-index regeneration pitfall.
+6. Proceed to § 6.
+
+#### 4c. GitHub repository study
+
+When the source URL is a GitHub repository and the user asks to "study", "index knowledge", "best approach integration", or "quantify and judge", treat the repo as a research source rather than a plain webpage. Follow `references/github-repo-research-wiki.md`: collect repo metadata, README/release/tree data, focused implementation/test excerpts, and local integration touchpoints. Prefer `gh api`/raw-content reads over cloning when a clone is unnecessary or blocked. The raw snapshot should contain the evidence packet; the wiki entry should synthesize mechanism, integration recommendation, quantitative fit judgment, and limitations within the normal 600-word cap.
 
 ### 5. Draft promotion (`--from-draft`)
 
@@ -186,11 +208,17 @@ confidence: provisional
 
 # <Title>
 
+## Relevant Source Files
+- `<path>` — <why this source is relevant>
+
 ## Summary
 <2-3 sentence synthesis of the source>
 
 ## Detail
-<Bounded prose from the source, ≤ 600 words total for the entry>
+<Bounded prose from the source. For repo architecture/harness topics, cite concrete source paths and line numbers.>
+
+## System Relationships
+<Optional. Required for architecture/harness topics that describe pipelines, runtime ownership, or cross-file mechanisms; use Mermaid when it clarifies ordering or handoffs.>
 
 ## See Also
 ```
@@ -202,6 +230,8 @@ Field notes:
 - `updated`: set to today's UTC date.
 - `sources`: list the new snapshot path (relative to `wiki/`, e.g., `raw/2026-05-24-karpathy-llm-wiki.md`). For `--from-draft`, use the draft file path.
 - `confidence`: always `provisional` on creation. Never set to `confirmed` autonomously — that is the orchestrator's manual action.
+- `## Relevant Source Files`: include for repo architecture/harness topics; omit only for simple external-concept entries with no local source footprint.
+- `## System Relationships`: include for pipeline/runtime/architecture entries; omit only when the topic has no meaningful component relationship to show.
 - `## See Also`: leave the section header present but empty if no cross-links are evident. Do not omit the section.
 
 #### 6b. Existing entry (update)
@@ -313,3 +343,17 @@ Expected outcome:
 - `memory/<today>/log.md` has an `## /wiki-ingest -- HH:MM UTC` entry with `Result: OP`.
 
 This smoke test MUST run and its commit must land before US-003's smoke test runs.
+
+## Handoff
+
+`wiki-ingest` is the representative skill of the **compound** node in the executable loop (`context/rules/loop.md` § 2, § 4) — the node that promotes durable knowledge (this skill + `MEMORY.md` promotion + probe-minting). On a **successful** completion (a `wiki/<slug>.md` entry written or updated, i.e. § 9's `Result: OP`), after the § 9 log entry, emit exactly one terminal line as the **final line of output**:
+
+    STATUS: COMPOUND-DONE
+
+Routes (must match `context/rules/loop.md` § 2):
+
+| STATUS | Next node |
+|--------|-----------|
+| `COMPOUND-DONE` | `compress` |
+
+The `/autopilot` runner reads this token to route to `compress`. Emitting nothing is read as failure, never success (invariant 5) — a STALE or FAIL exit is silent on this token. When invoked standalone, the trailing `STATUS:` line is harmless.

@@ -1,0 +1,28 @@
+{
+  "id": "DS-020",
+  "slug": "lens-diversity",
+  "dataset": "retro-cycles",
+  "title": "Brief critics with diverse lenses (retro-promoted lesson)",
+  "created": "2026-06-15",
+  "source": {
+    "repo": "ryaneggz/openharness",
+    "memory_ref": "memory/MEMORY.md",
+    "lesson_date": "2026-05-11",
+    "origin": "/retro session"
+  },
+  "trajectory": {
+    "kind": "retro-cycle",
+    "outcome": "promoted"
+  },
+  "skills": ["/retro", "Memory Improvement Protocol"],
+  "reward_kind": ["artifact_presence", "diff_similarity"],
+  "oracle": {
+    "summary": "oracle/summary.md",
+    "changed_files": "oracle/changed-files.txt",
+    "changed_file_count": 1,
+    "lesson": "oracle/lesson.md"
+  },
+  "content_hash": "sha256:728a6b6fdf6bc20a6b77dbd35c648df144d044c9ba11f6949be55ddec1631cb6",
+  "capability_tasks": ["CB-003"],
+  "notes": "retro-cycle trajectory: /retro -> durable lesson promotion (no PR; provenance is memory/MEMORY.md @ 2026-05-11)."
+}

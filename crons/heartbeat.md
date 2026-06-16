@@ -5,6 +5,7 @@ timezone: America/Los_Angeles
 enabled: true
 overlap: false
 catchup: false
+agent: pi
 description: Hourly pulse — review memory, surface anything urgent
 ---
 

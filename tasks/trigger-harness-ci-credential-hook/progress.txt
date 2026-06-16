@@ -1,0 +1,7 @@
+# progress
+
+## 2026-06-16
+- US-001 COMPLETE — `.claude/hooks/**` added to ci-harness push/pull_request path filters and `.claude/hooks/*.sh` added to boot-lint shellcheck.
+- US-002 COMPLETE — `evals/probes/harness-ci-hooks-paths.sh` added and passing; eval benchmark refreshed.
+
+STATUS: COMPLETE

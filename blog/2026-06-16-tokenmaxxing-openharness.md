@@ -25,6 +25,27 @@ For agentic engineering, raw token burn is especially misleading. A bad agent ca
 
 The difference is not thrift. The difference is where the intelligence compounds.
 
+```mermaid
+flowchart LR
+  subgraph Bad["Bad tokenmaxxing"]
+    B1["Token burn"] --> B2["Activity dashboard"]
+    B2 --> B3["More prompts"]
+    B3 --> B4["Same weak loop"]
+    B4 --> B1
+  end
+
+  subgraph Good["Good tokenmaxxing"]
+    G1["Frontier reasoning"] --> G2["Better spec"]
+    G2 --> G3["Cheaper execution"]
+    G3 --> G4["Audit and memory"]
+    G4 --> G5["Sharper harness"]
+    G5 --> G2
+  end
+
+  B2 -. "measures consumption" .-> G2
+  B4 -. "break the loop" .-> G1
+```
+
 ## Good tokenmaxxing
 
 Good tokenmaxxing is frontier comparison that improves a custom harness.
@@ -52,6 +73,29 @@ For this repo, the split looks like this:
 **Haiku-class models are for cleanup.** Summaries, formatting, low-risk polish, changelog drafts, small transformations, mechanical copy passes. If a task has a narrow input, a narrow output, and a cheap way to verify it, it should not be renting the biggest brain in the building.
 
 That split can change. It should change. A harness that cannot route work differently as the tools improve is not a harness; it is just a habit.
+
+```mermaid
+flowchart TD
+  T["New work"] --> Q{"What kind of work?"}
+
+  Q -->|"Shape the problem"| C["Codex xhigh"]
+  C --> S["Compare and critique"]
+  S --> R["Critic-gated spec"]
+
+  R --> P{"Route the work"}
+
+  P -->|"Implementation"| PI["Pi"]
+  P -->|"Memory workflow"| HE["Hermes"]
+  P -->|"Bounded cleanup"| SM["Small model"]
+
+  PI --> A["Claude audit"]
+  HE --> A
+  SM --> A
+
+  A --> E["Eval and review"]
+  E --> M["Durable memory"]
+  M --> Q
+```
 
 ## Where the tokens should go
 

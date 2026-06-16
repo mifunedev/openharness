@@ -1,0 +1,68 @@
+# progress
+
+## Codebase Patterns
+
+- Worktree-local test runs can symlink the root `node_modules` for vitest, but the symlink is local-only and must not be committed.
+- Shared root runtime logs should be appended through `scripts/locked-append.sh`; helper failures in preflight logging must not change cap/status decisions.
+
+## US-001 — 2026-06-15 19:18 UTC
+
+**Title**: Provide a locked append helper
+**Files changed**: scripts/locked-append.sh, scripts/__tests__/locked-append.test.ts
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Added an executable helper that creates parent directories, serializes stdin appends via `flock`, stores lock files under `/tmp/openharness-locked-append`, and preserves exact record bytes. Added vitest coverage for missing arguments, parent creation, byte preservation, and concurrent writers.
+
+### Learnings for future iterations
+Lock files for repo log targets should live outside the checkout to avoid untracked artifact drift.
+
+---
+
+## US-002 — 2026-06-15 19:18 UTC
+
+**Title**: Adopt the helper in critical autopilot log snippets
+**Files changed**: .claude/skills/autopilot/SKILL.md, scripts/autopilot-caps.sh, scripts/__tests__/autopilot-caps.test.ts
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Updated autopilot liveness and memory-log examples to use `scripts/locked-append.sh`, and routed `scripts/autopilot-caps.sh` memory/liveness writes through a safe append wrapper. The caps script still returns the intended status if helper logging fails or the helper is missing.
+
+### Learnings for future iterations
+Cron/preflight logging is observability, not the decision itself; logging failures should warn without wedging the scheduler.
+
+---
+
+## US-003 — 2026-06-15 19:18 UTC
+
+**Title**: Document the shared-log append convention
+**Files changed**: context/rules/memory.md
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Rewrote the Memory concurrency section to require locked helper usage for shared root runtime logs, while documenting the scoped autopilot/caps migration and follow-up surface for other writers.
+
+### Learnings for future iterations
+Documentation must not overclaim full-writer migration when only the critical path is changed.
+
+---
+
+## US-004 — 2026-06-15 19:18 UTC
+
+**Title**: Test and guard the contract
+**Files changed**: evals/probes/locked-append-critical-path.sh, evals/probes/autopilot-worktree-log-root.sh, evals/RESULTS.md, CHANGELOG.md
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Added the `locked-append-critical-path` Tier-A probe, updated the existing worktree log-root probe to expect helper-mediated writes, refreshed `evals/RESULTS.md`, and recorded the change in the changelog.
+
+### Learnings for future iterations
+When replacing text guarded by an existing probe, update that probe in the same story or it becomes a false regression.
+
+---
+
+STATUS: COMPLETE

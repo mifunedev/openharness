@@ -30,6 +30,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | harness-audit-memory-path | A | 2026-06-16 02:13 | PASS | issue #183 — /harness-audit must inspect the active worktree, not a hardcoded root |
 | harness-ci-hooks-paths | A | 2026-06-16 02:13 | PASS | issue #202 — credential/security hook changes must trigger harness CI |
 | health-check-docker-stats | A | 2026-06-16 02:13 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
+| locked-append-critical-path | A | 2026-06-16 02:13 | PASS | issue #204 (lock shared runtime log appends) 2026-06-15 |
 | loop-benchmark-gate | A | 2026-06-16 02:13 | PASS | issue #179 — wire the executable-loop `benchmark` node (close the cycle) |
 | loop-handoff-consistency | A | 2026-06-16 02:13 | PASS | context/rules/loop.md § 4 (executable-loop Handoff convention) |
 | loop-repeat-gate | A | 2026-06-16 02:13 | PASS | issue #173 — wire the executable-loop `repeat` node (cycle-closing edge) |

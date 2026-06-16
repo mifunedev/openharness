@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/204-lock-shared-runtime-log-appends",
+  "issue": 204,
+  "description": "Add a locked append helper for critical autopilot/caps shared runtime log writes.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Provide a locked append helper",
+      "description": "As the orchestrator, I want a tiny helper for shared runtime log writes so concurrent agents append complete records rather than interleaving lines.",
+      "acceptanceCriteria": [
+        "scripts/locked-append.sh exists, is executable, and appends stdin to a target path.",
+        "The helper creates the target parent directory when missing.",
+        "The helper serializes writes with flock when available and falls back to a best-effort direct append with a clear warning when flock is unavailable; the degraded fallback is documented as non-serialized.",
+        "The helper writes each caller's stdin as one record while preserving exact bytes.",
+        "The helper uses a lock strategy that creates no unignored runtime artifacts in the repository checkout.",
+        "The helper rejects missing target arguments with a non-zero exit and usage message."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed 2026-06-15; added executable scripts/locked-append.sh with flock serialization, parent creation, no repo lock artifacts, and degraded fallback warning."
+    },
+    {
+      "id": "US-002",
+      "title": "Adopt the helper in critical autopilot log snippets",
+      "description": "As a maintainer reading autopilot instructions, I want the highest-frequency shared runtime log snippets to use the helper so future runs follow the locking convention.",
+      "acceptanceCriteria": [
+        ".claude/skills/autopilot/SKILL.md and .pi/skills/autopilot/SKILL.md define their liveness helper using scripts/locked-append.sh rather than raw printf >>.",
+        "The autopilot memory-log example pipes the complete heredoc record through scripts/locked-append.sh rather than raw cat >>.",
+        "scripts/autopilot-caps.sh uses scripts/locked-append.sh for both memory and liveness appends because it can run before an agent session starts.",
+        "If the helper is missing, non-executable, or fails inside scripts/autopilot-caps.sh, cap status selection still returns the intended status; logging failure is visible but must not turn a cap preflight into a hard failure.",
+        "The adoption preserves existing status tokens and log text byte-for-byte aside from serialization mechanics."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed 2026-06-15; autopilot skill snippets and autopilot-caps logging route critical shared-log writes through scripts/locked-append.sh with safe cap-status fallback."
+    },
+    {
+      "id": "US-003",
+      "title": "Document the shared-log append convention",
+      "description": "As a future skill author, I want the memory rule to name the locked append contract so new shared runtime logs do not reintroduce raw multi-line appends.",
+      "acceptanceCriteria": [
+        "context/rules/memory.md states that shared runtime logs should use scripts/locked-append.sh or an equivalent flock-guarded helper when the writer runs from cron/worktree/shared-root paths.",
+        "The rule distinguishes local scratch writes from shared root runtime logs.",
+        "The docs mention that the helper is record-level serialization, not a durable queue or cross-host lock.",
+        "The docs explicitly state this change migrates the autopilot/caps critical path first and leaves broader heartbeat/watchdog/manual-writer migration as follow-up work."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed 2026-06-15; context/rules/memory.md documents the shared-root locked append convention and scoped migration."
+    },
+    {
+      "id": "US-004",
+      "title": "Test and guard the contract",
+      "description": "As the harness, I want automated coverage for the helper and a regression probe for critical autopilot paths.",
+      "acceptanceCriteria": [
+        "scripts/__tests__/locked-append.test.ts covers missing argument failure, parent directory creation, exact byte preservation, multi-line records, and concurrent writer serialization.",
+        "The existing evals/probes/autopilot-worktree-log-root.sh is updated to validate scripts/locked-append.sh adoption while preserving the shared-root routing invariant.",
+        "A Tier-A eval probe exists under evals/probes/ and fails if the critical autopilot/caps paths use raw shared-log append snippets instead of scripts/locked-append.sh.",
+        "bash -n scripts/locked-append.sh scripts/autopilot-caps.sh evals/probes/<probe>.sh evals/probes/autopilot-worktree-log-root.sh passes.",
+        "pnpm vitest run scripts/__tests__/locked-append.test.ts passes.",
+        "CHANGELOG.md records the locked append helper under ## [Unreleased]."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed 2026-06-15; added locked-append vitest coverage, critical-path eval probe, updated autopilot-worktree-log-root, refreshed evals, and changelog."
+    }
+  ]
+}

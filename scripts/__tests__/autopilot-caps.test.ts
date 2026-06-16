@@ -51,7 +51,7 @@ function ghStub(count: string, exitStatus = 0): string {
 function run(env: Record<string, string>): RunResult {
   const result = spawnSync("bash", [SCRIPT], {
     encoding: "utf-8",
-    env: { ...process.env, AUTOPILOT_LOG_ROOT: tmp, ...env },
+    env: { ...process.env, AUTOPILOT_LOG_ROOT: tmp, CRON_TMUX_SESSION: "", ...env },
   });
   const stdout = result.stdout ?? "";
   const lines = stdout.trim().split("\n");

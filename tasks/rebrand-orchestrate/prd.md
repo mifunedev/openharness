@@ -11,6 +11,7 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 - Preserve the executable-loop concept, `context/rules/loop.md`, node names, route table, `--loop-candidate-only`, and all probe-pinned contract literals.
 - Rename the contract probe to `orchestrate-contract` and keep the relevant eval probes passing.
 - Document the rebrand in `CHANGELOG.md`.
+- Create the `/teach` skill as the post-implementation communication pass that uses wiki understanding to teach the operator what changed.
 
 ## User Stories
 
@@ -88,6 +89,22 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 - [ ] Typecheck passes.
 - [ ] Tests pass.
 
+### US-006: Add the teach skill to the loop handoff
+
+**Description:** As the harness maintainer, I want a `/teach` skill that runs after implementation/audit to revise the relevant wiki understanding and teach the operator the final mental model, so communication compounds instead of being reconstructed from PR artifacts.
+
+**Acceptance Criteria:**
+
+- [ ] Create `.claude/skills/teach/SKILL.md` with frontmatter `name: teach` and trigger language for `/teach`, "teach me this change", post-implementation understanding, and operator communication.
+- [ ] Define `/teach` as a communication and learning pass, not an implementation, audit, or retro gate.
+- [ ] Require `/teach` to read the relevant task artifacts (`tasks/<slug>/prd.md`, `progress.txt`, eval/audit evidence when present) and the relevant wiki entry before teaching.
+- [ ] Require `/teach` to revise or propose revisions to the wiki first when execution changed the provisional model created during `/ship-spec`.
+- [ ] Require `/teach` output to include a concise mental model, what changed, why it matters, verification evidence, known caveats, and 2-4 understanding checks for the operator.
+- [ ] Update `AGENTS.md` skill documentation to include `/teach` in the Skills table.
+- [ ] Update `wiki/ship-spec-orchestration.md` or the relevant wiki entry so it names `/teach` as the post-implementation communication pass paired with `/ship-spec` provisional wiki generation and `/orchestrate` final revision.
+- [ ] Typecheck passes.
+- [ ] Tests pass.
+
 ## Functional Requirements
 
 - FR-1: The system must expose the runner skill at `.claude/skills/orchestrate/SKILL.md` with `name: orchestrate`.
@@ -98,6 +115,8 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 - FR-6: The system must keep `loop-repeat-gate.sh` as a repeat-node probe while repointing it at the renamed skill.
 - FR-7: The system must document the rebrand under `CHANGELOG.md` `## [Unreleased]`.
 - FR-8: The system must avoid changing runtime behavior of the executable-loop runner.
+- FR-9: The system must expose a `/teach` skill at `.claude/skills/teach/SKILL.md` for post-implementation operator understanding.
+- FR-10: The system must document how `/teach` consumes the wiki/task artifacts and updates the shared model before teaching from it.
 
 ## Non-Goals
 
@@ -107,6 +126,7 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 - No edits to dataset oracle fixtures solely to rewrite historical `/loop-runner` references.
 - No broad historical churn outside the exact files and residual surfaces named in the user stories.
 - No migration of auto-managed telemetry such as `.hermes/skills/.usage.json`.
+- No requirement for `/teach` to block merge readiness, replace `/retro`, or perform code review.
 
 ## Technical Considerations
 
@@ -115,6 +135,7 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 - Two eval probes are path-coupled to the skill and must be updated in lockstep.
 - `evals/RESULTS.md` and `CHANGELOG.md` are shared append surfaces; keep diffs narrow and rebase if concurrent autopilot work lands first.
 - The live functional check is `/orchestrate --dry-run --start ideate` after the skill is renamed and available to the active agent runtime.
+- The `/teach` skill should follow the repository's existing skill format and stay focused on communication: it may ask understanding checks, but it does not mutate implementation state except for explicit wiki updates/proposals.
 
 ## Success Metrics
 
@@ -123,6 +144,7 @@ Rename the executable-loop runner skill from `/loop-runner` to `/orchestrate` wi
 - The whole eval suite reports no new green-to-red regression.
 - The active skill directory is `.claude/skills/orchestrate/`, and live command references use `/orchestrate`.
 - Residual `loop-runner` text is limited to documented historical or fixture surfaces.
+- `.claude/skills/teach/SKILL.md` exists, is documented in `AGENTS.md`, and connects `/ship-spec` provisional wiki generation to `/orchestrate` final understanding and the teaching pass.
 
 ## Open Questions
 

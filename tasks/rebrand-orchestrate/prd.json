@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "Open Harness",
   "branchName": "feat/214-rebrand-orchestrate",
-  "description": "Rename the executable-loop runner skill from /loop-runner to /orchestrate without changing behavior.",
+  "description": "Rename the executable-loop runner skill from /loop-runner to /orchestrate without changing behavior, and add /teach as the post-implementation communication pass.",
   "userStories": [
     {
       "id": "US-001",
@@ -89,6 +89,25 @@
         "Tests pass."
       ],
       "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Add the teach skill to the loop handoff",
+      "description": "As the harness maintainer, I want a /teach skill that runs after implementation/audit to revise the relevant wiki understanding and teach the operator the final mental model, so communication compounds instead of being reconstructed from PR artifacts.",
+      "acceptanceCriteria": [
+        "Create .claude/skills/teach/SKILL.md with frontmatter name: teach and trigger language for /teach, teach me this change, post-implementation understanding, and operator communication.",
+        "Define /teach as a communication and learning pass, not an implementation, audit, or retro gate.",
+        "Require /teach to read the relevant task artifacts (tasks/<slug>/prd.md, progress.txt, eval/audit evidence when present) and the relevant wiki entry before teaching.",
+        "Require /teach to revise or propose revisions to the wiki first when execution changed the provisional model created during /ship-spec.",
+        "Require /teach output to include a concise mental model, what changed, why it matters, verification evidence, known caveats, and 2-4 understanding checks for the operator.",
+        "Update AGENTS.md skill documentation to include /teach in the Skills table.",
+        "Update wiki/ship-spec-orchestration.md or the relevant wiki entry so it names /teach as the post-implementation communication pass paired with /ship-spec provisional wiki generation and /orchestrate final revision.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 6,
       "passes": false,
       "notes": ""
     }

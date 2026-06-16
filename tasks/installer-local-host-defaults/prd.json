@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/211-installer-local-host-defaults",
+  "description": "Keep installer-detected host defaults in gitignored local env instead of dirtying tracked harness.yaml.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install without dirtying tracked config",
+      "description": "As a new Open Harness user, I want install.sh to preserve host-detected defaults without editing tracked source so my checkout remains updateable.",
+      "acceptanceCriteria": [
+        "scripts/install.sh no longer writes sandbox.name, sandbox.timezone, git.user_name, or git.user_email into harness.yaml",
+        "Generated .devcontainer/.env includes SANDBOX_NAME and, when detected, TZ, GIT_USER_NAME, and GIT_USER_EMAIL",
+        "Existing .devcontainer/.env files are preserved; reruns do not clobber existing secrets or user customizations",
+        "Generated values are quote-safe for shell sourcing when values contain spaces or apostrophes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Implemented in scripts/install.sh; host defaults now write to gitignored .devcontainer/.env only when that file is generated."
+    },
+    {
+      "id": "US-002",
+      "title": "Document local/default precedence clearly",
+      "description": "As a maintainer, I want generated and user-facing docs to explain where host-local defaults live so installer behavior matches docs.",
+      "acceptanceCriteria": [
+        "Generated .devcontainer/.env header says host-local defaults live there and harness.yaml remains clean",
+        ".devcontainer/.example.env describes .env as local defaults plus secrets, not secrets-only",
+        "README, quickstart docs, and installer completion text describe .devcontainer/.env as gitignored host defaults plus secrets",
+        "Existing precedence remains unchanged: active harness.yaml keys override .devcontainer/.env"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Updated installer output, README, docs/quickstart.md, and .devcontainer/.example.env."
+    },
+    {
+      "id": "US-003",
+      "title": "Prevent regression",
+      "description": "As an orchestrator, I want test coverage that catches tracked-config mutation in the installer before it ships.",
+      "acceptanceCriteria": [
+        "A Vitest regression checks scripts/install.sh keeps host defaults out of tracked harness.yaml and preserves an existing .devcontainer/.env",
+        "The existing compose helper wiring test still verifies scripts/install.sh uses scripts/docker-compose.sh",
+        "bash -n scripts/install.sh passes",
+        "pnpm exec vitest run scripts/__tests__/compose-args.test.ts passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Added coverage to scripts/__tests__/compose-args.test.ts; targeted verification passes."
+    }
+  ]
+}

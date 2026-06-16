@@ -1,0 +1,23 @@
+# progress
+
+
+## Codebase Patterns
+
+- Compose lifecycle argv construction lives in `scripts/docker-compose.sh`; callers invoke the helper directly instead of expanding generated `-f` strings.
+
+## US-001..US-004 — 2026-06-15 10:20 UTC
+
+**Title**: Safe compose override argv handling
+**Files changed**: `scripts/docker-compose.sh`, `Makefile`, `scripts/install.sh`, `scripts/__tests__/compose-args.test.ts`, `CHANGELOG.md`, task state
+**Commit**: 2b8ef51
+**Result**: PASS
+
+### What I did
+Added a Bash compose helper that builds Docker Compose argv with arrays, including env-file precedence, base compose file, optional Hermes overlay, `harness.yaml` overlays, and `config.json` overlays. Rewired Make lifecycle targets and installer startup through the helper. Added focused regression tests for spaces, shell metacharacters, ordering, relative-path behavior, and caller wiring.
+
+### Learnings for future iterations
+Make cannot robustly carry arbitrary path args through a string variable; use an executable helper that owns argv construction. Debug output should print argv entries without executing so shell metacharacter tests stay safe.
+
+---
+
+STATUS: COMPLETE

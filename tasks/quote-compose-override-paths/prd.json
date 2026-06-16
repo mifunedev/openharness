@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/185-quote-compose-override-paths",
+  "description": "Safely quote compose override paths from harness.yaml/config.json across sandbox startup commands.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Centralize compose argument construction",
+      "description": "As a harness maintainer, I want compose file and env-file arguments assembled by a shell-safe helper so every sandbox lifecycle entrypoint passes override paths literally.",
+      "acceptanceCriteria": [
+        "Add a Bash executable helper that constructs Docker Compose arguments using arrays, not raw string concatenation, eval, or printed shell fragments for -f override paths.",
+        "Helper argument order is env files, base compose file, optional Hermes overlay, harness.yaml overlays, then config.json overlays.",
+        "Override paths keep repo-root-relative resolution and helper supports debug argv output without executing Docker Compose.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-15; commit 2b8ef51"
+    },
+    {
+      "id": "US-002",
+      "title": "Wire Make targets through safe helper",
+      "description": "As a harness user, I want Make lifecycle targets to use the same safe compose argument path.",
+      "acceptanceCriteria": [
+        "Make lifecycle targets call the shared executable helper directly and no longer expand raw COMPOSE_OVERRIDES strings.",
+        "make config still prints generated harness env content when present and then runs docker compose config through the helper.",
+        "Target verbs and flags remain unchanged: sandbox uses up -d --build, destroy uses down -v, and other lifecycle targets keep their existing subcommands.",
+        "Protected Makefile is edited only by targeted diff; no deletion, rename, or deprecation.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-15; commit 2b8ef51"
+    },
+    {
+      "id": "US-003",
+      "title": "Wire installer startup through safe helper",
+      "description": "As a fresh installer, I want scripts/install.sh to use the same safe compose argument path when it builds and starts the sandbox.",
+      "acceptanceCriteria": [
+        "Installer startup calls the shared helper rather than rebuilding COMPOSE_FILES with raw string concatenation.",
+        "Installer still writes the generated harness env file before compose execution and preserves existing GitHub-token and first-run messaging behavior.",
+        "Installer calls the helper from a defined repo-root context so relative override paths keep current behavior.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-15; commit 2b8ef51"
+    },
+    {
+      "id": "US-004",
+      "title": "Add compose override regression coverage",
+      "description": "As a maintainer, I want tests proving override paths with spaces and shell metacharacters remain single literal compose file arguments.",
+      "acceptanceCriteria": [
+        "Tests cover harness.yaml and config.json override sources including paths with spaces and shell metacharacters.",
+        "Tests assert full literal argument ordering: env files, base, Hermes overlay, harness.yaml overlays, then config.json overlays.",
+        "Tests or static assertions verify Makefile and scripts/install.sh use the shared helper and no longer build raw compose override strings.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-15; commit 2b8ef51"
+    }
+  ]
+}

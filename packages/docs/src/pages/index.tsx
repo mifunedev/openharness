@@ -7,6 +7,11 @@ import styles from "./index.module.css";
 const QUICKSTART = `# install (only host dep: Docker)
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 
+# review-first install, no extra dependency
+curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
+# Review openharness-install.sh in your editor or pager, then:
+bash openharness-install.sh
+
 # enter the isolated sandbox
 cd ~/.openharness && make shell
 

@@ -2,6 +2,7 @@
 
 ## Codebase Patterns
 
+- Protected skill edits are allowed only when the PRD carries an explicit override; keep them to the named non-destructive command-reference replacements and avoid restructuring the protected skill.
 - After a `git mv` directory rename, re-stage the destination file after content edits before committing; otherwise the commit can capture only the pure rename and leave identity edits unstaged.
 
 ## US-001 — 2026-06-16 04:50 UTC
@@ -16,5 +17,20 @@ Moved the runner skill directory from `.claude/skills/loop-runner/` to `.claude/
 
 ### Learnings for future iterations
 The worktree has `pnpm run typecheck`, not `pnpm run type-check`; the exact Ralph check reports the missing script but the repository typecheck passes via `pnpm run typecheck`. For rename stories, inspect `git status` after the first commit attempt because a partially staged rename can leave content edits unstaged.
+
+---
+
+## US-002 — 2026-06-16 04:54 UTC
+
+**Title**: Update sibling runner references
+**Files changed**: `.claude/skills/strategic-proposal/SKILL.md`, `.claude/skills/benchmark/SKILL.md`, `context/rules/loop.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
+**Commit**: TBD
+**Result**: PASS
+
+### What I did
+Updated the remaining sibling runner references in `/strategic-proposal`, `/benchmark`, and the `context/rules/loop.md` runner row from `/loop-runner` to `/orchestrate`. Kept `--loop-candidate-only`, `LOOP MODE: candidate-only`, `context/rules/loop.md`, The Loop, and loop node names unchanged, and limited the protected `strategic-proposal` edit to non-destructive command-reference replacements.
+
+### Learnings for future iterations
+The protected-path override for `strategic-proposal` is already encoded in the PRD AC; no separate protected-path file edit is needed. `rg -n "/loop-runner|loop-runner"` scoped to the three US-002 files is the fastest sanity check before moving on.
 
 ---

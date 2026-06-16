@@ -22,7 +22,7 @@ argument-hint: "[--base <ref>] [--cycles <N>]"
 The **benchmark** node of the executable loop (`context/rules/loop.md` § 2). It
 answers one question: *was this change actually beneficial — did it move or hold
 the capability ceiling without breaking the regression floor, and is it worth its
-complexity?* — and emits exactly one verdict the `/loop-runner` routes on.
+complexity?* — and emits exactly one verdict the `/orchestrate` routes on.
 
 **Core principle: compose, don't re-derive — and judge OUTCOMES, not machinery.**
 This skill owns the *verdict*, not the instruments. The regression floor is
@@ -114,7 +114,7 @@ State the verdict with the two signal results (floor `rc` + ceiling delta), then
 
 **On `NOT-BENEFICIAL`, the change is reverted before the cycle repeats** (`→ repeat`
 *after revert*). Like `/audit`, this skill is **read-only**: it decides and names
-the exact remediation; the operator/`/loop-runner` performs it. Surface the revert
+the exact remediation; the operator/`/orchestrate` performs it. Surface the revert
 command for the change under evaluation, e.g.:
 
 ```bash
@@ -190,5 +190,5 @@ Both tokens route to `repeat` (the runner-applied freshness gate): a `BENEFICIAL
 change is kept and the cycle repeats; a `NOT-BENEFICIAL` change is reverted first,
 then the cycle repeats (`loop.md` § 2: `NOT-BENEFICIAL → repeat` *after revert*).
 Emitting nothing is read as failure, never as success (invariant 5: honest exits).
-When `/benchmark` is invoked standalone (not under `/loop-runner`), the trailing
+When `/benchmark` is invoked standalone (not under `/orchestrate`), the trailing
 `STATUS:` line is harmless.

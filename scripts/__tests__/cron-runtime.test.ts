@@ -1086,22 +1086,25 @@ describe("runPreflight + the fire() preflight gate", () => {
     expect(runPreflight(entry(script)).reason).toBe("SKIPPED-CAP-DAILY");
   });
 
-  it("fails OPEN (status 0) and logs PREFLIGHT_ERROR for an invalid preflight path", () => {
+  it("fails CLOSED (non-zero status) and logs PREFLIGHT_ERROR for an invalid preflight path", () => {
     const r = runPreflight(entry("../evil"));
-    expect(r.status).toBe(0);
+    expect(r.status).not.toBe(0);
+    expect(r.reason).toBe("preflight-error: invalid-path");
     expect(loggedLines().some((l) => l.includes("PREFLIGHT_ERROR"))).toBe(true);
   });
 
-  it("fails OPEN (status 0) and logs PREFLIGHT_ERROR when the script is missing/unexecutable", () => {
+  it("fails CLOSED (non-zero status) and logs PREFLIGHT_ERROR when the script is missing/unexecutable", () => {
     const r = runPreflight(entry("scripts/definitely-missing-preflight.sh"));
-    expect(r.status).toBe(0);
+    expect(r.status).not.toBe(0);
+    expect(r.reason).toBe("preflight-error: exec-error");
     expect(loggedLines().some((l) => l.includes("PREFLIGHT_ERROR"))).toBe(true);
   });
 
-  it("fails OPEN (status 0) and logs PREFLIGHT_ERROR when the gate times out", () => {
+  it("fails CLOSED (non-zero status) and logs PREFLIGHT_ERROR when the gate times out", () => {
     // 50ms budget against a 2s sleep → spawnSync kills it (error/null status).
     const r = runPreflight(entry(preflightScript({ exit: 10, sleep: 2 })), 50);
-    expect(r.status).toBe(0);
+    expect(r.status).not.toBe(0);
+    expect(r.reason).toBe("preflight-error: exec-error");
     expect(loggedLines().some((l) => l.includes("PREFLIGHT_ERROR"))).toBe(true);
   });
 
@@ -1111,6 +1114,17 @@ describe("runPreflight + the fire() preflight gate", () => {
     fire(entry(preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" })));
     const lines = loggedLines();
     expect(lines.some((l) => l.includes("\tSKIPPED_PREFLIGHT\t") && l.includes("SKIPPED-CAP-DAILY"))).toBe(true);
+    expect(lines.some((l) => l.includes("SPAWNED"))).toBe(false);
+    expect(lines.some((l) => l.includes("\tFIRE\t"))).toBe(false);
+  });
+
+  it("fire() also short-circuits when preflight itself errors", () => {
+    fire(entry("scripts/definitely-missing-preflight.sh"));
+    const lines = loggedLines();
+    expect(lines.some((l) => l.includes("\tPREFLIGHT_ERROR\t"))).toBe(true);
+    expect(
+      lines.some((l) => l.includes("\tSKIPPED_PREFLIGHT\t") && l.includes("preflight-error: exec-error")),
+    ).toBe(true);
     expect(lines.some((l) => l.includes("SPAWNED"))).toBe(false);
     expect(lines.some((l) => l.includes("\tFIRE\t"))).toBe(false);
   });

@@ -1,0 +1,13 @@
+# progress
+
+US-001: PASS — runPreflight invalid-path and exec-error cases now return non-zero fail-closed statuses while preserving PREFLIGHT_ERROR logging.
+US-002: PASS — valid preflight exit-code/stdout behavior and autopilot-caps PROCEED-GH-ERROR behavior remain covered and passing.
+US-003: PASS — cron-runtime tests and autopilot-preflight-gate eval probe guard the fail-closed contract.
+
+Verification:
+- pnpm vitest run scripts/__tests__/cron-runtime.test.ts
+- bash evals/probes/autopilot-preflight-gate.sh
+- bash .claude/skills/eval/run.sh
+- env -u CRON_TMUX_SESSION -u CRON_KEEP_MARKER -u CRON_OVERLAP_PIDFILE -u CRON_WORKTREE pnpm test:scripts
+
+STATUS: COMPLETE

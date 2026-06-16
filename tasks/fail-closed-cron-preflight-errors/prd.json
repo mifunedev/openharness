@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/206-fail-closed-cron-preflight-errors",
+  "description": "Fail closed when configured cron preflight gates cannot be evaluated, while preserving normal cap-gate behavior.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Fail closed on preflight infrastructure errors",
+      "description": "As the cron runtime, I want invalid/missing/timed-out configured preflight gates to return a non-zero status so unsafe runs are skipped before spawn.",
+      "acceptanceCriteria": [
+        "runPreflight() returns status !== 0 for invalid preflight paths",
+        "runPreflight() returns status !== 0 for missing/unexecutable preflight scripts and spawn timeouts",
+        "Each infrastructure error still logs PREFLIGHT_ERROR for liveness/debugging",
+        "fire() logs SKIPPED_PREFLIGHT and does not spawn tmux/worktree/agent when runPreflight() reports one of these errors"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed on 2026-06-15; targeted cron-runtime tests, preflight eval probe, full /eval, and env-sanitized pnpm test:scripts passed."
+    },
+    {
+      "id": "US-002",
+      "title": "Preserve valid gate behavior",
+      "description": "As the autopilot cap gate, I want normal green/skip outcomes to remain unchanged.",
+      "acceptanceCriteria": [
+        "A preflight script exiting 0 still returns status: 0 and the final stdout line as the reason",
+        "A preflight script exiting non-zero still returns that exit code and final stdout line",
+        "scripts/autopilot-caps.sh still emits and tests PROCEED-GH-ERROR for GitHub/API failures"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed on 2026-06-15; targeted cron-runtime tests, preflight eval probe, full /eval, and env-sanitized pnpm test:scripts passed."
+    },
+    {
+      "id": "US-003",
+      "title": "Guard the contract",
+      "description": "As a maintainer, I want tests and eval coverage that prevent regression to fail-open runtime preflight errors.",
+      "acceptanceCriteria": [
+        "scripts/__tests__/cron-runtime.test.ts asserts invalid, missing, and timeout preflight cases fail closed",
+        "evals/probes/autopilot-preflight-gate.sh checks for the fail-closed runtime contract",
+        "Targeted tests and the preflight eval probe pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed on 2026-06-15; targeted cron-runtime tests, preflight eval probe, full /eval, and env-sanitized pnpm test:scripts passed."
+    }
+  ]
+}

@@ -4,6 +4,7 @@
 # desc: the autopilot caps are enforced by a deterministic preflight gate that runs
 #       BEFORE any worktree/tmux/agent — the cron runtime carries a generic
 #       `preflight:` field (runPreflight + SKIPPED_PREFLIGHT/PREFLIGHT_ERROR), the
+#       runtime fails closed when a configured preflight cannot be evaluated, the
 #       autopilot cron wires `preflight: scripts/autopilot-caps.sh`, and the script
 #       exists, is executable, defaults its caps from harness.yaml, and emits the
 #       SKIPPED-CAP-* / PROCEED contract (verified hermetically with a gh stub).
@@ -28,7 +29,12 @@ grep -Fq 'preflight?: string;' "$RUNTIME" || missing+=("CronEntry carries option
 grep -Fq 'preflight: fm.preflight || undefined' "$RUNTIME" || missing+=("parseCronFile reads the preflight frontmatter key")
 grep -Fq 'export function runPreflight(' "$RUNTIME" || missing+=("cron runtime defines runPreflight")
 grep -Fq '"SKIPPED_PREFLIGHT"' "$RUNTIME" || missing+=("fire() logs SKIPPED_PREFLIGHT on a non-zero gate")
-grep -Fq '"PREFLIGHT_ERROR"' "$RUNTIME" || missing+=("runPreflight logs PREFLIGHT_ERROR on fail-open")
+grep -Fq '"PREFLIGHT_ERROR"' "$RUNTIME" || missing+=("runPreflight logs PREFLIGHT_ERROR when the gate cannot be evaluated")
+grep -Fq 'preflight-error: exec-error' "$RUNTIME" || missing+=("runPreflight fails closed with a non-zero exec-error status")
+grep -Fq 'preflight-error: invalid-path' "$RUNTIME" || missing+=("runPreflight fails closed with a non-zero invalid-path status")
+if grep -Fq 'reason: "exec-error"' "$RUNTIME" || grep -Fq 'reason: "invalid-path"' "$RUNTIME"; then
+  missing+=("runPreflight appears to retain the old fail-open reason contract")
+fi
 # The gate must short-circuit fire() BEFORE the tmux branch (no worktree/session on skip).
 grep -Fq 'if (entry.preflight) {' "$RUNTIME" || missing+=("fire() runs the preflight gate before spawning")
 
@@ -74,5 +80,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS: autopilot caps enforced by a deterministic preflight gate (cron preflight: field + runPreflight/SKIPPED_PREFLIGHT, harness.yaml-configurable caps, SKIPPED-CAP-*/PROCEED contract verified hermetically)" >&2
+echo "PASS: autopilot caps enforced by a deterministic preflight gate (cron preflight: field + fail-closed runPreflight/SKIPPED_PREFLIGHT, harness.yaml-configurable caps, SKIPPED-CAP-*/PROCEED contract verified hermetically)" >&2
 exit 0

@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/214-rebrand-orchestrate",
+  "description": "Rename the executable-loop runner skill from the legacy runner command to /orchestrate without changing behavior, and add /teach as the post-implementation communication pass.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Rename the runner skill identity",
+      "description": "As the harness maintainer, I want the runner skill directory and skill metadata to use /orchestrate so the command name is intentional rather than defensive.",
+      "acceptanceCriteria": [
+        "Move the old skill directory to .claude/skills/orchestrate/ using git mv semantics.",
+        "Update .claude/skills/orchestrate/SKILL.md frontmatter name: to orchestrate.",
+        "Update frontmatter description, trigger text, and any argument/help text that names the legacy runner command.",
+        "Update the H1 and command-name references in the skill body from the legacy runner command to /orchestrate.",
+        "Preserve all loop concept references, context/rules/loop.md references, node names, and probe-pinned contract literals that do not contain the command name.",
+        "Rollback remains possible via git mv .claude/skills/orchestrate the old skill directory if validation fails.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-16; commit 4d2f787"
+    },
+    {
+      "id": "US-002",
+      "title": "Update sibling runner references",
+      "description": "As the harness maintainer, I want skills and loop manifest prose that invoke or name the runner to reference /orchestrate so the documented workflow remains coherent.",
+      "acceptanceCriteria": [
+        "Apply the protected-path override only as a constrained, non-destructive command-reference edit in .claude/skills/strategic-proposal/SKILL.md.",
+        "Update .claude/skills/strategic-proposal/SKILL.md references to the runner command from the legacy runner command to /orchestrate.",
+        "Do not delete, deprecate, rename, or restructure the strategic-proposal skill.",
+        "Update .claude/skills/benchmark/SKILL.md references to the runner command from the legacy runner command to /orchestrate.",
+        "Update the runner row in context/rules/loop.md from the legacy runner command to /orchestrate.",
+        "Keep --loop-candidate-only, LOOP MODE: candidate-only, context/rules/loop.md, The Loop, and loop node names unchanged.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed iteration 2 on 2026-06-16; commit add7d9a"
+    },
+    {
+      "id": "US-003",
+      "title": "Rename and update eval probes",
+      "description": "As the harness maintainer, I want the contract probe and repeat-gate probe to follow the renamed skill path so the eval floor guards the new command identity.",
+      "acceptanceCriteria": [
+        "Move the legacy contract probe to evals/probes/orchestrate-contract.sh using git mv semantics.",
+        "Update the renamed probe's SKILL path, name assertion, header comments, and PASS/SKIPPED/REGRESSION messages for /orchestrate.",
+        "Preserve the renamed probe's non-command contract literals verbatim, including the STATUS: routing signal, honest halt, invariant 5, --dry-run, --start, --max-iters, LOOP MODE: candidate-only, do not publish roadmap, and context/rules/loop.md literals.",
+        "Update evals/probes/loop-repeat-gate.sh internal skill path and runner command prose to /orchestrate while keeping the filename unchanged.",
+        "bash evals/probes/orchestrate-contract.sh passes.",
+        "bash evals/probes/loop-repeat-gate.sh passes.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed iteration 3 on 2026-06-16; commit 3061f39"
+    },
+    {
+      "id": "US-004",
+      "title": "Update capability and eval result metadata",
+      "description": "As the harness maintainer, I want capability task metadata and eval result rows to use /orchestrate so benchmark surfaces match the renamed command.",
+      "acceptanceCriteria": [
+        "Update evals/capability/tasks/CB-002-walk-the-loop.md skill metadata and command examples from the legacy runner command to /orchestrate.",
+        "Update evals/capability/RESULTS.md CB-002 description from the legacy runner command to /orchestrate.",
+        "Update evals/RESULTS.md row name to orchestrate-contract and update that row's source text to /orchestrate contract.",
+        "Permit restoring unrelated evals/RESULTS.md rows from base after targeted probe runs so the committed diff stays focused on the renamed row unless a real new probe result exists.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed iteration 4 on 2026-06-16; commit 01035e6"
+    },
+    {
+      "id": "US-005",
+      "title": "Document and verify the rebrand",
+      "description": "As the harness maintainer, I want the changelog and final verification to show the rebrand is complete without changing loop behavior.",
+      "acceptanceCriteria": [
+        "Add a CHANGELOG.md ## [Unreleased] entry documenting the legacy runner command to /orchestrate rebrand.",
+        "Update existing unreleased the legacy runner command and orchestrate-contract entries in place when they describe unreleased work; leave released sections unchanged.",
+        "The residual literal scan is clean outside this exact residual set: released CHANGELOG.md sections, .claude/plans/**, evals/datasets/**/oracle/**, gitignored memory/[0-9]*/**, and external pi-loop references.",
+        "Run the relevant eval probes and the whole eval suite; no new green-to-red regression is introduced.",
+        "If the active agent runtime cannot reload the renamed skill in the same session, validate via direct probe/file checks and document that a fresh session is required for live /orchestrate --dry-run --start ideate command verification.",
+        "Do not rename context/rules/loop.md, The Loop, loop node names, loop-repeat-gate.sh, loop-handoff-consistency.sh, loop-benchmark-gate.sh, --loop-candidate-only, or pi-loop references.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Completed iteration 5 on 2026-06-16; commit e94e662"
+    },
+    {
+      "id": "US-006",
+      "title": "Add the teach skill to the loop handoff",
+      "description": "As the harness maintainer, I want a /teach skill that runs after implementation/audit to revise the relevant wiki understanding and teach the operator the final mental model, so communication compounds instead of being reconstructed from PR artifacts.",
+      "acceptanceCriteria": [
+        "Create .claude/skills/teach/SKILL.md with frontmatter name: teach and trigger language for /teach, teach me this change, post-implementation understanding, and operator communication.",
+        "Define /teach as a communication and learning pass, not an implementation, audit, or retro gate.",
+        "Require /teach to read the relevant task artifacts (tasks/<slug>/prd.md, progress.txt, eval/audit evidence when present) and the relevant wiki entry before teaching.",
+        "Require /teach to revise or propose revisions to the wiki first when execution changed the provisional model created during /ship-spec.",
+        "Require /teach output to include a concise mental model, what changed, why it matters, verification evidence, known caveats, and 2-4 understanding checks for the operator.",
+        "Update AGENTS.md skill documentation to include /teach in the Skills table.",
+        "Update wiki/ship-spec-orchestration.md or the relevant wiki entry so it names /teach as the post-implementation communication pass paired with /ship-spec provisional wiki generation and /orchestrate final revision.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Completed iteration 6 on 2026-06-16; commit 1f1005b"
+    }
+  ]
+}

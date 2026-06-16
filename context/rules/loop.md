@@ -158,7 +158,7 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 | compress | yes (`/context-audit`) | ☑ | `STATUS: COMPRESS-DONE` → benchmark; `/context-audit` carries the Handoff — always completes (like `retro`), no branch |
 | benchmark | yes (`/benchmark`) | ☑ | `BENEFICIAL` → repeat · `NOT-BENEFICIAL` → repeat (after revert); verdict-owner composing `/eval` (regression floor) + the capability-benchmark ceiling delta (`evals/capability/`). Wiring it marks **every** node ☑ — the forward walk now closes `ideate → … → compress → benchmark → repeat → ideate`. `/eval-lint` instrument-grooming is a named follow-on |
 | repeat | runner-applied (`--max-iters` + autopilot caps) | ☑ | `CYCLE-CONTINUE` → ideate — the **cycle-closing edge**; **no work-skill / no `## Handoff`** (like the runner row): the freshness gate is the runner's `--max-iters` bound + autopilot caps (invariant 4), applied mechanically. With `benchmark` now wired the forward walk reaches `repeat`, closing the cycle `… → benchmark → repeat → ideate` |
-| **runner** | `/loop-runner` (standalone) · `/autopilot` (cron — gated) | ☑ | `/loop-runner` walks the wired spine: reads § 2 as the route table, STATUS-tail routing, honest halt at unwired nodes; the `/autopilot`-as-`/loop-runner`-cron integration stays gated |
+| **runner** | `/orchestrate` (standalone) · `/autopilot` (cron — gated) | ☑ | `/orchestrate` walks the wired spine: reads § 2 as the route table, STATUS-tail routing, honest halt at unwired nodes; the `/autopilot`-as-`/orchestrate`-cron integration stays gated |
 
 ---
 

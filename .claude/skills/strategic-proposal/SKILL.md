@@ -12,7 +12,7 @@ description: |
 
 # Strategic Proposal
 
-Spawn 5 specialized expert sub-agents in parallel, each proposing roadmap items from their domain. An Expert AI Council drafts the roadmap, a Strategic Critic challenges it with adversarial backpressure, and the Council finalizes with revisions. By default, the result is published as a pinned GitHub issue and written to `docs/roadmap.md`; when invoked by `/loop-runner` with `--loop-candidate-only` / `LOOP MODE: candidate-only`, it selects and reports the ranked candidate without publishing.
+Spawn 5 specialized expert sub-agents in parallel, each proposing roadmap items from their domain. An Expert AI Council drafts the roadmap, a Strategic Critic challenges it with adversarial backpressure, and the Council finalizes with revisions. By default, the result is published as a pinned GitHub issue and written to `docs/roadmap.md`; when invoked by `/orchestrate` with `--loop-candidate-only` / `LOOP MODE: candidate-only`, it selects and reports the ranked candidate without publishing.
 
 **Core principle: SIGNAL OVER FEATURES.** Items require evidence of user demand before entering "Build Now" phase. Infrastructure prerequisites are exempt. The Critic ensures the council isn't inflating signal or sandbagging complexity.
 
@@ -35,7 +35,7 @@ Session example and final V2MOM synthesis: `references/open-harness-v2mom-counci
 
 ## Loop brainstorm mode: candidate-only, no publishing
 
-Use this mode when `/loop-runner` invokes `strategic-proposal` as the executable loop's `brainstorm` node (`--loop-candidate-only` or an explicit `LOOP MODE: candidate-only` instruction). It is intentionally non-mutating:
+Use this mode when `/orchestrate` invokes `strategic-proposal` as the executable loop's `brainstorm` node (`--loop-candidate-only` or an explicit `LOOP MODE: candidate-only` instruction). It is intentionally non-mutating:
 
 1. Run the context gathering, expert fan-out, Strategic Council draft, Strategic Critic, and final council synthesis through step 7.
 2. Select/report the top ranked candidate and enough rationale for `plan` to continue.
@@ -43,7 +43,7 @@ Use this mode when `/loop-runner` invokes `strategic-proposal` as the executable
 4. Run the Memory Improvement Protocol with `Result: OP` and `Action: candidate selected (loop candidate-only; no publish)`.
 5. Emit the normal final handoff line: `STATUS: CANDIDATE-PICKED`.
 
-This keeps `/loop-runner` live mode from causing roadmap/GitHub side effects just because it needed a brainstorm route token. Standalone `/strategic-proposal` without this mode keeps the normal publishing behavior below.
+This keeps `/orchestrate` live mode from causing roadmap/GitHub side effects just because it needed a brainstorm route token. Standalone `/strategic-proposal` without this mode keeps the normal publishing behavior below.
 
 ## Decision Flow
 
@@ -257,7 +257,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 
 ## Handoff
 
-`strategic-proposal` is the `brainstorm` node in the executable loop (`context/rules/loop.md` § 2). `/loop-runner` MUST invoke it in `--loop-candidate-only` / `LOOP MODE: candidate-only` so this node selects a ranked candidate without creating/editing/pinning GitHub issues or writing `docs/roadmap.md`. After the council finalizes the ranked candidate/roadmap (step 7), skips publishing in loop mode, and the Memory Protocol logs the run (step 10) — on **successful completion** — emit exactly one terminal line as the **final line of output**:
+`strategic-proposal` is the `brainstorm` node in the executable loop (`context/rules/loop.md` § 2). `/orchestrate` MUST invoke it in `--loop-candidate-only` / `LOOP MODE: candidate-only` so this node selects a ranked candidate without creating/editing/pinning GitHub issues or writing `docs/roadmap.md`. After the council finalizes the ranked candidate/roadmap (step 7), skips publishing in loop mode, and the Memory Protocol logs the run (step 10) — on **successful completion** — emit exactly one terminal line as the **final line of output**:
 
     STATUS: CANDIDATE-PICKED
 

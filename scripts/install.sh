@@ -110,6 +110,9 @@ Open Harness — Installer
 
 Usage:
   curl -fsSL https://oh.mifune.dev/install.sh | bash [-s -- <flags>]
+  curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
+  # Review openharness-install.sh in your editor or pager, then:
+  bash openharness-install.sh [<flags>]
   ./scripts/install.sh [<flags>]
 
 Clones (or pulls) the repo into ~/.openharness, prepares host auth dirs,
@@ -130,10 +133,17 @@ Env vars:
 
 Examples:
   curl -fsSL https://oh.mifune.dev/install.sh | bash
+  curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
+  # Review openharness-install.sh before running it.
+  bash openharness-install.sh
   curl -fsSL https://oh.mifune.dev/install.sh | bash -s -- --yes
   ./scripts/install.sh
   OH_GITHUB_REPO=myorg/my-harness curl -fsSL \
     https://raw.githubusercontent.com/myorg/my-harness/main/scripts/install.sh | bash
+  curl -fsSL -o openharness-install.sh \
+    https://raw.githubusercontent.com/myorg/my-harness/main/scripts/install.sh
+  # Review openharness-install.sh, then run it against your fork.
+  OH_GITHUB_REPO=myorg/my-harness bash openharness-install.sh
 HELPEOF
 }
 

@@ -8,6 +8,7 @@ catchup: false
 tmux: true
 worktree: true
 agent: pi
+preflight: scripts/autopilot-caps.sh
 description: Hourly autopilot — issue-queue-first harness-infra improvements in an isolated-worktree Pi tmux Advisor session
 ---
 
@@ -35,7 +36,11 @@ Invoke the `/autopilot` skill. Reminders:
 - **The `/eval` gate runs inside `/ship-spec`** before it marks the PR ready; a
   new green→red probe regression keeps the PR draft.
 - **Caps**: at most 6 open `autopilot` PRs created per UTC day AND 10 total open
-  at any time. A close/merge frees a slot. **Never auto-merge.**
+  at any time. A close/merge frees a slot. **Never auto-merge.** These caps are
+  now enforced deterministically *before launch* by the `preflight:
+  scripts/autopilot-caps.sh` gate (logs `SKIPPED-CAP-*` + liveness and spawns no
+  session on a capped hour); your in-session §1 recheck is defense-in-depth for a
+  long run that crosses the cap mid-flight.
 - **Harness-infra scope only** (skills/rules/docs/scripts/crons/wiki) — never
   sandbox application code.
 

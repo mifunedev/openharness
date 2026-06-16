@@ -19,6 +19,11 @@ export interface CronEntry {
   // runs (root or worktree) or surfaces a failure (ERR_WORKTREE/ERR_WORKTREE_CAP).
   worktree: boolean;
   agentBin?: string;
+  // Optional repo-relative path to a deterministic pre-fire gate script. When
+  // set, fire() runs it BEFORE any worktree/tmux/agent is created; a non-zero
+  // exit skips the fire (SKIPPED_PREFLIGHT) with no session, no model query, no
+  // worktree. A fail-open optimization — a gate error proceeds (PREFLIGHT_ERROR).
+  preflight?: string;
   body: string;
   filePath: string;
 }
@@ -64,6 +69,7 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
     tmux: fm.tmux === "true",
     worktree: fm.worktree === "true",
     agentBin: fm.agent || undefined,
+    preflight: fm.preflight || undefined,
     body: m[2],
     filePath: file,
   };
@@ -568,7 +574,62 @@ function fireTmux(entry: CronEntry): void {
   }
 }
 
-function fire(entry: CronEntry): void {
+// Wall-clock bound for a preflight gate. The normal path is two ~1s `gh` calls;
+// the timeout caps worst-case scheduler-loop latency for co-firing crons since
+// spawnSync blocks the single-threaded event loop. The `timeoutMs` parameter
+// exists ONLY for test injection (mirrors loadCrons/onJobError's logFn seam) and
+// carries no external-stability guarantee.
+const PREFLIGHT_TIMEOUT_MS = 60_000;
+
+// Run a cron's `preflight:` gate synchronously and decide whether to skip the
+// fire. The gate's exit code is authoritative: a non-zero status means "skip"
+// and the final stdout line is the human-readable reason (e.g. SKIPPED-CAP-DAILY).
+// FAIL-OPEN: an invalid path, an exec error, or a timeout returns status 0
+// (proceed) and logs a distinct PREFLIGHT_ERROR liveness line — the gate is an
+// optimization, never a hard dependency, so a transient failure must not wedge
+// the cron shut. The in-session recheck remains the backstop. Validation reuses
+// isValidAgentBin (relative/charset-safe path, no `..`, no flag-shaped value).
+export function runPreflight(
+  entry: CronEntry,
+  timeoutMs: number = PREFLIGHT_TIMEOUT_MS,
+): { status: number; reason: string } {
+  const scriptPath = entry.preflight;
+  if (!scriptPath || !isValidAgentBin(scriptPath)) {
+    log(entry.id, "PREFLIGHT_ERROR", `invalid preflight: ${scriptPath}`);
+    return { status: 0, reason: "invalid-path" }; // fail-open
+  }
+  const abs = path.resolve(process.cwd(), scriptPath);
+  const r = spawnSync(abs, [], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: "utf-8",
+    timeout: timeoutMs,
+  });
+  if (r.error || typeof r.status !== "number") {
+    log(
+      entry.id,
+      "PREFLIGHT_ERROR",
+      `${scriptPath}: ${r.error ? String(r.error) : "no exit status"}`,
+    );
+    return { status: 0, reason: "exec-error" }; // fail-open
+  }
+  const out = (r.stdout || "").trim();
+  const reason = out ? out.split("\n").pop()!.trim() : `exit ${r.status}`;
+  return { status: r.status, reason };
+}
+
+export function fire(entry: CronEntry): void {
+  // Pre-fire gate: a deterministic preflight check that runs BEFORE any
+  // worktree/tmux/agent is created. A non-zero exit skips the fire entirely
+  // (SKIPPED_PREFLIGHT), mirroring the SKIPPED_OVERLAP short-circuit in
+  // fireTmux — no session, no model query, no worktree.
+  if (entry.preflight) {
+    const { status, reason } = runPreflight(entry);
+    if (status !== 0) {
+      log(entry.id, "SKIPPED_PREFLIGHT", reason);
+      return;
+    }
+  }
   if (entry.tmux) {
     fireTmux(entry);
     return;

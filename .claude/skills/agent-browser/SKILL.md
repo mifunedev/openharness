@@ -156,7 +156,7 @@ If `agent-browser open` does not support `--viewport-width`/`--viewport-height` 
 
 ```bash
 agent-browser open "$URL" $( [ -n "$SESSION" ] && echo "--session $SESSION" )
-agent-browser execute "await page.setViewportSize({ width: $WIDTH, height: $HEIGHT })"
+agent-browser eval "await page.setViewportSize({ width: $WIDTH, height: $HEIGHT })"
 ```
 
 If this fails, report the error with the full output.
@@ -169,15 +169,17 @@ agent-browser snapshot -c
 
 Report a summary of what loaded (page title, key elements visible).
 
-Take a screenshot to `.claude/screenshots/` using a descriptive filename derived from the URL path:
+Take a screenshot to `.claude/screenshots/` using a descriptive filename derived from the URL path. **Use an absolute output path** — `agent-browser` 0.8.5 writes relative paths from the daemon's working directory, so relative paths can silently miss the intended repo location.
 
 ```bash
 # Generate filename from URL: strip protocol, replace / with --, remove trailing -
 FILENAME=$(echo "$URL" | sed 's|https\?://||; s|/|--|g; s|--$||; s|[^a-zA-Z0-9._-]|-|g')
-agent-browser screenshot ".claude/screenshots/${FILENAME}.png"
+SCREENSHOT_PATH="$PWD/.claude/screenshots/${FILENAME}.png"
+mkdir -p "$(dirname "$SCREENSHOT_PATH")"
+agent-browser screenshot "$SCREENSHOT_PATH"
 ```
 
-Example: `https://my-app.oh-local.localhost:8443/guide/configuration/` → `.claude/screenshots/my-app.oh-local.localhost-8443--guide--configuration.png`
+Example: `https://my-app.oh-local.localhost:8443/guide/configuration/` → `$PWD/.claude/screenshots/my-app.oh-local.localhost-8443--guide--configuration.png`
 
 ### Step 5 — Report
 
@@ -187,11 +189,11 @@ Browser ready.
   URL:        $URL
   Viewport:   $VIEWPORT ($WIDTHx$HEIGHT)
   Session:    $SESSION (or "default")
-  Screenshot: .claude/screenshots/$FILENAME.png
+  Screenshot: $SCREENSHOT_PATH
 
   Next steps:
-    agent-browser screenshot <path>       # capture to custom path
-    agent-browser snapshot -i             # interactive elements
+    agent-browser screenshot <absolute-path>  # capture to custom path
+    agent-browser snapshot -i                 # interactive elements
     agent-browser is visible "<selector>" # wait for element
     agent-browser close                   # end session (always do this)
 ```

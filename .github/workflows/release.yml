@@ -32,6 +32,9 @@ jobs:
           restore-keys: |
             pnpm-store-
 
+      - name: Run pnpm security audit
+        run: pnpm run security:audit
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

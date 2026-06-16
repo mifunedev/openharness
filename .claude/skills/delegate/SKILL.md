@@ -248,4 +248,35 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Memory | `MEMORY.md` |
 | Daily Logs | `memory/YYYY-MM-DD/log.md` |
 
+## Handoff
+
+`/delegate` is the canonical driver of the **implement** node in the executable loop
+(`context/rules/loop.md` § 2) — the Advisor orchestrates it to fan a `prd.json` task
+graph out across waves (`scripts/ralph.sh` is the `AUTOPILOT_EXECUTOR=ralph` serial
+fallback, which emits its own `STATUS: COMPLETE` done-sentinel, invariant 1). When
+`/delegate` drives the implement node (invoked with `--plan tasks/<slug>/prd.json`),
+emit exactly one terminal line as the **final line of output**, derived from the
+Delegation Report (§ 7) **and** task-graph conformance:
+
+    STATUS: IMPL-COMPLETE
+
+- **`IMPL-COMPLETE`** — every task completed (zero Failed, zero Blocked) **and** the
+  task graph is conformant (all `tasks/<slug>/prd.json` user stories `passes: true`).
+- **`IMPL-INCOMPLETE`** — any task Failed/Blocked, or any story still unfinished. The
+  loop re-enters `implement` to resume the remaining work (worktree + commits persist).
+
+Routes (must match `context/rules/loop.md` § 2):
+
+| STATUS | Next node |
+|--------|-----------|
+| `IMPL-COMPLETE` | `audit` |
+| `IMPL-INCOMPLETE` | `implement` |
+
+The `/autopilot` runner reads this token to route: `IMPL-COMPLETE` advances to `audit`
+(which independently re-verifies conformance + gates), `IMPL-INCOMPLETE` resumes
+`implement`. Emitting nothing is read as failure, never as completion (invariant 5:
+honest exits). When `/delegate` is used standalone — not as the implement node (no
+`prd.json` plan) — the implement token does not apply; the trailing `STATUS:` line is
+omitted or harmless.
+
 The `implementer`/`pm`/`critic` agent types above are read-only and will silently make zero file changes. For any worker that must `Write`/`Edit` files, set `subagent_type: general-purpose` (or `claude`) — both are built-in agent types with no agent-definition file, so there is no `.claude/agents/` path to reference.

@@ -102,18 +102,32 @@ is an incomplete execution.
 
 ## Concurrency
 
-Memory files are plain markdown appended by a single writer at a time. There
-is no locking mechanism. The convention that prevents corruption:
+Memory files are plain markdown. Shared runtime logs — especially
+`memory/<today>/log.md` and `crons/.cron.log` written from cron, isolated
+worktrees, or kept tmux sessions — should append through
+`scripts/locked-append.sh` (or an equivalent `flock`-guarded helper) so a whole
+multi-line record is serialized. Local scratch writes that only one process can
+see do not need the helper.
+
+The helper provides record-level serialization on this host. It is not a
+durable queue, database, or cross-host lock, and it does not migrate historical
+entries. The first migrated critical path is autopilot/caps logging; broader
+heartbeat, watchdog, and manual-skill writers are follow-up surfaces.
+
+The convention that prevents corruption:
 
 - Only the agent or skill that produced an entry writes it.
 - Sub-agents may write to the daily log; they must not modify `MEMORY.md`
   directly. Only the orchestrating session promotes a lesson from the daily log
   to `MEMORY.md`.
+- Cron/shared-root runtime append snippets use `scripts/locked-append.sh` when
+  writing multi-line records or liveness lines consumed by watchdogs.
 - Heartbeat writes happen inside a single cron invocation — overlap is
   disabled (`overlap: false` in `crons/heartbeat.md`).
 
-Appending a new `##` section to an existing `log.md` is always safe. Editing
-an existing entry is not: treat existing entries as immutable once written.
+Appending a new `##` section to an existing `log.md` is safe when the writer uses
+the locked append convention for shared runtime paths. Editing an existing entry
+is not: treat existing entries as immutable once written.
 
 ## What Does NOT Go in Memory
 

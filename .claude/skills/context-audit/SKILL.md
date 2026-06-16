@@ -389,3 +389,19 @@ See `runner.sh` in this skill directory.
 | Load-bearing | 5+ citations | 1–4 citations | 0 citations |
 | Integrity | 0 broken refs | 1–2 broken | 3+ broken |
 | Redundancy | no overlap | 1 overlap file | 2+ overlap files |
+
+## Handoff
+
+`compress` is a node in the executable loop (`context/rules/loop.md` § 2). Its job — distill the default-loaded context for **clarity** — always completes: scoring runs, verdicts emit, and the node hands off. Like `retro`, there is no branch; it emits exactly one terminal token. After the audit (and any ablation) finishes, emit this line as the **final line of output**:
+
+```
+STATUS: COMPRESS-DONE
+```
+
+Routes (must match `context/rules/loop.md` § 2):
+
+| STATUS | Next node |
+|--------|-----------|
+| `COMPRESS-DONE` | `benchmark` |
+
+The `/autopilot` runner reads this token to route to `benchmark`. Emitting nothing — a crash or a stall — is read as failure, never as success (invariant 5: honest exits). When `/context-audit` is invoked standalone (not under `/autopilot`), the trailing `STATUS:` line is harmless.

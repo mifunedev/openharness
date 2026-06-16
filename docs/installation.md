@@ -60,6 +60,18 @@ The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and start
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
+### Review-first install
+
+Keep the one-liner for fast setup, but use this dependency-free flow when you want to inspect the remote installer first:
+
+```bash
+curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
+# Review openharness-install.sh in your editor or pager before running it.
+bash openharness-install.sh
+```
+
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides a fetch/diff/ShellCheck/preview/approve wrapper for the same installer. `vet` is optional; Docker remains the only required host dependency for Open Harness.
+
 The installer:
 
 1. Verifies Docker and git are present.
@@ -87,6 +99,15 @@ To install your fork instead of the upstream repo, run the installer directly fr
 ```bash
 OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
   https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh | bash
+```
+
+Review-first fork install:
+
+```bash
+curl -fsSL -o openharness-install.sh \
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh
+# Review openharness-install.sh, then run it against your fork.
+OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```
 
 If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. Forks restructuring `.devcontainer/` should also patch the local-run detection in `scripts/install.sh` (the `-f .devcontainer/docker-compose.yml` check near line 173) to match the new layout.
@@ -118,6 +139,15 @@ docker compose -f .devcontainer/docker-compose.yml up -d --build
 ```
 
 On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds.
+
+Check the sandbox health before attaching:
+
+```bash
+docker ps --filter "name=openharness" --format "{{.Names}} {{.Status}}"
+docker inspect --format '{{json .State.Health}}' openharness
+```
+
+A healthy sandbox reports the tmux-managed runtime sessions (`cron-watchdog` and `cron-system`) as available; optional Slack and Hermes dashboard sessions are checked only when configured. To debug a failure from inside the container, run `bash /home/sandbox/harness/scripts/sandbox-healthcheck.sh` for the exact missing session. For a temporary local escape hatch, add a Compose override with `services.sandbox.healthcheck.disable: true`; do not commit that override unless you are deliberately changing the harness health policy.
 
 ### 4. Open a shell
 

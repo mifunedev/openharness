@@ -10,12 +10,15 @@ on:
       - "packages/**"
       - "scripts/**"
       - ".pi/**"
+      - "Makefile"
+      - "harness.yaml"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "vitest.config.ts"
       - ".github/workflows/ci-harness.yml"
       - ".claude/skills/**"
+      - ".claude/hooks/**"
       - "crons/**"
       - "context/**"
       - ".devcontainer/**"
@@ -27,12 +30,15 @@ on:
       - "packages/**"
       - "scripts/**"
       - ".pi/**"
+      - "Makefile"
+      - "harness.yaml"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "vitest.config.ts"
       - ".github/workflows/ci-harness.yml"
       - ".claude/skills/**"
+      - ".claude/hooks/**"
       - "crons/**"
       - "context/**"
       - ".devcontainer/**"
@@ -72,6 +78,9 @@ jobs:
           restore-keys: |
             pnpm-store-
 
+      - name: Run pnpm security audit
+        run: pnpm run security:audit
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -110,7 +119,7 @@ jobs:
         run: |
           command -v shellcheck >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y shellcheck; }
           shellcheck --version
-          shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh
+          shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh .claude/hooks/*.sh
 
       - name: Hadolint Dockerfile
         uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0

@@ -169,7 +169,7 @@ surfaces as a draft sub-status, never as an actionable alarm.
 | ✅ **promotable** | `mergeable=="MERGEABLE" && mergeStateStatus=="CLEAN" && ci=="PASS"` | green WIP — could be marked ready (`gh pr ready <N>`) |
 | 🚧 **still-WIP** | otherwise (red/pending CI, or `CONFLICTING`/`DIRTY`/`BEHIND`) | expected work-in-progress; informational only, never a "fix me" alarm |
 
-A stale draft (💤, below) is *draft-limbo* — route to `/watchdog` to complete the branch and mark ready when green, or close only if explicitly abandoned.
+A stale draft (💤, below) is *draft-limbo* — route to `/watchdog` to complete the branch and mark ready when green. It is **not** a ready/actionable PR, not an auto-undraft signal, and must still be classified `Draft (promotable)` by a fresh `/pr-audit` run before any `gh pr ready`; close only if explicitly abandoned.
 
 **Orthogonal flags — tag any PR regardless of its primary state:**
 
@@ -179,6 +179,8 @@ A stale draft (💤, below) is *draft-limbo* — route to `/watchdog` to complet
 | 📐 **Convention** | `title_ok==false` (not `FROM … TO …`), or `base_ok==false` (base ≠ `development`), or oversized (`changedFiles > 50`) — see `context/rules/git.md` |
 
 ### 4. Emit the triage report
+
+When the user asks for a PR link only **after it is verified green by `/pr-audit`**, do not report the link until the fresh audit classifies that PR as `Ready to merge` or otherwise shows `ci=="PASS"`, `mergeable=="MERGEABLE"`, and `mergeStateStatus=="CLEAN"`. Treat `SKIPPED` checks such as PR-context deploy jobs as neutral, but call them out briefly if the user asked for green verification.
 
 One section per **non-empty primary state**, most-actionable first. Drafts get
 their own block **after** the actionable (ready-for-review) sections — least
@@ -216,11 +218,24 @@ under **Ready to merge** with a 💤 in its Flags column and again in the rollup
 
 When `--label autopilot`, append a **cap-headroom** line citing
 `.claude/skills/autopilot/SKILL.md` (§ Guardrails): `total open <n>/10`,
-`created today <n>/6` (a same-day close/merge frees a slot):
+`created today <n>/6` (a same-day close/merge frees a slot). If any autopilot
+PRs are stale drafts, report them as draft-limbo investigation/resume targets;
+they are not ready/actionable PRs and must still pass `/pr-audit`'s
+`Draft (promotable)` classification before any `gh pr ready`:
 
 ```bash
 echo "autopilot caps — total: $(gh pr list --state open --label autopilot --json number --jq 'length')/10 · today: $(gh pr list --state open --search "label:autopilot created:>=$(date -u +%Y-%m-%d)" --json number --jq 'length')/6"
 ```
+
+**Autopilot draft-cap pitfall:** stale-by-age is not the only draft-limbo signal.
+A same-day draft backlog can saturate the autopilot creation cap before any PR is
+24h stale, leaving the loop unable to open another PR. In that case, surface the
+cap saturation explicitly, then look for a draft that is already `Draft
+(promotable)` (green checks + mergeable + clean) and, if the operator asked to
+address the backlog rather than merely audit it, mark only that freshly-audited
+PR ready with `gh pr ready <N>`. Never use cap saturation alone to undraft,
+close, merge, or kill a session; it is a resume/investigate signal until a fresh
+`/pr-audit` classification proves the individual PR is promotable.
 
 ### 5. `--deep` escalation (optional)
 
@@ -315,7 +330,7 @@ Then run the qualify/improve pass per `context/rules/memory.md`.
 | ⚠ Conflicting / behind | CONFLICTING / DIRTY / BEHIND | rebase on `development` |
 | 🔴 Changes requested | review demands changes | address review |
 | 👀 Needs review | `REVIEW_REQUIRED` pending | request a reviewer |
-| 📝 Draft (separate WIP class) | `isDraft` — checked first; sub-status ✅ promotable (green+clean) / 🚧 still-WIP / 💤 limbo (stale) | `gh pr ready <N>` to promote, or close |
+| 📝 Draft (separate WIP class) | `isDraft` — checked first; sub-status ✅ promotable (green+clean) / 🚧 still-WIP / 💤 limbo (stale) | Only `Draft (promotable)` can be considered for `gh pr ready <N>`; stale/limbo drafts are investigation/resume targets, not auto-undraft signals |
 | ⏳ Pending / other | CI running / mergeable unknown | re-check shortly |
 | 💤 Stale (flag) | no update > `--stale-days` | ping or `--close-stale` |
 | 📐 Convention (flag) | title/base/size off-spec | fix title/base per `git.md` |

@@ -1,0 +1,6 @@
+.github/workflows/ci-harness.yml
+.github/workflows/release.yml
+CHANGELOG.md
+evals/RESULTS.md
+evals/probes/pnpm-audit-ci-gate.sh
+package.json

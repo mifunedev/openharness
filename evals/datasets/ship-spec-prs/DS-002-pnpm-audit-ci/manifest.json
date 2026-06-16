@@ -1,0 +1,29 @@
+{
+  "id": "DS-002",
+  "slug": "pnpm-audit-ci",
+  "dataset": "ship-spec-prs",
+  "title": "Run pnpm security audits in CI",
+  "created": "2026-06-15",
+  "source": {
+    "repo": "ryaneggz/openharness",
+    "pr": 172,
+    "issue": 171,
+    "merge_commit": "997e232",
+    "url": "https://github.com/ryaneggz/openharness/pull/172"
+  },
+  "trajectory": {
+    "kind": "ship-spec-pr",
+    "outcome": "merged"
+  },
+  "skills": ["/ship-spec", "/prd", "/ralph"],
+  "reward_kind": ["diff_similarity", "artifact_presence", "test_execution"],
+  "oracle": {
+    "summary": "oracle/summary.md",
+    "changed_files": "oracle/changed-files.txt",
+    "changed_file_count": 6,
+    "diff": "oracle/diff.patch"
+  },
+  "content_hash": "sha256:024c26c22b058c188622aafa2408a7b29d1692df0ec3f0744b1ff68dd8c3ad27",
+  "capability_tasks": ["CB-001"],
+  "notes": "Small-diff example: real oracle/diff.patch stored per the size-discipline rule."
+}

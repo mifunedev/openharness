@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import type { Cron } from "croner";
 import * as fsModule from "node:fs";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -29,6 +30,9 @@ import {
   acquireLock,
   buildCronAgentCommand,
   buildTmuxWrapper,
+  decideOverlap,
+  fire,
+  isValidAgentBin,
   isValidCronId,
   isValidSchedule,
   loadCrons,
@@ -37,6 +41,7 @@ import {
   readFailureTail,
   reloadBody,
   resetActiveJobs,
+  runPreflight,
   scheduleAll,
   sighupHandler,
   tmuxSessionName,
@@ -122,6 +127,71 @@ Heartbeat body.
 
     expect(entry?.agentBin).toBe("pi");
   });
+
+  it("parses an optional preflight gate path", () => {
+    expect(
+      parseCronFile(
+        `---\nschedule: "* * * * *"\npreflight: scripts/autopilot-caps.sh\n---\nbody\n`,
+        "autopilot.md",
+      )?.preflight,
+    ).toBe("scripts/autopilot-caps.sh");
+    // Absent frontmatter key → undefined (forward-compat additive parse).
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.preflight,
+    ).toBeUndefined();
+  });
+
+  it("parses worktree: true and defaults to false otherwise", () => {
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\nworktree: true\n---\nbody\n`, "a.md")
+        ?.worktree,
+    ).toBe(true);
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\nworktree: false\n---\nbody\n`, "b.md")
+        ?.worktree,
+    ).toBe(false);
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.worktree,
+    ).toBe(false);
+  });
+});
+
+describe("decideOverlap", () => {
+  // worktree:true ALWAYS isolates (the issue #142 default) — independent of the
+  // overlap flag, whether a pidfile exists, or whether its holder is alive.
+  it("returns 'worktree' for a worktree cron regardless of lock state", () => {
+    for (const pidfileExists of [false, true]) {
+      for (const holderAlive of [false, true]) {
+        for (const overlap of [false, true]) {
+          expect(
+            decideOverlap({ overlap, worktree: true, pidfileExists, holderAlive }),
+          ).toBe("worktree");
+        }
+      }
+    }
+  });
+
+  it("runs (never skips) when overlap is allowed", () => {
+    expect(
+      decideOverlap({ overlap: true, worktree: false, pidfileExists: true, holderAlive: true }),
+    ).toBe("run");
+  });
+
+  it("reclaims (runs) when there is no live holder of the id lock", () => {
+    expect(
+      decideOverlap({ overlap: false, worktree: false, pidfileExists: false, holderAlive: false }),
+    ).toBe("run");
+    // stale pidfile (exists but its pid is dead) → reclaim, do not skip
+    expect(
+      decideOverlap({ overlap: false, worktree: false, pidfileExists: true, holderAlive: false }),
+    ).toBe("run");
+  });
+
+  it("skips a non-worktree cron only when a live holder owns the id lock", () => {
+    expect(
+      decideOverlap({ overlap: false, worktree: false, pidfileExists: true, holderAlive: true }),
+    ).toBe("skip");
+  });
 });
 
 describe("isValidCronId", () => {
@@ -134,6 +204,30 @@ describe("isValidCronId", () => {
   it("rejects shell metacharacters, path traversal, uppercase, and empty ids", () => {
     for (const id of ["", "../evil", "evil;touch-pwned", "bad id", "Bad", "bad_id"]) {
       expect(isValidCronId(id)).toBe(false);
+    }
+  });
+});
+
+describe("isValidAgentBin", () => {
+  it("accepts safe executable tokens and paths", () => {
+    for (const agent of ["claude", "pi", "codex", "opencode", "/usr/local/bin/claude", "./bin/pi-agent"]) {
+      expect(isValidAgentBin(agent)).toBe(true);
+    }
+  });
+
+  it("rejects shell syntax, whitespace, traversal, and flag-shaped values", () => {
+    for (const agent of [
+      "",
+      "-c",
+      "pi agent",
+      "pi;touch-pwned",
+      "$(touch /tmp/pwn)",
+      "pi && bad",
+      "pi\nwhoami",
+      "../bin/pi",
+      "`touch /tmp/pwn`",
+    ]) {
+      expect(isValidAgentBin(agent)).toBe(false);
     }
   });
 });
@@ -220,8 +314,8 @@ describe("buildTmuxWrapper", () => {
   };
 
   it("writes the per-id pidfile and cleans it up", () => {
-    expect(wrapper).toContain("echo $$ > /tmp/cron-autopilot.pid;");
-    expect(wrapper).toContain("rm -f /tmp/cron-autopilot.pid;");
+    expect(wrapper).toContain("echo $$ > '/tmp/cron-autopilot.pid';");
+    expect(wrapper).toContain("rm -f '/tmp/cron-autopilot.pid';");
   });
 
   it("rejects unsafe ids before generating shell wrapper text", () => {
@@ -233,6 +327,17 @@ describe("buildTmuxWrapper", () => {
         promptFile: "/tmp/prompt",
       }),
     ).toThrow("invalid cron id");
+  });
+
+  it("rejects unsafe agent binaries before generating shell wrapper text", () => {
+    expect(() =>
+      buildTmuxWrapper({
+        session: "cron-bad-0101-0000",
+        id: "autopilot",
+        agentBin: "pi;touch-pwned",
+        promptFile: "/tmp/prompt",
+      }),
+    ).toThrow("invalid agent bin");
   });
 
   it("runs cleanup after a non-Claude agent command instead of bypassing it", () => {
@@ -267,19 +372,45 @@ describe("buildTmuxWrapper", () => {
 
   it("exports the session, keep-marker, and overlap pidfile env vars", () => {
     expect(wrapper).toContain(
-      "export CRON_TMUX_SESSION=cron-autopilot-0610-1805 CRON_KEEP_MARKER=/tmp/cron-autopilot-0610-1805.keep CRON_OVERLAP_PIDFILE=/tmp/cron-autopilot.pid;",
+      "export CRON_TMUX_SESSION='cron-autopilot-0610-1805' CRON_KEEP_MARKER='/tmp/cron-autopilot-0610-1805.keep' CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot.pid';",
     );
+  });
+
+  it("uses a session-scoped pidfile and exports CRON_WORKTREE for an isolated worktree fire", () => {
+    const wt = buildTmuxWrapper({
+      session: "cron-autopilot-0610-1805",
+      id: "autopilot",
+      agentBin: "pi",
+      promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
+      pidFile: "/tmp/cron-autopilot-0610-1805.pid",
+      worktree: "/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805",
+    });
+    // session-scoped lock (NOT the id-scoped /tmp/cron-autopilot.pid) so a worktree
+    // fire never clobbers the primary run's overlap lock.
+    expect(wt).toContain("echo $$ > '/tmp/cron-autopilot-0610-1805.pid';");
+    expect(wt).toContain("rm -f '/tmp/cron-autopilot-0610-1805.pid';");
+    expect(wt).not.toContain("/tmp/cron-autopilot.pid");
+    // CRON_WORKTREE is exported so the agent (autopilot §1/§7) knows it is isolated.
+    expect(wt).toContain(
+      "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805';",
+    );
+  });
+
+  it("omits CRON_WORKTREE and defaults to the id-scoped pidfile for a primary fire", () => {
+    // No pidFile/worktree opts → byte-identical to the historical primary path.
+    expect(wrapper).toContain("echo $$ > '/tmp/cron-autopilot.pid';");
+    expect(wrapper).not.toContain("CRON_WORKTREE=");
   });
 
   it("runs the agent against the prompt file and tees the log", () => {
     expect(wrapper).toContain(
-      'claude -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee /tmp/cron-autopilot-0610-1805.log',
+      'claude -p "$(cat \'/tmp/cron-autopilot-0610-1805.prompt\')" 2>&1 | tee \'/tmp/cron-autopilot-0610-1805.log\'',
     );
     expect(wrapper).toContain("AGENT_START");
     expect(wrapper).toContain("cron-runtime: Claude limit detected; retrying with Codex");
     expect(wrapper).toContain("AGENT_FALLBACK");
     expect(wrapper).toContain(
-      'codex exec --sandbox danger-full-access "$(cat /tmp/cron-autopilot-0610-1805.prompt)" 2>&1 | tee -a /tmp/cron-autopilot-0610-1805.log',
+      'codex exec --sandbox danger-full-access "$(cat \'/tmp/cron-autopilot-0610-1805.prompt\')" 2>&1 | tee -a \'/tmp/cron-autopilot-0610-1805.log\'',
     );
     expect(wrapper).toContain("export RALPH_HARNESS=codex;");
     expect(wrapper).toContain("AGENT_DONE");
@@ -288,7 +419,7 @@ describe("buildTmuxWrapper", () => {
 
   it("persists a kept session as a resumed live agent, using Codex after fallback", () => {
     expect(wrapper).toContain(
-      '[ "$(cat /tmp/cron-autopilot-0610-1805.agent 2>/dev/null || echo claude)" = codex ]; then codex; else claude --continue; fi;',
+      '[ "$(cat \'/tmp/cron-autopilot-0610-1805.agent\' 2>/dev/null || echo \'claude\')" = codex ]; then codex; else \'claude\' --continue; fi;',
     );
   });
 
@@ -300,13 +431,13 @@ describe("buildTmuxWrapper", () => {
       promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
     });
 
-    expect(piWrapper).toContain('pi "$(cat /tmp/cron-autopilot-0610-1805.prompt)";');
+    expect(piWrapper).toContain('\'pi\' "$(cat \'/tmp/cron-autopilot-0610-1805.prompt\')";');
     expect(piWrapper).not.toContain('pi -p "$(cat /tmp/cron-autopilot-0610-1805.prompt)"');
     expect(piWrapper).not.toContain("tee /tmp/cron-autopilot-0610-1805.log");
     expect(piWrapper).toContain("AGENT_START");
     expect(piWrapper).toContain("AGENT_DONE");
     expect(piWrapper).toContain(
-      '[ "$(cat /tmp/cron-autopilot-0610-1805.agent 2>/dev/null || echo pi)" = codex ]; then codex; else pi --continue; fi;',
+      '[ "$(cat \'/tmp/cron-autopilot-0610-1805.agent\' 2>/dev/null || echo \'pi\')" = codex ]; then codex; else \'pi\' --continue; fi;',
     );
   });
 });
@@ -319,13 +450,13 @@ describe("buildCronAgentCommand", () => {
       logFile: "/tmp/cron-global.log",
     });
 
-    expect(command).toContain('claude -p "$(cat /tmp/cron-global.prompt)"');
+    expect(command).toContain('claude -p "$(cat \'/tmp/cron-global.prompt\')"');
     expect(command).toContain("grep -Eiq");
     expect(command).toContain("AGENT_START");
     expect(command).toContain("export RALPH_HARNESS=codex;");
     expect(command).toContain("AGENT_FALLBACK");
     expect(command).toContain(
-      'codex exec --sandbox danger-full-access "$(cat /tmp/cron-global.prompt)"',
+      'codex exec --sandbox danger-full-access "$(cat \'/tmp/cron-global.prompt\')"',
     );
     expect(command).toContain("AGENT_DONE");
     expect(command).toContain('agent=$active_agent exit=$status');
@@ -338,7 +469,7 @@ describe("buildCronAgentCommand", () => {
       logFile: "/tmp/cron-custom.log",
     });
 
-    expect(command).toContain('pi -p "$(cat /tmp/cron-custom.prompt)"');
+    expect(command).toContain('\'pi\' -p "$(cat \'/tmp/cron-custom.prompt\')"');
     expect(command).toContain("AGENT_START");
     expect(command).toContain("AGENT_DONE");
     expect(command).toContain('agent=$active_agent exit=$status');
@@ -369,6 +500,18 @@ describe("buildCronAgentCommand", () => {
         logFile: "/tmp/log",
       }),
     ).toThrow("invalid cron id");
+  });
+
+  it("rejects unsafe agent binaries before generating agent command text", () => {
+    for (const agentBin of ["pi;touch-pwned", "$(touch /tmp/pwn)", "pi && bad", "bad agent"]) {
+      expect(() =>
+        buildCronAgentCommand({
+          agentBin,
+          promptFile: "/tmp/prompt",
+          logFile: "/tmp/log",
+        }),
+      ).toThrow("invalid agent bin");
+    }
   });
 });
 
@@ -484,6 +627,20 @@ describe("loadCrons", () => {
       "invalid cron filename id: bad_id",
     );
   });
+
+  it("skips and logs unsafe per-cron agent overrides before scheduling", () => {
+    writeFileSync(
+      path.join(tmp, "autopilot.md"),
+      `---\nid: autopilot\nschedule: "0 * * * *"\nagent: pi;touch-pwned\nenabled: true\n---\nbody\n`,
+    );
+    const spy = vi.fn();
+    expect(loadCrons(tmp, spy)).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(
+      "autopilot",
+      "AGENT_INVALID",
+      "invalid agent: pi;touch-pwned",
+    );
+  });
 });
 
 describe("scheduleAll", () => {
@@ -580,6 +737,25 @@ describe("scheduleAll", () => {
     expect(spy).toHaveBeenCalledWith("system", "BOOT", "1 scheduled, 2 skipped");
   });
 
+  it("counts invalid agent overrides as load-time skips without constructing them", () => {
+    writeFileSync(path.join(tmp, "good.md"), cron("good", "0 * * * *"));
+    writeFileSync(
+      path.join(tmp, "badagent.md"),
+      `---\nid: badagent\nschedule: "0 * * * *"\nagent: pi && bad\nenabled: true\n---\nbody\n`,
+    );
+
+    const spy = vi.fn();
+    const constructed: string[] = [];
+    const result = scheduleAll(tmp, spy, (e) => {
+      constructed.push(e.id);
+    });
+
+    expect(constructed).toEqual(["good"]);
+    expect(result).toEqual({ scheduled: 1, skipped: 1 });
+    expect(spy).toHaveBeenCalledWith("badagent", "AGENT_INVALID", "invalid agent: pi && bad");
+    expect(spy).toHaveBeenCalledWith("system", "BOOT", "1 scheduled, 1 skipped");
+  });
+
   it("does not double-count: a load-time skip and a construction skip sum disjointly", () => {
     writeFileSync(path.join(tmp, "aok.md"), cron("aok", "0 * * * *"));
     writeFileSync(path.join(tmp, "bload.md"), cron("bload", "not-a-cron"));
@@ -666,6 +842,7 @@ describe("reloadBody", () => {
       overlap: false,
       catchup: false,
       tmux: false,
+      worktree: false,
       body: "cached body\n",
       filePath: missingPath,
     };
@@ -844,5 +1021,111 @@ describe("SIGHUP reload", () => {
     // Exactly one reschedule completed → exactly one BOOT and one RELOAD line.
     expect(reloadLines()).toHaveLength(1);
     expect(loggedLines().filter((l) => l.includes("\tBOOT\t"))).toHaveLength(1);
+  });
+});
+
+describe("runPreflight + the fire() preflight gate", () => {
+  // Build a real executable preflight script with a chosen exit code and stdout,
+  // then point a CronEntry at it. This mirrors buildTmuxWrapper's runWrapper
+  // helper (real spawn against a throwaway script) — there is no child_process
+  // mock in this suite, and runPreflight calls spawnSync for real.
+  const preflightScript = (opts: { exit: number; stdout?: string; sleep?: number }): string => {
+    const p = path.join(tmp, `preflight-${process.pid}-${Math.random().toString(16).slice(2)}.sh`);
+    // Emit one `echo` per line so a multi-line `stdout` becomes real newlines in
+    // the child's output (a single `echo "a\nb"` would print a literal backslash-n).
+    const echoes =
+      opts.stdout != null
+        ? opts.stdout.split("\n").map((l) => `echo ${JSON.stringify(l)}`).join("\n") + "\n"
+        : "";
+    writeFileSync(
+      p,
+      `#!/usr/bin/env bash\n` +
+        (opts.sleep ? `sleep ${opts.sleep}\n` : "") +
+        echoes +
+        `exit ${opts.exit}\n`,
+      { mode: 0o755 },
+    );
+    return p;
+  };
+
+  const entry = (preflight?: string) => ({
+    id: "autopilot",
+    schedule: "* * * * *",
+    enabled: true,
+    overlap: false,
+    catchup: false,
+    tmux: true,
+    worktree: true,
+    preflight,
+    body: "body\n",
+    filePath: "autopilot.md",
+  });
+
+  const appendSpy = () => vi.mocked(fsModule.appendFileSync);
+  const loggedLines = (): string[] => appendSpy().mock.calls.map((c) => String(c[1]));
+
+  beforeEach(() => appendSpy().mockClear());
+  afterEach(() => appendSpy().mockClear());
+
+  it("returns the gate's exit code and its final stdout line as the reason", () => {
+    const skip = runPreflight(entry(preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" })));
+    expect(skip).toEqual({ status: 10, reason: "SKIPPED-CAP-DAILY" });
+
+    const total = runPreflight(entry(preflightScript({ exit: 11, stdout: "SKIPPED-CAP-TOTAL" })));
+    expect(total).toEqual({ status: 11, reason: "SKIPPED-CAP-TOTAL" });
+  });
+
+  it("returns status 0 with the PROCEED line as the reason on a green gate", () => {
+    const r = runPreflight(entry(preflightScript({ exit: 0, stdout: "PROCEED total=1/10 today=1/6" })));
+    expect(r.status).toBe(0);
+    expect(r.reason).toBe("PROCEED total=1/10 today=1/6");
+  });
+
+  it("uses only the LAST stdout line as the reason (diagnostics above it are ignored)", () => {
+    const script = preflightScript({ exit: 10, stdout: "noise line\nSKIPPED-CAP-DAILY" });
+    expect(runPreflight(entry(script)).reason).toBe("SKIPPED-CAP-DAILY");
+  });
+
+  it("fails CLOSED (non-zero status) and logs PREFLIGHT_ERROR for an invalid preflight path", () => {
+    const r = runPreflight(entry("../evil"));
+    expect(r.status).not.toBe(0);
+    expect(r.reason).toBe("preflight-error: invalid-path");
+    expect(loggedLines().some((l) => l.includes("PREFLIGHT_ERROR"))).toBe(true);
+  });
+
+  it("fails CLOSED (non-zero status) and logs PREFLIGHT_ERROR when the script is missing/unexecutable", () => {
+    const r = runPreflight(entry("scripts/definitely-missing-preflight.sh"));
+    expect(r.status).not.toBe(0);
+    expect(r.reason).toBe("preflight-error: exec-error");
+    expect(loggedLines().some((l) => l.includes("PREFLIGHT_ERROR"))).toBe(true);
+  });
+
+  it("fails CLOSED (non-zero status) and logs PREFLIGHT_ERROR when the gate times out", () => {
+    // 50ms budget against a 2s sleep → spawnSync kills it (error/null status).
+    const r = runPreflight(entry(preflightScript({ exit: 10, sleep: 2 })), 50);
+    expect(r.status).not.toBe(0);
+    expect(r.reason).toBe("preflight-error: exec-error");
+    expect(loggedLines().some((l) => l.includes("PREFLIGHT_ERROR"))).toBe(true);
+  });
+
+  it("fire() short-circuits on a non-zero gate: logs SKIPPED_PREFLIGHT and never spawns", () => {
+    // tmux:true would normally reach fireTmux's real `spawn("tmux", …)`, but the
+    // gate returns first, so no SPAWNED/SPAWNED_WORKTREE line is ever logged.
+    fire(entry(preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" })));
+    const lines = loggedLines();
+    expect(lines.some((l) => l.includes("\tSKIPPED_PREFLIGHT\t") && l.includes("SKIPPED-CAP-DAILY"))).toBe(true);
+    expect(lines.some((l) => l.includes("SPAWNED"))).toBe(false);
+    expect(lines.some((l) => l.includes("\tFIRE\t"))).toBe(false);
+  });
+
+  it("fire() also short-circuits when preflight itself errors", () => {
+    fire(entry("scripts/definitely-missing-preflight.sh"));
+    const lines = loggedLines();
+    expect(lines.some((l) => l.includes("\tPREFLIGHT_ERROR\t"))).toBe(true);
+    expect(
+      lines.some((l) => l.includes("\tSKIPPED_PREFLIGHT\t") && l.includes("preflight-error: exec-error")),
+    ).toBe(true);
+    expect(lines.some((l) => l.includes("SPAWNED"))).toBe(false);
+    expect(lines.some((l) => l.includes("\tFIRE\t"))).toBe(false);
   });
 });

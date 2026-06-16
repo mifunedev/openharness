@@ -20,6 +20,7 @@ enabled: true
 overlap: false           # skip new fire if previous still running
 catchup: false           # don't replay missed fires after downtime
 tmux: false              # optional — run each fire in its own detached tmux session
+worktree: false          # optional — run each fire in a fresh .worktrees/cron/<session> (root stays clean; never SKIPPED_OVERLAP)
 agent: pi                # optional — override CRON_AGENT_BIN for this job only
 description: <one-line>
 ---
@@ -60,7 +61,9 @@ status column is one of:
 | `ID_INVALID` | A cron was skipped because its resolved `id` or filename basename is not lowercase kebab-case (`^[a-z0-9][a-z0-9-]*$`). |
 | `ID_MISMATCH` | A cron was skipped because its explicit frontmatter `id` does not match the filename basename. |
 | `SCHED_INVALID` | A cron was skipped because its `schedule:` is not a valid cron expression (`msg` contains the offending schedule string). |
+| `AGENT_INVALID` | A cron was skipped because its `agent:` override or effective `CRON_AGENT_BIN` is not a safe executable token/path. |
 | `SPAWNED` | A `tmux: true` fire launched its detached session (`msg` is the session name). |
+| `SPAWNED_WORKTREE` | A `worktree: true` fire launched its detached session inside a fresh isolated `.worktrees/cron/<session>` worktree (`msg` is `<session> <worktree-path>`); the shared root checkout is untouched. |
 | `FIRE` | A scheduled job fired and began running its body. |
 | `AGENT_START` | The shell wrapper started an agent for the task (`msg` is `agent=<name>`). A Claude→Codex fallback emits a second `AGENT_START` for Codex. |
 | `AGENT_FALLBACK` | Default Claude execution hit a usage/session-limit pattern and retried through Codex (`msg` is `from=claude to=codex`). |
@@ -69,7 +72,9 @@ status column is one of:
 | `EXIT_n` | The fired child process exited non-zero with code `n`. When the job's log file is populated, a bounded tail of the job's trailing output is appended as the `msg` (4th column) — the optional field already used by `ERR_JOB`/`ERR`/`BODY_RELOADED` — so the failure is diagnosable from `.cron.log` alone (see example below). |
 | `ERR` | The child process failed to spawn (process-level error, not a job throw). |
 | `ERR_JOB` | A synchronous cron job-callback threw; recorded instead of being swallowed. Format: `<id>\tERR_JOB\t<error-string>`. |
-| `SKIPPED_OVERLAP` | A fire was skipped because the previous run was still in flight (`overlap: false`). |
+| `SKIPPED_OVERLAP` | A fire was skipped because the previous run was still in flight (`overlap: false`). Only possible for **non-`worktree`** crons — a `worktree: true` cron isolates instead of skipping (see `SPAWNED_WORKTREE`). |
+| `ERR_WORKTREE` | A `worktree: true` fire could not create its isolated worktree (no base ref, or `git worktree add` failed); the fire did not run. A surfaced failure, never a silent skip. |
+| `ERR_WORKTREE_CAP` | A `worktree: true` fire hit the live-worktree concurrency cap for its id; the fire did not run (retried next fire once a stuck session + its worktree are reaped). A surfaced failure, never a silent skip. |
 
 An enriched `EXIT_n` line (tab-separated, tail whitespace-collapsed and
 bounded to 200 chars):
@@ -79,10 +84,13 @@ bounded to 200 chars):
 ```
 
 A cron whose resolved `id` or filename basename is unsafe, whose explicit
-`id` does not match the filename basename, or whose `schedule:` string is
-not a valid cron expression is skipped at load time — it logs `ID_INVALID`, `ID_MISMATCH`,
-or `SCHED_INVALID` and never enters the scheduled set. A single malformed
-cron definition cannot crash the runtime and the other crons keep running.
+`id` does not match the filename basename, whose `agent:` override is unsafe,
+or whose `schedule:` string is not a valid cron expression is skipped at load
+time — it logs `ID_INVALID`, `ID_MISMATCH`, `AGENT_INVALID`, or
+`SCHED_INVALID` and never enters the scheduled set. A single malformed cron
+definition cannot crash the runtime and the other crons keep running. If the
+global `CRON_AGENT_BIN` is unsafe, each affected fire logs `AGENT_INVALID` and
+returns before generating a shell wrapper or spawning an agent.
 
 `BODY_RELOADED` and `BODY_RELOAD_ERR` are documented under
 [Hot-reload](#hot-reload).
@@ -103,11 +111,12 @@ The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that check
 A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
 
 - **Session name**: `cron-<id>-<MMDD>-<HHMM>` (e.g. `cron-autopilot-0610-1805`), derived from the fire time. The runtime logs `SPAWNED <session>` to `.cron.log`.
-- **Agent selection**: by default jobs use `CRON_AGENT_BIN` (compose default: `claude`). A cron can set `agent: <binary>` in frontmatter to override that for one job; `autopilot.md` sets `agent: pi` so the run itself and its kept Advisor session are attachable Pi sessions without forcing heartbeat/cleanup/eval onto Pi.
+- **Agent selection**: by default jobs use `CRON_AGENT_BIN` (compose default: `claude`). A cron can set `agent: <binary>` in frontmatter to override that for one job; `autopilot.md` sets `agent: pi` so the run itself and its kept Advisor session are attachable Pi sessions without forcing heartbeat/cleanup/eval onto Pi. Agent binaries must be non-empty executable tokens or paths made from `A-Z`, `a-z`, `0-9`, `_`, `.`, `/`, and `-`; values with whitespace, shell metacharacters, `..`, or leading `-` are rejected with `AGENT_INVALID` before shell wrapper generation.
 - **Agent attribution**: the shell wrapper logs `AGENT_START agent=<name>` and `AGENT_DONE agent=<name> exit=<code>` from inside the run. If default Claude falls back to Codex, `.cron.log` shows `AGENT_START agent=claude`, `AGENT_FALLBACK from=claude to=codex`, `AGENT_START agent=codex`, then `AGENT_DONE agent=codex exit=<code>`.
 - **Env exported into the agent**: `CRON_TMUX_SESSION=<session>`, `CRON_KEEP_MARKER=/tmp/<session>.keep`, and `CRON_OVERLAP_PIDFILE=/tmp/cron-<id>.pid`.
 - **Keep-marker contract**: if the agent `touch`es `$CRON_KEEP_MARKER` before exiting, the session persists by resuming the run's own conversation as a live, attachable agent (`claude --continue` for a Claude run, `pi --continue` for an `agent: pi` run, or `codex` after a Claude→Codex fallback), falling back to a shell if that exits; otherwise it auto-closes when the agent finishes. Claude/Codex tmux runs are headless (`claude -p`, or `codex exec --sandbox danger-full-access` after a Claude usage/session-limit fallback). Pi tmux runs intentionally use the positional TUI shape (`pi "$(cat prompt)"`), matching `tmux new -s <name> pi "<prompt>"`, so attaching mid-run shows the live Pi pane instead of a blank piped/headless screen. By convention a job keeps its session only when the run produced something worth revisiting (e.g. autopilot keeps it when a PR was opened).
 - **Overlap guard**: a per-id pidfile `/tmp/cron-<id>.pid` blocks a new fire while a previous one is still running when `overlap: false`; the skipped fire logs `SKIPPED_OVERLAP`. Kept interactive sessions that reach a terminal state can remove `$CRON_OVERLAP_PIDFILE` themselves before staying alive for manual review, so an intentionally retained pane does not suppress future fires.
+- **Worktree isolation (`worktree: true`)**: instead of serializing on the shared root checkout, a `worktree: true` `tmux` cron runs **every** fire in a fresh detached `.worktrees/cron/<session>` worktree cut from the base branch (`development`→`main`→`master`), exported to the run as `$CRON_WORKTREE`. The root checkout is never touched for source/branch work (no dirty-env stalls) and a fire is **never silently skipped** — it isolates (`SPAWNED_WORKTREE`) or surfaces a failure (`ERR_WORKTREE`, or `ERR_WORKTREE_CAP` at the live-worktree concurrency cap). Isolated fires use a session-scoped lock (`/tmp/<session>.pid`) so they never clobber the id-scoped overlap lock; the runtime prunes dead-session worktrees before counting the cap, and the heartbeat reaps stuck sessions + their worktrees. This is the autopilot default (it replaced autopilot's `SKIPPED_OVERLAP` stalls); `SKIPPED_OVERLAP` remains the behaviour for non-`worktree` crons (heartbeat/cleanup/eval). Autopilot treats runtime observability as the narrow exception: its source work stays in `$CRON_WORKTREE`, but it resolves `$AUTOPILOT_LOG_ROOT` to the shared root checkout and appends `crons/.cron.log` plus `memory/<today>/log.md` there so heartbeat and humans can still inspect liveness after the ephemeral worktree is reaped.
 
 Jobs with `tmux` absent or `false` keep the default in-process spawn. Steer autopilot's priorities by filing GitHub issues labeled `autopilot` (the work queue) — no in-repo backlog file.
 

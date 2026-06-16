@@ -234,3 +234,19 @@ Claude Code skills cannot self-trigger. True automatic firing at session end wou
 - **Overfitting one session.** Single-session support is not a principle; that is the MEMORY.md → IDENTITY.md graduation bar.
 - **Confirmation bias.** Every hypothesis must be tested for disconfirming evidence, not just supporting evidence.
 - **Scope creep into the lint tools.** Point at `/context-audit`, `/wiki-lint`, `/skill-lint`, etc.; do not run them inline.
+
+## Handoff
+
+`retro` is a node in the executable loop (`context/rules/loop.md` § 2). After § 8's log entry — on **every** exit path (op, dry-run, or trivial skip; retro always completes, so the loop always continues) — emit exactly one terminal line as the **final line of output**:
+
+```
+STATUS: RETRO-DONE
+```
+
+Routes (must match `context/rules/loop.md` § 2):
+
+| STATUS | Next node |
+|--------|-----------|
+| `RETRO-DONE` | `compound` |
+
+The `/autopilot` runner reads this token to route to `compound`. Emitting nothing — a crash or a stall — is read as failure, never as success (invariant 5: honest exits). When `/retro` is invoked standalone (not under `/autopilot`), the trailing `STATUS:` line is harmless.

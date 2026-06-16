@@ -42,6 +42,8 @@ Open Harness loads these project-local Pi packages from `.pi/settings.json`:
 - [`@narumitw/pi-plan-mode`](https://pi.dev/packages/@narumitw/pi-plan-mode) — Codex-like `/plan` mode for read-only exploration, structured clarification through `plan_mode_question`, and approval-gated implementation. Open Harness uses this upstream package instead of maintaining a local `.pi/extensions/plan-mode/` implementation.
 - [`@narumitw/pi-codex-usage`](https://github.com/narumiruna/pi-extensions/tree/main/extensions/pi-codex-usage) — Codex subscription usage inside Pi via `/codex-status`, including 5-hour session usage, weekly usage, reset times, credits, and an automatic compact statusline for `openai-codex` models.
 - [`@tifan/pi-recap`](https://github.com/tifandotme/pi-extensions/tree/master/packages/pi-recap) — one-line session recaps for re-entry. Use `/recap` for a fresh goal-first recap, `/recap status` to inspect freshness/model state, and `/recap config` to choose the recap model. The package also generates one idle recap after five minutes and refreshes stale/missing recaps on resume.
+- [`@trevonistrevon/pi-loop`](https://pi.dev/packages/@trevonistrevon/pi-loop?name=monitor) — Monitor and loop tools for background command monitoring and scheduled re-wakes. Use `MonitorCreate`, `MonitorList`, and `MonitorStop` for long-running commands; use `/loop` or `LoopCreate` for cron/event-triggered follow-up prompts.
+- [`@guwidoe/pi-prompt-suggester`](https://github.com/guwidoe/pi-prompt-suggester) — intent-aware next-prompt suggestions after assistant completions. Suggestions can appear as ghost text in the editor, with `/suggesterSettings` for interactive configuration and `/suggester status` / `/suggester reseed` for inspection and manual reseeding.
 
 Pi installs missing project packages automatically on startup after the project is trusted. In Open Harness, start package-backed plan mode with:
 
@@ -49,7 +51,45 @@ Pi installs missing project packages automatically on startup after the project 
 pi --plan
 ```
 
-Outside this project, try the packages manually with `pi -e npm:@narumitw/pi-goal`, `pi -e npm:@narumitw/pi-plan-mode --plan`, `pi -e npm:@narumitw/pi-codex-usage`, or `pi -e npm:@tifan/pi-recap`.
+Outside this project, try the packages manually with `pi -e npm:@narumitw/pi-goal`, `pi -e npm:@narumitw/pi-plan-mode --plan`, `pi -e npm:@narumitw/pi-codex-usage`, `pi -e npm:@tifan/pi-recap`, `pi -e npm:@trevonistrevon/pi-loop`, or `pi -e npm:@guwidoe/pi-prompt-suggester@0.3.10`.
+
+## Prompt suggestions
+
+Open Harness enables `@guwidoe/pi-prompt-suggester` by default for interactive Pi sessions. The package watches completed turns, builds a lightweight project intent seed, and proposes the next likely user prompt.
+
+```text
+/suggesterSettings
+/suggester status
+/suggester reseed
+/suggester config set suggestion.ghostAcceptKeys ["space","right"]
+```
+
+By default, compatible suggestions appear as ghost text when the editor is empty. Press `Space` to accept the full suggestion, or change the accept key and other behavior in `/suggesterSettings`. Suggester state, overrides, and logs live under Pi's agent data directory (`${PI_CODING_AGENT_DIR:-~/.pi/agent}/prompt-suggester/`), not in the workspace.
+
+## Monitor and loops
+
+Use Monitor for background commands that should keep running while the agent continues other work:
+
+```text
+MonitorCreate command="tail -n0 -f build.log" description="Watch build"
+MonitorCreate command="python train.py" onDone="Analyze results and report best loss"
+MonitorList
+MonitorStop monitorId="1"
+```
+
+`onDone` creates a one-shot completion wake so the agent can inspect results without polling. Prefer Monitor over raw shell `while`/`sleep` loops for CI polling, experiments, long downloads, training jobs, log tails, and other parallel work.
+
+Use loops for scheduled or event-triggered follow-up prompts:
+
+```text
+/loop 5m check the deploy
+LoopCreate trigger="5m" prompt="Check if the build passed"
+LoopCreate trigger="tool_execution_start" prompt="Log the tool being used" triggerType="event"
+LoopList
+LoopDelete id="1"
+```
+
+The package keeps a compact status line when loops, monitors, or native fallback tasks are active. Open Harness leaves `PI_LOOP_SCOPE` unset, which means `session` scope: loop state is stored under `.pi/loops/loops-<sessionId>.json` and stays isolated across concurrent sessions and worktree agents. `.pi/loops/` is gitignored. Set `PI_LOOP_SCOPE=memory` for disposable no-disk state, `PI_LOOP_SCOPE=project` only when intentionally sharing loops across sessions, or `PI_LOOP=off` to disable the package store.
 
 ## Recap
 
@@ -85,6 +125,8 @@ Auth is layered: the extension uses Pi's own `openai-codex` provider auth first,
 ## Task tracking
 
 The default task runtime state lives under `.pi/tasks/`, which is gitignored. Leave the default for per-checkout task state; set `PI_TASKS=off` to disable task tracking; set `PI_TASKS=<named-list>` to select a named task list; or pass an explicit task-list path when you intentionally want a shared list outside the gitignored default.
+
+`pi-loop` detects `@tintinweb/pi-tasks` over Pi's event bus. Because Open Harness loads `pi-tasks` by default, `pi-loop` delegates task management to that package; its native fallback `TaskCreate`/`TaskList`/`TaskUpdate`/`TaskDelete` tools and `/tasks` command only register in projects where `pi-tasks` is absent.
 
 ## Slack integration
 

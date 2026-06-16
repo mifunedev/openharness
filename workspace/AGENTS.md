@@ -2,19 +2,18 @@
 
 Agent working area. Bind-mounted into sandbox at `/home/sandbox/harness/workspace`. State persists across container restarts.
 
-Template ships intentionally minimal — agent identity, memory, skills, and routines come from a harness pack you install (e.g. `@ryaneggz/mifune`), not from this directory.
+Template ships intentionally minimal. The tracked seed contains only:
 
-## What lives here
+- `AGENTS.md` — workspace-local operating notes for the agent.
+- `CLAUDE.md` — compatibility symlink to `AGENTS.md` for Claude Code.
 
-- `.claude/rules/` — coding rules auto-loaded by Claude Code (`code-quality.md`, `git.md`, `token-conservation.md`).
-- `.claude/.example.env.claude` — template for credentials your agent runtime needs.
-- `.claude/settings.local.json` — Claude Code project-local settings (permissions, hooks).
+Agent identity, memory, skills, settings, and routines are pack/runtime state. They are created by the harness pack or running agent after provisioning, not by the base workspace template.
 
 ## Where things go that aren't here
 
 - Scheduled tasks → `crons/*.md` at repo root, executed by `scripts/cron-runtime.ts`.
-- Memory → `memory/YYYY-MM-DD/` directories at repo root, created on demand.
-- Pack-supplied identity, skills, and sub-agents → wherever your pack's README specifies.
+- Long-term orchestrator memory → `memory/` at repo root.
+- Pack-supplied identity, skills, sub-agents, settings, and credentials → wherever that pack's README specifies, often under workspace-local runtime directories created after install.
 
 ## Operating rules
 

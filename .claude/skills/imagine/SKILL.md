@@ -153,3 +153,17 @@ Then run the qualify/improve loop per `context/rules/memory.md`. Lessons about s
 ## Why this skill exists
 
 The harness already has `/prd` (Q&A → 9-section PRD) and `/ship-spec` (`/prd` → critics → `/ralph` → issue → branch → draft PR). What was missing was a **fast upstream sketch** for fuzzy ideas: something the user can iterate on locally before answering structured questions. `/imagine` fills that gap without polluting the repo — `.claude/specs/*` is gitignored, so every sketch is scratch by design.
+
+## Handoff
+
+`imagine` is the `ideate` node in the executable loop (`context/rules/loop.md` § 2). On successful completion — after the spec sketch is written (Step 3) and the handoff is printed (Step 4) — emit exactly one terminal line as the **final line of output**:
+
+    STATUS: IDEA-READY
+
+Routes (must match `context/rules/loop.md` § 2):
+
+| STATUS | Next node |
+|--------|-----------|
+| `IDEA-READY` | `brainstorm` |
+
+The `/autopilot` runner reads this token to route to `brainstorm`. Emitting nothing — a crash or a stall — is read as failure, never as success (invariant 5: honest exits). When `/imagine` is invoked standalone (not under `/autopilot`), the trailing `STATUS:` line is harmless.

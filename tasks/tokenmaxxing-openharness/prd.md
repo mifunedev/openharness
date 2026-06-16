@@ -78,6 +78,27 @@ Add a Docusaurus blog post explaining how Open Harness treats "tokenmaxxing" as 
 - FR-4: The post must position Open Harness as a single-developer harness and not as an enterprise token-governance product.
 - FR-5: The post must not add or remove protected-path files.
 
+## Wiki Alignment
+
+- **Impact**: REQUIRED
+- **Local entries**: `wiki/ship-spec-orchestration.md`
+- **Spec alignment**: The branch now updates `/ship-spec` itself, so the wiki must describe the skill as the spec-to-implementation commitment boundary and include the new wiki-alignment responsibility.
+- **DeepWiki comparison**: Compared against `https://deepwiki.com/mifunedev/openharness`, whose Open Harness pages use relevant source files, line-backed architecture prose, subsystem relationship diagrams, and navigation. The local entry now follows that page shape and cites `AGENTS.md`, `.claude/skills/ship-spec/SKILL.md`, and `scripts/ralph.sh`.
+- **Acceptance criteria**: Keep `wiki/ship-spec-orchestration.md` aligned with the `/ship-spec` skill, preserve DeepWiki-style relevant source files and system relationships, and verify `bash evals/probes/wiki-readme-index.sh`.
+
+### US-004: Align ship-spec wiki handling with DeepWiki
+
+**Description:** As a maintainer, I want `/ship-spec` to require wiki updates that match the spec and are compared against DeepWiki so that conceptual changes leave durable, source-backed documentation.
+
+**Acceptance Criteria:**
+
+- [ ] Update `.claude/skills/ship-spec/SKILL.md` so PRDs include a `## Wiki Alignment` section before critics run.
+- [ ] Require required wiki updates to compare the local spec/wiki against the relevant DeepWiki page(s).
+- [ ] Require post-implementation wiki revision when `Wiki Alignment` is `REQUIRED`.
+- [ ] Update the Ralph prompt template so workers see the wiki alignment gate.
+- [ ] Keep `wiki/ship-spec-orchestration.md` aligned with the revised `/ship-spec` behavior and DeepWiki-style source-backed structure.
+- [ ] Verify `bash evals/probes/wiki-readme-index.sh`.
+
 ## Non-Goals
 
 - Do not add new docs pages, landing pages, components, images, or Docusaurus configuration.

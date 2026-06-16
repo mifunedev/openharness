@@ -45,4 +45,19 @@ When a PRD specifies a generated Docusaurus route path, verify the local build o
 
 ---
 
+## US-004 — 2026-06-16 04:55 UTC
+
+**Title**: Align ship-spec wiki handling with DeepWiki
+**Files changed**: `.claude/skills/ship-spec/SKILL.md`, `.claude/skills/ship-spec/templates/prompt.md`, `CHANGELOG.md`, `tasks/tokenmaxxing-openharness/prd.md`, `tasks/tokenmaxxing-openharness/prd.json`, `tasks/tokenmaxxing-openharness/progress.txt`, `wiki/ship-spec-orchestration.md`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Added a `/ship-spec` Wiki Alignment stage before critics, a post-implementation wiki revision gate before `/pr-audit`, and worker prompt guidance so required wiki entries stay aligned with the spec and DeepWiki comparison. Updated this task's PRD/story state and the `ship-spec-orchestration` wiki entry to reflect the new behavior.
+
+### Learnings for future iterations
+Architecture-impacting specs should name the local wiki entries up front, compare against DeepWiki's source-backed page shape, and block undraft when required wiki updates are stale or missing.
+
+---
+
 STATUS: COMPLETE

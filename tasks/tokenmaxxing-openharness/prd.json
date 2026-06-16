@@ -56,6 +56,22 @@
       "priority": 3,
       "passes": true,
       "notes": "Completed iteration 3 on 2026-06-16; changelog updated and docs build plus generated route check passed."
+    },
+    {
+      "id": "US-004",
+      "title": "Align ship-spec wiki handling with DeepWiki",
+      "description": "As a maintainer, I want /ship-spec to require wiki updates that match the spec and are compared against DeepWiki so that conceptual changes leave durable, source-backed documentation.",
+      "acceptanceCriteria": [
+        "Update .claude/skills/ship-spec/SKILL.md so PRDs include a ## Wiki Alignment section before critics run",
+        "Require required wiki updates to compare the local spec/wiki against the relevant DeepWiki page(s)",
+        "Require post-implementation wiki revision when Wiki Alignment is REQUIRED",
+        "Update the Ralph prompt template so workers see the wiki alignment gate",
+        "Keep wiki/ship-spec-orchestration.md aligned with the revised /ship-spec behavior and DeepWiki-style source-backed structure",
+        "Verify bash evals/probes/wiki-readme-index.sh"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed iteration 4 on 2026-06-16; added wiki alignment and DeepWiki comparison gates to ship-spec."
     }
   ]
 }

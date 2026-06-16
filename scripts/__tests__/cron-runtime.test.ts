@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import type { Cron } from "croner";
 import * as fsModule from "node:fs";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -30,6 +31,7 @@ import {
   buildCronAgentCommand,
   buildTmuxWrapper,
   decideOverlap,
+  fire,
   isValidAgentBin,
   isValidCronId,
   isValidSchedule,
@@ -39,6 +41,7 @@ import {
   readFailureTail,
   reloadBody,
   resetActiveJobs,
+  runPreflight,
   scheduleAll,
   sighupHandler,
   tmuxSessionName,
@@ -123,6 +126,19 @@ Heartbeat body.
     );
 
     expect(entry?.agentBin).toBe("pi");
+  });
+
+  it("parses an optional preflight gate path", () => {
+    expect(
+      parseCronFile(
+        `---\nschedule: "* * * * *"\npreflight: scripts/autopilot-caps.sh\n---\nbody\n`,
+        "autopilot.md",
+      )?.preflight,
+    ).toBe("scripts/autopilot-caps.sh");
+    // Absent frontmatter key → undefined (forward-compat additive parse).
+    expect(
+      parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.preflight,
+    ).toBeUndefined();
   });
 
   it("parses worktree: true and defaults to false otherwise", () => {
@@ -1005,5 +1021,97 @@ describe("SIGHUP reload", () => {
     // Exactly one reschedule completed → exactly one BOOT and one RELOAD line.
     expect(reloadLines()).toHaveLength(1);
     expect(loggedLines().filter((l) => l.includes("\tBOOT\t"))).toHaveLength(1);
+  });
+});
+
+describe("runPreflight + the fire() preflight gate", () => {
+  // Build a real executable preflight script with a chosen exit code and stdout,
+  // then point a CronEntry at it. This mirrors buildTmuxWrapper's runWrapper
+  // helper (real spawn against a throwaway script) — there is no child_process
+  // mock in this suite, and runPreflight calls spawnSync for real.
+  const preflightScript = (opts: { exit: number; stdout?: string; sleep?: number }): string => {
+    const p = path.join(tmp, `preflight-${process.pid}-${Math.random().toString(16).slice(2)}.sh`);
+    // Emit one `echo` per line so a multi-line `stdout` becomes real newlines in
+    // the child's output (a single `echo "a\nb"` would print a literal backslash-n).
+    const echoes =
+      opts.stdout != null
+        ? opts.stdout.split("\n").map((l) => `echo ${JSON.stringify(l)}`).join("\n") + "\n"
+        : "";
+    writeFileSync(
+      p,
+      `#!/usr/bin/env bash\n` +
+        (opts.sleep ? `sleep ${opts.sleep}\n` : "") +
+        echoes +
+        `exit ${opts.exit}\n`,
+      { mode: 0o755 },
+    );
+    return p;
+  };
+
+  const entry = (preflight?: string) => ({
+    id: "autopilot",
+    schedule: "* * * * *",
+    enabled: true,
+    overlap: false,
+    catchup: false,
+    tmux: true,
+    worktree: true,
+    preflight,
+    body: "body\n",
+    filePath: "autopilot.md",
+  });
+
+  const appendSpy = () => vi.mocked(fsModule.appendFileSync);
+  const loggedLines = (): string[] => appendSpy().mock.calls.map((c) => String(c[1]));
+
+  beforeEach(() => appendSpy().mockClear());
+  afterEach(() => appendSpy().mockClear());
+
+  it("returns the gate's exit code and its final stdout line as the reason", () => {
+    const skip = runPreflight(entry(preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" })));
+    expect(skip).toEqual({ status: 10, reason: "SKIPPED-CAP-DAILY" });
+
+    const total = runPreflight(entry(preflightScript({ exit: 11, stdout: "SKIPPED-CAP-TOTAL" })));
+    expect(total).toEqual({ status: 11, reason: "SKIPPED-CAP-TOTAL" });
+  });
+
+  it("returns status 0 with the PROCEED line as the reason on a green gate", () => {
+    const r = runPreflight(entry(preflightScript({ exit: 0, stdout: "PROCEED total=1/10 today=1/6" })));
+    expect(r.status).toBe(0);
+    expect(r.reason).toBe("PROCEED total=1/10 today=1/6");
+  });
+
+  it("uses only the LAST stdout line as the reason (diagnostics above it are ignored)", () => {
+    const script = preflightScript({ exit: 10, stdout: "noise line\nSKIPPED-CAP-DAILY" });
+    expect(runPreflight(entry(script)).reason).toBe("SKIPPED-CAP-DAILY");
+  });
+
+  it("fails OPEN (status 0) and logs PREFLIGHT_ERROR for an invalid preflight path", () => {
+    const r = runPreflight(entry("../evil"));
+    expect(r.status).toBe(0);
+    expect(loggedLines().some((l) => l.includes("PREFLIGHT_ERROR"))).toBe(true);
+  });
+
+  it("fails OPEN (status 0) and logs PREFLIGHT_ERROR when the script is missing/unexecutable", () => {
+    const r = runPreflight(entry("scripts/definitely-missing-preflight.sh"));
+    expect(r.status).toBe(0);
+    expect(loggedLines().some((l) => l.includes("PREFLIGHT_ERROR"))).toBe(true);
+  });
+
+  it("fails OPEN (status 0) and logs PREFLIGHT_ERROR when the gate times out", () => {
+    // 50ms budget against a 2s sleep → spawnSync kills it (error/null status).
+    const r = runPreflight(entry(preflightScript({ exit: 10, sleep: 2 })), 50);
+    expect(r.status).toBe(0);
+    expect(loggedLines().some((l) => l.includes("PREFLIGHT_ERROR"))).toBe(true);
+  });
+
+  it("fire() short-circuits on a non-zero gate: logs SKIPPED_PREFLIGHT and never spawns", () => {
+    // tmux:true would normally reach fireTmux's real `spawn("tmux", …)`, but the
+    // gate returns first, so no SPAWNED/SPAWNED_WORKTREE line is ever logged.
+    fire(entry(preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" })));
+    const lines = loggedLines();
+    expect(lines.some((l) => l.includes("\tSKIPPED_PREFLIGHT\t") && l.includes("SKIPPED-CAP-DAILY"))).toBe(true);
+    expect(lines.some((l) => l.includes("SPAWNED"))).toBe(false);
+    expect(lines.some((l) => l.includes("\tFIRE\t"))).toBe(false);
   });
 });

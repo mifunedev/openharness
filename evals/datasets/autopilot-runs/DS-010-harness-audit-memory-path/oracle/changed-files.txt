@@ -1,0 +1,9 @@
+.claude/skills/harness-audit/SKILL.md
+CHANGELOG.md
+evals/RESULTS.md
+evals/probes/harness-audit-memory-path.sh
+tasks/correct-harness-audit-memory-path/critique.md
+tasks/correct-harness-audit-memory-path/prd.json
+tasks/correct-harness-audit-memory-path/prd.md
+tasks/correct-harness-audit-memory-path/progress.txt
+tasks/correct-harness-audit-memory-path/prompt.md

@@ -5,6 +5,7 @@
 - Protected skill edits are allowed only when the PRD carries an explicit override; keep them to the named non-destructive command-reference replacements and avoid restructuring the protected skill.
 - After a `git mv` directory rename, re-stage the destination file after content edits before committing; otherwise the commit can capture only the pure rename and leave identity edits unstaged.
 - Eval contract probes deliberately pin non-command contract literals; during skill rebrands, update paths/messages/frontmatter assertions while leaving the literal array unchanged unless the story says otherwise.
+- For rebrand metadata-only stories, keep `evals/RESULTS.md` edits narrowly scoped to the renamed probe row; do not regenerate or restamp unrelated rows unless the story runs the whole eval suite.
 
 ## US-001 — 2026-06-16 04:50 UTC
 
@@ -48,5 +49,19 @@ Renamed the loop runner contract probe to `evals/probes/orchestrate-contract.sh`
 
 ### Learnings for future iterations
 Use `python3` or direct edits in this environment; `python` is not installed on PATH. For eval-probe rebrands, keep the fixed-string `LITERALS` list stable unless the acceptance criteria explicitly asks to alter a contract literal.
+
+---
+## US-004 — 2026-06-16 05:01 UTC
+
+**Title**: Update capability and eval result metadata
+**Files changed**: `evals/capability/tasks/CB-002-walk-the-loop.md`, `evals/capability/RESULTS.md`, `evals/RESULTS.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
+**Commit**: 732c21e
+**Result**: PASS
+
+### What I did
+Updated the CB-002 capability task metadata, success signal, rubric, evidence basis, and scoring method from `/loop-runner` to `/orchestrate`. Updated the capability scoreboard basis and the eval scoreboard row/source so the current benchmark surfaces point at `orchestrate-contract`. Verified the target metadata no longer contains `loop-runner`, the renamed contract probe passes, and the repository typecheck/lint/test checks pass.
+
+### Learnings for future iterations
+`evals/RESULTS.md` can be edited narrowly for a rebrand metadata row when the story is not regenerating the suite; keep unrelated timestamps/statuses untouched so the diff remains auditable.
 
 ---

@@ -208,11 +208,17 @@ confidence: provisional
 
 # <Title>
 
+## Relevant Source Files
+- `<path>` — <why this source is relevant>
+
 ## Summary
 <2-3 sentence synthesis of the source>
 
 ## Detail
-<Bounded prose from the source, ≤ 600 words total for the entry>
+<Bounded prose from the source. For repo architecture/harness topics, cite concrete source paths and line numbers.>
+
+## System Relationships
+<Optional. Required for architecture/harness topics that describe pipelines, runtime ownership, or cross-file mechanisms; use Mermaid when it clarifies ordering or handoffs.>
 
 ## See Also
 ```
@@ -224,6 +230,8 @@ Field notes:
 - `updated`: set to today's UTC date.
 - `sources`: list the new snapshot path (relative to `wiki/`, e.g., `raw/2026-05-24-karpathy-llm-wiki.md`). For `--from-draft`, use the draft file path.
 - `confidence`: always `provisional` on creation. Never set to `confirmed` autonomously — that is the orchestrator's manual action.
+- `## Relevant Source Files`: include for repo architecture/harness topics; omit only for simple external-concept entries with no local source footprint.
+- `## System Relationships`: include for pipeline/runtime/architecture entries; omit only when the topic has no meaningful component relationship to show.
 - `## See Also`: leave the section header present but empty if no cross-links are evident. Do not omit the section.
 
 #### 6b. Existing entry (update)

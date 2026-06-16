@@ -1,0 +1,63 @@
+# progress
+
+## US-001 — 2026-06-16 00:00 UTC
+
+**Title**: Select and verify the trend-hook sources
+**Files changed**: `tasks/tokenmaxxing-openharness/prd.md`, `tasks/tokenmaxxing-openharness/prd.json`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Verified the supplied tokenmaxxing trend references with live search context. Business Insider, Fortune, WSJ, and Windows Central sources were reachable enough to confirm source context; the post uses them only as the hook.
+
+### Learnings for future iterations
+This Docusaurus build emits blog slug routes as `packages/docs/build/blog/<slug>.html`, not `packages/docs/build/blog/<slug>/index.html`.
+
+---
+
+## US-002 — 2026-06-16 00:00 UTC
+
+**Title**: Add the tokenmaxxing blog post
+**Files changed**: `blog/2026-06-16-tokenmaxxing-openharness.md`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Added the requested blog post with the exact frontmatter, the tokenmaxxing trend hook, the Open Harness model/harness split, and the closing thesis that frontier models should improve the harness and spec while implementation flows through the custom harness.
+
+### Learnings for future iterations
+The post should frame Codex, Pi, Hermes, Claude, and smaller models as situational choices in a single-developer workflow, not a vendor leaderboard or enterprise model router.
+
+---
+
+## US-003 — 2026-06-16 00:00 UTC
+
+**Title**: Record and verify the blog addition
+**Files changed**: `CHANGELOG.md`, `tasks/tokenmaxxing-openharness/prd.md`, `tasks/tokenmaxxing-openharness/prd.json`, `tasks/tokenmaxxing-openharness/progress.txt`, `tasks/tokenmaxxing-openharness/prompt.md`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Added the changelog entry under `### Added`, ran `pnpm docs:build`, and corrected the route verification path to the actual generated file.
+
+### Learnings for future iterations
+When a PRD specifies a generated Docusaurus route path, verify the local build output before treating the path as authoritative.
+
+---
+
+## US-004 — 2026-06-16 04:55 UTC
+
+**Title**: Align ship-spec wiki handling with DeepWiki
+**Files changed**: `.claude/skills/ship-spec/SKILL.md`, `.claude/skills/ship-spec/templates/prompt.md`, `CHANGELOG.md`, `tasks/tokenmaxxing-openharness/prd.md`, `tasks/tokenmaxxing-openharness/prd.json`, `tasks/tokenmaxxing-openharness/progress.txt`, `wiki/ship-spec-orchestration.md`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Added a `/ship-spec` Wiki Alignment stage before critics, a post-implementation wiki revision gate before `/pr-audit`, and worker prompt guidance so required wiki entries stay aligned with the spec and DeepWiki comparison. Updated this task's PRD/story state and the `ship-spec-orchestration` wiki entry to reflect the new behavior.
+
+### Learnings for future iterations
+Architecture-impacting specs should name the local wiki entries up front, compare against DeepWiki's source-backed page shape, and block undraft when required wiki updates are stale or missing.
+
+---
+
+STATUS: COMPLETE

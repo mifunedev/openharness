@@ -36,6 +36,16 @@ Open Harness uses the upstream installer during image build, pinned to the versi
 curl -fsSL https://x.ai/cli/install.sh | bash -s 0.2.39
 ```
 
+Review-first equivalent for manual inspection:
+
+```bash
+curl -fsSL -o grok-install.sh https://x.ai/cli/install.sh
+# Review grok-install.sh in your editor or pager before running it.
+bash grok-install.sh 0.2.39
+```
+
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://x.ai/cli/install.sh 0.2.39` gives the same third-party installer a fetch/review/approve gate. `vet` is optional and is not required by Open Harness.
+
 Verify the install inside the sandbox:
 
 ```bash

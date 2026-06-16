@@ -119,4 +119,14 @@ describe("compose helper wiring", () => {
     expect(text).not.toContain("docker compose $COMPOSE_FILES");
     expect(text).not.toContain("COMPOSE_FILES=\"-f .devcontainer/docker-compose.yml\"");
   });
+
+  it("installer keeps host defaults out of tracked harness.yaml", () => {
+    const text = readFileSync(INSTALL, "utf8");
+    expect(text).toContain("Existing .devcontainer/.env preserved");
+    expect(text).toContain("Tracked\n# harness.yaml stays clean");
+    expect(text).toContain('SANDBOX_NAME=$(_env_val "$SANDBOX_NAME")');
+    expect(text).toContain("GIT_USER_NAME=%s\\n");
+    expect(text).not.toContain('__YAML="$REPO_DIR/harness.yaml"');
+    expect(text).not.toContain('ok "harness.yaml: sandbox.name');
+  });
 });

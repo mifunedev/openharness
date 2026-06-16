@@ -584,11 +584,11 @@ const PREFLIGHT_TIMEOUT_MS = 60_000;
 // Run a cron's `preflight:` gate synchronously and decide whether to skip the
 // fire. The gate's exit code is authoritative: a non-zero status means "skip"
 // and the final stdout line is the human-readable reason (e.g. SKIPPED-CAP-DAILY).
-// FAIL-OPEN: an invalid path, an exec error, or a timeout returns status 0
-// (proceed) and logs a distinct PREFLIGHT_ERROR liveness line — the gate is an
-// optimization, never a hard dependency, so a transient failure must not wedge
-// the cron shut. The in-session recheck remains the backstop. Validation reuses
-// isValidAgentBin (relative/charset-safe path, no `..`, no flag-shaped value).
+// FAIL-CLOSED: an invalid path, an exec error, or a timeout returns a non-zero
+// status and logs a distinct PREFLIGHT_ERROR liveness line. A configured preflight
+// is a safety gate, not an optimization — if the gate cannot be evaluated, the
+// cron must not spawn a worktree/tmux/agent. Validation reuses isValidAgentBin
+// (relative/charset-safe path, no `..`, no flag-shaped value).
 export function runPreflight(
   entry: CronEntry,
   timeoutMs: number = PREFLIGHT_TIMEOUT_MS,
@@ -596,7 +596,7 @@ export function runPreflight(
   const scriptPath = entry.preflight;
   if (!scriptPath || !isValidAgentBin(scriptPath)) {
     log(entry.id, "PREFLIGHT_ERROR", `invalid preflight: ${scriptPath}`);
-    return { status: 0, reason: "invalid-path" }; // fail-open
+    return { status: 12, reason: "preflight-error: invalid-path" }; // fail-closed
   }
   const abs = path.resolve(process.cwd(), scriptPath);
   const r = spawnSync(abs, [], {
@@ -611,7 +611,7 @@ export function runPreflight(
       "PREFLIGHT_ERROR",
       `${scriptPath}: ${r.error ? String(r.error) : "no exit status"}`,
     );
-    return { status: 0, reason: "exec-error" }; // fail-open
+    return { status: 12, reason: "preflight-error: exec-error" }; // fail-closed
   }
   const out = (r.stdout || "").trim();
   const reason = out ? out.split("\n").pop()!.trim() : `exit ${r.status}`;

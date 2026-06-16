@@ -19,6 +19,16 @@
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
 
+Review-first alternative (no extra dependency):
+
+```bash
+curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
+# Review openharness-install.sh in your editor or pager before running it.
+bash openharness-install.sh
+```
+
+If you already use [`vet`](https://github.com/vet-run/vet), you can review and approve the same installer with `vet https://oh.mifune.dev/install.sh`. Docker remains the only required host dependency.
+
 Clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-docker/).
 
 **Option B — Fork and clone (recommended for self-hosting):**
@@ -43,6 +53,15 @@ bash scripts/install.sh
 ```bash
 OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
   https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh | bash
+```
+
+Review-first fork install:
+
+```bash
+curl -fsSL -o openharness-install.sh \
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh
+# Review openharness-install.sh, then run it against your fork.
+OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```
 
 If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](https://oh.mifune.dev/docs/installation) for all environment overrides.

@@ -1,0 +1,183 @@
+diff --git a/.github/workflows/ci-harness.yml b/.github/workflows/ci-harness.yml
+index 4f810f00..297c02fc 100644
+--- a/.github/workflows/ci-harness.yml
++++ b/.github/workflows/ci-harness.yml
+@@ -72,6 +72,9 @@ jobs:
+           restore-keys: |
+             pnpm-store-
+ 
++      - name: Run pnpm security audit
++        run: pnpm run security:audit
++
+       - name: Install dependencies
+         run: pnpm install --frozen-lockfile
+ 
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index de88de8c..81f4aed4 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -32,6 +32,9 @@ jobs:
+           restore-keys: |
+             pnpm-store-
+ 
++      - name: Run pnpm security audit
++        run: pnpm run security:audit
++
+       - name: Install dependencies
+         run: pnpm install --frozen-lockfile
+ 
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 5139cc49..a92e5288 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -112,6 +112,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
+ - Curated autopilot backlog (`crons/autopilot-backlog.md`) and the 4h `/harness-audit` throttle (`AUDIT-RUN` marker) — autopilot is now steered via GitHub `autopilot` issues, so the in-repo backlog file is gone ([#14](https://github.com/ryaneggz/openharness/issues/14)).
+ ### Deprecated
+ ### Security
++- Add a root `pnpm audit --audit-level low` security-audit script, run it before local `pnpm install` via `pnpm:devPreinstall`, run it before dependency install in harness CI/release validation, and guard the wiring with the `pnpm-audit-ci-gate` eval probe ([#171](https://github.com/ryaneggz/openharness/issues/171)).
+ - Resolve all open critical & high Dependabot alerts in the root `pnpm-lock.yaml` via `pnpm.overrides`: `shell-quote` →1.8.4 (GHSA-w7jw-789q-3m8p), `@babel/plugin-transform-modules-systemjs` →7.29.4 (GHSA-fv7c-fp4j-7gwp), `fast-uri` →3.1.2 (GHSA-v39h-62p7-jpjc, GHSA-q3j6-qgpj-74h6), `serialize-javascript` →7.0.3 (GHSA-5c6j-r48x-rmvq); `vitest` →3.2.6 already landed in [#28](https://github.com/ryaneggz/openharness/pull/28) ([#30](https://github.com/ryaneggz/openharness/issues/30)).
+ - Resolve moderate & low Dependabot alerts whose patched version is compatible with the Docusaurus 3.7 bundler: root `pnpm-lock.yaml` via `pnpm.overrides` — `qs` →6.15.2, `uuid` →11.1.1, `ws` →8.20.1 (scoped to the 8.x line so the `ws@7` consumer is untouched), `mermaid` →11.15.0, `postcss` →8.5.10; and `packages/oh` `esbuild` devDependency →0.25.0. The `webpack` (low) and `webpack-dev-server` (moderate) alerts are deferred to a Docusaurus 3.7→3.10 upgrade — webpack 5.107's stricter `ProgressPlugin` schema breaks the Docusaurus 3.7 `docs:build`, so the `webpack` pin stays at `5.98.0` here ([#35](https://github.com/ryaneggz/openharness/issues/35)).
+ - Resolve the `joi` Dependabot alert (uncaught `RangeError` via recursive `link()` schemas, GHSA-q7cg-457f-vx79) by overriding `joi` →18.2.1 in the root `pnpm-lock.yaml`; `joi` is Docusaurus's config-validation transitive, and the 17→18 major builds clean against Docusaurus 3.10 (validated via `docs:build`) ([#39](https://github.com/ryaneggz/openharness/issues/39)).
+diff --git a/evals/RESULTS.md b/evals/RESULTS.md
+index d0524415..9b8b6772 100644
+--- a/evals/RESULTS.md
++++ b/evals/RESULTS.md
+@@ -6,32 +6,33 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
+ 
+ | probe | tier | last-run (UTC) | status | source |
+ |-------|------|----------------|--------|--------|
+-| autopilot-executor-toggle | A | 2026-06-15 05:28 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
+-| autopilot-pi-agent | A | 2026-06-15 05:28 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14; issue #126 (kept Pi overlap lock release) 2026-06-14; issue #142 (worktree-by-default, skip→worktree) 2026-06-14 |
+-| autopilot-stale-draft-watchdog | A | 2026-06-15 05:28 | PASS | issue #161 — stale autopilot draft watchdog must surface investigation, not undraft |
+-| boot-lint-glob | A | 2026-06-15 05:28 | PASS | issue #90, issue #120 |
+-| clean-restore | A | 2026-06-15 05:28 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
+-| cleanup-tasks-scoped-guard | A | 2026-06-15 05:28 | PASS | issue #85 |
+-| cleanup-tasks-worktree-grooming | A | 2026-06-15 05:28 | PASS | issue #168 |
+-| cron-claude-codex-fallback | A | 2026-06-15 05:28 | PASS | conversation 2026-06-12 (default Codex fallback for crons) |
+-| cron-watchdog | A | 2026-06-15 05:28 | PASS | issue #130 (cron runtime watchdog) 2026-06-14 |
+-| devtcp-hook | A | 2026-06-15 05:28 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
+-| drift-check-cron-staleness-glob | A | 2026-06-15 05:28 | PASS | issue #98 |
+-| eval-ci-gate | A | 2026-06-15 05:28 | PASS | #103 — eval probe suite gated in CI |
+-| eval-gate | A | 2026-06-15 05:28 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
+-| eval-results-atomic | A | 2026-06-15 05:28 | PASS | issue #83 (eval-results-atomic-write) |
+-| eval-runner-exit | A | 2026-06-15 05:28 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
+-| health-check-docker-stats | A | 2026-06-15 05:28 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
+-| loop-handoff-consistency | A | 2026-06-15 05:28 | PASS | context/rules/loop.md § 4 (executable-loop Handoff convention) |
+-| loop-runner-contract | A | 2026-06-15 05:28 | PASS | issue #160 — /loop runner contract |
+-| memory-gitignore-claim | A | 2026-06-15 05:28 | PASS | issue #101 |
+-| next-dev-prod | A | 2026-06-15 05:28 | PASS | memory/MEMORY.md 2026-06-04 |
+-| owned-surface-guard | A | 2026-06-15 05:28 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
+-| ralph-fallback-order | A | 2026-06-15 05:28 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
+-| rl-delegation-write-worker | A | 2026-06-15 05:28 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
+-| ship-spec-ready-finalization | A | 2026-06-15 05:28 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |
+-| skill-paths | A | 2026-06-15 05:28 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
+-| submitted-by-trailers | A | 2026-06-15 05:28 | PASS | conversation 2026-06-12 (commit attribution trailers) |
+-| wiki-readme-index | A | 2026-06-15 05:28 | PASS | issue #132 — wiki README index drift guard |
++| autopilot-executor-toggle | A | 2026-06-15 05:54 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
++| autopilot-pi-agent | A | 2026-06-15 05:54 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14; issue #126 (kept Pi overlap lock release) 2026-06-14; issue #142 (worktree-by-default, skip→worktree) 2026-06-14 |
++| autopilot-stale-draft-watchdog | A | 2026-06-15 05:54 | PASS | issue #161 — stale autopilot draft watchdog must surface investigation, not undraft |
++| boot-lint-glob | A | 2026-06-15 05:54 | PASS | issue #90, issue #120 |
++| clean-restore | A | 2026-06-15 05:54 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
++| cleanup-tasks-scoped-guard | A | 2026-06-15 05:54 | PASS | issue #85 |
++| cleanup-tasks-worktree-grooming | A | 2026-06-15 05:54 | PASS | issue #168 |
++| cron-claude-codex-fallback | A | 2026-06-15 05:54 | PASS | conversation 2026-06-12 (default Codex fallback for crons) |
++| cron-watchdog | A | 2026-06-15 05:54 | PASS | issue #130 (cron runtime watchdog) 2026-06-14 |
++| devtcp-hook | A | 2026-06-15 05:54 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
++| drift-check-cron-staleness-glob | A | 2026-06-15 05:54 | PASS | issue #98 |
++| eval-ci-gate | A | 2026-06-15 05:54 | PASS | #103 — eval probe suite gated in CI |
++| eval-gate | A | 2026-06-15 05:54 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
++| eval-results-atomic | A | 2026-06-15 05:54 | PASS | issue #83 (eval-results-atomic-write) |
++| eval-runner-exit | A | 2026-06-15 05:54 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
++| health-check-docker-stats | A | 2026-06-15 05:54 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
++| loop-handoff-consistency | A | 2026-06-15 05:54 | PASS | context/rules/loop.md § 4 (executable-loop Handoff convention) |
++| loop-runner-contract | A | 2026-06-15 05:54 | PASS | issue #160 — /loop runner contract |
++| memory-gitignore-claim | A | 2026-06-15 05:54 | PASS | issue #101 |
++| next-dev-prod | A | 2026-06-15 05:54 | PASS | memory/MEMORY.md 2026-06-04 |
++| owned-surface-guard | A | 2026-06-15 05:54 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
++| pnpm-audit-ci-gate | A | 2026-06-15 05:54 | PASS | issue #171 — pnpm security audits must run in CI |
++| ralph-fallback-order | A | 2026-06-15 05:54 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
++| rl-delegation-write-worker | A | 2026-06-15 05:54 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
++| ship-spec-ready-finalization | A | 2026-06-15 05:54 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |
++| skill-paths | A | 2026-06-15 05:54 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
++| submitted-by-trailers | A | 2026-06-15 05:54 | PASS | conversation 2026-06-12 (commit attribution trailers) |
++| wiki-readme-index | A | 2026-06-15 05:54 | PASS | issue #132 — wiki README index drift guard |
+ 
+ <!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->
+diff --git a/evals/probes/pnpm-audit-ci-gate.sh b/evals/probes/pnpm-audit-ci-gate.sh
+new file mode 100755
+index 00000000..7801c876
+--- /dev/null
++++ b/evals/probes/pnpm-audit-ci-gate.sh
+@@ -0,0 +1,59 @@
++#!/usr/bin/env bash
++# tier: A
++# source: issue #171 — pnpm security audits must run in CI
++# desc: string/order guard — local pnpm installs and CI/release validation must audit before dependency install so pnpm audit cannot be silently removed
++set -euo pipefail
++
++ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
++PACKAGE_JSON="$ROOT/package.json"
++CI_WORKFLOW="$ROOT/.github/workflows/ci-harness.yml"
++RELEASE_WORKFLOW="$ROOT/.github/workflows/release.yml"
++
++for file in "$PACKAGE_JSON" "$CI_WORKFLOW" "$RELEASE_WORKFLOW"; do
++  if [[ ! -f "$file" ]]; then
++    echo "SKIPPED: required file absent: $file" >&2
++    exit 2
++  fi
++done
++
++script_value="$(node -e 'const p=require(process.argv[1]); process.stdout.write(p.scripts?.["security:audit"] || "")' "$PACKAGE_JSON")"
++if [[ "$script_value" != "pnpm audit --audit-level low" ]]; then
++  echo "REGRESSION: package.json scripts.security:audit must be exactly 'pnpm audit --audit-level low' (got: ${script_value:-<missing>})" >&2
++  exit 1
++fi
++
++dev_preinstall_value="$(node -e 'const p=require(process.argv[1]); process.stdout.write(p.scripts?.["pnpm:devPreinstall"] || "")' "$PACKAGE_JSON")"
++if [[ "$dev_preinstall_value" != "pnpm run security:audit" ]]; then
++  echo "REGRESSION: package.json scripts.pnpm:devPreinstall must run 'pnpm run security:audit' before local dependency install (got: ${dev_preinstall_value:-<missing>})" >&2
++  exit 1
++fi
++
++node - "$CI_WORKFLOW" "$RELEASE_WORKFLOW" <<'NODE'
++const fs = require('fs');
++let failed = false;
++for (const file of process.argv.slice(2)) {
++  const text = fs.readFileSync(file, 'utf8');
++  const audit = text.indexOf('pnpm run security:audit');
++  const install = text.indexOf('pnpm install --frozen-lockfile');
++  if (audit === -1) {
++    console.error(`REGRESSION: ${file} no longer invokes 'pnpm run security:audit'`);
++    failed = true;
++  }
++  if (install === -1) {
++    console.error(`REGRESSION: ${file} no longer invokes 'pnpm install --frozen-lockfile'`);
++    failed = true;
++  }
++  if (audit !== -1 && install !== -1 && audit > install) {
++    console.error(`REGRESSION: ${file} runs pnpm audit after dependency install; audit must run first`);
++    failed = true;
++  }
++}
++process.exit(failed ? 1 : 0);
++NODE
++
++if ! grep -q 'pnpm/action-setup@v4' "$CI_WORKFLOW"; then
++  echo "REGRESSION: ci-harness workflow no longer installs pnpm via pnpm/action-setup@v4" >&2
++  exit 1
++fi
++
++echo "PASS: pnpm audit is wired through local devPreinstall, CI, and release validation before install" >&2
+diff --git a/package.json b/package.json
+index 764c4e8a..2f5f8b15 100644
+--- a/package.json
++++ b/package.json
+@@ -14,6 +14,8 @@
+     "format:check": "pnpm -r --if-present run format:check",
+     "typecheck": "pnpm --filter './packages/**' -r --if-present run typecheck && npm --prefix packages/oh run typecheck",
+     "format": "pnpm -r --if-present run format",
++    "pnpm:devPreinstall": "pnpm run security:audit",
++    "security:audit": "pnpm audit --audit-level low",
+     "docs:build": "pnpm --dir packages/docs build",
+     "docs:dev": "pnpm --dir packages/docs start",
+     "docs:serve": "pnpm --dir packages/docs serve"

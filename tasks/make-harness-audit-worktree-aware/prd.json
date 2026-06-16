@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/183-make-harness-audit-worktree-aware",
+  "issue": 183,
+  "description": "Make /harness-audit inspect the active cron worktree instead of the hardcoded root checkout.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Resolve audit root dynamically",
+      "description": "As an autopilot cron run, I need /harness-audit to inspect the active worktree so findings reflect the candidate checkout.",
+      "acceptanceCriteria": [
+        ".claude/skills/harness-audit/SKILL.md defines AUDIT_ROOT from valid $CRON_WORKTREE when present",
+        "Standalone/manual runs fall back to git rev-parse --show-toplevel",
+        "Source-inspection commands use $AUDIT_ROOT or repo-relative paths, not /home/sandbox/harness"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed on 2026-06-15; harness-audit now resolves AUDIT_ROOT before gathering context."
+    },
+    {
+      "id": "US-002",
+      "title": "Separate runtime log root from source root",
+      "description": "As an operator, I need daily runtime logs to remain discoverable while source inspection stays isolated.",
+      "acceptanceCriteria": [
+        "The context snapshot documents AUDIT_LOG_ROOT for runtime observability logs",
+        "Long-term tracked memory reads use $AUDIT_ROOT/memory/MEMORY.md",
+        "The only log-root exception is documented near the snapshot commands"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed on 2026-06-15; runtime memory listing uses AUDIT_LOG_ROOT while tracked memory uses AUDIT_ROOT."
+    },
+    {
+      "id": "US-003",
+      "title": "Guard the contract",
+      "description": "As the harness, I need a deterministic probe so the hardcoded root path cannot return silently.",
+      "acceptanceCriteria": [
+        "evals/probes/harness-audit-memory-path.sh requires AUDIT_ROOT and CRON_WORKTREE handling",
+        "The probe fails on any /home/sandbox/harness literal in the harness-audit skill",
+        "The probe passes against the updated skill, and /eval has no new green-to-red regression",
+        "CHANGELOG.md records the fix under ## [Unreleased]"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed on 2026-06-15; probe updated and changelog entry added."
+    }
+  ]
+}

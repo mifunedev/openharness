@@ -53,31 +53,51 @@ Arguments received: `$ARGUMENTS`
 Read the following before spawning agents. Pass the assembled snapshot to every auditor.
 
 ```bash
+# Resolve the checkout under audit. In cron worktree mode, inspect the isolated
+# worktree that invoked the skill rather than the shared root checkout.
+if [ -n "${CRON_WORKTREE:-}" ] && git -C "$CRON_WORKTREE" rev-parse --show-toplevel >/dev/null 2>&1; then
+  AUDIT_ROOT="$(git -C "$CRON_WORKTREE" rev-parse --show-toplevel)"
+else
+  AUDIT_ROOT="$(git rev-parse --show-toplevel)"
+fi
+
+# Runtime observability logs may intentionally live in the shared checkout when
+# a cron worktree is ephemeral. Source inspection still uses $AUDIT_ROOT.
+AUDIT_LOG_ROOT="${AUTOPILOT_LOG_ROOT:-$AUDIT_ROOT}"
+if [ -n "${CRON_WORKTREE:-}" ] && [ "$AUDIT_LOG_ROOT" = "$AUDIT_ROOT" ]; then
+  root="$(git -C "$AUDIT_ROOT" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /, ""); print; exit }' || true)"
+  [ -n "$root" ] && AUDIT_LOG_ROOT="$root"
+fi
+
 # Harness structure
-ls /home/sandbox/harness/.claude/skills/
-ls /home/sandbox/harness/.claude/agents/ 2>/dev/null || echo "no agents dir"
-ls /home/sandbox/harness/crons/ 2>/dev/null || echo "no crons"
-ls /home/sandbox/harness/memory/ 2>/dev/null | tail -10
-ls /home/sandbox/harness/wiki/ 2>/dev/null | head -20
+ls "$AUDIT_ROOT/.claude/skills/"
+ls "$AUDIT_ROOT/.claude/agents/" 2>/dev/null || echo "no agents dir"
+ls "$AUDIT_ROOT/crons/" 2>/dev/null || echo "no crons"
+ls "$AUDIT_LOG_ROOT/memory/" 2>/dev/null | tail -10
+ls "$AUDIT_ROOT/wiki/" 2>/dev/null | head -20
 
 # Package health
-cat /home/sandbox/harness/package.json 2>/dev/null | head -30
-cat /home/sandbox/harness/packages/docs/package.json 2>/dev/null | head -30
+cat "$AUDIT_ROOT/package.json" 2>/dev/null | head -30
+cat "$AUDIT_ROOT/packages/docs/package.json" 2>/dev/null | head -30
 
 # CI definition
-ls /home/sandbox/harness/.github/workflows/ 2>/dev/null
+ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
 
 # Worktrees
-git -C /home/sandbox/harness worktree list 2>/dev/null
+git -C "$AUDIT_ROOT" worktree list 2>/dev/null
 
-# Recent memory
-tail -40 /home/sandbox/harness/memory/MEMORY.md 2>/dev/null
+# Recent long-term memory (tracked source artifact)
+tail -40 "$AUDIT_ROOT/memory/MEMORY.md" 2>/dev/null
 ```
 
 Assemble a **Context Snapshot** (compact markdown, ~300 words):
 
 ```markdown
 ## Harness Context Snapshot — YYYY-MM-DD
+
+### Roots
+- AUDIT_ROOT: [source checkout under audit]
+- AUDIT_LOG_ROOT: [runtime log checkout, if different]
 
 ### Skills present
 [list]
@@ -116,7 +136,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 
 #### PM Auditor
 
-> You are a Product Manager auditing the Open Harness project. Read the Context Snapshot provided. Then inspect the repo at `/home/sandbox/harness` for evidence supporting or refuting each check below. Use Read, Glob, and Grep tools freely. Return findings in the Ultra-compressed format defined at the end.
+> You are a Product Manager auditing the Open Harness project. Read the Context Snapshot provided. Then inspect the source checkout listed as `AUDIT_ROOT` for evidence supporting or refuting each check below. Use Read, Glob, and Grep tools freely. Return findings in the Ultra-compressed format defined at the end.
 >
 > **Audit areas:**
 >
@@ -142,7 +162,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 
 #### Implementer Auditor
 
-> You are a senior engineer auditing the Open Harness project. Read the Context Snapshot provided. Then inspect the repo at `/home/sandbox/harness`. Use Read, Glob, Grep, and Bash tools freely. Return findings in the Ultra-compressed format defined at the end.
+> You are a senior engineer auditing the Open Harness project. Read the Context Snapshot provided. Then inspect the source checkout listed as `AUDIT_ROOT`. Use Read, Glob, Grep, and Bash tools freely. Return findings in the Ultra-compressed format defined at the end.
 >
 > **Audit areas:**
 >
@@ -170,7 +190,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 
 #### Critic Auditor
 
-> You are an adversarial security and reliability critic auditing the Open Harness project. Assume everything is broken until proven otherwise. Read the Context Snapshot. Inspect `/home/sandbox/harness`. Use Read, Glob, Grep, and Bash tools. Return findings in the Ultra-compressed format defined at the end.
+> You are an adversarial security and reliability critic auditing the Open Harness project. Assume everything is broken until proven otherwise. Read the Context Snapshot. Inspect the source checkout listed as `AUDIT_ROOT`. Use Read, Glob, Grep, and Bash tools. Return findings in the Ultra-compressed format defined at the end.
 >
 > **Audit areas:**
 >
@@ -178,7 +198,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 2. **Cron reliability** — Read all cron definitions in `crons/`. For each: is there a watchdog/restart mechanism? What happens if the cron runtime crashes — does it auto-recover? Is the cron/daemon config present and valid?
 >
-> 3. **Worktree cleanup** — Run `git -C /home/sandbox/harness worktree list`. Identify orphaned agent branches (`agent/*`) with no recent commits (check `git log --since="7 days ago"`). Is there any automated cleanup?
+> 3. **Worktree cleanup** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list`. Identify orphaned agent branches (`agent/*`) with no recent commits (check `git log --since="7 days ago"`). Is there any automated cleanup?
 >
 > 4. **State corruption risks** — Look for: shared files written by multiple agents concurrently (e.g., `MEMORY.md`), no file locking on append operations, mid-commit crash scenarios (partial writes to critical files), compose volumes that could diverge.
 >
@@ -196,7 +216,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 
 #### Explorer Auditor
 
-> You are a system archaeologist auditing the Open Harness project. Your job is to discover what is actually happening vs. what the documentation claims. Read the Context Snapshot. Inspect `/home/sandbox/harness` and `/home/sandbox/harness/workspace`. Use Read, Glob, Grep, and Bash tools. Return findings in the Ultra-compressed format defined at the end.
+> You are a system archaeologist auditing the Open Harness project. Your job is to discover what is actually happening vs. what the documentation claims. Read the Context Snapshot. Inspect the source checkout listed as `AUDIT_ROOT` and its `workspace/` directory. Use Read, Glob, Grep, and Bash tools. Return findings in the Ultra-compressed format defined at the end.
 >
 > **Audit areas:**
 >
@@ -206,7 +226,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 3. **Cron health** — For each cron definition in `crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check memory logs for cron execution traces.
 >
-> 4. **Agent worktree status** — Run `git -C /home/sandbox/harness worktree list` and `git -C /home/sandbox/harness branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
+> 4. **Agent worktree status** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list` and `git branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
 >
 > 5. **Skill usage patterns** — Read `memory/MEMORY.md` and recent daily logs. Which skills appear in memory entries (evidence of use)? Which skills exist in `.claude/skills/` but never appear in logs (potentially stale or unknown)?
 >

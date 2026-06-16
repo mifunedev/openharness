@@ -9,6 +9,15 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.6.16] - 2026-06-16
+
+### Added
 - `/git` skill promotes the former `context/rules/git.md` conventions into a provider-portable command skill, leaving the rules file as a pointer for providers that still load rules ([#422](https://github.com/mifunedev/openharness/issues/422), [#424](https://github.com/mifunedev/openharness/issues/424)).
 - `/watchdog` skill replaces the autopilot-specific watchdog intent with a generic stuck/stale automation watchdog; its first guarded action completes stale autopilot draft PRs and removes draft only after verification, rather than merely nudging for a merge.
 - `autopilot-upstream-default` eval probe — guards that future `/autopilot` and `/ship-spec` runs default GitHub/git operations to upstream `mifunedev/openharness` via `upstream/development`, not the personal fork checkout.

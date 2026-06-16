@@ -24,7 +24,7 @@ The worktree has `pnpm run typecheck`, not `pnpm run type-check`; the exact Ralp
 
 **Title**: Update sibling runner references
 **Files changed**: `.claude/skills/strategic-proposal/SKILL.md`, `.claude/skills/benchmark/SKILL.md`, `context/rules/loop.md`, `tasks/rebrand-orchestrate/prd.json`, `tasks/rebrand-orchestrate/progress.txt`
-**Commit**: TBD
+**Commit**: a3db582
 **Result**: PASS
 
 ### What I did

@@ -5,6 +5,7 @@ timezone: America/Denver
 enabled: true
 overlap: false
 catchup: false
+agent: pi
 description: Weekly Ralph session sweep — archive completed tasks
 ---
 

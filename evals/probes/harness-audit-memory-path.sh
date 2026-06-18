@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #183 — /harness-audit must inspect the active worktree, not a hardcoded root
-# desc: /harness-audit context snapshot must resolve AUDIT_ROOT and avoid hardcoded source paths
+# desc: /harness-audit context snapshot must resolve AUDIT_ROOT for source inspection and avoid hardcoded source paths
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -19,8 +19,8 @@ if ! grep -q 'AUDIT_ROOT' "$SKILL" || ! grep -q 'CRON_WORKTREE' "$SKILL"; then
   exit 1
 fi
 
-if ! grep -q '\$AUDIT_ROOT/memory/MEMORY\.md' "$SKILL"; then
-  echo "REGRESSION: harness-audit context snapshot does not tail tracked memory/MEMORY.md via AUDIT_ROOT" >&2
+if ! grep -q 'ls "\$AUDIT_ROOT/\.claude/skills/"' "$SKILL" || ! grep -q 'git -C "\$AUDIT_ROOT" worktree list' "$SKILL"; then
+  echo "REGRESSION: harness-audit context snapshot does not inspect source via AUDIT_ROOT" >&2
   exit 1
 fi
 

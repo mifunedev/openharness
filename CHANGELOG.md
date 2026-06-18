@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `harness-audit-shared-memory` eval probe guards that `/harness-audit` reads durable long-term memory from `AUDIT_LOG_ROOT` in cron worktrees while preserving source inspection via `AUDIT_ROOT` ([#432](https://github.com/mifunedev/openharness/issues/432)).
 ### Changed
 ### Fixed
 ### Removed

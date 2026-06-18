@@ -87,8 +87,10 @@ ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
 # Worktrees
 git -C "$AUDIT_ROOT" worktree list 2>/dev/null
 
-# Recent long-term memory (tracked source artifact)
-tail -40 "$AUDIT_ROOT/memory/MEMORY.md" 2>/dev/null
+# Recent long-term memory (durable shared artifact). In cron worktree mode,
+# source inspection stays on AUDIT_ROOT, but long-term lessons live in the
+# shared checkout resolved as AUDIT_LOG_ROOT.
+tail -40 "$AUDIT_LOG_ROOT/memory/MEMORY.md" 2>/dev/null
 ```
 
 Assemble a **Context Snapshot** (compact markdown, ~300 words):

@@ -24,6 +24,10 @@ export interface CronEntry {
   // exit skips the fire (SKIPPED_PREFLIGHT) with no session, no model query, no
   // worktree. A fail-open optimization — a gate error proceeds (PREFLIGHT_ERROR).
   preflight?: string;
+  // Optional canonical GitHub repository (`owner/name`) for this cron. The
+  // runtime exports it as AUTOPILOT_REPO and resolves the matching local git
+  // remote as AUTOPILOT_REMOTE so gh and git operations target the same repo.
+  repo?: string;
   body: string;
   filePath: string;
 }
@@ -34,6 +38,8 @@ const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";
 const CRON_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const AGENT_BIN_PATTERN = /^[A-Za-z0-9_./-]+$/;
+const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+const REMOTE_PATTERN = /^[A-Za-z0-9_.-]+$/;
 
 export function isValidCronId(id: string): boolean {
   return CRON_ID_PATTERN.test(id);
@@ -45,6 +51,24 @@ export function isValidAgentBin(agentBin: string): boolean {
     !agentBin.startsWith("-") &&
     !agentBin.includes("..") &&
     AGENT_BIN_PATTERN.test(agentBin)
+  );
+}
+
+export function isValidRepo(repo: string): boolean {
+  return (
+    repo.length > 0 &&
+    !repo.startsWith("-") &&
+    !repo.includes("..") &&
+    REPO_PATTERN.test(repo)
+  );
+}
+
+export function isValidRemote(remote: string): boolean {
+  return (
+    remote.length > 0 &&
+    !remote.startsWith("-") &&
+    !remote.includes("..") &&
+    REMOTE_PATTERN.test(remote)
   );
 }
 
@@ -70,6 +94,7 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
     worktree: fm.worktree === "true",
     agentBin: fm.agent || undefined,
     preflight: fm.preflight || undefined,
+    repo: fm.repo || undefined,
     body: m[2],
     filePath: file,
   };
@@ -131,6 +156,10 @@ export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
       logFn(entry.id, "AGENT_INVALID", `invalid agent: ${entry.agentBin}`);
       continue;
     }
+    if (entry.repo && !isValidRepo(entry.repo)) {
+      logFn(entry.id, "REPO_INVALID", `invalid repo: ${entry.repo}`);
+      continue;
+    }
     // Invalid-schedule skip is a DISTINCT path from the silent unreadable-file
     // catch above: it runs after a non-null entry and OUTSIDE that try/catch, and
     // it logs SCHED_INVALID so the misconfiguration surfaces in crons/.cron.log
@@ -159,6 +188,66 @@ export function acquireLock(pidFile: string = PID_FILE): boolean {
   fs.mkdirSync(path.dirname(pidFile), { recursive: true });
   fs.writeFileSync(pidFile, String(process.pid));
   return true;
+}
+
+const FIRE_RELOAD_FIELDS: (keyof CronEntry)[] = [
+  "schedule",
+  "timezone",
+  "enabled",
+  "overlap",
+  "catchup",
+  "tmux",
+  "worktree",
+  "agentBin",
+  "preflight",
+  "repo",
+];
+
+// Re-read execution metadata immediately before each fire. Croner still owns the
+// already-armed schedule cadence until SIGHUP reschedules the process, but safety
+// fields like `preflight:` and `repo:` must not stay stale after frontmatter
+// edits. Keep the cached body so reloadBody() remains the single body logger.
+export function reloadEntryForFire(entry: CronEntry, logFn = log): CronEntry | null {
+  let fresh: CronEntry | null;
+  try {
+    fresh = parseCronFile(
+      fs.readFileSync(entry.filePath, "utf-8"),
+      path.basename(entry.filePath),
+    );
+  } catch (e) {
+    logFn(entry.id, "CONFIG_RELOAD_ERR", `${path.basename(entry.filePath)}: ${String(e)}`);
+    return null;
+  }
+  if (!fresh) {
+    logFn(entry.id, "CONFIG_RELOAD_ERR", `${path.basename(entry.filePath)}: unparseable cron`);
+    return null;
+  }
+  const expectedId = path.basename(entry.filePath, ".md");
+  if (!fresh.enabled) {
+    logFn(entry.id, "CONFIG_RELOAD_DISABLED", path.basename(entry.filePath));
+    return null;
+  }
+  if (fresh.id !== entry.id || fresh.id !== expectedId || !isValidCronId(fresh.id)) {
+    logFn(entry.id, "CONFIG_RELOAD_ERR", `id mismatch: ${fresh.id} expected ${entry.id}`);
+    return null;
+  }
+  if (fresh.agentBin && !isValidAgentBin(fresh.agentBin)) {
+    logFn(entry.id, "AGENT_INVALID", `invalid agent: ${fresh.agentBin}`);
+    return null;
+  }
+  if (fresh.repo && !isValidRepo(fresh.repo)) {
+    logFn(entry.id, "REPO_INVALID", `invalid repo: ${fresh.repo}`);
+    return null;
+  }
+  if (!isValidSchedule(fresh.schedule)) {
+    logFn(entry.id, "SCHED_INVALID", `invalid schedule: ${fresh.schedule}`);
+    return null;
+  }
+  const changed = FIRE_RELOAD_FIELDS.filter((field) => fresh[field] !== entry[field]);
+  if (changed.length > 0) {
+    logFn(entry.id, "ENTRY_RELOADED", `${path.basename(entry.filePath)}: ${changed.join(",")}`);
+  }
+  return { ...fresh, body: entry.body };
 }
 
 export function reloadBody(entry: CronEntry): string {
@@ -199,6 +288,27 @@ function cronLogCommand(id: string, status: string, msgExpr: string): string {
     `"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" ` +
     `${shellQuote(id)} ${shellQuote(status)} ${msgExpr} >> ${shellQuote(LOG_FILE)}; `
   );
+}
+
+function repoFromRemoteUrl(url: string): string | null {
+  const trimmed = url.trim().replace(/\.git$/, "");
+  const match =
+    trimmed.match(/github\.com[:/]([^/\s]+\/[^/\s]+)$/) ||
+    trimmed.match(/^([^/\s]+\/[^/\s]+)$/);
+  return match ? match[1].toLowerCase() : null;
+}
+
+export function remoteForRepo(repo: string): string | undefined {
+  if (!isValidRepo(repo)) return undefined;
+  const want = repo.toLowerCase();
+  const r = spawnSync("git", ["remote", "-v"], { encoding: "utf-8" });
+  if (r.status !== 0 || !r.stdout) return undefined;
+  for (const line of r.stdout.split("\n")) {
+    const m = line.match(/^(\S+)\s+(\S+)\s+\((fetch|push)\)$/);
+    if (!m) continue;
+    if (repoFromRemoteUrl(m[2]) === want && isValidRemote(m[1])) return m[1];
+  }
+  return undefined;
 }
 
 // Best-effort tail of a job's tee'd log, used by fire()'s exit handler to
@@ -245,17 +355,23 @@ export function buildTmuxWrapper(opts: {
   // Absolute path of the isolated worktree this fire runs in (worktree-fallback
   // only). Exported as CRON_WORKTREE so the agent knows it is isolated.
   worktree?: string;
+  repo?: string;
+  remote?: string;
 }): string {
   const { session, id, agentBin, promptFile } = opts;
   if (!isValidCronId(id)) throw new Error(`invalid cron id: ${id}`);
   if (!isValidAgentBin(agentBin)) throw new Error(`invalid agent bin: ${agentBin}`);
+  if (opts.repo && !isValidRepo(opts.repo)) throw new Error(`invalid repo: ${opts.repo}`);
+  if (opts.remote && !isValidRemote(opts.remote)) throw new Error(`invalid remote: ${opts.remote}`);
   const pidFile = opts.pidFile ?? `/tmp/cron-${id}.pid`;
   const quotedAgent = shellQuote(agentBin);
   const quotedPidFile = shellQuote(pidFile);
   const worktreeExport = opts.worktree ? ` CRON_WORKTREE=${shellQuote(opts.worktree)}` : "";
+  const repoExport = opts.repo ? ` AUTOPILOT_REPO=${shellQuote(opts.repo)}` : "";
+  const remoteExport = opts.remote ? ` AUTOPILOT_REMOTE=${shellQuote(opts.remote)}` : "";
   return (
     `echo $$ > ${quotedPidFile}; ` +
-    `export CRON_TMUX_SESSION=${shellQuote(session)} CRON_KEEP_MARKER=${shellQuote(`/tmp/${session}.keep`)} CRON_OVERLAP_PIDFILE=${quotedPidFile}${worktreeExport}; ` +
+    `export CRON_TMUX_SESSION=${shellQuote(session)} CRON_KEEP_MARKER=${shellQuote(`/tmp/${session}.keep`)} CRON_OVERLAP_PIDFILE=${quotedPidFile}${worktreeExport}${repoExport}${remoteExport}; ` +
     buildCronAgentCommand({
       id,
       agentBin,
@@ -263,6 +379,8 @@ export function buildTmuxWrapper(opts: {
       logFile: `/tmp/${session}.log`,
       resumeFile: `/tmp/${session}.agent`,
       exitOnComplete: false,
+      repo: opts.repo,
+      remote: opts.remote,
     }) +
     `; ` +
     `rm -f ${quotedPidFile}; ` +
@@ -282,6 +400,8 @@ export function buildCronAgentCommand(opts: {
   logFile: string;
   resumeFile?: string;
   exitOnComplete?: boolean;
+  repo?: string;
+  remote?: string;
 }): string {
   const {
     id = "cron",
@@ -290,13 +410,20 @@ export function buildCronAgentCommand(opts: {
     logFile,
     resumeFile,
     exitOnComplete = true,
+    repo,
+    remote,
   } = opts;
   if (!isValidCronId(id)) throw new Error(`invalid cron id: ${id}`);
   if (!isValidAgentBin(agentBin)) throw new Error(`invalid agent bin: ${agentBin}`);
+  if (repo && !isValidRepo(repo)) throw new Error(`invalid repo: ${repo}`);
+  if (remote && !isValidRemote(remote)) throw new Error(`invalid remote: ${remote}`);
   const quotedAgent = shellQuote(agentBin);
   const quotedPromptFile = shellQuote(promptFile);
   const quotedLogFile = shellQuote(logFile);
   const exitOrReturn = exitOnComplete ? `exit $status` : `true`;
+  const envExport =
+    (repo ? `export AUTOPILOT_REPO=${shellQuote(repo)}; ` : "") +
+    (remote ? `export AUTOPILOT_REMOTE=${shellQuote(remote)}; ` : "");
   const resumeInit = resumeFile
     ? `printf '%s' ${quotedAgent} > ${shellQuote(resumeFile)}; `
     : "";
@@ -308,6 +435,7 @@ export function buildCronAgentCommand(opts: {
   );
   if (agentBin === "pi" && resumeFile && !exitOnComplete) {
     return (
+      envExport +
       `${resumeInit}` +
       `active_agent=pi; ` +
       logAgentStart +
@@ -323,6 +451,7 @@ export function buildCronAgentCommand(opts: {
   }
   if (agentBin !== "claude") {
     return (
+      envExport +
       `${resumeInit}` +
       `active_agent=${quotedAgent}; ` +
       logAgentStart +
@@ -338,6 +467,7 @@ export function buildCronAgentCommand(opts: {
     ? `printf '%s' codex > ${shellQuote(resumeFile)}; `
     : "";
   return (
+    envExport +
     `${resumeInit}` +
     `active_agent=claude; ` +
     logAgentStart +
@@ -411,13 +541,14 @@ const FALLBACK_WORKTREE_DIR = ".worktrees/cron";
 // First existing remote (preferred) or local base branch, mirroring the
 // development→main→master precedence in context/rules/git.md. Returns a
 // commit-ish suitable for `git worktree add --detach`, or null if none exist.
-function detectBaseRef(): string | null {
+function detectBaseRef(remote = "origin"): string | null {
+  if (!isValidRemote(remote)) return null;
   for (const ref of ["development", "main", "master"]) {
     if (
-      spawnSync("git", ["show-ref", "--verify", "--quiet", `refs/remotes/origin/${ref}`])
+      spawnSync("git", ["show-ref", "--verify", "--quiet", `refs/remotes/${remote}/${ref}`])
         .status === 0
     ) {
-      return `origin/${ref}`;
+      return `${remote}/${ref}`;
     }
   }
   for (const ref of ["development", "main", "master"]) {
@@ -488,7 +619,12 @@ function createFallbackWorktree(entry: CronEntry, session: string): string | nul
     );
     return null;
   }
-  const base = detectBaseRef();
+  const remote = entry.repo ? remoteForRepo(entry.repo) : undefined;
+  if (entry.repo && !remote) {
+    log(entry.id, "REPO_REMOTE_MISSING", `no local remote for ${entry.repo}`);
+    return null;
+  }
+  const base = detectBaseRef(remote || "origin");
   if (!base) {
     log(entry.id, "ERR_WORKTREE", "no base ref (development/main/master) found");
     return null;
@@ -519,6 +655,11 @@ function fireTmux(entry: CronEntry): void {
   const agentBin = entry.agentBin || AGENT_BIN;
   if (!isValidAgentBin(agentBin)) {
     log(entry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
+    return;
+  }
+  const repoRemote = entry.repo ? remoteForRepo(entry.repo) : undefined;
+  if (entry.repo && !repoRemote) {
+    log(entry.id, "REPO_REMOTE_MISSING", `no local remote for ${entry.repo}`);
     return;
   }
 
@@ -560,7 +701,16 @@ function fireTmux(entry: CronEntry): void {
       session,
       "-c",
       cwd,
-      buildTmuxWrapper({ session, id: entry.id, agentBin, promptFile, pidFile, worktree }),
+      buildTmuxWrapper({
+        session,
+        id: entry.id,
+        agentBin,
+        promptFile,
+        pidFile,
+        worktree,
+        repo: entry.repo,
+        remote: repoRemote,
+      }),
     ],
     { stdio: "ignore" },
   );
@@ -599,9 +749,17 @@ export function runPreflight(
     return { status: 12, reason: "preflight-error: invalid-path" }; // fail-closed
   }
   const abs = path.resolve(process.cwd(), scriptPath);
+  const repoRemote = entry.repo ? remoteForRepo(entry.repo) : undefined;
+  if (entry.repo && !repoRemote) {
+    log(entry.id, "REPO_REMOTE_MISSING", `no local remote for ${entry.repo}`);
+  }
   const r = spawnSync(abs, [], {
     cwd: process.cwd(),
-    env: process.env,
+    env: {
+      ...process.env,
+      ...(entry.repo ? { AUTOPILOT_REPO: entry.repo } : {}),
+      ...(repoRemote ? { AUTOPILOT_REMOTE: repoRemote } : {}),
+    },
     encoding: "utf-8",
     timeout: timeoutMs,
   });
@@ -619,50 +777,59 @@ export function runPreflight(
 }
 
 export function fire(entry: CronEntry): void {
+  const liveEntry = reloadEntryForFire(entry);
+  if (!liveEntry) return;
   // Pre-fire gate: a deterministic preflight check that runs BEFORE any
   // worktree/tmux/agent is created. A non-zero exit skips the fire entirely
   // (SKIPPED_PREFLIGHT), mirroring the SKIPPED_OVERLAP short-circuit in
   // fireTmux — no session, no model query, no worktree.
-  if (entry.preflight) {
-    const { status, reason } = runPreflight(entry);
+  if (liveEntry.preflight) {
+    const { status, reason } = runPreflight(liveEntry);
     if (status !== 0) {
-      log(entry.id, "SKIPPED_PREFLIGHT", reason);
+      log(liveEntry.id, "SKIPPED_PREFLIGHT", reason);
       return;
     }
   }
-  if (entry.tmux) {
-    fireTmux(entry);
+  if (liveEntry.tmux) {
+    fireTmux(liveEntry);
     return;
   }
-  log(entry.id, "FIRE");
-  const session = tmuxSessionName(entry.id, new Date());
+  log(liveEntry.id, "FIRE");
+  const session = tmuxSessionName(liveEntry.id, new Date());
   const promptFile = `/tmp/${session}.prompt`;
   const logFile = `/tmp/${session}.log`;
-  const agentBin = entry.agentBin || AGENT_BIN;
+  const agentBin = liveEntry.agentBin || AGENT_BIN;
   if (!isValidAgentBin(agentBin)) {
-    log(entry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
+    log(liveEntry.id, "AGENT_INVALID", `invalid agent: ${agentBin}`);
     return;
   }
-  fs.writeFileSync(promptFile, reloadBody(entry));
+  const repoRemote = liveEntry.repo ? remoteForRepo(liveEntry.repo) : undefined;
+  if (liveEntry.repo && !repoRemote) {
+    log(liveEntry.id, "REPO_REMOTE_MISSING", `no local remote for ${liveEntry.repo}`);
+    return;
+  }
+  fs.writeFileSync(promptFile, reloadBody(liveEntry));
   const child = spawn(
     "bash",
     [
       "-lc",
       buildCronAgentCommand({
-        id: entry.id,
+        id: liveEntry.id,
         agentBin,
         promptFile,
         logFile,
+        repo: liveEntry.repo,
+        remote: repoRemote,
       }),
     ],
     { stdio: "inherit" },
   );
   child.on("exit", (code: number | null) =>
     code === 0
-      ? log(entry.id, "OK")
-      : log(entry.id, `EXIT_${code}`, readFailureTail(logFile)),
+      ? log(liveEntry.id, "OK")
+      : log(liveEntry.id, `EXIT_${code}`, readFailureTail(logFile)),
   );
-  child.on("error", (e: Error) => log(entry.id, "ERR", String(e)));
+  child.on("error", (e: Error) => log(liveEntry.id, "ERR", String(e)));
 }
 
 export interface BootResult {
@@ -730,7 +897,7 @@ export function scheduleAll(
   activeJobs = [];
   let loadSkips = 0;
   const entries = loadCrons(dir, (id, status, msg) => {
-    if (["SCHED_INVALID", "ID_INVALID", "ID_MISMATCH", "AGENT_INVALID"].includes(status)) loadSkips++;
+    if (["SCHED_INVALID", "ID_INVALID", "ID_MISMATCH", "AGENT_INVALID", "REPO_INVALID"].includes(status)) loadSkips++;
     logFn(id, status, msg);
   });
   let scheduled = 0;

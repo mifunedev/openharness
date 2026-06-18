@@ -34,11 +34,15 @@ import {
   fire,
   isValidAgentBin,
   isValidCronId,
+  isValidRemote,
+  isValidRepo,
   isValidSchedule,
   loadCrons,
   onJobError,
   parseCronFile,
   readFailureTail,
+  reloadEntryForFire,
+  remoteForRepo,
   reloadBody,
   resetActiveJobs,
   runPreflight,
@@ -64,6 +68,24 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
+
+function withTempGitRemotes<T>(remotes: Record<string, string>, fn: () => T): T {
+  const prevCwd = process.cwd();
+  const repo = path.join(tmp, "git-remotes");
+  mkdirSync(repo, { recursive: true });
+  const init = spawnSync("git", ["init"], { cwd: repo, encoding: "utf-8" });
+  expect(init.status).toBe(0);
+  for (const [name, url] of Object.entries(remotes)) {
+    const add = spawnSync("git", ["remote", "add", name, url], { cwd: repo, encoding: "utf-8" });
+    expect(add.status).toBe(0);
+  }
+  process.chdir(repo);
+  try {
+    return fn();
+  } finally {
+    process.chdir(prevCwd);
+  }
+}
 
 describe("parseCronFile", () => {
   it("parses the SPEC frontmatter shape", () => {
@@ -139,6 +161,16 @@ Heartbeat body.
     expect(
       parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.preflight,
     ).toBeUndefined();
+  });
+
+  it("parses an optional canonical repo target", () => {
+    expect(
+      parseCronFile(
+        `---\nschedule: "* * * * *"\nrepo: mifunedev/openharness\n---\nbody\n`,
+        "autopilot.md",
+      )?.repo,
+    ).toBe("mifunedev/openharness");
+    expect(parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.repo).toBeUndefined();
   });
 
   it("parses worktree: true and defaults to false otherwise", () => {
@@ -228,6 +260,24 @@ describe("isValidAgentBin", () => {
       "`touch /tmp/pwn`",
     ]) {
       expect(isValidAgentBin(agent)).toBe(false);
+    }
+  });
+});
+
+describe("isValidRepo / isValidRemote", () => {
+  it("accepts GitHub owner/name repo targets and simple remote names", () => {
+    expect(isValidRepo("mifunedev/openharness")).toBe(true);
+    expect(isValidRepo("ryan-eggz/open_harness.docs")).toBe(true);
+    expect(isValidRemote("origin")).toBe(true);
+    expect(isValidRemote("upstream")).toBe(true);
+  });
+
+  it("rejects unsafe repo and remote values", () => {
+    for (const repo of ["", "-bad/repo", "../repo", "owner/../repo", "owner/repo;bad", "owner repo/name", "owner"]) {
+      expect(isValidRepo(repo)).toBe(false);
+    }
+    for (const remote of ["", "-c", "../origin", "origin;bad", "origin upstream"]) {
+      expect(isValidRemote(remote)).toBe(false);
     }
   });
 });
@@ -376,6 +426,21 @@ describe("buildTmuxWrapper", () => {
     );
   });
 
+  it("exports the configured repo and resolved remote into tmux wrappers", () => {
+    const repoWrapper = buildTmuxWrapper({
+      session: "cron-autopilot-0610-1805",
+      id: "autopilot",
+      agentBin: "pi",
+      promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
+      repo: "mifunedev/openharness",
+      remote: "upstream",
+    });
+
+    expect(repoWrapper).toContain(
+      "AUTOPILOT_REPO='mifunedev/openharness' AUTOPILOT_REMOTE='upstream';",
+    );
+  });
+
   it("uses a session-scoped pidfile and exports CRON_WORKTREE for an isolated worktree fire", () => {
     const wt = buildTmuxWrapper({
       session: "cron-autopilot-0610-1805",
@@ -460,6 +525,19 @@ describe("buildCronAgentCommand", () => {
     );
     expect(command).toContain("AGENT_DONE");
     expect(command).toContain('agent=$active_agent exit=$status');
+  });
+
+  it("exports repo targeting for non-tmux cron agent commands", () => {
+    const command = buildCronAgentCommand({
+      agentBin: "claude",
+      promptFile: "/tmp/cron-global.prompt",
+      logFile: "/tmp/cron-global.log",
+      repo: "mifunedev/openharness",
+      remote: "upstream",
+    });
+
+    expect(command).toContain("export AUTOPILOT_REPO='mifunedev/openharness';");
+    expect(command).toContain("export AUTOPILOT_REMOTE='upstream';");
   });
 
   it("preserves explicit non-Claude CRON_AGENT_BIN behavior without Codex fallback", () => {
@@ -756,6 +834,21 @@ describe("scheduleAll", () => {
     expect(spy).toHaveBeenCalledWith("system", "BOOT", "1 scheduled, 1 skipped");
   });
 
+  it("counts invalid repo targets as load-time skips without constructing them", () => {
+    writeFileSync(
+      path.join(tmp, "autopilot.md"),
+      `---\nid: autopilot\nschedule: "0 * * * *"\nrepo: ../evil\nenabled: true\n---\nbody\n`,
+    );
+    const spy = vi.fn();
+    const result = scheduleAll(tmp, spy, () => {
+      throw new Error("must not construct");
+    });
+
+    expect(result).toEqual({ scheduled: 0, skipped: 1 });
+    expect(spy).toHaveBeenCalledWith("autopilot", "REPO_INVALID", "invalid repo: ../evil");
+    expect(spy).toHaveBeenCalledWith("system", "BOOT", "0 scheduled, 1 skipped");
+  });
+
   it("does not double-count: a load-time skip and a construction skip sum disjointly", () => {
     writeFileSync(path.join(tmp, "aok.md"), cron("aok", "0 * * * *"));
     writeFileSync(path.join(tmp, "bload.md"), cron("bload", "not-a-cron"));
@@ -796,6 +889,59 @@ describe("acquireLock", () => {
     writeFileSync(pidFile, "999999");
     expect(acquireLock(pidFile)).toBe(true);
     expect(existsSync(pidFile)).toBe(true);
+  });
+
+});
+
+describe("reloadEntryForFire", () => {
+  afterEach(() => {
+    vi.mocked(fsModule.appendFileSync).mockClear();
+  });
+
+  it("picks up fire-time metadata changes while preserving cached body for reloadBody", () => {
+    const cronFile = path.join(tmp, "hot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\nagent: claude\n---\noriginal body\n`,
+    );
+    const [entry] = loadCrons(tmp);
+    expect(entry.agentBin).toBe("claude");
+
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\nagent: pi\npreflight: scripts/autopilot-caps.sh\nrepo: mifunedev/openharness\n---\nupdated body\n`,
+    );
+
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+    const liveEntry = reloadEntryForFire(entry);
+
+    expect(liveEntry?.agentBin).toBe("pi");
+    expect(liveEntry?.preflight).toBe("scripts/autopilot-caps.sh");
+    expect(liveEntry?.repo).toBe("mifunedev/openharness");
+    // Body stays cached here so reloadBody remains the single BODY_RELOADED logger.
+    expect(liveEntry?.body).toBe("original body\n");
+    const lines = appendSpy.mock.calls.map((c) => String(c[1]));
+    expect(lines.some((line) => line.includes("ENTRY_RELOADED") && line.includes("agentBin,preflight,repo"))).toBe(true);
+  });
+
+  it("skips a fire when the cron is disabled on disk after scheduling", () => {
+    const cronFile = path.join(tmp, "hot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nbody\n`,
+    );
+    const [entry] = loadCrons(tmp);
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: false\n---\nbody\n`,
+    );
+
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+    expect(reloadEntryForFire(entry)).toBeNull();
+    const lines = appendSpy.mock.calls.map((c) => String(c[1]));
+    expect(lines.some((line) => line.includes("CONFIG_RELOAD_DISABLED"))).toBe(true);
   });
 });
 
@@ -1057,6 +1203,7 @@ describe("runPreflight + the fire() preflight gate", () => {
     tmux: true,
     worktree: true,
     preflight,
+    repo: undefined as string | undefined,
     body: "body\n",
     filePath: "autopilot.md",
   });
@@ -1111,15 +1258,60 @@ describe("runPreflight + the fire() preflight gate", () => {
   it("fire() short-circuits on a non-zero gate: logs SKIPPED_PREFLIGHT and never spawns", () => {
     // tmux:true would normally reach fireTmux's real `spawn("tmux", …)`, but the
     // gate returns first, so no SPAWNED/SPAWNED_WORKTREE line is ever logged.
-    fire(entry(preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" })));
+    const cronFile = path.join(tmp, "autopilot.md");
+    const script = preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" });
+    writeFileSync(
+      cronFile,
+      `---\nid: autopilot\nschedule: "* * * * *"\nenabled: true\ntmux: true\nworktree: true\npreflight: ${script}\n---\nbody\n`,
+    );
+    fire({ ...entry(script), filePath: cronFile });
     const lines = loggedLines();
     expect(lines.some((l) => l.includes("\tSKIPPED_PREFLIGHT\t") && l.includes("SKIPPED-CAP-DAILY"))).toBe(true);
     expect(lines.some((l) => l.includes("SPAWNED"))).toBe(false);
     expect(lines.some((l) => l.includes("\tFIRE\t"))).toBe(false);
   });
 
+  it("fire() picks up newly-added repo and preflight metadata before any spawn", () => {
+    const cronFile = path.join(tmp, "autopilot.md");
+    const script = preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" });
+    writeFileSync(
+      cronFile,
+      `---\nid: autopilot\nschedule: "* * * * *"\nenabled: true\ntmux: true\nworktree: true\npreflight: ${script}\nrepo: mifunedev/openharness\n---\nbody\n`,
+    );
+    fire({ ...entry(undefined), filePath: cronFile });
+
+    const lines = loggedLines();
+    expect(lines.some((l) => l.includes("\tENTRY_RELOADED\t") && l.includes("preflight,repo"))).toBe(true);
+    expect(lines.some((l) => l.includes("\tSKIPPED_PREFLIGHT\t") && l.includes("SKIPPED-CAP-DAILY"))).toBe(true);
+    expect(lines.some((l) => l.includes("SPAWNED"))).toBe(false);
+  });
+
+  it("exports repo and matching remote into preflight runs", () => {
+    withTempGitRemotes({ upstream: "https://github.com/mifunedev/openharness.git" }, () => {
+      const script = path.join(tmp, "preflight-env.sh");
+      const out = path.join(tmp, "preflight-env.out");
+      const expectedRemote = remoteForRepo("mifunedev/openharness");
+      expect(expectedRemote).toBe("upstream");
+      writeFileSync(
+        script,
+        `#!/usr/bin/env bash\nprintf '%s %s\\n' "$AUTOPILOT_REPO" "$AUTOPILOT_REMOTE" > ${JSON.stringify(out)}\necho PROCEED\n`,
+        { mode: 0o755 },
+      );
+
+      const r = runPreflight({ ...entry(script), repo: "mifunedev/openharness" });
+
+      expect(r.status).toBe(0);
+      expect(readFileSync(out, "utf-8").trim()).toBe(`mifunedev/openharness ${expectedRemote}`);
+    });
+  });
+
   it("fire() also short-circuits when preflight itself errors", () => {
-    fire(entry("scripts/definitely-missing-preflight.sh"));
+    const cronFile = path.join(tmp, "autopilot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: autopilot\nschedule: "* * * * *"\nenabled: true\ntmux: true\nworktree: true\npreflight: scripts/definitely-missing-preflight.sh\n---\nbody\n`,
+    );
+    fire({ ...entry("scripts/definitely-missing-preflight.sh"), filePath: cronFile });
     const lines = loggedLines();
     expect(lines.some((l) => l.includes("\tPREFLIGHT_ERROR\t"))).toBe(true);
     expect(
@@ -1127,5 +1319,15 @@ describe("runPreflight + the fire() preflight gate", () => {
     ).toBe(true);
     expect(lines.some((l) => l.includes("SPAWNED"))).toBe(false);
     expect(lines.some((l) => l.includes("\tFIRE\t"))).toBe(false);
+  });
+});
+
+describe("remoteForRepo", () => {
+  it("resolves the canonical repo to the local remote whose URL matches it", () => {
+    withTempGitRemotes({ origin: "https://github.com/ryaneggz/openharness.git", upstream: "git@github.com:mifunedev/openharness.git" }, () => {
+      const remote = remoteForRepo("mifunedev/openharness");
+      expect(remote).toBe("upstream");
+      expect(isValidRemote(remote!)).toBe(true);
+    });
   });
 });

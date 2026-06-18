@@ -9,6 +9,7 @@ tmux: true
 worktree: true
 agent: pi
 preflight: scripts/autopilot-caps.sh
+repo: mifunedev/openharness
 description: Hourly autopilot — issue-queue-first harness-infra improvements in an isolated-worktree Pi tmux Advisor session
 ---
 
@@ -39,8 +40,9 @@ Invoke the `/autopilot` skill. Reminders:
   at any time. A close/merge frees a slot. **Never auto-merge.** These caps are
   now enforced deterministically *before launch* by the `preflight:
   scripts/autopilot-caps.sh` gate (logs `SKIPPED-CAP-*` + liveness and spawns no
-  session on a capped hour); your in-session §1 recheck is defense-in-depth for a
-  long run that crosses the cap mid-flight.
+  session on a capped hour), scoped to `repo: mifunedev/openharness`; your
+  in-session §1 recheck is defense-in-depth for a long run that crosses the cap
+  mid-flight.
 - **Harness-infra scope only** (skills/rules/docs/scripts/crons/wiki) — never
   sandbox application code.
 

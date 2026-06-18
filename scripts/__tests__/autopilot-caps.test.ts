@@ -35,12 +35,15 @@ afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-// A fake `gh` that ignores its args and prints `count` (the number `gh pr list
-// --json number --jq 'length'` would emit). `exitStatus` lets a test simulate a
-// gh failure (non-numeric/empty output → the script's fail-open path).
+// A fake `gh` that records its args and prints `count` (the number `gh pr list
+// --repo <repo> --json number --jq 'length'` would emit). `exitStatus` lets a
+// test simulate a gh failure (non-numeric/empty output → fail-open path).
 function ghStub(count: string, exitStatus = 0): string {
   const p = path.join(tmp, "gh-stub");
-  writeFileSync(p, `#!/usr/bin/env bash\necho '${count}'\nexit ${exitStatus}\n`);
+  writeFileSync(
+    p,
+    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> '${path.join(tmp, "gh-args.log")}'\necho '${count}'\nexit ${exitStatus}\n`,
+  );
   chmodSync(p, 0o755);
   return p;
 }
@@ -75,6 +78,10 @@ const liveness = (): string => {
   const p = path.join(tmp, "crons", ".cron.log");
   return existsSync(p) ? readFileSync(p, "utf-8") : "";
 };
+const ghArgs = (): string => {
+  const p = path.join(tmp, "gh-args.log");
+  return existsSync(p) ? readFileSync(p, "utf-8") : "";
+};
 
 describe("autopilot-caps.sh — exit-code + STATUS contract", () => {
   it("PROCEEDs (exit 0) with both counts when there is cap headroom", () => {
@@ -82,6 +89,30 @@ describe("autopilot-caps.sh — exit-code + STATUS contract", () => {
     expect(r.status).toBe(0);
     expect(r.lastStdoutLine).toBe("PROCEED total=1/10 today=1/6");
     // A PROCEED writes neither the memory block nor a liveness line.
+    expect(memoryLog()).toBe("");
+    expect(liveness()).toBe("");
+  });
+
+  it("queries the canonical repo by default with gh --repo", () => {
+    run({ GH_BIN: ghStub("1") });
+
+    expect(ghArgs()).toContain("pr list --repo mifunedev/openharness --state open --label autopilot");
+    expect(ghArgs()).toContain("pr list --repo mifunedev/openharness --state open --search");
+  });
+
+  it("honors AUTOPILOT_REPO for both cap queries", () => {
+    run({ GH_BIN: ghStub("1"), AUTOPILOT_REPO: "example/custom" });
+
+    expect(ghArgs()).toContain("pr list --repo example/custom --state open --label autopilot");
+    expect(ghArgs()).toContain("pr list --repo example/custom --state open --search");
+  });
+
+  it("fails OPEN when AUTOPILOT_REPO is invalid", () => {
+    const r = run({ GH_BIN: ghStub("10"), AUTOPILOT_REPO: "../evil" });
+
+    expect(r.status).toBe(0);
+    expect(r.lastStdoutLine).toBe("PROCEED-GH-ERROR");
+    expect(ghArgs()).toBe("");
     expect(memoryLog()).toBe("");
     expect(liveness()).toBe("");
   });
@@ -158,7 +189,7 @@ describe("autopilot-caps.sh — exit-code + STATUS contract", () => {
     // The reason the cron runtime reads is r.stdout's last line; diagnostics
     // (counts, logged-to messages) must never shadow it.
     expect(r.lastStdoutLine).toBe("SKIPPED-CAP-DAILY");
-    expect(r.stderr).toContain("total=6/99 today=6/6");
+    expect(r.stderr).toContain("repo=mifunedev/openharness total=6/99 today=6/6");
   });
 });
 

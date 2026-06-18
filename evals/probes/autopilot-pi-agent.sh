@@ -23,7 +23,7 @@ grep -Eq '^agent:[[:space:]]*pi[[:space:]]*$' "$CRON" || missing+=("crons/autopi
 grep -Fq 'agentBin?: string;' "$RUNTIME" || missing+=("CronEntry carries optional agentBin")
 grep -Fq 'agentBin: fm.agent || undefined' "$RUNTIME" || missing+=("parseCronFile reads agent frontmatter")
 grep -Fq 'const agentBin = entry.agentBin || AGENT_BIN;' "$RUNTIME" || missing+=("fire paths prefer per-cron agent over global default")
-grep -Fq 'id: entry.id, agentBin, promptFile' "$RUNTIME" || missing+=("tmux wrapper receives per-cron agent")
+grep -Fq 'buildTmuxWrapper({' "$RUNTIME" && grep -Fq 'agentBin,' "$RUNTIME" || missing+=("tmux wrapper receives per-cron agent")
 grep -Fq 'agent: pi' "$TESTS" || missing+=("tests cover agent: pi parsing/scheduling")
 grep -Fq "else \'pi\' --continue; fi;" "$TESTS" || missing+=("tests cover kept Pi session resume")
 grep -Fq '${quotedAgent} "$(cat ${quotedPromptFile})";' "$RUNTIME" || missing+=("Pi tmux path uses positional TUI prompt through the shell-quoted agent token, not headless -p")

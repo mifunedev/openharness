@@ -1,0 +1,1 @@
+Implement issue #432: make `/harness-audit` read durable long-term memory from `AUDIT_LOG_ROOT/memory/MEMORY.md` while preserving source inspection on `AUDIT_ROOT`. Add/update eval probes, refresh `evals/RESULTS.md`, and update `CHANGELOG.md`.

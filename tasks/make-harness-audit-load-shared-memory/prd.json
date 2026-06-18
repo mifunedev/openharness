@@ -1,0 +1,45 @@
+{
+  "slug": "make-harness-audit-load-shared-memory",
+  "issue": 432,
+  "branchName": "feat/432-make-harness-audit-load-shared-memory",
+  "title": "Make /harness-audit load shared memory",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Read durable memory from AUDIT_LOG_ROOT",
+      "priority": 1,
+      "passes": true,
+      "acceptanceCriteria": [
+        "The skill keeps AUDIT_LOG_ROOT resolution via AUTOPILOT_LOG_ROOT fallback and shared worktree-list root derivation in cron worktree mode.",
+        "Manual/root-mode runs remain non-fatal when shared memory is absent.",
+        "The executable context-snapshot command tails $AUDIT_LOG_ROOT/memory/MEMORY.md for recent long-term memory.",
+        "Source inspection paths continue to use AUDIT_ROOT."
+      ],
+      "notes": "Completed 2026-06-18; harness-audit tails durable memory via AUDIT_LOG_ROOT while source inspection stays on AUDIT_ROOT."
+    },
+    {
+      "id": "US-002",
+      "title": "Guard the memory-root contract with eval",
+      "priority": 2,
+      "passes": true,
+      "acceptanceCriteria": [
+        "evals/probes/harness-audit-memory-path.sh fails if the executable context-snapshot tail command uses AUDIT_ROOT/memory/MEMORY.md.",
+        "The probe passes only when AUDIT_ROOT is still resolved from CRON_WORKTREE and AUDIT_LOG_ROOT/memory/MEMORY.md is used for the memory tail.",
+        "The probe remains free of hardcoded checkout paths."
+      ],
+      "notes": "Completed 2026-06-18; harness-audit-memory-path probe guards AUDIT_LOG_ROOT memory tail and AUDIT_ROOT source resolution."
+    },
+    {
+      "id": "US-003",
+      "title": "Update release notes and task state",
+      "priority": 3,
+      "passes": true,
+      "acceptanceCriteria": [
+        "CHANGELOG.md records the fix under Unreleased.",
+        "Task artifacts preserve critique findings and record completion.",
+        "/eval is run and evals/RESULTS.md is refreshed."
+      ],
+      "notes": "Completed 2026-06-18; changelog, task artifacts, and eval scoreboard refreshed."
+    }
+  ]
+}

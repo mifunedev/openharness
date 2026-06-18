@@ -1,0 +1,52 @@
+# progress
+
+## Codebase Patterns
+
+- `/harness-audit` distinguishes `AUDIT_ROOT` (source checkout under audit) from `AUDIT_LOG_ROOT` (shared runtime log/memory checkout for ephemeral cron worktrees). Keep source inspection on `AUDIT_ROOT`; use `AUDIT_LOG_ROOT` only for runtime observability and durable memory reads.
+
+## US-001 — 2026-06-18 08:11 UTC
+
+**Title**: Read durable memory from `AUDIT_LOG_ROOT`
+**Files changed**: `.claude/skills/harness-audit/SKILL.md`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Changed the context snapshot's long-term memory tail to use `AUDIT_LOG_ROOT` while preserving `AUDIT_ROOT` for source inspection. Clarified the skill comments and key-path table so future auditors keep the root split intact.
+
+### Learnings for future iterations
+In cron worktree mode, durable memory is runtime context rather than branch source; read it from the shared log root but keep code/wiki/package inspection on the isolated worktree.
+
+---
+
+## US-002 — 2026-06-18 08:11 UTC
+
+**Title**: Guard the memory-root contract with eval
+**Files changed**: `evals/probes/harness-audit-memory-path.sh`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Updated the probe to require `AUDIT_LOG_ROOT` fallback derivation and the executable `tail -40 "$AUDIT_LOG_ROOT/memory/MEMORY.md"` command. The probe still checks `AUDIT_ROOT`/`CRON_WORKTREE` resolution and rejects hardcoded checkout paths.
+
+### Learnings for future iterations
+Probe the executable command shape rather than all prose references to avoid false positives when docs mention historical or conceptual paths.
+
+---
+
+## US-003 — 2026-06-18 08:11 UTC
+
+**Title**: Update release notes and task state
+**Files changed**: `CHANGELOG.md`, `evals/RESULTS.md`, `tasks/make-harness-audit-load-shared-memory/*`
+**Commit**: pending
+**Result**: PASS
+
+### What I did
+Recorded the fix in the changelog, preserved critic findings and mitigations, marked all stories complete in `prd.json`, and ran the full eval suite. `/eval` exited 0 with all 46 probes PASS.
+
+### Learnings for future iterations
+An existing eval probe can be updated to guard a refined contract when the old assertion conflicts with the new bug fix.
+
+---
+
+STATUS: COMPLETE

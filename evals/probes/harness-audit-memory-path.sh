@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #183 — /harness-audit must inspect the active worktree, not a hardcoded root
-# desc: /harness-audit context snapshot must resolve AUDIT_ROOT and avoid hardcoded source paths
+# source: issue #183 and #432 — /harness-audit must inspect active worktree source but load shared durable memory
+# desc: /harness-audit context snapshot must resolve AUDIT_ROOT for source and AUDIT_LOG_ROOT for long-term memory
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -19,8 +19,18 @@ if ! grep -q 'AUDIT_ROOT' "$SKILL" || ! grep -q 'CRON_WORKTREE' "$SKILL"; then
   exit 1
 fi
 
-if ! grep -q '\$AUDIT_ROOT/memory/MEMORY\.md' "$SKILL"; then
-  echo "REGRESSION: harness-audit context snapshot does not tail tracked memory/MEMORY.md via AUDIT_ROOT" >&2
+if ! grep -q 'AUDIT_LOG_ROOT="${AUTOPILOT_LOG_ROOT:-\$AUDIT_ROOT}"' "$SKILL"; then
+  echo "REGRESSION: harness-audit does not derive AUDIT_LOG_ROOT from AUTOPILOT_LOG_ROOT with AUDIT_ROOT fallback" >&2
+  exit 1
+fi
+
+if ! grep -Eq 'tail -40 "\$AUDIT_LOG_ROOT/memory/MEMORY\.md"' "$SKILL"; then
+  echo "REGRESSION: harness-audit context snapshot does not tail durable memory/MEMORY.md via AUDIT_LOG_ROOT" >&2
+  exit 1
+fi
+
+if grep -Eq '^tail -40 "\$AUDIT_ROOT/memory/MEMORY\.md"' "$SKILL"; then
+  echo "REGRESSION: harness-audit executable context snapshot tails long-term memory via AUDIT_ROOT" >&2
   exit 1
 fi
 
@@ -30,5 +40,5 @@ if grep -n '/home/sandbox/harness' "$SKILL" >"$TMP"; then
   exit 1
 fi
 
-echo "PASS: harness-audit resolves source inspection through AUDIT_ROOT" >&2
+echo "PASS: harness-audit resolves source through AUDIT_ROOT and durable memory through AUDIT_LOG_ROOT" >&2
 exit 0

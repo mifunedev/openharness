@@ -62,8 +62,9 @@ else
   AUDIT_ROOT="$(git rev-parse --show-toplevel)"
 fi
 
-# Runtime observability logs may intentionally live in the shared checkout when
-# a cron worktree is ephemeral. Source inspection still uses $AUDIT_ROOT.
+# Runtime observability logs and durable memory may intentionally live in the
+# shared checkout when a cron worktree is ephemeral. Source inspection still
+# uses $AUDIT_ROOT; only runtime/durable context reads use $AUDIT_LOG_ROOT.
 AUDIT_LOG_ROOT="${AUTOPILOT_LOG_ROOT:-$AUDIT_ROOT}"
 if [ -n "${CRON_WORKTREE:-}" ] && [ "$AUDIT_LOG_ROOT" = "$AUDIT_ROOT" ]; then
   root="$(git -C "$AUDIT_ROOT" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /, ""); print; exit }' || true)"
@@ -87,8 +88,8 @@ ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
 # Worktrees
 git -C "$AUDIT_ROOT" worktree list 2>/dev/null
 
-# Recent long-term memory (tracked source artifact)
-tail -40 "$AUDIT_ROOT/memory/MEMORY.md" 2>/dev/null
+# Recent long-term memory (durable runtime artifact; shared root in cron worktrees)
+tail -40 "$AUDIT_LOG_ROOT/memory/MEMORY.md" 2>/dev/null
 ```
 
 Assemble a **Context Snapshot** (compact markdown, ~300 words):
@@ -349,7 +350,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Workspace skills | `workspace/.claude/skills/` when created by a pack/runtime (not part of the minimal workspace template) |
 | Crons | `crons/` |
 | Memory logs | `memory/YYYY-MM-DD/log.md` |
-| Long-term memory | `memory/MEMORY.md` |
+| Long-term memory | `memory/MEMORY.md` via `AUDIT_LOG_ROOT` in cron worktrees; source checkout fallback otherwise |
 | Wiki | `wiki/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |

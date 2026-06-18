@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `harness-audit` wiki entry and Context Snapshot memory load-status diagnostics preserve the shared-memory model salvaged from duplicate #432 PRs ([#441](https://github.com/mifunedev/openharness/issues/441)).
 - `autopilot-open-pr-reference-dedupe` eval probe guards that issue selection checks open PR metadata, branch names, titles, and bodies before launching duplicate autopilot work ([#437](https://github.com/mifunedev/openharness/issues/437)).
 - `harness-audit-shared-memory` eval probe guards that `/harness-audit` reads durable long-term memory from `AUDIT_LOG_ROOT` in cron worktrees while preserving source inspection via `AUDIT_ROOT` ([#432](https://github.com/mifunedev/openharness/issues/432)).
 ### Changed

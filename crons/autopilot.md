@@ -28,7 +28,8 @@ re-running implement/eval/finalize itself.
 Invoke the `/autopilot` skill. Reminders:
 
 - **Selection is issue-queue-first**: implement the oldest open issue labeled
-  `autopilot` that has no open PR. If the queue is empty, run first-principles
+  `autopilot` that has no open PR reference (linked metadata, branch, title, or body).
+  If the queue is empty, run first-principles
   research (`/harness-audit`), then **file an `autopilot` ticket from the
   top-ranked finding and build it** this same run. GitHub issues are the queue.
 - **Every PR states its selection rationale** in the description — why this item

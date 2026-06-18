@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/231-avoid-shell-sourcing-slack",
+  "description": "Start Slack restore without shell-sourcing .devcontainer/.env.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Launch Slack restore with explicit token env vars",
+      "description": "As the harness operator, I want Slack restore to launch pi with explicit Slack environment variables so .devcontainer/.env is parsed as data, not shell code.",
+      "acceptanceCriteria": [
+        ".devcontainer/entrypoint.sh no longer sources .devcontainer/.env in the Slack restore path",
+        "client-slack still starts only when SLACK_APP_TOKEN and SLACK_BOT_TOKEN are present, tmux is available, pi is installed for the sandbox user, and the tmux session does not already exist",
+        "The tmux command explicitly passes SLACK_APP_TOKEN and SLACK_BOT_TOKEN, and preserves optional SLACK_ALLOW_USERS / SLACK_ALLOW_CHANNELS values when those keys are present in .devcontainer/.env",
+        "Slack values embedded in the tmux command are shell-escaped or otherwise argv-safe",
+        "Relevant tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; implementation commit includes US-001"
+    },
+    {
+      "id": "US-002",
+      "title": "Guard Slack restore env parsing with regression tests",
+      "description": "As a maintainer, I want tests that prove Slack restore no longer depends on shell-sourcing .devcontainer/.env so future entrypoint edits do not reintroduce the unsafe pattern.",
+      "acceptanceCriteria": [
+        "Entry point tests assert the Slack restore block does not contain source $SLACK_ENV or an equivalent shell-source command",
+        "Tests assert the Slack restore command includes explicit SLACK_APP_TOKEN= and SLACK_BOT_TOKEN= environment assignments",
+        "Tests assert optional SLACK_ALLOW_USERS and SLACK_ALLOW_CHANNELS assignments are preserved when present",
+        "Tests cover a non-shell-safe Slack value/metacharacter fixture through the escaping helper or command construction path",
+        "bash -n .devcontainer/entrypoint.sh and typecheck/tests pass for the touched suite"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; implementation commit includes US-002"
+    }
+  ]
+}

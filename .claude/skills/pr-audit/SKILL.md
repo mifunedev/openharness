@@ -3,7 +3,7 @@ name: pr-audit
 description: |
   Audit all open PRs in one bulk query and triage them into actionable
   buckets: ready-to-merge, needs-review, CI-failing, conflicting/behind, plus
-  stale/convention flags. Draft PRs are split out as a separate work-in-progress
+  stale/convention/duplicate issue-reference flags. Draft PRs are split out as a separate work-in-progress
   class (promotable / WIP / limbo), checked first and never mixed into the
   actionable buckets. Read-only by default; --deep escalates flagged PRs to
   parallel diff reviewers, --proof writes each PR's verdict + evidence back as a
@@ -91,7 +91,7 @@ Build filter flags from the parsed args: `--label "$L"`, `--author "$A"`,
 ```bash
 gh pr list --state open --repo "$REPO" --limit 200 \
   $LABEL_FILTER $AUTHOR_FILTER $BASE_FILTER \
-  --json number,title,headRefName,baseRefName,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,createdAt,updatedAt,author,additions,deletions,changedFiles,labels,url \
+  --json number,title,headRefName,baseRefName,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,createdAt,updatedAt,author,additions,deletions,changedFiles,labels,url,body,closingIssuesReferences \
   > /tmp/pr-audit.json
 
 echo "open PRs fetched: $(jq 'length' /tmp/pr-audit.json)"
@@ -132,6 +132,26 @@ jq -r --argjson stale "$STALE_DAYS" --arg base "$BASE_DEFAULT" '
       (.reviewDecision // "NONE"), .title_ok, .base_ok, .baseRefName,
       .changedFiles, (.author.login), .title ]
   | @tsv
+' /tmp/pr-audit.json
+```
+
+Before assigning primary states, derive issue references and duplicate groups from the same cached payload — still no per-PR API loop. Treat linked metadata as best-effort and fall back to the PR branch/title/body because development-targeted PRs can carry `Closes #N` while GitHub leaves `closingIssuesReferences` empty until default-branch semantics apply:
+
+```bash
+jq -r '
+  def issue_refs:
+    ([.closingIssuesReferences[]?.number]
+     + [(.headRefName // ""), (.title // ""), (.body // "")]
+       | map(tostring)
+       | join("\n")
+       | [scan("(?i)(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|issue)?[[:space:]]*#([0-9]+)")[]]
+       | map(tonumber))
+    | unique;
+  [ .[] | {number, issue_refs: issue_refs} ] as $refs_by_pr
+  | ($refs_by_pr | map(.issue_refs[]) | group_by(.) | map(select(length > 1) | .[0])) as $dupes
+  | $refs_by_pr[]
+  | select((.issue_refs | map(IN($dupes[])) | any))
+  | "#\(.number) duplicate issue refs: \(.issue_refs | map(select(IN($dupes[]))) | join(","))"
 ' /tmp/pr-audit.json
 ```
 
@@ -177,6 +197,7 @@ A stale draft (💤, below) is *draft-limbo* — route to `/watchdog` to complet
 |------|------|
 | 💤 **Stale** | `age > STALE_DAYS` (days since `updatedAt`); on a 📝 Draft this is *draft-limbo* |
 | 📐 **Convention** | `title_ok==false` (not `FROM … TO …`), or `base_ok==false` (base ≠ `development`), or oversized (`changedFiles > 50`) — see `.claude/skills/git/SKILL.md` |
+| 🔁 **Duplicate issue refs** | Two or more open PRs reference the same issue via `closingIssuesReferences`, branch/title issue number, or body closing keywords (`Closes #N`, `Fixes #N`, `Resolves #N`) |
 
 ### 4. Emit the triage report
 
@@ -207,10 +228,10 @@ lists the recommended read-only command (report-and-recommend, like
 | #41 | … | 🚧 still-WIP  | 21d | 💤 limbo | `/watchdog`: complete branch, then `gh pr ready` |
 
 ### Flag rollup
-💤 stale: #41   📐 convention: #73 (title), #55 (base≠development)
+💤 stale: #41   📐 convention: #73 (title), #55 (base≠development)   🔁 duplicate issue refs: #433/#434/#435 → #432
 
 ### Summary
-ci-fail F · conflict C · changes-req X · needs-review R · ready M · pending P · draft D (✅ promotable Dp · 🚧 wip Dw)  ·  flagged: stale S, conv V
+ci-fail F · conflict C · changes-req X · needs-review R · ready M · pending P · draft D (✅ promotable Dp · 🚧 wip Dw)  ·  flagged: stale S, conv V, duplicate issue refs U
 ```
 
 A flag never moves a PR out of its state section — `#68` stale + ready shows
@@ -334,6 +355,7 @@ Then run the qualify/improve pass per `context/rules/memory.md`.
 | ⏳ Pending / other | CI running / mergeable unknown | re-check shortly |
 | 💤 Stale (flag) | no update > `--stale-days` | ping or `--close-stale` |
 | 📐 Convention (flag) | title/base/size off-spec | fix title/base per `git.md` |
+| 🔁 Duplicate issue refs (flag) | multiple open PRs reference the same issue | choose the canonical PR; close/rebase duplicates only after human review |
 
 ### `gh pr list --json` field glossary
 
@@ -345,6 +367,7 @@ Then run the qualify/improve pass per `context/rules/memory.md`.
 | `createdAt`, `updatedAt` | age / staleness |
 | `title`, `baseRefName`, `changedFiles` | convention checks |
 | `labels`, `author`, `url`, `number` | filtering, proof comment, reporting |
+| `body`, `closingIssuesReferences`, `headRefName`, `title` | duplicate issue-reference flags without per-PR API loops |
 
 ### Severity / thresholds
 

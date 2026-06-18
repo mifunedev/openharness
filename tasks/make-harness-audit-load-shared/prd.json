@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "slug": "make-harness-audit-load-shared",
+  "issue": 432,
+  "branchName": "feat/432-make-harness-audit-load-shared",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Load long-term memory from the shared log root",
+      "priority": 1,
+      "passes": false,
+      "acceptanceCriteria": [
+        ".claude/skills/harness-audit/SKILL.md tails \"$AUDIT_LOG_ROOT/memory/MEMORY.md\" for recent long-term memory.",
+        "Source inspection remains rooted at AUDIT_ROOT for repo files and git worktree list.",
+        "The AUDIT_LOG_ROOT contract remains explicit: AUTOPILOT_LOG_ROOT wins, cron worktrees fall back to the shared root from git worktree list --porcelain, unresolved fallback stays non-fatal at AUDIT_ROOT.",
+        "Missing shared memory remains non-fatal through stderr suppression.",
+        "The protected harness-audit skill is edited in place, not deleted, renamed, or deprecated."
+      ],
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Guard the memory-root split with an eval probe",
+      "priority": 2,
+      "passes": false,
+      "acceptanceCriteria": [
+        "evals/probes/harness-audit-memory-path.sh asserts AUDIT_LOG_ROOT/memory/MEMORY.md is used for long-term memory and rejects AUDIT_ROOT/memory/MEMORY.md tails for that purpose.",
+        "The probe still asserts AUDIT_ROOT/CRON_WORKTREE source-root resolution and no hardcoded root paths.",
+        "The probe passes locally."
+      ],
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Record the behavior in release and wiki artifacts",
+      "priority": 3,
+      "passes": false,
+      "acceptanceCriteria": [
+        "CHANGELOG.md records the fix under ## [Unreleased].",
+        "wiki/harness-audit.md explains the AUDIT_ROOT vs AUDIT_LOG_ROOT split with source references and cron worktree troubleshooting guidance.",
+        "wiki/README.md is refreshed and evals/probes/wiki-readme-index.sh passes.",
+        "evals/RESULTS.md is refreshed after the eval runner."
+      ],
+      "notes": ""
+    }
+  ]
+}

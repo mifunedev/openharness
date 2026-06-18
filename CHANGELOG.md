@@ -10,6 +10,15 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 ### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.6.17] - 2026-06-17
+
+### Added
+### Changed
 - Sync `ryaneggz/openharness:development` changes after `e863676` into canonical development, including Pi autoresearch package support, cron/watchdog hardening, issue-template generalization, Slack startup fixes, and fork branch-catch-up guidance ([#430](https://github.com/mifunedev/openharness/issues/430)).
 ### Fixed
 ### Removed

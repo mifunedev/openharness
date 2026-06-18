@@ -872,15 +872,23 @@ describe("acquireLock", () => {
     expect(readFileSync(pidFile, "utf-8")).toBe(String(process.pid));
   });
 
-  it("returns false when an existing PID is alive", () => {
+  it("returns false when an existing PID is alive and preserves the pidfile", () => {
     const pidFile = path.join(tmp, ".pid");
     const child = spawn("sleep", ["10"], { stdio: "ignore" });
     try {
       writeFileSync(pidFile, String(child.pid));
       expect(acquireLock(pidFile)).toBe(false);
+      expect(readFileSync(pidFile, "utf-8")).toBe(String(child.pid));
     } finally {
       child.kill();
     }
+  });
+
+  it("returns true when the current process already owns the lock", () => {
+    const pidFile = path.join(tmp, ".pid");
+    writeFileSync(pidFile, String(process.pid));
+    expect(acquireLock(pidFile)).toBe(true);
+    expect(readFileSync(pidFile, "utf-8")).toBe(String(process.pid));
   });
 
   it("steals stale lock when previous PID is dead", () => {
@@ -888,7 +896,64 @@ describe("acquireLock", () => {
     // Pick a high PID unlikely to be running.
     writeFileSync(pidFile, "999999");
     expect(acquireLock(pidFile)).toBe(true);
-    expect(existsSync(pidFile)).toBe(true);
+    expect(readFileSync(pidFile, "utf-8")).toBe(String(process.pid));
+  });
+
+  it("reclaims an unparsable lock file", () => {
+    const pidFile = path.join(tmp, ".pid");
+    writeFileSync(pidFile, "not-a-pid");
+    expect(acquireLock(pidFile)).toBe(true);
+    expect(readFileSync(pidFile, "utf-8")).toBe(String(process.pid));
+  });
+
+  it("lets exactly one concurrent process win an absent lock", () => {
+    const pidFile = path.join(tmp, ".pid");
+    const gateFile = path.join(tmp, ".start");
+    const worker = path.join(tmp, "lock-worker.mjs");
+    writeFileSync(
+      worker,
+      `import { existsSync, readFileSync } from "node:fs";\n` +
+        `import { acquireLock } from ${JSON.stringify(path.resolve("scripts/cron-runtime.ts"))};\n` +
+        `const [pidFile, gateFile] = process.argv.slice(2);\n` +
+        `const deadline = Date.now() + 2000;\n` +
+        `while (!existsSync(gateFile) && Date.now() < deadline) { await new Promise((r) => setTimeout(r, 5)); }\n` +
+        `const ok = acquireLock(pidFile);\n` +
+        `console.log(JSON.stringify({ pid: process.pid, ok, holder: readFileSync(pidFile, "utf-8") }));\n` +
+        `setTimeout(() => process.exit(0), ok ? 500 : 0);\n`,
+    );
+
+    const children = [
+      spawn(process.execPath, ["--experimental-strip-types", worker, pidFile, gateFile], {
+        cwd: process.cwd(),
+        stdio: ["ignore", "pipe", "pipe"],
+      }),
+      spawn(process.execPath, ["--experimental-strip-types", worker, pidFile, gateFile], {
+        cwd: process.cwd(),
+        stdio: ["ignore", "pipe", "pipe"],
+      }),
+    ];
+
+    writeFileSync(gateFile, "go");
+    const outputs = children.map(
+      (child) =>
+        new Promise<string>((resolve, reject) => {
+          let stdout = "";
+          let stderr = "";
+          child.stdout?.on("data", (chunk) => (stdout += String(chunk)));
+          child.stderr?.on("data", (chunk) => (stderr += String(chunk)));
+          child.on("error", reject);
+          child.on("exit", (code) => {
+            if (code === 0) resolve(stdout.trim());
+            else reject(new Error(stderr || `worker exited ${code}`));
+          });
+        }),
+    );
+
+    return Promise.all(outputs).then((lines) => {
+      const results = lines.map((line) => JSON.parse(line) as { pid: number; ok: boolean; holder: string });
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(readFileSync(pidFile, "utf-8")).toBe(String(results.find((r) => r.ok)!.pid));
+    });
   });
 
 });

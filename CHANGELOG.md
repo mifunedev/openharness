@@ -69,6 +69,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ### Changed
 - Slack Pi extension startup now silently disables itself when Slack tokens are unset instead of surfacing a missing-token warning.
+- Cron runtime singleton lock acquisition now uses atomic exclusive pidfile creation with stale-lock retry semantics, preventing concurrent runtime starts from both claiming `crons/.pid` ([#233](https://github.com/ryaneggz/openharness/issues/233)).
 - `/drift-check` now reports possible stale cron frontmatter/config when schedulable cron files change after the live runtime starts, names the restart-required field set, and documents SIGHUP reschedule vs. body hot-reload with updated eval/wiki coverage ([#225](https://github.com/ryaneggz/openharness/issues/225)).
 - Rebrand the executable-loop runner command to `/orchestrate`, carrying the skill docs, capability metadata, eval results row, and contract probe name forward without changing loop behavior ([#214](https://github.com/ryaneggz/openharness/issues/214)).
 - `/ship-spec` now requires specs to declare wiki impact, compare required wiki updates against the relevant DeepWiki pages, and keep those wiki entries aligned through the post-implementation gate ([#212](https://github.com/ryaneggz/openharness/issues/212)).

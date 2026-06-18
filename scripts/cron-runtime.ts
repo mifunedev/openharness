@@ -174,20 +174,44 @@ export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
 }
 
 export function acquireLock(pidFile: string = PID_FILE): boolean {
-  if (fs.existsSync(pidFile)) {
-    const existing = parseInt(fs.readFileSync(pidFile, "utf-8").trim(), 10);
-    if (!isNaN(existing) && existing !== process.pid) {
+  fs.mkdirSync(path.dirname(pidFile), { recursive: true });
+
+  while (true) {
+    try {
+      fs.writeFileSync(pidFile, String(process.pid), { flag: "wx" });
+      return true;
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code !== "EEXIST") throw e;
+    }
+
+    let existingRaw: string;
+    try {
+      existingRaw = fs.readFileSync(pidFile, "utf-8").trim();
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code === "ENOENT") continue;
+      throw e;
+    }
+
+    const existing = parseInt(existingRaw, 10);
+    if (!isNaN(existing)) {
+      if (existing === process.pid) return true;
       try {
         process.kill(existing, 0);
         return false;
       } catch {
-        /* stale — fall through */
+        /* stale — unlink then retry exclusive create */
       }
     }
+
+    try {
+      fs.unlinkSync(pidFile);
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code !== "ENOENT") throw e;
+    }
   }
-  fs.mkdirSync(path.dirname(pidFile), { recursive: true });
-  fs.writeFileSync(pidFile, String(process.pid));
-  return true;
 }
 
 const FIRE_RELOAD_FIELDS: (keyof CronEntry)[] = [

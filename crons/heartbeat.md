@@ -41,8 +41,9 @@ that catches anything time-sensitive without doing real work.
     draft is already green/mergeable/clean, remove draft with `gh pr ready`; if
     it is stale but not promotable, complete the remaining work on that PR branch,
     run targeted checks, push, and only then remove draft. It may also kill tmux
-    sessions frozen at usage-limit/resume prompts. It never merges PRs and never
-    kills sessions on age alone.
+    sessions frozen at usage-limit/resume prompts, or reap completed autopilot PR
+    sessions only after the PR is terminal and the pane is idle. It never merges
+    PRs and never kills sessions on age alone.
 3. Decide whether anything needs action right now.
 4. If yes, act. If no, append a brief "nothing pressing" note to
    `memory/<today>/log.md` and exit.
@@ -59,9 +60,10 @@ that catches anything time-sensitive without doing real work.
   `DRIFT: <summary>` and note in `memory/<today>/log.md`. Clean run →
   no extra output.
 - Watchdog nudge (step 2.8) → completed/undrafted stale PRs, killed stuck
-  sessions, or active-watch signals → include in reply as `NUDGE: <action>`
-  (and `WATCHING: ...` for active-but-not-stale items) and note in
-  `memory/<today>/log.md`. Clean watchdog run → no extra output.
+  sessions, reaped completed autopilot PR sessions, or active-watch signals →
+  include in reply as `NUDGE: <action>` (and `WATCHING: ...` for active or
+  open-PR items) and note in `memory/<today>/log.md`. Clean watchdog run → no
+  extra output.
 - Append the result to `memory/<today>/log.md` either way.
 - **Mandatory closing step (do this even after long action chains):**
   append one liveness line to `crons/.cron.log`:

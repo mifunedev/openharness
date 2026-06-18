@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/235-reap-completed-autopilot-pr-sessions",
+  "issue": 235,
+  "description": "Reap completed autopilot PR tmux sessions only after their PRs are terminal and panes are idle.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Map autopilot sessions to PR branches",
+      "description": "As an operator, I want /watchdog to map autopilot-feat-<issue>-<slug> sessions back to the PR branch so it can determine whether the PR is still open.",
+      "acceptanceCriteria": [
+        "/watchdog documents the autopilot-<branch> sanitized session naming convention.",
+        "The session cleanup logic derives candidate PR branch names from session names or compares session names against sanitized PR head refs.",
+        "Sessions with matching open PRs are preserved."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; watchdog docs now map autopilot session names to sanitized PR head refs and preserve open PR sessions This commit."
+    },
+    {
+      "id": "US-002",
+      "title": "Reap only terminal idle sessions",
+      "description": "As an operator, I want completed autopilot sessions reaped only after the associated PR is closed or merged and the pane is idle.",
+      "acceptanceCriteria": [
+        "/watchdog treats MERGED and CLOSED PR states as terminal for this cleanup.",
+        "/watchdog double-captures the pane over a short interval before killing a terminal-PR session.",
+        "/watchdog skips candidates whose pane changes between captures.",
+        "/watchdog removes /tmp/<session>.keep only after killing the session."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; watchdog docs gate completed-session reaping on MERGED/CLOSED PR state plus idle double-capture before kill/keep-marker removal This commit."
+    },
+    {
+      "id": "US-003",
+      "title": "Report and guard the contract",
+      "description": "As a future agent, I want the completed-session cleanup rule documented and guarded so it does not regress into age-only killing.",
+      "acceptanceCriteria": [
+        "crons/heartbeat.md reporting mentions terminal completed-session reaping when /watchdog performs it.",
+        "An eval probe guards the terminal-PR + idle contract and the no-age-only rule.",
+        "CHANGELOG.md records the behavior change under ## [Unreleased]."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed on 2026-06-16; heartbeat docs, changelog, and watchdog-completed-session-reap eval probe guard reporting and no-age-only cleanup This commit."
+    }
+  ]
+}

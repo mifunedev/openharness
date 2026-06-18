@@ -32,6 +32,7 @@ import {
   buildTmuxWrapper,
   decideOverlap,
   fire,
+  inspectFallbackWorktree,
   isValidAgentBin,
   isValidCronId,
   isValidRemote,
@@ -40,6 +41,7 @@ import {
   loadCrons,
   onJobError,
   parseCronFile,
+  pruneAndCountFallbackWorktrees,
   readFailureTail,
   reloadEntryForFire,
   remoteForRepo,
@@ -1068,6 +1070,63 @@ describe("reloadBody", () => {
     // BODY_RELOAD_ERR must appear in at least one appendFileSync call.
     const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(true);
+  });
+});
+
+describe("fallback worktree pruning", () => {
+  const git = (cwd: string, args: string[]): void => {
+    const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
+    expect(result.status, `${args.join(" ")}\n${result.stderr}`).toBe(0);
+  };
+
+  const initRepoWithFallbackWorktrees = (): { repo: string; dirtyWt: string; cleanWt: string } => {
+    const repo = path.join(tmp, "repo");
+    mkdirSync(repo, { recursive: true });
+    git(repo, ["init", "-b", "development"]);
+    writeFileSync(path.join(repo, "README.md"), "fixture\n");
+    git(repo, ["add", "README.md"]);
+    git(repo, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"]);
+
+    const dirtyWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-dirty");
+    const cleanWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-clean");
+    git(repo, ["worktree", "add", "--detach", dirtyWt, "HEAD"]);
+    git(repo, ["worktree", "add", "--detach", cleanWt, "HEAD"]);
+    writeFileSync(path.join(dirtyWt, "uncommitted.txt"), "salvage me\n");
+    return { repo, dirtyWt, cleanWt };
+  };
+
+  it("reports dirty fallback worktree state including untracked files", () => {
+    const { dirtyWt } = initRepoWithFallbackWorktrees();
+
+    const state = inspectFallbackWorktree(dirtyWt);
+
+    expect(state.dirty).toBe(true);
+    expect(state.changes).toContain("?? uncommitted.txt");
+    expect(state.ref).not.toBe("unknown");
+  });
+
+  it("preserves dirty dead fallback worktrees but removes clean dead ones", () => {
+    const { repo, dirtyWt, cleanWt } = initRepoWithFallbackWorktrees();
+    const priorCwd = process.cwd();
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+
+    try {
+      process.chdir(repo);
+      expect(pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
+    } finally {
+      process.chdir(priorCwd);
+    }
+
+    expect(existsSync(dirtyWt)).toBe(true);
+    expect(readFileSync(path.join(dirtyWt, "uncommitted.txt"), "utf-8")).toBe("salvage me\n");
+    expect(existsSync(cleanWt)).toBe(false);
+    expect(
+      appendSpy.mock.calls.some((c) =>
+        String(c[1]).includes("\tautopilot\tWORKTREE_DIRTY\t") &&
+        String(c[1]).includes("?? uncommitted.txt"),
+      ),
+    ).toBe(true);
   });
 });
 

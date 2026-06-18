@@ -603,10 +603,53 @@ function worktreeInUse(wtPath: string, cwds: string[]): boolean {
   return cwds.some((p) => p === abs || p.startsWith(abs + path.sep));
 }
 
+export interface FallbackWorktreeState {
+  dirty: boolean;
+  ref: string;
+  changes: string[];
+  reason?: string;
+}
+
+function worktreeRef(wtPath: string): string {
+  const branch = spawnSync("git", ["-C", wtPath, "rev-parse", "--abbrev-ref", "HEAD"], {
+    encoding: "utf-8",
+  });
+  const name = (branch.stdout || "").trim();
+  if (branch.status === 0 && name && name !== "HEAD") return name;
+
+  const head = spawnSync("git", ["-C", wtPath, "rev-parse", "--short", "HEAD"], {
+    encoding: "utf-8",
+  });
+  return head.status === 0 && head.stdout.trim() ? head.stdout.trim() : "unknown";
+}
+
+export function inspectFallbackWorktree(wtPath: string): FallbackWorktreeState {
+  const status = spawnSync("git", ["-C", wtPath, "status", "--porcelain"], {
+    encoding: "utf-8",
+  });
+  const ref = worktreeRef(wtPath);
+  if (status.status !== 0) {
+    const reason = (status.stderr || status.error?.message || "git status failed").trim();
+    return { dirty: true, ref, changes: [], reason };
+  }
+
+  const changes = (status.stdout || "").split("\n").map((s) => s.trim()).filter(Boolean);
+  return { dirty: changes.length > 0, ref, changes };
+}
+
+function formatWorktreeChanges(state: FallbackWorktreeState): string {
+  if (state.reason) return `status-unavailable=${state.reason.slice(0, 160)}`;
+  const shown = state.changes.slice(0, 20).join("; ");
+  const suffix = state.changes.length > 20 ? `; +${state.changes.length - 20} more` : "";
+  return shown + suffix;
+}
+
 // Remove fallback worktrees that no live tmux pane is working inside (self-healing),
 // then return the count still in use. Pane-cwd liveness (above) is robust to the
-// autopilot session rename and to the Advisor session sharing the worktree.
-function pruneAndCountFallbackWorktrees(id: string): number {
+// autopilot session rename and to the Advisor session sharing the worktree. A
+// dead-pane worktree is still preserved when it has modified/untracked files —
+// cleanup may reclaim only disposable state, and dirty worktrees require manual salvage.
+export function pruneAndCountFallbackWorktrees(id: string): number {
   const dir = path.resolve(FALLBACK_WORKTREE_DIR);
   let names: string[];
   try {
@@ -621,9 +664,16 @@ function pruneAndCountFallbackWorktrees(id: string): number {
     const wt = path.join(dir, name);
     if (worktreeInUse(wt, cwds)) {
       live++;
-    } else {
-      spawnSync("git", ["worktree", "remove", "--force", wt], { stdio: "ignore" });
+      continue;
     }
+
+    const state = inspectFallbackWorktree(wt);
+    if (state.dirty) {
+      log(id, "WORKTREE_DIRTY", `${wt} ref=${state.ref} changes=${formatWorktreeChanges(state)}`);
+      continue;
+    }
+
+    spawnSync("git", ["worktree", "remove", "--force", wt], { stdio: "ignore" });
   }
   spawnSync("git", ["worktree", "prune"], { stdio: "ignore" });
   return live;

@@ -16,7 +16,7 @@ Read core rules first: `.claude/skills/caveman/SKILL.md` (drop/preserve + auto-c
 
 ## Rules
 
-- **Subject**: `<type>: <description>` per `context/rules/git.md` — `feat` · `fix` · `task` · `audit` · `skill`. Imperative, lowercase, ≤50 chars, no trailing period. The subject must stay a legible Conventional Commit; compress the *description* words, not the structure.
+- **Subject**: `<type>: <description>` per `.claude/skills/git/SKILL.md` — `feat` · `fix` · `task` · `audit` · `skill`. Imperative, lowercase, ≤50 chars, no trailing period. The subject must stay a legible Conventional Commit; compress the *description* words, not the structure.
 - **Body** (optional): fragment bullets, drop articles/filler. One line per logical change.
 - **Preserve verbatim**: file names, symbols, flags, issue/PR refs, breaking-change notes.
 - Do **not** caveman-ify the `Co-Authored-By` trailer or `Closes #` lines.

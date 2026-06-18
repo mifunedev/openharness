@@ -9,7 +9,7 @@ argument-hint: "[--dry-run]"
 
 # Release
 
-Automates the CalVer release procedure defined in `.claude/rules/git.md` (§ Releases).
+Automates the CalVer release procedure defined in `.claude/skills/git/SKILL.md` (§ Releases).
 
 This skill exists for the parts that are tedious to run by hand: version auto-increment, CI polling, and post-release verification. Conventions (branch names, commit format, pre-flight checks) live in the rule — read it first.
 
@@ -42,7 +42,7 @@ echo "Repo: $REPO · Version: $VERSION"
 
 ### Step 2 — Pre-flight
 
-Follow the pre-flight checklist in `.claude/rules/git.md` § Releases (clean tree on the intended source branch).
+Follow the pre-flight checklist in `.claude/skills/git/SKILL.md` § Releases (clean tree on the intended source branch).
 
 If `--dry-run`, report version + pre-flight results and **stop here**.
 
@@ -97,7 +97,7 @@ The `[$VERSION]` section is the source of truth for the GitHub Release body — 
 
 `development` is the integration branch; `main` is the release line. Push
 the promotion commit to `development`, fast-forward `main` to it, then cut
-the release branch from `main` (see `.claude/rules/git.md` § Releases for
+the release branch from `main` (see `.claude/skills/git/SKILL.md` § Releases for
 the branch model).
 
 ```bash

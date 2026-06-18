@@ -1,6 +1,16 @@
-# Git Workflow
+---
+name: git
+description: |
+  Open Harness git workflow: issues, branches, commits, PR titles/bodies,
+  changelog discipline, worktrees, branch catch-up, stacked PRs, releases,
+  and post-push CI checks.
+  TRIGGER when: creating branches or PRs, catching a feature branch up to
+  development, resolving PR conflicts/behind state, committing, pushing,
+  release branch/tag workflow, or checking project git conventions.
+allowed-tools: Bash
+---
 
-> Compatibility mirror: the canonical Git workflow now lives in `.claude/skills/git/SKILL.md`. Keep this rule only as always-loaded routing context; when doing Git work, load/use the `git` skill.
+# Git Workflow
 
 ## Issue Titles
 

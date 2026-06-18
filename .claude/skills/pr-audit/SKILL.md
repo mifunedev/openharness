@@ -79,7 +79,7 @@ fi
 [ -n "$REPO" ] || { echo "ERROR: could not derive repo — is gh authenticated? Try: gh auth login"; exit 1; }
 
 STALE_DAYS=14   # override with --stale-days
-BASE_DEFAULT=development   # the harness default target branch (context/rules/git.md)
+BASE_DEFAULT=development   # the harness default target branch (.claude/skills/git/SKILL.md)
 # --mine → resolve login:  ME=$(gh api user --jq .login)
 ```
 
@@ -176,7 +176,7 @@ A stale draft (💤, below) is *draft-limbo* — route to `/watchdog` to complet
 | Flag | Rule |
 |------|------|
 | 💤 **Stale** | `age > STALE_DAYS` (days since `updatedAt`); on a 📝 Draft this is *draft-limbo* |
-| 📐 **Convention** | `title_ok==false` (not `FROM … TO …`), or `base_ok==false` (base ≠ `development`), or oversized (`changedFiles > 50`) — see `context/rules/git.md` |
+| 📐 **Convention** | `title_ok==false` (not `FROM … TO …`), or `base_ok==false` (base ≠ `development`), or oversized (`changedFiles > 50`) — see `.claude/skills/git/SKILL.md` |
 
 ### 4. Emit the triage report
 
@@ -327,7 +327,7 @@ Then run the qualify/improve pass per `context/rules/memory.md`.
 |--------|--------|-------------------------------|
 | ✅ Ready to merge | green + clean + approved | `gh pr merge <N>` |
 | ❌ CI failing | rollup has a failure | fix the branch; `--deep` for root cause |
-| ⚠ Conflicting / behind | CONFLICTING / DIRTY / BEHIND | rebase on `development` |
+| ⚠ Conflicting / behind | CONFLICTING / DIRTY / BEHIND | merge `origin/development` into the feature branch, resolve there, rerun checks |
 | 🔴 Changes requested | review demands changes | address review |
 | 👀 Needs review | `REVIEW_REQUIRED` pending | request a reviewer |
 | 📝 Draft (separate WIP class) | `isDraft` — checked first; sub-status ✅ promotable (green+clean) / 🚧 still-WIP / 💤 limbo (stale) | Only `Draft (promotable)` can be considered for `gh pr ready <N>`; stale/limbo drafts are investigation/resume targets, not auto-undraft signals |
@@ -360,7 +360,7 @@ Then run the qualify/improve pass per `context/rules/memory.md`.
 |----------|------|
 | Repo-resolution / `REPO_OVERRIDE` pattern | `.claude/skills/ci-status/SKILL.md` |
 | Ready-PR selector | `crons/heartbeat.md` (autopilot ready-PR nudge) |
-| PR title / base / size conventions | `context/rules/git.md` |
+| PR title / base / size conventions | `.claude/skills/git/SKILL.md` |
 | Autopilot caps (10 total / 6 daily) | `.claude/skills/autopilot/SKILL.md` § Guardrails |
 | Parallel-agent briefing format | `context/rules/advisor-model.md` |
 | Per-PR diff correctness (escalate, don't duplicate) | `/code-review` |

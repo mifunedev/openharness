@@ -444,7 +444,7 @@ Example (A and C non-clean):
 
 ```
 DRIFT-CHECK (A): origin/development is 3 behind upstream/development (0 ahead)
-  Recommended: git checkout upstream/development -- context/rules/git.md scripts/cron-runtime.ts
+  Recommended: git checkout upstream/development -- .claude/skills/git/SKILL.md scripts/cron-runtime.ts
 DRIFT-CHECK (B): ...
 (B) Branch-behind drift: OK
 DRIFT-CHECK (C): crons/heartbeat.md modified after runtime start — restart-required frontmatter/config may be stale until SIGHUP reschedule or runtime restart (schedule enabled agent tmux worktree preflight; current schedule=0 * * * * enabled=true agent=pi tmux=<unset> worktree=<unset> preflight=<unset>)

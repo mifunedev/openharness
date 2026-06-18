@@ -10,7 +10,7 @@ allowed-tools: Bash
 
 # Worktrees
 
-Manage `.worktrees/`. Full policy: `context/rules/git.md` § Worktrees.
+Manage `.worktrees/`. Full policy: `.claude/skills/git/SKILL.md` § Worktrees.
 
 ## DETECT BASE
 

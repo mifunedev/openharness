@@ -17,9 +17,9 @@ Required arguments:
 
 - Folder path (positional, e.g. `tasks/install-prereq-detection/`). The folder name is `<short-desc>`.
 - `--issue <N>` — GitHub issue number this PRD addresses. Required. The branch name embeds this.
-- `--prefix <type>` — branch prefix per `.claude/rules/git.md`. One of `feat | bug | task | audit | skill | agent`. Default: `feat`.
+- `--prefix <type>` — branch prefix per `.claude/skills/git/SKILL.md`. One of `feat | bug | task | audit | skill | agent`. Default: `feat`.
 
-`branchName` in the produced JSON follows `.claude/rules/git.md`:
+`branchName` in the produced JSON follows `.claude/skills/git/SKILL.md`:
 
 ```
 <prefix>/<issue#>-<short-desc>
@@ -27,7 +27,7 @@ Required arguments:
 
 Example: folder `tasks/install-prereq-detection/` + `--issue 175` + `--prefix task` → `branchName: "task/175-install-prereq-detection"`.
 
-If `--issue` is missing, hard-fail with: "issue number required — open the GitHub issue first per `.claude/rules/git.md` and re-run with `--issue <N>`." This matches the project's "issue first, then branch" workflow.
+If `--issue` is missing, hard-fail with: "issue number required — open the GitHub issue first per `.claude/skills/git/SKILL.md` and re-run with `--issue <N>`." This matches the project's "issue first, then branch" workflow.
 
 The folder name IS the feature name — do not re-derive it from `branchName` or anywhere else.
 

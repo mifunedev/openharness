@@ -9,7 +9,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed
+- `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
 ### Removed
 ### Deprecated
@@ -33,6 +35,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [2026.6.17] - 2026-06-17
 
 ### Added
+- `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed
 - Sync `ryaneggz/openharness:development` changes after `e863676` into canonical development, including Pi autoresearch package support, cron/watchdog hardening, issue-template generalization, Slack startup fixes, and fork branch-catch-up guidance ([#430](https://github.com/mifunedev/openharness/issues/430)).
 ### Fixed
@@ -69,6 +72,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Sandbox Docker healthcheck for tmux-managed runtime services: `scripts/sandbox-healthcheck.sh` verifies `cron-watchdog`/`cron-system`, flags legacy `system-cron`, conditionally checks configured Slack/Hermes dashboard sessions, and `.devcontainer/docker-compose.yml` reports failures through container health status ([#150](https://github.com/ryaneggz/openharness/issues/150)).
 
 ### Changed
+- `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
 ### Removed
 ### Deprecated
@@ -356,6 +360,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [2026.5.15] - 2026-05-15
 
 ### Added
+- `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed
 - `oh config slack` wizard UX overhaul. Token prompts now echo `●` per keystroke (was: silent — looked frozen) via a TTY-aware raw-mode `askSecret` that handles backspace, Ctrl-U, and Ctrl-C; piped/non-TTY stdin still uses the legacy readline fallback as `askSecretPiped` so `echo "" | oh config slack` keeps working. Flow is reframed into four numbered steps `[1/4] … [4/4]` with inline "Where:" hints and clickable URLs (OSC 8 hyperlinks; fall back to `label (url)` on legacy terminals). Each input shows `✓ valid prefix` / `✓ N user(s) accepted` after validation. A final summary screen lists the keys (tokens redacted, IDs visible) and gates the env-file write behind a `Proceed? [Y/n]` confirmation. New helpers exported from `apps/oh/src/lib/prompt.ts`: `step()`, `link()`, `bold()`. Zero new runtime dependencies. ([#290](https://github.com/mifunedev/openharness/issues/290))
 ### Fixed

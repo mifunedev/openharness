@@ -1,0 +1,5 @@
+STATUS: COMPLETE
+ISSUE: #242
+BRANCH: feat/242-generalize-issue-templates
+UPDATED: 2026-06-17
+SUMMARY: Generalized GitHub issue templates for harness context, added regression coverage, and updated changelog.

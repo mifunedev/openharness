@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/242-generalize-issue-templates",
+  "description": "Generalize GitHub issue templates so they describe harness runtime context instead of a stale application stack.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Bug template asks for harness context",
+      "description": "As a harness maintainer, I want bug reports to capture checkout, sandbox, agent, and workflow context so issues steer agents toward the correct infrastructure surface.",
+      "acceptanceCriteria": [
+        ".github/ISSUE_TEMPLATE/bug.md replaces Next.js/PostgreSQL/Browser-only prompts with harness-relevant environment fields",
+        "Bug acceptance criteria refer to regression tests or eval probes instead of app-only test assumptions",
+        "Bug acceptance criteria keep agent-browser verification conditional on deployed URL/browser behavior"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed on 2026-06-17; bug template now captures checkout/branch, sandbox/container, agent runtime, command/workflow, and host context."
+    },
+    {
+      "id": "US-002",
+      "title": "Templates reference the current git workflow rule",
+      "description": "As an issue filer, I want template links and branch guidance to point at the current harness rule path and target branch convention.",
+      "acceptanceCriteria": [
+        "Task, skill, audit, feature, and bug templates link to context/rules/git.md",
+        "Done/acceptance checklists mention targeting development unless the git workflow rule says otherwise",
+        "No issue template links to the stale .claude/rules/git.md path"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed on 2026-06-17; all Git workflow references now use context/rules/git.md and development-target wording."
+    },
+    {
+      "id": "US-003",
+      "title": "Template hygiene is regression-tested",
+      "description": "As the harness maintainer, I want a focused test that prevents stale app-stack prompts from returning to the issue queue surface.",
+      "acceptanceCriteria": [
+        "scripts/__tests__/issue-templates.test.ts checks every .github/ISSUE_TEMPLATE/*.md file",
+        "The test fails on Next.js, PostgreSQL, or a Browser-only environment prompt",
+        "The test fails on stale .claude/rules/git.md links",
+        "Focused vitest run passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed on 2026-06-17; focused vitest run passes."
+    }
+  ]
+}

@@ -29,7 +29,7 @@ assignees: ""
 
 ---
 
-> **Git workflow**: see [.claude/rules/git.md](../../.claude/rules/git.md)
+> **Git workflow**: see [context/rules/git.md](../../context/rules/git.md)
 
 ---
 
@@ -40,4 +40,4 @@ assignees: ""
 - [ ] Tests added for new logic where applicable
 - [ ] Lint + format + type-check pass (`pnpm run lint && pnpm run format:check && pnpm -r run type-check`)
 - [ ] Documentation updated under `docs/` if user-visible
-- [ ] PR targets the default target branch (see `.claude/rules/git.md`)
+- [ ] PR targets `development` unless the git workflow rule says otherwise

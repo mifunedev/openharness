@@ -16,7 +16,7 @@ assignees: ""
 
 ---
 
-> **Git workflow**: see [.claude/rules/git.md](../../.claude/rules/git.md)
+> **Git workflow**: see [context/rules/git.md](../../context/rules/git.md)
 
 ---
 
@@ -24,4 +24,4 @@ assignees: ""
 
 - [ ] <!-- Criteria 1 -->
 - [ ] <!-- Criteria 2 -->
-- [ ] PR targets the default target branch (see `.claude/rules/git.md`)
+- [ ] PR targets `development` unless the git workflow rule says otherwise

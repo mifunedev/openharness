@@ -32,6 +32,7 @@ import {
   buildTmuxWrapper,
   decideOverlap,
   fire,
+  inspectFallbackWorktree,
   isValidAgentBin,
   isValidCronId,
   isValidRemote,
@@ -40,6 +41,7 @@ import {
   loadCrons,
   onJobError,
   parseCronFile,
+  pruneAndCountFallbackWorktrees,
   readFailureTail,
   reloadEntryForFire,
   remoteForRepo,
@@ -68,6 +70,24 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
+
+function withTempGitRemotes<T>(remotes: Record<string, string>, fn: () => T): T {
+  const prevCwd = process.cwd();
+  const repo = path.join(tmp, "git-remotes");
+  mkdirSync(repo, { recursive: true });
+  const init = spawnSync("git", ["init"], { cwd: repo, encoding: "utf-8" });
+  expect(init.status).toBe(0);
+  for (const [name, url] of Object.entries(remotes)) {
+    const add = spawnSync("git", ["remote", "add", name, url], { cwd: repo, encoding: "utf-8" });
+    expect(add.status).toBe(0);
+  }
+  process.chdir(repo);
+  try {
+    return fn();
+  } finally {
+    process.chdir(prevCwd);
+  }
+}
 
 describe("parseCronFile", () => {
   it("parses the SPEC frontmatter shape", () => {
@@ -854,15 +874,23 @@ describe("acquireLock", () => {
     expect(readFileSync(pidFile, "utf-8")).toBe(String(process.pid));
   });
 
-  it("returns false when an existing PID is alive", () => {
+  it("returns false when an existing PID is alive and preserves the pidfile", () => {
     const pidFile = path.join(tmp, ".pid");
     const child = spawn("sleep", ["10"], { stdio: "ignore" });
     try {
       writeFileSync(pidFile, String(child.pid));
       expect(acquireLock(pidFile)).toBe(false);
+      expect(readFileSync(pidFile, "utf-8")).toBe(String(child.pid));
     } finally {
       child.kill();
     }
+  });
+
+  it("returns true when the current process already owns the lock", () => {
+    const pidFile = path.join(tmp, ".pid");
+    writeFileSync(pidFile, String(process.pid));
+    expect(acquireLock(pidFile)).toBe(true);
+    expect(readFileSync(pidFile, "utf-8")).toBe(String(process.pid));
   });
 
   it("steals stale lock when previous PID is dead", () => {
@@ -870,7 +898,64 @@ describe("acquireLock", () => {
     // Pick a high PID unlikely to be running.
     writeFileSync(pidFile, "999999");
     expect(acquireLock(pidFile)).toBe(true);
-    expect(existsSync(pidFile)).toBe(true);
+    expect(readFileSync(pidFile, "utf-8")).toBe(String(process.pid));
+  });
+
+  it("reclaims an unparsable lock file", () => {
+    const pidFile = path.join(tmp, ".pid");
+    writeFileSync(pidFile, "not-a-pid");
+    expect(acquireLock(pidFile)).toBe(true);
+    expect(readFileSync(pidFile, "utf-8")).toBe(String(process.pid));
+  });
+
+  it("lets exactly one concurrent process win an absent lock", () => {
+    const pidFile = path.join(tmp, ".pid");
+    const gateFile = path.join(tmp, ".start");
+    const worker = path.join(tmp, "lock-worker.mjs");
+    writeFileSync(
+      worker,
+      `import { existsSync, readFileSync } from "node:fs";\n` +
+        `import { acquireLock } from ${JSON.stringify(path.resolve("scripts/cron-runtime.ts"))};\n` +
+        `const [pidFile, gateFile] = process.argv.slice(2);\n` +
+        `const deadline = Date.now() + 2000;\n` +
+        `while (!existsSync(gateFile) && Date.now() < deadline) { await new Promise((r) => setTimeout(r, 5)); }\n` +
+        `const ok = acquireLock(pidFile);\n` +
+        `console.log(JSON.stringify({ pid: process.pid, ok, holder: readFileSync(pidFile, "utf-8") }));\n` +
+        `setTimeout(() => process.exit(0), ok ? 500 : 0);\n`,
+    );
+
+    const children = [
+      spawn(process.execPath, ["--experimental-strip-types", worker, pidFile, gateFile], {
+        cwd: process.cwd(),
+        stdio: ["ignore", "pipe", "pipe"],
+      }),
+      spawn(process.execPath, ["--experimental-strip-types", worker, pidFile, gateFile], {
+        cwd: process.cwd(),
+        stdio: ["ignore", "pipe", "pipe"],
+      }),
+    ];
+
+    writeFileSync(gateFile, "go");
+    const outputs = children.map(
+      (child) =>
+        new Promise<string>((resolve, reject) => {
+          let stdout = "";
+          let stderr = "";
+          child.stdout?.on("data", (chunk) => (stdout += String(chunk)));
+          child.stderr?.on("data", (chunk) => (stderr += String(chunk)));
+          child.on("error", reject);
+          child.on("exit", (code) => {
+            if (code === 0) resolve(stdout.trim());
+            else reject(new Error(stderr || `worker exited ${code}`));
+          });
+        }),
+    );
+
+    return Promise.all(outputs).then((lines) => {
+      const results = lines.map((line) => JSON.parse(line) as { pid: number; ok: boolean; holder: string });
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(readFileSync(pidFile, "utf-8")).toBe(String(results.find((r) => r.ok)!.pid));
+    });
   });
 
 });
@@ -985,6 +1070,63 @@ describe("reloadBody", () => {
     // BODY_RELOAD_ERR must appear in at least one appendFileSync call.
     const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(true);
+  });
+});
+
+describe("fallback worktree pruning", () => {
+  const git = (cwd: string, args: string[]): void => {
+    const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
+    expect(result.status, `${args.join(" ")}\n${result.stderr}`).toBe(0);
+  };
+
+  const initRepoWithFallbackWorktrees = (): { repo: string; dirtyWt: string; cleanWt: string } => {
+    const repo = path.join(tmp, "repo");
+    mkdirSync(repo, { recursive: true });
+    git(repo, ["init", "-b", "development"]);
+    writeFileSync(path.join(repo, "README.md"), "fixture\n");
+    git(repo, ["add", "README.md"]);
+    git(repo, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"]);
+
+    const dirtyWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-dirty");
+    const cleanWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-clean");
+    git(repo, ["worktree", "add", "--detach", dirtyWt, "HEAD"]);
+    git(repo, ["worktree", "add", "--detach", cleanWt, "HEAD"]);
+    writeFileSync(path.join(dirtyWt, "uncommitted.txt"), "salvage me\n");
+    return { repo, dirtyWt, cleanWt };
+  };
+
+  it("reports dirty fallback worktree state including untracked files", () => {
+    const { dirtyWt } = initRepoWithFallbackWorktrees();
+
+    const state = inspectFallbackWorktree(dirtyWt);
+
+    expect(state.dirty).toBe(true);
+    expect(state.changes).toContain("?? uncommitted.txt");
+    expect(state.ref).not.toBe("unknown");
+  });
+
+  it("preserves dirty dead fallback worktrees but removes clean dead ones", () => {
+    const { repo, dirtyWt, cleanWt } = initRepoWithFallbackWorktrees();
+    const priorCwd = process.cwd();
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+
+    try {
+      process.chdir(repo);
+      expect(pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
+    } finally {
+      process.chdir(priorCwd);
+    }
+
+    expect(existsSync(dirtyWt)).toBe(true);
+    expect(readFileSync(path.join(dirtyWt, "uncommitted.txt"), "utf-8")).toBe("salvage me\n");
+    expect(existsSync(cleanWt)).toBe(false);
+    expect(
+      appendSpy.mock.calls.some((c) =>
+        String(c[1]).includes("\tautopilot\tWORKTREE_DIRTY\t") &&
+        String(c[1]).includes("?? uncommitted.txt"),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -1269,20 +1411,22 @@ describe("runPreflight + the fire() preflight gate", () => {
   });
 
   it("exports repo and matching remote into preflight runs", () => {
-    const script = path.join(tmp, "preflight-env.sh");
-    const out = path.join(tmp, "preflight-env.out");
-    const expectedRemote = remoteForRepo("mifunedev/openharness");
-    expect(expectedRemote).toBeTruthy();
-    writeFileSync(
-      script,
-      `#!/usr/bin/env bash\nprintf '%s %s\\n' "$AUTOPILOT_REPO" "$AUTOPILOT_REMOTE" > ${JSON.stringify(out)}\necho PROCEED\n`,
-      { mode: 0o755 },
-    );
+    withTempGitRemotes({ upstream: "https://github.com/mifunedev/openharness.git" }, () => {
+      const script = path.join(tmp, "preflight-env.sh");
+      const out = path.join(tmp, "preflight-env.out");
+      const expectedRemote = remoteForRepo("mifunedev/openharness");
+      expect(expectedRemote).toBe("upstream");
+      writeFileSync(
+        script,
+        `#!/usr/bin/env bash\nprintf '%s %s\\n' "$AUTOPILOT_REPO" "$AUTOPILOT_REMOTE" > ${JSON.stringify(out)}\necho PROCEED\n`,
+        { mode: 0o755 },
+      );
 
-    const r = runPreflight({ ...entry(script), repo: "mifunedev/openharness" });
+      const r = runPreflight({ ...entry(script), repo: "mifunedev/openharness" });
 
-    expect(r.status).toBe(0);
-    expect(readFileSync(out, "utf-8").trim()).toBe(`mifunedev/openharness ${expectedRemote}`);
+      expect(r.status).toBe(0);
+      expect(readFileSync(out, "utf-8").trim()).toBe(`mifunedev/openharness ${expectedRemote}`);
+    });
   });
 
   it("fire() also short-circuits when preflight itself errors", () => {
@@ -1304,8 +1448,10 @@ describe("runPreflight + the fire() preflight gate", () => {
 
 describe("remoteForRepo", () => {
   it("resolves the canonical repo to the local remote whose URL matches it", () => {
-    const remote = remoteForRepo("mifunedev/openharness");
-    expect(remote).toBeTruthy();
-    expect(isValidRemote(remote!)).toBe(true);
+    withTempGitRemotes({ origin: "https://github.com/ryaneggz/openharness.git", upstream: "git@github.com:mifunedev/openharness.git" }, () => {
+      const remote = remoteForRepo("mifunedev/openharness");
+      expect(remote).toBe("upstream");
+      expect(isValidRemote(remote!)).toBe(true);
+    });
   });
 });

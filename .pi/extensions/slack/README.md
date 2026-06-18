@@ -80,7 +80,7 @@ SLACK_ALLOW_USERS=U789
 
    `set -a` is needed because `.devcontainer/.env` is Compose-formatted (no `export` prefix); without it, sourced vars stay in the shell but aren't inherited by `pi`. The tmux session keeps `pi` alive across SSH/VS Code disconnects (see [`context/rules/sandbox-processes.md`](../../context/rules/sandbox-processes.md)).
 
-   The extension loads on `session_start`. If `SLACK_APP_TOKEN` or `SLACK_BOT_TOKEN` is missing from `process.env`, the extension logs `Slack extension: missing SLACK_APP_TOKEN/SLACK_BOT_TOKEN; not connecting` and disables itself for the session.
+   The extension loads on `session_start`. If `SLACK_APP_TOKEN` or `SLACK_BOT_TOKEN` is missing from `process.env`, the extension silently disables itself for the session.
 
 4. **Verify**:
    ```bash

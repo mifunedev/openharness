@@ -4,7 +4,7 @@
 
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
 - **Agents that work while you sleep.** A tiny croner runtime reads `crons/*.md` markdown and wakes the agent on a schedule.
-- **Only host dependency: Docker.** No Node, no Python, no toolchain rot on your laptop.
+- **Host dependencies: Docker + Git.** No Node, no Python, no toolchain rot on your laptop.
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The in-tree Pi extension at `.pi/extensions/slack/` bridges Slack to a Pi agent — see [docs/integrations/slack.md](docs/integrations/slack.md).
 - **Multi-agent? Add a pack.** Other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
@@ -27,9 +27,9 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), you can review and approve the same installer with `vet https://oh.mifune.dev/install.sh`. Docker remains the only required host dependency.
+If you already use [`vet`](https://github.com/vet-run/vet), you can review and approve the same installer with `vet https://oh.mifune.dev/install.sh`. `vet` is optional; Open Harness requires Docker with the Compose plugin and Git on the host.
 
-Clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm). Only host dependency: [Docker](https://docs.docker.com/get-docker/).
+Clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm). Required host dependencies: [Docker](https://docs.docker.com/get-docker/) with the Compose plugin and [Git](https://git-scm.com/).
 
 **Option B — Fork and clone (recommended for self-hosting):**
 

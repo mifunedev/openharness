@@ -282,6 +282,27 @@ done
 Only after every file shows `same:` should you run `git restore` or `rm -f` to
 clean the main checkout.
 
+## Catching Up Feature Branches
+
+When an open feature branch falls behind `development`, prefer merging the target
+branch into the feature branch instead of rebasing it. This preserves the
+branch's published history, avoids force-push churn, and keeps integration
+conflict resolution on the feature branch; the final squash merge keeps
+`development` free of the catch-up merge commit.
+
+```bash
+git fetch origin development
+git checkout <feature-branch>              # or run inside its worktree
+git merge origin/development               # resolve conflicts on the feature branch
+git push origin <feature-branch>           # normal push; no --force-with-lease
+```
+
+After the merge, rerun the targeted checks and `/ci-status`/`/pr-audit` before
+marking the PR ready or merging it.
+
+Use rebase/force-push only for deliberate history surgery, for example before a
+branch has been shared, or when explicitly managing a stacked PR.
+
 ## Stacked PRs
 
 When a PR needs work from another open PR, stack instead of waiting:

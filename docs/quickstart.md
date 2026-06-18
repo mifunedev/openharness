@@ -5,11 +5,11 @@ title: "Quickstart"
 
 # Quickstart
 
-This guide takes you from zero to a running sandbox with an interactive shell in under five minutes. The only host dependency is [Docker](https://docs.docker.com/get-docker/).
+This guide takes you from zero to a running sandbox with an interactive shell in under five minutes. Required host dependencies are [Docker](https://docs.docker.com/get-docker/) with the Compose plugin and [Git](https://git-scm.com/).
 
 ## Before you start
 
-Install Docker with the Compose plugin: [docs.docker.com/get-docker](https://docs.docker.com/get-docker/). Everything else runs inside the container.
+Install Docker with the Compose plugin ([docs.docker.com/get-docker](https://docs.docker.com/get-docker/)) and Git ([git-scm.com](https://git-scm.com/)). Node, Python, pnpm, and agent CLIs run inside the container.
 
 ## Install
 
@@ -25,7 +25,7 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides the same fetch/review/approve flow. Docker remains the only required host dependency.
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides the same fetch/review/approve flow. `vet` is optional; Open Harness itself requires Docker with Compose and Git.
 
 > **Self-hosting?** If you've already cloned your fork or re-pointed origin, skip the curl command above and run `bash scripts/install.sh` from inside the directory instead — the installer detects the local clone automatically.
 

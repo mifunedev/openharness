@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #98
+# source: issue #98; issue #225 (restart-required cron frontmatter/config drift)
 # desc: extract the LIVE Step C-2 bash block from drift-check SKILL.md and RUN it
 #       against fixtures (README-style, valid scheduled cron, disabled cron,
-#       missing schedule, empty schedules, invalid schedule) with RUNTIME_START
-#       before their mtimes; PASS only if the inert set includes the valid cron
-#       and excludes the README, disabled, missing, empty, and invalid fixtures.
+#       missing schedule, empty schedules, invalid schedule, invalid id,
+#       id mismatch, unsafe agent) with RUNTIME_START before their mtimes; PASS
+#       only if the inert set includes the valid cron and excludes invalid
+#       runtime-config fixtures.
 #       This is a behavioral extract-and-run probe (not a text-presence grep): a
 #       revert of Step C-2 to the raw `for f in crons/*.md` glob flags all
 #       fixtures and flips the probe to REGRESSION.
@@ -50,6 +51,12 @@ if ! printf '%s' "$BLOCK" | grep -qF 'crons/*.md'; then
   echo "REGRESSION: extracted Step C-2 block does not iterate crons/*.md — wrong block captured" >&2
   exit 1
 fi
+for required in schedule enabled agent tmux worktree preflight RESTART_REQUIRED_FRONTMATTER_FIELDS "frontmatter/config may be stale" "SIGHUP reschedule or runtime restart"; do
+  if ! printf '%s' "$BLOCK" | grep -qF "$required"; then
+    echo "REGRESSION: Step C-2 block is missing restart-required frontmatter contract text: $required" >&2
+    exit 1
+  fi
+done
 
 # --- SKIPPED: the behavioral predicate needs node + croner -------------------
 # The extracted Step C-2 block's is_valid_cron_schedule() shells out to `node`
@@ -98,10 +105,14 @@ EOF_A
 #     closing '---'. Must be INCLUDED (flagged inert).
 cat > "$WORK/crons/bbb-valid.md" <<'EOF_B'
 ---
-id: probe-valid
+id: bbb-valid
 schedule: "0 * * * *"
 timezone: UTC
 enabled: true
+agent: pi
+tmux: true
+worktree: true
+preflight: scripts/autopilot-caps.sh
 ---
 
 # Valid scheduled cron
@@ -113,7 +124,7 @@ EOF_B
 #     Must be EXCLUDED.
 cat > "$WORK/crons/ccc-disabled.md" <<'EOF_C'
 ---
-id: probe-disabled
+id: ccc-disabled
 schedule: "0 * * * *"
 enabled: false
 ---
@@ -127,7 +138,7 @@ EOF_C
 #     Must be EXCLUDED.
 cat > "$WORK/crons/ddd-missing-schedule.md" <<'EOF_D'
 ---
-id: probe-missing
+id: ddd-missing-schedule
 enabled: true
 ---
 
@@ -140,7 +151,7 @@ EOF_D
 #     Must be EXCLUDED.
 cat > "$WORK/crons/eee-empty-schedule-bare.md" <<'EOF_E'
 ---
-id: probe-empty-bare
+id: eee-empty-schedule-bare
 schedule:
 enabled: true
 ---
@@ -154,7 +165,7 @@ EOF_E
 #     Must be EXCLUDED.
 cat > "$WORK/crons/fff-empty-schedule-double-quoted.md" <<'EOF_F'
 ---
-id: probe-empty-double
+id: fff-empty-schedule-double-quoted
 schedule: ""
 enabled: true
 ---
@@ -168,7 +179,7 @@ EOF_F
 #     Must be EXCLUDED.
 cat > "$WORK/crons/ggg-empty-schedule-single-quoted.md" <<'EOF_G'
 ---
-id: probe-empty-single
+id: ggg-empty-schedule-single-quoted
 schedule: ''
 enabled: true
 ---
@@ -182,7 +193,7 @@ EOF_G
 #     loadCrons logs SCHED_INVALID and drops it, so it must be EXCLUDED.
 cat > "$WORK/crons/hhh-invalid-schedule-not-a-cron.md" <<'EOF_H'
 ---
-id: probe-invalid
+id: hhh-invalid-schedule-not-a-cron
 schedule: "not-a-cron"
 enabled: true
 ---
@@ -199,6 +210,46 @@ printf '%s' "$BLOCK" > "$WORK/block.sh"
 # under the OLD raw-glob logic ALL fixtures would be flagged inert; only the
 # corrected predicate excludes the non-cron (a), disabled cron (c), missing
 # schedule (d), empty schedules (e-g), and invalid schedule (h).
+# (i) Invalid id: loadCrons logs ID_INVALID and drops it. Must be EXCLUDED.
+cat > "$WORK/crons/iii-invalid-id.md" <<'EOF_I'
+---
+id: bad_id
+schedule: "0 * * * *"
+enabled: true
+---
+
+# Invalid id cron
+
+Body.
+EOF_I
+
+# (j) ID mismatch: loadCrons logs ID_MISMATCH and drops it. Must be EXCLUDED.
+cat > "$WORK/crons/jjj-id-mismatch.md" <<'EOF_J'
+---
+id: not-jjj-id-mismatch
+schedule: "0 * * * *"
+enabled: true
+---
+
+# ID mismatch cron
+
+Body.
+EOF_J
+
+# (k) Unsafe agent override: loadCrons logs AGENT_INVALID and drops it. Must be EXCLUDED.
+cat > "$WORK/crons/kkk-unsafe-agent.md" <<'EOF_K'
+---
+id: kkk-unsafe-agent
+schedule: "0 * * * *"
+agent: pi && bad
+enabled: true
+---
+
+# Unsafe agent cron
+
+Body.
+EOF_K
+
 # The block prints one `DRIFT-CHECK (C): crons/<file> ...` line per inert file —
 # we read that observable contract rather than the internal INERT array name.
 output="$(cd "$WORK" && DRIFT_CHECK_ROOT="$ROOT" RUNTIME_START=1 bash block.sh 2>/dev/null)" || true
@@ -238,6 +289,28 @@ if inert_contains "hhh-invalid-schedule-not-a-cron.md"; then
   echo "REGRESSION: invalid schedule was flagged inert — predicate diverges from runtime SCHED_INVALID skip" >&2
   fail=1
 fi
+if inert_contains "iii-invalid-id.md"; then
+  echo "REGRESSION: invalid id was flagged inert — predicate diverges from runtime ID_INVALID skip" >&2
+  fail=1
+fi
+if inert_contains "jjj-id-mismatch.md"; then
+  echo "REGRESSION: id mismatch was flagged inert — predicate diverges from runtime ID_MISMATCH skip" >&2
+  fail=1
+fi
+if inert_contains "kkk-unsafe-agent.md"; then
+  echo "REGRESSION: unsafe agent override was flagged inert — predicate diverges from runtime AGENT_INVALID skip" >&2
+  fail=1
+fi
+if ! printf '%s\n' "$output" | grep -qF 'frontmatter/config may be stale until SIGHUP reschedule or runtime restart'; then
+  echo "REGRESSION: inert cron diagnostic does not name restart-required frontmatter/config and the reschedule/restart recovery" >&2
+  fail=1
+fi
+for required in 'schedule=0 * * * *' 'enabled=true' 'agent=pi' 'tmux=true' 'worktree=true' 'preflight=scripts/autopilot-caps.sh'; do
+  if ! printf '%s\n' "$output" | grep -qF "$required"; then
+    echo "REGRESSION: inert cron diagnostic is missing current frontmatter field value: $required" >&2
+    fail=1
+  fi
+done
 
 if (( fail )); then
   {
@@ -249,5 +322,5 @@ if (( fail )); then
   exit 1
 fi
 
-echo "PASS: drift-check Step C-2 includes the valid scheduled cron and excludes README-style, disabled, missing, empty, and invalid fixtures" >&2
+echo "PASS: drift-check Step C-2 includes the valid scheduled cron, reports restart-required frontmatter, and excludes README-style, disabled, missing, empty, invalid schedule/id/mismatch/agent fixtures" >&2
 exit 0

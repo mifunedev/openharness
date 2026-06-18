@@ -13,6 +13,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Changed
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
+- Cron worktree pruning now preserves a live early-run tmux session whose name still matches its cron worktree basename, preventing active autopilot checkouts from disappearing before branch rename ([#445](https://github.com/mifunedev/openharness/issues/445)).
 ### Removed
 ### Deprecated
 ### Security

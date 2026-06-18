@@ -583,11 +583,10 @@ function detectBaseRef(remote = "origin"): string | null {
   return null;
 }
 
-// Absolute working directory of every live tmux pane. This is how worktree
-// liveness is judged — NOT by matching the worktree dir name to a tmux session
-// name. Autopilot RENAMES its session (cron-autopilot-<ts> → autopilot-<branch>)
-// and ship-spec runs its build in a SEPARATE Advisor session (agent-ship-<slug>),
-// so a name match would falsely declare an active worktree dead and delete it.
+// Absolute working directory of every live tmux pane. This remains the primary
+// liveness signal because autopilot may rename its session
+// (cron-autopilot-<ts> → autopilot-<branch>) and ship-spec may run work inside a
+// separate Advisor session (agent-ship-<slug>).
 function livePaneCwds(): string[] {
   const r = spawnSync("tmux", ["list-panes", "-a", "-F", "#{pane_current_path}"], {
     encoding: "utf-8",
@@ -596,11 +595,28 @@ function livePaneCwds(): string[] {
   return r.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
 }
 
+function liveTmuxSessionNames(): string[] {
+  const r = spawnSync("tmux", ["ls", "-F", "#{session_name}"], { encoding: "utf-8" });
+  if (r.status !== 0 || !r.stdout) return [];
+  return r.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
 // A worktree is "in use" iff some live tmux pane is working inside it (its own
-// dir or a descendant).
-function worktreeInUse(wtPath: string, cwds: string[]): boolean {
+// dir or a descendant), OR the cron-created session still has the same name as
+// the worktree basename. The basename fallback protects early-run Pi sessions
+// before autopilot renames cron-autopilot-<ts> to autopilot-<branch>; it is only
+// a fallback, so renamed Advisor/autopilot sessions still rely on pane-cwd
+// liveness and cannot keep arbitrary stale worktrees alive by name accident.
+export function worktreeInUse(
+  wtPath: string,
+  cwds: string[],
+  sessionNames: string[] = liveTmuxSessionNames(),
+): boolean {
   const abs = path.resolve(wtPath);
-  return cwds.some((p) => p === abs || p.startsWith(abs + path.sep));
+  return (
+    cwds.some((p) => p === abs || p.startsWith(abs + path.sep)) ||
+    sessionNames.includes(path.basename(abs))
+  );
 }
 
 export interface FallbackWorktreeState {
@@ -658,11 +674,12 @@ export function pruneAndCountFallbackWorktrees(id: string): number {
     return 0;
   }
   const cwds = livePaneCwds();
+  const sessionNames = liveTmuxSessionNames();
   let live = 0;
   for (const name of names) {
     if (!name.startsWith(`cron-${id}-`)) continue;
     const wt = path.join(dir, name);
-    if (worktreeInUse(wt, cwds)) {
+    if (worktreeInUse(wt, cwds, sessionNames)) {
       live++;
       continue;
     }

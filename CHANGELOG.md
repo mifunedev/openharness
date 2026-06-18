@@ -9,9 +9,11 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `autopilot-open-pr-reference-dedupe` eval probe guards that issue selection checks open PR metadata, branch names, titles, and bodies before launching duplicate autopilot work ([#437](https://github.com/mifunedev/openharness/issues/437)).
 - `harness-audit-shared-memory` eval probe guards that `/harness-audit` reads durable long-term memory from `AUDIT_LOG_ROOT` in cron worktrees while preserving source inspection via `AUDIT_ROOT` ([#432](https://github.com/mifunedev/openharness/issues/432)).
 ### Changed
 ### Fixed
+- Autopilot issue selection now dedupes against open PR references in linked metadata, branch names, titles, and bodies before starting work, preventing repeated PRs for the same issue when GitHub linked-PR metadata is empty ([#437](https://github.com/mifunedev/openharness/issues/437)).
 ### Removed
 ### Deprecated
 ### Security

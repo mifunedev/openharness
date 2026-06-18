@@ -70,7 +70,7 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides a fetch/diff/ShellCheck/preview/approve wrapper for the same installer. `vet` is optional; Docker remains the only required host dependency for Open Harness.
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides a fetch/diff/ShellCheck/preview/approve wrapper for the same installer. `vet` is optional; Open Harness itself requires Docker with Compose and Git.
 
 The installer:
 
@@ -163,7 +163,7 @@ Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside
 
 ## What's Installed
 
-The sandbox image ships a complete development environment. The only host dependency is Docker.
+The sandbox image ships a complete development environment. The required host dependencies are Docker with the Compose plugin and Git.
 
 Project-local Pi packages are loaded from `.pi/settings.json`; the defaults include `@tintinweb/pi-subagents`, `@tintinweb/pi-tasks`, `@narumitw/pi-goal`, `@narumitw/pi-plan-mode`, `@narumitw/pi-codex-usage` for `/codex-status` plus the Codex 5-hour-session / weekly-usage statusline, and `@tifan/pi-recap` for `/recap` plus automatic idle/resume session summaries.
 

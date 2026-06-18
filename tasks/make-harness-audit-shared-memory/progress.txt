@@ -1,0 +1,6 @@
+# progress
+
+Implemented US-001: /harness-audit tails durable long-term memory from AUDIT_LOG_ROOT.
+Implemented US-002: harness-audit-memory-path probe guards AUDIT_ROOT/AUDIT_LOG_ROOT split.
+Implemented US-003: wiki/harness-audit.md documents the root split and wiki/README.md indexes it.
+STATUS: COMPLETE

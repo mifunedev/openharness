@@ -9,8 +9,10 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `harness-audit-memory-path` eval coverage now guards the `AUDIT_ROOT` source-inspection / `AUDIT_LOG_ROOT` durable-memory split for `/harness-audit` ([#432](https://github.com/mifunedev/openharness/issues/432)).
 ### Changed
 ### Fixed
+- `/harness-audit` now reads durable long-term memory from `AUDIT_LOG_ROOT` during isolated cron worktree runs, so audits keep shared runtime lessons while source inspection stays on `AUDIT_ROOT` ([#432](https://github.com/mifunedev/openharness/issues/432)).
 ### Removed
 ### Deprecated
 ### Security

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "slug": "make-harness-audit-shared-memory",
+  "issue": 432,
+  "branchName": "feat/432-make-harness-audit-shared-memory",
+  "title": "Make harness-audit load shared memory",
+  "description": "Make /harness-audit read durable long-term memory from AUDIT_LOG_ROOT while preserving AUDIT_ROOT source inspection.",
+  "tasks": [
+    {
+      "id": "US-001",
+      "title": "Read durable memory from the log root",
+      "description": "Update .claude/skills/harness-audit/SKILL.md so the context snapshot tails AUDIT_LOG_ROOT/memory/MEMORY.md for long-term memory while keeping source inspection on AUDIT_ROOT.",
+      "acceptanceCriteria": [
+        "harness-audit tails $AUDIT_LOG_ROOT/memory/MEMORY.md for recent long-term memory",
+        "source listings and package/CI/worktree inspection still use $AUDIT_ROOT",
+        "comments explain why source and runtime memory roots differ",
+        "context snapshot prints whether long-term memory was loaded or missing-or-unreadable from AUDIT_LOG_ROOT",
+        "memory/log-related auditor instructions use the Context Snapshot / AUDIT_LOG_ROOT while source inspections remain on AUDIT_ROOT"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-002",
+      "title": "Guard against memory-root regression",
+      "description": "Update evals/probes/harness-audit-memory-path.sh to assert the AUDIT_ROOT/AUDIT_LOG_ROOT split.",
+      "acceptanceCriteria": [
+        "probe requires $AUDIT_LOG_ROOT/memory/MEMORY.md",
+        "probe fails on $AUDIT_ROOT/memory/MEMORY.md for long-term memory",
+        "probe guards the memory load-status disclosure and auditor prompt direction",
+        "probe passes locally"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-003",
+      "title": "Document the harness-audit root split",
+      "description": "Create a source-backed wiki entry for the harness-audit root split and refresh the wiki index.",
+      "acceptanceCriteria": [
+        "wiki/harness-audit.md documents AUDIT_ROOT vs AUDIT_LOG_ROOT and missing-memory diagnostics",
+        "wiki/README.md indexes the new entry",
+        "wiki-readme-index probe passes"
+      ],
+      "passes": true
+    }
+  ]
+}

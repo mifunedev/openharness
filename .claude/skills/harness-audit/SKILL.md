@@ -33,7 +33,8 @@ flowchart TD
     C --> CRIT["Critic Auditor<br>security · heartbeat reliability<br>worktree cleanup · state corruption"]
     C --> EXP["Explorer Auditor<br>memory quality · wiki utilization<br>heartbeat health · skill staleness"]
 
-    PM & IMP & CRIT & EXP --> SYN["Synthesize: deduplicate + tier-rank"]
+    PM & IMP & CRIT & EXP --> VAL["Validate auditor outputs<br/>non-empty sentinels"]
+    VAL --> SYN["Synthesize: deduplicate + tier-rank"]
     SYN --> OUT["Emit tier-ranked report"]
     OUT --> MEM["Memory Protocol"]
 ```
@@ -242,9 +243,32 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 
 ---
 
+### 3.5 Validate auditor outputs (fail closed)
+
+Before synthesis, verify that every required auditor returned a real output block. An auditor result is valid only when it is non-empty and includes both its expected start sentinel and a closing `END` line:
+
+| Auditor | Required start sentinel |
+|---------|-------------------------|
+| PM | `PM_FINDINGS` |
+| Implementer | `IMP_FINDINGS` |
+| Critic | `CRITIC_FINDINGS` |
+| Explorer | `EXP_FINDINGS` |
+
+If any result is missing, blank/whitespace-only, lacks its required start sentinel, or lacks `END`, **stop before deduplication/tier-ranking**:
+
+1. Print `FAIL-AUDITOR-OUTPUT` and list each missing or empty auditor with the observed defect (`missing`, `blank`, `missing sentinel`, `missing END`).
+2. Do **not** synthesize findings, do **not** rank tiers, and do **not** emit `Recommended Next 3 Actions` from partial evidence.
+3. Still run the Memory Protocol with:
+   - `Result: FAIL-AUDITOR-OUTPUT`
+   - `Action: aborted before synthesis; invalid auditors: <names + defects>`
+   - `Observation: required harness-audit perspectives did not return evidence`
+4. Exit non-zero for the skill invocation so automation treats the audit as failed, not as an empty successful report.
+
+This is intentionally fail-closed: a no-output sub-agent completion is a runtime/input failure, not evidence that the audited area has no findings.
+
 ### 4. Synthesize findings
 
-After all 4 auditors return, synthesize into the output format:
+After all 4 auditors return and pass the auditor-output validation gate, synthesize into the output format:
 
 1. **Deduplicate** — if 2+ auditors flag the same issue, merge into one entry (note multiple sources)
 2. **Tier-rank** using this matrix:

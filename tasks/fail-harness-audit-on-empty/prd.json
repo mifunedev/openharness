@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/246-fail-harness-audit-on-empty",
+  "description": "Fail /harness-audit closed when required auditor outputs are empty.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add the fail-closed auditor-output gate",
+      "description": "As the harness orchestrator, I want /harness-audit to validate required auditor outputs before synthesis so that empty sub-agent returns cannot be mistaken for real findings.",
+      "acceptanceCriteria": [
+        ".claude/skills/harness-audit/SKILL.md adds a validation step before synthesis.",
+        "The validation requires each required auditor block to include a non-empty expected start sentinel: PM_FINDINGS, IMP_FINDINGS, CRITIC_FINDINGS, EXP_FINDINGS.",
+        "The validation requires each auditor block to include END.",
+        "The failure path names missing or empty auditors, emits FAIL-AUDITOR-OUTPUT, skips tier ranking/recommended actions, and still appends the Memory Protocol log.",
+        "No source changes are made to the Agent runner.",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed 2026-06-18; added fail-closed auditor-output validation to harness-audit skill."
+    },
+    {
+      "id": "US-002",
+      "title": "Guard the contract with an eval probe",
+      "description": "As the maintainer, I want a deterministic eval probe for the /harness-audit empty-output gate so future skill edits cannot silently remove it.",
+      "acceptanceCriteria": [
+        "Add evals/probes/harness-audit-empty-output-gate.sh with Tier-A metadata.",
+        "The probe resolves the repository root from BASH_SOURCE[0].",
+        "The probe returns REGRESSION when the skill lacks the expected sentinels, FAIL-AUDITOR-OUTPUT, the missing/empty-auditor language, or instructions to skip ranking on failure.",
+        "Run the new probe and the eval runner; update evals/RESULTS.md if the runner rewrites it.",
+        "Add a CHANGELOG.md entry under ## [Unreleased].",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed 2026-06-18; added Tier-A eval probe, refreshed eval results, and updated changelog."
+    }
+  ]
+}

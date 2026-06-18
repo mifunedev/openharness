@@ -68,6 +68,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - `/wiki-ingest` hardening — a new step 7 directs the orchestrator to regenerate the `wiki/README.md` index (via `/wiki-lint` or its atomic fallback) whenever a tracked entry ships as a deliverable, plus a new `references/concurrent-ingest-worktrees.md` documenting the isolated-worktree pattern for concurrent ingests / preserving unrelated branch state ([#75](https://github.com/ryaneggz/openharness/pull/75)).
 
 ### Changed
+- Slack Pi extension startup now silently disables itself when Slack tokens are unset instead of surfacing a missing-token warning.
 - `/drift-check` now reports possible stale cron frontmatter/config when schedulable cron files change after the live runtime starts, names the restart-required field set, and documents SIGHUP reschedule vs. body hot-reload with updated eval/wiki coverage ([#225](https://github.com/ryaneggz/openharness/issues/225)).
 - Rebrand the executable-loop runner command to `/orchestrate`, carrying the skill docs, capability metadata, eval results row, and contract probe name forward without changing loop behavior ([#214](https://github.com/ryaneggz/openharness/issues/214)).
 - `/ship-spec` now requires specs to declare wiki impact, compare required wiki updates against the relevant DeepWiki pages, and keep those wiki entries aligned through the post-implementation gate ([#212](https://github.com/ryaneggz/openharness/issues/212)).

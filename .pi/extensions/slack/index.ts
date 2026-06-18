@@ -109,12 +109,6 @@ export default function (pi: ExtensionAPI): void {
 		const appToken = process.env.SLACK_APP_TOKEN;
 		const botToken = process.env.SLACK_BOT_TOKEN;
 		if (!appToken || !botToken) {
-			const msg = "Slack extension: missing SLACK_APP_TOKEN/SLACK_BOT_TOKEN; not connecting";
-			if (ctx.hasUI) {
-				ctx.ui.notify(msg, "warning");
-			} else {
-				log.logWarning(msg);
-			}
 			return;
 		}
 

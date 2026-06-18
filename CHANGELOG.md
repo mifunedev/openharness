@@ -9,6 +9,15 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.6.18] - 2026-06-18
+
+### Added
 - `pr-audit-duplicate-issue-refs` eval probe guards that `/pr-audit` keeps duplicate open-PR issue references visible as a read-only triage flag ([#439](https://github.com/mifunedev/openharness/issues/439)).
 - `harness-audit` wiki entry and Context Snapshot memory load-status diagnostics preserve the shared-memory model salvaged from duplicate #432 PRs ([#441](https://github.com/mifunedev/openharness/issues/441)).
 - `autopilot-open-pr-reference-dedupe` eval probe guards that issue selection checks open PR metadata, branch names, titles, and bodies before launching duplicate autopilot work ([#437](https://github.com/mifunedev/openharness/issues/437)).

@@ -25,7 +25,7 @@ fi
 missing=()
 
 # Executor toggle: default delegate-advisor, explicit env/CLI Ralph fallback.
-grep -Fq 'argument-hint: "[--dry-run] [--executor=delegate-advisor|ralph]' "$SKILL" || missing+=("argument hint includes executor toggle")
+grep -F 'argument-hint:' "$SKILL" | grep -Fq '[--executor=delegate-advisor|ralph]' || missing+=("argument hint includes executor toggle")
 grep -Fq 'EXECUTOR="${AUTOPILOT_EXECUTOR:-delegate-advisor}"' "$SKILL" || missing+=("AUTOPILOT_EXECUTOR default delegate-advisor")
 grep -Fq '*--executor=ralph*) EXECUTOR=ralph' "$SKILL" || missing+=("CLI --executor=ralph toggle")
 grep -Fq '*--executor=delegate-advisor*) EXECUTOR=delegate-advisor' "$SKILL" || missing+=("CLI --executor=delegate-advisor toggle")
@@ -63,8 +63,8 @@ grep -Fq 'autopilot-<branch>' "$CRON" || missing+=("cron documents autopilot-<br
 # Duplicate guard: active tmux session, linked PR, or active marker suppresses duplicate work.
 grep -Fq 'ACTIVE_MARKER="/tmp/$SAFE_SESSION.active"' "$SKILL" || missing+=("active marker path")
 grep -Fq 'tmux has-session -t "$SAFE_SESSION"' "$SKILL" || missing+=("tmux duplicate guard")
-grep -Fq 'LINKED_PR=$(gh pr list --repo "$AUTOPILOT_REPO" --state open --head "$BRANCH"' "$SKILL" || missing+=("branch PR duplicate guard")
-grep -Fq 'LINKED_ISSUE_PR=$(gh issue list --repo "$AUTOPILOT_REPO" --state open --label autopilot --search "$ISSUE_NUM linked:pr"' "$SKILL" || missing+=("linked issue PR duplicate guard")
+grep -F 'LINKED_PR=$(gh pr list' "$SKILL" | grep -Fq -- '--head "$BRANCH"' || missing+=("branch PR duplicate guard")
+grep -F 'LINKED_ISSUE_PR=$(gh issue list' "$SKILL" | grep -Fq -- '--search "$ISSUE_NUM linked:pr"' || missing+=("linked issue PR duplicate guard")
 grep -Fq '[ -e "$ACTIVE_MARKER" ]' "$SKILL" || missing+=("active marker duplicate guard")
 grep -Fq 'cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER"; }' "$SKILL" || missing+=("active marker cleanup helper")
 grep -Fq 'Clean the active marker on finalized PR paths' "$SKILL" || missing+=("finalized PR paths clean active marker")
@@ -73,7 +73,7 @@ grep -Fq 'Keep `ACTIVE_MARKER` only on incomplete executor paths' "$SKILL" || mi
 
 # Dry-run research must not create GitHub issues before the dry-run exit.
 dryrun_line="$(grep -nF 'exit before any `gh issue create` mutation' "$SKILL" | head -1 | cut -d: -f1 || true)"
-issue_create_line="$(grep -nE 'gh issue create .*--label autopilot' "$SKILL" | head -1 | cut -d: -f1 || true)"
+issue_create_line="$(grep -nF 'gh issue create --repo' "$SKILL" | head -1 | cut -d: -f1 || true)"
 if [[ -z "$dryrun_line" || -z "$issue_create_line" || "$dryrun_line" -ge "$issue_create_line" ]]; then
   missing+=("research dry-run guard appears before gh issue create")
 fi

@@ -86,7 +86,7 @@ description: |
 
 ---
 
-> **Git workflow**: see [.claude/rules/git.md](../../.claude/rules/git.md)
+> **Git workflow**: see [context/rules/git.md](../../context/rules/git.md)
 
 ---
 
@@ -96,4 +96,4 @@ description: |
 - [ ] SKILL.md has valid YAML frontmatter
 - [ ] Skill triggers correctly on matching user requests
 - [ ] Does not trigger on unrelated requests
-- [ ] PR targets the default target branch (see `.claude/rules/git.md`)
+- [ ] PR targets `development` unless the git workflow rule says otherwise

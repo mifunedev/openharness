@@ -1,0 +1,54 @@
+# progress
+
+## Codebase Patterns
+- `/watchdog` is a skill contract, not a standalone executable script; regression protection belongs in `evals/probes/*.sh` source-shape probes.
+
+## US-001 — 2026-06-16 16:35 UTC
+
+**Title**: Map autopilot sessions to PR branches
+**Files changed**: `.claude/skills/watchdog/SKILL.md`
+**Commit**: this commit
+**Result**: PASS
+
+### What I did
+Documented the `autopilot-<branch>` session contract and a jq-based comparison from tmux session names to sanitized PR `headRefName` values.
+Open PR sessions now report `WATCHING` instead of being reaped.
+
+### Learnings for future iterations
+Compare sanitized PR head refs to session names when possible; reversing the session name alone is brittle.
+
+---
+
+## US-002 — 2026-06-16 16:36 UTC
+
+**Title**: Reap only terminal idle sessions
+**Files changed**: `.claude/skills/watchdog/SKILL.md`
+**Commit**: this commit
+**Result**: PASS
+
+### What I did
+Added the terminal `MERGED|CLOSED` PR gate and an `idle_session` helper that double-captures the pane over three seconds before killing.
+The keep marker is removed only after the session is killed.
+
+### Learnings for future iterations
+Age is never a safe tmux reap predicate by itself; combine objective terminal state with idleness.
+
+---
+
+## US-003 — 2026-06-16 16:37 UTC
+
+**Title**: Report and guard the contract
+**Files changed**: `crons/heartbeat.md`, `evals/probes/watchdog-completed-session-reap.sh`, `CHANGELOG.md`
+**Commit**: this commit
+**Result**: PASS
+
+### What I did
+Updated heartbeat reporting text and added a Tier-A source-shape probe for the completed-session reap contract.
+The changelog records the terminal-PR + idle behavior.
+
+### Learnings for future iterations
+For skill-only behavior, eval probes should pin exact safety phrases and reporting tokens.
+
+---
+
+STATUS: COMPLETE

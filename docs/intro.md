@@ -16,7 +16,7 @@ Key capabilities:
 
 - **One project, one sandbox.** A single container scoped to a single repo and branch. The agent owns its workspace; your laptop stays clean.
 - **Markdown-defined crons.** `crons/*.md` files declare schedules; an in-container croner runtime fires the bodies as agent prompts so the agent can work autonomously while you focus on other things.
-- **Only host dependency: Docker.** No Node, no Python, and no toolchain maintenance required on your laptop.
+- **Host dependencies: Docker + Git.** No Node, no Python, and no toolchain maintenance required on your laptop.
 - **Composable infra.** Cloudflare tunnels, SSH, and pack-supplied services are opt-in Docker Compose overlays.
 - **Multi-agent? Add a pack.** Slack-driven Pi+Mom and similar multi-agent setups ship as separate harness packs (e.g. [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune)).
 

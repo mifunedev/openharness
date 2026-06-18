@@ -119,6 +119,10 @@ Clones (or pulls) the repo into ~/.openharness, prepares host auth dirs,
 and brings up the sandbox via 'docker compose'. Per SPEC v0.7, docker
 compose is the canonical substrate; the legacy 'oh' CLI is removed.
 
+Prerequisites:
+  Docker with the Compose plugin
+  git (used to clone or update Open Harness)
+
 Flags:
   -y, --yes            Accept default at any prompt.
   -n, --no             Decline at any prompt (abort path).
@@ -193,7 +197,7 @@ ok "Docker Compose $(docker compose version --short) — OK"
 # ─── 2. Check git ────────────────────────────────────────────────────
 banner "Checking git"
 if ! command -v git >/dev/null 2>&1; then
-  die "git is not installed. Install git from: https://git-scm.com"
+  die "git is required to clone or update Open Harness. Install git from: https://git-scm.com"
 fi
 ok "git $(git --version | awk '{print $3}') — OK"
 

@@ -22,7 +22,7 @@ assignees: ""
 
 ---
 
-> **Git workflow**: see [.claude/rules/git.md](../../.claude/rules/git.md)
+> **Git workflow**: see [context/rules/git.md](../../context/rules/git.md)
 
 ---
 
@@ -30,4 +30,4 @@ assignees: ""
 
 - [ ] Findings documented in the PR description or a report file
 - [ ] Fixes applied (if applicable)
-- [ ] PR targets the default target branch (see `.claude/rules/git.md`) (if changes were made)
+- [ ] PR targets `development` unless the git workflow rule says otherwise (if changes were made)

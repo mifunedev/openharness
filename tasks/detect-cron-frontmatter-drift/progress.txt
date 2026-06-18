@@ -1,0 +1,68 @@
+# progress
+
+## Codebase Patterns
+
+- `/drift-check` is a read-only skill: recommended reschedule/restart commands may be printed, but the skill must never execute them.
+- Cron body edits and cron frontmatter/config edits have different lifecycles: `reloadBody()` hot-reloads body text at fire time, while scheduler/config fields require SIGHUP reschedule or runtime restart.
+
+## US-001 — 2026-06-16 13:28 UTC
+
+**Title**: Detect restart-required frontmatter drift
+**Files changed**: `.claude/skills/drift-check/SKILL.md`
+**Commit**: d6beaf1
+**Result**: PASS
+
+### What I did
+Updated Section C to distinguish body hot-reload from restart-required cron frontmatter/config. The Step C-2 block now extracts the restart-required field set and emits a conservative diagnostic naming possible stale frontmatter/config plus SIGHUP/restart recovery.
+
+### Learnings for future iterations
+Without a runtime snapshot, the correct claim is conservative: the skill can report that config may be stale when a schedulable cron changed after runtime start, not prove which field changed.
+
+---
+
+## US-002 — 2026-06-16 13:28 UTC
+
+**Title**: Preserve the schedulable-cron predicate
+**Files changed**: `.claude/skills/drift-check/SKILL.md`, `evals/probes/drift-check-cron-staleness-glob.sh`
+**Commit**: d6beaf1
+**Result**: PASS
+
+### What I did
+Kept the property-based schedulable predicate and expanded it to mirror runtime id, filename/id, and safe-agent filters. The eval fixture suite now includes invalid id, id mismatch, and unsafe agent cases.
+
+### Learnings for future iterations
+When a probe extracts executable shell from a skill, fixture ids must match file stems if the skill mirrors `loadCrons()` exactly.
+
+---
+
+## US-003 — 2026-06-16 13:28 UTC
+
+**Title**: Update operator documentation
+**Files changed**: `.claude/skills/drift-check/SKILL.md`, `wiki/cron-runtime.md`, `wiki/raw/2026-06-16-cron-runtime.md`, `wiki/README.md`
+**Commit**: d6beaf1
+**Result**: PASS
+
+### What I did
+Added a DeepWiki-style cron runtime entry with line-cited source relationships and refreshed the wiki index. The skill docs now teach SIGHUP reschedule vs runtime restart and body hot-reload explicitly.
+
+### Learnings for future iterations
+Wiki entries about harness mechanisms should cite both the runtime source and the skill that operationalizes the diagnostic.
+
+---
+
+## US-004 — 2026-06-16 13:28 UTC
+
+**Title**: Guard the contract in evals
+**Files changed**: `evals/probes/drift-check-cron-staleness-glob.sh`, `CHANGELOG.md`, `tasks/detect-cron-frontmatter-drift/prd.json`, `tasks/detect-cron-frontmatter-drift/progress.txt`
+**Commit**: d6beaf1
+**Result**: PASS
+
+### What I did
+Strengthened the existing Tier-A probe to guard the restart-required field set, diagnostic wording, and expanded runtime-qualification fixtures. Added the changelog entry and marked the task graph complete.
+
+### Learnings for future iterations
+Source-shape probes should label themselves honestly when they are not full live-runtime simulations, then pair that with executable fixture coverage where practical.
+
+---
+
+STATUS: COMPLETE

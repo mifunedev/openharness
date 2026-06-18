@@ -1,0 +1,35 @@
+# progress
+
+## US-001 — 2026-06-16 15:16 UTC
+
+**Title**: Acquire the cron singleton lock atomically
+**Files changed**: `scripts/cron-runtime.ts`, `scripts/__tests__/cron-runtime.test.ts`, `CHANGELOG.md`, `tasks/make-cron-singleton-lock/prd.json`, `tasks/make-cron-singleton-lock/progress.txt`
+**Commit**: 82f3bdf
+**Result**: PASS
+
+### What I did
+Replaced check-then-write pidfile acquisition with exclusive-create-first locking. Existing live holders are preserved, stale/unparsable locks are unlinked and retried through the same exclusive path, and current-process locks still return true.
+
+Added coverage for live, stale, self, unparsable, and two-process concurrent acquisition. Recorded the user-visible runtime hardening in `CHANGELOG.md`.
+
+### Learnings for future iterations
+For singleton pidfiles, stale cleanup must return to exclusive create rather than write directly; otherwise the stale-reclaim path reintroduces the same race the first create fixed.
+
+---
+## US-002 — 2026-06-16 15:18 UTC
+
+**Title**: Update the cron-runtime wiki model
+**Files changed**: `wiki/cron-runtime.md`, `tasks/make-cron-singleton-lock/prd.json`, `tasks/make-cron-singleton-lock/progress.txt`
+**Commit**: this commit
+**Result**: PASS
+
+### What I did
+Updated `wiki/cron-runtime.md` to include the singleton `acquireLock()` guard, atomic exclusive pidfile creation, stale-lock retry behavior, and a manual recovery note for wedged locks.
+
+Verified the wiki index with `bash evals/probes/wiki-readme-index.sh`; `wiki/README.md` did not need regeneration.
+
+### Learnings for future iterations
+When a runtime hardening change affects operator recovery semantics, the wiki should document the manual escape hatch rather than broaden automation.
+
+---
+STATUS: COMPLETE

@@ -116,22 +116,77 @@ Required:
 
 After `gh pr ready`, re-read the PR and require `isDraft == false`.
 
-## Action: stuck sessions
+## Action: autopilot tmux sessions
 
-For `cron-autopilot-*` or legacy `autopilot-*` tmux sessions, kill only when the
-pane tail shows a terminal prompt the detached run cannot clear itself: usage or
-session limit, `/upgrade`, `Resume from summary`, `Resume full session`, or a
-fatal error banner. Age alone is not enough.
+For `cron-autopilot-*` or legacy `autopilot-*` tmux sessions, kill only under one
+of two objective conditions. **Age alone is never sufficient. Age alone is not enough.**
+
+### 1. Frozen prompt sessions
+
+Kill when the pane tail shows a terminal prompt the detached run cannot clear
+itself: Claude usage/session limits, Codex zero-credit/usage-limit errors
+(`usage_limit_reached`, `status_code 429`, `Credits-Balance":"0`), `/upgrade`,
+`Resume from summary`, `Resume full session`, or a fatal error banner.
 
 ```bash
 for s in $(tmux ls 2>/dev/null | grep -oE '^(cron-)?autopilot-[^:]*'); do
-  if tmux capture-pane -p -t "$s" 2>/dev/null | tail -25 \
-       | grep -qiE 'hit your (usage|session) limit|session limit|/usage-credits|/upgrade|Resume from summary|Resume full session'; then
+  if tmux capture-pane -p -t "$s" 2>/dev/null | tail -80 \
+       | grep -qiE 'hit your (usage|session) limit|session limit|/usage-credits|/upgrade|Resume from summary|Resume full session|usage_limit_reached|status_code["[:space:]:]+429|Credits-Balance["[:space:]:]+0'; then
     tmux kill-session -t "$s"; rm -f "/tmp/$s.keep"
     echo "NUDGE: killed stuck session $s"
   fi
 done
 ```
+
+### 2. Completed autopilot PR sessions
+
+A kept `autopilot-<branch>` session is useful while its PR is open. After the
+associated PR is terminal (`MERGED` or `CLOSED`), it is safe to reap only if the
+pane is idle/static. Preserve every session with an open PR, and preserve any
+terminal-PR session whose pane changes between two captures.
+
+Implementation pattern:
+
+```bash
+safe_branch_session() { printf '%s' "autopilot-$1" | tr '/:' '--' | tr '[:space:]' '-' | tr -cd 'A-Za-z0-9_.=-'; }
+idle_session() {
+  local s="$1" a b
+  a=$(tmux capture-pane -p -t "$s" 2>/dev/null | md5sum | awk '{print $1}') || return 1
+  sleep 3
+  b=$(tmux capture-pane -p -t "$s" 2>/dev/null | md5sum | awk '{print $1}') || return 1
+  [ "$a" = "$b" ]
+}
+
+# Compare session names to sanitized headRefName values instead of relying only
+# on string surgery from the session name back to a branch.
+gh pr list --repo "$WATCHDOG_REPO" --state all --limit 100 \
+  --json number,state,headRefName > /tmp/watchdog-prs-all.json
+
+for s in $(tmux ls 2>/dev/null | grep -oE '^autopilot-[^:]*'); do
+  pr=$(jq -r --arg s "$s" '
+    .[] | select(("autopilot-" + (.headRefName | gsub("[/:[:space:]]"; "-") | gsub("[^A-Za-z0-9_.=-]"; ""))) == $s)
+        | @base64' /tmp/watchdog-prs-all.json | head -1)
+  [ -n "$pr" ] || continue
+  state=$(printf '%s' "$pr" | base64 -d | jq -r .state)
+  number=$(printf '%s' "$pr" | base64 -d | jq -r .number)
+  case "$state" in
+    MERGED|CLOSED)
+      if idle_session "$s"; then
+        tmux kill-session -t "$s"; rm -f "/tmp/$s.keep"
+        echo "NUDGE: reaped completed autopilot session $s (PR #$number $state)"
+      else
+        echo "WATCHING: completed autopilot session $s still active"
+      fi
+      ;;
+    *)
+      echo "WATCHING: autopilot session $s has open PR #$number"
+      ;;
+  esac
+done
+```
+
+Never kill a session merely because it is old. The terminal PR state plus the
+idle double-capture is the safety gate.
 
 ## Reporting
 
@@ -140,6 +195,8 @@ done
 - Draft needs work: `NUDGE: completing stale draft PR #<n> (<reason>)`
 - Active but not stale: `WATCHING: draft PR #<n> still active`
 - Stuck session killed: `NUDGE: killed stuck session <s>`
+- Completed session reaped: `NUDGE: reaped completed autopilot session <s> (PR #<n> <state>)`
+- Terminal session still active: `WATCHING: completed autopilot session <s> still active`
 
 ## Common Pitfalls
 
@@ -147,5 +204,7 @@ done
   otherwise finish the work.
 - Do not run `gh pr ready` on red, pending, dirty, behind, or conflicting PRs.
 - Do not merge. Watchdog completion stops at ready-for-review.
+- Do not kill autopilot tmux sessions on age alone; require a frozen prompt OR
+  terminal PR state plus an idle double-capture.
 - Do not derive the repo from the local checkout for Open Harness automation;
   default to `mifunedev/openharness` and accept explicit `--repo` overrides.

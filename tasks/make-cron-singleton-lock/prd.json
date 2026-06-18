@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/233-make-cron-singleton-lock",
+  "description": "Harden cron-runtime singleton lock acquisition with atomic pidfile creation and race coverage.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Acquire the cron singleton lock atomically",
+      "description": "As the harness operator, I want cron runtime lock acquisition to be atomic so watchdog/restart races cannot spawn duplicate schedulers.",
+      "acceptanceCriteria": [
+        "scripts/cron-runtime.ts is edited only for lock-acquisition behavior and is not deleted, moved, or deprecated.",
+        "acquireLock(pidFile) attempts exclusive pidfile creation before stale-lock reclamation.",
+        "Live foreign PID locks return false and leave the pidfile unchanged; current-process PID locks return true.",
+        "Stale or unparsable pidfiles are reclaimed by unlinking and retrying exclusive creation, re-inspecting if another contender wins before retry.",
+        "Vitest coverage proves live, stale, self, unparsable, and deterministic race behavior.",
+        "CHANGELOG.md records the cron-runtime lock hardening under ## [Unreleased] in the same commit as the runtime change.",
+        "pnpm test:scripts -- scripts/__tests__/cron-runtime.test.ts passes.",
+        "pnpm typecheck passes."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-16; atomic acquireLock, race tests, changelog committed in branch history"
+    },
+    {
+      "id": "US-002",
+      "title": "Update the cron-runtime wiki model",
+      "description": "As a future agent, I want the cron runtime wiki entry to mention singleton locking so I understand how scheduler duplication is prevented.",
+      "acceptanceCriteria": [
+        "wiki/cron-runtime.md documents acquireLock() as the singleton guard with source-file line references updated for the final code.",
+        "The wiki system-relationships section mentions the lock before schedule arming.",
+        "wiki/cron-runtime.md includes a short operator recovery note for a wedged/stale lock.",
+        "bash evals/probes/wiki-readme-index.sh passes; wiki/README.md is regenerated only if needed."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed iteration 2 on 2026-06-16; cron-runtime wiki lock model and recovery note added"
+    }
+  ]
+}

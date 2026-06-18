@@ -51,7 +51,7 @@ Arguments received: `$ARGUMENTS`
 Extract:
 - **`<feature-description>`** (required) — the first positional arg, free text
 - **`--plan <path>`** (optional) — if provided, use the file content as comprehensive input to `/prd` and skip clarifying questions
-- **`--prefix <type>`** (optional, default `feat`) — branch + issue prefix per `.claude/rules/git.md` (`feat | bug | task | audit | skill | agent`)
+- **`--prefix <type>`** (optional, default `feat`) — branch + issue prefix per `.claude/skills/git/SKILL.md` (`feat | bug | task | audit | skill | agent`)
 - **`--issue <N>`** (optional) — link an EXISTING GitHub issue instead of creating one. When present, set `ISSUE_NUM=<N>` and skip Stage 5's `gh issue create`; `<N>` flows into the branch (`<prefix>/<N>-<slug>`), `/ralph --issue <N>`, `prompt.md`, and the PR `Closes #<N>` link, exactly as a freshly-created issue number would
 - **`--repo <owner/name>`** (optional, default `mifunedev/openharness`) — GitHub repository for issue/PR operations.
 - **`--remote <name>`** (optional, default resolved from `--repo`) — git remote to fetch/push work branches.
@@ -200,7 +200,7 @@ Only reached after stage 4 PROCEED.
 
 **If `--issue <N>` was provided**: skip issue creation entirely — set `N=<N>`, print `Using existing issue #<N> (--issue); skipping creation.`, optionally confirm it exists with `gh issue view <N> --repo "$SHIP_SPEC_REPO"`, and continue to Stage 6. Everything below in this stage applies ONLY when creating a fresh issue (no `--issue` flag).
 
-Compose issue body from the prd.md introduction + goals sections. Title format per `.claude/rules/git.md`:
+Compose issue body from the prd.md introduction + goals sections. Title format per `.claude/skills/git/SKILL.md`:
 
 ```bash
 gh issue create \
@@ -481,7 +481,7 @@ The whole pipeline can be re-invoked safely. Failed stage = fix + re-run; resume
 - Not `archive` (reserved)
 - Examples: `slack-thread-replies`, `install-prereq-detection`, `architecture-cleanup-pass-1`
 
-### Branch + commit conventions (from `.claude/rules/git.md`)
+### Branch + commit conventions (from `.claude/skills/git/SKILL.md`)
 
 - Branch: `<prefix>/<issue#>-<slug>`
 - Commit: `<type>: <description>` (where `<type>` matches `<prefix>` for scaffold commits)

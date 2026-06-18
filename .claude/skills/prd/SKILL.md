@@ -152,7 +152,7 @@ The PRD reader may be a junior developer or AI agent. Therefore:
 - **Format:** Markdown (`.md`)
 - **Location:** `tasks/<feature-name>/`
 - **Filename:** `prd.md`
-- **Feature name (`<short-desc>`):** lowercase kebab-case, `[a-z0-9-]+`, **≤5 words** (per `.claude/rules/git.md` — this slug becomes the `<short-desc>` segment in any branch the task produces). Slugify the user-supplied name:
+- **Feature name (`<short-desc>`):** lowercase kebab-case, `[a-z0-9-]+`, **≤5 words** (per `.claude/skills/git/SKILL.md` — this slug becomes the `<short-desc>` segment in any branch the task produces). Slugify the user-supplied name:
   - Lowercase everything
   - Replace runs of whitespace or punctuation with a single `-`
   - Strip leading/trailing `-`

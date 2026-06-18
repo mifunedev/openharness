@@ -12,35 +12,56 @@ if [ -S "$SOCK" ]; then
   fi
 fi
 
-# Fix ownership of mounted volumes (created as root by Docker).
-for dir in .claude .codex .pi .grok .deepagents .hermes .cloudflared .config/gh .ssh; do
-  if [ -d "/home/sandbox/$dir" ]; then
-    chown -R sandbox:sandbox "/home/sandbox/$dir" 2>/dev/null || true
-    [ "$dir" = ".ssh" ] && chmod 700 "/home/sandbox/$dir" 2>/dev/null || true
-  fi
-done
+sandbox_ownership() {
+  printf '%s:%s' "$(id -u sandbox)" "$(id -g sandbox)"
+}
 
-# Fix ownership of parents Docker auto-creates as root to satisfy named-volume
-# or bind-mount targets, which then block the sandbox user from creating
-# sibling dirs (EACCES on first run). Two known cases:
-#   • `.local` / `.local/share` — parents of the opencode state mount; without
-#     this `opencode` can't create `.local/state`.
-#   • `.config` — parent of the `gh-config` named volume (see
-#     docker-compose.yml); without this `opencode` can't create
-#     `.config/opencode`, and any other tool writing under `~/.config/<tool>`
-#     would hit the same wall.
-# Non-recursive so the bind-mounted children (`.local/share/opencode`,
-# `.config/gh`) stay untouched.
-for parent in /home/sandbox/.local /home/sandbox/.local/share /home/sandbox/.config; do
-  if [ -d "$parent" ]; then
-    chown sandbox:sandbox "$parent" 2>/dev/null || true
-  fi
-done
+shell_quote() {
+  local value=${1//\'/\'\\\'\'}
+  printf "'%s'" "$value"
+}
 
-OPENCODE_STATE="/home/sandbox/.local/share/opencode"
-if [ -d "$OPENCODE_STATE" ]; then
-  chown -R sandbox:sandbox "$OPENCODE_STATE" 2>/dev/null || true
-fi
+repair_home_mount_ownership() {
+  local owner
+  owner="$(sandbox_ownership)"
+  echo "[entrypoint] repairing sandbox auth mount ownership as $owner"
+
+  # Fix ownership of mounted volumes (created as root by Docker). Use the
+  # sandbox user's numeric uid:gid so this remains correct after UID/GID sync,
+  # even when the primary group is remapped to an existing host group whose
+  # name is not `sandbox`.
+  for dir in .claude .codex .pi .grok .deepagents .cloudflared .config/gh .ssh; do
+    if [ -d "/home/sandbox/$dir" ]; then
+      chown -hR "$owner" "/home/sandbox/$dir" 2>/dev/null || true
+      [ "$dir" = ".ssh" ] && chmod 700 "/home/sandbox/$dir" 2>/dev/null || true
+    fi
+  done
+
+  # Legacy Hermes home state may exist from earlier layouts. Do not recurse
+  # into $HERMES_HOME when it points at the bind-mounted checkout; that
+  # project-local runtime is handled by the Hermes block after UID sync.
+  if [ -d "/home/sandbox/.hermes" ]; then
+    chown -hR "$owner" "/home/sandbox/.hermes" 2>/dev/null || true
+  fi
+
+  # Fix ownership of parents Docker auto-creates as root to satisfy named-volume
+  # or bind-mount targets, which then block the sandbox user from creating
+  # sibling dirs (EACCES on first run). Non-recursive so the bind-mounted
+  # children (`.local/share/opencode`, `.config/gh`) stay under the explicit
+  # repairs below.
+  for parent in /home/sandbox/.local /home/sandbox/.local/share /home/sandbox/.config; do
+    if [ -d "$parent" ]; then
+      chown -h "$owner" "$parent" 2>/dev/null || true
+    fi
+  done
+
+  OPENCODE_STATE="/home/sandbox/.local/share/opencode"
+  if [ -d "$OPENCODE_STATE" ]; then
+    chown -hR "$owner" "$OPENCODE_STATE" 2>/dev/null || true
+  fi
+}
+
+repair_home_mount_ownership
 
 # ─── Host UID reconciliation ────────────────────────────────────────
 # The repo is bind-mounted at /home/sandbox/harness with its host UID/GID.
@@ -71,6 +92,12 @@ if [ -d "$HARNESS_DIR" ]; then
     echo "[entrypoint] sandbox UID synced to host ($SANDBOX_UID → $HOST_UID, $SANDBOX_GID → $HOST_GID)"
   fi
 fi
+
+# UID/GID reconciliation can change the numeric identity behind the sandbox
+# user after Docker-created auth volumes were repaired above. Repeat the
+# idempotent repair with the final uid:gid so persisted credentials remain
+# readable on hosts where UID 1000 is already occupied.
+repair_home_mount_ownership
 
 # Hermes keeps all runtime state — including auth.json — inside the
 # project-local HERMES_HOME directory. An earlier design symlinked
@@ -154,7 +181,7 @@ else:
 config_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
 
-  chown -R sandbox:sandbox "$HERMES_RUNTIME" 2>/dev/null || true
+  chown -hR "$(sandbox_ownership)" "$HERMES_RUNTIME" 2>/dev/null || true
 
   # The venv is a system path (outside /home/sandbox) that the Dockerfile
   # chowned to the build-time sandbox UID. If the UID-sync above remapped
@@ -162,7 +189,7 @@ PY
   # `uv pip install --python .../venv 'hermes-agent[slack]'` fails EACCES.
   # Re-chown the install dir + uv tools to the current sandbox UID.
   for d in /usr/local/lib/hermes-agent /opt/uv; do
-    [ -d "$d" ] && chown -R sandbox:sandbox "$d" 2>/dev/null || true
+    [ -d "$d" ] && chown -hR "$(sandbox_ownership)" "$d" 2>/dev/null || true
   done
 
   # ─── Start Hermes dashboard in tmux session (opt-in) ────────────────
@@ -269,7 +296,7 @@ if [ -n "${GH_TOKEN:-}" ] && gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh aut
   SSH_KEY="$SSH_DIR/id_ed25519"
   if [ ! -f "$SSH_KEY" ]; then
     mkdir -p "$SSH_DIR"
-    chown sandbox:sandbox "$SSH_DIR"
+    chown -h "$(sandbox_ownership)" "$SSH_DIR"
     chmod 700 "$SSH_DIR"
     if gosu sandbox ssh-keygen -t ed25519 -f "$SSH_KEY" -N "" \
          -C "openharness-${SANDBOX_NAME:-$(hostname)}" &>/dev/null; then
@@ -352,7 +379,7 @@ while true; do
 done
 CRON_WATCHDOG
     chmod 755 /tmp/cron-watchdog.sh
-    chown sandbox:sandbox /tmp/cron-watchdog.sh 2>/dev/null || true
+    chown -h "$(sandbox_ownership)" /tmp/cron-watchdog.sh 2>/dev/null || true
 
     if gosu sandbox tmux has-session -t cron-watchdog 2>/dev/null; then
       echo "[entrypoint] cron-watchdog tmux session already running — skipping"
@@ -368,18 +395,23 @@ fi
 # Tokens live in .devcontainer/.env (Compose KEY=value format). When both
 # SLACK_APP_TOKEN and SLACK_BOT_TOKEN are set AND `pi` is installed for
 # the sandbox user, restore the session that `oh config slack` created.
-# Sourcing happens inside the tmux command (same pattern the wizard uses)
-# so the child `pi` process inherits the exported vars.
+# Treat the Compose env file as data, not shell: extract only the Slack
+# keys the bridge needs and shell-quote each value before passing them to
+# the child `pi` process.
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
-  # shellcheck disable=SC1090
   SLACK_APP_TOKEN=$(grep -E '^SLACK_APP_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
   SLACK_BOT_TOKEN=$(grep -E '^SLACK_BOT_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
+  SLACK_ALLOW_USERS=$(grep -E '^SLACK_ALLOW_USERS=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
+  SLACK_ALLOW_CHANNELS=$(grep -E '^SLACK_ALLOW_CHANNELS=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
   if [ -n "$SLACK_APP_TOKEN" ] && [ -n "$SLACK_BOT_TOKEN" ] \
      && gosu sandbox bash -lc 'command -v pi' &>/dev/null; then
     if ! gosu sandbox tmux has-session -t client-slack 2>/dev/null; then
+      SLACK_ENV_ARGS="SLACK_APP_TOKEN=$(shell_quote "$SLACK_APP_TOKEN") SLACK_BOT_TOKEN=$(shell_quote "$SLACK_BOT_TOKEN")"
+      [ -n "$SLACK_ALLOW_USERS" ] && SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_USERS=$(shell_quote "$SLACK_ALLOW_USERS")"
+      [ -n "$SLACK_ALLOW_CHANNELS" ] && SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_CHANNELS=$(shell_quote "$SLACK_ALLOW_CHANNELS")"
       gosu sandbox tmux new-session -d -s client-slack \
-        "bash -c 'set -a; source $SLACK_ENV; set +a; pi 2>&1 | tee /tmp/client-slack.log'"
+        "env $SLACK_ENV_ARGS pi 2>&1 | tee /tmp/client-slack.log"
       echo "[entrypoint] client-slack tmux session started (Slack bridge)"
     else
       echo "[entrypoint] client-slack tmux session already running — skipping"

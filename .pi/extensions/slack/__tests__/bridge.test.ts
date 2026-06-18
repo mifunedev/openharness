@@ -64,6 +64,7 @@ vi.mock("../log.js", () => ({
 // the mocks. Each test calls factory(pi) below to get a fresh closure with
 // its own bot/store/allowlist module-scope state.
 import factory from "../index.js";
+import * as log from "../log.js";
 
 // ---------------------------------------------------------------------------
 // Pi mock factory — captures event handlers registered via pi.on()
@@ -106,6 +107,33 @@ function makePi(isIdleReturnValue = true) {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe("bridge — missing token startup", () => {
+	let savedEnv: Record<string, string | undefined>;
+
+	beforeEach(() => {
+		savedEnv = saveSlackEnv();
+		delete process.env.SLACK_APP_TOKEN;
+		delete process.env.SLACK_BOT_TOKEN;
+		capturedEventHandler = undefined;
+		mockBot.start.mockClear();
+		vi.mocked(log.logWarning).mockClear();
+	});
+
+	afterEach(() => restoreSlackEnv(savedEnv));
+
+	it("silently disables the extension when Slack tokens are missing", async () => {
+		const { pi, ctx, fireEvent } = makePi(true);
+		factory(pi as never);
+
+		await fireEvent("session_start", {}, ctx);
+
+		expect(mockBot.start).not.toHaveBeenCalled();
+		expect(capturedEventHandler).toBeUndefined();
+		expect(ctx.ui.notify).not.toHaveBeenCalled();
+		expect(log.logWarning).not.toHaveBeenCalled();
+	});
+});
 
 function saveSlackEnv() {
 	return {

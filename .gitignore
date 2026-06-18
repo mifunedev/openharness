@@ -31,6 +31,9 @@ workspace/.ralph/.last-branch
 workspace/.ralph/ralph-*.log
 workspace/.ralph/.claude/
 
+# pi-autoresearch runtime state (benchmarks, logs, session config)
+**/.auto/
+
 **/.next
 **/.ralph/archives/
 **/src/generated/

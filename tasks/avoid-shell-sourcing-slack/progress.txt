@@ -1,0 +1,37 @@
+# progress
+
+## Codebase Patterns
+
+- Boot-critical `.devcontainer/entrypoint.sh` tests live in `scripts/__tests__/entrypoint.test.ts` as focused text/executable regression checks; pair them with `bash -n` and shellcheck for syntax safety.
+
+## US-001 — 2026-06-16 13:21 UTC
+
+**Title**: Launch Slack restore with explicit token env vars
+**Files changed**: `.devcontainer/entrypoint.sh`, `CHANGELOG.md`
+**Commit**: this implementation commit
+**Result**: PASS
+
+### What I did
+Replaced the Slack restore `source $SLACK_ENV` tmux command with explicit `env` assignments built from parsed Slack keys. Preserved optional `SLACK_ALLOW_USERS` and `SLACK_ALLOW_CHANNELS` values when present and added shell-safe quoting for values embedded in the tmux command.
+
+### Learnings for future iterations
+The Slack extension deny-default allowlist requires preserving allowlist env vars; token-only startup can connect but deny inbound messages.
+
+---
+
+## US-002 — 2026-06-16 13:21 UTC
+
+**Title**: Guard Slack restore env parsing with regression tests
+**Files changed**: `scripts/__tests__/entrypoint.test.ts`
+**Commit**: this implementation commit
+**Result**: PASS
+
+### What I did
+Added tests asserting the Slack restore path no longer sources `.devcontainer/.env`, explicitly passes token and allowlist vars, and round-trips a non-shell-safe Slack value through the entrypoint `shell_quote` helper. Verified `bash -n`, shellcheck, and the focused Vitest suite.
+
+### Learnings for future iterations
+When testing shell escaping, pass generated quoted strings via environment variables into the evaluation shell so Node/TypeScript interpolation does not alter quoting semantics.
+
+---
+
+STATUS: COMPLETE

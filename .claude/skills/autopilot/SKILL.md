@@ -28,7 +28,7 @@ When fired by the hourly cron, the run lives in its own detached Pi tmux session
 
 `--dry-run` prints the selection decision (queue ticket or research finding), executor mode, dedupe state, and open-PR counts, then exits without calling `/ship-spec`, `/delegate`, or the Ralph runner and without touching git or GitHub.
 
-**Default target repo:** future autopilot runs act on canonical upstream by default: `AUTOPILOT_REPO=mifunedev/openharness`, `AUTOPILOT_REMOTE=upstream`, and `AUTOPILOT_BASE=development`. The checkout may still have `origin` pointed at a personal fork; do not let implicit `gh` repo resolution or `git push origin` send autopilot issues/PRs there. Operators can override with `--repo`, `--remote`, `--base`, or the matching `AUTOPILOT_*` env vars.
+**Default target repo:** future autopilot runs act on canonical upstream by default: `AUTOPILOT_REPO=mifunedev/openharness`, `AUTOPILOT_BASE=development`, and `AUTOPILOT_REMOTE` resolved from the local remote URL that matches that repo (`upstream` in this checkout, normally `origin` in fresh installs). Do not let implicit `gh` repo resolution or `git push origin` send autopilot issues/PRs to a fork. Operators can override with `--repo`, `--remote`, `--base`, or the matching `AUTOPILOT_*` env vars.
 
 ## Instructions
 
@@ -40,11 +40,22 @@ Order matters — cheapest exits first.
 
 ```bash
 AUTOPILOT_REPO="${AUTOPILOT_REPO:-mifunedev/openharness}"
-AUTOPILOT_REMOTE="${AUTOPILOT_REMOTE:-upstream}"
 AUTOPILOT_BASE="${AUTOPILOT_BASE:-development}"
 case "${ARGUMENTS:-}" in *--repo*) AUTOPILOT_REPO=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--repo[ =]\([^ ]*\).*/\1/p') ;; esac
-case "${ARGUMENTS:-}" in *--remote*) AUTOPILOT_REMOTE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--remote[ =]\([^ ]*\).*/\1/p') ;; esac
 case "${ARGUMENTS:-}" in *--base*) AUTOPILOT_BASE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--base[ =]\([^ ]*\).*/\1/p') ;; esac
+resolve_autopilot_remote() {
+  git remote -v | awk -v repo="$AUTOPILOT_REPO" '
+    BEGIN { want=tolower(repo) }
+    $3 == "(fetch)" {
+      url=$2
+      sub(/\.git$/, "", url)
+      sub(/^.*github.com[:\/]/, "", url)
+      if (tolower(url) == want) { print $1; exit }
+    }'
+}
+case "${ARGUMENTS:-}" in *--remote*) AUTOPILOT_REMOTE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--remote[ =]\([^ ]*\).*/\1/p') ;; esac
+AUTOPILOT_REMOTE="${AUTOPILOT_REMOTE:-$(resolve_autopilot_remote)}"
+[ -n "$AUTOPILOT_REMOTE" ] || { echo "ERROR: no local git remote for $AUTOPILOT_REPO"; close_no_pr_session 2>/dev/null || true; exit 1; }
 echo "autopilot target: repo=$AUTOPILOT_REPO remote=$AUTOPILOT_REMOTE base=$AUTOPILOT_BASE"
 gh label create autopilot --repo "$AUTOPILOT_REPO" --color 6E40C9 --description "Opened by the autopilot loop" 2>/dev/null || true
 gh label create autopilot-blocked --repo "$AUTOPILOT_REPO" --color B60205 --description "Autopilot ticket blocked by a critic gate; remove to retry" 2>/dev/null || true
@@ -530,4 +541,6 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | `$CRON_OVERLAP_PIDFILE` | Per-id overlap lock path (for autopilot, `/tmp/cron-autopilot.pid`) exported by the cron runtime; terminal PR paths remove it so a kept Pi review session does not trigger hourly `SKIPPED_OVERLAP`. In worktree mode the runtime exports a session-scoped path instead (the id lock is never held), so this is a harmless no-op there |
 | `$CRON_WORKTREE` | Absolute path of the isolated worktree this run executes in, set by the cron runtime for `worktree: true` crons (empty on root/manual runs). When set, §1 skips the root-clean guards and §7 skips the branch restore — the worktree is ephemeral and source work never touches the root checkout |
 | `$AUTOPILOT_LOG_ROOT` | Shared checkout root used only for runtime observability appends (`crons/.cron.log`, `memory/<today>/log.md`); defaults to the current checkout in root/manual mode and resolves above `.worktrees/cron/<session>` in worktree mode |
+| `AUTOPILOT_REPO` | Canonical GitHub repo target for issues, PRs, labels, and cap counts. Defaults to `mifunedev/openharness`; cron runtime exports it from `repo:` frontmatter. |
+| `AUTOPILOT_REMOTE` | Local git remote whose URL matches `$AUTOPILOT_REPO` (`upstream` in this checkout, normally `origin` in fresh installs). Used for fetch/push. |
 | `AUTOPILOT_EXECUTOR` | Optional executor toggle: `delegate-advisor` (default) or `ralph` fallback |

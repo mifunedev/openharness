@@ -26,7 +26,8 @@
 # Env knobs:
 #   AUTOPILOT_TOTAL_CAP   override total-open ceiling (else harness.yaml, else 10)
 #   AUTOPILOT_DAILY_CAP   override per-UTC-day cap    (else harness.yaml, else 6)
-#   AUTOPILOT_LABEL=autopilot  GH_BIN=gh  AUTOPILOT_LOG_ROOT=<resolved>
+#   AUTOPILOT_REPO=mifunedev/openharness  AUTOPILOT_LABEL=autopilot
+#   GH_BIN=gh  AUTOPILOT_LOG_ROOT=<resolved>
 #   HARNESS_YAML          override the harness.yaml path (default <root>/harness.yaml)
 set -euo pipefail
 
@@ -46,8 +47,15 @@ harness_cfg() {
 TOTAL_CAP="${AUTOPILOT_TOTAL_CAP:-$(harness_cfg autopilot.total_cap)}"; TOTAL_CAP="${TOTAL_CAP:-10}"
 DAILY_CAP="${AUTOPILOT_DAILY_CAP:-$(harness_cfg autopilot.daily_cap)}"; DAILY_CAP="${DAILY_CAP:-6}"
 LABEL="${AUTOPILOT_LABEL:-autopilot}"
+REPO="${AUTOPILOT_REPO:-mifunedev/openharness}"
 GH_BIN="${GH_BIN:-gh}"
 TODAY=$(date -u +%Y-%m-%d)
+
+if ! [[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || [[ "$REPO" == *..* ]] || [[ "$REPO" == -* ]]; then
+  printf 'autopilot-caps: invalid AUTOPILOT_REPO=%q; failing open\n' "$REPO" >&2
+  echo "PROCEED-GH-ERROR"
+  exit 0
+fi
 
 # Resolve where memory/liveness logs are written. Byte-identical to
 # .claude/skills/autopilot/SKILL.md §1 resolve_autopilot_log_root: honor an
@@ -107,8 +115,8 @@ EOF
 
 # Query open autopilot PR counts. `|| echo ERR` keeps `set -e` from killing us on
 # a gh failure; the numeric guard below then routes to PROCEED-GH-ERROR.
-TOTAL_OPEN=$("$GH_BIN" pr list --state open --label "$LABEL" --json number --jq 'length' 2>/dev/null || echo ERR)
-OPEN_TODAY=$("$GH_BIN" pr list --state open --search "label:$LABEL created:>=$TODAY" --json number --jq 'length' 2>/dev/null || echo ERR)
+TOTAL_OPEN=$("$GH_BIN" pr list --repo "$REPO" --state open --label "$LABEL" --json number --jq 'length' 2>/dev/null || echo ERR)
+OPEN_TODAY=$("$GH_BIN" pr list --repo "$REPO" --state open --search "label:$LABEL created:>=$TODAY" --json number --jq 'length' 2>/dev/null || echo ERR)
 
 if ! [[ "$TOTAL_OPEN" =~ ^[0-9]+$ ]] || ! [[ "$OPEN_TODAY" =~ ^[0-9]+$ ]]; then
   printf 'autopilot-caps: gh query failed (total=%q today=%q); failing open\n' "$TOTAL_OPEN" "$OPEN_TODAY" >&2
@@ -116,7 +124,7 @@ if ! [[ "$TOTAL_OPEN" =~ ^[0-9]+$ ]] || ! [[ "$OPEN_TODAY" =~ ^[0-9]+$ ]]; then
   exit 0
 fi
 
-printf 'autopilot-caps: total=%s/%s today=%s/%s\n' "$TOTAL_OPEN" "$TOTAL_CAP" "$OPEN_TODAY" "$DAILY_CAP" >&2
+printf 'autopilot-caps: repo=%s total=%s/%s today=%s/%s\n' "$REPO" "$TOTAL_OPEN" "$TOTAL_CAP" "$OPEN_TODAY" "$DAILY_CAP" >&2
 
 if [ "$TOTAL_OPEN" -ge "$TOTAL_CAP" ]; then
   log_skip "SKIPPED-CAP-TOTAL" \

@@ -36,11 +36,13 @@ if grep -Fq 'reason: "exec-error"' "$RUNTIME" || grep -Fq 'reason: "invalid-path
   missing+=("runPreflight appears to retain the old fail-open reason contract")
 fi
 # The gate must short-circuit fire() BEFORE the tmux branch (no worktree/session on skip).
-grep -Fq 'if (entry.preflight) {' "$RUNTIME" || missing+=("fire() runs the preflight gate before spawning")
+grep -Eq 'if \((entry|liveEntry)\.preflight\) \{' "$RUNTIME" || missing+=("fire() runs the preflight gate before spawning")
 
 # 2. the autopilot cron wires the gate.
 grep -Eq '^preflight:[[:space:]]*scripts/autopilot-caps\.sh[[:space:]]*$' "$CRON" \
   || missing+=("crons/autopilot.md wires preflight: scripts/autopilot-caps.sh")
+grep -Eq '^repo:[[:space:]]*mifunedev/openharness[[:space:]]*$' "$CRON" \
+  || missing+=("crons/autopilot.md targets repo: mifunedev/openharness")
 
 # 3. the canonical gate script: executable + the STATUS contract + harness.yaml caps.
 [[ -x "$SCRIPT" ]] || missing+=("scripts/autopilot-caps.sh is executable")
@@ -49,6 +51,8 @@ grep -Fq 'SKIPPED-CAP-DAILY' "$SCRIPT" || missing+=("gate emits SKIPPED-CAP-DAIL
 grep -Fq 'PROCEED-GH-ERROR' "$SCRIPT" || missing+=("gate fails open with PROCEED-GH-ERROR")
 grep -Fq 'harness_cfg autopilot.total_cap' "$SCRIPT" || missing+=("gate defaults total cap from harness.yaml")
 grep -Fq 'harness_cfg autopilot.daily_cap' "$SCRIPT" || missing+=("gate defaults daily cap from harness.yaml")
+grep -Fq 'pr list --repo "$REPO"' "$SCRIPT" || missing+=("gate scopes gh PR counts with --repo")
+grep -Fq 'AUTOPILOT_REPO:-mifunedev/openharness' "$SCRIPT" || missing+=("gate defaults to canonical mifunedev/openharness repo")
 
 # 4. harness.yaml documents the configurable cap defaults (even while commented).
 grep -Eq '^[[:space:]]*#?[[:space:]]*total_cap:' "$YAML" || missing+=("harness.yaml documents autopilot.total_cap")

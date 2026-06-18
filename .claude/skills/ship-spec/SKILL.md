@@ -54,16 +54,27 @@ Extract:
 - **`--prefix <type>`** (optional, default `feat`) — branch + issue prefix per `.claude/rules/git.md` (`feat | bug | task | audit | skill | agent`)
 - **`--issue <N>`** (optional) — link an EXISTING GitHub issue instead of creating one. When present, set `ISSUE_NUM=<N>` and skip Stage 5's `gh issue create`; `<N>` flows into the branch (`<prefix>/<N>-<slug>`), `/ralph --issue <N>`, `prompt.md`, and the PR `Closes #<N>` link, exactly as a freshly-created issue number would
 - **`--repo <owner/name>`** (optional, default `mifunedev/openharness`) — GitHub repository for issue/PR operations.
-- **`--remote <name>`** (optional, default `upstream`) — git remote to fetch/push work branches.
+- **`--remote <name>`** (optional, default resolved from `--repo`) — git remote to fetch/push work branches.
 - **`--base <branch>`** (optional, default `development`) — PR base and branch start point.
 
 ```bash
 SHIP_SPEC_REPO="${SHIP_SPEC_REPO:-mifunedev/openharness}"
-SHIP_SPEC_REMOTE="${SHIP_SPEC_REMOTE:-upstream}"
 SHIP_SPEC_BASE="${SHIP_SPEC_BASE:-development}"
 case "${ARGUMENTS:-}" in *--repo*) SHIP_SPEC_REPO=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--repo[ =]\([^ ]*\).*/\1/p') ;; esac
-case "${ARGUMENTS:-}" in *--remote*) SHIP_SPEC_REMOTE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--remote[ =]\([^ ]*\).*/\1/p') ;; esac
 case "${ARGUMENTS:-}" in *--base*) SHIP_SPEC_BASE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--base[ =]\([^ ]*\).*/\1/p') ;; esac
+resolve_ship_spec_remote() {
+  git remote -v | awk -v repo="$SHIP_SPEC_REPO" '
+    BEGIN { want=tolower(repo) }
+    $3 == "(fetch)" {
+      url=$2
+      sub(/\.git$/, "", url)
+      sub(/^.*github.com[:\/]/, "", url)
+      if (tolower(url) == want) { print $1; exit }
+    }'
+}
+case "${ARGUMENTS:-}" in *--remote*) SHIP_SPEC_REMOTE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--remote[ =]\([^ ]*\).*/\1/p') ;; esac
+SHIP_SPEC_REMOTE="${SHIP_SPEC_REMOTE:-$(resolve_ship_spec_remote)}"
+[ -n "$SHIP_SPEC_REMOTE" ] || { echo "ERROR: no local git remote for $SHIP_SPEC_REPO"; exit 1; }
 echo "ship-spec target: repo=$SHIP_SPEC_REPO remote=$SHIP_SPEC_REMOTE base=$SHIP_SPEC_BASE"
 ```
 

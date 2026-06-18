@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/240-detect-codex-zero-credit",
+  "description": "Teach /watchdog to recognize Codex zero-credit stuck autopilot sessions and guard the behavior with eval coverage. Tracks GitHub issue #240.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Detect Codex zero-credit stuck prompts",
+      "description": "As the harness operator, I want /watchdog to recognize Codex zero-credit stuck sessions so hourly autopilot does not wedge repeatedly when Codex is out of credits.",
+      "acceptanceCriteria": [
+        ".claude/skills/watchdog/SKILL.md documents Codex zero-credit / usage-limit prompts as terminal stuck-session signals",
+        "The stuck-session shell snippet matches usage_limit_reached, status_code 429, and Credits-Balance\":\"0 in addition to the existing Claude resume/limit prompts",
+        "The snippet inspects enough pane tail context to catch multi-line Codex error banners while staying bounded",
+        "Existing stuck-session safety remains: only cron-autopilot-* and autopilot-* sessions are candidates, and age alone is not enough"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-17; commit 1a7f62e"
+    },
+    {
+      "id": "US-002",
+      "title": "Guard the detector and changelog it",
+      "description": "As a maintainer, I want regression coverage and release notes for the new watchdog signatures so the fix persists across future watchdog rewrites.",
+      "acceptanceCriteria": [
+        "Add evals/probes/watchdog-stuck-sessions.sh as a Tier-A source-text probe for the stuck-session contract",
+        "The probe fails unless /watchdog includes the existing Claude resume/limit patterns and the new Codex usage_limit_reached, status_code 429, and Credits-Balance\":\"0 patterns",
+        "The probe passes with bash evals/probes/watchdog-stuck-sessions.sh",
+        "CHANGELOG.md records the fix under ## [Unreleased] / ### Fixed and links issue #240"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed iteration 2 on 2026-06-17; commit 36c7661"
+    }
+  ]
+}

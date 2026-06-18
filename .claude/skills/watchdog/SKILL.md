@@ -119,14 +119,15 @@ After `gh pr ready`, re-read the PR and require `isDraft == false`.
 ## Action: stuck sessions
 
 For `cron-autopilot-*` or legacy `autopilot-*` tmux sessions, kill only when the
-pane tail shows a terminal prompt the detached run cannot clear itself: usage or
-session limit, `/upgrade`, `Resume from summary`, `Resume full session`, or a
-fatal error banner. Age alone is not enough.
+pane tail shows a terminal prompt the detached run cannot clear itself: Claude
+usage/session limits, Codex zero-credit/usage-limit errors (`usage_limit_reached`,
+`status_code 429`, `Credits-Balance":"0`), `/upgrade`, `Resume from summary`,
+`Resume full session`, or a fatal error banner. Age alone is not enough.
 
 ```bash
 for s in $(tmux ls 2>/dev/null | grep -oE '^(cron-)?autopilot-[^:]*'); do
-  if tmux capture-pane -p -t "$s" 2>/dev/null | tail -25 \
-       | grep -qiE 'hit your (usage|session) limit|session limit|/usage-credits|/upgrade|Resume from summary|Resume full session'; then
+  if tmux capture-pane -p -t "$s" 2>/dev/null | tail -80 \
+       | grep -qiE 'hit your (usage|session) limit|session limit|/usage-credits|/upgrade|Resume from summary|Resume full session|usage_limit_reached|status_code["[:space:]:]+429|Credits-Balance["[:space:]:]+0'; then
     tmux kill-session -t "$s"; rm -f "/tmp/$s.keep"
     echo "NUDGE: killed stuck session $s"
   fi

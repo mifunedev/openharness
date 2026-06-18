@@ -1,0 +1,33 @@
+# progress
+
+## US-001 — 2026-06-17 16:20 UTC
+
+**Title**: Detect Codex zero-credit stuck prompts
+**Files changed**: .claude/skills/watchdog/SKILL.md, tasks/detect-codex-zero-credit/prd.json, tasks/detect-codex-zero-credit/progress.txt
+**Commit**: 1a7f62e
+**Result**: PASS
+
+### What I did
+Documented Codex zero-credit stuck prompts as terminal watchdog signals and extended the stuck-session snippet to match `usage_limit_reached`, HTTP 429 status codes, and zero `Credits-Balance` banners. Widened the bounded pane tail to 80 lines so multi-line Codex error banners are visible while preserving autopilot-session-only targeting.
+
+### Learnings for future iterations
+Keep watchdog stuck-session kills conservative: candidate sessions stay scoped to `cron-autopilot-*` / `autopilot-*`, and age alone never authorizes a kill.
+
+---
+
+## US-002 — 2026-06-17 16:24 UTC
+
+**Title**: Guard the detector and changelog it
+**Files changed**: evals/probes/watchdog-stuck-sessions.sh, CHANGELOG.md, tasks/detect-codex-zero-credit/prd.json, tasks/detect-codex-zero-credit/progress.txt
+**Commit**: 36c7661
+**Result**: PASS
+
+### What I did
+Added the `watchdog-stuck-sessions` Tier-A probe to pin the autopilot-session scope, age-alone prohibition, existing Claude stuck prompts, and new Codex zero-credit signatures. Recorded the fix in the Unreleased changelog under Fixed.
+
+### Learnings for future iterations
+Source-text probes for skill snippets should assert contract literals and safety guards, not full line layout, so future refactors can preserve behavior without fighting brittle diffs.
+
+---
+
+STATUS: COMPLETE

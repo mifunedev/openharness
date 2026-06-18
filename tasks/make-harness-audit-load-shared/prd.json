@@ -8,7 +8,7 @@
       "id": "US-001",
       "title": "Load long-term memory from the shared log root",
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         ".claude/skills/harness-audit/SKILL.md tails \"$AUDIT_LOG_ROOT/memory/MEMORY.md\" for recent long-term memory.",
         "Source inspection remains rooted at AUDIT_ROOT for repo files and git worktree list.",
@@ -16,32 +16,32 @@
         "Missing shared memory remains non-fatal through stderr suppression.",
         "The protected harness-audit skill is edited in place, not deleted, renamed, or deprecated."
       ],
-      "notes": ""
+      "notes": "Completed on 2026-06-18; commit this implementation commit."
     },
     {
       "id": "US-002",
       "title": "Guard the memory-root split with an eval probe",
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         "evals/probes/harness-audit-memory-path.sh asserts AUDIT_LOG_ROOT/memory/MEMORY.md is used for long-term memory and rejects AUDIT_ROOT/memory/MEMORY.md tails for that purpose.",
         "The probe still asserts AUDIT_ROOT/CRON_WORKTREE source-root resolution and no hardcoded root paths.",
         "The probe passes locally."
       ],
-      "notes": ""
+      "notes": "Completed on 2026-06-18; commit this implementation commit."
     },
     {
       "id": "US-003",
       "title": "Record the behavior in release and wiki artifacts",
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "acceptanceCriteria": [
         "CHANGELOG.md records the fix under ## [Unreleased].",
         "wiki/harness-audit.md explains the AUDIT_ROOT vs AUDIT_LOG_ROOT split with source references and cron worktree troubleshooting guidance.",
         "wiki/README.md is refreshed and evals/probes/wiki-readme-index.sh passes.",
         "evals/RESULTS.md is refreshed after the eval runner."
       ],
-      "notes": ""
+      "notes": "Completed on 2026-06-18; commit this implementation commit."
     }
   ]
 }

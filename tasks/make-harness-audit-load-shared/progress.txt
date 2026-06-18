@@ -1,2 +1,52 @@
 # progress
 
+## Codebase Patterns
+- `/harness-audit` has a deliberate root split: source inspection uses `AUDIT_ROOT`; cron-worktree runtime observability and durable memory use `AUDIT_LOG_ROOT`.
+- Wiki entries that cite repo behavior should use source-backed line references and keep `wiki/README.md` synchronized with `evals/probes/wiki-readme-index.sh`.
+
+## US-001 — 2026-06-18 01:18 UTC
+
+**Title**: Load long-term memory from the shared log root
+**Files changed**: `.claude/skills/harness-audit/SKILL.md`
+**Commit**: this implementation commit
+**Result**: PASS
+
+### What I did
+Changed the context snapshot's long-term-memory tail to read `$AUDIT_LOG_ROOT/memory/MEMORY.md` and updated the key-path table to describe the source-root/runtime-root split.
+
+### Learnings for future iterations
+The existing `AUDIT_LOG_ROOT` resolution already preserves `AUTOPILOT_LOG_ROOT` precedence and falls back from a cron worktree to the shared root via `git worktree list --porcelain`.
+
+---
+
+## US-002 — 2026-06-18 01:18 UTC
+
+**Title**: Guard the memory-root split with an eval probe
+**Files changed**: `evals/probes/harness-audit-memory-path.sh`, `evals/RESULTS.md`
+**Commit**: this implementation commit
+**Result**: PASS
+
+### What I did
+Tightened the probe to require the `AUDIT_LOG_ROOT` memory tail and reject the old `AUDIT_ROOT` long-term-memory tail. Ran the full eval runner; all 46 probes passed.
+
+### Learnings for future iterations
+Probe causation should guard the exact shell line that implements the contract, not just a broad variable mention.
+
+---
+
+## US-003 — 2026-06-18 01:18 UTC
+
+**Title**: Record the behavior in release and wiki artifacts
+**Files changed**: `CHANGELOG.md`, `wiki/harness-audit.md`, `wiki/README.md`, `wiki/raw/2026-06-18-harness-audit.md`
+**Commit**: this implementation commit
+**Result**: PASS
+
+### What I did
+Added the changelog entry and a source-backed wiki page with cron worktree troubleshooting guidance. Refreshed `wiki/README.md` and verified its index probe.
+
+### Learnings for future iterations
+For skill-behavior changes, ship the wiki model in the same branch so future agents do not have to infer the root split from code.
+
+---
+
+STATUS: COMPLETE

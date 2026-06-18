@@ -87,8 +87,8 @@ ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
 # Worktrees
 git -C "$AUDIT_ROOT" worktree list 2>/dev/null
 
-# Recent long-term memory (tracked source artifact)
-tail -40 "$AUDIT_ROOT/memory/MEMORY.md" 2>/dev/null
+# Recent long-term memory (runtime observability artifact; shared root in cron worktrees)
+tail -40 "$AUDIT_LOG_ROOT/memory/MEMORY.md" 2>/dev/null
 ```
 
 Assemble a **Context Snapshot** (compact markdown, ~300 words):
@@ -349,7 +349,7 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Workspace skills | `workspace/.claude/skills/` when created by a pack/runtime (not part of the minimal workspace template) |
 | Crons | `crons/` |
 | Memory logs | `memory/YYYY-MM-DD/log.md` |
-| Long-term memory | `memory/MEMORY.md` |
+| Long-term memory | `$AUDIT_LOG_ROOT/memory/MEMORY.md` for the context snapshot; `memory/MEMORY.md` relative to `AUDIT_ROOT` remains only a source path |
 | Wiki | `wiki/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |

@@ -11,6 +11,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 ### Changed
 ### Fixed
+- `/harness-audit` now reads durable long-term memory from `AUDIT_LOG_ROOT` in cron worktrees while preserving `AUDIT_ROOT` for source inspection, guarded by `harness-audit-memory-path` ([#432](https://github.com/mifunedev/openharness/issues/432)).
 ### Removed
 ### Deprecated
 ### Security

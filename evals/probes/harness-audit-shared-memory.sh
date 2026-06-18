@@ -32,5 +32,15 @@ if ! grep -Fq 'ls "$AUDIT_LOG_ROOT/memory/"' "$SKILL"; then
   exit 1
 fi
 
-echo "PASS: harness-audit tails durable memory from AUDIT_LOG_ROOT while inspecting source via AUDIT_ROOT" >&2
+if ! grep -Fq 'long_term_memory: loaded' "$SKILL" || ! grep -Fq 'long_term_memory: missing-or-unreadable' "$SKILL"; then
+  echo "REGRESSION: harness-audit does not surface long-term memory load status" >&2
+  exit 1
+fi
+
+if ! grep -Fq "Context Snapshot's \`AUDIT_LOG_ROOT\` memory/log context" "$SKILL"; then
+  echo "REGRESSION: harness-audit Explorer prompt no longer routes memory/log checks through AUDIT_LOG_ROOT" >&2
+  exit 1
+fi
+
+echo "PASS: harness-audit tails durable memory from AUDIT_LOG_ROOT while inspecting source via AUDIT_ROOT and surfacing load status" >&2
 exit 0

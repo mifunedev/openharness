@@ -21,6 +21,7 @@ describe("project Pi settings", () => {
       "npm:@tifan/pi-recap@0.4.2",
       "npm:@trevonistrevon/pi-loop@0.5.5",
       "npm:@guwidoe/pi-prompt-suggester@0.3.10",
+      "npm:pi-autoresearch@1.6.0",
     ]);
   });
 });

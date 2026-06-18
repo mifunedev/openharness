@@ -165,7 +165,7 @@ Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside
 
 The sandbox image ships a complete development environment. The required host dependencies are Docker with the Compose plugin and Git.
 
-Project-local Pi packages are loaded from `.pi/settings.json`; the defaults include `@tintinweb/pi-subagents`, `@tintinweb/pi-tasks`, `@narumitw/pi-goal`, `@narumitw/pi-plan-mode`, `@narumitw/pi-codex-usage` for `/codex-status` plus the Codex 5-hour-session / weekly-usage statusline, and `@tifan/pi-recap` for `/recap` plus automatic idle/resume session summaries.
+Project-local Pi packages are loaded from `.pi/settings.json`; the defaults include `@tintinweb/pi-subagents`, `@tintinweb/pi-tasks`, `@narumitw/pi-goal`, `@narumitw/pi-plan-mode`, `@tifan/pi-recap` for `/recap` plus automatic idle/resume session summaries, `@trevonistrevon/pi-loop` for Monitor/Loop tools, `@guwidoe/pi-prompt-suggester` for next-prompt suggestions, and `pi-autoresearch` for autonomous metric-optimization loops.
 
 ### Base image
 

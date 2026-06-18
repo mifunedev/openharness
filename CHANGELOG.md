@@ -9,10 +9,12 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `pr-audit-duplicate-issue-refs` eval probe guards that `/pr-audit` keeps duplicate open-PR issue references visible as a read-only triage flag ([#439](https://github.com/mifunedev/openharness/issues/439)).
 - `harness-audit` wiki entry and Context Snapshot memory load-status diagnostics preserve the shared-memory model salvaged from duplicate #432 PRs ([#441](https://github.com/mifunedev/openharness/issues/441)).
 - `autopilot-open-pr-reference-dedupe` eval probe guards that issue selection checks open PR metadata, branch names, titles, and bodies before launching duplicate autopilot work ([#437](https://github.com/mifunedev/openharness/issues/437)).
 - `harness-audit-shared-memory` eval probe guards that `/harness-audit` reads durable long-term memory from `AUDIT_LOG_ROOT` in cron worktrees while preserving source inspection via `AUDIT_ROOT` ([#432](https://github.com/mifunedev/openharness/issues/432)).
 ### Changed
+- `/pr-audit` now documents a duplicate issue-reference flag so multiple open PRs that close/reference the same issue are grouped for human canonical-PR selection instead of appearing as unrelated conflicts ([#439](https://github.com/mifunedev/openharness/issues/439)).
 ### Fixed
 - Autopilot issue selection now dedupes against open PR references in linked metadata, branch names, titles, and bodies before starting work, preventing repeated PRs for the same issue when GitHub linked-PR metadata is empty ([#437](https://github.com/mifunedev/openharness/issues/437)).
 ### Removed

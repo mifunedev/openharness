@@ -221,22 +221,23 @@ dashboard (and the `.env` secrets it reads) to the LAN without auth.
 
 ### Remote access
 
-To reach the dashboard from another machine:
+To reach the dashboard from another machine, use `/cloudflared 9119` to
+start a Cloudflared tunnel for the loopback bind. The tunnel handles TLS;
+the dashboard itself stays on loopback.
 
-- **Tunnel (recommended)** — put cloudflared or tailscale-funnel in front
-  of the loopback bind. The tunnel handles auth and TLS; the dashboard
-  itself stays on loopback.
-- **Non-loopback bind (advanced)** — if you must expose via `--host 0.0.0.0`,
-  the upstream fail-closed auth gate requires credentials. Set at minimum:
+For sensitive dashboards, add Cloudflare Access or another authentication
+gate before sharing the URL. If you intentionally change Hermes to a
+non-loopback bind with `--host 0.0.0.0`, the upstream fail-closed auth gate
+requires credentials. Set at minimum:
 
-  ```env
-  HERMES_DASHBOARD_BASIC_AUTH_USERNAME=admin
-  HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=change-me   # plain-text, or use _HASH
-  HERMES_DASHBOARD_SECRET=a-random-32-char-string   # session signing key
-  ```
+```env
+HERMES_DASHBOARD_BASIC_AUTH_USERNAME=admin
+HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=change-me   # plain-text, or use _HASH
+HERMES_DASHBOARD_SECRET=a-random-32-char-string   # session signing key
+```
 
-  OAuth is also supported via `HERMES_DASHBOARD_OAUTH_CLIENT_ID` and related
-  vars — see upstream Hermes documentation for the full list.
+OAuth is also supported via `HERMES_DASHBOARD_OAUTH_CLIENT_ID` and related
+vars — see upstream Hermes documentation for the full list.
 
 
 ## Banner status

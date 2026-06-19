@@ -1,4 +1,4 @@
-Review the staged or recent changes for:
+/goal Review for:
 
 - Correctness — logic errors, wrong assumptions, missed cases
 - Security — injection, auth, secret handling, OWASP top-10
@@ -8,3 +8,5 @@ Review the staged or recent changes for:
 
 Report findings as a punch list. Cite `file:line` for each issue.
 Skip generic advice; focus on what is actually wrong in this diff.
+
+Definition of done is merged or closed open (not in draft) PR's that pass /pr-audt. Do this via /delegate but use an Advisor to reconcile merge order and conflict resolution. 

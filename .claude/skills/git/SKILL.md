@@ -4,13 +4,44 @@ description: |
   Open Harness git workflow: issues, branches, commits, PR titles/bodies,
   changelog discipline, worktrees, branch catch-up, stacked PRs, releases,
   and post-push CI checks.
-  TRIGGER when: creating branches or PRs, catching a feature branch up to
-  development, resolving PR conflicts/behind state, committing, pushing,
-  release branch/tag workflow, or checking project git conventions.
+  TRIGGER when: any chat mentions git, GitHub, branches, commits, pushes,
+  pulls, PRs, issues, worktrees, merge conflicts, dirty workspaces,
+  changelog entries, release branch/tag workflow, or project git conventions.
 allowed-tools: Bash
 ---
 
 # Git Workflow
+
+## Always Load This Skill
+
+Any time a chat mentions git, GitHub, branches, commits, pushes, pulls, PRs,
+issues, worktrees, merge conflicts, releases, changelog entries, or dirty
+workspace cleanup, read this skill before acting. Treat it as the source of truth
+for routing changes to the right remote and for preserving local work safely.
+
+## Repository and Memory Routing
+
+This checkout commonly has two remotes:
+
+- `upstream` → `mifunedev/openharness` (public template/canonical upstream)
+- `origin` → `ryaneggz/openharness` (private/operator fork)
+
+Before every commit or PR, inspect the changed paths and choose the remote
+explicitly. Do not assume `origin` is the public target.
+
+**Memory is private. Never commit memory artifacts to the public upstream repo.**
+Anything under `memory/` — especially `memory/MEMORY.md`, dated session logs,
+retro notes, and private lessons — belongs only in `ryaneggz/openharness`
+(`origin`) unless the operator gives an explicit one-off exception. If a public
+PR branch contains `memory/` changes, remove them before pushing/creating the PR,
+and preserve them separately on an `origin`-only branch or PR.
+
+Use this quick guard before pushing to `upstream`:
+
+```bash
+git diff --name-only upstream/development...HEAD | grep '^memory/' \
+  && { echo "BLOCK: memory changes must go to origin only"; exit 1; }
+```
 
 ## Issue Titles
 

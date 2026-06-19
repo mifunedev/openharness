@@ -1,13 +1,14 @@
 # The Loop — Executable Decision-Tree of Skills
 
-The harness self-improves by walking a **decision-tree of skills**: each node runs a skill (or a tool
-the Advisor wields), emits a terminal `STATUS:` token, and hands off to the next node based on that
-token. This file is the **single source of truth** for that tree — the objective it serves, the nodes,
-the routing tokens, the handoff convention, and the invariants every handoff must preserve.
+> **DEPRECATED.** The executable-loop framework — this file plus `/orchestrate` — is deprecated. The canonical workflow is now **`AGENTS.md` § The Workflow**: the operative path `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`. This file is preserved as a historical reference; the executable truth is `AGENTS.md § Workflow`. Full removal is tracked in [#263](https://github.com/ryaneggz/openharness/issues/263). The individual node *skills* (`/critique`, `/approve`, `/audit`, `/retro`, `/benchmark`, …) remain live.
 
-`AGENTS.md` "The Loop" is the human-facing summary; **this file is the executable spec** the `/autopilot`
-runner walks. Where they disagree, the truth-up of `AGENTS.md` is a separate, eval-gated change — this
-file leads.
+This file describes a **decision-tree of skills**: each node runs a skill (or a tool
+the Advisor wields), emits a terminal `STATUS:` token, and hands off to the next node based on that
+token — the objective it served, the nodes, the routing tokens, the handoff convention, and the
+invariants every handoff must preserve.
+
+`AGENTS.md § Workflow` is the canonical operative path; this file is preserved as a historical reference
+for the executable-loop design (it no longer leads over `AGENTS.md`).
 
 > **Build state is incremental.** A node's row below is its *contract*. Until § 7 marks a node wired,
 > the contract is not yet the behavior. Do not read this file as a description of what runs today —
@@ -164,7 +165,7 @@ Honest status of each node — contract vs. wired. Updated as layers land (see t
 
 ## See Also
 
-- `AGENTS.md` — human-facing "The Loop" summary (truth-up to point here is a separate, eval-gated change).
+- `AGENTS.md` § The Workflow — the canonical operative path; this file is a deprecated historical reference.
 - `context/rules/advisor-model.md` · `context/rules/recursive-delegation.md` — the execution primitives.
 - `scripts/ralph.sh` — the done-sentinel + serial story loop (invariant 1).
 - `evals/` — the probe suite (regression floor) and the future capability benchmark (progress ceiling).

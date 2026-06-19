@@ -17,6 +17,8 @@ description: |
 
 # Orchestrate
 
+> **DEPRECATED.** `/orchestrate` (the executable-loop runner) is deprecated. The canonical workflow is **`AGENTS.md` § The Workflow** and the single runner is `/autopilot`. This skill is preserved as a historical reference; full removal is tracked in [#263](https://github.com/ryaneggz/openharness/issues/263).
+
 `/orchestrate` is the **runner** of the executable decision-tree of skills (`context/rules/loop.md`). It walks the tree mechanically: run a node → read that node's terminal `STATUS:` line → look the token up in the route table → advance to the next node → repeat. It honestly halts the walk when it cannot continue.
 
 The runner embodies the loop's execution model (`context/rules/loop.md` § 6): **distributed declaration, centralized execution** — every node skill owns its own routing decision and emits its own `STATUS:` token; the runner only reads that token and moves to the declared target. **The runner routes, it does not decide.** All judgment lives in the node skills; `/orchestrate` is pure control flow.

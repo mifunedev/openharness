@@ -125,32 +125,42 @@ Full provider-portable policy lives in `/git` when slash skills are available; t
 
 Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspaces. Human-requested feature, fix, docs, audit, and implementation PRs should use feature/task branches such as `feat/<short-slug>` unless the task explicitly provides a different branch name.
 
-## The Loop
+## The Workflow
 
-The harness self-improves on an eight-phase cycle. Each phase is driven by a skill that hands off to the next; the loop closes when grooming surfaces the next thing to research. `/autopilot` walks the whole cycle autonomously; `/ship-spec` covers phases 1–4 for a single item. `/compact` brackets the implement phase on both sides so the implementer and the auditor each start with a clean context.
+<!-- workflow-canonical -->
+The harness has one canonical **operative path**: `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`. `autopilot` selects work; the `spec-*` family plans, critiques, executes, and reflects; the human merges; the runner resets. **`autopilot` is the designated sole runner.**
+
+> **Until Issue C ships, `/ship-spec` performs spec-plan / spec-critique / spec-execute / spec-retro** — the four `spec-*` skills do not exist yet (see the `/ship-spec` row in the Skills table below). The executable-loop machinery (`context/rules/loop.md` + `/orchestrate`) is **deprecated**; this section is canonical.
 
 ```mermaid
 flowchart LR
-    R["1 · Research / spec<br/>/harness-audit · /imagine · /prd"] --> P["2 · Plan<br/>/ship-spec · /ralph · pm+critic"]
-    P --> CB(["/compact<br/>before implement"]) --> I["3 · Implement<br/>/delegate → scripts/ralph.sh"]
-    I --> CA(["/compact<br/>after implement"]) --> A["4 · Audit<br/>/pr-audit · /eval · /code-review"]
-    A --> RE["5 · Retro<br/>/retro"]
-    RE --> C["6 · Compound<br/>/wiki-ingest → memory/MEMORY.md"]
-    C --> Z["7 · Compress<br/>/context-audit · /compact · /caveman"]
-    Z --> G["8 · Groom<br/>/skill-lint · /wiki-lint · /drift-check"]
-    G -->|next item| R
+    SEL["select<br/>(autopilot)"] -->|issue| PLAN["spec-plan<br/>(/ship-spec today)"]
+    PLAN --> CRIT{"spec-critique<br/>2 critics + approve"}
+    CRIT -->|DENIED: revise| PLAN
+    CRIT -->|APPROVED| BUILD["build"]
+    subgraph EXEC["spec-execute (/ship-spec today)"]
+        direction LR
+        BUILD --> AUDIT{"audit<br/>2 critics + eval + pr-audit"}
+        AUDIT -->|FAIL: fix| BUILD
+        AUDIT -->|PASS| SRETRO["spec-retro<br/>/retro"]
+        SRETRO --> IMPROVE["improve<br/>compound · compress · benchmark"]
+        IMPROVE --> GROOM["groom<br/>skill-lint · wiki-lint · drift-check"]
+    end
+    GROOM --> MERGE["merge<br/>(human)"]
+    MERGE --> RESET["reset | clean<br/>(runner)"]
+    RESET -.->|next item| SEL
 ```
 
-| Phase | Intent | Primary skills |
-|---|---|---|
-| 1 · Research / spec | Find the next thing worth building; capture it as a spec | `/harness-audit`, `/imagine`, `/prd` |
-| 2 · Plan | Critic-gate the spec; convert to an executable task | `/ship-spec`, `/ralph`, `pm`+`critic` |
-| 3 · Implement | Build it in isolation | `/delegate` → `scripts/ralph.sh` (worktree) |
-| 4 · Audit | Prove it's correct and promotable | `/pr-audit`, `/eval`, `/code-review` |
-| 5 · Retro | Turn the run into falsifiable lessons | `/retro` |
-| 6 · Compound | Promote durable knowledge so it's reused, not re-derived | `/wiki-ingest`, `memory/MEMORY.md` |
-| 7 · Compress | Keep the always-loaded context lean | `/context-audit`, `/compact`, `/caveman` |
-| 8 · Groom | Health-check skills, wiki, and drift; queue the next item | `/skill-lint`, `/wiki-lint`, `/drift-check` |
+**Two adversarial critic loops:** `spec-plan ⇄ spec-critique` vets the plan; `build ⇄ audit` vets the build — the same mechanism, looping until critics are satisfied.
+
+| Surface | Owns | Does NOT own | The seam |
+|---|---|---|---|
+| **autopilot** | select — issue selection + `pm` decompose, caps, session | the build, the merge | hands the issue to `spec-plan` |
+| **spec-\* family** | `spec-plan` (task artifacts + wiki), `spec-critique` (2 critics + approve), `spec-execute` (build⇄audit→spec-retro→improve→groom), `spec-retro` | selection, merge | each is pointed at a `tasks/<slug>/` folder |
+| **human** | merge — final gate, no auto-merge | selection, build | reviews the finished unit |
+| **runner** | `reset \| clean` — worktree/branch cleanup, state reset | judgment | closes the cycle back to select |
+
+The `spec-*` family operates on a `tasks/<slug>/` folder (the universal interface): `/spec-plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec-critique`, `/spec-execute`, `/spec-retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec-execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/skill-lint` · `/wiki-lint` · `/drift-check` before the human merge.
 
 ## Skills
 

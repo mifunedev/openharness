@@ -7,6 +7,7 @@ Seed files encoding voice, operating principles, environment inventory, and work
 - `SOUL.md` — voice and disposition
 - `IDENTITY.md` — operating principles and lessons learned (append-only)
 - `TOOLS.md` — environment inventory; skip tool rediscovery
+- `REPO_MAP.md` — source-map command plus default disregard/keep paths for context loading
 - `USER.md` — working-relationship patterns; living document
 - `rules/` — auto-loaded coding and process rules (canonical, tool-agnostic)
 

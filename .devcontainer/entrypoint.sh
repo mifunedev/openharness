@@ -397,8 +397,9 @@ fi
 # SLACK_APP_TOKEN and SLACK_BOT_TOKEN are set AND `pi` is installed for
 # the sandbox user, restore the session that `oh config slack` created.
 # Treat the Compose env file as data, not shell: extract only the Slack
-# keys the bridge needs and shell-quote each value before passing them to
-# the child `pi` process.
+# keys the bridge needs. Keep token values out of the tmux command string
+# by writing a sandbox-owned, mode-600 runtime env file that the child shell
+# sources and removes before launching `pi`.
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
   SLACK_APP_TOKEN=$(grep -E '^SLACK_APP_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
@@ -408,12 +409,23 @@ if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
   if [ -n "$SLACK_APP_TOKEN" ] && [ -n "$SLACK_BOT_TOKEN" ] \
      && gosu sandbox bash -lc 'command -v pi' &>/dev/null; then
     if ! gosu sandbox tmux has-session -t client-slack 2>/dev/null; then
-      SLACK_ENV_ARGS="SLACK_APP_TOKEN=$(shell_quote "$SLACK_APP_TOKEN") SLACK_BOT_TOKEN=$(shell_quote "$SLACK_BOT_TOKEN")"
-      [ -n "$SLACK_ALLOW_USERS" ] && SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_USERS=$(shell_quote "$SLACK_ALLOW_USERS")"
-      [ -n "$SLACK_ALLOW_CHANNELS" ] && SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_CHANNELS=$(shell_quote "$SLACK_ALLOW_CHANNELS")"
-      gosu sandbox tmux new-session -d -s client-slack \
-        "env $SLACK_ENV_ARGS pi 2>&1 | tee /tmp/client-slack.log"
-      echo "[entrypoint] client-slack tmux session started (Slack bridge)"
+      SLACK_RUNTIME_ENV=$(mktemp /tmp/client-slack-env.XXXXXX)
+      {
+        printf 'SLACK_APP_TOKEN=%s\n' "$(shell_quote "$SLACK_APP_TOKEN")"
+        printf 'SLACK_BOT_TOKEN=%s\n' "$(shell_quote "$SLACK_BOT_TOKEN")"
+        [ -n "$SLACK_ALLOW_USERS" ] && printf 'SLACK_ALLOW_USERS=%s\n' "$(shell_quote "$SLACK_ALLOW_USERS")"
+        [ -n "$SLACK_ALLOW_CHANNELS" ] && printf 'SLACK_ALLOW_CHANNELS=%s\n' "$(shell_quote "$SLACK_ALLOW_CHANNELS")"
+      } > "$SLACK_RUNTIME_ENV"
+      chmod 600 "$SLACK_RUNTIME_ENV"
+      chown "$(sandbox_ownership)" "$SLACK_RUNTIME_ENV" 2>/dev/null || true
+      if gosu sandbox tmux new-session -d -s client-slack \
+        "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; pi 2>&1 | tee /tmp/client-slack.log' -- $(shell_quote "$SLACK_RUNTIME_ENV")"; then
+        echo "[entrypoint] client-slack tmux session started (Slack bridge)"
+      else
+        rm -f "$SLACK_RUNTIME_ENV"
+        echo "[entrypoint] client-slack tmux session failed to start"
+        exit 1
+      fi
     else
       echo "[entrypoint] client-slack tmux session already running — skipping"
     fi

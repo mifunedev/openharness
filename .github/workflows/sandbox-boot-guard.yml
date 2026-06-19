@@ -1,0 +1,71 @@
+name: "CI: Sandbox Boot Guard"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - development
+      - main
+    paths:
+      - ".devcontainer/**"
+      - "install/**"
+      - "workspace/**"
+      - "packages/oh/**"
+      - "scripts/docker-compose.sh"
+      - "scripts/harness-config.sh"
+      - "Makefile"
+      - "harness.yaml"
+      - ".dockerignore"
+      - ".github/workflows/sandbox-boot-guard.yml"
+  pull_request:
+    paths:
+      - ".devcontainer/**"
+      - "install/**"
+      - "workspace/**"
+      - "packages/oh/**"
+      - "scripts/docker-compose.sh"
+      - "scripts/harness-config.sh"
+      - "Makefile"
+      - "harness.yaml"
+      - ".dockerignore"
+      - ".github/workflows/sandbox-boot-guard.yml"
+
+concurrency:
+  group: sandbox-boot-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sandbox-boot-guard:
+    name: Validate sandbox compose and image build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Docker diagnostics
+        run: |
+          docker --version
+          docker compose version
+
+      # Sandbox boot guard only: validate the local devcontainer substrate.
+      # This job never logs in, pushes an image, or publishes release artifacts.
+      - name: Validate base compose configuration
+        run: bash scripts/docker-compose.sh config --quiet
+
+      - name: Validate Hermes dashboard compose overlay
+        env:
+          HERMES_DASHBOARD: "true"
+        run: bash scripts/docker-compose.sh config --quiet
+
+      - name: Build sandbox image locally
+        run: |
+          docker build \
+            --file .devcontainer/Dockerfile \
+            --tag openharness-sandbox-boot-guard:${{ github.sha }} \
+            .

@@ -104,7 +104,7 @@ For Eval Probe Regression Gate failures, immediately inspect the failed probe na
 - **FAIL**: Report the failing step, error message, and suggest a fix. Then fix the issue, commit, push, and run `/ci-status` again
 - **NO RUN**: No workflow's `on:` filter matched the push, or `PR_NUMBER` was set but `gh pr checks` returned no rows (the PR exists but no workflows were triggered yet). *(Note: the workflow names below reflect this harness's layout and may differ in other checkouts.)*
   - `ci-harness.yml` — push only: `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, itself
-  - `docs.yml` — PR or push-to-main: `packages/docs/**`, `docs/**`, `blog/**`, itself
+  - `docs.yml` — push-to-main/master only: `packages/docs/**`, `docs/**`, `blog/**`, itself
   - `conciseness.yml` — push or PR: `workspace/*.md`, `workspace/.claude/rules/*.md`, itself
   - `release.yml` — tag push only
 
@@ -120,7 +120,7 @@ This project's CI (`CI: Harness`) runs these steps in order:
 2. Workspace package format check (`pnpm --filter './packages/**' -r --if-present run format:check`)
 3. Workspace package typecheck (`pnpm --filter './packages/**' -r --if-present run typecheck`)
 4. Standalone `packages/oh` typecheck (`npm --prefix packages/oh ci && npm --prefix packages/oh run typecheck`)
-5. Workspace package build (`pnpm --filter './packages/**' -r --if-present run build`)
+5. Fast harness build (`pnpm run build:harness`) — excludes Docusaurus/docs build; docs build/deploy happens only on `main`/`master` pushes through `docs.yml`
 6. Workspace package tests (`pnpm --filter './packages/**' -r --if-present run test`)
 7. Root script tests (`pnpm test:scripts`)
 8. Boot-path lint (`shellcheck .devcontainer/*.sh install/*.sh` and `hadolint .devcontainer/Dockerfile`)
@@ -135,7 +135,10 @@ pnpm --filter './packages/**' -r --if-present run lint
 pnpm --filter './packages/**' -r --if-present run format:check
 pnpm --filter './packages/**' -r --if-present run typecheck
 npm --prefix packages/oh ci && npm --prefix packages/oh run typecheck
-pnpm --filter './packages/**' -r --if-present run build
+pnpm run build:harness
 pnpm --filter './packages/**' -r --if-present run test
 pnpm test:scripts
+
+# Optional, manual docs validation only when intentionally editing docs:
+pnpm docs:build
 ```

@@ -60,10 +60,11 @@ describe("devcontainer entrypoint Slack restore", () => {
 
     expect(text).not.toContain("source $SLACK_ENV");
     expect(text).not.toContain("set -a; source");
-    expect(text).toContain('SLACK_ENV_ARGS="SLACK_APP_TOKEN=$(shell_quote "$SLACK_APP_TOKEN") SLACK_BOT_TOKEN=$(shell_quote "$SLACK_BOT_TOKEN")"');
-    expect(text).toContain('SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_USERS=$(shell_quote "$SLACK_ALLOW_USERS")"');
-    expect(text).toContain('SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_CHANNELS=$(shell_quote "$SLACK_ALLOW_CHANNELS")"');
-    expect(text).toContain("env $SLACK_ENV_ARGS pi");
+    expect(text).toContain("SLACK_RUNTIME_ENV=$(mktemp /tmp/client-slack-env.XXXXXX)");
+    expect(text).toContain('printf \'SLACK_APP_TOKEN=%s\\n\' "$(shell_quote "$SLACK_APP_TOKEN")"');
+    expect(text).toContain('printf \'SLACK_BOT_TOKEN=%s\\n\' "$(shell_quote "$SLACK_BOT_TOKEN")"');
+    expect(text).toContain("chmod 600 \"$SLACK_RUNTIME_ENV\"");
+    expect(text).toContain("bash -c");
     expect(text).toContain("/tmp/client-slack.log");
   });
 
@@ -117,6 +118,7 @@ describe("devcontainer entrypoint Slack restore", () => {
         "-c",
         [
           "set -euo pipefail",
+          entrypointFunction("sandbox_ownership"),
           entrypointFunction("shell_quote"),
           'gosu() { local user="$1"; shift; "$@"; }',
           slackRestoreBlock(),
@@ -136,7 +138,12 @@ describe("devcontainer entrypoint Slack restore", () => {
 
     const tmuxLines = readFileSync(tmuxArgs, "utf8").trim().split("\n");
     const tmuxCommand = tmuxLines[tmuxLines.length - 1] ?? "";
-    expect(tmuxCommand).toContain("env SLACK_APP_TOKEN=");
+    expect(tmuxCommand).toContain("bash -c");
+    expect(tmuxCommand).toContain("/tmp/client-slack.log");
+    expect(tmuxCommand).not.toContain("xapp token; touch $PWNED");
+    expect(tmuxCommand).not.toContain("xoxb'quoted");
+    expect(tmuxCommand).not.toContain("U_ALLOWED; touch $PWNED");
+    expect(tmuxCommand).not.toContain("C_ALLOWED C_SECOND");
 
     execFileSync("bash", ["-c", tmuxCommand], {
       env: {

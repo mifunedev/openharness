@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `sandbox-boot-guard` CI workflow validates the sandbox compose configuration and locally builds the devcontainer image for boot-path changes, guarded by the `sandbox-boot-guard-ci` eval probe ([#449](https://github.com/mifunedev/openharness/issues/449)).
 - `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).

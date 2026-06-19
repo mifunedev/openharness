@@ -18,6 +18,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Removed
 ### Deprecated
 ### Security
+- `client-slack` restore now keeps Slack token values out of the tmux command string by sourcing a permission-restricted runtime env file before launching `pi` ([#461](https://github.com/mifunedev/openharness/issues/461)).
 
 ## [2026.6.18] - 2026-06-18
 

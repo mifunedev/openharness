@@ -66,27 +66,19 @@ Nothing else is published to the host. The `127.0.0.1` binding ensures port 1455
 
 All other container ports (3000, 3773, etc.) are only reachable via VSCode's auto-forwarding or a manual `ssh -L` tunnel.
 
-## Opt-in public exposure
+## Public sharing with Cloudflared
 
-If you need a port reachable beyond your laptop — for example, to share a preview with a teammate — there are two opt-in paths:
+If you need a port reachable beyond your laptop — for example, to share a preview with a teammate — use Cloudflared. The sandbox image includes the `cloudflared` CLI and persists credentials in `~/.cloudflared` when you use named tunnels.
 
-**1. Compose overlay binding `0.0.0.0`**
+For temporary previews, run the `/cloudflared` skill against the local app port. It starts a Cloudflare quick tunnel in a named tmux session and reports the generated public URL:
 
-Add a custom compose file that binds the port on all interfaces and merge it in via `compose.overrides:` in `harness.yaml` (tracked) or `composeOverrides[]` in `config.json` (user-local, gitignored):
-
-```yaml
-# docker-compose.my-expose.yml
-services:
-  sandbox:
-    ports:
-      - "0.0.0.0:3000:3000"
+```text
+/cloudflared 3000
 ```
 
-This is NOT the default; you opt in explicitly. Be aware that binding to `0.0.0.0` exposes the port on the host's public interface.
+Quick tunnel URLs are public bearer URLs. For sensitive apps, add Cloudflare Access or another authentication gate before sharing the URL.
 
-**2. External tunnel**
-
-The harness ships no built-in tunnel tool. For public access, bring your own: `cloudflared`, `ngrok`, `tailscale funnel`, or an nginx/Caddy reverse proxy. Start the tunnel inside the sandbox in a named tmux session (see [tmux conventions](#tmux-session-naming)).
+Avoid binding app ports to `0.0.0.0` on the host unless you explicitly need host-level publishing. The default public-sharing path is a Cloudflared tunnel that keeps the app bound locally inside the sandbox.
 
 ## tmux session naming
 
@@ -97,6 +89,7 @@ All long-running processes inside the sandbox run in named tmux sessions. The na
 | `client-` | `client-slack`, `client-discord` | External-surface clients bridging an in-sandbox agent |
 | `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes (interactive CLIs are foreground, not tmux) |
 | `app-` | `app-docs`, `app-api` | Dev servers |
+| `cloudflared-` | `cloudflared-3000` | Cloudflare tunnels for shared previews |
 
 For the full convention see [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
 

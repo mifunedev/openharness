@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/461-keep-slack-tokens-out-of",
+  "description": "Keep Slack bridge tokens out of tmux argv when restoring the client-slack session.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Runtime env handoff",
+      "description": "As a sandbox operator, I want the client-slack restore path to pass Slack tokens through a permission-restricted runtime env file so secrets are inherited by pi without appearing in tmux argv.",
+      "acceptanceCriteria": [
+        ".devcontainer/entrypoint.sh no longer builds an env SLACK_APP_TOKEN command string.",
+        "The restore path writes only the required Slack keys to a temporary mode-600 runtime env file owned by the sandbox user.",
+        "The tmux command string contains only the runtime env file path, sources and removes it inside the child shell, then runs pi with /tmp/client-slack.log logging.",
+        "Existing start conditions remain unchanged."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Implemented in this branch; verified by entrypoint test."
+    },
+    {
+      "id": "US-002",
+      "title": "Regression coverage and docs",
+      "description": "As a future maintainer, I want tests and durable docs to capture the secret-handling invariant.",
+      "acceptanceCriteria": [
+        "scripts/__tests__/entrypoint.test.ts proves fixture token values are absent from the tmux command string.",
+        "The test proves pi receives the original Slack values and malicious-looking fixture content is not evaluated.",
+        "CHANGELOG.md records the security fix.",
+        "wiki/sandbox-auth-volumes.md documents the runtime env handoff and wiki/README.md stays indexed."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Implemented in this branch; verified by entrypoint test and wiki-readme-index probe."
+    }
+  ]
+}

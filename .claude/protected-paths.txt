@@ -24,6 +24,10 @@ skill-lint
 delegate
 strategic-proposal
 ship-spec
+spec-plan
+spec-critique
+spec-execute
+spec-retro
 eval
 health-check
 retro

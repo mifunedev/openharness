@@ -130,15 +130,15 @@ Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspa
 <!-- workflow-canonical -->
 The harness has one canonical **operative path**: `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`. `autopilot` selects work; the `spec-*` family plans, critiques, executes, and reflects; the human merges; the runner resets. **`autopilot` is the designated sole runner.**
 
-> **Until Issue C ships, `/ship-spec` performs spec-plan / spec-critique / spec-execute / spec-retro** — the four `spec-*` skills do not exist yet (see the `/ship-spec` row in the Skills table below). The executable-loop machinery (`context/rules/loop.md` + `/orchestrate`) is **deprecated**; this section is canonical.
+> The four `spec-*` skills (`/spec-plan` · `/spec-critique` · `/spec-execute` · `/spec-retro`) now exist and are the canonical decomposed workflow — each pointed at a `tasks/<slug>/` folder, runnable independently or fanned out via `/delegate`. `/ship-spec` remains the all-in-one composer that runs the same `plan → critique → execute → retro` pipeline in one invocation (what `/autopilot` drives) and is the single source of the protected build mechanics the `spec-*` family composes. The executable-loop machinery (`context/rules/loop.md` + `/orchestrate`) is **deprecated**; this section is canonical.
 
 ```mermaid
 flowchart LR
-    SEL["select<br/>(autopilot)"] -->|issue| PLAN["spec-plan<br/>(/ship-spec today)"]
+    SEL["select<br/>(autopilot)"] -->|issue| PLAN["spec-plan<br/>(/spec-plan)"]
     PLAN --> CRIT{"spec-critique<br/>2 critics + approve"}
     CRIT -->|DENIED: revise| PLAN
     CRIT -->|APPROVED| BUILD["build"]
-    subgraph EXEC["spec-execute (/ship-spec today)"]
+    subgraph EXEC["spec-execute (/spec-execute)"]
         direction LR
         BUILD --> AUDIT{"audit<br/>2 critics + eval + pr-audit"}
         AUDIT -->|FAIL: fix| BUILD
@@ -178,7 +178,11 @@ The `spec-*` family operates on a `tasks/<slug>/` folder (the universal interfac
 | `/imagine` | One-shot draft PRD sketch from a fuzzy scenario → `.claude/specs/<slug>/spec.md` (gitignored scratch, includes mermaid diagram); feeds `/ship-spec --plan <path>` |
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
-| `/ship-spec` | End-to-end spec: `/prd` → critics → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR |
+| `/ship-spec` | End-to-end spec (all-in-one form of the `spec-*` family): `/prd` → critics → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR; the single source of the protected build mechanics |
+| `/spec-plan` | `spec-*` **plan** node — topic/plan/issue → `tasks/<slug>/` four-file folder (`/prd` → wiki alignment → `/ralph` → scaffold); local artifacts only, no GitHub state |
+| `/spec-critique` | `spec-*` **critique** node — the `plan ⇄ critique` adversarial loop; composes `/critique` (2 critics) + `/approve` (gate); `DENIED` routes back to `/spec-plan` |
+| `/spec-execute` | `spec-*` **execute** node — `build ⇄ audit → spec-retro → improve → groom` to a ready PR, stopping at the human merge gate; composes `/ship-spec` build mechanics + `/audit` |
+| `/spec-retro` | `spec-*` **reflection** node — execution-side `/retro` scoped to a built `tasks/<slug>/`; always logs, propose-then-confirm promotion |
 | `/teach` | Post-implementation communication pass — revise/propose the relevant wiki model, then teach the operator the mental model, verification evidence, caveats, and understanding checks |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
 | `/autopilot` | Self-improvement loop — issue-queue-first selection (build the oldest open `autopilot` issue; researches + files its own ticket when empty), PM plan → exact `/goal` Advisor handoff → `/ship-spec --issue`, which now **owns the whole build** (the two compacts bracketing implement, a worktree Advisor, `/delegate --plan tasks/<slug>/prd.json` + ralph, `/eval`, `/pr-audit` undraft); autopilot **defers** and reconciles the outcome (no inline compact/delegate/eval/finalize). `AUTOPILOT_EXECUTOR=ralph` keeps the legacy inline `scripts/ralph.sh` fallback; every PR states its selection rationale; per-run Pi tmux sessions renamed `autopilot-<branch>` and left alive after PR creation; cap 6 open PRs/day + 10 total open, no auto-merge |

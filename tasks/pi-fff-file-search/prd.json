@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/261-pi-fff-file-search",
+  "issue": 261,
+  "description": "Add the fff file-search toolkit to the Pi harness via the @ff-labs/pi-fff Pi extension, pinned in .pi/settings.json (same mechanism as pi-autoresearch/pi-dynamic-workflows). Adds ffgrep/fffind tools + frecency-ranked @-mention autocomplete, a soft conditional prompt hint, a docs page, an agent-readable wiki entry, and a CHANGELOG bullet. Pi-only; no MCP-server route, no override mode, no other-harness wiring.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Pin pi-fff and keep the settings test green",
+      "description": "As the Pi harness, I want @ff-labs/pi-fff@0.9.5 pinned in .pi/settings.json so the sandbox installs fff's file-search tools on startup.",
+      "acceptanceCriteria": [
+        ".pi/settings.json packages[] contains \"npm:@ff-labs/pi-fff@0.9.5\", inserted as the last npm: pin (after npm:pi-autoresearch@1.6.0, before the trailing git: pi-dynamic-workflows pin).",
+        "0.9.5 is confirmed to still be the latest dist-tag at impl time (npm view @ff-labs/pi-fff dist-tags.latest).",
+        ".pi/extensions/__tests__/settings.test.ts toEqual array is updated to the new exact array in the same committed order.",
+        "git diff .pi/settings.json shows exactly one added line; no other pin reordered or bumped.",
+        "npx vitest run .pi/extensions/__tests__/settings.test.ts passes.",
+        "Tests pass."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed 2026-06-19 (ship-spec inline impl); settings.json +1 line, settings.test.ts updated, vitest green."
+    },
+    {
+      "id": "US-002",
+      "title": "Add a soft conditional fff prompt hint",
+      "description": "As an operator, I want the Pi agent to prefer fff tools for file search when they are available, without overriding native tools.",
+      "acceptanceCriteria": [
+        ".pi/APPEND_SYSTEM.md gains exactly one short section (<= 6 lines) preferring ffgrep/fffind for file search/grep WHEN those tools are available.",
+        "The hint does not instruct the agent to disable, remove, or override native tools (preference order only, not PI_FFF_MODE=override).",
+        "Existing Project context and Slack Bridge Awareness sections are preserved verbatim.",
+        "Tests pass."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed 2026-06-19 (ship-spec inline impl); one 'File search' section (3 lines), 'when available' guard, native tools kept as fallback."
+    },
+    {
+      "id": "US-003",
+      "title": "Document the integration and record the change",
+      "description": "As a maintainer, I want docs/integrations/pi-fff.md + a CHANGELOG entry so the integration is discoverable and follows the existing Pi-package doc pattern.",
+      "acceptanceCriteria": [
+        "docs/integrations/pi-fff.md exists with frontmatter incl. sidebar_position: 4, mirroring pi-autoresearch.md (intro + pin snippet, What it adds incl. /fff-mode, verify section, Disable/Remove section, troubleshooting table).",
+        "The doc records that @ff-labs/fff-node ships prebuilt binaries (no Rust toolchain) and notes the resolved fff-node version + resolution date (2026-06-19).",
+        "Troubleshooting table has rows for (a) fff tools not registered / native binding install failed (network or libc mismatch) and (b) empty @-mention autocomplete on first launch (frecency warms over use; /fff-rescan).",
+        "CHANGELOG.md gains one [Unreleased] bullet following the existing ([#NNN](.../issues/NNN)) convention using issue #261.",
+        "pnpm run lint passes; root vitest suite passes.",
+        "Tests pass."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed 2026-06-19 (ship-spec inline impl); docs/integrations/pi-fff.md (sidebar_position 4, Disable + 4-row troubleshooting), CHANGELOG #261 bullet."
+    },
+    {
+      "id": "US-004",
+      "title": "Add an agent-readable wiki entry",
+      "description": "As a future agent, I want wiki/pi-fff.md so the always-on fff behavior and the prompt-hint preference are loadable into agent context via /wiki-query.",
+      "acceptanceCriteria": [
+        "wiki/raw/2026-06-19-pi-fff.md immutable snapshot of the upstream README Pi section captured as the provenance source.",
+        "wiki/pi-fff.md follows context/rules/wiki.md schema: frontmatter (title, slug: pi-fff, tags, created/updated 2026-06-19, sources -> the raw snapshot, confidence: provisional), ## Summary, ## Detail (always-on tools + autocomplete + prompt hint, with .pi/settings.json and .pi/APPEND_SYSTEM.md cites), ## See Also; <= 600 words.",
+        "wiki/README.md index is refreshed.",
+        "bash evals/probes/wiki-readme-index.sh passes.",
+        "Tests pass."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed 2026-06-19 (ship-spec inline impl); wiki/pi-fff.md (463 words), raw snapshot force-added, README index regenerated, wiki-readme-index probe PASS."
+    }
+  ]
+}

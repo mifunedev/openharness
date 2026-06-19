@@ -1,0 +1,55 @@
+# progress
+
+## US-001 — 2026-06-19 14:24 UTC
+
+**Title**: Pin pi-fff and keep the settings test green
+**Files changed**: .pi/settings.json, .pi/extensions/__tests__/settings.test.ts
+**Result**: PASS
+
+### What I did
+Added `"npm:@ff-labs/pi-fff@0.9.5"` as the last npm pin (after pi-autoresearch, before the git: pin) in `.pi/settings.json`, and updated the `toEqual` array in `.pi/extensions/__tests__/settings.test.ts` to match. `git diff` shows exactly +1 line per file; `npx vitest run` on the settings test passes.
+
+### Learnings for future iterations
+The settings test pins the exact packages[] array with `toEqual` (order-sensitive) — any pin add/reorder MUST update it in lockstep or the pre-commit test fails. 0.9.5 confirmed as the `latest` dist-tag; native binding (@ff-labs/fff-node) verified loading on glibc-2.36 x64.
+
+---
+## US-002 — 2026-06-19 14:25 UTC
+
+**Title**: Add a soft conditional fff prompt hint
+**Files changed**: .pi/APPEND_SYSTEM.md
+**Result**: PASS
+
+### What I did
+Appended one `## File search` section to `.pi/APPEND_SYSTEM.md` preferring `ffgrep`/`fffind` for file search **when available**, explicitly stating it is a preference only and that native `grep`/`find` remain the fallback. Existing Project context + Slack Bridge sections preserved verbatim.
+
+### Learnings for future iterations
+The `when available` guard + "preference only, native tools remain" wording is what distinguishes a soft hint from `PI_FFF_MODE=override` (which actually replaces native tools) — this resolves the Critic-B H finding that the hint contradicted the no-override Non-Goal.
+
+---
+## US-003 — 2026-06-19 14:27 UTC
+
+**Title**: Document the integration and record the change
+**Files changed**: docs/integrations/pi-fff.md (new), CHANGELOG.md
+**Result**: PASS
+
+### What I did
+Created `docs/integrations/pi-fff.md` mirroring `pi-autoresearch.md` (frontmatter sidebar_position 4; intro + pin snippet; What it adds incl. /fff-mode modes/commands; Disable/Remove section; Verify section; 4-row troubleshooting table covering native-binding-fail + empty-autocomplete). Recorded the resolved @ff-labs/fff-node@0.9.5 version + 2026-06-19 resolution date. Added one `### Added` CHANGELOG bullet referencing #261 (fork issue convention).
+
+### Learnings for future iterations
+Fork-originated CHANGELOG bullets reference `ryaneggz/openharness/issues/NNN`; upstream-originated ones reference `mifunedev/...`. Match the originating repo.
+
+---
+## US-004 — 2026-06-19 14:30 UTC
+
+**Title**: Add an agent-readable wiki entry
+**Files changed**: wiki/pi-fff.md (new), wiki/raw/2026-06-19-pi-fff.md (new, force-added), wiki/README.md
+**Result**: PASS
+
+### What I did
+Captured the upstream README Pi section as wiki/raw/2026-06-19-pi-fff.md (force-added — raw/ is gitignored) and wrote wiki/pi-fff.md (463 words) following context/rules/wiki.md schema, modeled on the existing pi-loop/pi-tasks/pi-recap entries (so there IS wiki precedent for pinned Pi packages, contrary to the docs-only assumption in PRD v1.0). Regenerated wiki/README.md index via the probe's exact logic; bash evals/probes/wiki-readme-index.sh PASSES.
+
+### Learnings for future iterations
+The wiki HAS entries for pinned Pi packages (pi-loop/pi-tasks/pi-recap/pi-plan-mode) even though docs/integrations/ only documents some — so "Pi package = docs-only" was wrong; agent-facing/always-on packages warrant a wiki entry. Regenerate the README index with the probe's own row logic (updated+slug key, sort -r) for a guaranteed-green index.
+
+---
+STATUS: COMPLETE

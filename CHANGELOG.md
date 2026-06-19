@@ -13,6 +13,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Changed
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
+- Devcontainer boot now stops stale legacy `system-cron` tmux sessions before starting `cron-watchdog`/`cron-system`, avoiding unhealthy migrated sandboxes ([#453](https://github.com/mifunedev/openharness/issues/453)).
 ### Removed
 ### Deprecated
 ### Security

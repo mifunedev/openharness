@@ -172,11 +172,14 @@ describe("devcontainer entrypoint cron supervision", () => {
     expect(text).toContain("/tmp/cron-watchdog.log");
   });
 
-  it("preserves the legacy system-cron migration guard", () => {
+  it("reaps stale legacy system-cron instead of blocking modern cron supervision", () => {
     const text = entrypoint();
 
     expect(text).toContain("tmux has-session -t system-cron");
-    expect(text).toContain("not starting cron-system or cron-watchdog");
-    expect(text).toContain("legacy system-cron detected; watchdog exiting");
+    expect(text).toContain("legacy system-cron tmux session detected — stopping it before starting cron-watchdog");
+    expect(text).toContain("tmux kill-session -t system-cron");
+    expect(text).toContain("legacy system-cron detected; stopping it before supervising cron-system");
+    expect(text).not.toContain("not starting cron-system or cron-watchdog");
+    expect(text).not.toContain("watchdog exiting");
   });
 });

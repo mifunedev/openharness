@@ -6,6 +6,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 
 | probe | tier | last-run (UTC) | status | source |
 |-------|------|----------------|--------|--------|
+| advisor-monitored-loop | A | 2026-06-19 19:34 | PASS | conversation 2026-06-19 (advisor-monitored ralph loop pattern) |
 | agent-browser-cli | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-07 (agent-browser 0.8.5 CLI) |
 | autopilot-executor-toggle | A | 2026-06-18 05:17 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
 | autopilot-no-pr-session-close | A | 2026-06-18 05:17 | PASS | issue #209 (autopilot no-PR tmux session closure) 2026-06-16 |

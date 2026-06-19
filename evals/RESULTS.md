@@ -42,6 +42,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | orchestrate-contract | A | 2026-06-18 05:17 | PASS | issue #160 — /orchestrate contract; issue #175 — reserved /loop command rename |
 | owned-surface-guard | A | 2026-06-18 05:17 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | pnpm-audit-ci-gate | A | 2026-06-18 05:17 | PASS | issue #171 — pnpm security audits must run in CI |
+| prompt-miner-schema-compat | A | 2026-06-19 16:09 | PASS | issue #253 — prompt-miner JSONL dual-schema (Claude+Pi) drift guard |
 | ralph-fallback-order | A | 2026-06-18 05:17 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
 | rl-delegation-write-worker | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
 | ship-spec-ready-finalization | A | 2026-06-18 05:17 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |

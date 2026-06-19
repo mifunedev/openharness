@@ -1,0 +1,13 @@
+# progress
+
+US-001..US-007 (engine, adapters, scoring, features, report, tests, references): DONE (Wave 1).
+US-008 (SKILL.md + render-log-entry.sh + Pi parity note): DONE.
+US-009 (daily cron + origin-scoped prompt-miner-caps.sh + README rows): DONE.
+US-010 (prompt-miner-schema-compat eval probe + RESULTS.md row): DONE — probe exits 0.
+US-011 (register /prompt-miner in Skills table): DONE.
+US-012 (wiki/prompt-miner.md + raw snapshot + README index refresh): DONE — wiki-readme-index probe exits 0.
+CHANGELOG [Unreleased] Added entry (#253): DONE.
+
+All 12 user stories pass. Engine tests 16/16 green; both tier-A probes PASS.
+
+STATUS: COMPLETE

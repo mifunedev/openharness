@@ -1,0 +1,187 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/253-prompt-miner",
+    "description": "prompt-miner — a skill + zero-dependency Node engine that mines Claude+Pi session traces, ranks initiating prompts by a friction+ground-truth outcome proxy, extracts falsifiable prompt markers, and feeds learnings back interactively (/retro-style gate) and via a daily cap-gated cron that ships a benchmarked PR to origin through /ship-spec.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Engine I/O — CLI, enumeration, streaming, malformed tolerance",
+            "description": "As an orchestrator, I want a zero-dependency Node engine that parses flags, enumerates both harnesses' session files, and streams them tolerating corruption.",
+            "acceptanceCriteria": [
+                ".claude/skills/prompt-miner/scripts/mine-traces.mjs exists; node v22, no npm deps (git binary allowed, documented); header purpose comment",
+                "CLI flags parsed: --harness, --since/--until, --hours N (precedence over --since), --last-n, --min-turns (default 2), --top (default 15), --attribution (default first), --include-prompt-text, --no-git, --weights, --out (default memory/<UTC-date>/), --report-only, --dry-run, --max-file-mb (default 50)",
+                "Enumerates Claude ~/.claude/projects/-home-sandbox-harness/*.jsonl and Pi ${PI_CODING_AGENT_DIR:-~/.pi/agent}/sessions/*/*.jsonl, filtered by harness + window",
+                "Streams each file with node:readline (constant memory); per-line JSON.parse in try/catch — malformed lines increment malformedLines, never throw",
+                "Files over --max-file-mb are skipped and counted in a distinct skippedFiles manifest counter",
+                "node --check passes"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "mine-traces.mjs: zero-dep node v22 ESM, all CLI flags incl --fixtures-dir/--now, readline streaming, malformed tolerance, skippedFiles counter, node --check passes."
+        },
+        {
+            "id": "US-002",
+            "title": "Per-harness adapters — normalization, dedup, exports",
+            "description": "As an orchestrator, I want each harness's lines normalized to a common event shape and aggregated per session.",
+            "acceptanceCriteria": [
+                "Adapter normalizes each line to {kind, ts, isError?, stopReason?, usage?, text?}",
+                "Tool-error path harness-correct: Claude .message.content[]|select(.type==tool_result).is_error; Pi role==toolResult -> .message.toolResult.isError",
+                "Sessions aggregated and deduped by sessionId (resumed sessions across files merged; counts unioned)",
+                "Exports pure functions classifyLine, aggregateSession, scoreSession, extractFeatures, redact",
+                "node --check passes"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Per-harness classifyLine normalizes Claude+Pi to a common event; dedupe/merge by sessionId (Claude per-line) / session-line id or filename (Pi); verified Pi error lives at message.isError, also accepts message.toolResult.isError; pure fns exported."
+        },
+        {
+            "id": "US-003",
+            "title": "Outcome scoring — friction + ground-truth bonus (origin cross-ref)",
+            "description": "As an orchestrator, I want each session scored by a documented heuristic with an auditable breakdown.",
+            "acceptanceCriteria": [
+                "Friction score: 100 - 35*toolErrorRate - 30*correctionDensity - 20*abandoned - 10*incomplete - 5*turnBloat (sub-signals normalized 0..1, clamped)",
+                "abandoned/incomplete from last assistant stop_reason/stopReason (aborted / not end_turn|stop); correctionDensity uses a documented negation lexicon over plain-text human follow-ups",
+                "Ground-truth bonus (+15, total capped 100): PR URL grep in assistant content OR commit on session branch in git log origin/development within session window; runs git fetch origin development (bounded depth) first; --no-git stubs bonus to 0",
+                "Weights overridable via --weights; validated (required keys present, values non-negative, unknown keys error)",
+                "Each session emits scoreBreakdown",
+                "Tests pass (arithmetic + --no-git path)"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Friction formula + ground-truth bonus (PR-url OR origin/development commit-in-window; git fetch --depth=200; --no-git stubs to 0); --weights validated; scoreBreakdown emitted; arithmetic + --no-git path unit-tested."
+        },
+        {
+            "id": "US-004",
+            "title": "Prompt feature extraction + session-type detection",
+            "description": "As an orchestrator, I want each attributed prompt reduced to an objective feature vector and each session tagged with a type for stratified correlation.",
+            "acceptanceCriteria": [
+                "Attributed prompt per --attribution (default first human prompt). Claude detector = type:user AND userType==external AND string content AND isMeta!=true AND not starting with <...> AND promptSource!=sdk (when present). Pi = type:message AND role==user",
+                "Feature vector: lenChars, lenWords, startsImperative, hasFilePath, hasAcceptanceCriteria, hasCodeFence, hasInlineCode, briefingStructure, referencesSkill, mentionsIssuePr, questionCount, urlCount, hedgingCount",
+                "Session type detected from first human prompt (impl|retro|query|audit|cron|other) recorded per session",
+                "Sessions with no human prompt flagged no_human_prompt, excluded from prompt ranking, kept in session table",
+                "Tests pass"
+            ],
+            "priority": 4,
+            "passes": true,
+            "notes": "Attributed-prompt feature vector (13 keys) + session-type detection (impl|retro|query|audit|cron|other); no_human_prompt flag excludes from ranking, kept in table."
+        },
+        {
+            "id": "US-005",
+            "title": "Report generation + redaction",
+            "description": "As an orchestrator, I want a ranked, redacted report in a gitignored location with no transcripts or secrets.",
+            "acceptanceCriteria": [
+                "Emits prompt-miner-<UTC-date>.json (per references/report-schema.md) and .md (ranked top-N/bottom-N table + manifest) to --out (default memory/<UTC-date>/)",
+                "Default output contains feature vectors + metadata only — no raw prompt text",
+                "--include-prompt-text adds redaction (line-level: sk-, sk-ant-, ghp_/gho_, github_pat_, AKIA, Bearer; block-level: BEGIN/END KEY bodies, runs of >=40 base64/hex) AND prints WARNING banner",
+                "--dry-run computes + prints to stdout, writes nothing",
+                "--report-only writes report + daily log entry but never edits memory/MEMORY.md or context/IDENTITY.md",
+                "Manifest records sessionsScanned, sessionsRanked, malformedLines, skippedFiles, weights, window, scoreModel",
+                "Tests pass"
+            ],
+            "priority": 5,
+            "passes": true,
+            "notes": "Emits prompt-miner-<UTC-date>.json (manifest+sessions+markerFeatureKeys) and .md (top/bottom-N); no raw text by default; --include-prompt-text redacts line+block patterns + WARNING; --dry-run stdout-only; --report-only never touches MEMORY/IDENTITY."
+        },
+        {
+            "id": "US-006",
+            "title": "Unit tests + synthetic fixtures",
+            "description": "As an orchestrator, I want a node --test suite over synthetic fixtures verifying the dual-schema parsing.",
+            "acceptanceCriteria": [
+                "scripts/__tests__/fixtures/{claude-sample,pi-sample}.jsonl hand-authored synthetic traces (no real data); each has >=1 tool-error line, >=1 human prompt; Claude has >=1 isMeta:true and >=1 <command-name> wrapper",
+                "scripts/__tests__/mine-traces.test.mjs runs under node --test (no vitest/tsx)",
+                "Tests assert: Claude string-vs-array detection, <command-name>/isMeta/non-external exclusion, nested is_error vs toolResult.isError counting, abandonment via aborted/non-end_turn, malformed tolerance, redaction scrub incl block-level, --weights validation, score-breakdown arithmetic, --no-git stub path",
+                "node --test .claude/skills/prompt-miner/scripts/__tests__/ exits 0"
+            ],
+            "priority": 6,
+            "passes": true,
+            "notes": "node --test suite (16 tests, no vitest/tsx) over synthetic fixtures; asserts all required behaviors. NOTE: bare 'node --test <dir>' is unsupported by sandbox node v22.22.2 (runs dir as module; reproducible on empty tmpdir); use auto-discover (cd dir && node --test) or a glob pattern arg -- both 16/16 exit 0."
+        },
+        {
+            "id": "US-007",
+            "title": "Reference contracts (scoring, markers, report-schema)",
+            "description": "As an orchestrator, I want the scoring formula, marker taxonomy, and output schema documented out-of-band.",
+            "acceptanceCriteria": [
+                "references/scoring.md: formula; per-harness JSON paths; negation lexicon; candidate approaches; heuristic-proxy caveat flagging correctionDensity as highest-variance; --weights validation rules; git binary + git fetch requirement; concrete .mjs-over-jq rationale",
+                "references/markers.md: feature taxonomy; falsifiable marker schema {feature, direction, threshold, sessions_supporting, sessions_contradicting, effect_size}; thresholds sessions_supporting>=10 / effect_size>=0.3; mandatory session-type stratification; NO-CORPUS emission rule (distinct from NO-CANDIDATE)",
+                "references/report-schema.md: emitted JSON shape (manifest + sessions[] + markerFeatureKeys)",
+                "All three files exist and are internally consistent with mine-traces.mjs output"
+            ],
+            "priority": 7,
+            "passes": true,
+            "notes": "references/scoring.md, markers.md, report-schema.md written, consistent with mine-traces.mjs output (field names verified against real traces)."
+        },
+        {
+            "id": "US-008",
+            "title": "SKILL.md + memory-log helper + .pi mirror",
+            "description": "As an orchestrator, I want the /prompt-miner skill, the mandatory memory-log entry, and provider parity.",
+            "acceptanceCriteria": [
+                "SKILL.md frontmatter: name prompt-miner; description with TRIGGER phrases; argument-hint (bracket-per-option); disable-model-invocation: true (auto-invocation only; user-typed skill still does LLM synthesis); allowed-tools Read,Grep,Bash,Edit; no effort field; no ## Handoff / loop STATUS line",
+                "Body: privacy contract; Step1 runs engine via args=($ARGUMENTS); node \"${CLAUDE_SKILL_DIR}/scripts/mine-traces.mjs\" \"${args[@]}\" (array form, --weights stays one token); Step2 read dataset; Step3 mine markers stratified by session type into references/markers.md schema; Step4 propose-then-confirm (APPROVE/SKIP/EDIT) MEMORY.md/IDENTITY.md mirroring /retro, via retro/scripts/check-memory-duplicates.sh; Step5 append memory-log entry",
+                "Human result tag documented: RESULT: MINING-COMPLETE | DRY-RUN | NO-SESSIONS | NO-CORPUS",
+                "scripts/render-log-entry.sh (set -euo pipefail + ERR trap) with documented flags (--result, --time, --sessions-scanned, --markers-found, --top-marker); memory-log append resolves harness root via git rev-parse --show-toplevel and uses repo-root scripts/locked-append.sh",
+                "If .pi/skills/ mirrors .claude/skills/ as an invariant (verify against evals/probes/retro-deterministic-contract.sh), create .pi/skills/prompt-miner/ as byte-identical copy; else record why parity is not required",
+                "SKILL.md under ~500 lines"
+            ],
+            "priority": 8,
+            "passes": true,
+            "notes": "SKILL.md (230 lines) — frontmatter name/description+TRIGGER/argument-hint(bracket-per-option)/disable-model-invocation:true/allowed-tools Read,Grep,Bash,Edit, no effort, no Handoff/STATUS; body has privacy contract + Step1 array-form engine invoke + Step2 dataset read + Step3 stratified marker mining into markers.md schema + Step4 propose-then-confirm mirroring /retro (qualify+dedup grep of MEMORY/IDENTITY inline, since retro/scripts/check-memory-duplicates.sh does not exist in this tree) + Step5 render-log-entry.sh; RESULT tag documented. render-log-entry.sh (set -euo pipefail + ERR trap, flags --result/--time/--sessions-scanned/--markers-found/--top-marker, resolves root via git rev-parse --show-toplevel, appends via scripts/locked-append.sh) — tested OK. Pi parity: .pi/skills is a tracked symlink (mode 120000 -> ../.claude/skills) so no byte copy needed; recorded in references/pi-parity.md."
+        },
+        {
+            "id": "US-009",
+            "title": "Daily cron -> file origin issue -> /ship-spec --repo origin (cap-gated, opt-in)",
+            "description": "As an orchestrator, I want a daily cron that mines the corpus and ships a benchmarked PR to origin through /ship-spec, opt-in and cap-gated.",
+            "acceptanceCriteria": [
+                "crons/prompt-miner.md frontmatter: id prompt-miner; schedule \"0 5 * * *\"; timezone America/Denver; enabled false; overlap false; catchup false; tmux true; worktree true; preflight scripts/prompt-miner-caps.sh; repo ryaneggz/openharness; one-line description",
+                "scripts/prompt-miner-caps.sh exists (set -euo pipefail + ERR trap): origin-scoped wrapper execing scripts/autopilot-caps.sh with AUTOPILOT_REPO=ryaneggz/openharness and AUTOPILOT_LABEL=prompt-miner; row added to scripts/README.md",
+                "Body: (1) mine --hours 24 --report-only, write memory/<today>/prompt-miner-<date>.md + surface top markers in log.md; (2) if marker meets thresholds ensure prompt-miner label + file/ensure issue labeled prompt-miner, else log NO-CANDIDATE/NO-CORPUS and stop; (3) /ship-spec --repo ryaneggz/openharness --base development --issue <N>, capture PR, then gh pr edit <PR> --add-label prompt-miner (label not inherited from issue, else cap defeated); (4) append crons/.cron.log liveness resolving shared-root under worktree mode",
+                "Body states: never auto-merge; never edit MEMORY/IDENTITY directly; kill-switch enabled:false (default) + SIGHUP",
+                "id matches filename basename kebab-case; schedule valid 5-field cron (no ID_MISMATCH/SCHED_INVALID); repo: resolves to AUTOPILOT_REPO (verify against scripts/cron-runtime.ts)",
+                "crons/README.md Scheduled-jobs table gains a prompt-miner.md row"
+            ],
+            "priority": 9,
+            "passes": true,
+            "notes": "crons/prompt-miner.md: frontmatter id prompt-miner (matches basename), schedule \"0 5 * * *\" (validated via croner), timezone America/Denver, enabled false, overlap false, catchup false, tmux true, worktree true, preflight scripts/prompt-miner-caps.sh, repo ryaneggz/openharness, one-line description. Body: (1) /prompt-miner --hours 24 --report-only; (2) threshold-gated origin issue (ensure prompt-miner label) else NO-CANDIDATE/NO-CORPUS stop; (3) /ship-spec --repo ryaneggz/openharness --base development --issue <N> then gh pr edit <PR> --add-label prompt-miner; (4) shared-root liveness append via locked-append.sh. States never-auto-merge, never edit MEMORY/IDENTITY, kill-switch enabled:false + SIGHUP. scripts/prompt-miner-caps.sh (set -euo pipefail + ERR trap) execs autopilot-caps.sh with AUTOPILOT_REPO=ryaneggz/openharness + AUTOPILOT_LABEL=prompt-miner — tested: SKIPPED-CAP-TOTAL exit 11 scoped to fork, PROCEED-GH-ERROR fail-open. crons/README.md + scripts/README.md rows added."
+        },
+        {
+            "id": "US-010",
+            "title": "Eval probe for schema-compat (+ optional .pi parity probe)",
+            "description": "As an orchestrator, I want a tier-A probe that fails loudly if the JSONL parse breaks.",
+            "acceptanceCriteria": [
+                "evals/probes/prompt-miner-schema-compat.sh derives ROOT via dirname, runs node $ROOT/.claude/skills/prompt-miner/scripts/mine-traces.mjs --dry-run --no-git against $ROOT/.claude/skills/prompt-miner/scripts/__tests__/fixtures/, asserts non-zero session count AND non-zero tool-error count; 3-state oracle PASS/REGRESSION/SKIPPED with standard exit codes; SKIPPED guard if skill dir absent",
+                "If .pi/skills/prompt-miner/ exists, the probe (or sibling) asserts .pi<->.claude parity matching retro-deterministic-contract.sh",
+                "A single new row hand-inserted into evals/RESULTS.md (no wholesale regeneration / timestamp churn on other rows)",
+                "bash evals/probes/prompt-miner-schema-compat.sh exits 0 (PASS) on fixtures"
+            ],
+            "priority": 10,
+            "passes": true,
+            "notes": "evals/probes/prompt-miner-schema-compat.sh (tier A): ROOT via dirname/../..; SKIPPED (exit 2) guards for missing skill dir/engine/fixtures/node; runs mine-traces.mjs --dry-run --no-git --fixtures-dir <fixtures>; asserts manifest.sessionsScanned>0 AND manifest.toolErrorsTotal>0; PASS=0/REGRESSION=1. bash evals/probes/prompt-miner-schema-compat.sh exits 0 (sessionsScanned=3, toolErrorsTotal=2). One hand-inserted RESULTS.md row (alphabetical, between pnpm-audit-ci-gate and ralph-fallback-order) — no regeneration/timestamp churn. .pi parity is symlink-structural (see references/pi-parity.md) so no separate parity probe needed."
+        },
+        {
+            "id": "US-011",
+            "title": "Register /prompt-miner in CLAUDE.md",
+            "description": "As an orchestrator, I want the skill discoverable in the Skills table.",
+            "acceptanceCriteria": [
+                "A single /prompt-miner row added to the CLAUDE.md Skills table (additive; no other rows changed, no protected content removed)",
+                "Row 'When' text matches the skill's actual trigger",
+                "AGENTS.md parity preserved if it mirrors the Skills table"
+            ],
+            "priority": 11,
+            "passes": true,
+            "notes": "Single /prompt-miner row added to the Skills table after the /retro row; trigger text matches SKILL.md (mine prompts, rank prompts by outcome, what prompt patterns work best). CLAUDE.md is a symlink to AGENTS.md, so the one AGENTS.md edit registers the skill in both — parity is automatic. No other rows changed; additive-only."
+        },
+        {
+            "id": "US-012",
+            "title": "Wiki entry — wiki/prompt-miner.md",
+            "description": "As an operator, I want a DeepWiki-style wiki page so the prompt-mining subsystem is teachable.",
+            "acceptanceCriteria": [
+                "wiki/prompt-miner.md created per context/rules/wiki.md: frontmatter (slug prompt-miner, tags, created/updated, sources, confidence provisional); ## Relevant Source Files (mine-traces.mjs, SKILL.md, crons/prompt-miner.md); ## Summary; ## Detail (collect->score->rank->mine->feed-back; both feedback paths); ## System Relationships (Mermaid pipeline + cron->ship-spec->origin handoff); ## See Also ([[cron-runtime]] + retro/loop entries)",
+                "Line-cited claims for stage ordering and scoring model; records no DeepWiki counterpart exists (net-new subsystem)",
+                "wiki/README.md refreshed; bash evals/probes/wiki-readme-index.sh passes"
+            ],
+            "priority": 12,
+            "passes": true,
+            "notes": "wiki/prompt-miner.md (807 words incl code/diagram, < 900 architecture cap) per context/rules/wiki.md: frontmatter slug prompt-miner, tags, created/updated 2026-06-19, sources raw/2026-06-19-prompt-miner.md, confidence provisional; ## Relevant Source Files (mine-traces.mjs, SKILL.md, crons/prompt-miner.md, references/markers.md) with line cites; ## Summary; ## Detail (collect->score->rank->mine->feed-back, both interactive + cron paths); ## System Relationships Mermaid (engine pipeline + cron->ship-spec->origin); ## See Also [[cron-runtime]] [[ship-spec-orchestration]] [[compound-engineering]] (all existing; no retro/loop wiki entry exists so linked to real adjacent entries). Records no DeepWiki counterpart (net-new). Stage ordering + scoring model line-cited. raw snapshot force-added (raw/ gitignored). wiki/README.md index refreshed (prompt-miner row at top, updated desc); bash evals/probes/wiki-readme-index.sh PASS."
+        }
+    ]
+}

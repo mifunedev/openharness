@@ -8,6 +8,7 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | `install.sh`      | Curl-piped installer — bootstraps a fresh harness checkout         |
 | `ralph.sh`        | Ralph loop runner: `scripts/ralph.sh [--harness=…] <taskdesc>`     |
 | `cron-runtime.ts` | Croner runtime — scans `crons/*.md`, schedules, fires each job     |
+| `prompt-miner-caps.sh` | Origin-scoped PR-cap preflight for `crons/prompt-miner.md` — execs `autopilot-caps.sh` with `AUTOPILOT_REPO=ryaneggz/openharness` + `AUTOPILOT_LABEL=prompt-miner` |
 | `__tests__/`      | Vitest unit tests (`vitest.config.ts` at repo root targets this)   |
 
 ## Conventions

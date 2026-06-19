@@ -63,8 +63,8 @@
         "Tests pass."
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "Both critics flagged fff is always-on + agent-facing -> wiki (agent-readable), not just docs (human-only)."
+      "passes": true,
+      "notes": "Completed 2026-06-19 (ship-spec inline impl); wiki/pi-fff.md (463 words), raw snapshot force-added, README index regenerated, wiki-readme-index probe PASS."
     }
   ]
 }

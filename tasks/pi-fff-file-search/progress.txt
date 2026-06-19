@@ -39,3 +39,17 @@ Created `docs/integrations/pi-fff.md` mirroring `pi-autoresearch.md` (frontmatte
 Fork-originated CHANGELOG bullets reference `ryaneggz/openharness/issues/NNN`; upstream-originated ones reference `mifunedev/...`. Match the originating repo.
 
 ---
+## US-004 — 2026-06-19 14:30 UTC
+
+**Title**: Add an agent-readable wiki entry
+**Files changed**: wiki/pi-fff.md (new), wiki/raw/2026-06-19-pi-fff.md (new, force-added), wiki/README.md
+**Result**: PASS
+
+### What I did
+Captured the upstream README Pi section as wiki/raw/2026-06-19-pi-fff.md (force-added — raw/ is gitignored) and wrote wiki/pi-fff.md (463 words) following context/rules/wiki.md schema, modeled on the existing pi-loop/pi-tasks/pi-recap entries (so there IS wiki precedent for pinned Pi packages, contrary to the docs-only assumption in PRD v1.0). Regenerated wiki/README.md index via the probe's exact logic; bash evals/probes/wiki-readme-index.sh PASSES.
+
+### Learnings for future iterations
+The wiki HAS entries for pinned Pi packages (pi-loop/pi-tasks/pi-recap/pi-plan-mode) even though docs/integrations/ only documents some — so "Pi package = docs-only" was wrong; agent-facing/always-on packages warrant a wiki entry. Regenerate the README index with the probe's own row logic (updated+slug key, sort -r) for a guaranteed-green index.
+
+---
+STATUS: COMPLETE

@@ -26,6 +26,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
 | prompt-miner | prompt-miner | [prompt-mining, retro, self-improvement, scoring, cron, ship-spec, open-harness] | 2026-06-19 |
+| pi-fff | pi-fff (fff file search) | [pi, fff, file-search, ffgrep, fffind, frecency, integration, open-harness] | 2026-06-19 |
 | harness-audit | Harness Audit | [audit, skills, autopilot, memory, worktrees] | 2026-06-18 |
 | ship-spec-orchestration | ship-spec Orchestration Boundary | [ship-spec, orchestration, executable-loop, ralph, pr-audit, agent-harness] | 2026-06-16 |
 | sandbox-auth-volumes | Sandbox Auth Volume Ownership | [sandbox, devcontainer, auth, docker, ownership] | 2026-06-16 |

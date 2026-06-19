@@ -4,7 +4,7 @@
 
 **Title**: Split fast build from docs build
 **Files changed**: package.json
-**Commit**: 6a5997d
+**Commit**: 3503101
 **Result**: PASS
 
 ### What I did
@@ -19,7 +19,7 @@ Changed the root build path to delegate to `build:harness`, which excludes `@ope
 
 **Title**: Run docs build only on main/master-push docs workflow
 **Files changed**: .github/workflows/ci-harness.yml, .github/workflows/docs.yml, .github/workflows/release.yml, .claude/skills/ci-status/SKILL.md, docs/contributing.md
-**Commit**: 6a5997d
+**Commit**: 3503101
 **Result**: PASS
 
 ### What I did
@@ -34,7 +34,7 @@ Automatic docs validation is a deploy-time gate, not a PR or release-validation 
 
 **Title**: Add a regression probe for build-gate separation
 **Files changed**: evals/probes/docs-build-fast-path.sh, evals/RESULTS.md
-**Commit**: 6a5997d
+**Commit**: 3503101
 **Result**: PASS
 
 ### What I did
@@ -49,7 +49,7 @@ Use explicit static invariants for CI topology changes instead of relying on slo
 
 **Title**: Document the gate split in docs and wiki
 **Files changed**: docs/contributing.md, CHANGELOG.md, wiki/raw/2026-06-19-ci-build-gates.md, wiki/ci-build-gates.md, wiki/README.md
-**Commit**: 6a5997d
+**Commit**: 3503101
 **Result**: PASS
 
 ### What I did

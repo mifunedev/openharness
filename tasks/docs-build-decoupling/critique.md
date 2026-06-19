@@ -34,6 +34,10 @@ CRITIC_B — USER LENS
 
 [SEVERITY: L] [STORY: US-004] Wiki usefulness needed an operator-facing quick reference. | [EVIDENCE: US-004 and Wiki Alignment] | Mitigated in PRD: US-004 requires a command/gate table.
 
+## Operator clarification
+
+After initial scaffold, the operator clarified: docs build should **only** happen automatically on merges to `main`. This supersedes the earlier assumption that docs PR and release validation should keep building Docusaurus. The PRD was revised so automatic docs builds are removed from PR/Harness CI/release paths and retained only in `docs.yml` on `push` to `main`; explicit local `pnpm docs:build` remains a manual operator escape hatch.
+
 ## Synthesis
 
 - **High-severity findings**: 0

@@ -20,6 +20,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Fixed
 - Cron worktree pruning now preserves a live early-run tmux session whose name still matches its cron worktree basename, preventing active autopilot checkouts from disappearing before branch rename ([#445](https://github.com/mifunedev/openharness/issues/445)).
 - Heartbeat instructions now compute memory-log timestamps explicitly and route both memory/liveness writes through `scripts/locked-append.sh` instead of raw shared-log appends ([#447](https://github.com/mifunedev/openharness/issues/447)).
+- Devcontainer boot now stops stale legacy `system-cron` tmux sessions before starting `cron-watchdog`/`cron-system`, avoiding unhealthy migrated sandboxes ([#453](https://github.com/mifunedev/openharness/issues/453)).
 ### Removed
 ### Deprecated
 ### Security

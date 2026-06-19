@@ -40,9 +40,9 @@ Body becomes the agent prompt at fire time.
 - Migration note: older sandboxes used runtime session `system-cron` and
   autopilot run sessions/markers named `autopilot-*`. New sandboxes use
   `cron-system` and `cron-autopilot-*`. During the transition, heartbeat scans
-  and sweeps both old and new autopilot names. To complete migration, kill the
-  legacy `system-cron` session once, then restart/relaunch the sandbox so the
-  entrypoint starts `cron-system` without running duplicate cron runtimes.
+  and sweeps both old and new autopilot names. On boot, the entrypoint stops a
+  stale legacy `system-cron` session before starting `cron-watchdog`, so
+  operators no longer need a manual kill/restart migration step.
 - Disable a job by setting `enabled: false` — do not delete the file
   (preserves history).
 - Runtime artefacts in this directory (`.cron.log`, `.pid`) are
@@ -106,7 +106,7 @@ returns before generating a shell wrapper or spawning an agent.
 
 ## tmux sessions
 
-The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that checks for `cron-system` and starts `scripts/cron-runtime.ts` whenever the runtime session is absent. Inspect it with `tmux attach -t cron-watchdog`; watchdog output tees to `/tmp/cron-watchdog.log`, and the runtime still tees to `/tmp/cron-system.log`. During migration, a legacy `system-cron` session blocks both `cron-watchdog` and `cron-system`; kill `system-cron` and restart/relaunch the sandbox to complete the migration.
+The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that checks for `cron-system` and starts `scripts/cron-runtime.ts` whenever the runtime session is absent. Inspect it with `tmux attach -t cron-watchdog`; watchdog output tees to `/tmp/cron-watchdog.log`, and the runtime still tees to `/tmp/cron-system.log`. During migration, a stale legacy `system-cron` session is stopped automatically before modern cron supervision starts.
 
 A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
 

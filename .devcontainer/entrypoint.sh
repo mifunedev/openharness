@@ -358,17 +358,19 @@ mkdir -p "$CRONS_PATH"
 # Bind-mounted; sandbox UID is synced to host UID above, so no chown.
 if [ -f "$HARNESS/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
   if gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
-    echo "[entrypoint] legacy system-cron tmux session detected — not starting cron-system or cron-watchdog; kill system-cron and restart/relaunch the sandbox when ready to migrate"
-  else
-    cat > /tmp/cron-watchdog.sh <<'CRON_WATCHDOG'
+    echo "[entrypoint] legacy system-cron tmux session detected — stopping it before starting cron-watchdog"
+    gosu sandbox tmux kill-session -t system-cron 2>/dev/null || true
+  fi
+
+  cat > /tmp/cron-watchdog.sh <<'CRON_WATCHDOG'
 #!/usr/bin/env bash
 set -u
 HARNESS="${HARNESS:-/home/sandbox/harness}"
 INTERVAL="${CRON_WATCHDOG_INTERVAL:-60}"
 while true; do
   if tmux has-session -t system-cron 2>/dev/null; then
-    echo "[$(date -Iseconds)] legacy system-cron detected; watchdog exiting"
-    exit 0
+    echo "[$(date -Iseconds)] legacy system-cron detected; stopping it before supervising cron-system"
+    tmux kill-session -t system-cron 2>/dev/null || true
   fi
   if ! tmux has-session -t cron-system 2>/dev/null; then
     echo "[$(date -Iseconds)] cron-system missing; starting cron-runtime.ts"
@@ -378,16 +380,15 @@ while true; do
   sleep "$INTERVAL"
 done
 CRON_WATCHDOG
-    chmod 755 /tmp/cron-watchdog.sh
-    chown -h "$(sandbox_ownership)" /tmp/cron-watchdog.sh 2>/dev/null || true
+  chmod 755 /tmp/cron-watchdog.sh
+  chown -h "$(sandbox_ownership)" /tmp/cron-watchdog.sh 2>/dev/null || true
 
-    if gosu sandbox tmux has-session -t cron-watchdog 2>/dev/null; then
-      echo "[entrypoint] cron-watchdog tmux session already running — skipping"
-    else
-      gosu sandbox tmux new-session -d -s cron-watchdog \
-        "HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log"
-      echo "[entrypoint] cron-watchdog tmux session started (supervises cron-system)"
-    fi
+  if gosu sandbox tmux has-session -t cron-watchdog 2>/dev/null; then
+    echo "[entrypoint] cron-watchdog tmux session already running — skipping"
+  else
+    gosu sandbox tmux new-session -d -s cron-watchdog \
+      "HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log"
+    echo "[entrypoint] cron-watchdog tmux session started (supervises cron-system)"
   fi
 fi
 

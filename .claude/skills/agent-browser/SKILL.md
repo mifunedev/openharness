@@ -123,7 +123,7 @@ agent-browser close
 
 ### Step 2d — DNS resolution check (tunnel hostnames)
 
-If the URL contains a hostname served by a tunnel or reverse proxy, the container's DNS may not resolve it yet. Check and fix:
+If the URL contains a hostname served by a Cloudflared tunnel or custom DNS route, the container's DNS may not resolve it yet. Check and fix:
 
 ```bash
 HOSTNAME=$(echo "$URL" | sed 's|https\?://||; s|/.*||; s|:.*||')

@@ -159,6 +159,7 @@ flowchart LR
 | `/watchdog` | Generic stuck/stale automation watchdog. Current primary action: inspect autopilot draft PRs, complete stale/stuck branches, and remove draft only after the PR is green/mergeable/clean; also kills tmux sessions frozen at usage-limit/resume prompts and reaps completed autopilot PR sessions only after the PR is terminal and the pane is idle. Never merges. |
 | `/health-check` | Triage host memory/disk/Docker before starting a stack; rank reclaim levers by safety×yield, prune build cache, confirm destructive removal |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
+| `/cloudflared` | Start a Cloudflared tunnel for a sandbox app port; default public sharing path for previews |
 | `/interview` | Adaptive pre-work clarifier — batches 2–4 task-specific questions via `AskUserQuestion`, then proceeds |
 | `/imagine` | One-shot draft PRD sketch from a fuzzy scenario → `.claude/specs/<slug>/spec.md` (gitignored scratch, includes mermaid diagram); feeds `/ship-spec --plan <path>` |
 | `/prd` | Generate a new PRD from a feature description |
@@ -183,15 +184,15 @@ flowchart LR
 Provision / destroy / repair are plain `docker compose` commands — see
 the `Lifecycle` section above. There is no dedicated skill.
 
-## Exposing apps
+## Sharing app previews
 
-There is no first-class exposure tool. For external access, stand up
-your own reverse proxy (nginx/Caddy/Traefik) or tunnel (cloudflared,
-ngrok, tailscale-funnel) in front of the sandbox — the base ships
-without any of these.
+Cloudflared is the default method for public access to sandbox app
+previews. Use the `/cloudflared` skill to start a tunnel for a local app
+port and report the generated URL.
 
-Long-running apps inside the sandbox go in named tmux sessions, related
-apps as stacked panes — see `context/rules/sandbox-processes.md`.
+Long-running apps and tunnels inside the sandbox go in named tmux
+sessions, related apps as stacked panes — see
+`context/rules/sandbox-processes.md`.
 
 ## What You Do
 

@@ -56,7 +56,7 @@ Open the printed pairing URL in your host browser. Reattach to the session at an
 tmux attach -t agent-t3code
 ```
 
-If you can't reach `localhost:3773` from the host, expose port 3773 from the sandbox container (compose overlay or `docker run -p 3773:3773`), or front it with a Cloudflare tunnel (`cloudflared`).
+If you need to share the T3 Code UI beyond your attached host session, use `/cloudflared 3773` to start a Cloudflared tunnel for the local port.
 
 ## Tips
 

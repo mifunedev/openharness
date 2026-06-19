@@ -16,6 +16,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Docs builds now run automatically only from the docs workflow on `main`/`master` pushes; root build, Harness CI, release validation, and `/eval` stay on the fast non-docs path ([#455](https://github.com/mifunedev/openharness/issues/455)).
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
+- Cron worktree pruning now preserves a live early-run tmux session whose name still matches its cron worktree basename, preventing active autopilot checkouts from disappearing before branch rename ([#445](https://github.com/mifunedev/openharness/issues/445)).
 ### Removed
 ### Deprecated
 ### Security

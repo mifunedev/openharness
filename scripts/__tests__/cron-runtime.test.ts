@@ -51,6 +51,7 @@ import {
   scheduleAll,
   sighupHandler,
   tmuxSessionName,
+  worktreeInUse,
 } from "../cron-runtime";
 
 // Mock only appendFileSync (the log() writer) as a no-op spy so reloadBody's
@@ -1103,6 +1104,14 @@ describe("fallback worktree pruning", () => {
     expect(state.dirty).toBe(true);
     expect(state.changes).toContain("?? uncommitted.txt");
     expect(state.ref).not.toBe("unknown");
+  });
+
+  it("treats a matching live tmux session name as fallback worktree liveness", () => {
+    const wt = path.join(tmp, "repo", ".worktrees", "cron", "cron-autopilot-0618-1505");
+
+    expect(worktreeInUse(wt, [], ["cron-autopilot-0618-1505"])).toBe(true);
+    expect(worktreeInUse(wt, [path.join(wt, "nested")], [])).toBe(true);
+    expect(worktreeInUse(wt, [path.join(tmp, "elsewhere")], ["autopilot-feat-445-example"])).toBe(false);
   });
 
   it("preserves dirty dead fallback worktrees but removes clean dead ones", () => {

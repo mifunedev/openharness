@@ -9,10 +9,12 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `heartbeat-logging-contract` eval probe guards that heartbeat runs keep structured memory logs and locked liveness appends ([#447](https://github.com/mifunedev/openharness/issues/447)).
 - `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
+- Heartbeat instructions now compute memory-log timestamps explicitly and route both memory/liveness writes through `scripts/locked-append.sh` instead of raw shared-log appends ([#447](https://github.com/mifunedev/openharness/issues/447)).
 ### Removed
 ### Deprecated
 ### Security

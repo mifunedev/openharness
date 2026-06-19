@@ -64,13 +64,36 @@ that catches anything time-sensitive without doing real work.
   include in reply as `NUDGE: <action>` (and `WATCHING: ...` for active or
   open-PR items) and note in `memory/<today>/log.md`. Clean watchdog run → no
   extra output.
-- Append the result to `memory/<today>/log.md` either way.
-- **Mandatory closing step (do this even after long action chains):**
-  append one liveness line to `crons/.cron.log`:
-  `printf '[%s] heartbeat: %s\n' "$(date -Iseconds)" "<status>" >> crons/.cron.log`
+- **Memory log contract (do this either way):** run a shell block that computes
+  `TODAY` and `HEARTBEAT_TIME`, then append a structured record to
+  `memory/$TODAY/log.md` through `scripts/locked-append.sh`. Do not paste shell
+  expressions into the markdown heading; the log must contain the computed time,
+  never a literal `$(date ...)` string.
+
+  ```bash
+  TODAY=$(date -u +%Y-%m-%d)
+  HEARTBEAT_TIME=$(date -u +%H:%M)
+  mkdir -p "memory/$TODAY"
+  scripts/locked-append.sh "memory/$TODAY/log.md" <<EOF
+
+  ## Heartbeat -- $HEARTBEAT_TIME UTC
+  - **Result**: <OK | ACTION | WATCHING | DRIFT | NUDGE | STALE-RALPH>
+  - **Action**: <one-line summary of action taken, or "nothing pressing">
+  - **Observation**: <one sentence with the most important signal>
+  EOF
+  ```
+
+- **Mandatory closing step (do this even after long action chains):** append one
+  liveness line to `crons/.cron.log` through `scripts/locked-append.sh`:
+
+  ```bash
+  STATUS="<status>"
+  printf '[%s] heartbeat: %s\n' "$(date -Iseconds)" "$STATUS" | scripts/locked-append.sh crons/.cron.log
+  ```
+
   where `<status>` is one of `OK`, `OK (N watching)`, `OK (stale ralph: <name>)`,
-  `OK (resolved: <item-snippet>)`, `OK (watchdog: <summary>)`. This is the cron's only liveness
-  signal — it MUST execute every pulse regardless of what else happened.
+  `OK (resolved: <item-snippet>)`, `OK (watchdog: <summary>)`. This is the cron's
+  only liveness signal — it MUST execute every pulse regardless of what else happened.
 
 ## Active items
 

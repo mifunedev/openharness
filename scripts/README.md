@@ -7,6 +7,7 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | ----------------- | ------------------------------------------------------------------ |
 | `install.sh`      | Curl-piped installer — bootstraps a fresh harness checkout         |
 | `ralph.sh`        | Ralph loop runner: `scripts/ralph.sh [--harness=…] <taskdesc>`     |
+| `repo-orientation-benchmark-score.mjs` | Scores the CB-004 repo-orientation A/B benchmark report |
 | `cron-runtime.ts` | Croner runtime — scans `crons/*.md`, schedules, fires each job     |
 | `__tests__/`      | Vitest unit tests (`vitest.config.ts` at repo root targets this)   |
 

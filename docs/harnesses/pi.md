@@ -44,6 +44,7 @@ Open Harness loads these project-local Pi packages from `.pi/settings.json`:
 - [`@trevonistrevon/pi-loop`](https://pi.dev/packages/@trevonistrevon/pi-loop?name=monitor) — Monitor and loop tools for background command monitoring and scheduled re-wakes. Use `MonitorCreate`, `MonitorList`, and `MonitorStop` for long-running commands; use `/loop` or `LoopCreate` for cron/event-triggered follow-up prompts.
 - [`@guwidoe/pi-prompt-suggester`](https://github.com/guwidoe/pi-prompt-suggester) — intent-aware next-prompt suggestions after assistant completions. Suggestions can appear as ghost text in the editor, with `/suggesterSettings` for interactive configuration and `/suggester status` / `/suggester reseed` for inspection and manual reseeding.
 - [`pi-autoresearch`](../integrations/pi-autoresearch.md) — autonomous metric-optimization loops for Pi. Use `/skill:autoresearch-create` to create `.auto/` session files, run benchmark iterations, log keep/revert decisions, and inspect results through `/autoresearch export`.
+- [`pi-dynamic-workflows`](../integrations/pi-dynamic-workflows.md) — Claude-Code-style dynamic workflow orchestration for Pi, pinned to the upstream `v1.0.1` commit. It registers a `workflow` tool that lets the model write deterministic JavaScript workflows, fan out to isolated in-memory subagents, and synthesize the results.
 
 Pi installs missing project packages automatically on startup after the project is trusted. In Open Harness, start package-backed plan mode with:
 
@@ -51,7 +52,7 @@ Pi installs missing project packages automatically on startup after the project 
 pi --plan
 ```
 
-Outside this project, try the packages manually with `pi -e npm:@narumitw/pi-goal`, `pi -e npm:@narumitw/pi-plan-mode --plan`, `pi -e npm:@tifan/pi-recap`, `pi -e npm:@trevonistrevon/pi-loop`, `pi -e npm:@guwidoe/pi-prompt-suggester@0.3.10`, or `pi -e npm:pi-autoresearch@1.6.0`.
+Outside this project, try the packages manually with `pi -e npm:@narumitw/pi-goal`, `pi -e npm:@narumitw/pi-plan-mode --plan`, `pi -e npm:@tifan/pi-recap`, `pi -e npm:@trevonistrevon/pi-loop`, `pi -e npm:@guwidoe/pi-prompt-suggester@0.3.10`, `pi -e npm:pi-autoresearch@1.6.0`, or `pi -e git:github.com/Michaelliv/pi-dynamic-workflows@dbc6800d1f725f7439e51705e2664c59484afcd1`.
 
 ## Prompt suggestions
 
@@ -127,6 +128,12 @@ Auth is layered: the extension uses Pi's own `openai-codex` provider auth first,
 The default task runtime state lives under `.pi/tasks/`, which is gitignored. Leave the default for per-checkout task state; set `PI_TASKS=off` to disable task tracking; set `PI_TASKS=<named-list>` to select a named task list; or pass an explicit task-list path when you intentionally want a shared list outside the gitignored default.
 
 `pi-loop` detects `@tintinweb/pi-tasks` over Pi's event bus. Because Open Harness loads `pi-tasks` by default, `pi-loop` delegates task management to that package; its native fallback `TaskCreate`/`TaskList`/`TaskUpdate`/`TaskDelete` tools and `/tasks` command only register in projects where `pi-tasks` is absent.
+
+## Dynamic workflows
+
+Use the `workflow` tool when a Pi task benefits from deliberate fan-out: multi-perspective code review, repository audits, research sweeps, or analysis pipelines. The parent model writes a constrained JavaScript workflow that calls `agent()`, `parallel()`, `pipeline()`, and `phase()`; the extension runs it in a deterministic VM sandbox and reports live phase/subagent progress inline.
+
+See [Pi dynamic workflows](../integrations/pi-dynamic-workflows.md) for the workflow script shape, available globals, and safety constraints.
 
 ## Slack integration
 

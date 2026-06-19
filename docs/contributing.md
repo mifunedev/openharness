@@ -55,6 +55,24 @@ claude      # Claude Code
 codex       # OpenAI Codex CLI
 ```
 
+### Local validation
+
+Use the fast harness build for routine development:
+
+```bash
+pnpm run build          # fast non-docs build
+pnpm run test:scripts   # root script + .pi extension tests
+bash .claude/skills/eval/run.sh
+```
+
+Docs builds are intentionally excluded from fast local, PR, Harness CI, and release validation. Run them only when you explicitly need to validate the Docusaurus site:
+
+```bash
+pnpm docs:build
+```
+
+The automatic docs build/deploy gate runs only from `.github/workflows/docs.yml` on pushes to `main` or `master` that touch docs-site paths.
+
 ### Installing a harness pack
 
 Multi-agent setups (e.g. Pi+Mom Slack bot) ship as harness packs. Install one by cloning it into the workspace and following its README:

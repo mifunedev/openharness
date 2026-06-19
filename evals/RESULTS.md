@@ -59,5 +59,6 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | watchdog-draft-prs | A | 2026-06-18 05:17 | PASS | conversation 2026-06-15 (generic watchdog + stale draft PR recovery) |
 | watchdog-stuck-sessions | A | 2026-06-18 05:17 | PASS | issue #240 (Codex zero-credit stuck autopilot sessions) 2026-06-17 |
 | wiki-readme-index | A | 2026-06-18 05:17 | PASS | issue #132 — wiki README index drift guard |
+| workflow-boundaries | A | 2026-06-19 21:28 | PASS | conversation 2026-06-19 (workflow consolidation, issue #259) |
 
 <!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->

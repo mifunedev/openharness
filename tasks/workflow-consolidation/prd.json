@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/259-workflow-consolidation",
+  "issue": 259,
+  "description": "Definition + decision pass to consolidate the harness workflow: name the canonical operative path (select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean) in AGENTS.md; DEPRECATE the executable-loop machinery (/orchestrate + context/rules/loop.md) in this PR via additive banners (pinned literals kept so loop probes stay green); guard the canonical definition with one tier-A probe; and file three sequenced backlog issues (A: complete loop/orchestrate removal, BLOCKED ON C; B: cron heartbeat dispatch; C: split /ship-spec into the four-skill spec-* family with two adversarial critic loops). Six files changed; no protected path touched. Pass-2 critics verified the deprecation-by-banner is probe-safe; 2 H findings mitigated → PROCEED.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Truth-up AGENTS.md 'The Loop' → 'The Workflow'",
+      "description": "Replace the contradicting loop shapes with the canonical operative path + hard boundaries + the spec-* family, honestly flagging the not-yet-built skills.",
+      "acceptanceCriteria": [
+        "In AGENTS.md (root; CLAUDE.md is its symlink alias), replace the narrative 'The Loop' section with '## The Workflow' naming the operative path select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean. Heading '## The Workflow' + the <!-- workflow-canonical --> anchor comment (US-003 probe).",
+        "HONESTY (H-finding): the spec-* skills do NOT exist yet (Issue C). Label each spec-* node in the embedded mermaid with '(/ship-spec today)' AND include the sentence: 'Until Issue C ships, /ship-spec performs spec-plan/spec-critique/spec-execute/spec-retro (see the /ship-spec Skills-table row).' The /ship-spec literal MUST appear in the section (US-003 guards it).",
+        "Embed the decision tree: the mermaid (incl. the spec-plan⇄spec-critique and build⇄audit adversarial loops) + the spec-* family table + the /spec-execute pre-merge pipeline table + the enumerated groom steps.",
+        "Hard-boundaries table rows for autopilot (select), the spec-* family (plan/critique/execute/retro), human (merge), runner (reset|clean) — each with owns / does NOT own / the seam.",
+        "Honest single-runner statement: 'autopilot is the designated sole runner.'",
+        "Do NOT edit the AGENTS.md Skills table (pinned by autopilot-executor-toggle.sh, watchdog-draft-prs.sh). Identify the narrative section's exact line range (its '## ' heading to the next '## ') and diff the Skills table before/after to confirm zero change. Run the full probe suite before push.",
+        "Conciseness gate does not cover root AGENTS.md; keep surrounding prose tight (diagram + tables are the substance)."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Six-file scope; no Skills-table or protected-path edits."
+    },
+    {
+      "id": "US-002",
+      "title": "Deprecate context/rules/loop.md",
+      "description": "Mark the executable-loop spec deprecated without deleting it or breaking the 4 loop probes, and reconcile its self-contradictory authority claim.",
+      "acceptanceCriteria": [
+        "Add a '> **DEPRECATED**' banner after the H1, before the first --- (NO '## ' heading inside it — loop probes scope via awk '/^## 2\\./'): the framework is deprecated; canonical is AGENTS.md § Workflow; full removal is Issue A.",
+        "RECONCILE THE INTRO AUTHORITY PROSE (H-finding): lines ~8-10 say 'this file is the executable spec ... this file leads.' Change to 'this file is preserved as a historical reference; the executable truth is AGENTS.md § Workflow.' Also update intro/See-Also 'AGENTS.md \"The Loop\"' → 'AGENTS.md § Workflow'.",
+        "Do NOT change §2/§7 node tables or STATUS: tokens, and do NOT delete the file — additive banner keeps loop-handoff-consistency.sh, loop-benchmark-gate.sh, loop-repeat-gate.sh, orchestrate-contract.sh green (verify via the suite). Deletion + probe retirement = Issue A.",
+        "Add a CHANGELOG.md ### Deprecated entry for context/rules/loop.md."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Deprecation banner + authority-prose reconcile; node tables untouched; loop.md NOT protected."
+    },
+    {
+      "id": "US-005",
+      "title": "Deprecate /orchestrate",
+      "description": "Mark the loop runner deprecated so the single runner (/autopilot) is unambiguous, without breaking its YAML frontmatter or orchestrate-contract.",
+      "acceptanceCriteria": [
+        "Add a '> **DEPRECATED**' banner to .claude/skills/orchestrate/SKILL.md AFTER the '# Orchestrate' H1, NEVER inside the YAML --- frontmatter (M-finding: inserting in the frontmatter breaks it while the file-wide orchestrate-contract grep still passes, masking the damage): /orchestrate is deprecated; canonical is AGENTS.md § Workflow; single runner is /autopilot; full removal is Issue A. (/orchestrate is NOT a protected path.)",
+        "Keep the literals orchestrate-contract.sh pins (additive banner) so that probe stays green; verify via the suite.",
+        "Add a CHANGELOG.md ### Deprecated entry for /orchestrate."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Pairs with US-002; frontmatter-safe placement; additive banner keeps orchestrate-contract green."
+    },
+    {
+      "id": "US-003",
+      "title": "Add the workflow-boundaries tier-A probe",
+      "description": "Guard the canonical definition (incl. the current-vs-aspirational caveat) from silent re-drift, anchored on structural markers via awk scoping.",
+      "acceptanceCriteria": [
+        "Add evals/probes/workflow-boundaries.sh (tier A, 3-state). SCOPE WITH AWK (not whole-file grep): extract the '## The Workflow' section (section-bounded, modeled on the loop probes). SKIPPED(2) if AGENTS.md absent; else PASS(0) only when ALL present in that section, else REGRESSION(1): the <!-- workflow-canonical --> comment, the operative-path markers in order (select, spec-plan, spec-critique, spec-execute, merge, then cycle node reset/clean), a single-runner phrase (designated sole runner), and the /ship-spec current-monolith caveat literal (so the honesty note cannot be silently dropped).",
+        "Probe exits 0 against the US-001 edit; full evals/probes/*.sh suite regressions=0.",
+        "Hand-insert one evals/RESULTS.md row (alphabetical) + one CHANGELOG.md [Unreleased] ### Added line; no wholesale RESULTS regen."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "awk-scoped; guards the /ship-spec caveat so the aspirational-skill honesty can't rot."
+    },
+    {
+      "id": "US-004",
+      "title": "File the three sequenced backlog issues",
+      "description": "Track the deferred mechanical work in order, each gated; Issue A blocked on Issue C so the framework is not removed before its replacement exists.",
+      "acceptanceCriteria": [
+        "File Issue A — Complete the removal of /orchestrate + context/rules/loop.md. BLOCKED ON Issue C (do not remove the framework before the spec-* replacements exist). First inventory skills carrying handoffs (grep -rl '^## Handoff' .claude/skills/) and remove/transform those sections; delete both files; retire the 4 probes (loop-handoff-consistency.sh, loop-benchmark-gate.sh, loop-repeat-gate.sh, orchestrate-contract.sh) with a proof-gate (soft-retire to SKIPPED → suite green → delete); retire the gitignored .claude/specs/autopilot-process-map/spec.md.",
+        "File Issue B — Single time-dispatch heartbeat for the weeklies: fold eval-weekly + cleanup-tasks behavior into crons/heartbeat.md as date-gated steps; autopilot stays its own timer. PROTECTED-PATH override required for crons/cleanup-tasks.md + scripts/cron-runtime.ts — each override note states verbatim what supersedes it (e.g. 'crons/cleanup-tasks.md is consolidated into crons/heartbeat.md as a date-gated step; the protected-path entry is superseded when this PR merges'). Probe retirement (cleanup-tasks-*) is evaluated in that PR's own critic pass, not pre-decided here. cron-runtime.ts is documented, not edited here.",
+        "File Issue C — Split /ship-spec into the four-skill spec-* family: /spec-plan (task artifacts + wiki) · /spec-critique (2 adversarial critics + approve, loops with /spec-plan until satisfied) · /spec-execute (build ⇄ audit adversarial loop → spec-retro → improve → groom) · /spec-retro (the retro phase). Two adversarial critic loops (plan and build). I/O contract: /spec-plan takes a topic / plan / artifact folder and produces tasks/<slug>/; /spec-critique, /spec-execute, /spec-retro are each pointed at a tasks/<slug>/ folder and run independently or fan out at scale (via /delegate) — the task folder is the shared interface. PROTECTED-PATH override required: ship-spec is on .claude/protected-paths.txt:26 and 5 probes pin its literals (ship-spec-ready-finalization.sh, submitted-by-trailers.sh, autopilot-upstream-default.sh, autopilot-pi-agent.sh, autopilot-executor-toggle.sh) — override note + keep all 5 green (extends, never removes, the ready-finalization contract).",
+        "Each issue references this PRD; each is built as its own PR (not bundled). Filing touches no protected path (text only)."
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Finalize action; deletions/edits live in the future issue PRs behind override notes; Issue A blocked on C."
+    }
+  ]
+}

@@ -8,10 +8,15 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ## [Unreleased]
 
+### Deprecated
+- `context/rules/loop.md` — the executable decision-tree spec is deprecated; the canonical workflow is now `AGENTS.md` § The Workflow (operative path `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`). Full removal tracked in [#263](https://github.com/ryaneggz/openharness/issues/263).
+- `/orchestrate` — the executable-loop runner is deprecated; the single runner is `/autopilot`. Full removal tracked in [#263](https://github.com/ryaneggz/openharness/issues/263).
+
 ### Removed
 - Stale database-overlay documentation; the base now points database users to pack/user-supplied compose overrides instead, with a regression test guarding documented compose-file paths ([#181](https://github.com/ryaneggz/openharness/issues/181)).
 
 ### Added
+- `workflow-boundaries` eval probe guards that `AGENTS.md` § The Workflow names the canonical operative path (`select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`), the single runner, and the `/ship-spec`-today caveat — consolidating the harness workflow and deprecating the executable-loop machinery ([#259](https://github.com/ryaneggz/openharness/issues/259)).
 - Codify the **Monitored async loop** Advisor/executor variant (`context/rules/advisor-model.md` § Pipeline Variants) — the Advisor hosts a detached `scripts/ralph.sh --loop` in a named tmux session and owns the `STATUS:` sentinel watch (never delegated to a sub-agent that returns early), the loop surfaces blocks for Advisor resolution instead of silently shipping them, and finalize routes through the promotable gate (draft → `/pr-audit` → ready); guarded by the `advisor-monitored-loop` tier-A probe ([#257](https://github.com/ryaneggz/openharness/issues/257)).
 - Default Pi `fff` file-search support: `.pi/settings.json` pins `npm:@ff-labs/pi-fff@0.9.5` (adds the `ffgrep`/`fffind` tools and frecency-ranked `@`-mention autocomplete, backed by the prebuilt-binary `@ff-labs/fff-node` binding — no Rust toolchain needed), `.pi/APPEND_SYSTEM.md` gains a soft "prefer fff when available" hint that keeps native `grep`/`find` as the fallback (not `override` mode), and `docs/integrations/pi-fff.md` + `wiki/pi-fff.md` cover modes, verify steps, the disable path, and troubleshooting ([#261](https://github.com/ryaneggz/openharness/issues/261)).
 - `harness-audit-shared-memory` eval probe guards that `/harness-audit` reads durable long-term memory from `AUDIT_LOG_ROOT` in cron worktrees while preserving source inspection via `AUDIT_ROOT` ([#432](https://github.com/mifunedev/openharness/issues/432)).

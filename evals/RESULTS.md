@@ -48,6 +48,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | pnpm-audit-ci-gate | A | 2026-06-19 04:59 | PASS | issue #171 — pnpm security audits must run in CI |
 | pr-audit-duplicate-issue-refs | A | 2026-06-19 04:59 | PASS | issue #439 — /pr-audit must flag duplicate open PRs that reference the same issue |
 | ralph-fallback-order | A | 2026-06-19 04:59 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
+| repo-map-contract | A | 2026-06-19 07:23 | PASS | issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims |
 | retro-deterministic-contract | A | 2026-06-19 04:59 | PASS | issue #443 — /retro deterministic output and self-contained helper contract |
 | rl-delegation-write-worker | A | 2026-06-19 04:59 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
 | ship-spec-ready-finalization | A | 2026-06-19 04:59 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |

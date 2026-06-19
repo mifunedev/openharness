@@ -60,11 +60,17 @@ grep -Fq 'tmux rename-session -t "$SESSION" "$SAFE_SESSION"' "$SKILL" || missing
 grep -Fq 'do **not** spawn a second advisor session' "$SKILL" || missing+=("same Pi session is Advisor runtime")
 grep -Fq 'autopilot-<branch>' "$CRON" || missing+=("cron documents autopilot-<branch> session naming")
 
-# Duplicate guard: active tmux session, linked PR, or active marker suppresses duplicate work.
+# Duplicate guard: active tmux session, linked PR, local open-PR issue refs, or active marker suppresses duplicate work.
 grep -Fq 'ACTIVE_MARKER="/tmp/$SAFE_SESSION.active"' "$SKILL" || missing+=("active marker path")
 grep -Fq 'tmux has-session -t "$SAFE_SESSION"' "$SKILL" || missing+=("tmux duplicate guard")
 grep -F 'LINKED_PR=$(gh pr list' "$SKILL" | grep -Fq -- '--head "$BRANCH"' || missing+=("branch PR duplicate guard")
-grep -F 'LINKED_ISSUE_PR=$(gh issue list' "$SKILL" | grep -Fq -- '--search "$ISSUE_NUM linked:pr"' || missing+=("linked issue PR duplicate guard")
+grep -Fq 'OPEN_PRS_JSON="/tmp/autopilot-open-prs-$$.json"' "$SKILL" || missing+=("bulk open PR cache for issue dedupe")
+grep -Fq 'issue_open_pr_refs()' "$SKILL" || missing+=("local issue-to-open-PR reference helper")
+grep -Fq 'closingIssuesReferences' "$SKILL" || missing+=("linked metadata participates in issue PR dedupe")
+grep -Fq 'headRefName' "$SKILL" || missing+=("head branch participates in issue PR dedupe")
+grep -Fq 'body,closingIssuesReferences' "$SKILL" || missing+=("PR body fetched for issue PR dedupe")
+grep -F 'LINKED_ISSUE_PR=$(issue_open_pr_refs' "$SKILL" | grep -Fq '"$ISSUE_NUM"' || missing+=("issue PR reference duplicate guard")
+grep -Fq '[dry-run] dedupe: $DEDUPE_STATE' "$SKILL" || missing+=("dry-run surfaces dedupe state")
 grep -Fq '[ -e "$ACTIVE_MARKER" ]' "$SKILL" || missing+=("active marker duplicate guard")
 grep -Fq 'cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER"; }' "$SKILL" || missing+=("active marker cleanup helper")
 grep -Fq 'Clean the active marker on finalized PR paths' "$SKILL" || missing+=("finalized PR paths clean active marker")

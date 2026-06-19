@@ -1,6 +1,7 @@
 ---
 name: retro
 argument-hint: "[--dry-run] [--focus <subsystem>]"
+allowed-tools: Read, Grep, Bash, Edit
 description: |
   Scientific session-closing retrospective: scan the current conversation,
   turn each signal into a falsifiable hypothesis, cite session evidence for
@@ -24,6 +25,8 @@ Scientific session-closing retrospective. Turn the current conversation's signal
 
 This is the deliberate "Improve" pass of the Memory Improvement Protocol defined in `context/rules/memory.md`, now evidence-driven. Running it as a named skill turns an optional afterthought into a first-class, propose-then-confirm operation — and the scientific layer guards against overfitting a single session into a durable lesson.
 
+Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for deterministic checks and log rendering; use `${CLAUDE_SKILL_DIR}/references/report-schema.md` as the output contract. Shared repo primitives such as `scripts/locked-append.sh` are allowed only for cross-skill infrastructure.
+
 ## When to use
 
 - `/retro` invoked explicitly to close a session.
@@ -42,6 +45,28 @@ Key boundary: `/retro` is *session-scoped reflection*. The lint/audit skills abo
 ## Scope
 
 Current conversation only. `/retro` does not read prior daily logs, prior sessions, or the `~/.claude/projects/...` auto-memory store. It works from what is already in context.
+
+## Deterministic contract
+
+Before writing anything except the required log entry, produce a report that follows `${CLAUDE_SKILL_DIR}/references/report-schema.md`. At minimum it contains:
+
+```markdown
+## Session signals
+## Hypotheses
+| ID | Subsystem | Hypothesis | Evidence for | Evidence against | Verdict | Confidence | Promotion |
+|----|-----------|------------|--------------|------------------|---------|------------|-----------|
+## Promotion candidates
+## Log entry
+STATUS: RETRO-DONE
+```
+
+Run the helper when a report artifact exists:
+
+```bash
+bash "${CLAUDE_SKILL_DIR}/scripts/validate-retro-report.sh" /path/to/retro-report.md
+```
+
+If no artifact exists because the response is generated inline, still follow the schema exactly. The final non-empty line must be `STATUS: RETRO-DONE`.
 
 ## The scientific loop
 
@@ -106,7 +131,7 @@ For each signal, write one falsifiable statement and tag it with its subsystem. 
 
 ### 3. Test each hypothesis
 
-For every hypothesis, cite session evidence for it and actively search for evidence against it. Then assign a **verdict** (`supported` / `refuted` / `inconclusive`) and a **confidence** (`low` / `medium` / `high`) per the rubric above.
+For every hypothesis, cite session evidence for it and actively search for evidence against it. Then assign a **verdict** (`supported` / `refuted` / `inconclusive`) and a **confidence** (`low` / `medium` / `high`) per the rubric above. Record every hypothesis in the required `## Hypotheses` table, including `Evidence against`; write `none found in-session` only after actively checking.
 
 ### 4. Qualify filter
 
@@ -160,15 +185,21 @@ Before writing to `memory/MEMORY.md` or `context/IDENTITY.md`, present the propo
 
 ```
 Proposed MEMORY.md addition(s):
-- YYYY-MM-DD: <one-sentence lesson> [<subsystem> · <confidence>] — basis: <one clause>
+- YYYY-MM-DD: <one-sentence lesson> [<subsystem> · <confidence> · harden|proceduralize|eval] — probe: <id> | basis: <one clause>
 
 Proposed IDENTITY.md addition(s):
-- <prescriptive principle, "always X" or "never Y"> [<subsystem> · <confidence>] — basis: <one clause>
+- <prescriptive principle, "always X" or "never Y"> [<subsystem> · <confidence> · harden|proceduralize|eval] — probe: <id> | basis: <one clause>
 
 Type APPROVE to write, SKIP to discard any item, or EDIT <n> <new text> to revise.
 ```
 
-Do not write to either file until the user responds. Log-tier entries do not require approval. If `--dry-run` was passed, skip writing entirely and report what would have been written.
+Do not write to either file until the user responds. Log-tier entries do not require approval. If `--dry-run` was passed, write only the required `memory/<UTC-date>/log.md` entry with `Result: DRY-RUN`; never write MEMORY.md or IDENTITY.md in dry-run mode.
+
+Before proposing, pipe candidate lines through the self-contained duplicate helper and skip exact/substantive duplicates it reports:
+
+```bash
+printf "%s\n" "<candidate line>" | bash "${CLAUDE_SKILL_DIR}/scripts/check-memory-duplicates.sh"
+```
 
 ### 7. Write approved changes
 
@@ -196,16 +227,19 @@ TODAY=$(date -u +%Y-%m-%d)
 mkdir -p "memory/$TODAY"
 ```
 
-Then append to `memory/<UTC-date>/log.md`:
+Render the log entry with the skill-local helper, then append it with the shared locked append primitive:
 
-```markdown
-## Retro -- HH:MM UTC
-- **Result**: OP | DRY-RUN | SKIPPED-TRIVIAL
-- **Subsystems**: <which of the 6 produced signals, or "focus: <name>">
-- **Hypotheses**: <total formed> (supported <n> / refuted <n> / inconclusive <n>)
-- **Promoted**: <n> to MEMORY.md, <n> to IDENTITY.md
-- **Observation**: <one sentence — strongest supported finding, or "no durable patterns">
+```bash
+LOG_ENTRY=$(bash "${CLAUDE_SKILL_DIR}/scripts/render-log-entry.sh" \
+  --result OP \
+  --subsystems "<which of the 6 produced signals, or focus: name>" \
+  --hypotheses <total> --supported <n> --refuted <n> --inconclusive <n> \
+  --memory <n> --identity <n> \
+  --observation "<one sentence — strongest supported finding, or no durable patterns>")
+printf "%s\n" "$LOG_ENTRY" | scripts/locked-append.sh "memory/$TODAY/log.md"
 ```
+
+Use `--result DRY-RUN` for dry-runs and `--result SKIPPED-TRIVIAL` for trivial skips.
 
 ## MEMORY.md vs IDENTITY.md boundary
 
@@ -217,6 +251,31 @@ Then append to `memory/<UTC-date>/log.md`:
 | **Changed how** | Append-only; entries are never edited | Deliberate revision; graduation is rare |
 
 A lesson graduates from MEMORY.md to IDENTITY.md when it has recurred across multiple sessions or contexts, not from a single run. Do not graduate prematurely.
+
+## Example
+
+```markdown
+## Session signals
+- The session required manual release, PR land, and duplicate-PR cleanup command sequences.
+
+## Hypotheses
+| ID | Subsystem | Hypothesis | Evidence for | Evidence against | Verdict | Confidence | Promotion |
+|----|-----------|------------|--------------|------------------|---------|------------|-----------|
+| H1 | memory scaffolding | Release and PR cleanup have deterministic substeps worth scripting. | Repeated command sequences handled release verification and PR cleanup. | Canonical PR choice and /teach prose still required judgment. | supported | high | MEMORY |
+| H2 | docs | Every workflow gap found this session belongs in docs. | Several gaps were procedural. | Some were already encoded in skills and would be duplicate memory. | inconclusive | low | discarded |
+
+## Promotion candidates
+Proposed MEMORY.md addition(s):
+- 2026-06-18: Multi-step GitHub release and PR-cleanup workflows have deterministic substeps that should be scripted while leaving judgment gates explicit. [memory scaffolding · high · proceduralize] — probe: memory-scaffolding-20260618 | basis: release and PR cleanup repeated as command sequences
+
+Proposed IDENTITY.md addition(s):
+- none
+
+## Log entry
+- would append the rendered `Retro -- HH:MM UTC` block.
+
+STATUS: RETRO-DONE
+```
 
 ## Auto-trigger note
 
@@ -234,6 +293,7 @@ Claude Code skills cannot self-trigger. True automatic firing at session end wou
 - **Overfitting one session.** Single-session support is not a principle; that is the MEMORY.md → IDENTITY.md graduation bar.
 - **Confirmation bias.** Every hypothesis must be tested for disconfirming evidence, not just supporting evidence.
 - **Scope creep into the lint tools.** Point at `/context-audit`, `/wiki-lint`, `/skill-lint`, etc.; do not run them inline.
+- **Bypassing the schema/scripts.** The evidence table, duplicate check, and rendered log entry are part of the contract, not optional formatting.
 
 ## Handoff
 

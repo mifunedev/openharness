@@ -212,28 +212,62 @@ release_overlap_lock() { [ -n "${OVERLAP_PIDFILE:-}" ] && rm -f "$OVERLAP_PIDFIL
 
 GitHub issues labeled `autopilot` ARE the work queue. There are no time throttles and no in-repo backlog — the user steers by filing `autopilot`-labeled issues.
 
-**Queue check** — actionable = open, labeled `autopilot`, NOT labeled `autopilot-blocked`, and with no linked PR (GitHub's `linked:pr` qualifier matches PRs with closing keywords — our `Closes #N` convention):
+**Queue check** — actionable = open, labeled `autopilot`, NOT labeled `autopilot-blocked`, and with **no open PR reference**. Do **not** rely only on GitHub's `linked:pr` qualifier: PRs targeting `development` may carry `Closes #N` in their body while `closingIssuesReferences` / `linked:pr` stays empty until default-branch semantics apply. Enumerate open PRs once, then dedupe each candidate issue locally by linked metadata, head branch, title, and body text.
 
 ```bash
+OPEN_PRS_JSON="/tmp/autopilot-open-prs-$$.json"
+QUEUE_JSON="/tmp/autopilot-queue-$$.json"
+gh pr list --repo "$AUTOPILOT_REPO" --state open --limit 200 \
+  --json number,title,headRefName,body,closingIssuesReferences > "$OPEN_PRS_JSON"
 gh issue list --repo "$AUTOPILOT_REPO" --state open --label autopilot \
-  --search "-linked:pr -label:autopilot-blocked" \
-  --json number,title,createdAt --jq 'sort_by(.createdAt)'
+  --search "-label:autopilot-blocked" \
+  --json number,title,createdAt > "$QUEUE_JSON"
+
+issue_open_pr_refs() {
+  local issue="$1"
+  jq -r --arg issue "$issue" --argjson issue_num "$issue" '
+    def issue_re: "(^|[^0-9])" + $issue + "($|[^0-9])";
+    .[]
+    | select(
+        ([.closingIssuesReferences[]?.number] | index($issue_num))
+        or ((.headRefName // "") | test(issue_re))
+        or ((.title // "") | test("#" + $issue + "|issue[[:space:]]*" + $issue; "i"))
+        or ((.body // "") | test("#" + $issue + "|close[sd]?[[:space:]]+#" + $issue + "|fix(e[sd])?[[:space:]]+#" + $issue + "|resolve[sd]?[[:space:]]+#" + $issue; "i"))
+      )
+    | "#\(.number) \(.headRefName) \(.title)"
+  ' "$OPEN_PRS_JSON"
+}
+
+ISSUE_NUM=""; TITLE=""; CREATED=""; DEDUPE_STATE="none"
+while IFS= read -r row; do
+  n=$(jq -r .number <<<"$row")
+  refs=$(issue_open_pr_refs "$n" || true)
+  if [ -n "$refs" ]; then
+    DEDUPE_STATE="${DEDUPE_STATE}; issue #$n has open PR(s): $(printf '%s' "$refs" | paste -sd ', ' -)"
+    echo "DEDUPE: issue #$n already has open PR reference(s): $refs"
+    continue
+  fi
+  ISSUE_NUM="$n"
+  TITLE=$(jq -r .title <<<"$row")
+  CREATED=$(jq -r .createdAt <<<"$row")
+  break
+ done < <(jq -c 'sort_by(.createdAt)[]' "$QUEUE_JSON")
 ```
 
-- **Oldest actionable issue wins** → `ISSUE_NUM`, `TITLE`, `CREATED`. Derive `SLUG` from the title (kebab-case, ≤5 words). Set:
+- **Oldest actionable issue wins** → when `ISSUE_NUM` is non-empty, derive `SLUG` from the title (kebab-case, ≤5 words). Set:
   ```
   SELECTION_MODE=queue
-  SELECTION_RATIONALE="Queue selection: implementing open autopilot issue #$ISSUE_NUM (\"$TITLE\") — the oldest actionable ticket (filed $CREATED) with no open PR."
+  SELECTION_RATIONALE="Queue selection: implementing open autopilot issue #$ISSUE_NUM (\"$TITLE\") — the oldest actionable ticket (filed $CREATED) with no open PR reference after local PR dedupe."
   ```
-  Compute the expected work branch and dedupe before launching work:
+  Compute the expected work branch and run a final launch dedupe before starting work:
   ```bash
   BRANCH="feat/$ISSUE_NUM-$SLUG"
   SAFE_SESSION=$(safe_branch_session "$BRANCH")   # autopilot-feat-123-slug
   ACTIVE_MARKER="/tmp/$SAFE_SESSION.active"
   LINKED_PR=$(gh pr list --repo "$AUTOPILOT_REPO" --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
-  LINKED_ISSUE_PR=$(gh issue list --repo "$AUTOPILOT_REPO" --state open --label autopilot --search "$ISSUE_NUM linked:pr" --json number --jq '.[0].number // empty')
+  LINKED_ISSUE_PR=$(issue_open_pr_refs "$ISSUE_NUM" || true)
   if tmux has-session -t "$SAFE_SESSION" 2>/dev/null || [ -n "$LINKED_PR" ] || [ -n "$LINKED_ISSUE_PR" ] || [ -e "$ACTIVE_MARKER" ]; then
-    echo "DEDUPE: issue #$ISSUE_NUM / $SLUG already active (session=$SAFE_SESSION pr=$LINKED_PR linked_issue_pr=$LINKED_ISSUE_PR marker=$ACTIVE_MARKER); skipping"
+    echo "DEDUPE: issue #$ISSUE_NUM / $SLUG already active (session=$SAFE_SESSION branch_pr=$LINKED_PR issue_pr_refs=$LINKED_ISSUE_PR marker=$ACTIVE_MARKER); skipping"
     # memory log Result: NOTHING-NEW, liveness NOTHING-NEW, close_no_pr_session, exit 0; do not touch keep-marker.
     close_no_pr_session
     exit 0
@@ -272,6 +306,7 @@ gh issue list --repo "$AUTOPILOT_REPO" --state open --label autopilot \
 [dry-run] selected: #$ISSUE_NUM ($SLUG)        # research path: "would file + build: <finding>"
 [dry-run] executor: $EXECUTOR
 [dry-run] open autopilot PRs created today: $OPEN_TODAY (cap 6); total open: $TOTAL_OPEN (ceiling 10)
+[dry-run] dedupe: $DEDUPE_STATE
 [dry-run] exiting without calling /ship-spec, /delegate, or scripts/ralph.sh
 ```
 

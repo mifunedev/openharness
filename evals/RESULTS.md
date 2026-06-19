@@ -9,6 +9,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | agent-browser-cli | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-07 (agent-browser 0.8.5 CLI) |
 | autopilot-executor-toggle | A | 2026-06-18 05:17 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
 | autopilot-no-pr-session-close | A | 2026-06-18 05:17 | PASS | issue #209 (autopilot no-PR tmux session closure) 2026-06-16 |
+| autopilot-open-pr-reference-dedupe | A | 2026-06-19 17:47 | PASS | issue #437 — autopilot must not start duplicate work when open PRs reference the same issue without linked-PR metadata |
 | autopilot-pi-agent | A | 2026-06-18 05:17 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14; issue #126 (kept Pi overlap lock release) 2026-06-14; issue #142 (worktree-by-default, skip→worktree) 2026-06-14 |
 | autopilot-preflight-gate | A | 2026-06-18 05:17 | PASS | issue #194 (deterministic autopilot caps preflight gate) 2026-06-15 |
 | autopilot-upstream-default | A | 2026-06-18 05:17 | PASS | issue #420 — future autopilots must target canonical repo, not personal fork |
@@ -30,6 +31,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | eval-runner-exit | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
 | harness-audit-empty-output-gate | A | 2026-06-18 05:17 | PASS | issue #246 — /harness-audit must fail closed on empty auditor outputs |
 | harness-audit-memory-path | A | 2026-06-18 05:17 | PASS | issue #183 — /harness-audit must inspect the active worktree, not a hardcoded root |
+| harness-audit-shared-memory | A | 2026-06-19 17:47 | PASS | issue #432 — /harness-audit must load durable memory from shared log root in cron worktrees |
 | harness-ci-core-paths | A | 2026-06-18 05:17 | PASS | #165 — core sandbox config files must trigger harness CI |
 | harness-ci-hooks-paths | A | 2026-06-18 05:17 | PASS | issue #202 — credential/security hook changes must trigger harness CI |
 | health-check-docker-stats | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
@@ -43,8 +45,10 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | orchestrate-contract | A | 2026-06-18 05:17 | PASS | issue #160 — /orchestrate contract; issue #175 — reserved /loop command rename |
 | owned-surface-guard | A | 2026-06-18 05:17 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | pnpm-audit-ci-gate | A | 2026-06-18 05:17 | PASS | issue #171 — pnpm security audits must run in CI |
+| pr-audit-duplicate-issue-refs | A | 2026-06-19 17:47 | PASS | issue #439 — /pr-audit must flag duplicate open PRs that reference the same issue |
 | prompt-miner-schema-compat | A | 2026-06-19 16:09 | PASS | issue #253 — prompt-miner JSONL dual-schema (Claude+Pi) drift guard |
 | ralph-fallback-order | A | 2026-06-18 05:17 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
+| retro-deterministic-contract | A | 2026-06-19 17:47 | PASS | issue #443 — /retro deterministic output and self-contained helper contract |
 | rl-delegation-write-worker | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
 | sandbox-boot-guard-ci | A | 2026-06-19 18:45 | PASS | issue #449 (sandbox image build CI guard) 2026-06-19 |
 | ship-spec-ready-finalization | A | 2026-06-18 05:17 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |

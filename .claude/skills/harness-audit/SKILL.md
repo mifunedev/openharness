@@ -87,8 +87,15 @@ ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
 # Worktrees
 git -C "$AUDIT_ROOT" worktree list 2>/dev/null
 
-# Recent long-term memory (tracked source artifact)
-tail -40 "$AUDIT_ROOT/memory/MEMORY.md" 2>/dev/null
+# Recent long-term memory (durable shared artifact). In cron worktree mode,
+# source inspection stays on AUDIT_ROOT, but long-term lessons live in the
+# shared checkout resolved as AUDIT_LOG_ROOT.
+if [ -r "$AUDIT_LOG_ROOT/memory/MEMORY.md" ]; then
+  printf 'long_term_memory: loaded %s\n' "$AUDIT_LOG_ROOT/memory/MEMORY.md"
+  tail -40 "$AUDIT_LOG_ROOT/memory/MEMORY.md"
+else
+  printf 'long_term_memory: missing-or-unreadable %s\n' "$AUDIT_LOG_ROOT/memory/MEMORY.md"
+fi
 ```
 
 Assemble a **Context Snapshot** (compact markdown, ~300 words):
@@ -221,7 +228,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Memory system quality** — Read the 5 most recent daily logs in `memory/`. Are entries following the Memory Improvement Protocol (Result/Action/Observation/Duration)? Is quality declining over time (shorter entries, missing fields)? Are entries actually present?
+> 1. **Memory system quality** — Use the Context Snapshot's `AUDIT_LOG_ROOT` memory/log context (not `AUDIT_ROOT` when they differ) to inspect the 5 most recent daily logs. Are entries following the Memory Improvement Protocol (Result/Action/Observation/Duration)? Is quality declining over time (shorter entries, missing fields)? Are entries actually present? Report if `long_term_memory` is `missing-or-unreadable`.
 >
 > 2. **Wiki utilization** — List all files under `wiki/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
 >
@@ -229,7 +236,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 4. **Agent worktree status** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list` and `git branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
 >
-> 5. **Skill usage patterns** — Read `memory/MEMORY.md` and recent daily logs. Which skills appear in memory entries (evidence of use)? Which skills exist in `.claude/skills/` but never appear in logs (potentially stale or unknown)?
+> 5. **Skill usage patterns** — Use the Context Snapshot's long-term memory and recent daily-log excerpts from `AUDIT_LOG_ROOT`; keep `.claude/skills/` existence checks on `AUDIT_ROOT`. Which skills appear in memory entries (evidence of use)? Which skills exist in `.claude/skills/` but never appear in logs (potentially stale or unknown)?
 >
 > **Return format (Ultra compression):**
 > ```

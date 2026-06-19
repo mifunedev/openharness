@@ -12,6 +12,10 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - Stale database-overlay documentation; the base now points database users to pack/user-supplied compose overrides instead, with a regression test guarding documented compose-file paths ([#181](https://github.com/ryaneggz/openharness/issues/181)).
 
 ### Added
+- `harness-audit-shared-memory` eval probe guards that `/harness-audit` reads durable long-term memory from `AUDIT_LOG_ROOT` in cron worktrees while preserving source inspection via `AUDIT_ROOT` ([#432](https://github.com/mifunedev/openharness/issues/432)).
+- `harness-audit` wiki entry and Context Snapshot memory load-status diagnostics preserve the shared-memory model salvaged from duplicate #432 PRs ([#441](https://github.com/mifunedev/openharness/issues/441)).
+- `autopilot-open-pr-reference-dedupe` eval probe guards that issue selection checks open PR metadata, branch names, titles, and bodies before launching duplicate autopilot work ([#437](https://github.com/mifunedev/openharness/issues/437)).
+- `pr-audit-duplicate-issue-refs` eval probe guards that `/pr-audit` keeps duplicate open-PR issue references visible as a read-only triage flag ([#439](https://github.com/mifunedev/openharness/issues/439)).
 - `pi-dynamic-workflows` is now a default project-local Pi package pinned to the upstream `v1.0.1` commit, with docs for the `workflow` tool's deterministic JavaScript fan-out model and package-pin test coverage ([#451](https://github.com/mifunedev/openharness/issues/451)).
 - `heartbeat-logging-contract` eval probe guards that heartbeat runs keep structured memory logs and locked liveness appends ([#447](https://github.com/mifunedev/openharness/issues/447)).
 - `sandbox-boot-guard` CI workflow validates the sandbox compose configuration and locally builds the devcontainer image for boot-path changes, guarded by the `sandbox-boot-guard-ci` eval probe ([#449](https://github.com/mifunedev/openharness/issues/449)).
@@ -73,6 +77,8 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - `/wiki-ingest` hardening — a new step 7 directs the orchestrator to regenerate the `wiki/README.md` index (via `/wiki-lint` or its atomic fallback) whenever a tracked entry ships as a deliverable, plus a new `references/concurrent-ingest-worktrees.md` documenting the isolated-worktree pattern for concurrent ingests / preserving unrelated branch state ([#75](https://github.com/ryaneggz/openharness/pull/75)).
 
 ### Changed
+- `/pr-audit` now documents a duplicate issue-reference flag so multiple open PRs that close/reference the same issue are grouped for human canonical-PR selection instead of appearing as unrelated conflicts ([#439](https://github.com/mifunedev/openharness/issues/439)).
+- `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 - Slack Pi extension startup now silently disables itself when Slack tokens are unset instead of surfacing a missing-token warning.
 - Cron runtime singleton lock acquisition now uses atomic exclusive pidfile creation with stale-lock retry semantics, preventing concurrent runtime starts from both claiming `crons/.pid` ([#233](https://github.com/ryaneggz/openharness/issues/233)).
 - Cron worktree cleanup now preserves dirty or untracked fallback worktrees and logs `WORKTREE_DIRTY` with the ref and changed files for manual salvage instead of force-removing the only copy of WIP ([#227](https://github.com/ryaneggz/openharness/issues/227)).
@@ -112,6 +118,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 - Extend the typecheck gate to `release.yml`'s validate job — it now runs `Typecheck (workspace packages)` (`pnpm --filter './packages/**' ... typecheck`) and `Typecheck (oh CLI — npm standalone)` (`npm --prefix packages/oh ci && ... typecheck`) before building the image, mirroring `ci-harness.yml` so the release pipeline is a superset of the PR pipeline's checks ([#53](https://github.com/ryaneggz/openharness/issues/53)).
 - Warn in `/delegate` that the `implementer`/`pm`/`critic` sub-agent types are read-only (`tools: Read, Glob, Grep, Bash`) and silently make zero file changes — at both the Worker-configuration block and the §Reference Key Resources table — and recommend `subagent_type: general-purpose` (or `claude`) for any worker that must `Write`/`Edit` files; a new `rl-delegation-write-worker` `/eval` probe guards the warning against regression ([#57](https://github.com/ryaneggz/openharness/issues/57)).
 ### Fixed
+- Autopilot issue selection now dedupes against open PR references in linked metadata, branch names, titles, and bodies before starting work, preventing repeated PRs for the same issue when GitHub linked-PR metadata is empty ([#437](https://github.com/mifunedev/openharness/issues/437)).
 - Cron worktree pruning now preserves a live early-run tmux session whose name still matches its cron worktree basename, preventing active autopilot checkouts from disappearing before branch rename ([#445](https://github.com/mifunedev/openharness/issues/445)).
 - Heartbeat instructions now compute memory-log timestamps explicitly and route both memory/liveness writes through `scripts/locked-append.sh` instead of raw shared-log appends ([#447](https://github.com/mifunedev/openharness/issues/447)).
 - Devcontainer Slack restore no longer shell-sources `.devcontainer/.env` at boot; it imports only the Slack env keys it needs with shell-safe quoting, preserving optional allowlists while treating the env file as data ([#231](https://github.com/ryaneggz/openharness/issues/231)).
@@ -292,6 +299,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [2026.5.15] - 2026-05-15
 
 ### Added
+- `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed
 - `oh config slack` wizard UX overhaul. Token prompts now echo `●` per keystroke (was: silent — looked frozen) via a TTY-aware raw-mode `askSecret` that handles backspace, Ctrl-U, and Ctrl-C; piped/non-TTY stdin still uses the legacy readline fallback as `askSecretPiped` so `echo "" | oh config slack` keeps working. Flow is reframed into four numbered steps `[1/4] … [4/4]` with inline "Where:" hints and clickable URLs (OSC 8 hyperlinks; fall back to `label (url)` on legacy terminals). Each input shows `✓ valid prefix` / `✓ N user(s) accepted` after validation. A final summary screen lists the keys (tokens redacted, IDs visible) and gates the env-file write behind a `Proceed? [Y/n]` confirmation. New helpers exported from `apps/oh/src/lib/prompt.ts`: `step()`, `link()`, `bold()`. Zero new runtime dependencies. ([#290](https://github.com/mifunedev/openharness/issues/290))
 ### Fixed

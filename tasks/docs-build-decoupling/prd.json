@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/455-docs-build-decoupling",
+  "description": "Decouple slow Docusaurus docs builds from fast harness development and PR validation loops while keeping docs-specific and release gates intact.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Split fast and full build scripts",
+      "description": "As a harness operator, I want pnpm build to represent the fast non-docs harness build so routine validation does not run Docusaurus unless requested.",
+      "acceptanceCriteria": [
+        "Root package.json changes build to run the fast non-docs build path: all future buildable pnpm workspace packages except @openharness/docs, plus packages/oh via npm --prefix packages/oh run build.",
+        "Root package.json adds build:all, which runs all pnpm workspace package builds including @openharness/docs, then builds packages/oh.",
+        "Root setup uses the fast build path and does not invoke @openharness/docs or docusaurus build by default.",
+        "Existing root docs:build, docs:dev, and docs:serve scripts remain available, and packages/docs build/start/serve scripts remain intact.",
+        "pnpm run build succeeds without running docusaurus build.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Keep docs builds in intentional CI gates only",
+      "description": "As a maintainer, I want Harness CI to use the fast non-docs build while docs and release workflows retain full docs build coverage.",
+      "acceptanceCriteria": [
+        ".github/workflows/ci-harness.yml Build step calls the fast non-docs build path and cannot run @openharness/docs build through packages/**.",
+        ".github/workflows/docs.yml continues to run pnpm run build from packages/docs.",
+        ".github/workflows/release.yml calls pnpm run build:all so release validation continues to include docs.",
+        ".claude/skills/ci-status/SKILL.md and .pi/skills/ci-status/SKILL.md document the revised Harness CI build command and distinguish it from docs/release build coverage.",
+        "Operator escape hatch is documented: pnpm run docs:build for docs-only validation and pnpm run build:all for full release-style validation; rollback path is restoring Harness CI Build to the broad packages/** build command.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Add a regression probe for build-gate separation",
+      "description": "As a future agent, I want a fast deterministic eval probe that flags accidental Docusaurus build reintroduction into /eval, root fast build, or Harness CI.",
+      "acceptanceCriteria": [
+        "Add evals/probes/docs-build-fast-path.sh.",
+        "The probe uses exact static invariants for root build/setup, Harness CI Build, eval runner/probe files, docs workflow, and release validation.",
+        "The probe passes when root pnpm build and .github/workflows/ci-harness.yml exclude @openharness/docs/Docusaurus from the fast build path.",
+        "The probe passes only if .github/workflows/docs.yml still runs pnpm run build from packages/docs and release validation calls pnpm run build:all.",
+        "bash evals/probes/docs-build-fast-path.sh passes.",
+        "/eval passes.",
+        "Tests pass."
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Document the gate split in docs and wiki",
+      "description": "As an operator and future agent, I want the docs-build gate split recorded in human docs and the source-backed wiki so the tradeoff is not re-derived.",
+      "acceptanceCriteria": [
+        "Human-facing docs say pnpm build is fast/non-docs, pnpm docs:build validates docs, and pnpm run build:all performs full release-style validation.",
+        "CHANGELOG.md has an Unreleased entry for the build-gate change.",
+        "wiki/raw/<yyyy-mm-dd>-ci-build-gates.md and wiki/ci-build-gates.md exist with relevant source files, line-cited claims, a quick command/gate table, system relationships, and See Also.",
+        "wiki/README.md is refreshed using canonical deterministic ordering and includes ci-build-gates.",
+        "bash evals/probes/wiki-readme-index.sh passes.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

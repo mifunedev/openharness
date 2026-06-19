@@ -9,14 +9,18 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `context/REPO_MAP.md` gives session-start agents a Git-tracked source-map command plus default keep/disregard paths for context loading, guarded by `repo-map-contract` plus the CB-004 repo-orientation A/B benchmark manifest/scorer ([#464](https://github.com/mifunedev/openharness/issues/464)).
+- `pi-dynamic-workflows` is now a default project-local Pi package pinned to the upstream `v1.0.1` commit, with docs for the `workflow` tool's deterministic JavaScript fan-out model and package-pin test coverage ([#451](https://github.com/mifunedev/openharness/issues/451)).
 - `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed
+- Docs builds now run automatically only from the docs workflow on `main`/`master` pushes; root build, Harness CI, release validation, and `/eval` stay on the fast non-docs path ([#455](https://github.com/mifunedev/openharness/issues/455)).
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
 - Cron worktree pruning now preserves a live early-run tmux session whose name still matches its cron worktree basename, preventing active autopilot checkouts from disappearing before branch rename ([#445](https://github.com/mifunedev/openharness/issues/445)).
 ### Removed
 ### Deprecated
 ### Security
+- `client-slack` restore now keeps Slack token values out of the tmux command string by sourcing a permission-restricted runtime env file before launching `pi` ([#461](https://github.com/mifunedev/openharness/issues/461)).
 
 ## [2026.6.18] - 2026-06-18
 

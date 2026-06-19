@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/455-docs-build-decoupling",
+  "description": "Decouple slow Docusaurus docs builds from fast harness development, pull-request, and release validation loops so automatic docs builds run only on pushes to main or master.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Split fast build from docs build",
+      "description": "As a harness operator, I want pnpm build to represent the fast non-docs harness build so routine validation does not run Docusaurus unless I explicitly request it.",
+      "acceptanceCriteria": [
+        "Root package.json changes build to run the fast non-docs build path: all future buildable pnpm workspace packages except @openharness/docs, plus packages/oh via npm --prefix packages/oh run build.",
+        "Root setup uses the fast build path and does not invoke @openharness/docs or docusaurus build by default.",
+        "Existing root docs:build, docs:dev, and docs:serve scripts remain available, and packages/docs build/start/serve scripts remain intact.",
+        "pnpm run build succeeds without running docusaurus build.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-19; commit 3503101"
+    },
+    {
+      "id": "US-002",
+      "title": "Run docs build only on main/master-push docs workflow",
+      "description": "As a maintainer, I want automatic docs builds to run only after merge/promote to main or master, not during PR, Harness CI, or release validation.",
+      "acceptanceCriteria": [
+        ".github/workflows/ci-harness.yml Build step calls the fast non-docs build path and cannot run @openharness/docs build through packages/**.",
+        ".github/workflows/docs.yml has no pull_request trigger and no workflow_dispatch trigger; it builds docs only on push to main or master with existing docs path filters.",
+        ".github/workflows/release.yml Build step calls the fast non-docs build path and does not run Docusaurus.",
+        ".claude/skills/ci-status/SKILL.md and .pi/skills/ci-status/SKILL.md document that PR/Harness CI and release validation use the fast build, while docs build/deploy happens only on main/master pushes through docs.yml.",
+        "Operator escape hatch is documented: run pnpm docs:build only when intentionally validating docs locally; rollback path is restoring docs workflow PR/manual triggers and broad build gating.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-19; commit 3503101"
+    },
+    {
+      "id": "US-003",
+      "title": "Add a regression probe for build-gate separation",
+      "description": "As a future agent, I want a fast deterministic eval probe that flags accidental Docusaurus build reintroduction into /eval, root fast build, Harness CI, release validation, or PR docs workflows.",
+      "acceptanceCriteria": [
+        "Add evals/probes/docs-build-fast-path.sh.",
+        "The probe uses exact static invariants for root build/setup, Harness CI Build, release Build, eval runner/probe files, and docs workflow triggers.",
+        "The probe passes only if .github/workflows/docs.yml builds docs on push to main or master and has no pull_request or workflow_dispatch trigger.",
+        "bash evals/probes/docs-build-fast-path.sh passes.",
+        "/eval passes.",
+        "Tests pass."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-19; commit 3503101"
+    },
+    {
+      "id": "US-004",
+      "title": "Document the gate split in docs and wiki",
+      "description": "As an operator and future agent, I want the docs-build gate split recorded in human docs and the source-backed wiki so the tradeoff is not re-derived.",
+      "acceptanceCriteria": [
+        "Human-facing docs say pnpm build is fast/non-docs, pnpm docs:build is manual/explicit, and automatic docs build/deploy happens only on main/master pushes through docs.yml.",
+        "CHANGELOG.md has an Unreleased entry for the build-gate change.",
+        "wiki/raw/<yyyy-mm-dd>-ci-build-gates.md and wiki/ci-build-gates.md exist with relevant source files, line-cited claims, a quick command/gate table, system relationships, and See Also.",
+        "wiki/README.md is refreshed using canonical deterministic ordering and includes ci-build-gates.",
+        "bash evals/probes/wiki-readme-index.sh passes.",
+        "Typecheck passes.",
+        "Tests pass."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed implementation on 2026-06-19; commit 3503101"
+    }
+  ]
+}

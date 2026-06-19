@@ -99,7 +99,7 @@ jobs:
           npm --prefix packages/oh run typecheck
 
       - name: Build
-        run: pnpm --filter './packages/**' -r --if-present run build
+        run: pnpm run build:harness
 
       - name: Test
         run: pnpm --filter './packages/**' -r --if-present run test

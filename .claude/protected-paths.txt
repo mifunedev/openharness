@@ -15,7 +15,7 @@
 # --- Orchestrator skills (.claude/skills/) ---
 release
 ci-status
-cloudflared-tunnel
+cloudflared
 agent-browser
 prd
 ralph
@@ -39,7 +39,7 @@ Makefile
 
 # --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
 install/banner.sh
-install/cloudflared-tunnel.sh
+.claude/skills/cloudflared/scripts/run.sh
 .devcontainer/entrypoint.sh
 .devcontainer/Dockerfile
 

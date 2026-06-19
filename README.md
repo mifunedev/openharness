@@ -5,7 +5,7 @@
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
 - **Agents that work while you sleep.** A tiny croner runtime reads `crons/*.md` markdown and wakes the agent on a schedule.
 - **Host dependencies: Docker + Git.** No Node, no Python, no toolchain rot on your laptop.
-- **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
+- **Cloudflared previews.** Share sandbox app ports through Cloudflared tunnels; SSH and pack-supplied services remain opt-in Compose overlays.
 - **Slack-ready.** The in-tree Pi extension at `.pi/extensions/slack/` bridges Slack to a Pi agent — see [docs/integrations/slack.md](docs/integrations/slack.md).
 - **Multi-agent? Add a pack.** Other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
 

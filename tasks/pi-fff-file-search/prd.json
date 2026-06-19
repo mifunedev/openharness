@@ -18,8 +18,8 @@
         "Tests pass."
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "Critic-A H: transitive @ff-labs/fff-node:* is unfrozen (same as all pinned Pi pkgs); resolved version recorded in doc (US-003)."
+      "passes": true,
+      "notes": "Completed 2026-06-19 (ship-spec inline impl); settings.json +1 line, settings.test.ts updated, vitest green."
     },
     {
       "id": "US-002",

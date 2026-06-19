@@ -1,2 +1,15 @@
 # progress
 
+## US-001 — 2026-06-19 14:24 UTC
+
+**Title**: Pin pi-fff and keep the settings test green
+**Files changed**: .pi/settings.json, .pi/extensions/__tests__/settings.test.ts
+**Result**: PASS
+
+### What I did
+Added `"npm:@ff-labs/pi-fff@0.9.5"` as the last npm pin (after pi-autoresearch, before the git: pin) in `.pi/settings.json`, and updated the `toEqual` array in `.pi/extensions/__tests__/settings.test.ts` to match. `git diff` shows exactly +1 line per file; `npx vitest run` on the settings test passes.
+
+### Learnings for future iterations
+The settings test pins the exact packages[] array with `toEqual` (order-sensitive) — any pin add/reorder MUST update it in lockstep or the pre-commit test fails. 0.9.5 confirmed as the `latest` dist-tag; native binding (@ff-labs/fff-node) verified loading on glibc-2.36 x64.
+
+---

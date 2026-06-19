@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Sandbox images now include the `tree` CLI, and `/repo-layout` provides a concise, descriptive premap skill for agent handoff ([#459](https://github.com/mifunedev/openharness/issues/459)).
 - `pi-dynamic-workflows` is now a default project-local Pi package pinned to the upstream `v1.0.1` commit, with docs for the `workflow` tool's deterministic JavaScript fan-out model and package-pin test coverage ([#451](https://github.com/mifunedev/openharness/issues/451)).
 - `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed

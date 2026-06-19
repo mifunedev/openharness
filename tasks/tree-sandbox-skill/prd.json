@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "skill/459-tree-sandbox-skill",
+  "description": "Add first-class support for the Unix tree directory visualizer in sandbox builds and expose it through a concise, descriptive Claude repo-layout premap skill.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install tree in the sandbox image",
+      "description": "As a harness operator, I want the sandbox Docker image to install tree during image build so future sandboxes can inspect directory layouts without manual package installation.",
+      "acceptanceCriteria": [
+        "Protected-path override is honored: only add the Debian tree package to the existing .devcontainer/Dockerfile system package install list.",
+        ".devcontainer/Dockerfile includes tree in the existing apt-get install -y --no-install-recommends package list.",
+        "Verification proves next-build support with a Dockerfile package check and Debian bookworm package availability or build-path evidence.",
+        "Boot-path lint passes locally when available or via CI.",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed on 2026-06-19; commit 5b6804f"
+    },
+    {
+      "id": "US-002",
+      "title": "Add the concise descriptive repo-layout skill",
+      "description": "As an agent, I want a /repo-layout skill that creates concise, descriptive directory premaps so layout summaries are optimized for handoff before exact file reads.",
+      "acceptanceCriteria": [
+        ".claude/skills/repo-layout/SKILL.md exists with name: repo-layout, front-loaded premap/repo-layout triggers, an accurate argument-hint, and concise imperative instructions.",
+        ".claude/skills/repo-layout/scripts/run.sh exists, is executable, verifies tree is installed before use, and supports default premap plus --raw native pass-through.",
+        "Running the script with no args uses concise defaults equivalent to tree -L 1 --dirsfirst --filelimit 40 -a with noisy directories ignored, then emits Key areas and Good next reads sections.",
+        "Running the script with --depth 2 or -L 2 adjusts premap depth; running with --raw -L 1 .claude/skills succeeds as native tree pass-through.",
+        "The skill-builder checklist is satisfied: lowercase-kebab name, front-loaded triggers, description under listing budget, body under 500 lines, bundled deterministic logic, and wired $ARGUMENTS.",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed on 2026-06-19; renamed user-facing skill to repo-layout to avoid reserved tree collision; commit 165c8d4"
+    },
+    {
+      "id": "US-003",
+      "title": "Document tree support",
+      "description": "As a future agent, I want source-backed documentation for tree support so I know the sandbox image owns the binary and the skill owns the invocation pattern.",
+      "acceptanceCriteria": [
+        "CHANGELOG.md adds an Unreleased entry for sandbox tree support and the /repo-layout skill.",
+        "wiki/repo-layout-skill.md explains the relationship between .devcontainer/Dockerfile, .claude/skills/repo-layout/SKILL.md, and .claude/skills/repo-layout/scripts/run.sh with source-file references.",
+        "wiki/raw/<actual-utc-date>-repo-layout-skill.md captures the local and DeepWiki source notes used to create the entry.",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed on 2026-06-19; commit 5b6804f"
+    },
+    {
+      "id": "US-004",
+      "title": "Index and verify the wiki entry",
+      "description": "As a maintainer, I want the wiki index to stay fresh after adding tree support so /wiki-query can find it later.",
+      "acceptanceCriteria": [
+        "wiki/README.md is regenerated or otherwise updated so the new wiki entry is indexed.",
+        "bash evals/probes/wiki-readme-index.sh passes.",
+        "bash evals/probes/repo-layout-skill.sh passes.",
+        "tasks/tree-sandbox-skill/prd.json parses successfully.",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed on 2026-06-19; commit 5b6804f"
+    }
+  ]
+}

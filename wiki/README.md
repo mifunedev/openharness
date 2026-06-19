@@ -26,6 +26,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| repo-layout-skill | Repo Layout Sandbox Tree Support | [sandbox, skills, cli, tree, devcontainer] | 2026-06-19 |
 | ci-build-gates | CI Build Gates | [ci, docs, build, eval, github-actions] | 2026-06-19 |
 | harness-audit | Harness Audit | [audit, skills, autopilot, memory, worktrees] | 2026-06-18 |
 | sandbox-auth-volumes | Sandbox Auth Volume Ownership | [sandbox, devcontainer, auth, docker, ownership] | 2026-06-16 |

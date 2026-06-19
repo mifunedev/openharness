@@ -1,0 +1,83 @@
+# progress
+
+## Codebase Patterns
+
+- The `/repo-layout` skill uses a skill-local script so argument defaults, install checks, concise premap formatting, and raw pass-through stay deterministic; `.pi/skills` is a symlink to `.claude/skills`, so one tracked skill directory serves both Claude and Pi.
+
+## US-001 — 2026-06-19 05:49 UTC
+
+**Title**: Install tree in the sandbox image
+**Files changed**: `.devcontainer/Dockerfile`
+**Commit**: 5b6804f
+**Result**: PASS
+
+### What I did
+Added the Debian `tree` package to the existing no-recommends system package layer. Verified the local installed package is `tree v2.1.0` and Debian bookworm package metadata resolves `tree`.
+
+### Learnings for future iterations
+The Dockerfile is protected, so the PRD includes a bounded protected-path override for the package-list-only change.
+
+---
+
+## US-002 — 2026-06-19 05:49 UTC
+
+**Title**: Add the concise descriptive repo-layout skill
+**Files changed**: `.claude/skills/repo-layout/SKILL.md`, `.claude/skills/repo-layout/scripts/run.sh`
+**Commit**: 5b6804f
+**Result**: PASS
+
+### What I did
+Created `/repo-layout` as an agent premap skill. The wrapper verifies `tree`, defaults to a concise depth-1 map with noisy-directory ignores and file limits, adds descriptive key-area notes plus good next reads, and keeps native `tree` available behind explicit `--raw`.
+
+### Learnings for future iterations
+Default premap output should be concise and descriptive; deeper maps are opt-in via `--depth`/`-L`, and raw CLI output is opt-in via `--raw`.
+
+---
+
+## US-003 — 2026-06-19 05:49 UTC
+
+**Title**: Document tree support
+**Files changed**: `CHANGELOG.md`, `wiki/repo-layout-skill.md`, `wiki/raw/2026-06-19-repo-layout-skill.md`
+**Commit**: 5b6804f
+**Result**: PASS
+
+### What I did
+Added an Unreleased changelog entry and a source-backed wiki page explaining the sandbox binary layer and skill premap layer. Captured local and DeepWiki comparison notes in the raw snapshot.
+
+### Learnings for future iterations
+Small tool additions can still merit wiki coverage when they establish a reusable agent-facing workflow.
+
+---
+
+## US-004 — 2026-06-19 05:49 UTC
+
+**Title**: Index and verify the wiki entry
+**Files changed**: `wiki/README.md`, `evals/probes/repo-layout-skill.sh`, `evals/RESULTS.md`, `tasks/tree-sandbox-skill/prd.json`
+**Commit**: 5b6804f
+**Result**: PASS
+
+### What I did
+Regenerated the wiki index and added a tier-A probe that guards the Dockerfile package, symlinked Pi skill surface, concise descriptive premap contract, bounded defaults, and raw pass-through. Verified wiki index, probe, typecheck, build, script tests, and `/eval`.
+
+### Learnings for future iterations
+A static probe is enough to protect this contract without requiring an expensive sandbox image rebuild every local run.
+
+---
+
+
+## Rename follow-up — 2026-06-19 05:56 UTC
+
+**Title**: Avoid reserved `tree` skill collision
+**Files changed**: `.claude/skills/repo-layout/`, `evals/probes/repo-layout-skill.sh`, `wiki/repo-layout-skill.md`, task artifacts
+**Commit**: 165c8d4
+**Result**: PASS
+
+### What I did
+Renamed the user-facing skill from `/tree` to `/repo-layout` so the skill does not collide with any reserved or native `tree` surface. Kept Debian `tree` as the implementation detail and updated docs, wiki, probe, and task artifacts to describe concise descriptive repo-layout premaps.
+
+### Learnings for future iterations
+Prefer intent-based skill names over raw binary names when a CLI name could collide with reserved commands or future native tool surfaces.
+
+---
+
+STATUS: COMPLETE

@@ -2,6 +2,18 @@
 
 You are the harness orchestrator. You run at the project root. You do NOT write application code. Your sole purpose is to manage the sandboxed agent workspace.
 
+## Scope and local instructions
+
+This root `AGENTS.md` applies to the whole Open Harness repo unless a more local `AGENTS.md`/`CLAUDE.md` says otherwise.
+
+Assume agent harnesses may concatenate global, parent-directory, and current-directory context files; do not rely on automatic nearest-file-wins semantics. For Open Harness work, after discovering applicable context files, resolve conflicts by target-path specificity:
+
+- Before editing a subtree, check whether that directory or an ancestor below repo root contains another `AGENTS.md`/`CLAUDE.md`.
+- More local instructions take precedence for files in their subtree.
+- Within the same directory, `AGENTS.md` is canonical; `CLAUDE.md` is a provider-compatibility alias. If both are real files and conflict, stop and call out the conflict.
+- If context-file instructions conflict, follow the most specific file for the paths being edited and call out the conflict.
+- Launching an agent from repo root may not load deeper package/workspace context files; explicitly read them before work there, or restart/reload from that subdirectory when supported.
+
 ## Session start
 
 Read these files at the start of every session — they encode voice, principles, environment, and working-relationship patterns that don't belong in the always-loaded bootloader:
@@ -9,13 +21,14 @@ Read these files at the start of every session — they encode voice, principles
 - `context/SOUL.md` — voice and disposition
 - `context/IDENTITY.md` — operating principles + lessons learned (append-only)
 - `context/TOOLS.md` — environment inventory; skip rediscovery
+- `context/REPO_MAP.md` — source-map command, search routing, and low-signal folders to disregard
 - `context/USER.md` — working-relationship patterns; living document
 - `memory/MEMORY.md` — long-term lessons learned (append-only)
 - Today's `memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
 
 See `context/rules/memory.md` for the write-side Memory Improvement Protocol.
 
-Auto-loaded rules (no explicit read needed): `context/rules/*.md`.
+Some harnesses auto-load `context/rules/*.md`; when the current provider does not explicitly do so, read task-relevant rule files manually.
 
 ## Permissions
 
@@ -96,7 +109,7 @@ Remove the sandbox.
 
 ## Git Workflow
 
-Full provider-portable policy lives in `/git` (`.claude/skills/git/SKILL.md`). The table below is only the quick-reference subset.
+Full provider-portable policy lives in `/git` when slash skills are available; the skill is mirrored under provider-specific paths such as `.pi/skills/git/` and `.claude/skills/git/`. If slash skills are unavailable, read the relevant `SKILL.md` directly. The table below is only the quick-reference subset.
 
 | Item | Convention |
 |------|-----------|

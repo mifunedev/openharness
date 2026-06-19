@@ -1,0 +1,232 @@
+# progress — sync-upstream-20260619 (wave 1)
+
+## Codebase Patterns
+
+Verified facts seeded by the Advisor (2026-06-19). Trust these; they were
+checked against `upstream/development` (b922619) and `origin/development`
+(bafe2fb, merge-base 9cce12e) before the loop started.
+
+### Divergence / base
+- `origin/development` = bafe2fb = merge-base 9cce12e + origin's own #252, #254.
+- All wave-1 payload files are byte-identical between origin/development and the
+  merge-base (origin==base) → each pick applies cleanly; `-Xours` only ever
+  engages on the shared `CHANGELOG.md` / `evals/RESULTS.md`.
+- Branch `task/sync-upstream-20260619` is independent of open PR #255 (06-18
+  sync). Expect a shared-append conflict at merge time; resolve by union.
+- US-003 (#448) is RESOLVED/PASS. The empty-check initially flagged a
+  `crons/heartbeat.md` timezone line (HEAD `America/Denver` vs `35ced5f5`
+  `America/Los_Angeles`), but the Advisor verified #448's net diff never touches
+  that line — origin deliberately keeps `America/Denver`, and `-Xours` correctly
+  preserved it. #448's actual locked-append payload landed in full (probe green).
+  Do NOT re-block, re-pick, or "fix" the timezone; proceed to US-004.
+
+### Pick order + commands (trunk order)
+1. US-001 #452: `git cherry-pick -Xours a5cf486`  (single-parent — NO -m)
+2. US-002 #446: `git cherry-pick -m 1 -Xours 5b8db4dd`  (merge — -m 1 REQUIRED)
+3. US-003 #448: `git cherry-pick -m 1 -Xours 35ced5f5`  (merge — -m 1 REQUIRED)
+4. US-004 #450: `git cherry-pick -m 1 -Xours 619d660d`  (merge — -m 1 REQUIRED)
+
+### Empty-check reference (CRITICAL — differs from the 06-18 prompt)
+Diff against each PR's OWN merge SHA, never `upstream/development` (partial-day
+sync: the upstream tip carries deferred PRs' edits to the same files):
+- US-001: `git diff HEAD a5cf486 -- .pi/settings.json .pi/extensions/__tests__/settings.test.ts docs/harnesses/pi.md docs/installation.md docs/integrations/pi-dynamic-workflows.md`
+- US-002: `git diff HEAD 5b8db4dd -- scripts/cron-runtime.ts scripts/__tests__/cron-runtime.test.ts`
+- US-003: **ALREADY RESOLVED/PASS — do NOT re-block or re-pick.** `git diff HEAD 35ced5f5 -- evals/probes/heartbeat-logging-contract.sh` is EMPTY, and `git diff HEAD 35ced5f5 -- crons/heartbeat.md` shows ONLY the `timezone:` line (origin `America/Denver` vs upstream `America/Los_Angeles`). Origin's Denver timezone is a DELIBERATE fork setting #448 never modifies; `-Xours` correctly preserved it. This is NOT a payload drop.
+- US-004: `git diff HEAD 619d660d -- .github/workflows/sandbox-boot-guard.yml evals/probes/sandbox-boot-guard-ci.sh`
+Each must be EMPTY — EXCEPT the documented US-003 timezone line. Non-empty (beyond that exception) → BLOCKED (a `-Xours` drop); do not hand-patch.
+
+### CHANGELOG union lines (US-005) — append under [Unreleased], verbatim
+**### Added:**
+- `- \`pi-dynamic-workflows\` is now a default project-local Pi package pinned to the upstream \`v1.0.1\` commit, with docs for the \`workflow\` tool's deterministic JavaScript fan-out model and package-pin test coverage ([#451](https://github.com/mifunedev/openharness/issues/451)).`
+- `- \`heartbeat-logging-contract\` eval probe guards that heartbeat runs keep structured memory logs and locked liveness appends ([#447](https://github.com/mifunedev/openharness/issues/447)).`
+- `- \`sandbox-boot-guard\` CI workflow validates the sandbox compose configuration and locally builds the devcontainer image for boot-path changes, guarded by the \`sandbox-boot-guard-ci\` eval probe ([#449](https://github.com/mifunedev/openharness/issues/449)).`
+
+**### Fixed:**
+- `- Cron worktree pruning now preserves a live early-run tmux session whose name still matches its cron worktree basename, preventing active autopilot checkouts from disappearing before branch rename ([#445](https://github.com/mifunedev/openharness/issues/445)).`
+- `- Heartbeat instructions now compute memory-log timestamps explicitly and route both memory/liveness writes through \`scripts/locked-append.sh\` instead of raw shared-log appends ([#447](https://github.com/mifunedev/openharness/issues/447)).`
+
+### evals/RESULTS.md rows to hand-insert (US-005) — alphabetical position
+Format: `| probe | tier | last-run (UTC) | status | source |`. Set `last-run`
++ `status` from the actual US-003/US-004 probe runs; keep these `source` strings
+verbatim. Do NOT wholesale-regen the table.
+- `| heartbeat-logging-contract | A | <run> | <status> | issue #447 (heartbeat log append hardening) 2026-06-18 |`
+- `| sandbox-boot-guard-ci | A | <run> | <status> | issue #449 (sandbox image build CI guard) 2026-06-19 |`
+(`heartbeat-logging-contract` sorts after `health-check-docker-stats`;
+`sandbox-boot-guard-ci` sorts after `rl-delegation-write-worker`, before
+`ship-spec-ready-finalization`.)
+
+### Do NOT
+- Touch `wiki/README.md` (no wave-1 PR adds a wiki entry).
+- Sync #462/#454/#456/#458/#463 (wave 2 — out of scope; #462 needs a 3-way
+  merge because origin #252/#254 already edited AGENTS.md/scripts/README.md).
+- Push to development/main. Skip pre-commit hooks. Wholesale-regen RESULTS.md.
+
+### Provenance
+- Keep all `mifunedev/openharness` issue links (#445/#447/#449/#451) as-is.
+
+---
+
+<!-- iteration entries are appended below this line; none yet -->
+
+## US-001 — 2026-06-19 18:25 UTC
+
+**Title**: Cherry-pick #452 — pi dynamic workflows support (single-parent)
+**Files changed**: .pi/settings.json, .pi/extensions/__tests__/settings.test.ts, docs/harnesses/pi.md, docs/installation.md, docs/integrations/pi-dynamic-workflows.md
+**Commit**: 0c9318f
+**Result**: PASS
+
+### What I did
+Cherry-picked upstream #452 with the required single-parent command, `git cherry-pick -Xours a5cf486`, producing commit `0c9318f`. Verified the payload against the PR's own merge SHA with `git diff HEAD a5cf486 -- .pi/settings.json .pi/extensions/__tests__/settings.test.ts docs/harnesses/pi.md docs/installation.md docs/integrations/pi-dynamic-workflows.md`; the diff was empty. The pick did not modify `CHANGELOG.md` or `evals/RESULTS.md`, keeping reconciliation deferred to US-005.
+
+### Learnings for future iterations
+US-001 confirmed the seeded pattern: `-Xours` resolved only shared append/index files while leaving the payload byte-identical to the source merge SHA. Continue using each PR's own merge SHA for empty-checks; do not diff against `upstream/development` during this partial-day sync.
+
+---
+
+## US-002 — 2026-06-19 18:27 UTC
+
+**Title**: Cherry-pick #446 — preserve active cron worktrees (merge -m 1)
+**Files changed**: scripts/cron-runtime.ts, scripts/__tests__/cron-runtime.test.ts
+**Commit**: b295fc8
+**Result**: PASS
+
+### What I did
+Cherry-picked upstream #446 with the required merge-commit command, `git cherry-pick -m 1 -Xours 5b8db4dd`, producing commit `b295fc8`. Verified the payload against the PR's own merge SHA with `git diff HEAD 5b8db4dd -- scripts/cron-runtime.ts scripts/__tests__/cron-runtime.test.ts`; the diff was empty. The pick left `CHANGELOG.md` and `evals/RESULTS.md` reconciliation deferred to US-005.
+
+### Learnings for future iterations
+US-002 confirmed the merge-commit picks require `-m 1`; the command preserved the intended payload exactly while `-Xours` handled only the shared append-file conflict. Continue leaving shared append/index reconciliation to the single US-005 owner.
+
+---
+
+## US-003 — 2026-06-19 18:29 UTC
+
+**Title**: Cherry-pick #448 — harden heartbeat log appends (merge -m 1)
+**Files changed**: crons/heartbeat.md, evals/probes/heartbeat-logging-contract.sh
+**Commit**: bc093e2
+**Result**: BLOCKED
+
+### What I did
+Cherry-picked upstream #448 with the required merge-commit command, `git cherry-pick -m 1 -Xours 35ced5f5`, producing commit `bc093e2`. Ran `bash evals/probes/heartbeat-logging-contract.sh`; it passed. The required empty-check against the PR's own merge SHA was non-empty: `git diff HEAD 35ced5f5 -- crons/heartbeat.md evals/probes/heartbeat-logging-contract.sh` shows `crons/heartbeat.md` keeps `timezone: America/Denver` while `35ced5f5` has `timezone: America/Los_Angeles`, so this story is blocked per the conflict policy.
+
+### Learnings for future iterations
+The seeded origin==base assumption is false for `crons/heartbeat.md`'s timezone line. Do not hand-patch this drop inside the Ralph loop; an Advisor/human needs to decide whether origin's private timezone should intentionally diverge or whether the upstream payload should replace it.
+
+---
+
+## US-003 — 2026-06-19 18:32 UTC
+
+**Title**: Cherry-pick #448 — harden heartbeat log appends (merge -m 1)
+**Files changed**: crons/heartbeat.md, evals/probes/heartbeat-logging-contract.sh
+**Commit**: bc093e2
+**Result**: BLOCKED
+
+### What I did
+Selected the lowest-priority failing story, US-003, and did not re-cherry-pick because HEAD already contains the prior US-003 pick `bc093e2`. Re-ran `bash evals/probes/heartbeat-logging-contract.sh`; it passed. Re-ran the required empty-check against the PR's own merge SHA, `git diff HEAD 35ced5f5 -- crons/heartbeat.md evals/probes/heartbeat-logging-contract.sh`, and it is still non-empty on `crons/heartbeat.md` (`America/Denver` in HEAD vs `America/Los_Angeles` in `35ced5f5`), so the story remains blocked per policy.
+
+### Learnings for future iterations
+A blocked story can remain the lowest `passes: false` item after its cherry-pick commit exists. In that state, re-verify the blocker and halt rather than re-running the same cherry-pick or skipping ahead to the next story.
+
+---
+
+## US-003 — 2026-06-19 18:34 UTC
+
+**Title**: Cherry-pick #448 — harden heartbeat log appends (merge -m 1)
+**Files changed**: crons/heartbeat.md, evals/probes/heartbeat-logging-contract.sh
+**Commit**: bc093e2
+**Result**: BLOCKED
+
+### What I did
+Selected the lowest-priority failing story, US-003, and confirmed the prior cherry-pick commit `bc093e2` is already on HEAD, so I did not re-run the pick. Re-ran `bash evals/probes/heartbeat-logging-contract.sh`; it passed. Re-ran `git diff --exit-code HEAD 35ced5f5 -- crons/heartbeat.md evals/probes/heartbeat-logging-contract.sh`; it remains non-empty because `crons/heartbeat.md` keeps `timezone: America/Denver` while `35ced5f5` has `timezone: America/Los_Angeles`, so this story stays blocked per policy.
+
+### Learnings for future iterations
+Repeated Ralph iterations will keep selecting US-003 until an Advisor/human resolves the private timezone divergence or changes the acceptance criteria. Do not proceed to US-004 while US-003 remains `passes: false`.
+
+---
+
+## US-003 — 2026-06-19 18:36 UTC
+
+**Title**: Cherry-pick #448 — harden heartbeat log appends (merge -m 1)
+**Files changed**: crons/heartbeat.md, evals/probes/heartbeat-logging-contract.sh
+**Commit**: bc093e2
+**Result**: BLOCKED
+
+### What I did
+Selected the lowest-priority failing story, US-003, and confirmed HEAD is still the existing cherry-pick commit `bc093e2`. Re-ran `bash evals/probes/heartbeat-logging-contract.sh`; it passed. Re-ran the required empty-check against `35ced5f5`, and it remains non-empty only on `crons/heartbeat.md` because HEAD keeps `timezone: America/Denver` while upstream PR #448 has `timezone: America/Los_Angeles`; per policy this is blocked, not hand-patched.
+
+### Learnings for future iterations
+The blocker is stable and reproducible: the probe passes, but the payload empty-check fails on a private timezone divergence. A human/Advisor must resolve the acceptance criteria or timezone choice before Ralph can proceed to US-004.
+
+---
+
+## US-003 — 2026-06-19 RESOLVED (Advisor intervention)
+
+**Title**: Cherry-pick #448 — harden heartbeat log appends (merge -m 1)
+**Files changed**: crons/heartbeat.md, evals/probes/heartbeat-logging-contract.sh
+**Commit**: bc093e2
+**Result**: PASS (false block cleared)
+
+### What I did
+The Advisor reviewed the BLOCKED state. The cherry-pick `bc093e2` applied #448's
+locked-append payload in FULL: `git diff HEAD 35ced5f5 -- evals/probes/heartbeat-logging-contract.sh`
+is empty, and `git diff HEAD 35ced5f5 -- crons/heartbeat.md` differs on exactly ONE
+line — `timezone: America/Denver` (origin) vs `America/Los_Angeles` (upstream).
+Verified `#448`'s own net diff (`git diff 5b8db4d 35ced5f -- crons/heartbeat.md`)
+does NOT touch the timezone line; upstream flipped Denver->LA in an earlier commit
+and origin deliberately keeps Denver. `-Xours` correctly preserved origin's setting.
+Marked US-003 `passes: true` and made its empty-check timezone-aware.
+
+### Learnings for future iterations
+The per-PR-SHA empty-check can still false-block when the upstream merge SHA carries
+an ORTHOGONAL pre-existing origin/upstream divergence (here, a private timezone). The
+right test is "did THIS PR's net-diff payload land?", not "does the whole file match
+the upstream SHA". Origin's `crons/heartbeat.md` timezone is `America/Denver` by
+design — never clobber it during a sync.
+
+---
+
+## US-004 — 2026-06-19 18:43 UTC
+
+**Title**: Cherry-pick #450 — sandbox image build CI guard (merge -m 1)
+**Files changed**: .github/workflows/sandbox-boot-guard.yml, evals/probes/sandbox-boot-guard-ci.sh
+**Commit**: 139659b
+**Result**: PASS
+
+### What I did
+Cherry-picked upstream #450 with the required merge-commit command, `git cherry-pick -m 1 -Xours 619d660d`, producing commit `139659b`. Verified the payload against the PR's own merge SHA with `git diff --exit-code HEAD 619d660d -- .github/workflows/sandbox-boot-guard.yml evals/probes/sandbox-boot-guard-ci.sh`; the diff was empty. Ran `bash evals/probes/sandbox-boot-guard-ci.sh`; it passed.
+
+### Learnings for future iterations
+US-004 confirmed the merge-commit pick pattern for a new workflow/probe payload: use `-m 1`, diff only against the PR's own merge SHA and payload paths, and leave shared `CHANGELOG.md` / `evals/RESULTS.md` reconciliation to US-005.
+
+---
+
+## US-005 — 2026-06-19 18:45 UTC
+
+**Title**: Reconcile the two shared append/index files (one commit)
+**Files changed**: CHANGELOG.md, evals/RESULTS.md
+**Commit**: 9f6eed4
+**Result**: PASS
+
+### What I did
+Ran both net-new probes, `heartbeat-logging-contract` and `sandbox-boot-guard-ci`; both passed at 2026-06-19 18:45 UTC. Appended the five upstream CHANGELOG lines under their source `[Unreleased]` subsections and hand-inserted exactly two alphabetical `evals/RESULTS.md` rows with PASS status. Committed the reconciliation as `9f6eed4` with the required `Submitted-by: Pi` trailer.
+
+### Learnings for future iterations
+For this partial-day sync, `evals/RESULTS.md` should stay a surgical row insertion: no wholesale regeneration and no timestamp churn on existing rows. Keep `wiki/README.md` untouched unless a synced PR actually adds a wiki entry.
+
+---
+
+## US-006 — 2026-06-19 18:48 UTC
+
+**Title**: Verify suite green, push branch, open PR
+**Files changed**: tasks/sync-upstream-20260619/prd.json, tasks/sync-upstream-20260619/progress.txt
+**Commit**: 9f6eed4
+**Result**: PASS
+
+### What I did
+Ran the full `evals/probes/*.sh` suite; every probe returned PASS and `regressions=0`. Re-ran the two net-new probes directly (`heartbeat-logging-contract` and `sandbox-boot-guard-ci`), and both passed. Pushed `task/sync-upstream-20260619` to `origin` and opened PR #256 against `ryaneggz/openharness:development` with the required synced/deferred PR list and shared-append conflict policy.
+
+### Learnings for future iterations
+Finalization should push only the task branch, never `development` or `main`, then use the PR's checks as the source of truth for CI. The branch remains independent of PR #255; any later shared append-file conflict should be resolved by union, not by dropping either sync's entries.
+
+---
+
+STATUS: COMPLETE

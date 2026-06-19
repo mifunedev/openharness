@@ -33,6 +33,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | harness-ci-core-paths | A | 2026-06-18 05:17 | PASS | #165 — core sandbox config files must trigger harness CI |
 | harness-ci-hooks-paths | A | 2026-06-18 05:17 | PASS | issue #202 — credential/security hook changes must trigger harness CI |
 | health-check-docker-stats | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
+| heartbeat-logging-contract | A | 2026-06-19 18:45 | PASS | issue #447 (heartbeat log append hardening) 2026-06-18 |
 | locked-append-critical-path | A | 2026-06-18 05:17 | PASS | issue #204 (lock shared runtime log appends) 2026-06-15 |
 | loop-benchmark-gate | A | 2026-06-18 05:17 | PASS | issue #179 — wire the executable-loop `benchmark` node (close the cycle) |
 | loop-handoff-consistency | A | 2026-06-18 05:17 | PASS | context/rules/loop.md § 4 (executable-loop Handoff convention) |
@@ -45,6 +46,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | prompt-miner-schema-compat | A | 2026-06-19 16:09 | PASS | issue #253 — prompt-miner JSONL dual-schema (Claude+Pi) drift guard |
 | ralph-fallback-order | A | 2026-06-18 05:17 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
 | rl-delegation-write-worker | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
+| sandbox-boot-guard-ci | A | 2026-06-19 18:45 | PASS | issue #449 (sandbox image build CI guard) 2026-06-19 |
 | ship-spec-ready-finalization | A | 2026-06-18 05:17 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |
 | skill-paths | A | 2026-06-18 05:17 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
 | submitted-by-trailers | A | 2026-06-18 05:17 | PASS | conversation 2026-06-12 (commit attribution trailers) |

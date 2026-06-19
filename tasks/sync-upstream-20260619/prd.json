@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/sync-upstream-20260619",
+  "issue": null,
+  "description": "Sync the clean subset (wave 1) of the nine net-new upstream (mifunedev) PRs merged 2026-06-19 into origin/development (ryaneggz fork) via cherry-pick, reconcile the two shared append/index files (CHANGELOG.md, evals/RESULTS.md), and open one PR. Wave 1 = #452,#446,#448,#450 (origin==base payloads, uniform -Xours). #462/#454/#456/#458/#463 deferred to wave 2. Sync tasks use a date-slug branch with no embedded issue number (precedent: PR #431, PR #255).",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Cherry-pick #452 — pi dynamic workflows support (single-parent)",
+      "description": "As the orchestrator, I need upstream #452 imported so the fork gains the default project-local pi-dynamic-workflows package, the workflow tool docs, and package-pin test coverage.",
+      "acceptanceCriteria": [
+        "On branch task/sync-upstream-20260619 off origin/development, run: git cherry-pick -Xours a5cf486 (single-parent; NO -m).",
+        "Payload present: .pi/settings.json (dynamic-workflows package pin), .pi/extensions/__tests__/settings.test.ts, docs/harnesses/pi.md, docs/installation.md, docs/integrations/pi-dynamic-workflows.md (new).",
+        "Empty-check against the PR's OWN merge SHA (NOT upstream/development, since this is a partial-day sync): git diff HEAD a5cf486 -- .pi/settings.json .pi/extensions/__tests__/settings.test.ts docs/harnesses/pi.md docs/installation.md docs/integrations/pi-dynamic-workflows.md is empty (no -Xours payload drop).",
+        "No edits to CHANGELOG.md / evals/RESULTS.md yet (deferred to US-005; -Xours keeps origin's copy and discards #452's 100-line RESULTS timestamp churn)."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Iteration 1, 2026-06-19: cherry-picked a5cf486 as 0c9318f; payload empty-check against a5cf486 passed."
+    },
+    {
+      "id": "US-002",
+      "title": "Cherry-pick #446 — preserve active cron worktrees (merge -m 1)",
+      "description": "As the orchestrator, I need upstream #446 so cron worktree pruning preserves a live early-run tmux session whose name matches its worktree basename.",
+      "acceptanceCriteria": [
+        "Run: git cherry-pick -m 1 -Xours 5b8db4dd (merge commit; -m 1 is REQUIRED).",
+        "Payload present: scripts/cron-runtime.ts (preserve-active-worktree logic) and scripts/__tests__/cron-runtime.test.ts (new coverage).",
+        "Empty-check: git diff HEAD 5b8db4dd -- scripts/cron-runtime.ts scripts/__tests__/cron-runtime.test.ts is empty.",
+        "No CHANGELOG.md / evals/RESULTS.md edits yet (deferred to US-005)."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Iteration 2, 2026-06-19: cherry-picked 5b8db4dd as b295fc8; payload empty-check against 5b8db4dd passed."
+    },
+    {
+      "id": "US-003",
+      "title": "Cherry-pick #448 — harden heartbeat log appends (merge -m 1)",
+      "description": "As the orchestrator, I need upstream #448 so heartbeat runs compute memory-log timestamps explicitly and route memory/liveness writes through scripts/locked-append.sh, guarded by a new probe.",
+      "acceptanceCriteria": [
+        "Run: git cherry-pick -m 1 -Xours 35ced5f5 (merge commit; -m 1 REQUIRED).",
+        "Payload present: crons/heartbeat.md (locked-append routing) and evals/probes/heartbeat-logging-contract.sh (new).",
+        "Empty-check (timezone-aware): git diff HEAD 35ced5f5 -- evals/probes/heartbeat-logging-contract.sh is empty, AND git diff HEAD 35ced5f5 -- crons/heartbeat.md shows ONLY the line 'timezone: America/Denver' (origin) vs 'America/Los_Angeles' (upstream). Origin's Denver timezone is a DELIBERATE fork setting that MUST be preserved — #448's net diff never touches that line (upstream flipped Denver->LA in an earlier commit), so this is not a -Xours payload drop.",
+        "bash evals/probes/heartbeat-logging-contract.sh exits 0.",
+        "No CHANGELOG.md / evals/RESULTS.md edits yet (deferred to US-005)."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "RESOLVED by Advisor 2026-06-19: cherry-pick bc093e2 applied #448's locked-append payload in full (probe passes; net diff vs 35ced5f5 is ONLY origin's intentional 'timezone: America/Denver', which #448 never modifies). -Xours correctly preserved origin's Denver timezone. The original empty-check was over-strict (whole-file vs an upstream SHA carrying an orthogonal pre-existing divergence); corrected above. PASS."
+    },
+    {
+      "id": "US-004",
+      "title": "Cherry-pick #450 — sandbox image build CI guard (merge -m 1)",
+      "description": "As the orchestrator, I need upstream #450 so a sandbox-boot-guard CI workflow validates the compose config and builds the devcontainer image for boot-path changes, guarded by a new probe.",
+      "acceptanceCriteria": [
+        "Run: git cherry-pick -m 1 -Xours 619d660d (merge commit; -m 1 REQUIRED).",
+        "Payload present: .github/workflows/sandbox-boot-guard.yml (new) and evals/probes/sandbox-boot-guard-ci.sh (new).",
+        "Empty-check: git diff HEAD 619d660d -- .github/workflows/sandbox-boot-guard.yml evals/probes/sandbox-boot-guard-ci.sh is empty.",
+        "bash evals/probes/sandbox-boot-guard-ci.sh exits 0.",
+        "No CHANGELOG.md / evals/RESULTS.md edits yet (deferred to US-005)."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Iteration 7, 2026-06-19: cherry-picked 619d660d as 139659b; payload empty-check against 619d660d and sandbox-boot-guard-ci probe passed."
+    },
+    {
+      "id": "US-005",
+      "title": "Reconcile the two shared append/index files (one commit)",
+      "description": "As the orchestrator, I need CHANGELOG.md and evals/RESULTS.md merged by union so origin's entries are preserved and the four imported PRs' entries are added without churn. wiki/README.md is NOT touched (no wave-1 PR adds a wiki entry).",
+      "acceptanceCriteria": [
+        "CHANGELOG.md: under [Unreleased], append the four lines (one each from #452/#446/#450 and two from #448) captured verbatim in progress.txt § Codebase Patterns, each under the same subsection (Added/Changed/Fixed) it occupies in its source commit; origin's existing entries preserved.",
+        "evals/RESULTS.md: hand-insert exactly 2 rows in alphabetical position — '| heartbeat-logging-contract | A | <run> | <status> | issue #447 (heartbeat log append hardening) 2026-06-18 |' and '| sandbox-boot-guard-ci | A | <run> | <status> | issue #449 (sandbox image build CI guard) 2026-06-19 |' — status from the actual US-003/US-004 probe runs; existing rows untouched (no wholesale regen).",
+        "wiki/README.md is NOT modified.",
+        "Upstream mifunedev issue links (#445/#447/#449/#451) kept as-is (valid provenance).",
+        "Both edits land in a single reconciliation commit with a Submitted-by: trailer."
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Iteration 8, 2026-06-19: reconciled CHANGELOG.md and evals/RESULTS.md in 9f6eed4; both new probes passed at 2026-06-19 18:45 UTC."
+    },
+    {
+      "id": "US-006",
+      "title": "Verify suite green, push branch, open PR",
+      "description": "As the orchestrator, I need the full probe suite green and a single PR opened to the fork so the wave-1 sync is reviewable.",
+      "acceptanceCriteria": [
+        "Full evals/probes/*.sh run shows regressions=0 (PASS/SKIPPED only, no REGRESSION) vs origin baseline.",
+        "The 2 net-new probes (heartbeat-logging-contract, sandbox-boot-guard-ci) each exit 0.",
+        "git push -u origin task/sync-upstream-20260619.",
+        "gh pr create --base development --repo ryaneggz/openharness with a body listing the 4 synced PRs (#452,#446,#448,#450), the 5 wave-2 deferrals (#462,#454,#456,#458,#463) with rationale, the union/hand-insert conflict policy, and the #255 shared-append base note.",
+        "CI eval-gate is green (poll via /ci-status) before the PR is marked ready."
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Iteration 9, 2026-06-19: full eval suite passed with regressions=0 at 18:48 UTC; pushed branch and opened PR #256 to ryaneggz/openharness:development."
+    }
+  ]
+}

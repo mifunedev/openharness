@@ -32,8 +32,8 @@
         "Tests pass."
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Critic-B H mitigation: distinguish soft preference hint from override MODE; guard with 'when available'."
+      "passes": true,
+      "notes": "Completed 2026-06-19 (ship-spec inline impl); one 'File search' section (3 lines), 'when available' guard, native tools kept as fallback."
     },
     {
       "id": "US-003",

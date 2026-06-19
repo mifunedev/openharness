@@ -13,3 +13,16 @@ Added `"npm:@ff-labs/pi-fff@0.9.5"` as the last npm pin (after pi-autoresearch, 
 The settings test pins the exact packages[] array with `toEqual` (order-sensitive) — any pin add/reorder MUST update it in lockstep or the pre-commit test fails. 0.9.5 confirmed as the `latest` dist-tag; native binding (@ff-labs/fff-node) verified loading on glibc-2.36 x64.
 
 ---
+## US-002 — 2026-06-19 14:25 UTC
+
+**Title**: Add a soft conditional fff prompt hint
+**Files changed**: .pi/APPEND_SYSTEM.md
+**Result**: PASS
+
+### What I did
+Appended one `## File search` section to `.pi/APPEND_SYSTEM.md` preferring `ffgrep`/`fffind` for file search **when available**, explicitly stating it is a preference only and that native `grep`/`find` remain the fallback. Existing Project context + Slack Bridge sections preserved verbatim.
+
+### Learnings for future iterations
+The `when available` guard + "preference only, native tools remain" wording is what distinguishes a soft hint from `PI_FFF_MODE=override` (which actually replaces native tools) — this resolves the Critic-B H finding that the hint contradicted the no-override Non-Goal.
+
+---

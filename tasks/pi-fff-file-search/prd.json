@@ -48,8 +48,8 @@
         "Tests pass."
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "Folds Critic M findings: disable section, troubleshooting rows, sidebar_position, dist-tag note."
+      "passes": true,
+      "notes": "Completed 2026-06-19 (ship-spec inline impl); docs/integrations/pi-fff.md (sidebar_position 4, Disable + 4-row troubleshooting), CHANGELOG #261 bullet."
     },
     {
       "id": "US-004",

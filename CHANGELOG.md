@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Default Pi `fff` file-search support: `.pi/settings.json` pins `npm:@ff-labs/pi-fff@0.9.5` (adds the `ffgrep`/`fffind` tools and frecency-ranked `@`-mention autocomplete, backed by the prebuilt-binary `@ff-labs/fff-node` binding — no Rust toolchain needed), `.pi/APPEND_SYSTEM.md` gains a soft "prefer fff when available" hint that keeps native `grep`/`find` as the fallback (not `override` mode), and `docs/integrations/pi-fff.md` + `wiki/pi-fff.md` cover modes, verify steps, the disable path, and troubleshooting ([#499](https://github.com/mifunedev/openharness/issues/499)).
 - `autopilot-merged-pr-reference-dedupe` eval probe guards that `/autopilot` skips completed-but-still-open tickets whose development PRs already merged ([#468](https://github.com/mifunedev/openharness/issues/468)).
 - `AGENTS.md § The Workflow` codifies the canonical operative path (`select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`) with a single designated runner and the `/ship-spec` all-in-one caveat, guarded by the `workflow-boundaries` eval probe ([#493](https://github.com/mifunedev/openharness/issues/493)).
 - The `spec-*` skill family (`/spec-plan`, `/spec-critique`, `/spec-execute`, `/spec-retro`) decomposes `/ship-spec` into independently runnable, folder-pointed workflow nodes, guarded by the `spec-family-contract` eval probe ([#493](https://github.com/mifunedev/openharness/issues/493)).

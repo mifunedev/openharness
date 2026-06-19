@@ -26,3 +26,16 @@ Appended one `## File search` section to `.pi/APPEND_SYSTEM.md` preferring `ffgr
 The `when available` guard + "preference only, native tools remain" wording is what distinguishes a soft hint from `PI_FFF_MODE=override` (which actually replaces native tools) — this resolves the Critic-B H finding that the hint contradicted the no-override Non-Goal.
 
 ---
+## US-003 — 2026-06-19 14:27 UTC
+
+**Title**: Document the integration and record the change
+**Files changed**: docs/integrations/pi-fff.md (new), CHANGELOG.md
+**Result**: PASS
+
+### What I did
+Created `docs/integrations/pi-fff.md` mirroring `pi-autoresearch.md` (frontmatter sidebar_position 4; intro + pin snippet; What it adds incl. /fff-mode modes/commands; Disable/Remove section; Verify section; 4-row troubleshooting table covering native-binding-fail + empty-autocomplete). Recorded the resolved @ff-labs/fff-node@0.9.5 version + 2026-06-19 resolution date. Added one `### Added` CHANGELOG bullet referencing #261 (fork issue convention).
+
+### Learnings for future iterations
+Fork-originated CHANGELOG bullets reference `ryaneggz/openharness/issues/NNN`; upstream-originated ones reference `mifunedev/...`. Match the originating repo.
+
+---

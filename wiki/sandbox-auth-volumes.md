@@ -1,12 +1,13 @@
 ---
 title: "Sandbox Auth Volume Ownership"
 slug: sandbox-auth-volumes
-tags: [sandbox, devcontainer, auth, docker, ownership]
+tags: [sandbox, devcontainer, auth, docker, ownership, secrets]
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-19
 sources:
   - raw/2026-06-16-sandbox-auth-volumes.md
-related: [hermes-agent, inspectable-agent-harness]
+  - raw/2026-06-19-slack-token-argv.md
+related: [cron-runtime]
 confidence: provisional
 ---
 
@@ -16,7 +17,7 @@ confidence: provisional
 
 - `.devcontainer/docker-compose.yml` — mounts the repo plus persistent agent/GitHub auth named volumes.
 - `.devcontainer/entrypoint.sh` — reconciles the sandbox UID/GID and repairs ownership of auth/config mounts.
-- `scripts/__tests__/entrypoint.test.ts` — pins the ordering and numeric-owner invariant.
+- `scripts/__tests__/entrypoint.test.ts` — pins the ordering, numeric-owner invariant, and Slack token argv guard.
 
 ## Summary
 
@@ -27,6 +28,8 @@ Open Harness keeps agent and GitHub auth state in Docker named volumes under `/h
 Compose mounts `claude-auth`, `codex-auth`, `pi-auth`, `opencode-auth`, `grok-auth`, `deepagents-auth`, `cloudflared-auth`, and `gh-config` below `/home/sandbox` while mounting the checkout separately at `/home/sandbox/harness` (`.devcontainer/docker-compose.yml:31-40`). Docker can create those volume targets as root, so the entrypoint computes the sandbox user's current numeric owner with `id -u sandbox` and `id -g sandbox` before repair (`.devcontainer/entrypoint.sh:15-22`). Numeric ownership matters because UID/GID reconciliation can move `sandbox` to an existing host group whose name is not `sandbox`; `sandbox:sandbox` would then target the wrong group.
 
 The repair helper fixes existing auth/config mounts, preserves `.ssh` mode hardening, repairs root-created parents non-recursively, and handles legacy `/home/sandbox/.hermes` state without recursing into `$HERMES_HOME` when it lives inside the bind-mounted checkout (`.devcontainer/entrypoint.sh:24-56`). It runs once before the host UID block for default-host compatibility and again after UID/GID reconciliation so the final numeric identity owns persisted credentials (`.devcontainer/entrypoint.sh:59-95`). Tests assert both the numeric owner calculation and the pre/post UID-sync invocation order (`scripts/__tests__/entrypoint.test.ts:12-36`).
+
+Slack tokens are a separate secret-handling path in the same entrypoint. The `client-slack` restore block still reads only explicit Slack keys from `.devcontainer/.env`, but it now writes them into a temporary mode-600 runtime env file owned by the sandbox user, starts tmux with a command string containing only that file path, sources and removes the file inside the child shell, then launches `pi` with `/tmp/client-slack.log` logging (`.devcontainer/entrypoint.sh:394-427`). Tests execute the captured tmux command and assert fixture token values do not appear in argv while `pi` receives the original environment (`scripts/__tests__/entrypoint.test.ts:58-166`).
 
 Operator symptoms of ownership drift: `gh auth status` fails despite a populated `gh-config` volume, agent CLIs ask to re-authenticate after restart, or writes under `~/.claude`, `~/.codex`, `~/.pi`, `~/.grok`, `~/.deepagents`, `~/.cloudflared`, or `~/.config/gh` return EACCES. Verify with `stat -c '%u:%g %n' ~/.config/gh ~/.claude ~/.pi` inside the sandbox; expected owner is `$(id -u sandbox):$(id -g sandbox)`. If auth still fails, restart the sandbox to re-run the entrypoint, then manually chown only the affected auth volume path to that numeric owner; do not chown the whole bind-mounted checkout as a recovery shortcut.
 
@@ -42,5 +45,4 @@ flowchart TD
 
 ## See Also
 
-- [[hermes-agent]]
-- [[inspectable-agent-harness]]
+- [[cron-runtime]]

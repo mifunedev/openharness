@@ -12,6 +12,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - `pi-dynamic-workflows` is now a default project-local Pi package pinned to the upstream `v1.0.1` commit, with docs for the `workflow` tool's deterministic JavaScript fan-out model and package-pin test coverage ([#451](https://github.com/mifunedev/openharness/issues/451)).
 - `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed
+- Docs builds now run automatically only from the docs workflow on `main`/`master` pushes; root build, Harness CI, release validation, and `/eval` stay on the fast non-docs path ([#455](https://github.com/mifunedev/openharness/issues/455)).
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
 ### Removed

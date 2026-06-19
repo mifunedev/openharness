@@ -6,8 +6,9 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "setup": "pnpm install && pnpm -r --if-present run build",
-    "build": "pnpm -r --if-present run build",
+    "setup": "pnpm install && pnpm run build",
+    "build": "pnpm run build:harness",
+    "build:harness": "pnpm --filter './packages/**' --filter '!@openharness/docs' -r --if-present run build && (test -d packages/oh/node_modules || npm --prefix packages/oh ci --ignore-scripts) && npm --prefix packages/oh run build",
     "test": "pnpm -r --if-present run test && vitest run",
     "test:scripts": "vitest run",
     "lint": "pnpm -r --if-present run lint",

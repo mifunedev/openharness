@@ -74,8 +74,8 @@ SLACK_ALLOW_USERS=U789
    ```bash
    make shell
    set -a; source /home/sandbox/harness/.devcontainer/.env; set +a
-   tmux new-session -d -s client-slack 'pi 2>&1 | tee /tmp/client-slack.log'
-   tmux attach -t client-slack
+   tmux new-session -d -s client-slack-pi 'pi 2>&1 | tee /tmp/client-slack-pi.log'
+   tmux attach -t client-slack-pi
    ```
 
    `set -a` is needed because `.devcontainer/.env` is Compose-formatted (no `export` prefix); without it, sourced vars stay in the shell but aren't inherited by `pi`. The tmux session keeps `pi` alive across SSH/VS Code disconnects (see [`context/rules/sandbox-processes.md`](../../context/rules/sandbox-processes.md)).
@@ -86,7 +86,7 @@ SLACK_ALLOW_USERS=U789
    ```bash
    env | grep SLACK   # confirm vars are exported
    ```
-   Then DM the bot or `@mention` it from an allow-listed user. Watch the round-trip in `tmux attach -t client-slack` or `tail -f /tmp/client-slack.log`.
+   Then DM the bot or `@mention` it from an allow-listed user. Watch the round-trip in `tmux attach -t client-slack-pi` or `tail -f /tmp/client-slack-pi.log`.
 
 ## Build and Test
 

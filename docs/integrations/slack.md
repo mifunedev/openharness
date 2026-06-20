@@ -69,7 +69,7 @@ Keep both values ready for the next step.
 Inside the sandbox, run the wizard. It prompts for the two tokens, asks
 which allowlist mode to use (users / channels / both), validates IDs,
 writes `.devcontainer/.env` atomically, and offers to restart the
-`client-slack` tmux session.
+`client-slack-pi` tmux session.
 
 ```bash
 make shell           # enter the sandbox
@@ -84,9 +84,10 @@ The wizard:
 - Writes only the Slack keys; unrelated entries (`GH_TOKEN`, `TZ`, etc.)
   are preserved.
 - **Starts the Slack bridge for you** — at the end, it kills any
-  existing `client-slack` tmux session and launches a fresh one running
-  `pi` with the new env sourced. `pi` loads the Slack extension on boot
-  and opens the Socket Mode connection. The wizard polls for the
+  existing `client-slack-pi` tmux session (and the legacy `client-slack`
+  session, if present) and launches a fresh one running `pi` with the new
+  env sourced. `pi` loads the Slack extension on boot and opens the Socket
+  Mode connection. The wizard polls for the
   `"connected and listening"` log line and prints `✓ Slack bridge is live`
   on success (up to 15s).
 
@@ -99,7 +100,7 @@ If `oh` isn't available (older sandbox image, or you'd rather edit by
 hand), the manual procedure still works:
 
 <details>
-<summary>Hand-edit <code>.devcontainer/.env</code> + relaunch <code>client-slack</code></summary>
+<summary>Hand-edit <code>.devcontainer/.env</code> + relaunch <code>client-slack-pi</code></summary>
 
 `.devcontainer/.env` uses Docker Compose `KEY=value` format — no `export`
 prefix. This file is gitignored, so your tokens will not be committed.
@@ -137,11 +138,11 @@ vars. This is the most common manual-mode failure.
 
 ```bash
 set -a; source /home/sandbox/harness/.devcontainer/.env; set +a
-tmux new-session -d -s client-slack 'pi 2>&1 | tee /tmp/client-slack.log'
-tmux attach -t client-slack
+tmux new-session -d -s client-slack-pi 'pi 2>&1 | tee /tmp/client-slack-pi.log'
+tmux attach -t client-slack-pi
 ```
 
-Detach with `Ctrl-b d`. The session name `client-slack` follows the `client-`
+Detach with `Ctrl-b d`. The session name `client-slack-pi` follows the `client-`
 prefix convention in
 [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
 
@@ -162,7 +163,7 @@ the env (before attaching to tmux).
 
 2. **Socket Mode connected** (the real connectivity check):
    ```bash
-   tmux capture-pane -t client-slack -p | grep -i 'socket\|connected\|listening'
+   tmux capture-pane -t client-slack-pi -p | grep -i 'socket\|connected\|listening'
    ```
    Look for lines indicating the Socket Mode client connected or is listening.
    Note: `curl https://slack.com/api/auth.test` only validates the bot token
@@ -172,17 +173,17 @@ the env (before attaching to tmux).
 
 3. **Round-trip test:**
    From an allow-listed user account, DM the bot or `@mention` it in an
-   allow-listed channel. Watch `tmux attach -t client-slack` — you should see the
+   allow-listed channel. Watch `tmux attach -t client-slack-pi` — you should see the
    inbound event logged and the agent's reply posted back to Slack.
 
 ## 7. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Bot doesn't respond; allowlist is set | `pi` did not inherit the vars — `set -a` ran in a different shell than `tmux new-session` | Kill the session (`tmux kill-session -t client-slack`), run `set -a; source …; set +a`, then relaunch `tmux new-session` in the same shell |
+| Bot doesn't respond; allowlist is set | `pi` did not inherit the vars — `set -a` ran in a different shell than `tmux new-session` | Kill the session (`tmux kill-session -t client-slack-pi`), run `set -a; source …; set +a`, then relaunch `tmux new-session` in the same shell |
 | Bot doesn't respond; no allowlist set | Deny-default: both `SLACK_ALLOW_CHANNELS` and `SLACK_ALLOW_USERS` are unset | Set at least one allowlist under `slack:` in `harness.yaml` (and rebuild), or add to `.devcontainer/.env` and relaunch |
 | `invalid_auth` or `not_authed` in log | `xapp-` and `xoxb-` tokens are swapped | `SLACK_APP_TOKEN` must be the `xapp-` token; `SLACK_BOT_TOKEN` must be the `xoxb-` token — correct in `.devcontainer/.env` and relaunch |
-| Socket Mode crashes / reconnects in a loop | Network interruption or token revoked | `tmux kill-session -t client-slack`, verify tokens in `.devcontainer/.env`, then relaunch |
+| Socket Mode crashes / reconnects in a loop | Network interruption or token revoked | `tmux kill-session -t client-slack-pi`, verify tokens in `.devcontainer/.env`, then relaunch |
 | Bot is in allow-list but channel messages ignored | Bot is not a member of the channel | In Slack, type `/invite @OpenHarness` in the target channel |
 
 ## 8. Architecture Pointer

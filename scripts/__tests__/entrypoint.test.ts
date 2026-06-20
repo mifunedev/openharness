@@ -20,7 +20,7 @@ function entrypointFunction(name: string): string {
 }
 
 function slackRestoreBlock(): string {
-  const match = entrypoint().match(/# ─── Restore client-slack session[\s\S]*?\n# ─── Optional: agent-browser/);
+  const match = entrypoint().match(/# ─── Restore client-slack-pi session[\s\S]*?\n# ─── Optional: agent-browser/);
   if (!match) {
     throw new Error("missing Slack restore block");
   }
@@ -64,7 +64,11 @@ describe("devcontainer entrypoint Slack restore", () => {
     expect(text).toContain('SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_USERS=$(shell_quote "$SLACK_ALLOW_USERS")"');
     expect(text).toContain('SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_CHANNELS=$(shell_quote "$SLACK_ALLOW_CHANNELS")"');
     expect(text).toContain("env $SLACK_ENV_ARGS pi");
-    expect(text).toContain("/tmp/client-slack.log");
+    expect(text).toContain("SLACK_SESSION=\"client-slack-pi\"");
+    expect(text).toContain("SLACK_LEGACY_SESSION=\"client-slack\"");
+    expect(text).toContain('has-session -t "=$SLACK_LEGACY_SESSION"');
+    expect(text).toContain('has-session -t "=$SLACK_SESSION"');
+    expect(text).toContain("/tmp/client-slack-pi.log");
   });
 
   it("shell-quotes non-shell-safe Slack token values", () => {
@@ -136,6 +140,7 @@ describe("devcontainer entrypoint Slack restore", () => {
 
     const tmuxLines = readFileSync(tmuxArgs, "utf8").trim().split("\n");
     const tmuxCommand = tmuxLines[tmuxLines.length - 1] ?? "";
+    expect(tmuxLines).toContain("client-slack-pi");
     expect(tmuxCommand).toContain("env SLACK_APP_TOKEN=");
 
     execFileSync("bash", ["-c", tmuxCommand], {

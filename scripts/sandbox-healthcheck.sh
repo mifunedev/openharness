@@ -31,7 +31,7 @@ run_tmux() {
 }
 
 has_session() {
-  run_tmux has-session -t "$1" >/dev/null 2>&1
+  run_tmux has-session -t "=$1" >/dev/null 2>&1
 }
 
 require_session() {
@@ -73,7 +73,7 @@ else
   slack_bot_token="${SLACK_BOT_TOKEN:-$(compose_env_value SLACK_BOT_TOKEN)}"
   if has_value "$slack_app_token" && has_value "$slack_bot_token"; then
     if command_exists "$PI_BIN"; then
-      require_session client-slack
+      require_session client-slack-pi
     else
       record_failure "Slack tokens configured but Pi binary not found: $PI_BIN"
     fi

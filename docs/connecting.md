@@ -94,7 +94,7 @@ All long-running processes inside the sandbox run in named tmux sessions. The na
 
 | Category | Example | Purpose |
 |----------|---------|---------|
-| `client-` | `client-slack`, `client-discord` | External-surface clients bridging an in-sandbox agent |
+| `client-` | `client-slack-pi`, `client-discord` | External-surface clients bridging an in-sandbox agent |
 | `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes (interactive CLIs are foreground, not tmux) |
 | `app-` | `app-docs`, `app-api` | Dev servers |
 
@@ -115,12 +115,12 @@ Follow Option B (or C for a remote host). The Ports panel in VSCode shows forwar
 oh config slack
 ```
 
-The interactive wizard collects your Slack tokens, validates them, writes `.devcontainer/.env`, and restarts the `client-slack` tmux session in Socket Mode. For the full wizard walkthrough see [Integrations → Slack](/docs/integrations/slack).
+The interactive wizard collects your Slack tokens, validates them, writes `.devcontainer/.env`, and restarts the `client-slack-pi` tmux session in Socket Mode. For the full wizard walkthrough see [Integrations → Slack](/docs/integrations/slack).
 
 After the wizard completes, verify the bridge is live:
 
 ```bash
-tmux capture-pane -t client-slack -p | grep -i 'connected\|listening'
+tmux capture-pane -t client-slack-pi -p | grep -i 'connected\|listening'
 ```
 
 ### Step 3 — Launch T3 Code

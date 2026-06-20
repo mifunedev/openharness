@@ -1,12 +1,16 @@
 import { spawnSync } from "node:child_process";
 
+function exactTarget(name: string): string {
+  return `=${name}`;
+}
+
 export function hasSession(name: string): boolean {
-  const r = spawnSync("tmux", ["has-session", "-t", name], { stdio: "ignore" });
+  const r = spawnSync("tmux", ["has-session", "-t", exactTarget(name)], { stdio: "ignore" });
   return r.status === 0;
 }
 
 export function killSession(name: string): void {
-  spawnSync("tmux", ["kill-session", "-t", name], { stdio: "ignore" });
+  spawnSync("tmux", ["kill-session", "-t", exactTarget(name)], { stdio: "ignore" });
 }
 
 export function newSession(name: string, command: string): void {
@@ -17,7 +21,7 @@ export function newSession(name: string, command: string): void {
 }
 
 export function capturePane(name: string): string {
-  const r = spawnSync("tmux", ["capture-pane", "-t", name, "-p"], { encoding: "utf8" });
+  const r = spawnSync("tmux", ["capture-pane", "-t", exactTarget(name), "-p"], { encoding: "utf8" });
   if (r.status !== 0) return "";
   return (r.stdout ?? "") + (r.stderr ?? "");
 }

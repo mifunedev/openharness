@@ -63,11 +63,11 @@ Each runs in its own named tmux session per [`context/rules/sandbox-processes.md
 
 ### Pi+Slack
 
-The Pi agent with the Slack bridge loaded. The wizard writes `.devcontainer/.env`, launches the `client-slack` session, and waits for the Socket Mode connection to come up:
+The Pi agent with the Slack bridge loaded. The wizard writes `.devcontainer/.env`, launches the `client-slack-pi` session, and waits for the Socket Mode connection to come up:
 
 ```bash
 oh config slack              # interactive wizard
-tmux attach -t client-slack      # watch the live log
+tmux attach -t client-slack-pi   # watch the live log
 ```
 
 Talk to the agent from Slack (DM or `@mention` in an allow-listed channel). Full setup: [Slack integration](../integrations/slack.md).

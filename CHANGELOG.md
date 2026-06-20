@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Changed
+- Rename the Pi Slack bridge tmux session from `client-slack` to `client-slack-pi` across the setup wizard, devcontainer restore path, healthcheck, and operator docs ([#269](https://github.com/ryaneggz/openharness/issues/269)).
 - Clarify oh.mifune.dev copy — "harness" now consistently means Open Harness (the repo); the CLI you pick is the "agent". The landing page, site tagline/meta, `docs/intro.md`, `docs/installation.md`, and `docs/harnesses/overview.md` now state one-repo-per-sandbox, that the repo tracks/versions state, and sandbox isolation (agents never run straight on your host) ([#267](https://github.com/ryaneggz/openharness/issues/267)).
 
 ### Deprecated

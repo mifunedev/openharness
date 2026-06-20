@@ -10,7 +10,9 @@ import {
   hasSession, killSession, newSession, capturePane, isInstalled as tmuxAvailable,
 } from "../lib/tmux.js";
 
-const CLIENT_SLACK_SESSION = "client-slack";
+const CLIENT_SLACK_SESSION = "client-slack-pi";
+const LEGACY_CLIENT_SLACK_SESSION = "client-slack";
+const CLIENT_SLACK_LOG = "/tmp/client-slack-pi.log";
 const CONNECTED_MARKER = "connected and listening";
 const POLL_INTERVAL_MS = 1000;
 const MAX_POLLS = 15;
@@ -145,17 +147,18 @@ async function promptAllowlist(env: Record<string, string | undefined>): Promise
 
 async function relaunchClientSlack(envPath: string): Promise<void> {
   if (!tmuxAvailable()) {
-    warn("tmux not found in PATH — skipping client-slack restart. Restart it manually after this exits.");
+    warn(`tmux not found in PATH — skipping ${CLIENT_SLACK_SESSION} restart. Restart it manually after this exits.`);
     return;
   }
-  const wasRunning = hasSession(CLIENT_SLACK_SESSION);
-  if (wasRunning) {
-    info(`Killing existing tmux session "${CLIENT_SLACK_SESSION}"…`);
-    killSession(CLIENT_SLACK_SESSION);
+  for (const session of [CLIENT_SLACK_SESSION, LEGACY_CLIENT_SLACK_SESSION]) {
+    if (hasSession(session)) {
+      info(`Killing existing tmux session "${session}"…`);
+      killSession(session);
+    }
   }
   info(`Starting tmux session "${CLIENT_SLACK_SESSION}"…`);
   // The session sources .env via `set -a` so child pi inherits the new vars.
-  const cmd = `bash -c 'set -a; source ${envPath}; set +a; pi 2>&1 | tee /tmp/client-slack.log'`;
+  const cmd = `bash -c 'set -a; source ${envPath}; set +a; pi 2>&1 | tee ${CLIENT_SLACK_LOG}'`;
   newSession(CLIENT_SLACK_SESSION, cmd);
 
   info("Validating Slack connection (up to 15s)…");
@@ -166,14 +169,14 @@ async function relaunchClientSlack(envPath: string): Promise<void> {
       return;
     }
     if (/Run error|Missing env/.test(out)) {
-      fail("Slack extension reported an error. Check `tmux attach -t client-slack`.");
+      fail(`Slack extension reported an error. Check \`tmux attach -t ${CLIENT_SLACK_SESSION}\`.`);
       return;
     }
     await new Promise<void>((r) => setTimeout(r, POLL_INTERVAL_MS));
     process.stdout.write(".");
   }
   process.stdout.write("\n");
-  warn("Did not see 'connected and listening' within 15s. Check `tmux attach -t client-slack`.");
+  warn(`Did not see 'connected and listening' within 15s. Check \`tmux attach -t ${CLIENT_SLACK_SESSION}\`.`);
 }
 
 export async function runSlack(): Promise<number> {
@@ -231,20 +234,21 @@ export async function runSlack(): Promise<number> {
     return 1;
   }
 
-  info("Next step: start the Slack bridge by (re)launching the client-slack tmux session.");
-  info("This kills any existing client-slack session, then starts pi with the new tokens;");
+  info(`Next step: start the Slack bridge by (re)launching the ${CLIENT_SLACK_SESSION} tmux session.`);
+  info("This kills any existing Slack bridge tmux session, then starts pi with the new tokens;");
   info("pi loads the slack extension on boot and opens the Socket Mode connection.");
 
   if (await confirm("Start the Slack bridge now?")) {
     await relaunchClientSlack(envPath);
     info("");
     info("Slack bridge is live. Test it: DM your bot or @mention it in an allow-listed channel.");
-    info("Tail the live log: tmux attach -t client-slack   (detach: Ctrl-b d)");
+    info(`Tail the live log: tmux attach -t ${CLIENT_SLACK_SESSION}   (detach: Ctrl-b d)`);
   } else {
     info("Skipped. Start the bridge manually when ready:");
-    info("  tmux kill-session -t client-slack 2>/dev/null; \\");
+    info(`  tmux kill-session -t ${CLIENT_SLACK_SESSION} 2>/dev/null; \\`);
+    info(`  tmux kill-session -t ${LEGACY_CLIENT_SLACK_SESSION} 2>/dev/null; \\`);
     info(`  set -a; source ${envPath}; set +a; \\`);
-    info("  tmux new-session -d -s client-slack 'pi 2>&1 | tee /tmp/client-slack.log'");
+    info(`  tmux new-session -d -s ${CLIENT_SLACK_SESSION} 'pi 2>&1 | tee ${CLIENT_SLACK_LOG}'`);
   }
 
   return 0;

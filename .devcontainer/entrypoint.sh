@@ -391,7 +391,7 @@ CRON_WATCHDOG
   fi
 fi
 
-# ─── Restore client-slack session if Slack is configured ──────────────
+# ─── Restore client-slack-pi session if Slack is configured ───────────
 # Tokens live in .devcontainer/.env (Compose KEY=value format). When both
 # SLACK_APP_TOKEN and SLACK_BOT_TOKEN are set AND `pi` is installed for
 # the sandbox user, restore the session that `oh config slack` created.
@@ -399,6 +399,9 @@ fi
 # keys the bridge needs and shell-quote each value before passing them to
 # the child `pi` process.
 SLACK_ENV="$HARNESS/.devcontainer/.env"
+SLACK_SESSION="client-slack-pi"
+SLACK_LEGACY_SESSION="client-slack"
+SLACK_LOG="/tmp/client-slack-pi.log"
 if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
   SLACK_APP_TOKEN=$(grep -E '^SLACK_APP_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
   SLACK_BOT_TOKEN=$(grep -E '^SLACK_BOT_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
@@ -406,15 +409,19 @@ if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
   SLACK_ALLOW_CHANNELS=$(grep -E '^SLACK_ALLOW_CHANNELS=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
   if [ -n "$SLACK_APP_TOKEN" ] && [ -n "$SLACK_BOT_TOKEN" ] \
      && gosu sandbox bash -lc 'command -v pi' &>/dev/null; then
-    if ! gosu sandbox tmux has-session -t client-slack 2>/dev/null; then
+    if gosu sandbox tmux has-session -t "=$SLACK_LEGACY_SESSION" 2>/dev/null; then
+      gosu sandbox tmux kill-session -t "=$SLACK_LEGACY_SESSION" 2>/dev/null || true
+      echo "[entrypoint] legacy $SLACK_LEGACY_SESSION tmux session stopped; starting $SLACK_SESSION"
+    fi
+    if ! gosu sandbox tmux has-session -t "=$SLACK_SESSION" 2>/dev/null; then
       SLACK_ENV_ARGS="SLACK_APP_TOKEN=$(shell_quote "$SLACK_APP_TOKEN") SLACK_BOT_TOKEN=$(shell_quote "$SLACK_BOT_TOKEN")"
       [ -n "$SLACK_ALLOW_USERS" ] && SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_USERS=$(shell_quote "$SLACK_ALLOW_USERS")"
       [ -n "$SLACK_ALLOW_CHANNELS" ] && SLACK_ENV_ARGS="$SLACK_ENV_ARGS SLACK_ALLOW_CHANNELS=$(shell_quote "$SLACK_ALLOW_CHANNELS")"
-      gosu sandbox tmux new-session -d -s client-slack \
-        "env $SLACK_ENV_ARGS pi 2>&1 | tee /tmp/client-slack.log"
-      echo "[entrypoint] client-slack tmux session started (Slack bridge)"
+      gosu sandbox tmux new-session -d -s "$SLACK_SESSION" \
+        "env $SLACK_ENV_ARGS pi 2>&1 | tee $SLACK_LOG"
+      echo "[entrypoint] $SLACK_SESSION tmux session started (Slack bridge)"
     else
-      echo "[entrypoint] client-slack tmux session already running — skipping"
+      echo "[entrypoint] $SLACK_SESSION tmux session already running — skipping"
     fi
   fi
 fi

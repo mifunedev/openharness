@@ -19,7 +19,7 @@ Format: `<category>-<identifier>` (kebab-case inside each segment).
 | `app-` | `app-docs`, `app-api` | User dev servers |
 | `expose-public-` | `expose-public-3000` | Cloudflare quick tunnels (auto-created) |
 | `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes. Interactive CLIs (`claude`, `codex`, `opencode`) are normally foreground in a terminal or VS Code, not detached in tmux. |
-| `client-` | `client-slack`, `client-discord` | External-surface clients that bridge an in-sandbox agent to a third-party UI |
+| `client-` | `client-slack-pi`, `client-discord` | External-surface clients that bridge an in-sandbox agent to a third-party UI |
 | `cron-` | `cron-heartbeat`, `cron-autopilot-0613-1805`, `cron-system` | Scheduled cron jobs and the cron runtime. |
 
 Reserved prefix: `system-`. Do not use for user apps.

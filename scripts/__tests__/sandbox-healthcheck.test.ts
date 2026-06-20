@@ -22,8 +22,9 @@ function fixture() {
     tmux,
     `#!/usr/bin/env bash
 if [ "$1" = "has-session" ] && [ "$2" = "-t" ]; then
+  target="\${3#=}"
   case ",\${HEALTHCHECK_TMUX_SESSIONS:-}," in
-    *,"$3",*) exit 0 ;;
+    *,"$target",*) exit 0 ;;
     *) exit 1 ;;
   esac
 fi
@@ -127,7 +128,7 @@ describe("sandbox healthcheck", () => {
     });
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("missing required tmux session: client-slack");
+    expect(result.stderr).toContain("missing required tmux session: client-slack-pi");
   });
 
   it("is wired into the devcontainer compose healthcheck", () => {
@@ -143,5 +144,6 @@ describe("sandbox healthcheck", () => {
 
     expect(script).toContain('gosu sandbox "$TMUX_BIN" "$@"');
     expect(script).toContain('id sandbox >/dev/null');
+    expect(script).toContain('has-session -t "=$1"');
   });
 });

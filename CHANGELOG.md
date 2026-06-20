@@ -8,6 +8,9 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ## [Unreleased]
 
+### Changed
+- Clarify oh.mifune.dev copy — "harness" now consistently means Open Harness (the repo); the CLI you pick is the "agent". The landing page, site tagline/meta, `docs/intro.md`, `docs/installation.md`, and `docs/harnesses/overview.md` now state one-repo-per-sandbox, that the repo tracks/versions state, and sandbox isolation (agents never run straight on your host) ([#267](https://github.com/ryaneggz/openharness/issues/267)).
+
 ### Deprecated
 - `context/rules/loop.md` — the executable decision-tree spec is deprecated; the canonical workflow is now `AGENTS.md` § The Workflow (operative path `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`). Full removal tracked in [#263](https://github.com/ryaneggz/openharness/issues/263).
 - `/orchestrate` — the executable-loop runner is deprecated; the single runner is `/autopilot`. Full removal tracked in [#263](https://github.com/ryaneggz/openharness/issues/263).

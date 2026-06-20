@@ -6,15 +6,15 @@ title: "Introduction"
 
 # Open Harness
 
-Open Harness is a Docker-based agent harness for **one project**, agent-tended over time. A single sandbox container is scoped to a single repo, branch, and identity — the agent owns its workspace, runs against your code, and wakes itself on a schedule via a tiny croner runtime.
+Open Harness is your **portable harness** — one repo per sandbox — that wraps your project in an isolated Docker container and versions its state. The repo tracks the agent's identity, skills, crons, and memory in git; the sandbox keeps the agent (Claude Code, Codex, Pi, or another of your choice) off your host machine. The agent owns its workspace, runs against your code, and wakes itself on a schedule via a tiny croner runtime.
 
 ## What is Open Harness?
 
-Open Harness packages a single AI agent in a Docker container called a sandbox. You bring it up with `docker compose`, attach to it from your terminal or VS Code, and let the agent work the project over time. There is no per-agent fan-out and no host CLI; everything happens through standard `docker compose` commands and the croner runtime that ships in the image.
+Open Harness is a single repo that *is* your harness: it boots one Docker container — the sandbox — and wraps your project inside it. You bring the sandbox up with `docker compose`, attach to it from your terminal or VS Code, and let your chosen agent work the project over time. Because the harness is a git repo, its whole setup is tracked and versioned — reproducible and portable. There is no per-agent fan-out and no host CLI; everything happens through standard `docker compose` commands and the croner runtime that ships in the image.
 
 Key capabilities:
 
-- **One project, one sandbox.** A single container scoped to a single repo and branch. The agent owns its workspace; your laptop stays clean.
+- **One repo, one sandbox.** Your portable harness is one repo; it boots one container. The agent owns its workspace; your machine stays clean — you're not running agents straight on your host.
 - **Markdown-defined crons.** `crons/*.md` files declare schedules; an in-container croner runtime fires the bodies as agent prompts so the agent can work autonomously while you focus on other things.
 - **Host dependencies: Docker + Git.** No Node, no Python, and no toolchain maintenance required on your laptop.
 - **Composable infra.** Cloudflare tunnels, SSH, and pack-supplied services are opt-in Docker Compose overlays.

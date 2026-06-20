@@ -989,8 +989,11 @@ describe("reloadEntryForFire", () => {
     expect(liveEntry?.repo).toBe("mifunedev/openharness");
     // Body stays cached here so reloadBody remains the single BODY_RELOADED logger.
     expect(liveEntry?.body).toBe("original body\n");
+    expect(liveEntry?.filePath).toBe(cronFile);
+    expect(reloadBody(liveEntry!)).toBe("updated body\n");
     const lines = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(lines.some((line) => line.includes("ENTRY_RELOADED") && line.includes("agentBin,preflight,repo"))).toBe(true);
+    expect(lines.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(false);
   });
 
   it("skips a fire when the cron is disabled on disk after scheduling", () => {

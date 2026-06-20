@@ -27,11 +27,11 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 | --- | --- | --- | --- |
 | prompt-miner | prompt-miner | [prompt-mining, retro, self-improvement, scoring, cron, ship-spec, open-harness] | 2026-06-19 |
 | pi-fff | pi-fff (fff file search) | [pi, fff, file-search, ffgrep, fffind, frecency, integration, open-harness] | 2026-06-19 |
+| claude-code-teacher-skill | Claude Code Teacher Skill | [claude-code, education, skills, ai-assisted-coding] | 2026-06-19 |
 | harness-audit | Harness Audit | [audit, skills, autopilot, memory, worktrees] | 2026-06-18 |
 | ship-spec-orchestration | ship-spec Orchestration Boundary | [ship-spec, orchestration, executable-loop, ralph, pr-audit, agent-harness] | 2026-06-16 |
 | sandbox-auth-volumes | Sandbox Auth Volume Ownership | [sandbox, devcontainer, auth, docker, ownership] | 2026-06-16 |
 | cron-runtime | Cron Runtime | [cron, runtime, scheduler, drift-check, automation, open-harness] | 2026-06-16 |
-| claude-code-teacher-skill | Claude Code Teacher Skill | [claude-code, education, skills, ai-assisted-coding] | 2026-06-16 |
 | vet-run-vet | vet-run/vet | [security, shell, installer, curl-bash, devtools, openharness] | 2026-06-15 |
 | goldman-humanoid-robot-supply-chain | Goldman Humanoid Robot Supply Chain Map | [humanoid-robots, robotics, supply-chain, critical-metals, ai-infrastructure, market-maps] | 2026-06-15 |
 | pi-recap | Pi Recap | [pi, recap, session-summary, extension] | 2026-06-14 |

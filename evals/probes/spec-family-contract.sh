@@ -3,8 +3,8 @@
 # source: conversation 2026-06-19 (spec-* family split, issue #265)
 # desc: the spec-* family (/spec-plan,-critique,-execute,-retro) exists, each is pointed at
 #       the tasks/<slug>/ folder interface, names AGENTS.md § The Workflow as its authority,
-#       and carries NO loop-style ## Handoff section (so it stays out of the deprecated
-#       loop.md § 2 tree and loop-handoff-consistency.sh keeps skipping it)
+#       and carries NO loop-style ## Handoff section (a vestige of the executable-loop
+#       framework removed in #263; spec-* declares its place with ## Pipeline position)
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -34,9 +34,9 @@ for s in "${family[@]}"; do
   [ -f "$f" ] || continue
   grep -qF 'tasks/<slug>/' "$f" || missing+=("$s: does not name the tasks/<slug>/ folder interface")
   grep -qF 'AGENTS.md § The Workflow' "$f" || missing+=("$s: does not cite AGENTS.md § The Workflow as authority")
-  # The spec-* family is the canonical workflow, NOT a node of the deprecated loop.md § 2
-  # tree. A loop-style '## Handoff' section would (a) misroute it into the dead tree and
-  # (b) trip loop-handoff-consistency.sh, whose tokens must live in loop.md § 2.
+  # The spec-* family is the canonical workflow. A loop-style '## Handoff' section is a
+  # vestige of the executable-loop framework (removed in #263); spec-* skills declare
+  # their place with '## Pipeline position' instead.
   grep -qE '^## Handoff' "$f" && missing+=("$s: carries a loop-style ## Handoff section (must use ## Pipeline position)")
 done
 
@@ -59,5 +59,5 @@ if [ "${#missing[@]}" -gt 0 ]; then
   exit 1
 fi
 
-echo "PASS: spec-* family present, folder-pointed, AGENTS-authored, and out of the deprecated loop tree" >&2
+echo "PASS: spec-* family present, folder-pointed, AGENTS-authored, and free of loop-style ## Handoff sections" >&2
 exit 0

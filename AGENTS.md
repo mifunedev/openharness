@@ -111,7 +111,7 @@ Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspa
 <!-- workflow-canonical -->
 The harness has one canonical **operative path**: `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`. `autopilot` selects work; the `spec-*` family plans, critiques, executes, and reflects; the human merges; the runner resets. **`autopilot` is the designated sole runner.**
 
-> The four `spec-*` skills (`/spec-plan` · `/spec-critique` · `/spec-execute` · `/spec-retro`) now exist and are the canonical decomposed workflow — each pointed at a `tasks/<slug>/` folder, runnable independently or fanned out via `/delegate`. `/ship-spec` remains the all-in-one composer that runs the same `plan → critique → execute → retro` pipeline in one invocation (what `/autopilot` drives) and is the single source of the protected build mechanics the `spec-*` family composes. The executable-loop machinery (`context/rules/loop.md` + `/orchestrate`) is **deprecated**; this section is canonical.
+> The four `spec-*` skills (`/spec-plan` · `/spec-critique` · `/spec-execute` · `/spec-retro`) now exist and are the canonical decomposed workflow — each pointed at a `tasks/<slug>/` folder, runnable independently or fanned out via `/delegate`. `/ship-spec` remains the all-in-one composer that runs the same `plan → critique → execute → retro` pipeline in one invocation (what `/autopilot` drives) and is the single source of the protected build mechanics the `spec-*` family composes. This section (`§ The Workflow`) is the sole canonical workflow.
 
 ```mermaid
 flowchart LR

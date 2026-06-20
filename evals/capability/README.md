@@ -6,10 +6,9 @@ concrete deliverable (a shipped PR, a passing eval, a clean retro) and scores ho
 well the harness actually produced it. A rising suite score is evidence the loop
 **got better**; a flat score while machinery grows is its signal to ask a human.
 
-The originating rationale is the **objective anchor** in `context/rules/loop.md`
-§ 1 (the executable-loop series): this instrument is the *Capability benchmark*
-lever that anchor names. The benchmark **node** that consumes these scores is not
-wired yet (`loop.md` § 7 marks it `☐`) — see *Non-scope*.
+The originating rationale is the **objective anchor**: harness capability is *what the
+harness can DO, not what it HAS*. This instrument is the *Capability benchmark* — the
+progress ceiling — consumed by the `/benchmark` verdict skill against the counterfactual.
 
 ## Ceiling vs. floor
 
@@ -89,9 +88,9 @@ keep it honest:
 
 The benchmark is also the loop's one tap on the human's shoulder. If the **suite
 score does not move over N cycles** while the harness keeps adding machinery
-(skills, rules, probes), the loop flags itself for **human redirect** — the
-single external vote described in `context/rules/loop.md` § 1. A flat ceiling under
-growing complexity means the loop is busy but not *better*; only a human re-aims it.
+(skills, rules, probes), the harness flags itself for **human redirect** — the
+single external vote that can say "you are building the wrong thing". A flat ceiling under
+growing complexity means the harness is busy but not *better*; only a human re-aims it.
 
 ## Non-scope (be honest about what this v1 is)
 

@@ -1,21 +1,21 @@
 ---
 name: critique
 description: >-
-  The critique node of the executable loop — run two adversarial critics in
+  The critique node of the canonical workflow — run two adversarial critics in
   parallel (implementer lens + user lens) against a freshly-planned spec, write
   their findings to tasks/<slug>/critique.md, and hand off to the approve gate.
   This is the EVIDENCE half of the critique→approve pair; it produces findings,
   it does not decide (the /approve gate decides). Runs on local artifacts only,
   before any GitHub-side state.
   TRIGGER when: a PRD/plan exists and needs adversarial review before the
-  commitment gate; the `critique` node of context/rules/loop.md runs; "critique
+  commitment gate; "critique
   this spec", "run the critics on <slug>", "review prd before we build".
 argument-hint: "<slug>"
 ---
 
 # Critique — two adversarial critics before commitment
 
-The **critique** node of the executable loop (`context/rules/loop.md` § 2). It runs
+The **critique** node of the canonical workflow (`AGENTS.md § The Workflow`), composed by `/spec-critique`. It runs
 the short adversarial feedback loop on a planned spec *before* anything is committed,
 and writes the `critique.md` artifact the `approve` gate then decides on.
 
@@ -24,7 +24,7 @@ Two critics with **different framings** review `tasks/<slug>/prd.md` in parallel
 symmetric critics waste context. Every finding is SEVERITY-tagged so the downstream
 `/approve` gate can act on it mechanically. This node produces evidence; it does not
 gate (that is `/approve`). Like the gate, it touches only local artifacts — no
-GitHub-side state exists yet (invariant 6). Formalizes `/ship-spec` Stage 3 as a
+GitHub-side state exists yet (critic-before-commitment). Formalizes `/ship-spec` Stage 3 as a
 reusable node.
 
 ---
@@ -36,7 +36,7 @@ reusable node.
 | `<slug>` | The task slug — the critics read `tasks/<slug>/prd.md`; output is written to `tasks/<slug>/critique.md`. Required. |
 
 If `tasks/<slug>/prd.md` is absent there is nothing to critique — print an error
-pointing at the `plan` node and emit **no** `STATUS:` token (invariant 5: a missing
+pointing at `/spec-plan` and emit **no** `STATUS:` token (honest exits: a missing
 spec is a failure, not a clean critique).
 
 ---
@@ -135,23 +135,3 @@ After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
 - **Recommendation**: PROCEED | REVISE-PRD | HALT
 - **Observation**: <one sentence>
 ```
-
----
-
-## Handoff
-
-`critique` is a node in the executable loop (`context/rules/loop.md` § 2). After
-writing `critique.md`, emit exactly one terminal line as the **final line of output**:
-
-    STATUS: CRITIQUE-DONE
-
-Routes (must match `context/rules/loop.md` § 2):
-
-| STATUS | Next node |
-|--------|-----------|
-| `CRITIQUE-DONE` | `approve` |
-
-The `/autopilot` runner reads this token to route to `approve`, which gates on the
-`critique.md` this node produced. Emitting nothing (e.g. no `prd.md`, or the critics
-failed to return) is read as failure, never as a clean critique (invariant 5: honest
-exits). When `/critique` is invoked standalone, the trailing `STATUS:` line is harmless.

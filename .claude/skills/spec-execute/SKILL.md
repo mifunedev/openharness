@@ -160,7 +160,6 @@ tokens as the final line:
 
     STATUS: SPEC-BLOCKED
 
-The `spec-*` family is **not** wired into the deprecated executable loop
-(`context/rules/loop.md` § 2); `AGENTS.md § The Workflow` is its authority. Never infer a
+The `spec-*` family's authority is `AGENTS.md § The Workflow`. Never infer a
 promotable PR from silence — a build that crashed or an unrun CI is `SPEC-BLOCKED`, not
 `SPEC-EXECUTED`.

@@ -107,7 +107,6 @@ revise + re-critique. Print one of these bare tokens as the final line:
 
     STATUS: SPEC-DENIED
 
-The `spec-*` family is **not** wired into the deprecated executable loop
-(`context/rules/loop.md` § 2); `AGENTS.md § The Workflow` is its authority. No
+The `spec-*` family's authority is `AGENTS.md § The Workflow`. No
 `critique.md` → the gate cannot decide: print an error directing the caller to
 `/spec-plan`/`/critique` and emit no `STATUS:` line — never infer approval from silence.

@@ -1,17 +1,17 @@
 ---
 name: benchmark
 description: >-
-  Progress-ceiling verdict gate for the executable loop — decide whether ONE
+  Progress-ceiling verdict gate (part of `/spec-execute`'s improve tail) — decide whether ONE
   landed change was actually BENEFICIAL (moved or held the capability-benchmark
   ceiling without breaking the regression floor, and is worth its complexity),
   then emit a single BENEFICIAL/NOT-BENEFICIAL verdict. Composes (never forks)
   the existing instruments: /eval (the regression floor — probes stay green) +
   the capability-benchmark ceiling delta (evals/capability/RESULTS.md vs. the
   counterfactual). Machinery added with no benchmark movement is NOT-BENEFICIAL
-  by definition (loop.md § 1). Distinct from /audit (per-unit promotability =
+  by definition. Distinct from /audit (per-unit promotability =
   floor) — this is the ceiling: did the harness get BETTER, not just not-broken.
   TRIGGER when: a change has landed and the loop needs a benefit-vs-counterfactual
-  verdict before the cycle repeats; the `benchmark` node of context/rules/loop.md
+  verdict before the cycle repeats; the improve tail of `/spec-execute`
   runs; "was <change> beneficial", "score the capability benchmark", "benchmark
   this cycle".
 argument-hint: "[--base <ref>] [--cycles <N>]"
@@ -19,16 +19,16 @@ argument-hint: "[--base <ref>] [--cycles <N>]"
 
 # Benchmark — progress-ceiling verdict gate
 
-The **benchmark** node of the executable loop (`context/rules/loop.md` § 2). It
-answers one question: *was this change actually beneficial — did it move or hold
-the capability ceiling without breaking the regression floor, and is it worth its
-complexity?* — and emits exactly one verdict the `/orchestrate` routes on.
+The **benchmark** gate, part of `/spec-execute`'s improve tail in `AGENTS.md § The
+Workflow`. It answers one question: *was this change actually beneficial — did it
+move or hold the capability ceiling without breaking the regression floor, and is
+it worth its complexity?* — and emits exactly one verdict.
 
 **Core principle: compose, don't re-derive — and judge OUTCOMES, not machinery.**
 This skill owns the *verdict*, not the instruments. The regression floor is
 `/eval`; the progress ceiling is the capability benchmark (`evals/capability/`).
 `/benchmark` runs both and integrates them into a single `BENEFICIAL` /
-`NOT-BENEFICIAL`. Per loop.md § 1, *adding machinery is not progress* — a change
+`NOT-BENEFICIAL`. *Adding machinery is not progress* — a change
 that grows the harness but does not move the capability benchmark is
 `NOT-BENEFICIAL` **by definition**.
 
@@ -54,7 +54,7 @@ that grows the harness but does not move the capability benchmark is
 Run in order; the **first** signal that decides `NOT-BENEFICIAL` ends the gate.
 Only when **both** signals clear is the verdict `BENEFICIAL`. A signal that is
 missing or ambiguous is treated as NOT-BENEFICIAL, never as beneficial
-(invariant 5: honest exits).
+(honest exits).
 
 ### Signal 1 — Regression floor (`/eval`)
 
@@ -92,13 +92,13 @@ yet, see `evals/capability/README.md` § *Non-scope*):
 |---|---|
 | Suite score **rose**, or a task axis improved (`FAIL→PARTIAL→PASS`) | `BENEFICIAL` |
 | Score **held** AND the change demonstrably delivered its stated capability at acceptable cost (a deliberate floor-hardening / instrument / docs change that a capability task credits) | `BENEFICIAL` (justified hold) |
-| Score **flat** AND the change only added machinery (new skill/rule/probe) with **no** capability task crediting it | `NOT-BENEFICIAL` — "machinery without benchmark movement" (loop.md § 1) |
+| Score **flat** AND the change only added machinery (new skill/rule/probe) with **no** capability task crediting it | `NOT-BENEFICIAL` — "machinery without benchmark movement" |
 | Score **fell** | `NOT-BENEFICIAL` — the change regressed the ceiling |
 
 > **Instrument grooming (`/eval-lint`).** A faithful ceiling needs a sharp
 > instrument: stale probes retired, coverage gaps surfaced, an anti-Goodhart
-> holdout. That grooming is `/eval-lint` — a **named follow-on** (`loop.md` § 7,
-> not yet built). Until it exists, note in the verdict that the instrument was
+> holdout. That grooming is `/eval-lint` — a **named follow-on** that is
+> not yet built. Until it exists, note in the verdict that the instrument was
 > not groomed this cycle; do **not** silently skip it.
 
 ---
@@ -114,7 +114,7 @@ State the verdict with the two signal results (floor `rc` + ceiling delta), then
 
 **On `NOT-BENEFICIAL`, the change is reverted before the cycle repeats** (`→ repeat`
 *after revert*). Like `/audit`, this skill is **read-only**: it decides and names
-the exact remediation; the operator/`/orchestrate` performs it. Surface the revert
+the exact remediation; the operator performs it. Surface the revert
 command for the change under evaluation, e.g.:
 
 ```bash
@@ -128,7 +128,7 @@ gate), which closes back to `ideate`.
 
 ## Redirect signal — the one external vote
 
-Per `context/rules/loop.md` § 1, the benchmark is also the loop's single tap on a
+The benchmark is also the harness's single tap on a
 human's shoulder. If the capability suite score has **not moved over `--cycles N`
 consecutive cycles** while the harness kept adding machinery, the loop is busy but
 not *better* — emit the verdict as normal **and** print a `REDIRECT-FLAG` line
@@ -136,7 +136,7 @@ recommending human re-aim. This never blocks routing (it is advisory), but it MU
 be surfaced, not swallowed:
 
 ```
-REDIRECT-FLAG: capability suite score flat at <X.XX>/2.00 for <N> cycles while N skills/probes were added — recommend human redirect (loop.md § 1).
+REDIRECT-FLAG: capability suite score flat at <X.XX>/2.00 for <N> cycles while N skills/probes were added — recommend human redirect.
 ```
 
 ---
@@ -146,7 +146,7 @@ REDIRECT-FLAG: capability suite score flat at <X.XX>/2.00 for <N> cycles while N
 - **Score the floor as the ceiling.** A green probe suite is necessary, not
   sufficient. Benefit is the *capability* delta, not "nothing broke".
 - **Mutate.** No revert, no commit, no merge — it emits the verdict and names the
-  revert; the runner/operator acts (invariant 3: decided here, acted on elsewhere).
+  revert; the runner/operator acts (single-owner handoff: decided here, acted on elsewhere).
 - **Fork `/eval` or the instrument.** It composes both; it never reimplements the
   probe runner or re-authors the capability tasks.
 - **Tune the harness to the benchmark.** The task set is held-out
@@ -168,27 +168,3 @@ After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
 - **Redirect**: none | REDIRECT-FLAG (<N> flat cycles)
 - **Observation**: <one sentence>
 ```
-
----
-
-## Handoff
-
-`benchmark` is a node in the executable loop (`context/rules/loop.md` § 2). After
-the verdict — on **every** exit path — emit exactly one terminal line as the
-**final line of output**:
-
-    STATUS: BENEFICIAL
-
-(or `STATUS: NOT-BENEFICIAL`). Routes (must match `context/rules/loop.md` § 2):
-
-| STATUS | Next node |
-|--------|-----------|
-| `BENEFICIAL` | `repeat` |
-| `NOT-BENEFICIAL` | `repeat` |
-
-Both tokens route to `repeat` (the runner-applied freshness gate): a `BENEFICIAL`
-change is kept and the cycle repeats; a `NOT-BENEFICIAL` change is reverted first,
-then the cycle repeats (`loop.md` § 2: `NOT-BENEFICIAL → repeat` *after revert*).
-Emitting nothing is read as failure, never as success (invariant 5: honest exits).
-When `/benchmark` is invoked standalone (not under `/orchestrate`), the trailing
-`STATUS:` line is harmless.

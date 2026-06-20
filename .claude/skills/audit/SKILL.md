@@ -1,7 +1,7 @@
 ---
 name: audit
 description: >-
-  Per-unit verdict gate for the executable loop — decide whether ONE
+  Per-unit verdict gate (the build⇄audit gate composed by `/spec-execute`) — decide whether ONE
   implementation satisfies its task graph and is promotable, then emit a single
   PASS/FAIL verdict. Composes (never forks) the existing checks: prd.json
   task-graph conformance + /eval regression floor + /pr-audit promotable
@@ -10,14 +10,14 @@ description: >-
   /context-audit = context budget, /harness-audit = whole harness): this is one
   impl vs. one spec → one verdict.
   TRIGGER when: an implementation is complete and needs a go/no-go verdict before
-  retro; the `audit` node of context/rules/loop.md runs; "audit this task",
+  retro; the build⇄audit gate of `/spec-execute` runs; "audit this task",
   "is <slug> promotable", "verify the implementation against its prd.json".
 argument-hint: "<slug> [--pr <N>] [--branch <branch>]"
 ---
 
 # Audit — per-unit verdict gate
 
-The **audit** node of the executable loop (`context/rules/loop.md` § 2). It answers
+The **audit** gate, composed by `/spec-execute` in `AGENTS.md § The Workflow`. It answers
 one question: *does this one implementation satisfy its task graph and is it
 promotable?* — and emits exactly one verdict the `/autopilot` runner routes on.
 
@@ -26,8 +26,8 @@ This skill owns the *verdict*, not the checks. Each gate below is an existing
 primitive; `/audit` runs them in fail-fast order and integrates their results
 into a single `AUDIT-PASS` / `AUDIT-FAIL`. It is **read-only**: it decides, it
 does not mutate (no `gh pr ready`, no `gh pr merge`) and does not fix — promotion
-is a downstream concern and remediation belongs to the `implement` node on
-`AUDIT-FAIL` (invariant 3: the outcome is decided here, acted on elsewhere).
+is a downstream concern and remediation belongs to the build step on
+`AUDIT-FAIL` (single-owner handoff: the outcome is decided here, acted on elsewhere).
 
 > **Not a survey skill.** `/pr-audit` triages the *whole* open-PR queue in one
 > bulk query (*"never loop per-PR"*, `pr-audit/SKILL.md`); `/audit` is the
@@ -51,7 +51,7 @@ is a downstream concern and remediation belongs to the `implement` node on
 Run in order; the **first** gate that fails decides the verdict (`AUDIT-FAIL`,
 naming the gate). Only when **all** applicable gates pass is the verdict
 `AUDIT-PASS`. A gate whose signal is missing or ambiguous is a FAIL, never a pass
-(invariant 5: honest exits).
+(honest exits).
 
 ### Gate 1 — Task-graph conformance
 
@@ -152,27 +152,3 @@ After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
 - **Gates**: graph <p/t> · eval <rc> · promotable <class> · ui <pass|n/a>
 - **Observation**: <one sentence>
 ```
-
----
-
-## Handoff
-
-`audit` is a node in the executable loop (`context/rules/loop.md` § 2). After the
-verdict — on **every** exit path, PASS or FAIL — emit exactly one terminal line as
-the **final line of output**:
-
-    STATUS: AUDIT-PASS
-
-(or `STATUS: AUDIT-FAIL` when any gate fails). Routes (must match
-`context/rules/loop.md` § 2):
-
-| STATUS | Next node |
-|--------|-----------|
-| `AUDIT-PASS` | `retro` |
-| `AUDIT-FAIL` | `implement` |
-
-The `/autopilot` runner reads this token to route: `AUDIT-PASS` advances to
-`retro`, `AUDIT-FAIL` returns to `implement` to resume the unfinished work.
-Emitting nothing is read as failure, never as success (invariant 5: honest
-exits). When `/audit` is invoked standalone (not under `/autopilot`), the trailing
-`STATUS:` line is harmless.

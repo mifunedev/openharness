@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `autopilot-merged-pr-reference-dedupe` eval probe guards that `/autopilot` skips completed-but-still-open tickets whose development PRs already merged ([#468](https://github.com/mifunedev/openharness/issues/468)).
 - `context/REPO_MAP.md` gives session-start agents a Git-tracked source-map command plus default keep/disregard paths for context loading, guarded by `repo-map-contract` plus the CB-004 repo-orientation A/B benchmark manifest/scorer ([#464](https://github.com/mifunedev/openharness/issues/464)).
 - `pi-dynamic-workflows` is now a default project-local Pi package pinned to the upstream `v1.0.1` commit, with docs for the `workflow` tool's deterministic JavaScript fan-out model and package-pin test coverage ([#451](https://github.com/mifunedev/openharness/issues/451)).
 - `heartbeat-logging-contract` eval probe guards that heartbeat runs keep structured memory logs and locked liveness appends ([#447](https://github.com/mifunedev/openharness/issues/447)).
@@ -18,6 +19,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Docs builds now run automatically only from the docs workflow on `main`/`master` pushes; root build, Harness CI, release validation, and `/eval` stay on the fast non-docs path ([#455](https://github.com/mifunedev/openharness/issues/455)).
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
+- `/autopilot` issue selection now skips open tickets that already have merged PR references, avoiding duplicate rebuilds when `Closes #N` landed on `development` but GitHub left the issue open ([#468](https://github.com/mifunedev/openharness/issues/468)).
 - Cron worktree pruning now preserves a live early-run tmux session whose name still matches its cron worktree basename, preventing active autopilot checkouts from disappearing before branch rename ([#445](https://github.com/mifunedev/openharness/issues/445)).
 - Heartbeat instructions now compute memory-log timestamps explicitly and route both memory/liveness writes through `scripts/locked-append.sh` instead of raw shared-log appends ([#447](https://github.com/mifunedev/openharness/issues/447)).
 - Devcontainer boot now stops stale legacy `system-cron` tmux sessions before starting `cron-watchdog`/`cron-system`, avoiding unhealthy migrated sandboxes ([#453](https://github.com/mifunedev/openharness/issues/453)).

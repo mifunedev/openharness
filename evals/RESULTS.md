@@ -41,13 +41,9 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | health-check-docker-stats | A | 2026-06-21 06:16 | PASS | memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
 | heartbeat-logging-contract | A | 2026-06-21 06:16 | PASS | issue #447 (heartbeat log append hardening) 2026-06-18 |
 | locked-append-critical-path | A | 2026-06-21 06:16 | PASS | issue #204 (lock shared runtime log appends) 2026-06-15 |
-| loop-benchmark-gate | A | 2026-06-21 06:16 | PASS | issue #179 — wire the executable-loop `benchmark` node (close the cycle) |
-| loop-handoff-consistency | A | 2026-06-21 06:16 | PASS | context/rules/loop.md § 4 (executable-loop Handoff convention) |
-| loop-repeat-gate | A | 2026-06-21 06:16 | PASS | issue #173 — wire the executable-loop `repeat` node (cycle-closing edge) |
 | memory-gitignore-claim | A | 2026-06-21 06:16 | PASS | issue #101 |
 | memory-log-locked-append | A | 2026-06-21 06:16 | PASS | issue #476 — memory log writes in skill contracts must use scripts/locked-append.sh |
 | next-dev-prod | A | 2026-06-21 06:16 | PASS | memory/MEMORY.md 2026-06-04 |
-| orchestrate-contract | A | 2026-06-21 06:16 | PASS | issue #160 — /orchestrate contract; issue #175 — reserved /loop command rename |
 | owned-surface-guard | A | 2026-06-21 06:16 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | pnpm-audit-ci-gate | A | 2026-06-21 06:16 | PASS | issue #171 — pnpm security audits must run in CI |
 | pr-audit-duplicate-issue-refs | A | 2026-06-21 06:16 | PASS | issue #439 — /pr-audit must flag duplicate open PRs that reference the same issue |

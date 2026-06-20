@@ -97,6 +97,5 @@ benchmark). Print this bare token as the final line:
 
     STATUS: SPEC-RETRO-DONE
 
-The `spec-*` family is **not** wired into the deprecated executable loop
-(`context/rules/loop.md` § 2); `AGENTS.md § The Workflow` is its authority. `spec-retro`
+The `spec-*` family's authority is `AGENTS.md § The Workflow`. `spec-retro`
 always completes (like `/retro`), so the execute tail always continues to `improve`.

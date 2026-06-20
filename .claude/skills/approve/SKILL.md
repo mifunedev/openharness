@@ -1,28 +1,28 @@
 ---
 name: approve
 description: >-
-  The approve (approve|deny) decision gate of the executable loop — read a spec's
+  The approve (approve|deny) decision gate of the canonical workflow — read a spec's
   critique findings and decide go/no-go BEFORE any GitHub-side state exists, then
   emit a single APPROVED/DENIED verdict. Auto-gates on critic SEVERITY (any
   unmitigated high → deny), with an optional human override for borderline
   findings. This is the decision half of the critique→approve pair; the critics
   that produce the findings are the separate `/critique` node.
   TRIGGER when: a plan/PRD has been critiqued and needs a commitment decision
-  before implementation; the `approve` node of context/rules/loop.md runs;
+  before implementation;
   "approve this spec", "should we build <slug>", "gate <slug> on its critique".
 argument-hint: "<slug> [--auto]"
 ---
 
 # Approve — the critic-before-commitment gate
 
-The **approve** node of the executable loop (`context/rules/loop.md` § 2) — the
+The **approve** gate, composed by `/spec-critique` in `AGENTS.md § The Workflow` — the
 `approve|deny` decision point. It
 answers one question: *do the critic findings clear this spec to build, or must it
 go back to planning?* — and emits exactly one verdict the `/autopilot` runner
 routes on.
 
-**Core principle: gate the spec before anything is committed.** This is invariant 6
-(critic-before-commitment): the cheapest thing to revise is the spec itself, so the
+**Core principle: gate the spec before anything is committed.** This embodies
+critic-before-commitment: the cheapest thing to revise is the spec itself, so the
 gate runs while ONLY local artifacts exist (`tasks/<slug>/prd.md`, `prd.json`,
 `critique.md`) — **before** the GitHub issue, branch, or PR. A `DENIED` is therefore
 fully reversible (`rm -rf tasks/<slug>/`); no GitHub-side state is created until
@@ -90,7 +90,7 @@ GitHub-side exists yet.
 
 ---
 
-## Honest exits (invariant 5)
+## Honest exits
 
 - **No `critique.md`** → the gate cannot decide. This is **not** `DENIED` (which means
   "critiqued and found blocking") and **not** `APPROVED`. Print an error directing the
@@ -125,27 +125,3 @@ After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
 - **Mode**: auto | human-override
 - **Observation**: <one sentence>
 ```
-
----
-
-## Handoff
-
-`approve` is the **approve** node (the `approve|deny` decision point) of the
-executable loop (`context/rules/loop.md` § 2). After the decision, emit exactly one
-terminal line as the **final line of output**:
-
-    STATUS: APPROVED
-
-(or `STATUS: DENIED` when the spec is blocked). Routes (must match
-`context/rules/loop.md` § 2):
-
-| STATUS | Next node |
-|--------|-----------|
-| `APPROVED` | `implement` |
-| `DENIED` | `plan` |
-
-The `/autopilot` runner reads this token to route: `APPROVED` advances to
-`implement`, `DENIED` returns to `plan` to revise the spec and re-critique.
-Emitting nothing (e.g. no `critique.md`) is read as failure, never as approval
-(invariant 5: honest exits). When `/approve` is invoked standalone, the trailing
-`STATUS:` line is harmless.

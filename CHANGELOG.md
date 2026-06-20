@@ -8,6 +8,9 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ## [Unreleased]
 
+### Fixed
+- Cron body/config reload no longer silently serves a stale boot-cached body: `reloadEntryForFire`/`reloadBody` passed `path.basename(entry.filePath)` to `parseCronFile`, overwriting the absolute load-time path with a bare basename on the live entry, after which `reloadBody` read a CWD-relative path → `ENOENT` → fell back to the cached body. Now the absolute `entry.filePath` is preserved through reloads, so a freshly-merged heartbeat/cron body edit takes effect on the next fire without a full runtime restart ([#275](https://github.com/ryaneggz/openharness/issues/275)).
+
 ### Changed
 - Rename the Pi Slack bridge tmux session from `client-slack` to `client-slack-pi` across the setup wizard, devcontainer restore path, healthcheck, and operator docs ([#269](https://github.com/ryaneggz/openharness/issues/269)).
 - Clarify oh.mifune.dev copy — "harness" now consistently means Open Harness (the repo); the CLI you pick is the "agent". The landing page, site tagline/meta, `docs/intro.md`, `docs/installation.md`, and `docs/harnesses/overview.md` now state one-repo-per-sandbox, that the repo tracks/versions state, and sandbox isolation (agents never run straight on your host) ([#267](https://github.com/ryaneggz/openharness/issues/267)).

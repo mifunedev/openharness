@@ -236,7 +236,7 @@ export function reloadEntryForFire(entry: CronEntry, logFn = log): CronEntry | n
   try {
     fresh = parseCronFile(
       fs.readFileSync(entry.filePath, "utf-8"),
-      path.basename(entry.filePath),
+      entry.filePath,
     );
   } catch (e) {
     logFn(entry.id, "CONFIG_RELOAD_ERR", `${path.basename(entry.filePath)}: ${String(e)}`);
@@ -271,7 +271,7 @@ export function reloadEntryForFire(entry: CronEntry, logFn = log): CronEntry | n
   if (changed.length > 0) {
     logFn(entry.id, "ENTRY_RELOADED", `${path.basename(entry.filePath)}: ${changed.join(",")}`);
   }
-  return { ...fresh, body: entry.body };
+  return { ...fresh, filePath: entry.filePath, body: entry.body };
 }
 
 export function reloadBody(entry: CronEntry): string {
@@ -279,7 +279,7 @@ export function reloadBody(entry: CronEntry): string {
   try {
     const parsed = parseCronFile(
       fs.readFileSync(entry.filePath, "utf-8"),
-      path.basename(entry.filePath),
+      entry.filePath,
     );
     fresh = parsed?.body;
     if (fresh == null) throw new Error("parseCronFile returned no body");

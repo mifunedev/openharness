@@ -993,6 +993,25 @@ describe("reloadEntryForFire", () => {
     expect(lines.some((line) => line.includes("ENTRY_RELOADED") && line.includes("agentBin,preflight,repo"))).toBe(true);
   });
 
+  it("keeps filePath absolute through reload (regression: #275 basename leak)", () => {
+    const cronFile = path.join(tmp, "hot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nbody\n`,
+    );
+    const [entry] = loadCrons(tmp);
+    // loadCrons yields a dir-qualified (absolute) filePath.
+    expect(path.isAbsolute(entry.filePath)).toBe(true);
+
+    const liveEntry = reloadEntryForFire(entry);
+    // The reloaded entry MUST retain the original absolute path, not a bare
+    // basename — otherwise a later reloadBody() reads a CWD-relative path and
+    // silently falls back to the stale cached body.
+    expect(liveEntry).not.toBeNull();
+    expect(path.isAbsolute(liveEntry!.filePath)).toBe(true);
+    expect(liveEntry!.filePath).toBe(entry.filePath);
+  });
+
   it("skips a fire when the cron is disabled on disk after scheduling", () => {
     const cronFile = path.join(tmp, "hot.md");
     writeFileSync(
@@ -1044,6 +1063,50 @@ describe("reloadBody", () => {
     // BODY_RELOADED must be logged because the on-disk body differed from entry.body.
     const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
+  });
+
+  it("reads the fresh body regardless of cwd after a metadata reload (regression: #275 CWD-relative read)", () => {
+    // Reproduce the LIVE failure chain: reloadEntryForFire() returns the live
+    // entry the runtime reuses for subsequent fires; that entry's filePath must
+    // stay absolute. With the basename bug it became "hot.md", so a later
+    // reloadBody() — running from a cwd that is NOT the crons dir — resolves the
+    // read CWD-relative, hits ENOENT, and silently returns the stale body.
+    const cronFile = path.join(tmp, "hot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\noriginal body\n`,
+    );
+    const [entry] = loadCrons(tmp);
+    expect(path.isAbsolute(entry.filePath)).toBe(true);
+
+    // The runtime reloads metadata before a fire; reuse that returned entry.
+    const liveEntry = reloadEntryForFire(entry);
+    expect(liveEntry).not.toBeNull();
+
+    // A frontmatter-preserving body edit lands on disk before the next fire.
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nupdated body\n`,
+    );
+
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+
+    const prevCwd = process.cwd();
+    // chdir to a directory that is NOT the crons dir (the OS temp root).
+    process.chdir(tmpdir());
+    let result: string;
+    try {
+      result = reloadBody(liveEntry!);
+    } finally {
+      process.chdir(prevCwd);
+    }
+
+    // Must read the on-disk body, not silently fall back to the cached one.
+    expect(result).toBe("updated body\n");
+    const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
+    expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
+    expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(false);
   });
 
   it("returns cached entry.body and logs BODY_RELOAD_ERR when filePath is unreadable", () => {

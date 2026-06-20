@@ -26,7 +26,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| cron-runtime | Cron Runtime | [cron, runtime, scheduler, drift-check, automation, open-harness] | 2026-06-20 |
 | sandbox-auth-volumes | Sandbox Auth Volume Ownership | [sandbox, devcontainer, auth, docker, ownership, secrets] | 2026-06-19 |
 | ci-build-gates | CI Build Gates | [ci, docs, build, eval, github-actions] | 2026-06-19 |
 | harness-audit | Harness Audit | [audit, skills, autopilot, memory, worktrees] | 2026-06-18 |
-| cron-runtime | Cron Runtime | [cron, runtime, scheduler, drift-check, automation, open-harness] | 2026-06-16 |

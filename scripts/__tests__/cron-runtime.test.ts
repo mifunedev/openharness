@@ -54,15 +54,32 @@ import {
   worktreeInUse,
 } from "../cron-runtime";
 
-// Mock only appendFileSync (the log() writer) as a no-op spy so reloadBody's
-// BODY_RELOADED / BODY_RELOAD_ERR signals are observable without polluting the
-// real crons/.cron.log during test runs. All other node:fs exports pass through.
+// Mock appendFileSync defensively so a future raw-append regression cannot
+// pollute the repo's real crons/.cron.log. The normal log path now uses
+// scripts/locked-append.sh, which writes to SIGHUP_CRONS_DIR/.cron.log.
 vi.mock("node:fs", async (importOriginal) => {
   const real = await importOriginal<typeof import("node:fs")>();
   return { ...real, appendFileSync: vi.fn() };
 });
 
 let tmp: string;
+
+const CRON_LOG_FILE = path.join(SIGHUP_CRONS_DIR, ".cron.log");
+
+function clearCronLog(): void {
+  rmSync(CRON_LOG_FILE, { force: true });
+  vi.mocked(fsModule.appendFileSync).mockClear();
+}
+
+function loggedCronLines(): string[] {
+  const fileLines = existsSync(CRON_LOG_FILE)
+    ? readFileSync(CRON_LOG_FILE, "utf-8").split("\n").filter(Boolean)
+    : [];
+  const rawAppendLines = vi.mocked(fsModule.appendFileSync).mock.calls
+    .map((c) => String(c[1]).trim())
+    .filter(Boolean);
+  return [...fileLines, ...rawAppendLines];
+}
 
 beforeEach(() => {
   tmp = mkdtempSync(path.join(tmpdir(), "cron-runtime-"));
@@ -572,6 +589,18 @@ describe("buildCronAgentCommand", () => {
     expect(command).toContain("'heartbeat' 'AGENT_DONE'");
   });
 
+  it("pipes shell-level liveness lines through locked append", () => {
+    const command = buildCronAgentCommand({
+      id: "heartbeat",
+      agentBin: "claude",
+      promptFile: "/tmp/cron-heartbeat.prompt",
+      logFile: "/tmp/heartbeat.log",
+    });
+
+    expect(command).toContain("scripts/locked-append.sh");
+    expect(command).not.toContain(">> '");
+  });
+
   it("rejects unsafe ids before generating agent command text", () => {
     expect(() =>
       buildCronAgentCommand({
@@ -963,7 +992,7 @@ describe("acquireLock", () => {
 
 describe("reloadEntryForFire", () => {
   afterEach(() => {
-    vi.mocked(fsModule.appendFileSync).mockClear();
+    clearCronLog();
   });
 
   it("picks up fire-time metadata changes while preserving cached body for reloadBody", () => {
@@ -980,8 +1009,7 @@ describe("reloadEntryForFire", () => {
       `---\nid: hot\nschedule: "* * * * *"\nenabled: true\nagent: pi\npreflight: scripts/autopilot-caps.sh\nrepo: mifunedev/openharness\n---\nupdated body\n`,
     );
 
-    const appendSpy = vi.mocked(fsModule.appendFileSync);
-    appendSpy.mockClear();
+    clearCronLog();
     const liveEntry = reloadEntryForFire(entry);
 
     expect(liveEntry?.agentBin).toBe("pi");
@@ -989,7 +1017,7 @@ describe("reloadEntryForFire", () => {
     expect(liveEntry?.repo).toBe("mifunedev/openharness");
     // Body stays cached here so reloadBody remains the single BODY_RELOADED logger.
     expect(liveEntry?.body).toBe("original body\n");
-    const lines = appendSpy.mock.calls.map((c) => String(c[1]));
+    const lines = loggedCronLines();
     expect(lines.some((line) => line.includes("ENTRY_RELOADED") && line.includes("agentBin,preflight,repo"))).toBe(true);
   });
 
@@ -1005,17 +1033,16 @@ describe("reloadEntryForFire", () => {
       `---\nid: hot\nschedule: "* * * * *"\nenabled: false\n---\nbody\n`,
     );
 
-    const appendSpy = vi.mocked(fsModule.appendFileSync);
-    appendSpy.mockClear();
+    clearCronLog();
     expect(reloadEntryForFire(entry)).toBeNull();
-    const lines = appendSpy.mock.calls.map((c) => String(c[1]));
+    const lines = loggedCronLines();
     expect(lines.some((line) => line.includes("CONFIG_RELOAD_DISABLED"))).toBe(true);
   });
 });
 
 describe("reloadBody", () => {
   afterEach(() => {
-    vi.mocked(fsModule.appendFileSync).mockClear();
+    clearCronLog();
   });
 
   it("returns the on-disk body when it has been mutated after CronEntry was built", () => {
@@ -1034,15 +1061,14 @@ describe("reloadBody", () => {
       `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nupdated body\n`,
     );
 
-    const appendSpy = vi.mocked(fsModule.appendFileSync);
-    appendSpy.mockClear();
+    clearCronLog();
     const result = reloadBody(entry);
 
     // Should return the fresh on-disk body, not the cached entry.body.
     expect(result).toBe("updated body\n");
 
     // BODY_RELOADED must be logged because the on-disk body differed from entry.body.
-    const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
+    const loggedArgs = loggedCronLines();
     expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
   });
 
@@ -1061,15 +1087,14 @@ describe("reloadBody", () => {
       filePath: missingPath,
     };
 
-    const appendSpy = vi.mocked(fsModule.appendFileSync);
-    appendSpy.mockClear();
+    clearCronLog();
     const result = reloadBody(entry);
 
     // Should fall back to the cached body.
     expect(result).toBe("cached body\n");
 
-    // BODY_RELOAD_ERR must appear in at least one appendFileSync call.
-    const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
+    // BODY_RELOAD_ERR must appear in the cron liveness log.
+    const loggedArgs = loggedCronLines();
     expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(true);
   });
 });
@@ -1150,8 +1175,7 @@ esac
   it("preserves dirty dead fallback worktrees but removes clean dead ones", () => {
     const { repo, dirtyWt, cleanWt } = initRepoWithFallbackWorktrees();
     const priorCwd = process.cwd();
-    const appendSpy = vi.mocked(fsModule.appendFileSync);
-    appendSpy.mockClear();
+    clearCronLog();
 
     try {
       process.chdir(repo);
@@ -1164,9 +1188,9 @@ esac
     expect(readFileSync(path.join(dirtyWt, "uncommitted.txt"), "utf-8")).toBe("salvage me\n");
     expect(existsSync(cleanWt)).toBe(false);
     expect(
-      appendSpy.mock.calls.some((c) =>
-        String(c[1]).includes("\tautopilot\tWORKTREE_DIRTY\t") &&
-        String(c[1]).includes("?? uncommitted.txt"),
+      loggedCronLines().some((line) =>
+        line.includes("\tautopilot\tWORKTREE_DIRTY\t") &&
+        line.includes("?? uncommitted.txt"),
       ),
     ).toBe(true);
   });
@@ -1219,9 +1243,7 @@ describe("SIGHUP reload", () => {
   // SIGHUP_CRONS_DIR — repointed via the vi.hoisted block at the top of this file
   // — instead of the repo's real crons/. resetActiveJobs() clears the
   // module-private registry between cases.
-  const appendSpy = () => vi.mocked(fsModule.appendFileSync);
-  const loggedLines = (): string[] =>
-    appendSpy().mock.calls.map((c) => String(c[1]));
+  const loggedLines = (): string[] => loggedCronLines();
   const reloadLines = (): string[] =>
     loggedLines().filter((l) => l.includes("\tRELOAD\t"));
   const validCron = (id: string, schedule = "0 * * * *"): string =>
@@ -1239,7 +1261,7 @@ describe("SIGHUP reload", () => {
   beforeEach(() => {
     resetActiveJobs();
     emptyCronsDir();
-    appendSpy().mockClear();
+    clearCronLog();
   });
 
   afterEach(() => {
@@ -1251,7 +1273,7 @@ describe("SIGHUP reload", () => {
     emptyCronsDir();
     sighupHandler();
     resetActiveJobs();
-    appendSpy().mockClear();
+    clearCronLog();
   });
 
   afterAll(() => {
@@ -1279,13 +1301,13 @@ describe("SIGHUP reload", () => {
     expect(reloadLines().at(-1)).toContain("1 scheduled, 0 skipped");
 
     // Add a second file: the next reload re-reads the dir and counts both.
-    appendSpy().mockClear();
+    clearCronLog();
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "two.md"), validCron("two", FAR_FUTURE));
     sighupHandler();
     expect(reloadLines().at(-1)).toContain("2 scheduled, 0 skipped");
 
     // Remove the first file: the next reload drops it.
-    appendSpy().mockClear();
+    clearCronLog();
     rmSync(path.join(SIGHUP_CRONS_DIR, "one.md"));
     sighupHandler();
     expect(reloadLines().at(-1)).toContain("1 scheduled, 0 skipped");
@@ -1302,7 +1324,7 @@ describe("SIGHUP reload", () => {
     expect(reloadLines().at(-1)).toContain("1 scheduled, 1 skipped");
   });
 
-  it("writes a RELOAD liveness line via the appendFileSync spy", () => {
+  it("writes a RELOAD liveness line via the locked append log", () => {
     sighupHandler();
     expect(loggedLines().some((l) => l.includes("\tRELOAD\t"))).toBe(true);
     // RELOAD reuses the private log() format with id "system" (BOOT precedent).
@@ -1374,11 +1396,10 @@ describe("runPreflight + the fire() preflight gate", () => {
     filePath: "autopilot.md",
   });
 
-  const appendSpy = () => vi.mocked(fsModule.appendFileSync);
-  const loggedLines = (): string[] => appendSpy().mock.calls.map((c) => String(c[1]));
+  const loggedLines = (): string[] => loggedCronLines();
 
-  beforeEach(() => appendSpy().mockClear());
-  afterEach(() => appendSpy().mockClear());
+  beforeEach(() => clearCronLog());
+  afterEach(() => clearCronLog());
 
   it("returns the gate's exit code and its final stdout line as the reason", () => {
     const skip = runPreflight(entry(preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" })));

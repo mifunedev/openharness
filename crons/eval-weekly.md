@@ -60,9 +60,9 @@ sent.
    ```
 
 5. **Mandatory closing step:** append one liveness line to
-   `crons/.cron.log`:
+   `crons/.cron.log` through `scripts/locked-append.sh`:
    ```bash
-   printf '[%s] eval-weekly: %s\n' "$(date -Iseconds)" "<OK|REGRESSION(N)>" >> crons/.cron.log
+   printf '[%s] eval-weekly: %s\n' "$(date -Iseconds)" "<OK|REGRESSION(N)>" | scripts/locked-append.sh crons/.cron.log
    ```
    where the status token is `OK` when no regressions were found, or
    `REGRESSION(N)` (e.g. `REGRESSION(2)`) when N probes regressed.

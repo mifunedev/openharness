@@ -34,8 +34,8 @@ only — never a `tasks/` subfolder.
    autopilot loop's `BLOCKED-OWNED-WIP` owned-surface convention. If that
    scoped status is non-empty, abort: append a note to
    `memory/$TODAY/log.md`, emit the distinct liveness token to
-   `crons/.cron.log`
-   (`printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "BLOCKED-TASKS-WIP" >> crons/.cron.log`),
+   `crons/.cron.log` through `scripts/locked-append.sh`
+   (`printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "BLOCKED-TASKS-WIP" | scripts/locked-append.sh crons/.cron.log`),
    and stop here — do NOT fall through to step 7's `OK` line. This
    `BLOCKED-TASKS-WIP` token is intentionally distinct from the
    `OK (archived N, skipped M)` success token and the `HEARTBEAT_OK`
@@ -132,8 +132,9 @@ only — never a `tasks/` subfolder.
      nothing-to-archive case (`N = 0`), and partial runs; complements the
      step-3 `trap`, which also fires on any error/abort exit:
      `git worktree remove --force .worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune`.
-   - **Liveness line:** append one liveness line to `crons/.cron.log`:
-     `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M, groomed W worktrees)" >> crons/.cron.log`.
+   - **Liveness line:** append one liveness line to `crons/.cron.log`
+     through `scripts/locked-append.sh`:
+     `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M, groomed W worktrees)" | scripts/locked-append.sh crons/.cron.log`.
      Create the file if it does not exist.
 
 ## Reporting

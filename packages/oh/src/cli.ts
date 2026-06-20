@@ -11,7 +11,7 @@ interface Integration {
 
 const INTEGRATIONS: Record<string, Integration> = {
   slack: {
-    description: "Slack bridge tokens + allowlist",
+    description: "Slack bridge tokens (pi-messenger-bridge)",
     runner: runSlack,
   },
 };

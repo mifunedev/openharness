@@ -1,25 +1,30 @@
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, mkdirSync, writeFileSync, chmodSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { loadEnvInto, upsertEnvFile } from "../lib/env.js";
 import {
   ok, warn, fail, info, header, step, link, bold,
-  ask, askSecret, askChoice, confirm,
+  ask, askSecret, confirm,
   redact,
 } from "../lib/prompt.js";
 import {
   hasSession, killSession, newSession, capturePane, isInstalled as tmuxAvailable,
 } from "../lib/tmux.js";
 
+// Bridge tmux session name — keep the `client-slack` name (not the legacy
+// bare form) so the runtime, watchdog, and docs continue to find it.
+// See context/rules/sandbox-processes.md.
 const CLIENT_SLACK_SESSION = "client-slack";
-const CONNECTED_MARKER = "connected and listening";
+// Connect marker emitted by pi-messenger-bridge's Slack transport once Socket
+// Mode opens — the literal string we poll the pane for.
+const CONNECTED_MARKER = "[Slack] Bot user ID:";
 const POLL_INTERVAL_MS = 1000;
-const MAX_POLLS = 15;
+const MAX_POLLS = 18;
 
-interface SlackConfig {
-  appToken: string;
-  botToken: string;
-  allowUsers?: string;
-  allowChannels?: string;
+interface MsgBridgeConfig {
+  slack: { botToken: string; appToken: string };
+  auth?: { trustedUsers: string[]; adminUserId: string };
+  autoConnect: boolean;
 }
 
 function findHarnessRoot(): string {
@@ -47,23 +52,15 @@ function validateBotToken(t: string): string | null {
   return null;
 }
 
-function validateIds(ids: string, prefix: "U" | "C"): string | null {
-  const list = ids.split(",").map((s) => s.trim()).filter(Boolean);
-  if (list.length === 0) return "Provide at least one ID";
-  for (const id of list) {
-    if (!id.startsWith(prefix)) return `ID "${id}" must start with "${prefix}" (Slack ${prefix === "U" ? "user" : "channel"} IDs)`;
-    if (id.length < 9) return `ID "${id}" looks too short`;
-  }
+function validateUserId(id: string): string | null {
+  if (!id.startsWith("U")) return `Slack user ID "${id}" must start with "U"`;
+  if (id.length < 9) return `Slack user ID "${id}" looks too short`;
   return null;
 }
 
-function normalizeIds(ids: string): string {
-  return ids.split(",").map((s) => s.trim()).filter(Boolean).join(",");
-}
-
 async function promptTokens(env: Record<string, string | undefined>): Promise<{ appToken: string; botToken: string }> {
-  let appToken = env.SLACK_APP_TOKEN ?? "";
-  let botToken = env.SLACK_BOT_TOKEN ?? "";
+  let appToken = env.PI_SLACK_APP_TOKEN ?? "";
+  let botToken = env.PI_SLACK_BOT_TOKEN ?? "";
 
   if (appToken && botToken) {
     info(`Existing tokens detected: App=${redact(appToken)}, Bot=${redact(botToken)}`);
@@ -72,7 +69,7 @@ async function promptTokens(env: Record<string, string | undefined>): Promise<{ 
     }
   }
 
-  step(1, 4, "Slack App Token (xapp-…)");
+  step(1, 3, "Slack App Token (xapp-…)");
   info(`  Where: ${link("https://api.slack.com/apps", "api.slack.com/apps")} → Basic Information → App-Level Tokens`);
   while (true) {
     appToken = await askSecret("Token:");
@@ -81,7 +78,7 @@ async function promptTokens(env: Record<string, string | undefined>): Promise<{ 
     fail(e);
   }
 
-  step(2, 4, "Slack Bot Token (xoxb-…)");
+  step(2, 3, "Slack Bot Token (xoxb-…)");
   info(`  Where: ${link("https://api.slack.com/apps", "api.slack.com/apps")} → OAuth & Permissions → Bot User OAuth Token`);
   while (true) {
     botToken = await askSecret("Token:");
@@ -92,60 +89,60 @@ async function promptTokens(env: Record<string, string | undefined>): Promise<{ 
   return { appToken, botToken };
 }
 
-async function promptAllowlist(env: Record<string, string | undefined>): Promise<{ users?: string; channels?: string }> {
-  const existingUsers = env.SLACK_ALLOW_USERS;
-  const existingChannels = env.SLACK_ALLOW_CHANNELS;
-  if (existingUsers || existingChannels) {
-    info(`Existing allowlist detected: users=${existingUsers ?? "(none)"}, channels=${existingChannels ?? "(none)"}`);
-    if (!(await confirm("Replace it?", false))) {
-      return {
-        users: existingUsers,
-        channels: existingChannels,
-      };
+// Optionally pre-authorize a Slack user ID as the bridge's trusted/admin user.
+// Returns the user ID (U…) or null when the operator declines.
+async function promptTrustedUser(): Promise<string | null> {
+  step(3, 3, "Pre-authorize a trusted user (optional)");
+  info("  Pre-authorizing your Slack user ID makes you the bridge's trusted/admin");
+  info("  user and skips the first-message challenge — recommended for headless setups.");
+  if (!(await confirm("Pre-authorize your Slack user ID to skip the first-message challenge?", false))) {
+    info("  Skipped — the bot will challenge the first DM with a 6-digit code instead.");
+    return null;
+  }
+  info(`  Where: Slack profile → ⋯ menu → Copy member ID`);
+  while (true) {
+    const id = await ask("Slack user ID (U…):");
+    const e = validateUserId(id);
+    if (!e) {
+      ok(`Trusted user ${id} accepted`);
+      return id;
+    }
+    fail(e);
+  }
+}
+
+// Seed ~/.pi/msg-bridge.json (the pi-messenger-bridge config). Creates ~/.pi
+// (mode 0o700) if absent and writes the file mode 0o600. When the file already
+// exists, confirms before overwriting; declining leaves the prior config intact.
+async function seedMsgBridgeJson(config: MsgBridgeConfig): Promise<void> {
+  const piDir = join(homedir(), ".pi");
+  const bridgePath = join(piDir, "msg-bridge.json");
+
+  if (existsSync(bridgePath)) {
+    info(`Existing ${bridgePath} detected.`);
+    if (!(await confirm("Overwrite it with the new config?", false))) {
+      warn(`Kept existing ${bridgePath}. Bridge config NOT updated.`);
+      return;
     }
   }
 
-  step(3, 4, "Allowlist mode");
-  const mode = await askChoice("Pick (deny-default — at least one is required):", [
-    { label: "Users only — only listed users can talk to the bot", value: "users" },
-    { label: "Channels only — only in listed channels", value: "channels" },
-    { label: "Both — message must match user AND channel", value: "both" },
-  ]);
-
-  step(4, 4, "Allowed IDs");
-  const result: { users?: string; channels?: string } = {};
-  if (mode === "users" || mode === "both") {
-    info(`  Users:    Slack profile → ⋯ menu → Copy member ID`);
-    while (true) {
-      const ids = await ask("User IDs (comma-separated, U…):");
-      const e = validateIds(ids, "U");
-      if (!e) {
-        result.users = normalizeIds(ids);
-        ok(`${result.users.split(",").length} user(s) accepted`);
-        break;
-      }
-      fail(e);
+  try {
+    if (!existsSync(piDir)) {
+      mkdirSync(piDir, { recursive: true, mode: 0o700 });
     }
+    const json = JSON.stringify(config, null, 2) + "\n";
+    writeFileSync(bridgePath, json, { mode: 0o600 });
+    // writeFileSync's mode only applies on creation; enforce 0o600 on overwrite too.
+    chmodSync(bridgePath, 0o600);
+    ok(`Seeded ${bridgePath} (mode 0600)`);
+  } catch (err) {
+    fail(`Failed to write ${bridgePath}: ${(err as Error).message}`);
   }
-  if (mode === "channels" || mode === "both") {
-    info(`  Channels: channel header → About → bottom of panel`);
-    while (true) {
-      const ids = await ask("Channel IDs (comma-separated, C…):");
-      const e = validateIds(ids, "C");
-      if (!e) {
-        result.channels = normalizeIds(ids);
-        ok(`${result.channels.split(",").length} channel(s) accepted`);
-        break;
-      }
-      fail(e);
-    }
-  }
-  return result;
 }
 
 async function relaunchClientSlack(envPath: string): Promise<void> {
   if (!tmuxAvailable()) {
-    warn("tmux not found in PATH — skipping client-slack restart. Restart it manually after this exits.");
+    warn(`tmux not found in PATH — skipping ${CLIENT_SLACK_SESSION} restart. Restart it manually after this exits.`);
     return;
   }
   const wasRunning = hasSession(CLIENT_SLACK_SESSION);
@@ -158,22 +155,24 @@ async function relaunchClientSlack(envPath: string): Promise<void> {
   const cmd = `bash -c 'set -a; source ${envPath}; set +a; pi 2>&1 | tee /tmp/client-slack.log'`;
   newSession(CLIENT_SLACK_SESSION, cmd);
 
-  info("Validating Slack connection (up to 15s)…");
+  info(`Validating Slack connection (up to ${MAX_POLLS}s)…`);
   for (let i = 0; i < MAX_POLLS; i++) {
     const out = capturePane(CLIENT_SLACK_SESSION);
     if (out.includes(CONNECTED_MARKER)) {
-      ok("Slack extension connected.");
+      process.stdout.write("\n");
+      ok("Slack bridge connected.");
       return;
     }
     if (/Run error|Missing env/.test(out)) {
-      fail("Slack extension reported an error. Check `tmux attach -t client-slack`.");
+      process.stdout.write("\n");
+      fail(`Slack bridge reported an error. Check \`tmux attach -t ${CLIENT_SLACK_SESSION}\`.`);
       return;
     }
     await new Promise<void>((r) => setTimeout(r, POLL_INTERVAL_MS));
     process.stdout.write(".");
   }
   process.stdout.write("\n");
-  warn("Did not see 'connected and listening' within 15s. Check `tmux attach -t client-slack`.");
+  warn(`Did not see "${CONNECTED_MARKER}" within ${MAX_POLLS}s. Check \`tmux attach -t ${CLIENT_SLACK_SESSION}\`.`);
 }
 
 export async function runSlack(): Promise<number> {
@@ -195,28 +194,18 @@ export async function runSlack(): Promise<number> {
   loadEnvInto(envPath, env);
 
   const { appToken, botToken } = await promptTokens(env);
-  const allowlist = await promptAllowlist(env);
+  const trustedUserId = await promptTrustedUser();
 
-  const config: SlackConfig = {
-    appToken,
-    botToken,
-    allowUsers: allowlist.users,
-    allowChannels: allowlist.channels,
-  };
-
-  // Build the keys to upsert
+  // Build the keys to upsert into .devcontainer/.env
   const vars: Record<string, string> = {
-    SLACK_APP_TOKEN: config.appToken,
-    SLACK_BOT_TOKEN: config.botToken,
+    PI_SLACK_APP_TOKEN: appToken,
+    PI_SLACK_BOT_TOKEN: botToken,
   };
-  if (config.allowUsers !== undefined) vars.SLACK_ALLOW_USERS = config.allowUsers;
-  if (config.allowChannels !== undefined) vars.SLACK_ALLOW_CHANNELS = config.allowChannels;
 
   info("");
   info(bold(`Ready to write to ${envPath}:`));
   for (const [k, v] of Object.entries(vars)) {
-    if (k.endsWith("_TOKEN")) info(`  ${k}=${redact(v)}`);
-    else                       info(`  ${k}=${v}`);
+    info(`  ${k}=${redact(v)}`);
   }
   if (!(await confirm("Proceed?", true))) {
     warn("Aborted. Nothing written.");
@@ -231,20 +220,47 @@ export async function runSlack(): Promise<number> {
     return 1;
   }
 
-  info("Next step: start the Slack bridge by (re)launching the client-slack tmux session.");
-  info("This kills any existing client-slack session, then starts pi with the new tokens;");
-  info("pi loads the slack extension on boot and opens the Socket Mode connection.");
+  // Seed the pi-messenger-bridge config at ~/.pi/msg-bridge.json.
+  const bridgeConfig: MsgBridgeConfig = trustedUserId
+    ? {
+        slack: { botToken, appToken },
+        auth: {
+          trustedUsers: [`slack:${trustedUserId}`],
+          adminUserId: `slack:${trustedUserId}`,
+        },
+        autoConnect: true,
+      }
+    : {
+        slack: { botToken, appToken },
+        autoConnect: true,
+      };
+  await seedMsgBridgeJson(bridgeConfig);
+
+  info("");
+  info(bold("NOTE:"));
+  info("If your `.devcontainer/.env` still has old `SLACK_APP_TOKEN`/`SLACK_BOT_TOKEN`");
+  info("keys, remove them — they are no longer used.");
+  if (!trustedUserId) {
+    info("");
+    info("First time you DM the bot, a 6-digit challenge code appears in");
+    info(`\`tmux attach -t ${CLIENT_SLACK_SESSION}\` — reply with it in Slack to become trusted.`);
+  }
+
+  info("");
+  info(`Next step: start the Slack bridge by (re)launching the ${CLIENT_SLACK_SESSION} tmux session.`);
+  info(`This kills any existing ${CLIENT_SLACK_SESSION} session, then starts pi with the new tokens;`);
+  info("pi-messenger-bridge auto-connects on boot using ~/.pi/msg-bridge.json.");
 
   if (await confirm("Start the Slack bridge now?")) {
     await relaunchClientSlack(envPath);
     info("");
-    info("Slack bridge is live. Test it: DM your bot or @mention it in an allow-listed channel.");
-    info("Tail the live log: tmux attach -t client-slack   (detach: Ctrl-b d)");
+    info("Slack bridge is live. Test it: DM your bot or @mention it in a shared channel.");
+    info(`Tail the live log: tmux attach -t ${CLIENT_SLACK_SESSION}   (detach: Ctrl-b d)`);
   } else {
     info("Skipped. Start the bridge manually when ready:");
-    info("  tmux kill-session -t client-slack 2>/dev/null; \\");
+    info(`  tmux kill-session -t ${CLIENT_SLACK_SESSION} 2>/dev/null; \\`);
     info(`  set -a; source ${envPath}; set +a; \\`);
-    info("  tmux new-session -d -s client-slack 'pi 2>&1 | tee /tmp/client-slack.log'");
+    info(`  tmux new-session -d -s ${CLIENT_SLACK_SESSION} 'pi 2>&1 | tee /tmp/client-slack.log'`);
   }
 
   return 0;

@@ -70,11 +70,11 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    claude                           # terminal coding agent
    ```
 
-   For multi-agent setups (e.g., Pi+Slack), the recommended path is to enable
-   the Slack Pi extension in `.pi/extensions/slack/` (see
+   For multi-agent setups (e.g., Pi+Slack), the harness now ships Slack via
+   the **pi-messenger-bridge** npm package (pinned in `.pi/settings.json`; see
    [docs/integrations/slack.md](docs/integrations/slack.md)). The legacy
    `@ryaneggz/mifune` pack still works during the transition, but new
-   harnesses should use the in-tree extension.
+   harnesses should use pi-messenger-bridge.
 
 ### Validate
 

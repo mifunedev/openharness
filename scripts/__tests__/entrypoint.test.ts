@@ -61,8 +61,8 @@ describe("devcontainer entrypoint Slack restore", () => {
     expect(text).not.toContain("source $SLACK_ENV");
     expect(text).not.toContain("set -a; source");
     expect(text).toContain("SLACK_RUNTIME_ENV=$(mktemp /tmp/client-slack-env.XXXXXX)");
-    expect(text).toContain('printf \'SLACK_APP_TOKEN=%s\\n\' "$(shell_quote "$SLACK_APP_TOKEN")"');
-    expect(text).toContain('printf \'SLACK_BOT_TOKEN=%s\\n\' "$(shell_quote "$SLACK_BOT_TOKEN")"');
+    expect(text).toContain('printf \'PI_SLACK_APP_TOKEN=%s\\n\' "$(shell_quote "$PI_SLACK_APP_TOKEN")"');
+    expect(text).toContain('printf \'PI_SLACK_BOT_TOKEN=%s\\n\' "$(shell_quote "$PI_SLACK_BOT_TOKEN")"');
     expect(text).toContain("chmod 600 \"$SLACK_RUNTIME_ENV\"");
     expect(text).toContain("bash -c");
     expect(text).toContain("/tmp/client-slack.log");
@@ -95,10 +95,8 @@ describe("devcontainer entrypoint Slack restore", () => {
     writeFileSync(
       join(harness, ".devcontainer", ".env"),
       [
-        "SLACK_APP_TOKEN=xapp token; touch $PWNED",
-        "SLACK_BOT_TOKEN=xoxb'quoted",
-        "SLACK_ALLOW_USERS=U_ALLOWED; touch $PWNED",
-        "SLACK_ALLOW_CHANNELS=C_ALLOWED C_SECOND",
+        "PI_SLACK_APP_TOKEN=xapp token; touch $PWNED",
+        "PI_SLACK_BOT_TOKEN=xoxb'quoted",
       ].join("\n"),
     );
     writeFileSync(
@@ -108,7 +106,7 @@ describe("devcontainer entrypoint Slack restore", () => {
     );
     writeFileSync(
       join(bin, "pi"),
-      `#!/usr/bin/env bash\nprintf 'SLACK_APP_TOKEN=%s\nSLACK_BOT_TOKEN=%s\nSLACK_ALLOW_USERS=%s\nSLACK_ALLOW_CHANNELS=%s\n' "$SLACK_APP_TOKEN" "$SLACK_BOT_TOKEN" "$SLACK_ALLOW_USERS" "$SLACK_ALLOW_CHANNELS" > "$PI_ENV_FILE"\n`,
+      `#!/usr/bin/env bash\nprintf 'PI_SLACK_APP_TOKEN=%s\nPI_SLACK_BOT_TOKEN=%s\n' "$PI_SLACK_APP_TOKEN" "$PI_SLACK_BOT_TOKEN" > "$PI_ENV_FILE"\n`,
       { mode: 0o755 },
     );
 
@@ -127,6 +125,7 @@ describe("devcontainer entrypoint Slack restore", () => {
       {
         env: {
           ...process.env,
+          HOME: harness,
           HARNESS: harness,
           PATH: `${bin}:${process.env.PATH ?? ""}`,
           TMUX_ARGS_FILE: tmuxArgs,
@@ -142,12 +141,11 @@ describe("devcontainer entrypoint Slack restore", () => {
     expect(tmuxCommand).toContain("/tmp/client-slack.log");
     expect(tmuxCommand).not.toContain("xapp token; touch $PWNED");
     expect(tmuxCommand).not.toContain("xoxb'quoted");
-    expect(tmuxCommand).not.toContain("U_ALLOWED; touch $PWNED");
-    expect(tmuxCommand).not.toContain("C_ALLOWED C_SECOND");
 
     execFileSync("bash", ["-c", tmuxCommand], {
       env: {
         ...process.env,
+        HOME: harness,
         PATH: `${bin}:${process.env.PATH ?? ""}`,
         PI_ENV_FILE: piEnv,
         PWNED: pwned,
@@ -156,14 +154,16 @@ describe("devcontainer entrypoint Slack restore", () => {
 
     expect(readFileSync(piEnv, "utf8")).toBe(
       [
-        "SLACK_APP_TOKEN=xapp token; touch $PWNED",
-        "SLACK_BOT_TOKEN=xoxb'quoted",
-        "SLACK_ALLOW_USERS=U_ALLOWED; touch $PWNED",
-        "SLACK_ALLOW_CHANNELS=C_ALLOWED C_SECOND",
+        "PI_SLACK_APP_TOKEN=xapp token; touch $PWNED",
+        "PI_SLACK_BOT_TOKEN=xoxb'quoted",
         "",
       ].join("\n"),
     );
     expect(existsSync(pwned)).toBe(false);
+
+    const bridgeFile = join(harness, ".pi/msg-bridge.json");
+    expect(existsSync(bridgeFile)).toBe(true);
+    expect(readFileSync(bridgeFile, "utf8")).toContain("autoConnect");
   });
 });
 

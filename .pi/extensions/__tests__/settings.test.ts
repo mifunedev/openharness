@@ -22,6 +22,7 @@ describe("project Pi settings", () => {
       "npm:@trevonistrevon/pi-loop@0.5.5",
       "npm:@guwidoe/pi-prompt-suggester@0.3.10",
       "npm:pi-autoresearch@1.6.0",
+      "npm:pi-messenger-bridge@0.4.0",
       "git:github.com/Michaelliv/pi-dynamic-workflows@dbc6800d1f725f7439e51705e2664c59484afcd1",
     ]);
   });

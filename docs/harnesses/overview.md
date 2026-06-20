@@ -7,7 +7,7 @@ title: "Harnesses Overview"
 
 Open Harness ships with three agent CLIs in the default sandbox image: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, and **Grok Build** are optional image-level installs controlled by `harness.yaml` `install:` keys (or `.devcontainer/.env` build flags). **T3 Code** runs on demand via `npx t3` as a browser UI on port 3773. Inside the sandbox, launch whichever you prefer — switch between them at any time, or keep long-running sessions in tmux.
 
-The sandbox is the product; the harness is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a harness pack such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune). For Pi+Slack specifically, the recommended path is the in-tree extension at [`.pi/extensions/slack/`](../integrations/slack.md). The product surface is one developer, one project, one harness — not racing or stacking multiple CLIs against each other.
+The sandbox is the product; the harness is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox, edit the Dockerfile, or layer in a harness pack such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune). For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package (pinned in `.pi/settings.json`; see [Slack integration](../integrations/slack.md)). The product surface is one developer, one project, one harness — not racing or stacking multiple CLIs against each other.
 
 ## Supported agents
 
@@ -63,14 +63,14 @@ Each runs in its own named tmux session per [`context/rules/sandbox-processes.md
 
 ### Pi+Slack
 
-The Pi agent with the Slack bridge loaded. The wizard writes `.devcontainer/.env`, launches the `client-slack` session, and waits for the Socket Mode connection to come up:
+The Pi agent with the Slack bridge loaded. The wizard writes `.devcontainer/.env` and launches the `client-slack` session:
 
 ```bash
 oh config slack              # interactive wizard
-tmux attach -t client-slack      # watch the live log
+tmux attach -t client-slack   # watch the live log
 ```
 
-Talk to the agent from Slack (DM or `@mention` in an allow-listed channel). Full setup: [Slack integration](../integrations/slack.md).
+Talk to the agent from Slack (DM or `@mention`). Full setup: [Slack integration](../integrations/slack.md).
 
 ### T3 Code
 

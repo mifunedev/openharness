@@ -322,12 +322,10 @@ fi
 
 # ─── pnpm install at harness root ──────────────────────────────────
 # Root package.json declares deps that aren't bundled into Pi or any
-# global CLI: `croner` for scripts/cron-runtime.ts, plus the four sibling
-# packages the in-tree Slack Pi extension imports (`@slack/socket-mode`,
-# `@slack/web-api`, `chalk`, and `@sinclair/typebox` for tooling parity).
-# Pi loads extensions via jiti, which falls back to Node's node_modules
-# walk for non-aliased imports — without these installed at the harness
-# root, `pi` fails to load `.pi/extensions/slack/` on a fresh container.
+# global CLI: `croner` for scripts/cron-runtime.ts, plus dev tooling such
+# as `@sinclair/typebox` (kept as a devDep for tooling parity). The Slack
+# bridge no longer needs root npm deps — it ships as the pinned
+# `pi-messenger-bridge` package that Pi loads on its own.
 # The harness is bind-mounted, so a Dockerfile-time install gets shadowed
 # at runtime; we install on first boot here, idempotently. Set
 # SKIP_PNPM_INSTALL=1 to opt out (e.g. air-gapped envs managing deps
@@ -394,33 +392,47 @@ fi
 
 # ─── Restore client-slack session if Slack is configured ──────────────
 # Tokens live in .devcontainer/.env (Compose KEY=value format). When both
-# SLACK_APP_TOKEN and SLACK_BOT_TOKEN are set AND `pi` is installed for
-# the sandbox user, restore the session that `oh config slack` created.
-# Treat the Compose env file as data, not shell: extract only the Slack
-# keys the bridge needs. Keep token values out of the tmux command string
-# by writing a sandbox-owned, mode-600 runtime env file that the child shell
-# sources and removes before launching `pi`.
+# PI_SLACK_APP_TOKEN and PI_SLACK_BOT_TOKEN are set AND `pi` is installed for
+# the sandbox user, restore the bridge session that `oh config slack` created.
+# Pi auto-loads the pinned `pi-messenger-bridge` package; its connection state
+# is seeded into ~sandbox/.pi/msg-bridge.json (autoConnect:true), so the
+# session only needs the PI_SLACK_* tokens in its environment.
+# Treat the Compose env file as data, not shell: extract only the keys the
+# bridge needs. Keep token values out of the tmux command string by writing a
+# sandbox-owned, mode-600 runtime env file that the child shell sources and
+# removes before launching `pi`.
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
-  SLACK_APP_TOKEN=$(grep -E '^SLACK_APP_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
-  SLACK_BOT_TOKEN=$(grep -E '^SLACK_BOT_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
-  SLACK_ALLOW_USERS=$(grep -E '^SLACK_ALLOW_USERS=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
-  SLACK_ALLOW_CHANNELS=$(grep -E '^SLACK_ALLOW_CHANNELS=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
-  if [ -n "$SLACK_APP_TOKEN" ] && [ -n "$SLACK_BOT_TOKEN" ] \
+  PI_SLACK_APP_TOKEN=$(grep -E '^PI_SLACK_APP_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
+  PI_SLACK_BOT_TOKEN=$(grep -E '^PI_SLACK_BOT_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
+  if [ -n "$PI_SLACK_APP_TOKEN" ] && [ -n "$PI_SLACK_BOT_TOKEN" ] \
      && gosu sandbox bash -lc 'command -v pi' &>/dev/null; then
     if ! gosu sandbox tmux has-session -t client-slack 2>/dev/null; then
       SLACK_RUNTIME_ENV=$(mktemp /tmp/client-slack-env.XXXXXX)
       {
-        printf 'SLACK_APP_TOKEN=%s\n' "$(shell_quote "$SLACK_APP_TOKEN")"
-        printf 'SLACK_BOT_TOKEN=%s\n' "$(shell_quote "$SLACK_BOT_TOKEN")"
-        [ -n "$SLACK_ALLOW_USERS" ] && printf 'SLACK_ALLOW_USERS=%s\n' "$(shell_quote "$SLACK_ALLOW_USERS")"
-        [ -n "$SLACK_ALLOW_CHANNELS" ] && printf 'SLACK_ALLOW_CHANNELS=%s\n' "$(shell_quote "$SLACK_ALLOW_CHANNELS")"
+        printf 'PI_SLACK_APP_TOKEN=%s\n' "$(shell_quote "$PI_SLACK_APP_TOKEN")"
+        printf 'PI_SLACK_BOT_TOKEN=%s\n' "$(shell_quote "$PI_SLACK_BOT_TOKEN")"
       } > "$SLACK_RUNTIME_ENV"
       chmod 600 "$SLACK_RUNTIME_ENV"
       chown "$(sandbox_ownership)" "$SLACK_RUNTIME_ENV" 2>/dev/null || true
+      # Seed the bridge connection file once, with strict perms. Tokens reach
+      # the gosu shell by sourcing the mode-600 runtime env file (never echoed
+      # or passed on the command line), so they stay out of logs and `ps`.
+      gosu sandbox bash -c '
+        set -a; . "$1"; set +a
+        umask 077
+        mkdir -p ~/.pi && chmod 700 ~/.pi
+        if [ ! -f ~/.pi/msg-bridge.json ]; then
+          printf "{\"slack\":{\"botToken\":\"%s\",\"appToken\":\"%s\"},\"autoConnect\":true}" \
+            "$PI_SLACK_BOT_TOKEN" "$PI_SLACK_APP_TOKEN" > ~/.pi/msg-bridge.json
+          chmod 600 ~/.pi/msg-bridge.json
+        fi
+      ' -- "$SLACK_RUNTIME_ENV" || true
+      # Clear any stale single-instance PID lock before launching the bridge.
+      gosu sandbox rm -f ~sandbox/.pi/msg-bridge.lock 2>/dev/null || true
       if gosu sandbox tmux new-session -d -s client-slack \
         "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; pi 2>&1 | tee /tmp/client-slack.log' -- $(shell_quote "$SLACK_RUNTIME_ENV")"; then
-        echo "[entrypoint] client-slack tmux session started (Slack bridge)"
+        echo "[entrypoint] client-slack tmux session started (pi-messenger-bridge)"
       else
         rm -f "$SLACK_RUNTIME_ENV"
         echo "[entrypoint] client-slack tmux session failed to start"

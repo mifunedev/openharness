@@ -137,6 +137,6 @@ See [Pi dynamic workflows](../integrations/pi-dynamic-workflows.md) for the work
 
 ## Slack integration
 
-Pi ships with a Slack Socket Mode bridge as a first-class extension at `.pi/extensions/slack/`. Set `SLACK_APP_TOKEN`, `SLACK_BOT_TOKEN`, and at least one of `SLACK_ALLOW_CHANNELS` / `SLACK_ALLOW_USERS` (the allowlist denies by default), then start `pi` — inbound Slack messages route into the agent via `pi.sendUserMessage()`, and the agent can post back through the registered `slack_post`, `slack_reply`, `slack_react`, and `slack_upload` tools.
+The harness ships Slack via the pinned **pi-messenger-bridge** npm package (declared in `.pi/settings.json`). Set `PI_SLACK_APP_TOKEN` and `PI_SLACK_BOT_TOKEN` in `.devcontainer/.env` (or run `oh config slack`), then start `pi` — access control is challenge-based (deny-by-default, no static allowlist), and inbound Slack messages route into the agent via the package using Pi's native `sendUserMessage()` / `turn_end`.
 
-See [Slack integration](../integrations/slack.md) for setup steps and the [`.pi/extensions/slack/` package README](https://github.com/mifunedev/openharness/tree/development/.pi/extensions/slack) for the file inventory and divergence tracking.
+See [Slack integration](../integrations/slack.md) for setup steps.

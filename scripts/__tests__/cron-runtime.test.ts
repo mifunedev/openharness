@@ -1114,6 +1114,39 @@ describe("fallback worktree pruning", () => {
     expect(worktreeInUse(wt, [path.join(tmp, "elsewhere")], ["autopilot-feat-445-example"])).toBe(false);
   });
 
+  it("does not prune a clean fallback worktree while a matching tmux session is live", () => {
+    const { repo, cleanWt } = initRepoWithFallbackWorktrees();
+    const priorCwd = process.cwd();
+    const priorPath = process.env.PATH;
+    const binDir = path.join(tmp, "bin");
+    const fakeTmux = path.join(binDir, "tmux");
+    mkdirSync(binDir, { recursive: true });
+    writeFileSync(
+      fakeTmux,
+      `#!/usr/bin/env bash
+set -euo pipefail
+case "$1" in
+  list-panes) printf '%s\\n' '${path.join(tmp, "elsewhere").replace(/'/g, "'\\''")}' ;;
+  ls) printf '%s\\n' 'cron-autopilot-clean' ;;
+  *) exit 1 ;;
+esac
+`,
+    );
+    chmodSync(fakeTmux, 0o755);
+
+    try {
+      process.chdir(repo);
+      process.env.PATH = `${binDir}:${priorPath ?? ""}`;
+
+      expect(pruneAndCountFallbackWorktrees("autopilot")).toBe(1);
+    } finally {
+      process.env.PATH = priorPath;
+      process.chdir(priorCwd);
+    }
+
+    expect(existsSync(cleanWt)).toBe(true);
+  });
+
   it("preserves dirty dead fallback worktrees but removes clean dead ones", () => {
     const { repo, dirtyWt, cleanWt } = initRepoWithFallbackWorktrees();
     const priorCwd = process.cwd();

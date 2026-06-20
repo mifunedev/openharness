@@ -48,7 +48,9 @@ done
 
 CONFIG_SCRIPT=${HARNESS_CONFIG_SCRIPT:-$SCRIPT_DIR/harness-config.sh}
 HARNESS_YAML="$REPO_DIR/harness.yaml"
-HARNESS_ENV_FILE="$REPO_DIR/.devcontainer/.harness.yaml.env"
+PERSISTENT_HARNESS_ENV_FILE="$REPO_DIR/.devcontainer/.harness.yaml.env"
+HARNESS_ENV_FILE="$PERSISTENT_HARNESS_ENV_FILE"
+HARNESS_ENV_TEMP=0
 ENV_FILE="$REPO_DIR/.devcontainer/.env"
 
 compose_path() {
@@ -84,12 +86,25 @@ read_env_value() {
 
 args=()
 
+read_like_compose_invocation() {
+  [ "$PRINT_ARGV" -eq 1 ] && return 0
+  [ "${1:-}" = "config" ] && return 0
+  return 1
+}
+
 if [ -f "$ENV_FILE" ]; then
   args+=(--env-file "$ENV_FILE")
 fi
 
 if [ -f "$HARNESS_YAML" ]; then
-  mkdir -p "$(dirname "$HARNESS_ENV_FILE")"
+  if read_like_compose_invocation "$@"; then
+    HARNESS_ENV_FILE=$(mktemp "${TMPDIR:-/tmp}/openharness-harness-yaml-env.XXXXXX")
+    HARNESS_ENV_TEMP=1
+    trap 'rm -f "$HARNESS_ENV_FILE"' EXIT
+  else
+    HARNESS_ENV_FILE="$PERSISTENT_HARNESS_ENV_FILE"
+    mkdir -p "$(dirname "$HARNESS_ENV_FILE")"
+  fi
   sh "$CONFIG_SCRIPT" env "$HARNESS_YAML" > "$HARNESS_ENV_FILE"
   args+=(--env-file "$HARNESS_ENV_FILE")
 fi
@@ -122,6 +137,11 @@ fi
 if [ "$PRINT_ARGV" -eq 1 ]; then
   printf '%s\n' docker compose "${args[@]}" "$@"
   exit 0
+fi
+
+if [ "$HARNESS_ENV_TEMP" -eq 1 ]; then
+  docker compose "${args[@]}" "$@"
+  exit $?
 fi
 
 exec docker compose "${args[@]}" "$@"

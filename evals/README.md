@@ -96,7 +96,7 @@ truncated-then-appended in place — so a crash or concurrent run can never leav
 partially-written scoreboard. Carry-forward rows for probes not run this
 invocation are read from a pre-write snapshot of the original file taken before
 the rewrite, never from the live file being replaced, so a filtered run cannot
-erase untouched rows. A weekly cron (`crons/eval-weekly.md`) runs it unattended.
+erase untouched rows. A date-gated weekly step in `crons/heartbeat.md` (§ Weekly eval) runs it unattended.
 
 ### Runner aggregate exit code
 
@@ -110,7 +110,7 @@ above, which governs individual probe results).
 | `1` | One or more probes transitioned from a prior `PASS` to `REGRESSION` in this run. |
 
 This `0`/`1` contract is what the autopilot §6 eval gate and the
-`eval-weekly` cron rely on when checking whether a run is clean.
+`eval-weekly` heartbeat step rely on when checking whether a run is clean.
 
 ## CI gate (`eval-probes`)
 

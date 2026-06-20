@@ -26,9 +26,9 @@ A task directory typically contains:
 ## Lifecycle
 
 - Tasks are created under `tasks/<taskdesc>/`.
-- The weekly `cleanup-tasks` cron (`crons/cleanup-tasks.md`) sweeps any
-  task whose `progress.txt` ends with `STATUS: COMPLETE` into
-  `tasks/archive/<YYYY-MM-DD>/<taskdesc>/`.
+- The weekly task-cleanup sweep (a date-gated step in `crons/heartbeat.md`
+  § Weekly task cleanup) archives any task whose `progress.txt` ends with
+  `STATUS: COMPLETE` into `tasks/archive/<YYYY-MM-DD>/<taskdesc>/`.
 - `archive/` contents are gitignored except for archived task files
   themselves (see root `.gitignore`).
 

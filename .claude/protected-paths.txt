@@ -49,7 +49,6 @@ install/cloudflared-tunnel.sh
 
 # --- Crons (referenced by scripts/cron-runtime.ts) ---
 crons/heartbeat.md
-crons/cleanup-tasks.md
 
 # --- Rules consumed by skills + agents at runtime ---
 .claude/rules/git.md

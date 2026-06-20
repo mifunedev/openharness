@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/273-heartbeat-spec-restart",
+  "description": "Clear the stale `system-cron` argv on the tmux server (#273) via a heartbeat date-gated, detached restart of the durable session stack. Operational maintenance — spec-execute runs the reviewed runbook-as-code; there is no code feature to merge.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Detached, idempotent tmux-server restart script",
+      "description": "As the operator, I need a reviewed restart-as-code artifact that survives killing its own session, so the server argv is cleared without orphaning the durable session stack.",
+      "acceptanceCriteria": [
+        "scripts/maintenance/restart-openharness-tmux.sh captures the live durable session->(cwd,command) map before kill-server and replays it",
+        "It is safe to launch detached (setsid): trap '' HUP, flock single-instance, and a done-sentinel make re-runs a no-op",
+        "Relaunch order puts the website origin before its tunnel and cron-system before cron-watchdog; it never recreates the legacy `system-cron` session name",
+        "It clears a stale crons/.pid naming a dead runtime, verifies the six durable sessions + mifune.dev 200 + cleared argv, and closes #273 on success (comments + stays open if degraded)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Authored + self-critiqued + adversarially reviewed pre-merge. Runs unattended at 2026-06-20 12:00 America/Denver."
+    },
+    {
+      "id": "US-002",
+      "title": "Heartbeat date-gated spec-execute trigger",
+      "description": "As the operator, I need the heartbeat to execute this spec once at the scheduled time, mirroring the #264 weekly-step pattern.",
+      "acceptanceCriteria": [
+        "crons/heartbeat.md gains a one-shot step gated to TZ=America/Denver date 2026-06-20 hour 12, launching the script detached and touching a per-day sentinel so it fires once",
+        "The step preserves the existing heartbeat logging contract (locked-append, no raw >> crons/.cron.log)",
+        "The step is documented as the spec-execute node of tasks/restart-openharness-tmux/"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Date-gate, not day-of-week gate; auto-cleared after the date passes in a follow-up."
+    }
+  ]
+}

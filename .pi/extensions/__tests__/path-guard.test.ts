@@ -30,12 +30,17 @@ function makePi(): { pi: MockPi; captured: Captured } {
   return { pi, captured };
 }
 
-function makeCtx(confirm: (title: string, body: string) => Promise<boolean>, hasUI = true) {
+function makeCtx(
+  confirm: (title: string, body: string) => Promise<boolean>,
+  hasUI = true,
+  mode?: string,
+) {
   const notify = vi.fn();
   return {
     notify,
     ctx: {
       hasUI,
+      mode,
       ui: {
         confirm: vi.fn(confirm),
         notify,
@@ -186,6 +191,17 @@ describe("path-guard extension", () => {
   });
 
   describe("risky bash", () => {
+    it("does not prompt for risky bash in interactive TUI mode", async () => {
+      const { ctx } = makeCtx(async () => false, true, "tui");
+      const result = await fire(
+        captured.toolCallHandlers,
+        { toolName: "bash", input: { command: "git push --force-with-lease origin feat/x" } },
+        ctx,
+      );
+      expect(ctx.ui.confirm).not.toHaveBeenCalled();
+      expect(result).toBeUndefined();
+    });
+
     it.each([
       ["rm -rf /tmp/x"],
       ["sudo apt update"],

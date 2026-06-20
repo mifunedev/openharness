@@ -4,7 +4,7 @@
 
 **Title**: Dedupe merged autopilot refs
 **Files changed**: `.claude/skills/autopilot/SKILL.md`, `evals/probes/autopilot-open-pr-reference-dedupe.sh`, `evals/probes/autopilot-merged-pr-reference-dedupe.sh`, `CHANGELOG.md`, `wiki/autopilot.md`, `wiki/raw/2026-06-20-autopilot-selection.md`, `wiki/README.md`, `tasks/dedupe-merged-autopilot-refs/*`
-**Commit**: pending
+**Commit**: cad1243
 **Result**: PASS
 
 ### What I did

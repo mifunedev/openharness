@@ -9,10 +9,16 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+
 ### Changed
+- Clarify oh.mifune.dev copy — "harness" now consistently means Open Harness (the repo); the CLI you pick is the "agent". The landing page, site tagline/meta, `docs/intro.md`, `docs/installation.md`, and `docs/harnesses/overview.md` now state one-repo-per-sandbox, that the repo tracks/versions state, and sandbox isolation (agents never run straight on your host) ([#268](https://github.com/ryaneggz/openharness/pull/268)).
+
 ### Fixed
+
 ### Removed
+
 ### Deprecated
+
 ### Security
 
 ## [2026.6.18] - 2026-06-18

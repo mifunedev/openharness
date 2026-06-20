@@ -5,7 +5,7 @@ title: "Installation"
 
 # Installation
 
-Open Harness is a Docker-based sandbox image. Installation is `docker compose` against `.devcontainer/docker-compose.yml` — there is no host CLI, agent, or Node toolchain required on the host.
+Open Harness is a portable harness — a single repo that boots an isolated Docker sandbox for your project. Installation clones the repo and runs `docker compose` against `.devcontainer/docker-compose.yml` — there is no host CLI, agent, or Node toolchain required on the host.
 
 ## Prerequisites
 

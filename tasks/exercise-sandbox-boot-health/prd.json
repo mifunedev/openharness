@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/485-exercise-sandbox-boot-health",
+  "description": "Add a bounded sandbox boot smoke test to the CI boot guard so devcontainer changes prove entrypoint and healthcheck behavior, not just image buildability.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add a boot smoke test helper",
+      "description": "As a maintainer, I need a reusable bounded helper so the workflow can wait for sandbox container health and report diagnostics on failure.",
+      "acceptanceCriteria": [
+        "Add a script that validates a compose project/container name supplied by CI",
+        "Wait loop has a bounded timeout and recognizes healthy, unhealthy, and missing-container states",
+        "On failure, print docker compose ps, container health inspect output, and recent logs",
+        "Script always attempts compose teardown in a cleanup trap",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Wire sandbox boot guard to exercise health",
+      "description": "As a maintainer, I want the sandbox boot guard workflow to run the sandbox long enough to exercise entrypoint and healthcheck wiring.",
+      "acceptanceCriteria": [
+        ".github/workflows/sandbox-boot-guard.yml invokes the boot smoke test after image build/config validation",
+        "The workflow uses CI-safe settings such as an isolated compose project name and SKIP_PNPM_INSTALL=1",
+        "The guard does not publish images, log in to external services, or perform release side effects",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

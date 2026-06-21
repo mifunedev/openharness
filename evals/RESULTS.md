@@ -47,6 +47,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | owned-surface-guard | A | 2026-06-21 06:16 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | pnpm-audit-ci-gate | A | 2026-06-21 06:16 | PASS | issue #171 — pnpm security audits must run in CI |
 | pr-audit-duplicate-issue-refs | A | 2026-06-21 06:16 | PASS | issue #439 — /pr-audit must flag duplicate open PRs that reference the same issue |
+| prompt-miner-schema-compat | A | 2026-06-19 16:09 | PASS | issue #503 — prompt-miner JSONL dual-schema (Claude+Pi) drift guard |
 | prd-output-path-contract | A | 2026-06-21 06:16 | PASS | memory/MEMORY.md 2026-06-19 |
 | ralph-fallback-order | A | 2026-06-21 06:16 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
 | repo-map-contract | A | 2026-06-21 06:16 | PASS | issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims |

@@ -1,6 +1,7 @@
 sessions/
 git/
 npm/
+bridge/
 tasks/
 tasks-config.json
 loops/

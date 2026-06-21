@@ -26,14 +26,17 @@ function ohStatusBlock(banner: string): string {
 }
 
 describe("boot banners", () => {
-  it("first-boot entrypoint banner points at the installed optional Slack wizard", () => {
+  it("first-boot entrypoint banner points at the Slack bridge setup docs", () => {
     const block = firstBootBlock(readRepoFile(".devcontainer", "entrypoint.sh"));
 
-    expect(block).toContain("oh config slack");
+    expect(block).toContain("docs/integrations/slack.md");
     expect(block).toContain("Optional Slack bridge setup");
     expect(block).toContain("Start an agent from this shell");
     expect(block).not.toContain("openharness onboard");
     expect(block).not.toContain("Complete setup");
+    // The `oh config slack` wizard was removed with the pi-messenger-bridge
+    // swap (#481/#287); the banner must not advertise a command that errors.
+    expect(block).not.toContain("oh config slack");
   });
 
   it("interactive shell banner checks and labels the installed oh CLI", () => {

@@ -129,7 +129,8 @@ RUN set -e; \
 # Build the in-tree `oh` CLI (packages/oh/) into a self-contained bundle,
 # install onto $PATH. Source is COPY'd to /opt/oh (outside the
 # bind-mount) so the bundled binary survives the bind-mount overlay.
-# v1 ships `oh config slack` (Slack integration setup wizard).
+# The `oh config` family currently ships no integration wizards (Slack is
+# configured natively by editing files — see docs/integrations/slack.md).
 COPY packages/oh/ /opt/oh/
 RUN cd /opt/oh && npm install --no-audit --no-fund && npm run build \
  && chmod +x /opt/oh/dist/oh.js \

@@ -62,6 +62,6 @@ config: ## Print effective harness.yaml-derived env and resolved compose config
 help: ## List available targets with descriptions
 	@printf "Open Harness — Make targets:\n"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-	@printf "\nConfiguration wizards (run \033[36minside\033[0m the sandbox after \033[36mmake shell\033[0m):\n"
-	@printf "  \033[36moh config slack\033[0m  Slack integration setup wizard\n"
-	@printf "  \033[36moh --help\033[0m         List all \033[36moh\033[0m subcommands\n"
+	@printf "\nSandbox CLI (run \033[36minside\033[0m the sandbox after \033[36mmake shell\033[0m):\n"
+	@printf "  \033[36moh --help\033[0m  List all \033[36moh\033[0m subcommands\n"
+	@printf "  Slack bridge setup: see \033[36mdocs/integrations/slack.md\033[0m\n"

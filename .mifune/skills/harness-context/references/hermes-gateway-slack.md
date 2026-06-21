@@ -13,7 +13,7 @@ Gateway will continue for cron job execution.
 
 ## Meaning
 
-Slack is enabled in Hermes' gateway configuration, but the Hermes install in the sandbox does not include the optional Slack adapter dependency (`slack-bolt`). This affects Hermes' own messaging gateway only. It is separate from the Open Harness Pi Slack extension under `.pi/extensions/slack/`.
+Slack is enabled in Hermes' gateway configuration, but the Hermes install in the sandbox does not include the optional Slack adapter dependency (`slack-bolt`). This affects Hermes' own messaging gateway only. It is separate from the Open Harness Slack bridge (the `pi-messenger-bridge` package).
 
 The gateway continuing for cron execution is expected: Hermes cron jobs can still run even when no messaging platform adapter is available.
 

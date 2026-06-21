@@ -114,8 +114,8 @@ describe("sandbox healthcheck", () => {
     writeFileSync(
       join(harness, ".devcontainer", ".env"),
       [
-        ["SLACK_APP_TOKEN", "xapp-test"].join("="),
-        ["SLACK_BOT_TOKEN", "xoxb-test"].join("="),
+        ["PI_SLACK_APP_TOKEN", "xapp-test"].join("="),
+        ["PI_SLACK_BOT_TOKEN", "xoxb-test"].join("="),
         "",
       ].join("\n"),
     );
@@ -128,7 +128,7 @@ describe("sandbox healthcheck", () => {
     });
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("missing required tmux session: client-slack-pi");
+    expect(result.stderr).toContain("missing required tmux session: client-slack");
   });
 
   it("is wired into the devcontainer compose healthcheck", () => {

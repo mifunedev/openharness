@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -32,22 +40,47 @@ function printArgv(args: string[] = ["config"]): string[] {
   return result.stdout.trimEnd().split("\n");
 }
 
+function runWithFakeDocker(args: string[]): string[] {
+  const binDir = path.join(tmp, "bin");
+  const capture = path.join(tmp, "docker-argv.txt");
+  mkdirSync(binDir, { recursive: true });
+  const docker = path.join(binDir, "docker");
+  writeFileSync(docker, '#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "$CAPTURE"\n');
+  chmodSync(docker, 0o755);
+
+  const result = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, ...args], {
+    encoding: "utf8",
+    env: { ...process.env, PATH: `${binDir}:${process.env.PATH}`, CAPTURE: capture },
+  });
+
+  expect(result.stderr).toBe("");
+  expect(result.status).toBe(0);
+  return readFileSync(capture, "utf8").trimEnd().split("\n");
+}
+
 describe("scripts/docker-compose.sh", () => {
-  it("prints default argv with env files before the base compose file", () => {
+  it("prints read-like argv with a temporary harness env file", () => {
+    const persistent = path.join(tmp, ".devcontainer", ".harness.yaml.env");
     writeFileSync(path.join(tmp, ".devcontainer", ".env"), "SANDBOX_NAME=example\n");
     writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
 
-    expect(printArgv()).toEqual([
+    const argv = printArgv();
+    expect(argv.slice(0, 6)).toEqual([
       "docker",
       "compose",
       "--env-file",
       path.join(tmp, ".devcontainer", ".env"),
       "--env-file",
-      path.join(tmp, ".devcontainer", ".harness.yaml.env"),
+      argv[5],
+    ]);
+    expect(argv[5]).toContain("openharness-harness-yaml-env.");
+    expect(argv[5]).not.toBe(persistent);
+    expect(argv.slice(6)).toEqual([
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "config",
     ]);
+    expect(existsSync(persistent)).toBe(false);
   });
 
   it("keeps harness.yaml and config.json override paths as literal argv entries", () => {
@@ -66,11 +99,15 @@ describe("scripts/docker-compose.sh", () => {
       JSON.stringify({ composeOverrides: [configOverride] }),
     );
 
-    expect(printArgv(["up", "-d", "--build"])).toEqual([
+    const argv = printArgv(["up", "-d", "--build"]);
+    expect(argv.slice(0, 4)).toEqual([
       "docker",
       "compose",
       "--env-file",
-      path.join(tmp, ".devcontainer", ".harness.yaml.env"),
+      argv[3],
+    ]);
+    expect(argv[3]).toContain("openharness-harness-yaml-env.");
+    expect(argv.slice(4)).toEqual([
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "-f",
@@ -86,6 +123,37 @@ describe("scripts/docker-compose.sh", () => {
       "--build",
     ]);
     expect(existsSync(sentinel)).toBe(false);
+  });
+
+  it("keeps persistent harness env generation for lifecycle commands", () => {
+    const persistent = path.join(tmp, ".devcontainer", ".harness.yaml.env");
+    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
+
+    const argv = runWithFakeDocker(["up", "-d"]);
+
+    expect(argv).toEqual([
+      "compose",
+      "--env-file",
+      persistent,
+      "-f",
+      path.join(tmp, ".devcontainer", "docker-compose.yml"),
+      "up",
+      "-d",
+    ]);
+    expect(readFileSync(persistent, "utf8")).toContain("SANDBOX_NAME=from-yaml");
+  });
+
+  it("uses a temporary harness env file for compose config without overwriting persistent state", () => {
+    const persistent = path.join(tmp, ".devcontainer", ".harness.yaml.env");
+    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
+    writeFileSync(persistent, "SANDBOX_NAME=old\n");
+
+    const argv = runWithFakeDocker(["config", "--quiet"]);
+
+    expect(argv.slice(0, 4)).toEqual(["compose", "--env-file", argv[2], "-f"]);
+    expect(argv[2]).toContain("openharness-harness-yaml-env.");
+    expect(argv[2]).not.toBe(persistent);
+    expect(readFileSync(persistent, "utf8")).toBe("SANDBOX_NAME=old\n");
   });
 
   it("preserves repo-root-relative resolution for absolute and relative overrides", () => {

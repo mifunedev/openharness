@@ -19,6 +19,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Docs builds now run automatically only from the docs workflow on `main`/`master` pushes; root build, Harness CI, release validation, and `/eval` stay on the fast non-docs path ([#455](https://github.com/mifunedev/openharness/issues/455)).
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
+- Compose helper diagnostics now use temporary `harness.yaml` env files so `--print-argv` and `config` do not create or overwrite `.devcontainer/.harness.yaml.env` ([#470](https://github.com/mifunedev/openharness/issues/470)).
 - `/context-audit` and `/health-check` now route Memory Protocol examples through `scripts/locked-append.sh`, guarded by `memory-log-locked-append` ([#476](https://github.com/mifunedev/openharness/issues/476)).
 - `/prd` now consistently writes PRDs to `tasks/<feature-name>/prd.md`, guarded by the `prd-output-path-contract` eval probe ([#483](https://github.com/mifunedev/openharness/issues/483)).
 - Sandbox boot guard now boots the built sandbox image and verifies the in-container healthcheck before passing, catching entrypoint regressions in CI ([#485](https://github.com/mifunedev/openharness/issues/485)).

@@ -84,11 +84,11 @@ hermes setup --portal   # Nous Portal OAuth integration
 hermes doctor           # health check
 ```
 
-Config, memory, skills, and sessions write to `~/harness/.hermes/`
-through `HERMES_HOME=/home/sandbox/harness/.hermes`. On first boot with
-Hermes enabled, the entrypoint seeds `config.yaml` so
-`skills.external_dirs` includes `/home/sandbox/harness/.claude/skills`,
-making the harness' in-repo skills visible to Hermes by default.
+Config, memory, runtime skills, and sessions write to `~/harness/.hermes/`
+through `HERMES_HOME=/home/sandbox/harness/.hermes`. On boot with
+Hermes enabled, the entrypoint links `.hermes/skills/openharness` to the
+tracked shared skills directory (`.mifune/skills/`), making the same harness
+skills used by Claude, Codex, and Pi visible to Hermes by default.
 
 Auth lives directly inside `HERMES_HOME` (`~/harness/.hermes/auth.json`).
 No symlink or named volume is involved: an earlier design symlinked

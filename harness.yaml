@@ -1,7 +1,7 @@
 # harness.yaml — Open Harness master config (tracked).
 #
-# Everything non-secret lives here. Secrets (GH_TOKEN, SLACK_APP_TOKEN,
-# SLACK_BOT_TOKEN) live ONLY in gitignored .devcontainer/.env.
+# Everything non-secret lives here. Secrets (GH_TOKEN, PI_SLACK_APP_TOKEN,
+# PI_SLACK_BOT_TOKEN) live ONLY in gitignored .devcontainer/.env.
 # Keys set here OVERRIDE .devcontainer/.env for the same setting.
 #
 # Format: flat two-level section/key only — parsed by
@@ -45,8 +45,11 @@ autopilot:
   # daily_cap: 6               # AUTOPILOT_DAILY_CAP — max open autopilot PRs created per UTC day
 
 slack:
-  # allow_users: U01ABCD2345       # SLACK_ALLOW_USERS — comma-separated user IDs
-  # allow_channels: C01ABCD2345    # SLACK_ALLOW_CHANNELS — comma-separated channel IDs
+  # Slack is configured via the pi-messenger-bridge package, not here.
+  # Tokens PI_SLACK_APP_TOKEN / PI_SLACK_BOT_TOKEN live in .devcontainer/.env;
+  # runtime config (autoConnect, challenge-auth trustedUsers) lives in
+  # ~/.pi/msg-bridge.json. There is no static allowlist — auth is runtime
+  # challenge-based. See docs/integrations/slack.md.
 
 compose:
   # Tracked overlay paths, applied before user-local config.json

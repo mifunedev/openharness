@@ -61,8 +61,8 @@ describe("devcontainer entrypoint Slack restore", () => {
     expect(text).not.toContain("source $SLACK_ENV");
     expect(text).not.toContain("set -a; source");
     expect(text).toContain("SLACK_RUNTIME_ENV=$(mktemp /tmp/client-slack-env.XXXXXX)");
-    expect(text).toContain('printf \'SLACK_APP_TOKEN=%s\\n\' "$(shell_quote "$SLACK_APP_TOKEN")"');
-    expect(text).toContain('printf \'SLACK_BOT_TOKEN=%s\\n\' "$(shell_quote "$SLACK_BOT_TOKEN")"');
+    expect(text).toContain('printf \'PI_SLACK_APP_TOKEN=%s\\n\' "$(shell_quote "$PI_SLACK_APP_TOKEN")"');
+    expect(text).toContain('printf \'PI_SLACK_BOT_TOKEN=%s\\n\' "$(shell_quote "$PI_SLACK_BOT_TOKEN")"');
     expect(text).toContain("chmod 600 \"$SLACK_RUNTIME_ENV\"");
     expect(text).toContain("bash -c");
     expect(text).toContain("/tmp/client-slack.log");
@@ -86,29 +86,49 @@ describe("devcontainer entrypoint Slack restore", () => {
   it("assembles Slack env from fixture data without evaluating it", () => {
     const temp = mkdtempSync(join(tmpdir(), "entrypoint-slack-"));
     const harness = join(temp, "harness");
+    const home = join(temp, "home");
     const bin = join(temp, "bin");
     const tmuxArgs = join(temp, "tmux-args.txt");
     const piEnv = join(temp, "pi-env.txt");
     const pwned = join(temp, "pwned");
     mkdirSync(join(harness, ".devcontainer"), { recursive: true });
+    mkdirSync(join(harness, ".pi"), { recursive: true });
+    mkdirSync(home, { recursive: true });
     mkdirSync(bin);
     writeFileSync(
       join(harness, ".devcontainer", ".env"),
       [
-        "SLACK_APP_TOKEN=xapp token; touch $PWNED",
-        "SLACK_BOT_TOKEN=xoxb'quoted",
-        "SLACK_ALLOW_USERS=U_ALLOWED; touch $PWNED",
-        "SLACK_ALLOW_CHANNELS=C_ALLOWED C_SECOND",
+        "PI_SLACK_APP_TOKEN=xapp token; touch $PWNED",
+        "PI_SLACK_BOT_TOKEN=xoxb'quoted",
       ].join("\n"),
+    );
+    // Versioned, non-secret bridge config the entrypoint copies into ~/.pi.
+    writeFileSync(
+      join(harness, ".pi", "msg-bridge.json"),
+      JSON.stringify({ autoConnect: true, auth: { trustedUsers: [] } }),
     );
     writeFileSync(
       join(bin, "tmux"),
-      `#!/usr/bin/env bash\nif [ "$1" = "has-session" ]; then exit 1; fi\nprintf '%s\n' "$@" > "$TMUX_ARGS_FILE"\n`,
+      `#!/usr/bin/env bash\nif [ "$1" = "has-session" ]; then exit 1; fi\nif [ "$1" = "pipe-pane" ]; then exit 0; fi\nprintf '%s\n' "$@" > "$TMUX_ARGS_FILE"\n`,
       { mode: 0o755 },
     );
     writeFileSync(
       join(bin, "pi"),
-      `#!/usr/bin/env bash\nprintf 'SLACK_APP_TOKEN=%s\nSLACK_BOT_TOKEN=%s\nSLACK_ALLOW_USERS=%s\nSLACK_ALLOW_CHANNELS=%s\n' "$SLACK_APP_TOKEN" "$SLACK_BOT_TOKEN" "$SLACK_ALLOW_USERS" "$SLACK_ALLOW_CHANNELS" > "$PI_ENV_FILE"\n`,
+      `#!/usr/bin/env bash\nprintf 'PI_SLACK_APP_TOKEN=%s\nPI_SLACK_BOT_TOKEN=%s\n' "$PI_SLACK_APP_TOKEN" "$PI_SLACK_BOT_TOKEN" > "$PI_ENV_FILE"\n`,
+      { mode: 0o755 },
+    );
+    // npm stub: the real entrypoint npm-installs the bridge here; it must not
+    // run during the unit test.
+    writeFileSync(join(bin, "npm"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
+    // Stub supervisor: the entrypoint now exec's
+    // $HARNESS/.devcontainer/client-slack-supervise.sh. The real script runs a
+    // restart loop with a stale-ctx watchdog; this test only verifies that the
+    // entrypoint sources the PI_SLACK_* env as data and hands off, so the stub
+    // just exec's the pi stub once (no loop, no watchdog, no /tmp writes). The
+    // real supervisor's behavior is covered by a separate content/parse test.
+    writeFileSync(
+      join(harness, ".devcontainer", "client-slack-supervise.sh"),
+      '#!/usr/bin/env bash\nexec pi --extension "${BRIDGE_ENTRY:-x}" --extension "${RECOVERY_ENTRY:-y}" --approve\n',
       { mode: 0o755 },
     );
 
@@ -127,6 +147,7 @@ describe("devcontainer entrypoint Slack restore", () => {
       {
         env: {
           ...process.env,
+          HOME: home,
           HARNESS: harness,
           PATH: `${bin}:${process.env.PATH ?? ""}`,
           TMUX_ARGS_FILE: tmuxArgs,
@@ -142,12 +163,11 @@ describe("devcontainer entrypoint Slack restore", () => {
     expect(tmuxCommand).toContain("/tmp/client-slack.log");
     expect(tmuxCommand).not.toContain("xapp token; touch $PWNED");
     expect(tmuxCommand).not.toContain("xoxb'quoted");
-    expect(tmuxCommand).not.toContain("U_ALLOWED; touch $PWNED");
-    expect(tmuxCommand).not.toContain("C_ALLOWED C_SECOND");
 
     execFileSync("bash", ["-c", tmuxCommand], {
       env: {
         ...process.env,
+        HOME: harness,
         PATH: `${bin}:${process.env.PATH ?? ""}`,
         PI_ENV_FILE: piEnv,
         PWNED: pwned,
@@ -156,14 +176,55 @@ describe("devcontainer entrypoint Slack restore", () => {
 
     expect(readFileSync(piEnv, "utf8")).toBe(
       [
-        "SLACK_APP_TOKEN=xapp token; touch $PWNED",
-        "SLACK_BOT_TOKEN=xoxb'quoted",
-        "SLACK_ALLOW_USERS=U_ALLOWED; touch $PWNED",
-        "SLACK_ALLOW_CHANNELS=C_ALLOWED C_SECOND",
+        "PI_SLACK_APP_TOKEN=xapp token; touch $PWNED",
+        "PI_SLACK_BOT_TOKEN=xoxb'quoted",
         "",
       ].join("\n"),
     );
     expect(existsSync(pwned)).toBe(false);
+
+    // The versioned config was copied into ~/.pi (tokens stay out of it).
+    const seeded = join(home, ".pi/msg-bridge.json");
+    expect(existsSync(seeded)).toBe(true);
+    expect(readFileSync(seeded, "utf8")).toContain("autoConnect");
+  });
+});
+
+describe("client-slack bridge supervisor", () => {
+  const SUPERVISOR = join(ROOT, ".devcontainer/client-slack-supervise.sh");
+
+  it("parses as valid bash", () => {
+    execFileSync("bash", ["-n", SUPERVISOR]);
+  });
+
+  it("restarts pi on stale-ctx and crash, clears the lock, stops on a clean exit", () => {
+    const text = readFileSync(SUPERVISOR, "utf8");
+    // Detects the pi "extension ctx is stale" failure and kills the bridge pi
+    // (matched by its unique --extension path) so the loop relaunches it fresh.
+    expect(text).toContain("ctx is stale");
+    expect(text).toContain("pkill -f 'pi-messenger-bridge/dist/index.js'");
+    // pi runs interactive on the pane TTY: no `| tee` pipe and no --mode rpc, so
+    // the loaded UI extensions render instead of flooding stdout with JSON. A 2nd
+    // --extension co-loads the Codex retry-recovery extension. Assert on the pi
+    // command line itself so comment wording can't satisfy the negatives.
+    const piLine = text.split("\n").find((l) => /^\s*pi --extension/.test(l)) ?? "";
+    expect(piLine).toContain("--approve");
+    expect(piLine).toContain('--extension "$RECOVERY_ENTRY"');
+    expect(piLine).not.toContain("--mode rpc");
+    expect(piLine).not.toContain("tee");
+    expect(piLine).toContain('2>>"$LOG"');
+    expect(text).toContain("bridge-recovery");
+    expect(text).toContain("rc=$?");
+    // Clears the single-instance lock before each (re)launch.
+    expect(text).toContain('rm -f "$LOCK"');
+    // A clean pi exit (rc=0) breaks the loop; anything else restarts.
+    expect(text).toMatch(/\$rc"?\s+-eq\s+0/);
+    expect(text).toContain("break");
+    expect(text).toContain("restarting in 3s");
+  });
+
+  it("is referenced by the entrypoint's client-slack launch", () => {
+    expect(entrypoint()).toContain(".devcontainer/client-slack-supervise.sh");
   });
 });
 

@@ -137,7 +137,6 @@ line:
 
     STATUS: SPEC-PLANNED
 
-The `spec-*` family is **not** wired into the deprecated executable loop
-(`context/rules/loop.md` § 2); `AGENTS.md § The Workflow` is its authority. If the
+The `spec-*` family's authority is `AGENTS.md § The Workflow`. If the
 four-file contract is incomplete, print the missing file and emit no `STATUS:` line — a
 missing artifact is a failure, not a clean plan.

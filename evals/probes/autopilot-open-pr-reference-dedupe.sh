@@ -20,7 +20,7 @@ grep -Fq 'headRefName' "$SKILL" || missing+=("head branch check")
 grep -Fq 'body,closingIssuesReferences' "$SKILL" || missing+=("PR body fetched")
 grep -Fq 'close[sd]?[[:space:]]+#' "$SKILL" || missing+=("closing keyword body regex")
 grep -Fq 'Queue selection: implementing open autopilot issue #$ISSUE_NUM' "$SKILL" || missing+=("queue rationale kept")
-grep -Fq 'no open PR reference after local PR dedupe' "$SKILL" || missing+=("rationale names local PR dedupe")
+grep -Fq 'no open or merged PR reference after local PR dedupe' "$SKILL" || missing+=("rationale names local PR dedupe")
 grep -Fq '[dry-run] dedupe: $DEDUPE_STATE' "$SKILL" || missing+=("dry-run dedupe visibility")
 
 if grep -F -- '--search "-linked:pr -label:autopilot-blocked"' "$SKILL" >/dev/null; then

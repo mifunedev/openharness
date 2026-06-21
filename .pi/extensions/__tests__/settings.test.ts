@@ -18,6 +18,7 @@ describe("project Pi settings", () => {
       "npm:@tintinweb/pi-tasks@0.7.0",
       "npm:@narumitw/pi-goal@0.4.2",
       "npm:@narumitw/pi-plan-mode@0.4.2",
+      "npm:@narumitw/pi-codex-usage@0.6.2",
       "npm:@tifan/pi-recap@0.4.2",
       "npm:@trevonistrevon/pi-loop@0.5.5",
       "npm:@guwidoe/pi-prompt-suggester@0.3.10",

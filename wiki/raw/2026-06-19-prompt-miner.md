@@ -24,6 +24,6 @@
 - `.claude/skills/prompt-miner/references/{scoring,markers,report-schema}.md` — the contracts.
   - `markers.md:57-58` thresholds `sessions_supporting ≥ 10` AND `effect_size ≥ 0.3`.
   - `markers.md:67-76` `NO-CORPUS` vs `NO-CANDIDATE`.
-- `crons/prompt-miner.md` — daily cron; Step 3 (`:74`) `/ship-spec --repo ryaneggz/openharness`,
+- `crons/prompt-miner.md` — daily cron; Step 3 (`:74`) `/ship-spec --repo mifunedev/openharness`,
   PR-label step (`:88`) to keep the cap honest.
-- `scripts/prompt-miner-caps.sh` — origin-scoped wrapper of `scripts/autopilot-caps.sh`.
+- `scripts/prompt-miner-caps.sh` — prompt-miner-scoped wrapper of `scripts/autopilot-caps.sh`.

@@ -47,7 +47,7 @@ A session earns the bonus when **either**:
 
 The engine runs `git fetch origin development --depth=200` once, then
 `git log --format=%ct origin/development -n 200`. The cross-ref is against
-**`origin/development` only** — never `upstream`. `--no-git` stubs the bonus to
+**`development` only**. `--no-git` stubs the bonus to
 `0` for CI/tests and offline runs (it suppresses the PR-URL bonus too, so the
 stub is total and deterministic).
 

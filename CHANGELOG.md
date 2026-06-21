@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `/prompt-miner` skill + deterministic `mine-traces.mjs` engine — a cross-session, data-driven cousin of `/retro` that scores Claude+Pi session traces by a friction+ground-truth outcome proxy, ranks the initiating prompts, and mines falsifiable prompt **markers** behind a propose-then-confirm gate; guarded by the `prompt-miner-schema-compat` probe. Ships a **disabled-by-default** (`enabled: false`), cap-gated daily cron ([#503](https://github.com/mifunedev/openharness/issues/503)).
 - `autopilot-merged-pr-reference-dedupe` eval probe guards that `/autopilot` skips completed-but-still-open tickets whose development PRs already merged ([#468](https://github.com/mifunedev/openharness/issues/468)).
 - `AGENTS.md § The Workflow` codifies the canonical operative path (`select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`) with a single designated runner and the `/ship-spec` all-in-one caveat, guarded by the `workflow-boundaries` eval probe ([#493](https://github.com/mifunedev/openharness/issues/493)).
 - The `spec-*` skill family (`/spec-plan`, `/spec-critique`, `/spec-execute`, `/spec-retro`) decomposes `/ship-spec` into independently runnable, folder-pointed workflow nodes, guarded by the `spec-family-contract` eval probe ([#493](https://github.com/mifunedev/openharness/issues/493)).

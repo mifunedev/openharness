@@ -1,5 +1,3 @@
-import { runSlack } from "./config/slack.js";
-
 // Injected at build time from package.json#version (see build.mjs).
 declare const __OH_VERSION__: string;
 const VERSION: string = typeof __OH_VERSION__ === "string" ? __OH_VERSION__ : "0.0.0-dev";
@@ -9,12 +7,11 @@ interface Integration {
   runner: () => Promise<number>;
 }
 
-const INTEGRATIONS: Record<string, Integration> = {
-  slack: {
-    description: "Slack bridge tokens + allowlist",
-    runner: runSlack,
-  },
-};
+// No interactive wizards remain — Slack is configured natively by editing
+// `.devcontainer/.env` + `.pi/msg-bridge.json` (see docs/integrations/slack.md).
+// The framework stays for future integrations; `integrationLines()` renders
+// "(none)" while this record is empty.
+const INTEGRATIONS: Record<string, Integration> = {};
 
 export function isHelpFlag(arg: string | undefined): boolean {
   return arg === "--help" || arg === "-h" || arg === "help";
@@ -43,9 +40,6 @@ Usage:
 
 Integrations:
 ${integrationLines()}
-
-Examples:
-  oh config slack
 `);
 }
 
@@ -58,9 +52,6 @@ Usage:
 
 Integrations:
 ${integrationLines()}
-
-Examples:
-  oh config slack
 `);
 }
 

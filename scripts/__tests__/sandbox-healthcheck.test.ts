@@ -113,8 +113,8 @@ describe("sandbox healthcheck", () => {
     writeFileSync(
       join(harness, ".devcontainer", ".env"),
       [
-        ["SLACK_APP_TOKEN", "xapp-test"].join("="),
-        ["SLACK_BOT_TOKEN", "xoxb-test"].join("="),
+        ["PI_SLACK_APP_TOKEN", "xapp-test"].join("="),
+        ["PI_SLACK_BOT_TOKEN", "xoxb-test"].join("="),
         "",
       ].join("\n"),
     );

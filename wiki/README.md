@@ -26,6 +26,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| pi-messenger-bridge | pi-messenger-bridge | [pi, slack, messenger, extension, npm] | 2026-06-21 |
 | sandbox-auth-volumes | Sandbox Auth Volume Ownership | [sandbox, devcontainer, auth, docker, ownership, secrets] | 2026-06-19 |
 | ci-build-gates | CI Build Gates | [ci, docs, build, eval, github-actions] | 2026-06-19 |
 | harness-audit | Harness Audit | [audit, skills, autopilot, memory, worktrees] | 2026-06-18 |

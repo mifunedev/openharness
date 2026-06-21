@@ -69,8 +69,8 @@ else
     require_session app-hermes-dashboard
   fi
 
-  slack_app_token="${SLACK_APP_TOKEN:-$(compose_env_value SLACK_APP_TOKEN)}"
-  slack_bot_token="${SLACK_BOT_TOKEN:-$(compose_env_value SLACK_BOT_TOKEN)}"
+  slack_app_token="${PI_SLACK_APP_TOKEN:-$(compose_env_value PI_SLACK_APP_TOKEN)}"
+  slack_bot_token="${PI_SLACK_BOT_TOKEN:-$(compose_env_value PI_SLACK_BOT_TOKEN)}"
   if has_value "$slack_app_token" && has_value "$slack_bot_token"; then
     if command_exists "$PI_BIN"; then
       require_session client-slack

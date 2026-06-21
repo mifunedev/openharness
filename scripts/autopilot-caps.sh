@@ -44,8 +44,38 @@ harness_cfg() {
     && sh "$SCRIPT_DIR/harness-config.sh" get "$1" "$HARNESS_YAML" 2>/dev/null || true
 }
 
-TOTAL_CAP="${AUTOPILOT_TOTAL_CAP:-$(harness_cfg autopilot.total_cap)}"; TOTAL_CAP="${TOTAL_CAP:-10}"
-DAILY_CAP="${AUTOPILOT_DAILY_CAP:-$(harness_cfg autopilot.daily_cap)}"; DAILY_CAP="${DAILY_CAP:-6}"
+DEFAULT_TOTAL_CAP=10
+DEFAULT_DAILY_CAP=6
+
+resolve_cap() {
+  local env_name="$1" cfg_key="$2" fallback="$3" raw source
+  if [ -n "${!env_name+x}" ]; then
+    raw="${!env_name}"
+    source="$env_name"
+  else
+    raw="$(harness_cfg "$cfg_key")"
+    if [ -n "$raw" ]; then
+      source="$cfg_key"
+    else
+      raw="$fallback"
+      source="default"
+    fi
+  fi
+
+  if [[ "$raw" =~ ^[1-9][0-9]*$ ]]; then
+    printf '%s\n' "$raw"
+    return 0
+  fi
+
+  printf 'autopilot-caps: invalid %s=%q; using default %s\n' "$source" "$raw" "$fallback" >&2
+  printf '%s\n' "$fallback"
+}
+
+# Keep the config keys explicit here because evals/probes/autopilot-preflight-gate.sh
+# verifies the gate defaults remain wired to harness_cfg autopilot.total_cap and
+# harness_cfg autopilot.daily_cap.
+TOTAL_CAP="$(resolve_cap AUTOPILOT_TOTAL_CAP autopilot.total_cap "$DEFAULT_TOTAL_CAP")"
+DAILY_CAP="$(resolve_cap AUTOPILOT_DAILY_CAP autopilot.daily_cap "$DEFAULT_DAILY_CAP")"
 LABEL="${AUTOPILOT_LABEL:-autopilot}"
 REPO="${AUTOPILOT_REPO:-mifunedev/openharness}"
 GH_BIN="${GH_BIN:-gh}"

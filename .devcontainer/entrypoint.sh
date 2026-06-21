@@ -324,8 +324,9 @@ fi
 # Root package.json declares deps that aren't bundled into Pi or any
 # global CLI: `croner` for scripts/cron-runtime.ts, plus dev tooling such
 # as `@sinclair/typebox` (kept as a devDep for tooling parity). The Slack
-# bridge no longer needs root npm deps — it ships as the pinned
-# `pi-messenger-bridge` package that Pi loads on its own.
+# bridge no longer needs root npm deps — it is the `pi-messenger-bridge`
+# package, npm-installed into a gitignored `.pi/bridge/` dir and loaded only
+# in the dedicated client-slack session (see the Slack restore block below).
 # The harness is bind-mounted, so a Dockerfile-time install gets shadowed
 # at runtime; we install on first boot here, idempotently. Set
 # SKIP_PNPM_INSTALL=1 to opt out (e.g. air-gapped envs managing deps
@@ -437,12 +438,23 @@ if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
       # bridge-only dir, and loaded HERE only, via --extension. --mode rpc keeps
       # the session alive headlessly (plain `pi | tee` exits at idle on non-TTY
       # stdout); --approve trusts project-local files.
+      #
+      # The launch is wrapped by client-slack-supervise.sh: pi-messenger-bridge
+      # binds its Slack socket to a session-scoped pi ctx, so when pi replaces
+      # the session (compaction/fork/switch) the ctx goes stale and the bridge
+      # silently stops responding with no in-package recovery. The supervisor
+      # restarts pi on that signature (and on any crash), clearing the
+      # single-instance lock each time so the fresh process reconnects.
+      #
+      # The child shell sources the PI_SLACK_* tokens as data (never eval'd),
+      # then deletes the runtime env file before exec'ing the supervisor — the
+      # tokens live only in the process environment, never on disk or in argv.
       BRIDGE_DIR="$HARNESS/.pi/bridge"
       BRIDGE_ENTRY="$BRIDGE_DIR/node_modules/pi-messenger-bridge/dist/index.js"
       gosu sandbox bash -c '[ -f "$2" ] || npm install --prefix "$1" --no-fund --no-audit pi-messenger-bridge@0.4.0 >/dev/null 2>&1' -- "$BRIDGE_DIR" "$BRIDGE_ENTRY" || true
       if gosu sandbox tmux new-session -d -s client-slack \
-        "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; cd \"\$3\"; pi --extension \"\$2\" --mode rpc --approve 2>&1 | tee /tmp/client-slack.log' -- $(shell_quote "$SLACK_RUNTIME_ENV") $(shell_quote "$BRIDGE_ENTRY") $(shell_quote "$HARNESS")"; then
-        echo "[entrypoint] client-slack tmux session started (pi-messenger-bridge via --extension)"
+        "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; rm -f \"\$1\"; export HARNESS=\"\$3\" BRIDGE_ENTRY=\"\$2\" LOG=/tmp/client-slack.log; exec bash \"\$3/.devcontainer/client-slack-supervise.sh\"' -- $(shell_quote "$SLACK_RUNTIME_ENV") $(shell_quote "$BRIDGE_ENTRY") $(shell_quote "$HARNESS")"; then
+        echo "[entrypoint] client-slack tmux session started (pi-messenger-bridge via --extension, self-healing supervisor)"
       else
         rm -f "$SLACK_RUNTIME_ENV"
         echo "[entrypoint] client-slack tmux session failed to start"

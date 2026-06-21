@@ -120,6 +120,17 @@ describe("devcontainer entrypoint Slack restore", () => {
     // npm stub: the real entrypoint npm-installs the bridge here; it must not
     // run during the unit test.
     writeFileSync(join(bin, "npm"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
+    // Stub supervisor: the entrypoint now exec's
+    // $HARNESS/.devcontainer/client-slack-supervise.sh. The real script runs a
+    // restart loop with a stale-ctx watchdog; this test only verifies that the
+    // entrypoint sources the PI_SLACK_* env as data and hands off, so the stub
+    // just exec's the pi stub once (no loop, no watchdog, no /tmp writes). The
+    // real supervisor's behavior is covered by a separate content/parse test.
+    writeFileSync(
+      join(harness, ".devcontainer", "client-slack-supervise.sh"),
+      '#!/usr/bin/env bash\nexec pi --extension "${BRIDGE_ENTRY:-x}" --mode rpc --approve\n',
+      { mode: 0o755 },
+    );
 
     execFileSync(
       "bash",
@@ -176,6 +187,36 @@ describe("devcontainer entrypoint Slack restore", () => {
     const seeded = join(home, ".pi/msg-bridge.json");
     expect(existsSync(seeded)).toBe(true);
     expect(readFileSync(seeded, "utf8")).toContain("autoConnect");
+  });
+});
+
+describe("client-slack bridge supervisor", () => {
+  const SUPERVISOR = join(ROOT, ".devcontainer/client-slack-supervise.sh");
+
+  it("parses as valid bash", () => {
+    execFileSync("bash", ["-n", SUPERVISOR]);
+  });
+
+  it("restarts pi on stale-ctx and crash, clears the lock, stops on a clean exit", () => {
+    const text = readFileSync(SUPERVISOR, "utf8");
+    // Detects the pi "extension ctx is stale" failure and kills the bridge pi
+    // (matched by its unique --extension path) so the loop relaunches it fresh.
+    expect(text).toContain("ctx is stale");
+    expect(text).toContain("pkill -f 'pi-messenger-bridge/dist/index.js'");
+    // Foreground pi piped to tee keeps --mode rpc alive on the pty.
+    expect(text).toContain("--mode rpc --approve");
+    expect(text).toContain("tee -a");
+    expect(text).toContain("${PIPESTATUS[0]}");
+    // Clears the single-instance lock before each (re)launch.
+    expect(text).toContain('rm -f "$LOCK"');
+    // A clean pi exit (rc=0) breaks the loop; anything else restarts.
+    expect(text).toMatch(/\$rc"?\s+-eq\s+0/);
+    expect(text).toContain("break");
+    expect(text).toContain("restarting in 3s");
+  });
+
+  it("is referenced by the entrypoint's client-slack launch", () => {
+    expect(entrypoint()).toContain(".devcontainer/client-slack-supervise.sh");
   });
 });
 

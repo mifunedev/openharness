@@ -127,6 +127,23 @@ project-local files so the extension loads. The bridge is loaded **only**
 here — it is not pinned in `.pi/settings.json`, so no other `pi` session
 competes for the Slack connection.
 
+### 4.4 Self-healing supervisor
+
+The `client-slack` session does not run that `pi` command directly — it runs it
+under a thin supervisor, `.devcontainer/client-slack-supervise.sh`, which
+relaunches pi whenever the bridge dies. This exists because
+pi-messenger-bridge binds its long-lived Slack socket to a **session-scoped pi
+ctx**: when pi replaces the session (compaction, fork, model switch, reload),
+that ctx goes stale and every subsequent Slack message throws
+`extension ctx is stale after session replacement or reload`. The package has
+no recovery hook, so the process keeps running while the bridge silently stops
+responding. The supervisor tails the log for that stale-ctx signature (and
+catches any non-zero crash), kills the bridge pi, clears the single-instance
+lock (`~/.pi/msg-bridge.lock`), and relaunches a fresh process that reconnects
+— look for the `[Slack] Bot user ID:` connect marker (§ 7) again after a
+restart. A clean pi exit (`rc=0`) stops the loop. The manual relaunch below is
+only needed to pick up config edits, not to recover from stale-ctx.
+
 ### Manual relaunch
 
 After editing `.devcontainer/.env` or `.pi/msg-bridge.json`, restart the

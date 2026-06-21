@@ -98,7 +98,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run eval probe suite
-        run: bash .claude/skills/eval/run.sh
+        run: bash .mifune/skills/eval/run.sh
 
   release:
     name: Build & Release

@@ -11,7 +11,7 @@
       "registry_version": "in-tree",
       "skill_version": "0.1.0",
       "commit": "pending-upstream",
-      "installed_paths": [".claude/skills/retro"],
+      "installed_paths": [".mifune/skills/retro"],
       "note": "In-tree fork of upstream mifunedev/skills `reflect`, rewritten as `/retro`; diverged from registry so checksum dropped and commit marked pending-upstream."
     },
     "caveman": {
@@ -20,7 +20,7 @@
       "skill_version": "0.1.0",
       "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
       "checksum": "sha256:afb7d709f83d3d7f259fe50ad08c1e55ec1574631d68d84b9ded98147eb29405",
-      "installed_paths": [".claude/skills/caveman"],
+      "installed_paths": [".mifune/skills/caveman"],
       "note": "Manual/vendored adaptation of JuliusBrussee/caveman (MIT) to harness skill conventions; not from the mifunedev registry. Upstream curl|bash installer intentionally not used."
     },
     "caveman-commit": {
@@ -29,7 +29,7 @@
       "skill_version": "0.1.0",
       "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
       "checksum": "sha256:17994cce8cc17e575eb1e54bbc3f7b2aca5d27294fd190952f430d9c8ebfae1a",
-      "installed_paths": [".claude/skills/caveman-commit"],
+      "installed_paths": [".mifune/skills/caveman-commit"],
       "note": "Vendored caveman subcommand; see caveman entry."
     },
     "caveman-review": {
@@ -38,7 +38,7 @@
       "skill_version": "0.1.0",
       "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
       "checksum": "sha256:54728d3d76648c902a7ac57554e2123c14a258a6825532381bffcc11efb89701",
-      "installed_paths": [".claude/skills/caveman-review"],
+      "installed_paths": [".mifune/skills/caveman-review"],
       "note": "Vendored caveman subcommand; see caveman entry."
     },
     "caveman-compress": {
@@ -47,7 +47,7 @@
       "skill_version": "0.1.0",
       "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
       "checksum": "sha256:ed2c75566301ec8b00756e3d4a16030aba94d1a1a6c56c5de2330456d1464695",
-      "installed_paths": [".claude/skills/caveman-compress"],
+      "installed_paths": [".mifune/skills/caveman-compress"],
       "note": "Vendored caveman subcommand; see caveman entry."
     },
     "caveman-stats": {
@@ -56,7 +56,7 @@
       "skill_version": "0.1.0",
       "commit": "655b7d9c5431f822264b7732e9901c5578ac84cf",
       "checksum": "sha256:4cd48e8539635574309cf9bf124a98d1b9f48c4476751b11fabda7e6f7c34d98",
-      "installed_paths": [".claude/skills/caveman-stats"],
+      "installed_paths": [".mifune/skills/caveman-stats"],
       "note": "Vendored caveman subcommand; see caveman entry."
     },
     "context-audit": {
@@ -65,7 +65,7 @@
       "skill_version": "0.1.0",
       "commit": "f95011fe743994778ab2a01b16d31bae21f0ca38",
       "checksum": "sha256:02dd6324bb7ab62331a42fa414e2325bbb293c4e6f0ebb8aeead09f3948595a1",
-      "installed_paths": [".claude/skills/context-audit"]
+      "installed_paths": [".mifune/skills/context-audit"]
     },
     "agent-browser": {
       "source": "github:mifunedev/skills",
@@ -73,7 +73,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:78608b3bf75e85cbe3043c57cdbfd025d458f2cca605c6fafbfd0404e8653dee",
-      "installed_paths": [".claude/skills/agent-browser"]
+      "installed_paths": [".mifune/skills/agent-browser"]
     },
     "ci-status": {
       "source": "github:mifunedev/skills",
@@ -81,7 +81,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:775f79f521cca6455bfb14716962d168f0daa42649c8d09b78f61db36775691a",
-      "installed_paths": [".claude/skills/ci-status"]
+      "installed_paths": [".mifune/skills/ci-status"]
     },
     "delegate": {
       "source": "github:mifunedev/skills",
@@ -89,7 +89,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:c69144a47afb43b4df9e726b7e8c0fc7f6458c4b4654a380f24d3ef6d682f03f",
-      "installed_paths": [".claude/skills/delegate"]
+      "installed_paths": [".mifune/skills/delegate"]
     },
     "harness-audit": {
       "source": "github:mifunedev/skills",
@@ -97,7 +97,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:b720c40b4ce483c78fe30ce864598747834e0775a29048a9f93b8566d4013a7d",
-      "installed_paths": [".claude/skills/harness-audit"]
+      "installed_paths": [".mifune/skills/harness-audit"]
     },
     "harness-context": {
       "source": "github:mifunedev/skills",
@@ -105,7 +105,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:fce344dc3fa6052fa650e13405d610eb519472f611054596eda46ac98e56cc4a",
-      "installed_paths": [".claude/skills/harness-context"]
+      "installed_paths": [".mifune/skills/harness-context"]
     },
     "interview": {
       "source": "github:mifunedev/skills",
@@ -113,7 +113,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:b3e563d025d0c3f27edf5ca3c0d4b955399ff71fc303461f000ca92fc9b361bd",
-      "installed_paths": [".claude/skills/interview"]
+      "installed_paths": [".mifune/skills/interview"]
     },
     "post-bridge": {
       "source": "github:mifunedev/skills",
@@ -121,7 +121,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:b6ce466ea638fbdb03d6f66bff44c5f90c22f86fed4ff0bfe84d0219e1d39eda",
-      "installed_paths": [".claude/skills/post-bridge"]
+      "installed_paths": [".mifune/skills/post-bridge"]
     },
     "prd": {
       "source": "github:mifunedev/skills",
@@ -129,7 +129,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:72a5877e59b76abaf28443f3034c360842768562c6a1e0e6dcb5f92944b102c8",
-      "installed_paths": [".claude/skills/prd"]
+      "installed_paths": [".mifune/skills/prd"]
     },
     "ralph": {
       "source": "github:mifunedev/skills",
@@ -137,7 +137,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:cfba2c8fc999e082d48d637d78d7425482cd726da5026198e53b3b89ca0f5256",
-      "installed_paths": [".claude/skills/ralph"]
+      "installed_paths": [".mifune/skills/ralph"]
     },
     "release": {
       "source": "github:mifunedev/skills",
@@ -145,7 +145,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:57ffd3a2bfb2fa3bb53e086e8e7951bc4f6fe95b071179740bd10dfcb16c6e64",
-      "installed_paths": [".claude/skills/release"]
+      "installed_paths": [".mifune/skills/release"]
     },
     "render-html": {
       "source": "github:mifunedev/skills",
@@ -153,7 +153,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:e3e709b06cc06f1e9f3203e2520bf90b5352f50fc5aa01ea35e379d42926f17f",
-      "installed_paths": [".claude/skills/render-html"]
+      "installed_paths": [".mifune/skills/render-html"]
     },
     "ship-spec": {
       "source": "github:mifunedev/skills",
@@ -161,7 +161,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:a3c4fb446a435aa14d4d3e55549d9890020f53ff40995f69d02f73240aa719b8",
-      "installed_paths": [".claude/skills/ship-spec"]
+      "installed_paths": [".mifune/skills/ship-spec"]
     },
     "skill-lint": {
       "source": "github:mifunedev/skills",
@@ -169,7 +169,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:8db714bc34ffa35c81363721b69733014e80b1c82e6dd4b3fe4b75f3367f182d",
-      "installed_paths": [".claude/skills/skill-lint"]
+      "installed_paths": [".mifune/skills/skill-lint"]
     },
     "strategic-proposal": {
       "source": "github:mifunedev/skills",
@@ -177,7 +177,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:941f425f4a612e8d36a4d870ddf90f7cb6a8d9aa40efe596111c0eb78ddabe20",
-      "installed_paths": [".claude/skills/strategic-proposal"]
+      "installed_paths": [".mifune/skills/strategic-proposal"]
     },
     "worktrees": {
       "source": "github:mifunedev/skills",
@@ -185,7 +185,7 @@
       "skill_version": "0.1.0",
       "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
       "checksum": "sha256:ca2ce1bb4da6acc956f69181788faa3444487da0485156929f82d1754725d9b8",
-      "installed_paths": [".claude/skills/worktrees"]
+      "installed_paths": [".mifune/skills/worktrees"]
     }
   }
 }

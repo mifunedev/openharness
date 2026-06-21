@@ -26,6 +26,8 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| pi-messenger-bridge | pi-messenger-bridge | [pi, slack, messenger, extension, npm] | 2026-06-21 |
+| compose-wrapper | Compose Wrapper | [compose, docker, devcontainer, harness-yaml, diagnostics] | 2026-06-20 |
 | autopilot | Autopilot Selection | [autopilot, skills, github, queue, selection] | 2026-06-20 |
 | sandbox-auth-volumes | Sandbox Auth Volume Ownership | [sandbox, devcontainer, auth, docker, ownership, secrets] | 2026-06-19 |
 | ci-build-gates | CI Build Gates | [ci, docs, build, eval, github-actions] | 2026-06-19 |

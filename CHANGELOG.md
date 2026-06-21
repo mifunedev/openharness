@@ -8,6 +8,9 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 
 ## [Unreleased]
 
+### Added
+- `context/REPO_MAP.md` gives session-start agents a Git-tracked source-map command plus default keep/disregard paths for context loading, guarded by `repo-map-contract` plus the CB-004 repo-orientation A/B benchmark manifest/scorer ([#464](https://github.com/mifunedev/openharness/issues/464)).
+
 ### Fixed
 - Cron body/config reload no longer silently serves a stale boot-cached body: `reloadEntryForFire`/`reloadBody` passed `path.basename(entry.filePath)` to `parseCronFile`, overwriting the absolute load-time path with a bare basename on the live entry, after which `reloadBody` read a CWD-relative path → `ENOENT` → fell back to the cached body. Now the absolute `entry.filePath` is preserved through reloads, so a freshly-merged heartbeat/cron body edit takes effect on the next fire without a full runtime restart ([#275](https://github.com/ryaneggz/openharness/issues/275)).
 - Slack bot replies now post in a thread anchored to the triggering channel message (`thread_ts ?? ts`, gated to group chats so DMs stay flat) instead of as flat top-level messages. The harness temporarily pins the bridge to a fork branch carrying the unreleased patch (`github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies`, whose `prepare` script builds `dist/` on install); an upstream PR to [`tintinweb/pi-messenger-bridge`](https://github.com/tintinweb/pi-messenger-bridge) re-pins to a published release once merged ([#481](https://github.com/mifunedev/openharness/issues/481)).

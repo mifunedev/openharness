@@ -48,6 +48,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | prd-output-path-contract | A | 2026-06-21 16:42 | PASS | memory/MEMORY.md 2026-06-19 |
 | prompt-miner-schema-compat | A | 2026-06-19 16:09 | PASS | issue #253 — prompt-miner JSONL dual-schema (Claude+Pi) drift guard |
 | ralph-fallback-order | A | 2026-06-18 05:17 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
+| repo-map-contract | A | 2026-06-21 18:41 | PASS | issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims |
 | retro-deterministic-contract | A | 2026-06-19 17:47 | PASS | issue #443 — /retro deterministic output and self-contained helper contract |
 | rl-delegation-write-worker | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
 | sandbox-boot-guard-ci | A | 2026-06-19 18:45 | PASS | issue #449 (sandbox image build CI guard) 2026-06-19 |

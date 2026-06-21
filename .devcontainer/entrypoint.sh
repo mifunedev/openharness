@@ -379,17 +379,17 @@ if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
       chmod 600 "$SLACK_RUNTIME_ENV"
       chown "$(sandbox_ownership)" "$SLACK_RUNTIME_ENV" 2>/dev/null || true
       # Install the versioned, non-secret bridge config (tracked
-      # .pi/msg-bridge.json: autoConnect + trusted users) into the package's
-      # hard-coded ~/.pi path. Tokens are NOT written here — they reach pi via
-      # PI_SLACK_* in the session env (env overrides file config), so secrets
-      # stay out of the tracked config, logs, and `ps`. Copy (not symlink): the
-      # package rewrites ~/.pi/msg-bridge.json at runtime, which must never
-      # touch the git-tracked file.
-      gosu sandbox bash -c '
-        umask 077
-        mkdir -p ~/.pi && chmod 700 ~/.pi
-        if [ -f "$1" ]; then cp "$1" ~/.pi/msg-bridge.json && chmod 600 ~/.pi/msg-bridge.json; fi
-      ' -- "$HARNESS/.pi/msg-bridge.json" || true
+      # .pi/msg-bridge.json: autoConnect + showWidget + empty grant containers)
+      # into the package's hard-coded ~/.pi path. Tokens are NOT written here —
+      # they reach pi via PI_SLACK_* in the session env (env overrides file
+      # config), so secrets stay out of the tracked config, logs, and `ps`.
+      # seed-msg-bridge.sh installs the seed on first boot, then on reboots
+      # PRESERVES the operator's runtime grants (auth.trustedUsers,
+      # auth.channels) that the package writes via challenge-auth — a restart
+      # must never wipe them (bug #289) — while still adopting non-grant
+      # structure from the seed. It never writes back to the git-tracked seed.
+      gosu sandbox bash "$HARNESS/.devcontainer/seed-msg-bridge.sh" \
+        "$HARNESS/.pi/msg-bridge.json" || true
       # Clear any stale single-instance PID lock before launching the bridge.
       gosu sandbox rm -f ~sandbox/.pi/msg-bridge.lock 2>/dev/null || true
       # Dedicated-session-only load: pi-messenger-bridge is NOT pinned in

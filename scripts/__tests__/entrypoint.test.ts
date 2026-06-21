@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -102,10 +102,15 @@ describe("devcontainer entrypoint Slack restore", () => {
         "PI_SLACK_BOT_TOKEN=xoxb'quoted",
       ].join("\n"),
     );
-    // Versioned, non-secret bridge config the entrypoint copies into ~/.pi.
+    // Versioned, non-secret bridge config the entrypoint seeds into ~/.pi.
     writeFileSync(
       join(harness, ".pi", "msg-bridge.json"),
       JSON.stringify({ autoConnect: true, auth: { trustedUsers: [] } }),
+    );
+    // The restore block invokes the real seed-msg-bridge.sh; copy it in.
+    cpSync(
+      join(ROOT, ".devcontainer/seed-msg-bridge.sh"),
+      join(harness, ".devcontainer/seed-msg-bridge.sh"),
     );
     writeFileSync(
       join(bin, "tmux"),
@@ -246,5 +251,65 @@ describe("devcontainer entrypoint cron supervision", () => {
     expect(text).toContain("tmux has-session -t system-cron");
     expect(text).toContain("not starting cron-system or cron-watchdog");
     expect(text).toContain("legacy system-cron detected; watchdog exiting");
+  });
+});
+
+describe("msg-bridge seed/merge (seed-msg-bridge.sh)", () => {
+  const SEED_SCRIPT = join(ROOT, ".devcontainer/seed-msg-bridge.sh");
+
+  function runSeed(seedJson: unknown, runtimeJson?: string): unknown {
+    const home = mkdtempSync(join(tmpdir(), "seed-msg-bridge-"));
+    const seed = join(home, "seed.json");
+    writeFileSync(seed, JSON.stringify(seedJson));
+    const dest = join(home, ".pi/msg-bridge.json");
+    if (runtimeJson !== undefined) {
+      mkdirSync(join(home, ".pi"), { recursive: true });
+      writeFileSync(dest, runtimeJson);
+    }
+    execFileSync("bash", [SEED_SCRIPT, seed], { env: { ...process.env, HOME: home } });
+    return { dest, raw: readFileSync(dest, "utf8") };
+  }
+
+  it("parses as valid bash", () => {
+    execFileSync("bash", ["-n", SEED_SCRIPT]);
+  });
+
+  it("installs the tracked seed verbatim on first boot", () => {
+    const { raw } = runSeed({ autoConnect: true, showWidget: true, auth: { trustedUsers: [] } }) as {
+      raw: string;
+    };
+    const dest = JSON.parse(raw);
+    expect(dest.showWidget).toBe(true);
+    expect(dest.auth.trustedUsers).toEqual([]);
+  });
+
+  it("preserves operator grants on reboot while adopting non-grant seed structure", () => {
+    // Tracked seed ships EMPTY grants but a NEW non-grant field (showWidget).
+    // The package-written runtime file holds the operator's real grants.
+    const { raw } = runSeed(
+      { autoConnect: true, showWidget: true, auth: { trustedUsers: [] } },
+      JSON.stringify({
+        autoConnect: false,
+        auth: {
+          trustedUsers: ["slack:UOPERATOR"],
+          channels: { CCHANNEL: { enabled: true } },
+        },
+      }),
+    ) as { raw: string };
+    const merged = JSON.parse(raw);
+    // A restart must NOT wipe the operator's trust (bug #289).
+    expect(merged.auth.trustedUsers).toEqual(["slack:UOPERATOR"]);
+    expect(merged.auth.channels).toHaveProperty("CCHANNEL");
+    // Non-grant structure is adopted from the tracked seed.
+    expect(merged.showWidget).toBe(true);
+  });
+
+  it("leaves a malformed runtime file untouched (never clobbers on jq failure)", () => {
+    const malformed = "{ not valid json ";
+    const { raw } = runSeed({ autoConnect: true, auth: { trustedUsers: [] } }, malformed) as {
+      raw: string;
+    };
+    // jq fails → the existing runtime file is preserved, never overwritten by the seed.
+    expect(raw).toBe(malformed);
   });
 });

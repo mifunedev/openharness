@@ -51,8 +51,10 @@ Body becomes the agent prompt at fire time.
 ## Status tokens
 
 The runtime appends one tab-separated line per event to the gitignored
-`crons/.cron.log`, shaped `<iso-timestamp>\t<id>\t<status>\t<msg>`. The
-status column is one of:
+`crons/.cron.log`, shaped `<iso-timestamp>\t<id>\t<status>\t<msg>`. Runtime
+and prompt-authored liveness writes use `scripts/locked-append.sh` so whole
+records are serialized when multiple cron fires write concurrently. The status
+column is one of:
 
 | Token | Meaning |
 |-------|---------|

@@ -1,0 +1,1 @@
+You are implementing tasks/exercise-sandbox-boot-health. Read tasks/exercise-sandbox-boot-health/prd.md and tasks/exercise-sandbox-boot-health/prd.json. Complete the lowest-priority user story with passes=false, commit the change, update prd.json notes/passes, and append progress. Branch: feat/485-exercise-sandbox-boot-health.

@@ -103,8 +103,8 @@ install:
 | Var | Purpose |
 |-----|---------|
 | `GH_TOKEN` | GitHub token for non-interactive auth |
-| `SLACK_APP_TOKEN` | Slack Socket Mode app token (`xapp-`) |
-| `SLACK_BOT_TOKEN` | Slack bot token (`xoxb-`) |
+| `PI_SLACK_APP_TOKEN` | Slack Socket Mode app token (`xapp-`) |
+| `PI_SLACK_BOT_TOKEN` | Slack bot token (`xoxb-`) |
 
 **Non-secret settings** — set in `harness.yaml` (`harness.yaml` takes precedence over `.devcontainer/.env`):
 

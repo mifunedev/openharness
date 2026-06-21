@@ -323,7 +323,7 @@ Degradation threshold: **SIGNAL DETECTED** if any probe's ablation hits fall mor
 
 ```bash
 mkdir -p "$HARNESS/memory/$TODAY"
-cat >> "$HARNESS/memory/$TODAY/log.md" <<EOF
+scripts/locked-append.sh "$HARNESS/memory/$TODAY/log.md" <<EOF
 
 ## [Context Audit] — $(date -u +%H:%M) UTC
 - **Result**: OP

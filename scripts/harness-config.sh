@@ -71,8 +71,6 @@ BEGIN {
     envmap["hermes.dashboard_port"] = "HERMES_DASHBOARD_PORT"
     envmap["crons.dir"]             = "CRONS_DIR"
     envmap["crons.agent_bin"]       = "CRON_AGENT_BIN"
-    envmap["slack.allow_users"]     = "SLACK_ALLOW_USERS"
-    envmap["slack.allow_channels"]  = "SLACK_ALLOW_CHANNELS"
     section  = ""
     list_key = ""
     in_list  = 0

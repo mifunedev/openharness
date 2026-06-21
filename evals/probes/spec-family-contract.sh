@@ -4,7 +4,7 @@
 # desc: the spec-* family (/spec-plan,-critique,-execute,-retro) exists, each is pointed at
 #       the tasks/<slug>/ folder interface, names AGENTS.md § The Workflow as its authority,
 #       and carries NO loop-style ## Handoff section (a vestige of the executable-loop
-#       framework removed in #263; spec-* declares its place with ## Pipeline position)
+#       framework removed in #497; spec-* declares its place with ## Pipeline position)
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -35,7 +35,7 @@ for s in "${family[@]}"; do
   grep -qF 'tasks/<slug>/' "$f" || missing+=("$s: does not name the tasks/<slug>/ folder interface")
   grep -qF 'AGENTS.md § The Workflow' "$f" || missing+=("$s: does not cite AGENTS.md § The Workflow as authority")
   # The spec-* family is the canonical workflow. A loop-style '## Handoff' section is a
-  # vestige of the executable-loop framework (removed in #263); spec-* skills declare
+  # vestige of the executable-loop framework (removed in #497); spec-* skills declare
   # their place with '## Pipeline position' instead.
   grep -qE '^## Handoff' "$f" && missing+=("$s: carries a loop-style ## Handoff section (must use ## Pipeline position)")
 done

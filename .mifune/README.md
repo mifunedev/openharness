@@ -1,19 +1,23 @@
 # .mifune/
 
-Tracks skills installed from external registries (github.com/mifunedev/skills).
+Holds the tracked in-repo **skill source of truth** (`skills/`) plus the
+lockfile that pins which of those skills are installed from the external
+registry (github.com/mifunedev/skills).
 
-| File | Purpose |
+| File / dir | Purpose |
 |------|---------|
-| `skills.lock` | Pins commit SHA, checksum, and registry version for each managed skill |
+| `skills/` | Tracked source of truth for every agent skill (the shared primitive). Claude, Codex, and Pi expose it through the `.claude/skills`, `.codex/skills`, `.pi/skills` symlinks; Hermes through its runtime `.hermes/skills/openharness` link. |
+| `skills.lock` | Pins commit SHA, checksum, and registry version for each registry-managed skill |
 
 ## Managed skills
 
-All 15 skills in `.claude/skills/` are sourced from `github.com/mifunedev/skills` and tracked
-in `skills.lock` at commit `c559c100`.
+The 15 registry-managed skills tracked in `skills.lock` are sourced from
+`github.com/mifunedev/skills` at commit `c559c100` and live under
+`.mifune/skills/` alongside the harness-native skills.
 
 ## Update workflow
 
-To sync skills to a newer commit of `mifunedev/skills`:
+To sync the registry-managed skills to a newer commit of `mifunedev/skills`:
 
 ```bash
 # 1. Clone the remote at the new commit
@@ -24,8 +28,8 @@ REGISTRY_VERSION=$(jq -r '.version' /tmp/mifunedev-skills/registry.json)
 # 2. For each managed skill, replace and recompute checksum
 SKILLS="agent-browser ci-status delegate harness-audit harness-context interview post-bridge prd ralph release render-html ship-spec skill-lint strategic-proposal worktrees"
 for skill in $SKILLS; do
-  rm -rf .claude/skills/$skill
-  cp -r /tmp/mifunedev-skills/skills/$skill .claude/skills/$skill
+  rm -rf .mifune/skills/$skill
+  cp -r /tmp/mifunedev-skills/skills/$skill .mifune/skills/$skill
 done
 
 # 3. Restore argument-hint fields (harness-specific, not in upstream SKILL.md)

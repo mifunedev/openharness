@@ -5,7 +5,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"     # .claude/skills/eval -> repo root
+# The skill may be reached through agent-specific symlinks (`.claude/skills`) or
+# directly through the neutral `.mifune/skills` source directory. Walk upward until the
+# repo's eval corpus is found instead of hard-coding a fixed depth.
+ROOT="$SCRIPT_DIR"
+while [ "$ROOT" != "/" ] && [ ! -d "$ROOT/evals/probes" ]; do
+  ROOT="$(dirname "$ROOT")"
+done
+[ -d "$ROOT/evals/probes" ] || { echo "could not locate repo root from $SCRIPT_DIR" >&2; exit 1; }
 PROBES_DIR="$ROOT/evals/probes"
 RESULTS="$ROOT/evals/RESULTS.md"
 TIMEOUT_SECS=30

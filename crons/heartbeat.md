@@ -155,7 +155,7 @@ run: no issues are opened, no notifications are sent.
    exists: `mkdir -p "memory/$TODAY"`.
 2. Run the eval suite and capture full output to a temp file:
    ```bash
-   bash .claude/skills/eval/run.sh > /tmp/eval-weekly-out.txt 2>&1 || true
+   bash .mifune/skills/eval/run.sh > /tmp/eval-weekly-out.txt 2>&1 || true
    ```
 3. Check for regressions:
    ```bash

@@ -121,65 +121,27 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
     fi
   fi
 
-  # Seed Hermes with the harness' in-repo skills. Preserve any user config
-  # created by `hermes setup`; only add the external skill directory when it
-  # is absent.
-  HERMES_CONFIG="$HERMES_RUNTIME/config.yaml"
-  HERMES_EXTERNAL_SKILLS_DIR="/home/sandbox/harness/.claude/skills"
-  python3 - "$HERMES_CONFIG" "$HERMES_EXTERNAL_SKILLS_DIR" <<'PY'
-import sys
-from pathlib import Path
-
-config_path = Path(sys.argv[1])
-skills_dir = sys.argv[2]
-config_path.parent.mkdir(parents=True, exist_ok=True)
-
-if not config_path.exists():
-    config_path.write_text(
-        "skills:\n"
-        "  external_dirs:\n"
-        f"    - {skills_dir}\n",
-        encoding="utf-8",
-    )
-    raise SystemExit(0)
-
-text = config_path.read_text(encoding="utf-8")
-if skills_dir in text:
-    raise SystemExit(0)
-
-lines = text.splitlines()
-
-def is_top_level(line: str) -> bool:
-    return line and not line.startswith((" ", "\t")) and not line.lstrip().startswith("#")
-
-skills_start = next((i for i, line in enumerate(lines) if line == "skills:"), None)
-if skills_start is None:
-    if lines and lines[-1].strip():
-        lines.append("")
-    lines.extend(["skills:", "  external_dirs:", f"    - {skills_dir}"])
-else:
-    skills_end = len(lines)
-    for i in range(skills_start + 1, len(lines)):
-        if is_top_level(lines[i]):
-            skills_end = i
-            break
-
-    external_idx = next(
-        (i for i in range(skills_start + 1, skills_end) if lines[i].strip().startswith("external_dirs:")),
-        None,
-    )
-    if external_idx is None:
-        lines[skills_start + 1:skills_start + 1] = ["  external_dirs:", f"    - {skills_dir}"]
-    elif lines[external_idx].strip() == "external_dirs: []":
-        lines[external_idx:external_idx + 1] = ["  external_dirs:", f"    - {skills_dir}"]
-    else:
-        insert_at = external_idx + 1
-        while insert_at < skills_end and lines[insert_at].startswith("    - "):
-            insert_at += 1
-        lines.insert(insert_at, f"    - {skills_dir}")
-
-config_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-PY
+  # Share the harness' in-repo skills with Hermes through its normal
+  # HERMES_HOME skills tree. Claude, Codex, and Pi point at the same neutral
+  # /home/sandbox/harness/.mifune/skills directory; Hermes keeps its bundled/runtime
+  # skills under $HERMES_RUNTIME/skills and gets the harness collection as a
+  # symlinked child so one tracked primitive is visible to every agent.
+  HERMES_SHARED_SKILLS_DIR="/home/sandbox/harness/.mifune/skills"
+  HERMES_SHARED_SKILLS_LINK="$HERMES_RUNTIME/skills/openharness"
+  mkdir -p "$HERMES_RUNTIME/skills"
+  if [ -d "$HERMES_SHARED_SKILLS_DIR" ]; then
+    if [ -L "$HERMES_SHARED_SKILLS_LINK" ]; then
+      current_target="$(readlink "$HERMES_SHARED_SKILLS_LINK" || true)"
+      if [ "$current_target" != "../../.mifune/skills" ] && [ "$current_target" != "$HERMES_SHARED_SKILLS_DIR" ]; then
+        rm -f "$HERMES_SHARED_SKILLS_LINK"
+        ln -s ../../.mifune/skills "$HERMES_SHARED_SKILLS_LINK"
+      fi
+    elif [ ! -e "$HERMES_SHARED_SKILLS_LINK" ]; then
+      ln -s ../../.mifune/skills "$HERMES_SHARED_SKILLS_LINK"
+    else
+      echo "[entrypoint] $HERMES_SHARED_SKILLS_LINK exists and is not a symlink — leaving it untouched"
+    fi
+  fi
 
   chown -hR "$(sandbox_ownership)" "$HERMES_RUNTIME" 2>/dev/null || true
 

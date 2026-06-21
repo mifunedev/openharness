@@ -239,7 +239,7 @@ Auth credentials survive container rebuilds via named Docker volumes:
 - `cloudflared-auth` → `~/.cloudflared` (Cloudflare tunnel credentials, when used)
 - `gh-config` → `~/.config/gh` (GitHub CLI tokens)
 
-Hermes is split: when Hermes is enabled (`install.hermes: true` in `harness.yaml`), `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/` directory, while auth remains in the `~/.hermes` named volume and is linked into the project-local home as `auth.json`. The entrypoint also seeds `config.yaml` with `skills.external_dirs: ["/home/sandbox/harness/.claude/skills"]` so Hermes can load the harness' in-repo skills by default. Project-local runtime contents are gitignored except `.hermes/README.md`; `make destroy` removes the auth volume but not the bind-mounted project runtime directory.
+Hermes is split: when Hermes is enabled (`install.hermes: true` in `harness.yaml`), `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/` directory, while auth remains in the `~/.hermes` named volume and is linked into the project-local home as `auth.json`. The entrypoint links `.hermes/skills/openharness` to the tracked shared skill directory (`.mifune/skills/`) so Hermes sees the same harness skills as Claude, Codex, and Pi without copying them into runtime state. Project-local runtime contents are gitignored except `.hermes/README.md`; `make destroy` removes the auth volume but not the bind-mounted project runtime directory.
 
 `make destroy` and `docker compose down -v` remove named volumes, including `grok-auth`; use `make stop` when you want Grok Build credentials and state to survive.
 

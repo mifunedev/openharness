@@ -455,7 +455,12 @@ if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
       # tokens live only in the process environment, never on disk or in argv.
       BRIDGE_DIR="$HARNESS/.pi/bridge"
       BRIDGE_ENTRY="$BRIDGE_DIR/node_modules/pi-messenger-bridge/dist/index.js"
-      gosu sandbox bash -c '[ -f "$2" ] || npm install --prefix "$1" --no-fund --no-audit pi-messenger-bridge@0.4.0 >/dev/null 2>&1' -- "$BRIDGE_DIR" "$BRIDGE_ENTRY" || true
+      # TEMPORARY fork pin: the published pi-messenger-bridge does not thread
+      # Slack replies. Pin to a fork branch carrying the unreleased thread_ts
+      # patch (its package.json `prepare` script builds dist/ on install).
+      # Revert to `pi-messenger-bridge@<release>` once the upstream PR
+      # (tintinweb/pi-messenger-bridge) merges and publishes — see .pi/UPSTREAM.md.
+      gosu sandbox bash -c '[ -f "$2" ] || npm install --prefix "$1" --no-fund --no-audit "github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies" >/dev/null 2>&1' -- "$BRIDGE_DIR" "$BRIDGE_ENTRY" || true
       if gosu sandbox tmux new-session -d -s client-slack \
         "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; rm -f \"\$1\"; export HARNESS=\"\$3\" BRIDGE_ENTRY=\"\$2\" RECOVERY_ENTRY=\"\$3/.pi/bridge-recovery/index.ts\" LOG=/tmp/client-slack.log; exec bash \"\$3/.devcontainer/client-slack-supervise.sh\"' -- $(shell_quote "$SLACK_RUNTIME_ENV") $(shell_quote "$BRIDGE_ENTRY") $(shell_quote "$HARNESS")"; then
         echo "[entrypoint] client-slack tmux session started (pi-messenger-bridge via --extension, self-healing supervisor)"

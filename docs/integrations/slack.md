@@ -265,9 +265,12 @@ installs it via npm into a gitignored `.pi/bridge/` directory and loads it via
 `--extension` only in the dedicated `client-slack` tmux session
 (`.devcontainer/entrypoint.sh`) — it is not globally pinned in
 `.pi/settings.json`, so no other `pi` session competes for the Slack
-connection. The harness consumes the package as published and never edits or
-vendors it locally — to update, bump the `pi-messenger-bridge@<version>`
-version in the entrypoint's `npm install` line. Source lives upstream at
+connection. Replies post **in a thread** anchored to the triggering channel
+message (`thread_ts`); DMs stay flat. The harness normally consumes the package
+as published, but while that thread-reply patch is unreleased it temporarily
+pins the entrypoint's `npm install` line to a fork branch
+(`github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies`), reverting to
+`pi-messenger-bridge@<version>` once the upstream PR lands. Source lives upstream at
 [tintinweb/pi-messenger-bridge](https://github.com/tintinweb/pi-messenger-bridge).
 
 For upstream lineage, the version-pin model, the quarterly review cadence, and

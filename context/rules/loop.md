@@ -1,6 +1,6 @@
 # The Loop — Executable Decision-Tree of Skills
 
-> **DEPRECATED.** The executable-loop framework — this file plus `/orchestrate` — is deprecated. The canonical workflow is now **`AGENTS.md` § The Workflow**: the operative path `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`. This file is preserved as a historical reference; the executable truth is `AGENTS.md § Workflow`. Full removal is tracked in [#263](https://github.com/ryaneggz/openharness/issues/263). The individual node *skills* (`/critique`, `/approve`, `/audit`, `/retro`, `/benchmark`, …) remain live.
+> **DEPRECATED.** The executable-loop framework — this file plus `/orchestrate` — is deprecated. The canonical workflow is now **`AGENTS.md` § The Workflow**: the operative path `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`. This file is preserved as a historical reference; the executable truth is `AGENTS.md § Workflow`. Full removal is tracked in [#493](https://github.com/mifunedev/openharness/issues/493). The individual node *skills* (`/critique`, `/approve`, `/audit`, `/retro`, `/benchmark`, …) remain live.
 
 This file describes a **decision-tree of skills**: each node runs a skill (or a tool
 the Advisor wields), emits a terminal `STATUS:` token, and hands off to the next node based on that

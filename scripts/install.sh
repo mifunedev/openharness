@@ -394,14 +394,14 @@ ENVEOF
 # Scopes needed: repo, read:org, admin:public_key (for SSH key upload)
 GH_TOKEN=
 
-# ─── Slack bot (Pi extension) ────────────────────────────────────────
-# See docs/integrations/slack.md and .pi/extensions/slack/README.md.
+# ─── Slack bot (pi-messenger-bridge) ─────────────────────────────────
+# See docs/integrations/slack.md.
 
 # Slack app-level token for Socket Mode connection (starts with xapp-).
-# SLACK_APP_TOKEN=xapp-...
+# PI_SLACK_APP_TOKEN=xapp-...
 
 # Slack bot OAuth token for posting messages (starts with xoxb-).
-# SLACK_BOT_TOKEN=xoxb-...
+# PI_SLACK_BOT_TOKEN=xoxb-...
 ENVEOF
   ok "Wrote .devcontainer/.env (local defaults + secrets)"
 

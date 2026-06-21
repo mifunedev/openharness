@@ -212,19 +212,22 @@ release_overlap_lock() { [ -n "${OVERLAP_PIDFILE:-}" ] && rm -f "$OVERLAP_PIDFIL
 
 GitHub issues labeled `autopilot` ARE the work queue. There are no time throttles and no in-repo backlog — the user steers by filing `autopilot`-labeled issues.
 
-**Queue check** — actionable = open, labeled `autopilot`, NOT labeled `autopilot-blocked`, and with **no open PR reference**. Do **not** rely only on GitHub's `linked:pr` qualifier: PRs targeting `development` may carry `Closes #N` in their body while `closingIssuesReferences` / `linked:pr` stays empty until default-branch semantics apply. Enumerate open PRs once, then dedupe each candidate issue locally by linked metadata, head branch, title, and body text.
+**Queue check** — actionable = open, labeled `autopilot`, NOT labeled `autopilot-blocked`, and with **no open or merged PR reference**. Do **not** rely only on GitHub's `linked:pr` qualifier: PRs targeting `development` may carry `Closes #N` in their body while `closingIssuesReferences` / `linked:pr` stays empty until default-branch semantics apply, and merged `development` PRs may not auto-close issues when GitHub's default branch differs. Enumerate open and recent merged PRs once, then dedupe each candidate issue locally by linked metadata, head branch, title, and body text.
 
 ```bash
 OPEN_PRS_JSON="/tmp/autopilot-open-prs-$$.json"
+MERGED_PRS_JSON="/tmp/autopilot-merged-prs-$$.json"
 QUEUE_JSON="/tmp/autopilot-queue-$$.json"
 gh pr list --repo "$AUTOPILOT_REPO" --state open --limit 200 \
   --json number,title,headRefName,body,closingIssuesReferences > "$OPEN_PRS_JSON"
+gh pr list --repo "$AUTOPILOT_REPO" --state merged --limit 200 \
+  --json number,title,headRefName,body,closingIssuesReferences > "$MERGED_PRS_JSON"
 gh issue list --repo "$AUTOPILOT_REPO" --state open --label autopilot \
   --search "-label:autopilot-blocked" \
   --json number,title,createdAt > "$QUEUE_JSON"
 
-issue_open_pr_refs() {
-  local issue="$1"
+issue_pr_refs_in() {
+  local issue="$1" pr_json="$2"
   jq -r --arg issue "$issue" --argjson issue_num "$issue" '
     def issue_re: "(^|[^0-9])" + $issue + "($|[^0-9])";
     .[]
@@ -235,8 +238,11 @@ issue_open_pr_refs() {
         or ((.body // "") | test("#" + $issue + "|close[sd]?[[:space:]]+#" + $issue + "|fix(e[sd])?[[:space:]]+#" + $issue + "|resolve[sd]?[[:space:]]+#" + $issue; "i"))
       )
     | "#\(.number) \(.headRefName) \(.title)"
-  ' "$OPEN_PRS_JSON"
+  ' "$pr_json"
 }
+
+issue_open_pr_refs() { issue_pr_refs_in "$1" "$OPEN_PRS_JSON"; }
+issue_merged_pr_refs() { issue_pr_refs_in "$1" "$MERGED_PRS_JSON"; }
 
 ISSUE_NUM=""; TITLE=""; CREATED=""; DEDUPE_STATE="none"
 while IFS= read -r row; do
@@ -245,6 +251,12 @@ while IFS= read -r row; do
   if [ -n "$refs" ]; then
     DEDUPE_STATE="${DEDUPE_STATE}; issue #$n has open PR(s): $(printf '%s' "$refs" | paste -sd ', ' -)"
     echo "DEDUPE: issue #$n already has open PR reference(s): $refs"
+    continue
+  fi
+  merged_refs=$(issue_merged_pr_refs "$n" || true)
+  if [ -n "$merged_refs" ]; then
+    DEDUPE_STATE="${DEDUPE_STATE}; issue #$n has merged PR(s): $(printf '%s' "$merged_refs" | paste -sd ', ' -)"
+    echo "DEDUPE: issue #$n already has merged PR reference(s): $merged_refs"
     continue
   fi
   ISSUE_NUM="$n"
@@ -257,7 +269,7 @@ while IFS= read -r row; do
 - **Oldest actionable issue wins** → when `ISSUE_NUM` is non-empty, derive `SLUG` from the title (kebab-case, ≤5 words). Set:
   ```
   SELECTION_MODE=queue
-  SELECTION_RATIONALE="Queue selection: implementing open autopilot issue #$ISSUE_NUM (\"$TITLE\") — the oldest actionable ticket (filed $CREATED) with no open PR reference after local PR dedupe."
+  SELECTION_RATIONALE="Queue selection: implementing open autopilot issue #$ISSUE_NUM (\"$TITLE\") — the oldest actionable ticket (filed $CREATED) with no open or merged PR reference after local PR dedupe."
   ```
   Compute the expected work branch and run a final launch dedupe before starting work:
   ```bash
@@ -276,9 +288,9 @@ while IFS= read -r row; do
   touch "$ACTIVE_MARKER"
   ```
   Leave `$KEEP` unchanged — the keep-marker path is fixed at spawn time and the session wrapper checks that original path.
-- **No actionable item** — the queue is empty, OR every open `autopilot` ticket already has an open PR — → **fall through to research** (below). A single in-flight PR MUST NOT starve the loop: the §1 caps (6 open created/day, 10 total) are the pile-up guard, not an in-flight check. Those caps were already enforced above, so research here is cap-bounded by construction. Do **not** un-draft, finalize, or otherwise mutate a PR opened by a different run while idling on it — surface it (the heartbeat watches for stuck-green drafts) and proceed to research instead.
+- **No actionable item** — the queue is empty, OR every open `autopilot` ticket already has an open or merged PR — → **fall through to research** (below). A single in-flight PR MUST NOT starve the loop, and a completed-but-still-open ticket (common when a `development` PR carries `Closes #N` but the repo default branch differs) MUST NOT be rebuilt. The §1 caps (6 open created/day, 10 total) are the pile-up guard for fresh work. Those caps were already enforced above, so research here is cap-bounded by construction. Do **not** un-draft, finalize, or otherwise mutate a PR opened by a different run while idling on it — surface it (the heartbeat watches for stuck-green drafts) and proceed to research instead.
 
-**No actionable queue item → research** (first-principles pass — fires whenever the queue is empty *or* every open ticket already has a PR):
+**No actionable queue item → research** (first-principles pass — fires whenever the queue is empty *or* every open ticket already has an open/merged PR):
 
 1. Run `/harness-audit`. Rank its harness-infra findings by impact.
 2. Dedupe each finding (in rank order) against open issues, open PRs, **and merged PRs** — advance past any hit (a blocked candidate must never end the run while others remain):

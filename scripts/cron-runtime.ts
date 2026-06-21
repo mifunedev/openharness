@@ -35,6 +35,7 @@ export interface CronEntry {
 const CRONS_DIR = path.resolve(process.env.CRONS_DIR || "crons");
 const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
+const LOCKED_APPEND = path.resolve(process.env.CRON_LOCKED_APPEND || "scripts/locked-append.sh");
 const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";
 const CRON_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const AGENT_BIN_PATTERN = /^[A-Za-z0-9_./-]+$/;
@@ -236,7 +237,7 @@ export function reloadEntryForFire(entry: CronEntry, logFn = log): CronEntry | n
   try {
     fresh = parseCronFile(
       fs.readFileSync(entry.filePath, "utf-8"),
-      path.basename(entry.filePath),
+      entry.filePath,
     );
   } catch (e) {
     logFn(entry.id, "CONFIG_RELOAD_ERR", `${path.basename(entry.filePath)}: ${String(e)}`);
@@ -279,7 +280,7 @@ export function reloadBody(entry: CronEntry): string {
   try {
     const parsed = parseCronFile(
       fs.readFileSync(entry.filePath, "utf-8"),
-      path.basename(entry.filePath),
+      entry.filePath,
     );
     fresh = parsed?.body;
     if (fresh == null) throw new Error("parseCronFile returned no body");
@@ -291,14 +292,22 @@ export function reloadBody(entry: CronEntry): string {
   return fresh;
 }
 
-function log(id: string, status: string, msg = ""): void {
-  const line = `${new Date().toISOString()}\t${id}\t${status}\t${msg.replace(/\s+/g, " ").slice(0, 200)}\n`;
+function appendCronLog(line: string): void {
   try {
     fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
-    fs.appendFileSync(LOG_FILE, line);
+    spawnSync(LOCKED_APPEND, [LOG_FILE], {
+      input: line,
+      encoding: "utf-8",
+      stdio: ["pipe", "ignore", "ignore"],
+    });
   } catch {
     /* best-effort */
   }
+}
+
+function log(id: string, status: string, msg = ""): void {
+  const line = `${new Date().toISOString()}\t${id}\t${status}\t${msg.replace(/\s+/g, " ").slice(0, 200)}\n`;
+  appendCronLog(line);
 }
 
 function shellQuote(value: string): string {
@@ -308,9 +317,10 @@ function shellQuote(value: string): string {
 function cronLogCommand(id: string, status: string, msgExpr: string): string {
   return (
     `mkdir -p ${shellQuote(path.dirname(LOG_FILE))}; ` +
-    `printf '%s\\t%s\\t%s\\t%s\\n' ` +
+    `{ printf '%s\\t%s\\t%s\\t%s\\n' ` +
     `"$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" ` +
-    `${shellQuote(id)} ${shellQuote(status)} ${msgExpr} >> ${shellQuote(LOG_FILE)}; `
+    `${shellQuote(id)} ${shellQuote(status)} ${msgExpr}; } | ` +
+    `${shellQuote(LOCKED_APPEND)} ${shellQuote(LOG_FILE)}; `
   );
 }
 

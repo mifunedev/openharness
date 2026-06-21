@@ -34,8 +34,8 @@ only — never a `tasks/` subfolder.
    autopilot loop's `BLOCKED-OWNED-WIP` owned-surface convention. If that
    scoped status is non-empty, abort: append a note to
    `memory/$TODAY/log.md`, emit the distinct liveness token to
-   `crons/.cron.log`
-   (`printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "BLOCKED-TASKS-WIP" >> crons/.cron.log`),
+   `crons/.cron.log` through `scripts/locked-append.sh`
+   (`printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "BLOCKED-TASKS-WIP" | scripts/locked-append.sh crons/.cron.log`),
    and stop here — do NOT fall through to step 7's `OK` line. This
    `BLOCKED-TASKS-WIP` token is intentionally distinct from the
    `OK (archived N, skipped M)` success token and the `HEARTBEAT_OK`
@@ -100,19 +100,32 @@ only — never a `tasks/` subfolder.
      - Skip if its branch has an open PR:
        `gh pr list --head "$branch" --state open --json number --jq 'length'`.
      - Skip if the worktree's latest commit is newer than 30 days.
+     - Before removal, run a preservation gate inside the candidate
+       worktree. Skip and log the candidate if any of these checks fail:
+       - unstaged edits: `git -C "$path" diff --quiet` is non-zero;
+       - staged edits: `git -C "$path" diff --cached --quiet` is non-zero;
+       - untracked files: `git -C "$path" ls-files --others --exclude-standard`
+         returns any path;
+       - missing branch/upstream metadata: `git -C "$path" rev-parse --abbrev-ref HEAD`
+         or `git -C "$path" rev-parse --abbrev-ref --symbolic-full-name @{u}` fails;
+       - unpushed commits: `git -C "$path" log --oneline @{u}..HEAD`
+         returns any commit.
      - Otherwise remove it with `git worktree remove --force "$path"`,
        append the path to `GROOMED_WORKTREES`, and increment `W`.
    - Then prune corrupt/orphan folders that are not registered git
      worktrees: scan `.worktrees/` directories excluding `.worktrees/agent/`,
-     `.worktrees/project/`, and `.worktrees/archive/$TODAY`; remove only
-     directories older than 30 days with no live tmux pane cwd'd inside
-     them, using `rm -rf "$path"`, then record them in
-     `GROOMED_WORKTREES` and increment `W`.
+     `.worktrees/project/`, and `.worktrees/archive/$TODAY`. For each older
+     directory with no live tmux pane cwd'd inside it, remove it only when it
+     is provably empty using `rmdir "$path"`; skip and log every non-empty or
+     suspicious orphan directory for manual review instead of deleting it
+     recursively.
    - Remove empty non-reserved namespace directories left behind by the
      sweep (`find .worktrees -mindepth 1 -maxdepth 1 -type d ! -name agent ! -name project -empty -delete`), then run `git worktree prune`.
    - Append a one-line note to `memory/$TODAY/log.md` for each skipped
-     registered worktree, recording the reason (`open-pr`, `live-pane`, or
-     `too-new`) and its last commit time.
+     registered worktree or preserved orphan, recording the reason (`open-pr`,
+     `live-pane`, `too-new`, `dirty`, `staged`, `untracked`, `missing-upstream`,
+     `unpushed`, `orphan-nonempty`, or `orphan-live-pane`) and its last commit
+     time when available.
 6. If anything was archived this run (`N > 0`) — every git step runs
    inside the worktree via `git -C .worktrees/archive/$TODAY`:
    - Stage the moves: `git -C .worktrees/archive/$TODAY add tasks/`.
@@ -132,8 +145,9 @@ only — never a `tasks/` subfolder.
      nothing-to-archive case (`N = 0`), and partial runs; complements the
      step-3 `trap`, which also fires on any error/abort exit:
      `git worktree remove --force .worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune`.
-   - **Liveness line:** append one liveness line to `crons/.cron.log`:
-     `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M, groomed W worktrees)" >> crons/.cron.log`.
+   - **Liveness line:** append one liveness line to `crons/.cron.log`
+     through `scripts/locked-append.sh`:
+     `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M, groomed W worktrees)" | scripts/locked-append.sh crons/.cron.log`.
      Create the file if it does not exist.
 
 ## Reporting

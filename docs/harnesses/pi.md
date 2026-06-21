@@ -47,7 +47,13 @@ Open Harness loads these project-local Pi packages from `.pi/settings.json`:
 - [`pi-autoresearch`](../integrations/pi-autoresearch.md) — autonomous metric-optimization loops for Pi. Use `/skill:autoresearch-create` to create `.auto/` session files, run benchmark iterations, log keep/revert decisions, and inspect results through `/autoresearch export`.
 - [`pi-dynamic-workflows`](../integrations/pi-dynamic-workflows.md) — Claude-Code-style dynamic workflow orchestration for Pi, pinned to the upstream `v1.0.1` commit. It registers a `workflow` tool that lets the model write deterministic JavaScript workflows, fan out to isolated in-memory subagents, and synthesize the results.
 
-Pi installs missing project packages automatically on startup after the project is trusted. In Open Harness, start package-backed plan mode with:
+Pi installs missing project packages automatically on startup after the project is trusted. Open Harness also auto-loads project-local extensions from `.pi/extensions/`.
+
+### Codex stale-response recovery
+
+The installed `@earendil-works/pi-ai` Codex Responses provider can reuse WebSocket cached continuation state by sending `previous_response_id`. If the upstream Codex backend forgets that response id, it returns `previous_response_not_found`; Pi clears the stale continuation but the failed user turn would otherwise be lost. Open Harness keeps a small auto-loaded `.pi/extensions/codex-stale-response-retry.ts` extension that re-injects non-Slack failed turns once via `sendUserMessage(..., { deliverAs: "followUp" })`, causing the next request to start from fresh/full context. Slack-prefixed turns remain owned by the dedicated `.pi/bridge-recovery/` extension that is co-loaded with `pi-messenger-bridge`.
+
+In Open Harness, start package-backed plan mode with:
 
 ```bash
 pi --plan

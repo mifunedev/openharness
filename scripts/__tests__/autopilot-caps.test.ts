@@ -238,4 +238,30 @@ describe("autopilot-caps.sh — harness.yaml configurable cap defaults", () => {
     expect(r.status).toBe(0);
     expect(r.lastStdoutLine).toBe("PROCEED total=1/10 today=1/6");
   });
+
+  it("warns and falls back to defaults when harness.yaml cap values are invalid", () => {
+    const r = run({
+      GH_BIN: ghStub("6"),
+      HARNESS_YAML: fixtureYaml("autopilot:\n  total_cap: many\n  daily_cap: 0\n"),
+    });
+
+    expect(r.status).toBe(10);
+    expect(r.lastStdoutLine).toBe("SKIPPED-CAP-DAILY");
+    expect(r.stderr).toContain("invalid autopilot.total_cap=many; using default 10");
+    expect(r.stderr).toContain("invalid autopilot.daily_cap=0; using default 6");
+  });
+
+  it("warns and falls back to defaults when env cap overrides are invalid", () => {
+    const r = run({
+      GH_BIN: ghStub("10"),
+      HARNESS_YAML: fixtureYaml("autopilot:\n  total_cap: 99\n  daily_cap: 99\n"),
+      AUTOPILOT_TOTAL_CAP: "",
+      AUTOPILOT_DAILY_CAP: "six",
+    });
+
+    expect(r.status).toBe(11);
+    expect(r.lastStdoutLine).toBe("SKIPPED-CAP-TOTAL");
+    expect(r.stderr).toContain("invalid AUTOPILOT_TOTAL_CAP=''; using default 10");
+    expect(r.stderr).toContain("invalid AUTOPILOT_DAILY_CAP=six; using default 6");
+  });
 });

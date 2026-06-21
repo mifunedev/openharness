@@ -20,6 +20,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Docs builds now run automatically only from the docs workflow on `main`/`master` pushes; root build, Harness CI, release validation, and `/eval` stay on the fast non-docs path ([#455](https://github.com/mifunedev/openharness/issues/455)).
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
+- Cron fire-time metadata reload now preserves path-qualified cron file paths, preventing body hot-reload from falling back to stale cached prompts with `BODY_RELOAD_ERR` after `reloadEntryForFire` ([#472](https://github.com/mifunedev/openharness/issues/472)).
 - `/autopilot` issue selection now skips open tickets that already have merged PR references, avoiding duplicate rebuilds when `Closes #N` landed on `development` but GitHub left the issue open ([#468](https://github.com/mifunedev/openharness/issues/468)).
 - Compose helper diagnostics now use temporary `harness.yaml` env files so `--print-argv` and `config` do not create or overwrite `.devcontainer/.harness.yaml.env` ([#470](https://github.com/mifunedev/openharness/issues/470)).
 - `/context-audit` and `/health-check` now route Memory Protocol examples through `scripts/locked-append.sh`, guarded by `memory-log-locked-append` ([#476](https://github.com/mifunedev/openharness/issues/476)).

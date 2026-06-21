@@ -2,7 +2,7 @@
 id: autopilot
 schedule: "5 * * * *"
 timezone: America/Denver
-enabled: false
+enabled: true
 overlap: false
 catchup: false
 tmux: true

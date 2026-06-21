@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/487-enable-autopilot-cron",
+  "description": "Enable the committed autopilot cron so a cron runtime restart preserves the documented hourly self-improvement loop.",
+  "issue": 487,
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Enable the committed cron",
+      "description": "As a harness operator, I want crons/autopilot.md to be enabled in source so restarting cron-system does not silently stop hourly autopilot.",
+      "acceptanceCriteria": [
+        "crons/autopilot.md has enabled: true.",
+        "Existing schedule, tmux, worktree, agent, preflight, and repo safeguards remain unchanged."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Implemented by changing the cron frontmatter to enabled: true while preserving the existing schedule and safety fields."
+    },
+    {
+      "id": "US-002",
+      "title": "Guard the contract",
+      "description": "As a future maintainer, I want an eval probe to catch accidental disabling or weakening of the autopilot cron.",
+      "acceptanceCriteria": [
+        "Add evals/probes/autopilot-cron-enabled.sh.",
+        "The probe checks enabled: true, hourly schedule at minute 5, tmux: true, worktree: true, agent: pi, preflight: scripts/autopilot-caps.sh, and repo: mifunedev/openharness.",
+        "The targeted probe passes."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Implemented and verified with bash evals/probes/autopilot-cron-enabled.sh."
+    },
+    {
+      "id": "US-003",
+      "title": "Document and validate",
+      "description": "As a reviewer, I want the change visible in release notes and validated by the harness suite.",
+      "acceptanceCriteria": [
+        "CHANGELOG.md records the fix under [Unreleased].",
+        "/eval is run and evals/RESULTS.md is refreshed if needed."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "CHANGELOG updated; targeted probe and eval suite run."
+    }
+  ]
+}

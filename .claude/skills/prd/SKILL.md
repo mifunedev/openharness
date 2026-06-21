@@ -14,7 +14,7 @@ Create detailed Product Requirements Documents that are clear, actionable, and s
 1. Receive a feature description from the user
 2. Ask 3-5 essential clarifying questions (with lettered options)
 3. Generate a structured PRD based on answers
-4. Save to `tasks/prd-[feature-name].md`
+4. Save to `tasks/<feature-name>/prd.md`
 
 **Important:** Do NOT start implementing. Just create the PRD.
 

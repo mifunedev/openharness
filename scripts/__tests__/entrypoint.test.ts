@@ -86,11 +86,14 @@ describe("devcontainer entrypoint Slack restore", () => {
   it("assembles Slack env from fixture data without evaluating it", () => {
     const temp = mkdtempSync(join(tmpdir(), "entrypoint-slack-"));
     const harness = join(temp, "harness");
+    const home = join(temp, "home");
     const bin = join(temp, "bin");
     const tmuxArgs = join(temp, "tmux-args.txt");
     const piEnv = join(temp, "pi-env.txt");
     const pwned = join(temp, "pwned");
     mkdirSync(join(harness, ".devcontainer"), { recursive: true });
+    mkdirSync(join(harness, ".pi"), { recursive: true });
+    mkdirSync(home, { recursive: true });
     mkdirSync(bin);
     writeFileSync(
       join(harness, ".devcontainer", ".env"),
@@ -98,6 +101,11 @@ describe("devcontainer entrypoint Slack restore", () => {
         "PI_SLACK_APP_TOKEN=xapp token; touch $PWNED",
         "PI_SLACK_BOT_TOKEN=xoxb'quoted",
       ].join("\n"),
+    );
+    // Versioned, non-secret bridge config the entrypoint copies into ~/.pi.
+    writeFileSync(
+      join(harness, ".pi", "msg-bridge.json"),
+      JSON.stringify({ autoConnect: true, auth: { trustedUsers: [] } }),
     );
     writeFileSync(
       join(bin, "tmux"),
@@ -109,6 +117,9 @@ describe("devcontainer entrypoint Slack restore", () => {
       `#!/usr/bin/env bash\nprintf 'PI_SLACK_APP_TOKEN=%s\nPI_SLACK_BOT_TOKEN=%s\n' "$PI_SLACK_APP_TOKEN" "$PI_SLACK_BOT_TOKEN" > "$PI_ENV_FILE"\n`,
       { mode: 0o755 },
     );
+    // npm stub: the real entrypoint npm-installs the bridge here; it must not
+    // run during the unit test.
+    writeFileSync(join(bin, "npm"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
 
     execFileSync(
       "bash",
@@ -125,7 +136,7 @@ describe("devcontainer entrypoint Slack restore", () => {
       {
         env: {
           ...process.env,
-          HOME: harness,
+          HOME: home,
           HARNESS: harness,
           PATH: `${bin}:${process.env.PATH ?? ""}`,
           TMUX_ARGS_FILE: tmuxArgs,
@@ -161,9 +172,10 @@ describe("devcontainer entrypoint Slack restore", () => {
     );
     expect(existsSync(pwned)).toBe(false);
 
-    const bridgeFile = join(harness, ".pi/msg-bridge.json");
-    expect(existsSync(bridgeFile)).toBe(true);
-    expect(readFileSync(bridgeFile, "utf8")).toContain("autoConnect");
+    // The versioned config was copied into ~/.pi (tokens stay out of it).
+    const seeded = join(home, ".pi/msg-bridge.json");
+    expect(existsSync(seeded)).toBe(true);
+    expect(readFileSync(seeded, "utf8")).toContain("autoConnect");
   });
 });
 

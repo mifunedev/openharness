@@ -393,10 +393,11 @@ fi
 # ─── Restore client-slack session if Slack is configured ──────────────
 # Tokens live in .devcontainer/.env (Compose KEY=value format). When both
 # PI_SLACK_APP_TOKEN and PI_SLACK_BOT_TOKEN are set AND `pi` is installed for
-# the sandbox user, restore the bridge session that `oh config slack` created.
-# Pi auto-loads the pinned `pi-messenger-bridge` package; its connection state
-# is seeded into ~sandbox/.pi/msg-bridge.json (autoConnect:true), so the
-# session only needs the PI_SLACK_* tokens in its environment.
+# the sandbox user, start the dedicated Slack bridge session. pi-messenger-bridge
+# is NOT pinned in .pi/settings.json (so no other pi session loads it); it is
+# npm-installed into .pi/bridge/ and loaded only here, via --extension (below).
+# Its connection state is seeded into ~sandbox/.pi/msg-bridge.json
+# (autoConnect:true), so the session only needs the PI_SLACK_* tokens in its env.
 # Treat the Compose env file as data, not shell: extract only the keys the
 # bridge needs. Keep token values out of the tmux command string by writing a
 # sandbox-owned, mode-600 runtime env file that the child shell sources and
@@ -415,24 +416,33 @@ if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
       } > "$SLACK_RUNTIME_ENV"
       chmod 600 "$SLACK_RUNTIME_ENV"
       chown "$(sandbox_ownership)" "$SLACK_RUNTIME_ENV" 2>/dev/null || true
-      # Seed the bridge connection file once, with strict perms. Tokens reach
-      # the gosu shell by sourcing the mode-600 runtime env file (never echoed
-      # or passed on the command line), so they stay out of logs and `ps`.
+      # Install the versioned, non-secret bridge config (tracked
+      # .pi/msg-bridge.json: autoConnect + trusted users) into the package's
+      # hard-coded ~/.pi path. Tokens are NOT written here — they reach pi via
+      # PI_SLACK_* in the session env (env overrides file config), so secrets
+      # stay out of the tracked config, logs, and `ps`. Copy (not symlink): the
+      # package rewrites ~/.pi/msg-bridge.json at runtime, which must never
+      # touch the git-tracked file.
       gosu sandbox bash -c '
-        set -a; . "$1"; set +a
         umask 077
         mkdir -p ~/.pi && chmod 700 ~/.pi
-        if [ ! -f ~/.pi/msg-bridge.json ]; then
-          printf "{\"slack\":{\"botToken\":\"%s\",\"appToken\":\"%s\"},\"autoConnect\":true}" \
-            "$PI_SLACK_BOT_TOKEN" "$PI_SLACK_APP_TOKEN" > ~/.pi/msg-bridge.json
-          chmod 600 ~/.pi/msg-bridge.json
-        fi
-      ' -- "$SLACK_RUNTIME_ENV" || true
+        if [ -f "$1" ]; then cp "$1" ~/.pi/msg-bridge.json && chmod 600 ~/.pi/msg-bridge.json; fi
+      ' -- "$HARNESS/.pi/msg-bridge.json" || true
       # Clear any stale single-instance PID lock before launching the bridge.
       gosu sandbox rm -f ~sandbox/.pi/msg-bridge.lock 2>/dev/null || true
+      # Dedicated-session-only load: pi-messenger-bridge is NOT pinned in
+      # .pi/settings.json (so no other pi session loads it / competes for the
+      # Slack socket) and is NOT a harness dependency. It is installed via npm
+      # (which builds its native transport deps, unlike pnpm) into a gitignored,
+      # bridge-only dir, and loaded HERE only, via --extension. --mode rpc keeps
+      # the session alive headlessly (plain `pi | tee` exits at idle on non-TTY
+      # stdout); --approve trusts project-local files.
+      BRIDGE_DIR="$HARNESS/.pi/bridge"
+      BRIDGE_ENTRY="$BRIDGE_DIR/node_modules/pi-messenger-bridge/dist/index.js"
+      gosu sandbox bash -c '[ -f "$2" ] || npm install --prefix "$1" --no-fund --no-audit pi-messenger-bridge@0.4.0 >/dev/null 2>&1' -- "$BRIDGE_DIR" "$BRIDGE_ENTRY" || true
       if gosu sandbox tmux new-session -d -s client-slack \
-        "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; pi 2>&1 | tee /tmp/client-slack.log' -- $(shell_quote "$SLACK_RUNTIME_ENV")"; then
-        echo "[entrypoint] client-slack tmux session started (pi-messenger-bridge)"
+        "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; cd \"\$3\"; pi --extension \"\$2\" --mode rpc --approve 2>&1 | tee /tmp/client-slack.log' -- $(shell_quote "$SLACK_RUNTIME_ENV") $(shell_quote "$BRIDGE_ENTRY") $(shell_quote "$HARNESS")"; then
+        echo "[entrypoint] client-slack tmux session started (pi-messenger-bridge via --extension)"
       else
         rm -f "$SLACK_RUNTIME_ENV"
         echo "[entrypoint] client-slack tmux session failed to start"

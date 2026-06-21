@@ -63,10 +63,9 @@ Each runs in its own named tmux session per [`context/rules/sandbox-processes.md
 
 ### Pi+Slack
 
-The Pi agent with the Slack bridge loaded. The wizard writes `.devcontainer/.env` and launches the `client-slack` session:
+The Pi agent with the Slack bridge loaded. Configuration is native — edit `.devcontainer/.env` + `.pi/msg-bridge.json` (see [Slack integration](../integrations/slack.md)). The `client-slack` session is started automatically on container boot:
 
 ```bash
-oh config slack              # interactive wizard
 tmux attach -t client-slack   # watch the live log
 ```
 

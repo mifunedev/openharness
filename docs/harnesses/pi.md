@@ -137,6 +137,6 @@ See [Pi dynamic workflows](../integrations/pi-dynamic-workflows.md) for the work
 
 ## Slack integration
 
-The harness ships Slack via the pinned **pi-messenger-bridge** npm package (declared in `.pi/settings.json`). Set `PI_SLACK_APP_TOKEN` and `PI_SLACK_BOT_TOKEN` in `.devcontainer/.env` (or run `oh config slack`), then start `pi` — access control is challenge-based (deny-by-default, no static allowlist), and inbound Slack messages route into the agent via the package using Pi's native `sendUserMessage()` / `turn_end`.
+The harness ships Slack via the **pi-messenger-bridge** npm package, loaded only in the dedicated `client-slack` tmux session via `--extension` (not pinned in `.pi/settings.json`). Set `PI_SLACK_APP_TOKEN` and `PI_SLACK_BOT_TOKEN` in `.devcontainer/.env` and configure `.pi/msg-bridge.json`, then restart the `client-slack` session — access control is challenge-based (deny-by-default, no static allowlist), and inbound Slack messages route into the agent via the package using Pi's native `sendUserMessage()` / `turn_end`.
 
 See [Slack integration](../integrations/slack.md) for setup steps.

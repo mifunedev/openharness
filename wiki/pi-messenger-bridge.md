@@ -13,17 +13,17 @@ confidence: provisional
 # pi-messenger-bridge
 
 ## Relevant Source Files
-- `.pi/settings.json` — pins `npm:pi-messenger-bridge@0.4.0` in `packages[]` (`.pi/settings.json:27`), loading the extension into every project Pi session.
+- `.devcontainer/entrypoint.sh` — installs the package via `npm install pi-messenger-bridge@0.4.0` into the gitignored `.pi/bridge/` dir and loads it via `pi --extension …/dist/index.js --mode rpc --approve` **only** in the `client-slack` tmux session (`.devcontainer/entrypoint.sh:439`–`444`). It is **not** pinned in `.pi/settings.json` `packages[]`, so no other Pi session loads the bridge or contends for the Slack connection.
 - `packages/oh/src/config/slack.ts` — the `oh config slack` wizard: prompts for the two Slack tokens, seeds `~/.pi/msg-bridge.json` mode `0600` (`slack.ts:134`–`137`), and (re)launches the bridge's `client-slack` tmux session (`slack.ts:17`, `:143`–`155`).
-- `.devcontainer/entrypoint.sh` — sandbox boot script; the `client-slack` tmux session and the `~/.pi/msg-bridge.json` config persist in the sandbox runtime it establishes.
+- `~/.pi/msg-bridge.json` — the bridge's non-secret runtime config (`autoConnect:true`, `auth.trustedUsers`), seeded mode `0600` by the wizard and re-installed by the entrypoint before the `client-slack` session launches.
 - `docs/integrations/slack.md` — operator-facing setup guide for the Slack path (create the app, capture `xapp-`/`xoxb-` tokens, run the wizard).
 - External: the MIT-licensed npm package `pi-messenger-bridge` (GitHub README captured in the snapshot below).
 
 ## Summary
-`pi-messenger-bridge` is an MIT-licensed npm package that bridges common messengers — Telegram, WhatsApp, Slack, Discord, and Matrix — into a running Pi coding agent as an in-session extension, so remote users can drive the agent from their messenger app. Open Harness pins it (`npm:pi-messenger-bridge@0.4.0`) and uses it for **Slack**, replacing the removed in-tree `.pi/extensions/slack/` extension (#481). It loads through `.pi/settings.json` and is wired up by the `oh config slack` wizard.
+`pi-messenger-bridge` is an MIT-licensed npm package that bridges common messengers — Telegram, WhatsApp, Slack, Discord, and Matrix — into a running Pi coding agent as an in-session extension, so remote users can drive the agent from their messenger app. Open Harness installs it via npm into the gitignored `.pi/bridge/` dir and uses it for **Slack**, replacing the removed in-tree `.pi/extensions/slack/` extension (#481). It is **not** globally pinned in `.pi/settings.json`; instead `.devcontainer/entrypoint.sh` loads it via `--extension` only in the dedicated `client-slack` tmux session, so no other Pi session contends for the Slack connection. The `oh config slack` wizard wires up the tokens and trust.
 
 ## Detail
-The package installs with `pi install npm:pi-messenger-bridge` and registers the `/msg-bridge` command plus a toggleable status widget. In the harness it is pinned in `.pi/settings.json` `packages[]` (`.pi/settings.json:27`) so every project Pi session loads it.
+The package installs with `pi install npm:pi-messenger-bridge` and registers the `/msg-bridge` command plus a toggleable status widget. In the harness it is **not** pinned in `.pi/settings.json` `packages[]`; instead `.devcontainer/entrypoint.sh` runs `npm install pi-messenger-bridge@0.4.0` into the gitignored `.pi/bridge/` dir (npm builds the package's native transport deps, which pnpm does not) and loads it via `pi --extension "$HARNESS/.pi/bridge/node_modules/pi-messenger-bridge/dist/index.js" --mode rpc --approve` **only** in the `client-slack` tmux session (`.devcontainer/entrypoint.sh:439`–`444`). Dedicated-session-only load means no other Pi session loads the bridge — important because the single-instance lock (below) would otherwise let multiple instances contend for and steal the Slack Socket-Mode connection. `--mode rpc` keeps the bridge alive headlessly (plain `pi | tee` exits at idle on non-TTY stdout).
 
 **Configuration.** State lives in `~/.pi/msg-bridge.json`, written mode `0600` inside `~/.pi/` (mode `0700`). The Slack shape the wizard seeds is `{ slack: { botToken, appToken }, auth: { trustedUsers: ["slack:U…"], adminUserId }, autoConnect: true, showWidget, debug }` (`packages/oh/src/config/slack.ts:223`–`231`). `autoConnect: true` makes the bridge open its transports headlessly on boot — no interactive `/msg-bridge connect` needed — which is what lets the `client-slack` session come up unattended.
 
@@ -39,17 +39,20 @@ The package installs with `pi install npm:pi-messenger-bridge` and registers the
 ```mermaid
 flowchart LR
   subgraph cfg[config]
-    PIN[".pi/settings.json<br/>npm:pi-messenger-bridge@0.4.0"]
+    ENTRY[".devcontainer/entrypoint.sh<br/>npm install → .pi/bridge/<br/>pi --extension --mode rpc"]
     JSON["~/.pi/msg-bridge.json<br/>slack tokens · auth.trustedUsers"]
   end
-  SLACK["Slack workspace<br/>(Socket Mode)"] -->|inbound event| EXT["pi-messenger-bridge<br/>extension"]
-  PIN -.loads.-> EXT
+  subgraph sess["client-slack tmux session"]
+    EXT["pi-messenger-bridge<br/>extension (dedicated load)"]
+  end
+  SLACK["Slack workspace<br/>(Socket Mode)"] -->|inbound event| EXT
+  ENTRY -. "--extension load" .-> EXT
   JSON -.config + trust.-> EXT
   EXT -->|sendUserMessage| TURN["Pi agent turn"]
   TURN -->|turn_end| EXT
   EXT -->|reply| SLACK
 ```
-The `oh config slack` wizard seeds `~/.pi/msg-bridge.json` and runs the bridge inside the `client-slack` tmux session; the `.pi/settings.json` pin is what loads the extension into that session.
+The `oh config slack` wizard seeds `~/.pi/msg-bridge.json`; `.devcontainer/entrypoint.sh` installs the package into `.pi/bridge/` and loads it via `--extension` inside the dedicated `client-slack` tmux session. Because it is **not** globally pinned in `.pi/settings.json`, no other Pi session loads the bridge to contend for the Slack connection.
 
 ## See Also
 - [[pi-loop]]

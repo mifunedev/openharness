@@ -67,6 +67,10 @@ export default function (pi: ExtensionAPI) {
     }
 
     if (toolName === "bash") {
+      // Interactive TUI sessions already put the operator in the loop. Avoid
+      // interrupting those sessions with a second in-tree confirmation modal.
+      if (ctx.mode === "tui") return;
+
       const cmd = (event.input as { command?: string } | undefined)?.command ?? "";
       if (RISKY_BASH.some((re) => re.test(cmd))) {
         const ok = await ctx.ui.confirm(
@@ -87,7 +91,7 @@ export default function (pi: ExtensionAPI) {
         "Sensitive paths (write/edit prompt):",
         ...SENSITIVE_PATHS.map((re) => `  ${re.source}`),
         "",
-        "Risky bash patterns (prompt before run):",
+        "Risky bash patterns (prompt before run outside interactive TUI sessions):",
         ...RISKY_BASH.map((re) => `  ${re.source}`),
       ];
       ctx.ui.notify(lines.join("\n"), "info");

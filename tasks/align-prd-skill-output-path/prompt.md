@@ -1,0 +1,1 @@
+Implement issue #483: align the `/prd` skill output path contract so it uses only `tasks/<feature-name>/prd.md`, add a Tier-A probe that blocks the stale flat `tasks/prd-[feature-name].md` path, and verify with the focused probe plus `/eval`.

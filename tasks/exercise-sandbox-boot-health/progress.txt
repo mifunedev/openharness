@@ -1,0 +1,7 @@
+# progress
+
+## 2026-06-21
+- Completed US-001: added `scripts/sandbox-boot-smoke.sh` plus unit tests for success and timeout diagnostics.
+- Completed US-002: wired `.github/workflows/sandbox-boot-guard.yml` to boot the built sandbox image and run the health smoke test.
+- Verification: `shellcheck -S warning scripts/sandbox-boot-smoke.sh`; `pnpm exec vitest run scripts/__tests__/sandbox-boot-smoke.test.ts scripts/__tests__/sandbox-healthcheck.test.ts`.
+STATUS: COMPLETE

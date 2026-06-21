@@ -9,6 +9,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | advisor-monitored-loop | A | 2026-06-19 19:34 | PASS | conversation 2026-06-19 (advisor-monitored ralph loop pattern) |
 | agent-browser-cli | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-07 (agent-browser 0.8.5 CLI) |
 | autopilot-executor-toggle | A | 2026-06-18 05:17 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
+| autopilot-merged-pr-reference-dedupe | A | 2026-06-21 16:42 | PASS | issue #468 — autopilot must not rebuild open tickets whose development PRs already merged |
 | autopilot-no-pr-session-close | A | 2026-06-18 05:17 | PASS | issue #209 (autopilot no-PR tmux session closure) 2026-06-16 |
 | autopilot-open-pr-reference-dedupe | A | 2026-06-19 17:47 | PASS | issue #437 — autopilot must not start duplicate work when open PRs reference the same issue without linked-PR metadata |
 | autopilot-pi-agent | A | 2026-06-18 05:17 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14; issue #126 (kept Pi overlap lock release) 2026-06-14; issue #142 (worktree-by-default, skip→worktree) 2026-06-14 |
@@ -39,10 +40,12 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | heartbeat-logging-contract | A | 2026-06-19 18:45 | PASS | issue #447 (heartbeat log append hardening) 2026-06-18 |
 | locked-append-critical-path | A | 2026-06-18 05:17 | PASS | issue #204 (lock shared runtime log appends) 2026-06-15 |
 | memory-gitignore-claim | A | 2026-06-18 05:17 | PASS | issue #101 |
+| memory-log-locked-append | A | 2026-06-21 16:42 | PASS | issue #476 — memory log writes in skill contracts must use scripts/locked-append.sh |
 | next-dev-prod | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-04 |
 | owned-surface-guard | A | 2026-06-18 05:17 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | pnpm-audit-ci-gate | A | 2026-06-18 05:17 | PASS | issue #171 — pnpm security audits must run in CI |
 | pr-audit-duplicate-issue-refs | A | 2026-06-19 17:47 | PASS | issue #439 — /pr-audit must flag duplicate open PRs that reference the same issue |
+| prd-output-path-contract | A | 2026-06-21 16:42 | PASS | memory/MEMORY.md 2026-06-19 |
 | prompt-miner-schema-compat | A | 2026-06-19 16:09 | PASS | issue #253 — prompt-miner JSONL dual-schema (Claude+Pi) drift guard |
 | ralph-fallback-order | A | 2026-06-18 05:17 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
 | retro-deterministic-contract | A | 2026-06-19 17:47 | PASS | issue #443 — /retro deterministic output and self-contained helper contract |

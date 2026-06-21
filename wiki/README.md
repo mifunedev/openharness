@@ -27,6 +27,8 @@ Schema rule, frontmatter spec, and all authoring conventions: `context/rules/wik
 | --- | --- | --- | --- |
 | sandbox-auth-volumes | Sandbox Auth Volume Ownership | [sandbox, devcontainer, auth, docker, ownership] | 2026-06-20 |
 | pi-messenger-bridge | pi-messenger-bridge | [pi, slack, messenger, extension, npm] | 2026-06-20 |
+| compose-wrapper | Compose Wrapper | [compose, docker, devcontainer, harness-yaml, diagnostics] | 2026-06-20 |
+| autopilot | Autopilot Selection | [autopilot, skills, github, queue, selection] | 2026-06-20 |
 | prompt-miner | prompt-miner | [prompt-mining, retro, self-improvement, scoring, cron, ship-spec, open-harness] | 2026-06-19 |
 | pi-fff | pi-fff (fff file search) | [pi, fff, file-search, ffgrep, fffind, frecency, integration, open-harness] | 2026-06-19 |
 | claude-code-teacher-skill | Claude Code Teacher Skill | [claude-code, education, skills, ai-assisted-coding] | 2026-06-19 |

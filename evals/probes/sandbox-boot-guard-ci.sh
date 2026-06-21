@@ -27,6 +27,7 @@ has '"install/**"' "install path filter"
 has '"workspace/**"' "workspace path filter"
 has '"packages/oh/**"' "oh package path filter"
 has '"scripts/docker-compose.sh"' "compose wrapper path filter"
+has '"scripts/sandbox-boot-smoke.sh"' "boot smoke helper path filter"
 has '"scripts/harness-config.sh"' "harness config helper path filter"
 has '"Makefile"' "Makefile path filter"
 has '"harness.yaml"' "harness config path filter"
@@ -38,6 +39,9 @@ has 'HERMES_DASHBOARD: "true"' "Hermes overlay validation env"
 has 'docker build \' "local docker build step"
 has '--file .devcontainer/Dockerfile' "devcontainer Dockerfile build target"
 has '--tag openharness-sandbox-boot-guard:${{ github.sha }}' "local CI image tag"
+has '--tag "sandbox-${SANDBOX_NAME}"' "compose image tag for smoke boot"
+has 'bash scripts/sandbox-boot-smoke.sh' "boot smoke healthcheck invocation"
+has 'BOOT_SMOKE_TIMEOUT_SECONDS: "900"' "bounded boot smoke timeout"
 has 'Sandbox boot guard only' "comment explaining non-release intent"
 
 if grep -Eq 'docker[[:space:]]+push|--push([[:space:]]|$)|docker/login-action|docker/login|ghcr\.io|[[:alnum:]._-]+\.[[:alnum:]._-]+/.+:.+|packages:[[:space:]]*write|secrets\.' <<<"$text"; then
@@ -50,5 +54,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS sandbox boot guard validates compose config and locally builds the devcontainer image without registry writes" >&2
+echo "PASS sandbox boot guard validates compose config, builds the devcontainer image, and boots it through the healthcheck without registry writes" >&2
 exit 0

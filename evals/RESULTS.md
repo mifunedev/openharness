@@ -6,6 +6,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 
 | probe | tier | last-run (UTC) | status | source |
 |-------|------|----------------|--------|--------|
+| advisor-monitored-loop | A | 2026-06-21 16:28 | PASS | conversation 2026-06-19 (advisor-monitored ralph loop pattern, issue #257) |
 | agent-browser-cli | A | 2026-06-21 06:16 | PASS | memory/MEMORY.md 2026-06-07 (agent-browser 0.8.5 CLI) |
 | autopilot-executor-toggle | A | 2026-06-21 06:16 | PASS | conversation 2026-06-13 (autopilot delegate-advisor executor) |
 | autopilot-merged-pr-reference-dedupe | A | 2026-06-21 06:16 | PASS | issue #468 — autopilot must not rebuild open tickets whose development PRs already merged |
@@ -58,10 +59,12 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | sandbox-boot-guard-ci | A | 2026-06-21 06:16 | PASS | issue #449 (sandbox image build CI guard) 2026-06-19 |
 | ship-spec-ready-finalization | A | 2026-06-21 06:16 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |
 | skill-paths | A | 2026-06-21 06:16 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
+| spec-family-contract | A | 2026-06-21 16:28 | PASS | conversation 2026-06-19 (spec-* family split, issue #265) |
 | submitted-by-trailers | A | 2026-06-21 06:16 | PASS | conversation 2026-06-12 (commit attribution trailers) |
 | watchdog-completed-session-reap | A | 2026-06-21 06:16 | PASS | issue #235 (completed autopilot PR session reaping) |
 | watchdog-draft-prs | A | 2026-06-21 06:16 | PASS | conversation 2026-06-15 (generic watchdog + stale draft PR recovery) |
 | watchdog-stuck-sessions | A | 2026-06-21 06:16 | PASS | issue #240 (Codex zero-credit stuck autopilot sessions) 2026-06-17 |
 | wiki-readme-index | A | 2026-06-21 06:16 | PASS | issue #132 — wiki README index drift guard |
+| workflow-boundaries | A | 2026-06-21 16:28 | PASS | conversation 2026-06-19 (workflow consolidation, issue #259) |
 
 <!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->

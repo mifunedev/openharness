@@ -435,9 +435,13 @@ if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
       # .pi/settings.json (so no other pi session loads it / competes for the
       # Slack socket) and is NOT a harness dependency. It is installed via npm
       # (which builds its native transport deps, unlike pnpm) into a gitignored,
-      # bridge-only dir, and loaded HERE only, via --extension. --mode rpc keeps
-      # the session alive headlessly (plain `pi | tee` exits at idle on non-TTY
-      # stdout); --approve trusts project-local files.
+      # bridge-only dir, and loaded HERE only, via --extension. pi runs attached
+      # to the client-slack pane's real TTY (interactive mode), so the loaded UI
+      # extensions render in the TUI instead of flooding stdout with
+      # extension_ui_request JSON frames, and the REPL stays alive at idle — no
+      # --mode rpc and no `| tee` pipe. A 2nd --extension adds the Codex
+      # retry-recovery extension (.pi/bridge-recovery/index.ts). --approve trusts
+      # project-local files.
       #
       # The launch is wrapped by client-slack-supervise.sh: pi-messenger-bridge
       # binds its Slack socket to a session-scoped pi ctx, so when pi replaces
@@ -453,8 +457,13 @@ if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
       BRIDGE_ENTRY="$BRIDGE_DIR/node_modules/pi-messenger-bridge/dist/index.js"
       gosu sandbox bash -c '[ -f "$2" ] || npm install --prefix "$1" --no-fund --no-audit pi-messenger-bridge@0.4.0 >/dev/null 2>&1' -- "$BRIDGE_DIR" "$BRIDGE_ENTRY" || true
       if gosu sandbox tmux new-session -d -s client-slack \
-        "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; rm -f \"\$1\"; export HARNESS=\"\$3\" BRIDGE_ENTRY=\"\$2\" LOG=/tmp/client-slack.log; exec bash \"\$3/.devcontainer/client-slack-supervise.sh\"' -- $(shell_quote "$SLACK_RUNTIME_ENV") $(shell_quote "$BRIDGE_ENTRY") $(shell_quote "$HARNESS")"; then
+        "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; rm -f \"\$1\"; export HARNESS=\"\$3\" BRIDGE_ENTRY=\"\$2\" RECOVERY_ENTRY=\"\$3/.pi/bridge-recovery/index.ts\" LOG=/tmp/client-slack.log; exec bash \"\$3/.devcontainer/client-slack-supervise.sh\"' -- $(shell_quote "$SLACK_RUNTIME_ENV") $(shell_quote "$BRIDGE_ENTRY") $(shell_quote "$HARNESS")"; then
         echo "[entrypoint] client-slack tmux session started (pi-messenger-bridge via --extension, self-healing supervisor)"
+        # pi now runs interactive (no `| tee`), so mirror the visible pane into
+        # the log, ANSI-stripped, for the stale-ctx watchdog and humans. pipe-pane
+        # reads pane output only — never tokens.
+        gosu sandbox tmux pipe-pane -o -t client-slack \
+          "sed -u 's/\x1b\[[0-9;?]*[A-Za-z]//g; s/\r//g' >> /tmp/client-slack.log" 2>/dev/null || true
       else
         rm -f "$SLACK_RUNTIME_ENV"
         echo "[entrypoint] client-slack tmux session failed to start"

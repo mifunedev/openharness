@@ -13,8 +13,9 @@ confidence: provisional
 # pi-messenger-bridge
 
 ## Relevant Source Files
-- `.devcontainer/entrypoint.sh` — installs the package via `npm install pi-messenger-bridge@0.4.0` into the gitignored `.pi/bridge/` dir and loads it via `pi --extension …/dist/index.js --mode rpc --approve` **only** in the `client-slack` tmux session (`.devcontainer/entrypoint.sh:439`–`457`). It is **not** pinned in `.pi/settings.json` `packages[]`, so no other Pi session loads the bridge or contends for the Slack connection.
+- `.devcontainer/entrypoint.sh` — installs the package via `npm install pi-messenger-bridge@0.4.0` into the gitignored `.pi/bridge/` dir and loads it via `pi --extension …/dist/index.js --extension .pi/bridge-recovery/index.ts --approve` **interactive** (no `--mode rpc`) **only** in the `client-slack` tmux session (`.devcontainer/entrypoint.sh:434`–`462`). It is **not** pinned in `.pi/settings.json` `packages[]`, so no other Pi session loads the bridge or contends for the Slack connection.
 - `.devcontainer/client-slack-supervise.sh` — the self-healing supervisor the `client-slack` session runs pi under; restarts pi on the `ctx is stale` signature and on any crash, clearing the lock each time (below).
+- `.pi/bridge-recovery/index.ts` — in-tree pi extension co-loaded beside the bridge; re-injects a failed Slack-originated turn once on the Codex `previous_response_not_found` error (recovery the package lacks).
 - `.pi/msg-bridge.json` (tracked) + `.devcontainer/.env` (gitignored) — Slack's two config files (no wizard): non-secret runtime config (`autoConnect`, `auth.trustedUsers`, `auth.channels`) and the `PI_SLACK_*` tokens respectively; the entrypoint copies the tracked json to `~/.pi/msg-bridge.json` (mode `0600`) before launch.
 - `docs/integrations/slack.md` — operator-facing setup guide (create the app, capture `xapp-`/`xoxb-` tokens, edit the two config files).
 - External: the MIT-licensed npm package `pi-messenger-bridge` (GitHub README captured in the snapshot below).
@@ -23,7 +24,7 @@ confidence: provisional
 `pi-messenger-bridge` is an MIT-licensed npm package that bridges common messengers — Telegram, WhatsApp, Slack, Discord, and Matrix — into a running Pi coding agent as an in-session extension, so remote users can drive the agent from their messenger app. Open Harness installs it via npm into the gitignored `.pi/bridge/` dir and uses it for **Slack**, replacing the removed in-tree `.pi/extensions/slack/` extension (#481). It is **not** globally pinned in `.pi/settings.json`; instead `.devcontainer/entrypoint.sh` loads it via `--extension` only in the dedicated `client-slack` tmux session, so no other Pi session contends for the Slack connection. Slack is configured by hand-editing `.devcontainer/.env` (tokens) plus the tracked `.pi/msg-bridge.json` (trust and channels).
 
 ## Detail
-The package installs with `pi install npm:pi-messenger-bridge` and registers the `/msg-bridge` command plus a toggleable status widget. In the harness it is **not** pinned in `.pi/settings.json` `packages[]`; instead `.devcontainer/entrypoint.sh` runs `npm install pi-messenger-bridge@0.4.0` into the gitignored `.pi/bridge/` dir (npm builds the package's native transport deps, which pnpm does not) and loads it via `pi --extension "$HARNESS/.pi/bridge/node_modules/pi-messenger-bridge/dist/index.js" --mode rpc --approve` **only** in the `client-slack` tmux session (`.devcontainer/entrypoint.sh:439`–`444`). Dedicated-session-only load means no other Pi session loads the bridge — important because the single-instance lock (below) would otherwise let multiple instances contend for and steal the Slack Socket-Mode connection. `--mode rpc` keeps the bridge alive headlessly (plain `pi | tee` exits at idle on non-TTY stdout).
+The package installs with `pi install npm:pi-messenger-bridge` and registers the `/msg-bridge` command plus a toggleable status widget. In the harness it is **not** pinned in `.pi/settings.json` `packages[]`; instead `.devcontainer/entrypoint.sh` runs `npm install pi-messenger-bridge@0.4.0` into the gitignored `.pi/bridge/` dir (npm builds the package's native transport deps, which pnpm does not) and loads it via `pi --extension "…/pi-messenger-bridge/dist/index.js" --extension "$HARNESS/.pi/bridge-recovery/index.ts" --approve` **only** in the `client-slack` tmux session (`.devcontainer/entrypoint.sh:434`–`462`). Dedicated-session-only load means no other Pi session loads the bridge — otherwise the single-instance lock (below) would let instances contend for and steal the Slack connection. pi runs **interactive**, attached to the pane's real TTY (no `--mode rpc`, no `| tee` pipe): the loaded UI extensions render in the TUI instead of flooding stdout with `extension_ui_request` JSON frames, and the REPL stays alive at idle. Logs are out-of-band — pi stderr → the log, plus a `tmux pipe-pane` mirror.
 
 **Configuration.** State lives in `~/.pi/msg-bridge.json`, written mode `0600` inside `~/.pi/` (mode `0700`). There is no wizard — config is hand-edited in the two files above. `autoConnect: true` makes the bridge open its transports headlessly on boot — no interactive `/msg-bridge connect` needed — which is what lets the `client-slack` session come up unattended.
 
@@ -35,13 +36,15 @@ The package installs with `pi install npm:pi-messenger-bridge` and registers the
 
 **Stale-ctx self-heal.** The bridge binds its long-lived Slack socket to a *session-scoped* pi ctx; when pi replaces the session (compaction/fork/switch/reload) the ctx goes stale and every later Slack message throws `extension ctx is stale after session replacement or reload`, with no in-package recovery — the process lives on but the bridge silently stops responding. `.devcontainer/client-slack-supervise.sh` wraps the launch: it tails the log for that signature (and any crash), kills the bridge pi, clears `~/.pi/msg-bridge.lock`, and relaunches a fresh process that reconnects (a clean `rc=0` exit stops the loop).
 
+**Codex retry-recovery.** The bridge chains Codex turns via the provider's connection-scoped `previous_response_id`; a stale id 400s `previous_response_not_found` and the provider re-throws without retrying, so the Slack turn dies silently. The co-loaded in-tree `.pi/bridge-recovery/index.ts` (a second `--extension`) hooks `agent_end` and re-injects the failed Slack-originated turn once — the failed request already cleared the stale id, so the retry chains fresh. It does not patch the package.
+
 **Runtime shape.** It is a *pi-native* extension: it injects inbound messages with Pi's `sendUserMessage()` and reads `turn_end` events to post the agent's reply back — no tool-loop hack. In Open Harness the bridge process runs as `pi` inside the `client-slack` tmux session; the `[Slack] Bot user ID:` log line is its connect marker.
 
 ## System Relationships
 ```mermaid
 flowchart LR
   subgraph cfg[config]
-    ENTRY[".devcontainer/entrypoint.sh<br/>npm install → .pi/bridge/<br/>pi --extension --mode rpc"]
+    ENTRY[".devcontainer/entrypoint.sh<br/>npm install → .pi/bridge/<br/>pi --extension (interactive TTY)"]
     JSON["~/.pi/msg-bridge.json<br/>slack tokens · auth.trustedUsers"]
   end
   subgraph sess["client-slack tmux session"]

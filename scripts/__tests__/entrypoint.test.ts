@@ -109,7 +109,7 @@ describe("devcontainer entrypoint Slack restore", () => {
     );
     writeFileSync(
       join(bin, "tmux"),
-      `#!/usr/bin/env bash\nif [ "$1" = "has-session" ]; then exit 1; fi\nprintf '%s\n' "$@" > "$TMUX_ARGS_FILE"\n`,
+      `#!/usr/bin/env bash\nif [ "$1" = "has-session" ]; then exit 1; fi\nif [ "$1" = "pipe-pane" ]; then exit 0; fi\nprintf '%s\n' "$@" > "$TMUX_ARGS_FILE"\n`,
       { mode: 0o755 },
     );
     writeFileSync(
@@ -128,7 +128,7 @@ describe("devcontainer entrypoint Slack restore", () => {
     // real supervisor's behavior is covered by a separate content/parse test.
     writeFileSync(
       join(harness, ".devcontainer", "client-slack-supervise.sh"),
-      '#!/usr/bin/env bash\nexec pi --extension "${BRIDGE_ENTRY:-x}" --mode rpc --approve\n',
+      '#!/usr/bin/env bash\nexec pi --extension "${BRIDGE_ENTRY:-x}" --extension "${RECOVERY_ENTRY:-y}" --approve\n',
       { mode: 0o755 },
     );
 
@@ -203,10 +203,18 @@ describe("client-slack bridge supervisor", () => {
     // (matched by its unique --extension path) so the loop relaunches it fresh.
     expect(text).toContain("ctx is stale");
     expect(text).toContain("pkill -f 'pi-messenger-bridge/dist/index.js'");
-    // Foreground pi piped to tee keeps --mode rpc alive on the pty.
-    expect(text).toContain("--mode rpc --approve");
-    expect(text).toContain("tee -a");
-    expect(text).toContain("${PIPESTATUS[0]}");
+    // pi runs interactive on the pane TTY: no `| tee` pipe and no --mode rpc, so
+    // the loaded UI extensions render instead of flooding stdout with JSON. A 2nd
+    // --extension co-loads the Codex retry-recovery extension. Assert on the pi
+    // command line itself so comment wording can't satisfy the negatives.
+    const piLine = text.split("\n").find((l) => /^\s*pi --extension/.test(l)) ?? "";
+    expect(piLine).toContain("--approve");
+    expect(piLine).toContain('--extension "$RECOVERY_ENTRY"');
+    expect(piLine).not.toContain("--mode rpc");
+    expect(piLine).not.toContain("tee");
+    expect(piLine).toContain('2>>"$LOG"');
+    expect(text).toContain("bridge-recovery");
+    expect(text).toContain("rc=$?");
     // Clears the single-instance lock before each (re)launch.
     expect(text).toContain('rm -f "$LOCK"');
     // A clean pi exit (rc=0) breaks the loop; anything else restarts.

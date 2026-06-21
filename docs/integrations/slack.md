@@ -118,14 +118,20 @@ that loads it via `--extension`:
 
 ```bash
 pi --extension .pi/bridge/node_modules/pi-messenger-bridge/dist/index.js \
-   --mode rpc --approve 2>&1 | tee /tmp/client-slack.log
+   --extension .pi/bridge-recovery/index.ts \
+   --approve            # interactive on the pane TTY — no --mode rpc, no | tee
 ```
 
-`--mode rpc` keeps pi alive as a persistent process-integration host (a plain
-`pi` exits at idle when stdout is not a TTY); `--approve` trusts the
-project-local files so the extension loads. The bridge is loaded **only**
-here — it is not pinned in `.pi/settings.json`, so no other `pi` session
-competes for the Slack connection.
+pi runs **interactive**, attached to the pane's real TTY, so the loaded UI
+extensions render in the TUI instead of flooding stdout with
+`extension_ui_request` JSON frames — and the REPL stays alive at idle (no
+`--mode rpc`, no `| tee` pipe). Logs are captured out-of-band: pi's stderr goes
+to `/tmp/client-slack.log`, and the entrypoint mirrors the pane there
+(ANSI-stripped) with `tmux pipe-pane`. `--approve` trusts the project-local
+files so the extension loads. A second `--extension`
+(`.pi/bridge-recovery/index.ts`) adds Codex retry-recovery (§ 4.5). The bridge
+is loaded **only** here — it is not pinned in `.pi/settings.json`, so no other
+`pi` session competes for the Slack connection.
 
 ### 4.4 Self-healing supervisor
 
@@ -144,6 +150,19 @@ lock (`~/.pi/msg-bridge.lock`), and relaunches a fresh process that reconnects
 restart. A clean pi exit (`rc=0`) stops the loop. The manual relaunch below is
 only needed to pick up config edits, not to recover from stale-ctx.
 
+### 4.5 Codex retry-recovery
+
+The bridge chains Codex turns through the openai-codex provider's
+connection-scoped `previous_response_id`. When that id goes stale the provider
+returns `previous_response_not_found` (HTTP 400), clears its own continuation,
+and re-throws **without** retrying — so a real Slack turn dies with no reply.
+The npm package has no recovery for this, so the harness co-loads a small
+in-tree extension, `.pi/bridge-recovery/index.ts` (the second `--extension`
+above). It hooks `agent_end`: on a recoverable provider-state error whose failed
+turn was Slack-originated (the bridge's `[📱 … via slack]:` stamp), it re-injects
+that turn **once** — the failed request already cleared the stale id, so the
+retry chains fresh and succeeds. It does not patch the npm package.
+
 ### Manual relaunch
 
 After editing `.devcontainer/.env` or `.pi/msg-bridge.json`, restart the
@@ -156,7 +175,9 @@ same shell that ran `set -a`**, or `pi` will not inherit the vars.
 set -a; source /home/sandbox/harness/.devcontainer/.env; set +a
 tmux kill-session -t client-slack 2>/dev/null
 tmux new-session -d -s client-slack \
-  'pi --extension /home/sandbox/harness/.pi/bridge/node_modules/pi-messenger-bridge/dist/index.js --mode rpc --approve 2>&1 | tee /tmp/client-slack.log'
+  'exec bash /home/sandbox/harness/.devcontainer/client-slack-supervise.sh'
+tmux pipe-pane -o -t client-slack \
+  "sed -u 's/\x1b\[[0-9;?]*[A-Za-z]//g; s/\r//g' >> /tmp/client-slack.log"
 tmux attach -t client-slack
 ```
 

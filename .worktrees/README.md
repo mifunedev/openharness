@@ -3,47 +3,51 @@
 Scratch space for two kinds of checkouts that live next to the harness
 repo without polluting it.
 
-## Branch worktrees
+The split is by **kind of repo**, not by *who* owns it:
 
-`git worktree add` checkouts of in-flight harness branches. Top-level
-subfolders mirror the harness branch prefix:
+| Top-level | What lives here |
+| --------- | --------------- |
+| `agent/`  | **Harnesses** — anything that adopts the Open Harness shape. Either a `git worktree` of a harness branch in *this* repo, or a standalone harness repo (private or public) with its own remote — including a fork of an Open Harness orchestrator, even when it is not a branch of this repo. |
+| `project/`| **Non-harness repos** — independent projects that happen to live next to the harness for convenience. They do not inherit the Open Harness layout. |
+| `feat/` `bug/` `task/` `audit/` `skill/` | `git worktree` checkouts of in-flight harness branches, named after the branch prefix in `context/rules/git.md`. |
+| `archive/` | `archive/<YYYY-MM-DD>` — weekly cleanup-tasks archive sweeps. |
 
-| Subfolder | Branches it holds                                  |
-| --------- | -------------------------------------------------- |
-| `feat/`   | `feat/<issue#>-...` — new features                 |
-| `bug/`    | `bug/<issue#>-...` — bug fixes                     |
-| `task/`   | `task/<issue#>-...` — chores / maintenance         |
-| `audit/`  | `audit/<issue#>-...` — review / audit branches     |
-| `skill/`  | `skill/<issue#>-...` — skill authoring             |
-| `agent/`  | `agent/<agent-name>` — harness agent branches only |
-| `archive/`| `archive/<YYYY-MM-DD>` — weekly cleanup-tasks archive sweeps |
+## `agent/` — harness branches and standalone harness repos
 
-The `agent/` subfolder is for work tied to a named AI agent identity in
-this harness: either a true harness branch worktree (`agent/<agent-name>`)
-or a legacy agent-owned clone that has not yet graduated to the project
-layout. Do **not** put new long-lived external repos here just because an
-agent will work on them.
+Two sub-shapes share this folder because they share the same shape on
+disk: they all look like Open Harness inside. A fork of an Open Harness
+orchestrator belongs here even when it is not a branch of this repo — pick
+whichever sub-shape fits.
 
-Why this needed clarification: this README previously allowed
-"standalone agent-repo clones" under `agent/`, which blurred the line
-between agent identity and project ownership. New standalone repos should
-use `project/<owner>/<repo>/` so the path reflects the remote project, not
-which agent happened to clone it first.
+### A. Harness branch worktree
 
-See `.claude/rules/git.md` § Worktrees for the canonical workflow,
-including the stale-worktree policy.
+`git worktree add` of a branch in *this* repo:
 
-## Project clones — `project/<owner>/<repo>/`
+```bash
+git worktree add -b agent/<name> .worktrees/agent/<name> $BASE
+```
 
-Durable clones of independent repos that have **their own git tracking**
-and are NOT branches of the harness. Use this for collateral projects,
-extracted packages, app repos, and anything whose long-term identity is a
-GitHub repo rather than a harness agent branch.
+### B. Standalone harness repo (private or public)
 
-Folder shape mirrors the remote owner/repo. This prevents collisions and
-makes the remote obvious from the path.
+A separate repo that adopts the Open Harness shape but has its own remote
+— for example, a fork of an Open Harness orchestrator. Cloned into
+`.worktrees/agent/<repo-name>/`:
 
-Example layout:
+```bash
+git clone git@github.com:<owner>/<repo>.git .worktrees/agent/<repo>
+```
+
+The operator designates which of (A) or (B) applies when the path is
+first created. There is no automatic distinction; treat the folder as a
+self-contained harness either way.
+
+## `project/<owner>/<repo>/` — non-harness repos
+
+Durable clones of independent repos that are **not** harnesses. Use this
+for collateral projects, extracted packages, app repos, and anything
+whose layout is not the Open Harness shape.
+
+Folder shape mirrors the remote owner/repo:
 
 ```
 project/
@@ -65,6 +69,16 @@ The `project/` directory is gitignored — it materializes only when you
 clone something into it. Lifecycle is `git clone` / `rm -rf`, not
 `git worktree`.
 
+## Branch-prefix subfolders (`feat/`, `bug/`, `task/`, `audit/`, `skill/`)
+
+`git worktree` checkouts of in-flight branches in this repo. The folder
+mirrors the branch prefix from `context/rules/git.md`. The dated
+`archive/<YYYY-MM-DD>` folders hold weekly cleanup-tasks archive sweeps.
+Lifecycle is `git worktree add` / `git worktree remove`.
+
 ---
+
+See `.claude/rules/git.md` § Worktrees for the canonical workflow,
+including the stale-worktree policy.
 
 Everything under `.worktrees/` is gitignored except this README.

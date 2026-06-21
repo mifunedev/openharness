@@ -16,8 +16,8 @@
         "Tests pass"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added scripts/sandbox-boot-smoke.sh with bounded health polling, diagnostics, teardown trap, and vitest coverage on 2026-06-21."
     },
     {
       "id": "US-002",
@@ -30,8 +30,8 @@
         "Tests pass"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wired sandbox-boot-guard workflow to build the compose image tag, run boot smoke, and preserve no-publish/no-login side effects on 2026-06-21."
     }
   ]
 }

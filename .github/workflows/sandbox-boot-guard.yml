@@ -64,8 +64,18 @@ jobs:
         run: bash scripts/docker-compose.sh config --quiet
 
       - name: Build sandbox image locally
+        env:
+          SANDBOX_NAME: openharness-boot-guard-${{ github.run_id }}
         run: |
           docker build \
             --file .devcontainer/Dockerfile \
+            --tag "sandbox-${SANDBOX_NAME}" \
             --tag openharness-sandbox-boot-guard:${{ github.sha }} \
             .
+
+      - name: Boot sandbox and verify healthcheck
+        env:
+          SANDBOX_NAME: openharness-boot-guard-${{ github.run_id }}
+          BOOT_SMOKE_TIMEOUT_SECONDS: "900"
+          BOOT_SMOKE_INTERVAL_SECONDS: "10"
+        run: bash scripts/sandbox-boot-smoke.sh

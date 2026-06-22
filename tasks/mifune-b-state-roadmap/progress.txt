@@ -1,0 +1,53 @@
+# progress
+
+## Codebase Patterns
+
+- `gh issue create` needs the repo context: run it from the repo root with an
+  explicit `--repo <owner/name>` (running from a non-repo cwd like /tmp makes it
+  fail "not a git repository"). Capture the new number with `grep -oE '[0-9]+$'`
+  on the printed URL.
+- Docusaurus parses `.md` as MDX. Bare `<...>` AND bare `{...}` break the build —
+  wrap set-notation like `{skills, agents}` in backticks. The docs sidebar is
+  frontmatter-driven (`sidebar_position`); no manual sidebar registration.
+- M0 is the roadmap surface only — no migration. The migrations are M1–M6.
+
+## US-001 — Create roadmap label + pinned epic
+
+**Title**: Create roadmap label and pinned epic issue
+**Result**: PASS
+Created the `roadmap` label and the pinned epic #301 (north-star + export-ness
+principle + M0–M6 checklist). GitHub-state only; no files changed.
+
+---
+
+## US-002 — File M0–M6 milestone issues
+
+**Title**: File M0-M6 milestone issues with correct labels and dependency lines
+**Result**: PASS
+Filed #302–#308, each `roadmap`-labeled and referencing the epic; #303 (M1) also
+`autopilot`; each body states its Blocked-by relationship.
+
+---
+
+## US-003 — Author docs/roadmap.md
+
+**Title**: Author docs/roadmap.md as a Docusaurus north-star page
+**Files changed**: docs/roadmap.md
+**Result**: PASS
+Authored the Docusaurus page (`sidebar_position: 8`) with the 8 ordered sections,
+the three-namespace table, and the M0–M6 milestone table linking each issue.
+Verified MDX-safe (no bare `<...>` / `{...}`) and well-formed tables.
+
+---
+
+## US-004 — Wire into the repo (CHANGELOG + epic backlink)
+
+**Title**: Wire docs/roadmap.md into the repo (CHANGELOG + epic backlink)
+**Files changed**: CHANGELOG.md
+**Result**: PASS
+Added a `## [Unreleased]` → `### Added` bullet referencing #302 (and #301,
+#302–#308). The epic #301 body already backlinks docs/roadmap.md.
+
+---
+
+STATUS: COMPLETE

@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `docs/roadmap.md` north-star page records the B-state primitive-taxonomy migration (the export-ness axis, the `.mifune/` · `.oh/` · root namespaces, and the rules→skills collapse), mirroring the pinned `roadmap` epic [#301](https://github.com/ryaneggz/openharness/issues/301) and the M0–M6 milestone issues ([#302](https://github.com/ryaneggz/openharness/issues/302)–[#308](https://github.com/ryaneggz/openharness/issues/308)) with M1 promoted to `autopilot` as the next-ready step — milestone M0, no migration executed ([#302](https://github.com/ryaneggz/openharness/issues/302)).
 - `/t3` skill starts, inspects, and stops T3 Code (`npx t3`) in a sandbox tmux session, including pairing-URL discovery and log/status helpers ([#299](https://github.com/ryaneggz/openharness/issues/299)).
 - `context/REPO_MAP.md` gives session-start agents a Git-tracked source-map command plus default keep/disregard paths for context loading, guarded by `repo-map-contract` plus the CB-004 repo-orientation A/B benchmark manifest/scorer ([#464](https://github.com/mifunedev/openharness/issues/464)).
 

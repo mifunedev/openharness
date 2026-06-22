@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/302-mifune-b-state-roadmap",
+  "description": "M0 of the B-state roadmap: stand up the roadmap surface (docs/roadmap.md + a pinned roadmap epic + M0-M6 milestone issues) with M1 promoted to autopilot. No migration executed in this unit.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create roadmap label and pinned epic issue",
+      "description": "As a harness maintainer, I want a `roadmap` GitHub label and a pinned epic issue so the B-state vision has a canonical, discoverable tracking surface.",
+      "acceptanceCriteria": [
+        "`gh label list` shows a `roadmap` label.",
+        "An epic issue carrying the `roadmap` label is open and pinned.",
+        "The epic body holds the north-star paragraph, the export-ness principle, and a checklist of M0-M6 linking each milestone issue.",
+        "No code, file, or migration artifact is changed by this story (GitHub-state only)."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Done in M0 setup: roadmap label created; epic #301 pinned with the M0-M6 checklist and export-ness principle."
+    },
+    {
+      "id": "US-002",
+      "title": "File M0-M6 milestone issues with correct labels and dependency lines",
+      "description": "As autopilot, I want M0-M6 issues filed with `roadmap` labels (and `autopilot` on M1) and explicit Blocked-by lines so issue selection respects dependency order.",
+      "acceptanceCriteria": [
+        "Seven milestone issues exist (M0-M6), each `roadmap`-labeled, each referencing the epic.",
+        "The M1 issue additionally carries the `autopilot` label; M2-M6 do not.",
+        "Each milestone body states its Blocked-by relationship (M1,M2<-M0; M3<-M1; M4<-M3; M5,M6<-M1).",
+        "`gh issue list --label roadmap` returns the epic plus the seven milestones."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Done in M0 setup: milestone issues #302-#308 filed, all roadmap-labeled; #303 (M1) also autopilot; each body carries its Blocked-by line."
+    },
+    {
+      "id": "US-003",
+      "title": "Author docs/roadmap.md as a Docusaurus north-star page",
+      "description": "As a contributor or autopilot session, I want docs/roadmap.md to exist as a well-formed Docusaurus page so the B-state north-star is surfaced in the docs site and linkable from the epic.",
+      "acceptanceCriteria": [
+        "`docs/roadmap.md` exists with YAML frontmatter (title, sidebar_position) matching the docs/intro.md style.",
+        "It contains the Vision, the export-ness axis, the three-namespace table (.mifune/ | .oh/ | root), the A-state->B-state collapse, the milestone table (M0-M6 with deps + status + issue links), and the maintenance pattern.",
+        "It links the epic issue and each milestone issue by number.",
+        "Markdown renders without unclosed code fences or broken tables (docs build does not error on the page)."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "docs/roadmap.md authored (sidebar_position 8); 8 ordered sections, namespace table, and the M0-M6 milestone table with issue links; MDX-safe."
+    },
+    {
+      "id": "US-004",
+      "title": "Wire docs/roadmap.md into the repo (CHANGELOG + epic backlink)",
+      "description": "As a future agent reading session context, I want the roadmap page discoverable via CHANGELOG so the new surface is not silently orphaned.",
+      "acceptanceCriteria": [
+        "CHANGELOG.md `## [Unreleased]` has an `### Added` entry for the roadmap page + milestone issues, referencing #302.",
+        "The docs sidebar resolves the new page (frontmatter sidebar_position is sufficient for the auto-generated sidebar; no manual registration needed).",
+        "The epic issue body links to docs/roadmap.md.",
+        "`bash evals/probes/wiki-readme-index.sh` still passes (no wiki drift introduced)."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "CHANGELOG [Unreleased] Added entry references #302 (and #301, #302-#308); epic #301 body already backlinks docs/roadmap.md."
+    }
+  ]
+}

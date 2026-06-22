@@ -53,6 +53,30 @@ has_value() {
   [ -n "$value" ] && [ "$value" != "''" ] && [ "$value" != '""' ]
 }
 
+require_file() {
+  local label="$1"
+  local file="$2"
+  if [ ! -f "$file" ]; then
+    record_failure "missing $label: $file"
+  fi
+}
+
+check_slack_bridge_log() {
+  local log_file="${SLACK_BRIDGE_LOG:-/tmp/client-slack.log}"
+  if [ ! -f "$log_file" ]; then
+    record_failure "Slack tokens configured but bridge log not found: $log_file"
+    return
+  fi
+
+  if grep -Eiq 'Cannot find module|ERR_MODULE_NOT_FOUND|invalid_auth|not_authed|account_inactive|Socket Mode.*(error|failed)|pi exited rc=|restarting in 3s' "$log_file"; then
+    record_failure "Slack bridge log contains startup/auth/runtime failure signal: $log_file"
+  fi
+
+  if ! grep -Fq '[Slack] Bot user ID:' "$log_file"; then
+    record_failure "Slack tokens configured but bridge has not reported Socket Mode readiness: $log_file"
+  fi
+}
+
 if ! command_exists "$TMUX_BIN"; then
   record_failure "tmux binary not found: $TMUX_BIN"
 else
@@ -71,9 +95,14 @@ else
 
   slack_app_token="${PI_SLACK_APP_TOKEN:-$(compose_env_value PI_SLACK_APP_TOKEN)}"
   slack_bot_token="${PI_SLACK_BOT_TOKEN:-$(compose_env_value PI_SLACK_BOT_TOKEN)}"
-  if has_value "$slack_app_token" && has_value "$slack_bot_token"; then
-    if command_exists "$PI_BIN"; then
+  if has_value "$slack_app_token" || has_value "$slack_bot_token"; then
+    if ! has_value "$slack_app_token" || ! has_value "$slack_bot_token"; then
+      record_failure "Slack bridge partially configured: both PI_SLACK_APP_TOKEN and PI_SLACK_BOT_TOKEN are required"
+    elif command_exists "$PI_BIN"; then
       require_session client-slack
+      require_file "Slack bridge entrypoint" "${SLACK_BRIDGE_ENTRY:-$HARNESS/.pi/bridge/node_modules/pi-messenger-bridge/dist/index.js}"
+      require_file "Slack bridge config" "${SLACK_BRIDGE_CONFIG:-/home/sandbox/.pi/msg-bridge.json}"
+      check_slack_bridge_log
     else
       record_failure "Slack tokens configured but Pi binary not found: $PI_BIN"
     fi

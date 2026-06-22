@@ -248,6 +248,18 @@ env (before attaching to tmux).
    `tmux attach -t client-slack` — you should see the inbound event logged
    and the agent's reply posted back to Slack.
 
+### 7.1 Container healthcheck behavior
+
+`scripts/sandbox-healthcheck.sh` skips Slack checks when no Slack tokens are
+configured. If either token is present, both `PI_SLACK_APP_TOKEN` and
+`PI_SLACK_BOT_TOKEN` are required. With both tokens configured, the Docker
+healthcheck now verifies the `pi` binary, `client-slack` tmux session, bridge
+entrypoint under `.pi/bridge/`, seeded `~/.pi/msg-bridge.json`, and
+`/tmp/client-slack.log` readiness. The log must include `[Slack] Bot user ID:`
+and must not include startup/auth/runtime failure signals such as
+`Cannot find module`, `invalid_auth`, `not_authed`, or supervisor restart-loop
+messages.
+
 ## 8. Troubleshooting
 
 | Symptom | Cause | Fix |

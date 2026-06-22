@@ -5,12 +5,10 @@ title: "Roadmap"
 
 # Roadmap — the B-state north-star
 
-This page is the maintained north-star for Open Harness's primitive-taxonomy
+This page is the **single source of truth** for Open Harness's primitive-taxonomy
 migration: collapsing five behavior surfaces (skills, agents, hooks, rules,
 identity) into **three portable primitives plus one small always-on identity
-core**. It mirrors the pinned `roadmap` epic
-[#301](https://github.com/ryaneggz/openharness/issues/301); the source of truth
-for the full vision is `.claude/plans/context-as-a-logical-marble.md`.
+core**. The full vision is in `.claude/plans/context-as-a-logical-marble.md`.
 
 ## Vision
 
@@ -80,32 +78,30 @@ in that sequence; the eval suite is the oracle at every step.
 
 ## Milestones
 
-Each milestone is a `roadmap`-labeled GitHub issue. Only the **next-ready**
-milestone also carries the `autopilot` label, so autopilot
-(oldest-open-`autopilot`-first) builds milestones in dependency order and never
-jumps to a blocked step. M1 is the next-ready `autopilot` step.
+This page is the roadmap — milestones are **not** pre-filed as GitHub issues.
+When a milestone is ready to build, file a single issue for it and add the
+`autopilot` label so the self-improvement loop picks it up. Build them in
+dependency order (the **Depends on** column); never start a blocked step.
 
-| Milestone | Gist | Depends on | Status | Issue |
-|---|---|---|---|---|
-| M0 | Namespace taxonomy + B-state north-star (this page + the milestone issues) | — | In progress (this PR) | [#302](https://github.com/ryaneggz/openharness/issues/302) |
-| M1 | Agents → `.mifune/agents` — **`autopilot` next-ready** | M0 | Planned | [#303](https://github.com/ryaneggz/openharness/issues/303) |
-| M2 | `.oh/` config surface (rescope the dead `.openharness/`) | M0 | Planned | [#304](https://github.com/ryaneggz/openharness/issues/304) |
-| M3 | Rules → skills (easy first): `remote-installers` delete · `advisor` + `recursive-delegation` → `/advisor` · `wiki` → `wiki-ingest/references` · `sandbox-processes` → skill ref | M1 | Planned | [#305](https://github.com/ryaneggz/openharness/issues/305) |
-| M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `context/rules/` | M3 | Planned | [#306](https://github.com/ryaneggz/openharness/issues/306) |
-| M5 | Hooks → `.mifune/hooks` | M1 | Planned | [#307](https://github.com/ryaneggz/openharness/issues/307) |
-| M6 | Skill-private scripts → skill dirs (`autopilot-caps`, `prompt-miner-caps`); shared scripts stay at root | M1 | Planned | [#308](https://github.com/ryaneggz/openharness/issues/308) |
+| Milestone | Gist | Depends on | Status |
+|---|---|---|---|
+| M0 | Namespace taxonomy + B-state north-star (this page) | — | ✅ Done |
+| M1 | Agents → `.mifune/agents` | M0 | Next |
+| M2 | `.oh/` config surface (rescope the dead `.openharness/`) | M0 | Planned |
+| M3 | Rules → skills (easy first): `remote-installers` delete · `advisor` + `recursive-delegation` → `/advisor` · `wiki` → `wiki-ingest/references` · `sandbox-processes` → skill ref | M1 | Planned |
+| M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `context/rules/` | M3 | Planned |
+| M5 | Hooks → `.mifune/hooks` | M1 | Planned |
+| M6 | Skill-private scripts → skill dirs (`autopilot-caps`, `prompt-miner-caps`); shared scripts stay at root | M1 | Planned |
 
 ## Maintenance pattern
 
-The roadmap self-advances:
+This page is the living north-star — keep it current:
 
-- The pinned `roadmap` epic ([#301](https://github.com/ryaneggz/openharness/issues/301))
-  lists all milestones; this page mirrors it for the `/roadmap` view. This is the
-  living north-star.
-- Each milestone is a `roadmap`-labeled issue. Only the next-ready milestone also
-  carries the `autopilot` label.
-- As a milestone merges: tick it on this page, then promote the next milestone by
-  adding the `autopilot` label to its issue.
+- It is the single source of truth; milestones are tracked **here**, not as a
+  bank of pre-filed GitHub issues.
+- When you're ready to build the next milestone, file **one** issue for it and
+  add the `autopilot` label so the self-improvement loop can pick it up.
+- As a milestone ships, tick its **Status** here and mark the next one **Next**.
 
 ## Per-rule disposition
 

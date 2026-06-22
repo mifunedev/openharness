@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/515-smoke-test-release-image",
+  "description": "Smoke-test the release Docker image before publishing GHCR tags.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Gate release publish on boot smoke",
+      "description": "As a release operator, I want the release workflow to boot-smoke the exact image built for GHCR before pushing so that a broken image is not published as a release artifact.",
+      "acceptanceCriteria": [
+        ".github/workflows/release.yml separates local image build, smoke, and push steps so docker push runs only after smoke succeeds.",
+        "The local build tags the same image object as ghcr.io/mifunedev/openharness:<version>, ghcr.io/mifunedev/openharness:latest, and the sandbox-${SANDBOX_NAME} alias consumed by .devcontainer/docker-compose.yml.",
+        "The smoke step runs scripts/sandbox-boot-smoke.sh with a release-specific SANDBOX_NAME, bounded timeout/interval values, and --no-build compose startup so it tests the already-built image rather than rebuilding.",
+        "The smoke path always cleans up through scripts/sandbox-boot-smoke.sh's existing teardown trap.",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed manually on 2026-06-22; branch feat/515-smoke-test-release-image"
+    },
+    {
+      "id": "US-002",
+      "title": "Document and verify release gate behavior",
+      "description": "As a maintainer, I want the workflow intent to be obvious and locally reviewable so future release changes keep the smoke gate before publish.",
+      "acceptanceCriteria": [
+        "The workflow names/comments make the pre-push smoke gate explicit.",
+        "CHANGELOG.md records the release workflow hardening under [Unreleased].",
+        "A syntax/logic validation command confirms the workflow still parses and contains build → smoke → push ordering.",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed manually on 2026-06-22; branch feat/515-smoke-test-release-image"
+    }
+  ]
+}

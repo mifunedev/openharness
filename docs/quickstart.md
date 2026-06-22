@@ -56,7 +56,7 @@ directory: `/home/sandbox/harness`.
 
 The default sandbox ships with Claude Code, Codex, and Pi. OpenCode,
 DeepAgents, Hermes, and Grok Build are optional image-level installs; T3 Code runs on
-demand via `npx`. Authenticate at least one harness before use:
+demand via the `/t3` skill or direct `npx`. Authenticate at least one harness before use:
 
 - **[Claude Code](./harnesses/claude-code.md)**: run `claude` and follow the OAuth prompt
 - **[Codex](./harnesses/codex.md)**: run `codex login`
@@ -65,7 +65,7 @@ demand via `npx`. Authenticate at least one harness before use:
 - **[DeepAgents](./harnesses/deepagents.md)**: set `install.deepagents: true` in `harness.yaml` (or `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env`), rebuild, then write provider keys to `~/.deepagents/.env`
 - **[Hermes](./harnesses/hermes.md)**: set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`), rebuild, then run `hermes setup`
 - **[Grok Build](./harnesses/grok-build.md)**: set `install.grok_build: true` in `harness.yaml` (or `INSTALL_GROK_BUILD=true` in `.devcontainer/.env`), rebuild, verify `grok --version`, then run `grok login --device-auth` (headless/remote) or `grok login`
-- **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `npx t3` (browser UI on port 3773)
+- **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `/t3` or `npx t3` (browser UI on port 3773)
 
 Claude Code remains the documented default. See
 [the harnesses overview](./harnesses/overview) for the full list and

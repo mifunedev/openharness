@@ -120,7 +120,14 @@ tmux capture-pane -t client-slack -p | grep -i 'Bot user ID'
 
 ### Step 3 — Launch T3 Code
 
-T3 Code is not preinstalled; the first invocation downloads it via `npx`.
+T3 Code is not preinstalled; the first invocation downloads it via `npx`. If an agent is running, prefer the `/t3` skill:
+
+```text
+/t3 start
+/t3 url
+```
+
+Manual terminal fallback:
 
 ```bash
 tmux new-session -d -s agent-t3code 'npx t3 2>&1 | tee /tmp/agent-t3code.log'

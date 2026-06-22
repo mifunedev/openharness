@@ -9,6 +9,7 @@ Update policy and release automation live in [`.claude/rules/git.md`](.claude/ru
 ## [Unreleased]
 
 ### Added
+- `/t3` skill starts, inspects, and stops T3 Code (`npx t3`) in a sandbox tmux session, including pairing-URL discovery and log/status helpers ([#299](https://github.com/ryaneggz/openharness/issues/299)).
 - `context/REPO_MAP.md` gives session-start agents a Git-tracked source-map command plus default keep/disregard paths for context loading, guarded by `repo-map-contract` plus the CB-004 repo-orientation A/B benchmark manifest/scorer ([#464](https://github.com/mifunedev/openharness/issues/464)).
 
 ### Fixed

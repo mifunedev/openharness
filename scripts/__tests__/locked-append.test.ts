@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,9 +20,10 @@ afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-function run(target: string | undefined, input = ""): ReturnType<typeof spawnSync> {
+function run(target: string | undefined, input = "", cwd?: string): ReturnType<typeof spawnSync> {
   const args = target === undefined ? [SCRIPT] : [SCRIPT, target];
   return spawnSync("bash", args, {
+    cwd,
     input,
     encoding: "utf-8",
     env: { ...process.env, TMPDIR: tmp },
@@ -49,6 +50,30 @@ describe("locked-append.sh", () => {
     expect(run(target, "alpha\n\nbeta\n").status).toBe(0);
     expect(run(target, "gamma\n").status).toBe(0);
     expect(readFileSync(target, "utf-8")).toBe("alpha\n\nbeta\ngamma\n");
+  });
+
+  it("uses one lock for relative and absolute spellings of the same target", () => {
+    const cwd = path.join(tmp, "workspace");
+    mkdirSync(cwd, { recursive: true });
+    const target = path.join(cwd, "memory", "log.md");
+
+    expect(run(target, "absolute\n").status).toBe(0);
+    expect(run(path.relative(cwd, target), "relative\n", cwd).status).toBe(0);
+
+    expect(readFileSync(target, "utf-8")).toBe("absolute\nrelative\n");
+    const lockDir = path.join(tmp, "openharness-locked-append");
+    expect(readdirSync(lockDir).filter((entry) => entry.endsWith(".lock"))).toHaveLength(1);
+  });
+
+  it("appends to a missing target file after canonicalizing its parent", () => {
+    const parent = path.join(tmp, "existing-parent");
+    mkdirSync(parent, { recursive: true });
+    const target = path.join(parent, "new.log");
+
+    const result = run(target, "first-write\n");
+
+    expect(result.status).toBe(0);
+    expect(readFileSync(target, "utf-8")).toBe("first-write\n");
   });
 
   it("serializes concurrent whole-record appends", () => {

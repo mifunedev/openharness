@@ -13,7 +13,13 @@ Use T3 Code when you want a browser UI over the same providers the other harness
 
 ## Install
 
-T3 Code is **not preinstalled** in the sandbox image. Run it on demand via `npx`:
+T3 Code is **not preinstalled** in the sandbox image. The `/t3` skill starts it on demand via `npx --yes t3` and keeps it in tmux:
+
+```text
+/t3
+```
+
+For a direct shell launch, run:
 
 ```bash
 npx t3
@@ -43,7 +49,16 @@ T3 Code itself uses a **pairing-URL** auth model: on first start it logs a one-t
 
 ## Run in tmux
 
-Per [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md), long-running processes inside the sandbox go in named tmux sessions. T3 Code listens on `0.0.0.0:3773` so it can be reached from the host:
+Per [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md), long-running processes inside the sandbox go in named tmux sessions. T3 Code listens on `0.0.0.0:3773` so it can be reached from the host. Prefer the `/t3` skill when an agent is available:
+
+```text
+/t3 start      # launch in tmux and print the pairing URL when available
+/t3 status     # inspect the tmux session and recent output
+/t3 url        # print the latest pairing URL found in logs
+/t3 stop       # stop the tmux session
+```
+
+Manual terminal fallback:
 
 ```bash
 tmux new-session -d -s agent-t3code 'npx t3 2>&1 | tee /tmp/agent-t3code.log'

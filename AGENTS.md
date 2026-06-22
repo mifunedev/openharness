@@ -26,9 +26,9 @@ Read these files at the start of every session — they encode voice, principles
 - `memory/MEMORY.md` — long-term lessons learned (append-only)
 - Today's `memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
 
-See `context/rules/memory.md` for the write-side Memory Improvement Protocol.
+After **every** skill or agent run, fire the Memory Improvement Protocol (log → qualify → improve) — its canonical home is now the `/retro` skill (`.mifune/skills/retro/references/memory-protocol.md`).
 
-Some harnesses auto-load `context/rules/*.md`; when the current provider does not explicitly do so, read task-relevant rule files manually.
+The always-loaded `context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/advisor` (delegation + recursive-delegation), `/wiki-ingest` (wiki schema), `/t3` (sandbox tmux process lifecycle) — and the repo-authoring convention stays a plain doc at `context/directory-readme.md`. The always-on tier is now just the `context/` identity files listed above; load the relevant skill when a task calls for its norm.
 
 ## Permissions
 
@@ -189,7 +189,7 @@ The `spec-*` family operates on a `tasks/<slug>/` folder (the universal interfac
 | `/eval` | Run the context fitness-function probe suite (`evals/probes/*.sh`) against real state, write the `evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 | `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
-| `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `context/rules/memory.md` |
+| `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `.mifune/skills/retro/references/memory-protocol.md` |
 | `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `memory/<date>/`; raw prompt text is off by default. The daily `crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/ship-spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
 | `/caveman` | Token-compression output mode (`lite`/`full`/`ultra`/`wenyan`); subcommands `/caveman-commit`, `/caveman-review`, `/caveman-compress <file>`, `/caveman-stats`. Never compresses code, security warnings, or irreversible-action confirmations |
 | `/wiki-ingest` | Capture a source (URL or file path) or promote a sub-agent draft into the wiki; supports `<url\|path> [--slug <override>]` and `--from-draft <slug>` forms |
@@ -208,7 +208,7 @@ ngrok, tailscale-funnel) in front of the sandbox — the base ships
 without any of these.
 
 Long-running apps inside the sandbox go in named tmux sessions, related
-apps as stacked panes — see `context/rules/sandbox-processes.md`.
+apps as stacked panes — see `.mifune/skills/t3/references/sandbox-processes.md`.
 
 ## What You Do
 

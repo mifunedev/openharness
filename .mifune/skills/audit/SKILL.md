@@ -142,7 +142,7 @@ red from gate 2.
 
 ## Memory Protocol
 
-After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
+After a run, append to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
 ## audit -- HH:MM UTC

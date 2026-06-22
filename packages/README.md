@@ -27,4 +27,4 @@ pnpm --filter @openharness/docs build    # build it
 ```
 
 Inside the sandbox, long-running dev servers go in named tmux sessions
-(`app-<name>`) — see `.claude/rules/sandbox-processes.md`.
+(`app-<name>`) — see `.mifune/skills/t3/references/sandbox-processes.md`.

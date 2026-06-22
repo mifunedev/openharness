@@ -158,7 +158,7 @@ were **not** passed. Translate each reportable marker into a candidate lesson,
 then gate it exactly like `/retro` (`.claude/skills/retro/SKILL.md` § 6):
 
 1. **Qualify filter.** Drop any candidate that matches a row in the "What Does NOT
-   Go in Memory" table (`context/rules/memory.md`) — secrets, raw output, plans,
+   Go in Memory" table (`.mifune/skills/retro/references/memory-protocol.md`) — secrets, raw output, plans,
    anything re-derivable in under a minute.
 2. **Dedup against existing memory.** For each surviving candidate, grep
    `memory/MEMORY.md` and `context/IDENTITY.md` for the same substance; if it is

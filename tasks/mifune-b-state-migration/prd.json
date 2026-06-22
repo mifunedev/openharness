@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/mifune-b-state-migration",
+  "description": "Execute the full B-state primitive-taxonomy migration (M1-M6) as one branch/one PR: collapse {skills, agents, hooks, rules, identity} into .mifune/{skills,agents,hooks} + a small always-on context/ identity core. Eval suite green at every step.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "M1: Agents to .mifune/agents",
+      "description": "As a provider-portable harness, I want sub-agent definitions to live in .mifune/agents (canonical) with a .claude/agents back-symlink so all 4 providers + the skills registry address them as a unit, exactly as skills do.",
+      "acceptanceCriteria": [
+        "git mv moves all of .claude/agents/*.md into .mifune/agents/",
+        ".claude/agents is a symlink -> ../.mifune/agents (so the ~40 existing .claude/agents refs still resolve)",
+        ".codex/agents -> ../.claude/agents still resolves to the moved files",
+        ".mifune/README.md lists agents/ as a portable primitive",
+        "bash .mifune/skills/eval/run.sh shows zero REGRESSION rows",
+        "CHANGELOG [Unreleased] records the agents move"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-21; commit bcf8e40"
+    },
+    {
+      "id": "US-002",
+      "title": "M5: Hooks to .mifune/hooks",
+      "description": "As a portable harness, I want enforcement hooks in .mifune/hooks (canonical) with a .claude/hooks back-symlink so settings.json hook paths keep resolving while hooks become a portable primitive.",
+      "acceptanceCriteria": [
+        "git mv moves all of .claude/hooks/* into .mifune/hooks/",
+        ".claude/hooks is a symlink -> ../.mifune/hooks",
+        "settings.json / settings.local.json hook command paths still resolve through the symlink",
+        ".mifune/README.md lists hooks/ as a portable primitive",
+        "The CI hooks-path probe (harness-ci-hooks-paths) stays green",
+        "bash .mifune/skills/eval/run.sh shows zero REGRESSION rows",
+        "CHANGELOG [Unreleased] records the hooks move"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed iteration 2 on 2026-06-21; commit 6b1bf6d"
+    },
+    {
+      "id": "US-003",
+      "title": "M6: Skill-private scripts to skill dirs",
+      "description": "As a self-contained skill, I want my single-owner script bundled in my skill dir (the eval/run.sh precedent) while shared scripts stay at root.",
+      "acceptanceCriteria": [
+        "scripts/autopilot-caps.sh moved to .mifune/skills/autopilot/autopilot-caps.sh",
+        "scripts/prompt-miner-caps.sh moved to .mifune/skills/prompt-miner/prompt-miner-caps.sh",
+        "crons/autopilot.md preflight: path and body refs repointed to the new path",
+        "crons/prompt-miner.md preflight: path and body refs repointed to the new path",
+        "crons/README.md references repointed",
+        "locked-append.sh, ralph.sh, cron-runtime.ts, ablate.sh, sandbox-healthcheck.sh remain at scripts/",
+        "Any probe referencing the moved script paths is repointed and green",
+        "bash .mifune/skills/eval/run.sh shows zero REGRESSION rows",
+        "CHANGELOG [Unreleased] records the script moves"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed iteration 3 on 2026-06-21; commit 1e96dec"
+    },
+    {
+      "id": "US-004",
+      "title": "M2: .oh/ config surface",
+      "description": "As the oh CLI / installer, I want a .oh/ namespace for deploy/install/pack config, rescoping the dead .openharness/ — without breaking runtime paths.",
+      "acceptanceCriteria": [
+        ".oh/README.md exists documenting the namespace + its external consumer (the oh CLI / oh harness add / container build), per the directory-README convention",
+        "The stale .openharness reference in install/banner.sh is rescoped to .oh/ (or corrected)",
+        "Any installer/lifecycle config relocated under .oh/ has every Makefile/CI/devcontainer/cross-script reference updated; if a relocation cannot keep CI+eval green it is left at root with a recorded rationale",
+        "bash .mifune/skills/eval/run.sh shows zero REGRESSION rows",
+        "CHANGELOG [Unreleased] records the .oh/ surface"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed iteration 4 on 2026-06-21; commit ec0558f"
+    },
+    {
+      "id": "US-005",
+      "title": "M3: Rules to skills (easy first)",
+      "description": "As a provider-portable norm, I want task-triggered rules to become skills (loaded on demand) following the git.md pointer template, so behavioral norms work across Codex/Pi/Hermes not just Claude.",
+      "acceptanceCriteria": [
+        "context/rules/remote-installers.md deleted after confirming zero inbound refs (norm folded into a skill reference if any consumer exists)",
+        ".mifune/skills/advisor/SKILL.md created from advisor-model.md content; recursive-delegation.md content placed at .mifune/skills/advisor/references/recursive-delegation.md",
+        "context/rules/advisor-model.md and recursive-delegation.md left as thin pointers to /advisor",
+        "evals/probes/advisor-monitored-loop.sh repointed to the /advisor skill location and green",
+        "wiki.md schema moved to .mifune/skills/wiki-ingest/references/schema.md with a thin pointer left at context/rules/wiki.md; wiki probes green",
+        "sandbox-processes.md content moved to a skill references/ doc with a thin pointer left behind",
+        "directory-readme.md remains a context/ doc",
+        "bash .mifune/skills/eval/run.sh shows zero REGRESSION rows",
+        "CHANGELOG [Unreleased] records the rules-to-skills moves"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Completed iteration 5 on 2026-06-22; commit db9ade4"
+    },
+    {
+      "id": "US-006",
+      "title": "M4: Always-on collapse (identity core)",
+      "description": "As the harness, I want the always-on rules tier collapsed: memory protocol into /retro + a one-line AGENTS.md pointer, context/rules/ removed, session-start loader rewritten.",
+      "acceptanceCriteria": [
+        "memory.md content moved to .mifune/skills/retro/references/memory-protocol.md",
+        "AGENTS.md/CLAUDE.md carries a one-line always-on pointer keeping the Memory Improvement Protocol firing after every skill (-> /retro)",
+        "evals/probes/memory-gitignore-claim.sh and evals/probes/git-skill.sh repointed as needed and green",
+        "The context/rules/ tier is removed (pointer files deleted) and the .claude/rules -> ../context/rules symlink removed",
+        "AGENTS.md Session start loader + the rules-autoload sentence rewritten to load identity + name canonical skills instead of context/rules/*",
+        "directory-readme.md convention remains reachable (relocated to a context/ doc or skill reference)",
+        "docs/roadmap.md Status column ticked through M6",
+        "bash .mifune/skills/eval/run.sh shows zero REGRESSION rows",
+        "CHANGELOG [Unreleased] records the always-on collapse"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Completed iteration 6 on 2026-06-22; commit cf37769"
+    }
+  ]
+}

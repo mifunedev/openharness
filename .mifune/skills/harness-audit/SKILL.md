@@ -327,7 +327,7 @@ Append to `memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d`:
 - **Observation**: [one sentence — top finding]
 ```
 
-See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
+See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
 ## Reference
 

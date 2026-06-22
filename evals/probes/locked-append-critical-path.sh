@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HELPER="$ROOT/scripts/locked-append.sh"
-CAPS="$ROOT/scripts/autopilot-caps.sh"
+CAPS="$ROOT/.mifune/skills/autopilot/autopilot-caps.sh"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
 PI_SKILL="$ROOT/.pi/skills/autopilot/SKILL.md"
 

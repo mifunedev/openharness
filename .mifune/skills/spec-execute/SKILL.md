@@ -134,7 +134,7 @@ Workflow`: *human merge — final gate, no auto-merge*). Never `gh pr merge`.
 ## Memory Protocol
 
 The composed skills each log their own entries. `spec-execute` adds one roll-up to
-`memory/<UTC-date>/log.md` per `context/rules/memory.md`:
+`memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
 ## spec-execute -- HH:MM UTC

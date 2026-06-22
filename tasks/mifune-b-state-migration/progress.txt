@@ -1,0 +1,178 @@
+# progress — mifune-b-state-migration
+
+## Codebase Patterns
+- `.claude/skills -> ../.mifune/skills` and `.claude/rules -> ../context/rules`
+  are the existing symlink precedent. `.claude/agents` and `.claude/hooks` are
+  REAL dirs to be moved to `.mifune/` with a back-symlink (US-001, US-002).
+- `.codex/agents -> ../.claude/agents` chains through `.claude/agents`; after the
+  move it resolves `.codex/agents -> .claude/agents (symlink) -> .mifune/agents`.
+- Eval runner: `bash .mifune/skills/eval/run.sh` (writes evals/RESULTS.md; 56
+  probes; green baseline at branch start). `git checkout evals/RESULTS.md` after
+  to drop timestamp churn unless a probe is added.
+- 3 probes couple to `context/rules`: `git-skill.sh`, `memory-gitignore-claim.sh`,
+  `advisor-monitored-loop.sh` — repoint these in US-005/US-006.
+- Cron preflight paths to update in US-003: `crons/autopilot.md`,
+  `crons/prompt-miner.md`, `crons/README.md`.
+- Dir-move mechanics (proven US-001, reuse for US-002 hooks): `git mv
+  .claude/<x> .mifune/<x>` moves the whole dir+contents (git records clean
+  renames), then `ln -s ../.mifune/<x> .claude/<x>` + `git add .claude/<x>`
+  registers the back-symlink as a git symlink (mode 120000), exactly like
+  `.claude/skills`. NO probe couples to the agents path, so the move was
+  eval-neutral (all 56 PASS/SKIPPED). Verify the symlink mode with
+  `git ls-files -s .claude/<x>` (expect `120000`).
+- Roadmap ticking is owned by US-006 ("ticked through M6"); per-story
+  acceptanceCriteria for M1–M5 do NOT include a roadmap edit — leave
+  `docs/roadmap.md` untouched until US-006 to honor scope discipline.
+- CHANGELOG: agents move went under `### Changed` (a relocation), right after
+  the analogous skills-move bullet; referenced roadmap issue #302.
+- CI path filters DON'T follow symlinks (US-002): GitHub Actions `paths:`
+  matches the literal git path of changed files, so after moving a dir to
+  `.mifune/<x>` a future edit lands at `.mifune/<x>/...` and would NOT match a
+  `.claude/<x>/**` filter (the symlink only redirects path RESOLUTION, not diff
+  matching). The static `harness-ci-hooks-paths` probe greps the workflow for
+  the literal `.claude/hooks/**` (×2) + `.claude/hooks/*.sh` strings, so it
+  can't catch this runtime gap. Fix = ADD `.mifune/<x>/**` to both push +
+  pull_request filters ALONGSIDE the probe-pinned `.claude/<x>/**` (don't
+  remove it — the probe needs it; the shellcheck glob `.claude/hooks/*.sh`
+  still lints the real files through the symlink). This mirrors the skills
+  precedent (the CI filter is `.mifune/skills/**`, no `.claude/skills/**`).
+  Future US-003 (scripts→skill dirs) has the same trap if any moved path is in
+  a CI filter.
+- Script-move root resolution (proven US-003, reuse for US-004 .oh/ relocations):
+  a root-anchored script (one that reads `harness.yaml` or execs sibling
+  `scripts/*.sh`) BREAKS when moved out of `scripts/` because it computes its
+  root as `REPO_ROOT="$(dirname "$SCRIPT_DIR")"` (assumes `<root>/scripts/`).
+  Fix = adopt the `.mifune/skills/eval/run.sh` walk-up idiom: `REPO_ROOT=$SCRIPT_DIR;
+  while [ "$REPO_ROOT" != "/" ] && [ ! -f "$REPO_ROOT/scripts/cron-runtime.ts" ]; do
+  REPO_ROOT="$(dirname "$REPO_ROOT")"; done`, then reference shared scripts as
+  `$REPO_ROOT/scripts/<name>`. Verify with a gh-stub run from the NEW path
+  (no "missing scripts/locked-append.sh" fallback warning = root resolved).
+- CI coverage gaps from a scripts→skill move are TWO-fold and the eval suite
+  catches NEITHER (CI-only): (1) the path FILTER — `.mifune/skills/**` was
+  already in ci-harness.yml from the skills move, so moved skill scripts still
+  trigger CI without a filter edit (unlike US-002 hooks). (2) the shellcheck
+  GLOB — `scripts/*.sh` no longer covers the moved scripts; add
+  `.claude/skills/<skill>/*.sh` to the glob (mirrors the `.claude/hooks/*.sh`
+  precedent; shellcheck reads through the `.claude/skills -> ../.mifune/skills`
+  symlink). Run the exact CI shellcheck line locally to confirm clean.
+- The cron `preflight:` value must pass `isValidAgentBin` in cron-runtime.ts
+  (`/^[A-Za-z0-9_./-]+$/`, no leading `-`, no `..`); `.mifune/skills/.../x.sh`
+  passes. runPreflight resolves it via `path.resolve(process.cwd(), scriptPath)`
+  at the root checkout (preflight runs BEFORE the worktree spawn), so a
+  repo-relative `.mifune/...` path resolves correctly.
+- Test/probe FIXTURE strings (drift-check-cron-staleness-glob.sh `bbb-valid.md`
+  heredoc + its assertion; cron-runtime.test.ts parser round-trip fixtures)
+  carry `preflight: scripts/autopilot-caps.sh` as ARBITRARY synthetic data —
+  they don't reference the real file and pass regardless of the move. Leave
+  them (changing only one half of a matched fixture/assert breaks the probe).
+- Rule→skill move mechanics (proven US-005, reuse for US-006 memory.md): `git mv
+  context/rules/<x>.md <skill>/{SKILL.md|references/<x>.md}` records a clean
+  rename, then Write a thin "Moved." pointer back at `context/rules/<x>.md` so
+  the ~30 inbound PATH refs (skills, IDENTITY/MEMORY, protected-paths,
+  blog/wiki, docs) keep resolving — only CONTENT-greping eval probes need a
+  repoint. A rule promoted to a top-level SKILL.md needs YAML frontmatter
+  (`name`/`description` with a TRIGGER clause) prepended above the H1; that
+  auto-registers the slash command (the in-session skill list refreshed to show
+  /advisor) with NO manual table/registry edit and no consistency probe. To
+  enumerate which eval probes couple to a rule, grep `evals/probes/` for the
+  rule path AND for its load-bearing content phrases — paths resolve via the
+  pointer, but a probe that greps SECTION CONTENT (advisor-monitored-loop greps
+  "## Pipeline Variants") breaks when the content moves out to the skill.
+- The `curl-bash-safe-alternatives` probe guards the remote-installer safety
+  norm against docs/, NOT against context/rules/remote-installers.md — so that
+  rule could be DELETED (zero inbound) with the probe staying green. Confirm a
+  to-be-deleted rule's norm has an independent guard (or no consumer) before rm.
+- Tier-removal mechanics (US-006, the M4 always-on collapse): move content to the
+  owning skills, then DELETE the whole `context/rules/` dir + the `.claude/rules`
+  symlink (US-005's thin pointers are gone, so every live inbound ref must be
+  repointed in THIS story). Only ONE eval probe couples (`memory-gitignore-claim.sh`
+  → repoint its `RULE=` to `.mifune/skills/retro/references/memory-protocol.md`); the
+  gate stays green regardless of the ~50 prose refs, but dangling refs degrade the
+  harness, so repoint the LIVE operational set and LEAVE frozen records.
+  **Repoint (live):** AGENTS.md (loader + skills table), all `.mifune/skills/*`,
+  `crons/`, `scripts/cron-runtime.ts`, `.claude/protected-paths.txt`, context-audit
+  (incl. its functional `[ -f ] || continue` glob — harmless but update the budget
+  model + comment example), always-loaded `context/{IDENTITY,TOOLS,README}.md` +
+  relocated `context/directory-readme.md`, dir READMEs (`.worktrees/`, `packages/`,
+  `memory/`), `.devcontainer/entrypoint.sh` comment. **Leave (frozen):** CHANGELOG
+  existing entries, `blog/`, `docs/` (except the roadmap tick), `wiki/`, `tasks/`,
+  `evals/{capability,datasets}` fixtures, `.github/ISSUE_TEMPLATE/`, dated
+  `MEMORY.md`/`IDENTITY.md` lessons, the generic portable agents
+  (`rule-builder`/`critic`/`implementer`/`command-builder` describe the Claude Code
+  rules FEATURE, not this repo's tier), and `scripts/__tests__/issue-templates.test.ts`
+  (a NEGATIVE guard asserting `.claude/rules/git.md` must NOT appear — never "fix" it).
+  Two-prefix gotcha: refs use BOTH `context/rules/X.md` AND `.claude/rules/X.md` — sed both.
+- zsh sed-loop trap (bit me in US-006, builds on the documented zsh word-split lessons):
+  orchestrator Bash is zsh, where `for f in $FILES` does NOT word-split a multi-line
+  variable → sed receives the whole blob as one filename and edits NOTHING (a SILENT
+  no-op; the residual-grep showed all refs intact, so no partial damage). Use
+  `echo "$FILES" | while IFS= read -r f; do …; done` instead.
+
+## US-006 — 2026-06-22 06:29 UTC
+**Title**: M4: Always-on collapse (identity core)
+**Files changed**: context/rules/memory.md → .mifune/skills/retro/references/memory-protocol.md (moved, internal directory-readme refs fixed), context/rules/directory-readme.md → context/directory-readme.md (relocated), context/rules/{git,advisor-model,recursive-delegation,wiki,sandbox-processes,README}.md (deleted), .claude/rules symlink (removed), AGENTS.md (loader rewrite + skills-table refs), ~30 .mifune/skills/*/SKILL.md + references/templates (bulk repoint of memory/git/advisor/wiki/sandbox-processes paths), .mifune/skills/{harness-context,context-audit}/SKILL.md + context-audit/runner.sh (prose/glob rewrites), .mifune/README.md, .claude/protected-paths.txt, crons/{heartbeat,README}.md, scripts/cron-runtime.ts, context/{IDENTITY,TOOLS,README}.md, .devcontainer/entrypoint.sh (comment), .oh/README.md, .worktrees/README.md, packages/README.md, memory/{README,MEMORY,promotion-plan}.md, evals/README.md, evals/probes/memory-gitignore-claim.sh (repointed RULE=), docs/roadmap.md (M1–M6 Status ticked), CHANGELOG.md, tasks/mifune-b-state-migration/{prd.json,progress.txt}
+**Commit**: cf37769
+**Result**: PASS
+### What I did
+git mv'd memory.md into the /retro skill as references/memory-protocol.md and relocated directory-readme.md to a plain context/ doc, then deleted the remaining context/rules/ pointer files (git/advisor-model/recursive-delegation/wiki/sandbox-processes/README) and the .claude/rules symlink — removing the always-on rules tier entirely. Rewrote the AGENTS.md session-start loader + the rules-autoload sentence to load only the context/ identity files and name the canonical on-demand skills (/git, /advisor, /wiki-ingest, /t3, /retro). Repointed every LIVE inbound reference (the ~50-file operational set above, both `context/rules/` and `.claude/rules/` prefixes) at the content's new skill/context homes, and repointed the one coupled probe (memory-gitignore-claim → the moved protocol). Ticked docs/roadmap.md M1–M6 to ✅ Done. Eval suite: 55 PASS + 1 SKIPPED (next-dev-prod, env-dependent), zero REGRESSION; shellcheck clean on edited shell files; no broken symlink introduced (.claude/rules cleanly removed).
+### Learnings for future iterations
+The literal acceptance criteria named only the probe + AGENTS edits, but "remove the tier (pointer files deleted)" demands repointing the ~50 live refs US-005 had deferred behind pointers — see the new tier-removal Codebase Pattern for the live-vs-frozen boundary. The highest-value targets were the ALWAYS-LOADED identity files (context/IDENTITY.md principles, context/TOOLS.md, context/README.md) — easy to miss because they sit outside `.mifune/skills/`; broaden the ref sweep to the whole repo, not just the skills dir. context-audit needed three coordinated edits (drop the Rules row from the budget table, drop the now-empty inventory glob, update the --ablate comment example) because it MODELS the always-on budget that M4 shrinks. The bulk repoint hit zsh's word-split trap (silent no-op) — use `while IFS= read`. The eval gate never reddened from prose repoints (only memory-gitignore-claim couples), so the discipline that matters is completeness, not the gate.
+---
+
+## US-005 — 2026-06-22 06:18 UTC
+**Title**: M3: Rules → skills (easy first)
+**Files changed**: .mifune/skills/advisor/SKILL.md (new, from advisor-model.md + frontmatter), .mifune/skills/advisor/references/recursive-delegation.md (moved + cross-link repoint), .mifune/skills/wiki-ingest/references/schema.md (moved from wiki.md, content unchanged), .mifune/skills/t3/references/sandbox-processes.md (moved, content unchanged), context/rules/{advisor-model,recursive-delegation,wiki,sandbox-processes}.md (now thin pointers), context/rules/remote-installers.md (deleted), evals/probes/advisor-monitored-loop.sh (repointed), CHANGELOG.md, tasks/mifune-b-state-migration/prd.json, tasks/mifune-b-state-migration/progress.txt
+**Commit**: db9ade4
+**Result**: PASS
+### What I did
+git mv'd the four task-triggered rules into owning skills (advisor-model→/advisor SKILL.md, recursive-delegation→/advisor/references, wiki→wiki-ingest/references/schema.md, sandbox-processes→t3/references) and left a thin "Moved." pointer at each context/rules/ path so the ~30 existing path refs resolve. Deleted the orphan remote-installers.md (zero inbound skill/code refs; its curl|bash safe-alternative norm is independently guarded by the curl-bash-safe-alternatives probe against docs/, which stayed green). Added SKILL frontmatter (name/description/TRIGGER) so /advisor is Skill-tool-discoverable, and repointed only the one coupled eval probe (advisor-monitored-loop RULE → .mifune/skills/advisor/SKILL.md). Eval suite: 55 PASS + 1 SKIPPED (next-dev-prod, env-dependent), zero REGRESSION.
+### Learnings for future iterations
+Only ONE eval probe couples to the moved rules: advisor-monitored-loop.sh (greps the "## Pipeline Variants" section for 4 exact phrases — preserve them verbatim when moving advisor-model.md → SKILL.md, and repoint RULE). memory-gitignore-claim.sh references context/rules but NOT any US-005 file (it's a US-006/memory.md concern); git-skill.sh does not exist (the prior "3 probes" note was stale). The wiki schema move is eval-neutral: wiki-readme-index.sh implements the §6 awk extraction on wiki/*.md entries, it does NOT read context/rules/wiki.md. The prd's Wiki-Alignment note says wiki.md content is UNCHANGED, so schema.md/sandbox-processes.md are pure renames (no internal self-ref edits) — the thin pointer resolves any "context/rules/wiki.md" self-references. Adding a SKILL.md to a skill dir auto-registers the slash command (the skill list refreshed mid-session showing /advisor) — no manual registry/table edit needed and no probe enforces a skills-table↔dir consistency check. NOT touched (out of US-005 scope, all still resolve via the pointers): the .mifune/skills/context-audit/probes/probe-{advisor,recursive,sandbox}.md markdown specs (context-audit is not the eval gate), the wiki-*/ship-spec/teach SKILL descriptions that name context/rules/wiki.md by path, and .claude/protected-paths.txt (lists .claude/rules/* which resolve through the symlink). US-006 owns the loader rewrite + context/rules tier removal + roadmap tick.
+
+---
+
+## US-004 — 2026-06-22 05:55 UTC
+**Title**: M2: .oh/ config surface
+**Files changed**: .oh/README.md (new namespace anchor), install/banner.sh (stale .openharness comment corrected), CHANGELOG.md, tasks/mifune-b-state-migration/prd.json, tasks/mifune-b-state-migration/progress.txt
+**Commit**: ec0558f
+**Result**: PASS
+### What I did
+Established `.oh/` as the oh-CLI/installer config surface per the directory-README convention: `.oh/README.md` documents the namespace, its external consumer (oh CLI / `oh harness add` / container build), the belongs-here-vs-root boundary, and the relocation policy. Corrected the stale `.openharness` comment in `install/banner.sh:20` to name the actual repo-root `config.json` it reads (line 25). Relocated NO installer config — the prd deliverable is the namespace + rescope, not blind relocation — and recorded the rationale (candidate scripts' refs span CI/Makefile/tests/boot-lint; `harness.yaml`/`config.json` are pinned to root by probes + runtime). Eval suite: zero REGRESSION (all 55 PASS + 1 SKIPPED next-dev-prod); shellcheck -S warning clean on banner.sh.
+### Learnings for future iterations
+The conservative reading was correct: NO probe couples to `.oh/`, `.openharness`, `install/banner.sh`, or `config.json` (the four grep-matched probes pin `harness.yaml`/`config.json` at root but don't grep banner content), so the namespace+rescope is eval-neutral. Confirm a new dotdir isn't gitignored before relying on its README to anchor it (`git check-ignore -v .oh/README.md`). The plan's relocation table (install.sh/harness-config.sh/docker-compose.sh/check-pnpm-pin.sh → .oh/) is explicitly subordinated by the prd to "only if CI+eval green" — those four span CI workflows + Makefile + vitest + the boot-lint `scripts/*.sh` shellcheck glob, so relocating any would need `.oh/*.sh` added to the glob (the `.claude/hooks/*.sh` precedent) plus a `boot-lint-glob` probe repoint — deferred, rationale recorded in `.oh/README.md`. For US-005/US-006 (rules→skills), the 3 context/rules-coupled probes (git-skill, memory-gitignore-claim, advisor-monitored-loop) DO need repointing — unlike this story.
+---
+
+## US-001 — 2026-06-22 05:29 UTC
+**Title**: M1: Agents → .mifune/agents
+**Files changed**: .claude/agents (now symlink), .mifune/agents/*.md (7 moved files), .mifune/README.md, CHANGELOG.md, tasks/mifune-b-state-migration/prd.json, tasks/mifune-b-state-migration/progress.txt
+**Commit**: bcf8e40
+**Result**: PASS
+### What I did
+git mv'd .claude/agents/ (7 sub-agent definitions) into .mifune/agents/ as the canonical home, then created the .claude/agents -> ../.mifune/agents back-symlink (git-tracked, mode 120000). Verified .claude/agents/critic.md and the .codex/agents -> .claude/agents -> .mifune/agents chain both resolve, and that protected-paths.txt refs still exist. Listed agents/ as a portable primitive in .mifune/README.md and recorded the move under CHANGELOG ### Changed.
+### Learnings for future iterations
+Whole-dir `git mv .claude/<x> .mifune/<x>` is cleaner than per-file moves and git records renames. No eval probe references the agents path, so the move was eval-neutral (56 PASS/SKIPPED, zero REGRESSION). The same mechanics apply to US-002 hooks — but settings.json hook command paths and the harness-ci-hooks-paths probe DO couple to .claude/hooks, so US-002 must verify those resolve through the new symlink (US-001 had no such coupling). Scope discipline held: roadmap left for US-006.
+---
+
+## US-002 — 2026-06-22 05:34 UTC
+**Title**: M5: Hooks → .mifune/hooks
+**Files changed**: .claude/hooks (now symlink -> ../.mifune/hooks), .mifune/hooks/*.sh (4 moved files: deny-env-dump, deny-secret-paths, notify_slack, warn-devtcp), .github/workflows/ci-harness.yml (added .mifune/hooks/** to both path filters), .mifune/README.md (hooks/ row), CHANGELOG.md, tasks/mifune-b-state-migration/prd.json, tasks/mifune-b-state-migration/progress.txt
+**Commit**: 6b1bf6d
+**Result**: PASS
+### What I did
+git mv'd .claude/hooks/ (4 enforcement hook scripts) into .mifune/hooks/ as the canonical home, then created the .claude/hooks -> ../.mifune/hooks back-symlink (git-tracked, mode 120000). Verified settings.json hook command paths, the .codex/hooks/ wrapper, and the devtcp-hook probe (HOOK=$ROOT/.claude/hooks/warn-devtcp.sh) all resolve through the symlink. Added .mifune/hooks/** to both CI push+pull_request path filters alongside the probe-pinned .claude/hooks/** so hook edits at the new canonical path still trigger CI (the #202 guarantee), keeping harness-ci-hooks-paths green. Listed hooks/ as a portable primitive in .mifune/README.md and recorded the move under CHANGELOG ### Changed. Eval suite: 55 PASS + 1 SKIPPED (next-dev-prod, env-dependent), zero REGRESSION.
+### Learnings for future iterations
+The big gotcha (now also a top-of-file Codebase Pattern): GitHub Actions `paths:` filters match the LITERAL git path of changed files and do NOT follow symlinks, so the move silently breaks CI-trigger coverage of hooks unless `.mifune/hooks/**` is added to the filters — the static probe greps for `.claude/hooks/**` and can't catch the runtime gap. devtcp-hook (referencing .claude/hooks/warn-devtcp.sh) stayed green WITHOUT a repoint because it resolves through the symlink; only path-FILTER matching needed the new entry, not path-RESOLUTION. The .codex/hooks/ wrapper is a real dir with one file (not a symlink chain like .codex/agents), so no chain concern.
+---
+
+## US-003 — 2026-06-22 05:49 UTC
+**Title**: M6: Skill-private scripts → skill dirs
+**Files changed**: .mifune/skills/autopilot/autopilot-caps.sh (moved from scripts/ + root-resolution fix), .mifune/skills/prompt-miner/prompt-miner-caps.sh (moved from scripts/ + sibling-exec fix), .mifune/skills/autopilot/SKILL.md (§1 recheck refs), evals/probes/autopilot-preflight-gate.sh, evals/probes/locked-append-critical-path.sh, crons/autopilot.md, crons/prompt-miner.md, crons/README.md, scripts/__tests__/autopilot-caps.test.ts, .github/workflows/ci-harness.yml (shellcheck glob), harness.yaml, context/REPO_MAP.md, scripts/README.md, CHANGELOG.md, tasks/mifune-b-state-migration/prd.json, tasks/mifune-b-state-migration/progress.txt
+**Commit**: 1e96dec
+**Result**: PASS
+### What I did
+git mv'd the two single-owner caps scripts into their owning skill dirs (the eval/run.sh precedent) and STAYed the five shared scripts at scripts/. Fixed the moved scripts' internal path resolution: autopilot-caps.sh now walks up to the repo root (the eval/run.sh idiom) so it keeps reading harness.yaml + the root scripts/{harness-config,locked-append}.sh; prompt-miner-caps.sh execs the sibling autopilot/autopilot-caps.sh. Repointed the two cron preflight paths + body refs, the autopilot SKILL §1 recheck, the autopilot-preflight-gate + locked-append-critical-path probes, the autopilot-caps.test.ts SCRIPT path, and the harness.yaml/REPO_MAP/scripts-README doc refs; added the two skill scripts to the CI shellcheck glob via the .claude/skills symlinks. Eval suite: zero REGRESSION (all probe rows PASS/SKIPPED); vitest autopilot-caps (18) + cron-runtime (97) = 115 green; shellcheck -S warning clean on both moved scripts and the full CI glob.
+### Learnings for future iterations
+The load-bearing change was NOT the move itself but the moved scripts' root resolution: a `REPO_ROOT="$(dirname "$SCRIPT_DIR")"` assumption silently breaks (loses harness.yaml caps + locked-append serialization) — adopt the eval/run.sh walk-up (see new Codebase Pattern). Probe coupling came in pairs: the cron `preflight:` value AND the autopilot-preflight-gate regex must move together; the SKILL §1 ref AND the same probe's `grep -Fq` must move together. The CI shellcheck glob (`scripts/*.sh`) drops the moved scripts — eval can't catch it; add `.claude/skills/<skill>/*.sh` (the `.claude/hooks/*.sh` precedent). Left the wiki/prompt-miner.md narrative ref to the old preflight path UNCHANGED (a clean wiki edit needs an `updated:` bump + README regen, out of US-003 scope; prd scopes wiki NOT-APPLICABLE) and the drift-check/cron-runtime FIXTURE strings unchanged (synthetic, pass regardless). Unlike US-002 hooks, NO CI path-filter edit was needed: `.mifune/skills/**` was already in the filters from the skills move.
+---
+
+STATUS: COMPLETE

@@ -86,12 +86,12 @@ dependency order (the **Depends on** column); never start a blocked step.
 | Milestone | Gist | Depends on | Status |
 |---|---|---|---|
 | M0 | Namespace taxonomy + B-state north-star (this page) | — | ✅ Done |
-| M1 | Agents → `.mifune/agents` | M0 | Next |
-| M2 | `.oh/` config surface (rescope the dead `.openharness/`) | M0 | Planned |
-| M3 | Rules → skills (easy first): `remote-installers` delete · `advisor` + `recursive-delegation` → `/advisor` · `wiki` → `wiki-ingest/references` · `sandbox-processes` → skill ref | M1 | Planned |
-| M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `context/rules/` | M3 | Planned |
-| M5 | Hooks → `.mifune/hooks` | M1 | Planned |
-| M6 | Skill-private scripts → skill dirs (`autopilot-caps`, `prompt-miner-caps`); shared scripts stay at root | M1 | Planned |
+| M1 | Agents → `.mifune/agents` | M0 | ✅ Done |
+| M2 | `.oh/` config surface (rescope the dead `.openharness/`) | M0 | ✅ Done |
+| M3 | Rules → skills (easy first): `remote-installers` delete · `advisor` + `recursive-delegation` → `/advisor` · `wiki` → `wiki-ingest/references` · `sandbox-processes` → skill ref | M1 | ✅ Done |
+| M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `context/rules/` | M3 | ✅ Done |
+| M5 | Hooks → `.mifune/hooks` | M1 | ✅ Done |
+| M6 | Skill-private scripts → skill dirs (`autopilot-caps`, `prompt-miner-caps`); shared scripts stay at root | M1 | ✅ Done |
 
 ## Maintenance pattern
 

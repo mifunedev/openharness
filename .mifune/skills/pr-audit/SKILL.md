@@ -264,7 +264,7 @@ Only when `--deep` is set. For PRs in the **CI-failing / conflicting /
 changes-requested** buckets (the ones whose *why* isn't visible from metadata),
 spawn parallel sub-agent reviewers **in one message**, capped at ~5 (state in
 the report if more were flagged than reviewed — no silent truncation). Brief
-each per `context/rules/advisor-model.md` (Goal / Constraints / Acceptance /
+each per `.mifune/skills/advisor/SKILL.md` (Goal / Constraints / Acceptance /
 Start here / Out of scope). Each reviewer:
 
 - reads `gh pr diff <N>` and `gh pr checks <N>` (and the failing job log for CI reds)
@@ -338,7 +338,7 @@ Append to `memory/$(date -u +%Y-%m-%d)/log.md` (create the dir first):
 - **Observation**: [one sentence — top finding]
 ```
 
-Then run the qualify/improve pass per `context/rules/memory.md`.
+Then run the qualify/improve pass per `.mifune/skills/retro/references/memory-protocol.md`.
 
 ## Reference
 
@@ -385,6 +385,6 @@ Then run the qualify/improve pass per `context/rules/memory.md`.
 | Ready-PR selector | `crons/heartbeat.md` (autopilot ready-PR nudge) |
 | PR title / base / size conventions | `.claude/skills/git/SKILL.md` |
 | Autopilot caps (10 total / 6 daily) | `.claude/skills/autopilot/SKILL.md` § Guardrails |
-| Parallel-agent briefing format | `context/rules/advisor-model.md` |
+| Parallel-agent briefing format | `.mifune/skills/advisor/SKILL.md` |
 | Per-PR diff correctness (escalate, don't duplicate) | `/code-review` |
-| Memory Improvement Protocol | `context/rules/memory.md` |
+| Memory Improvement Protocol | `.mifune/skills/retro/references/memory-protocol.md` |

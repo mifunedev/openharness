@@ -134,7 +134,7 @@ Then ask (use `AskUserQuestion`). Run the removal only on explicit approval. Wit
 
 ### 8. Log (Memory Improvement Protocol)
 
-Always, per `context/rules/memory.md`:
+Always, per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "memory/$TODAY"

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# scripts/autopilot-caps.sh — deterministic autopilot PR-cap preflight gate.
+# .mifune/skills/autopilot/autopilot-caps.sh — deterministic autopilot PR-cap
+# preflight gate (skill-private: owned by the /autopilot skill, rides along with
+# it like the /eval skill's run.sh).
 #
 # Canonical source of truth for the autopilot caps (the cap math + skip-logging
 # extracted verbatim from the in-session shell in
@@ -31,17 +33,25 @@
 #   HARNESS_YAML          override the harness.yaml path (default <root>/harness.yaml)
 set -euo pipefail
 
-# This script lives in <root>/scripts/; resolve the harness root so the caps can
-# default from harness.yaml via the canonical POSIX parser (scripts/harness-config.sh).
+# This script lives in <root>/.mifune/skills/autopilot/ but reads root-level
+# harness.yaml and execs the shared root scripts (harness-config.sh,
+# locked-append.sh) that STAY at <root>/scripts/. The skill may be reached through
+# agent-symlinks (.claude/skills) or the neutral .mifune/skills source, so walk
+# upward to find the repo root (the dir holding scripts/cron-runtime.ts) instead
+# of hard-coding a fixed depth — the same idiom as .mifune/skills/eval/run.sh.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+REPO_ROOT="$SCRIPT_DIR"
+while [ "$REPO_ROOT" != "/" ] && [ ! -f "$REPO_ROOT/scripts/cron-runtime.ts" ]; do
+  REPO_ROOT="$(dirname "$REPO_ROOT")"
+done
+SCRIPTS_DIR="$REPO_ROOT/scripts"
 HARNESS_YAML="${HARNESS_YAML:-$REPO_ROOT/harness.yaml}"
 
 # Read a flat section.key from harness.yaml (empty when the file/key is absent or
 # commented). harness-config.sh is the single source of truth for the format.
 harness_cfg() {
-  [ -f "$HARNESS_YAML" ] && [ -f "$SCRIPT_DIR/harness-config.sh" ] \
-    && sh "$SCRIPT_DIR/harness-config.sh" get "$1" "$HARNESS_YAML" 2>/dev/null || true
+  [ -f "$HARNESS_YAML" ] && [ -f "$SCRIPTS_DIR/harness-config.sh" ] \
+    && sh "$SCRIPTS_DIR/harness-config.sh" get "$1" "$HARNESS_YAML" 2>/dev/null || true
 }
 
 DEFAULT_TOTAL_CAP=10
@@ -112,8 +122,8 @@ resolve_autopilot_log_root() {
 # parsing is unchanged. Diagnostics → stderr (stdout stays the STATUS token).
 append_runtime_log() {
   local target="$1"
-  if [ -x "$SCRIPT_DIR/locked-append.sh" ]; then
-    "$SCRIPT_DIR/locked-append.sh" "$target" || {
+  if [ -x "$SCRIPTS_DIR/locked-append.sh" ]; then
+    "$SCRIPTS_DIR/locked-append.sh" "$target" || {
       printf 'autopilot-caps: WARNING: locked append failed for %s; log entry dropped\n' "$target" >&2
       cat >/dev/null || true
     }

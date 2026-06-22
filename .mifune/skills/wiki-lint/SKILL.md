@@ -22,7 +22,7 @@ stale, deprecated, orphaned, and broken-link entries; regenerate the index
 atomically.
 
 The canonical schema, frontmatter extraction command, cross-link convention,
-and confidence lifecycle all live in `context/rules/wiki.md`. This skill
+and confidence lifecycle all live in `.mifune/skills/wiki-ingest/references/schema.md`. This skill
 defers to those rules — it does not redefine them.
 
 `wiki/README.md` is generated state, not hand-authored inventory. The tier-A
@@ -96,7 +96,7 @@ If `$ENTRIES_COUNT = 0`, skip all check steps and proceed directly to
 ### 3. Extract frontmatter for each entry
 
 For every entry path, extract its YAML frontmatter using the canonical command
-locked in `context/rules/wiki.md` § 6:
+locked in `.mifune/skills/wiki-ingest/references/schema.md` § 6:
 
 ```bash
 awk '/^---$/{f=!f; next} f{print}' wiki/<slug>.md
@@ -204,7 +204,7 @@ If `${#DEPRECATED[@]} = 0`, print `  (none)`.
 **Critical constraint**: `/wiki-lint` ONLY REPORTS deprecated entries — it NEVER
 autonomously SETS `confidence: deprecated`. The `deprecated` value is set
 MANUALLY by the orchestrator only, per the lifecycle defined in
-`context/rules/wiki.md` § 5. This constraint is non-negotiable.
+`.mifune/skills/wiki-ingest/references/schema.md` § 5. This constraint is non-negotiable.
 
 Stale-90d (§ 4) and Deprecated (§ 5) are always reported separately. They are
 distinct finding types and MUST NOT be conflated — an entry can be stale-90d
@@ -309,7 +309,7 @@ For each finding in `BROKEN_LINKS`, print one line: `  - <source-slug> → [[<mi
 
 If `${#BROKEN_LINKS[@]} = 0`, print `  (none)`.
 
-See `context/rules/wiki.md` § 4 for the cross-link convention and grep
+See `.mifune/skills/wiki-ingest/references/schema.md` § 4 for the cross-link convention and grep
 patterns that govern outbound link syntax (`\[\[[a-z0-9-]+\]\]`).
 
 ### 8. Contradiction detection (stub)
@@ -458,17 +458,17 @@ Field definitions:
 | `Result` | `OP` on success (including dry-run); `FAIL` if the skill errored out |
 | `Observation` | One sentence — e.g., "1 orphan (single-entry corpus, true positive); no other findings" |
 
-Then apply the qualify/improve loop per `context/rules/memory.md` § Write:
+Then apply the qualify/improve loop per `.mifune/skills/retro/references/memory-protocol.md` § Write:
 
 - Did any finding reveal a gap in the wiki schema or cross-link conventions?
 - Did the atomic write step surface an edge case worth capturing?
 - If yes, propose a `memory/MEMORY.md` addition.
 
-See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
+See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
 ## Extraction Command Reference
 
-The canonical frontmatter extraction command, per `context/rules/wiki.md` § 6:
+The canonical frontmatter extraction command, per `.mifune/skills/wiki-ingest/references/schema.md` § 6:
 
 ```bash
 awk '/^---$/{f=!f; next} f{print}' wiki/<slug>.md
@@ -501,7 +501,7 @@ and distinct recommendations.
   neither. Always report them under separate headings.
 - **Setting `confidence: deprecated` autonomously** — `/wiki-lint` is a reporter,
   not a writer. The `deprecated` flag is set MANUALLY by the orchestrator per
-  `context/rules/wiki.md` § 5. If `/wiki-lint` sets this flag, it violates the
+  `.mifune/skills/wiki-ingest/references/schema.md` § 5. If `/wiki-lint` sets this flag, it violates the
   confidence lifecycle.
 - **Treating a single-entry orphan as a false positive** — a corpus with one entry
   always produces one orphan finding. This is correct behavior. Document it in the
@@ -521,10 +521,10 @@ and distinct recommendations.
 
 ## See Also
 
-- `context/rules/wiki.md` — the locked schema, § 4 (cross-link / orphan / broken-link
+- `.mifune/skills/wiki-ingest/references/schema.md` — the locked schema, § 4 (cross-link / orphan / broken-link
   definitions), § 5 (confidence lifecycle: who SETS vs REPORTS), § 6 (frontmatter
   extraction canonical command)
 - `/wiki-ingest` — add or update an entry; the only authorized write path to `wiki/`
 - `/wiki-query` — search the wiki by topic; shares the § 6 extraction command
-- `context/rules/memory.md` — Memory Improvement Protocol (MIP) governing the log step
+- `.mifune/skills/retro/references/memory-protocol.md` — Memory Improvement Protocol (MIP) governing the log step
 - `/context-audit` — reference for `--dry-run` flag pattern and atomic-write convention

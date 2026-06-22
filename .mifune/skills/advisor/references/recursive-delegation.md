@@ -4,7 +4,7 @@
 >
 > RAO is an **RL training** paper. Its quantitative gains (depth-12 generalization, 2.5× wall-clock reduction, context-overflow handling) are properties of a *trained* policy. This harness uses an untrained inference-only model; only the **structural patterns** below transfer. Treat the fields in this rule as strong conventions, not runtime-enforced caps — an untrained model may ignore them.
 
-Extends `context/rules/advisor-model.md` for multi-level delegation trees (root → child → grandchild).
+Extends the `/advisor` skill (`../SKILL.md`) for multi-level delegation trees (root → child → grandchild).
 
 ## When to Use
 
@@ -109,6 +109,6 @@ The paper's `async launch_subagent` runs inside a Python REPL with `asyncio` cor
 
 ## See Also
 
-- `context/rules/advisor-model.md` — the flat 2-step / 3-step / multi-turn parent rules this one extends.
+- `../SKILL.md` (the `/advisor` skill) — the flat 2-step / 3-step / multi-turn parent rules this one extends.
 - `.claude/skills/delegate/SKILL.md` — parallel wave execution (the orthogonal axis); see § 5 *Execute waves* for the parallel-spawn primitive.
 - `CLAUDE.md` § *What You Do NOT Do* — the orchestrator-vs-application-code boundary referenced above.

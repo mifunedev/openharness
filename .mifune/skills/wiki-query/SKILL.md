@@ -3,7 +3,7 @@ name: wiki-query
 description: |
   Search the wiki by topic and read top match(es) into context. Greps only
   frontmatter (title, slug, tags) of wiki/*.md entries using the canonical
-  extraction command from context/rules/wiki.md § 6. Splits a multi-word
+  extraction command from .mifune/skills/wiki-ingest/references/schema.md § 6. Splits a multi-word
   topic into space-separated OR terms; an entry matches if ANY term appears
   in the extracted frontmatter. Returns all matching paths to stdout.
   Sub-cap: reads all matches when fewer than 3; reads top 3 (by updated:
@@ -102,7 +102,7 @@ If no `wiki/*.md` files exist, jump to step 5 (empty result).
 ### 3. Grep frontmatter for each term — OR semantics
 
 For each entry path, extract its frontmatter using the canonical command locked
-in `context/rules/wiki.md` § 6:
+in `.mifune/skills/wiki-ingest/references/schema.md` § 6:
 
 ```bash
 awk '/^---$/{f=!f; next} f{print}' wiki/<slug>.md
@@ -255,7 +255,7 @@ Field definitions:
 | `Result` | `OP` on success (including empty-result); `FAIL` if the skill errored |
 | `Observation` | One sentence — e.g., "matched 2 entries on `github`; both read into context" |
 
-Then apply the qualify/improve loop per `context/rules/memory.md`:
+Then apply the qualify/improve loop per `.mifune/skills/retro/references/memory-protocol.md`:
 
 - Did the query reveal a gap in the wiki (topic the user expected to find but didn't)?
 - Is the absence itself a signal worth noting (e.g., "no entry for X despite repeated re-derivation")?
@@ -263,7 +263,7 @@ Then apply the qualify/improve loop per `context/rules/memory.md`:
 
 ## Extraction Command Reference
 
-The canonical frontmatter extraction command, per `context/rules/wiki.md` § 6:
+The canonical frontmatter extraction command, per `.mifune/skills/wiki-ingest/references/schema.md` § 6:
 
 ```bash
 awk '/^---$/{f=!f; next} f{print}' wiki/<slug>.md
@@ -293,7 +293,7 @@ work in the other).
 
 ## See Also
 
-- `context/rules/wiki.md` — the locked schema, § 6 (frontmatter extraction canonical command), § 2 (entry schema), § 4 (cross-link convention)
+- `.mifune/skills/wiki-ingest/references/schema.md` — the locked schema, § 6 (frontmatter extraction canonical command), § 2 (entry schema), § 4 (cross-link convention)
 - `/wiki-ingest` — add or update an entry
 - `/wiki-lint` — health-check the corpus and regenerate `wiki/README.md`
-- `context/rules/memory.md` — Memory Improvement Protocol (MIP) governing the log step
+- `.mifune/skills/retro/references/memory-protocol.md` — Memory Improvement Protocol (MIP) governing the log step

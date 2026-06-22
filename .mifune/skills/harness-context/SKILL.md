@@ -23,11 +23,12 @@ conventions, git workflow, or where files live.
    `scripts/README.md`, `.worktrees/README.md`) and the `Project
    Structure` section of `CLAUDE.md`. There is no single comprehensive
    tree — use the filesystem and the directory READMEs.
-3. Read relevant rules under `.claude/rules/`:
-   - `git.md` — issue / branch / commit / PR conventions
-   - `sandbox-processes.md` — tmux sessions for long-running processes
-   - `directory-readme.md` — when a directory needs a README
-   - `advisor-model.md` — pattern for delegating to sub-agents
+3. For behavioral norms (formerly the `context/rules/` tier, collapsed into
+   on-demand skills in B-state M4), the canonical homes are now:
+   - `/git` (`.mifune/skills/git/SKILL.md`) — issue / branch / commit / PR conventions
+   - `/t3` (`.mifune/skills/t3/references/sandbox-processes.md`) — tmux sessions for long-running processes
+   - `context/directory-readme.md` — when a directory needs a README
+   - `/advisor` (`.mifune/skills/advisor/SKILL.md`) — pattern for delegating to sub-agents
 4. For skill-listing or skill-source-of-truth questions, load `references/skill-source-of-truth.md` and separate the tracked Open Harness shared skill library (`.mifune/skills/*/SKILL.md`, exposed through `.claude/skills`, `.codex/skills`, `.pi/skills`, and Hermes' runtime `.hermes/skills/openharness` symlink) from the active Hermes runtime catalog (`.hermes/skills/` plus bundled/profile skills). Do not present `hermes skills list` as the repo source of truth without this distinction.
 5. For shared-skill path migrations or cross-agent skill wiring, load `references/shared-skills-symlink-migration.md`; update symlinks, runtime boot setup, docs, CI path filters, cron invocations, exact-path eval probes, and fixed-depth support scripts together before declaring the migration done.
 6. For optional sandbox agent/runtime integrations, audit the full runtime/config/auth surface together: compose mounts and env, entrypoint setup/migration, default config seeding, banner sentinels, `.gitignore`, docs/wiki/changelog, and compose config validation. If Hermes is involved, load `references/hermes-state-auth-split.md` for the established single-device project-local runtime (config + auth + sessions all under one `HERMES_HOME`) + shared-skill symlink pattern, and why auth must not be a cross-device symlink.
@@ -39,5 +40,5 @@ conventions, git workflow, or where files live.
 - Short factual answer first, then file references.
 - Lifecycle questions (setup / validate / teardown): cite the relevant
   section of `CLAUDE.md`.
-- Convention questions: cite the specific rule file under
-  `.claude/rules/`.
+- Convention questions: cite the owning skill (`.mifune/skills/<name>/SKILL.md`)
+  or the relevant `context/` doc.

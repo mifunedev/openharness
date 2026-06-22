@@ -17,7 +17,8 @@ sandbox_name="${SANDBOX_NAME:-$(hostname)}"
 timezone="${TZ:-$(date +%Z 2>/dev/null)}"
 workspace_dir="${HOME}/harness/workspace"
 
-# Parse compose overlays from openharness config
+# Parse compose overlays from the harness config.json (the old .openharness/config.json,
+# now repo-root config.json; see .oh/README.md for the installer config surface)
 overlays=""
 if command -v jq >/dev/null 2>&1; then
   overlays=$(jq -r \

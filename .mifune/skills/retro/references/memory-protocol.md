@@ -50,7 +50,7 @@ mkdir -p "memory/$TODAY"
 # then append to memory/$TODAY/log.md
 ```
 
-For directory anchor and gitignore conventions see `context/rules/directory-readme.md`.
+For directory anchor and gitignore conventions see `context/directory-readme.md`.
 
 ## Read
 
@@ -164,7 +164,7 @@ goes in `IDENTITY.md`.
 
 | Resource | Path |
 |----------|------|
-| Directory README convention | `context/rules/directory-readme.md` |
+| Directory README convention | `context/directory-readme.md` |
 | Heartbeat cron (daily log writer) | `crons/heartbeat.md` |
 | Long-term lessons (instance) | `memory/MEMORY.md` |
 | Identity / operating principles | `context/IDENTITY.md` |

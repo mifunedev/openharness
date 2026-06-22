@@ -2,7 +2,7 @@
 
 The Open Harness wiki (`wiki/`) is a personal-scale knowledge base compiled and maintained by the orchestrator. Its target quality bar is the DeepWiki treatment of `mifunedev/openharness`: architecture-first pages that explain source-backed system relationships, not loose notes. Entity pages hold **facts and synthesis** about recurring topics; they are loaded directly into context on demand (via `/wiki-query`) rather than retrieved through vector search.
 
-`context/rules/wiki.md` is the sole schema document for `wiki/`. There is no `wiki/CLAUDE.md` — that would collide with the root `CLAUDE.md` symlink to `AGENTS.md`.
+`.mifune/skills/wiki-ingest/references/schema.md` is the sole schema document for `wiki/`. There is no `wiki/CLAUDE.md` — that would collide with the root `CLAUDE.md` symlink to `AGENTS.md`.
 
 ---
 
@@ -12,7 +12,7 @@ The sharp test: *Is this a fact or synthesis about a topic, intended to be read 
 
 | Surface | Holds | Written by | When wiki wins instead |
 | --- | --- | --- | --- |
-| `context/rules/*.md` | Behavioral norms (prescriptive) | Deliberate orchestrator revision | Wiki holds **facts**, rules hold **how to behave** |
+| `.mifune/skills/*/SKILL.md` | Behavioral norms (prescriptive) | Deliberate orchestrator revision | Wiki holds **facts**, skills hold **how to behave** |
 | `context/IDENTITY.md` | Cross-session operating principles | Orchestrator, deliberate | Wiki is codebase/domain knowledge; IDENTITY is "always do X" |
 | `memory/MEMORY.md` | Distilled experiential lessons ("run on date X showed Y") | Orchestrator via `/retro` | Wiki entries are **reference**; memory is **journal** |
 | `memory/<topic>.md` | Ad-hoc reference notes, no schema, no retrieval | Any session | Wiki wins after a note is re-derived twice and earns a schema |
@@ -164,7 +164,7 @@ Lifecycle flow:
     [entry removed or moved to wiki/archive/<slug>.md]
 ```
 
-The archive vs. delete decision for `deprecated` entries is not yet defined — defer to `context/rules/wiki.md` update after the first deprecation in practice.
+The archive vs. delete decision for `deprecated` entries is not yet defined — defer to `.mifune/skills/wiki-ingest/references/schema.md` update after the first deprecation in practice.
 
 ---
 

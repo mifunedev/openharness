@@ -1,7 +1,7 @@
 # Promotion / Launch Plan — `mifunedev/openharness` on Developer Message Boards
 
 > Durable, tracked copy of the launch campaign plan (topic note per
-> `context/rules/memory.md` — campaign planning lives at `memory/<topic>.md`).
+> `.mifune/skills/retro/references/memory-protocol.md` — campaign planning lives at `memory/<topic>.md`).
 > Created 2026-06-10. Kept out of `docs/` deliberately: `docs/` publishes to
 > oh.mifune.dev, and a public site is the wrong home for launch strategy.
 > Scratch origin: `.claude/plans/kind-dancing-parnas.md`.

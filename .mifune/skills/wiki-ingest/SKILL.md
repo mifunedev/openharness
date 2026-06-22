@@ -5,7 +5,7 @@ description: |
   harness wiki. For URL/path ingest: WebFetch or reads the source, writes an
   immutable snapshot to wiki/raw/<yyyy-mm-dd>-<slug>.md, then writes or
   updates the corresponding wiki/<slug>.md entity page following the schema and
-  body-merge rules in context/rules/wiki.md. For draft promotion: resolves the
+  body-merge rules in .mifune/skills/wiki-ingest/references/schema.md. For draft promotion: resolves the
   most-recent draft from memory/*/wiki-drafts/<slug>.md (by ISO date in parent
   dir name, not mtime), checks staleness, then promotes to wiki/<slug>.md.
   Write operations are orchestrator-only; sub-agents propose drafts to
@@ -22,7 +22,7 @@ argument-hint: "<url|path> [--slug <override>] | --from-draft <slug> [--allow-st
 
 Snapshot a source and write or update a wiki entity page. This is the only authorized path for writing to `wiki/`. Sub-agents may not call this skill directly for write operations — they propose drafts to `memory/<today>/wiki-drafts/<slug>.md` and the orchestrator promotes via `--from-draft`.
 
-The canonical schema, slug derivation rules, and body-merge strategy all live in `context/rules/wiki.md`. This skill defers to those rules — it does not redefine them.
+The canonical schema, slug derivation rules, and body-merge strategy all live in `.mifune/skills/wiki-ingest/references/schema.md`. This skill defers to those rules — it does not redefine them.
 
 ## Argument interface
 
@@ -92,7 +92,7 @@ mkdir -p wiki/raw/
 
 ### 3. Slug derivation
 
-Slug derivation follows `context/rules/wiki.md` § 3 verbatim. Summary for reference (the rule document is authoritative):
+Slug derivation follows `.mifune/skills/wiki-ingest/references/schema.md` § 3 verbatim. Summary for reference (the rule document is authoritative):
 
 1. **URL — last non-UUID segment**: take the URL path, strip trailing slashes, split on `/`, take the last segment. If that segment matches `/^[0-9a-f-]{8,}$/i` (UUID or bare hash), proceed to rule 3.
    - `https://example.com/foo/bar` → `bar`
@@ -191,7 +191,7 @@ Check whether `wiki/<slug>.md` already exists.
 
 #### 6a. New entry (create)
 
-Write `wiki/<slug>.md` with valid frontmatter per `context/rules/wiki.md` § 2:
+Write `wiki/<slug>.md` with valid frontmatter per `.mifune/skills/wiki-ingest/references/schema.md` § 2:
 
 ```yaml
 ---
@@ -236,7 +236,7 @@ Field notes:
 
 #### 6b. Existing entry (update)
 
-When `wiki/<slug>.md` already exists, apply the body-merge strategy from `context/rules/wiki.md` § 7 verbatim:
+When `wiki/<slug>.md` already exists, apply the body-merge strategy from `.mifune/skills/wiki-ingest/references/schema.md` § 7 verbatim:
 
 1. **Replace `## Summary`**: overwrite the entire `## Summary` section (from `## Summary` heading to the next `##` heading) with the new summary from the fresh source.
 2. **Replace `## Detail`**: overwrite the entire `## Detail` section in-place with new detail prose.
@@ -246,7 +246,7 @@ When `wiki/<slug>.md` already exists, apply the body-merge strategy from `contex
 6. **Do NOT touch `created:`**: `created:` is immutable after initial creation.
 7. **Do NOT concatenate bodies**: the prior `## Summary` and `## Detail` content is replaced, not appended. The entry stays ≤ 600 words.
 
-Use the `Edit` tool to perform in-place section replacement. Extract the canonical frontmatter first using the locked command from `context/rules/wiki.md` § 6:
+Use the `Edit` tool to perform in-place section replacement. Extract the canonical frontmatter first using the locked command from `.mifune/skills/wiki-ingest/references/schema.md` § 6:
 
 ```bash
 awk '/^---$/{f=!f; next} f{print}' wiki/<slug>.md
@@ -268,7 +268,7 @@ Sub-agents may propose new entries by writing drafts to `memory/<today>/wiki-dra
 /wiki-ingest --from-draft <slug>
 ```
 
-This gate preserves the concurrency invariant from `context/rules/memory.md`: only the orchestrator writes to tracked knowledge surfaces. A sub-agent that bypasses this by writing directly to `wiki/` is out of scope — the orchestrator may revert such writes.
+This gate preserves the concurrency invariant from `.mifune/skills/retro/references/memory-protocol.md`: only the orchestrator writes to tracked knowledge surfaces. A sub-agent that bypasses this by writing directly to `wiki/` is out of scope — the orchestrator may revert such writes.
 
 ### 9. Memory Improvement Protocol
 
@@ -299,8 +299,8 @@ Field guidance:
 - `Snapshot-Path`: path to the snapshot written (relative to harness root), or `—` on STALE/FAIL.
 - `Result`: `OP` for a completed ingest (create or update), `STALE` if the run exited on the staleness gate without `--allow-stale`, `FAIL` for any other error that prevented wiki writes.
 
-Then apply the qualify/improve pass per `context/rules/memory.md` § Write:
-- Did the ingest reveal a slug derivation edge case not covered by `context/rules/wiki.md` § 3?
+Then apply the qualify/improve pass per `.mifune/skills/retro/references/memory-protocol.md` § Write:
+- Did the ingest reveal a slug derivation edge case not covered by `.mifune/skills/wiki-ingest/references/schema.md` § 3?
 - Did the body-merge produce an unexpected result worth capturing?
 - If yes, propose a `memory/MEMORY.md` addition.
 
@@ -323,11 +323,11 @@ Then apply the qualify/improve pass per `context/rules/memory.md` § Write:
 
 | Rule | Section | What this skill defers to it for |
 |------|---------|----------------------------------|
-| `context/rules/wiki.md` | § 2 Entry schema | Frontmatter fields, body layout, ≤600-word cap |
-| `context/rules/wiki.md` | § 3 Slug derivation | URL/path-to-slug algorithm; UUID/hash error path |
-| `context/rules/wiki.md` | § 6 Frontmatter extraction | Canonical `awk` command for reading frontmatter on update |
-| `context/rules/wiki.md` | § 7 Body-merge strategy | Exact merge steps for existing entry updates |
-| `context/rules/memory.md` | § Write — MIP | Daily log format and qualify/improve loop |
+| `.mifune/skills/wiki-ingest/references/schema.md` | § 2 Entry schema | Frontmatter fields, body layout, ≤600-word cap |
+| `.mifune/skills/wiki-ingest/references/schema.md` | § 3 Slug derivation | URL/path-to-slug algorithm; UUID/hash error path |
+| `.mifune/skills/wiki-ingest/references/schema.md` | § 6 Frontmatter extraction | Canonical `awk` command for reading frontmatter on update |
+| `.mifune/skills/wiki-ingest/references/schema.md` | § 7 Body-merge strategy | Exact merge steps for existing entry updates |
+| `.mifune/skills/retro/references/memory-protocol.md` | § Write — MIP | Daily log format and qualify/improve loop |
 
 ### Smoke test (manual QA only)
 

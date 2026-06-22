@@ -66,7 +66,7 @@ Before teaching, decide whether the existing wiki model is still accurate:
 The wiki update/proposal must happen before the final teaching output. The operator should learn from the corrected model, not from stale PR archaeology.
 
 Wiki-write boundaries:
-- Keep entries within `context/rules/wiki.md` schema and word cap.
+- Keep entries within `.mifune/skills/wiki-ingest/references/schema.md` schema and word cap.
 - Update `updated:` when editing an existing entry; do not change `created:`.
 - Preserve `sources:` provenance; if task artifacts are the evidence, cite their paths in the proposed revision text rather than pretending they are raw external snapshots.
 - Do not use `/teach` for broad wiki restructures. If the model needs a new source capture, hand off to `/wiki-ingest`.

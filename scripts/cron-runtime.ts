@@ -563,7 +563,7 @@ export function decideOverlap(opts: {
 const FALLBACK_WORKTREE_DIR = ".worktrees/cron";
 
 // First existing remote (preferred) or local base branch, mirroring the
-// development→main→master precedence in context/rules/git.md. Returns a
+// development→main→master precedence in .mifune/skills/git/SKILL.md. Returns a
 // commit-ish suitable for `git worktree add --detach`, or null if none exist.
 function detectBaseRef(remote = "origin"): string | null {
   if (!isValidRemote(remote)) return null;

@@ -40,11 +40,11 @@ Or in this orchestrator's case: a permanent entry in `.claude/protected-paths.tx
 
 ### Issue first, then branch
 
-Per `.claude/rules/git.md` — every branch traces to an issue. Every PR closes one. This forces a moment of "what is this actually for" before any code is written.
+Per the `/git` skill (`.mifune/skills/git/SKILL.md`) — every branch traces to an issue. Every PR closes one. This forces a moment of "what is this actually for" before any code is written.
 
 ### CHANGELOG entries land in the same commit
 
-Per `.claude/rules/git.md` — entries under `## [Unreleased]` ship with the change that produced them. No "I'll add the changelog later." Later doesn't happen.
+Per the `/git` skill (`.mifune/skills/git/SKILL.md`) — entries under `## [Unreleased]` ship with the change that produced them. No "I'll add the changelog later." Later doesn't happen.
 
 ### Push is shared state
 

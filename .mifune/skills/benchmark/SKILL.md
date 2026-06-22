@@ -157,7 +157,7 @@ REDIRECT-FLAG: capability suite score flat at <X.XX>/2.00 for <N> cycles while N
 
 ## Memory Protocol
 
-After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
+After a run, append to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
 ## benchmark -- HH:MM UTC

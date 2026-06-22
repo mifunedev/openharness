@@ -128,7 +128,7 @@ Next: /ship-spec --plan .claude/specs/<slug>/spec.md
 
 ## Step 5 — Memory Protocol
 
-Per `context/rules/memory.md`, append to `memory/<UTC-date>/log.md` (create the dated directory if missing):
+Per `.mifune/skills/retro/references/memory-protocol.md`, append to `memory/<UTC-date>/log.md` (create the dated directory if missing):
 
 ```markdown
 ## imagine -- HH:MM UTC
@@ -139,7 +139,7 @@ Per `context/rules/memory.md`, append to `memory/<UTC-date>/log.md` (create the 
 - **Observation**: <one sentence on whether the scenario was rich enough to one-shot, or whether the open-questions section had to carry the weight>
 ```
 
-Then run the qualify/improve loop per `context/rules/memory.md`. Lessons about scenario-quality patterns (e.g. "scenarios under 10 words usually need a follow-up `/prd` pass") may belong in `memory/MEMORY.md`.
+Then run the qualify/improve loop per `.mifune/skills/retro/references/memory-protocol.md`. Lessons about scenario-quality patterns (e.g. "scenarios under 10 words usually need a follow-up `/prd` pass") may belong in `memory/MEMORY.md`.
 
 ## Anti-patterns
 

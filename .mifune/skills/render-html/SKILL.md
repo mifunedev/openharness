@@ -35,7 +35,7 @@ Common targets in this harness:
 Skip when the artifact is **source or pipeline input** — Markdown stays the substrate of the harness:
 - PRDs (`tasks/*/prd.md`), briefings, commit messages, PR bodies, `CHANGELOG.md`
 - Memory log entries themselves (`memory/<date>/log.md`)
-- Skill/rule/identity sources (`CLAUDE.md`, `context/rules/`, `.claude/skills/`)
+- Skill/identity sources (`CLAUDE.md`, `context/`, `.claude/skills/`)
 - Agent-to-agent handoffs (advisor → executor briefings)
 
 If asked to render any of the above, refuse and explain.
@@ -117,7 +117,7 @@ Append to `memory/<UTC-date>/log.md`:
 - **Observation**: <one sentence — what shape the artifact took, e.g. "filterable severity table with 17 rows + inline SVG dependency map">
 ```
 
-Then run the qualify/improve loop per `context/rules/memory.md`. If you learned something non-obvious about which HTML shape suited this artifact type, that may merit a line in `memory/MEMORY.md`.
+Then run the qualify/improve loop per `.mifune/skills/retro/references/memory-protocol.md`. If you learned something non-obvious about which HTML shape suited this artifact type, that may merit a line in `memory/MEMORY.md`.
 
 ## Anti-patterns
 

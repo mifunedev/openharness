@@ -86,7 +86,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Session role, permissions, startup load | `AGENTS.md`, `context/README.md`, `context/` | Defines orchestrator role, voice, session-start reads, and rules. |
 | Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml`, `scripts/README.md`, `scripts/docker-compose.sh` | Owns container image, compose overlays, generated env, and lifecycle commands. |
 | Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/pr-audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
-| Cron/autopilot behavior | `crons/README.md`, `crons/`, `scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `scripts/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog flow. |
+| Cron/autopilot behavior | `crons/README.md`, `crons/`, `scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.mifune/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog flow. |
 | Eval/probe regressions | `evals/README.md`, `evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
 | Task/spec implementation state | `tasks/README.md`, `tasks/<active-task>/` | PRD, critique, Ralph JSON, prompt, and task-specific artifacts. |
 | Docs/site/blog | `docs/`, `blog/`, `packages/docs/` | Source docs, Docusaurus site package, public content. |

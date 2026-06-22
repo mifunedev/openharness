@@ -1,6 +1,6 @@
 # Memory
 
-Long-term lessons distilled from session experience. Append-only. See `context/rules/memory.md` for the Memory Improvement Protocol.
+Long-term lessons distilled from session experience. Append-only. See `.mifune/skills/retro/references/memory-protocol.md` for the Memory Improvement Protocol.
 
 ## Lessons Learned
 

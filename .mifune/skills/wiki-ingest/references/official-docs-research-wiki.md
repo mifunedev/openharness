@@ -16,7 +16,7 @@ Use this pattern when a user asks to "add to wiki" but the source is a seed URL 
    - Subagents may draft proposed wiki text, but the orchestrator owns writes to `wiki/raw/`, `wiki/<slug>.md`, and cross-links.
 4. Snapshot every authoritative source that materially supports the final entry.
    - Prefer official docs over social posts, blog summaries, or inferred behavior.
-   - Keep raw snapshots immutable and synthesized entries bounded by `context/rules/wiki.md`.
+   - Keep raw snapshots immutable and synthesized entries bounded by `.mifune/skills/wiki-ingest/references/schema.md`.
 5. Cross-link counterpart concepts rather than merging unrelated domains into one page.
    - Example: a Claude Code workflows page can link to an inspectable-agent-harness/Pi workflows page as a related counterpart while keeping each page focused.
 6. Audit before finalizing.

@@ -13,7 +13,7 @@ description: |
   learning, context compression, reinforcement learning, wiki, docs, and
   memory scaffolding — and points at the deep-dive lint/audit skills rather
   than running them. Operationalizes the Memory Improvement Protocol
-  (context/rules/memory.md) as an explicit, evidence-driven, session-closing
+  (.mifune/skills/retro/references/memory-protocol.md) as an explicit, evidence-driven, session-closing
   skill rather than a per-run afterthought. Always appends a log entry.
   TRIGGER when: /retro invoked, or session closing with decisions,
   surprises, or failures worth preserving.
@@ -23,7 +23,7 @@ description: |
 
 Scientific session-closing retrospective. Turn the current conversation's signals into falsifiable hypotheses, test each against session evidence (for and against), assign a verdict and confidence, and promote only the supported, sufficiently-confident ones — with explicit confirmation — into the harness memory tiers (`memory/MEMORY.md`, `context/IDENTITY.md`). Always appends a log entry regardless of outcome.
 
-This is the deliberate "Improve" pass of the Memory Improvement Protocol defined in `context/rules/memory.md`, now evidence-driven. Running it as a named skill turns an optional afterthought into a first-class, propose-then-confirm operation — and the scientific layer guards against overfitting a single session into a durable lesson.
+This is the deliberate "Improve" pass of the Memory Improvement Protocol defined in `.mifune/skills/retro/references/memory-protocol.md`, now evidence-driven. Running it as a named skill turns an optional afterthought into a first-class, propose-then-confirm operation — and the scientific layer guards against overfitting a single session into a durable lesson.
 
 Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for deterministic checks and log rendering; use `${CLAUDE_SKILL_DIR}/references/report-schema.md` as the output contract. Shared repo primitives such as `scripts/locked-append.sh` are allowed only for cross-skill infrastructure.
 
@@ -107,10 +107,10 @@ Seed hypotheses by asking, for each subsystem, what *this session* revealed abou
 |-----------|--------------------------------------------------|----------------------------|
 | Continual learning | Did prior memory/identity get used, ignored, or contradicted? Did anything durable emerge? | `memory/MEMORY.md`, `context/IDENTITY.md` |
 | Context compression | Was loaded context bloated/redundant, or did a rule prove load-bearing? | `/context-audit`, `/caveman` |
-| Reinforcement learning | Did advisor/executor or recursive-delegation patterns help or hurt? Over/under-delegation? | `context/rules/advisor-model.md`, `recursive-delegation.md` |
+| Reinforcement learning | Did advisor/executor or recursive-delegation patterns help or hurt? Over/under-delegation? | `.mifune/skills/advisor/SKILL.md`, `recursive-delegation.md` |
 | Wiki | Did the session surface knowledge that belongs in the wiki, or hit stale/missing entries? | `/wiki-ingest`, `/wiki-lint` |
 | Docs | Did human-facing doc gaps or inaccuracies surface? | `docs/`, `blog/` |
-| Memory scaffolding | Did the log/tier protocol itself create friction or work cleanly? | `context/rules/memory.md`, `/retro` |
+| Memory scaffolding | Did the log/tier protocol itself create friction or work cleanly? | `.mifune/skills/retro/references/memory-protocol.md`, `/retro` |
 
 ## Instructions
 
@@ -135,7 +135,7 @@ For every hypothesis, cite session evidence for it and actively search for evide
 
 ### 4. Qualify filter
 
-Discard any surviving hypothesis that matches a row in the "What Does NOT Go in Memory" table (`context/rules/memory.md`):
+Discard any surviving hypothesis that matches a row in the "What Does NOT Go in Memory" table (`.mifune/skills/retro/references/memory-protocol.md`):
 
 | Discard if | Reason |
 |------------|--------|

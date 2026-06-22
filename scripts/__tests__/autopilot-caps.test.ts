@@ -16,7 +16,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
-const SCRIPT = path.join(REPO_ROOT, "scripts", "autopilot-caps.sh");
+// autopilot-caps.sh is skill-private: it rides along with the /autopilot skill
+// under .mifune/skills/ (the eval/run.sh precedent), not scripts/ (US-003 / M6).
+const SCRIPT = path.join(REPO_ROOT, ".mifune", "skills", "autopilot", "autopilot-caps.sh");
 
 interface RunResult {
   stdout: string;

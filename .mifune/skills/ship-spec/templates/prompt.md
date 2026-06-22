@@ -13,10 +13,10 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
    - `tasks/<slug>/progress.txt` — read the "Codebase Patterns" section at the top (if any) and the most recent few iterations to see what's been done.
    - `tasks/<slug>/critique.md` — if present, the critic findings the stories must satisfy.
    - If `tasks/<slug>/prd.md` contains `## Wiki Alignment`, read it before choosing the story. When `Impact: REQUIRED`, the relevant story must keep wiki updates aligned with the PRD and the recorded DeepWiki comparison.
-   - `context/rules/wiki.md` when your story touches `wiki/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
+   - `.mifune/skills/wiki-ingest/references/schema.md` when your story touches `wiki/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
    - `.claude/skills/git/SKILL.md` for branch + commit conventions.
-   - `.claude/rules/sandbox-processes.md` for tmux session conventions if your story spawns processes.
-   - `.claude/rules/advisor-model.md` for any critic-gated story.
+   - `.mifune/skills/t3/references/sandbox-processes.md` for tmux session conventions if your story spawns processes.
+   - `.mifune/skills/advisor/SKILL.md` for any critic-gated story.
 
 2. **Verify branch** — your branch is `<prefix>/<N>-<slug>` (per `prd.json` `branchName`). If `/ship-spec`'s Advisor launched you in an isolated worktree at `.worktrees/<prefix>/<N>-<slug>`, that directory already has the branch checked out — `cd` into it and skip the checkout below. Otherwise, if you are not on the branch:
    ```bash

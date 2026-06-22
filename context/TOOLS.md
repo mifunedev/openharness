@@ -31,7 +31,7 @@ What's available in the orchestrator's runtime. Read at session start to skip re
 
 ## Long-running processes (tmux convention)
 
-Per `.claude/rules/sandbox-processes.md`:
+Per `.mifune/skills/t3/references/sandbox-processes.md`:
 - `cron-watchdog` — `.devcontainer/entrypoint.sh` supervisor that restarts `cron-system` if the runtime tmux session dies
 - `cron-system` — `scripts/cron-runtime.ts`, started and supervised by `cron-watchdog`
 - `app-*` — user dev servers

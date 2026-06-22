@@ -56,7 +56,7 @@ have caught the v0.7 convergence regression, PR #212 / US-012).
 > MUST-NOT-DELETE without an override note. Surface technical risks BEFORE
 > implementation. Focus on: (1) vague/unverifiable acceptance criteria; (2) missing
 > dependencies each story silently assumes; (3) pattern conflicts with this repo (read
-> `.claude/rules/*.md` and sibling `tasks/*/prd.json`); (4) scope creep — "single
+> `AGENTS.md` + the relevant `.mifune/skills/*/SKILL.md` and sibling `tasks/*/prd.json`); (4) scope creep — "single
 > iteration" stories that are really 2+; (5) hidden destructive operations not
 > explicitly gated; (6) protected-path violations → `SEVERITY: H` + `[PROTECTED-PATH]`.
 > Return:
@@ -125,7 +125,7 @@ none → `PROCEED`. This node only *records* that judgment — the binding decis
 
 ## Memory Protocol
 
-After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
+After a run, append to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
 ## critique -- HH:MM UTC

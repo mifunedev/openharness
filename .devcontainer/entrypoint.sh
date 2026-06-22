@@ -306,7 +306,7 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
 fi
 
 # ─── Start/supervise cron runtime in tmux sessions ────────────────
-# Per SPEC v0.7 §"Croner runtime" + .claude/rules/sandbox-processes.md.
+# Per SPEC v0.7 §"Croner runtime" + .mifune/skills/t3/references/sandbox-processes.md.
 # `cron-system` runs scripts/cron-runtime.ts. `cron-watchdog` is the outer
 # supervisor: if cron-system disappears after boot, it restarts the runtime
 # without requiring a container restart. Logs tee to /tmp/cron-system.log and

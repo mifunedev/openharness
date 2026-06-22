@@ -214,7 +214,7 @@ Parse the council's FINAL roadmap table and write it to `docs/roadmap.md` as a s
 - **Observation**: [one sentence — what signal was strongest, what surprised you]
 ```
 
-See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
+See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
 **b) Report**:
 - `HEARTBEAT_OK` (if skipped)

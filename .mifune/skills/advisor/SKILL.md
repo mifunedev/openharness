@@ -1,3 +1,16 @@
+---
+name: advisor
+description: |
+  Advisor/executor delegation pattern: a stronger model (advisor) reads
+  instance-specific context, synthesizes a tight 5-field briefing, then hands
+  off to a cheaper/faster model or sub-agent (executor) via the Agent tool.
+  Covers the 2-step / 3-step / multi-turn / monitored-async-loop variants and
+  the recursive (multi-level) extension in references/recursive-delegation.md.
+  TRIGGER when: delegating a multi-step or multi-file task across a capability
+  gap, briefing a sub-agent or cheaper model, "use the advisor model", "write
+  a briefing", "hand this off", or running a monitored async (ralph) loop.
+---
+
 # Advisor Model Pattern
 
 > Reference: *Advisor Models: Synthesizing Instance-Specific Guidance for Steering Black-Box LLMs* — arXiv 2510.02453v2
@@ -70,7 +83,7 @@ Keep the briefing tight. If a point is generic best-practice (not instance-speci
 | **2-step** | Straightforward delegation | Advisor writes briefing → `Agent` tool with briefing prepended to prompt |
 | **3-step** | First attempt needs steering | Executor makes attempt → advisor reviews output → advisor writes targeted critique as a second briefing → executor revises |
 | **Multi-turn agentic** | Long runs (>10 steps) | Advisor provides a briefing every N steps, receiving the executor's intermediate observations before writing the next guidance block |
-| **Multi-level (recursive)** | A child's task is itself multi-step and could be parallelized further | The executor is authorized to itself become an advisor at depth+1. See `context/rules/recursive-delegation.md` for the bounding / structured-return / Context-block protocol. |
+| **Multi-level (recursive)** | A child's task is itself multi-step and could be parallelized further | The executor is authorized to itself become an advisor at depth+1. See `references/recursive-delegation.md` for the bounding / structured-return / Context-block protocol. |
 | **Monitored async loop** | Executor runs unattended as a detached loop (>10 iters), e.g. `scripts/ralph.sh --loop` | Advisor launches the loop in a named tmux session and **owns the terminal watch** itself — a background poll on the executor's `STATUS:` sentinel (`COMPLETE` / `SESSION-GONE` / max-iters), **never delegated to a sub-agent** (a `run_in_background` sub-agent Advisor returns early instead of staying alive to finalize). The loop **surfaces blocks** back rather than shipping them; on a block the Advisor diagnoses, corrects the task's acceptance criteria, and relaunches. The loop stops at the sentinel — the Advisor **finalizes through the promotable gate** (draft → `/pr-audit` → ready) and never lets the loop open a ready PR. See `scripts/ralph.sh` and `.claude/skills/ship-spec/SKILL.md` Stage 10 for the done-sentinel, single-owner-handoff, and honest-exit invariants this variant preserves. |
 
 ## Mapping to This Harness

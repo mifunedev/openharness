@@ -50,11 +50,12 @@ install/cloudflared-tunnel.sh
 # --- Crons (referenced by scripts/cron-runtime.ts) ---
 crons/heartbeat.md
 
-# --- Rules consumed by skills + agents at runtime ---
-.claude/rules/git.md
-.claude/rules/sandbox-processes.md
-.claude/rules/advisor-model.md
-.claude/rules/recursive-delegation.md
+# --- Norms folded into skills (formerly context/rules/, B-state M3+M4) ---
+.mifune/skills/git/SKILL.md
+.mifune/skills/t3/references/sandbox-processes.md
+.mifune/skills/advisor/SKILL.md
+.mifune/skills/advisor/references/recursive-delegation.md
+.mifune/skills/retro/references/memory-protocol.md
 
 # --- Specs that other artifacts cross-reference ---
 .claude/specs/structure-spec-v0.7.md

@@ -76,7 +76,7 @@ still require explicit approval (or are skipped under `--dry-run`).
 ## Memory Protocol
 
 `/retro` writes its own log entry. `spec-retro` ensures it is tagged to the unit; if `/retro`
-did not, add one line to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
+did not, add one line to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
 ## spec-retro -- HH:MM UTC

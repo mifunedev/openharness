@@ -9,7 +9,6 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | `ralph.sh`        | Ralph loop runner: `scripts/ralph.sh [--harness=…] <taskdesc>`     |
 | `repo-orientation-benchmark-score.mjs` | Scores the CB-004 repo-orientation A/B benchmark report |
 | `cron-runtime.ts` | Croner runtime — scans `crons/*.md`, schedules, fires each job     |
-| `prompt-miner-caps.sh` | Origin-scoped PR-cap preflight for `crons/prompt-miner.md` — execs `autopilot-caps.sh` with `AUTOPILOT_REPO=ryaneggz/openharness` + `AUTOPILOT_LABEL=prompt-miner` |
 | `__tests__/`      | Vitest unit tests (`vitest.config.ts` at repo root targets this)   |
 
 ## Conventions

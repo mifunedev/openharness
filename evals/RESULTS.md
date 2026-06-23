@@ -26,6 +26,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | cron-watchdog | A | 2026-06-18 05:17 | PASS | issue #130 (cron runtime watchdog) 2026-06-14 |
 | curl-bash-safe-alternatives | A | 2026-06-18 05:17 | PASS | vet-run/vet integration — public curl|bash examples need review-first alternatives |
 | datasets-schema | A | 2026-06-18 05:17 | PASS | issue #196 — evals/datasets verifiable trajectory corpus (Repo2RLEnv-inspired) |
+| debugmcp-availability | A | 2026-06-23 03:53 | SKIPPED | issue #297 — DebugMCP MCP debug-server availability |
 | devtcp-hook | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
 | drift-check-cron-staleness-glob | A | 2026-06-18 05:17 | PASS | issue #98; issue #225 (restart-required cron frontmatter/config drift) |
 | eval-ci-gate | A | 2026-06-18 05:17 | PASS | #103 — eval probe suite gated in CI |

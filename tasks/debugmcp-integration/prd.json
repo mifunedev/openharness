@@ -1,0 +1,125 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/297-debugmcp-integration",
+    "description": "Explore optional DebugMCP integration (validated against v2.0.1) — feasibility, MCP registration docs, per-language debug workflows, a 3-state eval probe, a security note, a wiki entry, and a maintainer decision gate. Docs/probe/wiki only; no vendoring, no default capability, no Dockerfile/entrypoint edits.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Feasibility spike — headless VS Code extension host in Debian bookworm-slim",
+            "description": "As a harness maintainer, I want a documented feasibility assessment of running DebugMCP's VS Code extension in the current devcontainer so that all subsequent docs and probe work is grounded in verified facts.",
+            "acceptanceCriteria": [
+                "Create docs/integrations/debugmcp.md with a '## Feasibility' section split into two tiers: Container-side (headless, no host IDE) = code serve-web, code-server (apt/binary); Operator-side (requires host VS Code) = Attach-to-Container (Option B), Remote-SSH (Option C)",
+                "Section states the filed open question is the container-side one; operator-side paths noted as available-but-host-dependent, not given equal weight",
+                "Each path verdict is exactly VIABLE (with evidence), BLOCKED (with exact constraint text), or UNVERIFIED (with what would confirm it); no bare 'unknown'/'works'/'unclear'",
+                "grep -q '## Feasibility' docs/integrations/debugmcp.md exits 0 AND grep -qE '\\b(VIABLE|BLOCKED|UNVERIFIED)\\b' docs/integrations/debugmcp.md exits 0",
+                "No changes to .devcontainer/Dockerfile, .devcontainer/devcontainer.json, or entrypoint.sh — prose assessment only"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed 2026-06-23; container-side code serve-web BLOCKED / code-server UNVERIFIED, operator-side Attach+Remote-SSH VIABLE"
+        },
+        {
+            "id": "US-002",
+            "title": "MCP registration docs (Claude Code, Codex; Pi/Hermes flagged unverified)",
+            "description": "As a harness agent operator, I want copy-pasteable MCP registration snippets per agent so that I can activate DebugMCP without guessing config paths or formats.",
+            "acceptanceCriteria": [
+                "Add '## Agent MCP Registration' section to docs/integrations/debugmcp.md",
+                "Codex snippet is a fenced TOML block referencing .codex/config.toml with a [mcp_servers.debugmcp] block and url = http://localhost:3001/mcp, plus the codex mcp add one-liner",
+                "Claude Code snippet is a fenced JSON block (machine-parseable, not prose) for project .mcp.json (note it must be created — does not exist) with mcpServers.debugmcp of type http, plus claude mcp add --transport http debugmcp http://localhost:3001/mcp",
+                "Pi and Hermes each have a present section explicitly labeled 'unverified — MCP support not confirmed' with NO config snippet",
+                "Notes these config files are project-local and may be committed with the loopback URL visible (not a credential, but flagged)",
+                "Implementer MUST NOT create .mcp.json (doc only — it stays operator-created); committing it would cross the no-default-capability Non-Goal",
+                "grep -q 'mcp_servers.debugmcp' docs/integrations/debugmcp.md exits 0 AND grep -q 'unverified' docs/integrations/debugmcp.md exits 0",
+                "Typecheck passes"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Completed 2026-06-23; Codex .codex/config.toml TOML + Claude Code .mcp.json JSON snippets; Pi/Hermes unverified; .mcp.json documented not created"
+        },
+        {
+            "id": "US-003",
+            "title": "Per-language debug workflow docs (Python, JS/TS, Go, Rust)",
+            "description": "As a harness coding agent, I want language-specific debug workflow examples using real DebugMCP tool calls so that I can follow a concrete sequence without improvising tool names.",
+            "acceptanceCriteria": [
+                "Add '## Debug Workflows' section stating the tool surface is anchored to DebugMCP v2.0.1, with Python, JS/TS, Go, Rust sub-sections",
+                "Every tool name used is one of the canonical 13 v2.0.1 tools (start_debugging, stop_debugging, restart_debugging, step_over, step_into, step_out, continue_execution, add_breakpoint, remove_breakpoint, clear_all_breakpoints, list_breakpoints, get_variables_values, evaluate_expression); verify by extracting every tool token and confirming membership (no get_variable_values-style typo passes)",
+                "No CLI debugger-subcommand syntax: grep -nE '^\\s*debugger [a-z]' docs/integrations/debugmcp.md returns empty (prose 'the debugger' is fine)",
+                "Each section names its required VS Code extension (ms-python.python; built-in js-debug; golang.Go; rust-lang.rust-analyzer PLUS a DAP provider e.g. vadimcn.vscode-lldb — rust-analyzer alone ships no debug adapter)",
+                "Each scenario includes at least start_debugging, one breakpoint tool, one inspection tool, stop_debugging",
+                "Feasibility honesty: if US-001's container-side verdict is UNVERIFIED or BLOCKED for all headless paths, each workflow carries a one-line 'pending feasibility confirmation (see ## Feasibility)' note; no workflow presented as verified-working",
+                "Typecheck passes"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Completed 2026-06-23; Python/JS-TS/Go/Rust workflows, v2.0.1-anchored, all 13 canonical tools, each carries pending-feasibility note"
+        },
+        {
+            "id": "US-004",
+            "title": "Eval probe evals/probes/debugmcp-availability.sh (precise 3-state, no orphan process)",
+            "description": "As a harness eval runner, I want a deterministic probe reporting DebugMCP runtime availability so that evals detect whether the extension is active without starting a VS Code host themselves.",
+            "acceptanceCriteria": [
+                "Create executable evals/probes/debugmcp-availability.sh following the existing tier/source/desc header comment pattern",
+                "SKIPPED (exit 2): port 3001 not bound / connection refused / not reachable (clean-sandbox default)",
+                "PASS (exit 0): port 3001 bound AND GET /mcp returns HTTP 2xx with a DebugMCP-consistent content-type (text/event-stream or application/json)",
+                "REGRESSION (exit 1): port 3001 bound BUT /mcp does not respond as above (non-2xx, wrong/empty content-type) — a definite detected-bad-state, never the catch-all for timeouts",
+                "All human output to stderr (>&2); bash <probe> 2>/dev/null produces no stdout",
+                "Probe starts no process: grep -E '(^|[^a-z])(code|code-server|node|npm)([^a-z]|$)' evals/probes/debugmcp-availability.sh returns empty; uses curl -sf (or strict-mode-guarded portable check), not nc, not an unguarded /dev/tcp that would exit 1 on a closed port under set -euo pipefail; cleans up via trap EXIT",
+                "evals/RESULTS.md gains a single hand-inserted row for debugmcp-availability with initial status SKIPPED, in alphabetical probe-id order (do NOT regenerate the table or churn other rows' timestamps)",
+                "Typecheck passes"
+            ],
+            "priority": 4,
+            "passes": true,
+            "notes": "Completed 2026-06-23; curl-based 3-state probe, exit 2 in clean sandbox, no process spawn, shellcheck clean; RESULTS row SKIPPED inserted alphabetically"
+        },
+        {
+            "id": "US-005",
+            "title": "Security note — bindHost risk + /really-debug skill relationship",
+            "description": "As a harness maintainer, I want explicit documentation of DebugMCP's security model so that operators understand the attack surface before configuring non-default bind hosts.",
+            "acceptanceCriteria": [
+                "Add '## Security' section to docs/integrations/debugmcp.md",
+                "States setting debugmcp.bindHost to a non-loopback address exposes an unauthenticated evaluate_expression endpoint — a do-not-do (grep -q 'unauthenticated' exits 0)",
+                "Clarifies Host/Origin validation is a DNS-rebinding defense, not an intra-container process defense (grep -q 'DNS-rebinding' exits 0)",
+                "References /really-debug in ONE sentence as a design consideration (auto-install relationship to .mifune/skills + provider symlinks), not a substantive description of a non-existent skill (grep -q 'really-debug' exits 0)",
+                "No .mifune/skills/really-debug/ directory is created",
+                "Typecheck passes"
+            ],
+            "priority": 5,
+            "passes": true,
+            "notes": "Completed 2026-06-23; bindHost unauthenticated risk + DNS-rebinding scope + one-sentence /really-debug design note"
+        },
+        {
+            "id": "US-006",
+            "title": "Wiki entry wiki/debugmcp.md",
+            "description": "As a harness agent, I want a wiki entry for DebugMCP so that /wiki-query can load integration facts into context without re-reading the full doc each session.",
+            "acceptanceCriteria": [
+                "Create wiki/debugmcp.md with complete frontmatter per .mifune/skills/wiki-ingest/references/schema.md §2: title, slug: debugmcp, tags (incl. mcp, debugging), created/updated = today (UTC), sources (>= the raw snapshot path), related (>= one existing slug), confidence: provisional",
+                "awk '/^---$/{f=!f; next} f{print}' wiki/debugmcp.md output contains title:, slug: debugmcp, tags:, sources:, related:, confidence: (grep each)",
+                "Create wiki/raw/<YYYY-MM-DD>-debugmcp.md snapshot, force-added (git add -f; wiki/raw/* is gitignored), capturing the v2.0.1 tool schema as the version anchor",
+                "Body sections in order: ## Relevant Source Files, ## Summary, ## Detail, ## See Also; body <= 600 words; ## Detail states the current feasibility status (mirrors US-001) so the entry is not aspirational",
+                "## See Also cross-links >= one existing wiki slug, preferring closest sandbox-constraint adjacency (e.g. [[sandbox-auth-volumes]]); inbound-orphan is expected",
+                "Regenerate wiki/README.md deterministically (via /wiki-lint or wiki-readme-index.sh logic) so it contains a debugmcp row and bash evals/probes/wiki-readme-index.sh passes",
+                "Typecheck passes"
+            ],
+            "priority": 6,
+            "passes": true,
+            "notes": "Completed 2026-06-23; wiki/debugmcp.md (421 words, full frontmatter, [[codegraph-mcp]] cross-link) + v2.0.1 raw snapshot; wiki-readme-index probe PASS"
+        },
+        {
+            "id": "US-007",
+            "title": "Maintainer decision gate (docs-only / optional installer / default capability)",
+            "description": "As a harness maintainer, I want a structured decision gate so that I can choose integration depth with full awareness of trade-offs, no pre-selected recommendation, and a concrete follow-on action per choice.",
+            "acceptanceCriteria": [
+                "Add '## Maintainer Decision Gate' section with exactly three options: docs-only, optional installer, default capability",
+                "Each option names at least one trade-off; none marked recommended/preferred/default (grep -iE '(recommended|preferred|default option)' within the gate section returns empty)",
+                "The decision-gate section prescribes no Dockerfile/entrypoint.sh change (post-decision only)",
+                "A '## Next Steps' stub provides a SEPARATE pre-written non-executable gh issue create body (one fenced block per non-docs-only option — optional installer, default capability) so the choice has a concrete follow-on action",
+                "grep -q 'Decision Gate' docs/integrations/debugmcp.md exits 0",
+                "Typecheck passes"
+            ],
+            "priority": 7,
+            "passes": true,
+            "notes": "Completed 2026-06-23; 3 options (no pre-select) + Next Steps gh issue create stub per non-docs-only option"
+        }
+    ]
+}

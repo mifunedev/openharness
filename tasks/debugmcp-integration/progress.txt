@@ -1,0 +1,55 @@
+# progress
+
+## Codebase Patterns
+- This branch builds on `origin/development` (current tree), which has COLLAPSED the `context/rules/*` tier: the wiki schema lives at `.mifune/skills/wiki-ingest/references/schema.md`, NOT `context/rules/wiki.md`. Stale planning refs were corrected during US-006.
+- All seven stories were Advisor-orchestrated via delegated executors (EDIT-only; the Advisor verified ACs + committed) in an isolated worktree — not the `scripts/ralph.sh` loop. The same-file doc stories (US-002/003/005/007) were built by one executor sequentially to avoid races; US-004 (probe) ran in parallel on a disjoint path; US-006 (wiki) ran after the doc completed.
+
+## US-001 — 2026-06-23
+**Title**: Feasibility spike — headless VS Code extension host in Debian bookworm-slim
+**Files changed**: docs/integrations/debugmcp.md (new), CHANGELOG.md, tasks/.../prd.json
+**Commit**: a4f30f0
+**Result**: PASS
+### What I did
+Created the integration doc with a two-tier `## Feasibility` section. Container-side `code serve-web` BLOCKED (no VS Code server binary in `debian:bookworm-slim`), code-server UNVERIFIED (installable; Open VSX availability unconfirmed). Operator-side Attach/Remote-SSH VIABLE but host-IDE-dependent. Added the CHANGELOG entry.
+### Learnings for future iterations
+The container-side headless host is the real open question and is NOT confirmed — every downstream workflow must carry a pending-feasibility note.
+
+---
+
+## US-002/003/005/007 — 2026-06-23
+**Title**: DebugMCP docs — MCP registration, debug workflows, security, decision gate
+**Files changed**: docs/integrations/debugmcp.md, tasks/.../prd.json
+**Commit**: 15efb7e
+**Result**: PASS
+### What I did
+Appended four sections in order. Registration: Codex `.codex/config.toml` TOML + Claude Code `.mcp.json` JSON (operator-created, documented not committed); Pi/Hermes unverified. Workflows: Python/JS-TS/Go/Rust, v2.0.1-anchored, all 13 canonical tools, each with a pending-feasibility note. Security: non-loopback `bindHost` = unauthenticated `evaluate_expression`; Host/Origin = DNS-rebinding defense; one-sentence `/really-debug` note. Decision gate: 3 options (no pre-select) + per-option `gh issue create` Next-Steps stubs.
+### Learnings for future iterations
+The `grep -nE '^\s*debugger [a-z]'` guard targets CLI lines only — prose "the debugger" is fine.
+
+---
+
+## US-004 — 2026-06-23
+**Title**: debugmcp-availability eval probe (3-state)
+**Files changed**: evals/probes/debugmcp-availability.sh (new), evals/RESULTS.md, tasks/.../prd.json
+**Commit**: 0c13e48
+**Result**: PASS
+### What I did
+curl-based detection-only probe: SKIPPED (exit 2) when :3001 unbound (clean-sandbox default), PASS (exit 0) on HTTP 2xx + MCP content-type, REGRESSION (exit 1) bound-but-bad. No process spawn, stderr-only, trap cleanup, shellcheck clean. Hand-inserted the SKIPPED RESULTS row alphabetically.
+### Learnings for future iterations
+curl's `%{http_code}` write-out token trips the no-process grep (`code`); parse the status line instead. Guard the curl connect rc so `set -e` can't abort before the `exit 2` branch.
+
+---
+
+## US-006 — 2026-06-23
+**Title**: Wiki entry wiki/debugmcp.md
+**Files changed**: wiki/debugmcp.md (new), wiki/raw/2026-06-23-debugmcp.md (new, force-added), wiki/README.md, tasks/.../prd.json + prd.md + prompt.md (schema-path correction)
+**Commit**: (this commit)
+**Result**: PASS
+### What I did
+Created the 421-word entry (full frontmatter, `confidence: provisional`, `[[codegraph-mcp]]` + `[[sandbox-auth-volumes]]` cross-links) + a v2.0.1 tool-schema raw snapshot. `## Detail` states the feasibility status honestly. Regenerated `wiki/README.md`; `evals/probes/wiki-readme-index.sh` PASS.
+### Learnings for future iterations
+Read the real schema at `.mifune/skills/wiki-ingest/references/schema.md`; `context/rules/wiki.md` no longer exists on this tree.
+
+---
+
+STATUS: COMPLETE

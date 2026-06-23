@@ -42,7 +42,10 @@ permissions:
 jobs:
   sandbox-boot-guard:
     name: Validate sandbox compose and image build
-    runs-on: ubuntu-latest
+    # When CI_RUNNER routes this to self-hosted it MUST be the dind model
+    # (`make up-dind`): this job builds AND boots the devcontainer image, which
+    # needs an isolated daemon + a non-root runner. The host-socket model can't.
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout

@@ -58,7 +58,7 @@ permissions:
 jobs:
   ci:
     name: "Lint, Typecheck, Build & Test"
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
@@ -111,7 +111,7 @@ jobs:
 
   boot-lint:
     name: Boot Path Lint (shellcheck + hadolint)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
@@ -135,11 +135,18 @@ jobs:
 
   eval-probes:
     name: "Eval Probe Regression Gate"
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Provision Node explicitly so the suite is runner-agnostic: GitHub-hosted
+      # ships Node preinstalled, the self-hosted runner does not.
+      - name: Setup Node 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - name: Run eval probe suite
         run: bash .mifune/skills/eval/run.sh

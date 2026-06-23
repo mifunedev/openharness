@@ -15,13 +15,14 @@ evaluation — to any MCP-capable coding agent. Its `extensionKind` is
 `workspace`, so it activates in the **remote/workspace extension host**, not a
 UI or browser host.
 
-This page documents an **integration contract and its feasibility status**, not
-a proven-running capability. The extension host normally needs a VS Code
+This page documents an **integration contract and its feasibility status**. Its
+operator-side runtime is now proven in practice; the headless path is not. The extension host normally needs a VS Code
 **server binary** to load a `workspace`-kind extension; whether that binary can
 be supplied **inside this headless devcontainer** is the central open question
-this page exists to answer. The verdicts below are graded plainly — `VIABLE`,
-`BLOCKED`, or `UNVERIFIED` — and nothing is asserted as working today that has
-not been confirmed.
+this page exists to answer. The verdicts below are graded plainly — `CONFIRMED`,
+`VIABLE`, `BLOCKED`, or `UNVERIFIED`. The **operator-side path is now confirmed
+working** in practice (validated on the `oh-remote` container, 2026-06-23); the
+**container-side headless path remains the open question**.
 
 ## Feasibility
 
@@ -59,25 +60,25 @@ the missing-binary constraint above does not apply. They are available today but
 
 | Path | Verdict | Evidence / constraint |
 | --- | --- | --- |
-| VS Code Attach-to-Container (Lifecycle Option B) | **VIABLE** | The image is already prepared for Attach-to-Container: `.devcontainer/Dockerfile:197-201` writes `/.devcontainer/devcontainer.json` and a `devcontainer.metadata` LABEL so VS Code attaches as user `sandbox` at `/home/sandbox/harness`. The Dev Containers extension provisions its own VS Code server into the container on attach, supplying the binary the headless tiers lack; DebugMCP can then install and activate in that operator-driven host. Confirmed by `CLAUDE.md` Lifecycle **Option B** (Dev Containers → "Attach to Running Container"). |
+| VS Code Attach-to-Container (Lifecycle Option B) | **CONFIRMED** | Validated on `oh-remote` (2026-06-23): an attached VS Code session provisioned the server, `ozzafar.debugmcpextension` v2.0.1 installed + activated + bound `:3001`, and a full debug lifecycle (breakpoint → pause → `get_variables_values` → `step_over` → `evaluate_expression`) ran against a Python file. The image is already prepared for Attach-to-Container: `.devcontainer/Dockerfile:197-201` writes `/.devcontainer/devcontainer.json` and a `devcontainer.metadata` LABEL so VS Code attaches as user `sandbox` at `/home/sandbox/harness`. The Dev Containers extension provisions its own VS Code server into the container on attach, supplying the binary the headless tiers lack; DebugMCP can then install and activate in that operator-driven host. Confirmed by `CLAUDE.md` Lifecycle **Option B** (Dev Containers → "Attach to Running Container"). |
 | Remote-SSH + Attach (Lifecycle Option C) | **VIABLE** | Same mechanism over SSH: the operator SSHes to the remote host, then attaches to the container, and VS Code provisions its server. The host IDE supplies the server binary, so the extension host can run. Confirmed by `CLAUDE.md` Lifecycle **Option C** (Remote-SSH then attach). |
 
 **Summary of the open question.** The container-side, host-free path is **not
 confirmed**: `code serve-web` is **BLOCKED** by the missing VS Code server
 binary, and code-server is **UNVERIFIED** pending a runtime install plus an Open
-VSX availability check. Operator-side Attach/Remote-SSH are **VIABLE** but
-require a host VS Code and therefore do not answer the headless question. Until
-the container-side path resolves to `VIABLE`, downstream sections treat DebugMCP
-as a documented contract whose runtime availability is **pending feasibility
-confirmation**.
+VSX availability check. Operator-side Attach is **CONFIRMED** in practice
+(Remote-SSH is **VIABLE** by the same mechanism); the headless container-side
+path remains the open question. Until it resolves to `VIABLE`, **host-free** (no
+attached IDE) availability stays **pending feasibility confirmation** — but with
+an operator attached, DebugMCP is confirmed working.
 
 ## Agent MCP Registration
 
 Once a VS Code extension host activates DebugMCP (see [Feasibility](#feasibility)),
 the MCP server listens on `http://localhost:3001/mcp` (Streamable HTTP). The
-snippets below register that endpoint with each harness agent. They are **not**
-applied automatically — an operator copies them in only after deciding to use
-DebugMCP.
+snippets below register that endpoint with each harness agent. Codex and Claude
+Code are now **registered at project scope in-repo** (committed); Pi and Hermes
+remain operator-driven and unverified.
 
 > **These are project-local config files** (`.codex/config.toml`, `.mcp.json`)
 > that may be **committed to git with the loopback URL visible**. The URL is a
@@ -86,8 +87,7 @@ DebugMCP.
 
 ### Codex
 
-`.codex/config.toml` already exists in this repo and currently carries **no**
-`[mcp_servers.*]` block. Add one:
+`.codex/config.toml` carries the project-level `[mcp_servers.debugmcp]` block:
 
 ```toml
 [mcp_servers.debugmcp]
@@ -102,11 +102,10 @@ codex mcp add debugmcp --url http://localhost:3001/mcp
 
 ### Claude Code
 
-Claude Code reads MCP servers from a project-local `.mcp.json`. **This file does
-not exist in the repo** — the operator creates it. Do not commit a generated
-`.mcp.json` as part of this integration: that would silently make DebugMCP a
-default capability, which the decision gate below explicitly defers. The JSON
-shape (machine-parseable, not prose):
+Claude Code reads MCP servers from a project-local `.mcp.json`, **now committed
+at project scope** and pre-approved via `enabledMcpjsonServers` in
+`.claude/settings.json` (the maintainer's default-capability depth — see the
+decision gate below). The committed JSON shape (machine-parseable, not prose):
 
 ```json
 {
@@ -147,13 +146,16 @@ one of the canonical v2.0.1 tool names: `start_debugging`, `stop_debugging`,
 `list_breakpoints`, `get_variables_values`, `evaluate_expression`.
 
 Each workflow assumes its language's VS Code debug extension is installed in the
-active extension host. None of these is asserted to run today.
+active extension host. The **Python workflow is validated end-to-end**
+(operator-attached, on `oh-remote`); the others are documented but not yet exercised.
 
 ### Python
 
 Requires the `ms-python.python` extension (it bundles the Python debug adapter).
 
-> Pending feasibility confirmation (see [Feasibility](#feasibility)).
+> **Validated end-to-end** on `oh-remote` (2026-06-23) — an attached VS Code
+> session ran the full breakpoint → inspect → step → evaluate cycle against a
+> Python file.
 
 1. `start_debugging` on the target script.
 2. `add_breakpoint` at the suspect line.
@@ -237,6 +239,14 @@ work, gated behind whichever option is chosen.
 | **Docs-only** | Ship this page and the eval probe; install/registration stays a manual operator step. | Lowest cost and zero runtime surface, but DebugMCP is never available without per-operator setup, and the feasibility question stays unresolved in practice. |
 | **Optional installer** | Add an opt-in script (or flag) that installs the extension host + DebugMCP on request. | Makes activation one command without forcing it on every sandbox, but adds an installer surface to maintain and still requires resolving the container-side feasibility `UNVERIFIED`. |
 | **Default capability** | Bake the extension host + DebugMCP into the image so it is active out of the box. | Zero per-operator friction, but enlarges every image, adds a bound `:3001` listener to the attack surface by default, and commits the harness to maintaining the debug stack. |
+
+**Decision (2026-06-23).** The maintainer committed the **agent-side
+registration** at project scope — `.mcp.json` + `.codex/config.toml` + the
+`enabledMcpjsonServers` approval — so DebugMCP is a default for Claude Code and
+Codex sessions. The **runtime extension host stays operator-side Attach** (no
+`Dockerfile`/`entrypoint.sh` change); the container-side headless host remains
+deferred. This is the *default-capability* depth for registration without the
+image-baking cost.
 
 ## Next Steps
 

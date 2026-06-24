@@ -10,7 +10,7 @@ Produce a bounded wiki entry that is more useful than a README summary: capture 
 
 Prefer GitHub API and raw-content reads when a clone is unnecessary or blocked by approval/sandbox policy.
 
-Minimum source packet for `wiki/raw/<date>-<slug>.md`:
+Minimum source packet for `.mifune/skills/wiki/corpus/raw/<date>-<slug>.md`:
 
 - `gh repo view owner/repo --json nameWithOwner,description,stargazerCount,forkCount,defaultBranchRef,licenseInfo,repositoryTopics,pushedAt,createdAt,updatedAt,url,homepageUrl`
 - README raw content or a concise README summary
@@ -21,7 +21,7 @@ Minimum source packet for `wiki/raw/<date>-<slug>.md`:
 
 ## Synthesis shape
 
-In `wiki/<slug>.md`, include:
+In `.mifune/skills/wiki/corpus/<slug>.md`, include:
 
 1. What it is and why it matters.
 2. Implementation mechanics that a future agent can reuse.

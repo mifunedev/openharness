@@ -28,7 +28,7 @@ Read these files at the start of every session — they encode voice, principles
 
 After **every** skill or agent run, fire the Memory Improvement Protocol (log → qualify → improve) — its canonical home is now the `/retro` skill (`.mifune/skills/retro/references/memory-protocol.md`).
 
-The always-loaded `context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/advisor` (delegation + recursive-delegation), `/wiki-ingest` (wiki schema), `/t3` (sandbox tmux process lifecycle) — and the repo-authoring convention stays a plain doc at `context/directory-readme.md`. The always-on tier is now just the `context/` identity files listed above; load the relevant skill when a task calls for its norm.
+The always-loaded `context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/advisor` (delegation + recursive-delegation), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — and the repo-authoring convention stays a plain doc at `context/directory-readme.md`. The always-on tier is now just the `context/` identity files listed above; load the relevant skill when a task calls for its norm.
 
 ## Permissions
 
@@ -142,7 +142,7 @@ flowchart LR
         AUDIT -->|FAIL: fix| BUILD
         AUDIT -->|PASS| SRETRO["spec-retro<br/>/retro"]
         SRETRO --> IMPROVE["improve<br/>compound · compress · benchmark"]
-        IMPROVE --> GROOM["groom<br/>skill-lint · wiki-lint · drift-check"]
+        IMPROVE --> GROOM["groom<br/>skill-lint · wiki lint · drift-check"]
     end
     GROOM --> MERGE["merge<br/>(human)"]
     MERGE --> RESET["reset | clean<br/>(runner)"]
@@ -158,7 +158,7 @@ flowchart LR
 | **human** | merge — final gate, no auto-merge | selection, build | reviews the finished unit |
 | **runner** | `reset \| clean` — worktree/branch cleanup, state reset | judgment | closes the cycle back to select |
 
-The `spec-*` family operates on a `tasks/<slug>/` folder (the universal interface): `/spec-plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec-critique`, `/spec-execute`, `/spec-retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec-execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/skill-lint` · `/wiki-lint` · `/drift-check` before the human merge.
+The `spec-*` family operates on a `tasks/<slug>/` folder (the universal interface): `/spec-plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec-critique`, `/spec-execute`, `/spec-retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec-execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/skill-lint` · `/wiki lint` · `/drift-check` before the human merge.
 
 ## Skills
 
@@ -192,9 +192,7 @@ The `spec-*` family operates on a `tasks/<slug>/` folder (the universal interfac
 | `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `.mifune/skills/retro/references/memory-protocol.md` |
 | `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `memory/<date>/`; raw prompt text is off by default. The daily `crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/ship-spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
 | `/caveman` | Token-compression output mode (`lite`/`full`/`ultra`/`wenyan`); subcommands `/caveman-commit`, `/caveman-review`, `/caveman-compress <file>`, `/caveman-stats`. Never compresses code, security warnings, or irreversible-action confirmations |
-| `/wiki-ingest` | Capture a source (URL or file path) or promote a sub-agent draft into the wiki; supports `<url\|path> [--slug <override>]` and `--from-draft <slug>` forms |
-| `/wiki-query` | Search the wiki by topic and load top matches into context; splits multi-word topics into OR terms, caps reads at 3 entries by `updated:` descending |
-| `/wiki-lint` | Health-check the wiki corpus for staleness, deprecated entries, orphans, and broken links; regenerates `wiki/README.md` atomically (supports `--dry-run`) |
+| `/wiki` | Dispatcher for the wiki knowledge base (corpus at `.mifune/skills/wiki/corpus/`, gitignored-by-default + whitelisted): `ingest <url\|path> [--slug]` / `ingest --from-draft <slug> [--allow-stale]` (capture a source or promote a draft), `query <topic>` (frontmatter OR-search, read top ≤3 by `updated:` desc), `lint [--dry-run]` (5 health checks + atomic `corpus/README.md` regen). Schema: `.mifune/skills/wiki/references/schema.md` |
 | `/drift-check` | Detect framework (origin↔upstream), branch-behind, and cron-staleness drift; report remediation — never mutates state |
 
 Provision / destroy / repair are plain `docker compose` commands — see

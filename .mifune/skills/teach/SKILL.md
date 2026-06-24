@@ -29,7 +29,7 @@ It is **not** an implementation, audit, retro, or merge gate. `/teach` does not 
 - **Before implementation is complete.** Use `/ship-spec`, `/delegate`, or `scripts/ralph.sh` to finish the task first.
 - **To decide promotability.** Use `/audit` for one implementation or `/pr-audit` for PR queue/mergeability.
 - **To capture session lessons.** Use `/retro` for falsifiable hypotheses and memory promotion.
-- **To create a new research wiki entry from an external source.** Use `/wiki-ingest` for source capture; `/teach` may revise an existing task-relevant entry or propose edits.
+- **To create a new research wiki entry from an external source.** Use `/wiki ingest` for source capture; `/teach` may revise an existing task-relevant entry or propose edits.
 
 ## Instructions
 
@@ -39,7 +39,7 @@ Arguments received: `$ARGUMENTS`
 
 Identify:
 - **Task slug or branch** — prefer `tasks/<slug>/` when present. If a branch is given, derive the slug from its trailing segment only after checking for an exact `tasks/<slug>/` match.
-- **Relevant wiki slug** — use `--wiki <slug>` if provided. Otherwise search likely wiki entries by task terms and by changed conceptual surface. If no relevant entry exists, say so and propose the one entry that should be created via `/wiki-ingest` or manual wiki authoring; do not fabricate a source-backed entry.
+- **Relevant wiki slug** — use `--wiki <slug>` if provided. Otherwise search likely wiki entries by task terms and by changed conceptual surface. If no relevant entry exists, say so and propose the one entry that should be created via `/wiki ingest` or manual wiki authoring; do not fabricate a source-backed entry.
 - **Mode** — `--dry-run` reports the proposed wiki changes and teaching output without writing.
 
 ### 2. Read evidence before teaching
@@ -51,7 +51,7 @@ Read the task artifacts first:
 3. `tasks/<slug>/prd.json` — story pass state and branch name when present.
 4. `tasks/<slug>/critique.md` — critic findings and mitigations when present.
 5. Eval/audit/verification evidence when present: `evals/RESULTS.md`, targeted probe output in `progress.txt`, `/audit` or `/pr-audit` notes, CI status, and commit/PR evidence.
-6. The relevant wiki entry (`wiki/<wiki-slug>.md`) before drafting the teaching response.
+6. The relevant wiki entry (`.mifune/skills/wiki/corpus/<wiki-slug>.md`) before drafting the teaching response.
 
 If any required task artifact is missing, proceed only with a caveat naming the missing file. Do not invent verification evidence.
 
@@ -66,10 +66,10 @@ Before teaching, decide whether the existing wiki model is still accurate:
 The wiki update/proposal must happen before the final teaching output. The operator should learn from the corrected model, not from stale PR archaeology.
 
 Wiki-write boundaries:
-- Keep entries within `.mifune/skills/wiki-ingest/references/schema.md` schema and word cap.
+- Keep entries within `.mifune/skills/wiki/references/schema.md` schema and word cap.
 - Update `updated:` when editing an existing entry; do not change `created:`.
 - Preserve `sources:` provenance; if task artifacts are the evidence, cite their paths in the proposed revision text rather than pretending they are raw external snapshots.
-- Do not use `/teach` for broad wiki restructures. If the model needs a new source capture, hand off to `/wiki-ingest`.
+- Do not use `/teach` for broad wiki restructures. If the model needs a new source capture, hand off to `/wiki ingest`.
 
 ### 4. Teach the final model
 
@@ -115,8 +115,8 @@ Use 2-4 understanding checks. Prefer open-ended questions; multiple choice is al
 
 Always include the teaching sections in § 4. Prepend a short `Wiki action:` line before them:
 
-- `Wiki action: updated wiki/<slug>.md — <summary>`
-- `Wiki action: proposed update for wiki/<slug>.md — <summary>`
+- `Wiki action: updated .mifune/skills/wiki/corpus/<slug>.md — <summary>`
+- `Wiki action: proposed update for .mifune/skills/wiki/corpus/<slug>.md — <summary>`
 - `Wiki action: no change — <reason>`
 - `Wiki action: no entry found — proposed <slug>`
 

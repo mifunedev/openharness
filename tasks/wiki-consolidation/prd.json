@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/wiki-consolidation",
+  "issue": null,
+  "repo": "ryaneggz/openharness",
+  "base": "development",
+  "pr": 319,
+  "description": "Consolidate the three wiki skills (/wiki-ingest, /wiki-query, /wiki-lint) into one parameterized /wiki <ingest|query|lint> dispatcher that owns its corpus, and relocate the wiki data from top-level wiki/ into the skill dir at .mifune/skills/wiki/corpus/ (entity pages) + corpus/raw/ (snapshots), gitignored-by-default with curated entries whitelisted via git add -f. Proof-of-concept for the 'skills own their artifacts' primitive; memory (reserved /memory builtin) and the spec-* family are out of scope. Built directly by an Advisor orchestrating /delegate executors for the mechanical sweep, verified by a 2-critic adversarial pass, shipped as ready PR #319 (all CI green, MERGEABLE/CLEAN).",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Merge wiki-* into one /wiki dispatcher",
+      "description": "Replace the three standalone wiki skills with a single thin dispatcher that routes the first $ARGUMENTS token to references/{ingest,query,lint}.md.",
+      "acceptanceCriteria": [
+        ".mifune/skills/wiki/SKILL.md dispatches ingest|query|lint to references/<sub>.md; frontmatter name: wiki, valid argument-hint + allowed-tools; schema pointer is .mifune/skills/wiki/references/schema.md (no context/rules/wiki.md, which does not exist on this base).",
+        "references/{ingest,query,lint}.md are lifted from the old SKILL.md bodies with only documented path/name rewrites; schema + four research docs moved under references/.",
+        "The three wiki-* skill dirs are deleted; /wiki resolves through .claude/.pi/.codex skill symlinks."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Done. Critic-A confirmed dispatcher correctness + reference-doc fidelity after fixing the lifted-header double-path."
+    },
+    {
+      "id": "US-002",
+      "title": "Relocate corpus + gitignore-by-default",
+      "description": "Move the corpus into the skill dir and make it local-by-default with a whitelist model.",
+      "acceptanceCriteria": [
+        "31 entity pages + 19 raw snapshots + 2 READMEs git-mv'd to .mifune/skills/wiki/corpus/ and corpus/raw/ (history preserved); the 50 tracked files stay tracked.",
+        ".gitignore ignores .mifune/skills/wiki/corpus/* and exempts corpus/README.md, corpus/raw/, corpus/raw/README.md; a new scratch entry is ignored while tracked entries stay tracked.",
+        "corpus README anchors carry the gitignore-by-default note and point at .mifune/skills/wiki/references/schema.md."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Done. Critic-B verified gitignore semantics + that git add -A re-staged the rename-then-edited READMEs (avoiding stale index content)."
+    },
+    {
+      "id": "US-003",
+      "title": "Repoint coupled probes + cross-ref sweep",
+      "description": "Move the two data-path-coupled probes in lockstep and rewire all live consumer references.",
+      "acceptanceCriteria": [
+        "wiki-readme-index.sh reconstructs the index from the git-tracked corpus set; repo-map-contract.sh's three raw-path asserts repoint to .mifune/skills/wiki/corpus/raw/; both PASS.",
+        "AGENTS.md (3 rows -> 1 /wiki row, mermaid groom node, B-state list), REPO_MAP.md, context/README.md, autopilot OWNED_PATHS, and the live wiki-* cross-refs across ship-spec/spec-*/teach/retro/harness-audit/imagine/strategic-proposal/prompt-miner are repointed.",
+        "Conceptual wiki/memory (harness-audit) and wiki/docs (teach) tokens preserved; historical records (roadmap M3 tables, CHANGELOG, dated MEMORY/IDENTITY lessons, tasks/, eval fixtures) keep as-of-then refs."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Done. 9 trap-free files via 2 /delegate executors; 8 nuanced files by the Advisor. Critic-B caught a missed ls \"$AUDIT_ROOT/wiki/\" (grep blind spot) — fixed."
+    },
+    {
+      "id": "US-004",
+      "title": "Verify + ship ready PR",
+      "description": "Full probe suite green, no RESULTS.md churn, PR opened to development.",
+      "acceptanceCriteria": [
+        "Full eval suite 56 PASS / 1 SKIPPED (env) / 0 REGRESSION; no probes added/removed so RESULTS.md is untouched.",
+        "PR #319 to development is MERGEABLE/CLEAN with all CI gates green (Boot Path Lint, Eval Probe Regression Gate, Lint/Typecheck/Build/Test, GitGuardian).",
+        "Stops at the human merge gate; no auto-merge."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Done. PR #319 green + CLEAN."
+    }
+  ]
+}

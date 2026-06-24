@@ -62,7 +62,7 @@ Run these in order; each is an existing primitive — compose, don't re-derive.
    (or `--plan` content, with an explicit instruction to skip clarifying questions when a
    plan is supplied). Verify `tasks/<slug>/prd.md` exists before continuing.
 
-3. **Wiki alignment** (Stage 2.5). Read `.mifune/skills/wiki-ingest/references/schema.md`, compare the topic against
+3. **Wiki alignment** (Stage 2.5). Read `.mifune/skills/wiki/references/schema.md`, compare the topic against
    the public DeepWiki for this repo, and record a `## Wiki Alignment` section in
    `prd.md` (`Impact: REQUIRED | NOT-APPLICABLE`, local entries, spec alignment, DeepWiki
    comparison, and — when REQUIRED — the wiki acceptance criteria a story must carry). The

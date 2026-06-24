@@ -13,7 +13,7 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
    - `tasks/<slug>/progress.txt` — read the "Codebase Patterns" section at the top (if any) and the most recent few iterations to see what's been done.
    - `tasks/<slug>/critique.md` — if present, the critic findings the stories must satisfy.
    - If `tasks/<slug>/prd.md` contains `## Wiki Alignment`, read it before choosing the story. When `Impact: REQUIRED`, the relevant story must keep wiki updates aligned with the PRD and the recorded DeepWiki comparison.
-   - `.mifune/skills/wiki-ingest/references/schema.md` when your story touches `wiki/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
+   - `.mifune/skills/wiki/references/schema.md` when your story touches `.mifune/skills/wiki/corpus/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
    - `.claude/skills/git/SKILL.md` for branch + commit conventions.
    - `.mifune/skills/t3/references/sandbox-processes.md` for tmux session conventions if your story spawns processes.
    - `.mifune/skills/advisor/SKILL.md` for any critic-gated story.

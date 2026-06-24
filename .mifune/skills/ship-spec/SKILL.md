@@ -14,7 +14,7 @@ argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|au
 
 # Ship Spec
 
-Compose the existing primitives (`/prd`, wiki synthesis per `.mifune/skills/wiki-ingest/references/schema.md`, DeepWiki comparison, `.claude/agents/critic.md`, `/ralph`, `gh`, `git`, `/compact`, an expert `/worktrees` Advisor launched via `/goal`, `/delegate` + `scripts/ralph.sh`, `/eval`, `/pr-audit`) into one durable invocation that produces a fully-scaffolded task and a ready-for-review PR. The draft PR is an observability checkpoint while implementation is pending, not the terminal state. After scaffolding, the orchestrator compacts and hands off to an expert Advisor — launched in its own tmux session via a `/goal`-prefixed prompt — that isolates work in a worktree, drives `/delegate` workers each running `scripts/ralph.sh`, revises required wiki entries from implementation evidence, then undrafts the PR through a `/pr-audit` promotable gate. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
+Compose the existing primitives (`/prd`, wiki synthesis per `.mifune/skills/wiki/references/schema.md`, DeepWiki comparison, `.claude/agents/critic.md`, `/ralph`, `gh`, `git`, `/compact`, an expert `/worktrees` Advisor launched via `/goal`, `/delegate` + `scripts/ralph.sh`, `/eval`, `/pr-audit`) into one durable invocation that produces a fully-scaffolded task and a ready-for-review PR. The draft PR is an observability checkpoint while implementation is pending, not the terminal state. After scaffolding, the orchestrator compacts and hands off to an expert Advisor — launched in its own tmux session via a `/goal`-prefixed prompt — that isolates work in a worktree, drives `/delegate` workers each running `scripts/ralph.sh`, revises required wiki entries from implementation evidence, then undrafts the PR through a `/pr-audit` promotable gate. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
 
 **Core principle: critic gate before commitment.** Critics review the PRD before the issue is opened, the branch created, or anything is pushed. The cheapest thing to revise is the spec itself — make that the gate.
 
@@ -97,13 +97,13 @@ Verify output exists at `tasks/<slug>/prd.md` before proceeding.
 
 ### Stage 2.5 — Wiki alignment + DeepWiki comparison
 
-Before critics run, make the PRD explicit about wiki impact. Read `.mifune/skills/wiki-ingest/references/schema.md` and compare the spec's topic against the public DeepWiki for this repository (`https://deepwiki.com/mifunedev/openharness`), opening the most relevant DeepWiki page(s) when the topic maps to an existing subsystem. Record the result in `tasks/<slug>/prd.md` as a `## Wiki Alignment` section:
+Before critics run, make the PRD explicit about wiki impact. Read `.mifune/skills/wiki/references/schema.md` and compare the spec's topic against the public DeepWiki for this repository (`https://deepwiki.com/mifunedev/openharness`), opening the most relevant DeepWiki page(s) when the topic maps to an existing subsystem. Record the result in `tasks/<slug>/prd.md` as a `## Wiki Alignment` section:
 
 ```markdown
 ## Wiki Alignment
 
 - **Impact**: REQUIRED | NOT-APPLICABLE
-- **Local entries**: `wiki/<slug>.md` to create/update, or `none`
+- **Local entries**: `.mifune/skills/wiki/corpus/<slug>.md` to create/update, or `none`
 - **Spec alignment**: <how the wiki entry must reflect this PRD's goals, non-goals, and acceptance criteria>
 - **DeepWiki comparison**: <source-file/page-shape/terminology gaps found against https://deepwiki.com/mifunedev/openharness, or "no relevant DeepWiki page found">
 - **Acceptance criteria**: <wiki update checks to add to the relevant story when REQUIRED>
@@ -115,7 +115,7 @@ When impact is required, revise the PRD before critics run so at least one story
 - local wiki entry creation/update aligned with the PRD's goals, non-goals, and final behavior;
 - DeepWiki-style body shape: relevant source files, line-cited claims, system relationships when applicable, and `## See Also`;
 - explicit comparison against the relevant DeepWiki page(s), naming any source-file coverage or terminology differences;
-- `wiki/README.md` index freshness via `/wiki-lint` or `bash evals/probes/wiki-readme-index.sh`.
+- `.mifune/skills/wiki/corpus/README.md` index freshness via `/wiki lint` or `bash evals/probes/wiki-readme-index.sh`.
 
 ### Stage 3 — Two critics in parallel
 
@@ -368,7 +368,7 @@ tmux new-session -d -s "$SESSION" -c "${WT:-$PWD}" \
 
 **Advisor `/goal` prompt** (one line; fill the placeholders — when `$CRON_WORKTREE` is set, substitute its actual path for `<worktree>` and use the "reuse" branch of step 1):
 
-> `/goal` As an **expert Advisor on `/worktrees`**, implement `tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) Orchestrate with `/delegate --plan tasks/<slug>/prd.json`: spawn `general-purpose` worker(s) that each `cd` into that worktree and run `scripts/ralph.sh <slug>` (the ralph loop), and **monitor** them by polling `tasks/<slug>/progress.txt` for `STATUS: COMPLETE` and the workers' tmux liveness. (3) Run the `/eval` gate (Stage 11). (4) If `tasks/<slug>/prd.md` has `## Wiki Alignment` with `Impact: REQUIRED`, revise the named `wiki/*.md` entries after implementation so they match the spec's final behavior and acceptance criteria, include DeepWiki-style relevant source files/line citations/system relationships, preserve the recorded DeepWiki comparison, and refresh `wiki/README.md`; verify with `bash evals/probes/wiki-readme-index.sh`. (5) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (6) In a **separate executor**, run `/pr-audit` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SHIP_SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
+> `/goal` As an **expert Advisor on `/worktrees`**, implement `tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) Orchestrate with `/delegate --plan tasks/<slug>/prd.json`: spawn `general-purpose` worker(s) that each `cd` into that worktree and run `scripts/ralph.sh <slug>` (the ralph loop), and **monitor** them by polling `tasks/<slug>/progress.txt` for `STATUS: COMPLETE` and the workers' tmux liveness. (3) Run the `/eval` gate (Stage 11). (4) If `tasks/<slug>/prd.md` has `## Wiki Alignment` with `Impact: REQUIRED`, revise the named `.mifune/skills/wiki/corpus/*.md` entries after implementation so they match the spec's final behavior and acceptance criteria, include DeepWiki-style relevant source files/line citations/system relationships, preserve the recorded DeepWiki comparison, and refresh `.mifune/skills/wiki/corpus/README.md`; verify with `bash evals/probes/wiki-readme-index.sh`. (5) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (6) In a **separate executor**, run `/pr-audit` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SHIP_SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
 
 The Advisor owns Stages 11–13 inside its session. The orchestrator's turn ends after launching it and reporting the session name; the ready-for-review PR is produced asynchronously by the Advisor. Each worker commits the implementation on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer (per `templates/prompt.md`); worktree isolation keeps concurrent work off the shared checkout (avoiding the autopilot shared-checkout contamination class). If `tmux` is unavailable, fall back to running the executor inline (`scripts/ralph.sh <slug>`) and continue to Stage 11 in the foreground. Stage 13 still requires a fresh Stage 12 `/pr-audit` immediately before `gh pr ready`; stale-draft watchdog/heartbeat output cannot substitute for that audit.
 
@@ -378,12 +378,12 @@ Run `/eval` (the Advisor runs this inside its session) while still on the work b
 
 ### Stage 11.25 — Wiki revision gate
 
-If `tasks/<slug>/prd.md` has `## Wiki Alignment` with `Impact: REQUIRED`, the Advisor must revise the named `wiki/*.md` entries after implementation and before `/pr-audit`. The revision must align with:
+If `tasks/<slug>/prd.md` has `## Wiki Alignment` with `Impact: REQUIRED`, the Advisor must revise the named `.mifune/skills/wiki/corpus/*.md` entries after implementation and before `/pr-audit`. The revision must align with:
 - the PRD's goals, non-goals, acceptance criteria, and completed behavior;
 - the DeepWiki comparison captured in Stage 2.5;
-- `.mifune/skills/wiki-ingest/references/schema.md`'s DeepWiki-style standard: relevant source files, line-cited claims, system relationships for pipelines/runtime/architecture topics, and `## See Also` navigation.
+- `.mifune/skills/wiki/references/schema.md`'s DeepWiki-style standard: relevant source files, line-cited claims, system relationships for pipelines/runtime/architecture topics, and `## See Also` navigation.
 
-Refresh `wiki/README.md` via `/wiki-lint` or the atomic fallback in `/wiki-ingest`, then run:
+Refresh `.mifune/skills/wiki/corpus/README.md` via `/wiki lint` or the atomic fallback in `/wiki ingest`, then run:
 
 ```bash
 bash evals/probes/wiki-readme-index.sh
@@ -495,7 +495,7 @@ The whole pipeline can be re-invoked safely. Failed stage = fix + re-run; resume
 | `/prd` skill | `.claude/skills/prd/SKILL.md` | Stage 2 — markdown PRD generation |
 | `critic` agent | `.claude/agents/critic.md` | Stage 4 — adversarial review |
 | `/ralph` skill | `.claude/skills/ralph/SKILL.md` | Stage 6 — markdown → JSON conversion |
-| Wiki rules | `.mifune/skills/wiki-ingest/references/schema.md` | Stages 2.5 & 11.25 — DeepWiki-style source-backed wiki alignment |
+| Wiki rules | `.mifune/skills/wiki/references/schema.md` | Stages 2.5 & 11.25 — DeepWiki-style source-backed wiki alignment |
 | `/compact` | (built-in) | Stages 7.5 & 11.5 — bracket the implement phase (before implement after PRD artifacts; after implement before the audit) |
 | `/worktrees` skill | `.claude/skills/worktrees/SKILL.md` | Stage 10 — isolated `.worktrees/<branch>` for the implementation |
 | `/delegate` skill | `.claude/skills/delegate/SKILL.md` | Stage 10 — Advisor spawns workers in waves |

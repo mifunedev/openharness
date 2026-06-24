@@ -8,7 +8,7 @@ At session start, prefer Git's tracked file list over raw filesystem scans, then
 repo=$(git rev-parse --show-toplevel)
 git -C "$repo" ls-files -- \
   ':!:tasks/*/progress.txt' \
-  ':!:wiki/raw/*' \
+  ':!:.mifune/skills/wiki/corpus/raw/*' \
   ':!:evals/datasets/**/oracle/**' \
   ':!:evals/datasets/**/diff.patch' \
   ':!:evals/datasets/**/changed-files.txt'
@@ -23,7 +23,7 @@ Why: anchoring at `git rev-parse --show-toplevel` prevents subdirectory launches
 3. Pick one row from the search routing guide before running broad `rg`.
 4. When a routed directory has `README.md`, read that first.
 5. Disregard the folders in the skip table by default; open them only for listed exception cases.
-6. Prefer curated `wiki/*.md` and `memory/MEMORY.md` over raw logs/snapshots.
+6. Prefer curated `.mifune/skills/wiki/corpus/*.md` and `memory/MEMORY.md` over raw logs/snapshots.
 
 ## Performance caveat and acceptance metric
 
@@ -93,7 +93,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | CLI/package code | `packages/README.md`, `packages/*/src/`, `packages/*/package.json` | Workspace package source and package-local scripts/dependencies. |
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi extensions, manifests, and Pi runtime config. |
 | Skill behavior | `.pi/skills/`, `.claude/skills/` | Provider-facing skill contracts; keep copies synchronized when both exist. |
-| Durable knowledge | `wiki/README.md`, `wiki/*.md`, `memory/MEMORY.md` | Curated wiki pages and long-term lessons; prefer these before raw logs. |
+| Durable knowledge | `.mifune/skills/wiki/corpus/README.md`, `.mifune/skills/wiki/corpus/*.md`, `memory/MEMORY.md` | Curated wiki pages and long-term lessons; prefer these before raw logs. |
 | Agent workspace seed files | `workspace/AGENTS.md`, `workspace/CLAUDE.md` | Template files bind-mounted into the sandbox workspace. |
 
 ## Disregard by default
@@ -108,8 +108,8 @@ Ignore these unless the task explicitly targets them:
 | `packages/docs/build/`, `packages/docs/.docusaurus/`, `packages/oh/dist/` | Generated build output. | Verifying generated artifacts or deployment output. |
 | `packages/docs/node_modules/`, `packages/oh/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
 | `memory/YYYY-MM-DD/`, `memory/*/log.md` | High-churn session logs; noisy for broad context. | Loading today's required startup log or investigating a dated event. |
-| `memory/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki-ingest --from-draft`. |
-| `wiki/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `wiki/*.md` entry. |
+| `memory/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki ingest --from-draft`. |
+| `.mifune/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.mifune/skills/wiki/corpus/*.md` entry. |
 | `workspace/.slack/`, `workspace/.pi/`, `workspace/.ralph/`, `workspace/startup.sh` | Runtime state and local/sensitive sandbox artifacts. | Debugging Slack/Pi/Ralph runtime state or startup generation. |
 | `tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific Ralph run status; prefer `tail` over full read. |
 | `evals/datasets/**/oracle/`, `evals/datasets/**/diff.patch`, `evals/datasets/**/changed-files.txt` | Expected-output fixtures, not active implementation guidance. | Updating/verifying a dataset oracle. |
@@ -137,7 +137,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `packages/*/package.json` | Package-local scripts and dependencies. | Run package-specific build/test/typecheck. |
 | `docs/` | Docusaurus documentation source. | Update product docs. |
 | `blog/` | Blog posts and authors metadata. | Update long-form public writing. |
-| `wiki/*.md` | Curated internal knowledge pages. | Reuse durable research before reading raw sources; read `wiki/README.md` for index. |
+| `.mifune/skills/wiki/corpus/*.md` | Curated internal knowledge pages. | Reuse durable research before reading raw sources; read `.mifune/skills/wiki/corpus/README.md` for index. |
 | `tasks/<active-task>/` | `prd.md`, `prd.json`, `critique.md`, `prompt.md`; `progress.txt` only for Ralph run status. | Verify task graph or implementation scope before reading runtime progress. |
 | `.github/workflows/` | CI, docs, release workflow definitions. | Debug/check GitHub Actions behavior. |
 | `.devcontainer/` | Sandbox Dockerfile, compose, devcontainer config, entrypoint. | Change sandbox image/runtime provisioning. |

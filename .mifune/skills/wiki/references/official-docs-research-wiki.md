@@ -13,10 +13,10 @@ Use this pattern when a user asks to "add to wiki" but the source is a seed URL 
    - Stop for confirmation before writing the wiki implementation.
 3. Use subagents for research and audit, not direct tracked wiki writes.
    - Research subagents collect source-backed findings and identify related official docs.
-   - Subagents may draft proposed wiki text, but the orchestrator owns writes to `wiki/raw/`, `wiki/<slug>.md`, and cross-links.
+   - Subagents may draft proposed wiki text, but the orchestrator owns writes to `.mifune/skills/wiki/corpus/raw/`, `.mifune/skills/wiki/corpus/<slug>.md`, and cross-links.
 4. Snapshot every authoritative source that materially supports the final entry.
    - Prefer official docs over social posts, blog summaries, or inferred behavior.
-   - Keep raw snapshots immutable and synthesized entries bounded by `.mifune/skills/wiki-ingest/references/schema.md`.
+   - Keep raw snapshots immutable and synthesized entries bounded by `.mifune/skills/wiki/references/schema.md`.
 5. Cross-link counterpart concepts rather than merging unrelated domains into one page.
    - Example: a Claude Code workflows page can link to an inspectable-agent-harness/Pi workflows page as a related counterpart while keeping each page focused.
 6. Audit before finalizing.

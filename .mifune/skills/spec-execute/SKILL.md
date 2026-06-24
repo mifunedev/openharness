@@ -8,7 +8,7 @@ description: >-
   Composes the existing build mechanics of /ship-spec (Stages 5, 8–13: locate
   issue + branch + draft PR + worktree Advisor + /delegate + scripts/ralph.sh +
   /eval + /pr-audit) plus the spec-* tail (/audit, /spec-retro,
-  compound/compress/benchmark, skill-lint/wiki-lint/drift-check).
+  compound/compress/benchmark, skill-lint/wiki lint/drift-check).
   TRIGGER when: an APPROVED tasks/<slug>/ folder needs building to a promotable PR;
   the execute step of AGENTS.md § The Workflow; "execute <slug>", "build <slug>",
   "spec-execute <slug>".
@@ -85,8 +85,8 @@ When the build reports complete, run the per-unit verdict gate:
 - `AUDIT-PASS` → the build is promotable; continue to the tail.
 
 The wiki-revision gate (`/ship-spec` Stage 11.25) applies inside this loop when
-`prd.md`'s `## Wiki Alignment` is `Impact: REQUIRED`: required `wiki/*.md` entries are
-revised against the implemented behavior + DeepWiki comparison and `wiki/README.md` is
+`prd.md`'s `## Wiki Alignment` is `Impact: REQUIRED`: required `.mifune/skills/wiki/corpus/*.md` entries are
+revised against the implemented behavior + DeepWiki comparison and `.mifune/skills/wiki/corpus/README.md` is
 refreshed before the audit can PASS.
 
 ### 3. `spec-retro` — capture the lessons
@@ -99,7 +99,7 @@ propose-then-confirm gate. Always logs.
 
 The self-improvement tail (`AGENTS.md § The Workflow`):
 
-- **compound** — promote durable knowledge so it is reused, not re-derived (`/wiki-ingest`,
+- **compound** — promote durable knowledge so it is reused, not re-derived (`/wiki ingest`,
   `memory/MEMORY.md`, mint a probe from any guardrail lesson).
 - **compress** — keep the always-loaded context lean and clear (`/context-audit`).
 - **benchmark** — confirm the change earned its complexity (`/benchmark`): the `/eval`
@@ -108,7 +108,7 @@ The self-improvement tail (`AGENTS.md § The Workflow`):
 ### 5. `groom` — pre-merge health checks
 
 Before handing to the human, run the grooming triad named in `AGENTS.md § The Workflow`:
-`/skill-lint` · `/wiki-lint` · `/drift-check`. These are report-only health checks; surface
+`/skill-lint` · `/wiki lint` · `/drift-check`. These are report-only health checks; surface
 findings, do not block the merge on advisory output.
 
 ### 6. Undraft → human merge gate

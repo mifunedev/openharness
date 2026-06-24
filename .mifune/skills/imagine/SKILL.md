@@ -146,7 +146,7 @@ Then run the qualify/improve loop per `.mifune/skills/retro/references/memory-pr
 - **Asking clarifying questions.** Breaks the one-shot contract. If the scenario is too vague, push the ambiguities into `## Open questions for /prd`; do not interrupt.
 - **Writing a full PRD.** Story seeds are one-liners. Numbered functional requirements, acceptance criteria, success metrics — all `/prd`'s job, not this skill's.
 - **Skipping the mermaid diagram.** The diagram is the cheapest forcing function for "did I actually understand the scenario?" Pick a real type; never emit a placeholder or `// TODO: diagram`.
-- **Writing outside `.claude/specs/<slug>/`.** No spillover into `tasks/`, `memory/<topic>.md`, `wiki/`, or root. Those surfaces have their own skills.
+- **Writing outside `.claude/specs/<slug>/`.** No spillover into `tasks/`, `memory/<topic>.md`, `.mifune/skills/wiki/corpus/`, or root. Those surfaces have their own skills.
 - **Auto-chaining into `/ship-spec`.** Keep the seam explicit. The user edits the spec before formalizing — that's the entire reason the seam exists.
 - **Truncating the scenario into the slug.** `imagine a long thirty word scenario about ...` → derive the noun phrase (`thirty-word-scenario` or `long-scenario`), not the first five words verbatim.
 

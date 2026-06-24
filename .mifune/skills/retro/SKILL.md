@@ -37,7 +37,7 @@ Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for determinist
 - **`/harness-audit`** — audits harness code health via four parallel sub-agents. That is a structural audit, not a behavioral/conversational pass.
 - **`/context-audit`** — scores the default-loaded context budget across four dimensions. It trims files, not behaviors.
 - **`/skill-lint`** — scores individual skills for staleness. It reviews skill quality, not session outcomes.
-- **`/wiki-lint`** — health-checks the wiki corpus for staleness and broken links. It curates the wiki, not the session.
+- **`/wiki lint`** — health-checks the wiki corpus for staleness and broken links. It curates the wiki, not the session.
 - **Trivial sessions** — if the session contained only mechanical read-only queries or single-command invocations with no surprises, announce the skip and proceed to log.
 
 Key boundary: `/retro` is *session-scoped reflection*. The lint/audit skills above are the *deep-dive tooling* it points at — not what it runs. It is the only skill whose domain is *current-session signals → falsifiable hypotheses → memory/identity*.
@@ -108,7 +108,7 @@ Seed hypotheses by asking, for each subsystem, what *this session* revealed abou
 | Continual learning | Did prior memory/identity get used, ignored, or contradicted? Did anything durable emerge? | `memory/MEMORY.md`, `context/IDENTITY.md` |
 | Context compression | Was loaded context bloated/redundant, or did a rule prove load-bearing? | `/context-audit`, `/caveman` |
 | Reinforcement learning | Did advisor/executor or recursive-delegation patterns help or hurt? Over/under-delegation? | `.mifune/skills/advisor/SKILL.md`, `recursive-delegation.md` |
-| Wiki | Did the session surface knowledge that belongs in the wiki, or hit stale/missing entries? | `/wiki-ingest`, `/wiki-lint` |
+| Wiki | Did the session surface knowledge that belongs in the wiki, or hit stale/missing entries? | `/wiki ingest`, `/wiki lint` |
 | Docs | Did human-facing doc gaps or inaccuracies surface? | `docs/`, `blog/` |
 | Memory scaffolding | Did the log/tier protocol itself create friction or work cleanly? | `.mifune/skills/retro/references/memory-protocol.md`, `/retro` |
 
@@ -292,5 +292,5 @@ Claude Code skills cannot self-trigger. True automatic firing at session end wou
 - **Promoting an unfalsifiable claim.** If no session evidence could refute it, it's not a hypothesis — it cannot be promoted.
 - **Overfitting one session.** Single-session support is not a principle; that is the MEMORY.md → IDENTITY.md graduation bar.
 - **Confirmation bias.** Every hypothesis must be tested for disconfirming evidence, not just supporting evidence.
-- **Scope creep into the lint tools.** Point at `/context-audit`, `/wiki-lint`, `/skill-lint`, etc.; do not run them inline.
+- **Scope creep into the lint tools.** Point at `/context-audit`, `/wiki lint`, `/skill-lint`, etc.; do not run them inline.
 - **Bypassing the schema/scripts.** The evidence table, duplicate check, and rendered log entry are part of the contract, not optional formatting.

@@ -25,7 +25,7 @@ Use this variant when the user asks for a council to define a V2MOM, operating m
    - **Council decision**: Vision, Values, Methods, Obstacles, Measures.
    - **Wiki plan**: exact target entry, draft frontmatter/body, verification, and rejected scope.
 5. Prefer one bounded provisional wiki entry first. Extra positioning/docs-IA entries are premature unless they hold distinct durable facts.
-6. Keep wiki output as synthesis, not council minutes. Raw/source material belongs under `wiki/raw/`; the tracked entry stays within the wiki word cap and starts `confidence: provisional`.
+6. Keep wiki output as synthesis, not council minutes. Raw/source material belongs under `.mifune/skills/wiki/corpus/raw/`; the tracked entry stays within the wiki word cap and starts `confidence: provisional`.
 7. Add explicit approval gates for contested strategic wording (e.g. tagline, key nouns, whether a constraint is too narrow) before implementing file changes.
 
 Session example and final V2MOM synthesis: `references/open-harness-v2mom-council.md`.

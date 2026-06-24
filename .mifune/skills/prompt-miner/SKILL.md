@@ -58,7 +58,7 @@ content. The contract is non-negotiable:
 
 - **`/retro`** — reflects on the current conversation, not the historical corpus.
   Use `/retro` to close a session; use `/prompt-miner` to learn across sessions.
-- **`/context-audit` / `/skill-lint` / `/wiki-lint`** — those score harness
+- **`/context-audit` / `/skill-lint` / `/wiki lint`** — those score harness
   artifacts (context budget, skills, wiki). `/prompt-miner` scores *prompts*.
 
 ## Result tag

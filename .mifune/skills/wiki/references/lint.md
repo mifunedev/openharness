@@ -1,62 +1,54 @@
----
-name: wiki-lint
-description: |
-  Manual health-check skill for the wiki corpus. Surfaces five finding types:
-  stale entries (updated > 90 days ago), deprecated entries (confidence:
-  deprecated), orphaned entries (zero inbound [[slug]] references), broken
-  outbound links ([[slug]] references with no matching entry), and a stub for
-  contradiction detection (not yet implemented). Default invocation atomically
-  regenerates wiki/README.md; --dry-run prints proposed changes without writing.
-  Always logs to memory/<today>/log.md per the Memory Improvement Protocol.
-  TRIGGER when: asked to health-check the wiki, "lint the wiki", "regenerate
-  wiki/README.md", "find stale or orphaned wiki entries", or before a release
-  that includes wiki changes.
-argument-hint: "[--dry-run]"
----
+# /wiki lint — reference
+
+> Full procedure for the `lint` subcommand of the `/wiki` dispatcher, lifted
+> from the former standalone `/wiki lint` skill during the wiki consolidation.
+> The dispatcher (`.mifune/skills/wiki/SKILL.md`) routes here when the first
+> `$ARGUMENTS` token is `lint`. Canonical schema: `.mifune/skills/wiki/references/schema.md`.
+
 
 # Wiki Lint
 
-Health-check the `wiki/` corpus and regenerate `wiki/README.md`. This is
+Health-check the `.mifune/skills/wiki/corpus/` corpus and regenerate `.mifune/skills/wiki/corpus/README.md`. This is
 Karpathy's "Lint + Maintain" operation adapted for Open Harness: surface
 stale, deprecated, orphaned, and broken-link entries; regenerate the index
 atomically.
 
 The canonical schema, frontmatter extraction command, cross-link convention,
-and confidence lifecycle all live in `.mifune/skills/wiki-ingest/references/schema.md`. This skill
+and confidence lifecycle all live in `.mifune/skills/wiki/references/schema.md`. This skill
 defers to those rules — it does not redefine them.
 
-`wiki/README.md` is generated state, not hand-authored inventory. The tier-A
+`.mifune/skills/wiki/corpus/README.md` is generated state, not hand-authored inventory. The tier-A
 `evals/probes/wiki-readme-index.sh` probe reconstructs the expected Index from
-current `wiki/*.md` frontmatter and fails when this skill's committed output
+current `.mifune/skills/wiki/corpus/*.md` frontmatter and fails when this skill's committed output
 falls out of sync.
 
 ## When to Use
 
-- `/wiki-lint` to regenerate `wiki/README.md` and surface any health findings.
-- `/wiki-lint --dry-run` to preview what would change without writing.
+- `/wiki lint` to regenerate `.mifune/skills/wiki/corpus/README.md` and surface any health findings.
+- `/wiki lint --dry-run` to preview what would change without writing.
 - Periodically (manual cadence — no heartbeat cron in v1) to keep the corpus
   healthy as entries accumulate.
 
 ## When NOT to Use
 
-- **`/wiki-ingest`** — to add or update an entry. `/wiki-lint` is read-only
-  except for `wiki/README.md` regeneration.
-- **`/wiki-query`** — to search for a topic and read entries into context.
-- **Direct `Edit` tool on `wiki/README.md`** — `/wiki-lint` owns this file;
+- **`/wiki ingest`** — to add or update an entry. `/wiki lint` is read-only
+  except for `.mifune/skills/wiki/corpus/README.md` regeneration.
+- **`/wiki query`** — to search for a topic and read entries into context.
+- **Direct `Edit` tool on `.mifune/skills/wiki/corpus/README.md`** — `/wiki lint` owns this file;
   hand-edits will be overwritten on the next run.
 
 ## Argument Interface (locked)
 
 ```
-/wiki-lint [--dry-run]
+/wiki lint [--dry-run]
 ```
 
 The argument interface is locked. Do not add flags or positional arguments
 without editing this SKILL.md.
 
-- **No arguments**: run all checks, atomically regenerate `wiki/README.md`.
-- **`--dry-run`**: run all checks, print the proposed `wiki/README.md` content
-  and any findings, but do NOT write `wiki/README.md` or any other file.
+- **No arguments**: run all checks, atomically regenerate `.mifune/skills/wiki/corpus/README.md`.
+- **`--dry-run`**: run all checks, print the proposed `.mifune/skills/wiki/corpus/README.md` content
+  and any findings, but do NOT write `.mifune/skills/wiki/corpus/README.md` or any other file.
 
 ## Instructions
 
@@ -70,7 +62,7 @@ if echo "$ARGUMENTS" | grep -q -- '--dry-run'; then
 fi
 ```
 
-All subsequent write operations (including the atomic `wiki/README.md`
+All subsequent write operations (including the atomic `.mifune/skills/wiki/corpus/README.md`
 regeneration) are gated on `DRY_RUN=false`. In dry-run mode, print what
 would be written; never write it.
 
@@ -79,15 +71,15 @@ would be written; never write it.
 ```bash
 HARNESS=/home/sandbox/harness
 WIKI_ENTRIES=()
-for f in "$HARNESS"/wiki/*.md; do
+for f in "$HARNESS"/.mifune/skills/wiki/corpus/*.md; do
   [ -f "$f" ] && WIKI_ENTRIES+=("$f")
 done
 ENTRIES_COUNT=${#WIKI_ENTRIES[@]}
 ```
 
-This enumerates `wiki/*.md` directly — NOT via `wiki/README.md` (the README is
+This enumerates `.mifune/skills/wiki/corpus/*.md` directly — NOT via `.mifune/skills/wiki/corpus/README.md` (the README is
 the output of this skill, not its input). Sub-article files at
-`wiki/<parent>/<child>.md` are not matched by this glob; they are scoped for
+`.mifune/skills/wiki/corpus/<parent>/<child>.md` are not matched by this glob; they are scoped for
 a future iteration.
 
 If `$ENTRIES_COUNT = 0`, skip all check steps and proceed directly to
@@ -96,10 +88,10 @@ If `$ENTRIES_COUNT = 0`, skip all check steps and proceed directly to
 ### 3. Extract frontmatter for each entry
 
 For every entry path, extract its YAML frontmatter using the canonical command
-locked in `.mifune/skills/wiki-ingest/references/schema.md` § 6:
+locked in `.mifune/skills/wiki/references/schema.md` § 6:
 
 ```bash
-awk '/^---$/{f=!f; next} f{print}' wiki/<slug>.md
+awk '/^---$/{f=!f; next} f{print}' .mifune/skills/wiki/corpus/<slug>.md
 ```
 
 Build a lookup table of slug → frontmatter fields:
@@ -132,8 +124,8 @@ done
 ```
 
 This extraction MUST use the exact `awk '/^---$/{f=!f; next} f{print}'` command.
-Deviation from the § 6 canonical command is forbidden — both `/wiki-query` and
-`/wiki-lint` must use identical extraction to prevent silent divergence (a match
+Deviation from the § 6 canonical command is forbidden — both `/wiki query` and
+`/wiki lint` must use identical extraction to prevent silent divergence (a match
 that works in one skill must work in the other).
 
 ### 4. Stale-90d check
@@ -173,7 +165,7 @@ For each entry in `STALE_90D`, print one line: `  - <slug> (updated: <date>, age
 
 If `${#STALE_90D[@]} = 0`, print `  (none)`.
 
-**Important**: this check only REPORTS. `/wiki-lint` does NOT modify the
+**Important**: this check only REPORTS. `/wiki lint` does NOT modify the
 `updated:` field or any other frontmatter field on any entry.
 
 ### 5. Deprecated check
@@ -201,10 +193,10 @@ For each entry in `DEPRECATED`, print one line: `  - <slug>`.
 
 If `${#DEPRECATED[@]} = 0`, print `  (none)`.
 
-**Critical constraint**: `/wiki-lint` ONLY REPORTS deprecated entries — it NEVER
+**Critical constraint**: `/wiki lint` ONLY REPORTS deprecated entries — it NEVER
 autonomously SETS `confidence: deprecated`. The `deprecated` value is set
 MANUALLY by the orchestrator only, per the lifecycle defined in
-`.mifune/skills/wiki-ingest/references/schema.md` § 5. This constraint is non-negotiable.
+`.mifune/skills/wiki/references/schema.md` § 5. This constraint is non-negotiable.
 
 Stale-90d (§ 4) and Deprecated (§ 5) are always reported separately. They are
 distinct finding types and MUST NOT be conflated — an entry can be stale-90d
@@ -309,7 +301,7 @@ For each finding in `BROKEN_LINKS`, print one line: `  - <source-slug> → [[<mi
 
 If `${#BROKEN_LINKS[@]} = 0`, print `  (none)`.
 
-See `.mifune/skills/wiki-ingest/references/schema.md` § 4 for the cross-link convention and grep
+See `.mifune/skills/wiki/references/schema.md` § 4 for the cross-link convention and grep
 patterns that govern outbound link syntax (`\[\[[a-z0-9-]+\]\]`).
 
 ### 8. Contradiction detection (stub)
@@ -318,7 +310,7 @@ Contradiction detection is explicitly **descoped** for v1. The function prints
 the following exact text and returns:
 
 ```
-contradiction detection: not yet implemented — see wiki-lint follow-up tracking
+contradiction detection: not yet implemented — see wiki lint follow-up tracking
 ```
 
 A follow-up tracking issue may be filed post-merge but is not a pre-merge
@@ -327,7 +319,7 @@ the stub text above is the complete implementation for v1.
 
 ### 9. README regeneration
 
-Build the `wiki/README.md` entries table. Sort all entries by `updated:`
+Build the `.mifune/skills/wiki/corpus/README.md` entries table. Sort all entries by `updated:`
 descending (most recently updated first).
 
 #### 9a. Sort entries by updated date descending
@@ -347,13 +339,13 @@ done < <(printf '%s\n' "${RANK_LINES[@]}" | sort -r)
 
 #### 9b. Build the README content
 
-The README file is owned and regenerated by `/wiki-lint`. The table header is
+The README file is owned and regenerated by `/wiki lint`. The table header is
 literal — the exact byte sequence matters for validation.
 
 ```bash
-# Preserve the static preamble of wiki/README.md (lines before the Index table)
+# Preserve the static preamble of .mifune/skills/wiki/corpus/README.md (lines before the Index table)
 # The Index section starts at "## Index"
-PREAMBLE=$(awk '/^## Index$/{exit} {print}' "$HARNESS/wiki/README.md")
+PREAMBLE=$(awk '/^## Index$/{exit} {print}' "$HARNESS/.mifune/skills/wiki/corpus/README.md")
 
 NEW_README="$PREAMBLE"$'\n'
 NEW_README+="## Index"$'\n\n'
@@ -376,49 +368,49 @@ header lines and no data rows. This is NOT an error condition.
 In `--dry-run` mode, print the proposed content:
 
 ```
---- Proposed wiki/README.md (dry-run, not written) ---
+--- Proposed .mifune/skills/wiki/corpus/README.md (dry-run, not written) ---
 <content>
---- end proposed wiki/README.md ---
+--- end proposed .mifune/skills/wiki/corpus/README.md ---
 ```
 
 In default (non-dry-run) mode, perform the **atomic write**:
 
 ```bash
-TMP="$HARNESS/wiki/README.md.tmp"
-FINAL="$HARNESS/wiki/README.md"
+TMP="$HARNESS/.mifune/skills/wiki/corpus/README.md.tmp"
+FINAL="$HARNESS/.mifune/skills/wiki/corpus/README.md"
 
 # Write to tmp
 printf '%s' "$NEW_README" > "$TMP"
 
 # Validate: non-empty AND contains the exact header line
 if [ ! -s "$TMP" ]; then
-  echo "ERROR: wiki/README.md.tmp is empty — aborting regeneration"
+  echo "ERROR: .mifune/skills/wiki/corpus/README.md.tmp is empty — aborting regeneration"
   rm -f "$TMP"
   exit 1
 fi
 
 if ! grep -qF '| Slug | Title | Tags | Updated |' "$TMP"; then
-  echo "ERROR: wiki/README.md.tmp is missing the required header line — aborting regeneration"
+  echo "ERROR: .mifune/skills/wiki/corpus/README.md.tmp is missing the required header line — aborting regeneration"
   rm -f "$TMP"
   exit 1
 fi
 
 # Atomic rename on validation success
 mv "$TMP" "$FINAL"
-echo "wiki/README.md regenerated (${ENTRIES_COUNT} entries)"
+echo ".mifune/skills/wiki/corpus/README.md regenerated (${ENTRIES_COUNT} entries)"
 ```
 
 **Atomic write protocol** (Critic-B mitigation):
 
-1. Write to `wiki/README.md.tmp` first.
+1. Write to `.mifune/skills/wiki/corpus/README.md.tmp` first.
 2. Validate the tmp file: it must be non-empty AND contain the exact header line
    `| Slug | Title | Tags | Updated |`.
-3. On validation success: atomically rename `wiki/README.md.tmp` → `wiki/README.md`.
-4. On validation failure: exit non-zero, leave the original `wiki/README.md`
+3. On validation success: atomically rename `.mifune/skills/wiki/corpus/README.md.tmp` → `.mifune/skills/wiki/corpus/README.md`.
+4. On validation failure: exit non-zero, leave the original `.mifune/skills/wiki/corpus/README.md`
    intact, print the failure reason, and remove the tmp file.
 
 This protocol ensures that a partial write or generation failure never leaves
-`wiki/README.md` in a corrupt or empty state.
+`.mifune/skills/wiki/corpus/README.md` in a corrupt or empty state.
 
 ### 10. Memory Improvement Protocol
 
@@ -434,7 +426,7 @@ mkdir -p "$HARNESS/memory/$TODAY"
 Append to `memory/<UTC-date>/log.md`:
 
 ```markdown
-## /wiki-lint -- HH:MM UTC
+## /wiki lint -- HH:MM UTC
 - **Result**: OP | DRY-RUN | FAIL
 - **Entries-Scanned**: <count>
 - **Stale-90d**: <count>
@@ -449,7 +441,7 @@ Field definitions:
 
 | Field | Content |
 |-------|---------|
-| `Entries-Scanned` | Total number of `wiki/*.md` files processed |
+| `Entries-Scanned` | Total number of `.mifune/skills/wiki/corpus/*.md` files processed |
 | `Stale-90d` | Count of entries with `updated:` > 90 days older than today |
 | `Deprecated` | Count of entries with `confidence: deprecated` |
 | `Orphaned` | Count of entries with zero inbound `[[links]]` |
@@ -468,14 +460,14 @@ See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memor
 
 ## Extraction Command Reference
 
-The canonical frontmatter extraction command, per `.mifune/skills/wiki-ingest/references/schema.md` § 6:
+The canonical frontmatter extraction command, per `.mifune/skills/wiki/references/schema.md` § 6:
 
 ```bash
-awk '/^---$/{f=!f; next} f{print}' wiki/<slug>.md
+awk '/^---$/{f=!f; next} f{print}' .mifune/skills/wiki/corpus/<slug>.md
 ```
 
 This MUST be the extraction method used in this skill. Deviation from the § 6
-command is forbidden — both `/wiki-query` and `/wiki-lint` must use identical
+command is forbidden — both `/wiki query` and `/wiki lint` must use identical
 extraction to prevent silent divergence (a match that works in one skill must
 work in the other). Any future change to this extraction method requires
 updating both skills atomically.
@@ -499,9 +491,9 @@ and distinct recommendations.
 - **Conflating stale-90d with deprecated** — stale-90d triggers on age of `updated:`;
   deprecated triggers on the value of `confidence:`. An entry may be one, both, or
   neither. Always report them under separate headings.
-- **Setting `confidence: deprecated` autonomously** — `/wiki-lint` is a reporter,
+- **Setting `confidence: deprecated` autonomously** — `/wiki lint` is a reporter,
   not a writer. The `deprecated` flag is set MANUALLY by the orchestrator per
-  `.mifune/skills/wiki-ingest/references/schema.md` § 5. If `/wiki-lint` sets this flag, it violates the
+  `.mifune/skills/wiki/references/schema.md` § 5. If `/wiki lint` sets this flag, it violates the
   confidence lifecycle.
 - **Treating a single-entry orphan as a false positive** — a corpus with one entry
   always produces one orphan finding. This is correct behavior. Document it in the
@@ -509,11 +501,11 @@ and distinct recommendations.
 - **Conflating orphans with broken outbound links** — orphans have no INBOUND links
   (other entries don't reference them); broken outbound links reference slugs that
   DO NOT EXIST. They are separate checks with different remediation paths.
-- **Non-atomic README write** — writing directly to `wiki/README.md` without the
+- **Non-atomic README write** — writing directly to `.mifune/skills/wiki/corpus/README.md` without the
   tmp → validate → rename protocol risks corruption. Always use the three-step
   atomic write in § 9c.
-- **Grepping `wiki/README.md` for entries** — the README is the output of this
-  skill, not its input. Always enumerate `wiki/*.md` directly.
+- **Grepping `.mifune/skills/wiki/corpus/README.md` for entries** — the README is the output of this
+  skill, not its input. Always enumerate `.mifune/skills/wiki/corpus/*.md` directly.
 - **Skipping the log** — every invocation (OP, DRY-RUN, FAIL) appends a log entry.
   No exceptions.
 - **Hardcoding today's date** — always compute UTC date at runtime with
@@ -521,10 +513,10 @@ and distinct recommendations.
 
 ## See Also
 
-- `.mifune/skills/wiki-ingest/references/schema.md` — the locked schema, § 4 (cross-link / orphan / broken-link
+- `.mifune/skills/wiki/references/schema.md` — the locked schema, § 4 (cross-link / orphan / broken-link
   definitions), § 5 (confidence lifecycle: who SETS vs REPORTS), § 6 (frontmatter
   extraction canonical command)
-- `/wiki-ingest` — add or update an entry; the only authorized write path to `wiki/`
-- `/wiki-query` — search the wiki by topic; shares the § 6 extraction command
+- `/wiki ingest` — add or update an entry; the only authorized write path to `.mifune/skills/wiki/corpus/`
+- `/wiki query` — search the wiki by topic; shares the § 6 extraction command
 - `.mifune/skills/retro/references/memory-protocol.md` — Memory Improvement Protocol (MIP) governing the log step
 - `/context-audit` — reference for `--dry-run` flag pattern and atomic-write convention

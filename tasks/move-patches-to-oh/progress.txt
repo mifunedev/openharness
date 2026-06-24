@@ -1,0 +1,28 @@
+# progress
+
+Task: move-patches-to-oh (#324) — relocate root patches/ -> .oh/patches/.
+Orchestration: /advisor orchestrating /delegate fan-out. Branch: feat/324-move-patches-to-oh (base development).
+
+== Plan ==
+2-story prd.json, single parallel wave (disjoint files, no git-index race — only US-001 does git mv).
+
+== Wave 1 (parallel, 2 executors) ==
+[US-001] Relocate patch + repoint consumer (sonnet) ................. COMPLETE
+  - git mv patches .oh/patches; package.json:64 value -> .oh/patches/...
+  - pnpm-lock.yaml:32 path -> .oh/patches/... (hash unchanged; content-based).
+  - pnpm install exit 0.
+[US-002] Update .oh/README.md + CHANGELOG.md (haiku) ................ COMPLETE
+  - README contents table: new patches/ row.
+  - CHANGELOG [Unreleased] ### Changed: one new entry (#324); no history altered.
+
+== Advisor verification ==
+- ls .oh/patches/ -> gray-matter@4.0.3.patch present; ls patches -> No such file.
+- grep patches/ package.json pnpm-lock.yaml -> only .oh/patches/ paths.
+- pnpm install --frozen-lockfile -> exit 0 (patch resolves from new path; lock consistent).
+- git status: rename tracked (R patches -> .oh/patches); only intended files modified.
+- eval probe sweep: no new REGRESSION. The single exit-1 (wiki-readme-index.sh) is
+  PRE-EXISTING — fails only on the dirty gitignored corpus README (forbidden file);
+  stashing that file makes the probe PASS. Unrelated to this change.
+- Forbidden files NOT staged: crons/heartbeat.md, .mifune/skills/wiki/corpus/**, .pi/prompts/**.
+
+STATUS: COMPLETE

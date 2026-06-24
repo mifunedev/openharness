@@ -21,4 +21,13 @@ describe("devcontainer entrypoint pnpm install", () => {
     expect(entrypoint).toMatch(/pnpm install failed[\s\S]*exit 1/);
     expect(entrypoint).not.toContain("cron-runtime and Slack Pi extension will not load");
   });
+
+  it("reinstalls when package manifests drift despite existing node_modules", () => {
+    expect(entrypoint).toContain("pnpm_manifest_fingerprint()");
+    expect(entrypoint).toContain(".openharness-pnpm-manifests.sha256");
+    expect(entrypoint).toContain("pnpm-lock.yaml pnpm-workspace.yaml packages/*/package.json");
+    expect(entrypoint).toContain("manifest drift detected");
+    expect(entrypoint).toContain("pnpm dependencies current — manifest fingerprint unchanged");
+    expect(entrypoint).not.toMatch(/if \[ ! -d "\$HARNESS\/node_modules" \]; then\s*echo "\[entrypoint\] node_modules missing/);
+  });
 });

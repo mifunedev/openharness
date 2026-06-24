@@ -290,18 +290,46 @@ fi
 # package, npm-installed into a gitignored `.pi/bridge/` dir and loaded only
 # in the dedicated client-slack session (see the Slack restore block below).
 # The harness is bind-mounted, so a Dockerfile-time install gets shadowed
-# at runtime; we install on first boot here, idempotently. Set
+# at runtime; we install on first boot here, idempotently. A small manifest
+# fingerprint under node_modules forces a reinstall when package manifests or
+# the lockfile change, without paying install cost on unchanged boots. Set
 # SKIP_PNPM_INSTALL=1 to opt out (e.g. air-gapped envs managing deps
 # externally).
 if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
+  pnpm_manifest_fingerprint() {
+    (
+      cd "$HARNESS" || exit 1
+      for manifest in package.json pnpm-lock.yaml pnpm-workspace.yaml packages/*/package.json; do
+        [ -f "$manifest" ] && printf '%s\0' "$manifest"
+      done | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'
+    )
+  }
+
+  PNPM_MARKER="$HARNESS/node_modules/.openharness-pnpm-manifests.sha256"
+  PNPM_FINGERPRINT=$(pnpm_manifest_fingerprint)
+  PNPM_INSTALL_REASON=""
   if [ ! -d "$HARNESS/node_modules" ]; then
-    echo "[entrypoint] node_modules missing — running pnpm install at $HARNESS"
+    PNPM_INSTALL_REASON="node_modules missing"
+  elif [ ! -f "$PNPM_MARKER" ]; then
+    PNPM_INSTALL_REASON="manifest fingerprint missing"
+  elif [ "$(cat "$PNPM_MARKER" 2>/dev/null || true)" != "$PNPM_FINGERPRINT" ]; then
+    PNPM_INSTALL_REASON="manifest drift detected"
+  fi
+
+  if [ -n "$PNPM_INSTALL_REASON" ]; then
+    echo "[entrypoint] $PNPM_INSTALL_REASON — running pnpm install at $HARNESS"
     if gosu sandbox bash -c "cd $HARNESS && pnpm install --prefer-offline" >/tmp/pnpm-install.log 2>&1; then
+      printf '%s\n' "$PNPM_FINGERPRINT" > "$PNPM_MARKER.tmp"
+      chown -h "$(sandbox_ownership)" "$PNPM_MARKER.tmp"
+      mv "$PNPM_MARKER.tmp" "$PNPM_MARKER"
       echo "[entrypoint] pnpm install completed (log: /tmp/pnpm-install.log)"
     else
+      rm -f "$PNPM_MARKER.tmp"
       echo "[entrypoint] pnpm install failed — see /tmp/pnpm-install.log; aborting sandbox boot"
       exit 1
     fi
+  else
+    echo "[entrypoint] pnpm dependencies current — manifest fingerprint unchanged"
   fi
 fi
 

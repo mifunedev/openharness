@@ -5,6 +5,7 @@
     "description": "Move the root patches/ folder (vendored pnpm dependency patch) under .oh/patches/ so all harness build machinery lives in the .oh/ namespace as one unit (#324, follows #321/#322). Repoint package.json patchedDependencies, regenerate the lockfile, update .oh/README.md + CHANGELOG.",
     "status": "COMPLETE",
     "issueNumber": 324,
+    "prNumber": 325,
     "userStories": [
         {
             "id": "US-001",

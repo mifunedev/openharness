@@ -15,8 +15,8 @@
         "Typecheck passes."
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-23; commit 12c47b8"
     },
     {
       "id": "US-002",
@@ -29,8 +29,8 @@
         "Typecheck passes."
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-23; commit 12c47b8"
     },
     {
       "id": "US-003",
@@ -43,8 +43,8 @@
         "Typecheck passes."
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-23; commit 12c47b8"
     }
   ]
 }

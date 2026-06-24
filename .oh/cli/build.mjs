@@ -1,4 +1,4 @@
-// Bundle packages/oh/src/cli.ts → dist/oh.js with package.json version inlined.
+// Bundle .oh/cli/src/cli.ts → dist/oh.js with package.json version inlined.
 // `__OH_VERSION__` is replaced at build time so the runtime VERSION constant
 // can never drift from what npm/git tags say the package version is.
 

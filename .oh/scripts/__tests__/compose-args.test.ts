@@ -125,6 +125,26 @@ describe("scripts/docker-compose.sh", () => {
     expect(existsSync(sentinel)).toBe(false);
   });
 
+  it("reads .oh/config.json as the canonical location, taking precedence over legacy root config.json", () => {
+    const canonicalOverride = "oh config/canonical.yml";
+    const legacyOverride = "legacy config/should-not-be-read.yml";
+
+    mkdirSync(path.join(tmp, ".oh"), { recursive: true });
+    writeFileSync(
+      path.join(tmp, ".oh", "config.json"),
+      JSON.stringify({ composeOverrides: [canonicalOverride] }),
+    );
+    // Legacy root config.json present too — the canonical .oh/ copy must win.
+    writeFileSync(
+      path.join(tmp, "config.json"),
+      JSON.stringify({ composeOverrides: [legacyOverride] }),
+    );
+
+    const argv = printArgv(["up"]);
+    expect(argv).toContain(path.join(tmp, canonicalOverride));
+    expect(argv).not.toContain(path.join(tmp, legacyOverride));
+  });
+
   it("keeps persistent harness env generation for lifecycle commands", () => {
     const persistent = path.join(tmp, ".devcontainer", ".harness.yaml.env");
     writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");

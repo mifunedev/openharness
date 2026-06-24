@@ -36,29 +36,52 @@ The governing principle for every namespace decision:
 > external consumer (providers, a registry, an installer/CLI) — not by
 > ownership.**
 
-Machinery (`scripts/`, `evals/`, `crons/`, `context/`) stays at the repo root
-because it is consumed *in place* by this repo's own runtime — `cron-runtime`
-resolves `crons/`, the eval runner resolves `ROOT/evals/`, skills call
-`scripts/ralph.sh`. No *external* consumer addresses these as a unit, so they
-fail the export test. Relocating them would buy dozens of reference rewrites and
-runtime-path breakage for zero export gain — and a hidden dotdir hurts the
-discoverability of directories humans actively navigate.
+> **Superseded — now generalized to FUNCTION-CLASS.** Export-ness was the
+> original axis, but it left OpenHarness's own machinery scattered at root. The
+> current rule (see [Namespaces](#namespaces)): a dotdir is earned by
+> *function-class* — `.mifune/` holds provider-portable primitives, `.oh/` holds
+> OpenHarness's own machinery addressed as one unit, root holds
+> external-tooling-forced surfaces + live identity/state. Export is one way a
+> namespace is addressed as a unit; being the harness's own tooling is another.
+
+OpenHarness's own machinery — the `oh` CLI, the docs-site builder, the
+installer/lifecycle scripts, and the container-install inputs — is now **grouped
+under `.oh/`** so the harness can be addressed as a single unit, and the
+top-level `packages/` folder is **retired**. The physical files moved
+(`packages/oh → .oh/cli`, `packages/docs → .oh/docs`, `scripts → .oh/scripts`,
+`install → .oh/install`, plus the canonical `config.json → .oh/config.json`).
+
+The runtime-machinery dirs (`scripts/`, `install/`) keep **tracked back-compat
+symlinks at the old root paths** (exactly as `.claude/skills` → `.mifune/skills`),
+so every consumer pinning a `scripts/…` / `install/…` literal — skills, cron
+bodies, the `Makefile`, the boot-lint glob, vitest, the eval probes — resolves
+unchanged. The two **packages** (`cli/`, `docs/`) moved *without* a symlink (the
+`packages/` folder is gone), so their consumers were repointed directly:
+`pnpm-workspace.yaml` → `.oh/docs`, the `pnpm --filter './packages/**'` selectors
+→ `'./.oh/**'`, `npm --prefix packages/oh` → `.oh/cli`, `docs:*` scripts →
+`--dir .oh/docs`, and `docs.yml`'s filter + `working-directory`. The Docusaurus
+config's `../../docs` / `../../blog` paths resolve unchanged because `.oh/docs`
+sits at the same depth `packages/docs` did. (`evals/`, `crons/`, `context/`,
+`memory/`, `tasks/`, `workspace/`, and the `docs/`+`blog/` markdown content stay
+at root: live identity/state and content, not machinery addressed as a unit.)
 
 ## Namespaces
 
-Three surfaces, keyed by external consumer:
+This **supersedes** the earlier "earned by EXPORT only" rule: a dotdir namespace
+is earned by **function-class**. Three surfaces:
 
-| Namespace | External consumer | Holds |
+| Namespace | Function-class | Holds |
 |---|---|---|
-| `.mifune/` | the 4 providers + the `mifunedev/skills` registry | portable primitives: skills, agents, hooks |
-| `.oh/` *(proposed)* | the `oh` CLI + `oh harness add` + container build | deploy/compose overrides, install/pack config (rescopes the dead `.openharness/`) |
-| repo **root** | this repo's own runtime | machinery + identity: `scripts/`, `evals/`, `crons/`, `context/`, `install/` (consumed in place) |
+| `.mifune/` | provider-portable primitives (exported to the 4 providers + the `mifunedev/skills` registry) | skills, agents, hooks |
+| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), the docs-site builder (`docs/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), deploy config (`config.json`) |
+| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`, `docs/`+`blog/` content |
 
-`.oh/` is worth creating, but **only** as the `oh`-CLI / installer config surface
-— it does not absorb the runtime machinery. Harness-native skills still live in
-`.mifune/skills/` because they share the *identical* export mechanism;
-portability is a property recorded in `skills.lock` metadata, not a location, so
-there is no separate `.oh/skills/`.
+Harness-native skills still live in `.mifune/skills/` (not `.oh/`) because they
+share the *identical* provider-export mechanism; portability is a property
+recorded in `skills.lock` metadata, not a location, so there is no separate
+`.oh/skills/`. The split is by function-class, not by repo: both `.mifune/` and
+`.oh/` are machinery, divided by whether the artifact is a portable agent
+primitive or OpenHarness's own tooling.
 
 ## A-state to B-state
 
@@ -92,6 +115,7 @@ dependency order (the **Depends on** column); never start a blocked step.
 | M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `context/rules/` | M3 | ✅ Done |
 | M5 | Hooks → `.mifune/hooks` | M1 | ✅ Done |
 | M6 | Skill-private scripts → skill dirs (`autopilot-caps`, `prompt-miner-caps`); shared scripts stay at root | M1 | ✅ Done |
+| M7 | `.oh/` machinery grouping + retire `packages/`: `packages/oh → .oh/cli`, `packages/docs → .oh/docs`, `scripts → .oh/scripts`, `install → .oh/install`, canonical `config.json → .oh/config.json`. Runtime dirs (`scripts/`, `install/`) keep back-compat symlinks (the `.mifune` precedent); the two packages (`cli/`, `docs/`) repoint their consumers directly and the `packages/` folder is removed. Generalizes the namespace rule from export-ness to function-class. | M2 | ✅ Done |
 
 ## Maintenance pattern
 
@@ -123,7 +147,12 @@ The A→B map for each `context/rules/` file:
 
 A script consolidates into a skill iff exactly one skill-feature owns it (so it
 rides along when the skill syncs — the same portability thesis as rules→skills).
-Shared, runtime, or concurrency scripts **stay at root**.
+
+> **M7 update:** the "stay at root" verdict below now means *physically in
+> `.oh/scripts/`, reachable at `scripts/` via the back-compat symlink* — the
+> whole `scripts/` directory was grouped under `.oh/` as OpenHarness machinery.
+> The single-owner → SKILL verdicts (`autopilot-caps`, `prompt-miner-caps`) are a
+> separate axis and already shipped in M6.
 
 | Script | Verdict | Target |
 |---|---|---|
@@ -135,5 +164,5 @@ Shared, runtime, or concurrency scripts **stay at root**.
 | `prompt-miner-caps.sh` | → SKILL | `.mifune/skills/prompt-miner/` |
 | `sandbox-healthcheck.sh` | → SKILL *(verify `/health-check` owns it)* | `.mifune/skills/health-check/` |
 | `repo-orientation-benchmark-score.mjs` | → SKILL *(verify `/benchmark` owns it)* | `.mifune/skills/benchmark/` |
-| `install.sh`, `harness-config.sh`, `docker-compose.sh`, `check-pnpm-pin.sh` | → `.oh/` (M2 surface) | `.oh/` |
-| `sandbox-boot-smoke.sh`, `README.md` | STAY | root |
+| `install.sh`, `harness-config.sh`, `docker-compose.sh`, `check-pnpm-pin.sh` | ✅ Done — moved with the whole dir (M7) | `.oh/scripts/` (symlink at `scripts/`) |
+| `sandbox-boot-smoke.sh`, `README.md` | moved with the whole dir (M7) | `.oh/scripts/` (symlink at `scripts/`) |

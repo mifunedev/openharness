@@ -1074,6 +1074,19 @@ function main(): void {
   scheduleAll();
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// `scripts/` is a symlink to `.oh/scripts/` (the .oh machinery grouping), so
+// Node resolves THIS module's own path (import.meta.filename) to the realpath
+// under `.oh/scripts/`, while process.argv[1] keeps the path as invoked — the
+// cron watchdog launches us as `scripts/cron-runtime.ts`. A raw string compare
+// therefore never matches, main() never runs, and cron-system exits ~1s after
+// every (re)start, flapping the boot healthcheck. Compare resolved realpaths so
+// main() runs no matter which path (symlink or real) launched the process.
+let invokedRealPath = "";
+try {
+  if (process.argv[1]) invokedRealPath = fs.realpathSync(process.argv[1]);
+} catch {
+  /* argv[1] is not a real file (e.g. REPL/eval) — leave empty, do not run */
+}
+if (invokedRealPath && invokedRealPath === import.meta.filename) {
   main();
 }

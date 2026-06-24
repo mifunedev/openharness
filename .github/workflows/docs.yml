@@ -3,7 +3,7 @@ name: "Docs: build & deploy"
 on:
   pull_request:
     paths:
-      - "packages/docs/**"
+      - ".oh/docs/**"
       - "docs/**"
       - "blog/**"
       - ".github/workflows/docs.yml"
@@ -11,7 +11,7 @@ on:
     branches:
       - main
     paths:
-      - "packages/docs/**"
+      - ".oh/docs/**"
       - "docs/**"
       - "blog/**"
       - ".github/workflows/docs.yml"
@@ -23,7 +23,12 @@ permissions:
 jobs:
   build:
     name: Build docs
-    runs-on: ubuntu-latest
+    # Route to the self-hosted runner when configured (vars.CI_RUNNER), falling
+    # back to GitHub-hosted ubuntu-latest otherwise — same pattern as ci-harness,
+    # conciseness, and sandbox-boot-guard. GitHub-hosted minutes are billing-gated
+    # on this account, so ubuntu-latest-pinned jobs fail to start ("recent account
+    # payments have failed"); the self-hosted runner sidesteps that.
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     concurrency:
       group: docs-build-${{ github.ref }}
       cancel-in-progress: true
@@ -47,7 +52,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build site
-        working-directory: packages/docs
+        working-directory: .oh/docs
         run: pnpm run build
 
       # Pages deploy only runs on the canonical repo. Forks build-validate docs
@@ -61,13 +66,13 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'mifunedev/openharness'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: packages/docs/build
+          path: .oh/docs/build
 
   deploy:
     name: Deploy to GitHub Pages
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'mifunedev/openharness'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     concurrency:
       group: pages
       cancel-in-progress: false

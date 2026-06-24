@@ -17,13 +17,16 @@ sandbox_name="${SANDBOX_NAME:-$(hostname)}"
 timezone="${TZ:-$(date +%Z 2>/dev/null)}"
 workspace_dir="${HOME}/harness/workspace"
 
-# Parse compose overlays from the harness config.json (the old .openharness/config.json,
-# now repo-root config.json; see .oh/README.md for the installer config surface)
+# Parse compose overlays from the harness config.json. Canonical location is
+# .oh/config.json (the OpenHarness machinery namespace; see .oh/README.md); the
+# legacy repo-root config.json is still read as a fallback for older installs.
 overlays=""
+config_json="${HOME}/harness/.oh/config.json"
+[ -f "$config_json" ] || config_json="${HOME}/harness/config.json"
 if command -v jq >/dev/null 2>&1; then
   overlays=$(jq -r \
     '.composeOverrides[]? | sub("^\\.devcontainer/docker-compose\\."; "") | sub("\\.yml$"; "")' \
-    "${HOME}/harness/config.json" 2>/dev/null \
+    "$config_json" 2>/dev/null \
     | paste -sd, -)
 fi
 [ -z "$overlays" ] && overlays="(none)"

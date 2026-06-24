@@ -79,7 +79,7 @@ ls "$AUDIT_ROOT/.mifune/skills/wiki/corpus/" 2>/dev/null | head -20
 
 # Package health
 cat "$AUDIT_ROOT/package.json" 2>/dev/null | head -30
-cat "$AUDIT_ROOT/packages/docs/package.json" 2>/dev/null | head -30
+cat "$AUDIT_ROOT/.oh/docs/package.json" 2>/dev/null | head -30
 
 # CI definition
 ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
@@ -124,7 +124,7 @@ Assemble a **Context Snapshot** (compact markdown, ~300 words):
 
 ### Packages
 - root: [version, dep count]
-- packages/docs: [version, dep count]
+- .oh/docs: [version, dep count]
 
 ### CI workflows
 [list]
@@ -176,7 +176,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml` and `.devcontainer/entrypoint.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), stale workspace auto-start hooks, missing healthchecks on compose services.
 >
-> 2. **Test coverage** — Check `scripts/__tests__/` and `packages/docs/` for test files. Run `ls scripts/__tests__/ 2>/dev/null` and `ls packages/docs/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are the orchestrator scripts and docs app tested in CI?
+> 2. **Test coverage** — Check `scripts/__tests__/` and `.oh/docs/` for test files. Run `ls scripts/__tests__/ 2>/dev/null` and `ls .oh/docs/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are the orchestrator scripts and docs app tested in CI?
 >
 > 3. **CI/CD completeness** — Read each workflow file. Are there gaps: missing lint, missing type-check, no test job, no release job, no deploy step?
 >
@@ -361,5 +361,5 @@ See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memor
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |
 | CI workflows | `.github/workflows/` |
-| Docs app | `packages/docs/` |
+| Docs app | `.oh/docs/` |
 | Orchestrator scripts | `scripts/` (with tests in `scripts/__tests__/`) |

@@ -52,8 +52,8 @@ if [[ -f "$REPO_MAP" ]]; then
   for path in \
     'node_modules/' \
     '.pi/npm/node_modules/' \
-    'packages/docs/build/' \
-    'packages/oh/dist/' \
+    '.oh/docs/build/' \
+    '.oh/cli/dist/' \
     '.mifune/skills/wiki/corpus/raw/' \
     'memory/*/log.md' \
     'tasks/*/progress.txt' \

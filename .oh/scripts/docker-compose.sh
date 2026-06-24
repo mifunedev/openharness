@@ -128,10 +128,15 @@ if [ -f "$HARNESS_YAML" ]; then
   done < <(sh "$CONFIG_SCRIPT" compose-overrides "$HARNESS_YAML")
 fi
 
-if command -v jq >/dev/null 2>&1 && [ -f "$REPO_DIR/config.json" ]; then
+# User-local compose overrides. Canonical location is .oh/config.json (the
+# OpenHarness machinery namespace); the legacy repo-root config.json is still
+# honored as a fallback for installs that predate the .oh/ relocation.
+CONFIG_JSON="$REPO_DIR/.oh/config.json"
+[ -f "$CONFIG_JSON" ] || CONFIG_JSON="$REPO_DIR/config.json"
+if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_JSON" ]; then
   while IFS= read -r override; do
     [ -n "$override" ] && args+=(-f "$(compose_path "$override")")
-  done < <(jq -r '.composeOverrides[]?' "$REPO_DIR/config.json")
+  done < <(jq -r '.composeOverrides[]?' "$CONFIG_JSON")
 fi
 
 if [ "$PRINT_ARGV" -eq 1 ]; then

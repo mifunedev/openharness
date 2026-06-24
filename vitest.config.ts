@@ -5,7 +5,7 @@ export default defineConfig({
     include: [
       "scripts/__tests__/**/*.test.ts",
       ".pi/**/__tests__/**/*.test.ts",
-      "packages/**/__tests__/**/*.test.ts",
+      ".oh/cli/**/__tests__/**/*.test.ts",
     ],
     globals: true,
   },

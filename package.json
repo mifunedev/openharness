@@ -12,13 +12,13 @@
     "test:scripts": "vitest run",
     "lint": "pnpm -r --if-present run lint",
     "format:check": "pnpm -r --if-present run format:check",
-    "typecheck": "pnpm --filter './packages/**' -r --if-present run typecheck && npm --prefix packages/oh run typecheck",
+    "typecheck": "pnpm --filter './.oh/**' -r --if-present run typecheck && npm --prefix .oh/cli run typecheck",
     "format": "pnpm -r --if-present run format",
     "pnpm:devPreinstall": "pnpm run security:audit",
     "security:audit": "pnpm audit --audit-level low --ignore GHSA-h67p-54hq-rp68",
-    "docs:build": "pnpm --dir packages/docs build",
-    "docs:dev": "pnpm --dir packages/docs start",
-    "docs:serve": "pnpm --dir packages/docs serve"
+    "docs:build": "pnpm --dir .oh/docs build",
+    "docs:dev": "pnpm --dir .oh/docs start",
+    "docs:serve": "pnpm --dir .oh/docs serve"
   },
   "dependencies": {
     "croner": "^9.1.0"

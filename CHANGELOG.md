@@ -51,6 +51,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Removed the deprecated executable-loop framework — `context/rules/loop.md`, the `/orchestrate` runner skill, and the four loop-coupling tier-A probes (`loop-handoff-consistency`, `loop-benchmark-gate`, `loop-repeat-gate`, `orchestrate-contract`). The canonical workflow is now solely `AGENTS.md` § The Workflow; the former loop-node skills (`/critique`, `/approve`, `/audit`, `/benchmark`, `/delegate`, `/retro`, `/strategic-proposal`, `/imagine`, `/wiki-ingest`, `/context-audit`) remain as standalone / spec-*-composed skills with their loop-routing `## Handoff` sections removed. Also retired the `CB-002-walk-the-loop` capability task and the gitignored `autopilot-process-map` spec ([#497](https://github.com/mifunedev/openharness/issues/497)).
 ### Deprecated
 ### Security
+- `/post-bridge` now defaults post creation to draft/dry-run previews and requires `POST BRIDGE LIVE CONFIRMED` before non-draft live or scheduled publishing, guarded by the `post-bridge-publish-confirmation` eval probe ([#523](https://github.com/mifunedev/openharness/issues/523)).
 - `client-slack` restore now keeps Slack token values out of the tmux command string by sourcing a permission-restricted runtime env file before launching `pi` ([#461](https://github.com/mifunedev/openharness/issues/461)).
 
 ## [2026.6.18] - 2026-06-18

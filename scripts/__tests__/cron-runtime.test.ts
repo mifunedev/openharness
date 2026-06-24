@@ -1075,6 +1075,39 @@ describe("reloadBody", () => {
     expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
   });
 
+  it("hot-reloads via an absolute filePath after the process cwd changes", () => {
+    const prevCwd = process.cwd();
+    const root = path.join(tmp, "cron-root");
+    const cronsDir = path.join(root, "crons");
+    mkdirSync(cronsDir, { recursive: true });
+    const cronFile = path.join(cronsDir, "hot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\noriginal body\n`,
+    );
+
+    try {
+      process.chdir(root);
+      const [entry] = loadCrons("crons");
+      expect(path.isAbsolute(entry.filePath)).toBe(true);
+      expect(entry.body).toBe("original body\n");
+
+      process.chdir(tmpdir());
+      writeFileSync(
+        cronFile,
+        `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nupdated body\n`,
+      );
+
+      clearCronLog();
+      expect(reloadBody(entry)).toBe("updated body\n");
+      const loggedArgs = loggedCronLines();
+      expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
+      expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(false);
+    } finally {
+      process.chdir(prevCwd);
+    }
+  });
+
   it("returns cached entry.body and logs BODY_RELOAD_ERR when filePath is unreadable", () => {
     // Build a hand-crafted entry pointing at a nonexistent path.
     const missingPath = path.join(tmp, "ghost.md");

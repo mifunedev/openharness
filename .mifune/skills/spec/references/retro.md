@@ -1,35 +1,25 @@
----
-name: spec-retro
-description: >-
-  The execution-side retro of the canonical workflow (AGENTS.md § The Workflow) —
-  point it at a built tasks/<slug>/ folder after audit PASSes and it captures the
-  run's lessons via /retro, scoped to that task's artifacts. The reflection member
-  of the spec-* family; composes the existing /retro skill (scientific,
-  evidence-tested, propose-then-confirm) rather than re-implementing it. Always
-  logs; promotes only supported lessons behind a confirmation gate.
-  TRIGGER when: a spec-execute build PASSed audit and its lessons should be
-  captured before the human merge; the spec-retro step of AGENTS.md § The Workflow;
-  "spec-retro <slug>", "retro the <slug> build", "capture lessons for <slug>".
-argument-hint: "<slug> [--dry-run]"
----
+# `/spec retro` — capture the build's lessons
 
-# Spec Retro — capture the build's lessons
+> Detail doc for the **`retro`** subcommand of the `/spec` skill
+> (`.mifune/skills/spec/SKILL.md`). Argument form: `retro <slug> [--dry-run]`.
+> The dispatcher passes the argument string after `retro` to this procedure as
+> `$ARGUMENTS`. Authority: `AGENTS.md § The Workflow`.
 
-The **reflection** member of the `spec-*` family (`AGENTS.md § The Workflow`). It runs
-inside `/spec-execute`'s tail, after `build ⇄ audit` reaches `AUDIT-PASS` and before the
+The **reflection** node of the `spec-*` family (`AGENTS.md § The Workflow`). It runs
+inside `/spec execute`'s tail, after `build ⇄ audit` reaches `AUDIT-PASS` and before the
 `improve` and `groom` steps, to turn the execution run into durable, evidence-tested
 lessons.
 
 **Core principle: compose `/retro`, scoped to this task.** `/retro` already implements the
 scientific session-closing pass — falsifiable hypotheses, evidence for *and* against, a
 verdict + confidence, and a propose-then-confirm promotion into `memory/MEMORY.md` /
-`context/IDENTITY.md`. `spec-retro` is the execution-side application of it: point `/retro`
+`context/IDENTITY.md`. `retro` is the execution-side application of it: point `/retro`
 at the just-built `tasks/<slug>/` run so the reflection is anchored to that unit's
 artifacts (`prd.md`, `progress.txt`, `prd.json`, `critique.md`, the `/audit` evidence)
 rather than the whole ambient session.
 
 It is **not** a second retro engine. The propose-then-confirm gate, the six-subsystem lens,
-and the memory-tier rules all live in `/retro`; `spec-retro` only frames the scope and
+and the memory-tier rules all live in `/retro`; `retro` only frames the scope and
 records that the execution stage ran its retro.
 
 ---
@@ -56,26 +46,26 @@ do its scientific pass: form falsifiable hypotheses, test each for and against, 
 verdict + confidence, and present supported `medium`+ lessons for confirmation before any
 write. Always logs, even on a trivial/no-lesson run.
 
-`spec-retro` does not bypass `/retro`'s confirmation gate — `MEMORY.md`/`IDENTITY.md` writes
+`retro` does not bypass `/retro`'s confirmation gate — `MEMORY.md`/`IDENTITY.md` writes
 still require explicit approval (or are skipped under `--dry-run`).
 
 ---
 
-## What this skill does NOT do
+## What this node does NOT do
 
 - **Re-implement retro.** The hypothesis engine, qualify filter, and propose-then-confirm
-  gate are `/retro`'s; `spec-retro` only scopes them to the task.
+  gate are `/retro`'s; `retro` only scopes them to the task.
 - **Audit or decide promotability.** That was `/audit` (the `build ⇄ audit` loop) earlier in
-  `/spec-execute`.
+  `/spec execute`.
 - **Run the grooming triad.** `/skill-lint` · `/wiki lint` · `/drift-check` are the `groom`
-  step of `/spec-execute`, after this one.
+  step of `/spec execute`, after this one.
 - **Merge or undraft.** No GitHub-side mutation — reflection only.
 
 ---
 
 ## Memory Protocol
 
-`/retro` writes its own log entry. `spec-retro` ensures it is tagged to the unit; if `/retro`
+`/retro` writes its own log entry. `retro` ensures it is tagged to the unit; if `/retro`
 did not, add one line to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
@@ -91,11 +81,11 @@ did not, add one line to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/re
 ## Pipeline position
 
 Within `AGENTS.md § The Workflow` (`select → spec-plan ⇄ spec-critique → spec-execute →
-merge → reset|clean`), `spec-retro` runs inside the `spec-execute` tail (`build ⇄ audit →
+merge → reset|clean`), `retro` runs inside the `spec-execute` tail (`build ⇄ audit →
 spec-retro → improve → groom`); the next step is `improve` (compound · compress ·
 benchmark). Print this bare token as the final line:
 
     STATUS: SPEC-RETRO-DONE
 
-The `spec-*` family's authority is `AGENTS.md § The Workflow`. `spec-retro`
+The `/spec` family's authority is `AGENTS.md § The Workflow`. `retro`
 always completes (like `/retro`), so the execute tail always continues to `improve`.

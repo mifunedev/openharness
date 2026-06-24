@@ -15,7 +15,7 @@ argument-hint: "<slug> [--auto]"
 
 # Approve — the critic-before-commitment gate
 
-The **approve** gate, composed by `/spec-critique` in `AGENTS.md § The Workflow` — the
+The **approve** gate, composed by `/spec critique` in `AGENTS.md § The Workflow` — the
 `approve|deny` decision point. It
 answers one question: *do the critic findings clear this spec to build, or must it
 go back to planning?* — and emits exactly one verdict the `/autopilot` runner

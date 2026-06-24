@@ -128,15 +128,15 @@ Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspa
 <!-- workflow-canonical -->
 The harness has one canonical **operative path**: `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`. `autopilot` selects work; the `spec-*` family plans, critiques, executes, and reflects; the human merges; the runner resets. **`autopilot` is the designated sole runner.**
 
-> The four `spec-*` skills (`/spec-plan` · `/spec-critique` · `/spec-execute` · `/spec-retro`) now exist and are the canonical decomposed workflow — each pointed at a `tasks/<slug>/` folder, runnable independently or fanned out via `/delegate`. `/ship-spec` remains the all-in-one composer that runs the same `plan → critique → execute → retro` pipeline in one invocation (what `/autopilot` drives) and is the single source of the protected build mechanics the `spec-*` family composes. This section (`§ The Workflow`) is the sole canonical workflow.
+> The `/spec` dispatcher's four subcommands (`/spec plan` · `/spec critique` · `/spec execute` · `/spec retro`) are the canonical decomposed workflow — each pointed at a `tasks/<slug>/` folder, runnable independently or fanned out via `/delegate`. `/ship-spec` remains the all-in-one composer that runs the same `plan → critique → execute → retro` pipeline in one invocation (what `/autopilot` drives) and is the single source of the protected build mechanics the `/spec` nodes compose. This section (`§ The Workflow`) is the sole canonical workflow.
 
 ```mermaid
 flowchart LR
-    SEL["select<br/>(autopilot)"] -->|issue| PLAN["spec-plan<br/>(/spec-plan)"]
+    SEL["select<br/>(autopilot)"] -->|issue| PLAN["spec-plan<br/>(/spec plan)"]
     PLAN --> CRIT{"spec-critique<br/>2 critics + approve"}
     CRIT -->|DENIED: revise| PLAN
     CRIT -->|APPROVED| BUILD["build"]
-    subgraph EXEC["spec-execute (/spec-execute)"]
+    subgraph EXEC["spec-execute (/spec execute)"]
         direction LR
         BUILD --> AUDIT{"audit<br/>2 critics + eval + pr-audit"}
         AUDIT -->|FAIL: fix| BUILD
@@ -154,11 +154,11 @@ flowchart LR
 | Surface | Owns | Does NOT own | The seam |
 |---|---|---|---|
 | **autopilot** | select — issue selection + `pm` decompose, caps, session | the build, the merge | hands the issue to `spec-plan` |
-| **spec-\* family** | `spec-plan` (task artifacts + wiki), `spec-critique` (2 critics + approve), `spec-execute` (build⇄audit→spec-retro→improve→groom), `spec-retro` | selection, merge | each is pointed at a `tasks/<slug>/` folder |
+| **`/spec` dispatcher** | `spec-plan` (task artifacts + wiki), `spec-critique` (2 critics + approve), `spec-execute` (build⇄audit→spec-retro→improve→groom), `spec-retro` | selection, merge | each subcommand is pointed at a `tasks/<slug>/` folder |
 | **human** | merge — final gate, no auto-merge | selection, build | reviews the finished unit |
 | **runner** | `reset \| clean` — worktree/branch cleanup, state reset | judgment | closes the cycle back to select |
 
-The `spec-*` family operates on a `tasks/<slug>/` folder (the universal interface): `/spec-plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec-critique`, `/spec-execute`, `/spec-retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec-execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/skill-lint` · `/wiki lint` · `/drift-check` before the human merge.
+The `/spec` dispatcher operates on a `tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec critique`, `/spec execute`, `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/skill-lint` · `/wiki lint` · `/drift-check` before the human merge.
 
 ## Skills
 
@@ -175,10 +175,7 @@ The `spec-*` family operates on a `tasks/<slug>/` folder (the universal interfac
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `tasks/<name>/prd.json` for the Ralph runner |
 | `/ship-spec` | End-to-end spec (all-in-one form of the `spec-*` family): `/prd` → critics → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR; the single source of the protected build mechanics |
-| `/spec-plan` | `spec-*` **plan** node — topic/plan/issue → `tasks/<slug>/` four-file folder (`/prd` → wiki alignment → `/ralph` → scaffold); local artifacts only, no GitHub state |
-| `/spec-critique` | `spec-*` **critique** node — the `plan ⇄ critique` adversarial loop; composes `/critique` (2 critics) + `/approve` (gate); `DENIED` routes back to `/spec-plan` |
-| `/spec-execute` | `spec-*` **execute** node — `build ⇄ audit → spec-retro → improve → groom` to a ready PR, stopping at the human merge gate; composes `/ship-spec` build mechanics + `/audit` |
-| `/spec-retro` | `spec-*` **reflection** node — execution-side `/retro` scoped to a built `tasks/<slug>/`; always logs, propose-then-confirm promotion |
+| `/spec` | Dispatcher for the decomposed workflow (`/spec <plan\|critique\|execute\|retro>`, routes to `references/{plan,critique,execute,retro}.md`): **plan** = topic/plan/issue → `tasks/<slug>/` four-file folder (local only, no GitHub state); **critique** = the `plan ⇄ critique` loop (`/critique` 2 critics + `/approve` gate; `DENIED` → `/spec plan`); **execute** = `build ⇄ audit → spec-retro → improve → groom` to a ready PR at the human merge gate (composes `/ship-spec` mechanics + `/audit`); **retro** = execution-side `/retro` scoped to a built `tasks/<slug>/` |
 | `/teach` | Post-implementation communication pass — revise/propose the relevant wiki model, then teach the operator the mental model, verification evidence, caveats, and understanding checks |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
 | `/watchdog` | Generic stuck/stale automation watchdog. Current primary action: inspect autopilot draft PRs, complete stale/stuck branches, and remove draft only after the PR is green/mergeable/clean; also kills tmux sessions frozen at usage-limit/resume prompts. Never merges. |

@@ -1,38 +1,27 @@
----
-name: spec-execute
-description: >-
-  The execute node of the canonical workflow (AGENTS.md § The Workflow) — point
-  it at an APPROVED tasks/<slug>/ folder and it runs build ⇄ audit → spec-retro →
-  improve → groom up to a ready-for-review PR, then stops at the human merge gate
-  (never auto-merges). build ⇄ audit is the second adversarial loop (FAIL → build).
-  Composes the existing build mechanics of /ship-spec (Stages 5, 8–13: locate
-  issue + branch + draft PR + worktree Advisor + /delegate + scripts/ralph.sh +
-  /eval + /pr-audit) plus the spec-* tail (/audit, /spec-retro,
-  compound/compress/benchmark, skill-lint/wiki lint/drift-check).
-  TRIGGER when: an APPROVED tasks/<slug>/ folder needs building to a promotable PR;
-  the execute step of AGENTS.md § The Workflow; "execute <slug>", "build <slug>",
-  "spec-execute <slug>".
-argument-hint: "<slug> [--pr <N>] [--repo <owner/name>] [--remote <name>] [--base <branch>]"
----
+# `/spec execute` — build ⇄ audit → spec-retro → improve → groom
 
-# Spec Execute — build ⇄ audit → spec-retro → improve → groom
+> Detail doc for the **`execute`** subcommand of the `/spec` skill
+> (`.mifune/skills/spec/SKILL.md`). Argument form:
+> `execute <slug> [--pr <N>] [--repo <owner/name>] [--remote <name>] [--base <branch>]`.
+> The dispatcher passes the argument string after `execute` to this procedure as
+> `$ARGUMENTS`. Authority: `AGENTS.md § The Workflow`.
 
-The **execute** member of the `spec-*` family (`AGENTS.md § The Workflow`). Pointed at an
-**APPROVED** `tasks/<slug>/` folder (cleared by `/spec-critique`), it drives the build to
+The **execute** node of the `spec-*` family (`AGENTS.md § The Workflow`). Pointed at an
+**APPROVED** `tasks/<slug>/` folder (cleared by `/spec critique`), it drives the build to
 a ready-for-review PR and stops at the human merge gate. It contains the second adversarial
 loop — `build ⇄ audit` — mirroring the `spec-plan ⇄ spec-critique` loop that vetted the plan.
 
 **Core principle: compose the protected build machinery; own only the spec-* tail.** The
 heavy build/finalize mechanics already live in `/ship-spec` Stages 8–13 (worktree Advisor
 launched via `/goal`, `/delegate` workers each running `scripts/ralph.sh`, the `/eval`
-gate, the `/pr-audit` promotable undraft). `spec-execute` **reuses those by reference** —
+gate, the `/pr-audit` promotable undraft). `execute` **reuses those by reference** —
 it does not re-implement or fork them, so `/ship-spec` stays the single source of build
-literals (and its protected probes stay green). What `spec-execute` adds is the
+literals (and its protected probes stay green). What `execute` adds is the
 folder-pointed `build ⇄ audit` loop and the post-PASS tail named in `AGENTS.md § The
 Workflow`: `spec-retro → improve → groom`.
 
 `/ship-spec` is still the all-in-one composer that runs `plan → critique → execute` in one
-invocation (what `/autopilot` drives). `spec-execute` is the decomposed execute stage,
+invocation (what `/autopilot` drives). `execute` is the decomposed execute stage,
 runnable on its own folder or fanned out at scale via `/delegate`.
 
 ---
@@ -43,13 +32,13 @@ runnable on its own folder or fanned out at scale via `/delegate`.
 |-----|---------|
 | `<slug>` | The task slug — reads the four-file contract in `tasks/<slug>/` and `prd.json`'s `branchName`. Required. |
 | `--pr <N>` | Resume against an existing PR rather than creating one. |
-| `--repo <owner/name>` | GitHub repo (default `mifunedev/openharness`; read from the folder if `/spec-plan` recorded it). |
+| `--repo <owner/name>` | GitHub repo (default `mifunedev/openharness`; read from the folder if `/spec plan` recorded it). |
 | `--remote <name>` | Git remote (resolved from `--repo` if absent). |
 | `--base <branch>` | PR base + branch start point (default `development`). |
 
-Precondition: `/spec-critique <slug>` returned `SPEC-APPROVED`. If `tasks/<slug>/` is not
+Precondition: `/spec critique <slug>` returned `SPEC-APPROVED`. If `tasks/<slug>/` is not
 APPROVED (no `critique.md`, or its verdict is `DENIED`), refuse and route back to
-`/spec-critique` — do not build an ungated spec (`AGENTS.md § The Workflow`
+`/spec critique` — do not build an ungated spec (`AGENTS.md § The Workflow`
 critic-before-commitment invariant).
 
 ---
@@ -60,7 +49,7 @@ critic-before-commitment invariant).
 
 Now that the spec is APPROVED, GitHub-side state may be created: **locate** the issue
 (`prd.json`'s `branchName` already embeds `<N>` — in the canonical flow that is the issue
-`/autopilot` selected and `/spec-plan` consumed; open one only in a standalone run that has
+`/autopilot` selected and `/spec plan` consumed; open one only in a standalone run that has
 no issue yet), create the branch `<prefix>/<N>-<slug>`, commit the scaffold, push, and open
 the **draft** PR (observability checkpoint). Then drive the build exactly as `/ship-spec` Stage 10
 specifies — an expert `/worktrees` Advisor in a tmux session (`agent-ship-<slug>`) via
@@ -91,7 +80,7 @@ refreshed before the audit can PASS.
 
 ### 3. `spec-retro` — capture the lessons
 
-On `AUDIT-PASS`, run `/spec-retro <slug>` (the execution-side retro). It turns the run's
+On `AUDIT-PASS`, run `/spec retro <slug>` (the execution-side retro). It turns the run's
 signals into falsifiable, evidence-tested lessons and promotes the supported ones behind a
 propose-then-confirm gate. Always logs.
 
@@ -120,20 +109,20 @@ Workflow`: *human merge — final gate, no auto-merge*). Never `gh pr merge`.
 
 ---
 
-## What this skill does NOT do
+## What this node does NOT do
 
 - **Re-implement the build machinery.** It composes `/ship-spec` Stages 8–13; that skill is
   the single source of worktree/delegate/ralph/eval/pr-audit literals.
 - **Merge.** The terminal state is a **ready** PR. Merge is the human's gate; reset/clean is
   the runner's job after merge.
-- **Select work.** Selection is `/autopilot`'s; `spec-execute` builds the one folder it is
+- **Select work.** Selection is `/autopilot`'s; `execute` builds the one folder it is
   handed.
 
 ---
 
 ## Memory Protocol
 
-The composed skills each log their own entries. `spec-execute` adds one roll-up to
+The composed skills each log their own entries. `execute` adds one roll-up to
 `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
@@ -151,7 +140,7 @@ The composed skills each log their own entries. `spec-execute` adds one roll-up 
 ## Pipeline position
 
 Within `AGENTS.md § The Workflow` (`select → spec-plan ⇄ spec-critique → spec-execute →
-merge → reset|clean`), `spec-execute` is the **execute** node — it ends at the human merge
+merge → reset|clean`), `execute` is the **execute** node — it ends at the human merge
 gate (next step: the human merges; the runner then resets/cleans). When a gate blocks the
 undraft, the next step is to resume the build or fix the named gate. Print one of these bare
 tokens as the final line:
@@ -160,6 +149,6 @@ tokens as the final line:
 
     STATUS: SPEC-BLOCKED
 
-The `spec-*` family's authority is `AGENTS.md § The Workflow`. Never infer a
+The `/spec` family's authority is `AGENTS.md § The Workflow`. Never infer a
 promotable PR from silence — a build that crashed or an unrun CI is `SPEC-BLOCKED`, not
 `SPEC-EXECUTED`.

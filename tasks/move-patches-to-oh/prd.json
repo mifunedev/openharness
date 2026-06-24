@@ -1,0 +1,39 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/324-move-patches-to-oh",
+    "description": "Move the root patches/ folder (vendored pnpm dependency patch) under .oh/patches/ so all harness build machinery lives in the .oh/ namespace as one unit (#324, follows #321/#322). Repoint package.json patchedDependencies, regenerate the lockfile, update .oh/README.md + CHANGELOG.",
+    "status": "COMPLETE",
+    "issueNumber": 324,
+    "prNumber": 325,
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Relocate the patch and repoint its consumer",
+            "description": "As the harness build, I want the gray-matter patch under .oh/patches/ and package.json/lock repointed so the patch resolves without the root patches/ folder.",
+            "acceptanceCriteria": [
+                "git mv patches .oh/patches — .oh/patches/gray-matter@4.0.3.patch exists; ls patches errors",
+                "package.json patchedDependencies value repointed: 'gray-matter@4.0.3' -> '.oh/patches/gray-matter@4.0.3.patch'",
+                "pnpm-lock.yaml regenerated via pnpm install; its path: entry points at .oh/patches/...",
+                "grep -n 'patches/' package.json pnpm-lock.yaml shows only .oh/patches/ paths",
+                "pnpm install exits 0 with the patch applied (no patch-not-found, no failed apply)"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "DONE (executor, sonnet). git mv patches .oh/patches; package.json:64 + pnpm-lock.yaml:32 path repointed (hash unchanged — content-based). pnpm install exit 0; advisor verified pnpm install --frozen-lockfile exit 0 (patch resolves from .oh/patches/). ls patches errors; grep shows only .oh/patches/."
+        },
+        {
+            "id": "US-002",
+            "title": "Update namespace doc and CHANGELOG",
+            "description": "As a contributor, I want .oh/README.md and CHANGELOG to reflect that patches/ now lives under .oh/ so the namespace docs stay accurate.",
+            "acceptanceCriteria": [
+                ".oh/README.md lists patches/ (vendored pnpm dependency patches) among .oh/ contents",
+                "Exactly one new CHANGELOG.md [Unreleased] entry (### Changed) referencing #324/#321; no prior history altered",
+                "ONLY .oh/README.md and CHANGELOG.md are modified by this story"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "DONE (executor, haiku). .oh/README.md contents table gained a patches/ row (between scripts/ and config.json). CHANGELOG.md gained exactly one [Unreleased] ### Changed entry referencing #324; no prior history altered. Advisor verified git diff scoped to the two files."
+        }
+    ]
+}

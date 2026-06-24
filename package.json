@@ -61,7 +61,7 @@
       ]
     },
     "patchedDependencies": {
-      "gray-matter@4.0.3": "patches/gray-matter@4.0.3.patch"
+      "gray-matter@4.0.3": ".oh/patches/gray-matter@4.0.3.patch"
     }
   }
 }

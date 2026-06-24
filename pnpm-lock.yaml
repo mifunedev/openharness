@@ -29,7 +29,7 @@ overrides:
 patchedDependencies:
   gray-matter@4.0.3:
     hash: 6867093d18e007f9f610b1c4c6871b64734503b546ffcd3bc7a3675dd11f2188
-    path: patches/gray-matter@4.0.3.patch
+    path: .oh/patches/gray-matter@4.0.3.patch
 
 importers:
 

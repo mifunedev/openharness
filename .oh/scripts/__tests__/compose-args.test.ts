@@ -12,10 +12,10 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
-const SCRIPT = path.join(REPO_ROOT, "scripts", "docker-compose.sh");
+const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
+const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "docker-compose.sh");
 const MAKEFILE = path.join(REPO_ROOT, "Makefile");
-const INSTALL = path.join(REPO_ROOT, "scripts", "install.sh");
+const INSTALL = path.join(REPO_ROOT, ".oh", "scripts", "install.sh");
 
 let tmp: string;
 
@@ -194,7 +194,7 @@ describe("scripts/docker-compose.sh", () => {
 describe("compose helper wiring", () => {
   it("Makefile uses the shared helper and preserves lifecycle verbs", () => {
     const text = readFileSync(MAKEFILE, "utf8");
-    expect(text).toContain("COMPOSE           := scripts/docker-compose.sh");
+    expect(text).toContain("COMPOSE           := .oh/scripts/docker-compose.sh");
     expect(text).toContain("$(COMPOSE) up -d --build");
     expect(text).toContain("$(COMPOSE) down -v");
     expect(text).not.toContain("COMPOSE_OVERRIDES");
@@ -203,7 +203,7 @@ describe("compose helper wiring", () => {
 
   it("installer uses the shared helper instead of raw COMPOSE_FILES expansion", () => {
     const text = readFileSync(INSTALL, "utf8");
-    expect(text).toContain('"$REPO_DIR/scripts/docker-compose.sh" up -d --build');
+    expect(text).toContain('"$REPO_DIR/.oh/scripts/docker-compose.sh" up -d --build');
     expect(text).not.toContain("docker compose $COMPOSE_FILES");
     expect(text).not.toContain("COMPOSE_FILES=\"-f .devcontainer/docker-compose.yml\"");
   });

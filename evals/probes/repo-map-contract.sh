@@ -9,7 +9,7 @@ REPO_MAP="$ROOT/context/REPO_MAP.md"
 AGENTS="$ROOT/AGENTS.md"
 CONTEXT_README="$ROOT/context/README.md"
 MANIFEST="$ROOT/evals/capability/repo-orientation/tasks.json"
-SCORER="$ROOT/scripts/repo-orientation-benchmark-score.mjs"
+SCORER="$ROOT/.oh/scripts/repo-orientation-benchmark-score.mjs"
 MAX_BYTES=12288
 
 fails=()

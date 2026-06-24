@@ -916,7 +916,7 @@ describe("acquireLock", () => {
     writeFileSync(
       worker,
       `import { existsSync, readFileSync } from "node:fs";\n` +
-        `import { acquireLock } from ${JSON.stringify(path.resolve("scripts/cron-runtime.ts"))};\n` +
+        `import { acquireLock } from ${JSON.stringify(path.resolve(".oh/scripts/cron-runtime.ts"))};\n` +
         `const [pidFile, gateFile] = process.argv.slice(2);\n` +
         `const deadline = Date.now() + 2000;\n` +
         `while (!existsSync(gateFile) && Date.now() < deadline) { await new Promise((r) => setTimeout(r, 5)); }\n` +

@@ -8,8 +8,8 @@ import path from "node:path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const REPO_ROOT = path.resolve(__dirname, "../..");
-const SCRIPT = path.join(REPO_ROOT, "scripts", "harness-config.sh");
+const REPO_ROOT = path.resolve(__dirname, "../../..");
+const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "harness-config.sh");
 const HARNESS_YAML = path.join(REPO_ROOT, "harness.yaml");
 
 interface RunResult {

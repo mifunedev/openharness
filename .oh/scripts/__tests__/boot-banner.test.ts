@@ -5,7 +5,7 @@ import path from "node:path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, "../..");
+const REPO_ROOT = path.resolve(__dirname, "../../..");
 
 function readRepoFile(...parts: string[]): string {
   return readFileSync(path.join(REPO_ROOT, ...parts), "utf-8");
@@ -40,7 +40,7 @@ describe("boot banners", () => {
   });
 
   it("interactive shell banner checks and labels the installed oh CLI", () => {
-    const block = ohStatusBlock(readRepoFile("install", "banner.sh"));
+    const block = ohStatusBlock(readRepoFile(".oh", "install", "banner.sh"));
 
     expect(block).toContain("command -v oh");
     expect(block).toContain("oh --version");

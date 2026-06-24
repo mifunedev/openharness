@@ -60,7 +60,7 @@ else
     record_failure "legacy tmux session present: system-cron blocks cron-system startup"
   fi
 
-  if [ -f "$HARNESS/scripts/cron-runtime.ts" ]; then
+  if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ]; then
     require_session cron-watchdog
     require_session cron-system
   fi

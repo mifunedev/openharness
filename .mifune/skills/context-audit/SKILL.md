@@ -251,11 +251,11 @@ Back up the target file, run all probes, restore. Use `trap` to guarantee restor
 ```bash
 TARGET="$HARNESS/$ARGUMENTS_FILE"   # the <file> arg from --ablate
 
-# Swap/restore/trap mechanics are shared with /eval — see scripts/ablate.sh
+# Swap/restore/trap mechanics are shared with /eval — see .oh/scripts/ablate.sh
 # (prd.md §10 M-1). ablate_swap_out backs up + removes TARGET and arms an EXIT
 # trap (plus a crash-recovery sentinel /eval restores on startup). Only the
 # mechanics are shared; the `claude -p` marker oracle below stays /context-audit's own.
-source "$HARNESS/scripts/ablate.sh"
+source "$HARNESS/.oh/scripts/ablate.sh"
 ablate_swap_out "$TARGET"
 
 for probe in "$PROBE_DIR"/*.md; do
@@ -321,7 +321,7 @@ Degradation threshold: **SIGNAL DETECTED** if any probe's ablation hits fall mor
 
 ```bash
 mkdir -p "$HARNESS/memory/$TODAY"
-scripts/locked-append.sh "$HARNESS/memory/$TODAY/log.md" <<EOF
+.oh/scripts/locked-append.sh "$HARNESS/memory/$TODAY/log.md" <<EOF
 
 ## [Context Audit] — $(date -u +%H:%M) UTC
 - **Result**: OP

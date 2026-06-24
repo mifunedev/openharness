@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
+const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 
 function readRepoFile(...segments: string[]): string {
   return readFileSync(path.join(REPO_ROOT, ...segments), "utf8");
@@ -27,7 +27,7 @@ describe("installer host prerequisite docs", () => {
   });
 
   it("installer help and missing-git diagnostic explain the Git prerequisite", () => {
-    const install = readRepoFile("scripts", "install.sh");
+    const install = readRepoFile(".oh", "scripts", "install.sh");
 
     expect(install).toContain("Docker with the Compose plugin");
     expect(install).toContain("git (used to clone or update Open Harness)");

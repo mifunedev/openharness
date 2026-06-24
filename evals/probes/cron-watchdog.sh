@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ENTRYPOINT="$ROOT/.devcontainer/entrypoint.sh"
-TESTS="$ROOT/scripts/__tests__/entrypoint.test.ts"
+TESTS="$ROOT/.oh/scripts/__tests__/entrypoint.test.ts"
 
 missing=()
 
@@ -17,7 +17,7 @@ grep -Fq 'cron-watchdog' "$ENTRYPOINT" || missing+=("entrypoint names cron-watch
 grep -Fq 'tmux new-session -d -s cron-watchdog' "$ENTRYPOINT" || missing+=("entrypoint starts cron-watchdog tmux session")
 grep -Fq 'cron-system missing; starting cron-runtime.ts' "$ENTRYPOINT" || missing+=("watchdog logs missing cron-system restart")
 grep -Fq 'tmux new-session -d -s cron-system' "$ENTRYPOINT" || missing+=("watchdog restarts cron-system tmux session")
-grep -Fq 'node --experimental-strip-types scripts/cron-runtime.ts' "$ENTRYPOINT" || missing+=("watchdog launches cron-runtime.ts")
+grep -Fq 'node --experimental-strip-types .oh/scripts/cron-runtime.ts' "$ENTRYPOINT" || missing+=("watchdog launches cron-runtime.ts")
 grep -Fq '/tmp/cron-system.log' "$ENTRYPOINT" || missing+=("cron-system log path retained")
 grep -Fq '/tmp/cron-watchdog.log' "$ENTRYPOINT" || missing+=("watchdog log path present")
 grep -Fq 'tmux has-session -t system-cron' "$ENTRYPOINT" || missing+=("legacy system-cron guard retained")

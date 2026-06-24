@@ -37,7 +37,7 @@ tmp=""
 trap '[ -n "$tmp" ] && rm -f "$tmp"' EXIT
 
 # --- M-2: recover orphaned ablation backups from a crashed prior run ---
-# scripts/ablate.sh records in-flight "<target>\t<bak>" lines in this sentinel;
+# .oh/scripts/ablate.sh records in-flight "<target>\t<bak>" lines in this sentinel;
 # if a prior ablation was SIGKILLed before its trap fired, restore here.
 SENTINEL="$ROOT/evals/.ablation-active"
 if [ -f "$SENTINEL" ]; then
@@ -50,7 +50,7 @@ if [ -f "$SENTINEL" ]; then
 fi
 
 # --- ablation mode (M-1): run one probe with/without a target file via the shared
-#     swap/restore/trap mechanics in scripts/ablate.sh; reports LOAD-BEARING|PRUNABLE ---
+#     swap/restore/trap mechanics in .oh/scripts/ablate.sh; reports LOAD-BEARING|PRUNABLE ---
 if [ -n "$ABLATE_TARGET" ]; then
   [ -n "$FILTER_PROBE" ] || { echo "--ablate requires --probe <id>" >&2; exit 64; }
   ABL_PROBE="$PROBES_DIR/$FILTER_PROBE.sh"
@@ -59,7 +59,7 @@ if [ -n "$ABLATE_TARGET" ]; then
     /*) ABL_TGT="$ABLATE_TARGET" ;;                 # absolute — use as-is
     *)  ABL_TGT="$ROOT/$ABLATE_TARGET" ;;           # relative — resolve against eval repo root, NOT cwd
   esac
-  exec bash "$ROOT/scripts/ablate.sh" "$ABL_TGT" "$ABL_PROBE"
+  exec bash "$ROOT/.oh/scripts/ablate.sh" "$ABL_TGT" "$ABL_PROBE"
 fi
 
 hdr() { grep -E "^# $1:" "$2" 2>/dev/null | head -1 | sed "s/^# $1:[[:space:]]*//" || true; }

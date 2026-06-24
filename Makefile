@@ -6,11 +6,11 @@
 -include .devcontainer/.env
 
 HARNESS_YAML      := harness.yaml
-COMPOSE           := scripts/docker-compose.sh
+COMPOSE           := .oh/scripts/docker-compose.sh
 
 # SANDBOX_NAME resolution: harness.yaml wins over .devcontainer/.env; fallback openharness.
 # Command-line "make ... SANDBOX_NAME=x" overrides all assignments automatically.
-SANDBOX_NAME_YAML := $(shell [ -f $(HARNESS_YAML) ] && sh scripts/harness-config.sh get sandbox.name $(HARNESS_YAML))
+SANDBOX_NAME_YAML := $(shell [ -f $(HARNESS_YAML) ] && sh .oh/scripts/harness-config.sh get sandbox.name $(HARNESS_YAML))
 SANDBOX_NAME      := $(or $(SANDBOX_NAME_YAML),$(SANDBOX_NAME),openharness)
 
 SHELL_USER        ?= sandbox
@@ -50,7 +50,7 @@ restart: ## Restart the service
 
 config: ## Print effective harness.yaml-derived env and resolved compose config
 	@if [ -f $(HARNESS_YAML) ]; then \
-		sh scripts/harness-config.sh env $(HARNESS_YAML) > .devcontainer/.harness.yaml.env; \
+		sh .oh/scripts/harness-config.sh env $(HARNESS_YAML) > .devcontainer/.harness.yaml.env; \
 		printf "==> Derived env from $(HARNESS_YAML):\n"; \
 		cat .devcontainer/.harness.yaml.env; \
 		printf "\n"; \

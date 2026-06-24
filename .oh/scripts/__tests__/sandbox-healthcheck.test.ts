@@ -5,8 +5,8 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const ROOT = join(import.meta.dirname, "../..");
-const SCRIPT = join(ROOT, "scripts", "sandbox-healthcheck.sh");
+const ROOT = join(import.meta.dirname, "../../..");
+const SCRIPT = join(ROOT, ".oh", "scripts", "sandbox-healthcheck.sh");
 const COMPOSE = join(ROOT, ".devcontainer", "docker-compose.yml");
 
 function fixture() {
@@ -14,8 +14,8 @@ function fixture() {
   const bin = join(dir, "bin");
   const harness = join(dir, "harness");
   mkdirSync(bin, { recursive: true });
-  mkdirSync(join(harness, "scripts"), { recursive: true });
-  writeFileSync(join(harness, "scripts", "cron-runtime.ts"), "// fixture\n");
+  mkdirSync(join(harness, ".oh", "scripts"), { recursive: true });
+  writeFileSync(join(harness, ".oh", "scripts", "cron-runtime.ts"), "// fixture\n");
 
   const tmux = join(bin, "tmux");
   writeFileSync(
@@ -135,7 +135,7 @@ describe("sandbox healthcheck", () => {
     const compose = readFileSync(COMPOSE, "utf8");
 
     expect(compose).toContain("healthcheck:");
-    expect(compose).toContain("/home/sandbox/harness/scripts/sandbox-healthcheck.sh");
+    expect(compose).toContain("/home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh");
     expect(compose).toContain("start_period: 300s");
   });
 

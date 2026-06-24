@@ -4,14 +4,14 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
-COMPOSE=${BOOT_SMOKE_COMPOSE:-$REPO_ROOT/scripts/docker-compose.sh}
+REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
+COMPOSE=${BOOT_SMOKE_COMPOSE:-$REPO_ROOT/.oh/scripts/docker-compose.sh}
 SERVICE=${BOOT_SMOKE_SERVICE:-sandbox}
 TIMEOUT=${BOOT_SMOKE_TIMEOUT_SECONDS:-600}
 INTERVAL=${BOOT_SMOKE_INTERVAL_SECONDS:-10}
 UP_ARGS=${BOOT_SMOKE_UP_ARGS:-up -d --no-build}
 DOWN_ARGS=${BOOT_SMOKE_DOWN_ARGS:-down -v --remove-orphans}
-HEALTH_CMD=${BOOT_SMOKE_HEALTH_CMD:-bash /home/sandbox/harness/scripts/sandbox-healthcheck.sh}
+HEALTH_CMD=${BOOT_SMOKE_HEALTH_CMD:-bash /home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh}
 
 compose() {
   bash "$COMPOSE" "$@"

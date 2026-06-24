@@ -1,0 +1,124 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/322-deprecate-oh-symlinks",
+    "description": "Deprecate the root back-compat symlinks (install -> .oh/install, scripts -> .oh/scripts) introduced in #321 by repointing every functional consumer to the real .oh/ paths, then removing the symlinks. Authoritative inventory: tasks/deprecate-oh-symlinks/blast-radius.md (Categories A-G + FORBIDDEN + verification).",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "T-A: Repoint build and test config",
+            "description": "As the harness, I want the Makefile and vitest config to reference .oh/scripts directly so build/test work without the root symlink.",
+            "acceptanceCriteria": [
+                "Makefile L9/L13/L53: scripts/docker-compose.sh and scripts/harness-config.sh repointed to .oh/scripts/...",
+                "vitest.config.ts L6 include is '.oh/scripts/__tests__/**/*.test.ts'",
+                "grep -n 'scripts/' Makefile shows only .oh/scripts/ paths",
+                "grep -n '\"scripts/' vitest.config.ts returns empty",
+                "npx vitest run exits 0 (Typecheck passes)",
+                "ONLY Makefile and vitest.config.ts are modified by this story"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Parallel wave. Files: Makefile, vitest.config.ts."
+        },
+        {
+            "id": "US-002",
+            "title": "T-B: Repoint devcontainer runtime boot path",
+            "description": "As the sandbox boot path, I want entrypoint and compose to reference .oh/ directly so the container boots healthy without the root symlink.",
+            "acceptanceCriteria": [
+                "entrypoint.sh L190/L194/L195 reference .oh/install/banner.sh (grep pattern + sourced path)",
+                "entrypoint.sh L320 guard and L337 tmux launch reference .oh/scripts/cron-runtime.ts",
+                "docker-compose.yml L64 healthcheck references /home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh; L14 comment updated",
+                "bash -n .devcontainer/entrypoint.sh exits 0",
+                "grep -n 'harness/scripts/\\|harness/install/' .devcontainer/entrypoint.sh returns empty",
+                "grep -n '/home/sandbox/harness/scripts/' .devcontainer/docker-compose.yml returns empty",
+                "ONLY .devcontainer/entrypoint.sh and .devcontainer/docker-compose.yml are modified"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Parallel wave. Live boot path — verify with bash -n. Files: .devcontainer/entrypoint.sh, .devcontainer/docker-compose.yml."
+        },
+        {
+            "id": "US-003",
+            "title": "T-CD: Repoint CI workflows and update eval probes atomically",
+            "description": "As CI, I want workflow script paths/filters and the probes that assert them to reference .oh/ together so CI stays green and probes stay non-REGRESSION.",
+            "acceptanceCriteria": [
+                "ci-harness.yml: shellcheck glob (L126) and pnpm-pin call (L136) use .oh/...; legacy 'install/**'/'scripts/**' filters removed (.oh/** already present)",
+                "release.yml: pnpm-pin (L65) and shellcheck (L81) use .oh/...",
+                "sandbox-boot-guard.yml: compose calls (L66,L71) + boot-smoke (L136) use .oh/scripts/...; path filters repointed to .oh/scripts/.../.oh/install/...",
+                "boot-lint-glob.sh L31/L51 use '.devcontainer/ .oh/install/ .oh/scripts/'",
+                "sandbox-boot-guard-ci.sh assertions (L26,L37,L43) match the new .oh/ workflow strings",
+                "grep -n '\"install/\\*\\*\"' .github/workflows/ci-harness.yml .github/workflows/sandbox-boot-guard.yml returns empty",
+                "grep -n 'bash scripts/' .github/workflows/*.yml returns empty",
+                "bash evals/probes/boot-lint-glob.sh and bash evals/probes/sandbox-boot-guard-ci.sh exit 0",
+                "ONLY the 3 workflow files and 2 probe files are modified"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Parallel wave. Coupled: edit workflows first, then probes to match. Re-read filter blocks before editing."
+        },
+        {
+            "id": "US-004",
+            "title": "T-E: Repoint skills and crons that exec root paths",
+            "description": "As a skill/cron running inside the sandbox, I want bare scripts/ exec forms repointed to .oh/scripts/ so they resolve without the root symlink.",
+            "acceptanceCriteria": [
+                "Bare/$HARNESS/$REPO_ROOT/$ROOT exec+source forms of scripts/locked-append.sh, scripts/ralph.sh, scripts/ablate.sh, scripts/cron-runtime.ts repointed to .oh/scripts/... in: autopilot/SKILL.md, autopilot/autopilot-caps.sh, context-audit/SKILL.md, eval/run.sh, health-check/SKILL.md, retro/SKILL.md, crons/autopilot.md, crons/prompt-miner.md",
+                "${CLAUDE_SKILL_DIR}/scripts/... references are NOT modified",
+                "crons/heartbeat.md is NOT modified (git diff --quiet crons/heartbeat.md)",
+                "bash -n .mifune/skills/autopilot/autopilot-caps.sh and bash -n .mifune/skills/eval/run.sh exit 0",
+                "ONLY the 8 listed files are modified"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Parallel wave. Do NOT touch ${CLAUDE_SKILL_DIR}/scripts or crons/heartbeat.md."
+        },
+        {
+            "id": "US-005",
+            "title": "T-F: Repoint user-facing docs",
+            "description": "As a self-hosting user, I want install/healthcheck commands in docs to use .oh/ so copy-paste works after the symlink is gone.",
+            "acceptanceCriteria": [
+                "README.md L40/L48, docs/installation.md L25/L39/L54, docs/quickstart.md L30: 'bash scripts/install.sh' -> 'bash .oh/scripts/install.sh'",
+                "docs/installation.md L150: harness/scripts/sandbox-healthcheck.sh -> .oh/scripts/sandbox-healthcheck.sh",
+                "grep -n 'bash scripts/' README.md docs/installation.md docs/quickstart.md returns empty",
+                "grep -n 'harness/scripts/' docs/installation.md returns empty",
+                "ONLY README.md, docs/installation.md, docs/quickstart.md are modified"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Parallel wave. Files: README.md, docs/installation.md, docs/quickstart.md."
+        },
+        {
+            "id": "US-006",
+            "title": "T-G: Update misc references (protected-paths, context, AGENTS)",
+            "description": "As a contributor/orchestrator, I want protected-paths and context docs to name .oh/ paths so they stay accurate after removal.",
+            "acceptanceCriteria": [
+                ".claude/protected-paths.txt L45-46: install/banner.sh and install/cloudflared-tunnel.sh -> .oh/install/...",
+                "context/SOUL.md, context/TOOLS.md, context/REPO_MAP.md, AGENTS.md machinery-path mentions of scripts/ and install/ updated to .oh/... (or removed-symlink note dropped)",
+                ".github/ISSUE_TEMPLATE/feat.md and skill.md area lists updated if they name these dirs",
+                "grep -n '^install/' .claude/protected-paths.txt returns empty",
+                "ONLY the listed files are modified"
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Parallel wave. Prose/correctness; non-breaking."
+        },
+        {
+            "id": "US-007",
+            "title": "T-REMOVE: Remove symlinks, add CHANGELOG entry, final verification",
+            "description": "As the harness, I want the two root symlinks removed and the full verification suite green so the migration is complete and durable.",
+            "acceptanceCriteria": [
+                "Depends on US-001..US-006 all complete",
+                "Add exactly one new CHANGELOG.md [Unreleased] entry (Removed/Changed); no history entries altered",
+                "git rm install scripts (symlink blobs removed; .oh/install and .oh/scripts untouched)",
+                "ls install scripts exits non-zero (No such file)",
+                "npx vitest run exits 0 (Typecheck passes)",
+                "for p in evals/probes/*.sh; do bash \"$p\"; done — no exit 1 (REGRESSION/FAIL)",
+                "bash .oh/scripts/docker-compose.sh config --quiet exits 0",
+                "bash -n .devcontainer/entrypoint.sh exits 0",
+                "git grep -nE '(^|[^.a-zA-Z/])(install|scripts)/' -- ':!CHANGELOG.md' ':!*.md' shows only .oh/-prefixed or intentional non-path prose"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": "SERIAL — runs only after the parallel wave. Files: install, scripts (removed), CHANGELOG.md."
+        }
+    ]
+}

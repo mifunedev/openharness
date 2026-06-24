@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, "../..");
+const REPO_ROOT = path.resolve(__dirname, "../../..");
 const DOCS_ROOT = path.join(REPO_ROOT, "docs");
 const MARKDOWN_ROOT_FILES = [path.join(REPO_ROOT, "README.md")];
 

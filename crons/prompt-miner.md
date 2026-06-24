@@ -99,7 +99,7 @@ set, else map `$CRON_WORKTREE` back to its shared root, else the current topleve
 ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1{sub(/^worktree /,"");print;exit}')}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
-  | "$ROOT/scripts/locked-append.sh" "$ROOT/crons/.cron.log"
+  | "$ROOT/.oh/scripts/locked-append.sh" "$ROOT/crons/.cron.log"
 ```
 
 ## Guarantees

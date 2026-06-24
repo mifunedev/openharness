@@ -1,0 +1,73 @@
+# progress
+
+Task: deprecate-oh-symlinks (#322) — remove root back-compat symlinks
+(scripts -> .oh/scripts, install -> .oh/install) and repoint all consumers.
+Executor: /delegate fan-out (NOT the ralph runner), orchestrated by the harness.
+Branch: feat/322-deprecate-oh-symlinks → PR #323 (base development).
+
+== Explore ==
+- Built blast-radius inventory (tasks/deprecate-oh-symlinks/blast-radius.md),
+  Categories A–G of path-literal consumers + FORBIDDEN list + verification steps.
+
+== Wave 1 (parallel, 5 workers) ==
+[US-001] T-A build/test config (Makefile, vitest.config.ts) ............ COMPLETE
+[US-002] T-B devcontainer boot (entrypoint.sh, docker-compose.yml) ..... COMPLETE
+[US-003] T-CD CI workflows + 2 coupled probes ......................... COMPLETE
+[US-004] T-E skills + crons exec forms (8 files) ...................... COMPLETE
+[US-005] T-F user-facing docs (README, installation, quickstart) ...... COMPLETE
+
+== Mid-execution discovery (vitest run + machinery audit) ==
+Original inventory caught only path LITERALS. Running vitest + auditing the
+machinery exposed two deeper classes that resolved root through the symlink's
+DEPTH, not its name (#321's "no path-resolution rewiring needed" held only
+while the symlink existed):
+  Category H — machinery self-location ($SCRIPT_DIR/.. only hit root because the
+    symlink made pwd report the 2-level path; at real .oh/scripts/ depth -> .oh/).
+  Category I — the 16-file vitest suite computed root as ../.. (assumed symlink
+    depth) and referenced join(ROOT,"scripts",...).
+  Category D-ext — 7 more probes + prompt-miner/scripts/render-log-entry.sh
+    referencing $ROOT/scripts/...
+These were appended to blast-radius.md and scheduled as Wave 2.
+
+== Wave 2 (parallel workers + orchestrator) ==
+[US-006] T-G misc refs (protected-paths, context/*, AGENTS, issue tmpl) . COMPLETE
+[US-008] Category H machinery (orchestrator) + probe sweep (worker) .... COMPLETE
+[US-009] Category I vitest suite depth correction ..................... COMPLETE
+- Orchestrator fixed the 7 boot-critical machinery scripts (docker-compose.sh,
+  sandbox-boot-smoke.sh, check-pnpm-pin.sh, ablate.sh, install.sh,
+  sandbox-healthcheck.sh, restart-openharness-tmux.sh): $SCRIPT_DIR/.. -> ../..
+  + internal $REPO_*/scripts -> .oh/scripts.
+- Fixed a regression a worker introduced: context/REPO_MAP.md grew 12 bytes over
+  the 12288 budget -> trimmed to 12210 (repo-orientation probe green).
+
+== Finalize / verification (orchestrator) ==
+- Final functional grep sweep: clean (only operator-owned heartbeat.md remains).
+- git rm install scripts -> ls install scripts errors (symlinks gone).
+- CHANGELOG.md: one new [Unreleased] entry (refs #322/#321); no history altered.
+- npx vitest run -> 281/282 PASS. The 1 failure (cron-runtime.test.ts:420
+  buildTmuxWrapper "expected 0 to be 9") is PRE-EXISTING & env-only:
+  origin/development asserts .toBe(9) identically; GREEN in CI.
+- evals/probes/*.sh -> no new REGRESSION. wiki-readme-index.sh fails only on the
+  pre-existing dirty gitignored corpus README (stash it -> probe passes).
+- bash .oh/scripts/docker-compose.sh config --quiet -> OK; REPO_DIR -> true root.
+- bash -n clean on all edited shell scripts; workflows valid YAML.
+- Forbidden files never staged: crons/heartbeat.md, .mifune/skills/wiki/corpus/**,
+  .pi/prompts/**. ${CLAUDE_SKILL_DIR}/scripts/... left untouched.
+
+== CI (PR #323) — ALL GREEN ==
+Validate sandbox compose and image build .. pass  (container booted symlink-free)
+Lint, Typecheck, Build & Test ............. pass  (vitest green — confirms 420 is env-only)
+Eval Probe Regression Gate ................ pass
+Boot Path Lint (shellcheck + hadolint) .... pass
+Build docs ................................ pass
+GitGuardian Security Checks ............... pass
+
+== Known follow-up (NOT in this PR) ==
+crons/heartbeat.md (operator-owned; carries uncommitted local `enabled:` state;
+on the do-not-touch list) still references bare scripts/locked-append.sh and
+scripts/maintenance/restart-openharness-tmux.sh. Committed form is enabled:true,
+so its cron fires would fail to resolve those paths once merged. Must be
+repointed to .oh/scripts/... in a separate operator-owned commit; the
+heartbeat-logging-contract probe greps the bare form to match it until then.
+
+STATUS: COMPLETE

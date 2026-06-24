@@ -37,7 +37,7 @@ Clones into `~/.openharness`, offers to share your host `gh` token, writes `.dev
 # 1. Fork on GitHub, then clone YOUR fork:
 git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
 # 2. Bootstrap — installer auto-detects the local clone, no env vars needed:
-bash scripts/install.sh
+bash .oh/scripts/install.sh
 ```
 
 **Option C — Clone upstream, then re-point to your repo:**
@@ -45,7 +45,7 @@ bash scripts/install.sh
 ```bash
 git clone https://github.com/mifunedev/openharness.git my-harness && cd my-harness
 git remote set-url origin https://github.com/<your-org>/<your-repo>.git
-bash scripts/install.sh
+bash .oh/scripts/install.sh
 ```
 
 <details><summary>Advanced: install directly from your fork without cloning first</summary>

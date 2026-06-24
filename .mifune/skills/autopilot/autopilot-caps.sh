@@ -7,7 +7,7 @@
 # extracted verbatim from the in-session shell in
 # .claude/skills/autopilot/SKILL.md §1). The cron runtime runs this as a
 # `preflight:` gate BEFORE any worktree/tmux/agent is created
-# (scripts/cron-runtime.ts → runPreflight). On a capped hour it exits non-zero,
+# (.oh/scripts/cron-runtime.ts → runPreflight). On a capped hour it exits non-zero,
 # so the runtime logs SKIPPED_PREFLIGHT and spawns nothing — no session, no
 # model query, no worktree. Only PROCEED (exit 0) launches the agent.
 #
@@ -35,16 +35,16 @@ set -euo pipefail
 
 # This script lives in <root>/.mifune/skills/autopilot/ but reads root-level
 # harness.yaml and execs the shared root scripts (harness-config.sh,
-# locked-append.sh) that STAY at <root>/scripts/. The skill may be reached through
+# locked-append.sh) that STAY at <root>/.oh/scripts/. The skill may be reached through
 # agent-symlinks (.claude/skills) or the neutral .mifune/skills source, so walk
-# upward to find the repo root (the dir holding scripts/cron-runtime.ts) instead
+# upward to find the repo root (the dir holding .oh/scripts/cron-runtime.ts) instead
 # of hard-coding a fixed depth — the same idiom as .mifune/skills/eval/run.sh.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
-while [ "$REPO_ROOT" != "/" ] && [ ! -f "$REPO_ROOT/scripts/cron-runtime.ts" ]; do
+while [ "$REPO_ROOT" != "/" ] && [ ! -f "$REPO_ROOT/.oh/scripts/cron-runtime.ts" ]; do
   REPO_ROOT="$(dirname "$REPO_ROOT")"
 done
-SCRIPTS_DIR="$REPO_ROOT/scripts"
+SCRIPTS_DIR="$REPO_ROOT/.oh/scripts"
 HARNESS_YAML="${HARNESS_YAML:-$REPO_ROOT/harness.yaml}"
 
 # Read a flat section.key from harness.yaml (empty when the file/key is absent or
@@ -128,7 +128,7 @@ append_runtime_log() {
       cat >/dev/null || true
     }
   else
-    printf 'autopilot-caps: WARNING: missing scripts/locked-append.sh; appending without serialization to %s\n' "$target" >&2
+    printf 'autopilot-caps: WARNING: missing .oh/scripts/locked-append.sh; appending without serialization to %s\n' "$target" >&2
     cat >> "$target" 2>/dev/null || true
   fi
 }

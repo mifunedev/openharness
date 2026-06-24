@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, "../..");
-const SCRIPT = path.join(REPO_ROOT, "scripts", "repo-orientation-benchmark-score.mjs");
+const REPO_ROOT = path.resolve(__dirname, "../../..");
+const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "repo-orientation-benchmark-score.mjs");
 const MANIFEST = path.join(REPO_ROOT, "evals", "capability", "repo-orientation", "tasks.json");
 
 function run(report: unknown) {

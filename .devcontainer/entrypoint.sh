@@ -187,12 +187,12 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
 fi
 
 # ─── Attach banner wiring (idempotent) ──────────────────────────────
-# Source install/banner.sh from the sandbox user's .bashrc so every
+# Source .oh/install/banner.sh from the sandbox user's .bashrc so every
 # interactive shell (docker exec, VS Code) shows
 # sandbox + onboarding status. Safe to run on every boot.
 BASHRC="/home/sandbox/.bashrc"
-if [ -f "$BASHRC" ] && ! grep -q 'source.*install/banner.sh' "$BASHRC"; then
-  gosu sandbox bash -c 'echo "source /home/sandbox/harness/install/banner.sh 2>/dev/null" >> ~/.bashrc'
+if [ -f "$BASHRC" ] && ! grep -q 'source.*\.oh/install/banner.sh' "$BASHRC"; then
+  gosu sandbox bash -c 'echo "source /home/sandbox/harness/.oh/install/banner.sh 2>/dev/null" >> ~/.bashrc'
   echo "[entrypoint] attach banner wired into .bashrc"
 fi
 
@@ -284,7 +284,7 @@ fi
 
 # ─── pnpm install at harness root ──────────────────────────────────
 # Root package.json declares deps that aren't bundled into Pi or any
-# global CLI: `croner` for scripts/cron-runtime.ts, plus dev tooling such
+# global CLI: `croner` for .oh/scripts/cron-runtime.ts, plus dev tooling such
 # as `@sinclair/typebox` (kept as a devDep for tooling parity). The Slack
 # bridge no longer needs root npm deps — it is the `pi-messenger-bridge`
 # package, npm-installed into a gitignored `.pi/bridge/` dir and loaded only
@@ -307,7 +307,7 @@ fi
 
 # ─── Start/supervise cron runtime in tmux sessions ────────────────
 # Per SPEC v0.7 §"Croner runtime" + .mifune/skills/t3/references/sandbox-processes.md.
-# `cron-system` runs scripts/cron-runtime.ts. `cron-watchdog` is the outer
+# `cron-system` runs .oh/scripts/cron-runtime.ts. `cron-watchdog` is the outer
 # supervisor: if cron-system disappears after boot, it restarts the runtime
 # without requiring a container restart. Logs tee to /tmp/cron-system.log and
 # /tmp/cron-watchdog.log.
@@ -317,7 +317,7 @@ case "${CRONS_DIR:-crons}" in
 esac
 mkdir -p "$CRONS_PATH"
 # Bind-mounted; sandbox UID is synced to host UID above, so no chown.
-if [ -f "$HARNESS/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
+if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
   if gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
     echo "[entrypoint] legacy system-cron tmux session detected — not starting cron-system or cron-watchdog; kill system-cron and restart/relaunch the sandbox when ready to migrate"
   else
@@ -334,7 +334,7 @@ while true; do
   if ! tmux has-session -t cron-system 2>/dev/null; then
     echo "[$(date -Iseconds)] cron-system missing; starting cron-runtime.ts"
     tmux new-session -d -s cron-system \
-      "cd $HARNESS && node --experimental-strip-types scripts/cron-runtime.ts 2>&1 | tee /tmp/cron-system.log"
+      "cd $HARNESS && node --experimental-strip-types .oh/scripts/cron-runtime.ts 2>&1 | tee /tmp/cron-system.log"
   fi
   sleep "$INTERVAL"
 done

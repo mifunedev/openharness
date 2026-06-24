@@ -17,7 +17,7 @@
 #   scripts/ablate.sh <target-file> <probe-script>   # -> LOAD-BEARING | PRUNABLE | CHANGED
 set -euo pipefail
 
-_ablate_root() { cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd; }
+_ablate_root() { cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd; }
 ABLATE_SENTINEL="$(_ablate_root)/evals/.ablation-active"
 
 ablate_swap_out() {

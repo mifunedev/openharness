@@ -11,7 +11,7 @@
 # WHY DETACHED
 #   `tmux kill-server` kills every session — INCLUDING the one the launcher runs in. This
 #   script is therefore meant to be launched DETACHED so it outlives the server it kills:
-#       setsid bash scripts/maintenance/restart-openharness-tmux.sh </dev/null >/tmp/oh-restart-273.boot.log 2>&1 &
+#       setsid bash .oh/scripts/maintenance/restart-openharness-tmux.sh </dev/null >/tmp/oh-restart-273.boot.log 2>&1 &
 #   It is the spec-execute artifact for tasks/restart-openharness-tmux/ (see that PRD).
 #
 # SAFETY
@@ -47,7 +47,7 @@ ORDER=(app-website app-website-preview app-orchestra expose-public-mifune cron-s
 # capture misses them.
 fallback_cmd() {
   case "$1" in
-    cron-system)   echo "cd $HARNESS && node --experimental-strip-types scripts/cron-runtime.ts 2>&1 | tee /tmp/cron-system.log" ;;
+    cron-system)   echo "cd $HARNESS && node --experimental-strip-types .oh/scripts/cron-runtime.ts 2>&1 | tee /tmp/cron-system.log" ;;
     cron-watchdog) echo "HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log" ;;
     *) echo "" ;;
   esac
@@ -189,10 +189,10 @@ status="ok"
 log "verify: status=$status missing=[${missing[*]:-none}] argv-cleared=$argv_clean cron-runtime-alive=$cron_alive mifune.dev=$site"
 
 # --- liveness + audit trail --------------------------------------------------------------
-if [[ -x "$HARNESS/scripts/locked-append.sh" ]]; then
+if [[ -x "$HARNESS/.oh/scripts/locked-append.sh" ]]; then
   printf '[%s] restart-273: status=%s argv-cleared=%s cron-alive=%s missing=%s mifune=%s\n' \
     "$(date -Iseconds)" "$status" "$argv_clean" "$cron_alive" "${missing[*]:-none}" "$site" \
-    | "$HARNESS/scripts/locked-append.sh" "$HARNESS/crons/.cron.log" || true
+    | "$HARNESS/.oh/scripts/locked-append.sh" "$HARNESS/crons/.cron.log" || true
 fi
 
 body="$(printf 'Automated tmux-server restart (#273) ran via the heartbeat date-gated spec-execute step.\n\n- system-cron argv cleared: %s\n- cron runtime alive (crons/.pid): %s\n- sessions missing after relaunch: %s\n- https://mifune.dev/ : %s (informational; rebuilds on its own)\n\nLog: %s on the sandbox host.' \

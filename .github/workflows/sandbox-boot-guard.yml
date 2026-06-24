@@ -9,12 +9,11 @@ on:
     paths:
       - ".devcontainer/**"
       - ".oh/**"
-      - "install/**"
       - "workspace/**"
       - "packages/oh/**"
-      - "scripts/docker-compose.sh"
-      - "scripts/sandbox-boot-smoke.sh"
-      - "scripts/harness-config.sh"
+      - ".oh/scripts/docker-compose.sh"
+      - ".oh/scripts/sandbox-boot-smoke.sh"
+      - ".oh/scripts/harness-config.sh"
       - "Makefile"
       - "harness.yaml"
       - ".dockerignore"
@@ -23,12 +22,11 @@ on:
     paths:
       - ".devcontainer/**"
       - ".oh/**"
-      - "install/**"
       - "workspace/**"
       - "packages/oh/**"
-      - "scripts/docker-compose.sh"
-      - "scripts/sandbox-boot-smoke.sh"
-      - "scripts/harness-config.sh"
+      - ".oh/scripts/docker-compose.sh"
+      - ".oh/scripts/sandbox-boot-smoke.sh"
+      - ".oh/scripts/harness-config.sh"
       - "Makefile"
       - "harness.yaml"
       - ".dockerignore"
@@ -63,12 +61,12 @@ jobs:
       # Sandbox boot guard only: validate the local devcontainer substrate.
       # This job never logs in, pushes an image, or publishes release artifacts.
       - name: Validate base compose configuration
-        run: bash scripts/docker-compose.sh config --quiet
+        run: bash .oh/scripts/docker-compose.sh config --quiet
 
       - name: Validate Hermes dashboard compose overlay
         env:
           HERMES_DASHBOARD: "true"
-        run: bash scripts/docker-compose.sh config --quiet
+        run: bash .oh/scripts/docker-compose.sh config --quiet
 
       - name: Build sandbox image locally
         env:
@@ -133,4 +131,4 @@ jobs:
           # the Option C contract: install slowness can no longer trip the
           # ~390s unhealthy deadline. Boot is now just the cron-system spawn.
           SKIP_PNPM_INSTALL: "1"
-        run: bash scripts/sandbox-boot-smoke.sh
+        run: bash .oh/scripts/sandbox-boot-smoke.sh

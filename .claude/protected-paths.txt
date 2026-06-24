@@ -33,21 +33,21 @@ health-check
 retro
 drift-check
 
-# --- Orchestrator scripts (scripts/) ---
-scripts/ralph.sh
-scripts/cron-runtime.ts
-scripts/sandbox-healthcheck.sh
+# --- Orchestrator scripts (.oh/scripts/) ---
+.oh/scripts/ralph.sh
+.oh/scripts/cron-runtime.ts
+.oh/scripts/sandbox-healthcheck.sh
 
 # --- Root lifecycle entrypoints ---
 Makefile
 
 # --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
-install/banner.sh
-install/cloudflared-tunnel.sh
+.oh/install/banner.sh
+.oh/install/cloudflared-tunnel.sh
 .devcontainer/entrypoint.sh
 .devcontainer/Dockerfile
 
-# --- Crons (referenced by scripts/cron-runtime.ts) ---
+# --- Crons (referenced by .oh/scripts/cron-runtime.ts) ---
 crons/heartbeat.md
 
 # --- Norms folded into skills (formerly context/rules/, B-state M3+M4) ---

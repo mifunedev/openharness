@@ -84,9 +84,9 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Intent | Start here | Why |
 |---|---|---|
 | Session role, permissions, startup load | `AGENTS.md`, `context/README.md`, `context/` | Defines orchestrator role, voice, session-start reads, and rules. |
-| Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml`, `scripts/README.md`, `scripts/docker-compose.sh` | Owns container image, compose overlays, generated env, and lifecycle commands. |
+| Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml`, `.oh/scripts/README.md`, `.oh/scripts/docker-compose.sh` | Owns container image, compose overlays, generated env, and lifecycle commands. |
 | Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/pr-audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
-| Cron/autopilot behavior | `crons/README.md`, `crons/`, `scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.mifune/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog flow. |
+| Cron/autopilot behavior | `crons/README.md`, `crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.mifune/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog flow. |
 | Eval/probe regressions | `evals/README.md`, `evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
 | Task/spec implementation state | `tasks/README.md`, `tasks/<active-task>/` | PRD, critique, Ralph JSON, prompt, and task-specific artifacts. |
 | Docs/site/blog | `docs/`, `blog/`, `.oh/docs/` | Markdown content (`docs/`, `blog/`) and the Docusaurus site that renders it (`.oh/docs/`). |
@@ -126,11 +126,11 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `package.json` | Root scripts for build/test/typecheck/docs/security audit. | Pick verification commands. |
 | `pnpm-workspace.yaml`, `pnpm-lock.yaml` | Workspace package layout and pinned dependency graph. | Debug workspace membership or dependency drift; avoid lockfile reads unless dependency state matters. |
 | `harness.yaml` | Harness runtime defaults such as autopilot caps and configured services. | Inspect operator-configurable behavior. |
-| `.oh/` | OpenHarness's own machinery grouped as one unit: the `oh` CLI (`.oh/cli/`), the docs site builder (`.oh/docs/`), installer/lifecycle scripts (`.oh/scripts/`), container-install inputs (`.oh/install/`), deploy config (`.oh/config.json`). The old root paths `scripts/` and `install/` remain as back-compat symlinks into here; the `packages/` folder was retired (its `oh` and `docs` packages moved in). | Read `.oh/README.md` first; find harness tooling addressed as a namespace. |
+| `.oh/` | OpenHarness's own machinery grouped as one unit: the `oh` CLI (`.oh/cli/`), the docs site builder (`.oh/docs/`), installer/lifecycle scripts (`.oh/scripts/`), container-install inputs (`.oh/install/`), deploy config (`.oh/config.json`). The old root symlinks `scripts/`/`install/` and the `packages/` folder were retired — all machinery lives here now. | Read `.oh/README.md` first; find harness tooling addressed as a namespace. |
 | `context/` | Voice, identity, tools, repo map, user collaboration, and rules. | Load operating principles and process constraints. |
 | `crons/` | Scheduled agent prompts and heartbeat/autopilot jobs. | Understand recurring automation behavior; read `crons/README.md` first. |
-| `scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, Ralph, caps. | Find executable implementation behind docs/skills; read `scripts/README.md` first. |
-| `scripts/__tests__/` | Vitest coverage for harness scripts. | Locate targeted tests for script changes. |
+| `.oh/scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, Ralph, caps. | Find executable implementation behind docs/skills; read `.oh/scripts/README.md` first. |
+| `.oh/scripts/__tests__/` | Vitest coverage for harness scripts. | Locate targeted tests for script changes. |
 | `evals/probes/` | Deterministic regression probes used by `/eval` and CI. | Add or inspect behavior guards. |
 | `evals/capability/` | Capability benchmark specs/results distinct from regression probes. | Evaluate progress-ceiling tasks. |
 | `evals/datasets/` | Verifiable issue-to-PR trajectory datasets. | Inspect dataset prompts/manifests before oracle fixtures. |

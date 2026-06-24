@@ -12,7 +12,7 @@
 # inheriting its exact SKIPPED-CAP-* / PROCEED contract, fail-open behavior,
 # harness.yaml cap defaults, and liveness logging.
 #
-# Run as the cron `preflight:` gate (scripts/cron-runtime.ts → runPreflight),
+# Run as the cron `preflight:` gate (.oh/scripts/cron-runtime.ts → runPreflight),
 # BEFORE any worktree/tmux/agent is created. The FINAL stdout line is the STATUS
 # token the runtime reads as the skip reason; all diagnostics go to stderr.
 set -euo pipefail

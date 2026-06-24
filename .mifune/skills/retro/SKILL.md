@@ -25,7 +25,7 @@ Scientific session-closing retrospective. Turn the current conversation's signal
 
 This is the deliberate "Improve" pass of the Memory Improvement Protocol defined in `.mifune/skills/retro/references/memory-protocol.md`, now evidence-driven. Running it as a named skill turns an optional afterthought into a first-class, propose-then-confirm operation — and the scientific layer guards against overfitting a single session into a durable lesson.
 
-Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for deterministic checks and log rendering; use `${CLAUDE_SKILL_DIR}/references/report-schema.md` as the output contract. Shared repo primitives such as `scripts/locked-append.sh` are allowed only for cross-skill infrastructure.
+Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for deterministic checks and log rendering; use `${CLAUDE_SKILL_DIR}/references/report-schema.md` as the output contract. Shared repo primitives such as `.oh/scripts/locked-append.sh` are allowed only for cross-skill infrastructure.
 
 ## When to use
 
@@ -236,7 +236,7 @@ LOG_ENTRY=$(bash "${CLAUDE_SKILL_DIR}/scripts/render-log-entry.sh" \
   --hypotheses <total> --supported <n> --refuted <n> --inconclusive <n> \
   --memory <n> --identity <n> \
   --observation "<one sentence — strongest supported finding, or no durable patterns>")
-printf "%s\n" "$LOG_ENTRY" | scripts/locked-append.sh "memory/$TODAY/log.md"
+printf "%s\n" "$LOG_ENTRY" | .oh/scripts/locked-append.sh "memory/$TODAY/log.md"
 ```
 
 Use `--result DRY-RUN` for dry-runs and `--result SKIPPED-TRIVIAL` for trivial skips.

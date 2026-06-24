@@ -8,8 +8,8 @@ import path from "node:path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const REPO_ROOT = path.resolve(__dirname, "../..");
-const SCRIPT = path.join(REPO_ROOT, "scripts", "check-pnpm-pin.sh");
+const REPO_ROOT = path.resolve(__dirname, "../../..");
+const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "check-pnpm-pin.sh");
 
 interface RunResult {
   stdout: string;

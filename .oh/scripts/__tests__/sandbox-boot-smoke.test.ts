@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
-const ROOT = join(import.meta.dirname, "../..");
-const SCRIPT = join(ROOT, "scripts", "sandbox-boot-smoke.sh");
+const ROOT = join(import.meta.dirname, "../../..");
+const SCRIPT = join(ROOT, ".oh", "scripts", "sandbox-boot-smoke.sh");
 
 function fixture(opts: { dockerExecAlwaysFails?: boolean } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "sandbox-boot-smoke-"));

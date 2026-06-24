@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const ROOT = join(import.meta.dirname, "../..");
+const ROOT = join(import.meta.dirname, "../../..");
 const ENTRYPOINT = join(ROOT, ".devcontainer/entrypoint.sh");
 
 function entrypoint(): string {
@@ -240,7 +240,7 @@ describe("devcontainer entrypoint cron supervision", () => {
     expect(text).toContain("cron-watchdog");
     expect(text).toContain("cron-system missing; starting cron-runtime.ts");
     expect(text).toContain("tmux new-session -d -s cron-system");
-    expect(text).toContain("node --experimental-strip-types scripts/cron-runtime.ts");
+    expect(text).toContain("node --experimental-strip-types .oh/scripts/cron-runtime.ts");
     expect(text).toContain("/tmp/cron-system.log");
     expect(text).toContain("/tmp/cron-watchdog.log");
   });

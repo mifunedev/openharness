@@ -11,12 +11,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNTIME="$ROOT/scripts/cron-runtime.ts"
+RUNTIME="$ROOT/.oh/scripts/cron-runtime.ts"
 CRON="$ROOT/crons/autopilot.md"
 SCRIPT="$ROOT/.mifune/skills/autopilot/autopilot-caps.sh"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
 YAML="$ROOT/harness.yaml"
-TESTS="$ROOT/scripts/__tests__/autopilot-caps.test.ts"
+TESTS="$ROOT/.oh/scripts/__tests__/autopilot-caps.test.ts"
 
 for f in "$RUNTIME" "$CRON" "$SCRIPT" "$SKILL" "$YAML"; do
   [[ -f "$f" ]] || { echo "SKIPPED: missing $f" >&2; exit 2; }
@@ -62,7 +62,7 @@ grep -Eq '^[[:space:]]*#?[[:space:]]*daily_cap:' "$YAML" || missing+=("harness.y
 grep -Fq '.mifune/skills/autopilot/autopilot-caps.sh' "$SKILL" || missing+=("autopilot SKILL §1 defers to .mifune/skills/autopilot/autopilot-caps.sh")
 
 # 6. tests exist for the gate contract.
-[[ -f "$TESTS" ]] || missing+=("scripts/__tests__/autopilot-caps.test.ts exists")
+[[ -f "$TESTS" ]] || missing+=(".oh/scripts/__tests__/autopilot-caps.test.ts exists")
 
 # 7. HERMETIC behavioral check — run the gate with a gh stub (no network/auth).
 #    Fail-open: a gh failure → PROCEED-GH-ERROR, exit 0.

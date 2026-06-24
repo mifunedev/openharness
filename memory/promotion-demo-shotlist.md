@@ -97,7 +97,7 @@ once the PR appears.
 ```bash
 cd "$HOME/oh-cron-demo"
 CRONS_DIR="$HOME/demo-crons" CRON_AGENT_BIN="$HOME/bin/claude-cron" \
-  node --experimental-strip-types "$HOME/harness/scripts/cron-runtime.ts"
+  node --experimental-strip-types "$HOME/harness/.oh/scripts/cron-runtime.ts"
 ```
 
 ---
@@ -146,7 +146,7 @@ Sleep 3s
 
 # 3 — start the cron and walk away  (schedule sped up for this clip)
 Type "cd ~/oh-cron-demo"   Enter
-Type "CRONS_DIR=~/demo-crons CRON_AGENT_BIN=~/bin/claude-cron node --experimental-strip-types ~/harness/scripts/cron-runtime.ts"   Enter
+Type "CRONS_DIR=~/demo-crons CRON_AGENT_BIN=~/bin/claude-cron node --experimental-strip-types ~/harness/.oh/scripts/cron-runtime.ts"   Enter
 Sleep 5s
 
 # 4 — agent runs headless; hide the long real run to keep the GIF short

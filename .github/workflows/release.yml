@@ -62,7 +62,7 @@ jobs:
         run: pnpm test:scripts
 
       - name: Check pnpm pin drift
-        run: bash scripts/check-pnpm-pin.sh
+        run: bash .oh/scripts/check-pnpm-pin.sh
 
   boot-lint:
     name: Boot Path Lint (shellcheck + hadolint)
@@ -78,7 +78,7 @@ jobs:
         run: |
           command -v shellcheck >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y shellcheck; }
           shellcheck --version
-          shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh
+          shellcheck -S warning .devcontainer/*.sh .oh/install/*.sh .oh/scripts/*.sh
 
       - name: Hadolint Dockerfile
         uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0

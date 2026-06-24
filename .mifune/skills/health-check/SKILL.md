@@ -138,7 +138,7 @@ Always, per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "memory/$TODAY"
-scripts/locked-append.sh "memory/$TODAY/log.md" <<EOF
+.oh/scripts/locked-append.sh "memory/$TODAY/log.md" <<EOF
 
 ## Health-Check -- $TIME UTC
 - **Result**: OP | DRY-RUN

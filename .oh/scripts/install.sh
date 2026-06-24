@@ -113,7 +113,7 @@ Usage:
   curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
   # Review openharness-install.sh in your editor or pager, then:
   bash openharness-install.sh [<flags>]
-  ./scripts/install.sh [<flags>]
+  ./.oh/scripts/install.sh [<flags>]
 
 Clones (or pulls) the repo into ~/.openharness, prepares host auth dirs,
 and brings up the sandbox via 'docker compose'. Per SPEC v0.7, docker
@@ -141,11 +141,11 @@ Examples:
   # Review openharness-install.sh before running it.
   bash openharness-install.sh
   curl -fsSL https://oh.mifune.dev/install.sh | bash -s -- --yes
-  ./scripts/install.sh
+  ./.oh/scripts/install.sh
   OH_GITHUB_REPO=myorg/my-harness curl -fsSL \
-    https://raw.githubusercontent.com/myorg/my-harness/main/scripts/install.sh | bash
+    https://raw.githubusercontent.com/myorg/my-harness/main/.oh/scripts/install.sh | bash
   curl -fsSL -o openharness-install.sh \
-    https://raw.githubusercontent.com/myorg/my-harness/main/scripts/install.sh
+    https://raw.githubusercontent.com/myorg/my-harness/main/.oh/scripts/install.sh
   # Review openharness-install.sh, then run it against your fork.
   OH_GITHUB_REPO=myorg/my-harness bash openharness-install.sh
 HELPEOF
@@ -205,10 +205,10 @@ ok "git $(git --version | awk '{print $3}') — OK"
 banner "Resolving repository"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
-# install.sh lives at scripts/install.sh; the repo root is its parent.
-REPO_CANDIDATE="$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd)"
+# install.sh lives at .oh/scripts/install.sh; the repo root is two levels up.
+REPO_CANDIDATE="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)"
 
-if [ -n "$REPO_CANDIDATE" ] && [ -f "$REPO_CANDIDATE/.devcontainer/docker-compose.yml" ] && [ -f "$REPO_CANDIDATE/scripts/install.sh" ]; then
+if [ -n "$REPO_CANDIDATE" ] && [ -f "$REPO_CANDIDATE/.devcontainer/docker-compose.yml" ] && [ -f "$REPO_CANDIDATE/.oh/scripts/install.sh" ]; then
   REPO_DIR="$REPO_CANDIDATE"
   ok "Using local repo: $REPO_DIR"
 else
@@ -429,11 +429,11 @@ fi
 # ─── 5. Bring up the sandbox ─────────────────────────────────────────
 banner "Building and starting sandbox"
 printf "${CYAN}==> Building image — ~10 min on cold cache, ~30s on warm cache. Compose output below.${NC}\n"
-# scripts/docker-compose.sh centralizes env-file + compose-overlay argv construction
+# .oh/scripts/docker-compose.sh centralizes env-file + compose-overlay argv construction
 # and preserves each override path as a single literal argument.
 (
   cd "$REPO_DIR"
-  "$REPO_DIR/scripts/docker-compose.sh" up -d --build
+  "$REPO_DIR/.oh/scripts/docker-compose.sh" up -d --build
 )
 ok "Sandbox '$SANDBOX_NAME' started"
 

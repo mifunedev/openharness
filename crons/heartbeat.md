@@ -2,7 +2,7 @@
 id: heartbeat
 schedule: "0 * * * *"
 timezone: America/Denver
-enabled: true
+enabled: false
 overlap: false
 catchup: false
 agent: pi

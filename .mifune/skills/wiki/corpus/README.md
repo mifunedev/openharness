@@ -25,11 +25,11 @@ Entries here are **local scratch by default** — `.mifune/skills/wiki/corpus/*`
 ## Canonical docs
 
 Schema rule, frontmatter spec, and all authoring conventions: `.mifune/skills/wiki/references/schema.md`
-
 ## Index
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| self-harness-paper | Self-Harness: Harnesses That Improve Themselves (arXiv 2606.09498) | [research, self-improvement, agent-harness, llm-agents, benchmark] | 2026-06-24 |
 | debugmcp | DebugMCP Integration | [mcp, debugging, vscode, devcontainer, integration, open-harness] | 2026-06-23 |
 | sandbox-auth-volumes | Sandbox Auth Volume Ownership | [sandbox, devcontainer, auth, docker, ownership] | 2026-06-20 |
 | pi-messenger-bridge | pi-messenger-bridge | [pi, slack, messenger, extension, npm] | 2026-06-20 |

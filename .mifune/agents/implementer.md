@@ -5,7 +5,7 @@ description: |
   based on the repo's stack and existing patterns. Focuses on affected files, architecture
   decisions, data flow, and dependencies.
   TRIGGER when: spawned as one of 3 parallel planning sub-agents (with Critic and PM).
-tools: Read, Glob, Grep, Bash
+tools: Read, Glob, Grep, Bash, Write, Edit
 model: sonnet
 ---
 

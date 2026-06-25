@@ -59,6 +59,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | skill-paths | A | 2026-06-18 05:17 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
 | spec-family-contract | A | 2026-06-24 02:55 | PASS | conversation 2026-06-19 (spec-* family split, issue #265); consolidated into /spec dispatcher 2026-06-23 (one skill, args) |
 | submitted-by-trailers | A | 2026-06-18 05:17 | PASS | conversation 2026-06-12 (commit attribution trailers) |
+| sync-skill-contract | A | 2026-06-24 23:24 | PASS | issue #331 — /sync dispatcher contract (bidirectional origin↔upstream sync; publish|catchup|status routes; composes /drift-check, /eval, /pr-audit) |
 | watchdog-completed-session-reap | A | 2026-06-18 05:17 | PASS | issue #235 (completed autopilot PR session reaping) |
 | watchdog-draft-prs | A | 2026-06-18 05:17 | PASS | conversation 2026-06-15 (generic watchdog + stale draft PR recovery) |
 | watchdog-stuck-sessions | A | 2026-06-18 05:17 | PASS | issue #240 (Codex zero-credit stuck autopilot sessions) 2026-06-17 |

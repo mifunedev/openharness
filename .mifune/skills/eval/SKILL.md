@@ -34,9 +34,9 @@ itself): `0` when no new green→red regression occurred this run, `1` when one 
 more new regressions were detected (`${#regressions[@]} > 0`). When invoked via the
 Bash tool as `bash .claude/skills/eval/run.sh`, the agent caller reads `$?` directly
 to gate on success — the printed `REGRESSIONS (...)` stdout block and per-probe stderr
-lines remain the human-readable signal. Note: the `eval-weekly` date-gated step in
-`crons/heartbeat.md` is an intentional legacy caller that appends `|| true` then greps
-stdout; it does not consume the exit code by design — this is not a bug.
+lines remain the human-readable signal. Note: the `eval-weekly` cron is an intentional
+legacy caller that appends `|| true` then greps stdout; it does not consume the exit
+code by design — this is not a bug.
 
 ## What the runner does
 

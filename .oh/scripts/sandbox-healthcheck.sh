@@ -73,7 +73,7 @@ else
   slack_bot_token="${PI_SLACK_BOT_TOKEN:-$(compose_env_value PI_SLACK_BOT_TOKEN)}"
   if has_value "$slack_app_token" && has_value "$slack_bot_token"; then
     if command_exists "$PI_BIN"; then
-      require_session client-slack
+      require_session client-slack-pi
     else
       record_failure "Slack tokens configured but Pi binary not found: $PI_BIN"
     fi

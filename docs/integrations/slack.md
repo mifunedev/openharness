@@ -11,7 +11,7 @@ The Slack integration is provided by the npm package
 [**pi-messenger-bridge**](https://github.com/tintinweb/pi-messenger-bridge)
 (MIT, multi-transport — Slack / Telegram / WhatsApp / Discord / Matrix). The
 harness **installs it via npm into a gitignored `.pi/bridge/` directory** and
-the **dedicated `client-slack` tmux session loads it via `--extension`** — it
+the **dedicated `client-slack-pi` tmux session loads it via `--extension`** — it
 is **not** globally pinned in `.pi/settings.json`, so no other `pi` session
 loads the bridge or competes for the Slack connection. You do **not** run
 `pi install` yourself. Once your sandbox is up and Slack
@@ -22,7 +22,7 @@ Slack.
 
 > Upstream / standalone users (outside this harness) install the package with
 > `pi install npm:pi-messenger-bridge`. Inside the harness the entrypoint's
-> `npm install` into `.pi/bridge/` plus the `client-slack` `--extension` load
+> `npm install` into `.pi/bridge/` plus the `client-slack-pi` `--extension` load
 > handles it.
 
 ## 1. Prerequisites
@@ -58,12 +58,13 @@ auth failure.
 
 Keep both values ready for the next step.
 
-## 4. Configure the bridge (native — no wizard)
+## 4. Configure the bridge
 
-Configuration is **native**: edit two files directly inside the sandbox.
-There is no interactive configuration wizard — you set tokens in
-`.devcontainer/.env` and bridge runtime state in the tracked
-`.pi/msg-bridge.json`.
+Two layers. **Tokens** go in `.devcontainer/.env` (§ 4.1). The **messenger
+itself is configured from inside the running session via the bridge's own
+`/msg-bridge` command** (§ 4.2) — trusted users, channels, enable/disable — which
+is the default method; there is no separate wizard. The tracked
+`.pi/msg-bridge.json` is only an optional pre-seed for headless setups (§ 4.2).
 
 ### 4.1 Tokens — `.devcontainer/.env`
 
@@ -80,13 +81,36 @@ PI_SLACK_BOT_TOKEN=xoxb-...
 is the `xoxb-` Bot User OAuth Token. Swapping them causes a silent auth
 failure — double-check the prefixes.
 
-### 4.2 Bridge runtime — `.pi/msg-bridge.json`
+### 4.2 Configure the messenger — the `/msg-bridge` command
 
-The tracked `.pi/msg-bridge.json` holds the bridge's non-secret runtime
-config. On boot the entrypoint copies it into the bridge package
-(`~/.pi/msg-bridge.json`, which the package then rewrites at runtime). Set
-`autoConnect` so the bridge listens on startup, and optionally pre-authorize
-trusted users and enable channels:
+The default way to configure the bridge is its own in-session `/msg-bridge`
+command — you do **not** hand-edit config for normal use. Attach to the session
+and run it:
+
+```bash
+gateway pi --attach     # start (if needed) + attach to client-slack-pi
+```
+
+Then, inside the session:
+
+- `/msg-bridge` — bridge status and the config menu.
+- `/trusted` — list / add / remove trusted Slack users. Access is
+  **deny-by-default and challenge-based**: a new user DMs the bot, gets a
+  6-digit code, and replies with it to authorize (see § 5) — or you add them
+  here.
+- `/channels` — enable/disable channels and set per-channel `mode`
+  (`all` / `mentions` / `trusted-only`).
+- `/enable` · `/disable` — turn the bridge on/off without stopping the session.
+
+These changes persist to `~/.pi/msg-bridge.json` (owned and rewritten by the
+package); `gateway pi` preserves them across restarts, never clobbering live
+grants (bug #289).
+
+#### Optional pre-seed (headless) — `.pi/msg-bridge.json`
+
+For headless setups where nobody watches the terminal, the tracked
+`.pi/msg-bridge.json` pre-seeds `autoConnect` plus a starting trust set, so the
+bridge is usable on first boot without the challenge handshake:
 
 ```json
 {
@@ -100,21 +124,33 @@ trusted users and enable channels:
 }
 ```
 
-- `autoConnect` — `true` opens Socket Mode and starts listening as soon as
-  the `client-slack` session boots.
-- `auth.trustedUsers` — Slack user IDs namespaced by transport as `slack:U…`.
-  Pre-authorizing your own ID skips the first-message challenge (see § 5) —
-  recommended for headless setups where nobody watches the terminal.
-- `auth.channels` (optional) — per-channel enablement keyed by Slack channel
-  ID (`C…`); each entry takes `"enabled": true` and a `mode` of
-  `all` / `mentions` / `trusted-only`.
+- `autoConnect` — `true` opens Socket Mode as soon as the `client-slack-pi`
+  session boots.
+- `auth.trustedUsers` — Slack user IDs namespaced by transport as `slack:U…`;
+  pre-authorizing your own ID skips the first-message challenge (§ 5).
+- `auth.channels` — per-channel enablement keyed by channel ID (`C…`).
 
-### 4.3 The `client-slack` session starts automatically
+`gateway pi` seeds this into `~/.pi/msg-bridge.json` on launch but **preserves**
+any grants you've since added via `/trusted`/`/channels`.
 
-You do **not** launch anything by hand. On container boot,
-`.devcontainer/entrypoint.sh` npm-installs the bridge into a gitignored
-`.pi/bridge/` directory and starts the dedicated `client-slack` tmux session
-that loads it via `--extension`:
+### 4.3 The `client-slack-pi` session (managed by `gateway`)
+
+On container boot, `.devcontainer/entrypoint.sh` hands off to
+`.oh/scripts/gateway.sh pi`, which npm-installs the bridge into a gitignored
+`.pi/bridge/` directory and starts the dedicated `client-slack-pi` tmux session
+loading it via `--extension`. You can also manage it by hand at any time with
+the bare `gateway` command (a boot-installed symlink to that script; equivalently
+`make gateway pi`):
+
+```bash
+gateway pi              # start (idempotent)
+gateway pi --restart    # restart to pick up config / token edits
+gateway pi --stop       # stop
+gateway status          # client-slack-pi + client-slack-hermes
+```
+
+The sibling Hermes gateway client is the same command: `gateway hermes` (session
+`client-slack-hermes`). Under the hood `gateway pi` / the supervisor run:
 
 ```bash
 pi --extension .pi/bridge/node_modules/pi-messenger-bridge/dist/index.js \
@@ -126,7 +162,7 @@ pi runs **interactive**, attached to the pane's real TTY, so the loaded UI
 extensions render in the TUI instead of flooding stdout with
 `extension_ui_request` JSON frames — and the REPL stays alive at idle (no
 `--mode rpc`, no `| tee` pipe). Logs are captured out-of-band: pi's stderr goes
-to `/tmp/client-slack.log`, and the entrypoint mirrors the pane there
+to `/tmp/client-slack-pi.log`, and `gateway.sh` mirrors the pane there
 (ANSI-stripped) with `tmux pipe-pane`. `--approve` trusts the project-local
 files so the extension loads. A second `--extension`
 (`.pi/bridge-recovery/index.ts`) adds Codex retry-recovery (§ 4.5). The bridge
@@ -135,7 +171,7 @@ is loaded **only** here — it is not pinned in `.pi/settings.json`, so no other
 
 ### 4.4 Self-healing supervisor
 
-The `client-slack` session does not run that `pi` command directly — it runs it
+The `client-slack-pi` session does not run that `pi` command directly — it runs it
 under a thin supervisor, `.devcontainer/client-slack-supervise.sh`, which
 relaunches pi whenever the bridge dies. This exists because
 pi-messenger-bridge binds its long-lived Slack socket to a **session-scoped pi
@@ -165,24 +201,22 @@ retry chains fresh and succeeds. It does not patch the npm package.
 
 ### Manual relaunch
 
-After editing `.devcontainer/.env` or `.pi/msg-bridge.json`, restart the
-session to pick up the change. `.devcontainer/.env` is Compose-formatted (no
-`export`), so `set -a` is required to auto-export vars as they are sourced.
-**`set -a` is shell-local — the `tmux new-session` command must run in the
-same shell that ran `set -a`**, or `pi` will not inherit the vars.
+After editing `.devcontainer/.env` or `.pi/msg-bridge.json`, restart the session
+to pick up the change. The `gateway` command owns the whole lifecycle — it
+sources the tokens from `.env`, seeds the config (preserving your trust grants),
+clears the single-instance lock, and runs the supervisor — so a relaunch is one
+line:
 
 ```bash
-set -a; source /home/sandbox/harness/.devcontainer/.env; set +a
-tmux kill-session -t client-slack 2>/dev/null
-tmux new-session -d -s client-slack \
-  'exec bash /home/sandbox/harness/.devcontainer/client-slack-supervise.sh'
-tmux pipe-pane -o -t client-slack \
-  "sed -u 's/\x1b\[[0-9;?]*[A-Za-z]//g; s/\r//g' >> /tmp/client-slack.log"
-tmux attach -t client-slack
+gateway pi --restart      # restart the client-slack-pi session
+gateway pi --attach       # start it (if needed) and attach to watch the log
+gateway status            # show client-slack-pi + client-slack-hermes
 ```
 
-Detach with `Ctrl-b d`. The session name `client-slack` follows the `client-`
-prefix convention in
+`gateway` is a boot-installed symlink to `.oh/scripts/gateway.sh` (equivalently
+`make gateway pi`). The same command brings up the sibling Hermes gateway
+client: `gateway hermes`. Detach an attached session with `Ctrl-b d`. The
+session name `client-slack-pi` follows the `client-` prefix convention in
 [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
 
 ## 5. Access Control — challenge-based auth
@@ -193,7 +227,7 @@ maintain — trust is established through a one-time challenge.
 
 1. The first time an unknown user messages the bot, the bridge prints a
    **6-digit challenge code** in the pi terminal. Read it with
-   `tmux attach -t client-slack` (detach: `Ctrl-b d`).
+   `tmux attach -t client-slack-pi` (detach: `Ctrl-b d`).
 2. The user replies with that code in Slack.
 3. On a match, the user becomes **trusted** and is persisted to
    `~/.pi/msg-bridge.json` under `auth.trustedUsers`, namespaced by transport as
@@ -201,7 +235,7 @@ maintain — trust is established through a one-time challenge.
 
 For **headless** setups where nobody is watching the pi terminal, pre-authorize
 your Slack user ID up front — add `slack:U…` to `auth.trustedUsers` in the
-tracked `.pi/msg-bridge.json` (§ 4.2) and restart the `client-slack` session.
+tracked `.pi/msg-bridge.json` (§ 4.2) and restart the `client-slack-pi` session.
 That skips the challenge entirely.
 
 ## 6. Admin DM Commands
@@ -233,7 +267,7 @@ env (before attaching to tmux).
 
 2. **Socket Mode connected** (the real connectivity check):
    ```bash
-   tmux capture-pane -t client-slack -p | grep -F '[Slack] Bot user ID:'
+   tmux capture-pane -t client-slack-pi -p | grep -F '[Slack] Bot user ID:'
    ```
    The `[Slack] Bot user ID:` line is the bridge's connect signal — it prints
    once Socket Mode is open and the bot identity is resolved. Note:
@@ -245,16 +279,16 @@ env (before attaching to tmux).
 3. **Round-trip test:**
    DM the bot or `@mention` it in a channel. If you've never talked to it
    before, complete the 6-digit challenge (§ 5) first. Watch
-   `tmux attach -t client-slack` — you should see the inbound event logged
+   `tmux attach -t client-slack-pi` — you should see the inbound event logged
    and the agent's reply posted back to Slack.
 
 ## 8. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Bot stays silent; you've never authenticated | Deny-by-default — your Slack user isn't trusted yet | DM the bot, read the 6-digit code from `tmux attach -t client-slack`, reply with it in Slack — or pre-authorize your user ID in `.pi/msg-bridge.json` (§ 4.2) |
+| Bot stays silent; you've never authenticated | Deny-by-default — your Slack user isn't trusted yet | DM the bot, read the 6-digit code from `tmux attach -t client-slack-pi`, reply with it in Slack — or pre-authorize your user ID in `.pi/msg-bridge.json` (§ 4.2) |
 | `invalid_auth` / `not_authed` in the log | `xapp-` and `xoxb-` tokens are swapped | `PI_SLACK_APP_TOKEN` must be the `xapp-` token; `PI_SLACK_BOT_TOKEN` must be the `xoxb-` token — correct `.devcontainer/.env` and relaunch |
-| Bridge won't start after an unclean exit | Stale lock file `~/.pi/msg-bridge.lock` left behind | `rm ~/.pi/msg-bridge.lock`, then relaunch the `client-slack` session |
+| Bridge won't start after an unclean exit | Stale lock file `~/.pi/msg-bridge.lock` left behind | `rm ~/.pi/msg-bridge.lock`, then relaunch the `client-slack-pi` session |
 | Bot connected (`[Slack] Bot user ID:` logged) but never replies | `autoConnect` not set in `.pi/msg-bridge.json` — the bridge stays idle | Set `"autoConnect": true` (§ 4.2) and relaunch |
 | Bot is trusted but channel messages ignored | Bot is not a member of the channel | In Slack, type `/invite @OpenHarness` in the target channel |
 
@@ -262,7 +296,7 @@ env (before attaching to tmux).
 
 The Slack capability is the **pi-messenger-bridge** npm package. The harness
 installs it via npm into a gitignored `.pi/bridge/` directory and loads it via
-`--extension` only in the dedicated `client-slack` tmux session
+`--extension` only in the dedicated `client-slack-pi` tmux session
 (`.devcontainer/entrypoint.sh`) — it is not globally pinned in
 `.pi/settings.json`, so no other `pi` session competes for the Slack
 connection. Replies post **in a thread** anchored to the triggering channel

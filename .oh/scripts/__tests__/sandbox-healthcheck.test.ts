@@ -128,7 +128,7 @@ describe("sandbox healthcheck", () => {
     });
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("missing required tmux session: client-slack");
+    expect(result.stderr).toContain("missing required tmux session: client-slack-pi");
   });
 
   it("is wired into the devcontainer compose healthcheck", () => {

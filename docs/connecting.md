@@ -110,12 +110,12 @@ Follow Option B (or C for a remote host). The Ports panel in VSCode shows forwar
 
 ### Step 2 — Configure Slack
 
-Configuration is native — edit `.devcontainer/.env` (set `PI_SLACK_APP_TOKEN` / `PI_SLACK_BOT_TOKEN`) and the tracked `.pi/msg-bridge.json` (`autoConnect`, `auth.trustedUsers`), then restart the `client-slack` session. The session itself is started automatically on container boot by `.devcontainer/entrypoint.sh`. For the full walkthrough see [Integrations → Slack](/docs/integrations/slack).
+Set `PI_SLACK_APP_TOKEN` / `PI_SLACK_BOT_TOKEN` in `.devcontainer/.env`, then configure the messenger from inside the session with the bridge's `/msg-bridge` command (trusted users, channels) — that is the default method. The `client-slack-pi` session starts automatically on container boot; manage it with `gateway pi` (`gateway pi --restart` to pick up token edits, `gateway status` to check). The tracked `.pi/msg-bridge.json` (`autoConnect`, `auth.trustedUsers`) is an optional headless pre-seed. For the full walkthrough see [Integrations → Slack](/docs/integrations/slack).
 
-After the bridge restarts, verify it is live:
+After the bridge is up, verify it is live:
 
 ```bash
-tmux capture-pane -t client-slack -p | grep -i 'Bot user ID'
+tmux capture-pane -t client-slack-pi -p | grep -i 'Bot user ID'
 ```
 
 ### Step 3 — Launch T3 Code

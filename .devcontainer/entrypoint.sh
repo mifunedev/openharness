@@ -16,11 +16,6 @@ sandbox_ownership() {
   printf '%s:%s' "$(id -u sandbox)" "$(id -g sandbox)"
 }
 
-shell_quote() {
-  local value=${1//\'/\'\\\'\'}
-  printf "'%s'" "$value"
-}
-
 repair_home_mount_ownership() {
   local owner
   owner="$(sandbox_ownership)"
@@ -288,7 +283,7 @@ fi
 # as `@sinclair/typebox` (kept as a devDep for tooling parity). The Slack
 # bridge no longer needs root npm deps — it is the `pi-messenger-bridge`
 # package, npm-installed into a gitignored `.pi/bridge/` dir and loaded only
-# in the dedicated client-slack session (see the Slack restore block below).
+# in the dedicated client-slack-pi session (see the Slack restore block below).
 # The harness is bind-mounted, so a Dockerfile-time install gets shadowed
 # at runtime; we install on first boot here, idempotently. Set
 # SKIP_PNPM_INSTALL=1 to opt out (e.g. air-gapped envs managing deps
@@ -352,93 +347,36 @@ CRON_WATCHDOG
   fi
 fi
 
-# ─── Restore client-slack session if Slack is configured ──────────────
-# Tokens live in .devcontainer/.env (Compose KEY=value format). When both
-# PI_SLACK_APP_TOKEN and PI_SLACK_BOT_TOKEN are set AND `pi` is installed for
-# the sandbox user, start the dedicated Slack bridge session. pi-messenger-bridge
-# is NOT pinned in .pi/settings.json (so no other pi session loads it); it is
-# npm-installed into .pi/bridge/ and loaded only here, via --extension (below).
-# Its connection state is seeded into ~sandbox/.pi/msg-bridge.json
-# (autoConnect:true), so the session only needs the PI_SLACK_* tokens in its env.
-# Treat the Compose env file as data, not shell: extract only the keys the
-# bridge needs. Keep token values out of the tmux command string by writing a
-# sandbox-owned, mode-600 runtime env file that the child shell sources and
-# removes before launching `pi`.
+# ─── Restore client-slack-pi session if Slack is configured ───────────
+# The pi-messenger-bridge Slack client (the /msg-bridge config surface) is
+# intentionally NOT pinned in .pi/settings.json — it loads ONLY in the dedicated
+# client-slack-pi session. Boot and manual `gateway pi` share ONE launch path:
+# .oh/scripts/gateway.sh, which sources PI_SLACK_* from the sandbox-owned,
+# mode-600 .env, seeds the non-secret bridge config (preserving the operator's
+# runtime trust grants, bug #289), clears the single-instance lock, npm-installs
+# the fork-pinned bridge if missing, and runs the self-healing supervisor in the
+# client-slack-pi session. Here we only gate on Slack being configured (both
+# tokens present in .env) and pi being installed, then hand off as the sandbox
+# user. The sibling hermes gateway client (client-slack-hermes) is NOT
+# auto-started — bring it up manually with `gateway hermes`.
+#
+# Expose the launcher as a bare `gateway` command. Recreated every boot
+# (idempotent) pointing at the live bind-mounted script, so edits to gateway.sh
+# take effect without an image rebuild.
+ln -sf "$HARNESS/.oh/scripts/gateway.sh" /usr/local/bin/gateway 2>/dev/null || true
 SLACK_ENV="$HARNESS/.devcontainer/.env"
-if [ -f "$SLACK_ENV" ] && command -v tmux &>/dev/null; then
-  PI_SLACK_APP_TOKEN=$(grep -E '^PI_SLACK_APP_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
-  PI_SLACK_BOT_TOKEN=$(grep -E '^PI_SLACK_BOT_TOKEN=' "$SLACK_ENV" | tail -1 | cut -d= -f2-)
-  if [ -n "$PI_SLACK_APP_TOKEN" ] && [ -n "$PI_SLACK_BOT_TOKEN" ] \
-     && gosu sandbox bash -lc 'command -v pi' &>/dev/null; then
-    if ! gosu sandbox tmux has-session -t client-slack 2>/dev/null; then
-      SLACK_RUNTIME_ENV=$(mktemp /tmp/client-slack-env.XXXXXX)
-      {
-        printf 'PI_SLACK_APP_TOKEN=%s\n' "$(shell_quote "$PI_SLACK_APP_TOKEN")"
-        printf 'PI_SLACK_BOT_TOKEN=%s\n' "$(shell_quote "$PI_SLACK_BOT_TOKEN")"
-      } > "$SLACK_RUNTIME_ENV"
-      chmod 600 "$SLACK_RUNTIME_ENV"
-      chown "$(sandbox_ownership)" "$SLACK_RUNTIME_ENV" 2>/dev/null || true
-      # Install the versioned, non-secret bridge config (tracked
-      # .pi/msg-bridge.json: autoConnect + showWidget + empty grant containers)
-      # into the package's hard-coded ~/.pi path. Tokens are NOT written here —
-      # they reach pi via PI_SLACK_* in the session env (env overrides file
-      # config), so secrets stay out of the tracked config, logs, and `ps`.
-      # seed-msg-bridge.sh installs the seed on first boot, then on reboots
-      # PRESERVES the operator's runtime grants (auth.trustedUsers,
-      # auth.channels) that the package writes via challenge-auth — a restart
-      # must never wipe them (bug #289) — while still adopting non-grant
-      # structure from the seed. It never writes back to the git-tracked seed.
-      gosu sandbox bash "$HARNESS/.devcontainer/seed-msg-bridge.sh" \
-        "$HARNESS/.pi/msg-bridge.json" || true
-      # Clear any stale single-instance PID lock before launching the bridge.
-      gosu sandbox rm -f ~sandbox/.pi/msg-bridge.lock 2>/dev/null || true
-      # Dedicated-session-only load: pi-messenger-bridge is NOT pinned in
-      # .pi/settings.json (so no other pi session loads it / competes for the
-      # Slack socket) and is NOT a harness dependency. It is installed via npm
-      # (which builds its native transport deps, unlike pnpm) into a gitignored,
-      # bridge-only dir, and loaded HERE only, via --extension. pi runs attached
-      # to the client-slack pane's real TTY (interactive mode), so the loaded UI
-      # extensions render in the TUI instead of flooding stdout with
-      # extension_ui_request JSON frames, and the REPL stays alive at idle — no
-      # --mode rpc and no `| tee` pipe. A 2nd --extension adds the Codex
-      # retry-recovery extension (.pi/bridge-recovery/index.ts). --approve trusts
-      # project-local files.
-      #
-      # The launch is wrapped by client-slack-supervise.sh: pi-messenger-bridge
-      # binds its Slack socket to a session-scoped pi ctx, so when pi replaces
-      # the session (compaction/fork/switch) the ctx goes stale and the bridge
-      # silently stops responding with no in-package recovery. The supervisor
-      # restarts pi on that signature (and on any crash), clearing the
-      # single-instance lock each time so the fresh process reconnects.
-      #
-      # The child shell sources the PI_SLACK_* tokens as data (never eval'd),
-      # then deletes the runtime env file before exec'ing the supervisor — the
-      # tokens live only in the process environment, never on disk or in argv.
-      BRIDGE_DIR="$HARNESS/.pi/bridge"
-      BRIDGE_ENTRY="$BRIDGE_DIR/node_modules/pi-messenger-bridge/dist/index.js"
-      # TEMPORARY fork pin: the published pi-messenger-bridge does not thread
-      # Slack replies. Pin to a fork branch carrying the unreleased thread_ts
-      # patch (its package.json `prepare` script builds dist/ on install).
-      # Revert to `pi-messenger-bridge@<release>` once the upstream PR
-      # (tintinweb/pi-messenger-bridge) merges and publishes — see .pi/UPSTREAM.md.
-      gosu sandbox bash -c '[ -f "$2" ] || npm install --prefix "$1" --no-fund --no-audit "github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies" >/dev/null 2>&1' -- "$BRIDGE_DIR" "$BRIDGE_ENTRY" || true
-      if gosu sandbox tmux new-session -d -s client-slack \
-        "bash -c 'trap '\''rm -f \"\$1\"'\'' EXIT; set -a; . \"\$1\"; set +a; rm -f \"\$1\"; export HARNESS=\"\$3\" BRIDGE_ENTRY=\"\$2\" RECOVERY_ENTRY=\"\$3/.pi/bridge-recovery/index.ts\" LOG=/tmp/client-slack.log; exec bash \"\$3/.devcontainer/client-slack-supervise.sh\"' -- $(shell_quote "$SLACK_RUNTIME_ENV") $(shell_quote "$BRIDGE_ENTRY") $(shell_quote "$HARNESS")"; then
-        echo "[entrypoint] client-slack tmux session started (pi-messenger-bridge via --extension, self-healing supervisor)"
-        # pi now runs interactive (no `| tee`), so mirror the visible pane into
-        # the log, ANSI-stripped, for the stale-ctx watchdog and humans. pipe-pane
-        # reads pane output only — never tokens.
-        gosu sandbox tmux pipe-pane -o -t client-slack \
-          "sed -u 's/\x1b\[[0-9;?]*[A-Za-z]//g; s/\r//g' >> /tmp/client-slack.log" 2>/dev/null || true
-      else
-        rm -f "$SLACK_RUNTIME_ENV"
-        echo "[entrypoint] client-slack tmux session failed to start"
-        exit 1
-      fi
-    else
-      echo "[entrypoint] client-slack tmux session already running — skipping"
-    fi
+if [ -f "$SLACK_ENV" ] \
+   && grep -qE '^PI_SLACK_APP_TOKEN=.' "$SLACK_ENV" \
+   && grep -qE '^PI_SLACK_BOT_TOKEN=.' "$SLACK_ENV" \
+   && command -v tmux &>/dev/null \
+   && gosu sandbox bash -lc 'command -v pi' &>/dev/null; then
+  if gosu sandbox bash -lc "exec bash \"$HARNESS\"/.oh/scripts/gateway.sh pi"; then
+    echo "[entrypoint] client-slack-pi started via gateway.sh"
+  else
+    echo "[entrypoint] client-slack-pi failed to start via gateway.sh"
   fi
+else
+  echo "[entrypoint] Slack not configured (or pi missing) — skipping client-slack-pi"
 fi
 
 # ─── Optional: agent-browser (opt-in via INSTALL_AGENT_BROWSER=true) ──

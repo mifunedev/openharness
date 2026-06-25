@@ -23,9 +23,15 @@ ifeq ($(firstword $(MAKECMDGOALS)),shell)
   endif
 endif
 
+# `make gateway <pi|hermes>` — forward the backend as a positional word.
+ifeq ($(firstword $(MAKECMDGOALS)),gateway)
+  GATEWAY_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(foreach a,$(GATEWAY_ARGS),$(eval $a:;@:))
+endif
+
 .DEFAULT_GOAL := help
 
-.PHONY: sandbox shell destroy stop logs ps restart config help
+.PHONY: sandbox shell destroy stop logs ps restart config help gateway
 
 sandbox: ## Provision and start the sandbox
 	$(COMPOSE) up -d --build
@@ -47,6 +53,9 @@ ps: ## Show service status
 
 restart: ## Restart the service
 	$(COMPOSE) restart
+
+gateway: ## Start a messaging client session: make gateway <pi|hermes> (flags/--stop via the script)
+	@bash .oh/scripts/gateway.sh $(GATEWAY_ARGS)
 
 config: ## Print effective harness.yaml-derived env and resolved compose config
 	@if [ -f $(HARNESS_YAML) ]; then \

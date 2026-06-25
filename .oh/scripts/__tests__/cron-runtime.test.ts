@@ -1553,7 +1553,7 @@ describe("runPreflight + the fire() preflight gate", () => {
 
 describe("remoteForRepo", () => {
   it("resolves the canonical repo to the local remote whose URL matches it", () => {
-    withTempGitRemotes({ origin: "https://github.com/ryaneggz/openharness.git", upstream: "git@github.com:mifunedev/openharness.git" }, () => {
+    withTempGitRemotes({ origin: "https://github.com/example/openharness.git", upstream: "git@github.com:mifunedev/openharness.git" }, () => {
       const remote = remoteForRepo("mifunedev/openharness");
       expect(remote).toBe("upstream");
       expect(isValidRemote(remote!)).toBe(true);

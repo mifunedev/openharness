@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #168; the weekly sweep was folded into crons/heartbeat.md (date-gated) in #264
+# source: issue #168
 # desc: the cleanup-tasks weekly sweep also grooms stale .worktrees/ branch
 #       checkout folders while preserving durable .worktrees/agent/ identities and
 #       .worktrees/project/ external project clones. The documented procedure must
@@ -8,16 +8,16 @@
 #       PRs, remove stale registered worktrees via git worktree remove, prune stale
 #       corrupt/orphan folders only outside agent/project, and report the groomed
 #       count in the cron liveness line.
-# NOTE: this is a STATIC grep oracle over markdown (crons/heartbeat.md § Weekly task cleanup), NOT a
+# NOTE: this is a STATIC grep oracle over markdown (crons/cleanup-tasks.md), NOT a
 #       runtime execution test of the cron. It guards the documented procedure
 #       against silent revert, not shell behavior.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CRON="$ROOT/crons/heartbeat.md"
+CRON="$ROOT/crons/cleanup-tasks.md"
 
 if [[ ! -f "$CRON" ]]; then
-  echo "SKIPPED: heartbeat cron absent: $CRON" >&2
+  echo "SKIPPED: cleanup-tasks cron absent: $CRON" >&2
   exit 2
 fi
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #85; the weekly sweep was folded into crons/heartbeat.md (date-gated) in #264
+# source: issue #85
 # desc: the cleanup-tasks weekly sweep's pre-flight is SCOPED to tasks/ (not the
 #       whole tree) and the archive branch/commit work is ISOLATED in a crash-safe
 #       worktree. Step 2 uses the path-scoped, archive-excluded
@@ -10,16 +10,16 @@
 #       add`/`git worktree remove` lifecycle — the old shared-checkout
 #       `git switch -c "archive/` is gone. So foreign WIP elsewhere neither aborts
 #       the sweep nor leaks into the archive commit.
-# NOTE: this is a STATIC grep oracle over markdown (crons/heartbeat.md § Weekly task cleanup), NOT a
+# NOTE: this is a STATIC grep oracle over markdown (crons/cleanup-tasks.md), NOT a
 #       runtime execution test of the cron — same limitation as owned-surface-guard.sh.
 #       It guards the documented procedure against silent revert, not its behavior.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CRON="$ROOT/crons/heartbeat.md"
+CRON="$ROOT/crons/cleanup-tasks.md"
 
 if [[ ! -f "$CRON" ]]; then
-  echo "SKIPPED: heartbeat cron absent: $CRON" >&2
+  echo "SKIPPED: cleanup-tasks cron absent: $CRON" >&2
   exit 2
 fi
 
@@ -45,7 +45,7 @@ fi
 
 # --- (c) a dirty tasks/ emits the distinct BLOCKED-TASKS-WIP liveness token -----------
 if ! grep -q 'BLOCKED-TASKS-WIP' "$CRON"; then
-  echo "REGRESSION: BLOCKED-TASKS-WIP token missing from crons/heartbeat.md" >&2
+  echo "REGRESSION: BLOCKED-TASKS-WIP token missing from crons/cleanup-tasks.md" >&2
   exit 1
 fi
 

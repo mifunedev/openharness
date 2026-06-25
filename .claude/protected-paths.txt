@@ -49,6 +49,8 @@ Makefile
 
 # --- Crons (referenced by .oh/scripts/cron-runtime.ts) ---
 crons/heartbeat.md
+crons/cleanup-tasks.md
+crons/eval-weekly.md
 
 # --- Norms folded into skills (formerly context/rules/, B-state M3+M4) ---
 .mifune/skills/git/SKILL.md

@@ -1,7 +1,7 @@
 ---
 name: benchmark
 description: >-
-  Progress-ceiling verdict gate (part of `/spec-execute`'s improve tail) — decide whether ONE
+  Progress-ceiling verdict gate (part of `/spec execute`'s improve tail) — decide whether ONE
   landed change was actually BENEFICIAL (moved or held the capability-benchmark
   ceiling without breaking the regression floor, and is worth its complexity),
   then emit a single BENEFICIAL/NOT-BENEFICIAL verdict. Composes (never forks)
@@ -11,7 +11,7 @@ description: >-
   by definition. Distinct from /audit (per-unit promotability =
   floor) — this is the ceiling: did the harness get BETTER, not just not-broken.
   TRIGGER when: a change has landed and the loop needs a benefit-vs-counterfactual
-  verdict before the cycle repeats; the improve tail of `/spec-execute`
+  verdict before the cycle repeats; the improve tail of `/spec execute`
   runs; "was <change> beneficial", "score the capability benchmark", "benchmark
   this cycle".
 argument-hint: "[--base <ref>] [--cycles <N>]"
@@ -19,7 +19,7 @@ argument-hint: "[--base <ref>] [--cycles <N>]"
 
 # Benchmark — progress-ceiling verdict gate
 
-The **benchmark** gate, part of `/spec-execute`'s improve tail in `AGENTS.md § The
+The **benchmark** gate, part of `/spec execute`'s improve tail in `AGENTS.md § The
 Workflow`. It answers one question: *was this change actually beneficial — did it
 move or hold the capability ceiling without breaking the regression floor, and is
 it worth its complexity?* — and emits exactly one verdict.
@@ -157,7 +157,7 @@ REDIRECT-FLAG: capability suite score flat at <X.XX>/2.00 for <N> cycles while N
 
 ## Memory Protocol
 
-After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
+After a run, append to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
 ## benchmark -- HH:MM UTC

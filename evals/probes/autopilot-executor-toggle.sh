@@ -29,7 +29,7 @@ grep -F 'argument-hint:' "$SKILL" | grep -Fq '[--executor=delegate-advisor|ralph
 grep -Fq 'EXECUTOR="${AUTOPILOT_EXECUTOR:-delegate-advisor}"' "$SKILL" || missing+=("AUTOPILOT_EXECUTOR default delegate-advisor")
 grep -Fq '*--executor=ralph*) EXECUTOR=ralph' "$SKILL" || missing+=("CLI --executor=ralph toggle")
 grep -Fq '*--executor=delegate-advisor*) EXECUTOR=delegate-advisor' "$SKILL" || missing+=("CLI --executor=delegate-advisor toggle")
-grep -Fq 'scripts/ralph.sh "$SLUG"' "$SKILL" || missing+=("Ralph fallback still launches scripts/ralph.sh")
+grep -Fq '.oh/scripts/ralph.sh "$SLUG"' "$SKILL" || missing+=("Ralph fallback still launches .oh/scripts/ralph.sh")
 grep -Fq '#### `ralph` fallback' "$SKILL" || missing+=("Ralph fallback section")
 
 # Required exact Advisor goal phrase (now hands the whole build to /ship-spec).

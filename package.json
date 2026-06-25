@@ -8,12 +8,12 @@
   "scripts": {
     "setup": "pnpm install && pnpm run build",
     "build": "pnpm run build:harness",
-    "build:harness": "pnpm --filter './packages/**' --filter '!@openharness/docs' -r --if-present run build && (test -d packages/oh/node_modules || npm --prefix packages/oh ci --ignore-scripts) && npm --prefix packages/oh run build",
+    "build:harness": "pnpm --filter './.oh/**' --filter '!@openharness/docs' -r --if-present run build && (test -d .oh/cli/node_modules || npm --prefix .oh/cli ci --ignore-scripts) && npm --prefix .oh/cli run build",
     "test": "pnpm -r --if-present run test && vitest run",
     "test:scripts": "vitest run",
     "lint": "pnpm -r --if-present run lint",
     "format:check": "pnpm -r --if-present run format:check",
-    "typecheck": "pnpm --filter './packages/**' -r --if-present run typecheck && npm --prefix packages/oh run typecheck",
+    "typecheck": "pnpm --filter './.oh/**' -r --if-present run typecheck && npm --prefix .oh/cli run typecheck",
     "format": "pnpm -r --if-present run format",
     "pnpm:devPreinstall": "pnpm run security:audit",
     "security:audit": "pnpm audit --audit-level low --ignore GHSA-h67p-54hq-rp68",
@@ -62,7 +62,7 @@
       ]
     },
     "patchedDependencies": {
-      "gray-matter@4.0.3": "patches/gray-matter@4.0.3.patch"
+      "gray-matter@4.0.3": ".oh/patches/gray-matter@4.0.3.patch"
     }
   }
 }

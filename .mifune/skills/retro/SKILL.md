@@ -13,7 +13,7 @@ description: |
   learning, context compression, reinforcement learning, wiki, docs, and
   memory scaffolding — and points at the deep-dive lint/audit skills rather
   than running them. Operationalizes the Memory Improvement Protocol
-  (context/rules/memory.md) as an explicit, evidence-driven, session-closing
+  (.mifune/skills/retro/references/memory-protocol.md) as an explicit, evidence-driven, session-closing
   skill rather than a per-run afterthought. Always appends a log entry.
   TRIGGER when: /retro invoked, or session closing with decisions,
   surprises, or failures worth preserving.
@@ -23,9 +23,9 @@ description: |
 
 Scientific session-closing retrospective. Turn the current conversation's signals into falsifiable hypotheses, test each against session evidence (for and against), assign a verdict and confidence, and promote only the supported, sufficiently-confident ones — with explicit confirmation — into the harness memory tiers (`memory/MEMORY.md`, `context/IDENTITY.md`). Always appends a log entry regardless of outcome.
 
-This is the deliberate "Improve" pass of the Memory Improvement Protocol defined in `context/rules/memory.md`, now evidence-driven. Running it as a named skill turns an optional afterthought into a first-class, propose-then-confirm operation — and the scientific layer guards against overfitting a single session into a durable lesson.
+This is the deliberate "Improve" pass of the Memory Improvement Protocol defined in `.mifune/skills/retro/references/memory-protocol.md`, now evidence-driven. Running it as a named skill turns an optional afterthought into a first-class, propose-then-confirm operation — and the scientific layer guards against overfitting a single session into a durable lesson.
 
-Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for deterministic checks and log rendering; use `${CLAUDE_SKILL_DIR}/references/report-schema.md` as the output contract. Shared repo primitives such as `scripts/locked-append.sh` are allowed only for cross-skill infrastructure.
+Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for deterministic checks and log rendering; use `${CLAUDE_SKILL_DIR}/references/report-schema.md` as the output contract. Shared repo primitives such as `.oh/scripts/locked-append.sh` are allowed only for cross-skill infrastructure.
 
 ## When to use
 
@@ -37,7 +37,7 @@ Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for determinist
 - **`/harness-audit`** — audits harness code health via four parallel sub-agents. That is a structural audit, not a behavioral/conversational pass.
 - **`/context-audit`** — scores the default-loaded context budget across four dimensions. It trims files, not behaviors.
 - **`/skill-lint`** — scores individual skills for staleness. It reviews skill quality, not session outcomes.
-- **`/wiki-lint`** — health-checks the wiki corpus for staleness and broken links. It curates the wiki, not the session.
+- **`/wiki lint`** — health-checks the wiki corpus for staleness and broken links. It curates the wiki, not the session.
 - **Trivial sessions** — if the session contained only mechanical read-only queries or single-command invocations with no surprises, announce the skip and proceed to log.
 
 Key boundary: `/retro` is *session-scoped reflection*. The lint/audit skills above are the *deep-dive tooling* it points at — not what it runs. It is the only skill whose domain is *current-session signals → falsifiable hypotheses → memory/identity*.
@@ -107,10 +107,10 @@ Seed hypotheses by asking, for each subsystem, what *this session* revealed abou
 |-----------|--------------------------------------------------|----------------------------|
 | Continual learning | Did prior memory/identity get used, ignored, or contradicted? Did anything durable emerge? | `memory/MEMORY.md`, `context/IDENTITY.md` |
 | Context compression | Was loaded context bloated/redundant, or did a rule prove load-bearing? | `/context-audit`, `/caveman` |
-| Reinforcement learning | Did advisor/executor or recursive-delegation patterns help or hurt? Over/under-delegation? | `context/rules/advisor-model.md`, `recursive-delegation.md` |
-| Wiki | Did the session surface knowledge that belongs in the wiki, or hit stale/missing entries? | `/wiki-ingest`, `/wiki-lint` |
+| Reinforcement learning | Did advisor/executor or recursive-delegation patterns help or hurt? Over/under-delegation? | `.mifune/skills/advisor/SKILL.md`, `recursive-delegation.md` |
+| Wiki | Did the session surface knowledge that belongs in the wiki, or hit stale/missing entries? | `/wiki ingest`, `/wiki lint` |
 | Docs | Did human-facing doc gaps or inaccuracies surface? | `docs/`, `blog/` |
-| Memory scaffolding | Did the log/tier protocol itself create friction or work cleanly? | `context/rules/memory.md`, `/retro` |
+| Memory scaffolding | Did the log/tier protocol itself create friction or work cleanly? | `.mifune/skills/retro/references/memory-protocol.md`, `/retro` |
 
 ## Instructions
 
@@ -135,7 +135,7 @@ For every hypothesis, cite session evidence for it and actively search for evide
 
 ### 4. Qualify filter
 
-Discard any surviving hypothesis that matches a row in the "What Does NOT Go in Memory" table (`context/rules/memory.md`):
+Discard any surviving hypothesis that matches a row in the "What Does NOT Go in Memory" table (`.mifune/skills/retro/references/memory-protocol.md`):
 
 | Discard if | Reason |
 |------------|--------|
@@ -236,7 +236,7 @@ LOG_ENTRY=$(bash "${CLAUDE_SKILL_DIR}/scripts/render-log-entry.sh" \
   --hypotheses <total> --supported <n> --refuted <n> --inconclusive <n> \
   --memory <n> --identity <n> \
   --observation "<one sentence — strongest supported finding, or no durable patterns>")
-printf "%s\n" "$LOG_ENTRY" | scripts/locked-append.sh "memory/$TODAY/log.md"
+printf "%s\n" "$LOG_ENTRY" | .oh/scripts/locked-append.sh "memory/$TODAY/log.md"
 ```
 
 Use `--result DRY-RUN` for dry-runs and `--result SKIPPED-TRIVIAL` for trivial skips.
@@ -292,5 +292,5 @@ Claude Code skills cannot self-trigger. True automatic firing at session end wou
 - **Promoting an unfalsifiable claim.** If no session evidence could refute it, it's not a hypothesis — it cannot be promoted.
 - **Overfitting one session.** Single-session support is not a principle; that is the MEMORY.md → IDENTITY.md graduation bar.
 - **Confirmation bias.** Every hypothesis must be tested for disconfirming evidence, not just supporting evidence.
-- **Scope creep into the lint tools.** Point at `/context-audit`, `/wiki-lint`, `/skill-lint`, etc.; do not run them inline.
+- **Scope creep into the lint tools.** Point at `/context-audit`, `/wiki lint`, `/skill-lint`, etc.; do not run them inline.
 - **Bypassing the schema/scripts.** The evidence table, duplicate check, and rendered log entry are part of the contract, not optional formatting.

@@ -16,7 +16,7 @@ assignees: ""
 
 ---
 
-> **Git workflow**: see [context/rules/git.md](../../context/rules/git.md)
+> **Git workflow**: see the [/git skill](../../.mifune/skills/git/SKILL.md)
 
 ---
 

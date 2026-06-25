@@ -5,7 +5,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"     # .claude/skills/eval -> repo root
+# The skill may be reached through agent-specific symlinks (`.claude/skills`) or
+# directly through the neutral `.mifune/skills` source directory. Walk upward until the
+# repo's eval corpus is found instead of hard-coding a fixed depth.
+ROOT="$SCRIPT_DIR"
+while [ "$ROOT" != "/" ] && [ ! -d "$ROOT/evals/probes" ]; do
+  ROOT="$(dirname "$ROOT")"
+done
+[ -d "$ROOT/evals/probes" ] || { echo "could not locate repo root from $SCRIPT_DIR" >&2; exit 1; }
 PROBES_DIR="$ROOT/evals/probes"
 RESULTS="$ROOT/evals/RESULTS.md"
 TIMEOUT_SECS=30
@@ -30,7 +37,7 @@ tmp=""
 trap '[ -n "$tmp" ] && rm -f "$tmp"' EXIT
 
 # --- M-2: recover orphaned ablation backups from a crashed prior run ---
-# scripts/ablate.sh records in-flight "<target>\t<bak>" lines in this sentinel;
+# .oh/scripts/ablate.sh records in-flight "<target>\t<bak>" lines in this sentinel;
 # if a prior ablation was SIGKILLed before its trap fired, restore here.
 SENTINEL="$ROOT/evals/.ablation-active"
 if [ -f "$SENTINEL" ]; then
@@ -43,7 +50,7 @@ if [ -f "$SENTINEL" ]; then
 fi
 
 # --- ablation mode (M-1): run one probe with/without a target file via the shared
-#     swap/restore/trap mechanics in scripts/ablate.sh; reports LOAD-BEARING|PRUNABLE ---
+#     swap/restore/trap mechanics in .oh/scripts/ablate.sh; reports LOAD-BEARING|PRUNABLE ---
 if [ -n "$ABLATE_TARGET" ]; then
   [ -n "$FILTER_PROBE" ] || { echo "--ablate requires --probe <id>" >&2; exit 64; }
   ABL_PROBE="$PROBES_DIR/$FILTER_PROBE.sh"
@@ -52,7 +59,7 @@ if [ -n "$ABLATE_TARGET" ]; then
     /*) ABL_TGT="$ABLATE_TARGET" ;;                 # absolute — use as-is
     *)  ABL_TGT="$ROOT/$ABLATE_TARGET" ;;           # relative — resolve against eval repo root, NOT cwd
   esac
-  exec bash "$ROOT/scripts/ablate.sh" "$ABL_TGT" "$ABL_PROBE"
+  exec bash "$ROOT/.oh/scripts/ablate.sh" "$ABL_TGT" "$ABL_PROBE"
 fi
 
 hdr() { grep -E "^# $1:" "$2" 2>/dev/null | head -1 | sed "s/^# $1:[[:space:]]*//" || true; }

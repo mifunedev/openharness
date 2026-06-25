@@ -1012,12 +1012,6 @@ async function main() {
   );
 }
 
-let invokedHref = "";
-try {
-  if (process.argv[1]) invokedHref = pathToFileURL(fs.realpathSync(process.argv[1])).href;
-} catch {
-  invokedHref = "";
-}
-if (import.meta.url === invokedHref) {
+if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
   main();
 }

@@ -15,7 +15,7 @@ See `scripts/cron-runtime.ts` for the runtime implementation
 ---
 id: <unique-id>          # runtime-enforced: must match filename, kebab-case
 schedule: "0 23 * * 0"   # 5-field cron expression
-timezone: America/Los_Angeles
+timezone: America/Denver
 enabled: true
 overlap: false           # skip new fire if previous still running
 catchup: false           # don't replay missed fires after downtime
@@ -36,13 +36,13 @@ Body becomes the agent prompt at fire time.
 - Cron tmux sessions follow the `cron-<name>` category-prefix convention:
   the supervisor is `cron-watchdog`, the runtime is `cron-system`, and
   detached job fires are `cron-<id>-<MMDD>-<HHMM>` (see
-  `.claude/rules/sandbox-processes.md`).
+  `.mifune/skills/t3/references/sandbox-processes.md`).
 - Migration note: older sandboxes used runtime session `system-cron` and
   autopilot run sessions/markers named `autopilot-*`. New sandboxes use
   `cron-system` and `cron-autopilot-*`. During the transition, heartbeat scans
-  and sweeps both old and new autopilot names. On boot, the entrypoint stops a
-  stale legacy `system-cron` session before starting `cron-watchdog`, so
-  operators no longer need a manual kill/restart migration step.
+  and sweeps both old and new autopilot names. To complete migration, kill the
+  legacy `system-cron` session once, then restart/relaunch the sandbox so the
+  entrypoint starts `cron-system` without running duplicate cron runtimes.
 - Disable a job by setting `enabled: false` — do not delete the file
   (preserves history).
 - Runtime artefacts in this directory (`.cron.log`, `.pid`) are
@@ -51,10 +51,8 @@ Body becomes the agent prompt at fire time.
 ## Status tokens
 
 The runtime appends one tab-separated line per event to the gitignored
-`crons/.cron.log`, shaped `<iso-timestamp>\t<id>\t<status>\t<msg>`. Runtime
-and prompt-authored liveness writes use `scripts/locked-append.sh` so whole
-records are serialized when multiple cron fires write concurrently. The status
-column is one of:
+`crons/.cron.log`, shaped `<iso-timestamp>\t<id>\t<status>\t<msg>`. The
+status column is one of:
 
 | Token | Meaning |
 |-------|---------|
@@ -105,11 +103,11 @@ returns before generating a shell wrapper or spawning an agent.
 | `heartbeat.md` | `0 * * * *` (hourly) | Hourly pulse — review memory, surface anything urgent |
 | `cleanup-tasks.md` | `0 23 * * 0` (Sun 23:00 MT) | Weekly Ralph session sweep — archive completed tasks |
 | `eval-weekly.md` | `0 6 * * 0` (Sun 06:00 MT) | Weekly eval suite — run probes, log any regressions to memory |
-| `prompt-miner.md` | `0 5 * * *` (daily 05:00 MT) | Daily prompt-miner — mine 24h of session traces for prompt-quality markers; ship a top finding to `development` via `/ship-spec` (opt-in `enabled: false`, cap-gated by `preflight: scripts/prompt-miner-caps.sh`) |
+| `prompt-miner.md` | `0 5 * * *` (daily 05:00 MT) | Daily prompt-miner — mine 24h of session traces for prompt-quality markers; ship a top finding to the origin fork via `/ship-spec` (opt-in `enabled: false`, cap-gated by `preflight: .mifune/skills/prompt-miner/prompt-miner-caps.sh`) |
 
 ## tmux sessions
 
-The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that checks for `cron-system` and starts `scripts/cron-runtime.ts` whenever the runtime session is absent. Inspect it with `tmux attach -t cron-watchdog`; watchdog output tees to `/tmp/cron-watchdog.log`, and the runtime still tees to `/tmp/cron-system.log`. During migration, a stale legacy `system-cron` session is stopped automatically before modern cron supervision starts.
+The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that checks for `cron-system` and starts `scripts/cron-runtime.ts` whenever the runtime session is absent. Inspect it with `tmux attach -t cron-watchdog`; watchdog output tees to `/tmp/cron-watchdog.log`, and the runtime still tees to `/tmp/cron-system.log`. During migration, a legacy `system-cron` session blocks both `cron-watchdog` and `cron-system`; kill `system-cron` and restart/relaunch the sandbox to complete the migration.
 
 A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
 

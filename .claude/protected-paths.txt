@@ -50,6 +50,7 @@ Makefile
 # --- Crons (referenced by .oh/scripts/cron-runtime.ts) ---
 crons/heartbeat.md
 crons/cleanup-tasks.md
+evals/probes/cleanup-tasks-worktree-grooming.sh
 crons/eval-weekly.md
 
 # --- Norms folded into skills (formerly context/rules/, B-state M3+M4) ---

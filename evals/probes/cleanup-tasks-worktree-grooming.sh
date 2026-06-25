@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #168
-# desc: the cleanup-tasks weekly sweep also grooms stale .worktrees/ branch
-#       checkout folders while preserving durable .worktrees/agent/ identities and
-#       .worktrees/project/ external project clones. The documented procedure must
-#       enumerate registered git worktrees, skip live panes and branches with open
-#       PRs, remove stale registered worktrees via git worktree remove, prune stale
-#       corrupt/orphan folders only outside agent/project, and report the groomed
-#       count in the cron liveness line.
+# source: issue #168; issue #327
+# desc: the cleanup-tasks weekly sweep grooms stale .worktrees/ branch
+#       checkout folders while preserving durable .worktrees/agent/ identities,
+#       .worktrees/project/ external project clones, and dirty/unpushed stale
+#       worktrees. The documented procedure must enumerate registered git
+#       worktrees, skip live panes and branches with open PRs, require dirty /
+#       staged / untracked / missing-upstream / unpushed preservation gates before
+#       `git worktree remove --force`, avoid recursive orphan deletion, and report
+#       the groomed count in cron liveness.
 # NOTE: this is a STATIC grep oracle over markdown (crons/cleanup-tasks.md), NOT a
 #       runtime execution test of the cron. It guards the documented procedure
 #       against silent revert, not shell behavior.
@@ -46,7 +47,8 @@ if ! grep -Fq 'excluding `.worktrees/agent/`' "$CRON"; then
   exit 1
 fi
 
-# Safety gates before removal: live pane, open PR, and 30-day age.
+# Safety gates before removal: live pane, open PR, 30-day age, and local-work
+# preservation. The latter prevents stale age from becoming proof of disposability.
 if ! grep -Fq "tmux list-panes -a -F '#{pane_current_path}'" "$CRON"; then
   echo "REGRESSION: grooming pass lacks live tmux-pane protection" >&2
   exit 1
@@ -60,14 +62,42 @@ if ! grep -Fq 'newer than 30 days' "$CRON"; then
   exit 1
 fi
 
-# Registered worktrees use git worktree remove; corrupt/orphan dirs are the only
-# paths allowed to use rm -rf, and they are still outside agent/project.
+for required in \
+  'git -C "$path" diff --quiet' \
+  'git -C "$path" diff --cached --quiet' \
+  'git -C "$path" ls-files --others --exclude-standard' \
+  'git -C "$path" rev-parse --abbrev-ref --symbolic-full-name @{u}' \
+  'git -C "$path" log --oneline @{u}..HEAD'; do
+  if ! grep -Fq "$required" "$CRON"; then
+    echo "REGRESSION: grooming pass lacks preservation gate: $required" >&2
+    exit 1
+  fi
+done
+for reason in dirty staged untracked missing-upstream unpushed; do
+  if ! grep -Fq "$reason" "$CRON"; then
+    echo "REGRESSION: grooming pass does not log skip reason '$reason'" >&2
+    exit 1
+  fi
+done
+
+# Registered worktrees use git worktree remove only after the preservation gate.
 if ! grep -Fq 'git worktree remove --force "$path"' "$CRON"; then
   echo "REGRESSION: stale registered worktrees are not removed via git worktree remove" >&2
   exit 1
 fi
-if ! grep -Fq 'using `rm -rf "$path"`' "$CRON"; then
-  echo "REGRESSION: corrupt/orphan folder pruning path is missing" >&2
+
+# Corrupt/orphan folders are not registered worktrees; they must not be recursively
+# deleted when non-empty/suspicious because that can destroy the only copy of work.
+if grep -Fq 'rm -rf "$path"' "$CRON"; then
+  echo "REGRESSION: orphan-folder pruning still authorizes recursive rm -rf" >&2
+  exit 1
+fi
+if ! grep -Fq 'rmdir "$path"' "$CRON"; then
+  echo "REGRESSION: orphan-folder pruning lacks non-recursive empty-directory removal" >&2
+  exit 1
+fi
+if ! grep -Fq 'orphan-nonempty' "$CRON"; then
+  echo "REGRESSION: orphan-folder pruning does not log preserved non-empty orphans" >&2
   exit 1
 fi
 
@@ -85,5 +115,5 @@ if ! grep -Fq '! -name agent ! -name project -empty -delete' "$CRON"; then
   exit 1
 fi
 
-echo "PASS: cleanup-tasks grooms stale non-agent/non-project .worktrees safely and reports the groomed count" >&2
+echo "PASS: cleanup-tasks grooms stale non-agent/non-project .worktrees only after preservation gates; dirty/unpushed candidates and non-empty orphans are logged instead of recursively deleted" >&2
 exit 0

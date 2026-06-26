@@ -14,6 +14,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Removed
 ### Deprecated
 ### Security
+- Patch Dependabot security alerts for `dompurify`, `http-proxy-middleware`, `undici`, and `webpack-dev-server` via pnpm overrides and lockfile refresh ([#527](https://github.com/mifunedev/openharness/issues/527)).
 
 ## [2026.6.25-2] - 2026-06-25
 

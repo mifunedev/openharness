@@ -41,8 +41,6 @@ On a headless or remote sandbox where the browser callback can't reach the conta
 codex login --device-auth
 ```
 
-> Note: the [Pi harness](./pi.md) has its own login flow that binds `localhost:1455` and *does* need that port forwarded — see [Pi § Authentication](./pi.md#authentication).
-
 If you'd rather use a raw API key non-interactively (CI, headless agents), export it instead:
 
 ```bash

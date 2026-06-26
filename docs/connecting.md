@@ -56,15 +56,9 @@ When you close the VSCode remote window or detach from the container, the port f
 
 ## Default exposure posture
 
-The sandbox publishes **one port** by default:
+The base sandbox publishes **no application ports** to the host by default.
 
-```
-127.0.0.1:1455:1455   # Pi harness OAuth login callback (host loopback only)
-```
-
-Nothing else is published to the host. The `127.0.0.1` binding ensures port 1455 is reachable from `localhost` on the host machine — which VSCode's Remote-SSH forwarding can carry back to your laptop — without exposing it on any public interface.
-
-All other container ports (3000, 3773, etc.) are only reachable via VSCode's auto-forwarding or a manual `ssh -L` tunnel.
+Container ports (3000, 3773, etc.) are reachable from your laptop only via VSCode's auto-forwarding, a manual `ssh -L` tunnel, or an explicit compose overlay you add yourself.
 
 ## Opt-in public exposure
 
@@ -154,7 +148,6 @@ Open the **Ports** panel (bottom status bar → Ports, or `Ctrl+Shift+P` → "Fo
 
 | Port | Forwarded to | App |
 |------|-------------|-----|
-| 1455 | localhost:1455 | Pi OAuth callback |
 | 3000 | localhost:3000 | Docs site |
 | 3773 | localhost:3773 | T3 Code UI |
 
@@ -166,4 +159,3 @@ If a port is missing, confirm the tmux session is running (`tmux ls`) and that y
 |-----|---------------|------------------------------|
 | Docs site | 3000 | `http://localhost:3000` |
 | T3 Code UI | 3773 | `http://localhost:3773` |
-| Pi OAuth callback | 1455 | `http://localhost:1455` |

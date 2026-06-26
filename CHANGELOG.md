@@ -11,6 +11,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 ### Changed
 ### Fixed
+- Restore the GitHub Pages docs workflow after the docs app relocation by pointing the build and artifact paths at `.oh/docs` and guarding the path in `docs-build-fast-path`.
 ### Removed
 ### Deprecated
 ### Security

@@ -79,7 +79,7 @@ Each subcommand inherits the **drop/preserve** and **auto-clarity** rules above.
 
 ## Memory protocol
 
-Per `context/rules/memory.md`, append a one-line entry to `memory/<UTC-date>/log.md` after activation:
+Per `.mifune/skills/retro/references/memory-protocol.md`, append a one-line entry to `memory/<UTC-date>/log.md` after activation:
 
 ```markdown
 ## Caveman -- HH:MM UTC

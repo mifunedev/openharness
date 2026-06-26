@@ -1,7 +1,7 @@
 ---
 name: audit
 description: >-
-  Per-unit verdict gate (the build⇄audit gate composed by `/spec-execute`) — decide whether ONE
+  Per-unit verdict gate (the build⇄audit gate composed by `/spec execute`) — decide whether ONE
   implementation satisfies its task graph and is promotable, then emit a single
   PASS/FAIL verdict. Composes (never forks) the existing checks: prd.json
   task-graph conformance + /eval regression floor + /pr-audit promotable
@@ -10,14 +10,14 @@ description: >-
   /context-audit = context budget, /harness-audit = whole harness): this is one
   impl vs. one spec → one verdict.
   TRIGGER when: an implementation is complete and needs a go/no-go verdict before
-  retro; the build⇄audit gate of `/spec-execute` runs; "audit this task",
+  retro; the build⇄audit gate of `/spec execute` runs; "audit this task",
   "is <slug> promotable", "verify the implementation against its prd.json".
 argument-hint: "<slug> [--pr <N>] [--branch <branch>]"
 ---
 
 # Audit — per-unit verdict gate
 
-The **audit** gate, composed by `/spec-execute` in `AGENTS.md § The Workflow`. It answers
+The **audit** gate, composed by `/spec execute` in `AGENTS.md § The Workflow`. It answers
 one question: *does this one implementation satisfy its task graph and is it
 promotable?* — and emits exactly one verdict the `/autopilot` runner routes on.
 
@@ -142,7 +142,7 @@ red from gate 2.
 
 ## Memory Protocol
 
-After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
+After a run, append to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
 ## audit -- HH:MM UTC

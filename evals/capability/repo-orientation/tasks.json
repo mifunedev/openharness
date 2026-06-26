@@ -71,8 +71,8 @@
       "id": "RO-006",
       "class": "deep-orientation",
       "prompt": "Find the docs build configuration and explain why docs builds stay out of the fast harness gate.",
-      "expected_paths": ["package.json", "packages/docs/package.json", ".github/workflows/docs.yml", "evals/probes/docs-build-fast-path.sh"],
-      "forbidden_patterns": ["packages/docs/build/", "packages/docs/.docusaurus/", "packages/docs/node_modules/"]
+      "expected_paths": ["package.json", ".oh/docs/package.json", ".github/workflows/docs.yml", "evals/probes/docs-build-fast-path.sh"],
+      "forbidden_patterns": [".oh/docs/build/", ".oh/docs/.docusaurus/", ".oh/docs/node_modules/"]
     },
     {
       "id": "RO-007",

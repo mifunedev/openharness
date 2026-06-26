@@ -75,11 +75,11 @@ ls "$AUDIT_ROOT/.claude/skills/"
 ls "$AUDIT_ROOT/.claude/agents/" 2>/dev/null || echo "no agents dir"
 ls "$AUDIT_ROOT/crons/" 2>/dev/null || echo "no crons"
 ls "$AUDIT_LOG_ROOT/memory/" 2>/dev/null | tail -10
-ls "$AUDIT_ROOT/wiki/" 2>/dev/null | head -20
+ls "$AUDIT_ROOT/.mifune/skills/wiki/corpus/" 2>/dev/null | head -20
 
 # Package health
 cat "$AUDIT_ROOT/package.json" 2>/dev/null | head -30
-cat "$AUDIT_ROOT/packages/docs/package.json" 2>/dev/null | head -30
+cat "$AUDIT_ROOT/.oh/docs/package.json" 2>/dev/null | head -30
 
 # CI definition
 ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
@@ -124,7 +124,7 @@ Assemble a **Context Snapshot** (compact markdown, ~300 words):
 
 ### Packages
 - root: [version, dep count]
-- packages/docs: [version, dep count]
+- .oh/docs: [version, dep count]
 
 ### CI workflows
 [list]
@@ -154,7 +154,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 3. **Issue template completeness** — List `.github/ISSUE_TEMPLATE/` files. For each template, check: does it have required fields, clear labels, and assignment guidance?
 >
-> 4. **Wiki/memory utilization** — Count wiki pages under `wiki/`. Count daily memory logs under `memory/`. Are logs recent (within 7 days)? Are wiki pages populated or placeholder-empty?
+> 4. **Wiki/memory utilization** — Count wiki pages under `.mifune/skills/wiki/corpus/`. Count daily memory logs under `memory/`. Are logs recent (within 7 days)? Are wiki pages populated or placeholder-empty?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -176,7 +176,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml` and `.devcontainer/entrypoint.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), stale workspace auto-start hooks, missing healthchecks on compose services.
 >
-> 2. **Test coverage** — Check `scripts/__tests__/` and `packages/docs/` for test files. Run `ls scripts/__tests__/ 2>/dev/null` and `ls packages/docs/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are the orchestrator scripts and docs app tested in CI?
+> 2. **Test coverage** — Check `scripts/__tests__/` and `.oh/docs/` for test files. Run `ls scripts/__tests__/ 2>/dev/null` and `ls .oh/docs/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are the orchestrator scripts and docs app tested in CI?
 >
 > 3. **CI/CD completeness** — Read each workflow file. Are there gaps: missing lint, missing type-check, no test job, no release job, no deploy step?
 >
@@ -230,7 +230,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Memory system quality** — Use the Context Snapshot's `AUDIT_LOG_ROOT` memory/log context (not `AUDIT_ROOT` when they differ) to inspect the 5 most recent daily logs. Are entries following the Memory Improvement Protocol (Result/Action/Observation/Duration)? Is quality declining over time (shorter entries, missing fields)? Are entries actually present? Report if `long_term_memory` is `missing-or-unreadable`.
 >
-> 2. **Wiki utilization** — List all files under `wiki/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
+> 2. **Wiki utilization** — List all files under `.mifune/skills/wiki/corpus/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
 >
 > 3. **Cron health** — For each cron definition in `crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check memory logs for cron execution traces.
 >
@@ -327,7 +327,7 @@ Append to `memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d`:
 - **Observation**: [one sentence — top finding]
 ```
 
-See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
+See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
 ## Reference
 
@@ -357,9 +357,9 @@ See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
 | Crons | `crons/` |
 | Memory logs | `memory/YYYY-MM-DD/log.md` |
 | Long-term memory | `memory/MEMORY.md` |
-| Wiki | `wiki/` |
+| Wiki | `.mifune/skills/wiki/corpus/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |
 | CI workflows | `.github/workflows/` |
-| Docs app | `packages/docs/` |
+| Docs app | `.oh/docs/` |
 | Orchestrator scripts | `scripts/` (with tests in `scripts/__tests__/`) |

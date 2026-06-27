@@ -16,8 +16,8 @@
         ".mifune/skills/weigh/references/scoring.md documents the formula, sub-signal table, weights validation, hard-floor + --soft semantics, the judge:0 determinism note, and the judge:0-vs-judge:25 selection signal an operator watches when tuning."
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wave 1 (delegate) 2026-06-27; scorer + tests (20/20) + scoring.md"
     },
     {
       "id": "US-004",
@@ -28,8 +28,8 @@
         ".mifune/skills/rlm/scripts/__tests__/query-context.test.mjs (node --test) covers chunk-map, slice, grep, and the max-bytes guard with a fixture; the suite passes."
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wave 1 (delegate) 2026-06-27; query-context.mjs + tests (11/11) + max-bytes guard"
     },
     {
       "id": "US-008",
@@ -41,8 +41,8 @@
         ".mifune/skills/wiki/corpus/README.md is regenerated; bash evals/probes/wiki-readme-index.sh passes; curated entry + raw snapshot are force-added (git add -f) and verified tracked via git ls-files (corpus is gitignored-by-default, so a forgotten force-add passes CI silently)."
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wave 1 (delegate) 2026-06-27; wiki entry (523w) + raw snapshot + README"
     },
     {
       "id": "US-002",

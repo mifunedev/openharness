@@ -29,3 +29,4 @@ Schema rule, frontmatter spec, and all authoring conventions: `.mifune/skills/wi
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| recursive-language-models | Recursive Language Models | [rlm, context-as-environment, weighted-trajectories, agent-harness, llm-agents, self-consistency] | 2026-06-27 |

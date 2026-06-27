@@ -1,0 +1,134 @@
+# Progress — oh-payload-manifest (RFC #531 follow-on, value-first step 3)
+
+## Codebase Patterns
+
+- This slice STACKS on PR #336 (`feat/531-oh-update`); the base already has
+  `.oh/cli/src/commands/update.ts` with `runUpdate` + the `assertDestInTarget` path-escape
+  guard + a `walkFiles` overlay that ships ALL of `.oh/` minus per-segment node_modules/dist
+  (lines ~158-202). This slice EXTENDS that overlay with a manifest filter — it does NOT
+  rewrite update.ts.
+- The overlay relpaths are POSIX, relative to `.oh/` (`path.relative(fromOh, abs)` at
+  update.ts:51). The manifest globs match THAT shape (`cli/**` → `.oh/cli/...`). Because the
+  root is `<from>/.oh` and `assertDestInTarget` refuses any dest outside `<target>/.oh`, the
+  manifest STRUCTURALLY cannot reach outside `.oh/` — the safety invariant is preserved free.
+- The matcher (`lib/manifest.ts`) is zero-dependency by design: the CLI uses only node:fs +
+  node:path (no glob lib). `globToRegExp` must detect the 2-char `**` before the 1-char `*`
+  and special-case leading `**/` → `(?:.*/)?` so `**/node_modules/**` matches a top-level
+  `node_modules/x` too. A no-wildcard pattern is an EXACT match.
+- Tests import SOURCE via `.js` specifiers (NodeNext maps `.js` → `.ts`; vitest transforms
+  TS). `vitest.config.ts` auto-discovers `.oh/cli/**/__tests__/**/*.test.ts`. Verify with
+  `/home/sandbox/harness/node_modules/.bin/vitest run --root <worktree>` (worktree has no
+  node_modules; resolution walks up to repo-root node_modules).
+- Eval probes are 3-state oracles (0 PASS / 1 REGRESSION / 2 SKIPPED) with `# tier:` /
+  `# source:` / `# desc:` headers and `ROOT` via `${BASH_SOURCE[0]}`. `evals/RESULTS.md` is a
+  `| probe | tier | last-run (UTC) | status | source |` table, one row per probe id, kept
+  alphabetical. The "Eval Probe Regression Gate" CI job fails only on a NEW green→red regression.
+- The de-hardcode landmine is LARGELY ALREADY MITIGATED (corrected against the actual #336
+  base): `prompt-miner-caps.sh` is NOT under `.oh/` — it lives at
+  `.mifune/skills/prompt-miner/prompt-miner-caps.sh`, so `oh update` (which writes only under
+  `.oh/`) never ships it. The shipped `.oh/` scripts that DO reference the upstream repo are
+  `.oh/scripts/install.sh` (clone target, `${OH_GITHUB_REPO:-mifunedev/openharness}` override +
+  a help-text + a `!=` fork-detection comparison) and `.oh/scripts/maintenance/restart-openharness-tmux.sh`
+  (`${OH_REPO:-ryaneggz/openharness}` override). Both use the overridable `${VAR:-…}` form. The
+  root `crons/*.md` are instance-layer (NOT shipped). So this slice's de-hardcode work is just a
+  WHITELIST GUARD PROBE (`:-`/`#`/`!=`/`default:` allowed) locking that no shipped `.oh/` script
+  REGRESSES into a bare hardcode — not a behavior change to the live autopilot.
+
+---
+
+## US-001 — 2026-06-27 16:12 UTC
+
+**Title**: Pure manifest matcher + loader in .oh/cli/src/lib/manifest.ts
+**Files changed**: .oh/cli/src/lib/manifest.ts (new)
+**Result**: PASS
+
+### What I did
+Created the zero-dependency pure module: `Manifest` interface + `globToRegExp` (left-to-right
+index walk: `**/`→`(?:.*/)?`, standalone `**`→`.*`, `*`→`[^/]*`, regex-specials escaped) +
+`shouldShip` (≥1 include AND 0 exclude, exclude wins) + `loadManifest` (returns null on
+absent/unparseable/non-array/EMPTY include → back-compat).
+
+### Learnings for future iterations
+The index-walk (not sequential String.replace) is what prevents `**`→`.*`→double-translate;
+the leading-`**/`→`(?:.*/)?` token is what makes `**/node_modules/**` match a top-level
+`node_modules/x`. Empty-include→null is the hollow-out guard.
+
+---
+
+## US-002 — 2026-06-27 16:12 UTC
+
+**Title**: runUpdate honors the manifest in commands/update.ts
+**Files changed**: .oh/cli/src/commands/update.ts (edit)
+**Result**: PASS
+
+### What I did
+Three additive edits: import `loadManifest`/`shouldShip`; load the manifest after
+`relpaths.sort()` with a null→`legacy mode` warning; inside the overlay loop, after the
+volatile-skip and before `assertDestInTarget`, skip `!shouldShip(rel)` with a
+`(not in payload)` line counted in `skipped`. Signatures, guard, dry-run, and summary
+format all unchanged.
+
+### Learnings for future iterations
+The manifest filter is purely SUBTRACTIVE — it only `continue`s, never produces a new dest,
+so the path-escape guard stays the sole arbiter of write location (safety preserved free).
+
+---
+
+## US-003 — 2026-06-27 16:12 UTC
+
+**Title**: Vitest suite .oh/cli/src/__tests__/manifest.test.ts
+**Files changed**: .oh/cli/src/__tests__/manifest.test.ts (new)
+**Result**: PASS
+
+### What I did
+Wrote matcher units (cli/**, exact-literal, leading **/, segment-bounded *, exclude-wins),
+loadManifest cases (incl. empty-include→null), and two runUpdate integration cases proving
+docs/site.md + patches/p.diff + cli/dist/oh.js are NOT shipped (manifest mode) and ARE shipped
+in back-compat legacy mode. 13 new tests; full worktree suite 312/312 green.
+
+### Learnings for future iterations
+`loadManifest(fromOh)` reads `<fromOh>/manifest.json`, so the fixture passes the dir that
+directly contains manifest.json. The existing update.test.ts fixtures have no manifest, so
+they now exercise the legacy path — by design.
+
+---
+
+## US-004 — 2026-06-27 16:12 UTC
+
+**Title**: Production manifest + two eval probes + RESULTS rows
+**Files changed**: .oh/manifest.json (new), evals/probes/oh-payload-manifest.sh (new), evals/probes/oh-shipped-repo-overridable.sh (new), evals/RESULTS.md (2 rows)
+**Result**: PASS
+
+### What I did
+Production allowlist (cli/scripts/install/templates/README/manifest; docs+patches omitted) +
+the manifest-contract probe (jq non-empty include, docs/patches absent, wiring greps) + the
+de-hardcode whitelist guard probe (`:-`/`#`/`!=`/`default:` allowed) + 2 alphabetical RESULTS
+rows before `oh-update`. Both probes rc=0; shellcheck clean (one scoped SC2016 disable on the
+intentionally single-quoted `${OH_GITHUB_REPO:-` grep literal).
+
+### Learnings for future iterations
+The override-guard whitelist (4 forms) is verified clean against the ACTUAL base — the shipped
+refs are install.sh (L135 default:/L221 :-/L225 !=) + restart-openharness-tmux.sh (L29 :-).
+prompt-miner-caps.sh is NOT in .oh/ (lives at .mifune/skills/prompt-miner/), so not shipped.
+
+---
+
+## US-005 — 2026-06-27 16:12 UTC
+
+**Title**: Doc the payload boundary: .oh/README.md + CHANGELOG
+**Files changed**: .oh/README.md (edit), CHANGELOG.md (edit)
+**Result**: PASS
+
+### What I did
+Added a `## Payload manifest` README section (allowlist, docs/patches excluded-not-deleted,
+manifest-ships-itself, legacy back-compat, guard-preserved/cross-tree-deferred, templates/**
+preemptive, oh init seam) and one CHANGELOG [Unreleased] Added bullet with the full mifunedev
+#531 URL, appended within #336's existing block.
+
+### Learnings for future iterations
+Keep `**` globs inside code spans in markdown so the asterisks don't render as bold. The
+CHANGELOG entry uses the file's `([#531](full-url))` link style — full URL, not bare.
+
+---
+
+STATUS: COMPLETE

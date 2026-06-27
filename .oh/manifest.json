@@ -1,0 +1,14 @@
+{
+  "include": [
+    "cli/**",
+    "scripts/**",
+    "install/**",
+    "templates/**",
+    "README.md",
+    "manifest.json"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**"
+  ]
+}

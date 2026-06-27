@@ -8,6 +8,7 @@ import {
   copyFileSync,
 } from 'node:fs';
 import path from 'node:path';
+import { loadManifest, shouldShip } from '../lib/manifest.js';
 
 export interface UpdateIO {
   stdout: (s: string) => void;
@@ -159,6 +160,14 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
   walkFiles(fromOh, fromOh, relpaths);
   relpaths.sort();
 
+  const manifest = loadManifest(fromOh);
+  if (manifest === null) {
+    io.stdout(
+      dryPrefix +
+        'oh update: no .oh/manifest.json in source; overlaying all of .oh/ (legacy mode)\n',
+    );
+  }
+
   let created = 0;
   let overwritten = 0;
   let skipped = 0;
@@ -167,6 +176,12 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
     const segments = rel.split('/');
     if (segments.includes('node_modules') || segments.includes('dist')) {
       io.stdout(dryPrefix + 'skip ' + rel + ' (volatile)\n');
+      skipped++;
+      continue;
+    }
+
+    if (manifest && !shouldShip(rel, manifest)) {
+      io.stdout(dryPrefix + 'skip ' + rel + ' (not in payload)\n');
       skipped++;
       continue;
     }

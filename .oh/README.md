@@ -193,6 +193,39 @@ is **no separate VERSION file**. `oh update` **no-ops when already current**, an
 into the repo; `oh update` *refreshes the `.oh/` infrastructure* in place. Do not
 confuse the two — init populates the project, update upgrades the control plane.
 
+## Payload manifest
+
+`oh update` does **not** overlay all of `.oh/`. It overlays a **declared
+allowlist** read from `.oh/manifest.json` — an `{ "include": [...], "exclude":
+[...] }` document whose globs are **POSIX paths relative to `.oh/`** (e.g.
+`cli/**`, `README.md`, `manifest.json`). A path ships **iff** it matches at least
+one `include` pattern and zero `exclude` patterns (exclude wins).
+
+**What is intentionally NOT shipped:** `.oh/docs/` (the Docusaurus site) and
+`.oh/patches/` (repo-specific dependency patches) are **omitted from `include`**,
+so they are never vendored into a consumer repo. They are **not deleted** — they
+stay physically in this repo; they are simply not part of the payload.
+
+- **The manifest ships itself** — `manifest.json` is in `include`, so the policy
+  **propagates forward**: a consumer's next `oh update` reads the *source's*
+  manifest and inherits the same boundary.
+- `templates/**` is pre-declared in `include` for PR #334 (the `oh init`
+  templates); on this base it matches **nothing**, harmlessly.
+
+**Back-compat (legacy mode):** a source with **no `.oh/manifest.json`** — or an
+empty/invalid one — falls back to overlaying **all of `.oh/`**, exactly as
+before, emitting a one-line `legacy mode` warning so the fallback stays visible.
+
+**Boundary is preserved:** the manifest **cannot reach outside `.oh/`**. Its
+patterns are relative to `.oh/`, and the existing path-escape guard (writes land
+only under `<target>/.oh/`) is **unchanged** — the manifest *narrows* the
+payload, it never widens the write surface. Cross-tree shipping of
+`.mifune/skills` is **deferred** (out of scope here).
+
+> **`oh init` seam:** `oh init` does **not** yet honor this manifest — its
+> manifest-aware seeding (`commands/init.ts`) and the `.oh/templates/` payload
+> ship in PR #334. Today the manifest governs `oh update` only.
+
 ## Pointers
 
 - `context/directory-readme.md` — the README-as-directory-anchor convention this file follows.

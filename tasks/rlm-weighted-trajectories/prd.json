@@ -104,8 +104,8 @@
         "evals/probes/spec-family-contract.sh gains a concrete assertion that critique.md's required headings are still emitted (schema-preserving); the /eval suite stays green; the PR description names this protected-skill edit explicitly."
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wave 3 (advisor-direct) 2026-06-27; opt-in default-off self-consistency seam + spec-family-contract.sh schema assertion (PASS)"
     },
     {
       "id": "US-009",
@@ -117,8 +117,8 @@
         "A name-collision check confirms weigh and rlm do not shadow built-ins or Pi packages (recorded in progress.txt)."
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wave 3 (delegate) 2026-06-27; CHANGELOG + 2 RESULTS rows + collision note (no collision)"
     }
   ]
 }

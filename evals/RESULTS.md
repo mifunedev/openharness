@@ -56,6 +56,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | repo-map-contract | A | 2026-06-26 01:01 | PASS | issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims |
 | retro-deterministic-contract | A | 2026-06-26 01:01 | PASS | issue #443 — /retro deterministic output and self-contained helper contract |
 | rl-delegation-write-worker | A | 2026-06-26 01:01 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
+| rlm-context-budget | A | 2026-06-27 00:00 | PASS | issue #533 — /rlm recursion-budget (depth/children/step) + query-context max-bytes guard contract (tasks/rlm-weighted-trajectories) |
 | sandbox-boot-guard-ci | A | 2026-06-26 01:01 | PASS | issue #449 (sandbox image build CI guard) 2026-06-19 |
 | ship-spec-ready-finalization | A | 2026-06-26 01:01 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |
 | skill-paths | A | 2026-06-26 01:01 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
@@ -65,6 +66,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | watchdog-completed-session-reap | A | 2026-06-26 01:01 | PASS | issue #235 (completed autopilot PR session reaping) |
 | watchdog-draft-prs | A | 2026-06-26 01:01 | PASS | conversation 2026-06-15 (generic watchdog + stale draft PR recovery) |
 | watchdog-stuck-sessions | A | 2026-06-26 01:01 | PASS | issue #240 (Codex zero-credit stuck autopilot sessions) 2026-06-17 |
+| weigh-scorer-contract | A | 2026-06-27 00:00 | PASS | issue #533 — /weigh scorer frozen-weights (sum 100) + hard-floor (evalRc:1 never selected) contract (tasks/rlm-weighted-trajectories) |
 | wiki-readme-index | A | 2026-06-26 01:01 | PASS | issue #132 — wiki README index drift guard |
 | workflow-boundaries | A | 2026-06-26 01:01 | PASS | conversation 2026-06-19 (workflow consolidation, issue #259) |
 

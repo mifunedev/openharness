@@ -2,10 +2,10 @@
 
 Hermes keeps **all** runtime state — config, sessions, skills, memory, **and `auth.json`** — inside one project-local directory:
 
-- `HERMES_HOME=/home/sandbox/harness/.hermes`, set in `.devcontainer/docker-compose.yml`. This is the bind-mounted checkout, so state is host-visible.
+- `HERMES_HOME=/home/sandbox/harness/.hermes`, set in `.oh/devcontainer/docker-compose.yml`. This is the bind-mounted checkout, so state is host-visible.
 - `.hermes/` is gitignored (`.hermes/*` ignored, only `.hermes/README.md` tracked), so credentials never reach version control.
 - There is **no** `hermes-auth` named volume and **no** `auth.json` symlink. Both are forbidden — see below.
-- `.devcontainer/entrypoint.sh` links `~/harness/.hermes/skills/openharness` to `/home/sandbox/harness/.mifune/skills` so Hermes loads the harness' shared in-repo skills through its normal local skill scan while keeping runtime/profile skills under `.hermes/skills` non-authoritative.
+- `.oh/devcontainer/entrypoint.sh` links `~/harness/.hermes/skills/openharness` to `/home/sandbox/harness/.mifune/skills` so Hermes loads the harness' shared in-repo skills through its normal local skill scan while keeping runtime/profile skills under `.hermes/skills` non-authoritative.
 - On boot the entrypoint **heals** any legacy `auth.json` symlink: if `$HERMES_HOME/auth.json` is a symlink it removes it (restoring a real file from the old `/home/sandbox/.hermes/auth.json` volume path if one exists).
 - `install/banner.sh` reports authentication from `$HERMES_HOME/auth.json`.
 
@@ -22,9 +22,9 @@ Hermes hardcodes `auth.json` into `get_hermes_home()` (no separate auth-dir env 
 ## Useful verification
 
 ```bash
-bash -n .devcontainer/entrypoint.sh install/banner.sh
+bash -n .oh/devcontainer/entrypoint.sh install/banner.sh
 git diff --check
-docker compose -f .devcontainer/docker-compose.yml config >/tmp/openharness-compose-config.yml
+docker compose -f .oh/devcontainer/docker-compose.yml config >/tmp/openharness-compose-config.yml
 grep -n 'HERMES_HOME' /tmp/openharness-compose-config.yml
 # expect: no hermes-auth volume, no auth.json symlink
 ! grep -q 'hermes-auth' /tmp/openharness-compose-config.yml && echo "no hermes-auth volume: OK"

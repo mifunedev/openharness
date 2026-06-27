@@ -44,7 +44,7 @@ autocomplete with a frecency-ranked picker:
 - **`fffind`** — path and filename search across the whole repo-relative path (not
   just the filename), frecency-aware so files you actually open rank higher next time.
 
-A short hint in `.pi/APPEND_SYSTEM.md`
+A short hint in [`.pi/APPEND_SYSTEM.md`](https://github.com/mifunedev/openharness/blob/development/.pi/APPEND_SYSTEM.md)
 tells the agent to **prefer** these tools for file search **when they are available**.
 It is a preference only — the native `grep`/`find` tools stay available as the
 fallback when the extension is not loaded.

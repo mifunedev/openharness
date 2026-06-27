@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../..");
 const SCRIPT = join(ROOT, ".oh", "scripts", "sandbox-healthcheck.sh");
-const COMPOSE = join(ROOT, ".devcontainer", "docker-compose.yml");
+const COMPOSE = join(ROOT, ".oh", "devcontainer", "docker-compose.yml");
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "sandbox-healthcheck-"));
@@ -135,7 +135,7 @@ describe("sandbox healthcheck", () => {
     const compose = readFileSync(COMPOSE, "utf8");
 
     expect(compose).toContain("healthcheck:");
-    expect(compose).toContain("/home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh");
+    expect(compose).toContain("${OH_PROJECT_ROOT:-/home/sandbox/harness}/.oh/scripts/sandbox-healthcheck.sh");
     expect(compose).toContain("start_period: 300s");
   });
 

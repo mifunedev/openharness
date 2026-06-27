@@ -174,7 +174,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml` and `.devcontainer/entrypoint.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), stale workspace auto-start hooks, missing healthchecks on compose services.
+> 1. **Startup reliability** — Read `.oh/devcontainer/docker-compose.yml` and `.oh/devcontainer/entrypoint.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), stale workspace auto-start hooks, missing healthchecks on compose services.
 >
 > 2. **Test coverage** — Check `scripts/__tests__/` and `.oh/docs/` for test files. Run `ls scripts/__tests__/ 2>/dev/null` and `ls .oh/docs/src/__tests__/ 2>/dev/null`. Check `.github/workflows/` for test job definitions. Are the orchestrator scripts and docs app tested in CI?
 >
@@ -182,7 +182,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 4. **Package health** — For root `package.json` and each `packages/*/package.json`, check: pinned vs caret deps, presence of `build` script, presence of `test` script.
 >
-> 5. **Compose overlay fragility** — Read `.devcontainer/docker-compose*.yml` files. Look for: hardcoded paths, missing `restart: unless-stopped` on long-lived services, volumes without named mounts, environment variables without defaults.
+> 5. **Compose overlay fragility** — Read `.oh/devcontainer/docker-compose*.yml` files. Look for: hardcoded paths, missing `restart: unless-stopped` on long-lived services, volumes without named mounts, environment variables without defaults.
 >
 > **Return format (Ultra compression):**
 > ```
@@ -287,7 +287,7 @@ After all 4 auditors return and pass the auditor-output validation gate, synthes
 | **Tier 3: Design Decisions Needed** | Requires architectural choice, policy decision, or cross-team alignment before action |
 
 3. **Identify what's working** — consolidate all WORKING entries from auditors
-4. **Select top 3 actions** — the 3 highest-leverage Tier 1 items (or Tier 2 if Tier 1 is empty), stated as concrete next steps (e.g., "Add healthcheck to postgres service in `.devcontainer/docker-compose.yml`")
+4. **Select top 3 actions** — the 3 highest-leverage Tier 1 items (or Tier 2 if Tier 1 is empty), stated as concrete next steps (e.g., "Add healthcheck to postgres service in `.oh/devcontainer/docker-compose.yml`")
 
 ### 5. Emit the report
 
@@ -358,8 +358,8 @@ See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memor
 | Memory logs | `memory/YYYY-MM-DD/log.md` |
 | Long-term memory | `memory/MEMORY.md` |
 | Wiki | `.mifune/skills/wiki/corpus/` |
-| Compose | `.devcontainer/docker-compose.yml` |
-| Entrypoint | `.devcontainer/entrypoint.sh` |
+| Compose | `.oh/devcontainer/docker-compose.yml` |
+| Entrypoint | `.oh/devcontainer/entrypoint.sh` |
 | CI workflows | `.github/workflows/` |
 | Docs app | `.oh/docs/` |
 | Orchestrator scripts | `scripts/` (with tests in `scripts/__tests__/`) |

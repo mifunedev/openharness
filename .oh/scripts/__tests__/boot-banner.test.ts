@@ -27,7 +27,7 @@ function ohStatusBlock(banner: string): string {
 
 describe("boot banners", () => {
   it("first-boot entrypoint banner points at the Slack bridge setup docs", () => {
-    const block = firstBootBlock(readRepoFile(".devcontainer", "entrypoint.sh"));
+    const block = firstBootBlock(readRepoFile(".oh", "devcontainer", "entrypoint.sh"));
 
     expect(block).toContain("docs/integrations/slack.md");
     expect(block).toContain("Optional Slack bridge setup");

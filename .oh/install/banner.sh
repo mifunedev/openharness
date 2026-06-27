@@ -148,7 +148,7 @@ fi
 hermes_status="$status_x"
 hermes_detail="not installed — set INSTALL_HERMES=true and rebuild"
 if command -v hermes >/dev/null 2>&1; then
-  if [ -s "${HERMES_HOME:-/home/sandbox/harness/.hermes}/auth.json" ]; then
+  if [ -s "${HERMES_HOME:-${OH_PROJECT_ROOT:-/home/sandbox/harness}/.hermes}/auth.json" ]; then
     hermes_status="$status_ok"
     hermes_detail="authenticated"
   else

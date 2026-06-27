@@ -11,7 +11,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 // extension's recovery from harness PR #283 was dropped in the npm swap).
 //
 // This extension is co-loaded ALONGSIDE the bridge (a 2nd `--extension` in
-// .devcontainer/client-slack-supervise.sh) — it does NOT patch node_modules. It
+// .oh/devcontainer/client-slack-supervise.sh) — it does NOT patch node_modules. It
 // owns the `agent_end` event (the bridge does not hook it, so no collision): on
 // a recoverable provider-state error whose failed turn was Slack-originated, it
 // re-injects that user text ONCE. The failed request already cleared the stale

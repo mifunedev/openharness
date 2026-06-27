@@ -109,7 +109,7 @@ if [ -f "$HARNESS_YAML" ]; then
   args+=(--env-file "$HARNESS_ENV_FILE")
 fi
 
-args+=(-f "$(compose_path ".devcontainer/docker-compose.yml")")
+args+=(-f "$(compose_path ".oh/devcontainer/docker-compose.yml")")
 
 hermes_value=""
 if [ -f "$HARNESS_YAML" ]; then
@@ -119,7 +119,7 @@ if [ -z "$hermes_value" ]; then
   hermes_value=${HERMES_DASHBOARD:-$(read_env_value HERMES_DASHBOARD)}
 fi
 if truthy "$hermes_value"; then
-  args+=(-f "$(compose_path ".devcontainer/docker-compose.hermes-dashboard.yml")")
+  args+=(-f "$(compose_path ".oh/devcontainer/docker-compose.hermes-dashboard.yml")")
 fi
 
 if [ -f "$HARNESS_YAML" ]; then

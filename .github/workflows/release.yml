@@ -78,12 +78,12 @@ jobs:
         run: |
           command -v shellcheck >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y shellcheck; }
           shellcheck --version
-          shellcheck -S warning .devcontainer/*.sh .oh/install/*.sh .oh/scripts/*.sh
+          shellcheck -S warning .oh/devcontainer/*.sh .oh/install/*.sh .oh/scripts/*.sh
 
       - name: Hadolint Dockerfile
         uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0
         with:
-          dockerfile: .devcontainer/Dockerfile
+          dockerfile: .oh/devcontainer/Dockerfile
           config: .hadolint.yaml
           failure-threshold: warning
 
@@ -157,7 +157,7 @@ jobs:
           IMAGE=ghcr.io/mifunedev/openharness:${{ steps.parse.outputs.version }}
           LATEST=ghcr.io/mifunedev/openharness:latest
 
-          docker build -f .devcontainer/Dockerfile -t $IMAGE -t $LATEST .
+          docker build -f .oh/devcontainer/Dockerfile -t $IMAGE -t $LATEST .
           docker push $IMAGE
           docker push $LATEST
 

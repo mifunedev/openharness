@@ -73,7 +73,7 @@ jobs:
           SANDBOX_NAME: openharness-boot-guard-${{ github.run_id }}
         run: |
           docker build \
-            --file .devcontainer/Dockerfile \
+            --file .oh/devcontainer/Dockerfile \
             --tag "sandbox-${SANDBOX_NAME}" \
             --tag openharness-sandbox-boot-guard:${{ github.sha }} \
             .

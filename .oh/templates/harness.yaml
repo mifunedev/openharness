@@ -1,0 +1,27 @@
+# harness.yaml — your project's own Open Harness config (tracked).
+#
+# This is YOUR project's harness config — distinct from the OpenHarness
+# orchestrator root harness.yaml. It was materialized into your repo by
+# `oh init`. Every key ships commented with its default shown, so a fresh
+# `oh init` changes nothing until you uncomment a key.
+#
+# Format: flat two-level section/key only (no nesting, no anchors).
+# Commented keys are inactive (compose / .env defaults apply); uncomment
+# to take over a setting. Secrets stay ONLY in gitignored
+# .devcontainer/.env — never here.
+
+sandbox:
+  # name: my-project           # SANDBOX_NAME — container + compose project name
+  # timezone: America/Denver   # TZ — cron schedules, log timestamps
+
+git:
+  # user_name: Your Name           # GIT_USER_NAME (spaces OK)
+  # user_email: you@example.com    # GIT_USER_EMAIL
+
+install:
+  # agent_browser: false       # INSTALL_AGENT_BROWSER — agent-browser + Chromium (~1 GB)
+  # hermes: false              # INSTALL_HERMES — Hermes CLI (build arg + runtime)
+
+hermes:
+  # dashboard: false           # HERMES_DASHBOARD — auto-start web dashboard when Hermes is installed
+  # dashboard_port: 9119       # HERMES_DASHBOARD_PORT — host loopback port for the dashboard

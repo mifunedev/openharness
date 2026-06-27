@@ -1,0 +1,116 @@
+# Progress — oh-update (RFC #531 Phase 3)
+
+## Codebase Patterns
+
+- The CLI lives in `.oh/cli/`. `src/cli.ts` is the entrypoint (a top-level
+  `main(process.argv.slice(2)).then(process.exit)` side effect). `build.mjs` bundles
+  it via esbuild to `dist/oh.js`, inlining `__OH_VERSION__` from
+  `.oh/cli/package.json#version` (currently 0.1.0). Tests import the SOURCE with `.js`
+  specifiers (e.g. `await import("../cli.js")`) — NodeNext resolution maps `.js` → `.ts`;
+  vitest transforms TS. Mirror this for `../commands/update.js`.
+- There is NO `commands/` dir on this base — `oh init` (PR #334, still open) is what
+  introduces `commands/init.ts` + `.oh/templates/`. This slice creates
+  `commands/update.ts` fresh and does NOT touch or reference init's files. The only
+  overlap with #334 is the `cli.ts` subcommand-registration branch (a trivial merge
+  union; documented in the PR body).
+- `oh init` operates on PROJECT-owned files (harness.yaml, AGENTS.md, .devcontainer/)
+  scaffolded FROM `.oh/templates/`. `oh update` operates on the `.oh/` CONTROL PLANE
+  itself (cli, scripts, orchestration). Disjoint targets — that is why Phase 3 ships
+  standalone off origin/development without depending on Phase 2.
+- The safety invariant: `runUpdate` resolves `targetOh = <target>/.oh` and writes ONLY
+  under it (path-escape guard `dest === targetOh || dest.startsWith(targetOh + sep)`).
+  This makes "project source untouched" hold BY CONSTRUCTION — the command is
+  structurally incapable of writing outside `.oh/`. The test (US-003) and probe (US-004)
+  must prove it.
+- Version metadata is the EXISTING `.oh/cli/package.json#version` — no new VERSION file.
+  `runUpdate` reads it from `<from>/.oh/cli/package.json` (available) and
+  `<target>/.oh/cli/package.json` (current); numeric dotted compare; refuse downgrade
+  without `--force`; no-op when equal without `--force`.
+- vitest config (`vitest.config.ts`) includes `.oh/cli/**/__tests__/**/*.test.ts`, so a
+  new `update.test.ts` is auto-discovered by CI's Test job. Verify with
+  `/home/sandbox/harness/node_modules/.bin/vitest run --root <worktree>` (the worktree
+  has no node_modules; resolution walks up to the repo-root node_modules).
+- Eval probes are 3-state oracles (exit 0 PASS / 1 REGRESSION / 2 SKIPPED) with a
+  `# tier:` / `# source:` / `# desc:` header and `ROOT` resolved via `${BASH_SOURCE[0]}`.
+  `evals/RESULTS.md` is a `| probe | tier | last-run (UTC) | status | source |` table,
+  one row per probe id, kept alphabetical. The "Eval Probe Regression Gate" CI job
+  fails only on a NEW green→red regression.
+
+---
+
+## US-001 — 2026-06-27 17:25 UTC
+
+**Title**: Implement runUpdate core in .oh/cli/src/commands/update.ts
+**Files changed**: .oh/cli/src/commands/update.ts (new)
+**Commit**: f8d98f7
+**Result**: PASS
+
+### What I did
+Created the self-contained, pure `runUpdate(opts, io)` plus the exported `assertDestInTarget` path-escape guard, using only `node:fs` + `node:path`. Implemented the symlink-skipping `walkFiles`, the suffix-stripped numeric version gate (upgrade / equal-no-op / downgrade-refuse, all overridable with `--force`), the per-segment volatile skip (`node_modules`/`dist`), dry-run write-suppression (even under `--force`), and the exact `oh update: <x> created, <y> overwritten, <s> skipped` summary. No `process.exit`/`argv`/`cwd` — fully pure.
+
+### Learnings for future iterations
+The "every stdout line is `[dry-run] `-prefixed under dry-run" invariant must include the version-gate report lines (`updating .oh:`, `re-overlay`, `downgrading .oh:`), not just the per-file create/overwrite/skip lines and the summary — the US-003 test asserts ALL stdout lines carry the prefix, so apply `dryPrefix` uniformly to every `io.stdout` call.
+
+---
+
+## US-002 — 2026-06-27 17:25 UTC
+
+**Title**: Wire `oh update` into cli.ts dispatch + help
+**Files changed**: .oh/cli/src/cli.ts (edit)
+**Commit**: 655b608
+**Result**: PASS
+
+### What I did
+Added `import { runUpdate } from "./commands/update.js"`, an `if (first === "update")` branch (after `config`, before the unknown-command fallthrough) that parses `--from <dir>` / `--dry-run` / `--force` / `--help` with all the required error paths (missing `--from` value, absent `--from`, unexpected argument), resolves `targetDir = process.cwd()` (the sole cwd read, keeping `runUpdate` pure), and a `printUpdateHelp()` plus an `oh update` line in `printOhHelp()`. Left `config`/help/version/INTEGRATIONS untouched.
+
+### Learnings for future iterations
+`--from` must consume the NEXT token and advance the loop index, or the consumed value falls through to the "unexpected argument" path. Reusing `isHelpFlag(arg)` also matches the bare `help` token, consistent with the existing `config` branch — harmless and idiomatic for this CLI.
+
+---
+
+## US-003 — 2026-06-27 17:25 UTC
+
+**Title**: Vitest suite .oh/cli/src/__tests__/update.test.ts
+**Files changed**: .oh/cli/src/__tests__/update.test.ts (new)
+**Commit**: 436c2ad
+**Result**: PASS
+
+### What I did
+Wrote 11 vitest cases (auto-discovered by `vitest.config.ts`) covering upgrade overlay, project-untouched backstop, equal no-op, force re-overlay, downgrade refuse + the `0.1.0` vs `0.1.0-dev` pre-release-equal case, dry-run write-suppression (incl. force+dry-run downgrade), the direct `assertDestInTarget` path-escape unit, all three preconditions, and the nested volatile skip. Fixtures are built by explicit `writeFileSync` under `mkdtempSync` dirs, cleaned in `afterEach`.
+
+### Learnings for future iterations
+Do NOT snapshot `os.tmpdir()` (the shared `/tmp`) as a "parent untouched" oracle — concurrent vitest workers create temp dirs there, so the assertion flakes (saw a stray `ralph-*` entry appear mid-run). Put `from` and `target` under ONE dedicated per-test base dir and assert THAT base is unchanged — a parent you own.
+
+---
+
+## US-004 — 2026-06-27 17:25 UTC
+
+**Title**: Eval probe evals/probes/oh-update.sh + RESULTS row
+**Files changed**: evals/probes/oh-update.sh (new), evals/RESULTS.md (one row)
+**Commit**: 18311af
+**Result**: PASS
+
+### What I did
+Created the 3-state oracle (SKIP if `update.ts` absent; else assert `runUpdate` export, the path-escape guard literal + `assertDestInTarget`/`targetOh`, the `package.json`/`downgrade` version-gate references, the `first === "update"` cli dispatch, the `oh update` help advertisement, and the test file's existence). shellcheck-clean at default level. Inserted the alphabetical `oh-update` RESULTS row between `next-dev-prod` and `owned-surface-guard`.
+
+### Learnings for future iterations
+The probe is a STATIC deletion-guard proxy for the safety invariant — say so in `# desc:` so it is not mistaken for a runtime check; the real proof lives in US-003's direct `assertDestInTarget` unit + the project-untouched test. The `oh-update` row slots cleanly without an `oh-init-scaffold` row present (that ships in #334).
+
+---
+
+## US-005 — 2026-06-27 17:25 UTC
+
+**Title**: Doc the command: .oh/README.md + CHANGELOG
+**Files changed**: .oh/README.md (edit), CHANGELOG.md (edit)
+**Commit**: 13fcd3e
+**Result**: PASS
+
+### What I did
+Added a `## oh update (Phase 3)` README section (purpose, sibling-of-`oh init` framing, usage, `--from` MVP + deferred remote-fetch, the `.oh/`-only path-escape safety invariant, the package.json#version gate, the honesty disclosure that `.oh/` files are overwritten in place with no backup, and an explicit init-vs-update contrast) and one `### Added` CHANGELOG bullet citing the full mifunedev #531 URL.
+
+### Learnings for future iterations
+Doc honesty matters for AC-I: state plainly that only files OUTSIDE `.oh/` are guaranteed untouched (a user-modified `.oh/config.json` IS replaced) and that remote-fetch is DEFERRED, never documented as implemented. The grep sweep `grep -rIn 'oh update'` should surface only `.oh/`-scoped claims.
+
+---
+
+STATUS: COMPLETE

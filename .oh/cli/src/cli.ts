@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { runInit, type InitIO, type InitOptions } from "./commands/init.js";
+import { runUpdate } from "./commands/update.js";
 
 // Injected at build time from package.json#version (see build.mjs).
 declare const __OH_VERSION__: string;
@@ -49,6 +50,7 @@ function printOhHelp(): void {
 Usage:
   oh init [dir]             Scaffold OpenHarness compat files into a repo
   oh config <integration>   Configure an integration via interactive wizard
+  oh update --from <dir>    Upgrade the .oh/ control plane from a newer source
   oh --version              Print version
   oh --help                 Show this help
 
@@ -66,6 +68,23 @@ Usage:
 
 Integrations:
 ${integrationLines()}
+`);
+}
+
+function printUpdateHelp(): void {
+  process.stdout.write(`oh update — Upgrade the .oh/ control plane
+
+Usage:
+  oh update --from <dir> [--dry-run] [--force]
+
+Upgrades ONLY the .oh/ control plane (skills, scripts, CLI). Your project
+source is left untouched.
+
+Flags:
+  --from <dir>   A built OpenHarness checkout to upgrade from. Required for
+                 now — remote-fetch is deferred (#531).
+  --dry-run      Preview the changes without writing anything.
+  --force        Override the up-to-date / downgrade gate.
 `);
 }
 
@@ -183,6 +202,55 @@ async function main(argv: string[]): Promise<number> {
     }
 
     return await integration.runner();
+  }
+
+  if (first === "update") {
+    const rest = argv.slice(1);
+    let fromDir: string | undefined;
+    let force = false;
+    let dryRun = false;
+
+    for (let i = 0; i < rest.length; i++) {
+      const arg = rest[i];
+      if (arg === "--from") {
+        const value = rest[i + 1];
+        if (value === undefined) {
+          process.stderr.write("oh update: --from requires a directory\n");
+          return 1;
+        }
+        fromDir = value;
+        i++;
+        continue;
+      }
+      if (arg === "--dry-run") {
+        dryRun = true;
+        continue;
+      }
+      if (arg === "--force") {
+        force = true;
+        continue;
+      }
+      if (isHelpFlag(arg)) {
+        printUpdateHelp();
+        return 0;
+      }
+      process.stderr.write(`oh update: unexpected argument "${arg}"\n`);
+      printUpdateHelp();
+      return 1;
+    }
+
+    if (fromDir === undefined) {
+      process.stderr.write(
+        "oh update: --from <dir> is required (remote-fetch deferred, #531)\n",
+      );
+      return 1;
+    }
+
+    const targetDir = process.cwd();
+    return await runUpdate(
+      { targetDir, fromDir, force, dryRun },
+      { stdout: (s) => process.stdout.write(s), stderr: (s) => process.stderr.write(s) },
+    );
   }
 
   process.stderr.write(`oh: unknown command "${first}"\n\n`);

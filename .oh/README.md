@@ -156,6 +156,43 @@ is **separate** from `.oh/templates/.devcontainer/` (Phase 2 slice 1), which is 
 downstream scaffold copied into *consumer* repos by the `oh` CLI — not this repo's
 own boot environment.
 
+## oh update (Phase 3)
+
+`oh update` upgrades **only the `.oh/` control plane** of an OpenHarness-equipped
+repo. It is the **sibling of `oh init`**: where `oh init` seeds *project* files
+from `.oh/templates/`, `oh update` refreshes the `.oh/` **infrastructure itself**.
+Project source — anything *outside* `.oh/` — is left untouched.
+
+**Usage:**
+
+```bash
+oh update --from <dir> [--dry-run] [--force]
+```
+
+- `--from <built-checkout>` — the source `.oh/` to upgrade from. This is the MVP
+  source surface; **remote-fetch is DEFERRED** (the same precedent as `oh init`'s
+  deferred bundling — a built source must be supplied via `--from` in this slice).
+- `--dry-run` — report what would change without writing.
+- `--force` — override the version gate (see below).
+
+**Safety invariant:** `oh update` writes **only under `<target>/.oh/`**, and every
+write path is **path-escape-guarded** (rejected if it would resolve outside
+`<target>/.oh/`). Because of this, "project source remains untouched" holds **by
+construction** — only files *outside* `.oh/` are guaranteed untouched.
+
+**Version gate:** the version is read from `.oh/cli/package.json#version` — there
+is **no separate VERSION file**. `oh update` **no-ops when already current**, and
+**refuses a downgrade without `--force`**.
+
+> **Honesty disclosure:** in this MVP, `oh update` **OVERWRITES `.oh/` files in
+> place with NO backup**. Any user-modified file *under* `.oh/` (for example a
+> local `.oh/config.json`) **is replaced**. Only files **outside** `.oh/` (the
+> project source) are guaranteed untouched.
+
+**Contrast with `oh init`:** `oh init` *seeds project files* from `.oh/templates/`
+into the repo; `oh update` *refreshes the `.oh/` infrastructure* in place. Do not
+confuse the two — init populates the project, update upgrades the control plane.
+
 ## Pointers
 
 - `context/directory-readme.md` — the README-as-directory-anchor convention this file follows.

@@ -1,0 +1,123 @@
+# Progress — oh-devcontainer-restructure (RFC #531 Phase 2 slice 2)
+
+## Codebase Patterns
+
+- Build context for the sandbox image is the REPO ROOT (compose `build.context`), so Dockerfile
+  COPY sources are root-relative and mostly DO NOT change when the Dockerfile file itself moves.
+  Only `COPY .devcontainer/entrypoint.sh` (a moved asset) changes.
+- compose relative paths (`context`, `volumes` bind source) resolve from the compose FILE's dir.
+  Moving the compose file from `.devcontainer/` to `.oh/devcontainer/` deepens it one level, so
+  `..` becomes `../..`.
+- The env files (`.env`, `.example.env`, `.harness.yaml.env`) are USER-OWNED and STAY at root
+  `.devcontainer/`. Only the six build assets move. Repointing an env path is a bug.
+- `.oh/**` is already a CI path filter in sandbox-boot-guard.yml, so the moved location is
+  already covered; keep `.devcontainer/**` too (compat layer remains).
+- `boot-lint-glob.sh` asserts the shellcheck glob covers active boot-script dirs — after the move
+  the active dir is `.oh/devcontainer/` not `.devcontainer/`; the probe and BOTH workflows
+  (ci-harness.yml + release.yml) must change together.
+- Some vitest files reference moved assets via the SPLIT-FORM `path.join(ROOT, ".devcontainer",
+  "<asset>")` — invisible to a `/`-literal grep. The full split-form set is enumerated in US-003.
+  Validate with `node_modules/.bin/vitest run --root <worktree>` (the worktree has no node_modules;
+  resolution walks up to the repo-root node_modules).
+
+---
+
+## US-001 — 2026-06-27 16:24 UTC
+
+**Title**: Relocate build assets to .oh/devcontainer/ + fix in-file refs + .dockerignore
+**Files changed**: .oh/devcontainer/{Dockerfile,docker-compose.yml,docker-compose.hermes-dashboard.yml,entrypoint.sh,client-slack-supervise.sh,seed-msg-bridge.sh} (renamed from .devcontainer/), .dockerignore
+**Commit**: df67afd
+**Result**: PASS
+
+### What I did
+Filesystem-moved the six build assets to .oh/devcontainer/ (git detected all as renames; +x preserved on the two executable scripts). Repointed the single Dockerfile entrypoint COPY, the compose build.context/dockerfile/bind from .. to ../.., and the supervisor launch comment; dropped the stale .dockerignore negations. No env/runtime-path change.
+
+### Learnings for future iterations
+- git detected all six moves as true renames (R) in the per-story commit because both the deletion and the addition were staged together — stage old+new paths in the same commit.
+- entrypoint.sh is tracked 100644 (NOT +x) and never had +x in this repo; the Dockerfile does `RUN chmod +x` post-COPY, so the AC's "all three retain +x" applies only to the two scripts that actually had it. mv preserved real modes; behavior-neutral.
+- hadolint reports only pre-existing info-level notes on UNCHANGED lines; at --failure-threshold warning (CI's gate) it exits 0.
+
+---
+
+## US-002 — 2026-06-27 16:24 UTC
+
+**Title**: Repoint .oh/scripts runtime scripts + generate the root compat devcontainer.json
+**Files changed**: .oh/scripts/{docker-compose.sh,gateway.sh,install.sh,check-pnpm-pin.sh,maintenance/restart-openharness-tmux.sh,sync-devcontainer.sh(new)}, .devcontainer/devcontainer.json
+**Commit**: d436e30
+**Result**: PASS
+
+### What I did
+Repointed the compose wrapper -f paths, gateway exec paths, install.sh harness-detection test, and check-pnpm-pin Dockerfile path to .oh/devcontainer/. Added sync-devcontainer.sh (write + --check drift modes, git-root + BASH_SOURCE fallback) and regenerated the root devcontainer.json to point at ../.oh/devcontainer/docker-compose.yml. User-env paths untouched.
+
+### Learnings for future iterations
+- MF-I honored: the GENERATED notice lives in the shell script comments + .oh/README.md only, NEVER in the emitted JSON (jq . must parse). sync-devcontainer.sh --check exits 0 against the committed file.
+- The generated devcontainer.json preserves the exact pre-move key set; only dockerComposeFile is repointed.
+
+---
+
+## US-003 — 2026-06-27 16:24 UTC
+
+**Title**: Repoint the .oh/scripts/__tests__ vitest suite + the docs it asserts on
+**Files changed**: .oh/scripts/__tests__/{entrypoint,entrypoint-pnpm-install,gateway,compose-args,docs-compose-overlays,boot-banner,sandbox-healthcheck}.test.ts, docs/intro.md, docs/installation.md
+**Commit**: 90479ae
+**Result**: PASS
+
+### What I did
+Repointed every hardcoded moved-asset path (incl. split-form path.join refs in boot-banner + sandbox-healthcheck, the docs-compose-overlays scan regex, and the gateway content assertion) to .oh/devcontainer/, added the .oh/devcontainer fixtures while keeping the user-env fixtures at root, and moved the docker compose -f commands in the two docs. Full vitest suite green: 18 files, 222 tests.
+
+### Learnings for future iterations
+- The split-form path.join(ROOT, ".devcontainer", "<asset>") refs are invisible to a '/'-literal grep; boot-banner.test.ts + sandbox-healthcheck.test.ts each carry one and MUST be repointed or vitest ENOENTs.
+- MF-E double-bind resolved: the regex AND the docs it scans had to change together — docs/intro.md + docs/installation.md now contain literal .oh/devcontainer/docker-compose.yml so refs.size>0 AND existsSync both hold.
+- The line-~209 compose-args negative guard (COMPOSE_FILES="-f .devcontainer/...") is a literal removed-legacy-form assertion — leave it.
+
+---
+
+## US-004 — 2026-06-27 16:24 UTC
+
+**Title**: Repoint CI workflows + boot probes + protected-paths + add the guard probe
+**Files changed**: .github/workflows/{ci-harness,release,sandbox-boot-guard}.yml, .hadolint.yaml, evals/probes/{boot-lint-glob,sandbox-boot-guard-ci,cron-watchdog,oh-devcontainer-restructure(new)}.sh, .claude/protected-paths.txt
+**Commit**: 6b6799d
+**Result**: PASS
+
+### What I did
+Pointed the ci-harness/release shellcheck globs + hadolint + release build, and the sandbox-boot-guard local build, at .oh/devcontainer/ while KEEPING the .devcontainer/** push/pull path filters (compat layer). Updated the two repointed probes + cron-watchdog + protected-paths, and added the 3-state oh-devcontainer-restructure.sh oracle. All probes shellcheck-clean.
+
+### Learnings for future iterations
+- The shellcheck glob .devcontainer/*.sh would error on zero matches post-move (root has no .sh left) — ci-harness.yml + release.yml + boot-lint-glob.sh must flip to .oh/devcontainer/*.sh in lockstep.
+- The new --file .oh/devcontainer/Dockerfile string does not trip sandbox-boot-guard's anti-registry grep; the .devcontainer/** path-filter assertion stays valid.
+- The guard probe runs sync-devcontainer.sh --check so generator drift is caught by the eval gate.
+
+---
+
+## US-005 — 2026-06-27 16:24 UTC
+
+**Title**: Doc sweep + CHANGELOG + RESULTS row
+**Files changed**: evals/RESULTS.md, CHANGELOG.md, .oh/README.md, AGENTS.md, docs/integrations/{slack,debugmcp}.md, crons/README.md, .mifune/skills/harness-audit/SKILL.md, .mifune/skills/harness-context/references/hermes-state-auth-split.md, .pi/UPSTREAM.md, .pi/bridge-recovery/index.ts, context/TOOLS.md, docs/harnesses/pi.md
+**Commit**: 1b34c34
+**Result**: PASS
+
+### What I did
+Surgically repointed moved-asset references (path prefix only) across all 11 doc/code files, reworded the .oh/README.md compat-layer narrative + added a devcontainer-layout section, added the [Unreleased] CHANGELOG entry (full mifunedev #531 URL), and inserted one alphabetical evals/RESULTS.md row. User-env + .devcontainer/** CI-filter references left untouched.
+
+### Learnings for future iterations
+- Wiki corpus (.mifune/skills/wiki/corpus/**, incl. 2 immutable raw/ snapshots) + memory/MEMORY.md still reference old paths — DELIBERATELY left: out of this slice's scope (prd.md declared Wiki Alignment NOT-APPLICABLE; wiki is owned by /wiki re-ingest, memory is append-only history). They are non-operative knowledge/history, not boot/build refs. A follow-up /wiki ingest could refresh the curated entries.
+- The deliberate tail (banner.sh, harness.yaml:58 commented example, blog/**, tasks/** historical PRDs, harness-config.test.ts fictional fixtures) is archival/cosmetic and intentionally unchanged.
+
+---
+
+## VERIFY — 2026-06-27 17:05 UTC
+
+**Title**: Advisor integration gates (all five stories already committed)
+**Files changed**: tasks/oh-devcontainer-restructure/prd.json (passes flags), progress.txt
+**Result**: PASS
+
+### What I did
+Re-ran every integration gate against the committed tree (df67afd–1b34c34): compose config base + HERMES_DASHBOARD=true; hadolint @ CI's `warning` threshold + the exact CI shellcheck glob; `sync-devcontainer.sh --check` (exit 0) + `jq` parse; the three named probes; the full probe suite (59 PASS / 1 pre-existing next-dev-prod SKIP / 0 regressions); the AC-H grep sweep (all hits point at the new `.oh/devcontainer/` location, historical CHANGELOG/blog narrative, or the probe's own negative-guards). Ran the strongest oracle — a clean `docker build -f .oh/devcontainer/Dockerfile` — to 47/47 (image `sandbox-restructure-smoke`, 3.01GB). Flipped all five `passes` flags to true and committed the task-tracking metadata.
+
+### Learnings for future iterations
+- `.oh/devcontainer/entrypoint.sh` is tracked `100644` (NON-exec) — and was `100644` at the old `.devcontainer/` path too (same blob 48b8302), so the pure-rename preserved it faithfully; the runtime exec bit comes from the Dockerfile `RUN chmod +x` after COPY, not the tracked mode. Not a lost-bit regression. The two genuinely-executable scripts (client-slack-supervise.sh, seed-msg-bridge.sh) kept `100755`.
+- Bare `hadolint` exits 1 on this Dockerfile (4 info-level notes: SC2015/SC2016×2/DL3059) but CI passes them — the boot-lint action sets `failure-threshold: warning`, so verify with `--failure-threshold warning` (exit 0), not the default `info`.
+
+---
+
+STATUS: COMPLETE

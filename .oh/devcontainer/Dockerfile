@@ -214,7 +214,7 @@ RUN chmod +x /home/sandbox/install/*.sh
 COPY --chown=sandbox:sandbox workspace/ ${OH_PROJECT_ROOT}/workspace/
 
 # ─── Entrypoint ────────────────────────────────────────────────────
-COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY .oh/devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 WORKDIR ${OH_PROJECT_ROOT}

@@ -6,7 +6,7 @@ import path from "node:path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../../..");
-const ENTRYPOINT = path.join(REPO_ROOT, ".devcontainer", "entrypoint.sh");
+const ENTRYPOINT = path.join(REPO_ROOT, ".oh", "devcontainer", "entrypoint.sh");
 
 const entrypoint = readFileSync(ENTRYPOINT, "utf-8");
 

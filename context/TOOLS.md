@@ -1,6 +1,6 @@
 # Orchestrator — environment inventory
 
-What's available in the orchestrator's runtime. Read at session start to skip rediscovery cycles. Regenerate when `.devcontainer/Dockerfile` or `.oh/install/*.sh` changes.
+What's available in the orchestrator's runtime. Read at session start to skip rediscovery cycles. Regenerate when `.oh/devcontainer/Dockerfile` or `.oh/install/*.sh` changes.
 
 ## CLI binaries on PATH
 
@@ -32,7 +32,7 @@ What's available in the orchestrator's runtime. Read at session start to skip re
 ## Long-running processes (tmux convention)
 
 Per `.mifune/skills/t3/references/sandbox-processes.md`:
-- `cron-watchdog` — `.devcontainer/entrypoint.sh` supervisor that restarts `cron-system` if the runtime tmux session dies
+- `cron-watchdog` — `.oh/devcontainer/entrypoint.sh` supervisor that restarts `cron-system` if the runtime tmux session dies
 - `cron-system` — `.oh/scripts/cron-runtime.ts`, started and supervised by `cron-watchdog`
 - `app-*` — user dev servers
 - `agent-*` — AI agent processes

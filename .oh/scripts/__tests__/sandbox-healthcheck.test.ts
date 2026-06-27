@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../..");
 const SCRIPT = join(ROOT, ".oh", "scripts", "sandbox-healthcheck.sh");
-const COMPOSE = join(ROOT, ".devcontainer", "docker-compose.yml");
+const COMPOSE = join(ROOT, ".oh", "devcontainer", "docker-compose.yml");
 
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "sandbox-healthcheck-"));

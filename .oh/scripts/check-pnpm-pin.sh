@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# check-pnpm-pin.sh — detect pnpm-version drift between .devcontainer/Dockerfile
+# check-pnpm-pin.sh — detect pnpm-version drift between .oh/devcontainer/Dockerfile
 # and package.json.
 #
 # Usage:
@@ -14,7 +14,7 @@ set -euo pipefail
 # is CWD-independent.
 # ---------------------------------------------------------------------------
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-DOCKERFILE="${REPO_ROOT}/.devcontainer/Dockerfile"
+DOCKERFILE="${REPO_ROOT}/.oh/devcontainer/Dockerfile"
 PKG_JSON="${REPO_ROOT}/package.json"
 
 # ---------------------------------------------------------------------------
@@ -100,6 +100,6 @@ if [[ "$df_ver" == "$pkg_ver" ]]; then
   echo "OK: Dockerfile and package.json both pin pnpm@${df_ver}"
   exit 0
 else
-  echo "pnpm pin drift: Dockerfile pins pnpm@${df_ver}, package.json declares pnpm@${pkg_ver} — update .devcontainer/Dockerfile to match" >&2
+  echo "pnpm pin drift: Dockerfile pins pnpm@${df_ver}, package.json declares pnpm@${pkg_ver} — update .oh/devcontainer/Dockerfile to match" >&2
   exit 1
 fi

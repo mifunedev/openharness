@@ -52,6 +52,16 @@ done
 # (3) the all-in-one composer the family decomposes must still exist (protected monolith).
 [ -f "$SKILLS/ship-spec/SKILL.md" ] || missing+=("ship-spec: the all-in-one composer must remain present")
 
+# (3b) the /critique skill's critique.md output schema must stay intact. The optional
+# self-consistency-weighting seam (#533 US-007) is schema-preserving by contract: /approve and
+# /ship-spec Stage 4 parse these exact headings, so any edit that drops one is a regression.
+CRITIQUE="$SKILLS/critique/SKILL.md"
+if [ -f "$CRITIQUE" ]; then
+  for h in '## Critic A' '## Critic B' '## Synthesis'; do
+    grep -qF "$h" "$CRITIQUE" || missing+=("critique/SKILL.md: critique.md schema heading '$h' missing (the self-consistency seam must stay schema-preserving)")
+  done
+fi
+
 # (4) AGENTS.md § The Workflow must name each /spec <sub> invocation so an operator can find it.
 if [ -f "$AGENTS" ]; then
   section="$(awk '/^## The Workflow/{f=1; print; next} f && /^## /{f=0} f{print}' "$AGENTS")"

@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- **Recursive Language Models (RLM) integrated as two harness-owned skills** — `/weigh` (weighted-trajectory selection over the Workflow tool, backed by a pure, version-controlled, deterministic-first scorer at `.mifune/skills/weigh/scripts/score-trajectories.mjs` with frozen `DEFAULT_WEIGHTS` and a hard eligibility floor that never makes a silent least-bad pick) and `/rlm` (context-as-environment decomposition that addresses large artifacts via `query-context.mjs` without ingesting them, then recurses sub-agents under a bounded depth/children/step budget, reusing `.oh/scripts/ralph.sh` + `.worktrees/` by reference). Adds an opt-in, default-off self-consistency weighting seam to `/critique`, and the `weigh-scorer-contract` and `rlm-context-budget` eval probes ([#533](https://github.com/mifunedev/openharness/issues/533)).
 ### Changed
 ### Fixed
 ### Removed

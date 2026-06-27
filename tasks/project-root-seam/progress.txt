@@ -1,0 +1,9 @@
+# progress
+
+## US-001..005 — 2026-06-27 (Advisor-managed /delegate, EDIT-only workers)
+
+**Result**: PASS (all 5 stories)
+**Verification**: eval suite 59 PASS / 1 SKIPPED / 0 REGRESSION (60 probes, incl. new project-root-seam); root vitest 288/288 pass; shellcheck clean on changed .sh; `docker compose config` renders /home/sandbox/harness when OH_PROJECT_ROOT unset; seam overrides to /home/sandbox/project when set.
+**Seam contract**: OH_PROJECT_ROOT (default /home/sandbox/harness) defined once in compose+Dockerfile+entrypoint; HARNESS kept as back-compat alias; all consumers route through ${OH_PROJECT_ROOT:-/home/sandbox/harness}. Zero behavior change (value unchanged).
+
+STATUS: COMPLETE

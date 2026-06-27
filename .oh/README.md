@@ -97,6 +97,15 @@ directly to the real `.oh/` paths:
   read location); the gitignored file itself is user-local runtime state, and the
   legacy repo-root path still works as a fallback for older installs.
 
+## Project-root seam
+
+`OH_PROJECT_ROOT` (default `/home/sandbox/harness`) is the single source of truth for
+the container workspace path. All devcontainer and `.oh/scripts` consumers derive their
+paths from `${OH_PROJECT_ROOT:-/home/sandbox/harness}` rather than the bare literal.
+`HARNESS` is kept as a back-compat alias (`HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"`);
+prefer `$OH_PROJECT_ROOT` in new code. This is Phase 1 of [#531](https://github.com/mifunedev/openharness/issues/531) toward `oh init`.
+The seam contract is guarded by `evals/probes/project-root-seam.sh`.
+
 ## Pointers
 
 - `context/directory-readme.md` — the README-as-directory-anchor convention this file follows.

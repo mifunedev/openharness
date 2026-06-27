@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/531-project-root-seam",
+  "issue": 531,
+  "description": "RFC #531 Phase 1: introduce an explicit project-root concept (OH_PROJECT_ROOT) and route the hardcoded /home/sandbox/harness container-path literals in the devcontainer layer and .oh/scripts through it, with a backward-compatible HARNESS alias. Zero behavior change — the default value stays /home/sandbox/harness; only the indirection is added. Unblocks oh init (Phase 2) and oh update (Phase 3).",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Define the OH_PROJECT_ROOT seam + compose wiring",
+      "description": "As a maintainer, I need one canonical project-root variable so the bind-mount and runtime paths derive from a single source of truth instead of a scattered literal.",
+      "acceptanceCriteria": [
+        "OH_PROJECT_ROOT is the canonical project-root variable, default /home/sandbox/harness",
+        ".devcontainer/docker-compose.yml passes OH_PROJECT_ROOT as a build args value AND into the service environment",
+        "The compose bind-mount target, HERMES_HOME, and the healthcheck script path use ${OH_PROJECT_ROOT:-/home/sandbox/harness}",
+        ".devcontainer/.example.env adds a documented, commented OH_PROJECT_ROOT= reference (Phase 1 of #531, default /home/sandbox/harness)",
+        "AMENDMENT (critique A): update .oh/scripts/__tests__/sandbox-healthcheck.test.ts which asserts the literal compose healthcheck path — change it to match the seam'd ${OH_PROJECT_ROOT:-/home/sandbox/harness} form so it stays green",
+        "Default preserved: with no override, the bind-mount target resolves to /home/sandbox/harness",
+        "Tests pass (run the sandbox-healthcheck vitest specifically)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "compose seam + .example.env + healthcheck test updated; compose config renders /home/sandbox/harness; commit c916775"
+    },
+    {
+      "id": "US-002",
+      "title": "Route Dockerfile build-time literals through the seam",
+      "description": "As a maintainer, I want the image build to derive its workspace path from OH_PROJECT_ROOT so the build layer stops hardcoding the checkout path.",
+      "acceptanceCriteria": [
+        "Dockerfile is single-stage; add ONE top-level ARG OH_PROJECT_ROOT=/home/sandbox/harness + ENV OH_PROJECT_ROOT=${OH_PROJECT_ROOT} so it persists to entrypoint + interactive shells",
+        "Route the EXPANDABLE literals through ${OH_PROJECT_ROOT}: WORKDIR, git safe.directory, the workspace/ COPY target (${OH_PROJECT_ROOT}/workspace/), and the banner-source + default-cd rc-append RUN lines (use DOUBLE quotes so the var expands, not single quotes)",
+        "AMENDMENT (critique C/F): the two SINGLE-QUOTED JSON emitters (the echo writing devcontainer.json and the LABEL devcontainer.metadata) cannot expand a shell var — leave them as documented static Phase-2 exceptions (cosmetic VS Code attach metadata; value unchanged) with a brief # comment; do NOT force-expand them",
+        "Only .devcontainer/Dockerfile is modified by this story",
+        "Default preserved: built behavior is identical when the ARG is unset",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Dockerfile ARG/ENV + WORKDIR/safe.directory/COPY/rc routed; 2 JSON emitters documented; commit ac4eec6"
+    },
+    {
+      "id": "US-003",
+      "title": "Make entrypoint.sh project-root aware",
+      "description": "As a maintainer, I want the entrypoint to resolve the project root from the seam so its UID/GID sync, banner wiring, Hermes setup, pnpm install, and cron launch all use one variable.",
+      "acceptanceCriteria": [
+        "Establish OH_PROJECT_ROOT=\"${OH_PROJECT_ROOT:-/home/sandbox/harness}\" then HARNESS=\"${HARNESS:-$OH_PROJECT_ROOT}\" BEFORE the HARNESS_DIR UID-sync block (~line 68); add a '# DEPRECATED alias — prefer $OH_PROJECT_ROOT' comment",
+        "AMENDMENT (critique B, HIGH): REMOVE the later unconditional HARNESS=\"/home/sandbox/harness\" (~line 194) — do not leave a second definition that overrides the seam for every consumer below it",
+        "AMENDMENT (critique C, HIGH): the banner-source line (~190) is inside bash -c '...' single quotes — restructure quoting (double-quote or printf) so $OH_PROJECT_ROOT EXPANDS at entrypoint runtime and bakes the resolved path into .bashrc as today",
+        "AMENDMENT (critique C): the cron-watchdog single-quoted heredoc (~321-338) inner HARNESS fallback (~324) must chain through the seam, AND the tmux launch (~346) must pass OH_PROJECT_ROOT=$OH_PROJECT_ROOT alongside HARNESS=$HARNESS",
+        "AMENDMENT (critique D): replace bare literals HERMES_SHARED_SKILLS_DIR (~124) and the HERMES_RUNTIME fallback (~105) with $HARNESS-derived paths",
+        "Replace HARNESS_DIR=/home/sandbox/harness and any other bare /home/sandbox/harness literals with the seam variable",
+        "Only .devcontainer/entrypoint.sh is modified by this story",
+        "Default preserved: with no env override every derived path is identical to today",
+        "shellcheck clean; tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "entrypoint seam before UID-sync; removed unconditional HARNESS; banner re-quoted; watchdog chained; commit 6c0eea8"
+    },
+    {
+      "id": "US-004",
+      "title": "Standardize the .oh/scripts + devcontainer script consumers",
+      "description": "As a maintainer, I want every script that resolves the project root to chain through the same seam so the fallback is consistent and future-proof.",
+      "acceptanceCriteria": [
+        "AMENDMENT (critique E): scope is sandbox-healthcheck.sh (~line 10), gateway.sh, maintenance/restart-openharness-tmux.sh, client-slack-supervise.sh, sandbox-boot-smoke.sh (~line 14), and .oh/install/banner.sh (~line 151) — chain ${HARNESS:-/home/sandbox/harness} (and banner's ${HERMES_HOME:-/home/sandbox/harness/.hermes}) through the ${OH_PROJECT_ROOT:-/home/sandbox/harness} seam",
+        "AMENDMENT (critique E): DO NOT touch cron-runtime.ts, seed-msg-bridge.sh, or docker-compose.sh — they carry NO hardcoded path literal (relative CRONS_DIR / $1 arg / script-self-location); editing them is make-work",
+        "If banner.sh is guarded by a probe, either keep the chained form probe-compatible or document-exclude — owner verifies before editing",
+        "Existing HARNESS override precedence is preserved",
+        "These scripts do not touch the Dockerfile, entrypoint.sh, or docker-compose.yml (owned by other stories)",
+        "shellcheck clean; default preserved",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "6 script consumers chained through seam; shellcheck clean; commit 35ff8d8"
+    },
+    {
+      "id": "US-005",
+      "title": "Guard the seam with a probe + docs + CHANGELOG",
+      "description": "As a maintainer, I want a deterministic probe and documentation so the seam is guarded against regression and the project-root concept is discoverable.",
+      "acceptanceCriteria": [
+        "Add evals/probes/project-root-seam.sh: a 3-state oracle (PASS/REGRESSION/SKIPPED) mirroring existing probes (positive assertions). Assert OH_PROJECT_ROOT is defined as the seam in docker-compose.yml, Dockerfile, and entrypoint.sh, AND that entrypoint defines HARNESS as ${HARNESS:-$OH_PROJECT_ROOT} (not a bare literal)",
+        "AMENDMENT (critique G): any negative 'no fresh bare literal' assertion must exclude comment lines (grep -v '^[[:space:]]*#') and the documented Dockerfile single-quoted JSON exceptions to avoid false positives; SKIPPED when target files are absent",
+        "Hand-insert ONE new row into evals/RESULTS.md without regenerating timestamps on existing rows",
+        "Add a ## [Unreleased] CHANGELOG entry (Added: probe + OH_PROJECT_ROOT variable; Changed: routing) noting it is Phase 1 of #531",
+        "Add a short .oh/README.md note introducing OH_PROJECT_ROOT as the project-root seam",
+        "bash evals/probes/project-root-seam.sh prints PASS; the full /eval suite has no new RED",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "project-root-seam probe (PASS); RESULTS row; CHANGELOG; .oh/README note"
+    }
+  ]
+}

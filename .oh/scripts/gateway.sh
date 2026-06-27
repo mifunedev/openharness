@@ -26,7 +26,7 @@
 # control flow here (mirrors client-slack-supervise.sh).
 set -u
 
-HARNESS="${HARNESS:-/home/sandbox/harness}"
+HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 # TEMPORARY fork pin — keep in sync with entrypoint.sh; revert once the upstream
 # thread_ts PR merges and publishes (see .pi/UPSTREAM.md).

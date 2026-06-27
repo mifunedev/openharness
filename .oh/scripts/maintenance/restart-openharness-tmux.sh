@@ -25,7 +25,7 @@
 set -uo pipefail
 trap '' HUP   # survive the SIGHUP that the dying server sends to our (now-detached) group
 
-HARNESS="${HARNESS:-/home/sandbox/harness}"
+HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 REPO="${OH_REPO:-ryaneggz/openharness}"
 ISSUE=273
 LOCK=/tmp/oh-restart-273.lock

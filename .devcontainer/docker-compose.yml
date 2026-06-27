@@ -23,12 +23,13 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
       args:
+        OH_PROJECT_ROOT: ${OH_PROJECT_ROOT:-/home/sandbox/harness}
         INSTALL_OPENCODE: ${INSTALL_OPENCODE:-false}
         INSTALL_GROK_BUILD: ${INSTALL_GROK_BUILD:-false}
         INSTALL_DEEPAGENTS: ${INSTALL_DEEPAGENTS:-false}
         INSTALL_HERMES: ${INSTALL_HERMES:-false}
     volumes:
-      - ..:/home/sandbox/harness
+      - ..:${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - /var/run/docker.sock:/var/run/docker.sock
       - claude-auth:/home/sandbox/.claude
       - codex-auth:/home/sandbox/.codex
@@ -50,7 +51,8 @@ services:
       - XAI_API_KEY=${XAI_API_KEY:-}
       - INSTALL_AGENT_BROWSER=${INSTALL_AGENT_BROWSER:-false}
       - INSTALL_HERMES=${INSTALL_HERMES:-false}
-      - HERMES_HOME=/home/sandbox/harness/.hermes
+      - HERMES_HOME=${OH_PROJECT_ROOT:-/home/sandbox/harness}/.hermes
+      - OH_PROJECT_ROOT=${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - HERMES_DASHBOARD=${HERMES_DASHBOARD:-false}
       - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
       - CRONS_DIR=${CRONS_DIR:-crons}
@@ -61,7 +63,7 @@ services:
     entrypoint: /usr/local/bin/entrypoint.sh
     command: sleep infinity
     healthcheck:
-      test: ["CMD", "bash", "/home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh"]
+      test: ["CMD", "bash", "${OH_PROJECT_ROOT:-/home/sandbox/harness}/.oh/scripts/sandbox-healthcheck.sh"]
       interval: 30s
       timeout: 10s
       retries: 3

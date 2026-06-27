@@ -49,6 +49,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | pnpm-audit-ci-gate | A | 2026-06-18 05:17 | PASS | issue #171 — pnpm security audits must run in CI |
 | pr-audit-duplicate-issue-refs | A | 2026-06-19 17:47 | PASS | issue #439 — /pr-audit must flag duplicate open PRs that reference the same issue |
 | prd-output-path-contract | A | 2026-06-21 16:42 | PASS | memory/MEMORY.md 2026-06-19 |
+| project-root-seam | A | 2026-06-26 00:00 | PASS | issue #531 Phase 1 (OH_PROJECT_ROOT project-root seam) 2026-06-26 |
 | prompt-miner-schema-compat | A | 2026-06-19 16:09 | PASS | issue #253 — prompt-miner JSONL dual-schema (Claude+Pi) drift guard |
 | ralph-fallback-order | A | 2026-06-18 05:17 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
 | repo-map-contract | A | 2026-06-21 18:41 | PASS | issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims |

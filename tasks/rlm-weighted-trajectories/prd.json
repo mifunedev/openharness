@@ -54,8 +54,8 @@
         "/skill-lint passes on weigh; the name does not collide with built-ins or Pi packages."
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wave 2 (delegate) 2026-06-27; /weigh SKILL.md + workflow-shape.md"
     },
     {
       "id": "US-003",
@@ -66,8 +66,8 @@
         "The probe passes locally via bash .claude/skills/eval/run.sh with no new regressions."
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wave 2 (delegate) 2026-06-27; weigh-scorer-contract.sh probe (PASS)"
     },
     {
       "id": "US-005",
@@ -79,8 +79,8 @@
         "/skill-lint passes on rlm; the name does not collide."
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wave 2 (delegate) 2026-06-27; /rlm SKILL.md + recursion-budget.md"
     },
     {
       "id": "US-006",
@@ -90,8 +90,8 @@
         "evals/probes/rlm-context-budget.sh is a 3-state oracle asserting recursion-budget.md declares depth/children/step ceilings AND query-context.mjs enforces a max-bytes guard; SKIPPED if absent. Passes locally."
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Wave 2 (delegate) 2026-06-27; rlm-context-budget.sh probe (PASS)"
     },
     {
       "id": "US-007",

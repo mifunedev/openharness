@@ -45,6 +45,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | memory-gitignore-claim | A | 2026-06-18 05:17 | PASS | issue #101 |
 | memory-log-locked-append | A | 2026-06-21 16:42 | PASS | issue #476 — memory log writes in skill contracts must use scripts/locked-append.sh |
 | next-dev-prod | A | 2026-06-18 05:17 | PASS | memory/MEMORY.md 2026-06-04 |
+| oh-init-scaffold | A | 2026-06-27 00:00 | PASS | issue #531 Phase 2 (oh init scaffold) 2026-06-27 |
 | owned-surface-guard | A | 2026-06-18 05:17 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | pnpm-audit-ci-gate | A | 2026-06-18 05:17 | PASS | issue #171 — pnpm security audits must run in CI |
 | pr-audit-duplicate-issue-refs | A | 2026-06-19 17:47 | PASS | issue #439 — /pr-audit must flag duplicate open PRs that reference the same issue |

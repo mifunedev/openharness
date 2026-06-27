@@ -77,6 +77,29 @@ directly to the real `.oh/` paths:
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
 
+## oh init (Phase 2)
+
+`oh init [dir]` scaffolds a fresh harness checkout (defaulting to the current
+directory) by materializing the payload under `.oh/templates/` — `harness.yaml`,
+`AGENTS.md`, a `gitignore` seed, and a `.devcontainer/devcontainer.json` whose
+`workspaceFolder` is pinned to `/home/sandbox/project`. The command is
+`runInit` (exported from `cli/src/commands/init.ts`, dispatched from `cli.ts`).
+
+A `--templates <dir>` escape hatch points the command at an alternate template
+source instead of the bundled `.oh/templates/`.
+
+**Deferred slices** (Phase 2 slice 2/3, not in this slice):
+
+- **Installed-binary template bundling** — the on-PATH `oh` resolves templates
+  to `/opt/templates`, which the `.devcontainer/Dockerfile` does **not** COPY
+  yet, so the installed binary has no payload to read. Until then, run `oh init`
+  from a built checkout (where `.oh/templates/` resolves locally) or pass
+  `--templates <dir>` explicitly.
+- **Live-asset restructure** — promoting the template set from a static seed to
+  the live harness assets.
+- **Full `.oh/` vendoring** — shipping the complete `.oh/` machinery as part of
+  the scaffold.
+
 ## What belongs here vs. at root
 
 | Belongs in `.oh/` | Stays at root |

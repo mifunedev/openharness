@@ -1,0 +1,78 @@
+{
+    "schemaVersion": 1,
+    "project": "OpenHarness",
+    "branchName": "feat/531-oh-init-scaffold",
+    "issue": 531,
+    "base": "development",
+    "repo": "ryaneggz/openharness",
+    "description": "RFC #531 Phase 2 slice 1 — add `oh init [targetDir]` + a new `.oh/templates/` scaffold source that generates project-side compatibility files (harness.yaml, .devcontainer/ compat layer, AGENTS.md, .gitignore entries). Dependency-injected, idempotent (--force/--dry-run), fully tested against a temp dir. Zero live-boot impact: the live .devcontainer/ and root harness.yaml are untouched; oh init writes only into a target dir (default cwd).",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Add .oh/templates/ scaffold source",
+            "description": "As OpenHarness, I need a template payload directory so `oh init` has files to materialize into a target repo.",
+            "acceptanceCriteria": [
+                "Create .oh/templates/harness.yaml — project harness config with commented-out defaults (a fresh init changes nothing until a key is uncommented); base it on the root harness.yaml sections most relevant to a user project (sandbox, git, install, hermes) with a header comment explaining it is the project's own config.",
+                "Create .oh/templates/AGENTS.md — a minimal project-workspace AGENTS.md stub (title, one line that the repo is equipped with OpenHarness, a placeholder Conventions section). NOT the orchestrator AGENTS.md.",
+                "Create .oh/templates/.devcontainer/devcontainer.json — PLAIN JSON (no comments, must JSON.parse) with name, image (ghcr.io/mifunedev/openharness:latest as a documented stub), remoteUser 'sandbox', and workspaceFolder set EXACTLY to \"/home/sandbox/project\".",
+                "Create .oh/templates/.devcontainer/.example.env — a minimal commented env template (e.g. # GH_TOKEN=, # GIT_USER_NAME=, # GIT_USER_EMAIL=).",
+                "Create .oh/templates/gitignore — newline list of entries to append to a target .gitignore: at minimum `.devcontainer/.env`, `.oh/cli/dist/`, `.oh/cli/node_modules/`. One entry per line, no leading comment required.",
+                "Create .oh/templates/README.md — explains that .oh/templates/ is the `oh init` scaffold payload, that README.md itself is NOT copied by oh init, and that the devcontainer.json `image` (ghcr.io/mifunedev/openharness:latest) is a documented stub (JSON cannot carry comments). One line noting the installed `oh` binary does not yet bundle these templates (use --templates or a built checkout).",
+                "Owns ONLY files under .oh/templates/. Does not edit any other path."
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-27; commit c92c7cf"
+        },
+        {
+            "id": "US-002",
+            "title": "Implement oh init core command + tests",
+            "description": "As a developer, I want a pure, dependency-injected runInit(opts, io) so `oh init` is fully testable against a temp dir.",
+            "acceptanceCriteria": [
+                "Create .oh/cli/src/commands/init.ts exporting `InitIO` { stdout(s):void, stderr(s):void }, `InitOptions` { targetDir:string, templatesDir:string, force?:boolean, dryRun?:boolean }, and `async function runInit(opts:InitOptions, io:InitIO): Promise<number>`. Returns exit code: 0 success (incl. all-skipped), 1 precondition error. NEVER calls process.exit; ALL output via io; ALL fs via node:fs.",
+                "Mapping rule: recursively enumerate FILES under templatesDir (skip directories and the literal top-level README.md). The top-level file named `gitignore` → append its non-empty, non-duplicate lines to <target>/.gitignore (create if absent); report `update .gitignore (+N)` or `skip .gitignore (no new entries)`. Every other file at relpath R → copy to <target>/R creating parent dirs; if <target>/R exists report `skip R (exists)` unless force → overwrite and report `overwrite R`; else report `create R`.",
+                "Preconditions (exit 1, write nothing): templatesDir missing or not a directory; targetDir exists but is a file. The templatesDir-missing error MUST be contextual, e.g. `oh init: scaffold templates not found at <templatesDir>. Pass --templates <dir> or run from a built OpenHarness checkout; installed-binary template bundling is deferred (#531).` (CRITIC AMENDMENT — installed `oh` resolves templates to /opt/templates which is not COPY'd by the Dockerfile in this slice). If targetDir is missing AND not dry-run, mkdir -p it.",
+                "Path-escape guard PIN (CRITIC AMENDMENT): every resolved target path must satisfy `resolved === t || resolved.startsWith(t + path.sep)` where `t = resolve(opts.targetDir)` — NOT a bare startsWith(t) (which would admit a sibling like /tmp/target-x for targetDir /tmp/target).",
+                ".gitignore append PIN (CRITIC AMENDMENT): dedup by comparing `line.trimEnd()` against existing trimmed lines; if the existing file is non-empty and does not end with a newline, write a `\\n` before appending; the resulting file MUST end with `\\n`. Mirror the trailing-newline care in .oh/cli/src/lib/env.ts.",
+                "--dry-run: compute and print the same per-file report prefixed `[dry-run] `, but create no files, do NOT touch .gitignore, and do NOT mkdir the targetDir (CRITIC AMENDMENT — dry-run writes NOTHING; a missing targetDir is reported as if it would be created). The targetDir-is-a-file precondition still exits 1 under dry-run.",
+                "Unexpected fs errors (e.g. copyFileSync throws mid-scaffold) PROPAGATE as thrown exceptions — the CLI wrapper's existing catch maps them to exit 2; runInit itself only returns 0/1 for the defined success/precondition paths.",
+                "Create .oh/cli/src/__tests__/init.test.ts (vitest, NodeNext `.js` import of ../commands/init.js). Scaffold into mkdtempSync(join(tmpdir(),'oh-init-')); resolve the REAL templates via `resolve(dirname(fileURLToPath(import.meta.url)), '../../../templates')` — THREE levels up from src/__tests__/ to .oh/, NOT two (IMPLEMENTER AMENDMENT: the cli.ts 2-level path is wrong from the test's deeper location). Capture io in arrays; rm the temp dir in afterEach. Cover: create-from-empty (all template files present), skip-without-force (exit 0, no changes), overwrite-with-force, dry-run-writes-nothing (incl. dry-run with a missing targetDir does NOT create it), .gitignore append idempotency (run twice → byte-identical .gitignore, no dup lines, ends with newline), partial-existing-.gitignore (target already has SOME template lines → only missing ones appended, no dups), empty-payload no-op (templatesDir with only README → exit 0, zero writes), precondition error when target is a file (exit 1, nothing written), contextual error when templatesDir is absent (exit 1, stderr names the path + --templates), and devcontainer.json parses with workspaceFolder '/home/sandbox/project'.",
+                "Owns ONLY .oh/cli/src/commands/init.ts and .oh/cli/src/__tests__/init.test.ts. Code strictly to the pinned signature so the cli.ts wiring (US-003) integrates without changes.",
+                "`npm --prefix .oh/cli run typecheck` passes (TS strict)."
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-27; commit 7d15cc5"
+        },
+        {
+            "id": "US-003",
+            "title": "Wire oh init into the CLI dispatcher + help",
+            "description": "As a user, I want `oh init` available from the CLI with help and flag parsing.",
+            "acceptanceCriteria": [
+                "Edit ONLY .oh/cli/src/cli.ts. Add an `init` branch to main(): positional [targetDir] default process.cwd(); flags --force, --dry-run, --templates <dir>, --help/-h. Unknown flag → stderr message + exit 1.",
+                "Resolve the DEFAULT templatesDir once: resolve(dirname(fileURLToPath(import.meta.url)), '../../templates') — correct from both src/cli.ts and bundled dist/oh.js (both 2 levels under .oh/cli). The `--templates <dir>` flag OVERRIDES this default (CRITIC AMENDMENT — escape hatch so the command is usable from the installed binary, which otherwise resolves to a non-existent /opt/templates). Import runInit from './commands/init.js' and call it, awaiting its number and returning it as the exit code. Unexpected throws are handled by the existing top-level catch (exit 2).",
+                "Add an `oh init` line to printOhHelp() Usage, and add a printInitHelp() printing: usage `oh init [dir] [--force] [--dry-run] [--templates <dir>]`, what it does, and the flags. `oh init --help` calls it and returns 0.",
+                "Do not change existing config/version/help behavior; isHelpFlag/isVersionFlag stay exported; cli.property.test.ts stays green.",
+                "`npm --prefix .oh/cli run typecheck` passes and `npm --prefix .oh/cli run build` produces dist/oh.js."
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-27; commit bd4558f"
+        },
+        {
+            "id": "US-004",
+            "title": "Add eval probe + docs + CHANGELOG",
+            "description": "As OpenHarness, I want the oh-init scaffold contract guarded by a probe and recorded in docs.",
+            "acceptanceCriteria": [
+                "Create evals/probes/oh-init-scaffold.sh — 3-state oracle (exit 0 PASS / 1 REGRESSION / 2 SKIPPED) with header lines `# tier: A`, `# source: issue #531 Phase 2`, `# desc: ...`. Self-resolve repo root via ${BASH_SOURCE[0]}. SKIPPED(2) if .oh/templates or .oh/cli/src/commands/init.ts absent. PASS asserts: .oh/templates/{harness.yaml,AGENTS.md,gitignore,.devcontainer/devcontainer.json} exist; init.ts exports `runInit`; cli.ts has an `init` dispatch branch and lists init in help; devcontainer.json contains \"/home/sandbox/project\". REGRESSION(1) if any positive assertion fails. One-line stderr reason for every outcome.",
+                "Insert ONE new row into evals/RESULTS.md alphabetically: `| oh-init-scaffold | A | 2026-06-27 00:00 | PASS | issue #531 Phase 2 (oh init scaffold) 2026-06-27 |` (match the existing column shape). Do NOT alter timestamps/status of any other row.",
+                "Add a CHANGELOG.md [Unreleased] Added entry describing `oh init` + .oh/templates/, linking the full URL https://github.com/mifunedev/openharness/issues/531 (NOT a bare #531).",
+                "Add a short `## oh init (Phase 2)` pointer section to .oh/README.md describing the command + .oh/templates/ payload, the `--templates <dir>` escape hatch, and the deferred slices: live-asset restructure, full .oh vendoring, AND installed-binary template bundling (the on-PATH `oh` resolves templates to /opt/templates which the Dockerfile does not COPY in this slice — run from a built checkout or pass --templates until Phase 2 slice 2/3). The CHANGELOG entry notes the same limitation in one line.",
+                "Owns ONLY evals/probes/oh-init-scaffold.sh, evals/RESULTS.md, CHANGELOG.md, .oh/README.md. shellcheck clean on the new probe."
+            ],
+            "priority": 4,
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-06-27; commit b462b72"
+        }
+    ]
+}

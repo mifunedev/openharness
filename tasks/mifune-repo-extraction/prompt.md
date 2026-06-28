@@ -2,6 +2,15 @@
 
 You are one iteration of a Ralph loop implementing the `mifune-repo-extraction` task. The full plan is in `tasks/mifune-repo-extraction/prd.md` and the structured task list is in `tasks/mifune-repo-extraction/prd.json`. The loop calls you again until `progress.txt` contains a line `STATUS: COMPLETE`.
 
+## Execution model
+
+**This ralph loop is the executor — you do the work yourself.** `/delegate` is **available** as an
+optional tool to fan out a single story's disjoint files in parallel when that clearly helps, but it
+is **optional and never replaces the loop**: do not turn the iteration into a pure `/delegate`
+dispatcher (an Advisor running several independent tasks runs one ralph loop per task in parallel and
+each loop may, but need not, use `/delegate` inside). Default to implementing directly; reach for
+`/delegate` only for genuinely parallelizable, disjoint-file work within your one story.
+
 ## Your job in one iteration
 
 Pick **one** user story, implement it, commit, mark it `passes: true`, and append a progress entry. Then exit. The next iteration handles the next story. Do not attempt multiple stories per iteration.

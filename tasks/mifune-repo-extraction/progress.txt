@@ -79,3 +79,20 @@ skills/t3/scripts/t3-code.sh
 - Disposable clone pin check passed: resetting to `71134a2` and running `git submodule update --init --recursive .mifune` lands `.mifune` at `f5a72314687b6ea3848c9b5654e8a4fb894d10af`.
 - Pre-merge rollback command: revert the Open Harness implementation commit or restore `.mifune/` from commit `41c928b`.
 - Post-merge rollback command: revert the Open Harness submodule conversion commit or open a pin-bump PR that points `.mifune` back to a known-good `ryaneggz/mifune` SHA; if the external replacement itself must be rolled back, restore recorded pre-extraction `ryaneggz/mifune` default HEAD `f2ccf1aeaadccaf003224d6bfaa1f90ff2fc2820`.
+
+## Upstream catch-up during execution
+- `upstream/development` advanced to `f9d4b1f` while PR #540 was in progress, with six additional `.mifune` skill/template edits.
+- To avoid losing those edits during the `.mifune` gitlink conversion, copied the changed files into `ryaneggz/mifune` on branch `task/539-sync-openharness-dev-mifune` and merged external PR `https://github.com/ryaneggz/mifune/pull/9`.
+- Updated final Open Harness submodule pin from `f5a72314687b6ea3848c9b5654e8a4fb894d10af` to `5455bab1aa42648a6ae362f23199d7bff63f6309`.
+- Merged `upstream/development` into this branch and resolved `.mifune` modify/delete conflicts by keeping `.mifune` as the v1 submodule mount pinned to `5455bab1aa42648a6ae362f23199d7bff63f6309`; `.pi/` remains only a provider surface.
+
+## Post-merge validation evidence — local
+- After merging `upstream/development` and updating the `.mifune` pin to `5455bab1aa42648a6ae362f23199d7bff63f6309`, reran the full validation suite.
+- PASS: `bash .oh/scripts/ensure-mifune.sh --init` and `--check`.
+- PASS: `bash evals/probes/mifune-checkout.sh`, `wiki-readme-index.sh`, and `repo-map-contract.sh`.
+- PASS: `pnpm install --frozen-lockfile`, `pnpm run security:audit`, `pnpm run build`, `pnpm run typecheck`, `pnpm test:scripts`, and `bash .oh/scripts/check-pnpm-pin.sh`.
+- PASS: `bash .mifune/skills/eval/run.sh --probe skill-paths`, `--probe spec-family-contract`, and full `bash .mifune/skills/eval/run.sh` (65 probes).
+
+## Final rollback/pin validation
+- Disposable clone check passed for the final post-catch-up merge state: `git submodule update --init --recursive .mifune` pins `.mifune` to `5455bab1aa42648a6ae362f23199d7bff63f6309`, with protected skill/hook paths present.
+- Disposable clone check passed for first-parent rollback to the pre-catch-up implementation commit: `.mifune` pins back to `f5a72314687b6ea3848c9b5654e8a4fb894d10af` with protected paths present.

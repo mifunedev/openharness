@@ -1,6 +1,4 @@
 ---
-slug: /
-sidebar_position: 1
 title: "Introduction"
 ---
 
@@ -39,7 +37,7 @@ flowchart TB
 
     subgraph sandbox["Sandbox container — default workspace"]
         Orch{{"<b>Orchestrator</b><br/>Claude @ project root<br/>git · lifecycle · file edits"}}
-        Tmux["tmux sessions<br/>client-slack-pi · agent-t3code · app-docs · cron-system"]
+        Tmux["tmux sessions<br/>client-slack-pi · agent-t3code · cron-system"]
         Sock(["docker.sock"])
     end
 

@@ -1,13 +1,10 @@
 ---
-id: connecting
-slug: /connecting
-sidebar_position: 4
 title: "Connecting to the Sandbox"
 ---
 
 # Connecting to the Sandbox
 
-The sandbox is a Docker container running on your host (or a remote server). Getting UI apps like the docs site and T3 Code onto your laptop browser depends on **how** you connect — not every connection method forwards ports. This page covers your options, explains which one to use, and walks an end-to-end recipe.
+The sandbox is a Docker container running on your host (or a remote server). Getting UI apps like T3 Code onto your laptop browser depends on **how** you connect — not every connection method forwards ports. This page covers your options, explains which one to use, and walks an end-to-end recipe.
 
 ## Three ways to connect
 
@@ -90,7 +87,7 @@ All long-running processes inside the sandbox run in named tmux sessions. The na
 |----------|---------|---------|
 | `client-` | `client-slack-pi`, `client-discord` | External-surface clients bridging an in-sandbox agent |
 | `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes (interactive CLIs are foreground, not tmux) |
-| `app-` | `app-docs`, `app-api` | Dev servers |
+| `app-` | `app-api` | Dev servers |
 
 For the full convention see [`.oh/context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
 

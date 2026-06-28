@@ -12,7 +12,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
-CRON="$ROOT/crons/autopilot.md"
+CRON="$ROOT/.oh/crons/autopilot.md"
 AGENTS="$ROOT/AGENTS.md"
 SHIP="$ROOT/.claude/skills/ship-spec/SKILL.md"
 

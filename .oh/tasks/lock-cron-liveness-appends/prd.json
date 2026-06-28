@@ -23,8 +23,8 @@
       "title": "Cron prompt liveness guidance uses locked append",
       "description": "As a future cron author, I want tracked cron prompts to show the locked append convention so prompt-authored liveness snippets do not teach raw shared-log appends.",
       "acceptanceCriteria": [
-        "crons/cleanup-tasks.md uses scripts/locked-append.sh crons/.cron.log for blocked and success liveness snippets.",
-        "crons/eval-weekly.md uses scripts/locked-append.sh crons/.cron.log for its mandatory closing liveness snippet.",
+        ".oh/crons/cleanup-tasks.md uses scripts/locked-append.sh .oh/crons/.cron.log for blocked and success liveness snippets.",
+        ".oh/crons/eval-weekly.md uses scripts/locked-append.sh .oh/crons/.cron.log for its mandatory closing liveness snippet.",
         "Repository grep shows no raw .cron.log append guidance in tracked cron prompts except guard probes that search for regressions."
       ],
       "priority": 2,
@@ -38,7 +38,7 @@
       "acceptanceCriteria": [
         "scripts/__tests__/cron-runtime.test.ts verifies runtime/shell liveness is observable via the locked append path and generated shell commands contain scripts/locked-append.sh rather than raw appends.",
         "evals/probes/locked-append-critical-path.sh guards runtime, autopilot/caps, and weekly cron prompt liveness paths.",
-        "crons/README.md, wiki/cron-runtime.md, wiki/README.md, and CHANGELOG.md document the invariant/update.",
+        ".oh/crons/README.md, wiki/cron-runtime.md, wiki/README.md, and CHANGELOG.md document the invariant/update.",
         "Targeted cron runtime tests, locked append probe, and wiki index probe pass."
       ],
       "priority": 3,

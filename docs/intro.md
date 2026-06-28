@@ -15,7 +15,7 @@ Open Harness is a single repo that *is* your harness: it boots one Docker contai
 Key capabilities:
 
 - **One repo, one sandbox.** Your portable harness is one repo; it boots one container. The agent owns its workspace; your machine stays clean — you're not running agents straight on your host.
-- **Markdown-defined crons.** `crons/*.md` files declare schedules; an in-container croner runtime fires the bodies as agent prompts so the agent can work autonomously while you focus on other things.
+- **Markdown-defined crons.** `.oh/crons/*.md` files declare schedules; an in-container croner runtime fires the bodies as agent prompts so the agent can work autonomously while you focus on other things.
 - **Host dependencies: Docker + Git.** No Node, no Python, and no toolchain maintenance required on your laptop.
 - **Cloudflared previews.** Share sandbox app ports through Cloudflared tunnels; SSH and pack-supplied services remain opt-in Docker Compose overlays.
 - **Multi-agent? Add a pack.** Slack-driven Pi+Mom and similar multi-agent setups ship as separate harness packs (e.g. [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune)).
@@ -28,7 +28,7 @@ The agent session you attach to at the project root is your **orchestrator** —
 
 Stand up a **second sandbox** only when you want isolation — an independent identity, branch, or provider key running on its own. Most users won't need this.
 
-Inside the sandbox, a `cron-system` tmux session runs `scripts/cron-runtime.ts`, which reads `crons/*.md` and fires each body as a prompt to the configured agent on its declared schedule.
+Inside the sandbox, a `cron-system` tmux session runs `scripts/cron-runtime.ts`, which reads `.oh/crons/*.md` and fires each body as a prompt to the configured agent on its declared schedule.
 
 ```mermaid
 flowchart TB

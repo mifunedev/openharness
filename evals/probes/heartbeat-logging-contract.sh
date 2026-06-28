@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-HEARTBEAT="$ROOT/crons/heartbeat.md"
+HEARTBEAT="$ROOT/.oh/crons/heartbeat.md"
 HELPER="$ROOT/.oh/scripts/locked-append.sh"
 
 missing=()
@@ -18,10 +18,10 @@ grep -Fq 'scripts/locked-append.sh "memory/$TODAY/log.md"' "$HEARTBEAT" || missi
 grep -Fq -- '- **Result**:' "$HEARTBEAT" || missing+=("heartbeat memory template includes Result field")
 grep -Fq -- '- **Action**:' "$HEARTBEAT" || missing+=("heartbeat memory template includes Action field")
 grep -Fq -- '- **Observation**:' "$HEARTBEAT" || missing+=("heartbeat memory template includes Observation field")
-grep -Fq 'scripts/locked-append.sh crons/.cron.log' "$HEARTBEAT" || missing+=("heartbeat liveness line uses scripts/locked-append.sh")
+grep -Fq 'scripts/locked-append.sh .oh/crons/.cron.log' "$HEARTBEAT" || missing+=("heartbeat liveness line uses scripts/locked-append.sh")
 
 # Regression guard for the old race-prone shared log append.
-grep -Fq '>> crons/.cron.log' "$HEARTBEAT" && missing+=("heartbeat must not append liveness with raw >>")
+grep -Fq '>> .oh/crons/.cron.log' "$HEARTBEAT" && missing+=("heartbeat must not append liveness with raw >>")
 
 # Regression guard for the observed malformed memory heading. The liveness shell
 # command may legitimately contain $(date -Iseconds); the memory heading must not.

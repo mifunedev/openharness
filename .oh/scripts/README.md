@@ -9,8 +9,8 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | `ralph.sh`        | Ralph loop runner: `scripts/ralph.sh [--harness=…] <taskdesc>`     |
 | `ensure-mifune.sh` | Initializes/checks the pinned `.mifune/` submodule from `ryaneggz/mifune` before providers read shared skills/hooks. |
 | `repo-orientation-benchmark-score.mjs` | Scores the CB-004 repo-orientation A/B benchmark report |
-| `cron-runtime.ts` | Croner runtime — scans `crons/*.md`, schedules, fires each job     |
-| `prompt-miner-caps.sh` | Origin-scoped PR-cap preflight for `crons/prompt-miner.md` — execs `autopilot-caps.sh` with `AUTOPILOT_REPO=mifunedev/openharness` + `AUTOPILOT_LABEL=prompt-miner` |
+| `cron-runtime.ts` | Croner runtime — scans `.oh/crons/*.md`, schedules, fires each job     |
+| `prompt-miner-caps.sh` | Origin-scoped PR-cap preflight for `.oh/crons/prompt-miner.md` — execs `autopilot-caps.sh` with `AUTOPILOT_REPO=mifunedev/openharness` + `AUTOPILOT_LABEL=prompt-miner` |
 | `__tests__/`      | Vitest unit tests (`vitest.config.ts` at repo root targets this)   |
 
 ## Conventions

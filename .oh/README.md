@@ -22,20 +22,21 @@ namespaces, split by what *kind* of thing they hold:
 - **`.oh/`** — *OpenHarness's own machinery* as one unit: the `oh` CLI (`cli/`),
   the Docusaurus docs-site builder (`docs/`, the sole pnpm-workspace member),
   installer + lifecycle scripts (`scripts/`), container-install inputs
-  (`install/`), user-local deploy config (`config.json`), and the Ralph/spec
-  task workdirs (`tasks/` — ephemeral build scratch, now at `.oh/tasks/`). The
-  former top-level `packages/` folder was **retired** — its `oh` and `docs`
-  packages moved in here.
+  (`install/`), the scheduled-agent cron definitions + runtime log (`crons/`),
+  user-local deploy config (`config.json`), and the Ralph/spec task workdirs
+  (`tasks/` — ephemeral build scratch, now at `.oh/tasks/`). The former
+  top-level `packages/` folder was **retired** — its `oh` and `docs` packages
+  moved in here.
 - **repo root** — everything forced to root by *external* tooling
   (`.devcontainer/` for the devcontainer spec + Docker COPY, `harness.yaml`,
   `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) **plus** live
-  identity/state the harness edits in place (`context/`, `evals/`, `crons/`,
+  identity/state the harness edits in place (`context/`, `evals/`,
   `memory/`, `workspace/`, and the markdown `docs/`+`blog/` content
   the `.oh/docs` site renders).
 
 ### Back-compat symlinks (the `.mifune` precedent)
 
-The runtime-machinery directories (`scripts/`, `install/`) and the relocated task
+The runtime-machinery directories (`scripts/`, `install/`, `crons/`) and the relocated task
 workdirs (`tasks/`) moved into `.oh/` but keep **tracked back-compat symlinks at
 the old root paths** — exactly how `.claude/skills` → `.mifune/skills` works:
 
@@ -44,6 +45,7 @@ the old root paths** — exactly how `.claude/skills` → `.mifune/skills` works
 | `scripts/` | `.oh/scripts/` |
 | `install/` | `.oh/install/` |
 | `tasks/` | `.oh/tasks/` |
+| `crons/` | `.oh/crons/` |
 
 Every consumer pinning those literals — the ~7 skills and 2 cron bodies that call
 `scripts/locked-append.sh`, the `Makefile`'s `COMPOSE := scripts/docker-compose.sh`,
@@ -88,6 +90,7 @@ The core runtime expects `.mifune/` to be initialized before provider paths read
 | `cli/` | The in-tree `oh` CLI (standalone npm package; built into the image as `/opt/oh`). Old path: `packages/oh/` (no symlink — repointed). |
 | `install/` | Container-install inputs (`.zshrc`, `.tmux.conf`, `banner.sh`, `install.sh` prerequisites) consumed by the Dockerfile + entrypoint. Old path: `install/` (back-compat symlink kept). |
 | `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `ralph.sh`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (back-compat symlink kept). |
+| `crons/` | Scheduled-agent cron definitions (`heartbeat.md`, `autopilot.md`, `cleanup-tasks.md`, …) read by `.oh/scripts/cron-runtime.ts`, plus the gitignored runtime `.cron.log`/`.pid`. Old path: `crons/` (back-compat symlink kept). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
 
@@ -118,7 +121,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the docs-site builder, installer/lifecycle scripts, container-install inputs, deploy/compose config, the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `crons/`, `memory/`, `workspace/`, and the `docs/`+`blog/` markdown content) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the docs-site builder, installer/lifecycle scripts, container-install inputs, deploy/compose config, the scheduled-agent cron definitions (`crons/`), the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `memory/`, `workspace/`, and the `docs/`+`blog/` markdown content) |
 
 ### Why these specifically stay at root
 

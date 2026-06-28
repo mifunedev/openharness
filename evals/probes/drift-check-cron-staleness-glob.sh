@@ -8,7 +8,7 @@
 #       only if the inert set includes the valid cron and excludes invalid
 #       runtime-config fixtures.
 #       This is a behavioral extract-and-run probe (not a text-presence grep): a
-#       revert of Step C-2 to the raw `for f in crons/*.md` glob flags all
+#       revert of Step C-2 to the raw `for f in .oh/crons/*.md` glob flags all
 #       fixtures and flips the probe to REGRESSION.
 set -euo pipefail
 
@@ -47,8 +47,8 @@ if [[ -z "${BLOCK//[[:space:]]/}" ]]; then
   echo "REGRESSION: Step C-2 bash block extraction was empty — heading/fence anchor broken in $SKILL" >&2
   exit 1
 fi
-if ! printf '%s' "$BLOCK" | grep -qF 'crons/*.md'; then
-  echo "REGRESSION: extracted Step C-2 block does not iterate crons/*.md — wrong block captured" >&2
+if ! printf '%s' "$BLOCK" | grep -qF '.oh/crons/*.md'; then
+  echo "REGRESSION: extracted Step C-2 block does not iterate .oh/crons/*.md — wrong block captured" >&2
   exit 1
 fi
 for required in schedule enabled agent tmux worktree preflight RESTART_REQUIRED_FRONTMATTER_FIELDS "frontmatter/config may be stale" "SIGHUP reschedule or runtime restart"; do
@@ -83,11 +83,11 @@ fi
 # --- Fixtures: trap-based cleanup registered BEFORE any fixture exists ------
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
-mkdir -p "$WORK/crons"
+mkdir -p "$WORK/.oh/crons"
 
 # (a) README-style: first line is an H1, NO line-1 '---'. The '---' lines live
-#     inside a fenced code block — the crons/README.md trap. Must be EXCLUDED.
-cat > "$WORK/crons/aaa-readme.md" <<'EOF_A'
+#     inside a fenced code block — the .oh/crons/README.md trap. Must be EXCLUDED.
+cat > "$WORK/.oh/crons/aaa-readme.md" <<'EOF_A'
 # Crons Directory
 
 Not a cron — a directory README. The frontmatter below is an EXAMPLE inside a
@@ -103,7 +103,7 @@ EOF_A
 
 # (b) Valid scheduled cron: line-1 '---', anchored schedule:, enabled: true,
 #     closing '---'. Must be INCLUDED (flagged inert).
-cat > "$WORK/crons/bbb-valid.md" <<'EOF_B'
+cat > "$WORK/.oh/crons/bbb-valid.md" <<'EOF_B'
 ---
 id: bbb-valid
 schedule: "0 * * * *"
@@ -122,7 +122,7 @@ EOF_B
 
 # (c) Disabled cron: schedule: present but enabled: false → loadCrons drops it.
 #     Must be EXCLUDED.
-cat > "$WORK/crons/ccc-disabled.md" <<'EOF_C'
+cat > "$WORK/.oh/crons/ccc-disabled.md" <<'EOF_C'
 ---
 id: ccc-disabled
 schedule: "0 * * * *"
@@ -136,7 +136,7 @@ EOF_C
 
 # (d) Missing schedule: parseCronFile returns null because fm.schedule is absent.
 #     Must be EXCLUDED.
-cat > "$WORK/crons/ddd-missing-schedule.md" <<'EOF_D'
+cat > "$WORK/.oh/crons/ddd-missing-schedule.md" <<'EOF_D'
 ---
 id: ddd-missing-schedule
 enabled: true
@@ -149,7 +149,7 @@ EOF_D
 
 # (e) Empty bare schedule: parseCronFile returns null because fm.schedule is empty.
 #     Must be EXCLUDED.
-cat > "$WORK/crons/eee-empty-schedule-bare.md" <<'EOF_E'
+cat > "$WORK/.oh/crons/eee-empty-schedule-bare.md" <<'EOF_E'
 ---
 id: eee-empty-schedule-bare
 schedule:
@@ -163,7 +163,7 @@ EOF_E
 
 # (f) Empty double-quoted schedule: parseCronFile strips quotes to empty.
 #     Must be EXCLUDED.
-cat > "$WORK/crons/fff-empty-schedule-double-quoted.md" <<'EOF_F'
+cat > "$WORK/.oh/crons/fff-empty-schedule-double-quoted.md" <<'EOF_F'
 ---
 id: fff-empty-schedule-double-quoted
 schedule: ""
@@ -177,7 +177,7 @@ EOF_F
 
 # (g) Empty single-quoted schedule: parseCronFile strips quotes to empty.
 #     Must be EXCLUDED.
-cat > "$WORK/crons/ggg-empty-schedule-single-quoted.md" <<'EOF_G'
+cat > "$WORK/.oh/crons/ggg-empty-schedule-single-quoted.md" <<'EOF_G'
 ---
 id: ggg-empty-schedule-single-quoted
 schedule: ''
@@ -191,7 +191,7 @@ EOF_G
 
 # (h) Invalid cron: frontmatter and schedule key exist, but Croner rejects it.
 #     loadCrons logs SCHED_INVALID and drops it, so it must be EXCLUDED.
-cat > "$WORK/crons/hhh-invalid-schedule-not-a-cron.md" <<'EOF_H'
+cat > "$WORK/.oh/crons/hhh-invalid-schedule-not-a-cron.md" <<'EOF_H'
 ---
 id: hhh-invalid-schedule-not-a-cron
 schedule: "not-a-cron"
@@ -211,7 +211,7 @@ printf '%s' "$BLOCK" > "$WORK/block.sh"
 # corrected predicate excludes the non-cron (a), disabled cron (c), missing
 # schedule (d), empty schedules (e-g), and invalid schedule (h).
 # (i) Invalid id: loadCrons logs ID_INVALID and drops it. Must be EXCLUDED.
-cat > "$WORK/crons/iii-invalid-id.md" <<'EOF_I'
+cat > "$WORK/.oh/crons/iii-invalid-id.md" <<'EOF_I'
 ---
 id: bad_id
 schedule: "0 * * * *"
@@ -224,7 +224,7 @@ Body.
 EOF_I
 
 # (j) ID mismatch: loadCrons logs ID_MISMATCH and drops it. Must be EXCLUDED.
-cat > "$WORK/crons/jjj-id-mismatch.md" <<'EOF_J'
+cat > "$WORK/.oh/crons/jjj-id-mismatch.md" <<'EOF_J'
 ---
 id: not-jjj-id-mismatch
 schedule: "0 * * * *"
@@ -237,7 +237,7 @@ Body.
 EOF_J
 
 # (k) Unsafe agent override: loadCrons logs AGENT_INVALID and drops it. Must be EXCLUDED.
-cat > "$WORK/crons/kkk-unsafe-agent.md" <<'EOF_K'
+cat > "$WORK/.oh/crons/kkk-unsafe-agent.md" <<'EOF_K'
 ---
 id: kkk-unsafe-agent
 schedule: "0 * * * *"
@@ -250,7 +250,7 @@ enabled: true
 Body.
 EOF_K
 
-# The block prints one `DRIFT-CHECK (C): crons/<file> ...` line per inert file —
+# The block prints one `DRIFT-CHECK (C): .oh/crons/<file> ...` line per inert file —
 # we read that observable contract rather than the internal INERT array name.
 output="$(cd "$WORK" && DRIFT_CHECK_ROOT="$ROOT" RUNTIME_START=1 bash block.sh 2>/dev/null)" || true
 

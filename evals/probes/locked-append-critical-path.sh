@@ -23,13 +23,13 @@ grep -Fq 'append_runtime_log' "$CAPS" || missing+=("autopilot-caps has append_ru
 grep -Fq 'locked-append.sh' "$CAPS" || missing+=("autopilot-caps calls locked append")
 grep -Fq 'missing .oh/scripts/locked-append.sh; appending without serialization' "$CAPS" || missing+=("autopilot-caps documents helper-missing fallback")
 
-grep -Fq '.oh/scripts/locked-append.sh "$AUTOPILOT_LOG_ROOT/crons/.cron.log"' "$SKILL" || missing+=("autopilot liveness uses locked append")
+grep -Fq '.oh/scripts/locked-append.sh "$AUTOPILOT_LOG_ROOT/.oh/crons/.cron.log"' "$SKILL" || missing+=("autopilot liveness uses locked append")
 grep -Fq '.oh/scripts/locked-append.sh "$AUTOPILOT_LOG_ROOT/memory/$TODAY/log.md"' "$SKILL" || missing+=("autopilot memory log uses locked append")
-grep -Fq '.oh/scripts/locked-append.sh "$AUTOPILOT_LOG_ROOT/crons/.cron.log"' "$PI_SKILL" || missing+=("pi autopilot liveness uses locked append")
+grep -Fq '.oh/scripts/locked-append.sh "$AUTOPILOT_LOG_ROOT/.oh/crons/.cron.log"' "$PI_SKILL" || missing+=("pi autopilot liveness uses locked append")
 grep -Fq '.oh/scripts/locked-append.sh "$AUTOPILOT_LOG_ROOT/memory/$TODAY/log.md"' "$PI_SKILL" || missing+=("pi autopilot memory log uses locked append")
 
 # The critical skill snippets must not regress to the old raw shared-root forms.
-grep -Fq '>> "$AUTOPILOT_LOG_ROOT/crons/.cron.log"' "$SKILL" && missing+=("autopilot skill has no raw shared-root liveness append")
+grep -Fq '>> "$AUTOPILOT_LOG_ROOT/.oh/crons/.cron.log"' "$SKILL" && missing+=("autopilot skill has no raw shared-root liveness append")
 grep -Fq 'cat >> "$AUTOPILOT_LOG_ROOT/memory/$TODAY/log.md"' "$SKILL" && missing+=("autopilot skill has no raw shared-root memory append")
 
 if (( ${#missing[@]} )); then

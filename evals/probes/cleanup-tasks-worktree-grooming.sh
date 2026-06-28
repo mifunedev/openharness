@@ -9,13 +9,13 @@
 #       staged / untracked / missing-upstream / unpushed preservation gates before
 #       `git worktree remove --force`, avoid recursive orphan deletion, and report
 #       the groomed count in cron liveness.
-# NOTE: this is a STATIC grep oracle over markdown (crons/cleanup-tasks.md), NOT a
+# NOTE: this is a STATIC grep oracle over markdown (.oh/crons/cleanup-tasks.md), NOT a
 #       runtime execution test of the cron. It guards the documented procedure
 #       against silent revert, not shell behavior.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CRON="$ROOT/crons/cleanup-tasks.md"
+CRON="$ROOT/.oh/crons/cleanup-tasks.md"
 
 if [[ ! -f "$CRON" ]]; then
   echo "SKIPPED: cleanup-tasks cron absent: $CRON" >&2

@@ -1,5 +1,5 @@
 // scripts/cron-runtime.ts — minimal cron runtime per SPEC v0.7 §"Croner runtime".
-// Reads crons/*.md frontmatter, schedules with croner, runs body as agent prompt.
+// Reads .oh/crons/*.md frontmatter, schedules with croner, runs body as agent prompt.
 import { Cron } from "croner";
 import { spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -162,7 +162,7 @@ export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
     }
     // Invalid-schedule skip is a DISTINCT path from the silent unreadable-file
     // catch above: it runs after a non-null entry and OUTSIDE that try/catch, and
-    // it logs SCHED_INVALID so the misconfiguration surfaces in crons/.cron.log
+    // it logs SCHED_INVALID so the misconfiguration surfaces in .oh/crons/.cron.log
     // instead of poisoning the entries list and crashing main()'s new Cron() loop.
     if (!isValidSchedule(entry.schedule)) {
       logFn(entry.id, "SCHED_INVALID", `invalid schedule: ${entry.schedule}`);
@@ -1012,8 +1012,8 @@ export function scheduleAll(
 }
 
 // SIGHUP reschedule entry point. Stops the prior generation of armed Cron
-// handles, then re-reads crons/ and re-arms via scheduleAll() — so schedule
-// edits and added/removed crons/*.md files take effect without restarting the
+// handles, then re-reads .oh/crons/ and re-arms via scheduleAll() — so schedule
+// edits and added/removed .oh/crons/*.md files take effect without restarting the
 // cron-system session. Exported (not buried in main()) so tests can invoke it
 // directly without going through process signals or acquireLock side effects.
 //

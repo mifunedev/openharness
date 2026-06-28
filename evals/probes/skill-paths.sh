@@ -13,7 +13,7 @@ if [[ ! -d "$SKILLS" ]]; then
 fi
 
 # Guard 1 — the two dead renamed-directory tokens from the wiki/cron restructure
-# (docs/wiki/ -> wiki/, workspace/heartbeats/ -> crons/). No legitimate use anywhere
+# (docs/wiki/ -> wiki/, workspace/heartbeats/ -> .oh/crons/). No legitimate use anywhere
 # under .claude/skills/.
 #
 # Exclusion: harness-context/SKILL.md contains the prose string "docs/wiki/changelog"
@@ -23,7 +23,7 @@ hits=$(grep -rnE 'docs/wiki/|workspace/heartbeats/' "$SKILLS" \
          | grep -v 'harness-context/SKILL.md' || true)
 
 if [[ -n "$hits" ]]; then
-  echo "REGRESSION: retired path token(s) reappeared in .claude/skills/ (docs/wiki/ -> wiki/, workspace/heartbeats/ -> crons/):" >&2
+  echo "REGRESSION: retired path token(s) reappeared in .claude/skills/ (docs/wiki/ -> wiki/, workspace/heartbeats/ -> .oh/crons/):" >&2
   echo "$hits" >&2
   exit 1
 fi

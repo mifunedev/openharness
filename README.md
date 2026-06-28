@@ -35,7 +35,7 @@ Clones into `~/.openharness`, offers to share your host `gh` token, writes `.dev
 
 ```bash
 # 1. Fork on GitHub, then clone YOUR fork:
-git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
+git clone --recurse-submodules https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
 # 2. Bootstrap — installer auto-detects the local clone, no env vars needed:
 bash .oh/scripts/install.sh
 ```
@@ -43,7 +43,7 @@ bash .oh/scripts/install.sh
 **Option C — Clone upstream, then re-point to your repo:**
 
 ```bash
-git clone https://github.com/mifunedev/openharness.git my-harness && cd my-harness
+git clone --recurse-submodules https://github.com/mifunedev/openharness.git my-harness && cd my-harness
 git remote set-url origin https://github.com/<your-org>/<your-repo>.git
 bash .oh/scripts/install.sh
 ```
@@ -67,6 +67,24 @@ OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](docs/installation.md) for all environment overrides.
 
 </details>
+
+
+## 🧩 How Mifune is added
+
+Open Harness consumes the shared Mifune primitive pack as a mandatory pinned Git submodule at `.mifune/`, sourced from [`ryaneggz/mifune`](https://github.com/ryaneggz/mifune). A recursive clone initializes it automatically:
+
+```bash
+git clone --recurse-submodules https://github.com/mifunedev/openharness.git
+```
+
+After a plain clone, or if `.mifune/` is empty or at the wrong commit, repair it with:
+
+```bash
+bash .oh/scripts/ensure-mifune.sh --init
+bash .oh/scripts/ensure-mifune.sh --check
+```
+
+Provider surfaces remain provider-specific: `.pi/skills`, `.claude/skills`, `.codex/skills`, `.claude/agents`, and `.claude/hooks` are symlinks into the initialized `.mifune/` mount. `.pi/` itself remains the Pi provider surface in v1; consolidation of `.pi` and Mifune is a separate v2 design topic, not part of this extraction.
 
 ## 🚀 Use it
 
@@ -104,7 +122,7 @@ with `make destroy && make sandbox`.
 <details><summary>Manual setup (no installer)</summary>
 
 ```bash
-git clone https://github.com/mifunedev/openharness.git && cd openharness
+git clone --recurse-submodules https://github.com/mifunedev/openharness.git && cd openharness
 make sandbox
 make shell
 ```

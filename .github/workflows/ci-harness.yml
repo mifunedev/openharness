@@ -9,6 +9,9 @@ on:
     paths:
       - "packages/**"
       - ".oh/**"
+      - ".gitmodules"
+      - ".mifune"
+      - ".mifune/**"
       - ".pi/**"
       - "Makefile"
       - "harness.yaml"
@@ -19,6 +22,7 @@ on:
       - ".github/workflows/ci-harness.yml"
       - ".mifune/skills/**"
       - ".claude/hooks/**"
+      - ".claude/protected-paths.txt"
       - ".mifune/hooks/**"
       - "crons/**"
       - "context/**"
@@ -29,6 +33,9 @@ on:
     paths:
       - "packages/**"
       - ".oh/**"
+      - ".gitmodules"
+      - ".mifune"
+      - ".mifune/**"
       - ".pi/**"
       - "Makefile"
       - "harness.yaml"
@@ -39,6 +46,7 @@ on:
       - ".github/workflows/ci-harness.yml"
       - ".mifune/skills/**"
       - ".claude/hooks/**"
+      - ".claude/protected-paths.txt"
       - ".mifune/hooks/**"
       - "crons/**"
       - "context/**"
@@ -61,6 +69,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure Mifune submodule
+        run: bash .oh/scripts/ensure-mifune.sh --init
 
       - name: Setup Node 22.x
         uses: actions/setup-node@v4
@@ -106,6 +119,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure Mifune submodule
+        run: bash .oh/scripts/ensure-mifune.sh --init
 
       - name: Shellcheck boot scripts
         run: |
@@ -130,6 +148,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure Mifune submodule
+        run: bash .oh/scripts/ensure-mifune.sh --init
+
+      - name: Run root Mifune checkout probe
+        run: bash evals/probes/mifune-checkout.sh
 
       # Provision Node explicitly so the suite is runner-agnostic: GitHub-hosted
       # ships Node preinstalled, the self-hosted runner does not.

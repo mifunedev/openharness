@@ -65,6 +65,13 @@ directly to the real `.oh/` paths:
   `working-directory` repointed to `.oh/docs`. (The legacy `scripts/**` /
   `install/**` / `packages/oh/**` filters are kept so the path probes stay green.)
 
+
+## How Mifune is added
+
+The core runtime expects `.mifune/` to be initialized before provider paths read shared skills, agents, hooks, or evals. `.mifune/` is a pinned Git submodule from `https://github.com/ryaneggz/mifune.git`; `.oh/scripts/ensure-mifune.sh --init` initializes or repairs it, and `--check` verifies the URL, pinned SHA, protected paths, executable bits, provider symlinks, and Hermes link when enabled.
+
+`.pi/` remains the Pi provider surface in v1. It is not the Mifune submodule mount in this PR.
+
 ## Contents
 
 | File / dir | Purpose |

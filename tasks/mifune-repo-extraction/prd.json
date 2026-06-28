@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/539-mifune-repo-extraction",
+  "description": "V1 extraction: mount ryaneggz/mifune as the mandatory pinned .mifune Git submodule in Open Harness, with ensure-mifune init/check and docs/tests proving that ingress path. .pi-as-Mifune consolidation is explicitly deferred to a v2 follow-up.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Seed and verify the external Mifune repository",
+      "description": "As a maintainer, I want the current .mifune tree checkpointed into ryaneggz/mifune so no skills, agents, hooks, wiki entries, or lock metadata are lost during extraction.",
+      "acceptanceCriteria": [
+        "Preflight the destination before copying: gh repo view ryaneggz/mifune --json visibility,defaultBranchRef,viewerPermission succeeds, reports visibility PUBLIC, and grants maintainer push/admin rights.",
+        "Record the current ryaneggz/mifune default branch name and HEAD SHA in tasks/mifune-repo-extraction/progress.txt before replacing contents, so rollback can restore the previous default if needed.",
+        "Verify public/fresh-clone readability with git ls-remote https://github.com/ryaneggz/mifune.git HEAD, without relying on local credentials.",
+        "Copy the full tracked .mifune tree into a replacement branch in ryaneggz/mifune, preserving file contents, executable bits, symlinks if any, and relative layout: skills/, agents/, hooks/, skills.lock, README.md.",
+        "The replacement branch intentionally removes/replaces existing default-branch contents that are not part of the extracted Open Harness Mifune pack; this is a planned overwrite, not accidental data loss.",
+        "Prefer branch-and-PR flow for ryaneggz/mifune: open a PR from the replacement branch to the repo default branch, merge it, and use the resulting default-branch merge SHA as the Open Harness pin. If execution chooses direct default-branch push, document the operator-confirmed reason in progress.txt.",
+        "Add or revise the Mifune repository README.md explaining that Open Harness consumes the repo at checkout path .mifune/ and that provider symlinks target subpaths below it.",
+        "Commit and push the checkpoint/replacement; record the resulting final ryaneggz/mifune default-branch SHA in tasks/mifune-repo-extraction/progress.txt and the Open Harness PR body.",
+        "Verify git -C <mifune-repo> status --short is clean after the push.",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
+    },
+    {
+      "id": "US-002",
+      "title": "Replace vendored Mifune with a pinned external checkout without protected-path loss",
+      "description": "As an Open Harness operator, I want .mifune/ to remain present at the same repo-relative path while its contents come from the external repository so provider symlinks and protected skill references keep resolving.",
+      "acceptanceCriteria": [
+        "Remove tracked in-core .mifune/** file contents only after US-001 has a pushed/merged ryaneggz/mifune replacement and a recorded final default-branch Mifune commit SHA.",
+        "Add a deterministic Git submodule/gitlink pin for ryaneggz/mifune at path .mifune/ via .gitmodules; v1 does not allow a non-submodule bootstrap manifest because git clone --recurse-submodules is a required ingress path.",
+        "Preserve provider symlinks and their current targets unless a stronger compatibility reason is documented: .pi/skills -> ../.mifune/skills, .claude/skills -> ../.mifune/skills, .codex/skills -> ../.mifune/skills, .claude/agents -> ../.mifune/agents, .claude/hooks -> ../.mifune/hooks, .codex/agents -> ../.claude/agents.",
+        "Preserve protected explicit .mifune/... paths at the same repo-relative runtime locations after initialization; run exact-path checks for .mifune/skills/git/SKILL.md, .mifune/skills/t3/references/sandbox-processes.md, .mifune/skills/advisor/SKILL.md, .mifune/skills/advisor/references/recursive-delegation.md, and .mifune/skills/retro/references/memory-protocol.md.",
+        "Add a protected-path continuity check that reads .claude/protected-paths.txt and verifies every explicit .mifune/... entry exists after .oh/scripts/ensure-mifune.sh --check; for provider-backed protected skill/agent entries, verify the provider symlink target resolves to initialized .mifune/ or document an existing legacy alias.",
+        "Verify smoke paths after a clean checkout/init: test -f .mifune/skills/git/SKILL.md, test -x .mifune/hooks/deny-env-dump.sh, test -f .mifune/skills/wiki/references/schema.md, and test -f .mifune/skills/eval/run.sh.",
+        "Verify find .pi .claude .codex -maxdepth 2 -type l -exec sh -c 'for p; do test -e \"$p\" || exit 1; done' sh {} + exits 0 after initialization.",
+        "Preserve executable bits for all executable files under .mifune/hooks/ and any executable Mifune scripts/cap files; compare before/after mode lists in tasks/mifune-repo-extraction/progress.txt.",
+        "Add rollback instructions and validate them in a disposable clone/worktree before deleting tracked contents: pre-merge rollback restores the Open Harness vendored tree or previous gitlink from the base commit and abandons the ryaneggz/mifune replacement branch; post-merge rollback reverts the Open Harness pin-removal commit or pins .mifune/ back to the last known-good ryaneggz/mifune SHA, and restores the recorded pre-extraction ryaneggz/mifune default HEAD if the external repo replacement itself must be rolled back.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Scope guard: v1 keeps .mifune/ as the real submodule mount. Do not pivot this PR to .pi-as-Mifune; defer that to a separate v2 spec. Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
+    },
+    {
+      "id": "US-003",
+      "title": "Initialize Mifune before workflows use it",
+      "description": "As a fresh-clone user, I want setup, devcontainer, CI, release, cron, and agent startup paths to initialize Mifune before invoking any skill, hook, or eval runner.",
+      "acceptanceCriteria": [
+        "Add a root-owned initializer/checker outside .mifune/, named .oh/scripts/ensure-mifune.sh, that supports at least --init and --check modes, initializes the pinned .mifune/ checkout, validates the expected SHA/path/executables, and prints the manual remediation command on failure.",
+        "Add .oh/scripts/ensure-mifune.sh to .claude/protected-paths.txt in the same PR because it becomes load-bearing bootstrap infrastructure.",
+        "Document the manual recovery command in root docs: bash .oh/scripts/ensure-mifune.sh --init, or have the wrapper delegate to git submodule update --init --recursive .mifune for a pure submodule path.",
+        "Document the manual recovery command and ingress model in root docs: bash .oh/scripts/ensure-mifune.sh --init is how Mifune is added or repaired after a plain clone.",
+        "Update all required call sites to run the initializer/checker before provider CLIs or Mifune-hosted files are used: Makefile sandbox/setup targets if applicable, .devcontainer/entrypoint.sh, .devcontainer/Dockerfile or install scripts that assume skills exist, GitHub Actions CI checkouts, release workflow checkouts, cron runtime/preflight paths, and provider startup paths.",
+        "Update GitHub Actions checkout/setup steps so CI and release jobs have .mifune/ populated before running bash .mifune/skills/eval/run.sh, boot-path lint, skill-path probes, or provider skill checks.",
+        "Update workflow path filters so Mifune pin changes trigger validation after extraction, including .mifune, .gitmodules, .oh/scripts/ensure-mifune.sh, the new/updated root-level Mifune probe, .github/workflows/ci-harness.yml, and .github/workflows/release.yml where relevant.",
+        "Update any script that assumes tracked .mifune/ contents exist in a shallow clone to either call .oh/scripts/ensure-mifune.sh --check or fail with a clear remediation command.",
+        "pnpm run build passes",
+        "pnpm run typecheck passes",
+        "pnpm test:scripts passes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
+    },
+    {
+      "id": "US-006",
+      "title": "Make the Mifune ingress path explicit for Open Harness",
+      "description": "As an Open Harness operator, I want to clearly see how Mifune gets added into an Open Harness checkout or generated harness so setup, repair, and debugging are obvious.",
+      "acceptanceCriteria": [
+        "Document the canonical ingress model: Open Harness carries a pinned .mifune/ Git submodule reference to ryaneggz/mifune; initialization populates that mount path, and provider surfaces are symlinks into it.",
+        "Document the two supported fresh-clone flows: git clone --recurse-submodules <openharness-url> and plain clone followed by bash .oh/scripts/ensure-mifune.sh --init; both must initialize the same submodule pin.",
+        "Ensure bash .oh/scripts/ensure-mifune.sh --init is idempotent and can add/repair Mifune in an Open Harness checkout where .mifune/ is absent, empty, uninitialized, or at the wrong SHA.",
+        "Ensure bash .oh/scripts/ensure-mifune.sh --check prints a concise diagnostic that names the expected ryaneggz/mifune URL/SHA, current state, and exact remediation command.",
+        "Add one concise \u201cHow Mifune is added\u201d block to all required operator-facing surfaces: README.md, docs/README.md, .oh/README.md, devcontainer/entrypoint docs or comments, and context/REPO_MAP.md.",
+        "Add or update a clean-clone test/probe that starts from a checkout without initialized .mifune/, runs the documented init command, and verifies .mifune/skills/git/SKILL.md, provider symlink resolution, protected-path continuity, and Hermes symlink behavior when enabled.",
+        "Include the ingress flow in the Open Harness PR body so reviewers can see exactly how Mifune enters the repo after extraction.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Scope guard: v1 keeps .mifune/ as the real submodule mount. Do not pivot this PR to .pi-as-Mifune; defer that to a separate v2 spec. Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
+    },
+    {
+      "id": "US-004",
+      "title": "Update references, regression probes, and maintainer workflow docs",
+      "description": "As a maintainer, I want docs, context, evals, and DeepWiki-facing explanations to describe Mifune as an external primitive pack mounted at .mifune/ so future agents do not re-vendor or break it.",
+      "acceptanceCriteria": [
+        "Update .mifune references in root docs/context/skills/evals only where the ownership model changes; preserve path references where runtime still uses .mifune/....",
+        "Update docs/context so the Mifune addition path is explicit: Open Harness owns the pinned .mifune reference and ensure-mifune initializes that mount from ryaneggz/mifune before providers read symlinks.",
+        "Add a root-level Tier-A smoke/probe outside .mifune/, for example evals/probes/mifune-checkout.sh, that runs before the Mifune-hosted eval runner and fails clearly when .mifune/ is missing, uninitialized, pinned to the wrong repo/SHA, missing protected paths, missing executable bits, or has broken provider symlinks.",
+        "Keep the Mifune-hosted eval runner path valid and also run bash .mifune/skills/eval/run.sh --probe <new-or-updated-mifune-probe> after .oh/scripts/ensure-mifune.sh --init succeeds.",
+        "Update context/REPO_MAP.md to route Mifune source-of-truth questions to ryaneggz/mifune while still explaining the local mount path .mifune/.",
+        "Update AGENTS.md and relevant skill docs only enough to keep the core workflow accurate; do not rewrite individual skill behavior.",
+        "Add or update source-backed docs/wiki material explaining the external Mifune boundary, stable .mifune/ mount path, provider symlink relationship, and DeepWiki comparison in the Wiki Alignment section.",
+        "If any US-004 docs/wiki/skill reference edits touch .mifune/**, make those edits in ryaneggz/mifune, commit and push a final Mifune SHA, update the Open Harness .mifune pin to that final SHA, and record it in tasks/mifune-repo-extraction/progress.txt and the PR body before validation.",
+        "Add maintainer workflow docs for future Mifune edits: change Mifune in ryaneggz/mifune, merge/push there first, then open an Open Harness pin-bump PR that runs the Mifune checkout probe and provider symlink checks.",
+        "Add a CHANGELOG.md entry under ## [Unreleased] because the extraction changes fresh-clone/setup behavior.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Docs may mention .pi consolidation only as a v2 follow-up/out-of-scope note; v1 docs must teach .mifune submodule ingress. Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
+    },
+    {
+      "id": "US-005",
+      "title": "Verify end-to-end provider and workflow compatibility",
+      "description": "As the orchestrator, I want the extracted Mifune setup to pass the same green path as the vendored setup so the v1 core split does not regress normal operation.",
+      "acceptanceCriteria": [
+        "Verify the documented Mifune addition flow in a clean/plain clone: run bash .oh/scripts/ensure-mifune.sh --init and then bash .oh/scripts/ensure-mifune.sh --check before provider/eval checks.",
+        "From a clean Open Harness checkout with .oh/scripts/ensure-mifune.sh --init run, provider symlinks resolve and ls .pi/skills/git/SKILL.md .claude/skills/spec/SKILL.md .codex/skills/git/SKILL.md succeeds.",
+        "Verify Hermes compatibility when INSTALL_HERMES=true: sandbox boot or an entrypoint-level check creates .hermes/skills/openharness -> ../../.mifune/skills, and test -f .hermes/skills/openharness/git/SKILL.md succeeds after Mifune init.",
+        "bash .mifune/skills/eval/run.sh --probe skill-paths passes",
+        "bash .mifune/skills/eval/run.sh --probe spec-family-contract passes",
+        "bash .mifune/skills/eval/run.sh completes without a Mifune-path regression.",
+        "Existing cron preflight paths for autopilot and prompt-miner resolve to executable/readable files under .mifune/skills/... after initialization.",
+        "Open Harness PR checks are green before the PR is marked ready.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
+    }
+  ]
+}

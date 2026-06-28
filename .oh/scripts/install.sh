@@ -306,10 +306,10 @@ else
   else
     # ── Population A: fresh clone ──────────────────────────────────────────
     if [ -n "$OH_GITHUB_REF" ]; then
-      git clone --branch "$OH_GITHUB_REF" "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
+      git clone --recurse-submodules --branch "$OH_GITHUB_REF" "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
       ok "Repository cloned at ref '$OH_GITHUB_REF': $REPO_DIR"
     else
-      git clone "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
+      git clone --recurse-submodules "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
       ok "Repository cloned: $REPO_DIR"
     fi
   fi
@@ -322,6 +322,12 @@ else
 fi
 
 cd "$REPO_DIR"
+
+# Mifune enters Open Harness as the pinned .mifune/ submodule. Repair plain
+# clones or older checkouts before the sandbox build/provider startup reads it.
+if [ -x .oh/scripts/ensure-mifune.sh ]; then
+  bash .oh/scripts/ensure-mifune.sh --init
+fi
 
 # ─── 4. Configure sandbox ────────────────────────────────────────────
 banner "Configuring sandbox"

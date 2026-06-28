@@ -37,6 +37,7 @@ drift-check
 .oh/scripts/ralph.sh
 .oh/scripts/cron-runtime.ts
 .oh/scripts/sandbox-healthcheck.sh
+.oh/scripts/ensure-mifune.sh
 
 # --- Root lifecycle entrypoints ---
 Makefile

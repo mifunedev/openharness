@@ -58,7 +58,7 @@ Two optional surfaces cover most day-to-day use:
 - **Pi+Slack** — chat with the agent from Slack instead of the terminal.
 - **T3 Code** — browser UI on port `3773` driving Claude / Codex / OpenCode.
 
-Each runs in its own named tmux session per [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md). For the two browser surfaces, open them in **VS Code's Simple Browser** (`Ctrl+Shift+P` → `Simple Browser: Show`; `Cmd+Shift+P` on macOS) so the live UI sits in a tab next to the code you're editing.
+Each runs in its own named tmux session per [`.oh/context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md). For the two browser surfaces, open them in **VS Code's Simple Browser** (`Ctrl+Shift+P` → `Simple Browser: Show`; `Cmd+Shift+P` on macOS) so the live UI sits in a tab next to the code you're editing.
 
 ### Pi+Slack
 

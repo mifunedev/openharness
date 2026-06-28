@@ -1,9 +1,9 @@
 {
   "version": 1,
   "id": "repo-orientation-efficiency",
-  "description": "A/B workload for proving whether context/REPO_MAP.md improves total repo-orientation economics after startup context cost.",
+  "description": "A/B workload for proving whether .oh/context/REPO_MAP.md improves total repo-orientation economics after startup context cost.",
   "startupContext": {
-    "path": "context/REPO_MAP.md",
+    "path": ".oh/context/REPO_MAP.md",
     "tokenEstimate": "ceil(bytes / 4)"
   },
   "thresholds": {

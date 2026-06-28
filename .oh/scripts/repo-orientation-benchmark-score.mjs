@@ -146,7 +146,7 @@ function validateManifest(manifest, manifestPath) {
   }
 
   const repoRoot = path.resolve(path.dirname(manifestPath), "../../../..");
-  const startupPath = manifest.startupContext?.path ?? "context/REPO_MAP.md";
+  const startupPath = manifest.startupContext?.path ?? ".oh/context/REPO_MAP.md";
   const startupAbs = path.resolve(repoRoot, startupPath);
   try {
     const bytes = statSync(startupAbs).size;
@@ -195,7 +195,7 @@ function scoreReport(manifest, manifestPath, report) {
   const runs = assertArray(report.runs, "report.runs", failures);
   const startupTokens = Number(
     report.startupTokens ??
-      Math.ceil(statSync(path.resolve(path.dirname(manifestPath), "../../..", manifest.startupContext?.path ?? "context/REPO_MAP.md")).size / 4),
+      Math.ceil(statSync(path.resolve(path.dirname(manifestPath), "../../..", manifest.startupContext?.path ?? ".oh/context/REPO_MAP.md")).size / 4),
   );
   if (!Number.isFinite(startupTokens) || startupTokens < 0) failures.push("startupTokens must be >= 0");
 

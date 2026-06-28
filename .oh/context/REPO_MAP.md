@@ -18,7 +18,7 @@ Why: anchoring at `git rev-parse --show-toplevel` prevents subdirectory launches
 
 ## Session-start use
 
-1. Read this file after `context/TOOLS.md`.
+1. Read this file after `.oh/context/TOOLS.md`.
 2. Use the source-map command only when orientation is needed; do not paste a raw filesystem tree into context.
 3. Pick one row from the search routing guide before running broad `rg`.
 4. When a routed directory has `README.md`, read that first.
@@ -88,7 +88,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 
 | Intent | Start here | Why |
 |---|---|---|
-| Session role, permissions, startup load | `AGENTS.md`, `context/README.md`, `context/` | Defines orchestrator role, voice, session-start reads, and rules. |
+| Session role, permissions, startup load | `AGENTS.md`, `.oh/context/README.md`, `.oh/context/` | Defines orchestrator role, voice, session-start reads, and rules. |
 | Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml`, `.oh/scripts/README.md`, `.oh/scripts/docker-compose.sh` | Owns container image, compose overlays, generated env, and lifecycle commands. |
 | Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/pr-audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
 | Cron/autopilot behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.mifune/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog flow. |
@@ -132,7 +132,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `pnpm-workspace.yaml`, `pnpm-lock.yaml` | Root pnpm marker and pinned dependency graph. | Debug dependency drift; avoid lockfile reads unless dependency state matters. |
 | `harness.yaml` | Harness runtime defaults such as autopilot caps and configured services. | Inspect operator-configurable behavior. |
 | `.oh/` | OpenHarness runtime machinery grouped as one unit: the `oh` CLI (`.oh/cli/`), installer/lifecycle scripts (`.oh/scripts/`), container-install inputs (`.oh/install/`), deploy config (`.oh/config.json`). The docs site moved to `mifunedev/openharness-web`. | Read `.oh/README.md` first; find harness tooling addressed as a namespace. |
-| `context/` | Voice, identity, tools, repo map, user collaboration, and rules. | Load operating principles and process constraints. |
+| `.oh/context/` | Voice, identity, tools, repo map, user collaboration, and rules. | Load operating principles and process constraints. |
 | `.oh/crons/` | Scheduled agent prompts and heartbeat/autopilot jobs. | Understand recurring automation behavior; read `.oh/crons/README.md` first. |
 | `.oh/scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, Ralph, caps. | Find executable implementation behind docs/skills; read `.oh/scripts/README.md` first. |
 | `.oh/scripts/__tests__/` | Vitest coverage for harness scripts. | Locate targeted tests for script changes. |

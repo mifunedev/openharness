@@ -56,10 +56,10 @@ sent.
    - **Observation**: all probes passed or skipped; no regressions
    ```
 
-5. **Liveness:** append one liveness line to `crons/.cron.log` through
+5. **Liveness:** append one liveness line to `.oh/crons/.cron.log` through
    `.oh/scripts/locked-append.sh`:
    ```bash
-   printf '[%s] eval-weekly: %s\n' "$(date -Iseconds)" "<OK|REGRESSION(N)>" | .oh/scripts/locked-append.sh crons/.cron.log
+   printf '[%s] eval-weekly: %s\n' "$(date -Iseconds)" "<OK|REGRESSION(N)>" | .oh/scripts/locked-append.sh .oh/crons/.cron.log
    ```
    where the status token is `OK` when no regressions were found, or
    `REGRESSION(N)` (e.g. `REGRESSION(2)`) when N probes regressed.

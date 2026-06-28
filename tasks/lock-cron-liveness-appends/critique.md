@@ -10,7 +10,7 @@ CRITIC_A — IMPLEMENTER LENS
 ## Critic B — User lens
 
 CRITIC_B — USER LENS
-[SEVERITY: L] [STORY: US-003] Documentation should explain why locked append matters, not just name the helper. | [EVIDENCE: PRD Wiki Alignment] | Covered by `crons/README.md` and `wiki/cron-runtime.md` updates.
+[SEVERITY: L] [STORY: US-003] Documentation should explain why locked append matters, not just name the helper. | [EVIDENCE: PRD Wiki Alignment] | Covered by `.oh/crons/README.md` and `wiki/cron-runtime.md` updates.
 
 ## Synthesis
 - **High-severity findings**: 0

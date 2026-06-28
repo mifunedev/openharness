@@ -22,9 +22,9 @@ tasks/archive/
 **/.claude/screenshots/*
 !**/.claude/screenshots/.gitkeep
 
-# Croner runtime artifacts (keep crons/*.md tracked)
-crons/.pid
-crons/*.log
+# Croner runtime artifacts (keep .oh/crons/*.md tracked)
+.oh/crons/.pid
+.oh/crons/*.log
 
 # Ralph runtime files (keep prd.json + progress.txt tracked for recovery)
 workspace/.ralph/.last-branch

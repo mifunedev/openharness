@@ -9,7 +9,7 @@ SKILL="$ROOT/.claude/skills/git/SKILL.md"
 RULE="$ROOT/context/rules/git.md"
 AGENTS="$ROOT/AGENTS.md"
 WORKTREES="$ROOT/.claude/skills/worktrees/SKILL.md"
-CLEANUP="$ROOT/crons/cleanup-tasks.md"
+CLEANUP="$ROOT/.oh/crons/cleanup-tasks.md"
 CHANGELOG="$ROOT/CHANGELOG.md"
 
 missing=()

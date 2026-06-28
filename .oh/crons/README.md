@@ -1,4 +1,4 @@
-# `crons/`
+# `.oh/crons/`
 
 Markdown-frontmatter cron definitions consumed by
 `scripts/cron-runtime.ts`. Each `<id>.md` file declares one scheduled
@@ -51,13 +51,13 @@ Body becomes the agent prompt at fire time.
 ## Status tokens
 
 The runtime appends one tab-separated line per event to the gitignored
-`crons/.cron.log`, shaped `<iso-timestamp>\t<id>\t<status>\t<msg>`. The
+`.oh/crons/.cron.log`, shaped `<iso-timestamp>\t<id>\t<status>\t<msg>`. The
 status column is one of:
 
 | Token | Meaning |
 |-------|---------|
 | `BOOT` | Runtime started and scheduled its crons (`id` is `system`; `msg` is the cron count). |
-| `RELOAD` | A `SIGHUP` reschedule re-read `crons/` and re-armed every schedule without restarting the runtime (`id` is `system`; `msg` is the cron count, e.g. `4 scheduled, 0 skipped`). See [Hot-reload](#hot-reload). |
+| `RELOAD` | A `SIGHUP` reschedule re-read `.oh/crons/` and re-armed every schedule without restarting the runtime (`id` is `system`; `msg` is the cron count, e.g. `4 scheduled, 0 skipped`). See [Hot-reload](#hot-reload). |
 | `ID_INVALID` | A cron was skipped because its resolved `id` or filename basename is not lowercase kebab-case (`^[a-z0-9][a-z0-9-]*$`). |
 | `ID_MISMATCH` | A cron was skipped because its explicit frontmatter `id` does not match the filename basename. |
 | `SCHED_INVALID` | A cron was skipped because its `schedule:` is not a valid cron expression (`msg` contains the offending schedule string). |
@@ -117,29 +117,29 @@ A job with `tmux: true` in its frontmatter runs each fire in its own detached tm
 - **Env exported into the agent**: `CRON_TMUX_SESSION=<session>`, `CRON_KEEP_MARKER=/tmp/<session>.keep`, and `CRON_OVERLAP_PIDFILE=/tmp/cron-<id>.pid`.
 - **Keep-marker contract**: if the agent `touch`es `$CRON_KEEP_MARKER` before exiting, the session persists by resuming the run's own conversation as a live, attachable agent (`claude --continue` for a Claude run, `pi --continue` for an `agent: pi` run, or `codex` after a Claude→Codex fallback), falling back to a shell if that exits; otherwise it auto-closes when the agent finishes. Claude/Codex tmux runs are headless (`claude -p`, or `codex exec --sandbox danger-full-access` after a Claude usage/session-limit fallback). Pi tmux runs intentionally use the positional TUI shape (`pi "$(cat prompt)"`), matching `tmux new -s <name> pi "<prompt>"`, so attaching mid-run shows the live Pi pane instead of a blank piped/headless screen. By convention a job keeps its session only when the run produced something worth revisiting (e.g. autopilot keeps it when a PR was opened).
 - **Overlap guard**: a per-id pidfile `/tmp/cron-<id>.pid` blocks a new fire while a previous one is still running when `overlap: false`; the skipped fire logs `SKIPPED_OVERLAP`. Kept interactive sessions that reach a terminal state can remove `$CRON_OVERLAP_PIDFILE` themselves before staying alive for manual review, so an intentionally retained pane does not suppress future fires.
-- **Worktree isolation (`worktree: true`)**: instead of serializing on the shared root checkout, a `worktree: true` `tmux` cron runs **every** fire in a fresh detached `.worktrees/cron/<session>` worktree cut from the base branch (`development`→`main`→`master`), exported to the run as `$CRON_WORKTREE`. The root checkout is never touched for source/branch work (no dirty-env stalls) and a fire is **never silently skipped** — it isolates (`SPAWNED_WORKTREE`) or surfaces a failure (`ERR_WORKTREE`, or `ERR_WORKTREE_CAP` at the live-worktree concurrency cap). Isolated fires use a session-scoped lock (`/tmp/<session>.pid`) so they never clobber the id-scoped overlap lock; the runtime prunes dead-session worktrees before counting the cap, and the heartbeat reaps stuck sessions + their worktrees. Dead-session pruning only removes clean worktrees: if `git status --porcelain` reports modified or untracked files, the runtime preserves the worktree and logs `WORKTREE_DIRTY` with its path, ref, and changed files for manual salvage. This is the autopilot default (it replaced autopilot's `SKIPPED_OVERLAP` stalls); `SKIPPED_OVERLAP` remains the behaviour for non-`worktree` crons (heartbeat/cleanup/eval). Autopilot treats runtime observability as the narrow exception: its source work stays in `$CRON_WORKTREE`, but it resolves `$AUTOPILOT_LOG_ROOT` to the shared root checkout and appends `crons/.cron.log` plus `memory/<today>/log.md` there so heartbeat and humans can still inspect liveness after the ephemeral worktree is reaped.
+- **Worktree isolation (`worktree: true`)**: instead of serializing on the shared root checkout, a `worktree: true` `tmux` cron runs **every** fire in a fresh detached `.worktrees/cron/<session>` worktree cut from the base branch (`development`→`main`→`master`), exported to the run as `$CRON_WORKTREE`. The root checkout is never touched for source/branch work (no dirty-env stalls) and a fire is **never silently skipped** — it isolates (`SPAWNED_WORKTREE`) or surfaces a failure (`ERR_WORKTREE`, or `ERR_WORKTREE_CAP` at the live-worktree concurrency cap). Isolated fires use a session-scoped lock (`/tmp/<session>.pid`) so they never clobber the id-scoped overlap lock; the runtime prunes dead-session worktrees before counting the cap, and the heartbeat reaps stuck sessions + their worktrees. Dead-session pruning only removes clean worktrees: if `git status --porcelain` reports modified or untracked files, the runtime preserves the worktree and logs `WORKTREE_DIRTY` with its path, ref, and changed files for manual salvage. This is the autopilot default (it replaced autopilot's `SKIPPED_OVERLAP` stalls); `SKIPPED_OVERLAP` remains the behaviour for non-`worktree` crons (heartbeat/cleanup/eval). Autopilot treats runtime observability as the narrow exception: its source work stays in `$CRON_WORKTREE`, but it resolves `$AUTOPILOT_LOG_ROOT` to the shared root checkout and appends `.oh/crons/.cron.log` plus `memory/<today>/log.md` there so heartbeat and humans can still inspect liveness after the ephemeral worktree is reaped.
 
 Jobs with `tmux` absent or `false` keep the default in-process spawn. Steer autopilot's priorities by filing GitHub issues labeled `autopilot` (the work queue) — no in-repo backlog file.
 
 ## Hot-reload
 
-A cron definition's **body** (the agent prompt) hot-reloads at fire time: the runtime re-reads the file just before each fire, so edits take effect at the next scheduled fire without a restart. On a read/parse error, the runtime falls back to the cached boot-time body and logs `BODY_RELOAD_ERR`. When a fire's body differs from the boot-time cached version, a `BODY_RELOADED` line appears in `crons/.cron.log` — this signal recurs on every fire after an edit until the runtime is restarted (which re-baselines). Schedule/frontmatter changes (`schedule`, `enabled`, `timezone`, `overlap`) and added/removed `crons/*.md` files now take effect via a `SIGHUP` reschedule (see [Reload schedules](#reload-schedules-sighup) below) — there is still no auto-watcher, so the reload is operator-triggered. A full runtime restart is only needed for `scripts/cron-runtime.ts` *code* changes. Rollback: remove the `reloadBody` call and restore the two `entry.body` usages in `scripts/cron-runtime.ts`.
+A cron definition's **body** (the agent prompt) hot-reloads at fire time: the runtime re-reads the file just before each fire, so edits take effect at the next scheduled fire without a restart. On a read/parse error, the runtime falls back to the cached boot-time body and logs `BODY_RELOAD_ERR`. When a fire's body differs from the boot-time cached version, a `BODY_RELOADED` line appears in `.oh/crons/.cron.log` — this signal recurs on every fire after an edit until the runtime is restarted (which re-baselines). Schedule/frontmatter changes (`schedule`, `enabled`, `timezone`, `overlap`) and added/removed `.oh/crons/*.md` files now take effect via a `SIGHUP` reschedule (see [Reload schedules](#reload-schedules-sighup) below) — there is still no auto-watcher, so the reload is operator-triggered. A full runtime restart is only needed for `scripts/cron-runtime.ts` *code* changes. Rollback: remove the `reloadBody` call and restore the two `entry.body` usages in `scripts/cron-runtime.ts`.
 
 ## Reload schedules (SIGHUP)
 
-The runtime installs a `SIGHUP` handler: on signal it stops the live croner jobs, re-reads every `crons/*.md`, and re-arms the schedules — so schedule/frontmatter edits and added/removed cron files apply without restarting the `cron-system` tmux session. Each successful reload appends a `RELOAD` line (`id` `system`, `msg` the cron count) to `crons/.cron.log`. A malformed `schedule:` present during a reload is dropped (`SCHED_INVALID`) exactly as at boot; the rest stay scheduled and the runtime does not exit. In-flight fires are not interrupted — `overlap: false` remains the only protection against a reschedule racing a still-running fire.
+The runtime installs a `SIGHUP` handler: on signal it stops the live croner jobs, re-reads every `.oh/crons/*.md`, and re-arms the schedules — so schedule/frontmatter edits and added/removed cron files apply without restarting the `cron-system` tmux session. Each successful reload appends a `RELOAD` line (`id` `system`, `msg` the cron count) to `.oh/crons/.cron.log`. A malformed `schedule:` present during a reload is dropped (`SCHED_INVALID`) exactly as at boot; the rest stay scheduled and the runtime does not exit. In-flight fires are not interrupted — `overlap: false` remains the only protection against a reschedule racing a still-running fire.
 
 The runtime runs inside the container, so reload from the host via `docker exec`:
 
 ```bash
 # Health check first — confirm the PID file points at a live runtime.
-docker exec -u sandbox openharness sh -c 'kill -0 "$(cat crons/.pid)" 2>/dev/null && echo alive || echo "not running"'
+docker exec -u sandbox openharness sh -c 'kill -0 "$(cat .oh/crons/.pid)" 2>/dev/null && echo alive || echo "not running"'
 
 # Reload schedules.
-docker exec -u sandbox openharness kill -HUP "$(cat crons/.pid)"
+docker exec -u sandbox openharness kill -HUP "$(cat .oh/crons/.pid)"
 ```
 
-The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`; the `cron-watchdog` session will relaunch `node --experimental-strip-types scripts/cron-runtime.ts` in a fresh `cron-system` session (the documented start path from `.oh/devcontainer/entrypoint.sh`).
+The bare `kill -HUP "$(cat .oh/crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `.oh/crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`; the `cron-watchdog` session will relaunch `node --experimental-strip-types scripts/cron-runtime.ts` in a fresh `cron-system` session (the documented start path from `.oh/devcontainer/entrypoint.sh`).
 
 ## Override
 

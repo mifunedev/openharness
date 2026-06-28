@@ -12,7 +12,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNTIME="$ROOT/.oh/scripts/cron-runtime.ts"
-CRON="$ROOT/crons/autopilot.md"
+CRON="$ROOT/.oh/crons/autopilot.md"
 SCRIPT="$ROOT/.mifune/skills/autopilot/autopilot-caps.sh"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
 YAML="$ROOT/harness.yaml"
@@ -40,9 +40,9 @@ grep -Eq 'if \((entry|liveEntry)\.preflight\) \{' "$RUNTIME" || missing+=("fire(
 
 # 2. the autopilot cron wires the gate.
 grep -Eq '^preflight:[[:space:]]*\.mifune/skills/autopilot/autopilot-caps\.sh[[:space:]]*$' "$CRON" \
-  || missing+=("crons/autopilot.md wires preflight: .mifune/skills/autopilot/autopilot-caps.sh")
+  || missing+=(".oh/crons/autopilot.md wires preflight: .mifune/skills/autopilot/autopilot-caps.sh")
 grep -Eq '^repo:[[:space:]]*mifunedev/openharness[[:space:]]*$' "$CRON" \
-  || missing+=("crons/autopilot.md targets repo: mifunedev/openharness")
+  || missing+=(".oh/crons/autopilot.md targets repo: mifunedev/openharness")
 
 # 3. the canonical gate script: executable + the STATUS contract + harness.yaml caps.
 [[ -x "$SCRIPT" ]] || missing+=(".mifune/skills/autopilot/autopilot-caps.sh is executable")

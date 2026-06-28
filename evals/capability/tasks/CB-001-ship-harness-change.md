@@ -28,7 +28,7 @@ Given a small harness-infra change request (a skill, rule, doc, script, or cron 
 | unattended | Reached ready-for-review with zero human intervention after the initial ask | Completed but needed ≥1 human nudge (re-run, conflict resolution) | Required hands-on human authoring/fixing to finish |
 
 ## Evidence basis
-Recent ready-for-review PRs demonstrate the end-to-end path: e.g. #147 (default Pi monitor support) and #141, plus the executable-loop series #157/#163. `crons/autopilot.md` ships exactly this class of PR unattended on an hourly cadence (oldest open `autopilot`-labeled issue → `/ship-spec --issue` → ready PR), and `/ship-spec` itself composes `/prd` → critics → `/ralph` → branch → draft PR → eval/CI gates → ready PR.
+Recent ready-for-review PRs demonstrate the end-to-end path: e.g. #147 (default Pi monitor support) and #141, plus the executable-loop series #157/#163. `.oh/crons/autopilot.md` ships exactly this class of PR unattended on an hourly cadence (oldest open `autopilot`-labeled issue → `/ship-spec --issue` → ready PR), and `/ship-spec` itself composes `/prd` → critics → `/ralph` → branch → draft PR → eval/CI gates → ready PR.
 
 ## Scoring method
 v1: inspect the most-recent real instance of this capability — the latest autopilot-shipped or `/ship-spec`-shipped PR — against the rubric. Confirm the branch name shape, `Closes #N`, the `tasks/<slug>/` scaffold (`prd.md`+`prd.json`), CI status via `gh pr checks`, and ready (non-draft) state via `gh pr view --json isDraft`. For the eval axis, diff the PR's `evals/RESULTS.md` against its base to confirm no green→red row. Alternatively, run a fresh request through `/ship-spec` and score the produced PR.

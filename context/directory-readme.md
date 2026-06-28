@@ -47,7 +47,7 @@ mydir/*
 
 ## Examples in this repo
 
-`.worktrees/README.md`, `.oh/README.md`, `crons/README.md`,
+`.worktrees/README.md`, `.oh/README.md`, `.oh/crons/README.md`,
 `tasks/README.md`, `.oh/scripts/README.md`.
 
 ## When NOT to add a README

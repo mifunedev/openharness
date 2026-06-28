@@ -96,7 +96,7 @@ truncated-then-appended in place — so a crash or concurrent run can never leav
 partially-written scoreboard. Carry-forward rows for probes not run this
 invocation are read from a pre-write snapshot of the original file taken before
 the rewrite, never from the live file being replaced, so a filtered run cannot
-erase untouched rows. A weekly cron (`crons/eval-weekly.md`) runs it unattended.
+erase untouched rows. A weekly cron (`.oh/crons/eval-weekly.md`) runs it unattended.
 
 ### Runner aggregate exit code
 

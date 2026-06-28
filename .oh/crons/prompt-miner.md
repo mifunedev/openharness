@@ -26,7 +26,7 @@ This cron is **opt-in and cap-gated**:
 
 - **Kill-switch**: this cron ships `enabled: false`. It does not fire until an
   operator flips it to `enabled: true` and reloads the runtime (`SIGHUP` —
-  `kill -HUP "$(cat crons/.pid)"` from inside the container). Disabling again is a
+  `kill -HUP "$(cat .oh/crons/.pid)"` from inside the container). Disabling again is a
   one-line edit + reload; never delete the file (preserves history).
 - **Caps**: the `preflight: .mifune/skills/prompt-miner/prompt-miner-caps.sh` gate
   runs **before** any worktree/tmux/agent and counts open PRs labeled
@@ -90,7 +90,7 @@ gh pr edit <PR> --repo mifunedev/openharness --add-label prompt-miner
 
 ### 4. Append the liveness line
 
-Append a `crons/.cron.log` liveness line, resolving the **shared root** under
+Append a `.oh/crons/.cron.log` liveness line, resolving the **shared root** under
 worktree mode (the worktree is reaped after the run; humans + heartbeat read the
 root checkout). Mirror the autopilot convention: honor `$AUTOPILOT_LOG_ROOT` if
 set, else map `$CRON_WORKTREE` back to its shared root, else the current toplevel.
@@ -99,7 +99,7 @@ set, else map `$CRON_WORKTREE` back to its shared root, else the current topleve
 ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1{sub(/^worktree /,"");print;exit}')}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
-  | "$ROOT/.oh/scripts/locked-append.sh" "$ROOT/crons/.cron.log"
+  | "$ROOT/.oh/scripts/locked-append.sh" "$ROOT/.oh/crons/.cron.log"
 ```
 
 ## Guarantees

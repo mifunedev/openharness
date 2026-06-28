@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CRON="$ROOT/crons/autopilot.md"
+CRON="$ROOT/.oh/crons/autopilot.md"
 RUNTIME="$ROOT/.oh/scripts/cron-runtime.ts"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
 TESTS="$ROOT/.oh/scripts/__tests__/cron-runtime.test.ts"
@@ -19,7 +19,7 @@ missing=()
 
 # The autopilot prompt promises a Pi tmux Advisor session; make that executable,
 # not just prose, with a per-cron agent override.
-grep -Eq '^agent:[[:space:]]*pi[[:space:]]*$' "$CRON" || missing+=("crons/autopilot.md sets agent: pi")
+grep -Eq '^agent:[[:space:]]*pi[[:space:]]*$' "$CRON" || missing+=(".oh/crons/autopilot.md sets agent: pi")
 grep -Fq 'agentBin?: string;' "$RUNTIME" || missing+=("CronEntry carries optional agentBin")
 grep -Fq 'agentBin: fm.agent || undefined' "$RUNTIME" || missing+=("parseCronFile reads agent frontmatter")
 grep -Fq 'const agentBin = entry.agentBin || AGENT_BIN;' "$RUNTIME" || missing+=("fire paths prefer per-cron agent over global default")
@@ -35,7 +35,7 @@ grep -Fq 'CRON_OVERLAP_PIDFILE=${quotedPidFile}' "$RUNTIME" || missing+=("tmux w
 grep -Fq '/tmp/cron-${id}.pid' "$RUNTIME" || missing+=("wrapper defaults the overlap pidfile to the id-scoped /tmp/cron-<id>.pid")
 # Worktree-by-default (issue #142): a fire is never silently skipped — worktree:true
 # crons isolate (SPAWNED_WORKTREE) instead of logging SKIPPED_OVERLAP.
-grep -Eq '^worktree:[[:space:]]*true[[:space:]]*$' "$CRON" || missing+=("crons/autopilot.md sets worktree: true")
+grep -Eq '^worktree:[[:space:]]*true[[:space:]]*$' "$CRON" || missing+=(".oh/crons/autopilot.md sets worktree: true")
 grep -Fq 'worktree: fm.worktree === "true"' "$RUNTIME" || missing+=("parseCronFile reads the worktree frontmatter flag")
 grep -Fq '"SPAWNED_WORKTREE"' "$RUNTIME" || missing+=("fireTmux logs SPAWNED_WORKTREE for an isolated worktree fire")
 grep -Fq 'CRON_WORKTREE=' "$RUNTIME" || missing+=("worktree wrapper exports CRON_WORKTREE so the agent knows it is isolated")

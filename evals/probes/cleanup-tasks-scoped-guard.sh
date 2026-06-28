@@ -10,13 +10,13 @@
 #       add`/`git worktree remove` lifecycle — the old shared-checkout
 #       `git switch -c "archive/` is gone. So foreign WIP elsewhere neither aborts
 #       the sweep nor leaks into the archive commit.
-# NOTE: this is a STATIC grep oracle over markdown (crons/cleanup-tasks.md), NOT a
+# NOTE: this is a STATIC grep oracle over markdown (.oh/crons/cleanup-tasks.md), NOT a
 #       runtime execution test of the cron — same limitation as owned-surface-guard.sh.
 #       It guards the documented procedure against silent revert, not its behavior.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CRON="$ROOT/crons/cleanup-tasks.md"
+CRON="$ROOT/.oh/crons/cleanup-tasks.md"
 
 if [[ ! -f "$CRON" ]]; then
   echo "SKIPPED: cleanup-tasks cron absent: $CRON" >&2
@@ -45,7 +45,7 @@ fi
 
 # --- (c) a dirty tasks/ emits the distinct BLOCKED-TASKS-WIP liveness token -----------
 if ! grep -q 'BLOCKED-TASKS-WIP' "$CRON"; then
-  echo "REGRESSION: BLOCKED-TASKS-WIP token missing from crons/cleanup-tasks.md" >&2
+  echo "REGRESSION: BLOCKED-TASKS-WIP token missing from .oh/crons/cleanup-tasks.md" >&2
   exit 1
 fi
 

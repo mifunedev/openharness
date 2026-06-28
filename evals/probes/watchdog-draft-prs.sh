@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WATCHDOG="$ROOT/.claude/skills/watchdog/SKILL.md"
-HEARTBEAT="$ROOT/crons/heartbeat.md"
+HEARTBEAT="$ROOT/.oh/crons/heartbeat.md"
 PRAUDIT="$ROOT/.claude/skills/pr-audit/SKILL.md"
 AGENTS="$ROOT/AGENTS.md"
 

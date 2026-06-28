@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/539-mifune-repo-extraction",
+  "description": "Extract the tracked .mifune portable primitive pack into a dedicated external repository while keeping Open Harness v1 provider symlinks and core workflow compatible.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Seed the external Mifune repository",
+      "description": "As a maintainer, I want the current .mifune tree checkpointed into its own repository so no skills, agents, hooks, wiki entries, or lock metadata are lost during extraction.",
+      "acceptanceCriteria": [
+        "Create or use mifunedev/mifune as the external repository for the Mifune primitive pack.",
+        "Copy the full tracked .mifune tree into that repo, preserving file contents, executable bits, symlinks if any, and relative layout: skills/, agents/, hooks/, skills.lock, README.md.",
+        "Add a repository README explaining that Open Harness consumes the repo at checkout path .mifune/ and that provider symlinks target subpaths below it.",
+        "Commit and push the checkpoint; record the resulting Mifune commit SHA in the Open Harness implementation notes.",
+        "Verify git -C <mifune-repo> status --short is clean after the push.",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Replace vendored Mifune with a pinned external checkout",
+      "description": "As an Open Harness operator, I want .mifune/ to remain present at the same path while its contents come from the external repository so provider symlinks keep resolving.",
+      "acceptanceCriteria": [
+        "Remove tracked in-core .mifune/** file contents from Open Harness without deleting the external checkpoint.",
+        "Add a deterministic pin for mifunedev/mifune at path .mifune/; preferred implementation is a Git submodule/gitlink plus .gitmodules, otherwise document an equivalent pinned bootstrap manifest.",
+        "Preserve provider symlinks and their current targets unless a stronger compatibility reason is documented: .pi/skills -> ../.mifune/skills, .claude/skills -> ../.mifune/skills, .codex/skills -> ../.mifune/skills, .claude/agents -> ../.mifune/agents, .claude/hooks -> ../.mifune/hooks, .codex/agents -> ../.claude/agents.",
+        "Verify test -f .mifune/skills/git/SKILL.md, test -x .mifune/hooks/deny-env-dump.sh, and test -f .mifune/skills/wiki/references/schema.md pass after a clean checkout/init.",
+        "Verify find .pi .claude .codex -maxdepth 2 -type l -exec sh -c 'for p; do test -e \"$p\" || exit 1; done' sh {} + exits 0.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Initialize Mifune before workflows use it",
+      "description": "As a fresh-clone user, I want setup, devcontainer, CI, release, cron, and agent startup paths to initialize Mifune before invoking any skill, hook, or eval runner.",
+      "acceptanceCriteria": [
+        "Update install/bootstrap/devcontainer entry points so .mifune/ is initialized before provider CLIs or hooks load skills.",
+        "Update GitHub Actions checkout/setup steps so CI and release jobs have .mifune/ populated before running bash .mifune/skills/eval/run.sh, boot-path lint, skill-path probes, or provider skill checks.",
+        "Update any script that assumes tracked .mifune/ contents exist in a shallow clone to either call the shared initializer or fail with a clear remediation command.",
+        "Document the manual recovery command for a broken or missing Mifune checkout.",
+        "pnpm run build passes",
+        "pnpm run typecheck passes",
+        "pnpm test:scripts passes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Update references and regression probes for the external Mifune boundary",
+      "description": "As a maintainer, I want docs, context, evals, and DeepWiki-facing explanations to describe Mifune as an external primitive pack mounted at .mifune/ so future agents do not re-vendor or break it.",
+      "acceptanceCriteria": [
+        "Update .mifune references in root docs/context/skills/evals only where the ownership model changes; preserve path references where runtime still uses .mifune/....",
+        "Add or update a Tier-A eval probe that fails when .mifune/ is missing, not initialized to the pinned external repo, or provider symlinks are broken.",
+        "Update context/REPO_MAP.md to route Mifune source-of-truth questions to the external repo while still explaining the local mount path.",
+        "Update AGENTS.md and relevant skill docs only enough to keep the core workflow accurate; do not rewrite individual skill behavior.",
+        "Satisfy the PRD Wiki Alignment section with a source-backed update or new entry that explains Mifune's external-repo relationship and references the DeepWiki comparison.",
+        "bash .mifune/skills/eval/run.sh --probe <new-or-updated-mifune-probe> passes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Verify end-to-end core workflow compatibility",
+      "description": "As the orchestrator, I want the extracted Mifune setup to pass the same green path as the vendored setup so the v1 core split does not regress normal operation.",
+      "acceptanceCriteria": [
+        "From a clean Open Harness checkout with submodules or external Mifune initialized, provider symlinks resolve and ls .pi/skills/git/SKILL.md .claude/skills/spec/SKILL.md .codex/skills/git/SKILL.md succeeds.",
+        "bash .mifune/skills/eval/run.sh --probe skill-paths passes",
+        "bash .mifune/skills/eval/run.sh --probe spec-family-contract passes",
+        "bash .mifune/skills/eval/run.sh completes without a Mifune-path regression.",
+        "Existing cron preflight paths for autopilot and prompt-miner resolve to executable files under .mifune/skills/....",
+        "Open Harness PR checks are green before the PR is marked ready.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

@@ -22,26 +22,28 @@ namespaces, split by what *kind* of thing they hold:
 - **`.oh/`** — *OpenHarness's own machinery* as one unit: the `oh` CLI (`cli/`),
   the Docusaurus docs-site builder (`docs/`, the sole pnpm-workspace member),
   installer + lifecycle scripts (`scripts/`), container-install inputs
-  (`install/`), and user-local deploy config (`config.json`). The former
-  top-level `packages/` folder was **retired** — its `oh` and `docs` packages
-  moved in here.
+  (`install/`), user-local deploy config (`config.json`), and the Ralph/spec
+  task workdirs (`tasks/` — ephemeral build scratch, now at `.oh/tasks/`). The
+  former top-level `packages/` folder was **retired** — its `oh` and `docs`
+  packages moved in here.
 - **repo root** — everything forced to root by *external* tooling
   (`.devcontainer/` for the devcontainer spec + Docker COPY, `harness.yaml`,
   `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) **plus** live
   identity/state the harness edits in place (`context/`, `evals/`, `crons/`,
-  `memory/`, `tasks/`, `workspace/`, and the markdown `docs/`+`blog/` content
+  `memory/`, `workspace/`, and the markdown `docs/`+`blog/` content
   the `.oh/docs` site renders).
 
 ### Back-compat symlinks (the `.mifune` precedent)
 
-The runtime-machinery directories (`scripts/`, `install/`) moved into `.oh/` but
-keep **tracked back-compat symlinks at the old root paths** — exactly how
-`.claude/skills` → `.mifune/skills` works:
+The runtime-machinery directories (`scripts/`, `install/`) and the relocated task
+workdirs (`tasks/`) moved into `.oh/` but keep **tracked back-compat symlinks at
+the old root paths** — exactly how `.claude/skills` → `.mifune/skills` works:
 
 | Old path (symlink) | Real location |
 |---|---|
 | `scripts/` | `.oh/scripts/` |
 | `install/` | `.oh/install/` |
+| `tasks/` | `.oh/tasks/` |
 
 Every consumer pinning those literals — the ~7 skills and 2 cron bodies that call
 `scripts/locked-append.sh`, the `Makefile`'s `COMPOSE := scripts/docker-compose.sh`,
@@ -49,6 +51,12 @@ the boot-lint shellcheck glob (`scripts/*.sh`), vitest's `scripts/__tests__/**`,
 and the eval probes — keeps resolving through the symlink unchanged. Boot scripts
 that self-resolve via `cd "$(dirname "$0")" && pwd` land on the repo root through
 the symlink (bash logical `pwd`), so no path-resolution rewiring was needed.
+
+Unlike `scripts/`/`install/` — whose consumers only need filesystem resolution and
+so ride the symlink unchanged — the **git-mutating** consumers of `tasks/` (the
+`cleanup-tasks` cron, `ralph.sh`, and the eval probes) were repointed to the real
+`.oh/tasks/` path directly, because git index operations cannot traverse the
+symlink.
 
 The **package** directories (`cli/`, `docs/`) moved *without* a back-compat
 symlink — the `packages/` folder is retired, and their consumers were repointed
@@ -110,7 +118,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the docs-site builder, installer/lifecycle scripts, container-install inputs, deploy/compose config | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`, and the `docs/`+`blog/` markdown content) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the docs-site builder, installer/lifecycle scripts, container-install inputs, deploy/compose config, the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `crons/`, `memory/`, `workspace/`, and the `docs/`+`blog/` markdown content) |
 
 ### Why these specifically stay at root
 

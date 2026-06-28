@@ -61,8 +61,13 @@ entirely: the Docusaurus app/assets/blog now live in
 [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web),
 while this core repo keeps GitHub-readable markdown under `docs/` and points
 DeepWiki at generated repo navigation. (`evals/`, `crons/`, `context/`,
-`memory/`, `tasks/`, `workspace/`, and `docs/` stay at root as live
-identity/state/content, not machinery addressed as a unit.)
+`memory/`, `workspace/`, and `docs/` stay at root as live
+identity/state/content, not machinery addressed as a unit.) The Ralph/spec
+task workdirs (`tasks/`) were reclassified as machinery and moved under
+`.oh/tasks/`, keeping a back-compat root symlink; their git-mutating
+consumers (the `cleanup-tasks` cron, `ralph.sh`, the eval probes) were
+repointed to the real `.oh/tasks/` path because git index operations
+cannot traverse the symlink.
 
 ## Namespaces
 
@@ -72,8 +77,8 @@ is earned by **function-class**. Three surfaces:
 | Namespace | Function-class | Holds |
 |---|---|---|
 | `.mifune/` | provider-portable primitives (exported to the 4 providers + the `mifunedev/skills` registry) | skills, agents, hooks |
-| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), deploy config (`config.json`) |
-| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`, `docs/` content |
+| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), deploy config (`config.json`), the Ralph/spec task workdirs (`tasks/` → `.oh/tasks/`) |
+| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `evals/`, `crons/`, `memory/`, `workspace/`, `docs/` content |
 
 Harness-native skills still live in `.mifune/skills/` (not `.oh/`) because they
 share the *identical* provider-export mechanism; portability is a property

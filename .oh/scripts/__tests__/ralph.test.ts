@@ -154,14 +154,14 @@ describe("ralph.sh four-file contract", () => {
     return run(args, { cwd: tmp, env: { ...process.env, REPO_ROOT: tmp } });
   }
 
-  // Create tasks/<taskdesc>/ under the fixture with exactly `files` present.
+  // Create .oh/tasks/<taskdesc>/ under the fixture with exactly `files` present.
   function scaffoldTask(taskdesc: string, files: string[]): void {
-    const dir = path.join(tmp, "tasks", taskdesc);
+    const dir = path.join(tmp, ".oh", "tasks", taskdesc);
     mkdirSync(dir, { recursive: true });
     for (const f of files) writeFileSync(path.join(dir, f), "");
   }
 
-  it("exits 1 when the tasks/<desc> dir does not exist", () => {
+  it("exits 1 when the .oh/tasks/<desc> dir does not exist", () => {
     const { status, stderr } = runHermetic(["missing-task"]);
     expect(status).toBe(1);
     expect(stderr).toMatch(/does not exist/);

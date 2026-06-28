@@ -38,7 +38,7 @@ exact contract `grep -E '^# (tier|source|desc):'`):
 ```sh
 #!/usr/bin/env bash
 # tier: A          # A | ablation
-# source: memory/MEMORY.md 2026-06-04   # the lesson/rule this probe closes
+# source: .oh/memory/MEMORY.md 2026-06-04   # the lesson/rule this probe closes
 # desc: public mifune.dev is not served by `next dev`
 set -euo pipefail
 # ... inspect REAL state (running processes, actual files, live sandbox) — never mocks ...

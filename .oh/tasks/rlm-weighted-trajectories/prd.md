@@ -109,7 +109,7 @@ Acceptance criteria:
   different angles, against **`TRAJECTORY_SCHEMA` exported by `score-trajectories.mjs`** (US-001);
   `--dry-run` stops here) → attach signals (`/eval`, `/audit` by reference + clustering + optional
   verifier) → weight+select via the scorer → aggregate for `synthesis` → persist + log to
-  gitignored `memory/<UTC-date>/weigh-*`.
+  gitignored `.oh/memory/<UTC-date>/weigh-*`.
 - `.mifune/skills/weigh/references/workflow-shape.md` documents the seam: sampling/judging are
   the Workflow tool's substrate; the weight function (the scorer) is the part we own.
 - `/skill-lint` passes on `weigh`; the skill name does not collide with built-ins or Pi packages.
@@ -152,7 +152,7 @@ Acceptance criteria:
   `disable-model-invocation: true`) and a numbered procedure: take artifact + query → chunk-map
   via `query-context.mjs --map` → recurse sub-agents over relevant chunks (bounded by
   depth/children/step budget) → aggregate (pipe competing per-chunk answers through `/weigh`)
-  → persist the recursion trace to gitignored `memory/<UTC-date>/rlm-*`.
+  → persist the recursion trace to gitignored `.oh/memory/<UTC-date>/rlm-*`.
 - `.mifune/skills/rlm/references/recursion-budget.md` points at the `Max depth N / children M /
   step S` triple in `.mifune/skills/advisor/references/recursive-delegation.md` and adds a
   per-run token ceiling. The procedure reuses `.oh/scripts/ralph.sh` and `.worktrees/` **by

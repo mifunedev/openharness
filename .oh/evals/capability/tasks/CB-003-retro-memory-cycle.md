@@ -15,7 +15,7 @@ At session close, produce a scientific retrospective and compound a durable less
 
 ## Success signal
 - A `/retro` run yields **≥1 falsifiable hypothesis**, each carrying a verdict (`supported` / `refuted` / `inconclusive`) and **cited session evidence** for and against.
-- **≥1 supported, sufficiently-confident lesson** is written to a durable memory tier — `memory/MEMORY.md` or the auto-memory index — as one bullet, without duplicating an existing rule/IDENTITY principle.
+- **≥1 supported, sufficiently-confident lesson** is written to a durable memory tier — `.oh/memory/MEMORY.md` or the auto-memory index — as one bullet, without duplicating an existing rule/IDENTITY principle.
 
 ## Rubric
 | Axis | PASS | PARTIAL | FAIL |
@@ -28,4 +28,4 @@ At session close, produce a scientific retrospective and compound a durable less
 Recent durable lessons demonstrate the cycle landing: `loop-node-name-pipe-trap` and `eval-results-new-probe-row` in the memory index, each a one-bullet lesson traceable to a session observation. `context/rules/memory.md` defines the Memory Improvement Protocol (log → qualify → improve) that `/retro` operationalizes as an explicit, evidence-driven, session-closing pass with a propose-then-confirm (or auto-approve) promotion gate.
 
 ## Scoring method
-v1: inspect the most-recent real `/retro` instance — its log entry under `memory/<date>/log.md` and the resulting bullet(s) in `memory/MEMORY.md` or the auto-memory index — against the rubric. Confirm each hypothesis is falsifiable and carries a verdict with cited evidence, and confirm the promoted lesson is a single non-duplicative bullet in a durable tier. Alternatively, run `/retro` fresh at the close of a real session and score the hypotheses and promotion it produces.
+v1: inspect the most-recent real `/retro` instance — its log entry under `.oh/memory/<date>/log.md` and the resulting bullet(s) in `.oh/memory/MEMORY.md` or the auto-memory index — against the rubric. Confirm each hypothesis is falsifiable and carries a verdict with cited evidence, and confirm the promoted lesson is a single non-duplicative bullet in a durable tier. Alternatively, run `/retro` fresh at the close of a real session and score the hypotheses and promotion it produces.

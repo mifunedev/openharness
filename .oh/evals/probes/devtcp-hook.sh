@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: memory/MEMORY.md 2026-06-10 (zsh /dev/tcp)
+# source: .oh/memory/MEMORY.md 2026-06-10 (zsh /dev/tcp)
 # desc: warn-devtcp hook fires on /dev/tcp and not on .devcontainer
 set -euo pipefail
 

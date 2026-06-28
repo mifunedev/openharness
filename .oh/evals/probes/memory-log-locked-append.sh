@@ -20,7 +20,7 @@ done
 bad=""
 for rel in "${files[@]}"; do
   path="$ROOT/$rel"
-  hits="$(grep -nE 'cat[[:space:]]*>>.*memory/\$TODAY/log\.md|cat[[:space:]]*>>.*memory/.*log\.md' "$path" || true)"
+  hits="$(grep -nE 'cat[[:space:]]*>>.*.oh/memory/\$TODAY/log\.md|cat[[:space:]]*>>.*.oh/memory/.*log\.md' "$path" || true)"
   if [ -n "$hits" ]; then
     bad+=$'\n'"$rel:"$'\n'"$hits"
   fi
@@ -32,13 +32,13 @@ if [ -n "$bad" ]; then
 fi
 
 for rel in ".claude/skills/context-audit/SKILL.md" ".pi/skills/context-audit/SKILL.md"; do
-  grep -qF '.oh/scripts/locked-append.sh "$HARNESS/memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
+  grep -qF '.oh/scripts/locked-append.sh "$HARNESS/.oh/memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
     echo "REGRESSION: $rel lacks locked context-audit memory append" >&2
     exit 1
   }
 done
 for rel in ".claude/skills/health-check/SKILL.md" ".pi/skills/health-check/SKILL.md"; do
-  grep -qF '.oh/scripts/locked-append.sh "memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
+  grep -qF '.oh/scripts/locked-append.sh ".oh/memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
     echo "REGRESSION: $rel lacks locked health-check memory append" >&2
     exit 1
   }

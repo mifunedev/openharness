@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: memory/MEMORY.md 2026-06-10 (docker stats vs ps Size)
+# source: .oh/memory/MEMORY.md 2026-06-10 (docker stats vs ps Size)
 # desc: /health-check retains the docker stats in-container-reclaim step
 set -euo pipefail
 

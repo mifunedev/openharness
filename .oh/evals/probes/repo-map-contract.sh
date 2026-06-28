@@ -54,7 +54,7 @@ if [[ -f "$REPO_MAP" ]]; then
     '.pi/npm/node_modules/' \
     '.oh/cli/dist/' \
     '.mifune/skills/wiki/corpus/raw/' \
-    'memory/*/log.md' \
+    '.oh/memory/*/log.md' \
     '.oh/tasks/*/progress.txt' \
     '.oh/evals/datasets/**/oracle/'; do
     grep -Fq "$path" "$REPO_MAP" || fails+=("skip/disregard path documented: $path")

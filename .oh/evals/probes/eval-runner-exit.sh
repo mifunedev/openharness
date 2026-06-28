@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29
+# source: .oh/memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29
 # desc: /eval run.sh exits non-zero when regressions array is non-empty (exit-gate contract)
 set -euo pipefail
 

@@ -49,7 +49,7 @@
       "title": "/weigh skill + workflow-shape reference",
       "description": "As a harness operator, I want a /weigh skill that runs the sample->score->select procedure over the Workflow tool.",
       "acceptanceCriteria": [
-        ".mifune/skills/weigh/SKILL.md has valid frontmatter (name: weigh, TRIGGER description, disable-model-invocation: true, allowed-tools: Read, Grep, Bash, Agent (the sampling step spawns agents), argument-hint) and a numbered procedure: resolve config (N default 4 cap 8) -> sample N agents (one message, different angles, against TRAJECTORY_SCHEMA exported by score-trajectories.mjs; --dry-run stops) -> attach signals (/eval, /audit by reference + clustering + optional verifier) -> weight+select via the scorer -> aggregate for synthesis -> persist + log to gitignored memory/<UTC-date>/weigh-*.",
+        ".mifune/skills/weigh/SKILL.md has valid frontmatter (name: weigh, TRIGGER description, disable-model-invocation: true, allowed-tools: Read, Grep, Bash, Agent (the sampling step spawns agents), argument-hint) and a numbered procedure: resolve config (N default 4 cap 8) -> sample N agents (one message, different angles, against TRAJECTORY_SCHEMA exported by score-trajectories.mjs; --dry-run stops) -> attach signals (/eval, /audit by reference + clustering + optional verifier) -> weight+select via the scorer -> aggregate for synthesis -> persist + log to gitignored .oh/memory/<UTC-date>/weigh-*.",
         ".mifune/skills/weigh/references/workflow-shape.md documents the seam: sampling/judging are the Workflow tool's substrate; the scorer is the part we own.",
         "/skill-lint passes on weigh; the name does not collide with built-ins or Pi packages."
       ],
@@ -74,7 +74,7 @@
       "title": "/rlm skill + recursion-budget reference",
       "description": "As a harness operator, I want a /rlm skill that decomposes a large artifact and recurses sub-LM calls under a bounded budget, reusing the existing recursion substrate.",
       "acceptanceCriteria": [
-        ".mifune/skills/rlm/SKILL.md has valid frontmatter (name: rlm, TRIGGER, disable-model-invocation: true) and a numbered procedure: artifact + query -> chunk-map via query-context.mjs --map -> recurse sub-agents over relevant chunks (bounded by depth/children/step budget) -> aggregate (pipe competing per-chunk answers through /weigh) -> persist the recursion trace to gitignored memory/<UTC-date>/rlm-*.",
+        ".mifune/skills/rlm/SKILL.md has valid frontmatter (name: rlm, TRIGGER, disable-model-invocation: true) and a numbered procedure: artifact + query -> chunk-map via query-context.mjs --map -> recurse sub-agents over relevant chunks (bounded by depth/children/step budget) -> aggregate (pipe competing per-chunk answers through /weigh) -> persist the recursion trace to gitignored .oh/memory/<UTC-date>/rlm-*.",
         ".mifune/skills/rlm/references/recursion-budget.md points at the Max depth N / children M / step S triple in .mifune/skills/advisor/references/recursive-delegation.md and adds a per-run token ceiling; the procedure reuses .oh/scripts/ralph.sh and .worktrees/ by reference (no edits).",
         "/skill-lint passes on rlm; the name does not collide."
       ],

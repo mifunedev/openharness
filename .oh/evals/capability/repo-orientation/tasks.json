@@ -44,7 +44,7 @@
       "class": "light-orientation",
       "prompt": "Find the git workflow, PR title, branch, and target-base conventions.",
       "expected_paths": ["AGENTS.md", ".pi/skills/git/", ".claude/skills/git/"],
-      "forbidden_patterns": ["node_modules/", "wiki/raw/", "memory/*/log.md"]
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", ".oh/memory/*/log.md"]
     },
     {
       "id": "RO-003",
@@ -79,7 +79,7 @@
       "class": "no-orientation",
       "prompt": "Check the current branch and working tree status without needing repo orientation.",
       "expected_paths": [],
-      "forbidden_patterns": ["node_modules/", "wiki/raw/", "memory/*/log.md"]
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", ".oh/memory/*/log.md"]
     },
     {
       "id": "RO-008",

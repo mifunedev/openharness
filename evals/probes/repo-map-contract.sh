@@ -55,7 +55,7 @@ if [[ -f "$REPO_MAP" ]]; then
     '.oh/cli/dist/' \
     '.mifune/skills/wiki/corpus/raw/' \
     'memory/*/log.md' \
-    'tasks/*/progress.txt' \
+    '.oh/tasks/*/progress.txt' \
     'evals/datasets/**/oracle/'; do
     grep -Fq "$path" "$REPO_MAP" || fails+=("skip/disregard path documented: $path")
   done
@@ -73,7 +73,7 @@ if [[ -f "$REPO_MAP" ]]; then
     cd "$ROOT/context"
     repo=$(git rev-parse --show-toplevel)
     git -C "$repo" ls-files -- \
-      ':!:tasks/*/progress.txt' \
+      ':!:.oh/tasks/*/progress.txt' \
       ':!:.mifune/skills/wiki/corpus/raw/*' \
       ':!:evals/datasets/**/oracle/**' \
       ':!:evals/datasets/**/diff.patch' \
@@ -89,7 +89,7 @@ if [[ -f "$REPO_MAP" ]]; then
   for forbidden_re in \
     '(^|/)node_modules/' \
     '^\.mifune/skills/wiki/corpus/raw/' \
-    '^tasks/.*/progress\.txt$' \
+    '^\.oh/tasks/.*/progress\.txt$' \
     '^evals/datasets/.*/oracle/' \
     '^evals/datasets/.*/diff\.patch$' \
     '^evals/datasets/.*/changed-files\.txt$'; do

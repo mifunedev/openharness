@@ -5,7 +5,7 @@
 /.oh/config.json
 .worktrees/*
 .claude/worktrees/
-tasks/archive/
+.oh/tasks/archive/
 !.worktrees/README.md
 
 # Build artifacts

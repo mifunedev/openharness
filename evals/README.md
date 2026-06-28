@@ -4,7 +4,7 @@ This directory is the harness's **fitness function**: a corpus of deterministic
 **probes** that turn lessons into runnable, exit-code-scored checks against
 *real state*. A rectification is provably "done" when its probe is green; a
 recurrence surfaces as a was-green-now-red regression. See
-`tasks/context-fitness-evals/prd.md` for the full design and `.mifune/skills/retro/references/memory-protocol.md`
+`.oh/tasks/context-fitness-evals/prd.md` for the full design and `.mifune/skills/retro/references/memory-protocol.md`
 for how lessons map to probes.
 
 ## Subfolders

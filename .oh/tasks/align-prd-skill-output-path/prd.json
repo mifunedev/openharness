@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "issue": 483,
+  "branchName": "feat/483-align-prd-skill-output-path",
+  "description": "Align /prd output docs to .oh/tasks/<feature-name>/prd.md and add a probe blocking stale flat PRD paths.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Canonicalize the /prd output location",
+      "description": "As a harness operator, I want the PRD skill to document one canonical output path so downstream /ralph and /ship-spec stages can reliably find task artifacts.",
+      "acceptanceCriteria": [
+        ".claude/skills/prd/SKILL.md no longer references .oh/tasks/prd-[feature-name].md.",
+        "The job step says to save to .oh/tasks/<feature-name>/prd.md.",
+        "Existing output/checklist language remains aligned with .oh/tasks/<feature-name>/prd.md.",
+        "Mirrored Pi skill content resolves to the same canonical path when present."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Implemented by updating the provider-facing PRD skill contract."
+    },
+    {
+      "id": "US-002",
+      "title": "Guard against stale flat PRD paths",
+      "description": "As a future maintainer, I want a deterministic eval probe to fail if the stale flat PRD path returns.",
+      "acceptanceCriteria": [
+        "Add evals/probes/prd-output-path-contract.sh.",
+        "The probe fails on .oh/tasks/prd-[feature-name].md in provider-facing PRD skill docs.",
+        "The probe passes only when .oh/tasks/<feature-name>/prd.md is present.",
+        "The probe resolves the repo root from ${BASH_SOURCE[0]}."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Focused probe passes locally."
+    },
+    {
+      "id": "US-003",
+      "title": "Record the change for review",
+      "description": "As a reviewer, I want task and changelog artifacts that explain why the path contract changed.",
+      "acceptanceCriteria": [
+        ".oh/tasks/align-prd-skill-output-path/prd.md and prd.json describe the work.",
+        "CHANGELOG.md records the fix under [Unreleased].",
+        "/eval runs without a new green-to-red regression before the PR is marked ready."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Full eval gate ran successfully (55 probes before addition plus new probe; exit 0)."
+    }
+  ]
+}

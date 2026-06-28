@@ -4,7 +4,7 @@
 # desc: the canonical decomposed workflow is the single /spec dispatcher
 #       (.claude/skills/spec/SKILL.md) routing plan|critique|execute|retro to
 #       references/{plan,critique,execute,retro}.md; the legacy split spec-* skill dirs are
-#       gone; each procedure (and the dispatcher) is pointed at the tasks/<slug>/ folder
+#       gone; each procedure (and the dispatcher) is pointed at the .oh/tasks/<slug>/ folder
 #       interface, names AGENTS.md § The Workflow as its authority, and carries NO loop-style
 #       ## Handoff section (a vestige of the executable-loop framework removed in #263; the
 #       /spec nodes declare their place with ## Pipeline position); AGENTS.md § The Workflow
@@ -41,7 +41,7 @@ for f in "$SPEC/SKILL.md" "$SPEC/references"/plan.md "$SPEC/references"/critique
          "$SPEC/references"/execute.md "$SPEC/references"/retro.md; do
   [ -f "$f" ] || continue
   rel="${f#"$ROOT"/}"
-  grep -qF 'tasks/<slug>/' "$f" || missing+=("$rel: does not name the tasks/<slug>/ folder interface")
+  grep -qF '.oh/tasks/<slug>/' "$f" || missing+=("$rel: does not name the .oh/tasks/<slug>/ folder interface")
   grep -qF 'AGENTS.md § The Workflow' "$f" || missing+=("$rel: does not cite AGENTS.md § The Workflow as authority")
   # The /spec dispatcher is the canonical workflow. A loop-style '## Handoff' section is a
   # vestige of the executable-loop framework (removed in #263); /spec declares its place with

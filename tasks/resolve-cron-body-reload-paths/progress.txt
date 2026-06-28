@@ -1,0 +1,52 @@
+# progress
+
+## Codebase Patterns
+
+- `CronEntry.filePath` is a canonical absolute path. Tests that need to reproduce reload behavior can load from a relative `loadCrons("crons")` call, then change `process.cwd()` and still expect `reloadBody()` to read the original file.
+
+## US-001 — 2026-06-23 21:13 UTC
+
+**Title**: Canonicalize cron entry paths
+**Files changed**: `scripts/cron-runtime.ts`
+**Commit**: 12c47b8
+**Result**: PASS
+
+### What I did
+Canonicalized `CronEntry.filePath` with `path.resolve(file)` at parse time while leaving basename-based id derivation unchanged. `reloadEntryForFire` and `reloadBody` continue reading the stored path.
+
+### Learnings for future iterations
+Canonicalization belongs at the parser boundary so every loader path receives the invariant, including direct parser tests and relative `loadCrons(dir)` calls.
+
+---
+
+## US-002 — 2026-06-23 21:13 UTC
+
+**Title**: Guard cwd-independent body hot-reload
+**Files changed**: `scripts/__tests__/cron-runtime.test.ts`
+**Commit**: 12c47b8
+**Result**: PASS
+
+### What I did
+Added a regression test that loads a cron from relative `loadCrons("crons")`, changes cwd, mutates the source cron body, and verifies `reloadBody()` returns the updated body. The test asserts `BODY_RELOADED` appears and `BODY_RELOAD_ERR` does not.
+
+### Learnings for future iterations
+Use `try/finally` around `process.chdir()` in Vitest tests so later tests inherit the original cwd.
+
+---
+
+## US-003 — 2026-06-23 21:13 UTC
+
+**Title**: Document the hot-reload invariant
+**Files changed**: `wiki/cron-runtime.md`, `wiki/README.md`, `CHANGELOG.md`, `evals/RESULTS.md`
+**Commit**: 12c47b8
+**Result**: PASS
+
+### What I did
+Updated the cron runtime wiki and changelog with the absolute-path hot-reload invariant, refreshed the wiki index, and ran the harness eval gate.
+
+### Learnings for future iterations
+Changing wiki frontmatter `updated:` requires refreshing `wiki/README.md`; `evals/probes/wiki-readme-index.sh` gives a precise diff when it is stale.
+
+---
+
+STATUS: COMPLETE

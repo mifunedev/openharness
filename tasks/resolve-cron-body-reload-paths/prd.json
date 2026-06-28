@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/517-resolve-cron-body-reload-paths",
+  "description": "Fix cron hot-reload to use absolute cron file paths after cwd changes.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Canonicalize cron entry paths",
+      "description": "As the harness operator, I want cron entries to retain absolute source paths so fire-time reloads do not depend on cwd.",
+      "acceptanceCriteria": [
+        "parseCronFile/loadCrons produce CronEntry.filePath as an absolute path for relative and absolute inputs.",
+        "reloadEntryForFire and reloadBody continue to read the same canonical source path.",
+        "Existing cron-runtime tests continue to pass.",
+        "Typecheck passes."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-23; commit 12c47b8"
+    },
+    {
+      "id": "US-002",
+      "title": "Guard cwd-independent body hot-reload",
+      "description": "As the harness operator, I want a regression test that reproduces the cwd-change failure mode.",
+      "acceptanceCriteria": [
+        "Add a test that loads a cron from relative loadCrons(\"crons\"), changes process.cwd(), mutates the cron body, and verifies reloadBody(entry) returns the updated body.",
+        "The test asserts BODY_RELOADED is logged and BODY_RELOAD_ERR is not logged.",
+        "pnpm run test:scripts -- scripts/__tests__/cron-runtime.test.ts passes.",
+        "Typecheck passes."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-23; commit 12c47b8"
+    },
+    {
+      "id": "US-003",
+      "title": "Document the hot-reload invariant",
+      "description": "As a future agent, I want docs to state that cron hot-reload uses absolute file paths.",
+      "acceptanceCriteria": [
+        "Update wiki/cron-runtime.md to describe canonical absolute filePath storage and cwd-independent body reload.",
+        "Update CHANGELOG.md under [Unreleased] with a Fixed entry for issue #517.",
+        "bash evals/probes/wiki-readme-index.sh passes.",
+        "Typecheck passes."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed iteration 1 on 2026-06-23; commit 12c47b8"
+    }
+  ]
+}

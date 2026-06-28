@@ -96,7 +96,7 @@ export function parseCronFile(content: string, file: string): CronEntry | null {
     preflight: fm.preflight || undefined,
     repo: fm.repo || undefined,
     body: m[2],
-    filePath: file,
+    filePath: path.resolve(file),
   };
 }
 

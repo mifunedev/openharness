@@ -48,7 +48,7 @@ day-granularity) would introduce:
 
 This writes `memory/<today>/prompt-miner-<date>.md` (+ `.json`) and appends the
 mandatory `memory/<today>/log.md` entry via `render-log-entry.sh`. `--report-only`
-**never** edits `memory/MEMORY.md` or `context/IDENTITY.md`. Surface the top
+**never** edits `memory/MEMORY.md` or `.oh/context/IDENTITY.md`. Surface the top
 mined markers in the daily log so a human can review the run without attaching.
 
 ### 2. Decide: candidate or stop
@@ -105,7 +105,7 @@ printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
 ## Guarantees
 
 - **Never auto-merge.** This cron opens a PR and labels it; a human merges.
-- **Never edit `memory/MEMORY.md` or `context/IDENTITY.md` directly.** Improvements
+- **Never edit `memory/MEMORY.md` or `.oh/context/IDENTITY.md` directly.** Improvements
   land as loop-gated PRs through `/ship-spec` (which does not walk retro/compound),
   never as unattended memory/identity mutations. The interactive `/prompt-miner`
   Step-4 gate is the only memory-writing path, and it requires human `APPROVE`.

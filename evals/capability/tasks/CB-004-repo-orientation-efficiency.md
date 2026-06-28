@@ -10,12 +10,12 @@ created: 2026-06-19
 # CB-004 · Repo orientation efficiency
 
 ## Task
-Given a fresh session and a common repository-orientation question, find the first correct source path faster and with less context waste by using `context/REPO_MAP.md` instead of raw filesystem scans or broad vendor/generated/runtime reads. The capability under test is whether startup-loaded repo guidance improves the whole harness's navigation efficiency, not merely whether the file exists.
+Given a fresh session and a common repository-orientation question, find the first correct source path faster and with less context waste by using `.oh/context/REPO_MAP.md` instead of raw filesystem scans or broad vendor/generated/runtime reads. The capability under test is whether startup-loaded repo guidance improves the whole harness's navigation efficiency, not merely whether the file exists.
 
 ## Success signal
 - The repo-map contract probe is green: `bash .claude/skills/eval/run.sh --probe repo-map-contract` exits 0.
 - `evals/capability/repo-orientation/tasks.json` defines the held-out workload mix, including no-orientation sessions that still pay startup cost.
-- An A/B run compares at least 6 paired tasks with and without `context/REPO_MAP.md` loaded, covering no-orientation, light-orientation, and deep-orientation classes.
+- An A/B run compares at least 6 paired tasks with and without `.oh/context/REPO_MAP.md` loaded, covering no-orientation, light-orientation, and deep-orientation classes.
 - The A/B report tracks total input tokens, tool calls before the first relevant file, time to correct path, accidental reads under disregard paths, and answer correctness.
 - `scripts/repo-orientation-benchmark-score.mjs --report <report.json>` returns PASS: correctness equal or better, orientation median tool calls drop ≥20%, orientation median time drops ≥15%, poison-path reads do not increase, and expected token delta is ≤0 after counting repo-map startup cost.
 
@@ -32,7 +32,7 @@ PR #462 adds the repo map, startup-load hook, source-map command, disregard/sear
 The manifest includes orientation and no-orientation tasks so the benchmark accounts for sessions that pay startup cost but do not benefit from repo navigation.
 
 ## Scoring method
-Run paired sessions or scripted agent trials for the same task set: baseline without `context/REPO_MAP.md` in startup context, treatment with it. Record per task: first relevant path, correctness, input tokens, tool-call count before that path, elapsed time, and any reads under disregard paths. Write the report as JSON with `runs[]` entries carrying `task`, `variant` (`baseline` or `treatment`), `correct`, `inputTokens`, `toolCallsToFirstRelevantFile`, `elapsedSeconds`, and `poisonPathReads`. Score it with:
+Run paired sessions or scripted agent trials for the same task set: baseline without `.oh/context/REPO_MAP.md` in startup context, treatment with it. Record per task: first relevant path, correctness, input tokens, tool-call count before that path, elapsed time, and any reads under disregard paths. Write the report as JSON with `runs[]` entries carrying `task`, `variant` (`baseline` or `treatment`), `correct`, `inputTokens`, `toolCallsToFirstRelevantFile`, `elapsedSeconds`, and `poisonPathReads`. Score it with:
 
 ```bash
 node scripts/repo-orientation-benchmark-score.mjs \

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # tier: A
 # source: conversation 2026-06-15 — rules are not always supported; git workflow must be the /git skill
-# desc: context/rules/git.md is only a pointer and the executable git conventions live in /git.
+# desc: .oh/context/rules/git.md is only a pointer and the executable git conventions live in /git.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SKILL="$ROOT/.claude/skills/git/SKILL.md"
-RULE="$ROOT/context/rules/git.md"
+RULE="$ROOT/.oh/context/rules/git.md"
 AGENTS="$ROOT/AGENTS.md"
 WORKTREES="$ROOT/.claude/skills/worktrees/SKILL.md"
 CLEANUP="$ROOT/crons/cleanup-tasks.md"
@@ -15,7 +15,7 @@ CHANGELOG="$ROOT/CHANGELOG.md"
 missing=()
 
 [[ -f "$SKILL" ]] || missing+=("/git skill exists")
-[[ -f "$RULE" ]] || missing+=("context/rules/git.md pointer exists")
+[[ -f "$RULE" ]] || missing+=(".oh/context/rules/git.md pointer exists")
 
 if [[ -f "$SKILL" ]]; then
   grep -Fq 'name: git' "$SKILL" || missing+=("skill frontmatter name")
@@ -50,5 +50,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS: git workflow lives in /git and context/rules/git.md is a provider-compat pointer" >&2
+echo "PASS: git workflow lives in /git and .oh/context/rules/git.md is a provider-compat pointer" >&2
 exit 0

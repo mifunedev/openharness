@@ -48,5 +48,5 @@ Acceptance criteria:
 - **Impact**: REQUIRED
 - **Local entries**: `wiki/autopilot.md` to create/update
 - **Spec alignment**: The wiki must teach that GitHub `autopilot` issues are the queue, but completed development-branch PRs can leave issues open; selection therefore dedupes both open and merged PR references before building.
-- **DeepWiki comparison**: No relevant public DeepWiki page found for this narrow selection invariant; use the local DeepWiki-style source-files-first layout from `context/rules/wiki.md`.
+- **DeepWiki comparison**: No relevant public DeepWiki page found for this narrow selection invariant; use the local DeepWiki-style source-files-first layout from `.oh/context/rules/wiki.md`.
 - **Acceptance criteria**: US-003 updates `wiki/autopilot.md`, refreshes `wiki/README.md`, and verifies `bash evals/probes/wiki-readme-index.sh`.

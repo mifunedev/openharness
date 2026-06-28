@@ -19,9 +19,16 @@ The extraction must make the Mifune ingress path obvious and repeatable:
 4. Provider exposure is not a second copy: tracked provider symlinks (`.pi/skills`, `.claude/skills`, `.codex/skills`, `.claude/agents`, `.claude/hooks`, `.codex/agents`) and the Hermes runtime symlink point at the initialized `.mifune/` mount.
 5. Setup surfaces (`README.md`, `docs/README.md`, `.oh/README.md`, devcontainer/entrypoint docs, and `context/REPO_MAP.md`) must show this path in one short “How Mifune is added” block so operators can diagnose an empty `.mifune/` directory without reading implementation code.
 
+
+## Scope guard and v2 follow-up
+
+This implementation stays deliberately v1-simple: Open Harness mounts `ryaneggz/mifune` at `.mifune/` as the mandatory pinned submodule. Do not pivot this PR to make `.pi/` the submodule, move `.mifune` to a compatibility symlink, or absorb Pi runtime state into the Mifune pack.
+
+A possible v2 follow-up may evaluate consolidating Mifune under `.pi/`, with `.mifune -> .pi` as a protected compatibility alias. That v2 needs its own spec/critique because `.pi/` currently mixes source/config with runtime-local state (`npm`, bridge installs, caches, generated files), and because Claude/Codex/Hermes protected paths would depend on a provider-named mount. v2 must first separate runtime state from versioned pack state, define ignore rules, and prove `.mifune/...` continuity through the alias.
+
 ## 2. Goals
 
-- Move the `.mifune/` source tree to `ryaneggz/mifune` with a clear README and a pinned revision consumed by Open Harness.
+- Move the `.mifune/` source tree to `ryaneggz/mifune` with a clear README and a pinned revision consumed by Open Harness at the same `.mifune/` mount path for v1.
 - Keep the in-core runtime path `.mifune/` present as a deterministic external checkout/submodule so existing provider symlinks continue to work unchanged.
 - Add a root-owned initializer/checker so fresh clones, devcontainers, CI, cron jobs, release jobs, and agent startup initialize and validate Mifune before any skill, hook, eval, or autopilot path is used.
 - Make the Mifune ingress path explicit: Open Harness adds Mifune by initializing the pinned `.mifune/` mount, not by copying ad hoc files during setup.
@@ -145,10 +152,13 @@ The extraction must make the Mifune ingress path obvious and repeatable:
 - Adding automatic Dependabot/release automation for Mifune pin bumps in v1; updates are manual and pinned.
 - Auto-merging downstream PRs or force-pushing unrelated branches.
 - Switching the destination repository away from `ryaneggz/mifune` without an explicit operator decision.
+- Consolidating `.pi/` and `.mifune/` into a single `.pi`-mounted Mifune submodule; that is a v2 follow-up requiring a separate spec, runtime-state split, and protected-path alias proof.
 
 ## 6. Design Considerations
 
 Use a Git submodule/gitlink for `.mifune/` because it preserves the local path and existing provider symlink targets while making the external boundary explicit, pinned, and compatible with `git clone --recurse-submodules`. A non-submodule bootstrap manifest is out of scope for v1.
+
+**Scope lock:** If implementation pressure suggests moving the mount from `.mifune/` to `.pi/`, stop and open a v2 planning pass instead of broadening this PR. The v1 acceptance criteria, CI probes, docs, and PR body must continue to describe `.mifune/` as the real submodule mount.
 
 The safe migration sequence is: record current `ryaneggz/mifune` default HEAD → stage extracted Mifune on a replacement branch → merge/overwrite the repo default through a PR unless direct overwrite is explicitly documented → record final `ryaneggz/mifune` SHA → add root initializer/checker → add CI/probe/docs changes → replace vendored tree with pinned external checkout → run clean-clone/provider/Hermes/eval validation → only then mark the PR ready.
 
@@ -174,6 +184,7 @@ The safe migration sequence is: record current `ryaneggz/mifune` default HEAD �
 - **Destination repo:** `ryaneggz/mifune` for v1; intentionally replace its current default-branch contents with the extracted Open Harness Mifune pack, preferably through a feature branch and PR into that repo. Stop and ask if unavailable.
 - **History shape:** a clean checkpoint commit is sufficient for v1 unless the operator explicitly requests filter-repo history preservation.
 - **Pin updates:** manual/pinned Open Harness PRs only for v1; no automatic Dependabot/release pin-bump automation in this task.
+- **`.pi` consolidation:** Deferred to v2. This PR keeps `.mifune/` as the mandatory submodule mount and does not move Mifune ownership to `.pi/`.
 
 ## Wiki Alignment
 

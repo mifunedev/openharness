@@ -12,3 +12,39 @@
 - Documented fresh-clone paths: `git clone --recurse-submodules` or plain clone plus `bash .oh/scripts/ensure-mifune.sh --init`.
 - Added US-006, FR-8, required docs surfaces, protected-path registration for `.oh/scripts/ensure-mifune.sh`, and clean-clone ingress verification.
 - `/spec critique` rerun after this change returned `STATUS: SPEC-APPROVED` (H0/M0/L2).
+
+## US-001 implementation — external Mifune seed
+- Destination repo preflight: `ryaneggz/mifune` public, default branch `development`, viewer permission `ADMIN`.
+- Public readability preflight: `git ls-remote https://github.com/ryaneggz/mifune.git HEAD` succeeded.
+- Pre-replacement default HEAD: `f2ccf1aeaadccaf003224d6bfaa1f90ff2fc2820` on `development`.
+- Replacement branch: `task/539-openharness-mifune-pack`.
+- Replacement copy source: tracked Open Harness `.mifune/` tree via `git archive HEAD:.mifune`, preserving modes/symlinks.
+- External PR: `https://github.com/ryaneggz/mifune/pull/8`.
+- External PR result: merged by squash at `2026-06-28T02:56:08Z`.
+- Final `ryaneggz/mifune` default HEAD / Open Harness submodule pin: `f5a72314687b6ea3848c9b5654e8a4fb894d10af`.
+- External post-merge status: clean (`git -C .worktrees/project/ryaneggz/mifune status --short` had no file changes).
+- External smoke checks passed: `skills/git/SKILL.md`, executable `hooks/deny-env-dump.sh`, `skills/wiki/references/schema.md`, executable `skills/eval/run.sh`.
+
+### Preserved executable mode list
+
+```text
+hooks/deny-env-dump.sh
+hooks/deny-secret-paths.sh
+hooks/warn-devtcp.sh
+skills/autopilot/autopilot-caps.sh
+skills/cloudflared/scripts/run.sh
+skills/context-audit/runner.sh
+skills/eval/run.sh
+skills/prompt-miner/prompt-miner-caps.sh
+skills/prompt-miner/scripts/render-log-entry.sh
+skills/retro/scripts/check-memory-duplicates.sh
+skills/retro/scripts/render-log-entry.sh
+skills/retro/scripts/validate-retro-report.sh
+skills/t3/scripts/t3-code.sh
+```
+
+## Scope decision — v1 stays `.mifune`
+- Operator considered whether `.pi/` should become the Mifune-owned submodule surface.
+- Decision for this PR: do **not** broaden scope; v1 remains mandatory `.mifune/` submodule to `ryaneggz/mifune` with `ensure-mifune` init/check and docs/tests proving ingress.
+- V2 follow-up idea: evaluate `.pi/` as the Mifune submodule and `.mifune -> .pi` as compatibility alias only after a separate spec handles Pi runtime-local state, ignore rules, and protected-path alias proof.
+- Current OpenHarness implementation edits remain paused/uncommitted until this scope guard is pushed.

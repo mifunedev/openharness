@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "Open Harness",
   "branchName": "task/539-mifune-repo-extraction",
-  "description": "Extract the tracked .mifune portable primitive pack into the public ryaneggz/mifune repository while making the pinned .mifune ingress path into Open Harness explicit and preserving provider symlinks, protected .mifune paths, Hermes, and core workflow compatibility.",
+  "description": "V1 extraction: mount ryaneggz/mifune as the mandatory pinned .mifune Git submodule in Open Harness, with ensure-mifune init/check and docs/tests proving that ingress path. .pi-as-Mifune consolidation is explicitly deferred to a v2 follow-up.",
   "userStories": [
     {
       "id": "US-001",
@@ -43,7 +43,7 @@
       ],
       "priority": 2,
       "passes": false,
-      "notes": ""
+      "notes": "Scope guard: v1 keeps .mifune/ as the real submodule mount. Do not pivot this PR to .pi-as-Mifune; defer that to a separate v2 spec."
     },
     {
       "id": "US-003",
@@ -85,7 +85,7 @@
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "Scope guard: v1 keeps .mifune/ as the real submodule mount. Do not pivot this PR to .pi-as-Mifune; defer that to a separate v2 spec."
     },
     {
       "id": "US-004",
@@ -107,7 +107,7 @@
       ],
       "priority": 4,
       "passes": false,
-      "notes": ""
+      "notes": "Docs may mention .pi consolidation only as a v2 follow-up/out-of-scope note; v1 docs must teach .mifune submodule ingress."
     },
     {
       "id": "US-005",

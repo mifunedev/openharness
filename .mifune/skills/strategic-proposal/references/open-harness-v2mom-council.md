@@ -35,7 +35,7 @@ Session: 2026-06-04. Trigger: user linked Marc Benioff / Salesforce V2MOM post a
 
 ## Wiki plan rule of thumb
 
-For strategic operating models, create one provisional bounded entry first (e.g. `wiki/open-harness-v2mom.md`) plus a raw source snapshot. Do not paste council minutes into the wiki. Do not create multiple adjacent strategy entries until distinct durable facts exist.
+For strategic operating models, create one provisional bounded entry first (e.g. `.mifune/skills/wiki/corpus/open-harness-v2mom.md`) plus a raw source snapshot. Do not paste council minutes into the wiki. Do not create multiple adjacent strategy entries until distinct durable facts exist.
 
 ## Approval gates used
 

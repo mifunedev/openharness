@@ -6,7 +6,7 @@ on:
       - main
       - master
     paths:
-      - "packages/docs/**"
+      - ".oh/docs/**"
       - "docs/**"
       - "blog/**"
       - ".github/workflows/docs.yml"
@@ -41,7 +41,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build site
-        working-directory: packages/docs
+        working-directory: .oh/docs
         run: pnpm run build
 
       # Pages deploy only runs on the canonical repo and release branches.
@@ -55,7 +55,7 @@ jobs:
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.repository == 'mifunedev/openharness'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: packages/docs/build
+          path: .oh/docs/build
 
   deploy:
     name: Deploy to GitHub Pages

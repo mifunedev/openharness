@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Self-healing supervisor for the dedicated Slack bridge (client-slack tmux session).
+# Self-healing supervisor for the dedicated Slack bridge (client-slack-pi tmux session).
 #
 # Launched by .devcontainer/entrypoint.sh with the PI_SLACK_* tokens already in
 # the environment and HARNESS / BRIDGE_ENTRY / RECOVERY_ENTRY / LOG exported.
@@ -38,7 +38,7 @@ set -u
 HARNESS="${HARNESS:-/home/sandbox/harness}"
 BRIDGE_ENTRY="${BRIDGE_ENTRY:-$HARNESS/.pi/bridge/node_modules/pi-messenger-bridge/dist/index.js}"
 RECOVERY_ENTRY="${RECOVERY_ENTRY:-$HARNESS/.pi/bridge-recovery/index.ts}"
-LOG="${LOG:-/tmp/client-slack.log}"
+LOG="${LOG:-/tmp/client-slack-pi.log}"
 LOCK="$HOME/.pi/msg-bridge.lock"
 
 cd "$HARNESS" 2>/dev/null || true

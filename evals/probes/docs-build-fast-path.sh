@@ -46,7 +46,7 @@ fi
 if grep -Eiq 'docusaurus|docs:build|packages/docs' <<<"$build_harness"; then
   failures+=("package.json scripts.build:harness must not invoke Docusaurus/docs build: $build_harness")
 fi
-if [[ "$docs_build" != "pnpm --dir packages/docs build" ]]; then
+if [[ "$docs_build" != "pnpm --dir .oh/docs build" ]]; then
   failures+=("package.json scripts.docs:build must remain the explicit manual docs build command")
 fi
 
@@ -84,12 +84,18 @@ for branch in main master; do
     failures+=("docs.yml push.branches must include $branch")
   fi
 done
+if ! grep -Fq '".oh/docs/**"' "$DOCS_WORKFLOW"; then
+  failures+=("docs.yml push.paths must include .oh/docs/**")
+fi
+if grep -Fq '"packages/docs/**"' "$DOCS_WORKFLOW"; then
+  failures+=("docs.yml push.paths must not include stale packages/docs/**")
+fi
 if ! awk '
   /^[[:space:]]+- name: Build site[[:space:]]*$/ { in_build=1; next }
   in_build && /^[[:space:]]+- name:/ { exit }
   in_build { print }
-' "$DOCS_WORKFLOW" | grep -Fq 'working-directory: packages/docs'; then
-  failures+=("docs.yml Build site step must run from packages/docs")
+' "$DOCS_WORKFLOW" | grep -Fq 'working-directory: .oh/docs'; then
+  failures+=("docs.yml Build site step must run from .oh/docs")
 fi
 if ! awk '
   /^[[:space:]]+- name: Build site[[:space:]]*$/ { in_build=1; next }
@@ -101,8 +107,18 @@ fi
 if ! grep -Eq "refs/heads/(main|master)" "$DOCS_WORKFLOW"; then
   failures+=("docs.yml deploy guards must be scoped to main/master refs")
 fi
+if ! awk '
+  /^[[:space:]]+- name: Upload Pages artifact[[:space:]]*$/ { in_upload=1; next }
+  in_upload && /^[[:space:]]+- name:/ { exit }
+  in_upload { print }
+' "$DOCS_WORKFLOW" | grep -Fq 'path: .oh/docs/build'; then
+  failures+=("docs.yml Upload Pages artifact step must upload .oh/docs/build")
+fi
+if grep -Fq 'path: packages/docs/build' "$DOCS_WORKFLOW"; then
+  failures+=("docs.yml Upload Pages artifact step must not use stale packages/docs/build")
+fi
 
-if grep -REn 'docusaurus build|pnpm (run )?docs:build|pnpm --dir packages/docs build' "$EVAL_RUNNER" "$PROBES_DIR" --exclude='docs-build-fast-path.sh' >/tmp/docs-build-fast-path-grep.txt; then
+if grep -REn 'docusaurus build|pnpm (run )?docs:build|pnpm --dir \.oh/docs build' "$EVAL_RUNNER" "$PROBES_DIR" --exclude='docs-build-fast-path.sh' >/tmp/docs-build-fast-path-grep.txt; then
   failures+=("eval runner/probes must not invoke docs build commands: $(tr '\n' ';' </tmp/docs-build-fast-path-grep.txt)")
 fi
 

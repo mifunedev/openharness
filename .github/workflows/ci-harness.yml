@@ -8,7 +8,7 @@ on:
       - main
     paths:
       - "packages/**"
-      - "scripts/**"
+      - ".oh/**"
       - ".pi/**"
       - "Makefile"
       - "harness.yaml"
@@ -19,16 +19,16 @@ on:
       - ".github/workflows/ci-harness.yml"
       - ".mifune/skills/**"
       - ".claude/hooks/**"
+      - ".mifune/hooks/**"
       - "crons/**"
       - "context/**"
       - ".devcontainer/**"
-      - "install/**"
       - "workspace/**"
       - "evals/**"
   pull_request:
     paths:
       - "packages/**"
-      - "scripts/**"
+      - ".oh/**"
       - ".pi/**"
       - "Makefile"
       - "harness.yaml"
@@ -39,10 +39,10 @@ on:
       - ".github/workflows/ci-harness.yml"
       - ".mifune/skills/**"
       - ".claude/hooks/**"
+      - ".mifune/hooks/**"
       - "crons/**"
       - "context/**"
       - ".devcontainer/**"
-      - "install/**"
       - "workspace/**"
       - "evals/**"
 
@@ -56,7 +56,7 @@ permissions:
 jobs:
   ci:
     name: "Lint, Typecheck, Build & Test"
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
@@ -85,31 +85,31 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm --filter './packages/**' -r --if-present run lint
+        run: pnpm --filter './.oh/**' -r --if-present run lint
 
       - name: Format check
-        run: pnpm --filter './packages/**' -r --if-present run format:check
+        run: pnpm --filter './.oh/**' -r --if-present run format:check
 
       - name: Typecheck (workspace packages)
-        run: pnpm --filter './packages/**' -r --if-present run typecheck
+        run: pnpm --filter './.oh/**' -r --if-present run typecheck
 
       - name: Typecheck (oh CLI — npm standalone)
         run: |
-          npm --prefix packages/oh ci
-          npm --prefix packages/oh run typecheck
+          npm --prefix .oh/cli ci
+          npm --prefix .oh/cli run typecheck
 
       - name: Build
         run: pnpm run build:harness
 
       - name: Test
-        run: pnpm --filter './packages/**' -r --if-present run test
+        run: pnpm --filter './.oh/**' -r --if-present run test
 
       - name: Root tests (scripts + .pi extensions)
         run: pnpm test:scripts
 
   boot-lint:
     name: Boot Path Lint (shellcheck + hadolint)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
@@ -119,7 +119,7 @@ jobs:
         run: |
           command -v shellcheck >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y shellcheck; }
           shellcheck --version
-          shellcheck -S warning .devcontainer/*.sh install/*.sh scripts/*.sh .claude/hooks/*.sh
+          shellcheck -S warning .devcontainer/*.sh .oh/install/*.sh .oh/scripts/*.sh .claude/hooks/*.sh .claude/skills/autopilot/*.sh .claude/skills/prompt-miner/*.sh
 
       - name: Hadolint Dockerfile
         uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0
@@ -129,15 +129,22 @@ jobs:
           failure-threshold: warning
 
       - name: Check pnpm pin drift
-        run: bash scripts/check-pnpm-pin.sh
+        run: bash .oh/scripts/check-pnpm-pin.sh
 
   eval-probes:
     name: "Eval Probe Regression Gate"
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Provision Node explicitly so the suite is runner-agnostic: GitHub-hosted
+      # ships Node preinstalled, the self-hosted runner does not.
+      - name: Setup Node 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - name: Run eval probe suite
         run: bash .mifune/skills/eval/run.sh

@@ -36,4 +36,4 @@ Everything else is **out of scope** — refuse with a one-line reason. In partic
 
 - **Never** compress: `LICENSE`, `CHANGELOG.md`, generated/lock files (`*.lock`, `skills.lock`), or anything under `.github/`. These have exact-format contracts.
 - **Refuse** files where compression would break a parser (JSON, YAML data, `prd.json`) — compression is for human-prose docs, not machine-read data.
-- Compressing a `memory/` note is fine; preserve the `## Heading -- HH:MM UTC` log structure (`context/rules/memory.md`).
+- Compressing a `memory/` note is fine; preserve the `## Heading -- HH:MM UTC` log structure (`.mifune/skills/retro/references/memory-protocol.md`).

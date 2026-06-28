@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # tier: A
 # source: conversation 2026-06-19 (advisor-monitored ralph loop pattern, issue #257)
-# desc: advisor-model.md § Pipeline Variants codifies the "Monitored async loop" variant — Advisor owns the STATUS watch, the loop surfaces blocks, finalize routes through the promotable gate
+# desc: the /advisor skill (.mifune/skills/advisor/SKILL.md) § Pipeline Variants codifies the "Monitored async loop" variant — Advisor owns the STATUS watch, the loop surfaces blocks, finalize routes through the promotable gate
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RULE="$ROOT/context/rules/advisor-model.md"
+RULE="$ROOT/.mifune/skills/advisor/SKILL.md"
 
 if [[ ! -f "$RULE" ]]; then
-  echo "SKIPPED: advisor-model rule absent: $RULE" >&2
+  echo "SKIPPED: advisor skill absent: $RULE" >&2
   exit 2
 fi
 
@@ -32,7 +32,7 @@ grep -qiF 'surfaces blocks'                        <<<"$section" || missing+=("l
 grep -qiF 'finalizes through the promotable gate'  <<<"$section" || missing+=("finalize-via-promotable-gate rule")
 
 if (( ${#missing[@]} )); then
-  printf 'REGRESSION: advisor-model.md "Monitored async loop" variant missing: %s\n' "${missing[*]}" >&2
+  printf 'REGRESSION: advisor SKILL.md "Monitored async loop" variant missing: %s\n' "${missing[*]}" >&2
   exit 1
 fi
 

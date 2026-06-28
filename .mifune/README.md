@@ -1,12 +1,17 @@
 # .mifune/
 
-Holds the tracked in-repo **skill source of truth** (`skills/`) plus the
-lockfile that pins which of those skills are installed from the external
-registry (github.com/mifunedev/skills).
+Holds the tracked in-repo **portable primitives** — the provider-agnostic
+behavior surfaces every agent harness consumes through a back-symlink. Today
+that is the **skill source of truth** (`skills/`), the **sub-agent
+definitions** (`agents/`), and the **enforcement hooks** (`hooks/`), plus the
+lockfile that pins which skills are installed from the external registry
+(github.com/mifunedev/skills).
 
 | File / dir | Purpose |
 |------|---------|
 | `skills/` | Tracked source of truth for every agent skill (the shared primitive). Claude, Codex, and Pi expose it through the `.claude/skills`, `.codex/skills`, `.pi/skills` symlinks; Hermes through its runtime `.hermes/skills/openharness` link. |
+| `agents/` | Tracked source of truth for sub-agent definitions (the shared primitive). Claude exposes it through `.claude/agents -> ../.mifune/agents`; Codex chains through `.codex/agents -> ../.claude/agents`. |
+| `hooks/` | Tracked source of truth for enforcement hooks (secret-exposure guard, secret-path guard, dev/tcp warning, Slack notifier). Claude exposes it through `.claude/hooks -> ../.mifune/hooks`, so `settings.json` hook command paths (`.claude/hooks/...`) resolve through the symlink; the Codex `.codex/hooks/` wrapper chains the same way. |
 | `skills.lock` | Pins commit SHA, checksum, and registry version for each registry-managed skill |
 
 ## Managed skills
@@ -36,4 +41,4 @@ done
 # 4. Update .mifune/skills.lock with new commit and checksums, then commit
 ```
 
-See `context/rules/git.md` for branch and commit conventions.
+See `.mifune/skills/git/SKILL.md` for branch and commit conventions.

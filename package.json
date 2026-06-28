@@ -8,18 +8,18 @@
   "scripts": {
     "setup": "pnpm install && pnpm run build",
     "build": "pnpm run build:harness",
-    "build:harness": "pnpm --filter './packages/**' --filter '!@openharness/docs' -r --if-present run build && (test -d packages/oh/node_modules || npm --prefix packages/oh ci --ignore-scripts) && npm --prefix packages/oh run build",
+    "build:harness": "pnpm --filter './.oh/**' --filter '!@openharness/docs' -r --if-present run build && (test -d .oh/cli/node_modules || npm --prefix .oh/cli ci --ignore-scripts) && npm --prefix .oh/cli run build",
     "test": "pnpm -r --if-present run test && vitest run",
     "test:scripts": "vitest run",
     "lint": "pnpm -r --if-present run lint",
     "format:check": "pnpm -r --if-present run format:check",
-    "typecheck": "pnpm --filter './packages/**' -r --if-present run typecheck && npm --prefix packages/oh run typecheck",
+    "typecheck": "pnpm --filter './.oh/**' -r --if-present run typecheck && npm --prefix .oh/cli run typecheck",
     "format": "pnpm -r --if-present run format",
     "pnpm:devPreinstall": "pnpm run security:audit",
     "security:audit": "pnpm audit --audit-level low --ignore GHSA-h67p-54hq-rp68",
-    "docs:build": "pnpm --dir packages/docs build",
-    "docs:dev": "pnpm --dir packages/docs start",
-    "docs:serve": "pnpm --dir packages/docs serve"
+    "docs:build": "pnpm --dir .oh/docs build",
+    "docs:dev": "pnpm --dir .oh/docs start",
+    "docs:serve": "pnpm --dir .oh/docs serve"
   },
   "dependencies": {
     "croner": "^9.1.0"
@@ -49,12 +49,15 @@
       "form-data": "^4.0.6",
       "launch-editor": "^2.14.1",
       "@babel/core": "^7.29.7",
-      "dompurify": "^3.4.10",
+      "dompurify": "^3.4.11",
       "mermaid": "^11.15.0",
       "postcss": "^8.5.10",
       "joi": "^18.2.1",
       "esbuild": "^0.28.1",
-      "js-yaml": "^4.2.0"
+      "js-yaml": "^4.2.0",
+      "undici": "^7.28.0",
+      "webpack-dev-server": "^5.2.5",
+      "http-proxy-middleware": "^2.0.10"
     },
     "auditConfig": {
       "ignoreCves": [
@@ -62,7 +65,7 @@
       ]
     },
     "patchedDependencies": {
-      "gray-matter@4.0.3": "patches/gray-matter@4.0.3.patch"
+      "gray-matter@4.0.3": ".oh/patches/gray-matter@4.0.3.patch"
     }
   }
 }

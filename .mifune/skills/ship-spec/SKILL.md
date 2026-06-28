@@ -9,12 +9,12 @@ description: |
   CI gates pass.
   TRIGGER when: asked to scaffold a spec end-to-end, "ship a spec",
   "set up a task PR", or after planning a feature and ready to formalize.
-argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent] [--issue <N>] [--repo <owner/name>] [--remote <name>] [--base <branch>]"
+argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent] [--issue <N>] [--executor=ralph|delegate-advisor] [--repo <owner/name>] [--remote <name>] [--base <branch>]"
 ---
 
 # Ship Spec
 
-Compose the existing primitives (`/prd`, wiki synthesis per `.mifune/skills/wiki/references/schema.md`, DeepWiki comparison, `.claude/agents/critic.md`, `/ralph`, `gh`, `git`, `/compact`, an expert `/worktrees` Advisor launched via `/goal`, `/delegate` + `scripts/ralph.sh`, `/eval`, `/pr-audit`) into one durable invocation that produces a fully-scaffolded task and a ready-for-review PR. The draft PR is an observability checkpoint while implementation is pending, not the terminal state. After scaffolding, the orchestrator compacts and hands off to an expert Advisor — launched in its own tmux session via a `/goal`-prefixed prompt — that isolates work in a worktree, drives `/delegate` workers each running `scripts/ralph.sh`, revises required wiki entries from implementation evidence, then undrafts the PR through a `/pr-audit` promotable gate. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
+Compose the existing primitives (`/prd`, wiki synthesis per `.mifune/skills/wiki/references/schema.md`, DeepWiki comparison, `.claude/agents/critic.md`, `/ralph`, `gh`, `git`, `/compact`, an expert `/worktrees` Advisor launched via `/goal`, an Advisor-monitored `scripts/ralph.sh` loop (`/delegate` optional inside), `/eval`, `/pr-audit`) into one durable invocation that produces a fully-scaffolded task and a ready-for-review PR. The draft PR is an observability checkpoint while implementation is pending, not the terminal state. After scaffolding, the orchestrator compacts and hands off to an expert Advisor — launched in its own tmux session via a `/goal`-prefixed prompt — that isolates work in a worktree, **drives an Advisor-monitored `scripts/ralph.sh` loop by default** (`--executor=ralph`; `/delegate` is an optional within-iteration fan-out tool, never a replacement for the loop; `--executor=delegate-advisor` selects the legacy `/delegate` worker fan-out), revises required wiki entries from implementation evidence, then undrafts the PR through a `/pr-audit` promotable gate. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
 
 **Core principle: critic gate before commitment.** Critics review the PRD before the issue is opened, the branch created, or anything is pushed. The cheapest thing to revise is the spec itself — make that the gate.
 
@@ -32,7 +32,7 @@ flowchart TD
     G --> G2["7.5 /compact (before implement)<br/>after PRD artifacts"]
     G2 --> H["8. Branch + commit + push"]
     H --> I["9. gh pr create --draft<br/>(observability checkpoint)"]
-    I --> J["10. Launch /worktrees Advisor in tmux via /goal<br/>→ /delegate workers each run scripts/ralph.sh<br/>→ Advisor monitors to STATUS: COMPLETE"]
+    I --> J["10. Launch /worktrees Advisor in tmux via /goal<br/>→ Advisor-monitored scripts/ralph.sh loop (default)<br/>→ /delegate optional inside; monitor to STATUS: COMPLETE"]
     J --> K["11. /eval gate"]
     K --> W2["11.25 Wiki revision gate<br/>if Wiki Alignment required"]
     W2 --> K2["11.5 /compact (after implement)<br/>before the audit"]
@@ -56,12 +56,16 @@ Extract:
 - **`--repo <owner/name>`** (optional, default `mifunedev/openharness`) — GitHub repository for issue/PR operations.
 - **`--remote <name>`** (optional, default resolved from `--repo`) — git remote to fetch/push work branches.
 - **`--base <branch>`** (optional, default `development`) — PR base and branch start point.
+- **`--executor=ralph|delegate-advisor`** (optional, default `ralph`) — Stage 10 build executor. `ralph` (default): the Advisor monitors `scripts/ralph.sh` directly (the Monitored async loop; `/delegate` is an optional within-iteration fan-out tool, never a replacement for the loop). `delegate-advisor`: the legacy `/delegate --plan tasks/<slug>/prd.json` worker fan-out.
 
 ```bash
 SHIP_SPEC_REPO="${SHIP_SPEC_REPO:-mifunedev/openharness}"
 SHIP_SPEC_BASE="${SHIP_SPEC_BASE:-development}"
 case "${ARGUMENTS:-}" in *--repo*) SHIP_SPEC_REPO=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--repo[ =]\([^ ]*\).*/\1/p') ;; esac
 case "${ARGUMENTS:-}" in *--base*) SHIP_SPEC_BASE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--base[ =]\([^ ]*\).*/\1/p') ;; esac
+SHIP_SPEC_EXECUTOR="${SHIP_SPEC_EXECUTOR:-ralph}"
+case "${ARGUMENTS:-}" in *--executor=delegate-advisor*) SHIP_SPEC_EXECUTOR=delegate-advisor ;; *--executor=ralph*) SHIP_SPEC_EXECUTOR=ralph ;; esac
+case "$SHIP_SPEC_EXECUTOR" in ralph|delegate-advisor) ;; *) echo "ERROR: invalid SHIP_SPEC_EXECUTOR=$SHIP_SPEC_EXECUTOR"; exit 1 ;; esac
 resolve_ship_spec_remote() {
   git remote -v | awk -v repo="$SHIP_SPEC_REPO" '
     BEGIN { want=tolower(repo) }
@@ -75,7 +79,7 @@ resolve_ship_spec_remote() {
 case "${ARGUMENTS:-}" in *--remote*) SHIP_SPEC_REMOTE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--remote[ =]\([^ ]*\).*/\1/p') ;; esac
 SHIP_SPEC_REMOTE="${SHIP_SPEC_REMOTE:-$(resolve_ship_spec_remote)}"
 [ -n "$SHIP_SPEC_REMOTE" ] || { echo "ERROR: no local git remote for $SHIP_SPEC_REPO"; exit 1; }
-echo "ship-spec target: repo=$SHIP_SPEC_REPO remote=$SHIP_SPEC_REMOTE base=$SHIP_SPEC_BASE"
+echo "ship-spec target: repo=$SHIP_SPEC_REPO remote=$SHIP_SPEC_REMOTE base=$SHIP_SPEC_BASE executor=$SHIP_SPEC_EXECUTOR"
 ```
 
 Derive `<slug>` per `/prd` rules: lowercase, kebab-case, `[a-z0-9-]+`, **≤5 words**, not `archive`. Reject and ask for a shorter name if invalid.
@@ -342,7 +346,7 @@ Closes #<N>.
 
 ## Next steps (automated)
 1. Launch the expert `/worktrees` Advisor in tmux session `agent-ship-<slug>` via `/goal` (the pre-implement `/compact` already ran in Stage 7.5).
-2. Advisor: `/delegate` workers each run `scripts/ralph.sh <slug>` in an isolated worktree; monitor to `STATUS: COMPLETE`; run `/eval`; revise required wiki entries against the spec and DeepWiki comparison; then `/compact` before the audit.
+2. Advisor: monitor `scripts/ralph.sh <slug>` directly in an isolated worktree (`--executor=ralph`, the default Monitored async loop; `/delegate` optional inside an iteration — `--executor=delegate-advisor` for the legacy worker fan-out); monitor to `STATUS: COMPLETE`; run `/eval`; revise required wiki entries against the spec and DeepWiki comparison; then `/compact` before the audit.
 3. A separate executor runs `/pr-audit` immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that fresh audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output — including draft-age and draft-cap/backlog warnings — is only a resume/investigation hint, never an undraft signal.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code) via /ship-spec
@@ -354,7 +358,7 @@ Capture the PR URL and PR number `<PR>`. This is an observability checkpoint, no
 
 ### Stage 10 — Launch the expert `/worktrees` Advisor (tmux + `/goal`)
 
-The orchestrator does not implement inline. It launches an **expert Advisor on `/worktrees`** — the per-task orchestrator that drives the `/delegate` ralph executors and monitors them to completion — in its own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode persists the run to completion. Session name `agent-ship-<slug>` (sanitize slashes/space → `-`), distinct from the `<slug>`-named loop sessions `scripts/ralph.sh` creates. The Advisor session is launched in **both** modes.
+The orchestrator does not implement inline. It launches an **expert Advisor on `/worktrees`** — the per-task orchestrator that, by default (`--executor=ralph`), monitors the `scripts/ralph.sh` loop directly to completion (and may run one loop per independent task in parallel; `/delegate` is optional inside an iteration), or with `--executor=delegate-advisor` drives the legacy `/delegate` ralph executors — in its own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode persists the run to completion. Session name `agent-ship-<slug>` (sanitize slashes/space → `-`), distinct from the `<slug>`-named loop sessions `scripts/ralph.sh` creates. The Advisor session is launched in **both** modes.
 
 **Build worktree — reuse vs. create.** When `$CRON_WORKTREE` is set (autopilot's default), this run is ALREADY inside an isolated worktree that Stage 8 put on the feature branch, so the Advisor **reuses it** — it does NOT create a second worktree (a second `git worktree add` for the same branch would nest under the cron worktree via the relative path, or fail with `branch already checked out`). Standalone (no `$CRON_WORKTREE`) the Advisor creates `.worktrees/<prefix>/<N>-<slug>` as before. Start the Advisor session **in the build worktree** with `-c`, and bake the worktree path into the prompt — a new tmux session does not inherit `$CRON_WORKTREE` from the launching client, so passing it via env is unreliable:
 
@@ -368,7 +372,7 @@ tmux new-session -d -s "$SESSION" -c "${WT:-$PWD}" \
 
 **Advisor `/goal` prompt** (one line; fill the placeholders — when `$CRON_WORKTREE` is set, substitute its actual path for `<worktree>` and use the "reuse" branch of step 1):
 
-> `/goal` As an **expert Advisor on `/worktrees`**, implement `tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) Orchestrate with `/delegate --plan tasks/<slug>/prd.json`: spawn `general-purpose` worker(s) that each `cd` into that worktree and run `scripts/ralph.sh <slug>` (the ralph loop), and **monitor** them by polling `tasks/<slug>/progress.txt` for `STATUS: COMPLETE` and the workers' tmux liveness. (3) Run the `/eval` gate (Stage 11). (4) If `tasks/<slug>/prd.md` has `## Wiki Alignment` with `Impact: REQUIRED`, revise the named `.mifune/skills/wiki/corpus/*.md` entries after implementation so they match the spec's final behavior and acceptance criteria, include DeepWiki-style relevant source files/line citations/system relationships, preserve the recorded DeepWiki comparison, and refresh `.mifune/skills/wiki/corpus/README.md`; verify with `bash evals/probes/wiki-readme-index.sh`. (5) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (6) In a **separate executor**, run `/pr-audit` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SHIP_SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
+> `/goal` As an **expert Advisor on `/worktrees`**, implement `tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) **Drive the build per `$SHIP_SPEC_EXECUTOR` (default `ralph`).** *Default (`ralph`)* — the Monitored async loop: launch `scripts/ralph.sh <slug>` in a named tmux session and **own the `STATUS: COMPLETE` watch yourself** (poll `tasks/<slug>/progress.txt` + the loop's tmux liveness; never delegate the watch to a sub-agent that returns early). A ralph iteration **may** call `/delegate` to fan out one story's disjoint files, but `/delegate` does **not** replace the loop. Given multiple **independent** tasks, run one `scripts/ralph.sh` per task in parallel (each its own slug + tmux session) and monitor each to its own `STATUS: COMPLETE`. *Opt-in (`--executor=delegate-advisor`)* — instead orchestrate with `/delegate --plan tasks/<slug>/prd.json`: spawn `general-purpose` worker(s) that each `cd` into that worktree and run `scripts/ralph.sh <slug>`, monitoring `tasks/<slug>/progress.txt` for `STATUS: COMPLETE` and the workers' tmux liveness. (3) Run the `/eval` gate (Stage 11). (4) If `tasks/<slug>/prd.md` has `## Wiki Alignment` with `Impact: REQUIRED`, revise the named `.mifune/skills/wiki/corpus/*.md` entries after implementation so they match the spec's final behavior and acceptance criteria, include DeepWiki-style relevant source files/line citations/system relationships, preserve the recorded DeepWiki comparison, and refresh `.mifune/skills/wiki/corpus/README.md`; verify with `bash evals/probes/wiki-readme-index.sh`. (5) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (6) In a **separate executor**, run `/pr-audit` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SHIP_SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
 
 The Advisor owns Stages 11–13 inside its session. The orchestrator's turn ends after launching it and reporting the session name; the ready-for-review PR is produced asynchronously by the Advisor. Each worker commits the implementation on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer (per `templates/prompt.md`); worktree isolation keeps concurrent work off the shared checkout (avoiding the autopilot shared-checkout contamination class). If `tmux` is unavailable, fall back to running the executor inline (`scripts/ralph.sh <slug>`) and continue to Stage 11 in the foreground. Stage 13 still requires a fresh Stage 12 `/pr-audit` immediately before `gh pr ready`; stale-draft watchdog/heartbeat output cannot substitute for that audit.
 

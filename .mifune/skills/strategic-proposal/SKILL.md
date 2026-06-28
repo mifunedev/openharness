@@ -25,7 +25,7 @@ Use this variant when the user asks for a council to define a V2MOM, operating m
    - **Council decision**: Vision, Values, Methods, Obstacles, Measures.
    - **Wiki plan**: exact target entry, draft frontmatter/body, verification, and rejected scope.
 5. Prefer one bounded provisional wiki entry first. Extra positioning/docs-IA entries are premature unless they hold distinct durable facts.
-6. Keep wiki output as synthesis, not council minutes. Raw/source material belongs under `wiki/raw/`; the tracked entry stays within the wiki word cap and starts `confidence: provisional`.
+6. Keep wiki output as synthesis, not council minutes. Raw/source material belongs under `.mifune/skills/wiki/corpus/raw/`; the tracked entry stays within the wiki word cap and starts `confidence: provisional`.
 7. Add explicit approval gates for contested strategic wording (e.g. tagline, key nouns, whether a constraint is too narrow) before implementing file changes.
 
 Session example and final V2MOM synthesis: `references/open-harness-v2mom-council.md`.
@@ -75,7 +75,7 @@ Read the following to build the briefing:
 - `IDENTITY.md` — stack, mission, URLs
 - `MEMORY.md` — past decisions, lessons learned
 - `Makefile`, `scripts/`, `install/` — orchestrator entrypoints and provisioning surface
-- `packages/docs/` — documentation site source
+- `docs/` — GitHub-readable core docs; rendered docs site source lives in `mifunedev/openharness-web`
 - Open issues: `gh api "repos/mifunedev/openharness/issues?state=open&per_page=50"`
 - Repo stats: `gh api repos/mifunedev/openharness --jq '{stars: .stargazers_count, forks: .forks_count}'`
 
@@ -214,7 +214,7 @@ Parse the council's FINAL roadmap table and write it to `docs/roadmap.md` as a s
 - **Observation**: [one sentence — what signal was strongest, what surprised you]
 ```
 
-See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
+See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
 **b) Report**:
 - `HEARTBEAT_OK` (if skipped)

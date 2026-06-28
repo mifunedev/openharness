@@ -78,7 +78,7 @@ Append to `memory/<UTC-date>/log.md`:
 - **Observation**: <one sentence on whether the questions landed (changed the work, or were noise)>
 ```
 
-Then run the qualify/improve loop per `context/rules/memory.md`. If a question pattern landed especially well or poorly across runs, that may merit a line in `memory/MEMORY.md`.
+Then run the qualify/improve loop per `.mifune/skills/retro/references/memory-protocol.md`. If a question pattern landed especially well or poorly across runs, that may merit a line in `memory/MEMORY.md`.
 
 ## Question quality bar
 

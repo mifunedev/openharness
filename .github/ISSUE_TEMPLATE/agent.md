@@ -42,7 +42,7 @@ This will:
 - Build the Docker image and start the sandbox container (`docker compose up -d --build`)
 - Mount the workspace and run the setup script
 
-`make sandbox` does **not** create the per-agent branch or worktree. The `branch` (`agent/<agent-name>`) and `worktree_path` (`.worktrees/<agent-name>`) fields from the Metadata block above are real conventions you create manually with `git worktree add` per `context/rules/git.md` §Worktrees:
+`make sandbox` does **not** create the per-agent branch or worktree. The `branch` (`agent/<agent-name>`) and `worktree_path` (`.worktrees/<agent-name>`) fields from the Metadata block above are real conventions you create manually with `git worktree add` per the `/git` skill (`.mifune/skills/git/SKILL.md`) §Worktrees:
 
 ```bash
 git worktree add -b agent/<agent-name> .worktrees/<agent-name> development

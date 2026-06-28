@@ -85,7 +85,7 @@ Analyze the plan deeply and produce a structured task list. For each task, deter
 - Tasks that modify the same file or depend on another's output MUST be sequential
 - Every task must have at least one verifiable acceptance criterion
 - Each task must have a **distinct, non-overlapping scope** — do not spawn redundant workers for the same files
-- A task that is itself multi-step and parallelizable MAY recursively delegate via the `Agent` tool — but only if the worker's task description includes explicit `Max depth: N` and `Step budget: N` fields (see `context/rules/recursive-delegation.md`). Absent those fields, workers stay flat.
+- A task that is itself multi-step and parallelizable MAY recursively delegate via the `Agent` tool — but only if the worker's task description includes explicit `Max depth: N` and `Step budget: N` fields (see `.mifune/skills/advisor/references/recursive-delegation.md`). Absent those fields, workers stay flat.
 
 ### 3. Build dependency graph and compute waves
 
@@ -137,7 +137,7 @@ If any worker's task description authorizes recursive delegation (`Max depth: N`
 - `Max children per level: M` (M ≤ 5)
 - `Step budget: S`
 
-If any field is missing, either add it or downgrade the task to flat execution (`Max depth: 1`). Workers without all three fields MUST stay flat — they have no authority to spawn grandchildren regardless of how the task is described in prose. See `context/rules/recursive-delegation.md` for the full protocol.
+If any field is missing, either add it or downgrade the task to flat execution (`Max depth: 1`). Workers without all three fields MUST stay flat — they have no authority to spawn grandchildren regardless of how the task is described in prose. See `.mifune/skills/advisor/references/recursive-delegation.md` for the full protocol.
 
 **b) Collect results**
 
@@ -223,7 +223,7 @@ Run at the end of **every** execution -- op, dry-run, or error.
 - **Observation**: [one sentence]
 ```
 
-See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
+See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
 ## Reference
 

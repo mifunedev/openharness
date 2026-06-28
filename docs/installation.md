@@ -22,7 +22,7 @@ If you've already cloned your fork — or cloned upstream and re-pointed the rem
 
 ```bash
 cd <your-clone>
-bash scripts/install.sh
+bash .oh/scripts/install.sh
 ```
 
 The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and starts the sandbox. No `OH_GITHUB_REPO` environment variable required.
@@ -36,7 +36,7 @@ The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and start
    ```
 3. Run the installer — it detects the local clone automatically:
    ```bash
-   bash scripts/install.sh
+   bash .oh/scripts/install.sh
    ```
 
 ### Clone-and-own (re-point)
@@ -51,7 +51,7 @@ The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and start
    ```
 3. Run the installer:
    ```bash
-   bash scripts/install.sh
+   bash .oh/scripts/install.sh
    ```
 
 ## One-line installer (upstream only)
@@ -147,7 +147,7 @@ docker ps --filter "name=openharness" --format "{{.Names}} {{.Status}}"
 docker inspect --format '{{json .State.Health}}' openharness
 ```
 
-A healthy sandbox reports the tmux-managed runtime sessions (`cron-watchdog` and `cron-system`) as available; optional Slack and Hermes dashboard sessions are checked only when configured. To debug a failure from inside the container, run `bash /home/sandbox/harness/scripts/sandbox-healthcheck.sh` for the exact missing session. For a temporary local escape hatch, add a Compose override with `services.sandbox.healthcheck.disable: true`; do not commit that override unless you are deliberately changing the harness health policy.
+A healthy sandbox reports the tmux-managed runtime sessions (`cron-watchdog` and `cron-system`) as available; optional Slack and Hermes dashboard sessions are checked only when configured. To debug a failure from inside the container, run `bash /home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh` for the exact missing session. For a temporary local escape hatch, add a Compose override with `services.sandbox.healthcheck.disable: true`; do not commit that override unless you are deliberately changing the harness health policy.
 
 ### 4. Open a shell
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #476 — memory log writes in skill contracts must use scripts/locked-append.sh
+# source: issue #476 — memory log writes in skill contracts must use .oh/scripts/locked-append.sh
 # desc: /context-audit and /health-check route Memory Protocol appends through the locked append helper
 set -euo pipefail
 
@@ -32,13 +32,13 @@ if [ -n "$bad" ]; then
 fi
 
 for rel in ".claude/skills/context-audit/SKILL.md" ".pi/skills/context-audit/SKILL.md"; do
-  grep -qF 'scripts/locked-append.sh "$HARNESS/memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
+  grep -qF '.oh/scripts/locked-append.sh "$HARNESS/memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
     echo "REGRESSION: $rel lacks locked context-audit memory append" >&2
     exit 1
   }
 done
 for rel in ".claude/skills/health-check/SKILL.md" ".pi/skills/health-check/SKILL.md"; do
-  grep -qF 'scripts/locked-append.sh "memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
+  grep -qF '.oh/scripts/locked-append.sh "memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
     echo "REGRESSION: $rel lacks locked health-check memory append" >&2
     exit 1
   }
@@ -53,5 +53,5 @@ cmp -s "$ROOT/.claude/skills/health-check/SKILL.md" "$ROOT/.pi/skills/health-che
   exit 1
 }
 
-echo "PASS: memory log skill appends use scripts/locked-append.sh" >&2
+echo "PASS: memory log skill appends use .oh/scripts/locked-append.sh" >&2
 exit 0

@@ -103,12 +103,12 @@ For Eval Probe Regression Gate failures, immediately inspect the failed probe na
 - **PASS**: Report "CI green" with the run URL
 - **FAIL**: Report the failing step, error message, and suggest a fix. Then fix the issue, commit, push, and run `/ci-status` again
 - **NO RUN**: No workflow's `on:` filter matched the push, or `PR_NUMBER` was set but `gh pr checks` returned no rows (the PR exists but no workflows were triggered yet). *(Note: the workflow names below reflect this harness's layout and may differ in other checkouts.)*
-  - `ci-harness.yml` — push only: `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, itself
-  - `docs.yml` — push-to-main/master only: `packages/docs/**`, `docs/**`, `blog/**`, itself
+  - `ci-harness.yml` — push only: `packages/**`, `.oh/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, itself
+  - Docs site CI/deploy lives in `mifunedev/openharness-web`; this repo has no `docs.yml` Docusaurus workflow.
   - `conciseness.yml` — push or PR: `workspace/*.md`, `workspace/.claude/rules/*.md`, itself
   - `release.yml` — tag push only
 
-  Diagnose with: `git diff --name-only HEAD~1 HEAD` and compare against each workflow's `on:` block.
+  Infrastructure-only PRs (devcontainer/scripts/install/) trigger NOTHING on push — that's expected. `pull_request`-event workflows still fire when the PR opens. Diagnose with: `git diff --name-only HEAD~1 HEAD` and compare against each workflow's `on:` block.
 
 ## CI Pipeline Steps
 
@@ -116,29 +116,19 @@ For Eval Probe Regression Gate failures, immediately inspect the failed probe na
 
 This project's CI (`CI: Harness`) runs these steps in order:
 
-1. Workspace package lint (`pnpm --filter './packages/**' -r --if-present run lint`)
-2. Workspace package format check (`pnpm --filter './packages/**' -r --if-present run format:check`)
-3. Workspace package typecheck (`pnpm --filter './packages/**' -r --if-present run typecheck`)
-4. Standalone `packages/oh` typecheck (`npm --prefix packages/oh ci && npm --prefix packages/oh run typecheck`)
-5. Fast harness build (`pnpm run build:harness`) — excludes Docusaurus/docs build; docs build/deploy happens only on `main`/`master` pushes through `docs.yml`
-6. Workspace package tests (`pnpm --filter './packages/**' -r --if-present run test`)
-7. Root script tests (`pnpm test:scripts`)
-8. Boot-path lint (`shellcheck .devcontainer/*.sh install/*.sh` and `hadolint .devcontainer/Dockerfile`)
+1. Lint (`pnpm run lint`)
+2. Format check (`pnpm run format:check`)
+3. Type check (`pnpm run type-check`)
+4. Prisma generate (`pnpm exec prisma generate`)
+5. Prisma migrate (`npx prisma migrate deploy`)
+6. Build (`pnpm run build`)
+7. Test (`pnpm test`)
+8. Playwright E2E (`pnpm run test:e2e`)
 
 ## Local Pre-flight
 
 Before pushing, you can run the same checks locally to catch issues early:
 
 ```bash
-pnpm install --frozen-lockfile
-pnpm --filter './packages/**' -r --if-present run lint
-pnpm --filter './packages/**' -r --if-present run format:check
-pnpm --filter './packages/**' -r --if-present run typecheck
-npm --prefix packages/oh ci && npm --prefix packages/oh run typecheck
-pnpm run build:harness
-pnpm --filter './packages/**' -r --if-present run test
-pnpm test:scripts
-
-# Optional, manual docs validation only when intentionally editing docs:
-pnpm docs:build
+pnpm -r run lint && pnpm -r run format:check && pnpm -r run build && pnpm -r run test
 ```

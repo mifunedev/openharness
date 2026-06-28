@@ -2,7 +2,7 @@
 id: heartbeat
 schedule: "0 * * * *"
 timezone: America/Los_Angeles
-enabled: true
+enabled: false
 overlap: false
 catchup: false
 agent: pi
@@ -44,6 +44,20 @@ that catches anything time-sensitive without doing real work.
     sessions frozen at usage-limit/resume prompts, or reap completed autopilot PR
     sessions only after the PR is terminal and the pane is idle. It never merges
     PRs and never kills sessions on age alone.
+2.10. **One-shot scheduled maintenance (date-gated).** Compute the current
+    Denver date and hour:
+    ```bash
+    SDATE=$(TZ=America/Denver date +%Y-%m-%d)
+    SHOUR=$(TZ=America/Denver date +%H)
+    ```
+    - If `SDATE` is `2026-06-20` **and** `SHOUR` is (`12` **or** `13`) **and** the
+      sentinel `/tmp/oh-restart-273.done` is absent → run the **Scheduled
+      maintenance** procedure (see `## Scheduled maintenance` below). This is the
+      **spec-execute** node of `tasks/restart-openharness-tmux/` (issue #273). The
+      `13` hour is a single retry: the script writes the sentinel only on success
+      and is `flock`-guarded, so a healthy noon run makes the 13:00 pulse a no-op,
+      while a failed/missed noon run gets one more attempt.
+    - Any other date/hour → skip; do no scheduled maintenance this pulse.
 3. Decide whether anything needs action right now.
 4. If yes, act. If no, append a brief "nothing pressing" note to
    `memory/<today>/log.md` and exit.
@@ -64,6 +78,10 @@ that catches anything time-sensitive without doing real work.
   include in reply as `NUDGE: <action>` (and `WATCHING: ...` for active or
   open-PR items) and note in `memory/<today>/log.md`. Clean watchdog run → no
   extra output.
+- Scheduled maintenance (step 2.10) → when the one-shot maintenance fired,
+  include `MAINT: restart-273 launched (detached)` and note it in
+  `memory/<today>/log.md`. The detached restart script writes its own
+  separate `restart-273:` liveness line and #273 comment.
 - **Memory log contract (do this either way):** run a shell block that computes
   `TODAY` and `HEARTBEAT_TIME`, then append a structured record to
   `memory/$TODAY/log.md` through `scripts/locked-append.sh`. Do not paste shell
@@ -92,8 +110,50 @@ that catches anything time-sensitive without doing real work.
   ```
 
   where `<status>` is one of `OK`, `OK (N watching)`, `OK (stale ralph: <name>)`,
-  `OK (resolved: <item-snippet>)`, `OK (watchdog: <summary>)`. This is the cron's
-  only liveness signal — it MUST execute every pulse regardless of what else happened.
+  `OK (resolved: <item-snippet>)`, `OK (watchdog: <summary>)`, or `OK (maint)`.
+  This is the cron's only per-pulse liveness signal — it MUST
+  execute every pulse regardless of what else happened.
+
+## Scheduled maintenance
+
+Date-gated by step 2.10 to a specific one-shot window. The current entry executes
+issue **#273** — clear the stale `system-cron` argv on the tmux server — at
+**2026-06-20 12:00 America/Denver**, the operator-chosen auto-execute slot. This is
+the **spec-execute** node of the `tasks/restart-openharness-tmux/` spec (planned in
+`prd.md`/`prd.json`, critiqued in `critique.md`).
+
+The restart kills and relaunches the tmux server, which would kill this heartbeat
+agent's own session mid-step. So the heartbeat does **not** perform the restart
+inline — it launches the reviewed runbook-as-code **detached** so it outlives the
+server teardown.
+
+**Ordering — the launch is this pulse's FINAL action.** Because the restart tears
+down this agent's own session, first complete the normal Reporting steps for this
+pulse (the `MAINT: restart-273 launched (detached)` reply line, the memory log, and
+the `crons/.cron.log` liveness line), and ONLY THEN, as the last command, launch the
+detached script:
+
+```bash
+# spec-execute: launch the #273 restart detached (it survives `tmux kill-server`).
+# ABSOLUTE path — the launch must not depend on the agent's CWD; a relative path that
+# fails to resolve would misfire silently (backgrounded, output only in the boot log).
+setsid bash "$HARNESS/.oh/scripts/maintenance/restart-openharness-tmux.sh" </dev/null \
+  >/tmp/oh-restart-273.boot.log 2>&1 &
+```
+
+The detached script owns everything after launch: it waits an 8s grace window, then
+captures the live durable session map, kills the server, relaunches the durable
+sessions that were live at capture in dependency order (website origin before its
+tunnel; `cron-system` before `cron-watchdog`), clears a stale `crons/.pid`, verifies
+(durable stack back + cleared argv + a live cron runtime; `mifune.dev` is checked but
+informational, since it rebuilds on its own), appends a `restart-273:` liveness line
+to `crons/.cron.log` through `scripts/locked-append.sh`, and closes #273 on success
+(comments and stays open if degraded). It is `flock`- and sentinel-guarded
+(`/tmp/oh-restart-273.done`), so the 13:00 retry pulse or any double-fire is a no-op.
+
+Surface the result in the heartbeat reply as `MAINT: restart-273 launched
+(detached)`. Once the date has passed, a follow-up removes this one-shot step and
+this section.
 
 ## Active items
 

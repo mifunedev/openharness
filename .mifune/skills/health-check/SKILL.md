@@ -39,6 +39,15 @@ docker ps -a --filter status=exited --format 'table {{.Names}}\t{{.Status}}\t{{.
 
 `docker system df` splits usage into Images / Containers / Local Volumes / Build Cache with a **RECLAIMABLE** column — that column is the entire reclaim opportunity at a glance. For per-object detail (which exited container is hoarding GBs, which volumes are orphaned) use `docker system df -v`.
 
+If a running container is Docker-in-Docker (common names: `*dind*`, `ci-runner-dind`), also inspect the nested daemon before concluding the reclaim plan:
+
+```bash
+docker exec <dind-container> docker system df
+docker exec <dind-container> docker ps -a --size --format 'table {{.Names}}\t{{.Status}}\t{{.Size}}\t{{.Image}}'
+```
+
+Nested CI sidecars often hide the best disk win: unused inner CI images and build artifacts inside the sidecar volume. If ongoing cleanup is requested, prefer an idle-aware spindown/watchdog over manual one-off pruning; see `/docker-disk-cleanup`.
+
 ### 3. Size the target
 
 Match the verdict to what `target` actually does:
@@ -109,6 +118,8 @@ docker builder prune -f
 df -h / | tail -1
 ```
 
+If the request is a rerun/check-again in the same thread, make the report delta-oriented: call out what changed since the prior health check (disk %, available memory, CPU load, Docker restart/status changes) before repeating the verdict. Do not re-explain the full ladder unless the finding changed; keep it focused on current state plus material deltas.
+
 Then emit a verdict table — one row per resource, RAG-rated against the sized target:
 
 ```
@@ -134,11 +145,11 @@ Then ask (use `AskUserQuestion`). Run the removal only on explicit approval. Wit
 
 ### 8. Log (Memory Improvement Protocol)
 
-Always, per `context/rules/memory.md`:
+Always, per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "memory/$TODAY"
-scripts/locked-append.sh "memory/$TODAY/log.md" <<EOF
+.oh/scripts/locked-append.sh "memory/$TODAY/log.md" <<EOF
 
 ## Health-Check -- $TIME UTC
 - **Result**: OP | DRY-RUN

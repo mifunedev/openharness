@@ -39,7 +39,7 @@ flowchart TB
 
     subgraph sandbox["Sandbox container — default workspace"]
         Orch{{"<b>Orchestrator</b><br/>Claude @ project root<br/>git · lifecycle · file edits"}}
-        Tmux["tmux sessions<br/>client-slack · agent-t3code · app-docs · cron-system"]
+        Tmux["tmux sessions<br/>client-slack-pi · agent-t3code · app-docs · cron-system"]
         Sock(["docker.sock"])
     end
 
@@ -68,6 +68,6 @@ If you already have a sandbox running, jump directly to the page you need.
 
 - Source code and issues: [github.com/mifunedev/openharness](https://github.com/mifunedev/openharness)
 - Learning material: [Resources](/docs/resources)
-- Philosophy: [How Open Harness embodies compound engineering](/blog/compound-engineering) — why each unit of work here should make the next one easier.
+- Philosophy: [How Open Harness embodies compound engineering](https://github.com/mifunedev/openharness-web/tree/main/blog) — why each unit of work here should make the next one easier.
 
 [Connecting to the Sandbox](/docs/connecting)

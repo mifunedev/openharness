@@ -134,21 +134,12 @@ Detach from the tmux session without stopping it: `Ctrl-b d`.
 
 For more on T3 Code setup see [Harnesses → T3 Code](/docs/harnesses/t3code).
 
-### Step 4 — Launch the docs site
-
-```bash
-tmux new-session -d -s app-docs 'pnpm --filter @openharness/docs start 2>&1 | tee /tmp/app-docs.log'
-```
-
-The Docusaurus dev server binds port 3000 inside the container. Via VSCode auto-forwarding, open `localhost:3000` in your laptop browser.
-
-### Step 5 — Confirm ports in VSCode
+### Step 4 — Confirm ports in VSCode
 
 Open the **Ports** panel (bottom status bar → Ports, or `Ctrl+Shift+P` → "Focus on Ports"). You should see:
 
 | Port | Forwarded to | App |
 |------|-------------|-----|
-| 3000 | localhost:3000 | Docs site |
 | 3773 | localhost:3773 | T3 Code UI |
 
 If a port is missing, confirm the tmux session is running (`tmux ls`) and that you are still attached via VSCode.
@@ -157,5 +148,4 @@ If a port is missing, confirm the tmux session is running (`tmux ls`) and that y
 
 | App | Container port | Laptop URL (VSCode attached) |
 |-----|---------------|------------------------------|
-| Docs site | 3000 | `http://localhost:3000` |
 | T3 Code UI | 3773 | `http://localhost:3773` |

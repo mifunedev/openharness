@@ -11,8 +11,11 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 - **Recursive Language Models (RLM) integrated as two harness-owned skills** — `/weigh` (weighted-trajectory selection over the Workflow tool, backed by a pure, version-controlled, deterministic-first scorer at `.mifune/skills/weigh/scripts/score-trajectories.mjs` with frozen `DEFAULT_WEIGHTS` and a hard eligibility floor that never makes a silent least-bad pick) and `/rlm` (context-as-environment decomposition that addresses large artifacts via `query-context.mjs` without ingesting them, then recurses sub-agents under a bounded depth/children/step budget, reusing `.oh/scripts/ralph.sh` + `.worktrees/` by reference). Adds an opt-in, default-off self-consistency weighting seam to `/critique`, and the `weigh-scorer-contract` and `rlm-context-budget` eval probes ([#533](https://github.com/mifunedev/openharness/issues/533)).
 ### Changed
+- Move the rendered Docusaurus docs site, assets, and blog archive to `mifunedev/openharness-web`; the core repo now points readers to `docs/README.md`, DeepWiki, and the external site source ([#536](https://github.com/mifunedev/openharness/issues/536)).
 ### Fixed
+- Remove obsolete top-level `wiki-ingest`, `wiki-query`, and `wiki-lint` skill directories left after the consolidated `/wiki` dispatcher moved their procedures under `.mifune/skills/wiki/references/`, preventing Pi startup from reporting `description is required` on reference-only `SKILL.md` files.
 ### Removed
+- Remove the in-repo `.oh/docs` Docusaurus package, docs deploy workflow, docs build scripts, and docs-only pnpm dependency graph from Open Harness core ([#536](https://github.com/mifunedev/openharness/issues/536)).
 ### Deprecated
 ### Security
 

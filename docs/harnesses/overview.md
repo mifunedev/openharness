@@ -53,11 +53,10 @@ Open Harness ships Claude Code, Codex, and Pi in the default image. Authenticate
 
 ## Default surfaces
 
-Three surfaces cover most day-to-day use:
+Two optional surfaces cover most day-to-day use:
 
 - **Pi+Slack** — chat with the agent from Slack instead of the terminal.
 - **T3 Code** — browser UI on port `3773` driving Claude / Codex / OpenCode.
-- **Docs app** — the Docusaurus site you're reading now, on port `3000`.
 
 Each runs in its own named tmux session per [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md). For the two browser surfaces, open them in **VS Code's Simple Browser** (`Ctrl+Shift+P` → `Simple Browser: Show`; `Cmd+Shift+P` on macOS) so the live UI sits in a tab next to the code you're editing.
 
@@ -89,16 +88,6 @@ tmux capture-pane -t harness-t3code -p | grep -i pairingUrl
 ```
 
 Open the printed pairing URL (`http://localhost:3773/pair#token=…`) in the Simple Browser tab. Full setup: [T3 Code](./t3code.md).
-
-### Docs app
-
-The site you're reading now, served locally:
-
-```bash
-tmux new-session -d -s app-docs 'pnpm --filter @openharness/docs dev 2>&1 | tee /tmp/app-docs.log'
-```
-
-Open `http://localhost:3000` in the Simple Browser tab for hot-reload feedback on doc edits without leaving the editor.
 
 ### Reattach to any session
 

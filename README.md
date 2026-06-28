@@ -64,7 +64,7 @@ curl -fsSL -o openharness-install.sh \
 OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```
 
-If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](https://oh.mifune.dev/docs/installation) for all environment overrides.
+If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](docs/installation.md) for all environment overrides.
 
 </details>
 
@@ -125,8 +125,10 @@ make shell
 
 ## 📚 Where to go next
 
-- [Quickstart](https://oh.mifune.dev/docs/quickstart) — full step-by-step
-- [Crons](https://oh.mifune.dev/docs/crons/overview) — markdown-defined autonomous tasks
+- [Docs index](docs/README.md) — GitHub-readable docs kept with the core repo
+- [Quickstart](docs/quickstart.md) — full step-by-step
+- [DeepWiki](https://deepwiki.com/mifunedev/openharness) — generated codebase map
+- [Docs site source](https://github.com/mifunedev/openharness-web) — migrated Docusaurus site and blog archive
 
 ## 🧹 Cleanup
 
@@ -144,4 +146,4 @@ MIT.
 
 ---
 
-[Full documentation](https://oh.mifune.dev/docs)
+[Docs index](docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)

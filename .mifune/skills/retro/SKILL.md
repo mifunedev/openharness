@@ -109,7 +109,7 @@ Seed hypotheses by asking, for each subsystem, what *this session* revealed abou
 | Context compression | Was loaded context bloated/redundant, or did a rule prove load-bearing? | `/context-audit`, `/caveman` |
 | Reinforcement learning | Did advisor/executor or recursive-delegation patterns help or hurt? Over/under-delegation? | `.mifune/skills/advisor/SKILL.md`, `recursive-delegation.md` |
 | Wiki | Did the session surface knowledge that belongs in the wiki, or hit stale/missing entries? | `/wiki ingest`, `/wiki lint` |
-| Docs | Did human-facing doc gaps or inaccuracies surface? | `docs/`, `blog/` |
+| Docs | Did human-facing doc gaps or inaccuracies surface? | `docs/` (site/blog live in `mifunedev/openharness-web`) |
 | Memory scaffolding | Did the log/tier protocol itself create friction or work cleanly? | `.mifune/skills/retro/references/memory-protocol.md`, `/retro` |
 
 ## Instructions

@@ -2,26 +2,11 @@
 #
 # Dependabot security updates are enabled at the repository level and run
 # automatically. This file does NOT enable version-update PRs
-# (open-pull-requests-limit: 0) — its sole purpose is to carry the `ignore`
-# conditions that shape Dependabot's automatic security updates.
-#
-# Read from the default branch (development). See:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# (open-pull-requests-limit: 0).
 version: 2
 updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
-    # 0 disables version-update PRs entirely; security updates are unaffected
-    # by this limit but DO respect the `ignore` conditions below.
     open-pull-requests-limit: 0
-    ignore:
-      # js-yaml GHSA-h67p-54hq-rp68 (quadratic-complexity DoS, affects <=4.1.1)
-      # has no reachable fix: the patched line is >=4.2.0, but our tree caps
-      # js-yaml at 3.14.2 via @docusaurus/* -> gray-matter -> js-yaml. Dependabot
-      # reports `security_update_not_possible` and the job fails on every retry.
-      # The advisory is accepted and ignored on the pnpm side as well
-      # (package.json -> pnpm.auditConfig.ignoreCves + security:audit --ignore).
-      # Revisit if docusaurus/gray-matter ever unpins js-yaml to the 4.x line.
-      - dependency-name: "js-yaml"

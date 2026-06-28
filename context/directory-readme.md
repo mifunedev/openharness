@@ -52,6 +52,6 @@ mydir/*
 
 ## When NOT to add a README
 
-- Directory's name alone is enough (e.g. `blog/` for Docusaurus posts).
+- Directory's name alone is enough (e.g. `docs/` for product documentation).
 - Directory is auto-managed by tooling and not meant for human
   navigation (e.g. `node_modules/`).

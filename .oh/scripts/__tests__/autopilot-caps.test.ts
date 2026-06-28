@@ -77,7 +77,7 @@ const memoryLog = (): string => {
   return existsSync(p) ? readFileSync(p, "utf-8") : "";
 };
 const liveness = (): string => {
-  const p = path.join(tmp, "crons", ".cron.log");
+  const p = path.join(tmp, ".oh", "crons", ".cron.log");
   return existsSync(p) ? readFileSync(p, "utf-8") : "";
 };
 const ghArgs = (): string => {

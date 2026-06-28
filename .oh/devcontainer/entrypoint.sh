@@ -115,7 +115,7 @@ fi
 # readable on hosts where UID 1000 is already occupied.
 repair_home_mount_ownership
 
-HARNESS="/home/sandbox/harness"
+HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
 
 # How Mifune is added: Open Harness carries .mifune/ as a pinned Git
 # submodule to ryaneggz/mifune. Initialize or repair that mount before any

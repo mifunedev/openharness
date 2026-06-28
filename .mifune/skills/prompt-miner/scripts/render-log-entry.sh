@@ -3,7 +3,7 @@
 #
 # Mirrors the autopilot/caps logging shape: it resolves the shared harness root
 # (git rev-parse --show-toplevel) and appends a single Memory-Improvement-Protocol
-# record to memory/<UTC-date>/log.md through the repo-root scripts/locked-append.sh
+# record to memory/<UTC-date>/log.md through the repo-root .oh/scripts/locked-append.sh
 # helper so the whole multi-line record is serialized under flock. Diagnostics go
 # to stderr; the helper never edits memory/MEMORY.md or context/IDENTITY.md.
 #
@@ -47,7 +47,7 @@ DAY="$(date -u +%Y-%m-%d)"
 ROOT="${AUTOPILOT_LOG_ROOT:-$(git rev-parse --show-toplevel)}"
 LOG_DIR="$ROOT/memory/$DAY"
 LOG_FILE="$LOG_DIR/log.md"
-APPEND="$ROOT/scripts/locked-append.sh"
+APPEND="$ROOT/.oh/scripts/locked-append.sh"
 mkdir -p "$LOG_DIR"
 
 record() {

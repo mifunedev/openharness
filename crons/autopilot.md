@@ -8,7 +8,7 @@ catchup: false
 tmux: true
 worktree: true
 agent: pi
-preflight: scripts/autopilot-caps.sh
+preflight: .mifune/skills/autopilot/autopilot-caps.sh
 repo: mifunedev/openharness
 description: Hourly autopilot — issue-queue-first harness-infra improvements in an isolated-worktree Pi tmux Advisor session
 ---
@@ -34,13 +34,13 @@ Invoke the `/autopilot` skill. Reminders:
   top-ranked finding and build it** this same run. GitHub issues are the queue.
 - **Every PR states its selection rationale** in the description — why this item
   was chosen this session (queue position, or the research finding + ranking).
-- **Default executor is delegate-advisor**: use `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, /delegate + ralph, /eval, /pr-audit undraft) into a ready-for-review PR`, then let `/ship-spec` own the build — it compacts, runs the worktree Advisor + `/delegate` + ralph, gates on `/eval`, and undrafts via `/pr-audit`. `AUTOPILOT_EXECUTOR=ralph` or `/autopilot --executor=ralph` keeps the legacy inline `scripts/ralph.sh "$SLUG"` fallback.
+- **Default executor is delegate-advisor**: use `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, /delegate + ralph, /eval, /pr-audit undraft) into a ready-for-review PR`, then let `/ship-spec` own the build — it compacts, runs the worktree Advisor + `/delegate` + ralph, gates on `/eval`, and undrafts via `/pr-audit`. `AUTOPILOT_EXECUTOR=ralph` or `/autopilot --executor=ralph` keeps the legacy inline `.oh/scripts/ralph.sh "$SLUG"` fallback.
 - **The `/eval` gate runs inside `/ship-spec`** before it marks the PR ready; a
   new green→red probe regression keeps the PR draft.
 - **Caps**: at most 6 open `autopilot` PRs created per UTC day AND 10 total open
   at any time. A close/merge frees a slot. **Never auto-merge.** These caps are
   now enforced deterministically *before launch* by the `preflight:
-  scripts/autopilot-caps.sh` gate (logs `SKIPPED-CAP-*` + liveness and spawns no
+  .mifune/skills/autopilot/autopilot-caps.sh` gate (logs `SKIPPED-CAP-*` + liveness and spawns no
   session on a capped hour), scoped to `repo: mifunedev/openharness`; your
   in-session §1 recheck is defense-in-depth for a long run that crosses the cap
   mid-flight.

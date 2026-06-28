@@ -56,29 +56,31 @@ When you close the VSCode remote window or detach from the container, the port f
 
 ## Default exposure posture
 
-The sandbox publishes **one port** by default:
+The base sandbox publishes **no application ports** to the host by default.
 
+Container ports (3000, 3773, etc.) are reachable from your laptop only via VSCode's auto-forwarding, a manual `ssh -L` tunnel, or an explicit compose overlay you add yourself.
+
+## Opt-in public exposure
+
+If you need a port reachable beyond your laptop — for example, to share a preview with a teammate — there are two opt-in paths:
+
+**1. Compose overlay binding `0.0.0.0`**
+
+Add a custom compose file that binds the port on all interfaces and merge it in via `compose.overrides:` in `harness.yaml` (tracked) or `composeOverrides[]` in `config.json` (user-local, gitignored):
+
+```yaml
+# docker-compose.my-expose.yml
+services:
+  sandbox:
+    ports:
+      - "0.0.0.0:3000:3000"
 ```
-127.0.0.1:1455:1455   # Pi harness OAuth login callback (host loopback only)
-```
 
-Nothing else is published to the host. The `127.0.0.1` binding ensures port 1455 is reachable from `localhost` on the host machine — which VSCode's Remote-SSH forwarding can carry back to your laptop — without exposing it on any public interface.
+This is NOT the default; you opt in explicitly. Be aware that binding to `0.0.0.0` exposes the port on the host's public interface.
 
-All other container ports (3000, 3773, etc.) are only reachable via VSCode's auto-forwarding or a manual `ssh -L` tunnel.
+**2. External tunnel**
 
-## Public sharing with Cloudflared
-
-If you need a port reachable beyond your laptop — for example, to share a preview with a teammate — use Cloudflared. The sandbox image includes the `cloudflared` CLI and persists credentials in `~/.cloudflared` when you use named tunnels.
-
-For temporary previews, run the `/cloudflared` skill against the local app port. It starts a Cloudflare quick tunnel in a named tmux session and reports the generated public URL:
-
-```text
-/cloudflared 3000
-```
-
-Quick tunnel URLs are public bearer URLs. For sensitive apps, add Cloudflare Access or another authentication gate before sharing the URL.
-
-Avoid binding app ports to `0.0.0.0` on the host unless you explicitly need host-level publishing. The default public-sharing path is a Cloudflared tunnel that keeps the app bound locally inside the sandbox.
+The harness ships no built-in tunnel tool. For public access, bring your own: `cloudflared`, `ngrok`, `tailscale funnel`, or an nginx/Caddy reverse proxy. Start the tunnel inside the sandbox in a named tmux session (see [tmux conventions](#tmux-session-naming)).
 
 ## tmux session naming
 
@@ -86,10 +88,9 @@ All long-running processes inside the sandbox run in named tmux sessions. The na
 
 | Category | Example | Purpose |
 |----------|---------|---------|
-| `client-` | `client-slack`, `client-discord` | External-surface clients bridging an in-sandbox agent |
+| `client-` | `client-slack-pi`, `client-discord` | External-surface clients bridging an in-sandbox agent |
 | `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes (interactive CLIs are foreground, not tmux) |
 | `app-` | `app-docs`, `app-api` | Dev servers |
-| `cloudflared-` | `cloudflared-3000` | Cloudflare tunnels for shared previews |
 
 For the full convention see [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
 
@@ -103,12 +104,12 @@ Follow Option B (or C for a remote host). The Ports panel in VSCode shows forwar
 
 ### Step 2 — Configure Slack
 
-Configuration is native — edit `.devcontainer/.env` (set `PI_SLACK_APP_TOKEN` / `PI_SLACK_BOT_TOKEN`) and the tracked `.pi/msg-bridge.json` (`autoConnect`, `auth.trustedUsers`), then restart the `client-slack` session. The session itself is started automatically on container boot by `.devcontainer/entrypoint.sh`. For the full walkthrough see [Integrations → Slack](/docs/integrations/slack).
+Set `PI_SLACK_APP_TOKEN` / `PI_SLACK_BOT_TOKEN` in `.devcontainer/.env`, then configure the messenger from inside the session with the bridge's `/msg-bridge` command (trusted users, channels) — that is the default method. The `client-slack-pi` session starts automatically on container boot; manage it with `gateway pi` (`gateway pi --restart` to pick up token edits, `gateway status` to check). The tracked `.pi/msg-bridge.json` (`autoConnect`, `auth.trustedUsers`) is an optional headless pre-seed. For the full walkthrough see [Integrations → Slack](/docs/integrations/slack).
 
-After the bridge restarts, verify it is live:
+After the bridge is up, verify it is live:
 
 ```bash
-tmux capture-pane -t client-slack -p | grep -i 'Bot user ID'
+tmux capture-pane -t client-slack-pi -p | grep -i 'Bot user ID'
 ```
 
 ### Step 3 — Launch T3 Code
@@ -147,7 +148,6 @@ Open the **Ports** panel (bottom status bar → Ports, or `Ctrl+Shift+P` → "Fo
 
 | Port | Forwarded to | App |
 |------|-------------|-----|
-| 1455 | localhost:1455 | Pi OAuth callback |
 | 3000 | localhost:3000 | Docs site |
 | 3773 | localhost:3773 | T3 Code UI |
 
@@ -159,4 +159,3 @@ If a port is missing, confirm the tmux session is running (`tmux ls`) and that y
 |-----|---------------|------------------------------|
 | Docs site | 3000 | `http://localhost:3000` |
 | T3 Code UI | 3773 | `http://localhost:3773` |
-| Pi OAuth callback | 1455 | `http://localhost:1455` |

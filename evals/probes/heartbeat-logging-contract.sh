@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HEARTBEAT="$ROOT/crons/heartbeat.md"
-HELPER="$ROOT/scripts/locked-append.sh"
+HELPER="$ROOT/.oh/scripts/locked-append.sh"
 
 missing=()
 [[ -f "$HEARTBEAT" ]] || { echo "SKIPPED: missing $HEARTBEAT" >&2; exit 2; }

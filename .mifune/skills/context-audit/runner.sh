@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # context-audit runner — Tier-2 ablation harness
 # Usage:
-#   ./runner.sh --ablate <relative-path>   # e.g. context/rules/recursive-delegation.md
+#   ./runner.sh --ablate <relative-path>   # e.g. context/IDENTITY.md
 #   ./runner.sh --baseline                 # record baseline probe outputs only
 #
 # Must be run from the harness root (/home/sandbox/harness).

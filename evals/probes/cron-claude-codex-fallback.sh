@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNTIME="$ROOT/scripts/cron-runtime.ts"
+RUNTIME="$ROOT/.oh/scripts/cron-runtime.ts"
 
 if [[ ! -f "$RUNTIME" ]]; then
   echo "SKIPPED: cron runtime absent: $RUNTIME" >&2

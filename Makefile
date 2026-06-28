@@ -6,11 +6,11 @@
 -include .devcontainer/.env
 
 HARNESS_YAML      := harness.yaml
-COMPOSE           := scripts/docker-compose.sh
+COMPOSE           := .oh/scripts/docker-compose.sh
 
 # SANDBOX_NAME resolution: harness.yaml wins over .devcontainer/.env; fallback openharness.
 # Command-line "make ... SANDBOX_NAME=x" overrides all assignments automatically.
-SANDBOX_NAME_YAML := $(shell [ -f $(HARNESS_YAML) ] && sh scripts/harness-config.sh get sandbox.name $(HARNESS_YAML))
+SANDBOX_NAME_YAML := $(shell [ -f $(HARNESS_YAML) ] && sh .oh/scripts/harness-config.sh get sandbox.name $(HARNESS_YAML))
 SANDBOX_NAME      := $(or $(SANDBOX_NAME_YAML),$(SANDBOX_NAME),openharness)
 
 SHELL_USER        ?= sandbox
@@ -23,9 +23,15 @@ ifeq ($(firstword $(MAKECMDGOALS)),shell)
   endif
 endif
 
+# `make gateway <pi|hermes>` — forward the backend as a positional word.
+ifeq ($(firstword $(MAKECMDGOALS)),gateway)
+  GATEWAY_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(foreach a,$(GATEWAY_ARGS),$(eval $a:;@:))
+endif
+
 .DEFAULT_GOAL := help
 
-.PHONY: sandbox shell destroy stop logs ps restart config help
+.PHONY: sandbox shell destroy stop logs ps restart config help gateway
 
 sandbox: ## Provision and start the sandbox
 	$(COMPOSE) up -d --build
@@ -48,9 +54,12 @@ ps: ## Show service status
 restart: ## Restart the service
 	$(COMPOSE) restart
 
+gateway: ## Start a messaging client session: make gateway <pi|hermes> (flags/--stop via the script)
+	@bash .oh/scripts/gateway.sh $(GATEWAY_ARGS)
+
 config: ## Print effective harness.yaml-derived env and resolved compose config
 	@if [ -f $(HARNESS_YAML) ]; then \
-		sh scripts/harness-config.sh env $(HARNESS_YAML) > .devcontainer/.harness.yaml.env; \
+		sh .oh/scripts/harness-config.sh env $(HARNESS_YAML) > .devcontainer/.harness.yaml.env; \
 		printf "==> Derived env from $(HARNESS_YAML):\n"; \
 		cat .devcontainer/.harness.yaml.env; \
 		printf "\n"; \
@@ -62,6 +71,6 @@ config: ## Print effective harness.yaml-derived env and resolved compose config
 help: ## List available targets with descriptions
 	@printf "Open Harness — Make targets:\n"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-	@printf "\nConfiguration wizards (run \033[36minside\033[0m the sandbox after \033[36mmake shell\033[0m):\n"
-	@printf "  \033[36moh config slack\033[0m  Slack integration setup wizard\n"
-	@printf "  \033[36moh --help\033[0m         List all \033[36moh\033[0m subcommands\n"
+	@printf "\nSandbox CLI (run \033[36minside\033[0m the sandbox after \033[36mmake shell\033[0m):\n"
+	@printf "  \033[36moh --help\033[0m  List all \033[36moh\033[0m subcommands\n"
+	@printf "  Slack bridge setup: see \033[36mdocs/integrations/slack.md\033[0m\n"

@@ -5,7 +5,7 @@ Use this reference when the user asks whether an external article/repo/social po
 ## Workflow
 
 1. **Capture the source first**
-   - If the request says “Add to Wiki,” run `/wiki-ingest` for the URL before or alongside the audit.
+   - If the request says “Add to Wiki,” run `/wiki ingest` for the URL before or alongside the audit.
    - For LinkedIn/social pages, metadata may be enough to extract the claim when the full body is gated.
    - Prefer small, auditable tool calls: fetch/snapshot, write wiki entry, append log. Avoid one large ingest script that combines network fetch + writes + logging.
 
@@ -31,7 +31,7 @@ Use this reference when the user asks whether an external article/repo/social po
 6. **Verify side effects**
    - Verify the GitHub issue URL/comment URL with `gh issue view` or create/comment output.
    - Verify the wiki entry frontmatter and raw snapshot size/path.
-   - Append the daily memory log with both wiki-ingest and audit/issue outcomes.
+   - Append the daily memory log with both wiki ingest and audit/issue outcomes.
 
 ## Reusable verdict shape
 
@@ -49,10 +49,10 @@ Then specify:
 Source claim: a single flat `AGENTS.md` loses context as codebases grow; Lat.md proposes a project-root markdown knowledge graph with linked architecture/business/test-spec pages plus `lat init`, `lat check`, `lat search`, and `lat section`.
 
 Council-aligned recommendation for Open Harness:
-- Extend existing `wiki/` into a codebase knowledge graph v0.
+- Extend existing `.mifune/skills/wiki/corpus/` into a codebase knowledge graph v0.
 - Keep `AGENTS.md` authoritative for operating rules and permissions.
 - Add optional wiki metadata for `type`, `paths`, `symbols`, and `tests`.
-- Extend `/wiki-lint` or add `/wiki-check` for broken links plus repo-relative path/test validation.
+- Extend `/wiki lint` or add `/wiki-check` for broken links plus repo-relative path/test validation.
 - Defer `lat.md/`, standalone `lat` CLI, semantic/vector search, embeddings, and automatic symbol indexing until current wiki retrieval gaps are proven.
 
 Key risks to include in future issues:
@@ -67,7 +67,7 @@ Source claim: CodeGraph reduces Claude Code repository-exploration cost by pre-i
 
 Council-aligned recommendation for Open Harness:
 - Use the existing CodeGraph evaluation issue if present; update it with a council/audit comment instead of creating a duplicate issue.
-- Treat CodeGraph as live source-code navigation infrastructure, not as durable project memory and not as a replacement for `wiki/`/Lat.md-style knowledge.
+- Treat CodeGraph as live source-code navigation infrastructure, not as durable project memory and not as a replacement for `.mifune/skills/wiki/corpus/`/Lat.md-style knowledge.
 - Run Open Harness-local A/B benchmarks before integration: baseline vs CodeGraph for tool calls, wall-clock, tokens/cost, correctness, files read/searched, index time, DB size, watcher freshness, and CPU/memory if practical.
 - If benchmarks pass, implement first as an opt-in sandbox capability (for example `INSTALL_CODEGRAPH=false`) with pinned package, minimal reviewed MCP config, generated-state ignores, and docs/rules for when to use graph queries vs direct reads.
 - Do not bake into the default base image, run upstream broad auto-installers, or auto-grant MCP permissions until security/reliability gates pass.

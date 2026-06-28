@@ -1109,6 +1109,43 @@ describe("reloadBody", () => {
     expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(false);
   });
 
+  it("hot-reloads via an absolute filePath after the process cwd changes", () => {
+    // loadCrons() invoked with a RELATIVE dir must still resolve filePath to an
+    // absolute path (#517 path.resolve), so a later reloadBody() from a changed
+    // cwd reads the on-disk body instead of falling back to the cached one.
+    const prevCwd = process.cwd();
+    const root = path.join(tmp, "cron-root");
+    const cronsDir = path.join(root, "crons");
+    mkdirSync(cronsDir, { recursive: true });
+    const cronFile = path.join(cronsDir, "hot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\noriginal body\n`,
+    );
+
+    try {
+      process.chdir(root);
+      const [entry] = loadCrons("crons");
+      expect(path.isAbsolute(entry.filePath)).toBe(true);
+      expect(entry.body).toBe("original body\n");
+
+      process.chdir(tmpdir());
+      writeFileSync(
+        cronFile,
+        `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nupdated body\n`,
+      );
+
+      const appendSpy = vi.mocked(fsModule.appendFileSync);
+      appendSpy.mockClear();
+      expect(reloadBody(entry)).toBe("updated body\n");
+      const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
+      expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
+      expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(false);
+    } finally {
+      process.chdir(prevCwd);
+    }
+  });
+
   it("returns cached entry.body and logs BODY_RELOAD_ERR when filePath is unreadable", () => {
     // Build a hand-crafted entry pointing at a nonexistent path.
     const missingPath = path.join(tmp, "ghost.md");

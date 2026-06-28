@@ -39,26 +39,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm --filter './.oh/**' -r --if-present run lint
+        run: pnpm run lint
 
       - name: Format check
-        run: pnpm --filter './.oh/**' -r --if-present run format:check
+        run: pnpm run format:check
 
-      - name: Typecheck (workspace packages)
-        run: pnpm --filter './.oh/**' -r --if-present run typecheck
-
-      - name: Typecheck (oh CLI — npm standalone)
-        run: |
-          npm --prefix .oh/cli ci
-          npm --prefix .oh/cli run typecheck
+      - name: Typecheck
+        run: pnpm run typecheck
 
       - name: Build
         run: pnpm run build:harness
 
       - name: Test
-        run: pnpm --filter './.oh/**' -r --if-present run test
-
-      - name: Root tests (scripts + .pi extensions)
         run: pnpm test:scripts
 
       - name: Check pnpm pin drift
@@ -152,14 +144,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build Docker image
+        env:
+          SANDBOX_NAME: openharness-release-smoke-${{ github.run_id }}
+        run: |
+          IMAGE=ghcr.io/mifunedev/openharness:${{ steps.parse.outputs.version }}
+          LATEST=ghcr.io/mifunedev/openharness:latest
+          SMOKE_IMAGE=sandbox-${SANDBOX_NAME}
+
+          docker build -f .oh/devcontainer/Dockerfile -t "$IMAGE" -t "$LATEST" -t "$SMOKE_IMAGE" .
+
+      # Keep this pre-push smoke gate between build and push: it boots the
+      # exact image object that will be published to GHCR, via the sandbox-* tag
+      # consumed by .oh/devcontainer/docker-compose.yml.
+      - name: Smoke-test Docker image before publish
+        env:
+          SANDBOX_NAME: openharness-release-smoke-${{ github.run_id }}
+          BOOT_SMOKE_TIMEOUT_SECONDS: "900"
+          BOOT_SMOKE_INTERVAL_SECONDS: "10"
+          BOOT_SMOKE_UP_ARGS: "up -d --no-build"
+        run: bash .oh/scripts/sandbox-boot-smoke.sh
+
+      - name: Push Docker image
         run: |
           IMAGE=ghcr.io/mifunedev/openharness:${{ steps.parse.outputs.version }}
           LATEST=ghcr.io/mifunedev/openharness:latest
 
-          docker build -f .oh/devcontainer/Dockerfile -t $IMAGE -t $LATEST .
-          docker push $IMAGE
-          docker push $LATEST
+          docker push "$IMAGE"
+          docker push "$LATEST"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

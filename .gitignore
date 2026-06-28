@@ -63,9 +63,8 @@ workspace/startup.sh
 !/.hermes/hooks/
 
 **/scheduled_tasks.lock
-# Workspace package build artifacts (Docusaurus + future packages/*)
+# Legacy/future workspace package build artifacts
 packages/*/build/
-packages/*/.docusaurus/
 packages/*/node_modules/
 # Wiki corpus owned by the /wiki skill — entries are local scratch by default;
 # the operator whitelists curated entries into git with `git add -f`. Raw

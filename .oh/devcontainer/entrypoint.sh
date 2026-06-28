@@ -68,26 +68,44 @@ repair_home_mount_ownership
 OH_PROJECT_ROOT="${OH_PROJECT_ROOT:-/home/sandbox/harness}"
 # DEPRECATED alias — prefer $OH_PROJECT_ROOT
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
+
+uid_reconcile_step() {
+  local description="$1"
+  shift
+
+  if "$@"; then
+    return 0
+  fi
+
+  echo "[entrypoint] WARNING: failed to ${description}" >&2
+  return 1
+}
+
 HARNESS_DIR="$OH_PROJECT_ROOT"
 if [ -d "$HARNESS_DIR" ]; then
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
   HOST_GID=$(stat -c '%g' "$HARNESS_DIR")
   SANDBOX_UID=$(id -u sandbox)
   SANDBOX_GID=$(id -g sandbox)
+  UID_GID_SYNC_OK=true
   if [ "$HOST_GID" != "$SANDBOX_GID" ]; then
     if getent group "$HOST_GID" >/dev/null 2>&1; then
       EXISTING_GROUP=$(getent group "$HOST_GID" | cut -d: -f1)
       if [ "$EXISTING_GROUP" != "sandbox" ]; then
-        usermod -g "$HOST_GID" sandbox 2>/dev/null || true
+        uid_reconcile_step "set sandbox primary group to existing host GID $HOST_GID" usermod -g "$HOST_GID" sandbox || UID_GID_SYNC_OK=false
       fi
     else
-      groupmod -g "$HOST_GID" sandbox 2>/dev/null || true
+      uid_reconcile_step "set sandbox group GID to host GID $HOST_GID" groupmod -g "$HOST_GID" sandbox || UID_GID_SYNC_OK=false
     fi
   fi
   if [ "$HOST_UID" != "$SANDBOX_UID" ]; then
-    usermod -u "$HOST_UID" sandbox 2>/dev/null || true
-    find /home/sandbox -xdev -uid "$SANDBOX_UID" -exec chown -h "$HOST_UID:$HOST_GID" {} + 2>/dev/null || true
-    echo "[entrypoint] sandbox UID synced to host ($SANDBOX_UID → $HOST_UID, $SANDBOX_GID → $HOST_GID)"
+    uid_reconcile_step "set sandbox UID to host UID $HOST_UID" usermod -u "$HOST_UID" sandbox || UID_GID_SYNC_OK=false
+    uid_reconcile_step "repair sandbox-owned files after UID/GID sync" find /home/sandbox -xdev -uid "$SANDBOX_UID" -exec chown -h "$HOST_UID:$HOST_GID" {} + || UID_GID_SYNC_OK=false
+    if [ "$UID_GID_SYNC_OK" = "true" ]; then
+      echo "[entrypoint] sandbox UID synced to host ($SANDBOX_UID → $HOST_UID, $SANDBOX_GID → $HOST_GID)"
+    else
+      echo "[entrypoint] WARNING: sandbox UID/GID reconciliation incomplete; continuing with current ownership" >&2
+    fi
   fi
 fi
 

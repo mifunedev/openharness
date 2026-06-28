@@ -89,8 +89,8 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Cron/autopilot behavior | `crons/README.md`, `crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.mifune/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog flow. |
 | Eval/probe regressions | `evals/README.md`, `evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
 | Task/spec implementation state | `tasks/README.md`, `tasks/<active-task>/` | PRD, critique, Ralph JSON, prompt, and task-specific artifacts. |
-| Docs/site/blog | `docs/`, `blog/`, `.oh/docs/` | Markdown content (`docs/`, `blog/`) and the Docusaurus site that renders it (`.oh/docs/`). |
-| CLI/package code | `.oh/README.md`, `.oh/cli/`, `.oh/docs/` | The `oh` CLI and the Docusaurus site packages; read `.oh/README.md` first. |
+| Docs | `README.md`, `docs/README.md`, `docs/` | GitHub-readable markdown docs; rendered site/blog source lives in `mifunedev/openharness-web`. |
+| CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi extensions, manifests, and Pi runtime config. |
 | Skill behavior | `.pi/skills/`, `.claude/skills/` | Provider-facing skill contracts; keep copies synchronized when both exist. |
 | Durable knowledge | `.mifune/skills/wiki/corpus/README.md`, `.mifune/skills/wiki/corpus/*.md`, `memory/MEMORY.md` | Curated wiki pages and long-term lessons; prefer these before raw logs. |
@@ -105,8 +105,8 @@ Ignore these unless the task explicitly targets them:
 | `.git/` | Git object database and refs; use `git` commands instead. | Debugging repository corruption. |
 | `.worktrees/`, `.claude/worktrees/` | Isolated branch checkouts that duplicate repo context. | Managing/removing worktrees or inspecting a specific branch. |
 | `node_modules/`, `.pnpm/`, `.pi/npm/node_modules/`, `.hermes/lsp/node_modules/` | Vendor dependencies; huge and low-signal. | Debugging dependency installation or package resolution. |
-| `.oh/docs/build/`, `.oh/docs/.docusaurus/`, `.oh/cli/dist/` | Generated build output. | Verifying generated artifacts or deployment output. |
-| `.oh/docs/node_modules/`, `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
+| `.oh/cli/dist/` | Generated build output. | Verifying generated CLI artifacts. |
+| `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
 | `memory/YYYY-MM-DD/`, `memory/*/log.md` | High-churn session logs; noisy for broad context. | Loading today's required startup log or investigating a dated event. |
 | `memory/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki ingest --from-draft`. |
 | `.mifune/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.mifune/skills/wiki/corpus/*.md` entry. |
@@ -124,9 +124,9 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `README.md` | User-facing project overview and quick orientation. | Understand product positioning or public claims. |
 | `Makefile` | Common lifecycle targets around sandbox creation, shell, ps, destroy. | Find operator commands and compose entry points. |
 | `package.json` | Root scripts for build/test/typecheck/docs/security audit. | Pick verification commands. |
-| `pnpm-workspace.yaml`, `pnpm-lock.yaml` | Workspace package layout and pinned dependency graph. | Debug workspace membership or dependency drift; avoid lockfile reads unless dependency state matters. |
+| `pnpm-workspace.yaml`, `pnpm-lock.yaml` | Root pnpm marker and pinned dependency graph. | Debug dependency drift; avoid lockfile reads unless dependency state matters. |
 | `harness.yaml` | Harness runtime defaults such as autopilot caps and configured services. | Inspect operator-configurable behavior. |
-| `.oh/` | OpenHarness's own machinery grouped as one unit: the `oh` CLI (`.oh/cli/`), the docs site builder (`.oh/docs/`), installer/lifecycle scripts (`.oh/scripts/`), container-install inputs (`.oh/install/`), deploy config (`.oh/config.json`). The old root symlinks `scripts/`/`install/` and the `packages/` folder were retired — all machinery lives here now. | Read `.oh/README.md` first; find harness tooling addressed as a namespace. |
+| `.oh/` | OpenHarness runtime machinery grouped as one unit: the `oh` CLI (`.oh/cli/`), installer/lifecycle scripts (`.oh/scripts/`), container-install inputs (`.oh/install/`), deploy config (`.oh/config.json`). The docs site moved to `mifunedev/openharness-web`. | Read `.oh/README.md` first; find harness tooling addressed as a namespace. |
 | `context/` | Voice, identity, tools, repo map, user collaboration, and rules. | Load operating principles and process constraints. |
 | `crons/` | Scheduled agent prompts and heartbeat/autopilot jobs. | Understand recurring automation behavior; read `crons/README.md` first. |
 | `.oh/scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, Ralph, caps. | Find executable implementation behind docs/skills; read `.oh/scripts/README.md` first. |
@@ -134,10 +134,9 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `evals/probes/` | Deterministic regression probes used by `/eval` and CI. | Add or inspect behavior guards. |
 | `evals/capability/` | Capability benchmark specs/results distinct from regression probes. | Evaluate progress-ceiling tasks. |
 | `evals/datasets/` | Verifiable issue-to-PR trajectory datasets. | Inspect dataset prompts/manifests before oracle fixtures. |
-| `.oh/cli/src/`, `.oh/docs/src/` | Package source code (the `oh` CLI and the Docusaurus site). | Change package behavior; read `.oh/README.md` first. |
-| `.oh/cli/package.json`, `.oh/docs/package.json` | Package-local scripts and dependencies. | Run package-specific build/test/typecheck. |
-| `docs/`, `blog/` | Markdown content the `.oh/docs` Docusaurus site renders. | Update product docs or blog posts. |
-| `blog/` | Blog posts and authors metadata. | Update long-form public writing. |
+| `.oh/cli/src/` | Standalone `oh` CLI source code. | Change CLI behavior; read `.oh/README.md` first. |
+| `.oh/cli/package.json` | CLI package-local scripts and dependencies. | Run package-specific build/typecheck. |
+| `docs/` | GitHub-readable product docs. | Update product docs; start at `docs/README.md`. |
 | `.mifune/skills/wiki/corpus/*.md` | Curated internal knowledge pages. | Reuse durable research before reading raw sources; read `.mifune/skills/wiki/corpus/README.md` for index. |
 | `tasks/<active-task>/` | `prd.md`, `prd.json`, `critique.md`, `prompt.md`; `progress.txt` only for Ralph run status. | Verify task graph or implementation scope before reading runtime progress. |
 | `.github/workflows/` | CI, docs, release workflow definitions. | Debug/check GitHub Actions behavior. |

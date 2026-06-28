@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # tier: A
-# source: conversation 2026-06-13 (autopilot delegate-advisor executor)
-# desc: /autopilot defaults to delegate-advisor, keeps Ralph as explicit fallback,
-#       uses the exact Advisor /goal phrase, defers the whole build to /ship-spec
-#       (no inline compact/delegate/eval — ship-spec owns them + the /pr-audit undraft),
-#       renames cron tmux sessions to autopilot-<branch>, dedupes active work,
-#       cleans finalized active markers, and keeps dry-run research non-mutating.
+# source: conversation 2026-06-13 (autopilot executor); 2026-06-27 (ralph-default flip)
+# desc: /autopilot defaults to the ship-spec deferral whose Stage 10 build executor is the
+#       Advisor-monitored ralph loop (/delegate optional inside, never a replacement); keeps
+#       delegate-advisor + inline ralph as explicit opt-in flags, uses the exact Advisor /goal
+#       phrase, defers the whole build to /ship-spec (no inline compact/delegate/eval —
+#       ship-spec owns them + the /pr-audit undraft), renames cron tmux sessions to
+#       autopilot-<branch>, dedupes active work, cleans finalized active markers, and keeps
+#       dry-run research non-mutating.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
 CRON="$ROOT/crons/autopilot.md"
 AGENTS="$ROOT/AGENTS.md"
+SHIP="$ROOT/.claude/skills/ship-spec/SKILL.md"
 
 if [[ ! -f "$SKILL" ]]; then
   echo "SKIPPED: autopilot skill absent: $SKILL" >&2
@@ -24,33 +27,47 @@ fi
 
 missing=()
 
-# Executor toggle: default delegate-advisor, explicit env/CLI Ralph fallback.
-grep -F 'argument-hint:' "$SKILL" | grep -Fq '[--executor=delegate-advisor|ralph]' || missing+=("argument hint includes executor toggle")
-grep -Fq 'EXECUTOR="${AUTOPILOT_EXECUTOR:-delegate-advisor}"' "$SKILL" || missing+=("AUTOPILOT_EXECUTOR default delegate-advisor")
-grep -Fq '*--executor=ralph*) EXECUTOR=ralph' "$SKILL" || missing+=("CLI --executor=ralph toggle")
+# Executor toggle: default ship-spec (Advisor-monitored ralph build), explicit
+# delegate-advisor + inline ralph opt-ins.
+grep -F 'argument-hint:' "$SKILL" | grep -Fq '[--executor=ship-spec|delegate-advisor|ralph]' || missing+=("argument hint includes executor toggle")
+grep -Fq 'EXECUTOR="${AUTOPILOT_EXECUTOR:-ship-spec}"' "$SKILL" || missing+=("AUTOPILOT_EXECUTOR default ship-spec")
+grep -Fq '*--executor=ship-spec*) EXECUTOR=ship-spec' "$SKILL" || missing+=("CLI --executor=ship-spec toggle")
 grep -Fq '*--executor=delegate-advisor*) EXECUTOR=delegate-advisor' "$SKILL" || missing+=("CLI --executor=delegate-advisor toggle")
-grep -Fq '.oh/scripts/ralph.sh "$SLUG"' "$SKILL" || missing+=("Ralph fallback still launches .oh/scripts/ralph.sh")
-grep -Fq '#### `ralph` fallback' "$SKILL" || missing+=("Ralph fallback section")
+grep -Fq '*--executor=ralph*) EXECUTOR=ralph' "$SKILL" || missing+=("CLI --executor=ralph toggle")
+grep -Fq '.oh/scripts/ralph.sh "$SLUG"' "$SKILL" || missing+=("Ralph inline fallback still launches .oh/scripts/ralph.sh")
+grep -Fq '#### `ralph` fallback' "$SKILL" || missing+=("Ralph inline fallback section")
 
-# Required exact Advisor goal phrase (now hands the whole build to /ship-spec).
-required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, /delegate + ralph, /eval, /pr-audit undraft) into a ready-for-review PR'
+# Required exact Advisor goal phrase (defers the whole build to /ship-spec; Advisor-managed ralph).
+required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /pr-audit undraft) into a ready-for-review PR'
 grep -Fq "$required_goal" "$SKILL" || missing+=("exact Advisor /goal phrase in autopilot skill")
 grep -Fq "$required_goal" "$CRON" || missing+=("exact Advisor /goal phrase in cron reminder")
 
-# Delegate-advisor DEFERS the whole build to /ship-spec — no inline compact/delegate/eval.
+# Default ship-spec mode DEFERS the whole build to /ship-spec — no inline compact/delegate/eval.
 grep -Fq '/ship-spec --issue' "$SKILL" || missing+=("autopilot invokes /ship-spec --issue")
-delegate_section="$(awk '/#### `delegate-advisor` \(default\)/,/#### `ralph` fallback/' "$SKILL")"
-[[ -n "$delegate_section" ]] || missing+=("delegate-advisor section")
-if [[ -n "$delegate_section" ]]; then
-  grep -Fq 'defer to `/ship-spec`' <<<"$delegate_section" || missing+=("delegate-advisor defers to /ship-spec")
-  grep -Fq 'does **not** run its own' <<<"$delegate_section" || missing+=("delegate-advisor does not re-run compact/delegate/eval")
-  grep -Fq '/pr-audit' <<<"$delegate_section" || missing+=("delegate-advisor references the ship-spec-owned /pr-audit undraft")
+default_section="$(awk '/#### `ship-spec` \(default\)/,/#### `delegate-advisor`/' "$SKILL")"
+[[ -n "$default_section" ]] || missing+=("ship-spec default executor section")
+if [[ -n "$default_section" ]]; then
+  grep -Fq 'defer to `/ship-spec`' <<<"$default_section" || missing+=("ship-spec section defers to /ship-spec")
+  grep -Fq 'does **not** run its own' <<<"$default_section" || missing+=("ship-spec section does not re-run compact/delegate/eval")
+  grep -Fq '/pr-audit' <<<"$default_section" || missing+=("ship-spec section references the ship-spec-owned /pr-audit undraft")
+  grep -Fq 'Advisor-monitored' <<<"$default_section" || missing+=("ship-spec section names the Advisor-monitored ralph loop default")
+  grep -Fq '`/delegate` optional inside' <<<"$default_section" || missing+=("ship-spec section marks /delegate optional inside the loop")
   # ship-spec must own the build BEFORE autopilot reconciles: §4 (/ship-spec) precedes §5 (executor).
   shipspec_line="$(grep -nF '/ship-spec --issue (owns the full build)' "$SKILL" | head -1 | cut -d: -f1 || true)"
   executor_line="$(grep -nF '### 5. Implement — executor' "$SKILL" | head -1 | cut -d: -f1 || true)"
   if [[ -z "$shipspec_line" || -z "$executor_line" || "$shipspec_line" -ge "$executor_line" ]]; then
     missing+=("/ship-spec --issue stage precedes the executor reconcile stage")
   fi
+fi
+
+# delegate-advisor is now an explicit OPT-IN section (no longer the default).
+grep -Fq '#### `delegate-advisor`' "$SKILL" || missing+=("delegate-advisor opt-in section (no longer the default)")
+
+# /ship-spec (the single source of build mechanics) defaults its Stage 10 executor to ralph,
+# and keeps delegate-advisor as the opt-in flag.
+if [[ -f "$SHIP" ]]; then
+  grep -Fq 'SHIP_SPEC_EXECUTOR="${SHIP_SPEC_EXECUTOR:-ralph}"' "$SHIP" || missing+=("/ship-spec default executor ralph")
+  grep -Fq '*--executor=delegate-advisor*) SHIP_SPEC_EXECUTOR=delegate-advisor' "$SHIP" || missing+=("/ship-spec --executor=delegate-advisor opt-in")
 fi
 
 # Session naming and no second Advisor session.
@@ -85,13 +102,14 @@ if [[ -z "$dryrun_line" || -z "$issue_create_line" || "$dryrun_line" -ge "$issue
 fi
 
 # Top-level docs should advertise the changed operator contract.
-grep -Fq 'AUTOPILOT_EXECUTOR=ralph' "$AGENTS" || missing+=("AGENTS documents Ralph toggle")
-grep -Fq '/delegate --plan tasks/<slug>/prd.json' "$AGENTS" || missing+=("AGENTS documents delegate prd.json default")
+grep -Fq 'AUTOPILOT_EXECUTOR=ralph' "$AGENTS" || missing+=("AGENTS documents inline Ralph toggle")
+grep -Fq 'Advisor-monitored `scripts/ralph.sh` loop' "$AGENTS" || missing+=("AGENTS documents Advisor-monitored ralph default")
+grep -Fq -- '--executor=delegate-advisor' "$AGENTS" || missing+=("AGENTS documents delegate-advisor opt-in")
 
 if (( ${#missing[@]} )); then
   printf 'REGRESSION: autopilot executor toggle contract missing: %s\n' "${missing[*]}" >&2
   exit 1
 fi
 
-echo "PASS: autopilot defaults to delegate-advisor with exact goal, defers the build to /ship-spec, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard, and Ralph fallback" >&2
+echo "PASS: autopilot defaults to ship-spec (Advisor-monitored ralph; /delegate optional inside), exact goal, defers the build to /ship-spec, delegate-advisor + inline ralph opt-ins, /ship-spec default executor ralph, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard" >&2
 exit 0

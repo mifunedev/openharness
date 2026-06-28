@@ -71,7 +71,6 @@ directly to the real `.oh/` paths:
 |------|---------|
 | `README.md` | This file — the namespace anchor (keeps `.oh/` in a fresh clone) and the surface's documentation. |
 | `cli/` | The in-tree `oh` CLI (standalone npm package; built into the image as `/opt/oh`). Old path: `packages/oh/` (no symlink — repointed). |
-| `docs/` | The Docusaurus documentation site (sole `pnpm-workspace.yaml` member; `@openharness/docs`). Renders the markdown in root `docs/`+`blog/`. Old path: `packages/docs/` (no symlink — repointed). |
 | `install/` | Container-install inputs (`.zshrc`, `.tmux.conf`, `banner.sh`, `install.sh` prerequisites) consumed by the Dockerfile + entrypoint. Old path: `install/` (back-compat symlink kept). |
 | `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `ralph.sh`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (back-compat symlink kept). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
@@ -201,10 +200,11 @@ allowlist** read from `.oh/manifest.json` — an `{ "include": [...], "exclude":
 `cli/**`, `README.md`, `manifest.json`). A path ships **iff** it matches at least
 one `include` pattern and zero `exclude` patterns (exclude wins).
 
-**What is intentionally NOT shipped:** `.oh/docs/` (the Docusaurus site) and
-`.oh/patches/` (repo-specific dependency patches) are **omitted from `include`**,
-so they are never vendored into a consumer repo. They are **not deleted** — they
-stay physically in this repo; they are simply not part of the payload.
+**What is intentionally NOT shipped:** `.oh/patches/` (repo-specific dependency
+patches) is **omitted from `include`**, so it is never vendored into a consumer
+repo. It is **not deleted** — it stays physically in this repo; it is simply not
+part of the payload. (The Docusaurus docs site formerly under `.oh/docs/` has been
+migrated out to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web).)
 
 - **The manifest ships itself** — `manifest.json` is in `include`, so the policy
   **propagates forward**: a consumer's next `oh update` reads the *source's*

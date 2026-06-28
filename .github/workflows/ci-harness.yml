@@ -85,26 +85,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm --filter './.oh/**' -r --if-present run lint
+        run: pnpm run lint
 
       - name: Format check
-        run: pnpm --filter './.oh/**' -r --if-present run format:check
+        run: pnpm run format:check
 
-      - name: Typecheck (workspace packages)
-        run: pnpm --filter './.oh/**' -r --if-present run typecheck
-
-      - name: Typecheck (oh CLI — npm standalone)
-        run: |
-          npm --prefix .oh/cli ci
-          npm --prefix .oh/cli run typecheck
+      - name: Typecheck
+        run: pnpm run typecheck
 
       - name: Build
         run: pnpm run build:harness
 
       - name: Test
-        run: pnpm --filter './.oh/**' -r --if-present run test
-
-      - name: Root tests (scripts + .pi extensions)
         run: pnpm test:scripts
 
   boot-lint:

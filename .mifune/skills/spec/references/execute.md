@@ -53,9 +53,11 @@ Now that the spec is APPROVED, GitHub-side state may be created: **locate** the 
 no issue yet), create the branch `<prefix>/<N>-<slug>`, commit the scaffold, push, and open
 the **draft** PR (observability checkpoint). Then drive the build exactly as `/ship-spec` Stage 10
 specifies — an expert `/worktrees` Advisor in a tmux session (`agent-ship-<slug>`) via
-`/goal`, running `/delegate --plan tasks/<slug>/prd.json` workers that each run
-`scripts/ralph.sh <slug>` in an isolated worktree, monitored to `STATUS: COMPLETE`. Use
-that skill's stage text as the authority for the mechanics; do not duplicate them here.
+`/goal` that, by default (`--executor=ralph`), **monitors `scripts/ralph.sh <slug>` directly**
+in an isolated worktree to `STATUS: COMPLETE` (`/delegate` is an optional within-iteration
+fan-out tool, never a replacement for the loop; `--executor=delegate-advisor` selects the
+legacy `/delegate --plan tasks/<slug>/prd.json` worker fan-out). Use that skill's stage text
+as the authority for the mechanics; do not duplicate them here.
 
 ### 2. `build ⇄ audit` — the second adversarial loop
 

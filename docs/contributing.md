@@ -65,13 +65,7 @@ pnpm run test:scripts   # root script + .pi extension tests
 bash .claude/skills/eval/run.sh
 ```
 
-Docs builds are intentionally excluded from fast local, PR, Harness CI, and release validation. Run them only when you explicitly need to validate the Docusaurus site:
-
-```bash
-pnpm docs:build
-```
-
-The automatic docs build/deploy gate runs only from `.github/workflows/docs.yml` on pushes to `main` or `master` that touch docs-site paths.
+The rendered docs site is maintained in [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web). In this core repo, validate docs by checking the Markdown links and the GitHub-readable index at `docs/README.md`; no Docusaurus build runs here.
 
 ### Installing a harness pack
 

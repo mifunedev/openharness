@@ -44,26 +44,25 @@ The governing principle for every namespace decision:
 > external-tooling-forced surfaces + live identity/state. Export is one way a
 > namespace is addressed as a unit; being the harness's own tooling is another.
 
-OpenHarness's own machinery — the `oh` CLI, the docs-site builder, the
-installer/lifecycle scripts, and the container-install inputs — is now **grouped
+OpenHarness's own machinery — the `oh` CLI, the installer/lifecycle scripts,
+and the container-install inputs — is now **grouped
 under `.oh/`** so the harness can be addressed as a single unit, and the
 top-level `packages/` folder is **retired**. The physical files moved
-(`packages/oh → .oh/cli`, `packages/docs → .oh/docs`, `scripts → .oh/scripts`,
+(`packages/oh → .oh/cli`, `packages/docs → openharness-web`, `scripts → .oh/scripts`,
 `install → .oh/install`, plus the canonical `config.json → .oh/config.json`).
 
 The runtime-machinery dirs (`scripts/`, `install/`) keep **tracked back-compat
 symlinks at the old root paths** (exactly as `.claude/skills` → `.mifune/skills`),
 so every consumer pinning a `scripts/…` / `install/…` literal — skills, cron
 bodies, the `Makefile`, the boot-lint glob, vitest, the eval probes — resolves
-unchanged. The two **packages** (`cli/`, `docs/`) moved *without* a symlink (the
-`packages/` folder is gone), so their consumers were repointed directly:
-`pnpm-workspace.yaml` → `.oh/docs`, the `pnpm --filter './packages/**'` selectors
-→ `'./.oh/**'`, `npm --prefix packages/oh` → `.oh/cli`, `docs:*` scripts →
-`--dir .oh/docs`, and `docs.yml`'s filter + `working-directory`. The Docusaurus
-config's `../../docs` / `../../blog` paths resolve unchanged because `.oh/docs`
-sits at the same depth `packages/docs` did. (`evals/`, `crons/`, `context/`,
-`memory/`, `tasks/`, `workspace/`, and the `docs/`+`blog/` markdown content stay
-at root: live identity/state and content, not machinery addressed as a unit.)
+unchanged. The `oh` CLI moved without a symlink (the `packages/` folder is gone), so
+its consumers were repointed to `.oh/cli`. The docs-site package later moved out
+entirely: the Docusaurus app/assets/blog now live in
+[`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web),
+while this core repo keeps GitHub-readable markdown under `docs/` and points
+DeepWiki at generated repo navigation. (`evals/`, `crons/`, `context/`,
+`memory/`, `tasks/`, `workspace/`, and `docs/` stay at root as live
+identity/state/content, not machinery addressed as a unit.)
 
 ## Namespaces
 
@@ -73,8 +72,8 @@ is earned by **function-class**. Three surfaces:
 | Namespace | Function-class | Holds |
 |---|---|---|
 | `.mifune/` | provider-portable primitives (exported to the 4 providers + the `mifunedev/skills` registry) | skills, agents, hooks |
-| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), the docs-site builder (`docs/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), deploy config (`config.json`) |
-| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`, `docs/`+`blog/` content |
+| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), deploy config (`config.json`) |
+| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`, `docs/` content |
 
 Harness-native skills still live in `.mifune/skills/` (not `.oh/`) because they
 share the *identical* provider-export mechanism; portability is a property
@@ -115,7 +114,8 @@ dependency order (the **Depends on** column); never start a blocked step.
 | M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `context/rules/` | M3 | ✅ Done |
 | M5 | Hooks → `.mifune/hooks` | M1 | ✅ Done |
 | M6 | Skill-private scripts → skill dirs (`autopilot-caps`, `prompt-miner-caps`); shared scripts stay at root | M1 | ✅ Done |
-| M7 | `.oh/` machinery grouping + retire `packages/`: `packages/oh → .oh/cli`, `packages/docs → .oh/docs`, `scripts → .oh/scripts`, `install → .oh/install`, canonical `config.json → .oh/config.json`. Runtime dirs (`scripts/`, `install/`) keep back-compat symlinks (the `.mifune` precedent); the two packages (`cli/`, `docs/`) repoint their consumers directly and the `packages/` folder is removed. Generalizes the namespace rule from export-ness to function-class. | M2 | ✅ Done |
+| M7 | `.oh/` machinery grouping + retire `packages/`: `packages/oh → .oh/cli`, `packages/docs → .oh/docs` (intermediate), `scripts → .oh/scripts`, `install → .oh/install`, canonical `config.json → .oh/config.json`. Runtime dirs (`scripts/`, `install/`) keep back-compat symlinks (the `.mifune` precedent); package consumers repoint directly and the `packages/` folder is removed. Generalizes the namespace rule from export-ness to function-class. | M2 | ✅ Done |
+| M8 | Docs-site extraction: Docusaurus app/assets/blog → `mifunedev/openharness-web`; core repo keeps concise `README.md` + GitHub-readable `docs/README.md`; DeepWiki becomes the generated navigation layer. | M7 | ✅ Done |
 
 ## Maintenance pattern
 

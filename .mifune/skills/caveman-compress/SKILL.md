@@ -20,7 +20,7 @@ In-scope targets only:
 - a file the user passes with explicit "compress this anyway" override
 
 Everything else is **out of scope** — refuse with a one-line reason. In particular:
-- `docs/**`, `blog/**`, `README.md`, `CLAUDE.md`/`AGENTS.md` — published / load-bearing prose; brevity is intentional there.
+- `docs/**`, `README.md`, `CLAUDE.md`/`AGENTS.md` — published / load-bearing prose; brevity is intentional there.
 - `tasks/archive/**` and other archives — not read by default; compressing is busywork that mutates the record for ~0 live-token gain.
 - `context/**`, `.claude/skills/**`, `.claude/agents/**` — auto-loaded / behavior-steering. Token budget there is `/context-audit`'s job (it has a safe ablation gate); compression here can silently change behavior.
 

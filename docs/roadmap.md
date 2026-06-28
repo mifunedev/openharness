@@ -111,7 +111,7 @@ dependency order (the **Depends on** column); never start a blocked step.
 | M0 | Namespace taxonomy + B-state north-star (this page) | — | ✅ Done |
 | M1 | Agents → `.mifune/agents` | M0 | ✅ Done |
 | M2 | `.oh/` config surface (rescope the dead `.openharness/`) | M0 | ✅ Done |
-| M3 | Rules → skills (easy first): `remote-installers` delete · `advisor` + `recursive-delegation` → `/advisor` · `wiki` → `wiki-ingest/references` · `sandbox-processes` → skill ref | M1 | ✅ Done |
+| M3 | Rules → skills (easy first): `remote-installers` delete · `advisor` + `recursive-delegation` → `/advisor` · `wiki` → `wiki/references` · `sandbox-processes` → skill ref | M1 | ✅ Done |
 | M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `context/rules/` | M3 | ✅ Done |
 | M5 | Hooks → `.mifune/hooks` | M1 | ✅ Done |
 | M6 | Skill-private scripts → skill dirs (`autopilot-caps`, `prompt-miner-caps`); shared scripts stay at root | M1 | ✅ Done |
@@ -136,7 +136,7 @@ The A→B map for each `context/rules/` file:
 | `git.md` | task procedure | done — pointer → `/git` | the template for all the rest |
 | `advisor-model.md` | delegation pattern | → `/advisor` skill (or `delegate` references) | invoked when delegating; not always-on |
 | `recursive-delegation.md` | extends advisor | → same skill as a `references/` doc | one concept, one home |
-| `wiki.md` | schema spec | → `wiki-ingest/references/schema.md` | the `/wiki-*` skills already implement it |
+| `wiki.md` | schema spec | → `wiki/references/schema.md` | the consolidated `/wiki` skill implements it |
 | `memory.md` | end-of-skill protocol + schema | → `/retro` (canonical) + a one-line always-on pointer in `AGENTS.md` | `/retro` already operationalizes it; the protocol must still fire after every skill |
 | `sandbox-processes.md` | tmux lifecycle norm | → skill `references/` (cloudflared / t3) | task-triggered |
 | `directory-readme.md` | repo-authoring convention | stays a small `context/` doc | applies to this repo's authors, not portable behavior |

@@ -76,7 +76,7 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    session (not globally pinned in `.pi/settings.json`), under the self-healing
    supervisor `.oh/devcontainer/client-slack-supervise.sh` that restarts pi on the
    stale-ctx error and on crashes (see
-   [docs/integrations/slack.md](docs/integrations/slack.md)). The legacy
+   [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md)). The legacy
    `@ryaneggz/mifune` pack still works during the transition, but new
    harnesses should use pi-messenger-bridge.
 

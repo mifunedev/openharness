@@ -260,7 +260,7 @@ For the **optional installer** option:
 gh issue create \
   --title "DebugMCP: optional installer for headless extension host" \
   --label autopilot \
-  --body "Decision-gate outcome: optional installer (see docs/integrations/debugmcp.md § Maintainer Decision Gate).
+  --body "Decision-gate outcome: optional installer (see .oh/docs/integrations/debugmcp.md § Maintainer Decision Gate).
 Build an opt-in installer (script or flag) that provisions a headless VS Code
 extension host plus the ozzafar.debugmcpextension v2.0.1 and verifies the MCP
 server binds on :3001/mcp. Must first resolve the container-side feasibility
@@ -274,7 +274,7 @@ For the **default capability** option:
 gh issue create \
   --title "DebugMCP: make the debug capability active by default" \
   --label autopilot \
-  --body "Decision-gate outcome: default capability (see docs/integrations/debugmcp.md § Maintainer Decision Gate).
+  --body "Decision-gate outcome: default capability (see .oh/docs/integrations/debugmcp.md § Maintainer Decision Gate).
 Bake a headless VS Code extension host + ozzafar.debugmcpextension v2.0.1 into
 the devcontainer image so DebugMCP is active out of the box. Scope the image-size
 and attack-surface impact of a default-bound :3001 listener, and resolve the

@@ -5,3 +5,10 @@
 - `ryaneggz/mifune` exists, is public, has default branch `development`, and current viewer permission is `ADMIN` as of spec update preflight.
 - Extraction intent: replace the current `ryaneggz/mifune` default contents with the extracted Open Harness `.mifune` pack, preferably through a replacement feature branch and PR into that repo before Open Harness pins the final default-branch SHA.
 - `/spec critique` rerun after this change returned `STATUS: SPEC-APPROVED` (H0/M0/L2).
+
+## Spec update — Mifune ingress model
+- Added explicit “How Mifune gets added to an Open Harness checkout” section.
+- v1 ingress is now mandatory Git submodule/gitlink at `.mifune/` pointing to `ryaneggz/mifune`; no manifest alternative.
+- Documented fresh-clone paths: `git clone --recurse-submodules` or plain clone plus `bash .oh/scripts/ensure-mifune.sh --init`.
+- Added US-006, FR-8, required docs surfaces, protected-path registration for `.oh/scripts/ensure-mifune.sh`, and clean-clone ingress verification.
+- `/spec critique` rerun after this change returned `STATUS: SPEC-APPROVED` (H0/M0/L2).

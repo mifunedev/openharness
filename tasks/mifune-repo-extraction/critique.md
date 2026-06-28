@@ -1,16 +1,16 @@
 # Critique — mifune-repo-extraction
 
-Generated 2026-06-28; reviews revised destination `prd.md` post-/prd, pre-/ralph.
+Generated 2026-06-28; reviews revised ingress `prd.md` post-/prd, pre-/ralph.
 
 ## Critic A — Implementer lens
 
 CRITIC_A — IMPLEMENTER LENS
-[SEVERITY: L] [STORY: *] No blocking findings; destination change to ryaneggz/mifune and planned default replacement are mitigated at AC level. | [EVIDENCE: tasks/mifune-repo-extraction/prd.md US-001/US-002/US-004/Resolved Questions] | [RECOMMENDATION: PROCEED]
+[SEVERITY: L] [STORY: *] No blocking findings; Mifune ingress/addition path and prior implementer concerns are mitigated at AC level. | [EVIDENCE: tasks/mifune-repo-extraction/prd.md 'How Mifune gets added', US-002, US-003, US-006] | [RECOMMENDATION: PROCEED]
 
 ## Critic B — User lens
 
 CRITIC_B — USER LENS
-[SEVERITY: L] [STORY: *] No blocking findings; destination and overwrite intent are explicit, reviewable, and rollback-safe at AC level. | [EVIDENCE: tasks/mifune-repo-extraction/prd.md US-001/US-002/Resolved Questions] | [RECOMMENDATION: PROCEED]
+[SEVERITY: L] [STORY: *] No blocking findings; operator-facing Mifune addition path is explicit, documented on required surfaces, and verifiable. | [EVIDENCE: tasks/mifune-repo-extraction/prd.md 'How Mifune gets added', US-006, Success Metrics] | [RECOMMENDATION: PROCEED]
 
 ## Synthesis
 
@@ -19,4 +19,4 @@ CRITIC_B — USER LENS
 - **Low-severity findings**: 2
 - **Recommendation**: PROCEED
 
-The revised PRD now names `ryaneggz/mifune` as the destination, records that replacing the existing default-branch contents is intentional, prefers a feature-branch/PR flow into that repo before Open Harness consumes the final default-branch SHA, and requires pre-replacement HEAD capture plus rollback instructions. The prior protected-path continuity, root initializer/checker, CI/probe, Hermes, changelog, maintainer workflow, and final-SHA requirements remain in force. Per `/approve`, only low-severity non-blocking findings remain, so the gate verdict is APPROVED.
+The revised PRD now explicitly describes how Mifune gets added into Open Harness: `.mifune/` is a mandatory pinned Git submodule/gitlink to `ryaneggz/mifune`, plain clones are repaired with `bash .oh/scripts/ensure-mifune.sh --init`, `--check` diagnoses drift and prints remediation, provider/Hermes surfaces are symlinks into the initialized mount, and required docs/tests must prove the ingress path. Prior critic concerns about manifest ambiguity, protecting `ensure-mifune.sh`, and docs surface consistency are mitigated at AC level. Per `/approve`, only low-severity non-blocking findings remain, so the gate verdict is APPROVED.

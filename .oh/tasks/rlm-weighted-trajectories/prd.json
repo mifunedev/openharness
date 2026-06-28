@@ -38,7 +38,7 @@
       "acceptanceCriteria": [
         ".mifune/skills/wiki/corpus/recursive-language-models.md exists with valid frontmatter (confidence: provisional, updated: date, related: cross-links), <=600 words on RLM context-as-environment + weighted-trajectory selection and how the harness adapts it.",
         "An immutable snapshot exists under .mifune/skills/wiki/corpus/raw/<date>-recursive-language-models.md.",
-        ".mifune/skills/wiki/corpus/README.md is regenerated; bash evals/probes/wiki-readme-index.sh passes; curated entry + raw snapshot are force-added (git add -f) and verified tracked via git ls-files (corpus is gitignored-by-default, so a forgotten force-add passes CI silently)."
+        ".mifune/skills/wiki/corpus/README.md is regenerated; bash .oh/evals/probes/wiki-readme-index.sh passes; curated entry + raw snapshot are force-added (git add -f) and verified tracked via git ls-files (corpus is gitignored-by-default, so a forgotten force-add passes CI silently)."
       ],
       "priority": 3,
       "passes": true,
@@ -62,7 +62,7 @@
       "title": "/weigh eval probe",
       "description": "As a future maintainer, I want CI-visible coverage of the scorer's frozen-weights + hard-floor contract.",
       "acceptanceCriteria": [
-        "evals/probes/weigh-scorer-contract.sh is a 3-state oracle (PASS=0/REGRESSION=1/SKIPPED=2) asserting STRUCTURAL facts of the scorer source (not SKILL.md prose, to avoid literal-token coupling): frozen weight keys exact + sum 100; scorer exports validateWeights/weight/select/clamp/DEFAULT_WEIGHTS/TRAJECTORY_SCHEMA; the four method names appear in the .mjs; and on the fixture the evalRc:1 trajectory is never selected. SKIPPED only if node/scorer/fixture ABSENT; a scorer runtime/parse error is a real REGRESSION.",
+        ".oh/evals/probes/weigh-scorer-contract.sh is a 3-state oracle (PASS=0/REGRESSION=1/SKIPPED=2) asserting STRUCTURAL facts of the scorer source (not SKILL.md prose, to avoid literal-token coupling): frozen weight keys exact + sum 100; scorer exports validateWeights/weight/select/clamp/DEFAULT_WEIGHTS/TRAJECTORY_SCHEMA; the four method names appear in the .mjs; and on the fixture the evalRc:1 trajectory is never selected. SKIPPED only if node/scorer/fixture ABSENT; a scorer runtime/parse error is a real REGRESSION.",
         "The probe passes locally via bash .claude/skills/eval/run.sh with no new regressions."
       ],
       "priority": 5,
@@ -87,7 +87,7 @@
       "title": "/rlm eval probe",
       "description": "As a future maintainer, I want CI-visible coverage of the recursion-budget + max-bytes contract.",
       "acceptanceCriteria": [
-        "evals/probes/rlm-context-budget.sh is a 3-state oracle asserting recursion-budget.md declares depth/children/step ceilings AND query-context.mjs enforces a max-bytes guard; SKIPPED if absent. Passes locally."
+        ".oh/evals/probes/rlm-context-budget.sh is a 3-state oracle asserting recursion-budget.md declares depth/children/step ceilings AND query-context.mjs enforces a max-bytes guard; SKIPPED if absent. Passes locally."
       ],
       "priority": 7,
       "passes": true,
@@ -101,7 +101,7 @@
         "OVERRIDE NOTE: /spec critique (in .claude/protected-paths.txt) dispatches to .mifune/skills/critique/SKILL.md; this edit is ADDITIVE and DEFAULT-OFF (no deletion, no change to the critique.md headings /approve + ship-spec Stage 4 parse, no change to the default 2-critic run).",
         ".mifune/skills/critique/SKILL.md gains an opt-in default-off 'self-consistency weighting (optional)' subsection: with a --weigh flag (or documented env var) each lens samples K critics (K default 1 = exact current behavior; opt-in K=2, hard cap 2) routed through /weigh (vote method) so a finding firing 1/K is down-weighted vs. K/K before the SEVERITY tally. Default (no flag) = today's behavior with zero added agent calls.",
         "The critique.md output schema (## Critic A, ## Critic B, ## Synthesis, the SEVERITY tally line, the Recommendation) is unchanged.",
-        "evals/probes/spec-family-contract.sh gains a concrete assertion that critique.md's required headings are still emitted (schema-preserving); the /eval suite stays green; the PR description names this protected-skill edit explicitly."
+        ".oh/evals/probes/spec-family-contract.sh gains a concrete assertion that critique.md's required headings are still emitted (schema-preserving); the /eval suite stays green; the PR description names this protected-skill edit explicitly."
       ],
       "priority": 8,
       "passes": true,
@@ -113,7 +113,7 @@
       "description": "As a future maintainer, I want the change recorded and the probe benchmark current.",
       "acceptanceCriteria": [
         "CHANGELOG.md records the RLM /weigh + /rlm addition under ## [Unreleased] (### Added).",
-        "evals/RESULTS.md gains rows for weigh-scorer-contract.sh and rlm-context-budget.sh (hand-inserted; no churn to existing timestamps).",
+        ".oh/evals/RESULTS.md gains rows for weigh-scorer-contract.sh and rlm-context-budget.sh (hand-inserted; no churn to existing timestamps).",
         "A name-collision check confirms weigh and rlm do not shadow built-ins or Pi packages (recorded in progress.txt)."
       ],
       "priority": 9,

@@ -23,10 +23,10 @@
       "title": "Guard the merged dedupe invariant",
       "description": "As a future maintainer, I want an eval probe that fails if merged-PR dedupe disappears from the autopilot skill.",
       "acceptanceCriteria": [
-        "Add evals/probes/autopilot-merged-pr-reference-dedupe.sh as a Tier-A probe.",
-        "Keep evals/probes/autopilot-open-pr-reference-dedupe.sh aligned with the revised rationale text.",
-        "bash evals/probes/autopilot-open-pr-reference-dedupe.sh passes.",
-        "bash evals/probes/autopilot-merged-pr-reference-dedupe.sh passes."
+        "Add .oh/evals/probes/autopilot-merged-pr-reference-dedupe.sh as a Tier-A probe.",
+        "Keep .oh/evals/probes/autopilot-open-pr-reference-dedupe.sh aligned with the revised rationale text.",
+        "bash .oh/evals/probes/autopilot-open-pr-reference-dedupe.sh passes.",
+        "bash .oh/evals/probes/autopilot-merged-pr-reference-dedupe.sh passes."
       ],
       "priority": 2,
       "passes": true,
@@ -40,7 +40,7 @@
         "CHANGELOG.md has Unreleased entries for the probe and behavior change.",
         "wiki/autopilot.md explains the queue selection model, cites source lines, and links adjacent entries.",
         "wiki/raw/2026-06-20-autopilot-selection.md captures the source snapshot for the wiki entry.",
-        "wiki/README.md includes the new entry and bash evals/probes/wiki-readme-index.sh passes."
+        "wiki/README.md includes the new entry and bash .oh/evals/probes/wiki-readme-index.sh passes."
       ],
       "priority": 3,
       "passes": true,

@@ -186,7 +186,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |
-| `/eval` | Run the context fitness-function probe suite (`evals/probes/*.sh`) against real state, write the `evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
+| `/eval` | Run the context fitness-function probe suite (`.oh/evals/probes/*.sh`) against real state, write the `.oh/evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 | `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
 | `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `.mifune/skills/retro/references/memory-protocol.md` |

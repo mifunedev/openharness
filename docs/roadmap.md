@@ -60,14 +60,15 @@ its consumers were repointed to `.oh/cli`. The docs-site package later moved out
 entirely: the Docusaurus app/assets/blog now live in
 [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web),
 while this core repo keeps GitHub-readable markdown under `docs/` and points
-DeepWiki at generated repo navigation. (`evals/`, `context/`,
-`memory/`, `workspace/`, and `docs/` stay at root as live
-identity/state/content, not machinery addressed as a unit.) The Ralph/spec
-task workdirs (`tasks/`) and the scheduled-agent cron definitions (`crons/`)
-were reclassified as machinery and moved under `.oh/tasks/` and `.oh/crons/`,
-keeping back-compat root symlinks; their git-mutating consumers (the
-`cleanup-tasks` cron, `ralph.sh`, the eval probes) were repointed to the real
-`.oh/` paths because git index operations cannot traverse the symlink.
+DeepWiki at generated repo navigation. (`context/`, `memory/`, `workspace/`,
+and `docs/` stay at root as live identity/state/content, not machinery
+addressed as a unit.)
+
+The Ralph/spec task workdirs (`tasks/`) were reclassified as machinery and
+moved under `.oh/tasks/`, keeping a back-compat root symlink; their git-mutating
+consumers (the `cleanup-tasks` cron, `ralph.sh`, the eval probes) were repointed
+to the real `.oh/tasks/` path because git index operations cannot traverse the
+symlink.
 
 The scheduled-agent cron definitions (`crons/`) were reclassified as machinery
 and moved under `.oh/crons/`, keeping a back-compat root symlink. Unlike a
@@ -77,6 +78,13 @@ filesystem appends (`cron-runtime.ts` reads, and liveness logs append via
 the cron bodies, and the eval probes — resolves unchanged; references were
 repointed to the real `.oh/crons/` path for consistency.
 
+The fitness-function eval suite (`evals/`) was reclassified as machinery and
+moved under `.oh/evals/`, keeping a back-compat root symlink. Because the move
+is one directory level deeper, the eval runner (`run.sh`), the
+`repo-orientation-benchmark-score.mjs` scorer, and every probe's relative-root
+resolution were repointed to the real `.oh/evals/` path; reads through the
+symlink keep working for any consumer that still pins `evals/`.
+
 ## Namespaces
 
 This **supersedes** the earlier "earned by EXPORT only" rule: a dotdir namespace
@@ -85,8 +93,8 @@ is earned by **function-class**. Three surfaces:
 | Namespace | Function-class | Holds |
 |---|---|---|
 | `.mifune/` | provider-portable primitives (exported to the 4 providers + the `mifunedev/skills` registry) | skills, agents, hooks |
-| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), the scheduled-agent cron definitions (`crons/`), deploy config (`config.json`), the Ralph/spec task workdirs (`tasks/` → `.oh/tasks/`) |
-| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `evals/`, `memory/`, `workspace/`, `docs/` content |
+| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), the scheduled-agent cron definitions (`crons/`), the fitness-function eval suite (`evals/`), deploy config (`config.json`), the Ralph/spec task workdirs (`tasks/` → `.oh/tasks/`) |
+| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `memory/`, `workspace/`, `docs/` content |
 
 Harness-native skills still live in `.mifune/skills/` (not `.oh/`) because they
 share the *identical* provider-export mechanism; portability is a property

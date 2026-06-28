@@ -24,7 +24,7 @@
 
 #### Task 3: Add regression coverage
 - **Input**: Extension behavior contract.
-- **Output**: `.pi/extensions/__tests__/codex-stale-response-retry.test.ts` and `evals/probes/codex-stale-response-retry.sh`.
+- **Output**: `.pi/extensions/__tests__/codex-stale-response-retry.test.ts` and `.oh/evals/probes/codex-stale-response-retry.sh`.
 - **Acceptance**: Targeted vitest file and probe both pass.
 
 #### Task 4: Document and package PR

@@ -30,7 +30,7 @@ The `/prd` skill currently names two different PRD output locations. Its early j
 
 **Acceptance Criteria:**
 
-- [x] Add `evals/probes/prd-output-path-contract.sh`.
+- [x] Add `.oh/evals/probes/prd-output-path-contract.sh`.
 - [x] The probe fails on `.oh/tasks/prd-[feature-name].md` in provider-facing PRD skill docs.
 - [x] The probe passes only when `.oh/tasks/<feature-name>/prd.md` is present.
 - [x] The probe resolves the repo root from `${BASH_SOURCE[0]}`.

@@ -51,7 +51,7 @@ Acceptance criteria:
 - **Local entries**: create `wiki/compose-wrapper.md`; refresh `wiki/README.md`.
 - **Spec alignment**: The wiki entry must describe the compose helper's env-file ordering, temporary generated env files for diagnostics, and persistent generated env files for lifecycle commands.
 - **DeepWiki comparison**: No dedicated public DeepWiki compose-wrapper page was found; use DeepWiki-style local source-file citations and a relationship diagram.
-- **Acceptance criteria**: US-003 includes wiki update and `bash evals/probes/wiki-readme-index.sh` verification.
+- **Acceptance criteria**: US-003 includes wiki update and `bash .oh/evals/probes/wiki-readme-index.sh` verification.
 
 ## PM Plan
 

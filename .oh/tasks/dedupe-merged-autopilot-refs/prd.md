@@ -29,10 +29,10 @@ Acceptance criteria:
 As a future maintainer, I want an eval probe that fails if merged-PR dedupe disappears from the autopilot skill.
 
 Acceptance criteria:
-- Add `evals/probes/autopilot-merged-pr-reference-dedupe.sh` as a Tier-A probe.
-- Keep `evals/probes/autopilot-open-pr-reference-dedupe.sh` aligned with the revised rationale text.
-- `bash evals/probes/autopilot-open-pr-reference-dedupe.sh` passes.
-- `bash evals/probes/autopilot-merged-pr-reference-dedupe.sh` passes.
+- Add `.oh/evals/probes/autopilot-merged-pr-reference-dedupe.sh` as a Tier-A probe.
+- Keep `.oh/evals/probes/autopilot-open-pr-reference-dedupe.sh` aligned with the revised rationale text.
+- `bash .oh/evals/probes/autopilot-open-pr-reference-dedupe.sh` passes.
+- `bash .oh/evals/probes/autopilot-merged-pr-reference-dedupe.sh` passes.
 
 ### US-003 — Record the operator model
 As a future agent, I want docs/wiki/changelog context that explains why merged PR references matter for a `development`-targeting workflow.
@@ -41,7 +41,7 @@ Acceptance criteria:
 - `CHANGELOG.md` has Unreleased entries for the probe and behavior change.
 - `wiki/autopilot.md` explains the queue selection model, cites source lines, and links adjacent entries.
 - `wiki/raw/2026-06-20-autopilot-selection.md` captures the source snapshot for the wiki entry.
-- `wiki/README.md` includes the new entry and `bash evals/probes/wiki-readme-index.sh` passes.
+- `wiki/README.md` includes the new entry and `bash .oh/evals/probes/wiki-readme-index.sh` passes.
 
 ## Wiki Alignment
 
@@ -49,4 +49,4 @@ Acceptance criteria:
 - **Local entries**: `wiki/autopilot.md` to create/update
 - **Spec alignment**: The wiki must teach that GitHub `autopilot` issues are the queue, but completed development-branch PRs can leave issues open; selection therefore dedupes both open and merged PR references before building.
 - **DeepWiki comparison**: No relevant public DeepWiki page found for this narrow selection invariant; use the local DeepWiki-style source-files-first layout from `context/rules/wiki.md`.
-- **Acceptance criteria**: US-003 updates `wiki/autopilot.md`, refreshes `wiki/README.md`, and verifies `bash evals/probes/wiki-readme-index.sh`.
+- **Acceptance criteria**: US-003 updates `wiki/autopilot.md`, refreshes `wiki/README.md`, and verifies `bash .oh/evals/probes/wiki-readme-index.sh`.

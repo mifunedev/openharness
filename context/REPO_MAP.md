@@ -77,6 +77,11 @@ while :; do
 done
 ```
 
+
+## Mifune ingress and ownership
+
+Mifune source lives in `ryaneggz/mifune` and enters Open Harness as the pinned `.mifune/` submodule. Use `git clone --recurse-submodules`, or repair a plain clone with `bash .oh/scripts/ensure-mifune.sh --init` then `--check`. Change Mifune upstream first, then bump the Open Harness pin. `.pi/` remains a provider surface, not the v1 Mifune mount.
+
 ## Search routing quick guide
 
 Use these routes before broad repo-wide search. If `Start here` names a directory and that directory has `README.md`, read the README first.
@@ -91,8 +96,8 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Task/spec implementation state | `tasks/README.md`, `tasks/<active-task>/` | PRD, critique, Ralph JSON, prompt, and task-specific artifacts. |
 | Docs | `README.md`, `docs/README.md`, `docs/` | GitHub-readable markdown docs; rendered site/blog source lives in `mifunedev/openharness-web`. |
 | CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
-| Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi extensions, manifests, and Pi runtime config. |
-| Skill behavior | `.pi/skills/`, `.claude/skills/` | Provider-facing skill contracts; keep copies synchronized when both exist. |
+| Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi provider extensions, manifests, and runtime config; `.pi/` is not the v1 Mifune mount. |
+| Skill behavior | `.mifune/skills/`, `.pi/skills/`, `.claude/skills/` | Source of truth is the initialized `.mifune/` submodule from `ryaneggz/mifune`; provider paths are symlinks into it. |
 | Durable knowledge | `.mifune/skills/wiki/corpus/README.md`, `.mifune/skills/wiki/corpus/*.md`, `memory/MEMORY.md` | Curated wiki pages and long-term lessons; prefer these before raw logs. |
 | Agent workspace seed files | `workspace/AGENTS.md`, `workspace/CLAUDE.md` | Template files bind-mounted into the sandbox workspace. |
 

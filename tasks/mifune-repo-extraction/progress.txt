@@ -1,0 +1,98 @@
+# progress
+
+## Spec update — destination repo
+- Destination changed per operator instruction to `ryaneggz/mifune` (replacing the earlier placeholder destination).
+- `ryaneggz/mifune` exists, is public, has default branch `development`, and current viewer permission is `ADMIN` as of spec update preflight.
+- Extraction intent: replace the current `ryaneggz/mifune` default contents with the extracted Open Harness `.mifune` pack, preferably through a replacement feature branch and PR into that repo before Open Harness pins the final default-branch SHA.
+- `/spec critique` rerun after this change returned `STATUS: SPEC-APPROVED` (H0/M0/L2).
+
+## Spec update — Mifune ingress model
+- Added explicit “How Mifune gets added to an Open Harness checkout” section.
+- v1 ingress is now mandatory Git submodule/gitlink at `.mifune/` pointing to `ryaneggz/mifune`; no manifest alternative.
+- Documented fresh-clone paths: `git clone --recurse-submodules` or plain clone plus `bash .oh/scripts/ensure-mifune.sh --init`.
+- Added US-006, FR-8, required docs surfaces, protected-path registration for `.oh/scripts/ensure-mifune.sh`, and clean-clone ingress verification.
+- `/spec critique` rerun after this change returned `STATUS: SPEC-APPROVED` (H0/M0/L2).
+
+## US-001 implementation — external Mifune seed
+- Destination repo preflight: `ryaneggz/mifune` public, default branch `development`, viewer permission `ADMIN`.
+- Public readability preflight: `git ls-remote https://github.com/ryaneggz/mifune.git HEAD` succeeded.
+- Pre-replacement default HEAD: `f2ccf1aeaadccaf003224d6bfaa1f90ff2fc2820` on `development`.
+- Replacement branch: `task/539-openharness-mifune-pack`.
+- Replacement copy source: tracked Open Harness `.mifune/` tree via `git archive HEAD:.mifune`, preserving modes/symlinks.
+- External PR: `https://github.com/ryaneggz/mifune/pull/8`.
+- External PR result: merged by squash at `2026-06-28T02:56:08Z`.
+- Final `ryaneggz/mifune` default HEAD / Open Harness submodule pin: `f5a72314687b6ea3848c9b5654e8a4fb894d10af`.
+- External post-merge status: clean (`git -C .worktrees/project/ryaneggz/mifune status --short` had no file changes).
+- External smoke checks passed: `skills/git/SKILL.md`, executable `hooks/deny-env-dump.sh`, `skills/wiki/references/schema.md`, executable `skills/eval/run.sh`.
+
+### Preserved executable mode list
+
+```text
+hooks/deny-env-dump.sh
+hooks/deny-secret-paths.sh
+hooks/warn-devtcp.sh
+skills/autopilot/autopilot-caps.sh
+skills/cloudflared/scripts/run.sh
+skills/context-audit/runner.sh
+skills/eval/run.sh
+skills/prompt-miner/prompt-miner-caps.sh
+skills/prompt-miner/scripts/render-log-entry.sh
+skills/retro/scripts/check-memory-duplicates.sh
+skills/retro/scripts/render-log-entry.sh
+skills/retro/scripts/validate-retro-report.sh
+skills/t3/scripts/t3-code.sh
+```
+
+## Scope decision — v1 stays `.mifune`
+- Operator considered whether `.pi/` should become the Mifune-owned submodule surface.
+- Decision for this PR: do **not** broaden scope; v1 remains mandatory `.mifune/` submodule to `ryaneggz/mifune` with `ensure-mifune` init/check and docs/tests proving ingress.
+- V2 follow-up idea: evaluate `.pi/` as the Mifune submodule and `.mifune -> .pi` as compatibility alias only after a separate spec handles Pi runtime-local state, ignore rules, and protected-path alias proof.
+- Current OpenHarness implementation edits remain paused/uncommitted until this scope guard is pushed.
+
+## V1 Open Harness implementation
+- Kept v1 scoped to `.mifune/` as the real Git submodule mount; `.pi/` remains a provider surface with symlinks into `.mifune/`.
+- Replaced tracked in-core `.mifune/**` blobs with a `.gitmodules` entry plus gitlink pinned to `ryaneggz/mifune` commit `f5a72314687b6ea3848c9b5654e8a4fb894d10af`.
+- Added `.oh/scripts/ensure-mifune.sh --init|--check` to initialize/repair the submodule, validate URL/SHA/protected paths/executable bits/provider symlinks/Hermes link, and print remediation on failure.
+- Added `.oh/scripts/ensure-mifune.sh` to `.claude/protected-paths.txt`.
+- Wired Mifune initialization into installer, devcontainer entrypoint, CI, release, and sandbox boot guard paths.
+- Added root probe `evals/probes/mifune-checkout.sh` and updated `wiki-readme-index` to enumerate wiki files from the Mifune submodule.
+- Updated README/docs/.oh/context/AGENTS/CHANGELOG to explain the `.mifune` ingress model and v2-only `.pi` consolidation note.
+
+## Validation evidence — local
+- `bash .oh/scripts/ensure-mifune.sh --init` — PASS.
+- `bash .oh/scripts/ensure-mifune.sh --check` — PASS.
+- `bash evals/probes/mifune-checkout.sh` — PASS, including clean plain-clone init and Hermes symlink verification.
+- `bash evals/probes/wiki-readme-index.sh` — PASS against submodule-tracked wiki files.
+- `bash evals/probes/repo-map-contract.sh` — PASS.
+- `pnpm install --frozen-lockfile` — PASS.
+- `pnpm run security:audit` — PASS.
+- `pnpm run build` — PASS.
+- `pnpm run typecheck` — PASS.
+- `pnpm test:scripts` — PASS after updating entrypoint ordering test for the new ensure-mifune step.
+- `bash .oh/scripts/check-pnpm-pin.sh` — PASS.
+- `bash .mifune/skills/eval/run.sh --probe skill-paths` — PASS.
+- `bash .mifune/skills/eval/run.sh --probe spec-family-contract` — PASS.
+- `bash .mifune/skills/eval/run.sh` — PASS, 64 probes run; `evals/RESULTS.md` updated with the new `mifune-checkout` row.
+
+## Rollback validation
+- Disposable clone rollback check passed: `git revert --no-commit 71134a2` restores vendored `.mifune/` paths including `.mifune/skills/git/SKILL.md` and executable `.mifune/hooks/deny-env-dump.sh`, and removes `.gitmodules`.
+- Disposable clone pin check passed: resetting to `71134a2` and running `git submodule update --init --recursive .mifune` lands `.mifune` at `f5a72314687b6ea3848c9b5654e8a4fb894d10af`.
+- Pre-merge rollback command: revert the Open Harness implementation commit or restore `.mifune/` from commit `41c928b`.
+- Post-merge rollback command: revert the Open Harness submodule conversion commit or open a pin-bump PR that points `.mifune` back to a known-good `ryaneggz/mifune` SHA; if the external replacement itself must be rolled back, restore recorded pre-extraction `ryaneggz/mifune` default HEAD `f2ccf1aeaadccaf003224d6bfaa1f90ff2fc2820`.
+
+## Upstream catch-up during execution
+- `upstream/development` advanced to `f9d4b1f` while PR #540 was in progress, with six additional `.mifune` skill/template edits.
+- To avoid losing those edits during the `.mifune` gitlink conversion, copied the changed files into `ryaneggz/mifune` on branch `task/539-sync-openharness-dev-mifune` and merged external PR `https://github.com/ryaneggz/mifune/pull/9`.
+- Updated final Open Harness submodule pin from `f5a72314687b6ea3848c9b5654e8a4fb894d10af` to `5455bab1aa42648a6ae362f23199d7bff63f6309`.
+- Merged `upstream/development` into this branch and resolved `.mifune` modify/delete conflicts by keeping `.mifune` as the v1 submodule mount pinned to `5455bab1aa42648a6ae362f23199d7bff63f6309`; `.pi/` remains only a provider surface.
+
+## Post-merge validation evidence — local
+- After merging `upstream/development` and updating the `.mifune` pin to `5455bab1aa42648a6ae362f23199d7bff63f6309`, reran the full validation suite.
+- PASS: `bash .oh/scripts/ensure-mifune.sh --init` and `--check`.
+- PASS: `bash evals/probes/mifune-checkout.sh`, `wiki-readme-index.sh`, and `repo-map-contract.sh`.
+- PASS: `pnpm install --frozen-lockfile`, `pnpm run security:audit`, `pnpm run build`, `pnpm run typecheck`, `pnpm test:scripts`, and `bash .oh/scripts/check-pnpm-pin.sh`.
+- PASS: `bash .mifune/skills/eval/run.sh --probe skill-paths`, `--probe spec-family-contract`, and full `bash .mifune/skills/eval/run.sh` (65 probes).
+
+## Final rollback/pin validation
+- Disposable clone check passed for the final post-catch-up merge state: `git submodule update --init --recursive .mifune` pins `.mifune` to `5455bab1aa42648a6ae362f23199d7bff63f6309`, with protected skill/hook paths present.
+- Disposable clone check passed for first-parent rollback to the pre-catch-up implementation commit: `.mifune` pins back to `f5a72314687b6ea3848c9b5654e8a4fb894d10af` with protected paths present.

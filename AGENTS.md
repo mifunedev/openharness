@@ -236,7 +236,8 @@ apps as stacked panes — see `.mifune/skills/t3/references/sandbox-processes.md
 
 The harness root is `/home/sandbox/harness` inside the sandbox.
 Orchestrator scripts live in `.oh/scripts/`, scheduled agents in `crons/`,
-sandbox environment in `.devcontainer/`, the shared skill source of truth in
-`.mifune/skills/`, and the agent template in `workspace/`. Claude, Codex, Pi, and
-Hermes expose the shared skills through agent-specific symlinks. Per-directory
-`README.md` files explain anything whose purpose isn't obvious from the name.
+sandbox environment in `.devcontainer/`, the shared Mifune primitive pack in the
+pinned `.mifune/` submodule, and the agent template in `workspace/`. Claude,
+Codex, Pi, and Hermes expose `.mifune/skills` through provider-specific symlinks
+(`.pi/` remains the Pi provider surface in v1). Per-directory `README.md` files
+explain anything whose purpose isn't obvious from the name.

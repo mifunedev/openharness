@@ -5,6 +5,11 @@ for repo-local docs and [DeepWiki](https://deepwiki.com/mifunedev/openharness)
 for generated codebase navigation. The rendered Docusaurus site and blog archive
 live in [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web).
 
+
+## How Mifune is added
+
+Open Harness adds Mifune by pinning [`ryaneggz/mifune`](https://github.com/ryaneggz/mifune) as the `.mifune/` Git submodule. Use `git clone --recurse-submodules` for a fresh checkout, or run `bash .oh/scripts/ensure-mifune.sh --init` followed by `bash .oh/scripts/ensure-mifune.sh --check` after a plain clone. Provider paths such as `.pi/skills`, `.claude/skills`, and `.codex/skills` stay as symlinks into `.mifune/`; `.pi/` remains a provider surface for v1.
+
 ## Start here
 
 - [Introduction](intro.md)

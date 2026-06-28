@@ -12,7 +12,7 @@ This guide covers the workflow for contributing to Open Harness: creating branch
 Clone the repository:
 
 ```bash
-git clone https://github.com/mifunedev/openharness.git
+git clone --recurse-submodules https://github.com/mifunedev/openharness.git
 cd openharness
 ```
 

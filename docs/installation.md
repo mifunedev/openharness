@@ -32,7 +32,7 @@ The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and start
 1. Fork `mifunedev/openharness` on GitHub.
 2. Clone your fork:
    ```bash
-   git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
+   git clone --recurse-submodules https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
    ```
 3. Run the installer — it detects the local clone automatically:
    ```bash
@@ -43,7 +43,7 @@ The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and start
 
 1. Clone upstream:
    ```bash
-   git clone https://github.com/mifunedev/openharness.git my-harness && cd my-harness
+   git clone --recurse-submodules https://github.com/mifunedev/openharness.git my-harness && cd my-harness
    ```
 2. Re-point origin to your repo:
    ```bash
@@ -120,7 +120,7 @@ Use this path when you want more control or are setting up a CI environment.
 
 ```bash
 # Forkers: substitute your fork URL here.
-git clone https://github.com/mifunedev/openharness.git
+git clone --recurse-submodules https://github.com/mifunedev/openharness.git
 cd openharness
 ```
 

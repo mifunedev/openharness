@@ -36,6 +36,38 @@ describe("devcontainer entrypoint auth volume ownership", () => {
     expect(secondRepair).toBeGreaterThan(uidSync);
     expect(text.slice(secondRepair)).toContain("repair_home_mount_ownership\n\n# Hermes keeps all runtime state");
   });
+
+  it("does not swallow host UID reconciliation failures", () => {
+    const text = entrypoint();
+    const block = text.slice(
+      text.indexOf("# ─── Host UID reconciliation"),
+      text.indexOf("# UID/GID reconciliation can change"),
+    );
+
+    expect(block).toContain("uid_reconcile_step()");
+    expect(block).toContain("WARNING: failed to");
+    expect(block).not.toContain("2>/dev/null || true");
+    expect(block).not.toContain("groupmod -g \"$HOST_GID\" sandbox 2>/dev/null");
+    expect(block).not.toContain("usermod -u \"$HOST_UID\" sandbox 2>/dev/null");
+  });
+
+  it("prints UID sync success only after reconciliation commands report success", () => {
+    const text = entrypoint();
+    const block = text.slice(
+      text.indexOf("# ─── Host UID reconciliation"),
+      text.indexOf("# UID/GID reconciliation can change"),
+    );
+    const usermod = block.indexOf("uid_reconcile_step \"set sandbox UID to host UID $HOST_UID\" usermod -u \"$HOST_UID\" sandbox");
+    const chown = block.indexOf("uid_reconcile_step \"repair sandbox-owned files after UID/GID sync\" find /home/sandbox");
+    const success = block.indexOf("sandbox UID synced to host");
+    const incomplete = block.indexOf("sandbox UID/GID reconciliation incomplete");
+
+    expect(usermod).toBeGreaterThan(-1);
+    expect(chown).toBeGreaterThan(usermod);
+    expect(success).toBeGreaterThan(chown);
+    expect(incomplete).toBeGreaterThan(success);
+    expect(block).toContain("if [ \"$UID_GID_SYNC_OK\" = \"true\" ]; then");
+  });
 });
 
 describe("devcontainer entrypoint Slack restore (delegates to gateway.sh)", () => {

@@ -61,8 +61,16 @@ entirely: the Docusaurus app/assets/blog now live in
 [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web),
 while this core repo keeps GitHub-readable markdown under `docs/` and points
 DeepWiki at generated repo navigation. (`evals/`, `crons/`, `context/`,
-`memory/`, `tasks/`, `workspace/`, and `docs/` stay at root as live
+`tasks/`, `workspace/`, and `docs/` stay at root as live
 identity/state/content, not machinery addressed as a unit.)
+
+The harness's long-term memory + session logs (`memory/`) were reclassified as
+machinery and moved under `.oh/memory/`, keeping a back-compat root symlink.
+Like `crons/`, the memory surface has no git-mutating consumers — `/retro`, the
+crons, and `autopilot-caps.sh` append via `locked-append.sh` (filesystem writes
+that traverse the symlink) — so references were repointed to the real
+`.oh/memory/` path for consistency. The tracked `MEMORY.md`/`README.md` move
+with the dir; the gitignored dated `[0-9]*/` logs stay ignored at the new path.
 
 ## Namespaces
 
@@ -72,8 +80,8 @@ is earned by **function-class**. Three surfaces:
 | Namespace | Function-class | Holds |
 |---|---|---|
 | `.mifune/` | provider-portable primitives (exported to the 4 providers + the `mifunedev/skills` registry) | skills, agents, hooks |
-| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), deploy config (`config.json`) |
-| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`, `docs/` content |
+| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), the long-term memory + session logs (`memory/`), deploy config (`config.json`) |
+| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `evals/`, `crons/`, `tasks/`, `workspace/`, `docs/` content |
 
 Harness-native skills still live in `.mifune/skills/` (not `.oh/`) because they
 share the *identical* provider-export mechanism; portability is a property

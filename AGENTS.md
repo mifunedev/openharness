@@ -23,8 +23,8 @@ Read these files at the start of every session — they encode voice, principles
 - `context/TOOLS.md` — environment inventory; skip rediscovery
 - `context/REPO_MAP.md` — source-map command, search routing, and low-signal folders to disregard
 - `context/USER.md` — working-relationship patterns; living document
-- `memory/MEMORY.md` — long-term lessons learned (append-only)
-- Today's `memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
+- `.oh/memory/MEMORY.md` — long-term lessons learned (append-only)
+- Today's `.oh/memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
 
 After **every** skill or agent run, fire the Memory Improvement Protocol (log → qualify → improve) — its canonical home is now the `/retro` skill (`.mifune/skills/retro/references/memory-protocol.md`).
 
@@ -188,9 +188,9 @@ The `/spec` dispatcher operates on a `tasks/<slug>/` folder (the universal inter
 | `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |
 | `/eval` | Run the context fitness-function probe suite (`evals/probes/*.sh`) against real state, write the `evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
-| `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
+| `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `.oh/memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
 | `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `.mifune/skills/retro/references/memory-protocol.md` |
-| `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `memory/<date>/`; raw prompt text is off by default. The daily `crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/ship-spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
+| `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `.oh/memory/<date>/`; raw prompt text is off by default. The daily `crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/ship-spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
 | `/caveman` | Token-compression output mode (`lite`/`full`/`ultra`/`wenyan`); subcommands `/caveman-commit`, `/caveman-review`, `/caveman-compress <file>`, `/caveman-stats`. Never compresses code, security warnings, or irreversible-action confirmations |
 | `/wiki` | Dispatcher for the wiki knowledge base (corpus at `.mifune/skills/wiki/corpus/`, gitignored-by-default + whitelisted): `ingest <url\|path> [--slug]` / `ingest --from-draft <slug> [--allow-stale]` (capture a source or promote a draft), `query <topic>` (frontmatter OR-search, read top ≤3 by `updated:` desc), `lint [--dry-run]` (5 health checks + atomic `corpus/README.md` regen). Schema: `.mifune/skills/wiki/references/schema.md` |
 | `/drift-check` | Detect framework (origin↔upstream), branch-behind, and cron-staleness drift; report remediation — never mutates state |

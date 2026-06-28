@@ -43,8 +43,8 @@ workspace/.slack/*/
 workspace/.slack/events/
 workspace/.slack/settings.json
 
-# Daily session logs — memory/README.md, memory/MEMORY.md, and topic notes are tracked
-memory/[0-9]*/
+# Daily session logs — .oh/memory/README.md, .oh/memory/MEMORY.md, and topic notes are tracked
+.oh/memory/[0-9]*/
 
 # Pi project config (generated symlinks)
 workspace/.pi/

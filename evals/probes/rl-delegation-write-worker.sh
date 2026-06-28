@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: memory/MEMORY.md 2026-06-10 (rl-delegation) #57
+# source: .oh/memory/MEMORY.md 2026-06-10 (rl-delegation) #57
 # desc: /delegate SKILL.md must warn that the implementer/pm/critic sub-agent types are
 #       read-only and recommend subagent_type general-purpose for any write/edit worker
 set -euo pipefail

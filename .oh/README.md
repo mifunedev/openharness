@@ -22,14 +22,15 @@ namespaces, split by what *kind* of thing they hold:
 - **`.oh/`** — *OpenHarness's own machinery* as one unit: the `oh` CLI (`cli/`),
   the Docusaurus docs-site builder (`docs/`, the sole pnpm-workspace member),
   installer + lifecycle scripts (`scripts/`), container-install inputs
-  (`install/`), and user-local deploy config (`config.json`). The former
+  (`install/`), the long-term memory + session logs (`memory/`), and user-local
+  deploy config (`config.json`). The former
   top-level `packages/` folder was **retired** — its `oh` and `docs` packages
   moved in here.
 - **repo root** — everything forced to root by *external* tooling
   (`.devcontainer/` for the devcontainer spec + Docker COPY, `harness.yaml`,
   `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) **plus** live
   identity/state the harness edits in place (`context/`, `evals/`, `crons/`,
-  `memory/`, `tasks/`, `workspace/`, and the markdown `docs/`+`blog/` content
+  `tasks/`, `workspace/`, and the markdown `docs/`+`blog/` content
   the `.oh/docs` site renders).
 
 ### Back-compat symlinks (the `.mifune` precedent)
@@ -42,6 +43,7 @@ keep **tracked back-compat symlinks at the old root paths** — exactly how
 |---|---|
 | `scripts/` | `.oh/scripts/` |
 | `install/` | `.oh/install/` |
+| `memory/` | `.oh/memory/` |
 
 Every consumer pinning those literals — the ~7 skills and 2 cron bodies that call
 `scripts/locked-append.sh`, the `Makefile`'s `COMPOSE := scripts/docker-compose.sh`,
@@ -80,6 +82,7 @@ The core runtime expects `.mifune/` to be initialized before provider paths read
 | `cli/` | The in-tree `oh` CLI (standalone npm package; built into the image as `/opt/oh`). Old path: `packages/oh/` (no symlink — repointed). |
 | `install/` | Container-install inputs (`.zshrc`, `.tmux.conf`, `banner.sh`, `install.sh` prerequisites) consumed by the Dockerfile + entrypoint. Old path: `install/` (back-compat symlink kept). |
 | `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `ralph.sh`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (back-compat symlink kept). |
+| `memory/` | The harness's long-term memory (`MEMORY.md` + topic notes, tracked) and gitignored dated session logs (`[0-9]*/log.md`). Old path: `memory/` (back-compat symlink kept). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
 
@@ -110,7 +113,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the docs-site builder, installer/lifecycle scripts, container-install inputs, deploy/compose config | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`, and the `docs/`+`blog/` markdown content) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the docs-site builder, installer/lifecycle scripts, container-install inputs, deploy/compose config, the long-term memory + session logs (`memory/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `crons/`, `tasks/`, `workspace/`, and the `docs/`+`blog/` markdown content) |
 
 ### Why these specifically stay at root
 

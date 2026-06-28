@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: memory/MEMORY.md 2026-06-04
+# source: .oh/memory/MEMORY.md 2026-06-04
 # desc: public mifune.dev is not served by next dev
 set -euo pipefail
 

@@ -7,7 +7,7 @@
       "id": "US-001",
       "title": "Route long-term memory through AUDIT_LOG_ROOT",
       "acceptance": [
-        "harness-audit tails AUDIT_LOG_ROOT/memory/MEMORY.md for recent long-term memory",
+        "harness-audit tails AUDIT_LOG_ROOT/.oh/memory/MEMORY.md for recent long-term memory",
         "source inspection paths continue to use AUDIT_ROOT"
       ],
       "status": "complete"
@@ -16,7 +16,7 @@
       "id": "US-002",
       "title": "Guard with eval probe",
       "acceptance": [
-        "eval probe fails when harness-audit tails AUDIT_ROOT/memory/MEMORY.md for long-term memory",
+        "eval probe fails when harness-audit tails AUDIT_ROOT/.oh/memory/MEMORY.md for long-term memory",
         "eval results and changelog are updated"
       ],
       "status": "complete"

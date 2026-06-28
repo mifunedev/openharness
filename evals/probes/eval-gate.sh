@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: memory/MEMORY.md 2026-06-11 (eval-gate)
+# source: .oh/memory/MEMORY.md 2026-06-11 (eval-gate)
 # desc: autopilot §6 eval-gate keys on green→red delta + runner exit code, not bare REGRESSION presence
 set -euo pipefail
 

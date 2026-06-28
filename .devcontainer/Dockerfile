@@ -126,11 +126,14 @@ RUN set -e; \
     else echo "Skipping Grok Build CLI install (INSTALL_GROK_BUILD=false)"; fi
 
 # ─── Open Harness `oh` CLI ──────────────────────────────────────────
-# Build the in-tree `oh` CLI (packages/oh/) into a self-contained bundle,
+# Build the in-tree `oh` CLI (.oh/cli/) into a self-contained bundle,
 # install onto $PATH. Source is COPY'd to /opt/oh (outside the
 # bind-mount) so the bundled binary survives the bind-mount overlay.
-# v1 ships `oh config slack` (Slack integration setup wizard).
-COPY packages/oh/ /opt/oh/
+# The `oh config` family currently ships no integration wizards (Slack is
+# configured natively by editing files — see docs/integrations/slack.md).
+# NOTE: COPY does not follow the back-compat `packages/oh` symlink, so the
+# real path `.oh/cli/` is used here; runtime callers still use `packages/oh`.
+COPY .oh/cli/ /opt/oh/
 RUN cd /opt/oh && npm install --no-audit --no-fund && npm run build \
  && chmod +x /opt/oh/dist/oh.js \
  && ln -sf /opt/oh/dist/oh.js /usr/local/bin/oh
@@ -168,11 +171,11 @@ RUN su - sandbox -c "RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \"\$(curl -fsSL http
  && su - sandbox -c "git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting     /home/sandbox/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" \
  && su - sandbox -c "git clone --depth 1 https://github.com/zsh-users/zsh-history-substring-search /home/sandbox/.oh-my-zsh/custom/plugins/zsh-history-substring-search"
 
-# Default tmux config for sandbox user
-COPY --chown=sandbox:sandbox install/.tmux.conf /home/sandbox/.tmux.conf
+# Default tmux config for sandbox user (real path — COPY ignores the install symlink)
+COPY --chown=sandbox:sandbox .oh/install/.tmux.conf /home/sandbox/.tmux.conf
 
 # Default .zshrc for sandbox user (overrides the oh-my-zsh template)
-COPY --chown=sandbox:sandbox install/.zshrc /home/sandbox/.zshrc
+COPY --chown=sandbox:sandbox .oh/install/.zshrc /home/sandbox/.zshrc
 
 # Ensure user npm bin + PNPM_HOME are on PATH for login shells (SSH, openharness shell).
 # bash reads .profile; zsh reads .zprofile — mirror the exports into both.
@@ -200,7 +203,8 @@ RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness",
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
 
 # ─── Copy install scripts + workspace (for CI; bind mount overrides at runtime)
-COPY --chown=sandbox:sandbox install/ /home/sandbox/install/
+# Real path .oh/install/ — COPY does not traverse the back-compat install symlink.
+COPY --chown=sandbox:sandbox .oh/install/ /home/sandbox/install/
 RUN chmod +x /home/sandbox/install/*.sh
 COPY --chown=sandbox:sandbox workspace/ /home/sandbox/harness/workspace/
 

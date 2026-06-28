@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #168; issue #478
+# source: issue #168; issue #327
 # desc: the cleanup-tasks weekly sweep grooms stale .worktrees/ branch
 #       checkout folders while preserving durable .worktrees/agent/ identities,
 #       .worktrees/project/ external project clones, and dirty/unpushed stale
@@ -61,6 +61,7 @@ if ! grep -Fq 'newer than 30 days' "$CRON"; then
   echo "REGRESSION: grooming pass lacks the 30-day staleness threshold" >&2
   exit 1
 fi
+
 for required in \
   'git -C "$path" diff --quiet' \
   'git -C "$path" diff --cached --quiet' \

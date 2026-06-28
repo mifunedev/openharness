@@ -15,7 +15,7 @@
 # --- Orchestrator skills (.claude/skills/) ---
 release
 ci-status
-cloudflared
+cloudflared-tunnel
 agent-browser
 prd
 ralph
@@ -33,29 +33,32 @@ health-check
 retro
 drift-check
 
-# --- Orchestrator scripts (scripts/) ---
-scripts/ralph.sh
-scripts/cron-runtime.ts
-scripts/sandbox-healthcheck.sh
+# --- Orchestrator scripts (.oh/scripts/) ---
+.oh/scripts/ralph.sh
+.oh/scripts/cron-runtime.ts
+.oh/scripts/sandbox-healthcheck.sh
 
 # --- Root lifecycle entrypoints ---
 Makefile
 
 # --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
-install/banner.sh
-.claude/skills/cloudflared/scripts/run.sh
+.oh/install/banner.sh
+.oh/install/cloudflared-tunnel.sh
 .devcontainer/entrypoint.sh
 .devcontainer/Dockerfile
 
-# --- Crons (referenced by scripts/cron-runtime.ts) ---
+# --- Crons (referenced by .oh/scripts/cron-runtime.ts) ---
 crons/heartbeat.md
 crons/cleanup-tasks.md
+evals/probes/cleanup-tasks-worktree-grooming.sh
+crons/eval-weekly.md
 
-# --- Rules consumed by skills + agents at runtime ---
-.claude/rules/git.md
-.claude/rules/sandbox-processes.md
-.claude/rules/advisor-model.md
-.claude/rules/recursive-delegation.md
+# --- Norms folded into skills (formerly context/rules/, B-state M3+M4) ---
+.mifune/skills/git/SKILL.md
+.mifune/skills/t3/references/sandbox-processes.md
+.mifune/skills/advisor/SKILL.md
+.mifune/skills/advisor/references/recursive-delegation.md
+.mifune/skills/retro/references/memory-protocol.md
 
 # --- Specs that other artifacts cross-reference ---
 .claude/specs/structure-spec-v0.7.md

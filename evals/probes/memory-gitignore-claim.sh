@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #101
-# desc: context/rules/memory.md must not claim daily logs are git-tracked, and .gitignore must keep ignoring memory/[0-9]*/ so the false "tracked inside" persistence claim cannot return
+# desc: the Memory Improvement Protocol (.mifune/skills/retro/references/memory-protocol.md) must not claim daily logs are git-tracked, and .gitignore must keep ignoring memory/[0-9]*/ so the false "tracked inside" persistence claim cannot return
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GITIGNORE="$ROOT/.gitignore"
-RULE="$ROOT/context/rules/memory.md"
+RULE="$ROOT/.mifune/skills/retro/references/memory-protocol.md"
 
 # SKIPPED guard: a grep against a missing file would silently false-PASS
 # Assertion B (grep -q on absent file exits non-zero → "not present"), so
@@ -36,5 +36,5 @@ if grep -qF 'tracked inside' "$RULE"; then
   exit 1
 fi
 
-echo "PASS: .gitignore keeps ignoring memory/[0-9]*/ and context/rules/memory.md drops the false 'tracked inside' claim" >&2
+echo "PASS: .gitignore keeps ignoring memory/[0-9]*/ and the Memory Improvement Protocol drops the false 'tracked inside' claim" >&2
 exit 0

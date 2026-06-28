@@ -73,7 +73,7 @@ US-006 in `tasks/context-fitness-evals/prd.md`.
 
 ## Memory Protocol
 
-After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
+After a run, append to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
 ## eval -- HH:MM UTC

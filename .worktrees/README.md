@@ -9,7 +9,7 @@ The split is by **kind of repo**, not by *who* owns it:
 | --------- | --------------- |
 | `agent/`  | **Harnesses** — anything that adopts the Open Harness shape. Either a `git worktree` of a harness branch in *this* repo, or a standalone harness repo (private or public) with its own remote — including a fork of an Open Harness orchestrator, even when it is not a branch of this repo. |
 | `project/`| **Non-harness repos** — independent projects that happen to live next to the harness for convenience. They do not inherit the Open Harness layout. |
-| `feat/` `bug/` `task/` `audit/` `skill/` | `git worktree` checkouts of in-flight harness branches, named after the branch prefix in `context/rules/git.md`. |
+| `feat/` `bug/` `task/` `audit/` `skill/` | `git worktree` checkouts of in-flight harness branches, named after the branch prefix in `.mifune/skills/git/SKILL.md`. |
 | `archive/` | `archive/<YYYY-MM-DD>` — weekly cleanup-tasks archive sweeps. |
 
 ## `agent/` — harness branches and standalone harness repos
@@ -72,13 +72,13 @@ clone something into it. Lifecycle is `git clone` / `rm -rf`, not
 ## Branch-prefix subfolders (`feat/`, `bug/`, `task/`, `audit/`, `skill/`)
 
 `git worktree` checkouts of in-flight branches in this repo. The folder
-mirrors the branch prefix from `context/rules/git.md`. The dated
+mirrors the branch prefix from `.mifune/skills/git/SKILL.md`. The dated
 `archive/<YYYY-MM-DD>` folders hold weekly cleanup-tasks archive sweeps.
 Lifecycle is `git worktree add` / `git worktree remove`.
 
 ---
 
-See `.claude/rules/git.md` § Worktrees for the canonical workflow,
+See `.mifune/skills/git/SKILL.md` § Worktrees for the canonical workflow,
 including the stale-worktree policy.
 
 Everything under `.worktrees/` is gitignored except this README.

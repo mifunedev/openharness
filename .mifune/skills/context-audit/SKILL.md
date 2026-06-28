@@ -7,7 +7,7 @@ description: |
   degradation — the only provably safe gate for cutting load-bearing content.
   TRIGGER when: asked to audit context window, check default context load,
   "what's in my context", evaluate rules for signal vs noise, or before/after
-  any change to context/rules/ or CLAUDE.md.
+  any change to context/ or CLAUDE.md.
 ---
 
 # Context Audit
@@ -19,7 +19,6 @@ Score every file in the default-loaded context set on 4 deterministic dimensions
 | Layer | Files | Loaded how |
 |-------|-------|-----------|
 | Bootloader | `CLAUDE.md` | always |
-| Rules | `context/rules/*.md` | always (auto via `.claude/rules` symlink) |
 | Context | `context/SOUL.md`, `context/IDENTITY.md`, `context/TOOLS.md`, `context/USER.md` | session start |
 | Memory | `memory/MEMORY.md` (+ today's log) | session start |
 | Skill metadata | frontmatter of all `**/SKILL.md` | always injected |
@@ -45,7 +44,6 @@ TODAY=$(date -u +%Y-%m-%d)
 # Enumerate all files and their footprint
 for f in \
   "$HARNESS/CLAUDE.md" \
-  "$HARNESS"/context/rules/*.md \
   "$HARNESS/context/SOUL.md" \
   "$HARNESS/context/IDENTITY.md" \
   "$HARNESS/context/TOOLS.md" \
@@ -253,11 +251,11 @@ Back up the target file, run all probes, restore. Use `trap` to guarantee restor
 ```bash
 TARGET="$HARNESS/$ARGUMENTS_FILE"   # the <file> arg from --ablate
 
-# Swap/restore/trap mechanics are shared with /eval — see scripts/ablate.sh
+# Swap/restore/trap mechanics are shared with /eval — see .oh/scripts/ablate.sh
 # (prd.md §10 M-1). ablate_swap_out backs up + removes TARGET and arms an EXIT
 # trap (plus a crash-recovery sentinel /eval restores on startup). Only the
 # mechanics are shared; the `claude -p` marker oracle below stays /context-audit's own.
-source "$HARNESS/scripts/ablate.sh"
+source "$HARNESS/.oh/scripts/ablate.sh"
 ablate_swap_out "$TARGET"
 
 for probe in "$PROBE_DIR"/*.md; do
@@ -323,7 +321,7 @@ Degradation threshold: **SIGNAL DETECTED** if any probe's ablation hits fall mor
 
 ```bash
 mkdir -p "$HARNESS/memory/$TODAY"
-scripts/locked-append.sh "$HARNESS/memory/$TODAY/log.md" <<EOF
+.oh/scripts/locked-append.sh "$HARNESS/memory/$TODAY/log.md" <<EOF
 
 ## [Context Audit] — $(date -u +%H:%M) UTC
 - **Result**: OP
@@ -334,7 +332,7 @@ scripts/locked-append.sh "$HARNESS/memory/$TODAY/log.md" <<EOF
 EOF
 ```
 
-See `context/rules/memory.md` for the canonical Memory Improvement Protocol.
+See `.mifune/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
 ## Guidelines
 
@@ -376,7 +374,7 @@ markers:
 For running ablation outside a Claude session:
 
 ```bash
-.claude/skills/context-audit/runner.sh --ablate context/rules/<file>.md
+.claude/skills/context-audit/runner.sh --ablate context/<file>.md
 ```
 
 See `runner.sh` in this skill directory.

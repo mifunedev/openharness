@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none" aria-label="Open Harness">
-  <rect x="1.5" y="1.5" width="45" height="45" rx="9" stroke="#ffffff" stroke-width="2.5"/>
-  <path d="M14 17 L21 24 L14 31" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <path d="M25 32 L34 32" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
-</svg>

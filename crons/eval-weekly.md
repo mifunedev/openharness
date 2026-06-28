@@ -15,7 +15,7 @@ Run the context fitness-function probe suite and log any regressions.
 This is a **log-only** run: no issues are opened, no notifications are
 sent.
 
-> **Note:** CI (`eval-probes` in `.github/workflows/ci-harness.yml`) is now the
+> **Note:** CI (`eval-probes` in `.github/workflows/ci-harness.yml`) is the
 > primary green→red regression gate — it runs the suite on every PR and push to
 > `development`/`main`. This weekly cron is a **supplemental** check that catches
 > regressions from non-PR activity (direct commits, drift in live real state).
@@ -24,20 +24,17 @@ sent.
 
 1. Compute `TODAY=$(date -u +%Y-%m-%d)` and ensure the log directory
    exists: `mkdir -p "memory/$TODAY"`.
-
 2. Run the eval suite and capture full output to a temp file:
    ```bash
    bash .mifune/skills/eval/run.sh > /tmp/eval-weekly-out.txt 2>&1 || true
    ```
-
 3. Check for regressions:
    ```bash
    grep -E "^  - " /tmp/eval-weekly-out.txt || true
    ```
-
 4. If any lines matching `^  - ` were found (these are the regression
-   entries produced by `run.sh`), append one dated entry per regression
-   to `memory/$TODAY/log.md`:
+   entries produced by `run.sh`), append one dated entry per run to
+   `memory/$TODAY/log.md` through `.oh/scripts/locked-append.sh`:
 
    ```
    ## eval-weekly -- HH:MM UTC
@@ -54,15 +51,15 @@ sent.
    If there are no regressions, append instead:
    ```
    ## eval-weekly -- HH:MM UTC
-   - **Result**: OP
+   - **Result**: OK
    - **Probes**: <N from "ran N probe(s)" line>
    - **Observation**: all probes passed or skipped; no regressions
    ```
 
-5. **Mandatory closing step:** append one liveness line to
-   `crons/.cron.log` through `scripts/locked-append.sh`:
+5. **Liveness:** append one liveness line to `crons/.cron.log` through
+   `.oh/scripts/locked-append.sh`:
    ```bash
-   printf '[%s] eval-weekly: %s\n' "$(date -Iseconds)" "<OK|REGRESSION(N)>" | scripts/locked-append.sh crons/.cron.log
+   printf '[%s] eval-weekly: %s\n' "$(date -Iseconds)" "<OK|REGRESSION(N)>" | .oh/scripts/locked-append.sh crons/.cron.log
    ```
    where the status token is `OK` when no regressions were found, or
    `REGRESSION(N)` (e.g. `REGRESSION(2)`) when N probes regressed.

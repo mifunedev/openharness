@@ -70,9 +70,9 @@
     {
       "id": "RO-006",
       "class": "deep-orientation",
-      "prompt": "Find the docs build configuration and explain why docs builds stay out of the fast harness gate.",
-      "expected_paths": ["package.json", "packages/docs/package.json", ".github/workflows/docs.yml", "evals/probes/docs-build-fast-path.sh"],
-      "forbidden_patterns": ["packages/docs/build/", "packages/docs/.docusaurus/", "packages/docs/node_modules/"]
+      "prompt": "Find where the core repo keeps GitHub-readable docs and how the rendered docs site was externalized.",
+      "expected_paths": ["README.md", "docs/README.md", "package.json", "evals/probes/docs-build-fast-path.sh"],
+      "forbidden_patterns": [".oh/docs/", ".github/workflows/docs.yml", "blog/"]
     },
     {
       "id": "RO-007",

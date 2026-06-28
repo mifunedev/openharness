@@ -20,7 +20,7 @@ In-scope targets only:
 - a file the user passes with explicit "compress this anyway" override
 
 Everything else is **out of scope** — refuse with a one-line reason. In particular:
-- `docs/**`, `blog/**`, `README.md`, `CLAUDE.md`/`AGENTS.md` — published / load-bearing prose; brevity is intentional there.
+- `docs/**`, `README.md`, `CLAUDE.md`/`AGENTS.md` — published / load-bearing prose; brevity is intentional there.
 - `tasks/archive/**` and other archives — not read by default; compressing is busywork that mutates the record for ~0 live-token gain.
 - `context/**`, `.claude/skills/**`, `.claude/agents/**` — auto-loaded / behavior-steering. Token budget there is `/context-audit`'s job (it has a safe ablation gate); compression here can silently change behavior.
 
@@ -36,4 +36,4 @@ Everything else is **out of scope** — refuse with a one-line reason. In partic
 
 - **Never** compress: `LICENSE`, `CHANGELOG.md`, generated/lock files (`*.lock`, `skills.lock`), or anything under `.github/`. These have exact-format contracts.
 - **Refuse** files where compression would break a parser (JSON, YAML data, `prd.json`) — compression is for human-prose docs, not machine-read data.
-- Compressing a `memory/` note is fine; preserve the `## Heading -- HH:MM UTC` log structure (`context/rules/memory.md`).
+- Compressing a `memory/` note is fine; preserve the `## Heading -- HH:MM UTC` log structure (`.mifune/skills/retro/references/memory-protocol.md`).

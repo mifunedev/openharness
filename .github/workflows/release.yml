@@ -15,6 +15,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure Mifune submodule
+        run: bash .oh/scripts/ensure-mifune.sh --init
 
       - name: Setup Node 22.x
         uses: actions/setup-node@v4
@@ -65,6 +70,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure Mifune submodule
+        run: bash .oh/scripts/ensure-mifune.sh --init
 
       - name: Shellcheck boot scripts
         run: |
@@ -88,6 +98,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure Mifune submodule
+        run: bash .oh/scripts/ensure-mifune.sh --init
+
+      - name: Run root Mifune checkout probe
+        run: bash evals/probes/mifune-checkout.sh
 
       - name: Run eval probe suite
         run: bash .mifune/skills/eval/run.sh
@@ -103,6 +121,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ensure Mifune submodule
+        run: bash .oh/scripts/ensure-mifune.sh --init
 
       - name: Parse tag
         id: parse

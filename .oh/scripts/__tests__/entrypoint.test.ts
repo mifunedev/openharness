@@ -34,7 +34,13 @@ describe("devcontainer entrypoint auth volume ownership", () => {
     expect(firstRepair).toBeGreaterThan(-1);
     expect(uidSync).toBeGreaterThan(firstRepair);
     expect(secondRepair).toBeGreaterThan(uidSync);
-    expect(text.slice(secondRepair)).toContain("repair_home_mount_ownership\n\n# Hermes keeps all runtime state");
+    const postUidSync = text.slice(secondRepair);
+    const secondRepairCall = postUidSync.indexOf("repair_home_mount_ownership");
+    const ensureMifune = postUidSync.indexOf('bash "$HARNESS/.oh/scripts/ensure-mifune.sh" --init');
+    const hermesBlock = postUidSync.indexOf("# Hermes keeps all runtime state");
+    expect(secondRepairCall).toBeGreaterThan(-1);
+    expect(ensureMifune).toBeGreaterThan(secondRepairCall);
+    expect(hermesBlock).toBeGreaterThan(ensureMifune);
   });
 });
 

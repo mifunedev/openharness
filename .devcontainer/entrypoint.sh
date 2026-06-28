@@ -94,6 +94,18 @@ fi
 # readable on hosts where UID 1000 is already occupied.
 repair_home_mount_ownership
 
+HARNESS="/home/sandbox/harness"
+
+# How Mifune is added: Open Harness carries .mifune/ as a pinned Git
+# submodule to ryaneggz/mifune. Initialize or repair that mount before any
+# provider symlink, hook, eval runner, or Hermes skill path reads it.
+if [ -x "$HARNESS/.oh/scripts/ensure-mifune.sh" ]; then
+  if ! gosu sandbox bash "$HARNESS/.oh/scripts/ensure-mifune.sh" --init; then
+    echo "[entrypoint] failed to initialize .mifune; run: bash .oh/scripts/ensure-mifune.sh --init"
+    exit 1
+  fi
+fi
+
 # Hermes keeps all runtime state — including auth.json — inside the
 # project-local HERMES_HOME directory. An earlier design symlinked
 # auth.json into the home-scoped ~/.hermes named volume, but that volume
@@ -116,11 +128,11 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
     fi
   fi
 
-  # Share the harness' in-repo skills with Hermes through its normal
+  # Share the harness' pinned Mifune skills with Hermes through its normal
   # HERMES_HOME skills tree. Claude, Codex, and Pi point at the same neutral
-  # /home/sandbox/harness/.mifune/skills directory; Hermes keeps its bundled/runtime
-  # skills under $HERMES_RUNTIME/skills and gets the harness collection as a
-  # symlinked child so one tracked primitive is visible to every agent.
+  # /home/sandbox/harness/.mifune/skills submodule directory; Hermes keeps its
+  # bundled/runtime skills under $HERMES_RUNTIME/skills and gets the harness
+  # collection as a symlinked child so one primitive is visible to every agent.
   HERMES_SHARED_SKILLS_DIR="/home/sandbox/harness/.mifune/skills"
   HERMES_SHARED_SKILLS_LINK="$HERMES_RUNTIME/skills/openharness"
   mkdir -p "$HERMES_RUNTIME/skills"
@@ -190,8 +202,6 @@ if [ -f "$BASHRC" ] && ! grep -q 'source.*\.oh/install/banner.sh' "$BASHRC"; the
   gosu sandbox bash -c 'echo "source /home/sandbox/harness/.oh/install/banner.sh 2>/dev/null" >> ~/.bashrc'
   echo "[entrypoint] attach banner wired into .bashrc"
 fi
-
-HARNESS="/home/sandbox/harness"
 
 # ─── GitHub CLI auth via PAT (optional) ─────────────────────────────
 # When GH_TOKEN is provided, persist it into ~/.config/gh/hosts.yml on

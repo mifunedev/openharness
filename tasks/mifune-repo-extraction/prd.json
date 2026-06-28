@@ -21,8 +21,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
     },
     {
       "id": "US-002",
@@ -42,8 +42,8 @@
         "Tests pass"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Scope guard: v1 keeps .mifune/ as the real submodule mount. Do not pivot this PR to .pi-as-Mifune; defer that to a separate v2 spec."
+      "passes": true,
+      "notes": "Scope guard: v1 keeps .mifune/ as the real submodule mount. Do not pivot this PR to .pi-as-Mifune; defer that to a separate v2 spec. Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
     },
     {
       "id": "US-003",
@@ -65,8 +65,8 @@
         "Tests pass"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
     },
     {
       "id": "US-006",
@@ -84,8 +84,8 @@
         "Tests pass"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "Scope guard: v1 keeps .mifune/ as the real submodule mount. Do not pivot this PR to .pi-as-Mifune; defer that to a separate v2 spec."
+      "passes": true,
+      "notes": "Scope guard: v1 keeps .mifune/ as the real submodule mount. Do not pivot this PR to .pi-as-Mifune; defer that to a separate v2 spec. Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
     },
     {
       "id": "US-004",
@@ -106,8 +106,8 @@
         "Tests pass"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "Docs may mention .pi consolidation only as a v2 follow-up/out-of-scope note; v1 docs must teach .mifune submodule ingress."
+      "passes": true,
+      "notes": "Docs may mention .pi consolidation only as a v2 follow-up/out-of-scope note; v1 docs must teach .mifune submodule ingress. Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
     },
     {
       "id": "US-005",
@@ -126,8 +126,8 @@
         "Tests pass"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implementation evidence: local validation passed including ensure-mifune init/check, root Mifune probe, provider/Hermes checks, build, typecheck, test:scripts, targeted eval probes, and full eval. CI evidence is recorded in the PR after push."
     }
   ]
 }

@@ -27,7 +27,18 @@ trap 'rm -f "$expected_tmp" "$actual_tmp" "$rows_tmp"' EXIT
 # filesystem glob: corpus/* is gitignored-by-default, so a fresh CI clone carries
 # only the whitelisted set the committed README is built from, and an operator's
 # local-only scratch entry can never make this probe red. raw/ snapshots are
-# excluded explicitly (they carry no slug: frontmatter anyway).
+# excluded explicitly (they carry no slug: frontmatter anyway). When Mifune is a
+# submodule, enumerate the submodule's own tracked files and prefix them back to
+# the Open Harness mount path.
+tracked_wiki_files() {
+  if git -C "$ROOT/.mifune" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$ROOT/.mifune" ls-files -- 'skills/wiki/corpus/*.md' ':!:skills/wiki/corpus/raw/*' \
+      | sed 's#^#.mifune/#'
+  else
+    git -C "$ROOT" ls-files -- '.mifune/skills/wiki/corpus/*.md' ':!:.mifune/skills/wiki/corpus/raw/*'
+  fi
+}
+
 while IFS= read -r relpath; do
   entry="$ROOT/$relpath"
   [[ "$(basename "$entry")" == "README.md" ]] && continue
@@ -39,7 +50,7 @@ while IFS= read -r relpath; do
   tags="$(grep '^tags:' <<<"$frontmatter" | sed 's/^tags: *//' | head -1 || true)"
   updated="$(grep '^updated:' <<<"$frontmatter" | awk '{print $2}' | head -1 || true)"
   printf '%s %s\t| %s | %s | %s | %s |\n' "${updated:-0000-00-00}" "$slug" "$slug" "$title" "$tags" "$updated" >> "$rows_tmp"
-done < <(git -C "$ROOT" ls-files -- '.mifune/skills/wiki/corpus/*.md' ':!:.mifune/skills/wiki/corpus/raw/*')
+done < <(tracked_wiki_files)
 
 sort -r "$rows_tmp" | cut -f2- > "$expected_tmp"
 

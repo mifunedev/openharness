@@ -48,3 +48,34 @@ skills/t3/scripts/t3-code.sh
 - Decision for this PR: do **not** broaden scope; v1 remains mandatory `.mifune/` submodule to `ryaneggz/mifune` with `ensure-mifune` init/check and docs/tests proving ingress.
 - V2 follow-up idea: evaluate `.pi/` as the Mifune submodule and `.mifune -> .pi` as compatibility alias only after a separate spec handles Pi runtime-local state, ignore rules, and protected-path alias proof.
 - Current OpenHarness implementation edits remain paused/uncommitted until this scope guard is pushed.
+
+## V1 Open Harness implementation
+- Kept v1 scoped to `.mifune/` as the real Git submodule mount; `.pi/` remains a provider surface with symlinks into `.mifune/`.
+- Replaced tracked in-core `.mifune/**` blobs with a `.gitmodules` entry plus gitlink pinned to `ryaneggz/mifune` commit `f5a72314687b6ea3848c9b5654e8a4fb894d10af`.
+- Added `.oh/scripts/ensure-mifune.sh --init|--check` to initialize/repair the submodule, validate URL/SHA/protected paths/executable bits/provider symlinks/Hermes link, and print remediation on failure.
+- Added `.oh/scripts/ensure-mifune.sh` to `.claude/protected-paths.txt`.
+- Wired Mifune initialization into installer, devcontainer entrypoint, CI, release, and sandbox boot guard paths.
+- Added root probe `evals/probes/mifune-checkout.sh` and updated `wiki-readme-index` to enumerate wiki files from the Mifune submodule.
+- Updated README/docs/.oh/context/AGENTS/CHANGELOG to explain the `.mifune` ingress model and v2-only `.pi` consolidation note.
+
+## Validation evidence — local
+- `bash .oh/scripts/ensure-mifune.sh --init` — PASS.
+- `bash .oh/scripts/ensure-mifune.sh --check` — PASS.
+- `bash evals/probes/mifune-checkout.sh` — PASS, including clean plain-clone init and Hermes symlink verification.
+- `bash evals/probes/wiki-readme-index.sh` — PASS against submodule-tracked wiki files.
+- `bash evals/probes/repo-map-contract.sh` — PASS.
+- `pnpm install --frozen-lockfile` — PASS.
+- `pnpm run security:audit` — PASS.
+- `pnpm run build` — PASS.
+- `pnpm run typecheck` — PASS.
+- `pnpm test:scripts` — PASS after updating entrypoint ordering test for the new ensure-mifune step.
+- `bash .oh/scripts/check-pnpm-pin.sh` — PASS.
+- `bash .mifune/skills/eval/run.sh --probe skill-paths` — PASS.
+- `bash .mifune/skills/eval/run.sh --probe spec-family-contract` — PASS.
+- `bash .mifune/skills/eval/run.sh` — PASS, 64 probes run; `evals/RESULTS.md` updated with the new `mifune-checkout` row.
+
+## Rollback validation
+- Disposable clone rollback check passed: `git revert --no-commit 71134a2` restores vendored `.mifune/` paths including `.mifune/skills/git/SKILL.md` and executable `.mifune/hooks/deny-env-dump.sh`, and removes `.gitmodules`.
+- Disposable clone pin check passed: resetting to `71134a2` and running `git submodule update --init --recursive .mifune` lands `.mifune` at `f5a72314687b6ea3848c9b5654e8a4fb894d10af`.
+- Pre-merge rollback command: revert the Open Harness implementation commit or restore `.mifune/` from commit `41c928b`.
+- Post-merge rollback command: revert the Open Harness submodule conversion commit or open a pin-bump PR that points `.mifune` back to a known-good `ryaneggz/mifune` SHA; if the external replacement itself must be rolled back, restore recorded pre-extraction `ryaneggz/mifune` default HEAD `f2ccf1aeaadccaf003224d6bfaa1f90ff2fc2820`.

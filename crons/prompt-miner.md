@@ -2,14 +2,14 @@
 id: prompt-miner
 schedule: "0 5 * * *"
 timezone: America/Denver
-enabled: false
+enabled: true
 overlap: false
 catchup: false
 tmux: true
 worktree: true
-preflight: scripts/prompt-miner-caps.sh
+preflight: .mifune/skills/prompt-miner/prompt-miner-caps.sh
 repo: mifunedev/openharness
-description: Daily prompt-miner — mine 24h of session traces for prompt-quality markers and ship a top finding to `development` via /ship-spec (opt-in, cap-gated)
+description: Daily prompt-miner — mine 24h of session traces for prompt-quality markers and ship a top finding to the origin fork via /ship-spec (opt-in, cap-gated)
 ---
 
 # prompt-miner
@@ -19,7 +19,7 @@ session **in an isolated git worktree** (`$CRON_WORKTREE`, set by the cron runti
 because this cron declares `worktree: true`). The shared root checkout is never
 touched for source/branch work. Your job is to mine the last 24h of session
 traces for a high-confidence prompt-quality marker and, when one clears the bar,
-ship it to **`development`** through `/ship-spec` — disabled by default, never
+ship it to the **origin fork** through `/ship-spec` — never upstream, never
 auto-merged.
 
 This cron is **opt-in and cap-gated**:
@@ -28,11 +28,11 @@ This cron is **opt-in and cap-gated**:
   operator flips it to `enabled: true` and reloads the runtime (`SIGHUP` —
   `kill -HUP "$(cat crons/.pid)"` from inside the container). Disabling again is a
   one-line edit + reload; never delete the file (preserves history).
-- **Caps**: the `preflight: scripts/prompt-miner-caps.sh` gate runs **before** any
-  worktree/tmux/agent and counts open PRs labeled `prompt-miner` on
-  `mifunedev/openharness`. On a capped day it logs `SKIPPED-CAP-*` + liveness and
-  spawns nothing. Caps are prompt-miner-scoped (the wrapper re-points
-  `scripts/autopilot-caps.sh` at this repo + the `prompt-miner` label).
+- **Caps**: the `preflight: .mifune/skills/prompt-miner/prompt-miner-caps.sh` gate
+  runs **before** any worktree/tmux/agent and counts open PRs labeled
+  `prompt-miner` on `mifunedev/openharness`. On a capped day it logs `SKIPPED-CAP-*`
+  + liveness and spawns nothing. Caps are origin-scoped (the wrapper re-points
+  `.mifune/skills/autopilot/autopilot-caps.sh` at the fork + the `prompt-miner` label).
 
 ## Steps
 
@@ -57,7 +57,7 @@ Read the mined markers (stratified by session type; see `references/markers.md`)
 
 - **If a marker clears the bar** (`sessions_supporting ≥ 10` AND `effect_size ≥ 0.3`
   within a single session-type stratum): ensure the `prompt-miner` label exists on
-  this repo, then file (or reuse) an issue labeled `prompt-miner` describing
+  the fork, then file (or reuse) an origin issue labeled `prompt-miner` describing
   the improvement the marker motivates:
 
   ```bash
@@ -74,7 +74,7 @@ Read the mined markers (stratified by session type; see `references/markers.md`)
 ### 3. Ship the candidate to origin via `/ship-spec`
 
 Hand the issue to `/ship-spec`, which owns the build end-to-end (worktree Advisor,
-`/delegate` + ralph, the `/eval` gate, `/pr-audit` undraft) and targets this repo:
+`/delegate` + ralph, the `/eval` gate, `/pr-audit` undraft) and targets the fork:
 
 ```bash
 /ship-spec --repo mifunedev/openharness --base development --issue <N>
@@ -99,7 +99,7 @@ set, else map `$CRON_WORKTREE` back to its shared root, else the current topleve
 ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1{sub(/^worktree /,"");print;exit}')}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
-  | "$ROOT/scripts/locked-append.sh" "$ROOT/crons/.cron.log"
+  | "$ROOT/.oh/scripts/locked-append.sh" "$ROOT/crons/.cron.log"
 ```
 
 ## Guarantees
@@ -109,6 +109,6 @@ printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
   land as loop-gated PRs through `/ship-spec` (which does not walk retro/compound),
   never as unattended memory/identity mutations. The interactive `/prompt-miner`
   Step-4 gate is the only memory-writing path, and it requires human `APPROVE`.
-- **Self-scoped.** Issue, PR, and ground-truth cross-ref target
-  `mifunedev/openharness` / `development`.
+- **Origin-only.** Issue, PR, and ground-truth cross-ref target
+  `mifunedev/openharness` / `origin/development` — never `upstream`/`mifunedev`.
 - **Harness-infra scope only** (skills/rules/docs/scripts/crons/wiki).

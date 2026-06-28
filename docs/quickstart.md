@@ -27,7 +27,7 @@ bash openharness-install.sh
 
 If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides the same fetch/review/approve flow. `vet` is optional; Open Harness itself requires Docker with Compose and Git.
 
-> **Self-hosting?** If you've already cloned your fork or re-pointed origin, skip the curl command above and run `bash scripts/install.sh` from inside the directory instead — the installer detects the local clone automatically.
+> **Self-hosting?** If you've already cloned your fork or re-pointed origin, skip the curl command above and run `bash .oh/scripts/install.sh` from inside the directory instead — the installer detects the local clone automatically.
 
 The installer clones into `~/.openharness`, prompts to share your host
 `gh` token, writes `.devcontainer/.env` with safe defaults, and brings

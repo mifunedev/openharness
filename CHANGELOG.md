@@ -9,6 +9,41 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- **Recursive Language Models (RLM) integrated as two harness-owned skills** — `/weigh` (weighted-trajectory selection over the Workflow tool, backed by a pure, version-controlled, deterministic-first scorer at `.mifune/skills/weigh/scripts/score-trajectories.mjs` with frozen `DEFAULT_WEIGHTS` and a hard eligibility floor that never makes a silent least-bad pick) and `/rlm` (context-as-environment decomposition that addresses large artifacts via `query-context.mjs` without ingesting them, then recurses sub-agents under a bounded depth/children/step budget, reusing `.oh/scripts/ralph.sh` + `.worktrees/` by reference). Adds an opt-in, default-off self-consistency weighting seam to `/critique`, and the `weigh-scorer-contract` and `rlm-context-budget` eval probes ([#533](https://github.com/mifunedev/openharness/issues/533)).
+### Changed
+- Move the rendered Docusaurus docs site, assets, and blog archive to `mifunedev/openharness-web`; the core repo now points readers to `docs/README.md`, DeepWiki, and the external site source ([#536](https://github.com/mifunedev/openharness/issues/536)).
+### Fixed
+- Remove obsolete top-level `wiki-ingest`, `wiki-query`, and `wiki-lint` skill directories left after the consolidated `/wiki` dispatcher moved their procedures under `.mifune/skills/wiki/references/`, preventing Pi startup from reporting `description is required` on reference-only `SKILL.md` files.
+### Removed
+- Remove the in-repo `.oh/docs` Docusaurus package, docs deploy workflow, docs build scripts, and docs-only pnpm dependency graph from Open Harness core ([#536](https://github.com/mifunedev/openharness/issues/536)).
+### Deprecated
+### Security
+
+## [2026.6.25-3] - 2026-06-25
+
+### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+- Patch Dependabot security alerts for `dompurify`, `http-proxy-middleware`, `undici`, and `webpack-dev-server` via pnpm overrides and lockfile refresh ([#527](https://github.com/mifunedev/openharness/issues/527)).
+
+## [2026.6.25-2] - 2026-06-25
+
+### Added
+### Changed
+### Fixed
+- Restore the GitHub Pages docs workflow after the docs app relocation by pointing the build and artifact paths at `.oh/docs` and guarding the path in `docs-build-fast-path`.
+### Removed
+### Deprecated
+### Security
+
+## [2026.6.25] - 2026-06-25
+
+### Added
+- `/sync` dispatcher skill codifies `publish`, `catchup`, and `status` for gated origin↔upstream synchronization, including topology docs and the `sync-skill-contract` eval probe ([#526](https://github.com/mifunedev/openharness/pull/526)).
+- Forward sync `ryaneggz/openharness:development` → `mifunedev/openharness:development` (2026-06-24): brings in the `auditor` agent, `gateway.sh` client-session launcher, DebugMCP MCP registration, `.oh/` machinery grouping, consolidated `/spec` dispatcher, `/wiki` skill consolidation, `sandbox-boot-guard` CI workflow, `context/REPO_MAP.md`, `repo-map-contract` probe, `spec-family-contract` probe, `sandbox-boot-guard-ci` probe, and `crons/prompt-miner.md`. Cron timezone: `heartbeat` and `cleanup-tasks` normalised to `America/Los_Angeles` (public baseline); `autopilot` stays `America/Denver` (both sides agree). Stale upstream branch `release-prep/sync-ryaneggz-development` should be deleted post-merge ([ryaneggz#327](https://github.com/ryaneggz/openharness/issues/327), and others).
 - `/t3` skill starts, inspects, and stops T3 Code (`npx t3`) in a sandbox tmux session, including pairing-URL discovery and log/status helpers ([#509](https://github.com/mifunedev/openharness/issues/509)).
 - `/prompt-miner` skill + deterministic `mine-traces.mjs` engine — a cross-session, data-driven cousin of `/retro` that scores Claude+Pi session traces by a friction+ground-truth outcome proxy, ranks the initiating prompts, and mines falsifiable prompt **markers** behind a propose-then-confirm gate; guarded by the `prompt-miner-schema-compat` probe. Ships a **disabled-by-default** (`enabled: false`), cap-gated daily cron ([#503](https://github.com/mifunedev/openharness/issues/503)).
 - Default Pi `fff` file-search support: `.pi/settings.json` pins `npm:@ff-labs/pi-fff@0.9.5` (adds the `ffgrep`/`fffind` tools and frecency-ranked `@`-mention autocomplete, backed by the prebuilt-binary `@ff-labs/fff-node` binding — no Rust toolchain needed), `.pi/APPEND_SYSTEM.md` gains a soft "prefer fff when available" hint that keeps native `grep`/`find` as the fallback (not `override` mode), and `docs/integrations/pi-fff.md` + `wiki/pi-fff.md` cover modes, verify steps, the disable path, and troubleshooting ([#499](https://github.com/mifunedev/openharness/issues/499)).
@@ -22,6 +57,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - `sandbox-boot-guard` CI workflow validates the sandbox compose configuration and locally builds the devcontainer image for boot-path changes, guarded by the `sandbox-boot-guard-ci` eval probe ([#449](https://github.com/mifunedev/openharness/issues/449)).
 - `retro-deterministic-contract` eval probe guards that `/retro` keeps schema-backed output, self-contained helper scripts, and synchronized `.pi`/`.claude` skill copies ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Changed
+- Clarify oh.mifune.dev copy — "harness" now consistently means Open Harness (the repo); the CLI you pick is the "agent". The landing page, site tagline/meta, `docs/intro.md`, `docs/installation.md`, and `docs/harnesses/overview.md` now state one-repo-per-sandbox, that the repo tracks/versions state, and sandbox isolation (agents never run straight on your host) ([#466](https://github.com/mifunedev/openharness/pull/466)).
 - Relocate the shared skill source of truth from `.claude/skills/` to `.mifune/skills/` (a single tracked primitive). `.claude/skills`, `.codex/skills`, and `.pi/skills` are now symlinks to it, and the Hermes runtime gets it via a `.hermes/skills/openharness` symlink seeded by `.devcontainer/entrypoint.sh` (replacing the old `skills.external_dirs` config-injection). CI/release path filters and the eval-runner invocation now point at `.mifune/skills/**`; `.mifune/README.md` + `skills.lock` and the Hermes/installation docs are updated ([#501](https://github.com/mifunedev/openharness/issues/501)).
 - Bypass the in-tree Pi path-guard risky-bash confirmation in interactive TUI sessions (`ctx.mode === "tui"`, where the operator is already approving each step) while keeping sensitive-path write/edit prompts and all non-TUI (headless/cron/autopilot) confirmations intact ([#495](https://github.com/mifunedev/openharness/issues/495)).
 - Replace the hand-built in-tree Slack Pi extension (`.pi/extensions/slack/`) with the community [`pi-messenger-bridge`](https://github.com/tintinweb/pi-messenger-bridge) npm package, installed via npm into a gitignored `.pi/bridge/` dir and loaded only in the dedicated `client-slack` tmux session via `--extension` (not globally pinned), so no other pi session competes for the Slack connection. Slack tokens move from `SLACK_APP_TOKEN`/`SLACK_BOT_TOKEN` to `PI_SLACK_APP_TOKEN`/`PI_SLACK_BOT_TOKEN`; access control changes from a static `SLACK_ALLOW_*` allowlist to the package's challenge-based `trustedUsers`; runtime config lives in `~/.pi/msg-bridge.json` (`autoConnect:true`). Updates the `oh config slack` wizard, `.devcontainer/entrypoint.sh`, healthcheck, docker-compose/`harness.yaml` plumbing, all Slack docs, and adds a `pi-messenger-bridge` wiki entry ([#481](https://github.com/mifunedev/openharness/issues/481)).
@@ -29,6 +65,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Docs copy clarifies the product framing — Open Harness is the harness, the agent is your call (one developer, one project, one agent) — across the intro, installation, harnesses overview, and landing pages ([#493](https://github.com/mifunedev/openharness/issues/493)).
 - `/retro` now uses a report schema plus skill-local helper scripts for deterministic hypothesis validation, duplicate-memory checks, and log rendering ([#443](https://github.com/mifunedev/openharness/issues/443)).
 ### Fixed
+- `scripts/locked-append.sh` now hashes canonical absolute append targets for flock files, so relative and absolute spellings of the same memory or cron log serialize through one lock ([#513](https://github.com/mifunedev/openharness/issues/513)).
 - Non-Slack Pi turns that hit the Codex Responses `previous_response_not_found` provider-state error are now re-injected once by an auto-loaded `.pi/extensions/codex-stale-response-retry.ts` extension, recovering loop/interactive prompts after installed `@earendil-works/pi-ai` clears its stale WebSocket `previous_response_id` continuation while leaving Slack-prefixed turns to the dedicated bridge recovery extension ([#506](https://github.com/mifunedev/openharness/issues/506)).
 - Re-enabled the default `@narumitw/pi-codex-usage` Pi package at `0.6.2`, which includes the upstream stale-`ExtensionContext` statusline timer fix and restores `/codex-status` without the replacement-context crash ([#419](https://github.com/mifunedev/openharness/issues/419)).
 - Weekly cleanup now preserves dirty, untracked, unpushed, or suspicious stale worktrees instead of deleting them by age alone, with eval coverage for the preservation gate ([#478](https://github.com/mifunedev/openharness/issues/478)).
@@ -48,9 +85,11 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Devcontainer boot now stops stale legacy `system-cron` tmux sessions before starting `cron-watchdog`/`cron-system`, avoiding unhealthy migrated sandboxes ([#453](https://github.com/mifunedev/openharness/issues/453)).
 - The pi-messenger-bridge seed no longer clobbers runtime trust grants on every container boot: `.devcontainer/seed-msg-bridge.sh` seeds `~/.pi/msg-bridge.json` only when absent, otherwise jq-merges the seed structure while preserving the operator's `auth.trustedUsers`/`auth.channels`, and leaves the runtime file untouched on malformed input or jq failure ([#493](https://github.com/mifunedev/openharness/issues/493)).
 ### Removed
+- Remove stale Pi authentication/port-forward docs now that Pi supports device auth ([#528](https://github.com/mifunedev/openharness/issues/528)).
 - Removed the deprecated executable-loop framework — `context/rules/loop.md`, the `/orchestrate` runner skill, and the four loop-coupling tier-A probes (`loop-handoff-consistency`, `loop-benchmark-gate`, `loop-repeat-gate`, `orchestrate-contract`). The canonical workflow is now solely `AGENTS.md` § The Workflow; the former loop-node skills (`/critique`, `/approve`, `/audit`, `/benchmark`, `/delegate`, `/retro`, `/strategic-proposal`, `/imagine`, `/wiki-ingest`, `/context-audit`) remain as standalone / spec-*-composed skills with their loop-routing `## Handoff` sections removed. Also retired the `CB-002-walk-the-loop` capability task and the gitignored `autopilot-process-map` spec ([#497](https://github.com/mifunedev/openharness/issues/497)).
 ### Deprecated
 ### Security
+- `/post-bridge` now defaults post creation to draft/dry-run previews and requires `POST BRIDGE LIVE CONFIRMED` before non-draft live or scheduled publishing, guarded by the `post-bridge-publish-confirmation` eval probe ([#523](https://github.com/mifunedev/openharness/issues/523)).
 - `client-slack` restore now keeps Slack token values out of the tmux command string by sourcing a permission-restricted runtime env file before launching `pi` ([#461](https://github.com/mifunedev/openharness/issues/461)).
 
 ## [2026.6.18] - 2026-06-18

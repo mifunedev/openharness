@@ -16,10 +16,14 @@ for file in "$PACKAGE_JSON" "$CI_WORKFLOW" "$RELEASE_WORKFLOW"; do
   fi
 done
 
-EXPECTED_AUDIT="pnpm audit --audit-level low --ignore GHSA-h67p-54hq-rp68"
+EXPECTED_AUDIT="pnpm audit --audit-level low"
 script_value="$(node -e 'const p=require(process.argv[1]); process.stdout.write(p.scripts?.["security:audit"] || "")' "$PACKAGE_JSON")"
 if [[ "$script_value" != "$EXPECTED_AUDIT" ]]; then
   echo "REGRESSION: package.json scripts.security:audit must be exactly '$EXPECTED_AUDIT' (got: ${script_value:-<missing>})" >&2
+  exit 1
+fi
+if grep -Fq 'GHSA-h67p-54hq-rp68' "$PACKAGE_JSON"; then
+  echo "REGRESSION: docs-only js-yaml audit ignore must not remain after Docusaurus extraction" >&2
   exit 1
 fi
 

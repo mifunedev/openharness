@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RALPH="$ROOT/scripts/ralph.sh"
+RALPH="$ROOT/.oh/scripts/ralph.sh"
 AUTOPILOT="$ROOT/.claude/skills/autopilot/SKILL.md"
 
 if [[ ! -f "$RALPH" ]]; then

@@ -2,15 +2,15 @@
 
 ## 1. Introduction/Overview
 
-Extract the tracked `.mifune/` portable primitive pack from the Open Harness core repository into the dedicated public repository `mifunedev/mifune` while keeping Open Harness v1 bootable, deterministic, and provider-compatible. Today `.mifune/` is the source of truth for shared skills, agents, hooks, wiki corpus, and skill lock state; `.pi/skills`, `.claude/skills`, `.codex/skills`, `.claude/agents`, `.claude/hooks`, and Hermes' project-local skill symlink resolve through it. The extraction must reduce core repo surface area without breaking those existing provider-facing paths or the canonical `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean` workflow.
+Extract the tracked `.mifune/` portable primitive pack from the Open Harness core repository into the dedicated public repository `ryaneggz/mifune` while keeping Open Harness v1 bootable, deterministic, and provider-compatible. Today `.mifune/` is the source of truth for shared skills, agents, hooks, wiki corpus, and skill lock state; `.pi/skills`, `.claude/skills`, `.codex/skills`, `.claude/agents`, `.claude/hooks`, and Hermes' project-local skill symlink resolve through it. The extraction must reduce core repo surface area without breaking those existing provider-facing paths or the canonical `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean` workflow.
 
-**Destination decision:** `mifunedev/mifune` is the required destination for v1. If that repository cannot be created, used, pushed, and read publicly, stop and ask the operator; do not silently switch names.
+**Destination decision:** `ryaneggz/mifune` is the required destination for v1. It already exists and its default branch is expected to be replaced by the extracted Open Harness Mifune pack. Prefer the safe path: stage the replacement on a feature branch in `ryaneggz/mifune`, open/merge a PR into that repo's default branch, then consume the resulting default-branch SHA from Open Harness. If repository access, default-branch replacement, or public readability fails, stop and ask the operator; do not silently switch names.
 
 **Critical invariant:** tracked contents may leave Open Harness only after the same runtime paths are restored by the pinned external checkout. Removing tracked core blobs is not permission to remove, rename, or deprecate any protected `.mifune/...` path.
 
 ## 2. Goals
 
-- Move the `.mifune/` source tree to `mifunedev/mifune` with a clear README and a pinned revision consumed by Open Harness.
+- Move the `.mifune/` source tree to `ryaneggz/mifune` with a clear README and a pinned revision consumed by Open Harness.
 - Keep the in-core runtime path `.mifune/` present as a deterministic external checkout/submodule so existing provider symlinks continue to work unchanged.
 - Add a root-owned initializer/checker so fresh clones, devcontainers, CI, cron jobs, release jobs, and agent startup initialize and validate Mifune before any skill, hook, eval, or autopilot path is used.
 - Add regression coverage for missing Mifune checkout, wrong pin, executable-bit loss, protected-path drift, Hermes drift, and provider symlink breakage.
@@ -20,16 +20,18 @@ Extract the tracked `.mifune/` portable primitive pack from the Open Harness cor
 
 ### US-001: Seed and verify the external Mifune repository
 
-**Description:** As a maintainer, I want the current `.mifune/` tree checkpointed into `mifunedev/mifune` so no skills, agents, hooks, wiki entries, or lock metadata are lost during extraction.
+**Description:** As a maintainer, I want the current `.mifune/` tree checkpointed into `ryaneggz/mifune` so no skills, agents, hooks, wiki entries, or lock metadata are lost during extraction.
 
 **Acceptance Criteria:**
 
-- [ ] Preflight the destination before copying: `gh repo view mifunedev/mifune --json visibility,defaultBranchRef,viewerPermission` succeeds or the implementation creates `mifunedev/mifune` as a public repository with operator-owned credentials.
-- [ ] Verify maintainer push rights before committing the Open Harness extraction branch; if push rights are absent, stop and ask the operator.
-- [ ] Verify public/fresh-clone readability with `git ls-remote https://github.com/mifunedev/mifune.git HEAD` after creation/checkpoint, without relying on local credentials.
-- [ ] Copy the full tracked `.mifune/` tree into `mifunedev/mifune`, preserving file contents, executable bits, symlinks if any, and relative layout (`skills/`, `agents/`, `hooks/`, `skills.lock`, `README.md`).
+- [ ] Preflight the destination before copying: `gh repo view ryaneggz/mifune --json visibility,defaultBranchRef,viewerPermission` succeeds, reports `visibility: PUBLIC`, and grants maintainer push/admin rights.
+- [ ] Record the current `ryaneggz/mifune` default branch name and HEAD SHA in `tasks/mifune-repo-extraction/progress.txt` before replacing contents, so rollback can restore the previous default if needed.
+- [ ] Verify public/fresh-clone readability with `git ls-remote https://github.com/ryaneggz/mifune.git HEAD`, without relying on local credentials.
+- [ ] Copy the full tracked `.mifune/` tree into a replacement branch in `ryaneggz/mifune`, preserving file contents, executable bits, symlinks if any, and relative layout (`skills/`, `agents/`, `hooks/`, `skills.lock`, `README.md`).
+- [ ] The replacement branch intentionally removes/replaces existing default-branch contents that are not part of the extracted Open Harness Mifune pack; this is a planned overwrite, not accidental data loss.
+- [ ] Prefer branch-and-PR flow for `ryaneggz/mifune`: open a PR from the replacement branch to the repo default branch, merge it, and use the resulting default-branch merge SHA as the Open Harness pin. If execution chooses direct default-branch push, document the operator-confirmed reason in `progress.txt`.
 - [ ] Add or revise the Mifune repository `README.md` explaining that Open Harness consumes the repo at checkout path `.mifune/` and that provider symlinks target subpaths below it.
-- [ ] Commit and push the checkpoint; record the resulting Mifune commit SHA in `tasks/mifune-repo-extraction/progress.txt` and the Open Harness PR body.
+- [ ] Commit and push the checkpoint/replacement; record the resulting final `ryaneggz/mifune` default-branch SHA in `tasks/mifune-repo-extraction/progress.txt` and the Open Harness PR body.
 - [ ] Verify `git -C <mifune-repo> status --short` is clean after the push.
 
 ### US-002: Replace vendored `.mifune/` with a pinned external checkout without protected-path loss
@@ -38,8 +40,8 @@ Extract the tracked `.mifune/` portable primitive pack from the Open Harness cor
 
 **Acceptance Criteria:**
 
-- [ ] Remove tracked in-core `.mifune/**` file contents only after US-001 has a pushed external checkpoint and a recorded Mifune commit SHA.
-- [ ] Add a deterministic pin for `mifunedev/mifune` at path `.mifune/` (preferred: Git submodule/gitlink plus `.gitmodules`; otherwise an explicit pinned bootstrap manifest with equivalent reproducibility and reviewer-visible SHA).
+- [ ] Remove tracked in-core `.mifune/**` file contents only after US-001 has a pushed/merged `ryaneggz/mifune` replacement and a recorded final default-branch Mifune commit SHA.
+- [ ] Add a deterministic pin for `ryaneggz/mifune` at path `.mifune/` (preferred: Git submodule/gitlink plus `.gitmodules`; otherwise an explicit pinned bootstrap manifest with equivalent reproducibility and reviewer-visible SHA).
 - [ ] Preserve these tracked provider symlinks and their current targets unless a stronger compatibility reason is documented: `.pi/skills -> ../.mifune/skills`, `.claude/skills -> ../.mifune/skills`, `.codex/skills -> ../.mifune/skills`, `.claude/agents -> ../.mifune/agents`, `.claude/hooks -> ../.mifune/hooks`, `.codex/agents -> ../.claude/agents`.
 - [ ] Preserve protected explicit `.mifune/...` paths at the same repo-relative runtime locations after initialization; the implementation must run exact-path checks for:
   - `.mifune/skills/git/SKILL.md`
@@ -51,7 +53,7 @@ Extract the tracked `.mifune/` portable primitive pack from the Open Harness cor
 - [ ] Verify smoke paths after a clean checkout/init: `test -f .mifune/skills/git/SKILL.md`, `test -x .mifune/hooks/deny-env-dump.sh`, `test -f .mifune/skills/wiki/references/schema.md`, and `test -f .mifune/skills/eval/run.sh`.
 - [ ] Verify `find .pi .claude .codex -maxdepth 2 -type l -exec sh -c 'for p; do test -e "$p" || exit 1; done' sh {} +` exits 0 after initialization.
 - [ ] Preserve executable bits for all executable files under `.mifune/hooks/` and any executable Mifune scripts/cap files; compare before/after mode lists in `tasks/mifune-repo-extraction/progress.txt`.
-- [ ] Add rollback instructions and validate them in a disposable clone/worktree before deleting tracked contents: pre-merge rollback restores the vendored tree or previous gitlink from the base commit; post-merge rollback reverts the Open Harness pin-removal commit or pins `.mifune/` back to the last known-good Mifune SHA.
+- [ ] Add rollback instructions and validate them in a disposable clone/worktree before deleting tracked contents: pre-merge rollback restores the Open Harness vendored tree or previous gitlink from the base commit and abandons the `ryaneggz/mifune` replacement branch; post-merge rollback reverts the Open Harness pin-removal commit or pins `.mifune/` back to the last known-good `ryaneggz/mifune` SHA, and restores the recorded pre-extraction `ryaneggz/mifune` default HEAD if the external repo replacement itself must be rolled back.
 
 ### US-003: Initialize Mifune before workflows use it
 
@@ -76,11 +78,11 @@ Extract the tracked `.mifune/` portable primitive pack from the Open Harness cor
 - [ ] Update `.mifune` references in root docs/context/skills/evals only where the ownership model changes; preserve path references where runtime still uses `.mifune/...`.
 - [ ] Add a root-level Tier-A smoke/probe outside `.mifune/` (for example `evals/probes/mifune-checkout.sh` or equivalent) that runs before the Mifune-hosted eval runner and fails clearly when `.mifune/` is missing, uninitialized, pinned to the wrong repo/SHA, missing protected paths, missing executable bits, or has broken provider symlinks.
 - [ ] Keep the Mifune-hosted eval runner path valid and also run `bash .mifune/skills/eval/run.sh --probe <new-or-updated-mifune-probe>` after `.oh/scripts/ensure-mifune.sh --init` succeeds.
-- [ ] Update `context/REPO_MAP.md` to route Mifune source-of-truth questions to `mifunedev/mifune` while still explaining the local mount path `.mifune/`.
+- [ ] Update `context/REPO_MAP.md` to route Mifune source-of-truth questions to `ryaneggz/mifune` while still explaining the local mount path `.mifune/`.
 - [ ] Update `AGENTS.md` and relevant skill docs only enough to keep the core workflow accurate; do not rewrite individual skill behavior.
 - [ ] Add or update source-backed docs/wiki material explaining the external Mifune boundary, stable `.mifune/` mount path, provider symlink relationship, and DeepWiki comparison in the Wiki Alignment section.
-- [ ] If any US-004 docs/wiki/skill reference edits touch `.mifune/**`, make those edits in `mifunedev/mifune`, commit and push a final Mifune SHA, update the Open Harness `.mifune` pin to that final SHA, and record it in `tasks/mifune-repo-extraction/progress.txt` and the PR body before validation.
-- [ ] Add maintainer workflow docs for future Mifune edits: change Mifune in `mifunedev/mifune`, merge/push there first, then open an Open Harness pin-bump PR that runs the Mifune checkout probe and provider symlink checks.
+- [ ] If any US-004 docs/wiki/skill reference edits touch `.mifune/**`, make those edits in `ryaneggz/mifune`, commit and push a final Mifune SHA, update the Open Harness `.mifune` pin to that final SHA, and record it in `tasks/mifune-repo-extraction/progress.txt` and the PR body before validation.
+- [ ] Add maintainer workflow docs for future Mifune edits: change Mifune in `ryaneggz/mifune`, merge/push there first, then open an Open Harness pin-bump PR that runs the Mifune checkout probe and provider symlink checks.
 - [ ] Add a `CHANGELOG.md` entry under `## [Unreleased]` because the extraction changes fresh-clone/setup behavior.
 
 ### US-005: Verify end-to-end provider and workflow compatibility
@@ -114,13 +116,13 @@ Extract the tracked `.mifune/` portable primitive pack from the Open Harness cor
 - Replacing the public `mifunedev/skills` registry workflow tracked by `.mifune/skills.lock`.
 - Adding automatic Dependabot/release automation for Mifune pin bumps in v1; updates are manual and pinned.
 - Auto-merging downstream PRs or force-pushing unrelated branches.
-- Switching the destination repository away from `mifunedev/mifune` without an explicit operator decision.
+- Switching the destination repository away from `ryaneggz/mifune` without an explicit operator decision.
 
 ## 6. Design Considerations
 
 Prefer a Git submodule/gitlink for `.mifune/` because it preserves the local path and existing provider symlink targets while making the external boundary explicit and pinned. If execution chooses a non-submodule bootstrap clone, it must provide equivalent reproducibility, CI initialization, root-owned failure reporting, and clean-checkout ergonomics.
 
-The safe migration sequence is: checkpoint external Mifune → record SHA → add root initializer/checker → add CI/probe/docs changes → replace vendored tree with pinned external checkout → run clean-clone/provider/Hermes/eval validation → only then mark the PR ready.
+The safe migration sequence is: record current `ryaneggz/mifune` default HEAD → stage extracted Mifune on a replacement branch → merge/overwrite the repo default through a PR unless direct overwrite is explicitly documented → record final `ryaneggz/mifune` SHA → add root initializer/checker → add CI/probe/docs changes → replace vendored tree with pinned external checkout → run clean-clone/provider/Hermes/eval validation → only then mark the PR ready.
 
 ## 7. Technical Considerations
 
@@ -140,7 +142,7 @@ The safe migration sequence is: checkpoint external Mifune → record SHA → ad
 
 ## 9. Resolved Questions
 
-- **Destination repo:** `mifunedev/mifune` for v1; stop and ask if unavailable.
+- **Destination repo:** `ryaneggz/mifune` for v1; intentionally replace its current default-branch contents with the extracted Open Harness Mifune pack, preferably through a feature branch and PR into that repo. Stop and ask if unavailable.
 - **History shape:** a clean checkpoint commit is sufficient for v1 unless the operator explicitly requests filter-repo history preservation.
 - **Pin updates:** manual/pinned Open Harness PRs only for v1; no automatic Dependabot/release pin-bump automation in this task.
 

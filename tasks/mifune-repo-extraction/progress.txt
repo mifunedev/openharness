@@ -1,1 +1,7 @@
 # progress
+
+## Spec update — destination repo
+- Destination changed per operator instruction to `ryaneggz/mifune` (replacing the earlier placeholder destination).
+- `ryaneggz/mifune` exists, is public, has default branch `development`, and current viewer permission is `ADMIN` as of spec update preflight.
+- Extraction intent: replace the current `ryaneggz/mifune` default contents with the extracted Open Harness `.mifune` pack, preferably through a replacement feature branch and PR into that repo before Open Harness pins the final default-branch SHA.
+- `/spec critique` rerun after this change returned `STATUS: SPEC-APPROVED` (H0/M0/L2).

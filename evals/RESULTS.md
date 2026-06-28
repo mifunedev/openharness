@@ -25,11 +25,11 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | codex-stale-response-retry | A | 2026-06-26 01:01 | PASS | issue #506 — Codex previous_response_not_found RCA |
 | cron-claude-codex-fallback | A | 2026-06-26 01:01 | PASS | conversation 2026-06-12 (default Codex fallback for crons) |
 | cron-watchdog | A | 2026-06-26 01:01 | PASS | issues #130/#453 (cron runtime watchdog + legacy system-cron reaping) 2026-06-19 |
-| curl-bash-safe-alternatives | A | 2026-06-26 01:01 | PASS | vet-run/vet integration — public curl|bash examples need review-first alternatives |
+| curl-bash-safe-alternatives | A | 2026-06-28 01:24 | PASS | vet-run/vet integration — public curl|bash examples need review-first alternatives |
 | datasets-schema | A | 2026-06-26 01:01 | PASS | issue #196 — evals/datasets verifiable trajectory corpus (Repo2RLEnv-inspired) |
 | debugmcp-availability | A | 2026-06-26 01:01 | PASS | issue #297 — DebugMCP MCP debug-server availability |
 | devtcp-hook | A | 2026-06-26 01:01 | PASS | memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
-| docs-build-fast-path | A | 2026-06-26 01:01 | PASS | #455 — docs builds must stay out of fast harness/eval/release gates |
+| docs-build-fast-path | A | 2026-06-28 01:24 | PASS | #455 — docs builds must stay out of fast harness/eval/release gates; #536 — docs site externalized to openharness-web |
 | drift-check-cron-staleness-glob | A | 2026-06-26 01:01 | PASS | issue #98; issue #225 (restart-required cron frontmatter/config drift) |
 | eval-ci-gate | A | 2026-06-26 01:01 | PASS | #103 — eval probe suite gated in CI |
 | eval-gate | A | 2026-06-26 01:01 | PASS | memory/MEMORY.md 2026-06-11 (eval-gate) |
@@ -48,12 +48,12 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | memory-log-locked-append | A | 2026-06-26 01:01 | PASS | issue #476 — memory log writes in skill contracts must use .oh/scripts/locked-append.sh |
 | next-dev-prod | A | 2026-06-26 01:01 | SKIPPED | memory/MEMORY.md 2026-06-04 |
 | owned-surface-guard | A | 2026-06-26 01:01 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
-| pnpm-audit-ci-gate | A | 2026-06-26 01:01 | PASS | issue #171 — pnpm security audits must run in CI |
+| pnpm-audit-ci-gate | A | 2026-06-28 01:28 | PASS | issue #171 — pnpm security audits must run in CI |
 | pr-audit-duplicate-issue-refs | A | 2026-06-26 01:01 | PASS | issue #439 — /pr-audit must flag duplicate open PRs that reference the same issue |
 | prd-output-path-contract | A | 2026-06-26 01:01 | PASS | memory/MEMORY.md 2026-06-19 |
 | prompt-miner-schema-compat | A | 2026-06-26 01:01 | PASS | issue #253 — prompt-miner JSONL schema-drift guard |
 | ralph-fallback-order | A | 2026-06-26 01:01 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
-| repo-map-contract | A | 2026-06-26 01:01 | PASS | issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims |
+| repo-map-contract | A | 2026-06-28 01:24 | PASS | issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims |
 | retro-deterministic-contract | A | 2026-06-26 01:01 | PASS | issue #443 — /retro deterministic output and self-contained helper contract |
 | rl-delegation-write-worker | A | 2026-06-26 01:01 | PASS | memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
 | rlm-context-budget | A | 2026-06-27 00:00 | PASS | issue #533 — /rlm recursion-budget (depth/children/step) + query-context max-bytes guard contract (tasks/rlm-weighted-trajectories) |

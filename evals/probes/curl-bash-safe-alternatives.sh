@@ -14,7 +14,6 @@ import sys
 root = Path(sys.argv[1])
 files = [root / "README.md", root / ".oh/scripts/install.sh"]
 files += sorted((root / "docs").rglob("*.md"))
-files += sorted((root / ".oh/docs/src/pages").rglob("*.tsx"))
 files = [p for p in files if p.exists()]
 
 curl_bash = re.compile(r"curl\b.*\|\s*(?:sudo\s+)?(?:bash|sh)\b", re.I)

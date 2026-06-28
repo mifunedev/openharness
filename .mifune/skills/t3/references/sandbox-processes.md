@@ -68,7 +68,7 @@ sessions into one is not.
 Inside the sandbox:
 
 ```bash
-tmux new-session -d -s app-docs 'pnpm --filter @openharness/docs dev 2>&1 | tee /tmp/app-docs.log'
+tmux new-session -d -s app-web 'pnpm dev 2>&1 | tee /tmp/app-web.log'
 ```
 
 The `tee` to `/tmp/<session>.log` is the convention — one log file per

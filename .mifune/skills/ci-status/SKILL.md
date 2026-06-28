@@ -103,8 +103,8 @@ For Eval Probe Regression Gate failures, immediately inspect the failed probe na
 - **PASS**: Report "CI green" with the run URL
 - **FAIL**: Report the failing step, error message, and suggest a fix. Then fix the issue, commit, push, and run `/ci-status` again
 - **NO RUN**: No workflow's `on:` filter matched the push, or `PR_NUMBER` was set but `gh pr checks` returned no rows (the PR exists but no workflows were triggered yet). *(Note: the workflow names below reflect this harness's layout and may differ in other checkouts.)*
-  - `ci-harness.yml` — push only: `packages/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, itself
-  - `docs.yml` — PR or push-to-main: `.oh/docs/**`, `docs/**`, `blog/**`, itself
+  - `ci-harness.yml` — push only: `packages/**`, `.oh/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, itself
+  - Docs site CI/deploy lives in `mifunedev/openharness-web`; this repo has no `docs.yml` Docusaurus workflow.
   - `conciseness.yml` — push or PR: `workspace/*.md`, `workspace/.claude/rules/*.md`, itself
   - `release.yml` — tag push only
 

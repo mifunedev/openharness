@@ -75,7 +75,7 @@ Read the following to build the briefing:
 - `IDENTITY.md` — stack, mission, URLs
 - `MEMORY.md` — past decisions, lessons learned
 - `Makefile`, `scripts/`, `install/` — orchestrator entrypoints and provisioning surface
-- `.oh/docs/` — documentation site source
+- `docs/` — GitHub-readable core docs; rendered docs site source lives in `mifunedev/openharness-web`
 - Open issues: `gh api "repos/mifunedev/openharness/issues?state=open&per_page=50"`
 - Repo stats: `gh api repos/mifunedev/openharness --jq '{stars: .stargazers_count, forks: .forks_count}'`
 

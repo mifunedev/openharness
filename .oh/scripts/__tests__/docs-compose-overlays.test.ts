@@ -21,7 +21,7 @@ function markdownFiles(dir: string): string[] {
 describe("documented compose files", () => {
   it("references only compose files that exist", () => {
     const refs = new Set<string>();
-    const pattern = /\.devcontainer\/docker-compose[\w.-]*\.yml/g;
+    const pattern = /\.oh\/devcontainer\/docker-compose[\w.-]*\.yml/g;
 
     for (const file of [...MARKDOWN_ROOT_FILES, ...markdownFiles(DOCS_ROOT)]) {
       const content = readFileSync(file, "utf8");

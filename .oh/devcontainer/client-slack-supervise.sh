@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Self-healing supervisor for the dedicated Slack bridge (client-slack-pi tmux session).
 #
-# Launched by .devcontainer/entrypoint.sh with the PI_SLACK_* tokens already in
+# Launched by .oh/devcontainer/entrypoint.sh with the PI_SLACK_* tokens already in
 # the environment and HARNESS / BRIDGE_ENTRY / RECOVERY_ENTRY / LOG exported.
 #
 # Why this exists: pi-messenger-bridge binds its long-lived Slack socket to a
@@ -35,7 +35,7 @@
 # nothing to signal, which is normal control flow here, not an error.
 set -u
 
-HARNESS="${HARNESS:-/home/sandbox/harness}"
+HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 BRIDGE_ENTRY="${BRIDGE_ENTRY:-$HARNESS/.pi/bridge/node_modules/pi-messenger-bridge/dist/index.js}"
 RECOVERY_ENTRY="${RECOVERY_ENTRY:-$HARNESS/.pi/bridge-recovery/index.ts}"
 LOG="${LOG:-/tmp/client-slack-pi.log}"

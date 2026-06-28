@@ -28,7 +28,7 @@ for workflow in "${WORKFLOWS[@]}"; do
   fi
 
   missing=()
-  for dir in .devcontainer/ .oh/install/ .oh/scripts/; do
+  for dir in .oh/devcontainer/ .oh/install/ .oh/scripts/; do
     case "$line" in
       *"$dir"*) ;;
       *) missing+=("$dir") ;;
@@ -48,5 +48,5 @@ for workflow in "${WORKFLOWS[@]}"; do
   fi
 done
 
-echo "PASS: boot-lint shellcheck globs cover active boot-script dirs (.devcontainer/, .oh/install/, .oh/scripts/) and exclude removed workspace hook dir" >&2
+echo "PASS: boot-lint shellcheck globs cover active boot-script dirs (.oh/devcontainer/, .oh/install/, .oh/scripts/) and exclude removed workspace hook dir" >&2
 exit 0

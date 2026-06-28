@@ -208,7 +208,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
 # install.sh lives at .oh/scripts/install.sh; the repo root is two levels up.
 REPO_CANDIDATE="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)"
 
-if [ -n "$REPO_CANDIDATE" ] && [ -f "$REPO_CANDIDATE/.devcontainer/docker-compose.yml" ] && [ -f "$REPO_CANDIDATE/.oh/scripts/install.sh" ]; then
+if [ -n "$REPO_CANDIDATE" ] && [ -f "$REPO_CANDIDATE/.oh/devcontainer/docker-compose.yml" ] && [ -f "$REPO_CANDIDATE/.oh/scripts/install.sh" ]; then
   REPO_DIR="$REPO_CANDIDATE"
   ok "Using local repo: $REPO_DIR"
 else

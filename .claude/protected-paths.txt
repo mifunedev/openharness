@@ -45,8 +45,8 @@ Makefile
 # --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
 .oh/install/banner.sh
 .oh/install/cloudflared-tunnel.sh
-.devcontainer/entrypoint.sh
-.devcontainer/Dockerfile
+.oh/devcontainer/entrypoint.sh
+.oh/devcontainer/Dockerfile
 
 # --- Crons (referenced by .oh/scripts/cron-runtime.ts) ---
 crons/heartbeat.md

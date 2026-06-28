@@ -5,7 +5,7 @@ title: "Installation"
 
 # Installation
 
-Open Harness is a portable harness — a single repo that boots an isolated Docker sandbox for your project. Installation clones the repo and runs `docker compose` against `.devcontainer/docker-compose.yml` — there is no host CLI, agent, or Node toolchain required on the host.
+Open Harness is a portable harness — a single repo that boots an isolated Docker sandbox for your project. Installation clones the repo and runs `docker compose` against `.oh/devcontainer/docker-compose.yml` — there is no host CLI, agent, or Node toolchain required on the host.
 
 ## Prerequisites
 
@@ -77,7 +77,7 @@ The installer:
 1. Verifies Docker and git are present.
 2. Clones the repo into `~/.openharness` (or pulls latest if the directory already exists).
 3. Prompts for `SANDBOX_NAME`, then writes `.devcontainer/.env`.
-4. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
+4. Runs `docker compose -f .oh/devcontainer/docker-compose.yml up -d --build`.
 5. Prints the next-step commands (open a shell, stop, tear down).
 
 ### Environment overrides
@@ -110,7 +110,7 @@ curl -fsSL -o openharness-install.sh \
 OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```
 
-If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. Forks restructuring `.devcontainer/` should also patch the local-run detection in `scripts/install.sh` (the `-f .devcontainer/docker-compose.yml` check near line 173) to match the new layout.
+If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. Forks restructuring the build assets should also patch the local-run detection in `.oh/scripts/install.sh` (the `-f .oh/devcontainer/docker-compose.yml` check) to match the new layout.
 
 ## Manual installation
 
@@ -135,7 +135,7 @@ Edit `.devcontainer/.env` and set your `SANDBOX_NAME` and any optional tokens. S
 ### 3. Build and start the sandbox
 
 ```bash
-docker compose -f .devcontainer/docker-compose.yml up -d --build
+docker compose -f .oh/devcontainer/docker-compose.yml up -d --build
 ```
 
 On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds.

@@ -65,6 +65,10 @@ repair_home_mount_ownership
 # we sync the sandbox user's UID/GID to the host owner. After the sync,
 # anything sandbox creates inside the container is owned by the host
 # user on the host filesystem — no chown handoff needed.
+OH_PROJECT_ROOT="${OH_PROJECT_ROOT:-/home/sandbox/harness}"
+# DEPRECATED alias — prefer $OH_PROJECT_ROOT
+HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
+
 uid_reconcile_step() {
   local description="$1"
   shift
@@ -77,7 +81,7 @@ uid_reconcile_step() {
   return 1
 }
 
-HARNESS_DIR="/home/sandbox/harness"
+HARNESS_DIR="$OH_PROJECT_ROOT"
 if [ -d "$HARNESS_DIR" ]; then
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
   HOST_GID=$(stat -c '%g' "$HARNESS_DIR")
@@ -111,7 +115,7 @@ fi
 # readable on hosts where UID 1000 is already occupied.
 repair_home_mount_ownership
 
-HARNESS="/home/sandbox/harness"
+HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
 
 # How Mifune is added: Open Harness carries .mifune/ as a pinned Git
 # submodule to ryaneggz/mifune. Initialize or repair that mount before any
@@ -131,7 +135,7 @@ fi
 # auth write. Keeping auth on the same device as its temp file fixes it;
 # HERMES_HOME is gitignored, so credentials stay out of version control.
 if [ "${INSTALL_HERMES:-false}" = "true" ]; then
-  HERMES_RUNTIME="${HERMES_HOME:-/home/sandbox/harness/.hermes}"
+  HERMES_RUNTIME="${HERMES_HOME:-$HARNESS/.hermes}"
   HERMES_LEGACY_AUTH="/home/sandbox/.hermes/auth.json"
 
   mkdir -p "$HERMES_RUNTIME"
@@ -150,7 +154,7 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
   # /home/sandbox/harness/.mifune/skills submodule directory; Hermes keeps its
   # bundled/runtime skills under $HERMES_RUNTIME/skills and gets the harness
   # collection as a symlinked child so one primitive is visible to every agent.
-  HERMES_SHARED_SKILLS_DIR="/home/sandbox/harness/.mifune/skills"
+  HERMES_SHARED_SKILLS_DIR="$HARNESS/.mifune/skills"
   HERMES_SHARED_SKILLS_LINK="$HERMES_RUNTIME/skills/openharness"
   mkdir -p "$HERMES_RUNTIME/skills"
   if [ -d "$HERMES_SHARED_SKILLS_DIR" ]; then
@@ -216,7 +220,7 @@ fi
 # sandbox + onboarding status. Safe to run on every boot.
 BASHRC="/home/sandbox/.bashrc"
 if [ -f "$BASHRC" ] && ! grep -q 'source.*\.oh/install/banner.sh' "$BASHRC"; then
-  gosu sandbox bash -c 'echo "source /home/sandbox/harness/.oh/install/banner.sh 2>/dev/null" >> ~/.bashrc'
+  gosu sandbox bash -c "echo 'source ${OH_PROJECT_ROOT}/.oh/install/banner.sh 2>/dev/null' >> ~/.bashrc"
   echo "[entrypoint] attach banner wired into .bashrc"
 fi
 
@@ -348,7 +352,7 @@ if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null;
   cat > /tmp/cron-watchdog.sh <<'CRON_WATCHDOG'
 #!/usr/bin/env bash
 set -u
-HARNESS="${HARNESS:-/home/sandbox/harness}"
+HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 INTERVAL="${CRON_WATCHDOG_INTERVAL:-60}"
 while true; do
   if tmux has-session -t system-cron 2>/dev/null; then
@@ -370,7 +374,7 @@ CRON_WATCHDOG
     echo "[entrypoint] cron-watchdog tmux session already running — skipping"
   else
     gosu sandbox tmux new-session -d -s cron-watchdog \
-      "HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log"
+      "OH_PROJECT_ROOT=$OH_PROJECT_ROOT HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log"
     echo "[entrypoint] cron-watchdog tmux session started (supervises cron-system)"
   fi
 fi

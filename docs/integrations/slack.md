@@ -135,7 +135,7 @@ any grants you've since added via `/trusted`/`/channels`.
 
 ### 4.3 The `client-slack-pi` session (managed by `gateway`)
 
-On container boot, `.devcontainer/entrypoint.sh` hands off to
+On container boot, `.oh/devcontainer/entrypoint.sh` hands off to
 `.oh/scripts/gateway.sh pi`, which npm-installs the bridge into a gitignored
 `.pi/bridge/` directory and starts the dedicated `client-slack-pi` tmux session
 loading it via `--extension`. You can also manage it by hand at any time with
@@ -172,7 +172,7 @@ is loaded **only** here — it is not pinned in `.pi/settings.json`, so no other
 ### 4.4 Self-healing supervisor
 
 The `client-slack-pi` session does not run that `pi` command directly — it runs it
-under a thin supervisor, `.devcontainer/client-slack-supervise.sh`, which
+under a thin supervisor, `.oh/devcontainer/client-slack-supervise.sh`, which
 relaunches pi whenever the bridge dies. This exists because
 pi-messenger-bridge binds its long-lived Slack socket to a **session-scoped pi
 ctx**: when pi replaces the session (compaction, fork, model switch, reload),
@@ -297,11 +297,14 @@ env (before attaching to tmux).
 The Slack capability is the **pi-messenger-bridge** npm package. The harness
 installs it via npm into a gitignored `.pi/bridge/` directory and loads it via
 `--extension` only in the dedicated `client-slack-pi` tmux session
-(`.devcontainer/entrypoint.sh`) — it is not globally pinned in
+(`.oh/devcontainer/entrypoint.sh`) — it is not globally pinned in
 `.pi/settings.json`, so no other `pi` session competes for the Slack
 connection. Replies post **in a thread** anchored to the triggering channel
-message (`thread_ts`); DMs stay flat. The harness consumes `pi-messenger-bridge`
-as published. Source lives upstream at
+message (`thread_ts`); DMs stay flat. The harness normally consumes the package
+as published, but while that thread-reply patch is unreleased it temporarily
+pins the entrypoint's `npm install` line to a fork branch
+(`github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies`), reverting to
+`pi-messenger-bridge@<version>` once the upstream PR lands. Source lives upstream at
 [tintinweb/pi-messenger-bridge](https://github.com/tintinweb/pi-messenger-bridge).
 
 For upstream lineage, the version-pin model, the quarterly review cadence, and

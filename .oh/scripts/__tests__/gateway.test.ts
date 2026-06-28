@@ -17,7 +17,7 @@ describe("gateway client-session launcher", () => {
   });
 
   it("runs the pi backend under the self-healing supervisor", () => {
-    expect(gateway()).toContain(".devcontainer/client-slack-supervise.sh");
+    expect(gateway()).toContain(".oh/devcontainer/client-slack-supervise.sh");
   });
 
   it("runs the hermes backend via `hermes gateway run`", () => {
@@ -43,6 +43,7 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     const piEnv = join(temp, "pi-env.txt");
     const pwned = join(temp, "pwned");
     mkdirSync(join(harness, ".devcontainer"), { recursive: true });
+    mkdirSync(join(harness, ".oh", "devcontainer"), { recursive: true });
     mkdirSync(join(harness, ".pi"), { recursive: true });
     mkdirSync(home, { recursive: true });
     mkdirSync(bin);
@@ -59,8 +60,8 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     );
     // gateway.sh invokes the real seed-msg-bridge.sh; copy it in.
     cpSync(
-      join(ROOT, ".devcontainer/seed-msg-bridge.sh"),
-      join(harness, ".devcontainer/seed-msg-bridge.sh"),
+      join(ROOT, ".oh/devcontainer/seed-msg-bridge.sh"),
+      join(harness, ".oh/devcontainer/seed-msg-bridge.sh"),
     );
     // Stub tmux: ls reports no sessions (so start proceeds); new-session captures
     // the launch command; pipe-pane/kill-session/has-session are no-ops.
@@ -90,7 +91,7 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     // Stub supervisor: the real one runs a restart loop (covered separately);
     // here it just exec's the pi stub once so we can inspect the env it got.
     writeFileSync(
-      join(harness, ".devcontainer", "client-slack-supervise.sh"),
+      join(harness, ".oh", "devcontainer", "client-slack-supervise.sh"),
       '#!/usr/bin/env bash\nexec pi --extension "${BRIDGE_ENTRY:-x}" --extension "${RECOVERY_ENTRY:-y}" --approve\n',
       { mode: 0o755 },
     );

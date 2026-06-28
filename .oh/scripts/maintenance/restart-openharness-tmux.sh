@@ -25,7 +25,7 @@
 set -uo pipefail
 trap '' HUP   # survive the SIGHUP that the dying server sends to our (now-detached) group
 
-HARNESS="${HARNESS:-/home/sandbox/harness}"
+HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 REPO="${OH_REPO:-mifunedev/openharness}"
 ISSUE=273
 LOCK=/tmp/oh-restart-273.lock
@@ -43,7 +43,7 @@ DURABLE_RE='^(cron-system|cron-watchdog|app-.*|expose-public-.*)$'
 # Fixed relaunch order: website origin before tunnel; cron-system before its watchdog.
 ORDER=(app-website app-website-preview app-orchestra expose-public-mifune cron-system cron-watchdog)
 
-# Canonical fallbacks (.devcontainer/entrypoint.sh) for the two cron sessions if live
+# Canonical fallbacks (.oh/devcontainer/entrypoint.sh) for the two cron sessions if live
 # capture misses them.
 fallback_cmd() {
   case "$1" in

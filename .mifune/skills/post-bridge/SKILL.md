@@ -26,9 +26,27 @@ Authorization: Bearer $POST_BRIDGE_API_KEY
 
 ---
 
+## Safety Gate for External Side Effects
+
+Creating, scheduling, or immediately publishing a post is an external side effect. Default to a dry-run preview or draft unless the user explicitly asks for a live/scheduled post **and** confirms the final payload.
+
+Before any non-draft `POST /v1/posts` (including scheduled posts), show a final review that includes:
+
+- destination account IDs and platforms
+- caption text and platform/account overrides
+- media IDs or `media_urls`
+- draft vs. scheduled vs. immediate publish state, including `scheduled_at`/`use_queue`
+- the endpoint and redacted JSON payload to be submitted
+
+Then ask for the exact confirmation phrase `POST BRIDGE LIVE CONFIRMED`. Do not send the non-draft create request until the user replies with that phrase. If confirmation is absent or ambiguous, either stop after the preview or create a draft with `"is_draft": true` when the user wants a saved draft.
+
+Read-only requests (accounts, analytics, post-results) and media preparation (signed upload URL + file upload) do not require the final confirmation, but still avoid logging secrets or signed URLs beyond what is needed for the task.
+
+---
+
 ## Core Workflow
 
-Publishing a post follows four steps. Execute them in order — each step depends on the previous.
+Publishing a post follows four steps. Execute them in order — each step depends on the previous. Step 4 must pass the Safety Gate above before any non-draft create/schedule request.
 
 ### Step 1: Retrieve Social Accounts
 
@@ -80,7 +98,7 @@ Upload promptly — the signed URL expires after a short window. Unused media au
 
 ### Step 4: Create Post
 
-Combine the account ID(s) and media ID(s) to create the post. Account IDs are **numbers**.
+Combine the account ID(s) and media ID(s) to create the post. Account IDs are **numbers**. Build and display the payload first. Use `"is_draft": true` by default; remove it only after the user confirms with `POST BRIDGE LIVE CONFIRMED`.
 
 ```bash
 curl -s -X POST \
@@ -89,7 +107,8 @@ curl -s -X POST \
   -d "{
     \"social_accounts\": [$ACCOUNT_ID],
     \"caption\": \"Your caption here\",
-    \"media\": [\"$MEDIA_ID\"]
+    \"media\": [\"$MEDIA_ID\"],
+    \"is_draft\": true
   }" \
   "https://api.post-bridge.com/v1/posts" | jq .
 ```
@@ -103,7 +122,8 @@ curl -s -X POST \
   -d "{
     \"social_accounts\": [$ACCOUNT_ID],
     \"caption\": \"Your caption here\",
-    \"media_urls\": [\"https://example.com/photo.jpg\"]
+    \"media_urls\": [\"https://example.com/photo.jpg\"],
+    \"is_draft\": true
   }" \
   "https://api.post-bridge.com/v1/posts" | jq .
 ```
@@ -199,9 +219,11 @@ Override caption/media per social account in multi-account posts:
 
 ## Examples
 
-### Example 1: Publish an Image to Instagram Now
+### Example 1: Draft or Confirm an Image Post to Instagram
 
 User: "Post this photo to my Instagram with the caption 'New arrivals just dropped.'"
+
+Default response: prepare the media, show the payload preview, then ask for `POST BRIDGE LIVE CONFIRMED` before sending any non-draft post. The command below saves a draft unless that confirmation has already been received.
 
 ```bash
 # Step 1 - find the instagram account
@@ -222,14 +244,16 @@ MEDIA_ID=$(echo "$UPLOAD_RESP" | jq -r '.media_id')
 curl -s -X PUT -H "Content-Type: image/jpeg" \
   --data-binary @arrivals.jpg "$UPLOAD_URL"
 
-# Step 4 - create post (no scheduled_at = publish immediately)
+# Step 4 - create draft by default. For live publishing, first show this payload
+# and wait for the exact confirmation phrase: POST BRIDGE LIVE CONFIRMED.
 curl -s -X POST \
   -H "Authorization: Bearer $POST_BRIDGE_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{
     \"social_accounts\": [$ACCOUNT],
     \"caption\": \"New arrivals just dropped.\",
-    \"media\": [\"$MEDIA_ID\"]
+    \"media\": [\"$MEDIA_ID\"],
+    \"is_draft\": true
   }" \
   "https://api.post-bridge.com/v1/posts" | jq .
 ```
@@ -242,13 +266,16 @@ User: "Post this image to LinkedIn: https://example.com/banner.png"
 ACCOUNT=$(curl -s -H "Authorization: Bearer $POST_BRIDGE_API_KEY" \
   "https://api.post-bridge.com/v1/social-accounts?platform=linkedin" | jq -r '.data[0].id')
 
+# Show this payload to the user first. Keep it as a draft unless they reply
+# with POST BRIDGE LIVE CONFIRMED.
 curl -s -X POST \
   -H "Authorization: Bearer $POST_BRIDGE_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{
     \"social_accounts\": [$ACCOUNT],
     \"caption\": \"Check out our new banner!\",
-    \"media_urls\": [\"https://example.com/banner.png\"]
+    \"media_urls\": [\"https://example.com/banner.png\"],
+    \"is_draft\": true
   }" \
   "https://api.post-bridge.com/v1/posts" | jq .
 ```
@@ -284,7 +311,8 @@ COVER_URL=$(echo "$COVER_RESP" | jq -r '.upload_url')
 COVER_ID=$(echo "$COVER_RESP" | jq -r '.media_id')
 curl -s -X PUT -H "Content-Type: image/jpeg" --data-binary @cover.jpg "$COVER_URL"
 
-# Step 4 - create scheduled post with cover image
+# Step 4 - show this scheduled payload first and wait for
+# POST BRIDGE LIVE CONFIRMED before creating the scheduled post.
 curl -s -X POST \
   -H "Authorization: Bearer $POST_BRIDGE_API_KEY" \
   -H "Content-Type: application/json" \
@@ -350,6 +378,8 @@ curl -s -H "Authorization: Bearer $POST_BRIDGE_API_KEY" \
 
 ## Guidelines
 
+- Treat `POST /v1/posts` without `"is_draft": true` as irreversible; never run it without first receiving `POST BRIDGE LIVE CONFIRMED` for the displayed payload.
+- Prefer drafts or dry-run payload previews when the user has not explicitly confirmed live posting or scheduling.
 - Always verify `POST_BRIDGE_API_KEY` is set before making API calls.
 - Complete media uploads promptly after generating the signed URL — it expires quickly.
 - Reference the full endpoint list and request/response shapes in `references/api-endpoints.md`.

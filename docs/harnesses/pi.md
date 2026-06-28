@@ -13,21 +13,6 @@ Pi is a lightweight, customizable harness — a hackable agent framework you can
 pi --version
 ```
 
-## Authentication
-
-Pi's subscription login runs its own OAuth flow with a local callback server on `http://localhost:1455`. For the login to complete, the browser on your laptop has to reach port 1455 inside the container.
-
-The base `.devcontainer/docker-compose.yml` publishes `127.0.0.1:1455:1455` so the callback port lands on the host loopback:
-
-- **VS Code Remote SSH (works out of the box):** VS Code automatically forwards the loopback port to your laptop — just run the Pi login, the redirect completes with no extra step.
-- **Direct terminal (plain `ssh`):** plain SSH does not auto-forward ports. Open the tunnel yourself before logging in:
-
-  ```bash
-  ssh -L 1455:localhost:1455 user@your-host
-  ```
-
-This is Pi-specific. The Codex CLI has its own headless path (`codex login --device-auth`) and does not need port 1455 — see [Codex § Authentication](./codex.md#authentication).
-
 ## Upstream
 
 [`@earendil-works/pi-coding-agent` on npm](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) — see the upstream repository at [earendil-works/pi-mono](https://github.com/earendil-works/pi-mono) for documentation, configuration, and roadmap. (The previous package, `@mariozechner/pi-coding-agent`, is deprecated — install the `@earendil-works/...` successor instead.)
@@ -144,6 +129,6 @@ See [Pi dynamic workflows](../integrations/pi-dynamic-workflows.md) for the work
 
 ## Slack integration
 
-The harness ships Slack via the **pi-messenger-bridge** npm package, loaded only in the dedicated `client-slack` tmux session via `--extension` (not pinned in `.pi/settings.json`). Set `PI_SLACK_APP_TOKEN` and `PI_SLACK_BOT_TOKEN` in `.devcontainer/.env` and configure `.pi/msg-bridge.json`, then restart the `client-slack` session — access control is challenge-based (deny-by-default, no static allowlist), and inbound Slack messages route into the agent via the package using Pi's native `sendUserMessage()` / `turn_end`.
+The harness ships Slack via the **pi-messenger-bridge** npm package, loaded only in the dedicated `client-slack-pi` tmux session via `--extension` (not pinned in `.pi/settings.json`). Set `PI_SLACK_APP_TOKEN` and `PI_SLACK_BOT_TOKEN` in `.devcontainer/.env`, manage the session with `gateway pi` (`gateway status` to check, `gateway pi --restart` after token edits), and configure the messenger from inside it with the bridge's `/msg-bridge` command — access control is challenge-based (deny-by-default, no static allowlist), and inbound Slack messages route into the agent via the package using Pi's native `sendUserMessage()` / `turn_end`.
 
 See [Slack integration](../integrations/slack.md) for setup steps.

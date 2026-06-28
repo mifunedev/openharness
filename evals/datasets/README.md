@@ -103,4 +103,4 @@ directions; column 1 is the bare `DS-NNN`).
 - [`../README.md`](../README.md) — the probe suite (the regression **floor**).
 - [`../capability/README.md`](../capability/README.md) — the capability benchmark (the progress **ceiling**).
 - Source inspiration: [huggingface/Repo2RLEnv](https://github.com/huggingface/Repo2RLEnv) — turning a repo's history into verifiable RL environments.
-- `context/rules/directory-readme.md` — the directory-README convention this file follows.
+- `context/directory-readme.md` — the directory-README convention this file follows.

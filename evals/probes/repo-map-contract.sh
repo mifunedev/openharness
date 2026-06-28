@@ -9,7 +9,7 @@ REPO_MAP="$ROOT/context/REPO_MAP.md"
 AGENTS="$ROOT/AGENTS.md"
 CONTEXT_README="$ROOT/context/README.md"
 MANIFEST="$ROOT/evals/capability/repo-orientation/tasks.json"
-SCORER="$ROOT/scripts/repo-orientation-benchmark-score.mjs"
+SCORER="$ROOT/.oh/scripts/repo-orientation-benchmark-score.mjs"
 MAX_BYTES=12288
 
 fails=()
@@ -52,9 +52,8 @@ if [[ -f "$REPO_MAP" ]]; then
   for path in \
     'node_modules/' \
     '.pi/npm/node_modules/' \
-    'packages/docs/build/' \
-    'packages/oh/dist/' \
-    'wiki/raw/' \
+    '.oh/cli/dist/' \
+    '.mifune/skills/wiki/corpus/raw/' \
     'memory/*/log.md' \
     'tasks/*/progress.txt' \
     'evals/datasets/**/oracle/'; do
@@ -75,7 +74,7 @@ if [[ -f "$REPO_MAP" ]]; then
     repo=$(git rev-parse --show-toplevel)
     git -C "$repo" ls-files -- \
       ':!:tasks/*/progress.txt' \
-      ':!:wiki/raw/*' \
+      ':!:.mifune/skills/wiki/corpus/raw/*' \
       ':!:evals/datasets/**/oracle/**' \
       ':!:evals/datasets/**/diff.patch' \
       ':!:evals/datasets/**/changed-files.txt'
@@ -89,7 +88,7 @@ if [[ -f "$REPO_MAP" ]]; then
   done
   for forbidden_re in \
     '(^|/)node_modules/' \
-    '^wiki/raw/' \
+    '^\.mifune/skills/wiki/corpus/raw/' \
     '^tasks/.*/progress\.txt$' \
     '^evals/datasets/.*/oracle/' \
     '^evals/datasets/.*/diff\.patch$' \

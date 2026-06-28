@@ -6,9 +6,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CRON="$ROOT/crons/autopilot.md"
-RUNTIME="$ROOT/scripts/cron-runtime.ts"
+RUNTIME="$ROOT/.oh/scripts/cron-runtime.ts"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
-TESTS="$ROOT/scripts/__tests__/cron-runtime.test.ts"
+TESTS="$ROOT/.oh/scripts/__tests__/cron-runtime.test.ts"
 SHIPSPEC="$ROOT/.claude/skills/ship-spec/SKILL.md"
 
 missing=()

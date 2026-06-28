@@ -2,6 +2,15 @@
 
 You are one iteration of a Ralph loop implementing the `<slug>` task. The full plan is in `tasks/<slug>/prd.md` and the structured task list is in `tasks/<slug>/prd.json`. The loop calls you again until `progress.txt` contains a line `STATUS: COMPLETE`.
 
+## Execution model
+
+**This ralph loop is the executor — you do the work yourself.** `/delegate` is **available** as an
+optional tool to fan out a single story's disjoint files in parallel when that clearly helps, but it
+is **optional and never replaces the loop**: do not turn the iteration into a pure `/delegate`
+dispatcher (an Advisor running several independent tasks runs one ralph loop per task in parallel and
+each loop may, but need not, use `/delegate` inside). Default to implementing directly; reach for
+`/delegate` only for genuinely parallelizable, disjoint-file work within your one story.
+
 ## Your job in one iteration
 
 Pick **one** user story, implement it, commit, mark it `passes: true`, and append a progress entry. Then exit. The next iteration handles the next story. Do not attempt multiple stories per iteration.
@@ -13,10 +22,10 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
    - `tasks/<slug>/progress.txt` — read the "Codebase Patterns" section at the top (if any) and the most recent few iterations to see what's been done.
    - `tasks/<slug>/critique.md` — if present, the critic findings the stories must satisfy.
    - If `tasks/<slug>/prd.md` contains `## Wiki Alignment`, read it before choosing the story. When `Impact: REQUIRED`, the relevant story must keep wiki updates aligned with the PRD and the recorded DeepWiki comparison.
-   - `context/rules/wiki.md` when your story touches `wiki/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
+   - `.mifune/skills/wiki/references/schema.md` when your story touches `.mifune/skills/wiki/corpus/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
    - `.claude/skills/git/SKILL.md` for branch + commit conventions.
-   - `.claude/rules/sandbox-processes.md` for tmux session conventions if your story spawns processes.
-   - `.claude/rules/advisor-model.md` for any critic-gated story.
+   - `.mifune/skills/t3/references/sandbox-processes.md` for tmux session conventions if your story spawns processes.
+   - `.mifune/skills/advisor/SKILL.md` for any critic-gated story.
 
 2. **Verify branch** — your branch is `<prefix>/<N>-<slug>` (per `prd.json` `branchName`). If `/ship-spec`'s Advisor launched you in an isolated worktree at `.worktrees/<prefix>/<N>-<slug>`, that directory already has the branch checked out — `cd` into it and skip the checkout below. Otherwise, if you are not on the branch:
    ```bash

@@ -10,12 +10,12 @@ description: >-
   TRIGGER when: a PRD/plan exists and needs adversarial review before the
   commitment gate; "critique
   this spec", "run the critics on <slug>", "review prd before we build".
-argument-hint: "<slug>"
+argument-hint: "<slug> [--weigh]"
 ---
 
 # Critique — two adversarial critics before commitment
 
-The **critique** node of the canonical workflow (`AGENTS.md § The Workflow`), composed by `/spec-critique`. It runs
+The **critique** node of the canonical workflow (`AGENTS.md § The Workflow`), composed by `/spec critique`. It runs
 the short adversarial feedback loop on a planned spec *before* anything is committed,
 and writes the `critique.md` artifact the `approve` gate then decides on.
 
@@ -36,7 +36,7 @@ reusable node.
 | `<slug>` | The task slug — the critics read `tasks/<slug>/prd.md`; output is written to `tasks/<slug>/critique.md`. Required. |
 
 If `tasks/<slug>/prd.md` is absent there is nothing to critique — print an error
-pointing at `/spec-plan` and emit **no** `STATUS:` token (honest exits: a missing
+pointing at `/spec plan` and emit **no** `STATUS:` token (honest exits: a missing
 spec is a failure, not a clean critique).
 
 ---
@@ -56,7 +56,7 @@ have caught the v0.7 convergence regression, PR #212 / US-012).
 > MUST-NOT-DELETE without an override note. Surface technical risks BEFORE
 > implementation. Focus on: (1) vague/unverifiable acceptance criteria; (2) missing
 > dependencies each story silently assumes; (3) pattern conflicts with this repo (read
-> `.claude/rules/*.md` and sibling `tasks/*/prd.json`); (4) scope creep — "single
+> `AGENTS.md` + the relevant `.mifune/skills/*/SKILL.md` and sibling `tasks/*/prd.json`); (4) scope creep — "single
 > iteration" stories that are really 2+; (5) hidden destructive operations not
 > explicitly gated; (6) protected-path violations → `SEVERITY: H` + `[PROTECTED-PATH]`.
 > Return:
@@ -80,6 +80,29 @@ have caught the v0.7 convergence regression, PR #212 / US-012).
 > CRITIC_B — USER LENS
 > [SEVERITY: H/M/L] [STORY: US-NNN or *] [FINDING] | [EVIDENCE: file or PRD section] | [RECOMMENDATION]
 > ```
+
+---
+
+## Self-consistency weighting (optional, default-off)
+
+> Opt-in only. **Default behavior is unchanged**: without the flag this node runs exactly the
+> two single-pass critics above (K=1) and writes the same `critique.md` — zero added agent
+> calls, byte-for-byte the same cost model.
+
+When invoked with `--weigh` (or `CRITIQUE_WEIGH=1`), each lens is sampled **K times** (`K`
+default 1 = current behavior; opt-in **K=2**, hard cap 2) and the per-lens samples are routed
+through `/weigh` (`vote` method) so a finding that fires in only 1 of K samples is
+**down-weighted** relative to one that fires in all K, *before* the SEVERITY tally. This trades
+up to 2× critic cost for a flakiness-resistant tally; it never raises a finding's severity,
+only discounts low-consistency ones.
+
+Invariants (the seam is schema-preserving):
+- The `critique.md` output schema below — `## Critic A`, `## Critic B`, `## Synthesis`, the
+  SEVERITY tally, and the `Recommendation` — is **identical** in both modes; `/approve` and
+  `/ship-spec` Stage 4 parse it unchanged.
+- A down-weighted finding is still listed (with a `consistency: n/K` note), never silently
+  dropped; the SEVERITY auto-gate still fails closed on any unmitigated high.
+- `K` is capped at 2 — total critique cost never exceeds 2× the default 2-agent baseline.
 
 ---
 
@@ -125,7 +148,7 @@ none → `PROCEED`. This node only *records* that judgment — the binding decis
 
 ## Memory Protocol
 
-After a run, append to `memory/<UTC-date>/log.md` per `context/rules/memory.md`:
+After a run, append to `memory/<UTC-date>/log.md` per `.mifune/skills/retro/references/memory-protocol.md`:
 
 ```markdown
 ## critique -- HH:MM UTC

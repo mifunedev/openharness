@@ -39,7 +39,7 @@
       "acceptanceCriteria": [
         "Update wiki/cron-runtime.md to describe canonical absolute filePath storage and cwd-independent body reload.",
         "Update CHANGELOG.md under [Unreleased] with a Fixed entry for issue #517.",
-        "bash evals/probes/wiki-readme-index.sh passes.",
+        "bash .oh/evals/probes/wiki-readme-index.sh passes.",
         "Typecheck passes."
       ],
       "priority": 3,

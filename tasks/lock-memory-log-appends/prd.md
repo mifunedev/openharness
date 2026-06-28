@@ -44,7 +44,7 @@ Acceptance criteria:
 As a future maintainer, I want CI-visible coverage for the locked-memory-append invariant.
 
 Acceptance criteria:
-- `evals/probes/memory-log-locked-append.sh` fails on direct `cat >> ...memory/$TODAY/log.md` examples in the affected skill contracts.
+- `.oh/evals/probes/memory-log-locked-append.sh` fails on direct `cat >> ...memory/$TODAY/log.md` examples in the affected skill contracts.
 - The new probe passes locally.
 - `CHANGELOG.md` records the fix under `[Unreleased]`.
 

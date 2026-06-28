@@ -44,7 +44,7 @@ Acceptance criteria:
 - **Local entries**: `wiki/sandbox-auth-volumes.md`
 - **Spec alignment**: document that auth/secret handling now includes a Slack runtime env-file handoff that keeps token values out of tmux argv while preserving ownership and startup behavior.
 - **DeepWiki comparison**: no relevant public DeepWiki page was reachable from the local tooling during this run; local source-backed wiki entry is the authority.
-- **Acceptance criteria**: update the wiki entry with relevant source files and line-cited behavior; refresh `wiki/README.md`; verify with `bash evals/probes/wiki-readme-index.sh`.
+- **Acceptance criteria**: update the wiki entry with relevant source files and line-cited behavior; refresh `wiki/README.md`; verify with `bash .oh/evals/probes/wiki-readme-index.sh`.
 
 ## Critique Synthesis
 

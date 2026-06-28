@@ -28,7 +28,7 @@ on:
       - "context/**"
       - ".devcontainer/**"
       - "workspace/**"
-      - "evals/**"
+      - ".oh/evals/**"
   pull_request:
     paths:
       - "packages/**"
@@ -52,7 +52,7 @@ on:
       - "context/**"
       - ".devcontainer/**"
       - "workspace/**"
-      - "evals/**"
+      - ".oh/evals/**"
 
 concurrency:
   group: ci-harness-${{ github.ref }}
@@ -155,7 +155,7 @@ jobs:
         run: bash .oh/scripts/ensure-mifune.sh --init
 
       - name: Run root Mifune checkout probe
-        run: bash evals/probes/mifune-checkout.sh
+        run: bash .oh/evals/probes/mifune-checkout.sh
 
       # Provision Node explicitly so the suite is runner-agnostic: GitHub-hosted
       # ships Node preinstalled, the self-hosted runner does not.

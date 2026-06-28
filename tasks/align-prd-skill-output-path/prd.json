@@ -24,7 +24,7 @@
       "title": "Guard against stale flat PRD paths",
       "description": "As a future maintainer, I want a deterministic eval probe to fail if the stale flat PRD path returns.",
       "acceptanceCriteria": [
-        "Add evals/probes/prd-output-path-contract.sh.",
+        "Add .oh/evals/probes/prd-output-path-contract.sh.",
         "The probe fails on tasks/prd-[feature-name].md in provider-facing PRD skill docs.",
         "The probe passes only when tasks/<feature-name>/prd.md is present.",
         "The probe resolves the repo root from ${BASH_SOURCE[0]}."

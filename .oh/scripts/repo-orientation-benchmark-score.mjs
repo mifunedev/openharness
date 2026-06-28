@@ -16,7 +16,7 @@ function usage(exitCode = 64) {
 
 function parseArgs(argv) {
   const args = {
-    manifest: "evals/capability/repo-orientation/tasks.json",
+    manifest: ".oh/evals/capability/repo-orientation/tasks.json",
     report: "",
     validateOnly: false,
     json: false,
@@ -145,7 +145,7 @@ function validateManifest(manifest, manifestPath) {
     if ((classCounts.get(required) ?? 0) === 0) failures.push(`tasks missing class ${required}`);
   }
 
-  const repoRoot = path.resolve(path.dirname(manifestPath), "../../..");
+  const repoRoot = path.resolve(path.dirname(manifestPath), "../../../..");
   const startupPath = manifest.startupContext?.path ?? "context/REPO_MAP.md";
   const startupAbs = path.resolve(repoRoot, startupPath);
   try {

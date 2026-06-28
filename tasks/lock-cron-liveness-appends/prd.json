@@ -37,7 +37,7 @@
       "description": "As a maintainer, I want tests, eval probes, and docs to lock the cron liveness invariant so it is not re-derived or regressed.",
       "acceptanceCriteria": [
         "scripts/__tests__/cron-runtime.test.ts verifies runtime/shell liveness is observable via the locked append path and generated shell commands contain scripts/locked-append.sh rather than raw appends.",
-        "evals/probes/locked-append-critical-path.sh guards runtime, autopilot/caps, and weekly cron prompt liveness paths.",
+        ".oh/evals/probes/locked-append-critical-path.sh guards runtime, autopilot/caps, and weekly cron prompt liveness paths.",
         "crons/README.md, wiki/cron-runtime.md, wiki/README.md, and CHANGELOG.md document the invariant/update.",
         "Targeted cron runtime tests, locked append probe, and wiki index probe pass."
       ],

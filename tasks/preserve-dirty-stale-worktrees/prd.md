@@ -42,7 +42,7 @@ Acceptance criteria:
 As a maintainer, I want eval coverage that guards cleanup preservation semantics so future edits cannot reintroduce destructive cleanup guidance.
 
 Acceptance criteria:
-- `evals/probes/cleanup-tasks-worktree-grooming.sh` requires dirty/staged/untracked/unpushed preservation checks.
+- `.oh/evals/probes/cleanup-tasks-worktree-grooming.sh` requires dirty/staged/untracked/unpushed preservation checks.
 - The probe fails if cleanup guidance authorizes recursive orphan deletion.
 - The targeted probe passes locally.
 

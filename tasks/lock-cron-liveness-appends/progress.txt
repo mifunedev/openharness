@@ -37,7 +37,7 @@ Prompt examples are executable guidance; guard them with probes just like runtim
 ## US-003 — 2026-06-20 03:16 UTC
 
 **Title**: Regression coverage and docs
-**Files changed**: evals/probes/locked-append-critical-path.sh, crons/README.md, wiki/cron-runtime.md, wiki/README.md, CHANGELOG.md
+**Files changed**: .oh/evals/probes/locked-append-critical-path.sh, crons/README.md, wiki/cron-runtime.md, wiki/README.md, CHANGELOG.md
 **Commit**: this commit
 **Result**: PASS
 

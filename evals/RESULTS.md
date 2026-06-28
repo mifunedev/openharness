@@ -49,6 +49,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | next-dev-prod | A | 2026-06-26 01:01 | SKIPPED | memory/MEMORY.md 2026-06-04 |
 | owned-surface-guard | A | 2026-06-26 01:01 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | pnpm-audit-ci-gate | A | 2026-06-28 01:28 | PASS | issue #171 — pnpm security audits must run in CI |
+| post-bridge-publish-confirmation | A | 2026-06-24 06:17 | PASS | #523 — post-bridge live publishing requires an explicit final confirmation gate |
 | pr-audit-duplicate-issue-refs | A | 2026-06-26 01:01 | PASS | issue #439 — /pr-audit must flag duplicate open PRs that reference the same issue |
 | prd-output-path-contract | A | 2026-06-26 01:01 | PASS | memory/MEMORY.md 2026-06-19 |
 | prompt-miner-schema-compat | A | 2026-06-26 01:01 | PASS | issue #253 — prompt-miner JSONL schema-drift guard |

@@ -105,16 +105,16 @@ Usage:
   oh init [dir] [--minimal] [--yes] [--from <dir>] [--force] [--dry-run] [--templates <dir>]
 
 Scaffolds a complete, locally-buildable OpenHarness project into a target repo
-(default: cwd): vendors the .oh/ control plane (incl. context/crons/evals),
-seeds empty memory/ + tasks/, copies the full .devcontainer/ for a local image
-build, writes a project AGENTS.md (+ CLAUDE.md), wires the .mifune submodule,
-and configures the .claude/.codex/.pi/.hermes provider surfaces. In a TTY
-(without --yes) it runs a short config wizard for harness.yaml +
-.devcontainer/.env.
+(default: cwd): vendors the .oh/ control plane (incl. context/crons/evals and
+the skills/agents/hooks pack), seeds empty memory/ + tasks/, copies the full
+.devcontainer/ for a local image build, writes a project AGENTS.md (+ CLAUDE.md),
+and configures the .claude/.codex/.pi/.hermes provider surfaces as symlinks into
+.oh/skills. In a TTY (without --yes) it runs a short config wizard for
+harness.yaml + .devcontainer/.env.
 
 Flags:
   --minimal          Thin scaffold only (compat files + vendored .oh/) — the old
-                     behavior; skips devcontainer/providers/.mifune/seeds
+                     behavior; skips devcontainer/providers/seeds
   --copy-claude      Write CLAUDE.md as a copy instead of a symlink -> AGENTS.md
                      (for filesystems without symlink support)
   --yes              Non-interactive: skip the wizard, keep template defaults

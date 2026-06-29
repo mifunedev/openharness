@@ -7,6 +7,10 @@
     "context/**",
     "crons/**",
     "evals/**",
+    "skills/**",
+    "agents/**",
+    "hooks/**",
+    "skills.lock",
     "README.md",
     "manifest.json"
   ],

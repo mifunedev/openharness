@@ -1,4 +1,4 @@
-# OpenHarness — secrets & runtime (never commit). `.mifune` is a tracked submodule.
+# OpenHarness — secrets & runtime (never commit).
 .devcontainer/.env
 .claude/.env.claude
 .hermes/.env

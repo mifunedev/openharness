@@ -9,9 +9,6 @@ on:
     paths:
       - "packages/**"
       - ".oh/**"
-      - ".gitmodules"
-      - ".mifune"
-      - ".mifune/**"
       - ".pi/**"
       - "Makefile"
       - "harness.yaml"
@@ -20,10 +17,10 @@ on:
       - "pnpm-workspace.yaml"
       - "vitest.config.ts"
       - ".github/workflows/ci-harness.yml"
-      - ".mifune/skills/**"
+      - ".oh/skills/**"
       - ".claude/hooks/**"
       - ".claude/protected-paths.txt"
-      - ".mifune/hooks/**"
+      - ".oh/hooks/**"
       - ".oh/crons/**"
       - "crons/**"
       - ".oh/context/**"
@@ -35,9 +32,6 @@ on:
     paths:
       - "packages/**"
       - ".oh/**"
-      - ".gitmodules"
-      - ".mifune"
-      - ".mifune/**"
       - ".pi/**"
       - "Makefile"
       - "harness.yaml"
@@ -46,10 +40,10 @@ on:
       - "pnpm-workspace.yaml"
       - "vitest.config.ts"
       - ".github/workflows/ci-harness.yml"
-      - ".mifune/skills/**"
+      - ".oh/skills/**"
       - ".claude/hooks/**"
       - ".claude/protected-paths.txt"
-      - ".mifune/hooks/**"
+      - ".oh/hooks/**"
       - ".oh/crons/**"
       - "crons/**"
       - ".oh/context/**"
@@ -77,7 +71,7 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Setup Node 22.x
         uses: actions/setup-node@v4
@@ -127,7 +121,7 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Shellcheck boot scripts
         run: |
@@ -156,7 +150,7 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Run root Mifune checkout probe
         run: bash .oh/evals/probes/mifune-checkout.sh
@@ -169,4 +163,4 @@ jobs:
           node-version: "22"
 
       - name: Run eval probe suite
-        run: bash .mifune/skills/eval/run.sh
+        run: bash .oh/skills/eval/run.sh

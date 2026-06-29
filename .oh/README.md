@@ -13,13 +13,15 @@ config" to "the machinery."
 
 ## Governing principle: a dotdir namespace is earned by FUNCTION-CLASS
 
-This **supersedes** the earlier "earned by EXPORT only" rule. Two peer machinery
-namespaces, split by what *kind* of thing they hold:
+This **supersedes** the earlier "earned by EXPORT only" rule *and* the later
+`.oh/`-vs-`.mifune/` split: the provider-portable primitives were absorbed into
+`.oh/`, so there is now **one** machinery namespace (the former `.mifune` submodule
+is obsolete):
 
-- **`.mifune/`** — provider-portable *primitives* (skills, agents, hooks),
-  exported to the four agent providers via symlinks (`.claude/`, `.codex/`,
-  `.pi/`, `.hermes/`).
-- **`.oh/`** — *OpenHarness's own machinery* as one unit: the `oh` CLI (`cli/`),
+- **`.oh/`** — *OpenHarness's own machinery* as one unit, including the
+  provider-portable *primitives* — `skills/`, `agents/`, `hooks/` (+ `skills.lock`)
+  — exported to the four agent providers via symlinks (`.claude/`, `.codex/`,
+  `.pi/`, `.hermes/`): the `oh` CLI (`cli/`),
   the GitHub-readable markdown docs (`docs/`, now at `.oh/docs/`), installer +
   lifecycle scripts (`scripts/`), container-install inputs (`install/`), the
   scheduled-agent cron definitions + runtime log (`crons/`), the
@@ -37,11 +39,11 @@ namespaces, split by what *kind* of thing they hold:
   markdown docs now live under `.oh/docs/`; the rendered docs site and the
   `blog/` archive live in `mifunedev/openharness-web`.
 
-### Back-compat symlinks (the `.mifune` precedent)
+### Back-compat symlinks (the provider-symlink precedent)
 
 The runtime-machinery directories (`scripts/`, `install/`, `crons/`) and the relocated task
 workdirs (`tasks/`) moved into `.oh/` but keep **tracked back-compat symlinks at
-the old root paths** — exactly how `.claude/skills` → `.mifune/skills` works:
+the old root paths** — exactly how `.claude/skills` → `.oh/skills` works:
 
 | Old path (symlink) | Real location |
 |---|---|
@@ -85,11 +87,11 @@ rendered now lives at `.oh/docs/` (markdown only — no build machinery; guarded
 `evals/probes/docs-build-fast-path.sh`).
 
 
-## How Mifune is added
+## How the skill pack is wired
 
-The core runtime expects `.mifune/` to be initialized before provider paths read shared skills, agents, hooks, or evals. `.mifune/` is a pinned Git submodule from `https://github.com/ryaneggz/mifune.git`; `.oh/scripts/ensure-mifune.sh --init` initializes or repairs it, and `--check` verifies the URL, pinned SHA, protected paths, executable bits, provider symlinks, and Hermes link when enabled.
+The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/skills`, `.oh/agents`, `.oh/hooks`) and tracked in this repo — there is no submodule and no network fetch. `oh init`/`oh update` lay the pack down with the rest of `.oh/`; `.oh/scripts/link-providers.sh --init` (re)creates the provider symlinks into it, and `--check` verifies the vendored pack is present, the required executables, the protected paths, the provider symlinks, and the Hermes link when enabled.
 
-`.pi/` remains the Pi provider surface in v1. It is not the Mifune submodule mount in this PR.
+`.pi/` remains the Pi provider surface in v1; its `.pi/skills` is one of the symlinks into `.oh/skills`.
 
 ## Contents
 
@@ -247,15 +249,16 @@ before, emitting a one-line `legacy mode` warning so the fallback stays visible.
 **Boundary is preserved:** the manifest **cannot reach outside `.oh/`**. Its
 patterns are relative to `.oh/`, and the existing path-escape guard (writes land
 only under `<target>/.oh/`) is **unchanged** — the manifest *narrows* the
-payload, it never widens the write surface. Cross-tree shipping of
-`.mifune/skills` is **deferred** (out of scope here).
+payload, it never widens the write surface. The vendored skill pack
+(`skills/**`, `agents/**`, `hooks/**`, `skills.lock`) ships through this same
+manifest, so `oh init`/`oh update` carry it into a target with the rest of `.oh/`.
 
-> **`oh init` seam:** `oh init` does **not** yet honor this manifest — its
-> manifest-aware seeding (`commands/init.ts`) and the `.oh/templates/` payload
-> ship in PR #334. Today the manifest governs `oh update` only.
+> **`oh init` seam:** both `oh init` and `oh update` honor this manifest — they
+> vendor only the manifest-shipped `.oh/` payload (via `commands/init.ts`'s
+> `copyOhPayload`), so the skill pack arrives in one shot with no submodule step.
 
 ## Pointers
 
 - `.oh/context/directory-readme.md` — the README-as-directory-anchor convention this file follows.
 - `.oh/docs/roadmap.md` — the B-state primitive-taxonomy migration; `.oh/` machinery grouping.
-- `.mifune/` — the peer machinery namespace (provider-portable primitives), the relocation pattern this dir follows.
+- `.oh/skills/` — the vendored provider-portable primitive pack (skills/agents/hooks), absorbed from the former `.mifune` submodule.

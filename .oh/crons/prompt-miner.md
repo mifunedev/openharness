@@ -7,7 +7,7 @@ overlap: false
 catchup: false
 tmux: true
 worktree: true
-preflight: .mifune/skills/prompt-miner/prompt-miner-caps.sh
+preflight: .oh/skills/prompt-miner/prompt-miner-caps.sh
 repo: mifunedev/openharness
 description: Daily prompt-miner — mine 24h of session traces for prompt-quality markers and ship a top finding to the origin fork via /ship-spec (opt-in, cap-gated)
 ---
@@ -28,11 +28,11 @@ This cron is **opt-in and cap-gated**:
   operator flips it to `enabled: true` and reloads the runtime (`SIGHUP` —
   `kill -HUP "$(cat .oh/crons/.pid)"` from inside the container). Disabling again is a
   one-line edit + reload; never delete the file (preserves history).
-- **Caps**: the `preflight: .mifune/skills/prompt-miner/prompt-miner-caps.sh` gate
+- **Caps**: the `preflight: .oh/skills/prompt-miner/prompt-miner-caps.sh` gate
   runs **before** any worktree/tmux/agent and counts open PRs labeled
   `prompt-miner` on `mifunedev/openharness`. On a capped day it logs `SKIPPED-CAP-*`
   + liveness and spawns nothing. Caps are origin-scoped (the wrapper re-points
-  `.mifune/skills/autopilot/autopilot-caps.sh` at the fork + the `prompt-miner` label).
+  `.oh/skills/autopilot/autopilot-caps.sh` at the fork + the `prompt-miner` label).
 
 ## Steps
 

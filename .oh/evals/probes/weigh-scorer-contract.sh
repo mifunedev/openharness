@@ -5,8 +5,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SCORER="${SCORER:-$ROOT/.mifune/skills/weigh/scripts/score-trajectories.mjs}"
-FIXTURE="${FIXTURE:-$ROOT/.mifune/skills/weigh/scripts/__tests__/fixtures/cohort-sample.json}"
+SCORER="${SCORER:-$ROOT/.oh/skills/weigh/scripts/score-trajectories.mjs}"
+FIXTURE="${FIXTURE:-$ROOT/.oh/skills/weigh/scripts/__tests__/fixtures/cohort-sample.json}"
 
 # 1) Prerequisites — SKIPPED only when node/scorer/fixture are ABSENT.
 if ! command -v node >/dev/null 2>&1; then
@@ -24,7 +24,7 @@ fi
 
 # 2) + 3) Frozen DEFAULT_WEIGHTS (exact keys + sum 100) AND the required exports,
 # asserted by importing the module (absolute file:// URL → works through the
-# .claude/skills → .mifune/skills symlink). A node import/runtime error here is a
+# .claude/skills → .oh/skills symlink). A node import/runtime error here is a
 # REAL regression, not a skip.
 if ! err="$(node -e '
   // argv[1] is a guard-neutral placeholder so the scorer module does NOT auto-run

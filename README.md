@@ -35,7 +35,7 @@ Clones into `~/.openharness`, offers to share your host `gh` token, writes `.dev
 
 ```bash
 # 1. Fork on GitHub, then clone YOUR fork:
-git clone --recurse-submodules https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
+git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
 # 2. Bootstrap — installer auto-detects the local clone, no env vars needed:
 bash .oh/scripts/install.sh
 ```
@@ -43,7 +43,7 @@ bash .oh/scripts/install.sh
 **Option C — Clone upstream, then re-point to your repo:**
 
 ```bash
-git clone --recurse-submodules https://github.com/mifunedev/openharness.git my-harness && cd my-harness
+git clone https://github.com/mifunedev/openharness.git my-harness && cd my-harness
 git remote set-url origin https://github.com/<your-org>/<your-repo>.git
 bash .oh/scripts/install.sh
 ```
@@ -69,22 +69,11 @@ If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch
 </details>
 
 
-## 🧩 How Mifune is added
+## 🧩 How the primitive pack ships
 
-Open Harness consumes the shared Mifune primitive pack as a mandatory pinned Git submodule at `.mifune/`, sourced from [`ryaneggz/mifune`](https://github.com/ryaneggz/mifune). A recursive clone initializes it automatically:
+Open Harness vendors the shared skills/agents/hooks primitive pack directly into the `.oh/` control plane: `.oh/skills/`, `.oh/agents/`, `.oh/hooks/`, and `.oh/skills.lock` are tracked as ordinary files in this repo. The `oh` CLI lays them down during `oh init`/`oh update`, so a fresh checkout has the skills immediately — no submodule, no recursive clone, no network step.
 
-```bash
-git clone --recurse-submodules https://github.com/mifunedev/openharness.git
-```
-
-After a plain clone, or if `.mifune/` is empty or at the wrong commit, repair it with:
-
-```bash
-bash .oh/scripts/ensure-mifune.sh --init
-bash .oh/scripts/ensure-mifune.sh --check
-```
-
-Provider surfaces remain provider-specific: `.pi/skills`, `.claude/skills`, `.codex/skills`, `.claude/agents`, and `.claude/hooks` are symlinks into the initialized `.mifune/` mount. `.pi/` itself remains the Pi provider surface in v1; consolidation of `.pi` and Mifune is a separate v2 design topic, not part of this extraction.
+Provider surfaces are symlinks into `.oh/`: `.pi/skills`, `.claude/skills`, and `.codex/skills` point at `.oh/skills`; `.claude/agents` → `.oh/agents`; `.claude/hooks` → `.oh/hooks`. `.pi/` itself remains the Pi provider surface in v1.
 
 ## 🚀 Use it
 
@@ -122,7 +111,7 @@ with `make destroy && make sandbox`.
 <details><summary>Manual setup (no installer)</summary>
 
 ```bash
-git clone --recurse-submodules https://github.com/mifunedev/openharness.git && cd openharness
+git clone https://github.com/mifunedev/openharness.git && cd openharness
 make sandbox
 make shell
 ```

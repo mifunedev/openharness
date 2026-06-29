@@ -12,7 +12,6 @@ import {
   readlinkSync,
   rmSync,
 } from "node:fs";
-import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { loadManifest } from "../lib/manifest.js";
 import { copyOhPayload, type CopyReport } from "../lib/vendor.js";
@@ -31,13 +30,6 @@ export interface InitIO {
   ask?: (q: string) => Promise<string>;
   /** Secret reader for the wizard. Defaults to `prompt.askSecret`. */
   askSecret?: (q: string) => Promise<string>;
-  /**
-   * Materialize the `.mifune` submodule into `targetDir`, returning true iff it
-   * is present afterward. Defaults to `defaultEnsureMifune` (a `git submodule
-   * add` against the target, network-dependent and non-fatal). Tests inject a
-   * stub so they never hit the network.
-   */
-  ensureMifune?: (targetDir: string, dryRun: boolean) => boolean;
 }
 
 export interface InitOptions {
@@ -55,7 +47,7 @@ export interface InitOptions {
   /**
    * FULL scaffold is the DEFAULT. `minimal: true` reverts to the old thin
    * scaffold (the compat template files + vendored `.oh/` only) — no full
-   * devcontainer, empty seeds, provider surfaces, or `.mifune` wiring.
+   * devcontainer, empty seeds, or provider surfaces.
    */
   minimal?: boolean;
   /**
@@ -102,7 +94,6 @@ export async function runInit(
   const verbose = opts.verbose === true;
   const prefix = dryRun ? "[dry-run] " : "";
   const report = (line: string): void => io.stdout(`${prefix}${line}\n`);
-  let mifuneMaterialized = false;
   // Aggregate tallies for the legible end-of-run summary (UX channel).
   const stats = { created: 0, overwritten: 0, skipped: 0 };
 
@@ -283,17 +274,13 @@ export async function runInit(
       }
     }
 
-    // Phase 3c: provider skill/agent/hook symlinks. ensure-mifune.sh only
-    // VERIFIES these (it assumes the harness already tracks them), so init
-    // CREATES them for the target. They resolve once .mifune materializes.
+    // Phase 3c: provider skill/agent/hook symlinks into the vendored `.oh/`
+    // pack. The skills/agents/hooks live in `.oh/` (vendored above with the rest
+    // of the control plane), so these links resolve immediately — no submodule
+    // materialization, no network step. link-providers.sh repairs them later.
     for (const [linkRel, linkTarget] of PROVIDER_LINKS) {
       linkReport(wr, linkRel, linkTarget);
     }
-
-    // Phase 3d: .mifune submodule — materialize (non-fatal) + .gitmodules entry.
-    const ensureMifuneFn = io.ensureMifune ?? defaultEnsureMifune;
-    mifuneMaterialized = ensureMifuneFn(t, dryRun);
-    ensureGitmodules(wr);
   }
 
   // --- Interactive config wizard (US-002/003) ---------------------------------
@@ -360,7 +347,7 @@ export async function runInit(
   if (!minimal) {
     prompt.ok("Wrote AGENTS.md + CLAUDE.md and seeded empty memory/ + tasks/");
     prompt.ok("Copied the full .devcontainer/ (local image build)");
-    prompt.ok("Configured 4 provider surfaces (.claude .codex .pi .hermes) + .gitmodules");
+    prompt.ok("Configured 4 provider surfaces (.claude .codex .pi .hermes) → vendored .oh/skills");
   }
   if (force && totalOverwritten > 0) {
     prompt.warn(`--force overwrote ${totalOverwritten} existing file(s).`);
@@ -369,17 +356,12 @@ export async function runInit(
   // --- Next steps ------------------------------------------------------------
   prompt.header("Next steps");
   if (!minimal) {
-    if (mifuneMaterialized) {
-      prompt.ok(".mifune submodule materialized — provider skills are live.");
-    } else {
-      prompt.warn(".mifune is not materialized yet (offline or not a git repo).");
-      prompt.info("  1. git submodule update --init   (resolves the provider skill symlinks)");
-    }
-    prompt.info("  2. Put secrets in .devcontainer/.env (gitignored — never commit them)");
-    prompt.info("  3. Build the sandbox:  reopen in container, or");
+    prompt.ok("Provider skills are live — symlinks resolve into the vendored .oh/skills.");
+    prompt.info("  1. Put secrets in .devcontainer/.env (gitignored — never commit them)");
+    prompt.info("  2. Build the sandbox:  reopen in container, or");
     prompt.info("       docker compose -f .devcontainer/docker-compose.yml up -d --build");
-    prompt.info("  4. Build the CLI:  cd .oh/cli && npm install && npm run build");
-    prompt.info("  5. Commit .oh/, the provider surfaces, AGENTS.md, and .gitmodules");
+    prompt.info("  3. Build the CLI:  cd .oh/cli && npm install && npm run build");
+    prompt.info("  4. Commit .oh/ (incl. .oh/skills) and the provider surfaces + AGENTS.md");
   } else {
     prompt.info(".oh/ is your portable control plane — commit it to your repo.");
     prompt.info("Build the CLI:  cd .oh/cli && npm install && npm run build");
@@ -550,18 +532,15 @@ const WORKSPACE_README =
   "`$OH_PROJECT_ROOT/workspace/` at build time. Seed it with your project's " +
   "in-sandbox agent scaffolding (e.g. an `AGENTS.md` for the running agent).\n";
 
-// The pinned shared skill pack. Mirrors the harness `.gitmodules` + the
-// ensure-mifune.sh EXPECTED_URL.
-const MIFUNE_URL = "https://github.com/ryaneggz/mifune.git";
-
-// Provider skill/agent/hook symlinks. ensure-mifune.sh only verifies these;
-// init creates them for the target. `.codex` reuses `.claude`'s agents/specs.
+// Provider skill/agent/hook symlinks into the vendored `.oh/` pack. init creates
+// them for the target; link-providers.sh repairs them. `.codex` reuses
+// `.claude`'s agents/specs.
 const PROVIDER_LINKS: [string, string][] = [
-  [".pi/skills", "../.mifune/skills"],
-  [".claude/skills", "../.mifune/skills"],
-  [".codex/skills", "../.mifune/skills"],
-  [".claude/agents", "../.mifune/agents"],
-  [".claude/hooks", "../.mifune/hooks"],
+  [".pi/skills", "../.oh/skills"],
+  [".claude/skills", "../.oh/skills"],
+  [".codex/skills", "../.oh/skills"],
+  [".claude/agents", "../.oh/agents"],
+  [".claude/hooks", "../.oh/hooks"],
   [".codex/agents", "../.claude/agents"],
   [".codex/specs", "../.claude/specs"],
 ];
@@ -633,53 +612,6 @@ function writeClaudeAlias(ctx: WriteCtx, copyClaude: boolean): void {
   ctx.report(`${exists ? "overwrite" : "create"} CLAUDE.md (copy of AGENTS.md)`);
   if (exists) ctx.stats.overwritten++;
   else ctx.stats.created++;
-}
-
-/** Ensure `<t>/.gitmodules` carries the `.mifune` submodule entry. */
-function ensureGitmodules(ctx: WriteCtx): void {
-  const p = path.resolve(ctx.t, ".gitmodules");
-  const entry =
-    `[submodule ".mifune"]\n\tpath = .mifune\n\turl = ${MIFUNE_URL}\n\tbranch = development\n`;
-  if (existsSync(p)) {
-    const current = readFileSync(p, "utf8");
-    if (current.includes('submodule ".mifune"')) {
-      ctx.report("skip .gitmodules (exists)");
-      ctx.stats.skipped++;
-      return;
-    }
-    if (!ctx.dryRun) {
-      writeFileSync(p, (current.endsWith("\n") ? current : current + "\n") + entry, "utf8");
-    }
-    ctx.report("update .gitmodules (+.mifune)");
-    ctx.stats.overwritten++;
-    return;
-  }
-  if (!ctx.dryRun) writeFileSync(p, entry, "utf8");
-  ctx.report("create .gitmodules");
-  ctx.stats.created++;
-}
-
-/**
- * Default `.mifune` materialization: `git submodule add` against the target.
- * Returns true iff `.mifune` is present afterward. Non-fatal — any failure
- * (offline, no git repo, already registered) leaves the symlinks in place and
- * the caller prints a `git submodule update --init` instruction.
- */
-function defaultEnsureMifune(t: string, dryRun: boolean): boolean {
-  const marker = path.join(t, ".mifune", "skills", "git", "SKILL.md");
-  if (existsSync(marker)) return true;
-  if (dryRun) return false;
-  if (!existsSync(path.join(t, ".git"))) return false;
-  try {
-    execFileSync(
-      "git",
-      ["-C", t, "submodule", "add", "--force", "-b", "development", MIFUNE_URL, ".mifune"],
-      { stdio: "ignore", timeout: 120_000 },
-    );
-  } catch {
-    return false;
-  }
-  return existsSync(marker);
 }
 
 // ---------------------------------------------------------------------------

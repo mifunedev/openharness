@@ -36,11 +36,11 @@ describe("devcontainer entrypoint auth volume ownership", () => {
     expect(secondRepair).toBeGreaterThan(uidSync);
     const postUidSync = text.slice(secondRepair);
     const secondRepairCall = postUidSync.indexOf("repair_home_mount_ownership");
-    const ensureMifune = postUidSync.indexOf('bash "$HARNESS/.oh/scripts/ensure-mifune.sh" --init');
+    const linkProviders = postUidSync.indexOf('bash "$HARNESS/.oh/scripts/link-providers.sh" --init');
     const hermesBlock = postUidSync.indexOf("# Hermes keeps all runtime state");
     expect(secondRepairCall).toBeGreaterThan(-1);
-    expect(ensureMifune).toBeGreaterThan(secondRepairCall);
-    expect(hermesBlock).toBeGreaterThan(ensureMifune);
+    expect(linkProviders).toBeGreaterThan(secondRepairCall);
+    expect(hermesBlock).toBeGreaterThan(linkProviders);
   });
 
   it("does not swallow host UID reconciliation failures", () => {

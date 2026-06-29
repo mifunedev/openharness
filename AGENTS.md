@@ -26,7 +26,7 @@ Read these files at the start of every session — they encode voice, principles
 - `.oh/memory/MEMORY.md` — long-term lessons learned (append-only)
 - Today's `.oh/memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
 
-After **every** skill or agent run, fire the Memory Improvement Protocol (log → qualify → improve) — its canonical home is now the `/retro` skill (`.mifune/skills/retro/references/memory-protocol.md`).
+After **every** skill or agent run, fire the Memory Improvement Protocol (log → qualify → improve) — its canonical home is now the `/retro` skill (`.oh/skills/retro/references/memory-protocol.md`).
 
 The always-loaded `.oh/context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/advisor` (delegation + recursive-delegation), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — and the repo-authoring convention stays a plain doc at `.oh/context/directory-readme.md`. The always-on tier is now just the `.oh/context/` identity files listed above; load the relevant skill when a task calls for its norm.
 
@@ -189,10 +189,10 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/eval` | Run the context fitness-function probe suite (`.oh/evals/probes/*.sh`) against real state, write the `.oh/evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 | `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `.oh/memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
-| `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `.mifune/skills/retro/references/memory-protocol.md` |
+| `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `.oh/skills/retro/references/memory-protocol.md` |
 | `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `.oh/memory/<date>/`; raw prompt text is off by default. The daily `.oh/crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/ship-spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
 | `/caveman` | Token-compression output mode (`lite`/`full`/`ultra`/`wenyan`); subcommands `/caveman-commit`, `/caveman-review`, `/caveman-compress <file>`, `/caveman-stats`. Never compresses code, security warnings, or irreversible-action confirmations |
-| `/wiki` | Dispatcher for the wiki knowledge base (corpus at `.mifune/skills/wiki/corpus/`, gitignored-by-default + whitelisted): `ingest <url\|path> [--slug]` / `ingest --from-draft <slug> [--allow-stale]` (capture a source or promote a draft), `query <topic>` (frontmatter OR-search, read top ≤3 by `updated:` desc), `lint [--dry-run]` (5 health checks + atomic `corpus/README.md` regen). Schema: `.mifune/skills/wiki/references/schema.md` |
+| `/wiki` | Dispatcher for the wiki knowledge base (corpus at `.oh/skills/wiki/corpus/`, gitignored-by-default + whitelisted): `ingest <url\|path> [--slug]` / `ingest --from-draft <slug> [--allow-stale]` (capture a source or promote a draft), `query <topic>` (frontmatter OR-search, read top ≤3 by `updated:` desc), `lint [--dry-run]` (5 health checks + atomic `corpus/README.md` regen). Schema: `.oh/skills/wiki/references/schema.md` |
 | `/drift-check` | Detect framework (origin↔upstream), branch-behind, and cron-staleness drift; report remediation — never mutates state |
 
 Provision / destroy / repair are plain `docker compose` commands — see
@@ -206,7 +206,7 @@ ngrok, tailscale-funnel) in front of the sandbox — the base ships
 without any of these.
 
 Long-running apps inside the sandbox go in named tmux sessions, related
-apps as stacked panes — see `.mifune/skills/t3/references/sandbox-processes.md`.
+apps as stacked panes — see `.oh/skills/t3/references/sandbox-processes.md`.
 
 ## What You Do
 
@@ -236,8 +236,8 @@ apps as stacked panes — see `.mifune/skills/t3/references/sandbox-processes.md
 
 The harness root is `/home/sandbox/harness` inside the sandbox.
 Orchestrator scripts live in `.oh/scripts/`, scheduled agents in `.oh/crons/`,
-sandbox environment in `.devcontainer/`, the shared Mifune primitive pack in the
-pinned `.mifune/` submodule, and the agent template in `workspace/`. Claude,
-Codex, Pi, and Hermes expose `.mifune/skills` through provider-specific symlinks
-(`.pi/` remains the Pi provider surface in v1). Per-directory `README.md` files
+sandbox environment in `.devcontainer/`, the shared primitive pack (skills,
+agents, hooks) vendored under `.oh/skills`, `.oh/agents`, `.oh/hooks`, and the
+agent template in `workspace/`. Claude, Codex, Pi, and Hermes expose `.oh/skills`
+through provider-specific symlinks (`.pi/` remains the Pi provider surface in v1). Per-directory `README.md` files
 explain anything whose purpose isn't obvious from the name.

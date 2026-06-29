@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #331 — /sync dispatcher skill (bidirectional origin↔upstream sync)
-# desc: the /sync dispatcher (.mifune/skills/sync/SKILL.md) routes publish|catchup|status
+# desc: the /sync dispatcher (.oh/skills/sync/SKILL.md) routes publish|catchup|status
 #       to references/{publish,catchup}.md; topology lives in references/topology.md;
 #       the dispatcher composes /drift-check, /eval, and /pr-audit rather than
 #       reimplementing any of their logic; neither SKILL.md nor any reference doc may
@@ -11,12 +11,12 @@
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILLS="$ROOT/.mifune/skills"
+SKILLS="$ROOT/.oh/skills"
 SYNC="$SKILLS/sync"
 
 # Not applicable when the /sync dispatcher is absent (cold runner / pre-merge main).
 if [ ! -f "$SYNC/SKILL.md" ]; then
-  echo "SKIPPED: /sync dispatcher absent (no .mifune/skills/sync/SKILL.md)" >&2
+  echo "SKIPPED: /sync dispatcher absent (no .oh/skills/sync/SKILL.md)" >&2
   exit 2
 fi
 

@@ -38,7 +38,7 @@ crons:
 
 autopilot:
   # Configurable defaults for the deterministic caps gate
-  # (.mifune/skills/autopilot/autopilot-caps.sh, wired as the autopilot cron's `preflight:`).
+  # (.oh/skills/autopilot/autopilot-caps.sh, wired as the autopilot cron's `preflight:`).
   # Read live at each fire — uncomment to change without a rebuild. An
   # AUTOPILOT_TOTAL_CAP / AUTOPILOT_DAILY_CAP env var still overrides these.
   # total_cap: 10              # AUTOPILOT_TOTAL_CAP — max open autopilot PRs at any time

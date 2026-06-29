@@ -19,7 +19,7 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Setup Node 22.x
         uses: actions/setup-node@v4
@@ -74,7 +74,7 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Shellcheck boot scripts
         run: |
@@ -102,13 +102,13 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Run root Mifune checkout probe
         run: bash .oh/evals/probes/mifune-checkout.sh
 
       - name: Run eval probe suite
-        run: bash .mifune/skills/eval/run.sh
+        run: bash .oh/skills/eval/run.sh
 
   release:
     name: Build & Release
@@ -125,7 +125,7 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Parse tag
         id: parse

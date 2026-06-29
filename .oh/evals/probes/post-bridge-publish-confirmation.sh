@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILL="$ROOT/.mifune/skills/post-bridge/SKILL.md"
+SKILL="$ROOT/.oh/skills/post-bridge/SKILL.md"
 
 if [[ ! -f "$SKILL" ]]; then
   echo "SKIPPED: post-bridge skill absent: $SKILL" >&2

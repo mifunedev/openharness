@@ -11,7 +11,7 @@ On boot with Hermes enabled, the sandbox links the shared skill pack so Hermes
 sees the same skills as Claude/Codex/Pi:
 
 ```text
-<repo>/.hermes/skills/openharness -> ../../.mifune/skills
+<repo>/.hermes/skills/openharness -> ../../.oh/skills
 ```
 
 Hermes docs: <https://hermes-agent.nousresearch.com/docs/>

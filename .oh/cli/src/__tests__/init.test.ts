@@ -510,11 +510,18 @@ describe("runInit", () => {
     expect(m.exclude).toContain("**/.env");
     expect(m.exclude).toContain("**/auth.json");
     expect(m.include).toEqual(
-      expect.arrayContaining(["context/**", "crons/**", "evals/**"]),
+      expect.arrayContaining([
+        "context/**",
+        "crons/**",
+        "evals/**",
+        "skills/**",
+        "agents/**",
+        "hooks/**",
+      ]),
     );
   });
 
-  // --- Full scaffold (P3: AGENTS-lite + CLAUDE + .mifune + provider surfaces) -
+  // --- Full scaffold (P3: AGENTS-lite + CLAUDE + vendored skill pack + providers) -
 
   it("full (default): writes the project AGENTS.md-lite", async () => {
     const t = freshTmp();
@@ -543,14 +550,14 @@ describe("runInit", () => {
     expect(readFileSync(claude, "utf8")).toBe(readFileSync(join(t, "AGENTS.md"), "utf8"));
   });
 
-  it("full (default): writes .gitmodules with the .mifune entry", async () => {
+  it("full (default): vendors the skill pack into .oh/ and writes NO submodule", async () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
-    const gm = readFileSync(join(t, ".gitmodules"), "utf8");
-    expect(gm).toContain('[submodule ".mifune"]');
-    expect(gm).toContain("path = .mifune");
-    expect(gm).toContain("ryaneggz/mifune.git");
-    expect(gm).toContain("branch = development");
+    // The skills/agents/hooks pack is vendored directly — no submodule, no .gitmodules.
+    expect(existsSync(join(t, ".gitmodules"))).toBe(false);
+    expect(existsSync(join(t, ".mifune"))).toBe(false);
+    expect(existsSync(join(t, ".oh/skills/git/SKILL.md"))).toBe(true);
+    expect(existsSync(join(t, ".oh/skills.lock"))).toBe(true);
   });
 
   it("full (default): scaffolds curated provider config surfaces", async () => {
@@ -582,12 +589,12 @@ describe("runInit", () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
     const links: [string, string][] = [
-      [".claude/skills", "../.mifune/skills"],
-      [".claude/agents", "../.mifune/agents"],
-      [".claude/hooks", "../.mifune/hooks"],
-      [".codex/skills", "../.mifune/skills"],
+      [".claude/skills", "../.oh/skills"],
+      [".claude/agents", "../.oh/agents"],
+      [".claude/hooks", "../.oh/hooks"],
+      [".codex/skills", "../.oh/skills"],
       [".codex/agents", "../.claude/agents"],
-      [".pi/skills", "../.mifune/skills"],
+      [".pi/skills", "../.oh/skills"],
     ];
     for (const [rel, target] of links) {
       const p = join(t, rel);
@@ -596,21 +603,11 @@ describe("runInit", () => {
     }
   });
 
-  it("provider symlinks resolve once .mifune materializes (fake submodule)", async () => {
+  it("provider symlinks resolve into the vendored .oh/skills pack", async () => {
     const t = freshTmp();
-    const io: InitIO = {
-      stdout: () => {},
-      stderr: () => {},
-      // Stand in for the network: drop a fake .mifune skill tree into the target.
-      ensureMifune: (dir) => {
-        const skill = join(dir, ".mifune/skills/git");
-        mkdirSync(skill, { recursive: true });
-        writeFileSync(join(skill, "SKILL.md"), "# git\n");
-        return true;
-      },
-    };
-    expect(await runInit(opts(t, { yes: true }), io)).toBe(0);
-    // The .claude/.codex/.pi skills symlinks now resolve to the fake skill.
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    // No DI/fake needed: the skill pack is vendored with .oh/, so the provider
+    // symlinks resolve immediately — no submodule materialization step.
     expect(existsSync(join(t, ".claude/skills/git/SKILL.md"))).toBe(true);
     expect(existsSync(join(t, ".codex/skills/git/SKILL.md"))).toBe(true);
     expect(existsSync(join(t, ".pi/skills/git/SKILL.md"))).toBe(true);
@@ -640,9 +637,10 @@ describe("runInit", () => {
     expect(joined).toContain("create .devcontainer/Dockerfile");
     expect(joined).toContain("create .devcontainer/devcontainer.json");
     expect(joined).toContain("create CLAUDE.md");
-    expect(joined).toContain("create .gitmodules");
     expect(joined).toContain("create .claude/settings.json");
     expect(joined).toContain("create .claude/skills");
+    // The vendored skill pack ships with the .oh/ payload (no submodule).
+    expect(joined).toContain("create .oh/skills/git/SKILL.md");
     expect(joined).toContain("create .oh/memory/README.md");
     // Nothing was written.
     expect(existsSync(join(t, ".oh"))).toBe(false);

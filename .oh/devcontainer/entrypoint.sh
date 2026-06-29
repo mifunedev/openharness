@@ -117,12 +117,12 @@ repair_home_mount_ownership
 
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
 
-# How Mifune is added: Open Harness carries .mifune/ as a pinned Git
-# submodule to ryaneggz/mifune. Initialize or repair that mount before any
-# provider symlink, hook, eval runner, or Hermes skill path reads it.
-if [ -x "$HARNESS/.oh/scripts/ensure-mifune.sh" ]; then
-  if ! gosu sandbox bash "$HARNESS/.oh/scripts/ensure-mifune.sh" --init; then
-    echo "[entrypoint] failed to initialize .mifune; run: bash .oh/scripts/ensure-mifune.sh --init"
+# How the skill pack is wired: the shared skills/agents/hooks are vendored
+# directly under .oh/ (no submodule). Create/repair the provider symlinks into
+# .oh/ before any provider symlink, hook, eval runner, or Hermes skill path reads it.
+if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
+  if ! gosu sandbox bash "$HARNESS/.oh/scripts/link-providers.sh" --init; then
+    echo "[entrypoint] failed to link provider skills; run: bash .oh/scripts/link-providers.sh --init"
     exit 1
   fi
 fi
@@ -149,23 +149,23 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
     fi
   fi
 
-  # Share the harness' pinned Mifune skills with Hermes through its normal
+  # Share the harness' vendored skill pack with Hermes through its normal
   # HERMES_HOME skills tree. Claude, Codex, and Pi point at the same neutral
-  # /home/sandbox/harness/.mifune/skills submodule directory; Hermes keeps its
-  # bundled/runtime skills under $HERMES_RUNTIME/skills and gets the harness
-  # collection as a symlinked child so one primitive is visible to every agent.
-  HERMES_SHARED_SKILLS_DIR="$HARNESS/.mifune/skills"
+  # /home/sandbox/harness/.oh/skills directory; Hermes keeps its bundled/runtime
+  # skills under $HERMES_RUNTIME/skills and gets the harness collection as a
+  # symlinked child so one primitive is visible to every agent.
+  HERMES_SHARED_SKILLS_DIR="$HARNESS/.oh/skills"
   HERMES_SHARED_SKILLS_LINK="$HERMES_RUNTIME/skills/openharness"
   mkdir -p "$HERMES_RUNTIME/skills"
   if [ -d "$HERMES_SHARED_SKILLS_DIR" ]; then
     if [ -L "$HERMES_SHARED_SKILLS_LINK" ]; then
       current_target="$(readlink "$HERMES_SHARED_SKILLS_LINK" || true)"
-      if [ "$current_target" != "../../.mifune/skills" ] && [ "$current_target" != "$HERMES_SHARED_SKILLS_DIR" ]; then
+      if [ "$current_target" != "../../.oh/skills" ] && [ "$current_target" != "$HERMES_SHARED_SKILLS_DIR" ]; then
         rm -f "$HERMES_SHARED_SKILLS_LINK"
-        ln -s ../../.mifune/skills "$HERMES_SHARED_SKILLS_LINK"
+        ln -s ../../.oh/skills "$HERMES_SHARED_SKILLS_LINK"
       fi
     elif [ ! -e "$HERMES_SHARED_SKILLS_LINK" ]; then
-      ln -s ../../.mifune/skills "$HERMES_SHARED_SKILLS_LINK"
+      ln -s ../../.oh/skills "$HERMES_SHARED_SKILLS_LINK"
     else
       echo "[entrypoint] $HERMES_SHARED_SKILLS_LINK exists and is not a symlink — leaving it untouched"
     fi
@@ -344,7 +344,7 @@ esac
 mkdir -p "$MEMORY_PATH"
 
 # ─── Start/supervise cron runtime in tmux sessions ────────────────
-# Per SPEC v0.7 §"Croner runtime" + .mifune/skills/t3/references/sandbox-processes.md.
+# Per SPEC v0.7 §"Croner runtime" + .oh/skills/t3/references/sandbox-processes.md.
 # `cron-system` runs .oh/scripts/cron-runtime.ts. `cron-watchdog` is the outer
 # supervisor: if cron-system disappears after boot, it restarts the runtime
 # without requiring a container restart. Logs tee to /tmp/cron-system.log and

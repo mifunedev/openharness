@@ -10,5 +10,5 @@
 # build (entrypoints, generators, migrations, CI scripts, key skills).
 
 # --- OpenHarness machinery (do not delete) ---
-.oh/scripts/ensure-mifune.sh
+.oh/scripts/link-providers.sh
 .oh/devcontainer/entrypoint.sh

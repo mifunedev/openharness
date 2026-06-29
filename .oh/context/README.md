@@ -14,5 +14,5 @@ Seed files encoding voice, operating principles, environment inventory, and work
 The former always-loaded `rules/` tier was collapsed into on-demand skills
 (B-state M4): task-triggered norms now live in `/git`, `/advisor`,
 `/wiki`, and `/t3`, and the Memory Improvement Protocol in `/retro`
-(`.mifune/skills/retro/references/memory-protocol.md`). Only the identity files
+(`.oh/skills/retro/references/memory-protocol.md`). Only the identity files
 above are always-on.

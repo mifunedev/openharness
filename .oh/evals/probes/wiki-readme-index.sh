@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #132 — wiki README index drift guard
-# desc: .mifune/skills/wiki/corpus/README.md Index must match the git-tracked corpus/*.md frontmatter
+# desc: .oh/skills/wiki/corpus/README.md Index must match the git-tracked corpus/*.md frontmatter
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-WIKI="$ROOT/.mifune/skills/wiki/corpus"
+WIKI="$ROOT/.oh/skills/wiki/corpus"
 README="$WIKI/README.md"
 
 if [[ ! -d "$WIKI" ]]; then
@@ -14,7 +14,7 @@ if [[ ! -d "$WIKI" ]]; then
 fi
 
 if [[ ! -f "$README" ]]; then
-  echo "REGRESSION: .mifune/skills/wiki/corpus/README.md is missing" >&2
+  echo "REGRESSION: .oh/skills/wiki/corpus/README.md is missing" >&2
   exit 1
 fi
 
@@ -27,16 +27,10 @@ trap 'rm -f "$expected_tmp" "$actual_tmp" "$rows_tmp"' EXIT
 # filesystem glob: corpus/* is gitignored-by-default, so a fresh CI clone carries
 # only the whitelisted set the committed README is built from, and an operator's
 # local-only scratch entry can never make this probe red. raw/ snapshots are
-# excluded explicitly (they carry no slug: frontmatter anyway). When Mifune is a
-# submodule, enumerate the submodule's own tracked files and prefix them back to
-# the Open Harness mount path.
+# excluded explicitly (they carry no slug: frontmatter anyway). The skill pack is
+# vendored under .oh/, so the corpus is tracked directly in the Open Harness repo.
 tracked_wiki_files() {
-  if git -C "$ROOT/.mifune" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    git -C "$ROOT/.mifune" ls-files -- 'skills/wiki/corpus/*.md' ':!:skills/wiki/corpus/raw/*' \
-      | sed 's#^#.mifune/#'
-  else
-    git -C "$ROOT" ls-files -- '.mifune/skills/wiki/corpus/*.md' ':!:.mifune/skills/wiki/corpus/raw/*'
-  fi
+  git -C "$ROOT" ls-files -- '.oh/skills/wiki/corpus/*.md' ':!:.oh/skills/wiki/corpus/raw/*'
 }
 
 while IFS= read -r relpath; do
@@ -61,10 +55,10 @@ awk '
 ' "$README" > "$actual_tmp"
 
 if ! diff_output="$(diff -u "$expected_tmp" "$actual_tmp")"; then
-  echo "REGRESSION: .mifune/skills/wiki/corpus/README.md Index is out of sync with the tracked corpus/*.md frontmatter" >&2
+  echo "REGRESSION: .oh/skills/wiki/corpus/README.md Index is out of sync with the tracked corpus/*.md frontmatter" >&2
   echo "$diff_output" >&2
   exit 1
 fi
 
-echo "PASS: .mifune/skills/wiki/corpus/README.md Index matches the git-tracked corpus/*.md frontmatter" >&2
+echo "PASS: .oh/skills/wiki/corpus/README.md Index matches the git-tracked corpus/*.md frontmatter" >&2
 exit 0

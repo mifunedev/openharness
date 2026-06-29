@@ -9,11 +9,11 @@
       "title": "/weigh deterministic scorer + contract",
       "description": "As a harness operator, I want a pure, version-controlled scorer that owns the trajectory weighting, so weighting is transparent and tunable rather than a model black box.",
       "acceptanceCriteria": [
-        ".mifune/skills/weigh/scripts/score-trajectories.mjs is pure (no git, no Date.now(), no model), zero-dep; exports validateWeights, weight, select, clamp, DEFAULT_WEIGHTS, and TRAJECTORY_SCHEMA (named JSON-Schema, the single source of truth US-002 sampling cites); frozen DEFAULT_WEIGHTS (consistency:30, evalPass:20, auditPass:15, cost:10, judge:25, sum 100); CLI --cohort/--weights/--method/--now/--soft/--dry-run. When --now is absent it throws + exits 1 (no Date.now() fallback). CLI-entrypoint detection uses a basename match on process.argv[1] (ends with score-trajectories.mjs), NOT import.meta.url===pathToFileURL(argv[1]) (symlink no-op trap).",
+        ".oh/skills/weigh/scripts/score-trajectories.mjs is pure (no git, no Date.now(), no model), zero-dep; exports validateWeights, weight, select, clamp, DEFAULT_WEIGHTS, and TRAJECTORY_SCHEMA (named JSON-Schema, the single source of truth US-002 sampling cites); frozen DEFAULT_WEIGHTS (consistency:30, evalPass:20, auditPass:15, cost:10, judge:25, sum 100); CLI --cohort/--weights/--method/--now/--soft/--dry-run. When --now is absent it throws + exits 1 (no Date.now() fallback). CLI-entrypoint detection uses a basename match on process.argv[1] (ends with score-trajectories.mjs), NOT import.meta.url===pathToFileURL(argv[1]) (symlink no-op trap).",
         "weight() normalizes sub-signals to [0,1] and emits a reconstructable weightBreakdown; eligible excludes evalRc===1 || auditVerdict==='FAIL' (hard floor; --soft down-weights).",
         "select() supports best-of-n (default argmax), vote (largest cluster), softmax, synthesis (top-K); when nothing is eligible it returns { selected: null, reason: 'NO-SELECTION', floorViolations: [{id, cause}] } (never a silent least-bad pick). validateWeights() rejects non-object/missing-key/negative/non-finite/unknown-key.",
-        ".mifune/skills/weigh/scripts/__tests__/score-trajectories.test.mjs (node --test) covers weight/floor/each-method/breakdown/judge:0-determinism, the NO-SELECTION shape (all-floor-fail cohort), and the absent---now throw, with __tests__/fixtures/cohort-sample.json (incl. an evalRc:1 floor-breaker); the suite passes.",
-        ".mifune/skills/weigh/references/scoring.md documents the formula, sub-signal table, weights validation, hard-floor + --soft semantics, the judge:0 determinism note, and the judge:0-vs-judge:25 selection signal an operator watches when tuning."
+        ".oh/skills/weigh/scripts/__tests__/score-trajectories.test.mjs (node --test) covers weight/floor/each-method/breakdown/judge:0-determinism, the NO-SELECTION shape (all-floor-fail cohort), and the absent---now throw, with __tests__/fixtures/cohort-sample.json (incl. an evalRc:1 floor-breaker); the suite passes.",
+        ".oh/skills/weigh/references/scoring.md documents the formula, sub-signal table, weights validation, hard-floor + --soft semantics, the judge:0 determinism note, and the judge:0-vs-judge:25 selection signal an operator watches when tuning."
       ],
       "priority": 1,
       "passes": true,
@@ -24,8 +24,8 @@
       "title": "/rlm query-context primitive + tests",
       "description": "As a harness operator, I want a pure helper that addresses a large artifact without ingesting it, so a root agent can grep/slice context instead of suffering context rot.",
       "acceptanceCriteria": [
-        ".mifune/skills/rlm/scripts/query-context.mjs is pure, zero-dep; CLI <path> [--grep <re>] [--slice L1:L2] [--chunk <size>] [--map]; returns the addressed slice + a chunk map (line ranges, byte offsets, match locations); enforces a max-bytes guard (never returns an unbounded slice).",
-        ".mifune/skills/rlm/scripts/__tests__/query-context.test.mjs (node --test) covers chunk-map, slice, grep, and the max-bytes guard with a fixture; the suite passes."
+        ".oh/skills/rlm/scripts/query-context.mjs is pure, zero-dep; CLI <path> [--grep <re>] [--slice L1:L2] [--chunk <size>] [--map]; returns the addressed slice + a chunk map (line ranges, byte offsets, match locations); enforces a max-bytes guard (never returns an unbounded slice).",
+        ".oh/skills/rlm/scripts/__tests__/query-context.test.mjs (node --test) covers chunk-map, slice, grep, and the max-bytes guard with a fixture; the suite passes."
       ],
       "priority": 2,
       "passes": true,
@@ -36,9 +36,9 @@
       "title": "Wiki entry (compound knowledge)",
       "description": "As a future maintainer, I want the RLM concept captured so it is reused, not re-derived.",
       "acceptanceCriteria": [
-        ".mifune/skills/wiki/corpus/recursive-language-models.md exists with valid frontmatter (confidence: provisional, updated: date, related: cross-links), <=600 words on RLM context-as-environment + weighted-trajectory selection and how the harness adapts it.",
-        "An immutable snapshot exists under .mifune/skills/wiki/corpus/raw/<date>-recursive-language-models.md.",
-        ".mifune/skills/wiki/corpus/README.md is regenerated; bash .oh/evals/probes/wiki-readme-index.sh passes; curated entry + raw snapshot are force-added (git add -f) and verified tracked via git ls-files (corpus is gitignored-by-default, so a forgotten force-add passes CI silently)."
+        ".oh/skills/wiki/corpus/recursive-language-models.md exists with valid frontmatter (confidence: provisional, updated: date, related: cross-links), <=600 words on RLM context-as-environment + weighted-trajectory selection and how the harness adapts it.",
+        "An immutable snapshot exists under .oh/skills/wiki/corpus/raw/<date>-recursive-language-models.md.",
+        ".oh/skills/wiki/corpus/README.md is regenerated; bash .oh/evals/probes/wiki-readme-index.sh passes; curated entry + raw snapshot are force-added (git add -f) and verified tracked via git ls-files (corpus is gitignored-by-default, so a forgotten force-add passes CI silently)."
       ],
       "priority": 3,
       "passes": true,
@@ -49,8 +49,8 @@
       "title": "/weigh skill + workflow-shape reference",
       "description": "As a harness operator, I want a /weigh skill that runs the sample->score->select procedure over the Workflow tool.",
       "acceptanceCriteria": [
-        ".mifune/skills/weigh/SKILL.md has valid frontmatter (name: weigh, TRIGGER description, disable-model-invocation: true, allowed-tools: Read, Grep, Bash, Agent (the sampling step spawns agents), argument-hint) and a numbered procedure: resolve config (N default 4 cap 8) -> sample N agents (one message, different angles, against TRAJECTORY_SCHEMA exported by score-trajectories.mjs; --dry-run stops) -> attach signals (/eval, /audit by reference + clustering + optional verifier) -> weight+select via the scorer -> aggregate for synthesis -> persist + log to gitignored .oh/memory/<UTC-date>/weigh-*.",
-        ".mifune/skills/weigh/references/workflow-shape.md documents the seam: sampling/judging are the Workflow tool's substrate; the scorer is the part we own.",
+        ".oh/skills/weigh/SKILL.md has valid frontmatter (name: weigh, TRIGGER description, disable-model-invocation: true, allowed-tools: Read, Grep, Bash, Agent (the sampling step spawns agents), argument-hint) and a numbered procedure: resolve config (N default 4 cap 8) -> sample N agents (one message, different angles, against TRAJECTORY_SCHEMA exported by score-trajectories.mjs; --dry-run stops) -> attach signals (/eval, /audit by reference + clustering + optional verifier) -> weight+select via the scorer -> aggregate for synthesis -> persist + log to gitignored .oh/memory/<UTC-date>/weigh-*.",
+        ".oh/skills/weigh/references/workflow-shape.md documents the seam: sampling/judging are the Workflow tool's substrate; the scorer is the part we own.",
         "/skill-lint passes on weigh; the name does not collide with built-ins or Pi packages."
       ],
       "priority": 4,
@@ -74,8 +74,8 @@
       "title": "/rlm skill + recursion-budget reference",
       "description": "As a harness operator, I want a /rlm skill that decomposes a large artifact and recurses sub-LM calls under a bounded budget, reusing the existing recursion substrate.",
       "acceptanceCriteria": [
-        ".mifune/skills/rlm/SKILL.md has valid frontmatter (name: rlm, TRIGGER, disable-model-invocation: true) and a numbered procedure: artifact + query -> chunk-map via query-context.mjs --map -> recurse sub-agents over relevant chunks (bounded by depth/children/step budget) -> aggregate (pipe competing per-chunk answers through /weigh) -> persist the recursion trace to gitignored .oh/memory/<UTC-date>/rlm-*.",
-        ".mifune/skills/rlm/references/recursion-budget.md points at the Max depth N / children M / step S triple in .mifune/skills/advisor/references/recursive-delegation.md and adds a per-run token ceiling; the procedure reuses .oh/scripts/ralph.sh and .worktrees/ by reference (no edits).",
+        ".oh/skills/rlm/SKILL.md has valid frontmatter (name: rlm, TRIGGER, disable-model-invocation: true) and a numbered procedure: artifact + query -> chunk-map via query-context.mjs --map -> recurse sub-agents over relevant chunks (bounded by depth/children/step budget) -> aggregate (pipe competing per-chunk answers through /weigh) -> persist the recursion trace to gitignored .oh/memory/<UTC-date>/rlm-*.",
+        ".oh/skills/rlm/references/recursion-budget.md points at the Max depth N / children M / step S triple in .oh/skills/advisor/references/recursive-delegation.md and adds a per-run token ceiling; the procedure reuses .oh/scripts/ralph.sh and .worktrees/ by reference (no edits).",
         "/skill-lint passes on rlm; the name does not collide."
       ],
       "priority": 6,
@@ -98,8 +98,8 @@
       "title": "/critique weighted by self-consistency (live seam)",
       "description": "As a harness operator, I want /critique to down-weight flaky findings, proving /weigh end-to-end on a real node.",
       "acceptanceCriteria": [
-        "OVERRIDE NOTE: /spec critique (in .claude/protected-paths.txt) dispatches to .mifune/skills/critique/SKILL.md; this edit is ADDITIVE and DEFAULT-OFF (no deletion, no change to the critique.md headings /approve + ship-spec Stage 4 parse, no change to the default 2-critic run).",
-        ".mifune/skills/critique/SKILL.md gains an opt-in default-off 'self-consistency weighting (optional)' subsection: with a --weigh flag (or documented env var) each lens samples K critics (K default 1 = exact current behavior; opt-in K=2, hard cap 2) routed through /weigh (vote method) so a finding firing 1/K is down-weighted vs. K/K before the SEVERITY tally. Default (no flag) = today's behavior with zero added agent calls.",
+        "OVERRIDE NOTE: /spec critique (in .claude/protected-paths.txt) dispatches to .oh/skills/critique/SKILL.md; this edit is ADDITIVE and DEFAULT-OFF (no deletion, no change to the critique.md headings /approve + ship-spec Stage 4 parse, no change to the default 2-critic run).",
+        ".oh/skills/critique/SKILL.md gains an opt-in default-off 'self-consistency weighting (optional)' subsection: with a --weigh flag (or documented env var) each lens samples K critics (K default 1 = exact current behavior; opt-in K=2, hard cap 2) routed through /weigh (vote method) so a finding firing 1/K is down-weighted vs. K/K before the SEVERITY tally. Default (no flag) = today's behavior with zero added agent calls.",
         "The critique.md output schema (## Critic A, ## Critic B, ## Synthesis, the SEVERITY tally line, the Recommendation) is unchanged.",
         ".oh/evals/probes/spec-family-contract.sh gains a concrete assertion that critique.md's required headings are still emitted (schema-preserving); the /eval suite stays green; the PR description names this protected-skill edit explicitly."
       ],

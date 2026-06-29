@@ -6,9 +6,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-QC="$ROOT/.mifune/skills/rlm/scripts/query-context.mjs"
-BUDGET="$ROOT/.mifune/skills/rlm/references/recursion-budget.md"
-FIXTURE="$ROOT/.mifune/skills/rlm/scripts/__tests__/fixtures/big-sample.txt"
+QC="$ROOT/.oh/skills/rlm/scripts/query-context.mjs"
+BUDGET="$ROOT/.oh/skills/rlm/references/recursion-budget.md"
+FIXTURE="$ROOT/.oh/skills/rlm/scripts/__tests__/fixtures/big-sample.txt"
 
 # --- Assertion 1: prerequisites absent => SKIPPED (not a regression) ----------
 if ! command -v node >/dev/null 2>&1; then

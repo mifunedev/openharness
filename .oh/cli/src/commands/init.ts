@@ -373,7 +373,8 @@ export async function runInit(
       prompt.info("  1. git submodule update --init   (resolves the provider skill symlinks)");
     }
     prompt.info("  2. Put secrets in .devcontainer/.env (gitignored — never commit them)");
-    prompt.info("  3. Build the sandbox:  make sandbox   (or reopen in container)");
+    prompt.info("  3. Build the sandbox:  reopen in container, or");
+    prompt.info("       docker compose -f .devcontainer/docker-compose.yml up -d --build");
     prompt.info("  4. Build the CLI:  cd .oh/cli && npm install && npm run build");
     prompt.info("  5. Commit .oh/, the provider surfaces, AGENTS.md, and .gitmodules");
   } else {

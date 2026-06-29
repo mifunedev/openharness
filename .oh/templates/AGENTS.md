@@ -93,7 +93,7 @@ your-project/
 1. `oh init` already scaffolded this layout.
 2. Materialize the skill pack: `git submodule update --init` (if `.mifune/` is empty).
 3. Put secrets in `.devcontainer/.env` (gitignored — never commit them).
-4. Build the sandbox image and reopen in container: `make sandbox` (or your
-   editor's "Reopen in Container"). The published image is a documented fallback
-   in `.devcontainer/devcontainer.json`.
+4. Build the sandbox image: reopen in your editor's Dev Container, or
+   `docker compose -f .devcontainer/docker-compose.yml up -d --build`. The
+   published image is a documented fallback in `.devcontainer/devcontainer.json`.
 5. Commit `.oh/`, the provider surfaces, and `.gitmodules`.

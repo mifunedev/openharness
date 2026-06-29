@@ -149,11 +149,8 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Ensure Mifune submodule
+      - name: Link provider skills
         run: bash .oh/scripts/link-providers.sh --init
-
-      - name: Run root Mifune checkout probe
-        run: bash .oh/evals/probes/mifune-checkout.sh
 
       # Provision Node explicitly so the suite is runner-agnostic: GitHub-hosted
       # ships Node preinstalled, the self-hosted runner does not.

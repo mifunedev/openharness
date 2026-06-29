@@ -101,11 +101,8 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Ensure Mifune submodule
+      - name: Link provider skills
         run: bash .oh/scripts/link-providers.sh --init
-
-      - name: Run root Mifune checkout probe
-        run: bash .oh/evals/probes/mifune-checkout.sh
 
       - name: Run eval probe suite
         run: bash .oh/skills/eval/run.sh

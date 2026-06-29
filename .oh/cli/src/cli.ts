@@ -115,6 +115,8 @@ and configures the .claude/.codex/.pi/.hermes provider surfaces. In a TTY
 Flags:
   --minimal          Thin scaffold only (compat files + vendored .oh/) — the old
                      behavior; skips devcontainer/providers/.mifune/seeds
+  --copy-claude      Write CLAUDE.md as a copy instead of a symlink -> AGENTS.md
+                     (for filesystems without symlink support)
   --yes              Non-interactive: skip the wizard, keep template defaults
   --from <dir>       Vendor the .oh/ payload from this built OpenHarness checkout
                      (defaults to the CLI's own .oh/; installed-binary bundling
@@ -160,6 +162,7 @@ async function main(argv: string[]): Promise<number> {
     let force = false;
     let dryRun = false;
     let minimal = false;
+    let copyClaude = false;
 
     const rest = argv.slice(1);
     for (let i = 0; i < rest.length; i++) {
@@ -172,6 +175,8 @@ async function main(argv: string[]): Promise<number> {
         yes = true;
       } else if (token === "--minimal") {
         minimal = true;
+      } else if (token === "--copy-claude") {
+        copyClaude = true;
       } else if (token === "--from") {
         const value = rest[i + 1];
         if (value === undefined) {
@@ -212,6 +217,7 @@ async function main(argv: string[]): Promise<number> {
       force,
       dryRun,
       minimal,
+      copyClaude,
     };
     const io: InitIO = {
       stdout: (s) => process.stdout.write(s),

@@ -1,0 +1,12 @@
+# Project-local Codex CLI defaults for OpenHarness.
+# Docker is the isolation boundary, so Codex runs without prompts or its own
+# workspace sandbox. Validate any permission-profile change against `codex`.
+
+model = "gpt-5.5"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+model_reasoning_effort = "medium"
+
+[features]
+hooks = true

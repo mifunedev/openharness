@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   existsSync,
+  lstatSync,
   mkdtempSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -510,5 +512,117 @@ describe("runInit", () => {
     expect(m.include).toEqual(
       expect.arrayContaining(["context/**", "crons/**", "evals/**"]),
     );
+  });
+
+  // --- Full scaffold (P3: AGENTS-lite + CLAUDE + .mifune + provider surfaces) -
+
+  it("full (default): writes the project AGENTS.md-lite", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    const agents = readFileSync(join(t, "AGENTS.md"), "utf8");
+    expect(agents).toContain("your OpenHarness project");
+    expect(agents).toContain("Internal repo map");
+    expect(agents).toContain("/spec");
+  });
+
+  it("full (default): CLAUDE.md is a symlink -> AGENTS.md", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    const claude = join(t, "CLAUDE.md");
+    expect(lstatSync(claude).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(claude)).toBe("AGENTS.md");
+    // Resolves to the same content as AGENTS.md.
+    expect(readFileSync(claude, "utf8")).toBe(readFileSync(join(t, "AGENTS.md"), "utf8"));
+  });
+
+  it("--copy-claude: CLAUDE.md is a real file copy, not a symlink", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true, copyClaude: true }), makeIO().io)).toBe(0);
+    const claude = join(t, "CLAUDE.md");
+    expect(lstatSync(claude).isSymbolicLink()).toBe(false);
+    expect(readFileSync(claude, "utf8")).toBe(readFileSync(join(t, "AGENTS.md"), "utf8"));
+  });
+
+  it("full (default): writes .gitmodules with the .mifune entry", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    const gm = readFileSync(join(t, ".gitmodules"), "utf8");
+    expect(gm).toContain('[submodule ".mifune"]');
+    expect(gm).toContain("path = .mifune");
+    expect(gm).toContain("ryaneggz/mifune.git");
+    expect(gm).toContain("branch = development");
+  });
+
+  it("full (default): scaffolds curated provider config surfaces", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    for (const rel of [
+      ".claude/settings.json",
+      ".claude/protected-paths.txt",
+      ".claude/.example.env.claude",
+      ".codex/config.toml",
+      ".codex/hooks.json",
+      ".codex/hooks/deny-env-dump.sh",
+      ".pi/settings.json",
+      ".pi/APPEND_SYSTEM.md",
+      ".hermes/config.yaml",
+      ".hermes/SOUL.md",
+      ".hermes/README.md",
+    ]) {
+      expect(existsSync(join(t, rel))).toBe(true);
+    }
+    // settings.json is valid JSON and is the trimmed project default (no MCP / Slack).
+    const cs = JSON.parse(readFileSync(join(t, ".claude/settings.json"), "utf8"));
+    expect(cs.enabledMcpjsonServers).toBeUndefined();
+    // The codex hook keeps its +x bit.
+    expect(statSync(join(t, ".codex/hooks/deny-env-dump.sh")).mode & 0o111).not.toBe(0);
+  });
+
+  it("full (default): creates provider skill/agent/hook symlinks", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    const links: [string, string][] = [
+      [".claude/skills", "../.mifune/skills"],
+      [".claude/agents", "../.mifune/agents"],
+      [".claude/hooks", "../.mifune/hooks"],
+      [".codex/skills", "../.mifune/skills"],
+      [".codex/agents", "../.claude/agents"],
+      [".pi/skills", "../.mifune/skills"],
+    ];
+    for (const [rel, target] of links) {
+      const p = join(t, rel);
+      expect(lstatSync(p).isSymbolicLink()).toBe(true);
+      expect(readlinkSync(p)).toBe(target);
+    }
+  });
+
+  it("provider symlinks resolve once .mifune materializes (fake submodule)", async () => {
+    const t = freshTmp();
+    const io: InitIO = {
+      stdout: () => {},
+      stderr: () => {},
+      // Stand in for the network: drop a fake .mifune skill tree into the target.
+      ensureMifune: (dir) => {
+        const skill = join(dir, ".mifune/skills/git");
+        mkdirSync(skill, { recursive: true });
+        writeFileSync(join(skill, "SKILL.md"), "# git\n");
+        return true;
+      },
+    };
+    expect(await runInit(opts(t, { yes: true }), io)).toBe(0);
+    // The .claude/.codex/.pi skills symlinks now resolve to the fake skill.
+    expect(existsSync(join(t, ".claude/skills/git/SKILL.md"))).toBe(true);
+    expect(existsSync(join(t, ".codex/skills/git/SKILL.md"))).toBe(true);
+    expect(existsSync(join(t, ".pi/skills/git/SKILL.md"))).toBe(true);
+  });
+
+  it("--minimal: no CLAUDE.md / .gitmodules / provider surfaces", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true, minimal: true }), makeIO().io)).toBe(0);
+    expect(existsSync(join(t, "CLAUDE.md"))).toBe(false);
+    expect(existsSync(join(t, ".gitmodules"))).toBe(false);
+    expect(existsSync(join(t, ".claude/settings.json"))).toBe(false);
+    expect(existsSync(join(t, ".codex/config.toml"))).toBe(false);
+    expect(existsSync(join(t, ".pi/settings.json"))).toBe(false);
   });
 });

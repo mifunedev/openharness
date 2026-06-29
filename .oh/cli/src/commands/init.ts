@@ -31,6 +31,13 @@ export interface InitIO {
   ask?: (q: string) => Promise<string>;
   /** Secret reader for the wizard. Defaults to `prompt.askSecret`. */
   askSecret?: (q: string) => Promise<string>;
+  /**
+   * Materialize the `.mifune` submodule into `targetDir`, returning true iff it
+   * is present afterward. Defaults to `defaultEnsureMifune` (a `git submodule
+   * add` against the target, network-dependent and non-fatal). Tests inject a
+   * stub so they never hit the network.
+   */
+  ensureMifune?: (targetDir: string, dryRun: boolean) => boolean;
 }
 
 export interface InitOptions {
@@ -51,6 +58,11 @@ export interface InitOptions {
    * devcontainer, empty seeds, provider surfaces, or `.mifune` wiring.
    */
   minimal?: boolean;
+  /**
+   * Write `CLAUDE.md` as a COPY of `AGENTS.md` instead of a symlink — for
+   * filesystems without symlink support. Default: symlink.
+   */
+  copyClaude?: boolean;
 }
 
 /**
@@ -81,8 +93,10 @@ export async function runInit(
   const dryRun = opts.dryRun === true;
   const force = opts.force === true;
   const minimal = opts.minimal === true;
+  const copyClaude = opts.copyClaude === true;
   const prefix = dryRun ? "[dry-run] " : "";
   const report = (line: string): void => io.stdout(`${prefix}${line}\n`);
+  let mifuneMaterialized = false;
 
   // Precondition: templates dir must exist and be a directory.
   if (!existsSync(templatesDir) || !statSync(templatesDir).isDirectory()) {
@@ -235,6 +249,34 @@ export async function runInit(
         `Source devcontainer not found at ${sourceDevcontainer}; skipped full .devcontainer/ scaffold.`,
       );
     }
+
+    // Phase 3a: CLAUDE.md alias of AGENTS.md (AGENTS.md itself comes from the
+    // template scaffold above). Symlink by default; copy under --copy-claude.
+    writeClaudeAlias(wr, copyClaude);
+
+    // Phase 3b: curated, secret-free provider config surfaces (.claude/.codex/
+    // .pi/.hermes). Authored project defaults — NOT the harness's live files.
+    const fullTemplates = path.join(templatesDir, "full");
+    if (existsSync(fullTemplates) && statSync(fullTemplates).isDirectory()) {
+      const rels: string[] = [];
+      collectRealFiles(fullTemplates, fullTemplates, rels);
+      rels.sort();
+      for (const rel of rels) {
+        copyFileReport(wr, path.join(fullTemplates, rel), rel);
+      }
+    }
+
+    // Phase 3c: provider skill/agent/hook symlinks. ensure-mifune.sh only
+    // VERIFIES these (it assumes the harness already tracks them), so init
+    // CREATES them for the target. They resolve once .mifune materializes.
+    for (const [linkRel, linkTarget] of PROVIDER_LINKS) {
+      linkReport(wr, linkRel, linkTarget);
+    }
+
+    // Phase 3d: .mifune submodule — materialize (non-fatal) + .gitmodules entry.
+    const ensureMifuneFn = io.ensureMifune ?? defaultEnsureMifune;
+    mifuneMaterialized = ensureMifuneFn(t, dryRun);
+    ensureGitmodules(wr);
   }
 
   // --- Interactive config wizard (US-002/003) ---------------------------------
@@ -291,6 +333,18 @@ export async function runInit(
     prompt.info("");
     prompt.ok(`Vendored .oh/ (${vCreated + vOverwritten} files) into ${t}`);
     prompt.info(".oh/ is your portable control plane — commit it to your repo.");
+    if (!minimal) {
+      if (mifuneMaterialized) {
+        prompt.ok(".mifune submodule materialized; provider skills are live.");
+      } else {
+        prompt.warn(
+          ".mifune is not materialized yet (offline or not a git repo).",
+        );
+        prompt.info(
+          "Run: git submodule update --init   (the provider symlinks resolve once it lands)",
+        );
+      }
+    }
     prompt.info(
       "Build the CLI before the `oh` binary works:  cd .oh/cli && npm install && npm run build",
     );
@@ -453,6 +507,128 @@ const WORKSPACE_README =
   "In-container agent workspace template. The harness image copies this into " +
   "`$OH_PROJECT_ROOT/workspace/` at build time. Seed it with your project's " +
   "in-sandbox agent scaffolding (e.g. an `AGENTS.md` for the running agent).\n";
+
+// The pinned shared skill pack. Mirrors the harness `.gitmodules` + the
+// ensure-mifune.sh EXPECTED_URL.
+const MIFUNE_URL = "https://github.com/ryaneggz/mifune.git";
+
+// Provider skill/agent/hook symlinks. ensure-mifune.sh only verifies these;
+// init creates them for the target. `.codex` reuses `.claude`'s agents/specs.
+const PROVIDER_LINKS: [string, string][] = [
+  [".pi/skills", "../.mifune/skills"],
+  [".claude/skills", "../.mifune/skills"],
+  [".codex/skills", "../.mifune/skills"],
+  [".claude/agents", "../.mifune/agents"],
+  [".claude/hooks", "../.mifune/hooks"],
+  [".codex/agents", "../.claude/agents"],
+  [".codex/specs", "../.claude/specs"],
+];
+
+/** Create/refresh a symlink at `<t>/<linkRel>` → `linkTarget` (create/skip/overwrite). */
+function linkReport(ctx: WriteCtx, linkRel: string, linkTarget: string): void {
+  const dest = path.resolve(ctx.t, linkRel);
+  assertInTarget(dest, ctx.t);
+  let exists = false;
+  try {
+    lstatSync(dest);
+    exists = true;
+  } catch {
+    /* absent */
+  }
+  if (exists) {
+    let current: string | null = null;
+    try {
+      current = readlinkSync(dest);
+    } catch {
+      /* not a symlink */
+    }
+    if (current === linkTarget) {
+      ctx.report(`skip ${linkRel} (exists)`);
+      return;
+    }
+    if (!ctx.force) {
+      ctx.report(`skip ${linkRel} (exists)`);
+      return;
+    }
+    if (!ctx.dryRun) {
+      rmSync(dest, { recursive: true, force: true });
+      mkdirSync(path.dirname(dest), { recursive: true });
+      symlinkSync(linkTarget, dest);
+    }
+    ctx.report(`overwrite ${linkRel}`);
+    return;
+  }
+  if (!ctx.dryRun) {
+    mkdirSync(path.dirname(dest), { recursive: true });
+    symlinkSync(linkTarget, dest);
+  }
+  ctx.report(`create ${linkRel}`);
+}
+
+/** CLAUDE.md alias of AGENTS.md — a symlink by default, a copy under --copy-claude. */
+function writeClaudeAlias(ctx: WriteCtx, copyClaude: boolean): void {
+  if (!copyClaude) {
+    linkReport(ctx, "CLAUDE.md", "AGENTS.md");
+    return;
+  }
+  const dest = path.resolve(ctx.t, "CLAUDE.md");
+  assertInTarget(dest, ctx.t);
+  if (existsSync(dest) && !ctx.force) {
+    ctx.report("skip CLAUDE.md (exists)");
+    return;
+  }
+  const verb = existsSync(dest) ? "overwrite" : "create";
+  if (!ctx.dryRun) {
+    const agents = path.join(ctx.t, "AGENTS.md");
+    const body = existsSync(agents) ? readFileSync(agents, "utf8") : "";
+    writeFileSync(dest, body, "utf8");
+  }
+  ctx.report(`${verb} CLAUDE.md (copy of AGENTS.md)`);
+}
+
+/** Ensure `<t>/.gitmodules` carries the `.mifune` submodule entry. */
+function ensureGitmodules(ctx: WriteCtx): void {
+  const p = path.resolve(ctx.t, ".gitmodules");
+  const entry =
+    `[submodule ".mifune"]\n\tpath = .mifune\n\turl = ${MIFUNE_URL}\n\tbranch = development\n`;
+  if (existsSync(p)) {
+    const current = readFileSync(p, "utf8");
+    if (current.includes('submodule ".mifune"')) {
+      ctx.report("skip .gitmodules (exists)");
+      return;
+    }
+    if (!ctx.dryRun) {
+      writeFileSync(p, (current.endsWith("\n") ? current : current + "\n") + entry, "utf8");
+    }
+    ctx.report("update .gitmodules (+.mifune)");
+    return;
+  }
+  if (!ctx.dryRun) writeFileSync(p, entry, "utf8");
+  ctx.report("create .gitmodules");
+}
+
+/**
+ * Default `.mifune` materialization: `git submodule add` against the target.
+ * Returns true iff `.mifune` is present afterward. Non-fatal — any failure
+ * (offline, no git repo, already registered) leaves the symlinks in place and
+ * the caller prints a `git submodule update --init` instruction.
+ */
+function defaultEnsureMifune(t: string, dryRun: boolean): boolean {
+  const marker = path.join(t, ".mifune", "skills", "git", "SKILL.md");
+  if (existsSync(marker)) return true;
+  if (dryRun) return false;
+  if (!existsSync(path.join(t, ".git"))) return false;
+  try {
+    execFileSync(
+      "git",
+      ["-C", t, "submodule", "add", "--force", "-b", "development", MIFUNE_URL, ".mifune"],
+      { stdio: "ignore", timeout: 120_000 },
+    );
+  } catch {
+    return false;
+  }
+  return existsSync(marker);
+}
 
 // ---------------------------------------------------------------------------
 // Wizard

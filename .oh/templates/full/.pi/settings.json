@@ -1,0 +1,13 @@
+{
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.5",
+  "defaultThinkingLevel": "xhigh",
+  "theme": "dark",
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3,
+    "baseDelayMs": 2000
+  },
+  "skills": ["./skills"],
+  "enableSkillCommands": true
+}

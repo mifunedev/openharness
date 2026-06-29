@@ -8,7 +8,12 @@
     "maxRetries": 3,
     "baseDelayMs": 2000
   },
+  "steeringMode": "one-at-a-time",
+  "followUpMode": "one-at-a-time",
+  "extensions": ["./extensions"],
   "skills": ["./skills"],
+  "prompts": ["./prompts"],
+  "themes": ["./themes"],
   "enableSkillCommands": true,
   "packages": [
     "npm:@tintinweb/pi-subagents@0.7.1",

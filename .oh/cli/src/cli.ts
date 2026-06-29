@@ -102,19 +102,25 @@ function printInitHelp(): void {
   process.stdout.write(`oh init — Equip a repo with OpenHarness
 
 Usage:
-  oh init [dir] [--yes] [--from <dir>] [--force] [--dry-run] [--templates <dir>]
+  oh init [dir] [--minimal] [--yes] [--from <dir>] [--force] [--dry-run] [--templates <dir>]
 
-Scaffolds the OpenHarness compat files AND vendors the .oh/ control plane into a
-target directory (default: cwd). In a TTY (without --yes) it runs a short config
-wizard for harness.yaml + .devcontainer/.env.
+Scaffolds a complete, locally-buildable OpenHarness project into a target repo
+(default: cwd): vendors the .oh/ control plane (incl. context/crons/evals),
+seeds empty memory/ + tasks/, copies the full .devcontainer/ for a local image
+build, writes a project AGENTS.md (+ CLAUDE.md), wires the .mifune submodule,
+and configures the .claude/.codex/.pi/.hermes provider surfaces. In a TTY
+(without --yes) it runs a short config wizard for harness.yaml +
+.devcontainer/.env.
 
 Flags:
+  --minimal          Thin scaffold only (compat files + vendored .oh/) — the old
+                     behavior; skips devcontainer/providers/.mifune/seeds
   --yes              Non-interactive: skip the wizard, keep template defaults
   --from <dir>       Vendor the .oh/ payload from this built OpenHarness checkout
                      (defaults to the CLI's own .oh/; installed-binary bundling
                      is deferred, #531)
   --force            Overwrite existing files (prints the overwrite count)
-  --dry-run          Print the plan without writing anything
+  --dry-run          Print the whole plan without writing anything
   --templates <dir>  Override the scaffold template source directory
 `);
 }
@@ -153,6 +159,7 @@ async function main(argv: string[]): Promise<number> {
     let yes = false;
     let force = false;
     let dryRun = false;
+    let minimal = false;
 
     const rest = argv.slice(1);
     for (let i = 0; i < rest.length; i++) {
@@ -163,6 +170,8 @@ async function main(argv: string[]): Promise<number> {
         dryRun = true;
       } else if (token === "--yes") {
         yes = true;
+      } else if (token === "--minimal") {
+        minimal = true;
       } else if (token === "--from") {
         const value = rest[i + 1];
         if (value === undefined) {
@@ -202,6 +211,7 @@ async function main(argv: string[]): Promise<number> {
       yes,
       force,
       dryRun,
+      minimal,
     };
     const io: InitIO = {
       stdout: (s) => process.stdout.write(s),

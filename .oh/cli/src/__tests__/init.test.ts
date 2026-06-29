@@ -418,4 +418,97 @@ describe("runInit", () => {
     expect(hy).toMatch(/^  # name: my-project/m);
     expect(existsSync(join(t, ".devcontainer/.env"))).toBe(false);
   });
+
+  // --- Full scaffold (P2: vendor content + empty seeds + full devcontainer) ---
+
+  it("full (default): vendors context/crons/evals as content", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    expect(existsSync(join(t, ".oh/context/REPO_MAP.md"))).toBe(true);
+    expect(existsSync(join(t, ".oh/crons/heartbeat.md"))).toBe(true);
+    // evals/ ships its probe suite as content.
+    expect(readdirSync(join(t, ".oh/evals")).length).toBeGreaterThan(0);
+  });
+
+  it("full (default): seeds memory/ and tasks/ EMPTY (README stub only)", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    expect(readdirSync(join(t, ".oh/memory"))).toEqual(["README.md"]);
+    expect(readdirSync(join(t, ".oh/tasks"))).toEqual(["README.md"]);
+    // This harness's own MEMORY.md / PRDs are never shipped.
+    expect(existsSync(join(t, ".oh/memory/MEMORY.md"))).toBe(false);
+  });
+
+  it("full (default): copies the full .devcontainer/ + a local-build devcontainer.json", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    expect(existsSync(join(t, ".devcontainer/Dockerfile"))).toBe(true);
+    expect(existsSync(join(t, ".devcontainer/docker-compose.yml"))).toBe(true);
+    expect(existsSync(join(t, ".devcontainer/entrypoint.sh"))).toBe(true);
+
+    const dc = JSON.parse(
+      readFileSync(join(t, ".devcontainer/devcontainer.json"), "utf8"),
+    );
+    expect(dc.dockerComposeFile).toBe("docker-compose.yml");
+    expect(dc.service).toBe("sandbox");
+    expect(dc.workspaceFolder).toBe("/home/sandbox/project");
+    // The ghcr image is present ONLY as a documented fallback key, never active.
+    expect(dc.image).toBeUndefined();
+    expect(dc["// image"]).toContain("ghcr.io/mifunedev/openharness");
+
+    // The relocated compose build context targets the repo root (one level up).
+    const compose = readFileSync(join(t, ".devcontainer/docker-compose.yml"), "utf8");
+    expect(compose).toContain("context: ..");
+    expect(compose).not.toContain("context: ../..");
+  });
+
+  it("full (default): seeds a workspace/ stub for the image build", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    expect(existsSync(join(t, "workspace/README.md"))).toBe(true);
+  });
+
+  it("--minimal: thin scaffold only (no full devcontainer, no empty seeds, no workspace)", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true, minimal: true }), makeIO().io)).toBe(0);
+    // Thin compat files + vendored .oh/ are still present.
+    expect(existsSync(join(t, ".oh/manifest.json"))).toBe(true);
+    expect(existsSync(join(t, "AGENTS.md"))).toBe(true);
+    // Full-scaffold-only artifacts are absent.
+    expect(existsSync(join(t, ".devcontainer/Dockerfile"))).toBe(false);
+    expect(existsSync(join(t, ".oh/memory/README.md"))).toBe(false);
+    expect(existsSync(join(t, "workspace/README.md"))).toBe(false);
+    // The thin devcontainer.json stub is image-based (no dockerComposeFile).
+    const dc = JSON.parse(
+      readFileSync(join(t, ".devcontainer/devcontainer.json"), "utf8"),
+    );
+    expect(dc.image).toContain("ghcr.io/mifunedev/openharness");
+    expect(dc.dockerComposeFile).toBeUndefined();
+  });
+
+  it("never writes secret files (.env / auth.json) under --yes full init", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    const offenders: string[] = [];
+    const walk = (dir: string): void => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (e.name === ".env" || e.name === "auth.json") offenders.push(p);
+      }
+    };
+    walk(t);
+    expect(offenders).toEqual([]);
+  });
+
+  it("vendored manifest excludes secret files from the payload", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    const m = JSON.parse(readFileSync(join(t, ".oh/manifest.json"), "utf8"));
+    expect(m.exclude).toContain("**/.env");
+    expect(m.exclude).toContain("**/auth.json");
+    expect(m.include).toEqual(
+      expect.arrayContaining(["context/**", "crons/**", "evals/**"]),
+    );
+  });
 });

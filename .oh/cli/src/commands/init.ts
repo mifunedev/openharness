@@ -1,12 +1,18 @@
 import {
   existsSync,
   statSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   writeFileSync,
   copyFileSync,
+  chmodSync,
+  symlinkSync,
+  readlinkSync,
+  rmSync,
 } from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { loadManifest } from "../lib/manifest.js";
 import { copyOhPayload, type CopyReport } from "../lib/vendor.js";
@@ -39,6 +45,12 @@ export interface InitOptions {
   yes?: boolean; // non-interactive: skip the wizard
   force?: boolean;
   dryRun?: boolean;
+  /**
+   * FULL scaffold is the DEFAULT. `minimal: true` reverts to the old thin
+   * scaffold (the compat template files + vendored `.oh/` only) — no full
+   * devcontainer, empty seeds, provider surfaces, or `.mifune` wiring.
+   */
+  minimal?: boolean;
 }
 
 /**
@@ -68,6 +80,7 @@ export async function runInit(
   const templatesDir = path.resolve(opts.templatesDir);
   const dryRun = opts.dryRun === true;
   const force = opts.force === true;
+  const minimal = opts.minimal === true;
   const prefix = dryRun ? "[dry-run] " : "";
   const report = (line: string): void => io.stdout(`${prefix}${line}\n`);
 
@@ -102,9 +115,17 @@ export async function runInit(
 
   // --- Thin compat scaffold (templates) ---------------------------------------
   // Enumerate template files, skip the top-level README.md, sort for determinism.
+  // The `full/` subtree holds full-scaffold-only payloads (provider configs)
+  // copied explicitly by the full-mode phases — never by this generic walk.
+  // In full mode the local-build `.devcontainer/devcontainer.json` is written by
+  // the devcontainer phase, so the thin stub template is skipped there.
   const relpaths: string[] = [];
   walkFiles(templatesDir, templatesDir, relpaths);
-  const files = relpaths.filter((r) => r !== "README.md").sort();
+  const files = relpaths
+    .filter((r) => r !== "README.md")
+    .filter((r) => r !== "full" && !r.startsWith("full/"))
+    .filter((r) => minimal || r !== ".devcontainer/devcontainer.json")
+    .sort();
 
   for (const R of files) {
     const src = path.join(templatesDir, R);
@@ -180,6 +201,42 @@ export async function runInit(
     vReport,
   );
 
+  // --- Full scaffold phases (default; skipped under --minimal) -----------------
+  if (!minimal) {
+    const wr: WriteCtx = { t, dryRun, force, report };
+
+    // Phase 2a: seed memory/ and tasks/ as EMPTY dirs (README stub each). This
+    // harness's own memory/PRDs are NEVER shipped — init creates them fresh.
+    writeGenerated(
+      wr,
+      ".oh/memory/README.md",
+      "# memory/\n\nLong-term, append-only lessons for this project's agents. " +
+        "`MEMORY.md` is the index; daily logs live under `memory/<UTC-date>/`.\n",
+    );
+    writeGenerated(
+      wr,
+      ".oh/tasks/README.md",
+      "# tasks/\n\nPer-task `tasks/<slug>/` folders (PRD + plan + critique + " +
+        "prd.json) produced by `/spec plan` and consumed by `/spec execute`.\n",
+    );
+
+    // Phase 2b: full .devcontainer/ (Dockerfile, compose, entrypoint, *.sh) +
+    // a local-build devcontainer.json. The published image is a documented
+    // fallback only.
+    const sourceDevcontainer = path.join(sourceOh, "devcontainer");
+    if (existsSync(sourceDevcontainer) && statSync(sourceDevcontainer).isDirectory()) {
+      copyDevcontainer(sourceDevcontainer, wr);
+      writeGenerated(wr, ".devcontainer/devcontainer.json", DEVCONTAINER_JSON);
+      // The harness Dockerfile `COPY workspace/` expects an in-repo workspace
+      // template; seed a stub so a local image build has a source to copy.
+      writeGenerated(wr, "workspace/README.md", WORKSPACE_README);
+    } else {
+      prompt.warn(
+        `Source devcontainer not found at ${sourceDevcontainer}; skipped full .devcontainer/ scaffold.`,
+      );
+    }
+  }
+
   // --- Interactive config wizard (US-002/003) ---------------------------------
   // Gate: only in a real TTY (or when a reader is injected for tests), and never
   // under --yes. Production cli.ts never injects io.ask → pure isTTY gate.
@@ -242,6 +299,160 @@ export async function runInit(
 
   return 0;
 }
+
+// ---------------------------------------------------------------------------
+// Full-scaffold helpers
+// ---------------------------------------------------------------------------
+
+/** Shared context for the generated-file writers (create/skip/overwrite). */
+interface WriteCtx {
+  t: string;
+  dryRun: boolean;
+  force: boolean;
+  report: (line: string) => void;
+}
+
+/**
+ * Path-escape guard shared by every full-scaffold writer: the resolved dest
+ * MUST be `t` itself or strictly inside it. Mirrors the vendor invariant.
+ */
+function assertInTarget(dest: string, t: string): void {
+  if (!(dest === t || dest.startsWith(t + path.sep))) {
+    throw new Error(`oh init: refusing to write outside target dir: ${dest}`);
+  }
+}
+
+/**
+ * Write generated `content` to `<t>/<rel>` with create/skip/overwrite semantics
+ * identical to the thin-scaffold loop: skip an existing file unless `force`,
+ * honor `dryRun`, and report exactly one operation-log line.
+ */
+function writeGenerated(ctx: WriteCtx, rel: string, content: string): void {
+  const dest = path.resolve(ctx.t, rel);
+  assertInTarget(dest, ctx.t);
+  if (existsSync(dest)) {
+    if (ctx.force) {
+      if (!ctx.dryRun) {
+        mkdirSync(path.dirname(dest), { recursive: true });
+        writeFileSync(dest, content, "utf8");
+      }
+      ctx.report(`overwrite ${rel}`);
+    } else {
+      ctx.report(`skip ${rel} (exists)`);
+    }
+  } else {
+    if (!ctx.dryRun) {
+      mkdirSync(path.dirname(dest), { recursive: true });
+      writeFileSync(dest, content, "utf8");
+    }
+    ctx.report(`create ${rel}`);
+  }
+}
+
+/** Copy a real file (preserving the +x bit for `*.sh`) with create/skip/overwrite. */
+function copyFileReport(ctx: WriteCtx, src: string, rel: string): void {
+  const dest = path.resolve(ctx.t, rel);
+  assertInTarget(dest, ctx.t);
+  const exists = existsSync(dest);
+  if (exists && !ctx.force) {
+    ctx.report(`skip ${rel} (exists)`);
+    return;
+  }
+  if (!ctx.dryRun) {
+    mkdirSync(path.dirname(dest), { recursive: true });
+    copyFileSync(src, dest);
+    if (rel.endsWith(".sh")) chmodSync(dest, 0o755);
+  }
+  ctx.report(exists ? `overwrite ${rel}` : `create ${rel}`);
+}
+
+/**
+ * Copy the FULL source `.oh/devcontainer/` into `<t>/.devcontainer/`. The
+ * harness keeps its devcontainer under `.oh/devcontainer/` with a build context
+ * of `../..` (repo root); relocating it to the conventional `<t>/.devcontainer/`
+ * means the build context drops one level, so the copied `docker-compose.yml`
+ * and `Dockerfile` are rewritten to resolve against the target's layout. Real
+ * files only (symlinks/volatile dirs skipped).
+ */
+function copyDevcontainer(srcDir: string, ctx: WriteCtx): void {
+  const rels: string[] = [];
+  collectRealFiles(srcDir, srcDir, rels);
+  rels.sort();
+  for (const rel of rels) {
+    const src = path.join(srcDir, rel);
+    const destRel = `.devcontainer/${rel}`;
+    if (rel === "docker-compose.yml" || rel === "Dockerfile") {
+      const transformed =
+        rel === "docker-compose.yml"
+          ? rewriteComposeForTarget(readFileSync(src, "utf8"))
+          : rewriteDockerfileForTarget(readFileSync(src, "utf8"));
+      writeGenerated(ctx, destRel, transformed);
+    } else {
+      copyFileReport(ctx, src, destRel);
+    }
+  }
+}
+
+/** POSIX relpaths of every REAL file under `dir` (skip symlinks + volatile dirs). */
+function collectRealFiles(root: string, dir: string, acc: string[]): void {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const abs = path.join(dir, entry.name);
+    if (lstatSync(abs).isSymbolicLink()) continue;
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === "dist") continue;
+      collectRealFiles(root, abs, acc);
+    } else if (entry.isFile()) {
+      acc.push(path.relative(root, abs).split(path.sep).join("/"));
+    }
+  }
+}
+
+/**
+ * Rewrite the harness `docker-compose.yml` for a target that keeps the
+ * devcontainer under `<t>/.devcontainer/` (build context = repo root, one level
+ * up) and a project-scoped `OH_PROJECT_ROOT`.
+ */
+function rewriteComposeForTarget(content: string): string {
+  return content
+    .replaceAll("context: ../..", "context: ..")
+    .replaceAll("dockerfile: .oh/devcontainer/Dockerfile", "dockerfile: .devcontainer/Dockerfile")
+    .replaceAll("../..:${OH_PROJECT_ROOT", "..:${OH_PROJECT_ROOT")
+    .replaceAll("/home/sandbox/harness", "/home/sandbox/project");
+}
+
+/** Rewrite the Dockerfile's entrypoint COPY for the relocated devcontainer. */
+function rewriteDockerfileForTarget(content: string): string {
+  return content.replaceAll(
+    "COPY .oh/devcontainer/entrypoint.sh",
+    "COPY .devcontainer/entrypoint.sh",
+  );
+}
+
+// devcontainer.json for LOCAL BUILD (default). Valid JSON (JSON.parse-able): the
+// `// image` key is a documented fallback, not a real comment. To use the
+// published image instead, drop dockerComposeFile/service/shutdownAction and add
+// `"image": "ghcr.io/mifunedev/openharness:latest"`.
+const DEVCONTAINER_JSON = `${JSON.stringify(
+  {
+    name: "openharness-project",
+    dockerComposeFile: "docker-compose.yml",
+    service: "sandbox",
+    workspaceFolder: "/home/sandbox/project",
+    remoteUser: "sandbox",
+    shutdownAction: "stopCompose",
+    "//":
+      "Local build is the DEFAULT (see docker-compose.yml `build:`). To use the published image instead, drop dockerComposeFile/service/shutdownAction and add: \"image\": \"ghcr.io/mifunedev/openharness:latest\".",
+    "// image": "ghcr.io/mifunedev/openharness:latest",
+  },
+  null,
+  2,
+)}\n`;
+
+const WORKSPACE_README =
+  "# workspace/\n\n" +
+  "In-container agent workspace template. The harness image copies this into " +
+  "`$OH_PROJECT_ROOT/workspace/` at build time. Seed it with your project's " +
+  "in-sandbox agent scaffolding (e.g. an `AGENTS.md` for the running agent).\n";
 
 // ---------------------------------------------------------------------------
 // Wizard

@@ -67,6 +67,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | sandbox-boot-guard-ci | A | 2026-06-29 05:13 | PASS | issue #449 (sandbox image build CI guard) 2026-06-19 |
 | ship-spec-ready-finalization | A | 2026-06-29 05:13 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |
 | skill-paths | A | 2026-06-29 05:13 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
+| skills-dir-clean | A | 2026-06-29 06:08 | PASS | conversation 2026-06-29 — Pi parses every top-level `.md` in the skills |
 | skills-vendored | A | 2026-06-29 05:13 | PASS | absorb .mifune submodule into .oh — the skills/agents/hooks pack is vendored |
 | spec-family-contract | A | 2026-06-29 05:13 | PASS | conversation 2026-06-19 (spec-* family split, issue #265); consolidated into /spec dispatcher 2026-06-23 (one skill, args) |
 | submitted-by-trailers | A | 2026-06-29 05:13 | PASS | conversation 2026-06-12 (commit attribution trailers) |

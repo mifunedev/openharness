@@ -3,16 +3,32 @@ import {
   existsSync,
   mkdtempSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { runInit, type InitOptions, type InitIO } from "../commands/init.js";
+
+/** Sorted POSIX relpaths of every file under `<root>/.oh/`. */
+function listOh(root: string): string[] {
+  const ohRoot = join(root, ".oh");
+  const acc: string[] = [];
+  const walk = (dir: string): void => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else acc.push(relative(ohRoot, p).split("/").join("/"));
+    }
+  };
+  if (existsSync(ohRoot)) walk(ohRoot);
+  return acc.sort();
+}
 
 // THREE levels up from src/__tests__/ to reach .oh/, then into templates.
 // (Two levels would wrongly resolve .oh/cli/templates.)
@@ -20,6 +36,9 @@ const TEMPLATES = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../../../templates",
 );
+
+// The repo's own `.oh/` — the vendor source. THREE levels up from src/__tests__/.
+const SOURCE_OH = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 function makeIO(): { io: InitIO; out: string[]; err: string[] } {
   const out: string[] = [];
@@ -32,7 +51,7 @@ function makeIO(): { io: InitIO; out: string[]; err: string[] } {
 }
 
 function opts(targetDir: string, extra: Partial<InitOptions> = {}): InitOptions {
-  return { targetDir, templatesDir: TEMPLATES, ...extra };
+  return { targetDir, templatesDir: TEMPLATES, sourceOhDir: SOURCE_OH, ...extra };
 }
 
 const cleanups: string[] = [];
@@ -191,12 +210,12 @@ describe("runInit", () => {
 
     const { io } = makeIO();
     const code = await runInit(
-      { targetDir: t, templatesDir: onlyReadme },
+      { targetDir: t, templatesDir: onlyReadme, sourceOhDir: SOURCE_OH },
       io,
     );
 
     expect(code).toBe(0);
-    // Target stays empty: no scaffolded files.
+    // Template scaffold writes nothing (only README.md, which is skipped).
     expect(existsSync(join(t, ".gitignore"))).toBe(false);
     expect(existsSync(join(t, "README.md"))).toBe(false);
     expect(statSync(t).isDirectory()).toBe(true);
@@ -241,5 +260,162 @@ describe("runInit", () => {
       readFileSync(join(t, ".devcontainer/devcontainer.json"), "utf8"),
     );
     expect(parsed.workspaceFolder).toBe("/home/sandbox/project");
+  });
+
+  // --- US-001 vendor ---------------------------------------------------------
+
+  it("vendor: init --yes populates .oh/ with manifest-shipped files, excludes volatile", async () => {
+    const t = freshTmp();
+    const { io } = makeIO();
+    const code = await runInit(opts(t, { yes: true }), io);
+
+    expect(code).toBe(0);
+    expect(existsSync(join(t, ".oh/manifest.json"))).toBe(true);
+    expect(existsSync(join(t, ".oh/README.md"))).toBe(true);
+    expect(existsSync(join(t, ".oh/cli/package.json"))).toBe(true);
+    expect(existsSync(join(t, ".oh/cli/src/cli.ts"))).toBe(true);
+    expect(existsSync(join(t, ".oh/templates/harness.yaml"))).toBe(true);
+    // Volatile build artifacts are never shipped.
+    expect(existsSync(join(t, ".oh/cli/node_modules"))).toBe(false);
+    expect(existsSync(join(t, ".oh/cli/dist"))).toBe(false);
+    // devcontainer/ is not in the manifest include → not vendored.
+    expect(existsSync(join(t, ".oh/devcontainer"))).toBe(false);
+  });
+
+  it("--yes determinism: two runs vendor an identical .oh/ file set", async () => {
+    const a = freshTmp();
+    const b = freshTmp();
+    expect(await runInit(opts(a, { yes: true }), makeIO().io)).toBe(0);
+    expect(await runInit(opts(b, { yes: true }), makeIO().io)).toBe(0);
+
+    const listA = listOh(a);
+    expect(listA.length).toBeGreaterThan(0);
+    expect(listA).toEqual(listOh(b));
+  });
+
+  it("missing vendor source: exit 1, stderr names the path + deferred #531 seam", async () => {
+    const t = freshTmp();
+    const bogus = join(t, "no-such-source");
+    const { io, err } = makeIO();
+    const code = await runInit(opts(t, { sourceOhDir: bogus, yes: true }), io);
+
+    expect(code).toBe(1);
+    const msg = err.join("");
+    expect(msg).toContain(resolve(bogus));
+    expect(msg).toContain("#531");
+    // Nothing vendored on the precondition failure.
+    expect(existsSync(join(t, ".oh"))).toBe(false);
+  });
+
+  it("--dry-run leaves an empty tree (no .oh/, no scaffold)", async () => {
+    const t = freshTmp();
+    const { io, out } = makeIO();
+    const code = await runInit(opts(t, { dryRun: true, yes: true }), io);
+
+    expect(code).toBe(0);
+    expect(out.length).toBeGreaterThan(0);
+    for (const line of out) expect(line.startsWith("[dry-run] ")).toBe(true);
+    expect(out.some((l) => l.includes("create .oh/manifest.json"))).toBe(true);
+    expect(existsSync(join(t, ".oh"))).toBe(false);
+    expect(readdirSync(t)).toHaveLength(0);
+  });
+
+  it("idempotent re-run: vendor reports skip for existing .oh/, no .gitignore dupes", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    const giBefore = readFileSync(join(t, ".gitignore"), "utf8");
+    const ohBefore = listOh(t);
+
+    const { io, out } = makeIO();
+    expect(await runInit(opts(t, { yes: true }), io)).toBe(0);
+
+    expect(out.some((l) => l.includes("skip .oh/manifest.json (exists)"))).toBe(true);
+    expect(readFileSync(join(t, ".gitignore"), "utf8")).toBe(giBefore);
+    expect(listOh(t)).toEqual(ohBefore);
+  });
+
+  // --- US-002 wizard ---------------------------------------------------------
+
+  it("wizard: injected answers land in harness.yaml + .env; secrets stay out of harness.yaml; untouched lines byte-identical", async () => {
+    const t = freshTmp();
+    const ask = async (q: string): Promise<string> => {
+      if (q.includes("Sandbox name")) return "my-cool-sandbox";
+      if (q.includes("Timezone")) return "America/New_York";
+      if (q.includes("Git user name")) return "Ada Lovelace";
+      if (q.includes("Git user email")) return "ada@example.com";
+      if (q.includes("agent_browser")) return "y";
+      return ""; // decline other installs / accept blank text defaults
+    };
+    const askSecret = async (q: string): Promise<string> =>
+      q.includes("GH_TOKEN") ? "ghp_supersecrettoken12345" : "";
+
+    const out: string[] = [];
+    const io: InitIO = {
+      stdout: (s) => out.push(s),
+      stderr: () => {},
+      ask,
+      askSecret,
+    };
+
+    // yes:false + injected reader → wizard runs even without a TTY.
+    const code = await runInit(opts(t, { yes: false }), io);
+    expect(code).toBe(0);
+
+    const hy = readFileSync(join(t, "harness.yaml"), "utf8");
+    // Set keys are uncommented AND given the answer value.
+    expect(hy).toMatch(/^  name: my-cool-sandbox/m);
+    expect(hy).toMatch(/^  timezone: America\/New_York/m);
+    expect(hy).toMatch(/^  user_name: Ada Lovelace/m);
+    expect(hy).toMatch(/^  user_email: ada@example.com/m);
+    expect(hy).toMatch(/^  agent_browser: true/m);
+    // A declined install stays commented (default applies).
+    expect(hy).toMatch(/^  # hermes: false/m);
+    // Secrets are NEVER written to harness.yaml.
+    expect(hy).not.toContain("ghp_supersecrettoken12345");
+    expect(hy).not.toContain("GH_TOKEN");
+
+    // Every line whose key the user did NOT set is byte-identical to the template.
+    const tmpl = readFileSync(join(TEMPLATES, "harness.yaml"), "utf8").split("\n");
+    const result = hy.split("\n");
+    expect(result).toHaveLength(tmpl.length);
+    const touched = new Set([
+      "name",
+      "timezone",
+      "user_name",
+      "user_email",
+      "agent_browser",
+    ]);
+    for (let i = 0; i < tmpl.length; i++) {
+      const m = tmpl[i].match(/^\s*#\s?([A-Za-z0-9_]+)\s*:/);
+      const key = m ? m[1] : undefined;
+      if (key && touched.has(key)) continue;
+      expect(result[i]).toBe(tmpl[i]);
+    }
+
+    // Secret lands in .devcontainer/.env only.
+    const env = readFileSync(join(t, ".devcontainer/.env"), "utf8");
+    expect(env).toContain("GH_TOKEN=ghp_supersecrettoken12345");
+  });
+
+  it("wizard: --yes skips the wizard even when a reader is injected", async () => {
+    const t = freshTmp();
+    let asked = 0;
+    const io: InitIO = {
+      stdout: () => {},
+      stderr: () => {},
+      ask: async () => {
+        asked++;
+        return "should-not-be-asked";
+      },
+      askSecret: async () => "",
+    };
+    const code = await runInit(opts(t, { yes: true }), io);
+
+    expect(code).toBe(0);
+    expect(asked).toBe(0);
+    // Template default left commented (nothing uncommented).
+    const hy = readFileSync(join(t, "harness.yaml"), "utf8");
+    expect(hy).toMatch(/^  # name: my-project/m);
+    expect(existsSync(join(t, ".devcontainer/.env"))).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { runInit, type InitIO, type InitOptions } from "./commands/init.js";
 import { runUpdate } from "./commands/update.js";
 
@@ -16,13 +16,23 @@ const DEFAULT_TEMPLATES_DIR = resolve(
   "../../templates",
 );
 
+// The CLI's own bundled `.oh/` — the default source `oh init` vendors FROM. From
+// both `src/cli.ts` and `dist/oh.js` (each two levels under `.oh/cli`), `../..`
+// resolves to `.oh` (verified empirically; `DEFAULT_TEMPLATES_DIR` is `.oh/templates`,
+// one level deeper). Installed-binary payload bundling (e.g. /opt/oh) is deferred
+// (#531); use `--from <checkout>` until then.
+const DEFAULT_SOURCE_OH_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
+
 interface Integration {
   description: string;
   runner: () => Promise<number>;
 }
 
 // No interactive wizards remain — Slack is configured natively by editing
-// `.devcontainer/.env` + `.pi/msg-bridge.json` (see .oh/docs/integrations/slack.md).
+// `.devcontainer/.env` + `.pi/msg-bridge.json` (see docs/integrations/slack.md).
 // The framework stays for future integrations; `integrationLines()` renders
 // "(none)" while this record is empty.
 const INTEGRATIONS: Record<string, Integration> = {};
@@ -89,17 +99,23 @@ Flags:
 }
 
 function printInitHelp(): void {
-  process.stdout.write(`oh init — Scaffold OpenHarness compat files into a repo
+  process.stdout.write(`oh init — Equip a repo with OpenHarness
 
 Usage:
-  oh init [dir] [--force] [--dry-run] [--templates <dir>]
+  oh init [dir] [--yes] [--from <dir>] [--force] [--dry-run] [--templates <dir>]
 
-Scaffolds OpenHarness compatibility files into a target directory (default: cwd).
+Scaffolds the OpenHarness compat files AND vendors the .oh/ control plane into a
+target directory (default: cwd). In a TTY (without --yes) it runs a short config
+wizard for harness.yaml + .devcontainer/.env.
 
 Flags:
-  --force            Overwrite existing files
+  --yes              Non-interactive: skip the wizard, keep template defaults
+  --from <dir>       Vendor the .oh/ payload from this built OpenHarness checkout
+                     (defaults to the CLI's own .oh/; installed-binary bundling
+                     is deferred, #531)
+  --force            Overwrite existing files (prints the overwrite count)
   --dry-run          Print the plan without writing anything
-  --templates <dir>  Override the scaffold source directory
+  --templates <dir>  Override the scaffold template source directory
 `);
 }
 
@@ -133,6 +149,8 @@ async function main(argv: string[]): Promise<number> {
 
     let targetDir: string | undefined;
     let templatesDir = DEFAULT_TEMPLATES_DIR;
+    let fromDir: string | undefined;
+    let yes = false;
     let force = false;
     let dryRun = false;
 
@@ -143,6 +161,16 @@ async function main(argv: string[]): Promise<number> {
         force = true;
       } else if (token === "--dry-run") {
         dryRun = true;
+      } else if (token === "--yes") {
+        yes = true;
+      } else if (token === "--from") {
+        const value = rest[i + 1];
+        if (value === undefined) {
+          process.stderr.write(`oh init: --from requires a directory argument\n`);
+          return 1;
+        }
+        fromDir = value;
+        i++;
       } else if (token === "--templates") {
         const value = rest[i + 1];
         if (value === undefined) {
@@ -162,9 +190,16 @@ async function main(argv: string[]): Promise<number> {
       }
     }
 
+    // `--from <checkout>` mirrors `oh update --from`: vendor from <checkout>/.oh.
+    // Default to the CLI's own bundled `.oh/`.
+    const sourceOhDir =
+      fromDir !== undefined ? resolve(join(fromDir, ".oh")) : DEFAULT_SOURCE_OH_DIR;
+
     const opts: InitOptions = {
       targetDir: resolve(targetDir ?? process.cwd()),
       templatesDir: resolve(templatesDir),
+      sourceOhDir,
+      yes,
       force,
       dryRun,
     };

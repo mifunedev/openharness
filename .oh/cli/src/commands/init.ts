@@ -238,8 +238,11 @@ export async function runInit(
     writeGenerated(
       wr,
       ".oh/memory/README.md",
-      "# memory/\n\nLong-term, append-only lessons for this project's agents. " +
-        "`MEMORY.md` is the index; daily logs live under `memory/<UTC-date>/`.\n",
+      "# .oh/memory/\n\nLong-term, append-only lessons for this project's agents. " +
+        "`MEMORY.md` is the index; daily logs live under `<UTC-date>/`.\n\n" +
+        "Resolve this directory with `.oh/scripts/oh-path memory` (or the " +
+        "`MEMORY_DIR` env var) rather than hardcoding a path — change " +
+        "`paths.memory` in `harness.yaml` to relocate it.\n",
     );
     writeGenerated(
       wr,

@@ -71,6 +71,7 @@ BEGIN {
     envmap["hermes.dashboard_port"] = "HERMES_DASHBOARD_PORT"
     envmap["crons.dir"]             = "CRONS_DIR"
     envmap["crons.agent_bin"]       = "CRON_AGENT_BIN"
+    envmap["paths.memory"]          = "MEMORY_DIR"
     section  = ""
     list_key = ""
     in_list  = 0

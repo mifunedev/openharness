@@ -14,7 +14,7 @@ git -C "$repo" ls-files -- \
   ':!:.oh/evals/datasets/**/changed-files.txt'
 ```
 
-Why: anchoring at `git rev-parse --show-toplevel` prevents subdirectory launches from silently mapping only a subtree. `git ls-files` requires no extra tooling and excludes vendor, generated, ignored, and runtime state by default while preserving hidden source dirs such as `.claude/`, `.pi/`, `.github/`, and `.devcontainer/`.
+Why: `git rev-parse --show-toplevel` stops a subdirectory launch from mapping only a subtree; `git ls-files` needs no extra tooling and skips vendor, generated, ignored, and runtime state while keeping hidden source dirs (`.claude/`, `.pi/`, `.github/`, `.devcontainer/`).
 
 ## Session-start use
 
@@ -27,13 +27,13 @@ Why: anchoring at `git rev-parse --show-toplevel` prevents subdirectory launches
 
 ## Performance caveat and acceptance metric
 
-Caveat: this file is a structural optimization, not benchmark proof by itself. It adds startup context; savings happen only when agents use it to avoid raw filesystem scans, vendor/generated reads, or broad repo search.
+Caveat: this file is a structural optimization, not benchmark proof by itself. Savings happen only when agents use it to avoid raw filesystem scans, vendor/generated reads, or broad search.
 
 Acceptance metric: compare at least 5 common orientation tasks with and without this file loaded. Track total input tokens, tool calls before the first relevant file, time to correct path, and accidental reads under disregard paths. Count the change successful only if median time/tool calls drop and total token spend breaks even or improves.
 
 ## Context-file loading model
 
-Different harnesses load `AGENTS.md`/`CLAUDE.md` differently. For Open Harness work, treat discovered global/user, parent-directory, and current-directory context files as cumulative context, then resolve conflicts by target-path specificity. Do not rely on automatic nearest-file-wins semantics.
+Different harnesses load `AGENTS.md`/`CLAUDE.md` differently. For Open Harness, treat discovered global/user, parent-directory, and current-directory context files as cumulative, then resolve conflicts by target-path specificity. Do not rely on nearest-file-wins semantics.
 
 Operational rule:
 
@@ -80,7 +80,7 @@ done
 
 ## Mifune ingress and ownership
 
-Mifune source lives in `ryaneggz/mifune` and enters Open Harness as the pinned `.mifune/` submodule. Use `git clone --recurse-submodules`, or repair a plain clone with `bash .oh/scripts/ensure-mifune.sh --init` then `--check`. Change Mifune upstream first, then bump the Open Harness pin. `.pi/` remains a provider surface, not the v1 Mifune mount.
+Mifune source lives in `ryaneggz/mifune` and enters Open Harness as the pinned `.mifune/` submodule. Use `git clone --recurse-submodules`, or repair a plain clone with `bash .oh/scripts/ensure-mifune.sh --init` then `--check`. Change Mifune upstream first, then bump the Open Harness pin.
 
 ## Search routing quick guide
 

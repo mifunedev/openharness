@@ -331,6 +331,18 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
   fi
 fi
 
+# ─── Resolve + pre-create the memory directory ────────────────────
+# Single source of truth = MEMORY_DIR (docker-compose passes harness.yaml's
+# paths.memory through here; default .oh/memory). Pre-creating it at boot means
+# the first skill/cron write lands in the resolved dir instead of racing a mkdir
+# — and never silently falls back to a phantom relative `memory/`. Mirrors the
+# CRONS_PATH block below; see .oh/scripts/oh-path for the shared resolver.
+case "${MEMORY_DIR:-.oh/memory}" in
+  /*) MEMORY_PATH="${MEMORY_DIR}" ;;
+  *)  MEMORY_PATH="$HARNESS/${MEMORY_DIR:-.oh/memory}" ;;
+esac
+mkdir -p "$MEMORY_PATH"
+
 # ─── Start/supervise cron runtime in tmux sessions ────────────────
 # Per SPEC v0.7 §"Croner runtime" + .mifune/skills/t3/references/sandbox-processes.md.
 # `cron-system` runs .oh/scripts/cron-runtime.ts. `cron-watchdog` is the outer

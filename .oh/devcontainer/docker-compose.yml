@@ -57,6 +57,7 @@ services:
       - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
       - CRONS_DIR=${CRONS_DIR:-crons}
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
+      - MEMORY_DIR=${MEMORY_DIR:-.oh/memory}
     stdin_open: true
     tty: true
     init: true

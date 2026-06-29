@@ -123,6 +123,7 @@ Flags:
                      is deferred, #531)
   --force            Overwrite existing files (prints the overwrite count)
   --dry-run          Print the whole plan without writing anything
+  --verbose          List every per-file action (default summarizes vendor noise)
   --templates <dir>  Override the scaffold template source directory
 `);
 }
@@ -163,6 +164,7 @@ async function main(argv: string[]): Promise<number> {
     let dryRun = false;
     let minimal = false;
     let copyClaude = false;
+    let verbose = false;
 
     const rest = argv.slice(1);
     for (let i = 0; i < rest.length; i++) {
@@ -177,6 +179,8 @@ async function main(argv: string[]): Promise<number> {
         minimal = true;
       } else if (token === "--copy-claude") {
         copyClaude = true;
+      } else if (token === "--verbose") {
+        verbose = true;
       } else if (token === "--from") {
         const value = rest[i + 1];
         if (value === undefined) {
@@ -218,6 +222,7 @@ async function main(argv: string[]): Promise<number> {
       dryRun,
       minimal,
       copyClaude,
+      verbose,
     };
     const io: InitIO = {
       stdout: (s) => process.stdout.write(s),

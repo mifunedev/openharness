@@ -1,3 +1,7 @@
+# OpenHarness — secrets & runtime (never commit). `.mifune` is a tracked submodule.
 .devcontainer/.env
+.claude/.env.claude
+.hermes/.env
+.hermes/auth.json
 .oh/cli/dist/
 .oh/cli/node_modules/

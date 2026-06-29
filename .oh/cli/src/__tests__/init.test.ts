@@ -625,4 +625,89 @@ describe("runInit", () => {
     expect(existsSync(join(t, ".codex/config.toml"))).toBe(false);
     expect(existsSync(join(t, ".pi/settings.json"))).toBe(false);
   });
+
+  // --- Full scaffold (P4: dry-run plan, verbose, gitignore union, idempotency)-
+
+  it("--dry-run previews the WHOLE full plan and writes nothing", async () => {
+    const t = freshTmp();
+    const { io, out } = makeIO();
+    const code = await runInit(opts(t, { yes: true, dryRun: true }), io);
+
+    expect(code).toBe(0);
+    for (const line of out) expect(line.startsWith("[dry-run] ")).toBe(true);
+    // The plan covers every full-scaffold surface.
+    const joined = out.join("");
+    expect(joined).toContain("create .devcontainer/Dockerfile");
+    expect(joined).toContain("create .devcontainer/devcontainer.json");
+    expect(joined).toContain("create CLAUDE.md");
+    expect(joined).toContain("create .gitmodules");
+    expect(joined).toContain("create .claude/settings.json");
+    expect(joined).toContain("create .claude/skills");
+    expect(joined).toContain("create .oh/memory/README.md");
+    // Nothing was written.
+    expect(existsSync(join(t, ".oh"))).toBe(false);
+    expect(existsSync(join(t, ".devcontainer"))).toBe(false);
+    expect(existsSync(join(t, ".gitmodules"))).toBe(false);
+    expect(existsSync(join(t, ".claude"))).toBe(false);
+    expect(readdirSync(t)).toHaveLength(0);
+  });
+
+  it("vendor noise is summarized by default; --verbose lists it", async () => {
+    const quiet = freshTmp();
+    const q = makeIO();
+    expect(await runInit(opts(quiet, { yes: true }), q.io)).toBe(0);
+    expect(q.out.join("")).not.toContain("(not in payload)");
+
+    const loud = freshTmp();
+    const l = makeIO();
+    expect(await runInit(opts(loud, { yes: true, verbose: true }), l.io)).toBe(0);
+    expect(l.out.join("")).toContain("(not in payload)");
+  });
+
+  it(".gitignore union includes provider runtime/secret ignores", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    const gi = readFileSync(join(t, ".gitignore"), "utf8")
+      .split("\n")
+      .map((l) => l.trimEnd());
+    for (const entry of [
+      ".devcontainer/.env",
+      ".claude/.env.claude",
+      ".hermes/.env",
+      ".hermes/auth.json",
+      ".oh/cli/dist/",
+      ".oh/cli/node_modules/",
+    ]) {
+      expect(gi).toContain(entry);
+    }
+  });
+
+  it("idempotent full re-run leaves the tree byte-identical", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    const ohBefore = listOh(t);
+    const giBefore = readFileSync(join(t, ".gitignore"), "utf8");
+    const agentsBefore = readFileSync(join(t, "AGENTS.md"), "utf8");
+
+    const { io, out } = makeIO();
+    expect(await runInit(opts(t, { yes: true }), io)).toBe(0);
+    // Every per-file action is a skip.
+    for (const line of out) expect(line.trim().startsWith("skip ")).toBe(true);
+    expect(listOh(t)).toEqual(ohBefore);
+    expect(readFileSync(join(t, ".gitignore"), "utf8")).toBe(giBefore);
+    expect(readFileSync(join(t, "AGENTS.md"), "utf8")).toBe(agentsBefore);
+  });
+
+  it("--force re-writes provider config + reports overwrite", async () => {
+    const t = freshTmp();
+    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
+    writeFileSync(join(t, ".claude/settings.json"), "{ \"sentinel\": true }\n");
+
+    const { io, out } = makeIO();
+    expect(await runInit(opts(t, { yes: true, force: true }), io)).toBe(0);
+    expect(out.some((l) => l.includes("overwrite .claude/settings.json"))).toBe(true);
+    const cs = JSON.parse(readFileSync(join(t, ".claude/settings.json"), "utf8"));
+    expect(cs.sentinel).toBeUndefined();
+    expect(cs.permissions).toBeDefined();
+  });
 });

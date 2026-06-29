@@ -63,6 +63,11 @@ export interface InitOptions {
    * filesystems without symlink support. Default: symlink.
    */
   copyClaude?: boolean;
+  /**
+   * Show every per-file action, including the `skip … (not in payload/volatile)`
+   * vendor noise that is summarized away by default.
+   */
+  verbose?: boolean;
 }
 
 /**
@@ -94,9 +99,12 @@ export async function runInit(
   const force = opts.force === true;
   const minimal = opts.minimal === true;
   const copyClaude = opts.copyClaude === true;
+  const verbose = opts.verbose === true;
   const prefix = dryRun ? "[dry-run] " : "";
   const report = (line: string): void => io.stdout(`${prefix}${line}\n`);
   let mifuneMaterialized = false;
+  // Aggregate tallies for the legible end-of-run summary (UX channel).
+  const stats = { created: 0, overwritten: 0, skipped: 0 };
 
   // Precondition: templates dir must exist and be a directory.
   if (!existsSync(templatesDir) || !statSync(templatesDir).isDirectory()) {
@@ -185,6 +193,7 @@ export async function runInit(
 
   let vCreated = 0;
   let vOverwritten = 0;
+  let vFiltered = 0; // not-in-payload + volatile (the noise we summarize away)
   const vReport: CopyReport = (action, rel) => {
     const r = `.oh/${rel}`;
     switch (action) {
@@ -198,12 +207,17 @@ export async function runInit(
         break;
       case "skip-exists":
         report(`skip ${r} (exists)`);
+        stats.skipped++;
         break;
       case "skip-not-in-payload":
-        report(`skip ${r} (not in payload)`);
+        // Noise: dozens of source files outside the manifest. Summarized away
+        // by default; surfaced per-file only under --verbose.
+        if (verbose) report(`skip ${r} (not in payload)`);
+        vFiltered++;
         break;
       case "skip-volatile":
-        report(`skip ${r} (volatile)`);
+        if (verbose) report(`skip ${r} (volatile)`);
+        vFiltered++;
         break;
     }
   };
@@ -217,7 +231,7 @@ export async function runInit(
 
   // --- Full scaffold phases (default; skipped under --minimal) -----------------
   if (!minimal) {
-    const wr: WriteCtx = { t, dryRun, force, report };
+    const wr: WriteCtx = { t, dryRun, force, report, stats };
 
     // Phase 2a: seed memory/ and tasks/ as EMPTY dirs (README stub each). This
     // harness's own memory/PRDs are NEVER shipped — init creates them fresh.
@@ -326,29 +340,46 @@ export async function runInit(
   // --- Post-init guidance (UX channel; not the io operation log) ---------------
   // Routed through prompt.* (process.stdout) so it never pollutes the testable
   // io.stdout operation log. Suppressed under --dry-run.
-  if (!dryRun) {
-    if (force && vOverwritten > 0) {
-      prompt.warn(`--force overwrote ${vOverwritten} existing .oh/ file(s).`);
-    }
+  if (dryRun) {
     prompt.info("");
-    prompt.ok(`Vendored .oh/ (${vCreated + vOverwritten} files) into ${t}`);
-    prompt.info(".oh/ is your portable control plane — commit it to your repo.");
-    if (!minimal) {
-      if (mifuneMaterialized) {
-        prompt.ok(".mifune submodule materialized; provider skills are live.");
-      } else {
-        prompt.warn(
-          ".mifune is not materialized yet (offline or not a git repo).",
-        );
-        prompt.info(
-          "Run: git submodule update --init   (the provider symlinks resolve once it lands)",
-        );
-      }
+    prompt.ok(`Dry run complete — previewed the ${minimal ? "minimal" : "full"} plan, wrote nothing.`);
+    prompt.info("Re-run without --dry-run to apply.");
+    return 0;
+  }
+
+  // --- Legible summary -------------------------------------------------------
+  const totalOverwritten = vOverwritten + stats.overwritten;
+  prompt.header(`OpenHarness ${minimal ? "minimal" : "full"} scaffold — done`);
+  prompt.ok(`Vendored .oh/ (${vCreated + vOverwritten} files)`);
+  if (vFiltered > 0 && !verbose) {
+    prompt.info(`  (${vFiltered} non-payload source file(s) skipped — pass --verbose to list)`);
+  }
+  if (!minimal) {
+    prompt.ok("Wrote AGENTS.md + CLAUDE.md and seeded empty memory/ + tasks/");
+    prompt.ok("Copied the full .devcontainer/ (local image build)");
+    prompt.ok("Configured 4 provider surfaces (.claude .codex .pi .hermes) + .gitmodules");
+  }
+  if (force && totalOverwritten > 0) {
+    prompt.warn(`--force overwrote ${totalOverwritten} existing file(s).`);
+  }
+
+  // --- Next steps ------------------------------------------------------------
+  prompt.header("Next steps");
+  if (!minimal) {
+    if (mifuneMaterialized) {
+      prompt.ok(".mifune submodule materialized — provider skills are live.");
+    } else {
+      prompt.warn(".mifune is not materialized yet (offline or not a git repo).");
+      prompt.info("  1. git submodule update --init   (resolves the provider skill symlinks)");
     }
-    prompt.info(
-      "Build the CLI before the `oh` binary works:  cd .oh/cli && npm install && npm run build",
-    );
-    prompt.info("Re-run `oh init --force` to overwrite existing files.");
+    prompt.info("  2. Put secrets in .devcontainer/.env (gitignored — never commit them)");
+    prompt.info("  3. Build the sandbox:  make sandbox   (or reopen in container)");
+    prompt.info("  4. Build the CLI:  cd .oh/cli && npm install && npm run build");
+    prompt.info("  5. Commit .oh/, the provider surfaces, AGENTS.md, and .gitmodules");
+  } else {
+    prompt.info(".oh/ is your portable control plane — commit it to your repo.");
+    prompt.info("Build the CLI:  cd .oh/cli && npm install && npm run build");
+    prompt.info("Re-run `oh init` (full, default) for the complete scaffold.");
   }
 
   return 0;
@@ -364,6 +395,7 @@ interface WriteCtx {
   dryRun: boolean;
   force: boolean;
   report: (line: string) => void;
+  stats: { created: number; overwritten: number; skipped: number };
 }
 
 /**
@@ -391,8 +423,10 @@ function writeGenerated(ctx: WriteCtx, rel: string, content: string): void {
         writeFileSync(dest, content, "utf8");
       }
       ctx.report(`overwrite ${rel}`);
+      ctx.stats.overwritten++;
     } else {
       ctx.report(`skip ${rel} (exists)`);
+      ctx.stats.skipped++;
     }
   } else {
     if (!ctx.dryRun) {
@@ -400,6 +434,7 @@ function writeGenerated(ctx: WriteCtx, rel: string, content: string): void {
       writeFileSync(dest, content, "utf8");
     }
     ctx.report(`create ${rel}`);
+    ctx.stats.created++;
   }
 }
 
@@ -410,6 +445,7 @@ function copyFileReport(ctx: WriteCtx, src: string, rel: string): void {
   const exists = existsSync(dest);
   if (exists && !ctx.force) {
     ctx.report(`skip ${rel} (exists)`);
+    ctx.stats.skipped++;
     return;
   }
   if (!ctx.dryRun) {
@@ -418,6 +454,8 @@ function copyFileReport(ctx: WriteCtx, src: string, rel: string): void {
     if (rel.endsWith(".sh")) chmodSync(dest, 0o755);
   }
   ctx.report(exists ? `overwrite ${rel}` : `create ${rel}`);
+  if (exists) ctx.stats.overwritten++;
+  else ctx.stats.created++;
 }
 
 /**
@@ -544,10 +582,12 @@ function linkReport(ctx: WriteCtx, linkRel: string, linkTarget: string): void {
     }
     if (current === linkTarget) {
       ctx.report(`skip ${linkRel} (exists)`);
+      ctx.stats.skipped++;
       return;
     }
     if (!ctx.force) {
       ctx.report(`skip ${linkRel} (exists)`);
+      ctx.stats.skipped++;
       return;
     }
     if (!ctx.dryRun) {
@@ -556,6 +596,7 @@ function linkReport(ctx: WriteCtx, linkRel: string, linkTarget: string): void {
       symlinkSync(linkTarget, dest);
     }
     ctx.report(`overwrite ${linkRel}`);
+    ctx.stats.overwritten++;
     return;
   }
   if (!ctx.dryRun) {
@@ -563,6 +604,7 @@ function linkReport(ctx: WriteCtx, linkRel: string, linkTarget: string): void {
     symlinkSync(linkTarget, dest);
   }
   ctx.report(`create ${linkRel}`);
+  ctx.stats.created++;
 }
 
 /** CLAUDE.md alias of AGENTS.md — a symlink by default, a copy under --copy-claude. */
@@ -575,15 +617,18 @@ function writeClaudeAlias(ctx: WriteCtx, copyClaude: boolean): void {
   assertInTarget(dest, ctx.t);
   if (existsSync(dest) && !ctx.force) {
     ctx.report("skip CLAUDE.md (exists)");
+    ctx.stats.skipped++;
     return;
   }
-  const verb = existsSync(dest) ? "overwrite" : "create";
+  const exists = existsSync(dest);
   if (!ctx.dryRun) {
     const agents = path.join(ctx.t, "AGENTS.md");
     const body = existsSync(agents) ? readFileSync(agents, "utf8") : "";
     writeFileSync(dest, body, "utf8");
   }
-  ctx.report(`${verb} CLAUDE.md (copy of AGENTS.md)`);
+  ctx.report(`${exists ? "overwrite" : "create"} CLAUDE.md (copy of AGENTS.md)`);
+  if (exists) ctx.stats.overwritten++;
+  else ctx.stats.created++;
 }
 
 /** Ensure `<t>/.gitmodules` carries the `.mifune` submodule entry. */
@@ -595,16 +640,19 @@ function ensureGitmodules(ctx: WriteCtx): void {
     const current = readFileSync(p, "utf8");
     if (current.includes('submodule ".mifune"')) {
       ctx.report("skip .gitmodules (exists)");
+      ctx.stats.skipped++;
       return;
     }
     if (!ctx.dryRun) {
       writeFileSync(p, (current.endsWith("\n") ? current : current + "\n") + entry, "utf8");
     }
     ctx.report("update .gitmodules (+.mifune)");
+    ctx.stats.overwritten++;
     return;
   }
   if (!ctx.dryRun) writeFileSync(p, entry, "utf8");
   ctx.report("create .gitmodules");
+  ctx.stats.created++;
 }
 
 /**
@@ -659,8 +707,9 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
   const harness: { key: string; value: string }[] = [];
   const secrets: Record<string, string> = {};
 
-  prompt.header("Configure your harness (press Enter to accept the shown default)");
+  prompt.header("Configure your harness  (press Enter to accept the shown default)");
 
+  prompt.step(1, 3, "Project");
   const name = await askFn("Sandbox name [my-project]:");
   if (name) harness.push({ key: "name", value: name });
 
@@ -673,7 +722,7 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
   const gitEmail = await askFn("Git user email:");
   if (gitEmail) harness.push({ key: "user_email", value: gitEmail });
 
-  prompt.info("Optional installs:");
+  prompt.step(2, 3, "Optional installs");
   const installs: { key: string; desc: string }[] = [
     { key: "opencode", desc: "OpenCode TUI coding agent" },
     { key: "deepagents", desc: "DeepAgents multi-agent runtime" },
@@ -686,7 +735,8 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
     if (yes) harness.push({ key: inst.key, value: "true" });
   }
 
-  prompt.info("Secrets (stored ONLY in .devcontainer/.env, never in harness.yaml):");
+  prompt.step(3, 3, "Secrets");
+  prompt.info("Stored ONLY in .devcontainer/.env (gitignored), never in harness.yaml:");
   const gh = await askSecretFn("GH_TOKEN (blank to skip):");
   if (gh) {
     secrets.GH_TOKEN = gh;

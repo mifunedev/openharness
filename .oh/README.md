@@ -38,15 +38,14 @@ namespaces, split by what *kind* of thing they hold:
 
 ### Back-compat symlinks (the `.mifune` precedent)
 
-The runtime-machinery directories (`scripts/`, `install/`) and the relocated task
-workdirs (`tasks/`) moved into `.oh/` but keep **tracked back-compat symlinks at
-the old root paths** — exactly how `.claude/skills` → `.mifune/skills` works:
+The runtime-machinery directories (`scripts/`, `install/`) moved into `.oh/` but
+keep **tracked back-compat symlinks at the old root paths** — exactly how
+`.claude/skills` → `.mifune/skills` works:
 
 | Old path (symlink) | Real location |
 |---|---|
 | `scripts/` | `.oh/scripts/` |
 | `install/` | `.oh/install/` |
-| `tasks/` | `.oh/tasks/` |
 
 Every consumer pinning those literals — the ~7 skills and 2 cron bodies that call
 `scripts/locked-append.sh`, the `Makefile`'s `COMPOSE := scripts/docker-compose.sh`,
@@ -55,11 +54,11 @@ and the eval probes — keeps resolving through the symlink unchanged. Boot scri
 that self-resolve via `cd "$(dirname "$0")" && pwd` land on the repo root through
 the symlink (bash logical `pwd`), so no path-resolution rewiring was needed.
 
-Unlike `scripts/`/`install/` — whose consumers only need filesystem resolution and
-so ride the symlink unchanged — the **git-mutating** consumers of `tasks/` (the
-`cleanup-tasks` cron, `ralph.sh`, and the eval probes) were repointed to the real
-`.oh/tasks/` path directly, because git index operations cannot traverse the
-symlink.
+The relocated task workdirs (`tasks/` → `.oh/tasks/`) moved **without** a
+back-compat symlink — every consumer was repointed to the real `.oh/tasks/` path
+directly (the `cleanup-tasks` cron, `ralph.sh` + its vitest, the eval probes, and
+the `.mifune` skill/agent references), because git index operations cannot traverse
+a symlink and nothing reads the bare `tasks/` path anymore.
 
 The **`oh` CLI package** moved *without* a back-compat symlink — the `packages/`
 folder is retired, and its consumers were repointed directly to the real `.oh/`

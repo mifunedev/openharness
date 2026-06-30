@@ -63,10 +63,10 @@ DeepWiki at generated repo navigation. (`evals/`, `crons/`, `context/`,
 `memory/`, `workspace/`, and `docs/` stay at root as live
 identity/state/content, not machinery addressed as a unit.) The Ralph/spec
 task workdirs (`tasks/`) were reclassified as machinery and moved under
-`.oh/tasks/`, keeping a back-compat root symlink; their git-mutating
-consumers (the `cleanup-tasks` cron, `ralph.sh`, the eval probes) were
-repointed to the real `.oh/tasks/` path because git index operations
-cannot traverse the symlink.
+`.oh/tasks/` with no back-compat symlink; every consumer (the `cleanup-tasks`
+cron, `ralph.sh`, the eval probes, and the `.mifune` skill/agent references)
+was repointed to the real `.oh/tasks/` path because git index operations
+cannot traverse a symlink and nothing reads the bare `tasks/` path anymore.
 
 ## Namespaces
 

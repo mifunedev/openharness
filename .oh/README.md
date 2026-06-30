@@ -20,17 +20,19 @@ namespaces, split by what *kind* of thing they hold:
   exported to the four agent providers via symlinks (`.claude/`, `.codex/`,
   `.pi/`, `.hermes/`).
 - **`.oh/`** — *OpenHarness's own machinery* as one unit: the `oh` CLI (`cli/`),
-  the Docusaurus docs-site builder (`docs/`, the sole pnpm-workspace member),
-  installer + lifecycle scripts (`scripts/`), container-install inputs
-  (`install/`), and user-local deploy config (`config.json`). The former
-  top-level `packages/` folder was **retired** — its `oh` and `docs` packages
-  moved in here.
+  the GitHub-readable markdown docs (`docs/`), installer + lifecycle scripts
+  (`scripts/`), container-install inputs (`install/`), and user-local deploy
+  config (`config.json`). The former top-level `packages/` folder was
+  **retired** — its `oh` package moved in here; the Docusaurus docs *site* was
+  externalized to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
+  (#536), and the GitHub-readable markdown it rendered now lives at `.oh/docs/`.
 - **repo root** — everything forced to root by *external* tooling
   (`.devcontainer/` for the devcontainer spec + Docker COPY, `harness.yaml`,
   `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) **plus** live
   identity/state the harness edits in place (`context/`, `evals/`, `crons/`,
-  `memory/`, `tasks/`, `workspace/`, and the markdown `docs/`+`blog/` content
-  the `.oh/docs` site renders).
+  `memory/`, `tasks/`, `workspace/`). The GitHub-readable markdown docs now live
+  under `.oh/docs/`; the rendered docs site and the `blog/` archive live in
+  `mifunedev/openharness-web`.
 
 ### Back-compat symlinks (the `.mifune` precedent)
 
@@ -50,20 +52,23 @@ and the eval probes — keeps resolving through the symlink unchanged. Boot scri
 that self-resolve via `cd "$(dirname "$0")" && pwd` land on the repo root through
 the symlink (bash logical `pwd`), so no path-resolution rewiring was needed.
 
-The **package** directories (`cli/`, `docs/`) moved *without* a back-compat
-symlink — the `packages/` folder is retired, and their consumers were repointed
-directly to the real `.oh/` paths:
+The **`oh` CLI package** moved *without* a back-compat symlink — the `packages/`
+folder is retired, and its consumers were repointed directly to the real `.oh/`
+paths:
 
 - **`npm --prefix packages/oh`** → `npm --prefix .oh/cli` (CI typecheck + release).
-- **pnpm workspace** — `pnpm-workspace.yaml` now declares `.oh/docs`; the
-  `pnpm --filter './packages/**'` selectors became `--filter './.oh/**'`, and the
-  `docs:build`/`docs:dev`/`docs:serve` scripts use `--dir .oh/docs`.
 - **Docker `COPY`** (`.oh/devcontainer/Dockerfile`) — copies from `.oh/cli/` and
   `.oh/install/` (Docker's build context ignores symlinked directories anyway).
 - **GitHub Actions `paths:` filters** — keyed on real diff paths, so `.oh/**` was
-  added to `ci-harness.yml`/`sandbox-boot-guard.yml` and `docs.yml`'s filter +
-  `working-directory` repointed to `.oh/docs`. (The legacy `scripts/**` /
+  added to `ci-harness.yml`/`sandbox-boot-guard.yml`. (The legacy `scripts/**` /
   `install/**` / `packages/oh/**` filters are kept so the path probes stay green.)
+
+The former `packages/docs` Docusaurus **site** is **not** in `.oh/` — it was
+externalized to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
+(#536), which removed the pnpm-workspace member, the `docs:build`/`docs:dev`/`docs:serve`
+scripts, and the `docs.yml` workflow. The GitHub-readable markdown those scripts
+rendered now lives at `.oh/docs/` (markdown only — no build machinery; guarded by
+`evals/probes/docs-build-fast-path.sh`).
 
 
 ## How Mifune is added
@@ -110,7 +115,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the docs-site builder, installer/lifecycle scripts, container-install inputs, deploy/compose config | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`, and the `docs/`+`blog/` markdown content) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, deploy/compose config | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`) |
 
 ### Why these specifically stay at root
 
@@ -122,10 +127,6 @@ source instead of the bundled `.oh/templates/`.
   `docker-compose.yml` + the hermes-dashboard overlay, `entrypoint.sh`, and the two
   client scripts `client-slack-supervise.sh` / `seed-msg-bridge.sh`) now live at
   `.oh/devcontainer/`.
-- `docs/` + `blog/` — the markdown **content** (vs. the `.oh/docs` Docusaurus site
-  that renders it); the Docusaurus config reaches them via `../../docs` /
-  `../../blog`, which resolves identically because `.oh/docs` sits at the same
-  depth `packages/docs` did.
 - `harness.yaml` — the CI path filters and the `autopilot-preflight-gate` /
   `harness-ci-core-paths` / `sandbox-boot-guard-ci` probes pin it at repo root.
 - `config.json` — relocated *logically* to `.oh/config.json` (now the canonical
@@ -210,8 +211,10 @@ one `include` pattern and zero `exclude` patterns (exclude wins).
 **What is intentionally NOT shipped:** `.oh/patches/` (repo-specific dependency
 patches) is **omitted from `include`**, so it is never vendored into a consumer
 repo. It is **not deleted** — it stays physically in this repo; it is simply not
-part of the payload. (The Docusaurus docs site formerly under `.oh/docs/` has been
-migrated out to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web).)
+part of the payload. (The Docusaurus docs *site* formerly under `.oh/docs/` was
+migrated out to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
+(#536); `.oh/docs/` now holds the GitHub-readable markdown docs, which the manifest
+also does not ship — `docs/**` is absent from `include`.)
 
 - **The manifest ships itself** — `manifest.json` is in `include`, so the policy
   **propagates forward**: a consumer's next `oh update` reads the *source's*
@@ -236,5 +239,5 @@ payload, it never widens the write surface. Cross-tree shipping of
 ## Pointers
 
 - `context/directory-readme.md` — the README-as-directory-anchor convention this file follows.
-- `docs/roadmap.md` — the B-state primitive-taxonomy migration; `.oh/` machinery grouping.
+- `.oh/docs/roadmap.md` — the B-state primitive-taxonomy migration; `.oh/` machinery grouping.
 - `.mifune/` — the peer machinery namespace (provider-portable primitives), the relocation pattern this dir follows.

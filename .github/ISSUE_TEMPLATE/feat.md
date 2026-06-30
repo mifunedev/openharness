@@ -17,7 +17,7 @@ assignees: ""
 ## Proposed Implementation
 
 <!-- Describe the approach. Consider:
-  - Which area of the harness does this affect? (.devcontainer/, .oh/install/, docs/, workspace/ template, .oh/scripts/, crons/)
+  - Which area of the harness does this affect? (.devcontainer/, .oh/install/, .oh/docs/, workspace/ template, .oh/scripts/, crons/)
   - New skill, rule, or heartbeat needed?
   - Compose overlay change? Dockerfile change?
   - Any new commands or CLI surface?
@@ -39,5 +39,5 @@ assignees: ""
 - [ ] TypeScript strict — no `any` types (where TS applies)
 - [ ] Tests added for new logic where applicable
 - [ ] Lint + format + type-check pass (`pnpm run lint && pnpm run format:check && pnpm -r run type-check`)
-- [ ] Documentation updated under `docs/` if user-visible
+- [ ] Documentation updated under `.oh/docs/` if user-visible
 - [ ] PR targets `development` unless the git workflow rule says otherwise

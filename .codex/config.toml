@@ -23,7 +23,7 @@ status_line = [
 ]
 status_line_use_colors = true
 
-# DebugMCP — project-level MCP server (see docs/integrations/debugmcp.md).
+# DebugMCP — project-level MCP server (see .oh/docs/integrations/debugmcp.md).
 # Streamable HTTP endpoint the ozzafar.debugmcpextension VS Code extension
 # exposes while a VS Code window is attached to this container (:3001).
 [mcp_servers.debugmcp]

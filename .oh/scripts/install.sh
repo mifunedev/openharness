@@ -401,7 +401,7 @@ ENVEOF
 GH_TOKEN=
 
 # ─── Slack bot (pi-messenger-bridge) ─────────────────────────────────
-# See docs/integrations/slack.md.
+# See .oh/docs/integrations/slack.md.
 
 # Slack app-level token for Socket Mode connection (starts with xapp-).
 # PI_SLACK_APP_TOKEN=xapp-...

@@ -22,7 +22,7 @@ interface Integration {
 }
 
 // No interactive wizards remain — Slack is configured natively by editing
-// `.devcontainer/.env` + `.pi/msg-bridge.json` (see docs/integrations/slack.md).
+// `.devcontainer/.env` + `.pi/msg-bridge.json` (see .oh/docs/integrations/slack.md).
 // The framework stays for future integrations; `integrationLines()` renders
 // "(none)" while this record is empty.
 const INTEGRATIONS: Record<string, Integration> = {};

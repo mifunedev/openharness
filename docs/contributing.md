@@ -1,5 +1,4 @@
 ---
-sidebar_position: 999
 title: "Contributing"
 ---
 

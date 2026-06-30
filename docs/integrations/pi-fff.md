@@ -1,5 +1,4 @@
 ---
-sidebar_position: 4
 title: Pi fff (file search)
 ---
 

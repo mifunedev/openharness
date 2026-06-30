@@ -49,7 +49,7 @@ slack:
   # Tokens PI_SLACK_APP_TOKEN / PI_SLACK_BOT_TOKEN live in .devcontainer/.env;
   # runtime config (autoConnect, challenge-auth trustedUsers) lives in
   # ~/.pi/msg-bridge.json. There is no static allowlist — auth is runtime
-  # challenge-based. See docs/integrations/slack.md.
+  # challenge-based. See .oh/docs/integrations/slack.md.
 
 compose:
   # Tracked overlay paths, applied before user-local config.json

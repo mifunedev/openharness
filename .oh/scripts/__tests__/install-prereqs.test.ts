@@ -10,9 +10,9 @@ function readRepoFile(...segments: string[]): string {
 
 const onboardingDocs = [
   ["README", "README.md"],
-  ["docs intro", "docs/intro.md"],
-  ["quickstart", "docs/quickstart.md"],
-  ["installation", "docs/installation.md"],
+  ["docs intro", ".oh/docs/intro.md"],
+  ["quickstart", ".oh/docs/quickstart.md"],
+  ["installation", ".oh/docs/installation.md"],
 ] as const;
 
 describe("installer host prerequisite docs", () => {

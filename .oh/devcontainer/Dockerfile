@@ -133,7 +133,7 @@ RUN set -e; \
 # install onto $PATH. Source is COPY'd to /opt/oh (outside the
 # bind-mount) so the bundled binary survives the bind-mount overlay.
 # The `oh config` family currently ships no integration wizards (Slack is
-# configured natively by editing files — see docs/integrations/slack.md).
+# configured natively by editing files — see .oh/docs/integrations/slack.md).
 # NOTE: COPY does not follow the back-compat `packages/oh` symlink, so the
 # real path `.oh/cli/` is used here; runtime callers still use `packages/oh`.
 COPY .oh/cli/ /opt/oh/

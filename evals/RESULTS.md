@@ -60,6 +60,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | prd-output-path-contract | A | 2026-06-28 03:31 | PASS | memory/MEMORY.md 2026-06-19 |
 | project-root-seam | A | 2026-06-27 23:37 | PASS | issue #531 Phase 1 (OH_PROJECT_ROOT project-root seam) 2026-06-26 |
 | prompt-miner-schema-compat | A | 2026-06-28 03:31 | PASS | issue #253 — prompt-miner JSONL schema-drift guard |
+| railway-one-click-deploy | A | 2026-06-30 15:37 | PASS | issue #553 — Railway one-click hosted deploy surface |
 | ralph-fallback-order | A | 2026-06-28 03:31 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
 | repo-map-contract | A | 2026-06-28 03:31 | PASS | issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims |
 | retro-deterministic-contract | A | 2026-06-28 03:31 | PASS | issue #443 — /retro deterministic output and self-contained helper contract |

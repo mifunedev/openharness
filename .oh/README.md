@@ -82,6 +82,7 @@ The core runtime expects `.mifune/` to be initialized before provider paths read
 | `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `ralph.sh`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (back-compat symlink kept). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
+| `deploy/` | Hosted-platform deployment assets. `deploy/railway/` holds the Railway hosted-smoke Dockerfile and status server used by the README deploy button. |
 
 ## oh init (Phase 2)
 

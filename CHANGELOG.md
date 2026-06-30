@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Add a Railway one-click hosted smoke deploy path from the README, with config-as-code, deploy assets, docs, and an eval drift guard ([#553](https://github.com/mifunedev/openharness/issues/553)).
 - **`OH_PROJECT_ROOT` project-root seam** (RFC #531 Phase 1) — single source of truth for the container workspace path (default `/home/sandbox/harness`); `HARNESS` is kept as a back-compat alias. `evals/probes/project-root-seam.sh` guards the seam contract against regression ([#531](https://github.com/mifunedev/openharness/issues/531)).
 - **`oh init [dir]` scaffolds a fresh harness checkout** from a new `.oh/templates/` payload source (`harness.yaml`, `AGENTS.md`, `gitignore`, and a `.devcontainer/devcontainer.json` whose `workspaceFolder` is pinned to `/home/sandbox/project`), with a `--templates <dir>` escape hatch to point at an alternate source. `runInit` is exported from `.oh/cli/src/commands/init.ts` and dispatched from `cli.ts` (with help text). Guarded by the new `oh-init-scaffold` eval probe ([#531](https://github.com/mifunedev/openharness/issues/531)).
 - Add `oh update` CLI command (RFC #531 Phase 3): upgrades only the `.oh/` control plane of an OpenHarness-equipped repo from a `--from <checkout>` source, version-gated and path-escape-guarded so project source stays untouched; remote-fetch deferred ([#531](https://github.com/mifunedev/openharness/issues/531)).

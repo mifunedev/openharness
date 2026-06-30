@@ -1,0 +1,7 @@
+# progress
+
+## 2026-06-30
+- SPEC-PLANNED: four-file contract created for issue #553.
+- SPEC-APPROVED: critique found H0/M3/L2, recommendation PROCEED.
+- Implemented README Railway entry point, railway.json, hosted-smoke deploy assets, docs, and eval probe.
+- Verification: railway probe PASS; start server /healthz and /status.json smoke PASS; hadolint PASS; pnpm test:scripts PASS with Slack env vars unset; pnpm run typecheck PASS; pnpm run build PASS; lint/format scripts PASS (no-op configured).

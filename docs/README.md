@@ -15,6 +15,7 @@ Open Harness adds Mifune by pinning [`ryaneggz/mifune`](https://github.com/ryane
 - [Introduction](intro.md)
 - [Quickstart](quickstart.md)
 - [Installation](installation.md)
+- [Railway hosted smoke deploy](railway.md)
 - [Connecting to the sandbox](connecting.md)
 - [Contributing](contributing.md)
 

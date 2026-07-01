@@ -88,13 +88,13 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 
 | Intent | Start here | Why |
 |---|---|---|
-| Session role, permissions, startup load | `AGENTS.md`, `.oh/context/README.md`, `.oh/context/` | Defines orchestrator role, voice, session-start reads, and rules. |
-| Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml`, `.oh/scripts/README.md`, `.oh/scripts/docker-compose.sh` | Owns container image, compose overlays, generated env, and lifecycle commands. |
+| Session role, permissions, startup load | `AGENTS.md`, `.oh/context/README.md`, `.oh/context/` | Defines orchestrator role, voice, session-start reads, rules. |
+| Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml`, `.oh/scripts/README.md`, `.oh/scripts/docker-compose.sh` | Owns container image, compose overlays, env, and lifecycle commands. |
 | Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/pr-audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
-| Cron/autopilot behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.oh/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog flow. |
+| Cron/autopilot behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.oh/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog. |
 | Eval/probe regressions | `.oh/evals/README.md`, `.oh/evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
 | Task/spec implementation state | `.oh/tasks/README.md`, `.oh/tasks/<active-task>/` | PRD, critique, Ralph JSON, prompt, and task-specific artifacts. |
-| Docs | `README.md`, `.oh/docs/README.md`, `.oh/docs/` | GitHub-readable markdown docs; rendered site/blog source lives in `mifunedev/openharness-web`. |
+| Docs | `README.md`, `.oh/docs/README.md`, `.oh/docs/` | GitHub-readable markdown; site/blog lives in `mifunedev/openharness-web`. |
 | CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi provider extensions, manifests, and runtime config; `.pi/` is not the v1 Mifune mount. |
 | Skill behavior | `.oh/skills/`, `.pi/skills/`, `.claude/skills/` | Source of truth is the vendored `.oh/skills/` pack; provider paths are symlinks into it. |
@@ -112,12 +112,12 @@ Ignore these unless the task explicitly targets them:
 | `node_modules/`, `.pnpm/`, `.pi/npm/node_modules/`, `.hermes/lsp/node_modules/` | Vendor dependencies; huge and low-signal. | Debugging dependency installation or package resolution. |
 | `.oh/cli/dist/` | Generated build output. | Verifying generated CLI artifacts. |
 | `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
-| `.oh/memory/YYYY-MM-DD/`, `.oh/memory/*/log.md` | High-churn session logs; noisy for broad context. | Loading today's required startup log or investigating a dated event. |
+| `.oh/memory/YYYY-MM-DD/`, `.oh/memory/*/log.md` | High-churn session logs. | Loading today's required startup log or investigating a dated event. |
 | `.oh/memory/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki ingest --from-draft`. |
 | `.oh/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.oh/skills/wiki/corpus/*.md` entry. |
 | `workspace/.slack/`, `workspace/.pi/`, `workspace/.ralph/`, `workspace/startup.sh` | Runtime state and local/sensitive sandbox artifacts. | Debugging Slack/Pi/Ralph runtime state or startup generation. |
 | `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific Ralph run status; prefer `tail` over full read. |
-| `.oh/evals/datasets/**/oracle/`, `.oh/evals/datasets/**/diff.patch`, `.oh/evals/datasets/**/changed-files.txt` | Expected-output fixtures, not active implementation guidance. | Updating/verifying a dataset oracle. |
+| `.oh/evals/datasets/**/oracle/`, `.oh/evals/datasets/**/diff.patch`, `.oh/evals/datasets/**/changed-files.txt` | Expected-output fixtures, not implementation guidance. | Updating/verifying a dataset oracle. |
 
 ## On-demand search targets
 
@@ -133,7 +133,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `harness.yaml` | Harness runtime defaults such as autopilot caps and configured services. | Inspect operator-configurable behavior. |
 | `.oh/` | OpenHarness runtime machinery grouped as one unit: the `oh` CLI (`.oh/cli/`), installer/lifecycle scripts (`.oh/scripts/`), container-install inputs (`.oh/install/`), deploy config (`.oh/config.json`). The docs site moved to `mifunedev/openharness-web`. | Read `.oh/README.md` first; find harness tooling addressed as a namespace. |
 | `.oh/context/` | Voice, identity, tools, repo map, user collaboration, and rules. | Load operating principles and process constraints. |
-| `.oh/crons/` | Scheduled agent prompts and heartbeat/autopilot jobs. | Understand recurring automation behavior; read `.oh/crons/README.md` first. |
+| `.oh/crons/` | Scheduled agent prompts and heartbeat/autopilot jobs. | Understand recurring automation; read `.oh/crons/README.md` first. |
 | `.oh/scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, Ralph, caps. | Find executable implementation behind docs/skills; read `.oh/scripts/README.md` first. |
 | `.oh/scripts/__tests__/` | Vitest coverage for harness scripts. | Locate targeted tests for script changes. |
 | `.oh/evals/probes/` | Regression probes used by `/eval` and CI. | Add or inspect behavior guards. |

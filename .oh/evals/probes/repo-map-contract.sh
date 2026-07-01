@@ -89,10 +89,10 @@ if [[ -f "$REPO_MAP" ]]; then
   for forbidden_re in \
     '(^|/)node_modules/' \
     '^\.oh/skills/wiki/corpus/raw/' \
-    '^.oh/tasks/.*/progress\.txt$' \
-    '^.oh/evals/datasets/.*/oracle/' \
-    '^.oh/evals/datasets/.*/diff\.patch$' \
-    '^.oh/evals/datasets/.*/changed-files\.txt$'; do
+    '^\.oh/tasks/.*/progress\.txt$' \
+    '^\.oh/evals/datasets/.*/oracle/' \
+    '^\.oh/evals/datasets/.*/diff\.patch$' \
+    '^\.oh/evals/datasets/.*/changed-files\.txt$'; do
     if grep -Eq "$forbidden_re" <<<"$source_map"; then
       fails+=("source-map smoke included forbidden pattern: $forbidden_re")
     fi

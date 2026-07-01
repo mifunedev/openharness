@@ -349,9 +349,9 @@ mkdir -p "$MEMORY_PATH"
 # supervisor: if cron-system disappears after boot, it restarts the runtime
 # without requiring a container restart. Logs tee to /tmp/cron-system.log and
 # /tmp/cron-watchdog.log.
-case "${CRONS_DIR:-crons}" in
+case "${CRONS_DIR:-.oh/crons}" in
   /*) CRONS_PATH="${CRONS_DIR}" ;;
-  *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-crons}" ;;
+  *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-.oh/crons}" ;;
 esac
 mkdir -p "$CRONS_PATH"
 # Bind-mounted; sandbox UID is synced to host UID above, so no chown.

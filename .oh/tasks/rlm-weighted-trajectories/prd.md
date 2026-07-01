@@ -52,7 +52,7 @@ operator wants to "determine the weighted trajectories ourselves."
 ## Wiki Alignment
 
 - **Impact**: REQUIRED
-- **Local entries**: `.oh/skills/wiki/corpus/recursive-language-models.md` (new, provisional)
+- **Local entries**: `.mifune/skills/wiki/corpus/recursive-language-models.md` (new, provisional)
 - **Spec alignment**: RLM is a net-new harness concept (context-as-environment + weighted
   trajectories); it warrants a provisional corpus entry cross-linked to existing entries.
 - **DeepWiki comparison**: no public DeepWiki page covers this harness's RLM integration;
@@ -69,7 +69,7 @@ As a harness operator, I want a pure, version-controlled scorer that owns the tr
 weighting, so weighting is transparent and tunable rather than a model black box.
 
 Acceptance criteria:
-- `.oh/skills/weigh/scripts/score-trajectories.mjs` is pure (no `git`, no `Date.now()`, no
+- `.mifune/skills/weigh/scripts/score-trajectories.mjs` is pure (no `git`, no `Date.now()`, no
   model call), zero-dep, node-built-ins only; exports `validateWeights`, `weight`, `select`,
   `clamp`, **`DEFAULT_WEIGHTS`, and `TRAJECTORY_SCHEMA`** (a named JSON-Schema object — the
   single source of truth for the trajectory record shape that US-002's sampling cites); frozen
@@ -88,11 +88,11 @@ Acceptance criteria:
   `{ selected: null, reason: "NO-SELECTION", floorViolations: [{id, cause}] }` (never a
   least-bad silent pick).
 - `validateWeights()` rejects non-objects, missing keys, negative/non-finite values, unknown keys.
-- `.oh/skills/weigh/scripts/__tests__/score-trajectories.test.mjs` (`node --test`) covers
+- `.mifune/skills/weigh/scripts/__tests__/score-trajectories.test.mjs` (`node --test`) covers
   weight/floor/each-method/breakdown/`judge:0`-determinism, the `NO-SELECTION` shape (all-floor-fail
   cohort), and the absent-`--now` throw + `__tests__/fixtures/cohort-sample.json` (a cohort incl.
   one `evalRc:1` floor-breaker); the suite passes.
-- `.oh/skills/weigh/references/scoring.md` documents the formula, sub-signal table, weights
+- `.mifune/skills/weigh/references/scoring.md` documents the formula, sub-signal table, weights
   validation rules, the hard-floor + `--soft` semantics, the `judge:0` determinism note, and the
   judge:0-vs-judge:25 selection signal an operator watches when tuning.
 
@@ -102,7 +102,7 @@ As a harness operator, I want a `/weigh` skill that runs the sample→score→se
 over the Workflow tool.
 
 Acceptance criteria:
-- `.oh/skills/weigh/SKILL.md` has valid frontmatter (`name: weigh`, description with
+- `.mifune/skills/weigh/SKILL.md` has valid frontmatter (`name: weigh`, description with
   TRIGGER, `disable-model-invocation: true`, **`allowed-tools: Read, Grep, Bash, Agent`** — the
   sampling step spawns agents, so the `Agent` tool is required — and an argument-hint),
   and a numbered procedure: resolve config (N default 4, cap 8) → sample N agents (one message,
@@ -110,7 +110,7 @@ Acceptance criteria:
   `--dry-run` stops here) → attach signals (`/eval`, `/audit` by reference + clustering + optional
   verifier) → weight+select via the scorer → aggregate for `synthesis` → persist + log to
   gitignored `.oh/memory/<UTC-date>/weigh-*`.
-- `.oh/skills/weigh/references/workflow-shape.md` documents the seam: sampling/judging are
+- `.mifune/skills/weigh/references/workflow-shape.md` documents the seam: sampling/judging are
   the Workflow tool's substrate; the weight function (the scorer) is the part we own.
 - `/skill-lint` passes on `weigh`; the skill name does not collide with built-ins or Pi packages.
 
@@ -135,11 +135,11 @@ As a harness operator, I want a pure helper that addresses a large artifact with
 it, so a root agent can grep/slice context instead of suffering context rot.
 
 Acceptance criteria:
-- `.oh/skills/rlm/scripts/query-context.mjs` is pure, zero-dep, node-built-ins; CLI
+- `.mifune/skills/rlm/scripts/query-context.mjs` is pure, zero-dep, node-built-ins; CLI
   `<path> [--grep <re>] [--slice L1:L2] [--chunk <size>] [--map]`; returns the addressed slice
   + a chunk map (line ranges, byte offsets, match locations); enforces a **max-bytes guard**
   (never returns an unbounded slice).
-- `.oh/skills/rlm/scripts/__tests__/query-context.test.mjs` (`node --test`) covers
+- `.mifune/skills/rlm/scripts/__tests__/query-context.test.mjs` (`node --test`) covers
   chunk-map, slice, grep, and the max-bytes guard + a fixture; the suite passes.
 
 ### US-005 — `/rlm` skill + recursion-budget reference
@@ -148,13 +148,13 @@ As a harness operator, I want a `/rlm` skill that decomposes a large artifact an
 sub-LM calls under a bounded budget, reusing the existing recursion substrate.
 
 Acceptance criteria:
-- `.oh/skills/rlm/SKILL.md` has valid frontmatter (`name: rlm`, TRIGGER,
+- `.mifune/skills/rlm/SKILL.md` has valid frontmatter (`name: rlm`, TRIGGER,
   `disable-model-invocation: true`) and a numbered procedure: take artifact + query → chunk-map
   via `query-context.mjs --map` → recurse sub-agents over relevant chunks (bounded by
   depth/children/step budget) → aggregate (pipe competing per-chunk answers through `/weigh`)
   → persist the recursion trace to gitignored `.oh/memory/<UTC-date>/rlm-*`.
-- `.oh/skills/rlm/references/recursion-budget.md` points at the `Max depth N / children M /
-  step S` triple in `.oh/skills/advisor/references/recursive-delegation.md` and adds a
+- `.mifune/skills/rlm/references/recursion-budget.md` points at the `Max depth N / children M /
+  step S` triple in `.mifune/skills/advisor/references/recursive-delegation.md` and adds a
   per-run token ceiling. The procedure reuses `.oh/scripts/ralph.sh` and `.worktrees/` **by
   reference** (no edits to either).
 - `/skill-lint` passes on `rlm`; the name does not collide.
@@ -174,13 +174,13 @@ As a harness operator, I want `/critique` to *optionally* down-weight flaky find
 `/weigh` end-to-end on a real node **without changing default behavior or cost**.
 
 > **Override note (protected skill):** `/spec critique` (in `.claude/protected-paths.txt`)
-> dispatches to `.oh/skills/critique/SKILL.md`. This story edits that file **additively and
+> dispatches to `.mifune/skills/critique/SKILL.md`. This story edits that file **additively and
 > default-off**: it does NOT delete the skill, does NOT touch the `critique.md` output headings
 > that `/approve` + `/ship-spec` Stage 4 parse, and does NOT alter the default 2-critic run.
 > The edit is an opt-in paragraph, not a behavior change at default.
 
 Acceptance criteria:
-- `.oh/skills/critique/SKILL.md` gains an **opt-in, default-off** "self-consistency weighting
+- `.mifune/skills/critique/SKILL.md` gains an **opt-in, default-off** "self-consistency weighting
   (optional)" subsection: when the operator passes a `--weigh` flag (or sets a documented env
   var), each lens samples **K critics (K default 1 = exact current behavior; opt-in K=2, hard
   cap 2)** and routes them through `/weigh` (`vote` method) so a finding firing 1/K is
@@ -197,13 +197,13 @@ Acceptance criteria:
 As a future maintainer, I want the RLM concept captured so it is reused, not re-derived.
 
 Acceptance criteria:
-- `.oh/skills/wiki/corpus/recursive-language-models.md` exists with valid frontmatter
+- `.mifune/skills/wiki/corpus/recursive-language-models.md` exists with valid frontmatter
   (`confidence: provisional`, `updated:` date, `related:` cross-links), ≤600 words covering
   RLM context-as-environment + weighted-trajectory selection and how the harness adapts it.
-- An immutable snapshot exists under `.oh/skills/wiki/corpus/raw/<date>-recursive-language-models.md`.
-- `.oh/skills/wiki/corpus/README.md` is regenerated; `bash .oh/evals/probes/wiki-readme-index.sh`
+- An immutable snapshot exists under `.mifune/skills/wiki/corpus/raw/<date>-recursive-language-models.md`.
+- `.mifune/skills/wiki/corpus/README.md` is regenerated; `bash .oh/evals/probes/wiki-readme-index.sh`
   passes. Curated entry + raw snapshot are force-added (`git add -f`) and **verified tracked**:
-  `git ls-files .oh/skills/wiki/corpus/recursive-language-models.md .oh/skills/wiki/corpus/raw/*recursive-language-models.md`
+  `git ls-files .mifune/skills/wiki/corpus/recursive-language-models.md .mifune/skills/wiki/corpus/raw/*recursive-language-models.md`
   lists both (the corpus is gitignored-by-default, so a forgotten force-add passes CI silently).
 
 ### US-009 — CHANGELOG + RESULTS.md + collision verification

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/553-one-click-deploy",
+  "description": "Add a Railway-style one-click hosted deployment path from the README, with explicit hosted-mode limitations and deterministic drift coverage.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "README one-click entry point",
+      "description": "As a new Open Harness user, I want a prominent one-click hosted deploy entry point in the README, so I can launch a hosted trial before committing to local self-hosting.",
+      "acceptanceCriteria": [
+        "README includes a Railway deploy button or equivalent one-click hosted deploy link near the install path.",
+        "README distinguishes hosted Railway mode from full local Docker/devcontainer mode.",
+        "README links to detailed hosted deployment docs."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "README now includes a Railway deploy button, hosted-mode caveat, and docs/railway.md link."
+    },
+    {
+      "id": "US-002",
+      "title": "Railway hosted-smoke deployment assets",
+      "description": "As a new Open Harness user, I want repository-owned Railway config and startup assets, so the deploy button boots a predictable smoke-testable service.",
+      "acceptanceCriteria": [
+        "Root railway.json uses Railway config-as-code with the JSON schema and a custom Dockerfile path.",
+        "The Railway Dockerfile builds a minimal Open Harness hosted-smoke image from this repo without requiring a host Docker socket.",
+        "The Railway start command binds to $PORT and serves a status endpoint/page confirming the container booted.",
+        "The hosted mode does not claim full local sandbox parity."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added railway.json plus .oh/deploy/railway Dockerfile, start.sh, and status-server.mjs; the server binds to $PORT and exposes /healthz and /status.json."
+    },
+    {
+      "id": "US-003",
+      "title": "Hosted deployment docs",
+      "description": "As a self-hosting evaluator, I want explicit hosted-mode requirements and limits, so I know what works on Railway and when to switch to the local path.",
+      "acceptanceCriteria": [
+        "Docs name required/optional env vars without secret values.",
+        "Docs explain that Railway does not provide the host Docker socket / privileged container surface needed for nested sandbox lifecycle operations.",
+        "Docs explain the supported smoke-test experience and the path to full local setup.",
+        "Docs mention persistence expectations and safe credential handling."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Added docs/railway.md covering optional GH_TOKEN, provider secrets, Railway volume persistence, Docker socket limitations, and local setup handoff."
+    },
+    {
+      "id": "US-004",
+      "title": "Drift guard",
+      "description": "As a maintainer, I want a deterministic probe for the Railway deploy surface, so future README/config changes do not silently break the one-click path.",
+      "acceptanceCriteria": [
+        "An eval probe verifies railway.json, deploy assets, README link, docs link, and $PORT binding contract.",
+        "The probe exits PASS on the implemented surface and REGRESSION when any required artifact/link/contract is missing.",
+        "evals/RESULTS.md is refreshed for the new probe."
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Added evals/probes/railway-one-click-deploy.sh and refreshed evals/RESULTS.md with the new PASS row."
+    }
+  ]
+}

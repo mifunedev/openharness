@@ -110,6 +110,7 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 | `context/` | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) + the collapsed `rules/` provider pointers. Old path: `context/` (no symlink — repointed). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
+| `deploy/` | Hosted-platform deployment assets. `deploy/railway/` holds the Railway hosted-smoke Dockerfile and status server used by the README deploy button. |
 
 ## oh init (Phase 2)
 

@@ -32,7 +32,7 @@ for literal in \
   '${CLAUDE_SKILL_DIR}/scripts/render-log-entry.sh' \
   '${CLAUDE_SKILL_DIR}/scripts/check-memory-duplicates.sh' \
   '| ID | Subsystem | Hypothesis | Evidence for | Evidence against | Verdict | Confidence | Promotion |' \
-  'write only the required `memory/<UTC-date>/log.md` entry with `Result: DRY-RUN`' \
+  'write only the required `.oh/memory/<UTC-date>/log.md` entry with `Result: DRY-RUN`' \
   '[<subsystem> · <confidence> · harden|proceduralize|eval] — probe: <id> | basis:' \
   'Bypassing the schema/scripts'
 do

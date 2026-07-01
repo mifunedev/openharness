@@ -14,7 +14,7 @@ missing=()
 
 grep -Fq 'Memory log contract' "$HEARTBEAT" || missing+=("heartbeat defines an explicit memory log contract")
 grep -Fq 'HEARTBEAT_TIME=$(date -u +%H:%M)' "$HEARTBEAT" || missing+=("heartbeat computes HEARTBEAT_TIME before writing memory log")
-grep -Fq 'scripts/locked-append.sh "memory/$TODAY/log.md"' "$HEARTBEAT" || missing+=("heartbeat memory log uses scripts/locked-append.sh")
+grep -Fq 'scripts/locked-append.sh ".oh/memory/$TODAY/log.md"' "$HEARTBEAT" || missing+=("heartbeat memory log uses scripts/locked-append.sh")
 grep -Fq -- '- **Result**:' "$HEARTBEAT" || missing+=("heartbeat memory template includes Result field")
 grep -Fq -- '- **Action**:' "$HEARTBEAT" || missing+=("heartbeat memory template includes Action field")
 grep -Fq -- '- **Observation**:' "$HEARTBEAT" || missing+=("heartbeat memory template includes Observation field")

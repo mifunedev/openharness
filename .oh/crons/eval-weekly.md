@@ -23,7 +23,7 @@ sent.
 ## Tasks
 
 1. Compute `TODAY=$(date -u +%Y-%m-%d)` and ensure the log directory
-   exists: `mkdir -p "memory/$TODAY"`.
+   exists: `mkdir -p ".oh/memory/$TODAY"`.
 2. Run the eval suite and capture full output to a temp file:
    ```bash
    bash .mifune/skills/eval/run.sh > /tmp/eval-weekly-out.txt 2>&1 || true
@@ -34,7 +34,7 @@ sent.
    ```
 4. If any lines matching `^  - ` were found (these are the regression
    entries produced by `run.sh`), append one dated entry per run to
-   `memory/$TODAY/log.md` through `.oh/scripts/locked-append.sh`:
+   `.oh/memory/$TODAY/log.md` through `.oh/scripts/locked-append.sh`:
 
    ```
    ## eval-weekly -- HH:MM UTC

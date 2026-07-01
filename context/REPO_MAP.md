@@ -23,7 +23,7 @@ Why: anchoring at `git rev-parse --show-toplevel` prevents subdirectory launches
 3. Pick one row from the search routing guide before running broad `rg`.
 4. When a routed directory has `README.md`, read that first.
 5. Disregard the folders in the skip table by default; open them only for listed exception cases.
-6. Prefer curated `.mifune/skills/wiki/corpus/*.md` and `memory/MEMORY.md` over raw logs/snapshots.
+6. Prefer curated `.mifune/skills/wiki/corpus/*.md` and `.oh/memory/MEMORY.md` over raw logs/snapshots.
 
 ## Performance caveat and acceptance metric
 
@@ -98,7 +98,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi provider extensions, manifests, and runtime config; `.pi/` is not the v1 Mifune mount. |
 | Skill behavior | `.mifune/skills/`, `.pi/skills/`, `.claude/skills/` | Source of truth is the initialized `.mifune/` submodule from `ryaneggz/mifune`; provider paths are symlinks into it. |
-| Durable knowledge | `.mifune/skills/wiki/corpus/README.md`, `.mifune/skills/wiki/corpus/*.md`, `memory/MEMORY.md` | Curated wiki pages and long-term lessons; prefer these before raw logs. |
+| Durable knowledge | `.mifune/skills/wiki/corpus/README.md`, `.mifune/skills/wiki/corpus/*.md`, `.oh/memory/MEMORY.md` | Curated wiki pages and long-term lessons; prefer these before raw logs. |
 | Agent workspace seed files | `workspace/AGENTS.md`, `workspace/CLAUDE.md` | Template files bind-mounted into the sandbox workspace. |
 
 ## Disregard by default
@@ -112,8 +112,8 @@ Ignore these unless the task explicitly targets them:
 | `node_modules/`, `.pnpm/`, `.pi/npm/node_modules/`, `.hermes/lsp/node_modules/` | Vendor dependencies; huge and low-signal. | Debugging dependency installation or package resolution. |
 | `.oh/cli/dist/` | Generated build output. | Verifying generated CLI artifacts. |
 | `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
-| `memory/YYYY-MM-DD/`, `memory/*/log.md` | High-churn session logs; noisy for broad context. | Loading today's required startup log or investigating a dated event. |
-| `memory/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki ingest --from-draft`. |
+| `.oh/memory/YYYY-MM-DD/`, `.oh/memory/*/log.md` | High-churn session logs. | Loading today's required startup log or investigating a dated event. |
+| `.oh/memory/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki ingest --from-draft`. |
 | `.mifune/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.mifune/skills/wiki/corpus/*.md` entry. |
 | `workspace/.slack/`, `workspace/.pi/`, `workspace/.ralph/`, `workspace/startup.sh` | Runtime state and local/sensitive sandbox artifacts. | Debugging Slack/Pi/Ralph runtime state or startup generation. |
 | `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific Ralph run status; prefer `tail` over full read. |

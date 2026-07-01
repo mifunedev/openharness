@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # tier: A
-# source: memory/MEMORY.md 2026-06-07 (agent-browser 0.8.5 CLI)
+# source: .oh/memory/MEMORY.md 2026-06-07 (agent-browser 0.8.5 CLI)
 # desc: Guard /agent-browser skill docs against stale execute/relative-screenshot guidance.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"

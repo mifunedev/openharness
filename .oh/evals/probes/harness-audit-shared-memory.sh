@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #432 — /harness-audit must load durable memory from shared log root in cron worktrees
-# desc: /harness-audit context snapshot must tail AUDIT_LOG_ROOT/memory/MEMORY.md for long-term lessons, not AUDIT_ROOT.
+# desc: /harness-audit context snapshot must tail AUDIT_LOG_ROOT/.oh/memory/MEMORY.md for long-term lessons, not AUDIT_ROOT.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -12,12 +12,12 @@ if [[ ! -f "$SKILL" ]]; then
   exit 2
 fi
 
-if ! grep -Fq 'tail -40 "$AUDIT_LOG_ROOT/memory/MEMORY.md"' "$SKILL"; then
+if ! grep -Fq 'tail -40 "$AUDIT_LOG_ROOT/.oh/memory/MEMORY.md"' "$SKILL"; then
   echo "REGRESSION: harness-audit does not tail long-term memory from AUDIT_LOG_ROOT" >&2
   exit 1
 fi
 
-if grep -Fq 'tail -40 "$AUDIT_ROOT/memory/MEMORY.md"' "$SKILL"; then
+if grep -Fq 'tail -40 "$AUDIT_ROOT/.oh/memory/MEMORY.md"' "$SKILL"; then
   echo "REGRESSION: harness-audit still tails long-term memory from AUDIT_ROOT" >&2
   exit 1
 fi
@@ -27,7 +27,7 @@ if ! grep -Fq 'ls "$AUDIT_ROOT/.claude/skills/"' "$SKILL"; then
   exit 1
 fi
 
-if ! grep -Fq 'ls "$AUDIT_LOG_ROOT/memory/"' "$SKILL"; then
+if ! grep -Fq 'ls "$AUDIT_LOG_ROOT/.oh/memory/"' "$SKILL"; then
   echo "REGRESSION: harness-audit memory log discovery no longer uses AUDIT_LOG_ROOT" >&2
   exit 1
 fi
@@ -37,8 +37,8 @@ if ! grep -Fq 'long_term_memory: loaded' "$SKILL" || ! grep -Fq 'long_term_memor
   exit 1
 fi
 
-if ! grep -Fq "Context Snapshot's \`AUDIT_LOG_ROOT\` memory/log context" "$SKILL"; then
-  echo "REGRESSION: harness-audit Explorer prompt no longer routes memory/log checks through AUDIT_LOG_ROOT" >&2
+if ! grep -Fq "Context Snapshot's \`AUDIT_LOG_ROOT\` .oh/memory/log context" "$SKILL"; then
+  echo "REGRESSION: harness-audit Explorer prompt no longer routes .oh/memory/log checks through AUDIT_LOG_ROOT" >&2
   exit 1
 fi
 

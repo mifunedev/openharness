@@ -366,7 +366,7 @@ pnpm_workspace_package_patterns() {
 
 pnpm_manifest_rel_is_excluded() {
   case "$1" in
-    .git/*|.worktrees/*|node_modules/*|*/node_modules/*|.pi/npm/node_modules/*|.oh/cli/node_modules/*|.hermes/lsp/node_modules/*)
+    .git/*|.worktrees/*|node_modules/*|*/node_modules/*)
       return 0
       ;;
   esac

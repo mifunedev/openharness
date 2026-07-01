@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared ablation mechanics for the harness fitness function: back up a context
 # file, remove it (so a probe/oracle runs WITHOUT it), and restore on EXIT —
-# even after a crash, via the evals/.ablation-active sentinel that /eval recovers
+# even after a crash, via the .oh/evals/.ablation-active sentinel that /eval recovers
 # on startup.
 #
 # Only the swap/restore/trap MECHANICS are shared (prd.md §10 M-1). Each caller
@@ -18,7 +18,7 @@
 set -euo pipefail
 
 _ablate_root() { cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd; }
-ABLATE_SENTINEL="$(_ablate_root)/evals/.ablation-active"
+ABLATE_SENTINEL="$(_ablate_root)/.oh/evals/.ablation-active"
 
 ablate_swap_out() {
   local target="$1" bak="$1.bak"

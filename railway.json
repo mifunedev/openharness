@@ -7,7 +7,7 @@
       "railway.json",
       ".oh/deploy/railway/**",
       "README.md",
-      "docs/railway.md"
+      ".oh/docs/railway.md"
     ]
   },
   "deploy": {

@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+# Create/repair the provider skill/agent/hook symlinks into the vendored .oh/
+# pack, and verify the pack is present. The skills/agents/hooks primitive pack is
+# vendored directly under .oh/ (no submodule), so there is nothing to fetch —
+# this script only wires the provider surfaces to it and validates the result.
+set -euo pipefail
+
+PROTECTED_PATHS_FILE=".claude/protected-paths.txt"
+
+required_files=(
+  ".oh/skills/git/SKILL.md"
+  ".oh/skills/t3/references/sandbox-processes.md"
+  ".oh/skills/advisor/SKILL.md"
+  ".oh/skills/advisor/references/recursive-delegation.md"
+  ".oh/skills/retro/references/memory-protocol.md"
+  ".oh/skills/wiki/references/schema.md"
+  ".oh/skills/eval/run.sh"
+)
+
+required_execs=(
+  ".oh/hooks/deny-env-dump.sh"
+  ".oh/hooks/deny-secret-paths.sh"
+  ".oh/hooks/warn-devtcp.sh"
+  ".oh/skills/autopilot/autopilot-caps.sh"
+  ".oh/skills/cloudflared/scripts/run.sh"
+  ".oh/skills/context-audit/runner.sh"
+  ".oh/skills/eval/run.sh"
+  ".oh/skills/prompt-miner/prompt-miner-caps.sh"
+  ".oh/skills/prompt-miner/scripts/render-log-entry.sh"
+  ".oh/skills/retro/scripts/check-memory-duplicates.sh"
+  ".oh/skills/retro/scripts/render-log-entry.sh"
+  ".oh/skills/retro/scripts/validate-retro-report.sh"
+  ".oh/skills/t3/scripts/t3-code.sh"
+)
+
+provider_links=(
+  ".pi/skills|../.oh/skills"
+  ".claude/skills|../.oh/skills"
+  ".codex/skills|../.oh/skills"
+  ".claude/agents|../.oh/agents"
+  ".claude/hooks|../.oh/hooks"
+  ".codex/agents|../.claude/agents"
+)
+
+HERMES_LINK=".hermes/skills/openharness"
+HERMES_TARGET="../../.oh/skills"
+
+usage() {
+  cat <<'EOF'
+usage: bash .oh/scripts/link-providers.sh [--init|--check]
+
+--init   create/repair the provider symlinks into .oh/, then verify
+--check  verify the provider symlinks + vendored .oh/ pack without mutating
+EOF
+}
+
+mode="${1:---check}"
+case "$mode" in
+  --init|--check) ;;
+  -h|--help) usage; exit 0 ;;
+  *) usage >&2; exit 64 ;;
+esac
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "$repo_root" ]; then
+  echo "ERROR: link-providers must run inside an Open Harness git checkout" >&2
+  exit 1
+fi
+cd "$repo_root"
+
+failures=0
+fail() {
+  echo "ERROR: $*" >&2
+  failures=1
+}
+
+print_state() {
+  cat >&2 <<EOF
+Vendored skill pack: .oh/skills (expected to exist as tracked files)
+Provider surfaces:   .pi/skills .claude/skills .codex/skills -> ../.oh/skills
+Remediation: bash .oh/scripts/link-providers.sh --init
+EOF
+}
+
+link_provider() {
+  local path="$1" target="$2"
+  mkdir -p "$(dirname "$path")"
+  if [ -L "$path" ]; then
+    [ "$(readlink "$path")" = "$target" ] && return 0
+    rm -f "$path"
+  elif [ -e "$path" ]; then
+    fail "$path exists and is not a symlink; move it aside, then run --init"
+    return 1
+  fi
+  ln -s "$target" "$path"
+}
+
+init_links() {
+  if [ ! -d .oh/skills ]; then
+    fail ".oh/skills is missing — the vendored skill pack is not present"
+    return 1
+  fi
+
+  local link path target
+  for link in "${provider_links[@]}"; do
+    path="${link%%|*}"
+    target="${link#*|}"
+    link_provider "$path" "$target" || true
+  done
+
+  local f
+  for f in "${required_execs[@]}"; do
+    [ -f "$f" ] && chmod +x "$f"
+  done
+
+  if [ "${INSTALL_HERMES:-false}" = "true" ]; then
+    link_provider "$HERMES_LINK" "$HERMES_TARGET" || true
+  fi
+}
+
+check_symlink() {
+  local path="$1" expected_target="$2" target
+  if [ ! -L "$path" ]; then
+    fail "$path is not a symlink"
+    return
+  fi
+  target="$(readlink "$path")"
+  if [ "$target" != "$expected_target" ]; then
+    fail "$path points to $target, expected $expected_target"
+  fi
+  if [ ! -e "$path" ]; then
+    fail "$path target is missing; the vendored .oh/ pack is incomplete"
+  fi
+}
+
+check_hermes_link() {
+  if [ "${INSTALL_HERMES:-false}" != "true" ] && [ ! -e "$HERMES_LINK" ] && [ ! -L "$HERMES_LINK" ]; then
+    return 0
+  fi
+  check_symlink "$HERMES_LINK" "$HERMES_TARGET"
+  if [ ! -f "$HERMES_LINK/git/SKILL.md" ]; then
+    fail "$HERMES_LINK/git/SKILL.md is missing"
+  fi
+}
+
+check_protected_paths() {
+  if [ ! -f "$PROTECTED_PATHS_FILE" ]; then
+    fail "$PROTECTED_PATHS_FILE is missing"
+    return
+  fi
+  local entry
+  while IFS= read -r entry || [ -n "$entry" ]; do
+    entry="${entry%%#*}"
+    entry="$(printf '%s' "$entry" | xargs)"
+    [ -n "$entry" ] || continue
+    case "$entry" in
+      .oh/skills/*|.oh/agents/*|.oh/hooks/*)
+        [ -e "$entry" ] || fail "protected pack path missing: $entry"
+        ;;
+    esac
+  done < "$PROTECTED_PATHS_FILE"
+}
+
+check_links() {
+  if [ ! -d .oh/skills ]; then
+    fail ".oh/skills is missing — the vendored skill pack is not present"
+  fi
+
+  local f
+  for f in "${required_files[@]}"; do
+    [ -f "$f" ] || fail "required pack file missing: $f"
+  done
+  for f in "${required_execs[@]}"; do
+    [ -x "$f" ] || fail "required pack executable missing or not executable: $f"
+  done
+
+  local link path expected_target
+  for link in "${provider_links[@]}"; do
+    path="${link%%|*}"
+    expected_target="${link#*|}"
+    check_symlink "$path" "$expected_target"
+  done
+
+  check_hermes_link
+  check_protected_paths
+}
+
+if [ "$mode" = "--init" ]; then
+  init_links
+fi
+
+check_links
+
+if [ "$failures" -ne 0 ]; then
+  print_state
+  exit 1
+fi
+
+printf 'Providers OK: .pi/.claude/.codex skills -> .oh/skills (vendored pack present)\n'

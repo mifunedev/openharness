@@ -25,3 +25,8 @@ install:
 hermes:
   # dashboard: false           # HERMES_DASHBOARD — auto-start web dashboard when Hermes is installed
   # dashboard_port: 9119       # HERMES_DASHBOARD_PORT — host loopback port for the dashboard
+
+paths:
+  # memory: .oh/memory         # MEMORY_DIR — session logs + MEMORY.md (default .oh/memory).
+                               #   Resolved by .oh/scripts/oh-path; change here to relocate
+                               #   memory project-wide without editing any skill.

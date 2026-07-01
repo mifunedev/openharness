@@ -1,0 +1,59 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(file_path=**/.env*)",
+      "Read(file_path=**/*.pem)",
+      "Read(file_path=**/*.key)",
+      "Read(file_path=**/*id_rsa*)",
+      "Read(file_path=**/*id_ed25519*)",
+      "Read(file_path=**/.aws/credentials)",
+      "Read(file_path=**/.config/gcloud/**)",
+      "Read(file_path=**/.kube/config)",
+      "Read(file_path=**/.npmrc)",
+      "Read(file_path=**/.git-credentials)",
+      "Read(file_path=**/.netrc)",
+      "Read(file_path=**/.config/gh/hosts.yml)",
+      "Read(file_path=**/.claude/.credentials.json)",
+      "Read(file_path=**/.pi/**/auth.json)",
+      "Bash(command=*printenv*)",
+      "Bash(command=*env | grep*)",
+      "Bash(command=*gh auth token*)",
+      "Bash(command=*cat*.env*)",
+      "Bash(command=*cat*.git-credentials*)",
+      "Bash(command=*cat*auth.json*)",
+      "Bash(command=*curl*-H*Authorization*)"
+    ],
+    "defaultMode": "bypassPermissions"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/deny-env-dump.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/warn-devtcp.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/deny-secret-paths.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash -lc 'input=$(cat); model=$(jq -r \".model.display_name // \\\"Claude\\\"\" <<<\"$input\"); pct=$(jq -r \"(.context_window.used_percentage // 0 | tostring)\" <<<\"$input\"); branch=$(git branch --show-current 2>/dev/null); [ -n \"$branch\" ] || branch=$(git rev-parse --short HEAD 2>/dev/null || echo detached); printf \"[%s] %s%% context | %s\\n\" \"$model\" \"$pct\" \"$branch\"'",
+    "padding": 0
+  }
+}

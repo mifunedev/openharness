@@ -17,8 +17,8 @@ const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 // autopilot-caps.sh is skill-private: it rides along with the /autopilot skill
-// under .mifune/skills/ (the eval/run.sh precedent), not scripts/ (US-003 / M6).
-const SCRIPT = path.join(REPO_ROOT, ".mifune", "skills", "autopilot", "autopilot-caps.sh");
+// under .oh/skills/ (the eval/run.sh precedent), not scripts/ (US-003 / M6).
+const SCRIPT = path.join(REPO_ROOT, ".oh", "skills", "autopilot", "autopilot-caps.sh");
 
 interface RunResult {
   stdout: string;
@@ -73,11 +73,11 @@ const today = (): string => {
   return (r.stdout ?? "").trim();
 };
 const memoryLog = (): string => {
-  const p = path.join(tmp, "memory", today(), "log.md");
+  const p = path.join(tmp, ".oh", "memory", today(), "log.md");
   return existsSync(p) ? readFileSync(p, "utf-8") : "";
 };
 const liveness = (): string => {
-  const p = path.join(tmp, "crons", ".cron.log");
+  const p = path.join(tmp, ".oh", "crons", ".cron.log");
   return existsSync(p) ? readFileSync(p, "utf-8") : "";
 };
 const ghArgs = (): string => {

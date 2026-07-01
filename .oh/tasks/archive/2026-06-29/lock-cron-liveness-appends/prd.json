@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/474-lock-cron-liveness-appends",
+  "description": "Serialize cron liveness writes through the locked append helper.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Runtime liveness uses locked append",
+      "description": "As an operator, I want in-process runtime events and shell-wrapper agent events to write .cron.log records through the existing locked append helper so concurrent runtime writes remain whole-line records.",
+      "acceptanceCriteria": [
+        "scripts/cron-runtime.ts defines a single locked append helper path for .cron.log writes.",
+        "In-process log() writes pipe complete tab-separated records through scripts/locked-append.sh.",
+        "Shell-wrapper liveness emitted by buildCronAgentCommand/cronLogCommand pipes complete records through scripts/locked-append.sh instead of >> LOG_FILE.",
+        "Existing timestamp, id, status, and message formatting semantics remain unchanged."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed manually in autopilot run on 2026-06-20; committed in this branch; verified by cron-runtime tests."
+    },
+    {
+      "id": "US-002",
+      "title": "Cron prompt liveness guidance uses locked append",
+      "description": "As a future cron author, I want tracked cron prompts to show the locked append convention so prompt-authored liveness snippets do not teach raw shared-log appends.",
+      "acceptanceCriteria": [
+        ".oh/crons/cleanup-tasks.md uses scripts/locked-append.sh .oh/crons/.cron.log for blocked and success liveness snippets.",
+        ".oh/crons/eval-weekly.md uses scripts/locked-append.sh .oh/crons/.cron.log for its mandatory closing liveness snippet.",
+        "Repository grep shows no raw .cron.log append guidance in tracked cron prompts except guard probes that search for regressions."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed manually in autopilot run on 2026-06-20; committed in this branch; cron prompt snippets updated."
+    },
+    {
+      "id": "US-003",
+      "title": "Regression coverage and docs",
+      "description": "As a maintainer, I want tests, eval probes, and docs to lock the cron liveness invariant so it is not re-derived or regressed.",
+      "acceptanceCriteria": [
+        "scripts/__tests__/cron-runtime.test.ts verifies runtime/shell liveness is observable via the locked append path and generated shell commands contain scripts/locked-append.sh rather than raw appends.",
+        ".oh/evals/probes/locked-append-critical-path.sh guards runtime, autopilot/caps, and weekly cron prompt liveness paths.",
+        ".oh/crons/README.md, wiki/cron-runtime.md, wiki/README.md, and CHANGELOG.md document the invariant/update.",
+        "Targeted cron runtime tests, locked append probe, and wiki index probe pass."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed manually in autopilot run on 2026-06-20; committed in this branch; targeted tests and probes pass."
+    }
+  ]
+}

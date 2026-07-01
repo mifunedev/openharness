@@ -9,9 +9,6 @@ on:
     paths:
       - "packages/**"
       - ".oh/**"
-      - ".gitmodules"
-      - ".mifune"
-      - ".mifune/**"
       - ".pi/**"
       - "Makefile"
       - "harness.yaml"
@@ -20,22 +17,19 @@ on:
       - "pnpm-workspace.yaml"
       - "vitest.config.ts"
       - ".github/workflows/ci-harness.yml"
-      - ".mifune/skills/**"
+      - ".oh/skills/**"
       - ".claude/hooks/**"
       - ".claude/protected-paths.txt"
-      - ".mifune/hooks/**"
-      - "crons/**"
-      - "context/**"
+      - ".oh/hooks/**"
+      - ".oh/crons/**"
+      - ".oh/context/**"
       - ".devcontainer/**"
       - "workspace/**"
-      - "evals/**"
+      - ".oh/evals/**"
   pull_request:
     paths:
       - "packages/**"
       - ".oh/**"
-      - ".gitmodules"
-      - ".mifune"
-      - ".mifune/**"
       - ".pi/**"
       - "Makefile"
       - "harness.yaml"
@@ -44,15 +38,15 @@ on:
       - "pnpm-workspace.yaml"
       - "vitest.config.ts"
       - ".github/workflows/ci-harness.yml"
-      - ".mifune/skills/**"
+      - ".oh/skills/**"
       - ".claude/hooks/**"
       - ".claude/protected-paths.txt"
-      - ".mifune/hooks/**"
-      - "crons/**"
-      - "context/**"
+      - ".oh/hooks/**"
+      - ".oh/crons/**"
+      - ".oh/context/**"
       - ".devcontainer/**"
       - "workspace/**"
-      - "evals/**"
+      - ".oh/evals/**"
 
 concurrency:
   group: ci-harness-${{ github.ref }}
@@ -73,7 +67,7 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Setup Node 22.x
         uses: actions/setup-node@v4
@@ -123,7 +117,7 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Shellcheck boot scripts
         run: |
@@ -151,11 +145,8 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
-
-      - name: Run root Mifune checkout probe
-        run: bash evals/probes/mifune-checkout.sh
+      - name: Link provider skills
+        run: bash .oh/scripts/link-providers.sh --init
 
       # Provision Node explicitly so the suite is runner-agnostic: GitHub-hosted
       # ships Node preinstalled, the self-hosted runner does not.
@@ -165,4 +156,4 @@ jobs:
           node-version: "22"
 
       - name: Run eval probe suite
-        run: bash .mifune/skills/eval/run.sh
+        run: bash .oh/skills/eval/run.sh

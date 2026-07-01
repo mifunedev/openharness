@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "repo-orientation-benchmark-score.mjs");
-const MANIFEST = path.join(REPO_ROOT, "evals", "capability", "repo-orientation", "tasks.json");
+const MANIFEST = path.join(REPO_ROOT, ".oh", "evals", "capability", "repo-orientation", "tasks.json");
 
 function run(report: unknown) {
   const tmp = mkdtempSync(path.join(tmpdir(), "repo-orientation-score-"));

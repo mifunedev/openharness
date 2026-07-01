@@ -12,14 +12,14 @@
 #   `tmux kill-server` kills every session — INCLUDING the one the launcher runs in. This
 #   script is therefore meant to be launched DETACHED so it outlives the server it kills:
 #       setsid bash .oh/scripts/maintenance/restart-openharness-tmux.sh </dev/null >/tmp/oh-restart-273.boot.log 2>&1 &
-#   It is the spec-execute artifact for tasks/restart-openharness-tmux/ (see that PRD).
+#   It is the spec-execute artifact for .oh/tasks/restart-openharness-tmux/ (see that PRD).
 #
 # SAFETY
 #   - flock single-instance + a done-sentinel make it a no-op on re-run.
 #   - It captures the LIVE session→(cwd,command) map BEFORE the kill and replays it, so it
 #     adapts to whatever is actually running; pinned fallbacks cover the two cron sessions.
 #   - Relaunch order puts the website origin before its tunnel and cron-system before its
-#     watchdog, so nothing races. The cron singleton lock (crons/.pid) self-heals on a dead
+#     watchdog, so nothing races. The cron singleton lock (.oh/crons/.pid) self-heals on a dead
 #     pid (cron-runtime.ts acquireLock); we also clear it defensively.
 #   - It NEVER recreates the legacy `system-cron` session name (the watchdog self-exits on it).
 set -uo pipefail
@@ -31,8 +31,8 @@ ISSUE=273
 LOCK=/tmp/oh-restart-273.lock
 LOGF=/tmp/oh-restart-273.log
 MAP=/tmp/oh-restart-273.sessions.txt
-# Sentinel lives in /tmp, NOT under tasks/ — an untracked file in the tracked tasks/ tree
-# would make the weekly cleanup pre-flight (`git status --porcelain -- tasks/`) emit
+# Sentinel lives in /tmp, NOT under .oh/tasks/ — an untracked file in the tracked .oh/tasks/ tree
+# would make the weekly cleanup pre-flight (`git status --porcelain -- .oh/tasks/`) emit
 # BLOCKED-TASKS-WIP. /tmp survives `tmux kill-server` (only a container restart clears it,
 # which is not expected in the one-shot window). The heartbeat gate checks the same path.
 SENTINEL="/tmp/oh-restart-273.done"
@@ -83,10 +83,10 @@ tmux kill-server 2>/dev/null || true
 sleep 2
 
 # Defensive: clear a singleton lock that names a now-dead runtime (cron-runtime also self-heals).
-if [[ -f "$HARNESS/crons/.pid" ]]; then
-  oldpid="$(cat "$HARNESS/crons/.pid" 2>/dev/null || true)"
+if [[ -f "$HARNESS/.oh/crons/.pid" ]]; then
+  oldpid="$(cat "$HARNESS/.oh/crons/.pid" 2>/dev/null || true)"
   if [[ -n "${oldpid:-}" ]] && ! kill -0 "$oldpid" 2>/dev/null; then
-    rm -f "$HARNESS/crons/.pid"; log "cleared stale crons/.pid (dead pid $oldpid)"
+    rm -f "$HARNESS/.oh/crons/.pid"; log "cleared stale .oh/crons/.pid (dead pid $oldpid)"
   fi
 fi
 
@@ -125,8 +125,8 @@ for s in "${ORDER[@]}"; do
     # watchdog, so the watchdog never double-launches it and we don't proceed past a crashed
     # pane. `has-session` alone can't tell a live runtime from a pane holding a crash.
     for _ in $(seq 1 20); do
-      if [[ -f "$HARNESS/crons/.pid" ]]; then
-        rp="$(cat "$HARNESS/crons/.pid" 2>/dev/null || true)"
+      if [[ -f "$HARNESS/.oh/crons/.pid" ]]; then
+        rp="$(cat "$HARNESS/.oh/crons/.pid" 2>/dev/null || true)"
         [[ -n "${rp:-}" ]] && kill -0 "$rp" 2>/dev/null && break
       fi
       sleep 1
@@ -160,8 +160,8 @@ if ! pgrep -af 'tmux' 2>/dev/null | grep -q -- '-s system-cron'; then argv_clean
 # Cron runtime must be ALIVE (a session existing is not enough — the pane could hold a crash).
 cron_alive="no"
 for _ in $(seq 1 15); do
-  if [[ -f "$HARNESS/crons/.pid" ]]; then
-    rp="$(cat "$HARNESS/crons/.pid" 2>/dev/null || true)"
+  if [[ -f "$HARNESS/.oh/crons/.pid" ]]; then
+    rp="$(cat "$HARNESS/.oh/crons/.pid" 2>/dev/null || true)"
     if [[ -n "${rp:-}" ]] && kill -0 "$rp" 2>/dev/null; then cron_alive="yes"; break; fi
   fi
   sleep 1
@@ -192,10 +192,10 @@ log "verify: status=$status missing=[${missing[*]:-none}] argv-cleared=$argv_cle
 if [[ -x "$HARNESS/.oh/scripts/locked-append.sh" ]]; then
   printf '[%s] restart-273: status=%s argv-cleared=%s cron-alive=%s missing=%s mifune=%s\n' \
     "$(date -Iseconds)" "$status" "$argv_clean" "$cron_alive" "${missing[*]:-none}" "$site" \
-    | "$HARNESS/.oh/scripts/locked-append.sh" "$HARNESS/crons/.cron.log" || true
+    | "$HARNESS/.oh/scripts/locked-append.sh" "$HARNESS/.oh/crons/.cron.log" || true
 fi
 
-body="$(printf 'Automated tmux-server restart (#273) ran via the heartbeat date-gated spec-execute step.\n\n- system-cron argv cleared: %s\n- cron runtime alive (crons/.pid): %s\n- sessions missing after relaunch: %s\n- https://mifune.dev/ : %s (informational; rebuilds on its own)\n\nLog: %s on the sandbox host.' \
+body="$(printf 'Automated tmux-server restart (#273) ran via the heartbeat date-gated spec-execute step.\n\n- system-cron argv cleared: %s\n- cron runtime alive (.oh/crons/.pid): %s\n- sessions missing after relaunch: %s\n- https://mifune.dev/ : %s (informational; rebuilds on its own)\n\nLog: %s on the sandbox host.' \
   "$argv_clean" "$cron_alive" "${missing[*]:-none}" "$site" "$LOGF")"
 
 if command -v gh >/dev/null 2>&1; then

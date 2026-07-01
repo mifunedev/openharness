@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/468-dedupe-merged-autopilot-refs",
+  "description": "Prevent /autopilot from rebuilding open tickets whose development PRs already merged.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Skip completed-but-open queue tickets",
+      "description": "As the harness operator, I want /autopilot to skip open autopilot issues when a merged PR already references them so the loop does not rebuild shipped work.",
+      "acceptanceCriteria": [
+        ".claude/skills/autopilot/SKILL.md fetches recent merged PRs alongside open PRs before queue selection.",
+        "The issue-reference matcher is shared across open and merged PR JSON caches.",
+        "Candidate issues with merged refs are skipped with DEDUPE_STATE and console output explaining the merged PR reference.",
+        "The queue rationale and no-actionable-item prose mention open or merged PR references."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed during autopilot run on 2026-06-20."
+    },
+    {
+      "id": "US-002",
+      "title": "Guard the merged dedupe invariant",
+      "description": "As a future maintainer, I want an eval probe that fails if merged-PR dedupe disappears from the autopilot skill.",
+      "acceptanceCriteria": [
+        "Add .oh/evals/probes/autopilot-merged-pr-reference-dedupe.sh as a Tier-A probe.",
+        "Keep .oh/evals/probes/autopilot-open-pr-reference-dedupe.sh aligned with the revised rationale text.",
+        "bash .oh/evals/probes/autopilot-open-pr-reference-dedupe.sh passes.",
+        "bash .oh/evals/probes/autopilot-merged-pr-reference-dedupe.sh passes."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed during autopilot run on 2026-06-20."
+    },
+    {
+      "id": "US-003",
+      "title": "Record the operator model",
+      "description": "As a future agent, I want docs/wiki/changelog context that explains why merged PR references matter for a development-targeting workflow.",
+      "acceptanceCriteria": [
+        "CHANGELOG.md has Unreleased entries for the probe and behavior change.",
+        "wiki/autopilot.md explains the queue selection model, cites source lines, and links adjacent entries.",
+        "wiki/raw/2026-06-20-autopilot-selection.md captures the source snapshot for the wiki entry.",
+        "wiki/README.md includes the new entry and bash .oh/evals/probes/wiki-readme-index.sh passes."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed during autopilot run on 2026-06-20."
+    }
+  ]
+}

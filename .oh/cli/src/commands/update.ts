@@ -1,14 +1,16 @@
 import {
   existsSync,
   statSync,
-  lstatSync,
-  mkdirSync,
-  readdirSync,
   readFileSync,
-  copyFileSync,
 } from 'node:fs';
 import path from 'node:path';
-import { loadManifest, shouldShip } from '../lib/manifest.js';
+import { loadManifest } from '../lib/manifest.js';
+import { copyOhPayload, assertDestInTarget, type CopyReport } from '../lib/vendor.js';
+
+// `assertDestInTarget` now lives in lib/vendor.ts (shared by init + update); it
+// is re-exported here so existing importers (src/__tests__/update.test.ts) keep
+// working unchanged.
+export { assertDestInTarget };
 
 export interface UpdateIO {
   stdout: (s: string) => void;
@@ -20,38 +22,6 @@ export interface UpdateOptions {
   fromDir: string;
   force?: boolean;
   dryRun?: boolean;
-}
-
-/**
- * Throws unless `dest` is `targetOh` itself or strictly inside it.
- * This is the path-escape safety invariant — never weaken it.
- */
-export function assertDestInTarget(dest: string, targetOh: string, sep: string): void {
-  if (dest === targetOh || dest.startsWith(targetOh + sep)) {
-    return;
-  }
-  throw new Error('oh update: refusing to write outside target .oh: ' + dest);
-}
-
-/**
- * Recurse `dir` (anchored at `root`), pushing POSIX relpaths of every REAL file.
- * Symlinks (file AND dir) are skipped and never followed, so a source `.oh/`
- * symlink can never pull external content into the target.
- */
-function walkFiles(root: string, dir: string, acc: string[]): void {
-  const entries = readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const abs = path.resolve(dir, entry.name);
-    const st = lstatSync(abs);
-    if (st.isSymbolicLink()) {
-      continue;
-    }
-    if (st.isDirectory()) {
-      walkFiles(root, abs, acc);
-    } else if (st.isFile()) {
-      acc.push(path.relative(root, abs).split(path.sep).join('/'));
-    }
-  }
 }
 
 /** Parse a semver-ish string into a 3-segment numeric tuple (pre-release/build stripped). */
@@ -155,11 +125,8 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
     );
   }
 
-  // AC-4 / AC-6: overlay
-  const relpaths: string[] = [];
-  walkFiles(fromOh, fromOh, relpaths);
-  relpaths.sort();
-
+  // AC-4 / AC-6: overlay via the shared copier. update preserves its
+  // always-overwrite behavior by NOT passing `skipExisting`.
   const manifest = loadManifest(fromOh);
   if (manifest === null) {
     io.stdout(
@@ -170,40 +137,32 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
 
   let created = 0;
   let overwritten = 0;
-  let skipped = 0;
 
-  for (const rel of relpaths) {
-    const segments = rel.split('/');
-    if (segments.includes('node_modules') || segments.includes('dist')) {
-      io.stdout(dryPrefix + 'skip ' + rel + ' (volatile)\n');
-      skipped++;
-      continue;
+  const report: CopyReport = (action, rel) => {
+    switch (action) {
+      case 'create':
+        io.stdout(dryPrefix + 'create ' + rel + '\n');
+        created++;
+        break;
+      case 'overwrite':
+        io.stdout(dryPrefix + 'overwrite ' + rel + '\n');
+        overwritten++;
+        break;
+      case 'skip-volatile':
+        io.stdout(dryPrefix + 'skip ' + rel + ' (volatile)\n');
+        break;
+      case 'skip-not-in-payload':
+        io.stdout(dryPrefix + 'skip ' + rel + ' (not in payload)\n');
+        break;
+      case 'skip-exists':
+        // update never passes skipExisting, so this is unreachable; handled for
+        // exhaustiveness.
+        io.stdout(dryPrefix + 'skip ' + rel + ' (exists)\n');
+        break;
     }
+  };
 
-    if (manifest && !shouldShip(rel, manifest)) {
-      io.stdout(dryPrefix + 'skip ' + rel + ' (not in payload)\n');
-      skipped++;
-      continue;
-    }
-
-    const dest = path.resolve(targetOh, rel);
-    assertDestInTarget(dest, targetOh, path.sep);
-
-    const exists = existsSync(dest);
-    if (exists) {
-      io.stdout(dryPrefix + 'overwrite ' + rel + '\n');
-      overwritten++;
-    } else {
-      io.stdout(dryPrefix + 'create ' + rel + '\n');
-      created++;
-    }
-
-    if (!dryRun) {
-      const src = path.resolve(fromOh, rel);
-      mkdirSync(path.dirname(dest), { recursive: true });
-      copyFileSync(src, dest);
-    }
-  }
+  const { skipped } = copyOhPayload(fromOh, targetOh, manifest, { force, dryRun }, report);
 
   io.stdout(
     dryPrefix +

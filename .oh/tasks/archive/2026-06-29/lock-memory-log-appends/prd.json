@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/476-lock-memory-log-appends",
+  "description": "Lock remaining skill memory-log appends through scripts/locked-append.sh.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Context audit uses locked memory append",
+      "description": "As an autonomous harness operator, I want /context-audit memory-log guidance to use scripts/locked-append.sh so concurrent log writers do not interleave records.",
+      "acceptanceCriteria": [
+        ".claude/skills/context-audit/SKILL.md routes the Memory Protocol heredoc through scripts/locked-append.sh \"$HARNESS/.oh/memory/$TODAY/log.md\".",
+        ".pi/skills/context-audit/SKILL.md has the same content as the .claude copy."
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Implemented on 2026-06-20; verified by memory-log-locked-append probe."
+    },
+    {
+      "id": "US-002",
+      "title": "Health check uses locked memory append",
+      "description": "As an autonomous harness operator, I want /health-check memory-log guidance to use scripts/locked-append.sh so resource-check logs share the same append discipline as other skills.",
+      "acceptanceCriteria": [
+        ".claude/skills/health-check/SKILL.md routes the Memory Protocol heredoc through scripts/locked-append.sh \".oh/memory/$TODAY/log.md\".",
+        ".pi/skills/health-check/SKILL.md has the same content as the .claude copy."
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Implemented on 2026-06-20; verified by memory-log-locked-append probe."
+    },
+    {
+      "id": "US-003",
+      "title": "Regression probe and changelog",
+      "description": "As a future maintainer, I want CI-visible coverage for the locked-memory-append invariant.",
+      "acceptanceCriteria": [
+        ".oh/evals/probes/memory-log-locked-append.sh fails on direct cat >> ....oh/memory/$TODAY/log.md examples in the affected skill contracts.",
+        "The new probe passes locally.",
+        "CHANGELOG.md records the fix under [Unreleased]."
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Implemented on 2026-06-20; verified by memory-log-locked-append probe."
+    }
+  ]
+}

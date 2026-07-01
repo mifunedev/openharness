@@ -1,0 +1,19 @@
+# Hermes Agent config — sanitized project default scaffolded by `oh init`.
+# Runtime state (auth.json, sessions, caches, dbs) is gitignored and lives
+# alongside this file under HERMES_HOME. NEVER commit secrets here.
+model:
+  default: gpt-5.5
+  provider: openai-codex
+agent:
+  max_turns: 90
+  gateway_timeout: 1800
+  tool_use_enforcement: auto
+  task_completion_guidance: true
+terminal:
+  backend: local
+  cwd: .
+  timeout: 180
+  persistent_shell: true
+toolsets:
+  - hermes-cli
+providers: {}

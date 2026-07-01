@@ -306,10 +306,10 @@ else
   else
     # ── Population A: fresh clone ──────────────────────────────────────────
     if [ -n "$OH_GITHUB_REF" ]; then
-      git clone --recurse-submodules --branch "$OH_GITHUB_REF" "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
+      git clone --branch "$OH_GITHUB_REF" "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
       ok "Repository cloned at ref '$OH_GITHUB_REF': $REPO_DIR"
     else
-      git clone --recurse-submodules "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
+      git clone "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
       ok "Repository cloned: $REPO_DIR"
     fi
   fi
@@ -323,10 +323,10 @@ fi
 
 cd "$REPO_DIR"
 
-# Mifune enters Open Harness as the pinned .mifune/ submodule. Repair plain
-# clones or older checkouts before the sandbox build/provider startup reads it.
-if [ -x .oh/scripts/ensure-mifune.sh ]; then
-  bash .oh/scripts/ensure-mifune.sh --init
+# The skills/agents/hooks pack is vendored under .oh/. Wire (or repair) the
+# provider symlinks into it before the sandbox build/provider startup reads them.
+if [ -x .oh/scripts/link-providers.sh ]; then
+  bash .oh/scripts/link-providers.sh --init
 fi
 
 # ─── 4. Configure sandbox ────────────────────────────────────────────
@@ -401,7 +401,7 @@ ENVEOF
 GH_TOKEN=
 
 # ─── Slack bot (pi-messenger-bridge) ─────────────────────────────────
-# See docs/integrations/slack.md.
+# See .oh/docs/integrations/slack.md.
 
 # Slack app-level token for Socket Mode connection (starts with xapp-).
 # PI_SLACK_APP_TOKEN=xapp-...

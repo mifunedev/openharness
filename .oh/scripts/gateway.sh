@@ -3,7 +3,7 @@
 # the in-sandbox agent into a messaging platform (Slack today).
 #
 # Two backends bridge Slack, each in its OWN tmux session (naming per
-# docs/connecting.md: client-<platform>-<backend>) and holding its OWN Slack
+# .oh/docs/connecting.md: client-<platform>-<backend>) and holding its OWN Slack
 # app, so the two coexist without competing for one socket:
 #
 #   pi      client-slack-pi      pi-messenger-bridge, loaded via `pi --extension`

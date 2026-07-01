@@ -3,10 +3,10 @@
 **Open Harness** is a Docker-based agent harness for **one project**, agent-tended over time. One `docker compose up` gives you a long-lived sandbox where Claude (or another agent of your choice) runs against a single repo, branch, and identity — not a multi-tenant comparison rig.
 
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
-- **Agents that work while you sleep.** A tiny croner runtime reads `crons/*.md` markdown and wakes the agent on a schedule.
+- **Agents that work while you sleep.** A tiny croner runtime reads `.oh/crons/*.md` markdown and wakes the agent on a schedule.
 - **Host dependencies: Docker + Git.** No Node, no Python, no toolchain rot on your laptop.
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
-- **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [docs/integrations/slack.md](docs/integrations/slack.md).
+- **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
 - **Multi-agent? Add a pack.** Other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
 
 ---
@@ -17,7 +17,7 @@
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2Fmifunedev%2Fopenharness)
 
-This boots a Railway-hosted status surface so you can verify Open Harness starts before doing local setup. Railway mode does **not** provide the host Docker socket or privileged sibling containers needed for full sandbox lifecycle commands (`make sandbox`, `make shell`, compose overlays). Use it as a hosted preview; use the local Docker path below for the complete harness. Details: [Railway deployment](docs/railway.md).
+This boots a Railway-hosted status surface so you can verify Open Harness starts before doing local setup. Railway mode does **not** provide the host Docker socket or privileged sibling containers needed for full sandbox lifecycle commands (`make sandbox`, `make shell`, compose overlays). Use it as a hosted preview; use the local Docker path below for the complete harness. Details: [Railway deployment](.oh/docs/railway.md).
 
 **Option A — Upstream (try it without any local repo setup):**
 
@@ -41,7 +41,7 @@ Clones into `~/.openharness`, offers to share your host `gh` token, writes `.dev
 
 ```bash
 # 1. Fork on GitHub, then clone YOUR fork:
-git clone --recurse-submodules https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
+git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
 # 2. Bootstrap — installer auto-detects the local clone, no env vars needed:
 bash .oh/scripts/install.sh
 ```
@@ -49,7 +49,7 @@ bash .oh/scripts/install.sh
 **Option C — Clone upstream, then re-point to your repo:**
 
 ```bash
-git clone --recurse-submodules https://github.com/mifunedev/openharness.git my-harness && cd my-harness
+git clone https://github.com/mifunedev/openharness.git my-harness && cd my-harness
 git remote set-url origin https://github.com/<your-org>/<your-repo>.git
 bash .oh/scripts/install.sh
 ```
@@ -70,27 +70,16 @@ curl -fsSL -o openharness-install.sh \
 OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```
 
-If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](docs/installation.md) for all environment overrides.
+If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](.oh/docs/installation.md) for all environment overrides.
 
 </details>
 
 
-## 🧩 How Mifune is added
+## 🧩 How the primitive pack ships
 
-Open Harness consumes the shared Mifune primitive pack as a mandatory pinned Git submodule at `.mifune/`, sourced from [`ryaneggz/mifune`](https://github.com/ryaneggz/mifune). A recursive clone initializes it automatically:
+Open Harness vendors the shared skills/agents/hooks primitive pack directly into the `.oh/` control plane: `.oh/skills/`, `.oh/agents/`, `.oh/hooks/`, and `.oh/skills.lock` are tracked as ordinary files in this repo. The `oh` CLI lays them down during `oh init`/`oh update`, so a fresh checkout has the skills immediately — no submodule, no recursive clone, no network step.
 
-```bash
-git clone --recurse-submodules https://github.com/mifunedev/openharness.git
-```
-
-After a plain clone, or if `.mifune/` is empty or at the wrong commit, repair it with:
-
-```bash
-bash .oh/scripts/ensure-mifune.sh --init
-bash .oh/scripts/ensure-mifune.sh --check
-```
-
-Provider surfaces remain provider-specific: `.pi/skills`, `.claude/skills`, `.codex/skills`, `.claude/agents`, and `.claude/hooks` are symlinks into the initialized `.mifune/` mount. `.pi/` itself remains the Pi provider surface in v1; consolidation of `.pi` and Mifune is a separate v2 design topic, not part of this extraction.
+Provider surfaces are symlinks into `.oh/`: `.pi/skills`, `.claude/skills`, and `.codex/skills` point at `.oh/skills`; `.claude/agents` → `.oh/agents`; `.claude/hooks` → `.oh/hooks`. `.pi/` itself remains the Pi provider surface in v1.
 
 ## 🚀 Use it
 
@@ -111,7 +100,7 @@ make help        # all targets
 
 ## 🧪 Testing
 
-- Property-based testing convention: [docs/property-testing.md](docs/property-testing.md)
+- Property-based testing convention: [.oh/docs/property-testing.md](.oh/docs/property-testing.md)
 
 Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Running Container" against `openharness`, or SSH into your host first and then attach.
 
@@ -128,7 +117,7 @@ with `make destroy && make sandbox`.
 <details><summary>Manual setup (no installer)</summary>
 
 ```bash
-git clone --recurse-submodules https://github.com/mifunedev/openharness.git && cd openharness
+git clone https://github.com/mifunedev/openharness.git && cd openharness
 make sandbox
 make shell
 ```
@@ -144,13 +133,13 @@ make shell
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
-| **Crons** | Markdown-defined schedules in `crons/*.md` driven by the in-container croner runtime |
+| **Crons** | Markdown-defined schedules in `.oh/crons/*.md` driven by the in-container croner runtime |
 | **Multi-agent** | Install a harness pack such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) for additional multi-agent setups |
 
 ## 📚 Where to go next
 
-- [Docs index](docs/README.md) — GitHub-readable docs kept with the core repo
-- [Quickstart](docs/quickstart.md) — full step-by-step
+- [Docs index](.oh/docs/README.md) — GitHub-readable docs kept with the core repo
+- [Quickstart](.oh/docs/quickstart.md) — full step-by-step
 - [DeepWiki](https://deepwiki.com/mifunedev/openharness) — generated codebase map
 - [Docs site source](https://github.com/mifunedev/openharness-web) — migrated Docusaurus site and blog archive
 
@@ -170,4 +159,4 @@ MIT.
 
 ---
 
-[Docs index](docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)
+[Docs index](.oh/docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)

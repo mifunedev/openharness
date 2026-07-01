@@ -82,7 +82,7 @@ grep -Fq '.oh/docs/README.md' "$README" || failures+=("README.md must point read
 # artifacts are excluded because they describe old completed work.
 if git -C "$ROOT" grep -nE 'docusaurus build|pnpm (run )?docs:build|pnpm --dir \.oh/docs build|@openharness/docs' -- \
   ':!evals/probes/docs-build-fast-path.sh' \
-  ':!tasks/**' \
+  ':!.oh/tasks/**' \
   ':!CHANGELOG.md' >/tmp/docs-site-externalized-grep.txt; then
   failures+=("core repo still references removed docs-build commands: $(tr '\n' ';' </tmp/docs-site-externalized-grep.txt)")
 fi

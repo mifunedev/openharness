@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: memory/MEMORY.md 2026-06-19
-# desc: /prd skill uses canonical tasks/<feature-name>/prd.md output path
+# desc: /prd skill uses canonical .oh/tasks/<feature-name>/prd.md output path
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -14,11 +14,11 @@ fi
 missing=()
 for file in "${skill_files[@]}"; do
   [ -f "$file" ] || { missing+=("$file"); continue; }
-  if grep -q 'tasks/prd-\[feature-name\]\.md' "$file"; then
+  if grep -q '\.oh/tasks/prd-\[feature-name\]\.md' "$file"; then
     echo "REGRESSION: stale flat PRD path remains in ${file#$ROOT/}" >&2
     exit 1
   fi
-  if ! grep -q 'tasks/<feature-name>/prd\.md' "$file"; then
+  if ! grep -q '\.oh/tasks/<feature-name>/prd\.md' "$file"; then
     echo "REGRESSION: canonical PRD path missing from ${file#$ROOT/}" >&2
     exit 1
   fi

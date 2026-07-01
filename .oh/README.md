@@ -21,18 +21,20 @@ namespaces, split by what *kind* of thing they hold:
   `.pi/`, `.hermes/`).
 - **`.oh/`** — *OpenHarness's own machinery* as one unit: the `oh` CLI (`cli/`),
   the GitHub-readable markdown docs (`docs/`), installer + lifecycle scripts
-  (`scripts/`), container-install inputs (`install/`), and user-local deploy
-  config (`config.json`). The former top-level `packages/` folder was
-  **retired** — its `oh` package moved in here; the Docusaurus docs *site* was
-  externalized to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
+  (`scripts/`), container-install inputs (`install/`), user-local deploy
+  config (`config.json`), and the Ralph/spec task workdirs (`tasks/` —
+  ephemeral build scratch, now at `.oh/tasks/`). The former top-level
+  `packages/` folder was **retired** — its `oh` package moved in here; the
+  Docusaurus docs *site* was externalized to
+  [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
   (#536), and the GitHub-readable markdown it rendered now lives at `.oh/docs/`.
 - **repo root** — everything forced to root by *external* tooling
   (`.devcontainer/` for the devcontainer spec + Docker COPY, `harness.yaml`,
   `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) **plus** live
   identity/state the harness edits in place (`context/`, `evals/`, `crons/`,
-  `memory/`, `tasks/`, `workspace/`). The GitHub-readable markdown docs now live
-  under `.oh/docs/`; the rendered docs site and the `blog/` archive live in
-  `mifunedev/openharness-web`.
+  `memory/`, `workspace/`). The GitHub-readable markdown docs now live
+  under `.oh/docs/` and the Ralph/spec task workdirs under `.oh/tasks/`; the
+  rendered docs site and the `blog/` archive live in `mifunedev/openharness-web`.
 
 ### Back-compat symlinks (the `.mifune` precedent)
 
@@ -51,6 +53,12 @@ the boot-lint shellcheck glob (`scripts/*.sh`), vitest's `scripts/__tests__/**`,
 and the eval probes — keeps resolving through the symlink unchanged. Boot scripts
 that self-resolve via `cd "$(dirname "$0")" && pwd` land on the repo root through
 the symlink (bash logical `pwd`), so no path-resolution rewiring was needed.
+
+The relocated task workdirs (`tasks/` → `.oh/tasks/`) moved **without** a
+back-compat symlink — every consumer was repointed to the real `.oh/tasks/` path
+directly (the `cleanup-tasks` cron, `ralph.sh` + its vitest, the eval probes, and
+the `.mifune` skill/agent references), because git index operations cannot traverse
+a symlink and nothing reads the bare `tasks/` path anymore.
 
 The **`oh` CLI package** moved *without* a back-compat symlink — the `packages/`
 folder is retired, and its consumers were repointed directly to the real `.oh/`
@@ -115,7 +123,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, deploy/compose config | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `crons/`, `memory/`, `tasks/`, `workspace/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, deploy/compose config, the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `evals/`, `crons/`, `memory/`, `workspace/`) |
 
 ### Why these specifically stay at root
 

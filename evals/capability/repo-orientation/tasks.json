@@ -37,7 +37,7 @@
       "class": "light-orientation",
       "prompt": "Find the sandbox lifecycle and Docker provisioning entry points.",
       "expected_paths": ["Makefile", ".devcontainer/", "scripts/docker-compose.sh"],
-      "forbidden_patterns": ["node_modules/", "wiki/raw/", "tasks/*/progress.txt"]
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", ".oh/tasks/*/progress.txt"]
     },
     {
       "id": "RO-002",
@@ -86,7 +86,7 @@
       "class": "no-orientation",
       "prompt": "Report a known PR's GitHub status from PR metadata without reading repository files.",
       "expected_paths": [],
-      "forbidden_patterns": ["node_modules/", "wiki/raw/", "tasks/*/progress.txt"]
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", ".oh/tasks/*/progress.txt"]
     }
   ]
 }

@@ -5,7 +5,7 @@
 #       BEFORE any worktree/tmux/agent — the cron runtime carries a generic
 #       `preflight:` field (runPreflight + SKIPPED_PREFLIGHT/PREFLIGHT_ERROR), the
 #       runtime fails closed when a configured preflight cannot be evaluated, the
-#       autopilot cron wires `preflight: .mifune/skills/autopilot/autopilot-caps.sh`,
+#       autopilot cron wires `preflight: .oh/skills/autopilot/autopilot-caps.sh`,
 #       and the script exists, is executable, defaults its caps from harness.yaml,
 #       and emits the SKIPPED-CAP-* / PROCEED contract (verified hermetically with a gh stub).
 set -euo pipefail
@@ -13,7 +13,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 RUNTIME="$ROOT/.oh/scripts/cron-runtime.ts"
 CRON="$ROOT/.oh/crons/autopilot.md"
-SCRIPT="$ROOT/.mifune/skills/autopilot/autopilot-caps.sh"
+SCRIPT="$ROOT/.oh/skills/autopilot/autopilot-caps.sh"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
 YAML="$ROOT/harness.yaml"
 TESTS="$ROOT/.oh/scripts/__tests__/autopilot-caps.test.ts"
@@ -39,13 +39,13 @@ fi
 grep -Eq 'if \((entry|liveEntry)\.preflight\) \{' "$RUNTIME" || missing+=("fire() runs the preflight gate before spawning")
 
 # 2. the autopilot cron wires the gate.
-grep -Eq '^preflight:[[:space:]]*\.mifune/skills/autopilot/autopilot-caps\.sh[[:space:]]*$' "$CRON" \
-  || missing+=(".oh/crons/autopilot.md wires preflight: .mifune/skills/autopilot/autopilot-caps.sh")
+grep -Eq '^preflight:[[:space:]]*\.oh/skills/autopilot/autopilot-caps\.sh[[:space:]]*$' "$CRON" \
+  || missing+=(".oh/crons/autopilot.md wires preflight: .oh/skills/autopilot/autopilot-caps.sh")
 grep -Eq '^repo:[[:space:]]*mifunedev/openharness[[:space:]]*$' "$CRON" \
   || missing+=(".oh/crons/autopilot.md targets repo: mifunedev/openharness")
 
 # 3. the canonical gate script: executable + the STATUS contract + harness.yaml caps.
-[[ -x "$SCRIPT" ]] || missing+=(".mifune/skills/autopilot/autopilot-caps.sh is executable")
+[[ -x "$SCRIPT" ]] || missing+=(".oh/skills/autopilot/autopilot-caps.sh is executable")
 grep -Fq 'SKIPPED-CAP-TOTAL' "$SCRIPT" || missing+=("gate emits SKIPPED-CAP-TOTAL")
 grep -Fq 'SKIPPED-CAP-DAILY' "$SCRIPT" || missing+=("gate emits SKIPPED-CAP-DAILY")
 grep -Fq 'PROCEED-GH-ERROR' "$SCRIPT" || missing+=("gate fails open with PROCEED-GH-ERROR")
@@ -59,7 +59,7 @@ grep -Eq '^[[:space:]]*#?[[:space:]]*total_cap:' "$YAML" || missing+=("harness.y
 grep -Eq '^[[:space:]]*#?[[:space:]]*daily_cap:' "$YAML" || missing+=("harness.yaml documents autopilot.daily_cap")
 
 # 5. the autopilot skill §1 defers to the canonical script (no duplicate cap shell).
-grep -Fq '.mifune/skills/autopilot/autopilot-caps.sh' "$SKILL" || missing+=("autopilot SKILL §1 defers to .mifune/skills/autopilot/autopilot-caps.sh")
+grep -Fq '.oh/skills/autopilot/autopilot-caps.sh' "$SKILL" || missing+=("autopilot SKILL §1 defers to .oh/skills/autopilot/autopilot-caps.sh")
 
 # 6. tests exist for the gate contract.
 [[ -f "$TESTS" ]] || missing+=(".oh/scripts/__tests__/autopilot-caps.test.ts exists")

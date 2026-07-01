@@ -4,11 +4,20 @@
     "scripts/**",
     "install/**",
     "templates/**",
+    "context/**",
+    "crons/**",
+    "evals/**",
+    "skills/**",
+    "agents/**",
+    "hooks/**",
+    "skills.lock",
     "README.md",
     "manifest.json"
   ],
   "exclude": [
     "**/node_modules/**",
-    "**/dist/**"
+    "**/dist/**",
+    "**/.env",
+    "**/auth.json"
   ]
 }

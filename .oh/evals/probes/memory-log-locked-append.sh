@@ -38,7 +38,7 @@ for rel in ".claude/skills/context-audit/SKILL.md" ".pi/skills/context-audit/SKI
   }
 done
 for rel in ".claude/skills/health-check/SKILL.md" ".pi/skills/health-check/SKILL.md"; do
-  grep -qF '.oh/scripts/locked-append.sh ".oh/memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
+  grep -qF '.oh/scripts/locked-append.sh "$MEM/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
     echo "REGRESSION: $rel lacks locked health-check memory append" >&2
     exit 1
   }

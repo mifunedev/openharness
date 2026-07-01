@@ -41,7 +41,7 @@ only — never a `.oh/tasks/` subfolder.
    `OK (archived N, skipped M)` success token and the `HEARTBEAT_OK`
    nothing-to-do reply. Do not contaminate the archive branch with
    unrelated changes.
-3. Resolve `$BASE` = default target branch per `/git` (`.mifune/skills/git/SKILL.md`)
+3. Resolve `$BASE` = default target branch per `/git` (`.oh/skills/git/SKILL.md`)
    (`development` → `main` → `master`, whichever exists). Fetch it
    (`git fetch origin "$BASE"`), then provision a dedicated, crash-safe
    worktree for the archive work — never branch or commit against the
@@ -132,7 +132,7 @@ only — never a `.oh/tasks/` subfolder.
    - Commit: `git -C .worktrees/archive/$TODAY commit -m "archive: weekly cleanup $TODAY (N tasks)"`.
    - Push: `git -C .worktrees/archive/$TODAY push -u origin "archive/$TODAY"`.
    - Open a PR (or update an existing one for the same branch) per
-     `.mifune/skills/git/SKILL.md` conventions:
+     `.oh/skills/git/SKILL.md` conventions:
      `gh pr create --base "$BASE" --head "archive/$TODAY" \
         --title "FROM archive/$TODAY TO $BASE" \
         --body "Weekly task sweep — archived N completed tasks, skipped M still-active, groomed W stale worktrees.\n\nArchived: <list>\nSkipped: <list>\nGroomed worktrees: <list>"`.

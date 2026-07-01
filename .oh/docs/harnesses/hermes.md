@@ -86,7 +86,7 @@ hermes doctor           # health check
 Config, memory, runtime skills, and sessions write to `~/harness/.hermes/`
 through `HERMES_HOME=/home/sandbox/harness/.hermes`. On boot with
 Hermes enabled, the entrypoint links `.hermes/skills/openharness` to the
-tracked shared skills directory (`.mifune/skills/`), making the same harness
+tracked shared skills directory (`.oh/skills/`), making the same harness
 skills used by Claude, Codex, and Pi visible to Hermes by default.
 
 Auth lives directly inside `HERMES_HOME` (`~/harness/.hermes/auth.json`).

@@ -53,7 +53,7 @@ if [[ -f "$REPO_MAP" ]]; then
     'node_modules/' \
     '.pi/npm/node_modules/' \
     '.oh/cli/dist/' \
-    '.mifune/skills/wiki/corpus/raw/' \
+    '.oh/skills/wiki/corpus/raw/' \
     '.oh/memory/*/log.md' \
     '.oh/tasks/*/progress.txt' \
     '.oh/evals/datasets/**/oracle/'; do
@@ -74,7 +74,7 @@ if [[ -f "$REPO_MAP" ]]; then
     repo=$(git rev-parse --show-toplevel)
     git -C "$repo" ls-files -- \
       ':!:.oh/tasks/*/progress.txt' \
-      ':!:.mifune/skills/wiki/corpus/raw/*' \
+      ':!:.oh/skills/wiki/corpus/raw/*' \
       ':!:.oh/evals/datasets/**/oracle/**' \
       ':!:.oh/evals/datasets/**/diff.patch' \
       ':!:.oh/evals/datasets/**/changed-files.txt'
@@ -88,7 +88,7 @@ if [[ -f "$REPO_MAP" ]]; then
   done
   for forbidden_re in \
     '(^|/)node_modules/' \
-    '^\.mifune/skills/wiki/corpus/raw/' \
+    '^\.oh/skills/wiki/corpus/raw/' \
     '^\.oh/tasks/.*/progress\.txt$' \
     '^\.oh/evals/datasets/.*/oracle/' \
     '^\.oh/evals/datasets/.*/diff\.patch$' \

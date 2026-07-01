@@ -9,9 +9,6 @@ on:
     paths:
       - ".devcontainer/**"
       - ".oh/**"
-      - ".gitmodules"
-      - ".mifune"
-      - ".mifune/**"
       - "workspace/**"
       - "packages/oh/**"
       - ".oh/scripts/docker-compose.sh"
@@ -25,9 +22,6 @@ on:
     paths:
       - ".devcontainer/**"
       - ".oh/**"
-      - ".gitmodules"
-      - ".mifune"
-      - ".mifune/**"
       - "workspace/**"
       - "packages/oh/**"
       - ".oh/scripts/docker-compose.sh"
@@ -61,7 +55,7 @@ jobs:
           submodules: recursive
 
       - name: Ensure Mifune submodule
-        run: bash .oh/scripts/ensure-mifune.sh --init
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Docker diagnostics
         run: |

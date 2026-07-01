@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # tier: A
 # source: conversation 2026-06-19 (advisor-monitored ralph loop pattern, issue #257)
-# desc: the /advisor skill (.mifune/skills/advisor/SKILL.md) § Pipeline Variants codifies the "Monitored async loop" variant — Advisor owns the STATUS watch, the loop surfaces blocks, finalize routes through the promotable gate
+# desc: the /advisor skill (.oh/skills/advisor/SKILL.md) § Pipeline Variants codifies the "Monitored async loop" variant — Advisor owns the STATUS watch, the loop surfaces blocks, finalize routes through the promotable gate
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-RULE="$ROOT/.mifune/skills/advisor/SKILL.md"
+RULE="$ROOT/.oh/skills/advisor/SKILL.md"
 
 if [[ ! -f "$RULE" ]]; then
   echo "SKIPPED: advisor skill absent: $RULE" >&2

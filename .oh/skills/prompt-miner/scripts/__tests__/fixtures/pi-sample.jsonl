@@ -1,0 +1,7 @@
+{"type":"session","version":3,"id":"pi-good-001","timestamp":"2026-06-18T12:00:00.000Z","cwd":"/home/sandbox/harness"}
+{"type":"message","timestamp":"2026-06-18T12:00:01.000Z","message":{"role":"user","content":[{"type":"text","text":"Create the baz module in src/baz.mjs and wire its tests."}]}}
+{"type":"message","timestamp":"2026-06-18T12:00:02.000Z","message":{"role":"assistant","stopReason":"toolUse","content":[{"type":"text","text":"On it."}],"usage":{"input":10,"output":5}}}
+{"type":"message","timestamp":"2026-06-18T12:00:03.000Z","message":{"role":"toolResult","toolName":"bash","isError":true,"content":[{"type":"text","text":"boom: command not found"}]}}
+{"type":"message","timestamp":"2026-06-18T12:00:04.000Z","message":{"role":"assistant","stopReason":"toolUse","content":[{"type":"text","text":"Retrying with the correct path."}],"usage":{"input":11,"output":7}}}
+{"type":"message","timestamp":"2026-06-18T12:00:05.000Z","message":{"role":"toolResult","toolName":"read","isError":false,"content":[{"type":"text","text":"ok"}]}}
+{"type":"message","timestamp":"2026-06-18T12:00:06.000Z","message":{"role":"assistant","stopReason":"stop","content":[{"type":"text","text":"Done."}],"usage":{"input":12,"output":6}}}

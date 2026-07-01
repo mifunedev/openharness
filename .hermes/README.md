@@ -7,7 +7,7 @@ This directory holds Hermes project-local runtime state such as config, memory, 
 On boot with Hermes enabled, the sandbox creates this symlink when the shared skill directory exists:
 
 ```text
-/home/sandbox/harness/.hermes/skills/openharness -> ../../.mifune/skills
+/home/sandbox/harness/.hermes/skills/openharness -> ../../.oh/skills
 ```
 
 That makes the harness' in-repo shared skills visible to Hermes through Hermes' normal `$HERMES_HOME/skills` scan, while Claude, Codex, and Pi see the same tracked files through their own `skills` symlinks.

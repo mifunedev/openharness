@@ -36,7 +36,7 @@ Body becomes the agent prompt at fire time.
 - Cron tmux sessions follow the `cron-<name>` category-prefix convention:
   the supervisor is `cron-watchdog`, the runtime is `cron-system`, and
   detached job fires are `cron-<id>-<MMDD>-<HHMM>` (see
-  `.mifune/skills/t3/references/sandbox-processes.md`).
+  `.oh/skills/t3/references/sandbox-processes.md`).
 - Migration note: older sandboxes used runtime session `system-cron` and
   autopilot run sessions/markers named `autopilot-*`. New sandboxes use
   `cron-system` and `cron-autopilot-*`. During the transition, heartbeat scans
@@ -103,7 +103,7 @@ returns before generating a shell wrapper or spawning an agent.
 | `heartbeat.md` | `0 * * * *` (hourly) | Hourly pulse — review memory, surface anything urgent |
 | `cleanup-tasks.md` | `0 23 * * 0` (Sun 23:00 MT) | Weekly Ralph session sweep — archive completed tasks |
 | `eval-weekly.md` | `0 6 * * 0` (Sun 06:00 MT) | Weekly eval suite — run probes, log any regressions to memory |
-| `prompt-miner.md` | `0 5 * * *` (daily 05:00 MT) | Daily prompt-miner — mine 24h of session traces for prompt-quality markers; ship a top finding to the origin fork via `/ship-spec` (opt-in `enabled: false`, cap-gated by `preflight: .mifune/skills/prompt-miner/prompt-miner-caps.sh`) |
+| `prompt-miner.md` | `0 5 * * *` (daily 05:00 MT) | Daily prompt-miner — mine 24h of session traces for prompt-quality markers; ship a top finding to the origin fork via `/ship-spec` (opt-in `enabled: false`, cap-gated by `preflight: .oh/skills/prompt-miner/prompt-miner-caps.sh`) |
 
 ## tmux sessions
 

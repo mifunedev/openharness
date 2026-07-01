@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #101
-# desc: the Memory Improvement Protocol (.mifune/skills/retro/references/memory-protocol.md) must not claim daily logs are git-tracked, and .gitignore must keep ignoring .oh/memory/[0-9]*/ so the false "tracked inside" persistence claim cannot return
+# desc: the Memory Improvement Protocol (.oh/skills/retro/references/memory-protocol.md) must not claim daily logs are git-tracked, and .gitignore must keep ignoring .oh/memory/[0-9]*/ so the false "tracked inside" persistence claim cannot return
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 GITIGNORE="$ROOT/.gitignore"
-RULE="$ROOT/.mifune/skills/retro/references/memory-protocol.md"
+RULE="$ROOT/.oh/skills/retro/references/memory-protocol.md"
 
 # SKIPPED guard: a grep against a missing file would silently false-PASS
 # Assertion B (grep -q on absent file exits non-zero → "not present"), so

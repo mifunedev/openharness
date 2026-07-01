@@ -8,13 +8,13 @@ At session start, prefer Git's tracked file list over raw filesystem scans, then
 repo=$(git rev-parse --show-toplevel)
 git -C "$repo" ls-files -- \
   ':!:.oh/tasks/*/progress.txt' \
-  ':!:.mifune/skills/wiki/corpus/raw/*' \
+  ':!:.oh/skills/wiki/corpus/raw/*' \
   ':!:.oh/evals/datasets/**/oracle/**' \
   ':!:.oh/evals/datasets/**/diff.patch' \
   ':!:.oh/evals/datasets/**/changed-files.txt'
 ```
 
-Why: anchoring at `git rev-parse --show-toplevel` prevents subdirectory launches from silently mapping only a subtree. `git ls-files` requires no extra tooling and excludes vendor, generated, ignored, and runtime state by default while preserving hidden source dirs such as `.claude/`, `.pi/`, `.github/`, and `.devcontainer/`.
+Why: `git rev-parse --show-toplevel` stops a subdirectory launch from mapping only a subtree; `git ls-files` needs no extra tooling and skips vendor, generated, ignored, and runtime state while keeping hidden source dirs (`.claude/`, `.pi/`, `.github/`, `.devcontainer/`).
 
 ## Session-start use
 
@@ -23,17 +23,17 @@ Why: anchoring at `git rev-parse --show-toplevel` prevents subdirectory launches
 3. Pick one row from the search routing guide before running broad `rg`.
 4. When a routed directory has `README.md`, read that first.
 5. Disregard the folders in the skip table by default; open them only for listed exception cases.
-6. Prefer curated `.mifune/skills/wiki/corpus/*.md` and `.oh/memory/MEMORY.md` over raw logs/snapshots.
+6. Prefer curated `.oh/skills/wiki/corpus/*.md` and `.oh/memory/MEMORY.md` over raw logs/snapshots.
 
 ## Performance caveat and acceptance metric
 
-Caveat: this file is a structural optimization, not benchmark proof by itself. It adds startup context; savings happen only when agents use it to avoid raw filesystem scans, vendor/generated reads, or broad repo search.
+Caveat: this file is a structural optimization, not benchmark proof by itself. Savings happen only when agents use it to avoid raw filesystem scans, vendor/generated reads, or broad search.
 
 Acceptance metric: compare at least 5 common orientation tasks with and without this file loaded. Track total input tokens, tool calls before the first relevant file, time to correct path, and accidental reads under disregard paths. Count the change successful only if median time/tool calls drop and total token spend breaks even or improves.
 
 ## Context-file loading model
 
-Different harnesses load `AGENTS.md`/`CLAUDE.md` differently. For Open Harness work, treat discovered global/user, parent-directory, and current-directory context files as cumulative context, then resolve conflicts by target-path specificity. Do not rely on automatic nearest-file-wins semantics.
+Different harnesses load `AGENTS.md`/`CLAUDE.md` differently. For Open Harness, treat discovered global/user, parent-directory, and current-directory context files as cumulative, then resolve conflicts by target-path specificity. Do not rely on nearest-file-wins semantics.
 
 Operational rule:
 
@@ -78,9 +78,9 @@ done
 ```
 
 
-## Mifune ingress and ownership
+## Skill pack (skills/agents/hooks)
 
-Mifune source lives in `ryaneggz/mifune` and enters Open Harness as the pinned `.mifune/` submodule. Use `git clone --recurse-submodules`, or repair a plain clone with `bash .oh/scripts/ensure-mifune.sh --init` then `--check`. Change Mifune upstream first, then bump the Open Harness pin. `.pi/` remains a provider surface, not the v1 Mifune mount.
+The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/skills`, `.oh/agents`, `.oh/hooks`) — no submodule. `oh init`/`oh update` lay them down with the rest of `.oh/`; `bash .oh/scripts/link-providers.sh --init` (re)creates the provider symlinks into them.
 
 ## Search routing quick guide
 
@@ -91,14 +91,14 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Session role, permissions, startup load | `AGENTS.md`, `.oh/context/README.md`, `.oh/context/` | Defines orchestrator role, voice, session-start reads, rules. |
 | Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml`, `.oh/scripts/README.md`, `.oh/scripts/docker-compose.sh` | Owns container image, compose overlays, env, and lifecycle commands. |
 | Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/pr-audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
-| Cron/autopilot behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.mifune/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog. |
+| Cron/autopilot behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.oh/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog. |
 | Eval/probe regressions | `.oh/evals/README.md`, `.oh/evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
 | Task/spec implementation state | `.oh/tasks/README.md`, `.oh/tasks/<active-task>/` | PRD, critique, Ralph JSON, prompt, and task-specific artifacts. |
 | Docs | `README.md`, `.oh/docs/README.md`, `.oh/docs/` | GitHub-readable markdown; site/blog lives in `mifunedev/openharness-web`. |
 | CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi provider extensions, manifests, and runtime config; `.pi/` is not the v1 Mifune mount. |
-| Skill behavior | `.mifune/skills/`, `.pi/skills/`, `.claude/skills/` | Source of truth is the initialized `.mifune/` submodule from `ryaneggz/mifune`; provider paths are symlinks into it. |
-| Durable knowledge | `.mifune/skills/wiki/corpus/README.md`, `.mifune/skills/wiki/corpus/*.md`, `.oh/memory/MEMORY.md` | Curated wiki pages and long-term lessons; prefer these before raw logs. |
+| Skill behavior | `.oh/skills/`, `.pi/skills/`, `.claude/skills/` | Source of truth is the vendored `.oh/skills/` pack; provider paths are symlinks into it. |
+| Durable knowledge | `.oh/skills/wiki/corpus/README.md`, `.oh/skills/wiki/corpus/*.md`, `.oh/memory/MEMORY.md` | Curated wiki pages and long-term lessons; prefer these before raw logs. |
 | Agent workspace seed files | `workspace/AGENTS.md`, `workspace/CLAUDE.md` | Template files bind-mounted into the sandbox workspace. |
 
 ## Disregard by default
@@ -114,7 +114,7 @@ Ignore these unless the task explicitly targets them:
 | `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
 | `.oh/memory/YYYY-MM-DD/`, `.oh/memory/*/log.md` | High-churn session logs. | Loading today's required startup log or investigating a dated event. |
 | `.oh/memory/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki ingest --from-draft`. |
-| `.mifune/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.mifune/skills/wiki/corpus/*.md` entry. |
+| `.oh/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.oh/skills/wiki/corpus/*.md` entry. |
 | `workspace/.slack/`, `workspace/.pi/`, `workspace/.ralph/`, `workspace/startup.sh` | Runtime state and local/sensitive sandbox artifacts. | Debugging Slack/Pi/Ralph runtime state or startup generation. |
 | `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific Ralph run status; prefer `tail` over full read. |
 | `.oh/evals/datasets/**/oracle/`, `.oh/evals/datasets/**/diff.patch`, `.oh/evals/datasets/**/changed-files.txt` | Expected-output fixtures, not implementation guidance. | Updating/verifying a dataset oracle. |
@@ -142,7 +142,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `.oh/cli/src/` | Standalone `oh` CLI source code. | Change CLI behavior; read `.oh/README.md` first. |
 | `.oh/cli/package.json` | CLI package-local scripts and dependencies. | Run package-specific build/typecheck. |
 | `.oh/docs/` | GitHub-readable product docs. | Update product docs; start at `.oh/docs/README.md`. |
-| `.mifune/skills/wiki/corpus/*.md` | Curated internal knowledge pages. | Reuse durable research before reading raw sources; read `.mifune/skills/wiki/corpus/README.md` for index. |
+| `.oh/skills/wiki/corpus/*.md` | Curated internal knowledge pages. | Reuse durable research before reading raw sources; read `.oh/skills/wiki/corpus/README.md` for index. |
 | `.oh/tasks/<active-task>/` | `prd.md`, `prd.json`, `critique.md`, `prompt.md`; `progress.txt` only for Ralph run status. | Verify task graph or implementation scope before reading runtime progress. |
 | `.github/workflows/` | CI, docs, release workflow definitions. | Debug/check GitHub Actions behavior. |
 | `.devcontainer/` | Sandbox Dockerfile, compose, devcontainer config, entrypoint. | Change sandbox image/runtime provisioning. |

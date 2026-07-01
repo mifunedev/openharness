@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # tier: A
 # source: auditor agent — the primary manager/dispatcher of the audit-skill family must preserve its frozen scope-boundary contract
-# desc: .mifune/agents/auditor.md registers an auditor agent that routes/composes the 7 audit skills without reimplementing them
+# desc: .oh/agents/auditor.md registers an auditor agent that routes/composes the 7 audit skills without reimplementing them
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-AGENT="$ROOT/.mifune/agents/auditor.md"
+AGENT="$ROOT/.oh/agents/auditor.md"
 
 if [[ ! -f "$AGENT" ]]; then
   echo "SKIPPED: auditor agent absent: $AGENT" >&2

@@ -11,7 +11,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILL_DIR="$ROOT/.mifune/skills/prompt-miner"
+SKILL_DIR="$ROOT/.oh/skills/prompt-miner"
 ENGINE="$SKILL_DIR/scripts/mine-traces.mjs"
 FIXTURES="$SKILL_DIR/scripts/__tests__/fixtures"
 

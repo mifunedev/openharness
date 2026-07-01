@@ -222,7 +222,7 @@ or isolate processes *inside* the container — any local process that can open
 and Host/Origin validation as a narrower, browser-specific mitigation.
 
 A future `/really-debug` companion skill is a **design consideration only**:
-were it built, it would auto-install via the `.mifune/skills` source-of-truth
+were it built, it would auto-install via the `.oh/skills` source-of-truth
 plus the per-provider symlinks, but no such skill exists today and none is
 created by this integration.
 

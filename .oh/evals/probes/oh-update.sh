@@ -7,6 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 UPDATE_TS="$ROOT/.oh/cli/src/commands/update.ts"
+VENDOR_TS="$ROOT/.oh/cli/src/lib/vendor.ts"
 CLI_TS="$ROOT/.oh/cli/src/cli.ts"
 TEST_TS="$ROOT/.oh/cli/src/__tests__/update.test.ts"
 
@@ -22,9 +23,16 @@ if ! grep -q 'export async function runUpdate' "$UPDATE_TS"; then
   exit 1
 fi
 
-# Path-escape guard literal must be present.
-if ! grep -q 'refusing to write outside target .oh' "$UPDATE_TS"; then
-  echo "REGRESSION update.ts missing path-escape guard message" >&2
+# Path-escape guard: the guard (assertDestInTarget + its message literal) now lives
+# in the shared lib/vendor.ts, which update.ts imports and applies via copyOhPayload.
+# Verify the message at its source of truth, and that update.ts routes writes through
+# the guarded copier.
+if ! grep -q 'refusing to write outside target .oh' "$VENDOR_TS"; then
+  echo "REGRESSION vendor.ts missing path-escape guard message" >&2
+  exit 1
+fi
+if ! grep -q 'copyOhPayload' "$UPDATE_TS"; then
+  echo "REGRESSION update.ts does not route writes through the guarded copyOhPayload" >&2
   exit 1
 fi
 
@@ -60,8 +68,9 @@ if [ ! -f "$TEST_TS" ]; then
   exit 1
 fi
 
-# Negative-guard (static deletion proxy): the .oh-scoped path guard must be present.
-for token in 'assertDestInTarget' 'targetOh' 'refusing to write outside target .oh'; do
+# Negative-guard (static deletion proxy): update.ts must import + reference the
+# shared .oh-scoped path guard (defined in lib/vendor.ts, message checked above).
+for token in 'assertDestInTarget' 'targetOh'; do
   if ! grep -q "$token" "$UPDATE_TS"; then
     echo "REGRESSION update.ts missing negative-guard token: $token" >&2
     exit 1

@@ -1,37 +1,37 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims
-# desc: guards context/REPO_MAP.md as a tracked-source orientation contract: startup-loaded, repo-root anchored git ls-files command, no tree dependency, skip/search guidance, context-file precedence, source-map/helper smoke checks, size budget, and explicit A/B benchmark path
+# desc: guards .oh/context/REPO_MAP.md as a tracked-source orientation contract: startup-loaded, repo-root anchored git ls-files command, no tree dependency, skip/search guidance, context-file precedence, source-map/helper smoke checks, size budget, and explicit A/B benchmark path
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-REPO_MAP="$ROOT/context/REPO_MAP.md"
+REPO_MAP="$ROOT/.oh/context/REPO_MAP.md"
 AGENTS="$ROOT/AGENTS.md"
-CONTEXT_README="$ROOT/context/README.md"
+CONTEXT_README="$ROOT/.oh/context/README.md"
 MANIFEST="$ROOT/.oh/evals/capability/repo-orientation/tasks.json"
 SCORER="$ROOT/.oh/scripts/repo-orientation-benchmark-score.mjs"
 MAX_BYTES=12288
 
 fails=()
 
-[[ -f "$REPO_MAP" ]] || fails+=("context/REPO_MAP.md exists")
+[[ -f "$REPO_MAP" ]] || fails+=(".oh/context/REPO_MAP.md exists")
 [[ -f "$AGENTS" ]] || fails+=("AGENTS.md exists")
-[[ -f "$CONTEXT_README" ]] || fails+=("context/README.md exists")
+[[ -f "$CONTEXT_README" ]] || fails+=(".oh/context/README.md exists")
 [[ -f "$MANIFEST" ]] || fails+=("repo-orientation benchmark manifest exists")
 [[ -x "$SCORER" ]] || fails+=("repo-orientation benchmark scorer exists and is executable")
 
 if [[ -f "$AGENTS" ]]; then
-  grep -Fq 'context/REPO_MAP.md' "$AGENTS" || fails+=("AGENTS.md startup reads include context/REPO_MAP.md")
+  grep -Fq '.oh/context/REPO_MAP.md' "$AGENTS" || fails+=("AGENTS.md startup reads include .oh/context/REPO_MAP.md")
 fi
 
 if [[ -f "$CONTEXT_README" ]]; then
-  grep -Fq 'REPO_MAP.md' "$CONTEXT_README" || fails+=("context/README.md lists REPO_MAP.md")
+  grep -Fq 'REPO_MAP.md' "$CONTEXT_README" || fails+=(".oh/context/README.md lists REPO_MAP.md")
 fi
 
 if [[ -f "$REPO_MAP" ]]; then
   bytes=$(wc -c <"$REPO_MAP" | tr -d ' ')
   if (( bytes > MAX_BYTES )); then
-    fails+=("context/REPO_MAP.md is ${bytes} bytes, above ${MAX_BYTES}-byte startup budget")
+    fails+=(".oh/context/REPO_MAP.md is ${bytes} bytes, above ${MAX_BYTES}-byte startup budget")
   fi
 
   grep -Fq 'repo=$(git rev-parse --show-toplevel)' "$REPO_MAP" || fails+=("source-map command anchors at repo root")
@@ -70,7 +70,7 @@ if [[ -f "$REPO_MAP" ]]; then
   fi
 
   source_map="$({
-    cd "$ROOT/context"
+    cd "$ROOT/.oh/context"
     repo=$(git rev-parse --show-toplevel)
     git -C "$repo" ls-files -- \
       ':!:.oh/tasks/*/progress.txt' \
@@ -82,7 +82,7 @@ if [[ -f "$REPO_MAP" ]]; then
   for required in \
     'AGENTS.md' \
     '.github/workflows/ci-harness.yml' \
-    'context/REPO_MAP.md' \
+    '.oh/context/REPO_MAP.md' \
     '.oh/evals/probes/repo-map-contract.sh'; do
     grep -Fxq "$required" <<<"$source_map" || fails+=("source-map smoke missing tracked root file: $required")
   done

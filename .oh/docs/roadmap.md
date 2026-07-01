@@ -13,13 +13,13 @@ core**. The full vision is in `.claude/plans/context-as-a-logical-marble.md`.
 
 Skills moved to `.mifune/skills/` because a skill is a **portable primitive** —
 it works across Claude, Codex, Pi, and Hermes. That exposed the real
-consolidation target: **rules (`context/rules/`) are Claude-Code-only.** Only
+consolidation target: **rules (`.oh/context/rules/`) are Claude-Code-only.** Only
 `.claude/rules` auto-loads them; Codex, Pi, and Hermes do not. A "rule" is thus a
 *non-portable* mechanism holding *provider-agnostic* knowledge — a mismatch.
 
 The B-state **deprecates the rules tier into skills**, so behavioral norms become
 portable across every provider instead of Claude-only. The pattern is already
-proven on one rule: `context/rules/git.md` is a three-line pointer whose source
+proven on one rule: `.oh/context/rules/git.md` is a three-line pointer whose source
 of truth is the `/git` skill. Every other rule follows that template.
 
 The headline: **the rules tier disappears.** Norms that are *task-triggered*
@@ -59,8 +59,7 @@ its consumers were repointed to `.oh/cli`. The docs-site package later moved out
 entirely: the Docusaurus app/assets/blog now live in
 [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web),
 while this core repo keeps GitHub-readable markdown under `docs/` and points
-DeepWiki at generated repo navigation. (`context/`,
-`workspace/`, and `docs/` stay at root as live
+DeepWiki at generated repo navigation. (`workspace/` and `docs/` stay at root as live
 identity/state/content, not machinery addressed as a unit.) The Ralph/spec
 task workdirs (`tasks/`) were reclassified as machinery and moved under
 `.oh/tasks/` with no back-compat symlink; every consumer (the `cleanup-tasks`
@@ -91,6 +90,14 @@ that traverse the symlink) — so references were repointed to the real
 `.oh/memory/` path for consistency. The tracked `MEMORY.md`/`README.md` move
 with the dir; the gitignored dated `[0-9]*/` logs stay ignored at the new path.
 
+The always-on identity core (`context/` — `SOUL.md`, `IDENTITY.md`, `TOOLS.md`,
+`USER.md`, `REPO_MAP.md`, and the collapsed `context/rules/` pointers) was
+reclassified as machinery and moved under `.oh/context/`, keeping a back-compat
+root symlink so `AGENTS.md`'s session-start reads resolve unchanged. References
+were repointed to the real `.oh/context/` path; `protected-paths.txt`, the
+`repo-orientation` benchmark `startupContext`, and the `repo-map-contract`
+probe were updated in lockstep.
+
 ## Namespaces
 
 This **supersedes** the earlier "earned by EXPORT only" rule: a dotdir namespace
@@ -99,8 +106,8 @@ is earned by **function-class**. Three surfaces:
 | Namespace | Function-class | Holds |
 |---|---|---|
 | `.mifune/` | provider-portable primitives (exported to the 4 providers + the `mifunedev/skills` registry) | skills, agents, hooks |
-| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), the scheduled-agent cron definitions (`crons/` → `.oh/crons/`), the fitness-function eval suite (`evals/` → `.oh/evals/`), the long-term memory + session logs (`memory/` → `.oh/memory/`), deploy config (`config.json`), the Ralph/spec task workdirs (`tasks/` → `.oh/tasks/`) |
-| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `workspace/`, `docs/` content |
+| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), the scheduled-agent cron definitions (`crons/` → `.oh/crons/`), the fitness-function eval suite (`evals/` → `.oh/evals/`), the long-term memory + session logs (`memory/` → `.oh/memory/`), the always-on identity core (`context/` → `.oh/context/`), deploy config (`config.json`), the Ralph/spec task workdirs (`tasks/` → `.oh/tasks/`) |
+| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `workspace/`, `docs/` content |
 
 Harness-native skills still live in `.mifune/skills/` (not `.oh/`) because they
 share the *identical* provider-export mechanism; portability is a property
@@ -117,7 +124,7 @@ primitives plus one small always-on identity core:
 | | A-state (today) | B-state (target) |
 |---|---|---|
 | Portable (`.mifune/`) | `skills/` (agents still in `.claude/`) | `skills/` · `agents/` · `hooks/` — all behavior lives here |
-| Always-on identity (`context/`) | `rules/` (auto-loaded, Claude-only) + SOUL / IDENTITY / TOOLS / USER / REPO_MAP | SOUL / IDENTITY / TOOLS / USER / REPO_MAP — no `rules/` tier, or pointers only |
+| Always-on identity (`.oh/context/`) | `rules/` (auto-loaded, Claude-only) + SOUL / IDENTITY / TOOLS / USER / REPO_MAP | SOUL / IDENTITY / TOOLS / USER / REPO_MAP — no `rules/` tier, or pointers only |
 | Provider dirs | `.claude` `.codex` `.pi` `.hermes` (config + symlinks) | `.claude` `.codex` `.pi` `.hermes` (thin config + symlinks) |
 
 Five behavior surfaces become **3 portable + 1 small always-on core**:
@@ -138,7 +145,7 @@ dependency order (the **Depends on** column); never start a blocked step.
 | M1 | Agents → `.mifune/agents` | M0 | ✅ Done |
 | M2 | `.oh/` config surface (rescope the dead `.openharness/`) | M0 | ✅ Done |
 | M3 | Rules → skills (easy first): `remote-installers` delete · `advisor` + `recursive-delegation` → `/advisor` · `wiki` → `wiki/references` · `sandbox-processes` → skill ref | M1 | ✅ Done |
-| M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `context/rules/` | M3 | ✅ Done |
+| M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `.oh/context/rules/` | M3 | ✅ Done |
 | M5 | Hooks → `.mifune/hooks` | M1 | ✅ Done |
 | M6 | Skill-private scripts → skill dirs (`autopilot-caps`, `prompt-miner-caps`); shared scripts stay at root | M1 | ✅ Done |
 | M7 | `.oh/` machinery grouping + retire `packages/`: `packages/oh → .oh/cli`, `packages/docs → .oh/docs` (intermediate), `scripts → .oh/scripts`, `install → .oh/install`, canonical `config.json → .oh/config.json`. Runtime dirs (`scripts/`, `install/`) keep back-compat symlinks (the `.mifune` precedent); package consumers repoint directly and the `packages/` folder is removed. Generalizes the namespace rule from export-ness to function-class. | M2 | ✅ Done |
@@ -156,7 +163,7 @@ This page is the living north-star — keep it current:
 
 ## Per-rule disposition
 
-The A→B map for each `context/rules/` file:
+The A→B map for each `.oh/context/rules/` file:
 
 | Rule | Nature | B-state home | Why |
 |---|---|---|---|
@@ -166,7 +173,7 @@ The A→B map for each `context/rules/` file:
 | `wiki.md` | schema spec | → `wiki/references/schema.md` | the consolidated `/wiki` skill implements it |
 | `memory.md` | end-of-skill protocol + schema | → `/retro` (canonical) + a one-line always-on pointer in `AGENTS.md` | `/retro` already operationalizes it; the protocol must still fire after every skill |
 | `sandbox-processes.md` | tmux lifecycle norm | → skill `references/` (cloudflared / t3) | task-triggered |
-| `directory-readme.md` | repo-authoring convention | stays a small `context/` doc | applies to this repo's authors, not portable behavior |
+| `directory-readme.md` | repo-authoring convention | stays a small `.oh/context/` doc | applies to this repo's authors, not portable behavior |
 | `remote-installers.md` | safety norm, orphan | fold into a skill or delete | no inbound references |
 | `README.md` | dir index | regenerate / trim with the tier | — |
 

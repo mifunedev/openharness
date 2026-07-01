@@ -18,17 +18,17 @@ Assume agent harnesses may concatenate global, parent-directory, and current-dir
 
 Read these files at the start of every session — they encode voice, principles, environment, and working-relationship patterns that don't belong in the always-loaded bootloader:
 
-- `context/SOUL.md` — voice and disposition
-- `context/IDENTITY.md` — operating principles + lessons learned (append-only)
-- `context/TOOLS.md` — environment inventory; skip rediscovery
-- `context/REPO_MAP.md` — source-map command, search routing, and low-signal folders to disregard
-- `context/USER.md` — working-relationship patterns; living document
+- `.oh/context/SOUL.md` — voice and disposition
+- `.oh/context/IDENTITY.md` — operating principles + lessons learned (append-only)
+- `.oh/context/TOOLS.md` — environment inventory; skip rediscovery
+- `.oh/context/REPO_MAP.md` — source-map command, search routing, and low-signal folders to disregard
+- `.oh/context/USER.md` — working-relationship patterns; living document
 - `.oh/memory/MEMORY.md` — long-term lessons learned (append-only)
 - Today's `.oh/memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
 
 After **every** skill or agent run, fire the Memory Improvement Protocol (log → qualify → improve) — its canonical home is now the `/retro` skill (`.mifune/skills/retro/references/memory-protocol.md`).
 
-The always-loaded `context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/advisor` (delegation + recursive-delegation), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — and the repo-authoring convention stays a plain doc at `context/directory-readme.md`. The always-on tier is now just the `context/` identity files listed above; load the relevant skill when a task calls for its norm.
+The always-loaded `.oh/context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/advisor` (delegation + recursive-delegation), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — and the repo-authoring convention stays a plain doc at `.oh/context/directory-readme.md`. The always-on tier is now just the `.oh/context/` identity files listed above; load the relevant skill when a task calls for its norm.
 
 ## Permissions
 
@@ -168,7 +168,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 |-------|------|
 | `/release` | CalVer release — branch, tag, push, GHCR |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
-| `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `context/rules/git.md`, which is now only a pointer for providers that load rules. |
+| `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `.oh/context/rules/git.md`, which is now only a pointer for providers that load rules. |
 | `/pr-audit` | Triage all open PRs in one bulk `gh pr list --json` query — actionable buckets (ready/CI-failing/conflicting/changes-requested/needs-review) for ready-for-review PRs, with draft PRs split out first as a separate WIP class (promotable/WIP/limbo) + stale/convention flags; read-only by default, `--deep` fans out diff reviewers for flagged PRs, `--proof` writes an idempotent per-PR verdict comment, `--label-apply`/`--close-stale` mutate after confirmation |
 | `/health-check` | Triage host memory/disk/Docker before starting a stack; rank reclaim levers by safety×yield, prune build cache, confirm destructive removal |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |

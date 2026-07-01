@@ -54,7 +54,7 @@ Makefile
 .oh/evals/probes/cleanup-tasks-worktree-grooming.sh
 .oh/crons/eval-weekly.md
 
-# --- Norms folded into skills (formerly context/rules/, B-state M3+M4) ---
+# --- Norms folded into skills (formerly .oh/context/rules/, B-state M3+M4) ---
 .mifune/skills/git/SKILL.md
 .mifune/skills/t3/references/sandbox-processes.md
 .mifune/skills/advisor/SKILL.md
@@ -65,10 +65,10 @@ Makefile
 .claude/specs/structure-spec-v0.7.md
 
 # --- Orchestrator identity layer (session-loaded by AGENTS.md bootloader) ---
-context/SOUL.md
-context/IDENTITY.md
-context/TOOLS.md
-context/USER.md
+.oh/context/SOUL.md
+.oh/context/IDENTITY.md
+.oh/context/TOOLS.md
+.oh/context/USER.md
 
 # --- Sub-agents invoked by skills ---
 .claude/agents/critic.md

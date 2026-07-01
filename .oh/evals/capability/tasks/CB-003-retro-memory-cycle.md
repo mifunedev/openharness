@@ -25,7 +25,7 @@ At session close, produce a scientific retrospective and compound a durable less
 | unattended | Retro ran and the supported lesson was written end-to-end without human authoring | Auto-approve path ran but a human confirmed/edited the lesson wording | A human had to author the hypothesis or the lesson by hand |
 
 ## Evidence basis
-Recent durable lessons demonstrate the cycle landing: `loop-node-name-pipe-trap` and `eval-results-new-probe-row` in the memory index, each a one-bullet lesson traceable to a session observation. `context/rules/memory.md` defines the Memory Improvement Protocol (log → qualify → improve) that `/retro` operationalizes as an explicit, evidence-driven, session-closing pass with a propose-then-confirm (or auto-approve) promotion gate.
+Recent durable lessons demonstrate the cycle landing: `loop-node-name-pipe-trap` and `eval-results-new-probe-row` in the memory index, each a one-bullet lesson traceable to a session observation. `.oh/context/rules/memory.md` defines the Memory Improvement Protocol (log → qualify → improve) that `/retro` operationalizes as an explicit, evidence-driven, session-closing pass with a propose-then-confirm (or auto-approve) promotion gate.
 
 ## Scoring method
 v1: inspect the most-recent real `/retro` instance — its log entry under `.oh/memory/<date>/log.md` and the resulting bullet(s) in `.oh/memory/MEMORY.md` or the auto-memory index — against the rubric. Confirm each hypothesis is falsifiable and carries a verdict with cited evidence, and confirm the promoted lesson is a single non-duplicative bullet in a durable tier. Alternatively, run `/retro` fresh at the close of a real session and score the hypotheses and promotion it produces.

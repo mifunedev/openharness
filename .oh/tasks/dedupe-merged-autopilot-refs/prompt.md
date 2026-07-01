@@ -13,7 +13,7 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
    - `.oh/tasks/dedupe-merged-autopilot-refs/progress.txt` — read the "Codebase Patterns" section at the top (if any) and the most recent few iterations to see what's been done.
    - `.oh/tasks/dedupe-merged-autopilot-refs/critique.md` — if present, the critic findings the stories must satisfy.
    - If `.oh/tasks/dedupe-merged-autopilot-refs/prd.md` contains `## Wiki Alignment`, read it before choosing the story. When `Impact: REQUIRED`, the relevant story must keep wiki updates aligned with the PRD and the recorded DeepWiki comparison.
-   - `context/rules/wiki.md` when your story touches `wiki/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
+   - `.oh/context/rules/wiki.md` when your story touches `wiki/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
    - `.claude/skills/git/SKILL.md` for branch + commit conventions.
    - `.claude/rules/sandbox-processes.md` for tmux session conventions if your story spawns processes.
    - `.claude/rules/advisor-model.md` for any critic-gated story.

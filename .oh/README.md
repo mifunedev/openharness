@@ -23,8 +23,8 @@ namespaces, split by what *kind* of thing they hold:
   the GitHub-readable markdown docs (`docs/`), installer + lifecycle scripts
   (`scripts/`), container-install inputs (`install/`), the scheduled-agent cron
   definitions + runtime log (`crons/`), the regression/capability eval suite
-  (`evals/`), the long-term memory + session logs (`memory/`), user-local deploy
-  config (`config.json`),
+  (`evals/`), the long-term memory + session logs (`memory/`), the always-on
+  identity core (`context/`), user-local deploy config (`config.json`),
   and the Ralph/spec task workdirs (`tasks/` — ephemeral build scratch, now at
   `.oh/tasks/`). The former top-level `packages/` folder was **retired** — its
   `oh` package moved in here; the Docusaurus docs *site* was externalized to
@@ -33,15 +33,16 @@ namespaces, split by what *kind* of thing they hold:
 - **repo root** — everything forced to root by *external* tooling
   (`.devcontainer/` for the devcontainer spec + Docker COPY, `harness.yaml`,
   `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) **plus** live
-  identity/state the harness edits in place (`context/`, `workspace/`). The
-  GitHub-readable markdown docs now live under `.oh/docs/`, the scheduled-agent
-  crons under `.oh/crons/`, the eval suite under `.oh/evals/`, long-term memory
-  under `.oh/memory/`, and the Ralph/spec task workdirs under `.oh/tasks/`; the
-  rendered docs site and the `blog/` archive live in `mifunedev/openharness-web`.
+  identity/state the harness edits in place (`workspace/`). The GitHub-readable
+  markdown docs now live under `.oh/docs/`, the scheduled-agent crons under
+  `.oh/crons/`, the eval suite under `.oh/evals/`, long-term memory under
+  `.oh/memory/`, the identity core under `.oh/context/`, and the Ralph/spec task
+  workdirs under `.oh/tasks/`; the rendered docs site and the `blog/` archive
+  live in `mifunedev/openharness-web`.
 
 ### Back-compat symlinks (the `.mifune` precedent)
 
-The runtime-machinery directories (`scripts/`, `install/`, `crons/`, `evals/`, `memory/`) moved into `.oh/` but
+The runtime-machinery directories (`scripts/`, `install/`, `crons/`, `evals/`, `memory/`, `context/`) moved into `.oh/` but
 keep **tracked back-compat symlinks at the old root paths** — exactly how
 `.claude/skills` → `.mifune/skills` works:
 
@@ -52,6 +53,7 @@ keep **tracked back-compat symlinks at the old root paths** — exactly how
 | `crons/` | `.oh/crons/` |
 | `evals/` | `.oh/evals/` |
 | `memory/` | `.oh/memory/` |
+| `context/` | `.oh/context/` |
 
 Every consumer pinning those literals — the ~7 skills and 2 cron bodies that call
 `scripts/locked-append.sh`, the `Makefile`'s `COMPOSE := scripts/docker-compose.sh`,
@@ -102,6 +104,7 @@ The core runtime expects `.mifune/` to be initialized before provider paths read
 | `crons/` | Scheduled-agent cron definitions (`heartbeat.md`, `autopilot.md`, `cleanup-tasks.md`, …) read by `.oh/scripts/cron-runtime.ts`, plus the gitignored runtime `.cron.log`/`.pid`. Old path: `crons/` (back-compat symlink kept). |
 | `evals/` | The fitness-function suite — regression probes (`probes/`), capability benchmark (`capability/`), trajectory datasets (`datasets/`), and the `RESULTS.md` scoreboard. Old path: `evals/` (back-compat symlink kept). |
 | `memory/` | The harness's long-term memory (`MEMORY.md` + topic notes, tracked) and gitignored dated session logs (`[0-9]*/log.md`). Old path: `memory/` (back-compat symlink kept). |
+| `context/` | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) + the collapsed `rules/` provider pointers. Old path: `context/` (back-compat symlink kept). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
 
@@ -132,7 +135,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, deploy/compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the long-term memory + session logs (`.oh/memory/`), the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`context/`, `workspace/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, deploy/compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the long-term memory + session logs (`.oh/memory/`), the always-on identity core (`.oh/context/`), the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`workspace/`) |
 
 ### Why these specifically stay at root
 
@@ -255,6 +258,6 @@ payload, it never widens the write surface. Cross-tree shipping of
 
 ## Pointers
 
-- `context/directory-readme.md` — the README-as-directory-anchor convention this file follows.
+- `.oh/context/directory-readme.md` — the README-as-directory-anchor convention this file follows.
 - `.oh/docs/roadmap.md` — the B-state primitive-taxonomy migration; `.oh/` machinery grouping.
 - `.mifune/` — the peer machinery namespace (provider-portable primitives), the relocation pattern this dir follows.

@@ -82,7 +82,7 @@ Acceptance criteria:
 - **Impact**: REQUIRED
 - **Local entries**: create `wiki/ci-build-gates.md` and refresh `wiki/README.md`.
 - **Spec alignment**: The wiki entry must explain the split between fast harness validation (`pnpm build`, Harness CI, release validation, `/eval`) and docs validation (`docs.yml` on `main`/`master` push only; local `pnpm docs:build` only by explicit operator choice). It must preserve the goals and non-goals above, especially that PR and release gates no longer build docs automatically.
-- **DeepWiki comparison**: No dedicated public DeepWiki page for this narrow CI/build-gate split was found during local review. The entry should follow the DeepWiki-style shape from `context/rules/wiki.md`: relevant source files first, concrete source-backed claims, a system relationship diagram/table, and `## See Also` navigation.
+- **DeepWiki comparison**: No dedicated public DeepWiki page for this narrow CI/build-gate split was found during local review. The entry should follow the DeepWiki-style shape from `.oh/context/rules/wiki.md`: relevant source files first, concrete source-backed claims, a system relationship diagram/table, and `## See Also` navigation.
 - **Acceptance criteria**: US-004 must create or update the local wiki entry, include relevant source files and line-cited claims, record the DeepWiki comparison gap, include system relationships, and pass `bash .oh/evals/probes/wiki-readme-index.sh`.
 
 ## Critique resolution

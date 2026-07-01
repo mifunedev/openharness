@@ -22,9 +22,9 @@
 **/.claude/screenshots/*
 !**/.claude/screenshots/.gitkeep
 
-# Croner runtime artifacts (keep crons/*.md tracked)
-crons/.pid
-crons/*.log
+# Croner runtime artifacts (keep .oh/crons/*.md tracked)
+.oh/crons/.pid
+.oh/crons/*.log
 
 # Ralph runtime files (keep prd.json + progress.txt tracked for recovery)
 workspace/.ralph/.last-branch
@@ -43,8 +43,8 @@ workspace/.slack/*/
 workspace/.slack/events/
 workspace/.slack/settings.json
 
-# Daily session logs — memory/README.md, memory/MEMORY.md, and topic notes are tracked
-memory/[0-9]*/
+# Daily session logs — .oh/memory/README.md, .oh/memory/MEMORY.md, and topic notes are tracked
+.oh/memory/[0-9]*/
 
 # Pi project config (generated symlinks)
 workspace/.pi/

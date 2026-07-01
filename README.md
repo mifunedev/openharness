@@ -3,7 +3,7 @@
 **Open Harness** is a Docker-based agent harness for **one project**, agent-tended over time. One `docker compose up` gives you a long-lived sandbox where Claude (or another agent of your choice) runs against a single repo, branch, and identity — not a multi-tenant comparison rig.
 
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
-- **Agents that work while you sleep.** A tiny croner runtime reads `crons/*.md` markdown and wakes the agent on a schedule.
+- **Agents that work while you sleep.** A tiny croner runtime reads `.oh/crons/*.md` markdown and wakes the agent on a schedule.
 - **Host dependencies: Docker + Git.** No Node, no Python, no toolchain rot on your laptop.
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
@@ -138,7 +138,7 @@ make shell
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
-| **Crons** | Markdown-defined schedules in `crons/*.md` driven by the in-container croner runtime |
+| **Crons** | Markdown-defined schedules in `.oh/crons/*.md` driven by the in-container croner runtime |
 | **Multi-agent** | Install a harness pack such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) for additional multi-agent setups |
 
 ## 📚 Where to go next

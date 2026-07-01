@@ -18,17 +18,17 @@ Assume agent harnesses may concatenate global, parent-directory, and current-dir
 
 Read these files at the start of every session — they encode voice, principles, environment, and working-relationship patterns that don't belong in the always-loaded bootloader:
 
-- `context/SOUL.md` — voice and disposition
-- `context/IDENTITY.md` — operating principles + lessons learned (append-only)
-- `context/TOOLS.md` — environment inventory; skip rediscovery
-- `context/REPO_MAP.md` — source-map command, search routing, and low-signal folders to disregard
-- `context/USER.md` — working-relationship patterns; living document
-- `memory/MEMORY.md` — long-term lessons learned (append-only)
-- Today's `memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
+- `.oh/context/SOUL.md` — voice and disposition
+- `.oh/context/IDENTITY.md` — operating principles + lessons learned (append-only)
+- `.oh/context/TOOLS.md` — environment inventory; skip rediscovery
+- `.oh/context/REPO_MAP.md` — source-map command, search routing, and low-signal folders to disregard
+- `.oh/context/USER.md` — working-relationship patterns; living document
+- `.oh/memory/MEMORY.md` — long-term lessons learned (append-only)
+- Today's `.oh/memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
 
 After **every** skill or agent run, fire the Memory Improvement Protocol (log → qualify → improve) — its canonical home is now the `/retro` skill (`.mifune/skills/retro/references/memory-protocol.md`).
 
-The always-loaded `context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/advisor` (delegation + recursive-delegation), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — and the repo-authoring convention stays a plain doc at `context/directory-readme.md`. The always-on tier is now just the `context/` identity files listed above; load the relevant skill when a task calls for its norm.
+The always-loaded `.oh/context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/advisor` (delegation + recursive-delegation), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — and the repo-authoring convention stays a plain doc at `.oh/context/directory-readme.md`. The always-on tier is now just the `.oh/context/` identity files listed above; load the relevant skill when a task calls for its norm.
 
 ## Permissions
 
@@ -96,7 +96,7 @@ Verify the sandbox is healthy.
    - `AGENTS.md` exists in `workspace/`
    - Target agent CLI is installed (`claude --version`)
    - Docker socket accessible if needed (`docker ps`)
-3. **Check the cron runtime** (if heartbeats configured under `crons/`):
+3. **Check the cron runtime** (if heartbeats configured under `.oh/crons/`):
    ```bash
    docker exec -it -u sandbox openharness tmux ls
    # → expect "cron-system" session
@@ -168,7 +168,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 |-------|------|
 | `/release` | CalVer release — branch, tag, push, GHCR |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
-| `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `context/rules/git.md`, which is now only a pointer for providers that load rules. |
+| `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `.oh/context/rules/git.md`, which is now only a pointer for providers that load rules. |
 | `/pr-audit` | Triage all open PRs in one bulk `gh pr list --json` query — actionable buckets (ready/CI-failing/conflicting/changes-requested/needs-review) for ready-for-review PRs, with draft PRs split out first as a separate WIP class (promotable/WIP/limbo) + stale/convention flags; read-only by default, `--deep` fans out diff reviewers for flagged PRs, `--proof` writes an idempotent per-PR verdict comment, `--label-apply`/`--close-stale` mutate after confirmation |
 | `/health-check` | Triage host memory/disk/Docker before starting a stack; rank reclaim levers by safety×yield, prune build cache, confirm destructive removal |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
@@ -186,11 +186,11 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
 | `/skill-lint` | Score skills for staleness across 5 dimensions |
 | `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |
-| `/eval` | Run the context fitness-function probe suite (`evals/probes/*.sh`) against real state, write the `evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
+| `/eval` | Run the context fitness-function probe suite (`.oh/evals/probes/*.sh`) against real state, write the `.oh/evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
-| `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
+| `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `.oh/memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
 | `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `.mifune/skills/retro/references/memory-protocol.md` |
-| `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `memory/<date>/`; raw prompt text is off by default. The daily `crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/ship-spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
+| `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `.oh/memory/<date>/`; raw prompt text is off by default. The daily `.oh/crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/ship-spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
 | `/caveman` | Token-compression output mode (`lite`/`full`/`ultra`/`wenyan`); subcommands `/caveman-commit`, `/caveman-review`, `/caveman-compress <file>`, `/caveman-stats`. Never compresses code, security warnings, or irreversible-action confirmations |
 | `/wiki` | Dispatcher for the wiki knowledge base (corpus at `.mifune/skills/wiki/corpus/`, gitignored-by-default + whitelisted): `ingest <url\|path> [--slug]` / `ingest --from-draft <slug> [--allow-stale]` (capture a source or promote a draft), `query <topic>` (frontmatter OR-search, read top ≤3 by `updated:` desc), `lint [--dry-run]` (5 health checks + atomic `corpus/README.md` regen). Schema: `.mifune/skills/wiki/references/schema.md` |
 | `/drift-check` | Detect framework (origin↔upstream), branch-behind, and cron-staleness drift; report remediation — never mutates state |
@@ -210,13 +210,13 @@ apps as stacked panes — see `.mifune/skills/t3/references/sandbox-processes.md
 
 ## What You Do
 
-- Commit and push changes to the harness itself (.devcontainer/, .oh/install/, workspace/ templates, .oh/scripts/, crons/)
+- Commit and push changes to the harness itself (.devcontainer/, .oh/install/, workspace/ templates, .oh/scripts/, .oh/crons/)
 - Manage branches via git
 - Review diffs across agent branches
 - Provision, validate, and tear down the sandbox (`docker compose up -d --build`, `docker compose down -v`, `docker exec`, etc.)
 - Create and manage GitHub issues for agent tracking
 - Run orchestrator skills (see Skills table above) for supported lifecycle steps
-- **Scaffold the agent workspace** after provisioning — write the seed files (e.g. `AGENTS.md`, identity scaffolding, initial cron entries under `crons/`) based on the agent's role. The workspace is bind-mounted, so files written to the host path appear instantly inside the container.
+- **Scaffold the agent workspace** after provisioning — write the seed files (e.g. `AGENTS.md`, identity scaffolding, initial cron entries under `.oh/crons/`) based on the agent's role. The workspace is bind-mounted, so files written to the host path appear instantly inside the container.
 
 ## What You Do NOT Do
 
@@ -235,7 +235,7 @@ apps as stacked panes — see `.mifune/skills/t3/references/sandbox-processes.md
 ## Project Structure
 
 The harness root is `/home/sandbox/harness` inside the sandbox.
-Orchestrator scripts live in `.oh/scripts/`, scheduled agents in `crons/`,
+Orchestrator scripts live in `.oh/scripts/`, scheduled agents in `.oh/crons/`,
 sandbox environment in `.devcontainer/`, the shared Mifune primitive pack in the
 pinned `.mifune/` submodule, and the agent template in `workspace/`. Claude,
 Codex, Pi, and Hermes expose `.mifune/skills` through provider-specific symlinks

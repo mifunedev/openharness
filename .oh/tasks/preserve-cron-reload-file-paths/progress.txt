@@ -3,6 +3,6 @@ Completed: 2026-06-20
 Verification:
 - pnpm vitest run scripts/__tests__/cron-runtime.test.ts — PASS
 - pnpm run test:scripts — PASS
-- bash evals/probes/wiki-readme-index.sh — PASS
+- bash .oh/evals/probes/wiki-readme-index.sh — PASS
 - bash .claude/skills/eval/run.sh — PASS (54 probes unchanged)
 - pnpm run typecheck — PASS after worktree package node_modules symlinks

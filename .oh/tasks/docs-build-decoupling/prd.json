@@ -42,10 +42,10 @@
       "title": "Add a regression probe for build-gate separation",
       "description": "As a future agent, I want a fast deterministic eval probe that flags accidental Docusaurus build reintroduction into /eval, root fast build, Harness CI, release validation, or PR docs workflows.",
       "acceptanceCriteria": [
-        "Add evals/probes/docs-build-fast-path.sh.",
+        "Add .oh/evals/probes/docs-build-fast-path.sh.",
         "The probe uses exact static invariants for root build/setup, Harness CI Build, release Build, eval runner/probe files, and docs workflow triggers.",
         "The probe passes only if .github/workflows/docs.yml builds docs on push to main or master and has no pull_request or workflow_dispatch trigger.",
-        "bash evals/probes/docs-build-fast-path.sh passes.",
+        "bash .oh/evals/probes/docs-build-fast-path.sh passes.",
         "/eval passes.",
         "Tests pass."
       ],
@@ -62,7 +62,7 @@
         "CHANGELOG.md has an Unreleased entry for the build-gate change.",
         "wiki/raw/<yyyy-mm-dd>-ci-build-gates.md and wiki/ci-build-gates.md exist with relevant source files, line-cited claims, a quick command/gate table, system relationships, and See Also.",
         "wiki/README.md is refreshed using canonical deterministic ordering and includes ci-build-gates.",
-        "bash evals/probes/wiki-readme-index.sh passes.",
+        "bash .oh/evals/probes/wiki-readme-index.sh passes.",
         "Typecheck passes.",
         "Tests pass."
       ],

@@ -17,7 +17,7 @@ The extraction must make the Mifune ingress path obvious and repeatable:
 2. A fresh clone may use either `git clone --recurse-submodules <openharness-url>` or a plain clone followed by `bash .oh/scripts/ensure-mifune.sh --init`. Both paths must initialize the same `.mifune/` submodule tree pinned to the recorded `ryaneggz/mifune` SHA.
 3. `.oh/scripts/ensure-mifune.sh --init` is the canonical repair/add command. It initializes or repairs `.mifune/`, verifies the remote URL and pinned SHA, refuses branch-head drift, restores required executable bits, and then runs the protected-path and provider-symlink checks.
 4. Provider exposure is not a second copy: tracked provider symlinks (`.pi/skills`, `.claude/skills`, `.codex/skills`, `.claude/agents`, `.claude/hooks`, `.codex/agents`) and the Hermes runtime symlink point at the initialized `.mifune/` mount.
-5. Setup surfaces (`README.md`, `docs/README.md`, `.oh/README.md`, devcontainer/entrypoint docs, and `context/REPO_MAP.md`) must show this path in one short “How Mifune is added” block so operators can diagnose an empty `.mifune/` directory without reading implementation code.
+5. Setup surfaces (`README.md`, `docs/README.md`, `.oh/README.md`, devcontainer/entrypoint docs, and `.oh/context/REPO_MAP.md`) must show this path in one short “How Mifune is added” block so operators can diagnose an empty `.mifune/` directory without reading implementation code.
 
 
 ## Scope guard and v2 follow-up
@@ -99,7 +99,7 @@ A possible v2 follow-up may evaluate consolidating Mifune under `.pi/`, with `.m
 - [ ] Document the two supported fresh-clone flows: `git clone --recurse-submodules <openharness-url>` and plain clone followed by `bash .oh/scripts/ensure-mifune.sh --init`; both must initialize the same submodule pin.
 - [ ] Ensure `bash .oh/scripts/ensure-mifune.sh --init` is idempotent and can add/repair Mifune in an Open Harness checkout where `.mifune/` is absent, empty, uninitialized, or at the wrong SHA.
 - [ ] Ensure `bash .oh/scripts/ensure-mifune.sh --check` prints a concise diagnostic that names the expected `ryaneggz/mifune` URL/SHA, current state, and exact remediation command.
-- [ ] Add one concise “How Mifune is added” block to all required operator-facing surfaces: `README.md`, `docs/README.md`, `.oh/README.md`, devcontainer/entrypoint docs or comments, and `context/REPO_MAP.md`.
+- [ ] Add one concise “How Mifune is added” block to all required operator-facing surfaces: `README.md`, `docs/README.md`, `.oh/README.md`, devcontainer/entrypoint docs or comments, and `.oh/context/REPO_MAP.md`.
 - [ ] Add or update a clean-clone test/probe that starts from a checkout without initialized `.mifune/`, runs the documented init command, and verifies `.mifune/skills/git/SKILL.md`, provider symlink resolution, protected-path continuity, and Hermes symlink behavior when enabled.
 - [ ] Include the ingress flow in the Open Harness PR body so reviewers can see exactly how Mifune enters the repo after extraction.
 
@@ -110,9 +110,9 @@ A possible v2 follow-up may evaluate consolidating Mifune under `.pi/`, with `.m
 **Acceptance Criteria:**
 
 - [ ] Update `.mifune` references in root docs/context/skills/evals only where the ownership model changes; preserve path references where runtime still uses `.mifune/...`.
-- [ ] Add a root-level Tier-A smoke/probe outside `.mifune/` (for example `evals/probes/mifune-checkout.sh` or equivalent) that runs before the Mifune-hosted eval runner and fails clearly when `.mifune/` is missing, uninitialized, pinned to the wrong repo/SHA, missing protected paths, missing executable bits, or has broken provider symlinks.
+- [ ] Add a root-level Tier-A smoke/probe outside `.mifune/` (for example `.oh/evals/probes/mifune-checkout.sh` or equivalent) that runs before the Mifune-hosted eval runner and fails clearly when `.mifune/` is missing, uninitialized, pinned to the wrong repo/SHA, missing protected paths, missing executable bits, or has broken provider symlinks.
 - [ ] Keep the Mifune-hosted eval runner path valid and also run `bash .mifune/skills/eval/run.sh --probe <new-or-updated-mifune-probe>` after `.oh/scripts/ensure-mifune.sh --init` succeeds.
-- [ ] Update `context/REPO_MAP.md` to route Mifune source-of-truth questions to `ryaneggz/mifune` while still explaining the local mount path `.mifune/`.
+- [ ] Update `.oh/context/REPO_MAP.md` to route Mifune source-of-truth questions to `ryaneggz/mifune` while still explaining the local mount path `.mifune/`.
 - [ ] Update `AGENTS.md` and relevant skill docs only enough to keep the core workflow accurate; do not rewrite individual skill behavior.
 - [ ] Add or update source-backed docs/wiki material explaining the external Mifune boundary, stable `.mifune/` mount path, provider symlink relationship, and DeepWiki comparison in the Wiki Alignment section.
 - [ ] If any US-004 docs/wiki/skill reference edits touch `.mifune/**`, make those edits in `ryaneggz/mifune`, commit and push a final Mifune SHA, update the Open Harness `.mifune` pin to that final SHA, and record it in `.oh/tasks/mifune-repo-extraction/progress.txt` and the PR body before validation.

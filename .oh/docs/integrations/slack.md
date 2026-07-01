@@ -216,7 +216,7 @@ gateway status            # show client-slack-pi + client-slack-hermes
 `make gateway pi`). The same command brings up the sibling Hermes gateway
 client: `gateway hermes`. Detach an attached session with `Ctrl-b d`. The
 session name `client-slack-pi` follows the `client-` prefix convention in
-[`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
+[`.oh/context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
 
 ## 5. Access Control — challenge-based auth
 

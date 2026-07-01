@@ -14,9 +14,9 @@ CRITIC_A — IMPLEMENTER LENS
 
 [SEVERITY: M] [STORY: US-002] Release could accidentally call the newly-fast build command and lose docs coverage. | [EVIDENCE: `.github/workflows/release.yml` Build step; US-002 AC] | Mitigated in PRD: release validation must call `pnpm run build:all`.
 
-[SEVERITY: L] [STORY: US-004] Wiki schema requires a `sources:` entry with raw provenance. | [EVIDENCE: `context/rules/wiki.md`; US-004 AC] | Mitigated in PRD: US-004 now requires `wiki/raw/<date>-ci-build-gates.md` provenance.
+[SEVERITY: L] [STORY: US-004] Wiki schema requires a `sources:` entry with raw provenance. | [EVIDENCE: `.oh/context/rules/wiki.md`; US-004 AC] | Mitigated in PRD: US-004 now requires `wiki/raw/<date>-ci-build-gates.md` provenance.
 
-[SEVERITY: L] [STORY: US-004] `wiki/README.md` should be regenerated using the canonical deterministic behavior, not manually approximated. | [EVIDENCE: `context/rules/wiki.md` README index freshness] | Mitigated in PRD: US-004 requires canonical `/wiki-lint`-equivalent deterministic ordering.
+[SEVERITY: L] [STORY: US-004] `wiki/README.md` should be regenerated using the canonical deterministic behavior, not manually approximated. | [EVIDENCE: `.oh/context/rules/wiki.md` README index freshness] | Mitigated in PRD: US-004 requires canonical `/wiki-lint`-equivalent deterministic ordering.
 
 [SEVERITY: L] [STORY: US-001] Root docs aliases were preserved, but package-local docs scripts were not explicitly protected. | [EVIDENCE: root `package.json`; `packages/docs/package.json`; US-001 AC] | Mitigated in PRD: US-001 requires `packages/docs` build/start/serve scripts remain intact.
 

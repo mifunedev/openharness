@@ -56,10 +56,10 @@ As a future agent, I want a fast deterministic eval probe that flags accidental 
 
 Acceptance criteria:
 
-- Add `evals/probes/docs-build-fast-path.sh`.
+- Add `.oh/evals/probes/docs-build-fast-path.sh`.
 - The probe uses exact static invariants: root `build`/`setup` must not contain `docusaurus`, `docs:build`, `packages/docs`, or `@openharness/docs`; Harness CI and release Build steps must call the fast build path; eval runner/probe files must not invoke `docusaurus build`, `pnpm run docs:build`, or `pnpm --dir packages/docs build` outside this probe's own forbidden-pattern checks.
 - The probe passes only if `.github/workflows/docs.yml` builds docs on `push` to `main` or `master` and has no `pull_request` or `workflow_dispatch` trigger.
-- `bash evals/probes/docs-build-fast-path.sh` passes.
+- `bash .oh/evals/probes/docs-build-fast-path.sh` passes.
 - `/eval` passes.
 - Tests pass.
 
@@ -73,7 +73,7 @@ Acceptance criteria:
 - Add a `CHANGELOG.md` Unreleased entry for the build-gate change.
 - Add `wiki/raw/<yyyy-mm-dd>-ci-build-gates.md` provenance and `wiki/ci-build-gates.md` with relevant source files, line-cited claims, a quick command/gate table, system relationships, and `## See Also`.
 - Refresh `wiki/README.md` using canonical deterministic ordering so the wiki index includes the new/updated entry.
-- `bash evals/probes/wiki-readme-index.sh` passes.
+- `bash .oh/evals/probes/wiki-readme-index.sh` passes.
 - Typecheck passes.
 - Tests pass.
 
@@ -82,8 +82,8 @@ Acceptance criteria:
 - **Impact**: REQUIRED
 - **Local entries**: create `wiki/ci-build-gates.md` and refresh `wiki/README.md`.
 - **Spec alignment**: The wiki entry must explain the split between fast harness validation (`pnpm build`, Harness CI, release validation, `/eval`) and docs validation (`docs.yml` on `main`/`master` push only; local `pnpm docs:build` only by explicit operator choice). It must preserve the goals and non-goals above, especially that PR and release gates no longer build docs automatically.
-- **DeepWiki comparison**: No dedicated public DeepWiki page for this narrow CI/build-gate split was found during local review. The entry should follow the DeepWiki-style shape from `context/rules/wiki.md`: relevant source files first, concrete source-backed claims, a system relationship diagram/table, and `## See Also` navigation.
-- **Acceptance criteria**: US-004 must create or update the local wiki entry, include relevant source files and line-cited claims, record the DeepWiki comparison gap, include system relationships, and pass `bash evals/probes/wiki-readme-index.sh`.
+- **DeepWiki comparison**: No dedicated public DeepWiki page for this narrow CI/build-gate split was found during local review. The entry should follow the DeepWiki-style shape from `.oh/context/rules/wiki.md`: relevant source files first, concrete source-backed claims, a system relationship diagram/table, and `## See Also` navigation.
+- **Acceptance criteria**: US-004 must create or update the local wiki entry, include relevant source files and line-cited claims, record the DeepWiki comparison gap, include system relationships, and pass `bash .oh/evals/probes/wiki-readme-index.sh`.
 
 ## Critique resolution
 

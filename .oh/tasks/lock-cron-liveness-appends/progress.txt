@@ -22,12 +22,12 @@ Routed runtime `log()` and shell-wrapper liveness command generation through `sc
 ## US-002 — 2026-06-20 03:16 UTC
 
 **Title**: Cron prompt liveness guidance uses locked append
-**Files changed**: crons/cleanup-tasks.md, crons/eval-weekly.md
+**Files changed**: .oh/crons/cleanup-tasks.md, .oh/crons/eval-weekly.md
 **Commit**: this commit
 **Result**: PASS
 
 ### What I did
-Replaced raw blocked/success liveness snippets in weekly cron prompts with `scripts/locked-append.sh crons/.cron.log` pipelines.
+Replaced raw blocked/success liveness snippets in weekly cron prompts with `scripts/locked-append.sh .oh/crons/.cron.log` pipelines.
 
 ### Learnings for future iterations
 Prompt examples are executable guidance; guard them with probes just like runtime code.
@@ -37,7 +37,7 @@ Prompt examples are executable guidance; guard them with probes just like runtim
 ## US-003 — 2026-06-20 03:16 UTC
 
 **Title**: Regression coverage and docs
-**Files changed**: evals/probes/locked-append-critical-path.sh, crons/README.md, wiki/cron-runtime.md, wiki/README.md, CHANGELOG.md
+**Files changed**: .oh/evals/probes/locked-append-critical-path.sh, .oh/crons/README.md, wiki/cron-runtime.md, wiki/README.md, CHANGELOG.md
 **Commit**: this commit
 **Result**: PASS
 

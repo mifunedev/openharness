@@ -36,8 +36,8 @@ As a future cron author, I want tracked cron prompts to show the locked append c
 
 **Acceptance Criteria**
 
-- `crons/cleanup-tasks.md` uses `scripts/locked-append.sh crons/.cron.log` for both blocked and success liveness snippets.
-- `crons/eval-weekly.md` uses `scripts/locked-append.sh crons/.cron.log` for its mandatory closing liveness snippet.
+- `.oh/crons/cleanup-tasks.md` uses `scripts/locked-append.sh .oh/crons/.cron.log` for both blocked and success liveness snippets.
+- `.oh/crons/eval-weekly.md` uses `scripts/locked-append.sh .oh/crons/.cron.log` for its mandatory closing liveness snippet.
 - Repository grep shows no raw `.cron.log` append guidance in tracked cron prompts except guard probes that search for regressions.
 
 ### US-003 — Regression coverage and docs
@@ -47,8 +47,8 @@ As a maintainer, I want tests, eval probes, and docs to lock the cron liveness i
 **Acceptance Criteria**
 
 - `scripts/__tests__/cron-runtime.test.ts` verifies runtime/shell liveness is observable via the locked append path and that generated shell commands contain `scripts/locked-append.sh` rather than raw appends.
-- `evals/probes/locked-append-critical-path.sh` guards runtime, autopilot/caps, and weekly cron prompt liveness paths.
-- `crons/README.md`, `wiki/cron-runtime.md`, `wiki/README.md`, and `CHANGELOG.md` document the invariant/update.
+- `.oh/evals/probes/locked-append-critical-path.sh` guards runtime, autopilot/caps, and weekly cron prompt liveness paths.
+- `.oh/crons/README.md`, `wiki/cron-runtime.md`, `wiki/README.md`, and `CHANGELOG.md` document the invariant/update.
 - Targeted cron runtime tests and the locked append probe pass.
 
 ## Wiki Alignment
@@ -57,4 +57,4 @@ As a maintainer, I want tests, eval probes, and docs to lock the cron liveness i
 - **Local entries**: `wiki/cron-runtime.md` to update, `wiki/README.md` to refresh.
 - **Spec alignment**: The wiki must explain that both runtime-side `log()` and shell-wrapper agent liveness records are serialized through `scripts/locked-append.sh`, matching prompt-level cron guidance.
 - **DeepWiki comparison**: No live DeepWiki fetch was performed in this cron run; the local wiki entry follows the existing DeepWiki-style structure with relevant source files, line-cited claims, system relationships, and See Also.
-- **Acceptance criteria**: US-003 must update the wiki entry/index and pass `bash evals/probes/wiki-readme-index.sh`.
+- **Acceptance criteria**: US-003 must update the wiki entry/index and pass `bash .oh/evals/probes/wiki-readme-index.sh`.

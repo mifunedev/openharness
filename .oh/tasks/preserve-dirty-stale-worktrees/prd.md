@@ -6,7 +6,7 @@ Preserve dirty, unpushed, or otherwise unrecoverable stale `.worktrees/` checkou
 
 ## Goals
 
-- Make `crons/cleanup-tasks.md` require a salvage/preservation gate before deleting stale registered worktrees.
+- Make `.oh/crons/cleanup-tasks.md` require a salvage/preservation gate before deleting stale registered worktrees.
 - Ensure dirty, staged, untracked, unpushed, missing-upstream, or suspicious worktrees are skipped and logged for human review.
 - Replace recursive orphan-directory deletion guidance with safe empty-directory removal or preservation/reporting.
 - Add static eval coverage so the documented cleanup procedure cannot silently regress.
@@ -42,7 +42,7 @@ Acceptance criteria:
 As a maintainer, I want eval coverage that guards cleanup preservation semantics so future edits cannot reintroduce destructive cleanup guidance.
 
 Acceptance criteria:
-- `evals/probes/cleanup-tasks-worktree-grooming.sh` requires dirty/staged/untracked/unpushed preservation checks.
+- `.oh/evals/probes/cleanup-tasks-worktree-grooming.sh` requires dirty/staged/untracked/unpushed preservation checks.
 - The probe fails if cleanup guidance authorizes recursive orphan deletion.
 - The targeted probe passes locally.
 

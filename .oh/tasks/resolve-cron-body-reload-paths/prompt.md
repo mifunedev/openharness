@@ -13,7 +13,7 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
    - `.oh/tasks/resolve-cron-body-reload-paths/progress.txt` — read the "Codebase Patterns" section at the top (if any) and the most recent few iterations to see what's been done.
    - `.oh/tasks/resolve-cron-body-reload-paths/critique.md` — if present, the critic findings the stories must satisfy.
    - If `.oh/tasks/resolve-cron-body-reload-paths/prd.md` contains `## Wiki Alignment`, read it before choosing the story. When `Impact: REQUIRED`, the relevant story must keep wiki updates aligned with the PRD and the recorded DeepWiki comparison.
-   - `context/rules/wiki.md` when your story touches `wiki/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
+   - `.oh/context/rules/wiki.md` when your story touches `wiki/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
    - `.claude/skills/git/SKILL.md` for branch + commit conventions.
    - `.claude/rules/sandbox-processes.md` for tmux session conventions if your story spawns processes.
    - `.claude/rules/advisor-model.md` for any critic-gated story.
@@ -95,7 +95,7 @@ If the chosen story cannot be completed this iteration:
 - **Confine writes** to repo-tracked paths. Do not write outside the repo or to `~/`.
 - **Phase ordering matters.** Stories are priority-ordered by dependency — implement them in `priority` order. If a story depends on an artifact a later story creates, it is mis-ordered; surface it rather than implementing out of order.
 - **CHANGELOG discipline.** Per `.claude/skills/git/SKILL.md`, every story with user-visible impact must add an entry under `## [Unreleased]` in the same commit. The PRD's individual stories spell out which `### Added`, `### Removed`, `### Changed` section to use.
-- **Wiki alignment discipline.** If the PRD says `Wiki Alignment` is `REQUIRED`, update the named wiki entries in the same implementation branch so they match the final spec behavior, preserve the DeepWiki comparison, and pass `bash evals/probes/wiki-readme-index.sh`.
+- **Wiki alignment discipline.** If the PRD says `Wiki Alignment` is `REQUIRED`, update the named wiki entries in the same implementation branch so they match the final spec behavior, preserve the DeepWiki comparison, and pass `bash .oh/evals/probes/wiki-readme-index.sh`.
 - **Don't modify completed stories** unless the current story explicitly requires it.
 
 ## Reference

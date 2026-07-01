@@ -48,7 +48,7 @@ T3 Code itself uses a **pairing-URL** auth model: on first start it logs a one-t
 
 ## Run in tmux
 
-Per [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md), long-running processes inside the sandbox go in named tmux sessions. T3 Code listens on `0.0.0.0:3773` so it can be reached from the host. Prefer the `/t3` skill when an agent is available:
+Per [`.oh/context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md), long-running processes inside the sandbox go in named tmux sessions. T3 Code listens on `0.0.0.0:3773` so it can be reached from the host. Prefer the `/t3` skill when an agent is available:
 
 ```text
 /t3 start      # launch in tmux and print the pairing URL when available

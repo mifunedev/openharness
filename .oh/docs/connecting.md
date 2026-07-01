@@ -89,7 +89,7 @@ All long-running processes inside the sandbox run in named tmux sessions. The na
 | `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes (interactive CLIs are foreground, not tmux) |
 | `app-` | `app-api` | Dev servers |
 
-For the full convention see [`context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
+For the full convention see [`.oh/context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
 
 ## End-to-end recipe
 

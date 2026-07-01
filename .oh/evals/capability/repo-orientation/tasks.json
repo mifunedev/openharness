@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "id": "repo-orientation-efficiency",
+  "description": "A/B workload for proving whether context/REPO_MAP.md improves total repo-orientation economics after startup context cost.",
+  "startupContext": {
+    "path": "context/REPO_MAP.md",
+    "tokenEstimate": "ceil(bytes / 4)"
+  },
+  "thresholds": {
+    "minTasks": 6,
+    "maxRepoMapBytes": 12288,
+    "minOrientationToolCallDropPct": 20,
+    "minOrientationTimeDropPct": 15,
+    "maxExpectedTokenDelta": 0,
+    "maxPoisonPathReadDelta": 0
+  },
+  "workloadMix": [
+    {
+      "class": "no-orientation",
+      "weight": 0.25,
+      "description": "Sessions that pay startup cost but do not need repo navigation."
+    },
+    {
+      "class": "light-orientation",
+      "weight": 0.45,
+      "description": "Find one source area or policy surface."
+    },
+    {
+      "class": "deep-orientation",
+      "weight": 0.3,
+      "description": "Cross-cutting work that must navigate several source areas."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "RO-001",
+      "class": "light-orientation",
+      "prompt": "Find the sandbox lifecycle and Docker provisioning entry points.",
+      "expected_paths": ["Makefile", ".devcontainer/", "scripts/docker-compose.sh"],
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", ".oh/tasks/*/progress.txt"]
+    },
+    {
+      "id": "RO-002",
+      "class": "light-orientation",
+      "prompt": "Find the git workflow, PR title, branch, and target-base conventions.",
+      "expected_paths": ["AGENTS.md", ".pi/skills/git/", ".claude/skills/git/"],
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", "memory/*/log.md"]
+    },
+    {
+      "id": "RO-003",
+      "class": "light-orientation",
+      "prompt": "Find the eval runner contract and the GitHub Actions gate that runs it.",
+      "expected_paths": [".oh/evals/README.md", ".claude/skills/eval/run.sh", ".github/workflows/ci-harness.yml"],
+      "forbidden_patterns": ["node_modules/", ".oh/evals/datasets/**/oracle/", "wiki/raw/"]
+    },
+    {
+      "id": "RO-004",
+      "class": "light-orientation",
+      "prompt": "Find the Pi extension or integration source for Slack bridge work.",
+      "expected_paths": [".pi/extensions/", ".pi/settings.json", ".oh/docs/integrations/slack.md"],
+      "forbidden_patterns": [".pi/npm/node_modules/", "workspace/.slack/", "node_modules/"]
+    },
+    {
+      "id": "RO-005",
+      "class": "deep-orientation",
+      "prompt": "Find all surfaces needed to change new sandbox workspace seed instructions and verify the change.",
+      "expected_paths": ["workspace/AGENTS.md", "workspace/CLAUDE.md", "AGENTS.md", ".oh/evals/probes/"],
+      "forbidden_patterns": ["workspace/.pi/", "workspace/.ralph/", "workspace/.slack/", "node_modules/"]
+    },
+    {
+      "id": "RO-006",
+      "class": "deep-orientation",
+      "prompt": "Find where the core repo keeps GitHub-readable docs and how the rendered docs site was externalized.",
+      "expected_paths": ["README.md", ".oh/docs/README.md", "package.json", ".oh/evals/probes/docs-build-fast-path.sh"],
+      "forbidden_patterns": [".github/workflows/docs.yml", "blog/"]
+    },
+    {
+      "id": "RO-007",
+      "class": "no-orientation",
+      "prompt": "Check the current branch and working tree status without needing repo orientation.",
+      "expected_paths": [],
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", "memory/*/log.md"]
+    },
+    {
+      "id": "RO-008",
+      "class": "no-orientation",
+      "prompt": "Report a known PR's GitHub status from PR metadata without reading repository files.",
+      "expected_paths": [],
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", ".oh/tasks/*/progress.txt"]
+    }
+  ]
+}

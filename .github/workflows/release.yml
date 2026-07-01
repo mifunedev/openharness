@@ -105,7 +105,7 @@ jobs:
         run: bash .oh/scripts/ensure-mifune.sh --init
 
       - name: Run root Mifune checkout probe
-        run: bash evals/probes/mifune-checkout.sh
+        run: bash .oh/evals/probes/mifune-checkout.sh
 
       - name: Run eval probe suite
         run: bash .mifune/skills/eval/run.sh

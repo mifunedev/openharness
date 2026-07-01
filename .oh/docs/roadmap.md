@@ -59,7 +59,7 @@ its consumers were repointed to `.oh/cli`. The docs-site package later moved out
 entirely: the Docusaurus app/assets/blog now live in
 [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web),
 while this core repo keeps GitHub-readable markdown under `docs/` and points
-DeepWiki at generated repo navigation. (`evals/`, `context/`,
+DeepWiki at generated repo navigation. (`context/`,
 `memory/`, `workspace/`, and `docs/` stay at root as live
 identity/state/content, not machinery addressed as a unit.) The Ralph/spec
 task workdirs (`tasks/`) were reclassified as machinery and moved under
@@ -76,6 +76,13 @@ filesystem appends (`cron-runtime.ts` reads, and liveness logs append via
 the cron bodies, and the eval probes — resolves unchanged; references were
 repointed to the real `.oh/crons/` path for consistency.
 
+The fitness-function eval suite (`evals/`) was reclassified as machinery and
+moved under `.oh/evals/`, keeping a back-compat root symlink. Because the move
+is one directory level deeper, the eval runner (`run.sh`), the
+`repo-orientation-benchmark-score.mjs` scorer, and every probe's relative-root
+resolution were repointed to the real `.oh/evals/` path; reads through the
+symlink keep working for any consumer that still pins `evals/`.
+
 ## Namespaces
 
 This **supersedes** the earlier "earned by EXPORT only" rule: a dotdir namespace
@@ -84,8 +91,8 @@ is earned by **function-class**. Three surfaces:
 | Namespace | Function-class | Holds |
 |---|---|---|
 | `.mifune/` | provider-portable primitives (exported to the 4 providers + the `mifunedev/skills` registry) | skills, agents, hooks |
-| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), the scheduled-agent cron definitions (`crons/` → `.oh/crons/`), deploy config (`config.json`), the Ralph/spec task workdirs (`tasks/` → `.oh/tasks/`) |
-| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `evals/`, `memory/`, `workspace/`, `docs/` content |
+| `.oh/` | OpenHarness's own machinery, addressed as one unit | the `oh` CLI (`cli/`), installer/lifecycle scripts (`scripts/`), container-install inputs (`install/`), the scheduled-agent cron definitions (`crons/` → `.oh/crons/`), the fitness-function eval suite (`evals/` → `.oh/evals/`), deploy config (`config.json`), the Ralph/spec task workdirs (`tasks/` → `.oh/tasks/`) |
+| repo **root** | external-tooling-forced surfaces + live identity/state | `.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/` · and `context/`, `memory/`, `workspace/`, `docs/` content |
 
 Harness-native skills still live in `.mifune/skills/` (not `.oh/`) because they
 share the *identical* provider-export mechanism; portability is a property

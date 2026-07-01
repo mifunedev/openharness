@@ -119,7 +119,7 @@ Acceptance criteria:
 As a future maintainer, I want CI-visible coverage of the scorer's frozen-weights + hard-floor contract.
 
 Acceptance criteria:
-- `evals/probes/weigh-scorer-contract.sh` is a 3-state oracle (PASS=0 / REGRESSION=1 / SKIPPED=2)
+- `.oh/evals/probes/weigh-scorer-contract.sh` is a 3-state oracle (PASS=0 / REGRESSION=1 / SKIPPED=2)
   asserting **structural facts of the scorer source** (not SKILL.md prose, to avoid
   eval-probe-literal-token-coupling): the frozen weight keys are exact and sum to 100; the scorer
   exports `validateWeights`/`weight`/`select`/`clamp`/`DEFAULT_WEIGHTS`/`TRAJECTORY_SCHEMA`; the
@@ -164,7 +164,7 @@ Acceptance criteria:
 As a future maintainer, I want CI-visible coverage of the recursion-budget + max-bytes contract.
 
 Acceptance criteria:
-- `evals/probes/rlm-context-budget.sh` is a 3-state oracle asserting `recursion-budget.md`
+- `.oh/evals/probes/rlm-context-budget.sh` is a 3-state oracle asserting `recursion-budget.md`
   declares depth/children/step ceilings AND `query-context.mjs` enforces a max-bytes guard;
   `SKIPPED` if absent. Passes locally.
 
@@ -188,7 +188,7 @@ Acceptance criteria:
   byte-for-byte in effect** — zero added agent calls.
 - The `critique.md` output schema (`## Critic A`, `## Critic B`, `## Synthesis`, the SEVERITY tally
   line, the `Recommendation`) is **unchanged**; `/approve`'s parser still reads it.
-- `evals/probes/spec-family-contract.sh` (the existing critique-guarding probe) gains a concrete
+- `.oh/evals/probes/spec-family-contract.sh` (the existing critique-guarding probe) gains a concrete
   assertion that `critique.md`'s required headings are still emitted (the seam is schema-preserving);
   the `/eval` suite stays green. The PR description names this protected-skill edit explicitly.
 
@@ -201,7 +201,7 @@ Acceptance criteria:
   (`confidence: provisional`, `updated:` date, `related:` cross-links), ≤600 words covering
   RLM context-as-environment + weighted-trajectory selection and how the harness adapts it.
 - An immutable snapshot exists under `.mifune/skills/wiki/corpus/raw/<date>-recursive-language-models.md`.
-- `.mifune/skills/wiki/corpus/README.md` is regenerated; `bash evals/probes/wiki-readme-index.sh`
+- `.mifune/skills/wiki/corpus/README.md` is regenerated; `bash .oh/evals/probes/wiki-readme-index.sh`
   passes. Curated entry + raw snapshot are force-added (`git add -f`) and **verified tracked**:
   `git ls-files .mifune/skills/wiki/corpus/recursive-language-models.md .mifune/skills/wiki/corpus/raw/*recursive-language-models.md`
   lists both (the corpus is gitignored-by-default, so a forgotten force-add passes CI silently).
@@ -212,7 +212,7 @@ As a future maintainer, I want the change recorded and the probe benchmark curre
 
 Acceptance criteria:
 - `CHANGELOG.md` records the RLM `/weigh` + `/rlm` addition under `## [Unreleased]` (`### Added`).
-- `evals/RESULTS.md` gains rows for `weigh-scorer-contract.sh` and `rlm-context-budget.sh`
+- `.oh/evals/RESULTS.md` gains rows for `weigh-scorer-contract.sh` and `rlm-context-budget.sh`
   (hand-inserted; do not churn existing timestamps).
 - A name-collision check confirms `weigh` and `rlm` do not shadow built-ins or Pi packages
   (recorded in `progress.txt`).

@@ -48,7 +48,7 @@ As a future agent, I want the durable docs to state that cron hot-reload uses ab
 
 - Update `wiki/cron-runtime.md` to describe canonical absolute `filePath` storage and cwd-independent body reload.
 - Update `CHANGELOG.md` under `[Unreleased]` with a Fixed entry for issue #517.
-- `bash evals/probes/wiki-readme-index.sh` passes.
+- `bash .oh/evals/probes/wiki-readme-index.sh` passes.
 
 ## Wiki Alignment
 
@@ -56,10 +56,10 @@ As a future agent, I want the durable docs to state that cron hot-reload uses ab
 - **Local entries**: `wiki/cron-runtime.md`
 - **Spec alignment**: The cron runtime wiki must explain that `CronEntry.filePath` is canonicalized to an absolute path during parse/load and remains the source for fire-time metadata/body reloads.
 - **DeepWiki comparison**: No live DeepWiki page was fetched in this cron run; the local wiki already names the relevant source-file sections and should be updated to preserve that source-backed shape.
-- **Acceptance criteria**: US-003 must update `wiki/cron-runtime.md` and verify the wiki index with `bash evals/probes/wiki-readme-index.sh`.
+- **Acceptance criteria**: US-003 must update `wiki/cron-runtime.md` and verify the wiki index with `bash .oh/evals/probes/wiki-readme-index.sh`.
 
 ## Verification
 
 - `pnpm run test:scripts -- scripts/__tests__/cron-runtime.test.ts`
-- `bash evals/probes/wiki-readme-index.sh`
+- `bash .oh/evals/probes/wiki-readme-index.sh`
 - `/eval` (full harness probe gate)

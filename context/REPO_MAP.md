@@ -9,9 +9,9 @@ repo=$(git rev-parse --show-toplevel)
 git -C "$repo" ls-files -- \
   ':!:.oh/tasks/*/progress.txt' \
   ':!:.mifune/skills/wiki/corpus/raw/*' \
-  ':!:evals/datasets/**/oracle/**' \
-  ':!:evals/datasets/**/diff.patch' \
-  ':!:evals/datasets/**/changed-files.txt'
+  ':!:.oh/evals/datasets/**/oracle/**' \
+  ':!:.oh/evals/datasets/**/diff.patch' \
+  ':!:.oh/evals/datasets/**/changed-files.txt'
 ```
 
 Why: anchoring at `git rev-parse --show-toplevel` prevents subdirectory launches from silently mapping only a subtree. `git ls-files` requires no extra tooling and excludes vendor, generated, ignored, and runtime state by default while preserving hidden source dirs such as `.claude/`, `.pi/`, `.github/`, and `.devcontainer/`.
@@ -92,7 +92,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml`, `.oh/scripts/README.md`, `.oh/scripts/docker-compose.sh` | Owns container image, compose overlays, generated env, and lifecycle commands. |
 | Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/pr-audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
 | Cron/autopilot behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.mifune/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog. |
-| Eval/probe regressions | `evals/README.md`, `evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
+| Eval/probe regressions | `.oh/evals/README.md`, `.oh/evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
 | Task/spec implementation state | `.oh/tasks/README.md`, `.oh/tasks/<active-task>/` | PRD, critique, Ralph JSON, prompt, and task-specific artifacts. |
 | Docs | `README.md`, `.oh/docs/README.md`, `.oh/docs/` | GitHub-readable markdown; site/blog lives in `mifunedev/openharness-web`. |
 | CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
@@ -117,7 +117,7 @@ Ignore these unless the task explicitly targets them:
 | `.mifune/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.mifune/skills/wiki/corpus/*.md` entry. |
 | `workspace/.slack/`, `workspace/.pi/`, `workspace/.ralph/`, `workspace/startup.sh` | Runtime state and local/sensitive sandbox artifacts. | Debugging Slack/Pi/Ralph runtime state or startup generation. |
 | `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific Ralph run status; prefer `tail` over full read. |
-| `evals/datasets/**/oracle/`, `evals/datasets/**/diff.patch`, `evals/datasets/**/changed-files.txt` | Expected-output fixtures, not active implementation guidance. | Updating/verifying a dataset oracle. |
+| `.oh/evals/datasets/**/oracle/`, `.oh/evals/datasets/**/diff.patch`, `.oh/evals/datasets/**/changed-files.txt` | Expected-output fixtures, not implementation guidance. | Updating/verifying a dataset oracle. |
 
 ## On-demand search targets
 
@@ -136,9 +136,9 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `.oh/crons/` | Scheduled agent prompts and heartbeat/autopilot jobs. | Understand recurring automation; read `.oh/crons/README.md` first. |
 | `.oh/scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, Ralph, caps. | Find executable implementation behind docs/skills; read `.oh/scripts/README.md` first. |
 | `.oh/scripts/__tests__/` | Vitest coverage for harness scripts. | Locate targeted tests for script changes. |
-| `evals/probes/` | Deterministic regression probes used by `/eval` and CI. | Add or inspect behavior guards. |
-| `evals/capability/` | Capability benchmark specs/results distinct from regression probes. | Evaluate progress-ceiling tasks. |
-| `evals/datasets/` | Verifiable issue-to-PR trajectory datasets. | Inspect dataset prompts/manifests before oracle fixtures. |
+| `.oh/evals/probes/` | Regression probes used by `/eval` and CI. | Add or inspect behavior guards. |
+| `.oh/evals/capability/` | Capability benchmark specs/results vs regression probes. | Evaluate progress-ceiling tasks. |
+| `.oh/evals/datasets/` | Verifiable issue-to-PR trajectory datasets. | Inspect prompts/manifests before oracle fixtures. |
 | `.oh/cli/src/` | Standalone `oh` CLI source code. | Change CLI behavior; read `.oh/README.md` first. |
 | `.oh/cli/package.json` | CLI package-local scripts and dependencies. | Run package-specific build/typecheck. |
 | `.oh/docs/` | GitHub-readable product docs. | Update product docs; start at `.oh/docs/README.md`. |

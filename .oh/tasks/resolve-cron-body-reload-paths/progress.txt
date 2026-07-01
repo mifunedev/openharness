@@ -37,7 +37,7 @@ Use `try/finally` around `process.chdir()` in Vitest tests so later tests inheri
 ## US-003 — 2026-06-23 21:13 UTC
 
 **Title**: Document the hot-reload invariant
-**Files changed**: `wiki/cron-runtime.md`, `wiki/README.md`, `CHANGELOG.md`, `evals/RESULTS.md`
+**Files changed**: `wiki/cron-runtime.md`, `wiki/README.md`, `CHANGELOG.md`, `.oh/evals/RESULTS.md`
 **Commit**: 12c47b8
 **Result**: PASS
 
@@ -45,7 +45,7 @@ Use `try/finally` around `process.chdir()` in Vitest tests so later tests inheri
 Updated the cron runtime wiki and changelog with the absolute-path hot-reload invariant, refreshed the wiki index, and ran the harness eval gate.
 
 ### Learnings for future iterations
-Changing wiki frontmatter `updated:` requires refreshing `wiki/README.md`; `evals/probes/wiki-readme-index.sh` gives a precise diff when it is stale.
+Changing wiki frontmatter `updated:` requires refreshing `wiki/README.md`; `.oh/evals/probes/wiki-readme-index.sh` gives a precise diff when it is stale.
 
 ---
 

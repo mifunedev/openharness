@@ -33,7 +33,7 @@ Automatic docs validation is a deploy-time gate, not a PR or release-validation 
 ## US-003 — 2026-06-19 23:04 UTC
 
 **Title**: Add a regression probe for build-gate separation
-**Files changed**: evals/probes/docs-build-fast-path.sh, evals/RESULTS.md
+**Files changed**: .oh/evals/probes/docs-build-fast-path.sh, .oh/evals/RESULTS.md
 **Commit**: 3503101
 **Result**: PASS
 

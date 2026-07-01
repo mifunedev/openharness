@@ -3,7 +3,7 @@
 ## US-001/US-002/US-003 — 2026-06-20 UTC
 
 **Title**: Dedupe merged autopilot refs
-**Files changed**: `.claude/skills/autopilot/SKILL.md`, `evals/probes/autopilot-open-pr-reference-dedupe.sh`, `evals/probes/autopilot-merged-pr-reference-dedupe.sh`, `CHANGELOG.md`, `wiki/autopilot.md`, `wiki/raw/2026-06-20-autopilot-selection.md`, `wiki/README.md`, `tasks/dedupe-merged-autopilot-refs/*`
+**Files changed**: `.claude/skills/autopilot/SKILL.md`, `.oh/evals/probes/autopilot-open-pr-reference-dedupe.sh`, `.oh/evals/probes/autopilot-merged-pr-reference-dedupe.sh`, `CHANGELOG.md`, `wiki/autopilot.md`, `wiki/raw/2026-06-20-autopilot-selection.md`, `wiki/README.md`, `tasks/dedupe-merged-autopilot-refs/*`
 **Commit**: cad1243
 **Result**: PASS
 

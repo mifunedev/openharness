@@ -41,7 +41,7 @@ sent.
    - **Result**: REGRESSION
    - **Probe**: <probe-id from regression line>
    - **Source**: <source field from regression line>
-   - **Observation**: probe regressed from PASS; see evals/RESULTS.md for current status
+   - **Observation**: probe regressed from PASS; see .oh/evals/RESULTS.md for current status
    ```
 
    Use one `## eval-weekly -- HH:MM UTC` heading block per run (not per

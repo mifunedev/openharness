@@ -110,7 +110,7 @@ A possible v2 follow-up may evaluate consolidating Mifune under `.pi/`, with `.m
 **Acceptance Criteria:**
 
 - [ ] Update `.mifune` references in root docs/context/skills/evals only where the ownership model changes; preserve path references where runtime still uses `.mifune/...`.
-- [ ] Add a root-level Tier-A smoke/probe outside `.mifune/` (for example `evals/probes/mifune-checkout.sh` or equivalent) that runs before the Mifune-hosted eval runner and fails clearly when `.mifune/` is missing, uninitialized, pinned to the wrong repo/SHA, missing protected paths, missing executable bits, or has broken provider symlinks.
+- [ ] Add a root-level Tier-A smoke/probe outside `.mifune/` (for example `.oh/evals/probes/mifune-checkout.sh` or equivalent) that runs before the Mifune-hosted eval runner and fails clearly when `.mifune/` is missing, uninitialized, pinned to the wrong repo/SHA, missing protected paths, missing executable bits, or has broken provider symlinks.
 - [ ] Keep the Mifune-hosted eval runner path valid and also run `bash .mifune/skills/eval/run.sh --probe <new-or-updated-mifune-probe>` after `.oh/scripts/ensure-mifune.sh --init` succeeds.
 - [ ] Update `context/REPO_MAP.md` to route Mifune source-of-truth questions to `ryaneggz/mifune` while still explaining the local mount path `.mifune/`.
 - [ ] Update `AGENTS.md` and relevant skill docs only enough to keep the core workflow accurate; do not rewrite individual skill behavior.

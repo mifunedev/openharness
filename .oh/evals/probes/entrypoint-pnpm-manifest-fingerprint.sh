@@ -6,12 +6,15 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 ENTRYPOINT="$ROOT/.devcontainer/entrypoint.sh"
+COMPOSE="$ROOT/.devcontainer/docker-compose.yml"
 TEST_FILE="$ROOT/.oh/scripts/__tests__/entrypoint-pnpm-install.test.ts"
 
 [[ -f "$ENTRYPOINT" ]] || { echo "SKIPPED: missing $ENTRYPOINT" >&2; exit 2; }
+[[ -f "$COMPOSE" ]] || { echo "SKIPPED: missing $COMPOSE" >&2; exit 2; }
 [[ -f "$TEST_FILE" ]] || { echo "SKIPPED: missing $TEST_FILE" >&2; exit 2; }
 
 entrypoint="$(cat "$ENTRYPOINT")"
+compose_text="$(cat "$COMPOSE")"
 test_text="$(cat "$TEST_FILE")"
 missing=()
 
@@ -27,6 +30,10 @@ has_test() {
   grep -Fq -- "$1" <<<"$test_text" || missing+=("test: $2")
 }
 
+has_compose() {
+  grep -Fq -- "$1" <<<"$compose_text" || missing+=("compose: $2")
+}
+
 has_entrypoint 'PNPM_INSTALL_MARKER_FILENAME=".openharness-root-pnpm-manifest.sha256"' "Open Harness marker filename"
 has_entrypoint 'PNPM_INSTALL_MARKER="$HARNESS/node_modules/$PNPM_INSTALL_MARKER_FILENAME"' "marker stored under node_modules"
 has_entrypoint 'pnpm_manifest_fingerprint()' "pnpm_manifest_fingerprint helper"
@@ -36,6 +43,7 @@ has_entrypoint 'LC_ALL=C sort -u' "bytewise sorted manifest path list"
 has_entrypoint 'sha256sum "$root/$rel"' "per-file content hashing"
 has_entrypoint "| sha256sum | awk '{print \$1}'" "final manifest-list digest"
 has_entrypoint '[ "${SKIP_PNPM_INSTALL:-0}" != "1" ]' "SKIP_PNPM_INSTALL escape hatch"
+has_compose 'SKIP_PNPM_INSTALL=${SKIP_PNPM_INSTALL:-0}' "SKIP_PNPM_INSTALL passes into container environment"
 has_entrypoint '[ ! -d "$HARNESS/node_modules" ]' "missing node_modules install branch"
 has_entrypoint '[ ! -f "$PNPM_INSTALL_MARKER" ] || [ "$(cat "$PNPM_INSTALL_MARKER" 2>/dev/null || true)" != "$PNPM_MANIFEST_FINGERPRINT" ]' "missing/stale marker reinstall branch"
 has_entrypoint 'manifest drift detected; reinstalling' "manifest drift log"
@@ -53,6 +61,7 @@ has_test 'pnpm_manifest_fingerprint helper contract' "fingerprint helper asserti
 has_test 'reinstalls when manifests drift or the marker is missing' "drift reinstall assertion"
 has_test 'skips install when dependencies are current' "current-dependencies assertion"
 has_test 'atomically refreshes the marker only after install succeeds' "atomic marker refresh assertion"
+has_test 'passes the SKIP_PNPM_INSTALL opt-out through compose' "compose skip-env assertion"
 has_test 'fails boot instead of swallowing a required pnpm install error' "install failure assertion"
 
 if (( ${#missing[@]} )); then

@@ -7,13 +7,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 const ENTRYPOINT = path.join(REPO_ROOT, ".devcontainer", "entrypoint.sh");
+const COMPOSE = path.join(REPO_ROOT, ".devcontainer", "docker-compose.yml");
 
 const entrypoint = readFileSync(ENTRYPOINT, "utf-8");
+const compose = readFileSync(COMPOSE, "utf-8");
 
 describe("devcontainer entrypoint pnpm install", () => {
   it("keeps the explicit SKIP_PNPM_INSTALL opt-out", () => {
     expect(entrypoint).toContain("SKIP_PNPM_INSTALL=1");
     expect(entrypoint).toContain('${SKIP_PNPM_INSTALL:-0}');
+  });
+
+  it("passes the SKIP_PNPM_INSTALL opt-out through compose", () => {
+    expect(compose).toContain("SKIP_PNPM_INSTALL=${SKIP_PNPM_INSTALL:-0}");
   });
 
   it("uses an Open Harness marker stored under node_modules", () => {

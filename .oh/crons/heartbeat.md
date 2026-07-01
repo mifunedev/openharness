@@ -18,7 +18,7 @@ that catches anything time-sensitive without doing real work.
 
 1. Read today's `memory/<today>/log.md` (create the directory if it
    does not exist; today is `date -u +%Y-%m-%d`).
-2. Check active Ralph sessions: for each `tasks/*/progress.txt`, note
+2. Check active Ralph sessions: for each `.oh/tasks/*/progress.txt`, note
    any whose last update is older than 2 hours. Surface those in the log.
 2.5. Read the `## Active items` section below. For each item, decide
     whether resolution can be confirmed using ONLY the validation
@@ -53,7 +53,7 @@ that catches anything time-sensitive without doing real work.
     - If `SDATE` is `2026-06-20` **and** `SHOUR` is (`12` **or** `13`) **and** the
       sentinel `/tmp/oh-restart-273.done` is absent → run the **Scheduled
       maintenance** procedure (see `## Scheduled maintenance` below). This is the
-      **spec-execute** node of `tasks/restart-openharness-tmux/` (issue #273). The
+      **spec-execute** node of `.oh/tasks/restart-openharness-tmux/` (issue #273). The
       `13` hour is a single retry: the script writes the sentinel only on success
       and is `flock`-guarded, so a healthy noon run makes the 13:00 pulse a no-op,
       while a failed/missed noon run gets one more attempt.
@@ -119,7 +119,7 @@ that catches anything time-sensitive without doing real work.
 Date-gated by step 2.10 to a specific one-shot window. The current entry executes
 issue **#273** — clear the stale `system-cron` argv on the tmux server — at
 **2026-06-20 12:00 America/Denver**, the operator-chosen auto-execute slot. This is
-the **spec-execute** node of the `tasks/restart-openharness-tmux/` spec (planned in
+the **spec-execute** node of the `.oh/tasks/restart-openharness-tmux/` spec (planned in
 `prd.md`/`prd.json`, critiqued in `critique.md`).
 
 The restart kills and relaunches the tmux server, which would kill this heartbeat

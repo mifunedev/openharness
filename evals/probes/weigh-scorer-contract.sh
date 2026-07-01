@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: tasks/rlm-weighted-trajectories/prd.json US-003 (2026-06-27)
+# source: .oh/tasks/rlm-weighted-trajectories/prd.json US-003 (2026-06-27)
 # desc: /weigh scorer frozen-weights + hard-floor STRUCTURAL contract (3-state oracle; asserts the .mjs source, not SKILL.md prose)
 set -euo pipefail
 

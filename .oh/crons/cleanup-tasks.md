@@ -11,22 +11,22 @@ description: Weekly Ralph session sweep — archive completed tasks
 
 # Weekly Task Cleanup
 
-Sweep `tasks/` once per week and archive anything that has finished.
+Sweep `.oh/tasks/` once per week and archive anything that has finished.
 Per SPEC v0.7 §"Weekly cleanup cron": completed tasks move into the
-dated archive under `tasks/`; incomplete tasks are left alone with a
+dated archive under `.oh/tasks/`; incomplete tasks are left alone with a
 note. The same weekly pass also grooms stale `.worktrees/` branch
 checkouts, but it never touches the durable `.worktrees/agent/` or
 `.worktrees/project/` namespaces. `memory/` carries journal artifacts
-only — never a `tasks/` subfolder.
+only — never a `.oh/tasks/` subfolder.
 
 ## Tasks
 
 1. Compute `TODAY=$(date -u +%Y-%m-%d)`. The dated destination
-   `tasks/archive/$TODAY/` is created inside the worktree (step 4); all
+   `.oh/tasks/archive/$TODAY/` is created inside the worktree (step 4); all
    archive moves now run there, not in the shared checkout.
-2. **Pre-flight (scoped to `tasks/`):** check only the surface this job
-   mutates — run `git status --porcelain -- tasks/ ':!tasks/archive/'`.
-   Only a mid-write task under `tasks/` (the `tasks/archive/`
+2. **Pre-flight (scoped to `.oh/tasks/`):** check only the surface this job
+   mutates — run `git status --porcelain -- .oh/tasks/ ':!.oh/tasks/archive/'`.
+   Only a mid-write task under `.oh/tasks/` (the `.oh/tasks/archive/`
    destination is excluded so an in-progress archive write never
    self-flags the sweep) blocks the run; foreign WIP elsewhere in the
    shared checkout — an in-flight feature branch, a concurrent session's
@@ -68,17 +68,17 @@ only — never a `tasks/` subfolder.
    Every `git` command for the archive from here on runs inside the
    worktree via `git -C .worktrees/archive/$TODAY <cmd>`.
 4. Inside the worktree, create the dated destination
-   (`mkdir -p .worktrees/archive/$TODAY/tasks/archive/$TODAY`), then scan
+   (`mkdir -p .worktrees/archive/$TODAY/.oh/tasks/archive/$TODAY`), then scan
    the worktree's `origin/$BASE` checkout — committed state only, so
    uncommitted task dirs in the shared checkout are never archived. For
-   each `.worktrees/archive/$TODAY/tasks/<taskdesc>/` (skipping
-   `tasks/archive/`):
-   - If `tasks/<taskdesc>/progress.txt` ends with a line matching exactly
+   each `.worktrees/archive/$TODAY/.oh/tasks/<taskdesc>/` (skipping
+   `.oh/tasks/archive/`):
+   - If `.oh/tasks/<taskdesc>/progress.txt` ends with a line matching exactly
      `STATUS: COMPLETE`:
      - Kill the matching tmux session if one exists:
        `tmux kill-session -t <taskdesc> 2>/dev/null || true`.
      - Move the folder inside the worktree:
-       `git -C .worktrees/archive/$TODAY mv tasks/<taskdesc> tasks/archive/$TODAY/<taskdesc>`
+       `git -C .worktrees/archive/$TODAY mv .oh/tasks/<taskdesc> .oh/tasks/archive/$TODAY/<taskdesc>`
        (falls back to `mv` + `git -C .worktrees/archive/$TODAY add` if
        `git mv` rejects an untracked path).
    - Otherwise, leave the folder in place and append a one-line note to
@@ -128,7 +128,7 @@ only — never a `tasks/` subfolder.
      time when available.
 6. If anything was archived this run (`N > 0`) — every git step runs
    inside the worktree via `git -C .worktrees/archive/$TODAY`:
-   - Stage the moves: `git -C .worktrees/archive/$TODAY add tasks/`.
+   - Stage the moves: `git -C .worktrees/archive/$TODAY add .oh/tasks/`.
    - Commit: `git -C .worktrees/archive/$TODAY commit -m "archive: weekly cleanup $TODAY (N tasks)"`.
    - Push: `git -C .worktrees/archive/$TODAY push -u origin "archive/$TODAY"`.
    - Open a PR (or update an existing one for the same branch) per

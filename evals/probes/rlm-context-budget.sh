@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: tasks/rlm-weighted-trajectories/prd.json US-006
+# source: .oh/tasks/rlm-weighted-trajectories/prd.json US-006
 # desc: /rlm recursion-budget.md declares depth/children/step ceilings AND query-context.mjs enforces a max-bytes guard (whole-file slice <= cap, truncated when input exceeds cap)
 set -euo pipefail
 

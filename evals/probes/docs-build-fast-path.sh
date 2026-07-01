@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
-# source: #455 — docs builds must stay out of fast harness/eval/release gates; #536 — docs site externalized to openharness-web
-# desc: Docusaurus site/build machinery stays out of the core repo after migration to mifunedev/openharness-web.
+# source: #455 — docs builds must stay out of fast harness/eval/release gates; #536 — docs site externalized to openharness-web; docs markdown relocated to .oh/docs/
+# desc: Docusaurus site/BUILD machinery stays out of the core repo (openharness-web owns the rendered site). The GitHub-readable markdown now lives at .oh/docs/; only build machinery is forbidden under that path.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -9,7 +9,7 @@ PACKAGE_JSON="$ROOT/package.json"
 CI_WORKFLOW="$ROOT/.github/workflows/ci-harness.yml"
 RELEASE_WORKFLOW="$ROOT/.github/workflows/release.yml"
 README="$ROOT/README.md"
-DOCS_INDEX="$ROOT/docs/README.md"
+DOCS_INDEX="$ROOT/.oh/docs/README.md"
 LOCKFILE="$ROOT/pnpm-lock.yaml"
 EVAL_RUNNER="$ROOT/.claude/skills/eval/run.sh"
 PROBES_DIR="$ROOT/evals/probes"
@@ -26,7 +26,12 @@ script_value() {
 
 failures=()
 
-[[ ! -e "$ROOT/.oh/docs" ]] || failures+=(".oh/docs must be removed from the core repo")
+# .oh/docs now holds the GitHub-readable markdown docs; only Docusaurus BUILD
+# machinery (a package.json / docusaurus.config.* / sidebars.*) is forbidden there.
+[[ ! -e "$ROOT/.oh/docs/package.json" ]] || failures+=(".oh/docs must not regain a Docusaurus package.json (the rendered site stays in openharness-web)")
+for __cfg in "$ROOT/.oh/docs"/docusaurus.config.* "$ROOT/.oh/docs"/sidebars.*; do
+  [[ -e "$__cfg" ]] && failures+=(".oh/docs must not contain Docusaurus build config: $(basename "$__cfg")")
+done
 [[ ! -e "$ROOT/.github/workflows/docs.yml" ]] || failures+=("core repo must not keep the Docusaurus docs.yml workflow")
 [[ ! -e "$ROOT/blog" ]] || failures+=("blog archive must live in mifunedev/openharness-web, not the core repo")
 [[ ! -e "$ROOT/.oh/patches/gray-matter@4.0.3.patch" ]] || failures+=("docs-only gray-matter patch must not remain in core repo")
@@ -71,19 +76,19 @@ for f in "$README" "$DOCS_INDEX"; do
   grep -Fq 'https://github.com/mifunedev/openharness-web' "$f" || failures+=("$(basename "$f") must point to mifunedev/openharness-web")
 done
 grep -Fiq 'deepwiki' "$README" || failures+=("README.md must point readers to DeepWiki for generated navigation")
-grep -Fq 'docs/README.md' "$README" || failures+=("README.md must point readers to docs/README.md")
+grep -Fq '.oh/docs/README.md' "$README" || failures+=("README.md must point readers to .oh/docs/README.md")
 
 # Keep eval/probe code from reintroducing docs-build commands. Historical task
 # artifacts are excluded because they describe old completed work.
 if git -C "$ROOT" grep -nE 'docusaurus build|pnpm (run )?docs:build|pnpm --dir \.oh/docs build|@openharness/docs' -- \
   ':!evals/probes/docs-build-fast-path.sh' \
-  ':!tasks/**' \
+  ':!.oh/tasks/**' \
   ':!CHANGELOG.md' >/tmp/docs-site-externalized-grep.txt; then
   failures+=("core repo still references removed docs-build commands: $(tr '\n' ';' </tmp/docs-site-externalized-grep.txt)")
 fi
 
 if (( ${#failures[@]} == 0 )); then
-  echo "PASS: docs site is externalized to mifunedev/openharness-web and absent from core repo" >&2
+  echo "PASS: docs site externalized to mifunedev/openharness-web; .oh/docs holds markdown only (no build machinery)" >&2
   exit 0
 fi
 

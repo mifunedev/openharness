@@ -37,7 +37,7 @@
       "class": "light-orientation",
       "prompt": "Find the sandbox lifecycle and Docker provisioning entry points.",
       "expected_paths": ["Makefile", ".devcontainer/", "scripts/docker-compose.sh"],
-      "forbidden_patterns": ["node_modules/", "wiki/raw/", "tasks/*/progress.txt"]
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", ".oh/tasks/*/progress.txt"]
     },
     {
       "id": "RO-002",
@@ -57,7 +57,7 @@
       "id": "RO-004",
       "class": "light-orientation",
       "prompt": "Find the Pi extension or integration source for Slack bridge work.",
-      "expected_paths": [".pi/extensions/", ".pi/settings.json", "docs/integrations/slack.md"],
+      "expected_paths": [".pi/extensions/", ".pi/settings.json", ".oh/docs/integrations/slack.md"],
       "forbidden_patterns": [".pi/npm/node_modules/", "workspace/.slack/", "node_modules/"]
     },
     {
@@ -71,8 +71,8 @@
       "id": "RO-006",
       "class": "deep-orientation",
       "prompt": "Find where the core repo keeps GitHub-readable docs and how the rendered docs site was externalized.",
-      "expected_paths": ["README.md", "docs/README.md", "package.json", "evals/probes/docs-build-fast-path.sh"],
-      "forbidden_patterns": [".oh/docs/", ".github/workflows/docs.yml", "blog/"]
+      "expected_paths": ["README.md", ".oh/docs/README.md", "package.json", "evals/probes/docs-build-fast-path.sh"],
+      "forbidden_patterns": [".github/workflows/docs.yml", "blog/"]
     },
     {
       "id": "RO-007",
@@ -86,7 +86,7 @@
       "class": "no-orientation",
       "prompt": "Report a known PR's GitHub status from PR metadata without reading repository files.",
       "expected_paths": [],
-      "forbidden_patterns": ["node_modules/", "wiki/raw/", "tasks/*/progress.txt"]
+      "forbidden_patterns": ["node_modules/", "wiki/raw/", ".oh/tasks/*/progress.txt"]
     }
   ]
 }

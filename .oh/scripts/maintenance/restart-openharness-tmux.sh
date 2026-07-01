@@ -12,7 +12,7 @@
 #   `tmux kill-server` kills every session — INCLUDING the one the launcher runs in. This
 #   script is therefore meant to be launched DETACHED so it outlives the server it kills:
 #       setsid bash .oh/scripts/maintenance/restart-openharness-tmux.sh </dev/null >/tmp/oh-restart-273.boot.log 2>&1 &
-#   It is the spec-execute artifact for tasks/restart-openharness-tmux/ (see that PRD).
+#   It is the spec-execute artifact for .oh/tasks/restart-openharness-tmux/ (see that PRD).
 #
 # SAFETY
 #   - flock single-instance + a done-sentinel make it a no-op on re-run.
@@ -31,8 +31,8 @@ ISSUE=273
 LOCK=/tmp/oh-restart-273.lock
 LOGF=/tmp/oh-restart-273.log
 MAP=/tmp/oh-restart-273.sessions.txt
-# Sentinel lives in /tmp, NOT under tasks/ — an untracked file in the tracked tasks/ tree
-# would make the weekly cleanup pre-flight (`git status --porcelain -- tasks/`) emit
+# Sentinel lives in /tmp, NOT under .oh/tasks/ — an untracked file in the tracked .oh/tasks/ tree
+# would make the weekly cleanup pre-flight (`git status --porcelain -- .oh/tasks/`) emit
 # BLOCKED-TASKS-WIP. /tmp survives `tmux kill-server` (only a container restart clears it,
 # which is not expected in the one-shot window). The heartbeat gate checks the same path.
 SENTINEL="/tmp/oh-restart-273.done"

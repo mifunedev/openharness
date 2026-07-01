@@ -294,7 +294,7 @@ if [ "${1-}" = "--loop" ]; then
   parse_args "$@"
 
   REPO_ROOT="${REPO_ROOT:-$(pwd)}"
-  TASK_DIR="$REPO_ROOT/tasks/$TASKDESC"
+  TASK_DIR="$REPO_ROOT/.oh/tasks/$TASKDESC"
   PROMPT="$TASK_DIR/prompt.md"
   PROGRESS="$TASK_DIR/progress.txt"
   ACTIVE_HARNESS="$(resolve_initial_harness "$HARNESS")"
@@ -397,7 +397,7 @@ if ! [[ "$TASKDESC" =~ ^[a-z0-9-]+$ ]]; then
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-TASK_DIR="$REPO_ROOT/tasks/$TASKDESC"
+TASK_DIR="$REPO_ROOT/.oh/tasks/$TASKDESC"
 
 if [ ! -d "$TASK_DIR" ]; then
   echo "Error: $TASK_DIR does not exist." >&2

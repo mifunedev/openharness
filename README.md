@@ -6,7 +6,7 @@
 - **Agents that work while you sleep.** A tiny croner runtime reads `.oh/crons/*.md` markdown and wakes the agent on a schedule.
 - **Host dependencies: Docker + Git.** No Node, no Python, no toolchain rot on your laptop.
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
-- **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [docs/integrations/slack.md](docs/integrations/slack.md).
+- **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
 - **Multi-agent? Add a pack.** Other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
 
 ---
@@ -64,7 +64,7 @@ curl -fsSL -o openharness-install.sh \
 OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```
 
-If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](docs/installation.md) for all environment overrides.
+If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](.oh/docs/installation.md) for all environment overrides.
 
 </details>
 
@@ -105,7 +105,7 @@ make help        # all targets
 
 ## 🧪 Testing
 
-- Property-based testing convention: [docs/property-testing.md](docs/property-testing.md)
+- Property-based testing convention: [.oh/docs/property-testing.md](.oh/docs/property-testing.md)
 
 Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Running Container" against `openharness`, or SSH into your host first and then attach.
 
@@ -143,8 +143,8 @@ make shell
 
 ## 📚 Where to go next
 
-- [Docs index](docs/README.md) — GitHub-readable docs kept with the core repo
-- [Quickstart](docs/quickstart.md) — full step-by-step
+- [Docs index](.oh/docs/README.md) — GitHub-readable docs kept with the core repo
+- [Quickstart](.oh/docs/quickstart.md) — full step-by-step
 - [DeepWiki](https://deepwiki.com/mifunedev/openharness) — generated codebase map
 - [Docs site source](https://github.com/mifunedev/openharness-web) — migrated Docusaurus site and blog archive
 
@@ -164,4 +164,4 @@ MIT.
 
 ---
 
-[Docs index](docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)
+[Docs index](.oh/docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)

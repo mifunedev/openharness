@@ -11,4 +11,4 @@
 
 # --- OpenHarness machinery (do not delete) ---
 .oh/scripts/link-providers.sh
-.oh/devcontainer/entrypoint.sh
+.devcontainer/entrypoint.sh

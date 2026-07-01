@@ -5,10 +5,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-# Phase 2 slice 2 (#531) relocated these build assets from .devcontainer/ to .oh/devcontainer/.
-COMPOSE="$ROOT/.oh/devcontainer/docker-compose.yml"
-DOCKERFILE="$ROOT/.oh/devcontainer/Dockerfile"
-ENTRYPOINT="$ROOT/.oh/devcontainer/entrypoint.sh"
+# The harness's devcontainer build assets live at the conventional root .devcontainer/.
+COMPOSE="$ROOT/.devcontainer/docker-compose.yml"
+DOCKERFILE="$ROOT/.devcontainer/Dockerfile"
+ENTRYPOINT="$ROOT/.devcontainer/entrypoint.sh"
 
 [[ -f "$COMPOSE" ]]    || { echo "SKIPPED: missing $COMPOSE" >&2; exit 2; }
 [[ -f "$DOCKERFILE" ]] || { echo "SKIPPED: missing $DOCKERFILE" >&2; exit 2; }

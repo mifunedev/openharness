@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #531 Phase 2 (devcontainer relocation)
-# desc: harness build assets live under .oh/devcontainer/ (Dockerfile, compose + hermes overlay, entrypoint, the two client scripts); root .devcontainer/ is a generated compat layer (devcontainer.json -> ../.oh/devcontainer/docker-compose.yml) + user env; no moved asset lingers at .devcontainer/ and the generator does not drift.
+# source: consolidate devcontainer — .oh/devcontainer/ folded back into .devcontainer/
+# desc: the harness's own devcontainer build assets live in the conventional root .devcontainer/ (Dockerfile, compose + hermes overlay, entrypoint, the two client scripts) alongside devcontainer.json; nothing lingers under .oh/devcontainer/; devcontainer.json points dockerComposeFile at the same-dir compose (no ../.oh shim); compose builds .devcontainer/Dockerfile with a repo-root context; Dockerfile copies .devcontainer/entrypoint.sh; .dockerignore keeps the .devcontainer/ dir in the build context (so the entrypoint COPY resolves) yet still excludes env secrets; the sync-devcontainer.sh compat generator is retired.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-DOCKERFILE="$ROOT/.oh/devcontainer/Dockerfile"
-COMPOSE="$ROOT/.oh/devcontainer/docker-compose.yml"
-DEVCONTAINER_JSON="$ROOT/.devcontainer/devcontainer.json"
+DC="$ROOT/.devcontainer"
+DOCKERFILE="$DC/Dockerfile"
+COMPOSE="$DC/docker-compose.yml"
+DEVCONTAINER_JSON="$DC/devcontainer.json"
 DOCKERIGNORE="$ROOT/.dockerignore"
-SYNC_SCRIPT="$ROOT/.oh/scripts/sync-devcontainer.sh"
 
-# SKIPPED: the relocation has not landed yet (the moved Dockerfile is the anchor).
+# SKIPPED: the consolidation has not landed yet (the moved Dockerfile is the anchor).
 if [[ ! -f "$DOCKERFILE" ]]; then
-  echo "SKIPPED: relocation not present — $DOCKERFILE absent" >&2
+  echo "SKIPPED: consolidation not present — $DOCKERFILE absent" >&2
   exit 2
 fi
 
@@ -23,7 +23,7 @@ regress() {
   exit 1
 }
 
-# 1. All six build assets exist under .oh/devcontainer/.
+# 1. All six build assets exist under .devcontainer/.
 for asset in \
   Dockerfile \
   docker-compose.yml \
@@ -31,37 +31,52 @@ for asset in \
   entrypoint.sh \
   client-slack-supervise.sh \
   seed-msg-bridge.sh; do
-  [[ -f "$ROOT/.oh/devcontainer/$asset" ]] || regress "moved asset missing from .oh/devcontainer/: $asset"
+  [[ -f "$DC/$asset" ]] || regress "build asset missing from .devcontainer/: $asset"
 done
 
-# 2. The moved assets are GONE from the root .devcontainer/.
-[[ ! -f "$ROOT/.devcontainer/Dockerfile" ]] || regress ".devcontainer/Dockerfile still present (should have moved to .oh/devcontainer/)"
-[[ ! -f "$ROOT/.devcontainer/docker-compose.yml" ]] || regress ".devcontainer/docker-compose.yml still present (should have moved to .oh/devcontainer/)"
-[[ ! -f "$ROOT/.devcontainer/entrypoint.sh" ]] || regress ".devcontainer/entrypoint.sh still present (should have moved to .oh/devcontainer/)"
+# 2. Nothing lingers under the retired .oh/devcontainer/.
+[[ ! -d "$ROOT/.oh/devcontainer" ]] \
+  || regress ".oh/devcontainer/ still present (assets should have consolidated into .devcontainer/)"
 
-# 3. Root compat layer points VS Code at the relocated compose file.
-[[ -f "$DEVCONTAINER_JSON" ]] || regress "root compat layer missing: $DEVCONTAINER_JSON"
-grep -Fq '../.oh/devcontainer/docker-compose.yml' "$DEVCONTAINER_JSON" \
-  || regress "root devcontainer.json does not point dockerComposeFile at ../.oh/devcontainer/docker-compose.yml"
-
-# 4. Relocated compose references the relocated Dockerfile.
-grep -Fq 'dockerfile: .oh/devcontainer/Dockerfile' "$COMPOSE" \
-  || regress ".oh/devcontainer/docker-compose.yml does not set dockerfile: .oh/devcontainer/Dockerfile"
-
-# 5. Relocated Dockerfile copies the relocated entrypoint.
-grep -Fq 'COPY .oh/devcontainer/entrypoint.sh' "$DOCKERFILE" \
-  || regress ".oh/devcontainer/Dockerfile does not COPY .oh/devcontainer/entrypoint.sh"
-
-# 6. .dockerignore no longer carries a stale negation for the moved Dockerfile.
-if [[ -f "$DOCKERIGNORE" ]] && grep -Fq '.devcontainer/Dockerfile' "$DOCKERIGNORE"; then
-  regress ".dockerignore still references .devcontainer/Dockerfile (stale post-move)"
+# 3. The VS Code devcontainer.json points at the same-dir compose (no ../.oh shim).
+[[ -f "$DEVCONTAINER_JSON" ]] || regress "devcontainer.json missing: $DEVCONTAINER_JSON"
+grep -Fq '"docker-compose.yml"' "$DEVCONTAINER_JSON" \
+  || regress "devcontainer.json does not point dockerComposeFile at the same-dir docker-compose.yml"
+if grep -Fq '.oh/devcontainer' "$DEVCONTAINER_JSON"; then
+  regress "devcontainer.json still references .oh/devcontainer (stale shim)"
 fi
 
-# 7. The generator and the committed compat layer agree (no drift) when present.
-if [[ -f "$SYNC_SCRIPT" ]]; then
-  bash "$SYNC_SCRIPT" --check >/dev/null 2>&1 \
-    || regress "sync-devcontainer.sh --check reports drift between the generator and root devcontainer.json"
+# 4. Compose references the co-located Dockerfile and a repo-root build context.
+grep -Fq 'dockerfile: .devcontainer/Dockerfile' "$COMPOSE" \
+  || regress "docker-compose.yml does not set dockerfile: .devcontainer/Dockerfile"
+grep -Eq '^[[:space:]]*context: \.\.$' "$COMPOSE" \
+  || regress "docker-compose.yml build context is not the repo root (context: ..)"
+
+# 5. Dockerfile copies the co-located entrypoint.
+grep -Fq 'COPY .devcontainer/entrypoint.sh' "$DOCKERFILE" \
+  || regress "Dockerfile does not COPY .devcontainer/entrypoint.sh"
+
+# 6. No moved build asset still references the retired .oh/devcontainer/ path.
+for asset in Dockerfile docker-compose.yml docker-compose.hermes-dashboard.yml \
+             entrypoint.sh client-slack-supervise.sh seed-msg-bridge.sh devcontainer.json; do
+  if grep -Fq '.oh/devcontainer' "$DC/$asset" 2>/dev/null; then
+    regress ".devcontainer/$asset still references the retired .oh/devcontainer/ path"
+  fi
+done
+
+# 7. .dockerignore must NOT exclude the whole .devcontainer/ dir (else the
+#    entrypoint COPY has no source) but must still exclude env secrets.
+if [[ -f "$DOCKERIGNORE" ]]; then
+  if grep -Eq '^[[:space:]]*\.devcontainer/?[[:space:]]*$' "$DOCKERIGNORE"; then
+    regress ".dockerignore excludes the whole .devcontainer/ dir — the entrypoint COPY would fail"
+  fi
+  grep -Fq '.env' "$DOCKERIGNORE" \
+    || regress ".dockerignore no longer excludes env files (secret-leak risk)"
 fi
 
-echo "PASS: build assets relocated to .oh/devcontainer/, root .devcontainer/ reduced to a generated compat layer, no moved asset lingers, generator in sync" >&2
+# 8. The compat generator is retired (no split left to keep in sync).
+[[ ! -f "$ROOT/.oh/scripts/sync-devcontainer.sh" ]] \
+  || regress ".oh/scripts/sync-devcontainer.sh still present (compat generator retired by consolidation)"
+
+echo "PASS: devcontainer build assets consolidated under .devcontainer/, nothing under .oh/devcontainer/, same-dir compose ref, no compat generator, .dockerignore keeps the dir but excludes secrets" >&2
 exit 0

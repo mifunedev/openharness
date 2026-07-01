@@ -1,4 +1,4 @@
-# hadolint config for Open Harness — gates .oh/devcontainer/Dockerfile in CI
+# hadolint config for Open Harness — gates .devcontainer/Dockerfile in CI
 # (consumed by the `boot-lint` job in .github/workflows/ci-harness.yml).
 #
 # Two-layer gate:

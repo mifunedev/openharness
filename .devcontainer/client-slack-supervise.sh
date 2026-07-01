@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Self-healing supervisor for the dedicated Slack bridge (client-slack-pi tmux session).
 #
-# Launched by .oh/devcontainer/entrypoint.sh with the PI_SLACK_* tokens already in
+# Launched by .devcontainer/entrypoint.sh with the PI_SLACK_* tokens already in
 # the environment and HARNESS / BRIDGE_ENTRY / RECOVERY_ENTRY / LOG exported.
 #
 # Why this exists: pi-messenger-bridge binds its long-lived Slack socket to a

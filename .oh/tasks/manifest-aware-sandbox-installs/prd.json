@@ -23,8 +23,8 @@
         "Tests pass"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Iteration 1 on 2026-07-01: implemented manifest-aware root pnpm install gate and CI skip-path comment update in cf24601e."
     },
     {
       "id": "US-002",
@@ -41,8 +41,8 @@
         "Tests pass"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Iteration 2 on 2026-07-01: added Vitest contract assertions and Tier-A eval probe for the root pnpm manifest fingerprint gate in a868dfd6."
     },
     {
       "id": "US-003",
@@ -60,8 +60,8 @@
         "Tests pass"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Iteration 3 on 2026-07-01: documented the manifest-aware sandbox dependency install behavior and refreshed the tracked wiki index in 3bffa24f."
     }
   ]
 }

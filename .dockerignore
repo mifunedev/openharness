@@ -1,6 +1,5 @@
 **/.env*
 .claude/
-.devcontainer/
 .worktrees/
 .git/
 node_modules/

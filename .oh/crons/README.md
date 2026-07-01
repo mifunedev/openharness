@@ -139,7 +139,7 @@ docker exec -u sandbox openharness sh -c 'kill -0 "$(cat .oh/crons/.pid)" 2>/dev
 docker exec -u sandbox openharness kill -HUP "$(cat .oh/crons/.pid)"
 ```
 
-The bare `kill -HUP "$(cat .oh/crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `.oh/crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`; the `cron-watchdog` session will relaunch `node --experimental-strip-types scripts/cron-runtime.ts` in a fresh `cron-system` session (the documented start path from `.oh/devcontainer/entrypoint.sh`).
+The bare `kill -HUP "$(cat .oh/crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `.oh/crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`; the `cron-watchdog` session will relaunch `node --experimental-strip-types scripts/cron-runtime.ts` in a fresh `cron-system` session (the documented start path from `.devcontainer/entrypoint.sh`).
 
 ## Override
 

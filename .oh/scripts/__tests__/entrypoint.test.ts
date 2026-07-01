@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../..");
-const ENTRYPOINT = join(ROOT, ".oh/devcontainer/entrypoint.sh");
+const ENTRYPOINT = join(ROOT, ".devcontainer/entrypoint.sh");
 
 function entrypoint(): string {
   return readFileSync(ENTRYPOINT, "utf8");
@@ -105,7 +105,7 @@ describe("devcontainer entrypoint Slack restore (delegates to gateway.sh)", () =
 });
 
 describe("client-slack bridge supervisor", () => {
-  const SUPERVISOR = join(ROOT, ".oh/devcontainer/client-slack-supervise.sh");
+  const SUPERVISOR = join(ROOT, ".devcontainer/client-slack-supervise.sh");
 
   it("parses as valid bash", () => {
     execFileSync("bash", ["-n", SUPERVISOR]);
@@ -139,7 +139,7 @@ describe("client-slack bridge supervisor", () => {
 
   it("is referenced by gateway.sh, which the entrypoint delegates to", () => {
     const gateway = readFileSync(join(ROOT, ".oh/scripts/gateway.sh"), "utf8");
-    expect(gateway).toContain(".oh/devcontainer/client-slack-supervise.sh");
+    expect(gateway).toContain(".devcontainer/client-slack-supervise.sh");
     // The entrypoint no longer launches the supervisor directly — it hands off.
     expect(entrypoint()).toContain(".oh/scripts/gateway.sh pi");
   });
@@ -169,7 +169,7 @@ describe("devcontainer entrypoint cron supervision", () => {
 });
 
 describe("msg-bridge seed/merge (seed-msg-bridge.sh)", () => {
-  const SEED_SCRIPT = join(ROOT, ".oh/devcontainer/seed-msg-bridge.sh");
+  const SEED_SCRIPT = join(ROOT, ".devcontainer/seed-msg-bridge.sh");
 
   function runSeed(seedJson: unknown, runtimeJson?: string): unknown {
     const home = mkdtempSync(join(tmpdir(), "seed-msg-bridge-"));

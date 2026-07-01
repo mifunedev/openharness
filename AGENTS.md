@@ -74,7 +74,7 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    the **pi-messenger-bridge** npm package — npm-installed into `.pi/bridge/`
    and loaded via `--extension` only in the dedicated `client-slack-pi` tmux
    session (not globally pinned in `.pi/settings.json`), under the self-healing
-   supervisor `.oh/devcontainer/client-slack-supervise.sh` that restarts pi on the
+   supervisor `.devcontainer/client-slack-supervise.sh` that restarts pi on the
    stale-ctx error and on crashes (see
    [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md)). The legacy
    `@ryaneggz/mifune` pack still works during the transition, but new

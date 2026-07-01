@@ -47,7 +47,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | memory-gitignore-claim | A | 2026-07-01 03:15 | PASS | issue #101 |
 | memory-log-locked-append | A | 2026-07-01 03:15 | PASS | issue #476 — memory log writes in skill contracts must use .oh/scripts/locked-append.sh |
 | next-dev-prod | A | 2026-07-01 03:15 | SKIPPED | .oh/memory/MEMORY.md 2026-06-04 |
-| oh-devcontainer-restructure | A | 2026-07-01 03:15 | PASS | issue #531 Phase 2 (devcontainer relocation) |
+| oh-devcontainer-restructure | A | 2026-07-01 04:58 | PASS | consolidate devcontainer — .oh/devcontainer/ folded back into .devcontainer/ |
 | oh-init-scaffold | A | 2026-07-01 03:15 | PASS | issue #531 Phase 2 |
 | oh-payload-manifest | A | 2026-07-01 03:15 | PASS | issue #531 follow-on (.oh payload manifest — oh update ships a declared allowlist) |
 | oh-shipped-repo-overridable | A | 2026-07-01 03:15 | PASS | issue #531 follow-on (de-hardcode residual — shipped .oh shell scripts keep the upstream repo overridable) |

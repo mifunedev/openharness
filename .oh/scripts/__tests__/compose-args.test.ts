@@ -22,9 +22,8 @@ let tmp: string;
 beforeEach(() => {
   tmp = mkdtempSync(path.join(tmpdir(), "compose-args-"));
   mkdirSync(path.join(tmp, ".devcontainer"), { recursive: true });
-  mkdirSync(path.join(tmp, ".oh", "devcontainer"), { recursive: true });
-  writeFileSync(path.join(tmp, ".oh", "devcontainer", "docker-compose.yml"), "services: {}\n");
-  writeFileSync(path.join(tmp, ".oh", "devcontainer", "docker-compose.hermes-dashboard.yml"), "services: {}\n");
+  writeFileSync(path.join(tmp, ".devcontainer", "docker-compose.yml"), "services: {}\n");
+  writeFileSync(path.join(tmp, ".devcontainer", "docker-compose.hermes-dashboard.yml"), "services: {}\n");
 });
 
 afterEach(() => {
@@ -78,7 +77,7 @@ describe("scripts/docker-compose.sh", () => {
     expect(argv[5]).not.toBe(persistent);
     expect(argv.slice(6)).toEqual([
       "-f",
-      path.join(tmp, ".oh", "devcontainer", "docker-compose.yml"),
+      path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "config",
     ]);
     expect(existsSync(persistent)).toBe(false);
@@ -110,9 +109,9 @@ describe("scripts/docker-compose.sh", () => {
     expect(argv[3]).toContain("openharness-harness-yaml-env.");
     expect(argv.slice(4)).toEqual([
       "-f",
-      path.join(tmp, ".oh", "devcontainer", "docker-compose.yml"),
+      path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "-f",
-      path.join(tmp, ".oh", "devcontainer", "docker-compose.hermes-dashboard.yml"),
+      path.join(tmp, ".devcontainer", "docker-compose.hermes-dashboard.yml"),
       "-f",
       path.join(tmp, harnessOverride),
       "-f",
@@ -157,7 +156,7 @@ describe("scripts/docker-compose.sh", () => {
       "--env-file",
       persistent,
       "-f",
-      path.join(tmp, ".oh", "devcontainer", "docker-compose.yml"),
+      path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "up",
       "-d",
     ]);

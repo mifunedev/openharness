@@ -244,8 +244,9 @@ export async function runInit(
 
     // Phase 2b: full .devcontainer/ (Dockerfile, compose, entrypoint, *.sh) +
     // a local-build devcontainer.json. The published image is a documented
-    // fallback only.
-    const sourceDevcontainer = path.join(sourceOh, "devcontainer");
+    // fallback only. The harness keeps these assets under its own conventional
+    // .devcontainer/ (a sibling of .oh/), so they copy across near-verbatim.
+    const sourceDevcontainer = path.join(sourceOh, "..", ".devcontainer");
     if (existsSync(sourceDevcontainer) && statSync(sourceDevcontainer).isDirectory()) {
       copyDevcontainer(sourceDevcontainer, wr);
       writeGenerated(wr, ".devcontainer/devcontainer.json", DEVCONTAINER_JSON);
@@ -445,26 +446,31 @@ function copyFileReport(ctx: WriteCtx, src: string, rel: string): void {
 }
 
 /**
- * Copy the FULL source `.oh/devcontainer/` into `<t>/.devcontainer/`. The
- * harness keeps its devcontainer under `.oh/devcontainer/` with a build context
- * of `../..` (repo root); relocating it to the conventional `<t>/.devcontainer/`
- * means the build context drops one level, so the copied `docker-compose.yml`
- * and `Dockerfile` are rewritten to resolve against the target's layout. Real
- * files only (symlinks/volatile dirs skipped).
+ * Copy the harness's own `.devcontainer/` build assets into `<t>/.devcontainer/`.
+ * Source and target share the conventional `.devcontainer/` layout (build context
+ * = repo root, one level up), so the only per-target rewrite is the workspace path
+ * (`/home/sandbox/harness` → `/home/sandbox/project`) applied to
+ * `docker-compose.yml`; the Dockerfile and client scripts copy verbatim. The
+ * source `devcontainer.json` (the consumer's is written separately) and any env
+ * files (never ship secrets) are skipped. Real files only (symlinks/volatile
+ * dirs skipped).
  */
 function copyDevcontainer(srcDir: string, ctx: WriteCtx): void {
+  const skip = new Set([
+    "devcontainer.json",
+    ".example.env",
+    ".env",
+    ".harness.yaml.env",
+  ]);
   const rels: string[] = [];
   collectRealFiles(srcDir, srcDir, rels);
   rels.sort();
   for (const rel of rels) {
+    if (skip.has(rel) || rel.startsWith(".env")) continue;
     const src = path.join(srcDir, rel);
     const destRel = `.devcontainer/${rel}`;
-    if (rel === "docker-compose.yml" || rel === "Dockerfile") {
-      const transformed =
-        rel === "docker-compose.yml"
-          ? rewriteComposeForTarget(readFileSync(src, "utf8"))
-          : rewriteDockerfileForTarget(readFileSync(src, "utf8"));
-      writeGenerated(ctx, destRel, transformed);
+    if (rel === "docker-compose.yml") {
+      writeGenerated(ctx, destRel, rewriteComposeForTarget(readFileSync(src, "utf8")));
     } else {
       copyFileReport(ctx, src, destRel);
     }
@@ -486,24 +492,12 @@ function collectRealFiles(root: string, dir: string, acc: string[]): void {
 }
 
 /**
- * Rewrite the harness `docker-compose.yml` for a target that keeps the
- * devcontainer under `<t>/.devcontainer/` (build context = repo root, one level
- * up) and a project-scoped `OH_PROJECT_ROOT`.
+ * Rewrite the harness `docker-compose.yml` for a consumer target. Source and
+ * target share the same `.devcontainer/` layout (build context = repo root, one
+ * level up), so the only rewrite is the project-scoped workspace path.
  */
 function rewriteComposeForTarget(content: string): string {
-  return content
-    .replaceAll("context: ../..", "context: ..")
-    .replaceAll("dockerfile: .oh/devcontainer/Dockerfile", "dockerfile: .devcontainer/Dockerfile")
-    .replaceAll("../..:${OH_PROJECT_ROOT", "..:${OH_PROJECT_ROOT")
-    .replaceAll("/home/sandbox/harness", "/home/sandbox/project");
-}
-
-/** Rewrite the Dockerfile's entrypoint COPY for the relocated devcontainer. */
-function rewriteDockerfileForTarget(content: string): string {
-  return content.replaceAll(
-    "COPY .oh/devcontainer/entrypoint.sh",
-    "COPY .devcontainer/entrypoint.sh",
-  );
+  return content.replaceAll("/home/sandbox/harness", "/home/sandbox/project");
 }
 
 // devcontainer.json for LOCAL BUILD (default). Valid JSON (JSON.parse-able): the

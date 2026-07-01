@@ -8,7 +8,7 @@
 #
 #   pi      client-slack-pi      pi-messenger-bridge, loaded via `pi --extension`
 #                                under the self-healing supervisor
-#                                (.oh/devcontainer/client-slack-supervise.sh).
+#                                (.devcontainer/client-slack-supervise.sh).
 #   hermes  client-slack-hermes  `hermes gateway run` — Hermes' native messaging
 #                                gateway.
 #
@@ -85,7 +85,7 @@ start_pi() {
   fi
 
   # Seed the non-secret bridge config (preserves runtime trust grants), clear lock.
-  bash "$HARNESS/.oh/devcontainer/seed-msg-bridge.sh" "$HARNESS/.pi/msg-bridge.json" || true
+  bash "$HARNESS/.devcontainer/seed-msg-bridge.sh" "$HARNESS/.pi/msg-bridge.json" || true
   rm -f "$HOME/.pi/msg-bridge.lock" 2>/dev/null || true
 
   # Pass config + tokens to the session via a mode-600 runtime env file the pane
@@ -102,7 +102,7 @@ start_pi() {
   } >>"$envf"
 
   if tmux new-session -d -s "$session" \
-       "bash -c '. \"$envf\"; rm -f \"$envf\"; exec bash \"$HARNESS/.oh/devcontainer/client-slack-supervise.sh\"'"; then
+       "bash -c '. \"$envf\"; rm -f \"$envf\"; exec bash \"$HARNESS/.devcontainer/client-slack-supervise.sh\"'"; then
     # pi runs interactive (no `| tee`), so mirror the pane into the log,
     # ANSI-stripped, for the stale-ctx watchdog and humans.
     tmux pipe-pane -o -t "$session" "$ANSI_STRIP >> $log" 2>/dev/null || true

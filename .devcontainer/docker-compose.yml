@@ -20,8 +20,8 @@ services:
     image: sandbox-${SANDBOX_NAME:-openharness}
     container_name: ${SANDBOX_NAME:-openharness}
     build:
-      context: ../..
-      dockerfile: .oh/devcontainer/Dockerfile
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
       args:
         OH_PROJECT_ROOT: ${OH_PROJECT_ROOT:-/home/sandbox/harness}
         INSTALL_OPENCODE: ${INSTALL_OPENCODE:-false}
@@ -29,7 +29,7 @@ services:
         INSTALL_DEEPAGENTS: ${INSTALL_DEEPAGENTS:-false}
         INSTALL_HERMES: ${INSTALL_HERMES:-false}
     volumes:
-      - ../..:${OH_PROJECT_ROOT:-/home/sandbox/harness}
+      - ..:${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - /var/run/docker.sock:/var/run/docker.sock
       - claude-auth:/home/sandbox/.claude
       - codex-auth:/home/sandbox/.codex

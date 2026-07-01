@@ -1,6 +1,6 @@
 {
   "name": "Open Harness Sandbox",
-  "dockerComposeFile": ["../.oh/devcontainer/docker-compose.yml"],
+  "dockerComposeFile": ["docker-compose.yml"],
   "service": "sandbox",
   "workspaceFolder": "/home/sandbox/harness",
   "remoteUser": "sandbox",

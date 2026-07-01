@@ -27,11 +27,11 @@ working** in practice (validated on the `oh-remote` container, 2026-06-23); the
 
 DebugMCP runs inside a VS Code extension host. That host needs a VS Code server
 binary, which is **not** in the current image: the devcontainer is
-`FROM debian:bookworm-slim` (`.oh/devcontainer/Dockerfile:1`) and installs no
+`FROM debian:bookworm-slim` (`.devcontainer/Dockerfile:1`) and installs no
 `code`, `code-server`, or `vscode-server` binary at build time — the only `code`
 tokens in the Dockerfile are the `claude-code` npm package
-(`.oh/devcontainer/Dockerfile:102,108`) and the two VS Code *Attach-to-Container*
-comments (`.oh/devcontainer/Dockerfile:197,200`). `devcontainer.json` declares no
+(`.devcontainer/Dockerfile:102,108`) and the two VS Code *Attach-to-Container*
+comments (`.devcontainer/Dockerfile:197,200`). `devcontainer.json` declares no
 `extensions` list and no `forwardPorts` (`.devcontainer/devcontainer.json`,
 whole file).
 
@@ -48,7 +48,7 @@ This tier is the subject of the open feasibility question.
 
 | Path | Verdict | Evidence / constraint |
 | --- | --- | --- |
-| `code serve-web` | **BLOCKED** | The `serve-web` subcommand requires the VS Code CLI/server, which is **not installed** in the image — no `code` binary exists (`grep -niE 'code-server\|serve-web\|vscode-server' .oh/devcontainer/Dockerfile` returns nothing but the `claude-code` package and the Attach comments). Without a runtime install of the VS Code server, `code serve-web` cannot start. The blocking constraint is the **absent VS Code server binary** in `debian:bookworm-slim`. |
+| `code serve-web` | **BLOCKED** | The `serve-web` subcommand requires the VS Code CLI/server, which is **not installed** in the image — no `code` binary exists (`grep -niE 'code-server\|serve-web\|vscode-server' .devcontainer/Dockerfile` returns nothing but the `claude-code` package and the Attach comments). Without a runtime install of the VS Code server, `code serve-web` cannot start. The blocking constraint is the **absent VS Code server binary** in `debian:bookworm-slim`. |
 | code-server (apt / binary) | **UNVERIFIED** | code-server (the Coder fork) is not in the image either, but unlike upstream `code serve-web` it is installable headlessly (`apt`/`.deb`/install script) and bundles its own Open VSX extension marketplace. What would confirm: install code-server at runtime, install `ozzafar.debugmcpextension` from Open VSX, open a workspace, and observe the MCP server bind on `:3001` — none of which has been executed. Open question: whether `ozzafar.debugmcpextension` is published to **Open VSX** (code-server cannot reach the proprietary Microsoft Marketplace). Editing the Dockerfile to bake this in is **out of scope** here (post-decision only). |
 
 ### Operator-side (requires host VS Code)
@@ -59,7 +59,7 @@ the missing-binary constraint above does not apply. They are available today but
 
 | Path | Verdict | Evidence / constraint |
 | --- | --- | --- |
-| VS Code Attach-to-Container (Lifecycle Option B) | **CONFIRMED** | Validated on `oh-remote` (2026-06-23): an attached VS Code session provisioned the server, `ozzafar.debugmcpextension` v2.0.1 installed + activated + bound `:3001`, and a full debug lifecycle (breakpoint → pause → `get_variables_values` → `step_over` → `evaluate_expression`) ran against a Python file. The image is already prepared for Attach-to-Container: `.oh/devcontainer/Dockerfile:197-201` writes `/.devcontainer/devcontainer.json` and a `devcontainer.metadata` LABEL so VS Code attaches as user `sandbox` at `/home/sandbox/harness`. The Dev Containers extension provisions its own VS Code server into the container on attach, supplying the binary the headless tiers lack; DebugMCP can then install and activate in that operator-driven host. Confirmed by `CLAUDE.md` Lifecycle **Option B** (Dev Containers → "Attach to Running Container"). |
+| VS Code Attach-to-Container (Lifecycle Option B) | **CONFIRMED** | Validated on `oh-remote` (2026-06-23): an attached VS Code session provisioned the server, `ozzafar.debugmcpextension` v2.0.1 installed + activated + bound `:3001`, and a full debug lifecycle (breakpoint → pause → `get_variables_values` → `step_over` → `evaluate_expression`) ran against a Python file. The image is already prepared for Attach-to-Container: `.devcontainer/Dockerfile:197-201` writes `/.devcontainer/devcontainer.json` and a `devcontainer.metadata` LABEL so VS Code attaches as user `sandbox` at `/home/sandbox/harness`. The Dev Containers extension provisions its own VS Code server into the container on attach, supplying the binary the headless tiers lack; DebugMCP can then install and activate in that operator-driven host. Confirmed by `CLAUDE.md` Lifecycle **Option B** (Dev Containers → "Attach to Running Container"). |
 | Remote-SSH + Attach (Lifecycle Option C) | **VIABLE** | Same mechanism over SSH: the operator SSHes to the remote host, then attaches to the container, and VS Code provisions its server. The host IDE supplies the server binary, so the extension host can run. Confirmed by `CLAUDE.md` Lifecycle **Option C** (Remote-SSH then attach). |
 
 **Summary of the open question.** The container-side, host-free path is **not

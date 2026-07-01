@@ -280,7 +280,7 @@ describe("runInit", () => {
     // Volatile build artifacts are never shipped.
     expect(existsSync(join(t, ".oh/cli/node_modules"))).toBe(false);
     expect(existsSync(join(t, ".oh/cli/dist"))).toBe(false);
-    // devcontainer/ is not in the manifest include → not vendored.
+    // The devcontainer lives at .devcontainer/, never vendored under .oh/.
     expect(existsSync(join(t, ".oh/devcontainer"))).toBe(false);
   });
 

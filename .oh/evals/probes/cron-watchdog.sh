@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-ENTRYPOINT="$ROOT/.oh/devcontainer/entrypoint.sh"
+ENTRYPOINT="$ROOT/.devcontainer/entrypoint.sh"
 TESTS="$ROOT/.oh/scripts/__tests__/entrypoint.test.ts"
 
 missing=()

@@ -50,12 +50,11 @@ top-level `packages/` folder is **retired**. The physical files moved
 (`packages/oh → .oh/cli`, `packages/docs → openharness-web`, `scripts → .oh/scripts`,
 `install → .oh/install`, plus the canonical `config.json → .oh/config.json`).
 
-The runtime-machinery dirs (`scripts/`, `install/`, `crons/`) keep **tracked back-compat
-symlinks at the old root paths** (exactly as `.claude/skills` → `.mifune/skills`),
-so every consumer pinning a `scripts/…` / `install/…` / `crons/…` literal — skills, cron
-bodies, the `Makefile`, the boot-lint glob, vitest, the eval probes — resolves
-unchanged. The `oh` CLI moved without a symlink (the `packages/` folder is gone), so
-its consumers were repointed to `.oh/cli`. The docs-site package later moved out
+The runtime-machinery dirs (`scripts/`, `install/`, `crons/`) moved **without back-compat
+symlinks** — every consumer pinning a `scripts/…` / `install/…` / `crons/…` literal — skills, cron
+bodies, the `Makefile`, the boot-lint glob, vitest, the eval probes, and the `CRONS_DIR`
+default — was repointed to the real `.oh/…` path. The `oh` CLI likewise moved without a
+symlink (the `packages/` folder is gone), so its consumers were repointed to `.oh/cli`. The docs-site package later moved out
 entirely: the Docusaurus app/assets/blog now live in
 [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web),
 while this core repo keeps GitHub-readable markdown under `docs/` and points
@@ -68,35 +67,32 @@ was repointed to the real `.oh/tasks/` path because git index operations
 cannot traverse a symlink and nothing reads the bare `tasks/` path anymore.
 
 The scheduled-agent cron definitions (`crons/`) were reclassified as machinery
-and moved under `.oh/crons/`, keeping a back-compat root symlink. Unlike a
-directory with git-mutating consumers, the cron surface's writes are all
-filesystem appends (`cron-runtime.ts` reads, and liveness logs append via
-`locked-append.sh`) that traverse the symlink, so every consumer — the runtime,
-the cron bodies, and the eval probes — resolves unchanged; references were
-repointed to the real `.oh/crons/` path for consistency.
+and moved under `.oh/crons/`, without a back-compat root symlink. Every consumer
+was repointed to the real `.oh/crons/` path — the `cron-runtime.ts` reads, the
+liveness logs that append via `locked-append.sh`, the cron bodies, the eval probes,
+and the `CRONS_DIR` default itself (`.oh/crons`) in `docker-compose.yml`,
+`entrypoint.sh`, and `cron-runtime.ts`, so nothing depends on the old root path.
 
 The fitness-function eval suite (`evals/`) was reclassified as machinery and
-moved under `.oh/evals/`, keeping a back-compat root symlink. Because the move
+moved under `.oh/evals/`, without a back-compat root symlink. Because the move
 is one directory level deeper, the eval runner (`run.sh`), the
 `repo-orientation-benchmark-score.mjs` scorer, and every probe's relative-root
-resolution were repointed to the real `.oh/evals/` path; reads through the
-symlink keep working for any consumer that still pins `evals/`.
+resolution were repointed to the real `.oh/evals/` path; nothing pins the bare
+`evals/` path anymore.
 
 The harness's long-term memory + session logs (`memory/`) were reclassified as
-machinery and moved under `.oh/memory/`, keeping a back-compat root symlink.
+machinery and moved under `.oh/memory/`, without a back-compat root symlink.
 Like `crons/`, the memory surface has no git-mutating consumers — `/retro`, the
-crons, and `autopilot-caps.sh` append via `locked-append.sh` (filesystem writes
-that traverse the symlink) — so references were repointed to the real
-`.oh/memory/` path for consistency. The tracked `MEMORY.md`/`README.md` move
-with the dir; the gitignored dated `[0-9]*/` logs stay ignored at the new path.
+crons, and `autopilot-caps.sh` append via `locked-append.sh` — so every reference
+was repointed to the real `.oh/memory/` path. The tracked `MEMORY.md`/`README.md`
+move with the dir; the gitignored dated `[0-9]*/` logs stay ignored at the new path.
 
 The always-on identity core (`context/` — `SOUL.md`, `IDENTITY.md`, `TOOLS.md`,
 `USER.md`, `REPO_MAP.md`, and the collapsed `context/rules/` pointers) was
-reclassified as machinery and moved under `.oh/context/`, keeping a back-compat
-root symlink so `AGENTS.md`'s session-start reads resolve unchanged. References
-were repointed to the real `.oh/context/` path; `protected-paths.txt`, the
-`repo-orientation` benchmark `startupContext`, and the `repo-map-contract`
-probe were updated in lockstep.
+reclassified as machinery and moved under `.oh/context/`, without a back-compat
+root symlink. Every reference — `AGENTS.md`'s session-start reads,
+`protected-paths.txt`, the `repo-orientation` benchmark `startupContext`, and the
+`repo-map-contract` probe — was repointed to the real `.oh/context/` path in lockstep.
 
 ## Namespaces
 
@@ -148,7 +144,7 @@ dependency order (the **Depends on** column); never start a blocked step.
 | M4 | Always-on collapse (identity-core): `memory.md` → `/retro` + `AGENTS.md` one-liner; remove `.oh/context/rules/` | M3 | ✅ Done |
 | M5 | Hooks → `.mifune/hooks` | M1 | ✅ Done |
 | M6 | Skill-private scripts → skill dirs (`autopilot-caps`, `prompt-miner-caps`); shared scripts stay at root | M1 | ✅ Done |
-| M7 | `.oh/` machinery grouping + retire `packages/`: `packages/oh → .oh/cli`, `packages/docs → .oh/docs` (intermediate), `scripts → .oh/scripts`, `install → .oh/install`, canonical `config.json → .oh/config.json`. Runtime dirs (`scripts/`, `install/`) keep back-compat symlinks (the `.mifune` precedent); package consumers repoint directly and the `packages/` folder is removed. Generalizes the namespace rule from export-ness to function-class. | M2 | ✅ Done |
+| M7 | `.oh/` machinery grouping + retire `packages/`: `packages/oh → .oh/cli`, `packages/docs → .oh/docs` (intermediate), `scripts → .oh/scripts`, `install → .oh/install`, canonical `config.json → .oh/config.json`. Runtime dirs (`scripts/`, `install/`) and package consumers repoint directly (no back-compat symlinks); the `packages/` folder is removed. Generalizes the namespace rule from export-ness to function-class. | M2 | ✅ Done |
 | M8 | Docs-site extraction: Docusaurus app/assets/blog → `mifunedev/openharness-web`; core repo keeps concise `README.md` + GitHub-readable `docs/README.md`; DeepWiki becomes the generated navigation layer. | M7 | ✅ Done |
 
 ## Maintenance pattern
@@ -183,8 +179,9 @@ A script consolidates into a skill iff exactly one skill-feature owns it (so it
 rides along when the skill syncs — the same portability thesis as rules→skills).
 
 > **M7 update:** the "stay at root" verdict below now means *physically in
-> `.oh/scripts/`, reachable at `scripts/` via the back-compat symlink* — the
-> whole `scripts/` directory was grouped under `.oh/` as OpenHarness machinery.
+> `.oh/scripts/`, referenced directly at `.oh/scripts/` (no back-compat symlink;
+> the bare `scripts/` root path no longer exists)* — the whole `scripts/`
+> directory was grouped under `.oh/` as OpenHarness machinery.
 > The single-owner → SKILL verdicts (`autopilot-caps`, `prompt-miner-caps`) are a
 > separate axis and already shipped in M6.
 
@@ -198,5 +195,5 @@ rides along when the skill syncs — the same portability thesis as rules→skil
 | `prompt-miner-caps.sh` | → SKILL | `.mifune/skills/prompt-miner/` |
 | `sandbox-healthcheck.sh` | → SKILL *(verify `/health-check` owns it)* | `.mifune/skills/health-check/` |
 | `repo-orientation-benchmark-score.mjs` | → SKILL *(verify `/benchmark` owns it)* | `.mifune/skills/benchmark/` |
-| `install.sh`, `harness-config.sh`, `docker-compose.sh`, `check-pnpm-pin.sh` | ✅ Done — moved with the whole dir (M7) | `.oh/scripts/` (symlink at `scripts/`) |
-| `sandbox-boot-smoke.sh`, `README.md` | moved with the whole dir (M7) | `.oh/scripts/` (symlink at `scripts/`) |
+| `install.sh`, `harness-config.sh`, `docker-compose.sh`, `check-pnpm-pin.sh` | ✅ Done — moved with the whole dir (M7) | `.oh/scripts/` (no symlink) |
+| `sandbox-boot-smoke.sh`, `README.md` | moved with the whole dir (M7) | `.oh/scripts/` (no symlink) |

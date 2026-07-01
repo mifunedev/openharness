@@ -144,4 +144,4 @@ The bare `kill -HUP "$(cat .oh/crons/.pid)"` form works only from *inside* the c
 ## Override
 
 Set `CRONS_DIR=<path>` to point the runtime at a different directory
-(default: `crons`).
+(default: `.oh/crons`).

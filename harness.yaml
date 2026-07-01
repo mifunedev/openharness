@@ -33,7 +33,7 @@ hermes:
   # dashboard_port: 9119       # HERMES_DASHBOARD_PORT — host loopback port for the dashboard
 
 crons:
-  # dir: crons                 # CRONS_DIR — directory the cron runtime scans
+  # dir: .oh/crons             # CRONS_DIR — directory the cron runtime scans
   # agent_bin: claude          # CRON_AGENT_BIN — binary that fires scheduled tasks
 
 autopilot:

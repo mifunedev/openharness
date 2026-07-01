@@ -55,7 +55,7 @@ services:
       - OH_PROJECT_ROOT=${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - HERMES_DASHBOARD=${HERMES_DASHBOARD:-false}
       - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
-      - CRONS_DIR=${CRONS_DIR:-crons}
+      - CRONS_DIR=${CRONS_DIR:-.oh/crons}
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
     stdin_open: true
     tty: true

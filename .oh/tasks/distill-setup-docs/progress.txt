@@ -41,3 +41,16 @@ Enriched installation.md's "Clone-and-own" into the full validated pattern (clon
 - installation.md anchor = #clone-and-own-private-origin-and-upstream-recommended (GitHub slug of the heading); reused by the README link and will be reused by github.md (US-004).
 
 ---
+## US-004 — 2026-07-02 06:42 UTC
+
+**Title**: Document GitHub SSH auth path in integrations/github.md
+**Files changed**: .oh/docs/integrations/github.md
+**Result**: PASS
+
+### What I did
+Added an "SSH authentication (recommended for private origin + upstream)" section: (A) the interactive gh auth login SSH path (generate key, paste token, needed scopes incl. admin:public_key) and (B) the entrypoint auto-keygen behavior (ed25519 at ~/.ssh, uploads pubkey when GH_TOKEN has admin:public_key; idempotent; cites entrypoint.sh:275-309). Reframed the intro line to point SSH users at the clone-and-own flow; preserved the existing HTTPS/PAT + PR + persistence content.
+
+### Learnings for future iterations
+- Cross-link anchor reused from US-003: ../installation.md#clone-and-own-private-origin-and-upstream-recommended.
+
+---

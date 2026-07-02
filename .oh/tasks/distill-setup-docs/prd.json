@@ -61,8 +61,8 @@
                 "Existing PAT/HTTPS content is preserved, not deleted"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-07-02; github.md gains an SSH auth section (interactive gh auth login SSH path + entrypoint auto-keygen 275-309, admin:public_key scope), cross-linked to installation.md clone-and-own"
         },
         {
             "id": "US-005",

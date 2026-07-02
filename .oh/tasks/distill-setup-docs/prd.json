@@ -104,8 +104,8 @@
                 "gateway status output / session naming verified against the live sandbox; if no gateway session is running, state so and mark the attach example with a '> Unverified — ...' admonition rather than the 'where possible' hedge"
             ],
             "priority": 7,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-07-02; slack.md +4.6 Run-and-verify (read-only), observation attaches -> -r; hermes.md gateway section reconciled to shared gateway.sh lifecycle + Run-and-verify. gateway status format and tmux -r flag live-verified (tmux 3.3a)"
         },
         {
             "id": "US-008",

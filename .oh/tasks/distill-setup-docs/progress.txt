@@ -80,3 +80,17 @@ Verified live in the running openharness container (docker exec -u sandbox): Cla
 - Live verification confirmed the command; no `> Unverified` admonition needed. The sandbox container name is `openharness`.
 
 ---
+## US-007 — 2026-07-02 06:47 UTC
+
+**Title**: Align Slack/gateway docs and add a read-only Run-and-verify subsection (sandbox-only)
+**Files changed**: .oh/docs/integrations/slack.md, .oh/docs/harnesses/hermes.md
+**Result**: PASS
+
+### What I did
+Reconciled hermes.md's "independent surfaces" wording to gateway.sh ground truth: both Pi and Hermes Slack gateways run under the SAME .oh/scripts/gateway.sh lifecycle in sibling sessions (client-slack-pi = pi-messenger-bridge; client-slack-hermes = `hermes gateway run`), each with its OWN Slack app. Added a "Run and verify (read-only)" subsection to BOTH docs (sandbox-only run commands, `tmux attach -r`, detach Ctrl-b d, log tails). Converted slack.md's observation-only `tmux attach -t client-slack-pi` occurrences to `-r`. Cross-linked the two.
+
+### Learnings for future iterations
+- Live-verified: `gateway status` prints "· client-slack-pi  stopped  (gateway pi)" / hermes sibling; both stopped now. `tmux attach -r` is valid (tmux 3.3a) — returns "can't find session" when stopped, not "unknown flag". `gateway`/`make gateway` are sandbox-only (need pi/hermes on PATH).
+- Left the pre-existing stale `.oh/context/rules/sandbox-processes.md` links (now .oh/skills/t3/references/) untouched — out of this story's scope.
+
+---

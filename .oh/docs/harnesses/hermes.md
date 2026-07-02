@@ -139,14 +139,37 @@ tmux attach -t agent-hermes
 
 ```bash
 hermes model            # pick LLM provider
-hermes gateway setup    # configure messaging bridge (optional)
-hermes gateway          # start the messaging gateway
+hermes gateway setup    # configure the messaging gateway (Slack app, trust) — optional
 ```
 
-Open Harness does not currently wire Hermes into the in-tree Pi Slack
-extension — they are independent surfaces. If you enable a Hermes
-messaging gateway, the bridge runs entirely under Hermes' own
-configuration.
+Hermes' Slack/messaging gateway is managed by the **same** harness lifecycle script as
+Pi's — `.oh/scripts/gateway.sh` — in a sibling tmux session. Pi and Hermes each hold their
+**own** Slack app and config, so the two never compete for one socket: Pi's `client-slack-pi`
+runs the pi-messenger-bridge, while Hermes' `client-slack-hermes` runs Hermes' native
+`hermes gateway run`. `gateway.sh` owns only the session *lifecycle*; configuration is
+separate (`hermes gateway setup` for Hermes, the in-session `/msg-bridge` for Pi). See
+[Slack](../integrations/slack.md) for the Pi side.
+
+#### Run and verify (read-only)
+
+Run the Hermes gateway **from inside the sandbox** — both `gateway hermes` and
+`make gateway hermes` require `hermes` on `PATH`, so they only work in the container
+(`gateway.sh` errors otherwise):
+
+```bash
+gateway hermes            # start the client-slack-hermes session (wraps `hermes gateway run`)
+gateway status            # both gateways + state, e.g.
+                          #   · client-slack-pi        stopped   (gateway pi)
+                          #   · client-slack-hermes    stopped   (gateway hermes)
+```
+
+To **watch** a running gateway without any risk of stopping it, attach **read-only** with
+`-r`, then detach with `Ctrl-b d` — never `Ctrl-C` or `exit` (those kill the process):
+
+```bash
+tmux attach -r -t client-slack-hermes    # read-only view; detach: Ctrl-b d
+tail -f /tmp/client-slack-hermes.log     # or just tail the log (no attach needed)
+```
 
 ## Web dashboard
 

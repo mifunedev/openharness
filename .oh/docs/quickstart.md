@@ -78,10 +78,19 @@ directory: `/home/sandbox/harness`.
 
 The default sandbox ships with Claude Code, Codex, and Pi. OpenCode,
 DeepAgents, Hermes, and Grok Build are optional image-level installs; T3 Code runs on
-demand via the `/t3` skill or direct `npx`. Authenticate at least one harness before use:
+demand via the `/t3` skill or direct `npx`. Authenticate at least one harness before use.
 
-- **[Claude Code](./harnesses/claude-code.md)**: run `claude auth login` and follow the OAuth prompt (`claude auth status` to verify)
-- **[Codex](./harnesses/codex.md)**: run `codex login`
+> **Simplest cross-provider login — device mode via `/login`.** The most straightforward path
+> that works the same across most harnesses: launch the agent in **interactive mode**, run
+> **`/login`**, and choose **device mode** (device-auth). You get a short code + a URL to open
+> in a browser on *any* device — no local browser on the host required, so it works cleanly on
+> a **headless or remote sandbox** (e.g. a cloud VM you SSH into). Browser-redirect OAuth
+> assumes a local browser and often fails there; device mode doesn't. The per-harness commands
+> below are equivalents for when you prefer a one-liner — several expose an explicit
+> `--device-auth` flag (e.g. `codex login --device-auth`, `grok login --device-auth`).
+
+- **[Claude Code](./harnesses/claude-code.md)**: `claude auth login` (or `/login` in an interactive session), then `claude auth status` to verify
+- **[Codex](./harnesses/codex.md)**: `codex login --device-auth` (device mode; or `/login` in-session)
 - **[OpenCode](./harnesses/opencode.md)**: set `install.opencode: true` in `harness.yaml` (or `INSTALL_OPENCODE=true` in `.devcontainer/.env`), rebuild, then run `opencode auth login`
 - **[Pi](./harnesses/pi.md)**: configure provider keys via environment variables
 - **[DeepAgents](./harnesses/deepagents.md)**: set `install.deepagents: true` in `harness.yaml` (or `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env`), rebuild, then write provider keys to `~/.deepagents/.env`
@@ -157,7 +166,9 @@ overlays to `composeOverrides[]` in `config.json` (gitignored, last wins).
 
 The full path from a bare Linux host to an authenticated multi-agent sandbox. Each step
 inlines the command to run; follow the link for depth/troubleshooting. Steps 5–13 run
-**inside the sandbox** (`make shell`).
+**inside the sandbox** (`make shell`). For the agent-auth steps (8–11), the simplest
+cross-provider method is `/login` → **device mode** inside each agent's interactive session
+(see [Pick your harness](#pick-your-harness)); the explicit commands shown are equivalents.
 
 1. **Install host prerequisites** — Docker (+ Compose), Git, and `make`
    ([details](./installation.md#prerequisites)):

@@ -161,3 +161,16 @@ Per operator review: made clone-and-own the SINGLE visible install method in the
 - DebugMCP's confirmed path is operator-side VS Code Attach (Lifecycle B/C), independent of which agent you authenticate; it should never be presented as a per-agent auth step.
 
 ---
+## US-006/US-009 follow-up (review feedback) — 2026-07-02 15:16 UTC
+
+**Title**: Document /login -> device mode as the simplest cross-provider login
+**Files changed**: .oh/docs/quickstart.md, README.md, .oh/skills/wiki/corpus/fresh-machine-setup.md
+**Result**: PASS
+
+### What I did
+Per review: documented that the most straightforward login across most harnesses is to launch the agent in interactive mode, run /login, and choose DEVICE MODE (device-auth) — a code + URL that works headless/remote where browser-redirect OAuth fails. Added a prominent callout in quickstart "Pick your harness", a one-line pointer in the walkthrough intro (steps 8-11), an inline note in the README full-setup auth block, and a sentence in the wiki synthesis. Codex line normalized to `codex login --device-auth`; per-harness CLI commands kept as equivalents.
+
+### Learnings for future iterations
+- /login is an interactive TUI command (not a --help flag); codex exposes --device-auth on the CLI. Device mode is the reliable cross-provider path on cloud/remote sandboxes.
+
+---

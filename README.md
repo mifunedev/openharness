@@ -54,11 +54,13 @@ git remote set-url origin git@github.com:<your-user>/openharness.git
 git remote add upstream git@github.com:mifunedev/openharness.git
 git push -u origin HEAD
 
-# Authenticate the agents you'll use:
-claude auth login            # Claude Code
-codex login --device-auth    # Codex
-pi                           # Pi (first run walks provider auth)
-hermes setup                 # Hermes (optional; needs install.hermes: true)
+# Authenticate the agents you'll use. Simplest cross-provider path: launch the agent,
+# run /login, and pick DEVICE MODE (a code + URL that works headless/remote). The
+# one-liners below are equivalents where a provider exposes them:
+claude auth login            # Claude Code   (or /login in-session)
+codex login --device-auth    # Codex         (device mode; or /login in-session)
+pi                           # Pi            (first run walks provider auth; /login in-session)
+hermes setup                 # Hermes        (optional; needs install.hermes: true)
 
 # Configure Slack, then run + verify the gateways (sandbox-only):
 #   config: .oh/docs/integrations/slack.md  ·  .oh/docs/harnesses/hermes.md

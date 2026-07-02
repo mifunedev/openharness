@@ -51,7 +51,11 @@ ed25519 key and uploads the public key when `GH_TOKEN` carries `admin:public_key
 idempotent).
 
 Per-harness auth, in order: Claude (verified against v2.1.198), Codex (device-auth), Pi
-(provider OAuth), and Hermes (opt-in via `install.hermes`). **DebugMCP** is a separate,
+(provider OAuth), and Hermes (opt-in via `install.hermes`). The **most straightforward
+cross-provider login** is `/login` → **device mode** from an agent's interactive session — a
+short code + URL that works on a headless/remote host, where browser-redirect OAuth
+typically fails; explicit `--device-auth` CLI flags (e.g. `codex login --device-auth`) are
+equivalents. **DebugMCP** is a separate,
 optional **cross-harness** debugging capability (MCP): it is enabled by the VS Code
 attach-to-container route after `make sandbox`, and any MCP-capable harness can drive it
 (Claude Code and Codex are pre-registered) — it is not a Codex-specific step.

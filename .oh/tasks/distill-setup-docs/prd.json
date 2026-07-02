@@ -74,8 +74,8 @@
                 "Runbook references codex login --device-auth ordering (step 9 context)"
             ],
             "priority": 5,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-07-02; prepended a 5-step Confirmed setup runbook (codex login --device-auth, install ozzafar.debugmcpextension on the VS Code machine, attach-to-container, verify) above the preserved feasibility analysis"
         },
         {
             "id": "US-006",

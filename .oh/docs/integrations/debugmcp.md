@@ -23,6 +23,34 @@ this page exists to answer. The verdicts below are graded plainly — `CONFIRMED
 working** in practice (validated on the `oh-remote` container, 2026-06-23); the
 **container-side headless path remains the open question**.
 
+## Confirmed setup (runbook)
+
+The operator-attached path is **confirmed working** (validated on `oh-remote`, 2026-06-23).
+Follow these steps to get DebugMCP live for Codex/Claude Code in the sandbox:
+
+1. **Authenticate Codex first** — DebugMCP is registered at project scope for Codex and
+   Claude Code, so bring Codex up before you need the debugger:
+   ```bash
+   codex login --device-auth   # in the sandbox; follow the device-code prompt
+   ```
+2. **Install the DebugMCP extension on the machine running VS Code** (your laptop, or the
+   remote host you Remote-SSH into) — search the VS Code Marketplace for
+   **microsoft/DebugMCP** (`ozzafar.debugmcpextension`, v2.0.1) and install it there. It
+   activates in the workspace/remote extension host, so it must be present where the IDE runs.
+3. **Attach VS Code to the running container** — Dev Containers → *Attach to Running
+   Container* → `openharness` (local), or Remote-SSH to the host first and then attach
+   (`CLAUDE.md` Lifecycle Options B/C). The attach provisions the VS Code server *inside* the
+   container — the binary the headless image lacks.
+4. On attach the extension activates and binds the MCP server on
+   `http://localhost:3001/mcp`. Codex and Claude Code are already registered against that
+   endpoint (see [Agent MCP Registration](#agent-mcp-registration)) — no extra wiring.
+5. Verify with a debug session (see [Debug Workflows](#debug-workflows)); the Python
+   breakpoint → inspect → step → evaluate cycle is validated end-to-end.
+
+> Headless activation (no attached IDE) is **not** confirmed — see
+> [Feasibility](#feasibility) for the open container-side question. The analysis below
+> documents the full integration contract and per-path verdicts.
+
 ## Feasibility
 
 DebugMCP runs inside a VS Code extension host. That host needs a VS Code server

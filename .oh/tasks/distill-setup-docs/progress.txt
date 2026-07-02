@@ -54,3 +54,16 @@ Added an "SSH authentication (recommended for private origin + upstream)" sectio
 - Cross-link anchor reused from US-003: ../installation.md#clone-and-own-private-origin-and-upstream-recommended.
 
 ---
+## US-005 — 2026-07-02 06:43 UTC
+
+**Title**: Prepend a Confirmed-setup runbook to integrations/debugmcp.md
+**Files changed**: .oh/docs/integrations/debugmcp.md
+**Result**: PASS
+
+### What I did
+Inserted a "## Confirmed setup (runbook)" section before "## Feasibility": (1) codex login --device-auth, (2) install microsoft/DebugMCP (ozzafar.debugmcpextension v2.0.1) on the VS Code machine, (3) attach-to-container (Lifecycle B/C), (4) MCP binds :3001, Codex/Claude pre-registered, (5) verify. The full feasibility analysis is preserved unchanged below.
+
+### Learnings for future iterations
+- Extension ID is ozzafar.debugmcpextension (Marketplace name "microsoft/DebugMCP"); operator-attach path is the CONFIRMED one; headless container-side still open.
+
+---

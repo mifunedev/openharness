@@ -4,11 +4,11 @@ title: "Quickstart"
 
 # Quickstart
 
-This guide takes you from zero to a running sandbox with an interactive shell in under five minutes. Required host dependencies are [Docker](https://docs.docker.com/get-docker/) with the Compose plugin and [Git](https://git-scm.com/).
+This guide takes you from zero to a running sandbox with an interactive shell in under five minutes. Required host dependencies are [Docker](https://docs.docker.com/get-docker/) with the Compose plugin, [Git](https://git-scm.com/), and `make` (build-essential) — the full list with install commands is in [Prerequisites](./installation.md#prerequisites).
 
 ## Before you start
 
-Install Docker with the Compose plugin ([docs.docker.com/get-docker](https://docs.docker.com/get-docker/)) and Git ([git-scm.com](https://git-scm.com/)). Node, Python, pnpm, and agent CLIs run inside the container.
+Install Docker with the Compose plugin ([docs.docker.com/get-docker](https://docs.docker.com/get-docker/)), Git ([git-scm.com](https://git-scm.com/)), and `make` (build-essential — `sudo apt-get install build-essential` on Debian/Ubuntu, Xcode Command Line Tools on macOS). Node, Python, pnpm, and agent CLIs run inside the container.
 
 ## Install
 

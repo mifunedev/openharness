@@ -4,7 +4,7 @@
 
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
 - **Agents that work while you sleep.** A tiny croner runtime reads `.oh/crons/*.md` markdown and wakes the agent on a schedule.
-- **Host dependencies: Docker + Git.** No Node, no Python, no toolchain rot on your laptop.
+- **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites).)
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
 - **Multi-agent? Add a pack.** Other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
@@ -35,7 +35,7 @@ bash openharness-install.sh
 
 If you already use [`vet`](https://github.com/vet-run/vet), you can review and approve the same installer with `vet https://oh.mifune.dev/install.sh`. `vet` is optional; Open Harness requires Docker with the Compose plugin and Git on the host.
 
-Clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm). Required host dependencies: [Docker](https://docs.docker.com/get-docker/) with the Compose plugin and [Git](https://git-scm.com/).
+Clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm). Required host dependencies: [Docker](https://docs.docker.com/get-docker/) with the Compose plugin, [Git](https://git-scm.com/), and `make` (build-essential) for the `make sandbox` / `make shell` wrappers — full list in [Prerequisites](.oh/docs/installation.md#prerequisites).
 
 **Option B — Fork and clone (recommended for self-hosting):**
 

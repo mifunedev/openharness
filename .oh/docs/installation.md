@@ -12,6 +12,7 @@ Open Harness is a portable harness — a single repo that boots an isolated Dock
 |---|---|---|
 | Docker (with Compose plugin) | Sandbox image | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
 | git | Cloning the repo | [git-scm.com](https://git-scm.com/) |
+| make (build-essential) | The `make sandbox` / `make shell` / `make destroy` wrappers around `docker compose` | `sudo apt-get install build-essential` (Debian/Ubuntu) · Xcode Command Line Tools (macOS) |
 
 That is the entire host requirement. Node.js, pnpm, and any AI CLI live inside the sandbox.
 
@@ -69,7 +70,7 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides a fetch/diff/ShellCheck/preview/approve wrapper for the same installer. `vet` is optional; Open Harness itself requires Docker with Compose and Git.
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides a fetch/diff/ShellCheck/preview/approve wrapper for the same installer. `vet` is optional; Open Harness itself requires Docker with Compose, Git, and make (see [Prerequisites](#prerequisites)).
 
 The installer:
 
@@ -162,7 +163,7 @@ Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside
 
 ## What's Installed
 
-The sandbox image ships a complete development environment. The required host dependencies are Docker with the Compose plugin and Git.
+The sandbox image ships a complete development environment. The required host dependencies are Docker with the Compose plugin, Git, and make (see [Prerequisites](#prerequisites)).
 
 Project-local Pi packages are loaded from `.pi/settings.json`; the defaults include `@tintinweb/pi-subagents`, `@tintinweb/pi-tasks`, `@narumitw/pi-goal`, `@narumitw/pi-plan-mode`, `@narumitw/pi-codex-usage@0.6.2` for `/codex-status` plus fixed statusline usage timers, `@tifan/pi-recap` for `/recap` plus automatic idle/resume session summaries, `@trevonistrevon/pi-loop` for Monitor/Loop tools, `@guwidoe/pi-prompt-suggester` for next-prompt suggestions, `pi-autoresearch` for autonomous metric-optimization loops, and `pi-dynamic-workflows` for workflow-script fan-out through isolated Pi subagents.
 

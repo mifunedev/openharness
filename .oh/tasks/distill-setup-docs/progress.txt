@@ -1,2 +1,15 @@
 # progress
 
+## US-001 — 2026-07-02 06:38 UTC
+
+**Title**: Fix host prerequisites to include make/build-essential
+**Files changed**: .oh/docs/installation.md, README.md, .oh/docs/quickstart.md, .oh/docs/intro.md
+**Result**: PASS
+
+### What I did
+Made installation.md the canonical Prerequisites home — added a make/build-essential row (with why + per-OS install) to the table. README:7/38, quickstart:7/11, intro:17 now list make and link to the canonical Prerequisites section. Fixed the two "Docker with Compose and Git" prose lines in installation.md too.
+
+### Learnings for future iterations
+- The grep gate must use a DIRECTORY arg (grep -rn "Docker + Git" README.md .oh/docs/) — a .oh/docs/*.md glob silently skips harnesses/ and integrations/. Gate now returns 0.
+
+---

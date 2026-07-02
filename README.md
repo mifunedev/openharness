@@ -7,7 +7,7 @@
 - **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites).)
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
-- **Multi-agent? Add a pack.** Other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
+- **Multiple harnesses, one sandbox.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in); bridge them to Slack with [`pi-messenger-bridge`](.oh/docs/integrations/slack.md).
 
 ---
 
@@ -145,7 +145,7 @@ make shell
 | **Browser** | agent-browser + Chromium (headless) |
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
 | **Crons** | Markdown-defined schedules in `.oh/crons/*.md` driven by the in-container croner runtime |
-| **Multi-agent** | Install a harness pack such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) for additional multi-agent setups |
+| **Multi-agent** | Claude, Codex, Pi by default (Hermes/Grok opt-in); Slack bridging via [pi-messenger-bridge](.oh/docs/integrations/slack.md) |
 
 ## 📚 Where to go next
 

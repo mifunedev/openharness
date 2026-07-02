@@ -123,8 +123,8 @@
                 "PRESERVE-CHECK (PER-PATH, not aggregate): the archived task folder is now .oh/tasks/archive/2026-07-02/mifune-repo-extraction/ (the live .oh/tasks/mifune-repo-extraction/ was archived by the cleanup-tasks cron). Baselines to hold UNCHANGED: CHANGELOG.md = 14 hits, .oh/tasks/archive/2026-07-02/mifune-repo-extraction/ = 64 hits (grep -rc ryaneggz/mifune per path). CHANGELOG.md is the git-tracked audit trail; the archive is gitignored working-tree history."
             ],
             "priority": 8,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-07-02; removed ryaneggz/mifune from the 6 named sites; contributing pack-mechanism rewritten to pi-messenger-bridge; preserve-check held (CHANGELOG 14, archive 64 unchanged)"
         },
         {
             "id": "US-009",

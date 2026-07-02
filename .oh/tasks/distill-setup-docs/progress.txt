@@ -94,3 +94,16 @@ Reconciled hermes.md's "independent surfaces" wording to gateway.sh ground truth
 - Left the pre-existing stale `.oh/context/rules/sandbox-processes.md` links (now .oh/skills/t3/references/) untouched — out of this story's scope.
 
 ---
+## US-008 — 2026-07-02 06:51 UTC
+
+**Title**: Remove unused ryaneggz/mifune repo references (6 named sites only)
+**Files changed**: README.md, AGENTS.md, .oh/docs/intro.md, .oh/docs/contributing.md, .oh/docs/harnesses/overview.md
+**Result**: PASS
+
+### What I did
+Edited only the 6 named sites (no global find/replace): README two spots now describe multiple-harnesses + pi-messenger-bridge; intro bullet re-pointed to slack; contributing "Installing a harness pack" rewritten as "Multi-agent messaging (Slack)" describing the REAL bridge mechanism (npm into .pi/bridge, --extension, gateway.sh) instead of the wrong git-clone-into-workspace pack contract; overview drops the pack clause; AGENTS drops the legacy-pack sentence. Left the legitimate ryaneggz/pi-messenger-bridge fork pin (different repo) intact.
+
+### Learnings for future iterations
+- Preserve-check held: CHANGELOG.md 14 occurrences and archive 64 occurrences both UNCHANGED. Removal grep over README/AGENTS/.oh/docs = 0.
+
+---

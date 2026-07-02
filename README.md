@@ -1,16 +1,16 @@
 <h1 align="center">🏗️ Open Harness</h1>
 
 <p align="center">
-  <img src=".github/assets/mifune-banner.jpg" alt="Open Harness" width="100%">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-D4AF37?style=plastic&labelColor=0B1220"></a>
+  <a href="https://github.com/mifunedev/openharness/actions/workflows/ci-harness.yml"><img alt="CI: Harness" src="https://img.shields.io/github/actions/workflow/status/mifunedev/openharness/ci-harness.yml?branch=main&style=plastic&label=CI&labelColor=0B1220&color=D4AF37"></a>
+  <a href="https://github.com/mifunedev/openharness/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/mifunedev/openharness?style=plastic&logo=github&logoColor=white&labelColor=0B1220&color=D4AF37"></a>
+  <a href="https://github.com/mifunedev/openharness/issues"><img alt="Issues" src="https://img.shields.io/github/issues/mifunedev/openharness?style=plastic&labelColor=0B1220&color=D4AF37"></a>
+  <img alt="Docker required" src="https://img.shields.io/badge/Docker-required-D4AF37?style=plastic&logo=docker&logoColor=white&labelColor=0B1220">
+  <a href="https://deepwiki.com/mifunedev/openharness"><img alt="Ask DeepWiki" src="https://img.shields.io/badge/DeepWiki-ask-D4AF37?style=plastic&labelColor=0B1220"></a>
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-D4AF37?style=for-the-badge&labelColor=0B1220"></a>
-  <a href="https://github.com/mifunedev/openharness/actions/workflows/ci-harness.yml"><img alt="CI: Harness" src="https://img.shields.io/github/actions/workflow/status/mifunedev/openharness/ci-harness.yml?branch=main&style=for-the-badge&label=CI&labelColor=0B1220&color=D4AF37"></a>
-  <a href="https://github.com/mifunedev/openharness/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/mifunedev/openharness?style=for-the-badge&logo=github&logoColor=white&labelColor=0B1220&color=D4AF37"></a>
-  <a href="https://github.com/mifunedev/openharness/issues"><img alt="Issues" src="https://img.shields.io/github/issues/mifunedev/openharness?style=for-the-badge&labelColor=0B1220&color=D4AF37"></a>
-  <img alt="Docker required" src="https://img.shields.io/badge/Docker-required-D4AF37?style=for-the-badge&logo=docker&logoColor=white&labelColor=0B1220">
-  <a href="https://deepwiki.com/mifunedev/openharness"><img alt="Ask DeepWiki" src="https://img.shields.io/badge/DeepWiki-ask-D4AF37?style=for-the-badge&labelColor=0B1220"></a>
+  <img src=".github/assets/mifune-banner.jpg" alt="Open Harness" width="100%">
 </p>
 
 **Open Harness** is a Docker-based agent harness for **one project**, agent-tended over time. One `docker compose up` gives you a long-lived sandbox where Claude (or another agent of your choice) runs against a single repo, branch, and identity — not a multi-tenant comparison rig.

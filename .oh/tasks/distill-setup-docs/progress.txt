@@ -120,3 +120,18 @@ Replaced the thin "Next steps" section with an ordered 13-step "End-to-end setup
 - Verified all 8 linked docs exist and the 4 non-trivial anchors resolve (#prerequisites, #clone-and-own..., #confirmed-setup-runbook, #run-and-verify-read-only). Ran after US-001..US-008 so inlined commands match canonical docs.
 
 ---
+## US-010 — 2026-07-02 06:55 UTC
+
+**Title**: Author the fresh-machine-setup wiki entity page
+**Files changed**: .oh/skills/wiki/corpus/fresh-machine-setup.md (new), .oh/skills/wiki/corpus/README.md
+**Result**: PASS
+
+### What I did
+Authored the fresh-machine-setup entity page per schema (ordered sections, in-repo sources per the sandbox-dependency-installs precedent, confidence: provisional, 550 words < 900). It is a synthesis + Mermaid 13-step -> doc-handoff map with NO literal command blocks; names quickstart.md as the canonical command source (drift surface removed). Whitelisted with git add -f, regenerated the corpus README index (new row at top by updated desc). Probe green; [[sandbox-dependency-installs]] link resolves.
+
+### Learnings for future iterations
+- wiki-readme-index.sh enumerates only git-tracked entries, so `git add -f` MUST precede the probe. Index rows sort by updated desc then slug.
+
+---
+
+STATUS: COMPLETE

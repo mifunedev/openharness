@@ -171,8 +171,8 @@
             "dependsOn": [
                 "US-009"
             ],
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-07-02; authored corpus/fresh-machine-setup.md (550 words, synthesis+Mermaid handoff map, no literal commands, quickstart named as command source), whitelisted, index regenerated, probe green + no broken links"
         }
     ]
 }

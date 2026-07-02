@@ -1,8 +1,8 @@
+<h1 align="center">🏗️ Open Harness</h1>
+
 <p align="center">
   <img src=".github/assets/mifune-banner.jpg" alt="Open Harness" width="100%">
 </p>
-
-<h1 align="center">🏗️ Open Harness</h1>
 
 **Open Harness** is a Docker-based agent harness for **one project**, agent-tended over time. One `docker compose up` gives you a long-lived sandbox where Claude (or another agent of your choice) runs against a single repo, branch, and identity — not a multi-tenant comparison rig.
 

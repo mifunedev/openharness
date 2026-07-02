@@ -150,8 +150,8 @@
                 "US-007",
                 "US-008"
             ],
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-07-02; replaced quickstart Next-steps with a self-sufficient 13-step end-to-end walkthrough, each step inlining commands and linking its canonical doc; links verified to resolve"
         },
         {
             "id": "US-010",

@@ -107,3 +107,16 @@ Edited only the 6 named sites (no global find/replace): README two spots now des
 - Preserve-check held: CHANGELOG.md 14 occurrences and archive 64 occurrences both UNCHANGED. Removal grep over README/AGENTS/.oh/docs = 0.
 
 ---
+## US-009 — 2026-07-02 06:53 UTC
+
+**Title**: Add the end-to-end 13-step quickstart walkthrough (self-sufficient)
+**Files changed**: .oh/docs/quickstart.md
+**Result**: PASS
+
+### What I did
+Replaced the thin "Next steps" section with an ordered 13-step "End-to-end setup walkthrough" that inlines the actual command for each step (host deps -> clone -> harness.yaml -> make sandbox/shell -> gh SSH auth -> gh repo create --private -> remotes -> claude auth login -> codex device-auth + DebugMCP -> pi -> hermes setup -> Slack config -> run+verify gateways read-only). Each step links its canonical doc; kept steps tight (1-3 command lines). Added a GH_TOKEN shortcut note.
+
+### Learnings for future iterations
+- Verified all 8 linked docs exist and the 4 non-trivial anchors resolve (#prerequisites, #clone-and-own..., #confirmed-setup-runbook, #run-and-verify-read-only). Ran after US-001..US-008 so inlined commands match canonical docs.
+
+---

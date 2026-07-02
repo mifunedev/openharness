@@ -130,12 +130,75 @@ For additional services (databases, tunnels, reverse proxies), add tracked
 overlays under `compose.overrides:` in `harness.yaml`, or add user-local
 overlays to `composeOverrides[]` in `config.json` (gitignored, last wins).
 
-## Next steps
+## End-to-end setup walkthrough
 
-With the sandbox running, here's what to wire up next:
+The full path from a bare Linux host to an authenticated multi-agent sandbox. Each step
+inlines the command to run; follow the link for depth/troubleshooting. Steps 5–13 run
+**inside the sandbox** (`make shell`).
 
-- Slack bridge for your sandbox agent → [integrations/slack.md](./integrations/slack.md)
-- GitHub auth (only if you skipped `GH_TOKEN` at install) → [integrations/github.md](./integrations/github.md)
+1. **Install host prerequisites** — Docker (+ Compose), Git, and `make`
+   ([details](./installation.md#prerequisites)):
+   ```bash
+   sudo apt-get install -y build-essential   # provides make (Debian/Ubuntu)
+   ```
+2. **Clone the repo** to `~/.openharness`:
+   ```bash
+   git clone --recurse-submodules https://github.com/mifunedev/openharness.git ~/.openharness
+   cd ~/.openharness
+   ```
+3. **Edit `harness.yaml`** — set `sandbox.name`, `sandbox.timezone`, `git.user_name`,
+   `git.user_email`, and any optional installs (see [Configuration](#configuration) above).
+4. **Build and enter the sandbox**:
+   ```bash
+   make sandbox        # build + start (~10 min cold)
+   make shell          # attach as the sandbox user
+   ```
+5. **Authenticate GitHub over SSH** — choose SSH, generate a key, paste a token
+   ([GitHub auth](./integrations/github.md)):
+   ```bash
+   gh auth login && gh auth setup-git
+   ```
+6. **Create your own private repo**:
+   ```bash
+   gh repo create <your-user>/openharness --private
+   ```
+7. **Point remotes at your repo + upstream** (SSH, so the step-5 key is used;
+   [clone-and-own](./installation.md#clone-and-own-private-origin-and-upstream-recommended)):
+   ```bash
+   git remote set-url origin git@github.com:<your-user>/openharness.git
+   git remote add upstream git@github.com:mifunedev/openharness.git
+   git push -u origin HEAD
+   ```
+8. **Authenticate Claude Code** ([Claude Code](./harnesses/claude-code.md)):
+   ```bash
+   claude auth login && claude auth status
+   ```
+9. **Authenticate Codex + DebugMCP** — device-auth, then install the
+   `microsoft/DebugMCP` VS Code extension on the machine running your IDE and attach
+   ([Codex](./harnesses/codex.md), [DebugMCP runbook](./integrations/debugmcp.md#confirmed-setup-runbook)):
+   ```bash
+   codex login --device-auth
+   ```
+10. **Authenticate Pi** — configure provider keys / OAuth ([Pi](./harnesses/pi.md)):
+    ```bash
+    pi        # first run walks provider auth
+    ```
+11. **Authenticate Hermes** (optional; needs `install.hermes: true`) ([Hermes](./harnesses/hermes.md)):
+    ```bash
+    hermes setup
+    ```
+12. **Configure Slack** for Pi (and Hermes) — create the Slack app, add tokens, set trust
+    ([Slack](./integrations/slack.md); Hermes uses `hermes gateway setup`).
+13. **Run and verify the gateways** (sandbox-only; watch read-only so you can't kill them —
+    [Slack § Run and verify](./integrations/slack.md), [Hermes § Run and verify](./harnesses/hermes.md#run-and-verify-read-only)):
+    ```bash
+    gateway pi && gateway hermes        # start the client-slack-* sessions
+    gateway status                      # both sessions + state
+    tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
+    ```
+
+> Shortcut: if `GH_TOKEN` was set at install, the entrypoint already ran `gh auth login`
+> + `gh auth setup-git` and generated/uploaded an SSH key for you (steps 5 partly done).
 
 ## Tear down
 

@@ -67,3 +67,16 @@ Inserted a "## Confirmed setup (runbook)" section before "## Feasibility": (1) c
 - Extension ID is ozzafar.debugmcpextension (Marketplace name "microsoft/DebugMCP"); operator-attach path is the CONFIRMED one; headless container-side still open.
 
 ---
+## US-006 — 2026-07-02 06:44 UTC
+
+**Title**: Verify and correct the Claude auth command
+**Files changed**: .oh/docs/harnesses/claude-code.md, .oh/docs/quickstart.md
+**Result**: PASS
+
+### What I did
+Verified live in the running openharness container (docker exec -u sandbox): Claude Code v2.1.198 exposes `claude auth login`, `claude auth status`, `claude auth logout` (no bare `claude login`). Rewrote the claude-code.md Authentication section to use `claude auth login` + `claude auth status` (noting bare `claude` also triggers OAuth), and updated the quickstart harness-list line to match.
+
+### Learnings for future iterations
+- Live verification confirmed the command; no `> Unverified` admonition needed. The sandbox container name is `openharness`.
+
+---

@@ -57,7 +57,7 @@ The default sandbox ships with Claude Code, Codex, and Pi. OpenCode,
 DeepAgents, Hermes, and Grok Build are optional image-level installs; T3 Code runs on
 demand via the `/t3` skill or direct `npx`. Authenticate at least one harness before use:
 
-- **[Claude Code](./harnesses/claude-code.md)**: run `claude` and follow the OAuth prompt
+- **[Claude Code](./harnesses/claude-code.md)**: run `claude auth login` and follow the OAuth prompt (`claude auth status` to verify)
 - **[Codex](./harnesses/codex.md)**: run `codex login`
 - **[OpenCode](./harnesses/opencode.md)**: set `install.opencode: true` in `harness.yaml` (or `INSTALL_OPENCODE=true` in `.devcontainer/.env`), rebuild, then run `opencode auth login`
 - **[Pi](./harnesses/pi.md)**: configure provider keys via environment variables

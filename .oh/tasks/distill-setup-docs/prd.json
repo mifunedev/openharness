@@ -88,8 +88,8 @@
                 "Doc edit is made only after the verification attempt"
             ],
             "priority": 6,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-07-02; verified live in openharness container (Claude Code v2.1.198): claude auth login/status/logout are real subcommands; fixed claude-code.md + quickstart harness list to use claude auth login"
         },
         {
             "id": "US-007",

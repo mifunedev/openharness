@@ -13,19 +13,69 @@
 
 ## 📦 Install
 
-**Recommended: clone-and-own (private origin + upstream).** The validated path for a
-long-lived harness — clone upstream, create a **private** repo as your `origin`, and
-keep `mifunedev/openharness` as `upstream` to pull updates and contribute back. This is
-**Option C** below; the full inside-the-sandbox walkthrough (private `gh repo create`,
-SSH remotes) lives in [installation.md → Clone-and-own](.oh/docs/installation.md#clone-and-own-private-origin-and-upstream-recommended). The hosted Railway preview and the one-line installer are quicker ways to *try* it first.
+Open Harness runs one project in one Docker sandbox. The recommended path is
+**clone-and-own**: clone upstream, then make your **own private repo** the `origin` and keep
+`mifunedev/openharness` as `upstream` so you can pull framework updates and contribute back.
+
+Host prerequisites: [Docker](https://docs.docker.com/get-docker/) with the Compose plugin,
+[Git](https://git-scm.com/), and `make` (build-essential) — full list in
+[Prerequisites](.oh/docs/installation.md#prerequisites).
+
+### 1. Basic setup
+
+```bash
+# a. Clone upstream:
+git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
+
+# b. Edit harness.yaml BEFORE building — set sandbox.name, sandbox.timezone,
+#    git.user_name, git.user_email, and any optional installs (Hermes, agent-browser, …).
+#    See "⚙️ Configure" below for the full key list. Secrets stay in .devcontainer/.env.
+nano harness.yaml
+
+# c. Build the image and open a shell inside the sandbox:
+make sandbox && make shell
+```
+
+That is already a working sandbox. To make it **yours** (private `origin` + `upstream`) and
+authenticate the agents, continue with the optional full setup.
+
+### 2. Full setup (optional) — private repo, remotes, agent auth
+
+Run these **inside the sandbox** (`make shell`). Per-step depth + troubleshooting:
+[quickstart → End-to-end setup walkthrough](.oh/docs/quickstart.md#end-to-end-setup-walkthrough).
+
+```bash
+# GitHub auth over SSH — pick SSH, generate a key, paste a token:
+gh auth login && gh auth setup-git
+
+# Create your own PRIVATE repo, point origin at it, add upstream — all over SSH:
+gh repo create <your-user>/openharness --private
+git remote set-url origin git@github.com:<your-user>/openharness.git
+git remote add upstream git@github.com:mifunedev/openharness.git
+git push -u origin HEAD
+
+# Authenticate the agents you'll use:
+claude auth login            # Claude Code
+codex login --device-auth    # Codex (+ install microsoft/DebugMCP in your IDE, then attach)
+pi                           # Pi (first run walks provider auth)
+hermes setup                 # Hermes (optional; needs install.hermes: true)
+
+# Configure Slack, then run + verify the gateways (sandbox-only):
+#   config: .oh/docs/integrations/slack.md  ·  .oh/docs/harnesses/hermes.md
+gateway pi && gateway hermes
+gateway status
+tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
+```
+
+<details><summary>Other install methods (Railway preview · one-line installer · fork-and-clone)</summary>
 
 **Hosted smoke test — Railway (one click):**
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2Fmifunedev%2Fopenharness)
 
-This boots a Railway-hosted status surface so you can verify Open Harness starts before doing local setup. Railway mode does **not** provide the host Docker socket or privileged sibling containers needed for full sandbox lifecycle commands (`make sandbox`, `make shell`, compose overlays). Use it as a hosted preview; use the local Docker path below for the complete harness. Details: [Railway deployment](.oh/docs/railway.md).
+This boots a Railway-hosted status surface so you can verify Open Harness starts before doing local setup. Railway mode does **not** provide the host Docker socket or privileged sibling containers needed for full sandbox lifecycle commands (`make sandbox`, `make shell`, compose overlays). Use it as a hosted preview; use the local Docker path above for the complete harness. Details: [Railway deployment](.oh/docs/railway.md).
 
-**Option A — Upstream (try it without any local repo setup):**
+**One-line installer (upstream):**
 
 ```bash
 curl -fsSL https://oh.mifune.dev/install.sh | bash
@@ -39,34 +89,17 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), you can review and approve the same installer with `vet https://oh.mifune.dev/install.sh`. `vet` is optional; Open Harness requires Docker with the Compose plugin and Git on the host.
+If you already use [`vet`](https://github.com/vet-run/vet), you can review and approve the same installer with `vet https://oh.mifune.dev/install.sh`. `vet` is optional; Open Harness requires Docker with the Compose plugin, Git, and make on the host. The installer clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm).
 
-Clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm). Required host dependencies: [Docker](https://docs.docker.com/get-docker/) with the Compose plugin, [Git](https://git-scm.com/), and `make` (build-essential) for the `make sandbox` / `make shell` wrappers — full list in [Prerequisites](.oh/docs/installation.md#prerequisites).
-
-**Option B — Fork and clone (recommended for self-hosting):**
+**Fork and clone (self-hosting):**
 
 ```bash
-# 1. Fork on GitHub, then clone YOUR fork:
+# Fork on GitHub, then clone YOUR fork; the installer auto-detects the local clone:
 git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
-# 2. Bootstrap — installer auto-detects the local clone, no env vars needed:
 bash .oh/scripts/install.sh
 ```
 
-**Option C — Clone-and-own: private origin + upstream (recommended):**
-
-```bash
-git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
-make sandbox && make shell        # then, INSIDE the sandbox:
-gh auth login                     # GitHub.com → SSH → generate key → paste token
-gh repo create <your-user>/openharness --private
-git remote set-url origin git@github.com:<your-user>/openharness.git
-git remote add upstream git@github.com:mifunedev/openharness.git
-git push -u origin HEAD
-```
-
-Full step-by-step (why the private repo, when to pull `upstream`, HTTPS/installer alternative): [installation.md → Clone-and-own](.oh/docs/installation.md#clone-and-own-private-origin-and-upstream-recommended).
-
-<details><summary>Advanced: install directly from your fork without cloning first</summary>
+**Install directly from your fork without cloning first:**
 
 ```bash
 OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
@@ -162,7 +195,7 @@ make destroy
 
 ## 🤝 Contributing & community
 
-Open Harness is maintained under the [`mifunedev`](https://github.com/mifunedev) org — the canonical repo is [github.com/mifunedev/openharness](https://github.com/mifunedev/openharness). To run your own, fork it (see **Option B** above) and open PRs back upstream. Issues and PRs welcome; if Open Harness is useful to you, please [give us a star](https://github.com/mifunedev/openharness/stargazers).
+Open Harness is maintained under the [`mifunedev`](https://github.com/mifunedev) org — the canonical repo is [github.com/mifunedev/openharness](https://github.com/mifunedev/openharness). To run your own, use the clone-and-own setup above (or fork it — see **Other install methods**) and open PRs back upstream. Issues and PRs welcome; if Open Harness is useful to you, please [give us a star](https://github.com/mifunedev/openharness/stargazers).
 
 ## 📄 License
 

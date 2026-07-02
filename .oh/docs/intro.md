@@ -14,9 +14,9 @@ Key capabilities:
 
 - **One repo, one sandbox.** Your portable harness is one repo; it boots one container. The agent owns its workspace; your machine stays clean — you're not running agents straight on your host.
 - **Markdown-defined crons.** `.oh/crons/*.md` files declare schedules; an in-container croner runtime fires the bodies as agent prompts so the agent can work autonomously while you focus on other things.
-- **Host dependencies: Docker + Git.** No Node, no Python, and no toolchain maintenance required on your laptop.
+- **Host dependencies: Docker, Git, and make.** No Node, no Python, and no toolchain maintenance required on your laptop. (`make` drives the `make sandbox` / `make shell` wrappers — see [Prerequisites](/docs/installation#prerequisites).)
 - **Cloudflared previews.** Share sandbox app ports through Cloudflared tunnels; SSH and pack-supplied services remain opt-in Docker Compose overlays.
-- **Multi-agent? Add a pack.** Slack-driven Pi+Mom and similar multi-agent setups ship as separate harness packs (e.g. [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune)).
+- **Multi-agent messaging.** Bridge Slack (and other messengers) to a Pi agent with the [`pi-messenger-bridge`](/docs/integrations/slack) npm package; SSH and pack-supplied services remain opt-in Docker Compose overlays.
 
 ## How it works
 

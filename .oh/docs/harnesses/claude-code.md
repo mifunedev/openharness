@@ -26,13 +26,19 @@ claude --version
 
 ## Authentication
 
-Claude Code authenticates via OAuth on first launch. Run it once and follow the browser prompt:
+Sign in explicitly with the `auth` subcommand (verified against Claude Code v2.1.198) and
+follow the OAuth prompt:
 
 ```bash
-claude
+claude auth login      # sign in to your Anthropic account (OAuth)
+claude auth status     # confirm you're authenticated
 ```
 
-Credentials are stored in `~/.claude/.credentials.json` inside the sandbox. The sandbox banner at login indicates whether credentials are present.
+`claude auth` also has `logout`. Launching a bare `claude` when unauthenticated will start
+the same OAuth flow, but `claude auth login` is the explicit, scriptable path.
+
+Credentials are stored in `~/.claude/.credentials.json` inside the sandbox (persisted via the
+`claude-auth` volume). The sandbox banner at login indicates whether credentials are present.
 
 ## Common usage
 

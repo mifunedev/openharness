@@ -135,3 +135,16 @@ Authored the fresh-machine-setup entity page per schema (ordered sections, in-re
 ---
 
 STATUS: COMPLETE
+## US-003 follow-up (review feedback) — 2026-07-02 14:47 UTC
+
+**Title**: README Install shows only clone-and-own; add harness.yaml edit step
+**Files changed**: README.md, .oh/docs/installation.md
+**Result**: PASS
+
+### What I did
+Per operator review: made clone-and-own the SINGLE visible install method in the README, split into "1. Basic setup" (clone -> edit harness.yaml BEFORE build -> make sandbox/shell) and "2. Full setup (optional)" (private repo + remotes + agent auth = the validated flow). Added the missing "edit harness.yaml before make sandbox" step in BOTH README and installation.md clone-and-own. Moved Railway/one-line-installer/fork-and-clone into an "Other install methods" dropdown; removed the now-dangling Option-letter references (README footer updated). Railway button + curl one-liner retained; all links resolve; grep gates still 0/0.
+
+### Learnings for future iterations
+- Removing the A/B/C lettering required fixing the "see Option B above" footer cross-ref -> "Other install methods".
+
+---

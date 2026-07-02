@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "bug/521-manifest-aware-sandbox-installs",
+  "description": "Make devcontainer root dependency installation refresh when package manifest inputs change instead of relying only on node_modules existence.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add manifest-aware pnpm install gate",
+      "description": "As a sandbox operator, I want the entrypoint to detect dependency manifest drift so a long-lived node_modules directory cannot hide stale JavaScript dependencies.",
+      "acceptanceCriteria": [
+        ".devcontainer/entrypoint.sh computes a deterministic root install fingerprint from $HARNESS/package.json, $HARNESS/pnpm-lock.yaml, $HARNESS/pnpm-workspace.yaml, and package.json files that are declared as pnpm workspace packages when present.",
+        "Fingerprinting uses normalized relative paths sorted bytewise, hashes file contents with sha256sum, treats absent optional files as absent, and hashes the ordered path plus content hash manifest list into one final digest.",
+        "Manifest discovery excludes dependency/runtime/vendor directories including node_modules, .git, .worktrees, .pi/npm/node_modules, .oh/cli/node_modules, and .hermes/lsp/node_modules; .oh/cli/package.json is excluded unless it becomes a pnpm workspace package.",
+        "The marker is stored under $HARNESS/node_modules/ with an Open Harness-specific filename so it is coupled to the installed dependency tree.",
+        "Boot still runs pnpm install --prefer-offline when node_modules is missing.",
+        "Boot runs pnpm install --prefer-offline when the marker is missing or differs from the current fingerprint, and logs manifest drift detected; reinstalling.",
+        "Boot skips install when node_modules exists and the marker matches, and logs dependencies current.",
+        "A successful install atomically refreshes the marker; a failed install still aborts sandbox boot with the existing /tmp/pnpm-install.log diagnostic.",
+        "The .github/workflows/sandbox-boot-guard.yml preseed path remains safe because it explicitly sets SKIP_PNPM_INSTALL=1; update stale comments/tests if they still describe an existence-only guard as the CI contract.",
+        "SKIP_PNPM_INSTALL=1 still bypasses this root install block.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Iteration 1 on 2026-07-01: implemented manifest-aware root pnpm install gate and CI skip-path comment update in cf24601e."
+    },
+    {
+      "id": "US-002",
+      "title": "Guard the entrypoint contract with tests and probes",
+      "description": "As a harness maintainer, I want automated guards for the pnpm install drift behavior so future boot-path edits do not silently return to a node_modules existence-only fast path.",
+      "acceptanceCriteria": [
+        ".oh/scripts/__tests__/entrypoint-pnpm-install.test.ts asserts the named marker filename, the pnpm_manifest_fingerprint contract, drift reinstall branch, current-dependencies skip branch, and atomic marker refresh are present.",
+        "The tests assert the previous install-failure boot abort behavior remains intact.",
+        "Add .oh/evals/probes/entrypoint-pnpm-manifest-fingerprint.sh or equivalent Tier-A probe that checks the same boot-path contract from the eval suite.",
+        "The new probe is discoverable by bash .oh/skills/eval/run.sh --probe entrypoint-pnpm-manifest-fingerprint.",
+        "The targeted Vitest file passes.",
+        "The new eval probe passes.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Iteration 2 on 2026-07-01: added Vitest contract assertions and Tier-A eval probe for the root pnpm manifest fingerprint gate in a868dfd6."
+    },
+    {
+      "id": "US-003",
+      "title": "Document the boot behavior and release note",
+      "description": "As a future maintainer or agent, I want the manifest-aware install behavior documented in the codebase so I can understand why the marker exists and when reinstall happens.",
+      "acceptanceCriteria": [
+        "CHANGELOG.md adds a Fixed entry for issue #521 under [Unreleased].",
+        "Create or update .oh/skills/wiki/corpus/sandbox-dependency-installs.md with the final behavior, relevant source files, system relationship flow, and See Also links.",
+        "The wiki entry includes line-cited claims for .devcontainer/entrypoint.sh, .oh/scripts/__tests__/entrypoint-pnpm-install.test.ts, and the new eval probe.",
+        "The wiki entry cites the local source files and preserves this PRD's non-goals: no global package install changes, no deletion of node_modules, no changes to optional agent-browser install, no package-manager migration.",
+        "The wiki entry is force-added/tracked (git ls-files --error-unmatch .oh/skills/wiki/corpus/sandbox-dependency-installs.md succeeds after staging) because wiki corpus entries are gitignored by default.",
+        "Refresh .oh/skills/wiki/corpus/README.md so the new wiki entry is indexed.",
+        "bash .oh/evals/probes/wiki-readme-index.sh passes.",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Iteration 3 on 2026-07-01: documented the manifest-aware sandbox dependency install behavior and refreshed the tracked wiki index in 3bffa24f."
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+# progress
+
+## Codebase Patterns
+
+- US-002 owns the new `entrypoint-pnpm-manifest-fingerprint` eval probe; during US-001 the probe file is expected to be absent, so validate the entrypoint with the targeted Vitest and full-suite/typecheck signals instead.
+- Adding a new eval probe also updates tracked `.oh/evals/RESULTS.md` when `bash .oh/skills/eval/run.sh --probe <id>` verifies discoverability; include that row with the probe commit.
+
+## US-001 — 2026-07-01 14:18 UTC
+
+**Title**: Add manifest-aware pnpm install gate
+**Files changed**: `.devcontainer/entrypoint.sh`, `.github/workflows/sandbox-boot-guard.yml`, `CHANGELOG.md`
+**Commit**: `cf24601e`
+**Result**: PASS
+
+### What I did
+Implemented the root pnpm install gate in `.devcontainer/entrypoint.sh` so it fingerprints root manifests and declared pnpm workspace package manifests, stores an Open Harness marker under `node_modules`, reinstalls on missing/stale markers, and preserves the `SKIP_PNPM_INSTALL=1` escape hatch. Updated the sandbox boot guard comments to keep the CI preseed path explicit and added the #521 changelog entry.
+
+### Learnings for future iterations
+Root `pnpm-workspace.yaml` currently has `packages: []`, so `.oh/cli/package.json` is intentionally not part of the fingerprint. The targeted entrypoint Vitest, `pnpm run typecheck`, and `env PI_SLACK_APP_TOKEN= PI_SLACK_BOT_TOKEN= HERMES_DASHBOARD=false pnpm run test` pass; clearing optional integration env keeps the healthcheck fixture focused on its declared sessions.
+
+---
+
+## US-002 — 2026-07-01 14:22 UTC
+
+**Title**: Guard the entrypoint contract with tests and probes
+**Files changed**: `.oh/scripts/__tests__/entrypoint-pnpm-install.test.ts`, `.oh/evals/probes/entrypoint-pnpm-manifest-fingerprint.sh`, `.oh/evals/RESULTS.md`
+**Commit**: `a868dfd6`
+**Result**: PASS
+
+### What I did
+Expanded the targeted Vitest coverage so it now asserts the marker filename, `pnpm_manifest_fingerprint` helper shape, drift reinstall branch, dependencies-current skip branch, atomic marker refresh, and existing install-failure abort path. Added the Tier-A `entrypoint-pnpm-manifest-fingerprint` eval probe and verified it directly and through `bash .oh/skills/eval/run.sh --probe entrypoint-pnpm-manifest-fingerprint`.
+
+### Learnings for future iterations
+The eval runner writes a tracked `.oh/evals/RESULTS.md` row for newly discovered probes, so keep that row with the probe commit. The plain full test suite can inherit optional Slack/Hermes env and trip the sandbox healthcheck fixture; `env PI_SLACK_APP_TOKEN= PI_SLACK_BOT_TOKEN= HERMES_DASHBOARD=false pnpm run test` keeps the full-suite check focused and passes.
+
+---
+
+## US-003 — 2026-07-01 14:26 UTC
+
+**Title**: Document the boot behavior and release note
+**Files changed**: `.oh/skills/wiki/corpus/sandbox-dependency-installs.md`, `.oh/skills/wiki/corpus/README.md`, `.oh/tasks/manifest-aware-sandbox-installs/prd.json`, `.oh/tasks/manifest-aware-sandbox-installs/progress.txt`
+**Commit**: `3bffa24f`
+**Result**: PASS
+
+### What I did
+Created the tracked `sandbox-dependency-installs` wiki entry with line-cited claims for the entrypoint, targeted Vitest, and Tier-A eval probe. Refreshed the wiki corpus README index and verified the #521 changelog entry already existed under `[Unreleased]`.
+
+### Learnings for future iterations
+Wiki corpus entries are ignored by default, so `git add -f .oh/skills/wiki/corpus/sandbox-dependency-installs.md` is required before the README index probe can see the new entry. Avoid using lowercase `path` as a shell variable in zsh helper snippets because it aliases the special `$path` array and can clobber `PATH`.
+
+---
+
+STATUS: COMPLETE

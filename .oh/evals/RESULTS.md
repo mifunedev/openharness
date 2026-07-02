@@ -31,6 +31,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | devtcp-hook | A | 2026-07-01 03:15 | PASS | .oh/memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
 | docs-build-fast-path | A | 2026-07-01 03:15 | PASS | #455 — docs builds must stay out of fast harness/eval/release gates; #536 — docs site externalized to openharness-web; docs markdown relocated to .oh/docs/ |
 | drift-check-cron-staleness-glob | A | 2026-07-01 03:15 | PASS | issue #98; issue #225 (restart-required cron frontmatter/config drift) |
+| entrypoint-pnpm-manifest-fingerprint | A | 2026-07-01 14:21 | PASS | issue #521 (manifest-aware sandbox installs) 2026-07-01 |
 | eval-ci-gate | A | 2026-07-01 03:15 | PASS | #103 — eval probe suite gated in CI |
 | eval-gate | A | 2026-07-01 03:15 | PASS | .oh/memory/MEMORY.md 2026-06-11 (eval-gate) |
 | eval-results-atomic | A | 2026-07-01 03:15 | PASS | issue #83 (eval-results-atomic-write) |

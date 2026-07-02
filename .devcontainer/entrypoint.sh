@@ -316,14 +316,137 @@ fi
 # package, npm-installed into a gitignored `.pi/bridge/` dir and loaded only
 # in the dedicated client-slack-pi session (see the Slack restore block below).
 # The harness is bind-mounted, so a Dockerfile-time install gets shadowed
-# at runtime; we install on first boot here, idempotently. Set
-# SKIP_PNPM_INSTALL=1 to opt out (e.g. air-gapped envs managing deps
-# externally).
+# at runtime; we install when the root dependency manifest fingerprint differs
+# from the marker stored alongside node_modules. Set SKIP_PNPM_INSTALL=1 to opt
+# out (e.g. air-gapped envs managing deps externally).
+pnpm_workspace_package_patterns() {
+  local workspace="$1/pnpm-workspace.yaml"
+  [ -f "$workspace" ] || return 0
+
+  awk '
+    function trim(value) {
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      return value
+    }
+    function emit(value) {
+      value = trim(value)
+      sub(/[[:space:]]+#.*$/, "", value)
+      value = trim(value)
+      gsub(/^\047|\047$/, "", value)
+      gsub(/^"|"$/, "", value)
+      if (value != "" && substr(value, 1, 1) != "!") {
+        print value
+      }
+    }
+    /^[[:space:]]*packages:[[:space:]]*\[/ {
+      line = $0
+      sub(/^[[:space:]]*packages:[[:space:]]*\[/, "", line)
+      sub(/\].*$/, "", line)
+      count = split(line, values, ",")
+      for (i = 1; i <= count; i++) {
+        emit(values[i])
+      }
+      exit
+    }
+    /^[[:space:]]*packages:[[:space:]]*$/ {
+      in_packages = 1
+      next
+    }
+    in_packages && /^[^[:space:]#][^:]*:/ {
+      exit
+    }
+    in_packages && /^[[:space:]]*-[[:space:]]*/ {
+      line = $0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      emit(line)
+    }
+  ' "$workspace"
+}
+
+pnpm_manifest_rel_is_excluded() {
+  case "$1" in
+    .git/*|.worktrees/*|node_modules/*|*/node_modules/*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+pnpm_workspace_package_manifest_paths() {
+  local root="$1"
+  local pattern candidate rel
+  shopt -s nullglob globstar
+
+  while IFS= read -r pattern; do
+    pattern="${pattern#./}"
+    pattern="${pattern%/}"
+    [ -n "$pattern" ] || continue
+
+    case "$pattern" in
+      /*|../*|*/../*)
+        continue
+        ;;
+    esac
+
+    if [[ "$pattern" == *package.json ]]; then
+      for candidate in "$root"/$pattern; do
+        [ -f "$candidate" ] || continue
+        rel="${candidate#"$root"/}"
+        rel="${rel#./}"
+        pnpm_manifest_rel_is_excluded "$rel" || printf '%s\n' "$rel"
+      done
+    else
+      for candidate in "$root"/$pattern/package.json; do
+        [ -f "$candidate" ] || continue
+        rel="${candidate#"$root"/}"
+        rel="${rel#./}"
+        pnpm_manifest_rel_is_excluded "$rel" || printf '%s\n' "$rel"
+      done
+    fi
+  done < <(pnpm_workspace_package_patterns "$root")
+}
+
+pnpm_manifest_fingerprint() {
+  local root="$1"
+  local rel
+  {
+    for rel in package.json pnpm-lock.yaml pnpm-workspace.yaml; do
+      [ -f "$root/$rel" ] && printf '%s\n' "$rel"
+    done
+    pnpm_workspace_package_manifest_paths "$root"
+  } | LC_ALL=C sort -u | while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    printf '%s %s\n' "$rel" "$(sha256sum "$root/$rel" | awk '{print $1}')"
+  done | sha256sum | awk '{print $1}'
+}
+
 if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
+  PNPM_INSTALL_MARKER_FILENAME=".openharness-root-pnpm-manifest.sha256"
+  PNPM_INSTALL_MARKER="$HARNESS/node_modules/$PNPM_INSTALL_MARKER_FILENAME"
+  PNPM_MANIFEST_FINGERPRINT="$(pnpm_manifest_fingerprint "$HARNESS")"
+  PNPM_INSTALL_REQUIRED=false
+
   if [ ! -d "$HARNESS/node_modules" ]; then
     echo "[entrypoint] node_modules missing — running pnpm install at $HARNESS"
-    if gosu sandbox bash -c "cd $HARNESS && pnpm install --prefer-offline" >/tmp/pnpm-install.log 2>&1; then
-      echo "[entrypoint] pnpm install completed (log: /tmp/pnpm-install.log)"
+    PNPM_INSTALL_REQUIRED=true
+  elif [ ! -f "$PNPM_INSTALL_MARKER" ] || [ "$(cat "$PNPM_INSTALL_MARKER" 2>/dev/null || true)" != "$PNPM_MANIFEST_FINGERPRINT" ]; then
+    echo "[entrypoint] manifest drift detected; reinstalling"
+    PNPM_INSTALL_REQUIRED=true
+  else
+    echo "[entrypoint] dependencies current"
+  fi
+
+  if [ "$PNPM_INSTALL_REQUIRED" = "true" ]; then
+    if gosu sandbox bash -c 'cd "$1" && pnpm install --prefer-offline' _ "$HARNESS" >/tmp/pnpm-install.log 2>&1; then
+      PNPM_MANIFEST_FINGERPRINT="$(pnpm_manifest_fingerprint "$HARNESS")"
+      PNPM_INSTALL_MARKER_TMP="$PNPM_INSTALL_MARKER.tmp.$$"
+      if gosu sandbox bash -c 'printf "%s\n" "$1" > "$2" && mv -f "$2" "$3"' _ "$PNPM_MANIFEST_FINGERPRINT" "$PNPM_INSTALL_MARKER_TMP" "$PNPM_INSTALL_MARKER" >>/tmp/pnpm-install.log 2>&1; then
+        echo "[entrypoint] pnpm install completed (log: /tmp/pnpm-install.log)"
+      else
+        echo "[entrypoint] pnpm install marker refresh failed — see /tmp/pnpm-install.log; aborting sandbox boot"
+        exit 1
+      fi
     else
       echo "[entrypoint] pnpm install failed — see /tmp/pnpm-install.log; aborting sandbox boot"
       exit 1

@@ -27,3 +27,17 @@ Added a git: section (user_name/user_email) to the quickstart harness.yaml examp
 - Bash guard blocks any command whose text contains the literal dotenv substring; keep it out of commit messages / heredocs.
 
 ---
+## US-003 — 2026-07-02 06:41 UTC
+
+**Title**: Document the private-origin + upstream clone-and-own pattern (retain Railway/curl)
+**Files changed**: .oh/docs/installation.md, README.md
+**Result**: PASS
+
+### What I did
+Enriched installation.md's "Clone-and-own" into the full validated pattern (clone → make sandbox/shell → inside-sandbox gh auth SSH → gh repo create --private → SSH origin + upstream remotes → push), with an HTTPS/installer fallback note. Added a "Recommended: clone-and-own" lead callout at the top of the README Install section and enriched Option C with the same commands + a deep link. Renamed the installation.md heading to a clean-anchor form.
+
+### Learnings for future iterations
+- Did NOT reletter Options — added a lead callout instead, so README:165 "Option B above" (Fork-and-clone) stays valid. Gates: Railway button (L24) + curl (L31) intact; Options A/B/C coherent.
+- installation.md anchor = #clone-and-own-private-origin-and-upstream-recommended (GitHub slug of the heading); reused by the README link and will be reused by github.md (US-004).
+
+---

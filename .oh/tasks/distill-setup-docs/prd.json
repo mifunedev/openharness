@@ -47,8 +47,8 @@
                 "A reader can reproduce flow steps 6-7 from installation.md alone; all new git/gh commands are copy-paste runnable and use SSH URLs consistently"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-07-02; installation.md Clone-and-own enriched with private gh repo create + SSH remotes + upstream; README Option C enriched + Recommended lead callout; Railway/curl retained; Option-letter refs coherent"
         },
         {
             "id": "US-004",

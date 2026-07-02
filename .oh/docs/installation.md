@@ -39,20 +39,42 @@ The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and start
    bash .oh/scripts/install.sh
    ```
 
-### Clone-and-own (re-point)
+### Clone-and-own: private origin and upstream (recommended)
 
-1. Clone upstream:
+The validated path for running your own long-lived harness: clone upstream, make
+**your** repo the `origin`, and keep `mifunedev/openharness` as `upstream` so you can
+pull framework updates and open PRs back. Creating the private repo and setting the
+remotes happens **inside the sandbox**, after GitHub auth, so the SSH key generated
+there is the one used for pushes.
+
+1. Clone upstream and bring the sandbox up, then open a shell:
    ```bash
-   git clone --recurse-submodules https://github.com/mifunedev/openharness.git my-harness && cd my-harness
+   git clone --recurse-submodules https://github.com/mifunedev/openharness.git ~/.openharness
+   cd ~/.openharness
+   make sandbox        # build + start the container (~10 min cold)
+   make shell          # attach as the sandbox user
    ```
-2. Re-point origin to your repo:
+2. **Inside the sandbox**, authenticate GitHub over SSH — choose SSH as the protocol
+   and let `gh` generate a key (details: [GitHub auth](./integrations/github.md)):
    ```bash
-   git remote set-url origin https://github.com/<your-org>/<your-repo>.git
+   gh auth login       # GitHub.com → SSH → generate a new SSH key → paste a token
+   gh auth setup-git
    ```
-3. Run the installer:
+3. Still inside the sandbox, create your own **private** repo, make it `origin`, and
+   add upstream — all over SSH so the key from step 2 is used:
    ```bash
-   bash .oh/scripts/install.sh
+   gh repo create <your-user>/openharness --private
+   git remote set-url origin git@github.com:<your-user>/openharness.git
+   git remote add upstream git@github.com:mifunedev/openharness.git
+   git push -u origin HEAD
    ```
+   Pull framework updates later with `git fetch upstream && git merge upstream/development`;
+   contribute back by opening PRs from your repo to `mifunedev/openharness`.
+
+> Prefer HTTPS or an installer-driven bring-up? Re-point origin to your repo with
+> `git remote set-url origin https://github.com/<your-org>/<your-repo>.git` and run
+> `bash .oh/scripts/install.sh` instead of `make sandbox` — the installer detects the
+> local clone automatically.
 
 ## One-line installer (upstream only)
 

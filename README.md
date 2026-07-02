@@ -13,6 +13,12 @@
 
 ## 📦 Install
 
+**Recommended: clone-and-own (private origin + upstream).** The validated path for a
+long-lived harness — clone upstream, create a **private** repo as your `origin`, and
+keep `mifunedev/openharness` as `upstream` to pull updates and contribute back. This is
+**Option C** below; the full inside-the-sandbox walkthrough (private `gh repo create`,
+SSH remotes) lives in [installation.md → Clone-and-own](.oh/docs/installation.md#clone-and-own-private-origin-and-upstream-recommended). The hosted Railway preview and the one-line installer are quicker ways to *try* it first.
+
 **Hosted smoke test — Railway (one click):**
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2Fmifunedev%2Fopenharness)
@@ -46,13 +52,19 @@ git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
 bash .oh/scripts/install.sh
 ```
 
-**Option C — Clone upstream, then re-point to your repo:**
+**Option C — Clone-and-own: private origin + upstream (recommended):**
 
 ```bash
-git clone https://github.com/mifunedev/openharness.git my-harness && cd my-harness
-git remote set-url origin https://github.com/<your-org>/<your-repo>.git
-bash .oh/scripts/install.sh
+git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
+make sandbox && make shell        # then, INSIDE the sandbox:
+gh auth login                     # GitHub.com → SSH → generate key → paste token
+gh repo create <your-user>/openharness --private
+git remote set-url origin git@github.com:<your-user>/openharness.git
+git remote add upstream git@github.com:mifunedev/openharness.git
+git push -u origin HEAD
 ```
+
+Full step-by-step (why the private repo, when to pull `upstream`, HTTPS/installer alternative): [installation.md → Clone-and-own](.oh/docs/installation.md#clone-and-own-private-origin-and-upstream-recommended).
 
 <details><summary>Advanced: install directly from your fork without cloning first</summary>
 

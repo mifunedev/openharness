@@ -25,26 +25,27 @@ working** in practice (validated on the `oh-remote` container, 2026-06-23); the
 
 ## Confirmed setup (runbook)
 
-The operator-attached path is **confirmed working** (validated on `oh-remote`, 2026-06-23).
-Follow these steps to get DebugMCP live for Codex/Claude Code in the sandbox:
+DebugMCP is an **optional, cross-harness** capability: it exposes a Model Context Protocol
+server that **any MCP-capable harness** can drive — breakpoints, stepping, variable
+inspection, expression evaluation. Claude Code and Codex are pre-registered against it in this
+repo, so either can use it; it is **not** part of any single agent's auth and is unnecessary
+for the pure-terminal path. It becomes available when you take the **VS Code
+attach-to-container route** after `make sandbox` (the operator-attached path is **confirmed
+working** — validated on `oh-remote`, 2026-06-23):
 
-1. **Authenticate Codex first** — DebugMCP is registered at project scope for Codex and
-   Claude Code, so bring Codex up before you need the debugger:
-   ```bash
-   codex login --device-auth   # in the sandbox; follow the device-code prompt
-   ```
-2. **Install the DebugMCP extension on the machine running VS Code** (your laptop, or the
+1. **Install the DebugMCP extension on the machine running VS Code** (your laptop, or the
    remote host you Remote-SSH into) — search the VS Code Marketplace for
    **microsoft/DebugMCP** (`ozzafar.debugmcpextension`, v2.0.1) and install it there. It
    activates in the workspace/remote extension host, so it must be present where the IDE runs.
-3. **Attach VS Code to the running container** — Dev Containers → *Attach to Running
+2. **Attach VS Code to the running container** — Dev Containers → *Attach to Running
    Container* → `openharness` (local), or Remote-SSH to the host first and then attach
    (`CLAUDE.md` Lifecycle Options B/C). The attach provisions the VS Code server *inside* the
    container — the binary the headless image lacks.
-4. On attach the extension activates and binds the MCP server on
-   `http://localhost:3001/mcp`. Codex and Claude Code are already registered against that
-   endpoint (see [Agent MCP Registration](#agent-mcp-registration)) — no extra wiring.
-5. Verify with a debug session (see [Debug Workflows](#debug-workflows)); the Python
+3. On attach the extension activates and binds the MCP server on `http://localhost:3001/mcp`.
+   **Claude Code and Codex are already registered** against that endpoint (see
+   [Agent MCP Registration](#agent-mcp-registration)) — no extra wiring; just have the agent
+   you want to debug from authenticated (`claude auth login` / `codex login --device-auth`).
+4. Verify with a debug session (see [Debug Workflows](#debug-workflows)); the Python
    breakpoint → inspect → step → evaluate cycle is validated end-to-end.
 
 > Headless activation (no attached IDE) is **not** confirmed — see

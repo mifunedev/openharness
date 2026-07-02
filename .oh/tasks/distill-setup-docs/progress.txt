@@ -148,3 +148,16 @@ Per operator review: made clone-and-own the SINGLE visible install method in the
 - Removing the A/B/C lettering required fixing the "see Option B above" footer cross-ref -> "Other install methods".
 
 ---
+## US-009/US-005 follow-up (review feedback) — 2026-07-02 15:02 UTC
+
+**Title**: Align quickstart Install with README; reframe DebugMCP as optional cross-harness
+**Files changed**: .oh/docs/quickstart.md, README.md, .oh/docs/integrations/debugmcp.md, .oh/skills/wiki/corpus/fresh-machine-setup.md
+**Result**: PASS
+
+### What I did
+(1) Aligned quickstart "## Install" with the README: clone-and-own (clone -> edit harness.yaml -> make sandbox) is now the primary path; the one-line installer + fork-and-clone moved into an "Other install methods" dropdown. (2) Reframed DebugMCP everywhere as an OPTIONAL, CROSS-HARNESS capability enabled by the VS Code attach-to-container route (any MCP-capable harness; Claude Code + Codex pre-registered), NOT a Codex auth step: quickstart step 9 is now Codex-only with a DebugMCP note in "Enter the sandbox"; README codex line de-conflated + DebugMCP note added; debugmcp.md runbook leads with the cross-harness/VS-Code-attach framing; wiki entry detail + Mermaid decoupled (S9 = codex only; DebugMCP hangs off the make-sandbox/attach step).
+
+### Learnings for future iterations
+- DebugMCP's confirmed path is operator-side VS Code Attach (Lifecycle B/C), independent of which agent you authenticate; it should never be presented as a per-agent auth step.
+
+---

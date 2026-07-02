@@ -56,7 +56,7 @@ git push -u origin HEAD
 
 # Authenticate the agents you'll use:
 claude auth login            # Claude Code
-codex login --device-auth    # Codex (+ install microsoft/DebugMCP in your IDE, then attach)
+codex login --device-auth    # Codex
 pi                           # Pi (first run walks provider auth)
 hermes setup                 # Hermes (optional; needs install.hermes: true)
 
@@ -66,6 +66,12 @@ gateway pi && gateway hermes
 gateway status
 tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
 ```
+
+> **Optional — DebugMCP.** If you attach to the sandbox from **VS Code** (Dev Containers →
+> *Attach to Running Container*) after `make sandbox`, you can install the `microsoft/DebugMCP`
+> extension to expose a debugging MCP server that **any MCP-capable harness** (Claude Code,
+> Codex, …) can drive. It's optional and not tied to any single agent — see the
+> [DebugMCP runbook](.oh/docs/integrations/debugmcp.md#confirmed-setup-runbook).
 
 <details><summary>Other install methods (Railway preview · one-line installer · fork-and-clone)</summary>
 

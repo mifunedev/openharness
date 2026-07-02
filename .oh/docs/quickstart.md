@@ -12,6 +12,25 @@ Install Docker with the Compose plugin ([docs.docker.com/get-docker](https://doc
 
 ## Install
 
+The recommended path is **clone-and-own** — clone upstream, edit `harness.yaml`, then build
+(same as the [README](https://github.com/mifunedev/openharness#-install)). To then make the
+sandbox *yours* with a private repo + upstream, continue with the
+[end-to-end walkthrough](#end-to-end-setup-walkthrough) below.
+
+```bash
+# 1. Clone upstream:
+git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
+
+# 2. Edit harness.yaml BEFORE building — set sandbox.name, sandbox.timezone,
+#    git.user_name, git.user_email, optional installs (see Configuration below):
+nano harness.yaml
+
+# 3. Build the image (~10 min cold, ~30s warm):
+make sandbox
+```
+
+<details><summary>Other install methods (one-line installer · fork-and-clone)</summary>
+
 ```bash
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
@@ -24,13 +43,11 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides the same fetch/review/approve flow. `vet` is optional; Open Harness itself requires Docker with Compose and Git.
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides the same fetch/review/approve flow. The installer clones into `~/.openharness`, prompts to share your host `gh` token, writes `.devcontainer/.env` with safe defaults, and brings the sandbox up via `docker compose`.
 
-> **Self-hosting?** If you've already cloned your fork or re-pointed origin, skip the curl command above and run `bash .oh/scripts/install.sh` from inside the directory instead — the installer detects the local clone automatically.
+**Self-hosting from an existing clone:** run `bash .oh/scripts/install.sh` from inside the directory — it detects the local clone automatically.
 
-The installer clones into `~/.openharness`, prompts to share your host
-`gh` token, writes `.devcontainer/.env` with safe defaults, and brings
-the sandbox up via `docker compose`.
+</details>
 
 ## Enter the sandbox
 
@@ -39,6 +56,12 @@ the sandbox up via `docker compose`.
 1. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers).
 2. Open the Command Palette with `Ctrl+Shift+P` (`Cmd+Shift+P` on macOS) → **Dev Containers: Attach to Running Container...** → select `openharness`.
 3. When the new VS Code window opens, set the workspace folder to `/home/sandbox/harness`.
+
+> **Optional — DebugMCP (cross-harness debugging).** If you take the VS Code attach route
+> above, you can install the `microsoft/DebugMCP` extension to expose a debugging MCP server
+> that **any MCP-capable harness** (Claude Code, Codex, …) can drive — breakpoints, stepping,
+> variable inspection. It is not tied to one agent and is unnecessary for the terminal path.
+> Runbook: [DebugMCP](./integrations/debugmcp.md#confirmed-setup-runbook).
 
 **Terminal fallback** for when VS Code isn't available or you just need a shell:
 
@@ -173,12 +196,12 @@ inlines the command to run; follow the link for depth/troubleshooting. Steps 5�
    ```bash
    claude auth login && claude auth status
    ```
-9. **Authenticate Codex + DebugMCP** — device-auth, then install the
-   `microsoft/DebugMCP` VS Code extension on the machine running your IDE and attach
-   ([Codex](./harnesses/codex.md), [DebugMCP runbook](./integrations/debugmcp.md#confirmed-setup-runbook)):
+9. **Authenticate Codex** ([Codex](./harnesses/codex.md)):
    ```bash
    codex login --device-auth
    ```
+   > Optional: DebugMCP (cross-harness debugging over MCP) is available if you attached via
+   > VS Code — see [Enter the sandbox](#enter-the-sandbox) above, not this step.
 10. **Authenticate Pi** — configure provider keys / OAuth ([Pi](./harnesses/pi.md)):
     ```bash
     pi        # first run walks provider auth

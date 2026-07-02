@@ -50,9 +50,11 @@ during login, generate a key, paste a token) or automatic (the entrypoint genera
 ed25519 key and uploads the public key when `GH_TOKEN` carries `admin:public_key`;
 idempotent).
 
-Per-harness auth, in order: Claude (verified against v2.1.198), Codex via device-auth plus
-the `microsoft/DebugMCP` VS Code extension installed on the machine running the IDE and
-attach-to-container, Pi (provider OAuth), and Hermes (opt-in via `install.hermes`).
+Per-harness auth, in order: Claude (verified against v2.1.198), Codex (device-auth), Pi
+(provider OAuth), and Hermes (opt-in via `install.hermes`). **DebugMCP** is a separate,
+optional **cross-harness** debugging capability (MCP): it is enabled by the VS Code
+attach-to-container route after `make sandbox`, and any MCP-capable harness can drive it
+(Claude Code and Codex are pre-registered) — it is not a Codex-specific step.
 
 Slack + gateways: the `pi-messenger-bridge` package bridges Slack to Pi; Hermes uses its
 native gateway. Both gateways are managed by the **same** `.oh/scripts/gateway.sh` lifecycle
@@ -78,7 +80,7 @@ flowchart TD
     S5 --> S6[6 gh repo create --private]
     S6 --> S7[7 origin + upstream over SSH]
     S7 --> S8[8 claude auth login]
-    S8 --> S9[9 codex device-auth + DebugMCP]
+    S8 --> S9[9 codex device-auth]
     S9 --> S10[10 pi auth]
     S10 --> S11[11 hermes setup]
     S11 --> S12[12 configure Slack]
@@ -88,7 +90,7 @@ flowchart TD
   S3 -.-> D2[quickstart.md configuration]
   S5 -.-> D3[integrations/github.md]
   S7 -.-> D4[installation.md clone-and-own]
-  S9 -.-> D6[integrations/debugmcp.md]
+  S4 -.-> D6[debugmcp.md optional via VS Code attach]
   S12 -.-> D7[integrations/slack.md]
   S13 -.-> D8[slack.md + hermes.md run/verify]
 ```

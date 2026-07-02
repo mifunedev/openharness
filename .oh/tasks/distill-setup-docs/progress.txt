@@ -13,3 +13,17 @@ Made installation.md the canonical Prerequisites home — added a make/build-ess
 - The grep gate must use a DIRECTORY arg (grep -rn "Docker + Git" README.md .oh/docs/) — a .oh/docs/*.md glob silently skips harnesses/ and integrations/. Gate now returns 0.
 
 ---
+## US-002 — 2026-07-02 06:39 UTC
+
+**Title**: Add harness.yaml git: key reference; collapse README Configure prose to a pointer
+**Files changed**: .oh/docs/quickstart.md, README.md
+**Result**: PASS
+
+### What I did
+Added a git: section (user_name/user_email) to the quickstart harness.yaml example, two rows to the config-key table (git.user_name, git.user_email), and a note that crons/autopilot/slack/compose sections exist. Shrank README "Configure (optional)" prose to a 2-sentence pointer to the quickstart table; kept the secrets-stay-out-of-git warning.
+
+### Learnings for future iterations
+- README Configure was PROSE, not a table (critic caught the gap-audit imprecision). No table removal needed.
+- Bash guard blocks any command whose text contains the literal dotenv substring; keep it out of commit messages / heredocs.
+
+---

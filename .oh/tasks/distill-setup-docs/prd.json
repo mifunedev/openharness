@@ -31,8 +31,8 @@
                 "No config key contradicts .oh/scripts/harness-config.sh"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Completed on 2026-07-02; git.* keys added to quickstart config example+table; README Configure shrunk to pointer, secrets warning kept"
         },
         {
             "id": "US-003",

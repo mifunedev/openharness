@@ -89,6 +89,9 @@ gh auth login && gh auth setup-git
 sandbox:
   name: openharness
   timezone: UTC
+git:
+  user_name: your-name           # GIT_USER_NAME (spaces OK)
+  user_email: you@example.com    # GIT_USER_EMAIL
 install:
   opencode: false
   deepagents: false
@@ -96,6 +99,8 @@ install:
   grok_build: false
   agent_browser: false
 ```
+
+The file also has `crons:`, `autopilot:`, `slack:`, and `compose:` sections (all commented out by default) — uncomment the keys you need. See the shipped `harness.yaml` for every available key and its default.
 
 **Secrets** — keep in `.devcontainer/.env` only (gitignored):
 
@@ -111,6 +116,8 @@ install:
 |--------------------|---------|
 | `sandbox.name` | Container/compose project name |
 | `sandbox.timezone` | Container timezone |
+| `git.user_name` | Commit author name → `GIT_USER_NAME` (spaces OK) |
+| `git.user_email` | Commit author email → `GIT_USER_EMAIL` |
 | `install.agent_browser` | Set `true` to install Chromium (~1 GB) |
 | `install.opencode` | Set `true` to include OpenCode in the sandbox image |
 | `install.deepagents` | Set `true` to include DeepAgents in the sandbox image |

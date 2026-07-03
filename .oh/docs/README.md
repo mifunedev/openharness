@@ -44,8 +44,10 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 
 - [Security considerations](security-considerations.md)
 - [`.oh/` directory layout](oh-directory-layout.md)
+- [Descriptive `.oh/harness.yml` example](harness-manifest.md)
 - [Glossary](glossary.md)
 - [RFC / ADR index](rfcs/README.md)
+- [ADR-0001: #532 standards scope](rfcs/adr-0001-standards-scope.md)
 - [Self-improving harness roadmap curation (#525)](rfcs/rfc-selfimprove-roadmap.md)
 - [Trace/event ledger RFC (#525 foundation)](rfcs/rfc-trace-ledger.md)
 - [Property testing](property-testing.md)

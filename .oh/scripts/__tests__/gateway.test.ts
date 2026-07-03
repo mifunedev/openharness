@@ -24,12 +24,29 @@ describe("gateway client-session launcher", () => {
     expect(gateway()).toContain("hermes gateway run");
   });
 
+  it("pins the hermes backend to the harness runtime home and cwd", () => {
+    expect(gateway()).toContain("HERMES_GATEWAY_HOME:-$HARNESS/.hermes");
+    expect(gateway()).toContain("HERMES_GATEWAY_CWD:-$HARNESS");
+    expect(gateway()).toContain("/usr/local/bin/hermes");
+    expect(gateway()).toContain("ensure_hermes_gateway_cwd");
+  });
+
+  it("self-heals Hermes Teams gateway dependencies when Teams is configured", () => {
+    expect(gateway()).toContain("microsoft-teams-apps==2.0.13.4");
+    expect(gateway()).toContain("sync_hermes_teams_env_aliases");
+  });
+
   it("matches session names EXACTLY (no client-slack-hermes prefix collision)", () => {
     // grep -Fxq guards against `has-session -t client-slack` prefix-matching the
     // sibling client-slack-hermes session.
     expect(gateway()).toContain("grep -Fxq");
     // No actual `tmux has-session` CALL (a comment may explain why we avoid it).
     expect(gateway()).not.toMatch(/^\s*tmux has-session/m);
+  });
+
+  it("exposes a msg-bridge configuration entrypoint", () => {
+    expect(gateway()).toContain("gateway msg-bridge");
+    expect(gateway()).toContain("/msg-bridge");
   });
 });
 

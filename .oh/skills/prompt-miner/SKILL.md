@@ -118,6 +118,10 @@ shape is documented in `references/report-schema.md`:
 - `sessions[]` — ranked (score desc), each with `score`, `scoreBreakdown`,
   `sessionType`, and a `features` vector (the 13 `markerFeatureKeys`).
 - `unranked[]` — `noHumanPrompt` / below-`minTurns` sessions (kept, not ranked).
+- `weaknesses[]` — metadata-only `WH-<NNN>` harness-weakness records clustering
+  repeated failure signals across the corpus; deterministic, and **never** carries
+  prompt text (`supporting_traces` = session-id metadata only). See
+  `references/report-schema.md`.
 
 Verify every score is reconstructable from its `scoreBreakdown` before trusting
 the ranking — the score is a **heuristic proxy**, not a verdict (see

@@ -72,7 +72,7 @@ Run `ls .oh/skills/` for the full set; each has a `SKILL.md`.
 ```
 your-project/
   AGENTS.md                 # this file (CLAUDE.md -> AGENTS.md)
-  harness.yaml              # your harness config (sandbox name, timezone, installs)
+  harness.yaml              # local gitignored harness config (sandbox name, timezone, installs)
   .devcontainer/            # local image build (Dockerfile, docker-compose.yml, entrypoint)
   .claude/ .codex/          # provider surfaces — skills/agents/hooks symlinks + config
   .pi/ .hermes/             #   (configured by `oh init`; runtime/secrets gitignored)

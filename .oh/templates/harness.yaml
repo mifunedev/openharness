@@ -1,7 +1,7 @@
-# harness.yaml — your project's own Open Harness config (tracked).
+# harness.yaml — your project's own Open Harness config (local, gitignored).
 #
 # This is YOUR project's harness config — distinct from the OpenHarness
-# orchestrator root harness.yaml. It was materialized into your repo by
+# template under .oh/templates/. It was materialized into your repo by
 # `oh init`. Every key ships commented with its default shown, so a fresh
 # `oh init` changes nothing until you uncomment a key.
 #

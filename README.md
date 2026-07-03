@@ -40,9 +40,10 @@ Host prerequisites: [Docker](https://docs.docker.com/get-docker/) with the Compo
 # a. Clone upstream:
 git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
 
-# b. Edit harness.yaml BEFORE building — set sandbox.name, sandbox.timezone,
-#    git.user_name, git.user_email, and any optional installs (Hermes, agent-browser, …).
-#    See "⚙️ Configure" below for the full key list. Secrets stay in .devcontainer/.env.
+# b. Materialize local config, then edit it BEFORE building — set sandbox.name,
+#    sandbox.timezone, git.user_name, git.user_email, and any optional installs
+#    (Hermes, agent-browser, …). Secrets stay in .devcontainer/.env.
+make harness-config
 nano harness.yaml
 
 # c. Build the image and open a shell inside the sandbox:
@@ -172,11 +173,13 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 ## ⚙️ Configure (optional)
 
-`harness.yaml` is the tracked config for shared non-secret settings (`sandbox.*`,
-`git.*`, optional installs, Slack allowlists, compose overlays). **Secrets stay in
-the gitignored `.devcontainer/.env`** (`GH_TOKEN`, `PI_SLACK_APP_TOKEN`,
-`PI_SLACK_BOT_TOKEN`) — never in `harness.yaml`. Active keys in `harness.yaml`
-override `.devcontainer/.env`; apply changes with `make destroy && make sandbox`.
+`harness.yaml` is local gitignored config for shared non-secret settings, generated
+from tracked `harness.yaml.example` by `make harness-config` (also run by
+`make sandbox`). It holds `sandbox.*`, `git.*`, optional installs, Slack allowlists,
+and compose overlays. **Secrets stay in the gitignored `.devcontainer/.env`**
+(`GH_TOKEN`, `PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`) — never in
+`harness.yaml`. Active keys in `harness.yaml` override `.devcontainer/.env`; apply
+changes with `make destroy && make sandbox`.
 Full key reference: [Quickstart → Configuration](.oh/docs/quickstart.md#configuration).
 
 <details><summary>Manual setup (no installer)</summary>

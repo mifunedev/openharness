@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "harness-config.sh");
-const HARNESS_YAML = path.join(REPO_ROOT, "harness.yaml");
+const HARNESS_TEMPLATE = path.join(REPO_ROOT, "harness.yaml.example");
 
 interface RunResult {
   stdout: string;
@@ -155,20 +155,21 @@ describe("harness-config.sh get mode", () => {
 });
 
 // ---------------------------------------------------------------------------
-// real harness.yaml
+// shipped harness.yaml.example template
 // ---------------------------------------------------------------------------
 
-describe("harness-config.sh — real harness.yaml", () => {
+describe("harness-config.sh — shipped harness.yaml.example", () => {
   it("parses without error and emits nothing (all shipped keys commented)", () => {
-    // The shipped file is fully commented so a fresh clone changes nothing:
-    // .env / compose defaults stay authoritative until a key is uncommented.
-    const { stdout, status } = run(["env", HARNESS_YAML]);
+    // The shipped template is fully commented so a fresh clone changes nothing:
+    // .env / compose defaults stay authoritative until a key is uncommented in
+    // local gitignored harness.yaml.
+    const { stdout, status } = run(["env", HARNESS_TEMPLATE]);
     expect(status).toBe(0);
     expect(stdout.trim()).toBe("");
   });
 
-  it("emits a key once uncommented (uncommented copy of the shipped file)", () => {
-    const shipped = readFileSync(HARNESS_YAML, "utf8");
+  it("emits a key once uncommented (uncommented copy of the shipped template)", () => {
+    const shipped = readFileSync(HARNESS_TEMPLATE, "utf8");
     const activated = shipped.replace("  # name: openharness", "  name: openharness");
     const file = fixture(activated);
     const { stdout, status } = run(["env", file]);

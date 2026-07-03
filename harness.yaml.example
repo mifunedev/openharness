@@ -1,8 +1,10 @@
-# harness.yaml — Open Harness master config (tracked).
+# harness.yaml.example — Open Harness master config template (tracked).
 #
-# Everything non-secret lives here. Secrets (GH_TOKEN, PI_SLACK_APP_TOKEN,
-# PI_SLACK_BOT_TOKEN) live ONLY in gitignored .devcontainer/.env.
-# Keys set here OVERRIDE .devcontainer/.env for the same setting.
+# Copy to local gitignored harness.yaml before building (`make harness-config`).
+# Everything non-secret lives in harness.yaml. Secrets (GH_TOKEN,
+# PI_SLACK_APP_TOKEN, PI_SLACK_BOT_TOKEN) live ONLY in gitignored
+# .devcontainer/.env. Keys set in harness.yaml OVERRIDE .devcontainer/.env
+# for the same setting.
 #
 # Format: flat two-level section/key only — parsed by
 # scripts/harness-config.sh (plain awk; no yq). No anchors or nesting
@@ -11,7 +13,7 @@
 # default shown, so a fresh clone changes nothing; uncomment to take over
 # a setting from .env.
 #
-# Apply changes with: make destroy && make sandbox
+# Apply harness.yaml changes with: make destroy && make sandbox
 
 sandbox:
   # name: openharness          # SANDBOX_NAME — container + compose project name

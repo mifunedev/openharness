@@ -47,10 +47,11 @@ pull framework updates and open PRs back. Creating the private repo and setting 
 remotes happens **inside the sandbox**, after GitHub auth, so the SSH key generated
 there is the one used for pushes.
 
-1. Clone upstream, edit `harness.yaml`, then bring the sandbox up and open a shell:
+1. Clone upstream, materialize/edit local `harness.yaml`, then bring the sandbox up and open a shell:
    ```bash
    git clone --recurse-submodules https://github.com/mifunedev/openharness.git ~/.openharness
    cd ~/.openharness
+   make harness-config # copies tracked harness.yaml.example to local gitignored harness.yaml if missing
    nano harness.yaml   # set sandbox.name, sandbox.timezone, git.user_name/user_email,
                        # optional installs — see Quickstart → Configuration. Do this BEFORE building.
    make sandbox        # build + start the container (~10 min cold)

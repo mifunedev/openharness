@@ -89,7 +89,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Intent | Start here | Why |
 |---|---|---|
 | Session role, permissions, startup load | `AGENTS.md`, `.oh/context/README.md`, `.oh/context/` | Defines orchestrator role, voice, session-start reads, rules. |
-| Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml`, `.oh/scripts/README.md`, `.oh/scripts/docker-compose.sh` | Owns container image, compose overlays, env, and lifecycle commands. |
+| Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml.example`, local `harness.yaml`, `.oh/scripts/README.md`, `.oh/scripts/docker-compose.sh` | Owns container image, compose overlays, env, and lifecycle commands. |
 | Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/pr-audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
 | Cron/autopilot behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.oh/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog. |
 | Eval/probe regressions | `.oh/evals/README.md`, `.oh/evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
@@ -130,7 +130,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `Makefile` | Common lifecycle targets around sandbox creation, shell, ps, destroy. | Find operator commands and compose entry points. |
 | `package.json` | Root scripts for build/test/typecheck/docs/security audit. | Pick verification commands. |
 | `pnpm-workspace.yaml`, `pnpm-lock.yaml` | Root pnpm marker and pinned dependency graph. | Debug dependency drift; avoid lockfile reads unless dependency state matters. |
-| `harness.yaml` | Harness runtime defaults such as autopilot caps and configured services. | Inspect operator-configurable behavior. |
+| `harness.yaml.example` / local `harness.yaml` | Tracked config template plus generated operator-local runtime defaults such as autopilot caps and configured services. | Inspect supported keys in the template; inspect local overrides only when debugging the current checkout. |
 | `.oh/` | OpenHarness runtime machinery grouped as one unit: the `oh` CLI (`.oh/cli/`), installer/lifecycle scripts (`.oh/scripts/`), container-install inputs (`.oh/install/`), deploy config (`.oh/config.json`). The docs site moved to `mifunedev/openharness-web`. | Read `.oh/README.md` first; find harness tooling addressed as a namespace. |
 | `.oh/context/` | Voice, identity, tools, repo map, user collaboration, and rules. | Load operating principles and process constraints. |
 | `.oh/crons/` | Scheduled agent prompts and heartbeat/autopilot jobs. | Understand recurring automation; read `.oh/crons/README.md` first. |

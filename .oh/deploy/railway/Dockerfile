@@ -21,9 +21,16 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
  && corepack enable \
  && corepack prepare pnpm@10.33.0 --activate
 
+# Sudo requires a password (no NOPASSWD): an interactive operator who knows the
+# password can escalate, but a non-interactive internal agent hits the prompt
+# and fails. The password is set here at build time because start.sh runs as
+# the sandbox user and can no longer use passwordless sudo to set it. Override
+# at build with --build-arg SANDBOX_PASSWORD=... ; default is the weak `test1234`.
+ARG SANDBOX_PASSWORD=test1234
 RUN useradd -m -s /bin/zsh sandbox \
- && echo "sandbox ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/sandbox \
- && chmod 0440 /etc/sudoers.d/sandbox
+ && echo "sandbox ALL=(ALL) ALL" > /etc/sudoers.d/sandbox \
+ && chmod 0440 /etc/sudoers.d/sandbox \
+ && echo "sandbox:${SANDBOX_PASSWORD:-test1234}" | chpasswd
 
 WORKDIR ${OH_PROJECT_ROOT}
 COPY --chown=sandbox:sandbox . ${OH_PROJECT_ROOT}/

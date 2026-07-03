@@ -109,15 +109,18 @@ if [ -d "$HARNESS_DIR" ]; then
   fi
 fi
 
-# Set the sandbox user's LOGIN password so an operator can authenticate on a
-# remote box (e.g. `su sandbox` or SSH password auth). This is unconditional
-# — independent of whether the UID/GID reconcile above succeeded — and is
-# distinct from sudo, which stays NOPASSWD:ALL via /etc/sudoers.d/sandbox.
+# Set the sandbox user's password. This is BOTH the remote login password
+# (e.g. `su sandbox` / SSH password auth) AND the sudo password: sudo now
+# requires it (/etc/sudoers.d/sandbox is `sandbox ALL=(ALL) ALL`, no NOPASSWD),
+# so an interactive operator who knows it can escalate, but a non-interactive
+# internal agent hits the password prompt and fails (`sudo -n` -> error). We
+# run as root here (before the gosu drop), so no sudo is needed to set it.
+# Unconditional — independent of whether the UID/GID reconcile above succeeded.
 # The trailing `|| echo ... >&2` (not a bare `|| true`) keeps a chpasswd
 # failure (e.g. read-only /etc on some hosts) from aborting boot under
 # `set -e`, while still surfacing it as a warning; never log $PW itself.
 PW="${SANDBOX_PASSWORD:-test1234}"
-echo "sandbox:${PW}" | chpasswd || echo "[entrypoint] WARNING: failed to set sandbox login password" >&2
+echo "sandbox:${PW}" | chpasswd || echo "[entrypoint] WARNING: failed to set sandbox password" >&2
 unset PW
 
 # UID/GID reconciliation can change the numeric identity behind the sandbox

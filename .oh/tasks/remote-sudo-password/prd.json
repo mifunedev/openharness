@@ -2,52 +2,51 @@
     "schemaVersion": 1,
     "project": "Open Harness",
     "branchName": "feat/remote-sudo-password",
-    "description": "Set the sandbox user's Unix login password on remote/hosted deployments from a SANDBOX_PASSWORD variable with a fallback default of test1234, so an operator can authenticate as `sandbox` (SSH/console/su) on a remote box. The existing NOPASSWD:ALL passwordless sudo is preserved unchanged — this adds a *login* password only; it does NOT make sudo require a password. Both container images (.devcontainer and .oh/deploy/railway) and the local env surface are covered.",
+    "description": "Make sudo require a password for the `sandbox` user instead of NOPASSWD:ALL, and set that password from a SANDBOX_PASSWORD variable with a fallback default of test1234. Goal: a non-interactive internal agent (running as `sandbox`) can no longer escalate via sudo — it hits the password prompt and fails — while an interactive operator who knows the password still can. The same password doubles as the remote login password (SSH/su). NOTE (documented, not silently ignored): the sandbox user is in the `docker` group with the docker socket mounted, which remains a separate root-escalation path; this change gates `sudo` specifically, not every escalation vector.",
     "userStories": [
         {
             "id": "US-001",
-            "title": "Devcontainer: set sandbox login password from SANDBOX_PASSWORD (default test1234) at runtime, keep passwordless sudo",
-            "description": "As an operator of a remote devcontainer sandbox, I want the `sandbox` user to have a real Unix login password so I can authenticate as it, while sudo stays passwordless. The entrypoint already runs as root before it drops to `gosu sandbox`, so set the password there from the env var with the required fallback.",
+            "title": "Devcontainer: require a sudo password and set it from SANDBOX_PASSWORD (default test1234)",
+            "description": "As a harness operator, I want internal agents in the devcontainer to be unable to run sudo non-interactively, while I (interactively) still can. Change the sudoers policy to require a password and set the sandbox user's password from the env var at runtime.",
             "acceptanceCriteria": [
-                "In .devcontainer/docker-compose.yml, add `- SANDBOX_PASSWORD=${SANDBOX_PASSWORD:-test1234}` to the sandbox service `environment:` block (near the other identity vars) so the variable reaches the container with the fallback default.",
-                "In .devcontainer/entrypoint.sh, while still running as root (before any `gosu sandbox` handoff / near the existing usermod UID-reconcile ops), set the login password: resolve `PW=\"${SANDBOX_PASSWORD:-test1234}\"` and run `echo \"sandbox:${PW}\" | chpasswd`. Guard so an empty/unset value still falls back to test1234, and do not `set -x`/echo the password to logs.",
-                "Do NOT modify /etc/sudoers.d/sandbox — the `sandbox ALL=(ALL) NOPASSWD:ALL` line in .devcontainer/Dockerfile stays exactly as-is; sudo must remain passwordless.",
-                "`bash -n .devcontainer/entrypoint.sh` passes (script remains syntactically valid).",
-                "Verifiable behavior (documented in the story notes / progress.txt): after boot, `passwd -S sandbox` reports a set password (status `P`, not `L`/`NP`) and `sudo -n true` as sandbox still succeeds without a password prompt.",
-                "The password value is not printed to stdout/stderr or the entrypoint log."
+                "In .devcontainer/Dockerfile, /etc/sudoers.d/sandbox is `sandbox ALL=(ALL) ALL` (NOT NOPASSWD:ALL) — sudo access still exists but requires the password.",
+                "In .devcontainer/docker-compose.yml, `- SANDBOX_PASSWORD=${SANDBOX_PASSWORD:-test1234}` is passed into the sandbox service `environment:` block.",
+                "In .devcontainer/entrypoint.sh, while running as root (before any gosu drop), the sandbox password is set from `${SANDBOX_PASSWORD:-test1234}` via `chpasswd`, unconditionally, without logging the value. (Root sets it directly — no sudo needed.)",
+                "Behavioral check (documented in notes): as the sandbox user, `sudo -n true` FAILS with a 'password is required' error, while `echo \"$SANDBOX_PASSWORD\" | sudo -S -k true` (or an interactive sudo with the known password) SUCCEEDS.",
+                "Docker access is NOT via sudo — the sandbox user stays in the `docker` group — so removing NOPASSWD does not break `docker` for agents.",
+                "`bash -n .devcontainer/entrypoint.sh` passes."
             ],
             "priority": 1,
             "passes": false,
-            "notes": "Entrypoint root context confirmed at .devcontainer/entrypoint.sh (groupmod/chown/usermod run as root, then `gosu sandbox` drops privileges). Place the chpasswd near the usermod UID-reconcile block (~line 102) but unconditional (not gated on UID sync)."
+            "notes": "The password is the sudo credential and the login credential — one value. Setting it in entrypoint (runtime) means a compose/.env override applies without a rebuild."
         },
         {
             "id": "US-002",
-            "title": "Railway/hosted image: set sandbox login password from SANDBOX_PASSWORD (default test1234), keep passwordless sudo",
-            "description": "As an operator of the hosted (Railway) image, I want the same SANDBOX_PASSWORD-with-test1234-fallback login password behavior. That image runs `.oh/deploy/railway/start.sh` as the `sandbox` user (Dockerfile does `USER sandbox`), but `sandbox` has passwordless sudo, so the password can be set at container start via sudo.",
+            "title": "Railway image: require a sudo password and bake it at build time from SANDBOX_PASSWORD (default test1234)",
+            "description": "As an operator of the hosted Railway image, I want the same 'sudo requires a password' policy. Because start.sh runs as the sandbox user and can no longer use passwordless sudo, the password must be set at image build time.",
             "acceptanceCriteria": [
-                "In .oh/deploy/railway/start.sh, near the top (after `set -euo pipefail`, before `exec node ...`), resolve `PW=\"${SANDBOX_PASSWORD:-test1234}\"` and set the password using the available passwordless sudo: `echo \"sandbox:${PW}\" | sudo chpasswd`. It must tolerate a missing/empty SANDBOX_PASSWORD (fall back to test1234) and must not print the password.",
-                "Do NOT modify the `sandbox ALL=(ALL) NOPASSWD:ALL` sudoers line in .oh/deploy/railway/Dockerfile — passwordless sudo is preserved.",
-                "`bash -n .oh/deploy/railway/start.sh` passes.",
-                "start.sh keeps its `set -euo pipefail` discipline: the chpasswd step must not abort startup if it is a no-op environment, but a genuine failure to set the password should surface (do not blanket-`|| true` in a way that hides a real error — a short comment explaining the choice is acceptable).",
-                "Verifiable behavior (documented in notes): in a built railway image, `passwd -S sandbox` reports a set password after start.sh runs."
+                "In .oh/deploy/railway/Dockerfile, /etc/sudoers.d/sandbox is `sandbox ALL=(ALL) ALL` (NOT NOPASSWD:ALL).",
+                "The Dockerfile sets the sandbox password at build time from an `ARG SANDBOX_PASSWORD` (default test1234) via `chpasswd`, overridable with `--build-arg SANDBOX_PASSWORD=...`.",
+                ".oh/deploy/railway/start.sh no longer runs `sudo chpasswd` (that would now fail, since sudo requires a password); a comment records that the password is baked at build time.",
+                "`bash -n .oh/deploy/railway/start.sh` passes."
             ],
             "priority": 1,
             "passes": false,
-            "notes": "start.sh runs as `sandbox` (USER sandbox in .oh/deploy/railway/Dockerfile) and has NOPASSWD sudo, so `sudo chpasswd` works at runtime without a rebuild — a Railway-set SANDBOX_PASSWORD env var takes effect on next start."
+            "notes": "Runtime env override is intentionally not supported on the Railway image (no root at runtime); rebuild with --build-arg to change the password. This is a hosted-smoke image, so build-time is acceptable."
         },
         {
             "id": "US-003",
-            "title": "Document SANDBOX_PASSWORD in .example.env with the test1234 default and its security caveat",
-            "description": "As a new operator, I want to discover the SANDBOX_PASSWORD variable and understand that it defaults to a weak, publicly-known value that must be overridden on any exposed deployment.",
+            "title": "Document SANDBOX_PASSWORD as the login+sudo password with the test1234 default and caveats",
+            "description": "As a new operator, I want .example.env to explain that SANDBOX_PASSWORD gates sudo (not passwordless), doubles as the login password, defaults to test1234, and that the docker-group/socket path is a separate escalation vector.",
             "acceptanceCriteria": [
-                "Add a documented `SANDBOX_PASSWORD` entry to .devcontainer/.example.env (a commented example line plus a short explanation), describing it as the `sandbox` user's remote LOGIN password (not the sudo password — sudo stays passwordless) and stating the fallback default is `test1234`.",
-                "The comment includes a SECURITY warning: `test1234` is a known weak default intended for convenience/local use; set a strong value in the gitignored .devcontainer/.env (or the platform's secret store, e.g. Railway variables) for any network-reachable deployment.",
-                "Do NOT add SANDBOX_PASSWORD to tracked harness.yaml — it is a secret and belongs in the gitignored .env surface, consistent with the existing 'secrets in .env, non-secret defaults in harness.yaml' convention.",
-                "Wording matches the file's existing comment style/format in .devcontainer/.example.env."
+                "`.devcontainer/.example.env` documents SANDBOX_PASSWORD as the sandbox user's login AND sudo password, states sudo is NOT passwordless, and gives the test1234 default.",
+                "The doc notes the non-interactive-agent-can't-sudo behavior and the security caveat to override the weak default on exposed deployments.",
+                "The doc honestly notes the `docker` group + mounted socket as a separate root-escalation path (this change gates sudo, not all escalation).",
+                "SANDBOX_PASSWORD is NOT added to tracked harness.yaml (it is a secret; belongs in gitignored .env)."
             ],
             "priority": 2,
             "passes": false,
-            "notes": "harness.yaml keys map to env vars but harness.yaml is a tracked/non-secret surface; a password must not be committed there. Document only in .example.env."
+            "notes": "Truthful scoping: gating sudo is defense-in-depth, not full root containment while the docker socket is exposed."
         }
     ]
 }

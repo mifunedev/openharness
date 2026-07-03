@@ -42,6 +42,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 
 ## Reference
 
+- [Glossary](glossary.md)
 - [Property testing](property-testing.md)
 - [Resources](resources.md)
 - [Roadmap](roadmap.md)

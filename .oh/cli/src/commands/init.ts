@@ -361,10 +361,11 @@ export async function runInit(
   if (!minimal) {
     prompt.ok("Provider skills are live — symlinks resolve into the vendored .oh/skills.");
     prompt.info("  1. Put secrets in .devcontainer/.env (gitignored — never commit them)");
-    prompt.info("  2. Build the sandbox:  reopen in container, or");
-    prompt.info("       docker compose -f .devcontainer/docker-compose.yml up -d --build");
-    prompt.info("  3. Build the CLI:  cd .oh/cli && npm install && npm run build");
-    prompt.info("  4. Commit .oh/ (incl. .oh/skills) and the provider surfaces + AGENTS.md");
+    prompt.info("  2. Build + start the sandbox:  oh sandbox");
+    prompt.info("       (or: docker compose -f .devcontainer/docker-compose.yml up -d --build)");
+    prompt.info("  3. Connect to the sandbox:  oh shell");
+    prompt.info("  4. Build the CLI:  cd .oh/cli && npm install && npm run build");
+    prompt.info("  5. Commit .oh/ (incl. .oh/skills) and the provider surfaces + AGENTS.md");
   } else {
     prompt.info(".oh/ is your portable control plane — commit it to your repo.");
     prompt.info("Build the CLI:  cd .oh/cli && npm install && npm run build");

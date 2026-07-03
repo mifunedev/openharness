@@ -200,11 +200,9 @@ RUN su - sandbox -c "git config --global --add safe.directory ${OH_PROJECT_ROOT}
 RUN echo "cd ${OH_PROJECT_ROOT} 2>/dev/null" >> /home/sandbox/.bashrc
 
 # Image-level devcontainer config — VS Code reads this on "Attach to Running Container"
-# NOTE: static /home/sandbox/harness — Phase-2 devcontainer templating target (#531)
 RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness","remoteUser":"sandbox"}' > /.devcontainer/devcontainer.json
 
 # Labels for VS Code "Attach to Running Container"
-# NOTE: static /home/sandbox/harness — Phase-2 devcontainer templating target (#531)
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
 
 # ─── Copy install scripts + workspace (for CI; bind mount overrides at runtime)

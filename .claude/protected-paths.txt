@@ -21,6 +21,7 @@ prd
 ralph
 harness-audit
 skill-lint
+eval-lint
 delegate
 strategic-proposal
 ship-spec

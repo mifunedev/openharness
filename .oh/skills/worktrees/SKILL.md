@@ -4,7 +4,10 @@ description: |
   Manage .worktrees/ lifecycle: create worktree, list worktrees, remove worktree,
   clean worktrees, stale worktrees audit, isolate work, project clone.
   TRIGGER when: any git worktree operation, branch isolation needed, stale worktrees
-  review, project clone under .worktrees/project/, worktree cleanup.
+  review, project clone under .worktrees/project/ (e.g. "clone <owner>/<repo> to
+  worktrees", "add <repo> to .worktrees", "clone this repo into worktrees"), worktree
+  cleanup. A leading-slash harness dir like "/worktrees" still means the repo-relative
+  .worktrees/ — never a literal filesystem-root path.
 allowed-tools: Bash
 ---
 

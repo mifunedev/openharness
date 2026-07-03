@@ -182,6 +182,29 @@ docker exec -it -u sandbox openharness zsh
 
 Replace `openharness` with whatever you set as `SANDBOX_NAME`.
 
+## Standalone CLI (`oh`): equip an existing repo
+
+Every path above clones the harness repo itself and keeps the host toolchain-free — no Node required. The standalone `oh` CLI path is different: it equips **your existing project repo** with the harness and drives the sandbox without keeping an OpenHarness checkout around. This path — and only this path — requires on the host:
+
+| Dependency | Required for |
+|---|---|
+| Node.js ≥ 18 (20+ recommended) | Building and running the `oh` binary (`dist/oh.js`) |
+| git | The shallow clone behind `--from-remote` |
+| Docker (with Compose plugin) | `oh sandbox` / `oh shell` |
+
+`make` is **not** needed here — the verbs wrap the vendored `.oh/scripts/` directly. The CLI is not published to npm: build it once from any OpenHarness checkout (`cd .oh/cli && npm install && npm run build`) and put `dist/oh.js` on your PATH as `oh`.
+
+```bash
+cd <your-project>
+oh init --from-remote   # equip the repo — shallow-clones the public repo for the
+                        # payload; pin a version with --ref <tag|branch>
+oh sandbox              # provision + start the sandbox (docker compose up -d --build)
+oh shell                # zsh in the running container (or: oh shell <container>)
+oh gateway status       # manage messaging client sessions (pi|hermes)
+```
+
+`--from-remote` fetches over public HTTPS only — private or credential-prompting remotes fail fast (`GIT_TERMINAL_PROMPT=0`); offline, use `oh init --from <local-checkout>` instead. Repos equipped this way mount your project at `/home/sandbox/project` inside the sandbox (the clone paths above use `/home/sandbox/harness`). Upgrade the vendored `.oh/` later with `oh update --from-remote [--ref <ref>]`.
+
 ## Next step
 
 Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside the sandbox and start an agent.

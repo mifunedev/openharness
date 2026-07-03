@@ -462,6 +462,11 @@ describe("runInit", () => {
     const compose = readFileSync(join(t, ".devcontainer/docker-compose.yml"), "utf8");
     expect(compose).toContain("context: ..");
     expect(compose).not.toContain("context: ../..");
+
+    // rewriteComposeForTarget: every workspace mount/env default is rewritten
+    // to the consumer project path — no harness path survives the rewrite.
+    expect(compose).toContain("/home/sandbox/project");
+    expect(compose).not.toContain("/home/sandbox/harness");
   });
 
   it("full (default): seeds a workspace/ stub for the image build", async () => {

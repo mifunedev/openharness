@@ -143,7 +143,7 @@ RUN cd /opt/oh && npm install --no-audit --no-fund && npm run build \
 
 # ─── Sandbox user ──────────────────────────────────────────────────
 RUN useradd -m -s /bin/zsh sandbox \
- && echo "sandbox ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/sandbox \
+ && echo "sandbox ALL=(ALL) ALL" > /etc/sudoers.d/sandbox \
  && chmod 0440 /etc/sudoers.d/sandbox \
  && groupadd -f docker && usermod -aG docker sandbox
 

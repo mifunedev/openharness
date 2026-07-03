@@ -6,6 +6,12 @@ export PORT
 export OPENHARNESS_HOSTED_MODE="${OPENHARNESS_HOSTED_MODE:-railway}"
 export OH_PROJECT_ROOT="${OH_PROJECT_ROOT:-/home/sandbox/harness}"
 
+# The sandbox user's password (login + sudo) is set at image build time in the
+# Dockerfile — see `ARG SANDBOX_PASSWORD`. It is NOT set here: sudo now requires
+# a password (no NOPASSWD), so start.sh (which runs as the sandbox user) could
+# not use `sudo chpasswd` anyway. Rebuild with --build-arg SANDBOX_PASSWORD=...
+# to change it.
+
 cd "$OH_PROJECT_ROOT"
 
 if ! command -v oh >/dev/null 2>&1; then

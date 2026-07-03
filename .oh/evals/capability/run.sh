@@ -39,7 +39,7 @@ Score preview (no write):
 
 Score + overwrite a task's row:
   --task <CB-id> --success <V> --cost-time <V> --unattended <V>
-                 [--basis <text>] [--base <ref>] [--dry-run]
+                 [--basis <text>] [--base <ref>] [--check <cmd>] [--dry-run]
                     score CB-<id> from the validated triad, read the prior score
                     for that id (default: current RESULTS.md; --base <ref> reads
                     git show <ref>:.oh/evals/capability/RESULTS.md), compute the
@@ -49,6 +49,15 @@ Score + overwrite a task's row:
                     records the 3 axes + score + a delta/machinery note in basis.
                     --dry-run prints the would-be row + suite comment, no write.
                     The runner is fully task-agnostic (no per-task-id branching).
+
+  --check <cmd>     OPTIONAL success-signal check (e.g. a task's runnable probe:
+                    'bash .oh/evals/probes/repo-map-contract.sh'). The command is
+                    run from the repo root and its exit code is recorded as
+                    EVIDENCE (check=PASS|SKIPPED|FAIL: 0->PASS, 2->SKIPPED, else
+                    FAIL) in the row basis / preview line. It NEVER sets or
+                    overrides a judgment axis — the operator still supplies the
+                    triad (the benchmark stays semi-automated). A failing check
+                    does not abort the write; it is honestly recorded.
 EOF
 }
 
@@ -165,15 +174,38 @@ validate_triad() {
   return 0
 }
 
+# Optionally run a task's success-signal check (e.g. its runnable probe) and map
+# the exit code to a PASS/SKIPPED/FAIL label — recorded as EVIDENCE only. The
+# runner NEVER lets this result set or override a judgment axis: the operator
+# still supplies the validated triad (this is why the benchmark is *semi*-
+# automated). Runs from $ROOT so a relative probe path resolves independently of
+# cwd; a pure-oracle probe writes nothing. A non-zero exit is recorded honestly,
+# it does NOT abort the write. Exit oracle mirrors the probes: 0=PASS 2=SKIPPED
+# else=FAIL. Emits the command's own output to stderr; only the label to stdout.
+run_check() {
+  local cmd="$1" code
+  set +e
+  ( cd "$ROOT" && bash -c "$cmd" ) 1>&2
+  code=$?
+  set -e
+  case "$code" in
+    0)   echo "PASS" ;;
+    2)   echo "SKIPPED" ;;
+    *)   echo "FAIL" ;;
+  esac
+}
+
 # Validate the triad and print the deterministic task score to stdout WITHOUT
 # writing the scoreboard (score-preview mode). Any missing/invalid axis returns
-# non-zero WITHOUT printing a score. The score never depends on the task id.
+# non-zero WITHOUT printing a score. The score never depends on the task id. An
+# optional --check is run and its label appended as evidence (never a judgment axis).
 score_task() {
   validate_triad || return 1
-  local score
+  local score check_suffix=""
   score="$(compute_score "$SUCCESS" "$COST_TIME" "$UNATTENDED")"
-  printf 'score=%s success=%s cost-time=%s unattended=%s%s\n' \
-    "$score" "$SUCCESS" "$COST_TIME" "$UNATTENDED" "${TASK:+ task=$TASK}"
+  if [[ -n "$CHECK" ]]; then check_suffix=" check=$(run_check "$CHECK")"; fi
+  printf 'score=%s success=%s cost-time=%s unattended=%s%s%s\n' \
+    "$score" "$SUCCESS" "$COST_TIME" "$UNATTENDED" "${TASK:+ task=$TASK}" "$check_suffix"
   return 0
 }
 
@@ -257,14 +289,15 @@ write_row() {
     return 1
   fi
 
-  local new_score prior class delta note basis prior_basis existing_row
+  local new_score prior class delta note basis prior_basis existing_row check_result
   new_score="$(compute_score "$SUCCESS" "$COST_TIME" "$UNATTENDED")"
   prior="$(prior_score_for "$id")"
 
   existing_row="$(grep -E "^\|[[:space:]]*${id}[[:space:]]*\|" "$RESULTS" | head -1 || true)"
   prior_basis="$(row_field "$existing_row" 8)"
   # drop any prior runner-appended delta note so re-writes don't accumulate them
-  # (keeps the write idempotent for a fixed baseline).
+  # (keeps the write idempotent for a fixed baseline). The ` · check=` evidence is
+  # folded INSIDE the ` · Δ ` annotation below, so this one strip removes both.
   prior_basis="${prior_basis% · Δ *}"
 
   if [[ -n "$BASIS" ]]; then basis="$BASIS"; else basis="$prior_basis"; fi
@@ -275,6 +308,13 @@ write_row() {
     note="Δ ${delta} ${class} vs ${prior} baseline"
   else
     note="Δ baseline established (no prior score in ${BASE:-RESULTS.md})"
+  fi
+  # optional success-signal check, recorded as EVIDENCE only (never a judgment
+  # axis). Folded into the Δ annotation so the single ` · Δ *` strip above stays
+  # idempotent across re-writes.
+  if [[ -n "$CHECK" ]]; then
+    check_result="$(run_check "$CHECK")"
+    note="${note} · check=${check_result}"
   fi
   basis="${basis} · ${note}"
 
@@ -332,6 +372,7 @@ COST_TIME=""
 UNATTENDED=""
 BASIS=""
 BASE=""
+CHECK=""
 DRY_RUN=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -355,6 +396,9 @@ while [[ $# -gt 0 ]]; do
     --base)
       [[ $# -ge 2 ]] || { echo "run.sh: --base requires a git <ref> value" >&2; exit 64; }
       BASE="$2"; shift 2 ;;
+    --check)
+      [[ $# -ge 2 ]] || { echo "run.sh: --check requires a command value" >&2; exit 64; }
+      CHECK="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     *)
       echo "run.sh: unknown arg: $1" >&2

@@ -28,6 +28,12 @@ No stage gates, no editors, no numbering scheme beyond the GitHub issue number.
 | [#525](https://github.com/mifunedev/openharness/issues/525) | Draft | Self-improving-harness roadmap epic. |
 | [#532](https://github.com/mifunedev/openharness/issues/532) | Draft | Standards process — the full RFC/ADR taxonomy, registries, and conformance profiles (deferred scope; see below). |
 
+## Decision records
+
+| Record | Decision |
+|---|---|
+| [ADR-0001: #532 standards scope](adr-0001-standards-scope.md) | The lightweight RFC / ADR convention is sufficient for now; heavier taxonomy, registries, lifecycle, and conformance machinery stay deferred until a concrete future need appears. |
+
 ## Deferred scope
 
 The full IETF-style standards body — the `OH-RFC` / `STD` / `BCP` / `EXP` / `INF`

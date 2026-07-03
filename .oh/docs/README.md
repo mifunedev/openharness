@@ -46,6 +46,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [`.oh/` directory layout](oh-directory-layout.md)
 - [Glossary](glossary.md)
 - [RFC / ADR index](rfcs/README.md)
+- [ADR-0001: #532 standards scope](rfcs/adr-0001-standards-scope.md)
 - [Property testing](property-testing.md)
 - [Resources](resources.md)
 - [Roadmap](roadmap.md)

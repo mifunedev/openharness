@@ -295,7 +295,7 @@ describe("runInit", () => {
     expect(listA).toEqual(listOh(b));
   });
 
-  it("missing vendor source: exit 1, stderr names the path + deferred #531 seam", async () => {
+  it("missing vendor source: exit 1, stderr names the path + the --from/--from-remote sources", async () => {
     const t = freshTmp();
     const bogus = join(t, "no-such-source");
     const { io, err } = makeIO();
@@ -304,7 +304,7 @@ describe("runInit", () => {
     expect(code).toBe(1);
     const msg = err.join("");
     expect(msg).toContain(resolve(bogus));
-    expect(msg).toContain("#531");
+    expect(msg).toContain("--from-remote");
     // Nothing vendored on the precondition failure.
     expect(existsSync(join(t, ".oh"))).toBe(false);
   });
@@ -462,6 +462,11 @@ describe("runInit", () => {
     const compose = readFileSync(join(t, ".devcontainer/docker-compose.yml"), "utf8");
     expect(compose).toContain("context: ..");
     expect(compose).not.toContain("context: ../..");
+
+    // rewriteComposeForTarget: every workspace mount/env default is rewritten
+    // to the consumer project path — no harness path survives the rewrite.
+    expect(compose).toContain("/home/sandbox/project");
+    expect(compose).not.toContain("/home/sandbox/harness");
   });
 
   it("full (default): seeds a workspace/ stub for the image build", async () => {

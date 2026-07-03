@@ -13,7 +13,7 @@ sources:
   - .oh/docs/harnesses/hermes.md
   - .devcontainer/entrypoint.sh
   - .oh/scripts/gateway.sh
-related: [sandbox-dependency-installs]
+related: [sandbox-dependency-installs, oh-cli-portable-lifecycle]
 confidence: provisional
 ---
 
@@ -101,3 +101,4 @@ flowchart TD
 
 ## See Also
 - [[sandbox-dependency-installs]]
+- [[oh-cli-portable-lifecycle]]

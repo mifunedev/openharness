@@ -50,6 +50,8 @@ If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifu
 
 **Self-hosting from an existing clone:** run `bash .oh/scripts/install.sh` from inside the directory — it detects the local clone automatically.
 
+**Standalone `oh` CLI (equip an existing project repo):** `oh init --from-remote` → `oh sandbox` / `oh shell` / `oh gateway` — see [Installation → Standalone CLI](./installation.md#standalone-cli-oh-equip-an-existing-repo). Unlike the paths above, it requires Node.js ≥ 18, git, and Docker on the host.
+
 </details>
 
 ## Enter the sandbox

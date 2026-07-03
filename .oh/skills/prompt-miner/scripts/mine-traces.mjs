@@ -1035,7 +1035,7 @@ async function run(args) {
 // ---------------------------------------------------------------------------
 
 function renderMarkdown(dataset, top) {
-  const { manifest, sessions } = dataset;
+  const { manifest, sessions, weaknesses = [] } = dataset;
   const lines = [];
   lines.push(`# prompt-miner report — ${manifest.generatedAt.slice(0, 10)}`);
   lines.push("");
@@ -1066,6 +1066,23 @@ function renderMarkdown(dataset, top) {
   lines.push(sep);
   for (const s of sessions.slice(-top).reverse()) lines.push(fmtRow(s));
   lines.push("");
+  // Weakness records: metadata-only WH-<NNN> clusters. No prompt text is
+  // rendered — only the fixed taxonomy summary + session-id counts.
+  lines.push("## Weakness records");
+  lines.push("");
+  if (!weaknesses.length) {
+    lines.push("_None — no failure signal recurred across enough sessions._");
+    lines.push("");
+  } else {
+    lines.push("| id | frequency | affected agents | likely harness layer | recommended repair surface | summary |");
+    lines.push("|---|---|---|---|---|---|");
+    for (const w of weaknesses) {
+      lines.push(
+        `| ${w.weakness_id} | ${w.frequency} | ${w.affected_agents.join(", ")} | ${w.likely_harness_layer} | ${w.recommended_repair_surface} | ${w.summary} |`,
+      );
+    }
+    lines.push("");
+  }
   return `${lines.join("\n")}\n`;
 }
 

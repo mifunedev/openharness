@@ -254,7 +254,7 @@ Clone `.claude/skills/ship-spec/templates/prompt.md` as the template (it ships w
 - Replace `<slug>` with this task's slug throughout
 - Replace `<prefix>/<N>-<slug>` with the real branch name
 - Replace `#<issue>` with the tracking issue number
-- Confirm the read-context list (step 1) points at this task's prd.md, prd.json, critique.md, progress.txt (the template already references `.oh/skills/advisor/SKILL.md` for critic-gated stories)
+- Confirm the read-context list (step 1) points at this task's prd.md, prd.json, critique.md, progress.txt (the template already references `.oh/agents/advisor.md` for critic-gated stories)
 
 Write `.oh/tasks/<slug>/progress.txt` with header only:
 
@@ -508,7 +508,7 @@ The whole pipeline can be re-invoked safely. Failed stage = fix + re-run; resume
 | `/eval` skill | `.claude/skills/eval/SKILL.md` | Stage 11 — probe regression gate |
 | `/pr-audit` skill | `.claude/skills/pr-audit/SKILL.md` | Stage 12 — promotable classification (gates the undraft) |
 | `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | CI verification (subsumed by `/pr-audit`'s promotable check) |
-| advisor-model rule | `.oh/skills/advisor/SKILL.md` | Critic-gate pattern (3-step variant); Advisor handoff |
+| advisor-model rule | `.oh/agents/advisor.md` | Critic-gate pattern (3-step variant); Advisor handoff |
 | sandbox-processes rule | `.oh/skills/t3/references/sandbox-processes.md` | Stage 10 — tmux session naming for the Advisor |
 | Protected-paths list | `.claude/protected-paths.txt` | Stage 3 — load-bearing items critics must not propose deleting |
 | Ralph prompt template | `.claude/skills/ship-spec/templates/prompt.md` | Stage 7 — prompt.md template |

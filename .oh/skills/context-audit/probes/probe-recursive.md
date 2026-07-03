@@ -1,6 +1,6 @@
 ---
 name: probe-recursive
-target: recursive-delegation.md
+target: advisor.md
 markers:
   - "Max depth"
   - "Step budget"

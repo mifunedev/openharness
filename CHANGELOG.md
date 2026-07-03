@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Add `.oh/docs/security-considerations.md` documenting the security boundaries the harness already enforces today — each path-cited to its real mechanism (gitignored env secrets + template allowlist, the secret-exposure command/path hooks + the `-F <file>` safe pattern, devcontainer sandbox isolation + the Docker-socket caveat, the human merge / no-auto-merge gate, the autopilot owned-surface guard, and the untrusted-model-output posture) and labelled ENFORCED vs RECOMMENDED; linked from the docs index ([#568](https://github.com/mifunedev/openharness/issues/568)).
 - Add an agent-browser X.com login snippet for dashboard-observed human login, persistent profiles, 2FA/CAPTCHA handling, Google OAuth fallback, and credential safety.
 - Add a Railway one-click hosted smoke deploy path from the README, with config-as-code, deploy assets, docs, and an eval drift guard ([#553](https://github.com/mifunedev/openharness/issues/553)).
 - **`OH_PROJECT_ROOT` project-root seam** (RFC #531 Phase 1) — single source of truth for the container workspace path (default `/home/sandbox/harness`); `HARNESS` is kept as a back-compat alias. `evals/probes/project-root-seam.sh` guards the seam contract against regression ([#531](https://github.com/mifunedev/openharness/issues/531)).

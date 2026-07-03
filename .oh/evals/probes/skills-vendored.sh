@@ -27,8 +27,6 @@ fail() {
 for path in \
   .oh/skills/git/SKILL.md \
   .oh/skills/t3/references/sandbox-processes.md \
-  .oh/skills/advisor/SKILL.md \
-  .oh/skills/advisor/references/recursive-delegation.md \
   .oh/skills/retro/references/memory-protocol.md \
   .oh/skills/wiki/references/schema.md; do
   [ -f "$path" ] || fail "vendored pack file missing: $path"

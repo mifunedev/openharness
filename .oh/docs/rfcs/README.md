@@ -25,7 +25,7 @@ No stage gates, no editors, no numbering scheme beyond the GitHub issue number.
 | Proposal | Status | Summary |
 |---|---|---|
 | [#531](https://github.com/mifunedev/openharness/issues/531) | Accepted | Portable `.oh/` control plane — `oh init` / `oh update`, the project-root seam, and the machinery-namespace relocation. |
-| [#525](https://github.com/mifunedev/openharness/issues/525) | Draft | Self-improving-harness roadmap epic. |
+| [#525](https://github.com/mifunedev/openharness/issues/525) | Draft | Self-improving-harness roadmap epic, curated into [proposed child issues](rfc-selfimprove-roadmap.md). |
 | [#532](https://github.com/mifunedev/openharness/issues/532) | Draft | Standards process — the full RFC/ADR taxonomy, registries, and conformance profiles (deferred scope; see below). |
 
 ## Deferred scope

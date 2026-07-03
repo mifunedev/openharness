@@ -193,12 +193,167 @@ Memory Improvement Protocol.
 
 ## Scoring procedure
 
-> **US-002 fills this section** with the copy-pasteable discovery + scoring
-> driver blocks (skill-lint idiom) that loop over every probe and capability
-> task, run checks 1–7, cross-reference the `.oh/evals/RESULTS.md` SKIPPED
-> oracle, and emit the KEEP/GROOM/CUT matrix — plus a sample matrix and the
-> `git status --porcelain .oh/evals/` read-only proof. Until then, the check
-> definitions in § 3 and the verdict thresholds in § 4 are the contract.
+One self-contained, copy-pasteable driver (skill-lint idiom). It discovers every
+probe + capability task, cross-references the `.oh/evals/RESULTS.md` SKIPPED
+oracle, computes the deterministic checks from § 3, emits the KEEP/GROOM/CUT
+matrix (worst verdict first) with the check-7 suite footer, and closes with the
+`git status --porcelain .oh/evals/` read-only proof. It reads and prints only —
+nothing under `.oh/evals/` is ever written.
+
+```bash
+set -uo pipefail   # NOT -e: grep returning 1 (no match) is normal control flow
+
+ROOT="$(git rev-parse --show-toplevel)"
+EVALS="$ROOT/.oh/evals"
+RESULTS="$EVALS/RESULTS.md"
+
+# ── Discover targets ────────────────────────────────────────────────────────
+mapfile -t PROBES < <(ls "$EVALS"/probes/*.sh 2>/dev/null | sort)
+mapfile -t CAPS   < <(ls "$EVALS"/capability/tasks/CB-*.md 2>/dev/null | sort)
+[ -e "$EVALS/capability/repo-orientation" ] && CAPS+=("$EVALS/capability/repo-orientation")
+
+# ── Oracle: persistently-SKIPPED probe ids from the last /eval (RESULTS.md) ──
+# The "always-SKIP" verdict is REAL DATA — the status column, never grep 'exit 2'.
+skip_status() {  # $1 = probe id → prints the RESULTS.md status column, trimmed
+  awk -F'|' -v id="$1" '
+    { gsub(/^ +| +$/,"",$2); gsub(/^ +| +$/,"",$5) }
+    $2==id { print $5; exit }' "$RESULTS"
+}
+
+# ── Duplicate oracle: normalized-body hash → colliding probe ids ─────────────
+# Strip shebang/comments/blank/whitespace, then hash. A shared hash = exact twin.
+declare -A HASH2IDS
+for f in "${PROBES[@]}"; do
+  id=$(basename "$f" .sh)
+  h=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$f" | tr -d '[:space:]' | sha256sum | cut -c1-16)
+  HASH2IDS[$h]+=" $id"
+done
+
+verdict() {  # $1 = fatal(≥1) · $2 = non-fatal flag count → KEEP/GROOM/CUT
+  if   [ "$1" -ge 1 ]; then echo CUT
+  elif [ "$2" -ge 3 ]; then echo CUT
+  elif [ "$2" -ge 1 ]; then echo GROOM
+  else echo KEEP; fi
+}
+
+ROWS=""; KEEP=0; GROOM=0; CUT=0
+
+# ── Score probes (checks 1,2,3,4,6) ─────────────────────────────────────────
+for f in "${PROBES[@]}"; do
+  id=$(basename "$f" .sh); fatal=0; nf=0; flags=""
+
+  # Check 3 — always-SKIP-in-CI (FATAL, RESULTS.md oracle)
+  [ "$(skip_status "$id")" = "SKIPPED" ] && { fatal=1; flags+="3 "; }
+
+  # Check 2 — exact duplicate (FATAL if a normalized twin exists)
+  h=$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$f" | tr -d '[:space:]' | sha256sum | cut -c1-16)
+  peers=(${HASH2IDS[$h]}); [ "${#peers[@]}" -ge 2 ] && { fatal=1; flags+="2 "; }
+
+  # Check 1 — stale (GROOM): no `# source:` provenance header to anchor the lesson
+  grep -qE '^#[[:space:]]*source:' "$f" || { nf=$((nf+1)); flags+="1 "; }
+
+  # Check 4 — asserts-implementation-detail (GROOM): a line-number pin into files
+  grep -qE "sed -n '[0-9]+p'|head -n?[0-9]+ .*tail" "$f" && { nf=$((nf+1)); flags+="4 "; }
+
+  # Check 6 — too-easy/too-narrow (GROOM): tiny body (< 8 non-comment lines)
+  sloc=$(grep -vcE '^[[:space:]]*#|^[[:space:]]*$' "$f")
+  [ "$sloc" -lt 8 ] && { nf=$((nf+1)); flags+="6 "; }
+
+  v=$(verdict "$fatal" "$nf")
+  case "$v" in KEEP) KEEP=$((KEEP+1));; GROOM) GROOM=$((GROOM+1));; CUT) CUT=$((CUT+1));; esac
+  ROWS+="$v|probe|$id|${flags:-—}"$'\n'
+done
+
+# ── Score capability tasks (checks 1,5,6) ────────────────────────────────────
+for f in "${CAPS[@]}"; do
+  if [ -d "$f" ]; then id="repo-orientation"; else id=$(grep -m1 '^id:' "$f" | awk '{print $2}'); fi
+  fatal=0; nf=0; flags=""
+
+  if [ "$id" != "repo-orientation" ]; then
+    slug=$(grep -m1 '^slug:' "$f" | awk '{print $2}')
+    # Check 5 — no-longer-held-out (FATAL): executable harness LOGIC (NOT the eval
+    # scorer, NOT docs) hardcodes the task's slug ⇒ the harness was special-cased.
+    if git -C "$ROOT" grep -lF "$slug" -- '.oh/scripts/' '.oh/hooks/' 2>/dev/null \
+         | grep -qviE 'benchmark-score|README'; then fatal=1; flags+="5 "; fi
+    # Check 1 — stale (GROOM): a declared datasets: DS-NNN ref that no longer
+    # resolves under datasets/**/ (datasets are nested dirs, not bare files).
+    for ds in $(grep -m1 '^datasets:' "$f" | grep -oE 'DS-[0-9]+'); do
+      find "$EVALS/datasets" -maxdepth 2 -name "${ds}*" 2>/dev/null | grep -q . \
+        || { nf=$((nf+1)); flags+="1 "; break; }
+    done
+    # Check 6 — too-narrow (GROOM): missing a scoring rubric / success signal
+    grep -qE '^## Rubric|^## Success signal' "$f" || { nf=$((nf+1)); flags+="6 "; }
+  fi
+
+  v=$(verdict "$fatal" "$nf")
+  case "$v" in KEEP) KEEP=$((KEEP+1));; GROOM) GROOM=$((GROOM+1));; CUT) CUT=$((CUT+1));; esac
+  ROWS+="$v|task|$id|${flags:-—}"$'\n'
+done
+
+# ── Emit matrix (worst verdict first) ────────────────────────────────────────
+echo "## Eval Lint — $(date +%F)"
+echo
+echo "### Summary"
+echo "${#PROBES[@]} probes + ${#CAPS[@]} capability tasks scored | KEEP $KEEP | GROOM $GROOM | CUT $CUT"
+echo
+echo "| Target | Class | Flags | Verdict |"
+echo "|--------|-------|-------|---------|"
+printf '%s' "$ROWS" | awk -F'|' '
+  BEGIN{ord["CUT"]=0; ord["GROOM"]=1; ord["KEEP"]=2}
+  { print ord[$1]"\t"$0 }' | sort -k1,1n | cut -f2- | while IFS='|' read -r v cls id fl; do
+    printf '| %-42s | %-5s | %-6s | %-5s |\n' "$id" "$cls" "$fl" "$v"
+  done
+
+# ── Check 7 — machinery-growth footer (suite-level advisory, not a per-row flag)
+SUITE=$(grep -oE 'suite score = [^·]*' "$EVALS/capability/RESULTS.md" | head -1)
+echo
+echo "_Check 7 (suite advisory): ${#PROBES[@]} probes now; capability ${SUITE:-score n/a}."
+echo "Growing probe count against a flat ceiling ⇒ machinery-without-capability; compare"
+echo "\`git -C \"\$ROOT\" grep -c '' -- .oh/evals/probes | wc -l\` at an earlier revision._"
+
+# ── Read-only proof (this skill only reads + prints) ─────────────────────────
+echo
+if [ -z "$(git -C "$ROOT" status --porcelain .oh/evals/)" ]; then
+  echo "read-only proof: git status --porcelain .oh/evals/ is EMPTY ✓"
+else
+  echo "read-only proof: FAILED — the lint mutated .oh/evals/ (bug); investigate:"
+  git -C "$ROOT" status --porcelain .oh/evals/
+fi
+```
+
+### Sample matrix
+
+Real output against the current tree (80 targets: 75 probes + 4 `CB-*` tasks +
+`repo-orientation`). Only the two probes RESULTS.md records as persistently
+`SKIPPED` fire the fatal check-3 CUT; every other target is a clean KEEP:
+
+```
+## Eval Lint — 2026-07-03
+
+### Summary
+75 probes + 5 capability tasks scored | KEEP 78 | GROOM 0 | CUT 2
+
+| Target | Class | Flags | Verdict |
+|--------|-------|-------|---------|
+| autopilot-preflight-gate                   | probe | 3      | CUT   |
+| next-dev-prod                              | probe | 3      | CUT   |
+| advisor-monitored-loop                     | probe | —      | KEEP  |
+| … (73 more probes) …                       | probe | —      | KEEP  |
+| CB-001                                     | task  | —      | KEEP  |
+| CB-002                                     | task  | —      | KEEP  |
+| CB-003                                     | task  | —      | KEEP  |
+| CB-004                                     | task  | —      | KEEP  |
+| repo-orientation                           | task  | —      | KEEP  |
+
+_Check 7 (suite advisory): 75 probes now; capability suite score = mean of task scores…_
+
+read-only proof: git status --porcelain .oh/evals/ is EMPTY ✓
+```
+
+Both `SKIPPED` rows are the check-3 oracle finding — `autopilot-preflight-gate`
+and `next-dev-prod` are the only probes whose `.oh/evals/RESULTS.md` status is
+`SKIPPED`, so they are the only fatal CUTs. Re-running the driver twice yields
+byte-identical verdicts (deterministic), and `.oh/evals/` stays unmodified.
 
 ## Guidelines
 

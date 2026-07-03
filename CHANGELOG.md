@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- **`oh sandbox`, `oh shell [container]`, and `oh gateway <args…>` lifecycle verbs** — thin argv-array wrappers over the vendored `.oh/scripts/` (`docker-compose.sh --repo-dir <root> up -d --build`; `docker exec -it -u sandbox <name> zsh` with `sandbox.name` read via `harness-config.sh get` and an explicit `<root>/harness.yaml` path; `gateway.sh` with `OH_PROJECT_ROOT` set), sharing a new equipped-project-root resolver (`lib/project.ts`) that works from any subdirectory; `oh sandbox` defensively seeds `harness.yaml` from `harness.yaml.example` (parity with `make harness-config`) ([#564](https://github.com/mifunedev/openharness/issues/564)).
 - Add an agent-browser X.com login snippet for dashboard-observed human login, persistent profiles, 2FA/CAPTCHA handling, Google OAuth fallback, and credential safety.
 - Add a Railway one-click hosted smoke deploy path from the README, with config-as-code, deploy assets, docs, and an eval drift guard ([#553](https://github.com/mifunedev/openharness/issues/553)).
 - **`OH_PROJECT_ROOT` project-root seam** (RFC #531 Phase 1) — single source of truth for the container workspace path (default `/home/sandbox/harness`); `HARNESS` is kept as a back-compat alias. `evals/probes/project-root-seam.sh` guards the seam contract against regression ([#531](https://github.com/mifunedev/openharness/issues/531)).

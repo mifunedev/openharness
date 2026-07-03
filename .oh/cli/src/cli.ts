@@ -5,6 +5,13 @@ import { tmpdir } from "node:os";
 import { runInit, type InitIO, type InitOptions } from "./commands/init.js";
 import { runUpdate } from "./commands/update.js";
 import {
+  runGateway,
+  runSandbox,
+  runShell,
+  DEFAULT_CONTAINER_NAME,
+  type LifecycleIO,
+} from "./commands/lifecycle.js";
+import {
   fetchRemoteSource,
   DEFAULT_REPO_URL,
   type FetchRemoteSourceOptions,
@@ -63,13 +70,17 @@ function integrationLines(): string {
     .join("\n");
 }
 
-function printOhHelp(): void {
+/** Exported for tests (asserting the Usage block lists every subcommand). */
+export function printOhHelp(): void {
   process.stdout.write(`oh — Open Harness CLI (v${VERSION})
 
 Usage:
   oh init [dir]             Scaffold OpenHarness compat files into a repo
   oh config <integration>   Configure an integration via interactive wizard
   oh update                 Upgrade the .oh/ control plane from a newer source
+  oh sandbox                Provision and start the sandbox (docker compose up)
+  oh shell [container]      Open a zsh shell in the running sandbox container
+  oh gateway <args...>      Manage a messaging client session (pi|hermes)
   oh --version              Print version
   oh --help                 Show this help
 
@@ -149,6 +160,55 @@ Flags:
   --dry-run          Print the whole plan without writing anything
   --verbose          List every per-file action (default summarizes vendor noise)
   --templates <dir>  Override the scaffold template source directory
+`);
+}
+
+/** Exported for tests. */
+export function printSandboxHelp(): void {
+  process.stdout.write(`oh sandbox — Provision and start the sandbox
+
+Usage:
+  oh sandbox
+
+Works from any subdirectory of an equipped repo (walks up to the nearest
+directory containing .oh/). Seeds harness.yaml from harness.yaml.example when
+the example exists and no harness.yaml does, then delegates to the vendored
+compose wrapper:
+
+  bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build
+
+Build output streams live; oh sandbox exits with docker compose's exit code.
+Takes no flags — it is a pass-through, not a writer.
+`);
+}
+
+/** Exported for tests. */
+export function printShellHelp(): void {
+  process.stdout.write(`oh shell — Open a shell in the running sandbox container
+
+Usage:
+  oh shell [container]
+
+Runs \`docker exec -it -u sandbox <container> zsh\`. Container-name precedence:
+the positional argument > sandbox.name in <root>/harness.yaml (read via the
+vendored .oh/scripts/harness-config.sh) > "${DEFAULT_CONTAINER_NAME}". Works from any
+subdirectory of an equipped repo; exits with docker's exit code.
+`);
+}
+
+/** Exported for tests. */
+export function printGatewayHelp(): void {
+  process.stdout.write(`oh gateway — Manage a messaging client session (Slack bridge)
+
+Usage:
+  oh gateway <pi|hermes> [--attach]   start the client session (--attach after)
+  oh gateway <pi|hermes> --restart    restart the session
+  oh gateway <pi|hermes> --stop       stop the session
+  oh gateway status                   show both sessions
+
+Only a LEADING --help/-h is intercepted here; everything else passes through
+verbatim to the vendored .oh/scripts/gateway.sh with OH_PROJECT_ROOT set to
+the equipped project root. Exits with the script's exit code.
 `);
 }
 
@@ -328,6 +388,56 @@ export function parseUpdateArgs(rest: string[]): ParseResult<UpdateArgs> {
     };
   }
   return { ok: true, args };
+}
+
+/** Parsed `oh sandbox` flags — the verb is a pass-through and takes none. */
+export interface SandboxArgs {
+  help: boolean;
+}
+
+export function parseSandboxArgs(rest: string[]): ParseResult<SandboxArgs> {
+  if (isHelpFlag(rest[0])) return { ok: true, args: { help: true } };
+  const extra = rest[0];
+  if (extra !== undefined) {
+    return { ok: false, error: `oh sandbox: unexpected argument "${extra}" — the verb takes no flags` };
+  }
+  return { ok: true, args: { help: false } };
+}
+
+/** Parsed `oh shell` args. */
+export interface ShellArgs {
+  help: boolean;
+  container?: string;
+}
+
+export function parseShellArgs(rest: string[]): ParseResult<ShellArgs> {
+  const args: ShellArgs = { help: false };
+  if (isHelpFlag(rest[0])) return { ok: true, args: { help: true } };
+  for (const token of rest) {
+    if (token.startsWith("-")) {
+      return { ok: false, error: `oh shell: unknown flag "${token}"` };
+    }
+    if (args.container !== undefined) {
+      return { ok: false, error: `oh shell: unexpected argument "${token}"` };
+    }
+    args.container = token;
+  }
+  return { ok: true, args };
+}
+
+/** Parsed `oh gateway` args — everything after a leading help flag is verbatim. */
+export interface GatewayArgs {
+  help: boolean;
+  /** Arguments handed to gateway.sh untouched (never re-interpreted). */
+  passthrough: string[];
+}
+
+export function parseGatewayArgs(rest: string[]): ParseResult<GatewayArgs> {
+  // Intercept ONLY a leading --help/-h; a later --help belongs to the script.
+  if (rest[0] === "--help" || rest[0] === "-h") {
+    return { ok: true, args: { help: true, passthrough: [] } };
+  }
+  return { ok: true, args: { help: false, passthrough: [...rest] } };
 }
 
 // ---------------------------------------------------------------------------
@@ -604,9 +714,55 @@ async function main(argv: string[]): Promise<number> {
     return await runUpdate({ targetDir, fromDir: fromDir as string, force, dryRun }, io);
   }
 
+  if (first === "sandbox") {
+    const parsed = parseSandboxArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      return 1;
+    }
+    if (parsed.args.help) {
+      printSandboxHelp();
+      return 0;
+    }
+    return runSandbox({}, lifecycleIo());
+  }
+
+  if (first === "shell") {
+    const parsed = parseShellArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      return 1;
+    }
+    if (parsed.args.help) {
+      printShellHelp();
+      return 0;
+    }
+    return runShell({ container: parsed.args.container }, lifecycleIo());
+  }
+
+  if (first === "gateway") {
+    const parsed = parseGatewayArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      return 1;
+    }
+    if (parsed.args.help) {
+      printGatewayHelp();
+      return 0;
+    }
+    return runGateway(parsed.args.passthrough, {});
+  }
+
   process.stderr.write(`oh: unknown command "${first}"\n\n`);
   printOhHelp();
   return 1;
+}
+
+function lifecycleIo(): LifecycleIO {
+  return {
+    stdout: (s: string) => process.stdout.write(s),
+    stderr: (s: string) => process.stderr.write(s),
+  };
 }
 
 main(process.argv.slice(2)).then(

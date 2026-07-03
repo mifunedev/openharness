@@ -57,13 +57,50 @@ suite score = mean(task score over all tasks)         # 0.0 – 2.0
 
 The **baseline** is established `2026-06-15` by **rubric inspection** — scoring
 the real repo state and the most-recent real instance of each task against the
-rubric above, by hand. There is no automated runner yet (see *Non-scope*).
+rubric above, by hand. The executable **runner** `run.sh` (see *Runner*) now turns
+that inspection into a reproducible, overwrite-per-id scoreboard write.
+
+## Runner
+
+The executable runner `run.sh` (mirroring the `/eval` runner idiom:
+`${BASH_SOURCE[0]}` root-resolution, atomic temp-sibling + `mv -f` write) turns
+rubric inspection into a reproducible scoreboard write. It is **semi-automated**:
+the operator supplies the three axis *values* — the runner validates them against
+`{PASS,PARTIAL,FAIL}`, computes the task score, a baseline delta, and the
+capability-vs-machinery classification, then atomically overwrites only that
+task's row. It **never fabricates a judgment axis** (a missing or out-of-enum
+axis exits non-zero and writes nothing) and is **fully task-agnostic** (zero
+per-task-id branching, so a held-out task cannot be special-cased).
+
+```bash
+# schema self-check against the committed scoreboard
+bash .oh/evals/capability/run.sh --validate
+
+# score-preview (no write): print the deterministic task score for a triad
+bash .oh/evals/capability/run.sh --success PASS --cost-time PARTIAL --unattended PARTIAL
+
+# re-score a task and overwrite ONLY its row (recomputes the suite-score comment).
+# --check runs a success-signal probe and records check=PASS|SKIPPED|FAIL as
+# EVIDENCE (never a judgment axis — the operator still supplies the triad);
+# --base <ref> compares against a counterfactual; --dry-run previews without writing.
+bash .oh/evals/capability/run.sh --task CB-004 \
+  --success PARTIAL --cost-time PARTIAL --unattended PARTIAL \
+  --check 'bash .oh/evals/probes/repo-map-contract.sh'
+```
+
+The row records the three axes, the task score, and a `Δ <delta> <class> vs
+<prior> baseline` note: a flat score is classified **machinery-added** (the
+anti-Goodhart signal — you built more but the capability didn't move), a risen
+score **capability-improved**. Git history is the time series — the runner
+overwrites the row, never appends. The `/benchmark` verdict skill reads the
+recomputed `suite score = <n>` comment as the ceiling delta versus the counterfactual.
 
 ## Layout
 
 | Path | Holds |
 |---|---|
 | `README.md` | This spec — the instrument, axes, schema, and discipline. |
+| `run.sh` | The executable runner (see *Runner*): validates operator-supplied axes, scores, computes the baseline delta + machinery-vs-capability class, and overwrites the task's row. |
 | `tasks/CB-NNN-<slug>.md` | One spec per benchmark task: its deliverable, the per-axis rubric, and a pointer to the most-recent real instance. `NNN` is a zero-padded, never-reused id. |
 | `repo-orientation/tasks.json` | Held-out workload manifest for CB-004 repo-orientation A/B scoring. |
 | `RESULTS.md` | The scoreboard. House style mirrors [`../RESULTS.md`](../RESULTS.md): one row per task id, **overwrite the row** each run — git history is the time series, not appended rows. |
@@ -93,14 +130,17 @@ score does not move over N cycles** while the harness keeps adding machinery
 single external vote that can say "you are building the wrong thing". A flat ceiling under
 growing complexity means the harness is busy but not *better*; only a human re-aims it.
 
-## Non-scope (be honest about what this v1 is)
+## Non-scope (be honest about what this is)
 
-This v1 **stands up the instrument and a hand-scored baseline — nothing more.**
-Stated plainly so no one mistakes it for a live gate:
+This **stands up the instrument, a hand-scored baseline, and a semi-automated
+runner — but not a live gate.** Stated plainly so no one mistakes it for one:
 
-- It does **not** auto-run. There is no `/benchmark` skill yet; scoring is
-  rubric inspection by a human/orchestrator. A `/benchmark` skill (or an `/eval`
-  extension) that runs and scores tasks automatically is a **follow-on**.
+- The runner is **semi-**automated by design. `run.sh` scores and overwrites rows
+  from **operator-supplied, validated** axis values and the `/benchmark` verdict
+  skill consumes its output — but the judgment axes are **not** auto-decided
+  (that is why the operator supplies them; `--check` records a probe result only
+  as *evidence*, never as an axis). Fully-automatic judgment scoring is a
+  deliberate non-goal.
 - It is **not wired into any gate.** Nothing fails CI, blocks a merge, or gates a
   PR on the benchmark delta today.
 - The loop `benchmark` node, `/eval`-gating on the score delta, and `selection`

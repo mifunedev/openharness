@@ -57,8 +57,7 @@ Makefile
 # --- Norms folded into skills (formerly .oh/context/rules/, B-state M3+M4) ---
 .oh/skills/git/SKILL.md
 .oh/skills/t3/references/sandbox-processes.md
-.oh/skills/advisor/SKILL.md
-.oh/skills/advisor/references/recursive-delegation.md
+.oh/agents/advisor.md  # advisor delegation + recursive-decomposition norm, now an agent (was .oh/skills/advisor/)
 .oh/skills/retro/references/memory-protocol.md
 
 # --- Specs that other artifacts cross-reference ---

@@ -109,6 +109,17 @@ if [ -d "$HARNESS_DIR" ]; then
   fi
 fi
 
+# Set the sandbox user's LOGIN password so an operator can authenticate on a
+# remote box (e.g. `su sandbox` or SSH password auth). This is unconditional
+# — independent of whether the UID/GID reconcile above succeeded — and is
+# distinct from sudo, which stays NOPASSWD:ALL via /etc/sudoers.d/sandbox.
+# The trailing `|| echo ... >&2` (not a bare `|| true`) keeps a chpasswd
+# failure (e.g. read-only /etc on some hosts) from aborting boot under
+# `set -e`, while still surfacing it as a warning; never log $PW itself.
+PW="${SANDBOX_PASSWORD:-test1234}"
+echo "sandbox:${PW}" | chpasswd || echo "[entrypoint] WARNING: failed to set sandbox login password" >&2
+unset PW
+
 # UID/GID reconciliation can change the numeric identity behind the sandbox
 # user after Docker-created auth volumes were repaired above. Repeat the
 # idempotent repair with the final uid:gid so persisted credentials remain

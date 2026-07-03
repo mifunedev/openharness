@@ -6,6 +6,12 @@ export PORT
 export OPENHARNESS_HOSTED_MODE="${OPENHARNESS_HOSTED_MODE:-railway}"
 export OH_PROJECT_ROOT="${OH_PROJECT_ROOT:-/home/sandbox/harness}"
 
+# Give the sandbox user a real Unix login password (sudo itself stays
+# passwordless via the NOPASSWD:ALL sudoers entry set in the Dockerfile).
+# Do not echo ${PW} anywhere below.
+PW="${SANDBOX_PASSWORD:-test1234}"
+echo "sandbox:${PW}" | sudo chpasswd
+
 cd "$OH_PROJECT_ROOT"
 
 if ! command -v oh >/dev/null 2>&1; then

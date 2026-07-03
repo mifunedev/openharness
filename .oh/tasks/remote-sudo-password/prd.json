@@ -1,0 +1,53 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/remote-sudo-password",
+    "description": "Set the sandbox user's Unix login password on remote/hosted deployments from a SANDBOX_PASSWORD variable with a fallback default of test1234, so an operator can authenticate as `sandbox` (SSH/console/su) on a remote box. The existing NOPASSWD:ALL passwordless sudo is preserved unchanged — this adds a *login* password only; it does NOT make sudo require a password. Both container images (.devcontainer and .oh/deploy/railway) and the local env surface are covered.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Devcontainer: set sandbox login password from SANDBOX_PASSWORD (default test1234) at runtime, keep passwordless sudo",
+            "description": "As an operator of a remote devcontainer sandbox, I want the `sandbox` user to have a real Unix login password so I can authenticate as it, while sudo stays passwordless. The entrypoint already runs as root before it drops to `gosu sandbox`, so set the password there from the env var with the required fallback.",
+            "acceptanceCriteria": [
+                "In .devcontainer/docker-compose.yml, add `- SANDBOX_PASSWORD=${SANDBOX_PASSWORD:-test1234}` to the sandbox service `environment:` block (near the other identity vars) so the variable reaches the container with the fallback default.",
+                "In .devcontainer/entrypoint.sh, while still running as root (before any `gosu sandbox` handoff / near the existing usermod UID-reconcile ops), set the login password: resolve `PW=\"${SANDBOX_PASSWORD:-test1234}\"` and run `echo \"sandbox:${PW}\" | chpasswd`. Guard so an empty/unset value still falls back to test1234, and do not `set -x`/echo the password to logs.",
+                "Do NOT modify /etc/sudoers.d/sandbox — the `sandbox ALL=(ALL) NOPASSWD:ALL` line in .devcontainer/Dockerfile stays exactly as-is; sudo must remain passwordless.",
+                "`bash -n .devcontainer/entrypoint.sh` passes (script remains syntactically valid).",
+                "Verifiable behavior (documented in the story notes / progress.txt): after boot, `passwd -S sandbox` reports a set password (status `P`, not `L`/`NP`) and `sudo -n true` as sandbox still succeeds without a password prompt.",
+                "The password value is not printed to stdout/stderr or the entrypoint log."
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "Entrypoint root context confirmed at .devcontainer/entrypoint.sh (groupmod/chown/usermod run as root, then `gosu sandbox` drops privileges). Place the chpasswd near the usermod UID-reconcile block (~line 102) but unconditional (not gated on UID sync)."
+        },
+        {
+            "id": "US-002",
+            "title": "Railway/hosted image: set sandbox login password from SANDBOX_PASSWORD (default test1234), keep passwordless sudo",
+            "description": "As an operator of the hosted (Railway) image, I want the same SANDBOX_PASSWORD-with-test1234-fallback login password behavior. That image runs `.oh/deploy/railway/start.sh` as the `sandbox` user (Dockerfile does `USER sandbox`), but `sandbox` has passwordless sudo, so the password can be set at container start via sudo.",
+            "acceptanceCriteria": [
+                "In .oh/deploy/railway/start.sh, near the top (after `set -euo pipefail`, before `exec node ...`), resolve `PW=\"${SANDBOX_PASSWORD:-test1234}\"` and set the password using the available passwordless sudo: `echo \"sandbox:${PW}\" | sudo chpasswd`. It must tolerate a missing/empty SANDBOX_PASSWORD (fall back to test1234) and must not print the password.",
+                "Do NOT modify the `sandbox ALL=(ALL) NOPASSWD:ALL` sudoers line in .oh/deploy/railway/Dockerfile — passwordless sudo is preserved.",
+                "`bash -n .oh/deploy/railway/start.sh` passes.",
+                "start.sh keeps its `set -euo pipefail` discipline: the chpasswd step must not abort startup if it is a no-op environment, but a genuine failure to set the password should surface (do not blanket-`|| true` in a way that hides a real error — a short comment explaining the choice is acceptable).",
+                "Verifiable behavior (documented in notes): in a built railway image, `passwd -S sandbox` reports a set password after start.sh runs."
+            ],
+            "priority": 1,
+            "passes": false,
+            "notes": "start.sh runs as `sandbox` (USER sandbox in .oh/deploy/railway/Dockerfile) and has NOPASSWD sudo, so `sudo chpasswd` works at runtime without a rebuild — a Railway-set SANDBOX_PASSWORD env var takes effect on next start."
+        },
+        {
+            "id": "US-003",
+            "title": "Document SANDBOX_PASSWORD in .example.env with the test1234 default and its security caveat",
+            "description": "As a new operator, I want to discover the SANDBOX_PASSWORD variable and understand that it defaults to a weak, publicly-known value that must be overridden on any exposed deployment.",
+            "acceptanceCriteria": [
+                "Add a documented `SANDBOX_PASSWORD` entry to .devcontainer/.example.env (a commented example line plus a short explanation), describing it as the `sandbox` user's remote LOGIN password (not the sudo password — sudo stays passwordless) and stating the fallback default is `test1234`.",
+                "The comment includes a SECURITY warning: `test1234` is a known weak default intended for convenience/local use; set a strong value in the gitignored .devcontainer/.env (or the platform's secret store, e.g. Railway variables) for any network-reachable deployment.",
+                "Do NOT add SANDBOX_PASSWORD to tracked harness.yaml — it is a secret and belongs in the gitignored .env surface, consistent with the existing 'secrets in .env, non-secret defaults in harness.yaml' convention.",
+                "Wording matches the file's existing comment style/format in .devcontainer/.example.env."
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": "harness.yaml keys map to env vars but harness.yaml is a tracked/non-secret surface; a password must not be committed there. Document only in .example.env."
+        }
+    ]
+}

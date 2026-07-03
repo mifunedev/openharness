@@ -240,7 +240,8 @@ PY
 }
 
 ensure_hermes_gateway_cwd() {
-  local hermes_home="$1" gateway_cwd="$2" config_file="$hermes_home/config.yaml"
+  local hermes_home="$1" gateway_cwd="$2"
+  local config_file="$hermes_home/config.yaml"
   mkdir -p "$hermes_home"
   # Hermes gateway defaults terminal.cwd to $HOME when config.yaml omits it.
   # Persist the harness cwd so relative tool/file operations route into the

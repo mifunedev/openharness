@@ -264,7 +264,7 @@ Only when `--deep` is set. For PRs in the **CI-failing / conflicting /
 changes-requested** buckets (the ones whose *why* isn't visible from metadata),
 spawn parallel sub-agent reviewers **in one message**, capped at ~5 (state in
 the report if more were flagged than reviewed — no silent truncation). Brief
-each per `.oh/skills/advisor/SKILL.md` (Goal / Constraints / Acceptance /
+each per `.oh/agents/advisor.md` (Goal / Constraints / Acceptance /
 Start here / Out of scope). Each reviewer:
 
 - reads `gh pr diff <N>` and `gh pr checks <N>` (and the failing job log for CI reds)
@@ -385,6 +385,6 @@ Then run the qualify/improve pass per `.oh/skills/retro/references/memory-protoc
 | Ready-PR selector | `.oh/crons/heartbeat.md` (autopilot ready-PR nudge) |
 | PR title / base / size conventions | `.claude/skills/git/SKILL.md` |
 | Autopilot caps (10 total / 6 daily) | `.claude/skills/autopilot/SKILL.md` § Guardrails |
-| Parallel-agent briefing format | `.oh/skills/advisor/SKILL.md` |
+| Parallel-agent briefing format | `.oh/agents/advisor.md` |
 | Per-PR diff correctness (escalate, don't duplicate) | `/code-review` |
 | Memory Improvement Protocol | `.oh/skills/retro/references/memory-protocol.md` |

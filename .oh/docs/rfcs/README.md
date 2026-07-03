@@ -25,7 +25,8 @@ No stage gates, no editors, no numbering scheme beyond the GitHub issue number.
 | Proposal | Status | Summary |
 |---|---|---|
 | [#531](https://github.com/mifunedev/openharness/issues/531) | Accepted | Portable `.oh/` control plane — `oh init` / `oh update`, the project-root seam, and the machinery-namespace relocation. |
-| [#525](https://github.com/mifunedev/openharness/issues/525) | Draft | Self-improving-harness roadmap epic. |
+| [#525](https://github.com/mifunedev/openharness/issues/525) | Draft | Self-improving-harness roadmap epic; the [curation doc](rfc-selfimprove-roadmap.md) is the proposed child-issue index for human filing. |
+| [Trace/event ledger RFC](rfc-trace-ledger.md) | Draft | Foundational #525 child spec for the normalized append-only event ledger, storage layout, redaction rules, and replay/diagnosis/scoring event set. |
 | [#532](https://github.com/mifunedev/openharness/issues/532) | [Accepted — resolved lightweight; heavy scope deferred](adr-0001-standards-scope.md) | Standards process — keep the lightweight RFC / ADR convention; defer the full taxonomy, registries, lifecycle, and conformance profiles until a concrete future issue needs them. |
 
 ## Decision records

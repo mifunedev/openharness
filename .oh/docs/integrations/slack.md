@@ -198,6 +198,32 @@ turn was Slack-originated (the bridge's `[📱 … via slack]:` stamp), it re-in
 that turn **once** — the failed request already cleared the stale id, so the
 retry chains fresh and succeeds. It does not patch the npm package.
 
+### 4.6 Run and verify (read-only)
+
+Run and check the gateway **from inside the sandbox** — both `gateway <pi|hermes>` and
+`make gateway <pi|hermes>` require `pi`/`hermes` on `PATH`, so they only work in the
+container (`.oh/scripts/gateway.sh` errors "run inside the sandbox" otherwise).
+
+```bash
+gateway pi                 # start the client-slack-pi session (idempotent)
+gateway status             # both sessions + state, e.g.
+                           #   · client-slack-pi        stopped   (gateway pi)
+                           #   · client-slack-hermes    stopped   (gateway hermes)
+```
+
+To **watch** a running gateway without any risk of killing it, attach **read-only** with
+`-r`, then detach with `Ctrl-b d` — never `Ctrl-C` or `exit` (those stop the pi process):
+
+```bash
+tmux attach -r -t client-slack-pi     # read-only view of the live session; detach: Ctrl-b d
+tail -f /tmp/client-slack-pi.log      # or just tail the log — no attach needed
+```
+
+Use the interactive `gateway pi --attach` (read-write) **only** when you actually need to
+run `/msg-bridge`, `/trusted`, or `/channels` inside the session. The sibling Hermes gateway
+is the same story — `gateway hermes`, session `client-slack-hermes`, log
+`/tmp/client-slack-hermes.log` (see [Hermes → Run and verify](../harnesses/hermes.md#run-and-verify-read-only)).
+
 ### Manual relaunch
 
 After editing `.devcontainer/.env` or `.pi/msg-bridge.json`, restart the session
@@ -226,7 +252,7 @@ maintain — trust is established through a one-time challenge.
 
 1. The first time an unknown user messages the bot, the bridge prints a
    **6-digit challenge code** in the pi terminal. Read it with
-   `tmux attach -t client-slack-pi` (detach: `Ctrl-b d`).
+   `tmux attach -r -t client-slack-pi` (detach: `Ctrl-b d`).
 2. The user replies with that code in Slack.
 3. On a match, the user becomes **trusted** and is persisted to
    `~/.pi/msg-bridge.json` under `auth.trustedUsers`, namespaced by transport as
@@ -278,14 +304,14 @@ env (before attaching to tmux).
 3. **Round-trip test:**
    DM the bot or `@mention` it in a channel. If you've never talked to it
    before, complete the 6-digit challenge (§ 5) first. Watch
-   `tmux attach -t client-slack-pi` — you should see the inbound event logged
+   `tmux attach -r -t client-slack-pi` — you should see the inbound event logged
    and the agent's reply posted back to Slack.
 
 ## 8. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Bot stays silent; you've never authenticated | Deny-by-default — your Slack user isn't trusted yet | DM the bot, read the 6-digit code from `tmux attach -t client-slack-pi`, reply with it in Slack — or pre-authorize your user ID in `.pi/msg-bridge.json` (§ 4.2) |
+| Bot stays silent; you've never authenticated | Deny-by-default — your Slack user isn't trusted yet | DM the bot, read the 6-digit code from `tmux attach -r -t client-slack-pi`, reply with it in Slack — or pre-authorize your user ID in `.pi/msg-bridge.json` (§ 4.2) |
 | `invalid_auth` / `not_authed` in the log | `xapp-` and `xoxb-` tokens are swapped | `PI_SLACK_APP_TOKEN` must be the `xapp-` token; `PI_SLACK_BOT_TOKEN` must be the `xoxb-` token — correct `.devcontainer/.env` and relaunch |
 | Bridge won't start after an unclean exit | Stale lock file `~/.pi/msg-bridge.lock` left behind | `rm ~/.pi/msg-bridge.lock`, then relaunch the `client-slack-pi` session |
 | Bot connected (`[Slack] Bot user ID:` logged) but never replies | `autoConnect` not set in `.pi/msg-bridge.json` — the bridge stays idle | Set `"autoConnect": true` (§ 4.2) and relaunch |

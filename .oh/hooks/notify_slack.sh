@@ -15,7 +15,8 @@ else
     DOTENV_PATH="$FALLBACK_ENV_PATH"
 fi
 
-# Load env file if it exists
+# Load env file if it exists. Slack notifications are optional, so missing
+# env files are a no-op instead of a hook failure.
 if [[ -f "$DOTENV_PATH" ]]; then
     # Export variables from env file (handles quoted values and comments)
     set -a
@@ -23,14 +24,13 @@ if [[ -f "$DOTENV_PATH" ]]; then
     source "$DOTENV_PATH"
     set +a
     echo "Loaded env from: $DOTENV_PATH" >&2
-else
-    echo "No env file found at $PREFERRED_ENV_PATH or $FALLBACK_ENV_PATH" >&2
 fi
 
-# Check for SLACK_WEBHOOK_URL
+# Skip Slack notifications when no webhook is configured. This hook should
+# never fail a Claude stop/notification event just because Slack is disabled.
 if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
-    echo "SLACK_WEBHOOK_URL is not set" >&2
-    exit 1
+    echo "Slack notification skipped: SLACK_WEBHOOK_URL is not set" >&2
+    exit 0
 fi
 
 # Read input JSON from stdin

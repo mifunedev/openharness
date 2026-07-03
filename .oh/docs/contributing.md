@@ -66,16 +66,14 @@ bash .claude/skills/eval/run.sh
 
 The rendered docs site is maintained in [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web). In this core repo, validate docs by checking the Markdown links and the GitHub-readable index at `docs/README.md`; no Docusaurus build runs here.
 
-### Installing a harness pack
+### Multi-agent messaging (Slack)
 
-Multi-agent setups (e.g. Pi+Mom Slack bot) ship as harness packs. Install one by cloning it into the workspace and following its README:
-
-```bash
-git clone <pack-repo> workspace/<pack>
-# then follow workspace/<pack>/README.md
-```
-
-The canonical example is [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune), which defines the pack contract.
+Slack (and other messengers) bridge to a Pi agent via the
+[`pi-messenger-bridge`](https://github.com/tintinweb/pi-messenger-bridge) npm package. The
+harness installs it into a gitignored `.pi/bridge/` directory and loads it via `--extension`
+only in the dedicated `client-slack-pi` tmux session (managed by `.oh/scripts/gateway.sh`) —
+you don't run `pi install` yourself. Full setup (tokens, trust, the sibling Hermes gateway)
+lives in [Slack integration](./integrations/slack.md).
 
 ## Branch Naming
 

@@ -12,6 +12,7 @@ Open Harness is a portable harness — a single repo that boots an isolated Dock
 |---|---|---|
 | Docker (with Compose plugin) | Sandbox image | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
 | git | Cloning the repo | [git-scm.com](https://git-scm.com/) |
+| make (build-essential) | The `make sandbox` / `make shell` / `make destroy` wrappers around `docker compose` | `sudo apt-get install build-essential` (Debian/Ubuntu) · Xcode Command Line Tools (macOS) |
 
 That is the entire host requirement. Node.js, pnpm, and any AI CLI live inside the sandbox.
 
@@ -38,20 +39,44 @@ The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and start
    bash .oh/scripts/install.sh
    ```
 
-### Clone-and-own (re-point)
+### Clone-and-own: private origin and upstream (recommended)
 
-1. Clone upstream:
+The validated path for running your own long-lived harness: clone upstream, make
+**your** repo the `origin`, and keep `mifunedev/openharness` as `upstream` so you can
+pull framework updates and open PRs back. Creating the private repo and setting the
+remotes happens **inside the sandbox**, after GitHub auth, so the SSH key generated
+there is the one used for pushes.
+
+1. Clone upstream, edit `harness.yaml`, then bring the sandbox up and open a shell:
    ```bash
-   git clone --recurse-submodules https://github.com/mifunedev/openharness.git my-harness && cd my-harness
+   git clone --recurse-submodules https://github.com/mifunedev/openharness.git ~/.openharness
+   cd ~/.openharness
+   nano harness.yaml   # set sandbox.name, sandbox.timezone, git.user_name/user_email,
+                       # optional installs — see Quickstart → Configuration. Do this BEFORE building.
+   make sandbox        # build + start the container (~10 min cold)
+   make shell          # attach as the sandbox user
    ```
-2. Re-point origin to your repo:
+2. **Inside the sandbox**, authenticate GitHub over SSH — choose SSH as the protocol
+   and let `gh` generate a key (details: [GitHub auth](./integrations/github.md)):
    ```bash
-   git remote set-url origin https://github.com/<your-org>/<your-repo>.git
+   gh auth login       # GitHub.com → SSH → generate a new SSH key → paste a token
+   gh auth setup-git
    ```
-3. Run the installer:
+3. Still inside the sandbox, create your own **private** repo, make it `origin`, and
+   add upstream — all over SSH so the key from step 2 is used:
    ```bash
-   bash .oh/scripts/install.sh
+   gh repo create <your-user>/openharness --private
+   git remote set-url origin git@github.com:<your-user>/openharness.git
+   git remote add upstream git@github.com:mifunedev/openharness.git
+   git push -u origin HEAD
    ```
+   Pull framework updates later with `git fetch upstream && git merge upstream/development`;
+   contribute back by opening PRs from your repo to `mifunedev/openharness`.
+
+> Prefer HTTPS or an installer-driven bring-up? Re-point origin to your repo with
+> `git remote set-url origin https://github.com/<your-org>/<your-repo>.git` and run
+> `bash .oh/scripts/install.sh` instead of `make sandbox` — the installer detects the
+> local clone automatically.
 
 ## One-line installer (upstream only)
 
@@ -69,7 +94,7 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides a fetch/diff/ShellCheck/preview/approve wrapper for the same installer. `vet` is optional; Open Harness itself requires Docker with Compose and Git.
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides a fetch/diff/ShellCheck/preview/approve wrapper for the same installer. `vet` is optional; Open Harness itself requires Docker with Compose, Git, and make (see [Prerequisites](#prerequisites)).
 
 The installer:
 
@@ -162,7 +187,7 @@ Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside
 
 ## What's Installed
 
-The sandbox image ships a complete development environment. The required host dependencies are Docker with the Compose plugin and Git.
+The sandbox image ships a complete development environment. The required host dependencies are Docker with the Compose plugin, Git, and make (see [Prerequisites](#prerequisites)).
 
 Project-local Pi packages are loaded from `.pi/settings.json`; the defaults include `@tintinweb/pi-subagents`, `@tintinweb/pi-tasks`, `@narumitw/pi-goal`, `@narumitw/pi-plan-mode`, `@narumitw/pi-codex-usage@0.6.2` for `/codex-status` plus fixed statusline usage timers, `@tifan/pi-recap` for `/recap` plus automatic idle/resume session summaries, `@trevonistrevon/pi-loop` for Monitor/Loop tools, `@guwidoe/pi-prompt-suggester` for next-prompt suggestions, `pi-autoresearch` for autonomous metric-optimization loops, and `pi-dynamic-workflows` for workflow-script fan-out through isolated Pi subagents.
 

@@ -1,25 +1,102 @@
-# 🏗️ Open Harness
+<h1 align="center">🏗️ Open Harness</h1>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-D4AF37?style=plastic&labelColor=0B1220"></a>
+  <a href="https://github.com/mifunedev/openharness/actions/workflows/ci-harness.yml"><img alt="CI: Harness" src="https://img.shields.io/github/actions/workflow/status/mifunedev/openharness/ci-harness.yml?branch=main&style=plastic&label=CI&labelColor=0B1220&color=D4AF37"></a>
+  <a href="https://github.com/mifunedev/openharness/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/mifunedev/openharness?style=plastic&logo=github&logoColor=white&labelColor=0B1220&color=D4AF37"></a>
+  <a href="https://github.com/mifunedev/openharness/issues"><img alt="Issues" src="https://img.shields.io/github/issues/mifunedev/openharness?style=plastic&labelColor=0B1220&color=D4AF37"></a>
+  <img alt="Docker required" src="https://img.shields.io/badge/Docker-required-D4AF37?style=plastic&logo=docker&logoColor=white&labelColor=0B1220">
+  <a href="https://deepwiki.com/mifunedev/openharness"><img alt="Ask DeepWiki" src="https://img.shields.io/badge/DeepWiki-ask-D4AF37?style=plastic&labelColor=0B1220"></a>
+</p>
+
+<p align="center">
+  <img src=".github/assets/mifune-banner.jpg" alt="Open Harness" width="100%">
+</p>
 
 **Open Harness** is a Docker-based agent harness for **one project**, agent-tended over time. One `docker compose up` gives you a long-lived sandbox where Claude (or another agent of your choice) runs against a single repo, branch, and identity — not a multi-tenant comparison rig.
 
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
 - **Agents that work while you sleep.** A tiny croner runtime reads `.oh/crons/*.md` markdown and wakes the agent on a schedule.
-- **Host dependencies: Docker + Git.** No Node, no Python, no toolchain rot on your laptop.
+- **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites).)
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
-- **Multi-agent? Add a pack.** Other multi-agent setups ship as separate packs — see [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune).
+- **Multiple harnesses, one sandbox.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in); bridge them to Slack with [`pi-messenger-bridge`](.oh/docs/integrations/slack.md).
 
 ---
 
 ## 📦 Install
 
+Open Harness runs one project in one Docker sandbox. The recommended path is
+**clone-and-own**: clone upstream, then make your **own private repo** the `origin` and keep
+`mifunedev/openharness` as `upstream` so you can pull framework updates and contribute back.
+
+Host prerequisites: [Docker](https://docs.docker.com/get-docker/) with the Compose plugin,
+[Git](https://git-scm.com/), and `make` (build-essential) — full list in
+[Prerequisites](.oh/docs/installation.md#prerequisites).
+
+### 1. Basic setup
+
+```bash
+# a. Clone upstream:
+git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
+
+# b. Edit harness.yaml BEFORE building — set sandbox.name, sandbox.timezone,
+#    git.user_name, git.user_email, and any optional installs (Hermes, agent-browser, …).
+#    See "⚙️ Configure" below for the full key list. Secrets stay in .devcontainer/.env.
+nano harness.yaml
+
+# c. Build the image and open a shell inside the sandbox:
+make sandbox && make shell
+```
+
+That is already a working sandbox. To make it **yours** (private `origin` + `upstream`) and
+authenticate the agents, continue with the optional full setup.
+
+### 2. Full setup (optional) — private repo, remotes, agent auth
+
+Run these **inside the sandbox** (`make shell`). Per-step depth + troubleshooting:
+[quickstart → End-to-end setup walkthrough](.oh/docs/quickstart.md#end-to-end-setup-walkthrough).
+
+```bash
+# GitHub auth over SSH — pick SSH, generate a key, paste a token:
+gh auth login && gh auth setup-git
+
+# Create your own PRIVATE repo, point origin at it, add upstream — all over SSH:
+gh repo create <your-user>/openharness --private
+git remote set-url origin git@github.com:<your-user>/openharness.git
+git remote add upstream git@github.com:mifunedev/openharness.git
+git push -u origin HEAD
+
+# Authenticate the agents you'll use. Simplest cross-provider path: launch the agent,
+# run /login, and pick DEVICE MODE (a code + URL that works headless/remote). The
+# one-liners below are equivalents where a provider exposes them:
+claude auth login            # Claude Code   (or /login in-session)
+codex login --device-auth    # Codex         (device mode; or /login in-session)
+pi                           # Pi            (first run walks provider auth; /login in-session)
+hermes setup                 # Hermes        (optional; needs install.hermes: true)
+
+# Configure Slack, then run + verify the gateways (sandbox-only):
+#   config: .oh/docs/integrations/slack.md  ·  .oh/docs/harnesses/hermes.md
+gateway pi && gateway hermes
+gateway status
+tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
+```
+
+> **Optional — DebugMCP.** If you attach to the sandbox from **VS Code** (Dev Containers →
+> *Attach to Running Container*) after `make sandbox`, you can install the `microsoft/DebugMCP`
+> extension to expose a debugging MCP server that **any MCP-capable harness** (Claude Code,
+> Codex, …) can drive. It's optional and not tied to any single agent — see the
+> [DebugMCP runbook](.oh/docs/integrations/debugmcp.md#confirmed-setup-runbook).
+
+<details><summary>Other install methods (Railway preview · one-line installer · fork-and-clone)</summary>
+
 **Hosted smoke test — Railway (one click):**
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2Fmifunedev%2Fopenharness)
 
-This boots a Railway-hosted status surface so you can verify Open Harness starts before doing local setup. Railway mode does **not** provide the host Docker socket or privileged sibling containers needed for full sandbox lifecycle commands (`make sandbox`, `make shell`, compose overlays). Use it as a hosted preview; use the local Docker path below for the complete harness. Details: [Railway deployment](.oh/docs/railway.md).
+This boots a Railway-hosted status surface so you can verify Open Harness starts before doing local setup. Railway mode does **not** provide the host Docker socket or privileged sibling containers needed for full sandbox lifecycle commands (`make sandbox`, `make shell`, compose overlays). Use it as a hosted preview; use the local Docker path above for the complete harness. Details: [Railway deployment](.oh/docs/railway.md).
 
-**Option A — Upstream (try it without any local repo setup):**
+**One-line installer (upstream):**
 
 ```bash
 curl -fsSL https://oh.mifune.dev/install.sh | bash
@@ -33,28 +110,17 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), you can review and approve the same installer with `vet https://oh.mifune.dev/install.sh`. `vet` is optional; Open Harness requires Docker with the Compose plugin and Git on the host.
+If you already use [`vet`](https://github.com/vet-run/vet), you can review and approve the same installer with `vet https://oh.mifune.dev/install.sh`. `vet` is optional; Open Harness requires Docker with the Compose plugin, Git, and make on the host. The installer clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm).
 
-Clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm). Required host dependencies: [Docker](https://docs.docker.com/get-docker/) with the Compose plugin and [Git](https://git-scm.com/).
-
-**Option B — Fork and clone (recommended for self-hosting):**
+**Fork and clone (self-hosting):**
 
 ```bash
-# 1. Fork on GitHub, then clone YOUR fork:
+# Fork on GitHub, then clone YOUR fork; the installer auto-detects the local clone:
 git clone https://github.com/<your-org>/<your-fork>.git && cd <your-fork>
-# 2. Bootstrap — installer auto-detects the local clone, no env vars needed:
 bash .oh/scripts/install.sh
 ```
 
-**Option C — Clone upstream, then re-point to your repo:**
-
-```bash
-git clone https://github.com/mifunedev/openharness.git my-harness && cd my-harness
-git remote set-url origin https://github.com/<your-org>/<your-repo>.git
-bash .oh/scripts/install.sh
-```
-
-<details><summary>Advanced: install directly from your fork without cloning first</summary>
+**Install directly from your fork without cloning first:**
 
 ```bash
 OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
@@ -106,13 +172,12 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 ## ⚙️ Configure (optional)
 
-`harness.yaml` is the tracked config for shared non-secret settings (optional
-installs, Slack allowlists, compose overlays, and any sandbox defaults you
-intentionally want in git). `.devcontainer/.env` is gitignored and holds
-host-local defaults generated by the installer (`SANDBOX_NAME`, `TZ`, git
-identity) plus secrets (`GH_TOKEN`, `PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`).
-Active keys in `harness.yaml` override `.devcontainer/.env`. Apply changes
-with `make destroy && make sandbox`.
+`harness.yaml` is the tracked config for shared non-secret settings (`sandbox.*`,
+`git.*`, optional installs, Slack allowlists, compose overlays). **Secrets stay in
+the gitignored `.devcontainer/.env`** (`GH_TOKEN`, `PI_SLACK_APP_TOKEN`,
+`PI_SLACK_BOT_TOKEN`) — never in `harness.yaml`. Active keys in `harness.yaml`
+override `.devcontainer/.env`; apply changes with `make destroy && make sandbox`.
+Full key reference: [Quickstart → Configuration](.oh/docs/quickstart.md#configuration).
 
 <details><summary>Manual setup (no installer)</summary>
 
@@ -134,7 +199,7 @@ make shell
 | **Browser** | agent-browser + Chromium (headless) |
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
 | **Crons** | Markdown-defined schedules in `.oh/crons/*.md` driven by the in-container croner runtime |
-| **Multi-agent** | Install a harness pack such as [`@ryaneggz/mifune`](https://github.com/ryaneggz/mifune) for additional multi-agent setups |
+| **Multi-agent** | Claude, Codex, Pi by default (Hermes/Grok opt-in); Slack bridging via [pi-messenger-bridge](.oh/docs/integrations/slack.md) |
 
 ## 📚 Where to go next
 
@@ -151,7 +216,7 @@ make destroy
 
 ## 🤝 Contributing & community
 
-Open Harness is maintained under the [`mifunedev`](https://github.com/mifunedev) org — the canonical repo is [github.com/mifunedev/openharness](https://github.com/mifunedev/openharness). To run your own, fork it (see **Option B** above) and open PRs back upstream. Issues and PRs welcome; if Open Harness is useful to you, please [give us a star](https://github.com/mifunedev/openharness/stargazers).
+Open Harness is maintained under the [`mifunedev`](https://github.com/mifunedev) org — the canonical repo is [github.com/mifunedev/openharness](https://github.com/mifunedev/openharness). To run your own, use the clone-and-own setup above (or fork it — see **Other install methods**) and open PRs back upstream. Issues and PRs welcome; if Open Harness is useful to you, please [give us a star](https://github.com/mifunedev/openharness/stargazers).
 
 ## 📄 License
 

@@ -487,6 +487,109 @@ export function detectSessionType(text) {
 }
 
 // ---------------------------------------------------------------------------
+// Weakness records (pure) — cluster repeated harness-level failure signals into
+// metadata-only WH-<NNN> records. A weakness record NEVER carries prompt text in
+// ANY mode (not even --include-prompt-text); supporting_traces holds session-id
+// metadata only. See references/report-schema.md and rfc-selfimprove-roadmap.md
+// items 4 + 6 (the likely_harness_layer / recommended_repair_surface vocab).
+// ---------------------------------------------------------------------------
+
+// A single occurrence is not a pattern: a signal must recur in at least this many
+// sessions before it earns a weakness record.
+export const WEAKNESS_MIN_FREQUENCY = 2;
+
+// Fixed failure-signal taxonomy. Declaration order is the deterministic tiebreak
+// when two clusters share a frequency, so WH-001 never flips across identical
+// runs. `likely_harness_layer` and `recommended_repair_surface` use the exact
+// RFC item 4 + 6 enum terms (harness layer: artifact contract | audit gate |
+// handoff | terminal status; repair surface: skill rule | probe | verifier).
+const WEAKNESS_SIGNALS = Object.freeze([
+  {
+    key: "tool_error",
+    match: (s) => Number(s?.toolErrors) > 0,
+    summary: "Recurring tool-call errors surfaced during execution",
+    likely_harness_layer: "terminal status",
+    recommended_repair_surface: "verifier",
+  },
+  {
+    key: "correction_churn",
+    match: (s) => Number(s?.scoreBreakdown?.signals?.correctionDensity) > 0,
+    summary: "Repeated user corrections point to an unclear task handoff",
+    likely_harness_layer: "handoff",
+    recommended_repair_surface: "skill rule",
+  },
+  {
+    key: "abandoned",
+    match: (s) => Number(s?.abandoned) > 0,
+    summary: "Sessions abandoned before a clean terminal status",
+    likely_harness_layer: "terminal status",
+    recommended_repair_surface: "probe",
+  },
+  {
+    key: "incomplete",
+    match: (s) => Number(s?.incomplete) > 0,
+    summary: "Sessions ended without a clean terminal status",
+    likely_harness_layer: "terminal status",
+    recommended_repair_surface: "probe",
+  },
+]);
+
+// buildWeaknessRecords clusters sessions by the fixed failure-signal taxonomy and
+// emits one metadata-only WH-<NNN> record per signal met by >= minFrequency
+// sessions. Pure + deterministic: clusters sort by frequency desc then taxonomy
+// order, so WH-001 is stable across byte-identical inputs.
+export function buildWeaknessRecords(sessions, opts = {}) {
+  const list = Array.isArray(sessions) ? sessions : [];
+  const total = list.length;
+  const minFrequency = Number.isInteger(opts.minFrequency)
+    ? opts.minFrequency
+    : WEAKNESS_MIN_FREQUENCY;
+
+  const clusters = [];
+  for (let order = 0; order < WEAKNESS_SIGNALS.length; order += 1) {
+    const signal = WEAKNESS_SIGNALS[order];
+    const matched = list.filter((s) => signal.match(s));
+    if (matched.length < minFrequency) continue;
+
+    // affected agents: distinct harness values, sorted (deterministic).
+    const affected_agents = [...new Set(matched.map((s) => s?.harness).filter(Boolean))].sort();
+
+    // supporting traces: session-id METADATA ONLY — never prompt text, in any mode.
+    const supporting_traces = matched
+      .map((s) => ({
+        sessionId: s?.sessionId ?? null,
+        harness: s?.harness ?? null,
+        gitBranch: s?.gitBranch ?? null,
+      }))
+      .sort((a, b) => String(a.sessionId).localeCompare(String(b.sessionId)));
+
+    clusters.push({
+      order,
+      count: matched.length,
+      summary: signal.summary,
+      frequency: `${matched.length}/${total}`,
+      affected_agents,
+      likely_harness_layer: signal.likely_harness_layer,
+      supporting_traces,
+      recommended_repair_surface: signal.recommended_repair_surface,
+    });
+  }
+
+  // Deterministic ordering: frequency desc, then taxonomy declaration order asc.
+  clusters.sort((a, b) => b.count - a.count || a.order - b.order);
+
+  return clusters.map((c, i) => ({
+    weakness_id: `WH-${String(i + 1).padStart(3, "0")}`,
+    summary: c.summary,
+    frequency: c.frequency,
+    affected_agents: c.affected_agents,
+    likely_harness_layer: c.likely_harness_layer,
+    supporting_traces: c.supporting_traces,
+    recommended_repair_surface: c.recommended_repair_surface,
+  }));
+}
+
+// ---------------------------------------------------------------------------
 // Redaction (pure)
 // ---------------------------------------------------------------------------
 
@@ -894,6 +997,10 @@ async function run(args) {
   const rankable = sessions.filter((s) => !s.noHumanPrompt && s.turns >= args.minTurns);
   rankable.sort((a, b) => b.score - a.score || String(a.sessionId).localeCompare(String(b.sessionId)));
 
+  // Weakness records cluster harness-level failure signals across ALL in-window
+  // sessions (ranked + unranked) — metadata only, never prompt text.
+  const weaknesses = buildWeaknessRecords(sessions);
+
   const manifest = {
     generatedAt,
     harnessFilter: args.harness,
@@ -917,6 +1024,7 @@ async function run(args) {
     markerFeatureKeys: MARKER_FEATURE_KEYS,
     sessions: rankable,
     unranked: sessions.filter((s) => s.noHumanPrompt || s.turns < args.minTurns),
+    weaknesses,
   };
 
   return { dataset, manifest, rankable, utcDate };

@@ -295,7 +295,7 @@ describe("runInit", () => {
     expect(listA).toEqual(listOh(b));
   });
 
-  it("missing vendor source: exit 1, stderr names the path + deferred #531 seam", async () => {
+  it("missing vendor source: exit 1, stderr names the path + the --from/--from-remote sources", async () => {
     const t = freshTmp();
     const bogus = join(t, "no-such-source");
     const { io, err } = makeIO();
@@ -304,7 +304,7 @@ describe("runInit", () => {
     expect(code).toBe(1);
     const msg = err.join("");
     expect(msg).toContain(resolve(bogus));
-    expect(msg).toContain("#531");
+    expect(msg).toContain("--from-remote");
     // Nothing vendored on the precondition failure.
     expect(existsSync(join(t, ".oh"))).toBe(false);
   });

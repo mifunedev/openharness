@@ -73,7 +73,7 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
     io.stderr(
       'oh update: update source not found at ' +
         fromOh +
-        '. Pass --from <built-OpenHarness-checkout>; remote-fetch is deferred (#531).\n',
+        '. Pass --from <built-OpenHarness-checkout> or --from-remote [--ref <ref>].\n',
     );
     return 1;
   }

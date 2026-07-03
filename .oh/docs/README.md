@@ -47,6 +47,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [Glossary](glossary.md)
 - [RFC / ADR index](rfcs/README.md)
 - [Self-improving harness roadmap curation](rfcs/rfc-selfimprove-roadmap.md)
+- [Trace/event ledger RFC](rfcs/rfc-trace-ledger.md)
 - [Property testing](property-testing.md)
 - [Resources](resources.md)
 - [Roadmap](roadmap.md)

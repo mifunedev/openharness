@@ -19,7 +19,8 @@ regardless; the flag documents that contract for the SKILL layer.
   "manifest": { ... },          // run metadata (below)
   "markerFeatureKeys": [ ... ], // the 13 feature keys (see markers.md)
   "sessions": [ ... ],          // ranked sessions (score desc), human-prompted, turns >= minTurns
-  "unranked": [ ... ]           // noHumanPrompt or below-minTurns sessions, same shape
+  "unranked": [ ... ],          // noHumanPrompt or below-minTurns sessions, same shape
+  "weaknesses": [ ... ]         // metadata-only WH-<NNN> harness-weakness records (below)
 }
 ```
 
@@ -73,6 +74,34 @@ regardless; the flag documents that contract for the SKILL layer.
   "promptText": "...redacted..."  // present only with --include-prompt-text
 }
 ```
+
+## `weaknesses[]`
+
+A deterministic, **metadata-only** clustering of repeated **harness-level** failure
+signals across the in-window corpus (both `sessions` and `unranked`). Each `WH-<NNN>`
+record has exactly seven fields and **never carries prompt text in any mode** — not
+even under `--include-prompt-text`; `supporting_traces` holds session-id metadata
+only. The array is purely additive — the four keys above are unchanged.
+
+```jsonc
+{
+  "weakness_id": "WH-001",                    // /^WH-\d{3}$/, stable across identical runs
+  "summary": "Repeated tool errors ...",      // fixed taxonomy phrase (no prompt text)
+  "frequency": "2/3",                         // n sessions matching / total in-window (/^\d+\/\d+$/)
+  "affected_agents": ["claude", "pi"],        // distinct harnesses, sorted
+  "likely_harness_layer": "terminal status",  // rfc-selfimprove item 4 vocab
+  "supporting_traces": [                       // session-id METADATA ONLY — never prompt text
+    { "sessionId": "...", "harness": "claude", "gitBranch": "feat/..." }
+  ],
+  "recommended_repair_surface": "verifier"     // rfc-selfimprove item 6 vocab
+}
+```
+
+Records are ordered by frequency desc, then a fixed taxonomy declaration order, so
+`WH-001` is stable across byte-identical inputs. A signal must recur across
+`>= WEAKNESS_MIN_FREQUENCY` (2) sessions to emit a record. Rendered into the markdown
+report as a `## Weakness records` table (metadata columns only — no `supporting_traces`
+prompt text). Guarded hermetically by `.oh/evals/probes/prompt-miner-weakness-record.sh`.
 
 ## See Also
 

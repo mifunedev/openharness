@@ -164,7 +164,8 @@ start_pi() {
 }
 
 hermes_teams_configured() {
-  local hermes_home="$1" env_file="$hermes_home/.env"
+  local hermes_home="$1"
+  local env_file="$hermes_home/.env"
   if [ -n "${TEAMS_CLIENT_ID:-}" ] || [ -n "${CLIENT_ID:-}" ]; then
     return 0
   fi
@@ -172,7 +173,8 @@ hermes_teams_configured() {
 }
 
 sync_hermes_teams_env_aliases() {
-  local hermes_home="$1" env_file="$hermes_home/.env"
+  local hermes_home="$1"
+  local env_file="$hermes_home/.env"
   [ -f "$env_file" ] || return 0
   command -v python3 >/dev/null 2>&1 || return 0
   python3 - "$env_file" <<'PY'

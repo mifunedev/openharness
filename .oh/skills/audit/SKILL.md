@@ -53,11 +53,13 @@ naming the gate). Only when **all** applicable gates pass is the verdict
 `AUDIT-PASS`. A gate whose signal is missing or ambiguous is a FAIL, never a pass
 (honest exits).
 
-### Gate 1 — Task-graph conformance
+### Gate 1 — Task-graph conformance + artifact contract
 
-Every user story in the task graph must be marked complete. The ralph loop flips
-`passes: false → true` as it finishes each story, so the graph is conformant only
-when **zero** stories remain unfinished:
+Gate 1 has **two gating sub-checks**; either failing is an `AUDIT-FAIL`.
+
+**(a) Task-graph conformance.** Every user story in the task graph must be marked
+complete. The ralph loop flips `passes: false → true` as it finishes each story, so
+the graph is conformant only when **zero** stories remain unfinished:
 
 ```bash
 SLUG="$1"; PRD=".oh/tasks/$SLUG/prd.json"
@@ -68,8 +70,29 @@ echo "task-graph: $((total - unfinished))/$total stories pass"
 [ "$unfinished" -eq 0 ] || { echo "FAIL gate1: $unfinished story(ies) not passing"; }
 ```
 
-A non-conformant graph is `AUDIT-FAIL` → `implement` (resume the unfinished
-stories). Do not advance to the later gates.
+**(b) Artifact contract.** If the `prd.json` declares an `artifact_contract` block
+(see the [artifact-contract schema](../../docs/artifact-contract-schema.md)), every
+path in `artifact_contract.required_artifacts` must exist on disk. This is a
+**gating** sub-check — a declared-but-missing artifact is a hard `AUDIT-FAIL`, not
+an advisory warning. The block is **optional and additive**: a `prd.json` with no
+`artifact_contract` key yields an empty list and passes this sub-check unchanged,
+so the gate keeps its pre-contract behavior for specs that declare no contract:
+
+```bash
+# Gating: a declared required_artifact that is absent on disk fails Gate 1.
+# Optional block — no .artifact_contract ⇒ empty list ⇒ unchanged pass.
+while IFS= read -r artifact; do
+  [ -z "$artifact" ] && continue
+  [ -e "$artifact" ] || { echo "FAIL gate1: required_artifact missing: $artifact"; exit 1; }
+done < <(jq -r '.artifact_contract.required_artifacts // [] | .[]' "$PRD")
+```
+
+A non-conformant graph **or** a missing required artifact is `AUDIT-FAIL` →
+`implement` (resume the unfinished stories, or produce the promised artifact). Do
+not advance to the later gates. A worked fixture proving the artifact sub-check
+fails on a missing path lives at
+[`references/artifact-contract-fixture.prd.json`](references/artifact-contract-fixture.prd.json)
+(exercised by `.oh/evals/probes/artifact-contract-audit.sh`).
 
 ### Gate 2 — Regression floor (`/eval`)
 

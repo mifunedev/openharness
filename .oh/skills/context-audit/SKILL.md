@@ -206,7 +206,7 @@ Grand total: ~Z tokens
 - **TRIM**: <file> — <one-line reason>
 ```
 
-Omit KEEP files from Recommendations. Use the short filename (e.g. `recursive-delegation.md`), not the full path.
+Omit KEEP files from Recommendations. Use the short filename (e.g. `advisor.md`), not the full path.
 
 ### 6. Tier-2 ablation (skip if mode is `all`)
 

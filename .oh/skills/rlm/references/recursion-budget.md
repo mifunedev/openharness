@@ -6,23 +6,23 @@ ceilings**. This reference does not invent a new budgeting scheme — it **point
 existing one** and adds the two things `/rlm` needs on top: a per-run token ceiling and
 the `/rlm → /weigh` invocation contract.
 
-## The budget triple — owned by recursive-delegation.md (do not fork)
+## The budget triple — owned by the advisor agent (`.oh/agents/advisor.md`) (do not fork)
 
 The depth / children / step ceilings are the **`Max depth N` / `Max children per level
 M` (M ≤ 5) / `Step budget S`** triple defined in
-[`.oh/skills/advisor/references/recursive-delegation.md`](../../advisor/references/recursive-delegation.md)
+[`.oh/agents/advisor.md`](../../../agents/advisor.md)
 § *Bounding Compute*. That file is the single source of truth for the triple's
 semantics; `/rlm` honors it verbatim:
 
 - `Max depth` counts edges from the root (child = 1, grandchild = 2). A sub-agent MUST
   NOT recurse if `Max depth` is absent or `1`. A recursing child decrements it
   (`Max depth: N−1`) for its grandchildren.
-- `Max children per level` is hard-capped at **5** (recursive-delegation.md). A child
+- `Max children per level` is hard-capped at **5** (.oh/agents/advisor.md). A child
   MUST NOT rewrite a sibling's briefing to lift its own depth or scope.
 - `Step budget` always reserves at least one final step for the parent's synthesis turn
-  (recursive-delegation.md § Bounding Compute).
+  (.oh/agents/advisor.md § Recursive decomposition).
 
-These are **prompt-level conventions, not runtime-enforced caps** (recursive-delegation.md
+These are **prompt-level conventions, not runtime-enforced caps** (.oh/agents/advisor.md
 opening note): an untrained model may ignore them, so write every briefing to honor them
 rigorously.
 
@@ -30,14 +30,14 @@ rigorously.
 
 | Field | `/rlm` default | Hard cap | CLI flag | Source of the cap |
 |-------|:--:|:--:|---|---|
-| `Max depth` | **2** | 4 | `--depth N` | recursive-delegation.md § Bounding Compute |
-| `Max children per level` (M) | **4** | 5 | `--children M` | recursive-delegation.md (M ≤ 5) |
+| `Max depth` | **2** | 4 | `--depth N` | .oh/agents/advisor.md § Recursive decomposition |
+| `Max children per level` (M) | **4** | 5 | `--children M` | .oh/agents/advisor.md (M ≤ 5) |
 | `Step budget` (S, per chunk) | **6** | — | `--step-budget S` | skill-specific (reserves ≥1 synthesis step) |
 | Sample width `N` (chunks recursed per wave) | **4** | 8 | `--n N` | mirrors `/delegate` wave discipline |
 | **Per-run token ceiling** | **200 000** | — | `--token-ceiling N` | this reference (see below) |
 
 Defaults are deliberately small (depth 2 = root → child → grandchild, four children per
-level) so a default `/rlm` run is bounded at well under the recursive-delegation.md hard
+level) so a default `/rlm` run is bounded at well under the advisor agent's hard
 caps. A CLI value above a hard cap is clamped to the cap, not honored as-is.
 
 ## Per-run token ceiling (the `/rlm` addition)
@@ -89,7 +89,7 @@ off-limits per the PRD non-goals) or anything under `.worktrees/`.
 
 ## See Also
 
-- `.oh/skills/advisor/references/recursive-delegation.md` — the budget triple + multi-level delegation protocol this reference points at.
+- `.oh/agents/advisor.md` — the budget triple + multi-level delegation protocol this reference points at.
 - `SKILL.md` — the `/rlm` procedure that consumes this budget.
 - `.oh/skills/weigh/references/scoring.md` — the `TRAJECTORY_SCHEMA` + scoring contract the `/weigh` hand-off cites.
 - `scripts/query-context.mjs` — the chunk-map / slice / grep primitive with the 32 KiB max-bytes guard.

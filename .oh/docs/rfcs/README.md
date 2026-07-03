@@ -26,14 +26,19 @@ No stage gates, no editors, no numbering scheme beyond the GitHub issue number.
 |---|---|---|
 | [#531](https://github.com/mifunedev/openharness/issues/531) | Accepted | Portable `.oh/` control plane — `oh init` / `oh update`, the project-root seam, and the machinery-namespace relocation. |
 | [#525](https://github.com/mifunedev/openharness/issues/525) | Draft | Self-improving-harness roadmap epic. |
-| [#532](https://github.com/mifunedev/openharness/issues/532) | Draft | Standards process — the full RFC/ADR taxonomy, registries, and conformance profiles (deferred scope; see below). |
+| [#532](https://github.com/mifunedev/openharness/issues/532) | [Accepted — resolved lightweight; heavy scope deferred](adr-0001-standards-scope.md) | Standards process — keep the lightweight RFC / ADR convention; defer the full taxonomy, registries, lifecycle, and conformance profiles until a concrete future issue needs them. |
+
+## Decision records
+
+| Record | Decision |
+|---|---|
+| [ADR-0001: #532 standards scope](adr-0001-standards-scope.md) | The lightweight RFC / ADR convention is sufficient for now; heavier taxonomy, registries, lifecycle, and conformance machinery stay deferred until a concrete future need appears. |
 
 ## Deferred scope
 
 The full IETF-style standards body — the `OH-RFC` / `STD` / `BCP` / `EXP` / `INF`
 / `ADR` document taxonomy, formal registries, an IANA-style allocation authority,
-conformance profiles, and a multi-stage lifecycle — is **out of scope for this
-index** and tracked in
-[#532](https://github.com/mifunedev/openharness/issues/532). This page stays
-deliberately proportionate to what the project already produces; reach for the
-heavier process only if #532 concludes we need it.
+conformance profiles, and a multi-stage lifecycle — remains **out of scope for
+this index**. [ADR-0001](adr-0001-standards-scope.md) resolves #532 with the
+lightweight convention above and keeps that heavier machinery deferred until a
+concrete future issue needs it.

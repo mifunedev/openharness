@@ -62,5 +62,6 @@ must not be treated as real until a change actually creates them:
 ## See also
 
 - [`.oh/README.md`](../README.md) — the governing principle and the `.oh/`-vs-root boundary.
+- [Descriptive `.oh/harness.yml` example](harness-manifest.md) — an example-only pointer map over the real `.oh/` surfaces, not a required manifest schema.
 - [`.oh/docs/roadmap.md`](roadmap.md) — the primitive-taxonomy migration this layout came out of.
 - [`.oh/context/directory-readme.md`](../context/directory-readme.md) — the README-as-directory-anchor convention.

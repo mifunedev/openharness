@@ -30,17 +30,25 @@ Modes:
                     exactly one row per CB-<id> task) against the committed
                     scoreboard; exit 0 if intact, 1 otherwise
 
-Scoring:
-  --task <CB-id> --success <V> --cost-time <V> --unattended <V> [--basis <text>]
-                    score a capability task on the three axes from
-                    operator-supplied, validated values (V is one of
-                    PASS|PARTIAL|FAIL) and print the task score — the mean of
-                    the three axes with PASS=2 PARTIAL=1 FAIL=0. A missing or
-                    out-of-enum axis exits non-zero and writes no score: values
-                    are operator-supplied and validated, never fabricated. The
-                    score is fully task-agnostic (no per-task-id branching).
-                    (Baseline delta + RESULTS.md row overwrite land in a later
-                    story; see prd.json.)
+Score preview (no write):
+  --success <V> --cost-time <V> --unattended <V> [--basis <text>]
+                    validate the triad (V is one of PASS|PARTIAL|FAIL) and print
+                    the deterministic task score (mean; PASS=2 PARTIAL=1 FAIL=0)
+                    WITHOUT touching the scoreboard. A missing or out-of-enum
+                    axis exits non-zero and prints no score (never fabricated).
+
+Score + overwrite a task's row:
+  --task <CB-id> --success <V> --cost-time <V> --unattended <V>
+                 [--basis <text>] [--base <ref>] [--dry-run]
+                    score CB-<id> from the validated triad, read the prior score
+                    for that id (default: current RESULTS.md; --base <ref> reads
+                    git show <ref>:.oh/evals/capability/RESULTS.md), compute the
+                    delta, classify capability-improved vs machinery-added, then
+                    ATOMICALLY overwrite ONLY that task's row (overwrite-per-id;
+                    never append) and recompute the suite-score comment. The row
+                    records the 3 axes + score + a delta/machinery note in basis.
+                    --dry-run prints the would-be row + suite comment, no write.
+                    The runner is fully task-agnostic (no per-task-id branching).
 EOF
 }
 
@@ -142,10 +150,11 @@ compute_score() {
   awk -v x="$a" -v y="$b" -v z="$c" 'BEGIN{ printf "%.2f\n", (x + y + z) / 3 }'
 }
 
-# Validate the triad and print the deterministic task score. Any missing/invalid
-# axis returns non-zero WITHOUT printing a score. --task and --basis are optional
-# here (recorded for the row-overwrite story); the score never depends on the id.
-score_task() {
+# Validate the full triad. Collect ALL axis failures before returning (so a
+# missing/invalid axis message names every offender, not just the first) — the
+# fabrication guard: an unvalidated triad never reaches a score or a write. The
+# `|| bad=1` list and the `if (( bad ))` are both set -e exempt.
+validate_triad() {
   local bad=0
   validate_axis --success    "$SUCCESS"    || bad=1
   validate_axis --cost-time  "$COST_TIME"  || bad=1
@@ -153,6 +162,14 @@ score_task() {
   if (( bad )); then
     return 1
   fi
+  return 0
+}
+
+# Validate the triad and print the deterministic task score to stdout WITHOUT
+# writing the scoreboard (score-preview mode). Any missing/invalid axis returns
+# non-zero WITHOUT printing a score. The score never depends on the task id.
+score_task() {
+  validate_triad || return 1
   local score
   score="$(compute_score "$SUCCESS" "$COST_TIME" "$UNATTENDED")"
   printf 'score=%s success=%s cost-time=%s unattended=%s%s\n' \
@@ -160,13 +177,162 @@ score_task() {
   return 0
 }
 
+# --- baseline delta + machinery-vs-capability + atomic row overwrite (US-003) ---
+# Overwrite-per-id: the runner replaces exactly ONE scoreboard row (the named CB
+# task) and recomputes the suite-score comment, leaving every other line byte-for-
+# byte intact. It never appends a row (git history is the time series; an appended
+# row also breaks capability-benchmark-schema.sh). The whole file is rebuilt into a
+# temp sibling and swapped in with a single `mv -f` so an interrupted write can
+# never leave a partial scoreboard.
+
+# Trim leading/trailing whitespace from field $2 (awk -F'|' index) of a table row
+# line $1. Field 2 = task id, 7 = score, 8 = basis (rows are `| id | date | s | c
+# | u | score | basis |`).
+row_field() {
+  awk -F'|' -v f="$2" '{ gsub(/^[[:space:]]+|[[:space:]]+$/, "", $f); print $f }' <<<"$1"
+}
+
+# Read the prior score for a task id. Default source is the current working-tree
+# RESULTS.md; --base <ref> reads the scoreboard at that git ref instead (the
+# counterfactual). Prints the score (e.g. 1.33) or empty if the id has no prior row.
+prior_score_for() {
+  local id="$1" content row
+  if [[ -n "$BASE" ]]; then
+    content="$(git -C "$ROOT" show "${BASE}:.oh/evals/capability/RESULTS.md" 2>/dev/null || true)"
+  else
+    content="$(cat "$RESULTS")"
+  fi
+  row="$(grep -E "^\|[[:space:]]*${id}[[:space:]]*\|" <<<"$content" | head -1 || true)"
+  [[ -n "$row" ]] || { printf ''; return 0; }
+  row_field "$row" 7
+}
+
+# Classify the transition. Mirrors the /benchmark verdict (keys on the score, never
+# inverts it): a risen task score = capability-improved; flat = machinery-added; a
+# fallen score = capability-regressed. Pure numeric delta => no per-task branching.
+classify_delta() {
+  awk -v n="$1" -v p="$2" 'BEGIN{
+    d = n - p
+    if      (d >  0.001) print "capability-improved"
+    else if (d < -0.001) print "capability-regressed"
+    else                 print "machinery-added"
+  }'
+}
+
+# Recompute the suite-score comment from every CB row's score, substituting the
+# NEW score for the target id ($1=id, $2=new score). Deterministic: a pure function
+# of the row scores in file order. The literal number is placed IMMEDIATELY after
+# `suite score = ` so /benchmark's `grep -oE 'suite score = [0-9.]+'` reads it.
+recompute_suite() {
+  local tid="$1" tscore="$2" line id sc mean list=""
+  local -a scores=()
+  while IFS= read -r line; do
+    id="$(row_field "$line" 2)"
+    [[ "$id" =~ ^CB-[0-9]+$ ]] || continue
+    if [[ "$id" == "$tid" ]]; then sc="$tscore"; else sc="$(row_field "$line" 7)"; fi
+    scores+=("$sc")
+    if [[ -z "$list" ]]; then list="$sc"; else list="$list, $sc"; fi
+  done < <(grep -E '^\|[[:space:]]*CB-[0-9]+[[:space:]]*\|' "$RESULTS")
+  mean="$(printf '%s\n' "${scores[@]}" | awk '{ s += $1; n++ } END { if (n > 0) printf "%.2f", s / n; else printf "0.00" }')"
+  printf '<!-- suite score = %s / 2.00 = mean(%s) · PASS=2 PARTIAL=1 FAIL=0; SKIPPED a task only when the capability is absent from the eval environment -->' \
+    "$mean" "$list"
+}
+
+# Score the named CB task and atomically overwrite its row. Requires a validated
+# triad (validate_triad runs first — fabrication guard). Refuses to write if the id
+# has no existing row (never append/renumber). --dry-run prints the row + suite
+# comment instead of writing.
+write_row() {
+  local id="$TASK"
+
+  # overwrite-per-id: the row must already exist exactly once (never append; do not
+  # add or renumber CB tasks — that is the task-spec authors' job, not the runner's).
+  local nrows
+  nrows="$(grep -cE "^\|[[:space:]]*${id}[[:space:]]*\|" "$RESULTS" || true)"
+  if (( nrows == 0 )); then
+    echo "run.sh: no existing scoreboard row for $id — refusing to append (overwrite-per-id; do not add/renumber CB tasks)" >&2
+    return 1
+  elif (( nrows > 1 )); then
+    echo "run.sh: $id already has $nrows rows — scoreboard violates overwrite-per-id; aborting" >&2
+    return 1
+  fi
+
+  local new_score prior class delta note basis prior_basis existing_row
+  new_score="$(compute_score "$SUCCESS" "$COST_TIME" "$UNATTENDED")"
+  prior="$(prior_score_for "$id")"
+
+  existing_row="$(grep -E "^\|[[:space:]]*${id}[[:space:]]*\|" "$RESULTS" | head -1 || true)"
+  prior_basis="$(row_field "$existing_row" 8)"
+  # drop any prior runner-appended delta note so re-writes don't accumulate them
+  # (keeps the write idempotent for a fixed baseline).
+  prior_basis="${prior_basis% · Δ *}"
+
+  if [[ -n "$BASIS" ]]; then basis="$BASIS"; else basis="$prior_basis"; fi
+
+  if [[ -n "$prior" ]]; then
+    delta="$(awk -v n="$new_score" -v p="$prior" 'BEGIN{ printf "%+.2f", n - p }')"
+    class="$(classify_delta "$new_score" "$prior")"
+    note="Δ ${delta} ${class} vs ${prior} baseline"
+  else
+    note="Δ baseline established (no prior score in ${BASE:-RESULTS.md})"
+  fi
+  basis="${basis} · ${note}"
+
+  # a literal pipe in the basis would corrupt the markdown table row.
+  if [[ "$basis" == *"|"* ]]; then
+    echo "run.sh: basis must not contain '|' (breaks the RESULTS.md table row)" >&2
+    return 1
+  fi
+
+  local now new_row suite_comment
+  now="$(date -u +%Y-%m-%d)"
+  new_row="| ${id} | ${now} | ${SUCCESS} | ${COST_TIME} | ${UNATTENDED} | ${new_score} | ${basis} |"
+  suite_comment="$(recompute_suite "$id" "$new_score")"
+
+  if (( DRY_RUN )); then
+    printf '%s\n%s\n' "$new_row" "$suite_comment"
+    echo "dry-run: ${id} ${SUCCESS}/${COST_TIME}/${UNATTENDED} score=${new_score} (${note})" >&2
+    return 0
+  fi
+
+  # atomic rewrite: pass every line through verbatim, substituting ONLY the target
+  # row and the suite-score COMMENT line (the `<!--` guards against the prose line
+  # that also contains "suite score ="). Build into a temp sibling on the same
+  # filesystem, then swap in with one mv -f. TMP is cleaned up by the EXIT trap.
+  TMP="$RESULTS.tmp.$$"
+  {
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      if [[ "$line" =~ ^[|][[:space:]]*${id}[[:space:]]*[|] ]]; then
+        printf '%s\n' "$new_row"
+      elif [[ "$line" == *"<!-- suite score = "* ]]; then
+        printf '%s\n' "$suite_comment"
+      else
+        printf '%s\n' "$line"
+      fi
+    done < "$RESULTS"
+  } > "$TMP"
+  mv -f "$TMP" "$RESULTS"
+  TMP=""
+
+  echo "wrote ${id}: ${SUCCESS}/${COST_TIME}/${UNATTENDED} score=${new_score} (${note})" >&2
+  printf '%s\n' "$new_row"
+  return 0
+}
+
 # --- arg parse ---
+# TMP holds the in-flight scoreboard temp file; the EXIT trap removes it so an
+# interrupted write leaves no partial sibling. Empty on every non-write path.
+TMP=""
+trap '[[ -n "${TMP:-}" ]] && rm -f "$TMP"' EXIT
+
 MODE=""
 TASK=""
 SUCCESS=""
 COST_TIME=""
 UNATTENDED=""
 BASIS=""
+BASE=""
+DRY_RUN=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--help)  MODE="help"; shift ;;
@@ -186,6 +352,10 @@ while [[ $# -gt 0 ]]; do
     --basis)
       [[ $# -ge 2 ]] || { echo "run.sh: --basis requires a text value" >&2; exit 64; }
       BASIS="$2"; shift 2 ;;
+    --base)
+      [[ $# -ge 2 ]] || { echo "run.sh: --base requires a git <ref> value" >&2; exit 64; }
+      BASE="$2"; shift 2 ;;
+    --dry-run) DRY_RUN=1; shift ;;
     *)
       echo "run.sh: unknown arg: $1" >&2
       usage >&2
@@ -200,11 +370,16 @@ case "$MODE" in
   validate)
     if validate_schema; then exit 0; else exit 1; fi ;;
   "")
-    # Scoring path: any of --task/--success/--cost-time/--unattended/--basis
-    # requests a score. The full validated triad is required; a missing or
-    # out-of-enum axis exits non-zero and prints no score (no fabrication). The
-    # baseline delta + RESULTS.md row overwrite land in a later story.
-    if [[ -n "$TASK$SUCCESS$COST_TIME$UNATTENDED$BASIS" ]]; then
+    # Scoring path. The full validated triad is always required first; a missing or
+    # out-of-enum axis exits non-zero and writes/prints no score (no fabrication).
+    if [[ -n "$TASK" ]]; then
+      # Write mode: a named CB target => score it and overwrite ITS row.
+      [[ "$TASK" =~ ^CB-[0-9]+$ ]] \
+        || { echo "run.sh: --task must be a CB-<id> (matching CB-[0-9]+); got '$TASK'" >&2; exit 64; }
+      validate_triad || exit 1
+      if write_row; then exit 0; else exit 1; fi
+    elif [[ -n "$SUCCESS$COST_TIME$UNATTENDED$BASIS" ]]; then
+      # Preview mode: a triad with no target => print the score, touch nothing.
       if score_task; then exit 0; else exit 1; fi
     else
       usage >&2

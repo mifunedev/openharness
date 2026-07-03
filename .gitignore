@@ -67,6 +67,8 @@ workspace/startup.sh
 /.hermes/*
 !/.hermes/README.md
 !/.hermes/hooks/
+!/.hermes/config.yaml
+!/.hermes/config.yml
 
 **/scheduled_tasks.lock
 # Legacy/future workspace package build artifacts

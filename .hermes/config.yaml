@@ -1,0 +1,13 @@
+model:
+  default: gpt-5.5
+  provider: openai-codex
+  base_url: https://chatgpt.com/backend-api/codex
+compression:
+  codex_gpt55_autoraise: false
+  auto_compact_percent: 85
+onboarding:
+  seen:
+    profile_build_offered: true
+_config_version: 33
+terminal:
+  cwd: "/home/sandbox/harness"

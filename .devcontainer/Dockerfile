@@ -53,15 +53,15 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
 # ─── Hermes Agent CLI ───────────────────────────────────────────────
 # Optional image-level install. When INSTALL_HERMES=true, install the
 # executable during image build (like the other image-level CLIs), not at
-# container boot. The Slack messaging extra ships by default so the gateway's
-# Slack adapter works without a post-install step. Runtime config/auth uses
+# container boot. The Slack and Teams messaging extras ship by default so the
+# gateway adapters work without a post-install step. Runtime config/auth uses
 # the project-local /home/sandbox/harness/.hermes directory via HERMES_HOME.
 ARG INSTALL_HERMES=false
 RUN if [ "${INSTALL_HERMES}" = "true" ]; then \
       curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
         | bash -s -- --skip-setup --skip-browser; \
       rm -rf /root/.hermes; \
-      uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack,web,pty]'; \
+      uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack,teams,web,pty]'; \
     else \
       echo "Skipping Hermes Agent CLI install (INSTALL_HERMES=false)"; \
     fi

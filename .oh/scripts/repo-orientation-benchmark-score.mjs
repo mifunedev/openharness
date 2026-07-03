@@ -16,7 +16,7 @@ function usage(exitCode = 64) {
 
 function parseArgs(argv) {
   const args = {
-    manifest: "evals/capability/repo-orientation/tasks.json",
+    manifest: ".oh/evals/capability/repo-orientation/tasks.json",
     report: "",
     validateOnly: false,
     json: false,
@@ -145,8 +145,8 @@ function validateManifest(manifest, manifestPath) {
     if ((classCounts.get(required) ?? 0) === 0) failures.push(`tasks missing class ${required}`);
   }
 
-  const repoRoot = path.resolve(path.dirname(manifestPath), "../../..");
-  const startupPath = manifest.startupContext?.path ?? "context/REPO_MAP.md";
+  const repoRoot = path.resolve(path.dirname(manifestPath), "../../../..");
+  const startupPath = manifest.startupContext?.path ?? ".oh/context/REPO_MAP.md";
   const startupAbs = path.resolve(repoRoot, startupPath);
   try {
     const bytes = statSync(startupAbs).size;
@@ -195,7 +195,7 @@ function scoreReport(manifest, manifestPath, report) {
   const runs = assertArray(report.runs, "report.runs", failures);
   const startupTokens = Number(
     report.startupTokens ??
-      Math.ceil(statSync(path.resolve(path.dirname(manifestPath), "../../..", manifest.startupContext?.path ?? "context/REPO_MAP.md")).size / 4),
+      Math.ceil(statSync(path.resolve(path.dirname(manifestPath), "../../..", manifest.startupContext?.path ?? ".oh/context/REPO_MAP.md")).size / 4),
   );
   if (!Number.isFinite(startupTokens) || startupTokens < 0) failures.push("startupTokens must be >= 0");
 

@@ -1,6 +1,9 @@
 FROM debian:bookworm-slim
 
-ENV TZ=America/Los_Angeles
+ARG OH_PROJECT_ROOT=/home/sandbox/harness
+ENV OH_PROJECT_ROOT=${OH_PROJECT_ROOT}
+
+ENV TZ=America/Denver
 
 # ─── System packages ────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -130,7 +133,7 @@ RUN set -e; \
 # install onto $PATH. Source is COPY'd to /opt/oh (outside the
 # bind-mount) so the bundled binary survives the bind-mount overlay.
 # The `oh config` family currently ships no integration wizards (Slack is
-# configured natively by editing files — see docs/integrations/slack.md).
+# configured natively by editing files — see .oh/docs/integrations/slack.md).
 # NOTE: COPY does not follow the back-compat `packages/oh` symlink, so the
 # real path `.oh/cli/` is used here; runtime callers still use `packages/oh`.
 COPY .oh/cli/ /opt/oh/
@@ -140,7 +143,7 @@ RUN cd /opt/oh && npm install --no-audit --no-fund && npm run build \
 
 # ─── Sandbox user ──────────────────────────────────────────────────
 RUN useradd -m -s /bin/zsh sandbox \
- && echo "sandbox ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/sandbox \
+ && echo "sandbox ALL=(ALL) ALL" > /etc/sudoers.d/sandbox \
  && chmod 0440 /etc/sudoers.d/sandbox \
  && groupadd -f docker && usermod -aG docker sandbox
 
@@ -191,28 +194,30 @@ RUN echo "alias claude='claude --dangerously-skip-permissions'" >> /home/sandbox
  && echo "alias codex='codex --dangerously-bypass-approvals-and-sandbox'" >> /home/sandbox/.bashrc
 
 # Git safe.directory for bind-mounted project
-RUN su - sandbox -c "git config --global --add safe.directory /home/sandbox/harness"
+RUN su - sandbox -c "git config --global --add safe.directory ${OH_PROJECT_ROOT}"
 
 # Default working directory for interactive shells (SSH + terminal attach, bash fallback)
-RUN echo 'cd ~/harness 2>/dev/null' >> /home/sandbox/.bashrc
+RUN echo "cd ${OH_PROJECT_ROOT} 2>/dev/null" >> /home/sandbox/.bashrc
 
 # Image-level devcontainer config — VS Code reads this on "Attach to Running Container"
+# NOTE: static /home/sandbox/harness — Phase-2 devcontainer templating target (#531)
 RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness","remoteUser":"sandbox"}' > /.devcontainer/devcontainer.json
 
 # Labels for VS Code "Attach to Running Container"
+# NOTE: static /home/sandbox/harness — Phase-2 devcontainer templating target (#531)
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
 
 # ─── Copy install scripts + workspace (for CI; bind mount overrides at runtime)
 # Real path .oh/install/ — COPY does not traverse the back-compat install symlink.
 COPY --chown=sandbox:sandbox .oh/install/ /home/sandbox/install/
 RUN chmod +x /home/sandbox/install/*.sh
-COPY --chown=sandbox:sandbox workspace/ /home/sandbox/harness/workspace/
+COPY --chown=sandbox:sandbox workspace/ ${OH_PROJECT_ROOT}/workspace/
 
 # ─── Entrypoint ────────────────────────────────────────────────────
 COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-WORKDIR /home/sandbox/harness
+WORKDIR ${OH_PROJECT_ROOT}
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["sleep", "infinity"]

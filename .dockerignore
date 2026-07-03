@@ -1,8 +1,5 @@
 **/.env*
 .claude/
-.devcontainer/
-!.devcontainer/entrypoint.sh
-!.devcontainer/Dockerfile
 .worktrees/
 .git/
 node_modules/

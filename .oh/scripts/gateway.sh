@@ -3,7 +3,7 @@
 # the in-sandbox agent into a messaging platform (Slack today).
 #
 # Two backends bridge Slack, each in its OWN tmux session (naming per
-# docs/connecting.md: client-<platform>-<backend>) and holding its OWN Slack
+# .oh/docs/connecting.md: client-<platform>-<backend>) and holding its OWN Slack
 # app, so the two coexist without competing for one socket:
 #
 #   pi      client-slack-pi      pi-messenger-bridge, loaded via `pi --extension`
@@ -26,11 +26,11 @@
 # control flow here (mirrors client-slack-supervise.sh).
 set -u
 
-HARNESS="${HARNESS:-/home/sandbox/harness}"
+HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 # TEMPORARY fork pin — keep in sync with entrypoint.sh; revert once the upstream
 # thread_ts PR merges and publishes (see .pi/UPSTREAM.md).
-FORK_PIN="npm:pi-messenger-bridge"
+FORK_PIN="github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies"
 
 usage() {
   echo "Usage:"

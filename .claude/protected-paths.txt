@@ -37,6 +37,7 @@ drift-check
 .oh/scripts/ralph.sh
 .oh/scripts/cron-runtime.ts
 .oh/scripts/sandbox-healthcheck.sh
+.oh/scripts/link-providers.sh
 
 # --- Root lifecycle entrypoints ---
 Makefile
@@ -48,26 +49,25 @@ Makefile
 .devcontainer/Dockerfile
 
 # --- Crons (referenced by .oh/scripts/cron-runtime.ts) ---
-crons/heartbeat.md
-crons/cleanup-tasks.md
-evals/probes/cleanup-tasks-worktree-grooming.sh
-crons/eval-weekly.md
+.oh/crons/heartbeat.md
+.oh/crons/cleanup-tasks.md
+.oh/evals/probes/cleanup-tasks-worktree-grooming.sh
+.oh/crons/eval-weekly.md
 
-# --- Norms folded into skills (formerly context/rules/, B-state M3+M4) ---
-.mifune/skills/git/SKILL.md
-.mifune/skills/t3/references/sandbox-processes.md
-.mifune/skills/advisor/SKILL.md
-.mifune/skills/advisor/references/recursive-delegation.md
-.mifune/skills/retro/references/memory-protocol.md
+# --- Norms folded into skills (formerly .oh/context/rules/, B-state M3+M4) ---
+.oh/skills/git/SKILL.md
+.oh/skills/t3/references/sandbox-processes.md
+.oh/agents/advisor.md  # advisor delegation + recursive-decomposition norm, now an agent (was .oh/skills/advisor/)
+.oh/skills/retro/references/memory-protocol.md
 
 # --- Specs that other artifacts cross-reference ---
 .claude/specs/structure-spec-v0.7.md
 
 # --- Orchestrator identity layer (session-loaded by AGENTS.md bootloader) ---
-context/SOUL.md
-context/IDENTITY.md
-context/TOOLS.md
-context/USER.md
+.oh/context/SOUL.md
+.oh/context/IDENTITY.md
+.oh/context/TOOLS.md
+.oh/context/USER.md
 
 # --- Sub-agents invoked by skills ---
 .claude/agents/critic.md

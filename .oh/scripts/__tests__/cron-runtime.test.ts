@@ -18,7 +18,7 @@ import path from "node:path";
 // process.env.CRONS_DIR — at an isolated tmp path BEFORE ../cron-runtime is
 // imported. vi.hoisted runs ahead of all imports, so the exported
 // sighupHandler()'s internal scheduleAll() (called with no dir arg) re-reads
-// THIS dir and never the repo's real crons/ directory (US-004 AC). Per-pid keeps
+// THIS dir and never the repo's real .oh/crons/ directory (US-004 AC). Per-pid keeps
 // parallel vitest workers from colliding on the path.
 const SIGHUP_CRONS_DIR = vi.hoisted(() => {
   const dir = `/tmp/cron-sighup-test-crons-${process.pid}`;
@@ -56,7 +56,7 @@ import {
 
 // Mock only appendFileSync (the log() writer) as a no-op spy so reloadBody's
 // BODY_RELOADED / BODY_RELOAD_ERR signals are observable without polluting the
-// real crons/.cron.log during test runs. All other node:fs exports pass through.
+// real .oh/crons/.cron.log during test runs. All other node:fs exports pass through.
 vi.mock("node:fs", async (importOriginal) => {
   const real = await importOriginal<typeof import("node:fs")>();
   return { ...real, appendFileSync: vi.fn() };
@@ -1109,6 +1109,43 @@ describe("reloadBody", () => {
     expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(false);
   });
 
+  it("hot-reloads via an absolute filePath after the process cwd changes", () => {
+    // loadCrons() invoked with a RELATIVE dir must still resolve filePath to an
+    // absolute path (#517 path.resolve), so a later reloadBody() from a changed
+    // cwd reads the on-disk body instead of falling back to the cached one.
+    const prevCwd = process.cwd();
+    const root = path.join(tmp, "cron-root");
+    const cronsDir = path.join(root, "crons");
+    mkdirSync(cronsDir, { recursive: true });
+    const cronFile = path.join(cronsDir, "hot.md");
+    writeFileSync(
+      cronFile,
+      `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\noriginal body\n`,
+    );
+
+    try {
+      process.chdir(root);
+      const [entry] = loadCrons("crons");
+      expect(path.isAbsolute(entry.filePath)).toBe(true);
+      expect(entry.body).toBe("original body\n");
+
+      process.chdir(tmpdir());
+      writeFileSync(
+        cronFile,
+        `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nupdated body\n`,
+      );
+
+      const appendSpy = vi.mocked(fsModule.appendFileSync);
+      appendSpy.mockClear();
+      expect(reloadBody(entry)).toBe("updated body\n");
+      const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
+      expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
+      expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(false);
+    } finally {
+      process.chdir(prevCwd);
+    }
+  });
+
   it("returns cached entry.body and logs BODY_RELOAD_ERR when filePath is unreadable", () => {
     // Build a hand-crafted entry pointing at a nonexistent path.
     const missingPath = path.join(tmp, "ghost.md");
@@ -1238,7 +1275,7 @@ esac
 describe("onJobError", () => {
   it("logs an ERR_JOB line through the injected logger", () => {
     // Inject a spy logger so the test is fully deterministic and never touches
-    // the filesystem or the real crons/.cron.log (the default logger is log()).
+    // the filesystem or the real .oh/crons/.cron.log (the default logger is log()).
     const spy = vi.fn();
     onJobError("testjob", new Error("disk full"), spy);
     expect(spy).toHaveBeenCalledTimes(1);
@@ -1280,7 +1317,7 @@ describe("SIGHUP reload", () => {
   // These tests drive the exported sighupHandler() directly (not scheduleAll) per
   // US-004. The handler calls scheduleAll() with no dir arg, so it re-reads
   // SIGHUP_CRONS_DIR — repointed via the vi.hoisted block at the top of this file
-  // — instead of the repo's real crons/. resetActiveJobs() clears the
+  // — instead of the repo's real .oh/crons/. resetActiveJobs() clears the
   // module-private registry between cases.
   const appendSpy = () => vi.mocked(fsModule.appendFileSync);
   const loggedLines = (): string[] =>

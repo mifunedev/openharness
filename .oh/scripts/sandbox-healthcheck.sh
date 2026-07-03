@@ -7,7 +7,7 @@
 
 set -u
 
-HARNESS="${HARNESS:-/home/sandbox/harness}"
+HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 TMUX_BIN="${TMUX_BIN:-tmux}"
 HERMES_BIN="${HERMES_BIN:-hermes}"
 PI_BIN="${PI_BIN:-pi}"

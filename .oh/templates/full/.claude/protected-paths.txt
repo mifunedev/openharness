@@ -1,0 +1,14 @@
+# Protected paths — load-bearing skills, scripts, and config that critics
+# must NOT propose for deletion or deprecation without an explicit override
+# note in the finding's RECOMMENDATION column.
+#
+# Format: one entry per line. Skill names are bare (e.g., "release"), not
+# slash-prefixed. Scripts and files use repo-relative paths. Lines starting
+# with # are comments; blank lines are ignored.
+#
+# This is a project-default starter. Add YOUR load-bearing paths here as you
+# build (entrypoints, generators, migrations, CI scripts, key skills).
+
+# --- OpenHarness machinery (do not delete) ---
+.oh/scripts/link-providers.sh
+.devcontainer/entrypoint.sh

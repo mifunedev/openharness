@@ -1,8 +1,0 @@
-# progress
-
-- Planned via PM-style delegate graph.
-- RCA evidence: installed `@earendil-works/pi-ai@0.79.9` Codex WebSocket cached continuation sends stale `previous_response_id`; provider clears cache but rethrows; Pi retry classifier omits this error; existing bridge recovery is Slack-only.
-- Implemented `.pi/extensions/codex-stale-response-retry.ts` for non-Slack stale Codex response recovery.
-- Added vitest coverage and `evals/probes/codex-stale-response-retry.sh`.
-- Opened tracking issue #506.
-- Verified targeted extension tests and eval probe pass.

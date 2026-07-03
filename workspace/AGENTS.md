@@ -11,8 +11,8 @@ Agent identity, memory, skills, settings, and routines are pack/runtime state. T
 
 ## Where things go that aren't here
 
-- Scheduled tasks → `crons/*.md` at repo root, executed by `scripts/cron-runtime.ts`.
-- Long-term orchestrator memory → `memory/` at repo root.
+- Scheduled tasks → `.oh/crons/*.md` at repo root, executed by `scripts/cron-runtime.ts`.
+- Long-term orchestrator memory → `.oh/memory/` at repo root.
 - Pack-supplied identity, skills, sub-agents, settings, and credentials → wherever that pack's README specifies, often under workspace-local runtime directories created after install.
 
 ## Operating rules

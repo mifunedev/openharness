@@ -1,0 +1,9 @@
+# OpenHarness — secrets & runtime (never commit).
+/harness.yaml
+/harness.yml
+.devcontainer/.env
+.claude/.env.claude
+.hermes/.env
+.hermes/auth.json
+.oh/cli/dist/
+.oh/cli/node_modules/

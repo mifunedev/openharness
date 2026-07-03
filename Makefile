@@ -6,6 +6,7 @@
 -include .devcontainer/.env
 
 HARNESS_YAML      := harness.yaml
+HARNESS_TEMPLATE  := harness.yaml.example
 COMPOSE           := .oh/scripts/docker-compose.sh
 
 # SANDBOX_NAME resolution: harness.yaml wins over .devcontainer/.env; fallback openharness.
@@ -31,9 +32,17 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: sandbox shell destroy stop logs ps restart config help gateway
+.PHONY: sandbox shell destroy stop logs ps restart config help gateway harness-config
 
-sandbox: ## Provision and start the sandbox
+harness-config: ## Create local harness.yaml from harness.yaml.example if missing
+	@if [ ! -f "$(HARNESS_YAML)" ]; then \
+		cp "$(HARNESS_TEMPLATE)" "$(HARNESS_YAML)"; \
+		printf "Created $(HARNESS_YAML) from $(HARNESS_TEMPLATE). Edit it before rebuilding if needed.\n"; \
+	else \
+		printf "$(HARNESS_YAML) already exists; leaving local config untouched.\n"; \
+	fi
+
+sandbox: harness-config ## Provision and start the sandbox
 	$(COMPOSE) up -d --build
 
 shell: ## Connect to a running container (default: $(SANDBOX_NAME)). Usage: make shell [container] [SHELL_USER=user]
@@ -57,7 +66,7 @@ restart: ## Restart the service
 gateway: ## Start a messaging client session: make gateway <pi|hermes> (flags/--stop via the script)
 	@bash .oh/scripts/gateway.sh $(GATEWAY_ARGS)
 
-config: ## Print effective harness.yaml-derived env and resolved compose config
+config: harness-config ## Print effective harness.yaml-derived env and resolved compose config
 	@if [ -f $(HARNESS_YAML) ]; then \
 		sh .oh/scripts/harness-config.sh env $(HARNESS_YAML) > .devcontainer/.harness.yaml.env; \
 		printf "==> Derived env from $(HARNESS_YAML):\n"; \
@@ -73,4 +82,4 @@ help: ## List available targets with descriptions
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@printf "\nSandbox CLI (run \033[36minside\033[0m the sandbox after \033[36mmake shell\033[0m):\n"
 	@printf "  \033[36moh --help\033[0m  List all \033[36moh\033[0m subcommands\n"
-	@printf "  Slack bridge setup: see \033[36mdocs/integrations/slack.md\033[0m\n"
+	@printf "  Slack bridge setup: see \033[36m.oh/docs/integrations/slack.md\033[0m\n"

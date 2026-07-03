@@ -1,0 +1,70 @@
+#!/bin/sh
+# oh-path — resolve a harness data directory deterministically.
+#
+# Usage:  oh-path <name> [--no-create]
+#   <name>   memory | crons | evals | context | tasks
+#            (or any harness.yaml `paths.<name>` you define)
+#
+# Resolution precedence (first hit wins):
+#   1. environment override   <NAME>_DIR        (e.g. MEMORY_DIR=.oh/memory)
+#   2. harness.yaml           paths.<name>
+#   3. default                .oh/<name>
+#
+# The result is anchored to the REPO ROOT (the parent of this script's `.oh/`
+# directory), so it resolves identically no matter the caller's CWD. That is the
+# whole point: skills, crons, and sub-agents stop guessing where memory lives —
+# they ask oh-path. To MOVE a directory in future, change ONE thing
+# (`paths.<name>` in harness.yaml, or the <NAME>_DIR env var); every caller
+# follows. No need to edit individual skills.
+#
+# Relative values (from env or harness.yaml) are resolved against the repo root.
+# The directory is created (mkdir -p) unless --no-create. The absolute path is
+# printed on stdout. Mirrors the established CRONS_DIR pattern in
+# .oh/scripts/cron-runtime.ts + docker-compose.yml + entrypoint.sh.
+
+set -eu
+
+_name=""
+_create=1
+for _arg in "$@"; do
+    case "$_arg" in
+        --no-create) _create=0 ;;
+        -*) printf 'oh-path: unknown option "%s"\n' "$_arg" >&2; exit 2 ;;
+        *)
+            if [ -z "$_name" ]; then
+                _name="$_arg"
+            else
+                printf 'oh-path: unexpected argument "%s"\n' "$_arg" >&2
+                exit 2
+            fi
+            ;;
+    esac
+done
+[ -n "$_name" ] || { printf 'Usage: oh-path <name> [--no-create]\n' >&2; exit 2; }
+
+# Anchor to the repo root via this script's own location:
+#   <root>/.oh/scripts/oh-path  →  _root=<root>
+_script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
+_oh_dir=$(dirname -- "$_script_dir")      # <root>/.oh
+_root=$(dirname -- "$_oh_dir")            # <root>
+
+# 1. environment override:  memory → MEMORY_DIR, crons → CRONS_DIR, ...
+_envvar="$(printf '%s' "$_name" | tr 'a-z-' 'A-Z_')_DIR"
+eval "_dir=\${$_envvar:-}"
+
+# 2. harness.yaml  paths.<name>  (invoked via sh so a missing +x bit never bites)
+if [ -z "$_dir" ] && [ -f "$_root/harness.yaml" ] && [ -f "$_script_dir/harness-config.sh" ]; then
+    _dir=$(sh "$_script_dir/harness-config.sh" get "paths.$_name" "$_root/harness.yaml" 2>/dev/null || true)
+fi
+
+# 3. default  .oh/<name>
+[ -n "$_dir" ] || _dir=".oh/$_name"
+
+# Resolve a relative value against the repo root.
+case "$_dir" in
+    /*) ;;
+    *) _dir="$_root/$_dir" ;;
+esac
+
+[ "$_create" -eq 1 ] && mkdir -p "$_dir"
+printf '%s\n' "$_dir"

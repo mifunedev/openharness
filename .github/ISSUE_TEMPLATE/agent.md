@@ -42,7 +42,7 @@ This will:
 - Build the Docker image and start the sandbox container (`docker compose up -d --build`)
 - Mount the workspace and run the setup script
 
-`make sandbox` does **not** create the per-agent branch or worktree. The `branch` (`agent/<agent-name>`) and `worktree_path` (`.worktrees/<agent-name>`) fields from the Metadata block above are real conventions you create manually with `git worktree add` per the `/git` skill (`.mifune/skills/git/SKILL.md`) §Worktrees:
+`make sandbox` does **not** create the per-agent branch or worktree. The `branch` (`agent/<agent-name>`) and `worktree_path` (`.worktrees/<agent-name>`) fields from the Metadata block above are real conventions you create manually with `git worktree add` per the `/git` skill (`.oh/skills/git/SKILL.md`) §Worktrees:
 
 ```bash
 git worktree add -b agent/<agent-name> .worktrees/<agent-name> development
@@ -67,4 +67,4 @@ Run **inside the sandbox** (after `make shell <agent-name>`):
 
 - [ ] Workspace is accessible (`ls ~/harness/workspace`)
 - [ ] `workspace/AGENTS.md` is present (the workspace also holds `.claude/`, among others — non-exhaustive)
-- [ ] Harness identity and memory live at the repo root, **not** under `workspace/`: `context/SOUL.md` and `memory/MEMORY.md` are present
+- [ ] Harness identity and memory live at the repo root, **not** under `workspace/`: `.oh/context/SOUL.md` and `.oh/memory/MEMORY.md` are present

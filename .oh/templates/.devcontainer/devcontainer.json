@@ -1,0 +1,6 @@
+{
+  "name": "openharness-project",
+  "image": "ghcr.io/mifunedev/openharness:latest",
+  "remoteUser": "sandbox",
+  "workspaceFolder": "/home/sandbox/project"
+}

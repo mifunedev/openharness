@@ -1,0 +1,20 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": ".oh/deploy/railway/Dockerfile",
+    "watchPatterns": [
+      "railway.json",
+      ".oh/deploy/railway/**",
+      "README.md",
+      ".oh/docs/railway.md"
+    ]
+  },
+  "deploy": {
+    "startCommand": "/bin/bash -lc 'exec .oh/deploy/railway/start.sh'",
+    "healthcheckPath": "/healthz",
+    "healthcheckTimeout": 30,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}

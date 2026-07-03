@@ -323,6 +323,12 @@ fi
 
 cd "$REPO_DIR"
 
+# The skills/agents/hooks pack is vendored under .oh/. Wire (or repair) the
+# provider symlinks into it before the sandbox build/provider startup reads them.
+if [ -x .oh/scripts/link-providers.sh ]; then
+  bash .oh/scripts/link-providers.sh --init
+fi
+
 # ─── 4. Configure sandbox ────────────────────────────────────────────
 banner "Configuring sandbox"
 
@@ -395,7 +401,7 @@ ENVEOF
 GH_TOKEN=
 
 # ─── Slack bot (pi-messenger-bridge) ─────────────────────────────────
-# See docs/integrations/slack.md.
+# See .oh/docs/integrations/slack.md.
 
 # Slack app-level token for Socket Mode connection (starts with xapp-).
 # PI_SLACK_APP_TOKEN=xapp-...

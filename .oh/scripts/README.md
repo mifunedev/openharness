@@ -7,14 +7,15 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | ----------------- | ------------------------------------------------------------------ |
 | `install.sh`      | Curl-piped installer — bootstraps a fresh harness checkout         |
 | `ralph.sh`        | Ralph loop runner: `scripts/ralph.sh [--harness=…] <taskdesc>`     |
+| `link-providers.sh` | Creates/repairs the provider skill/agent/hook symlinks into `.oh/` and validates the vendored pack is present. |
 | `repo-orientation-benchmark-score.mjs` | Scores the CB-004 repo-orientation A/B benchmark report |
-| `cron-runtime.ts` | Croner runtime — scans `crons/*.md`, schedules, fires each job     |
-| `prompt-miner-caps.sh` | Origin-scoped PR-cap preflight for `crons/prompt-miner.md` — execs `autopilot-caps.sh` with `AUTOPILOT_REPO=mifunedev/openharness` + `AUTOPILOT_LABEL=prompt-miner` |
+| `cron-runtime.ts` | Croner runtime — scans `.oh/crons/*.md`, schedules, fires each job     |
+| `prompt-miner-caps.sh` | Origin-scoped PR-cap preflight for `.oh/crons/prompt-miner.md` — execs `autopilot-caps.sh` with `AUTOPILOT_REPO=mifunedev/openharness` + `AUTOPILOT_LABEL=prompt-miner` |
 | `__tests__/`      | Vitest unit tests (`vitest.config.ts` at repo root targets this)   |
 
 ## Conventions
 
-- Bash scripts use `set -euo pipefail` and an `ERR` trap so silent exits
+- Bash scripts use `set -euo pipefail` and an `ERR` trap where practical so silent exits
   surface as `ERROR:` lines (see `install.sh` header for the pattern).
 - TypeScript scripts are run via `tsx` from the root `package.json`
   scripts; tests run via `pnpm test`.

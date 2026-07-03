@@ -65,34 +65,81 @@ repair_home_mount_ownership
 # we sync the sandbox user's UID/GID to the host owner. After the sync,
 # anything sandbox creates inside the container is owned by the host
 # user on the host filesystem — no chown handoff needed.
-HARNESS_DIR="/home/sandbox/harness"
+OH_PROJECT_ROOT="${OH_PROJECT_ROOT:-/home/sandbox/harness}"
+# DEPRECATED alias — prefer $OH_PROJECT_ROOT
+HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
+
+uid_reconcile_step() {
+  local description="$1"
+  shift
+
+  if "$@"; then
+    return 0
+  fi
+
+  echo "[entrypoint] WARNING: failed to ${description}" >&2
+  return 1
+}
+
+HARNESS_DIR="$OH_PROJECT_ROOT"
 if [ -d "$HARNESS_DIR" ]; then
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
   HOST_GID=$(stat -c '%g' "$HARNESS_DIR")
   SANDBOX_UID=$(id -u sandbox)
   SANDBOX_GID=$(id -g sandbox)
+  UID_GID_SYNC_OK=true
   if [ "$HOST_GID" != "$SANDBOX_GID" ]; then
     if getent group "$HOST_GID" >/dev/null 2>&1; then
       EXISTING_GROUP=$(getent group "$HOST_GID" | cut -d: -f1)
       if [ "$EXISTING_GROUP" != "sandbox" ]; then
-        usermod -g "$HOST_GID" sandbox 2>/dev/null || true
+        uid_reconcile_step "set sandbox primary group to existing host GID $HOST_GID" usermod -g "$HOST_GID" sandbox || UID_GID_SYNC_OK=false
       fi
     else
-      groupmod -g "$HOST_GID" sandbox 2>/dev/null || true
+      uid_reconcile_step "set sandbox group GID to host GID $HOST_GID" groupmod -g "$HOST_GID" sandbox || UID_GID_SYNC_OK=false
     fi
   fi
   if [ "$HOST_UID" != "$SANDBOX_UID" ]; then
-    usermod -u "$HOST_UID" sandbox 2>/dev/null || true
-    find /home/sandbox -xdev -uid "$SANDBOX_UID" -exec chown -h "$HOST_UID:$HOST_GID" {} + 2>/dev/null || true
-    echo "[entrypoint] sandbox UID synced to host ($SANDBOX_UID → $HOST_UID, $SANDBOX_GID → $HOST_GID)"
+    uid_reconcile_step "set sandbox UID to host UID $HOST_UID" usermod -u "$HOST_UID" sandbox || UID_GID_SYNC_OK=false
+    uid_reconcile_step "repair sandbox-owned files after UID/GID sync" find /home/sandbox -xdev -uid "$SANDBOX_UID" -exec chown -h "$HOST_UID:$HOST_GID" {} + || UID_GID_SYNC_OK=false
+    if [ "$UID_GID_SYNC_OK" = "true" ]; then
+      echo "[entrypoint] sandbox UID synced to host ($SANDBOX_UID → $HOST_UID, $SANDBOX_GID → $HOST_GID)"
+    else
+      echo "[entrypoint] WARNING: sandbox UID/GID reconciliation incomplete; continuing with current ownership" >&2
+    fi
   fi
 fi
+
+# Set the sandbox user's password. This is BOTH the remote login password
+# (e.g. `su sandbox` / SSH password auth) AND the sudo password: sudo now
+# requires it (/etc/sudoers.d/sandbox is `sandbox ALL=(ALL) ALL`, no NOPASSWD),
+# so an interactive operator who knows it can escalate, but a non-interactive
+# internal agent hits the password prompt and fails (`sudo -n` -> error). We
+# run as root here (before the gosu drop), so no sudo is needed to set it.
+# Unconditional — independent of whether the UID/GID reconcile above succeeded.
+# The trailing `|| echo ... >&2` (not a bare `|| true`) keeps a chpasswd
+# failure (e.g. read-only /etc on some hosts) from aborting boot under
+# `set -e`, while still surfacing it as a warning; never log $PW itself.
+PW="${SANDBOX_PASSWORD:-test1234}"
+echo "sandbox:${PW}" | chpasswd || echo "[entrypoint] WARNING: failed to set sandbox password" >&2
+unset PW
 
 # UID/GID reconciliation can change the numeric identity behind the sandbox
 # user after Docker-created auth volumes were repaired above. Repeat the
 # idempotent repair with the final uid:gid so persisted credentials remain
 # readable on hosts where UID 1000 is already occupied.
 repair_home_mount_ownership
+
+HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
+
+# How the skill pack is wired: the shared skills/agents/hooks are vendored
+# directly under .oh/ (no submodule). Create/repair the provider symlinks into
+# .oh/ before any provider symlink, hook, eval runner, or Hermes skill path reads it.
+if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
+  if ! gosu sandbox bash "$HARNESS/.oh/scripts/link-providers.sh" --init; then
+    echo "[entrypoint] failed to link provider skills; run: bash .oh/scripts/link-providers.sh --init"
+    exit 1
+  fi
+fi
 
 # Hermes keeps all runtime state — including auth.json — inside the
 # project-local HERMES_HOME directory. An earlier design symlinked
@@ -102,7 +149,7 @@ repair_home_mount_ownership
 # auth write. Keeping auth on the same device as its temp file fixes it;
 # HERMES_HOME is gitignored, so credentials stay out of version control.
 if [ "${INSTALL_HERMES:-false}" = "true" ]; then
-  HERMES_RUNTIME="${HERMES_HOME:-/home/sandbox/harness/.hermes}"
+  HERMES_RUNTIME="${HERMES_HOME:-$HARNESS/.hermes}"
   HERMES_LEGACY_AUTH="/home/sandbox/.hermes/auth.json"
 
   mkdir -p "$HERMES_RUNTIME"
@@ -116,23 +163,23 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
     fi
   fi
 
-  # Share the harness' in-repo skills with Hermes through its normal
+  # Share the harness' vendored skill pack with Hermes through its normal
   # HERMES_HOME skills tree. Claude, Codex, and Pi point at the same neutral
-  # /home/sandbox/harness/.mifune/skills directory; Hermes keeps its bundled/runtime
+  # /home/sandbox/harness/.oh/skills directory; Hermes keeps its bundled/runtime
   # skills under $HERMES_RUNTIME/skills and gets the harness collection as a
-  # symlinked child so one tracked primitive is visible to every agent.
-  HERMES_SHARED_SKILLS_DIR="/home/sandbox/harness/.mifune/skills"
+  # symlinked child so one primitive is visible to every agent.
+  HERMES_SHARED_SKILLS_DIR="$HARNESS/.oh/skills"
   HERMES_SHARED_SKILLS_LINK="$HERMES_RUNTIME/skills/openharness"
   mkdir -p "$HERMES_RUNTIME/skills"
   if [ -d "$HERMES_SHARED_SKILLS_DIR" ]; then
     if [ -L "$HERMES_SHARED_SKILLS_LINK" ]; then
       current_target="$(readlink "$HERMES_SHARED_SKILLS_LINK" || true)"
-      if [ "$current_target" != "../../.mifune/skills" ] && [ "$current_target" != "$HERMES_SHARED_SKILLS_DIR" ]; then
+      if [ "$current_target" != "../../.oh/skills" ] && [ "$current_target" != "$HERMES_SHARED_SKILLS_DIR" ]; then
         rm -f "$HERMES_SHARED_SKILLS_LINK"
-        ln -s ../../.mifune/skills "$HERMES_SHARED_SKILLS_LINK"
+        ln -s ../../.oh/skills "$HERMES_SHARED_SKILLS_LINK"
       fi
     elif [ ! -e "$HERMES_SHARED_SKILLS_LINK" ]; then
-      ln -s ../../.mifune/skills "$HERMES_SHARED_SKILLS_LINK"
+      ln -s ../../.oh/skills "$HERMES_SHARED_SKILLS_LINK"
     else
       echo "[entrypoint] $HERMES_SHARED_SKILLS_LINK exists and is not a symlink — leaving it untouched"
     fi
@@ -187,11 +234,9 @@ fi
 # sandbox + onboarding status. Safe to run on every boot.
 BASHRC="/home/sandbox/.bashrc"
 if [ -f "$BASHRC" ] && ! grep -q 'source.*\.oh/install/banner.sh' "$BASHRC"; then
-  gosu sandbox bash -c 'echo "source /home/sandbox/harness/.oh/install/banner.sh 2>/dev/null" >> ~/.bashrc'
+  gosu sandbox bash -c "echo 'source ${OH_PROJECT_ROOT}/.oh/install/banner.sh 2>/dev/null' >> ~/.bashrc"
   echo "[entrypoint] attach banner wired into .bashrc"
 fi
-
-HARNESS="/home/sandbox/harness"
 
 # ─── GitHub CLI auth via PAT (optional) ─────────────────────────────
 # When GH_TOKEN is provided, persist it into ~/.config/gh/hosts.yml on
@@ -285,14 +330,137 @@ fi
 # package, npm-installed into a gitignored `.pi/bridge/` dir and loaded only
 # in the dedicated client-slack-pi session (see the Slack restore block below).
 # The harness is bind-mounted, so a Dockerfile-time install gets shadowed
-# at runtime; we install on first boot here, idempotently. Set
-# SKIP_PNPM_INSTALL=1 to opt out (e.g. air-gapped envs managing deps
-# externally).
+# at runtime; we install when the root dependency manifest fingerprint differs
+# from the marker stored alongside node_modules. Set SKIP_PNPM_INSTALL=1 to opt
+# out (e.g. air-gapped envs managing deps externally).
+pnpm_workspace_package_patterns() {
+  local workspace="$1/pnpm-workspace.yaml"
+  [ -f "$workspace" ] || return 0
+
+  awk '
+    function trim(value) {
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      return value
+    }
+    function emit(value) {
+      value = trim(value)
+      sub(/[[:space:]]+#.*$/, "", value)
+      value = trim(value)
+      gsub(/^\047|\047$/, "", value)
+      gsub(/^"|"$/, "", value)
+      if (value != "" && substr(value, 1, 1) != "!") {
+        print value
+      }
+    }
+    /^[[:space:]]*packages:[[:space:]]*\[/ {
+      line = $0
+      sub(/^[[:space:]]*packages:[[:space:]]*\[/, "", line)
+      sub(/\].*$/, "", line)
+      count = split(line, values, ",")
+      for (i = 1; i <= count; i++) {
+        emit(values[i])
+      }
+      exit
+    }
+    /^[[:space:]]*packages:[[:space:]]*$/ {
+      in_packages = 1
+      next
+    }
+    in_packages && /^[^[:space:]#][^:]*:/ {
+      exit
+    }
+    in_packages && /^[[:space:]]*-[[:space:]]*/ {
+      line = $0
+      sub(/^[[:space:]]*-[[:space:]]*/, "", line)
+      emit(line)
+    }
+  ' "$workspace"
+}
+
+pnpm_manifest_rel_is_excluded() {
+  case "$1" in
+    .git/*|.worktrees/*|node_modules/*|*/node_modules/*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+pnpm_workspace_package_manifest_paths() {
+  local root="$1"
+  local pattern candidate rel
+  shopt -s nullglob globstar
+
+  while IFS= read -r pattern; do
+    pattern="${pattern#./}"
+    pattern="${pattern%/}"
+    [ -n "$pattern" ] || continue
+
+    case "$pattern" in
+      /*|../*|*/../*)
+        continue
+        ;;
+    esac
+
+    if [[ "$pattern" == *package.json ]]; then
+      for candidate in "$root"/$pattern; do
+        [ -f "$candidate" ] || continue
+        rel="${candidate#"$root"/}"
+        rel="${rel#./}"
+        pnpm_manifest_rel_is_excluded "$rel" || printf '%s\n' "$rel"
+      done
+    else
+      for candidate in "$root"/$pattern/package.json; do
+        [ -f "$candidate" ] || continue
+        rel="${candidate#"$root"/}"
+        rel="${rel#./}"
+        pnpm_manifest_rel_is_excluded "$rel" || printf '%s\n' "$rel"
+      done
+    fi
+  done < <(pnpm_workspace_package_patterns "$root")
+}
+
+pnpm_manifest_fingerprint() {
+  local root="$1"
+  local rel
+  {
+    for rel in package.json pnpm-lock.yaml pnpm-workspace.yaml; do
+      [ -f "$root/$rel" ] && printf '%s\n' "$rel"
+    done
+    pnpm_workspace_package_manifest_paths "$root"
+  } | LC_ALL=C sort -u | while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    printf '%s %s\n' "$rel" "$(sha256sum "$root/$rel" | awk '{print $1}')"
+  done | sha256sum | awk '{print $1}'
+}
+
 if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
+  PNPM_INSTALL_MARKER_FILENAME=".openharness-root-pnpm-manifest.sha256"
+  PNPM_INSTALL_MARKER="$HARNESS/node_modules/$PNPM_INSTALL_MARKER_FILENAME"
+  PNPM_MANIFEST_FINGERPRINT="$(pnpm_manifest_fingerprint "$HARNESS")"
+  PNPM_INSTALL_REQUIRED=false
+
   if [ ! -d "$HARNESS/node_modules" ]; then
     echo "[entrypoint] node_modules missing — running pnpm install at $HARNESS"
-    if gosu sandbox bash -c "cd $HARNESS && pnpm install --prefer-offline" >/tmp/pnpm-install.log 2>&1; then
-      echo "[entrypoint] pnpm install completed (log: /tmp/pnpm-install.log)"
+    PNPM_INSTALL_REQUIRED=true
+  elif [ ! -f "$PNPM_INSTALL_MARKER" ] || [ "$(cat "$PNPM_INSTALL_MARKER" 2>/dev/null || true)" != "$PNPM_MANIFEST_FINGERPRINT" ]; then
+    echo "[entrypoint] manifest drift detected; reinstalling"
+    PNPM_INSTALL_REQUIRED=true
+  else
+    echo "[entrypoint] dependencies current"
+  fi
+
+  if [ "$PNPM_INSTALL_REQUIRED" = "true" ]; then
+    if gosu sandbox bash -c 'cd "$1" && pnpm install --prefer-offline' _ "$HARNESS" >/tmp/pnpm-install.log 2>&1; then
+      PNPM_MANIFEST_FINGERPRINT="$(pnpm_manifest_fingerprint "$HARNESS")"
+      PNPM_INSTALL_MARKER_TMP="$PNPM_INSTALL_MARKER.tmp.$$"
+      if gosu sandbox bash -c 'printf "%s\n" "$1" > "$2" && mv -f "$2" "$3"' _ "$PNPM_MANIFEST_FINGERPRINT" "$PNPM_INSTALL_MARKER_TMP" "$PNPM_INSTALL_MARKER" >>/tmp/pnpm-install.log 2>&1; then
+        echo "[entrypoint] pnpm install completed (log: /tmp/pnpm-install.log)"
+      else
+        echo "[entrypoint] pnpm install marker refresh failed — see /tmp/pnpm-install.log; aborting sandbox boot"
+        exit 1
+      fi
     else
       echo "[entrypoint] pnpm install failed — see /tmp/pnpm-install.log; aborting sandbox boot"
       exit 1
@@ -300,15 +468,27 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
   fi
 fi
 
+# ─── Resolve + pre-create the memory directory ────────────────────
+# Single source of truth = MEMORY_DIR (docker-compose passes harness.yaml's
+# paths.memory through here; default .oh/memory). Pre-creating it at boot means
+# the first skill/cron write lands in the resolved dir instead of racing a mkdir
+# — and never silently falls back to a phantom relative `memory/`. Mirrors the
+# CRONS_PATH block below; see .oh/scripts/oh-path for the shared resolver.
+case "${MEMORY_DIR:-.oh/memory}" in
+  /*) MEMORY_PATH="${MEMORY_DIR}" ;;
+  *)  MEMORY_PATH="$HARNESS/${MEMORY_DIR:-.oh/memory}" ;;
+esac
+mkdir -p "$MEMORY_PATH"
+
 # ─── Start/supervise cron runtime in tmux sessions ────────────────
-# Per SPEC v0.7 §"Croner runtime" + .mifune/skills/t3/references/sandbox-processes.md.
+# Per SPEC v0.7 §"Croner runtime" + .oh/skills/t3/references/sandbox-processes.md.
 # `cron-system` runs .oh/scripts/cron-runtime.ts. `cron-watchdog` is the outer
 # supervisor: if cron-system disappears after boot, it restarts the runtime
 # without requiring a container restart. Logs tee to /tmp/cron-system.log and
 # /tmp/cron-watchdog.log.
-case "${CRONS_DIR:-crons}" in
+case "${CRONS_DIR:-.oh/crons}" in
   /*) CRONS_PATH="${CRONS_DIR}" ;;
-  *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-crons}" ;;
+  *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-.oh/crons}" ;;
 esac
 mkdir -p "$CRONS_PATH"
 # Bind-mounted; sandbox UID is synced to host UID above, so no chown.
@@ -321,7 +501,7 @@ if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null;
   cat > /tmp/cron-watchdog.sh <<'CRON_WATCHDOG'
 #!/usr/bin/env bash
 set -u
-HARNESS="${HARNESS:-/home/sandbox/harness}"
+HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 INTERVAL="${CRON_WATCHDOG_INTERVAL:-60}"
 while true; do
   if tmux has-session -t system-cron 2>/dev/null; then
@@ -343,7 +523,7 @@ CRON_WATCHDOG
     echo "[entrypoint] cron-watchdog tmux session already running — skipping"
   else
     gosu sandbox tmux new-session -d -s cron-watchdog \
-      "HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log"
+      "OH_PROJECT_ROOT=$OH_PROJECT_ROOT HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log"
     echo "[entrypoint] cron-watchdog tmux session started (supervises cron-system)"
   fi
 fi
@@ -401,7 +581,7 @@ if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo "  ┌─────────────────────────────────────────────────┐"
   echo "  │  First boot detected.                           │"
   echo "  │  Optional Slack bridge setup:                   │"
-  echo "  │    see docs/integrations/slack.md               │"
+  echo "  │    see .oh/docs/integrations/slack.md           │"
   echo "  │  Start an agent from this shell:                │"
   echo "  │    claude   # or: codex, pi                     │"
   echo "  └─────────────────────────────────────────────────┘"

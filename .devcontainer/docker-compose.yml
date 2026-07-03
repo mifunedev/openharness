@@ -23,12 +23,13 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
       args:
+        OH_PROJECT_ROOT: ${OH_PROJECT_ROOT:-/home/sandbox/harness}
         INSTALL_OPENCODE: ${INSTALL_OPENCODE:-false}
         INSTALL_GROK_BUILD: ${INSTALL_GROK_BUILD:-false}
         INSTALL_DEEPAGENTS: ${INSTALL_DEEPAGENTS:-false}
         INSTALL_HERMES: ${INSTALL_HERMES:-false}
     volumes:
-      - ..:/home/sandbox/harness
+      - ..:${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - /var/run/docker.sock:/var/run/docker.sock
       - claude-auth:/home/sandbox/.claude
       - codex-auth:/home/sandbox/.codex
@@ -42,6 +43,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - SANDBOX_NAME=${SANDBOX_NAME:-openharness}
+      - SANDBOX_PASSWORD=${SANDBOX_PASSWORD:-test1234}
       - TZ=${TZ:-America/Los_Angeles}
       - CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true
       - GIT_USER_NAME=${GIT_USER_NAME:-}
@@ -49,19 +51,22 @@ services:
       - GH_TOKEN=${GH_TOKEN:-}
       - XAI_API_KEY=${XAI_API_KEY:-}
       - INSTALL_AGENT_BROWSER=${INSTALL_AGENT_BROWSER:-false}
+      - SKIP_PNPM_INSTALL=${SKIP_PNPM_INSTALL:-0}
       - INSTALL_HERMES=${INSTALL_HERMES:-false}
-      - HERMES_HOME=/home/sandbox/harness/.hermes
+      - HERMES_HOME=${OH_PROJECT_ROOT:-/home/sandbox/harness}/.hermes
+      - OH_PROJECT_ROOT=${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - HERMES_DASHBOARD=${HERMES_DASHBOARD:-false}
       - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
-      - CRONS_DIR=${CRONS_DIR:-crons}
+      - CRONS_DIR=${CRONS_DIR:-.oh/crons}
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
+      - MEMORY_DIR=${MEMORY_DIR:-.oh/memory}
     stdin_open: true
     tty: true
     init: true
     entrypoint: /usr/local/bin/entrypoint.sh
     command: sleep infinity
     healthcheck:
-      test: ["CMD", "bash", "/home/sandbox/harness/.oh/scripts/sandbox-healthcheck.sh"]
+      test: ["CMD", "bash", "${OH_PROJECT_ROOT:-/home/sandbox/harness}/.oh/scripts/sandbox-healthcheck.sh"]
       interval: 30s
       timeout: 10s
       retries: 3

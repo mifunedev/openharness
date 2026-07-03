@@ -15,7 +15,7 @@ on:
       - ".oh/scripts/sandbox-boot-smoke.sh"
       - ".oh/scripts/harness-config.sh"
       - "Makefile"
-      - "harness.yaml"
+      - "harness.yaml.example"
       - ".dockerignore"
       - ".github/workflows/sandbox-boot-guard.yml"
   pull_request:
@@ -28,7 +28,7 @@ on:
       - ".oh/scripts/sandbox-boot-smoke.sh"
       - ".oh/scripts/harness-config.sh"
       - "Makefile"
-      - "harness.yaml"
+      - "harness.yaml.example"
       - ".dockerignore"
       - ".github/workflows/sandbox-boot-guard.yml"
 
@@ -52,6 +52,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          submodules: recursive
+
+      - name: Ensure Mifune submodule
+        run: bash .oh/scripts/link-providers.sh --init
 
       - name: Docker diagnostics
         run: |
@@ -80,18 +84,19 @@ jobs:
 
       # ── Option C: pre-seed node_modules on the runner, BEFORE boot ──────────
       # The devcontainer bind-mounts the checkout (..:/home/sandbox/harness) and
-      # the entrypoint runs a synchronous `pnpm install` on first boot whenever
-      # node_modules is absent — a cold install can overrun the healthcheck's
-      # ~390s unhealthy deadline and fail the boot with "missing required tmux
-      # session: cron-system". Seeding node_modules here moves that slow/variable
-      # install OUT of the healthcheck-timed window: the runner workspace is a
-      # named volume shared at the same path with the dind daemon, so the
-      # node_modules written here is exactly what the container's bind mount
-      # sees, and the entrypoint's `[ -d node_modules ]` guard then skips the
-      # in-container install (boot becomes just the cron-system spawn — seconds).
-      # The container's UID is synced to the bind-mount owner on boot, so the
-      # runner-written node_modules is readable/writable by the sandbox user.
-      # See .claude/specs/boot-guard-cold-boot/spec.md (Option C).
+      # can run a synchronous `pnpm install` during boot when the root dependency
+      # tree is missing or its manifest marker is stale — a cold install can
+      # overrun the healthcheck's ~390s unhealthy deadline and fail the boot with
+      # "missing required tmux session: cron-system". Seeding node_modules here
+      # moves that slow/variable install OUT of the healthcheck-timed window; the
+      # sandbox smoke step below also sets SKIP_PNPM_INSTALL=1 so the pre-seeded
+      # CI path remains an explicit boot-window escape hatch even before a marker
+      # exists. The runner workspace is a named volume shared at the same path
+      # with the dind daemon, so the node_modules written here is exactly what the
+      # container's bind mount sees. The container's UID is synced to the
+      # bind-mount owner on boot, so the runner-written node_modules is
+      # readable/writable by the sandbox user. See
+      # .claude/specs/boot-guard-cold-boot/spec.md (Option C).
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -126,9 +131,9 @@ jobs:
           SANDBOX_NAME: openharness-boot-guard-${{ github.run_id }}
           BOOT_SMOKE_TIMEOUT_SECONDS: "900"
           BOOT_SMOKE_INTERVAL_SECONDS: "10"
-          # Deps are pre-seeded above and proven visible — the in-container
-          # install MUST NOT run inside the healthcheck-timed window. This is
-          # the Option C contract: install slowness can no longer trip the
-          # ~390s unhealthy deadline. Boot is now just the cron-system spawn.
+          # Deps are pre-seeded above and proven visible; SKIP_PNPM_INSTALL=1
+          # keeps the in-container install out of the healthcheck-timed window.
+          # This is the Option C contract: install slowness can no longer trip
+          # the ~390s unhealthy deadline. Boot is now just the cron-system spawn.
           SKIP_PNPM_INSTALL: "1"
         run: bash .oh/scripts/sandbox-boot-smoke.sh

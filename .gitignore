@@ -5,7 +5,9 @@
 /.oh/config.json
 .worktrees/*
 .claude/worktrees/
-.oh/tasks/archive/
+# Task artifacts are local runtime state; keep only the directory guide tracked.
+.oh/tasks/*
+!.oh/tasks/README.md
 !.worktrees/README.md
 
 # Build artifacts
@@ -43,7 +45,8 @@ workspace/.slack/*/
 workspace/.slack/events/
 workspace/.slack/settings.json
 
-# Daily session logs — .oh/memory/README.md, .oh/memory/MEMORY.md, and topic notes are tracked
+# Memory runtime/state — keep .oh/memory/README.md tracked; ignore private memory and dated logs.
+.oh/memory/MEMORY.md
 .oh/memory/[0-9]*/
 
 # Pi project config (generated symlinks)

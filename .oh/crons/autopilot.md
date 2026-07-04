@@ -10,7 +10,7 @@ worktree: true
 agent: pi
 preflight: .oh/skills/autopilot/autopilot-caps.sh
 repo: mifunedev/openharness
-description: Hourly autopilot — issue-queue-first harness-infra improvements in an isolated-worktree Pi tmux Advisor session
+description: Hourly autopilot — RFC/wiki-driven harness-infra improvements (queue → Accepted-RFC children → grounded research) in an isolated-worktree Pi tmux Advisor session
 ---
 
 # Autopilot
@@ -27,11 +27,13 @@ re-running implement/eval/finalize itself.
 
 Invoke the `/autopilot` skill. Reminders:
 
-- **Selection is issue-queue-first**: implement the oldest open issue labeled
-  `autopilot` that has no open PR reference (linked metadata, branch, title, or body).
-  If the queue is empty, run first-principles
-  research (`/harness-audit`), then **file an `autopilot` ticket from the
-  top-ranked finding and build it** this same run. GitHub issues are the queue.
+- **Selection ladder** (autopilot runs off the RFC + wiki system): **(1)** the oldest open
+  issue labeled `autopilot` with no open PR reference (linked metadata, branch, title, or body);
+  **(2)** when the queue is empty, the next unbuilt child of an **Accepted** RFC in
+  `.oh/docs/rfcs/README.md` (Draft RFCs are never auto-built); **(3)** else wiki-grounded
+  `/harness-audit` research — a **directional** finding is filed as a Draft `RFC:` proposal and
+  **deferred to human** (no build), a **tactical** one is filed as an `autopilot` ticket and built
+  this same run. Durable findings are `/wiki ingest`ed so knowledge compounds. GitHub issues are the queue.
 - **Every PR states its selection rationale** in the description — why this item
   was chosen this session (queue position, or the research finding + ranking).
 - **Default executor is `ship-spec`** (defer the build to `/ship-spec`): use `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /pr-audit undraft) into a ready-for-review PR`, then let `/ship-spec` own the build — it compacts, runs the worktree Advisor + an Advisor-monitored `.oh/scripts/ralph.sh` loop (`/delegate` optional inside), gates on `/eval`, and undrafts via `/pr-audit`. `--executor=delegate-advisor` selects the legacy `/delegate` worker fan-out; `AUTOPILOT_EXECUTOR=ralph` or `/autopilot --executor=ralph` keeps the legacy inline `.oh/scripts/ralph.sh "$SLUG"` fallback.

@@ -20,7 +20,7 @@ argument-hint: "[--dry-run] [--executor=ship-spec|delegate-advisor|ralph] [--rep
 
 # Autopilot
 
-Unattended self-improvement loop for the harness. Each run picks one harness-infra item from the GitHub `autopilot` issue queue (or researches and files one when the queue is empty), builds it end-to-end through `pm decompose → /goal Advisor handoff → /ship-spec --issue`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. `/ship-spec` now owns the whole build pipeline (`/compact → worktree Advisor → Advisor-monitored .oh/scripts/ralph.sh loop → /eval → /compact → /pr-audit undraft`); autopilot **defers** to it rather than re-running implement/eval/finalize. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
+Unattended self-improvement loop for the harness that **runs off the RFC + wiki system**. Each run picks one harness-infra item from the GitHub `autopilot` issue queue — or, when the queue is empty, the next unbuilt child of an **Accepted** RFC (`.oh/docs/rfcs/README.md`), else a wiki-grounded `/harness-audit` finding it classifies as *directional* (filed as a Draft `RFC:` proposal and deferred to human ratification, not built) or *tactical* (filed + built) — then builds the selected buildable item end-to-end through `pm decompose → /goal Advisor handoff → /ship-spec --issue`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. `/ship-spec` now owns the whole build pipeline (`/compact → worktree Advisor → Advisor-monitored .oh/scripts/ralph.sh loop → /eval → /compact → /pr-audit undraft`); autopilot **defers** to it rather than re-running implement/eval/finalize. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
 
 Executor toggle: `--executor=ship-spec|delegate-advisor|ralph`, or `AUTOPILOT_EXECUTOR=ship-spec|delegate-advisor|ralph`. Default `ship-spec` **defers the whole build to `/ship-spec`** (which owns the worktree Advisor, the two compacts, an **Advisor-monitored `.oh/scripts/ralph.sh` loop** with `/delegate` optional inside an iteration, `/eval`, and the `/pr-audit` promotable undraft). `delegate-advisor` is the same deferral but passes `--executor=delegate-advisor` to `/ship-spec` for the legacy `/delegate --plan` worker fan-out. `ralph` remains a legacy inline fallback that drives `.oh/scripts/ralph.sh "$SLUG"` directly against the scaffolded task and finalizes inline (idempotent: a no-op if `/ship-spec` already reached `STATUS: COMPLETE`).
 
@@ -209,9 +209,9 @@ cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER";
 release_overlap_lock() { [ -n "${OVERLAP_PIDFILE:-}" ] && rm -f "$OVERLAP_PIDFILE"; }
 ```
 
-### 2. Select — issue queue first, research only when empty
+### 2. Select — queue → Accepted-RFC children → grounded research
 
-GitHub issues labeled `autopilot` ARE the work queue. There are no time throttles and no in-repo backlog — the user steers by filing `autopilot`-labeled issues.
+GitHub issues labeled `autopilot` ARE the work queue. There are no time throttles and no in-repo backlog — the user steers by filing `autopilot`-labeled issues. Beyond the raw queue, autopilot **runs off the RFC + wiki system**: it drives *ratified* direction to completion (unbuilt children of **Accepted** RFCs in `.oh/docs/rfcs/README.md`), grounds its research in the `/wiki` corpus, and routes its own *directional* findings back through the RFC system rather than building them unratified. The selection ladder is **(1)** oldest actionable `autopilot` issue → **(2)** next unbuilt child of an Accepted RFC → **(3)** grounded research (which itself classifies findings directional-vs-tactical).
 
 **Queue check** — actionable = open, labeled `autopilot`, NOT labeled `autopilot-blocked`, and with **no open or merged PR reference**. Do **not** rely only on GitHub's `linked:pr` qualifier: PRs targeting `development` may carry `Closes #N` in their body while `closingIssuesReferences` / `linked:pr` stays empty until default-branch semantics apply, and merged `development` PRs may not auto-close issues when GitHub's default branch differs. Enumerate open and recent merged PRs once, then dedupe each candidate issue locally by linked metadata, head branch, title, and body text.
 
@@ -289,10 +289,23 @@ while IFS= read -r row; do
   touch "$ACTIVE_MARKER"
   ```
   Leave `$KEEP` unchanged — the keep-marker path is fixed at spawn time and the session wrapper checks that original path.
-- **No actionable item** — the queue is empty, OR every open `autopilot` ticket already has an open or merged PR — → **fall through to research** (below). A single in-flight PR MUST NOT starve the loop, and a completed-but-still-open ticket (common when a `development` PR carries `Closes #N` but the repo default branch differs) MUST NOT be rebuilt. The §1 caps (6 open created/day, 10 total) are the pile-up guard for fresh work. Those caps were already enforced above, so research here is cap-bounded by construction. Do **not** un-draft, finalize, or otherwise mutate a PR opened by a different run while idling on it — surface it (the heartbeat watches for stuck-green drafts) and proceed to research instead.
+- **No actionable item** — the queue is empty, OR every open `autopilot` ticket already has an open or merged PR — → **fall through to research** (below). A single in-flight PR MUST NOT starve the loop, and a completed-but-still-open ticket (common when a `development` PR carries `Closes #N` but the repo default branch differs) MUST NOT be rebuilt. The §1 caps (6 open created/day, 10 total) are the pile-up guard for fresh work. Those caps were already enforced above, so research here is cap-bounded by construction. Do **not** un-draft, finalize, or otherwise mutate a PR opened by a different run while idling on it — surface it (the heartbeat watches for stuck-green drafts) and proceed to **tier 2** instead.
 
-**No actionable queue item → research** (first-principles pass — fires whenever the queue is empty *or* every open ticket already has an open/merged PR):
+**Tier 2 — next Accepted-RFC child (before any cold audit).** When no `autopilot` issue is actionable, consult the RFC index before researching — autopilot's job is to drive *ratified* direction to done, not to re-derive it:
 
+1. Read `.oh/docs/rfcs/README.md` and collect proposals whose **Status is `Accepted`** (skip `Draft`/`Superseded` — a Draft RFC awaits human ratification and MUST NEVER be auto-built).
+2. For each Accepted RFC in index order, open its linked epic/issue and read its child-issue checklist / referenced sub-issues. Pick the first child that is **unbuilt** — unchecked, or a referenced issue with **no open or merged PR** after the same local dedupe as the queue — and not `autopilot-blocked`.
+3. **Found one** → reuse its existing `autopilot` issue if already filed, else file it (`--label autopilot`, title `feat: <child>`, body citing the parent RFC + the child item). Set:
+   ```
+   SELECTION_MODE=rfc-child
+   SELECTION_RATIONALE="RFC-driven selection: queue empty; building the next unbuilt child of Accepted RFC #<rfc> — \"<child>\". Driving ratified direction before any cold research."
+   ```
+   Run the same `BRANCH` / `SAFE_SESSION` / `ACTIVE_MARKER` dedupe + rename block, then **build it this same run** (§3 onward); its terminal token is `RFC-CHILD-BUILT`.
+4. **None actionable** → fall through to tier 3.
+
+**Tier 3 — grounded research** (fires only when tiers 1–2 yield nothing actionable):
+
+0. **Ground it in the RFC + wiki system first.** `/wiki query` the topics the audit will touch — so findings compound on accumulated knowledge instead of starting cold each hour — and skim `.oh/docs/rfcs/README.md` for an open **Draft** RFC already covering the space (do not re-propose one that exists).
 1. Run `/harness-audit`. Rank its harness-infra findings by impact.
 2. Dedupe each finding (in rank order) against open issues, open PRs, **and merged PRs** — advance past any hit (a blocked candidate must never end the run while others remain):
    ```bash
@@ -301,29 +314,37 @@ while IFS= read -r row; do
    DUPE_MERGED_PR=$(gh pr list --repo "$AUTOPILOT_REPO" --state merged --limit 50 --json number,title,headRefName --jq '.[] | "\(.number) \(.title) \(.headRefName)"' | grep -i "$SLUG" || true)
    ```
 3. **No survivor** → memory log `Result: NOTHING-NEW`, liveness `NOTHING-NEW`, then `close_no_pr_session` and exit 0 (no keep-marker). Research fires whenever no actionable ticket exists — both when the queue is fully drained AND when open tickets are all awaiting review. Dedupe (against open issues, open PRs, and merged PRs) plus the §1 caps bound the output: an already-filed finding dedupes to `NOTHING-NEW`; worst case an hourly audit yields `NOTHING-NEW` repeatedly — accepted cost.
-4. **Top survivor** → write a body to `/tmp/autopilot-research-$$.md` containing (a) the finding, (b) the first-principles rationale, (c) a 3–7-bullet plan sketch. If `--dry-run` is set, print the would-file finding in the dry-run block below and exit before any `gh issue create` mutation. Otherwise file the ticket from the plan:
+4. **Top survivor** → write a body to `/tmp/autopilot-research-$$.md` containing (a) the finding, (b) the first-principles rationale, (c) a 3–7-bullet plan sketch. **If `--dry-run` is set, print the classification (directional → would-file RFC; tactical → would file + build) in the dry-run block below and exit before any `gh issue create` mutation.** Otherwise **classify and route it** — this is where autopilot honors the RFC direction gate:
+
+   **Directional** — a decision, a new capability, an architecture/policy change, or anything cross-cutting whose *direction* a human should ratify before it is built → **file an RFC proposal and defer; do NOT build this run:**
+   ```bash
+   gh issue create --repo "$AUTOPILOT_REPO" --label roadmap --title "RFC: <finding>" --body-file /tmp/autopilot-research-$$.md
+   ```
+   The body follows the RFC convention (`.oh/docs/rfcs/README.md`): `Status: Draft`, the proposal, and what it decides vs. defers. Then `/wiki ingest` the supporting research so the knowledge compounds for later runs (writes under the already-owned `.oh/skills/wiki/`), set `SELECTION_MODE=rfc-filed`, memory-log `Result: RFC-FILED` + liveness `RFC-FILED`, `close_no_pr_session`, and exit 0. The companion `.oh/docs/rfcs/<slug>.md` is authored later — when the RFC is **Accepted** and built via tier 2 — so autopilot never writes an unratified direction into the tree, and `.oh/docs/rfcs/` need not enter `OWNED_PATHS`.
+
+   **Tactical** — a bounded fix or self-contained improvement with no directional ambiguity → file it as an `autopilot` ticket and build it this run:
    ```bash
    gh issue create --repo "$AUTOPILOT_REPO" --label autopilot --title "feat: <finding>" --body-file /tmp/autopilot-research-$$.md
    ```
-   Capture `ISSUE_NUM`; derive `SLUG` from the title. Set:
+   Capture `ISSUE_NUM`; derive `SLUG` from the title. If the finding produced durable reference knowledge, `/wiki ingest` it too. Set:
    ```
    SELECTION_MODE=research
-   SELECTION_RATIONALE="Research selection: queue was empty; /harness-audit ranked this finding #1 by impact among harness-infra candidates. First-principles rationale: <reasoning>. Filed as #$ISSUE_NUM."
+   SELECTION_RATIONALE="Research selection: tiers 1–2 empty; grounded /harness-audit ranked this tactical finding #1 by impact. First-principles rationale: <reasoning>. Filed as #$ISSUE_NUM."
    ```
    Run the same `BRANCH` / `SAFE_SESSION` / `ACTIVE_MARKER` duplicate guard and session rename block described above. Then **implement it this same run** (§3 onward).
 
 **`--dry-run` exit** — print:
 
 ```
-[dry-run] mode: $SELECTION_MODE
-[dry-run] selected: #$ISSUE_NUM ($SLUG)        # research path: "would file + build: <finding>"
+[dry-run] mode: $SELECTION_MODE                # queue | rfc-child | research | rfc-filed
+[dry-run] selected: #$ISSUE_NUM ($SLUG)        # rfc-child: "would build Accepted-RFC child"; research: tactical "would file + build", directional "would file RFC + defer"
 [dry-run] executor: $EXECUTOR
 [dry-run] open autopilot PRs created today: $OPEN_TODAY (cap 6); total open: $TOTAL_OPEN (ceiling 10)
 [dry-run] dedupe: $DEDUPE_STATE
 [dry-run] exiting without calling /ship-spec, /delegate, or .oh/scripts/ralph.sh
 ```
 
-In `--dry-run`, the research path ranks findings but MUST NOT `gh issue create` — print the would-be finding instead. Then exit 0.
+In `--dry-run`, tiers 2–3 rank/classify but MUST NOT `gh issue create` or `/wiki ingest` — print the would-be action instead: for tier 2 the Accepted-RFC child it would build, for tier 3 the top finding tagged `would file RFC` (directional) or `would file + build` (tactical). Then exit 0.
 
 ### 3. pm decompose
 
@@ -567,7 +588,9 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 |-------|---------|
 | `SKIPPED-CAP-TOTAL` | ≥10 open autopilot PRs (any age); run skipped until one closes/merges |
 | `SKIPPED-CAP-DAILY` | ≥6 autopilot PRs created this UTC day are still open; skipped until one closes/merges or the day rolls over |
-| `NOTHING-NEW` | No actionable ticket (queue empty, or all open tickets already have PRs) AND `/harness-audit` produced no finding that survives dedupe — research ran but had nothing fresh to file. _(Replaces the retired `IN-FLIGHT` token: a single in-flight PR no longer ends the run; it falls through to research.)_ |
+| `NOTHING-NEW` | No actionable ticket across all tiers — the `autopilot` queue is empty/all-PR'd, no Accepted-RFC child is buildable, AND grounded `/harness-audit` produced no finding that survives dedupe. _(Replaces the retired `IN-FLIGHT` token: a single in-flight PR no longer ends the run; it falls through to the RFC/research tiers.)_ |
+| `RFC-CHILD-BUILT` | Tier-2 selection: built the next unbuilt child of an **Accepted** RFC. PR outcome then follows the `PR-READY` / `PR-DRAFT-*` tokens as usual. |
+| `RFC-FILED` | Tier-3 research surfaced a **directional** finding; autopilot filed it as a Draft `RFC:` proposal (label `roadmap`), `/wiki ingest`ed the supporting knowledge, and deferred to human ratification — no build this run, no PR. |
 | `PR-READY` | End-to-end success; PR marked ready with green CI |
 | `PR-DRAFT-CI-RED` | PR left draft because the PR was not promotable per `/pr-audit` (CI red/pending or conflicts) — set by `/ship-spec` in the ship-spec/delegate-advisor modes, or by the ralph fallback's own `/pr-audit` gate |
 | `PR-DRAFT-EVAL-RED` | PR left draft because `/eval` reported a NEW (green→red) probe regression or a non-zero runner exit (inside `/ship-spec` in the ship-spec/delegate-advisor modes, or autopilot's inline `/eval` in ralph mode) |

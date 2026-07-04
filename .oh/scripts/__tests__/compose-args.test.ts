@@ -211,7 +211,7 @@ describe("compose helper wiring", () => {
   it("installer keeps host defaults out of tracked harness.yaml", () => {
     const text = readFileSync(INSTALL, "utf8");
     expect(text).toContain("Existing .devcontainer/.env preserved");
-    expect(text).toContain("Tracked\n# harness.yaml stays clean");
+    expect(text).toContain("Keeping host\n# defaults here (not in shared config)");
     expect(text).toContain('SANDBOX_NAME=$(_env_val "$SANDBOX_NAME")');
     expect(text).toContain("GIT_USER_NAME=%s\\n");
     expect(text).not.toContain('__YAML="$REPO_DIR/harness.yaml"');

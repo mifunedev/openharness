@@ -44,4 +44,26 @@ describe("installer host prerequisite docs", () => {
     // ...and warns rather than dies when it's absent.
     expect(install).toContain("make not found");
   });
+
+  it("refuses to overwrite a sandbox that already exists under the same name", () => {
+    const install = readRepoFile(".oh", "scripts", "install.sh");
+
+    // Checks existing containers (running OR stopped) by name before up...
+    expect(install).toContain("docker ps -a --format");
+    // ...and hard-errors (die) rather than silently recreating it,
+    expect(install).toContain('die "A sandbox named');
+    expect(install).toContain("already exists");
+    // with an explicit opt-in to replace in place.
+    expect(install).toContain("OH_REPLACE");
+  });
+
+  it("offers optional agent installs (Hermes etc.) as INSTALL_* toggles", () => {
+    const install = readRepoFile(".oh", "scripts", "install.sh");
+
+    expect(install).toContain("_opt_install HERMES");
+    expect(install).toContain("_opt_install AGENT_BROWSER");
+    // interactive prompt that writes the toggle the compose build args read
+    expect(install).toContain('prompt_yn "Install ');
+    expect(install).toContain("INSTALL_");
+  });
 });

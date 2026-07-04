@@ -358,14 +358,18 @@ DEFAULT_NAME=$(basename "$REPO_DIR"); DEFAULT_NAME="${DEFAULT_NAME#.}"
 prompt_input SANDBOX_NAME "Container name" "$DEFAULT_NAME"
 ok "Name: $SANDBOX_NAME"
 
-# ─── Guard: don't clobber a sandbox already running under this name ──────
+# ─── Guard: don't clobber a sandbox that already exists under this name ──
 # The compose service uses container_name=$SANDBOX_NAME and image
-# sandbox-$SANDBOX_NAME (.devcontainer/docker-compose.yml), so bringing the
-# sandbox up while a container of the same name is already running would
-# recreate it and kill that live session. Names must be unique — refuse unless
-# the operator explicitly opts into replacing it with OH_REPLACE=1.
-if [ "${OH_REPLACE:-}" != "1" ] && docker ps --format '{{.Names}}' 2>/dev/null | grep -Fxq "$SANDBOX_NAME"; then
-  die "A sandbox named '$SANDBOX_NAME' is already running — refusing to overwrite it. Choose a unique name (re-run with SANDBOX_NAME=<name>), or pass OH_REPLACE=1 to rebuild this one in place."
+# sandbox-$SANDBOX_NAME (.devcontainer/docker-compose.yml). Bringing the
+# sandbox up while a container of the same name exists — running OR stopped —
+# would recreate it and can lose its bind-mounted .devcontainer/.env and
+# .hermes state. Names must be unique; refuse unless the operator explicitly
+# opts into replacing it with OH_REPLACE=1. `docker ps -a` covers stopped
+# containers too, so an idle prior install isn't silently overwritten. (A
+# leftover clone with NO container is safe: its .env/.hermes are reused, not
+# lost, so we don't block on the directory alone.)
+if [ "${OH_REPLACE:-}" != "1" ] && docker ps -a --format '{{.Names}}' 2>/dev/null | grep -Fxq "$SANDBOX_NAME"; then
+  die "A sandbox named '$SANDBOX_NAME' already exists (a container with that name is present — running or stopped) — refusing to overwrite it and risk losing its .devcontainer/.env or .hermes state. Choose a unique name (re-run with SANDBOX_NAME=<name>), or pass OH_REPLACE=1 to rebuild this one in place."
 fi
 
 mkdir -p "$REPO_DIR/.devcontainer"

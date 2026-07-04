@@ -45,14 +45,14 @@ describe("installer host prerequisite docs", () => {
     expect(install).toContain("make not found");
   });
 
-  it("refuses to overwrite a sandbox already running under the same name", () => {
+  it("refuses to overwrite a sandbox that already exists under the same name", () => {
     const install = readRepoFile(".oh", "scripts", "install.sh");
 
-    // Checks running containers by name before bringing the sandbox up...
-    expect(install).toContain("docker ps --format");
+    // Checks existing containers (running OR stopped) by name before up...
+    expect(install).toContain("docker ps -a --format");
     // ...and hard-errors (die) rather than silently recreating it,
     expect(install).toContain('die "A sandbox named');
-    expect(install).toContain("already running");
+    expect(install).toContain("already exists");
     // with an explicit opt-in to replace in place.
     expect(install).toContain("OH_REPLACE");
   });

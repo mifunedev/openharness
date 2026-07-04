@@ -137,6 +137,12 @@ Env vars:
   SANDBOX_NAME         Skip the "Container name" prompt
   OH_GITHUB_REPO       GitHub repo to clone (default: mifunedev/openharness)
   OH_GITHUB_REF        Git ref to clone (alias: OH_INSTALL_REF)
+  OH_REPLACE           Set to 1 to rebuild in place even when a sandbox of the
+                       same name is already running (default: refuse, so a live
+                       sandbox is never overwritten)
+  INSTALL_HERMES=true  Enable an optional agent non-interactively. Also:
+                       INSTALL_OPENCODE, INSTALL_DEEPAGENTS, INSTALL_GROK_BUILD,
+                       INSTALL_AGENT_BROWSER
 
 Examples:
   curl -fsSL https://oh.mifune.dev/install.sh | bash
@@ -352,6 +358,16 @@ DEFAULT_NAME=$(basename "$REPO_DIR"); DEFAULT_NAME="${DEFAULT_NAME#.}"
 prompt_input SANDBOX_NAME "Container name" "$DEFAULT_NAME"
 ok "Name: $SANDBOX_NAME"
 
+# ─── Guard: don't clobber a sandbox already running under this name ──────
+# The compose service uses container_name=$SANDBOX_NAME and image
+# sandbox-$SANDBOX_NAME (.devcontainer/docker-compose.yml), so bringing the
+# sandbox up while a container of the same name is already running would
+# recreate it and kill that live session. Names must be unique — refuse unless
+# the operator explicitly opts into replacing it with OH_REPLACE=1.
+if [ "${OH_REPLACE:-}" != "1" ] && docker ps --format '{{.Names}}' 2>/dev/null | grep -Fxq "$SANDBOX_NAME"; then
+  die "A sandbox named '$SANDBOX_NAME' is already running — refusing to overwrite it. Choose a unique name (re-run with SANDBOX_NAME=<name>), or pass OH_REPLACE=1 to rebuild this one in place."
+fi
+
 mkdir -p "$REPO_DIR/.devcontainer"
 
 if [ -f "$REPO_DIR/.devcontainer/.env" ]; then
@@ -446,6 +462,34 @@ ENVEOF
       unset __GH_TOKEN_RAW
     fi
   fi
+
+  # ─── Optional installs (extra agents/features — OFF by default) ──────
+  # Each maps to an INSTALL_* build arg/env in .devcontainer/docker-compose.yml.
+  # Enabling one rebuilds the image with that CLI; agent_browser also pulls
+  # ~1 GB of Chromium. A pre-set INSTALL_* env var is honored (non-interactive
+  # installs); otherwise we prompt — but only with a TTY, and --yes/--no keep
+  # the lean default (nothing extra) rather than auto-enabling everything.
+  banner "Optional installs (off by default)"
+  _opt_install() {   # $1 = INSTALL_ suffix, $2 = human label
+    local __k="INSTALL_$1"
+    if [ "${!__k:-}" = "true" ]; then
+      printf '%s=true\n' "$__k" >> "$REPO_DIR/.devcontainer/.env"
+      ok "$__k=true (from environment)"
+      return 0
+    fi
+    if [ "$ASSUME_YES" = true ] || [ "$ASSUME_NO" = true ] || [ ! -r /dev/tty ]; then
+      return 0
+    fi
+    if prompt_yn "Install $2?" n; then
+      printf '%s=true\n' "$__k" >> "$REPO_DIR/.devcontainer/.env"
+      ok "$__k=true"
+    fi
+  }
+  _opt_install HERMES        "Hermes — Nous self-improving agent CLI"
+  _opt_install OPENCODE      "OpenCode — OpenAI-OAuth terminal agent"
+  _opt_install DEEPAGENTS    "DeepAgents — LangChain multi-provider agent"
+  _opt_install GROK_BUILD    "Grok Build — xAI terminal agent"
+  _opt_install AGENT_BROWSER "agent-browser + Chromium (~1 GB)"
 fi
 
 # ─── 5. Bring up the sandbox ─────────────────────────────────────────

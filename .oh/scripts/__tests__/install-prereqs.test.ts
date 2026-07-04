@@ -33,4 +33,15 @@ describe("installer host prerequisite docs", () => {
     expect(install).toContain("git (used to clone or update Open Harness)");
     expect(install).toContain("git is required to clone or update Open Harness");
   });
+
+  it("installer surfaces make as a soft (non-fatal) lifecycle prerequisite", () => {
+    const install = readRepoFile(".oh", "scripts", "install.sh");
+
+    // Help text lists make for the post-install lifecycle (make shell / destroy).
+    expect(install).toContain("make (build-essential)");
+    // Preflight checks for make...
+    expect(install).toMatch(/command -v make/);
+    // ...and warns rather than dies when it's absent.
+    expect(install).toContain("make not found");
+  });
 });

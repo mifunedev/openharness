@@ -46,7 +46,7 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides the same fetch/review/approve flow. The installer clones into `~/.openharness`, prompts to share your host `gh` token, writes `.devcontainer/.env` with safe defaults, and brings the sandbox up via `docker compose`.
+The installer clones into `~/.openharness`, prompts to share your host `gh` token, writes `.devcontainer/.env` with safe defaults, creates `harness.yaml` from the template when missing, and brings the sandbox up via `docker compose`.
 
 **Self-hosting from an existing clone:** run `bash .oh/scripts/install.sh` from inside the directory — it detects the local clone automatically.
 

@@ -95,15 +95,16 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides a fetch/diff/ShellCheck/preview/approve wrapper for the same installer. `vet` is optional; Open Harness itself requires Docker with Compose, Git, and make (see [Prerequisites](#prerequisites)).
+Open Harness requires Docker with Compose, Git, and make (see [Prerequisites](#prerequisites)).
 
 The installer:
 
-1. Verifies Docker and git are present.
+1. Verifies Docker and git are present (warns if `make`, used by the lifecycle targets, is missing).
 2. Clones the repo into `~/.openharness` (or pulls latest if the directory already exists).
 3. Prompts for `SANDBOX_NAME`, then writes `.devcontainer/.env`.
-4. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
-5. Prints the next-step commands (open a shell, stop, tear down).
+4. Creates `harness.yaml` from `harness.yaml.example` when missing (all keys commented — inert until you edit).
+5. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
+6. Prints the next-step commands (open a shell, stop, tear down).
 
 ### Environment overrides
 
@@ -123,14 +124,14 @@ To install your fork instead of the upstream repo, run the installer directly fr
 
 ```bash
 OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
-  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh | bash
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/.oh/scripts/install.sh | bash
 ```
 
 Review-first fork install:
 
 ```bash
 curl -fsSL -o openharness-install.sh \
-  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/.oh/scripts/install.sh
 # Review openharness-install.sh, then run it against your fork.
 OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```

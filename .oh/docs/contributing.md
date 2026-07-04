@@ -36,7 +36,7 @@ make restart    # restart the service
 make help       # list all targets
 ```
 
-A first-run helper is available at `scripts/install.sh` — it prompts for the values written to `.devcontainer/.env` (GitHub token autodetect, idempotent re-runs) before you call `make sandbox`.
+A first-run helper is available at `.oh/scripts/install.sh` — it prompts for the values written to `.devcontainer/.env` (GitHub token autodetect, idempotent re-runs) before you call `make sandbox`.
 
 ### Onboard inside the sandbox
 

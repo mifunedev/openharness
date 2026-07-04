@@ -17,6 +17,7 @@ import {
   redact,
   validateWeights,
   resolveGroundTruth,
+  buildWeaknessRecords,
   DEFAULT_WEIGHTS,
   MARKER_FEATURE_KEYS,
 } from "../mine-traces.mjs";
@@ -324,4 +325,75 @@ test("CLI tolerates malformed lines without throwing", () => {
 
 test("CLI rejects an unknown flag with a non-zero exit", () => {
   assert.throws(() => execFileSync("node", [ENGINE, "--bogus"], { encoding: "utf8", stdio: "pipe" }));
+});
+
+// --- weakness records (WH-<NNN>): shape, determinism, privacy ---------------
+
+// Synthetic sessions: tool_error fires in 2 of 3 (>= WEAKNESS_MIN_FREQUENCY),
+// so exactly one WH-001 record is produced. Ordering is intentionally jumbled
+// (sessionId z before a, harness pi before claude) to exercise the sorts.
+const SYNTH_SESSIONS = [
+  { sessionId: "z-sess", harness: "pi", gitBranch: "feat/z", toolErrors: 1, incomplete: 0, abandoned: 0, scoreBreakdown: { signals: { correctionDensity: 0 } } },
+  { sessionId: "a-sess", harness: "claude", gitBranch: "feat/a", toolErrors: 2, incomplete: 0, abandoned: 0, scoreBreakdown: { signals: { correctionDensity: 0 } } },
+  { sessionId: "m-sess", harness: "claude", gitBranch: "feat/m", toolErrors: 0, incomplete: 0, abandoned: 0, scoreBreakdown: { signals: { correctionDensity: 0 } } },
+];
+
+test("buildWeaknessRecords returns exactly the 7 metadata fields, all non-empty, no promptText", () => {
+  const records = buildWeaknessRecords(SYNTH_SESSIONS);
+  assert.ok(records.length >= 1, "at least one WH record");
+  const rec = records[0];
+  assert.deepEqual(Object.keys(rec).sort(), [
+    "affected_agents",
+    "frequency",
+    "likely_harness_layer",
+    "recommended_repair_surface",
+    "summary",
+    "supporting_traces",
+    "weakness_id",
+  ]);
+  assert.match(rec.weakness_id, /^WH-\d{3}$/);
+  assert.match(rec.frequency, /^\d+\/\d+$/);
+  assert.ok(typeof rec.summary === "string" && rec.summary.length > 0);
+  assert.ok(typeof rec.likely_harness_layer === "string" && rec.likely_harness_layer.length > 0);
+  assert.ok(typeof rec.recommended_repair_surface === "string" && rec.recommended_repair_surface.length > 0);
+  assert.ok(Array.isArray(rec.affected_agents) && rec.affected_agents.length > 0);
+  assert.ok(Array.isArray(rec.supporting_traces) && rec.supporting_traces.length > 0);
+  // Privacy: no promptText key on the record OR on any supporting trace; traces
+  // are session-id metadata only.
+  assert.equal("promptText" in rec, false);
+  for (const t of rec.supporting_traces) {
+    assert.equal("promptText" in t, false);
+    assert.deepEqual(Object.keys(t).sort(), ["gitBranch", "harness", "sessionId"]);
+  }
+});
+
+test("buildWeaknessRecords is byte-identical across two calls and stable under input reordering", () => {
+  const a = JSON.stringify(buildWeaknessRecords(SYNTH_SESSIONS));
+  const b = JSON.stringify(buildWeaknessRecords(SYNTH_SESSIONS));
+  assert.equal(a, b, "two calls on the same input are byte-identical");
+  // WH-001 must not flip when the same sessions arrive in a different order.
+  const shuffled = [SYNTH_SESSIONS[2], SYNTH_SESSIONS[0], SYNTH_SESSIONS[1]];
+  assert.equal(JSON.stringify(buildWeaknessRecords(shuffled)), a, "stable under reorder");
+});
+
+test("weakness records serialize no raw human-prompt substring from the fixtures", () => {
+  const out = execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const data = JSON.parse(out);
+  assert.ok(Array.isArray(data.weaknesses) && data.weaknesses.length >= 1, ">= 1 WH record");
+  const serialized = JSON.stringify(data.weaknesses);
+  // Distinctive human-prompt substrings that live verbatim in the fixture .jsonl.
+  const humanPromptSubstrings = [
+    "Implement the foo widget",
+    "Add the bar feature",
+    "No, that's wrong",
+    "Create the baz module",
+  ];
+  for (const needle of humanPromptSubstrings) {
+    assert.ok(!serialized.includes(needle), `weakness records leaked prompt text: ${needle}`);
+  }
+  for (const w of data.weaknesses) assert.equal("promptText" in w, false);
 });

@@ -5,7 +5,20 @@ term defined as this repo actually uses it today, with a pointer to a canonical
 source file or skill. This is a plain reference page, not a standards document:
 there are no normative requirements here, only working definitions.
 
-Terms are listed alphabetically.
+Terms are listed alphabetically below.
+
+## Layers
+
+These names describe separate layers, not interchangeable jobs:
+
+- **Model** — The LLM selected by a provider; it proposes text and tool calls, while the surrounding agent, harness, and policy decide where those requests run and what is allowed. See the **model** glossary entry.
+- **Agent / CLI** — The process that wraps a model with tools, instructions, and session state, such as Claude Code, Codex, Pi, or a scoped `.oh/agents/` worker. See the **agent** glossary entry.
+- **Harness** — The repo, Docker sandbox, and `.oh/` control plane that give agents a reproducible workspace and lifecycle. See the **harness** glossary entry.
+- **Loop** — A repeated workflow that the harness drives until a terminal state, such as a Ralph run ending on the completion marker. See the **loop** and **terminal state** glossary entries.
+- **Policy** — The provider-portable rules, skills, and hooks that constrain agent behavior and tool use. See the **policy** and **tool** glossary entries.
+- **Trace** — Recorded session evidence consumed later by analysis, not the live execution layer itself. See the **trace** glossary entry.
+
+## Terms
 
 - **agent** — A model-driven worker that reads the workspace and does the task:
   an agent CLI (Claude Code, Codex, Pi, …) running inside the sandbox, or a
@@ -46,6 +59,11 @@ Terms are listed alphabetically.
   completion marker appears. The reference implementation is the Ralph loop,
   which re-invokes the agent on a task until `progress.txt` contains the line
   `STATUS: COMPLETE`. Source: [`.oh/scripts/ralph.sh`](../scripts/ralph.sh).
+
+- **model** — The LLM an agent or CLI uses to produce reasoning, text, and
+  tool-call requests. The model is only one part of an agent session; the
+  harness, tools, and policy decide where it runs and which actions are allowed.
+  Source: [`.oh/agents/advisor.md`](../agents/advisor.md).
 
 - **orchestrator** — The root-level role that manages the sandbox lifecycle and
   git but does not write application code; its job is provisioning, scaffolding

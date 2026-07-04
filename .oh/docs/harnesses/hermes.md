@@ -154,7 +154,10 @@ separate (`hermes gateway setup` for Hermes, the in-session `/msg-bridge` for Pi
 
 Run the Hermes gateway **from inside the sandbox** — both `gateway hermes` and
 `make gateway hermes` require `hermes` on `PATH`, so they only work in the container
-(`gateway.sh` errors otherwise):
+(`gateway.sh` errors otherwise). The launcher pins `HERMES_HOME` to
+`~/harness/.hermes`, persists Hermes `terminal.cwd` to `~/harness` (override with
+`HERMES_GATEWAY_HOME` / `HERMES_GATEWAY_CWD`), and self-installs Teams webhook deps
+when Teams credentials are configured:
 
 ```bash
 gateway hermes            # start the client-slack-hermes session (wraps `hermes gateway run`)

@@ -113,7 +113,7 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), you can review and approve the same installer with `vet https://oh.mifune.dev/install.sh`. `vet` is optional; Open Harness requires Docker with the Compose plugin, Git, and make on the host. The installer clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm).
+Open Harness requires Docker with the Compose plugin, Git, and make on the host. The installer clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm).
 
 **Fork and clone (self-hosting):**
 
@@ -127,14 +127,14 @@ bash .oh/scripts/install.sh
 
 ```bash
 OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
-  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh | bash
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/.oh/scripts/install.sh | bash
 ```
 
 Review-first fork install:
 
 ```bash
 curl -fsSL -o openharness-install.sh \
-  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/.oh/scripts/install.sh
 # Review openharness-install.sh, then run it against your fork.
 OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```

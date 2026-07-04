@@ -53,15 +53,15 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 
 # ─── Hermes Agent CLI ───────────────────────────────────────────────
 # Optional image-level install. When INSTALL_HERMES=true, install the
 # executable during image build (like the other image-level CLIs), not at
-# container boot. The Slack messaging extra ships by default so the gateway's
-# Slack adapter works without a post-install step. Runtime config/auth uses
+# container boot. The Slack and Teams messaging extras ship by default so the
+# gateway adapters work without a post-install step. Runtime config/auth uses
 # the project-local /home/sandbox/harness/.hermes directory via HERMES_HOME.
 ARG INSTALL_HERMES=false
 RUN if [ "${INSTALL_HERMES}" = "true" ]; then \
       curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
         | bash -s -- --skip-setup --skip-browser; \
       rm -rf /root/.hermes; \
-      uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack,web,pty]'; \
+      uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack,teams,web,pty]'; \
     else \
       echo "Skipping Hermes Agent CLI install (INSTALL_HERMES=false)"; \
     fi
@@ -200,11 +200,9 @@ RUN su - sandbox -c "git config --global --add safe.directory ${OH_PROJECT_ROOT}
 RUN echo "cd ${OH_PROJECT_ROOT} 2>/dev/null" >> /home/sandbox/.bashrc
 
 # Image-level devcontainer config — VS Code reads this on "Attach to Running Container"
-# NOTE: static /home/sandbox/harness — Phase-2 devcontainer templating target (#531)
 RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness","remoteUser":"sandbox"}' > /.devcontainer/devcontainer.json
 
 # Labels for VS Code "Attach to Running Container"
-# NOTE: static /home/sandbox/harness — Phase-2 devcontainer templating target (#531)
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
 
 # ─── Copy install scripts + workspace (for CI; bind mount overrides at runtime)

@@ -95,15 +95,16 @@ curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 bash openharness-install.sh
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://oh.mifune.dev/install.sh` provides a fetch/diff/ShellCheck/preview/approve wrapper for the same installer. `vet` is optional; Open Harness itself requires Docker with Compose, Git, and make (see [Prerequisites](#prerequisites)).
+Open Harness requires Docker with Compose, Git, and make (see [Prerequisites](#prerequisites)).
 
 The installer:
 
-1. Verifies Docker and git are present.
+1. Verifies Docker and git are present (warns if `make`, used by the lifecycle targets, is missing).
 2. Clones the repo into `~/.openharness` (or pulls latest if the directory already exists).
 3. Prompts for `SANDBOX_NAME`, then writes `.devcontainer/.env`.
-4. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
-5. Prints the next-step commands (open a shell, stop, tear down).
+4. Creates `harness.yaml` from `harness.yaml.example` when missing (all keys commented — inert until you edit).
+5. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
+6. Prints the next-step commands (open a shell, stop, tear down).
 
 ### Environment overrides
 
@@ -123,14 +124,14 @@ To install your fork instead of the upstream repo, run the installer directly fr
 
 ```bash
 OH_GITHUB_REPO=<your-org>/<your-fork> curl -fsSL \
-  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh | bash
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/.oh/scripts/install.sh | bash
 ```
 
 Review-first fork install:
 
 ```bash
 curl -fsSL -o openharness-install.sh \
-  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/scripts/install.sh
+  https://raw.githubusercontent.com/<your-org>/<your-fork>/main/.oh/scripts/install.sh
 # Review openharness-install.sh, then run it against your fork.
 OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```
@@ -181,6 +182,29 @@ docker exec -it -u sandbox openharness zsh
 ```
 
 Replace `openharness` with whatever you set as `SANDBOX_NAME`.
+
+## Standalone CLI (`oh`): equip an existing repo
+
+Every path above clones the harness repo itself and keeps the host toolchain-free — no Node required. The standalone `oh` CLI path is different: it equips **your existing project repo** with the harness and drives the sandbox without keeping an OpenHarness checkout around. This path — and only this path — requires on the host:
+
+| Dependency | Required for |
+|---|---|
+| Node.js ≥ 18 (20+ recommended) | Building and running the `oh` binary (`dist/oh.js`) |
+| git | The shallow clone behind `--from-remote` |
+| Docker (with Compose plugin) | `oh sandbox` / `oh shell` |
+
+`make` is **not** needed here — the verbs wrap the vendored `.oh/scripts/` directly. The CLI is not published to npm: build it once from any OpenHarness checkout (`cd .oh/cli && npm install && npm run build`) and put `dist/oh.js` on your PATH as `oh`.
+
+```bash
+cd <your-project>
+oh init --from-remote   # equip the repo — shallow-clones the public repo for the
+                        # payload; pin a version with --ref <tag|branch>
+oh sandbox              # provision + start the sandbox (docker compose up -d --build)
+oh shell                # zsh in the running container (or: oh shell <container>)
+oh gateway status       # manage messaging client sessions (pi|hermes)
+```
+
+`--from-remote` fetches over public HTTPS only — private or credential-prompting remotes fail fast (`GIT_TERMINAL_PROMPT=0`); offline, use `oh init --from <local-checkout>` instead. Repos equipped this way mount your project at `/home/sandbox/project` inside the sandbox (the clone paths above use `/home/sandbox/harness`). Upgrade the vendored `.oh/` later with `oh update --from-remote [--ref <ref>]`.
 
 ## Next step
 

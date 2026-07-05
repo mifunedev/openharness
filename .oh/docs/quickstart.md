@@ -50,7 +50,7 @@ The installer clones into `~/.openharness`, prompts to share your host `gh` toke
 
 **Self-hosting from an existing clone:** run `bash .oh/scripts/install.sh` from inside the directory — it detects the local clone automatically.
 
-**Standalone `oh` CLI (equip an existing project repo):** bootstrap the `oh` command onto your host with `curl -fsSL https://oh.mifune.dev/get-oh.sh | bash` (review-first: `curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh` then read it and `bash get-oh.sh`), then `cd <your-project> && oh init` → `oh sandbox` / `oh shell` / `oh gateway` — see [Installation → Standalone CLI](./installation.md#standalone-cli-oh-equip-an-existing-repo). Unlike the paths above, it requires Node.js ≥ 18 and git on the host (Docker only for `oh sandbox`).
+**Standalone `oh` CLI (equip an existing project repo):** bootstrap the `oh` command onto your host with `curl -fsSL https://oh.mifune.dev/get-oh.sh | bash` (review-first: `curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh` then read it and `bash get-oh.sh`), then `cd <your-project> && oh init` → `oh sandbox` / `oh shell` / `oh gateway` — see [Installation → Standalone CLI](./installation.md#standalone-cli-oh-equip-an-existing-repo). It installs the `oh` binary to `~/.local/bin/oh` (no repo clone) and needs Node.js ≥ 20 (it offers to install nvm + Node 22 if missing); Docker only for `oh sandbox`.
 
 </details>
 

@@ -189,13 +189,13 @@ Every path above clones the harness repo itself and keeps the host toolchain-fre
 
 | Dependency | Required for |
 |---|---|
-| Node.js ≥ 18 (20+ recommended) | Building and running the `oh` binary (`dist/oh.js`) |
+| Node.js ≥ 20 (22 recommended) | Running the `oh` binary (`get-oh.sh` offers to install nvm + Node 22 if missing) |
 | git | The shallow clone behind `--from-remote` |
 | Docker (with Compose plugin) | `oh sandbox` / `oh shell` |
 
 `make` is **not** needed here — the verbs wrap the vendored `.oh/scripts/` directly.
 
-**Get the `oh` command (recommended):** the CLI is not published to npm, so bootstrap it with `get-oh.sh`. It clones the harness into `~/.openharness`, builds the CLI, and symlinks `oh` onto your PATH — keeping the clone so `oh init`/`oh update` run from the **local** payload with no per-command network fetch.
+**Get the `oh` command (recommended):** the CLI is not published to npm, so bootstrap it with `get-oh.sh`. It installs the single self-contained `oh` binary to `~/.local/bin/oh` — **no repo clone**, and it does not touch an existing `~/.openharness` sandbox. It prefers a prebuilt bundle (`oh.mifune.dev/oh.js`) and falls back to building from source in a temp dir. If Node.js ≥ 20 is missing, it offers to install nvm + Node 22 and sources it so `oh` works in the same shell. `oh init` fetches its scaffold payload on demand.
 
 ```bash
 curl -fsSL https://oh.mifune.dev/get-oh.sh | bash
@@ -209,7 +209,7 @@ curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh
 bash get-oh.sh
 ```
 
-Environment overrides: `OH_GITHUB_REPO=<org>/<fork>` (clone a fork), `OH_GITHUB_REF=<ref>` (pin a tag/branch), `OH_HOME=<dir>` (clone location, default `~/.openharness`), `OH_BIN_DIR=<dir>` (symlink location, default `~/.local/bin`).
+Environment overrides: `OH_BIN_DIR=<dir>` (install location, default `~/.local/bin`), `OH_JS_URL=<url>` (prebuilt bundle URL), `OH_GITHUB_REPO=<org>/<fork>` / `OH_GITHUB_REF=<ref>` (source for the build fallback), `OH_NVM_VERSION=<tag>` (nvm version for the Node install), `--yes`/`--no` (auto-accept/decline the Node-install prompt).
 
 **From an existing checkout (no bootstrap script):** `cd .oh/cli && npm install && npm run build`, then put `dist/oh.js` on your PATH as `oh`.
 

@@ -163,6 +163,18 @@ bash get-oh.sh
 source <(curl -fsSL https://oh.mifune.dev/get-oh.sh)
 ```
 
+**Or install from npm** — if you already have **Node.js ≥ 20** on your host, skip the bootstrap script entirely:
+
+```bash
+npm install -g @mifune/openharness   # puts `oh` on your PATH
+oh init
+
+# ...or zero-install, no global install:
+npx @mifune/openharness init
+```
+
+Unlike `get-oh.sh`, npm does **not** install Node for you — Node ≥ 20 must already be on your PATH.
+
 If you already ran the plain piped form and `oh` isn't found yet, just add its dir to the current shell's PATH: `export PATH="$HOME/.local/bin:$PATH"`.
 
 `get-oh.sh` installs the single self-contained `oh` binary to `~/.local/bin/oh` — **no repo clone**, and it leaves any existing `~/.openharness` sandbox config untouched. It needs **Node.js ≥ 20** to run `oh`; if Node is missing it offers to install nvm + Node 22 (and sources it so it works in the same shell). `oh init` fetches its scaffold payload on demand. Override the install dir with `OH_BIN_DIR`. Then:

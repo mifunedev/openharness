@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: get-oh.sh bootstrap — the only host-side path to the standalone `oh` CLI (unpublished npm pkg)
+# source: get-oh.sh bootstrap — the Node-bootstrapping host-side path to the standalone `oh` CLI (also on npm as @mifune/openharness; see oh-npm-package.sh)
 # desc: STATIC guard — `.oh/scripts/get-oh.sh` exists, is executable, uses the overridable repo form,
 #       installs a PREBUILT `oh` to a bin dir WITHOUT cloning the repo, offers to install Node,
 #       and is documented in the README. Also guards link-providers.sh's non-git fallback.

@@ -157,7 +157,7 @@ curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh
 bash get-oh.sh
 ```
 
-`get-oh.sh` clones the harness into `~/.openharness`, builds the CLI, and symlinks `oh` onto your PATH (keeping the clone so `oh init`/`oh update` work offline from the local payload). It needs **Node.js ≥ 18** and git on the host (Docker is only needed later, for `oh sandbox`). Point it at a fork with `OH_GITHUB_REPO=<your-org>/<your-fork>`. Then:
+`get-oh.sh` installs the single self-contained `oh` binary to `~/.local/bin/oh` — **no repo clone**, and it leaves any existing `~/.openharness` sandbox config untouched. It needs **Node.js ≥ 20** to run `oh`; if Node is missing it offers to install nvm + Node 22 (and sources it so it works in the same shell). `oh init` fetches its scaffold payload on demand. Override the install dir with `OH_BIN_DIR`. Then:
 
 ```bash
 cd <your-project>

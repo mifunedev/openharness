@@ -157,6 +157,14 @@ curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh
 bash get-oh.sh
 ```
 
+**Use `oh` immediately in the current shell** (installs *and* puts `oh` on your PATH now — no new terminal or re-login):
+
+```bash
+source <(curl -fsSL https://oh.mifune.dev/get-oh.sh)
+```
+
+If you already ran the plain piped form and `oh` isn't found yet, just add its dir to the current shell's PATH: `export PATH="$HOME/.local/bin:$PATH"`.
+
 `get-oh.sh` installs the single self-contained `oh` binary to `~/.local/bin/oh` — **no repo clone**, and it leaves any existing `~/.openharness` sandbox config untouched. It needs **Node.js ≥ 20** to run `oh`; if Node is missing it offers to install nvm + Node 22 (and sources it so it works in the same shell). `oh init` fetches its scaffold payload on demand. Override the install dir with `OH_BIN_DIR`. Then:
 
 ```bash

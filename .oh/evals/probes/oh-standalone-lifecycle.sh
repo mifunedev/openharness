@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #564
-# desc: guards the standalone lifecycle contract — cli.ts registers sandbox/shell/gateway + --from-remote, no stale #531 marker remains under .oh/cli/src/, and rewriteComposeForTarget still maps consumer mounts to /home/sandbox/project
+# desc: guards the standalone lifecycle contract — cli.ts registers sandbox/shell/gateway + --from-remote, no stale #531 marker remains under .oh/cli/src/, and init.ts scaffolds the consumer devcontainer workspace at /home/sandbox/harness (compose copied verbatim; the older /home/sandbox/project rewrite was intentionally removed)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -33,9 +33,14 @@ if [[ -n "$stale_531" ]]; then
   fails+=("no stale #531 marker under .oh/cli/src/ (found: ${stale_531})")
 fi
 
-# (c) rewriteComposeForTarget still maps consumer compose mounts to the project path.
-grep -q 'rewriteComposeForTarget' "$INIT" || fails+=(".oh/cli/src/commands/init.ts defines rewriteComposeForTarget")
-grep -Fq '/home/sandbox/project' "$INIT" || fails+=(".oh/cli/src/commands/init.ts maps the consumer compose to /home/sandbox/project")
+# (c) init.ts scaffolds the consumer devcontainer workspace at /home/sandbox/harness.
+# The compose file is now copied VERBATIM (its mounts are already parameterized as
+# ${OH_PROJECT_ROOT:-/home/sandbox/harness}), so the older /home/sandbox/project
+# rewrite must NOT reappear.
+grep -Fq '/home/sandbox/harness' "$INIT" || fails+=(".oh/cli/src/commands/init.ts scaffolds the consumer workspace at /home/sandbox/harness")
+if grep -Fq '/home/sandbox/project' "$INIT"; then
+  fails+=(".oh/cli/src/commands/init.ts must NOT reintroduce the /home/sandbox/project rewrite")
+fi
 
 if (( ${#fails[@]} > 0 )); then
   echo "REGRESSION: standalone lifecycle contract broken:" >&2
@@ -43,5 +48,5 @@ if (( ${#fails[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: standalone lifecycle contract — sandbox/shell/gateway + --from-remote registered in cli.ts, no stale #531 marker under .oh/cli/src/, rewriteComposeForTarget maps to /home/sandbox/project" >&2
+echo "PASS: standalone lifecycle contract — sandbox/shell/gateway + --from-remote registered in cli.ts, no stale #531 marker under .oh/cli/src/, init.ts scaffolds the consumer workspace at /home/sandbox/harness (no /home/sandbox/project rewrite)" >&2
 exit 0

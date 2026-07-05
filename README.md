@@ -141,6 +141,30 @@ OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 
 If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](.oh/docs/installation.md) for all environment overrides.
 
+**Get the standalone `oh` CLI (equip an existing project repo):**
+
+The installer above builds the harness sandbox. To instead put the `oh` command on your host — so you can run `oh init` inside any project — bootstrap it once:
+
+```bash
+curl -fsSL https://oh.mifune.dev/get-oh.sh | bash
+```
+
+Review-first alternative (no extra dependency):
+
+```bash
+curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh
+# Review get-oh.sh in your editor or pager before running it.
+bash get-oh.sh
+```
+
+`get-oh.sh` clones the harness into `~/.openharness`, builds the CLI, and symlinks `oh` onto your PATH (keeping the clone so `oh init`/`oh update` work offline from the local payload). It needs **Node.js ≥ 18** and git on the host (Docker is only needed later, for `oh sandbox`). Point it at a fork with `OH_GITHUB_REPO=<your-org>/<your-fork>`. Then:
+
+```bash
+cd <your-project>
+oh init          # equip the repo with Open Harness
+oh sandbox       # provision + start the sandbox
+```
+
 </details>
 
 

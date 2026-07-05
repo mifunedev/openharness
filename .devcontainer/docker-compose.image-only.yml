@@ -1,0 +1,73 @@
+# Image-Only Sandbox Docker Compose Configuration (Flavor B, #609)
+# ===================================================================
+# Standalone recipe for running the PUBLISHED image with no repo checkout
+# and no local image build — there is no parent-directory bind mount and
+# no build stanza in this file. The workspace and control plane (.oh/,
+# agent state) live entirely in the named volume `oh_workspace`, seeded
+# from the image's baked /opt/oh-seed on first boot by entrypoint.sh (see
+# OH_IMAGE_ONLY handling). Edits made inside the running sandbox persist
+# in the volume across image pulls and container recreation, not in the
+# image itself.
+#
+# Usage:
+#   docker compose -f .devcontainer/docker-compose.image-only.yml up -d
+#
+# See .oh/docs/deployment-prebuilt-image.md for the full Flavor B writeup.
+
+name: ${SANDBOX_NAME:-openharness}
+
+services:
+  sandbox:
+    # Always runs the published image — never builds locally.
+    image: ${OH_SANDBOX_IMAGE:-ghcr.io/mifunedev/openharness:latest}
+    pull_policy: ${OH_PULL_POLICY:-always}
+    container_name: ${SANDBOX_NAME:-openharness}
+    volumes:
+      - oh_workspace:${OH_PROJECT_ROOT:-/home/sandbox/harness}
+      - claude-auth:/home/sandbox/.claude
+      - codex-auth:/home/sandbox/.codex
+      - pi-auth:/home/sandbox/.pi
+      - opencode-auth:/home/sandbox/.local/share/opencode
+      - grok-auth:/home/sandbox/.grok
+      - deepagents-auth:/home/sandbox/.deepagents
+      - cloudflared-auth:/home/sandbox/.cloudflared
+      - gh-config:/home/sandbox/.config/gh
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - SANDBOX_NAME=${SANDBOX_NAME:-openharness}
+      - SANDBOX_PASSWORD=${SANDBOX_PASSWORD:-test1234}
+      - TZ=${TZ:-America/Los_Angeles}
+      - CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true
+      - GIT_USER_NAME=${GIT_USER_NAME:-}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
+      - GH_TOKEN=${GH_TOKEN:-}
+      - XAI_API_KEY=${XAI_API_KEY:-}
+      - OH_PROJECT_ROOT=${OH_PROJECT_ROOT:-/home/sandbox/harness}
+      - OH_IMAGE_ONLY=1
+      - CRONS_DIR=${CRONS_DIR:-.oh/crons}
+      - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
+      - MEMORY_DIR=${MEMORY_DIR:-.oh/memory}
+    stdin_open: true
+    tty: true
+    init: true
+    entrypoint: /usr/local/bin/entrypoint.sh
+    command: sleep infinity
+    healthcheck:
+      test: ["CMD", "bash", "${OH_PROJECT_ROOT:-/home/sandbox/harness}/.oh/scripts/sandbox-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 300s
+    restart: unless-stopped
+
+volumes:
+  oh_workspace:
+  claude-auth:
+  codex-auth:
+  pi-auth:
+  opencode-auth:
+  grok-auth:
+  deepagents-auth:
+  cloudflared-auth:
+  gh-config:

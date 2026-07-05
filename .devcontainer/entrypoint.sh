@@ -56,6 +56,31 @@ repair_home_mount_ownership() {
   fi
 }
 
+# >>> seed_workspace_volume >>>
+# First-boot seed for OH_IMAGE_ONLY (no-bind) mode: populate an empty named
+# workspace volume from the image's baked control plane (/opt/oh-seed by
+# default). Self-contained: uses only $1 (dest) + $OH_IMAGE_SEED_SRC so the
+# eval probe can source it in isolation. Sets OH_IMAGE_SEEDED_THIS_BOOT.
+seed_workspace_volume() {
+  local dest="$1"
+  local marker="$dest/.oh/.image-seeded"
+  local src="${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+  OH_IMAGE_SEEDED_THIS_BOOT=0
+  if [ -f "$marker" ]; then
+    return 0
+  fi
+  # Clobber guard: only seed when the control plane is absent (marker AND emptiness).
+  if [ -n "$src" ] && [ -d "$src" ] && [ ! -d "$dest/.oh" ]; then
+    cp -a "$src/." "$dest/" 2>/dev/null || true
+  fi
+  if [ -d "$dest/.oh" ]; then
+    : > "$marker" 2>/dev/null || true
+    OH_IMAGE_SEEDED_THIS_BOOT=1
+  fi
+  return 0
+}
+# <<< seed_workspace_volume <<<
+
 repair_home_mount_ownership
 
 # ─── Host UID reconciliation ────────────────────────────────────────
@@ -82,7 +107,16 @@ uid_reconcile_step() {
 }
 
 HARNESS_DIR="$OH_PROJECT_ROOT"
-if [ -d "$HARNESS_DIR" ]; then
+if [ "${OH_IMAGE_ONLY:-}" = "1" ]; then
+  echo "[entrypoint] OH_IMAGE_ONLY=1 — no-bind mode; skipping host UID/GID sync"
+  seed_workspace_volume "$OH_PROJECT_ROOT"
+  if [ "${OH_IMAGE_SEEDED_THIS_BOOT:-0}" = "1" ]; then
+    echo "[entrypoint] seeded control plane into $OH_PROJECT_ROOT from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+    chown -R "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
+  else
+    chown "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
+  fi
+elif [ -d "$HARNESS_DIR" ]; then
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
   HOST_GID=$(stat -c '%g' "$HARNESS_DIR")
   SANDBOX_UID=$(id -u sandbox)

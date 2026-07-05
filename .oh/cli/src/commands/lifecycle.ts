@@ -82,8 +82,27 @@ export interface ShellOptions extends LifecycleOptions {
   container?: string;
 }
 
+/** `oh sandbox` options — the prebuilt-image / no-build knobs on top of the base. */
+export interface SandboxOptions extends LifecycleOptions {
+  /** `--image` was passed (run the prebuilt image; implies `--no-build`). */
+  image?: boolean;
+  /** Explicit ref from `--image=<ref>`; when set it wins over harness.yaml. */
+  imageRef?: string;
+  /** `--no-build` was passed (suppress the local build, reuse an existing image). */
+  noBuild?: boolean;
+}
+
 /** The fallback container name (parity with the Makefile's SANDBOX_NAME). */
 export const DEFAULT_CONTAINER_NAME = "openharness";
+
+/**
+ * The image `oh sandbox --image` (bare, no ref) resolves to when harness.yaml
+ * carries no `sandbox.image`. `latest` is safe because the bind-mounted repo
+ * shadows the image's baked `.oh/` — the image supplies only the toolchain, so
+ * its version is a toolchain concern, not a correctness one. Override precedence
+ * (last wins): this default -> harness.yaml `sandbox.image` -> `--image=<ref>`.
+ */
+export const DEFAULT_SANDBOX_IMAGE = "ghcr.io/mifunedev/openharness:latest";
 
 /**
  * Path-escape guard for the one writer in this module (the harness.yaml seed):
@@ -189,20 +208,62 @@ async function maybePromptDockerSocket(root: string, io: LifecycleIO, run: Lifec
 }
 
 /**
+ * `sandbox.image` from `<root>/harness.yaml` via the vendored parser, or
+ * undefined when unconfigured — the middle layer of the `--image` ref
+ * resolution (below the `--image=<ref>` flag, above DEFAULT_SANDBOX_IMAGE). Same
+ * mandatory-explicit-path contract as `configuredContainerName`.
+ */
+function configuredImage(root: string, run: LifecycleRunner): string | undefined {
+  const script = join(root, ".oh", "scripts", "harness-config.sh");
+  const harnessYaml = join(root, "harness.yaml");
+  if (!existsSync(script) || !existsSync(harnessYaml)) return undefined;
+  const r = run("sh", [script, "get", "sandbox.image", harnessYaml], { stdio: "capture" });
+  if (r.error || r.status !== 0) return undefined;
+  const name = (r.stdout ?? "").trim();
+  return name === "" ? undefined : name;
+}
+
+/**
  * `oh sandbox` — provision and start the sandbox: seed harness.yaml if needed,
  * prompt once for the (default-off) Docker-socket opt-in, then delegate to the
  * vendored compose wrapper (which owns ALL compose-argv building):
  * `bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build`.
- * Runs with inherited stdio (live build output) and returns the child's exit code.
+ *
+ * Prebuilt-image mode (`--image[=<ref>]` / `--no-build`) swaps the trailing
+ * `--build` for `--no-build` so no local image is built, and — when an image is
+ * requested — threads the resolved ref through `OH_SANDBOX_IMAGE` in the child
+ * env (the compose file interpolates it at `image:`). The ref resolves last-wins:
+ * `--image=<ref>` > harness.yaml `sandbox.image` > DEFAULT_SANDBOX_IMAGE. The
+ * ref itself still travels via the env into the wrapper — this stays a thin
+ * pass-through, no compose-argv building in TS.
+ *
+ * Runs with inherited stdio (live build/pull output) and returns the child's exit code.
  */
-export async function runSandbox(opts: LifecycleOptions, io: LifecycleIO): Promise<number> {
+export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
   seedHarnessYaml(root, io);
   await maybePromptDockerSocket(root, io, run);
   const script = requireScript(root, "docker-compose.sh");
-  const r = run("bash", [script, "--repo-dir", root, "up", "-d", "--build"], {
+
+  // `--image` implies `--no-build` (skipping the build is the whole point);
+  // `--no-build` on its own suppresses the build without pinning an image.
+  const useImage = opts.image === true || opts.imageRef !== undefined;
+  const useNoBuild = useImage || opts.noBuild === true;
+  const buildFlag = useNoBuild ? "--no-build" : "--build";
+
+  let env: NodeJS.ProcessEnv | undefined;
+  if (useImage) {
+    const ref = opts.imageRef ?? configuredImage(root, run) ?? DEFAULT_SANDBOX_IMAGE;
+    env = { ...process.env, OH_SANDBOX_IMAGE: ref };
+    io.stdout(`image mode: ${ref} (skipping local build)\n`);
+  } else if (useNoBuild) {
+    io.stdout("no-build mode: reusing the existing image (skipping local build)\n");
+  }
+
+  const r = run("bash", [script, "--repo-dir", root, "up", "-d", buildFlag], {
     stdio: "inherit",
+    ...(env ? { env } : {}),
   });
   assertSpawned(r, `bash ${script}`);
   return r.status ?? 1;

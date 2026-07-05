@@ -7,6 +7,7 @@ import {
   runSandbox,
   runShell,
   DEFAULT_CONTAINER_NAME,
+  DEFAULT_SANDBOX_IMAGE,
   type LifecycleIO,
   type LifecycleRunner,
   type RunResult,
@@ -276,6 +277,75 @@ describe("runSandbox", () => {
     ]);
     expect(calls[1].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--build"]);
   });
+
+  // ── Prebuilt-image mode (--image / --no-build) ───────────────────────────
+  it("--image (bare, no harness.yaml image) → up -d --no-build + OH_SANDBOX_IMAGE=<default>", async () => {
+    const root = makeRepo();
+    const script = addScript(root, "docker-compose.sh");
+    const { calls, run } = makeRunner([{ status: 0 }]);
+    const { out, io } = makeIo();
+
+    expect(await runSandbox({ cwd: root, run, image: true }, io)).toBe(0);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].cmd).toBe("bash");
+    expect(calls[0].args).toEqual([script, "--repo-dir", root, "up", "-d", "--no-build"]);
+    expect(calls[0].args).not.toContain("--build");
+    expect(calls[0].opts.env?.OH_SANDBOX_IMAGE).toBe(DEFAULT_SANDBOX_IMAGE);
+    expect(out.join("")).toContain(`image mode: ${DEFAULT_SANDBOX_IMAGE}`);
+  });
+
+  it("--image=<ref> wins over harness.yaml sandbox.image (explicit ref → no image lookup)", async () => {
+    const root = makeRepo();
+    const composeScript = addScript(root, "docker-compose.sh");
+    addScript(root, "harness-config.sh");
+    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  image: ghcr.io/x/y:pinned\n");
+    // call 0 = the docker-socket opt-in lookup (fires whenever both files exist,
+    // returns empty → unconfigured, non-TTY → no prompt); call 1 = compose up.
+    // No sandbox.image lookup happens — the explicit ref short-circuits it.
+    const { calls, run } = makeRunner([{ status: 0 }]);
+    const ref = "ghcr.io/mifunedev/openharness:2026.7.5";
+
+    expect(await runSandbox({ cwd: root, run, image: true, imageRef: ref }, makeIo().io)).toBe(0);
+    expect(calls).toHaveLength(2);
+    expect(calls.some((c) => c.args.includes("sandbox.image"))).toBe(false);
+    expect(calls[1].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--no-build"]);
+    expect(calls[1].opts.env?.OH_SANDBOX_IMAGE).toBe(ref);
+  });
+
+  it("--image (bare) reads harness.yaml sandbox.image via the vendored parser", async () => {
+    const root = makeRepo();
+    const composeScript = addScript(root, "docker-compose.sh");
+    const configScript = addScript(root, "harness-config.sh");
+    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  image: ghcr.io/x/y:configured\n");
+    // call 0 = docker-socket opt-in lookup (empty → unconfigured); call 1 =
+    // sandbox.image lookup → the configured ref; call 2 = compose up.
+    const { calls, run } = makeRunner([
+      { status: 0 },
+      { status: 0, stdout: "ghcr.io/x/y:configured\n" },
+      { status: 0 },
+    ]);
+
+    expect(await runSandbox({ cwd: root, run, image: true }, makeIo().io)).toBe(0);
+    expect(calls[1]).toEqual({
+      cmd: "sh",
+      args: [configScript, "get", "sandbox.image", join(root, "harness.yaml")],
+      opts: { stdio: "capture" },
+    });
+    expect(calls[2].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--no-build"]);
+    expect(calls[2].opts.env?.OH_SANDBOX_IMAGE).toBe("ghcr.io/x/y:configured");
+  });
+
+  it("--no-build alone → up -d --no-build with NO OH_SANDBOX_IMAGE pinned", async () => {
+    const root = makeRepo();
+    const script = addScript(root, "docker-compose.sh");
+    const { calls, run } = makeRunner([{ status: 0 }]);
+    const { out, io } = makeIo();
+
+    expect(await runSandbox({ cwd: root, run, noBuild: true }, io)).toBe(0);
+    expect(calls[0].args).toEqual([script, "--repo-dir", root, "up", "-d", "--no-build"]);
+    expect(calls[0].opts.env).toBeUndefined();
+    expect(out.join("")).toContain("no-build mode");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -438,13 +508,49 @@ describe("runGateway", () => {
 
 describe("parseSandboxArgs", () => {
   it("accepts no arguments and recognizes the help flags", () => {
-    expect(parseSandboxArgs([])).toEqual({ ok: true, args: { help: false } });
+    expect(parseSandboxArgs([])).toEqual({
+      ok: true,
+      args: { help: false, image: false, noBuild: false },
+    });
     for (const h of ["--help", "-h", "help"]) {
-      expect(parseSandboxArgs([h])).toEqual({ ok: true, args: { help: true } });
+      expect(parseSandboxArgs([h])).toEqual({
+        ok: true,
+        args: { help: true, image: false, noBuild: false },
+      });
     }
   });
 
-  it("rejects any other argument (lifecycle verbs take no flags — FR-11)", () => {
+  it("accepts --image (bare), --image=<ref>, and --no-build (alone or combined)", () => {
+    expect(parseSandboxArgs(["--image"])).toEqual({
+      ok: true,
+      args: { help: false, image: true, noBuild: false },
+    });
+    expect(parseSandboxArgs(["--image=ghcr.io/mifunedev/openharness:2026.7.5"])).toEqual({
+      ok: true,
+      args: {
+        help: false,
+        image: true,
+        imageRef: "ghcr.io/mifunedev/openharness:2026.7.5",
+        noBuild: false,
+      },
+    });
+    expect(parseSandboxArgs(["--no-build"])).toEqual({
+      ok: true,
+      args: { help: false, image: false, noBuild: true },
+    });
+    expect(parseSandboxArgs(["--image", "--no-build"])).toEqual({
+      ok: true,
+      args: { help: false, image: true, noBuild: true },
+    });
+  });
+
+  it("rejects an empty --image= ref", () => {
+    const r = parseSandboxArgs(["--image="]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("--image=<ref> requires a non-empty image ref");
+  });
+
+  it("rejects unknown flags and stray positionals", () => {
     for (const bad of ["--force", "--dry-run", "extra"]) {
       const r = parseSandboxArgs([bad]);
       expect(r.ok).toBe(false);

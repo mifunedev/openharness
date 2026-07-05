@@ -61,6 +61,8 @@ BEGIN {
     envmap["sandbox.name"]          = "SANDBOX_NAME"
     envmap["sandbox.timezone"]      = "TZ"
     envmap["sandbox.docker_socket"] = "DOCKER_SOCKET"
+    envmap["sandbox.image"]         = "OH_SANDBOX_IMAGE"
+    envmap["sandbox.pull_policy"]   = "OH_PULL_POLICY"
     envmap["git.user_name"]         = "GIT_USER_NAME"
     envmap["git.user_email"]        = "GIT_USER_EMAIL"
     envmap["install.opencode"]      = "INSTALL_OPENCODE"

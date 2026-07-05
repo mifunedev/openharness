@@ -102,14 +102,14 @@ function captureStdout(fn: () => void): string {
 // ---------------------------------------------------------------------------
 
 describe("runSandbox", () => {
-  it("delegates the EXACT vendored argv with inherited stdio and returns the child's exit code", () => {
+  it("delegates the EXACT vendored argv with inherited stdio and returns the child's exit code", async () => {
     const root = makeRepo();
     const script = addScript(root, "docker-compose.sh");
     writeFileSync(join(root, "harness.yaml"), "sandbox:\n  name: x\n");
     const { calls, run } = makeRunner([{ status: 0 }]);
     const { out, io } = makeIo();
 
-    expect(runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(calls).toEqual([
       {
         cmd: "bash",
@@ -118,79 +118,163 @@ describe("runSandbox", () => {
       },
     ]);
     // harness.yaml already existed → no seed, no operation-log line.
+    // No io.ask injected + non-TTY → the Docker-socket prompt never fires.
     expect(out).toEqual([]);
   });
 
-  it("propagates a non-zero exit code from docker-compose.sh", () => {
+  it("propagates a non-zero exit code from docker-compose.sh", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     const { run } = makeRunner([{ status: 17 }]);
-    expect(runSandbox({ cwd: root, run }, makeIo().io)).toBe(17);
+    expect(await runSandbox({ cwd: root, run }, makeIo().io)).toBe(17);
   });
 
-  it("seeds harness.yaml from harness.yaml.example with exactly one operation-log line", () => {
+  it("seeds harness.yaml from harness.yaml.example with exactly one operation-log line", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     writeFileSync(join(root, "harness.yaml.example"), "sandbox:\n  name: seeded\n");
     const { run } = makeRunner();
     const { out, io } = makeIo();
 
-    expect(runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(readFileSync(join(root, "harness.yaml"), "utf8")).toBe("sandbox:\n  name: seeded\n");
     expect(out).toEqual(["create harness.yaml (from harness.yaml.example)\n"]);
   });
 
-  it("seed is a no-op when harness.yaml already exists (never overwritten, no log line)", () => {
+  it("seed is a no-op when harness.yaml already exists (never overwritten, no log line)", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     writeFileSync(join(root, "harness.yaml"), "sandbox:\n  name: mine\n");
     writeFileSync(join(root, "harness.yaml.example"), "sandbox:\n  name: template\n");
     const { out, io } = makeIo();
 
-    expect(runSandbox({ cwd: root, run: makeRunner().run }, io)).toBe(0);
+    expect(await runSandbox({ cwd: root, run: makeRunner().run }, io)).toBe(0);
     expect(readFileSync(join(root, "harness.yaml"), "utf8")).toBe("sandbox:\n  name: mine\n");
     expect(out).toEqual([]);
   });
 
-  it("seed is a no-op when no harness.yaml.example exists (oh init-equipped repos)", () => {
+  it("seed is a no-op when no harness.yaml.example exists (oh init-equipped repos)", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     const { calls, run } = makeRunner();
     const { out, io } = makeIo();
 
-    expect(runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(existsSync(join(root, "harness.yaml"))).toBe(false);
     expect(out).toEqual([]);
     expect(calls).toHaveLength(1); // compose still runs
   });
 
-  it("errors naming the missing docker-compose.sh path (no oh: prefix) without spawning", () => {
+  it("errors naming the missing docker-compose.sh path (no oh: prefix) without spawning", async () => {
     const root = makeRepo(); // .oh/scripts exists but the script does not
     const { calls, run } = makeRunner();
     const expected = join(root, ".oh", "scripts", "docker-compose.sh");
 
-    expect(() => runSandbox({ cwd: root, run }, makeIo().io)).toThrow(expected);
-    expect(() => runSandbox({ cwd: root, run }, makeIo().io)).not.toThrow(/oh:/);
+    // Now async → a thrown error surfaces as a rejected promise, not a sync throw.
+    await expect(runSandbox({ cwd: root, run }, makeIo().io)).rejects.toThrow(expected);
+    await expect(runSandbox({ cwd: root, run }, makeIo().io)).rejects.not.toThrow(/oh:/);
     expect(calls).toEqual([]);
   });
 
-  it("resolves the project root from a nested cwd", () => {
+  it("resolves the project root from a nested cwd", async () => {
     const root = makeRepo();
     const script = addScript(root, "docker-compose.sh");
     const nested = join(root, "src", "app", "deep");
     mkdirSync(nested, { recursive: true });
     const { calls, run } = makeRunner();
 
-    expect(runSandbox({ cwd: nested, run }, makeIo().io)).toBe(0);
+    expect(await runSandbox({ cwd: nested, run }, makeIo().io)).toBe(0);
     expect(calls[0].args).toEqual([script, "--repo-dir", root, "up", "-d", "--build"]);
   });
 
-  it("errors when not inside an equipped repo", () => {
+  it("errors when not inside an equipped repo", async () => {
     const bare = mkdtempSync(join(tmpdir(), "oh-lifecycle-bare-"));
     cleanups.push(bare);
-    expect(() => runSandbox({ cwd: bare, run: makeRunner().run }, makeIo().io)).toThrow(
+    await expect(runSandbox({ cwd: bare, run: makeRunner().run }, makeIo().io)).rejects.toThrow(
       "not an OpenHarness-equipped repo — run `oh init` first",
     );
+  });
+
+  // ── Docker-socket opt-in (default OFF; prompt only when interactive) ──────
+  it("prompts and writes DOCKER_SOCKET=true to .devcontainer/.env on yes", async () => {
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    const { run } = makeRunner();
+    const asked: string[] = [];
+    const io: LifecycleIO = {
+      stdout: () => {},
+      stderr: () => {},
+      ask: async (q) => {
+        asked.push(q);
+        return "y";
+      },
+    };
+
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(asked).toHaveLength(1);
+    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toContain("DOCKER_SOCKET=true");
+  });
+
+  it("records DOCKER_SOCKET=false on no (sticks the choice; no re-prompt later)", async () => {
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    const { run } = makeRunner();
+    const io: LifecycleIO = { stdout: () => {}, stderr: () => {}, ask: async () => "n" };
+
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toContain("DOCKER_SOCKET=false");
+  });
+
+  it("does NOT re-prompt when DOCKER_SOCKET is already set in .devcontainer/.env", async () => {
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(join(root, ".devcontainer", ".env"), "DOCKER_SOCKET=false\n");
+    const { run } = makeRunner();
+    let asked = 0;
+    const io: LifecycleIO = {
+      stdout: () => {},
+      stderr: () => {},
+      ask: async () => {
+        asked++;
+        return "y";
+      },
+    };
+
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(asked).toBe(0);
+    // Standing choice untouched.
+    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe("DOCKER_SOCKET=false\n");
+  });
+
+  it("does NOT prompt when sandbox.docker_socket is set in harness.yaml", async () => {
+    const root = makeRepo();
+    const composeScript = addScript(root, "docker-compose.sh");
+    addScript(root, "harness-config.sh");
+    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  docker_socket: true\n");
+    // call 0 = harness-config get (returns "true"); call 1 = compose up.
+    const { calls, run } = makeRunner([{ status: 0, stdout: "true\n" }, { status: 0 }]);
+    let asked = 0;
+    const io: LifecycleIO = {
+      stdout: () => {},
+      stderr: () => {},
+      ask: async () => {
+        asked++;
+        return "n";
+      },
+    };
+
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(asked).toBe(0);
+    expect(calls[0].args).toEqual([
+      join(root, ".oh", "scripts", "harness-config.sh"),
+      "get",
+      "sandbox.docker_socket",
+      join(root, "harness.yaml"),
+    ]);
+    expect(calls[1].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--build"]);
   });
 });
 

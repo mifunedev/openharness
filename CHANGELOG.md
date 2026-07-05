@@ -8,6 +8,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Security
+- **The host Docker socket is no longer mounted by default — it is now an explicit, prompted opt-in.** `/var/run/docker.sock` was previously bind-mounted into every sandbox unconditionally (`docker-compose.yml:33`), which is effectively host root (an agent can start a privileged container that mounts the host FS). The mount now lives in an opt-in overlay, `.devcontainer/docker-compose.docker-sock.yml`, applied by `.oh/scripts/docker-compose.sh` only when `DOCKER_SOCKET` is truthy (`harness.yaml` `sandbox.docker_socket: true` or `DOCKER_SOCKET=true` in `.devcontainer/.env`) — mirroring the existing hermes-dashboard overlay toggle. Both interactive installers now prompt for it and **default to off**: `install.sh` (the `curl | bash` path, honoring a pre-set `DOCKER_SOCKET` env for non-interactive/CI installs) and `oh sandbox` (the `oh` CLI / `get-oh.sh` path, which persists the choice to `.devcontainer/.env` so it sticks). `entrypoint.sh` already guarded on the socket's presence, so the sandbox boots cleanly with or without it. The VS Code "Reopen in Container" path reads `docker-compose.yml` directly and never mounts the socket; enable it there by adding the overlay to `devcontainer.json`. Documented in `.oh/docs/security-considerations.md` and `.oh/docs/intro.md`.
+
 ### Fixed
 - **Equipped-project sandbox no longer crash-loops on boot.** `link-providers.sh` hard-required a git checkout (`git rev-parse --show-toplevel`), so an `oh init`-equipped project that wasn't a git repo failed the entrypoint's provider-linking step (`entrypoint.sh` `exit 1`) and the container restart-looped under `restart: unless-stopped`. It now falls back to `${OH_PROJECT_ROOT:-$PWD}` when not in a git checkout, guarded by a `.oh/skills` existence check; behavior inside a real git checkout is unchanged.
 

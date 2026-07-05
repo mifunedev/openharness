@@ -1,6 +1,6 @@
 {
   "name": "@mifune/openharness",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Open Harness CLI — in-sandbox configuration wizards.",
   "license": "MIT",
   "homepage": "https://github.com/mifunedev/openharness#readme",

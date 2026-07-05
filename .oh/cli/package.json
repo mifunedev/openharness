@@ -29,7 +29,8 @@
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run typecheck"
+    "typecheck:build": "tsc --noEmit -p tsconfig.build.json",
+    "prepublishOnly": "npm run typecheck:build"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

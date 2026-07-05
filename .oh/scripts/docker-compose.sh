@@ -122,6 +122,20 @@ if truthy "$hermes_value"; then
   args+=(-f "$(compose_path ".devcontainer/docker-compose.hermes-dashboard.yml")")
 fi
 
+# Host Docker socket is opt-in (effectively host root). Apply the overlay only
+# when DOCKER_SOCKET is truthy via harness.yaml `sandbox.docker_socket` or the
+# .devcontainer/.env DOCKER_SOCKET key. Mirrors the hermes-dashboard toggle above.
+docker_socket_value=""
+if [ -f "$HARNESS_YAML" ]; then
+  docker_socket_value=$(sh "$CONFIG_SCRIPT" get sandbox.docker_socket "$HARNESS_YAML")
+fi
+if [ -z "$docker_socket_value" ]; then
+  docker_socket_value=${DOCKER_SOCKET:-$(read_env_value DOCKER_SOCKET)}
+fi
+if truthy "$docker_socket_value"; then
+  args+=(-f "$(compose_path ".devcontainer/docker-compose.docker-sock.yml")")
+fi
+
 if [ -f "$HARNESS_YAML" ]; then
   while IFS= read -r override; do
     [ -n "$override" ] && args+=(-f "$(compose_path "$override")")

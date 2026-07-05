@@ -60,6 +60,7 @@ awk -v mode="$_mode" -v filter_key="$_filter_key" -v sq="'" '
 BEGIN {
     envmap["sandbox.name"]          = "SANDBOX_NAME"
     envmap["sandbox.timezone"]      = "TZ"
+    envmap["sandbox.docker_socket"] = "DOCKER_SOCKET"
     envmap["git.user_name"]         = "GIT_USER_NAME"
     envmap["git.user_email"]        = "GIT_USER_EMAIL"
     envmap["install.opencode"]      = "INSTALL_OPENCODE"

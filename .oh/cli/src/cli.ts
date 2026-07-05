@@ -724,7 +724,7 @@ async function main(argv: string[]): Promise<number> {
       printSandboxHelp();
       return 0;
     }
-    return runSandbox({}, lifecycleIo());
+    return await runSandbox({}, lifecycleIo());
   }
 
   if (first === "shell") {

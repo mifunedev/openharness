@@ -1,0 +1,16 @@
+# Docker-socket overlay (opt-in — see .oh/docs/security-considerations.md).
+#
+# Applied by .oh/scripts/docker-compose.sh only when DOCKER_SOCKET is truthy
+# (harness.yaml `sandbox.docker_socket` or .devcontainer/.env DOCKER_SOCKET).
+# Mounting the host Docker socket gives the sandboxed agent effectively host
+# root (it can start a privileged container that mounts the host filesystem),
+# so enable this ONLY when the agent must drive Docker. entrypoint.sh guards on
+# the socket's presence, so the sandbox boots fine whether or not this is applied.
+#
+# The VS Code "Reopen in Container" path reads docker-compose.yml directly and
+# bypasses the wrapper, so it never applies this overlay; add this file to
+# devcontainer.json's dockerComposeFile list to enable the socket there.
+services:
+  sandbox:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

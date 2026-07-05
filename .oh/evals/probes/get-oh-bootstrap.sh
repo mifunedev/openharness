@@ -32,6 +32,10 @@ grep -qE '\.openharness|OH_HOME=' "$SCRIPT" && { echo 'REGRESSION get-oh.sh rein
 # Offers to install Node when missing (nvm path).
 grep -q 'nvm' "$SCRIPT" || { echo 'REGRESSION get-oh.sh no longer offers to install Node via nvm' >&2; exit 1; }
 
+# v2: supports being sourced so it can mutate the caller's live PATH in the same
+# shell (`source <(curl ...)`) — strict mode/traps scoped to the executed path.
+grep -q '_OH_SOURCED' "$SCRIPT" || { echo 'REGRESSION get-oh.sh lost sourced-vs-executed detection (same-shell PATH activation)' >&2; exit 1; }
+
 # Documented in the README.
 grep -q 'get-oh.sh' "$ROOT/README.md" || { echo 'REGRESSION README no longer documents get-oh.sh' >&2; exit 1; }
 

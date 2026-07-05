@@ -11,6 +11,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 ### Changed
 ### Fixed
+- **The CLI's `prepublishOnly` typecheck no longer requires workspace-root test dependencies.** `.oh/cli`'s `tsconfig.json` includes `src/__tests__/**`, whose specs import `vitest`/`fast-check` — devDependencies that live at the pnpm workspace root, not in `.oh/cli/package.json`. The `publish-npm` CI job installs `.oh/cli` in isolation (`npm ci`), so the `prepublishOnly` `tsc --noEmit` failed to resolve those modules (`TS2307`). Added `tsconfig.build.json` (extends the base, excludes `src/__tests__/**`) and pointed `prepublishOnly` at it, so the publish-time typecheck covers exactly the shipped source and passes with only the CLI's own devDependencies; test typechecking stays in the main workspace CI ([#564](https://github.com/mifunedev/openharness/issues/564)).
 ### Removed
 ### Deprecated
 ### Security

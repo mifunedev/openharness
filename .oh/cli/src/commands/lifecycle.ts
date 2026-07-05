@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, readFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { resolveProjectRoot } from "../lib/project.js";
+import * as prompt from "../lib/prompt.js";
 
 /**
  * Lifecycle verbs for equipped repos (issue #564): `oh sandbox`, `oh shell`,
@@ -21,6 +22,13 @@ import { resolveProjectRoot } from "../lib/project.js";
 export interface LifecycleIO {
   stdout: (s: string) => void;
   stderr: (s: string) => void;
+  /**
+   * Reader for the one interactive prompt (`oh sandbox`'s Docker-socket
+   * opt-in). Defaults to `prompt.ask` (real stdin). Injecting it also FORCES
+   * the prompt on in tests regardless of isTTY — mirrors init.ts's `io.ask`
+   * gate. Production cli.ts never injects it → pure isTTY gate.
+   */
+  ask?: (q: string) => Promise<string>;
 }
 
 /**
@@ -123,15 +131,75 @@ function seedHarnessYaml(root: string, io: LifecycleIO): void {
 }
 
 /**
+ * Whether the DOCKER_SOCKET toggle already has an explicit value — set either
+ * in `<root>/harness.yaml` (`sandbox.docker_socket`, the source of truth
+ * docker-compose.sh reads first) or `.devcontainer/.env` (a `DOCKER_SOCKET=`
+ * line). When configured, `oh sandbox` respects the standing choice and does
+ * NOT re-prompt.
+ */
+function dockerSocketConfigured(root: string, run: LifecycleRunner): boolean {
+  const script = join(root, ".oh", "scripts", "harness-config.sh");
+  const harnessYaml = join(root, "harness.yaml");
+  if (existsSync(script) && existsSync(harnessYaml)) {
+    const r = run("sh", [script, "get", "sandbox.docker_socket", harnessYaml], { stdio: "capture" });
+    if (!r.error && r.status === 0 && (r.stdout ?? "").trim() !== "") return true;
+  }
+  const envFile = join(root, ".devcontainer", ".env");
+  if (existsSync(envFile)) {
+    try {
+      if (/^\s*DOCKER_SOCKET=/m.test(readFileSync(envFile, "utf8"))) return true;
+    } catch {
+      /* unreadable .env → treat as unconfigured */
+    }
+  }
+  return false;
+}
+
+/**
+ * The Docker-socket opt-in for `oh sandbox` (the get-oh.sh / CLI provisioning
+ * path). Mounting /var/run/docker.sock is effectively HOST ROOT, so it is OFF
+ * by default: we only prompt on a TTY (or when a test injects `io.ask`) and
+ * only when no standing choice exists. The answer is persisted to
+ * `.devcontainer/.env` (`DOCKER_SOCKET=true|false`) so the choice sticks and
+ * docker-compose.sh applies the docker-compose.docker-sock.yml overlay when true.
+ */
+async function maybePromptDockerSocket(root: string, io: LifecycleIO, run: LifecycleRunner): Promise<void> {
+  if (dockerSocketConfigured(root, run)) return;
+  const interactive = process.stdin.isTTY === true || io.ask !== undefined;
+  if (!interactive) return; // non-TTY → leave it OFF, don't persist
+  const envDir = join(root, ".devcontainer");
+  if (!existsSync(envDir)) return; // nowhere durable to record the choice
+  const askFn = io.ask ?? prompt.ask;
+  const answer = (
+    await askFn(
+      "Mount host Docker socket into the sandbox? (effectively host root — enable only if the agent must drive Docker) [y/N]",
+    )
+  )
+    .trim()
+    .toLowerCase();
+  const enabled = answer === "y" || answer === "yes";
+  const envFile = join(envDir, ".env");
+  assertInRoot(envFile, root);
+  appendFileSync(envFile, `DOCKER_SOCKET=${enabled ? "true" : "false"}\n`);
+  io.stdout(
+    enabled
+      ? "DOCKER_SOCKET=true — host Docker socket will be mounted\n"
+      : "DOCKER_SOCKET=false — host Docker socket stays unmounted\n",
+  );
+}
+
+/**
  * `oh sandbox` — provision and start the sandbox: seed harness.yaml if needed,
- * then delegate to the vendored compose wrapper (which owns ALL compose-argv
- * building): `bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build`.
+ * prompt once for the (default-off) Docker-socket opt-in, then delegate to the
+ * vendored compose wrapper (which owns ALL compose-argv building):
+ * `bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build`.
  * Runs with inherited stdio (live build output) and returns the child's exit code.
  */
-export function runSandbox(opts: LifecycleOptions, io: LifecycleIO): number {
+export async function runSandbox(opts: LifecycleOptions, io: LifecycleIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
   seedHarnessYaml(root, io);
+  await maybePromptDockerSocket(root, io, run);
   const script = requireScript(root, "docker-compose.sh");
   const r = run("bash", [script, "--repo-dir", root, "up", "-d", "--build"], {
     stdio: "inherit",

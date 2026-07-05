@@ -18,6 +18,7 @@
 sandbox:
   # name: openharness          # SANDBOX_NAME — container + compose project name
   # timezone: America/Los_Angeles   # TZ — cron schedules, log timestamps
+  # docker_socket: false       # DOCKER_SOCKET — mount host /var/run/docker.sock (effectively host root; opt-in)
 
 git:
   # user_name: Your Name           # GIT_USER_NAME (spaces OK)

@@ -12,6 +12,14 @@
 # Downstream harness packs and Pi extensions can register additional
 # overlays by appending paths to composeOverrides[] in config.json;
 # `make sandbox` and `.oh/scripts/install.sh` pick those up via jq.
+#
+# The host Docker socket is NOT mounted here by default (socket access is
+# effectively host root). It is an opt-in overlay — docker-compose.docker-sock.yml
+# — applied by .oh/scripts/docker-compose.sh only when DOCKER_SOCKET is truthy
+# (harness.yaml `sandbox.docker_socket` or .devcontainer/.env). The VS Code
+# "Reopen in Container" path reads THIS file directly and bypasses that wrapper,
+# so it never gets the socket; add the overlay to devcontainer.json to enable it
+# there. See .oh/docs/security-considerations.md.
 
 name: ${SANDBOX_NAME:-openharness}
 
@@ -30,7 +38,6 @@ services:
         INSTALL_HERMES: ${INSTALL_HERMES:-false}
     volumes:
       - ..:${OH_PROJECT_ROOT:-/home/sandbox/harness}
-      - /var/run/docker.sock:/var/run/docker.sock
       - claude-auth:/home/sandbox/.claude
       - codex-auth:/home/sandbox/.codex
       - pi-auth:/home/sandbox/.pi

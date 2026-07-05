@@ -88,6 +88,20 @@ filesystem and out of host user state — a real, enforced boundary — but
 the socket mount means it is not an escape-proof jail. Run the harness on
 hosts and repos you are willing to expose to that trust level.
 
+- **Caveat 3 — the optional sshd overlay (RECOMMENDED to configure).** The base
+  container publishes **no ports** and runs **no** SSH daemon. The opt-in overlay
+  ([`.devcontainer/docker-compose.ssh.yml`](../../.devcontainer/docker-compose.ssh.yml),
+  enabled via `ssh.enabled` in `harness.yaml`) starts `sshd` and ships a **safe
+  default posture**: host bind **loopback-only** (`127.0.0.1`), **public-key auth**,
+  `PermitRootLogin no`, and password auth **off**. Two operator choices weaken that
+  and are your responsibility: switching the bind to `0.0.0.0` (public interface),
+  and enabling password auth while `SANDBOX_PASSWORD` is still the weak default
+  (`test1234`). A `make sandbox` **port-collision preflight**
+  ([`.oh/scripts/check-host-port.sh`](../../.oh/scripts/check-host-port.sh)) refuses
+  to create a container on a port already in use, so enabling SSH or adding a tenant
+  can't silently clobber another tenant's port. Setup + the nginx multi-tenant recipe:
+  [Integrations → SSH](integrations/sshd.md).
+
 ## 4. Human merge gate / no auto-merge — **ENFORCED (process) · RECOMMENDED (hard gate)**
 
 No agent merges its own work to the trunk.

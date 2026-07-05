@@ -228,6 +228,65 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
   fi
 fi
 
+# ─── Optional: sshd for direct container SSH (opt-in via SANDBOX_SSH=true) ──
+# Publishes over the docker-compose.ssh.yml overlay. We start sshd as a
+# BACKGROUND daemon (no -D) so it runs alongside `sleep infinity` — PID 1 stays
+# the healthcheck-friendly sleep, matching how cron/hermes run as side services.
+# Auth is public-key by default; password auth (using SANDBOX_PASSWORD, applied
+# via chpasswd above) only when SANDBOX_SSH_PASSWORD_AUTH is truthy. Idempotent:
+# skip if sshd is already running. Runs as root (needed to bind port 22 + manage
+# host keys); never logs the password or key material.
+if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
+  if pgrep -x sshd >/dev/null 2>&1; then
+    echo "[entrypoint] sshd already running — skipping"
+  else
+    mkdir -p /run/sshd
+    ssh-keygen -A >/dev/null 2>&1 || true   # generate host keys if missing
+
+    # Seed the sandbox user's authorized_keys from env (public key material is
+    # not secret; it rides in .devcontainer/.env because it can be multi-line).
+    _ssh_dir=/home/sandbox/.ssh
+    _have_keys=0
+    if [ -n "${SANDBOX_SSH_AUTHORIZED_KEYS:-}" ]; then
+      mkdir -p "$_ssh_dir"
+      printf '%s\n' "$SANDBOX_SSH_AUTHORIZED_KEYS" > "$_ssh_dir/authorized_keys"
+      chmod 700 "$_ssh_dir"
+      chmod 600 "$_ssh_dir/authorized_keys"
+      chown -R "$(sandbox_ownership)" "$_ssh_dir"
+      _have_keys=1
+    elif [ -s "$_ssh_dir/authorized_keys" ]; then
+      _have_keys=1   # operator bind-mounted or pre-seeded keys
+    fi
+
+    # Password auth: only when explicitly enabled.
+    _pw_auth=no
+    case "$(printf '%s' "${SANDBOX_SSH_PASSWORD_AUTH:-false}" | tr '[:upper:]' '[:lower:]')" in
+      1|true|yes|on) _pw_auth=yes ;;
+    esac
+
+    # Hardened drop-in — Debian's default sshd_config Includes sshd_config.d/*.conf.
+    mkdir -p /etc/ssh/sshd_config.d
+    cat > /etc/ssh/sshd_config.d/openharness.conf <<EOF
+# Managed by Open Harness entrypoint — regenerated every boot.
+PermitRootLogin no
+PubkeyAuthentication yes
+PasswordAuthentication ${_pw_auth}
+EOF
+
+    if [ "$_pw_auth" = "no" ] && [ "$_have_keys" -eq 0 ]; then
+      echo "[entrypoint] WARNING: sshd starting with NO authorized_keys and password auth OFF —" >&2
+      echo "[entrypoint]          no one can log in. Set SANDBOX_SSH_AUTHORIZED_KEYS in .devcontainer/.env" >&2
+      echo "[entrypoint]          or ssh.password_auth: true in harness.yaml. See .oh/docs/integrations/sshd.md" >&2
+    fi
+
+    if /usr/sbin/sshd; then
+      echo "[entrypoint] sshd started (password auth: ${_pw_auth}, pubkeys: $([ "$_have_keys" -eq 1 ] && echo present || echo none))"
+    else
+      echo "[entrypoint] WARNING: sshd failed to start" >&2
+    fi
+  fi
+fi
+
 # ─── Attach banner wiring (idempotent) ──────────────────────────────
 # Source .oh/install/banner.sh from the sandbox user's .bashrc so every
 # interactive shell (docker exec, VS Code) shows

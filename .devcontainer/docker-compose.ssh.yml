@@ -1,0 +1,23 @@
+# sshd overlay — direct SSH into the sandbox container.
+#
+# Included automatically by Makefile/install.sh only when SANDBOX_SSH is truthy
+# via harness.yaml (`ssh.enabled`) or legacy .devcontainer/.env. The host bind
+# stays loopback-only (127.0.0.1) so the daemon is reachable from the host and
+# through a host-side reverse proxy, but not from the public interface by
+# default — switch the bind to 0.0.0.0 for direct remote SSH, or front it with
+# nginx for multi-tenant routing. See .oh/docs/integrations/sshd.md.
+#
+# Auth is public-key by default: put your public key(s) in
+# SANDBOX_SSH_AUTHORIZED_KEYS (in .devcontainer/.env). Password auth (using
+# SANDBOX_PASSWORD) stays off unless SANDBOX_SSH_PASSWORD_AUTH is truthy.
+# The entrypoint starts sshd as a background daemon alongside `sleep infinity`.
+
+services:
+  sandbox:
+    ports:
+      - "127.0.0.1:${SANDBOX_SSH_PORT:-2222}:22"
+    environment:
+      - SANDBOX_SSH=true
+      - SANDBOX_SSH_PORT=${SANDBOX_SSH_PORT:-2222}
+      - SANDBOX_SSH_PASSWORD_AUTH=${SANDBOX_SSH_PASSWORD_AUTH:-false}
+      - SANDBOX_SSH_AUTHORIZED_KEYS=${SANDBOX_SSH_AUTHORIZED_KEYS:-}

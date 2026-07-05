@@ -8,6 +8,15 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.7.5] - 2026-07-05
+
 ### Security
 - **The host Docker socket is no longer mounted by default — it is now an explicit, prompted opt-in.** `/var/run/docker.sock` was previously bind-mounted into every sandbox unconditionally (`docker-compose.yml:33`), which is effectively host root (an agent can start a privileged container that mounts the host FS). The mount now lives in an opt-in overlay, `.devcontainer/docker-compose.docker-sock.yml`, applied by `.oh/scripts/docker-compose.sh` only when `DOCKER_SOCKET` is truthy (`harness.yaml` `sandbox.docker_socket: true` or `DOCKER_SOCKET=true` in `.devcontainer/.env`) — mirroring the existing hermes-dashboard overlay toggle. Both interactive installers now prompt for it and **default to off**: `install.sh` (the `curl | bash` path, honoring a pre-set `DOCKER_SOCKET` env for non-interactive/CI installs) and `oh sandbox` (the `oh` CLI / `get-oh.sh` path, which persists the choice to `.devcontainer/.env` so it sticks). `entrypoint.sh` already guarded on the socket's presence, so the sandbox boots cleanly with or without it. The VS Code "Reopen in Container" path reads `docker-compose.yml` directly and never mounts the socket; enable it there by adding the overlay to `devcontainer.json`. Documented in `.oh/docs/security-considerations.md` and `.oh/docs/intro.md`.
 

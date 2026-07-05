@@ -201,6 +201,14 @@ Every path above clones the harness repo itself and keeps the host toolchain-fre
 curl -fsSL https://oh.mifune.dev/get-oh.sh | bash
 ```
 
+**Use `oh` immediately in the current shell** — `source` the installer instead of piping to `bash` so it installs *and* puts `oh` on your PATH in the running shell (no new terminal, no re-login):
+
+```bash
+source <(curl -fsSL https://oh.mifune.dev/get-oh.sh)
+```
+
+If you already used the plain `curl … | bash` form and `oh` isn't found yet, add its install dir to the current shell's PATH: `export PATH="$HOME/.local/bin:$PATH"`.
+
 Review-first alternative (no extra dependency):
 
 ```bash

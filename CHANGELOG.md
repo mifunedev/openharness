@@ -11,6 +11,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 ### Changed
 ### Fixed
+- **The `publish-npm` CI job now publishes the CLI from `.oh/cli` instead of the repository root.** The `2026.7.5` release built the GHCR image and GitHub Release successfully, but the npm publish step failed with `EPRIVATE`: `npm publish` packs its working directory and ignores `--prefix` for package selection, so `npm --prefix .oh/cli publish` packed the private root `package.json` (`name: openharness`, `private: true`, 477 files) rather than `@mifune/openharness`. The three CLI steps now run with `working-directory: .oh/cli`, so the built `dist`-only bundle is what ships ([#564](https://github.com/mifunedev/openharness/issues/564)).
 ### Removed
 ### Deprecated
 ### Security

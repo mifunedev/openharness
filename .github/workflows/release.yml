@@ -238,14 +238,20 @@ jobs:
 
       - name: Install CLI dev dependencies
         if: steps.guard.outputs.skip == 'false'
-        run: npm --prefix .oh/cli ci --ignore-scripts
+        working-directory: .oh/cli
+        run: npm ci --ignore-scripts
 
       - name: Build CLI bundle
         if: steps.guard.outputs.skip == 'false'
-        run: npm --prefix .oh/cli run build
+        working-directory: .oh/cli
+        run: npm run build
 
       - name: Publish to npm
         if: steps.guard.outputs.skip == 'false'
-        run: npm --prefix .oh/cli publish --access public --provenance
+        working-directory: .oh/cli
+        # `npm publish` packs the working directory and ignores `--prefix` for
+        # package selection — running from repo root would pack the private
+        # root package (EPRIVATE). Must run inside .oh/cli.
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,67 @@
+name: Publish CLI to npm
+
+# Publishes the standalone `oh` CLI (`.oh/cli`) to npm as @mifune/openharness.
+#
+# The CLI's semver is independent of the repo's CalVer release tags, so this is
+# its own workflow rather than a job chained onto Release:
+#   - workflow_dispatch lets a CLI-only change (README, patch bump) publish
+#     WITHOUT cutting a CalVer release.
+#   - the CalVer tag trigger preserves auto-publish on every release.
+# The version guard makes a run a clean no-op when the CLI version is already
+# on the registry, so running on every release tag is safe and idempotent.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "[0-9][0-9][0-9][0-9].[0-9]*.[0-9]*"
+
+jobs:
+  publish-npm:
+    name: Publish CLI to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # provenance attestation
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Skip if version already published
+        id: guard
+        run: |
+          V=$(node -p "require('./.oh/cli/package.json').version")
+          if npm view "@mifune/openharness@$V" version >/dev/null 2>&1; then
+            echo "@mifune/openharness@$V already published — skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "@mifune/openharness@$V not yet published — will publish"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install CLI dev dependencies
+        if: steps.guard.outputs.skip == 'false'
+        working-directory: .oh/cli
+        run: npm ci --ignore-scripts
+
+      - name: Build CLI bundle
+        if: steps.guard.outputs.skip == 'false'
+        working-directory: .oh/cli
+        run: npm run build
+
+      - name: Publish to npm
+        if: steps.guard.outputs.skip == 'false'
+        working-directory: .oh/cli
+        # `npm publish` packs the working directory and ignores `--prefix` for
+        # package selection — running from repo root would pack the private
+        # root package (EPRIVATE). Must run inside .oh/cli.
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

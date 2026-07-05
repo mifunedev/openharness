@@ -9,7 +9,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- **`@mifune/openharness` now ships a README and LICENSE on its npm page.** The first publish (`0.1.0`) shipped only `dist/oh.js` + `package.json` (a bare npm page). Added `.oh/cli/README.md` (install, requirements, quick start, command table, docs links) and `.oh/cli/LICENSE`; npm force-includes both even under the `files: ["dist"]` allowlist. Bumps the CLI to `0.1.1` and the `oh-npm-package` eval probe now guards their presence ([#564](https://github.com/mifunedev/openharness/issues/564)).
 ### Changed
+- **The `oh` CLI npm publish moved to its own workflow, `.github/workflows/publish-cli.yml`.** Previously a `publish-npm` job chained onto `release.yml` (`needs: [release]`), so a CLI-only change (a README fix, a patch bump) could only reach npm by cutting a CalVer release. The publish now runs as an independent workflow triggered by `workflow_dispatch` **and** the same CalVer tags, honoring the CLI's independent semver — a CLI change can publish without a harness release, while every release still auto-publishes. The version guard keeps it idempotent ([#564](https://github.com/mifunedev/openharness/issues/564)).
 ### Fixed
 ### Removed
 ### Deprecated

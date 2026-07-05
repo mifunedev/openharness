@@ -199,59 +199,6 @@ jobs:
           name: v${{ steps.parse.outputs.version }}
           body_path: ${{ steps.notes.outputs.notes_file }}
 
-  # Publish the standalone `oh` CLI to npm as @mifune/openharness. Runs AFTER
-  # the release job so a missing NPM_TOKEN (or npm outage) never blocks the
-  # GHCR image + GitHub Release. The CLI's npm version is independent of the
-  # CalVer tag: publish whatever version is in .oh/cli/package.json, and skip
-  # cleanly when that version is already on the registry (so a release that
-  # didn't bump the CLI is a no-op, not a red build).
-  publish-npm:
-    name: Publish CLI to npm
-    needs: [release]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write # provenance attestation
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup Node 22.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Skip if version already published
-        id: guard
-        run: |
-          V=$(node -p "require('./.oh/cli/package.json').version")
-          if npm view "@mifune/openharness@$V" version >/dev/null 2>&1; then
-            echo "@mifune/openharness@$V already published — skipping"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "@mifune/openharness@$V not yet published — will publish"
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Install CLI dev dependencies
-        if: steps.guard.outputs.skip == 'false'
-        working-directory: .oh/cli
-        run: npm ci --ignore-scripts
-
-      - name: Build CLI bundle
-        if: steps.guard.outputs.skip == 'false'
-        working-directory: .oh/cli
-        run: npm run build
-
-      - name: Publish to npm
-        if: steps.guard.outputs.skip == 'false'
-        working-directory: .oh/cli
-        # `npm publish` packs the working directory and ignores `--prefix` for
-        # package selection — running from repo root would pack the private
-        # root package (EPRIVATE). Must run inside .oh/cli.
-        run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  # The `oh` CLI publish lives in its own workflow (.github/workflows/publish-cli.yml)
+  # so a CLI-only change can publish via workflow_dispatch without a CalVer release;
+  # it also triggers on the same release tags, independently of this job.

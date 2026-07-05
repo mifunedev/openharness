@@ -261,7 +261,7 @@ describe("runInit", () => {
     const parsed = JSON.parse(
       readFileSync(join(t, ".devcontainer/devcontainer.json"), "utf8"),
     );
-    expect(parsed.workspaceFolder).toBe("/home/sandbox/project");
+    expect(parsed.workspaceFolder).toBe("/home/sandbox/harness");
   });
 
   // --- US-001 vendor ---------------------------------------------------------
@@ -453,7 +453,7 @@ describe("runInit", () => {
     );
     expect(dc.dockerComposeFile).toBe("docker-compose.yml");
     expect(dc.service).toBe("sandbox");
-    expect(dc.workspaceFolder).toBe("/home/sandbox/project");
+    expect(dc.workspaceFolder).toBe("/home/sandbox/harness");
     // The ghcr image is present ONLY as a documented fallback key, never active.
     expect(dc.image).toBeUndefined();
     expect(dc["// image"]).toContain("ghcr.io/mifunedev/openharness");
@@ -463,10 +463,10 @@ describe("runInit", () => {
     expect(compose).toContain("context: ..");
     expect(compose).not.toContain("context: ../..");
 
-    // rewriteComposeForTarget: every workspace mount/env default is rewritten
-    // to the consumer project path — no harness path survives the rewrite.
-    expect(compose).toContain("/home/sandbox/project");
-    expect(compose).not.toContain("/home/sandbox/harness");
+    // The compose file is copied VERBATIM: its workspace path stays the
+    // parameterized `${OH_PROJECT_ROOT:-/home/sandbox/harness}` default, which
+    // resolves to the harness path — no per-target rewrite is applied.
+    expect(compose).toContain("/home/sandbox/harness");
   });
 
   it("full (default): seeds a workspace/ stub for the image build", async () => {

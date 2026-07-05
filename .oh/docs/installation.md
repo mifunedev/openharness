@@ -193,12 +193,33 @@ Every path above clones the harness repo itself and keeps the host toolchain-fre
 | git | The shallow clone behind `--from-remote` |
 | Docker (with Compose plugin) | `oh sandbox` / `oh shell` |
 
-`make` is **not** needed here — the verbs wrap the vendored `.oh/scripts/` directly. The CLI is not published to npm: build it once from any OpenHarness checkout (`cd .oh/cli && npm install && npm run build`) and put `dist/oh.js` on your PATH as `oh`.
+`make` is **not** needed here — the verbs wrap the vendored `.oh/scripts/` directly.
+
+**Get the `oh` command (recommended):** the CLI is not published to npm, so bootstrap it with `get-oh.sh`. It clones the harness into `~/.openharness`, builds the CLI, and symlinks `oh` onto your PATH — keeping the clone so `oh init`/`oh update` run from the **local** payload with no per-command network fetch.
+
+```bash
+curl -fsSL https://oh.mifune.dev/get-oh.sh | bash
+```
+
+Review-first alternative (no extra dependency):
+
+```bash
+curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh
+# Review get-oh.sh in your editor or pager before running it.
+bash get-oh.sh
+```
+
+Environment overrides: `OH_GITHUB_REPO=<org>/<fork>` (clone a fork), `OH_GITHUB_REF=<ref>` (pin a tag/branch), `OH_HOME=<dir>` (clone location, default `~/.openharness`), `OH_BIN_DIR=<dir>` (symlink location, default `~/.local/bin`).
+
+**From an existing checkout (no bootstrap script):** `cd .oh/cli && npm install && npm run build`, then put `dist/oh.js` on your PATH as `oh`.
+
+Then, in any project:
 
 ```bash
 cd <your-project>
-oh init --from-remote   # equip the repo — shallow-clones the public repo for the
-                        # payload; pin a version with --ref <tag|branch>
+oh init                 # equip the repo — vendors the .oh/ payload from the local
+                        # clone (offline). Use --from-remote to shallow-clone a
+                        # fresh payload instead; pin a version with --ref <tag|branch>
 oh sandbox              # provision + start the sandbox (docker compose up -d --build)
 oh shell                # zsh in the running container (or: oh shell <container>)
 oh gateway status       # manage messaging client sessions (pi|hermes)

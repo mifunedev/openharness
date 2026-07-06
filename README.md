@@ -64,8 +64,9 @@ Run these **inside the sandbox** (`make shell`). Per-step depth + troubleshootin
 [quickstart → End-to-end setup walkthrough](.oh/docs/quickstart.md#end-to-end-setup-walkthrough).
 
 ```bash
-# GitHub auth over SSH — pick SSH, generate a key, paste a token:
-gh auth login && gh auth setup-git
+# GitHub auth over SSH — pick SSH, generate a key, paste a token
+# (SSH remotes use the key directly, so `gh auth setup-git` isn't needed):
+gh auth login
 
 # Create your own PRIVATE repo, point origin at it, add upstream — all over SSH:
 gh repo create <your-user>/openharness --private

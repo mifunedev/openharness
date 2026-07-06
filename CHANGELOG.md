@@ -11,6 +11,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 ### Changed
 ### Fixed
+- Fix `OH_IMAGE_ONLY=1` (no-bind) boot crash-loop: `.dockerignore` excluded the whole `.claude/` directory, so `/opt/oh-seed` never carried `.claude/protected-paths.txt` and `link-providers.sh --init` failed on every boot. `.dockerignore` now re-includes the tracked `.claude/` control-plane config (`protected-paths.txt`, `settings.json`, `.example.env.claude`), and `entrypoint.sh`'s seed self-heals already-seeded-but-incomplete volumes by backfilling those files without clobbering operator edits (guarded by the `oh-image-only-deploy` probe).
 ### Removed
 - Remove the Railway hosted smoke deployment surface, including the root Railway config, deploy assets, documentation, README button, and eval guard.
 ### Deprecated

@@ -184,15 +184,6 @@ Same caveat as Flavor A above: the published image targets the CI runner's
 architecture. If you run a different CPU arch, prefer a local build (or
 Flavor A, which builds locally by default) until multi-arch images land.
 
-### Relationship to the Railway smoke path
-
-Flavor B is a **supersede-candidate** for the existing (unvalidated) Railway
-smoke path under [`.oh/deploy/railway/`](../deploy/railway/) — once Flavor B
-itself has been host-validated (see the manual smoke checklist below), it may
-replace that path as the recommended no-checkout deployment target. This is a
-documentation note only; no file under `.oh/deploy/railway/` changes as part
-of this work.
-
 ### Manual live-host smoke checklist (non-gating)
 
 The eval probe suite covers the static contract (env-var gating, compose

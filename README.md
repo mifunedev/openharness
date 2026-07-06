@@ -91,13 +91,7 @@ tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
 > Codex, …) can drive. It's optional and not tied to any single agent — see the
 > [DebugMCP runbook](.oh/docs/integrations/debugmcp.md#confirmed-setup-runbook).
 
-<details><summary>Other install methods (Railway preview · one-line installer · fork-and-clone)</summary>
-
-**Hosted smoke test — Railway (one click):**
-
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2Fmifunedev%2Fopenharness)
-
-This boots a Railway-hosted status surface so you can verify Open Harness starts before doing local setup. Railway mode does **not** provide the host Docker socket or privileged sibling containers needed for full sandbox lifecycle commands (`make sandbox`, `make shell`, compose overlays). Use it as a hosted preview; use the local Docker path above for the complete harness. Details: [Railway deployment](.oh/docs/railway.md).
+<details><summary>Other install methods (one-line installer · fork-and-clone)</summary>
 
 **One-line installer (upstream):**
 

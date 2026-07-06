@@ -203,6 +203,14 @@ printf "%s\n" "<candidate line>" | bash "${CLAUDE_SKILL_DIR}/scripts/check-memor
 
 ### 7. Write approved changes
 
+First ensure the durable ledger exists (it is gitignored/local-per-instance, so
+a fresh clone lacks it; this seeds the `## Lessons Learned` header idempotently
+and never overwrites):
+
+```bash
+sh .oh/scripts/ensure-memory-file.sh
+```
+
 For each APPROVED item:
 
 **`.oh/memory/MEMORY.md`** — append under `## Lessons Learned`:

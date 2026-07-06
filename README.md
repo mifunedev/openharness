@@ -221,8 +221,8 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 `harness.yaml` is local gitignored config for shared non-secret settings, generated
 from tracked `harness.yaml.example` by `make harness-config` (also run by
-`make sandbox`). It holds `sandbox.*`, `git.*`, optional installs, Slack allowlists,
-and compose overlays. **Secrets stay in the gitignored `.devcontainer/.env`**
+`make sandbox`). It holds `sandbox.*`, `git.*`, optional installs, `paths.*`
+(overrides like `paths.worktrees`), Slack allowlists, and compose overlays. **Secrets stay in the gitignored `.devcontainer/.env`**
 (`GH_TOKEN`, `PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`) — never in
 `harness.yaml`. Active keys in `harness.yaml` override `.devcontainer/.env`; apply
 changes with `make destroy && make sandbox`.
@@ -247,7 +247,7 @@ make shell
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
-| **Worktrees** | One sandbox → many isolated git worktrees: parallel branches, delegated sub-agents, satellite project clones under `.worktrees/` |
+| **Worktrees** | One sandbox → many isolated git worktrees: parallel branches, delegated sub-agents, satellite project clones under `.oh/worktrees/` |
 | **Crons** | Markdown-defined schedules in `.oh/crons/*.md` driven by the in-container croner runtime |
 | **Multi-agent** | Claude, Codex, Pi by default (Hermes/Grok opt-in); Slack bridging via [pi-messenger-bridge](.oh/docs/integrations/slack.md) |
 

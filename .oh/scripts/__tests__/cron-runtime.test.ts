@@ -451,7 +451,7 @@ describe("buildTmuxWrapper", () => {
       agentBin: "pi",
       promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
       pidFile: "/tmp/cron-autopilot-0610-1805.pid",
-      worktree: "/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805",
+      worktree: "/home/sandbox/harness/.oh/worktrees/cron/cron-autopilot-0610-1805",
     });
     // session-scoped lock (NOT the id-scoped /tmp/cron-autopilot.pid) so a worktree
     // fire never clobbers the primary run's overlap lock.
@@ -460,7 +460,7 @@ describe("buildTmuxWrapper", () => {
     expect(wt).not.toContain("/tmp/cron-autopilot.pid");
     // CRON_WORKTREE is exported so the agent (autopilot §1/§7) knows it is isolated.
     expect(wt).toContain(
-      "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805';",
+      "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.oh/worktrees/cron/cron-autopilot-0610-1805';",
     );
   });
 
@@ -1188,8 +1188,8 @@ describe("fallback worktree pruning", () => {
     git(repo, ["add", "README.md"]);
     git(repo, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"]);
 
-    const dirtyWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-dirty");
-    const cleanWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-clean");
+    const dirtyWt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-dirty");
+    const cleanWt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-clean");
     git(repo, ["worktree", "add", "--detach", dirtyWt, "HEAD"]);
     git(repo, ["worktree", "add", "--detach", cleanWt, "HEAD"]);
     writeFileSync(path.join(dirtyWt, "uncommitted.txt"), "salvage me\n");
@@ -1207,7 +1207,7 @@ describe("fallback worktree pruning", () => {
   });
 
   it("treats a matching live tmux session name as fallback worktree liveness", () => {
-    const wt = path.join(tmp, "repo", ".worktrees", "cron", "cron-autopilot-0618-1505");
+    const wt = path.join(tmp, "repo", ".oh/worktrees", "cron", "cron-autopilot-0618-1505");
 
     expect(worktreeInUse(wt, [], ["cron-autopilot-0618-1505"])).toBe(true);
     expect(worktreeInUse(wt, [path.join(wt, "nested")], [])).toBe(true);

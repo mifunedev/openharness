@@ -414,7 +414,8 @@ pnpm_workspace_package_patterns() {
 
 pnpm_manifest_rel_is_excluded() {
   case "$1" in
-    .git/*|.worktrees/*|node_modules/*|*/node_modules/*)
+    # Defensive: legacy root .worktrees/ may exist in old checkouts; never scan it.
+    .git/*|.oh/worktrees/*|.worktrees/*|node_modules/*|*/node_modules/*)
       return 0
       ;;
   esac
@@ -513,6 +514,17 @@ case "${MEMORY_DIR:-.oh/memory}" in
   *)  MEMORY_PATH="$HARNESS/${MEMORY_DIR:-.oh/memory}" ;;
 esac
 mkdir -p "$MEMORY_PATH"
+
+# ─── Resolve + pre-create the worktrees directory ─────────────────
+# Single source of truth = WORKTREES_DIR (docker-compose passes
+# paths.worktrees through here; default .oh/worktrees). Cron worktree isolation
+# and the /worktrees skill use this root so ignored branch/project clones stay
+# under the .oh control-plane namespace.
+case "${WORKTREES_DIR:-.oh/worktrees}" in
+  /*) WORKTREES_PATH="${WORKTREES_DIR}" ;;
+  *)  WORKTREES_PATH="$HARNESS/${WORKTREES_DIR:-.oh/worktrees}" ;;
+esac
+mkdir -p "$WORKTREES_PATH"
 
 # ─── Start/supervise cron runtime in tmux sessions ────────────────
 # Per SPEC v0.7 §"Croner runtime" + .oh/skills/t3/references/sandbox-processes.md.

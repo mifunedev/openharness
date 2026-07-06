@@ -17,7 +17,7 @@ doc + folder anchor) without the empty-file smell.
 2. **Subfolder enumeration** — every meaningful subdirectory gets a
    row in a table (or bullet) with its purpose. Spell out the
    convention; don't assume readers will chase the rule that defined
-   it (e.g. inside `.worktrees/`, list `feat/`, `bug/`, `agent/`, …
+   it (e.g. inside `.oh/worktrees/`, list `feat/`, `bug/`, `agent/`, …
    not just "subfolders mirror branch prefixes").
 3. **Conventions** — naming, lifecycle, gitignore behaviour, anything
    non-obvious to someone landing fresh in the directory.
@@ -47,7 +47,7 @@ mydir/*
 
 ## Examples in this repo
 
-`.worktrees/README.md`, `.oh/README.md`, `.oh/crons/README.md`,
+`.oh/worktrees/README.md`, `.oh/README.md`, `.oh/crons/README.md`,
 `.oh/tasks/README.md`, `.oh/scripts/README.md`.
 
 ## When NOT to add a README

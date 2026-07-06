@@ -41,6 +41,10 @@ crons:
   # dir: .oh/crons             # CRONS_DIR — directory the cron runtime scans
   # agent_bin: claude          # CRON_AGENT_BIN — binary that fires scheduled tasks
 
+paths:
+  # memory: .oh/memory         # MEMORY_DIR — long-term memory + dated session logs
+  # worktrees: .oh/worktrees   # WORKTREES_DIR — ignored git worktree and project-clone root
+
 autopilot:
   # Configurable defaults for the deterministic caps gate
   # (.oh/skills/autopilot/autopilot-caps.sh, wired as the autopilot cron's `preflight:`).

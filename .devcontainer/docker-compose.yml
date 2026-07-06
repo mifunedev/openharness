@@ -73,6 +73,7 @@ services:
       - CRONS_DIR=${CRONS_DIR:-.oh/crons}
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
       - MEMORY_DIR=${MEMORY_DIR:-.oh/memory}
+      - WORKTREES_DIR=${WORKTREES_DIR:-.oh/worktrees}
     stdin_open: true
     tty: true
     init: true

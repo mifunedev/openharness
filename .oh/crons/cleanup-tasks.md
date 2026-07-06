@@ -14,9 +14,9 @@ description: Weekly Ralph session sweep — archive completed tasks
 Sweep `.oh/tasks/` once per week and archive anything that has finished.
 Per SPEC v0.7 §"Weekly cleanup cron": completed tasks move into the
 dated archive under `.oh/tasks/`; incomplete tasks are left alone with a
-note. The same weekly pass also grooms stale `.worktrees/` branch
-checkouts, but it never touches the durable `.worktrees/agent/` or
-`.worktrees/project/` namespaces. `.oh/memory/` carries journal artifacts
+note. The same weekly pass also grooms stale `.oh/worktrees/` branch
+checkouts, but it never touches the durable `.oh/worktrees/agent/` or
+`.oh/worktrees/project/` namespaces. `.oh/memory/` carries journal artifacts
 only — never a `.oh/tasks/` subfolder.
 
 ## Tasks
@@ -51,50 +51,50 @@ only — never a `.oh/tasks/` subfolder.
      and recreate — never reuse a possibly-dirty worktree left by a prior
      failed run):
      ```bash
-     git worktree remove --force .worktrees/archive/$TODAY 2>/dev/null || true
+     git worktree remove --force .oh/worktrees/archive/$TODAY 2>/dev/null || true
      git branch -D "archive/$TODAY" 2>/dev/null || true   # drop a stale branch from a partial run
      git worktree prune
      ```
    - **Create** the worktree off `origin/$BASE` (paths resolve from the
      repo root, not the cron's ambient cwd):
      ```bash
-     git worktree add .worktrees/archive/$TODAY -b archive/$TODAY origin/$BASE
+     git worktree add .oh/worktrees/archive/$TODAY -b archive/$TODAY origin/$BASE
      ```
    - **Arm crash-safe teardown** so a failed push/PR step (or any error
      exit) never strands the worktree for next week's run to collide with:
      ```bash
-     trap 'git worktree remove --force .worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune' EXIT
+     trap 'git worktree remove --force .oh/worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune' EXIT
      ```
    Every `git` command for the archive from here on runs inside the
-   worktree via `git -C .worktrees/archive/$TODAY <cmd>`.
+   worktree via `git -C .oh/worktrees/archive/$TODAY <cmd>`.
 4. Inside the worktree, create the dated destination
-   (`mkdir -p .worktrees/archive/$TODAY/.oh/tasks/archive/$TODAY`), then scan
+   (`mkdir -p .oh/worktrees/archive/$TODAY/.oh/tasks/archive/$TODAY`), then scan
    the worktree's `origin/$BASE` checkout — committed state only, so
    uncommitted task dirs in the shared checkout are never archived. For
-   each `.worktrees/archive/$TODAY/.oh/tasks/<taskdesc>/` (skipping
+   each `.oh/worktrees/archive/$TODAY/.oh/tasks/<taskdesc>/` (skipping
    `.oh/tasks/archive/`):
    - If `.oh/tasks/<taskdesc>/progress.txt` ends with a line matching exactly
      `STATUS: COMPLETE`:
      - Kill the matching tmux session if one exists:
        `tmux kill-session -t <taskdesc> 2>/dev/null || true`.
      - Move the folder inside the worktree:
-       `git -C .worktrees/archive/$TODAY mv .oh/tasks/<taskdesc> .oh/tasks/archive/$TODAY/<taskdesc>`
-       (falls back to `mv` + `git -C .worktrees/archive/$TODAY add` if
+       `git -C .oh/worktrees/archive/$TODAY mv .oh/tasks/<taskdesc> .oh/tasks/archive/$TODAY/<taskdesc>`
+       (falls back to `mv` + `git -C .oh/worktrees/archive/$TODAY add` if
        `git mv` rejects an untracked path).
    - Otherwise, leave the folder in place and append a one-line note to
      `.oh/memory/$TODAY/log.md` recording that `<taskdesc>` is still active
      (include the last `progress.txt` modification time).
-5. **Groom stale `.worktrees/` branch checkouts** from the shared repo
+5. **Groom stale `.oh/worktrees/` branch checkouts** from the shared repo
    root after the task scan. Initialize `W=0` plus a `GROOMED_WORKTREES`
    list. This pass is intentionally limited to harness branch worktrees
    and cron/archive leftovers: it must skip any path under
-   `.worktrees/agent/` and `.worktrees/project/` without inspecting or
+   `.oh/worktrees/agent/` and `.oh/worktrees/project/` without inspecting or
    mutating those namespaces. Also skip the current archive worktree
-   `.worktrees/archive/$TODAY` until step 8 tears it down.
+   `.oh/worktrees/archive/$TODAY` until step 8 tears it down.
    - Build the registered-worktree candidate set from
      `git worktree list --porcelain`. For each worktree path under
-     `$PWD/.worktrees/` that is NOT under `.worktrees/agent/`, NOT under
-     `.worktrees/project/`, and NOT `.worktrees/archive/$TODAY`:
+     `$PWD/.oh/worktrees/` that is NOT under `.oh/worktrees/agent/`, NOT under
+     `.oh/worktrees/project/`, and NOT `.oh/worktrees/archive/$TODAY`:
      - Skip if any live tmux pane is cwd'd inside it:
        `tmux list-panes -a -F '#{pane_current_path}' | grep -F -- "$path"`.
      - Skip if its branch has an open PR:
@@ -113,24 +113,24 @@ only — never a `.oh/tasks/` subfolder.
      - Otherwise remove it with `git worktree remove --force "$path"`,
        append the path to `GROOMED_WORKTREES`, and increment `W`.
    - Then prune corrupt/orphan folders that are not registered git
-     worktrees: scan `.worktrees/` directories excluding `.worktrees/agent/`,
-     `.worktrees/project/`, and `.worktrees/archive/$TODAY`. For each older
+     worktrees: scan `.oh/worktrees/` directories excluding `.oh/worktrees/agent/`,
+     `.oh/worktrees/project/`, and `.oh/worktrees/archive/$TODAY`. For each older
      directory with no live tmux pane cwd'd inside it, remove it only when it
      is provably empty using `rmdir "$path"`; skip and log every non-empty or
      suspicious orphan directory for manual review instead of deleting it
      recursively.
    - Remove empty non-reserved namespace directories left behind by the
-     sweep (`find .worktrees -mindepth 1 -maxdepth 1 -type d ! -name agent ! -name project -empty -delete`), then run `git worktree prune`.
+     sweep (`find .oh/worktrees -mindepth 1 -maxdepth 1 -type d ! -name agent ! -name project -empty -delete`), then run `git worktree prune`.
    - Append a one-line note to `.oh/memory/$TODAY/log.md` for each skipped
      registered worktree or preserved orphan, recording the reason (`open-pr`,
      `live-pane`, `too-new`, `dirty`, `staged`, `untracked`, `missing-upstream`,
      `unpushed`, `orphan-nonempty`, or `orphan-live-pane`) and its last commit
      time when available.
 6. If anything was archived this run (`N > 0`) — every git step runs
-   inside the worktree via `git -C .worktrees/archive/$TODAY`:
-   - Stage the moves: `git -C .worktrees/archive/$TODAY add .oh/tasks/`.
-   - Commit: `git -C .worktrees/archive/$TODAY commit -m "archive: weekly cleanup $TODAY (N tasks)"`.
-   - Push: `git -C .worktrees/archive/$TODAY push -u origin "archive/$TODAY"`.
+   inside the worktree via `git -C .oh/worktrees/archive/$TODAY`:
+   - Stage the moves: `git -C .oh/worktrees/archive/$TODAY add .oh/tasks/`.
+   - Commit: `git -C .oh/worktrees/archive/$TODAY commit -m "archive: weekly cleanup $TODAY (N tasks)"`.
+   - Push: `git -C .oh/worktrees/archive/$TODAY push -u origin "archive/$TODAY"`.
    - Open a PR (or update an existing one for the same branch) per
      `.oh/skills/git/SKILL.md` conventions:
      `gh pr create --base "$BASE" --head "archive/$TODAY" \
@@ -144,7 +144,7 @@ only — never a `.oh/tasks/` subfolder.
    - **Tear down the worktree** — covers normal completion, the
      nothing-to-archive case (`N = 0`), and partial runs; complements the
      step-3 `trap`, which also fires on any error/abort exit:
-     `git worktree remove --force .worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune`.
+     `git worktree remove --force .oh/worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune`.
    - **Liveness line:** append one liveness line to `.oh/crons/.cron.log` through
      `.oh/scripts/locked-append.sh`:
      `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M, groomed W worktrees)" | .oh/scripts/locked-append.sh .oh/crons/.cron.log`.

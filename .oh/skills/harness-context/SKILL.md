@@ -20,7 +20,7 @@ conventions, git workflow, or where files live.
    agent does and does not do.
 2. For layout questions, read the per-directory `README.md` files (e.g.
    `.oh/README.md`, `.oh/crons/README.md`, `.oh/tasks/README.md`,
-   `.oh/scripts/README.md`, `.worktrees/README.md`) and the `Project
+   `.oh/scripts/README.md`, `.oh/worktrees/README.md`) and the `Project
    Structure` section of `CLAUDE.md`. There is no single comprehensive
    tree — use the filesystem and the directory READMEs.
 3. For behavioral norms (formerly the `.oh/context/rules/` tier, collapsed into

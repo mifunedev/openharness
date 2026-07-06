@@ -107,7 +107,7 @@ resolve_autopilot_log_root() {
   if [ -n "${AUTOPILOT_LOG_ROOT:-}" ]; then printf '%s\n' "$AUTOPILOT_LOG_ROOT"; return; fi
   if [ -n "${CRON_WORKTREE:-}" ]; then
     root=$(git -C "$CRON_WORKTREE" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /, ""); print; exit }' || true)
-    [ -z "$root" ] && root="${CRON_WORKTREE%%/.worktrees/cron/*}"
+    [ -z "$root" ] && root="${CRON_WORKTREE%%/.oh/worktrees/cron/*}"
     if [ -n "$root" ] && git -C "$root" rev-parse --show-toplevel >/dev/null 2>&1; then
       git -C "$root" rev-parse --show-toplevel
       return

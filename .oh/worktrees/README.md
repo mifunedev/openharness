@@ -1,7 +1,8 @@
-# `.worktrees/`
+# `.oh/worktrees/`
 
-Scratch space for two kinds of checkouts that live next to the harness
-repo without polluting it.
+Ignored scratch space for two kinds of checkouts that live under the harness
+control-plane namespace without polluting tracked source. This is the default
+root; override with `WORKTREES_DIR` or `paths.worktrees` when needed.
 
 The split is by **kind of repo**, not by *who* owns it:
 
@@ -24,17 +25,17 @@ whichever sub-shape fits.
 `git worktree add` of a branch in *this* repo:
 
 ```bash
-git worktree add -b agent/<name> .worktrees/agent/<name> $BASE
+git worktree add -b agent/<name> .oh/worktrees/agent/<name> $BASE
 ```
 
 ### B. Standalone harness repo (private or public)
 
 A separate repo that adopts the Open Harness shape but has its own remote
 — for example, a fork of an Open Harness orchestrator. Cloned into
-`.worktrees/agent/<repo-name>/`:
+`.oh/worktrees/agent/<repo-name>/`:
 
 ```bash
-git clone git@github.com:<owner>/<repo>.git .worktrees/agent/<repo>
+git clone git@github.com:<owner>/<repo>.git .oh/worktrees/agent/<repo>
 ```
 
 The operator designates which of (A) or (B) applies when the path is
@@ -61,8 +62,8 @@ project/
 Create on demand:
 
 ```bash
-mkdir -p .worktrees/project/<owner>
-git clone https://github.com/<owner>/<repo>.git .worktrees/project/<owner>/<repo>
+mkdir -p .oh/worktrees/project/<owner>
+git clone https://github.com/<owner>/<repo>.git .oh/worktrees/project/<owner>/<repo>
 ```
 
 The `project/` directory is gitignored — it materializes only when you
@@ -81,4 +82,4 @@ Lifecycle is `git worktree add` / `git worktree remove`.
 See `.oh/skills/git/SKILL.md` § Worktrees for the canonical workflow,
 including the stale-worktree policy.
 
-Everything under `.worktrees/` is gitignored except this README.
+Everything under `.oh/worktrees/` is gitignored except this README.

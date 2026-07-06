@@ -28,7 +28,7 @@ assignees: ""
 ```yml
 agent: "<agent-name>"
 branch: "agent/<agent-name>"
-worktree_path: ".worktrees/<agent-name>"
+worktree_path: ".oh/worktrees/<agent-name>"
 ```
 
 ### 1. Provision the agent
@@ -42,10 +42,10 @@ This will:
 - Build the Docker image and start the sandbox container (`docker compose up -d --build`)
 - Mount the workspace and run the setup script
 
-`make sandbox` does **not** create the per-agent branch or worktree. The `branch` (`agent/<agent-name>`) and `worktree_path` (`.worktrees/<agent-name>`) fields from the Metadata block above are real conventions you create manually with `git worktree add` per the `/git` skill (`.oh/skills/git/SKILL.md`) §Worktrees:
+`make sandbox` does **not** create the per-agent branch or worktree. The `branch` (`agent/<agent-name>`) and `worktree_path` (`.oh/worktrees/<agent-name>`) fields from the Metadata block above are real conventions you create manually with `git worktree add` per the `/git` skill (`.oh/skills/git/SKILL.md`) §Worktrees:
 
 ```bash
-git worktree add -b agent/<agent-name> .worktrees/<agent-name> development
+git worktree add -b agent/<agent-name> .oh/worktrees/<agent-name> development
 ```
 
 ### 2. Enter the sandbox

@@ -75,6 +75,7 @@ BEGIN {
     envmap["crons.dir"]             = "CRONS_DIR"
     envmap["crons.agent_bin"]       = "CRON_AGENT_BIN"
     envmap["paths.memory"]          = "MEMORY_DIR"
+    envmap["paths.worktrees"]       = "WORKTREES_DIR"
     section  = ""
     list_key = ""
     in_list  = 0

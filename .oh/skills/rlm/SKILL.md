@@ -11,7 +11,7 @@ description: |
   bounded depth/children/step budget, AGGREGATE (piping competing per-chunk answers
   through /weigh), then PERSIST the recursion trace. The anti-context-rot move:
   ADDRESS context, don't dump the whole artifact into the window. Reuses
-  .oh/scripts/ralph.sh (the recursion loop) and .worktrees/ (isolated branches) BY
+  .oh/scripts/ralph.sh (the recursion loop) and .oh/worktrees/ (isolated branches) BY
   REFERENCE — never edits either. Manual-invoke (spawns agents, burns tokens).
   TRIGGER when: /rlm invoked, or asked to "answer a question over a huge file/log",
   "decompose a large artifact", "recurse over chunks", "address context instead of
@@ -38,12 +38,12 @@ candidate answers a chunk yields. This skill never re-implements selection — i
 | Substrate | Owner | How `/rlm` uses it |
 |---|---|---|
 | Recursion **loop** | `.oh/scripts/ralph.sh` | each iteration re-reads disk = the REPL step — **reused by reference, never edited** |
-| Isolated recursion **branches** | `.worktrees/` (the `/worktrees` skill) | depth-2 sub-trees fork here — **reused by reference, never edited** |
+| Isolated recursion **branches** | `.oh/worktrees/` (the `/worktrees` skill) | depth-2 sub-trees fork here — **reused by reference, never edited** |
 | Recursion **budget** | `.oh/agents/advisor.md` | the `Max depth N / Max children per level M / Step budget S` triple — `references/recursion-budget.md` points at it and adds a per-run token ceiling |
 | Chunk-map **primitive** | `scripts/query-context.mjs` (US-004, this skill) | partitions the artifact without ingesting it |
 | Candidate **selection** | `/weigh` | scores competing per-chunk answers |
 
-> Do **not** edit `.oh/scripts/ralph.sh` or anything under `.worktrees/`. `/rlm` is a
+> Do **not** edit `.oh/scripts/ralph.sh` or anything under `.oh/worktrees/`. `/rlm` is a
 > *consumer* of both. The only genuinely new substrate this skill adds is
 > `query-context.mjs` and this procedure.
 
@@ -126,7 +126,7 @@ synthesis. Honor the **per-run token ceiling**: when any budget dimension is hit
 surface the partial findings and the exhausted dimension and emit
 `RESULT: BUDGET-EXHAUSTED` — never silently truncate the recursion. The recursion loop
 **reuses `.oh/scripts/ralph.sh`** (each iteration re-reads disk = the REPL step) and
-isolated recursion branches **reuse `.worktrees/`** forks — both **by reference, no
+isolated recursion branches **reuse `.oh/worktrees/`** forks — both **by reference, no
 edits**.
 
 ### 4. Aggregate — synthesize, piping competing answers through `/weigh`
@@ -161,7 +161,7 @@ recursion auditable; it is a consumption artifact, never staged or committed. An
   `Max depth` means flat execution only (.oh/agents/advisor.md § Recursive decomposition).
 - **Re-implementing selection.** Competing per-chunk answers go through `/weigh`; do not
   hand-pick a "best" answer in prose.
-- **Editing the reused substrate.** `.oh/scripts/ralph.sh` and `.worktrees/` are reused
+- **Editing the reused substrate.** `.oh/scripts/ralph.sh` and `.oh/worktrees/` are reused
   by reference. Editing either is out of scope (and ralph.sh is explicitly off-limits
   per the PRD non-goals).
 - **Synthesis pass-through.** A mid-tree node that forwards children's returns verbatim

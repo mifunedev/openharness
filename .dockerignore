@@ -1,5 +1,8 @@
 **/.env*
 .claude/
+.oh/worktrees/*
+!.oh/worktrees/README.md
+# Defensive only: legacy root .worktrees/ is no longer canonical.
 .worktrees/
 .git/
 node_modules/

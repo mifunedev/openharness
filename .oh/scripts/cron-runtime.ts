@@ -15,7 +15,7 @@ export interface CronEntry {
   tmux: boolean;
   // When true, a tmux fire that would otherwise log SKIPPED_OVERLAP (overlap:false
   // + a genuinely-live previous run) instead runs in an isolated git worktree under
-  // .worktrees/cron/<session>. A fire is then never silently skipped — it either
+  // .oh/worktrees/cron/<session>. A fire is then never silently skipped — it either
   // runs (root or worktree) or surfaces a failure (ERR_WORKTREE/ERR_WORKTREE_CAP).
   worktree: boolean;
   agentBin?: string;
@@ -33,6 +33,10 @@ export interface CronEntry {
 }
 
 const CRONS_DIR = path.resolve(process.env.CRONS_DIR || ".oh/crons");
+// Keep relative WORKTREES_DIR values relative until use so tests and callers that
+// chdir into a fixture repo get repo-local fallback worktrees, matching the
+// relative fallback-root behavior.
+const WORKTREES_DIR = process.env.WORKTREES_DIR || ".oh/worktrees";
 const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";
@@ -539,7 +543,7 @@ export type OverlapDecision = "run" | "skip" | "worktree";
 // Pure fire policy shared by fireTmux and its tests. Decides how a tmux fire
 // proceeds given the cron's flags and whether a *live* holder owns the id-scoped
 // overlap pidfile:
-//   "worktree" — worktree:true → ALWAYS isolate in a fresh .worktrees/cron/<session>
+//   "worktree" — worktree:true → ALWAYS isolate in a fresh .oh/worktrees/cron/<session>
 //                worktree, every fire, so the shared root checkout never goes dirty
 //                and a fire is never skipped (it runs isolated or fails loudly).
 //   "run"      — no live holder of the id lock (no pidfile, or a stale/dead pid) →
@@ -560,7 +564,7 @@ export function decideOverlap(opts: {
   return "skip";
 }
 
-const FALLBACK_WORKTREE_DIR = ".worktrees/cron";
+const FALLBACK_WORKTREE_DIR = path.join(WORKTREES_DIR, "cron");
 
 // First existing remote (preferred) or local base branch, mirroring the
 // development→main→master precedence in .oh/skills/git/SKILL.md. Returns a
@@ -696,7 +700,7 @@ export function pruneAndCountFallbackWorktrees(id: string): number {
   return live;
 }
 
-// Create an isolated detached worktree at .worktrees/cron/<session> off the base
+// Create an isolated detached worktree at .oh/worktrees/cron/<session> off the base
 // branch for a worktree cron's fire. Returns the absolute path, or null after
 // logging a FAILURE (ERR_WORKTREE_CAP at/over the cap, ERR_WORKTREE otherwise) —
 // the caller must NOT fall back to a skip on null.

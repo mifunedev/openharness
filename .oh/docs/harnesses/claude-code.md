@@ -64,7 +64,7 @@ tmux attach -t agent-claude
 
 ## Tips
 
-- Use worktrees to give Claude Code its own branch: `git worktree add -b agent/claude .worktrees/agent/claude development`
+- Use worktrees to give Claude Code its own branch: `git worktree add -b agent/claude .oh/worktrees/agent/claude development`
 - Place a `SOUL.md` in the workspace to set the agent's persona and project context.
 - Crons in `.oh/crons/` (parsed by `scripts/cron-runtime.ts`) can fire Claude Code on a schedule for autonomous tasks.
 

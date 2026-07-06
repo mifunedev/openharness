@@ -214,7 +214,7 @@ COPY --chown=sandbox:sandbox workspace/ ${OH_PROJECT_ROOT}/workspace/
 # Flavor B (#609): bake a non-shadowed seed copy of the repo/control-plane so
 # the image-only path can populate an empty named workspace volume on first
 # boot (entrypoint OH_IMAGE_ONLY / seed_workspace_volume, OH_IMAGE_SEED_SRC).
-# Scoped by .dockerignore (.git, node_modules, .worktrees, .claude, .env* etc.).
+# Scoped by .dockerignore (.git, node_modules, .oh/worktrees/*, .claude, .env* etc.).
 # Tradeoff: bakes the repo into the image (size cost) for the seeding path only;
 # the primary bind-mount build ignores /opt/oh-seed at runtime.
 COPY --chown=sandbox:sandbox . /opt/oh-seed/

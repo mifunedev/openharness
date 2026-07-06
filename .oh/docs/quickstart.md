@@ -135,9 +135,11 @@ install:
   hermes: false
   grok_build: false
   agent_browser: false
+paths:
+  worktrees: .oh/worktrees     # WORKTREES_DIR
 ```
 
-The file also has `crons:`, `autopilot:`, `slack:`, and `compose:` sections (all commented out by default) — uncomment the keys you need. See tracked `harness.yaml.example` for every available key and its default.
+The file also has `paths:`, `crons:`, `autopilot:`, `slack:`, and `compose:` sections (all commented out by default) — uncomment the keys you need. See tracked `harness.yaml.example` for every available key and its default.
 
 **Secrets** — keep in `.devcontainer/.env` only (gitignored):
 
@@ -160,6 +162,7 @@ The file also has `crons:`, `autopilot:`, `slack:`, and `compose:` sections (all
 | `install.deepagents` | Set `true` to include DeepAgents in the sandbox image |
 | `install.hermes` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
 | `install.grok_build` | Set `true` to include Grok Build in the sandbox image; all Grok user state lives in the persisted `~/.grok` volume |
+| `paths.worktrees` | Worktree/project-clone root → `WORKTREES_DIR` (default `.oh/worktrees`) |
 
 Apply changes with `make destroy && make sandbox`.
 

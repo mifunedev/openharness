@@ -83,9 +83,9 @@ contract:
 ## Reuse-by-reference (no edits)
 
 The recursion **loop** is `.oh/scripts/ralph.sh` (each iteration re-reads disk = the
-REPL step) and isolated recursion **branches** are `.worktrees/` forks (the `/worktrees`
+REPL step) and isolated recursion **branches** are `.oh/worktrees/` forks (the `/worktrees`
 skill). `/rlm` reuses **both by reference** — it never edits `ralph.sh` (explicitly
-off-limits per the PRD non-goals) or anything under `.worktrees/`.
+off-limits per the PRD non-goals) or anything under `.oh/worktrees/`.
 
 ## See Also
 

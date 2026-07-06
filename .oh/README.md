@@ -27,8 +27,9 @@ is obsolete):
   scheduled-agent cron definitions + runtime log (`crons/`), the
   regression/capability eval suite (`evals/`), the long-term memory + session
   logs (`memory/`), the always-on identity core (`context/`), user-local deploy
-  config (`config.json`), and the Ralph/spec task workdirs (`tasks/` — ephemeral
-  build scratch, now at `.oh/tasks/`). The former top-level `packages/` folder
+  config (`config.json`), the ignored worktree/project-clone root (`worktrees/`),
+  and the Ralph/spec task workdirs (`tasks/` — ephemeral build scratch, now at
+  `.oh/tasks/`). The former top-level `packages/` folder
   was **retired** — its `oh` package moved in here; the Docusaurus docs *site*
   was externalized to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
   (#536), and the GitHub-readable markdown it rendered now lives at `.oh/docs/`.
@@ -38,8 +39,9 @@ is obsolete):
   identity/state the harness edits in place (`workspace/`). The GitHub-readable
   markdown docs now live under `.oh/docs/`, the scheduled-agent crons under
   `.oh/crons/`, the eval suite under `.oh/evals/`, long-term memory under
-  `.oh/memory/`, the identity core under `.oh/context/`, and the Ralph/spec task
-  workdirs under `.oh/tasks/`; the rendered docs site and the `blog/` archive
+  `.oh/memory/`, the identity core under `.oh/context/`, the worktree/project-clone
+  root under `.oh/worktrees/`, and the Ralph/spec task workdirs under `.oh/tasks/`;
+  the rendered docs site and the `blog/` archive
   live in `mifunedev/openharness-web`.
 
 ### Relocated into `.oh/` (no back-compat symlinks)
@@ -68,6 +70,12 @@ back-compat symlink — every consumer was repointed to the real `.oh/tasks/` pa
 directly (the `cleanup-tasks` cron, `ralph.sh` + its vitest, the eval probes, and
 the `.mifune` skill/agent references), because git index operations cannot traverse
 a symlink and nothing reads the bare `tasks/` path anymore.
+
+The ignored worktree root moved into the control-plane namespace as
+`.oh/worktrees/` **without** a back-compat symlink. Runtime creation is routed
+through `WORKTREES_DIR` / `paths.worktrees` (default `.oh/worktrees`), the
+`/worktrees` skill creates branch/project clones there, and cron worktree
+isolation uses `.oh/worktrees/cron/`.
 
 The **`oh` CLI package** moved *without* a back-compat symlink — the `packages/`
 folder is retired, and its consumers were repointed directly to the real `.oh/`
@@ -107,7 +115,8 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 | `crons/` | Scheduled-agent cron definitions (`heartbeat.md`, `autopilot.md`, `cleanup-tasks.md`, …) read by `.oh/scripts/cron-runtime.ts`, plus the gitignored runtime `.cron.log`/`.pid`. Old path: `crons/` (no symlink — repointed). |
 | `evals/` | The fitness-function suite — regression probes (`probes/`), capability benchmark (`capability/`), trajectory datasets (`datasets/`), and the `RESULTS.md` scoreboard. Old path: `evals/` (no symlink — repointed). |
 | `memory/` | The harness's long-term memory (`MEMORY.md` + topic notes, tracked) and gitignored dated session logs (`[0-9]*/log.md`). Old path: `memory/` (no symlink — repointed). |
-| `context/` | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) + the collapsed `rules/` provider pointers. Old path: `context/` (no symlink — repointed). |
+| `worktrees/` | Gitignored branch worktrees, cron isolation worktrees, and durable project/harness clones. Old path: root worktree directory (no symlink — repointed). |
+| `context/` | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) + the collapsed `rules` provider pointers. Old path: `context/` (no symlink — repointed). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
 | `deploy/` | Hosted-platform deployment assets. `deploy/railway/` holds the Railway hosted-smoke Dockerfile and status server used by the README deploy button. |
@@ -139,7 +148,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, deploy/compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the long-term memory + session logs (`.oh/memory/`), the always-on identity core (`.oh/context/`), the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`workspace/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, deploy/compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the long-term memory + session logs (`.oh/memory/`), the always-on identity core (`.oh/context/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`workspace/`) |
 
 ### Why these specifically stay at root
 

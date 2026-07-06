@@ -24,6 +24,7 @@ describe("project Pi settings", () => {
       "npm:@guwidoe/pi-prompt-suggester@0.3.10",
       "npm:pi-autoresearch@1.6.0",
       "npm:@ff-labs/pi-fff@0.9.5",
+      "npm:pi-yaml-hooks@2026.6.14",
       "git:github.com/Michaelliv/pi-dynamic-workflows@dbc6800d1f725f7439e51705e2664c59484afcd1",
     ]);
   });

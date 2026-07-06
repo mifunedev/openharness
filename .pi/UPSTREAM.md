@@ -44,3 +44,36 @@ On each review:
 1. Check whether `tintinweb/pi-messenger-bridge` has published a newer release.
 2. If so (or once the thread-reply PR is released), re-pin `.devcontainer/entrypoint.sh`'s `npm install` line from the fork branch to `pi-messenger-bridge@<release>` and validate.
 3. Verify the Slack transport still loads and bridges turns after the bump.
+
+---
+
+## Provenance — pi-yaml-hooks
+
+| Property | Value |
+|----------|-------|
+| **Capability** | Event-driven YAML hooks for pi (`tool.before.*`/`tool.after.*`/`file.changed`/`session.*` → `bash`/`tool`/`notify`/`confirm`/`setStatus`) |
+| **Package** | `pi-yaml-hooks` ([KristjanPikhof/Pi-YAML-Hooks](https://github.com/KristjanPikhof/Pi-YAML-Hooks)) |
+| **License** | MIT |
+| **Install / load** | Pinned in `.pi/settings.json` `packages[]` as `npm:pi-yaml-hooks@2026.6.14` (loads the engine in every pi session). Project hook config lives at `.pi/hook/hooks.yaml` and is **inert until trusted** via `/hooks-trust` or `PI_YAML_HOOKS_TRUST_PROJECT=1` — the harness does not auto-trust globally. See `.pi/hook/README.md`. |
+| **Vendored** | Engine: No — npm package pin. Examples: the small `pre-tool-developer-guards` pack is vendored under `.pi/hook/examples/` as reference-only (intentionally superseded by `.pi/extensions/path-guard.ts`); the repo-only `atomic-commit-snapshot-worker` pack is deliberately not vendored. |
+
+### Relationship Model
+
+The YAML-hooks capability is consumed as a **thin npm package pin** (same model
+as `pi-autoresearch`, `pi-subagents`, etc.), not a vendored port. The engine
+loads in every pi session, but the harness's project hook config (`.pi/hook/hooks.yaml`)
+is a conservative, observe-only demonstration that stays inert until an operator
+trusts the project. Blocking/guarding is intentionally left to the existing
+TypeScript extension `.pi/extensions/path-guard.ts` — the YAML layer does not
+duplicate it.
+
+### Review Cadence
+
+**Owner**: `@ryaneggz`
+**Schedule**: Quarterly (check for a newer `pi-yaml-hooks` release)
+**Last reviewed**: 2026-07-05
+
+On each review:
+1. Check whether `KristjanPikhof/Pi-YAML-Hooks` has published a newer release (`npm view pi-yaml-hooks version`).
+2. If so, re-pin `.pi/settings.json` `packages[]` **and** the matching entry in `.pi/extensions/__tests__/settings.test.ts` (asserted with `toEqual` — keep them in lockstep), then run `node_modules/.bin/vitest run`.
+3. Confirm the event/action/condition vocabulary in `.pi/hook/README.md` still matches upstream, and that `.pi/hook/hooks.yaml` still parses/loads under a trusted session.

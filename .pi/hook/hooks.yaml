@@ -1,0 +1,61 @@
+# Open Harness — active pi-yaml-hooks config
+#
+# Engine: pi-yaml-hooks (pinned in .pi/settings.json `packages[]`).
+# This file loads ONLY when the project is trusted:
+#   /hooks-trust        (interactive, per operator)
+#   PI_YAML_HOOKS_TRUST_PROJECT=1   (env, per session)
+# See README.md in this directory for the full schema + trust model.
+#
+# Scope note: this is a deliberately conservative, NON-blocking demonstration
+# of YAML hooks in the harness. It only observes (NDJSON audit log) and annotates
+# (status bar). It intentionally does NOT inject follow-up prompts or block tools
+# — pre-tool guarding is already owned by .pi/extensions/path-guard.ts, and prompt
+# injection would interfere with unattended autopilot/cron pi sessions.
+hooks:
+  # Append an NDJSON audit line whenever pi writes/edits a harness source file.
+  - id: log-harness-write
+    event: tool.after.write
+    conditions:
+      - matchesAnyPath:
+          - ".oh/**"
+          - ".pi/**"
+          - ".devcontainer/**"
+          - "workspace/**"
+    actions:
+      - bash: 'node ./.pi/hook/post-tool-log.mjs'
+
+  - id: log-harness-edit
+    event: tool.after.edit
+    conditions:
+      - matchesAnyPath:
+          - ".oh/**"
+          - ".pi/**"
+          - ".devcontainer/**"
+          - "workspace/**"
+    actions:
+      - bash: 'node ./.pi/hook/post-tool-log.mjs'
+
+  # Surface dependency-metadata changes in the pi status bar.
+  - id: mark-dependency-change-write
+    event: tool.after.write
+    conditions:
+      - matchesAnyPath:
+          - "package.json"
+          - "package-lock.json"
+          - "pnpm-lock.yaml"
+          - "yarn.lock"
+          - "bun.lock"
+    actions:
+      - setStatus: "Dependency metadata changed — consider `node_modules/.bin/vitest run`"
+
+  - id: mark-dependency-change-edit
+    event: tool.after.edit
+    conditions:
+      - matchesAnyPath:
+          - "package.json"
+          - "package-lock.json"
+          - "pnpm-lock.yaml"
+          - "yarn.lock"
+          - "bun.lock"
+    actions:
+      - setStatus: "Dependency metadata changed — consider `node_modules/.bin/vitest run`"

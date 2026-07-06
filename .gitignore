@@ -55,6 +55,9 @@ workspace/.slack/settings.json
 # Pi project config (generated symlinks)
 workspace/.pi/
 
+# pi-yaml-hooks audit output (see .pi/hook/hooks.yaml)
+.pi-hook-logs/
+
 # Startup script (contains runtime config, tokens sourced from env)
 workspace/startup.sh
 **/.pnpm-store

@@ -1,16 +1,38 @@
 # Open Harness docs
 
+📖 **Full rendered docs & search → https://oh.mifune.dev**
+
 GitHub-readable documentation for the core Open Harness repo. Prefer this index
 for repo-local docs and [DeepWiki](https://deepwiki.com/mifunedev/openharness)
 for generated codebase navigation. The rendered Docusaurus site and blog archive
 live in [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web).
 
+## Start here
+
+Open Harness provides the sandbox; you choose the harness — a Docker workspace you
+clone-and-own, where `make sandbox` boots one long-lived container and the coding agent
+of your choice (Claude Code, Codex, Pi, Hermes, and more) works on its own branch and
+identity, running identically on your laptop or an unattended, lights-out remote VM.
+
+**Attach in 3 steps (VS Code):**
+
+```
+1. `make sandbox` — build the image and boot the container.
+2. VS Code → Command Palette (Ctrl/Cmd+Shift+P) → "Dev Containers: Attach to Running
+   Container" → select `openharness`. Ports auto-forward while attached.
+3. Open a terminal inside the container and run `claude` (or `codex` · `pi` · `hermes`).
+```
+
+Full terminal / Remote-SSH options: see [Connecting → Option B](connecting.md#option-b--vscode-attach-to-running-container-local-host).
+
+[Hermes](harnesses/hermes.md) — Nous Research's self-improving agent CLI — is an opt-in harness: set
+`install.hermes: true` in harness.yaml, rebuild, then run `hermes setup`.
 
 ## How the primitive pack ships
 
 Open Harness vendors the shared skills/agents/hooks primitive pack directly into the `.oh/` control plane (`.oh/skills/`, `.oh/agents/`, `.oh/hooks/`, `.oh/skills.lock`), tracked as ordinary files — the `oh` CLI lays them down during `oh init`/`oh update`, so a fresh checkout has them with no submodule or network step. Provider paths such as `.pi/skills`, `.claude/skills`, and `.codex/skills` are symlinks into `.oh/skills`; `.pi/` remains a provider surface for v1.
 
-## Start here
+## Setup & first steps
 
 - [Introduction](intro.md)
 - [Quickstart](quickstart.md)

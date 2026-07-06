@@ -172,11 +172,65 @@ across image pulls and container recreation, not in the image itself. Later
 boots see the marker and skip re-seeding, so a populated volume is never
 clobbered.
 
-> ⚠️ **Flavor B requires an image built after the seed-bake change.** Baking
-> `/opt/oh-seed` into the image is a separate change on top of the Dockerfile;
-> only images published from that change onward contain it. The `latest` tag
-> at the time of writing does **not** yet contain `/opt/oh-seed` — pin a tag
-> from the next published release (or newer) before relying on Flavor B.
+> ⚠️ **Flavor B requires an image built after two changes:** (1) the seed-bake
+> that stages `/opt/oh-seed`, and (2) the `.claude` seed-config fix
+> ([#617](https://github.com/mifunedev/openharness/pull/617)) that stops
+> `.dockerignore` from starving `/opt/oh-seed` of `.claude/protected-paths.txt`.
+> An image missing (2) crash-loops on boot with
+> `ERROR: .claude/protected-paths.txt is missing`. Pin a tag published **after
+> #617 merges** (or a local build of that branch — see below) before relying on
+> Flavor B. Volumes already seeded by a pre-#617 image self-heal on the next
+> boot against a fixed image.
+
+### Clean slate + fresh run (explicit `docker run`)
+
+The [compose file](../../.devcontainer/docker-compose.image-only.yml) is the
+canonical one-liner (`docker compose -f … up -d`). If you drive Docker directly
+instead, this is the equivalent teardown → fresh run → verify sequence. It
+mirrors the compose file's env and volume set — note it reads `GIT_USER_NAME` /
+`GIT_USER_EMAIL` (the entrypoint ignores any `OH_GIT_*` variants).
+
+```bash
+# ── 0. Config ──────────────────────────────────────────────────────
+IMAGE=ghcr.io/mifunedev/openharness:latest   # a tag published after #617
+NAME=openharness
+
+# To test BEFORE #617 is published, build the fix branch locally and point
+# IMAGE at it (this is the "run it now" path):
+#   git fetch origin && git checkout feat/image-seed-claude-config
+#   docker build -t openharness:seedfix -f .devcontainer/Dockerfile .
+#   IMAGE=openharness:seedfix
+
+# ── 1. Clear previous state ── DESTRUCTIVE: wipes the seeded workspace ──
+docker rm -f "$NAME" 2>/dev/null || true
+docker volume rm oh_workspace 2>/dev/null || true   # the seeded .oh/ control plane
+
+# ── 2. Fresh run (no bind mount, no build) ─────────────────────────
+docker run -d --name "$NAME" --restart unless-stopped --init \
+  -e OH_IMAGE_ONLY=1 \
+  -e OH_PROJECT_ROOT=/home/sandbox/harness \
+  -e GIT_USER_NAME="ryaneggz" \
+  -e GIT_USER_EMAIL="kre8mymedia@gmail.com" \
+  -e GH_TOKEN="${GH_TOKEN:-}" \
+  -v oh_workspace:/home/sandbox/harness \
+  -v claude-auth:/home/sandbox/.claude \
+  -v gh-config:/home/sandbox/.config/gh \
+  -v oh_ssh:/home/sandbox/.ssh \
+  "$IMAGE" sleep infinity
+
+# ── 3. Verify the seed + provider wiring ───────────────────────────
+sleep 8
+docker logs "$NAME" 2>&1 | tail -30
+docker exec "$NAME" bash -lc '
+  ls -l /home/sandbox/harness/.claude/protected-paths.txt \
+  && bash /home/sandbox/harness/.oh/scripts/link-providers.sh --check \
+  && ls /home/sandbox/harness/.oh >/dev/null && echo SEED_OK'
+```
+
+A healthy boot ends with `Providers OK: …` and `SEED_OK`, and the logs show
+**no** `protected-paths.txt is missing`. The `oh_workspace` volume is now
+authoritative — later boots see the `.oh/.image-seeded` marker and skip
+re-seeding, so your in-container edits persist.
 
 ### Single-arch caveat
 

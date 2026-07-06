@@ -12,12 +12,13 @@ if [ "${BASH_SOURCE[0]}" != "$0" ]; then _OH_SOURCED=1; else _OH_SOURCED=0; fi
 
 # get-oh.sh — install the standalone `oh` CLI onto a host.
 #
-# The `oh` CLI is not published to npm. This script places the single,
-# self-contained `oh` binary at its destination (default ~/.local/bin/oh) and
-# nothing else — it does NOT clone the harness repo and does NOT touch the
-# sandbox install dir or any existing config. It prefers a prebuilt bundle
-# (https://oh.mifune.dev/oh.js) and falls back to building from source in a
-# temp dir if that download fails.
+# This script is the npm-free bootstrap: it places the single, self-contained
+# `oh` binary at its destination (default ~/.local/bin/oh) and nothing else — it
+# does NOT clone the harness repo and does NOT touch the sandbox install dir or
+# any existing config. It prefers a prebuilt bundle (https://oh.mifune.dev/oh.js)
+# and falls back to building from source in a temp dir if that download fails.
+# (The CLI is also published to npm as `@mifune/openharness` — `npm i -g
+# @mifune/openharness` — for hosts that already have Node >= 20.)
 #
 # `oh init` fetches its scaffold payload on demand (a shallow clone into a temp
 # dir that it deletes), so no local repo is needed after install.

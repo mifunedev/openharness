@@ -164,7 +164,7 @@ Edit `.devcontainer/.env` and set your `SANDBOX_NAME` and any optional tokens. S
 docker compose -f .devcontainer/docker-compose.yml up -d --build
 ```
 
-On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds.
+On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds. To skip the build entirely and pull the prebuilt release image instead, see [Prebuilt-image deployment](deployment-prebuilt-image.md) (`docker compose … up -d --no-build` with `OH_SANDBOX_IMAGE` set, or `oh sandbox --image`).
 
 Check the sandbox health before attaching:
 
@@ -239,9 +239,14 @@ oh init                 # equip the repo — vendors the .oh/ payload from the l
                         # clone (offline). Use --from-remote to shallow-clone a
                         # fresh payload instead; pin a version with --ref <tag|branch>
 oh sandbox              # provision + start the sandbox (docker compose up -d --build)
+oh sandbox --image      # ...or pull the prebuilt release image and skip the local build
 oh shell                # zsh in the running container (or: oh shell <container>)
 oh gateway status       # manage messaging client sessions (pi|hermes)
 ```
+
+`oh sandbox --image` (and the `sandbox.image` key in `harness.yaml`) run the
+published `ghcr.io/mifunedev/openharness` image instead of building locally — see
+[Prebuilt-image deployment](deployment-prebuilt-image.md).
 
 `--from-remote` fetches over public HTTPS only — private or credential-prompting remotes fail fast (`GIT_TERMINAL_PROMPT=0`); offline, use `oh init --from <local-checkout>` instead. Repos equipped this way mount your project at `/home/sandbox/project` inside the sandbox (the clone paths above use `/home/sandbox/harness`). Upgrade the vendored `.oh/` later with `oh update --from-remote [--ref <ref>]`.
 

@@ -19,6 +19,8 @@ sandbox:
   # name: openharness          # SANDBOX_NAME — container + compose project name
   # timezone: America/Los_Angeles   # TZ — cron schedules, log timestamps
   # docker_socket: false       # DOCKER_SOCKET — mount host /var/run/docker.sock (effectively host root; opt-in)
+  # image: ghcr.io/mifunedev/openharness:latest   # OH_SANDBOX_IMAGE — run the prebuilt image instead of a local build (pair with `oh sandbox --image`)
+  # pull_policy: missing        # OH_PULL_POLICY — compose pull policy for the image (missing|always|never); used by the VS Code "Reopen in Container" path
 
 git:
   # user_name: Your Name           # GIT_USER_NAME (spaces OK)

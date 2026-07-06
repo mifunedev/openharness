@@ -15,6 +15,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [Introduction](intro.md)
 - [Quickstart](quickstart.md)
 - [Installation](installation.md)
+- [Prebuilt-image deployment (skip the local build)](deployment-prebuilt-image.md)
 - [Railway hosted smoke deploy](railway.md)
 - [Connecting to the sandbox](connecting.md)
 - [Contributing](contributing.md)

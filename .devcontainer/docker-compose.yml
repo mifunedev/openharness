@@ -25,7 +25,13 @@ name: ${SANDBOX_NAME:-openharness}
 
 services:
   sandbox:
-    image: sandbox-${SANDBOX_NAME:-openharness}
+    # Default is a LOCAL build tagged sandbox-<name>. Set OH_SANDBOX_IMAGE
+    # (harness.yaml `sandbox.image`, e.g. ghcr.io/mifunedev/openharness:latest)
+    # to run the prebuilt image instead — the CLI path pairs this with
+    # `up -d --no-build` (`oh sandbox --image`); the VS Code "Reopen in
+    # Container" path relies on pull_policy since it can't pass --no-build.
+    image: ${OH_SANDBOX_IMAGE:-sandbox-${SANDBOX_NAME:-openharness}}
+    pull_policy: ${OH_PULL_POLICY:-missing}
     container_name: ${SANDBOX_NAME:-openharness}
     build:
       context: ..

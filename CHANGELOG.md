@@ -10,6 +10,15 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 ### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.7.5-5] - 2026-07-05
+
+### Added
+### Changed
 - Move the canonical ignored worktree root into `.oh/worktrees/`, including `WORKTREES_DIR`/`paths.worktrees` plumbing and updated runtime/docs/skill references.
 ### Fixed
 ### Removed

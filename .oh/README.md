@@ -2,8 +2,8 @@
 
 **OpenHarness's own machinery, grouped as one addressable unit.** The `oh` CLI,
 the installer/lifecycle scripts, the container-install inputs, and the
-deploy/compose config now live together here so a future version (and the `oh`
-CLI itself) can address the harness's machinery as a single namespace instead of
+compose config now live together here so a future version (and the `oh` CLI
+itself) can address the harness's machinery as a single namespace instead of
 hunting it across the repo root.
 
 This rescopes the removed `.openharness/` deploy-override directory under the
@@ -119,7 +119,6 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 | `context/` | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) + the collapsed `rules` provider pointers. Old path: `context/` (no symlink — repointed). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
-| `deploy/` | Hosted-platform deployment assets. `deploy/railway/` holds the Railway hosted-smoke Dockerfile and status server used by the README deploy button. |
 
 ## oh init (Phase 2)
 
@@ -148,7 +147,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, deploy/compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the long-term memory + session logs (`.oh/memory/`), the always-on identity core (`.oh/context/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`workspace/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the long-term memory + session logs (`.oh/memory/`), the always-on identity core (`.oh/context/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`workspace/`) |
 
 ### Why these specifically stay at root
 

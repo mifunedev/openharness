@@ -16,12 +16,10 @@ identity, running identically on your laptop or an unattended, lights-out remote
 
 **Attach in 3 steps (VS Code):**
 
-```
 1. `make sandbox` — build the image and boot the container.
 2. VS Code → Command Palette (Ctrl/Cmd+Shift+P) → "Dev Containers: Attach to Running
    Container" → select `openharness`. Ports auto-forward while attached.
 3. Open a terminal inside the container and run `claude` (or `codex` · `pi` · `hermes`).
-```
 
 Full terminal / Remote-SSH options: see [Connecting → Option B](connecting.md#option-b--vscode-attach-to-running-container-local-host).
 

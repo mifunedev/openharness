@@ -12,6 +12,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Changed
 ### Fixed
 ### Removed
+- Remove the Railway hosted smoke deployment surface, including the root Railway config, deploy assets, documentation, README button, and eval guard.
 ### Deprecated
 ### Security
 

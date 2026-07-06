@@ -232,6 +232,25 @@ A healthy boot ends with `Providers OK: …` and `SEED_OK`, and the logs show
 authoritative — later boots see the `.oh/.image-seeded` marker and skip
 re-seeding, so your in-container edits persist.
 
+```bash
+# ── 4. Attach an interactive shell (once the container is stable) ──
+# Optional: block until the healthcheck reports healthy (start_period ~300s).
+until [ "$(docker inspect -f '{{.State.Health.Status}}' "$NAME" 2>/dev/null)" = healthy ]; do
+  echo "waiting for $NAME to become healthy…"; sleep 5
+done
+
+docker exec -it -u sandbox "$NAME" zsh   # interactive shell (bash also available)
+# then, inside the container:
+#   claude        # start the coding agent (or: codex, pi)
+#   gh auth login && gh auth setup-git   # one-time, if GH_TOKEN was not passed
+```
+
+The image has no `HEALTHCHECK` of its own, so `docker run` won't populate
+`.State.Health` unless you add `--health-cmd`; on the plain `docker run` above,
+skip the wait loop and just exec once `docker ps` shows the container `Up`. The
+compose path (`docker-compose.image-only.yml`) defines the healthcheck, so there
+the wait loop works as written — or use `make shell` / `oh shell`.
+
 ### Single-arch caveat
 
 Same caveat as Flavor A above: the published image targets the CI runner's

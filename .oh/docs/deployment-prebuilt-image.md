@@ -125,14 +125,93 @@ container:
 }
 ```
 
-## Not yet: image-only, no checkout
+## Image-only deployment (no checkout) — Flavor B
 
-Running the image with **no** project bind-mounted (workspace in a named volume,
-control plane straight from the baked image) is a separate, deferred path — the
-entrypoint's bind-mount assumptions (UID sync, root `pnpm install`, provider
-symlinks) don't hold without a mounted repo. Prebuilt-image mode always keeps the
-bind mount. Tracked in
+Everything above (call it **Flavor A**) still keeps the bind mount: your
+checked-out repo shadows the image's toolchain. **Flavor B** drops the checkout
+entirely — there is no project directory on the host at all. The workspace and
+the `.oh/` control plane live in a named Docker volume, seeded once from the
+image itself. Tracked in
 [#609](https://github.com/mifunedev/openharness/issues/609).
+
+### The recipe
+
+[`.devcontainer/docker-compose.image-only.yml`](../../.devcontainer/docker-compose.image-only.yml)
+is a standalone compose file — no `..:` bind mount, no `build:` stanza:
+
+```bash
+docker compose -f .devcontainer/docker-compose.image-only.yml up -d
+```
+
+This pulls and runs the published image with **no clone and no build**. The
+workspace and control plane live entirely in the named `oh_workspace` volume
+declared in that file, mounted at `$OH_PROJECT_ROOT`.
+
+### `OH_IMAGE_ONLY=1`
+
+The compose file sets `OH_IMAGE_ONLY=1` in the container environment. This is
+the entrypoint flag that switches `entrypoint.sh` into **no-bind mode**:
+
+- the host UID/GID sync block is skipped (there is no host directory to read
+  ownership from)
+- the workspace mount is `chown`'d to the sandbox user instead
+- the first-boot seed (below) runs before `link-providers`, the root
+  `pnpm install`, and cron tmux setup, so those steps see a populated `.oh/`
+
+Prebuilt-image mode (Flavor A) never sets this flag — it always keeps the bind
+mount, so its host-UID-sync path is unchanged.
+
+### Seed-to-volume persistence
+
+On the **first boot** against an empty `oh_workspace` volume, the entrypoint
+seeds the baked control plane — from the image's `/opt/oh-seed` — into the
+volume, then writes the marker `.oh/.image-seeded`. From that point on, the
+**volume is authoritative**: it is the operator-editable copy of `.oh/` (and
+the rest of the repo), and edits made inside the running sandbox persist there
+across image pulls and container recreation, not in the image itself. Later
+boots see the marker and skip re-seeding, so a populated volume is never
+clobbered.
+
+> ⚠️ **Flavor B requires an image built after the seed-bake change.** Baking
+> `/opt/oh-seed` into the image is a separate change on top of the Dockerfile;
+> only images published from that change onward contain it. The `latest` tag
+> at the time of writing does **not** yet contain `/opt/oh-seed` — pin a tag
+> from the next published release (or newer) before relying on Flavor B.
+
+### Single-arch caveat
+
+Same caveat as Flavor A above: the published image targets the CI runner's
+architecture. If you run a different CPU arch, prefer a local build (or
+Flavor A, which builds locally by default) until multi-arch images land.
+
+### Relationship to the Railway smoke path
+
+Flavor B is a **supersede-candidate** for the existing (unvalidated) Railway
+smoke path under [`.oh/deploy/railway/`](../deploy/railway/) — once Flavor B
+itself has been host-validated (see the manual smoke checklist below), it may
+replace that path as the recommended no-checkout deployment target. This is a
+documentation note only; no file under `.oh/deploy/railway/` changes as part
+of this work.
+
+### Manual live-host smoke checklist (non-gating)
+
+The eval probe suite covers the static contract (env-var gating, compose
+shape, doc content) deterministically, without a Docker host. It cannot cover
+an actual live boot. Before relying on Flavor B in production, run this
+checklist by hand on a real host:
+
+- [ ] `docker pull ghcr.io/mifunedev/openharness:<tag built after the /opt/oh-seed change>`
+- [ ] `docker compose -f .devcontainer/docker-compose.image-only.yml up -d`
+- [ ] confirm **no build step ran** — the compose/Docker output shows a pull, not a build
+- [ ] confirm `.oh/` was seeded into the volume:
+      `docker compose -f .devcontainer/docker-compose.image-only.yml exec sandbox ls /home/sandbox/harness/.oh`
+- [ ] confirm an agent / the `oh` CLI is usable inside the container
+- [ ] edit a file under `.oh/` in the running container, then
+      `docker compose -f .devcontainer/docker-compose.image-only.yml restart`,
+      and confirm the edit is still there
+
+See also [the CLI path](#cli-path-recommended) above for the Flavor A
+equivalent of pulling a pinned tag.
 
 ## See also
 

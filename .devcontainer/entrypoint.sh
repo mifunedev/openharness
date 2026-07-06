@@ -66,6 +66,21 @@ seed_workspace_volume() {
   local marker="$dest/.oh/.image-seeded"
   local src="${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
   OH_IMAGE_SEEDED_THIS_BOOT=0
+  # Self-heal: backfill tracked .claude control-plane config that a prior
+  # (pre-fix) image failed to seed. Copy ONLY when the dest file is absent and
+  # the seed carries it, so operator edits are never clobbered. Runs before the
+  # marker early-return so an already-marked-but-incomplete volume heals in
+  # place — no volume wipe. Idempotent. protected-paths.txt is boot-critical
+  # (link-providers.sh --init hard-requires it); settings.json wires hooks.
+  if [ -n "$src" ] && [ -d "$src/.claude" ]; then
+    local _rel
+    for _rel in protected-paths.txt settings.json; do
+      if [ ! -e "$dest/.claude/$_rel" ] && [ -f "$src/.claude/$_rel" ]; then
+        mkdir -p "$dest/.claude"
+        cp -a "$src/.claude/$_rel" "$dest/.claude/$_rel" 2>/dev/null || true
+      fi
+    done
+  fi
   if [ -f "$marker" ]; then
     return 0
   fi

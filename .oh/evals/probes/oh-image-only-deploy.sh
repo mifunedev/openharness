@@ -152,6 +152,20 @@ else
   echo "[oh-image-only-deploy] Dockerfile not present — skipping /opt/oh-seed staging sub-check" >&2
 fi
 
+# (7) .claude control-plane seed contract. The no-bind seed must carry
+#     .claude/protected-paths.txt or link-providers.sh --init crash-loops. Guard
+#     BOTH halves: (a) .dockerignore re-includes it into the /opt/oh-seed build
+#     context (a bare `.claude/` exclusion starves the seed), and (b) the
+#     entrypoint seed fn backfills it so an already-seeded-but-incomplete volume
+#     self-heals without a wipe.
+DOCKERIGNORE="$ROOT/.dockerignore"
+if [[ -f "$DOCKERIGNORE" ]]; then
+  grep -Eq '^[[:space:]]*!\.claude/protected-paths\.txt[[:space:]]*$' "$DOCKERIGNORE" \
+    || fails+=(".dockerignore must re-include .claude/protected-paths.txt (!.claude/protected-paths.txt) so /opt/oh-seed carries it into the no-bind seed")
+fi
+grep -Fq 'protected-paths.txt' "$seed_fn_file" 2>/dev/null \
+  || fails+=("seed_workspace_volume must backfill .claude/protected-paths.txt so an already-seeded-but-incomplete volume self-heals")
+
 if (( ${#fails[@]} > 0 )); then
   echo "REGRESSION: Flavor B (image-only deploy) contract broken:" >&2
   printf '  - %s\n' "${fails[@]}" >&2

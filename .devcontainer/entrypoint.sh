@@ -514,6 +514,11 @@ case "${MEMORY_DIR:-.oh/memory}" in
   *)  MEMORY_PATH="$HARNESS/${MEMORY_DIR:-.oh/memory}" ;;
 esac
 mkdir -p "$MEMORY_PATH"
+# Seed the durable lessons ledger (.oh/memory/MEMORY.md) if missing. It is
+# gitignored/local-per-instance, so a fresh clone lacks it and the session-start
+# read + /retro dedup would hit ENOENT until first write. Idempotent: never
+# overwrites an existing file. See .oh/scripts/ensure-memory-file.sh.
+sh "$HARNESS/.oh/scripts/ensure-memory-file.sh" >/dev/null 2>&1 || true
 
 # ─── Resolve + pre-create the worktrees directory ─────────────────
 # Single source of truth = WORKTREES_DIR (docker-compose passes

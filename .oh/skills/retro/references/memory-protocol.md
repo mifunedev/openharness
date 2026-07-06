@@ -52,17 +52,21 @@ Every path below shows the **default** (`.oh/memory`); read each as
 
 ```
 .oh/memory/
-  MEMORY.md              # long-term lessons (tracked)
+  MEMORY.md              # long-term lessons (gitignored - local-per-instance; auto-seeded)
   <topic>.md             # per-topic reference notes (tracked or gitignored per need)
   YYYY-MM-DD/
     log.md               # daily append log (gitignored - local-only; not committed)
 ```
 
-The `.oh/memory/YYYY-MM-DD/` directory is gitignored via `.gitignore`'s
-`.oh/memory/[0-9]*/` rule, so daily logs are a **local-only working journal** —
-they do not survive a fresh clone. Only `MEMORY.md`, `README.md`, and explicitly reviewed topic notes should
-persist in git. Public release branches should not carry daily logs or
-maintainer-private notes.
+Both `MEMORY.md` and the `.oh/memory/YYYY-MM-DD/` directory are gitignored (via
+`.gitignore`'s `.oh/memory/MEMORY.md` and `.oh/memory/[0-9]*/` rules), so the
+durable ledger and daily logs are **local-per-instance** — they do not survive a
+fresh clone. Because `MEMORY.md` is therefore absent on a fresh clone/sandbox,
+it is auto-seeded (header only) by `.oh/scripts/ensure-memory-file.sh` — the
+container entrypoint runs it at boot, and `/retro` runs it before its first
+write, so the session-start read never hits ENOENT. Only `README.md` and
+explicitly reviewed topic notes persist in git. Public release branches should
+not carry `MEMORY.md`, daily logs, or maintainer-private notes.
 
 Date format: always `date -u +%Y-%m-%d` (UTC). Never local time.
 

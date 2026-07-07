@@ -206,10 +206,16 @@ container (`.oh/scripts/gateway.sh` errors "run inside the sandbox" otherwise).
 
 ```bash
 gateway pi                 # start the client-slack-pi session (idempotent)
-gateway status             # both sessions + state, e.g.
-                           #   · client-slack-pi        stopped   (gateway pi)
-                           #   · client-slack-hermes    stopped   (gateway hermes)
+gateway status             # both sessions + HEALTH (not just existence), e.g.
+                           #   ✓ client-slack-pi  healthy   (tmux attach -t client-slack-pi)
+                           #   · client-slack-hermes  stopped   (gateway hermes)
 ```
+
+`status` reports the supervisor's live state, not merely "a tmux session exists":
+`healthy` (heartbeat fresh), `recovering` (in a restart/backoff — may add
+`· N restart(s)` / `· recovered <age> ago` after a stale-ctx heal), or
+`running · disconnected (no PI_SLACK token)` when the bridge loaded without tokens.
+A session with no state yet falls back to `running`.
 
 To **watch** a running gateway without any risk of killing it, attach **read-only** with
 `-r`, then detach with `Ctrl-b d` — never `Ctrl-C` or `exit` (those stop the pi process):

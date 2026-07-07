@@ -59,12 +59,63 @@ session_live() { tmux ls -F '#{session_name}' 2>/dev/null | grep -Fxq "$1"; }
 
 ANSI_STRIP="sed -u 's/\\x1b\\[[0-9;?]*[A-Za-z]//g; s/\\r//g'"
 
+# Non-secret runtime state the supervisor writes (see client-slack-supervise.sh):
+# $STATE_DIR/<backend>.{state,heartbeat,stale}. Used to report health, not just
+# session existence, in `gateway status`.
+STATE_DIR="${GATEWAY_STATE_DIR:-$HOME/.pi/gateway}"
+STALE_AFTER="${GATEWAY_STALE_AFTER:-60}"   # seconds without a heartbeat => not healthy
+
+# Parse a key from a state file as DATA (grep/cut, never source/eval).
+_state_kv() {
+  [ -f "$1" ] || return 1
+  local line; line=$(grep -E "^$2=" "$1" 2>/dev/null | tail -1) || return 1
+  [ -n "$line" ] || return 1
+  printf '%s' "${line#*=}"
+}
+
+# Seconds since the epoch timestamp in $1, or non-zero if unreadable/non-numeric.
+_state_age() {
+  [ -f "$1" ] || return 1
+  local t; t=$(cat "$1" 2>/dev/null) || return 1
+  case "$t" in ''|*[!0-9]*) return 1 ;; esac
+  printf '%s' "$(( $(date -u +%s) - t ))"
+}
+
+# Human health phrase for a LIVE backend session, from its state files.
+backend_health() {
+  local b="$1"
+  local state="$STATE_DIR/$b.state" hb="$STATE_DIR/$b.heartbeat" stale="$STATE_DIR/$b.stale"
+  local token launches hbage staleage extra=""
+  launches=$(_state_kv "$state" launches) || launches=""
+  if [ -n "$launches" ] && [ "$launches" -gt 1 ] 2>/dev/null; then extra=" · $((launches - 1)) restart(s)"; fi
+  if staleage=$(_state_age "$stale"); then extra="$extra · recovered ${staleage}s ago"; fi
+  token=$(_state_kv "$state" bridge_token) || token=""
+  if [ "$token" = absent ]; then printf 'running · disconnected (no PI_SLACK token)%s' "$extra"; return 0; fi
+  if hbage=$(_state_age "$hb") && [ "$hbage" -le "$STALE_AFTER" ] 2>/dev/null; then
+    printf 'healthy%s' "$extra"
+  else
+    printf 'recovering%s' "$extra"
+  fi
+}
+
 show_status() {
-  local b s
+  local b s health
   for b in pi hermes; do
     s="client-slack-$b"
-    if session_live "$s"; then echo "  ✓ $s        running   (tmux attach -t $s)"
-    else                       echo "  · $s        stopped   (gateway $b)"; fi
+    if session_live "$s"; then
+      if [ -f "$STATE_DIR/$b.state" ]; then
+        health=$(backend_health "$b")
+        case "$health" in
+          healthy*)     echo "  ✓ $s  $health   (tmux attach -t $s)" ;;
+          *disconnect*) echo "  ⚠ $s  $health   (tmux attach -t $s)" ;;
+          *)            echo "  ⟳ $s  $health   (tmux attach -t $s)" ;;
+        esac
+      else
+        echo "  ✓ $s  running   (tmux attach -t $s)"
+      fi
+    else
+      echo "  · $s  stopped   (gateway $b)"
+    fi
   done
 }
 
@@ -306,13 +357,29 @@ start_hermes() {
   ensure_hermes_gateway_cwd "$hermes_home" "$gateway_cwd"
 
   # Hermes' gateway reads its own config (hermes gateway setup / hermes secrets),
-  # so no PI_SLACK_* plumbing here. Run in foreground inside the session.
-  local launch_cmd
-  printf -v launch_cmd 'cd %q && export HERMES_HOME=%q HERMES_GATEWAY_CWD=%q && exec %q gateway run' \
+  # so no PI_SLACK_* plumbing here. Run under the shared supervisor's GENERIC
+  # crash-restart mode (no pi-specific stale-ctx/lock/recovery) so a hermes crash
+  # self-heals with backoff, matching the pi backend's resilience floor.
+  local run_cmd
+  printf -v run_cmd 'cd %q && export HERMES_HOME=%q HERMES_GATEWAY_CWD=%q && exec %q gateway run' \
     "$gateway_cwd" "$hermes_home" "$gateway_cwd" "$hermes_bin"
-  if tmux new-session -d -s "$session" "$launch_cmd"; then
+
+  # No secrets in the hermes launch command, but use the same mode-600
+  # source-then-delete env-file pattern as pi for uniformity.
+  local envf; envf=$(mktemp /tmp/client-slack-hermes-env.XXXXXX) || return 1
+  chmod 600 "$envf"
+  {
+    printf 'export HARNESS=%q\n'         "$HARNESS"
+    printf 'export LOG=%q\n'             "$log"
+    printf 'export GATEWAY_BACKEND=%q\n' "hermes"
+    printf 'export SUPERVISE_CMD=%q\n'   "$run_cmd"
+  } >>"$envf"
+
+  if tmux new-session -d -s "$session" \
+       "bash -c '. \"$envf\"; rm -f \"$envf\"; exec bash \"$HARNESS/.devcontainer/client-slack-supervise.sh\"'"; then
     tmux pipe-pane -o -t "$session" "$ANSI_STRIP >> $log" 2>/dev/null || true
   else
+    rm -f "$envf"
     echo "[gateway] failed to start $session" >&2
     return 1
   fi

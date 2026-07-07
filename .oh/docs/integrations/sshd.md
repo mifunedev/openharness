@@ -7,8 +7,9 @@ title: SSH
 By default you reach the sandbox with `make shell` or VS Code Attach (see
 [Connecting to the Sandbox](../connecting.md)) — the base container publishes
 **no ports**. This integration adds an **opt-in `sshd` overlay** so you can
-`ssh` straight into the container, and documents how to front several tenants'
-containers with a single host-side `nginx` reverse proxy on one VM.
+`ssh` straight into the container, documents the cloud/ECS consumption mode,
+and shows how to front several tenants' containers with a single host-side
+`nginx` reverse proxy on one VM.
 
 The daemon is **off by default**, binds **loopback-only**, and authenticates by
 **public key** unless you opt into password auth. It runs as a background daemon
@@ -89,7 +90,7 @@ ssh -p 2222 sandbox@localhost
 
 You land in `/home/sandbox/harness` as the `sandbox` user. To reach it from
 another machine, either open an SSH tunnel to the host
-(`ssh -L 2222:localhost:2222 you@vm`) or front it with nginx (section 6).
+(`ssh -L 2222:localhost:2222 you@vm`) or front it with nginx (section 7).
 
 Verify the daemon inside the container:
 
@@ -112,6 +113,47 @@ ssh:
 > setting a strong `SANDBOX_PASSWORD` in `.devcontainer/.env`. See
 > [Security considerations](../security-considerations.md).
 
+## 6. Cloud/ECS consumption (`SANDBOX_CLOUD`)
+
+The managed-cloud control plane uses the **same** Open Harness image — no cloud
+image fork and no Compose overlay. Its ECS task definition sets:
+
+```text
+OH_IMAGE_ONLY=1
+SANDBOX_SSH=true
+SANDBOX_CLOUD=true
+SANDBOX_SSH_AUTHORIZED_KEYS=<user public key>
+SANDBOX_PASSWORD=<random per-sandbox sudo password>
+```
+
+and mounts two EFS Access Points:
+
+- workspace AP → `/home/sandbox/harness`
+- per-user auth AP → `/mnt/agent-auth`
+
+When `SANDBOX_CLOUD=true`, the entrypoint creates the auth targets as the
+`sandbox` user and symlinks the home-scoped credential directories into the auth
+AP:
+
+```text
+~/.claude   -> /mnt/agent-auth/claude
+~/.codex    -> /mnt/agent-auth/codex
+~/.pi       -> /mnt/agent-auth/pi
+~/.config/gh -> /mnt/agent-auth/gh
+~/.ssh      -> /mnt/agent-auth/ssh
+```
+
+The same flag persists SSH host keys under the workspace mount at
+`/home/sandbox/harness/.oh/.ssh-hostkeys/` and symlinks them back into
+`/etc/ssh/`. First boot generates the keys; a restart of the same sandbox reuses
+them, so clients do not see a changed host key for that sandbox. The control
+plane may still return `StrictHostKeyChecking=accept-new` guidance because a new
+sandbox, DNS name, or dynamic host port is a new SSH endpoint.
+
+Keep password auth off for ECS tasks (`SANDBOX_SSH_PASSWORD_AUTH` unset/false).
+Expose container port 22 through the ECS bridge-mode dynamic host port and return
+`ssh -p <hostPort> sandbox@<ec2-public-dns>` from the status/reconcile endpoint.
+
 ## Security posture
 
 - **Off by default** — no `sshd`, no published port until you enable the overlay.
@@ -123,7 +165,7 @@ ssh:
 - Exposing SSH broadly, or enabling password auth with the default password, is
   the operator's responsibility — the harness makes the safe posture the default.
 
-## 6. Multi-tenant SSH routing with nginx (single VM)
+## 7. Multi-tenant SSH routing with nginx (single VM)
 
 To host several agents on one VM and give each its own SSH endpoint, run each as
 its own container (distinct `SANDBOX_NAME`) publishing SSH on a **distinct host

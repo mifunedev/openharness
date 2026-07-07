@@ -10,6 +10,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 - Add an opt-in sshd compose overlay with loopback binding, public-key-first auth, host-port collision checks, and direct-SSH/nginx multi-tenant docs ([#599](https://github.com/mifunedev/openharness/pull/599)).
+- Add a `SANDBOX_CLOUD=true` boot mode that persists agent auth and SSH host keys for ECS-hosted sandboxes ([ryaneggz/openharness#341](https://github.com/ryaneggz/openharness/issues/341)).
 ### Changed
 ### Fixed
 ### Removed

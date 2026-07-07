@@ -178,6 +178,100 @@ unset PW
 # readable on hosts where UID 1000 is already occupied.
 repair_home_mount_ownership
 
+# ─── Cloud sandbox persistence wiring (opt-in via SANDBOX_CLOUD=true) ─────
+# ECS mounts two EFS Access Points in cloud mode: the workspace at
+# $OH_PROJECT_ROOT and per-user agent credentials at /mnt/agent-auth. Keep this
+# independent from SANDBOX_SSH: the cloud control plane sets both flags, but the
+# auth persistence contract is useful on its own and must not affect local boots.
+configure_cloud_agent_auth() {
+  local auth_root="/mnt/agent-auth"
+  local spec home_rel target_name home_path target_path parent current_target
+
+  mkdir -p "$auth_root"
+  chown -h "$(sandbox_ownership)" "$auth_root" 2>/dev/null || true
+
+  for spec in ".claude:claude" ".codex:codex" ".pi:pi" ".config/gh:gh" ".ssh:ssh"; do
+    home_rel="${spec%%:*}"
+    target_name="${spec#*:}"
+    home_path="/home/sandbox/$home_rel"
+    target_path="$auth_root/$target_name"
+    parent="$(dirname "$home_path")"
+
+    gosu sandbox mkdir -p "$target_path" "$parent"
+
+    if [ -L "$home_path" ]; then
+      current_target="$(readlink "$home_path" || true)"
+      if [ "$current_target" = "$target_path" ]; then
+        continue
+      fi
+      rm -f "$home_path"
+    elif [ -e "$home_path" ]; then
+      if [ -d "$home_path" ]; then
+        cp -a "$home_path/." "$target_path/" 2>/dev/null || true
+      fi
+      rm -rf "$home_path"
+    fi
+
+    gosu sandbox ln -s "$target_path" "$home_path"
+  done
+
+  echo "[entrypoint] cloud agent auth symlinks ready under $auth_root"
+}
+
+configure_cloud_ssh_host_keys() {
+  local key_dir="$OH_PROJECT_ROOT/.oh/.ssh-hostkeys"
+  local key_name suffix etc_path store_path current_target
+
+  mkdir -p /etc/ssh
+  gosu sandbox mkdir -p "$key_dir"
+  chmod 700 "$key_dir" 2>/dev/null || true
+
+  for key_name in rsa ecdsa ed25519; do
+    store_path="$key_dir/ssh_host_${key_name}_key"
+
+    if [ ! -s "$store_path" ]; then
+      rm -f "$store_path" "$store_path.pub"
+      case "$key_name" in
+        rsa) ssh-keygen -q -t rsa -b 3072 -N "" -f "$store_path" ;;
+        ecdsa) ssh-keygen -q -t ecdsa -N "" -f "$store_path" ;;
+        ed25519) ssh-keygen -q -t ed25519 -N "" -f "$store_path" ;;
+      esac
+    fi
+
+    chmod 600 "$store_path" 2>/dev/null || true
+    if [ ! -s "$store_path.pub" ]; then
+      ssh-keygen -y -f "$store_path" > "$store_path.pub"
+    fi
+    chmod 644 "$store_path.pub" 2>/dev/null || true
+
+    for suffix in "" ".pub"; do
+      etc_path="/etc/ssh/ssh_host_${key_name}_key${suffix}"
+      store_path="$key_dir/ssh_host_${key_name}_key${suffix}"
+
+      if [ -L "$etc_path" ]; then
+        current_target="$(readlink "$etc_path" || true)"
+        if [ "$current_target" = "$store_path" ]; then
+          continue
+        fi
+        rm -f "$etc_path"
+      elif [ -e "$etc_path" ]; then
+        # Do not persist image-baked host keys. Cloud mode owns /etc/ssh host
+        # key paths as symlinks into the workspace-backed persistence dir.
+        rm -f "$etc_path"
+      fi
+
+      ln -s "$store_path" "$etc_path"
+    done
+  done
+
+  echo "[entrypoint] cloud SSH host keys persisted under $key_dir"
+}
+
+if [ "${SANDBOX_CLOUD:-false}" = "true" ]; then
+  configure_cloud_agent_auth
+  configure_cloud_ssh_host_keys
+fi
+
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
 
 # How the skill pack is wired: the shared skills/agents/hooks are vendored
@@ -305,7 +399,8 @@ if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
       unset _ssh_keys
       chmod 700 "$_ssh_dir"
       chmod 600 "$_ssh_dir/authorized_keys"
-      chown -R "$(sandbox_ownership)" "$_ssh_dir"
+      _ssh_real_dir="$(readlink -f "$_ssh_dir" 2>/dev/null || printf '%s' "$_ssh_dir")"
+      chown -R "$(sandbox_ownership)" "$_ssh_real_dir"
       _have_keys=1
     elif [ -s "$_ssh_dir/authorized_keys" ]; then
       _have_keys=1   # operator bind-mounted or pre-seeded keys
@@ -565,9 +660,11 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
   fi
 
   if [ "$PNPM_INSTALL_REQUIRED" = "true" ]; then
+    # shellcheck disable=SC2016 # expand $1 inside the gosu bash process.
     if gosu sandbox bash -c 'cd "$1" && pnpm install --prefer-offline' _ "$HARNESS" >/tmp/pnpm-install.log 2>&1; then
       PNPM_MANIFEST_FINGERPRINT="$(pnpm_manifest_fingerprint "$HARNESS")"
       PNPM_INSTALL_MARKER_TMP="$PNPM_INSTALL_MARKER.tmp.$$"
+      # shellcheck disable=SC2016 # expand $1/$2/$3 inside the gosu bash process.
       if gosu sandbox bash -c 'printf "%s\n" "$1" > "$2" && mv -f "$2" "$3"' _ "$PNPM_MANIFEST_FINGERPRINT" "$PNPM_INSTALL_MARKER_TMP" "$PNPM_INSTALL_MARKER" >>/tmp/pnpm-install.log 2>&1; then
         echo "[entrypoint] pnpm install completed (log: /tmp/pnpm-install.log)"
       else

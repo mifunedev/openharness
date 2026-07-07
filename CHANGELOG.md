@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Add an opt-in sshd compose overlay with loopback binding, public-key-first auth, host-port collision checks, and direct-SSH/nginx multi-tenant docs ([#599](https://github.com/mifunedev/openharness/pull/599)).
 ### Changed
 ### Fixed
 ### Removed

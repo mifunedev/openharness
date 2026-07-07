@@ -26,6 +26,15 @@ hermes:
   # dashboard: false           # HERMES_DASHBOARD — auto-start web dashboard when Hermes is installed
   # dashboard_port: 9119       # HERMES_DASHBOARD_PORT — host loopback port for the dashboard
 
+ssh:
+  # Direct SSH into the container. Off by default; uncomment `enabled` to
+  # publish sshd via the docker-compose.ssh.yml overlay. Auth is public-key by
+  # default — put your key(s) in SANDBOX_SSH_AUTHORIZED_KEYS in .devcontainer/.env
+  # (multi-line, so it can't live here). See .oh/docs/integrations/sshd.md.
+  # enabled: false             # SANDBOX_SSH — run sshd for direct container SSH
+  # port: 2222                 # SANDBOX_SSH_PORT — host loopback port published for SSH
+  # password_auth: false       # SANDBOX_SSH_PASSWORD_AUTH — allow password login (uses SANDBOX_PASSWORD)
+
 paths:
   # memory: .oh/memory         # MEMORY_DIR — session logs + MEMORY.md (default .oh/memory).
                                #   Resolved by .oh/scripts/oh-path; change here to relocate

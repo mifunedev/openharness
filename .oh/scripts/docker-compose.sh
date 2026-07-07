@@ -136,6 +136,62 @@ if truthy "$docker_socket_value"; then
   args+=(-f "$(compose_path ".devcontainer/docker-compose.docker-sock.yml")")
 fi
 
+ssh_value=""
+if [ -f "$HARNESS_YAML" ]; then
+  ssh_value=$(sh "$CONFIG_SCRIPT" get ssh.enabled "$HARNESS_YAML")
+fi
+if [ -z "$ssh_value" ]; then
+  ssh_value=${SANDBOX_SSH:-$(read_env_value SANDBOX_SSH)}
+fi
+if truthy "$ssh_value"; then
+  args+=(-f "$(compose_path ".devcontainer/docker-compose.ssh.yml")")
+
+  # Port-collision preflight — only for a real `up` (skip config/ps/down and
+  # --print-argv diagnostics). Turn Docker's opaque late "bind: address already
+  # in use" into a fail-fast at creation time so enabling SSH (or spinning up
+  # another tenant) can't silently collide with a port already in use. Opt out
+  # with SANDBOX_SSH_PORT_CHECK=off.
+  if [ "$PRINT_ARGV" -eq 0 ] && [ "${1:-}" = "up" ] \
+     && [ "$(printf '%s' "${SANDBOX_SSH_PORT_CHECK:-on}" | tr '[:upper:]' '[:lower:]')" != "off" ]; then
+    ssh_port=""
+    if [ -f "$HARNESS_YAML" ]; then
+      ssh_port=$(sh "$CONFIG_SCRIPT" get ssh.port "$HARNESS_YAML")
+    fi
+    [ -n "$ssh_port" ] || ssh_port=${SANDBOX_SSH_PORT:-$(read_env_value SANDBOX_SSH_PORT)}
+    [ -n "$ssh_port" ] || ssh_port=2222
+    port_check="$SCRIPT_DIR/check-host-port.sh"
+    if [ -x "$port_check" ] || [ -f "$port_check" ]; then
+      # Resolve our own container name the same way the compose file does
+      # (container_name: ${SANDBOX_NAME}): harness.yaml wins, then env/.env,
+      # then the compose default. Needed so the own-port skip below matches a
+      # custom-named sandbox, not just "openharness".
+      sandbox_name=""
+      if [ -f "$HARNESS_YAML" ]; then
+        sandbox_name=$(sh "$CONFIG_SCRIPT" get sandbox.name "$HARNESS_YAML")
+      fi
+      [ -n "$sandbox_name" ] || sandbox_name=${SANDBOX_NAME:-$(read_env_value SANDBOX_NAME)}
+      [ -n "$sandbox_name" ] || sandbox_name=openharness
+      # Skip the check when the port is already OUR sandbox's published port
+      # (an idempotent re-`up` of a running sandbox is fine, not a collision).
+      own_port=0
+      if command -v docker >/dev/null 2>&1; then
+        docker ps --format '{{.Names}}\t{{.Ports}}' 2>/dev/null \
+          | awk -F'\t' -v name="$sandbox_name" -v port="$ssh_port" '
+              $1 == name && index($2, ":" port "->") { hit = 1 }
+              END { exit(hit ? 0 : 1) }' && own_port=1
+      fi
+      if [ "$own_port" -eq 0 ]; then
+        if ! result=$(bash "$port_check" "$ssh_port" 2>/dev/null); then
+          printf 'error: SANDBOX_SSH_PORT=%s %s\n' "$ssh_port" "$result" >&2
+          printf '       Pick a free ssh.port in harness.yaml (or set SANDBOX_SSH_PORT), or\n' >&2
+          printf '       re-run with SANDBOX_SSH_PORT_CHECK=off to bypass this check.\n' >&2
+          exit 1
+        fi
+      fi
+    fi
+  fi
+fi
+
 if [ -f "$HARNESS_YAML" ]; then
   while IFS= read -r override; do
     [ -n "$override" ] && args+=(-f "$(compose_path "$override")")

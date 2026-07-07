@@ -60,6 +60,9 @@ awk -v mode="$_mode" -v filter_key="$_filter_key" -v sq="'" '
 BEGIN {
     envmap["sandbox.name"]          = "SANDBOX_NAME"
     envmap["sandbox.timezone"]      = "TZ"
+    envmap["sandbox.docker_socket"] = "DOCKER_SOCKET"
+    envmap["sandbox.image"]         = "OH_SANDBOX_IMAGE"
+    envmap["sandbox.pull_policy"]   = "OH_PULL_POLICY"
     envmap["git.user_name"]         = "GIT_USER_NAME"
     envmap["git.user_email"]        = "GIT_USER_EMAIL"
     envmap["install.opencode"]      = "INSTALL_OPENCODE"
@@ -75,6 +78,7 @@ BEGIN {
     envmap["crons.dir"]             = "CRONS_DIR"
     envmap["crons.agent_bin"]       = "CRON_AGENT_BIN"
     envmap["paths.memory"]          = "MEMORY_DIR"
+    envmap["paths.worktrees"]       = "WORKTREES_DIR"
     section  = ""
     list_key = ""
     in_list  = 0

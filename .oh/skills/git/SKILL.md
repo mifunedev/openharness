@@ -111,20 +111,21 @@ At release time, `/release` promotes `[Unreleased]` to new `## [<VERSION>] - YYY
 
 ## Worktrees
 
-Default path: `.worktrees/<branch>` at project root. Create `.worktrees/` if missing. Independent project clones (own `.git`, not harness branches) live under `.worktrees/project/<project-name>/<repo>/` — see `.worktrees/README.md`.
+Default path: `.oh/worktrees/<branch>` at project root, configurable with `WORKTREES_DIR` / `paths.worktrees`. Independent project clones (own `.git`, not harness branches) live under `.oh/worktrees/project/<project-name>/<repo>/` by default — see `.oh/worktrees/README.md`.
 
 ```bash
-mkdir -p .worktrees
-git worktree add .worktrees/<branch> <branch>                # existing branch
+WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
+mkdir -p "$WORKTREES_ROOT"
+git worktree add "$WORKTREES_ROOT/<branch>" <branch>                # existing branch
 git worktree add -b <prefix>/<issue#>-<short-desc> \
-  .worktrees/<prefix>/<issue#>-<short-desc> $BASE            # new branch off $BASE
+  "$WORKTREES_ROOT/<prefix>/<issue#>-<short-desc>" $BASE            # new branch off $BASE
 ```
 
-Example path: `.worktrees/feat/42-slack-thread-replies`
+Example path: `.oh/worktrees/feat/42-slack-thread-replies`
 
-Cleanup: `git worktree remove .worktrees/<branch>`.
+Cleanup: `git worktree remove "$WORKTREES_ROOT/<branch>"`.
 
-`.worktrees/` gitignored (see `.gitignore`); only `.worktrees/README.md` tracked.
+`.oh/worktrees/` gitignored (see `.gitignore`); only `.oh/worktrees/README.md` tracked.
 
 ### Stale worktree policy
 
@@ -134,7 +135,7 @@ Worktrees older than 30 days without a corresponding open PR may be removed via 
 
 When main checkout has unstaged changes you shouldn't commit in current PR, do **not** stash-and-switch-branches (risk of losing context). Instead:
 
-1. Cut worktree off target base: `git worktree add -b <new> .worktrees/<new> $BASE`.
+1. Cut worktree off target base: `git worktree add -b <new> "$WORKTREES_ROOT/<new>" $BASE`.
 2. Copy in-flight files into worktree: plain `cp` preserves main checkout's working tree untouched.
 3. Commit in worktree. Main checkout stays exactly as-is.
 

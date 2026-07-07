@@ -1,16 +1,36 @@
 {
-  "name": "@openharness/oh",
-  "private": true,
-  "version": "0.1.0",
+  "name": "@mifune/openharness",
+  "version": "0.1.1",
   "description": "Open Harness CLI — in-sandbox configuration wizards.",
+  "license": "MIT",
+  "homepage": "https://github.com/mifunedev/openharness#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mifunedev/openharness.git",
+    "directory": ".oh/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/mifunedev/openharness/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "bin": {
     "oh": "./dist/oh.js"
   },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "typecheck:build": "tsc --noEmit -p tsconfig.build.json",
+    "prepublishOnly": "npm run typecheck:build"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

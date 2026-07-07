@@ -451,12 +451,13 @@ function copyFileReport(ctx: WriteCtx, src: string, rel: string): void {
 /**
  * Copy the harness's own `.devcontainer/` build assets into `<t>/.devcontainer/`.
  * Source and target share the conventional `.devcontainer/` layout (build context
- * = repo root, one level up), so the only per-target rewrite is the workspace path
- * (`/home/sandbox/harness` → `/home/sandbox/project`) applied to
- * `docker-compose.yml`; the Dockerfile and client scripts copy verbatim. The
- * source `devcontainer.json` (the consumer's is written separately) and any env
- * files (never ship secrets) are skipped. Real files only (symlinks/volatile
- * dirs skipped).
+ * = repo root, one level up), so every asset — `docker-compose.yml`, the
+ * Dockerfile, and the client scripts — copies verbatim. The workspace path in
+ * `docker-compose.yml` is already parameterized as
+ * `${OH_PROJECT_ROOT:-/home/sandbox/harness}`, so no per-target rewrite is
+ * needed. The source `devcontainer.json` (the consumer's is written separately)
+ * and any env files (never ship secrets) are skipped. Real files only
+ * (symlinks/volatile dirs skipped).
  */
 function copyDevcontainer(srcDir: string, ctx: WriteCtx): void {
   const skip = new Set([
@@ -472,11 +473,7 @@ function copyDevcontainer(srcDir: string, ctx: WriteCtx): void {
     if (skip.has(rel) || rel.startsWith(".env")) continue;
     const src = path.join(srcDir, rel);
     const destRel = `.devcontainer/${rel}`;
-    if (rel === "docker-compose.yml") {
-      writeGenerated(ctx, destRel, rewriteComposeForTarget(readFileSync(src, "utf8")));
-    } else {
-      copyFileReport(ctx, src, destRel);
-    }
+    copyFileReport(ctx, src, destRel);
   }
 }
 
@@ -494,15 +491,6 @@ function collectRealFiles(root: string, dir: string, acc: string[]): void {
   }
 }
 
-/**
- * Rewrite the harness `docker-compose.yml` for a consumer target. Source and
- * target share the same `.devcontainer/` layout (build context = repo root, one
- * level up), so the only rewrite is the project-scoped workspace path.
- */
-function rewriteComposeForTarget(content: string): string {
-  return content.replaceAll("/home/sandbox/harness", "/home/sandbox/project");
-}
-
 // devcontainer.json for LOCAL BUILD (default). Valid JSON (JSON.parse-able): the
 // `// image` key is a documented fallback, not a real comment. To use the
 // published image instead, drop dockerComposeFile/service/shutdownAction and add
@@ -512,7 +500,7 @@ const DEVCONTAINER_JSON = `${JSON.stringify(
     name: "openharness-project",
     dockerComposeFile: "docker-compose.yml",
     service: "sandbox",
-    workspaceFolder: "/home/sandbox/project",
+    workspaceFolder: "/home/sandbox/harness",
     remoteUser: "sandbox",
     shutdownAction: "stopCompose",
     "//":

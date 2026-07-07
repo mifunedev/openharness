@@ -164,7 +164,7 @@ Edit `.devcontainer/.env` and set your `SANDBOX_NAME` and any optional tokens. S
 docker compose -f .devcontainer/docker-compose.yml up -d --build
 ```
 
-On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds.
+On a cold Docker cache the build takes around ten minutes; subsequent starts are a few seconds. To skip the build entirely and pull the prebuilt release image instead, see [Prebuilt-image deployment](deployment-prebuilt-image.md) (`docker compose … up -d --no-build` with `OH_SANDBOX_IMAGE` set, or `oh sandbox --image`).
 
 Check the sandbox health before attaching:
 
@@ -189,20 +189,64 @@ Every path above clones the harness repo itself and keeps the host toolchain-fre
 
 | Dependency | Required for |
 |---|---|
-| Node.js ≥ 18 (20+ recommended) | Building and running the `oh` binary (`dist/oh.js`) |
+| Node.js ≥ 20 (22 recommended) | Running the `oh` binary (`get-oh.sh` offers to install nvm + Node 22 if missing) |
 | git | The shallow clone behind `--from-remote` |
 | Docker (with Compose plugin) | `oh sandbox` / `oh shell` |
 
-`make` is **not** needed here — the verbs wrap the vendored `.oh/scripts/` directly. The CLI is not published to npm: build it once from any OpenHarness checkout (`cd .oh/cli && npm install && npm run build`) and put `dist/oh.js` on your PATH as `oh`.
+`make` is **not** needed here — the verbs wrap the vendored `.oh/scripts/` directly.
+
+**Get the `oh` command from npm (recommended if you have Node):** the CLI is published as [`@mifune/openharness`](https://www.npmjs.com/package/@mifune/openharness). If Node.js ≥ 20 is already on your host, install it globally or run it zero-install:
+
+```bash
+npm install -g @mifune/openharness   # puts `oh` on your PATH
+# ...or, without a global install:
+npx @mifune/openharness init
+```
+
+The published package is the same single self-contained bundle — `oh init`/`oh update` fetch their scaffold payload on demand (no repo clone). npm does **not** install Node; Node ≥ 20 must already be on your PATH (that is exactly what `get-oh.sh` bootstraps below).
+
+**No npm, or no Node yet?** Bootstrap with `get-oh.sh` instead. It installs the single self-contained `oh` binary to `~/.local/bin/oh` — **no repo clone**, and it does not touch an existing `~/.openharness` sandbox. It prefers a prebuilt bundle (`oh.mifune.dev/oh.js`) and falls back to building from source in a temp dir. If Node.js ≥ 20 is missing, it offers to install nvm + Node 22 and sources it so `oh` works in the same shell. `oh init` fetches its scaffold payload on demand.
+
+```bash
+curl -fsSL https://oh.mifune.dev/get-oh.sh | bash
+```
+
+**Use `oh` immediately in the current shell** — `source` the installer instead of piping to `bash` so it installs *and* puts `oh` on your PATH in the running shell (no new terminal, no re-login):
+
+```bash
+source <(curl -fsSL https://oh.mifune.dev/get-oh.sh)
+```
+
+If you already used the plain `curl … | bash` form and `oh` isn't found yet, add its install dir to the current shell's PATH: `export PATH="$HOME/.local/bin:$PATH"`.
+
+Review-first alternative (no extra dependency):
+
+```bash
+curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh
+# Review get-oh.sh in your editor or pager before running it.
+bash get-oh.sh
+```
+
+Environment overrides: `OH_BIN_DIR=<dir>` (install location, default `~/.local/bin`), `OH_JS_URL=<url>` (prebuilt bundle URL), `OH_GITHUB_REPO=<org>/<fork>` / `OH_GITHUB_REF=<ref>` (source for the build fallback), `OH_NVM_VERSION=<tag>` (nvm version for the Node install), `--yes`/`--no` (auto-accept/decline the Node-install prompt).
+
+**From an existing checkout (no bootstrap script):** `cd .oh/cli && npm install && npm run build`, then put `dist/oh.js` on your PATH as `oh`.
+
+Then, in any project:
 
 ```bash
 cd <your-project>
-oh init --from-remote   # equip the repo — shallow-clones the public repo for the
-                        # payload; pin a version with --ref <tag|branch>
+oh init                 # equip the repo — vendors the .oh/ payload from the local
+                        # clone (offline). Use --from-remote to shallow-clone a
+                        # fresh payload instead; pin a version with --ref <tag|branch>
 oh sandbox              # provision + start the sandbox (docker compose up -d --build)
+oh sandbox --image      # ...or pull the prebuilt release image and skip the local build
 oh shell                # zsh in the running container (or: oh shell <container>)
 oh gateway status       # manage messaging client sessions (pi|hermes)
 ```
+
+`oh sandbox --image` (and the `sandbox.image` key in `harness.yaml`) run the
+published `ghcr.io/mifunedev/openharness` image instead of building locally — see
+[Prebuilt-image deployment](deployment-prebuilt-image.md).
 
 `--from-remote` fetches over public HTTPS only — private or credential-prompting remotes fail fast (`GIT_TERMINAL_PROMPT=0`); offline, use `oh init --from <local-checkout>` instead. Repos equipped this way mount your project at `/home/sandbox/project` inside the sandbox (the clone paths above use `/home/sandbox/harness`). Upgrade the vendored `.oh/` later with `oh update --from-remote [--ref <ref>]`.
 

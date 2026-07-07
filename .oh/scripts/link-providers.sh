@@ -61,8 +61,15 @@ case "$mode" in
 esac
 
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+# Inside a git checkout, git wins. Otherwise fall back to the project root
+# (OH_PROJECT_ROOT, else PWD) so `oh init`-equipped projects and standalone
+# trees — which are not git repos — still wire their providers instead of
+# crash-looping the sandbox boot. The real guard is the vendored pack below.
 if [ -z "$repo_root" ]; then
-  echo "ERROR: link-providers must run inside an Open Harness git checkout" >&2
+  repo_root="${OH_PROJECT_ROOT:-$PWD}"
+fi
+if [ ! -d "$repo_root/.oh/skills" ]; then
+  echo "ERROR: not an Open Harness tree (no .oh/skills at $repo_root)" >&2
   exit 1
 fi
 cd "$repo_root"

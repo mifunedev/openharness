@@ -198,3 +198,7 @@ jobs:
         with:
           name: v${{ steps.parse.outputs.version }}
           body_path: ${{ steps.notes.outputs.notes_file }}
+
+  # The `oh` CLI publish lives in its own workflow (.github/workflows/publish-cli.yml)
+  # so a CLI-only change can publish via workflow_dispatch without a CalVer release;
+  # it also triggers on the same release tags, independently of this job.

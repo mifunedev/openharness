@@ -143,6 +143,10 @@ Env vars:
   INSTALL_HERMES=true  Enable an optional agent non-interactively. Also:
                        INSTALL_OPENCODE, INSTALL_DEEPAGENTS, INSTALL_GROK_BUILD,
                        INSTALL_AGENT_BROWSER
+  DOCKER_SOCKET=true   Mount the host Docker socket into the sandbox
+                       non-interactively. OFF by default (socket access is
+                       effectively host root). Otherwise you're prompted (TTY),
+                       and --yes/--no keep it off.
 
 Examples:
   curl -fsSL https://oh.mifune.dev/install.sh | bash
@@ -494,6 +498,29 @@ ENVEOF
   _opt_install DEEPAGENTS    "DeepAgents — LangChain multi-provider agent"
   _opt_install GROK_BUILD    "Grok Build — xAI terminal agent"
   _opt_install AGENT_BROWSER "agent-browser + Chromium (~1 GB)"
+
+  # ─── Host Docker socket (OFF by default — security-sensitive) ────────
+  # Mounting /var/run/docker.sock lets the agent drive Docker, but socket
+  # access is effectively HOST ROOT (an agent can start a privileged container
+  # that mounts the host filesystem). Off by default; a pre-set DOCKER_SOCKET
+  # env honors non-interactive installs; --yes/--no keep the socket OFF.
+  # docker-compose.sh reads this DOCKER_SOCKET key and applies the
+  # docker-compose.docker-sock.yml overlay when truthy.
+  banner "Host Docker socket (off by default)"
+  __want_sock=0
+  if [ "${DOCKER_SOCKET:-}" = "true" ]; then
+    __want_sock=1
+    ok "DOCKER_SOCKET=true (from environment)"
+  elif [ "$ASSUME_YES" = true ] || [ "$ASSUME_NO" = true ] || [ ! -r /dev/tty ]; then
+    :
+  elif prompt_yn "Mount host Docker socket into the sandbox? (effectively host root — enable only if the agent must drive Docker)" n; then
+    __want_sock=1
+  fi
+  if [ "$__want_sock" = "1" ]; then
+    printf 'DOCKER_SOCKET=true\n' >> "$REPO_DIR/.devcontainer/.env"
+    ok "DOCKER_SOCKET=true — host Docker socket will be mounted"
+  fi
+  unset __want_sock
 fi
 
 # ─── 5. Bring up the sandbox ─────────────────────────────────────────

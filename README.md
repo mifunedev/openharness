@@ -26,6 +26,9 @@
 
 ---
 
+> 📖 **Read the docs → https://oh.mifune.dev**
+> Rendered, searchable docs, guides, and blog. New here? Start with the [Start Here hub](.oh/docs/README.md).
+
 ## 📦 Install
 
 Open Harness runs one project in one Docker sandbox. The recommended path is
@@ -61,8 +64,9 @@ Run these **inside the sandbox** (`make shell`). Per-step depth + troubleshootin
 [quickstart → End-to-end setup walkthrough](.oh/docs/quickstart.md#end-to-end-setup-walkthrough).
 
 ```bash
-# GitHub auth over SSH — pick SSH, generate a key, paste a token:
-gh auth login && gh auth setup-git
+# GitHub auth over SSH — pick SSH, generate a key, paste a token
+# (SSH remotes use the key directly, so `gh auth setup-git` isn't needed):
+gh auth login
 
 # Create your own PRIVATE repo, point origin at it, add upstream — all over SSH:
 gh repo create <your-user>/openharness --private
@@ -91,13 +95,7 @@ tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
 > Codex, …) can drive. It's optional and not tied to any single agent — see the
 > [DebugMCP runbook](.oh/docs/integrations/debugmcp.md#confirmed-setup-runbook).
 
-<details><summary>Other install methods (Railway preview · one-line installer · fork-and-clone)</summary>
-
-**Hosted smoke test — Railway (one click):**
-
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2Fmifunedev%2Fopenharness)
-
-This boots a Railway-hosted status surface so you can verify Open Harness starts before doing local setup. Railway mode does **not** provide the host Docker socket or privileged sibling containers needed for full sandbox lifecycle commands (`make sandbox`, `make shell`, compose overlays). Use it as a hosted preview; use the local Docker path above for the complete harness. Details: [Railway deployment](.oh/docs/railway.md).
+<details><summary>Other install methods (one-line installer · fork-and-clone)</summary>
 
 **One-line installer (upstream):**
 
@@ -141,6 +139,50 @@ OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 
 If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](.oh/docs/installation.md) for all environment overrides.
 
+**Get the standalone `oh` CLI (equip an existing project repo):**
+
+The installer above builds the harness sandbox. To instead put the `oh` command on your host — so you can run `oh init` inside any project — bootstrap it once:
+
+```bash
+curl -fsSL https://oh.mifune.dev/get-oh.sh | bash
+```
+
+Review-first alternative (no extra dependency):
+
+```bash
+curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh
+# Review get-oh.sh in your editor or pager before running it.
+bash get-oh.sh
+```
+
+**Use `oh` immediately in the current shell** (installs *and* puts `oh` on your PATH now — no new terminal or re-login):
+
+```bash
+source <(curl -fsSL https://oh.mifune.dev/get-oh.sh)
+```
+
+**Or install from npm** — if you already have **Node.js ≥ 20** on your host, skip the bootstrap script entirely:
+
+```bash
+npm install -g @mifune/openharness   # puts `oh` on your PATH
+oh init
+
+# ...or zero-install, no global install:
+npx @mifune/openharness init
+```
+
+Unlike `get-oh.sh`, npm does **not** install Node for you — Node ≥ 20 must already be on your PATH.
+
+If you already ran the plain piped form and `oh` isn't found yet, just add its dir to the current shell's PATH: `export PATH="$HOME/.local/bin:$PATH"`.
+
+`get-oh.sh` installs the single self-contained `oh` binary to `~/.local/bin/oh` — **no repo clone**, and it leaves any existing `~/.openharness` sandbox config untouched. It needs **Node.js ≥ 20** to run `oh`; if Node is missing it offers to install nvm + Node 22 (and sources it so it works in the same shell). `oh init` fetches its scaffold payload on demand. Override the install dir with `OH_BIN_DIR`. Then:
+
+```bash
+cd <your-project>
+oh init          # equip the repo with Open Harness
+oh sandbox       # provision + start the sandbox
+```
+
 </details>
 
 
@@ -177,8 +219,8 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 `harness.yaml` is local gitignored config for shared non-secret settings, generated
 from tracked `harness.yaml.example` by `make harness-config` (also run by
-`make sandbox`). It holds `sandbox.*`, `git.*`, optional installs, Slack allowlists,
-and compose overlays. **Secrets stay in the gitignored `.devcontainer/.env`**
+`make sandbox`). It holds `sandbox.*`, `git.*`, optional installs, `paths.*`
+(overrides like `paths.worktrees`), Slack allowlists, and compose overlays. **Secrets stay in the gitignored `.devcontainer/.env`**
 (`GH_TOKEN`, `PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`) — never in
 `harness.yaml`. Active keys in `harness.yaml` override `.devcontainer/.env`; apply
 changes with `make destroy && make sandbox`.
@@ -203,16 +245,17 @@ make shell
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
-| **Worktrees** | One sandbox → many isolated git worktrees: parallel branches, delegated sub-agents, satellite project clones under `.worktrees/` |
+| **Worktrees** | One sandbox → many isolated git worktrees: parallel branches, delegated sub-agents, satellite project clones under `.oh/worktrees/` |
 | **Crons** | Markdown-defined schedules in `.oh/crons/*.md` driven by the in-container croner runtime |
 | **Multi-agent** | Claude, Codex, Pi by default (Hermes/Grok opt-in); Slack bridging via [pi-messenger-bridge](.oh/docs/integrations/slack.md) |
 
 ## 📚 Where to go next
 
+- **[Read the docs → oh.mifune.dev](https://oh.mifune.dev)** — the rendered, searchable documentation site (start here)
 - [Docs index](.oh/docs/README.md) — GitHub-readable docs kept with the core repo
 - [Quickstart](.oh/docs/quickstart.md) — full step-by-step
 - [DeepWiki](https://deepwiki.com/mifunedev/openharness) — generated codebase map
-- [Docs site source](https://github.com/mifunedev/openharness-web) — migrated Docusaurus site and blog archive
+- [Docs site source](https://github.com/mifunedev/openharness-web) — Docusaurus source repo that builds oh.mifune.dev (contribute doc edits here)
 
 ## 🧹 Cleanup
 
@@ -230,4 +273,4 @@ MIT.
 
 ---
 
-[Docs index](.oh/docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)
+[Read the docs](https://oh.mifune.dev) · [Docs index](.oh/docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)

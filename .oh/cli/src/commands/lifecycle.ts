@@ -1,7 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync } from "node:fs";
+import { appendFileSync, copyFileSync, existsSync, readFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { resolveProjectRoot } from "../lib/project.js";
+import * as prompt from "../lib/prompt.js";
 
 /**
  * Lifecycle verbs for equipped repos (issue #564): `oh sandbox`, `oh shell`,
@@ -21,6 +22,13 @@ import { resolveProjectRoot } from "../lib/project.js";
 export interface LifecycleIO {
   stdout: (s: string) => void;
   stderr: (s: string) => void;
+  /**
+   * Reader for the one interactive prompt (`oh sandbox`'s Docker-socket
+   * opt-in). Defaults to `prompt.ask` (real stdin). Injecting it also FORCES
+   * the prompt on in tests regardless of isTTY — mirrors init.ts's `io.ask`
+   * gate. Production cli.ts never injects it → pure isTTY gate.
+   */
+  ask?: (q: string) => Promise<string>;
 }
 
 /**
@@ -74,8 +82,27 @@ export interface ShellOptions extends LifecycleOptions {
   container?: string;
 }
 
+/** `oh sandbox` options — the prebuilt-image / no-build knobs on top of the base. */
+export interface SandboxOptions extends LifecycleOptions {
+  /** `--image` was passed (run the prebuilt image; implies `--no-build`). */
+  image?: boolean;
+  /** Explicit ref from `--image=<ref>`; when set it wins over harness.yaml. */
+  imageRef?: string;
+  /** `--no-build` was passed (suppress the local build, reuse an existing image). */
+  noBuild?: boolean;
+}
+
 /** The fallback container name (parity with the Makefile's SANDBOX_NAME). */
 export const DEFAULT_CONTAINER_NAME = "openharness";
+
+/**
+ * The image `oh sandbox --image` (bare, no ref) resolves to when harness.yaml
+ * carries no `sandbox.image`. `latest` is safe because the bind-mounted repo
+ * shadows the image's baked `.oh/` — the image supplies only the toolchain, so
+ * its version is a toolchain concern, not a correctness one. Override precedence
+ * (last wins): this default -> harness.yaml `sandbox.image` -> `--image=<ref>`.
+ */
+export const DEFAULT_SANDBOX_IMAGE = "ghcr.io/mifunedev/openharness:latest";
 
 /**
  * Path-escape guard for the one writer in this module (the harness.yaml seed):
@@ -123,18 +150,120 @@ function seedHarnessYaml(root: string, io: LifecycleIO): void {
 }
 
 /**
- * `oh sandbox` — provision and start the sandbox: seed harness.yaml if needed,
- * then delegate to the vendored compose wrapper (which owns ALL compose-argv
- * building): `bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build`.
- * Runs with inherited stdio (live build output) and returns the child's exit code.
+ * Whether the DOCKER_SOCKET toggle already has an explicit value — set either
+ * in `<root>/harness.yaml` (`sandbox.docker_socket`, the source of truth
+ * docker-compose.sh reads first) or `.devcontainer/.env` (a `DOCKER_SOCKET=`
+ * line). When configured, `oh sandbox` respects the standing choice and does
+ * NOT re-prompt.
  */
-export function runSandbox(opts: LifecycleOptions, io: LifecycleIO): number {
+function dockerSocketConfigured(root: string, run: LifecycleRunner): boolean {
+  const script = join(root, ".oh", "scripts", "harness-config.sh");
+  const harnessYaml = join(root, "harness.yaml");
+  if (existsSync(script) && existsSync(harnessYaml)) {
+    const r = run("sh", [script, "get", "sandbox.docker_socket", harnessYaml], { stdio: "capture" });
+    if (!r.error && r.status === 0 && (r.stdout ?? "").trim() !== "") return true;
+  }
+  const envFile = join(root, ".devcontainer", ".env");
+  if (existsSync(envFile)) {
+    try {
+      if (/^\s*DOCKER_SOCKET=/m.test(readFileSync(envFile, "utf8"))) return true;
+    } catch {
+      /* unreadable .env → treat as unconfigured */
+    }
+  }
+  return false;
+}
+
+/**
+ * The Docker-socket opt-in for `oh sandbox` (the get-oh.sh / CLI provisioning
+ * path). Mounting /var/run/docker.sock is effectively HOST ROOT, so it is OFF
+ * by default: we only prompt on a TTY (or when a test injects `io.ask`) and
+ * only when no standing choice exists. The answer is persisted to
+ * `.devcontainer/.env` (`DOCKER_SOCKET=true|false`) so the choice sticks and
+ * docker-compose.sh applies the docker-compose.docker-sock.yml overlay when true.
+ */
+async function maybePromptDockerSocket(root: string, io: LifecycleIO, run: LifecycleRunner): Promise<void> {
+  if (dockerSocketConfigured(root, run)) return;
+  const interactive = process.stdin.isTTY === true || io.ask !== undefined;
+  if (!interactive) return; // non-TTY → leave it OFF, don't persist
+  const envDir = join(root, ".devcontainer");
+  if (!existsSync(envDir)) return; // nowhere durable to record the choice
+  const askFn = io.ask ?? prompt.ask;
+  const answer = (
+    await askFn(
+      "Mount host Docker socket into the sandbox? (effectively host root — enable only if the agent must drive Docker) [y/N]",
+    )
+  )
+    .trim()
+    .toLowerCase();
+  const enabled = answer === "y" || answer === "yes";
+  const envFile = join(envDir, ".env");
+  assertInRoot(envFile, root);
+  appendFileSync(envFile, `DOCKER_SOCKET=${enabled ? "true" : "false"}\n`);
+  io.stdout(
+    enabled
+      ? "DOCKER_SOCKET=true — host Docker socket will be mounted\n"
+      : "DOCKER_SOCKET=false — host Docker socket stays unmounted\n",
+  );
+}
+
+/**
+ * `sandbox.image` from `<root>/harness.yaml` via the vendored parser, or
+ * undefined when unconfigured — the middle layer of the `--image` ref
+ * resolution (below the `--image=<ref>` flag, above DEFAULT_SANDBOX_IMAGE). Same
+ * mandatory-explicit-path contract as `configuredContainerName`.
+ */
+function configuredImage(root: string, run: LifecycleRunner): string | undefined {
+  const script = join(root, ".oh", "scripts", "harness-config.sh");
+  const harnessYaml = join(root, "harness.yaml");
+  if (!existsSync(script) || !existsSync(harnessYaml)) return undefined;
+  const r = run("sh", [script, "get", "sandbox.image", harnessYaml], { stdio: "capture" });
+  if (r.error || r.status !== 0) return undefined;
+  const name = (r.stdout ?? "").trim();
+  return name === "" ? undefined : name;
+}
+
+/**
+ * `oh sandbox` — provision and start the sandbox: seed harness.yaml if needed,
+ * prompt once for the (default-off) Docker-socket opt-in, then delegate to the
+ * vendored compose wrapper (which owns ALL compose-argv building):
+ * `bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build`.
+ *
+ * Prebuilt-image mode (`--image[=<ref>]` / `--no-build`) swaps the trailing
+ * `--build` for `--no-build` so no local image is built, and — when an image is
+ * requested — threads the resolved ref through `OH_SANDBOX_IMAGE` in the child
+ * env (the compose file interpolates it at `image:`). The ref resolves last-wins:
+ * `--image=<ref>` > harness.yaml `sandbox.image` > DEFAULT_SANDBOX_IMAGE. The
+ * ref itself still travels via the env into the wrapper — this stays a thin
+ * pass-through, no compose-argv building in TS.
+ *
+ * Runs with inherited stdio (live build/pull output) and returns the child's exit code.
+ */
+export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
   seedHarnessYaml(root, io);
+  await maybePromptDockerSocket(root, io, run);
   const script = requireScript(root, "docker-compose.sh");
-  const r = run("bash", [script, "--repo-dir", root, "up", "-d", "--build"], {
+
+  // `--image` implies `--no-build` (skipping the build is the whole point);
+  // `--no-build` on its own suppresses the build without pinning an image.
+  const useImage = opts.image === true || opts.imageRef !== undefined;
+  const useNoBuild = useImage || opts.noBuild === true;
+  const buildFlag = useNoBuild ? "--no-build" : "--build";
+
+  let env: NodeJS.ProcessEnv | undefined;
+  if (useImage) {
+    const ref = opts.imageRef ?? configuredImage(root, run) ?? DEFAULT_SANDBOX_IMAGE;
+    env = { ...process.env, OH_SANDBOX_IMAGE: ref };
+    io.stdout(`image mode: ${ref} (skipping local build)\n`);
+  } else if (useNoBuild) {
+    io.stdout("no-build mode: reusing the existing image (skipping local build)\n");
+  }
+
+  const r = run("bash", [script, "--repo-dir", root, "up", "-d", buildFlag], {
     stdio: "inherit",
+    ...(env ? { env } : {}),
   });
   assertSpawned(r, `bash ${script}`);
   return r.status ?? 1;

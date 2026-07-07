@@ -9,6 +9,78 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Add an opt-in sshd compose overlay with loopback binding, public-key-first auth, host-port collision checks, and direct-SSH/nginx multi-tenant docs ([#599](https://github.com/mifunedev/openharness/pull/599)).
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.7.6] - 2026-07-06
+
+### Added
+### Changed
+### Fixed
+- Fix `OH_IMAGE_ONLY=1` (no-bind) boot crash-loop: `.dockerignore` excluded the whole `.claude/` directory, so `/opt/oh-seed` never carried `.claude/protected-paths.txt` and `link-providers.sh --init` failed on every boot. `.dockerignore` now re-includes the tracked `.claude/` control-plane config (`protected-paths.txt`, `settings.json`, `.example.env.claude`), and `entrypoint.sh`'s seed self-heals already-seeded-but-incomplete volumes by backfilling those files without clobbering operator edits (guarded by the `oh-image-only-deploy` probe).
+### Removed
+- Remove the Railway hosted smoke deployment surface, including the root Railway config, deploy assets, documentation, README button, and eval guard.
+### Deprecated
+### Security
+
+## [2026.7.5-5] - 2026-07-05
+
+### Added
+### Changed
+- Move the canonical ignored worktree root into `.oh/worktrees/`, including `WORKTREES_DIR`/`paths.worktrees` plumbing and updated runtime/docs/skill references.
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.7.5-4] - 2026-07-05
+
+### Added
+- **`oh sandbox` can pull the published GHCR image instead of rebuilding locally.** Adds `--image[=<ref>]` and `--no-build`, `harness.yaml` image/pull-policy wiring, docs, and an eval guard for prebuilt-image mode ([#610](https://github.com/mifunedev/openharness/pull/610)).
+- **Open Harness can run in image-only mode without a repo checkout.** Adds `.devcontainer/docker-compose.image-only.yml`, `OH_IMAGE_ONLY=1` named-volume seeding from `/opt/oh-seed`, no-bind entrypoint handling, docs, and an eval guard ([#611](https://github.com/mifunedev/openharness/pull/611)).
+- **`@mifune/openharness` now ships a README and LICENSE on its npm page.** The first publish (`0.1.0`) shipped only `dist/oh.js` + `package.json` (a bare npm page). Added `.oh/cli/README.md` (install, requirements, quick start, command table, docs links) and `.oh/cli/LICENSE`; npm force-includes both even under the `files: ["dist"]` allowlist. Bumps the CLI to `0.1.1` and the `oh-npm-package` eval probe now guards their presence ([#564](https://github.com/mifunedev/openharness/issues/564)).
+### Changed
+- **The `oh` CLI npm publish moved to its own workflow, `.github/workflows/publish-cli.yml`.** Previously a `publish-npm` job chained onto `release.yml` (`needs: [release]`), so a CLI-only change (a README fix, a patch bump) could only reach npm by cutting a CalVer release. The publish now runs as an independent workflow triggered by `workflow_dispatch` **and** the same CalVer tags, honoring the CLI's independent semver — a CLI change can publish without a harness release, while every release still auto-publishes. The version guard keeps it idempotent ([#564](https://github.com/mifunedev/openharness/issues/564)).
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.7.5-3] - 2026-07-05
+
+### Added
+### Changed
+### Fixed
+- **The CLI's `prepublishOnly` typecheck no longer requires workspace-root test dependencies.** `.oh/cli`'s `tsconfig.json` includes `src/__tests__/**`, whose specs import `vitest`/`fast-check` — devDependencies that live at the pnpm workspace root, not in `.oh/cli/package.json`. The `publish-npm` CI job installs `.oh/cli` in isolation (`npm ci`), so the `prepublishOnly` `tsc --noEmit` failed to resolve those modules (`TS2307`). Added `tsconfig.build.json` (extends the base, excludes `src/__tests__/**`) and pointed `prepublishOnly` at it, so the publish-time typecheck covers exactly the shipped source and passes with only the CLI's own devDependencies; test typechecking stays in the main workspace CI ([#564](https://github.com/mifunedev/openharness/issues/564)).
+### Removed
+### Deprecated
+### Security
+
+## [2026.7.5-2] - 2026-07-05
+
+### Added
+### Changed
+### Fixed
+- **The `publish-npm` CI job now publishes the CLI from `.oh/cli` instead of the repository root.** The `2026.7.5` release built the GHCR image and GitHub Release successfully, but the npm publish step failed with `EPRIVATE`: `npm publish` packs its working directory and ignores `--prefix` for package selection, so `npm --prefix .oh/cli publish` packed the private root `package.json` (`name: openharness`, `private: true`, 477 files) rather than `@mifune/openharness`. The three CLI steps now run with `working-directory: .oh/cli`, so the built `dist`-only bundle is what ships ([#564](https://github.com/mifunedev/openharness/issues/564)).
+### Removed
+### Deprecated
+### Security
+
+## [2026.7.5] - 2026-07-05
+
+### Security
+- **The host Docker socket is no longer mounted by default — it is now an explicit, prompted opt-in.** `/var/run/docker.sock` was previously bind-mounted into every sandbox unconditionally (`docker-compose.yml:33`), which is effectively host root (an agent can start a privileged container that mounts the host FS). The mount now lives in an opt-in overlay, `.devcontainer/docker-compose.docker-sock.yml`, applied by `.oh/scripts/docker-compose.sh` only when `DOCKER_SOCKET` is truthy (`harness.yaml` `sandbox.docker_socket: true` or `DOCKER_SOCKET=true` in `.devcontainer/.env`) — mirroring the existing hermes-dashboard overlay toggle. Both interactive installers now prompt for it and **default to off**: `install.sh` (the `curl | bash` path, honoring a pre-set `DOCKER_SOCKET` env for non-interactive/CI installs) and `oh sandbox` (the `oh` CLI / `get-oh.sh` path, which persists the choice to `.devcontainer/.env` so it sticks). `entrypoint.sh` already guarded on the socket's presence, so the sandbox boots cleanly with or without it. The VS Code "Reopen in Container" path reads `docker-compose.yml` directly and never mounts the socket; enable it there by adding the overlay to `devcontainer.json`. Documented in `.oh/docs/security-considerations.md` and `.oh/docs/intro.md`.
+
+### Fixed
+- **Equipped-project sandbox no longer crash-loops on boot.** `link-providers.sh` hard-required a git checkout (`git rev-parse --show-toplevel`), so an `oh init`-equipped project that wasn't a git repo failed the entrypoint's provider-linking step (`entrypoint.sh` `exit 1`) and the container restart-looped under `restart: unless-stopped`. It now falls back to `${OH_PROJECT_ROOT:-$PWD}` when not in a git checkout, guarded by a `.oh/skills` existence check; behavior inside a real git checkout is unchanged.
+
+### Added
+- **The standalone `oh` CLI is now publishable to npm as [`@mifune/openharness`](https://www.npmjs.com/package/@mifune/openharness).** Flips `.oh/cli/package.json` from `private` to a public scoped package (`publishConfig.access: "public"`, `files: ["dist"]` so only the built bundle ships, plus `license`/`repository`/`bugs`/`homepage`/`engines` metadata); the installed command stays `oh`. Adds a `publish-npm` job to `release.yml` that runs **after** the GHCR/GitHub-Release job (so a missing `NPM_TOKEN` never blocks a release), publishes with `--provenance`, and skips cleanly when the CLI version is already on the registry — the npm semver is independent of the CalVer release tag. Users with Node.js ≥ 20 can now `npm install -g @mifune/openharness` or `npx @mifune/openharness init` instead of the `get-oh.sh` bootstrap; documented in README, `.oh/docs/installation.md`, and `.oh/docs/quickstart.md`, and guarded by the new `oh-npm-package` eval probe ([#564](https://github.com/mifunedev/openharness/issues/564)).
+- **`.oh/scripts/get-oh.sh` — a curl|bash installer for the standalone `oh` CLI.** Closes the gap where `oh init` needs the `oh` binary but there is no host-side way to get it (the CLI is a private, unpublished npm package; `install.sh` only builds `oh` inside the container). Installs the single self-contained `oh` binary to `~/.local/bin/oh` (`OH_BIN_DIR`-overridable) — **no repo clone**, and it never touches an existing `~/.openharness` sandbox. Prefers a prebuilt bundle (`oh.mifune.dev/oh.js`, published by the openharness-web Pages build) and falls back to building from source in a temp dir (`OH_JS_URL`/`OH_GITHUB_REPO`/`OH_GITHUB_REF` overridable). When Node.js ≥ 20 is missing it offers to install nvm + Node 22 and sources it so `oh` works in the same shell (`--yes`/`--no`, `OH_NVM_VERSION`). `oh init` fetches its scaffold payload on demand (a temp clone it deletes). Served at `oh.mifune.dev/get-oh.sh` (openharness-web GitHub Pages sync); documented in README, `.oh/docs/quickstart.md`, and `.oh/docs/installation.md` (each curl|bash paired with a review-first alternative).
 - Add ADR-0001 documenting #532's standards-scope disposition: the lightweight RFC/ADR convention is sufficient for now, while document taxonomy, registries, lifecycle, and conformance machinery stay deferred until a concrete future need appears ([#532](https://github.com/mifunedev/openharness/issues/532)).
 - Add a descriptive, example-only `.oh/harness.yml` manifest reference that points at today's `.oh/agents/`, `.oh/skills/`, `.oh/hooks/`, `.oh/crons/`, `.oh/scripts/ralph.sh`, and `.oh/tasks/` surfaces without defining a schema, registry, or conformance profile ([#532](https://github.com/mifunedev/openharness/issues/532)).
 - Add `.oh/docs/rfcs/rfc-selfimprove-roadmap.md`, a curated #525 self-improving-harness roadmap that decomposes the broad epic into dependency-ordered proposed child issues for human filing; linked from the docs and RFC indexes ([#525](https://github.com/mifunedev/openharness/issues/525)).
@@ -29,6 +101,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Add `.oh/docs/oh-directory-layout.md`, a descriptive map of the `.oh/` control plane — every real top-level entry with its purpose and canonical consumer, `config.json`/`patches/` flagged as not-in-a-fresh-clone, and the OH-RFC-0003 normalized dirs labelled "proposed, not present"; linked from the docs index and reconciled with (not duplicating) `.oh/README.md` ([#566](https://github.com/mifunedev/openharness/issues/566)).
 - Add a descriptive [`.oh/docs/glossary.md`](.oh/docs/glossary.md) defining Open Harness's core vocabulary (harness, agent, runtime, loop, policy, tool, capability, eval, session, trace, checkpoint, artifact, terminal state, skill, primitive, orchestrator, sandbox, worktree) as the repo uses each term, with a canonical source pointer per entry; linked from the docs index ([#565](https://github.com/mifunedev/openharness/issues/565)).
 ### Changed
+- `oh init`-scaffolded sandboxes now mount the workspace at `/home/sandbox/harness` (previously `/home/sandbox/project`), matching the path the harness's own devcontainer uses so equipped projects and the harness agree on the container workspace root.
+- `get-oh.sh` can now be run with `source <(curl … )` — installing *and* putting `oh` on the PATH in the current shell — and prints an unmissable same-shell `export PATH="$HOME/.local/bin:$PATH"` instruction, so the freshly installed `oh` works without exiting or re-logging in.
 - Improve `/health-check` performance by caching baseline snapshots, gating verbose Docker/process probes, and reusing one-pass diagnostics for ranked reclaim reports ([#576](https://github.com/mifunedev/openharness/issues/576)).
 - Resolve the #532 RFC-index disposition as accepted-lightweight, cross-linking ADR-0001 and keeping the heavier standards-body scope deferred until a concrete future issue needs it ([#532](https://github.com/mifunedev/openharness/issues/532)).
 - Clarify the glossary's model / agent CLI / harness / loop / policy / trace layer separation without introducing conformance machinery ([#532](https://github.com/mifunedev/openharness/issues/532)).

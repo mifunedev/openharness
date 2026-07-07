@@ -56,6 +56,46 @@ repair_home_mount_ownership() {
   fi
 }
 
+# >>> seed_workspace_volume >>>
+# First-boot seed for OH_IMAGE_ONLY (no-bind) mode: populate an empty named
+# workspace volume from the image's baked control plane (/opt/oh-seed by
+# default). Self-contained: uses only $1 (dest) + $OH_IMAGE_SEED_SRC so the
+# eval probe can source it in isolation. Sets OH_IMAGE_SEEDED_THIS_BOOT.
+seed_workspace_volume() {
+  local dest="$1"
+  local marker="$dest/.oh/.image-seeded"
+  local src="${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+  OH_IMAGE_SEEDED_THIS_BOOT=0
+  # Self-heal: backfill tracked .claude control-plane config that a prior
+  # (pre-fix) image failed to seed. Copy ONLY when the dest file is absent and
+  # the seed carries it, so operator edits are never clobbered. Runs before the
+  # marker early-return so an already-marked-but-incomplete volume heals in
+  # place — no volume wipe. Idempotent. protected-paths.txt is boot-critical
+  # (link-providers.sh --init hard-requires it); settings.json wires hooks.
+  if [ -n "$src" ] && [ -d "$src/.claude" ]; then
+    local _rel
+    for _rel in protected-paths.txt settings.json; do
+      if [ ! -e "$dest/.claude/$_rel" ] && [ -f "$src/.claude/$_rel" ]; then
+        mkdir -p "$dest/.claude"
+        cp -a "$src/.claude/$_rel" "$dest/.claude/$_rel" 2>/dev/null || true
+      fi
+    done
+  fi
+  if [ -f "$marker" ]; then
+    return 0
+  fi
+  # Clobber guard: only seed when the control plane is absent (marker AND emptiness).
+  if [ -n "$src" ] && [ -d "$src" ] && [ ! -d "$dest/.oh" ]; then
+    cp -a "$src/." "$dest/" 2>/dev/null || true
+  fi
+  if [ -d "$dest/.oh" ]; then
+    : > "$marker" 2>/dev/null || true
+    OH_IMAGE_SEEDED_THIS_BOOT=1
+  fi
+  return 0
+}
+# <<< seed_workspace_volume <<<
+
 repair_home_mount_ownership
 
 # ─── Host UID reconciliation ────────────────────────────────────────
@@ -82,7 +122,16 @@ uid_reconcile_step() {
 }
 
 HARNESS_DIR="$OH_PROJECT_ROOT"
-if [ -d "$HARNESS_DIR" ]; then
+if [ "${OH_IMAGE_ONLY:-}" = "1" ]; then
+  echo "[entrypoint] OH_IMAGE_ONLY=1 — no-bind mode; skipping host UID/GID sync"
+  seed_workspace_volume "$OH_PROJECT_ROOT"
+  if [ "${OH_IMAGE_SEEDED_THIS_BOOT:-0}" = "1" ]; then
+    echo "[entrypoint] seeded control plane into $OH_PROJECT_ROOT from ${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
+    chown -R "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
+  else
+    chown "$(id -u sandbox):$(id -g sandbox)" "$OH_PROJECT_ROOT" 2>/dev/null || true
+  fi
+elif [ -d "$HARNESS_DIR" ]; then
   HOST_UID=$(stat -c '%u' "$HARNESS_DIR")
   HOST_GID=$(stat -c '%g' "$HARNESS_DIR")
   SANDBOX_UID=$(id -u sandbox)
@@ -245,11 +294,15 @@ if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
 
     # Seed the sandbox user's authorized_keys from env (public key material is
     # not secret; it rides in .devcontainer/.env because it can be multi-line).
+    # Compose env files are single-line in practice, so also accept literal \n
+    # separators and normalize them into real authorized_keys lines.
     _ssh_dir=/home/sandbox/.ssh
     _have_keys=0
     if [ -n "${SANDBOX_SSH_AUTHORIZED_KEYS:-}" ]; then
       mkdir -p "$_ssh_dir"
-      printf '%s\n' "$SANDBOX_SSH_AUTHORIZED_KEYS" > "$_ssh_dir/authorized_keys"
+      _ssh_keys="${SANDBOX_SSH_AUTHORIZED_KEYS//\\n/$'\n'}"
+      printf '%s\n' "$_ssh_keys" > "$_ssh_dir/authorized_keys"
+      unset _ssh_keys
       chmod 700 "$_ssh_dir"
       chmod 600 "$_ssh_dir/authorized_keys"
       chown -R "$(sandbox_ownership)" "$_ssh_dir"
@@ -439,7 +492,8 @@ pnpm_workspace_package_patterns() {
 
 pnpm_manifest_rel_is_excluded() {
   case "$1" in
-    .git/*|.worktrees/*|node_modules/*|*/node_modules/*)
+    # Defensive: legacy root .worktrees/ may exist in old checkouts; never scan it.
+    .git/*|.oh/worktrees/*|.worktrees/*|node_modules/*|*/node_modules/*)
       return 0
       ;;
   esac
@@ -538,6 +592,22 @@ case "${MEMORY_DIR:-.oh/memory}" in
   *)  MEMORY_PATH="$HARNESS/${MEMORY_DIR:-.oh/memory}" ;;
 esac
 mkdir -p "$MEMORY_PATH"
+# Seed the durable lessons ledger (.oh/memory/MEMORY.md) if missing. It is
+# gitignored/local-per-instance, so a fresh clone lacks it and the session-start
+# read + /retro dedup would hit ENOENT until first write. Idempotent: never
+# overwrites an existing file. See .oh/scripts/ensure-memory-file.sh.
+sh "$HARNESS/.oh/scripts/ensure-memory-file.sh" >/dev/null 2>&1 || true
+
+# ─── Resolve + pre-create the worktrees directory ─────────────────
+# Single source of truth = WORKTREES_DIR (docker-compose passes
+# paths.worktrees through here; default .oh/worktrees). Cron worktree isolation
+# and the /worktrees skill use this root so ignored branch/project clones stay
+# under the .oh control-plane namespace.
+case "${WORKTREES_DIR:-.oh/worktrees}" in
+  /*) WORKTREES_PATH="${WORKTREES_DIR}" ;;
+  *)  WORKTREES_PATH="$HARNESS/${WORKTREES_DIR:-.oh/worktrees}" ;;
+esac
+mkdir -p "$WORKTREES_PATH"
 
 # ─── Start/supervise cron runtime in tmux sessions ────────────────
 # Per SPEC v0.7 §"Croner runtime" + .oh/skills/t3/references/sandbox-processes.md.

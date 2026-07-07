@@ -122,6 +122,20 @@ if truthy "$hermes_value"; then
   args+=(-f "$(compose_path ".devcontainer/docker-compose.hermes-dashboard.yml")")
 fi
 
+# Host Docker socket is opt-in (effectively host root). Apply the overlay only
+# when DOCKER_SOCKET is truthy via harness.yaml `sandbox.docker_socket` or the
+# .devcontainer/.env DOCKER_SOCKET key. Mirrors the hermes-dashboard toggle above.
+docker_socket_value=""
+if [ -f "$HARNESS_YAML" ]; then
+  docker_socket_value=$(sh "$CONFIG_SCRIPT" get sandbox.docker_socket "$HARNESS_YAML")
+fi
+if [ -z "$docker_socket_value" ]; then
+  docker_socket_value=${DOCKER_SOCKET:-$(read_env_value DOCKER_SOCKET)}
+fi
+if truthy "$docker_socket_value"; then
+  args+=(-f "$(compose_path ".devcontainer/docker-compose.docker-sock.yml")")
+fi
+
 ssh_value=""
 if [ -f "$HARNESS_YAML" ]; then
   ssh_value=$(sh "$CONFIG_SCRIPT" get ssh.enabled "$HARNESS_YAML")
@@ -167,7 +181,7 @@ if truthy "$ssh_value"; then
               END { exit(hit ? 0 : 1) }' && own_port=1
       fi
       if [ "$own_port" -eq 0 ]; then
-        if ! result=$(sh "$port_check" "$ssh_port" 2>/dev/null); then
+        if ! result=$(bash "$port_check" "$ssh_port" 2>/dev/null); then
           printf 'error: SANDBOX_SSH_PORT=%s %s\n' "$ssh_port" "$result" >&2
           printf '       Pick a free ssh.port in harness.yaml (or set SANDBOX_SSH_PORT), or\n' >&2
           printf '       re-run with SANDBOX_SSH_PORT_CHECK=off to bypass this check.\n' >&2

@@ -80,13 +80,15 @@ guard message says as much.
 Agents run inside a container, not on the host.
 
 - **Mechanism:** [`.devcontainer/docker-compose.yml`](../../.devcontainer/docker-compose.yml) + [`.devcontainer/devcontainer.json`](../../.devcontainer/devcontainer.json) + [`.devcontainer/Dockerfile`](../../.devcontainer/Dockerfile). The repo is bind-mounted (`docker-compose.yml:32`); the agent runs as the non-root `sandbox` user (`devcontainer.json:6`); auth lives in named volumes, not on the host FS.
-- **Caveat 1 — the Docker socket (RECOMMENDED to harden).** `/var/run/docker.sock` is mounted into the sandbox (`docker-compose.yml:33`) so the agent can drive Docker. This is a deliberate capability trade-off: **socket access is effectively host root** (an agent can start a privileged container that mounts the host FS). The container is therefore *isolation for convenience and blast-radius reduction, not a hard security boundary* against a hostile agent. If your threat model needs a hard boundary, remove the socket mount or run a rootless/proxied Docker.
+- **Caveat 1 — the Docker socket (OFF by default; opt-in).** `/var/run/docker.sock` is **no longer mounted by default** — it is an explicit opt-in via the [`docker-compose.docker-sock.yml`](../../.devcontainer/docker-compose.docker-sock.yml) overlay, applied only when `DOCKER_SOCKET` is truthy (`harness.yaml` `sandbox.docker_socket: true`, or `DOCKER_SOCKET=true` in `.devcontainer/.env`). Both interactive installers prompt for it and **default to off**: `install.sh` (the `curl | bash` path) and `oh sandbox` (the `oh` CLI / `get-oh.sh` path). Enabling it is a deliberate capability trade-off: **socket access is effectively host root** (an agent can start a privileged container that mounts the host FS), so the container becomes *isolation for convenience and blast-radius reduction, not a hard security boundary* against a hostile agent. Leave it off unless the agent genuinely must drive Docker; if it must and you still need a hard boundary, run a rootless/proxied Docker. **VS Code "Reopen in Container"** reads `docker-compose.yml` directly and bypasses the wrapper, so it never mounts the socket; to enable it there, add `docker-compose.docker-sock.yml` to `dockerComposeFile` in [`devcontainer.json`](../../.devcontainer/devcontainer.json).
 - **Caveat 2 — permissions bypassed inside.** `CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true` (`docker-compose.yml:48`) turns off the interactive permission engine inside the sandbox. This is the *reason* the §2 guards are implemented as hooks (which still fire) rather than relying on deny-list prompts (which are skipped).
 
 **Bottom line:** the sandbox reliably keeps agent work off the host
-filesystem and out of host user state — a real, enforced boundary — but
-the socket mount means it is not an escape-proof jail. Run the harness on
-hosts and repos you are willing to expose to that trust level.
+filesystem and out of host user state — a real, enforced boundary. With the
+Docker socket left at its default (off) that boundary holds; opting the
+socket in trades it away for Docker access and makes the sandbox no longer
+an escape-proof jail. Run the harness on hosts and repos you are willing to
+expose to whichever trust level you choose.
 
 - **Caveat 3 — the optional sshd overlay (RECOMMENDED to configure).** The base
   container publishes **no ports** and runs **no** SSH daemon. The opt-in overlay

@@ -50,7 +50,7 @@ The installer clones into `~/.openharness`, prompts to share your host `gh` toke
 
 **Self-hosting from an existing clone:** run `bash .oh/scripts/install.sh` from inside the directory — it detects the local clone automatically.
 
-**Standalone `oh` CLI (equip an existing project repo):** `oh init --from-remote` → `oh sandbox` / `oh shell` / `oh gateway` — see [Installation → Standalone CLI](./installation.md#standalone-cli-oh-equip-an-existing-repo). Unlike the paths above, it requires Node.js ≥ 18, git, and Docker on the host.
+**Standalone `oh` CLI (equip an existing project repo):** if you already have Node.js ≥ 20, install the `oh` command from npm — `npm install -g @mifune/openharness` (or zero-install `npx @mifune/openharness init`). Otherwise bootstrap it onto your host with `curl -fsSL https://oh.mifune.dev/get-oh.sh | bash` (or `source <(curl -fsSL https://oh.mifune.dev/get-oh.sh)` to install *and* put `oh` on your PATH in the current shell — no re-login; if you used the plain `curl … | bash` form, `export PATH="$HOME/.local/bin:$PATH"` in an already-open shell) (review-first: `curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh` then read it and `bash get-oh.sh`), then `cd <your-project> && oh init` → `oh sandbox` / `oh shell` / `oh gateway` — see [Installation → Standalone CLI](./installation.md#standalone-cli-oh-equip-an-existing-repo). It installs the `oh` binary to `~/.local/bin/oh` (no repo clone) and needs Node.js ≥ 20 (it offers to install nvm + Node 22 if missing); Docker only for `oh sandbox`.
 
 </details>
 
@@ -135,9 +135,11 @@ install:
   hermes: false
   grok_build: false
   agent_browser: false
+paths:
+  worktrees: .oh/worktrees     # WORKTREES_DIR
 ```
 
-The file also has `crons:`, `autopilot:`, `slack:`, and `compose:` sections (all commented out by default) — uncomment the keys you need. See tracked `harness.yaml.example` for every available key and its default.
+The file also has `paths:`, `crons:`, `autopilot:`, `slack:`, and `compose:` sections (all commented out by default) — uncomment the keys you need. See tracked `harness.yaml.example` for every available key and its default.
 
 **Secrets** — keep in `.devcontainer/.env` only (gitignored):
 
@@ -160,6 +162,7 @@ The file also has `crons:`, `autopilot:`, `slack:`, and `compose:` sections (all
 | `install.deepagents` | Set `true` to include DeepAgents in the sandbox image |
 | `install.hermes` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
 | `install.grok_build` | Set `true` to include Grok Build in the sandbox image; all Grok user state lives in the persisted `~/.grok` volume |
+| `paths.worktrees` | Worktree/project-clone root → `WORKTREES_DIR` (default `.oh/worktrees`) |
 
 Apply changes with `make destroy && make sandbox`.
 

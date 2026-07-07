@@ -108,7 +108,7 @@ Ignore these unless the task explicitly targets them:
 | Path pattern | Why to skip first | Read only when |
 |---|---|---|
 | `.git/` | Git object database and refs; use `git` commands instead. | Debugging repository corruption. |
-| `.worktrees/`, `.claude/worktrees/` | Isolated branch checkouts that duplicate repo context. | Managing/removing worktrees or inspecting a specific branch. |
+| `.oh/worktrees/`, `.claude/worktrees/` | Isolated branch checkouts that duplicate repo context. | Managing/removing worktrees or inspecting a specific branch. |
 | `node_modules/`, `.pnpm/`, `.pi/npm/node_modules/`, `.hermes/lsp/node_modules/` | Vendor dependencies; huge and low-signal. | Debugging dependency installation or package resolution. |
 | `.oh/cli/dist/` | Generated build output. | Verifying generated CLI artifacts. |
 | `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |

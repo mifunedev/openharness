@@ -5,6 +5,7 @@
     "install/**",
     "templates/**",
     "context/**",
+    "worktrees/README.md",
     "crons/**",
     "evals/**",
     "skills/**",

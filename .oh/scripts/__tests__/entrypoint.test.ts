@@ -52,9 +52,14 @@ describe("devcontainer entrypoint auth volume ownership", () => {
 
     expect(block).toContain("uid_reconcile_step()");
     expect(block).toContain("WARNING: failed to");
-    expect(block).not.toContain("2>/dev/null || true");
-    expect(block).not.toContain("groupmod -g \"$HOST_GID\" sandbox 2>/dev/null");
-    expect(block).not.toContain("usermod -u \"$HOST_UID\" sandbox 2>/dev/null");
+    // Scope the "no swallowed failures" guard to the host-reconciliation
+    // branch itself. The sibling `OH_IMAGE_ONLY` (no-bind) branch legitimately
+    // best-efforts a volume chown with `2>/dev/null || true`; it is not host
+    // UID reconciliation (it deliberately skips it), so it is excluded here.
+    const reconBranch = block.slice(block.indexOf('elif [ -d "$HARNESS_DIR" ]'));
+    expect(reconBranch).not.toContain("2>/dev/null || true");
+    expect(reconBranch).not.toContain("groupmod -g \"$HOST_GID\" sandbox 2>/dev/null");
+    expect(reconBranch).not.toContain("usermod -u \"$HOST_UID\" sandbox 2>/dev/null");
   });
 
   it("prints UID sync success only after reconciliation commands report success", () => {

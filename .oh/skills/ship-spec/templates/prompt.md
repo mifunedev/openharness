@@ -27,7 +27,7 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
    - `.oh/skills/t3/references/sandbox-processes.md` for tmux session conventions if your story spawns processes.
    - `.oh/agents/advisor.md` for any critic-gated story.
 
-2. **Verify branch** — your branch is `<prefix>/<N>-<slug>` (per `prd.json` `branchName`). If `/ship-spec`'s Advisor launched you in an isolated worktree at `.worktrees/<prefix>/<N>-<slug>`, that directory already has the branch checked out — `cd` into it and skip the checkout below. Otherwise, if you are not on the branch:
+2. **Verify branch** — your branch is `<prefix>/<N>-<slug>` (per `prd.json` `branchName`). If `/ship-spec`'s Advisor launched you in an isolated worktree at `.oh/worktrees/<prefix>/<N>-<slug>`, that directory already has the branch checked out — `cd` into it and skip the checkout below. Otherwise, if you are not on the branch:
    ```bash
    : "${SHIP_SPEC_REMOTE:?SHIP_SPEC_REMOTE must name the git remote that matches SHIP_SPEC_REPO}"
    git fetch "$SHIP_SPEC_REMOTE" "${SHIP_SPEC_BASE:-development}"

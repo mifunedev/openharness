@@ -22,7 +22,7 @@ Key capabilities:
 
 The harness uses Docker Compose to build a sandbox image from `.devcontainer/`. You bring the sandbox up with `docker compose -f .devcontainer/docker-compose.yml up -d --build`, attach with `docker exec -it -u sandbox openharness zsh` (or VS Code), authenticate GitHub and your chosen LLM provider once, then launch the agent with `claude` inside the sandbox. When you're done, `docker compose -f .devcontainer/docker-compose.yml down -v` tears everything down.
 
-The agent session you attach to at the project root is your **orchestrator** — git, sandbox lifecycle, and most file edits all flow through a single attach. The orchestrator can drive other containers and edit files inside them over the Docker socket, so day-to-day work rarely needs anything else. Drop back to the host shell only when something can't be done from inside the container — typically adding a new bind-mounted volume, which requires a `.devcontainer/docker-compose.yml` change and restart.
+The agent session you attach to at the project root is your **orchestrator** — git, sandbox lifecycle, and most file edits all flow through a single attach. When the optional Docker socket is enabled (off by default — see [security-considerations.md](security-considerations.md#3-sandbox-isolation--the-docker-socket-caveat--enforced-with-a-caveat)), the orchestrator can also drive other containers and edit files inside them over that socket, so day-to-day work rarely needs anything else. Drop back to the host shell only when something can't be done from inside the container — typically adding a new bind-mounted volume, which requires a `.devcontainer/docker-compose.yml` change and restart.
 
 Stand up a **second sandbox** only when you want isolation — an independent identity, branch, or provider key running on its own. Most users won't need this.
 
@@ -38,7 +38,7 @@ flowchart TB
     subgraph sandbox["Sandbox container — default workspace"]
         Orch{{"<b>Orchestrator</b><br/>Claude @ project root<br/>git · lifecycle · file edits"}}
         Tmux["tmux sessions<br/>client-slack-pi · agent-t3code · cron-system"]
-        Sock(["docker.sock"])
+        Sock(["docker.sock<br/><i>opt-in</i>"])
     end
 
     Sb2["Second sandbox<br/><i>only if you need isolation</i>"]
@@ -49,7 +49,7 @@ flowchart TB
     Orch -->|launches & monitors| Tmux
     Orch <-->|git| GH
     Tmux <-->|API| LLM
-    Orch -->|docker socket| Sock
+    Orch -.->|docker socket · opt-in| Sock
     Sock -.->|provisions| Sb2
 ```
 

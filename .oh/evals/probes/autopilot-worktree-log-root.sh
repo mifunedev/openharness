@@ -16,7 +16,7 @@ missing=()
 [[ -f "$SKILL" ]] || { echo "SKIPPED: missing $SKILL" >&2; exit 2; }
 [[ -f "$README" ]] || { echo "SKIPPED: missing $README" >&2; exit 2; }
 
-# Regression guard: the old relative writes disappear inside .worktrees/cron/<session>
+# Regression guard: the old relative writes disappear inside .oh/worktrees/cron/<session>
 # when the heartbeat later reaps that worktree.
 grep -Fq '>> .oh/crons/.cron.log' "$SKILL" && missing+=("no bare relative liveness append to .oh/crons/.cron.log")
 grep -Fq 'cat >> ".oh/memory/$TODAY/log.md"' "$SKILL" && missing+=("no bare relative memory append to .oh/memory/$TODAY/log.md")

@@ -2,7 +2,7 @@
 # oh-path — resolve a harness data directory deterministically.
 #
 # Usage:  oh-path <name> [--no-create]
-#   <name>   memory | crons | evals | context | tasks
+#   <name>   memory | crons | evals | context | tasks | worktrees
 #            (or any harness.yaml `paths.<name>` you define)
 #
 # Resolution precedence (first hit wins):

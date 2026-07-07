@@ -168,7 +168,7 @@ export function printSandboxHelp(): void {
   process.stdout.write(`oh sandbox — Provision and start the sandbox
 
 Usage:
-  oh sandbox
+  oh sandbox [--image[=<ref>]] [--no-build]
 
 Works from any subdirectory of an equipped repo (walks up to the nearest
 directory containing .oh/). Seeds harness.yaml from harness.yaml.example when
@@ -177,8 +177,16 @@ compose wrapper:
 
   bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build
 
-Build output streams live; oh sandbox exits with docker compose's exit code.
-Takes no flags — it is a pass-through, not a writer.
+By default it builds the image locally. Prebuilt-image mode skips that build:
+
+Flags:
+  --image[=<ref>]  Run the prebuilt image instead of building locally (implies
+                   --no-build). Ref resolves last-wins: --image=<ref> >
+                   harness.yaml sandbox.image > ghcr.io/mifunedev/openharness:latest.
+  --no-build       Suppress the local build and reuse an existing image without
+                   pinning one (advanced; pairs with a prior build or --image).
+
+Build/pull output streams live; oh sandbox exits with docker compose's exit code.
 `);
 }
 
@@ -390,18 +398,42 @@ export function parseUpdateArgs(rest: string[]): ParseResult<UpdateArgs> {
   return { ok: true, args };
 }
 
-/** Parsed `oh sandbox` flags — the verb is a pass-through and takes none. */
+/** Parsed `oh sandbox` flags — the prebuilt-image / no-build knobs. */
 export interface SandboxArgs {
   help: boolean;
+  /** `--image` (bare) or `--image=<ref>` was passed — run the prebuilt image. */
+  image: boolean;
+  /** Explicit ref from `--image=<ref>` (undefined for a bare `--image`). */
+  imageRef?: string;
+  /** `--no-build` was passed — suppress the local build. */
+  noBuild: boolean;
 }
 
 export function parseSandboxArgs(rest: string[]): ParseResult<SandboxArgs> {
-  if (isHelpFlag(rest[0])) return { ok: true, args: { help: true } };
-  const extra = rest[0];
-  if (extra !== undefined) {
-    return { ok: false, error: `oh sandbox: unexpected argument "${extra}" — the verb takes no flags` };
+  if (isHelpFlag(rest[0])) {
+    return { ok: true, args: { help: true, image: false, noBuild: false } };
   }
-  return { ok: true, args: { help: false } };
+  const args: SandboxArgs = { help: false, image: false, noBuild: false };
+  for (const token of rest) {
+    if (token === "--no-build") {
+      args.noBuild = true;
+    } else if (token === "--image") {
+      args.image = true;
+    } else if (token.startsWith("--image=")) {
+      const ref = token.slice("--image=".length);
+      if (ref === "") {
+        return { ok: false, error: "oh sandbox: --image=<ref> requires a non-empty image ref" };
+      }
+      args.image = true;
+      args.imageRef = ref;
+    } else {
+      return {
+        ok: false,
+        error: `oh sandbox: unexpected argument "${token}" — accepts only --image[=<ref>] and --no-build`,
+      };
+    }
+  }
+  return { ok: true, args };
 }
 
 /** Parsed `oh shell` args. */
@@ -724,7 +756,14 @@ async function main(argv: string[]): Promise<number> {
       printSandboxHelp();
       return 0;
     }
-    return runSandbox({}, lifecycleIo());
+    return await runSandbox(
+      {
+        image: parsed.args.image,
+        imageRef: parsed.args.imageRef,
+        noBuild: parsed.args.noBuild,
+      },
+      lifecycleIo(),
+    );
   }
 
   if (first === "shell") {

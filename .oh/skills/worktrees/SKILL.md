@@ -1,28 +1,30 @@
 ---
 name: worktrees
 description: |
-  Manage .worktrees/ lifecycle: create worktree, list worktrees, remove worktree,
+  Manage .oh/worktrees/ lifecycle: create worktree, list worktrees, remove worktree,
   clean worktrees, stale worktrees audit, isolate work, project clone.
   TRIGGER when: any git worktree operation, branch isolation needed, stale worktrees
-  review, project clone under .worktrees/project/ (e.g. "clone <owner>/<repo> to
-  worktrees", "add <repo> to .worktrees", "clone this repo into worktrees"), worktree
+  review, project clone under .oh/worktrees/project/ (e.g. "clone <owner>/<repo> to
+  worktrees", "add <repo> to .oh/worktrees", "clone this repo into worktrees"), worktree
   cleanup. A leading-slash harness dir like "/worktrees" still means the repo-relative
-  .worktrees/ — never a literal filesystem-root path.
+  .oh/worktrees/ — never a literal filesystem-root path.
 allowed-tools: Bash
 ---
 
 # Worktrees
 
-Manage `.worktrees/`. Full policy: `/git` § Worktrees; `.oh/context/rules/git.md` is only a compatibility pointer.
+Manage `.oh/worktrees/`. Full policy: `/git` § Worktrees; `.oh/context/rules/git.md` is only a compatibility pointer.
 
 ## DETECT BASE
 
-Run first. Every create op needs `$BASE`.
+Run first. Every create/remove op needs `$BASE` and `$WORKTREES_ROOT`.
 
 ```bash
 BASE=$(git show-ref --verify --quiet refs/heads/development && echo development || \
        git show-ref --verify --quiet refs/heads/main && echo main || echo master)
-echo $BASE
+WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
+echo "$BASE"
+echo "$WORKTREES_ROOT"
 ```
 
 ## CREATE — new branch
@@ -32,16 +34,16 @@ PREFIX=feat   # feat bug task audit skill agent
 ISSUE=42
 DESC=short-desc
 BRANCH="$PREFIX/$ISSUE-$DESC"
-mkdir -p .worktrees
-git worktree add -b "$BRANCH" ".worktrees/$BRANCH" "$BASE"
+mkdir -p "$WORKTREES_ROOT"
+git worktree add -b "$BRANCH" "$WORKTREES_ROOT/$BRANCH" "$BASE"
 ```
 
 ## CREATE — existing branch
 
 ```bash
 BRANCH=feat/42-short-desc
-mkdir -p .worktrees
-git worktree add ".worktrees/$BRANCH" "$BRANCH"
+mkdir -p "$WORKTREES_ROOT"
+git worktree add "$WORKTREES_ROOT/$BRANCH" "$BRANCH"
 ```
 
 ## LIST — all worktrees + age + PR status
@@ -63,13 +65,13 @@ Main checkout has loose files. Don't stash. Don't switch.
 ```bash
 # 1. Cut worktree off base
 BRANCH=feat/42-my-work
-git worktree add -b "$BRANCH" ".worktrees/$BRANCH" "$BASE"
+git worktree add -b "$BRANCH" "$WORKTREES_ROOT/$BRANCH" "$BASE"
 
 # 2. Copy files in
-cp path/to/file1 path/to/file2 ".worktrees/$BRANCH/<destination>/"
+cp path/to/file1 path/to/file2 "$WORKTREES_ROOT/$BRANCH/<destination>/"
 
 # 3. Commit in worktree
-cd ".worktrees/$BRANCH"
+cd "$WORKTREES_ROOT/$BRANCH"
 git add . && git commit -m "feat: ..."
 ```
 
@@ -95,14 +97,14 @@ Any `DRIFT:`? Stop. File not committed right. Fix first.
 
 ```bash
 BRANCH=feat/42-short-desc
-git worktree remove ".worktrees/$BRANCH"
+git worktree remove "$WORKTREES_ROOT/$BRANCH"
 git worktree prune
 ```
 
 Corrupted (not in `git worktree list`):
 
 ```bash
-rm -rf ".worktrees/$BRANCH"
+rm -rf "$WORKTREES_ROOT/$BRANCH"
 git worktree prune
 ```
 
@@ -131,11 +133,11 @@ Independent repo — not a harness branch. Has its own `.git`.
 # Clone
 OWNER=ryaneggz
 REPO=some-project
-mkdir -p ".worktrees/project/$OWNER"
-git clone "https://github.com/$OWNER/$REPO.git" ".worktrees/project/$OWNER/$REPO"
+mkdir -p "$WORKTREES_ROOT/project/$OWNER"
+git clone "https://github.com/$OWNER/$REPO.git" "$WORKTREES_ROOT/project/$OWNER/$REPO"
 
 # Remove
-rm -rf ".worktrees/project/$OWNER/$REPO"
+rm -rf "$WORKTREES_ROOT/project/$OWNER/$REPO"
 ```
 
 No `git worktree` for these. Plain `git clone` / `rm -rf`.

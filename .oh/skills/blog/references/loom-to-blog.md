@@ -195,13 +195,16 @@ The artifact should include:
 - target platform/profile URLs supplied by the user;
 - 2-3 LinkedIn variants: one polished main post, one shorter post, one comment/CTA;
 - X.com variants: one single-post draft, one 3-5 post thread, one short quote-post variant;
-- a feed-native visual plan or generated card that pulls directly from the post: concrete headline, proof path/checkpoints, one relevant screenshot or diagram, and a feedback-oriented CTA;
+- a deterministic banner recipe, not a one-off generated image: explicit copy slots, layout/theme tokens, source screenshot/diagram path, crop/slot settings, output paths, alt text, and review checklist;
 - suggested hashtags, alt text, and image/asset references;
 - UTM/link checklist if the operator wants tracking;
 - explicit safety note: review manually, do not auto-publish.
 
-Visual tone rules:
+Visual workflow rules:
 
+- Prefer a Canva-like source artifact over a one-off image: `promos/banner-recipes/YYYY-MM-DD-<slug>.json` → renderer → SVG/JPG outputs.
+- Keep the recipe human-editable: headline lines, proof path/checkpoints, CTA, footer URL, media source, media crop/slot, and review checklist.
+- Commit the recipe plus rendered SVG/JPG together so future edits are reproducible.
 - Prefer grounded value over hype: show what the post helps the reader do, not inflated claims.
 - Use copy the audience can evaluate: setup path, guardrails, before/after workflow, or a concrete artifact.
 - Include a feedback CTA when the goal is learning from practitioners, e.g. "Feedback welcome from agent builders and operators."

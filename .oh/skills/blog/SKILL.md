@@ -1,6 +1,6 @@
 ---
 name: blog
-argument-hint: "<scenario> [--source <path|url>] [--target <repo|path>] [--slug <slug>] [--promo linkedin,x] [--dry-run]"
+argument-hint: "<scenario> [--source <path|url>] [--target <repo|path>] [--slug <slug>] [--promo linkedin,x,channels] [--dry-run]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 description: |
@@ -8,7 +8,7 @@ description: |
   Loom/demo-to-blog, where a raw notes file plus Loom screenshots become a
   polished site post after Advisor briefing, photo/text alignment audit, site
   convention audit, narrative/fact-check audit, source-faithful image handling
-  (exact URLs or local files downloaded from them), optional social-promotion
+  (exact URLs or local files downloaded from them), optional social/channel-promotion
   artifact generation, and build verification. Manual-invoke only because it writes content and may spawn
   delegates.
   TRIGGER when: /blog <scenario> invoked; asked to create a blog post from a
@@ -29,7 +29,7 @@ Arguments received: `$ARGUMENTS`
    - `--source <path|url>` — raw notes, transcript, Loom URL, or source folder.
    - `--target <repo|path>` — blog repo or site root. Treat `/worktrees ...` as repo-relative `.oh/worktrees/...`, never filesystem root.
    - `--slug <slug>` — target post slug, lowercase kebab-case.
-   - `--promo linkedin,x` — also generate a reviewable social promotion artifact; never publish.
+   - `--promo linkedin,x,channels` — also generate a reviewable promotion artifact for social posts and channel blasts; never publish.
    - `--dry-run` — perform audits and propose filename/outline only; write nothing.
 3. Route to the first playbook, `references/loom-to-blog.md`, when the scenario mentions Loom, video, demo, transcript, screenshots, `demo.md`, or a source under `.claude/specs/`.
 4. If no playbook fits, say the only implemented reference is `loom-to-blog` and ask whether to adapt it.

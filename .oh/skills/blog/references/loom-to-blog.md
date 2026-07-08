@@ -195,6 +195,7 @@ The artifact should include:
 - target platform/profile URLs supplied by the user;
 - 2-3 LinkedIn variants: one polished main post, one shorter post, one comment/CTA;
 - X.com variants: one single-post draft, one 3-5 post thread, one short quote-post variant;
+- channel blasts when requested (`channels`, `slack`, `discord`, or `telegram`): one Slack announcement, one Discord community post, and one Telegram broadcast, each with direct blog URL, copy/paste-safe formatting, and a note about whether to rely on link unfurl/card preview;
 - a deterministic banner recipe, not a one-off generated image: explicit copy slots, layout/theme tokens, source screenshot/diagram path, crop/slot settings, output paths, alt text, and review checklist;
 - suggested hashtags, alt text, and image/asset references;
 - UTM/link checklist if the operator wants tracking;
@@ -211,6 +212,8 @@ Visual workflow rules:
 - Use 1-2 tasteful emojis to add structure/readability when they fit the brand; an emoji as the first character can work well when it is not gimmicky.
 - Do not assume markdown/HTML emphasis will render on social platforms. LinkedIn plain-text posts do not reliably render `**bold**`; if emphasis is important, use platform-supported formatting or Unicode emphasis sparingly and preview before publishing.
 - Keep platforms/accounts separate when formatting semantics differ. Prefer one draft/post per account over a multi-account post with platform overrides when X and LinkedIn copy need different formatting.
+- Treat Slack, Discord, and Telegram blasts as first-class promotion artifacts, not afterthoughts. Keep them concise, copy/paste-ready, and channel-native: Slack can use light emoji and bullets, Discord can use community framing and markdown sparingly, Telegram should be shortest and broadcast-like. Use one direct blog URL so unfurl/card previews can render; do not attach a separate banner unless the channel preview fails.
+- Include the promo artifact path and generated artifact inventory in the merge request / PR body when the blog PR is opened or updated, so reviewers can approve the post, social drafts, channel blasts, banner recipe, and publish checklist together.
 - Do not default to awkward feedback-welcome CTAs. Use practitioner-feedback asks only when the operator explicitly wants comments; otherwise prefer a clear next step.
 - For social posts where the destination page has Open Graph/Twitter card metadata, prefer the link-card pattern: include the direct canonical blog URL as the only link and do **not** attach uploaded Post Bridge media. The platform-rendered banner/card should then be clickable.
 - For Docusaurus posts, set frontmatter `image: /img/.../social-promo-card.jpg` and verify the built HTML emits `summary_large_image`, `og:image`, and `twitter:image` for that asset before drafting link-card posts.

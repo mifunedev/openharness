@@ -209,7 +209,8 @@ Visual workflow rules:
 - Prefer grounded value over hype: show what the post helps the reader do, not inflated claims.
 - Use copy the audience can evaluate: setup path, guardrails, before/after workflow, or a concrete artifact.
 - Use 1-2 tasteful emojis to add structure/readability when they fit the brand; an emoji as the first character can work well when it is not gimmicky.
-- Use LinkedIn markdown-style emphasis sparingly (`**bold**`, `*italic*`) to clarify hierarchy, not to shout.
+- Do not assume markdown/HTML emphasis will render on social platforms. LinkedIn plain-text posts do not reliably render `**bold**`; if emphasis is important, use platform-supported formatting or Unicode emphasis sparingly and preview before publishing.
+- Keep platforms/accounts separate when formatting semantics differ. Prefer one draft/post per account over a multi-account post with platform overrides when X and LinkedIn copy need different formatting.
 - Do not default to awkward feedback-welcome CTAs. Use practitioner-feedback asks only when the operator explicitly wants comments; otherwise prefer a clear next step.
 - For open-source project posts, include a light GitHub star CTA when appropriate, e.g. `⭐ Repo: <repo-url> — star if useful`.
 - For X/Twitter, do not leave a URL as the final visible token/line. X can suppress trailing URLs from the rendered post, leaving labels like `Guide:` or `Star:` blank. Put visible text after each URL, especially the final one, for example `Guide: <url> (setup runbook)` and `⭐ Repo: <url> — star if useful`.

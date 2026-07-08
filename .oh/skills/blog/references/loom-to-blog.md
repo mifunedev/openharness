@@ -195,9 +195,17 @@ The artifact should include:
 - target platform/profile URLs supplied by the user;
 - 2-3 LinkedIn variants: one polished main post, one shorter post, one comment/CTA;
 - X.com variants: one single-post draft, one 3-5 post thread, one short quote-post variant;
+- a feed-native visual plan or generated card that pulls directly from the post: concrete headline, proof path/checkpoints, one relevant screenshot or diagram, and a feedback-oriented CTA;
 - suggested hashtags, alt text, and image/asset references;
 - UTM/link checklist if the operator wants tracking;
 - explicit safety note: review manually, do not auto-publish.
+
+Visual tone rules:
+
+- Prefer grounded value over hype: show what the post helps the reader do, not inflated claims.
+- Use copy the audience can evaluate: setup path, guardrails, before/after workflow, or a concrete artifact.
+- Include a feedback CTA when the goal is learning from practitioners, e.g. "Feedback welcome from agent builders and operators."
+- Avoid generic AI imagery when the post contains real screenshots, diagrams, or code that can prove the workflow.
 
 Do not hardcode personal profile URLs in the skill. Use profile URLs provided in `$ARGUMENTS` or in the user request. If the user asks to actually publish/schedule, stop and hand off to `/post-bridge` with a confirmation gate.
 

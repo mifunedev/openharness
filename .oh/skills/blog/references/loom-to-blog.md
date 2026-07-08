@@ -211,7 +211,9 @@ Visual workflow rules:
 - Use 1-2 tasteful emojis to add structure/readability when they fit the brand; an emoji as the first character can work well when it is not gimmicky.
 - Use LinkedIn markdown-style emphasis sparingly (`**bold**`, `*italic*`) to clarify hierarchy, not to shout.
 - Do not default to awkward feedback-welcome CTAs. Use practitioner-feedback asks only when the operator explicitly wants comments; otherwise prefer a clear next step.
-- For open-source project posts, include a light GitHub star CTA when appropriate, e.g. `⭐ Star: <repo-url>`.
+- For open-source project posts, include a light GitHub star CTA when appropriate, e.g. `⭐ Repo: <repo-url> — star if useful`.
+- For X/Twitter, do not leave a URL as the final visible token/line. X can suppress trailing URLs from the rendered post, leaving labels like `Guide:` or `Star:` blank. Put visible text after each URL, especially the final one, for example `Guide: <url> (setup runbook)` and `⭐ Repo: <url> — star if useful`.
+- Publish or schedule at most one post per account per day by default. Treat additional variants as drafts/options unless the operator explicitly asks to exceed that cadence.
 - Avoid generic AI imagery when the post contains real screenshots, diagrams, or code that can prove the workflow.
 
 Do not hardcode personal profile URLs in the skill. Use profile URLs provided in `$ARGUMENTS` or in the user request. If the user asks to actually publish/schedule, stop and hand off to `/post-bridge` with a confirmation gate.

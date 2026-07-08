@@ -10,6 +10,7 @@ Resolve the scenario from `$ARGUMENTS`:
 - Target repo/path: prefer explicit `--target`; if the user says `/worktrees <repo>`, resolve it under the harness worktrees root (`bash .oh/scripts/oh-path worktrees --no-create`) and search `project/*/<repo>` before treating it as a branch worktree.
 - Post slug/date: prefer explicit `--slug`; otherwise derive a lowercase kebab-case slug from the title/subject, ≤6 words. Use UTC date unless target repo conventions require otherwise.
 - Image policy: for Loom/demo.md sources, preserve source fidelity. Either embed selected screenshots with the exact source image URLs from the raw document, or save local files downloaded from those exact URLs when PR/site rendering would otherwise break.
+- Promotion artifact: if `--promo linkedin,x` (or similar) is present, generate a reviewable social promotion artifact after drafting the post. Never publish from `/blog`.
 - Dry-run: if `--dry-run`, perform steps through the proposed outline/assets plan and stop before writes.
 
 If either source or target cannot be inferred, ask one concise question listing the missing value(s). Do not guess a publication target.
@@ -180,7 +181,27 @@ curl -fsSL '<exact-url-from-demo.md>' -o static/img/blog/YYYY-MM-DD-<slug>/<desc
 
 Never commit the temporary `/tmp` inspection cache.
 
-## Step 7 — Verify
+## Step 7 — Generate optional social promotion artifact
+
+When `--promo` is present, create a non-published review artifact for the requested platforms. Default path in a website repo:
+
+```text
+promos/YYYY-MM-DD-<slug>.md
+```
+
+The artifact should include:
+
+- canonical blog URL (or `after merge: <expected URL>` if not live yet);
+- target platform/profile URLs supplied by the user;
+- 2-3 LinkedIn variants: one polished main post, one shorter post, one comment/CTA;
+- X.com variants: one single-post draft, one 3-5 post thread, one short quote-post variant;
+- suggested hashtags, alt text, and image/asset references;
+- UTM/link checklist if the operator wants tracking;
+- explicit safety note: review manually, do not auto-publish.
+
+Do not hardcode personal profile URLs in the skill. Use profile URLs provided in `$ARGUMENTS` or in the user request. If the user asks to actually publish/schedule, stop and hand off to `/post-bridge` with a confirmation gate.
+
+## Step 8 — Verify
 
 Run target-specific checks. For Docusaurus/pnpm sites, typical commands are:
 
@@ -200,9 +221,9 @@ Manual final audit:
 - All source sections and source images are accounted for in the audit, even if not published.
 - The post states what was corrected or qualified from the raw source where that matters.
 
-## Step 8 — Report and log
+## Step 9 — Report and log
 
-Return the `/blog` output contract from `SKILL.md`.
+Return the `/blog` output contract from `SKILL.md`, including the `Promo:` path when generated.
 
 Append the memory log entry described in `SKILL.md`. Then run the qualify/improve loop. If the lesson is procedural, update this playbook instead of adding a MEMORY.md entry.
 
@@ -222,5 +243,6 @@ Expected actions:
 4. Use Advisor plus the three default delegates.
 5. Write the Docusaurus post under `openharness-web/blog/`.
 6. Embed selected safe screenshots with exact `demo.md` URLs or local files downloaded from those exact URLs if Loom hotlinks break.
-7. Run `pnpm run typecheck` and `pnpm run build`.
-8. Report changed files and verification.
+7. Generate `promos/<date-slug>.md` if social promotion was requested.
+8. Run `pnpm run typecheck` and `pnpm run build`.
+9. Report changed files and verification.

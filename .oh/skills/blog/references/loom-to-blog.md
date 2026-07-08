@@ -203,7 +203,8 @@ The artifact should include:
 Visual workflow rules:
 
 - Prefer a Canva-like source artifact over a one-off image: `promos/banner-recipes/YYYY-MM-DD-<slug>.json` → renderer → SVG/JPG outputs.
-- Keep the recipe human-editable: headline lines, proof path/checkpoints, CTA, footer URL, media source, media crop/slot, and review checklist.
+- Prefer a browserless HTML/CSS-like layout renderer (for example Satori + Sharp) over hand-positioned SVG text; it gives flexbox-style alignment without requiring Chromium just to render a social card.
+- Keep the recipe human-editable: headline lines, proof path/checkpoints, CTA, footer URL, media source, media crop/slot, layout/theme tokens, and review checklist.
 - Commit the recipe plus rendered SVG/JPG together so future edits are reproducible.
 - Prefer grounded value over hype: show what the post helps the reader do, not inflated claims.
 - Use copy the audience can evaluate: setup path, guardrails, before/after workflow, or a concrete artifact.

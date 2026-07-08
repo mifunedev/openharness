@@ -9,7 +9,7 @@ Resolve the scenario from `$ARGUMENTS`:
 - Source path: prefer explicit `--source`; otherwise extract `@path`, a `.claude/specs/<slug>` folder, `demo.md`, or a Loom URL.
 - Target repo/path: prefer explicit `--target`; if the user says `/worktrees <repo>`, resolve it under the harness worktrees root (`bash .oh/scripts/oh-path worktrees --no-create`) and search `project/*/<repo>` before treating it as a branch worktree.
 - Post slug/date: prefer explicit `--slug`; otherwise derive a lowercase kebab-case slug from the title/subject, ≤6 words. Use UTC date unless target repo conventions require otherwise.
-- Image policy: for Loom/demo.md sources, default to embedding selected screenshots with the exact source image URLs from the raw document. Localize assets only when the target repo or user explicitly requires it.
+- Image policy: for Loom/demo.md sources, preserve source fidelity. Either embed selected screenshots with the exact source image URLs from the raw document, or save local files downloaded from those exact URLs when PR/site rendering would otherwise break.
 - Dry-run: if `--dry-run`, perform steps through the proposed outline/assets plan and stop before writes.
 
 If either source or target cannot be inferred, ask one concise question listing the missing value(s). Do not guess a publication target.
@@ -146,27 +146,39 @@ Style rules:
 - Mention the Loom as the full source when screenshots are dropped for privacy/sensitivity.
 - Differentiate from existing posts; if a related post already covers auth in detail, link it and keep this post focused.
 
-## Step 6 — Preserve source image links or explicitly localize
+## Step 6 — Preserve source fidelity for images
 
-For Loom/demo.md sources, the default is **source-link preservation**:
+For Loom/demo.md sources, every published image must trace to the raw source exactly. Use one of two safe modes:
+
+### Mode A — exact source URLs
+
+Use this when the target renderer reliably displays Loom hotlinks.
 
 1. Embed selected publishable screenshots with the exact URL string found in the raw source file.
 2. Verify every embedded image URL is byte-for-byte present in the source document.
-3. Do not rewrite Loom URLs, strip query strings, or substitute downloaded `/tmp` filenames.
-
-Example:
+3. Do not rewrite Loom URLs or strip query strings.
 
 ```markdown
 ![Alt text](https://loom.com/i/<id>?workflows_screenshot=true)
 ```
 
-Only localize assets when the user or target repo explicitly requires local files. In that case:
+### Mode B — local files downloaded from exact source URLs
+
+Use this when PR previews, the target site, or the user reports Loom hotlinks as broken.
+
+1. Download each selected screenshot from the exact raw URL.
+2. Save it under the target asset directory, for example:
 
 ```bash
 mkdir -p static/img/blog/YYYY-MM-DD-<slug>
+curl -fsSL '<exact-url-from-demo.md>' -o static/img/blog/YYYY-MM-DD-<slug>/<descriptive-name>.jpg
 ```
 
-Reference localized assets with target-site paths, and document why localization was required. Do not commit the temporary `/tmp` inspection cache.
+3. Verify each local file exists and is non-empty.
+4. Reference localized assets with target-site paths.
+5. Document in the PR/body that local files were downloaded from exact source URLs.
+
+Never commit the temporary `/tmp` inspection cache.
 
 ## Step 7 — Verify
 
@@ -183,7 +195,7 @@ Manual final audit:
 
 - Frontmatter parses and matches target conventions.
 - `<!-- truncate -->` exists in the right place when target posts use it.
-- Every embedded image URL is either byte-for-byte present in the source document or, if explicitly localized, resolves to a local target file.
+- Every embedded image is source-faithful: either its URL is byte-for-byte present in the source document, or its local file was downloaded from an exact source URL and resolves in the target repo.
 - No sensitive screenshot survived.
 - All source sections and source images are accounted for in the audit, even if not published.
 - The post states what was corrected or qualified from the raw source where that matters.
@@ -209,6 +221,6 @@ Expected actions:
 3. Audit all source sections and images.
 4. Use Advisor plus the three default delegates.
 5. Write the Docusaurus post under `openharness-web/blog/`.
-6. Embed selected safe screenshots with the exact image URLs from `demo.md` unless localization is explicitly required.
+6. Embed selected safe screenshots with exact `demo.md` URLs or local files downloaded from those exact URLs if Loom hotlinks break.
 7. Run `pnpm run typecheck` and `pnpm run build`.
 8. Report changed files and verification.

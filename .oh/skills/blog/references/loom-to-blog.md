@@ -212,9 +212,10 @@ Visual workflow rules:
 - Do not assume markdown/HTML emphasis will render on social platforms. LinkedIn plain-text posts do not reliably render `**bold**`; if emphasis is important, use platform-supported formatting or Unicode emphasis sparingly and preview before publishing.
 - Keep platforms/accounts separate when formatting semantics differ. Prefer one draft/post per account over a multi-account post with platform overrides when X and LinkedIn copy need different formatting.
 - Do not default to awkward feedback-welcome CTAs. Use practitioner-feedback asks only when the operator explicitly wants comments; otherwise prefer a clear next step.
-- For social captions outside X/Twitter, prefer the platform's most reliable link style and preview before publishing. Keep canonical `https://` URLs in source docs and artifacts.
-- For open-source project posts, include a light GitHub star CTA when appropriate, e.g. `⭐ Repo: <repo-url> — star if useful`.
-- For X/Twitter posts via this flow, treat caption links as unreliable: repeated checks showed URLs disappearing after posting even when protocol-less and not final. Default X captions should contain no URL-like tokens; put the destination in the image/card, use a searchable phrase, or rely on non-X channels for direct links. Example: `Links are on the card/site. Search: <project> demo guide.`
+- For social posts where the destination page has Open Graph/Twitter card metadata, prefer the link-card pattern: include the direct canonical blog URL as the only link and do **not** attach uploaded Post Bridge media. The platform-rendered banner/card should then be clickable.
+- For Docusaurus posts, set frontmatter `image: /img/.../social-promo-card.jpg` and verify the built HTML emits `summary_large_image`, `og:image`, and `twitter:image` for that asset before drafting link-card posts.
+- For open-source project posts, include a light GitHub star CTA when appropriate, but avoid adding a second GitHub URL if the goal is to force the blog URL card. Example: `⭐ Star the repo if useful — the guide links through to GitHub.`
+- For X/Twitter via this flow, do not combine a caption link with uploaded media when the desired outcome is a clickable banner. Use one direct blog URL, no media attachment, and no dangling label before the URL. If the platform still fails to render a card in preview/post-check, fall back to a no-link caption plus visual/search CTA.
 - Publish or schedule at most one post per account per day by default. Treat additional variants as drafts/options unless the operator explicitly asks to exceed that cadence.
 - Avoid generic AI imagery when the post contains real screenshots, diagrams, or code that can prove the workflow.
 

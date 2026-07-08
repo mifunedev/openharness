@@ -9,6 +9,7 @@ Resolve the scenario from `$ARGUMENTS`:
 - Source path: prefer explicit `--source`; otherwise extract `@path`, a `.claude/specs/<slug>` folder, `demo.md`, or a Loom URL.
 - Target repo/path: prefer explicit `--target`; if the user says `/worktrees <repo>`, resolve it under the harness worktrees root (`bash .oh/scripts/oh-path worktrees --no-create`) and search `project/*/<repo>` before treating it as a branch worktree.
 - Post slug/date: prefer explicit `--slug`; otherwise derive a lowercase kebab-case slug from the title/subject, ≤6 words. Use UTC date unless target repo conventions require otherwise.
+- Image policy: for Loom/demo.md sources, default to embedding selected screenshots with the exact source image URLs from the raw document. Localize assets only when the target repo or user explicitly requires it.
 - Dry-run: if `--dry-run`, perform steps through the proposed outline/assets plan and stop before writes.
 
 If either source or target cannot be inferred, ask one concise question listing the missing value(s). Do not guess a publication target.
@@ -49,7 +50,7 @@ Place `<!-- truncate -->` after the intro hook.
 
 1. Read the raw source file(s) completely enough to capture every section, timestamp, link, command, and screenshot reference.
 2. Extract all Markdown images and remote screenshot URLs.
-3. Download remote screenshots into a temporary cache such as `/tmp/<slug>-images/` for inspection:
+3. Download remote screenshots into a temporary cache such as `/tmp/<slug>-images/` for inspection only:
 
 ```bash
 mkdir -p /tmp/<slug>-images
@@ -145,32 +146,27 @@ Style rules:
 - Mention the Loom as the full source when screenshots are dropped for privacy/sensitivity.
 - Differentiate from existing posts; if a related post already covers auth in detail, link it and keep this post focused.
 
-## Step 6 — Localize assets
+## Step 6 — Preserve source image links or explicitly localize
 
-For publishable screenshots:
+For Loom/demo.md sources, the default is **source-link preservation**:
 
-1. Create the target asset directory, for example:
+1. Embed selected publishable screenshots with the exact URL string found in the raw source file.
+2. Verify every embedded image URL is byte-for-byte present in the source document.
+3. Do not rewrite Loom URLs, strip query strings, or substitute downloaded `/tmp` filenames.
+
+Example:
+
+```markdown
+![Alt text](https://loom.com/i/<id>?workflows_screenshot=true)
+```
+
+Only localize assets when the user or target repo explicitly requires local files. In that case:
 
 ```bash
 mkdir -p static/img/blog/YYYY-MM-DD-<slug>
 ```
 
-2. Copy or export selected images with descriptive names:
-
-```text
-install-prereqs.jpg
-sandbox-options.jpg
-vscode-attach.jpg
-first-agent-pr.jpg
-```
-
-3. Reference them with absolute site paths:
-
-```markdown
-![Alt text](/img/blog/YYYY-MM-DD-<slug>/install-prereqs.jpg)
-```
-
-Prefer local assets over hotlinking Loom screenshot URLs. Do not commit the temporary `/tmp` cache.
+Reference localized assets with target-site paths, and document why localization was required. Do not commit the temporary `/tmp` inspection cache.
 
 ## Step 7 — Verify
 
@@ -187,7 +183,7 @@ Manual final audit:
 
 - Frontmatter parses and matches target conventions.
 - `<!-- truncate -->` exists in the right place when target posts use it.
-- All image links resolve to local files.
+- Every embedded image URL is either byte-for-byte present in the source document or, if explicitly localized, resolves to a local target file.
 - No sensitive screenshot survived.
 - All source sections and source images are accounted for in the audit, even if not published.
 - The post states what was corrected or qualified from the raw source where that matters.
@@ -213,6 +209,6 @@ Expected actions:
 3. Audit all source sections and images.
 4. Use Advisor plus the three default delegates.
 5. Write the Docusaurus post under `openharness-web/blog/`.
-6. Localize safe screenshots under `openharness-web/static/img/blog/<date-slug>/`.
+6. Embed selected safe screenshots with the exact image URLs from `demo.md` unless localization is explicitly required.
 7. Run `pnpm run typecheck` and `pnpm run build`.
 8. Report changed files and verification.

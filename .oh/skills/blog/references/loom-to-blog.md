@@ -208,7 +208,10 @@ Visual workflow rules:
 - Commit the recipe plus rendered SVG/JPG together so future edits are reproducible.
 - Prefer grounded value over hype: show what the post helps the reader do, not inflated claims.
 - Use copy the audience can evaluate: setup path, guardrails, before/after workflow, or a concrete artifact.
-- Include a feedback CTA when the goal is learning from practitioners, e.g. "Feedback welcome from agent builders and operators."
+- Use 1-2 tasteful emojis to add structure/readability when they fit the brand; an emoji as the first character can work well when it is not gimmicky.
+- Use LinkedIn markdown-style emphasis sparingly (`**bold**`, `*italic*`) to clarify hierarchy, not to shout.
+- Do not default to awkward feedback-welcome CTAs. Use practitioner-feedback asks only when the operator explicitly wants comments; otherwise prefer a clear next step.
+- For open-source project posts, include a light GitHub star CTA when appropriate, e.g. `⭐ Star: <repo-url>`.
 - Avoid generic AI imagery when the post contains real screenshots, diagrams, or code that can prove the workflow.
 
 Do not hardcode personal profile URLs in the skill. Use profile URLs provided in `$ARGUMENTS` or in the user request. If the user asks to actually publish/schedule, stop and hand off to `/post-bridge` with a confirmation gate.

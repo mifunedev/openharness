@@ -212,9 +212,9 @@ Visual workflow rules:
 - Do not assume markdown/HTML emphasis will render on social platforms. LinkedIn plain-text posts do not reliably render `**bold**`; if emphasis is important, use platform-supported formatting or Unicode emphasis sparingly and preview before publishing.
 - Keep platforms/accounts separate when formatting semantics differ. Prefer one draft/post per account over a multi-account post with platform overrides when X and LinkedIn copy need different formatting.
 - Do not default to awkward feedback-welcome CTAs. Use practitioner-feedback asks only when the operator explicitly wants comments; otherwise prefer a clear next step.
-- For social captions, prefer protocol-less links when the platform auto-links them cleanly; `oh.mifune.dev/...` and `github.com/...` often render better than full `https://...` URLs in post text. Keep canonical `https://` URLs in source docs and artifacts outside the post copy.
-- For open-source project posts, include a light GitHub star CTA when appropriate, e.g. `⭐ Repo: github.com/<owner>/<repo> — star if useful`.
-- For X/Twitter, do not leave a URL as the final visible token/line. X can suppress trailing URLs from the rendered post, leaving labels like `Guide:` or `Star:` blank. Put visible text after each URL, especially the final one, for example `Guide: oh.mifune.dev/... (setup runbook)` and `⭐ Repo: github.com/<owner>/<repo> — star if useful`.
+- For social captions outside X/Twitter, prefer the platform's most reliable link style and preview before publishing. Keep canonical `https://` URLs in source docs and artifacts.
+- For open-source project posts, include a light GitHub star CTA when appropriate, e.g. `⭐ Repo: <repo-url> — star if useful`.
+- For X/Twitter posts via this flow, treat caption links as unreliable: repeated checks showed URLs disappearing after posting even when protocol-less and not final. Default X captions should contain no URL-like tokens; put the destination in the image/card, use a searchable phrase, or rely on non-X channels for direct links. Example: `Links are on the card/site. Search: <project> demo guide.`
 - Publish or schedule at most one post per account per day by default. Treat additional variants as drafts/options unless the operator explicitly asks to exceed that cadence.
 - Avoid generic AI imagery when the post contains real screenshots, diagrams, or code that can prove the workflow.
 

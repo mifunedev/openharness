@@ -13,6 +13,7 @@ The sandbox is a Docker container running on your host (or a remote server). Get
 | **A — Terminal** | `make shell` from the host | None — plain shell only |
 | **B — VSCode Attach (local)** | Dev Containers extension → "Attach to Running Container" → `openharness` | Automatic while attached |
 | **C — VSCode Remote-SSH + Attach (remote host)** | SSH into your host in VSCode, then Attach to Container | Automatic while attached |
+| **D — Direct SSH (opt-in)** | `ssh -p 2222 sandbox@localhost` after enabling the sshd overlay | None — SSH shell only (tunnel/proxy separately) |
 
 ### Option A — Terminal
 
@@ -40,6 +41,21 @@ If the sandbox runs on a remote server:
 2. From that SSH window, follow Option B to attach to the `openharness` container.
 
 Port forwarding works identically — VSCode tunnels the container ports through the SSH connection to your laptop `localhost`. No manual `ssh -L` required.
+
+### Option D — Direct SSH (opt-in)
+
+The base container runs no SSH daemon. Enabling the opt-in `sshd` overlay
+publishes a loopback SSH port so you can connect straight in:
+
+```bash
+ssh -p 2222 sandbox@localhost
+```
+
+Auth is public-key by default and the host bind is loopback-only. This is the
+foundation for routing multiple tenants' containers behind one nginx proxy on a
+single VM. Full setup — enabling the overlay, adding your key, the port-collision
+preflight, and the nginx multi-tenant recipe — is in
+[Integrations → SSH](/docs/integrations/sshd).
 
 ## Why VSCode Attach is the recommended path
 
@@ -78,6 +94,10 @@ This is NOT the default; you opt in explicitly. Be aware that binding to `0.0.0.
 **2. External tunnel**
 
 The harness ships no built-in tunnel tool. For public access, bring your own: `cloudflared`, `ngrok`, `tailscale funnel`, or an nginx/Caddy reverse proxy. Start the tunnel inside the sandbox in a named tmux session (see [tmux conventions](#tmux-session-naming)).
+
+**3. Direct SSH + nginx multi-tenant routing**
+
+To SSH straight into the container — and to route several tenants' containers through one nginx reverse proxy on a single VM — enable the opt-in `sshd` overlay. See [Integrations → SSH](/docs/integrations/sshd).
 
 ## tmux session naming
 

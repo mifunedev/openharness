@@ -612,6 +612,7 @@ describe("help surfaces", () => {
     expect(text).toContain("oh sandbox");
     expect(text).toContain("oh shell [container]");
     expect(text).toContain("oh gateway");
+    expect(text).toContain("oh cloud <args...>");
   });
 
   it("per-verb --help output documents each verb's contract", () => {

@@ -26,6 +26,9 @@
 
 ---
 
+> 📖 **Read the docs → https://oh.mifune.dev**
+> Rendered, searchable docs, guides, and blog. New here? Start with the [Start Here hub](.oh/docs/README.md).
+
 ## 📦 Install
 
 Open Harness runs one project in one Docker sandbox. The recommended path is
@@ -61,8 +64,9 @@ Run these **inside the sandbox** (`make shell`). Per-step depth + troubleshootin
 [quickstart → End-to-end setup walkthrough](.oh/docs/quickstart.md#end-to-end-setup-walkthrough).
 
 ```bash
-# GitHub auth over SSH — pick SSH, generate a key, paste a token:
-gh auth login && gh auth setup-git
+# GitHub auth over SSH — pick SSH, generate a key, paste a token
+# (SSH remotes use the key directly, so `gh auth setup-git` isn't needed):
+gh auth login
 
 # Create your own PRIVATE repo, point origin at it, add upstream — all over SSH:
 gh repo create <your-user>/openharness --private
@@ -247,10 +251,11 @@ make shell
 
 ## 📚 Where to go next
 
+- **[Read the docs → oh.mifune.dev](https://oh.mifune.dev)** — the rendered, searchable documentation site (start here)
 - [Docs index](.oh/docs/README.md) — GitHub-readable docs kept with the core repo
 - [Quickstart](.oh/docs/quickstart.md) — full step-by-step
 - [DeepWiki](https://deepwiki.com/mifunedev/openharness) — generated codebase map
-- [Docs site source](https://github.com/mifunedev/openharness-web) — migrated Docusaurus site and blog archive
+- [Docs site source](https://github.com/mifunedev/openharness-web) — Docusaurus source repo that builds oh.mifune.dev (contribute doc edits here)
 
 ## 🧹 Cleanup
 
@@ -268,4 +273,4 @@ MIT.
 
 ---
 
-[Docs index](.oh/docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)
+[Read the docs](https://oh.mifune.dev) · [Docs index](.oh/docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)

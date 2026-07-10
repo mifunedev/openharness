@@ -111,7 +111,7 @@ Use `/recap` when re-entering a long Pi session without rereading the transcript
 
 `pi-recap` waits five idle minutes after each agent response and generates one automatic recap if you stay away. On resume, it shows the saved recap when current or regenerates it when stale/missing. The visible recap clears when you send a normal non-`/recap` message.
 
-Recap model selection is user-level state, not repository state. `/recap config` writes the user's selected model outside LLM context; the same setting can be edited manually at `~/.config/pi/extensions/pi-recap.json`. The upstream default is `openai-codex/gpt-5.4-mini`.
+Recap model selection is user-level state, not repository state. `/recap config` writes the user's selected model outside LLM context; the same setting can be edited manually at `~/.config/pi/extensions/pi-recap.json`. The upstream default is `openai-codex/gpt-5.6-luna`.
 
 ## Codex usage status
 

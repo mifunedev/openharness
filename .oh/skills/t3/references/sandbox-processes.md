@@ -63,6 +63,33 @@ sessions into one is not.
 - No need for `nohup`, `systemd-user`, or ad-hoc backgrounding inside the
   sandbox — tmux is the single convention.
 
+## Gateway client sessions (`client-slack-*`) — why tmux, not a service
+
+The Slack gateway (`.oh/scripts/gateway.sh`) is the load-bearing case for the
+tmux rule, and the reason it is **not** a separate Docker Compose service or an
+in-container `supervisord`/`systemd` unit:
+
+- **Interactive pty is required.** `pi` runs interactively on the pane's real TTY
+  so its UI extensions render in the TUI (off a TTY it floods stdout with
+  `extension_ui_request` JSON and exits at idle). `/msg-bridge`, `/trusted`,
+  `/channels` are typed **into** that pane, and challenge-code auth is **read off**
+  it (`tmux attach -r` / `capture-pane`). A detached service/supervisor process
+  has no attachable, driveable pane — the exact affordance tmux provides.
+- **The supervisor heals *live-but-bad* state, which `restart:` cannot see.**
+  `.devcontainer/client-slack-supervise.sh` restarts on the `ctx is stale`
+  signature (a process that keeps running while silently not serving), clears the
+  single-instance lock, and co-loads the retry-recovery extension. Docker/systemd
+  restart only reacts to process **exit**, so a service would still carry this
+  bash supervisor and gain nothing.
+
+The supervisor also stamps non-secret health state under
+`~/.pi/gateway/<backend>.{state,heartbeat,stale}`, which `gateway status` reads to
+report **healthy / recovering / disconnected** rather than mere session existence.
+The `hermes` backend runs under the same supervisor in a **generic** crash-restart
+mode (no pi-specific stale-ctx logic), giving it the same restart floor. See the
+decision analysis for the full trade-off; do not re-litigate tmux-vs-service
+without new constraints (e.g. a backend that needs inbound networking).
+
 ## Starting a Session
 
 Inside the sandbox:

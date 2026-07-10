@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { runInit, type InitIO, type InitOptions } from "./commands/init.js";
 import { runUpdate } from "./commands/update.js";
+import { runCloud } from "./commands/cloud.js";
 import {
   runGateway,
   runSandbox,
@@ -81,6 +82,7 @@ Usage:
   oh sandbox                Provision and start the sandbox (docker compose up)
   oh shell [container]      Open a zsh shell in the running sandbox container
   oh gateway <args...>      Manage a messaging client session (pi|hermes)
+  oh cloud <args...>        Manage OpenHarness Cloud nodes
   oh --version              Print version
   oh --help                 Show this help
 
@@ -777,6 +779,13 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     return runShell({ container: parsed.args.container }, lifecycleIo());
+  }
+
+  if (first === "cloud") {
+    return await runCloud(argv.slice(1), {
+      stdout: (s) => process.stdout.write(s),
+      stderr: (s) => process.stderr.write(s),
+    });
   }
 
   if (first === "gateway") {

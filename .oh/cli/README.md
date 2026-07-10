@@ -60,11 +60,30 @@ oh shell         # open a zsh shell in the running container
 | `oh sandbox` | Provision and start the sandbox (`docker compose up -d --build`). |
 | `oh shell [container]` | Open a `zsh` shell in the running sandbox container. |
 | `oh gateway <args…>` | Manage a messaging client session (Slack bridge for `pi`/`hermes`). |
+| `oh cloud <args…>` | Configure credentials and manage OpenHarness Cloud SSH keys and nodes. |
 | `oh --version` | Print the CLI version. |
 | `oh --help` | Show help; every subcommand also accepts `--help`. |
 
 `oh init` and `oh update` fetch their payload on demand — with no local source they shallow-clone
 the public OpenHarness repo into a temp dir and remove it after the run (`--from-remote`, `--ref <ref>`).
+
+## OpenHarness Cloud
+
+Configure the Cloud API once, then use `oh cloud` instead of hand-writing authenticated HTTP
+requests:
+
+```bash
+oh cloud config  # securely prompts for the current provisioner key
+oh cloud ssh-keys create --name laptop --public-key-file ~/.ssh/openharness_node.pub
+oh cloud nodes create --name demo --ssh-key-id <ssh-key-id>
+oh cloud nodes watch <node-id>
+```
+
+Until OpenHarness Cloud issues user API tokens, `oh cloud config` stores the user-provided
+provisioner key at `~/.config/openharness/cloud.json` with file mode `0600`. The key is never
+printed. `OH_CLOUD_CONFIG` overrides the file path; `OH_CLOUD_API_URL` and
+`OH_PROVISION_KEY` provide non-persistent overrides for automation. Run `oh cloud --help` for
+the complete SSH-key and node lifecycle command set.
 
 ## Documentation
 

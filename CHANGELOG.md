@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Add `oh cloud` commands for securely storing the current provisioner credential and managing OpenHarness Cloud SSH keys and node lifecycles without hand-written API requests ([#625](https://github.com/mifunedev/openharness/issues/625)).
 - Add an opt-in sshd compose overlay with loopback binding, public-key-first auth, host-port collision checks, and direct-SSH/nginx multi-tenant docs ([#599](https://github.com/mifunedev/openharness/pull/599)).
 ### Changed
 ### Fixed

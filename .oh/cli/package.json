@@ -1,7 +1,7 @@
 {
   "name": "@mifune/openharness",
-  "version": "0.1.1",
-  "description": "Open Harness CLI — in-sandbox configuration wizards.",
+  "version": "0.2.0",
+  "description": "Open Harness CLI — scaffold sandboxes and manage OpenHarness Cloud nodes.",
   "license": "MIT",
   "homepage": "https://github.com/mifunedev/openharness#readme",
   "repository": {

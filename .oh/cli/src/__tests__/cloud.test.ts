@@ -113,9 +113,10 @@ describe("cloud API commands", () => {
     ];
 
     for (const item of cases) {
+      const fixture = tempConfig();
       let call: { url: string; init: RequestInit } | undefined;
       const console = io({
-        env: { OH_PROVISION_KEY: "env-key" },
+        env: { ...fixture.env, OH_PROVISION_KEY: "env-key" },
         fetch: (async (url: string | URL | Request, init?: RequestInit) => {
           call = { url: String(url), init: init ?? {} };
           return response({ ok: true });
@@ -128,9 +129,10 @@ describe("cloud API commands", () => {
   });
 
   it("reads and trims an SSH public key file", async () => {
+    const fixture = tempConfig();
     let body: unknown;
     const console = io({
-      env: { PROVISION_KEY: "key" },
+      env: { ...fixture.env, PROVISION_KEY: "key" },
       readFile: async () => "ssh-ed25519 AAAA user@example\n",
       fetch: (async (_url: string | URL | Request, init?: RequestInit) => {
         body = JSON.parse(String(init?.body));
@@ -148,6 +150,7 @@ describe("cloud API commands", () => {
   });
 
   it("watches status changes and stops at the requested terminal status", async () => {
+    const fixture = tempConfig();
     const nodes = [
       { id: "node-1", status: "queued" },
       { id: "node-1", status: "queued" },
@@ -156,7 +159,7 @@ describe("cloud API commands", () => {
     ];
     const sleeps: number[] = [];
     const console = io({
-      env: { OH_PROVISION_KEY: "key" },
+      env: { ...fixture.env, OH_PROVISION_KEY: "key" },
       sleep: async (milliseconds) => { sleeps.push(milliseconds); },
       fetch: (async () => response(nodes.shift())) as typeof fetch,
     });
@@ -181,8 +184,9 @@ describe("cloud API commands", () => {
       message: "API request failed with 401 (UNAUTHORIZED): Unauthorized",
     });
 
+    const fixture = tempConfig();
     const console = io({
-      env: { OH_PROVISION_KEY: "wrong" },
+      env: { ...fixture.env, OH_PROVISION_KEY: "wrong" },
       fetch: (async () => response({ error: "Unauthorized", code: "UNAUTHORIZED" }, 401)) as typeof fetch,
     });
     expect(await runCloud(["nodes", "list"], console)).toBe(1);

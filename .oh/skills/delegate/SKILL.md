@@ -74,7 +74,7 @@ Analyze the plan deeply and produce a structured task list. For each task, deter
 | **Description** | What the worker agent needs to do (2-3 sentences, include file paths) |
 | **Depends On** | Task IDs this requires first, or "none" |
 | **Files** | Key files the worker will read or modify |
-| **Model** | haiku (config/docs) / sonnet (standard, default) / opus (only multi-file architecture synthesis) |
+| **Model** | Agent tier: `luna` (simple/high-throughput or strict-latency) / `terra` (balanced standard, default) / `sol` (hardest quality-first coding/reasoning or architecture synthesis). Compatibility fallbacks: `haiku` / `sonnet` / `opus`, respectively. |
 | **Acceptance** | How to verify the task is done (objectively checkable) |
 
 **Decomposition rules:**
@@ -125,7 +125,8 @@ Launch N `Agent` tool calls **in a single message** for parallel execution. Each
 - Instruction: report what was done, what files changed, whether acceptance criteria are met
 
 Worker configuration:
-- **Model**: as specified in the task decomposition (haiku/sonnet/opus)
+- **Model**: pass the task's exact tier unchanged to the Agent call's `model`. Use `luna` for simple/high-throughput or strict-latency work, `terra` for balanced standard work (default), and `sol` for the hardest quality-first coding/reasoning or architecture synthesis. Tier names are intentionally version-agnostic. If those tiers are unavailable, use the compatible `haiku` / `sonnet` / `opus` fallbacks, respectively.
+- **Thinking**: omit/inherit for routine work; raise only when task complexity warrants it, capped at `xhigh`. Never pass `max` to the Agent tool.
 - **run_in_background**: true (for waves with 2+ tasks)
 - **subagent_type** (read-only trap): the `implementer`, `pm`, and `critic` sub-agent types are **read-only** (`tools: Read, Glob, Grep, Bash` — no `Write`/`Edit`) and will **silently make zero file changes** if a worker is told to create or edit files. For any worker that must `Write`/`Edit` files, set `subagent_type: general-purpose` (or `claude`) in the `Agent` tool call; reserve `implementer`/`pm`/`critic` for analysis-only workers.
 
@@ -234,7 +235,7 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 | Max concurrent agents per wave | 5 (split larger waves) |
 | Failure handling | Mark dependent tasks BLOCKED, continue independent ones |
 | Context passing | Prior wave summaries, not full output |
-| Model selection | haiku: config/docs, sonnet: standard (default), opus: synthesis only |
+| Model selection | `luna`: simple/high-throughput or strict-latency; `terra`: balanced standard (default); `sol`: hardest quality-first coding/reasoning or architecture synthesis. Tier names are version-agnostic. Fallbacks: `haiku` / `sonnet` / `opus`, respectively. Agent thinking is capped at `xhigh`. |
 
 ### Key Resources
 

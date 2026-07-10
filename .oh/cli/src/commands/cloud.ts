@@ -122,7 +122,20 @@ function formatJson(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-function formatApiFailure(status: number, payload: unknown): string {
+function bodyPreview(body: string): string {
+  const compact = body.replace(/\s+/g, " ").trim();
+  return compact.length > 180 ? `${compact.slice(0, 177)}...` : compact;
+}
+
+function responseKind(contentType: string | null): string {
+  return contentType?.split(";", 1)[0]?.trim() || "non-JSON content";
+}
+
+function formatApiFailure(
+  status: number,
+  payload: unknown,
+  contentType: string | null,
+): string {
   if (payload && typeof payload === "object") {
     const record = payload as Record<string, unknown>;
     const message = record.error ?? record.message;
@@ -132,18 +145,25 @@ function formatApiFailure(status: number, payload: unknown): string {
     }
   }
   if (typeof payload === "string" && payload.length > 0) {
-    return `API request failed with ${status}: ${payload}`;
+    return `API request failed with ${status}: server returned ${responseKind(contentType)} instead of JSON (${bodyPreview(payload)})`;
   }
   return `API request failed with ${status}`;
 }
 
-async function parseResponse(response: Response): Promise<unknown> {
+interface ParsedResponse {
+  payload: unknown;
+  isJson: boolean;
+  contentType: string | null;
+}
+
+async function parseResponse(response: Response): Promise<ParsedResponse> {
   const text = await response.text();
-  if (!text) return null;
+  const contentType = response.headers.get("content-type");
+  if (!text) return { payload: null, isJson: true, contentType };
   try {
-    return JSON.parse(text) as unknown;
+    return { payload: JSON.parse(text) as unknown, isJson: true, contentType };
   } catch {
-    return text;
+    return { payload: text, isJson: false, contentType };
   }
 }
 
@@ -181,14 +201,23 @@ export function createCloudApiClient(options: {
       throw new CloudCliError(`could not reach ${options.apiUrl}: ${detail}`);
     }
 
-    const payload = await parseResponse(response);
+    const parsed = await parseResponse(response);
     if (!response.ok) {
-      throw new CloudCliError(formatApiFailure(response.status, payload), {
-        status: response.status,
-        payload,
-      });
+      throw new CloudCliError(
+        formatApiFailure(response.status, parsed.payload, parsed.contentType),
+        {
+          status: response.status,
+          payload: parsed.payload,
+        },
+      );
     }
-    return payload;
+    if (!parsed.isJson) {
+      throw new CloudCliError(
+        `API returned ${response.status} ${responseKind(parsed.contentType)}; expected JSON (${bodyPreview(parsed.payload as string)})`,
+        { status: response.status, payload: parsed.payload },
+      );
+    }
+    return parsed.payload;
   };
 }
 

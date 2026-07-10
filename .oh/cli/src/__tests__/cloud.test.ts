@@ -195,6 +195,34 @@ describe("cloud API commands", () => {
     );
   });
 
+  it("summarizes HTML responses instead of dumping a full Next.js error page", async () => {
+    const html = `<!DOCTYPE html><html><body>${"server-details-".repeat(100)}</body></html>`;
+    const htmlResponse = (status: number): Response =>
+      new Response(html, { status, headers: { "content-type": "text/html; charset=utf-8" } });
+
+    const failedRequest = createCloudApiClient({
+      apiUrl: "http://127.0.0.1:3000",
+      provisionKey: "key",
+      fetch: (async () => htmlResponse(500)) as typeof fetch,
+    });
+    const failure = await failedRequest("GET", "/api/nodes").catch((error: unknown) => error);
+    expect(failure).toMatchObject({
+      status: 500,
+      message: expect.stringContaining("server returned text/html instead of JSON"),
+    });
+    expect((failure as Error).message.length).toBeLessThan(300);
+
+    const successfulHtmlRequest = createCloudApiClient({
+      apiUrl: "http://127.0.0.1:3000",
+      provisionKey: "key",
+      fetch: (async () => htmlResponse(200)) as typeof fetch,
+    });
+    await expect(successfulHtmlRequest("GET", "/api/nodes")).rejects.toMatchObject({
+      status: 200,
+      message: expect.stringContaining("expected JSON"),
+    });
+  });
+
   it("prints help without requiring a stored credential", async () => {
     const console = io({ env: {} });
     expect(await runCloud(["--help"], console)).toBe(0);

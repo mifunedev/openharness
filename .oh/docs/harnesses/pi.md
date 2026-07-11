@@ -48,6 +48,13 @@ Open Harness loads these project-local Pi packages from `.pi/settings.json`:
 
 Pi installs missing project packages automatically on startup after the project is trusted. Open Harness also auto-loads project-local extensions from `.pi/extensions/`.
 
+## Optional Langfuse observability
+
+[Langfuse](../integrations/langfuse.md) is an opt-in Pi-only tracing package, not
+a default `.pi/settings.json` package. It can capture prompts, outputs, tool I/O,
+the system prompt, and cwd; review the package, choose a narrow privacy preset,
+and configure its external Langfuse deployment before installing it.
+
 ### Codex stale-response recovery
 
 The installed `@earendil-works/pi-ai` Codex Responses provider can reuse WebSocket cached continuation state by sending `previous_response_id`. If the upstream Codex backend forgets that response id, it returns `previous_response_not_found`; Pi clears the stale continuation but the failed user turn would otherwise be lost. Open Harness keeps a small auto-loaded `.pi/extensions/codex-stale-response-retry.ts` extension that re-injects non-Slack failed turns once via `sendUserMessage(..., { deliverAs: "followUp" })`, causing the next request to start from fresh/full context. Slack-prefixed turns remain owned by the dedicated `.pi/bridge-recovery/` extension that is co-loaded with `pi-messenger-bridge`.

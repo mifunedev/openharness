@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Document optional Pi-to-Langfuse observability, configuration precedence, privacy controls, and sandbox network boundaries ([#480](https://github.com/mifunedev/openharness/issues/480)).
 ### Changed
 ### Fixed
 ### Removed

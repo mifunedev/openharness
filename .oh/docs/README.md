@@ -55,6 +55,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 
 - [GitHub](integrations/github.md)
 - [Slack](integrations/slack.md)
+- [Langfuse](integrations/langfuse.md)
 - [DebugMCP](integrations/debugmcp.md)
 - [Pi autoresearch](integrations/pi-autoresearch.md)
 - [Pi dynamic workflows](integrations/pi-dynamic-workflows.md)

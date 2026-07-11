@@ -210,6 +210,7 @@ initialPrompt: "..."         # Optional: auto-submitted first user turn when run
    - **`sonnet`**: default executor — code generation, reasoning, architecture decisions
    - **`haiku`**: fast searches, simple analysis, quick lookups
    - Resolution order: `CLAUDE_CODE_SUBAGENT_MODEL` env var > per-invocation `model` arg > frontmatter > main conversation
+   - For newly released coding models, consult the [model-capability guidance](../docs/model-capability.md): DeepSWE is the current external gauge, but defaults still require availability, cost, latency/tool compatibility, and harness-specific evaluation.
 
    **Advisor Strategy (direct API consumers only)**:
    When building agents that make direct Anthropic API calls (e.g., Slack bot),

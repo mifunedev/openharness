@@ -9,6 +9,9 @@ well the harness actually produced it. A rising suite score is evidence the loop
 The originating rationale is the **objective anchor**: harness capability is *what the
 harness can DO, not what it HAS*. This instrument is the *Capability benchmark* — the
 progress ceiling — consumed by the `/benchmark` verdict skill against the counterfactual.
+It is distinct from [DeepSWE, the current external reference used when gauging a
+newly released coding model](../../docs/model-capability.md); neither instrument
+substitutes for the other.
 
 ## Ceiling vs. floor
 

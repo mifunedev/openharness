@@ -62,6 +62,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 
 ## Reference
 
+- [Gauging coding-model capability](model-capability.md)
 - [Security considerations](security-considerations.md)
 - [Repair-operator registry](repair-operator-registry.md)
 - [Artifact-contract schema](artifact-contract-schema.md)

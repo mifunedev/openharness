@@ -10,6 +10,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 ### Changed
+- Document DeepSWE as the current external gauge for newly released coding-model capability and distinguish it from Open Harness's internal evaluation layers ([#633](https://github.com/mifunedev/openharness/issues/633)).
 ### Fixed
 ### Removed
 ### Deprecated

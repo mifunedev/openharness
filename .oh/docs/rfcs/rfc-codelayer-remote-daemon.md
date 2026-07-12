@@ -35,6 +35,8 @@ Ralph accepts `--harness=codelayer`, `--harness codelayer`, or `RALPH_HARNESS=co
 
 ## Acceptance evidence
 
+Final alignment artifacts: [issue #635](https://github.com/mifunedev/openharness/issues/635), [core PR #636](https://github.com/mifunedev/openharness/pull/636), and [openharness-web PR #21](https://github.com/mifunedev/openharness-web/pull/21). These links close the accepted local coding-harness alignment only; they do not accept the remote-daemon appendix.
+
 On 2026-07-12, `.oh/scripts/codelayer-image-smoke.sh` built enabled and default images through build-only Compose and ran uniquely named containers on an internal no-egress Docker network. Exact local identifiers were:
 
 ```text

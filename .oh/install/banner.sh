@@ -176,9 +176,12 @@ if command -v hermes >/dev/null 2>&1; then
 fi
 
 # codelayer — local executable health only. This never infers provider
-# authentication or usability from INSTALL_CODELAYER.
+# authentication or usability from INSTALL_CODELAYER. banner.sh is sourced from
+# .bashrc, so $0 names the shell; resolve this helper from the sourced file.
+_oh_banner_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=.oh/install/codelayer-status.sh
-. "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/codelayer-status.sh"
+. "$_oh_banner_dir/codelayer-status.sh"
+unset _oh_banner_dir
 
 # oh CLI — verify the bind-mounted package built and symlinked
 oh_status="$status_x"

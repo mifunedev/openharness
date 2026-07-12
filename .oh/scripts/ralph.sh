@@ -493,7 +493,11 @@ if ! command -v tmux >/dev/null 2>&1; then
   REPO_ROOT="$REPO_ROOT" exec bash "$SCRIPT_PATH" --loop --harness="$HARNESS" "$TASKDESC"
 fi
 
-LAUNCH_CMD="REPO_ROOT=$(printf %q "$REPO_ROOT") bash $(printf %q "$SCRIPT_PATH") --loop --harness=$(printf %q "$HARNESS") $(printf %q "$TASKDESC") 2>&1 | tee $(printf %q "/tmp/ralph-$TASKDESC.log")"
+# tmux servers retain their own environment and may predate this invocation.
+# Carry only the two CodeLayer adapter controls into the pane command; do not
+# depend on tmux update-environment, forward the caller's unrelated environment,
+# or perform dynamic shell reconstruction.
+LAUNCH_CMD="REPO_ROOT=$(printf %q "$REPO_ROOT") RALPH_CODELAYER_PROVIDER=$(printf %q "${RALPH_CODELAYER_PROVIDER:-}") RALPH_CODELAYER_FLAGS=$(printf %q "${RALPH_CODELAYER_FLAGS:-}") bash $(printf %q "$SCRIPT_PATH") --loop --harness=$(printf %q "$HARNESS") $(printf %q "$TASKDESC") 2>&1 | tee $(printf %q "/tmp/ralph-$TASKDESC.log")"
 tmux new-session -d -s "$TASKDESC" "$LAUNCH_CMD"
 
 echo "✓ Launched tmux session: $TASKDESC"

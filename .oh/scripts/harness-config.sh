@@ -109,6 +109,11 @@ function clean_value(s) {
     return strip_quotes(s)
 }
 
+function config_error(message) {
+    print "harness-config.sh: " message > "/dev/stderr"
+    exit 2
+}
+
 {
     # Skip full-line comments (first non-space char is #) and blank lines.
     if ($0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/) next
@@ -148,15 +153,19 @@ function clean_value(s) {
         dotkey = section "." key
         # Empty value (or comment-only) after the colon marks the start of a list.
         if (val == "" || val ~ /^[[:space:]]*(#.*)?$/) {
+            if (dotkey == "install.codelayer")
+                config_error("install.codelayer must be exactly true or false")
             in_list  = 1
             list_key = dotkey
             next
         }
         val = clean_value(val)
         if (val == "") next
-        # CodeLayer is an evidence-gated exact boolean: malformed values stay
-        # inert rather than leaking a truthy-looking build argument.
-        if (dotkey == "install.codelayer" && val != "true" && val != "false") next
+        # CodeLayer is an evidence-gated exact boolean. Abort deterministically
+        # on malformed input so a legacy INSTALL_CODELAYER=true env file can
+        # never survive as an accidental enablement.
+        if (dotkey == "install.codelayer" && val != "true" && val != "false")
+            config_error("install.codelayer must be exactly true or false (got \"" val "\")")
         if (mode == "env" && (dotkey in envmap))
             print envmap[dotkey] "=" val
         else if (mode == "get" && dotkey == filter_key)

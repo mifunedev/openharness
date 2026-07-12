@@ -1,5 +1,6 @@
 #!/bin/sh
 # Source this file from banner.sh. Installation is not authentication.
+# shellcheck disable=SC2034,SC2154 # assigns banner variables; status markers are defined by banner.sh
 codelayer_status="$status_x"
 codelayer_detail="not installed — set install.codelayer: true (or INSTALL_CODELAYER=true) and rebuild"
 if command -v codelayer >/dev/null 2>&1; then

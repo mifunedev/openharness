@@ -63,7 +63,7 @@ describe("harness-config.sh env mode", () => {
     expect(stdout.trim()).toBe("");
   });
 
-  it("maps explicit CodeLayer booleans and keeps absent/malformed values inert", () => {
+  it("maps explicit CodeLayer booleans, keeps absence inert, and rejects malformed values", () => {
     const enabled = fixture("install:\n  codelayer: true\n");
     expect(run(["env", enabled]).stdout.trim()).toBe("INSTALL_CODELAYER=true");
     const disabled = fixture("install:\n  codelayer: false\n");
@@ -71,9 +71,15 @@ describe("harness-config.sh env mode", () => {
     const absent = fixture("install:\n  hermes: false\n");
     expect(run(["env", absent]).stdout).not.toContain("INSTALL_CODELAYER");
     const malformed = fixture("install:\n  codelayer: banana\n");
-    expect(run(["env", malformed]).stdout.trim()).toBe("");
+    const malformedResult = run(["env", malformed]);
+    expect(malformedResult.status).toBe(2);
+    expect(malformedResult.stdout).toBe("");
+    expect(malformedResult.stderr).toContain('install.codelayer must be exactly true or false (got "banana")');
     const nested = fixture("install:\n  codelayer:\n    nested: true\n");
-    expect(run(["env", nested]).stdout.trim()).toBe("");
+    const nestedResult = run(["env", nested]);
+    expect(nestedResult.status).toBe(2);
+    expect(nestedResult.stdout).toBe("");
+    expect(nestedResult.stderr).toContain("install.codelayer must be exactly true or false");
   });
 
   it("maps install.opencode: true → INSTALL_OPENCODE=true", () => {

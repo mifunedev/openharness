@@ -20,6 +20,7 @@ confidence: confirmed
 - `.oh/scripts/ralph.sh:246-301` — safe explicit adapter and completion authority.
 - `.oh/scripts/codelayer-image-smoke.sh:1-92` — build-only enabled/default no-egress proof and cleanup.
 - `.oh/docs/rfcs/rfc-codelayer-remote-daemon.md` — bounded acceptance and Draft daemon appendix.
+- [Issue #635](https://github.com/mifunedev/openharness/issues/635), [core PR #636](https://github.com/mifunedev/openharness/pull/636), and [web PR #21](https://github.com/mifunedev/openharness-web/pull/21) — final cross-repository alignment artifacts.
 
 ## Summary
 
@@ -34,6 +35,8 @@ The banner derives installation from `command -v` plus local help and explicitly
 Ralph selects CodeLayer only explicitly. Its simple extra-flags contract rejects quotes, backslashes, shell metacharacters, globs, and all prompt/provider collisions, then uses a Bash array with globbing disabled and no `eval` (`.oh/scripts/ralph.sh:246-287`). Ralph owns long `--prompt`; optional provider shape is exactly `--provider VALUE`. CodeLayer output is diagnostic; only exact-line `STATUS: COMPLETE` in `progress.txt` completes (`.oh/scripts/ralph.sh:289-301,389-408`).
 
 The 2026-07-12 internal-network smoke proved real help, regular wrapper/source uniqueness, and exact adapter-shaped parsing to exit `1` with pinned `src/providers.ts:42`'s missing-`OPENAI_API_KEY` message. Default image absence also passed. This establishes local executable/parser compatibility only—not authentication, provider connectivity, model availability, or remote E2E.
+
+Final alignment is bounded and cross-linked through [issue #635](https://github.com/mifunedev/openharness/issues/635), [core PR #636](https://github.com/mifunedev/openharness/pull/636), and [openharness-web PR #21](https://github.com/mifunedev/openharness-web/pull/21).
 
 `@humanlayer/cli`, daemon lifecycle, login, launch tokens, browser control, ports, remote workspaces, credential storage, and control-plane behavior remain Draft, deferred, and unsupported.
 

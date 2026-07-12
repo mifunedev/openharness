@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Add a docs-only Draft RFC evaluating optional CodeLayer remote-daemon integration without declaring or implementing support ([#635](https://github.com/mifunedev/openharness/issues/635)).
 - Document optional Pi-to-Langfuse observability, configuration precedence, privacy controls, and sandbox network boundaries ([#480](https://github.com/mifunedev/openharness/issues/480)).
 - Document optional Claude Code-to-Langfuse observability through the official marketplace plugin, including the user-scope privacy boundary and local sandbox endpoint setup ([#480](https://github.com/mifunedev/openharness/issues/480)).
 ### Changed

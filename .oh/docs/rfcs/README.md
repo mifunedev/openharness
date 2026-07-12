@@ -29,6 +29,7 @@ No stage gates, no editors, no numbering scheme beyond the GitHub issue number.
 | [Trace/event ledger RFC](rfc-trace-ledger.md) | Draft | Foundational #525 child spec for the normalized append-only event ledger, storage layout, redaction rules, and replay/diagnosis/scoring event set. |
 | [#532](https://github.com/mifunedev/openharness/issues/532) | [Accepted — resolved lightweight; heavy scope deferred](adr-0001-standards-scope.md) | Standards process — keep the lightweight RFC / ADR convention; defer the full taxonomy, registries, lifecycle, and conformance profiles until a concrete future issue needs them. |
 | [#592](https://github.com/mifunedev/openharness/issues/592) | Draft | Runtime support — the A1/A2/A3 axis taxonomy and the "supported runtime" contract; the [companion spec](rfc-runtime-support.md) holds the fit matrix, the Cloudflare fit, and the Crabbox control-plane comparison. Implementation epic [#591](https://github.com/mifunedev/openharness/issues/591). |
+| [Optional CodeLayer remote-daemon RFC](rfc-codelayer-remote-daemon.md) ([#635](https://github.com/mifunedev/openharness/issues/635)) | Draft | Docs-only proposal evaluating optional browser-based session management; it does not declare or implement CodeLayer support. |
 
 ## Decision records
 

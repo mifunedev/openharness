@@ -54,13 +54,14 @@ The pinned CLI exposes `--prompt`, `--provider`, and `--model`; its listed provi
 codelayer --provider openai --model <operator-selected-model> --prompt 'Inspect this repository'
 ```
 
-For example, pinned source requires `OPENAI_API_KEY` for the `openai` provider and reports a missing-key error before execution when it is absent ([`src/providers.ts`](https://unpkg.com/@humanlayer/codelayer@0.0.61/src/providers.ts)). Consult the pinned source for other provider-specific authentication; installed never means authenticated.
+Pinned source and its published README document `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `FIREWORKS_API_KEY` as provider credentials; `EXA_API_KEY` enables research-subagent web search. Anthropic and Fireworks can also fall back to AgentLayer's file auth store. That store documents only the path overrides `AGENTLAYER_AUTH_PATH`, `AGENT_SDK_AUTH_PATH`, and `OPENCODE_AUTH_PATH` ([CodeLayer README](https://unpkg.com/@humanlayer/codelayer@0.0.61/README.md), [`src/providers.ts`](https://unpkg.com/@humanlayer/codelayer@0.0.61/src/providers.ts), [AgentLayer auth README](https://unpkg.com/@humanlayer/agentlayer-provider-auth@0.0.61/README.md)). Installed never means authenticated.
 
 ## Ralph adapter
 
-CodeLayer is explicit-only and is never in Ralph's fallback order:
+CodeLayer is explicit-only and is never in Ralph's fallback order. Export the selected provider's key in the shell that launches Ralph so an already-running tmux server cannot hide a newly supplied credential:
 
 ```bash
+export OPENAI_API_KEY='<operator-supplied-key>'
 RALPH_CODELAYER_PROVIDER=openai \
 RALPH_CODELAYER_FLAGS='--model gpt-4.1 --verbose' \
   bash .oh/scripts/ralph.sh --harness=codelayer <task-slug>
@@ -69,6 +70,8 @@ RALPH_CODELAYER_FLAGS='--model gpt-4.1 --verbose' \
 `--harness codelayer` and `RALPH_HARNESS=codelayer` are also accepted. Ralph owns long `--prompt` and emits `--provider "$RALPH_CODELAYER_PROVIDER"` only when non-empty.
 
 `RALPH_CODELAYER_FLAGS` is intentionally not shell syntax. Empty or whitespace-only means no extra flags; otherwise use simple whitespace-delimited tokens only. Quotes, backslashes, embedded spaces represented by quotes, shell metacharacters, and glob characters are rejected. So are every `--prompt*`, `--provider*`, `-p`, and attached `-pVALUE` form. Ralph parses a Bash array without `eval` and with pathname expansion disabled.
+
+For CodeLayer launches, Ralph keeps `tmux new-session -E` and uses tmux 3.3a per-session `-e NAME=value` arguments for only the two `RALPH_CODELAYER_*` controls and the seven pinned-source/documented auth variables above. Values stay out of the pane command and Ralph log; spaces and explicit empty values are preserved, and absent allowlisted names are unset in the pane. Other variables already present in an old tmux server follow normal tmux/Ralph inheritance and are outside this adapter contract.
 
 CodeLayer's final-message wrapper is diagnostic only. Ralph completes only when `progress.txt` contains a whole line exactly `STATUS: COMPLETE`.
 

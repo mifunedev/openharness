@@ -493,14 +493,33 @@ if ! command -v tmux >/dev/null 2>&1; then
   REPO_ROOT="$REPO_ROOT" exec bash "$SCRIPT_PATH" --loop --harness="$HARNESS" "$TASKDESC"
 fi
 
-# tmux servers retain their own environment and may predate this invocation.
-# Carry only the two CodeLayer adapter controls into the pane command; do not
-# depend on tmux update-environment, forward the caller's unrelated environment,
-# or perform dynamic shell reconstruction.
-LAUNCH_CMD="REPO_ROOT=$(printf %q "$REPO_ROOT") RALPH_CODELAYER_PROVIDER=$(printf %q "${RALPH_CODELAYER_PROVIDER:-}") RALPH_CODELAYER_FLAGS=$(printf %q "${RALPH_CODELAYER_FLAGS:-}") bash $(printf %q "$SCRIPT_PATH") --loop --harness=$(printf %q "$HARNESS") $(printf %q "$TASKDESC") 2>&1 | tee $(printf %q "/tmp/ralph-$TASKDESC.log")"
-# -E prevents tmux update-environment from importing unrelated client variables
-# into an existing server; LAUNCH_CMD carries only the explicit Ralph values.
-tmux new-session -E -d -s "$TASKDESC" "$LAUNCH_CMD"
+# tmux servers retain the environment that created them, so an older server may
+# not know credentials exported by this invoking shell. For CodeLayer only, use
+# tmux 3.3a's per-session -e arguments to override the allowlisted controls and
+# pinned-source auth inputs. Keep values out of LAUNCH_CMD (and therefore logs),
+# preserve set-empty values, and explicitly unset allowlisted names absent from
+# the client so stale server copies cannot masquerade as caller configuration.
+TMUX_ENV_ARGS=()
+TMUX_UNSET_CMD=""
+if [ "$HARNESS" = "codelayer" ]; then
+  CODELAYER_TMUX_ENV=(
+    RALPH_CODELAYER_PROVIDER RALPH_CODELAYER_FLAGS
+    OPENAI_API_KEY ANTHROPIC_API_KEY FIREWORKS_API_KEY EXA_API_KEY
+    AGENTLAYER_AUTH_PATH AGENT_SDK_AUTH_PATH OPENCODE_AUTH_PATH
+  )
+  for env_name in "${CODELAYER_TMUX_ENV[@]}"; do
+    if [[ -v "$env_name" ]]; then
+      TMUX_ENV_ARGS+=("-e" "$env_name=${!env_name}")
+    else
+      TMUX_UNSET_CMD+="unset $env_name; "
+    fi
+  done
+fi
+
+LAUNCH_CMD="${TMUX_UNSET_CMD}REPO_ROOT=$(printf %q "$REPO_ROOT") bash $(printf %q "$SCRIPT_PATH") --loop --harness=$(printf %q "$HARNESS") $(printf %q "$TASKDESC") 2>&1 | tee $(printf %q "/tmp/ralph-$TASKDESC.log")"
+# -E blocks update-environment. Unrelated preexisting server variables still
+# follow normal tmux inheritance; only the CodeLayer allowlist is overridden.
+tmux new-session -E "${TMUX_ENV_ARGS[@]}" -d -s "$TASKDESC" "$LAUNCH_CMD"
 
 echo "✓ Launched tmux session: $TASKDESC"
 echo "  Harness: $HARNESS"

@@ -9,7 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
-- Add default-off, bounded local `@humanlayer/codelayer@0.0.61` coding-harness support with an exact Bun source wrapper for the package's omitted declared `dist/cli.js`, truthful installed-only banner status, explicit safe Ralph adapter, no-egress enabled/default image smoke, docs, and wiki evidence; `@humanlayer/cli` remote-daemon behavior remains Draft and unsupported ([#635](https://github.com/mifunedev/openharness/issues/635)).
+- Add default-off, bounded local `@humanlayer/codelayer@0.0.61` coding-harness support with an exact Bun source wrapper for the package's omitted declared `dist/cli.js`, truthful installed-only banner status, an explicit safe Ralph adapter with tmux per-session CodeLayer auth forwarding, no-egress enabled/default image smoke, docs, and wiki evidence; `@humanlayer/cli` remote-daemon behavior remains Draft and unsupported ([#635](https://github.com/mifunedev/openharness/issues/635)).
 - Document optional Pi-to-Langfuse observability, configuration precedence, privacy controls, and sandbox network boundaries ([#480](https://github.com/mifunedev/openharness/issues/480)).
 - Document optional Claude Code-to-Langfuse observability through the official marketplace plugin, including the user-scope privacy boundary and local sandbox endpoint setup ([#480](https://github.com/mifunedev/openharness/issues/480)).
 ### Changed

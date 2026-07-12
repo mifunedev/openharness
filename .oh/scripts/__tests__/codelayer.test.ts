@@ -28,6 +28,18 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
+const CODELAYER_TMUX_ENV = [
+  "RALPH_CODELAYER_PROVIDER", "RALPH_CODELAYER_FLAGS",
+  "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "FIREWORKS_API_KEY", "EXA_API_KEY",
+  "AGENTLAYER_AUTH_PATH", "AGENT_SDK_AUTH_PATH", "OPENCODE_AUTH_PATH",
+] as const;
+
+function withoutCodeLayerEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  for (const name of CODELAYER_TMUX_ENV) delete env[name];
+  return env;
+}
+
 describe("CodeLayer image contract", () => {
   it("pins the coding package and creates the exact regular-file wrapper after unconditional removal", () => {
     const dockerfile = readFileSync(path.join(ROOT, ".devcontainer/Dockerfile"), "utf8");
@@ -127,21 +139,18 @@ describe("Ralph CodeLayer adapter", () => {
     });
   }
 
-  it("forwards only CodeLayer controls in the real tmux launch command, independent of server environment", () => {
+  it("builds tmux argv with allowlisted values outside the launch command", () => {
     const repo = tempBin();
     const bin = path.join(repo, "bin");
-    const task = "codelayer-launch-test";
+    const task = "codelayer-launch-argv-test";
     const taskDir = path.join(repo, ".oh", "tasks", task);
     const capture = path.join(repo, "tmux-argv");
-    const codelayerArgv = path.join(repo, "codelayer-argv");
-    const progress = path.join(taskDir, "progress.txt");
     mkdirSync(bin);
     mkdirSync(taskDir, { recursive: true });
-    for (const file of ["prd.md", "prd.json", "prompt.md"]) writeFileSync(path.join(taskDir, file), file === "prompt.md" ? "launch task\n" : "{}\n");
-    writeFileSync(progress, "# progress\n");
+    for (const file of ["prd.md", "prd.json", "prompt.md", "progress.txt"]) writeFileSync(path.join(taskDir, file), file === "prompt.md" ? "launch task\n" : "{}\n");
     expect(spawnSync("git", ["init", "-q"], { cwd: repo }).status).toBe(0);
-    writeFileSync(path.join(bin, "tmux"), `#!/bin/sh\nif [ \"$1\" = has-session ]; then exit 1; fi\nif [ \"$1\" = new-session ]; then printf '%s\\0' \"$@\" > ${shellQuote(capture)}; exit 0; fi\nexit 2\n`);
-    writeFileSync(path.join(bin, "codelayer"), `#!/bin/sh\nprintf '%s\\0' \"$@\" > ${shellQuote(codelayerArgv)}\nprintf 'STATUS: COMPLETE\\n' >> ${shellQuote(progress)}\n`);
+    writeFileSync(path.join(bin, "tmux"), `#!/bin/sh\nif [ \"$1\" = has-session ]; then exit 1; fi\nprintf '%s\\0' \"$@\" > ${shellQuote(capture)}\n`);
+    writeFileSync(path.join(bin, "codelayer"), "#!/bin/sh\nexit 0\n");
     chmodSync(path.join(bin, "tmux"), 0o755);
     chmodSync(path.join(bin, "codelayer"), 0o755);
 
@@ -149,32 +158,82 @@ describe("Ralph CodeLayer adapter", () => {
       cwd: repo,
       encoding: "utf8",
       env: {
-        ...process.env,
+        ...withoutCodeLayerEnv(),
         PATH: `${bin}:/usr/bin:/bin`,
         RALPH_CODELAYER_PROVIDER: "open ai",
         RALPH_CODELAYER_FLAGS: "--model gpt-4.1 --verbose",
-        UNRELATED_LAUNCH_SECRET: "must-not-enter-pane-command",
+        OPENAI_API_KEY: "fixture key with spaces",
+        ANTHROPIC_API_KEY: "",
       },
     });
     expect(client.status).toBe(0);
     const tmuxArgs = readFileSync(capture).toString().split("\0").filter(Boolean);
-    expect(tmuxArgs.slice(0, 5)).toEqual(["new-session", "-E", "-d", "-s", task]);
+    expect(tmuxArgs.slice(0, 2)).toEqual(["new-session", "-E"]);
+    expect(tmuxArgs).toContain("RALPH_CODELAYER_PROVIDER=open ai");
+    expect(tmuxArgs).toContain("RALPH_CODELAYER_FLAGS=--model gpt-4.1 --verbose");
+    expect(tmuxArgs).toContain("OPENAI_API_KEY=fixture key with spaces");
+    expect(tmuxArgs).toContain("ANTHROPIC_API_KEY=");
+    expect(tmuxArgs).not.toContain(expect.stringContaining("FIREWORKS_API_KEY="));
     const launch = tmuxArgs.at(-1) ?? "";
-    expect(launch).toContain("RALPH_CODELAYER_PROVIDER=open\\ ai");
-    expect(launch).toContain("RALPH_CODELAYER_FLAGS=--model\\ gpt-4.1\\ --verbose");
-    expect(launch).not.toContain("UNRELATED_LAUNCH_SECRET");
-    expect(launch).not.toContain("must-not-enter-pane-command");
+    expect(launch).not.toContain("fixture key with spaces");
+    expect(launch).not.toContain("open ai");
+    expect(launch).toContain("unset FIREWORKS_API_KEY;");
+  });
 
-    // Execute as an already-running tmux server would: with a clean/stale server
-    // environment rather than the invoking client's RALPH_* values.
-    const pane = spawnSync("bash", ["-c", launch], {
-      cwd: repo,
-      encoding: "utf8",
-      timeout: 10_000,
-      env: { HOME: repo, PATH: `${bin}:/usr/bin:/bin` },
-    });
-    expect(pane.status).toBe(0);
-    expect(readFileSync(codelayerArgv)).toEqual(Buffer.from("--model\0gpt-4.1\0--verbose\0--provider\0open ai\0--prompt\0launch task\0"));
+  it("overrides stale CodeLayer values in a real existing tmux 3.3a+ server", () => {
+    expect(spawnSync("tmux", ["-V"], { encoding: "utf8" }).stdout).toMatch(/^tmux (?:3\.[3-9]|[4-9]\.)/);
+    const repo = tempBin();
+    const bin = path.join(repo, "bin");
+    const tmuxTmp = path.join(repo, "tmux");
+    const task = "codelayer-real-tmux-test";
+    const taskDir = path.join(repo, ".oh", "tasks", task);
+    const envCapture = path.join(repo, "codelayer-env.json");
+    const argvCapture = path.join(repo, "codelayer-argv.json");
+    const progress = path.join(taskDir, "progress.txt");
+    const ralphLog = `/tmp/ralph-${task}.log`;
+    created.push(ralphLog);
+    mkdirSync(bin);
+    mkdirSync(tmuxTmp, { mode: 0o700 });
+    mkdirSync(taskDir, { recursive: true });
+    for (const file of ["prd.md", "prd.json"]) writeFileSync(path.join(taskDir, file), "{}\n");
+    writeFileSync(path.join(taskDir, "prompt.md"), "real tmux task\n");
+    writeFileSync(progress, "# progress\n");
+    expect(spawnSync("git", ["init", "-q"], { cwd: repo }).status).toBe(0);
+    writeFileSync(path.join(bin, "codelayer"), `#!/usr/bin/env node\nconst fs = require("node:fs");\nconst names = ${JSON.stringify(CODELAYER_TMUX_ENV)};\nfs.writeFileSync(${JSON.stringify(envCapture)}, JSON.stringify(Object.fromEntries(names.concat(["UNRELATED_SERVER_ENV"]).map(n => [n, { set: Object.hasOwn(process.env, n), value: process.env[n] }]))));\nfs.writeFileSync(${JSON.stringify(argvCapture)}, JSON.stringify(process.argv.slice(2)));\nfs.appendFileSync(${JSON.stringify(progress)}, "STATUS: COMPLETE\\n");\n`);
+    chmodSync(path.join(bin, "codelayer"), 0o755);
+
+    const baseEnv = { ...withoutCodeLayerEnv(), HOME: repo, PATH: `${bin}:/usr/bin:/bin`, TMUX_TMPDIR: tmuxTmp };
+    const staleEnv: NodeJS.ProcessEnv = { ...baseEnv, UNRELATED_SERVER_ENV: "normal server inheritance" };
+    for (const name of CODELAYER_TMUX_ENV) staleEnv[name] = `stale ${name}`;
+    expect(spawnSync("tmux", ["new-session", "-d", "-s", "seed", "sleep 30"], { env: staleEnv }).status).toBe(0);
+
+    const clientValues: NodeJS.ProcessEnv = {
+      ...baseEnv,
+      RALPH_CODELAYER_PROVIDER: "open ai",
+      RALPH_CODELAYER_FLAGS: "--model gpt-4.1 --verbose",
+      OPENAI_API_KEY: "client openai key with spaces",
+      ANTHROPIC_API_KEY: "",
+      FIREWORKS_API_KEY: "client fireworks key",
+      EXA_API_KEY: "client exa key",
+      AGENTLAYER_AUTH_PATH: "/client path/agentlayer.json",
+      AGENT_SDK_AUTH_PATH: "/client path/agent-sdk.json",
+      // OPENCODE_AUTH_PATH intentionally remains unset.
+    };
+    const client = spawnSync("bash", [RALPH, "--harness=codelayer", task], { cwd: repo, encoding: "utf8", env: clientValues });
+    expect(client.status).toBe(0);
+    for (let attempt = 0; attempt < 50 && spawnSync("test", ["-f", envCapture]).status !== 0; attempt++) spawnSync("sleep", ["0.1"]);
+
+    const captured = JSON.parse(readFileSync(envCapture, "utf8")) as Record<string, { set: boolean; value?: string }>;
+    for (const name of CODELAYER_TMUX_ENV) {
+      if (Object.hasOwn(clientValues, name)) expect(captured[name]).toEqual({ set: true, value: clientValues[name] });
+    }
+    expect(captured.OPENCODE_AUTH_PATH).toEqual({ set: false });
+    expect(captured.UNRELATED_SERVER_ENV).toEqual({ set: true, value: "normal server inheritance" });
+    expect(JSON.parse(readFileSync(argvCapture, "utf8"))).toEqual(["--model", "gpt-4.1", "--verbose", "--provider", "open ai", "--prompt", "real tmux task"]);
+    const log = readFileSync(ralphLog, "utf8");
+    expect(log).not.toContain("client openai key with spaces");
+    expect(log).not.toContain("client fireworks key");
+    expect(spawnSync("tmux", ["kill-server"], { env: baseEnv }).status).toBe(0);
   });
 
   it("never uses eval and treats only progress exact lines as authoritative for CodeLayer", () => {

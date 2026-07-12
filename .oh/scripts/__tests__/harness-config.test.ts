@@ -63,6 +63,19 @@ describe("harness-config.sh env mode", () => {
     expect(stdout.trim()).toBe("");
   });
 
+  it("maps explicit CodeLayer booleans and keeps absent/malformed values inert", () => {
+    const enabled = fixture("install:\n  codelayer: true\n");
+    expect(run(["env", enabled]).stdout.trim()).toBe("INSTALL_CODELAYER=true");
+    const disabled = fixture("install:\n  codelayer: false\n");
+    expect(run(["env", disabled]).stdout.trim()).toBe("INSTALL_CODELAYER=false");
+    const absent = fixture("install:\n  hermes: false\n");
+    expect(run(["env", absent]).stdout).not.toContain("INSTALL_CODELAYER");
+    const malformed = fixture("install:\n  codelayer: banana\n");
+    expect(run(["env", malformed]).stdout.trim()).toBe("");
+    const nested = fixture("install:\n  codelayer:\n    nested: true\n");
+    expect(run(["env", nested]).stdout.trim()).toBe("");
+  });
+
   it("maps install.opencode: true → INSTALL_OPENCODE=true", () => {
     const f = fixture("install:\n  opencode: true\n");
     const { stdout } = run(["env", f]);

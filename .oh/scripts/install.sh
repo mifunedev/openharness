@@ -142,7 +142,7 @@ Env vars:
                        sandbox is never overwritten)
   INSTALL_HERMES=true  Enable an optional agent non-interactively. Also:
                        INSTALL_OPENCODE, INSTALL_DEEPAGENTS, INSTALL_GROK_BUILD,
-                       INSTALL_AGENT_BROWSER
+                       INSTALL_CODELAYER, INSTALL_AGENT_BROWSER
   DOCKER_SOCKET=true   Mount the host Docker socket into the sandbox
                        non-interactively. OFF by default (socket access is
                        effectively host root). Otherwise you're prompted (TTY),
@@ -574,6 +574,7 @@ printf "  ${CYAN}Optional capabilities${NC}  (enable in harness.yaml, then: make
 printf "  ──────────────────────────────────────\n"
 printf "       install.agent_browser: true   — headless Chromium for screenshots / preview checks (~1 GB)\n"
 printf "       install.hermes: true          — Hermes agent (run 'hermes setup'; optional web dashboard)\n"
+printf "       install.codelayer: true       — CodeLayer coding harness (installed only; configure provider auth separately)\n"
 printf "\n"
 printf "  ${CYAN}Messaging gateways${NC}\n"
 printf "  ──────────────────────────────────────\n"

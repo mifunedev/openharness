@@ -163,6 +163,19 @@ describe("scripts/docker-compose.sh", () => {
     expect(readFileSync(persistent, "utf8")).toContain("SANDBOX_NAME=from-yaml");
   });
 
+  it("puts harness.yaml after legacy env so explicit CodeLayer YAML wins", () => {
+    const legacy = path.join(tmp, ".devcontainer", ".env");
+    const persistent = path.join(tmp, ".devcontainer", ".harness.yaml.env");
+    writeFileSync(legacy, "INSTALL_CODELAYER=true\n");
+    writeFileSync(path.join(tmp, "harness.yaml"), "install:\n  codelayer: false\n");
+
+    const argv = runWithFakeDocker(["build"]);
+    expect(argv.slice(0, 6)).toEqual([
+      "compose", "--env-file", legacy, "--env-file", persistent, "-f",
+    ]);
+    expect(readFileSync(persistent, "utf8")).toBe("INSTALL_CODELAYER=false\n");
+  });
+
   it("uses a temporary harness env file for compose config without overwriting persistent state", () => {
     const persistent = path.join(tmp, ".devcontainer", ".harness.yaml.env");
     writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");

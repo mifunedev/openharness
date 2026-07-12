@@ -82,7 +82,7 @@ directory: `/home/sandbox/harness`.
 ## Pick your harness
 
 The default sandbox ships with Claude Code, Codex, and Pi. OpenCode,
-DeepAgents, Hermes, and Grok Build are optional image-level installs; T3 Code runs on
+DeepAgents, Hermes, Grok Build, and bounded local CodeLayer are optional image-level installs; T3 Code runs on
 demand via the `/t3` skill or direct `npx`. Authenticate at least one harness before use.
 
 > **Simplest cross-provider login — device mode via `/login`.** The most straightforward path
@@ -101,6 +101,7 @@ demand via the `/t3` skill or direct `npx`. Authenticate at least one harness be
 - **[DeepAgents](./harnesses/deepagents.md)**: set `install.deepagents: true` in `harness.yaml` (or `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env`), rebuild, then write provider keys to `~/.deepagents/.env`
 - **[Hermes](./harnesses/hermes.md)**: set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`), rebuild, then run `hermes setup`
 - **[Grok Build](./harnesses/grok-build.md)**: set `install.grok_build: true` in `harness.yaml` (or `INSTALL_GROK_BUILD=true` in `.devcontainer/.env`), rebuild, verify `grok --version`, then run `grok login --device-auth` (headless/remote) or `grok login`
+- **[CodeLayer](./harnesses/codelayer.md)**: set `install.codelayer: true`, rebuild, then verify `codelayer --help`; this proves installation only, not provider authentication, and does not enable a daemon
 - **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `/t3` or `npx t3` (browser UI on port 3773)
 
 Claude Code remains the documented default. See
@@ -134,6 +135,7 @@ install:
   deepagents: false
   hermes: false
   grok_build: false
+  codelayer: false
   agent_browser: false
 paths:
   worktrees: .oh/worktrees     # WORKTREES_DIR
@@ -162,6 +164,7 @@ The file also has `paths:`, `crons:`, `autopilot:`, `slack:`, and `compose:` sec
 | `install.deepagents` | Set `true` to include DeepAgents in the sandbox image |
 | `install.hermes` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
 | `install.grok_build` | Set `true` to include Grok Build in the sandbox image; all Grok user state lives in the persisted `~/.grok` volume |
+| `install.codelayer` | Set `true` for exact `@humanlayer/codelayer@0.0.61` bounded local coding-harness support; configure provider authentication separately |
 | `paths.worktrees` | Worktree/project-clone root → `WORKTREES_DIR` (default `.oh/worktrees`) |
 
 Apply changes with `make destroy && make sandbox`.

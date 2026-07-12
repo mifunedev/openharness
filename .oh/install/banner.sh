@@ -175,6 +175,11 @@ if command -v hermes >/dev/null 2>&1; then
   fi
 fi
 
+# codelayer — local executable health only. This never infers provider
+# authentication or usability from INSTALL_CODELAYER.
+# shellcheck source=.oh/install/codelayer-status.sh
+. "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/codelayer-status.sh"
+
 # oh CLI — verify the bind-mounted package built and symlinked
 oh_status="$status_x"
 oh_detail="not installed — check entrypoint logs"
@@ -203,6 +208,7 @@ printf '    %-6s %-11s %s\n' "$grok_status"       "grok"        "$grok_detail"
 printf '    %-6s %-11s %s\n' "$pi_status"         "pi"          "$pi_detail"
 printf '    %-6s %-11s %s\n' "$deepagents_status" "deepagents"  "$deepagents_detail"
 printf '    %-6s %-11s %s\n' "$hermes_status"     "hermes"      "$hermes_detail"
+printf '    %-6s %-11s %s\n' "$codelayer_status"  "codelayer"   "$codelayer_detail"
 [ -n "$dashboard_status" ] && printf '    %-6s %-11s %s\n' "$dashboard_status" "dashboard" "$dashboard_detail"
 printf '    %-6s %-11s %s\n' "$oh_status"         "oh"          "$oh_detail"
 printf '\n'
@@ -211,6 +217,7 @@ command -v opencode >/dev/null 2>&1 && shortcuts="$shortcuts · opencode"
 command -v grok >/dev/null 2>&1 && shortcuts="$shortcuts · grok"
 command -v deepagents >/dev/null 2>&1 && shortcuts="$shortcuts · deepagents"
 command -v hermes >/dev/null 2>&1 && shortcuts="$shortcuts · hermes"
+command -v codelayer >/dev/null 2>&1 && shortcuts="$shortcuts · codelayer"
 printf '  Shortcuts: %s · tmux attach -t cron-system\n' "$shortcuts"
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'

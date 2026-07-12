@@ -25,10 +25,12 @@ Entries here are **local scratch by default** — `.oh/skills/wiki/corpus/*` is 
 ## Canonical docs
 
 Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/references/schema.md`
+
 ## Index
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| codelayer-coding-harness | CodeLayer Bounded Local Coding Harness | [codelayer, coding-harness, ralph, bun, docker, authentication] | 2026-07-12 |
 | runtime-isolation-landscape | Runtime Isolation Landscape (2026) | [runtime, isolation, sandbox, gvisor, firecracker, kata, microvm, cloudflare, e2b, daytona, fly, modal] | 2026-07-04 |
 | crabbox-remote-exec-control-plane | Crabbox — Remote-Exec Control Plane | [runtime, sandbox, remote-execution, fan-out, control-plane, crabbox, cloudflare-workers, ssh, rsync] | 2026-07-04 |
 | oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch] | 2026-07-03 |

@@ -31,6 +31,7 @@ install:
   # grok_build: false          # INSTALL_GROK_BUILD — Grok Build CLI (build arg)
   # deepagents: false          # INSTALL_DEEPAGENTS — DeepAgents CLI (build arg)
   # hermes: false              # INSTALL_HERMES — Hermes CLI (build arg + runtime)
+  # codelayer: false           # INSTALL_CODELAYER — bounded local CodeLayer coding harness (build arg)
   # agent_browser: false       # INSTALL_AGENT_BROWSER — agent-browser + Chromium (~1 GB)
 
 hermes:

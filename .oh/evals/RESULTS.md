@@ -23,6 +23,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | clean-restore | A | 2026-07-07 00:47 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | cleanup-tasks-scoped-guard | A | 2026-07-07 00:47 | PASS | issue #85 |
 | cleanup-tasks-worktree-grooming | A | 2026-07-07 00:47 | PASS | issue #168; issue #327 |
+| codelayer-supported-harness | A | 2026-07-12 06:02 | PASS | issue #635 bounded CodeLayer coding-harness acceptance 2026-07-12 |
 | codex-stale-response-retry | A | 2026-07-07 00:47 | PASS | issue #506 — Codex previous_response_not_found RCA |
 | cron-claude-codex-fallback | A | 2026-07-07 00:47 | PASS | conversation 2026-06-12 (default Codex fallback for crons) |
 | cron-watchdog | A | 2026-07-07 00:47 | PASS | issues #130/#453 (cron runtime watchdog + legacy system-cron reaping) 2026-06-19 |

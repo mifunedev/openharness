@@ -81,6 +81,7 @@ claude auth login            # Claude Code   (or /login in-session)
 codex login --device-auth    # Codex         (device mode; or /login in-session)
 pi                           # Pi            (first run walks provider auth; /login in-session)
 hermes setup                 # Hermes        (optional; needs install.hermes: true)
+codelayer --help             # CodeLayer     (optional install check only; auth is separate)
 
 # Configure Slack, then run + verify the gateways (sandbox-only):
 #   config: .oh/docs/integrations/slack.md  ·  .oh/docs/harnesses/hermes.md
@@ -205,6 +206,7 @@ make shell       # enter the isolated sandbox
 #   deepagents # LangChain DeepAgents (optional: set install.deepagents: true in harness.yaml and rebuild)
 #   hermes     # Nous Research Hermes (optional: set install.hermes: true in harness.yaml and rebuild)
 #   grok       # xAI Grok Build (optional: set install.grok_build: true in harness.yaml and rebuild)
+#   codelayer  # bounded local @humanlayer/codelayer@0.0.61 (optional; installed is not authenticated; no daemon)
 make destroy     # stop and remove the sandbox
 make help        # all targets
 ```
@@ -240,7 +242,7 @@ make shell
 
 | | |
 |---|---|
-| **Core agents** | Defaults: Claude Code, Codex, Pi. Optional: OpenCode, DeepAgents, Hermes, Grok Build |
+| **Core agents** | Defaults: Claude Code, Codex, Pi. Optional: OpenCode, DeepAgents, Hermes, Grok Build, and [bounded local CodeLayer](.oh/docs/harnesses/codelayer.md) |
 | **Runtimes** | Node 22, pnpm, Bun, uv (Python) |
 | **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |

@@ -277,6 +277,7 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 | DeepAgents | `deepagents` | LangChain's multi-provider terminal agent (`deepagents-cli` via `uv tool install`) | optional: set `install.deepagents: true` in `harness.yaml` (or `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env`) |
 | Hermes | `hermes` | Nous Research's self-improving agent CLI | optional: set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`) |
 | Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | optional: set `install.grok_build: true` in `harness.yaml` (or `INSTALL_GROK_BUILD=true` in `.devcontainer/.env`) |
+| CodeLayer | `codelayer` | Exact `@humanlayer/codelayer@0.0.61` bounded local coding harness via tested Bun source wrapper; installed is not authenticated | optional: set `install.codelayer: true` (or `INSTALL_CODELAYER=true`), rebuild, and follow [CodeLayer](harnesses/codelayer.md); no remote-daemon support |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: set `install.agent_browser: true` in `harness.yaml` (or `INSTALL_AGENT_BROWSER=true` in `.devcontainer/.env`) |
 
 ### Runtimes & package managers

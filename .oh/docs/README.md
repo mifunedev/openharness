@@ -25,6 +25,7 @@ Full terminal / Remote-SSH options: see [Connecting → Option B](connecting.md#
 
 [Hermes](harnesses/hermes.md) — Nous Research's self-improving agent CLI — is an opt-in harness: set
 `install.hermes: true` in harness.yaml, rebuild, then run `hermes setup`.
+[CodeLayer](harnesses/codelayer.md) is a separate default-off, bounded local coding harness pinned to `@humanlayer/codelayer@0.0.61`; installation does not imply provider authentication, and remote-daemon behavior is not supported.
 
 ## How the primitive pack ships
 
@@ -50,6 +51,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [Hermes](harnesses/hermes.md)
 - [Grok Build](harnesses/grok-build.md)
 - [T3 Code](harnesses/t3code.md)
+- [CodeLayer](harnesses/codelayer.md)
 
 ## Integrations
 
@@ -73,7 +75,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [ADR-0001: #532 standards scope](rfcs/adr-0001-standards-scope.md)
 - [Self-improving harness roadmap curation (#525)](rfcs/rfc-selfimprove-roadmap.md)
 - [Trace/event ledger RFC (#525 foundation)](rfcs/rfc-trace-ledger.md)
-- [Optional CodeLayer remote-daemon RFC (Draft, #635)](rfcs/rfc-codelayer-remote-daemon.md)
+- [CodeLayer coding-harness RFC (bounded local integration Accepted; remote-daemon appendix Draft, #635)](rfcs/rfc-codelayer-remote-daemon.md)
 - [Property testing](property-testing.md)
 - [Resources](resources.md)
 - [Roadmap](roadmap.md)

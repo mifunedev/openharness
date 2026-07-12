@@ -4,7 +4,7 @@ title: "Harnesses Overview"
 
 # Harnesses Overview
 
-Open Harness ships with three agent CLIs in the default sandbox image: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, and **Grok Build** are optional image-level installs controlled by `harness.yaml` `install:` keys (or `.devcontainer/.env` build flags). **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773. Inside the sandbox, launch whichever you prefer — switch between them at any time, or keep long-running sessions in tmux.
+Open Harness ships with three agent CLIs in the default sandbox image: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, **Grok Build**, and the bounded local **CodeLayer** coding harness are optional image-level installs controlled by `harness.yaml` `install:` keys (or `.devcontainer/.env` build flags). **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773. Inside the sandbox, launch whichever you prefer — switch between them at any time, or keep long-running sessions in tmux.
 
 Open Harness is the harness; the **agent** is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox or edit the Dockerfile. For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package — see [Slack integration](../integrations/slack.md). The product surface is one developer, one project, one agent — not racing or stacking multiple CLIs against each other.
 
@@ -20,6 +20,7 @@ Open Harness is the harness; the **agent** is your call. To go beyond the preins
 | [Hermes](./hermes.md) | Nous Research's self-improving terminal agent | `hermes` | optional: `install.hermes: true` in `harness.yaml` |
 | [Grok Build](./grok-build.md) | xAI's proprietary Grok Build terminal agent | `grok` | optional: `install.grok_build: true` in `harness.yaml` |
 | [T3 Code](./t3code.md) | Browser UI over Claude/Codex/OpenCode (port 3773) | `/t3` or `npx t3` | on-demand |
+| [CodeLayer](./codelayer.md) | Bounded local `@humanlayer/codelayer@0.0.61` coding harness; installed is not authenticated | `codelayer` | optional: `install.codelayer: true`; no daemon support |
 
 ## Verifying installation
 
@@ -33,6 +34,7 @@ opencode --version      # install.opencode: true
 deepagents -v           # install.deepagents: true
 hermes --version        # install.hermes: true
 grok --version          # install.grok_build: true
+codelayer --help        # install.codelayer: true; local parser check only
 
 npx t3 --version        # T3 Code (not preinstalled — fetched on demand)
 ```
@@ -48,6 +50,7 @@ Open Harness ships Claude Code, Codex, and Pi in the default image. Authenticate
 - **DeepAgents**: write provider keys to `~/.deepagents/.env` (see [DeepAgents](./deepagents.md)).
 - **Hermes**: run `hermes setup` (see [Hermes](./hermes.md)).
 - **Grok Build**: run `grok login --device-auth` for headless/remote auth, `grok login` for interactive OAuth, or set `XAI_API_KEY` as a fallback (see [Grok Build](./grok-build.md)). Cached `~/.grok/auth.json` takes precedence over `XAI_API_KEY`.
+- **CodeLayer**: configure the operator-selected provider according to the [pinned-source guidance](./codelayer.md#direct-use-and-operator-owned-authentication); image installation does not verify authentication.
 - **T3 Code**: authenticate one of Claude / Codex / OpenCode first, then run `/t3` (or `npx t3`) and open the printed pairing URL (see [T3 Code](./t3code.md)).
 
 ## Default surfaces

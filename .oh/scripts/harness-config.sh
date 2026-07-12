@@ -69,6 +69,7 @@ BEGIN {
     envmap["install.grok_build"]    = "INSTALL_GROK_BUILD"
     envmap["install.deepagents"]    = "INSTALL_DEEPAGENTS"
     envmap["install.hermes"]        = "INSTALL_HERMES"
+    envmap["install.codelayer"]     = "INSTALL_CODELAYER"
     envmap["install.agent_browser"] = "INSTALL_AGENT_BROWSER"
     envmap["hermes.dashboard"]      = "HERMES_DASHBOARD"
     envmap["hermes.dashboard_port"] = "HERMES_DASHBOARD_PORT"
@@ -153,6 +154,9 @@ function clean_value(s) {
         }
         val = clean_value(val)
         if (val == "") next
+        # CodeLayer is an evidence-gated exact boolean: malformed values stay
+        # inert rather than leaking a truthy-looking build argument.
+        if (dotkey == "install.codelayer" && val != "true" && val != "false") next
         if (mode == "env" && (dotkey in envmap))
             print envmap[dotkey] "=" val
         else if (mode == "get" && dotkey == filter_key)

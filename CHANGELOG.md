@@ -10,6 +10,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 - Document optional Pi-to-Langfuse observability, configuration precedence, privacy controls, and sandbox network boundaries ([#480](https://github.com/mifunedev/openharness/issues/480)).
+- Document optional Claude Code-to-Langfuse observability through the official marketplace plugin, including the user-scope privacy boundary and local sandbox endpoint setup ([#480](https://github.com/mifunedev/openharness/issues/480)).
 ### Changed
 ### Fixed
 ### Removed

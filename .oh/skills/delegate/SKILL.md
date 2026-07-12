@@ -1,12 +1,10 @@
 ---
 name: delegate
 description: |
-  Parallel execution coordinator. Decomposes a plan into discrete tasks,
-  identifies parallelism via dependency analysis, and spawns worker sub-agents
-  in waves to maximize throughput without sacrificing quality. Collects results,
-  validates completeness, and reports a structured summary.
-  TRIGGER when: asked to delegate work, execute a plan, parallelize tasks,
-  "run this plan", "delegate this", or after /prd or plan creation.
+  TRIGGER when: asked to delegate work, execute or parallelize a plan, "run this
+  plan", "delegate this", or after /prd or plan creation. Decomposes work by
+  dependency, launches worker sub-agents in parallel waves, validates completion,
+  and reports results while preserving failure isolation and recursion limits.
 argument-hint: "[--plan <path>] [--dry-run]"
 ---
 
@@ -17,6 +15,25 @@ a dependency-ordered task graph, and spawn worker sub-agents in parallel waves. 
 completes before the next begins. Results are collected, validated, and reported.
 
 **Core principle: maximize parallelism while respecting dependencies absolutely.**
+
+## Worker model and thinking policy
+
+Apply this policy to every worker:
+
+1. **Inherit the parent/session model by default.** Omit the Agent tool's `model`
+   argument. Do not route routine or simple work to a weaker model tier.
+2. Set the Agent tool's `thinking` parameter from task complexity:
+   **simple/mechanical → `low`**, **standard → `medium`**, **complex → `high`**,
+   and **architecture or debugging with substantial uncertainty → `xhigh`**.
+   Supported levels are `off`, `minimal`, `low`, `medium`, `high`, and `xhigh`;
+   never use `max`.
+3. If the selected thinking level is unsupported by the inherited model/provider,
+   use the nearest supported level. Do not switch models merely to obtain a thinking
+   level.
+4. Override `model` only with an explicit task-specific reason: an operator request,
+   an unavailable required capability/context, a strict latency or budget constraint,
+   or local benchmark evidence. Record that reason in the task graph and pass the
+   override only for that worker.
 
 ## Decision Flow
 
@@ -63,7 +80,7 @@ If no plan is found in either source, report:
 
 Run Memory Protocol and stop.
 
-### 2. Decompose into tasks (use extended thinking)
+### 2. Decompose into tasks (reason according to complexity)
 
 Analyze the plan deeply and produce a structured task list. For each task, determine:
 
@@ -74,7 +91,9 @@ Analyze the plan deeply and produce a structured task list. For each task, deter
 | **Description** | What the worker agent needs to do (2-3 sentences, include file paths) |
 | **Depends On** | Task IDs this requires first, or "none" |
 | **Files** | Key files the worker will read or modify |
-| **Model** | Agent tier: `luna` (simple/high-throughput or strict-latency) / `terra` (balanced standard, default) / `sol` (hardest quality-first coding/reasoning or architecture synthesis). Compatibility fallbacks: `haiku` / `sonnet` / `opus`, respectively. |
+| **Complexity** | `simple/mechanical`, `standard`, `complex`, or `architecture/debugging with substantial uncertainty` |
+| **Model override** | `none (inherit)` by default; otherwise the exact model plus one allowed explicit reason |
+| **Thinking** | `low`, `medium`, `high`, or `xhigh`, derived from Complexity and passed as the Agent `thinking` parameter |
 | **Acceptance** | How to verify the task is done (objectively checkable) |
 
 **Decomposition rules:**
@@ -111,7 +130,7 @@ Output the wave plan:
 
 Use `TaskCreate` for each task. Then use `TaskUpdate` with `addBlockedBy` to wire dependencies.
 
-If `--dry-run`, output the full task graph and wave plan, then skip to **Step 8**.
+If `--dry-run`, output the full task graph and wave plan, then skip to **Step 9**.
 
 ### 5. Execute waves
 
@@ -125,8 +144,12 @@ Launch N `Agent` tool calls **in a single message** for parallel execution. Each
 - Instruction: report what was done, what files changed, whether acceptance criteria are met
 
 Worker configuration:
-- **Model**: pass the task's exact tier unchanged to the Agent call's `model`. Use `luna` for simple/high-throughput or strict-latency work, `terra` for balanced standard work (default), and `sol` for the hardest quality-first coding/reasoning or architecture synthesis. Tier names are intentionally version-agnostic. If those tiers are unavailable, use the compatible `haiku` / `sonnet` / `opus` fallbacks, respectively.
-- **Thinking**: omit/inherit for routine work; raise only when task complexity warrants it, capped at `xhigh`. Never pass `max` to the Agent tool.
+- **Model**: omit the Agent `model` argument so the worker inherits the parent/session
+  model. Include `model` only when the task graph records an allowed explicit override
+  and its reason; pass that exact override unchanged.
+- **Thinking**: pass `thinking` derived from Complexity (`low`, `medium`, `high`,
+  or `xhigh`). Never pass `max`. If unsupported, use the nearest supported thinking
+  level while keeping the inherited or explicitly overridden model unchanged.
 - **run_in_background**: true (for waves with 2+ tasks)
 - **subagent_type** (read-only trap): the `implementer`, `pm`, and `critic` sub-agent types are **read-only** (`tools: Read, Glob, Grep, Bash` — no `Write`/`Edit`) and will **silently make zero file changes** if a worker is told to create or edit files. For any worker that must `Write`/`Edit` files, set `subagent_type: general-purpose` (or `claude`) in the `Agent` tool call; reserve `implementer`/`pm`/`critic` for analysis-only workers.
 
@@ -166,16 +189,14 @@ Pass completed task summaries as context to the next wave's workers. Repeat unti
 
 After all waves complete:
 
-1. Review acceptance criteria for every completed task
-2. If the plan involved code changes, run verification:
-
-```bash
-cd ~/harness && pnpm -r run lint 2>&1 || true
-cd ~/harness && pnpm -r run build 2>&1 || true
-cd ~/harness && pnpm -r run test 2>&1 || true
-```
-
-3. If validation fails, note which tasks likely caused the failure
+1. Review acceptance criteria for every completed task.
+2. Determine validation commands from the plan's acceptance criteria and the target
+   repository's own instructions/configuration (for example, its `AGENTS.md`,
+   `README.md`, package scripts, Makefile, or CI workflow). Run only commands relevant
+   to the changed scope, from that repository's root.
+3. Preserve and record each command's real exit status. Do not append `|| true`, pipe
+   through a command that masks failure, or substitute hard-coded harness-wide checks.
+4. If validation fails, report the command, exit status, and tasks likely responsible.
 
 ### 7. Report
 
@@ -201,15 +222,22 @@ Output a structured summary:
 - Max parallelism: N agents
 
 ### Validation
-- Type check: PASS/FAIL
-- Lint: PASS/FAIL
-- Tests: PASS/FAIL
+| Command | Scope | Exit status | Result |
+|---------|-------|-------------|--------|
+| `<repo-specific command>` | `<changed scope>` | `<code>` | PASS/FAIL |
 
 ### Issues Requiring Attention
 - [list any failures, blocked tasks, or validation errors]
 ```
 
-### 8. Memory Improvement Protocol
+### 8. Example
+
+For a standard API task, record `Complexity: standard`, `Model override: none
+(inherit)`, and `Thinking: medium`; call Agent with `thinking: medium` and no
+`model` argument. If `medium` is unsupported, use the nearest supported thinking
+level without changing models.
+
+### 9. Memory Improvement Protocol
 
 Run at the end of **every** execution -- op, dry-run, or error.
 
@@ -235,7 +263,8 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 | Max concurrent agents per wave | 5 (split larger waves) |
 | Failure handling | Mark dependent tasks BLOCKED, continue independent ones |
 | Context passing | Prior wave summaries, not full output |
-| Model selection | `luna`: simple/high-throughput or strict-latency; `terra`: balanced standard (default); `sol`: hardest quality-first coding/reasoning or architecture synthesis. Tier names are version-agnostic. Fallbacks: `haiku` / `sonnet` / `opus`, respectively. Agent thinking is capped at `xhigh`. |
+| Model selection | Omit Agent `model` to inherit by default. Override only for an operator request, unavailable required capability/context, strict latency/budget, or local benchmark evidence; record the reason. Unsupported thinking falls back to the nearest supported level, never a model switch. |
+| Thinking selection | Pass Agent `thinking`: simple/mechanical=`low`; standard=`medium`; complex=`high`; architecture/debugging with substantial uncertainty=`xhigh`; never `max`. |
 
 ### Key Resources
 

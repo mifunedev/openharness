@@ -498,7 +498,9 @@ fi
 # depend on tmux update-environment, forward the caller's unrelated environment,
 # or perform dynamic shell reconstruction.
 LAUNCH_CMD="REPO_ROOT=$(printf %q "$REPO_ROOT") RALPH_CODELAYER_PROVIDER=$(printf %q "${RALPH_CODELAYER_PROVIDER:-}") RALPH_CODELAYER_FLAGS=$(printf %q "${RALPH_CODELAYER_FLAGS:-}") bash $(printf %q "$SCRIPT_PATH") --loop --harness=$(printf %q "$HARNESS") $(printf %q "$TASKDESC") 2>&1 | tee $(printf %q "/tmp/ralph-$TASKDESC.log")"
-tmux new-session -d -s "$TASKDESC" "$LAUNCH_CMD"
+# -E prevents tmux update-environment from importing unrelated client variables
+# into an existing server; LAUNCH_CMD carries only the explicit Ralph values.
+tmux new-session -E -d -s "$TASKDESC" "$LAUNCH_CMD"
 
 echo "✓ Launched tmux session: $TASKDESC"
 echo "  Harness: $HARNESS"

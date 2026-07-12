@@ -158,7 +158,7 @@ describe("Ralph CodeLayer adapter", () => {
     });
     expect(client.status).toBe(0);
     const tmuxArgs = readFileSync(capture).toString().split("\0").filter(Boolean);
-    expect(tmuxArgs.slice(0, 4)).toEqual(["new-session", "-d", "-s", task]);
+    expect(tmuxArgs.slice(0, 5)).toEqual(["new-session", "-E", "-d", "-s", task]);
     const launch = tmuxArgs.at(-1) ?? "";
     expect(launch).toContain("RALPH_CODELAYER_PROVIDER=open\\ ai");
     expect(launch).toContain("RALPH_CODELAYER_FLAGS=--model\\ gpt-4.1\\ --verbose");

@@ -40,6 +40,15 @@ the same OAuth flow, but `claude auth login` is the explicit, scriptable path.
 Credentials are stored in `~/.claude/.credentials.json` inside the sandbox (persisted via the
 `claude-auth` volume). The sandbox banner at login indicates whether credentials are present.
 
+## Optional Langfuse observability
+
+For optional Claude Code end-to-end traces, use Langfuse's official marketplace
+plugin and configure it at the Claude prompt; it is not a native OTEL or
+`.env` setup. The plugin is user-scoped and captures conversation and tool data,
+so disable it before sensitive sessions. See [Langfuse](../integrations/langfuse.md#claude-code)
+for the exact install/configure commands, endpoint choices, privacy boundary,
+and disable/uninstall steps.
+
 ## Common usage
 
 The sandbox alias pre-passes `--dangerously-skip-permissions` so Claude Code can read and write files without prompting on each operation:

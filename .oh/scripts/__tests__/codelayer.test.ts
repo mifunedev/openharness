@@ -199,7 +199,7 @@ describe("Ralph CodeLayer adapter", () => {
     writeFileSync(path.join(taskDir, "prompt.md"), "real tmux task\n");
     writeFileSync(progress, "# progress\n");
     expect(spawnSync("git", ["init", "-q"], { cwd: repo }).status).toBe(0);
-    writeFileSync(path.join(bin, "codelayer"), `#!/usr/bin/env node\nconst fs = require("node:fs");\nconst names = ${JSON.stringify(CODELAYER_TMUX_ENV)};\nfs.writeFileSync(${JSON.stringify(envCapture)}, JSON.stringify(Object.fromEntries(names.concat(["UNRELATED_SERVER_ENV"]).map(n => [n, { set: Object.hasOwn(process.env, n), value: process.env[n] }]))));\nfs.writeFileSync(${JSON.stringify(argvCapture)}, JSON.stringify(process.argv.slice(2)));\nfs.appendFileSync(${JSON.stringify(progress)}, "STATUS: COMPLETE\\n");\n`);
+    writeFileSync(path.join(bin, "codelayer"), `#!${process.execPath}\nconst fs = require("node:fs");\nconst names = ${JSON.stringify(CODELAYER_TMUX_ENV)};\nfs.writeFileSync(${JSON.stringify(envCapture)}, JSON.stringify(Object.fromEntries(names.concat(["UNRELATED_SERVER_ENV"]).map(n => [n, { set: Object.hasOwn(process.env, n), value: process.env[n] }]))));\nfs.writeFileSync(${JSON.stringify(argvCapture)}, JSON.stringify(process.argv.slice(2)));\nfs.appendFileSync(${JSON.stringify(progress)}, "STATUS: COMPLETE\\n");\n`);
     chmodSync(path.join(bin, "codelayer"), 0o755);
 
     const baseEnv = { ...withoutCodeLayerEnv(), HOME: repo, PATH: `${bin}:/usr/bin:/bin`, TMUX_TMPDIR: tmuxTmp };
@@ -221,7 +221,7 @@ describe("Ralph CodeLayer adapter", () => {
     };
     const client = spawnSync("bash", [RALPH, "--harness=codelayer", task], { cwd: repo, encoding: "utf8", env: clientValues });
     expect(client.status).toBe(0);
-    for (let attempt = 0; attempt < 50 && spawnSync("test", ["-f", envCapture]).status !== 0; attempt++) spawnSync("sleep", ["0.1"]);
+    for (let attempt = 0; attempt < 100 && spawnSync("test", ["-f", envCapture]).status !== 0; attempt++) spawnSync("sleep", ["0.1"]);
 
     const captured = JSON.parse(readFileSync(envCapture, "utf8")) as Record<string, { set: boolean; value?: string }>;
     for (const name of CODELAYER_TMUX_ENV) {

@@ -137,3 +137,36 @@ jobs:
           # the ~390s unhealthy deadline. Boot is now just the cron-system spawn.
           SKIP_PNPM_INSTALL: "1"
         run: bash .oh/scripts/sandbox-boot-smoke.sh
+
+  codelayer-enabled-image:
+    name: Validate enabled and default CodeLayer images
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    services:
+      docker:
+        image: docker:29-dind
+        env:
+          DOCKER_TLS_CERTDIR: ""
+        options: --privileged
+        ports:
+          - 2375:2375
+    env:
+      # This job talks only to its dedicated privileged dind service, never an
+      # operator daemon. Runtime smoke containers use a unique internal network.
+      DOCKER_HOST: tcp://127.0.0.1:2375
+      DOCKER_TLS_CERTDIR: ""
+      CODELAYER_SMOKE_ID: ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - name: Wait for isolated dind
+        run: |
+          for attempt in $(seq 1 60); do
+            docker info >/dev/null 2>&1 && exit 0
+            sleep 2
+          done
+          exit 1
+      - name: Build-only Compose and no-egress CodeLayer contract smoke
+        run: bash .oh/scripts/codelayer-image-smoke.sh

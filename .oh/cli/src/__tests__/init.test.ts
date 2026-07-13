@@ -372,6 +372,7 @@ describe("runInit", () => {
     expect(hy).toMatch(/^  agent_browser: true/m);
     // A declined install stays commented (default applies).
     expect(hy).toMatch(/^  # hermes: false/m);
+    expect(hy).toMatch(/^  # codelayer: false/m);
     // Secrets are NEVER written to harness.yaml.
     expect(hy).not.toContain("ghp_supersecrettoken12345");
     expect(hy).not.toContain("GH_TOKEN");

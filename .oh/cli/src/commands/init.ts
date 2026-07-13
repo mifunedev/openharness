@@ -649,6 +649,7 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
     { key: "deepagents", desc: "DeepAgents multi-agent runtime" },
     { key: "hermes", desc: "Hermes CLI + runtime (build arg + runtime)" },
     { key: "grok_build", desc: "Grok build tooling" },
+    { key: "codelayer", desc: "CodeLayer 0.0.61 local coding harness (auth configured separately)" },
     { key: "agent_browser", desc: "agent-browser + Chromium (~1 GB)" },
   ];
   for (const inst of installs) {

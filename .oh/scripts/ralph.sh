@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # scripts/ralph.sh — Ralph loop runner per SPEC §scripts.
 #
-# Usage:   scripts/ralph.sh [--harness=claude|pi|codex|opencode|deepagents] <taskdesc>
+# Usage:   scripts/ralph.sh [--harness=claude|pi|codex|opencode|deepagents|codelayer] <taskdesc>
 # Example: scripts/ralph.sh openharness-v07-convergence
 # Example: scripts/ralph.sh --harness=pi openharness-v07-convergence
 # Example: scripts/ralph.sh --harness=codex openharness-v07-convergence
 # Example: scripts/ralph.sh --harness=opencode openharness-v07-convergence
 # Example: scripts/ralph.sh --harness=deepagents openharness-v07-convergence
+# Example: scripts/ralph.sh --harness=codelayer openharness-v07-convergence
 #
 # Validates the four-file contract (prd.md, prd.json, prompt.md, progress.txt),
 # launches a named tmux session running the loop. Each iteration sends prompt.md
@@ -32,10 +33,12 @@
 #                        mounted Docker socket, --shell-allow-list all can affect
 #                        sibling containers or host Docker, so use only for
 #                        trusted tasks.
+#   --harness=codelayer  run the optional local CodeLayer coding harness;
+#                        explicit opt-in only and never an automatic fallback.
 #
 # Configuration (env vars):
 #   RALPH_HARNESS              default harness if --harness is omitted
-#                              (claude|pi|codex|opencode|deepagents)
+#                              (claude|pi|codex|opencode|deepagents|codelayer)
 #   RALPH_CLAUDE_FLAGS         Claude flags (default: --dangerously-skip-permissions --print)
 #   RALPH_AGENT_FLAGS          backwards-compatible alias for RALPH_CLAUDE_FLAGS
 #   RALPH_PI_FLAGS             Pi flags (default: --print)
@@ -46,6 +49,10 @@
 #                              "-y --shell-allow-list all -q --no-stream"; combined with
 #                              the mounted Docker socket, that can affect sibling
 #                              containers or host Docker — only use for trusted tasks.
+#   RALPH_CODELAYER_PROVIDER   optional provider emitted as exactly --provider VALUE
+#   RALPH_CODELAYER_FLAGS      empty or simple whitespace-delimited tokens only;
+#                              quotes, backslashes, shell metacharacters, globs,
+#                              and prompt/provider options are rejected.
 #   RALPH_DEEPAGENTS_MAX_TURNS per-call turn cap passed to DeepAgents as --max-turns
 #                              (default: 25). Prevents a single DeepAgents call from
 #                              hanging an iteration; always appended after the
@@ -56,17 +63,17 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 [--harness=claude|pi|codex|opencode|deepagents] <taskdesc>" >&2
+  echo "Usage: $0 [--harness=claude|pi|codex|opencode|deepagents|codelayer] <taskdesc>" >&2
 }
 
 normalize_harness() {
   local harness="$1"
   case "$harness" in
-    claude|pi|codex|opencode|deepagents)
+    claude|pi|codex|opencode|deepagents|codelayer)
       printf '%s\n' "$harness"
       ;;
     *)
-      echo "Error: unknown harness '$harness' (expected: claude, pi, codex, opencode, or deepagents)." >&2
+      echo "Error: unknown harness '$harness' (expected: claude, pi, codex, opencode, deepagents, or codelayer)." >&2
       exit 2
       ;;
   esac
@@ -84,7 +91,7 @@ parse_args() {
       --harness)
         shift
         if [ "${1-}" = "" ]; then
-          echo "Error: --harness requires a value (claude, pi, codex, opencode, or deepagents)." >&2
+          echo "Error: --harness requires a value (claude, pi, codex, opencode, deepagents, or codelayer)." >&2
           exit 2
         fi
         HARNESS="$1"
@@ -236,6 +243,59 @@ run_deepagents() {
   deepagents $deepagents_flags --max-turns "$max_turns" -n "$task"
 }
 
+parse_codelayer_flags() {
+  local raw="${RALPH_CODELAYER_FLAGS:-}"
+  local token
+  CODELAYER_FLAGS=()
+
+  [[ "$raw" =~ ^[[:space:]]*$ ]] && return 0
+  # Deliberately not shell syntax: only a conservative token alphabet is accepted.
+  if [[ "$raw" =~ [\'\"\\\;\&\|\<\>\$\`\(\)\{\}\[\]\*\?\!\~] ]]; then
+    echo "Error: RALPH_CODELAYER_FLAGS supports simple whitespace-delimited tokens only (no quotes, backslashes, shell metacharacters, or globs)." >&2
+    return 2
+  fi
+
+  set -f
+  read -r -a CODELAYER_FLAGS <<<"$raw"
+  for token in "${CODELAYER_FLAGS[@]}"; do
+    if [[ ! "$token" =~ ^[A-Za-z0-9_./:=+,-]+$ ]]; then
+      echo "Error: unsupported character in RALPH_CODELAYER_FLAGS token '$token'." >&2
+      return 2
+    fi
+    case "$token" in
+      --prompt*|--provider*|-p*)
+        echo "Error: RALPH_CODELAYER_FLAGS may not override Ralph-owned prompt/provider options ('$token')." >&2
+        return 2
+        ;;
+    esac
+  done
+}
+
+run_codelayer() (
+  local task="$1"
+  local provider="${RALPH_CODELAYER_PROVIDER:-}"
+  local -a CODELAYER_FLAGS=()
+  local -a command=(codelayer)
+  set -f
+  parse_codelayer_flags || exit $?
+  command+=("${CODELAYER_FLAGS[@]}")
+  if [ -n "$provider" ]; then
+    command+=(--provider "$provider")
+  fi
+  command+=(--prompt "$task")
+  "${command[@]}"
+)
+
+iteration_output_completes() {
+  local harness="$1"
+  local output_file="$2"
+  [ "$harness" != "codelayer" ] && grep -q '^STATUS: COMPLETE$' "$output_file"
+}
+
+progress_file_completes() {
+  grep -q '^STATUS: COMPLETE$' "$1"
+}
+
 run_iteration() {
   local harness="$1"
   local task="$2"
@@ -263,6 +323,10 @@ run_iteration() {
       ;;
     deepagents)
       run_deepagents "$task" 2>&1 | tee "$output_file"
+      status=${PIPESTATUS[0]}
+      ;;
+    codelayer)
+      run_codelayer "$task" 2>&1 | tee "$output_file"
       status=${PIPESTATUS[0]}
       ;;
     *)
@@ -314,6 +378,7 @@ if [ "${1-}" = "--loop" ]; then
   printf '│  codex: codex exec --sandbox danger-full-access <task>\n'
   printf '│  opencode: opencode run %s <task>\n' "${RALPH_OPENCODE_FLAGS:-}"
   printf '│  deepagents: deepagents %s --max-turns %s -n <task>\n' "$DEEPAGENTS_FLAGS" "$DEEPAGENTS_MAX_TURNS"
+  printf '│  codelayer: codelayer <validated flags>%s --prompt <task> (installed only; auth not inferred)\n' "${RALPH_CODELAYER_PROVIDER:+ --provider $RALPH_CODELAYER_PROVIDER}"
   printf '│  max iterations: %s\n' "$MAX_ITER"
   printf '│  progress: %s\n╰─\n\n' "$PROGRESS"
 
@@ -321,7 +386,7 @@ if [ "${1-}" = "--loop" ]; then
   COMPLETED=0
   while [ "$i" -lt "$MAX_ITER" ]; do
     i=$((i + 1))
-    if grep -q '^STATUS: COMPLETE$' "$PROGRESS"; then
+    if progress_file_completes "$PROGRESS"; then
       printf '\n✓ STATUS: COMPLETE found in progress.txt — exiting at iteration %d.\n' "$i"
       COMPLETED=1
       break
@@ -337,12 +402,10 @@ if [ "${1-}" = "--loop" ]; then
 
     run_iteration "$ACTIVE_HARNESS" "$TASK_TEXT" "$ITERATION_OUTPUT" || true
 
-    # Second completion channel: an iteration may signal completion in its own
-    # output without (or before) writing progress.txt. Grep the iteration output
-    # for the whole-line sentinel; on match, self-heal progress.txt so resume and
-    # the autopilot poller stay consistent, then exit. Whole-line anchoring keeps
-    # narration like "I appended STATUS: COMPLETE to…" from false-firing.
-    if grep -q '^STATUS: COMPLETE$' "$ITERATION_OUTPUT"; then
+    # CodeLayer's wrapped/final output is diagnostic only: Ralph completion for
+    # that adapter is authoritative only through progress.txt. Preserve the
+    # historical output self-heal channel for all other harnesses.
+    if iteration_output_completes "$ACTIVE_HARNESS" "$ITERATION_OUTPUT"; then
       printf '\n✓ STATUS: COMPLETE detected in iteration output — exiting at iteration %d.\n' "$i"
       grep -q '^STATUS: COMPLETE$' "$PROGRESS" || printf 'STATUS: COMPLETE\n' >>"$PROGRESS"
       COMPLETED=1
@@ -363,7 +426,7 @@ if [ "${1-}" = "--loop" ]; then
     sleep "$SLEEP_SECONDS"
   done
 
-  if [ "$i" -ge "$MAX_ITER" ] && ! grep -q '^STATUS: COMPLETE$' "$PROGRESS"; then
+  if [ "$i" -ge "$MAX_ITER" ] && ! progress_file_completes "$PROGRESS"; then
     printf '\n✗ Reached max iterations (%s) without STATUS: COMPLETE.\n' "$MAX_ITER"
     printf '  Inspect: tail -n 50 %s\n' "$PROGRESS"
   fi
@@ -430,8 +493,33 @@ if ! command -v tmux >/dev/null 2>&1; then
   REPO_ROOT="$REPO_ROOT" exec bash "$SCRIPT_PATH" --loop --harness="$HARNESS" "$TASKDESC"
 fi
 
-LAUNCH_CMD="REPO_ROOT=$(printf %q "$REPO_ROOT") bash $(printf %q "$SCRIPT_PATH") --loop --harness=$(printf %q "$HARNESS") $(printf %q "$TASKDESC") 2>&1 | tee $(printf %q "/tmp/ralph-$TASKDESC.log")"
-tmux new-session -d -s "$TASKDESC" "$LAUNCH_CMD"
+# tmux servers retain the environment that created them, so an older server may
+# not know credentials exported by this invoking shell. For CodeLayer only, use
+# tmux 3.3a's per-session -e arguments to override the allowlisted controls and
+# pinned-source auth inputs. Keep values out of LAUNCH_CMD (and therefore logs),
+# preserve set-empty values, and explicitly unset allowlisted names absent from
+# the client so stale server copies cannot masquerade as caller configuration.
+TMUX_ENV_ARGS=()
+TMUX_UNSET_CMD=""
+if [ "$HARNESS" = "codelayer" ]; then
+  CODELAYER_TMUX_ENV=(
+    RALPH_CODELAYER_PROVIDER RALPH_CODELAYER_FLAGS
+    OPENAI_API_KEY ANTHROPIC_API_KEY FIREWORKS_API_KEY EXA_API_KEY
+    AGENTLAYER_AUTH_PATH AGENT_SDK_AUTH_PATH OPENCODE_AUTH_PATH
+  )
+  for env_name in "${CODELAYER_TMUX_ENV[@]}"; do
+    if [[ -v "$env_name" ]]; then
+      TMUX_ENV_ARGS+=("-e" "$env_name=${!env_name}")
+    else
+      TMUX_UNSET_CMD+="unset $env_name; "
+    fi
+  done
+fi
+
+LAUNCH_CMD="${TMUX_UNSET_CMD}REPO_ROOT=$(printf %q "$REPO_ROOT") bash $(printf %q "$SCRIPT_PATH") --loop --harness=$(printf %q "$HARNESS") $(printf %q "$TASKDESC") 2>&1 | tee $(printf %q "/tmp/ralph-$TASKDESC.log")"
+# -E blocks update-environment. Unrelated preexisting server variables still
+# follow normal tmux inheritance; only the CodeLayer allowlist is overridden.
+tmux new-session -E "${TMUX_ENV_ARGS[@]}" -d -s "$TASKDESC" "$LAUNCH_CMD"
 
 echo "✓ Launched tmux session: $TASKDESC"
 echo "  Harness: $HARNESS"

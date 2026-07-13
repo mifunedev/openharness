@@ -69,6 +69,7 @@ BEGIN {
     envmap["install.grok_build"]    = "INSTALL_GROK_BUILD"
     envmap["install.deepagents"]    = "INSTALL_DEEPAGENTS"
     envmap["install.hermes"]        = "INSTALL_HERMES"
+    envmap["install.codelayer"]     = "INSTALL_CODELAYER"
     envmap["install.agent_browser"] = "INSTALL_AGENT_BROWSER"
     envmap["hermes.dashboard"]      = "HERMES_DASHBOARD"
     envmap["hermes.dashboard_port"] = "HERMES_DASHBOARD_PORT"
@@ -106,6 +107,11 @@ function clean_value(s) {
     sub(/[[:space:]]+$/, "", s)
     sub(/^[[:space:]]+/, "", s)
     return strip_quotes(s)
+}
+
+function config_error(message) {
+    print "harness-config.sh: " message > "/dev/stderr"
+    exit 2
 }
 
 {
@@ -147,12 +153,19 @@ function clean_value(s) {
         dotkey = section "." key
         # Empty value (or comment-only) after the colon marks the start of a list.
         if (val == "" || val ~ /^[[:space:]]*(#.*)?$/) {
+            if (dotkey == "install.codelayer")
+                config_error("install.codelayer must be exactly true or false")
             in_list  = 1
             list_key = dotkey
             next
         }
         val = clean_value(val)
         if (val == "") next
+        # CodeLayer is an evidence-gated exact boolean. Abort deterministically
+        # on malformed input so a legacy INSTALL_CODELAYER=true env file can
+        # never survive as an accidental enablement.
+        if (dotkey == "install.codelayer" && val != "true" && val != "false")
+            config_error("install.codelayer must be exactly true or false (got \"" val "\")")
         if (mode == "env" && (dotkey in envmap))
             print envmap[dotkey] "=" val
         else if (mode == "get" && dotkey == filter_key)

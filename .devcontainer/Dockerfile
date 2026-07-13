@@ -43,7 +43,11 @@ RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
  && rm -rf /var/lib/apt/lists/*
 
 # ─── Bun ────────────────────────────────────────────────────────────
-RUN BUN_INSTALL=/usr/local curl -fsSL https://bun.sh/install | bash
+# The upstream installer currently writes under /root even with BUN_INSTALL;
+# install a regular executable at the stable FHS path used by image harnesses.
+RUN BUN_INSTALL=/usr/local curl -fsSL https://bun.sh/install | bash \
+ && install -o root -g root -m 0755 /root/.bun/bin/bun /usr/local/bin/bun \
+ && test -x /usr/local/bin/bun
 
 # ─── uv ─────────────────────────────────────────────────────────────
 RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 sh \
@@ -127,6 +131,28 @@ RUN set -e; \
         ln -sf /opt/grok-build/bin/grok /usr/local/bin/grok; \
         rm -f /usr/local/bin/agent; \
     else echo "Skipping Grok Build CLI install (INSTALL_GROK_BUILD=false)"; fi
+
+# ─── CodeLayer coding harness ───────────────────────────────────────
+# @humanlayer/codelayer@0.0.61 publishes TypeScript source and JS bundles but
+# omits the dist/cli.js declared by its bin field. Install after the other npm
+# CLIs so npm cannot relocate/reconcile its global prefix afterward. Repair only
+# that entrypoint; never install @humanlayer/cli or any remote daemon.
+ARG INSTALL_CODELAYER=false
+COPY .oh/install/codelayer-wrapper.sh /tmp/openharness-codelayer-wrapper
+RUN set -eu; \
+    if [ "${INSTALL_CODELAYER}" = "true" ]; then \
+      npm install -g --prefix /usr/local '@humanlayer/codelayer@0.0.61'; \
+      test -x /usr/local/bin/bun; \
+      test -f /usr/local/lib/node_modules/@humanlayer/codelayer/src/cli.ts; \
+      rm -f /usr/local/bin/codelayer; \
+      install -o root -g root -m 0755 /tmp/openharness-codelayer-wrapper /usr/local/bin/codelayer; \
+      test -f /usr/local/bin/codelayer; \
+      test ! -L /usr/local/bin/codelayer; \
+      test -x /usr/local/bin/codelayer; \
+    else \
+      echo "Skipping CodeLayer coding harness install (INSTALL_CODELAYER=false)"; \
+    fi; \
+    rm -f /tmp/openharness-codelayer-wrapper
 
 # ─── Open Harness `oh` CLI ──────────────────────────────────────────
 # Build the in-tree `oh` CLI (.oh/cli/) into a self-contained bundle,

@@ -17,6 +17,7 @@ Key capabilities:
 - **Host dependencies: Docker, Git, and make.** No Node, no Python, and no toolchain maintenance required on your laptop. (`make` drives the `make sandbox` / `make shell` wrappers — see [Prerequisites](/docs/installation#prerequisites).)
 - **Cloudflared previews.** Share sandbox app ports through Cloudflared tunnels; SSH and pack-supplied services remain opt-in Docker Compose overlays.
 - **Multi-agent messaging.** Bridge Slack (and other messengers) to a Pi agent with the [`pi-messenger-bridge`](/docs/integrations/slack) npm package; SSH and pack-supplied services remain opt-in Docker Compose overlays.
+- **Optional coding harnesses.** Default agents can be supplemented with default-off image installs, including [bounded local CodeLayer](harnesses/codelayer.md). CodeLayer installation is not provider authentication and does not enable HumanLayer's remote daemon.
 
 ## How it works
 

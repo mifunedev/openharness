@@ -21,6 +21,7 @@ git:
 install:
   # agent_browser: false       # INSTALL_AGENT_BROWSER — agent-browser + Chromium (~1 GB)
   # hermes: false              # INSTALL_HERMES — Hermes CLI (build arg + runtime)
+  # codelayer: false           # INSTALL_CODELAYER — bounded local CodeLayer coding harness (build arg)
 
 hermes:
   # dashboard: false           # HERMES_DASHBOARD — auto-start web dashboard when Hermes is installed

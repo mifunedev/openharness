@@ -627,7 +627,20 @@ if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null;
     gosu sandbox tmux kill-session -t system-cron 2>/dev/null || true
   fi
 
-  cat > /tmp/cron-watchdog.sh <<'CRON_WATCHDOG'
+  # This helper must be REWRITABLE on a container RESTART (`docker start`). The
+  # entrypoint runs as root; the previous version chowned this file to the
+  # sandbox user (1000:1000, mode 755). On the second boot /tmp still holds it
+  # (container writable-layer, not tmpfs), so the root entrypoint's `cat >` had
+  # to overwrite a file it no longer owned — which fails with EACCES on node
+  # runtimes that drop CAP_DAC_OVERRIDE, and the global `set -e` then promoted
+  # that one failed redirect into a fatal boot abort (container crash-loop on
+  # restart). Fix: keep the file root-owned (root can always rewrite a file it
+  # owns via the owner mode bits — no CAP_DAC_OVERRIDE needed); the sandbox only
+  # needs to READ it, since it is launched via `bash <path>`. rm any stale
+  # sandbox-owned copy left by an older image, and never let this OPTIONAL
+  # supervisor kill the sandbox boot.
+  rm -f /tmp/cron-watchdog.sh 2>/dev/null || true
+  if cat > /tmp/cron-watchdog.sh <<'CRON_WATCHDOG'
 #!/usr/bin/env bash
 set -u
 HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
@@ -645,15 +658,18 @@ while true; do
   sleep "$INTERVAL"
 done
 CRON_WATCHDOG
-  chmod 755 /tmp/cron-watchdog.sh
-  chown -h "$(sandbox_ownership)" /tmp/cron-watchdog.sh 2>/dev/null || true
-
-  if gosu sandbox tmux has-session -t cron-watchdog 2>/dev/null; then
-    echo "[entrypoint] cron-watchdog tmux session already running — skipping"
+  then
+    chmod 755 /tmp/cron-watchdog.sh 2>/dev/null || true
+    if gosu sandbox tmux has-session -t cron-watchdog 2>/dev/null; then
+      echo "[entrypoint] cron-watchdog tmux session already running — skipping"
+    elif gosu sandbox tmux new-session -d -s cron-watchdog \
+      "OH_PROJECT_ROOT=$OH_PROJECT_ROOT HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log"; then
+      echo "[entrypoint] cron-watchdog tmux session started (supervises cron-system)"
+    else
+      echo "[entrypoint] WARN: cron-watchdog tmux launch failed — skipping (sandbox boot continues)"
+    fi
   else
-    gosu sandbox tmux new-session -d -s cron-watchdog \
-      "OH_PROJECT_ROOT=$OH_PROJECT_ROOT HARNESS=$HARNESS CRON_WATCHDOG_INTERVAL=${CRON_WATCHDOG_INTERVAL:-60} bash /tmp/cron-watchdog.sh 2>&1 | tee /tmp/cron-watchdog.log"
-    echo "[entrypoint] cron-watchdog tmux session started (supervises cron-system)"
+    echo "[entrypoint] WARN: could not write /tmp/cron-watchdog.sh — skipping cron-watchdog (sandbox boot continues)"
   fi
 fi
 

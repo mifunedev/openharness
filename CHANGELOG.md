@@ -9,11 +9,21 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+### Changed
+### Fixed
+### Removed
+### Deprecated
+### Security
+
+## [2026.7.14] - 2026-07-14
+
+### Added
 - Document optional Pi-to-Langfuse observability, configuration precedence, privacy controls, and sandbox network boundaries ([#480](https://github.com/mifunedev/openharness/issues/480)).
 - Document optional Claude Code-to-Langfuse observability through the official marketplace plugin, including the user-scope privacy boundary and local sandbox endpoint setup ([#480](https://github.com/mifunedev/openharness/issues/480)).
 ### Changed
 - Make `/delegate` inherit the session model by default and select the Agent tool's `thinking` level from task complexity ([#637](https://github.com/mifunedev/openharness/issues/637)).
 ### Fixed
+- Tolerate npm's retired package-audit endpoint (HTTP 410) so `pnpm audit` in the `pnpm:devPreinstall` hook no longer aborts a fresh `pnpm install` and crash-loops newly provisioned sandbox boots; `--ignore-registry-errors` keeps the audit running while real advisories still fail the gate ([#639](https://github.com/mifunedev/openharness/pull/639)).
 ### Removed
 ### Deprecated
 ### Security

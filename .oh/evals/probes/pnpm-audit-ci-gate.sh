@@ -16,7 +16,11 @@ for file in "$PACKAGE_JSON" "$CI_WORKFLOW" "$RELEASE_WORKFLOW"; do
   fi
 done
 
-EXPECTED_AUDIT="pnpm audit --audit-level low"
+# --ignore-registry-errors: npm retired the audit endpoint pnpm calls (HTTP 410),
+# which made this exit non-zero and abort every fresh `pnpm install` (and CI/release).
+# The flag exits 0 on registry-side errors while STILL failing on real advisories, so
+# the audit keeps running (issue #171) without a retired endpoint bricking installs.
+EXPECTED_AUDIT="pnpm audit --audit-level low --ignore-registry-errors"
 script_value="$(node -e 'const p=require(process.argv[1]); process.stdout.write(p.scripts?.["security:audit"] || "")' "$PACKAGE_JSON")"
 if [[ "$script_value" != "$EXPECTED_AUDIT" ]]; then
   echo "REGRESSION: package.json scripts.security:audit must be exactly '$EXPECTED_AUDIT' (got: ${script_value:-<missing>})" >&2

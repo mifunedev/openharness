@@ -16,7 +16,7 @@
     "typecheck": "(test -d .oh/cli/node_modules || npm --prefix .oh/cli ci --ignore-scripts) && npm --prefix .oh/cli run typecheck",
     "format": "echo \"No root formatter configured\"",
     "pnpm:devPreinstall": "pnpm run security:audit",
-    "security:audit": "pnpm audit --audit-level low"
+    "security:audit": "pnpm audit --audit-level low --ignore-registry-errors"
   },
   "dependencies": {
     "croner": "^9.1.0"

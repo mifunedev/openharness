@@ -11,6 +11,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 ### Changed
 ### Fixed
+- Keep the cron-watchdog temp file (`/tmp/cron-watchdog.sh`) root-owned so a container **restart** (`docker start`) can rewrite it, and make the optional cron supervisor non-fatal under `set -e`; previously the root entrypoint could not overwrite the sandbox-chowned file on the second boot (EACCES on runtimes without `CAP_DAC_OVERRIDE`), which crash-looped the node ([#640](https://github.com/mifunedev/openharness/issues/640)).
 ### Removed
 ### Deprecated
 ### Security

@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Add the draft pxpipe context-image proxy integration RFC and evaluation gates ([#630](https://github.com/mifunedev/openharness/issues/630)).
 ### Changed
 ### Fixed
 ### Removed

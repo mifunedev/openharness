@@ -73,6 +73,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [ADR-0001: #532 standards scope](rfcs/adr-0001-standards-scope.md)
 - [Self-improving harness roadmap curation (#525)](rfcs/rfc-selfimprove-roadmap.md)
 - [Trace/event ledger RFC (#525 foundation)](rfcs/rfc-trace-ledger.md)
+- [Experimental pxpipe integration RFC (#630)](rfcs/rfc-pxpipe-integration.md)
 - [Property testing](property-testing.md)
 - [Resources](resources.md)
 - [Roadmap](roadmap.md)

@@ -19,6 +19,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | autopilot-upstream-default | A | 2026-07-07 00:47 | PASS | issue #420 — future autopilots must target canonical repo, not personal fork |
 | autopilot-worktree-log-root | A | 2026-07-07 00:47 | PASS | issue #152 (persist autopilot worktree logs) 2026-06-15 |
 | boot-lint-glob | A | 2026-07-07 00:47 | PASS | issue #90, issue #120 |
+| builder-skill-consolidation | A | 2026-07-17 20:28 | PASS | issue #643 — consolidate artifact builders behind one /builder dispatcher |
 | capability-benchmark-schema | A | 2026-07-07 00:47 | PASS | issue #167 — capability benchmark instrument |
 | clean-restore | A | 2026-07-07 00:47 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | cleanup-tasks-scoped-guard | A | 2026-07-07 00:47 | PASS | issue #85 |

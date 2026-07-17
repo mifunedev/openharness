@@ -22,7 +22,7 @@ Every entry below is present in a fresh clone unless noted otherwise.
 | `README.md` | file | Namespace anchor (keeps `.oh/` in a fresh clone) and the governing-principle doc for the control plane. | Humans; shipped forward via `manifest.json`. |
 | `manifest.json` | file | `oh update` payload allowlist — an `{ include, exclude }` document of globs relative to `.oh/` that decides what gets vendored into an equipped repo. | `oh update` (`.oh/cli`). |
 | `skills.lock` | file | Pinned lockfile for the vendored skill pack (`skills.v1` schema). | `.oh/scripts/link-providers.sh` (vendored-pack validation). |
-| `agents/` | dir | Provider-portable sub-agent definitions (`pm`, `critic`, `implementer`, `auditor`, `skill-builder`, …). | Agent providers via symlinks (`.claude/agents` → `.oh/agents`); the Agent tool. |
+| `agents/` | dir | Provider-portable sub-agent definitions (`pm`, `critic`, `implementer`, `auditor`, `advisor`, …). | Agent providers via symlinks (`.claude/agents` → `.oh/agents`); the Agent tool. |
 | `cli/` | dir | The in-tree `oh` CLI — a standalone npm package built into the image as `/opt/oh`. | `npm --prefix .oh/cli`; the `oh` binary (`oh init` / `oh update`). |
 | `context/` | dir | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) plus the collapsed `rules/` provider pointers. | Session start per `AGENTS.md`; symlinked provider surfaces. |
 | `crons/` | dir | Scheduled-agent cron definitions (`heartbeat.md`, `autopilot.md`, `cleanup-tasks.md`, `eval-weekly.md`, `prompt-miner.md`) plus the gitignored runtime `.cron.log`/`.pid`. | `.oh/scripts/cron-runtime.ts`. |

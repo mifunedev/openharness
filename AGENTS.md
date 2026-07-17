@@ -167,6 +167,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/release` | CalVer release — branch, tag, push, GHCR |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
 | `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `.oh/context/rules/git.md`, which is now only a pointer for providers that load rules. |
+| `/builder` | Author or refine one provider-portable artifact via `/builder <agent\|skill\|command\|rule> <name-or-request>`; shared discovery and validation live in the dispatcher, with one authoritative reference per type. |
 | `/pr-audit` | Triage all open PRs in one bulk `gh pr list --json` query — actionable buckets (ready/CI-failing/conflicting/changes-requested/needs-review) for ready-for-review PRs, with draft PRs split out first as a separate WIP class (promotable/WIP/limbo) + stale/convention flags; read-only by default, `--deep` fans out diff reviewers for flagged PRs, `--proof` writes an idempotent per-PR verdict comment, `--label-apply`/`--close-stale` mutate after confirmation |
 | `/health-check` | Triage host memory/disk/Docker before starting a stack; rank reclaim levers by safety×yield, prune build cache, confirm destructive removal |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |

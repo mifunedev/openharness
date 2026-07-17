@@ -1,0 +1,8 @@
+# Progress — audit-consolidation
+
+## Codebase Patterns
+
+- Canonical provider-portable skills live under `.oh/skills/`; provider surfaces are symlinks.
+- `/audit` is the only public audit-family owner; shared scripts/references remain private.
+- Preserve unrelated root work by operating only in this isolated worktree.
+

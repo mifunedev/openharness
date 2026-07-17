@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "skill/645-consolidate-audit-workflows",
+  "description": "Consolidate audit workflows under a deterministic, safety-preserving nine-target /audit dispatcher.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add the nine-target dispatcher",
+      "description": "Create the canonical /audit dispatcher, exact usage, route ownership, trigger matrix, and focused route probe.",
+      "acceptanceCriteria": [
+        "Exactly nine public targets dispatch to one authoritative reference each",
+        "Invalid or incomplete invocation prints canonical usage without starting a run",
+        "Dispatcher taxonomy probe covers routes, triggers, private helpers, and retained instruments",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Build deterministic PR primitives",
+      "description": "Implement private focused/queue acquisition plus versioned deterministic classification and exhaustive fixtures.",
+      "acceptanceCriteria": [
+        "pr-acquire.sh owns one query per mode and cleans invocation-scoped snapshots",
+        "pr-classify.sh is network-free, mutation-free, deterministic JSON-in/JSON-out",
+        "Fixtures cover CI enums, review/merge truth tables, drafts, duplicates, unknowns, and byte stability",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Move the implementation gate",
+      "description": "Move the existing per-unit gate under /audit implementation and consume focused classifier JSON.",
+      "acceptanceCriteria": [
+        "Gate order and AUDIT-PASS/AUDIT-FAIL tokens remain unchanged",
+        "Gate 3 reads machine readiness and evidence fields only",
+        "Browser preflight is non-mutating and fail-closed for UI stories",
+        "All implementation-gate callers use /audit implementation",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Migrate audit target protocols",
+      "description": "Move harness, context, skills, eval-quality, drift, and full campaign protocols without flattening verdicts.",
+      "acceptanceCriteria": [
+        "Each target retains its native verdicts and fail-closed conditions",
+        "Full campaign preserves provenance, correlation, tiering, and Recommended Next 3 Actions",
+        "External harness mode is report-only by default and issue actions require preview/confirm/dry-run",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Unify root run and logging behavior",
+      "description": "Implement immutable AUDIT_ROOT/AUDIT_LOG_ROOT/AUDIT_RUN_ID propagation and single-owner logging.",
+      "acceptanceCriteria": [
+        "Direct eval, health-check, and wiki invocations log normally",
+        "Composed children suppress logs and one audit invocation appends exactly once",
+        "Root/run lifecycle and concurrent temp isolation are fixture-tested",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006A",
+      "title": "Harden ablation recovery",
+      "description": "Make ablate.sh the single locked versioned swap/restore state machine used by context and eval.",
+      "acceptanceCriteria": [
+        "Canonicalization and unsafe targets fail closed",
+        "Signals and simulated crash recovery restore byte-identical targets and clear state",
+        "Same-target contention and different-target concurrency are fixture-tested",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006B",
+      "title": "Migrate callers and registries",
+      "description": "Update every active caller, registry, provider prompt, cron, workflow, doc, template, and capability task to /audit.",
+      "acceptanceCriteria": [
+        "Before/after active-reference inventory classifies every legacy occurrence",
+        "link-providers, skills.lock provenance, REPO_MAP, workflows, docs, templates, and callers use canonical targets",
+        "CI and release shellcheck include audit scripts and ablate.sh",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006C",
+      "title": "Remove legacy entry points",
+      "description": "Delete superseded audit skills and auditor agent only after parent protection ancestry and caller migration are verified.",
+      "acceptanceCriteria": [
+        "Parent PR #648 protected-path commit is in ancestry",
+        "Six legacy skill entry points and auditor agent are removed with no aliases",
+        "Retained instruments remain public and stale-reference probe reports zero active legacy uses",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Strengthen audit regression probes",
+      "description": "Migrate existing probes and add behavior-level coverage for dispatcher, classifier, effects, recovery, and logging.",
+      "acceptanceCriteria": [
+        "Focused probes cover all PRD US-007 fixture cases",
+        "Provider-link and wiki-index probes pass",
+        "Full eval suite has no new green-to-red regression",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Align changelog and wiki",
+      "description": "Document the breaking migration and curate the audit architecture wiki model.",
+      "acceptanceCriteria": [
+        "CHANGELOG has a migration table for every removed invocation",
+        "audit-architecture wiki entry follows schema and is indexed",
+        "Documentation preserves ownership, effects, readiness, root/run, campaign, and rollback boundaries",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Verify the complete consolidation",
+      "description": "Run all focused and repository-wide gates and capture completion evidence.",
+      "acceptanceCriteria": [
+        "All new shell scripts are executable and shellcheck clean",
+        "Focused fixtures, provider links, wiki index, full eval, and git diff checks pass",
+        "No active legacy references or unrelated changes remain",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

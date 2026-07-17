@@ -1,16 +1,41 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #645 — immutable audit root/run/log correlation
-# desc: dispatcher and composed instruments preserve roots, child log suppression, and one outer append
+# source: issue #645 — executable immutable audit root/run/log correlation
+# desc: production lifecycle validates before state, preserves child identity, cleans temp, and locks one append
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; A="$ROOT/.oh/skills/audit/SKILL.md"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; RUN="$REPO/.oh/skills/audit/scripts/audit-run.sh"
+tmp=$(mktemp -d); tmpdir=$(mktemp -d); trap 'rm -rf "$tmp" "$tmpdir"' EXIT
+mkdir -p "$tmp/.oh/skills/audit/references" "$tmp/.oh/scripts"
+printf '# test route\n' >"$tmp/.oh/skills/audit/references/drift.md"
+printf '# harness route loads references/external-proposal-audit.md only for --external\n' >"$tmp/.oh/skills/audit/references/harness.md"
+printf '# private external route\n' >"$tmp/.oh/skills/audit/references/external-proposal-audit.md"
+cp "$REPO/.oh/scripts/locked-append.sh" "$tmp/.oh/scripts/locked-append.sh"
+git -C "$tmp" init -q; git -C "$tmp" config user.email test@example.invalid; git -C "$tmp" config user.name test
+git -C "$tmp" add .; git -C "$tmp" commit -qm init
 fail(){ echo "REGRESSION: $*" >&2; exit 1; }
-for token in AUDIT_ROOT AUDIT_LOG_ROOT AUDIT_RUN_ID 'exactly one locked append' 'Inherited IDs' 'before any reference is read'; do grep -Fq "$token" "$A" || fail "dispatcher lacks $token"; done
-grep -Eq 'audit-YYYYMMDDTHHMMSSZ|audit-\[0-9\]' "$A" || fail 'run-id shape absent'
-for f in .oh/skills/eval/SKILL.md .oh/skills/health-check/SKILL.md .oh/skills/wiki/references/ingest.md; do
-  grep -Fq 'AUDIT_RUN_ID' "$ROOT/$f" || fail "$f lacks audit child mode"
-  grep -Eqi 'suppress|skip this append' "$ROOT/$f" || fail "$f does not suppress child logging"
+export TMPDIR="$tmpdir"
+# Invalid usage creates neither temp state nor log.
+if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" nope >/dev/null 2>&1; then fail 'unknown target accepted'; fi
+[[ -z $(find "$tmpdir" -mindepth 1 -print -quit) && ! -e "$tmp/.oh/memory" ]] || fail 'invalid usage created lifecycle state'
+if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" harness --external source --focus x >/dev/null 2>&1; then fail 'external/focus conflict accepted'; fi
+if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" harness --wiki-ingest >/dev/null 2>&1; then fail 'external-only option reached survey mode'; fi
+[[ ! -e "$tmp/.oh/memory" ]] || fail 'invalid external routing created lifecycle state'
+# Two concurrent outer invocations get unique IDs and whole-record locked appends.
+for n in 1 2; do
+  CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" drift -- \
+    bash -c 'printf "%s|%s|%s" "$AUDIT_RUN_ID" "$AUDIT_ROOT" "$AUDIT_LOG_ROOT" >"$AUDIT_TMP_ROOT/seen"' & pids[n]=$!
 done
-grep -Fq 'AUDIT_ROOT' "$ROOT/.oh/skills/eval/run.sh" || fail 'eval ignores audit root'
-! grep -Rqs '/home/sandbox/harness' "$ROOT/.oh/skills/audit/scripts" || fail 'audit script hard-codes root'
-echo 'PASS: audit root/run/log contract' >&2
+wait "${pids[1]}"; wait "${pids[2]}"
+log=$(find "$tmp/.oh/memory" -name log.md -print -quit); [[ -f $log ]] || fail 'outer log missing'
+[[ $(grep -c '^## audit --' "$log") -eq 2 ]] || fail 'outer append count/locking'
+mapfile -t ids < <(grep '^\- \*\*Run-ID\*\*:' "$log" | awk '{print $3}')
+[[ ${#ids[@]} -eq 2 && ${ids[0]} != "${ids[1]}" ]] || fail 'run IDs not unique'
+[[ ${ids[0]} =~ ^audit-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9._-]+$ ]] || fail 'run ID shape'
+[[ -z $(find "$tmpdir" -mindepth 1 -maxdepth 1 ! -name openharness-locked-append -print -quit) ]] || fail 'invocation temp not cleaned'
+# Child mode preserves immutable roots/ID and performs no third append.
+id=${ids[0]}
+AUDIT_RUN_ID="$id" AUDIT_ROOT="$tmp" AUDIT_LOG_ROOT="$tmp" TMPDIR="$tmpdir" bash "$RUN" drift -- \
+  bash -c '[[ "$AUDIT_RUN_ID" == "$1" && "$AUDIT_ROOT" == "$2" && "$AUDIT_LOG_ROOT" == "$2" ]]' _ "$id" "$tmp"
+[[ $(grep -c '^## audit --' "$log") -eq 2 ]] || fail 'child appended independently'
+[[ -z $(find "$tmpdir" -mindepth 1 -maxdepth 1 ! -name openharness-locked-append -print -quit) ]] || fail 'child temp not cleaned'
+echo 'PASS: executable audit root/run/log contract' >&2

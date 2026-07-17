@@ -5,7 +5,7 @@
 #       to references/{publish,catchup}.md; topology lives in references/topology.md;
 #       the dispatcher composes /audit drift, /eval, and /audit pr rather than
 #       reimplementing any of their logic; neither SKILL.md nor any reference doc may
-#       contain git rev-list divergence logic (drift-check owns that); catchup must
+#       contain git rev-list divergence logic (`/audit drift` owns that); catchup must
 #       unconditionally prohibit 'git merge upstream/development'; both publish and
 #       catchup must invoke the eval oracle (eval/run.sh).
 set -u

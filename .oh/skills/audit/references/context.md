@@ -7,8 +7,8 @@ Score every file in the default-loaded context set on 4 deterministic dimensions
 | Layer | Files | Loaded how |
 |-------|-------|-----------|
 | Bootloader | `CLAUDE.md` | always |
-| Context | `.oh/context/SOUL.md`, `.oh/context/IDENTITY.md`, `.oh/context/TOOLS.md`, `.oh/context/USER.md` | session start |
-| Memory | `.oh/memory/MEMORY.md` (+ today's log) | session start |
+| Context | `.oh/context/SOUL.md`, `.oh/context/IDENTITY.md`, `.oh/context/TOOLS.md`, `.oh/context/REPO_MAP.md`, `.oh/context/USER.md` | session start |
+| Memory | `.oh/memory/MEMORY.md` and `.oh/memory/<UTC-today>/log.md` when present | session start |
 | Skill metadata | frontmatter of all `**/SKILL.md` | always injected |
 
 ## Instructions
@@ -35,8 +35,10 @@ for f in \
   "$HARNESS/.oh/context/SOUL.md" \
   "$HARNESS/.oh/context/IDENTITY.md" \
   "$HARNESS/.oh/context/TOOLS.md" \
+  "$HARNESS/.oh/context/REPO_MAP.md" \
   "$HARNESS/.oh/context/USER.md" \
-  "$HARNESS/.oh/memory/MEMORY.md"; do
+  "$AUDIT_LOG_ROOT/.oh/memory/MEMORY.md" \
+  "$AUDIT_LOG_ROOT/.oh/memory/$TODAY/log.md"; do
   [ -f "$f" ] || continue
   chars=$(wc -c < "$f")
   words=$(wc -w < "$f")
@@ -45,8 +47,7 @@ done
 
 # Skill metadata aggregate (all SKILL.md description fields)
 skill_chars=$(grep -h -A10 '^description:' \
-  "$HARNESS"/.claude/skills/*/SKILL.md \
-  "$HARNESS"/workspace/.claude/skills/*/SKILL.md 2>/dev/null \
+  "$HARNESS"/.oh/skills/*/SKILL.md 2>/dev/null \
   | wc -c)
 echo "$((skill_chars/4)) skill-metadata-aggregate (all trigger descriptions)"
 ```
@@ -82,12 +83,12 @@ Citation count: how many skills, agents, tracked docs, and orchestrator files re
 ```bash
 FILE_BASE=$(basename "$f")
 REFS=$(grep -rl "$FILE_BASE" \
-  "$HARNESS/.claude/skills" \
-  "$HARNESS/.claude/agents" \
+  "$HARNESS/.oh/skills" \
+  "$HARNESS/.oh/agents" \
   "$HARNESS/AGENTS.md" \
   "$HARNESS/CLAUDE.md" \
-  "$HARNESS/context" \
-  "$HARNESS/docs" 2>/dev/null \
+  "$HARNESS/.oh/context" \
+  "$HARNESS/.oh/docs" 2>/dev/null \
   | grep -v "^${f}$" | wc -l)
 ```
 
@@ -104,9 +105,11 @@ REFS=$(grep -rl "$FILE_BASE" \
 Verify that every file path and skill reference within the file resolves. Broken references are load-bearing context that actively misleads.
 
 ```bash
-# Absolute paths referenced in backticks or quotes
+# Repo-relative .oh/ paths referenced in backticks or quotes. Do not interpret
+# command invocations (for example /audit) as filesystem-root paths.
 PATH_REFS=$(grep -oP '`[^`]+`|"[^"]+"' "$f" \
-  | grep -oP '/[a-zA-Z0-9_./-]+' | sort -u)
+  | grep -oP '(?:^|[[:space:]`"])(\.oh/[a-zA-Z0-9_./-]+)' \
+  | grep -oP '\.oh/[a-zA-Z0-9_./-]+' | sort -u)
 
 # Skill invocations like /release, /ci-status (exclude filesystem paths)
 SKILL_REFS=$(grep -oP '/[a-z][a-z0-9-]+' "$f" \
@@ -114,13 +117,11 @@ SKILL_REFS=$(grep -oP '/[a-z][a-z0-9-]+' "$f" \
 
 BROKEN=0
 for p in $PATH_REFS; do
-  [ -e "$p" ] || BROKEN=$((BROKEN + 1))
+  [ -e "$HARNESS/$p" ] || BROKEN=$((BROKEN + 1))
 done
 for s in $SKILL_REFS; do
   name="${s#/}"
-  { [ -d "$HARNESS/.claude/skills/$name" ] || \
-    [ -d "$HARNESS/workspace/.claude/skills/$name" ]; } \
-    || BROKEN=$((BROKEN + 1))
+  [ -d "$HARNESS/.oh/skills/$name" ] || BROKEN=$((BROKEN + 1))
 done
 ```
 

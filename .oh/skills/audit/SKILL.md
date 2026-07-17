@@ -27,7 +27,7 @@ usage: /audit <implementation|pr|prs|harness|context|skills|eval-quality|drift|f
 
 | Target | Invocation | Native result |
 |---|---|---|
-| `implementation` | `/audit implementation <slug> [--pr N] [--branch B]` | `AUDIT-PASS` / `AUDIT-FAIL` |
+| `implementation` | `/audit implementation <slug> [--pr N --repo O/N] [--branch B]` | `AUDIT-PASS` / `AUDIT-FAIL` |
 | `pr` | `/audit pr <N> [--repo O/N] [--deep] [--proof] [--dry-run]` | `PR-AUDIT-PROMOTABLE` / `PR-AUDIT-BLOCKED` / `PR-AUDIT-UNKNOWN` |
 | `prs` | `/audit prs [--repo O/N] [filters/actions]` | buckets + `PRS-AUDIT-COMPLETE` / `PRS-AUDIT-PARTIAL` |
 | `harness` | `/audit harness [--focus area] [--external URL|path] [actions]` | Tier 1/2/3 + Recommended Next 3 Actions |
@@ -51,12 +51,19 @@ For missing/unknown targets or missing required arguments, print the exact usage
 | drift | `references/drift.md` |
 | full | `references/full.md` |
 
-After validation, the outermost invocation resolves and exports immutable `AUDIT_ROOT` from `git rev-parse --show-toplevel`, `AUDIT_LOG_ROOT` from a validated `AUTOPILOT_LOG_ROOT` or the main worktree root, and a fresh opaque `AUDIT_RUN_ID` matching `audit-YYYYMMDDTHHMMSSZ-suffix`. Inherited IDs identify child mode and are never replaced. Read exactly the selected route; supporting scripts/references are private, never targets.
+Use the executable lifecycle boundary
+`$AUDIT_ROOT/.oh/skills/audit/scripts/audit-run.sh <target> [target options] -- <route-driver>`
+for every valid invocation. It performs validation before lifecycle creation, resolves and
+exports immutable `AUDIT_ROOT`, `AUDIT_LOG_ROOT`, and `AUDIT_RUN_ID`, maps the target to
+exactly one route, supplies invocation-scoped `AUDIT_TMP_ROOT`, composes cleanup traps, and
+performs exactly one locked terminal append for the outer run. Do not hand-roll these steps
+from prose. An inherited ID identifies child mode and is never replaced or independently
+logged. The generated ID matches `audit-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9._-]+`.
 
-The outer invocation owns temp cleanup and exactly one locked append under
-`$AUDIT_LOG_ROOT/.oh/memory/<UTC-date>/log.md`, including failed/partial outcomes.
-Children inherit all three variables, return structured observations, and suppress their
-own memory/retro append. Native verdicts are preserved; the dispatcher does not normalize them.
+Read exactly the route returned by that boundary; supporting scripts/references are private,
+never targets. Children inherit all roots and the ID, return structured observations, and
+suppress their own memory/retro append. Native verdicts are preserved; the dispatcher does
+not normalize them.
 
 Default behavior is report-only except disclosed local state: `/eval` scoreboard,
 remote-ref fetches, invocation-scoped temp/recovery files, and the single audit log.

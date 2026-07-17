@@ -1,28 +1,48 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #645 — one locked versioned ablation recovery owner
-# desc: ablation restores bytes, rejects unsafe targets, and clears recovery state
+# desc: production ablation handles locking, symlinks, traps, contradiction, and recovery safely
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; A="$ROOT/.oh/scripts/ablate.sh"
-tmp="$ROOT/.oh/evals/.ablate-probe-target.$$"; tmp2="$tmp.two"; probe=$(mktemp); trap 'rm -f "$tmp" "$tmp2" "$probe"; rm -rf "$ROOT/.oh/evals/.ablation-state"' EXIT
-printf original >"$tmp"; printf second >"$tmp2"; chmod +x "$probe"
-# use a probe independent of args so CLI completes and restores
-printf '#!/bin/sh\nexit 0\n' >"$probe"
-before=$(sha256sum "$tmp"); AUDIT_ROOT="$ROOT" bash "$A" "$tmp" "$probe" >/dev/null; after=$(sha256sum "$tmp")
-[[ $before == "$after" ]] || { echo 'REGRESSION: bytes not restored' >&2; exit 1; }
-[[ ! -d "$ROOT/.oh/evals/.ablation-state" || -z $(find "$ROOT/.oh/evals/.ablation-state" -type f ! -name '*.lock' -print -quit) ]] || { echo 'REGRESSION: recovery state remains' >&2; exit 1; }
-if AUDIT_ROOT="$ROOT" bash "$A" /tmp/outside "$probe" >/dev/null 2>&1; then echo 'REGRESSION: outside root accepted' >&2; exit 1; fi
-if AUDIT_ROOT="$ROOT" bash "$A" "$ROOT/CLAUDE.md" "$probe" >/dev/null 2>&1; then echo 'REGRESSION: CLAUDE.md accepted' >&2; exit 1; fi
-# SIGKILL cannot trap: next startup recovery must restore the exact bytes.
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; A="$REPO/.oh/scripts/ablate.sh"
+ROOT=$(mktemp -d); probe="$ROOT/probe.sh"; trap 'rm -rf "$ROOT"' EXIT
+mkdir -p "$ROOT/.oh/evals"; printf '#!/bin/sh\nexit 0\n' >"$probe"; chmod +x "$probe"
+target="$ROOT/.oh/evals/target"; target2="$ROOT/.oh/evals/target.two"
+printf original >"$target"; printf second >"$target2"
+fail(){ echo "REGRESSION: $*" >&2; exit 1; }
+state="$ROOT/.oh/evals/.ablation-state"
+assert_clean(){
+  [[ ! -d $state || -z $(find "$state" -type f ! -name '.locks.guard' -print -quit) ]] || fail 'recovery/lock state remains'
+}
+before=$(sha256sum "$target"); AUDIT_ROOT="$ROOT" bash "$A" "$target" "$probe" >/dev/null; after=$(sha256sum "$target")
+[[ $before == "$after" ]] || fail 'bytes not restored'; assert_clean
+if AUDIT_ROOT="$ROOT" bash "$A" /tmp/outside-ablation-target "$probe" >/dev/null 2>&1; then fail 'outside root accepted'; fi
+printf forbidden >"$ROOT/CLAUDE.md"
+if AUDIT_ROOT="$ROOT" bash "$A" "$ROOT/CLAUDE.md" "$probe" >/dev/null 2>&1; then fail 'CLAUDE.md accepted'; fi
+ln -s "$target" "$ROOT/.oh/evals/link"
+if AUDIT_ROOT="$ROOT" bash "$A" "$ROOT/.oh/evals/link" "$probe" >/dev/null 2>&1; then fail 'symlink target accepted'; fi
+rm "$ROOT/.oh/evals/link"
+# SIGKILL cannot trap: the next startup recovery restores exact bytes.
 set +e
-AUDIT_ROOT="$ROOT" A="$A" T="$tmp" bash -c 'source "$A"; ablate_swap_out "$T"; kill -KILL $$' >/dev/null 2>&1
+AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_swap_out "$T"; kill -KILL $$' >/dev/null 2>&1
 set -e
-[[ ! -e $tmp ]] || { echo 'REGRESSION: crash fixture did not swap target' >&2; exit 1; }
-AUDIT_ROOT="$ROOT" A="$A" T="$tmp" bash -c 'source "$A"; ablate_recover "$T"'
-[[ $(<"$tmp") == original ]] || { echo 'REGRESSION: crash recovery bytes differ' >&2; exit 1; }
-# Different canonical targets may be independently locked/swapped and both restore.
-AUDIT_ROOT="$ROOT" A="$A" T="$tmp" bash -c 'source "$A"; ablate_swap_out "$T"; sleep 1; ablate_restore "$T"' & p1=$!
-AUDIT_ROOT="$ROOT" A="$A" T="$tmp2" bash -c 'source "$A"; ablate_swap_out "$T"; sleep 1; ablate_restore "$T"' & p2=$!
+[[ ! -e $target ]] || fail 'crash fixture did not swap target'
+AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_recover "$T"'
+[[ $(<"$target") == original ]] || fail 'crash recovery bytes differ'; assert_clean
+# Same-target lock contention fails; different targets remain independent.
+AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_swap_out "$T"; sleep 1; ablate_restore "$T"' & p1=$!
+sleep 0.2
+if AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_swap_out "$T"' >/dev/null 2>&1; then fail 'same target lock contention accepted'; fi
+AUDIT_ROOT="$ROOT" A="$A" T="$target2" bash -c 'source "$A"; ablate_swap_out "$T"; ablate_restore "$T"' & p2=$!
 wait "$p1"; wait "$p2"
-[[ $(<"$tmp") == original && $(<"$tmp2") == second ]] || { echo 'REGRESSION: concurrent targets not restored' >&2; exit 1; }
+[[ $(<"$target") == original && $(<"$target2") == second ]] || fail 'concurrent target bytes differ'; assert_clean
+# Existing EXIT trap is composed rather than clobbered.
+marker="$ROOT/prior-trap"
+AUDIT_ROOT="$ROOT" A="$A" T="$target" M="$marker" bash -c 'source "$A"; trap '\''printf prior >"$M"'\'' EXIT; ablate_swap_out "$T"; exit 0'
+[[ $(<"$target") == original && $(<"$marker") == prior ]] || fail 'EXIT trap composition failed'; assert_clean
+# Contradictory PREPARED state fails closed without overwriting either copy.
+AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; _ablate_paths "$T"; mkdir -p "$ABLATE_STATE_ROOT"; cp "$T" "$ABLATE_BACKUP"; _ablate_record PREPARED; printf changed >"$T"'
+if AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_recover "$T"' >/dev/null 2>&1; then fail 'contradictory PREPARED recovered'; fi
+[[ $(<"$target") == changed ]] || fail 'contradictory recovery overwrote target'
+backup=$(find "$state" -name '*.backup' -print -quit); [[ -n $backup && $(<"$backup") == original ]] || fail 'contradictory recovery overwrote backup'
+rm -rf "$state"
 echo 'PASS: ablation state machine' >&2

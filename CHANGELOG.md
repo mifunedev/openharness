@@ -14,6 +14,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Protect the consolidated `/audit` owner in place of the superseded `harness-audit`, `skill-lint`, `eval-lint`, and `drift-check` entry points, staging their removal in the separate audit-consolidation implementation ([#647](https://github.com/mifunedev/openharness/issues/647)).
 - **BREAKING:** Consolidate artifact authoring under `/builder <agent|skill|command|rule> <name-or-request>` with one authoritative reference per type ([#643](https://github.com/mifunedev/openharness/issues/643)).
 ### Fixed
+- Harden audit consolidation with real GitHub CI normalization, executable run/root/log lifecycle, focused watchdog classification, non-mutating implementation gates, and race-safe ablation recovery fixtures ([#646](https://github.com/mifunedev/openharness/pull/646)).
 ### Removed
 - **BREAKING:** Remove superseded audit-family entry points and the `auditor` agent. Migration: `/pr-audit` → `/audit pr` or `/audit prs`; `/harness-audit` → `/audit harness`; `/context-audit` → `/audit context`; `/skill-lint` → `/audit skills`; `/eval-lint` → `/audit eval-quality`; `/drift-check` → `/audit drift`; `/audit <slug>` → `/audit implementation <slug>`; auditor campaigns → `/audit full` ([#646](https://github.com/mifunedev/openharness/pull/646)).
 - Remove the legacy `agent-builder`, `skill-builder`, `command-builder`, and `rule-builder` agents and the superseded `/skill-builder` entry point; migrate callers to `/builder` ([#643](https://github.com/mifunedev/openharness/issues/643)).

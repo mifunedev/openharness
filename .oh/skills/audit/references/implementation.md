@@ -12,10 +12,10 @@ does not mutate (no `gh pr ready`, no `gh pr merge`) and does not fix — promot
 is a downstream concern and remediation belongs to the build step on
 `AUDIT-FAIL` (single-owner handoff: the outcome is decided here, acted on elsewhere).
 
-> **Not a survey skill.** `/audit pr` triages the *whole* open-PR queue in one
-> bulk query (*"never loop per-PR"*, `audit/references/prs.md`); `/audit` is the
-> opposite shape — a single unit (1 impl vs. 1 `prd.json`). `/audit` *consults*
-> `/audit pr`'s classification for its one PR; it does not replace or fork it.
+> **Not a survey target.** `/audit prs` triages the *whole* open-PR queue in one
+> bulk query (*"never loop per-PR"*, `audit/references/prs.md`); `/audit implementation`
+> is the opposite shape — a single unit (1 impl vs. 1 `prd.json`). It consumes the
+> same focused classifier used by `/audit pr`; it does not replace or fork it.
 
 ---
 
@@ -24,7 +24,8 @@ is a downstream concern and remediation belongs to the build step on
 | Arg | Meaning |
 |-----|---------|
 | `<slug>` | The task slug — locates `.oh/tasks/<slug>/prd.json` and `.oh/tasks/<slug>/progress.txt`. Required. |
-| `--pr <N>` | The PR for this unit, if one exists. When set, gate 3 uses `/audit pr` (which reads `statusCheckRollup`, subsuming `/ci-status`). |
+| `--pr <N>` | The PR for this unit, if one exists. When set, gate 3 uses the shared focused classifier (which reads `statusCheckRollup`, subsuming `/ci-status`). |
+| `--repo <owner/name>` | Repository passed unchanged to focused PR acquisition. Required with `--pr`; never inferred from the process checkout or a hard-coded default. |
 | `--branch <branch>` | The work branch. Used by gate 3's `/ci-status` fallback when there is no PR yet (e.g. an autopilot pre-PR audit). Defaults to the current branch. |
 
 ---
@@ -38,19 +39,21 @@ naming the gate). Only when **all** applicable gates pass is the verdict
 
 ### Gate 1 — Task-graph conformance + artifact contract
 
-Gate 1 has **two gating sub-checks**; either failing is an `AUDIT-FAIL`.
+Gate 1 has **two gating sub-checks**; either failing is an `AUDIT-FAIL`. Execute
+the production helper `"$AUDIT_ROOT/.oh/skills/audit/scripts/implementation-gates.sh" gate1 "$SLUG"`;
+the snippets below explain its behavior and are not a second implementation.
 
 **(a) Task-graph conformance.** Every user story in the task graph must be marked
 complete. The ralph loop flips `passes: false → true` as it finishes each story, so
 the graph is conformant only when **zero** stories remain unfinished:
 
 ```bash
-SLUG="$1"; PRD=".oh/tasks/$SLUG/prd.json"
+SLUG="$1"; PRD="$AUDIT_ROOT/.oh/tasks/$SLUG/prd.json"
 [ -f "$PRD" ] || { echo "FAIL gate1: no $PRD"; exit 1; }
 unfinished=$(jq '[.userStories[] | select(.passes != true)] | length' "$PRD")
 total=$(jq '.userStories | length' "$PRD")
 echo "task-graph: $((total - unfinished))/$total stories pass"
-[ "$unfinished" -eq 0 ] || { echo "FAIL gate1: $unfinished story(ies) not passing"; }
+[ "$unfinished" -eq 0 ] || { echo "FAIL gate1: $unfinished story(ies) not passing"; exit 1; }
 ```
 
 **(b) Artifact contract.** If the `prd.json` declares an `artifact_contract` block
@@ -66,7 +69,10 @@ so the gate keeps its pre-contract behavior for specs that declare no contract:
 # Optional block — no .artifact_contract ⇒ empty list ⇒ unchanged pass.
 while IFS= read -r artifact; do
   [ -z "$artifact" ] && continue
-  [ -e "$artifact" ] || { echo "FAIL gate1: required_artifact missing: $artifact"; exit 1; }
+  case "$artifact" in /*) echo "FAIL gate1: artifact must be AUDIT_ROOT-relative: $artifact"; exit 1;; esac
+  artifact_path="$AUDIT_ROOT/$artifact"
+  [ -e "$artifact_path" ] && [ ! -L "$artifact_path" ] \
+    || { echo "FAIL gate1: required_artifact missing or symlinked: $artifact"; exit 1; }
 done < <(jq -r '.artifact_contract.required_artifacts // [] | .[]' "$PRD")
 ```
 
@@ -97,10 +103,13 @@ the verdict. (Mirrors `/ship-spec` Stage 11 and `.oh/evals/probes/eval-gate.sh`.
 The implementation must be promotable: CI green **and** (for a PR) mergeable and
 clean.
 
-- **PR exists (`--pr N`):** use the private shared acquisition and classifier from
-  `/audit pr` and consume only `.promotable`, `.readyForReview`, `.readyToMerge`,
-  and `.evidenceComplete`. Pass only when evidence is complete and promotable.
-  Never parse Markdown or a human routing token. The shared acquisition reads
+- **PR exists (`--pr N --repo O/N`):** invoke
+  `"$AUDIT_ROOT/.oh/skills/audit/scripts/implementation-gates.sh" classify-pr "$REPO" "$PR"`.
+  That production helper calls the shared acquisition and classifier and returns
+  their fresh JSON. Consume only
+  `.promotable`, `.readyForReview`, `.readyToMerge`, and `.evidenceComplete`.
+  Pass only when evidence is complete and promotable; `NONE` and `UNKNOWN` fail.
+  Never parse Markdown or a human routing token. The acquisition reads
   `statusCheckRollup`, so do not also poll CI.
 - **No PR yet:** fall back to `/ci-status` on `--branch`. A `NO-RUN` CI status is
   **not** a pass (no run ≠ green) — that is `AUDIT-FAIL` until a run is dispatched
@@ -112,18 +121,24 @@ If the task graph contains any browser-verification criteria, the UI must be
 confirmed visually:
 
 ```bash
-grep -qi "agent-browser\|Verify in browser" ".oh/tasks/$SLUG/prd.json" && echo "UI gate applies"
+grep -qi "agent-browser\|Verify in browser" "$AUDIT_ROOT/.oh/tasks/$SLUG/prd.json" && echo "UI gate applies"
 ```
 
-When it applies, first run a non-mutating preflight: verify the registered
-`agent-browser` command and Chromium launch using an invocation-scoped temporary
-profile, then remove that profile. The preflight must not install/download/repair,
-navigate to the app, write the repository, or touch GitHub. Failure fails Gate 4
-before navigation. After a successful preflight, drive `/agent-browser` against
-the running app and confirm the acceptance criteria render/behave as specified. No
-clean screenshot/snapshot for an applicable story is `AUDIT-FAIL`. When no story
-declares browser verification, this gate is **not applicable** (skipped, not
-failed).
+Determine applicability with the production helper's `browser-required` mode. When
+it applies, run its `browser-preflight` mode directly (do **not** run the ordinary
+`/agent-browser` repair/install preflight): it requires `command -v agent-browser`
+and a successful `agent-browser --version`, create a profile beneath
+`$AUDIT_TMP_ROOT`, launch only `about:blank` in session `audit-$AUDIT_RUN_ID`, then
+close that session and remove the profile. Set `HOME` to that profile for all
+preflight commands. The preflight must not install/download/repair, navigate to the
+application, write anywhere under `AUDIT_ROOT`, or touch GitHub; compare
+`git -C "$AUDIT_ROOT" status --porcelain` before/after and fail on any delta.
+Failure fails Gate 4 before application navigation. After a successful preflight,
+drive `/agent-browser` against the running app and confirm the acceptance criteria
+render/behave as specified. Store screenshots under `$AUDIT_TMP_ROOT`, not in the
+repository. No clean screenshot/snapshot for an applicable story is `AUDIT-FAIL`.
+When no story declares browser verification, this gate is **not applicable** and
+must not invoke `agent-browser` at all.
 
 ---
 

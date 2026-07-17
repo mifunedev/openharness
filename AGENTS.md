@@ -138,11 +138,11 @@ flowchart LR
     CRIT -->|APPROVED| BUILD["build"]
     subgraph EXEC["spec-execute (/spec execute)"]
         direction LR
-        BUILD --> AUDIT{"audit<br/>2 critics + eval + pr-audit"}
+        BUILD --> AUDIT{"audit implementation<br/>task graph + eval + focused PR classifier"}
         AUDIT -->|FAIL: fix| BUILD
         AUDIT -->|PASS| SRETRO["spec-retro<br/>/retro"]
         SRETRO --> IMPROVE["improve<br/>compound · compress · benchmark"]
-        IMPROVE --> GROOM["groom<br/>skill-lint · wiki lint · drift-check"]
+        IMPROVE --> GROOM["groom<br/>audit skills · wiki lint · audit drift"]
     end
     GROOM --> MERGE["merge<br/>(human)"]
     MERGE --> RESET["reset | clean<br/>(runner)"]

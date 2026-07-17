@@ -134,7 +134,7 @@ Then run the qualify/improve loop per `.oh/skills/retro/references/memory-protoc
 ## Examples
 
 ```
-/render-html harness-audit-tier --from .oh/memory/2026-05-18/audit-raw.md --intent "pick next 3 actions"
+/render-html audit-harness-tier --from .oh/memory/2026-05-18/audit-raw.md --intent "pick next 3 actions"
 → .oh/memory/2026-05-18/audit-harness-tier.html
 
 /render-html roadmap-council --intent "review council deliberation before publishing pinned issue"

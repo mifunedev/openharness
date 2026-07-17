@@ -178,7 +178,7 @@ Memory Improvement Protocol.
 
 ## Scoring procedure
 
-One self-contained, copy-pasteable driver (skill-lint idiom). It discovers every
+One self-contained, copy-pasteable driver (the established deterministic lint idiom). It discovers every
 probe + capability task, cross-references the `.oh/evals/RESULTS.md` SKIPPED
 oracle, computes the deterministic checks from § 3, emits the KEEP/GROOM/CUT
 matrix (worst verdict first) with the check-7 suite footer, and closes with the

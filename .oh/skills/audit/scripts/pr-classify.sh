@@ -2,20 +2,36 @@
 # Pure, deterministic JSON classifier. No network, mutation, clock, or env defaults.
 set -euo pipefail
 jq -S -c '
-def allowed_fail: ["ACTION_REQUIRED","CANCELLED","ERROR","FAILURE","STARTUP_FAILURE","STALE","TIMED_OUT"];
-def allowed_pending: ["EXPECTED","IN_PROGRESS","PENDING","QUEUED","REQUESTED","WAITING"];
-def allowed_pass: ["SUCCESS","NEUTRAL","SKIPPED"];
-def vals($x): [$x[] | if type!="object" then null else
-  ([.conclusion,.state,.status] | map(select(type=="string" and length>0)) | unique) as $v
-  | if ($v|length)==1 then $v[0] else null end end];
+def fail_values: ["ACTION_REQUIRED","CANCELLED","ERROR","FAILURE","STARTUP_FAILURE","STALE","TIMED_OUT"];
+def pending_values: ["EXPECTED","IN_PROGRESS","PENDING","QUEUED","REQUESTED","WAITING"];
+def pass_values: ["SUCCESS","NEUTRAL","SKIPPED"];
+def known_values: fail_values + pending_values + pass_values + ["COMPLETED"];
+def strings($item): [$item.conclusion,$item.state,$item.status | select(type=="string" and length>0)];
+def malformed_item:
+  type!="object"
+  or ([.conclusion,.state,.status] | any(. != null and type!="string"))
+  or (strings(.) | any(. as $v | known_values | index($v) | not));
+def terminal_item:
+  . as $item | strings($item) as $values
+  | (($item.state // null) as $state
+     | ($item.conclusion // null) as $conclusion
+     | ($item.status // null) as $status
+     | (($state != null and (pass_values | index($state)) != null)
+        or ($conclusion != null and (pass_values | index($conclusion)) != null
+            and ($status == null or $status == "COMPLETED")))
+       and ($values | any(. as $v | fail_values | index($v)) | not)
+       and ($values | any(. as $v | pending_values | index($v)) | not));
 def ci:
   if (.statusCheckRollup|type)!="array" then {value:"UNKNOWN",complete:false}
   elif (.statusCheckRollup|length)==0 then {value:"NONE",complete:true}
-  else vals(.statusCheckRollup) as $v
-  | if ($v|any(.==null or .=="")) then {value:"UNKNOWN",complete:false}
-    elif ($v|any(. as $x|allowed_fail|index($x))) then {value:"FAIL",complete:true}
-    elif ($v|any(. as $x|allowed_pending|index($x))) then {value:"PENDING",complete:true}
-    elif ($v|all(. as $x|allowed_pass|index($x))) then {value:"PASS",complete:true}
+  else .statusCheckRollup as $items
+  | ($items | any(if type=="object" then (strings(.) | any(. as $v | fail_values | index($v))) else false end)) as $failed
+  | ($items | any(if type=="object" then (strings(.) | any(. as $v | pending_values | index($v))) else false end)) as $pending
+  | ($items | any(malformed_item)) as $malformed
+  | if $failed then {value:"FAIL",complete:($malformed|not)}
+    elif $pending then {value:"PENDING",complete:($malformed|not)}
+    elif $malformed then {value:"UNKNOWN",complete:false}
+    elif ($items|all(terminal_item)) then {value:"PASS",complete:true}
     else {value:"UNKNOWN",complete:false} end end;
 def refs:
   (([.closingIssuesReferences[]?.number]

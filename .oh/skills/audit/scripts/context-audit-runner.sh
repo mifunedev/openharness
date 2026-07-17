@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# context-audit runner — Tier-2 ablation harness
+# /audit context runner — Tier-2 ablation harness
 # Usage:
 #   ./runner.sh --ablate <relative-path>   # e.g. .oh/context/IDENTITY.md
 #   ./runner.sh --baseline                 # record baseline probe outputs only

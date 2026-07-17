@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SKILL="$ROOT/.oh/skills/audit/references/harness.md"
 
 if [[ ! -f "$SKILL" ]]; then
-  echo "SKIPPED: harness-audit skill absent: $SKILL" >&2
+  echo "SKIPPED: audit harness reference absent: $SKILL" >&2
   exit 2
 fi
 
@@ -33,10 +33,10 @@ do
 done
 
 if (( ${#missing[@]} > 0 )); then
-  echo "REGRESSION: harness-audit empty-output fail-closed contract is incomplete; missing literals:" >&2
+  echo "REGRESSION: audit harness empty-output fail-closed contract is incomplete; missing literals:" >&2
   printf '  - %s\n' "${missing[@]}" >&2
   exit 1
 fi
 
-echo "PASS: harness-audit fails closed on empty auditor outputs before synthesis" >&2
+echo "PASS: audit harness fails closed on empty auditor outputs before synthesis" >&2
 exit 0

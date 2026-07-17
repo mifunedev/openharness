@@ -250,7 +250,7 @@ After CI passes:
 gh pr ready <N> --repo "$ORIGIN_REPO"
 ```
 
-Run `/audit pr` and confirm the PR is in the `ready` bucket before
+Run `/audit pr <N> --repo "$ORIGIN_REPO"` and confirm the PR is in the `ready` bucket before
 undrafting. If CI never queued (dormant draft PR), dispatch it manually:
 ```bash
 gh workflow run "CI: Harness" --ref feat/${ISSUE_N}-${SLUG}

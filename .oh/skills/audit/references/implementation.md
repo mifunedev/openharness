@@ -57,7 +57,7 @@ echo "task-graph: $((total - unfinished))/$total stories pass"
 ```
 
 **(b) Artifact contract.** If the `prd.json` declares an `artifact_contract` block
-(see the [artifact-contract schema](../../docs/artifact-contract-schema.md)), every
+(see the [artifact-contract schema](../../../docs/artifact-contract-schema.md)), every
 path in `artifact_contract.required_artifacts` must exist on disk. This is a
 **gating** sub-check — a declared-but-missing artifact is a hard `AUDIT-FAIL`, not
 an advisory warning. The block is **optional and additive**: a `prd.json` with no
@@ -71,8 +71,9 @@ while IFS= read -r artifact; do
   [ -z "$artifact" ] && continue
   case "$artifact" in /*) echo "FAIL gate1: artifact must be AUDIT_ROOT-relative: $artifact"; exit 1;; esac
   artifact_path="$AUDIT_ROOT/$artifact"
-  [ -e "$artifact_path" ] && [ ! -L "$artifact_path" ] \
-    || { echo "FAIL gate1: required_artifact missing or symlinked: $artifact"; exit 1; }
+  resolved=$(realpath -e -- "$artifact_path") || exit 1
+  [ "$resolved" = "$artifact_path" ] && case "$resolved" in "$AUDIT_ROOT"/*) :;; *) false;; esac \
+    || { echo "FAIL gate1: required_artifact is non-canonical, symlinked, or outside AUDIT_ROOT: $artifact"; exit 1; }
 done < <(jq -r '.artifact_contract.required_artifacts // [] | .[]' "$PRD")
 ```
 
@@ -132,7 +133,7 @@ and a successful `agent-browser --version`, create a profile beneath
 close that session and remove the profile. Set `HOME` to that profile for all
 preflight commands. The preflight must not install/download/repair, navigate to the
 application, write anywhere under `AUDIT_ROOT`, or touch GitHub; compare
-`git -C "$AUDIT_ROOT" status --porcelain` before/after and fail on any delta.
+compare status, tracked content, index, and untracked-content snapshots before/after and fail on any delta (including changes to files that were already dirty).
 Failure fails Gate 4 before application navigation. After a successful preflight,
 drive `/agent-browser` against the running app and confirm the acceptance criteria
 render/behave as specified. Store screenshots under `$AUDIT_TMP_ROOT`, not in the

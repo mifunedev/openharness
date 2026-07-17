@@ -28,7 +28,11 @@ _ablate_paths() {
   ABLATE_GUARD="$ABLATE_STATE_ROOT/.locks.guard"
 }
 _ablate_reject_state_symlinks() {
-  local path
+  local path state_parent
+  [[ ! -L $ABLATE_STATE_ROOT ]] || { echo "ablate: symlink state directory rejected: $ABLATE_STATE_ROOT" >&2; return 1; }
+  state_parent=$(cd "$(dirname "$ABLATE_STATE_ROOT")" && pwd -P) || return 1
+  [[ $state_parent == "$(_ablate_root)/.oh/evals" ]] \
+    || { echo "ablate: non-canonical state parent rejected: $state_parent" >&2; return 1; }
   for path in "$ABLATE_RECORD" "$ABLATE_BACKUP" "$ABLATE_LOCK" "$ABLATE_GUARD"; do
     [[ ! -L $path ]] || { echo "ablate: symlink recovery state rejected: $path" >&2; return 1; }
   done
@@ -46,6 +50,7 @@ _ablate_validate_record() {
     and .target==$t and .backup==$b' "$ABLATE_RECORD" >/dev/null
 }
 _ablate_lock() {
+  _ablate_reject_state_symlinks || return 1
   mkdir -p "$ABLATE_STATE_ROOT"
   _ablate_reject_state_symlinks || return 1
   exec {ABLATE_GUARD_FD}>"$ABLATE_GUARD"
@@ -83,8 +88,13 @@ _ablate_recover_locked() {
   phase=$(jq -r .phase "$ABLATE_RECORD")
   case $phase in
     PREPARED)
-      [[ -f $ABLATE_TARGET && ! -L $ABLATE_TARGET ]] || { echo "ablate: contradictory PREPARED state" >&2; return 1; }
-      _ablate_same_bytes "$ABLATE_TARGET" "$ABLATE_BACKUP" || { echo "ablate: PREPARED copies differ; refusing overwrite" >&2; return 1; }
+      if [[ -e $ABLATE_TARGET || -L $ABLATE_TARGET ]]; then
+        [[ -f $ABLATE_TARGET && ! -L $ABLATE_TARGET ]] || { echo "ablate: contradictory PREPARED state" >&2; return 1; }
+        _ablate_same_bytes "$ABLATE_TARGET" "$ABLATE_BACKUP" || { echo "ablate: PREPARED copies differ; refusing overwrite" >&2; return 1; }
+      else
+        # Crash window: target was removed after PREPARED, before SWAPPED landed.
+        _ablate_restore_copy || return 1
+      fi
       _ablate_clear_state
       ;;
     SWAPPED)
@@ -137,20 +147,34 @@ _ablate_saved_trap_command() {
   line=${line%\' "$sig"}
   printf '%s' "$line"
 }
+_ablate_restore_traps() {
+  local sig var definition
+  trap - EXIT INT TERM HUP
+  for sig in EXIT INT TERM HUP; do
+    var="ABLATE_PRIOR_TRAP_$sig"; definition=${!var:-}
+    [[ -z $definition ]] || eval "$definition"
+  done
+}
 _ablate_on_trap() {
   local sig=$1 prior rc=0
   case $sig in EXIT) prior=${ABLATE_PRIOR_EXIT:-};; INT) prior=${ABLATE_PRIOR_INT:-};; TERM) prior=${ABLATE_PRIOR_TERM:-};; HUP) prior=${ABLATE_PRIOR_HUP:-};; esac
   trap - EXIT INT TERM HUP
   ablate_restore "$ABLATE_TARGET" || rc=$?
+  # ablate_restore reinstates the exact prior trap definitions. Invoke the
+  # displaced handler once for the signal already being handled.
   [[ -z $prior ]] || eval "$prior"
   [[ $sig == EXIT ]] || exit $((128 + $(kill -l "$sig")))
   return "$rc"
 }
 _ablate_install_traps() {
-  ABLATE_PRIOR_EXIT=$(_ablate_saved_trap_command EXIT)
-  ABLATE_PRIOR_INT=$(_ablate_saved_trap_command INT)
-  ABLATE_PRIOR_TERM=$(_ablate_saved_trap_command TERM)
-  ABLATE_PRIOR_HUP=$(_ablate_saved_trap_command HUP)
+  # shellcheck disable=SC2034 # consumed by name through _ablate_restore_traps
+  ABLATE_PRIOR_TRAP_EXIT=$(trap -p EXIT || true); ABLATE_PRIOR_EXIT=$(_ablate_saved_trap_command EXIT)
+  # shellcheck disable=SC2034 # consumed by name through _ablate_restore_traps
+  ABLATE_PRIOR_TRAP_INT=$(trap -p INT || true); ABLATE_PRIOR_INT=$(_ablate_saved_trap_command INT)
+  # shellcheck disable=SC2034 # consumed by name through _ablate_restore_traps
+  ABLATE_PRIOR_TRAP_TERM=$(trap -p TERM || true); ABLATE_PRIOR_TERM=$(_ablate_saved_trap_command TERM)
+  # shellcheck disable=SC2034 # consumed by name through _ablate_restore_traps
+  ABLATE_PRIOR_TRAP_HUP=$(trap -p HUP || true); ABLATE_PRIOR_HUP=$(_ablate_saved_trap_command HUP)
   trap '_ablate_on_trap EXIT' EXIT
   trap '_ablate_on_trap INT' INT
   trap '_ablate_on_trap TERM' TERM
@@ -179,7 +203,7 @@ ablate_restore() {
   _ablate_record RESTORING
   _ablate_restore_copy
   _ablate_clear_state
-  trap - EXIT INT TERM HUP
+  _ablate_restore_traps
   _ablate_unlock
 }
 

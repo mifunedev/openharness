@@ -207,7 +207,7 @@ After CI passes and `/audit pr` confirms promotability:
 gh pr ready <N> --repo mifunedev/openharness
 ```
 
-Run `/audit pr --repo mifunedev/openharness` and confirm the PR is in the
+Run `/audit pr <N> --repo mifunedev/openharness` and confirm the PR is in the
 `ready` bucket (not `CI-failing`, `conflicting`, or `changes-requested`)
 before undrafting.
 

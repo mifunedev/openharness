@@ -83,6 +83,12 @@ if [ -f "$SYNC/references/catchup.md" ]; then
     missing+=("references/catchup.md: must explicitly prohibit 'git merge upstream/development' (catchup must use cherry-pick, not a full merge)")
 fi
 
+# Focused promotion gates must include the required PR number and repository.
+grep -qF '/audit pr <N> --repo mifunedev/openharness' "$SYNC/references/publish.md" || \
+  missing+=("references/publish.md: focused /audit pr invocation lacks PR number/repo")
+grep -qF '/audit pr <N> --repo "$ORIGIN_REPO"' "$SYNC/references/catchup.md" || \
+  missing+=("references/catchup.md: focused /audit pr invocation lacks PR number/repo")
+
 # (7) both publish.md and catchup.md must invoke the eval oracle (eval/run.sh).
 #     The eval gate is non-negotiable in both directions.
 for proc_f in "$SYNC/references/publish.md" "$SYNC/references/catchup.md"; do

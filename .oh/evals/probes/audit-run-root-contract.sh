@@ -17,9 +17,23 @@ export TMPDIR="$tmpdir"
 # Invalid usage creates neither temp state nor log.
 if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" nope >/dev/null 2>&1; then fail 'unknown target accepted'; fi
 [[ -z $(find "$tmpdir" -mindepth 1 -print -quit) && ! -e "$tmp/.oh/memory" ]] || fail 'invalid usage created lifecycle state'
-if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" harness --external source --focus x >/dev/null 2>&1; then fail 'external/focus conflict accepted'; fi
-if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" harness --wiki-ingest >/dev/null 2>&1; then fail 'external-only option reached survey mode'; fi
-[[ ! -e "$tmp/.oh/memory" ]] || fail 'invalid external routing created lifecycle state'
+if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" harness --external source --focus x -- true >/dev/null 2>&1; then fail 'external/focus conflict accepted'; fi
+if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" harness --wiki-ingest -- true >/dev/null 2>&1; then fail 'external-only option reached survey mode'; fi
+if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" implementation -- true >/dev/null 2>&1; then fail 'missing implementation slug accepted'; fi
+if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" pr 7 --repo bad -- true >/dev/null 2>&1; then fail 'invalid focused repo accepted'; fi
+if CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" drift >/dev/null 2>&1; then fail 'missing route driver accepted'; fi
+[[ ! -e "$tmp/.oh/memory" ]] || fail 'invalid target arguments created lifecycle state'
+# Lifecycle remains active around the actual driver and exposes the selected route.
+CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c '
+  [[ $AUDIT_ROUTE == "$AUDIT_ROOT/.oh/skills/audit/references/drift.md" ]]
+  [[ ! -e "$AUDIT_LOG_ROOT/.oh/memory" ]]
+  printf route-ran >"$AUDIT_ROOT/driver-marker"
+'
+[[ $(<"$tmp/driver-marker") == route-ran ]] || fail 'selected route driver did not run'
+rm "$tmp/driver-marker"
+first_log=$(find "$tmp/.oh/memory" -name log.md -print -quit)
+[[ -f $first_log && $(grep -c '^## audit --' "$first_log") -eq 1 ]] || fail 'terminal append did not follow driver'
+rm -rf "$tmp/.oh/memory"
 # Two concurrent outer invocations get unique IDs and whole-record locked appends.
 for n in 1 2; do
   CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" drift -- \

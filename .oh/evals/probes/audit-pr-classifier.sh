@@ -21,11 +21,17 @@ for case_expect in checkRunSuccess:PASS checkRunFailure:FAIL checkRunPending:PEN
   out=$(env pr "[$p]"|bash "$C")
   [[ $(jq -r .ci<<<"$out") == "$expect" ]] || fail "real GitHub shape $key"
 done
+# Contradictory CheckRun state may retain a priority CI value, but evidence is incomplete.
+for item in '{"__typename":"CheckRun","status":"IN_PROGRESS","conclusion":"SUCCESS"}' '{"__typename":"CheckRun","status":"COMPLETED","conclusion":null}'; do
+  p=$(jq -c --argjson item "$item" '.+{statusCheckRollup:[$item]}'<<<"$base"); out=$(env pr "[$p]"|bash "$C")
+  [[ $(jq -r .evidenceComplete<<<"$out") == false ]] || fail 'contradictory CheckRun evidence accepted as complete'
+done
 p=$(jq -c '.+{statusCheckRollup:[]}'<<<"$base"); [[ $(env pr "[$p]"|bash "$C"|jq -r .ci) == NONE ]]||fail NONE
 for bad in BRAND_NEW ''; do p=$(jq -c --arg x "$bad" '.+{statusCheckRollup:[{conclusion:$x}]}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '.ci+":"+(.evidenceComplete|tostring)'<<<"$out") == UNKNOWN:false ]]||fail unknown; done
 p=$(jq -c '.+{statusCheckRollup:[null]}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '.ci+":"+(.evidenceComplete|tostring)'<<<"$out") == UNKNOWN:false ]]||fail null-item
 for review in APPROVED '' null; do p=$(jq -c --arg r "$review" '.+{statusCheckRollup:[{conclusion:"SUCCESS"}],reviewDecision:(if $r=="null" then null else $r end)}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '[.readyForReview,.readyToMerge,.promotable]|join(":")'<<<"$out") == false:true:true ]]||fail "solo readiness $review"; done
 p=$(jq -c '.+{isDraft:true,statusCheckRollup:[{conclusion:"SUCCESS"}],updatedAt:"2026-06-01T00:00:00Z"}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '[.draftStatus,.draftLimbo,.readyForReview,.readyToMerge]|join(":")'<<<"$out") == promotable:true:true:false ]]||fail limbo
+p=$(jq -c '.+{isDraft:true,statusCheckRollup:[{conclusion:"SUCCESS"}],updatedAt:"2026-07-17T10:00:00Z"}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '.ageSeconds|tostring'<<<"$out") == 7200 ]] || fail 'exact watchdog ageSeconds missing'
 p1=$(jq -c '.+{statusCheckRollup:[{conclusion:"SUCCESS"}]}'<<<"$base"); p2=$(jq -c '.+{number:2,statusCheckRollup:[{conclusion:"SUCCESS"}]}'<<<"$base"); input=$(env prs "[$p1,$p2]"); a=$(bash "$C"<<<"$input"); b=$(bash "$C"<<<"$input"); [[ $a == "$b" ]]||fail nondeterministic; [[ $(jq '[.prs[]|select(.flags|index("duplicate-issue-reference"))]|length'<<<"$a") == 2 ]]||fail duplicates
 [[ $(jq '[.prs[]|select((.readyForReview and .readyToMerge) or ((.isDraft|not) and .readyForReview) or (.isDraft and .readyToMerge))]|length'<<<"$a") == 0 ]]||fail exclusion
 echo 'PASS: classifier contract' >&2

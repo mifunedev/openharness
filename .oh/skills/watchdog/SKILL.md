@@ -76,8 +76,11 @@ watchdog failure, never an empty clean result.
 ### 2. Classify each draft
 
 Consume classifier fields; never re-derive CI, mergeability, readiness, age, or
-promotability from raw GitHub JSON. Convert `WATCHDOG_STALE_HOURS` to the queue
-classifier's day threshold only for candidate prioritization. Treat `.ci == "NONE"`
+promotability from raw GitHub JSON. The classifier supplies machine field
+`.ageSeconds`; a draft is stale exactly when
+`.ageSeconds >= (WATCHDOG_STALE_HOURS * 3600)`. With the default this preserves the
+2-hour policy without flooring to whole days. Do not use `.ageDays` or the queue's
+day threshold for the watchdog decision. Treat `.ci == "NONE"`
 or `"UNKNOWN"`, `.evidenceComplete != true`, and `.promotable != true` as blocked.
 A missing active tmux session may establish stuckness, but cannot override the
 classifier's readiness fields.

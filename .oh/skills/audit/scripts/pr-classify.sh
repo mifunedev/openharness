@@ -10,7 +10,12 @@ def strings($item): [$item.conclusion,$item.state,$item.status | select(type=="s
 def malformed_item:
   type!="object"
   or ([.conclusion,.state,.status] | any(. != null and type!="string"))
-  or (strings(.) | any(. as $v | known_values | index($v) | not));
+  or (strings(.) | any(. as $v | known_values | index($v) | not))
+  # CheckRun status and conclusion are one state machine. A terminal conclusion
+  # before COMPLETED, or COMPLETED without a terminal conclusion, is contradictory.
+  or (. as $item | ($item.__typename=="CheckRun" and
+      ((($item.status=="COMPLETED") and (($item.conclusion==null) or (pass_values + fail_values | index($item.conclusion) | not)))
+       or (($item.status!="COMPLETED") and ($item.conclusion!=null)))));
 def terminal_item:
   . as $item | strings($item) as $values
   | (($item.state // null) as $state
@@ -55,7 +60,7 @@ def classify($repo;$obs;$opt;$dupes):
        if .baseRefName!=$opt.expectedBase then "base-convention" else empty end,
        if ((.changedFiles|type)!="number" or .changedFiles>$opt.maxChangedFiles) then "size-convention" else empty end,
        if ($refs|any(. as $r|$dupes|index($r))) then "duplicate-issue-reference" else empty end]) as $flags
-  | {schemaVersion:1,repo:$repo,number:.number,isDraft:.isDraft,
+  | {schemaVersion:1,repo:$repo,number:.number,isDraft:.isDraft,updatedAt:(.updatedAt//null),ageSeconds:(if $age==null then null else (try (($obs|fromdateiso8601)-((.updatedAt//"")|fromdateiso8601)) catch null) end),
      primaryState:(if .isDraft==true then "draft" elif $ci.value=="FAIL" then "ci-failing"
        elif (.mergeable=="CONFLICTING" or (.mergeStateStatus as $ms | ["DIRTY","BEHIND"]|index($ms))) then "conflicting-behind"
        elif .reviewDecision=="CHANGES_REQUESTED" then "changes-requested"

@@ -23,6 +23,7 @@ if [[ -f "$WATCHDOG" ]]; then
   grep -Fq 'pr-acquire.sh" pr' "$WATCHDOG" || missing+=("watchdog freshly reacquires focused PR before action")
   grep -Fq '.ci == "PASS"' "$WATCHDOG" || missing+=("watchdog requires classifier PASS")
   grep -Fq '`NONE` is never accepted' "$WATCHDOG" || missing+=("watchdog blocks no-CI readiness")
+  grep -Fq '.ageSeconds >= (WATCHDOG_STALE_HOURS * 3600)' "$WATCHDOG" || missing+=("watchdog preserves exact stale-hours threshold")
   grep -Fq 'gh pr ready "$PR" --repo "$WATCHDOG_REPO"' "$WATCHDOG" || missing+=("watchdog removes draft via target repo")
   grep -Fq 'Stale/stuck draft → complete work first' "$WATCHDOG" || missing+=("watchdog completes stale drafts before ready")
   grep -Fq 'isDraft == false' "$WATCHDOG" || missing+=("watchdog verifies draft removed")
@@ -40,6 +41,13 @@ grep -Fq '| `/watchdog` | Generic stuck/stale automation watchdog' "$AGENTS" || 
 if grep -R "autopilot-watchdog" "$WATCHDOG" "$HEARTBEAT" "$PRAUDIT" "$AGENTS" >/dev/null 2>&1; then
   missing+=("new watchdog docs must not use old /autopilot-watchdog name")
 fi
+
+# Behavioral boundary fixture: default 2h policy changes state at 7200s, not a floored day.
+for age_expect in 7199:false 7200:true 7201:true; do
+  age=${age_expect%:*}; expect=${age_expect#*:}
+  actual=$(jq -nr --argjson age "$age" --argjson hours 2 '$age >= ($hours * 3600)')
+  [[ $actual == "$expect" ]] || missing+=("watchdog exact 2h boundary failed at ${age}s")
+done
 
 if (( ${#missing[@]} )); then
   printf 'REGRESSION: watchdog stale-draft contract missing: %s\n' "${missing[*]}" >&2

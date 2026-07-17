@@ -21,6 +21,11 @@ if AUDIT_ROOT="$ROOT" bash "$A" "$ROOT/CLAUDE.md" "$probe" >/dev/null 2>&1; then
 ln -s "$target" "$ROOT/.oh/evals/link"
 if AUDIT_ROOT="$ROOT" bash "$A" "$ROOT/.oh/evals/link" "$probe" >/dev/null 2>&1; then fail 'symlink target accepted'; fi
 rm "$ROOT/.oh/evals/link"
+# The state directory itself must never be followed through a symlink.
+rm -rf "$state"; mkdir "$ROOT/external-state"; ln -s "$ROOT/external-state" "$state"
+if AUDIT_ROOT="$ROOT" bash "$A" "$target" "$probe" >/dev/null 2>&1; then fail 'symlinked state directory accepted'; fi
+[[ -z $(find "$ROOT/external-state" -mindepth 1 -print -quit) ]] || fail 'symlink state directory was written'
+rm "$state"
 # SIGKILL cannot trap: the next startup recovery restores exact bytes.
 set +e
 AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_swap_out "$T"; kill -KILL $$' >/dev/null 2>&1
@@ -28,6 +33,10 @@ set -e
 [[ ! -e $target ]] || fail 'crash fixture did not swap target'
 AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_recover "$T"'
 [[ $(<"$target") == original ]] || fail 'crash recovery bytes differ'; assert_clean
+# PREPARED can be durable while target removal already happened (crash before SWAPPED).
+AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; _ablate_paths "$T"; _ablate_lock; cp -p "$T" "$ABLATE_BACKUP"; _ablate_record PREPARED; rm "$T"; _ablate_unlock'
+AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_recover "$T"'
+[[ $(<"$target") == original ]] || fail 'PREPARED missing-target recovery failed'; assert_clean
 # Same-target lock contention fails; different targets remain independent.
 AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_swap_out "$T"; sleep 1; ablate_restore "$T"' & p1=$!
 sleep 0.2
@@ -39,6 +48,10 @@ wait "$p1"; wait "$p2"
 marker="$ROOT/prior-trap"
 AUDIT_ROOT="$ROOT" A="$A" T="$target" M="$marker" bash -c 'source "$A"; trap '\''printf prior >"$M"'\'' EXIT; ablate_swap_out "$T"; exit 0'
 [[ $(<"$target") == original && $(<"$marker") == prior ]] || fail 'EXIT trap composition failed'; assert_clean
+# Explicit restore reinstates prior traps instead of clearing them.
+marker2="$ROOT/prior-after-restore"
+AUDIT_ROOT="$ROOT" A="$A" T="$target" M="$marker2" bash -c 'source "$A"; trap '\''printf restored >"$M"'\'' EXIT; ablate_swap_out "$T"; ablate_restore "$T"; [[ $(trap -p EXIT) == *"printf restored"* ]]'
+[[ $(<"$marker2") == restored ]] || fail 'prior trap not preserved after explicit restore'; assert_clean
 # Contradictory PREPARED state fails closed without overwriting either copy.
 AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; _ablate_paths "$T"; mkdir -p "$ABLATE_STATE_ROOT"; cp "$T" "$ABLATE_BACKUP"; _ablate_record PREPARED; printf changed >"$T"'
 if AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_recover "$T"' >/dev/null 2>&1; then fail 'contradictory PREPARED recovered'; fi

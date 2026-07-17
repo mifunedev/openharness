@@ -10,8 +10,10 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 ### Changed
+- **BREAKING:** Consolidate artifact authoring under `/builder <agent|skill|command|rule> <name-or-request>` with one authoritative reference per type ([#643](https://github.com/mifunedev/openharness/issues/643)).
 ### Fixed
 ### Removed
+- Remove the legacy `agent-builder`, `skill-builder`, `command-builder`, and `rule-builder` agents and the superseded `/skill-builder` entry point; migrate callers to `/builder` ([#643](https://github.com/mifunedev/openharness/issues/643)).
 ### Deprecated
 ### Security
 

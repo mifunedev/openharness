@@ -10,7 +10,7 @@
 
 **Title**: Complete approved audit consolidation
 **Files changed**: `.oh/skills/audit/`, audit callers/probes/workflows/docs, `.oh/scripts/ablate.sh`, wiki, changelog, task evidence
-**Commit**: pending final task commit
+**Commit**: fafe58ae
 **Result**: PASS
 
 ### What I did

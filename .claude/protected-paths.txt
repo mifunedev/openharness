@@ -19,9 +19,7 @@ cloudflared-tunnel
 agent-browser
 prd
 ralph
-harness-audit
-skill-lint
-eval-lint
+audit
 delegate
 strategic-proposal
 ship-spec
@@ -32,7 +30,6 @@ spec-retro
 eval
 health-check
 retro
-drift-check
 
 # --- Orchestrator scripts (.oh/scripts/) ---
 .oh/scripts/ralph.sh

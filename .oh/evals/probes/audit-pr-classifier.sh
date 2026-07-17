@@ -22,9 +22,19 @@ for case_expect in checkRunSuccess:PASS checkRunFailure:FAIL checkRunPending:PEN
   [[ $(jq -r .ci<<<"$out") == "$expect" ]] || fail "real GitHub shape $key"
 done
 # Contradictory CheckRun state may retain a priority CI value, but evidence is incomplete.
-for item in '{"__typename":"CheckRun","status":"IN_PROGRESS","conclusion":"SUCCESS"}' '{"__typename":"CheckRun","status":"COMPLETED","conclusion":null}'; do
+for item in '{"__typename":"CheckRun","name":"ci","status":"IN_PROGRESS","conclusion":"SUCCESS"}' '{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":null}'; do
   p=$(jq -c --argjson item "$item" '.+{statusCheckRollup:[$item]}'<<<"$base"); out=$(env pr "[$p]"|bash "$C")
   [[ $(jq -r .evidenceComplete<<<"$out") == false ]] || fail 'contradictory CheckRun evidence accepted as complete'
+done
+# StatusContext has a distinct contract: nonempty context + state only. A
+# conclusion/status field, missing context, or unknown typename is malformed.
+for item in \
+  '{"__typename":"StatusContext","context":"ci","state":"SUCCESS","conclusion":"SUCCESS"}' \
+  '{"__typename":"StatusContext","state":"SUCCESS"}' \
+  '{"__typename":"StatusContext","context":"ci","status":"COMPLETED","state":"SUCCESS"}' \
+  '{"__typename":"FutureStatus","context":"ci","state":"SUCCESS"}'; do
+  p=$(jq -c --argjson item "$item" '.+{statusCheckRollup:[$item]}'<<<"$base"); out=$(env pr "[$p]"|bash "$C")
+  [[ $(jq -r '.ci+":"+(.evidenceComplete|tostring)'<<<"$out") == UNKNOWN:false ]] || fail 'malformed StatusContext/typename accepted'
 done
 p=$(jq -c '.+{statusCheckRollup:[]}'<<<"$base"); [[ $(env pr "[$p]"|bash "$C"|jq -r .ci) == NONE ]]||fail NONE
 for bad in BRAND_NEW ''; do p=$(jq -c --arg x "$bad" '.+{statusCheckRollup:[{conclusion:$x}]}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '.ci+":"+(.evidenceComplete|tostring)'<<<"$out") == UNKNOWN:false ]]||fail unknown; done

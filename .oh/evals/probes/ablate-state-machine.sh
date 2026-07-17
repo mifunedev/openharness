@@ -5,17 +5,19 @@
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; A="$REPO/.oh/scripts/ablate.sh"
 ROOT=$(mktemp -d); probe="$ROOT/probe.sh"; trap 'rm -rf "$ROOT"' EXIT
-mkdir -p "$ROOT/.oh/evals"; printf '#!/bin/sh\nexit 0\n' >"$probe"; chmod +x "$probe"
-target="$ROOT/.oh/evals/target"; target2="$ROOT/.oh/evals/target.two"
+mkdir -p "$ROOT/.oh/evals" "$ROOT/.oh/context" "$ROOT/.oh/memory"; printf '#!/bin/sh\nexit 0\n' >"$probe"; chmod +x "$probe"
+target="$ROOT/.oh/context/SOUL.md"; target2="$ROOT/.oh/context/USER.md"
 printf original >"$target"; printf second >"$target2"
 fail(){ echo "REGRESSION: $*" >&2; exit 1; }
 state="$ROOT/.oh/evals/.ablation-state"
 assert_clean(){
-  [[ ! -d $state || -z $(find "$state" -type f ! -name '.locks.guard' -print -quit) ]] || fail 'recovery/lock state remains'
+  [[ ! -d $state || -z $(find "$state" -type f -print -quit) ]] || fail 'recovery/lock/guard state remains'
 }
 before=$(sha256sum "$target"); AUDIT_ROOT="$ROOT" bash "$A" "$target" "$probe" >/dev/null; after=$(sha256sum "$target")
 [[ $before == "$after" ]] || fail 'bytes not restored'; assert_clean
 if AUDIT_ROOT="$ROOT" bash "$A" /tmp/outside-ablation-target "$probe" >/dev/null 2>&1; then fail 'outside root accepted'; fi
+printf internal >"$ROOT/.oh/evals/not-default-loaded"
+if AUDIT_ROOT="$ROOT" bash "$A" "$ROOT/.oh/evals/not-default-loaded" "$probe" >/dev/null 2>&1; then fail 'non-context in-root target accepted'; fi
 printf forbidden >"$ROOT/CLAUDE.md"
 if AUDIT_ROOT="$ROOT" bash "$A" "$ROOT/CLAUDE.md" "$probe" >/dev/null 2>&1; then fail 'CLAUDE.md accepted'; fi
 ln -s "$target" "$ROOT/.oh/evals/link"
@@ -58,4 +60,10 @@ if AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; ablate_recover "$
 [[ $(<"$target") == changed ]] || fail 'contradictory recovery overwrote target'
 backup=$(find "$state" -name '*.backup' -print -quit); [[ -n $backup && $(<"$backup") == original ]] || fail 'contradictory recovery overwrote backup'
 rm -rf "$state"
-echo 'PASS: ablation state machine' >&2
+# A recovery record whose filename hash does not match its declared target is an
+# orphan mismatch, not a reason to silently recover a different path.
+AUDIT_ROOT="$ROOT" A="$A" T="$target" bash -c 'source "$A"; _ablate_paths "$T"; mkdir -p "$ABLATE_STATE_ROOT"; cp "$T" "$ABLATE_BACKUP"; _ablate_record PREPARED; mv "$ABLATE_RECORD" "$ABLATE_STATE_ROOT/not-the-target-key.json"'
+if AUDIT_ROOT="$ROOT" A="$A" bash -c 'source "$A"; ablate_recover' >/dev/null 2>&1; then fail 'mismatched recovery record accepted'; fi
+[[ $(<"$target") == changed ]] || fail 'mismatched recovery overwrote target'
+rm -rf "$state"
+echo 'PASS: restricted clean fail-closed ablation state machine' >&2

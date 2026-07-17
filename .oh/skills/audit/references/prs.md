@@ -1,13 +1,13 @@
 # Audit the open pull-request queue
 
-Validate queue-only flags before starting: `--repo owner/name`, optional
+Validate queue-only flags before starting: optional `--repo owner/name` (resolve an omitted repo once with `gh repo view --json nameWithOwner -q .nameWithOwner` from `AUDIT_ROOT`), optional
 `--label L`, exactly one of `--author A` or `--mine`, optional `--base B` and
 `--stale-days N`, `--deep`, repeatable `--apply proof|labels|close`, required
 `--close-stale-days N` for close, and `--dry-run`. Focused `--pr` is invalid here.
 Normalize `--mine` to the acquisition seam's `--mine` flag (which passes GitHub's
 `--author @me`); never silently ignore it or combine it with `--author`.
 
-Use `$AUDIT_ROOT/.oh/skills/audit/scripts/pr-acquire.sh prs` once with normalized filters (limit 200), then pipe its versioned envelope to `$AUDIT_ROOT/.oh/skills/audit/scripts/pr-classify.sh`. Never classify during acquisition and never re-derive classifier fields during rendering. A capped result carries `truncated:true`; acquisition failure, truncation, malformed/incomplete records, or requested deep evidence that fails makes the result partial.
+Use `$AUDIT_ROOT/.oh/skills/audit/scripts/pr-acquire.sh prs` once with the explicit or resolved repository and normalized filters (limit 200), then pipe its versioned envelope to `$AUDIT_ROOT/.oh/skills/audit/scripts/pr-classify.sh`. Never classify during acquisition and never re-derive classifier fields during rendering. A capped result carries `truncated:true`; acquisition failure, truncation, malformed/incomplete records, or requested deep evidence that fails makes the result partial.
 
 A stale draft must route to `/watchdog` to complete the branch before a workflow owner performs a freshly classified undraft.
 

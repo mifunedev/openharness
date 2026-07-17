@@ -33,7 +33,7 @@ without re-prompting. Pulling selection out into `score-trajectories.mjs` makes 
   judge:25`, sum 100) is `Object.freeze`d and version-controlled; `judge:0` yields a
   fully deterministic weight.
 - **Honest** — an all-floor-fail cohort returns `NO-SELECTION`, never a silent
-  least-bad pick (same posture as `/audit` and `/benchmark`).
+  least-bad pick (same posture as `/audit implementation` and `/benchmark`).
 
 This mirrors `prompt-miner`'s owned, frozen-weights `mine-traces.mjs` scorer — but
 scores candidate paths *prospectively* (before committing) rather than finished
@@ -69,7 +69,7 @@ const sampled = await sampleNAgents(task, meta.n);            // model-side fan-
 const cohort = sampled.map((t) => ({
   ...t,
   evalRc:       runEval(t),        // /eval rc: 0 PASS · 1 REGRESSION · 2 SKIPPED · null
-  auditVerdict: runAudit(t),       // /audit: "PASS" | "FAIL" | null
+  auditVerdict: runAudit(t),       // /audit implementation <slug>: "PASS" | "FAIL" | null
   ...cluster(t, sampled),          // semantic-equivalence pass → clusterId, clusterSize
   ...maybeJudge(t),                // optional verifier LM → judgeScore 0..1 (or null)
 }));
@@ -99,7 +99,7 @@ sides never drift:
 | `output` | Step 2 sampling | the candidate answer/artifact |
 | `costTokens` | Step 2 sampling | tokens consumed (cohort-relative; cheaper → higher `cost`) |
 | `evalRc` | Step 3 `/eval` | `0`·`1`·`2`·`null` (`1` = hard-floor breaker) |
-| `auditVerdict` | Step 3 `/audit` | `"PASS"`·`"FAIL"`·`null` (`"FAIL"` = hard-floor breaker) |
+| `auditVerdict` | Step 3 `/audit implementation <slug>` | `"PASS"`·`"FAIL"`·`null` (`"FAIL"` = hard-floor breaker) |
 | `clusterId` / `clusterSize` | Step 3 clustering | self-consistency cluster → `consistency = clusterSize / N` |
 | `judgeScore` / `judgeReason` | Step 3 verifier (optional) | `0..1` (or `null` → neutral `0.5`) |
 

@@ -86,8 +86,23 @@ fi
 # Focused promotion gates must include the required PR number and repository.
 grep -qF '/audit pr <N> --repo mifunedev/openharness' "$SYNC/references/publish.md" || \
   missing+=("references/publish.md: focused /audit pr invocation lacks PR number/repo")
-grep -qF '/audit pr <N> --repo "$ORIGIN_REPO"' "$SYNC/references/catchup.md" || \
+grep -qF "/audit pr <N> --repo \"\$ORIGIN_REPO\"" "$SYNC/references/catchup.md" || \
   missing+=("references/catchup.md: focused /audit pr invocation lacks PR number/repo")
+# The draft classifier gate must precede the mutation and key on draftStatus,
+# not the non-draft ready bucket.
+for proc_f in "$SYNC/references/publish.md" "$SYNC/references/catchup.md"; do
+  audit_line=$(grep -nF '/audit pr <N> --repo' "$proc_f" | head -1 | cut -d: -f1)
+  ready_line=$(grep -nF 'gh pr ready <N>' "$proc_f" | head -1 | cut -d: -f1)
+  [ -n "$audit_line" ] && [ -n "$ready_line" ] && [ "$audit_line" -lt "$ready_line" ] || \
+    missing+=("${proc_f#"$ROOT"/}: focused audit must run before gh pr ready")
+  grep -qF '.draftStatus == "promotable"' "$proc_f" || \
+    missing+=("${proc_f#"$ROOT"/}: undraft gate must consume draftStatus promotable")
+  # shellcheck disable=SC2016 # literal Markdown backticks
+  ready_bucket_pattern='confirm.*ready bucket|in the `ready` bucket'
+  if grep -qiE "$ready_bucket_pattern" "$proc_f"; then
+    missing+=("${proc_f#"$ROOT"/}: draft gate incorrectly keys on non-draft ready bucket")
+  fi
+done
 
 # (7) both publish.md and catchup.md must invoke the eval oracle (eval/run.sh).
 #     The eval gate is non-negotiable in both directions.

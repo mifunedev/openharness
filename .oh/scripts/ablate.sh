@@ -13,9 +13,10 @@ _ablate_canonical() {
   [[ ! -L $target ]] || { echo "ablate: symlink targets are forbidden: $target" >&2; return 1; }
   parent=$(cd "$(dirname "$target")" 2>/dev/null && pwd -P) || return 1
   real="$parent/$(basename "$target")"
-  [[ $real == "$root/"* && $real != "$root/CLAUDE.md" ]] || {
-    echo "ablate: unsafe target outside AUDIT_ROOT or disallowed: $real" >&2; return 1;
-  }
+  case ${real#"$root/"} in
+    .oh/context/SOUL.md|.oh/context/IDENTITY.md|.oh/context/TOOLS.md|.oh/context/REPO_MAP.md|.oh/context/USER.md|.oh/memory/MEMORY.md) ;;
+    *) echo "ablate: target is not an allowed session-start context file: $real" >&2; return 1;;
+  esac
   printf '%s\n' "$real"
 }
 _ablate_paths() {
@@ -25,7 +26,6 @@ _ablate_paths() {
   ABLATE_RECORD="$ABLATE_STATE_ROOT/$ABLATE_KEY.json"
   ABLATE_BACKUP="$ABLATE_STATE_ROOT/$ABLATE_KEY.backup"
   ABLATE_LOCK="$ABLATE_STATE_ROOT/$ABLATE_KEY.lock"
-  ABLATE_GUARD="$ABLATE_STATE_ROOT/.locks.guard"
 }
 _ablate_reject_state_symlinks() {
   local path state_parent
@@ -33,7 +33,7 @@ _ablate_reject_state_symlinks() {
   state_parent=$(cd "$(dirname "$ABLATE_STATE_ROOT")" && pwd -P) || return 1
   [[ $state_parent == "$(_ablate_root)/.oh/evals" ]] \
     || { echo "ablate: non-canonical state parent rejected: $state_parent" >&2; return 1; }
-  for path in "$ABLATE_RECORD" "$ABLATE_BACKUP" "$ABLATE_LOCK" "$ABLATE_GUARD"; do
+  for path in "$ABLATE_RECORD" "$ABLATE_BACKUP" "$ABLATE_LOCK"; do
     [[ ! -L $path ]] || { echo "ablate: symlink recovery state rejected: $path" >&2; return 1; }
   done
 }
@@ -53,7 +53,9 @@ _ablate_lock() {
   _ablate_reject_state_symlinks || return 1
   mkdir -p "$ABLATE_STATE_ROOT"
   _ablate_reject_state_symlinks || return 1
-  exec {ABLATE_GUARD_FD}>"$ABLATE_GUARD"
+  # The state directory itself is the serialization guard; no persistent guard
+  # file is left behind after a successful run.
+  exec {ABLATE_GUARD_FD}<"$ABLATE_STATE_ROOT"
   flock "$ABLATE_GUARD_FD"
   exec {ABLATE_LOCK_FD}>"$ABLATE_LOCK"
   if ! flock -n "$ABLATE_LOCK_FD"; then
@@ -130,6 +132,8 @@ ablate_recover() {
     [[ ! -L $record ]] || { echo "ablate: symlink recovery record rejected: $record" >&2; return 1; }
     target=$(jq -r '.target // empty' "$record" 2>/dev/null) || return 1
     [[ -n $target ]] || { echo "ablate: corrupt recovery record: $record" >&2; return 1; }
+    _ablate_paths "$target" || return 1
+    [[ $record == "$ABLATE_RECORD" ]] || { echo "ablate: recovery record key/target mismatch: $record" >&2; return 1; }
     rc=0; ablate_recover "$target" || rc=$?
     [[ $rc -eq 0 || $rc -eq 75 ]] || return "$rc"
   done
@@ -138,6 +142,14 @@ ablate_recover() {
     [[ ! -L $backup ]] || { echo "ablate: symlink backup rejected: $backup" >&2; return 1; }
     [[ -e ${backup%.backup}.json ]] || { echo "ablate: backup without sentinel: $backup" >&2; return 1; }
   done
+  for record in "$state_root"/*; do
+    [[ -e $record || -L $record ]] || continue
+    case $record in *.json|*.backup|*.lock) ;; *) echo "ablate: unknown recovery artifact: $record" >&2; return 1;; esac
+    if [[ $record == *.lock && ! -e ${record%.lock}.json && ! -e ${record%.lock}.backup ]]; then
+      echo "ablate: orphan lock artifact: $record" >&2; return 1
+    fi
+  done
+  rmdir "$state_root" 2>/dev/null || true
 }
 _ablate_saved_trap_command() {
   local sig=$1 line

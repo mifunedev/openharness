@@ -6,7 +6,12 @@ Run inline from the top-level session under the inherited immutable `AUDIT_RUN_I
 2. `/eval` in audit-child mode (regression floor; scoreboard write disclosed)
 3. `/audit skills all`, `/audit eval-quality all`, and `/audit context all`
 4. `/audit harness`
-5. `/audit prs`
+5. `/audit prs [--repo O/N]`
+
+`--repo O/N` is optional exactly as it is for `/audit prs`: when supplied to
+`full`, forward the same owner/name unchanged to the queue child. When omitted,
+the queue child resolves the repository from `gh repo view --json nameWithOwner` in
+`AUDIT_ROOT`; `full` must not invent a different default or drop the queue.
 
 With `--health-target "target"`, additionally compose `/health-check "target" --dry-run`; it is read-only evidence and must never reclaim resources. If nested execution prevents a target's sub-agent fan-out, mark it `deferred`, print its exact top-level rerun, and continue. Never claim it ran.
 

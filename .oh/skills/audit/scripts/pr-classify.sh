@@ -11,11 +11,24 @@ def malformed_item:
   type!="object"
   or ([.conclusion,.state,.status] | any(. != null and type!="string"))
   or (strings(.) | any(. as $v | known_values | index($v) | not))
-  # CheckRun status and conclusion are one state machine. A terminal conclusion
-  # before COMPLETED, or COMPLETED without a terminal conclusion, is contradictory.
-  or (. as $item | ($item.__typename=="CheckRun" and
-      ((($item.status=="COMPLETED") and (($item.conclusion==null) or (pass_values + fail_values | index($item.conclusion) | not)))
-       or (($item.status!="COMPLETED") and ($item.conclusion!=null)))));
+  or (. as $item |
+    if $item.__typename=="StatusContext" then
+      (($item.context|type)!="string" or ($item.context|length)==0
+       or ($item.state|type)!="string"
+       or ((pass_values + fail_values + pending_values | index($item.state)) == null)
+       or $item.status!=null or $item.conclusion!=null)
+    elif $item.__typename=="CheckRun" then
+      (($item.name|type)!="string" or ($item.name|length)==0
+       or $item.state!=null
+       or ($item.status|type)!="string"
+       or ((pending_values + ["COMPLETED"] | index($item.status)) == null)
+       # CheckRun status and conclusion are one state machine: only COMPLETED
+       # carries a terminal conclusion, and COMPLETED must carry one.
+       or (($item.status=="COMPLETED") and (($item.conclusion==null) or (pass_values + fail_values | index($item.conclusion) | not)))
+       or (($item.status!="COMPLETED") and ($item.conclusion!=null)))
+    elif $item.__typename!=null then true
+    else (strings($item)|length)==0
+    end);
 def terminal_item:
   . as $item | strings($item) as $values
   | (($item.state // null) as $state

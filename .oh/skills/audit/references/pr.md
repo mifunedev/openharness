@@ -1,6 +1,6 @@
 # Audit one pull request
 
-Validate a positive PR number and `--repo owner/name` before starting. Acquire with `$AUDIT_ROOT/.oh/skills/audit/scripts/pr-acquire.sh pr --repo "$REPO" --pr "$N"`, then pipe the schema-versioned envelope to `$AUDIT_ROOT/.oh/skills/audit/scripts/pr-classify.sh`. Acquisition failure or incomplete evidence is unknown; never infer readiness.
+Validate a positive PR number and optional `--repo owner/name` before starting. Resolve an omitted repository once with `gh repo view --json nameWithOwner -q .nameWithOwner` from `AUDIT_ROOT`. Acquire with `$AUDIT_ROOT/.oh/skills/audit/scripts/pr-acquire.sh pr --repo "$REPO" --pr "$N"`, then pipe the schema-versioned envelope to `$AUDIT_ROOT/.oh/skills/audit/scripts/pr-classify.sh`. Acquisition failure or incomplete evidence is unknown; never infer readiness.
 
 Render one compact evidence table from classifier JSON: number, CI, mergeability, clean state, review decision, primary state, flags, and the distinct `readyForReview`/`readyToMerge` booleans. Do not re-derive fields.
 

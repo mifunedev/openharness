@@ -35,7 +35,7 @@ usage: /audit <implementation|pr|prs|harness|context|skills|eval-quality|drift|f
 | `skills` | `/audit skills [all|root|workspace|name]` | `CURRENT` / `STALE` / `BROKEN` / `DELETE` |
 | `eval-quality` | `/audit eval-quality [all|probes|capability|id]` | `KEEP` / `GROOM` / `CUT` |
 | `drift` | `/audit drift` | per-class `OK` / aggregate `DRIFT:` |
-| `full` | `/audit full [--focus area] [--health-target target]` | `AUDIT-CAMPAIGN-COMPLETE` / `AUDIT-CAMPAIGN-PARTIAL` |
+| `full` | `/audit full [--repo O/N] [--focus area] [--health-target target]` | `AUDIT-CAMPAIGN-COMPLETE` / `AUDIT-CAMPAIGN-PARTIAL` |
 
 For missing/unknown targets or missing required arguments, print the exact usage line and this table, then stop. Exactly these nine cases are public:
 
@@ -57,8 +57,12 @@ for every valid invocation. The route driver is mandatory and is the actual sele
 execution (not a preflight command); it reads the exported `AUDIT_ROUTE`. The boundary
 validates all target arguments and the driver before lifecycle creation, resolves and exports
 immutable `AUDIT_ROOT`, `AUDIT_LOG_ROOT`, and `AUDIT_RUN_ID`, maps the target to exactly one
-route, supplies invocation-scoped `AUDIT_TMP_ROOT`, waits for the driver, and performs exactly
-one locked terminal append after that driver exits. Do not run the boundary merely to obtain
+route, supplies invocation-scoped `AUDIT_TMP_ROOT`, changes to `AUDIT_ROOT`, and invokes the
+driver with `<target> <validated-target-args...>` verbatim (also exporting
+`AUDIT_TARGET` and `AUDIT_TARGET_ARGS_JSON`). It keeps the lifecycle open while the driver
+runs, forwards TERM/INT/HUP to the complete child process group, waits for termination, and
+performs exactly one locked terminal append (`complete`, `failed`, or `interrupted`, with the
+nonzero exit) after that driver exits. Do not run the boundary merely to obtain
 environment JSON and then execute route work outside it. An inherited ID identifies child mode and is never replaced or independently
 logged. The generated ID matches `audit-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9._-]+`.
 

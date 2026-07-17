@@ -34,4 +34,11 @@ if AUDIT_ROOT="$root" AUDIT_RUN_ID='audit-20260717T120001Z-fixture' AUDIT_TMP_RO
   MUTATE_FILE="$root/.oh/tasks/ui/prd.json" PATH="$bin:$PATH" bash "$GATE" browser-preflight >/dev/null 2>&1; then
   fail 'content mutation of already-dirty file was not detected'
 fi
-echo 'PASS: implementation browser/root behavior' >&2
+# Git status and ls-files --others both omit ignored files; the content detector
+# must still see browser writes to them.
+printf 'ignored-profile\n' >"$root/.gitignore"; printf original >"$root/ignored-profile"; git -C "$root" add .gitignore; git -C "$root" commit -qm ignore
+if AUDIT_ROOT="$root" AUDIT_RUN_ID='audit-20260717T120002Z-fixture' AUDIT_TMP_ROOT="$runtime" \
+  MUTATE_FILE="$root/ignored-profile" PATH="$bin:$PATH" bash "$GATE" browser-preflight >/dev/null 2>&1; then
+  fail 'ignored content mutation was not detected'
+fi
+echo 'PASS: implementation browser/root/ignored-write behavior' >&2

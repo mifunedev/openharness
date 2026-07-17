@@ -244,16 +244,21 @@ Open as **draft** first.
 
 ## Step 10 — Gate to ready
 
-After CI passes:
+After CI passes, run `/audit pr <N> --repo "$ORIGIN_REPO"` before changing
+the draft state. Consume the focused classifier JSON and require
+`.draftStatus == "promotable"` with `.evidenceComplete == true`. A draft is
+not in the non-draft `ready` bucket.
+
+If CI never queued (dormant draft PR), dispatch it manually:
+```bash
+gh workflow run "CI: Harness" --ref feat/${ISSUE_N}-${SLUG}
+```
+
+Wait for CI and rerun the focused audit. Only an immediately preceding
+promotable draft result permits:
 
 ```bash
 gh pr ready <N> --repo "$ORIGIN_REPO"
 ```
 
-Run `/audit pr <N> --repo "$ORIGIN_REPO"` and confirm the PR is in the `ready` bucket before
-undrafting. If CI never queued (dormant draft PR), dispatch it manually:
-```bash
-gh workflow run "CI: Harness" --ref feat/${ISSUE_N}-${SLUG}
-```
-
-Wait for CI to complete before promoting to ready.
+Otherwise leave the PR draft.

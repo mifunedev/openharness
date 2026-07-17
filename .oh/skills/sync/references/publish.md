@@ -201,15 +201,18 @@ Open as **draft** first.
 
 ## Step 11 — Gate to ready
 
-After CI passes and `/audit pr` confirms promotability:
+After CI passes, run `/audit pr <N> --repo mifunedev/openharness` while the
+PR is still a draft. Consume the focused classifier JSON and require
+`.draftStatus == "promotable"` with `.evidenceComplete == true`; a draft is
+never in the non-draft `ready` bucket. Only that immediately preceding result
+permits the state change:
 
 ```bash
 gh pr ready <N> --repo mifunedev/openharness
 ```
 
-Run `/audit pr <N> --repo mifunedev/openharness` and confirm the PR is in the
-`ready` bucket (not `CI-failing`, `conflicting`, or `changes-requested`)
-before undrafting.
+If the audit is stale, partial, blocked, or reports any other draft status,
+leave the PR draft and rerun the audit after resolving the evidence.
 
 ## Revert-by-blob-restore warning
 

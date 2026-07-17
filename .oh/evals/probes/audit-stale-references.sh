@@ -24,6 +24,20 @@ while IFS= read -r hit; do
   bad+=("$hit")
 done <<<"$hits"
 if ((${#bad[@]})); then printf '%s\n' "${bad[@]}" >&2; echo 'REGRESSION: active legacy audit reference' >&2; exit 1; fi
+# Workflow callers that mean the per-unit gate must name the implementation
+# route. A bare namespace token is not executable and silently revives /audit <slug>.
+# shellcheck disable=SC2016 # literal Markdown route token
+bare_audit='`/audit`'
+for caller in .oh/skills/weigh .oh/skills/teach; do
+  if git grep -nF "$bare_audit" -- "$caller"; then
+    echo "REGRESSION: bare implementation audit route in $caller" >&2; exit 1
+  fi
+done
+# Canonical skill discovery must not regress to provider symlink scans.
+# shellcheck disable=SC2016 # literal documented environment variable
+canonical_skills='$AUDIT_ROOT/.oh/skills/'
+grep -qF "$canonical_skills" .oh/skills/audit/references/skills.md \
+  || { echo 'REGRESSION: skills audit does not scan canonical .oh/skills' >&2; exit 1; }
 # Assert breadth explicitly so future pathspec narrowing cannot silently drop active classes.
 for path in AGENTS.md .oh/docs/README.md .oh/templates/AGENTS.md .oh/crons/heartbeat.md .github/workflows/ci-harness.yml .oh/evals/capability/tasks/CB-001-ship-harness-change.md .oh/tasks/audit-consolidation/progress.txt; do
   git ls-files --error-unmatch "$path" >/dev/null || { echo "REGRESSION: stale-reference coverage path missing: $path" >&2; exit 1; }

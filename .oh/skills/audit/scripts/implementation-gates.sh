@@ -7,8 +7,17 @@ mode=${1:-}; shift || true
 case $mode in
   gate1)
     slug=${1:-}; [[ $slug =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo 'FAIL gate1: invalid slug' >&2; exit 64; }
-    prd="$AUDIT_ROOT/.oh/tasks/$slug/prd.json"
-    [[ -f $prd && ! -L $prd ]] || { echo "FAIL gate1: no regular $prd" >&2; exit 1; }
+    task_dir="$AUDIT_ROOT/.oh/tasks/$slug"; prd="$task_dir/prd.json"
+    resolved_task=$(realpath -e -- "$task_dir" 2>/dev/null) \
+      || { echo "FAIL gate1: missing task directory: $task_dir" >&2; exit 1; }
+    [[ $resolved_task == "$task_dir" && -d $task_dir && ! -L $task_dir && -f $prd && ! -L $prd ]] \
+      || { echo "FAIL gate1: task directory or prd.json is symlinked/non-regular: $task_dir" >&2; exit 1; }
+    jq -e '(.userStories|type)=="array"
+      and all(.userStories[]; type=="object")
+      and ((.artifact_contract // {})|type)=="object"
+      and ((.artifact_contract.required_artifacts // [])|type)=="array"
+      and all((.artifact_contract.required_artifacts // [])[]; type=="string")' "$prd" >/dev/null \
+      || { echo 'FAIL gate1: userStories/artifact_contract must use array contracts' >&2; exit 1; }
     unfinished=$(jq '[.userStories[] | select(.passes != true)] | length' "$prd")
     total=$(jq '.userStories | length' "$prd")
     printf 'task-graph: %s/%s stories pass\n' "$((total - unfinished))" "$total"
@@ -41,18 +50,22 @@ case $mode in
     : "${AUDIT_TMP_ROOT:?AUDIT_TMP_ROOT is required}"
     command -v agent-browser >/dev/null || { echo 'FAIL gate4: agent-browser not found' >&2; exit 1; }
     snapshot_repo(){
-      local out=$1 untracked
+      local out=$1 path rel
       {
+        # Git evidence covers index/worktree semantics. The filesystem walk also
+        # hashes ignored, untracked, and already-dirty content (excluding .git).
         git -C "$AUDIT_ROOT" status --porcelain=v1 -z --untracked-files=all
         git -C "$AUDIT_ROOT" diff --binary --no-ext-diff
         git -C "$AUDIT_ROOT" diff --cached --binary --no-ext-diff
         git -C "$AUDIT_ROOT" ls-files --stage -z
-        while IFS= read -r -d '' untracked; do
-          printf '%s\0' "$untracked"
-          if [[ -L "$AUDIT_ROOT/$untracked" ]]; then readlink -- "$AUDIT_ROOT/$untracked"
-          elif [[ -f "$AUDIT_ROOT/$untracked" ]]; then sha256sum -- "$AUDIT_ROOT/$untracked"
+        while IFS= read -r -d '' path; do
+          rel=${path#"$AUDIT_ROOT"/}
+          printf '%s\0' "$rel"
+          stat -c '%F:%a:%s' -- "$path"
+          if [[ -L $path ]]; then readlink -- "$path"
+          elif [[ -f $path ]]; then sha256sum -- "$path"
           fi
-        done < <(git -C "$AUDIT_ROOT" ls-files --others --exclude-standard -z)
+        done < <(find "$AUDIT_ROOT" -path "$AUDIT_ROOT/.git" -prune -o -print0 | sort -z)
       } >"$out"
     }
     before="$AUDIT_TMP_ROOT/repo-before"; after="$AUDIT_TMP_ROOT/repo-after"

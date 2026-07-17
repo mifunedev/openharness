@@ -11,18 +11,18 @@ Arguments received: `$ARGUMENTS`
 | Argument | Scope |
 |----------|-------|
 | `all` (default, or empty) | Root scope + workspace scope |
-| `root` | `$AUDIT_ROOT/.claude/skills/` only |
-| `workspace` | `$AUDIT_ROOT/workspace/.claude/skills/` only |
+| `root` | canonical `$AUDIT_ROOT/.oh/skills/` only |
+| `workspace` | canonical `$AUDIT_ROOT/workspace/.oh/skills/` only |
 | `<skill-name>` | Single skill, auto-detect scope |
 
 ### 2. Discover skills
 
 ```bash
 # Root scope
-ROOT_SKILLS=$(find $AUDIT_ROOT/.claude/skills -name "SKILL.md" -maxdepth 3 2>/dev/null)
+ROOT_SKILLS=$(find "$AUDIT_ROOT/.oh/skills" -maxdepth 3 -name "SKILL.md" 2>/dev/null)
 
-# Workspace scope
-WS_SKILLS=$(find $AUDIT_ROOT/workspace/.claude/skills -name "SKILL.md" -maxdepth 3 2>/dev/null)
+# Workspace scope (when a sandbox owns a canonical pack)
+WS_SKILLS=$(find "$AUDIT_ROOT/workspace/.oh/skills" -maxdepth 3 -name "SKILL.md" 2>/dev/null)
 ```
 
 Build a list of `(skill-name, scope-label, skill-dir, skill-file)` tuples. Scope label is `root` or `ws`.
@@ -79,7 +79,7 @@ SKILL_REFS=$(grep -oP '/[a-z][a-z0-9-]+' "<skill-file>" | grep -v '^/home' | sor
 ```
 
 For each extracted path reference: check `[ -e "<path>" ]`.
-For each skill reference like `/foo-bar`: check whether `<root>/.claude/skills/foo-bar/SKILL.md` or `<ws>/.claude/skills/foo-bar/SKILL.md` exists.
+For each skill reference like `/foo-bar`: check whether `<root>/.oh/skills/foo-bar/SKILL.md` or `<ws>/.oh/skills/foo-bar/SKILL.md` exists. Provider symlinks (`.claude/skills`, `.pi/skills`) are never discovery roots.
 
 Count total broken references (`BROKEN_COUNT`).
 
@@ -211,8 +211,8 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 
 | Scope | Skills root |
 |-------|-------------|
-| root | `$AUDIT_ROOT/.claude/skills/` |
-| ws | `$AUDIT_ROOT/workspace/.claude/skills/` |
+| root | `$AUDIT_ROOT/.oh/skills/` |
+| ws | `$AUDIT_ROOT/workspace/.oh/skills/` |
 
 ### Score thresholds
 

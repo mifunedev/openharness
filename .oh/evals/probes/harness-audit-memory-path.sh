@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #183 — /harness-audit must inspect the active worktree, not a hardcoded root
-# desc: /harness-audit context snapshot must resolve AUDIT_ROOT for source inspection and avoid hardcoded source paths
+# source: issue #183 — /audit harness must inspect the active worktree, not a hardcoded root
+# desc: /audit harness context snapshot must resolve AUDIT_ROOT for source inspection and avoid hardcoded source paths
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILL="$ROOT/.claude/skills/harness-audit/SKILL.md"
-TMP="/tmp/harness-audit-memory-path-hits.$$"
+SKILL="$ROOT/.oh/skills/audit/references/harness.md"
+TMP="/tmp/audit harness-memory-path-hits.$$"
 trap 'rm -f "$TMP"' EXIT
 
 if [[ ! -f "$SKILL" ]]; then

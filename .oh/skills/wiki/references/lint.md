@@ -519,4 +519,4 @@ and distinct recommendations.
 - `/wiki ingest` — add or update an entry; the only authorized write path to `.oh/skills/wiki/corpus/`
 - `/wiki query` — search the wiki by topic; shares the § 6 extraction command
 - `.oh/skills/retro/references/memory-protocol.md` — Memory Improvement Protocol (MIP) governing the log step
-- `/context-audit` — reference for `--dry-run` flag pattern and atomic-write convention
+- `/audit context` — reference for `--dry-run` flag pattern and atomic-write convention

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #246 — /harness-audit must fail closed on empty auditor outputs
-# desc: /harness-audit validates non-empty auditor sentinels before synthesis
+# source: issue #246 — /audit harness must fail closed on empty auditor outputs
+# desc: /audit harness validates non-empty auditor sentinels before synthesis
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILL="$ROOT/.claude/skills/harness-audit/SKILL.md"
+SKILL="$ROOT/.oh/skills/audit/references/harness.md"
 
 if [[ ! -f "$SKILL" ]]; then
   echo "SKIPPED: harness-audit skill absent: $SKILL" >&2

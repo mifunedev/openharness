@@ -1,17 +1,4 @@
----
-name: drift-check
-description: |
-  Detect and report three classes of silent harness drift: framework drift
-  (origin↔upstream), branch-behind/append-file drift, and cron-staleness
-  drift. Never auto-remediates — prints a recommended command for each
-  finding without executing it.
-  TRIGGER when: asked to check for drift, before a session-critical commit,
-  after a long session gap, when MEMORY.md or log.md may have been
-  concurrently modified, or on suspicion that a recently-merged cron is
-  not running.
----
-
-# Drift Check
+# Audit drift
 
 Read-only harness drift detector. Reports three drift classes and prints a
 recommended remediation command for each finding — never executes any

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #432 — /harness-audit must load durable memory from shared log root in cron worktrees
-# desc: /harness-audit context snapshot must tail AUDIT_LOG_ROOT/.oh/memory/MEMORY.md for long-term lessons, not AUDIT_ROOT.
+# source: issue #432 — /audit harness must load durable memory from shared log root in cron worktrees
+# desc: /audit harness context snapshot must tail AUDIT_LOG_ROOT/.oh/memory/MEMORY.md for long-term lessons, not AUDIT_ROOT.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILL="$ROOT/.claude/skills/harness-audit/SKILL.md"
+SKILL="$ROOT/.oh/skills/audit/references/harness.md"
 
 if [[ ! -f "$SKILL" ]]; then
   echo "SKIPPED: harness-audit skill absent: $SKILL" >&2

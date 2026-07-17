@@ -129,7 +129,7 @@ Cleanup: `git worktree remove "$WORKTREES_ROOT/<branch>"`.
 
 ### Stale worktree policy
 
-Worktrees older than 30 days without a corresponding open PR may be removed via `git worktree remove`; corrupted worktree directories may be removed with `rm -rf` after confirming they are not valid `git worktree list` entries. The `/harness-audit` skill flags stale-worktree candidates for review before cleanup.
+Worktrees older than 30 days without a corresponding open PR may be removed via `git worktree remove`; corrupted worktree directories may be removed with `rm -rf` after confirming they are not valid `git worktree list` entries. The `/audit harness` skill flags stale-worktree candidates for review before cleanup.
 
 ### Isolating in-flight work
 
@@ -162,7 +162,7 @@ git merge origin/development               # resolve conflicts on the feature br
 git push origin <feature-branch>           # normal push; no --force-with-lease
 ```
 
-After the merge, rerun the targeted checks and `/ci-status`/`/pr-audit` before marking the PR ready or merging it.
+After the merge, rerun the targeted checks and `/ci-status`/`/audit pr` before marking the PR ready or merging it.
 
 Use rebase/force-push only for deliberate history surgery (for example, before a branch has been shared, or when explicitly managing a stacked PR as described below).
 

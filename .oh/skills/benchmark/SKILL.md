@@ -95,9 +95,9 @@ yet, see `.oh/evals/capability/README.md` § *Non-scope*):
 | Score **flat** AND the change only added machinery (new skill/rule/probe) with **no** capability task crediting it | `NOT-BENEFICIAL` — "machinery without benchmark movement" |
 | Score **fell** | `NOT-BENEFICIAL` — the change regressed the ceiling |
 
-> **Instrument grooming (`/eval-lint`).** A faithful ceiling needs a sharp
+> **Instrument grooming (`/audit eval-quality`).** A faithful ceiling needs a sharp
 > instrument: stale probes retired, coverage gaps surfaced, an anti-Goodhart
-> holdout. That grooming is `/eval-lint` — a **named follow-on** that is
+> holdout. That grooming is `/audit eval-quality` — a **named follow-on** that is
 > not yet built. Until it exists, note in the verdict that the instrument was
 > not groomed this cycle; do **not** silently skip it.
 

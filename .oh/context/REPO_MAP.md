@@ -90,7 +90,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 |---|---|---|
 | Session role, permissions, startup load | `AGENTS.md`, `.oh/context/README.md`, `.oh/context/` | Defines orchestrator role, voice, session-start reads, rules. |
 | Sandbox lifecycle, Docker, provisioning | `Makefile`, `.devcontainer/`, `harness.yaml.example`, local `harness.yaml`, `.oh/scripts/README.md`, `.oh/scripts/docker-compose.sh` | Owns container image, compose overlays, env, and lifecycle commands. |
-| Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/pr-audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
+| Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
 | Cron/autopilot behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.oh/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog. |
 | Eval/probe regressions | `.oh/evals/README.md`, `.oh/evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
 | Task/spec implementation state | `.oh/tasks/README.md`, `.oh/tasks/<active-task>/` | PRD, critique, Ralph JSON, prompt, and task-specific artifacts. |

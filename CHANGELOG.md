@@ -9,11 +9,13 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Add the explicit nine-target `/audit` dispatcher, deterministic focused/queue PR classifier, correlated full campaigns, and shared locked ablation recovery ([#646](https://github.com/mifunedev/openharness/pull/646)).
 ### Changed
 - Protect the consolidated `/audit` owner in place of the superseded `harness-audit`, `skill-lint`, `eval-lint`, and `drift-check` entry points, staging their removal in the separate audit-consolidation implementation ([#647](https://github.com/mifunedev/openharness/issues/647)).
 - **BREAKING:** Consolidate artifact authoring under `/builder <agent|skill|command|rule> <name-or-request>` with one authoritative reference per type ([#643](https://github.com/mifunedev/openharness/issues/643)).
 ### Fixed
 ### Removed
+- **BREAKING:** Remove superseded audit-family entry points and the `auditor` agent. Migration: `/pr-audit` → `/audit pr` or `/audit prs`; `/harness-audit` → `/audit harness`; `/context-audit` → `/audit context`; `/skill-lint` → `/audit skills`; `/eval-lint` → `/audit eval-quality`; `/drift-check` → `/audit drift`; `/audit <slug>` → `/audit implementation <slug>`; auditor campaigns → `/audit full` ([#646](https://github.com/mifunedev/openharness/pull/646)).
 - Remove the legacy `agent-builder`, `skill-builder`, `command-builder`, and `rule-builder` agents and the superseded `/skill-builder` entry point; migrate callers to `/builder` ([#643](https://github.com/mifunedev/openharness/issues/643)).
 ### Deprecated
 ### Security

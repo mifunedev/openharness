@@ -144,7 +144,7 @@ AskUserQuestion:
 
 **Scope brief (after answers come back):**
 
-> Refactoring the audit skill to tighten the four sub-agent prompts so duplicate findings drop. Holding wall-clock and trigger conditions constant. Will land as edits to `.claude/skills/harness-audit/SKILL.md` only.
+> Refactoring the audit skill to tighten the four sub-agent prompts so duplicate findings drop. Holding wall-clock and trigger conditions constant. Will land as edits to `.oh/skills/audit/references/harness.md` only.
 
 ### Example 2 — new feature
 

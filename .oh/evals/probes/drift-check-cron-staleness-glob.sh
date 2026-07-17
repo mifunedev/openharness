@@ -13,7 +13,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILL="${DRIFT_CHECK_SKILL:-$ROOT/.claude/skills/drift-check/SKILL.md}"
+SKILL="${DRIFT_CHECK_SKILL:-$ROOT/.oh/skills/audit/references/drift.md}"
 
 # --- SKIPPED: hard prerequisites genuinely absent --------------------------
 if [[ ! -f "$SKILL" ]]; then

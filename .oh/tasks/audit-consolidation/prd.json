@@ -15,8 +15,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 1/11)."
     },
     {
       "id": "US-002",
@@ -29,8 +29,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 2/11)."
     },
     {
       "id": "US-003",
@@ -44,8 +44,8 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 3/11)."
     },
     {
       "id": "US-004",
@@ -58,8 +58,8 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 4/11)."
     },
     {
       "id": "US-005",
@@ -72,8 +72,8 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 5/11)."
     },
     {
       "id": "US-006A",
@@ -86,8 +86,8 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 6/11)."
     },
     {
       "id": "US-006B",
@@ -100,8 +100,8 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 7/11)."
     },
     {
       "id": "US-006C",
@@ -114,8 +114,8 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 8/11)."
     },
     {
       "id": "US-007",
@@ -128,8 +128,8 @@
         "Typecheck passes"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 9/11)."
     },
     {
       "id": "US-008",
@@ -142,8 +142,8 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 10/11)."
     },
     {
       "id": "US-009",
@@ -156,8 +156,8 @@
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed consolidated implementation on 2026-07-17; verified in final task commit (story 11/11)."
     }
   ]
 }

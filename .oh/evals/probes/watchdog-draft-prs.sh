@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 WATCHDOG="$ROOT/.claude/skills/watchdog/SKILL.md"
 HEARTBEAT="$ROOT/.oh/crons/heartbeat.md"
-PRAUDIT="$ROOT/.claude/skills/pr-audit/SKILL.md"
+PRAUDIT="$ROOT/.oh/skills/audit/references/prs.md"
 AGENTS="$ROOT/AGENTS.md"
 
 missing=()
@@ -30,7 +30,7 @@ grep -Fq 'complete the remaining work on that PR branch' "$HEARTBEAT" || missing
 grep -Fq 'only then remove draft' "$HEARTBEAT" || missing+=("heartbeat requires verification before undraft")
 grep -Fq 'Watchdog nudge' "$HEARTBEAT" || missing+=("heartbeat reporting renamed to watchdog")
 
-grep -Fq 'route to `/watchdog` to complete the branch' "$PRAUDIT" || missing+=("pr-audit stale draft routes to watchdog")
+grep -Fq 'route to `/watchdog` to complete the branch' "$PRAUDIT" || missing+=("audit prs stale draft routes to watchdog")
 grep -Fq '| `/watchdog` | Generic stuck/stale automation watchdog' "$AGENTS" || missing+=("AGENTS lists /watchdog")
 
 if grep -R "autopilot-watchdog" "$WATCHDOG" "$HEARTBEAT" "$PRAUDIT" "$AGENTS" >/dev/null 2>&1; then

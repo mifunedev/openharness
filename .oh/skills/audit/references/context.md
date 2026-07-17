@@ -1,15 +1,3 @@
----
-name: context-audit
-description: |
-  Score the default-loaded context budget across 4 dimensions and emit
-  KEEP/TRIM/DEMOTE/CUT verdicts per file. Optional Tier-2 ablation harness
-  removes a target file, runs a fixed probe suite, and measures behavior
-  degradation — the only provably safe gate for cutting load-bearing content.
-  TRIGGER when: asked to audit context window, check default context load,
-  "what's in my context", evaluate rules for signal vs noise, or before/after
-  any change to .oh/context/ or CLAUDE.md.
----
-
 # Context Audit
 
 Score every file in the default-loaded context set on 4 deterministic dimensions (footprint, load-bearing, integrity, redundancy). Emit KEEP / TRIM / DEMOTE / CUT verdicts and a total token budget. Optionally run the Tier-2 ablation harness to verify a proposed cut is safe.
@@ -38,7 +26,7 @@ Arguments received: `$ARGUMENTS`
 ### 2. Inventory the default-loaded set
 
 ```bash
-HARNESS=/home/sandbox/harness
+HARNESS=$AUDIT_ROOT
 TODAY=$(date -u +%Y-%m-%d)
 
 # Enumerate all files and their footprint
@@ -216,7 +204,7 @@ Do not apply Tier-2 to `CLAUDE.md` — removing orchestrator instructions produc
 
 #### 6a. Baseline probe run
 
-Run all probes in `.claude/skills/context-audit/probes/` with the full default-loaded set present.
+Run all probes in `.oh/skills/audit/probes/context/` with the full default-loaded set present.
 
 ```bash
 SKILL_DIR="$HARNESS/.claude/skills/context-audit"
@@ -254,7 +242,7 @@ TARGET="$HARNESS/$ARGUMENTS_FILE"   # the <file> arg from --ablate
 # Swap/restore/trap mechanics are shared with /eval — see .oh/scripts/ablate.sh
 # (prd.md §10 M-1). ablate_swap_out backs up + removes TARGET and arms an EXIT
 # trap (plus a crash-recovery sentinel /eval restores on startup). Only the
-# mechanics are shared; the `claude -p` marker oracle below stays /context-audit's own.
+# mechanics are shared; the `claude -p` marker oracle below stays /audit context's own.
 source "$HARNESS/.oh/scripts/ablate.sh"
 ablate_swap_out "$TARGET"
 
@@ -319,18 +307,9 @@ Degradation threshold: **SIGNAL DETECTED** if any probe's ablation hits fall mor
 
 ### 7. Memory Protocol
 
-```bash
-mkdir -p "$HARNESS/.oh/memory/$TODAY"
-.oh/scripts/locked-append.sh "$HARNESS/.oh/memory/$TODAY/log.md" <<EOF
-
-## [Context Audit] — $(date -u +%H:%M) UTC
-- **Result**: OP
-- **Budget**: Z tokens total (scored files + skill metadata)
-- **Top finding**: <VERDICT> — <file> (<tokens> tokens, <citations> citations)
-- **Ablation**: SAFE TO CUT | SIGNAL DETECTED | N/A
-- **Observation**: [one sentence — the single most actionable finding]
-EOF
-```
+Return a structured context observation carrying `AUDIT_RUN_ID`, budget, top finding,
+ablation verdict, and evidence path. Do not append or run retro from this route; the outer
+dispatcher owns the one locked append under `AUDIT_LOG_ROOT`.
 
 See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
@@ -374,7 +353,7 @@ markers:
 For running ablation outside a Claude session:
 
 ```bash
-.claude/skills/context-audit/runner.sh --ablate .oh/context/<file>.md
+.oh/skills/audit/scripts/context-audit-runner.sh --ablate .oh/context/<file>.md
 ```
 
 See `runner.sh` in this skill directory.

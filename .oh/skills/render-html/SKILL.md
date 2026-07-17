@@ -7,7 +7,7 @@ description: |
   consumption artifacts, not source.
   TRIGGER when: asked to render HTML, generate an HTML report, visualize an
   audit/council/lint/digest, "make this readable", "make a dashboard for",
-  or as a follow-up to /harness-audit, /strategic-proposal, /skill-lint.
+  or as a follow-up to /audit harness, /strategic-proposal, /audit skills.
 argument-hint: "<slug> [--from <path>] [--intent <one-line>]"
 ---
 
@@ -25,9 +25,9 @@ Use when **all three** are true:
 3. No downstream pipeline (Ralph, GitHub, another LLM, grep) consumes the artifact.
 
 Common targets in this harness:
-- `/harness-audit` tier-ranked report → filterable findings dashboard
+- `/audit harness` tier-ranked report → filterable findings dashboard
 - `/strategic-proposal` council artifact → phase-column roadmap with critic challenges inline
-- `/skill-lint` verdict matrix → sortable scoring table with CURRENT/STALE/BROKEN/DELETE badges
+- `/audit skills` verdict matrix → sortable scoring table with CURRENT/STALE/BROKEN/DELETE badges
 - Weekly memory digest from N days of `log.md` → timeline coloured by skill outcome
 
 ## When NOT to use
@@ -135,7 +135,7 @@ Then run the qualify/improve loop per `.oh/skills/retro/references/memory-protoc
 
 ```
 /render-html harness-audit-tier --from .oh/memory/2026-05-18/audit-raw.md --intent "pick next 3 actions"
-→ .oh/memory/2026-05-18/harness-audit-tier.html
+→ .oh/memory/2026-05-18/audit-harness-tier.html
 
 /render-html roadmap-council --intent "review council deliberation before publishing pinned issue"
 → .oh/memory/2026-05-18/roadmap-council.html

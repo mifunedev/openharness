@@ -15,7 +15,7 @@ description: |
 
 `/teach` is the post-implementation communication pass. It turns a completed change into operator understanding: first align the shared wiki model with what actually shipped, then teach from that updated model.
 
-It is **not** an implementation, audit, retro, or merge gate. `/teach` does not write application code, fix the PR, run reviews, mark PRs ready, or promote session lessons to memory. Those jobs belong to the implementation executor, `/audit` or `/pr-audit`, `/retro`, and the PR workflow. `/teach` communicates what is now true and checks that the operator can use that understanding.
+It is **not** an implementation, audit, retro, or merge gate. `/teach` does not write application code, fix the PR, run reviews, mark PRs ready, or promote session lessons to memory. Those jobs belong to the implementation executor, `/audit` or `/audit pr`, `/retro`, and the PR workflow. `/teach` communicates what is now true and checks that the operator can use that understanding.
 
 ## When to use
 
@@ -27,7 +27,7 @@ It is **not** an implementation, audit, retro, or merge gate. `/teach` does not 
 ## When NOT to use
 
 - **Before implementation is complete.** Use `/ship-spec`, `/delegate`, or `scripts/ralph.sh` to finish the task first.
-- **To decide promotability.** Use `/audit` for one implementation or `/pr-audit` for PR queue/mergeability.
+- **To decide promotability.** Use `/audit` for one implementation or `/audit pr` for PR queue/mergeability.
 - **To capture session lessons.** Use `/retro` for falsifiable hypotheses and memory promotion.
 - **To create a new research wiki entry from an external source.** Use `/wiki ingest` for source capture; `/teach` may revise an existing task-relevant entry or propose edits.
 
@@ -50,7 +50,7 @@ Read the task artifacts first:
 2. `.oh/tasks/<slug>/progress.txt` — implementation chronology, files changed, commits, and Codebase Patterns.
 3. `.oh/tasks/<slug>/prd.json` — story pass state and branch name when present.
 4. `.oh/tasks/<slug>/critique.md` — critic findings and mitigations when present.
-5. Eval/audit/verification evidence when present: `.oh/evals/RESULTS.md`, targeted probe output in `progress.txt`, `/audit` or `/pr-audit` notes, CI status, and commit/PR evidence.
+5. Eval/audit/verification evidence when present: `.oh/evals/RESULTS.md`, targeted probe output in `progress.txt`, `/audit` or `/audit pr` notes, CI status, and commit/PR evidence.
 6. The relevant wiki entry (`.oh/skills/wiki/corpus/<wiki-slug>.md`) before drafting the teaching response.
 
 If any required task artifact is missing, proceed only with a caveat naming the missing file. Do not invent verification evidence.

@@ -7,9 +7,9 @@ description: |
   direction check). The canonical topology and intentional divergences to
   preserve live in references/topology.md. Full per-subcommand procedures
   live in references/{publish,catchup}.md. This dispatcher composes
-  /drift-check (framework drift detection), /eval (oracle floor),
-  /pr-audit (promotability), and /git (branch/PR/CHANGELOG conventions).
-  It NEVER reimplements drift detection — /drift-check owns that.
+  /audit drift (framework drift detection), /eval (oracle floor),
+  /audit pr (promotability), and /git (branch/PR/CHANGELOG conventions).
+  It NEVER reimplements drift detection — /audit drift owns that.
   TRIGGER when: "sync to upstream", "publish fork changes to the public
   repo", "push to mifunedev", "origin→upstream" → publish; "pull from
   upstream", "port a feature from upstream", "catchup from mifunedev",
@@ -37,7 +37,7 @@ live in `references/topology.md`. Read it before executing any subcommand.
 |---|---|---|---|
 | `publish` | origin→upstream | Branch off upstream/development, merge-no-commit origin/development, sanitize private state, reconcile structure, eval-gate, draft PR to upstream | `references/publish.md` |
 | `catchup` | upstream→origin | Cherry-pick the squash commit of a specific upstream feature onto origin/development; never `git merge upstream/development` | `references/catchup.md` |
-| `status` | read-only | Invoke `/drift-check` and interpret its section (A) framework-drift output to report which direction is needed | inline — see below |
+| `status` | read-only | Invoke `/audit drift` and interpret its section (A) framework-drift output to report which direction is needed | inline — see below |
 
 ## Dispatch
 
@@ -59,16 +59,16 @@ Route on `$SUB`:
 
 ## Status procedure (inline)
 
-The `status` subcommand is a thin wrapper around `/drift-check` — it does
+The `status` subcommand is a thin wrapper around `/audit drift` — it does
 NOT reimplement framework drift detection.
 
-1. Invoke `/drift-check` and capture its full output.
+1. Invoke `/audit drift` and capture its full output.
 2. Parse the section (A) summary line (`DRIFT-CHECK (A):` or `(A) Framework drift: OK`):
    - Origin N **behind** upstream AND N ahead = 0: report "catchup is available (N commits to port from upstream/development)".
    - Origin N **ahead** of upstream AND N behind = 0: report "publish is available (N commits to push to upstream/development)".
    - Both non-zero: report "bidirectional work needed — run `/sync catchup` to port upstream features first, then `/sync publish` to push origin's changes forward."
    - Both zero: report "in sync — no action needed."
-3. Print the raw `/drift-check` section (A) output for operator context.
+3. Print the raw `/audit drift` section (A) output for operator context.
 
 ## Shared rules
 
@@ -78,15 +78,15 @@ These apply to all subcommands; the reference docs assume them.
   It defines the origin/upstream remotes and the intentional divergences
   (Denver TZ, `client-slack-pi` rename, `.oh/skills` symlink) that must
   survive every sync intact.
-- **This dispatcher composes /drift-check** for all framework drift detection
-  (section A of `/drift-check`'s output). NEVER implement your own
+- **This dispatcher composes /audit drift** for all framework drift detection
+  (section A of `/audit drift`'s output). NEVER implement your own
   left-right divergence-count commands in this skill or the reference docs
-  — `/drift-check` is the canonical owner of that detection logic.
+  — `/audit drift` is the canonical owner of that detection logic.
 - **This dispatcher composes /eval** as the oracle floor: both `publish` and
   `catchup` must pass `bash .oh/skills/eval/run.sh` (exit 0, no new
   REGRESSION rows) before the PR is promoted to ready.
-- **This dispatcher composes /pr-audit** for promotability: after creating a
-  PR, run `/pr-audit` to confirm it is in the ready bucket before undrafting.
+- **This dispatcher composes /audit pr** for promotability: after creating a
+  PR, run `/audit pr` to confirm it is in the ready bucket before undrafting.
 - **This dispatcher composes /git** for branch/commit/PR/CHANGELOG conventions:
   the branch-naming, commit-type, PR-body, and CHANGELOG-format rules live in
   `.oh/skills/git/SKILL.md` and are not restated here.
@@ -96,7 +96,7 @@ These apply to all subcommands; the reference docs assume them.
   — this is intentional and distinct from regular feature/task branches because
   the PR target is the upstream remote, not origin.
 - **Draft-then-gate pattern**: always open the PR as draft first; promote to
-  ready only after the eval suite is green and `/pr-audit` confirms
+  ready only after the eval suite is green and `/audit pr` confirms
   promotability.
 - **Eval oracle is non-negotiable**: a sync that breaks existing probes is not
   mergeable. Resolve conflicts until `bash .oh/skills/eval/run.sh` exits 0
@@ -106,19 +106,19 @@ These apply to all subcommands; the reference docs assume them.
 
 ## When NOT to use
 
-- **`/drift-check`** directly — for a standalone read-only drift report with
-  no intention to sync. `/sync status` wraps it; `/drift-check` is the raw tool.
+- **`/audit drift`** directly — for a standalone read-only drift report with
+  no intention to sync. `/sync status` wraps it; `/audit drift` is the raw tool.
 - **`/release`** — for cutting a CalVer tag after upstream development is
   already clean. `/sync publish` brings the fork's changes in; `/release` then
   tags a release from the canonical `main` branch.
-- **`/pr-audit`** — for a bulk PR triage pass unrelated to syncing.
+- **`/audit pr`** — for a bulk PR triage pass unrelated to syncing.
 
 ## See Also
 
 - `references/publish.md` — full origin→upstream procedure
 - `references/catchup.md` — full upstream→origin procedure
 - `references/topology.md` — canonical topology + intentional divergences
-- `.oh/skills/drift-check/SKILL.md` — framework drift detection (composed by status)
+- `.oh/skills/audit/references/drift.md` — framework drift detection (composed by status)
 - `.oh/skills/eval/SKILL.md` — eval oracle (composed by publish + catchup)
-- `.oh/skills/pr-audit/SKILL.md` — promotability gate (composed by publish + catchup)
+- `.oh/skills/audit/references/prs.md` — promotability gate (composed by publish + catchup)
 - `.oh/skills/git/SKILL.md` — branch/commit/PR/CHANGELOG conventions

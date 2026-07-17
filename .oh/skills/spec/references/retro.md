@@ -57,7 +57,7 @@ still require explicit approval (or are skipped under `--dry-run`).
   gate are `/retro`'s; `retro` only scopes them to the task.
 - **Audit or decide promotability.** That was `/audit` (the `build ⇄ audit` loop) earlier in
   `/spec execute`.
-- **Run the grooming triad.** `/skill-lint` · `/wiki lint` · `/drift-check` are the `groom`
+- **Run the grooming triad.** `/audit skills` · `/wiki lint` · `/audit drift` are the `groom`
   step of `/spec execute`, after this one.
 - **Merge or undraft.** No GitHub-side mutation — reflection only.
 

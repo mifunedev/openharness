@@ -22,7 +22,7 @@ required_execs=(
   ".oh/hooks/warn-devtcp.sh"
   ".oh/skills/autopilot/autopilot-caps.sh"
   ".oh/skills/cloudflared/scripts/run.sh"
-  ".oh/skills/context-audit/runner.sh"
+  ".oh/skills/audit/scripts/context-audit-runner.sh"
   ".oh/skills/eval/run.sh"
   ".oh/skills/prompt-miner/prompt-miner-caps.sh"
   ".oh/skills/prompt-miner/scripts/render-log-entry.sh"

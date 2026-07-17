@@ -6,3 +6,21 @@
 - `/audit` is the only public audit-family owner; shared scripts/references remain private.
 - Preserve unrelated root work by operating only in this isolated worktree.
 
+## US-001–US-009 — 2026-07-17 22:30 UTC
+
+**Title**: Complete approved audit consolidation
+**Files changed**: `.oh/skills/audit/`, audit callers/probes/workflows/docs, `.oh/scripts/ablate.sh`, wiki, changelog, task evidence
+**Commit**: pending final task commit
+**Result**: PASS
+
+### What I did
+Implemented the nine-target dispatcher, private focused/queue PR acquisition and deterministic classifier, migrated all target protocols and implementation gating, unified root/run/log and ablation ownership, migrated callers and probes, removed legacy public owners, and documented the breaking architecture. Preserved parent protected-path commit `6ea7be3f` in ancestry and did not alter the parent's protected-path file.
+
+### Verification
+Focused classifier/dispatcher/recovery/stale-reference/provider/wiki probes pass. `pnpm run typecheck`, `pnpm run lint`, 456 script tests, ShellCheck via `pnpm dlx shellcheck`, `git diff --check`, and the full 86-probe eval suite pass with no new green-to-red regression; `next-dev-prod` is a disclosed pre-existing unchanged red after the first full run.
+
+### Learnings for future iterations
+Clean-breaking dispatcher migrations require semantic separation of focused PR (`/audit pr`) from queue (`/audit prs`) callers; blind name replacement is insufficient. Provider surfaces are directory symlinks, so canonical reference resources remain under `.oh/skills/audit/` rather than becoming public helper skills.
+
+---
+STATUS: COMPLETE

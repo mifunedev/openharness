@@ -8,7 +8,7 @@ operation, not a simple push. Read `references/topology.md` before starting.
 
 1. Read `references/topology.md` in full.
 
-2. Invoke `/drift-check`. Confirm section (A) shows origin AHEAD of
+2. Invoke `/audit drift`. Confirm section (A) shows origin AHEAD of
    upstream (left count > 0). If origin is not ahead, there is nothing to
    publish — stop.
 
@@ -201,13 +201,13 @@ Open as **draft** first.
 
 ## Step 11 — Gate to ready
 
-After CI passes and `/pr-audit` confirms promotability:
+After CI passes and `/audit pr` confirms promotability:
 
 ```bash
 gh pr ready <N> --repo mifunedev/openharness
 ```
 
-Run `/pr-audit --repo mifunedev/openharness` and confirm the PR is in the
+Run `/audit pr --repo mifunedev/openharness` and confirm the PR is in the
 `ready` bucket (not `CI-failing`, `conflicting`, or `changes-requested`)
 before undrafting.
 

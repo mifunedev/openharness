@@ -5,17 +5,17 @@
 #       (non-zero exit + a "FAIL gate1: required_artifact missing" diagnostic) when a
 #       declared artifact_contract.required_artifacts path is absent on disk, and PASS
 #       (exit 0) when every declared artifact is present. This probe extracts the REAL
-#       jq/while block from .oh/skills/audit/SKILL.md (the ```bash fence that reads
+#       jq/while block from .oh/skills/audit/references/implementation.md (the ```bash fence that reads
 #       .artifact_contract.required_artifacts) and runs it against the tracked fixture
-#       (.oh/skills/audit/references/artifact-contract-fixture.prd.json, which declares one
+#       (.oh/skills/audit/fixtures/artifact-contract.prd.json, which declares one
 #       present + one deliberately-missing artifact) and an all-present variant. Extracting
 #       and executing the actual SKILL.md block — not a reimplementation — makes this a
 #       genuine guard: removing or breaking the gating sub-check regresses this probe.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILL="$ROOT/.oh/skills/audit/SKILL.md"
-FIX="$ROOT/.oh/skills/audit/references/artifact-contract-fixture.prd.json"
+SKILL="$ROOT/.oh/skills/audit/references/implementation.md"
+FIX="$ROOT/.oh/skills/audit/fixtures/artifact-contract.prd.json"
 
 # --- dependency / input guards: a missing tool or fixture is SKIPPED, never a regression -
 if ! command -v jq >/dev/null 2>&1; then
@@ -46,7 +46,7 @@ BLOCK="$(awk '
 ' "$SKILL")"
 
 if [[ -z "$BLOCK" ]]; then
-  echo "REGRESSION: no bash code fence reading .artifact_contract.required_artifacts found in audit/SKILL.md — the gating Gate 1 sub-check (b) is missing" >&2
+  echo "REGRESSION: no bash code fence reading .artifact_contract.required_artifacts found in audit/references/implementation.md — the gating Gate 1 sub-check (b) is missing" >&2
   exit 1
 fi
 printf '%s\n' "$BLOCK" > "$tmpblock"
@@ -93,5 +93,5 @@ if [[ "$rc_pass" -ne 0 ]]; then
   exit 1
 fi
 
-echo "PASS: /audit Gate 1 artifact-contract sub-check (real block from audit/SKILL.md) FAILs on the missing-artifact fixture (exit $rc_fail) and PASSes on the $present_count-present variant (exit 0)" >&2
+echo "PASS: /audit Gate 1 artifact-contract sub-check (real block from audit/references/implementation.md) FAILs on the missing-artifact fixture (exit $rc_fail) and PASSes on the $present_count-present variant (exit 0)" >&2
 exit 0

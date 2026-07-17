@@ -198,112 +198,16 @@ Omit KEEP files from Recommendations. Use the short filename (e.g. `advisor.md`)
 
 ### 6. Tier-2 ablation (skip if mode is `all`)
 
-**Purpose**: determine whether removing a file degrades observable behavior. This is the only step that goes beyond static proxies to provide an empirical signal measurement.
+The canonical caller is `$AUDIT_ROOT/.oh/skills/audit/scripts/context-audit-runner.sh`.
+Use `--baseline` only on explicit request; use `--ablate <relative-file>` for ablation.
+The runner resolves probes from `$AUDIT_ROOT/.oh/skills/audit/probes/context/`, creates
+invocation-scoped temporary results, and calls `.oh/scripts/ablate.sh` for validation,
+locking, versioned sentinel transitions, signal restoration, and startup recovery. Do
+not implement backup, sentinel parsing, locking, or restore in this route.
 
-Do not apply Tier-2 to `CLAUDE.md` — removing orchestrator instructions produces meaningless probe results.
-
-#### 6a. Baseline probe run
-
-Run all probes in `.oh/skills/audit/probes/context/` with the full default-loaded set present.
-
-```bash
-SKILL_DIR="$HARNESS/.claude/skills/context-audit"
-PROBE_DIR="$SKILL_DIR/probes"
-RESULTS="/tmp/context-audit-$(date +%s)"
-mkdir -p "$RESULTS"
-
-extract_body() {
-  # strips YAML frontmatter; prints body (text after closing ---)
-  awk '/^---/{n++; if(n==2){p=1;next}} p{print}' "$1"
-}
-
-for probe in "$PROBE_DIR"/*.md; do
-  pname=$(basename "$probe" .md)
-  claude -p "$(extract_body "$probe")" --output-format text \
-    > "$RESULTS/baseline-${pname}.txt" 2>&1
-  echo "baseline: $pname → $RESULTS/baseline-${pname}.txt"
-done
-```
-
-If `--baseline` mode: copy results to `.oh/memory/$TODAY/context-audit-baseline/` for durable storage.
-
-```bash
-mkdir -p "$HARNESS/.oh/memory/$TODAY/context-audit-baseline"
-cp "$RESULTS"/baseline-*.txt "$HARNESS/.oh/memory/$TODAY/context-audit-baseline/"
-```
-
-#### 6b. Ablation run
-
-Back up the target file, run all probes, restore. Use `trap` to guarantee restore on error.
-
-```bash
-TARGET="$HARNESS/$ARGUMENTS_FILE"   # the <file> arg from --ablate
-
-# Swap/restore/trap mechanics are shared with /eval — see .oh/scripts/ablate.sh
-# (prd.md §10 M-1). ablate_swap_out backs up + removes TARGET and arms an EXIT
-# trap (plus a crash-recovery sentinel /eval restores on startup). Only the
-# mechanics are shared; the `claude -p` marker oracle below stays /audit context's own.
-source "$HARNESS/.oh/scripts/ablate.sh"
-ablate_swap_out "$TARGET"
-
-for probe in "$PROBE_DIR"/*.md; do
-  pname=$(basename "$probe" .md)
-  claude -p "$(extract_body "$probe")" --output-format text \
-    > "$RESULTS/ablation-${pname}.txt" 2>&1
-  echo "ablation: $pname → $RESULTS/ablation-${pname}.txt"
-done
-
-# the EXIT trap armed by ablate_swap_out restores TARGET
-```
-
-#### 6c. Evaluate degradation
-
-For each probe, read MUST-CONTAIN markers from the probe's frontmatter `markers:` list. Count how many markers appear in the baseline vs. ablation response.
-
-```bash
-extract_markers() {
-  # prints one marker per line from YAML frontmatter markers: list
-  awk '/^markers:/{f=1;next} f && /^  - /{print substr($0,5)} f && /^[a-z]/{exit}' "$1"
-}
-
-for probe in "$PROBE_DIR"/*.md; do
-  pname=$(basename "$probe" .md)
-  baseline_hits=0; ablation_hits=0; total=0
-
-  while IFS= read -r marker; do
-    [ -z "$marker" ] && continue
-    total=$((total + 1))
-    grep -qi "$marker" "$RESULTS/baseline-${pname}.txt" \
-      && baseline_hits=$((baseline_hits + 1))
-    grep -qi "$marker" "$RESULTS/ablation-${pname}.txt" \
-      && ablation_hits=$((ablation_hits + 1))
-  done < <(extract_markers "$probe")
-
-  drop=$((baseline_hits - ablation_hits))
-  [ "$drop" -le 0 ] && severity="none" \
-    || { [ "$drop" -eq 1 ] && severity="LOW" || severity="HIGH"; }
-  echo "$pname|$baseline_hits|$ablation_hits|$total|$drop|$severity"
-done
-```
-
-#### 6d. Emit Tier-2 report
-
-```
-## Ablation: <target-file> — YYYY-MM-DD HH:MM UTC
-
-### Probe Results
-| Probe | Baseline | Ablation | Markers | Drop | Severity |
-|-------|:--------:|:--------:|:-------:|:----:|:--------:|
-| probe-git-branch | 3/3 | 1/3 | 3 | 2 | HIGH |
-| ...              |     |     |   |   |      |
-
-### Verdict
-SAFE TO CUT — all probes degraded ≤ 1 marker
-  OR
-SIGNAL DETECTED — N probe(s) degraded >1 marker; <target-file> earns its slot
-```
-
-Degradation threshold: **SIGNAL DETECTED** if any probe's ablation hits fall more than 1 below baseline hits. **SAFE TO CUT** otherwise.
+Ablation preserves the native `SAFE TO CUT` / `SIGNAL DETECTED` verdict. Explicit
+baseline output is durable under `AUDIT_LOG_ROOT`; ordinary ablation restores the target
+byte-for-byte and leaves only the structured observation returned to the dispatcher.
 
 ### 7. Memory Protocol
 

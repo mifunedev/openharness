@@ -14,7 +14,7 @@ loop — `build ⇄ audit` — mirroring the `spec-plan ⇄ spec-critique` loop 
 **Core principle: compose the protected build machinery; own only the spec-* tail.** The
 heavy build/finalize mechanics already live in `/ship-spec` Stages 8–13 (worktree Advisor
 launched via `/goal`, `/delegate` workers each running `scripts/ralph.sh`, the `/eval`
-gate, the `/pr-audit` promotable undraft). `execute` **reuses those by reference** —
+gate, the `/audit pr` promotable undraft). `execute` **reuses those by reference** —
 it does not re-implement or fork them, so `/ship-spec` stays the single source of build
 literals (and its protected probes stay green). What `execute` adds is the
 folder-pointed `build ⇄ audit` loop and the post-PASS tail named in `AGENTS.md § The
@@ -64,11 +64,11 @@ as the authority for the mechanics; do not duplicate them here.
 When the build reports complete, run the per-unit verdict gate:
 
 ```
-/audit <slug> --pr <N> --branch <prefix>/<N>-<slug>
+/audit implementation <slug> --pr <N> --repo <owner/name> --base <base> --branch <prefix>/<N>-<slug>
 ```
 
-`/audit` composes `prd.json` task-graph conformance + the `/eval` regression floor +
-`/pr-audit` promotable classification (+ `/agent-browser` for UI stories) into one verdict:
+`/audit implementation` composes `prd.json` task-graph conformance + the `/eval` regression floor +
+`/audit pr` promotable classification (+ `/agent-browser` for UI stories) into one verdict:
 
 - `AUDIT-FAIL` → loop back to **build**: resume the Advisor / `scripts/ralph.sh <slug>` to
   finish the unmet stories, then re-audit. This is the build-side adversary — keep looping
@@ -92,20 +92,20 @@ The self-improvement tail (`AGENTS.md § The Workflow`):
 
 - **compound** — promote durable knowledge so it is reused, not re-derived (`/wiki ingest`,
   `.oh/memory/MEMORY.md`, mint a probe from any guardrail lesson).
-- **compress** — keep the always-loaded context lean and clear (`/context-audit`).
+- **compress** — keep the always-loaded context lean and clear (`/audit context`).
 - **benchmark** — confirm the change earned its complexity (`/benchmark`): the `/eval`
   regression floor stays green AND the capability-benchmark ceiling held or moved.
 
 ### 5. `groom` — pre-merge health checks
 
 Before handing to the human, run the grooming triad named in `AGENTS.md § The Workflow`:
-`/skill-lint` · `/wiki lint` · `/drift-check`. These are report-only health checks; surface
+`/audit skills` · `/wiki lint` · `/audit drift`. These are report-only health checks; surface
 findings, do not block the merge on advisory output.
 
 ### 6. Undraft → human merge gate
 
-Mark the PR ready (`gh pr ready <N>`) **only** when `/audit` PASSED and an immediately
-preceding `/pr-audit` classifies it promotable (CI green + mergeable + clean) — exactly the
+Mark the PR ready (`gh pr ready <N>`) **only** when `/audit implementation` PASSED and an immediately
+preceding fresh `/audit pr <N> --repo <owner/name> --base <base>` classifies it promotable (CI green + mergeable + clean) — exactly the
 `/ship-spec` Stage 12–13 gate. Then **stop**. The human owns the merge (`AGENTS.md § The
 Workflow`: *human merge — final gate, no auto-merge*). Never `gh pr merge`.
 
@@ -114,7 +114,7 @@ Workflow`: *human merge — final gate, no auto-merge*). Never `gh pr merge`.
 ## What this node does NOT do
 
 - **Re-implement the build machinery.** It composes `/ship-spec` Stages 8–13; that skill is
-  the single source of worktree/delegate/ralph/eval/pr-audit literals.
+  the single source of worktree/delegate/ralph/eval/audit pr literals.
 - **Merge.** The terminal state is a **ready** PR. Merge is the human's gate; reset/clean is
   the runner's job after merge.
 - **Select work.** Selection is `/autopilot`'s; `execute` builds the one folder it is

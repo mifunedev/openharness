@@ -28,11 +28,11 @@ that catches anything time-sensitive without doing real work.
     `WATCHING: <item> (un-checkable)` and skip — do not invent ad-hoc
     checks. Do NOT edit `.oh/crons/heartbeat.md` yourself; sessions own
     that file.
-2.7. Run `/drift-check`. If it reports any findings (framework drift
+2.7. Run `/audit drift`. If it reports any findings (framework drift
     `origin`↔`upstream`, branch-behind/append-file drift, or
     cron-staleness drift), surface
     each finding in `.oh/memory/<today>/log.md` and include in the reply as
-    `DRIFT: <summary>`. When `/drift-check` reports all classes clean,
+    `DRIFT: <summary>`. When `/audit drift` reports all classes clean,
     append nothing extra — the existing `HEARTBEAT_OK` reply stays
     unchanged; do NOT add a per-pulse "no drift" block on clean runs.
 2.8. **Watchdog nudge.** Run `/watchdog --action all --repo mifunedev/openharness`.
@@ -70,7 +70,7 @@ that catches anything time-sensitive without doing real work.
 - Pending `## Active items` → include in reply as
   `WATCHING: <item> (added <date>, age <Nd>)`. Resolved-this-pulse →
   `RESOLVED: <item> — remove the line in next session`.
-- Drift detected by `/drift-check` → include in reply as
+- Drift detected by `/audit drift` → include in reply as
   `DRIFT: <summary>` and note in `.oh/memory/<today>/log.md`. Clean run →
   no extra output.
 - Watchdog nudge (step 2.8) → completed/undrafted stale PRs, killed stuck
@@ -166,7 +166,7 @@ Sessions add and remove lines; the cron only reads. Format:
 
 Entry: a session appends a line when (a) something needs deferred
 follow-up, (b) a prior heartbeat pulse surfaced something worth
-tracking, or (c) a skill (/harness-audit, /skill-lint,
+tracking, or (c) a skill (/audit harness, /audit skills,
 /strategic-proposal) suggested it.
 
 Exit: remove the line when resolved, or replace with `see #<issue>`

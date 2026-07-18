@@ -268,7 +268,10 @@ TODAY=$(date -u +%Y-%m-%d)
 MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"; mkdir -p "$MEM/$TODAY"
 ```
 
-Append to `"$MEM"/<UTC-date>/log.md` (default `.oh/memory/<UTC-date>/log.md`):
+When `AUDIT_RUN_ID` is inherited, return a structured ingest observation carrying
+that ID and suppress this append/retro; the outer `/audit` owns the single log.
+Direct invocation appends to `"$MEM"/<UTC-date>/log.md` (default
+`.oh/memory/<UTC-date>/log.md`):
 
 ```markdown
 ## /wiki ingest -- HH:MM UTC

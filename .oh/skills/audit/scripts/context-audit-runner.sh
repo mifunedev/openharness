@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# context-audit runner — Tier-2 ablation harness
+# /audit context runner — Tier-2 ablation harness
 # Usage:
 #   ./runner.sh --ablate <relative-path>   # e.g. .oh/context/IDENTITY.md
 #   ./runner.sh --baseline                 # record baseline probe outputs only
 #
-# Must be run from the harness root (/home/sandbox/harness).
-
 set -euo pipefail
 
-HARNESS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-SKILL_DIR="$HARNESS/.claude/skills/context-audit"
-PROBE_DIR="$SKILL_DIR/probes"
+HARNESS="$(cd "${AUDIT_ROOT:-$(git rev-parse --show-toplevel)}" && pwd -P)"
+PROBE_DIR="$HARNESS/.oh/skills/audit/probes/context"
 TODAY=$(date -u +%Y-%m-%d)
-RESULTS="/tmp/context-audit-$(date +%s)"
-mkdir -p "$RESULTS"
+RESULTS=$(mktemp -d "${TMPDIR:-/tmp}/${AUDIT_RUN_ID:-audit-direct}.context.XXXXXX")
+trap 'rm -rf "$RESULTS"' EXIT
+# shellcheck source=.oh/scripts/ablate.sh
+source "$HARNESS/.oh/scripts/ablate.sh"
+ablate_recover
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -91,7 +91,8 @@ if [ "$MODE" = "--baseline" ]; then
   echo "=== Baseline probe run ==="
   run_probes "baseline"
   # Persist to memory for durable comparison (resolver honors paths.memory / MEMORY_DIR)
-  MEM_DIR="$(sh "$HARNESS/.oh/scripts/oh-path" memory 2>/dev/null || printf '%s' "$HARNESS/.oh/memory")"
+  if [ -n "${AUDIT_LOG_ROOT:-}" ]; then MEM_DIR="$AUDIT_LOG_ROOT/.oh/memory"
+  else MEM_DIR="$(sh "$HARNESS/.oh/scripts/oh-path" memory 2>/dev/null || printf '%s' "$HARNESS/.oh/memory")"; fi
   mkdir -p "$MEM_DIR/$TODAY/context-audit-baseline"
   cp "$RESULTS"/baseline-*.txt "$MEM_DIR/$TODAY/context-audit-baseline/"
   echo ""
@@ -105,32 +106,27 @@ if [ "$MODE" = "--ablate" ]; then
     echo "Error: --ablate requires a file argument (relative to harness root)"
     exit 1
   fi
-  TARGET="$HARNESS/$TARGET_REL"
+  if [ "$TARGET_REL" = ".oh/memory/MEMORY.md" ]; then
+    SHARED_ROOT=$(cd "${AUDIT_LOG_ROOT:-$HARNESS}" && pwd -P)
+    TARGET="$SHARED_ROOT/.oh/memory/MEMORY.md"
+  else
+    TARGET="$HARNESS/$TARGET_REL"
+  fi
   if [ ! -f "$TARGET" ]; then
     echo "Error: file not found: $TARGET"
     exit 1
   fi
   TARGET_BASE=$(basename "$TARGET_REL")
 
-  # Safety: don't ablate CLAUDE.md (removes orchestrator identity)
-  if [ "$TARGET_BASE" = "CLAUDE.md" ]; then
-    echo "Error: CLAUDE.md cannot be ablated — results would be meaningless"
-    exit 1
-  fi
-
   echo "=== Baseline probe run (full context) ==="
   run_probes "baseline"
 
   echo ""
   echo "=== Ablation: temporarily removing $TARGET_REL ==="
-  # Restore on any exit
-  trap 'if [ -f "${TARGET}.bak" ]; then mv "${TARGET}.bak" "$TARGET"; echo "Restored $TARGET_REL"; fi' EXIT
-  mv "$TARGET" "${TARGET}.bak"
-
+  ablate_swap_out "$TARGET"
   run_probes "ablation"
-
-  # Restore now (trap also fires but idempotent)
-  mv "${TARGET}.bak" "$TARGET"
+  ablate_restore "$TARGET"
+  trap 'rm -rf "$RESULTS"' EXIT
 
   evaluate "$TARGET_BASE"
   exit 0

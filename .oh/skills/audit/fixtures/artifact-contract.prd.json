@@ -5,11 +5,11 @@
     "description": "FIXTURE — NOT a real task. Exercises /audit Gate 1 sub-check (b), the artifact-contract enforcement. Its root artifact_contract.required_artifacts declares one path that exists (this fixture itself) and one that deliberately does NOT exist (MISSING-ON-PURPOSE.md), so Gate 1 must emit AUDIT-FAIL. Do NOT create the missing path — its absence is the point. See .oh/docs/artifact-contract-schema.md and .oh/evals/probes/artifact-contract-audit.sh.",
     "artifact_contract": {
         "required_artifacts": [
-            ".oh/skills/audit/references/artifact-contract-fixture.prd.json",
-            ".oh/skills/audit/references/MISSING-ON-PURPOSE.md"
+            ".oh/skills/audit/fixtures/artifact-contract.prd.json",
+            ".oh/skills/audit/fixtures/MISSING-ON-PURPOSE.md"
         ],
         "allowed_locations": [
-            ".oh/skills/audit/references/"
+            ".oh/skills/audit/fixtures/"
         ],
         "verification_commands": [
             "bash .oh/evals/probes/artifact-contract-audit.sh"

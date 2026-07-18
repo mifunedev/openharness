@@ -92,7 +92,7 @@ node -e 'import("'"${CLAUDE_SKILL_DIR}"'/scripts/score-trajectories.mjs").then(m
 
 > `--dry-run` already returned in Step 1; if it reaches here it was not set.
 
-### Step 3 — Attach signals (compose `/eval` + `/audit` by reference)
+### Step 3 — Attach signals (compose `/eval` + `/audit implementation` by reference)
 
 For each sampled trajectory, attach the deterministic signals the scorer weights —
 **compose the existing gates, do not re-derive them**:
@@ -100,7 +100,7 @@ For each sampled trajectory, attach the deterministic signals the scorer weights
 - **`evalRc`** — run the trajectory's change through `/eval` (the regression
   floor); record the runner rc (`0` PASS · `1` REGRESSION · `2` SKIPPED · `null`
   N/A). `evalRc === 1` is a hard-floor breaker.
-- **`auditVerdict`** — run `/audit` (per-unit promotability) for trajectories that
+- **`auditVerdict`** — run `/audit implementation <slug>` (per-unit promotability) for trajectories that
   touch code; record `"PASS"` · `"FAIL"` · `null`. `"FAIL"` is a hard-floor breaker.
 - **`clusterId` / `clusterSize`** — one **clustering pass**: group the N outputs
   by semantic equivalence (a model step) and stamp each with its cluster id and
@@ -183,7 +183,7 @@ Announce the `RESULT:` tag once Step 6 completes.
   supplies `--now "$(date -u +%s)"` from the shell. Never patch a fallback into
   the scorer.
 - **Exceeding the cap.** `N > 8` is rejected — cost grows linearly with N (plus
-  `/eval` + `/audit` per trajectory). Preview with `--dry-run` first.
+  `/eval` + `/audit implementation <slug>` per trajectory). Preview with `--dry-run` first.
 - **Committing the artifacts.** `.oh/memory/<UTC-date>/` is gitignored; never stage a
   cohort, report, or summary.
 - **Editing the scorer to change weights inline.** `DEFAULT_WEIGHTS` is

@@ -1,15 +1,3 @@
----
-name: context-audit
-description: |
-  Score the default-loaded context budget across 4 dimensions and emit
-  KEEP/TRIM/DEMOTE/CUT verdicts per file. Optional Tier-2 ablation harness
-  removes a target file, runs a fixed probe suite, and measures behavior
-  degradation — the only provably safe gate for cutting load-bearing content.
-  TRIGGER when: asked to audit context window, check default context load,
-  "what's in my context", evaluate rules for signal vs noise, or before/after
-  any change to .oh/context/ or CLAUDE.md.
----
-
 # Context Audit
 
 Score every file in the default-loaded context set on 4 deterministic dimensions (footprint, load-bearing, integrity, redundancy). Emit KEEP / TRIM / DEMOTE / CUT verdicts and a total token budget. Optionally run the Tier-2 ablation harness to verify a proposed cut is safe.
@@ -19,8 +7,8 @@ Score every file in the default-loaded context set on 4 deterministic dimensions
 | Layer | Files | Loaded how |
 |-------|-------|-----------|
 | Bootloader | `CLAUDE.md` | always |
-| Context | `.oh/context/SOUL.md`, `.oh/context/IDENTITY.md`, `.oh/context/TOOLS.md`, `.oh/context/USER.md` | session start |
-| Memory | `.oh/memory/MEMORY.md` (+ today's log) | session start |
+| Context | `.oh/context/SOUL.md`, `.oh/context/IDENTITY.md`, `.oh/context/TOOLS.md`, `.oh/context/REPO_MAP.md`, `.oh/context/USER.md` | session start |
+| Memory | `.oh/memory/MEMORY.md` and `.oh/memory/<UTC-today>/log.md` when present | session start |
 | Skill metadata | frontmatter of all `**/SKILL.md` | always injected |
 
 ## Instructions
@@ -38,7 +26,7 @@ Arguments received: `$ARGUMENTS`
 ### 2. Inventory the default-loaded set
 
 ```bash
-HARNESS=/home/sandbox/harness
+HARNESS=$AUDIT_ROOT
 TODAY=$(date -u +%Y-%m-%d)
 
 # Enumerate all files and their footprint
@@ -47,8 +35,10 @@ for f in \
   "$HARNESS/.oh/context/SOUL.md" \
   "$HARNESS/.oh/context/IDENTITY.md" \
   "$HARNESS/.oh/context/TOOLS.md" \
+  "$HARNESS/.oh/context/REPO_MAP.md" \
   "$HARNESS/.oh/context/USER.md" \
-  "$HARNESS/.oh/memory/MEMORY.md"; do
+  "$AUDIT_LOG_ROOT/.oh/memory/MEMORY.md" \
+  "$AUDIT_LOG_ROOT/.oh/memory/$TODAY/log.md"; do
   [ -f "$f" ] || continue
   chars=$(wc -c < "$f")
   words=$(wc -w < "$f")
@@ -57,8 +47,7 @@ done
 
 # Skill metadata aggregate (all SKILL.md description fields)
 skill_chars=$(grep -h -A10 '^description:' \
-  "$HARNESS"/.claude/skills/*/SKILL.md \
-  "$HARNESS"/workspace/.claude/skills/*/SKILL.md 2>/dev/null \
+  "$HARNESS"/.oh/skills/*/SKILL.md 2>/dev/null \
   | wc -c)
 echo "$((skill_chars/4)) skill-metadata-aggregate (all trigger descriptions)"
 ```
@@ -94,12 +83,12 @@ Citation count: how many skills, agents, tracked docs, and orchestrator files re
 ```bash
 FILE_BASE=$(basename "$f")
 REFS=$(grep -rl "$FILE_BASE" \
-  "$HARNESS/.claude/skills" \
-  "$HARNESS/.claude/agents" \
+  "$HARNESS/.oh/skills" \
+  "$HARNESS/.oh/agents" \
   "$HARNESS/AGENTS.md" \
   "$HARNESS/CLAUDE.md" \
-  "$HARNESS/context" \
-  "$HARNESS/docs" 2>/dev/null \
+  "$HARNESS/.oh/context" \
+  "$HARNESS/.oh/docs" 2>/dev/null \
   | grep -v "^${f}$" | wc -l)
 ```
 
@@ -116,9 +105,11 @@ REFS=$(grep -rl "$FILE_BASE" \
 Verify that every file path and skill reference within the file resolves. Broken references are load-bearing context that actively misleads.
 
 ```bash
-# Absolute paths referenced in backticks or quotes
+# Repo-relative .oh/ paths referenced in backticks or quotes. Do not interpret
+# command invocations (for example /audit) as filesystem-root paths.
 PATH_REFS=$(grep -oP '`[^`]+`|"[^"]+"' "$f" \
-  | grep -oP '/[a-zA-Z0-9_./-]+' | sort -u)
+  | grep -oP '(?:^|[[:space:]`"])(\.oh/[a-zA-Z0-9_./-]+)' \
+  | grep -oP '\.oh/[a-zA-Z0-9_./-]+' | sort -u)
 
 # Skill invocations like /release, /ci-status (exclude filesystem paths)
 SKILL_REFS=$(grep -oP '/[a-z][a-z0-9-]+' "$f" \
@@ -126,13 +117,11 @@ SKILL_REFS=$(grep -oP '/[a-z][a-z0-9-]+' "$f" \
 
 BROKEN=0
 for p in $PATH_REFS; do
-  [ -e "$p" ] || BROKEN=$((BROKEN + 1))
+  [ -e "$HARNESS/$p" ] || BROKEN=$((BROKEN + 1))
 done
 for s in $SKILL_REFS; do
   name="${s#/}"
-  { [ -d "$HARNESS/.claude/skills/$name" ] || \
-    [ -d "$HARNESS/workspace/.claude/skills/$name" ]; } \
-    || BROKEN=$((BROKEN + 1))
+  [ -d "$HARNESS/.oh/skills/$name" ] || BROKEN=$((BROKEN + 1))
 done
 ```
 
@@ -210,127 +199,22 @@ Omit KEEP files from Recommendations. Use the short filename (e.g. `advisor.md`)
 
 ### 6. Tier-2 ablation (skip if mode is `all`)
 
-**Purpose**: determine whether removing a file degrades observable behavior. This is the only step that goes beyond static proxies to provide an empirical signal measurement.
+The canonical caller is `$AUDIT_ROOT/.oh/skills/audit/scripts/context-audit-runner.sh`.
+Use `--baseline` only on explicit request; use `--ablate <relative-file>` for ablation.
+The runner resolves probes from `$AUDIT_ROOT/.oh/skills/audit/probes/context/`, creates
+invocation-scoped temporary results, and calls `.oh/scripts/ablate.sh` for validation,
+locking, versioned sentinel transitions, signal restoration, and startup recovery. Do
+not implement backup, sentinel parsing, locking, or restore in this route.
 
-Do not apply Tier-2 to `CLAUDE.md` — removing orchestrator instructions produces meaningless probe results.
-
-#### 6a. Baseline probe run
-
-Run all probes in `.claude/skills/context-audit/probes/` with the full default-loaded set present.
-
-```bash
-SKILL_DIR="$HARNESS/.claude/skills/context-audit"
-PROBE_DIR="$SKILL_DIR/probes"
-RESULTS="/tmp/context-audit-$(date +%s)"
-mkdir -p "$RESULTS"
-
-extract_body() {
-  # strips YAML frontmatter; prints body (text after closing ---)
-  awk '/^---/{n++; if(n==2){p=1;next}} p{print}' "$1"
-}
-
-for probe in "$PROBE_DIR"/*.md; do
-  pname=$(basename "$probe" .md)
-  claude -p "$(extract_body "$probe")" --output-format text \
-    > "$RESULTS/baseline-${pname}.txt" 2>&1
-  echo "baseline: $pname → $RESULTS/baseline-${pname}.txt"
-done
-```
-
-If `--baseline` mode: copy results to `.oh/memory/$TODAY/context-audit-baseline/` for durable storage.
-
-```bash
-mkdir -p "$HARNESS/.oh/memory/$TODAY/context-audit-baseline"
-cp "$RESULTS"/baseline-*.txt "$HARNESS/.oh/memory/$TODAY/context-audit-baseline/"
-```
-
-#### 6b. Ablation run
-
-Back up the target file, run all probes, restore. Use `trap` to guarantee restore on error.
-
-```bash
-TARGET="$HARNESS/$ARGUMENTS_FILE"   # the <file> arg from --ablate
-
-# Swap/restore/trap mechanics are shared with /eval — see .oh/scripts/ablate.sh
-# (prd.md §10 M-1). ablate_swap_out backs up + removes TARGET and arms an EXIT
-# trap (plus a crash-recovery sentinel /eval restores on startup). Only the
-# mechanics are shared; the `claude -p` marker oracle below stays /context-audit's own.
-source "$HARNESS/.oh/scripts/ablate.sh"
-ablate_swap_out "$TARGET"
-
-for probe in "$PROBE_DIR"/*.md; do
-  pname=$(basename "$probe" .md)
-  claude -p "$(extract_body "$probe")" --output-format text \
-    > "$RESULTS/ablation-${pname}.txt" 2>&1
-  echo "ablation: $pname → $RESULTS/ablation-${pname}.txt"
-done
-
-# the EXIT trap armed by ablate_swap_out restores TARGET
-```
-
-#### 6c. Evaluate degradation
-
-For each probe, read MUST-CONTAIN markers from the probe's frontmatter `markers:` list. Count how many markers appear in the baseline vs. ablation response.
-
-```bash
-extract_markers() {
-  # prints one marker per line from YAML frontmatter markers: list
-  awk '/^markers:/{f=1;next} f && /^  - /{print substr($0,5)} f && /^[a-z]/{exit}' "$1"
-}
-
-for probe in "$PROBE_DIR"/*.md; do
-  pname=$(basename "$probe" .md)
-  baseline_hits=0; ablation_hits=0; total=0
-
-  while IFS= read -r marker; do
-    [ -z "$marker" ] && continue
-    total=$((total + 1))
-    grep -qi "$marker" "$RESULTS/baseline-${pname}.txt" \
-      && baseline_hits=$((baseline_hits + 1))
-    grep -qi "$marker" "$RESULTS/ablation-${pname}.txt" \
-      && ablation_hits=$((ablation_hits + 1))
-  done < <(extract_markers "$probe")
-
-  drop=$((baseline_hits - ablation_hits))
-  [ "$drop" -le 0 ] && severity="none" \
-    || { [ "$drop" -eq 1 ] && severity="LOW" || severity="HIGH"; }
-  echo "$pname|$baseline_hits|$ablation_hits|$total|$drop|$severity"
-done
-```
-
-#### 6d. Emit Tier-2 report
-
-```
-## Ablation: <target-file> — YYYY-MM-DD HH:MM UTC
-
-### Probe Results
-| Probe | Baseline | Ablation | Markers | Drop | Severity |
-|-------|:--------:|:--------:|:-------:|:----:|:--------:|
-| probe-git-branch | 3/3 | 1/3 | 3 | 2 | HIGH |
-| ...              |     |     |   |   |      |
-
-### Verdict
-SAFE TO CUT — all probes degraded ≤ 1 marker
-  OR
-SIGNAL DETECTED — N probe(s) degraded >1 marker; <target-file> earns its slot
-```
-
-Degradation threshold: **SIGNAL DETECTED** if any probe's ablation hits fall more than 1 below baseline hits. **SAFE TO CUT** otherwise.
+Ablation preserves the native `SAFE TO CUT` / `SIGNAL DETECTED` verdict. Explicit
+baseline output is durable under `AUDIT_LOG_ROOT`; ordinary ablation restores the target
+byte-for-byte and leaves only the structured observation returned to the dispatcher.
 
 ### 7. Memory Protocol
 
-```bash
-mkdir -p "$HARNESS/.oh/memory/$TODAY"
-.oh/scripts/locked-append.sh "$HARNESS/.oh/memory/$TODAY/log.md" <<EOF
-
-## [Context Audit] — $(date -u +%H:%M) UTC
-- **Result**: OP
-- **Budget**: Z tokens total (scored files + skill metadata)
-- **Top finding**: <VERDICT> — <file> (<tokens> tokens, <citations> citations)
-- **Ablation**: SAFE TO CUT | SIGNAL DETECTED | N/A
-- **Observation**: [one sentence — the single most actionable finding]
-EOF
-```
+Return a structured context observation carrying `AUDIT_RUN_ID`, budget, top finding,
+ablation verdict, and evidence path. Do not append or run retro from this route; the outer
+dispatcher owns the one locked append under `AUDIT_LOG_ROOT`.
 
 See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
@@ -374,7 +258,7 @@ markers:
 For running ablation outside a Claude session:
 
 ```bash
-.claude/skills/context-audit/runner.sh --ablate .oh/context/<file>.md
+.oh/skills/audit/scripts/context-audit-runner.sh --ablate .oh/context/<file>.md
 ```
 
 See `runner.sh` in this skill directory.

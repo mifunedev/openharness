@@ -1,14 +1,3 @@
----
-name: skill-lint
-description: |
-  Score all skills for staleness using 5 dimensions (freshness, usage,
-  integrity, format, dependencies). Reports CURRENT/STALE/BROKEN/DELETE
-  verdicts with specific recommendations.
-  TRIGGER when: asked to audit skills, check skill health, "are my skills
-  stale", "skill lint", or periodically via heartbeat.
-argument-hint: "all | root | workspace | <skill-name>"
----
-
 # Skill Lint
 
 Score every skill across two scopes on 5 deterministic dimensions and produce a CURRENT / STALE / BROKEN / DELETE verdict for each. No LLM judgment — scores come from file stats, grep counts, and path existence checks only.
@@ -22,18 +11,18 @@ Arguments received: `$ARGUMENTS`
 | Argument | Scope |
 |----------|-------|
 | `all` (default, or empty) | Root scope + workspace scope |
-| `root` | `/home/sandbox/harness/.claude/skills/` only |
-| `workspace` | `/home/sandbox/harness/workspace/.claude/skills/` only |
+| `root` | canonical `$AUDIT_ROOT/.oh/skills/` only |
+| `workspace` | canonical `$AUDIT_ROOT/workspace/.oh/skills/` only |
 | `<skill-name>` | Single skill, auto-detect scope |
 
 ### 2. Discover skills
 
 ```bash
 # Root scope
-ROOT_SKILLS=$(find /home/sandbox/harness/.claude/skills -name "SKILL.md" -maxdepth 3 2>/dev/null)
+ROOT_SKILLS=$(find "$AUDIT_ROOT/.oh/skills" -maxdepth 3 -name "SKILL.md" 2>/dev/null)
 
-# Workspace scope
-WS_SKILLS=$(find /home/sandbox/harness/workspace/.claude/skills -name "SKILL.md" -maxdepth 3 2>/dev/null)
+# Workspace scope (when a sandbox owns a canonical pack)
+WS_SKILLS=$(find "$AUDIT_ROOT/workspace/.oh/skills" -maxdepth 3 -name "SKILL.md" 2>/dev/null)
 ```
 
 Build a list of `(skill-name, scope-label, skill-dir, skill-file)` tuples. Scope label is `root` or `ws`.
@@ -66,7 +55,7 @@ AGE_DAYS=$(( (NOW - MTIME) / 86400 ))
 ```bash
 # Count daily memory logs that mention this skill name (case-insensitive)
 SKILL_NAME="<skill-name>"
-MENTION_COUNT=$(grep -rli "$SKILL_NAME" /home/sandbox/harness/.oh/memory/ 2>/dev/null | wc -l)
+MENTION_COUNT=$(grep -rli "$SKILL_NAME" "$AUDIT_LOG_ROOT/.oh/memory/" 2>/dev/null | wc -l)
 ```
 
 | Mentions | Score |
@@ -82,7 +71,7 @@ MENTION_COUNT=$(grep -rli "$SKILL_NAME" /home/sandbox/harness/.oh/memory/ 2>/dev
 Scan the SKILL.md body for references to paths and skill invocations, then verify existence.
 
 ```bash
-# Extract all bare absolute paths (e.g. /home/sandbox/harness/...)
+# Extract all bare absolute paths (e.g. $AUDIT_ROOT/...)
 PATH_REFS=$(grep -oP '`[^`]*`|"[^"]*"' "<skill-file>" | grep -oP '/[a-zA-Z0-9_./-]+' | sort -u)
 
 # Extract skill invocations (e.g. /release, /ci-status, /agent-browser)
@@ -90,7 +79,7 @@ SKILL_REFS=$(grep -oP '/[a-z][a-z0-9-]+' "<skill-file>" | grep -v '^/home' | sor
 ```
 
 For each extracted path reference: check `[ -e "<path>" ]`.
-For each skill reference like `/foo-bar`: check whether `<root>/.claude/skills/foo-bar/SKILL.md` or `<ws>/.claude/skills/foo-bar/SKILL.md` exists.
+For each skill reference like `/foo-bar`: check whether `<root>/.oh/skills/foo-bar/SKILL.md` or `<ws>/.oh/skills/foo-bar/SKILL.md` exists. Provider symlinks (`.claude/skills`, `.pi/skills`) are never discovery roots.
 
 Count total broken references (`BROKEN_COUNT`).
 
@@ -194,7 +183,7 @@ Sort the Scores table by Total ascending (worst first). Omit CURRENT skills from
 
 ### 7. Memory Protocol
 
-Append to `.oh/memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d`:
+Return this structured observation to the outer dispatcher and suppress target logging/retro:
 
 ```markdown
 ## [Skill Lint] — HH:MM UTC
@@ -210,9 +199,10 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 
 - Scoring is fully deterministic — run the same commands twice and get the same scores. Do not adjust scores based on content quality or subjective judgment.
 - Run Dimension E (Dependencies) last, after all other dimensions are scored, so referenced-skill scores are available without a second pass.
-- When checking integrity references, skip references to standard Unix paths (`/bin`, `/usr`, `/home/sandbox/harness` itself as a directory) — only flag references to specific files or skills that do not exist.
+- When checking integrity references, skip references to standard Unix paths (`/bin`, `/usr`, `$AUDIT_ROOT` itself as a directory) — only flag references to specific files or skills that do not exist.
 - A skill that is the target of `argument-hint: "all | root | workspace | <skill-name>"` style hints should not be penalized for referencing those placeholder tokens.
 - For the single-skill target mode (`$ARGUMENTS` = a skill name), run all 5 dimensions and emit the same table for just that skill, plus its recommendation.
+- Usage evidence always comes from `AUDIT_LOG_ROOT`; source and cron integrity checks stay under `AUDIT_ROOT`.
 - Heartbeat/cron coverage is a bonus signal, not a scored dimension — note it in the Recommendation line if a skill has 0 usage and no cron reference in `.oh/crons/`.
 
 ## Reference
@@ -221,8 +211,8 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 
 | Scope | Skills root |
 |-------|-------------|
-| root | `/home/sandbox/harness/.claude/skills/` |
-| ws | `/home/sandbox/harness/workspace/.claude/skills/` |
+| root | `$AUDIT_ROOT/.oh/skills/` |
+| ws | `$AUDIT_ROOT/workspace/.oh/skills/` |
 
 ### Score thresholds
 

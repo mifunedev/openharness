@@ -1,14 +1,3 @@
----
-name: harness-audit
-description: |
-  Spawn 4 parallel sub-agents (PM, Implementer, Critic, Explorer) to audit
-  the harness for improvements. Synthesizes findings into tier-ranked
-  actionable list. Outputs recommended next 3 actions.
-  TRIGGER when: asked to audit the harness, find improvements, review
-  system health, "what should we fix", or periodically via heartbeat.
-argument-hint: "[--focus <area>] [--dry-run]"
----
-
 # Harness Audit
 
 Run 4 parallel audit perspectives (PM, Implementer, Critic, Explorer), synthesize their ranked findings, and produce a single tier-classified improvement list with recommended next actions.
@@ -19,7 +8,10 @@ Run 4 parallel audit perspectives (PM, Implementer, Critic, Explorer), synthesiz
 
 When the user asks whether an external article, repo, or social post should be implemented into Open Harness, use this skill as a decision audit rather than a generic repo-health audit. If the request also says “Add to Wiki,” ingest the source first (or in parallel) and cite the resulting wiki entry/snapshot in the GitHub issue. Convene at least three perspectives — product/alignment, implementer/feasibility, and critic/security/reliability — then synthesize a recommendation with non-goals, acceptance criteria, and gating criteria before any larger implementation.
 
-Use `references/external-proposal-implementation-audit.md` for the detailed reusable pattern and the Lat.md/CodeGraph case studies.
+When `--external <url|path>` is present, load the private supporting reference
+`$AUDIT_ROOT/.oh/skills/audit/references/external-proposal-audit.md`; this is the
+only reachable external-proposal route. It is mutually exclusive with `--focus`
+and ordinary survey mode must not load it.
 
 ## Decision Flow
 
@@ -54,21 +46,11 @@ Arguments received: `$ARGUMENTS`
 Read the following before spawning agents. Pass the assembled snapshot to every auditor.
 
 ```bash
-# Resolve the checkout under audit. In cron worktree mode, inspect the isolated
-# worktree that invoked the skill rather than the shared root checkout.
-if [ -n "${CRON_WORKTREE:-}" ] && git -C "$CRON_WORKTREE" rev-parse --show-toplevel >/dev/null 2>&1; then
-  AUDIT_ROOT="$(git -C "$CRON_WORKTREE" rev-parse --show-toplevel)"
-else
-  AUDIT_ROOT="$(git rev-parse --show-toplevel)"
-fi
-
-# Runtime observability logs may intentionally live in the shared checkout when
-# a cron worktree is ephemeral. Source inspection still uses $AUDIT_ROOT.
-AUDIT_LOG_ROOT="${AUTOPILOT_LOG_ROOT:-$AUDIT_ROOT}"
-if [ -n "${CRON_WORKTREE:-}" ] && [ "$AUDIT_LOG_ROOT" = "$AUDIT_ROOT" ]; then
-  root="$(git -C "$AUDIT_ROOT" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /, ""); print; exit }' || true)"
-  [ -n "$root" ] && AUDIT_LOG_ROOT="$root"
-fi
+# The executable outer dispatcher already validated, canonicalized, and exported
+# immutable roots. Routes consume them; they never re-detect or overwrite them.
+: "${AUDIT_ROOT:?outer audit dispatcher did not export AUDIT_ROOT}"
+: "${AUDIT_LOG_ROOT:?outer audit dispatcher did not export AUDIT_LOG_ROOT}"
+: "${AUDIT_RUN_ID:?outer audit dispatcher did not export AUDIT_RUN_ID}"
 
 # Harness structure
 ls "$AUDIT_ROOT/.claude/skills/"
@@ -148,7 +130,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Developer onboarding friction** — Read `.devcontainer/`, `Makefile`, `install/`, `CLAUDE.md`, `workspace/AGENTS.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
+> 1. **Developer onboarding friction** — Read `.devcontainer/`, `Makefile`, `.oh/install/`, `CLAUDE.md`, `workspace/AGENTS.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
 >
 > 2. **Skill consistency** — Read every `SKILL.md` under `.claude/skills/`; also inspect `workspace/.claude/skills/` if that pack/runtime directory exists. Check: does each have valid YAML frontmatter (name, description)? Does each follow imperative instructions? Are any stale (no recent invocation evidence in memory logs)?
 >
@@ -176,7 +158,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Startup reliability** — Read `.devcontainer/docker-compose.yml` and `.devcontainer/entrypoint.sh`. Look for: race conditions (services starting before deps are ready), silent failure paths (errors swallowed without exit codes), stale workspace auto-start hooks, missing healthchecks on compose services.
 >
-> 2. **Test coverage** — Check `scripts/__tests__/` for harness script tests and `.github/workflows/` for CI job definitions. The docs site is externalized to `mifunedev/openharness-web` and is not part of this repo's CI surface.
+> 2. **Test coverage** — Check `.oh/scripts/__tests__/` for harness script tests and `.github/workflows/` for CI job definitions. The docs site is externalized to `mifunedev/openharness-web` and is not part of this repo's CI surface.
 >
 > 3. **CI/CD completeness** — Read each workflow file. Are there gaps: missing lint, missing type-check, no test job, no release job, no deploy step?
 >
@@ -268,7 +250,7 @@ If any result is missing, blank/whitespace-only, lacks its required start sentin
 3. Still run the Memory Protocol with:
    - `Result: FAIL-AUDITOR-OUTPUT`
    - `Action: aborted before synthesis; invalid auditors: <names + defects>`
-   - `Observation: required harness-audit perspectives did not return evidence`
+   - `Observation: required harness perspectives did not return evidence`
 4. Exit non-zero for the skill invocation so automation treats the audit as failed, not as an empty successful report.
 
 This is intentionally fail-closed: a no-output sub-agent completion is a runtime/input failure, not evidence that the audited area has no findings.
@@ -318,7 +300,7 @@ After all 4 auditors return and pass the auditor-output validation gate, synthes
 
 ### 6. Memory Protocol
 
-Append to `.oh/memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d`:
+Return this structured observation to the outer dispatcher; do not append or run retro from this route. The dispatcher logs it once under `AUDIT_LOG_ROOT`:
 
 ```markdown
 ## [Harness Audit] — HH:MM UTC
@@ -362,4 +344,4 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 | Entrypoint | `.devcontainer/entrypoint.sh` |
 | CI workflows | `.github/workflows/` |
 | Docs site | external repo `mifunedev/openharness-web` |
-| Orchestrator scripts | `scripts/` (with tests in `scripts/__tests__/`) |
+| Orchestrator scripts | `.oh/scripts/` (with tests in `.oh/scripts/__tests__/`) |

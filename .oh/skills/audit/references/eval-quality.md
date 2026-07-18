@@ -1,17 +1,3 @@
----
-name: eval-lint
-description: |
-  Score every eval probe (.oh/evals/probes/*.sh) and capability benchmark task
-  (.oh/evals/capability/tasks/CB-*.md + repo-orientation) across seven
-  anti-Goodhart failure modes and emit a KEEP/GROOM/CUT matrix. Read-only by
-  default — like /skill-lint, it only reads and prints; it never mutates a probe
-  or capability file. Deterministic file/grep/git/stat scoring, no LLM judgment.
-  TRIGGER when: asked to lint the eval suite, groom the probes, check for
-  Goodharted / stale / duplicate / always-SKIP probes, audit the capability
-  benchmark tasks, "eval lint", or before/after adding probes.
-argument-hint: "all | probes | capability | <probe-or-task-id>"
----
-
 # Eval Lint
 
 Score every eval **probe** and **capability benchmark task** across seven
@@ -21,7 +7,7 @@ git history, and the last `/eval` scoreboard only.
 
 The probe suite is now ~75 probes. Once the harness can improve itself it can
 also *overfit its own probes* — so the probes and capability tasks need the same
-cheap, high-value grooming pass that `/skill-lint` gives skills. `/eval-lint` is
+cheap, high-value grooming pass that `/audit skills` gives skills. `/audit eval-quality` is
 that pass. It is a **skill/report, not a probe**: it must not add machinery to
 the very suite it grooms.
 
@@ -177,8 +163,7 @@ footnote.
 
 ### 6. Memory Protocol
 
-Append to `.oh/memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d` (use
-`.oh/scripts/locked-append.sh` for the write):
+Return this structured observation to the outer dispatcher and suppress target logging/retro; the dispatcher owns the locked append:
 
 ```markdown
 ## [Eval Lint] — HH:MM UTC
@@ -193,7 +178,7 @@ Memory Improvement Protocol.
 
 ## Scoring procedure
 
-One self-contained, copy-pasteable driver (skill-lint idiom). It discovers every
+One self-contained, copy-pasteable driver (the established deterministic lint idiom). It discovers every
 probe + capability task, cross-references the `.oh/evals/RESULTS.md` SKIPPED
 oracle, computes the deterministic checks from § 3, emits the KEEP/GROOM/CUT
 matrix (worst verdict first) with the check-7 suite footer, and closes with the
@@ -368,10 +353,10 @@ byte-identical verdicts (deterministic), and `.oh/evals/` stays unmodified.
   If a run leaves `git status --porcelain .oh/evals/` non-empty, the run is a
   bug — it mutated state it was only allowed to read.
 - **CUT is advisory.** A `CUT` verdict is a recommendation for a human/follow-up
-  task, mirroring `/skill-lint`'s `DELETE`. Deleting a hard capability task to
+  task, mirroring `/audit skills`'s `DELETE`. Deleting a hard capability task to
   inflate the suite score is the cardinal sin the capability README forbids —
   this skill flags, it does not act.
-- Do not Goodhart the linter itself: `/eval-lint` is markdown-driven and ships
+- Do not Goodhart the linter itself: `/audit eval-quality` is markdown-driven and ships
   no probe of its own. It must **not** be registered under `.oh/evals/probes/`
   or `link-providers.sh` — adding a probe for it grows the machinery it exists
   to groom.
@@ -416,6 +401,6 @@ Exit-code semantics written by `/eval`: `0=PASS`, `1=REGRESSION`, `2=SKIPPED`,
 
 ### Related skills
 
-- `/skill-lint` — the sibling grooming pass this skill mirrors (skills ↔ evals).
+- `/audit skills` — the sibling grooming pass this skill mirrors (skills ↔ evals).
 - `/eval` — writes the `.oh/evals/RESULTS.md` status oracle check 3 reads.
 - `/benchmark` — consumes the capability ceiling check 7 watches for movement.

@@ -18,8 +18,8 @@
         "Tests pass"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-07-18; direct pinned CLI routing, trust boundary, and resource controls in 070b813b."
     },
     {
       "id": "US-002",
@@ -36,8 +36,8 @@
         "Tests pass"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-07-18; bounded validation, paired provenance, cleanup, and quality review in 070b813b."
     },
     {
       "id": "US-003",
@@ -55,8 +55,8 @@
         "Full eval has no new green-to-red regression"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-07-18; protected probe, four-format smoke evidence, wiki/index, changelog, tests, and eval in 070b813b."
     }
   ]
 }

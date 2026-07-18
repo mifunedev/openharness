@@ -162,14 +162,17 @@ forward_signal(){
   fi
 }
 terminate_child(){
-  local subject attempt
+  local subject remaining
   [[ -n $child_pid ]] || return 0
   if [[ $child_group == true ]]; then subject="-$child_pid"; else subject="$child_pid"; fi
-  for attempt in {1..20}; do kill -0 -- "$subject" 2>/dev/null || return 0; sleep .05; done
+  remaining=20
+  while ((remaining-- > 0)); do kill -0 -- "$subject" 2>/dev/null || return 0; sleep .05; done
   kill -TERM -- "$subject" 2>/dev/null || true
-  for attempt in {1..20}; do kill -0 -- "$subject" 2>/dev/null || return 0; sleep .05; done
+  remaining=20
+  while ((remaining-- > 0)); do kill -0 -- "$subject" 2>/dev/null || return 0; sleep .05; done
   kill -KILL -- "$subject" 2>/dev/null || true
-  for attempt in {1..20}; do kill -0 -- "$subject" 2>/dev/null || return 0; sleep .05; done
+  remaining=20
+  while ((remaining-- > 0)); do kill -0 -- "$subject" 2>/dev/null || return 0; sleep .05; done
   echo 'audit: route process did not terminate' >&2
   return 1
 }

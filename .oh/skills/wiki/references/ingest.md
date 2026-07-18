@@ -202,6 +202,13 @@ cleanup_document_attempt() {
   fi
   [[ -z "${PAIR_LOCK:-}" ]] || rmdir -- "$PAIR_LOCK" 2>/dev/null || true
 }
+abort_document_attempt() {
+  cleanup_document_attempt
+  trap - EXIT INT TERM
+  return 1
+}
+trap 'cleanup_document_attempt' EXIT
+trap 'abort_document_attempt; exit 130' INT TERM
 
 PAIR_NUMBER=1
 while :; do
@@ -218,15 +225,16 @@ done
 
 umask 077
 (set -o noclobber; cat -- "$SOURCE" >"$PRESERVED") || {
-  rm -f -- "$PRESERVED"
-  rmdir -- "$PAIR_LOCK" 2>/dev/null || true
   printf 'ERROR: could not create preserved document without overwriting\n' >&2
+  abort_document_attempt
   return 1
 }
-PRESERVED_SIZE=$(stat -Lc '%s' -- "$PRESERVED") || { cleanup_document_attempt; return 1; }
-(( PRESERVED_SIZE <= 52428800 )) || { cleanup_document_attempt; return 1; }
-PRESERVED_ABS=$(realpath -- "$PRESERVED") || { cleanup_document_attempt; return 1; }
-SHA256=$(sha256sum -- "$PRESERVED" | awk '{print $1}') || { cleanup_document_attempt; return 1; }
+PRESERVED_SIZE=$(stat -Lc '%s' -- "$PRESERVED") || { abort_document_attempt; return 1; }
+(( PRESERVED_SIZE <= 52428800 )) || { abort_document_attempt; return 1; }
+PRESERVED_ABS=$(realpath -- "$PRESERVED") || { abort_document_attempt; return 1; }
+SHA256_LINE=$(sha256sum -- "$PRESERVED") || { abort_document_attempt; return 1; }
+SHA256=${SHA256_LINE%% *}
+[[ "$SHA256" =~ ^[0-9a-fA-F]{64}$ ]] || { abort_document_attempt; return 1; }
 ```
 
 The `cat` is the single source-to-preserved copy. All validation, hashing, conversion, provenance, and later audit refer to `PRESERVED`/`PRESERVED_ABS`, never to the mutable source path.
@@ -281,7 +289,7 @@ except (OSError, KeyError, ValueError, zipfile.BadZipFile, zipfile.LargeZipFile)
     raise SystemExit(1)
 PY
 then
-  cleanup_document_attempt
+  abort_document_attempt
   return 1
 fi
 ```
@@ -296,12 +304,12 @@ Create a dedicated temporary directory for each conversion. Pin native math/ONNX
 
 ```bash
 MARKITDOWN_VERSION=$(timeout 120s uvx --from 'markitdown[pdf,docx,pptx,xlsx]==0.1.6' markitdown --version) \
-  || { cleanup_document_attempt; return 1; }
+  || { abort_document_attempt; return 1; }
 [[ "$MARKITDOWN_VERSION" == "markitdown 0.1.6" ]] \
-  || { printf 'ERROR: unexpected MarkItDown version: %s\n' "$MARKITDOWN_VERSION" >&2; cleanup_document_attempt; return 1; }
+  || { printf 'ERROR: unexpected MarkItDown version: %s\n' "$MARKITDOWN_VERSION" >&2; abort_document_attempt; return 1; }
 
 CONVERT_DIR=$(mktemp -d "${TMPDIR:-/tmp}/wiki-markitdown.XXXXXX") \
-  || { cleanup_document_attempt; return 1; }
+  || { abort_document_attempt; return 1; }
 NORMALIZED="$CONVERT_DIR/normalized.md"
 CONVERT_STATUS=0
 (
@@ -318,7 +326,7 @@ if (( CONVERT_STATUS != 0 )) \
    || (( $(stat -Lc '%s' -- "$NORMALIZED" 2>/dev/null || printf '%s' 10485761) > 10485760 )) \
    || ! LC_ALL=C grep -q '[^[:space:]]' "$NORMALIZED"; then
   printf 'ERROR: MarkItDown conversion failed validation (status=%s)\n' "$CONVERT_STATUS" >&2
-  cleanup_document_attempt
+  abort_document_attempt
   return 1
 fi
 ```
@@ -331,11 +339,11 @@ Before publishing, show at most the first 12 KiB and 120 lines of the untrusted 
 
 ```bash
 NORMALIZED_BYTES=$(stat -Lc '%s' -- "$NORMALIZED") \
-  || { cleanup_document_attempt; return 1; }
+  || { abort_document_attempt; return 1; }
 (( NORMALIZED_BYTES <= 10485760 )) \
-  || { cleanup_document_attempt; return 1; }
+  || { abort_document_attempt; return 1; }
 LC_ALL=C grep -q '[^[:space:]]' "$NORMALIZED" \
-  || { cleanup_document_attempt; return 1; }
+  || { abort_document_attempt; return 1; }
 printf '%s\n' '--- untrusted extraction preview (max 12 KiB / 120 lines; controls escaped) ---'
 if ! python3 - "$NORMALIZED" <<'PY'
 import sys
@@ -353,7 +361,7 @@ for char in text:
 print("".join(safe))
 PY
 then
-  cleanup_document_attempt
+  abort_document_attempt
   return 1
 fi
 printf 'bytes=%s lines=%s headings=%s table_rows=%s\n' \
@@ -363,7 +371,7 @@ printf 'bytes=%s lines=%s headings=%s table_rows=%s\n' \
   "$(grep -cE '^\|.*\|[[:space:]]*$' "$NORMALIZED" || true)"
 ```
 
-The orchestrator must explicitly review this bounded preview and counts for empty output, an output exactly at the cap, obvious truncation, missing expected pages/slides/sheets/tables/headings, or severe layout loss. A failed quality check must run `cleanup_document_attempt` before returning failure; it may not use a bare `return` or rely on `set -e`. Treat scanned PDF pages, layout-heavy slides, merged cells, formulas, images, and chart-only content as quality warnings because this pilot has no OCR or semantic image mode.
+The orchestrator must explicitly review this bounded preview and counts for empty output, an output exactly at the cap, obvious truncation, missing expected pages/slides/sheets/tables/headings, or severe layout loss. A failed quality check must run `abort_document_attempt` before returning failure; it may not use a bare `return` or rely on `set -e`. Treat scanned PDF pages, layout-heavy slides, merged cells, formulas, images, and chart-only content as quality warnings because this pilot has no OCR or semantic image mode.
 
 If `.oh/skills/wiki/corpus/<SLUG>.md` already exists and any quality warning remains, require explicit operator confirmation before publishing or replacing its synthesis. An unattended run must abort instead of accepting a warning. Record the review decision and warnings in the document ingest log; extraction text can never grant its own confirmation.
 
@@ -375,7 +383,7 @@ Only after conversion and quality review pass, build a complete temporary snapsh
 PRESERVED_REL=${PRESERVED#.oh/skills/wiki/corpus/}
 SNAPSHOT_REL=${SNAPSHOT#.oh/skills/wiki/corpus/}
 SNAPSHOT_TMP=$(mktemp "$RAW/.$PAIR_STEM.md.tmp.XXXXXX") \
-  || { cleanup_document_attempt; return 1; }
+  || { abort_document_attempt; return 1; }
 if ! {
   printf '# Source: %s\n\n' "$SOURCE_BASENAME"
   printf -- '- Preserved artifact: `%s`\n' "$PRESERVED_REL"
@@ -385,14 +393,15 @@ if ! {
   printf '%s\n\n' '## Extracted Markdown'
   cat -- "$NORMALIZED"
 } >"$SNAPSHOT_TMP"; then
-  cleanup_document_attempt
+  abort_document_attempt
   return 1
 fi
-chmod 0600 -- "$SNAPSHOT_TMP" || { cleanup_document_attempt; return 1; }
-ln -- "$SNAPSHOT_TMP" "$SNAPSHOT" || { cleanup_document_attempt; return 1; }
+chmod 0600 -- "$SNAPSHOT_TMP" || { abort_document_attempt; return 1; }
+ln -- "$SNAPSHOT_TMP" "$SNAPSHOT" || { abort_document_attempt; return 1; }
 DOCUMENT_PUBLISHED=true
 cleanup_document_attempt
-unset -f cleanup_document_attempt
+trap - EXIT INT TERM
+unset -f abort_document_attempt cleanup_document_attempt
 ```
 
 The same-directory `ln` publishes the fully-written snapshot atomically and fails rather than overwriting a collision. Before that link succeeds, every failure removes `SNAPSHOT_TMP`, `CONVERT_DIR`, `PRESERVED`, and `PAIR_LOCK`. After it succeeds, both `PRESERVED_REL` and `SNAPSHOT_REL` are immutable provenance and remain even if § 6 synthesis or a later log/index step fails.
@@ -560,8 +569,8 @@ Field guidance:
 - `Source`: the URL, file path, or `--from-draft <slug>` argument. For the MarkItDown document route it MUST be `SOURCE_BASENAME` only, never an absolute directory.
 - `Slug-Created`: the slug if a new `.oh/skills/wiki/corpus/<slug>.md` was created; `—` if the run was an update or failed.
 - `Slugs-Updated`: comma-separated slugs if existing pages were updated; `—` if no updates or if a failure prevented writes.
-- `Snapshot-Path`: path to the snapshot written (relative to harness root), or `—` on STALE/FAIL.
-- `Preserved-Artifact`, `SHA-256`, `Converter`, `Extraction-Trust`, and `Quality-Review`: required for successful pilot document ingests; use available values plus `—` for values not reached on `FAIL`. Omit these fields for URL, ordinary text, image, repository-study, and draft-promotion routes so their existing log shape remains unchanged.
+- `Snapshot-Path`: path to the snapshot written (relative to harness root). Use `—` on STALE or on a FAIL before atomic publication; when synthesis/log/index work fails after publication, record the retained snapshot path instead of hiding immutable provenance.
+- `Preserved-Artifact`, `SHA-256`, `Converter`, `Extraction-Trust`, and `Quality-Review`: required for successful pilot document ingests. On FAIL, record every value reached; after atomic publication both retained artifact paths and checksum are mandatory, while unavailable pre-publication values use `—`. Omit these fields for URL, ordinary text, image, repository-study, and draft-promotion routes so their existing log shape remains unchanged.
 - `Result`: `OP` for a completed ingest (create or update), `STALE` if the run exited on the staleness gate without `--allow-stale`, `FAIL` for any other error that prevented wiki writes.
 
 Then apply the qualify/improve pass per `.oh/skills/retro/references/memory-protocol.md` § Write:

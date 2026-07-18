@@ -47,7 +47,7 @@
         "Add a Tier-A contract probe covering direct pinned CLI usage, format/resource limits, trust boundaries, provenance, rollback, and no wrapper",
         "Register the new load-bearing probe in .claude/protected-paths.txt",
         "Run real minimal PDF, DOCX, PPTX, and XLSX smoke fixtures plus output-cap, cleanup, external-request, URL bypass, and text-path checks",
-        "Create the curated document-ingestion wiki entry, force-add only that entity, refresh the tracked README index, and pass wiki-readme-index.sh",
+        "Create the curated document-ingestion wiki entry plus one immutable upstream README snapshot, refresh the tracked README index, keep converted user documents ignored, and pass wiki-readme-index.sh",
         "Add an Unreleased changelog entry",
         "Document separate-PR removal policy for the protected probe",
         "Typecheck passes",

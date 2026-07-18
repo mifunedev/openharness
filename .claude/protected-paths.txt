@@ -50,6 +50,7 @@ Makefile
 .oh/crons/heartbeat.md
 .oh/crons/cleanup-tasks.md
 .oh/evals/probes/cleanup-tasks-worktree-grooming.sh
+.oh/evals/probes/markitdown-wiki-ingest.sh
 .oh/crons/eval-weekly.md
 
 # --- Norms folded into skills (formerly .oh/context/rules/, B-state M3+M4) ---

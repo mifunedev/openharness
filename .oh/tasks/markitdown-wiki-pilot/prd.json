@@ -37,7 +37,7 @@
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Completed 2026-07-18; bounded validation, paired provenance, cleanup, and quality review in 070b813b."
+      "notes": "Completed 2026-07-18; bounded validation, paired provenance, quality review in 070b813b; interruption-safe cleanup and checksum/log hardening in eb109684."
     },
     {
       "id": "US-003",
@@ -56,7 +56,7 @@
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Completed 2026-07-18; protected probe, four-format smoke evidence, wiki/index, changelog, tests, and eval in 070b813b."
+      "notes": "Completed 2026-07-18; protected probe, four-format smoke evidence, wiki/index, changelog, tests, and eval in 070b813b; final contract remediation in eb109684."
     }
   ]
 }

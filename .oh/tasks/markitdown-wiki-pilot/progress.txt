@@ -51,4 +51,18 @@ Static probes should say they guard declarations rather than overclaiming runtim
 
 ---
 
+## Audit remediation — 2026-07-18 06:15 UTC
+
+**Files changed**: `.oh/skills/wiki/references/ingest.md`, `.oh/evals/probes/markitdown-wiki-ingest.sh`, `.oh/skills/wiki/corpus/document-ingestion.md`, `.oh/evals/RESULTS.md`
+**Commit**: `eb109684`
+**Result**: PASS
+
+### What I did
+Closed final focused-review findings with EXIT/INT/TERM cleanup traps, fail-closed abort handling, checksum status/digest validation, and post-publication failure-log provenance. Updated the static contract guard and reran the full 90-probe eval without regression.
+
+### Learnings for future iterations
+Immutable publication changes failure semantics: after the atomic link, cleanup must preserve both artifacts and failure logs must name them. Signal cleanup must be installed before the first persistent copy and removed on every normal/explicit return.
+
+---
+
 STATUS: COMPLETE

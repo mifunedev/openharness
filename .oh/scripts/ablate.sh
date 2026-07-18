@@ -3,18 +3,21 @@
 set -euo pipefail
 
 _ablate_root() { printf '%s\n' "${AUDIT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)}"; }
+_ablate_log_root() { printf '%s\n' "${AUDIT_LOG_ROOT:-$(_ablate_root)}"; }
 _ablate_state_root() { printf '%s/.oh/evals/.ablation-state\n' "$(_ablate_root)"; }
 _ablate_key() { printf '%s' "$1" | sha256sum | cut -d' ' -f1; }
 _ablate_canonical() {
-  local root target parent real
+  local root log_root target parent real
   root=$(cd "$(_ablate_root)" && pwd -P) || return 1
+  log_root=$(cd "$(_ablate_log_root)" && pwd -P) || return 1
   target=$1
   [[ $target = /* ]] || target="$root/$target"
   [[ ! -L $target ]] || { echo "ablate: symlink targets are forbidden: $target" >&2; return 1; }
   parent=$(cd "$(dirname "$target")" 2>/dev/null && pwd -P) || return 1
   real="$parent/$(basename "$target")"
-  case ${real#"$root/"} in
-    .oh/context/SOUL.md|.oh/context/IDENTITY.md|.oh/context/TOOLS.md|.oh/context/REPO_MAP.md|.oh/context/USER.md|.oh/memory/MEMORY.md) ;;
+  case $real in
+    "$root/.oh/context/SOUL.md"|"$root/.oh/context/IDENTITY.md"|"$root/.oh/context/TOOLS.md"|"$root/.oh/context/REPO_MAP.md"|"$root/.oh/context/USER.md") ;;
+    "$log_root/.oh/memory/MEMORY.md") ;;
     *) echo "ablate: target is not an allowed session-start context file: $real" >&2; return 1;;
   esac
   printf '%s\n' "$real"
@@ -126,7 +129,9 @@ ablate_recover() {
     _ablate_unlock
     return 0
   fi
-  state_root=$(_ablate_state_root); [[ -d $state_root ]] || return 0
+  state_root=$(_ablate_state_root)
+  [[ ! -L $state_root ]] || { echo "ablate: symlink state directory rejected: $state_root" >&2; return 1; }
+  [[ -d $state_root ]] || return 0
   for record in "$state_root"/*.json; do
     [[ -e $record || -L $record ]] || continue
     [[ ! -L $record ]] || { echo "ablate: symlink recovery record rejected: $record" >&2; return 1; }

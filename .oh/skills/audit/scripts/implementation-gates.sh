@@ -34,10 +34,10 @@ case $mode in
     done < <(jq -r '.artifact_contract.required_artifacts // [] | .[]' "$prd")
     ;;
   classify-pr)
-    repo=${1:-}; pr=${2:-}
-    [[ $repo =~ ^[^/[:space:]]+/[^/[:space:]]+$ && $pr =~ ^[1-9][0-9]*$ ]] \
-      || { echo 'usage: implementation-gates.sh classify-pr owner/name N' >&2; exit 64; }
-    "$AUDIT_ROOT/.oh/skills/audit/scripts/pr-acquire.sh" pr --repo "$repo" --pr "$pr" \
+    repo=${1:-}; pr=${2:-}; base=${3:-development}
+    [[ $repo =~ ^[^/[:space:]]+/[^/[:space:]]+$ && $pr =~ ^[1-9][0-9]*$ && -n $base ]] \
+      || { echo 'usage: implementation-gates.sh classify-pr owner/name N [expected-base]' >&2; exit 64; }
+    "$AUDIT_ROOT/.oh/skills/audit/scripts/pr-acquire.sh" pr --repo "$repo" --pr "$pr" --base "$base" \
       | "$AUDIT_ROOT/.oh/skills/audit/scripts/pr-classify.sh"
     ;;
   browser-required)

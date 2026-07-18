@@ -22,7 +22,7 @@ done
 [[ $mine == false || -z $author ]] || { echo 'ERROR: --author and --mine are mutually exclusive' >&2; exit 64; }
 if [[ $mode == pr ]]; then
   [[ $pr =~ ^[1-9][0-9]*$ ]] || usage
-  [[ -z $label && -z $author && -z $base && $mine == false ]] || usage
+  [[ -z $label && -z $author && $mine == false ]] || usage
 else
   [[ -z $pr ]] || usage
 fi

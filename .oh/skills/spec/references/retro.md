@@ -15,7 +15,7 @@ scientific session-closing pass — falsifiable hypotheses, evidence for *and* a
 verdict + confidence, and a propose-then-confirm promotion into `.oh/memory/MEMORY.md` /
 `.oh/context/IDENTITY.md`. `retro` is the execution-side application of it: point `/retro`
 at the just-built `.oh/tasks/<slug>/` run so the reflection is anchored to that unit's
-artifacts (`prd.md`, `progress.txt`, `prd.json`, `critique.md`, the `/audit` evidence)
+artifacts (`prd.md`, `progress.txt`, `prd.json`, `critique.md`, the `/audit implementation` evidence)
 rather than the whole ambient session.
 
 It is **not** a second retro engine. The propose-then-confirm gate, the six-subsystem lens,
@@ -55,7 +55,7 @@ still require explicit approval (or are skipped under `--dry-run`).
 
 - **Re-implement retro.** The hypothesis engine, qualify filter, and propose-then-confirm
   gate are `/retro`'s; `retro` only scopes them to the task.
-- **Audit or decide promotability.** That was `/audit` (the `build ⇄ audit` loop) earlier in
+- **Audit or decide promotability.** That was `/audit implementation` (the `build ⇄ audit` loop) earlier in
   `/spec execute`.
 - **Run the grooming triad.** `/audit skills` · `/wiki lint` · `/audit drift` are the `groom`
   step of `/spec execute`, after this one.

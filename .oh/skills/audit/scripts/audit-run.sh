@@ -2,14 +2,19 @@
 # Executable lifecycle and route bridge for one /audit target.
 # Usage: audit-run.sh <target> [target args] -- <route-driver> [driver options]
 set -euo pipefail
+# Bash started as an asynchronous job inherits SIGINT ignored. Re-exec once through
+# GNU env so direct and process-group launches can install reliable handlers.
+if [[ ${AUDIT_SIGNALS_RESET:-} != 1 ]]; then
+  exec env --default-signal=INT,TERM,HUP AUDIT_SIGNALS_RESET=1 bash "$0" "$@"
+fi
 usage_line='usage: /audit <implementation|pr|prs|harness|context|skills|eval-quality|drift|full> [target options]'
 usage() {
   printf '%s\n' "$usage_line" >&2
   cat >&2 <<'EOF'
 | Target | Invocation | Native result |
 |---|---|---|
-| implementation | `/audit implementation <slug> [--pr N --repo O/N] [--branch B]` | `AUDIT-PASS` / `AUDIT-FAIL` |
-| pr | `/audit pr <N> [--repo O/N] [--deep] [--proof] [--dry-run]` | `PR-AUDIT-PROMOTABLE` / `PR-AUDIT-BLOCKED` / `PR-AUDIT-UNKNOWN` |
+| implementation | `/audit implementation <slug> [--pr N --repo O/N] [--base B] [--branch B]` | `AUDIT-PASS` / `AUDIT-FAIL` |
+| pr | `/audit pr <N> [--repo O/N] [--base B] [--deep] [--proof] [--dry-run]` | `PR-AUDIT-PROMOTABLE` / `PR-AUDIT-BLOCKED` / `PR-AUDIT-UNKNOWN` |
 | prs | `/audit prs [--repo O/N] [filters/actions]` | buckets + `PRS-AUDIT-COMPLETE` / `PRS-AUDIT-PARTIAL` |
 | harness | `/audit harness [--focus area] [--external URL|path] [actions]` | Tier 1/2/3 + Recommended Next 3 Actions |
 | context | `/audit context [all|--baseline|--ablate file]` | `KEEP` / `TRIM` / `DEMOTE` / `CUT` |
@@ -40,7 +45,7 @@ case $target in
       case ${args[$i]} in
         --pr) value "$i" "$((i+1))" && [[ ${args[$((i+1))]} =~ $number_re ]] || usage; have_pr=true; ((i+=2));;
         --repo) value "$i" "$((i+1))" && [[ ${args[$((i+1))]} =~ $repo_re ]] || usage; have_repo=true; ((i+=2));;
-        --branch) value "$i" "$((i+1))" || usage; ((i+=2));;
+        --base|--branch) value "$i" "$((i+1))" || usage; ((i+=2));;
         *) usage;;
       esac
     done
@@ -52,6 +57,7 @@ case $target in
     while ((i < ${#args[@]})); do
       case ${args[$i]} in
         --repo) value "$i" "$((i+1))" && [[ ${args[$((i+1))]} =~ $repo_re ]] || usage; ((i+=2));;
+        --base) value "$i" "$((i+1))" || usage; ((i+=2));;
         --deep|--proof|--dry-run) ((i+=1));;
         *) usage;;
       esac
@@ -141,8 +147,9 @@ AUDIT_TARGET_ARGS_JSON=$(jq -cn --args '$ARGS.positional' -- "${args[@]}")
 export AUDIT_TARGET_ARGS_JSON
 started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 tmp_root=$(mktemp -d "${TMPDIR:-/tmp}/${AUDIT_RUN_ID}.${target}.XXXXXX")
-export AUDIT_TMP_ROOT="$tmp_root"
-child_pid='' child_group=false interrupted=''
+AUDIT_EVIDENCE_PATH="$tmp_root/evidence.json"
+export AUDIT_TMP_ROOT="$tmp_root" AUDIT_EVIDENCE_PATH
+child_pid='' child_group=false interrupted='' verdict='none'
 # shellcheck disable=SC2329 # invoked by the EXIT trap
 cleanup(){ rm -rf "$tmp_root"; }
 # shellcheck disable=SC2329 # invoked by INT/TERM/HUP traps
@@ -154,6 +161,18 @@ forward_signal(){
   else kill -s "$sig" "$child_pid" 2>/dev/null || true
   fi
 }
+terminate_child(){
+  local subject attempt
+  [[ -n $child_pid ]] || return 0
+  if [[ $child_group == true ]]; then subject="-$child_pid"; else subject="$child_pid"; fi
+  for attempt in {1..20}; do kill -0 -- "$subject" 2>/dev/null || return 0; sleep .05; done
+  kill -TERM -- "$subject" 2>/dev/null || true
+  for attempt in {1..20}; do kill -0 -- "$subject" 2>/dev/null || return 0; sleep .05; done
+  kill -KILL -- "$subject" 2>/dev/null || true
+  for attempt in {1..20}; do kill -0 -- "$subject" 2>/dev/null || return 0; sleep .05; done
+  echo 'audit: route process did not terminate' >&2
+  return 1
+}
 trap cleanup EXIT
 trap 'forward_signal INT' INT
 trap 'forward_signal TERM' TERM
@@ -161,25 +180,39 @@ trap 'forward_signal HUP' HUP
 cd "$AUDIT_ROOT"
 # The driver receives the validated target and target arguments verbatim after its own options.
 # AUDIT_ROUTE and AUDIT_TARGET_ARGS_JSON provide equivalent named/machine-readable bindings.
-if command -v setsid >/dev/null 2>&1; then
-  setsid -- "${command[@]}" "$target" "${args[@]}" & child_pid=$!; child_group=true
+if [[ ${AUDIT_FORCE_DIRECT:-} != 1 ]] && command -v setsid >/dev/null 2>&1; then
+  env --default-signal=INT,TERM,HUP setsid -- "${command[@]}" "$target" "${args[@]}" & child_pid=$!; child_group=true
 else
-  "${command[@]}" "$target" "${args[@]}" & child_pid=$!
+  env --default-signal=INT,TERM,HUP "${command[@]}" "$target" "${args[@]}" & child_pid=$!
 fi
 rc=0
 wait "$child_pid" || rc=$?
 if [[ -n $interrupted ]]; then
-  # A trapped signal can interrupt wait before the child/group has reaped.
-  if kill -0 "$child_pid" 2>/dev/null; then wait "$child_pid" || true; fi
+  terminate_child || true
+  wait "$child_pid" 2>/dev/null || true
   rc=$((128 + $(kill -l "$interrupted")))
+elif [[ $rc -eq 0 ]]; then
+  # Exit zero is only transport success. Completion requires atomic evidence
+  # produced by route work and correlated to this exact run, target, and argv.
+  if [[ ! -f $AUDIT_EVIDENCE_PATH || -L $AUDIT_EVIDENCE_PATH ]] \
+    || ! jq -e --arg id "$AUDIT_RUN_ID" --arg target "$target" --argjson args "$AUDIT_TARGET_ARGS_JSON" '
+      .schemaVersion==1 and .runId==$id and .target==$target and .targetArgs==$args
+      and .state=="complete" and (.verdict|type)=="string"
+      and (.verdict|test("^[A-Z][A-Z0-9_-]{1,63}$"))
+      and (.finishedAt|type)=="string"' "$AUDIT_EVIDENCE_PATH" >/dev/null 2>&1; then
+    echo 'audit: route exited zero without valid target-correlated terminal evidence' >&2
+    rc=1
+  else
+    verdict=$(jq -r .verdict "$AUDIT_EVIDENCE_PATH")
+  fi
 fi
 trap - INT TERM HUP
 if [[ $outer == true ]]; then
   today=$(date -u +%Y-%m-%d); finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   log="$AUDIT_LOG_ROOT/.oh/memory/$today/log.md"
   state=complete; [[ $rc -eq 0 ]] || state=failed; [[ -z $interrupted ]] || state=interrupted
-  if ! printf '## audit -- %s UTC\n- **Run-ID**: %s\n- **Target**: %s\n- **State**: %s\n- **Exit**: %s\n- **Started**: %s\n- **Finished**: %s\n\n' \
-    "$(date -u +%H:%M)" "$AUDIT_RUN_ID" "$target" "$state" "$rc" "$started_at" "$finished_at" \
+  if ! printf '## audit -- %s UTC\n- **Run-ID**: %s\n- **Target**: %s\n- **State**: %s\n- **Verdict**: %s\n- **Exit**: %s\n- **Started**: %s\n- **Finished**: %s\n\n' \
+    "$(date -u +%H:%M)" "$AUDIT_RUN_ID" "$target" "$state" "$verdict" "$rc" "$started_at" "$finished_at" \
     | bash "$AUDIT_ROOT/.oh/scripts/locked-append.sh" "$log"; then
     echo 'audit: terminal log append failed' >&2
     [[ $rc -ne 0 ]] || rc=1

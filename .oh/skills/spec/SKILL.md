@@ -73,7 +73,7 @@ esac
 - **Compose, don't fork** — each node reuses existing loop-node skills rather than
   re-implementing them: `plan` composes `/prd` + `/ralph`; `critique` composes
   `/critique` + `/approve`; `execute` composes `/ship-spec` build mechanics +
-  `/audit`; `retro` composes `/retro`. `/ship-spec` stays the single source of the
+  `/audit implementation`; `retro` composes `/retro`. `/ship-spec` stays the single source of the
   protected build literals (and its probes stay green).
 - **Two adversarial loops** — `plan ⇄ critique` vets the plan (`critique` routes
   `DENIED` back to `plan`); `build ⇄ audit` inside `execute` vets the build

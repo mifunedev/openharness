@@ -85,8 +85,10 @@ These apply to all subcommands; the reference docs assume them.
 - **This dispatcher composes /eval** as the oracle floor: both `publish` and
   `catchup` must pass `bash .oh/skills/eval/run.sh` (exit 0, no new
   REGRESSION rows) before the PR is promoted to ready.
-- **This dispatcher composes /audit pr** for promotability: after creating a
-  PR, run `/audit pr` to confirm it is in the ready bucket before undrafting.
+- **This dispatcher composes /audit pr** for promotability: while the PR is
+  still draft, require focused classifier JSON with `.draftStatus == "promotable"`
+  and `.evidenceComplete == true` before undrafting. Drafts are never in the
+  non-draft `ready` bucket.
 - **This dispatcher composes /git** for branch/commit/PR/CHANGELOG conventions:
   the branch-naming, commit-type, PR-body, and CHANGELOG-format rules live in
   `.oh/skills/git/SKILL.md` and are not restated here.
@@ -96,8 +98,9 @@ These apply to all subcommands; the reference docs assume them.
   — this is intentional and distinct from regular feature/task branches because
   the PR target is the upstream remote, not origin.
 - **Draft-then-gate pattern**: always open the PR as draft first; promote to
-  ready only after the eval suite is green and `/audit pr` confirms
-  promotability.
+  ready only after the eval suite is green and an immediately preceding
+  `/audit pr <N> --repo <owner/name> [--base <stack-parent>]` result has
+  `.draftStatus == "promotable"` and complete evidence.
 - **Eval oracle is non-negotiable**: a sync that breaks existing probes is not
   mergeable. Resolve conflicts until `bash .oh/skills/eval/run.sh` exits 0
   with no new REGRESSION rows.
@@ -111,7 +114,7 @@ These apply to all subcommands; the reference docs assume them.
 - **`/release`** — for cutting a CalVer tag after upstream development is
   already clean. `/sync publish` brings the fork's changes in; `/release` then
   tags a release from the canonical `main` branch.
-- **`/audit pr`** — for a bulk PR triage pass unrelated to syncing.
+- **`/audit prs`** — for a bulk PR triage pass unrelated to syncing.
 
 ## See Also
 
@@ -120,5 +123,5 @@ These apply to all subcommands; the reference docs assume them.
 - `references/topology.md` — canonical topology + intentional divergences
 - `.oh/skills/audit/references/drift.md` — framework drift detection (composed by status)
 - `.oh/skills/eval/SKILL.md` — eval oracle (composed by publish + catchup)
-- `.oh/skills/audit/references/prs.md` — promotability gate (composed by publish + catchup)
+- `.oh/skills/audit/references/pr.md` — focused draft promotability gate (composed by publish + catchup)
 - `.oh/skills/git/SKILL.md` — branch/commit/PR/CHANGELOG conventions

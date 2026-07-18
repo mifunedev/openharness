@@ -28,7 +28,15 @@ if ((${#bad[@]})); then printf '%s\n' "${bad[@]}" >&2; echo 'REGRESSION: active 
 # route. A bare namespace token is not executable and silently revives /audit <slug>.
 # shellcheck disable=SC2016 # literal Markdown route token
 bare_audit='`/audit`'
-for caller in .oh/skills/weigh .oh/skills/teach; do
+for caller in \
+  .oh/skills/weigh \
+  .oh/skills/teach \
+  .oh/skills/benchmark/SKILL.md \
+  .oh/skills/spec/SKILL.md \
+  .oh/skills/spec/references/execute.md \
+  .oh/skills/spec/references/retro.md \
+  .oh/docs/artifact-contract-schema.md
+do
   if git grep -nF "$bare_audit" -- "$caller"; then
     echo "REGRESSION: bare implementation audit route in $caller" >&2; exit 1
   fi
@@ -39,7 +47,7 @@ canonical_skills='$AUDIT_ROOT/.oh/skills/'
 grep -qF "$canonical_skills" .oh/skills/audit/references/skills.md \
   || { echo 'REGRESSION: skills audit does not scan canonical .oh/skills' >&2; exit 1; }
 # Assert breadth explicitly so future pathspec narrowing cannot silently drop active classes.
-for path in AGENTS.md .oh/docs/README.md .oh/templates/AGENTS.md .oh/crons/heartbeat.md .github/workflows/ci-harness.yml .oh/evals/capability/tasks/CB-001-ship-harness-change.md .oh/tasks/audit-consolidation/progress.txt; do
+for path in AGENTS.md .oh/docs/README.md .oh/docs/artifact-contract-schema.md .oh/templates/AGENTS.md .oh/crons/heartbeat.md .github/workflows/ci-harness.yml .oh/evals/capability/tasks/CB-001-ship-harness-change.md .oh/skills/benchmark/SKILL.md .oh/skills/spec/references/retro.md .oh/tasks/audit-consolidation/progress.txt; do
   git ls-files --error-unmatch "$path" >/dev/null || { echo "REGRESSION: stale-reference coverage path missing: $path" >&2; exit 1; }
 done
 echo 'PASS: no active legacy audit references across tracked active surfaces' >&2

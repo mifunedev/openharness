@@ -42,6 +42,10 @@ p=$(jq -c '.+{statusCheckRollup:[null]}'<<<"$base"); out=$(env pr "[$p]"|bash "$
 for review in APPROVED '' null; do p=$(jq -c --arg r "$review" '.+{statusCheckRollup:[{conclusion:"SUCCESS"}],reviewDecision:(if $r=="null" then null else $r end)}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '[.readyForReview,.readyToMerge,.promotable]|join(":")'<<<"$out") == false:true:true ]]||fail "solo readiness $review"; done
 p=$(jq -c '.+{isDraft:true,statusCheckRollup:[{conclusion:"SUCCESS"}],updatedAt:"2026-06-01T00:00:00Z"}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '[.draftStatus,.draftLimbo,.readyForReview,.readyToMerge]|join(":")'<<<"$out") == promotable:true:true:false ]]||fail limbo
 p=$(jq -c '.+{isDraft:true,statusCheckRollup:[{conclusion:"SUCCESS"}],updatedAt:"2026-07-17T10:00:00Z"}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '.ageSeconds|tostring'<<<"$out") == 7200 ]] || fail 'exact watchdog ageSeconds missing'
+# Focused stacked PRs classify against their explicit parent base, not development.
+p=$(jq -c '.+{baseRefName:"skill/parent",statusCheckRollup:[{conclusion:"SUCCESS"}]}'<<<"$base")
+stack=$(env pr "[$p]" | jq '.options.expectedBase="skill/parent"' | bash "$C")
+[[ $(jq -r '[.promotable,(.flags|index("base-convention")==null)]|join(":")'<<<"$stack") == true:true ]] || fail 'focused stacked base override'
 p1=$(jq -c '.+{statusCheckRollup:[{conclusion:"SUCCESS"}]}'<<<"$base"); p2=$(jq -c '.+{number:2,statusCheckRollup:[{conclusion:"SUCCESS"}]}'<<<"$base"); input=$(env prs "[$p1,$p2]"); a=$(bash "$C"<<<"$input"); b=$(bash "$C"<<<"$input"); [[ $a == "$b" ]]||fail nondeterministic; [[ $(jq '[.prs[]|select(.flags|index("duplicate-issue-reference"))]|length'<<<"$a") == 2 ]]||fail duplicates
 [[ $(jq '[.prs[]|select((.readyForReview and .readyToMerge) or ((.isDraft|not) and .readyForReview) or (.isDraft and .readyToMerge))]|length'<<<"$a") == 0 ]]||fail exclusion
 echo 'PASS: classifier contract' >&2

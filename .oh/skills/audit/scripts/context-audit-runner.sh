@@ -106,7 +106,12 @@ if [ "$MODE" = "--ablate" ]; then
     echo "Error: --ablate requires a file argument (relative to harness root)"
     exit 1
   fi
-  TARGET="$HARNESS/$TARGET_REL"
+  if [ "$TARGET_REL" = ".oh/memory/MEMORY.md" ]; then
+    SHARED_ROOT=$(cd "${AUDIT_LOG_ROOT:-$HARNESS}" && pwd -P)
+    TARGET="$SHARED_ROOT/.oh/memory/MEMORY.md"
+  else
+    TARGET="$HARNESS/$TARGET_REL"
+  fi
   if [ ! -f "$TARGET" ]; then
     echo "Error: file not found: $TARGET"
     exit 1

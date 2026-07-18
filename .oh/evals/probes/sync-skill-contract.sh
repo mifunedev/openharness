@@ -47,6 +47,11 @@ grep -qiF 'composes /eval' "$SYNC/SKILL.md" || \
 
 grep -qiF 'composes /audit pr' "$SYNC/SKILL.md" || \
   missing+=("SKILL.md: 'composes /audit pr' declaration absent")
+grep -qF '.draftStatus == "promotable"' "$SYNC/SKILL.md" || \
+  missing+=("SKILL.md: top-level draft gate must consume draftStatus promotable")
+if grep -qiE 'audit pr.*ready bucket|confirm it is in the ready bucket' "$SYNC/SKILL.md"; then
+  missing+=("SKILL.md: top-level focused draft semantics incorrectly use the non-draft ready bucket")
+fi
 
 # (4) drift detection must NOT be reimplemented in SKILL.md or any reference doc.
 #     /audit drift uses 'git rev-list --left-right --count' as its canonical

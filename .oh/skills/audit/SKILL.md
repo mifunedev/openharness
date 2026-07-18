@@ -27,8 +27,8 @@ usage: /audit <implementation|pr|prs|harness|context|skills|eval-quality|drift|f
 
 | Target | Invocation | Native result |
 |---|---|---|
-| `implementation` | `/audit implementation <slug> [--pr N --repo O/N] [--branch B]` | `AUDIT-PASS` / `AUDIT-FAIL` |
-| `pr` | `/audit pr <N> [--repo O/N] [--deep] [--proof] [--dry-run]` | `PR-AUDIT-PROMOTABLE` / `PR-AUDIT-BLOCKED` / `PR-AUDIT-UNKNOWN` |
+| `implementation` | `/audit implementation <slug> [--pr N --repo O/N] [--base B] [--branch B]` | `AUDIT-PASS` / `AUDIT-FAIL` |
+| `pr` | `/audit pr <N> [--repo O/N] [--base B] [--deep] [--proof] [--dry-run]` | `PR-AUDIT-PROMOTABLE` / `PR-AUDIT-BLOCKED` / `PR-AUDIT-UNKNOWN` |
 | `prs` | `/audit prs [--repo O/N] [filters/actions]` | buckets + `PRS-AUDIT-COMPLETE` / `PRS-AUDIT-PARTIAL` |
 | `harness` | `/audit harness [--focus area] [--external URL|path] [actions]` | Tier 1/2/3 + Recommended Next 3 Actions |
 | `context` | `/audit context [all|--baseline|--ablate file]` | `KEEP` / `TRIM` / `DEMOTE` / `CUT` |
@@ -57,14 +57,38 @@ for every valid invocation. The route driver is mandatory and is the actual sele
 execution (not a preflight command); it reads the exported `AUDIT_ROUTE`. The boundary
 validates all target arguments and the driver before lifecycle creation, resolves and exports
 immutable `AUDIT_ROOT`, `AUDIT_LOG_ROOT`, and `AUDIT_RUN_ID`, maps the target to exactly one
-route, supplies invocation-scoped `AUDIT_TMP_ROOT`, changes to `AUDIT_ROOT`, and invokes the
-driver with `<target> <validated-target-args...>` verbatim (also exporting
-`AUDIT_TARGET` and `AUDIT_TARGET_ARGS_JSON`). It keeps the lifecycle open while the driver
-runs, forwards TERM/INT/HUP to the complete child process group, waits for termination, and
-performs exactly one locked terminal append (`complete`, `failed`, or `interrupted`, with the
-nonzero exit) after that driver exits. Do not run the boundary merely to obtain
-environment JSON and then execute route work outside it. An inherited ID identifies child mode and is never replaced or independently
-logged. The generated ID matches `audit-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9._-]+`.
+route, supplies invocation-scoped `AUDIT_TMP_ROOT` and `AUDIT_EVIDENCE_PATH`, changes to
+`AUDIT_ROOT`, and invokes the driver with `<target> <validated-target-args...>` verbatim
+(also exporting `AUDIT_TARGET` and `AUDIT_TARGET_ARGS_JSON`). It keeps the lifecycle open
+while the driver runs, forwards TERM/INT/HUP to the complete child process group, waits for
+termination, and performs exactly one locked terminal append (`complete`, `failed`, or
+`interrupted`, with the nonzero exit) after that driver exits.
+
+Exit zero is transport success, never completion evidence. Before logging `complete`, the
+boundary requires an atomic schema-v1 evidence file bound to the exact `AUDIT_RUN_ID`, target,
+validated target-argument array, terminal `state: complete`, and native machine verdict. A
+no-op such as `-- true`, stale evidence, a symlink, or mismatched target fails closed. Scripted
+routes publish it with `scripts/audit-evidence.sh complete <NATIVE-VERDICT>` only after their
+checks finish.
+
+For the normal inline-agent protocol, use the shipped production driver; do not substitute a
+preflight callback:
+
+```bash
+ROOT=$(git rev-parse --show-toplevel)
+AUDIT_AGENT_COMMAND_JSON='["claude","-p","--output-format","text"]' \
+  "$ROOT/.oh/skills/audit/scripts/audit-run.sh" \
+  implementation <slug> --pr <N> --repo <owner/name> -- \
+  "$ROOT/.oh/skills/audit/scripts/route-driver.sh"
+```
+
+The driver supplies the selected route and correlated bindings to that agent, requires its
+final `AUDIT-EVIDENCE: <NATIVE-VERDICT>` line, and atomically publishes the evidence contract.
+Set `AUDIT_AGENT_COMMAND_JSON` to the equivalent non-interactive argv for another provider.
+Non-scriptable protocols that cannot run this driver or publish valid evidence fail closed.
+Do not run the boundary merely to obtain environment JSON and then execute route work outside
+it. An inherited ID identifies child mode and is never replaced or independently logged. The
+generated ID matches `audit-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9._-]+`.
 
 Read exactly the route returned by that boundary; supporting scripts/references are private,
 never targets. Children inherit all roots and the ID, return structured observations, and

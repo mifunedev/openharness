@@ -6,7 +6,7 @@ promotable?* — and emits exactly one verdict the `/autopilot` runner routes on
 
 **Core principle: compose, don't re-derive — and never infer green from silence.**
 This skill owns the *verdict*, not the checks. Each gate below is an existing
-primitive; `/audit` runs them in fail-fast order and integrates their results
+primitive; `/audit implementation` runs them in fail-fast order and integrates their results
 into a single `AUDIT-PASS` / `AUDIT-FAIL`. It is **read-only**: it decides, it
 does not mutate (no `gh pr ready`, no `gh pr merge`) and does not fix — promotion
 is a downstream concern and remediation belongs to the build step on
@@ -26,6 +26,7 @@ is a downstream concern and remediation belongs to the build step on
 | `<slug>` | The task slug — locates `.oh/tasks/<slug>/prd.json` and `.oh/tasks/<slug>/progress.txt`. Required. |
 | `--pr <N>` | The PR for this unit, if one exists. When set, gate 3 uses the shared focused classifier (which reads `statusCheckRollup`, subsuming `/ci-status`). |
 | `--repo <owner/name>` | Repository passed unchanged to focused PR acquisition. Required with `--pr`; never inferred from the process checkout or a hard-coded default. |
+| `--base <branch>` | Expected PR base for focused classification. Defaults to `development`; set it to the parent branch for a stacked PR. |
 | `--branch <branch>` | The work branch. Used by gate 3's `/ci-status` fallback when there is no PR yet (e.g. an autopilot pre-PR audit). Defaults to the current branch. |
 
 ---
@@ -105,7 +106,7 @@ The implementation must be promotable: CI green **and** (for a PR) mergeable and
 clean.
 
 - **PR exists (`--pr N --repo O/N`):** invoke
-  `"$AUDIT_ROOT/.oh/skills/audit/scripts/implementation-gates.sh" classify-pr "$REPO" "$PR"`.
+  `"$AUDIT_ROOT/.oh/skills/audit/scripts/implementation-gates.sh" classify-pr "$REPO" "$PR" "$BASE"`.
   That production helper calls the shared acquisition and classifier and returns
   their fresh JSON. Consume only
   `.promotable`, `.readyForReview`, `.readyToMerge`, and `.evidenceComplete`.

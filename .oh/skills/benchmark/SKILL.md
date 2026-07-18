@@ -8,7 +8,7 @@ description: >-
   the existing instruments: /eval (the regression floor — probes stay green) +
   the capability-benchmark ceiling delta (.oh/evals/capability/RESULTS.md vs. the
   counterfactual). Machinery added with no benchmark movement is NOT-BENEFICIAL
-  by definition. Distinct from /audit (per-unit promotability =
+  by definition. Distinct from /audit implementation (per-unit promotability =
   floor) — this is the ceiling: did the harness get BETTER, not just not-broken.
   TRIGGER when: a change has landed and the loop needs a benefit-vs-counterfactual
   verdict before the cycle repeats; the improve tail of `/spec execute`
@@ -32,7 +32,7 @@ This skill owns the *verdict*, not the instruments. The regression floor is
 that grows the harness but does not move the capability benchmark is
 `NOT-BENEFICIAL` **by definition**.
 
-> **Not `/audit`.** `/audit` is the per-unit *floor* gate (does this one impl
+> **Not `/audit implementation`.** `/audit implementation` is the per-unit *floor* gate (does this one impl
 > satisfy its task graph and is it promotable?). `/benchmark` is the *ceiling*
 > gate (did the harness get **better**?). Distinct instruments, distinct
 > question — see `.oh/evals/capability/README.md` § *Ceiling vs. floor*. `/benchmark`
@@ -70,7 +70,7 @@ bash .claude/skills/eval/run.sh ; rc=$?
 A new `green→red` regression or a non-zero runner exit is an immediate
 `NOT-BENEFICIAL` → `repeat` (after revert). A pre-existing red with an unchanged
 delta is non-gating but MUST be disclosed in the verdict. (Same floor gate
-`/audit` uses; here it is necessary-not-sufficient — the floor staying green is
+`/audit implementation` uses; here it is necessary-not-sufficient — the floor staying green is
 the price of entry, not the proof of benefit.)
 
 ### Signal 2 — Capability-ceiling delta (counterfactual)
@@ -113,7 +113,7 @@ State the verdict with the two signal results (floor `rc` + ceiling delta), then
 — on the **final line** — emit the routing token.
 
 **On `NOT-BENEFICIAL`, the change is reverted before the cycle repeats** (`→ repeat`
-*after revert*). Like `/audit`, this skill is **read-only**: it decides and names
+*after revert*). Like `/audit implementation`, this skill is **read-only**: it decides and names
 the exact remediation; the operator performs it. Surface the revert
 command for the change under evaluation, e.g.:
 

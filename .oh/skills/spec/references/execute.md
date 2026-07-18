@@ -67,7 +67,7 @@ When the build reports complete, run the per-unit verdict gate:
 /audit implementation <slug> --pr <N> --repo <owner/name> --branch <prefix>/<N>-<slug>
 ```
 
-`/audit` composes `prd.json` task-graph conformance + the `/eval` regression floor +
+`/audit implementation` composes `prd.json` task-graph conformance + the `/eval` regression floor +
 `/audit pr` promotable classification (+ `/agent-browser` for UI stories) into one verdict:
 
 - `AUDIT-FAIL` → loop back to **build**: resume the Advisor / `scripts/ralph.sh <slug>` to

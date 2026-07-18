@@ -29,6 +29,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| document-ingestion | Local Document Ingestion | [wiki, ingestion, markitdown, documents, provenance, security] | 2026-07-18 |
 | audit-architecture | Audit Architecture | [audit, pr, workflow, safety, observability] | 2026-07-17 |
 | runtime-isolation-landscape | Runtime Isolation Landscape (2026) | [runtime, isolation, sandbox, gvisor, firecracker, kata, microvm, cloudflare, e2b, daytona, fly, modal] | 2026-07-04 |
 | crabbox-remote-exec-control-plane | Crabbox — Remote-Exec Control Plane | [runtime, sandbox, remote-execution, fan-out, control-plane, crabbox, cloudflare-workers, ssh, rsync] | 2026-07-04 |

@@ -64,7 +64,7 @@ as the authority for the mechanics; do not duplicate them here.
 When the build reports complete, run the per-unit verdict gate:
 
 ```
-/audit implementation <slug> --pr <N> --repo <owner/name> --branch <prefix>/<N>-<slug>
+/audit implementation <slug> --pr <N> --repo <owner/name> --base <base> --branch <prefix>/<N>-<slug>
 ```
 
 `/audit implementation` composes `prd.json` task-graph conformance + the `/eval` regression floor +
@@ -105,7 +105,7 @@ findings, do not block the merge on advisory output.
 ### 6. Undraft → human merge gate
 
 Mark the PR ready (`gh pr ready <N>`) **only** when `/audit implementation` PASSED and an immediately
-preceding fresh `/audit pr <N> --repo <owner/name>` classifies it promotable (CI green + mergeable + clean) — exactly the
+preceding fresh `/audit pr <N> --repo <owner/name> --base <base>` classifies it promotable (CI green + mergeable + clean) — exactly the
 `/ship-spec` Stage 12–13 gate. Then **stop**. The human owns the merge (`AGENTS.md § The
 Workflow`: *human merge — final gate, no auto-merge*). Never `gh pr merge`.
 

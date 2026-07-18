@@ -29,6 +29,7 @@ if ((${#bad[@]})); then printf '%s\n' "${bad[@]}" >&2; echo 'REGRESSION: active 
 # shellcheck disable=SC2016 # literal Markdown route token
 bare_audit='`/audit`'
 for caller in \
+  .oh/skills/wiki/corpus/recursive-language-models.md \
   .oh/skills/weigh \
   .oh/skills/teach \
   .oh/skills/benchmark/SKILL.md \
@@ -41,6 +42,9 @@ do
     echo "REGRESSION: bare implementation audit route in $caller" >&2; exit 1
   fi
 done
+if grep -nF 'mechanics + `/audit`' AGENTS.md; then
+  echo 'REGRESSION: workflow summary uses bare implementation audit route' >&2; exit 1
+fi
 # Canonical skill discovery must not regress to provider symlink scans.
 # shellcheck disable=SC2016 # literal documented environment variable
 canonical_skills='$AUDIT_ROOT/.oh/skills/'

@@ -1,0 +1,136 @@
+{
+    "schemaVersion": 1,
+    "project": "OpenHarness",
+    "branchName": "feat/654-cc-safety-net",
+    "description": "Adopt cc-safety-net@1.0.6 as the cross-provider destructive-command guard (claude/codex/pi), keep secret-exposure hooks, retire pi's dead RISKY_BASH branch, and keep harness automation working via a file-invoked git-maintenance script. Authoritative references: .oh/tasks/cc-safety-net/prd.md (v2.1) and install-decision.md.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Non-interactive install spike",
+            "description": "As the harness maintainer, I need a proven non-interactive install mechanism per provider before wiring.",
+            "acceptanceCriteria": [
+                "Decision table with install mechanism, files touched, offline safety, and env modes per provider exists at .oh/tasks/cc-safety-net/install-decision.md"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Completed pre-build (empirical spike, 2026-07-19). install-decision.md is authoritative for all later stories."
+        },
+        {
+            "id": "US-002",
+            "title": "Binary + env plumbing (prerequisite wave)",
+            "description": "As the harness maintainer, I want the pinned binary baked into the image and mode env wired so later stories can exercise the real hook.",
+            "acceptanceCriteria": [
+                "NEW standalone unconditional 'RUN npm install -g cc-safety-net@1.0.6' instruction in .devcontainer/Dockerfile AFTER the existing agent-CLI install block (~line 130), following the separate pi-coding-agent RUN-block pattern — NOT threaded into the AGENTS/PKG loop; no existing lines removed (protected path, additive-only override declared in prd.md)",
+                "CC_SAFETY_NET_STRICT=1 and CC_SAFETY_NET_WORKTREE=1 set in .devcontainer/docker-compose.yml / entrypoint env; no PARANOID vars, no DEBUG, CC_SAFETY_NET_OFF left unset",
+                "docker-compose.yml mounts ~/.cc-safety-net as a named volume alongside the existing per-tool volumes",
+                ".oh/scripts/link-providers.sh gains a NEW binary check-kind (command -v cc-safety-net + version match against 1.0.6) alongside required_execs, failing via the existing fail path when missing/mismatched UNLESS CC_SAFETY_NET_OFF=1 (then warn and continue); entrypoint.sh and link-providers.sh changes are additive-only (protected paths)",
+                "Boot performs zero npm-registry access for this feature (local presence checks only)",
+                "Typecheck passes"
+            ],
+            "priority": 2,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-003",
+            "title": "Claude wiring",
+            "description": "As the orchestrator, I want cc-safety-net enforcing on claude despite bypassPermissions.",
+            "acceptanceCriteria": [
+                ".claude/settings.json PreToolUse matcher \"Bash\" hooks[] gains exactly: {\"type\":\"command\",\"command\":\"sh -c '[ \\\"$CC_SAFETY_NET_OFF\\\" = \\\"1\\\" ] || exec cc-safety-net hook --claude-code'\"}",
+                "All existing hook entries byte-for-byte unchanged (only this file touched)",
+                "Headless verification: piping {\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"git reset --hard HEAD\"}} through the configured command yields permissionDecision \"deny\"; a benign command passes; with CC_SAFETY_NET_OFF=1 the wrapper exits 0 with no output",
+                "Typecheck passes"
+            ],
+            "priority": 3,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-004",
+            "title": "Codex wiring",
+            "description": "As the orchestrator, I want cc-safety-net enforcing on codex (approval_policy=never).",
+            "acceptanceCriteria": [
+                ".codex/hooks.json gains the same guard-wrapped command as a second PreToolUse/Bash entry; existing deny-env-dump.sh entry unchanged; config.toml untouched (hooks=true already set); only hooks.json touched",
+                "Same headless block/pass/kill-switch verification as US-003",
+                "Typecheck passes"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-005",
+            "title": "Pi wiring + path-guard refactor",
+            "description": "As the orchestrator, I want pi guarded deterministically by the cc-safety-net extension, retiring the dead RISKY_BASH branch and keeping SENSITIVE_PATHS.",
+            "acceptanceCriteria": [
+                "\"npm:cc-safety-net@1.0.6\" added to packages in .pi/settings.json and as a pinned dependency in .pi/npm/package.json (hand-edit; pi install rejected per install-decision.md)",
+                "RISKY_BASH array + bash branch removed from .pi/extensions/path-guard.ts; SENSITIVE_PATHS branch and /guard command retained; /guard listing text updated to name cc-safety-net as the bash guard",
+                "path-guard.test.ts updated: risky-bash describe block removed, headless + sensitive-path cases retained; path-guard.property.test.ts untouched (it has no RISKY_BASH cases)",
+                "Both pi extension test suites pass",
+                "Typecheck passes"
+            ],
+            "priority": 5,
+            "passes": false,
+            "notes": "Flagged 2 iterations in prd.md: iteration 1 = wire, iteration 2 = refactor + tests."
+        },
+        {
+            "id": "US-006",
+            "title": "Harness destructive-git compatibility (git-maintenance.sh)",
+            "description": "As the harness's own automation, I need my legitimate destructive git operations to keep working under the guard via file-invoked scripts.",
+            "acceptanceCriteria": [
+                "New .oh/scripts/git-maintenance.sh with subcommands reset-hard <ref>, clean, branch-delete <branch>, worktree-remove <path>, push-force <remote> <branch>; each refuses to run outside the repo and logs what it did",
+                "With the hook active, 'bash .oh/scripts/git-maintenance.sh reset-hard HEAD' succeeds while inline 'git reset --hard HEAD' is denied (verified headless via the US-003 hook command)",
+                ".oh/crons/cleanup-tasks.md inline 'git worktree remove --force' / 'git branch -D' calls (lines ~54-55, ~66, plus prose references) rewritten to git-maintenance.sh invocations; behavior preserved, no cleanup step removed (protected path, override declared in prd.md); grep across all .oh/crons/*.md confirms no other inline destructive-git remains",
+                ".oh/skills/git/SKILL.md, .oh/skills/watchdog/SKILL.md, .oh/skills/worktrees/SKILL.md reference the script for destructive git in agent contexts and state the corrected scope rule: only non-agent-mediated invocations (raw scheduler/tmux shell scripts) bypass PreToolUse hooks; agent-driven crons do NOT",
+                "Remaining blocked classes (rm -rf escalations, dd/mkfs/shred, find -delete, interpreter one-liners, git stash clear) documented as having NO script escape hatch (kill-switch only)",
+                "Typecheck passes"
+            ],
+            "priority": 6,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-007",
+            "title": "Eval probe cc-safety-net-wiring.sh",
+            "description": "As the harness maintainer, I want a deterministic probe so a wiring regression turns the eval suite red.",
+            "acceptanceCriteria": [
+                "New .oh/evals/probes/cc-safety-net-wiring.sh modeled on devtcp-hook.sh: 3-state (exit 0 PASS / 1 REGRESSION / 2 SKIPPED), '# tier:' header",
+                "Config-file assertions (claude + codex hook entries with guard wrapper, pi pin in both files, Dockerfile pin line, compose env vars) are repo-static and NEVER skip — absence is REGRESSION",
+                "Only the live-binary block test (cc-safety-net on PATH answering deny for 'git reset --hard HEAD') may SKIP, and only when the binary is absent outside the built sandbox image",
+                "/eval suite green with the probe",
+                "Typecheck passes"
+            ],
+            "priority": 7,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-008",
+            "title": "Documentation + operator runbook",
+            "description": "As an operator, I want the layered guard model, override paths, and rollout steps documented.",
+            "acceptanceCriteria": [
+                ".oh/docs/security-considerations.md: cc-safety-net as destructive-command layer; secret guards as complementary layer; per-provider coverage matrix incl. codex single-hook state and pi headless SENSITIVE_PATHS gap; 'a prompt asks; a hook enforces' doctrine",
+                "Operator runbook: CC_SAFETY_NET_OFF=1 override (new processes only) and git-maintenance.sh routing; the PI EXCEPTION stated in the runbook itself (env var does not affect pi; disable = remove package entry from .pi/settings.json + restart session)",
+                "Rollout/restart step: exact commands to restart long-lived sessions post-merge (cron-system, autopilot-*, client-slack-pi tmux sessions); audit-trail location ~/.cc-safety-net/logs/<session_id>.jsonl noted (persisted via US-002 volume, secrets redacted)",
+                ".oh/docs/oh-directory-layout.md and .oh/docs/harness-manifest.md list the new files; hermes gap documented",
+                "Typecheck passes"
+            ],
+            "priority": 8,
+            "passes": false,
+            "notes": ""
+        },
+        {
+            "id": "US-009",
+            "title": "CHANGELOG + decision record",
+            "description": "As a maintainer, I want the change logged and the fate-of-hooks decision captured.",
+            "acceptanceCriteria": [
+                "CHANGELOG entry per /git conventions",
+                ".oh/tasks/cc-safety-net/decision.md records: ADOPT @1.0.6 (pin + sha512 integrity documented for manual re-pin audits) / KEEP secret guards / KEEP SENSITIVE_PATHS with pre-existing headless gap named as future work / RETIRE RISKY_BASH ('dead code in headless and TUI modes today') / DOCUMENT hermes gap / manual re-pin policy with re-validation steps / script-file evasion route accepted (Docker is the boundary)",
+                "Typecheck passes"
+            ],
+            "priority": 9,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

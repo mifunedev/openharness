@@ -151,6 +151,20 @@ done
 
 Only after all files show `same:` run `git restore` / `rm -f` to clean main checkout.
 
+## Destructive git under the cc-safety-net guard
+
+`cc-safety-net` denies inline destructive git — `git reset --hard <ref>`, `git clean -f`, `git branch -D`, `git worktree remove --force`, `git push --force` — in every mode (its built-in git rules are not allowlistable). In agent (hook-mediated) contexts you must route these through the file-invoked shim instead:
+
+```bash
+bash .oh/scripts/git-maintenance.sh reset-hard <ref>
+bash .oh/scripts/git-maintenance.sh clean
+bash .oh/scripts/git-maintenance.sh branch-delete <branch>
+bash .oh/scripts/git-maintenance.sh worktree-remove <path>
+bash .oh/scripts/git-maintenance.sh push-force <remote> <branch>   # uses --force-with-lease
+```
+
+**Scope rule:** only **non-agent-mediated** invocations — raw scheduler/tmux shell scripts that never spawn a provider — bypass the PreToolUse hooks. Agent-driven crons do **not** bypass them (`cron-runtime.ts` runs them as `pi --continue` / `claude -p` prompts, so their Bash passes through the guard), so those must use the shim too. This is a compatibility shim, not a security control — the same script-file gap is also an evasion route; Docker is the security boundary.
+
 ## Catching Up Feature Branches
 
 When an open feature branch falls behind `development`, prefer merging the target branch into the feature branch instead of rebasing it. This preserves the branch's published history, avoids force-push churn, and keeps integration-conflict resolution on the feature branch; the final squash merge keeps `development` free of the catch-up merge commit.

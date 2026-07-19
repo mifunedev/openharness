@@ -143,6 +143,15 @@ RUN set -e; \
         rm -f /usr/local/bin/agent; \
     else echo "Skipping Grok Build CLI install (INSTALL_GROK_BUILD=false)"; fi
 
+# ─── cc-safety-net (destructive-command guard) ─────────────────────
+# Cross-provider PreToolUse guard, pinned. Installed unconditionally at image
+# build time — network is available and retryable here, so boot never touches
+# the registry (avoids the #639/4979b846 boot crash-loop class). Kept as its
+# own standalone RUN block (mirroring the pi-coding-agent pattern below), NOT
+# threaded into the AGENTS/PKG loop above: the guard must not be conditional on
+# agent selection. See .oh/tasks/cc-safety-net/install-decision.md.
+RUN npm install -g cc-safety-net@1.0.6
+
 # ─── Open Harness `oh` CLI ──────────────────────────────────────────
 # Build the in-tree `oh` CLI (.oh/cli/) into a self-contained bundle,
 # install onto $PATH. Source is COPY'd to /opt/oh (outside the

@@ -209,6 +209,23 @@ done
 Never kill a session merely because it is old. The terminal PR state plus the
 idle double-capture is the safety gate.
 
+## Destructive git under the cc-safety-net guard
+
+When completing/reaping work the watchdog may need destructive git —
+`git reset --hard <ref>`, `git clean -f`, `git branch -D`, `git worktree remove --force`,
+`git push --force`. cc-safety-net denies these inline, so route them through the
+file-invoked shim instead:
+
+```bash
+bash .oh/scripts/git-maintenance.sh worktree-remove <path>
+bash .oh/scripts/git-maintenance.sh branch-delete <branch>
+bash .oh/scripts/git-maintenance.sh reset-hard <ref>
+```
+
+Scope: only **non-agent-mediated** invocations (raw scheduler/tmux shell scripts)
+bypass PreToolUse hooks. Agent-driven crons and any agent-mediated run do **not**
+bypass them, so they must use the shim.
+
 ## Reporting
 
 - No candidates: `WATCHDOG_OK: <action>`

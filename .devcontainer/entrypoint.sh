@@ -25,7 +25,7 @@ repair_home_mount_ownership() {
   # sandbox user's numeric uid:gid so this remains correct after UID/GID sync,
   # even when the primary group is remapped to an existing host group whose
   # name is not `sandbox`.
-  for dir in .claude .codex .pi .grok .deepagents .herdr .cloudflared .config .ssh; do
+  for dir in .claude .codex .pi .grok .deepagents .herdr .cloudflared .config .cc-safety-net .ssh; do
     if [ -d "/home/sandbox/$dir" ]; then
       chown -hR "$owner" "/home/sandbox/$dir" 2>/dev/null || true
       [ "$dir" = ".ssh" ] && chmod 700 "/home/sandbox/$dir" 2>/dev/null || true

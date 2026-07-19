@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Install Herdr by default as a persistent multi-agent terminal workspace ([#651](https://github.com/mifunedev/openharness/issues/651)).
 - Add bounded local PDF, DOCX, PPTX, and XLSX normalization to `/wiki ingest` through Microsoft MarkItDown's pinned upstream CLI, preserving immutable source provenance without a wrapper command ([#650](https://github.com/mifunedev/openharness/pull/650)).
 - Add the explicit nine-target `/audit` dispatcher, deterministic focused/queue PR classifier, correlated full campaigns, and shared locked ablation recovery ([#646](https://github.com/mifunedev/openharness/pull/646)).
 ### Changed

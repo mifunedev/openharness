@@ -214,7 +214,7 @@ docker run -d --name "$NAME" --restart unless-stopped --init \
   -e GH_TOKEN="${GH_TOKEN:-}" \
   -v oh_workspace:/home/sandbox/harness \
   -v claude-auth:/home/sandbox/.claude \
-  -v gh-config:/home/sandbox/.config/gh \
+  -v config-dir:/home/sandbox/.config \
   -v oh_ssh:/home/sandbox/.ssh \
   "$IMAGE" sleep infinity
 

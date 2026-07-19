@@ -45,6 +45,14 @@ RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
 # ─── Bun ────────────────────────────────────────────────────────────
 RUN BUN_INSTALL=/usr/local curl -fsSL https://bun.sh/install | bash
 
+# ─── Herdr ──────────────────────────────────────────────────────────
+# Multi-agent terminal workspace. Install the stable release globally so every
+# sandbox user gets the command without a first-boot network dependency.
+RUN curl -fsSL https://herdr.dev/install.sh -o /tmp/herdr-install.sh \
+ && HERDR_INSTALL_DIR=/usr/local/bin sh /tmp/herdr-install.sh \
+ && rm /tmp/herdr-install.sh \
+ && herdr --version
+
 # ─── uv ─────────────────────────────────────────────────────────────
 RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 sh \
  && cp /root/.local/bin/uv /usr/local/bin/uv \

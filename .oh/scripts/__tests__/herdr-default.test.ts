@@ -21,6 +21,7 @@ describe("default Herdr integration", () => {
   it("vendors the official agent-control skill with pinned provenance", () => {
     const skill = readRepoFile(".oh/skills/herdr/SKILL.md");
     const upstream = readRepoFile(".oh/skills/herdr/UPSTREAM.md");
+    const upstreamLicense = readRepoFile(".oh/skills/herdr/LICENSE.upstream");
     const lock = readRepoFile(".oh/skills.lock");
     const checksum = createHash("sha256").update(skill).digest("hex");
 
@@ -28,6 +29,8 @@ describe("default Herdr integration", () => {
     expect(skill).toContain("Requires HERDR_ENV=1");
     expect(skill).toContain("Do not inspect or control the focused Herdr session from outside Herdr");
     expect(upstream).toContain("v0.7.4/SKILL.md");
+    expect(upstream).toContain("AGPL-3.0-or-later");
+    expect(upstreamLicense).toContain("GNU AFFERO GENERAL PUBLIC LICENSE");
     expect(lock).toContain('"source": "github:ogulcancelik/herdr"');
     expect(lock).not.toContain("npx skills add ogulcancelik/herdr");
   });
@@ -85,6 +88,8 @@ describe("default Herdr integration", () => {
       expect(reconciler).toContain(`install_integration ${target}`);
     }
     expect(reconciler).not.toMatch(/curl|wget|npx|herdr update/);
+    expect(reconciler).toContain('mktemp -d "${TMPDIR:-/tmp}/herdr-integrations.XXXXXX"');
+    expect(reconciler).not.toContain('/tmp/herdr-integration-"$target".log');
     expect(reconciler).not.toMatch(/install_integration (grok|deepagents)/);
     expect(harnessConfig).toContain('envmap["herdr.auto_integrations"] = "HERDR_AUTO_INTEGRATIONS"');
     expect(harnessExample).toContain("auto_integrations: true");

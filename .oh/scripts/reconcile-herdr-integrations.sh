@@ -18,15 +18,19 @@ fi
 home="${HOME:-/home/sandbox}"
 failures=0
 installed=()
+log_dir="$(mktemp -d "${TMPDIR:-/tmp}/herdr-integrations.XXXXXX")"
+chmod 700 "$log_dir"
+trap 'rm -rf "$log_dir"' EXIT
 
 install_integration() {
-  local target="$1"
+  local target="$1" log_file
   shift
-  if "$@" herdr integration install "$target" >/tmp/herdr-integration-"$target".log 2>&1; then
+  log_file="$log_dir/$target.log"
+  if "$@" herdr integration install "$target" >"$log_file" 2>&1; then
     installed+=("$target")
   else
     echo "[herdr-integrations] WARNING: failed to install $target integration" >&2
-    sed -n '1,20p' /tmp/herdr-integration-"$target".log >&2 2>/dev/null || true
+    sed -n '1,20p' "$log_file" >&2 2>/dev/null || true
     failures=1
   fi
 }

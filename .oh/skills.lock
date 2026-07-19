@@ -13,7 +13,7 @@
       "commit": "50aaa2ec046ee26ff407c20f49de496f522512a8",
       "checksum": "sha256:04b5f99c3c3178d8a7d194be2fbe99796852a8fbd7739346213d15242723ebb9",
       "installed_paths": [".oh/skills/herdr"],
-      "note": "Official Herdr agent-control skill vendored verbatim to match the pinned sandbox binary; runtime npx installation is intentionally not used."
+      "note": "Official AGPL-3.0-or-later/commercial Herdr agent-control skill vendored verbatim with its upstream license to match the pinned sandbox binary; runtime npx installation is intentionally not used."
     },
     "retro": {
       "source": "github:mifunedev/skills",

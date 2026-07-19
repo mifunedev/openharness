@@ -53,7 +53,7 @@ herdr status
 herdr --help
 herdr server reload-config
 herdr server stop              # end a broken Herdr server
-herdr --no-session             # open an unmanaged recovery shell
+herdr --no-session             # run Herdr without its server/client session
 ```
 
 Herdr is pinned in the Open Harness image. Upgrade it by rebuilding against a reviewed Open Harness release rather than self-updating `/usr/local/bin/herdr`.

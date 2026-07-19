@@ -43,6 +43,7 @@ describe("default Herdr integration", () => {
     const quickstart = readRepoFile(".oh/docs/quickstart.md");
     const agents = readRepoFile("AGENTS.md");
     const contributing = readRepoFile(".oh/docs/contributing.md");
+    const harnessOverview = readRepoFile(".oh/docs/harnesses/overview.md");
     const zshrc = readRepoFile(".oh/install/.zshrc");
 
     expect(readme.indexOf("\nherdr\n")).toBeGreaterThan(-1);
@@ -50,6 +51,7 @@ describe("default Herdr integration", () => {
     expect(quickstart.indexOf("## Start Herdr first")).toBeLessThan(quickstart.indexOf("gh auth login"));
     expect(agents.indexOf("Start the primary interactive workspace")).toBeLessThan(agents.indexOf("gh auth login"));
     expect(contributing.indexOf("\nherdr\n")).toBeLessThan(contributing.indexOf("gh auth login"));
+    expect(harnessOverview).toContain("run `herdr` first");
     expect(zshrc).toContain(".oh/install/banner.sh");
   });
 

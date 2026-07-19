@@ -213,17 +213,18 @@ check_links() {
     [ -x "$f" ] || fail "required pack executable missing or not executable: $f"
   done
 
-  # cc-safety-net enforcement is a BOOT gate (--init, inside the built image),
-  # not a --check assertion: --check also runs in CI checkouts and pre-rebuild
-  # sandboxes where the binary legitimately isn't installed yet, and failing
-  # there would recreate the #639 boot-adjacent failure class. The eval probe
-  # cc-safety-net-wiring.sh owns non-boot verification with proper SKIP
-  # semantics.
-  if [ "$mode" = "--init" ]; then
+  # cc-safety-net enforcement is scoped to environments where the guard is
+  # actually enabled: the sandbox container exports CC_SAFETY_NET_STRICT=1 via
+  # docker-compose, and the Dockerfile guarantees the binary there. CI runners
+  # and pre-rebuild hosts also run this script (both --init and --check) but
+  # never set that marker — failing there would recreate the #639
+  # boot-adjacent failure class. The eval probe cc-safety-net-wiring.sh owns
+  # non-sandbox verification with proper SKIP semantics.
+  if [ "${CC_SAFETY_NET_STRICT:-}" = "1" ]; then
     check_cc_safety_net
   else
     command -v cc-safety-net >/dev/null 2>&1 || \
-      echo "note: cc-safety-net not on PATH (enforced at --init boot only)" >&2
+      echo "note: cc-safety-net not on PATH (enforced only where CC_SAFETY_NET_STRICT=1, i.e. inside the sandbox)" >&2
   fi
 
   local link path expected_target

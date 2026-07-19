@@ -199,7 +199,8 @@ Provider surfaces are symlinks into `.oh/`: `.pi/skills`, `.claude/skills`, and 
 ```bash
 cd ~/.openharness
 make shell       # enter the isolated sandbox
-# inside the sandbox, launch any core agent:
+herdr           # first command: open the primary interactive workspace
+# from Herdr panes, launch any core agent:
 #   claude     # Claude Code (default)
 #   codex      # OpenAI Codex CLI
 #   opencode   # OpenCode (optional: set install.opencode: true in harness.yaml and rebuild)
@@ -234,6 +235,7 @@ Full key reference: [Quickstart → Configuration](.oh/docs/quickstart.md#config
 git clone https://github.com/mifunedev/openharness.git && cd openharness
 make sandbox
 make shell
+herdr            # first inside-sandbox command
 ```
 
 </details>

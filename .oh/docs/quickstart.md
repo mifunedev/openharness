@@ -89,8 +89,9 @@ herdr
 
 Herdr creates or reattaches the persistent interactive workspace for this repository.
 Complete GitHub and provider authentication, launch agents, and run tests and servers
-inside its panes. Detach with `Ctrl-b q`; run `herdr` again to return. Raw shells and
-direct agent commands remain recovery paths. Cron, Slack, and gateway infrastructure
+inside its panes. Detach with `Ctrl-b q`; run `herdr` again to return while the container
+keeps running. A container stop/rebuild restores metadata and layout, not terminated
+agent or server processes. Raw shells and direct agent commands remain recovery paths. Cron, Slack, and gateway infrastructure
 continue to run independently under tmux.
 
 ## Set up agents inside Herdr
@@ -190,7 +191,7 @@ The full path from a bare Linux host to an authenticated multi-agent sandbox. Ea
 inlines the command to run; follow the link for depth/troubleshooting. Steps 5–14 run
 **inside the sandbox** (`make shell`); step 5 enters Herdr before setup. For agent-auth steps (9–12), the simplest
 cross-provider method is `/login` → **device mode** inside each agent's interactive session
-(see [Pick your harness](#pick-your-harness)); the explicit commands shown are equivalents.
+(see [Set up agents inside Herdr](#set-up-agents-inside-herdr)); the explicit commands shown are equivalents.
 
 1. **Install host prerequisites** — Docker (+ Compose), Git, and `make`
    ([details](./installation.md#prerequisites)):

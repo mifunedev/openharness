@@ -209,8 +209,9 @@ your own reverse proxy (nginx/Caddy/Traefik) or tunnel (cloudflared,
 ngrok, tailscale-funnel) in front of the sandbox — the base ships
 without any of these.
 
-Long-running apps inside the sandbox go in named tmux sessions, related
-apps as stacked panes — see `.oh/skills/t3/references/sandbox-processes.md`.
+Interactive apps and development servers belong in Herdr panes. Managed/headless
+services (cron, gateways, watchdogs) use named tmux sessions — see
+`.oh/skills/t3/references/sandbox-processes.md`.
 
 ## What You Do
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -17,8 +18,22 @@ describe("default Herdr integration", () => {
     expect(dockerfile).toContain('test "$(herdr --version)" = "herdr ${HERDR_VERSION}"');
   });
 
+  it("vendors the official agent-control skill with pinned provenance", () => {
+    const skill = readRepoFile(".oh/skills/herdr/SKILL.md");
+    const upstream = readRepoFile(".oh/skills/herdr/UPSTREAM.md");
+    const lock = readRepoFile(".oh/skills.lock");
+    const checksum = createHash("sha256").update(skill).digest("hex");
+
+    expect(checksum).toBe("04b5f99c3c3178d8a7d194be2fbe99796852a8fbd7739346213d15242723ebb9");
+    expect(skill).toContain("Requires HERDR_ENV=1");
+    expect(skill).toContain("Do not inspect or control the focused Herdr session from outside Herdr");
+    expect(upstream).toContain("v0.7.4/SKILL.md");
+    expect(lock).toContain('"source": "github:ogulcancelik/herdr"');
+    expect(lock).not.toContain("npx skills add ogulcancelik/herdr");
+  });
+
   it.each(["docker-compose.yml", "docker-compose.image-only.yml"])(
-    "persists Herdr state in %s",
+    "persists Herdr state and wires integration control in %s",
     (composeFile) => {
       const compose = readRepoFile(`.devcontainer/${composeFile}`);
 
@@ -28,6 +43,7 @@ describe("default Herdr integration", () => {
       expect(compose).not.toContain("/home/sandbox/.config/gh");
       expect(compose).toMatch(/^  herdr-data:$/m);
       expect(compose).toMatch(/^  config-dir:$/m);
+      expect(compose).toContain("HERDR_AUTO_INTEGRATIONS=${HERDR_AUTO_INTEGRATIONS:-true}");
     },
   );
 
@@ -57,13 +73,34 @@ describe("default Herdr integration", () => {
     expect(zshrc).toContain(".oh/install/banner.sh");
   });
 
-  it("documents correct state and direct-image persistence", () => {
+  it("reconciles only official supported-agent integrations at runtime", () => {
+    const entrypoint = readRepoFile(".devcontainer/entrypoint.sh");
+    const reconciler = readRepoFile(".oh/scripts/reconcile-herdr-integrations.sh");
+    const harnessConfig = readRepoFile(".oh/scripts/harness-config.sh");
+    const harnessExample = readRepoFile("harness.yaml.example");
+
+    expect(entrypoint).toContain("reconcile-herdr-integrations.sh");
+    expect(reconciler).toContain("HERDR_AUTO_INTEGRATIONS");
+    for (const target of ["claude", "codex", "pi", "opencode", "hermes"]) {
+      expect(reconciler).toContain(`install_integration ${target}`);
+    }
+    expect(reconciler).not.toMatch(/curl|wget|npx|herdr update/);
+    expect(reconciler).not.toMatch(/install_integration (grok|deepagents)/);
+    expect(harnessConfig).toContain('envmap["herdr.auto_integrations"] = "HERDR_AUTO_INTEGRATIONS"');
+    expect(harnessExample).toContain("auto_integrations: true");
+  });
+
+  it("documents correct state, configuration, integrations, and direct-image persistence", () => {
     const herdrDocs = readRepoFile(".oh/docs/integrations/herdr.md");
     const imageDocs = readRepoFile(".oh/docs/deployment-prebuilt-image.md");
 
     expect(herdrDocs).toContain("~/.config/herdr");
     expect(herdrDocs).toContain("~/.herdr/worktrees");
     expect(herdrDocs).not.toContain("herdr update");
+    expect(herdrDocs).toContain("HERDR_AUTO_INTEGRATIONS=false");
+    expect(herdrDocs).toContain("~/.config/herdr/config.toml");
+    expect(herdrDocs).toContain("herdr --default-config");
+    expect(herdrDocs).toContain("herdr integration status");
     expect(imageDocs).toContain("herdr-data:/home/sandbox/.herdr");
   });
 });

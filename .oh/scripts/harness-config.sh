@@ -70,6 +70,7 @@ BEGIN {
     envmap["install.deepagents"]    = "INSTALL_DEEPAGENTS"
     envmap["install.hermes"]        = "INSTALL_HERMES"
     envmap["install.agent_browser"] = "INSTALL_AGENT_BROWSER"
+    envmap["herdr.auto_integrations"] = "HERDR_AUTO_INTEGRATIONS"
     envmap["hermes.dashboard"]      = "HERMES_DASHBOARD"
     envmap["hermes.dashboard_port"] = "HERMES_DASHBOARD_PORT"
     envmap["ssh.enabled"]           = "SANDBOX_SSH"

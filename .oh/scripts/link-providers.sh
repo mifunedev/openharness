@@ -14,6 +14,7 @@ CC_SAFETY_NET_PIN="1.0.6"
 
 required_files=(
   ".oh/skills/git/SKILL.md"
+  ".oh/skills/herdr/SKILL.md"
   ".oh/skills/t3/references/sandbox-processes.md"
   ".oh/agents/advisor.md"
   ".oh/skills/retro/references/memory-protocol.md"
@@ -31,6 +32,7 @@ required_execs=(
   ".oh/skills/eval/run.sh"
   ".oh/skills/prompt-miner/prompt-miner-caps.sh"
   ".oh/skills/prompt-miner/scripts/render-log-entry.sh"
+  ".oh/scripts/reconcile-herdr-integrations.sh"
   ".oh/skills/retro/scripts/check-memory-duplicates.sh"
   ".oh/skills/retro/scripts/render-log-entry.sh"
   ".oh/skills/retro/scripts/validate-retro-report.sh"

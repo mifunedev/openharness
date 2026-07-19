@@ -1,6 +1,6 @@
 # Herdr
 
-[Herdr](https://herdr.dev/) is Open Harness's primary interactive workspace. It is installed in every image.
+[Herdr](https://herdr.dev/) is Open Harness's primary interactive workspace. Version 0.7.4 is installed in every image with architecture-specific checksum verification.
 
 ## Start here
 
@@ -23,12 +23,74 @@ claude auth login                 # or configure codex / pi
 claude                            # launch agents from Herdr panes
 ```
 
-Agent detection works without extra hooks. Optional integrations provide richer status and session restore, but modify provider configuration and are never installed automatically:
+## Agent control skill
+
+Open Harness vendors Herdr's official agent skill at `.oh/skills/herdr/SKILL.md`. Existing shared-skill links expose the same pinned file to Claude Code, Codex, Pi, and optional Hermes without a runtime download. Do not run the upstream global `npx skills` installer inside Open Harness.
+
+The skill activates only when Herdr is explicitly requested. Before controlling a workspace, it requires `HERDR_ENV=1`; an agent outside a Herdr-managed pane must stop rather than inspect or mutate somebody else's focused session. Inside Herdr, the skill teaches agents to inspect panes, split without stealing focus, run and read commands, wait for work, and coordinate helper agents through stable pane IDs.
+
+## Official agent integrations
+
+The entrypoint idempotently installs the integrations bundled with the pinned Herdr binary. Installation is offline, runs as the final `sandbox` user after provider homes are ready, and structurally preserves unrelated settings.
+
+| Open Harness agent | Availability | Herdr integration |
+| --- | --- | --- |
+| Claude Code | default | session identity and native restore |
+| Codex | default | session identity and native restore |
+| Pi | default | lifecycle state and native restore |
+| OpenCode | when `install.opencode: true` | lifecycle state and native restore |
+| Hermes | when `install.hermes: true` | lifecycle, approvals, and native restore |
+| DeepAgents / Grok Build | optional | automatic detection only; no official integration exists |
+
+Check the exact bundled integration versions and paths:
 
 ```bash
-herdr integration install claude # or: codex, pi
 herdr integration status
 ```
+
+To keep the skill and binary but disable all automatic provider-config mutation, set this in local `harness.yaml` and recreate the container:
+
+```yaml
+herdr:
+  auto_integrations: false
+```
+
+The legacy `.devcontainer/.env` equivalent is `HERDR_AUTO_INTEGRATIONS=false`.
+
+Disable reconciliation **before** manually uninstalling an integration, or the next boot restores it:
+
+```bash
+herdr integration uninstall claude # or: codex, pi, opencode
+HOME="$(dirname "$HERMES_HOME")" herdr integration uninstall hermes
+```
+
+## Configuration
+
+Herdr works without a config file. Open Harness intentionally does not seed one: this preserves Herdr's first-run onboarding and lets its integrations tab explain detected agents. User choices persist at `~/.config/herdr/config.toml` in the shared `config-dir` volume.
+
+Inspect the resolved path and defaults:
+
+```bash
+herdr --help
+herdr --default-config
+```
+
+To create a full config only when one does not already exist:
+
+```bash
+mkdir -p ~/.config/herdr
+test -e ~/.config/herdr/config.toml || herdr --default-config > ~/.config/herdr/config.toml
+```
+
+The upstream defaults already fit Open Harness: new panes use `$SHELL`, child panes follow the current working directory, Herdr-created worktrees live under `~/.herdr/worktrees`, and supported agent sessions resume after a Herdr server restart. Open Harness does not enable pane screen-history persistence because saved terminal contents can include prompts, output, or secrets.
+
+After editing, apply non-startup settings with:
+
+```bash
+herdr server reload-config
+```
+
+See Herdr's [configuration guide](https://herdr.dev/docs/configuration/) and [config reference](https://herdr.dev/docs/config-reference/) before changing session history, worktree, remote SSH, shell, notification, or keybinding behavior.
 
 ## Working model
 
@@ -42,8 +104,9 @@ herdr integration status
 
 - `~/.config/herdr` (in the shared `config-dir` volume): configuration, logs, and session metadata.
 - `~/.herdr` (in `herdr-data`): Herdr-created worktrees and related data.
+- Provider integration files persist in the existing Claude, Codex, Pi, shared XDG, or project-local Hermes state.
 
-`make stop` and normal rebuilds preserve metadata and layout in these volumes, but stopped containers do not preserve running agent, test, or server processes. `make destroy` runs Compose with `-v` and removes the volumes too.
+`make stop` and normal rebuilds preserve metadata and layout in these volumes, but stopped containers do not preserve running agent, test, or server processes. `make destroy` runs Compose with `-v` and removes the named volumes too.
 
 ## Troubleshooting
 
@@ -51,11 +114,12 @@ herdr integration status
 herdr --version
 herdr status
 herdr --help
+herdr integration status
 herdr server reload-config
 herdr server stop              # end a broken Herdr server
 herdr --no-session             # run Herdr without its server/client session
 ```
 
-Herdr is pinned in the Open Harness image. Upgrade it by rebuilding against a reviewed Open Harness release rather than self-updating `/usr/local/bin/herdr`.
+Herdr is pinned in the Open Harness image. Upgrade the binary, vendored skill, checksums, integration fixtures, and documentation together through a reviewed Open Harness release rather than self-updating `/usr/local/bin/herdr`.
 
-See the upstream [quick start](https://herdr.dev/docs/quick-start/), [agents guide](https://herdr.dev/docs/agents/), and [configuration reference](https://herdr.dev/docs/configuration/).
+See the upstream [quick start](https://herdr.dev/docs/quick-start/), [agents guide](https://herdr.dev/docs/agents/), [integrations](https://herdr.dev/docs/integrations/), and [agent skill](https://herdr.dev/docs/agent-skill/).

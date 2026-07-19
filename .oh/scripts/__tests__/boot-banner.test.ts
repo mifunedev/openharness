@@ -31,12 +31,21 @@ describe("boot banners", () => {
 
     expect(block).toContain(".oh/docs/integrations/slack.md");
     expect(block).toContain("Optional Slack bridge setup");
-    expect(block).toContain("Start an agent from this shell");
+    expect(block).toContain("First command after attaching");
+    expect(block).toContain("herdr");
+    expect(block).not.toContain("Start an agent from this shell");
     expect(block).not.toContain("openharness onboard");
     expect(block).not.toContain("Complete setup");
     // The `oh config slack` wizard was removed with the pi-messenger-bridge
     // swap (#481/#287); the banner must not advertise a command that errors.
     expect(block).not.toContain("oh config slack");
+  });
+
+  it("interactive shell banner makes Herdr the canonical next action", () => {
+    const banner = readRepoFile(".oh", "install", "banner.sh");
+
+    expect(banner).toContain("Next: run `herdr`");
+    expect(banner).toContain("Complete setup, authentication, agents, tests, and servers inside Herdr");
   });
 
   it("interactive shell banner checks and labels the installed oh CLI", () => {

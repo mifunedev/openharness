@@ -4,7 +4,7 @@ title: "Harnesses Overview"
 
 # Harnesses Overview
 
-Open Harness ships with three agent CLIs in the default sandbox image: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, and **Grok Build** are optional image-level installs controlled by `harness.yaml` `install:` keys (or `.devcontainer/.env` build flags). **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773. Inside the sandbox, launch whichever you prefer — switch between them at any time, or keep long-running sessions in tmux.
+Open Harness ships with three agent CLIs in the default sandbox image: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, and **Grok Build** are optional image-level installs controlled by `harness.yaml` `install:` keys (or `.devcontainer/.env` build flags). **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
 
 Open Harness is the harness; the **agent** is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox or edit the Dockerfile. For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package — see [Slack integration](../integrations/slack.md). The product surface is one developer, one project, one agent — not racing or stacking multiple CLIs against each other.
 

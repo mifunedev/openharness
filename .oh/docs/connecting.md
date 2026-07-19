@@ -23,7 +23,7 @@ make shell
 ```
 Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
 
-You land inside the container as the `sandbox` user. This is enough to run CLI agents and configure Slack. Container ports are **not** forwarded to your laptop — you cannot open `localhost:3000` in your browser via this method alone.
+You land inside the container as the `sandbox` user. Run `herdr` first, then launch CLI agents and complete interactive setup from its panes. Container ports are **not** forwarded to your laptop — you cannot open `localhost:3000` in your browser via this method alone.
 
 ### Option B — VSCode Attach to Running Container (local host)
 
@@ -61,7 +61,7 @@ preflight, and the nginx multi-tenant recipe — is in
 
 Attaching via VSCode is the easiest way to reach container UIs on your laptop browser. The auto-forwarding is session-scoped: ports appear under the **Ports** panel while attached and disappear when you close or detach from the VSCode window.
 
-If you only need a terminal (no browser UI), Option A is fine.
+If you only need a terminal (no browser UI), Option A is fine. Whichever attach path you choose, make `herdr` the first command in the sandbox.
 
 ## What happens when you close VSCode
 

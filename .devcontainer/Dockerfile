@@ -46,12 +46,19 @@ RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
 RUN BUN_INSTALL=/usr/local curl -fsSL https://bun.sh/install | bash
 
 # ─── Herdr ──────────────────────────────────────────────────────────
-# Multi-agent terminal workspace. Install the stable release globally so every
-# sandbox user gets the command without a first-boot network dependency.
-RUN curl -fsSL https://herdr.dev/install.sh -o /tmp/herdr-install.sh \
- && HERDR_INSTALL_DIR=/usr/local/bin sh /tmp/herdr-install.sh \
- && rm /tmp/herdr-install.sh \
- && herdr --version
+# Primary interactive workspace. Pin and verify both supported Linux artifacts
+# so every sandbox gets the same reviewed binary without a first-boot download.
+ARG HERDR_VERSION=0.7.4
+RUN case "$(dpkg --print-architecture)" in \
+      amd64) herdr_arch=x86_64; herdr_sha=bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059 ;; \
+      arm64) herdr_arch=aarch64; herdr_sha=544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2 ;; \
+      *) echo "Unsupported Herdr architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "https://github.com/ogulcancelik/herdr/releases/download/v${HERDR_VERSION}/herdr-linux-${herdr_arch}" \
+      -o /usr/local/bin/herdr \
+ && echo "${herdr_sha}  /usr/local/bin/herdr" | sha256sum -c - \
+ && chmod 0755 /usr/local/bin/herdr \
+ && test "$(herdr --version)" = "herdr ${HERDR_VERSION}"
 
 # ─── uv ─────────────────────────────────────────────────────────────
 RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 sh \

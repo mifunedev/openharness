@@ -60,15 +60,24 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    **Option C — VS Code Remote SSH + Attach (remote server):**
    SSH into the remote host first, then attach to the container
 
-4. Complete onboarding (one-time, inside the sandbox):
+4. Start the primary interactive workspace immediately after attaching:
+   ```bash
+   herdr
+   ```
+
+5. Complete onboarding once from the initial Herdr pane:
    ```bash
    gh auth login && gh auth setup-git
    ```
 
-5. Start the agent:
+6. Start agents, tests, and development servers from Herdr panes:
    ```bash
-   claude                           # terminal coding agent
+   claude                           # or: codex, pi
    ```
+
+   Detach with `Ctrl-b q`; run `herdr` again to reattach. Raw shells remain a
+   recovery path. Cron, Slack gateway, and other headless infrastructure stay
+   in their existing tmux sessions; do not migrate those services into Herdr.
 
    For multi-agent setups (e.g., Pi+Slack), the harness now ships Slack via
    the **pi-messenger-bridge** npm package — npm-installed into `.pi/bridge/`
@@ -200,8 +209,9 @@ your own reverse proxy (nginx/Caddy/Traefik) or tunnel (cloudflared,
 ngrok, tailscale-funnel) in front of the sandbox — the base ships
 without any of these.
 
-Long-running apps inside the sandbox go in named tmux sessions, related
-apps as stacked panes — see `.oh/skills/t3/references/sandbox-processes.md`.
+Interactive apps and development servers belong in Herdr panes. Managed/headless
+services (cron, gateways, watchdogs) use named tmux sessions — see
+`.oh/skills/t3/references/sandbox-processes.md`.
 
 ## What You Do
 

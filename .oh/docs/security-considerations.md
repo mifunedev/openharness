@@ -24,8 +24,8 @@ caches and agents wandering outside their intended surface. The
 mechanisms below are strong against those. They are **not** a sandbox
 escape prevention against a determined adversary who controls the model —
 the guards are pattern-based and the sandbox intentionally trades
-isolation for capability (§3, sandbox isolation). Treat every model and
-tool output as untrusted (§6, untrusted output).
+isolation for capability (§4, sandbox isolation). Treat every model and
+tool output as untrusted (§7, untrusted output).
 
 ---
 
@@ -48,7 +48,7 @@ guards in §2 plus normal review.
 
 ## 2. Secret-exposure guards on commands and file paths — **ENFORCED**
 
-The harness assumes the permission engine can be bypassed (see §3) and
+The harness assumes the permission engine can be bypassed (see §4) and
 puts deterministic **hooks** in front of every tool call so the line
 holds anyway.
 
@@ -75,7 +75,49 @@ a complete defense against an adversary deliberately crafting a novel
 exfiltration command. Do not retry a variant that bypasses a deny — the
 guard message says as much.
 
-## 3. Sandbox isolation & the Docker-socket caveat — **ENFORCED (with a caveat)**
+## 3. Destructive-command guard — cc-safety-net@1.0.6 — **ENFORCED**
+
+A **complementary** layer to §2. The §2 guards stop *secret exposure*;
+this one stops *destructive intent* — the "I just `rm -rf`'d the repo"
+class of footgun. The two domains do not overlap: cc-safety-net does
+**not** scan for secret leakage, and the four `.oh/hooks/` guards remain
+wired exactly as §2 describes. Both fire on the same `PreToolUse`/`Bash`
+event.
+
+- **What it is:** [cc-safety-net](https://github.com/kenryu42/cc-safety-net) `@1.0.6` (MIT), a community-maintained `PreToolUse` hook that **semantically parses** the Bash command (via `shell-quote`, not a regex) and denies destructive intent: `rm -rf` targets, `git reset --hard`, `git checkout --` discards, `git push --force`, `git stash clear`, `git clean -f`, `find -delete`, `dd`/`mkfs`/`shred`, and destructive interpreter one-liners. Semantic parsing means shell-wrapper evasion (`bash -c "…"`, `xargs`, command chaining) is followed and blocked too, not just the surface form.
+- **Fail-closed under STRICT:** `CC_SAFETY_NET_STRICT=1` (`docker-compose.yml:69`) closes the one fail-open hole — unparseable shell syntax **ALLOWS** by default; STRICT **denies** it. Malformed input JSON is denied unconditionally (source-verified). `CC_SAFETY_NET_WORKTREE=1` (`docker-compose.yml:70`) unblocks *bare* `git reset --hard` / `clean -fd` / `checkout -- .` inside a verified linked worktree (autopilot builds there) without unblocking `reset --hard <ref>`. No `PARANOID`/`DEBUG` modes.
+- **Why a hook, not a prompt:** same rationale as §2 — the sandbox runs with `bypassPermissions` / `approval_policy=never`, so the permission engine is off (§4, Caveat 2) and hooks are the *only* enforcement layer. **A prompt asks; a hook enforces** (§7). Docker remains the real security boundary; this is a footgun net, not a sandbox (see the honesty note in the runbook below).
+- **Per-provider wiring:**
+  - **claude** — a guard-wrapped entry appended to `PreToolUse`→`Bash`→`hooks[]` in [`.claude/settings.json`](../../.claude/settings.json:87): `sh -c '[ "$CC_SAFETY_NET_OFF" = "1" ] || exec cc-safety-net hook --claude-code'`. The existing §2 hook entries are byte-for-byte unchanged.
+  - **codex** — the *same* guard-wrapped command appended as a second `PreToolUse`/`Bash` entry in [`.codex/hooks.json`](../../.codex/hooks.json:14) (codex reads Claude-format hook entries); its pre-existing `deny-env-dump.sh` wrapper is unchanged.
+  - **pi** — no command wrapper: `"npm:cc-safety-net@1.0.6"` is pinned in `packages` of [`.pi/settings.json`](../../.pi/settings.json:29), and the package's native extension auto-registers on `bash`/`Shell` tool calls and fails closed in source. The RETIRED `RISKY_BASH` branch of [`.pi/extensions/path-guard.ts`](../../.pi/extensions/path-guard.ts) (dead code in both headless and TUI modes) is superseded by it; `path-guard.ts` now guards sensitive-path writes/edits only.
+- **Binary + boot gate:** the pinned binary is baked into the image at build time (`RUN npm install -g cc-safety-net@1.0.6`, [`.devcontainer/Dockerfile:146`](../../.devcontainer/Dockerfile)) — boot and hook execution perform **zero** npm-registry access (avoids the #639 boot crash-loop class). [`.oh/scripts/link-providers.sh`](../../.oh/scripts/link-providers.sh) `--init` **fails loudly** if the binary is missing or version-mismatched against the pin — **unless** `CC_SAFETY_NET_OFF=1`, which downgrades the failure to a warn-and-continue (the kill-switch must never brick boot).
+- **Coverage matrix (post-change):**
+
+  | Provider | Destructive-command guard (cc-safety-net) | Secret-exposure guards (§2, unchanged) |
+  |---|---|---|
+  | claude | guard-wrapped hook in `.claude/settings.json` | all four `.oh/hooks/` guards |
+  | codex | guard-wrapped hook in `.codex/hooks.json` | `deny-env-dump.sh` wrapper only (**pre-existing asymmetry**, unchanged by this task) |
+  | pi | `npm:cc-safety-net` package extension (auto-registers, fails closed) | `SENSITIVE_PATHS` confirm — interactive-mode only; a **headless no-op today** (pre-existing gap, named future work) |
+  | hermes | **none** — no hook surface + no upstream support (**documented gap**) | none |
+
+- **Eval:** [`.oh/evals/probes/cc-safety-net-wiring.sh`](../../.oh/evals/probes/cc-safety-net-wiring.sh) asserts every wiring point above (config entries are repo-static — absence is a REGRESSION, never a SKIP; only the live-binary block test may SKIP when the binary is absent outside the built image).
+
+### Operator runbook
+
+- **False positive? Two overrides.**
+  1. **Kill-switch (env-only, no reprovision):** set `CC_SAFETY_NET_OFF=1`. The `sh -c` wrapper on the claude/codex hooks then exits 0 with no output. It affects **newly-spawned provider processes only** — a process already running keeps the guard until it restarts.
+  2. **Route the operation through the script:** `bash .oh/scripts/git-maintenance.sh <subcommand>` (`reset-hard <ref>` · `clean` · `branch-delete <branch>` · `worktree-remove <path>` · `push-force <remote> <branch>`). Script-file invocation is not analyzed by the guard, so a legitimate destructive-git op runs while the inline equivalent stays denied. This is how the harness's own automation (the `reset|clean` runner, `/watchdog`, worktree/branch grooming, the `cleanup-tasks` cron) keeps working.
+- **THE PI EXCEPTION.** `CC_SAFETY_NET_OFF=1` does **not** affect pi — pi's guard is a *package extension*, not a command wrapper, so it never reads the env flag. To disable on pi: remove `"npm:cc-safety-net@1.0.6"` from `packages` in [`.pi/settings.json`](../../.pi/settings.json) and **restart the pi session**.
+- **Rollout / restart step (required).** The guard binds at process spawn, so long-lived sessions started **before** the guard landed stay unguarded until restarted — without this step they defeat the purpose indefinitely. After the merge and image rebuild:
+  - **Simplest — recreate the container** (restarts every session with the new image + env): `docker compose -f .devcontainer/docker-compose.yml up -d --build` (or `make sandbox`).
+  - **Or restart the long-lived sessions in place:**
+    - `cron-system` (and `autopilot-*` run sessions): `tmux kill-session -t cron-system` — the `cron-watchdog` supervisor respawns it automatically ([`entrypoint.sh:653-656`](../../.devcontainer/entrypoint.sh)); per-run `autopilot-<branch>` sessions are transient and pick up the guard on their next hourly cron.
+    - `client-slack-pi` (Slack bridge): `gateway pi --restart` (see [Integrations → Slack](integrations/slack.md)).
+- **Audit trail.** Every block logs to `~/.cc-safety-net/logs/<session_id>.jsonl` with secrets redacted. The `~/.cc-safety-net` directory is a Docker **named volume** (`docker-compose.yml:57,109`), so the log survives rebuilds.
+- **Honesty note — the script-file gap cuts both ways.** The same script-file route the harness uses for its own destructive git is also the model's evasion route: an agent that writes its own `.sh` and runs it bypasses this layer entirely. That is **accepted**. cc-safety-net (per its own README) is a footgun net, not a security control — **Docker is the security boundary** (§4). This layer catches accidents, not a determined adversary who controls the model.
+
+## 4. Sandbox isolation & the Docker-socket caveat — **ENFORCED (with a caveat)**
 
 Agents run inside a container, not on the host.
 
@@ -104,7 +146,7 @@ expose to whichever trust level you choose.
   can't silently clobber another tenant's port. Setup + the nginx multi-tenant recipe:
   [Integrations → SSH](integrations/sshd.md).
 
-## 4. Human merge gate / no auto-merge — **ENFORCED (process) · RECOMMENDED (hard gate)**
+## 5. Human merge gate / no auto-merge — **ENFORCED (process) · RECOMMENDED (hard gate)**
 
 No agent merges its own work to the trunk.
 
@@ -112,7 +154,7 @@ No agent merges its own work to the trunk.
 - **Enforced in autopilot:** the self-improvement loop [`.oh/skills/autopilot/SKILL.md`](../../.oh/skills/autopilot/SKILL.md) **never auto-merges** and is rate-capped by the deterministic preflight [`.oh/skills/autopilot/autopilot-caps.sh`](../../.oh/skills/autopilot/autopilot-caps.sh) — cap **6 PRs/UTC-day** and **10 total open** (`autopilot-caps.sh:16-19,29-30`). On a capped hour the runtime spawns *no* session at all.
 - **RECOMMENDED (hard gate):** the ultimate enforcement of "no agent merges" is **GitHub branch protection** (required reviews / restricted merge) on `development`/`main`. That lives in repo settings, not this tree — configure it. Without it, "no auto-merge" rests on the agents' skill definitions, not a server-side block.
 
-## 5. Autopilot owned-surface guard — **ENFORCED**
+## 6. Autopilot owned-surface guard — **ENFORCED**
 
 The unattended loop can only touch harness infrastructure, never sandbox
 application code, and cleans up only after itself.
@@ -121,9 +163,9 @@ application code, and cleans up only after itself.
 - **Scope guard:** "harness-infra only … never sandbox application code" (`SKILL.md:549`) — the same boundary as `CLAUDE.md` § What You Do NOT Do.
 - **Non-destructive restore:** a dirty *owned* surface skips the run with a distinct `BLOCKED-OWNED-WIP` token (never a bare `FAIL`); the scoped restore discards only the run's own owned-path residue and leaves any *foreign* change outside the owned set byte-for-byte untouched (`SKILL.md:159-177,560`). `git clean` is deliberately not used.
 
-## 6. Untrusted model output — the harness is the authority — **RECOMMENDED (doctrine)**
+## 7. Untrusted model output — the harness is the authority — **RECOMMENDED (doctrine)**
 
-The design principle behind §§1–5: **treat every model, tool, and
+The design principle behind §§1–6: **treat every model, tool, and
 retrieved-context output as untrusted, and let deterministic harness
 mechanisms — not the model's self-restraint — be the authority.**
 
@@ -132,8 +174,8 @@ This posture is doctrine (not yet a single enforcing file), but it is
 model may misbehave:
 
 - the §2 hooks do not trust the agent to avoid dumping secrets — they scan every command/path and hold even under `bypassPermissions`;
-- the §4 merge gate does not trust the agent's PR — a human reviews before trunk;
-- the §5 owned-surface guard does not trust the agent to stay in scope — it scopes and restores mechanically.
+- the §5 merge gate does not trust the agent's PR — a human reviews before trunk;
+- the §6 owned-surface guard does not trust the agent to stay in scope — it scopes and restores mechanically.
 
 Corollaries for operators and skill authors:
 

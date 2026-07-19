@@ -44,3 +44,6 @@ alias claude='claude --dangerously-skip-permissions'
 alias codex='codex --dangerously-bypass-approvals-and-sandbox'
 
 cd ~/harness 2>/dev/null
+
+# One-shot onboarding status and canonical next action (shared with bash).
+source "${OH_PROJECT_ROOT:-$HOME/harness}/.oh/install/banner.sh" 2>/dev/null

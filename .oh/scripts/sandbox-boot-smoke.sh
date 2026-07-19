@@ -51,7 +51,13 @@ while [ "$(date +%s)" -le "$end" ]; do
     # avoids waiting for Docker's start_period while still exercising the same check.
     # shellcheck disable=SC2086 # HEALTH_CMD intentionally splits into command argv.
     if docker exec "$cid" $HEALTH_CMD >/tmp/sandbox-boot-smoke-health.out 2>/tmp/sandbox-boot-smoke-health.err; then
-      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD"
+      if ! docker exec -u sandbox "$cid" sh -lc \
+        'test "$(herdr --version)" = "herdr 0.7.4" && test -w "$HOME/.config" && test -w "$HOME/.herdr"'; then
+        echo "sandbox boot smoke failed: Herdr runtime or writable state is unavailable" >&2
+        status_diagnostics "$cid"
+        exit 1
+      fi
+      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD and Herdr runtime checks"
       exit 0
     fi
     last_status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$cid" 2>/dev/null || echo "inspect-failed")

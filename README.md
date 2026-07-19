@@ -22,7 +22,7 @@
 - **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites).)
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
-- **Multiple harnesses, one sandbox.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in); coordinate sessions in the bundled [Herdr](.oh/docs/integrations/herdr.md) terminal or bridge Pi to Slack with [`pi-messenger-bridge`](.oh/docs/integrations/slack.md).
+- **Herdr-first interactive work.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in). After entering the sandbox, run [Herdr](.oh/docs/integrations/herdr.md) first; keep setup, agents, tests, and servers organized in its persistent panes. Headless Slack and cron infrastructure remain independent.
 
 ---
 
@@ -51,16 +51,18 @@ git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.o
 make harness-config
 nano harness.yaml
 
-# c. Build the image and open a shell inside the sandbox:
+# c. Build the image, enter the sandbox, then open its primary workspace:
 make sandbox && make shell
+herdr
 ```
 
-That is already a working sandbox. To make it **yours** (private `origin` + `upstream`) and
+`herdr` should be your first inside-sandbox command. Run the remaining setup,
+authentication, agents, tests, and servers from its panes. That is already a working sandbox. To make it **yours** (private `origin` + `upstream`) and
 authenticate the agents, continue with the optional full setup.
 
 ### 2. Full setup (optional) — private repo, remotes, agent auth
 
-Run these **inside the sandbox** (`make shell`). Per-step depth + troubleshooting:
+Run these **inside the initial Herdr pane** (`make shell`, then `herdr`). Per-step depth + troubleshooting:
 [quickstart → End-to-end setup walkthrough](.oh/docs/quickstart.md#end-to-end-setup-walkthrough).
 
 ```bash

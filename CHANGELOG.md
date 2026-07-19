@@ -13,6 +13,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Add bounded local PDF, DOCX, PPTX, and XLSX normalization to `/wiki ingest` through Microsoft MarkItDown's pinned upstream CLI, preserving immutable source provenance without a wrapper command ([#650](https://github.com/mifunedev/openharness/pull/650)).
 - Add the explicit nine-target `/audit` dispatcher, deterministic focused/queue PR classifier, correlated full campaigns, and shared locked ablation recovery ([#646](https://github.com/mifunedev/openharness/pull/646)).
 ### Changed
+- Make Herdr the canonical first interactive workspace after sandbox entry, with setup and agents organized inside persistent panes and a pinned, checksum-verified CLI ([#653](https://github.com/mifunedev/openharness/issues/653)).
 - Protect the consolidated `/audit` owner in place of the superseded `harness-audit`, `skill-lint`, `eval-lint`, and `drift-check` entry points, staging their removal in the separate audit-consolidation implementation ([#647](https://github.com/mifunedev/openharness/issues/647)).
 - **BREAKING:** Consolidate artifact authoring under `/builder <agent|skill|command|rule> <name-or-request>` with one authoritative reference per type ([#643](https://github.com/mifunedev/openharness/issues/643)).
 ### Fixed

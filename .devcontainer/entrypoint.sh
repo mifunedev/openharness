@@ -727,8 +727,8 @@ if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo "  │  First boot detected.                           │"
   echo "  │  Optional Slack bridge setup:                   │"
   echo "  │    see .oh/docs/integrations/slack.md           │"
-  echo "  │  Start an agent from this shell:                │"
-  echo "  │    claude   # or: codex, pi                     │"
+  echo "  │  First command after attaching:                 │"
+  echo "  │    herdr   # then complete setup in its panes   │"
   echo "  └─────────────────────────────────────────────────┘"
   echo ""
 fi

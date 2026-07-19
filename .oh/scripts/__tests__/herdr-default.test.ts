@@ -95,7 +95,7 @@ describe("default Herdr integration", () => {
     expect(harnessConfig).toContain('envmap["herdr.auto_integrations"] = "HERDR_AUTO_INTEGRATIONS"');
     expect(harnessExample).toContain("auto_integrations: true");
     expect(realFixture).toContain("opencode --pure debug skill");
-    expect(realFixture).toContain("hermes skills list --source local --enabled-only");
+    expect(realFixture).toContain("hermes skills list --source local");
   });
 
   it("documents correct state, configuration, integrations, and direct-image persistence", () => {

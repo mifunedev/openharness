@@ -18,22 +18,38 @@ skill_sha="04b5f99c3c3178d8a7d194be2fbe99796852a8fbd7739346213d15242723ebb9"
 test "$(sha256sum "$root/.oh/skills/herdr/SKILL.md" | awk '{print $1}')" = "$skill_sha"
 
 if command -v opencode >/dev/null 2>&1; then
+  echo "checking OpenCode Herdr skill discovery"
   skills_json="$tmp/opencode-skills.json"
-  (cd "$root" && opencode --pure debug skill) > "$skills_json"
-  jq -e '[.[] | select(.name == "herdr")] | length == 1' "$skills_json" >/dev/null
+  if ! (cd "$root" && opencode --pure debug skill) > "$skills_json"; then
+    cat "$skills_json" >&2
+    exit 1
+  fi
+  if ! jq -e '[.[] | select(.name == "herdr")] | length == 1' "$skills_json" >/dev/null; then
+    cat "$skills_json" >&2
+    exit 1
+  fi
   skill_path="$(jq -r '.[] | select(.name == "herdr") | .location' "$skills_json")"
   test -f "$skill_path"
   test "$(sha256sum "$skill_path" | awk '{print $1}')" = "$skill_sha"
 fi
 
 if command -v hermes >/dev/null 2>&1; then
+  echo "checking Hermes Herdr skill discovery"
   test "$(readlink "$root/.hermes/skills/openharness")" = "../../.oh/skills"
   test -f "$root/.hermes/skills/openharness/herdr/SKILL.md"
   test "$(sha256sum "$root/.hermes/skills/openharness/herdr/SKILL.md" | awk '{print $1}')" = "$skill_sha"
-  (cd "$root" && HERMES_HOME="$root/.hermes" NO_COLOR=1 TERM=dumb hermes skills list --source local --enabled-only) |
-    grep -Eq '(^|[[:space:]│])herdr([[:space:]│]|$)'
+  hermes_skills="$tmp/hermes-skills.txt"
+  if ! (cd "$root" && HERMES_HOME="$root/.hermes" NO_COLOR=1 TERM=dumb hermes skills list --source local) > "$hermes_skills"; then
+    cat "$hermes_skills" >&2
+    exit 1
+  fi
+  if ! grep -Eq '(^|[[:space:]│/])herdr([[:space:]│]|$)' "$hermes_skills"; then
+    cat "$hermes_skills" >&2
+    exit 1
+  fi
 fi
 
+echo "checking all five bundled Herdr integrations"
 mkdir -p \
   "$home/.claude" \
   "$home/.codex" \

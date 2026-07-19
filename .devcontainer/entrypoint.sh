@@ -25,7 +25,7 @@ repair_home_mount_ownership() {
   # sandbox user's numeric uid:gid so this remains correct after UID/GID sync,
   # even when the primary group is remapped to an existing host group whose
   # name is not `sandbox`.
-  for dir in .claude .codex .pi .grok .deepagents .cloudflared .config/gh .ssh; do
+  for dir in .claude .codex .pi .grok .deepagents .herdr .cloudflared .config .ssh; do
     if [ -d "/home/sandbox/$dir" ]; then
       chown -hR "$owner" "/home/sandbox/$dir" 2>/dev/null || true
       [ "$dir" = ".ssh" ] && chmod 700 "/home/sandbox/$dir" 2>/dev/null || true
@@ -352,7 +352,7 @@ fi
 
 # ─── GitHub CLI auth via PAT (optional) ─────────────────────────────
 # When GH_TOKEN is provided, persist it into ~/.config/gh/hosts.yml on
-# disk (via the gh-config volume) so auth survives env changes and
+# disk (via the config-dir volume) so auth survives env changes and
 # `gh auth setup-git` has proper host config to reference. gh refuses
 # `--with-token` while GH_TOKEN is in env, so unset it in the subprocess.
 # Disk-auth check uses `env -u GH_TOKEN` so we don't mistake the env var

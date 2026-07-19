@@ -53,6 +53,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 
 ## Integrations
 
+- [Herdr](integrations/herdr.md)
 - [GitHub](integrations/github.md)
 - [Slack](integrations/slack.md)
 - [Langfuse](integrations/langfuse.md)

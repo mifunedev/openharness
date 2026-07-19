@@ -30,8 +30,9 @@ services:
       - opencode-auth:/home/sandbox/.local/share/opencode
       - grok-auth:/home/sandbox/.grok
       - deepagents-auth:/home/sandbox/.deepagents
+      - herdr-data:/home/sandbox/.herdr
       - cloudflared-auth:/home/sandbox/.cloudflared
-      - gh-config:/home/sandbox/.config/gh
+      - config-dir:/home/sandbox/.config
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -70,5 +71,6 @@ volumes:
   opencode-auth:
   grok-auth:
   deepagents-auth:
+  herdr-data:
   cloudflared-auth:
-  gh-config:
+  config-dir:

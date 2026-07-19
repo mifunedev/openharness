@@ -10,7 +10,7 @@ const readRepoFile = (file: string): string => readFileSync(path.join(repoRoot, 
 const version = "0.7.4";
 const commit = "50aaa2ec046ee26ff407c20f49de496f522512a8";
 const commitArchiveSha = "71ce984133b50bd097d499873dc867f4f947c39d7868027146169df7aea516e4";
-const bundleSha = "46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096";
+const bundleSha = "320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183";
 const amd64Sha = "bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059";
 const arm64Sha = "544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2";
 const zigAmd64Sha = "02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239";

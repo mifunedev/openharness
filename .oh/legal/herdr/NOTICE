@@ -22,7 +22,7 @@ Distributed executable SHA-256 values:
 Conservative corresponding-source bundle:
   herdr-0.7.4-corresponding-source.tar.gz
 SHA-256:
-  46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096
+  320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183
 
 The bundle contains the exact upstream repository tree renamed to
 herdr-0.7.4, including Cargo.lock, Cargo.toml, build.rs, and upstream's

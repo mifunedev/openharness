@@ -68,7 +68,7 @@ printf '%s  %s\n' "$EXPECTED_SHA" \
 ```
 
 The canonical bundle SHA-256 is
-`46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096`.
+`320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183`.
 The bundle contains the exact upstream tree at commit
 `50aaa2ec046ee26ff407c20f49de496f522512a8`, including `Cargo.lock`, build
 metadata, and upstream's vendored patched `portable-pty` and `libghostty-vt`

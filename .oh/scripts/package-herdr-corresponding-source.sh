@@ -218,8 +218,11 @@ it produces an executable byte-identical to the binary distributed by upstream.
 Herdr is provided without warranty under AGPL-3.0-or-later; see \`LICENSE\`.
 EOF
 
-# Preserve legitimate executable modes and symlinks from upstream/fetched
-# sources. Normalize timestamps only; tar normalizes archive ownership.
+# Preserve executable intent while normalizing environment-dependent cache
+# modes. Symlinks remain untouched; tar normalizes archive ownership.
+find "$source_root" -type d -exec chmod 0755 {} +
+find "$source_root" -type f -perm /111 -exec chmod 0755 {} +
+find "$source_root" -type f ! -perm /111 -exec chmod 0644 {} +
 find "$source_root" -exec touch -h -d "@${SOURCE_DATE_EPOCH}" {} +
 
 (

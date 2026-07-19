@@ -69,7 +69,7 @@ while [ "$(date +%s)" -le "$end" ]; do
         test -r /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256 &&
         (cd /usr/share/src/herdr &&
           sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256) &&
-        test "$(sha256sum /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz | awk '\''{ print $1 }'\'')" = "46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096" &&
+        test "$(sha256sum /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz | awk '\''{ print $1 }'\'')" = "320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183" &&
         tar -tzf /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz > "$source_listing" &&
         grep -Fqx "herdr-0.7.4/OPENHARNESS-CORRESPONDING-SOURCE.md" "$source_listing" &&
         grep -Eq "^herdr-0\\.7\\.4/vendor/cargo/[^/]+-[0-9][^/]*/\\.cargo-checksum\\.json$" "$source_listing" &&

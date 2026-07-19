@@ -81,7 +81,7 @@ RUN BUN_INSTALL=/usr/local curl -fsSL https://bun.sh/install | bash
 # same script as release CI and includes Cargo.lock plus locked dependencies.
 ARG HERDR_VERSION=0.7.4
 ARG HERDR_COMMIT=50aaa2ec046ee26ff407c20f49de496f522512a8
-ARG HERDR_CORRESPONDING_SOURCE_SHA256=46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096
+ARG HERDR_CORRESPONDING_SOURCE_SHA256=320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183
 ARG HERDR_SOURCE_URL=file:///usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz
 RUN install -d /usr/share/doc/herdr /usr/share/src/herdr
 COPY .oh/skills/herdr/LICENSE.upstream /usr/share/doc/herdr/LICENSE

@@ -96,7 +96,7 @@ docker exec "$CID" sh -c '
   cat /usr/share/doc/herdr/SOURCE-OFFER
 '
 # expected corresponding-source SHA-256:
-# 46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096
+# 320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183
 ```
 
 Or retrieve it without starting the image:

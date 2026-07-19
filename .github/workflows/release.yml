@@ -144,7 +144,7 @@ jobs:
         run: |
           VERSION="${{ steps.parse.outputs.version }}"
           HERDR_VERSION=0.7.4
-          CANONICAL_BUNDLE_SHA=46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096
+          CANONICAL_BUNDLE_SHA=320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183
           BUNDLE_NAME="herdr-${HERDR_VERSION}-corresponding-source.tar.gz"
           ARCHIVE="$RUNNER_TEMP/$BUNDLE_NAME"
           CHECKSUM="${ARCHIVE}.sha256"

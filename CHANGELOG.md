@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Ship Herdr's AGPL license, notice, source-access information, and deterministic checksum-pinned corresponding-source bundle with locked Rust and Zig dependencies in every image and tagged release ([#657](https://github.com/mifunedev/openharness/issues/657)).
 - Vendor Herdr's official agent-control skill and automatically reconcile bundled integrations for Claude Code, Codex, Pi, and installed OpenCode/Hermes agents, with an offline opt-out and configuration guidance ([#657](https://github.com/mifunedev/openharness/issues/657)).
 - Install Herdr by default as a persistent multi-agent terminal workspace ([#651](https://github.com/mifunedev/openharness/issues/651)).
 - Add bounded local PDF, DOCX, PPTX, and XLSX normalization to `/wiki ingest` through Microsoft MarkItDown's pinned upstream CLI, preserving immutable source provenance without a wrapper command ([#650](https://github.com/mifunedev/openharness/pull/650)).

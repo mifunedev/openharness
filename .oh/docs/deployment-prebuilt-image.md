@@ -21,6 +21,77 @@ a correctness one**, which is why `latest` is a safe default.
 This is the "basic" Docker path. It does **not** replace the canonical
 local-build flow — it is a faster option for the same equipped-repo model.
 
+## Herdr license and source in published images
+
+Published images aggregate an unmodified Herdr v0.7.4 executable under its
+AGPL-3.0-or-later option. That license scope covers the Herdr component, not
+Open Harness or other separate works in the aggregate. Legal files and a
+conservative corresponding-source bundle live outside `/home/sandbox/harness`,
+so neither the Flavor A bind mount nor Flavor B's workspace volume can hide
+them:
+
+```text
+/usr/share/doc/herdr/LICENSE
+/usr/share/doc/herdr/NOTICE
+/usr/share/doc/herdr/SOURCE-OFFER
+/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz
+/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256
+```
+
+Extract and verify them from a pulled image without booting the sandbox:
+
+```bash
+IMAGE=ghcr.io/mifunedev/openharness:<CalVer>
+docker pull "$IMAGE"
+docker create --name herdr-source "$IMAGE"
+docker cp herdr-source:/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz .
+docker cp herdr-source:/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256 .
+docker cp herdr-source:/usr/share/doc/herdr/LICENSE ./herdr-0.7.4-LICENSE
+docker cp herdr-source:/usr/share/doc/herdr/NOTICE ./herdr-0.7.4-NOTICE
+docker cp herdr-source:/usr/share/doc/herdr/SOURCE-OFFER ./herdr-0.7.4-SOURCE-OFFER
+docker rm herdr-source
+sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256
+```
+
+The matching tagged GitHub Release attaches the bundle, checksum, NOTICE,
+source-access information, and license. The direct asset URL in the image label
+is checksum-verifiable, not an immutable-storage claim:
+
+```bash
+SOURCE_URL=$(docker image inspect "$IMAGE" --format \
+  '{{ index .Config.Labels "dev.openharness.herdr.source.url" }}')
+EXPECTED_SHA=$(docker image inspect "$IMAGE" --format \
+  '{{ index .Config.Labels "dev.openharness.herdr.source.sha256" }}')
+curl --fail --location --remote-name "$SOURCE_URL"
+printf '%s  %s\n' "$EXPECTED_SHA" \
+  herdr-0.7.4-corresponding-source.tar.gz | sha256sum -c -
+```
+
+The canonical bundle SHA-256 is
+`46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096`.
+The bundle contains the exact upstream tree at commit
+`50aaa2ec046ee26ff407c20f49de496f522512a8`, including `Cargo.lock`, build
+metadata, and upstream's vendored patched `portable-pty` and `libghostty-vt`
+source. It also carries locked Rust dependency sources under `vendor/cargo` and
+exactly the 36 Zig package-source directories named by
+`vendor/libghostty-vt/build.zig.zon.json` under `vendor/zig-global-cache/p`.
+Cargo 1.96.1, Zig 0.15.2, and Python 3 create and validate the caches; the build
+note records the exact Zig fetch flags and offline-cache setup. Generated Zig
+local caches and build outputs are excluded, while legitimate upstream and
+fetched executable modes and symlinks are preserved. Open Harness makes no
+claim that rebuilding produces a byte-identical binary. The included license
+contains the no-warranty terms.
+
+Herdr upgrades are one atomic image/release change: binary checksums, source
+commit/checksum, legal files, labels, vendored skill, tests, and release assets
+must move together. Release CI builds the deterministic bundle from the pinned
+Docker source stage that the full build reuses, asserts its canonical SHA,
+embeds and smokes it before image push, and publishes or byte-compares source
+assets without overwrite. A retry reuses an existing version image only when
+its revision and source-SHA labels match, moves `latest` from that exact verified
+image, then verifies both remote digests. See
+[Herdr](integrations/herdr.md#license-and-corresponding-source) for details.
+
 ## Prerequisites
 
 | Need | For |

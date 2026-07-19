@@ -64,6 +64,89 @@ herdr integration uninstall claude # or: codex, pi, opencode
 HOME="$(dirname "$HERMES_HOME")" herdr integration uninstall hermes
 ```
 
+## License and corresponding source
+
+Open Harness distributes the unmodified Herdr v0.7.4 executable under Herdr's
+AGPL-3.0-or-later option. Herdr remains a separate work aggregated in the image;
+this component notice does not apply the AGPL to Open Harness or other separate
+image contents. The image keeps its legal payload and conservative corresponding
+source outside the project bind mount:
+
+```text
+/usr/share/doc/herdr/LICENSE
+/usr/share/doc/herdr/NOTICE
+/usr/share/doc/herdr/SOURCE-OFFER
+/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz
+/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256
+```
+
+Read and verify it in a running sandbox:
+
+```bash
+CID=$(bash .oh/scripts/docker-compose.sh ps -q sandbox)
+docker exec "$CID" sh -c '
+  cd /usr/share/src/herdr
+  sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256
+  listing=$(mktemp)
+  trap '\''rm -f "$listing"'\'' EXIT
+  tar -tzf herdr-0.7.4-corresponding-source.tar.gz > "$listing"
+  grep -m 5 vendor/cargo/ "$listing"
+  grep -m 5 vendor/zig-global-cache/p/ "$listing"
+  cat /usr/share/doc/herdr/NOTICE
+  cat /usr/share/doc/herdr/SOURCE-OFFER
+'
+# expected corresponding-source SHA-256:
+# 46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096
+```
+
+Or retrieve it without starting the image:
+
+```bash
+IMAGE=ghcr.io/mifunedev/openharness:<CalVer>
+docker create --name herdr-source "$IMAGE"
+docker cp herdr-source:/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz .
+docker cp herdr-source:/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256 .
+docker cp herdr-source:/usr/share/doc/herdr/LICENSE ./herdr-0.7.4-LICENSE
+docker cp herdr-source:/usr/share/doc/herdr/NOTICE ./herdr-0.7.4-NOTICE
+docker cp herdr-source:/usr/share/doc/herdr/SOURCE-OFFER ./herdr-0.7.4-SOURCE-OFFER
+docker rm herdr-source
+sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256
+```
+
+Every tagged Open Harness release containing this component also attaches the
+bundle, checksum, NOTICE, source-access information, and license. Get the direct
+asset URL and expected SHA from the image rather than guessing a tag. The URL is
+checksum-verifiable; it is not described as an immutable storage guarantee:
+
+```bash
+docker image inspect "$IMAGE" --format \
+  '{{ index .Config.Labels "dev.openharness.herdr.source.url" }} {{ index .Config.Labels "dev.openharness.herdr.source.sha256" }}'
+```
+
+The bundle contains the exact upstream repository tree at commit
+`50aaa2ec046ee26ff407c20f49de496f522512a8`, renamed `herdr-0.7.4`, including
+`Cargo.lock`, `Cargo.toml`, `build.rs`, and upstream's vendored patched
+`portable-pty` and `libghostty-vt` code. For conservative completeness it also
+includes all locked Rust registry and Git dependency sources under
+`vendor/cargo`, plus exactly the 36 Zig package-source directories named by
+`vendor/libghostty-vt/build.zig.zon.json` under `vendor/zig-global-cache/p`.
+Cargo 1.96.1, Zig 0.15.2, and Python 3 create and validate those caches. The
+bundle's build note gives the exact Zig fetch flags and offline cache setup.
+Generated Zig local caches and build outputs are excluded, while legitimate
+upstream and fetched executable modes and symlinks are preserved. Metadata is
+normalized with `SOURCE_DATE_EPOCH=1784133039`. Open Harness does not claim a
+rebuild will produce a byte-identical executable. Herdr and its source are
+provided without warranty as described by the included license.
+
+A Herdr upgrade is atomic at the Open Harness image/release boundary: update the
+binary version and architecture checksums, upstream commit and archive checksum,
+corresponding-source checksum, vendored skill, legal metadata, integration
+fixtures, image labels, and five release assets together. Release CI verifies
+the upstream `v0.7.4` tag's dereferenced commit, independently generates the
+bundle from the same pinned Docker source stage that the full image reuses,
+asserts its canonical SHA before building or publishing, and refuses mutable
+asset or version-tag overwrite.
+
 ## Configuration
 
 Herdr works without a config file. Open Harness intentionally does not seed one: this preserves Herdr's first-run onboarding and lets its integrations tab explain detected agents. User choices persist at `~/.config/herdr/config.toml` in the shared `config-dir` volume.

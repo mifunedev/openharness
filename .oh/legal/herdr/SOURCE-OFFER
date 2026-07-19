@@ -1,0 +1,85 @@
+Herdr 0.7.4 corresponding source access
+========================================
+
+This Open Harness image distributes an unmodified Herdr v0.7.4 executable
+under the GNU Affero General Public License version 3 or later option. The
+matching conservative corresponding source is supplied at no charge alongside
+the executable.
+
+Exact covered release
+---------------------
+Version: v0.7.4
+Commit:  50aaa2ec046ee26ff407c20f49de496f522512a8
+Verified upstream commit-archive SHA-256:
+  71ce984133b50bd097d499873dc867f4f947c39d7868027146169df7aea516e4
+Corresponding-source bundle SHA-256:
+  46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096
+Binary SHA-256 (linux-x86_64):
+  bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059
+Binary SHA-256 (linux-aarch64):
+  544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2
+
+Retrieve from an image
+----------------------
+The source and legal files are outside the project bind mount and remain in
+every distributed runtime image:
+
+  docker create --name herdr-source IMAGE
+  docker cp herdr-source:/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz .
+  docker cp herdr-source:/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256 .
+  docker cp herdr-source:/usr/share/doc/herdr/LICENSE ./herdr-0.7.4-LICENSE
+  docker cp herdr-source:/usr/share/doc/herdr/NOTICE ./herdr-0.7.4-NOTICE
+  docker cp herdr-source:/usr/share/doc/herdr/SOURCE-OFFER ./herdr-0.7.4-SOURCE-OFFER
+  docker rm herdr-source
+  sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256
+
+Replace IMAGE with the exact Open Harness image reference you received.
+
+Retrieve from a tagged Open Harness release
+-------------------------------------------
+Each tagged Open Harness release that contains Herdr v0.7.4 attaches:
+
+  herdr-0.7.4-corresponding-source.tar.gz
+  herdr-0.7.4-corresponding-source.tar.gz.sha256
+  herdr-0.7.4-LICENSE
+  herdr-0.7.4-NOTICE
+  herdr-0.7.4-SOURCE-OFFER
+
+Use the image's dev.openharness.herdr.source.url label to obtain the direct
+release-asset URL. The URL is checksum-verifiable using the adjacent checksum
+and the dev.openharness.herdr.source.sha256 label; it is not described as an
+immutable storage guarantee:
+
+  docker image inspect IMAGE --format \
+    '{{ index .Config.Labels "dev.openharness.herdr.source.url" }}'
+
+The verified upstream commit snapshot used as the source input is:
+  https://codeload.github.com/ogulcancelik/herdr/tar.gz/50aaa2ec046ee26ff407c20f49de496f522512a8
+
+Source contents and build scope
+-------------------------------
+The bundle contains the exact upstream repository tree for the commit above,
+renamed herdr-0.7.4, including Cargo.lock, Cargo.toml, build.rs, and upstream's
+vendored patched portable-pty code. Open Harness has not modified those files.
+For conservative completeness, the bundle also includes locked Rust registry
+and Git dependency sources under vendor/cargo, generated with Cargo 1.96.1 by:
+
+  cargo vendor --locked --versioned-dirs vendor/cargo
+
+It also includes exactly the 36 Zig package-source directories named by
+vendor/libghostty-vt/build.zig.zon.json under vendor/zig-global-cache/p. They
+are fetched with Zig 0.15.2, Python 3 validates the exact directory-name set,
+and the generated local cache and build-output areas are excluded. Legitimate
+upstream and fetched executable modes and symlinks are preserved.
+
+The generated .cargo/config.toml uses the relative vendor/cargo path. The build
+note gives Zig 0.15.2 offline-cache environment variables and the offline Cargo
+command. See OPENHARNESS-CORRESPONDING-SOURCE.md inside the bundle for exact
+fetch flags and metadata normalization. No claim of byte-identical binary
+reproducibility is made.
+
+This source access information covers the included unmodified Herdr component,
+not Open Harness or other separate works aggregated in the container image.
+The full AGPL-3.0-or-later text is at /usr/share/doc/herdr/LICENSE. Herdr and
+its source are provided without warranty, to the extent permitted by applicable
+law.

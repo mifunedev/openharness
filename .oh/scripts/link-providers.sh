@@ -33,6 +33,7 @@ required_execs=(
   ".oh/skills/prompt-miner/prompt-miner-caps.sh"
   ".oh/skills/prompt-miner/scripts/render-log-entry.sh"
   ".oh/scripts/reconcile-herdr-integrations.sh"
+  ".oh/scripts/package-herdr-corresponding-source.sh"
   ".oh/skills/retro/scripts/check-memory-duplicates.sh"
   ".oh/skills/retro/scripts/render-log-entry.sh"
   ".oh/skills/retro/scripts/validate-retro-report.sh"

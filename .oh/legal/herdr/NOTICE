@@ -1,0 +1,58 @@
+Herdr 0.7.4 distribution notice
+================================
+
+Open Harness container images include an unmodified Herdr v0.7.4 Linux
+executable as a separate component. Open Harness uses Herdr's
+AGPL-3.0-or-later licensing option. Commercial licensing is available from
+upstream but is not the basis for this distribution.
+
+Upstream source repository:
+  https://github.com/ogulcancelik/herdr
+Upstream version:
+  v0.7.4
+Upstream commit:
+  50aaa2ec046ee26ff407c20f49de496f522512a8
+Verified upstream commit-archive SHA-256:
+  71ce984133b50bd097d499873dc867f4f947c39d7868027146169df7aea516e4
+
+Distributed executable SHA-256 values:
+  linux-x86_64:  bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059
+  linux-aarch64: 544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2
+
+Conservative corresponding-source bundle:
+  herdr-0.7.4-corresponding-source.tar.gz
+SHA-256:
+  46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096
+
+The bundle contains the exact upstream repository tree renamed to
+herdr-0.7.4, including Cargo.lock, Cargo.toml, build.rs, and upstream's
+vendored patched portable-pty and libghostty-vt code. It also contains the
+locked Rust registry and Git dependency sources under vendor/cargo, all 36
+package-source directories named by libghostty-vt/build.zig.zon.json under
+vendor/zig-global-cache/p, a relative .cargo/config.toml, and
+OPENHARNESS-CORRESPONDING-SOURCE.md. Open Harness creates it with Cargo 1.96.1,
+Zig 0.15.2, and Python 3. Generated Zig local caches and build outputs are
+excluded; legitimate upstream and fetched executable modes and symlinks are
+preserved.
+
+This corresponding source is intended to permit a conservative rebuild; Open
+Harness does not claim that rebuilding it produces a byte-identical executable.
+
+License and source access information are installed at:
+  /usr/share/doc/herdr/LICENSE
+  /usr/share/doc/herdr/NOTICE
+  /usr/share/doc/herdr/SOURCE-OFFER
+  /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz
+  /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256
+
+Aggregate status
+----------------
+Herdr remains a separate work aggregated in the Open Harness container image.
+This notice describes the Herdr component only; it does not state that Open
+Harness or other separately included works are licensed under the AGPL.
+
+No warranty
+-----------
+Herdr and its accompanying source are provided without warranty, to the extent
+permitted by applicable law. See /usr/share/doc/herdr/LICENSE for the license's
+full warranty disclaimer and terms.

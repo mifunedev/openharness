@@ -9,6 +9,7 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | `ralph.sh`        | Ralph loop runner: `scripts/ralph.sh [--harness=…] <taskdesc>`     |
 | `link-providers.sh` | Creates/repairs the provider skill/agent/hook symlinks into `.oh/` and validates the vendored pack is present. |
 | `reconcile-herdr-integrations.sh` | Idempotently installs the pinned Herdr binary's official integrations for default and installed optional agents; set `HERDR_AUTO_INTEGRATIONS=false` to opt out. |
+| `package-herdr-corresponding-source.sh` | Builds Herdr's deterministic corresponding-source archive with Cargo 1.96.1 and Zig 0.15.2 dependency stores. |
 | `repo-orientation-benchmark-score.mjs` | Scores the CB-004 repo-orientation A/B benchmark report |
 | `cron-runtime.ts` | Croner runtime — scans `.oh/crons/*.md`, schedules, fires each job     |
 | `prompt-miner-caps.sh` | Origin-scoped PR-cap preflight for `.oh/crons/prompt-miner.md` — execs `autopilot-caps.sh` with `AUTOPILOT_REPO=mifunedev/openharness` + `AUTOPILOT_LABEL=prompt-miner` |

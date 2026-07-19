@@ -59,7 +59,24 @@ while [ "$(date +%s)" -le "$end" ]; do
     # shellcheck disable=SC2086 # HEALTH_CMD intentionally splits into command argv.
     if docker exec "$cid" $HEALTH_CMD >/tmp/sandbox-boot-smoke-health.out 2>/tmp/sandbox-boot-smoke-health.err; then
       if ! docker exec -u sandbox "$cid" sh -lc '
+        source_listing=$(mktemp) &&
+        trap '\''rm -f "$source_listing"'\'' EXIT &&
         test "$(herdr --version)" = "herdr 0.7.4" &&
+        test -r /usr/share/doc/herdr/LICENSE &&
+        test -r /usr/share/doc/herdr/NOTICE &&
+        test -r /usr/share/doc/herdr/SOURCE-OFFER &&
+        grep -Fq "GNU AFFERO GENERAL PUBLIC LICENSE" /usr/share/doc/herdr/LICENSE &&
+        test -r /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256 &&
+        (cd /usr/share/src/herdr &&
+          sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256) &&
+        test "$(sha256sum /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz | awk '\''{ print $1 }'\'')" = "46978a7b059db39271124b0430b4cbe0db3e3a3dc12b264d39fcbd00be00b096" &&
+        tar -tzf /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz > "$source_listing" &&
+        grep -Fqx "herdr-0.7.4/OPENHARNESS-CORRESPONDING-SOURCE.md" "$source_listing" &&
+        grep -Eq "^herdr-0\\.7\\.4/vendor/cargo/[^/]+-[0-9][^/]*/\\.cargo-checksum\\.json$" "$source_listing" &&
+        test "$(grep -Ec "^herdr-0\\.7\\.4/vendor/zig-global-cache/p/[^/]+/$" "$source_listing")" -eq 36 &&
+        grep -Fqx "herdr-0.7.4/vendor/zig-global-cache/p/N-V-__8AAGmZhABbsPJLfbqrh6JTHsXhY6qCaLAQyx25e0XE/" "$source_listing" &&
+        grep -Fqx "herdr-0.7.4/vendor/zig-global-cache/p/uucode-0.1.0-ZZjBPj96QADXyt5sqwBJUnhaDYs_qBeeKijZvlRa0eqM/" "$source_listing" &&
+        grep -Fqx "herdr-0.7.4/vendor/zig-global-cache/p/uucode-0.2.0-ZZjBPqZVVABQepOqZHR7vV_NcaN-wats0IB6o-Exj6m9/" "$source_listing" &&
         test -w "$HOME/.config" && test -w "$HOME/.herdr" &&
         status="$(herdr integration status)" &&
         printf "%s\n" "$status" | grep -q "^claude: current (v7)" &&

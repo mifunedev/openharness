@@ -3,6 +3,7 @@
     "cli/**",
     "scripts/**",
     "install/**",
+    "legal/**",
     "templates/**",
     "context/**",
     "worktrees/README.md",

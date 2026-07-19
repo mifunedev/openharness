@@ -77,6 +77,8 @@ jobs:
           SANDBOX_NAME: openharness-boot-guard-${{ github.run_id }}
         run: |
           docker build \
+            --build-arg INSTALL_OPENCODE=true \
+            --build-arg INSTALL_HERMES=true \
             --file .devcontainer/Dockerfile \
             --tag "sandbox-${SANDBOX_NAME}" \
             --tag openharness-sandbox-boot-guard:${{ github.sha }} \
@@ -136,6 +138,7 @@ jobs:
           # This is the Option C contract: install slowness can no longer trip
           # the ~390s unhealthy deadline. Boot is now just the cron-system spawn.
           SKIP_PNPM_INSTALL: "1"
+          INSTALL_HERMES: "true"
         run: bash .oh/scripts/sandbox-boot-smoke.sh
 
       - name: Boot image-only sandbox and verify seeded Herdr state after restart
@@ -147,4 +150,5 @@ jobs:
           BOOT_SMOKE_TIMEOUT_SECONDS: "900"
           BOOT_SMOKE_INTERVAL_SECONDS: "10"
           BOOT_SMOKE_RESTART_ONCE: "true"
+          INSTALL_HERMES: "true"
         run: bash .oh/scripts/sandbox-boot-smoke.sh

@@ -78,6 +78,7 @@ describe("default Herdr integration", () => {
 
   it("reconciles only official supported-agent integrations at runtime", () => {
     const entrypoint = readRepoFile(".devcontainer/entrypoint.sh");
+    const realFixture = readRepoFile(".oh/scripts/__tests__/herdr-integrations-real.sh");
     const reconciler = readRepoFile(".oh/scripts/reconcile-herdr-integrations.sh");
     const harnessConfig = readRepoFile(".oh/scripts/harness-config.sh");
     const harnessExample = readRepoFile("harness.yaml.example");
@@ -93,6 +94,8 @@ describe("default Herdr integration", () => {
     expect(reconciler).not.toMatch(/install_integration (grok|deepagents)/);
     expect(harnessConfig).toContain('envmap["herdr.auto_integrations"] = "HERDR_AUTO_INTEGRATIONS"');
     expect(harnessExample).toContain("auto_integrations: true");
+    expect(realFixture).toContain("opencode --pure debug skill");
+    expect(realFixture).toContain("hermes skills list --source local --enabled-only");
   });
 
   it("documents correct state, configuration, integrations, and direct-image persistence", () => {

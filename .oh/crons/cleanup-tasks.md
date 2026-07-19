@@ -51,8 +51,8 @@ only — never a `.oh/tasks/` subfolder.
      and recreate — never reuse a possibly-dirty worktree left by a prior
      failed run):
      ```bash
-     git worktree remove --force .oh/worktrees/archive/$TODAY 2>/dev/null || true
-     git branch -D "archive/$TODAY" 2>/dev/null || true   # drop a stale branch from a partial run
+     bash .oh/scripts/git-maintenance.sh worktree-remove .oh/worktrees/archive/$TODAY 2>/dev/null || true
+     bash .oh/scripts/git-maintenance.sh branch-delete "archive/$TODAY" 2>/dev/null || true   # drop a stale branch from a partial run
      git worktree prune
      ```
    - **Create** the worktree off `origin/$BASE` (paths resolve from the
@@ -63,7 +63,7 @@ only — never a `.oh/tasks/` subfolder.
    - **Arm crash-safe teardown** so a failed push/PR step (or any error
      exit) never strands the worktree for next week's run to collide with:
      ```bash
-     trap 'git worktree remove --force .oh/worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune' EXIT
+     trap 'bash .oh/scripts/git-maintenance.sh worktree-remove .oh/worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune' EXIT
      ```
    Every `git` command for the archive from here on runs inside the
    worktree via `git -C .oh/worktrees/archive/$TODAY <cmd>`.
@@ -110,7 +110,7 @@ only — never a `.oh/tasks/` subfolder.
          or `git -C "$path" rev-parse --abbrev-ref --symbolic-full-name @{u}` fails;
        - unpushed commits: `git -C "$path" log --oneline @{u}..HEAD`
          returns any commit.
-     - Otherwise remove it with `git worktree remove --force "$path"`,
+     - Otherwise remove it with `bash .oh/scripts/git-maintenance.sh worktree-remove "$path"`,
        append the path to `GROOMED_WORKTREES`, and increment `W`.
    - Then prune corrupt/orphan folders that are not registered git
      worktrees: scan `.oh/worktrees/` directories excluding `.oh/worktrees/agent/`,
@@ -144,7 +144,7 @@ only — never a `.oh/tasks/` subfolder.
    - **Tear down the worktree** — covers normal completion, the
      nothing-to-archive case (`N = 0`), and partial runs; complements the
      step-3 `trap`, which also fires on any error/abort exit:
-     `git worktree remove --force .oh/worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune`.
+     `bash .oh/scripts/git-maintenance.sh worktree-remove .oh/worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune`.
    - **Liveness line:** append one liveness line to `.oh/crons/.cron.log` through
      `.oh/scripts/locked-append.sh`:
      `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M, groomed W worktrees)" | .oh/scripts/locked-append.sh .oh/crons/.cron.log`.

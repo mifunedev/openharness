@@ -7,7 +7,6 @@ description: |
    Use PROACTIVELY when discussing skill architecture or
    enhancing Claude's domain capabilities.
 tools: Read, Glob, Grep, Edit, Write, Bash
-model: sonnet
 ---
 
 # Skill Builder Agent

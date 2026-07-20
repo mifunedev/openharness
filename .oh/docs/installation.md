@@ -330,7 +330,8 @@ Auth credentials survive container rebuilds via named Docker volumes:
 - `hermes-auth` → `~/.hermes` (Hermes auth only; non-auth runtime state defaults to project-local `~/harness/.hermes` when Hermes is enabled (`install.hermes: true` in `harness.yaml`))
 - `grok-auth` → `~/.grok` (all Grok Build user state: auth, config, sessions, memory, skills/plugins, logs; mounted alongside the other agent auth volumes and used by Grok Build when `install.grok_build: true` in `harness.yaml`). Cached OAuth/session state in `~/.grok/auth.json` takes precedence over `XAI_API_KEY`; if an API key seems ignored, run `grok logout` or reset the volume.
 - `cloudflared-auth` → `~/.cloudflared` (Cloudflare tunnel credentials, when used)
-- `gh-config` → `~/.config/gh` (GitHub CLI tokens)
+- `ssh-config` → `~/.ssh` (user SSH keys / known_hosts; entrypoint enforces `chmod 700`)
+- `config-dir` → `~/.config` (all XDG tool config, including the GitHub CLI tokens under `~/.config/gh`)
 
 Hermes is split: when Hermes is enabled (`install.hermes: true` in `harness.yaml`), `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/` directory, while auth remains in the `~/.hermes` named volume and is linked into the project-local home as `auth.json`. The entrypoint links `.hermes/skills/openharness` to the tracked shared skill directory (`.oh/skills/`) so Hermes sees the same harness skills as Claude, Codex, and Pi without copying them into runtime state. Project-local runtime contents are gitignored except `.hermes/README.md`; `make destroy` removes the auth volume but not the bind-mounted project runtime directory.
 

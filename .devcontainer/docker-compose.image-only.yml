@@ -31,7 +31,10 @@ services:
       - grok-auth:/home/sandbox/.grok
       - deepagents-auth:/home/sandbox/.deepagents
       - cloudflared-auth:/home/sandbox/.cloudflared
-      - gh-config:/home/sandbox/.config/gh
+      - ssh-config:/home/sandbox/.ssh
+      # config-dir covers all of ~/.config (gh CLI auth under ~/.config/gh
+      # included); entrypoint.sh chowns both to the sandbox UID (chmod 700 .ssh).
+      - config-dir:/home/sandbox/.config
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -71,4 +74,5 @@ volumes:
   grok-auth:
   deepagents-auth:
   cloudflared-auth:
-  gh-config:
+  ssh-config:
+  config-dir:

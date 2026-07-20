@@ -3,8 +3,12 @@
 # Base sandbox compose. The base ships with zero in-tree overlays;
 # agent auth and tool state persist in named volumes managed by Docker
 # (claude-auth, codex-auth, pi-auth, opencode-auth, grok-auth,
-# deepagents-auth, cloudflared-auth, gh-config), and the bind-mounted
-# repo's UID is synced into the sandbox user by entrypoint.sh on first boot.
+# deepagents-auth, cloudflared-auth, ssh-config, config-dir), and the
+# bind-mounted repo's UID is synced into the sandbox user by
+# entrypoint.sh on first boot. ~/.ssh (ssh-config) and ~/.config
+# (config-dir) get their own volumes so user SSH keys and tool config
+# — including the gh CLI auth that lives under ~/.config/gh — survive
+# container restart/rebuild.
 # Grok Build uses ~/.grok for user state/auth, persisted by grok-auth.
 # Hermes uses the project-local bind-mounted `.hermes/` directory as
 # HERMES_HOME for all runtime state, including auth.json (gitignored).
@@ -51,7 +55,11 @@ services:
       - grok-auth:/home/sandbox/.grok
       - deepagents-auth:/home/sandbox/.deepagents
       - cloudflared-auth:/home/sandbox/.cloudflared
-      - gh-config:/home/sandbox/.config/gh
+      - ssh-config:/home/sandbox/.ssh
+      # config-dir covers all of ~/.config (gh CLI auth included);
+      # entrypoint.sh chowns both dirs to the synced sandbox UID on boot
+      # (and chmod 700 on .ssh).
+      - config-dir:/home/sandbox/.config
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -95,4 +103,5 @@ volumes:
   grok-auth:
   deepagents-auth:
   cloudflared-auth:
-  gh-config:
+  ssh-config:
+  config-dir:

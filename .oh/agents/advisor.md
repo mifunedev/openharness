@@ -210,3 +210,4 @@ You return this and **stop**. The caller — not you — then runs `Agent(subage
 - `.oh/agents/implementer.md`, `.oh/agents/pm.md`, `.oh/agents/critic.md` — the executors/analysts your briefings target. You brief them; you do not do their work.
 - `CLAUDE.md` § *What You Do NOT Do* — the orchestrator-vs-application-code boundary above.
 - `scripts/ralph.sh` — the monitored async loop the *caller* runs, never you.
+- `.oh/context/rules/first-mate.md` — the First Mate role charter: the supervisory role the *caller* of this agent plays. This agent defines the briefing artifact; the charter defines the role.

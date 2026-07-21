@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #449 (sandbox image build CI guard) 2026-06-19
-# desc: PR CI must validate sandbox compose config and locally build the devcontainer image without registry writes.
+# desc: PR CI must validate compose, build locally, and boot both bind-mounted and image-only sandboxes without registry writes.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -37,11 +37,15 @@ has 'persist-credentials: false' "checkout token persistence disabled"
 has 'bash .oh/scripts/docker-compose.sh config --quiet' "base compose config validation"
 has 'HERMES_DASHBOARD: "true"' "Hermes overlay validation env"
 has 'docker build \' "local docker build step"
+has '--build-arg INSTALL_OPENCODE=true' "optional OpenCode integration build coverage"
+has '--build-arg INSTALL_HERMES=true' "optional Hermes integration build coverage"
 has '--file .devcontainer/Dockerfile' "devcontainer Dockerfile build target"
 has '--tag openharness-sandbox-boot-guard:${{ github.sha }}' "local CI image tag"
 has '--tag "sandbox-${SANDBOX_NAME}"' "compose image tag for smoke boot"
 has 'bash .oh/scripts/sandbox-boot-smoke.sh' "boot smoke healthcheck invocation"
 has 'BOOT_SMOKE_TIMEOUT_SECONDS: "900"' "bounded boot smoke timeout"
+has 'BOOT_SMOKE_COMPOSE_FILE: .devcontainer/docker-compose.image-only.yml' "image-only boot smoke"
+has 'BOOT_SMOKE_RESTART_ONCE: "true"' "image-only persistence restart smoke"
 has 'Sandbox boot guard only' "comment explaining non-release intent"
 
 if grep -Eq 'docker[[:space:]]+push|--push([[:space:]]|$)|docker/login-action|docker/login|ghcr\.io|[[:alnum:]._-]+\.[[:alnum:]._-]+/.+:.+|packages:[[:space:]]*write|secrets\.' <<<"$text"; then
@@ -54,5 +58,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS sandbox boot guard validates compose config, builds the devcontainer image, and boots it through the healthcheck without registry writes" >&2
+echo "PASS sandbox boot guard validates compose, builds locally, and boots bind-mounted plus image-only restart paths without registry writes" >&2
 exit 0

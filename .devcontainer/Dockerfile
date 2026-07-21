@@ -1,6 +1,36 @@
+FROM rust:1.96.1-bookworm AS herdr-source-packager
+
+ARG ZIG_VERSION=0.15.2
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl git python3 xz-utils \
+ && rm -rf /var/lib/apt/lists/* \
+ && case "$(dpkg --print-architecture)" in \
+      amd64) zig_arch=x86_64; zig_sha=02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239 ;; \
+      arm64) zig_arch=aarch64; zig_sha=958ed7d1e00d0ea76590d27666efbf7a932281b3d7ba0c6b01b0ff26498f667f ;; \
+      *) echo "Unsupported Zig architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
+    esac \
+ && zig_archive=/tmp/zig.tar.xz \
+ && curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+      "https://ziglang.org/download/${ZIG_VERSION}/zig-${zig_arch}-linux-${ZIG_VERSION}.tar.xz" \
+      -o "$zig_archive" \
+ && echo "${zig_sha}  ${zig_archive}" | sha256sum -c - \
+ && mkdir -p /opt/zig \
+ && tar -xJf "$zig_archive" --strip-components=1 -C /opt/zig \
+ && ln -s /opt/zig/zig /usr/local/bin/zig \
+ && test "$(zig version)" = "$ZIG_VERSION" \
+ && rm -f "$zig_archive"
+WORKDIR /opt/openharness-source
+COPY .oh/scripts/package-herdr-corresponding-source.sh /usr/local/bin/package-herdr-corresponding-source
+RUN chmod 0755 /usr/local/bin/package-herdr-corresponding-source \
+ && mkdir -p /out \
+ && package-herdr-corresponding-source /out
+
 FROM debian:bookworm-slim
 
 ARG OH_PROJECT_ROOT=/home/sandbox/harness
+ARG OPENHARNESS_VERSION=development
+ARG OPENHARNESS_REVISION=unknown
+ARG OPENHARNESS_CREATED=unknown
 ENV OH_PROJECT_ROOT=${OH_PROJECT_ROOT}
 
 ENV TZ=America/Denver
@@ -46,15 +76,45 @@ RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
 RUN BUN_INSTALL=/usr/local curl -fsSL https://bun.sh/install | bash
 
 # ─── Herdr ──────────────────────────────────────────────────────────
-# Primary interactive workspace. Pin and verify both supported Linux artifacts
-# so every sandbox gets the same reviewed binary without a first-boot download.
+# Primary interactive workspace. The binary and conservative corresponding
+# source bundle are independently checksum-pinned. The packager stage uses the
+# same script as release CI and includes Cargo.lock plus locked dependencies.
 ARG HERDR_VERSION=0.7.4
-RUN case "$(dpkg --print-architecture)" in \
+ARG HERDR_COMMIT=50aaa2ec046ee26ff407c20f49de496f522512a8
+ARG HERDR_CORRESPONDING_SOURCE_SHA256=320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183
+ARG HERDR_SOURCE_URL=file:///usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz
+RUN install -d /usr/share/doc/herdr /usr/share/src/herdr
+COPY .oh/skills/herdr/LICENSE.upstream /usr/share/doc/herdr/LICENSE
+COPY .oh/legal/herdr/NOTICE /usr/share/doc/herdr/NOTICE
+COPY .oh/legal/herdr/SOURCE-OFFER /usr/share/doc/herdr/SOURCE-OFFER
+COPY --from=herdr-source-packager \
+  /out/herdr-0.7.4-corresponding-source.tar.gz \
+  /out/herdr-0.7.4-corresponding-source.tar.gz.sha256 \
+  /usr/share/src/herdr/
+RUN test "${HERDR_VERSION}" = "0.7.4" \
+ && test "${HERDR_COMMIT}" = "50aaa2ec046ee26ff407c20f49de496f522512a8" \
+ && test "${HERDR_CORRESPONDING_SOURCE_SHA256}" = "$(sha256sum /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz | awk '{ print $1 }')" \
+ && (cd /usr/share/src/herdr && sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256) \
+ && source_listing=$(mktemp) \
+ && tar -tzf /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz > "$source_listing" \
+ && grep -Fqx 'herdr-0.7.4/OPENHARNESS-CORRESPONDING-SOURCE.md' "$source_listing" \
+ && grep -Eq '^herdr-0\.7\.4/vendor/cargo/[^/]+-[0-9][^/]*/\.cargo-checksum\.json$' "$source_listing" \
+ && test "$(grep -Ec '^herdr-0\.7\.4/vendor/zig-global-cache/p/[^/]+/$' "$source_listing")" -eq 36 \
+ && grep -Fqx 'herdr-0.7.4/vendor/zig-global-cache/p/N-V-__8AAGmZhABbsPJLfbqrh6JTHsXhY6qCaLAQyx25e0XE/' "$source_listing" \
+ && grep -Fqx 'herdr-0.7.4/vendor/zig-global-cache/p/uucode-0.1.0-ZZjBPj96QADXyt5sqwBJUnhaDYs_qBeeKijZvlRa0eqM/' "$source_listing" \
+ && grep -Fqx 'herdr-0.7.4/vendor/zig-global-cache/p/uucode-0.2.0-ZZjBPqZVVABQepOqZHR7vV_NcaN-wats0IB6o-Exj6m9/' "$source_listing" \
+ && rm -f "$source_listing" \
+ && chmod 0644 /usr/share/doc/herdr/LICENSE /usr/share/doc/herdr/NOTICE \
+      /usr/share/doc/herdr/SOURCE-OFFER \
+      /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz \
+      /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256 \
+ && case "$(dpkg --print-architecture)" in \
       amd64) herdr_arch=x86_64; herdr_sha=bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059 ;; \
       arm64) herdr_arch=aarch64; herdr_sha=544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2 ;; \
       *) echo "Unsupported Herdr architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
     esac \
- && curl -fsSL "https://github.com/ogulcancelik/herdr/releases/download/v${HERDR_VERSION}/herdr-linux-${herdr_arch}" \
+ && curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+      "https://github.com/ogulcancelik/herdr/releases/download/v${HERDR_VERSION}/herdr-linux-${herdr_arch}" \
       -o /usr/local/bin/herdr \
  && echo "${herdr_sha}  /usr/local/bin/herdr" | sha256sum -c - \
  && chmod 0755 /usr/local/bin/herdr \
@@ -226,8 +286,27 @@ RUN echo "cd ${OH_PROJECT_ROOT} 2>/dev/null" >> /home/sandbox/.bashrc
 # Image-level devcontainer config — VS Code reads this on "Attach to Running Container"
 RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness","remoteUser":"sandbox"}' > /.devcontainer/devcontainer.json
 
-# Labels for VS Code "Attach to Running Container"
-LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
+# Image provenance plus component-scoped Herdr compliance metadata. The OCI
+# labels describe Open Harness; dev.openharness.herdr.* describes only the
+# separately aggregated Herdr component.
+LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]' \
+      org.opencontainers.image.title="Open Harness" \
+      org.opencontainers.image.description="Sandbox orchestrator and agent toolchain" \
+      org.opencontainers.image.url="https://github.com/mifunedev/openharness" \
+      org.opencontainers.image.source="https://github.com/mifunedev/openharness" \
+      org.opencontainers.image.version="${OPENHARNESS_VERSION}" \
+      org.opencontainers.image.revision="${OPENHARNESS_REVISION}" \
+      org.opencontainers.image.created="${OPENHARNESS_CREATED}" \
+      dev.openharness.herdr.version="${HERDR_VERSION}" \
+      dev.openharness.herdr.license="AGPL-3.0-or-later" \
+      dev.openharness.herdr.commit="${HERDR_COMMIT}" \
+      dev.openharness.herdr.source.path="/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz" \
+      dev.openharness.herdr.source.checksum.path="/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256" \
+      dev.openharness.herdr.source.sha256="${HERDR_CORRESPONDING_SOURCE_SHA256}" \
+      dev.openharness.herdr.source.url="${HERDR_SOURCE_URL}" \
+      dev.openharness.herdr.binary.amd64.sha256="bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059" \
+      dev.openharness.herdr.binary.arm64.sha256="544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2" \
+      dev.openharness.herdr.aggregate="unmodified separate work"
 
 # ─── Copy install scripts + workspace (for CI; bind mount overrides at runtime)
 # Real path .oh/install/ — COPY does not traverse the back-compat install symlink.

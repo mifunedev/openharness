@@ -5,6 +5,12 @@ on:
     tags:
       - "[0-9][0-9][0-9][0-9].[0-9]*.[0-9]*"
 
+# A release may safely resume after publishing source but before pushing the
+# image. Serialize all release tags so `latest` and release assets cannot race.
+concurrency:
+  group: openharness-release
+  cancel-in-progress: false
+
 jobs:
   validate:
     name: "Validate"
@@ -124,11 +130,65 @@ jobs:
       - name: Ensure Mifune submodule
         run: bash .oh/scripts/link-providers.sh --init
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Parse tag
         id: parse
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Package Herdr corresponding source with pinned Docker source stage
+        id: metadata
+        run: |
+          VERSION="${{ steps.parse.outputs.version }}"
+          HERDR_VERSION=0.7.4
+          CANONICAL_BUNDLE_SHA=320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183
+          BUNDLE_NAME="herdr-${HERDR_VERSION}-corresponding-source.tar.gz"
+          ARCHIVE="$RUNNER_TEMP/$BUNDLE_NAME"
+          CHECKSUM="${ARCHIVE}.sha256"
+          SOURCE_LISTING="$RUNNER_TEMP/${BUNDLE_NAME}.listing"
+          SOURCE_URL="https://github.com/mifunedev/openharness/releases/download/${VERSION}/${BUNDLE_NAME}"
+          PACKAGER_IMAGE="openharness-herdr-source-packager:${GITHUB_SHA}"
+          PACKAGER_CONTAINER="openharness-herdr-source-packager-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          trap 'docker rm -f "$PACKAGER_CONTAINER" >/dev/null 2>&1 || true' EXIT
+
+          # Build and copy /out from the exact Dockerfile stage the full image
+          # reuses. This pins Rust, Cargo, Zig, Python, xz, and their fetch flow.
+          docker buildx build --load -f .devcontainer/Dockerfile \
+            --target herdr-source-packager \
+            -t "$PACKAGER_IMAGE" .
+          docker create --name "$PACKAGER_CONTAINER" "$PACKAGER_IMAGE"
+          docker cp "$PACKAGER_CONTAINER:/out/." "$RUNNER_TEMP/"
+          docker rm "$PACKAGER_CONTAINER"
+          trap - EXIT
+
+          BUNDLE_SHA=$(sha256sum "$ARCHIVE" | awk '{ print $1 }')
+          test "$BUNDLE_SHA" = "$CANONICAL_BUNDLE_SHA" || {
+            echo "Computed Herdr source SHA $BUNDLE_SHA differs from canonical $CANONICAL_BUNDLE_SHA" >&2
+            exit 1
+          }
+          (cd "$RUNNER_TEMP" && sha256sum -c "${BUNDLE_NAME}.sha256")
+          tar -tzf "$ARCHIVE" > "$SOURCE_LISTING"
+          grep -Fqx "herdr-${HERDR_VERSION}/OPENHARNESS-CORRESPONDING-SOURCE.md" "$SOURCE_LISTING"
+          grep -Eq "^herdr-${HERDR_VERSION}/vendor/cargo/[^/]+-[0-9][^/]*/\\.cargo-checksum\\.json$" "$SOURCE_LISTING"
+          test "$(grep -Ec "^herdr-${HERDR_VERSION}/vendor/zig-global-cache/p/[^/]+/$" "$SOURCE_LISTING")" -eq 36
+
+          cp .oh/skills/herdr/LICENSE.upstream "$RUNNER_TEMP/herdr-${HERDR_VERSION}-LICENSE"
+          cp .oh/legal/herdr/NOTICE "$RUNNER_TEMP/herdr-${HERDR_VERSION}-NOTICE"
+          cp .oh/legal/herdr/SOURCE-OFFER "$RUNNER_TEMP/herdr-${HERDR_VERSION}-SOURCE-OFFER"
+
+          # OCI created metadata is deterministic for the tagged commit.
+          CREATED=$(git show -s --format=%cI "$GITHUB_SHA")
+          echo "created=$CREATED" >> "$GITHUB_OUTPUT"
+          echo "source_url=$SOURCE_URL" >> "$GITHUB_OUTPUT"
+          echo "bundle_sha=$BUNDLE_SHA" >> "$GITHUB_OUTPUT"
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          echo "license=$RUNNER_TEMP/herdr-${HERDR_VERSION}-LICENSE" >> "$GITHUB_OUTPUT"
+          echo "notice=$RUNNER_TEMP/herdr-${HERDR_VERSION}-NOTICE" >> "$GITHUB_OUTPUT"
+          echo "source_offer=$RUNNER_TEMP/herdr-${HERDR_VERSION}-SOURCE-OFFER" >> "$GITHUB_OUTPUT"
 
       - name: Extract release notes from CHANGELOG
         id: notes
@@ -154,9 +214,6 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -172,7 +229,14 @@ jobs:
           LATEST=ghcr.io/mifunedev/openharness:latest
           SMOKE_IMAGE=sandbox-${SANDBOX_NAME}
 
-          docker build -f .devcontainer/Dockerfile -t "$IMAGE" -t "$LATEST" -t "$SMOKE_IMAGE" .
+          # Reuse the source-packager layers from the metadata target build.
+          docker buildx build --load -f .devcontainer/Dockerfile \
+            --build-arg "OPENHARNESS_VERSION=${{ steps.parse.outputs.version }}" \
+            --build-arg "OPENHARNESS_REVISION=${GITHUB_SHA}" \
+            --build-arg "OPENHARNESS_CREATED=${{ steps.metadata.outputs.created }}" \
+            --build-arg "HERDR_SOURCE_URL=${{ steps.metadata.outputs.source_url }}" \
+            --build-arg "HERDR_CORRESPONDING_SOURCE_SHA256=${{ steps.metadata.outputs.bundle_sha }}" \
+            -t "$IMAGE" -t "$LATEST" -t "$SMOKE_IMAGE" .
 
       # Keep this pre-push smoke gate between build and push: it boots the
       # exact image object that will be published to GHCR, via the sandbox-* tag
@@ -185,19 +249,216 @@ jobs:
           BOOT_SMOKE_UP_ARGS: "up -d --no-build"
         run: bash .oh/scripts/sandbox-boot-smoke.sh
 
-      - name: Push Docker image
+      - name: Verify Herdr legal payload and image labels before publish
+        run: |
+          IMAGE=ghcr.io/mifunedev/openharness:${{ steps.parse.outputs.version }}
+
+          assert_label() {
+            key=$1
+            expected=$2
+            actual=$(docker image inspect --format "{{ index .Config.Labels \"$key\" }}" "$IMAGE")
+            test "$actual" = "$expected" || {
+              echo "label $key: expected '$expected', got '$actual'" >&2
+              exit 1
+            }
+          }
+
+          assert_label org.opencontainers.image.source "https://github.com/mifunedev/openharness"
+          assert_label org.opencontainers.image.version "${{ steps.parse.outputs.version }}"
+          assert_label org.opencontainers.image.revision "$GITHUB_SHA"
+          assert_label org.opencontainers.image.created "${{ steps.metadata.outputs.created }}"
+          assert_label dev.openharness.herdr.version "0.7.4"
+          assert_label dev.openharness.herdr.license "AGPL-3.0-or-later"
+          assert_label dev.openharness.herdr.commit "50aaa2ec046ee26ff407c20f49de496f522512a8"
+          assert_label dev.openharness.herdr.source.path "/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz"
+          assert_label dev.openharness.herdr.source.checksum.path "/usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256"
+          assert_label dev.openharness.herdr.source.sha256 "${{ steps.metadata.outputs.bundle_sha }}"
+          assert_label dev.openharness.herdr.source.url "${{ steps.metadata.outputs.source_url }}"
+          assert_label dev.openharness.herdr.binary.amd64.sha256 "bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059"
+          assert_label dev.openharness.herdr.binary.arm64.sha256 "544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2"
+          assert_label dev.openharness.herdr.aggregate "unmodified separate work"
+
+          docker run --rm --entrypoint sh "$IMAGE" -c '
+            listing=$(mktemp)
+            trap '\''rm -f "$listing"'\'' EXIT
+            test -r /usr/share/doc/herdr/LICENSE
+            test -r /usr/share/doc/herdr/NOTICE
+            test -r /usr/share/doc/herdr/SOURCE-OFFER
+            grep -Fq "GNU AFFERO GENERAL PUBLIC LICENSE" /usr/share/doc/herdr/LICENSE
+            cd /usr/share/src/herdr
+            sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256
+            tar -tzf herdr-0.7.4-corresponding-source.tar.gz > "$listing"
+            grep -Fqx "herdr-0.7.4/OPENHARNESS-CORRESPONDING-SOURCE.md" "$listing"
+            grep -Eq "^herdr-0\\.7\\.4/vendor/cargo/[^/]+-[0-9][^/]*/\\.cargo-checksum\\.json$" "$listing"
+            test "$(grep -Ec "^herdr-0\\.7\\.4/vendor/zig-global-cache/p/[^/]+/$" "$listing")" -eq 36
+          '
+
+      # Source-first publication is intentional: the already-smoked image embeds
+      # this bundle, and a retry can safely resume after a source-only release.
+      - name: Publish or reuse byte-identical Herdr source assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.parse.outputs.version }}"
+          REUSE_DIR="$RUNNER_TEMP/herdr-release-reuse"
+          mkdir -p "$REUSE_DIR"
+
+          if ! gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release create "$VERSION" \
+              --title "v${VERSION}" \
+              --notes-file "${{ steps.notes.outputs.notes_file }}"
+          fi
+
+          existing_assets=$(gh release view "$VERSION" --json assets --jq '.assets[].name')
+          ensure_asset() {
+            local_path=$1
+            asset_name=$(basename "$local_path")
+            if printf '%s\n' "$existing_assets" | grep -Fqx "$asset_name"; then
+              asset_dir="$REUSE_DIR/$asset_name"
+              mkdir -p "$asset_dir"
+              gh release download "$VERSION" --pattern "$asset_name" --dir "$asset_dir"
+              cmp "$local_path" "$asset_dir/$asset_name" || {
+                echo "Existing release asset differs; refusing overwrite: $asset_name" >&2
+                exit 1
+              }
+            else
+              gh release upload "$VERSION" "$local_path"
+            fi
+          }
+
+          ensure_asset "${{ steps.metadata.outputs.archive }}"
+          ensure_asset "${{ steps.metadata.outputs.checksum }}"
+          ensure_asset "${{ steps.metadata.outputs.license }}"
+          ensure_asset "${{ steps.metadata.outputs.notice }}"
+          ensure_asset "${{ steps.metadata.outputs.source_offer }}"
+
+      - name: Verify all five Herdr assets before image push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.parse.outputs.version }}"
+          VERIFY_DIR="$RUNNER_TEMP/herdr-release-prepush"
+          mkdir -p "$VERIFY_DIR"
+          gh release download "$VERSION" --pattern 'herdr-0.7.4-*' --dir "$VERIFY_DIR"
+          cmp "$VERIFY_DIR/herdr-0.7.4-corresponding-source.tar.gz" "${{ steps.metadata.outputs.archive }}"
+          cmp "$VERIFY_DIR/herdr-0.7.4-corresponding-source.tar.gz.sha256" "${{ steps.metadata.outputs.checksum }}"
+          cmp "$VERIFY_DIR/herdr-0.7.4-LICENSE" "${{ steps.metadata.outputs.license }}"
+          cmp "$VERIFY_DIR/herdr-0.7.4-NOTICE" "${{ steps.metadata.outputs.notice }}"
+          cmp "$VERIFY_DIR/herdr-0.7.4-SOURCE-OFFER" "${{ steps.metadata.outputs.source_offer }}"
+          (cd "$VERIFY_DIR" && sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256)
+          SOURCE_LISTING="$VERIFY_DIR/herdr-0.7.4-corresponding-source.tar.gz.listing"
+          tar -tzf "$VERIFY_DIR/herdr-0.7.4-corresponding-source.tar.gz" > "$SOURCE_LISTING"
+          grep -Eq '^herdr-0\.7\.4/vendor/cargo/[^/]+-[0-9][^/]*/\.cargo-checksum\.json$' "$SOURCE_LISTING"
+          test "$(grep -Ec '^herdr-0\.7\.4/vendor/zig-global-cache/p/[^/]+/$' "$SOURCE_LISTING")" -eq 36
+
+      - name: Reuse or push version image, then push latest from it
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           IMAGE=ghcr.io/mifunedev/openharness:${{ steps.parse.outputs.version }}
           LATEST=ghcr.io/mifunedev/openharness:latest
+          EXPECTED_SOURCE_SHA="${{ steps.metadata.outputs.bundle_sha }}"
+          MANIFEST_URL="https://ghcr.io/v2/mifunedev/openharness/manifests/${{ steps.parse.outputs.version }}"
 
-          docker push "$IMAGE"
+          # Distinguish a confirmed 404 from auth/network/registry failures.
+          # Any indeterminate response fails closed rather than risking an
+          # overwrite of an immutable CalVer image tag.
+          registry_token=$(curl --fail --silent --show-error \
+            --user "${GITHUB_ACTOR}:${GH_TOKEN}" \
+            "https://ghcr.io/token?service=ghcr.io&scope=repository:mifunedev/openharness:pull" \
+            | jq -er '.token')
+          manifest_status=$(curl --silent --show-error --output "$RUNNER_TEMP/version-manifest.json" \
+            --write-out '%{http_code}' \
+            --header "Authorization: Bearer ${registry_token}" \
+            --header 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+            "$MANIFEST_URL")
+
+          case "$manifest_status" in
+            200)
+              echo "Version tag already exists; verifying and reusing it without overwrite"
+              docker pull "$IMAGE"
+              ;;
+            404)
+              echo "Registry confirmed version tag is absent; publishing the verified local image"
+              docker push "$IMAGE"
+              docker pull "$IMAGE"
+              ;;
+            *)
+              echo "Indeterminate GHCR manifest response ${manifest_status}; refusing version-tag push" >&2
+              cat "$RUNNER_TEMP/version-manifest.json" >&2 2>/dev/null || true
+              exit 1
+              ;;
+          esac
+
+          # $IMAGE now names the exact pulled version object in both paths.
+          # Verify it before deriving latest, including the retry/reuse path.
+          remote_revision=$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")
+          remote_source_sha=$(docker image inspect --format '{{ index .Config.Labels "dev.openharness.herdr.source.sha256" }}' "$IMAGE")
+          test "$remote_revision" = "$GITHUB_SHA" || {
+            echo "Version image revision differs; refusing latest update" >&2
+            exit 1
+          }
+          test "$remote_source_sha" = "$EXPECTED_SOURCE_SHA" || {
+            echo "Version image Herdr source SHA differs; refusing latest update" >&2
+            exit 1
+          }
+          remote_version_digest=$(docker image inspect --format '{{ index .RepoDigests 0 }}' "$IMAGE")
+          case "$remote_version_digest" in
+            *@sha256:*) ;;
+            *) echo "Version image has no registry digest" >&2; exit 1 ;;
+          esac
+
+          # Move latest from that exact verified object, never from another tag.
+          docker tag "$IMAGE" "$LATEST"
           docker push "$LATEST"
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: v${{ steps.parse.outputs.version }}
-          body_path: ${{ steps.notes.outputs.notes_file }}
+      - name: Verify remote image and release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.parse.outputs.version }}"
+          IMAGE="ghcr.io/mifunedev/openharness:${VERSION}"
+          LATEST=ghcr.io/mifunedev/openharness:latest
+          VERIFY_DIR="$RUNNER_TEMP/herdr-release-remote"
+
+          docker image rm "$IMAGE" "$LATEST" >/dev/null 2>&1 || true
+          docker pull "$IMAGE"
+          docker pull "$LATEST"
+
+          version_digest=$(docker image inspect --format '{{ index .RepoDigests 0 }}' "$IMAGE")
+          latest_digest=$(docker image inspect --format '{{ index .RepoDigests 0 }}' "$LATEST")
+          test "${version_digest#*@}" = "${latest_digest#*@}" || {
+            echo "Version and latest resolve to different digests" >&2
+            exit 1
+          }
+          for published_image in "$IMAGE" "$LATEST"; do
+            test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$published_image")" = "$GITHUB_SHA"
+            test "$(docker image inspect --format '{{ index .Config.Labels "dev.openharness.herdr.source.sha256" }}' "$published_image")" = \
+              "${{ steps.metadata.outputs.bundle_sha }}"
+            test "$(docker image inspect --format '{{ index .Config.Labels "dev.openharness.herdr.source.url" }}' "$published_image")" = \
+              "${{ steps.metadata.outputs.source_url }}"
+          done
+          docker run --rm --entrypoint sh "$IMAGE" -c '
+            listing=$(mktemp)
+            trap '\''rm -f "$listing"'\'' EXIT
+            cd /usr/share/src/herdr
+            sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256
+            test -r /usr/share/doc/herdr/LICENSE
+            test -r /usr/share/doc/herdr/NOTICE
+            test -r /usr/share/doc/herdr/SOURCE-OFFER
+            tar -tzf herdr-0.7.4-corresponding-source.tar.gz > "$listing"
+            grep -Eq "^herdr-0\\.7\\.4/vendor/cargo/[^/]+-[0-9][^/]*/\\.cargo-checksum\\.json$" "$listing"
+            test "$(grep -Ec "^herdr-0\\.7\\.4/vendor/zig-global-cache/p/[^/]+/$" "$listing")" -eq 36
+          '
+
+          mkdir -p "$VERIFY_DIR"
+          gh release download "$VERSION" --pattern 'herdr-0.7.4-*' --dir "$VERIFY_DIR"
+          cmp "$VERIFY_DIR/herdr-0.7.4-corresponding-source.tar.gz" "${{ steps.metadata.outputs.archive }}"
+          cmp "$VERIFY_DIR/herdr-0.7.4-corresponding-source.tar.gz.sha256" "${{ steps.metadata.outputs.checksum }}"
+          (cd "$VERIFY_DIR" && sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256)
+          cmp "$VERIFY_DIR/herdr-0.7.4-LICENSE" "${{ steps.metadata.outputs.license }}"
+          cmp "$VERIFY_DIR/herdr-0.7.4-NOTICE" "${{ steps.metadata.outputs.notice }}"
+          cmp "$VERIFY_DIR/herdr-0.7.4-SOURCE-OFFER" "${{ steps.metadata.outputs.source_offer }}"
 
   # The `oh` CLI publish lives in its own workflow (.github/workflows/publish-cli.yml)
   # so a CLI-only change can publish via workflow_dispatch without a CalVer release;

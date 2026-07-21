@@ -277,6 +277,8 @@ describe("runInit", () => {
     expect(existsSync(join(t, ".oh/cli/package.json"))).toBe(true);
     expect(existsSync(join(t, ".oh/cli/src/cli.ts"))).toBe(true);
     expect(existsSync(join(t, ".oh/templates/harness.yaml"))).toBe(true);
+    expect(existsSync(join(t, ".oh/legal/herdr/NOTICE"))).toBe(true);
+    expect(existsSync(join(t, ".oh/legal/herdr/SOURCE-OFFER"))).toBe(true);
     // Volatile build artifacts are never shipped.
     expect(existsSync(join(t, ".oh/cli/node_modules"))).toBe(false);
     expect(existsSync(join(t, ".oh/cli/dist"))).toBe(false);

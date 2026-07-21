@@ -30,12 +30,17 @@ spec-retro
 eval
 health-check
 retro
+herdr
 
 # --- Orchestrator scripts (.oh/scripts/) ---
 .oh/scripts/ralph.sh
 .oh/scripts/cron-runtime.ts
 .oh/scripts/sandbox-healthcheck.sh
 .oh/scripts/link-providers.sh
+.oh/scripts/reconcile-herdr-integrations.sh
+.oh/scripts/package-herdr-corresponding-source.sh
+.oh/legal/herdr/NOTICE
+.oh/legal/herdr/SOURCE-OFFER
 
 # --- Root lifecycle entrypoints ---
 Makefile

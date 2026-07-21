@@ -54,6 +54,9 @@ services:
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
       - GH_TOKEN=${GH_TOKEN:-}
       - XAI_API_KEY=${XAI_API_KEY:-}
+      - HERDR_AUTO_INTEGRATIONS=${HERDR_AUTO_INTEGRATIONS:-true}
+      - INSTALL_HERMES=${INSTALL_HERMES:-false}
+      - HERMES_HOME=${OH_PROJECT_ROOT:-/home/sandbox/harness}/.hermes
       - OH_PROJECT_ROOT=${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - OH_IMAGE_ONLY=1
       - CRONS_DIR=${CRONS_DIR:-.oh/crons}

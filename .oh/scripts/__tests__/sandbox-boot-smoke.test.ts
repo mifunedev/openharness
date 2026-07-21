@@ -98,6 +98,17 @@ describe("sandbox boot smoke", () => {
     expect(composeCalls).toContain("down -v --remove-orphans");
   });
 
+  it("can recheck the same persisted sandbox after a restart", () => {
+    const fx = fixture();
+
+    const result = runSmoke(fx, { BOOT_SMOKE_RESTART_ONCE: "true" });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("first boot passed; restarting");
+    expect(result.stdout).toContain("sandbox boot smoke ok");
+    expect(readFileSync(fx.composeLog, "utf8")).toContain("restart sandbox");
+  });
+
   it("prints compose, health, and log diagnostics on timeout", () => {
     const fx = fixture({ dockerExecAlwaysFails: true });
 

@@ -277,6 +277,17 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
   fi
 fi
 
+# Install the official integrations bundled with the pinned Herdr binary after
+# provider homes, skill links, ownership, and optional Hermes runtime state are
+# ready. Reconciliation is offline and idempotent. Failure is visible but does
+# not brick the recovery shell; set HERDR_AUTO_INTEGRATIONS=false to opt out.
+HERDR_RECONCILER="$HARNESS/.oh/scripts/reconcile-herdr-integrations.sh"
+if [ -x "$HERDR_RECONCILER" ]; then
+  if ! gosu sandbox env HOME=/home/sandbox bash "$HERDR_RECONCILER"; then
+    echo "[entrypoint] WARNING: one or more Herdr integrations failed; run: bash .oh/scripts/reconcile-herdr-integrations.sh" >&2
+  fi
+fi
+
 # ─── Optional: sshd for direct container SSH (opt-in via SANDBOX_SSH=true) ──
 # Publishes over the docker-compose.ssh.yml overlay. We start sshd as a
 # BACKGROUND daemon (no -D) so it runs alongside `sleep infinity` — PID 1 stays

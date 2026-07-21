@@ -6,15 +6,21 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 COMPOSE=${BOOT_SMOKE_COMPOSE:-$REPO_ROOT/.oh/scripts/docker-compose.sh}
+COMPOSE_FILE=${BOOT_SMOKE_COMPOSE_FILE:-}
 SERVICE=${BOOT_SMOKE_SERVICE:-sandbox}
 TIMEOUT=${BOOT_SMOKE_TIMEOUT_SECONDS:-600}
 INTERVAL=${BOOT_SMOKE_INTERVAL_SECONDS:-10}
 UP_ARGS=${BOOT_SMOKE_UP_ARGS:-up -d --no-build}
 DOWN_ARGS=${BOOT_SMOKE_DOWN_ARGS:-down -v --remove-orphans}
 HEALTH_CMD=${BOOT_SMOKE_HEALTH_CMD:-bash ${OH_PROJECT_ROOT:-/home/sandbox/harness}/.oh/scripts/sandbox-healthcheck.sh}
+RESTART_ONCE=${BOOT_SMOKE_RESTART_ONCE:-false}
 
 compose() {
-  bash "$COMPOSE" "$@"
+  if [ -n "$COMPOSE_FILE" ]; then
+    docker compose -f "$COMPOSE_FILE" "$@"
+  else
+    bash "$COMPOSE" "$@"
+  fi
 }
 
 teardown() {
@@ -42,6 +48,7 @@ compose $UP_ARGS "$SERVICE"
 end=$(( $(date +%s) + TIMEOUT ))
 last_status="starting"
 cid=""
+restarted=0
 while [ "$(date +%s)" -le "$end" ]; do
   cid=$(compose ps -q "$SERVICE" 2>/dev/null || true)
   if [ -z "$cid" ]; then
@@ -51,11 +58,42 @@ while [ "$(date +%s)" -le "$end" ]; do
     # avoids waiting for Docker's start_period while still exercising the same check.
     # shellcheck disable=SC2086 # HEALTH_CMD intentionally splits into command argv.
     if docker exec "$cid" $HEALTH_CMD >/tmp/sandbox-boot-smoke-health.out 2>/tmp/sandbox-boot-smoke-health.err; then
-      if ! docker exec -u sandbox "$cid" sh -lc \
-        'test "$(herdr --version)" = "herdr 0.7.4" && test -w "$HOME/.config" && test -w "$HOME/.herdr"'; then
-        echo "sandbox boot smoke failed: Herdr runtime or writable state is unavailable" >&2
+      if ! docker exec -u sandbox "$cid" sh -lc '
+        source_listing=$(mktemp) &&
+        trap '\''rm -f "$source_listing"'\'' EXIT &&
+        test "$(herdr --version)" = "herdr 0.7.4" &&
+        test -r /usr/share/doc/herdr/LICENSE &&
+        test -r /usr/share/doc/herdr/NOTICE &&
+        test -r /usr/share/doc/herdr/SOURCE-OFFER &&
+        grep -Fq "GNU AFFERO GENERAL PUBLIC LICENSE" /usr/share/doc/herdr/LICENSE &&
+        test -r /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz.sha256 &&
+        (cd /usr/share/src/herdr &&
+          sha256sum -c herdr-0.7.4-corresponding-source.tar.gz.sha256) &&
+        test "$(sha256sum /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz | awk '\''{ print $1 }'\'')" = "320c72c3d02d538d5c909e1e7d377485119351973b7a51c31a7fc33359c77183" &&
+        tar -tzf /usr/share/src/herdr/herdr-0.7.4-corresponding-source.tar.gz > "$source_listing" &&
+        grep -Fqx "herdr-0.7.4/OPENHARNESS-CORRESPONDING-SOURCE.md" "$source_listing" &&
+        grep -Eq "^herdr-0\\.7\\.4/vendor/cargo/[^/]+-[0-9][^/]*/\\.cargo-checksum\\.json$" "$source_listing" &&
+        test "$(grep -Ec "^herdr-0\\.7\\.4/vendor/zig-global-cache/p/[^/]+/$" "$source_listing")" -eq 36 &&
+        grep -Fqx "herdr-0.7.4/vendor/zig-global-cache/p/N-V-__8AAGmZhABbsPJLfbqrh6JTHsXhY6qCaLAQyx25e0XE/" "$source_listing" &&
+        grep -Fqx "herdr-0.7.4/vendor/zig-global-cache/p/uucode-0.1.0-ZZjBPj96QADXyt5sqwBJUnhaDYs_qBeeKijZvlRa0eqM/" "$source_listing" &&
+        grep -Fqx "herdr-0.7.4/vendor/zig-global-cache/p/uucode-0.2.0-ZZjBPqZVVABQepOqZHR7vV_NcaN-wats0IB6o-Exj6m9/" "$source_listing" &&
+        test -w "$HOME/.config" && test -w "$HOME/.herdr" &&
+        status="$(herdr integration status)" &&
+        printf "%s\n" "$status" | grep -q "^claude: current (v7)" &&
+        printf "%s\n" "$status" | grep -q "^codex: current (v6)" &&
+        printf "%s\n" "$status" | grep -q "^pi: current (v5)" &&
+        bash "${OH_PROJECT_ROOT:-/home/sandbox/harness}/.oh/scripts/__tests__/herdr-integrations-real.sh"
+      '; then
+        echo "sandbox boot smoke failed: Herdr runtime, writable state, or default integrations are unavailable" >&2
         status_diagnostics "$cid"
         exit 1
+      fi
+      if [ "$RESTART_ONCE" = "true" ] && [ "$restarted" -eq 0 ]; then
+        echo "sandbox boot smoke: first boot passed; restarting $SERVICE for persistence check"
+        compose restart "$SERVICE"
+        restarted=1
+        last_status="restarting"
+        continue
       fi
       echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD and Herdr runtime checks"
       exit 0

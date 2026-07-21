@@ -352,7 +352,7 @@ fi
 
 # ─── GitHub CLI auth via PAT (optional) ─────────────────────────────
 # When GH_TOKEN is provided, persist it into ~/.config/gh/hosts.yml on
-# disk (via the config-dir volume) so auth survives env changes and
+# disk (via the config-dir volume that backs ~/.config) so auth survives env changes and
 # `gh auth setup-git` has proper host config to reference. gh refuses
 # `--with-token` while GH_TOKEN is in env, so unset it in the subprocess.
 # Disk-auth check uses `env -u GH_TOKEN` so we don't mistake the env var

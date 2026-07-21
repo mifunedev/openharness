@@ -216,7 +216,7 @@ docker run -d --name "$NAME" --restart unless-stopped --init \
   -v claude-auth:/home/sandbox/.claude \
   -v config-dir:/home/sandbox/.config \
   -v herdr-data:/home/sandbox/.herdr \
-  -v oh_ssh:/home/sandbox/.ssh \
+  -v ssh-config:/home/sandbox/.ssh \
   "$IMAGE" sleep infinity
 
 # ── 3. Verify the seed + provider wiring ───────────────────────────

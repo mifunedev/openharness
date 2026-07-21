@@ -1,5 +1,6 @@
-PROMPT:
-> Use an expoert Advisor to orchestrate...
-- /spec plan using @"pm (agent)" to build a detailed TaskGraph to track $PLAN completion.
-- /delegate executors using /spec execute
-- /audit pr until green run /teach as PR comment.
+Advisor orchestrates expert specialized delegates to complete task:
+- Begin by exploring best approach, generate /prd -> /ralph
+- 2 critics audit
+- implement opus delegate fan out with reasoning correlated to subtask complexity
+- delegates /audit pr
+- Ready PR.

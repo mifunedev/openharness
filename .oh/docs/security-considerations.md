@@ -40,7 +40,7 @@ templates are committed.
   - `/.oh/config.json` (`.gitignore:8`) — host-local harness config.
   - `**/auth.json` and `**/.credentials.json` (`.gitignore:63-64`) — provider auth blobs.
 - **Template allowlist:** the *tracked* files are templates that hold no real secrets — e.g. [`.devcontainer/.example.env`](../../.devcontainer/.example.env) and `.claude/.example.env.claude`. The operator copies the template to the real (gitignored) `.devcontainer/.env`; `install.sh` writes host defaults there. The `.example.env` header spells this out.
-- **In the sandbox:** auth/state persists in Docker **named volumes** (`claude-auth`, `codex-auth`, `pi-auth`, `config-dir`, …), not in the repo — see [`.devcontainer/docker-compose.yml:31-41`](../../.devcontainer/docker-compose.yml).
+- **In the sandbox:** auth/state persists in Docker **named volumes** (`claude-auth`, `codex-auth`, `pi-auth`, `ssh-config`, `config-dir`, …), not in the repo — see [`.devcontainer/docker-compose.yml:31-41`](../../.devcontainer/docker-compose.yml).
 
 **What this does not do:** it does not scan commit *contents* for
 secrets pasted into a tracked file by mistake. That is the job of the

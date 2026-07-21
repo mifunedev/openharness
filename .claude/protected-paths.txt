@@ -69,6 +69,7 @@ Makefile
 .oh/context/USER.md
 
 # --- Sub-agents invoked by skills ---
+.claude/agents/architect.md
 .claude/agents/critic.md
 .claude/agents/implementer.md
 .claude/agents/pm.md

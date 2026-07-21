@@ -31,7 +31,7 @@ recording the raw signals, the normalized `signals`, the per-term `contributions
 |--------|:--:|---|---|
 | `consistency` | 30 | `clusterSize / N` | Self-consistency cluster membership as a fraction of the cohort (N = cohort size). Missing `clusterSize` → singleton (1). **Highest-variance signal** — clustering is a *model* step; the scorer only consumes `clusterSize`. Set `consistency: 0` for open-ended outputs where clustering is unreliable. |
 | `evalPass` | 20 | `{0→1.0, 2|null→0.5, 1→0.0}` | `/eval` runner rc: 0 PASS, 1 REGRESSION, 2 SKIPPED, null N/A. A regression (1) is the hard-floor breaker. |
-| `auditPass` | 15 | `{PASS→1.0, null→0.5, FAIL→0.0}` | `/audit` promotability verdict. A FAIL is the hard-floor breaker. |
+| `auditPass` | 15 | `{PASS→1.0, null→0.5, FAIL→0.0}` | `/audit implementation <slug>` promotability verdict. A FAIL is the hard-floor breaker. |
 | `cost` | 10 | `1 − (cost − minCost)/max(maxCost−minCost, 1)` | Cohort-relative token cost; cheapest → 1, most expensive → 0. Missing `costTokens` → neutral 0.5. The `max(…, 1)` guard makes all-equal-cost cohorts score 1. |
 | `judge` | 25 | `judgeScore ?? 0.5` | Optional verifier-LM score 0..1; **neutral 0.5 when the judge is disabled** (null). The one model-side coefficient — see *judge:0 determinism* below. |
 
@@ -52,7 +52,7 @@ export const DEFAULT_WEIGHTS = Object.freeze({
 });
 ```
 
-75 of the 100 points are **signals we own** (self-consistency, `/eval` rc, `/audit`
+75 of the 100 points are **signals we own** (self-consistency, `/eval` rc, `/audit implementation`
 verdict, cost); the remaining 25 is the one model-judge coefficient. The vector is
 `Object.freeze`d and version-controlled so tuning goes through review (as `/benchmark`);
 `.oh/evals/probes/weigh-scorer-contract.sh` pins the frozen keys + the 100-sum.
@@ -87,7 +87,7 @@ explicit shape — never a silent least-bad pick:
   "floorViolations": [{ "id": "…", "cause": "eval-regression" }, …] }
 ```
 
-Same posture as `/audit` and `/benchmark`: name the floor that killed the cohort rather
+Same posture as `/audit implementation` and `/benchmark`: name the floor that killed the cohort rather
 than promote a failure.
 
 ## Selection methods
@@ -118,7 +118,7 @@ and at `judge: 25` and compare the selected id(s).**
   signals already dominate — the judge is decorative and can be safely lowered (toward a
   cheaper, more reproducible weight).
 - If the selection **flips**, the model judge is the swing vote — inspect *which* trajectory
-  it elevated and whether that matches ground truth (`/eval` + `/audit` on the picked path)
+  it elevated and whether that matches ground truth (`/eval` + `/audit implementation <slug>` on the picked path)
   before trusting a high `judge` weight. A judge that routinely overrides a green-eval,
   PASS-audit, high-consistency candidate is a Goodhart risk, not a signal.
 

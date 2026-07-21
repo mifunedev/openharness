@@ -43,6 +43,9 @@ Parse `$ARGUMENTS`:
 WATCHDOG_REPO="${WATCHDOG_REPO:-mifunedev/openharness}"
 WATCHDOG_STALE_HOURS="${WATCHDOG_STALE_HOURS:-2}"
 WATCHDOG_ACTION="${WATCHDOG_ACTION:-all}"
+AUDIT_ROOT="${AUDIT_ROOT:-$(git rev-parse --show-toplevel)}"
+AUDIT_ROOT=$(cd "$AUDIT_ROOT" && pwd -P)
+export AUDIT_ROOT
 ```
 
 ## Action: autopilot draft PRs
@@ -54,35 +57,50 @@ ready-for-review PR when safe.
 
 ### 1. Fetch draft candidates in one query
 
+Create an invocation-scoped temporary directory with `mktemp -d` and an
+`EXIT INT TERM HUP` cleanup trap. Acquire candidates once through the shared seam:
+
 ```bash
-gh pr list --repo "$WATCHDOG_REPO" --state open --label autopilot \
-  --json number,title,url,headRefName,baseRefName,isDraft,mergeable,mergeStateStatus,statusCheckRollup,updatedAt,labels \
-  --jq '.[] | select(.isDraft == true)' > /tmp/watchdog-draft-prs.json
+AUDIT_RUN_ID="${AUDIT_RUN_ID:-audit-$(date -u +%Y%m%dT%H%M%SZ)-watchdog-$BASHPID}"
+WATCHDOG_TMP=$(mktemp -d "${TMPDIR:-/tmp}/${AUDIT_RUN_ID}.watchdog.XXXXXX")
+trap 'rm -rf "$WATCHDOG_TMP"' EXIT INT TERM HUP
+"$AUDIT_ROOT/.oh/skills/audit/scripts/pr-acquire.sh" prs \
+  --repo "$WATCHDOG_REPO" --label autopilot \
+  | "$AUDIT_ROOT/.oh/skills/audit/scripts/pr-classify.sh" >"$WATCHDOG_TMP/candidates.json"
 ```
 
-If the file is empty, report `WATCHDOG_OK: no autopilot draft PRs`.
+Select records with `.isDraft == true`. If none exist, report
+`WATCHDOG_OK: no autopilot draft PRs`. Acquisition/classification failure is a
+watchdog failure, never an empty clean result.
 
 ### 2. Classify each draft
 
-For each draft PR, derive:
-
-- `age_hours`: hours since `updatedAt`
-- `ci`: `PASS`, `FAIL`, `PEND`, or `NONE` from `statusCheckRollup`
-- `promotable`: `mergeable == "MERGEABLE" && mergeStateStatus == "CLEAN" && ci == "PASS"`
-- `stale`: `age_hours >= WATCHDOG_STALE_HOURS`
-- `stuck`: stale plus one of: no active tmux session for the head branch, CI failed,
-  merge state dirty/conflicting/behind, or no status/check progress
+Consume classifier fields; never re-derive CI, mergeability, readiness, age, or
+promotability from raw GitHub JSON. The classifier supplies machine field
+`.ageSeconds`; a draft is stale exactly when
+`.ageSeconds >= (WATCHDOG_STALE_HOURS * 3600)`. With the default this preserves the
+2-hour policy without flooring to whole days. Do not use `.ageDays` or the queue's
+day threshold for the watchdog decision. Treat `.ci == "NONE"`
+or `"UNKNOWN"`, `.evidenceComplete != true`, and `.promotable != true` as blocked.
+A missing active tmux session may establish stuckness, but cannot override the
+classifier's readiness fields.
 
 ### 3. Safe actions
 
 Allowed mutations:
 
-1. **Promotable draft → mark ready.** If `promotable`, run:
+1. **Promotable draft → mark ready.** Immediately before the mutation, perform a
+   fresh focused acquisition and classification under the same run:
    ```bash
-   gh pr ready <PR> --repo "$WATCHDOG_REPO"
+   "$AUDIT_ROOT/.oh/skills/audit/scripts/pr-acquire.sh" pr --repo "$WATCHDOG_REPO" --pr "$PR" \
+     | "$AUDIT_ROOT/.oh/skills/audit/scripts/pr-classify.sh" >"$WATCHDOG_TMP/pre-action-$PR.json"
+   jq -e '.isDraft == true and .ci == "PASS" and .evidenceComplete == true
+          and .readyForReview == true and .promotable == true' \
+     "$WATCHDOG_TMP/pre-action-$PR.json" >/dev/null || exit 1
+   gh pr ready "$PR" --repo "$WATCHDOG_REPO"
    ```
-   Then verify `gh pr view <PR> --repo "$WATCHDOG_REPO" --json isDraft,mergeable,mergeStateStatus`
-   reports `isDraft == false`.
+   `NONE` is never accepted, even when local targeted checks passed. Then verify a
+   fresh `gh pr view` reports `isDraft == false`.
 
 2. **Stale/stuck draft → complete work first.** If stale or stuck but not
    promotable, check out the PR branch in an isolated worktree, finish the
@@ -106,13 +124,16 @@ gh pr view <PR> --repo "$WATCHDOG_REPO" \
   --json isDraft,mergeable,mergeStateStatus,statusCheckRollup
 ```
 
-Required:
+Required from the immediately preceding shared focused classifier JSON:
 
-- `isDraft == true` before the action
-- `mergeable == "MERGEABLE"`
-- `mergeStateStatus == "CLEAN"`
-- no failing or pending checks in `statusCheckRollup` unless the repo has no checks
-  and local targeted checks passed
+- `isDraft == true`
+- `ci == "PASS"` (`NONE`, `PENDING`, and `UNKNOWN` are blocked)
+- `evidenceComplete == true`
+- `readyForReview == true`
+- `promotable == true`
+
+Do not inspect `statusCheckRollup` independently or substitute local checks for
+missing GitHub CI.
 
 After `gh pr ready`, re-read the PR and require `isDraft == false`.
 
@@ -187,6 +208,23 @@ done
 
 Never kill a session merely because it is old. The terminal PR state plus the
 idle double-capture is the safety gate.
+
+## Destructive git under the cc-safety-net guard
+
+When completing/reaping work the watchdog may need destructive git —
+`git reset --hard <ref>`, `git clean -f`, `git branch -D`, `git worktree remove --force`,
+`git push --force`. cc-safety-net denies these inline, so route them through the
+file-invoked shim instead:
+
+```bash
+bash .oh/scripts/git-maintenance.sh worktree-remove <path>
+bash .oh/scripts/git-maintenance.sh branch-delete <branch>
+bash .oh/scripts/git-maintenance.sh reset-hard <ref>
+```
+
+Scope: only **non-agent-mediated** invocations (raw scheduler/tmux shell scripts)
+bypass PreToolUse hooks. Agent-driven crons and any agent-mediated run do **not**
+bypass them, so they must use the shim.
 
 ## Reporting
 

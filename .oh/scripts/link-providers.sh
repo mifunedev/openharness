@@ -7,6 +7,11 @@ set -euo pipefail
 
 PROTECTED_PATHS_FILE=".claude/protected-paths.txt"
 
+# cc-safety-net destructive-command guard: pinned binary installed at image
+# build time (see .devcontainer/Dockerfile). Boot validation is presence +
+# version only — zero npm-registry access. See install-decision.md.
+CC_SAFETY_NET_PIN="1.0.6"
+
 required_files=(
   ".oh/skills/git/SKILL.md"
   ".oh/skills/t3/references/sandbox-processes.md"
@@ -22,7 +27,7 @@ required_execs=(
   ".oh/hooks/warn-devtcp.sh"
   ".oh/skills/autopilot/autopilot-caps.sh"
   ".oh/skills/cloudflared/scripts/run.sh"
-  ".oh/skills/context-audit/runner.sh"
+  ".oh/skills/audit/scripts/context-audit-runner.sh"
   ".oh/skills/eval/run.sh"
   ".oh/skills/prompt-miner/prompt-miner-caps.sh"
   ".oh/skills/prompt-miner/scripts/render-log-entry.sh"
@@ -167,6 +172,34 @@ check_protected_paths() {
   done < "$PROTECTED_PATHS_FILE"
 }
 
+check_cc_safety_net() {
+  # New check-kind: the required_* arrays above validate repo-relative files;
+  # cc-safety-net is a global binary on PATH, so it needs a presence + version
+  # check instead. Fails loudly via the shared `fail` path when the binary is
+  # missing or version-mismatched — UNLESS CC_SAFETY_NET_OFF=1, the kill-switch,
+  # which must never brick boot (downgrade to a warning and continue).
+  local off="${CC_SAFETY_NET_OFF:-}" version
+  if ! command -v cc-safety-net >/dev/null 2>&1; then
+    if [ "$off" = "1" ]; then
+      echo "WARNING: cc-safety-net not on PATH, but CC_SAFETY_NET_OFF=1 — continuing" >&2
+      return 0
+    fi
+    fail "cc-safety-net binary not found on PATH (expected @${CC_SAFETY_NET_PIN}); install via .devcontainer/Dockerfile, or set CC_SAFETY_NET_OFF=1 to bypass"
+    return
+  fi
+  version="$(cc-safety-net --version 2>/dev/null | tr -d '[:space:]' || true)"
+  case "$version" in
+    *"$CC_SAFETY_NET_PIN"*) ;;
+    *)
+      if [ "$off" = "1" ]; then
+        echo "WARNING: cc-safety-net version '$version' != pin ${CC_SAFETY_NET_PIN}, but CC_SAFETY_NET_OFF=1 — continuing" >&2
+        return 0
+      fi
+      fail "cc-safety-net version mismatch: found '$version', expected ${CC_SAFETY_NET_PIN}; re-pin per install-decision.md, or set CC_SAFETY_NET_OFF=1 to bypass"
+      ;;
+  esac
+}
+
 check_links() {
   if [ ! -d .oh/skills ]; then
     fail ".oh/skills is missing — the vendored skill pack is not present"
@@ -179,6 +212,20 @@ check_links() {
   for f in "${required_execs[@]}"; do
     [ -x "$f" ] || fail "required pack executable missing or not executable: $f"
   done
+
+  # cc-safety-net enforcement is scoped to environments where the guard is
+  # actually enabled: the sandbox container exports CC_SAFETY_NET_STRICT=1 via
+  # docker-compose, and the Dockerfile guarantees the binary there. CI runners
+  # and pre-rebuild hosts also run this script (both --init and --check) but
+  # never set that marker — failing there would recreate the #639
+  # boot-adjacent failure class. The eval probe cc-safety-net-wiring.sh owns
+  # non-sandbox verification with proper SKIP semantics.
+  if [ "${CC_SAFETY_NET_STRICT:-}" = "1" ]; then
+    check_cc_safety_net
+  else
+    command -v cc-safety-net >/dev/null 2>&1 || \
+      echo "note: cc-safety-net not on PATH (enforced only where CC_SAFETY_NET_STRICT=1, i.e. inside the sandbox)" >&2
+  fi
 
   local link path expected_target
   for link in "${provider_links[@]}"; do

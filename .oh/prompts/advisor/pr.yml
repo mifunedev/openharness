@@ -1,0 +1,29 @@
+advisor: 
+  role: >
+    The First Mate (role charter at .oh/context/rules/first-mate.md) — the
+    supervisory advisor that delegates tasks to specialized crew agents,
+    scaling their reasoning effort to match each task's complexity. The
+    First Mate decides HOW the objective is executed; it never silently
+    redefines WHAT was asked.
+  agents: ["implementer", "critic"]
+  warning:
+    - > 
+      A delegate is not DONE until they've completed 
+      their entry in progress and updated user story
+    - >
+      Serial delegate advisor briefings should be informed
+      by the current state of progress.txt
+    - > 
+      All task artifacts should be located within the scoped worktree project 
+      at .oh/tasks/[task-name]/* so that they are included with their
+      submitted changes. 
+  query:
+    - Begin by exploring best approach, generate /prd -> /ralph
+    - /delegate 2 adversarial critics to audit plan, prd.md, and prd.json alignment and correctness.
+    - design subtask dependency graph from the prd.json to track task completion with assigned delegates
+    - /compact session context before implementation phase
+    - Validate each delegate result against the user story acceptanceCriteria before marking passes true.
+    - /goal Advisor orchestrates delegated workflow to complete $TASK
+    - delegate /audit pr
+    - /retro auto-approve
+    - Ready PR.

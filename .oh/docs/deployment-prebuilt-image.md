@@ -215,6 +215,7 @@ docker run -d --name "$NAME" --restart unless-stopped --init \
   -v oh_workspace:/home/sandbox/harness \
   -v claude-auth:/home/sandbox/.claude \
   -v config-dir:/home/sandbox/.config \
+  -v herdr-data:/home/sandbox/.herdr \
   -v ssh-config:/home/sandbox/.ssh \
   "$IMAGE" sleep infinity
 
@@ -240,9 +241,9 @@ until [ "$(docker inspect -f '{{.State.Health.Status}}' "$NAME" 2>/dev/null)" = 
 done
 
 docker exec -it -u sandbox "$NAME" zsh   # interactive shell (bash also available)
-# then, inside the container:
-#   claude        # start the coding agent (or: codex, pi)
-#   gh auth login && gh auth setup-git   # one-time, if GH_TOKEN was not passed
+# first command inside the container:
+#   herdr
+# then complete gh/provider auth and launch agents from Herdr panes
 ```
 
 The image has no `HEALTHCHECK` of its own, so `docker run` won't populate

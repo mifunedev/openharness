@@ -3,11 +3,11 @@ name: autopilot
 description: |
   Self-improvement loop: each hourly run implements the oldest open issue
   labeled `autopilot` that has no open PR. When the queue is empty it runs
-  first-principles `/harness-audit` research, files its own `autopilot`
+  first-principles `/audit harness` research, files its own `autopilot`
   ticket from the top-ranked finding, and builds that. Decomposes via the pm
   agent, then runs `/ship-spec --issue`, which owns the build end-to-end
   (the two compacts bracketing implement, a worktree Advisor, `/delegate`
-  workers running `.oh/scripts/ralph.sh`, the `/eval` gate, and the `/pr-audit`
+  workers running `.oh/scripts/ralph.sh`, the `/eval` gate, and the `/audit pr`
   promotable undraft) through to a ready-for-review PR whose description
   states why this item was selected.
   Harness-infra only (skills/rules/docs/scripts/crons/wiki) — never sandbox
@@ -20,9 +20,9 @@ argument-hint: "[--dry-run] [--executor=ship-spec|delegate-advisor|ralph] [--rep
 
 # Autopilot
 
-Unattended self-improvement loop for the harness. Each run picks one harness-infra item from the GitHub `autopilot` issue queue (or researches and files one when the queue is empty), builds it end-to-end through `pm decompose → /goal Advisor handoff → /ship-spec --issue`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. `/ship-spec` now owns the whole build pipeline (`/compact → worktree Advisor → Advisor-monitored .oh/scripts/ralph.sh loop → /eval → /compact → /pr-audit undraft`); autopilot **defers** to it rather than re-running implement/eval/finalize. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
+Unattended self-improvement loop for the harness. Each run picks one harness-infra item from the GitHub `autopilot` issue queue (or researches and files one when the queue is empty), builds it end-to-end through `pm decompose → /goal Advisor handoff → /ship-spec --issue`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. `/ship-spec` now owns the whole build pipeline (`/compact → worktree Advisor → Advisor-monitored .oh/scripts/ralph.sh loop → /eval → /compact → /audit pr undraft`); autopilot **defers** to it rather than re-running implement/eval/finalize. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
 
-Executor toggle: `--executor=ship-spec|delegate-advisor|ralph`, or `AUTOPILOT_EXECUTOR=ship-spec|delegate-advisor|ralph`. Default `ship-spec` **defers the whole build to `/ship-spec`** (which owns the worktree Advisor, the two compacts, an **Advisor-monitored `.oh/scripts/ralph.sh` loop** with `/delegate` optional inside an iteration, `/eval`, and the `/pr-audit` promotable undraft). `delegate-advisor` is the same deferral but passes `--executor=delegate-advisor` to `/ship-spec` for the legacy `/delegate --plan` worker fan-out. `ralph` remains a legacy inline fallback that drives `.oh/scripts/ralph.sh "$SLUG"` directly against the scaffolded task and finalizes inline (idempotent: a no-op if `/ship-spec` already reached `STATUS: COMPLETE`).
+Executor toggle: `--executor=ship-spec|delegate-advisor|ralph`, or `AUTOPILOT_EXECUTOR=ship-spec|delegate-advisor|ralph`. Default `ship-spec` **defers the whole build to `/ship-spec`** (which owns the worktree Advisor, the two compacts, an **Advisor-monitored `.oh/scripts/ralph.sh` loop** with `/delegate` optional inside an iteration, `/eval`, and the `/audit pr` promotable undraft). `delegate-advisor` is the same deferral but passes `--executor=delegate-advisor` to `/ship-spec` for the legacy `/delegate --plan` worker fan-out. `ralph` remains a legacy inline fallback that drives `.oh/scripts/ralph.sh "$SLUG"` directly against the scaffolded task and finalizes inline (idempotent: a no-op if `/ship-spec` already reached `STATUS: COMPLETE`).
 
 When fired by the hourly cron, the run lives in its own detached Pi tmux session (`tmux: true` in `.oh/crons/autopilot.md`). In the default `ship-spec` mode (and `delegate-advisor`) this same cron-created Pi session is the expert Advisor runtime; do **not** spawn a second advisor session. After the work branch is known, rename the tmux session to `autopilot-<branch>` with slashes sanitized, e.g. `autopilot-feat-123-slug`, so a human can attach and continue. Leave `autopilot-<branch>` sessions alive for manual attach/continue/reap after a PR exists (see § Session lifecycle).
 
@@ -293,7 +293,7 @@ while IFS= read -r row; do
 
 **No actionable queue item → research** (first-principles pass — fires whenever the queue is empty *or* every open ticket already has an open/merged PR):
 
-1. Run `/harness-audit`. Rank its harness-infra findings by impact.
+1. Run `/audit harness`. Rank its harness-infra findings by impact.
 2. Dedupe each finding (in rank order) against open issues, open PRs, **and merged PRs** — advance past any hit (a blocked candidate must never end the run while others remain):
    ```bash
    DUPE_OPEN_ISSUE=$(gh issue list --repo "$AUTOPILOT_REPO" --state open --json title --jq '.[].title' | grep -i "$SLUG" || true)
@@ -308,7 +308,7 @@ while IFS= read -r row; do
    Capture `ISSUE_NUM`; derive `SLUG` from the title. Set:
    ```
    SELECTION_MODE=research
-   SELECTION_RATIONALE="Research selection: queue was empty; /harness-audit ranked this finding #1 by impact among harness-infra candidates. First-principles rationale: <reasoning>. Filed as #$ISSUE_NUM."
+   SELECTION_RATIONALE="Research selection: queue was empty; /audit harness ranked this finding #1 by impact among harness-infra candidates. First-principles rationale: <reasoning>. Filed as #$ISSUE_NUM."
    ```
    Run the same `BRANCH` / `SAFE_SESSION` / `ACTIVE_MARKER` duplicate guard and session rename block described above. Then **implement it this same run** (§3 onward).
 
@@ -359,10 +359,10 @@ Capture the pm output as `PM_DESC` (the first sentence) and `PM_PLAN` (the rest)
 In the default `ship-spec` mode (and `delegate-advisor`), set the active goal with this exact phrase (preserve it verbatim for observability and eval coverage):
 
 ```text
-/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /pr-audit undraft) into a ready-for-review PR
+/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /audit pr undraft) into a ready-for-review PR
 ```
 
-Include `ISSUE_NUM`, `SLUG`, `BRANCH`, `AUTOPILOT_REPO`, `AUTOPILOT_REMOTE`, `AUTOPILOT_BASE`, `SELECTION_RATIONALE`, `PM_DESC`, and `PM_PLAN` immediately under the goal prompt so the Advisor can audit the plan and run `/ship-spec`, which now owns the rest of the build (compacts, the worktree Advisor + Advisor-monitored ralph, `/eval`, and the `/pr-audit` undraft) — autopilot does not re-run those steps itself.
+Include `ISSUE_NUM`, `SLUG`, `BRANCH`, `AUTOPILOT_REPO`, `AUTOPILOT_REMOTE`, `AUTOPILOT_BASE`, `SELECTION_RATIONALE`, `PM_DESC`, and `PM_PLAN` immediately under the goal prompt so the Advisor can audit the plan and run `/ship-spec`, which now owns the rest of the build (compacts, the worktree Advisor + Advisor-monitored ralph, `/eval`, and the `/audit pr` undraft) — autopilot does not re-run those steps itself.
 
 ### 4. /ship-spec --issue (owns the full build)
 
@@ -372,7 +372,7 @@ In the default `ship-spec` mode (and `delegate-advisor`) the active `/goal` driv
 /ship-spec "$PM_DESC" --plan <PM_PLAN content> --prefix feat --issue $ISSUE_NUM --repo "$AUTOPILOT_REPO" --remote "$AUTOPILOT_REMOTE" --base "$AUTOPILOT_BASE"
 ```
 
-`/ship-spec` now runs the **entire pipeline**: `/prd` → 2 critics → (skips issue creation, reuses #$ISSUE_NUM) → `/ralph` (JSON) → branch `feat/$ISSUE_NUM-$SLUG` → draft PR → `/compact` (before implement) → the implement phase (in autopilot's default worktree mode, ship-spec detects `$CRON_WORKTREE` and builds **inline in that same worktree** — already on the feature branch — driving the Advisor-monitored `.oh/scripts/ralph.sh` loop by default (`/delegate` optional inside an iteration; `--executor=delegate-advisor` for the legacy worker fan-out); standalone, it instead launches an expert `/worktrees` Advisor in its own `agent-ship-<slug>` tmux session) → `/eval` → `/compact` (after implement) → `/pr-audit` promotable → `gh pr ready` (or left draft with a comment). **Capture `PR_NUM`, the actual `BRANCH`, and ship-spec's terminal status (`READY` or `DRAFT-BLOCKED`).** After the branch exists, ensure the cron tmux session is named `$(safe_branch_session "$BRANCH")` (for example `autopilot-feat-123-slug`) and keep `ACTIVE_MARKER=/tmp/$(safe_branch_session "$BRANCH").active` until the run is finalized or left for manual continuation.
+`/ship-spec` now runs the **entire pipeline**: `/prd` → 2 critics → (skips issue creation, reuses #$ISSUE_NUM) → `/ralph` (JSON) → branch `feat/$ISSUE_NUM-$SLUG` → draft PR → `/compact` (before implement) → the implement phase (in autopilot's default worktree mode, ship-spec detects `$CRON_WORKTREE` and builds **inline in that same worktree** — already on the feature branch — driving the Advisor-monitored `.oh/scripts/ralph.sh` loop by default (`/delegate` optional inside an iteration; `--executor=delegate-advisor` for the legacy worker fan-out); standalone, it instead launches an expert `/worktrees` Advisor in its own `agent-ship-<slug>` tmux session) → `/eval` → `/compact` (after implement) → `/audit pr` promotable → `gh pr ready` (or left draft with a comment). **Capture `PR_NUM`, the actual `BRANCH`, and ship-spec's terminal status (`READY` or `DRAFT-BLOCKED`).** After the branch exists, ensure the cron tmux session is named `$(safe_branch_session "$BRANCH")` (for example `autopilot-feat-123-slug`) and keep `ACTIVE_MARKER=/tmp/$(safe_branch_session "$BRANCH").active` until the run is finalized or left for manual continuation.
 
 Because `/ship-spec` owns implement → eval → audit → undraft, **§5–§7 are reconciliation, not re-execution** in the `ship-spec`/`delegate-advisor` deferring modes: autopilot reads ship-spec's outcome and applies its own caps / selection-rationale / session-lifecycle / branch-restore. The `ralph` fallback (§5) is the only path where autopilot drives the loop itself.
 
@@ -407,7 +407,7 @@ Dispatch by executor. In the `ship-spec`/`delegate-advisor` deferring modes `/sh
 
 #### `ship-spec` (default) — defer to `/ship-spec`
 
-`/ship-spec` (§4) owns the entire build inside its own `agent-ship-<slug>` worktree-Advisor session: the two compacts bracketing implement, an **Advisor-monitored `.oh/scripts/ralph.sh` loop** (`/delegate` optional inside an iteration; never a replacement for the loop), the `/eval` gate, and the `/pr-audit` promotable undraft. Autopilot does **not** run its own `/compact`, `/delegate`, `.oh/scripts/ralph.sh`, or `/eval` in these deferring modes, and does **not** spawn a second Advisor session. There is nothing to drive here — proceed to §6/§7 to reconcile ship-spec's terminal outcome.
+`/ship-spec` (§4) owns the entire build inside its own `agent-ship-<slug>` worktree-Advisor session: the two compacts bracketing implement, an **Advisor-monitored `.oh/scripts/ralph.sh` loop** (`/delegate` optional inside an iteration; never a replacement for the loop), the `/eval` gate, and the `/audit pr` promotable undraft. Autopilot does **not** run its own `/compact`, `/delegate`, `.oh/scripts/ralph.sh`, or `/eval` in these deferring modes, and does **not** spawn a second Advisor session. There is nothing to drive here — proceed to §6/§7 to reconcile ship-spec's terminal outcome.
 
 **Delegate-advisor failure compensation** — if `/ship-spec` returns `DRAFT-BLOCKED` because its implement/`/delegate` phase failed, stalled, or left acceptance criteria incomplete (eval/CI reds are reconciled in §6/§7):
 ```bash
@@ -481,7 +481,7 @@ gh pr comment "$PR_NUM" --repo "$AUTOPILOT_REPO" --body "autopilot: Ralph loop d
 
 ### 7. Finalize
 
-**`ship-spec`/`delegate-advisor`** — `/ship-spec` already finalized (it pushed, ran `/pr-audit`, and either `gh pr ready`'d a promotable PR or left it draft with a comment). Autopilot **reconciles** ship-spec's terminal status; it does **not** re-run `/pr-audit` or `gh pr ready`:
+**`ship-spec`/`delegate-advisor`** — `/ship-spec` already finalized (it pushed, ran `/audit pr`, and either `gh pr ready`'d a promotable PR or left it draft with a comment). Autopilot **reconciles** ship-spec's terminal status; it does **not** re-run `/audit pr` or `gh pr ready`:
 
 - ship-spec reported `READY` → memory log `Result: PR-READY`, liveness `PR-READY`.
 - ship-spec reported `DRAFT-BLOCKED` → leave the PR draft; memory log `Result: PR-DRAFT-CI-RED` (or `PR-DRAFT-EVAL-RED` when the block was a new eval regression), matching liveness.
@@ -493,16 +493,16 @@ gh pr comment "$PR_NUM" --repo "$AUTOPILOT_REPO" --body "autopilot: Ralph loop d
 git push "$AUTOPILOT_REMOTE" HEAD
 ```
 
-**Undraft gate** — run `/pr-audit` focused on this PR and key on its draft sub-status:
+**Undraft gate** — run `/audit pr` focused on this PR and key on its draft sub-status:
 
-- **Promotable** (`/pr-audit` reports CI green + mergeable + clean):
+- **Promotable** (`/audit pr` reports CI green + mergeable + clean):
   ```bash
   gh pr ready "$PR_NUM" --repo "$AUTOPILOT_REPO"
   ```
   Memory log `Result: PR-READY`, liveness `PR-READY`.
-- **Not promotable** (red/pending CI, conflicts, or `/pr-audit` could not classify):
+- **Not promotable** (red/pending CI, conflicts, or `/audit pr` could not classify):
   - Leave the PR **draft** (do NOT call `gh pr ready`).
-  - `gh pr comment "$PR_NUM" --repo "$AUTOPILOT_REPO" --body "autopilot: /pr-audit did not classify this PR promotable (CI red/pending or conflicts). PR left draft. Resolve and mark ready manually."`
+  - `gh pr comment "$PR_NUM" --repo "$AUTOPILOT_REPO" --body "autopilot: /audit pr did not classify this PR promotable (CI red/pending or conflicts). PR left draft. Resolve and mark ready manually."`
   - Memory log `Result: PR-DRAFT-CI-RED`, liveness `PR-DRAFT-CI-RED`.
 
 **Never call `gh pr merge`** — autopilot does not auto-merge under any condition.
@@ -551,7 +551,7 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 - **Selection rationale**: every PR autopilot opens MUST carry a `## Selection rationale` section as the FIRST section of its description, stating why this item was chosen this session (queue position, or the research finding + impact ranking).
 - **No auto-merge**: autopilot finalizes a *ready-for-review* PR; a human merges. The word "merge" must never appear in an autopilot-generated commit message, PR body, or `gh` command.
 - **Caps**: at most 6 open autopilot PRs created per UTC day AND 10 total open at any time. A close/merge frees a slot.
-- **Implementation executor**: default `ship-spec` (`AUTOPILOT_EXECUTOR` unset) runs the exact `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /pr-audit undraft) into a ready-for-review PR` prompt and **defers the whole build to `/ship-spec`** — ship-spec owns the compacts, the worktree Advisor + an Advisor-monitored `.oh/scripts/ralph.sh` loop (`/delegate` optional inside an iteration), `/eval`, and the `/pr-audit` undraft. Autopilot does not run its own `/compact`/`/delegate`/`/eval` in these deferring modes; it reconciles ship-spec's terminal outcome and leaves `autopilot-<branch>` alive. `delegate-advisor` is the same deferral but passes `--executor=delegate-advisor` to ship-spec for the legacy `/delegate` worker fan-out. `ralph` mode is an explicit legacy inline fallback via `--executor=ralph` or `AUTOPILOT_EXECUTOR=ralph` and drives `.oh/scripts/ralph.sh "$SLUG"` inline.
+- **Implementation executor**: default `ship-spec` (`AUTOPILOT_EXECUTOR` unset) runs the exact `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /audit pr undraft) into a ready-for-review PR` prompt and **defers the whole build to `/ship-spec`** — ship-spec owns the compacts, the worktree Advisor + an Advisor-monitored `.oh/scripts/ralph.sh` loop (`/delegate` optional inside an iteration), `/eval`, and the `/audit pr` undraft. Autopilot does not run its own `/compact`/`/delegate`/`/eval` in these deferring modes; it reconciles ship-spec's terminal outcome and leaves `autopilot-<branch>` alive. `delegate-advisor` is the same deferral but passes `--executor=delegate-advisor` to ship-spec for the legacy `/delegate` worker fan-out. `ralph` mode is an explicit legacy inline fallback via `--executor=ralph` or `AUTOPILOT_EXECUTOR=ralph` and drives `.oh/scripts/ralph.sh "$SLUG"` inline.
 - **Non-destructive failure**: never auto-close issues or PRs. On failure, comment + log. Human inspection is the recovery path.
 - **autopilot-blocked**: a critic HALT labels the ticket `autopilot-blocked`, excluding it from the queue query until a human removes the label — a bad ticket can't retry-loop hourly.
 - **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.
@@ -567,9 +567,9 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 |-------|---------|
 | `SKIPPED-CAP-TOTAL` | ≥10 open autopilot PRs (any age); run skipped until one closes/merges |
 | `SKIPPED-CAP-DAILY` | ≥6 autopilot PRs created this UTC day are still open; skipped until one closes/merges or the day rolls over |
-| `NOTHING-NEW` | No actionable ticket (queue empty, or all open tickets already have PRs) AND `/harness-audit` produced no finding that survives dedupe — research ran but had nothing fresh to file. _(Replaces the retired `IN-FLIGHT` token: a single in-flight PR no longer ends the run; it falls through to research.)_ |
+| `NOTHING-NEW` | No actionable ticket (queue empty, or all open tickets already have PRs) AND `/audit harness` produced no finding that survives dedupe — research ran but had nothing fresh to file. _(Replaces the retired `IN-FLIGHT` token: a single in-flight PR no longer ends the run; it falls through to research.)_ |
 | `PR-READY` | End-to-end success; PR marked ready with green CI |
-| `PR-DRAFT-CI-RED` | PR left draft because the PR was not promotable per `/pr-audit` (CI red/pending or conflicts) — set by `/ship-spec` in the ship-spec/delegate-advisor modes, or by the ralph fallback's own `/pr-audit` gate |
+| `PR-DRAFT-CI-RED` | PR left draft because the PR was not promotable per `/audit pr` (CI red/pending or conflicts) — set by `/ship-spec` in the ship-spec/delegate-advisor modes, or by the ralph fallback's own `/audit pr` gate |
 | `PR-DRAFT-EVAL-RED` | PR left draft because `/eval` reported a NEW (green→red) probe regression or a non-zero runner exit (inside `/ship-spec` in the ship-spec/delegate-advisor modes, or autopilot's inline `/eval` in ralph mode) |
 | `HALT-CRITIC-GATE` | `/ship-spec` critic gate rejected the spec; ticket labeled `autopilot-blocked`, no PR opened |
 | `RALPH-INCOMPLETE` | §5 Ralph fallback loop did not reach `STATUS: COMPLETE` (timeout, loop died, or all harnesses exhausted) after `/ship-spec` opened a PR; PR left draft — `.oh/tasks/$SLUG/` state is resumable via `.oh/scripts/ralph.sh $SLUG` |

@@ -8,6 +8,10 @@
             "type": "command",
             "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/deny-env-dump.sh\"",
             "statusMessage": "Checking Bash command for secret exposure"
+          },
+          {
+            "type": "command",
+            "command": "sh -c '[ \"$CC_SAFETY_NET_OFF\" = \"1\" ] || exec cc-safety-net hook --claude-code'"
           }
         ]
       }

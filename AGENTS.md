@@ -28,7 +28,7 @@ Read these files at the start of every session — they encode voice, principles
 
 After **every** skill or agent run, fire the Memory Improvement Protocol (log → qualify → improve) — its canonical home is now the `/retro` skill (`.oh/skills/retro/references/memory-protocol.md`).
 
-The always-loaded `.oh/context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — with the advisor delegation + recursive-decomposition norm now the `advisor` agent (`.oh/agents/advisor.md`, invoked via the Agent tool rather than a slash command), and the repo-authoring convention staying a plain doc at `.oh/context/directory-readme.md`. The always-on tier is now just the `.oh/context/` identity files listed above; load the relevant skill when a task calls for its norm.
+The always-loaded `.oh/context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — with the advisor delegation + recursive-decomposition norm now the `advisor` agent (`.oh/agents/advisor.md`, invoked via the Agent tool rather than a slash command), and the repo-authoring convention staying a plain doc at `.oh/context/directory-readme.md`, and the First Mate role charter (the supervisory-delegation role consumed by `.oh/prompts/advisor/*`) staying a plain on-demand doc at `.oh/context/rules/first-mate.md`. The always-on tier is now just the `.oh/context/` identity files listed above; load the relevant skill when a task calls for its norm.
 
 ## Permissions
 
@@ -60,15 +60,24 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    **Option C — VS Code Remote SSH + Attach (remote server):**
    SSH into the remote host first, then attach to the container
 
-4. Complete onboarding (one-time, inside the sandbox):
+4. Start the primary interactive workspace immediately after attaching:
+   ```bash
+   herdr
+   ```
+
+5. Complete onboarding once from the initial Herdr pane:
    ```bash
    gh auth login && gh auth setup-git
    ```
 
-5. Start the agent:
+6. Start agents, tests, and development servers from Herdr panes:
    ```bash
-   claude                           # terminal coding agent
+   claude                           # or: codex, pi
    ```
+
+   Detach with `Ctrl-b q`; run `herdr` again to reattach. Raw shells remain a
+   recovery path. Cron, Slack gateway, and other headless infrastructure stay
+   in their existing tmux sessions; do not migrate those services into Herdr.
 
    For multi-agent setups (e.g., Pi+Slack), the harness now ships Slack via
    the **pi-messenger-bridge** npm package — npm-installed into `.pi/bridge/`
@@ -138,11 +147,11 @@ flowchart LR
     CRIT -->|APPROVED| BUILD["build"]
     subgraph EXEC["spec-execute (/spec execute)"]
         direction LR
-        BUILD --> AUDIT{"audit<br/>2 critics + eval + pr-audit"}
+        BUILD --> AUDIT{"audit implementation<br/>task graph + eval + focused PR classifier"}
         AUDIT -->|FAIL: fix| BUILD
         AUDIT -->|PASS| SRETRO["spec-retro<br/>/retro"]
         SRETRO --> IMPROVE["improve<br/>compound · compress · benchmark"]
-        IMPROVE --> GROOM["groom<br/>skill-lint · wiki lint · drift-check"]
+        IMPROVE --> GROOM["groom<br/>audit skills · wiki lint · audit drift"]
     end
     GROOM --> MERGE["merge<br/>(human)"]
     MERGE --> RESET["reset | clean<br/>(runner)"]
@@ -158,7 +167,7 @@ flowchart LR
 | **human** | merge — final gate, no auto-merge | selection, build | reviews the finished unit |
 | **runner** | `reset \| clean` — worktree/branch cleanup, state reset | judgment | closes the cycle back to select |
 
-The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec critique`, `/spec execute`, `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/skill-lint` · `/wiki lint` · `/drift-check` before the human merge.
+The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec critique`, `/spec execute`, `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/audit skills` · `/wiki lint` · `/audit drift` before the human merge.
 
 ## Skills
 
@@ -167,7 +176,8 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/release` | CalVer release — branch, tag, push, GHCR |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
 | `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `.oh/context/rules/git.md`, which is now only a pointer for providers that load rules. |
-| `/pr-audit` | Triage all open PRs in one bulk `gh pr list --json` query — actionable buckets (ready/CI-failing/conflicting/changes-requested/needs-review) for ready-for-review PRs, with draft PRs split out first as a separate WIP class (promotable/WIP/limbo) + stale/convention flags; read-only by default, `--deep` fans out diff reviewers for flagged PRs, `--proof` writes an idempotent per-PR verdict comment, `--label-apply`/`--close-stale` mutate after confirmation |
+| `/builder` | Author or refine one provider-portable artifact via `/builder <agent\|skill\|command\|rule> <name-or-request>`; shared discovery and validation live in the dispatcher, with one authoritative reference per type. |
+| `/audit` | Explicit nine-target dispatcher: `implementation`, `pr`, `prs`, `harness`, `context`, `skills`, `eval-quality`, `drift`, and `full`; routes to native verdict owners, report-only by default, with one correlated run/log |
 | `/health-check` | Triage host memory/disk/Docker before starting a stack; rank reclaim levers by safety×yield, prune build cache, confirm destructive removal |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
 | `/t3` | Start, inspect, and stop the T3 Code browser UI (`npx t3`) in a sandbox tmux session, with pairing-URL discovery and log/status helpers |
@@ -176,15 +186,11 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `.oh/tasks/<name>/prd.json` for the Ralph runner |
 | `/ship-spec` | End-to-end spec (all-in-one form of the `spec-*` family): `/prd` → critics → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR; the single source of the protected build mechanics |
-| `/spec` | Dispatcher for the decomposed workflow (`/spec <plan\|critique\|execute\|retro>`, routes to `references/{plan,critique,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state); **critique** = the `plan ⇄ critique` loop (`/critique` 2 critics + `/approve` gate; `DENIED` → `/spec plan`); **execute** = `build ⇄ audit → spec-retro → improve → groom` to a ready PR at the human merge gate (composes `/ship-spec` mechanics + `/audit`); **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/` |
+| `/spec` | Dispatcher for the decomposed workflow (`/spec <plan\|critique\|execute\|retro>`, routes to `references/{plan,critique,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state); **critique** = the `plan ⇄ critique` loop (`/critique` 2 critics + `/approve` gate; `DENIED` → `/spec plan`); **execute** = `build ⇄ audit → spec-retro → improve → groom` to a ready PR at the human merge gate (composes `/ship-spec` mechanics + `/audit implementation`); **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/` |
 | `/teach` | Post-implementation communication pass — revise/propose the relevant wiki model, then teach the operator the mental model, verification evidence, caveats, and understanding checks |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
 | `/watchdog` | Generic stuck/stale automation watchdog. Current primary action: inspect autopilot draft PRs, complete stale/stuck branches, and remove draft only after the PR is green/mergeable/clean; also kills tmux sessions frozen at usage-limit/resume prompts. Never merges. |
-| `/autopilot` | Self-improvement loop — issue-queue-first selection (build the oldest open `autopilot` issue; researches + files its own ticket when empty), PM plan → exact `/goal` Advisor handoff → `/ship-spec --issue`, which now **owns the whole build** (the two compacts bracketing implement, a worktree Advisor running an **Advisor-monitored `scripts/ralph.sh` loop** by default — `/delegate` optional inside an iteration, never a replacement for the loop — `/eval`, `/pr-audit` undraft); autopilot **defers** and reconciles the outcome (no inline compact/delegate/eval/finalize). `--executor=delegate-advisor` selects the legacy `/delegate --plan .oh/tasks/<slug>/prd.json` worker fan-out; `AUTOPILOT_EXECUTOR=ralph` keeps the legacy inline `.oh/scripts/ralph.sh` fallback; every PR states its selection rationale; per-run Pi tmux sessions renamed `autopilot-<branch>` and left alive after PR creation; cap 6 open PRs/day + 10 total open, no auto-merge |
-| `/harness-audit` | Spawn 4 parallel sub-agents (PM/Implementer/Critic/Explorer) to audit the harness |
-| `/skill-lint` | Score skills for staleness across 5 dimensions |
-| `/eval-lint` | Score every eval probe (`.oh/evals/probes/*.sh`) + capability benchmark task (`tasks/CB-*.md` + repo-orientation) across seven anti-Goodhart failure modes (stale · duplicate · always-SKIP · asserts-impl-detail · no-longer-held-out · too-easy/narrow/special-cased · machinery-growth-without-capability-movement) → KEEP/GROOM/CUT matrix; read-only by default like `/skill-lint`, deterministic file/grep/git scoring |
-| `/context-audit` | Score default-loaded context budget (4 dimensions, KEEP/TRIM/DEMOTE/CUT); optional Tier-2 ablation harness verifies cuts are safe |
+| `/autopilot` | Self-improvement loop — issue-queue-first selection (build the oldest open `autopilot` issue; researches + files its own ticket when empty), PM plan → exact `/goal` Advisor handoff → `/ship-spec --issue`, which now **owns the whole build** (the two compacts bracketing implement, a worktree Advisor running an **Advisor-monitored `scripts/ralph.sh` loop** by default — `/delegate` optional inside an iteration, never a replacement for the loop — `/eval`, `/audit pr` undraft); autopilot **defers** and reconciles the outcome (no inline compact/delegate/eval/finalize). `--executor=delegate-advisor` selects the legacy `/delegate --plan .oh/tasks/<slug>/prd.json` worker fan-out; `AUTOPILOT_EXECUTOR=ralph` keeps the legacy inline `.oh/scripts/ralph.sh` fallback; every PR states its selection rationale; per-run Pi tmux sessions renamed `autopilot-<branch>` and left alive after PR creation; cap 6 open PRs/day + 10 total open, no auto-merge |
 | `/eval` | Run the context fitness-function probe suite (`.oh/evals/probes/*.sh`) against real state, write the `.oh/evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 | `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `.oh/memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
@@ -192,7 +198,6 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `.oh/memory/<date>/`; raw prompt text is off by default. The daily `.oh/crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/ship-spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
 | `/caveman` | Token-compression output mode (`lite`/`full`/`ultra`/`wenyan`); subcommands `/caveman-commit`, `/caveman-review`, `/caveman-compress <file>`, `/caveman-stats`. Never compresses code, security warnings, or irreversible-action confirmations |
 | `/wiki` | Dispatcher for the wiki knowledge base (corpus at `.oh/skills/wiki/corpus/`, gitignored-by-default + whitelisted): `ingest <url\|path> [--slug]` / `ingest --from-draft <slug> [--allow-stale]` (capture a source or promote a draft), `query <topic>` (frontmatter OR-search, read top ≤3 by `updated:` desc), `lint [--dry-run]` (5 health checks + atomic `corpus/README.md` regen). Schema: `.oh/skills/wiki/references/schema.md` |
-| `/drift-check` | Detect framework (origin↔upstream), branch-behind, and cron-staleness drift; report remediation — never mutates state |
 
 Provision / destroy / repair are plain `docker compose` commands — see
 the `Lifecycle` section above. There is no dedicated skill.
@@ -204,8 +209,9 @@ your own reverse proxy (nginx/Caddy/Traefik) or tunnel (cloudflared,
 ngrok, tailscale-funnel) in front of the sandbox — the base ships
 without any of these.
 
-Long-running apps inside the sandbox go in named tmux sessions, related
-apps as stacked panes — see `.oh/skills/t3/references/sandbox-processes.md`.
+Interactive apps and development servers belong in Herdr panes. Managed/headless
+services (cron, gateways, watchdogs) use named tmux sessions — see
+`.oh/skills/t3/references/sandbox-processes.md`.
 
 ## What You Do
 

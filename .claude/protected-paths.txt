@@ -19,9 +19,7 @@ cloudflared-tunnel
 agent-browser
 prd
 ralph
-harness-audit
-skill-lint
-eval-lint
+audit
 delegate
 strategic-proposal
 ship-spec
@@ -32,7 +30,6 @@ spec-retro
 eval
 health-check
 retro
-drift-check
 
 # --- Orchestrator scripts (.oh/scripts/) ---
 .oh/scripts/ralph.sh
@@ -53,6 +50,7 @@ Makefile
 .oh/crons/heartbeat.md
 .oh/crons/cleanup-tasks.md
 .oh/evals/probes/cleanup-tasks-worktree-grooming.sh
+.oh/evals/probes/markitdown-wiki-ingest.sh
 .oh/crons/eval-weekly.md
 
 # --- Norms folded into skills (formerly .oh/context/rules/, B-state M3+M4) ---
@@ -71,6 +69,7 @@ Makefile
 .oh/context/USER.md
 
 # --- Sub-agents invoked by skills ---
+.claude/agents/architect.md
 .claude/agents/critic.md
 .claude/agents/implementer.md
 .claude/agents/pm.md

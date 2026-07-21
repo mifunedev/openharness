@@ -45,6 +45,21 @@ RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
 # ─── Bun ────────────────────────────────────────────────────────────
 RUN BUN_INSTALL=/usr/local curl -fsSL https://bun.sh/install | bash
 
+# ─── Herdr ──────────────────────────────────────────────────────────
+# Primary interactive workspace. Pin and verify both supported Linux artifacts
+# so every sandbox gets the same reviewed binary without a first-boot download.
+ARG HERDR_VERSION=0.7.4
+RUN case "$(dpkg --print-architecture)" in \
+      amd64) herdr_arch=x86_64; herdr_sha=bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059 ;; \
+      arm64) herdr_arch=aarch64; herdr_sha=544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2 ;; \
+      *) echo "Unsupported Herdr architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "https://github.com/ogulcancelik/herdr/releases/download/v${HERDR_VERSION}/herdr-linux-${herdr_arch}" \
+      -o /usr/local/bin/herdr \
+ && echo "${herdr_sha}  /usr/local/bin/herdr" | sha256sum -c - \
+ && chmod 0755 /usr/local/bin/herdr \
+ && test "$(herdr --version)" = "herdr ${HERDR_VERSION}"
+
 # ─── uv ─────────────────────────────────────────────────────────────
 RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 sh \
  && cp /root/.local/bin/uv /usr/local/bin/uv \
@@ -127,6 +142,15 @@ RUN set -e; \
         ln -sf /opt/grok-build/bin/grok /usr/local/bin/grok; \
         rm -f /usr/local/bin/agent; \
     else echo "Skipping Grok Build CLI install (INSTALL_GROK_BUILD=false)"; fi
+
+# ─── cc-safety-net (destructive-command guard) ─────────────────────
+# Cross-provider PreToolUse guard, pinned. Installed unconditionally at image
+# build time — network is available and retryable here, so boot never touches
+# the registry (avoids the #639/4979b846 boot crash-loop class). Kept as its
+# own standalone RUN block (mirroring the pi-coding-agent pattern below), NOT
+# threaded into the AGENTS/PKG loop above: the guard must not be conditional on
+# agent selection. See .oh/tasks/cc-safety-net/install-decision.md.
+RUN npm install -g cc-safety-net@1.0.6
 
 # ─── Open Harness `oh` CLI ──────────────────────────────────────────
 # Build the in-tree `oh` CLI (.oh/cli/) into a self-contained bundle,

@@ -1,0 +1,8 @@
+{
+  "checkRunSuccess": {"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"SUCCESS"},
+  "checkRunFailure": {"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"FAILURE"},
+  "checkRunPending": {"__typename":"CheckRun","name":"ci","status":"IN_PROGRESS","conclusion":null},
+  "statusContextSuccess": {"__typename":"StatusContext","context":"ci","state":"SUCCESS"},
+  "failurePrecedesPending": {"__typename":"CheckRun","name":"ci","status":"IN_PROGRESS","conclusion":"FAILURE"},
+  "unknownConclusion": {"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"NEW_GITHUB_VALUE"}
+}

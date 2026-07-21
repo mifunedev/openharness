@@ -3,7 +3,7 @@ id: CB-004
 slug: repo-orientation-efficiency
 title: "Orient in the repository with fewer tokens and tool calls"
 axes: [success, cost-time, unattended]
-skills: [/eval, /benchmark, /context-audit]
+skills: [/eval, /benchmark, /audit context]
 created: 2026-06-19
 ---
 

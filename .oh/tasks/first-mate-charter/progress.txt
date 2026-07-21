@@ -1,0 +1,26 @@
+# progress
+
+## Subtask dependency graph (from prd.json rev 2)
+
+US-000 branch+issue [DONE] (feat/660-first-mate-charter off upstream/development 0eaa1526; issue #660)
+US-001 charter          <- US-000            [DONE]    delegate: general-purpose, thinking: high
+US-002 architect agent  <- US-000            [DONE]    delegate: general-purpose, thinking: medium
+US-003 land pack+README <- US-001, US-002    [DONE]    delegate: general-purpose, thinking: medium
+US-004 pointers         <- US-001            [DONE]    delegate: general-purpose, thinking: low
+US-005 changelog        <- US-001, US-003    [DONE]    delegate: general-purpose, thinking: low
+US-006 eval probe       <- US-001,002,003    [DONE]    delegate: general-purpose, thinking: medium
+
+Waves: W1 = {US-001 ∥ US-002} · W2 = {US-003 ∥ US-004} · W3 = {US-005 ∥ US-006}
+
+## Log
+
+- plan phase: architect+pm delegated in parallel, synthesized to plan.md (rev 1).
+- critique phase: 2 adversarial critics -> REVISE (2 HIGH: invented warnings; rules-dir pointer-only policy collision). Rev 2 written; disposition table in plan.md.
+- re-critique: pending verification critic verdict.
+- US-001 [delegate]: charter written; 8 ACs self-verified; typecheck AC vacuous per plan Constraint 8 (no step invented).
+- US-002 [delegate]: architect agent created + wired + protected; wiring is the existing directory-level symlink .claude/agents -> ../.oh/agents (no per-file link needed), so creating .oh/agents/architect.md surfaced it automatically.
+- US-004 [delegate]: AGENTS.md clause (1-line diff) + advisor.md See-also (1-line add); typecheck AC vacuous per plan Constraint 8, CLAUDE.md symlink verified so single-file edit suffices.
+- US-003 [delegate]: pack staged byte-identical (hashes ok: bb02c129/932fa0d0/019e9f5c) + READMEs; /compact + /goal are Claude-Code built-ins (no .oh/skills dir — counted as resolving), commit deferred to First Mate per brief.
+- US-005 [delegate]: CHANGELOG bullet added under [Unreleased]/Added
+- US-006 [delegate]: probe written, runs PASS; SKIPPED reserved solely for absent /delegate SKILL.md (feature-external counterpart) — charter/pack absence is always REGRESSION, and the tracked-check relies on ls-files seeing the index (staged-new counts, verified).
+- First Mate: all 6 stories validated against acceptanceCriteria, passes:true marked after independent verification (grep/diff/probe re-runs). Committing.

@@ -56,8 +56,9 @@ there is the one used for pushes.
                        # optional installs — see Quickstart → Configuration. Do this BEFORE building.
    make sandbox        # build + start the container (~10 min cold)
    make shell          # attach as the sandbox user
+   herdr              # first inside-sandbox command
    ```
-2. **Inside the sandbox**, authenticate GitHub over SSH — choose SSH as the protocol
+2. **Inside the initial Herdr pane**, authenticate GitHub over SSH — choose SSH as the protocol
    and let `gh` generate a key (details: [GitHub auth](./integrations/github.md)):
    ```bash
    gh auth login       # GitHub.com → SSH → generate a new SSH key → paste a token
@@ -292,6 +293,7 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 
 | Tool | Purpose |
 |------|---------|
+| Herdr (`herdr`) | Default multi-agent terminal workspace; state persists across rebuilds in dedicated volumes |
 | Docker CLI + Compose | Container management from inside the sandbox (host docker socket bind-mounted by the base compose) |
 | GitHub CLI (`gh`) | PRs, issues, releases from the terminal |
 | tmux | Detachable terminal sessions for long-running agents |
@@ -320,7 +322,7 @@ codex   → codex --dangerously-bypass-approvals-and-sandbox
 
 ### Persistent volumes
 
-Auth credentials survive container rebuilds via named Docker volumes:
+Auth credentials and Herdr workspace state survive container rebuilds via named Docker volumes:
 
 - `claude-auth` → `~/.claude` (Claude Code OAuth)
 - `codex-auth` → `~/.codex` (Codex OAuth)
@@ -331,10 +333,11 @@ Auth credentials survive container rebuilds via named Docker volumes:
 - `grok-auth` → `~/.grok` (all Grok Build user state: auth, config, sessions, memory, skills/plugins, logs; mounted alongside the other agent auth volumes and used by Grok Build when `install.grok_build: true` in `harness.yaml`). Cached OAuth/session state in `~/.grok/auth.json` takes precedence over `XAI_API_KEY`; if an API key seems ignored, run `grok logout` or reset the volume.
 - `cloudflared-auth` → `~/.cloudflared` (Cloudflare tunnel credentials, when used)
 - `ssh-config` → `~/.ssh` (user SSH keys / known_hosts; entrypoint enforces `chmod 700`)
-- `config-dir` → `~/.config` (all XDG tool config, including the GitHub CLI tokens under `~/.config/gh`)
+- `config-dir` → `~/.config` (all XDG tool config, including the GitHub CLI tokens under `~/.config/gh` and Herdr settings)
+- `herdr-data` → `~/.herdr` (Herdr-created worktrees and related data; session metadata is under `~/.config/herdr`)
 
 Hermes is split: when Hermes is enabled (`install.hermes: true` in `harness.yaml`), `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/` directory, while auth remains in the `~/.hermes` named volume and is linked into the project-local home as `auth.json`. The entrypoint links `.hermes/skills/openharness` to the tracked shared skill directory (`.oh/skills/`) so Hermes sees the same harness skills as Claude, Codex, and Pi without copying them into runtime state. Project-local runtime contents are gitignored except `.hermes/README.md`; `make destroy` removes the auth volume but not the bind-mounted project runtime directory.
 
-`make destroy` and `docker compose down -v` remove named volumes, including `grok-auth`; use `make stop` when you want Grok Build credentials and state to survive.
+`make destroy` and `docker compose down -v` remove named volumes, including Herdr state and provider credentials; use `make stop` when you want them to survive.
 
 Downstream harness packs and Pi extensions can introduce additional volumes or bind-mount overlays by listing tracked compose files under `compose.overrides:` in `harness.yaml`, or by adding user-local files to `composeOverrides[]` in `config.json` (gitignored).

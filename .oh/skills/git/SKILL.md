@@ -129,7 +129,7 @@ Cleanup: `git worktree remove "$WORKTREES_ROOT/<branch>"`.
 
 ### Stale worktree policy
 
-Worktrees older than 30 days without a corresponding open PR may be removed via `git worktree remove`; corrupted worktree directories may be removed with `rm -rf` after confirming they are not valid `git worktree list` entries. The `/harness-audit` skill flags stale-worktree candidates for review before cleanup.
+Worktrees older than 30 days without a corresponding open PR may be removed via `git worktree remove`; corrupted worktree directories may be removed with `rm -rf` after confirming they are not valid `git worktree list` entries. The `/audit harness` skill flags stale-worktree candidates for review before cleanup.
 
 ### Isolating in-flight work
 
@@ -151,6 +151,20 @@ done
 
 Only after all files show `same:` run `git restore` / `rm -f` to clean main checkout.
 
+## Destructive git under the cc-safety-net guard
+
+`cc-safety-net` denies inline destructive git — `git reset --hard <ref>`, `git clean -f`, `git branch -D`, `git worktree remove --force`, `git push --force` — in every mode (its built-in git rules are not allowlistable). In agent (hook-mediated) contexts you must route these through the file-invoked shim instead:
+
+```bash
+bash .oh/scripts/git-maintenance.sh reset-hard <ref>
+bash .oh/scripts/git-maintenance.sh clean
+bash .oh/scripts/git-maintenance.sh branch-delete <branch>
+bash .oh/scripts/git-maintenance.sh worktree-remove <path>
+bash .oh/scripts/git-maintenance.sh push-force <remote> <branch>   # uses --force-with-lease
+```
+
+**Scope rule:** only **non-agent-mediated** invocations — raw scheduler/tmux shell scripts that never spawn a provider — bypass the PreToolUse hooks. Agent-driven crons do **not** bypass them (`cron-runtime.ts` runs them as `pi --continue` / `claude -p` prompts, so their Bash passes through the guard), so those must use the shim too. This is a compatibility shim, not a security control — the same script-file gap is also an evasion route; Docker is the security boundary.
+
 ## Catching Up Feature Branches
 
 When an open feature branch falls behind `development`, prefer merging the target branch into the feature branch instead of rebasing it. This preserves the branch's published history, avoids force-push churn, and keeps integration-conflict resolution on the feature branch; the final squash merge keeps `development` free of the catch-up merge commit.
@@ -162,7 +176,7 @@ git merge origin/development               # resolve conflicts on the feature br
 git push origin <feature-branch>           # normal push; no --force-with-lease
 ```
 
-After the merge, rerun the targeted checks and `/ci-status`/`/pr-audit` before marking the PR ready or merging it.
+After the merge, rerun the targeted checks and `/ci-status`/`/audit pr` before marking the PR ready or merging it.
 
 Use rebase/force-push only for deliberate history surgery (for example, before a branch has been shared, or when explicitly managing a stacked PR as described below).
 

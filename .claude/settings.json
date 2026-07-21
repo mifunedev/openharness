@@ -81,6 +81,10 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/warn-devtcp.sh"
+          },
+          {
+            "type": "command",
+            "command": "sh -c '[ \"$CC_SAFETY_NET_OFF\" = \"1\" ] || exec cc-safety-net hook --claude-code'"
           }
         ]
       },

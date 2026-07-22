@@ -84,7 +84,7 @@
           },
           {
             "type": "command",
-            "command": "sh -c '[ \"$CC_SAFETY_NET_OFF\" = \"1\" ] || exec cc-safety-net hook --claude-code'"
+            "command": "sh -c '[ \"$CC_SAFETY_NET_OFF\" = \"1\" ] || ! command -v cc-safety-net >/dev/null 2>&1 || exec cc-safety-net hook --claude-code'"
           }
         ]
       },

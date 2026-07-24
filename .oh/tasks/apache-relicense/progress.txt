@@ -208,7 +208,7 @@ stays proprietary. `git diff --numstat` reports `1  0`. No version promoted, no 
 **Files changed**: `.oh/skills.lock`
 **Result**: PASS
 
-Line 213's trailing clause `... and skill-lint remains MIT in repository LICENSE` became
+Line 213's trailing clause `... remains MIT in repository LICENSE` became
 `... (MIT at time of consolidation, now Apache-2.0)` — the historical provenance is preserved and
 only the stale present-tense claim about the current root license is corrected. Line 28 (caveman,
 a third party's license) is untouched. `jq -e .` exits 0; `git diff --numstat` reports `1  1`.
@@ -230,3 +230,62 @@ Validated independently rather than accepting delegate self-reports:
   written by two stories.
 
 `passes: true` set for US-001..US-009 and US-011. US-010 outstanding.
+
+## W2
+
+### US-010 — End-to-end verification
+**Files changed**: `.oh/tasks/apache-relicense/verification.md` (new), `.oh/evals/RESULTS.md` (regenerated)
+**Result**: PASS (after remediating the one regression it found)
+
+Ran every check adversarially against the built artifact rather than the repo files alone, with real
+command output pasted into `verification.md`.
+
+**The tarball proof — the check that actually matters.** Everything else tests repo files; this tests
+what a consumer receives. `npm pack` in `.oh/cli`, extracted: `package/LICENSE` contains
+`Apache License` ×4 and `MIT License` ×0; `package/NOTICE` present at 1,540 bytes. Tarball and
+extraction removed; worktree confirmed clean afterwards. This is the check that would have caught the
+`files`-array trap — npm force-includes README and LICENSE but not NOTICE, so without US-006's
+`"NOTICE"` entry the published package would have shipped a NOTICE-less Apache-2.0 distribution.
+
+**The typecheck US-006 honestly could not verify** is now verified. Dependencies installed
+(`npm ci --ignore-scripts`), `tsc --noEmit` passes. `node_modules` did not leak into `git status`.
+
+**Probe suite: 92 probes → 88 PASS, 3 SKIPPED, 1 REGRESSION.**
+
+- **`audit-stale-references` — a genuine regression this branch introduced, now fixed.** The delegate
+  proved attribution the strong way, by running the probe against a disposable
+  `git worktree add --detach upstream/development` checkout where it passes, rather than inferring it
+  from reading. Cause: this task's own `prd.md`, `prd.json`, and `progress.txt` quoted the deprecated
+  audit-skill vocabulary verbatim while documenting the US-011 fix, and the probe's whitelist covers
+  only `.oh/tasks/audit-consolidation/*`.
+
+  **Fix chosen: sanitize our documents, not the probe.** Widening a drift guard owned by another task
+  so that this PR's paperwork can trip it is the wrong trade — the guard is doing its job. The four
+  tracked hits were rewritten to describe "the four superseded audit skills" without reproducing the
+  banned tokens, `verification.md` redacts them as `<legacy-audit-name>` behind an explicit note, and
+  `prd.json`'s US-011 criterion now carries a standing warning so a future editor does not reintroduce
+  them. Probe re-run: PASS. Nothing about the relicense itself changed.
+
+- **`next-dev-prod` — pre-existing and environmental, not attributable to this branch.** Verified
+  independently by the First Mate: the probe reads only live host state (`pgrep`, `/proc`, `tmux`) and
+  touches no file this branch modifies, and the process it flags is a `@openharness-cloud/web` dev
+  server belonging to an unrelated repo sharing this sandbox. The delegate separately reproduced the
+  identical failure, same PID, on a clean `upstream/development` checkout.
+
+- 3 SKIPPED (`autopilot-preflight-gate`, `cc-safety-net-wiring`, `debugmcp-availability`) are
+  environment-gated and excluded from pass-rate by the suite's own rule.
+
+**Carry-forward for future tasks:** `audit-stale-references.sh` whitelists deprecated audit vocabulary
+per task folder. Any future task whose PRD needs to quote that vocabulary as historical documentation
+will trip it. Either avoid verbatim quotation, as this task now does, or widen the whitelist
+deliberately in a PR that owns that probe.
+
+## First Mate validation — W2
+
+- `audit-stale-references.sh`, `skills-dir-clean.sh`, `oh-npm-package.sh` re-run post-remediation:
+  all exit 0.
+- `next-dev-prod.sh` re-run and its source read: host-state only, flagged PID belongs to
+  `@openharness-cloud/web`. Confirmed unrelated.
+- `git status --porcelain` free of `node_modules`, `*.tgz`, and extraction leftovers.
+
+`passes: true` set for US-010. All 11 stories pass.

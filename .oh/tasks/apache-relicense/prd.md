@@ -224,7 +224,7 @@ this change:
 Plus the 5 `caveman*` `LICENSE` files (DP-3).
 
 **One MIT reference in the repo is NOT a false positive.** `.oh/skills.lock:213` — the `audit`
-skill's `note` field — ends `"... and skill-lint remains MIT in repository LICENSE."` That is a
+skill's `note` field — ends `"... remains MIT in repository LICENSE."` That is a
 present-tense claim about *this repository's* root license, and it becomes false the moment `LICENSE`
 flips. It is owned by **US-011**, not whitelisted. Found by adversarial critique, not by the
 original plan.

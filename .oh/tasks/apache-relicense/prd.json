@@ -167,16 +167,16 @@
         "Findings are written to .oh/tasks/apache-relicense/verification.md with the actual command output for each check, not a claim that it passed"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PASS after remediation. Tarball proof: package/LICENSE has 'Apache License' x4 and 'MIT License' x0; package/NOTICE present at 1540 bytes. Typecheck deferred by US-006 now verified (deps installed, tsc --noEmit passes). Probe suite 92 -> 88 PASS / 3 SKIPPED / 1 REGRESSION. audit-stale-references was a genuine regression from this task's own docs quoting deprecated audit vocabulary; fixed by sanitizing our documents rather than widening a drift guard owned by another task; probe now PASS. next-dev-prod is environmental (host-state-only probe, flagged PID belongs to an unrelated openharness-cloud dev server), proven by identical failure on a clean upstream/development checkout."
     },
     {
       "id": "US-011",
       "title": "Correct the stale license claim in .oh/skills.lock",
       "description": "As the maintainer, I want the audit skill's lockfile note to stop asserting that the repository LICENSE is MIT so that no metadata contradicts the new grant.",
       "acceptanceCriteria": [
-        ".oh/skills.lock line 213 — the `audit` entry's `note` field — no longer claims the repository LICENSE is MIT. Its trailing clause currently reads `... and skill-lint remains MIT in repository LICENSE.`",
-        "The historical provenance meaning is preserved, not deleted: the note must still record that the audit skill consolidates implementation, PR, harness, context, skill, eval-quality, drift and campaign audits, and that LICENSE provenance was migrated from context-audit, harness-audit, pr-audit and skill-lint. Only the stale present-tense claim about the current root license is corrected",
+        ".oh/skills.lock line 213 — the `audit` entry's `note` field — no longer claims the repository LICENSE is MIT. Its trailing clause ends `... remains MIT in repository LICENSE.` (the four superseded audit-skill names preceding that clause are deliberately not reproduced here — see the note below)",
+        "The historical provenance meaning is preserved, not deleted: the note must still record that the audit skill consolidates implementation, PR, harness, context, skill, eval-quality, drift and campaign audits, and that LICENSE provenance was migrated from the four superseded audit skills it names. Only the stale present-tense claim about the current root license is corrected. NOTE: do not reproduce those four legacy skill names in any task document — `.oh/evals/probes/audit-stale-references.sh` bans that vocabulary across tracked surfaces and whitelists it only inside `.oh/skills.lock` itself",
         ".oh/skills.lock line 28 (the caveman upstream-MIT provenance note) is UNCHANGED — it describes a third party's license, not this repo's",
         "`jq -e . .oh/skills.lock` exits 0 and no other key, entry, checksum, or field in the file changes: `git diff -- .oh/skills.lock` shows exactly one changed line",
         ".oh/skills.lock is the only file modified by this story"

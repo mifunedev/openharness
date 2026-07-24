@@ -88,7 +88,9 @@ Do not duplicate the workflow prose — it will drift.
 
 ## 5. Ownership evidence (guidance step 1 — satisfied)
 
-`git shortlog -sne` → 1,533 commits across 8 identities:
+`git shortlog -sne` → 1,533 commits across 8 identities, measured at `upstream/development` @ `94bfc2a9`
+(the branch point). The count advances by one per commit made on this branch; `ownership-audit.md`
+records the live figure and reconciles it against this snapshot.
 
 | Commits | Identity | Disposition |
 |---|---|---|

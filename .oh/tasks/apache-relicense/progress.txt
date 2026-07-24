@@ -86,3 +86,147 @@ Model inherits by default. No story is architecture-shaped; none warrants `xhigh
     globs `skills/**` rather than listing files, so `oh update` cannot resurrect the 15 deletions;
     no CI workflow reads license metadata; the shortlog arithmetic, all before-state line numbers,
     and the 8-file whitelist all check out exactly as claimed.
+
+## Build log — W0 + W1
+
+Entries are delegate-authored and First-Mate-appended. Nine stories ran concurrently against one
+worktree, so `prd.json` and `progress.txt` were withheld from delegates to avoid a nine-way write
+race; the First Mate marks `passes` after validating each result against its acceptance criteria.
+Per-story file ownership held with zero overlap — no two delegates wrote the same path.
+
+### US-002 — First Mate, direct
+**Files changed**: `LICENSE`, `.oh/cli/LICENSE`
+**Result**: PASS
+
+Taken in-house rather than delegated. Asking a model to reproduce ~11 KB of legal text verbatim can
+only introduce corruption, so the canonical text was retrieved from
+`https://www.apache.org/licenses/LICENSE-2.0.txt` (202 lines, sha256
+`cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`) and placed byte-for-byte.
+
+The canonical file **opens with a blank line**, so `Apache License` is line 2 and
+`Version 2.0, January 2004` is line 3 — the original acceptance criterion said lines 1 and 2 and was
+corrected to match reality rather than the file being trimmed to match the criterion. Verified: the
+terms body (lines 1–177, through `END OF TERMS AND CONDITIONS`) diffs clean against the pristine
+retrieval; the sole deviation is line 190, the appendix boilerplate, now
+`Copyright 2026 Mifune Dev (mifune.dev)`. That line sits after the terms, so the grant itself is
+untouched. `grep -c 'MIT License'` → 0 in both files; `diff LICENSE .oh/cli/LICENSE` → empty.
+
+### US-001 — Record the ownership audit
+**Files changed**: `.oh/tasks/apache-relicense/ownership-audit.md` (new)
+**Result**: PASS
+
+Derived the evidence with live git commands, each shown inline so a reader can re-run it: the full
+`git shortlog -sne` identity table, all 9 `Im An AI` commits classified merge-vs-content with
+`f27cfd57` confirmed as the single content-bearing one at +2/−2, the `.oh/skills.lock` check showing
+`JuliusBrussee/caveman` as the sole non-`mifunedev` source, and `.pi/UPSTREAM.md` recording
+`pi-messenger-bridge` as an npm dependency rather than vendored code. Ends with `GO`.
+
+**Discrepancy found and reported rather than smoothed over**: live `HEAD` totals **1,534**, not the
+1,533 in `prd.md` § 5. Root cause isolated by running `HEAD~1` alongside `HEAD` — the delta is this
+task's own scaffolding commit, authored by the owner. It adds to an already-unblocked identity,
+introduces no new identity, and changes no disposition. `prd.md` § 5 now states the snapshot basis
+(`upstream/development` @ `94bfc2a9`) so the two figures reconcile.
+
+### US-003 — Add NOTICE
+**Files changed**: `NOTICE` (new), `.oh/cli/NOTICE` (new)
+**Result**: PASS
+
+Wrote the § 4(d) NOTICE: copyright and attribution lines, a third-party section that *cites* the
+vendored caveman skills' MIT license via `.oh/skills.lock` and `.oh/skills/caveman*/LICENSE` rather
+than restating it, a § 6 trademark paragraph, and the `typescript` line. The typescript claim was
+verified before being written, not assumed — `grep -c '"license": "Apache-2.0"'` on the lockfile
+returns 1, that entry is `node_modules/typescript` with `"dev": true`, and `files: ["dist"]` keeps it
+out of the tarball. `diff NOTICE .oh/cli/NOTICE` → empty.
+
+### US-004 — Retire the redundant per-skill licenses
+**Files changed**: 15 per-skill `LICENSE` files deleted
+**Result**: PASS
+
+Staged 15 deletions via `git rm`. Tripwire clean — nothing but files literally named `LICENSE` was
+touched. All 5 caveman LICENSEs survive byte-identical and still exist; no `SKILL.md`, `references/`,
+or `scripts/` file was modified; no new LICENSE added to the 20 skills that lack one.
+`skills-dir-clean.sh` exits 0 as predicted (it walks depth 1, so these were always invisible to it).
+
+### US-005 — README license, trademark, and boundary surface
+**Files changed**: `README.md`
+**Result**: PASS
+
+Badge, license section, `## Trademarks`, and the open-core statement. `grep -c 'License-MIT'` → 0.
+The delegate read LICENSE § 6 before writing the trademark section so the claim preserves § 6's own
+reasonable-and-customary-use carve-out instead of overstating it.
+
+**Non-obvious detail worth keeping**: shields.io requires a literal hyphen inside a badge segment to
+be doubled, so the URL carries `License-Apache--2.0-D4AF37`. Get this wrong and the badge silently
+renders with a broken field split rather than failing loudly.
+
+### US-006 — Package and distribution metadata
+**Files changed**: `package.json`, `.oh/cli/package.json`, `.devcontainer/Dockerfile`
+**Result**: PASS, with one criterion honestly unverified
+
+Both manifests declare `Apache-2.0`; `.oh/cli/package.json` `files` gained `"NOTICE"` alongside
+`"dist"` (npm force-includes README and LICENSE but not NOTICE, so without this the tarball would
+ship none). Protected path respected: `git diff --numstat -- .devcontainer/Dockerfile` reports
+`1  0` — one insertion, zero deletions. `oh-npm-package.sh` exits 0.
+
+`npm --prefix .oh/cli run typecheck` **could not run** — `tsc: not found`, because this worktree has
+no `.oh/cli/node_modules`. The delegate reported the gap rather than claiming a pass it had not
+observed, which is the correct behaviour. Deferred to US-010, which installs dependencies first.
+
+### US-007 — Open-core boundary documentation
+**Files changed**: `.oh/docs/open-core.md` (new), `.oh/docs/README.md`, `.oh/cli/README.md`
+**Result**: PASS
+
+New reference doc tabulating the split, plus the "why not MIT / why not AGPL-SSPL-BSL / why not dual
+licensing" rationale and the prior-MIT-releases guarantee. Linked from the docs index next to
+Security considerations. CLI README license line flipped and the `oh cloud` boundary sentence added.
+Every added relative link was path-normalized from its own file's directory and confirmed on disk.
+
+Noted: `.oh/docs/*.md` is inconsistent about `title:` frontmatter — several files including
+`security-considerations.md` have none. The new doc includes it, per its acceptance criterion.
+
+### US-008 — Root CONTRIBUTING.md with DCO
+**Files changed**: `CONTRIBUTING.md` (new), `.oh/docs/contributing.md` (+1 line)
+**Result**: PASS
+
+Thin root file carrying only the legal surface: inbound Apache-2.0, no CLA, the DCO with the
+`git commit -s` mechanic and the literal trailer form, and an explicit statement that the DCO is
+documented but **not** CI-enforced — so no contributor expects a gate that does not exist. Everything
+procedural links out to `.oh/docs/contributing.md`, which gained exactly one pointer line back.
+
+The delegate's own observation: keeping the root file to zero facts that the canonical guide also
+states made the no-duplication constraint self-enforcing — there is nothing to reconcile later.
+
+### US-009 — CHANGELOG entry
+**Files changed**: `CHANGELOG.md`
+**Result**: PASS
+
+One bullet under `## [Unreleased]` → `### Changed` carrying all three required facts: the MIT →
+Apache-2.0 move, that prior MIT releases remain available under MIT, and that the hosted Console
+stays proprietary. `git diff --numstat` reports `1  0`. No version promoted, no date, no tag.
+
+### US-011 — Correct the stale license claim in `.oh/skills.lock`
+**Files changed**: `.oh/skills.lock`
+**Result**: PASS
+
+Line 213's trailing clause `... and skill-lint remains MIT in repository LICENSE` became
+`... (MIT at time of consolidation, now Apache-2.0)` — the historical provenance is preserved and
+only the stale present-tense claim about the current root license is corrected. Line 28 (caveman,
+a third party's license) is untouched. `jq -e .` exits 0; `git diff --numstat` reports `1  1`.
+
+## First Mate validation — W0 + W1
+
+Validated independently rather than accepting delegate self-reports:
+
+- All 8 whitelisted third-party MIT files: `git diff upstream/development -- <path>` empty for each.
+- 5 caveman LICENSEs present, diff empty.
+- `grep -c 'MIT License'` → 0 for both LICENSE files; `diff LICENSE .oh/cli/LICENSE` empty.
+- `jq` confirms `Apache-2.0` on both manifests and both `"dist"` and `"NOTICE"` in `files`.
+- `diff NOTICE .oh/cli/NOTICE` empty. README badge line reads `License-Apache--2.0`.
+- Repo-wide `grep -rnw MIT` swept: every surviving hit is accounted for as whitelisted third-party
+  provenance, a caveman LICENSE, a dependency license in `.oh/cli/package-lock.json` (third-party,
+  correctly untouched), the historical caveman-vendoring CHANGELOG entry at line 542, or intentional
+  "prior MIT releases" prose. No unaccounted occurrence.
+- File-ownership audit: the staged change set matches the per-story assignment exactly, with no path
+  written by two stories.
+
+`passes: true` set for US-001..US-009 and US-011. US-010 outstanding.

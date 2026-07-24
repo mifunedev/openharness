@@ -6,6 +6,8 @@ title: "Contributing"
 
 This guide covers the workflow for contributing to Open Harness: creating branches, writing commits, updating the changelog, and shipping releases.
 
+For the inbound license terms and the Developer Certificate of Origin (DCO), see the root [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+
 ## Setup
 
 Clone the repository:

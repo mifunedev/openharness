@@ -2,7 +2,7 @@
   "name": "@mifune/openharness",
   "version": "0.2.0",
   "description": "Open Harness CLI — scaffold sandboxes and manage OpenHarness Cloud nodes.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "homepage": "https://github.com/mifunedev/openharness#readme",
   "repository": {
     "type": "git",
@@ -20,7 +20,8 @@
     "oh": "./dist/oh.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE"
   ],
   "publishConfig": {
     "access": "public"

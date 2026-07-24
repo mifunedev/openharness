@@ -117,9 +117,12 @@ $ grep -rnw --exclude-dir=.git 'MIT' .
 
 7+5+29+1+3+4+2+1 = **52**, matching the sweep total. No unaccounted hit.
 
-Full raw sweep output (for audit trail):
+Full raw sweep output (for audit trail). The `README.md:276` line was re-captured after DP-1 was
+revised to `Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)` (see `prd.md` § 11); every other line is
+as originally recorded, and the bucket counts are unchanged because the revision altered the holder
+string, not the MIT-mention topology:
 ```
-README.md:276:[Apache License 2.0](LICENSE) — copyright Mifune Dev (mifune.dev). Prior MIT releases remain available under MIT; this change governs new code and future releases and does not revoke past grants.
+README.md:276:[Apache License 2.0](LICENSE) — copyright Ryan Eggleston, d/b/a Mifune Dev (mifune.dev). Prior MIT releases remain available under MIT; this change governs new code and future releases and does not revoke past grants.
 .pi/UPSTREAM.md:9:| **License** | MIT |
 NOTICE:15:  Licensed under the MIT License.
 NOTICE:19:  or modify the MIT terms.

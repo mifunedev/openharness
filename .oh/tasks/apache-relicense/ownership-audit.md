@@ -337,11 +337,11 @@ against the real, current count of 1,534.
 
 ## 5. Legal note
 
-This is strategic and structural guidance, not legal advice. Counsel should confirm the copyright
-position and the `Mifune Dev (mifune.dev)` holder string — specifically whether that is a formal
-entity holding or assigned the copyright, or whether it should read `Ryan Eggleston, d/b/a Mifune
-Dev` — before the relicensing commit lands on the public repo. (Reproduced verbatim from `prd.md`
-§ 11.)
+This is strategic and structural guidance, not legal advice. The holder string was resolved before
+merge to `Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)` — the entity named by the trade name is
+being formed but does not yet exist, so the individual author is the rights holder today. Counsel
+should confirm that position and the post-formation IP assignment. (See `prd.md` § 11, which is
+authoritative.)
 
 ---
 

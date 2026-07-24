@@ -27,7 +27,7 @@
       "acceptanceCriteria": [
         "LICENSE is the canonical 202-line apache.org text, retrieved from https://www.apache.org/licenses/LICENSE-2.0.txt (sha256 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30). It retains the canonical LEADING BLANK LINE, so line 2 is `                                 Apache License` and line 3 is `                           Version 2.0, January 2004`",
         "The terms body — everything from line 1 through `END OF TERMS AND CONDITIONS` — is byte-identical to that retrieved file; no clause added, removed, reworded, re-wrapped, or re-indented. Verify by diffing against the pristine copy, not by reading",
-        "The appendix boilerplate brackets are filled: `Copyright [yyyy] [name of copyright owner]` becomes `Copyright 2026 Mifune Dev (mifune.dev)`. This is the ONLY permitted deviation and it sits after `END OF TERMS AND CONDITIONS`, so the terms are untouched",
+        "The appendix boilerplate brackets are filled: `Copyright [yyyy] [name of copyright owner]` becomes `Copyright 2026 Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)`. This is the ONLY permitted deviation and it sits after `END OF TERMS AND CONDITIONS`, so the terms are untouched",
         "No copyright line is inserted into the terms body — Apache-2.0 carries none, unlike MIT",
         "`grep -c 'MIT License' LICENSE` returns 0",
         ".oh/cli/LICENSE is updated identically; `diff LICENSE .oh/cli/LICENSE` produces no output"
@@ -41,7 +41,7 @@
       "title": "Add NOTICE",
       "description": "As a downstream distributor, I want a NOTICE file so that I can satisfy Apache-2.0 section 4(d).",
       "acceptanceCriteria": [
-        "Root NOTICE exists and contains the line `Copyright 2026 Mifune Dev (mifune.dev)`",
+        "Root NOTICE exists and contains the line `Copyright 2026 Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)`",
         "NOTICE contains the attribution sentence `This product includes software developed at Mifune Dev (https://mifune.dev).`",
         "A third-party section attributes the caveman skills to Julius Brussee under MIT, pointing at .oh/skills.lock and .oh/skills/caveman*/LICENSE rather than re-deriving or restating the license text",
         "A trademark paragraph states that Apache-2.0 section 6 grants no rights to the Mifune or Open Harness names, logos, or trade dress",
@@ -76,7 +76,7 @@
       "acceptanceCriteria": [
         "The badge on README.md line 4 reads Apache-2.0, still links to LICENSE, and preserves the existing D4AF37 / 0B1220 Mifune palette and `style=plastic`",
         "`grep -c 'License-MIT' README.md` returns 0",
-        "The `## 📄 License` section body changes from the bare `MIT.` to a statement naming Apache License 2.0 and the holder `Mifune Dev (mifune.dev)`, and noting that prior MIT releases remain available under MIT",
+        "The `## 📄 License` section body changes from the bare `MIT.` to a statement naming Apache License 2.0 and the holder `Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)`, and noting that prior MIT releases remain available under MIT",
         "A `## Trademarks` section exists stating Apache-2.0 section 6 grants no trademark rights to the Mifune or Open Harness names",
         "A two-to-three line open-core statement names the proprietary side (Mifune Console, provisioning/fleet control plane, billing/RBAC/hosted ops) and links to .oh/docs/open-core.md",
         "Only README.md is modified by this story"

@@ -38,8 +38,7 @@ output in `verification.md`, `/eval` re-run with `.oh/evals/RESULTS.md` regenera
 regression, and a ready-for-review PR to `upstream:development` that stays at the human merge gate.
 No auto-merge.
 
-**Outstanding precondition for the human reviewer, not for any delegate:** counsel should confirm
-the copyright position and the `Mifune Dev (mifune.dev)` holder string — specifically whether that is
-a formal entity holding or assigned the copyright, or whether it should read
-`Ryan Eggleston, d/b/a Mifune Dev` — before this merges. The PR body must surface this. Nothing in
-the build blocks on it; the merge does.
+**Resolved before merge, by the captain:** the holder string is
+`Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)`. The entity named by the trade name is being formed
+but does not yet exist, so the individual author is the rights holder today. See `prd.md` § 11 for
+the reasoning and the post-formation IP-assignment follow-up, which counsel should confirm.

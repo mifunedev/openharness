@@ -50,7 +50,7 @@ the managed platform, not restrictions on modifying the runtime.
 
 | # | Decision | Resolution |
 |---|---|---|
-| DP-1 | Canonical copyright holder | **`Mifune Dev (mifune.dev)`** |
+| DP-1 | Canonical copyright holder | **`Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)`** (revised — see § 11) |
 | DP-2 | The 15 Mifune-Dev per-skill `LICENSE` files | **Deleted**, not relicensed |
 | DP-3 | The 5 `caveman` per-skill `LICENSE` files | **Untouched** — third-party copyright |
 | DP-4 | License-consistency enforcement (eval probe, CI gate) | **Deferred** — out of scope, fast-follow |
@@ -244,7 +244,17 @@ original plan.
 
 ## 11. Legal note
 
-This is strategic and structural guidance, not legal advice. Counsel should confirm the copyright
-position and the `Mifune Dev (mifune.dev)` holder string — specifically whether that is a formal
-entity holding or assigned the copyright, or whether it should read `Ryan Eggleston, d/b/a Mifune
-Dev` — before the relicensing commit lands on the public repo.
+This is strategic and structural guidance, not legal advice.
+
+**Resolved.** DP-1 originally read `Mifune Dev (mifune.dev)`. The captain confirmed a legal entity is
+being formed (most likely via Stripe Atlas) but does **not** yet exist. Copyright vests in a legal
+person, so until the entity exists the rights sit with the individual author and a bare trade name
+would not name a rights holder. The holder string was therefore revised to
+`Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)` in `LICENSE`, `.oh/cli/LICENSE`, `NOTICE`,
+`.oh/cli/NOTICE`, and the README license line before merge. The `This product includes software
+developed at Mifune Dev` attribution sentence is unchanged — it names where the work was developed,
+not who holds the rights.
+
+**Open follow-up, out of scope for this task.** Once the entity is formed, pre-existing IP must be
+assigned to it in writing (confirm the Atlas founder package includes an IP assignment), and the same
+five surfaces updated to the exact registered legal name. Counsel should confirm both steps.

@@ -27,6 +27,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Deprecated
 ### Security
 - Add a reproducible, audit-gated `pi-langfuse@1.5.7` installer that overrides its vulnerable OpenTelemetry SDK tree to patched `@opentelemetry/sdk-node@0.220.0` ([#664](https://github.com/mifunedev/openharness/issues/664)).
+- Pin the transitive `postcss` dependency (reached via `vitest > vite`) to the patched `^8.5.18` via `pnpm.overrides`, clearing GHSA-r28c-9q8g-f849 and unblocking `pnpm run security:audit` on every PR ([#668](https://github.com/mifunedev/openharness/issues/668)).
 
 ## [2026.7.15] - 2026-07-15
 

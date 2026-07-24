@@ -1,0 +1,88 @@
+# progress — apache-relicense
+
+## Codebase Patterns
+
+- `origin` (`ryaneggz/openharness`) is the operator's fork; `upstream` (`mifunedev/openharness`) is
+  the canonical public repo. A license assertion is only legally meaningful upstream, so this branch
+  is cut from `upstream/development` and the PR targets `upstream:development`. Upstream merges do
+  NOT auto-close issues — close #666 manually.
+- `CLAUDE.md` is a symlink to `AGENTS.md`; edit `AGENTS.md` only.
+- `.oh/evals/probes/skills-dir-clean.sh` walks `find "$SKILLS" -maxdepth 1 -mindepth 1 -type f`, so
+  per-skill `LICENSE` files at depth 2 are invisible to it. Deleting them cannot break that probe.
+- npm force-includes `README` and `LICENSE` in a published tarball but NOT `NOTICE`. Any package
+  using an explicit `files` array must list `NOTICE` or it silently ships without one.
+- `.devcontainer/Dockerfile` is a protected path (`.claude/protected-paths.txt`). This task declares
+  an additive-only override: one new LABEL line, zero deletions.
+- Eight files mention MIT in reference to OTHER projects and must stay byte-identical. The list is
+  prd.md section 9. Never run a blind repo-wide MIT→Apache replacement.
+
+## Subtask dependency graph (from prd.json)
+
+```
+US-001 ownership audit    <- (none)   blocks the MERGE GATE, not the graph
+US-002 LICENSE x2         <- (none)   W1
+US-003 NOTICE x2          <- (none)   W1
+US-004 retire 15 skill LICENSEs <- (none)  W1   [PROTECTED PATH — override in prd.md 8.2]
+US-005 README             <- (none)   W1
+US-006 metadata x3        <- (none)   W1   [PROTECTED PATH — override in prd.md 8.1]
+US-007 boundary docs x3   <- (none)   W1
+US-008 CONTRIBUTING       <- (none)   W1
+US-009 CHANGELOG          <- (none)   W1
+US-011 skills.lock note   <- (none)   W1
+US-010 verification       <- ALL      W2
+```
+
+Waves: **W0** = {US-001} · **W1** = {US-002 ∥ US-003 ∥ US-004 ∥ US-005 ∥ US-006 ∥ US-007 ∥ US-008 ∥
+US-009 ∥ US-011} · **W2** = {US-010}
+
+Every W1 story owns a disjoint file set, so the wave is genuinely parallel with no write conflicts.
+
+## Delegate assignment
+
+| Story | Delegate | Thinking | Complexity class |
+|---|---|---|---|
+| US-001 | general-purpose | medium | standard |
+| US-002 | general-purpose | low | simple/mechanical (verbatim text placement) |
+| US-003 | general-purpose | medium | standard |
+| US-004 | general-purpose | low | simple/mechanical |
+| US-005 | general-purpose | low | simple/mechanical |
+| US-006 | general-purpose | high | complex (protected path, additive-only) |
+| US-007 | general-purpose | medium | standard |
+| US-008 | general-purpose | medium | standard |
+| US-009 | general-purpose | low | simple/mechanical |
+| US-010 | general-purpose | high | complex (cross-cutting, whitelist traps) |
+| US-011 | general-purpose | low | simple/mechanical |
+
+Model inherits by default. No story is architecture-shaped; none warrants `xhigh`.
+
+## Log
+
+- setup: issue #666 opened on `mifunedev/openharness`; worktree `feat/666-apache-relicense` cut from
+  `upstream/development` @ 94bfc2a9 so the operator's dirty `development` checkout is untouched.
+- plan phase: architect + pm delegated in parallel, synthesized to
+  `.claude/plans/log-txt-recommendation-polymorphic-acorn.md`, approved by the captain.
+- prd phase: `prd.md` + `prd.json` written from the approved plan.
+- critique round 1: 2 adversarial critics (alignment lens + factual/failure-mode lens) → both
+  **REVISE**. Findings independently verified against the repo by the First Mate before acting:
+  - **HIGH, both critics** — 10 of US-004's 15 target directories are skills named on
+    `.claude/protected-paths.txt`. The artifacts applied the override discipline to
+    `.devcontainer/Dockerfile` but never to these. **Fixed:** `prd.md` § 8 became § 8.1/§ 8.2 with an
+    explicit scoped override, and US-004 gained a leading protected-path criterion with a stop-and-
+    report tripwire.
+  - **MED, critic B** — `.oh/skills.lock:213` (the `audit` entry's `note`) asserts
+    "... remains MIT in repository LICENSE", a present-tense claim about *this* repo that the
+    relicense falsifies. Neither whitelisted nor owned by any story. **Fixed:** new **US-011**;
+    `prd.md` § 9 now distinguishes `.oh/skills.lock:28` (third-party caveman provenance — preserve)
+    from `:213` (ours — correct it).
+  - **MED, critic A** — US-010 dropped the plan's requirement that `/eval` regenerate
+    `.oh/evals/RESULTS.md`. **Fixed:** folded into the probe-suite criterion.
+  - **MED, critic A** — the counsel-confirmation caveat was in `prd.md` but not in the definition of
+    done. **Fixed:** added to `prompt.md` as a merge-gate precondition the PR body must surface.
+  - **LOW, critic A** — "founder" vs "project owner" persona drift. Not fixed; matches the approved
+    plan's own wording.
+  - Critic B verified clean, with commands: no probe reads LICENSE text / `license` fields / badges /
+    NOTICE except `skills-dir-clean.sh` (depth-1, blind to these) and `oh-npm-package.sh` (checks
+    `files | index("dist")` and LICENSE *existence* only, so both changes are safe); `.oh/manifest.json`
+    globs `skills/**` rather than listing files, so `oh update` cannot resurrect the 15 deletions;
+    no CI workflow reads license metadata; the shortlog arithmetic, all before-state line numbers,
+    and the 8-file whitelist all check out exactly as claimed.

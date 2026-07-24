@@ -210,7 +210,7 @@
       "installed_paths": [
         ".oh/skills/audit"
       ],
-      "note": "Consolidates implementation, PR, harness, context, skill, eval-quality, drift and campaign audits. Migrated LICENSE provenance from context-audit, harness-audit, pr-audit and skill-lint remains MIT in repository LICENSE."
+      "note": "Consolidates implementation, PR, harness, context, skill, eval-quality, drift and campaign audits. Migrated LICENSE provenance from context-audit, harness-audit, pr-audit and skill-lint (MIT at time of consolidation, now Apache-2.0)."
     }
   }
 }

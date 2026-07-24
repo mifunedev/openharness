@@ -228,6 +228,7 @@ RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness",
 
 # Labels for VS Code "Attach to Running Container"
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # ─── Copy install scripts + workspace (for CI; bind mount overrides at runtime)
 # Real path .oh/install/ — COPY does not traverse the back-compat install symlink.

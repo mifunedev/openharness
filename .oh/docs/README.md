@@ -65,6 +65,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 ## Reference
 
 - [Security considerations](security-considerations.md)
+- [Open-core boundary](open-core.md)
 - [Repair-operator registry](repair-operator-registry.md)
 - [Artifact-contract schema](artifact-contract-schema.md)
 - [`.oh/` directory layout](oh-directory-layout.md)

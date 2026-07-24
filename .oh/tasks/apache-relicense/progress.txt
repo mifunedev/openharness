@@ -1,0 +1,291 @@
+# progress — apache-relicense
+
+## Codebase Patterns
+
+- `origin` (`ryaneggz/openharness`) is the operator's fork; `upstream` (`mifunedev/openharness`) is
+  the canonical public repo. A license assertion is only legally meaningful upstream, so this branch
+  is cut from `upstream/development` and the PR targets `upstream:development`. Upstream merges do
+  NOT auto-close issues — close #666 manually.
+- `CLAUDE.md` is a symlink to `AGENTS.md`; edit `AGENTS.md` only.
+- `.oh/evals/probes/skills-dir-clean.sh` walks `find "$SKILLS" -maxdepth 1 -mindepth 1 -type f`, so
+  per-skill `LICENSE` files at depth 2 are invisible to it. Deleting them cannot break that probe.
+- npm force-includes `README` and `LICENSE` in a published tarball but NOT `NOTICE`. Any package
+  using an explicit `files` array must list `NOTICE` or it silently ships without one.
+- `.devcontainer/Dockerfile` is a protected path (`.claude/protected-paths.txt`). This task declares
+  an additive-only override: one new LABEL line, zero deletions.
+- Eight files mention MIT in reference to OTHER projects and must stay byte-identical. The list is
+  prd.md section 9. Never run a blind repo-wide MIT→Apache replacement.
+
+## Subtask dependency graph (from prd.json)
+
+```
+US-001 ownership audit    <- (none)   blocks the MERGE GATE, not the graph
+US-002 LICENSE x2         <- (none)   W1
+US-003 NOTICE x2          <- (none)   W1
+US-004 retire 15 skill LICENSEs <- (none)  W1   [PROTECTED PATH — override in prd.md 8.2]
+US-005 README             <- (none)   W1
+US-006 metadata x3        <- (none)   W1   [PROTECTED PATH — override in prd.md 8.1]
+US-007 boundary docs x3   <- (none)   W1
+US-008 CONTRIBUTING       <- (none)   W1
+US-009 CHANGELOG          <- (none)   W1
+US-011 skills.lock note   <- (none)   W1
+US-010 verification       <- ALL      W2
+```
+
+Waves: **W0** = {US-001} · **W1** = {US-002 ∥ US-003 ∥ US-004 ∥ US-005 ∥ US-006 ∥ US-007 ∥ US-008 ∥
+US-009 ∥ US-011} · **W2** = {US-010}
+
+Every W1 story owns a disjoint file set, so the wave is genuinely parallel with no write conflicts.
+
+## Delegate assignment
+
+| Story | Delegate | Thinking | Complexity class |
+|---|---|---|---|
+| US-001 | general-purpose | medium | standard |
+| US-002 | general-purpose | low | simple/mechanical (verbatim text placement) |
+| US-003 | general-purpose | medium | standard |
+| US-004 | general-purpose | low | simple/mechanical |
+| US-005 | general-purpose | low | simple/mechanical |
+| US-006 | general-purpose | high | complex (protected path, additive-only) |
+| US-007 | general-purpose | medium | standard |
+| US-008 | general-purpose | medium | standard |
+| US-009 | general-purpose | low | simple/mechanical |
+| US-010 | general-purpose | high | complex (cross-cutting, whitelist traps) |
+| US-011 | general-purpose | low | simple/mechanical |
+
+Model inherits by default. No story is architecture-shaped; none warrants `xhigh`.
+
+## Log
+
+- setup: issue #666 opened on `mifunedev/openharness`; worktree `feat/666-apache-relicense` cut from
+  `upstream/development` @ 94bfc2a9 so the operator's dirty `development` checkout is untouched.
+- plan phase: architect + pm delegated in parallel, synthesized to
+  `.claude/plans/log-txt-recommendation-polymorphic-acorn.md`, approved by the captain.
+- prd phase: `prd.md` + `prd.json` written from the approved plan.
+- critique round 1: 2 adversarial critics (alignment lens + factual/failure-mode lens) → both
+  **REVISE**. Findings independently verified against the repo by the First Mate before acting:
+  - **HIGH, both critics** — 10 of US-004's 15 target directories are skills named on
+    `.claude/protected-paths.txt`. The artifacts applied the override discipline to
+    `.devcontainer/Dockerfile` but never to these. **Fixed:** `prd.md` § 8 became § 8.1/§ 8.2 with an
+    explicit scoped override, and US-004 gained a leading protected-path criterion with a stop-and-
+    report tripwire.
+  - **MED, critic B** — `.oh/skills.lock:213` (the `audit` entry's `note`) asserts
+    "... remains MIT in repository LICENSE", a present-tense claim about *this* repo that the
+    relicense falsifies. Neither whitelisted nor owned by any story. **Fixed:** new **US-011**;
+    `prd.md` § 9 now distinguishes `.oh/skills.lock:28` (third-party caveman provenance — preserve)
+    from `:213` (ours — correct it).
+  - **MED, critic A** — US-010 dropped the plan's requirement that `/eval` regenerate
+    `.oh/evals/RESULTS.md`. **Fixed:** folded into the probe-suite criterion.
+  - **MED, critic A** — the counsel-confirmation caveat was in `prd.md` but not in the definition of
+    done. **Fixed:** added to `prompt.md` as a merge-gate precondition the PR body must surface.
+  - **LOW, critic A** — "founder" vs "project owner" persona drift. Not fixed; matches the approved
+    plan's own wording.
+  - Critic B verified clean, with commands: no probe reads LICENSE text / `license` fields / badges /
+    NOTICE except `skills-dir-clean.sh` (depth-1, blind to these) and `oh-npm-package.sh` (checks
+    `files | index("dist")` and LICENSE *existence* only, so both changes are safe); `.oh/manifest.json`
+    globs `skills/**` rather than listing files, so `oh update` cannot resurrect the 15 deletions;
+    no CI workflow reads license metadata; the shortlog arithmetic, all before-state line numbers,
+    and the 8-file whitelist all check out exactly as claimed.
+
+## Build log — W0 + W1
+
+Entries are delegate-authored and First-Mate-appended. Nine stories ran concurrently against one
+worktree, so `prd.json` and `progress.txt` were withheld from delegates to avoid a nine-way write
+race; the First Mate marks `passes` after validating each result against its acceptance criteria.
+Per-story file ownership held with zero overlap — no two delegates wrote the same path.
+
+### US-002 — First Mate, direct
+**Files changed**: `LICENSE`, `.oh/cli/LICENSE`
+**Result**: PASS
+
+Taken in-house rather than delegated. Asking a model to reproduce ~11 KB of legal text verbatim can
+only introduce corruption, so the canonical text was retrieved from
+`https://www.apache.org/licenses/LICENSE-2.0.txt` (202 lines, sha256
+`cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`) and placed byte-for-byte.
+
+The canonical file **opens with a blank line**, so `Apache License` is line 2 and
+`Version 2.0, January 2004` is line 3 — the original acceptance criterion said lines 1 and 2 and was
+corrected to match reality rather than the file being trimmed to match the criterion. Verified: the
+terms body (lines 1–177, through `END OF TERMS AND CONDITIONS`) diffs clean against the pristine
+retrieval; the sole deviation is line 190, the appendix boilerplate, now
+`Copyright 2026 Mifune Dev (mifune.dev)`. That line sits after the terms, so the grant itself is
+untouched. `grep -c 'MIT License'` → 0 in both files; `diff LICENSE .oh/cli/LICENSE` → empty.
+
+### US-001 — Record the ownership audit
+**Files changed**: `.oh/tasks/apache-relicense/ownership-audit.md` (new)
+**Result**: PASS
+
+Derived the evidence with live git commands, each shown inline so a reader can re-run it: the full
+`git shortlog -sne` identity table, all 9 `Im An AI` commits classified merge-vs-content with
+`f27cfd57` confirmed as the single content-bearing one at +2/−2, the `.oh/skills.lock` check showing
+`JuliusBrussee/caveman` as the sole non-`mifunedev` source, and `.pi/UPSTREAM.md` recording
+`pi-messenger-bridge` as an npm dependency rather than vendored code. Ends with `GO`.
+
+**Discrepancy found and reported rather than smoothed over**: live `HEAD` totals **1,534**, not the
+1,533 in `prd.md` § 5. Root cause isolated by running `HEAD~1` alongside `HEAD` — the delta is this
+task's own scaffolding commit, authored by the owner. It adds to an already-unblocked identity,
+introduces no new identity, and changes no disposition. `prd.md` § 5 now states the snapshot basis
+(`upstream/development` @ `94bfc2a9`) so the two figures reconcile.
+
+### US-003 — Add NOTICE
+**Files changed**: `NOTICE` (new), `.oh/cli/NOTICE` (new)
+**Result**: PASS
+
+Wrote the § 4(d) NOTICE: copyright and attribution lines, a third-party section that *cites* the
+vendored caveman skills' MIT license via `.oh/skills.lock` and `.oh/skills/caveman*/LICENSE` rather
+than restating it, a § 6 trademark paragraph, and the `typescript` line. The typescript claim was
+verified before being written, not assumed — `grep -c '"license": "Apache-2.0"'` on the lockfile
+returns 1, that entry is `node_modules/typescript` with `"dev": true`, and `files: ["dist"]` keeps it
+out of the tarball. `diff NOTICE .oh/cli/NOTICE` → empty.
+
+### US-004 — Retire the redundant per-skill licenses
+**Files changed**: 15 per-skill `LICENSE` files deleted
+**Result**: PASS
+
+Staged 15 deletions via `git rm`. Tripwire clean — nothing but files literally named `LICENSE` was
+touched. All 5 caveman LICENSEs survive byte-identical and still exist; no `SKILL.md`, `references/`,
+or `scripts/` file was modified; no new LICENSE added to the 20 skills that lack one.
+`skills-dir-clean.sh` exits 0 as predicted (it walks depth 1, so these were always invisible to it).
+
+### US-005 — README license, trademark, and boundary surface
+**Files changed**: `README.md`
+**Result**: PASS
+
+Badge, license section, `## Trademarks`, and the open-core statement. `grep -c 'License-MIT'` → 0.
+The delegate read LICENSE § 6 before writing the trademark section so the claim preserves § 6's own
+reasonable-and-customary-use carve-out instead of overstating it.
+
+**Non-obvious detail worth keeping**: shields.io requires a literal hyphen inside a badge segment to
+be doubled, so the URL carries `License-Apache--2.0-D4AF37`. Get this wrong and the badge silently
+renders with a broken field split rather than failing loudly.
+
+### US-006 — Package and distribution metadata
+**Files changed**: `package.json`, `.oh/cli/package.json`, `.devcontainer/Dockerfile`
+**Result**: PASS, with one criterion honestly unverified
+
+Both manifests declare `Apache-2.0`; `.oh/cli/package.json` `files` gained `"NOTICE"` alongside
+`"dist"` (npm force-includes README and LICENSE but not NOTICE, so without this the tarball would
+ship none). Protected path respected: `git diff --numstat -- .devcontainer/Dockerfile` reports
+`1  0` — one insertion, zero deletions. `oh-npm-package.sh` exits 0.
+
+`npm --prefix .oh/cli run typecheck` **could not run** — `tsc: not found`, because this worktree has
+no `.oh/cli/node_modules`. The delegate reported the gap rather than claiming a pass it had not
+observed, which is the correct behaviour. Deferred to US-010, which installs dependencies first.
+
+### US-007 — Open-core boundary documentation
+**Files changed**: `.oh/docs/open-core.md` (new), `.oh/docs/README.md`, `.oh/cli/README.md`
+**Result**: PASS
+
+New reference doc tabulating the split, plus the "why not MIT / why not AGPL-SSPL-BSL / why not dual
+licensing" rationale and the prior-MIT-releases guarantee. Linked from the docs index next to
+Security considerations. CLI README license line flipped and the `oh cloud` boundary sentence added.
+Every added relative link was path-normalized from its own file's directory and confirmed on disk.
+
+Noted: `.oh/docs/*.md` is inconsistent about `title:` frontmatter — several files including
+`security-considerations.md` have none. The new doc includes it, per its acceptance criterion.
+
+### US-008 — Root CONTRIBUTING.md with DCO
+**Files changed**: `CONTRIBUTING.md` (new), `.oh/docs/contributing.md` (+1 line)
+**Result**: PASS
+
+Thin root file carrying only the legal surface: inbound Apache-2.0, no CLA, the DCO with the
+`git commit -s` mechanic and the literal trailer form, and an explicit statement that the DCO is
+documented but **not** CI-enforced — so no contributor expects a gate that does not exist. Everything
+procedural links out to `.oh/docs/contributing.md`, which gained exactly one pointer line back.
+
+The delegate's own observation: keeping the root file to zero facts that the canonical guide also
+states made the no-duplication constraint self-enforcing — there is nothing to reconcile later.
+
+### US-009 — CHANGELOG entry
+**Files changed**: `CHANGELOG.md`
+**Result**: PASS
+
+One bullet under `## [Unreleased]` → `### Changed` carrying all three required facts: the MIT →
+Apache-2.0 move, that prior MIT releases remain available under MIT, and that the hosted Console
+stays proprietary. `git diff --numstat` reports `1  0`. No version promoted, no date, no tag.
+
+### US-011 — Correct the stale license claim in `.oh/skills.lock`
+**Files changed**: `.oh/skills.lock`
+**Result**: PASS
+
+Line 213's trailing clause `... remains MIT in repository LICENSE` became
+`... (MIT at time of consolidation, now Apache-2.0)` — the historical provenance is preserved and
+only the stale present-tense claim about the current root license is corrected. Line 28 (caveman,
+a third party's license) is untouched. `jq -e .` exits 0; `git diff --numstat` reports `1  1`.
+
+## First Mate validation — W0 + W1
+
+Validated independently rather than accepting delegate self-reports:
+
+- All 8 whitelisted third-party MIT files: `git diff upstream/development -- <path>` empty for each.
+- 5 caveman LICENSEs present, diff empty.
+- `grep -c 'MIT License'` → 0 for both LICENSE files; `diff LICENSE .oh/cli/LICENSE` empty.
+- `jq` confirms `Apache-2.0` on both manifests and both `"dist"` and `"NOTICE"` in `files`.
+- `diff NOTICE .oh/cli/NOTICE` empty. README badge line reads `License-Apache--2.0`.
+- Repo-wide `grep -rnw MIT` swept: every surviving hit is accounted for as whitelisted third-party
+  provenance, a caveman LICENSE, a dependency license in `.oh/cli/package-lock.json` (third-party,
+  correctly untouched), the historical caveman-vendoring CHANGELOG entry at line 542, or intentional
+  "prior MIT releases" prose. No unaccounted occurrence.
+- File-ownership audit: the staged change set matches the per-story assignment exactly, with no path
+  written by two stories.
+
+`passes: true` set for US-001..US-009 and US-011. US-010 outstanding.
+
+## W2
+
+### US-010 — End-to-end verification
+**Files changed**: `.oh/tasks/apache-relicense/verification.md` (new), `.oh/evals/RESULTS.md` (regenerated)
+**Result**: PASS (after remediating the one regression it found)
+
+Ran every check adversarially against the built artifact rather than the repo files alone, with real
+command output pasted into `verification.md`.
+
+**The tarball proof — the check that actually matters.** Everything else tests repo files; this tests
+what a consumer receives. `npm pack` in `.oh/cli`, extracted: `package/LICENSE` contains
+`Apache License` ×4 and `MIT License` ×0; `package/NOTICE` present at 1,540 bytes. Tarball and
+extraction removed; worktree confirmed clean afterwards. This is the check that would have caught the
+`files`-array trap — npm force-includes README and LICENSE but not NOTICE, so without US-006's
+`"NOTICE"` entry the published package would have shipped a NOTICE-less Apache-2.0 distribution.
+
+**The typecheck US-006 honestly could not verify** is now verified. Dependencies installed
+(`npm ci --ignore-scripts`), `tsc --noEmit` passes. `node_modules` did not leak into `git status`.
+
+**Probe suite: 92 probes → 88 PASS, 3 SKIPPED, 1 REGRESSION.**
+
+- **`audit-stale-references` — a genuine regression this branch introduced, now fixed.** The delegate
+  proved attribution the strong way, by running the probe against a disposable
+  `git worktree add --detach upstream/development` checkout where it passes, rather than inferring it
+  from reading. Cause: this task's own `prd.md`, `prd.json`, and `progress.txt` quoted the deprecated
+  audit-skill vocabulary verbatim while documenting the US-011 fix, and the probe's whitelist covers
+  only `.oh/tasks/audit-consolidation/*`.
+
+  **Fix chosen: sanitize our documents, not the probe.** Widening a drift guard owned by another task
+  so that this PR's paperwork can trip it is the wrong trade — the guard is doing its job. The four
+  tracked hits were rewritten to describe "the four superseded audit skills" without reproducing the
+  banned tokens, `verification.md` redacts them as `<legacy-audit-name>` behind an explicit note, and
+  `prd.json`'s US-011 criterion now carries a standing warning so a future editor does not reintroduce
+  them. Probe re-run: PASS. Nothing about the relicense itself changed.
+
+- **`next-dev-prod` — pre-existing and environmental, not attributable to this branch.** Verified
+  independently by the First Mate: the probe reads only live host state (`pgrep`, `/proc`, `tmux`) and
+  touches no file this branch modifies, and the process it flags is a `@openharness-cloud/web` dev
+  server belonging to an unrelated repo sharing this sandbox. The delegate separately reproduced the
+  identical failure, same PID, on a clean `upstream/development` checkout.
+
+- 3 SKIPPED (`autopilot-preflight-gate`, `cc-safety-net-wiring`, `debugmcp-availability`) are
+  environment-gated and excluded from pass-rate by the suite's own rule.
+
+**Carry-forward for future tasks:** `audit-stale-references.sh` whitelists deprecated audit vocabulary
+per task folder. Any future task whose PRD needs to quote that vocabulary as historical documentation
+will trip it. Either avoid verbatim quotation, as this task now does, or widen the whitelist
+deliberately in a PR that owns that probe.
+
+## First Mate validation — W2
+
+- `audit-stale-references.sh`, `skills-dir-clean.sh`, `oh-npm-package.sh` re-run post-remediation:
+  all exit 0.
+- `next-dev-prod.sh` re-run and its source read: host-state only, flagged PID belongs to
+  `@openharness-cloud/web`. Confirmed unrelated.
+- `git status --porcelain` free of `node_modules`, `*.tgz`, and extraction leftovers.
+
+`passes: true` set for US-010. All 11 stories pass.

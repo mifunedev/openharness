@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "project": "OpenHarness",
+  "branchName": "feat/666-apache-relicense",
+  "description": "Relicense Open Harness from MIT to Apache License 2.0 and document the open-core boundary. Authoritative reference: .oh/tasks/apache-relicense/prd.md. Target: upstream/development (mifunedev/openharness), issue #666.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Record the ownership audit",
+      "description": "As Mifune's founder, I want the copyright-ownership audit recorded as a durable artifact so that the relicense rests on cited evidence rather than recollection.",
+      "acceptanceCriteria": [
+        ".oh/tasks/apache-relicense/ownership-audit.md exists and reproduces the `git shortlog -sne` table from prd.md section 5 (1,533 commits, 8 identities, per-identity disposition)",
+        "All 9 `Im An AI <im.an.ai.agent@gmail.com>` commits are listed by short SHA and subject, each classified merge-vs-content; f27cfd57 'Update README.md' is named explicitly as the single content-bearing commit with its +2/-2 diffstat",
+        "Records the owner's attestation that `Im An AI` is his own identity, and states dependabot[bot] (3 commits) is excluded as mechanical version bumps carrying no protectable expression",
+        "States that JuliusBrussee/caveman is the only third-party vendored source (cites .oh/skills.lock) and that pi-messenger-bridge is an npm dependency, not vendored (cites .pi/UPSTREAM.md)",
+        "Every command used to derive the evidence is shown inline so a reader can re-run it",
+        "Final line of the file is exactly `GO`"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "PASS. Evidence derived live and shown inline; ends with GO. Flagged a real discrepancy (live HEAD totals 1,534 vs the 1,533 snapshot in prd.md §5) and isolated the cause via HEAD~1 rather than matching the expected number. prd.md §5 now states the snapshot basis so both figures reconcile."
+    },
+    {
+      "id": "US-002",
+      "title": "Replace the license text",
+      "description": "As the maintainer, I want LICENSE to carry unmodified Apache-2.0 terms so that the grant is unambiguous and machine-recognizable.",
+      "acceptanceCriteria": [
+        "LICENSE is the canonical 202-line apache.org text, retrieved from https://www.apache.org/licenses/LICENSE-2.0.txt (sha256 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30). It retains the canonical LEADING BLANK LINE, so line 2 is `                                 Apache License` and line 3 is `                           Version 2.0, January 2004`",
+        "The terms body — everything from line 1 through `END OF TERMS AND CONDITIONS` — is byte-identical to that retrieved file; no clause added, removed, reworded, re-wrapped, or re-indented. Verify by diffing against the pristine copy, not by reading",
+        "The appendix boilerplate brackets are filled: `Copyright [yyyy] [name of copyright owner]` becomes `Copyright 2026 Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)`. This is the ONLY permitted deviation and it sits after `END OF TERMS AND CONDITIONS`, so the terms are untouched",
+        "No copyright line is inserted into the terms body — Apache-2.0 carries none, unlike MIT",
+        "`grep -c 'MIT License' LICENSE` returns 0",
+        ".oh/cli/LICENSE is updated identically; `diff LICENSE .oh/cli/LICENSE` produces no output"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "PASS. Taken in-house by the First Mate rather than delegated: canonical text retrieved from apache.org (sha256 cfc7749b...), placed byte-for-byte. Terms body lines 1-177 diff clean against the pristine retrieval; sole deviation is line 190, the appendix holder line. AC line numbers corrected from 1/2 to 2/3 - the canonical file opens with a blank line."
+    },
+    {
+      "id": "US-003",
+      "title": "Add NOTICE",
+      "description": "As a downstream distributor, I want a NOTICE file so that I can satisfy Apache-2.0 section 4(d).",
+      "acceptanceCriteria": [
+        "Root NOTICE exists and contains the line `Copyright 2026 Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)`",
+        "NOTICE contains the attribution sentence `This product includes software developed at Mifune Dev (https://mifune.dev).`",
+        "A third-party section attributes the caveman skills to Julius Brussee under MIT, pointing at .oh/skills.lock and .oh/skills/caveman*/LICENSE rather than re-deriving or restating the license text",
+        "A trademark paragraph states that Apache-2.0 section 6 grants no rights to the Mifune or Open Harness names, logos, or trade dress",
+        "One line records that `typescript` — the sole Apache-2.0 entry in .oh/cli/package-lock.json — is a devDependency excluded from the shipped dist/, so no NOTICE obligation propagates",
+        ".oh/cli/NOTICE exists; `diff NOTICE .oh/cli/NOTICE` produces no output"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "PASS. typescript devDependency claim verified against package-lock.json (\"dev\": true) before being written into a legal-facing file, not assumed. diff NOTICE .oh/cli/NOTICE empty."
+    },
+    {
+      "id": "US-004",
+      "title": "Retire the redundant per-skill licenses",
+      "description": "As the maintainer, I want the 15 Mifune-Dev skill LICENSE files removed so that no subtree asserts MIT after the root goes Apache-2.0.",
+      "acceptanceCriteria": [
+        "PROTECTED PATH — read prd.md section 8.2 before starting. Ten of the fifteen target directories belong to skills named on .claude/protected-paths.txt (release, ci-status, agent-browser, prd, ralph, audit, delegate, strategic-proposal, ship-spec, retro). The override is recorded there and is scoped to the incidental LICENSE file ONLY: no skill is deleted or deprecated, and no functional file is touched. If you find yourself removing anything other than a file literally named LICENSE, stop and report instead",
+        "LICENSE deleted from all 15 of .oh/skills/{agent-browser,audit,ci-status,delegate,harness-context,interview,post-bridge,prd,ralph,release,render-html,retro,ship-spec,strategic-proposal,worktrees}/",
+        "`git status --porcelain` shows exactly 15 deletions under .oh/skills/ and zero other changes attributable to this story",
+        "The 5 caveman LICENSE files are unchanged: `git diff -- '.oh/skills/caveman*/LICENSE'` is empty and all 5 files still exist",
+        "No new per-skill LICENSE file is added to the 20 skills that lack one — they inherit the root grant",
+        "`bash .oh/evals/probes/skills-dir-clean.sh` exits 0",
+        "No SKILL.md or other skill file is modified by this story"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "PASS. Tripwire clean - only files literally named LICENSE removed. 5 caveman LICENSEs byte-identical, no SKILL.md/references/scripts touched, skills-dir-clean.sh exits 0. Protected-path override per prd.md 8.2."
+    },
+    {
+      "id": "US-005",
+      "title": "README license, trademark, and boundary surface",
+      "description": "As an evaluator, I want the README to state the license and the open/proprietary split so that I can assess adoption risk without reading the LICENSE file.",
+      "acceptanceCriteria": [
+        "The badge on README.md line 4 reads Apache-2.0, still links to LICENSE, and preserves the existing D4AF37 / 0B1220 Mifune palette and `style=plastic`",
+        "`grep -c 'License-MIT' README.md` returns 0",
+        "The `## 📄 License` section body changes from the bare `MIT.` to a statement naming Apache License 2.0 and the holder `Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)`, and noting that prior MIT releases remain available under MIT",
+        "A `## Trademarks` section exists stating Apache-2.0 section 6 grants no trademark rights to the Mifune or Open Harness names",
+        "A two-to-three line open-core statement names the proprietary side (Mifune Console, provisioning/fleet control plane, billing/RBAC/hosted ops) and links to .oh/docs/open-core.md",
+        "Only README.md is modified by this story"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "PASS. shields.io requires doubling a literal hyphen inside a badge segment, hence License-Apache--2.0; getting this wrong renders a broken badge silently. Trademark section preserves LICENSE section 6 own reasonable-and-customary-use carve-out."
+    },
+    {
+      "id": "US-006",
+      "title": "Package and distribution metadata",
+      "description": "As a packaging consumer, I want every manifest and image to declare Apache-2.0 so that automated license scanners read the truth.",
+      "acceptanceCriteria": [
+        "`jq -e '.license == \"Apache-2.0\"' .oh/cli/package.json` exits 0",
+        "Root package.json gains `\"license\": \"Apache-2.0\"` (private:true blocks publishing, not metadata truthfulness)",
+        ".oh/cli/package.json `files` array gains `\"NOTICE\"` — npm force-includes README and LICENSE but NOT NOTICE, so without this the published tarball ships no NOTICE",
+        ".devcontainer/Dockerfile gains exactly one new line, `LABEL org.opencontainers.image.licenses=\"Apache-2.0\"`, adjacent to the existing devcontainer.metadata LABEL",
+        "PROTECTED PATH: `git diff -- .devcontainer/Dockerfile` shows only additions, zero deletions, zero moved lines (`git diff --numstat -- .devcontainer/Dockerfile` reports 0 deletions)",
+        "Both package.json files remain valid JSON with unchanged key ordering elsewhere; `jq -e . <file>` exits 0 for each",
+        "`npm --prefix .oh/cli run typecheck` (or the root `pnpm run typecheck`) still passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "PASS on 6 of 7. Protected path clean: git diff --numstat reports 1 insertion 0 deletions on .devcontainer/Dockerfile. The typecheck criterion could NOT be verified - this worktree has no .oh/cli/node_modules so tsc was absent; the delegate reported the gap instead of claiming an unobserved pass. Carried into US-010, which installs dependencies first."
+    },
+    {
+      "id": "US-007",
+      "title": "Open-core boundary documentation",
+      "description": "As an enterprise reviewer, I want the open/proprietary boundary written down so that the license choice is legible without inferring it from the code.",
+      "acceptanceCriteria": [
+        ".oh/docs/open-core.md exists with the frontmatter `title:` convention used by sibling docs, and tabulates the split: Apache-2.0 covers the runtime, the `oh` CLI and public SDKs, container definitions and public deployment integrations, and the harness spec plus interop formats; proprietary covers the Mifune Console, the provisioning and fleet-management control plane, and billing / enterprise policy / RBAC / hosted operations",
+        ".oh/docs/open-core.md states that customer harness repos stay customer-owned, and that prior MIT releases remain usable under MIT",
+        "Linked from .oh/docs/README.md under `## Reference`, adjacent to the Security considerations entry",
+        ".oh/cli/README.md `## License` section changes `[MIT](./LICENSE)` to `[Apache-2.0](./LICENSE)`",
+        ".oh/cli/README.md `## OpenHarness Cloud` section gains one sentence stating `oh cloud` is an Apache-2.0 client that talks to a proprietary hosted service",
+        "Exactly three files are touched by this story: .oh/docs/open-core.md (new), .oh/docs/README.md, .oh/cli/README.md"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "PASS. Every added relative link path-normalized from its own directory and confirmed on disk. Noted that .oh/docs/*.md is inconsistent about title: frontmatter; the new doc includes it per its AC."
+    },
+    {
+      "id": "US-008",
+      "title": "Root CONTRIBUTING.md with DCO",
+      "description": "As a contributor, I want the inbound license terms stated so that my contribution's status is unambiguous.",
+      "acceptanceCriteria": [
+        "Root CONTRIBUTING.md exists, is distinct from .oh/docs/contributing.md, and links to it as the canonical workflow guide",
+        "`grep -qi 'Developer Certificate of Origin' CONTRIBUTING.md` and `grep -qi 'Signed-off-by' CONTRIBUTING.md` both succeed",
+        "Shows the `git commit -s` mechanic and the literal `Signed-off-by: Name <email>` trailer form",
+        "States that contributions are submitted under Apache-2.0 unless explicitly marked otherwise, and that no CLA is required",
+        "States DCO is documented, not CI-enforced (per DP-8) — do not imply a blocking gate that does not exist",
+        "Does NOT duplicate the branch-naming, commit-format, changelog, PR-title, or release prose from .oh/docs/contributing.md",
+        ".oh/docs/contributing.md is modified only by the addition of a link to the new root CONTRIBUTING.md"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "PASS. Root file states zero facts the canonical guide also states, so the no-duplication constraint is self-enforcing. Explicitly says the DCO is documented but not CI-enforced, per DP-8."
+    },
+    {
+      "id": "US-009",
+      "title": "CHANGELOG entry (staging only)",
+      "description": "As the release manager, I want the relicense staged under [Unreleased] so that the next release carries the note without this PR cutting a release.",
+      "acceptanceCriteria": [
+        "Exactly one bullet added under `## [Unreleased]` -> `### Changed`, in the repo's established form: `- <description> ([#666](https://github.com/mifunedev/openharness/issues/666)).`",
+        "The entry states the MIT -> Apache-2.0 move, that prior MIT releases remain available under MIT, and that the hosted Console stays proprietary",
+        "No version heading is promoted, no date added, no tag created — /release is a separate owner-triggered act",
+        "CHANGELOG.md is the only file modified by this story, and only that one line is added"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "PASS. One line, zero deletions, no version promoted and no tag."
+    },
+    {
+      "id": "US-010",
+      "title": "End-to-end verification",
+      "description": "As the maintainer, I want a single verification pass proving the shipped artifact — not just the repo files — declares Apache-2.0, and that no third-party MIT reference was collaterally rewritten.",
+      "acceptanceCriteria": [
+        "`grep -rn 'License-MIT' README.md .oh/cli/README.md` returns no matches",
+        "`grep -c 'MIT License' LICENSE .oh/cli/LICENSE` returns 0 for both, and `diff LICENSE .oh/cli/LICENSE` is empty",
+        "`jq -e '.license == \"Apache-2.0\"' .oh/cli/package.json` and the same check on the root package.json both exit 0",
+        "FALSE-POSITIVE WHITELIST — `git diff upstream/development -- <path>` is empty for each of: .oh/docs/harnesses/hermes.md, .oh/docs/integrations/debugmcp.md, .oh/docs/integrations/slack.md, .oh/docs/security-considerations.md, .pi/UPSTREAM.md, .oh/templates/full/.pi/UPSTREAM.md, .oh/tasks/cc-safety-net/prd.md, .oh/skills/wiki/corpus/raw/2026-07-18-markitdown.md — these describe other projects",
+        "The 5 caveman LICENSE files still exist and are unchanged, and .oh/skills.lock line 28 (the caveman upstream-MIT provenance note) is unchanged — only line 213 may differ, and only via US-011",
+        "A fresh repo-wide search (`grep -rn 'MIT' --exclude-dir=.git .`) is run and every surviving hit is accounted for as either whitelisted third-party provenance or one of the 5 caveman LICENSE files. Any unaccounted hit is reported, not silently accepted",
+        "SHIPPED-TARBALL PROOF: `cd .oh/cli && npm pack`, extract the tarball, and confirm package/LICENSE contains 'Apache License' and not 'MIT License', and that package/NOTICE exists and is non-empty. This is the only check that proves the artifact rather than the repo file. Remove the tarball and extraction afterwards so they are not committed",
+        "`bash .oh/evals/probes/oh-npm-package.sh` exits 0",
+        "`bash .oh/evals/probes/skills-dir-clean.sh` exits 0",
+        "The full probe suite is run via /eval and .oh/evals/RESULTS.md is regenerated; no probe flips green->red as a result of this change, and any pre-existing red is named and attributed to a prior cause",
+        "Findings are written to .oh/tasks/apache-relicense/verification.md with the actual command output for each check, not a claim that it passed"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "PASS after remediation. Tarball proof: package/LICENSE has 'Apache License' x4 and 'MIT License' x0; package/NOTICE present at 1540 bytes. Typecheck deferred by US-006 now verified (deps installed, tsc --noEmit passes). Probe suite 92 -> 88 PASS / 3 SKIPPED / 1 REGRESSION. audit-stale-references was a genuine regression from this task's own docs quoting deprecated audit vocabulary; fixed by sanitizing our documents rather than widening a drift guard owned by another task; probe now PASS. next-dev-prod is environmental (host-state-only probe, flagged PID belongs to an unrelated openharness-cloud dev server), proven by identical failure on a clean upstream/development checkout."
+    },
+    {
+      "id": "US-011",
+      "title": "Correct the stale license claim in .oh/skills.lock",
+      "description": "As the maintainer, I want the audit skill's lockfile note to stop asserting that the repository LICENSE is MIT so that no metadata contradicts the new grant.",
+      "acceptanceCriteria": [
+        ".oh/skills.lock line 213 — the `audit` entry's `note` field — no longer claims the repository LICENSE is MIT. Its trailing clause ends `... remains MIT in repository LICENSE.` (the four superseded audit-skill names preceding that clause are deliberately not reproduced here — see the note below)",
+        "The historical provenance meaning is preserved, not deleted: the note must still record that the audit skill consolidates implementation, PR, harness, context, skill, eval-quality, drift and campaign audits, and that LICENSE provenance was migrated from the four superseded audit skills it names. Only the stale present-tense claim about the current root license is corrected. NOTE: do not reproduce those four legacy skill names in any task document — `.oh/evals/probes/audit-stale-references.sh` bans that vocabulary across tracked surfaces and whitelists it only inside `.oh/skills.lock` itself",
+        ".oh/skills.lock line 28 (the caveman upstream-MIT provenance note) is UNCHANGED — it describes a third party's license, not this repo's",
+        "`jq -e . .oh/skills.lock` exits 0 and no other key, entry, checksum, or field in the file changes: `git diff -- .oh/skills.lock` shows exactly one changed line",
+        ".oh/skills.lock is the only file modified by this story"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "PASS. Historical provenance preserved, only the stale present-tense claim corrected. Line 28 (caveman, third-party) untouched. Added after adversarial critique round 1; not in the original approved plan."
+    }
+  ]
+}

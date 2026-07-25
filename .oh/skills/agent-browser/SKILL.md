@@ -29,7 +29,7 @@ If URL is missing, ask the user to provide it.
 
 | Name | Width | Height |
 |------|-------|--------|
-| `desktop` | 1920 | 1080 |
+| `desktop` | 1280 | 720 |
 | `mobile` | 414 | 896 |
 
 Default is `desktop` if `--viewport` is not specified.

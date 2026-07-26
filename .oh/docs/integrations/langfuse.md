@@ -18,22 +18,26 @@ privacy sections for the CLI you use before enabling either integration.
 
 ## Pi
 
-[`pi-langfuse` v1.5.6](https://www.npmjs.com/package/pi-langfuse/v/1.5.6) is a
-Pi package. Its `v1.5.6` tag resolves to
-[commit `fa415f33458f010265a287251fd3e7d249e97b99`](https://github.com/gooyoung/pi-langfuse/commit/fa415f33458f010265a287251fd3e7d249e97b99).
+[`pi-langfuse` v1.5.7](https://www.npmjs.com/package/pi-langfuse/v/1.5.7) is a
+Pi package. The published package resolves to
+[commit `131c1af13c24043890e820508ff1d7c1efc78ebe`](https://github.com/gooyoung/pi-langfuse/commit/131c1af13c24043890e820508ff1d7c1efc78ebe).
 Pi packages can execute arbitrary code, so review that source before installing
-it. Choose the narrowest installation scope and pin the version:
+it.
+
+Install the reviewed release through the repository-owned helper:
 
 ```bash
-# User installation: writes to ~/.pi/agent/settings.json
-pi install npm:pi-langfuse@1.5.6
-
-# Project installation: writes to .pi/settings.json (review before committing)
-pi install -l npm:pi-langfuse@1.5.6
-
-# One session only: does not change settings
-pi -e npm:pi-langfuse@1.5.6
+bash .pi/install/install-langfuse.sh
 ```
+
+The helper installs `pi-langfuse@1.5.7` in user scope, applies a scoped
+`@opentelemetry/sdk-node@0.220.0` override in Pi's managed npm manifest, and
+requires a clean `npm audit`. The override remediates the vulnerable
+OpenTelemetry tree selected by pi-langfuse's declared `^0.218.0` range without
+npm audit's unsafe recommendation to downgrade pi-langfuse to `1.0.0`. It is
+idempotent, preserves unrelated npm overrides, and remains in the persistent
+`~/.pi` volume across sandbox rebuilds. Rerun the helper if that volume is reset
+or if a future package operation reports an audit finding.
 
 This is deliberately **not** an Open Harness default package. It instruments Pi
 sessions only; it does not instrument standalone Claude Code, Codex CLI, or
@@ -156,7 +160,7 @@ Then run these commands in the **SANDBOX**:
 
 ```bash
 pi --version
-pi install npm:pi-langfuse@1.5.6
+bash .pi/install/install-langfuse.sh
 pi list
 export LANGFUSE_PRIVACY_PRESET=metadata-only
 pi
@@ -313,6 +317,8 @@ meets the need, and treat the Langfuse deployment as an external data boundary.
 
 For package installation scope, pins, and trust behavior, see the upstream
 [Pi packages documentation](https://github.com/earendil-works/pi-mono/blob/main/packages/coding-agent/docs/packages.md).
+The repository helper intentionally uses user scope so opting into observability
+does not modify the tracked project package list.
 
 ## Claude Code
 

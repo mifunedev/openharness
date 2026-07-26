@@ -1,0 +1,40 @@
+# Progress — audit-consolidation
+
+## Codebase Patterns
+
+- Canonical provider-portable skills live under `.oh/skills/`; provider surfaces are symlinks.
+- `/audit` is the only public audit-family owner; shared scripts/references remain private.
+- Preserve unrelated root work by operating only in this isolated worktree.
+
+## US-001–US-009 — 2026-07-17 22:30 UTC
+
+**Title**: Complete approved audit consolidation
+**Files changed**: `.oh/skills/audit/`, audit callers/probes/workflows/docs, `.oh/scripts/ablate.sh`, wiki, changelog, task evidence
+**Commit**: fafe58ae
+**Result**: PASS
+
+### What I did
+Implemented the nine-target dispatcher, private focused/queue PR acquisition and deterministic classifier, migrated all target protocols and implementation gating, unified root/run/log and ablation ownership, migrated callers and probes, removed legacy public owners, and documented the breaking architecture. Preserved parent protected-path commit `6ea7be3f` in ancestry and did not alter the parent's protected-path file.
+
+### Verification
+Focused classifier/dispatcher/recovery/stale-reference/provider/wiki probes pass. `pnpm run typecheck`, `pnpm run lint`, 456 script tests, ShellCheck via `pnpm dlx shellcheck`, `git diff --check`, and the full 86-probe eval suite pass with no new green-to-red regression; `next-dev-prod` is a disclosed pre-existing unchanged red after the first full run.
+
+### Learnings for future iterations
+Clean-breaking dispatcher migrations require semantic separation of focused PR (`/audit pr`) from queue (`/audit prs`) callers; blind name replacement is insufficient. Provider surfaces are directory symlinks, so canonical reference resources remain under `.oh/skills/audit/` rather than becoming public helper skills.
+
+## Adversarial remediation — 2026-07-17 22:46 UTC
+
+Repaired all high/medium review findings: real CheckRun/StatusContext normalization,
+canonical spec/watchdog focused classification, executable immutable run/root/log
+lifecycle, fail-closed rooted implementation/browser gates, reachable external routing,
+wiki child suppression, `--mine`, context paths, broad clean-break coverage, and
+race/symlink/contradiction/trap-safe ablation recovery. Added production behavior
+fixtures for acquisition, classifier shapes, implementation gates, lifecycle concurrency,
+and ablation interruption/recovery.
+
+Verification: focused probes PASS; ShellCheck 0.11.0 PASS; full 88-probe eval exits 0
+with no new green-to-red regression (`next-dev-prod` remains pre-existing/unchanged);
+`git diff --check` PASS.
+
+---
+STATUS: COMPLETE

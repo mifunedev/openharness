@@ -9,11 +9,29 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- Install Herdr by default as a persistent multi-agent terminal workspace ([#651](https://github.com/mifunedev/openharness/issues/651)).
+- Add bounded local PDF, DOCX, PPTX, and XLSX normalization to `/wiki ingest` through Microsoft MarkItDown's pinned upstream CLI, preserving immutable source provenance without a wrapper command ([#650](https://github.com/mifunedev/openharness/pull/650)).
+- Add the explicit nine-target `/audit` dispatcher, deterministic focused/queue PR classifier, correlated full campaigns, and shared locked ablation recovery ([#646](https://github.com/mifunedev/openharness/pull/646)).
+- Adopt `cc-safety-net@1.0.6` as the cross-provider destructive-command guard (claude, codex, and pi) — a PreToolUse hook that semantically blocks `git reset --hard`, `rm -rf`, `git push --force`, and peers under `bypassPermissions`/`approval_policy=never`; the binary is baked into the image at build time (exact pin, zero boot-time registry access), with a `CC_SAFETY_NET_OFF=1` kill-switch that disables the claude/codex bash hooks without config edits, a new `.oh/scripts/git-maintenance.sh` shim so hook-mediated harness automation keeps its legitimate destructive-git operations, and a `cc-safety-net-wiring` eval probe guarding the wiring ([#654](https://github.com/mifunedev/openharness/issues/654)).
+- Add the First Mate role charter at `.oh/context/rules/first-mate.md` and the git-tracked `.oh/prompts/advisor/` prompt pack, with a new `architect` crew agent for solution-shape planning ([#660](https://github.com/mifunedev/openharness/issues/660)).
 ### Changed
+- Default agent-browser desktop sessions to a 1280×720 viewport ([#674](https://github.com/mifunedev/openharness/issues/674)).
+- Refresh the default Claude model, durable review-loop guidance, and Cloudflared public-surface verification instructions ([#672](https://github.com/mifunedev/openharness/issues/672)).
+- Relicense from MIT to Apache License 2.0 with patent grants and trademark clarity; prior MIT releases remain available under MIT and the hosted Console stays proprietary ([#666](https://github.com/mifunedev/openharness/issues/666)).
+- Make Herdr the canonical first interactive workspace after sandbox entry, with setup and agents organized inside persistent panes and a pinned, checksum-verified CLI ([#653](https://github.com/mifunedev/openharness/issues/653)).
+- Protect the consolidated `/audit` owner in place of the superseded `harness-audit`, `skill-lint`, `eval-lint`, and `drift-check` entry points, staging their removal in the separate audit-consolidation implementation ([#647](https://github.com/mifunedev/openharness/issues/647)).
+- **BREAKING:** Consolidate artifact authoring under `/builder <agent|skill|command|rule> <name-or-request>` with one authoritative reference per type ([#643](https://github.com/mifunedev/openharness/issues/643)).
 ### Fixed
+- Harden audit consolidation with real GitHub CI normalization, executable run/root/log lifecycle, focused watchdog classification, non-mutating implementation gates, and race-safe ablation recovery fixtures ([#646](https://github.com/mifunedev/openharness/pull/646)).
 ### Removed
+- **BREAKING:** Remove superseded audit-family entry points and the `auditor` agent. Migration: `/pr-audit` → `/audit pr` or `/audit prs`; `/harness-audit` → `/audit harness`; `/context-audit` → `/audit context`; `/skill-lint` → `/audit skills`; `/eval-lint` → `/audit eval-quality`; `/drift-check` → `/audit drift`; `/audit <slug>` → `/audit implementation <slug>`; auditor campaigns → `/audit full` ([#646](https://github.com/mifunedev/openharness/pull/646)).
+- Remove the legacy `agent-builder`, `skill-builder`, `command-builder`, and `rule-builder` agents and the superseded `/skill-builder` entry point; migrate callers to `/builder` ([#643](https://github.com/mifunedev/openharness/issues/643)).
+- Retire the dead `RISKY_BASH` array and its bash branch from pi's `.pi/extensions/path-guard.ts` — it was a no-op in both headless and TUI modes, now superseded by cc-safety-net's fail-closed pi extension; `SENSITIVE_PATHS` and the `/guard` command are retained ([#654](https://github.com/mifunedev/openharness/issues/654)).
 ### Deprecated
 ### Security
+- Add a reproducible, audit-gated `pi-langfuse@1.5.7` installer that overrides its vulnerable OpenTelemetry SDK tree to patched `@opentelemetry/sdk-node@0.220.0` ([#664](https://github.com/mifunedev/openharness/issues/664)).
+- Pin the transitive `postcss` dependency (reached via `vitest > vite`) to the patched `^8.5.18` via `pnpm.overrides`, clearing GHSA-r28c-9q8g-f849 and unblocking `pnpm run security:audit` on every PR ([#668](https://github.com/mifunedev/openharness/issues/668)).
+- Move every pinned GitHub Action off the deprecated Node 20 runtime — `actions/checkout@v7`, `actions/setup-node@v7`, `pnpm/action-setup@v6`, `actions/cache@v6`, `softprops/action-gh-release@v3`, `docker/setup-buildx-action@v4`, `docker/login-action@v4` — and unpin the major in the `pnpm-audit-ci-gate` probe so future runtime bumps do not read as regressions ([#670](https://github.com/mifunedev/openharness/issues/670)).
 
 ## [2026.7.15] - 2026-07-15
 

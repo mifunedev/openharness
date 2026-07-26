@@ -69,7 +69,8 @@ would be written; never write it.
 ### 2. Collect all wiki entry paths
 
 ```bash
-HARNESS=/home/sandbox/harness
+HARNESS="${AUDIT_ROOT:-$(git rev-parse --show-toplevel)}"
+HARNESS=$(cd "$HARNESS" && pwd -P)
 WIKI_ENTRIES=()
 for f in "$HARNESS"/.oh/skills/wiki/corpus/*.md; do
   [ -f "$f" ] && WIKI_ENTRIES+=("$f")
@@ -414,16 +415,23 @@ This protocol ensures that a partial write or generation failure never leaves
 
 ### 10. Memory Improvement Protocol
 
-Always run this step regardless of outcome, dry-run or not. Get the current
-UTC time first:
+When `AUDIT_RUN_ID` is inherited, return a structured wiki-lint observation
+carrying `AUDIT_RUN_ID`, `AUDIT_ROOT`, result, counts, and README evidence path;
+suppress this append and retro entirely. The outer `/audit` dispatcher owns the
+single locked append under `AUDIT_LOG_ROOT`. A direct `/wiki lint` invocation
+still runs this step regardless of outcome or dry-run.
+
+For a direct invocation, get the current UTC time and resolve the configured
+memory root:
 
 ```bash
 date -u +%H:%M
 TODAY=$(date -u +%Y-%m-%d)
-mkdir -p "$HARNESS/.oh/memory/$TODAY"
+LOG_ROOT="${AUDIT_LOG_ROOT:-$HARNESS}"
+mkdir -p "$LOG_ROOT/.oh/memory/$TODAY"
 ```
 
-Append to `.oh/memory/<UTC-date>/log.md`:
+Append to `$LOG_ROOT/.oh/memory/<UTC-date>/log.md`:
 
 ```markdown
 ## /wiki lint -- HH:MM UTC
@@ -506,8 +514,9 @@ and distinct recommendations.
   atomic write in § 9c.
 - **Grepping `.oh/skills/wiki/corpus/README.md` for entries** — the README is the output of this
   skill, not its input. Always enumerate `.oh/skills/wiki/corpus/*.md` directly.
-- **Skipping the log** — every invocation (OP, DRY-RUN, FAIL) appends a log entry.
-  No exceptions.
+- **Skipping a direct log** — every direct invocation (OP, DRY-RUN, FAIL) appends
+  a log entry. Audit-child mode is the sole exception and returns its observation
+  to the outer dispatcher instead.
 - **Hardcoding today's date** — always compute UTC date at runtime with
   `date -u +%Y-%m-%d`.
 
@@ -519,4 +528,4 @@ and distinct recommendations.
 - `/wiki ingest` — add or update an entry; the only authorized write path to `.oh/skills/wiki/corpus/`
 - `/wiki query` — search the wiki by topic; shares the § 6 extraction command
 - `.oh/skills/retro/references/memory-protocol.md` — Memory Improvement Protocol (MIP) governing the log step
-- `/context-audit` — reference for `--dry-run` flag pattern and atomic-write convention
+- `/audit context` — reference for `--dry-run` flag pattern and atomic-write convention

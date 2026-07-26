@@ -49,7 +49,7 @@ trace/event ledger RFC
   → diagnostic reports + artifact contracts
   → weakness mining
   → repair registry + proposal generator
-  → benchmark/promotion gates + eval-lint
+  → benchmark/promotion gates + `/audit eval-quality`
   → per-agent profiles
   → optional comparison/eval pack
 ```

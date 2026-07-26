@@ -60,8 +60,11 @@ for (const file of process.argv.slice(2)) {
 process.exit(failed ? 1 : 0);
 NODE
 
-if ! grep -q 'pnpm/action-setup@v4' "$CI_WORKFLOW"; then
-  echo "REGRESSION: ci-harness workflow no longer installs pnpm via pnpm/action-setup@v4" >&2
+# Match any major: the guard is that pnpm is installed via the action at all,
+# not which version it is pinned to. Pinning the major here made routine
+# runtime bumps (Node 20 -> Node 24, #670) look like a regression.
+if ! grep -qE 'pnpm/action-setup@v[0-9]+' "$CI_WORKFLOW"; then
+  echo "REGRESSION: ci-harness workflow no longer installs pnpm via pnpm/action-setup" >&2
   exit 1
 fi
 

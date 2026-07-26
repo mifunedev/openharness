@@ -79,7 +79,22 @@ Pass an optional container name to attach to a different running container, e.g.
 Either way you're inside the isolated sandbox as the `sandbox` user. Working
 directory: `/home/sandbox/harness`.
 
-## Pick your harness
+## Start Herdr first
+
+Your first command inside a fresh sandbox should be:
+
+```bash
+herdr
+```
+
+Herdr creates or reattaches the persistent interactive workspace for this repository.
+Complete GitHub and provider authentication, launch agents, and run tests and servers
+inside its panes. Detach with `Ctrl-b q`; run `herdr` again to return while the container
+keeps running. A container stop/rebuild restores metadata and layout, not terminated
+agent or server processes. Raw shells and direct agent commands remain recovery paths. Cron, Slack, and gateway infrastructure
+continue to run independently under tmux.
+
+## Set up agents inside Herdr
 
 The default sandbox ships with Claude Code, Codex, and Pi. OpenCode,
 DeepAgents, Hermes, and Grok Build are optional image-level installs; T3 Code runs on
@@ -111,7 +126,7 @@ per-harness setup.
 
 If `GH_TOKEN` was set during install, the entrypoint already ran
 `gh auth login` and `gh auth setup-git` for you. Otherwise run them once
-inside the shell:
+inside a Herdr pane:
 
 ```bash
 gh auth login && gh auth setup-git
@@ -173,10 +188,10 @@ overlays to `composeOverrides[]` in `config.json` (gitignored, last wins).
 ## End-to-end setup walkthrough
 
 The full path from a bare Linux host to an authenticated multi-agent sandbox. Each step
-inlines the command to run; follow the link for depth/troubleshooting. Steps 5–13 run
-**inside the sandbox** (`make shell`). For the agent-auth steps (8–11), the simplest
+inlines the command to run; follow the link for depth/troubleshooting. Steps 5–14 run
+**inside the sandbox** (`make shell`); step 5 enters Herdr before setup. For agent-auth steps (9–12), the simplest
 cross-provider method is `/login` → **device mode** inside each agent's interactive session
-(see [Pick your harness](#pick-your-harness)); the explicit commands shown are equivalents.
+(see [Set up agents inside Herdr](#set-up-agents-inside-herdr)); the explicit commands shown are equivalents.
 
 1. **Install host prerequisites** — Docker (+ Compose), Git, and `make`
    ([details](./installation.md#prerequisites)):
@@ -196,43 +211,47 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
    make sandbox        # build + start (~10 min cold)
    make shell          # attach as the sandbox user
    ```
-5. **Authenticate GitHub over SSH** — choose SSH, generate a key, paste a token
+5. **Start Herdr** — your first inside-sandbox command; all remaining setup runs in its panes:
+   ```bash
+   herdr
+   ```
+6. **Authenticate GitHub over SSH** — choose SSH, generate a key, paste a token
    ([GitHub auth](./integrations/github.md)):
    ```bash
    gh auth login && gh auth setup-git
    ```
-6. **Create your own private repo**:
+7. **Create your own private repo**:
    ```bash
    gh repo create <your-user>/openharness --private
    ```
-7. **Point remotes at your repo + upstream** (SSH, so the step-5 key is used;
+8. **Point remotes at your repo + upstream** (SSH, so the step-6 key is used;
    [clone-and-own](./installation.md#clone-and-own-private-origin-and-upstream-recommended)):
    ```bash
    git remote set-url origin git@github.com:<your-user>/openharness.git
    git remote add upstream git@github.com:mifunedev/openharness.git
    git push -u origin HEAD
    ```
-8. **Authenticate Claude Code** ([Claude Code](./harnesses/claude-code.md)):
+9. **Authenticate Claude Code** ([Claude Code](./harnesses/claude-code.md)):
    ```bash
    claude auth login && claude auth status
    ```
-9. **Authenticate Codex** ([Codex](./harnesses/codex.md)):
+10. **Authenticate Codex** ([Codex](./harnesses/codex.md)):
    ```bash
    codex login --device-auth
    ```
    > Optional: DebugMCP (cross-harness debugging over MCP) is available if you attached via
    > VS Code — see [Enter the sandbox](#enter-the-sandbox) above, not this step.
-10. **Authenticate Pi** — configure provider keys / OAuth ([Pi](./harnesses/pi.md)):
+11. **Authenticate Pi** — configure provider keys / OAuth ([Pi](./harnesses/pi.md)):
     ```bash
     pi        # first run walks provider auth
     ```
-11. **Authenticate Hermes** (optional; needs `install.hermes: true`) ([Hermes](./harnesses/hermes.md)):
+12. **Authenticate Hermes** (optional; needs `install.hermes: true`) ([Hermes](./harnesses/hermes.md)):
     ```bash
     hermes setup
     ```
-12. **Configure Slack** for Pi (and Hermes) — create the Slack app, add tokens, set trust
+13. **Configure Slack** for Pi (and Hermes) — create the Slack app, add tokens, set trust
     ([Slack](./integrations/slack.md); Hermes uses `hermes gateway setup`).
-13. **Run and verify the gateways** (sandbox-only; watch read-only so you can't kill them —
+14. **Run and verify the gateways** (sandbox-only; watch read-only so you can't kill them —
     [Slack § Run and verify](./integrations/slack.md), [Hermes § Run and verify](./harnesses/hermes.md#run-and-verify-read-only)):
     ```bash
     gateway pi && gateway hermes        # start the client-slack-* sessions

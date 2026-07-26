@@ -80,9 +80,11 @@ for reason in dirty staged untracked missing-upstream unpushed; do
   fi
 done
 
-# Registered worktrees use git worktree remove only after the preservation gate.
-if ! grep -Fq 'git worktree remove --force "$path"' "$CRON"; then
-  echo "REGRESSION: stale registered worktrees are not removed via git worktree remove" >&2
+# Registered worktrees use forced worktree removal only after the preservation
+# gate — inline `git worktree remove --force` or (post cc-safety-net) the
+# guard-compatible shim `git-maintenance.sh worktree-remove`.
+if ! grep -Eq 'git worktree remove --force "\$path"|git-maintenance\.sh worktree-remove "\$path"' "$CRON"; then
+  echo "REGRESSION: stale registered worktrees are not removed via forced worktree removal" >&2
   exit 1
 fi
 

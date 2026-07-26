@@ -50,19 +50,16 @@ Skills are loaded from `.oh/skills/` via each provider's `skills` symlink, so
 | `/ralph` | convert a markdown PRD → `.oh/tasks/<name>/prd.json` |
 | `/delegate` | parallel sub-agent coordinator — execute a plan in waves |
 | `/critique`, `/approve` | adversarial review + the go/no-go gate |
-| `/audit` | per-unit PASS/FAIL verdict for one implementation |
+| `/audit` | explicit nine-target audit dispatcher (`implementation|pr|prs|harness|context|skills|eval-quality|drift|full`) |
 | `/eval` | run the probe suite, write `.oh/evals/RESULTS.md` |
 | `/git` | issues, branches, commits, PR titles/bodies, releases |
 | `/ci-status` | after a push — poll CI, report pass/fail |
-| `/pr-audit` | triage all open PRs into actionable buckets |
 | `/release` | CalVer release — branch, tag, push, image |
 | `/health-check` | triage host memory/disk/Docker before a heavy build |
 | `/agent-browser` | open a URL headless for screenshots / preview checks |
 | `/cloudflared` | expose a sandbox port via a public tunnel |
 | `/wiki` | knowledge-base ingest / query / lint |
 | `/retro` | session-closing retrospective → memory updates |
-| `/harness-audit` | audit the harness for improvements |
-| `/skill-lint` | score skills for staleness |
 | `/interview` | adaptive pre-work clarifier |
 
 Run `ls .oh/skills/` for the full set; each has a `SKILL.md`.

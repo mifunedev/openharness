@@ -1,0 +1,9 @@
+- Advisor -> orchestrates expert specialized delegates to complete task.
+- Advisor -> Begin by exploring best approach, generate /prd -> /ralph
+- Advisor -> 2 critics audit
+- Advisor -> design subtask dependency graph from the prd.json to track task completion
+- Advisor -> /compact session context before implementation phase
+- Advisor -> implement opus delegate fan out with reasoning correlated to subtask complexity
+- Advisor -> delegates /audit pr
+- Advisor -> /retro auto-approve
+- Advisor -> Ready PR.

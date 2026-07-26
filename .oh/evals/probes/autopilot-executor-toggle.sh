@@ -5,7 +5,7 @@
 #       Advisor-monitored ralph loop (/delegate optional inside, never a replacement); keeps
 #       delegate-advisor + inline ralph as explicit opt-in flags, uses the exact Advisor /goal
 #       phrase, defers the whole build to /ship-spec (no inline compact/delegate/eval —
-#       ship-spec owns them + the /pr-audit undraft), renames cron tmux sessions to
+#       ship-spec owns them + the /audit pr undraft), renames cron tmux sessions to
 #       autopilot-<branch>, dedupes active work, cleans finalized active markers, and keeps
 #       dry-run research non-mutating.
 set -euo pipefail
@@ -38,7 +38,7 @@ grep -Fq '.oh/scripts/ralph.sh "$SLUG"' "$SKILL" || missing+=("Ralph inline fall
 grep -Fq '#### `ralph` fallback' "$SKILL" || missing+=("Ralph inline fallback section")
 
 # Required exact Advisor goal phrase (defers the whole build to /ship-spec; Advisor-managed ralph).
-required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /pr-audit undraft) into a ready-for-review PR'
+required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /audit pr undraft) into a ready-for-review PR'
 grep -Fq "$required_goal" "$SKILL" || missing+=("exact Advisor /goal phrase in autopilot skill")
 grep -Fq "$required_goal" "$CRON" || missing+=("exact Advisor /goal phrase in cron reminder")
 
@@ -49,7 +49,7 @@ default_section="$(awk '/#### `ship-spec` \(default\)/,/#### `delegate-advisor`/
 if [[ -n "$default_section" ]]; then
   grep -Fq 'defer to `/ship-spec`' <<<"$default_section" || missing+=("ship-spec section defers to /ship-spec")
   grep -Fq 'does **not** run its own' <<<"$default_section" || missing+=("ship-spec section does not re-run compact/delegate/eval")
-  grep -Fq '/pr-audit' <<<"$default_section" || missing+=("ship-spec section references the ship-spec-owned /pr-audit undraft")
+  grep -Fq '/audit pr' <<<"$default_section" || missing+=("ship-spec section references the ship-spec-owned /audit pr undraft")
   grep -Fq 'Advisor-monitored' <<<"$default_section" || missing+=("ship-spec section names the Advisor-monitored ralph loop default")
   grep -Fq '`/delegate` optional inside' <<<"$default_section" || missing+=("ship-spec section marks /delegate optional inside the loop")
   # ship-spec must own the build BEFORE autopilot reconciles: §4 (/ship-spec) precedes §5 (executor).

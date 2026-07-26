@@ -74,7 +74,7 @@ Read the mined markers (stratified by session type; see `references/markers.md`)
 ### 3. Ship the candidate to origin via `/ship-spec`
 
 Hand the issue to `/ship-spec`, which owns the build end-to-end (worktree Advisor,
-`/delegate` + ralph, the `/eval` gate, `/pr-audit` undraft) and targets the fork:
+`/delegate` + ralph, the `/eval` gate, `/audit pr` undraft) and targets the fork:
 
 ```bash
 /ship-spec --repo mifunedev/openharness --base development --issue <N>

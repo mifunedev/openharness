@@ -1,0 +1,98 @@
+{
+    "schemaVersion": 1,
+    "project": "Open Harness",
+    "branchName": "feat/660-first-mate-charter",
+    "description": "First Mate Role Charter + Advisor Prompt Pack (rev 2, post-critique) - author the on-demand supervisory-role charter at .oh/context/rules/first-mate.md (incl. the Effort Scaling section cited by pr.yml; DP-0 exception surfaced) and land the .oh/prompts/advisor/ pack byte-identical with every reference resolving. Sources of truth: .oh/tasks/first-mate-charter/context.md (operator verbatim), plan.md rev 2 (post-critique decisions + constraints binding on all delegates), prd.md rev 2 (full acceptance detail). Issue #660.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Author the First Mate charter",
+            "description": "As the captain, I want a canonical role charter at .oh/context/rules/first-mate.md so that every advisor prompt's charter reference resolves to a faithful, non-duplicating role definition.",
+            "acceptanceCriteria": [
+                "File exists at .oh/context/rules/first-mate.md opening with a status declaration: on-demand doc, referenced by .oh/prompts/advisor/*, not always-loaded, AND a deliberate operator-mandated exception to the compatibility-pointer-only convention for .oh/context/rules/ (plan.md DP-0)",
+                "Sections in order: ## Definition, ## Crew Model, ## Responsibilities, ## The HOW / WHAT Boundary, ## Delegation Protocol, ## Verification & Rework, ## Effort Scaling, ## What This Charter Does NOT Own",
+                "Operator text verbatim from .oh/tasks/first-mate-charter/context.md: both definitions incl. arXiv citation, the 8 responsibility bullets, and the HOW/WHAT boundary sentence — context.md's prose ('One useful boundary: ...'), NOT the YAMLs' role: paraphrase (both may appear, labeled separately); annotations beside, never inside, verbatim text",
+                "Each of the 8 responsibility bullets annotated with its implementing repo surface",
+                "Crew Model contains a one-sentence disambiguation: the prompt pack's advisor: role = the First Mate orchestrator (spawns crew); the advisor agent (.oh/agents/advisor.md) = a read-only briefing synthesizer that cannot spawn",
+                "Delegation Protocol states as role policy the three policies originating in implement.yml's warnings (delegate not DONE until progress entry + user story updated; serial briefings informed by current progress state; all task artifacts in .oh/tasks/<task-name>/*), citing implement.yml as origin, and defers mechanics by literal reference to .oh/agents/advisor.md and .oh/skills/delegate/SKILL.md",
+                "grep -n '^## Effort Scaling' matches; table maps the four /delegate complexity classes (simple/mechanical, standard, complex, architecture/debugging — labels verbatim from /delegate SKILL.md) to thinking tiers low|medium|high|xhigh; normative notes: never max for delegates, model inherits by default, overrides require a recorded reason (a prompt step naming a model counts as an operator request), consistency clause naming /delegate as the enforcement layer this table must track",
+                "No content restated from /git, /delegate, advisor.md, /spec, or AGENTS.md § The Workflow — references only, sole carve-out: the Effort Scaling shared vocabulary (drift-guarded by US-006)",
+                "Typecheck passes (vacuous here — do NOT invent a typecheck step for markdown; see plan.md Constraint 8)"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Validated by First Mate: section order + ^## Effort Scaling (line 85) + refs + disambiguation grep-verified; all 8 operator bullets byte-verbatim vs context.md; delegate self-check 8/8. Warning-origin cites implement.yml AND pr.yml (post-16:22 ground truth)."
+        },
+        {
+            "id": "US-002",
+            "title": "Formalize the architect crew agent",
+            "description": "As the First Mate, I want .oh/agents/architect.md to exist so that plan.yml's agents list has no dangling reference. Provenance: First-Mate decision (plan.md DP-1), not operator-requested.",
+            "acceptanceCriteria": [
+                "File .oh/agents/architect.md exists with sibling frontmatter schema: name, description with TRIGGER clause, tools: Read, Glob, Grep, Bash, model: sonnet (matching pm/critic)",
+                "Role text: owns solution shape (placement, structure, integration, non-duplication, risks/constraints); explicitly states 'no task lists — pm owns breakdown'",
+                "Every name in every agents: list across the 3 YAMLs resolves to an .oh/agents/<name>.md file",
+                "The .claude/agents/ surface is wired the same way as critic/implementer/pm (inspect and replicate their symlink/file mechanism), and .claude/agents/architect.md is added to .claude/protected-paths.txt alongside its siblings in this same PR",
+                "Typecheck passes (vacuous — see plan.md Constraint 8)"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Validated by First Mate: frontmatter schema + model:sonnet OK; directory-symlink wiring confirmed (no per-file link needed); protected-paths.txt line 72; all agents: names resolve."
+        },
+        {
+            "id": "US-003",
+            "title": "Land the prompt pack byte-identical with directory README",
+            "description": "As the First Mate, I want the .oh/prompts/advisor/ pack tracked in git exactly as the operator wrote it, with a conventional README, so that the workflow prompts are versioned and self-describing.",
+            "acceptanceCriteria": [
+                "The 3 YAMLs are committed byte-identical to the operator's working-tree versions AT COMMIT TIME (re-hash against context.md's spec-freeze hashes first; if the operator edited again, re-read and proceed with the new content): NO warning additions/removals/rewording, NO query-step changes, role blocks left as-is. Ground truth at spec-freeze: implement.yml and pr.yml share byte-identical 3-item warning: blocks; plan.yml has none",
+                ".oh/prompts/README.md exists per .oh/context/directory-readme.md convention: one-line intent, table row for advisor/ (plan / implement / pr, increasing scope), YAML schema (role, agents, warning?, query — warning present in implement.yml and pr.yml, absent in plan.yml, by operator design), pointer to the charter, and a CONDITIONAL yml<->provider-rendering note ('a provider may keep a rendered mirror, e.g. .pi/prompts/advisor/pr.md; edit the yml, then re-render') without asserting any such mirror currently exists",
+                ".oh/README.md directory enumeration gains a one-line prompts/ entry",
+                "git status shows none of these files untracked; every path-like token inside the YAMLs resolves in-repo",
+                "Typecheck passes (vacuous — see plan.md Constraint 8)"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Validated by First Mate: 3 YAMLs staged byte-identical (hashes = spec-freeze), .oh/prompts/README.md + .oh/README.md row staged, reference closure table complete (/compact,/goal = CC built-ins)."
+        },
+        {
+            "id": "US-004",
+            "title": "Wire discoverability pointers (diff-capped)",
+            "description": "As a future session, I want two one-line pointers so that the on-demand charter isn't orphaned or cut by a later context audit. Provenance: First-Mate decision (plan.md DP-3).",
+            "acceptanceCriteria": [
+                "AGENTS.md (canonical file — CLAUDE.md is a symlink to it) rules-collapse sentence in § Session start gains one clause naming the charter as a plain on-demand doc at .oh/context/rules/first-mate.md; git diff development -- AGENTS.md shows exactly one changed line; Session-start read list unchanged",
+                ".oh/agents/advisor.md gains exactly one added 'See also' line; git diff development -- .oh/agents/advisor.md shows exactly one added line",
+                "Always-loaded tier grows by nothing else",
+                "Typecheck passes (vacuous — see plan.md Constraint 8)"
+            ],
+            "priority": 4,
+            "passes": true,
+            "notes": "Validated by First Mate: numstat AGENTS.md 1+/1- (one changed line, same physical line), advisor.md 1+/0-; Session-start list untouched; CLAUDE.md symlink confirmed."
+        },
+        {
+            "id": "US-005",
+            "title": "CHANGELOG entry",
+            "description": "As the release process, I want an Unreleased/Added bullet so that this workflow-effecting change follows /git changelog discipline.",
+            "acceptanceCriteria": [
+                "One imperative-mood bullet under ## [Unreleased] -> ### Added referencing the charter + prompt pack, format '- <description> ([#660](https://github.com/mifunedev/openharness/issues/660))' — #660 confirmed, not a placeholder",
+                "Typecheck passes (vacuous — see plan.md Constraint 8)"
+            ],
+            "priority": 5,
+            "passes": true,
+            "notes": "Validated by First Mate: one bullet, [Unreleased]/Added, correct format, #660 link, 1+/0- diff."
+        },
+        {
+            "id": "US-006",
+            "title": "Eval probe guarding charter + pack (drift-guarded)",
+            "description": "As the regression floor, I want .oh/evals/probes/first-mate-charter.sh so that deleting the charter, untracking the pack, or effort-vocabulary drift turns a probe red.",
+            "acceptanceCriteria": [
+                "Probe asserts: charter file exists; ^## Effort Scaling heading present; the 3 YAMLs are git-tracked; every agents: name resolves to .oh/agents/*.md",
+                "Drift-guard: each of the four complexity-class labels appears in BOTH the charter and .oh/skills/delegate/SKILL.md; mismatch reports REGRESSION naming the charter's consistency clause",
+                "Follows probe conventions (# desc: header, PASS/REGRESSION/SKIPPED three-state semantics, style of .oh/evals/probes/git-skill.sh); git-skill.sh untouched",
+                "Probe PASSes against the finished state of US-001..US-003 when run via bash",
+                "Typecheck passes (vacuous — see plan.md Constraint 8)"
+            ],
+            "priority": 6,
+            "passes": true,
+            "notes": "Validated by First Mate: probe re-run PASS (exit 0); git-skill.sh untouched; drift-guard extracts labels from charter table (no hardcoding) and cross-greps /delegate."
+        }
+    ]
+}

@@ -6,6 +6,8 @@ title: "Contributing"
 
 This guide covers the workflow for contributing to Open Harness: creating branches, writing commits, updating the changelog, and shipping releases.
 
+For the inbound license terms and the Developer Certificate of Origin (DCO), see the root [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
+
 ## Setup
 
 Clone the repository:
@@ -40,13 +42,19 @@ A first-run helper is available at `.oh/scripts/install.sh` — it prompts for t
 
 ### Onboard inside the sandbox
 
-After `make shell`, complete one-time GitHub auth so `git push` and `gh` work from within the container:
+After `make shell`, start Herdr before any other inside-sandbox setup:
+
+```bash
+herdr
+```
+
+From the initial Herdr pane, complete one-time GitHub auth so `git push` and `gh` work from within the container:
 
 ```bash
 gh auth login && gh auth setup-git
 ```
 
-Then start an agent. The default is the `pi` CLI; `claude` and `codex` are also installed:
+Then start agents from Herdr panes. The default is the `pi` CLI; `claude` and `codex` are also installed:
 
 ```bash
 pi          # default agent CLI

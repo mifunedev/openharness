@@ -29,7 +29,7 @@ If URL is missing, ask the user to provide it.
 
 | Name | Width | Height |
 |------|-------|--------|
-| `desktop` | 1920 | 1080 |
+| `desktop` | 1280 | 720 |
 | `mobile` | 414 | 896 |
 
 Default is `desktop` if `--viewport` is not specified.
@@ -148,7 +148,7 @@ This ensures agent-browser can reach tunnel-served sites even when the container
 Set the viewport size based on the selected viewport, then open the URL:
 
 ```bash
-# Desktop: 1920x1080, Mobile: 375x812
+# Desktop: 1280x720, Mobile: 375x812
 agent-browser open "$URL" --viewport-width $WIDTH --viewport-height $HEIGHT $( [ -n "$SESSION" ] && echo "--session $SESSION" )
 ```
 

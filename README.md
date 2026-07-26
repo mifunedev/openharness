@@ -1,7 +1,7 @@
 <h1 align="center">🏗️ Open Harness</h1>
 
 <p align="center">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-D4AF37?style=plastic&labelColor=0B1220"></a>
+  <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache--2.0-D4AF37?style=plastic&labelColor=0B1220"></a>
   <a href="https://github.com/mifunedev/openharness/actions/workflows/ci-harness.yml"><img alt="CI: Harness" src="https://img.shields.io/github/actions/workflow/status/mifunedev/openharness/ci-harness.yml?branch=main&style=plastic&label=CI&labelColor=0B1220&color=D4AF37"></a>
   <a href="https://github.com/mifunedev/openharness/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/mifunedev/openharness?style=plastic&logo=github&logoColor=white&labelColor=0B1220&color=D4AF37"></a>
   <a href="https://github.com/mifunedev/openharness/issues"><img alt="Issues" src="https://img.shields.io/github/issues/mifunedev/openharness?style=plastic&labelColor=0B1220&color=D4AF37"></a>
@@ -22,7 +22,7 @@
 - **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites).)
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
-- **Multiple harnesses, one sandbox.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in); bridge them to Slack with [`pi-messenger-bridge`](.oh/docs/integrations/slack.md).
+- **Herdr-first interactive work.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in). After entering the sandbox, run [Herdr](.oh/docs/integrations/herdr.md) first; keep setup, agents, tests, and servers organized in its persistent panes. Headless Slack and cron infrastructure remain independent.
 
 ---
 
@@ -51,16 +51,18 @@ git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.o
 make harness-config
 nano harness.yaml
 
-# c. Build the image and open a shell inside the sandbox:
+# c. Build the image, enter the sandbox, then open its primary workspace:
 make sandbox && make shell
+herdr
 ```
 
-That is already a working sandbox. To make it **yours** (private `origin` + `upstream`) and
+`herdr` should be your first inside-sandbox command. Run the remaining setup,
+authentication, agents, tests, and servers from its panes. That is already a working sandbox. To make it **yours** (private `origin` + `upstream`) and
 authenticate the agents, continue with the optional full setup.
 
 ### 2. Full setup (optional) — private repo, remotes, agent auth
 
-Run these **inside the sandbox** (`make shell`). Per-step depth + troubleshooting:
+Run these **inside the initial Herdr pane** (`make shell`, then `herdr`). Per-step depth + troubleshooting:
 [quickstart → End-to-end setup walkthrough](.oh/docs/quickstart.md#end-to-end-setup-walkthrough).
 
 ```bash
@@ -197,7 +199,8 @@ Provider surfaces are symlinks into `.oh/`: `.pi/skills`, `.claude/skills`, and 
 ```bash
 cd ~/.openharness
 make shell       # enter the isolated sandbox
-# inside the sandbox, launch any core agent:
+herdr           # first command: open the primary interactive workspace
+# from Herdr panes, launch any core agent:
 #   claude     # Claude Code (default)
 #   codex      # OpenAI Codex CLI
 #   opencode   # OpenCode (optional: set install.opencode: true in harness.yaml and rebuild)
@@ -232,6 +235,7 @@ Full key reference: [Quickstart → Configuration](.oh/docs/quickstart.md#config
 git clone https://github.com/mifunedev/openharness.git && cd openharness
 make sandbox
 make shell
+herdr            # first inside-sandbox command
 ```
 
 </details>
@@ -242,7 +246,7 @@ make shell
 |---|---|
 | **Core agents** | Defaults: Claude Code, Codex, Pi. Optional: OpenCode, DeepAgents, Hermes, Grok Build |
 | **Runtimes** | Node 22, pnpm, Bun, uv (Python) |
-| **DevOps** | Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
+| **DevOps** | Herdr, Docker CLI + Compose, GitHub CLI, cloudflared, tmux, croner |
 | **Browser** | agent-browser + Chromium (headless) |
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
 | **Worktrees** | One sandbox → many isolated git worktrees: parallel branches, delegated sub-agents, satellite project clones under `.oh/worktrees/` |
@@ -269,7 +273,13 @@ Open Harness is maintained under the [`mifunedev`](https://github.com/mifunedev)
 
 ## 📄 License
 
-MIT.
+[Apache License 2.0](LICENSE) — copyright Ryan Eggleston, d/b/a Mifune Dev (mifune.dev). Prior MIT releases remain available under MIT; this change governs new code and future releases and does not revoke past grants.
+
+Apache-2.0 covers the runtime, the `oh` CLI, container definitions, and the harness spec. The Mifune Console, the provisioning and fleet-management control plane, and billing / enterprise policy / RBAC / hosted operations are proprietary — see the [open-core boundary](.oh/docs/open-core.md).
+
+## Trademarks
+
+Apache-2.0 §6 grants no permission to use the Mifune or Open Harness names, logos, or trade dress (reasonable, customary use in describing the origin of the work is fine). Fork it, modify it, sell it — just don't present your fork as Mifune.
 
 ---
 

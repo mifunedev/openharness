@@ -175,7 +175,10 @@ Then ask (use `AskUserQuestion`). Run the removal only on explicit approval. Wit
 
 ### 8. Log (Memory Improvement Protocol)
 
-Always, per `.oh/skills/retro/references/memory-protocol.md`:
+When `AUDIT_RUN_ID` is inherited, return a structured health observation carrying
+`AUDIT_RUN_ID`, `AUDIT_ROOT`, and `AUDIT_LOG_ROOT` and skip this append/retro; the
+outer `/audit` owns the single log. Direct invocation logs normally. Per
+`.oh/skills/retro/references/memory-protocol.md`:
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M)

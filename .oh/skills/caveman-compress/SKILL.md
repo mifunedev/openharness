@@ -22,7 +22,7 @@ In-scope targets only:
 Everything else is **out of scope** — refuse with a one-line reason. In particular:
 - `docs/**`, `README.md`, `CLAUDE.md`/`AGENTS.md` — published / load-bearing prose; brevity is intentional there.
 - `.oh/tasks/archive/**` and other archives — not read by default; compressing is busywork that mutates the record for ~0 live-token gain.
-- `.oh/context/**`, `.claude/skills/**`, `.claude/agents/**` — auto-loaded / behavior-steering. Token budget there is `/context-audit`'s job (it has a safe ablation gate); compression here can silently change behavior.
+- `.oh/context/**`, `.claude/skills/**`, `.claude/agents/**` — auto-loaded / behavior-steering. Token budget there is `/audit context`'s job (it has a safe ablation gate); compression here can silently change behavior.
 
 ## Procedure
 

@@ -1,57 +1,20 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #476 — memory log writes in skill contracts must use .oh/scripts/locked-append.sh
-# desc: /context-audit and /health-check route Memory Protocol appends through the locked append helper
+# source: issue #476 and #645 — memory appends are locked and audit has one log owner
+# desc: audit targets suppress child logs while direct health-check retains locked append
 set -euo pipefail
-
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-files=(
-  ".claude/skills/context-audit/SKILL.md"
-  ".pi/skills/context-audit/SKILL.md"
-  ".claude/skills/health-check/SKILL.md"
-  ".pi/skills/health-check/SKILL.md"
-)
-
-for rel in "${files[@]}"; do
-  path="$ROOT/$rel"
-  [ -f "$path" ] || { echo "SKIPPED: missing skill file: $rel" >&2; exit 2; }
-done
-
-bad=""
-for rel in "${files[@]}"; do
-  path="$ROOT/$rel"
-  hits="$(grep -nE 'cat[[:space:]]*>>.*.oh/memory/\$TODAY/log\.md|cat[[:space:]]*>>.*.oh/memory/.*log\.md' "$path" || true)"
-  if [ -n "$hits" ]; then
-    bad+=$'\n'"$rel:"$'\n'"$hits"
+A="$ROOT/.oh/skills/audit/SKILL.md"; RUN="$ROOT/.oh/skills/audit/scripts/audit-run.sh"
+grep -Fq 'locked-append.sh' "$RUN" || { echo 'REGRESSION: executable audit dispatcher lacks locked log ownership' >&2; exit 1; }
+grep -Fq 'if [[ $outer == true ]]' "$RUN" || { echo 'REGRESSION: child audit run can append' >&2; exit 1; }
+for f in "$ROOT/.oh/skills/audit/references/"{implementation,harness,context,skills,eval-quality,drift,pr,prs,full}.md; do
+  [[ -f $f ]] || { echo "REGRESSION: route missing: $f" >&2; exit 1; }
+  if grep -Eq 'locked-append\.sh|Append to `\.oh/memory|append to `\.oh/memory' "$f"; then
+    echo "REGRESSION: child route owns memory append: $f" >&2; exit 1
   fi
 done
-
-if [ -n "$bad" ]; then
-  echo "REGRESSION: direct memory log append remains in skill contract(s):$bad" >&2
-  exit 1
-fi
-
-for rel in ".claude/skills/context-audit/SKILL.md" ".pi/skills/context-audit/SKILL.md"; do
-  grep -qF '.oh/scripts/locked-append.sh "$HARNESS/.oh/memory/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
-    echo "REGRESSION: $rel lacks locked context-audit memory append" >&2
-    exit 1
-  }
+for rel in .oh/skills/eval/SKILL.md .oh/skills/health-check/SKILL.md .oh/skills/wiki/references/ingest.md .oh/skills/wiki/references/lint.md; do
+  grep -Fq AUDIT_RUN_ID "$ROOT/$rel" || { echo "REGRESSION: $rel lacks child suppression" >&2; exit 1; }
 done
-for rel in ".claude/skills/health-check/SKILL.md" ".pi/skills/health-check/SKILL.md"; do
-  grep -qF '.oh/scripts/locked-append.sh "$MEM/$TODAY/log.md" <<EOF' "$ROOT/$rel" || {
-    echo "REGRESSION: $rel lacks locked health-check memory append" >&2
-    exit 1
-  }
-done
-
-cmp -s "$ROOT/.claude/skills/context-audit/SKILL.md" "$ROOT/.pi/skills/context-audit/SKILL.md" || {
-  echo "REGRESSION: context-audit skill mirrors differ" >&2
-  exit 1
-}
-cmp -s "$ROOT/.claude/skills/health-check/SKILL.md" "$ROOT/.pi/skills/health-check/SKILL.md" || {
-  echo "REGRESSION: health-check skill mirrors differ" >&2
-  exit 1
-}
-
-echo "PASS: memory log skill appends use .oh/scripts/locked-append.sh" >&2
-exit 0
+grep -qF '.oh/scripts/locked-append.sh "$MEM/$TODAY/log.md" <<EOF' "$ROOT/.oh/skills/health-check/SKILL.md" || { echo 'REGRESSION: direct health-check lacks locked append' >&2; exit 1; }
+echo 'PASS: one audit log owner; composed child logs suppressed; direct append locked' >&2

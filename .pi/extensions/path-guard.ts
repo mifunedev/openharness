@@ -13,17 +13,12 @@ export function isSensitivePath(p: string): boolean {
   return SENSITIVE_PATHS.some((re) => re.test(p));
 }
 
-// Fix #2: All regexes now carry the `i` flag for case-insensitive matching.
-// Fix #3: Block-device redirection regex updated to match bare `> /dev/...`
-//         without requiring a leading `:` (shell colon-truncate idiom).
-//         nvme devices use numeric suffixes (nvme0n1), disk\d+ likewise.
-const RISKY_BASH = [
-  /\brm\s+-rf\b/i,
-  /\bsudo\b/i,
-  /\bgit\s+push\s+.*--force\b/i,
-  /\bgit\s+reset\s+--hard\b/i,
-  /(^|\s)>\s*\/dev\/(sd[a-z]|nvme\d*|hd[a-z]|disk\d+)\b/i,
-];
+// Destructive-bash guarding is now owned by cc-safety-net (the pinned pi
+// extension from the `npm:cc-safety-net` package): it deterministically parses
+// and denies `rm -rf`, `git reset --hard`, `git push --force`, block-device
+// redirection, and related destructive intent across every mode, including
+// headless. This extension therefore no longer inspects bash commands — it
+// guards sensitive-path writes/edits only.
 
 // Tool names confirmed lowercase from pi source:
 // packages/coding-agent/src/core/tools/index.ts:
@@ -65,21 +60,6 @@ export default function (pi: ExtensionAPI) {
       }
       return;
     }
-
-    if (toolName === "bash") {
-      // Interactive TUI sessions already put the operator in the loop. Avoid
-      // interrupting those sessions with a second in-tree confirmation modal.
-      if (ctx.mode === "tui") return;
-
-      const cmd = (event.input as { command?: string } | undefined)?.command ?? "";
-      if (RISKY_BASH.some((re) => re.test(cmd))) {
-        const ok = await ctx.ui.confirm(
-          "Risky command",
-          `Allow:\n${cmd.length > 200 ? cmd.slice(0, 200) + "..." : cmd}`,
-        );
-        if (!ok) return { block: true, reason: "User declined risky command" };
-      }
-    }
   });
 
   pi.registerCommand("guard", {
@@ -91,8 +71,9 @@ export default function (pi: ExtensionAPI) {
         "Sensitive paths (write/edit prompt):",
         ...SENSITIVE_PATHS.map((re) => `  ${re.source}`),
         "",
-        "Risky bash patterns (prompt before run outside interactive TUI sessions):",
-        ...RISKY_BASH.map((re) => `  ${re.source}`),
+        "Bash destructive-command guarding is handled by cc-safety-net",
+        "(the pi extension from the npm:cc-safety-net package).",
+        "This extension now guards sensitive-path writes/edits only.",
       ];
       ctx.ui.notify(lines.join("\n"), "info");
     },

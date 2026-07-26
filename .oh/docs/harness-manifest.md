@@ -31,7 +31,8 @@ loops:
 policies:
   operator_instructions: AGENTS.md
   git_workflow: .oh/skills/git/SKILL.md
-  security_hooks: .oh/hooks/
+  security_hooks: .oh/hooks/                       # secret-exposure guards
+  destructive_command_guard: cc-safety-net@1.0.6   # global binary (Dockerfile) + provider config entries
 ```
 
 ## How to read the example
@@ -44,7 +45,11 @@ policies:
   executor script, and the task artifact directory.
 - `policies` points at existing policy surfaces instead of inventing a
   `.oh/policies/` directory: the root instructions file, the git workflow skill,
-  and hook-enforced guardrails.
+  and hook-enforced guardrails. The guardrails are two complementary layers: the
+  secret-exposure hooks under `.oh/hooks/`, and the destructive-command guard
+  (cc-safety-net@1.0.6 — a global binary from the image plus guard-wrapped
+  entries in the provider configs, not an `.oh/` file). Both are described in
+  [security-considerations.md](security-considerations.md).
 
 Every path in the example exists today except the illustrative
 `.oh/harness.yml` file itself. Adding formal schemas, registries, lifecycle

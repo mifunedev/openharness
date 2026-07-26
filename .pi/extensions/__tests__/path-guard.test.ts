@@ -190,115 +190,32 @@ describe("path-guard extension", () => {
     });
   });
 
-  describe("risky bash", () => {
-    it("does not prompt for risky bash in interactive TUI mode", async () => {
-      const { ctx } = makeCtx(async () => false, true, "tui");
+  describe("bash commands (no longer guarded — handled by cc-safety-net)", () => {
+    it("does not prompt or block bash commands, even destructive ones", async () => {
+      const { ctx } = makeCtx(async () => false);
       const result = await fire(
         captured.toolCallHandlers,
-        { toolName: "bash", input: { command: "git push --force-with-lease origin feat/x" } },
+        { toolName: "bash", input: { command: "git reset --hard HEAD~3" } },
         ctx,
       );
       expect(ctx.ui.confirm).not.toHaveBeenCalled();
       expect(result).toBeUndefined();
     });
 
-    it.each([
-      ["rm -rf /tmp/x"],
-      ["sudo apt update"],
-      ["git push origin main --force"],
-      ["git reset --hard HEAD~3"],
-    ])("prompts and blocks %s when user declines", async (command) => {
-      const { ctx } = makeCtx(async () => false);
-      const result = await fire(
-        captured.toolCallHandlers,
-        { toolName: "bash", input: { command } },
-        ctx,
-      );
-      expect(ctx.ui.confirm).toHaveBeenCalledOnce();
-      expect(result).toMatchObject({ block: true });
-    });
-
-    // Fix #2: case-insensitive RISKY_BASH — uppercase variants must still trigger
-    it.each([
-      ["RM -RF /tmp/x"],
-      ["Sudo apt update"],
-      ["GIT RESET --HARD HEAD~3"],
-    ])("prompts for uppercase risky command: %s", async (command) => {
-      const { ctx } = makeCtx(async () => false);
-      const result = await fire(
-        captured.toolCallHandlers,
-        { toolName: "bash", input: { command } },
-        ctx,
-      );
-      expect(ctx.ui.confirm).toHaveBeenCalledOnce();
-      expect(result).toMatchObject({ block: true });
-    });
-
-    // Fix #3: bare > /dev/... redirection without leading colon
-    it.each([
-      ["> /dev/sda"],
-      ["dd if=/dev/zero > /dev/sdb"],
-      ["cat /dev/zero > /dev/nvme0"],
-    ])("prompts for bare block-device redirection: %s", async (command) => {
-      const { ctx } = makeCtx(async () => false);
-      const result = await fire(
-        captured.toolCallHandlers,
-        { toolName: "bash", input: { command } },
-        ctx,
-      );
-      expect(ctx.ui.confirm).toHaveBeenCalledOnce();
-      expect(result).toMatchObject({ block: true });
-    });
-
-    it("allows risky bash when user accepts", async () => {
-      const { ctx } = makeCtx(async () => true);
-      const result = await fire(
-        captured.toolCallHandlers,
-        { toolName: "bash", input: { command: "rm -rf /tmp/x" } },
-        ctx,
-      );
-      expect(result).toBeUndefined();
-    });
-
-    it("does not prompt for ordinary bash commands", async () => {
-      const { ctx } = makeCtx(async () => false);
-      const result = await fire(
-        captured.toolCallHandlers,
-        { toolName: "bash", input: { command: "ls -la" } },
-        ctx,
-      );
-      expect(ctx.ui.confirm).not.toHaveBeenCalled();
-      expect(result).toBeUndefined();
-    });
-
-    it("truncates very long commands in the confirm body", async () => {
-      const long = "rm -rf " + "/x".repeat(200);
-      const { ctx } = makeCtx(async () => true);
-      await fire(
-        captured.toolCallHandlers,
-        { toolName: "bash", input: { command: long } },
-        ctx,
-      );
-      const body = (ctx.ui.confirm as ReturnType<typeof vi.fn>).mock.calls[0][1];
-      expect(body.length).toBeLessThanOrEqual(220);
-      expect(body).toContain("...");
-    });
-
-    // Fix #4: capitalized Bash tool name still fires the guard
-    it("fires guard for capitalized tool name Bash", async () => {
+    it("does not prompt for capitalized Bash either", async () => {
       const { ctx } = makeCtx(async () => false);
       const result = await fire(
         captured.toolCallHandlers,
         { toolName: "Bash", input: { command: "rm -rf /tmp/x" } },
         ctx,
       );
-      expect(ctx.ui.confirm).toHaveBeenCalledOnce();
-      expect(result).toMatchObject({ block: true });
+      expect(ctx.ui.confirm).not.toHaveBeenCalled();
+      expect(result).toBeUndefined();
     });
   });
 
   describe("/guard command", () => {
-    it("notifies with both protection lists", async () => {
+    it("notifies with the sensitive-path list and names cc-safety-net for bash", async () => {
       const { ctx } = makeCtx(async () => true);
       const cmd = captured.commands.get("guard")!;
       await cmd.handler("" as never, ctx as never);
@@ -306,7 +223,7 @@ describe("path-guard extension", () => {
       const [message, level] = (ctx.ui.notify as ReturnType<typeof vi.fn>).mock.calls[0];
       expect(level).toBe("info");
       expect(message).toContain("Sensitive paths");
-      expect(message).toContain("Risky bash patterns");
+      expect(message).toContain("cc-safety-net");
     });
   });
 });

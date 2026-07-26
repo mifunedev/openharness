@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #98; issue #225 (restart-required cron frontmatter/config drift)
-# desc: extract the LIVE Step C-2 bash block from drift-check SKILL.md and RUN it
+# desc: extract the LIVE Step C-2 bash block from /audit drift and RUN it
 #       against fixtures (README-style, valid scheduled cron, disabled cron,
 #       missing schedule, empty schedules, invalid schedule, invalid id,
 #       id mismatch, unsafe agent) with RUNTIME_START before their mtimes; PASS
@@ -13,11 +13,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILL="${DRIFT_CHECK_SKILL:-$ROOT/.claude/skills/drift-check/SKILL.md}"
+SKILL="${DRIFT_CHECK_SKILL:-$ROOT/.oh/skills/audit/references/drift.md}"
 
 # --- SKIPPED: hard prerequisites genuinely absent --------------------------
 if [[ ! -f "$SKILL" ]]; then
-  echo "SKIPPED: drift-check SKILL.md absent: $SKILL" >&2
+  echo "SKIPPED: audit drift reference absent: $SKILL" >&2
   exit 2
 fi
 if ! command -v stat >/dev/null 2>&1; then
@@ -318,9 +318,9 @@ if (( fail )); then
     printf '%s\n' "$output"
     echo "  --- end inert output ---"
   } >&2
-  echo "REGRESSION: drift-check Step C-2 predicate does not match the schedulable-cron contract" >&2
+  echo "REGRESSION: audit drift Step C-2 predicate does not match the schedulable-cron contract" >&2
   exit 1
 fi
 
-echo "PASS: drift-check Step C-2 includes the valid scheduled cron, reports restart-required frontmatter, and excludes README-style, disabled, missing, empty, invalid schedule/id/mismatch/agent fixtures" >&2
+echo "PASS: audit drift Step C-2 includes the valid scheduled cron, reports restart-required frontmatter, and excludes README-style, disabled, missing, empty, invalid schedule/id/mismatch/agent fixtures" >&2
 exit 0

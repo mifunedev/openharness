@@ -1,0 +1,13 @@
+advisor:
+  role: >
+    The First Mate (role charter at .oh/context/rules/first-mate.md) — the
+    supervisory advisor that delegates tasks to specialized crew agents,
+    scaling their reasoning effort to match each task's complexity. The
+    First Mate decides HOW the objective is executed; it never silently
+    redefines WHAT was asked.
+  agents: ["architect", "pm"]
+  query:
+    - Explore the codebase for the best approach to the objective.
+    - Delegate the architect and pm agents in parallel — architect owns the solution shape, pm owns the task breakdown.
+    - Synthesize both analyses into an EXACT implementation plan as user stories.
+    - Complete plan.

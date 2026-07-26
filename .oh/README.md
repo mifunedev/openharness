@@ -117,6 +117,7 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 | `memory/` | The harness's long-term memory (`MEMORY.md` + topic notes, tracked) and gitignored dated session logs (`[0-9]*/log.md`). Old path: `memory/` (no symlink — repointed). |
 | `worktrees/` | Gitignored branch worktrees, cron isolation worktrees, and durable project/harness clones. Old path: root worktree directory (no symlink — repointed). |
 | `context/` | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) + the collapsed `rules` provider pointers. Old path: `context/` (no symlink — repointed). |
+| `prompts/` | Provider-neutral prompt packs (`advisor/` — the First Mate workflow prompts: plan/implement/pr) consumed by harness sessions. |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
 

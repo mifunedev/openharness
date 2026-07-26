@@ -8,10 +8,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The skill may be reached through agent-specific symlinks (`.claude/skills`) or
 # directly through the neutral `.oh/skills` source directory. Walk upward until the
 # repo's eval corpus is found instead of hard-coding a fixed depth.
-ROOT="$SCRIPT_DIR"
-while [ "$ROOT" != "/" ] && [ ! -d "$ROOT/.oh/evals/probes" ]; do
-  ROOT="$(dirname "$ROOT")"
-done
+if [ -n "${AUDIT_ROOT:-}" ]; then
+  ROOT="$(cd "$AUDIT_ROOT" && pwd -P)"
+else
+  ROOT="$SCRIPT_DIR"
+  while [ "$ROOT" != "/" ] && [ ! -d "$ROOT/.oh/evals/probes" ]; do
+    ROOT="$(dirname "$ROOT")"
+  done
+fi
 [ -d "$ROOT/.oh/evals/probes" ] || { echo "could not locate repo root from $SCRIPT_DIR" >&2; exit 1; }
 PROBES_DIR="$ROOT/.oh/evals/probes"
 RESULTS="$ROOT/.oh/evals/RESULTS.md"
@@ -36,18 +40,10 @@ done
 tmp=""
 trap '[ -n "$tmp" ] && rm -f "$tmp"' EXIT
 
-# --- M-2: recover orphaned ablation backups from a crashed prior run ---
-# .oh/scripts/ablate.sh records in-flight "<target>\t<bak>" lines in this sentinel;
-# if a prior ablation was SIGKILLed before its trap fired, restore here.
-SENTINEL="$ROOT/.oh/evals/.ablation-active"
-if [ -f "$SENTINEL" ]; then
-  while IFS=$'\t' read -r target bak; do
-    if [ -n "${bak:-}" ] && [ -f "$bak" ]; then
-      mv -f "$bak" "$target" && echo "recovered orphaned ablation backup -> $target" >&2
-    fi
-  done < "$SENTINEL"
-  rm -f "$SENTINEL"
-fi
+# Recover through the single shared lock/sentinel state machine.
+# shellcheck source=.oh/scripts/ablate.sh
+source "$ROOT/.oh/scripts/ablate.sh"
+ablate_recover
 
 # --- ablation mode (M-1): run one probe with/without a target file via the shared
 #     swap/restore/trap mechanics in .oh/scripts/ablate.sh; reports LOAD-BEARING|PRUNABLE ---

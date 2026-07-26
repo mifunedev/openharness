@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/649-markitdown-wiki-pilot",
+  "description": "Use Microsoft MarkItDown's pinned upstream CLI to normalize supported local documents before /wiki ingest synthesis without adding a wrapper CLI.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Define direct CLI document normalization",
+      "description": "As the orchestrator, I want /wiki ingest to normalize supported local documents through the pinned upstream MarkItDown CLI.",
+      "acceptanceCriteria": [
+        "Document .pdf, .docx, .pptx, and .xlsx routing in .oh/skills/wiki/references/ingest.md",
+        "Invoke exactly uvx --from 'markitdown[pdf,docx,pptx,xlsx]==0.1.6' markitdown with no wrapper or ambient executable selection",
+        "Keep URL and text ingestion unchanged and never route URLs to MarkItDown",
+        "Enforce timeout 120s, dedicated temporary directory, 2 GiB virtual-memory ceiling, and ulimit -f 10240 during conversion",
+        "Treat extracted content as untrusted data and require external-relationship zero-request smoke evidence",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed 2026-07-18; direct pinned CLI routing, trust boundary, and resource controls in 070b813b."
+    },
+    {
+      "id": "US-002",
+      "title": "Preserve bounded source provenance",
+      "description": "As a wiki maintainer, I want paired original and Markdown artifacts with bounded validation and explicit extraction quality review.",
+      "acceptanceCriteria": [
+        "Reject symlinks, non-regular files, option-like names, inputs above 52,428,800 bytes, and invalid PDF/OOXML signatures",
+        "Inspect OOXML metadata without extraction and reject unsafe paths, encryption, members above 100 MiB, or totals above 250 MiB",
+        "Use one collision suffix for original and Markdown artifacts, copy once, hash and convert the preserved copy, and never overwrite",
+        "Require bounded preview and structure review before atomic snapshot publication; require operator confirmation before replacing an existing entry after warnings",
+        "Use basename-only source labels in snapshots and memory logs and mark extracted content unconditionally lossy and untrusted",
+        "Clean unpublished artifacts on failure while retaining published immutable provenance",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed 2026-07-18; bounded validation, paired provenance, quality review in 070b813b; interruption-safe cleanup and checksum/log hardening in eb109684."
+    },
+    {
+      "id": "US-003",
+      "title": "Guard and document pilot contract",
+      "description": "As a maintainer, I want a protected deterministic contract probe, behavioral evidence, wiki documentation, and changelog coverage.",
+      "acceptanceCriteria": [
+        "Add a Tier-A contract probe covering direct pinned CLI usage, format/resource limits, trust boundaries, provenance, rollback, and no wrapper",
+        "Register the new load-bearing probe in .claude/protected-paths.txt",
+        "Run real minimal PDF, DOCX, PPTX, and XLSX smoke fixtures plus output-cap, cleanup, external-request, URL bypass, and text-path checks",
+        "Create the curated document-ingestion wiki entry plus one immutable upstream README snapshot, refresh the tracked README index, keep converted user documents ignored, and pass wiki-readme-index.sh",
+        "Add an Unreleased changelog entry",
+        "Document separate-PR removal policy for the protected probe",
+        "Typecheck passes",
+        "Tests pass",
+        "Full eval has no new green-to-red regression"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed 2026-07-18; protected probe, four-format smoke evidence, wiki/index, changelog, tests, and eval in 070b813b; final contract remediation in eb109684."
+    }
+  ]
+}

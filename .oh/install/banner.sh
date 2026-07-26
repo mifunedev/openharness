@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# banner.sh — sourced from .bashrc to print a one-shot onboarding banner
+# banner.sh — sourced from bash and zsh to print a one-shot onboarding banner
 # on interactive shell start. Never use `exit` here; always use `return`.
 
 # Only print in interactive shells
@@ -211,7 +211,10 @@ command -v opencode >/dev/null 2>&1 && shortcuts="$shortcuts · opencode"
 command -v grok >/dev/null 2>&1 && shortcuts="$shortcuts · grok"
 command -v deepagents >/dev/null 2>&1 && shortcuts="$shortcuts · deepagents"
 command -v hermes >/dev/null 2>&1 && shortcuts="$shortcuts · hermes"
-printf '  Shortcuts: %s · tmux attach -t cron-system\n' "$shortcuts"
+printf '  Recovery commands: %s · tmux attach -t cron-system\n' "$shortcuts"
+printf '\n'
+printf '  Next: run `herdr` to open your persistent Open Harness workspace.\n'
+printf '  Complete setup, authentication, agents, tests, and servers inside Herdr.\n'
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'
 

@@ -69,6 +69,7 @@ the public OpenHarness repo into a temp dir and remove it after the run (`--from
 
 ## OpenHarness Cloud
 
+`oh cloud` is an Apache-2.0 licensed client that talks to a proprietary hosted service.
 Configure the Cloud API once, then use `oh cloud` instead of hand-writing authenticated HTTP
 requests:
 
@@ -93,4 +94,4 @@ the complete SSH-key and node lifecycle command set.
 
 ## License
 
-[MIT](./LICENSE)
+[Apache-2.0](./LICENSE)

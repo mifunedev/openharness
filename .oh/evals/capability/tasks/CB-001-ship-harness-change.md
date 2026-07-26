@@ -3,7 +3,7 @@ id: CB-001
 slug: ship-harness-change
 title: "Ship a harness-infra change end-to-end"
 axes: [success, cost-time, unattended]
-skills: [/ship-spec, /prd, /critique, /approve, /ralph, /delegate, /eval, /pr-audit]
+skills: [/ship-spec, /prd, /critique, /approve, /ralph, /delegate, /eval, /audit pr]
 datasets: [DS-001, DS-002, DS-010]
 created: 2026-06-15
 ---

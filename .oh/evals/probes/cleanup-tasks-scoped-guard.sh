@@ -54,8 +54,11 @@ if ! grep -q 'git worktree add' "$CRON"; then
   echo "REGRESSION: 'git worktree add' missing — archive work is not isolated in a worktree" >&2
   exit 1
 fi
-if ! grep -q 'git worktree remove' "$CRON"; then
-  echo "REGRESSION: 'git worktree remove' missing — worktree teardown is not crash-safe" >&2
+# Teardown may be inline `git worktree remove` or (post cc-safety-net) the
+# guard-compatible shim `git-maintenance.sh worktree-remove` — either satisfies
+# the crash-safe-teardown lesson this probe encodes.
+if ! grep -Eq 'git worktree remove|git-maintenance\.sh worktree-remove' "$CRON"; then
+  echo "REGRESSION: worktree teardown missing ('git worktree remove' or git-maintenance.sh worktree-remove) — not crash-safe" >&2
   exit 1
 fi
 

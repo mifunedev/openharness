@@ -13,7 +13,47 @@
     "bot_user": {
       "display_name": "OpenHarness",
       "always_online": true
-    }
+    },
+    "slash_commands": [
+      {
+        "command": "/help",
+        "description": "DM only: Open Harness bridge admin help",
+        "should_escape": false
+      },
+      {
+        "command": "/trusted",
+        "description": "DM only: List trusted Open Harness bridge users",
+        "should_escape": false
+      },
+      {
+        "command": "/revoke",
+        "description": "DM only: Revoke trust for an Open Harness bridge user",
+        "usage_hint": "<userId>",
+        "should_escape": false
+      },
+      {
+        "command": "/channels",
+        "description": "DM only: List Open Harness bridge-enabled chats",
+        "should_escape": false
+      },
+      {
+        "command": "/enable",
+        "description": "DM only: Enable the Open Harness bridge in a chat",
+        "usage_hint": "<chatId> <all|mentions|trusted-only>",
+        "should_escape": false
+      },
+      {
+        "command": "/disable",
+        "description": "DM only: Disable the Open Harness bridge in a chat",
+        "usage_hint": "<chatId>",
+        "should_escape": false
+      },
+      {
+        "command": "/toggletools",
+        "description": "DM only: Toggle Open Harness bridge tool-call visibility",
+        "should_escape": false
+      }
+    ]
   },
   "oauth_config": {
     "scopes": {

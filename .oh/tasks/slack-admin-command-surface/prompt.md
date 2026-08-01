@@ -13,5 +13,6 @@ Use `.oh/prompts/advisor/pr.yml` in an isolated worktree to address issue #354: 
 
 - Pi command surface: only `pi.registerCommand("msg-bridge")` in the installed bridge package.
 - Slack admin surface: `handleAdminCommand` processes trusted DM text commands.
-- Slack manifest: message-event based, no Slack-native slash commands.
-- Docs currently conflate in-session `/msg-bridge` with DM admin text commands.
+- Original Slack manifest: message-event based, with no native admin slash command declarations.
+- Original bridge transport: message handler only, with no Bolt `app.command(...)` listeners.
+- Docs conflated in-session `/msg-bridge` with Slack admin commands.

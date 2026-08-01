@@ -22,7 +22,8 @@ nl -ba .pi/bridge/node_modules/pi-messenger-bridge/README.md | sed -n '128,154p'
 nl -ba .pi/bridge/node_modules/pi-messenger-bridge/dist/index.js | sed -n '210,250p'
 nl -ba .pi/bridge/node_modules/pi-messenger-bridge/dist/transports/slack.js | sed -n '112,132p'
 nl -ba .pi/bridge/node_modules/pi-messenger-bridge/dist/auth/challenge-auth.js | sed -n '145,215p'
-nl -ba .pi/install/slack-manifest.json | sed -n '37,52p'
+git show 2acd2b76:.pi/install/slack-manifest.json | nl -ba | sed -n '37,52p'
+jq '.features.slash_commands' .pi/install/slack-manifest.json
 grep -n 'node_modules/pi-messenger-bridge' -A12 .pi/bridge/package-lock.json
 
 # source package evidence
@@ -35,6 +36,12 @@ nl -ba src/index.ts | sed -n '272,312p'
 nl -ba src/transports/slack.ts | sed -n '144,165p'
 nl -ba src/auth/challenge-auth.ts | sed -n '199,285p'
 nl -ba src/auth/challenge-auth.ts | sed -n '370,389p'
+
+# implemented package branch verification
+git switch feat/slack-thread-replies-admin-commands
+npm run typecheck
+npm run test
+npm run build
 ```
 
 ## Evidence
@@ -122,38 +129,38 @@ src/auth/challenge-auth.ts:280   case "/revoke":
 
 Conclusion: an untrusted Slack DM `/help` is not expected to show admin help; it participates in challenge auth. Admin help is expected only after the Slack user is trusted and the message reaches the bot.
 
-### 5. Harness Slack manifest is event-message based, not Slack-native slash-command based
+### 5. Original manifest/package gap
 
-The shipped manifest has message event subscriptions and no slash-command definitions:
+Before the corrective implementation, the harness manifest had Socket Mode
+message event subscriptions but no `features.slash_commands`, while the package
+Slack transport had `app.message(...)` but no Bolt `app.command(...)` handlers.
+That combination explained why the package README could document slash-prefixed
+admin DM text while Slack did not advertise or route native slash commands.
 
-```text
-.pi/install/slack-manifest.json:37 "settings": {
-.pi/install/slack-manifest.json:38   "event_subscriptions": {
-.pi/install/slack-manifest.json:39     "bot_events": [
-.pi/install/slack-manifest.json:40       "app_mention",
-.pi/install/slack-manifest.json:41       "message.channels",
-.pi/install/slack-manifest.json:42       "message.groups",
-.pi/install/slack-manifest.json:43       "message.im"
-.pi/install/slack-manifest.json:46   "interactivity": {
-.pi/install/slack-manifest.json:47     "is_enabled": false
-.pi/install/slack-manifest.json:50   "socket_mode_enabled": true
-```
-
-Conclusion: there is no Slack-native slash-command registration for `/trusted`, `/help`, or peers in the harness Slack app manifest. The admin command path is Slack message events handled by `pi-messenger-bridge`.
+A manifest-only change would be incomplete: Slack could emit command payloads,
+but the bridge would have no command listener to acknowledge and dispatch them.
 
 ## Grounded RCA
 
-The bug in Open Harness docs was not that the package lacks `/trusted`; the package root README does document `/trusted`, but specifically under "Admin commands (in DM with the bot)." The harness docs blurred that boundary by telling operators to run `/trusted` and `/channels` "inside the session" and by not explaining that Slack admin commands are trusted DM text handlers, not Pi commands or Slack-native slash commands.
+The package root README documents `/trusted`, but specifically under "Admin commands (in DM with the bot)," while the actual Slack integration originally supplied neither manifest slash-command declarations nor Bolt command handlers. Open Harness docs then compounded that product gap by telling operators to run `/trusted` and `/channels` "inside the session." The complete RCA is therefore two-part: stale harness docs conflated Pi and Slack surfaces, and the `.pi` Slack app/package wiring did not implement the native Slack command surface implied by slash-prefixed names.
 
 ## Best approach
 
-1. Correct harness docs to mirror the root package boundary:
-   - Pi TUI/session: `/msg-bridge` and `/msg-bridge ...` only.
-   - Slack DM after trust: `/help`, `/trusted`, `/channels`, `/enable`, `/disable`, `/revoke`, `/toggletools`.
-2. Explain that the shipped Slack manifest is event-message based, not Slack-native slash-command based.
-3. Preserve reliable operator fallbacks:
+1. Keep Pi TUI/session commands under `/msg-bridge`.
+2. Add the documented Slack admin commands to
+   `.pi/install/slack-manifest.json` so Slack advertises/routes them.
+3. Pair the manifest with package-owned Bolt `app.command(...)` handlers that
+   acknowledge command payloads, enforce DM-only + challenge trust, and delegate
+   to the existing `ChallengeAuth.handleAdminCommand` implementation.
+4. Pin Open Harness to the reviewed bridge fork branch carrying those handlers
+   until upstream publishes them.
+5. Preserve reliable operator fallbacks:
    - `gateway status`
    - `tmux capture-pane -t client-slack-pi -p | grep -F '[Slack] Bot user ID:'`
    - `jq '.auth' ~/.pi/msg-bridge.json`
    - `.pi/msg-bridge.json` pre-seeding plus `gateway pi --restart`
-4. Do not patch generated `.pi/bridge/node_modules` in this harness PR. Any change to actual admin command parsing belongs upstream in `pi-messenger-bridge`.
+
+Implemented package branch/PR:
+`github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies-admin-commands`
+(https://github.com/ryaneggz/pi-messenger-bridge/pull/1)
+(commits `aec340e`, `86cbd50`). Clean-source package checks (`npm run clean` before test): typecheck PASS, 86 tests PASS (including trusted-DM dispatch, channel rejection, and untrusted challenge coverage), build PASS. A clean `npm install github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies-admin-commands` smoke test also produced `dist/transports/slack.js` containing `this.app.command(...)`.

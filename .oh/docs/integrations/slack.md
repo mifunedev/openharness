@@ -40,7 +40,8 @@ Slack.
 2. Choose **From an app manifest**.
 3. Select your workspace and paste the contents of
    `.pi/install/slack-manifest.json` from this repo. The manifest enables
-   **Socket Mode** and requests the bot scopes the bridge needs.
+   **Socket Mode**, declares the bridge admin slash commands, and requests the
+   bot scopes the bridge needs.
 4. Click through the confirmation screens and then **Install to Workspace**.
 5. Approve the requested OAuth scopes.
 
@@ -59,12 +60,13 @@ Keep both values ready for the next step.
 
 ## 4. Configure the bridge
 
-Two layers. **Tokens** go in `.devcontainer/.env` (§ 4.1). The **Pi
+Three layers. **Tokens** go in `.devcontainer/.env` (§ 4.1). The **Pi
 session command surface is the bridge's own `/msg-bridge` command** (§ 4.2):
-use it for connection/status/configuration inside `client-slack-pi`. Trust and
-channel admin actions are **Slack DM admin text handlers** after challenge auth
-(§ 6), not Pi slash commands. The tracked `.pi/msg-bridge.json` is only an
-optional pre-seed for headless setups (§ 4.2).
+use it for connection/status/configuration inside `client-slack-pi`. The
+**Slack app manifest** in `.pi/install/slack-manifest.json` declares the admin
+slash commands so Slack can show and route them (§ 6). Runtime trust/channel
+state persists in `~/.pi/msg-bridge.json`; the tracked `.pi/msg-bridge.json` is
+only an optional pre-seed for headless setups (§ 4.2).
 
 ### 4.1 Tokens — `.devcontainer/.env`
 
@@ -103,11 +105,13 @@ as Pi TUI commands. This mirrors the root package: `pi-messenger-bridge`'s
 README lists `/msg-bridge ...` under `## Commands`, then lists `/trusted`,
 `/channels`, `/enable`, `/disable`, `/revoke`, `/toggletools`, and `/help` in a
 separate "Admin commands (in DM with the bot)" section. The package source also
-registers only `msg-bridge` as a Pi command and routes trusted Slack DM text to
-`handleAdminCommand`. Those admin actions therefore belong to Slack DMs (§ 6)
-after the user passes challenge auth (§ 5). Auth/channel changes persist to
-`~/.pi/msg-bridge.json` (owned and rewritten by the package); `gateway pi`
-preserves them across restarts, never clobbering live grants (bug #289).
+registers only `msg-bridge` as a Pi command. Open Harness additionally declares
+those admin commands in `.pi/install/slack-manifest.json` and pins the bridge
+fork branch that handles Slack slash-command payloads by forwarding them to the
+same `handleAdminCommand` path as trusted DM text (§ 6). Auth/channel changes
+persist to `~/.pi/msg-bridge.json` (owned and rewritten by the package);
+`gateway pi` preserves them across restarts, never clobbering live grants (bug
+#289).
 
 #### Optional pre-seed (headless) — `.pi/msg-bridge.json`
 
@@ -275,26 +279,29 @@ your Slack user ID up front — add `slack:U…` to `auth.trustedUsers` in the
 tracked `.pi/msg-bridge.json` (§ 4.2) and restart the `client-slack-pi` session.
 That skips the challenge entirely.
 
-## 6. Admin DM text handlers
+## 6. Admin Slack commands
 
-After a user is trusted, the bridge can handle these **Slack DM text messages**
-to manage trust and per-chat behavior:
+The shipped Slack manifest declares these **manifest-backed Slack admin commands**,
+and the pinned bridge fork handles them over Socket Mode after the invoking user
+is trusted.
+The same text still works as trusted Slack DM text when Slack delivers it as a
+message event:
 
-| DM text | Effect |
+| Slack command / DM text | Effect |
 |---------|--------|
 | `/trusted` | List currently trusted users |
 | `/revoke <userId>` | Revoke a user's trust (use the `slack:U…` or `U…` ID) |
 | `/channels` | List known chats and their enabled mode |
 | `/enable <chatId> <all\|mentions\|trusted-only>` | Enable the bot in a chat with the given response mode |
 | `/disable <chatId>` | Disable the bot in a chat |
-| `/help` | Show the bridge's admin DM help |
+| `/toggletools` | Toggle tool-call visibility in Slack replies |
+| `/help` | Show the bridge's admin help |
 
-These are not Slack-native slash commands in the shipped manifest: the app is
-configured for Socket Mode message events (`app_mention`, `message.channels`,
-`message.groups`, `message.im`) and has no slash-command definitions. They do
-not appear in Slack slash-command autocomplete. If a leading-slash DM is handled
-by Slack UI instead of arriving as a bot DM event, use the supported
-inspection/configuration fallbacks:
+If you created the Slack app before this manifest declared admin slash
+commands, update/recreate the app from `.pi/install/slack-manifest.json` so
+Slack can show them in autocomplete and route command payloads to the bridge.
+If a command still does not arrive, use the supported inspection/configuration
+fallbacks:
 
 ```bash
 gateway status
@@ -302,10 +309,10 @@ tmux capture-pane -t client-slack-pi -p | grep -F '[Slack] Bot user ID:'
 jq '.auth' ~/.pi/msg-bridge.json
 ```
 
-For headless or slash-intercepted setups, pre-seed `auth.trustedUsers` and
-`auth.channels` in `.pi/msg-bridge.json` (§ 4.2), then run `gateway pi --restart`.
-Use Pi-side `/msg-bridge status` inside `gateway pi --attach` for connection
-state; `/msg-bridge status` is not a Slack DM admin command.
+For headless setups, pre-seed `auth.trustedUsers` and `auth.channels` in
+`.pi/msg-bridge.json` (§ 4.2), then run `gateway pi --restart`. Use Pi-side
+`/msg-bridge status` inside `gateway pi --attach` for connection state;
+`/msg-bridge status` is not a Slack admin command.
 
 ## 7. Smoke Test
 
@@ -333,9 +340,9 @@ env (before attaching to tmux).
 
 3. **Round-trip test:**
    DM the bot plain text such as `hello` or `@mention` it in a channel. If
-   you've never talked to it before, complete the 6-digit challenge (§ 5) first;
-   starting with plain text avoids Slack intercepting a leading-slash admin DM
-   before trust is established. Watch `tmux attach -r -t client-slack-pi` — you
+   you've never talked to it before, complete the 6-digit challenge (§ 5) first.
+   After trust succeeds, test one manifest-backed admin command such as
+   `/trusted` in the bot DM. Watch `tmux attach -r -t client-slack-pi` — you
    should see the inbound event logged and the agent's reply posted back to
    Slack.
 
@@ -344,7 +351,7 @@ env (before attaching to tmux).
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Bot stays silent; you've never authenticated | Deny-by-default — your Slack user isn't trusted yet | DM the bot plain text, read the 6-digit code from `tmux attach -r -t client-slack-pi`, reply with it in Slack — or pre-authorize your user ID in `.pi/msg-bridge.json` (§ 4.2) |
-| `/help` or `/trusted` is not visible/does not reach the bot in Slack | These are bridge DM text handlers, not Slack-native slash commands in the shipped manifest; Slack may intercept leading-slash text | Use `gateway status`, `tmux capture-pane -t client-slack-pi -p`, and `jq '.auth' ~/.pi/msg-bridge.json`; pre-seed `.pi/msg-bridge.json` and `gateway pi --restart` for headless/slash-intercepted setups |
+| `/help` or `/trusted` is not visible in Slack autocomplete | The Slack app was created before `.pi/install/slack-manifest.json` declared admin slash commands, or the app manifest was not updated | Update/recreate the Slack app from `.pi/install/slack-manifest.json`, then `gateway pi --restart`; use `gateway status`, `tmux capture-pane -t client-slack-pi -p`, and `jq '.auth' ~/.pi/msg-bridge.json` to inspect runtime state |
 | `invalid_auth` / `not_authed` in the log | `xapp-` and `xoxb-` tokens are swapped | `PI_SLACK_APP_TOKEN` must be the `xapp-` token; `PI_SLACK_BOT_TOKEN` must be the `xoxb-` token — correct `.devcontainer/.env` and relaunch |
 | Bridge won't start after an unclean exit | Stale lock file `~/.pi/msg-bridge.lock` left behind | `rm ~/.pi/msg-bridge.lock`, then relaunch the `client-slack-pi` session |
 | Bot connected (`[Slack] Bot user ID:` logged) but never replies | `autoConnect` not set in `.pi/msg-bridge.json` — the bridge stays idle | Set `"autoConnect": true` (§ 4.2) and relaunch |
@@ -361,7 +368,7 @@ connection. Replies post **in a thread** anchored to the triggering channel
 message (`thread_ts`); DMs stay flat. The harness normally consumes the package
 as published, but while that thread-reply patch is unreleased it temporarily
 pins the entrypoint's `npm install` line to a fork branch
-(`github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies`), reverting to
+(`github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies-admin-commands`), reverting to
 `pi-messenger-bridge@<version>` once the upstream PR lands. Source lives upstream at
 [tintinweb/pi-messenger-bridge](https://github.com/tintinweb/pi-messenger-bridge).
 

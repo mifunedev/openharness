@@ -13,7 +13,7 @@
       "acceptanceCriteria": [
         "Slack integration docs state that /msg-bridge is the Pi in-session command surface.",
         "Docs no longer instruct users to run /trusted or /channels inside the Pi session.",
-        "Docs state that bridge admin commands are Slack DM text handlers after trust is established."
+        "Docs state that manifest-backed Slack admin commands are separate from Pi's /msg-bridge surface."
       ],
       "evidence": [
         ".oh/docs/integrations/slack.md separates Pi-side /msg-bridge from Slack DM admin text handlers.",
@@ -30,14 +30,15 @@
         "US-001"
       ],
       "acceptanceCriteria": [
-        "Docs explain that these are not Slack-native slash commands in the shipped manifest.",
+        ".pi/install/slack-manifest.json declares the documented admin slash commands and docs explain how to update an existing Slack app.",
         "Docs provide fallback inspection/config commands: gateway status, tmux capture-pane, jq .auth, and .pi/msg-bridge.json pre-seeding.",
         "Smoke/troubleshooting sections guide users to start with a plain-text DM to trigger challenge auth."
       ],
       "evidence": [
-        ".oh/docs/integrations/slack.md Admin DM text handlers section documents the caveat and fallbacks.",
+        ".oh/docs/integrations/slack.md Admin Slack commands section documents manifest setup, trust, and fallbacks.",
         ".oh/docs/integrations/slack.md Smoke Test and Troubleshooting now recommend a plain-text DM first.",
-        "Root package audit proves the shipped Slack manifest has message events and no Slack-native slash-command definitions."
+        ".pi/install/slack-manifest.json declares /help, /trusted, /revoke, /channels, /enable, /disable, and /toggletools.",
+        "The pinned pi-messenger-bridge fork branch registers Bolt app.command handlers and routes them through ChallengeAuth.handleAdminCommand."
       ]
     },
     {
@@ -57,7 +58,8 @@
       "evidence": [
         ".oh/evals/probes/slack-admin-command-surface.sh added and executable.",
         "bash .oh/skills/eval/run.sh --probe slack-admin-command-surface -> PASS.",
-        "Eval probe now requires the root-package audit artifact and package-grounding text in Slack docs."
+        "Eval probe now requires the root-package audit artifact and package-grounding text in Slack docs.",
+        "Eval probe requires manifest command declarations and the bridge fork pin containing Slack command handlers."
       ]
     },
     {

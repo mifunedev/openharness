@@ -47,3 +47,18 @@ Resolution:
   - `src/auth/challenge-auth.ts` gates admin handlers on trust.
   - `.pi/install/slack-manifest.json` has message events and no Slack-native slash-command definitions.
 - Updated docs and eval guard to cite/require this grounding.
+
+## Operator correction — implement the `.pi` manifest surface
+
+Finding:
+
+- **High**: Documentation/fallback changes did not solve discoverability. The likely product fix belongs in `.pi/install/slack-manifest.json`.
+- **High**: A manifest-only declaration would still fail because the pinned package had no Bolt `app.command(...)` listeners.
+
+Resolution:
+
+- Added `/help`, `/trusted`, `/revoke`, `/channels`, `/enable`, `/disable`, and `/toggletools` under `.pi/install/slack-manifest.json` `features.slash_commands`.
+- Added matching Socket Mode `app.command(...)` handlers on the existing bridge fork; handlers acknowledge, enforce DM-only + trusted auth, then delegate to `ChallengeAuth.handleAdminCommand`.
+- Published fork branch `github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies-admin-commands` at commits `aec340e` and `86cbd50`.
+- Updated `.oh/scripts/gateway.sh` and `.pi/UPSTREAM.md` pin documentation.
+- Package verification after `npm run clean`: TypeScript typecheck PASS; 86 source tests PASS (including three native slash-command tests); build PASS.

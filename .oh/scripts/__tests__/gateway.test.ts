@@ -48,6 +48,13 @@ describe("gateway client-session launcher", () => {
     expect(gateway()).toContain("gateway msg-bridge");
     expect(gateway()).toContain("/msg-bridge");
   });
+
+  it("reconciles the installed bridge when the reviewed fork pin changes", () => {
+    expect(gateway()).toContain("feat/slack-thread-replies-admin-commands");
+    expect(gateway()).toContain(".openharness-pin");
+    expect(gateway()).toContain('installed_pin" != "$FORK_PIN');
+    expect(gateway()).toContain('printf \'%s\\n\' "$FORK_PIN" >"$bridge_pin_file"');
+  });
 });
 
 describe("gateway pi: launches client-slack-pi handling tokens as data", () => {

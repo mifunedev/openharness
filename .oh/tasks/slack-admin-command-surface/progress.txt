@@ -24,3 +24,12 @@ STATUS: COMPLETE
 - [x] Added `.oh/tasks/slack-admin-command-surface/root-package-audit.md` with exact commands, line evidence, grounded RCA, and best approach.
 - [x] Updated `.oh/docs/integrations/slack.md` to ground the command-surface split in the root package README/source and shipped Slack manifest.
 - [x] Expanded `.oh/evals/probes/slack-admin-command-surface.sh` to require the root-package audit artifact and package-grounding text.
+
+## Slack manifest implementation addendum
+
+- [x] Added native admin slash command declarations to `.pi/install/slack-manifest.json`.
+- [x] Added matching Bolt command handlers to the pinned bridge fork branch (`aec340e`).
+- [x] Updated gateway fork pin and upstream tracking docs.
+- [x] Updated integration docs to instruct existing installs to update/recreate the Slack app from the manifest.
+- [x] Updated eval guard to require manifest command declarations and handler-capable fork pin.
+- [x] Opened package PR: https://github.com/ryaneggz/pi-messenger-bridge/pull/1

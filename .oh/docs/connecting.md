@@ -121,7 +121,7 @@ Follow Option B (or C for a remote host). The Ports panel in VSCode shows forwar
 
 ### Step 2 — Configure Slack
 
-Set `PI_SLACK_APP_TOKEN` / `PI_SLACK_BOT_TOKEN` in `.devcontainer/.env`, then configure the messenger from inside the session with the bridge's `/msg-bridge` command (trusted users, channels) — that is the default method. The `client-slack-pi` session starts automatically on container boot; manage it with `gateway pi` (`gateway pi --restart` to pick up token edits, `gateway status` to check). The tracked `.pi/msg-bridge.json` (`autoConnect`, `auth.trustedUsers`) is an optional headless pre-seed. For the full walkthrough see [Integrations → Slack](/docs/integrations/slack).
+Set `PI_SLACK_APP_TOKEN` / `PI_SLACK_BOT_TOKEN` in `.devcontainer/.env`, then manage the Pi-side bridge session with `/msg-bridge` from inside `client-slack-pi`. Trust/channel admin is handled by challenge auth and Slack DM admin text handlers, not separate Pi commands. The `client-slack-pi` session starts automatically on container boot; manage it with `gateway pi` (`gateway pi --restart` to pick up token edits, `gateway status` to check). The tracked `.pi/msg-bridge.json` (`autoConnect`, `auth.trustedUsers`) is an optional headless pre-seed. For the full walkthrough see [Integrations → Slack](/docs/integrations/slack).
 
 After the bridge is up, verify it is live:
 

@@ -1,0 +1,18 @@
+# Progress — slack-admin-command-surface
+
+- [x] US-001 — Separate Pi and Slack command surfaces
+  - Updated `.oh/docs/integrations/slack.md` to state `/msg-bridge` is the only Pi-side bridge command surface.
+  - Removed guidance that `/trusted` or `/channels` run inside the Pi session.
+  - Updated `.oh/skills/t3/references/sandbox-processes.md` so only `/msg-bridge` is typed into the pane.
+- [x] US-002 — Document Slack slash-command caveat and fallback
+  - Added Admin DM text handler section with Slack-native slash-command caveat.
+  - Added `gateway status`, `tmux capture-pane`, and `jq '.auth' ~/.pi/msg-bridge.json` fallback checks.
+  - Clarified plain-text DM challenge flow.
+- [x] US-003 — Guard the docs contract
+  - Added executable `.oh/evals/probes/slack-admin-command-surface.sh`.
+  - Verified with `bash .oh/skills/eval/run.sh --probe slack-admin-command-surface`.
+- [ ] US-004 — Submit a reviewable PR
+  - Changelog entry added.
+  - Pending commit, push, and PR URL.
+
+STATUS: READY_FOR_PR

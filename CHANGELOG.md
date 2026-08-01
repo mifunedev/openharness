@@ -11,6 +11,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 ### Changed
 ### Fixed
+- Clarify Slack bridge admin command docs: `/msg-bridge` is the Pi in-session command surface, while `/trusted`/`/help` are Slack DM text handlers with config fallbacks when Slack intercepts slash-prefixed text ([#354](https://github.com/ryaneggz/openharness/issues/354)).
 ### Removed
 ### Deprecated
 ### Security

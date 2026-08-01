@@ -71,10 +71,11 @@ in-container `supervisord`/`systemd` unit:
 
 - **Interactive pty is required.** `pi` runs interactively on the pane's real TTY
   so its UI extensions render in the TUI (off a TTY it floods stdout with
-  `extension_ui_request` JSON and exits at idle). `/msg-bridge`, `/trusted`,
-  `/channels` are typed **into** that pane, and challenge-code auth is **read off**
-  it (`tmux attach -r` / `capture-pane`). A detached service/supervisor process
-  has no attachable, driveable pane — the exact affordance tmux provides.
+  `extension_ui_request` JSON and exits at idle). Pi-side `/msg-bridge` commands
+  are typed **into** that pane, while Slack trust/channel admin is handled by DM
+  text messages to the bot; challenge-code auth is **read off** the pane
+  (`tmux attach -r` / `capture-pane`). A detached service/supervisor process has
+  no attachable, driveable pane — the exact affordance tmux provides.
 - **The supervisor heals *live-but-bad* state, which `restart:` cannot see.**
   `.devcontainer/client-slack-supervise.sh` restarts on the `ctx is stale`
   signature (a process that keeps running while silently not serving), clears the

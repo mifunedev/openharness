@@ -59,11 +59,12 @@ Keep both values ready for the next step.
 
 ## 4. Configure the bridge
 
-Two layers. **Tokens** go in `.devcontainer/.env` (§ 4.1). The **messenger
-itself is configured from inside the running session via the bridge's own
-`/msg-bridge` command** (§ 4.2) — trusted users, channels, enable/disable — which
-is the default method; there is no separate wizard. The tracked
-`.pi/msg-bridge.json` is only an optional pre-seed for headless setups (§ 4.2).
+Two layers. **Tokens** go in `.devcontainer/.env` (§ 4.1). The **Pi
+session command surface is the bridge's own `/msg-bridge` command** (§ 4.2):
+use it for connection/status/configuration inside `client-slack-pi`. Trust and
+channel admin actions are **Slack DM admin text handlers** after challenge auth
+(§ 6), not Pi slash commands. The tracked `.pi/msg-bridge.json` is only an
+optional pre-seed for headless setups (§ 4.2).
 
 ### 4.1 Tokens — `.devcontainer/.env`
 
@@ -82,28 +83,26 @@ failure — double-check the prefixes.
 
 ### 4.2 Configure the messenger — the `/msg-bridge` command
 
-The default way to configure the bridge is its own in-session `/msg-bridge`
-command — you do **not** hand-edit config for normal use. Attach to the session
-and run it:
+Inside the Pi session, the bridge exposes **one** Pi slash command:
+`/msg-bridge`. Attach only when you need to inspect or change the bridge from
+the TUI:
 
 ```bash
 gateway pi --attach     # start (if needed) + attach to client-slack-pi
 ```
 
-Then, inside the session:
+Then, inside the session, use:
 
 - `/msg-bridge` — bridge status and the config menu.
-- `/trusted` — list / add / remove trusted Slack users. Access is
-  **deny-by-default and challenge-based**: a new user DMs the bot, gets a
-  6-digit code, and replies with it to authorize (see § 5) — or you add them
-  here.
-- `/channels` — enable/disable channels and set per-channel `mode`
-  (`all` / `mentions` / `trusted-only`).
-- `/enable` · `/disable` — turn the bridge on/off without stopping the session.
+- `/msg-bridge status` — connection state plus trusted-user/channel counts.
+- `/msg-bridge help` — the Pi-side command reference.
+- `/msg-bridge connect` / `/msg-bridge disconnect` — Socket Mode lifecycle.
 
-These changes persist to `~/.pi/msg-bridge.json` (owned and rewritten by the
-package); `gateway pi` preserves them across restarts, never clobbering live
-grants (bug #289).
+Do **not** look for `/trusted`, `/channels`, `/enable`, `/disable`, or `/help`
+as Pi TUI commands. Those are bridge-owned Slack DM admin text handlers (§ 6)
+after the user passes challenge auth (§ 5). Auth/channel changes persist to
+`~/.pi/msg-bridge.json` (owned and rewritten by the package); `gateway pi`
+preserves them across restarts, never clobbering live grants (bug #289).
 
 #### Optional pre-seed (headless) — `.pi/msg-bridge.json`
 
@@ -130,7 +129,8 @@ bridge is usable on first boot without the challenge handshake:
 - `auth.channels` — per-channel enablement keyed by channel ID (`C…`).
 
 `gateway pi` seeds this into `~/.pi/msg-bridge.json` on launch but **preserves**
-any grants you've since added via `/trusted`/`/channels`.
+any grants you've since added via Slack DM admin handlers or runtime challenge
+auth.
 
 ### 4.3 The `client-slack-pi` session (managed by `gateway`)
 
@@ -226,7 +226,8 @@ tail -f /tmp/client-slack-pi.log      # or just tail the log — no attach neede
 ```
 
 Use the interactive `gateway pi --attach` (read-write) **only** when you actually need to
-run `/msg-bridge`, `/trusted`, or `/channels` inside the session. The sibling Hermes gateway
+run Pi-side `/msg-bridge` commands inside the session. Slack trust/channel admin
+handlers are DM text messages to the bot, not Pi TUI commands. The sibling Hermes gateway
 is the same story — `gateway hermes`, session `client-slack-hermes`, log
 `/tmp/client-slack-hermes.log` (see [Hermes → Run and verify](../harnesses/hermes.md#run-and-verify-read-only)).
 
@@ -269,19 +270,35 @@ your Slack user ID up front — add `slack:U…` to `auth.trustedUsers` in the
 tracked `.pi/msg-bridge.json` (§ 4.2) and restart the `client-slack-pi` session.
 That skips the challenge entirely.
 
-## 6. Admin DM Commands
+## 6. Admin DM text handlers
 
-DM the bot these commands to manage trust and per-chat behavior:
+After a user is trusted, the bridge can handle these **Slack DM text messages**
+to manage trust and per-chat behavior:
 
-| Command | Effect |
+| DM text | Effect |
 |---------|--------|
 | `/trusted` | List currently trusted users |
 | `/revoke <userId>` | Revoke a user's trust (use the `slack:U…` or `U…` ID) |
 | `/channels` | List known chats and their enabled mode |
 | `/enable <chatId> <all\|mentions\|trusted-only>` | Enable the bot in a chat with the given response mode |
 | `/disable <chatId>` | Disable the bot in a chat |
-| `/help` | Show the bridge's command help |
-| `/msg-bridge status` | Show connection state and trusted-user status |
+| `/help` | Show the bridge's admin DM help |
+
+These are not Slack-native slash commands in the shipped manifest: they do not
+appear in Slack slash-command autocomplete, and some Slack clients/workspaces
+may intercept `/help` or other leading-slash text before it reaches the bot. If
+that happens, use the supported inspection/configuration fallbacks:
+
+```bash
+gateway status
+tmux capture-pane -t client-slack-pi -p | grep -F '[Slack] Bot user ID:'
+jq '.auth' ~/.pi/msg-bridge.json
+```
+
+For headless or slash-intercepted setups, pre-seed `auth.trustedUsers` and
+`auth.channels` in `.pi/msg-bridge.json` (§ 4.2), then run `gateway pi --restart`.
+Use Pi-side `/msg-bridge status` inside `gateway pi --attach` for connection
+state; `/msg-bridge status` is not a Slack DM admin command.
 
 ## 7. Smoke Test
 
@@ -308,16 +325,19 @@ env (before attaching to tmux).
    Mode connection. Use the tmux log check above as the authoritative test.
 
 3. **Round-trip test:**
-   DM the bot or `@mention` it in a channel. If you've never talked to it
-   before, complete the 6-digit challenge (§ 5) first. Watch
-   `tmux attach -r -t client-slack-pi` — you should see the inbound event logged
-   and the agent's reply posted back to Slack.
+   DM the bot plain text such as `hello` or `@mention` it in a channel. If
+   you've never talked to it before, complete the 6-digit challenge (§ 5) first;
+   starting with plain text avoids Slack intercepting a leading-slash admin DM
+   before trust is established. Watch `tmux attach -r -t client-slack-pi` — you
+   should see the inbound event logged and the agent's reply posted back to
+   Slack.
 
 ## 8. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Bot stays silent; you've never authenticated | Deny-by-default — your Slack user isn't trusted yet | DM the bot, read the 6-digit code from `tmux attach -r -t client-slack-pi`, reply with it in Slack — or pre-authorize your user ID in `.pi/msg-bridge.json` (§ 4.2) |
+| Bot stays silent; you've never authenticated | Deny-by-default — your Slack user isn't trusted yet | DM the bot plain text, read the 6-digit code from `tmux attach -r -t client-slack-pi`, reply with it in Slack — or pre-authorize your user ID in `.pi/msg-bridge.json` (§ 4.2) |
+| `/help` or `/trusted` is not visible/does not reach the bot in Slack | These are bridge DM text handlers, not Slack-native slash commands in the shipped manifest; Slack may intercept leading-slash text | Use `gateway status`, `tmux capture-pane -t client-slack-pi -p`, and `jq '.auth' ~/.pi/msg-bridge.json`; pre-seed `.pi/msg-bridge.json` and `gateway pi --restart` for headless/slash-intercepted setups |
 | `invalid_auth` / `not_authed` in the log | `xapp-` and `xoxb-` tokens are swapped | `PI_SLACK_APP_TOKEN` must be the `xapp-` token; `PI_SLACK_BOT_TOKEN` must be the `xoxb-` token — correct `.devcontainer/.env` and relaunch |
 | Bridge won't start after an unclean exit | Stale lock file `~/.pi/msg-bridge.lock` left behind | `rm ~/.pi/msg-bridge.lock`, then relaunch the `client-slack-pi` session |
 | Bot connected (`[Slack] Bot user ID:` logged) but never replies | `autoConnect` not set in `.pi/msg-bridge.json` — the bridge stays idle | Set `"autoConnect": true` (§ 4.2) and relaunch |

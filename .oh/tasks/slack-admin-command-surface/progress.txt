@@ -1,0 +1,40 @@
+# Progress — slack-admin-command-surface
+
+- [x] US-001 — Separate Pi and Slack command surfaces
+  - Updated `.oh/docs/integrations/slack.md` to state `/msg-bridge` is the only Pi-side bridge command surface.
+  - Removed guidance that `/trusted` or `/channels` run inside the Pi session.
+  - Updated `.oh/skills/t3/references/sandbox-processes.md` so only `/msg-bridge` is typed into the pane.
+- [x] US-002 — Document Slack slash-command caveat and fallback
+  - Added Admin DM text handler section with Slack-native slash-command caveat.
+  - Added `gateway status`, `tmux capture-pane`, and `jq '.auth' ~/.pi/msg-bridge.json` fallback checks.
+  - Clarified plain-text DM challenge flow.
+- [x] US-003 — Guard the docs contract
+  - Added executable `.oh/evals/probes/slack-admin-command-surface.sh`.
+  - Verified with `bash .oh/skills/eval/run.sh --probe slack-admin-command-surface`.
+- [x] US-004 — Submit a reviewable PR
+  - Changelog entry added.
+  - Branch `bug/354-slack-admin-surface` committed and pushed.
+  - PR opened: https://github.com/mifunedev/openharness/pull/678
+
+STATUS: COMPLETE
+
+## Root package audit addendum
+
+- [x] Audited `pi-messenger-bridge` root package README and source at installed commit `dca59db0482e97a9ef85e1a3a49da937e9b94bc5`.
+- [x] Added `.oh/tasks/slack-admin-command-surface/root-package-audit.md` with exact commands, line evidence, grounded RCA, and best approach.
+- [x] Updated `.oh/docs/integrations/slack.md` to ground the command-surface split in the root package README/source and shipped Slack manifest.
+- [x] Expanded `.oh/evals/probes/slack-admin-command-surface.sh` to require the root-package audit artifact and package-grounding text.
+
+## Slack manifest implementation addendum
+
+- [x] Added native admin slash command declarations to `.pi/install/slack-manifest.json`.
+- [x] Added matching Bolt command handlers to the pinned bridge fork branch (`aec340e`).
+- [x] Updated gateway fork pin and upstream tracking docs.
+- [x] Updated integration docs to instruct existing installs to update/recreate the Slack app from the manifest.
+- [x] Updated eval guard to require manifest command declarations and handler-capable fork pin.
+- [x] Opened package PR: https://github.com/ryaneggz/pi-messenger-bridge/pull/1
+
+## Merge preparation
+
+- [x] Merged package PR https://github.com/ryaneggz/pi-messenger-bridge/pull/1 as `c8b96e9d0fb69611c4e67ae298d1d10d83792a26`.
+- [x] Replaced mutable package branch pin with exact landed commit before harness merge.

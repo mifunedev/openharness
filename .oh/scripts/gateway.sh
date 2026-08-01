@@ -32,9 +32,9 @@ set -u
 
 HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 SLACK_ENV="$HARNESS/.devcontainer/.env"
-# TEMPORARY fork pin — keep in sync with entrypoint.sh; revert once the upstream
-# thread_ts PR merges and publishes (see .pi/UPSTREAM.md).
-FORK_PIN="github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies"
+# TEMPORARY fork pin — carries thread replies + Slack admin slash handlers;
+# revert once upstream merges and publishes them (see .pi/UPSTREAM.md).
+FORK_PIN="github:ryaneggz/pi-messenger-bridge#c8b96e9d0fb69611c4e67ae298d1d10d83792a26"
 
 usage() {
   echo "Usage:"
@@ -160,6 +160,7 @@ start_pi() {
   local session="client-slack-pi" log="/tmp/client-slack-pi.log"
   local bridge_dir="$HARNESS/.pi/bridge"
   local bridge_entry="$bridge_dir/node_modules/pi-messenger-bridge/dist/index.js"
+  local bridge_pin_file="$bridge_dir/.openharness-pin"
   local recovery_entry="$HARNESS/.pi/bridge-recovery/index.ts"
 
   command -v pi >/dev/null 2>&1 \
@@ -178,11 +179,17 @@ start_pi() {
   [ -n "${PI_SLACK_BOT_TOKEN:-}" ] \
     || echo "[gateway] no PI_SLACK_* tokens — bridge loads but stays disconnected"
 
-  # Install the bridge if missing (same fork pin the entrypoint installs).
-  if [ ! -f "$bridge_entry" ]; then
+  # Install or reconcile the bridge when the reviewed pin changes. Existing
+  # sandboxes predate the marker, so the first restart after an upgrade refreshes
+  # the package instead of silently retaining an older branch.
+  local installed_pin=""
+  mkdir -p "$bridge_dir"
+  [ -f "$bridge_pin_file" ] && installed_pin="$(cat "$bridge_pin_file" 2>/dev/null || true)"
+  if [ ! -f "$bridge_entry" ] || [ "$installed_pin" != "$FORK_PIN" ]; then
     echo "[gateway] installing pi-messenger-bridge ($FORK_PIN) …"
     npm install --prefix "$bridge_dir" --no-fund --no-audit "$FORK_PIN" \
       || { echo "[gateway] npm install failed" >&2; return 1; }
+    printf '%s\n' "$FORK_PIN" >"$bridge_pin_file"
   fi
 
   # Seed the non-secret bridge config (preserves runtime trust grants), clear lock.

@@ -1,0 +1,996 @@
+{
+  "kind": "comparison-traceability",
+  "story": "US-016",
+  "status": "PASS",
+  "manifest": {
+    "path": "evidence/benchmark-manifest.json",
+    "sha256": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b",
+    "amendments": 0
+  },
+  "inputStoryRange": "US-005..US-015",
+  "inputFileCount": 125,
+  "inputByteCount": 476086,
+  "inputInventory": [
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/aggregate.json",
+      "bytes": 516,
+      "sha256": "fa1ec916342ab71114993c8ba90464adb476fb145134bde4192b970c5f9f2edd",
+      "records": 1
+    },
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/cleanup-proof.json",
+      "bytes": 389,
+      "sha256": "f75c6cab3ba507deb9fa05b566b9d853df4daaf68c5e44ff1e62ada3f2582317",
+      "records": 1
+    },
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "d1263633ff899ebbc0ac1726868dcbc378dbf81b9a2ebcc8aecc3af1e763b16f",
+      "records": 1
+    },
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/run.jsonl",
+      "bytes": 1965,
+      "sha256": "d5ec3897aba1947f1c1d5f2f97213b0758e6eccf56433ecb9003749ad4024eb6",
+      "records": 3
+    },
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/secret-scan.log",
+      "bytes": 64,
+      "sha256": "81a20486a6574c72da6236307d3d4998bbbce14134b4545e7b5e852acacf054b",
+      "records": null
+    },
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/tests.log",
+      "bytes": 3823,
+      "sha256": "b716d97f7ae98b815cdcb4a0934f3e9b56023fe822d0c550fc0102c2f19b31a3",
+      "records": null
+    },
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/verification.jsonl",
+      "bytes": 7907,
+      "sha256": "d648feb5416fc9a39cede0c2659dfe9e9bcedccfe879e7ab3b2e6ae88cdda878",
+      "records": 6
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/aggregate.json",
+      "bytes": 553,
+      "sha256": "c1bcb32d954e0f9325acebb57f1b58af8e4be0835a758f7283cc45066ab4dbaf",
+      "records": 1
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/cleanup-proof.json",
+      "bytes": 665,
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "records": 1
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "2896464d400c228612a3bf4c7dfee5e51c8bdebcbf920468e9b537268705ef89",
+      "records": 1
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/remediation-run.log",
+      "bytes": 1659,
+      "sha256": "89c97f31f02e9b7e5b25412dcf81ca392320b9c28ef5e2494c808b1fece2e3e3",
+      "records": null
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/run.jsonl",
+      "bytes": 2001,
+      "sha256": "f78f18623d8e41a44a4d7daf6947ee29b06ce972144c0aaf66ebd242bdfdc438",
+      "records": 3
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/secret-scan.log",
+      "bytes": 64,
+      "sha256": "af4af5d3477a4cb1fe3f9a2e4435f0e86e4bd31d02d70f6af8b74704616f0e7a",
+      "records": null
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/tests.log",
+      "bytes": 5449,
+      "sha256": "34283032599e549030f306d1ac65fa89886d3ca5d85258ef04a69ca7c4dacbb2",
+      "records": null
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/topology.json",
+      "bytes": 3911,
+      "sha256": "6e3e71e7e2af85417d1a3a6072e2bae1248f13873ce5519946fcdc6507248633",
+      "records": 1
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/transport.json",
+      "bytes": 3722,
+      "sha256": "0a6f1ab02f9c039f47b5494733aa4666364b8defb4ab3b4cdd1ce57d3408e45c",
+      "records": 1
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/verification.jsonl",
+      "bytes": 11486,
+      "sha256": "f9a2a7af5749cdc28091c4b0cea79a42d286c5e1216847694c035db683afde30",
+      "records": 7
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/version-integrity-source.json",
+      "bytes": 2310,
+      "sha256": "8e5abc8870fb9419027ab22ec2f6b1de0b1dd0572330b90b5cbaeb1605429220",
+      "records": 1
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/aggregate.json",
+      "bytes": 750,
+      "sha256": "151b43ea93be013291e2f4843ac478b97acad52400bfffbd552a31170bfb1c37",
+      "records": 1
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/cleanup-proof.json",
+      "bytes": 665,
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "records": 1
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "c6aee4c8879d942cb7bd003599ae79797b11bda9d3f02cc54be3d523c8bc22f6",
+      "records": 1
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/run.jsonl",
+      "bytes": 2748,
+      "sha256": "68e5df52869bd5bfdd4d12556a2ec36cfda9a0530c515eb864ffb6bee3a6e72f",
+      "records": 3
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/secret-scan.log",
+      "bytes": 64,
+      "sha256": "2fbc9d2a7bdf1771a8b676015accc2c35df90cb00f0af74213b6fa927f21f486",
+      "records": null
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/tests.log",
+      "bytes": 7309,
+      "sha256": "f6431db08ad59fb6954fc1ba6f26430544b30fd8397a8fafede776749aca65c6",
+      "records": null
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/topology.json",
+      "bytes": 2329,
+      "sha256": "0cbb7611d9df148275aae1db830a4077d1e2762875d7665059c1d25ca58c53dd",
+      "records": 1
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/transport.json",
+      "bytes": 4639,
+      "sha256": "da763b1db07bb7aac6879aa4578cdaa7352338f7efe672b8fa3e8e8d1218c8e1",
+      "records": 1
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/verification.jsonl",
+      "bytes": 12071,
+      "sha256": "cbfb7ec25f979c940de20406be1004a7259ba413b54e0a1845f83574913f4ad7",
+      "records": 6
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/aggregate.json",
+      "bytes": 721,
+      "sha256": "08a1b287a5b4c14382e8a6f75c5e95cfdb0ce8ebec1ce8236455afda33bc3576",
+      "records": 1
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/cleanup-proof.json",
+      "bytes": 665,
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "records": 1
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/probe-obligations.json",
+      "bytes": 1754,
+      "sha256": "e5a25460706d6d0c0b5d1b0a29a47c8cd83cda87c145a2ed7512699a3cb50a96",
+      "records": 1
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "7e5a42528726b7c6602737e6492f5a1ea559c22cd73ffb272b937a0446d71298",
+      "records": 1
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/run.jsonl",
+      "bytes": 2691,
+      "sha256": "ff63ea9043b9cc6775dd99c66c1799ba1440c5af90d4a751df3876b6659abe19",
+      "records": 3
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/secret-scan.log",
+      "bytes": 64,
+      "sha256": "b862590a171467dfd2d796a0122346e368b769c737b766bc71f6346a3b4527ce",
+      "records": null
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/tests.log",
+      "bytes": 7311,
+      "sha256": "64aee295122d8e867ebe4bab3b6189029126721552dbb343538b4cd35dabfe7b",
+      "records": null
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/verification.jsonl",
+      "bytes": 12069,
+      "sha256": "427d26018453466158e472b547f71721c26d3548a5b2dcb7fbecb73d854f3276",
+      "records": 6
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/aggregate.json",
+      "bytes": 629,
+      "sha256": "bae2bfdd35d802089ab4bef463d94a887181c5c1ce2b0eb8fd8380db0d7139e5",
+      "records": 1
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/cleanup-proof.json",
+      "bytes": 665,
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "records": 1
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/lifecycle.json",
+      "bytes": 2644,
+      "sha256": "9d858d2a3169041a7bac091413ea9390718f92d7ee59ae4da3d7bb7747cde66f",
+      "records": 1
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/mode.json",
+      "bytes": 1061,
+      "sha256": "72b54951ee23cf907c1dd99cec5932c7e9cf931b947e5741fd0c8513e5e9cbab",
+      "records": 1
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "7a5340f6aad8692e09b798772b31ebc6df21bdbb894f289b7f14412445e1051a",
+      "records": 1
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/run.jsonl",
+      "bytes": 1845,
+      "sha256": "3f9f665d43deb994a6113fc66ba7dbc24f76552261ab1fb9066aadc6421c697e",
+      "records": 3
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/secret-scan.log",
+      "bytes": 64,
+      "sha256": "6af3792bb6ef34eddcbd8d71cb9272cb99f739b5b7cfb41234b504ee34833794",
+      "records": null
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/tests.log",
+      "bytes": 7309,
+      "sha256": "cd66ced8e3397d4bf9bd06349aea7ab678dd308711b109f540c6fdb54ece86a1",
+      "records": null
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/verification.jsonl",
+      "bytes": 12063,
+      "sha256": "3395f02d530066575a39d293865df4d8b161dae15d07161d4a83c03d9eb68caf",
+      "records": 6
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/aggregate.json",
+      "bytes": 783,
+      "sha256": "000c992075c8dbd11ee3ea84c82c6b1734cc0c1cc16e61a3b0b4727ca7143770",
+      "records": 1
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/cleanup-proof.json",
+      "bytes": 665,
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "records": 1
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/mode-lifecycle.json",
+      "bytes": 3685,
+      "sha256": "714134bafe30f316dd98ea59cacec499631939a8f71973a74cb47db443376e2c",
+      "records": 1
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/prerequisite.json",
+      "bytes": 1452,
+      "sha256": "3167d27dd2e35cc28369c66734cfd8145f6adb9c325bc319bf21ea7f7774da0e",
+      "records": 1
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "de893988b125db8b56b15222b3eb82895eb405d37473d591ddbfca4636c40c7a",
+      "records": 1
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/run.jsonl",
+      "bytes": 2064,
+      "sha256": "93813cf4e5b93b9d24ec6f44713ce5e05d834ad9c8135363eaf4331b8d3f8d70",
+      "records": 3
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/secret-scan.log",
+      "bytes": 64,
+      "sha256": "9919c02423edeab39dd991faa351909a960c69514ad9e6b4074ae68e4f07cb6c",
+      "records": null
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/tests.log",
+      "bytes": 7309,
+      "sha256": "a5f2ae2e4d01dc039b9aace857167f92a61a15ff341aa3119e9efbe3733c8a06",
+      "records": null
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/verification.jsonl",
+      "bytes": 12049,
+      "sha256": "32c0c6b347a47d4bb66cfd4207818793fbf33899e1851245c4ea93b2554c52c7",
+      "records": 6
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/aggregate.json",
+      "bytes": 5010,
+      "sha256": "a06de864b2f4e3c486ce4392c864fb8a74359e9e81926abd31f5c13823d8cfb5",
+      "records": 1
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/cleanup-no-signal-proof.json",
+      "bytes": 863,
+      "sha256": "7259b8151f43f8e4b5a5a96bc9dbbb47e87c667201bead7c42237a68001e4b5a",
+      "records": 1
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/cleanup-proof.json",
+      "bytes": 863,
+      "sha256": "7259b8151f43f8e4b5a5a96bc9dbbb47e87c667201bead7c42237a68001e4b5a",
+      "records": 1
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/fault-matrix.json",
+      "bytes": 3609,
+      "sha256": "d6e26513637622ff536f6244ca42a3fd5503e8f0dcc6f04b7f379c41ff8b3057",
+      "records": 1
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/first-mate-exact.log",
+      "bytes": 1956,
+      "sha256": "51ca8e58545eb552c2da7485da0ff6cd66d79254064102e3829f1329a6c1cc42",
+      "records": null
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "bb1594694d288e6bb8ccd5fe0540ed6ed01e19988d99c49c0dec751e1f5af73f",
+      "records": 1
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/run.jsonl",
+      "bytes": 23529,
+      "sha256": "4ed861512fbb92abea916b0918e3a5a3bd0bf2d4bf7e370dc0096e63fa1de3f3",
+      "records": 15
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/secret-scan.log",
+      "bytes": 65,
+      "sha256": "956171199a83865286503e551b33833361065a7ad923541474bb9e9110b32a5e",
+      "records": null
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/tests.log",
+      "bytes": 9598,
+      "sha256": "9aff61a9bc44d4d2ba638f25a7ee3e5da60e1c4f2edccca25a6bd4d2b9f90273",
+      "records": null
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/verification.jsonl",
+      "bytes": 13496,
+      "sha256": "718fbacb1a9a12418b18444d4fa47c302fdd83ee1281cb9d624881b4a28d8295",
+      "records": 6
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/aggregate.json",
+      "bytes": 5016,
+      "sha256": "56d4a1fd7ec5e9a0a72e2dfb5a2887cfb13da9eb1522a06afe777499f1129110",
+      "records": 1
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/cleanup-no-signal-proof.json",
+      "bytes": 869,
+      "sha256": "9a9aa00ad6ed63715f24e79e919b52bbd43663ee3aa31e3cca01fa6254c0236e",
+      "records": 1
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/cleanup-proof.json",
+      "bytes": 869,
+      "sha256": "9a9aa00ad6ed63715f24e79e919b52bbd43663ee3aa31e3cca01fa6254c0236e",
+      "records": 1
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/fault-matrix.json",
+      "bytes": 4166,
+      "sha256": "bdef7c001971f89dc26bbd6060e046adbc18dadc434a2d50062152fe9a1d1455",
+      "records": 1
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/first-mate-exact.log",
+      "bytes": 2437,
+      "sha256": "10674f1ce88358be333de9f57fc71ce317dc68da8d8848f508e25ba8346eda52",
+      "records": null
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "673300e2f0fb1c0c0867ddaf84f4fb76628094553fd7c5e0f84f52af9392474f",
+      "records": 1
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/run.jsonl",
+      "bytes": 23619,
+      "sha256": "6ec8b4391d0af759a37d51ee7d4e773eba87cd3ac1596ec83d4cbcb7977c03a2",
+      "records": 15
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/secret-scan.log",
+      "bytes": 65,
+      "sha256": "364fa3b3919bf814da1e1167c7086a3f2c56acbd1c710626bb10b3ab01b0c78a",
+      "records": null
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/tests.log",
+      "bytes": 9601,
+      "sha256": "a45ab1ba584ebaba23b28e38e89f92f99158ba1c2e3ce14dc4e7bdf9c1c1d39f",
+      "records": null
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/verification.jsonl",
+      "bytes": 13986,
+      "sha256": "f4bb2dd801690d30f7490c31913902b23abfcd38c8f9bfa03a499f2f1ffdd5af",
+      "records": 6
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/aggregate.json",
+      "bytes": 5022,
+      "sha256": "5d1b32b75ae2d613f3a6e6de6d3812895749fc469f67fdb6b4c73b25202ae9a3",
+      "records": 1
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/cleanup-no-signal-proof.json",
+      "bytes": 875,
+      "sha256": "5b18723a08d03d10b87060c55df7e7f667fec80e24d285d1b2135157aa6afe18",
+      "records": 1
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/cleanup-proof.json",
+      "bytes": 875,
+      "sha256": "5b18723a08d03d10b87060c55df7e7f667fec80e24d285d1b2135157aa6afe18",
+      "records": 1
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/fault-matrix.json",
+      "bytes": 4309,
+      "sha256": "ce6bce6328477cf24d657668dcbce460f02e2b9f228556691fc4675e12759e27",
+      "records": 1
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/first-mate-exact.log",
+      "bytes": 2586,
+      "sha256": "9fb4559684bac3fd9d2ac46d9e1e2fd71069d7cc7e7d1533b88e44629464ca96",
+      "records": null
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "b3e086dfa28d3ad13e0367265841c88c16667bcf4f1dd095cb482e7f131db8f4",
+      "records": 1
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/run.jsonl",
+      "bytes": 23709,
+      "sha256": "055c1cc776e9c6a82f030e8a850197b3d5e56f68be56103aae5d6e4e50e6a558",
+      "records": 15
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/secret-scan.log",
+      "bytes": 65,
+      "sha256": "11ee2b44a9c689571ab6bcef1c9ee7fe41d31b665a412297bbb71a57d0427ac4",
+      "records": null
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/tests.log",
+      "bytes": 9598,
+      "sha256": "988624cadd1f6d847d555900f98dedf77759c5436b2a654f0027df5aa478f095",
+      "records": null
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/verification.jsonl",
+      "bytes": 14138,
+      "sha256": "58c58c409e19a0e0a1f7a04aed0228dcabd6d90d92a6ca62f68cf0250e5842f9",
+      "records": 6
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/aggregate.json",
+      "bytes": 5020,
+      "sha256": "1311ecbeee15c35dc41a118f1e9792ab8b3245ac457dfa6316a622b92a15d4b0",
+      "records": 1
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/cleanup-no-signal-proof.json",
+      "bytes": 873,
+      "sha256": "24932f6ded1d17352ad07e3cd60d40f70425f14c9f2022ad3bd702a945e3bf17",
+      "records": 1
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/cleanup-proof.json",
+      "bytes": 873,
+      "sha256": "24932f6ded1d17352ad07e3cd60d40f70425f14c9f2022ad3bd702a945e3bf17",
+      "records": 1
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/fault-matrix.json",
+      "bytes": 3680,
+      "sha256": "96ced91344c3e64d6c6403f7c09514d88f0d8fe8a7068ef5bb80d584c052f862",
+      "records": 1
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/first-mate-exact.log",
+      "bytes": 2037,
+      "sha256": "c30d087027605329ce5dda19e68621cf3e0709f412e2e1e2cd2e2e7dcc01c474",
+      "records": null
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "0d78799118406d135b800e0dcf7effcfa1c1be9aabdf30976c13c604520b6620",
+      "records": 1
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/run.jsonl",
+      "bytes": 23679,
+      "sha256": "0eeb2deffb3691dbc5ff5fa39d82a43f7d00834fa3d13e0a0e139af2539cbfe2",
+      "records": 15
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/secret-scan.log",
+      "bytes": 65,
+      "sha256": "34e0fe3b1f0e026c1d5094e7383b206fffd7557720106949fd4c013a73106f3d",
+      "records": null
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/tests.log",
+      "bytes": 9602,
+      "sha256": "47c8e793a83e15ac1e4c356b6db441b02c8e3b1102c66c924582773169694179",
+      "records": null
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/verification.jsonl",
+      "bytes": 13591,
+      "sha256": "80ba9b15da6d85b344d328ef53f23b6c931f61d46bc71566278638613ce77b29",
+      "records": 6
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/aggregate.json",
+      "bytes": 5017,
+      "sha256": "aa19e4fc144ac508883b3162676b121b1a7645a62d59291cca58adc5f8d21137",
+      "records": 1
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/cleanup-no-signal-proof.json",
+      "bytes": 870,
+      "sha256": "bfedf65c48c28b21accf2b6a484654ecca1a8aeb729cb1b11dc037f5480806cb",
+      "records": 1
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/cleanup-proof.json",
+      "bytes": 870,
+      "sha256": "bfedf65c48c28b21accf2b6a484654ecca1a8aeb729cb1b11dc037f5480806cb",
+      "records": 1
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/fault-matrix.json",
+      "bytes": 3731,
+      "sha256": "44fa9eeba5c35b05823171965ac3b553412611fa31120c7d4ac6ed525c6d7a38",
+      "records": 1
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/first-mate-exact.log",
+      "bytes": 2085,
+      "sha256": "d9fea12f4e35fc2b9f4cf2f5ce8719c655a51fb5787b9836eb60788b4ffaf6f4",
+      "records": null
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/node-check.log",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "records": null
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/production-metadata-delta.json",
+      "bytes": 1571,
+      "sha256": "270b8faf3cd61489e19f8e90e22f24a15804ce7048da150751086c20e922b0a9",
+      "records": 1
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/run.jsonl",
+      "bytes": 23634,
+      "sha256": "8a74176721e9178a4ca0bc898463905bf46ebc7a7618c272debb0bdd90a0a950",
+      "records": 15
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/secret-scan.log",
+      "bytes": 65,
+      "sha256": "25e003582e1f5bf52aad9b22e27c7bfebfc5fb5b1034ef38c8acda753e510d3e",
+      "records": null
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/tests.log",
+      "bytes": 9601,
+      "sha256": "fa5e52bb36031245c71e506269b72138bd7bd12faa232867d65ef44424f9a77f",
+      "records": null
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/typecheck.log",
+      "bytes": 217,
+      "sha256": "200ba8df471f6e53668f1d72f7963f43a07a0480e750da6392ec5a9606f40724",
+      "records": null
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/verification.jsonl",
+      "bytes": 13635,
+      "sha256": "9af101b0df021dd792aad126ecfa5ddce79e0a9c3f69c2571f97ac4dbc0c631d",
+      "records": 6
+    }
+  ],
+  "characterizationSummary": [
+    {
+      "story": "US-005",
+      "status": "NOT RUN",
+      "measuredRows": 0,
+      "comparableRows": 0,
+      "blocker": "fresh user/network namespace unavailable; candidate launch is prohibited"
+    },
+    {
+      "story": "US-006",
+      "status": "NOT RUN",
+      "measuredRows": 0,
+      "comparableRows": 0,
+      "blocker": "fresh user/network namespace unavailable; candidate launch is prohibited"
+    },
+    {
+      "story": "US-007",
+      "status": "NOT RUN",
+      "measuredRows": 0,
+      "comparableRows": 0,
+      "blocker": "conditional wrapper launch is not authorized: US-006 was blocked by unavailable network isolation, not solely by proven direct-transport infeasibility; unavailable network isolation independently prohibits launch"
+    },
+    {
+      "story": "US-008",
+      "status": "NOT RUN",
+      "measuredRows": 0,
+      "comparableRows": 0,
+      "blocker": "no RPC topology is runnable and denied-network proof is unavailable; fake-provider and extension API probe remains safely NOT RUN before extension/provider/Pi load or model turn"
+    },
+    {
+      "story": "US-009",
+      "status": "NOT RUN",
+      "measuredRows": 0,
+      "comparableRows": 0,
+      "blocker": "fresh user/network namespace isolation is unavailable; the direct no-mode control is safely NOT RUN before PM2 or Pi launch"
+    },
+    {
+      "story": "US-010",
+      "status": "NOT RUN",
+      "measuredRows": 0,
+      "comparableRows": 0,
+      "blocker": "compatible PTY utility metadata is present, but fresh user/network namespace isolation is unavailable; the PTY control is safely NOT RUN before utility, PM2, baseline, or Pi launch"
+    }
+  ],
+  "faultSummary": {
+    "candidates": 5,
+    "requestedSlots": 75,
+    "notRunSlots": 75,
+    "measuredSlots": 0,
+    "comparableSlots": 0,
+    "candidateLaunchCount": 0,
+    "faultInjectionCount": 0,
+    "signalAttemptCount": 0,
+    "productionContentRead": false
+  },
+  "claims": [
+    {
+      "id": "manifest-frozen",
+      "label": "SOURCE-VERIFIED",
+      "evidence": [
+        "evidence/benchmark-manifest.json",
+        "evidence/US-004/manifest.sha256"
+      ]
+    },
+    {
+      "id": "source-characterizations",
+      "label": "SOURCE-VERIFIED",
+      "evidence": [
+        "evidence/US-006/version-integrity-source.json",
+        "evidence/US-010/prerequisite.json"
+      ]
+    },
+    {
+      "id": "runtime-results",
+      "label": "NOT RUN",
+      "evidence": [
+        "evidence/US-011/aggregate.json",
+        "evidence/US-012/aggregate.json",
+        "evidence/US-013/aggregate.json",
+        "evidence/US-014/aggregate.json",
+        "evidence/US-015/aggregate.json"
+      ]
+    },
+    {
+      "id": "runtime-capabilities",
+      "label": "LIVE-UNVERIFIED",
+      "evidence": [
+        "evidence/US-011/fault-matrix.json",
+        "evidence/US-012/fault-matrix.json",
+        "evidence/US-013/fault-matrix.json",
+        "evidence/US-014/fault-matrix.json",
+        "evidence/US-015/fault-matrix.json"
+      ]
+    },
+    {
+      "id": "bounded-verification",
+      "label": "LIVE-VERIFIED",
+      "evidence": [
+        "evidence/US-011/verification.jsonl",
+        "evidence/US-012/verification.jsonl",
+        "evidence/US-013/verification.jsonl",
+        "evidence/US-014/verification.jsonl",
+        "evidence/US-015/verification.jsonl"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "kind": "terminal-policy-scan",
+  "story": "US-019",
+  "status": "PASS",
+  "scannedArtifact": "assessment.md#terminal-first-mate-synthesis",
+  "prohibitedOutputLabelFindingCount": 0,
+  "prohibitedOutputLabelFindings": [],
+  "claimVocabularyComplete": true,
+  "candidateNotRunRowCount": 5,
+  "allCandidateBehaviorNonComparable": true,
+  "placeholderAbsent": true,
+  "metadataQualificationPresent": true,
+  "separateHumanDecisionBoundaryPresent": true,
+  "selectionAuthority": false,
+  "migrationOrRolloutAuthority": false,
+  "productionConfigurationSupplied": false,
+  "defaultChangeSupplied": false,
+  "productionStateChangeAuthorized": false,
+  "noProductionChangeBoundaryPresent": true
+}

@@ -1,0 +1,67 @@
+{
+  "kind": "wrapper-topology",
+  "story": "US-007",
+  "candidate": "pm2-rpc-host-wrapper",
+  "separatelyNamedCandidate": "PM2 7.0.3 + RPC-host wrapper + Pi RPC",
+  "result": "NOT RUN",
+  "reason": "conditional wrapper launch is not authorized: US-006 was blocked by unavailable network isolation, not solely by proven direct-transport infeasibility; unavailable network isolation independently prohibits launch",
+  "eligibility": {
+    "directTransportStatus": "LIVE-UNVERIFIED",
+    "directTransportInfeasibleProven": false,
+    "us006BlockedSolelyByDirectTransportInfeasibility": false,
+    "conditionalLaunchAuthorized": false,
+    "networkIsolation": "NOT RUN"
+  },
+  "intendedParentage": "PM2 daemon -> fixture RPC-host wrapper -> Pi --mode rpc",
+  "exactPm2ScriptTarget": "fixture-owned RPC-host wrapper, never Pi",
+  "wrapperOwnsPiBytePipes": true,
+  "requiredSocket": {
+    "location": "beneath fresh runtime root",
+    "type": "Unix stream socket",
+    "mode": "0600"
+  },
+  "processMap": {
+    "pm2Daemon": {
+      "pid": null,
+      "parentPid": null,
+      "procStartTime": null,
+      "status": "NOT RUN"
+    },
+    "wrapper": {
+      "pid": null,
+      "parentPid": null,
+      "procStartTime": null,
+      "status": "NOT RUN"
+    },
+    "pi": {
+      "pid": null,
+      "parentPid": null,
+      "procStartTime": null,
+      "status": "NOT RUN"
+    }
+  },
+  "responsibilities": [
+    {
+      "component": "PM2",
+      "requiredBoundary": "supervise the fixture RPC-host wrapper as the exact script target; never claim direct Pi supervision"
+    },
+    {
+      "component": "RPC-host wrapper",
+      "requiredBoundary": "own the Pi stdin/stdout byte pipes, bounded LF-JSONL relay, ready/EOF/exit propagation, and a runtime-root Unix socket with mode 0600"
+    },
+    {
+      "component": "Pi",
+      "requiredBoundary": "run as the wrapper child with explicit --mode rpc and expose only the public RPC byte protocol"
+    },
+    {
+      "component": "fixture client",
+      "requiredBoundary": "own the Unix-socket peer and verify request/response sequence, type, count, byte count, and SHA-256 equality"
+    }
+  ],
+  "semanticWatchdogFunction": false,
+  "providerFunction": false,
+  "networkFunction": false,
+  "productionConfiguration": false,
+  "directCandidateSubstitution": false,
+  "candidateLaunchCount": 0
+}

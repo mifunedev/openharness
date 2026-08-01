@@ -1,0 +1,41 @@
+{
+  "kind": "extension-api-probe-obligations",
+  "story": "US-008",
+  "candidate": "rpc-extension-probe",
+  "result": "NOT RUN",
+  "reason": "no RPC topology is runnable and denied-network proof is unavailable; fake-provider and extension API probe remains safely NOT RUN before extension/provider/Pi load or model turn",
+  "prerequisiteTopologyResults": {
+    "directRpc": "NOT RUN",
+    "rpcHostWrapper": "NOT RUN",
+    "runnableRpcTopologyCount": 0
+  },
+  "requiredFixtureBoundary": {
+    "extension": "disposable task-local probe extension only",
+    "prompt": "synthetic prompt only",
+    "provider": "deterministic local fake/test provider only",
+    "network": "denied and proven before launch",
+    "authHomes": "fresh, allowlisted, and empty"
+  },
+  "requiredApiSequence": [
+    "load only the disposable probe extension",
+    "inject one synthetic sendUserMessage() call",
+    "observe its corresponding turn_end event",
+    "parse bounded frame types including extension_ui_request",
+    "prove request/response count, order, type, byte count, and SHA-256 evidence per runnable RPC topology"
+  ],
+  "failClosedCondition": "if deterministic fake-provider execution cannot be proven without credential discovery or a live/provider-backed model turn, remain NOT RUN",
+  "observed": {
+    "sendUserMessageAttempted": false,
+    "turnEndObserved": null,
+    "extensionUiRequestParsed": null,
+    "losslessJsonlProven": false,
+    "liveModelTurns": 0,
+    "providerBackedModelTurns": 0,
+    "fakeProviderTurns": 0,
+    "externalCredentialDiscoveryAttempts": 0,
+    "productionExtensionLoads": 0,
+    "productionSettingsLoads": 0,
+    "piLaunches": 0
+  },
+  "topologyAttribution": "none runnable; no result attributed to direct RPC or wrapper RPC"
+}

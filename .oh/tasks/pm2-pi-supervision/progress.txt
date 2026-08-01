@@ -79,3 +79,204 @@ STATUS: REMEDIATION COMPLETE — AWAITING BOTH CRITIC RE-REVIEWS, FIRST MATE ART
 - Implementation status: **NOT STARTED**. No explicit human kickoff is recorded; US-002 through US-019 remain blocked and all Ralph `passes` remain `false`.
 
 STATUS: PLANNING CHECKPOINT COMPLETE — DRAFT PR OPEN; AWAITING SEPARATE EXPLICIT IMPLEMENTATION KICKOFF.
+
+## 2026-08-01T02:44:11Z — US-001 First Mate validation complete
+
+- Revalidated branch, seven planning artifacts, schema/initial all-false/all-empty state, ordered priorities, both critic PASS verdicts, and draft PR #679's exact base/head/task-only file boundary.
+- Required command `timeout 180s pnpm typecheck` exited 0; UTC/output/exit evidence: `evidence/US-001/{typecheck.log,verification.jsonl}`.
+- US-001 is now `passes: true`; no implementation process was launched while closing the gate.
+KICKOFF issue=#677 author=user utc=2026-08-01T02:44:31Z source=pi-chat-current-turn quote=Kick off the implementation study.
+
+## 2026-08-01T02:44:31Z — US-002 explicit-human-kickoff record
+
+- Exact authorization above was supplied by the user after US-001 and draft PR #679 were complete.
+- Source and quote were human-validated from the current Pi conversation; the required anchored `grep -Eq` exited 0.
+- No install, fixture execution, process launch, fault injection, or benchmark occurred while recording this gate.
+- Required `timeout 180s pnpm typecheck` exited 0; UTC/output/exit evidence: `evidence/US-002/{typecheck.log,verification.jsonl}`.
+- US-002 is now `passes: true`; US-003 is unlocked.
+
+## 2026-08-01T03:00:16Z — US-003 fixture contract implementation complete
+
+- Added only task-local synthetic fixture code/tests for allowlisted `env -i`, disposable homes and mode-0700 `PM2_HOME`, exact PID/start-time ownership, bounded idempotent cleanup/traps/deadlines, metadata-only snapshots, fail-closed bounded JSONL, evidence caps, and deterministic secret scanning.
+- Required tests cover cleanup success/assertion failure/EXIT/INT/TERM/HUP/timeout/PID reuse, exact PM2 command denial, network-isolation failure, malformed/oversized JSONL, synthetic baseline isolation, and secret rejection; 16/16 passed. Shared tests/checks/scan, exact US-003 verify, and `timeout 180s pnpm typecheck` all exited 0; evidence: `evidence/US-003/`.
+- Network namespace proof was unavailable, so candidate execution remains safe `NOT RUN`; no baseline, Pi, PM2, wrapper, provider, benchmark candidate, or production/runtime asset was launched or observed. Delegate did not change any `passes` field; First Mate validation remains pending.
+
+## 2026-08-01T03:00:36Z — US-004 benchmark manifest preregistration complete
+
+- Froze `evidence/benchmark-manifest.json` after US-003 verification and before candidate observation; pre-observation SHA-256: `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b` (`evidence/US-004/manifest.sha256`).
+- Manifest fixes candidates/topologies, fake-provider boundary, three repetitions, clocks/deadlines/idle window, fresh-runtime policy, five-fault order, censor/aggregation rules, sentinel attribution, lexicographic ordering/ties, amendment/full-rerun rule, immutable safety constraints, and bounded synthetic evidence policy.
+- Shared tests/checks/scan, exact US-004 verify, and `timeout 180s pnpm typecheck` all exited 0; evidence: `evidence/US-004/`. Network proof remains safe `NOT RUN`; no candidate observation or PM2 launch occurred. Delegate did not change any `passes` field; First Mate validation remains pending.
+
+## 2026-08-01T03:03:21Z — US-004 final evidence regeneration complete
+
+- Regenerated `evidence/US-004/{manifest.sha256,verification.jsonl,tests.log,node-check.log,story-verify.log,typecheck.log,secret-scan.log}`; exact verify, shared tests/checks/secret scan, and bounded typecheck all exited 0. Frozen pre-observation hash is `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b`; verification records `candidateLaunched=false`, `observationPerformed=false`, and safe network-isolation `NOT RUN`. No `passes` field changed.
+
+## 2026-08-01T03:05:34Z — First Mate US-003/US-004 certification
+
+- Re-ran the 16-test fixture suite, all fixture `node --check` gates, exact US-003/US-004 verifies, and deterministic evidence secret scan; all exited 0.
+- Recomputed the frozen manifest SHA-256 and matched `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b`; manifest assertions for three repetitions, five-fault order, zero observations at freeze, and pre-observation freeze passed.
+- US-003 and US-004 are now `passes: true`. Network namespace isolation is unavailable, so runtime candidates remain safe `NOT RUN`; dependency graph advances to candidate/control characterization without relaxing safety.
+
+## 2026-08-01T03:13:58Z — US-005 baseline runner complete (safe NOT RUN)
+
+- Added the bounded task-local `fixture/run.mjs` baseline path and safety-gate tests. The exact US-005 command exited 0 with verified `NOT RUN`: fresh user/network namespace isolation was unavailable, so candidate launch count, observations, runtime roots, owned registries/PIDs, signal attempts, and residue all remained zero.
+- Preserved frozen manifest SHA-256 `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b`; three preregistered repetition slots are explicitly non-comparable `NOT RUN` rows (`0/3`, no retry or imputation), not fabricated measurements.
+- Evidence is complete in `evidence/US-005/`: verification/run/aggregate, metadata-only pre/post delta, and cleanup proof. Tracked paths, tmux sessions, and process identities were unchanged; fixture ownership proof records no launched or signaled process.
+- Exact run, 19 tests, all fixture `node --check` gates, typecheck, and deterministic secret scan all exited 0; final scan found 0 findings. Delegate did not change `passes`.
+
+## 2026-08-01T03:15:15Z — First Mate US-005 certification
+
+- Re-ran the exact baseline command and secret scan; validated three preregistered `NOT RUN` slots, zero candidate launches/owned PIDs/signals, unchanged metadata-only production identity snapshots, clean no-residue cleanup, no retries/imputation, and unchanged manifest hash.
+- US-005 is now `passes: true`; no baseline measurement is claimed because the network-isolation prerequisite is unavailable.
+
+## 2026-08-01T03:23:17Z — US-006 direct RPC topology characterization complete (safe NOT RUN)
+
+- Added the task-local direct topology branch and tests without a wrapper. The exact US-006 command exited 0 with verified safe `NOT RUN` before PM2 setup or PM2/Pi candidate launch because fresh user/network namespace isolation is unavailable; PM2, Pi, wrapper, fetch-process, runtime-root, registry, PID, and signal counts are all zero.
+- Recorded exact PM2 package identity `7.0.3`, Node engine `>=18`, integrity `sha512-zRJOdburpb9OEPB0uqoNT8C1Gp7hPJPVy4Kr67XJNuT9UlMQcOt1WXrYQUmwqKPHk8FyauvP1CPhqoCrCaPw0Q==`, tarball URL, cited metadata command, upstream tag/commit/source, and no-fetch/no-auth-config/no-ambient-cache runtime-resolution evidence in `evidence/US-006/version-integrity-source.json`. Offline dependency resolution remains `NOT RUN`; no alternate fetch, dependency, lockfile, or global install occurred.
+- Source-characterized installed Pi 0.82.1 read-only without executing it. `evidence/US-006/topology.json` records the exact direct script target `/home/sandbox/.local/bin/pi`, resolved public script, args `--mode rpc`, intended PM2-to-Pi parentage, null process identities, and explicit stdin writer/owner, stdout consumer, ready, LF-JSONL, retained stdin, EOF, exit, and byte/frame proof obligations. Only Pi's own stdin-end handler is source-verified; all end-to-end transport fields remain `LIVE-UNVERIFIED`, and transport infeasibility is not claimed.
+- Three preregistered transport slots are explicit non-comparable `NOT RUN` rows with null byte/frame/order/type/hash observations, no imputation/retry, PM2 logs excluded as transport, and no wrapper substitution. Metadata-only tracked-path/tmux/process identities are unchanged; cleanup is idempotent with no residue.
+- Frozen manifest SHA-256 remains `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b`. Exact run, 26 tests, all fixture `node --check` gates, `timeout 180s pnpm typecheck`, and deterministic evidence secret scan all exited 0; scan covered 39 files with 0 findings. Evidence: `evidence/US-006/`.
+- Delegate did not change any `passes` or `notes` field; First Mate validation remains pending.
+
+## 2026-08-01T03:25:05Z — First Mate US-006 certification
+
+- Re-ran the exact direct-RPC topology command and secret scan; validated exact PM2 7.0.3 identity/integrity, installed Pi source identity, explicit `--mode rpc` target, complete transport proof obligations, three unmeasured slots, metadata-only unchanged state, zero launches/PIDs/signals, and clean cleanup.
+- US-006 is now `passes: true` as a verified safe `NOT RUN`; direct transport feasibility remains `LIVE-UNVERIFIED`, and no wrapper substitution or recommendation is claimed.
+
+## 2026-08-01T03:30:55Z — US-007 wrapper topology characterization complete (safe NOT RUN)
+
+- The separately named `PM2 7.0.3 + RPC-host wrapper + Pi RPC` candidate was not implemented or launched. US-006 was blocked by unavailable network isolation, not solely by proven direct-transport infeasibility; direct transport remains `LIVE-UNVERIFIED`, so the protocol's conditional wrapper launch is not authorized. Unavailable network isolation independently blocks candidate launch.
+- Task-local evidence records the required PM2 → wrapper → Pi boundary, wrapper-owned Pi byte pipes, mode-`0600` runtime-root Unix socket, fixture-client boundary, three unmeasured lossless LF-JSONL slots, and distinct null PM2/wrapper/Pi identities. The wrapper has no semantic-watchdog, provider, or network function, is not production configuration, and was not substituted for the direct candidate.
+- The exact 420-second command, 34 tests, all fixture `node --check` gates, `timeout 180s pnpm typecheck`, and final deterministic evidence secret scan all exited `0`. Metadata-only production identities were unchanged; candidate/PM2/wrapper/Pi launches, owned PIDs, signals, runtime roots, and residue remained zero. Evidence: `evidence/US-007/`; frozen manifest hash remains `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b`.
+- Delegate did not change any `passes` or `notes` field; First Mate validation remains pending. Result is non-comparable `NOT RUN` (`0/3`, no retry or imputation), not evidence against wrapper feasibility.
+
+## 2026-08-01T03:31:51Z — US-008 extension API probe characterization complete (safe NOT RUN)
+
+- No RPC topology is runnable and denied-network proof remains unavailable, so the extension/fake-provider probe was not launched. No Pi, disposable or production extension, settings, provider, credential-discovery path, or model turn was loaded or executed.
+- Task-local evidence records the still-required disposable probe-extension, synthetic-prompt, deterministic local fake/test-provider, empty auth-home, `sendUserMessage()` → corresponding `turn_end`, bounded `extension_ui_request`, per-topology LF-JSONL sequence/type/count/byte/hash, fail-closed, attribution, and cleanup obligations. Observed counts are exactly zero live turns, zero provider-backed turns, zero fake-provider turns, zero production-extension loads, and zero production-settings loads.
+- The exact 420-second command, 34 tests, all fixture `node --check` gates, `timeout 180s pnpm typecheck`, and final deterministic evidence secret scan all exited `0`. Metadata-only production identities were unchanged; launches, owned PIDs, signals, runtime roots, and residue remained zero. Evidence: `evidence/US-008/`; frozen manifest hash remains `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b`.
+- Delegate did not change any `passes` or `notes` field; First Mate validation remains pending. Result is non-comparable `NOT RUN` (`0/3`, no retry or imputation), not observed extension API behavior.
+
+## 2026-08-01T03:32:40Z — US-009 direct no-mode control characterization complete (safe NOT RUN)
+
+- The direct PM2 7.0.3 → Pi control with no explicit mode argument was not launched because fresh user/network namespace isolation remains unavailable. No RPC wrapper, PTY wrapper, production asset, credential, network access, or model turn was used.
+- Task-local evidence records the exact empty argument list and required stdin/stdout TTY, resolved-mode, ready, 30-second idle, exit-propagation, and restart observations across three unmeasured slots. Every observed field, including resolved mode, remains `null`; expected mode is `null`, resolved mode is not claimed, and print-mode behavior is explicitly an observation target rather than an assumption.
+- The exact 420-second command, 34 tests, all fixture `node --check` gates, `timeout 180s pnpm typecheck`, and final deterministic evidence secret scan all exited `0`. Metadata-only production identities were unchanged; candidate/PM2/Pi launches, owned PIDs, signals, runtime roots, and residue remained zero. Evidence: `evidence/US-009/`; frozen manifest hash remains `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b`.
+- Delegate did not change any `passes` or `notes` field; First Mate validation remains pending. Result is non-comparable `NOT RUN` (`0/3`, no retry or imputation), not an observed Pi mode.
+
+## 2026-08-01T03:33:29Z — US-010 optional PTY control characterization complete (safe NOT RUN)
+
+- Read-only metadata detection found the already-present `/usr/bin/script` utility from installed `util-linux` package metadata, including its package version and executable SHA-256/mode. Detection executed neither the utility nor a package manager and performed no install, fetch, dependency, manifest, lockfile, or global change; compatibility remains live-unverified.
+- The PTY candidate was not launched because fresh user/network namespace isolation remains unavailable. Task-local evidence separately assigns PM2 supervision, PTY allocation/ownership, disposable baseline/Pi mode/lifecycle, and fixture observation/cleanup responsibilities; the PTY utility has no semantic-watchdog function. Three mode/lifecycle slots remain unmeasured with all TTY, resolved-mode, ready, idle, exit, and restart observations `null`.
+- The exact 420-second command, 34 tests, all fixture `node --check` gates, `timeout 180s pnpm typecheck`, and final deterministic evidence secret scan all exited `0`. Metadata-only production identities were unchanged; utility/candidate/PM2/Pi launches, owned PIDs, signals, runtime roots, and residue remained zero. Evidence: `evidence/US-010/`; frozen manifest hash remains `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b`.
+- Delegate did not change any `passes` or `notes` field; First Mate validation remains pending. Result is non-comparable `NOT RUN` (`0/3`, no retry or imputation), not observed PTY/Pi behavior.
+
+## 2026-08-01T03:36:24Z — First Mate US-007–US-010 certification
+
+- Re-ran all four exact candidate/control commands and the secret scan; verified complete safe `NOT RUN` evidence, three unmeasured slots each, unchanged metadata-only snapshots, zero candidate/Pi/PM2/wrapper/PTY launches or owned PIDs, and clean cleanup.
+- Validated wrapper conditional/non-substitution boundaries, zero-turn disposable extension-probe obligations, unassumed no-mode result, and read-only PTY utility metadata with no execution/install/fetch.
+- US-007 through US-010 are now `passes: true`; their runtime behavior remains unmeasured and non-comparable.
+
+## 2026-08-01T03:43:30Z — US-011 baseline fault matrix complete (safe NOT RUN)
+
+- Added the bounded task-local `fixture/run-faults.mjs` path and tests, then ran the user-required exact `timeout 900s` US-011 command plus the shared tests, all-fixture `node --check`, typecheck, and deterministic secret scan; final runs exited `0`. Evidence: `evidence/US-011/`.
+- Preregistered exactly five frozen manifest faults × three repetitions in manifest order. All 15 slots are non-comparable `NOT RUN` with UTC/monotonic, detection/recovery latency, restart, PID/exit/final-status, protocol, bounded-log, and semantic-health observations retained as `null`; no retry or imputation was applied.
+- US-005 is First-Mate-passed safe `NOT RUN` and fresh user/network namespace isolation remains unavailable. Candidate launches, fault injections, signal attempts, runtime roots, owned PIDs, and observations remained zero; metadata-only production identities were unchanged and cleanup/no-signal proof is clean.
+- The first US-011 invocation stopped before evidence output at the strict metadata-only equality check because of transient ambient process-identity churn. It launched no candidate, injected no fault, sent no signal, and observed no behavior; the same bounded command then exited `0`. This was not a candidate repetition or selective measurement retry.
+- The synthetic sentinel's exact common-public-stderr `SYNTHETIC_STALE_CONTEXT`, same-live-running-child-PID, and blocked-ordinary-synthetic-work obligations are recorded as unexecuted. No Slack recovery proof is claimed. Delegate did not change `passes` or `notes`.
+
+## 2026-08-01T03:43:31Z — US-012 direct-RPC fault matrix complete (safe NOT RUN)
+
+- Ran the exact `timeout 900s` US-012 command and all shared gates; all exited `0`. First-Mate-passed US-006 and US-008 remain safe `NOT RUN`, and isolation is unavailable, so no direct-RPC candidate or substitute was launched.
+- Evidence in `evidence/US-012/` preregisters all 15 frozen fault slots as non-comparable `NOT RUN`, retains measurement/transport/semantic fields as `null`, records zero candidate launches/faults/signals/observations, proves unchanged metadata and clean no-signal state, and preserves the frozen manifest hash. Sentinel obligations are unexecuted; no PM2 semantic or Slack recovery proof is claimed. Delegate did not change `passes` or `notes`.
+
+## 2026-08-01T03:43:32Z — US-013 RPC-host-wrapper fault matrix complete (safe NOT RUN)
+
+- Ran the exact `timeout 900s` US-013 command and all shared gates; all exited `0`. First-Mate-passed US-007 and US-008 remain safe `NOT RUN`, and isolation is unavailable, so PM2, wrapper, Pi, transport, sentinel, and semantic behavior were not exercised.
+- Evidence in `evidence/US-013/` preregisters all 15 frozen fault slots as non-comparable `NOT RUN`, retains every metric/identity/protocol field as `null`, and records zero launches/faults/signals/observations with unchanged metadata and clean no-signal proof. The wrapper receives no hidden sentinel knowledge because nothing ran; no direct-Pi, semantic, or Slack recovery claim is made. Delegate did not change `passes` or `notes`.
+
+## 2026-08-01T03:43:33Z — US-014 no-mode fault matrix complete (safe NOT RUN)
+
+- Ran the exact `timeout 900s` US-014 command and all shared gates; all exited `0`. First-Mate-passed US-009 remains safe `NOT RUN`, and isolation is unavailable, so resolved mode and all lifecycle/fault behavior remain unobserved.
+- Evidence in `evidence/US-014/` preregisters all 15 frozen fault slots as non-comparable `NOT RUN` with null/censored semantics, zero launches/faults/signals/observations, unchanged metadata, clean no-signal proof, and unchanged manifest hash. No semantic-health or Slack recovery proof is claimed. Delegate did not change `passes` or `notes`.
+
+## 2026-08-01T03:43:34Z — US-015 PTY-control fault matrix complete (safe NOT RUN)
+
+- Ran the exact `timeout 900s` US-015 command and all shared gates; all exited `0`. First-Mate-passed US-010 remains safe `NOT RUN`, and isolation is unavailable, so the PTY utility, PM2, Pi/control, faults, and sentinel were not launched or exercised.
+- Evidence in `evidence/US-015/` preregisters all 15 frozen fault slots as non-comparable `NOT RUN`, retains all metrics/identities as `null`, records zero launches/faults/signals/observations, and proves unchanged metadata plus clean no-signal state. Sentinel obligations remain unexecuted and no Slack recovery proof is claimed. Delegate did not change `passes` or `notes`.
+
+## 2026-08-01T03:45:00Z — US-011–US-015 bounded fault-matrix verification
+
+- Cross-story validation passed for 5 candidates, 75 preregistered slots, 75 safe `NOT RUN`, 0 measured/comparable slots, 0 candidate launches, 0 fault injections, 0 signals, 0 Slack-recovery claims, and 0 changes to US-011–US-015 `passes`/`notes`.
+- Each story has `run.jsonl`, `aggregate.json`, `fault-matrix.json`, `production-metadata-delta.json`, `cleanup-proof.json`, `cleanup-no-signal-proof.json`, `verification.jsonl`, and shared-gate logs. Every recorded exact 900-second story command and shared test/node-check/typecheck/secret-scan command exited `0`.
+- Final full fixture suite passed 43/43; all fixture modules passed `node --check`; typecheck exited `0`; deterministic scan covered 137 evidence files with 0 findings; `git diff --check` passed.
+- Frozen manifest SHA-256 remains `ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b`. No install, fetch, dependency/lockfile, production, pass-state, commit, or push action occurred.
+
+## 2026-08-01T03:47:34Z — First Mate US-011–US-015 certification
+
+- Corrected the delegate's bounded-command evidence from its conservative `timeout 900s` wrapper to each PRD-required exact `timeout 2100s` command; all five exact commands exited 0 and are appended to each `verification.jsonl`.
+- Validated 75 preregistered slots total (five faults × three repetitions × five candidates), all non-comparable `NOT RUN`; every metric remains null, with zero candidate launches, fault injections, signals, or Slack recovery claims.
+- Sentinel obligations retain same-live-PID/public-stderr/blocked-work/no-hidden-channel semantics as unexecuted simulation requirements. Metadata is unchanged and cleanup is clean.
+- US-011 through US-015 are now `passes: true`.
+
+## 2026-08-01T03:55:29Z — US-016 bounded comparison complete
+
+- Added task-local `fixture/compare.mjs` and comparison tests. The exact `timeout 180s` US-016 command exited `0` and read/hash-traced all 124 bounded evidence files under US-005 through US-015 without inspecting production runtime content.
+- Applied the frozen lexicographic order exactly with no imputation, selective retry, or post-observation weighting. All five candidates remain one explicit non-comparable tie group with null ranks: 75 requested fault slots, 75 `NOT RUN`, 0 measured, and 0 comparable.
+- Evidence scores retain only the passing safe-stop/cleanup gate; all runtime score fields and operational-responsibility counts remain null. Eight unresolved custom-supervisor responsibilities are retained per candidate with explicit uncertainty and blockers.
+- Updated `assessment.md` with claim-level `SOURCE-VERIFIED`, `LIVE-VERIFIED`, `LIVE-UNVERIFIED`, and `NOT RUN` labels plus bounded links. It grants no selection authority; any selection requires a separate human-approved issue or ADR.
+- Generated `evidence/US-016/{comparison.json,traceability.json,policy-scan.json,verification.jsonl,tests.log,node-check.log,policy-scan.log,typecheck.log,secret-scan.log}`. Exact comparison, 48/48 shared tests, all fixture syntax checks, bounded policy assertion, typecheck, and deterministic secret scan all exited `0`; the scan covered 151 evidence files with 0 findings.
+- Delegate did not change any `passes` or `notes` field. US-016 remains pending First Mate validation.
+
+## 2026-08-01T03:57:48Z — First Mate US-016 certification
+
+- Re-ran the exact comparison and secret scan; validated the frozen manifest/order, 75/75 `NOT RUN` slots, zero measured/comparable/ranked candidates, five-way non-comparable tie, null operational scores, and no imputation/selective retry/post-observation weighting.
+- Traceability and decision-boundary policy scans pass with no prohibited output label, migration authority, production configuration, default change, or selection authority.
+- US-016 is now `passes: true`; US-017 and US-018 are unlocked for independent terminal review.
+
+2026-08-01T04:02:59Z — `critic-final-evidence` complete: PASS (H0 / M0 / L3); report `critique-final-evidence.md`; deterministic evidence checks, 48 tests, syntax/secret scan, and required typecheck exited 0.
+
+2026-08-01T04:02:28Z — critic-final-safety-scope complete: PASS (H0 / M0 / L1); 48/48 tests, syntax, typecheck, and 151-file zero-finding secret scan passed; all candidates safely stopped with zero launches/turns/signals and unchanged metadata; report: `critique-final-safety-scope.md`.
+
+## 2026-08-01T04:09:02Z — Terminal low-severity remediation complete
+
+- Resolved US-017 L1 by time-qualifying the US-016 scope claim and L2 by stating that the frozen ordering contract was enforced but ranking stopped at non-comparability.
+- Resolved US-017 L3 by removing the hard-coded `timeout 900s` self-report from the fault runner; regenerated US-011–US-015 provenance and retained exactly one passing PRD-required `timeout 2100s` command row per story.
+- Resolved US-018 L-01 by replacing generic absolute worktree/tool paths with `<WORKTREE_ROOT>` and `<HOST_TOOL_ROOT>`; regenerated US-006 and US-016 traceability/comparison evidence.
+- Shared 48-test suite, all fixture syntax checks, typecheck, secret scan, absolute-path scan, conflicting-timeout scan, exact-command-count checks, and comparison policy scan all pass. Frozen manifest hash is unchanged.
+
+2026-08-01T04:11:20Z — `critic-final-evidence` re-review complete: PASS (H0 / M0 / L0); L1/L2/L3 closed, 125 traceability hashes and five exact 2100s rows verified, shared gates/typecheck passed.
+
+2026-08-01T04:13:57Z — `critic-final-safety-scope` re-review complete: PASS (H0 / M0 / L0); L-01 closed with zero `/home/` evidence hits, US-006 source hashes and 125 US-016 traceability hashes verified, manifest unchanged, and shared safety/typecheck/153-file secret gates passed.
+
+## 2026-08-01T04:15:26Z — First Mate US-017/US-018 certification
+
+- Both independent bounded reports are non-empty and end exactly `Final verdict: PASS (H0 / M0 / L0).` after verifying all low-severity remediations and prior regression gates.
+- Required `timeout 180s pnpm typecheck` exited 0 (UTC 2026-08-01T04:15:24Z to 2026-08-01T04:15:26Z); critic mutation boundaries remained limited to their reports and progress ledger.
+- US-017 and US-018 are now `passes: true`; US-019 final synthesis is unlocked.
+
+## 2026-08-01T04:22:36Z — US-019 delegated terminal synthesis verification complete
+
+- Replaced only `assessment.md#terminal-first-mate-synthesis` with claim-labeled evidence state, uncertainty, blockers, five-way non-comparable tie/scores, eight residual responsibilities, and the explicit requirement that selection needs a separate human-approved issue or ADR.
+- Extended task-local `fixture/verify.mjs` and added US-019 tests. The exact `timeout 180s node .../verify.mjs --story US-019 --evidence .../US-019` command exited `0` (UTC `2026-08-01T04:22:34Z`); both terminal reports validate at latest `PASS (H0 / M0 / L0)`.
+- Generated `evidence/US-019/{verification.jsonl,cleanup-proof.json,production-metadata-boundary-proof.json,policy-scan.json,secret-scan.json}` plus bounded command logs. Cleanup aggregation proves zero candidate launches, runtime roots, registered fixture-owned processes, signals, remaining owned PIDs, or residue from eleven already-captured safe-stop proofs.
+- Metadata proof is limited to the four authorized identity surfaces and eleven already-captured unchanged bounded pre/post deltas. It performs no new live identity capture and does not claim globally identical volatile ambient process identities or global continuity.
+- Final exact/shared gates all exited `0` with UTC/output/exit evidence in `evidence/US-019/verification.jsonl`: exact US-019 verify; expanded `55/55` test suite; all fixture `node --check` checks; `timeout 180s pnpm typecheck`; task-local `git diff --check`; terminal policy scan; and deterministic final secret scan (`165` files, `0` findings).
+- Candidate behavior remains `NOT RUN` and non-comparable: 75 requested, 0 measured, 0 comparable, 0 ranked, five tied with null runtime scores. No candidate selection, migration, rollout, production PM2 configuration, default change, production state change, commit, or push occurred.
+- Delegate did not modify any `passes` or `notes`; US-019 remains `passes: false` with empty notes for First Mate validation.
+
+## 2026-08-01T04:26:28Z — First Mate US-019 certification and study closure
+
+- Re-ran the exact US-019 verifier while delegated pass state remained false, then validated both terminal H0/M0/L0 reports, 11 zero-action cleanup proofs, 11 unchanged bounded metadata deltas, qualified no-global-continuity claim, final synthesis, and decision policy.
+- First Mate alone set US-019 `passes: true`; all 19 Ralph stories now pass.
+- Against the certified state, the expanded 55-test suite, all fixture syntax checks, typecheck, final zero-finding secret scan, task-local diff check, absolute-path scan, and conflicting-timeout scan all exit 0.
+- Study closure: all five runtime candidates and 75 fault slots remain `NOT RUN`, non-comparable, tied, and unranked because safe network isolation is unavailable. No selection, migration, rollout, production PM2 configuration, default change, or production state change is authorized.
+
+STATUS: IMPLEMENTATION STUDY COMPLETE — EVIDENCE-BOUND SAFE NOT RUN; SEPARATE HUMAN-APPROVED ISSUE OR ADR REQUIRED FOR ANY SELECTION.
+
+## 2026-08-01T04:28:48Z — Final pre-publish validation
+
+- All 19 stories are true with non-empty notes and dependency order satisfied; both terminal reports end PASS H0/M0/L0; frozen manifest hash matches.
+- Expanded 55-test suite, all fixture syntax checks, root typecheck, deterministic zero-finding evidence secret scan, terminal policy scan, cleanup proof, absolute-path scan, timeout-provenance scan, and task-local diff check all pass.
+- Final evidence remains 75/75 `NOT RUN`, zero launches/runtime roots/owned PIDs/signals, five-way non-comparable tie, and no selection authority.
+- Main checkout has no dirty path outside the seven-path pre-work set. One pre-existing path (`.pi/msg-bridge.json`) was independently resolved during the long-running delegated study; this worktree did not touch the main checkout.

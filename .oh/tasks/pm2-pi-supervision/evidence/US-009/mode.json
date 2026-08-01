@@ -1,0 +1,38 @@
+{
+  "kind": "no-mode-control-obligations",
+  "story": "US-009",
+  "candidate": "pm2-direct-no-mode",
+  "result": "NOT RUN",
+  "reason": "fresh user/network namespace isolation is unavailable; the direct no-mode control is safely NOT RUN before PM2 or Pi launch",
+  "exactPm2VersionRequired": "7.0.3",
+  "exactScriptTarget": "installed Pi executable directly",
+  "scriptArguments": [],
+  "explicitModeArgumentPresent": false,
+  "wrappers": {
+    "rpcHost": false,
+    "pty": false
+  },
+  "requiredObservations": [
+    "stdin TTY state",
+    "stdout TTY state",
+    "resolved Pi mode",
+    "ready behavior",
+    "30-second idle behavior",
+    "exit propagation",
+    "restart behavior"
+  ],
+  "observed": {
+    "stdinTty": null,
+    "stdoutTty": null,
+    "resolvedMode": null,
+    "ready": null,
+    "idle": null,
+    "exit": null,
+    "restart": null
+  },
+  "expectedMode": null,
+  "modeAssumption": "none; print-mode behavior is an observation target, not an assumed result",
+  "liveModelTurns": 0,
+  "productionAssetsLoaded": 0,
+  "candidateLaunchCount": 0
+}

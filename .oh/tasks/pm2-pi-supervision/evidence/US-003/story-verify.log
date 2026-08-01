@@ -1,0 +1,1 @@
+{"story":"US-003","status":"PASS","candidateLaunched":false,"observationPerformed":false,"networkIsolation":"NOT RUN","networkNotRunReason":"fresh user/network namespace unavailable; candidate launch is prohibited","manifestHash":null,"startedAtUtc":"2026-08-01T03:02:17.404Z","endedAtUtc":"2026-08-01T03:02:17.405Z","durationNs":"1666158"}

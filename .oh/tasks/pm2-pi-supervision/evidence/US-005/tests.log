@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: env -i contract creates empty disposable homes and 0700 PM2_HOME
+ok 1 - env -i contract creates empty disposable homes and 0700 PM2_HOME
+  ---
+  duration_ms: 5.506374
+  type: 'test'
+  ...
+# Subtest: non-empty disposable auth/config home fails closed
+ok 2 - non-empty disposable auth/config home fails closed
+  ---
+  duration_ms: 1.436366
+  type: 'test'
+  ...
+# Subtest: network-denial failure returns safe NOT RUN
+ok 3 - network-denial failure returns safe NOT RUN
+  ---
+  duration_ms: 0.188166
+  type: 'test'
+  ...
+# Subtest: global/default and cluster PM2 commands are denied
+ok 4 - global/default and cluster PM2 commands are denied
+  ---
+  duration_ms: 1.614076
+  type: 'test'
+  ...
+# Subtest: lifecycle performs cleanup after success and assertion failure
+ok 5 - lifecycle performs cleanup after success and assertion failure
+  ---
+  duration_ms: 1.181001
+  type: 'test'
+  ...
+# Subtest: EXIT, INT, TERM, HUP, and timeout invoke one idempotent bounded cleanup
+ok 6 - EXIT, INT, TERM, HUP, and timeout invoke one idempotent bounded cleanup
+  ---
+  duration_ms: 2.209133
+  type: 'test'
+  ...
+# Subtest: metadata snapshots are constrained to the four identity-only commands
+ok 7 - metadata snapshots are constrained to the four identity-only commands
+  ---
+  duration_ms: 0.313755
+  type: 'test'
+  ...
+# Subtest: baseline source is synthetic-only and has no process, network, or production imports
+ok 8 - baseline source is synthetic-only and has no process, network, or production imports
+  ---
+  duration_ms: 0.365895
+  type: 'test'
+  ...
+# Subtest: bounded JSONL preserves sequence/type and parses extension_ui_request
+ok 9 - bounded JSONL preserves sequence/type and parses extension_ui_request
+  ---
+  duration_ms: 1.169726
+  type: 'test'
+  ...
+# Subtest: malformed and unterminated JSONL fail closed
+ok 10 - malformed and unterminated JSONL fail closed
+  ---
+  duration_ms: 0.314951
+  type: 'test'
+  ...
+# Subtest: oversized JSONL line and total stream fail closed
+ok 11 - oversized JSONL line and total stream fail closed
+  ---
+  duration_ms: 0.14832
+  type: 'test'
+  ...
+# Subtest: secret scan rejects deterministic credential and personal-data fixtures
+ok 12 - secret scan rejects deterministic credential and personal-data fixtures
+  ---
+  duration_ms: 1.895801
+  type: 'test'
+  ...
+# Subtest: secret scan accepts bounded synthetic summaries
+ok 13 - secret scan accepts bounded synthetic summaries
+  ---
+  duration_ms: 1.43563
+  type: 'test'
+  ...
+# Subtest: proc parser uses exact Linux parent and start-time fields
+ok 14 - proc parser uses exact Linux parent and start-time fields
+  ---
+  duration_ms: 0.849051
+  type: 'test'
+  ...
+# Subtest: successful cleanup is reverse-order, exact-PID, bounded, and idempotent
+ok 15 - successful cleanup is reverse-order, exact-PID, bounded, and idempotent
+  ---
+  duration_ms: 2.152061
+  type: 'test'
+  ...
+# Subtest: PID reuse/start-time mismatch is rejected before a signal
+ok 16 - PID reuse/start-time mismatch is rejected before a signal
+  ---
+  duration_ms: 1.544344
+  type: 'test'
+  ...
+# Subtest: US-005 accepts only the unchanged frozen baseline manifest
+ok 17 - US-005 accepts only the unchanged frozen baseline manifest
+  ---
+  duration_ms: 1.188548
+  type: 'test'
+  ...
+# Subtest: unavailable network isolation creates three safe NOT RUN rows before launch
+ok 18 - unavailable network isolation creates three safe NOT RUN rows before launch
+  ---
+  duration_ms: 0.55588
+  type: 'test'
+  ...
+# Subtest: metadata delta excludes only the short-lived ps observer and detects other changes
+ok 19 - metadata delta excludes only the short-lived ps observer and detects other changes
+  ---
+  duration_ms: 0.902545
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 58.829098

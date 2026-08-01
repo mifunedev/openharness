@@ -1,0 +1,19 @@
+{
+  "kind": "comparison-policy-scan",
+  "story": "US-016",
+  "status": "PASS",
+  "scannedArtifacts": [
+    "assessment.md",
+    "evidence/US-016/comparison.json"
+  ],
+  "prohibitedOutputLabelFindingCount": 0,
+  "prohibitedOutputLabelFindings": [],
+  "claimVocabularyComplete": true,
+  "separateHumanDecisionBoundaryPresent": true,
+  "selectionAuthority": false,
+  "migrationOrRolloutAuthority": false,
+  "productionConfigurationSupplied": false,
+  "defaultChangeSupplied": false,
+  "postObservationWeighting": false,
+  "imputation": false
+}

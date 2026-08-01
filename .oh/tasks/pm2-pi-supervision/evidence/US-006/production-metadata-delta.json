@@ -1,0 +1,51 @@
+{
+  "kind": "production-metadata-delta",
+  "metadataOnly": true,
+  "productionContentRead": false,
+  "observerRowsExcluded": [
+    "process identity row whose comm is ps"
+  ],
+  "commands": [
+    {
+      "name": "git-diff-paths",
+      "beforeCount": 3,
+      "afterCount": 3,
+      "beforeSha256": "fc6899dc354a3603f7d2b05a2a3685ff647db3fe70a858865744f705686be948",
+      "afterSha256": "fc6899dc354a3603f7d2b05a2a3685ff647db3fe70a858865744f705686be948",
+      "added": [],
+      "removed": [],
+      "unchanged": true
+    },
+    {
+      "name": "git-status",
+      "beforeCount": 3,
+      "afterCount": 3,
+      "beforeSha256": "d0fd288c031c1ed8dda106d469b6388da9ced11d9933ae4b0856f45275728abf",
+      "afterSha256": "d0fd288c031c1ed8dda106d469b6388da9ced11d9933ae4b0856f45275728abf",
+      "added": [],
+      "removed": [],
+      "unchanged": true
+    },
+    {
+      "name": "process-identities",
+      "beforeCount": 119,
+      "afterCount": 119,
+      "beforeSha256": "7bf361b8ddda4689f7c62747074dff9e21bd3773df0d87dd5cf8b76f2640eac1",
+      "afterSha256": "7bf361b8ddda4689f7c62747074dff9e21bd3773df0d87dd5cf8b76f2640eac1",
+      "added": [],
+      "removed": [],
+      "unchanged": true
+    },
+    {
+      "name": "tmux-session-identities",
+      "beforeCount": 3,
+      "afterCount": 3,
+      "beforeSha256": "90aca6ff6d8345fb1853548325607f611b9ac0856b3b7ceac9d636b66ebc5e23",
+      "afterSha256": "90aca6ff6d8345fb1853548325607f611b9ac0856b3b7ceac9d636b66ebc5e23",
+      "added": [],
+      "removed": [],
+      "unchanged": true
+    }
+  ],
+  "unchanged": true
+}

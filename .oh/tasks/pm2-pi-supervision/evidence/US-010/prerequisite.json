@@ -1,0 +1,37 @@
+{
+  "kind": "pty-control-prerequisite",
+  "story": "US-010",
+  "candidate": "pm2-pty-control",
+  "result": "NOT RUN",
+  "reason": "compatible PTY utility metadata is present, but fresh user/network namespace isolation is unavailable; the PTY control is safely NOT RUN before utility, PM2, baseline, or Pi launch",
+  "utilityMetadata": {
+    "status": "SOURCE-VERIFIED-METADATA",
+    "utility": "script",
+    "role": "compatible PTY allocation/control utility candidate",
+    "utilityPath": "/usr/bin/script",
+    "resolvedPath": "/usr/bin/script",
+    "executableMode": "0755",
+    "binarySha256": "2a6e4aa0ac56fd63c71a66edfa4c44f150ac69f52f0373bde17345f26ed80bfa",
+    "packageMetadata": {
+      "package": "util-linux",
+      "version": "2.38.1-5+deb12u3",
+      "architecture": "amd64",
+      "installStatus": "install ok installed"
+    },
+    "utilityVersion": "2.38.1-5+deb12u3",
+    "compatibilityMetadataDetected": true,
+    "compatibilityStillLiveUnverified": true,
+    "detectionMethod": "read-only executable identity/hash plus installed util-linux package metadata; utility was not executed",
+    "executableInvoked": false,
+    "packageManagerInvoked": false,
+    "installAttempted": false,
+    "fetchAttempted": false
+  },
+  "manifestEdited": false,
+  "lockfileEdited": false,
+  "dependencyAdded": false,
+  "globalInstallAttempted": false,
+  "fetchAttempted": false,
+  "networkIsolation": "NOT RUN",
+  "candidateLaunchAuthorized": false
+}

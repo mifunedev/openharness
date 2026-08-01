@@ -1,0 +1,85 @@
+{
+  "kind": "terminal-cleanup-no-owned-process-proof",
+  "story": "US-019",
+  "status": "PASS",
+  "proofScope": "fixture-owned process and runtime-root records from the already-captured bounded safe-stop runs",
+  "sourceProofCount": 11,
+  "sourceProofs": [
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/cleanup-proof.json",
+      "sha256": "f75c6cab3ba507deb9fa05b566b9d853df4daaf68c5e44ff1e62ada3f2582317",
+      "bytes": 389
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/cleanup-proof.json",
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "bytes": 665
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/cleanup-proof.json",
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "bytes": 665
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/cleanup-proof.json",
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "bytes": 665
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/cleanup-proof.json",
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "bytes": 665
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/cleanup-proof.json",
+      "sha256": "6207f808b32a84bd9a33861f0a1bdeef0ec8c30042f3b1ed646c3617b4edc57f",
+      "bytes": 665
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/cleanup-proof.json",
+      "sha256": "7259b8151f43f8e4b5a5a96bc9dbbb47e87c667201bead7c42237a68001e4b5a",
+      "bytes": 863
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/cleanup-proof.json",
+      "sha256": "9a9aa00ad6ed63715f24e79e919b52bbd43663ee3aa31e3cca01fa6254c0236e",
+      "bytes": 869
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/cleanup-proof.json",
+      "sha256": "5b18723a08d03d10b87060c55df7e7f667fec80e24d285d1b2135157aa6afe18",
+      "bytes": 875
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/cleanup-proof.json",
+      "sha256": "24932f6ded1d17352ad07e3cd60d40f70425f14c9f2022ad3bd702a945e3bf17",
+      "bytes": 873
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/cleanup-proof.json",
+      "sha256": "bfedf65c48c28b21accf2b6a484654ecca1a8aeb729cb1b11dc037f5480806cb",
+      "bytes": 870
+    }
+  ],
+  "candidateLaunchCount": 0,
+  "runtimeRootsCreated": 0,
+  "registeredOwnedProcessCount": 0,
+  "signalAttempts": 0,
+  "remainingOwnedPids": 0,
+  "ownedProcessState": "none-created; none-remaining",
+  "cleanupRequired": false,
+  "residue": "none-created",
+  "currentAmbientProcessInventoryCaptured": false,
+  "globalAmbientProcessIdentityEqualityClaimed": false
+}

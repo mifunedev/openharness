@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 1,
+  "issue": 677,
+  "status": "FROZEN_PRE_OBSERVATION",
+  "frozenAtUtc": "2026-08-01T02:58:19Z",
+  "freeze": {
+    "hashAlgorithm": "SHA-256",
+    "hashRecord": "evidence/US-004/manifest.sha256",
+    "timing": "after US-003 verification and before every candidate observation"
+  },
+  "purpose": "Credentialless disposable evidence protocol; not an architecture or rollout decision",
+  "candidateObservationCountAtFreeze": 0,
+  "candidates": [
+    {
+      "id": "baseline",
+      "definition": "Purpose-built credentialless synthetic lifecycle executable",
+      "scriptTarget": "fixture/baseline.mjs",
+      "readySignal": "LF-JSONL frame type=ready on retained stdout",
+      "transport": "bounded UTF-8 LF JSONL stdin/stdout",
+      "responsibilities": ["synthetic lifecycle", "fixture watchdog when explicitly present"]
+    },
+    {
+      "id": "pm2-direct-rpc",
+      "definition": "PM2 7.0.3 script target is the Pi executable with --mode rpc",
+      "readySignal": "proven lossless Pi RPC public stdout frame; PM2 logs are not transport",
+      "requiredProof": ["stdin owner/writer", "stdout consumer", "ready path", "LF-JSONL command path", "retained-open stdin", "EOF shutdown", "exit propagation", "byte/frame equality"],
+      "infeasibleResult": "NOT RUN without wrapper substitution"
+    },
+    {
+      "id": "pm2-rpc-host-wrapper",
+      "definition": "Conditional separately named PM2 7.0.3 plus fixture RPC-host wrapper plus Pi --mode rpc",
+      "scriptTarget": "fixture-owned wrapper, never Pi",
+      "readySignal": "wrapper public Unix-socket ready record only after Pi RPC byte pipes are retained",
+      "transport": "wrapper-owned Pi byte pipes and mode-0600 runtime-root Unix socket",
+      "responsibilityAttribution": ["PM2", "wrapper", "Pi"],
+      "eligibility": "only when direct RPC transport is infeasible; otherwise NOT RUN (not required by protocol)"
+    },
+    {
+      "id": "pm2-direct-no-mode",
+      "definition": "PM2 7.0.3 directly launches Pi without --mode rpc",
+      "readySignal": "candidate public status plus first retained stdout event, with actual resolved mode recorded",
+      "requiredObservation": ["stdin TTY", "stdout TTY", "resolved mode", "ready", "idle", "exit", "restart"]
+    },
+    {
+      "id": "pm2-pty-control",
+      "definition": "Optional PM2 7.0.3 control through an already-present compatible PTY utility",
+      "readySignal": "candidate public status plus synthetic control ready event",
+      "missingPrerequisiteResult": "NOT RUN; install nothing"
+    }
+  ],
+  "networkProof": {
+    "mechanism": "fresh unprivileged user and network namespace with no non-internal interface",
+    "proofCommand": "unshare --user --map-root-user --net -- node <interface-assertion>",
+    "requiredBeforeEveryCandidateLaunch": true,
+    "unavailableOrFailed": "safe NOT RUN before candidate launch"
+  },
+  "fakeProvider": {
+    "kind": "deterministic local fixture provider",
+    "syntheticPromptsOnly": true,
+    "externalCredentialDiscovery": "prohibited",
+    "liveOrProviderBackedModelTurn": "prohibited",
+    "infeasibleResult": "dependent extension/RPC evidence is NOT RUN"
+  },
+  "protocol": {
+    "framing": "UTF-8 LF-delimited JSONL",
+    "maxLineBytes": 65536,
+    "maxFramesPerRepetition": 10000,
+    "maxTotalBytesPerRepetition": 8388608,
+    "malformedOrOversized": "fail closed with sanitized diagnostic",
+    "retainedProof": ["frame sequence", "frame type", "frame count", "SHA-256"],
+    "extensionUiRequest": "explicitly parse type=extension_ui_request",
+    "byteFrameLoss": "request and response byte/frame count, order, type, and SHA-256 equality"
+  },
+  "measurement": {
+    "measuredRepetitions": 3,
+    "independentFreshRuntimeEachRepetition": true,
+    "freshOwnedRegistryEachRepetition": true,
+    "warmupsCounted": false,
+    "selectiveRetries": false,
+    "imputation": false,
+    "recreationPolicy": "recreate and clean the complete runtime root for every measured repetition"
+  },
+  "clocks": {
+    "duration": "monotonic-nanoseconds",
+    "audit": "UTC-ISO-8601"
+  },
+  "deadlinesSeconds": {
+    "ready": 15,
+    "idle": 30,
+    "detection": 10,
+    "recovery": 30,
+    "cleanup": 10,
+    "totalRepetition": 120
+  },
+  "faults": {
+    "order": ["clean-exit", "non-zero-exit", "rapid-crash-loop", "SIGTERM", "synthetic-live-unhealthy-sentinel"],
+    "rapidCrashLoop": {
+      "definition": "three forced non-zero exits within 15 seconds"
+    },
+    "timeouts": "censored failure at the applicable deadline; never omitted",
+    "requiredRowFields": ["candidate", "fault", "repetition", "utcStart", "utcEnd", "monotonicStartNs", "monotonicEndNs", "detectionSource", "recoveryAction", "detectionLatencyNs", "recoveryLatencyNs", "restartCount", "pid", "startTime", "exitCode", "finalStatus", "outcome", "censored", "observabilityFields", "cleanupStatus"]
+  },
+  "sentinel": {
+    "name": "synthetic-live-unhealthy-sentinel",
+    "stderrSymptom": "SYNTHETIC_STALE_CONTEXT",
+    "symptomSurface": "common public stderr/health surface available identically to every candidate",
+    "childPid": "same-and-running",
+    "ordinarySyntheticWork": "blocked until externally observable recovery action",
+    "hiddenCandidateChannel": "prohibited",
+    "creditRule": "credit detection/recovery only to the actual component that observes the common public symptom and acts while the same child remains alive",
+    "possibleAttribution": ["PM2", "wrapper", "retained watchdog", "none"],
+    "pm2Credit": "only when PM2 detects and recovers while the same child remains alive",
+    "classification": "simulation-not-proof-of-Slack-recovery"
+  },
+  "aggregation": {
+    "metrics": ["median", "inclusive-min-max"],
+    "successCount": "n/3",
+    "timeouts": "included as censored failures",
+    "notRun": "not comparable",
+    "failed": "not comparable",
+    "noImputation": true
+  },
+  "ordering": {
+    "lexicographic": ["safety-cleanup-gate", "required-run-completeness", "lifecycle-success-count", "semantic-health-success-count", "observability-field-completeness", "median-recovery-latency", "operational-responsibility-count"],
+    "direction": {
+      "safety-cleanup-gate": "pass required",
+      "required-run-completeness": "higher",
+      "lifecycle-success-count": "higher",
+      "semantic-health-success-count": "higher",
+      "observability-field-completeness": "higher",
+      "median-recovery-latency": "lower",
+      "operational-responsibility-count": "lower"
+    },
+    "ties": "remain-ties",
+    "notRunAndFailed": "not-comparable-not-zero",
+    "meaning": "evidence ordering only; not a recommendation"
+  },
+  "constraints": {
+    "production": {
+      "contentInspection": "prohibited",
+      "allowedMetadataOnly": ["git status --porcelain=v1", "git diff --name-only", "tmux list-sessions identity fields", "ps pid/ppid/lstart/comm identity fields"],
+      "executeOrLoadProductionAssets": "prohibited",
+      "mutation": "prohibited"
+    },
+    "environment": {
+      "launchSemantics": "env -i allowlist only",
+      "allowlistedKeys": ["PATH", "HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "TMPDIR", "PM2_HOME", "LANG", "LC_ALL", "TZ", "manifest-listed fixture non-secret variables"],
+      "homes": "fresh children of each runtime root",
+      "pm2HomeMode": "0700",
+      "ambientCredentialValuesOrAuthStores": "never read, copy, inventory, or mount",
+      "negativePreflight": "reject prohibited key patterns, escaping paths, and non-empty disposable auth/config homes"
+    },
+    "network": {
+      "outbound": "denied for every run",
+      "unprovenResult": "NOT RUN",
+      "soleSetupException": {
+        "url": "https://registry.npmjs.org/pm2/-/pm2-7.0.3.tgz",
+        "integrity": "sha512-zRJOdburpb9OEPB0uqoNT8C1Gp7hPJPVy4Kr67XJNuT9UlMQcOt1WXrYQUmwqKPHk8FyauvP1CPhqoCrCaPw0Q==",
+        "environment": "same allowlisted disposable environment with no npm auth/config",
+        "dependencies": "offline only; cache miss is NOT RUN"
+      },
+      "otherFetches": "prohibited"
+    },
+    "process": {
+      "ownership": "exact PID plus /proc start-time plus parent/namespace",
+      "registryFields": ["pid", "parentPid", "procStartTime", "role", "candidate", "namespace"],
+      "signalPolicy": "revalidate exact ownership before every signal",
+      "traps": ["EXIT", "INT", "TERM", "HUP"],
+      "cleanup": "reverse dependency order; bounded TERM then five-second wait then revalidated KILL; repeatable",
+      "prohibited": ["pkill", "killall", "name-pattern signals", "tmux kill-server", "existing tmux targets", "pm2 delete all", "pm2 kill", "PM2 command without explicit fixture PM2_HOME", "PM2 cluster/modules/startup/save/resurrect"],
+      "cleanupFailure": "stop graph and require human inspection"
+    }
+  },
+  "evidence": {
+    "syntheticOnly": true,
+    "maxRetainedLogBytes": 1048576,
+    "rawPerRun": "bounded sanitized JSONL",
+    "prefer": "structured summaries and hashes when raw frames are unnecessary",
+    "redaction": ["scrub disposable home and worktree paths", "escape control characters"],
+    "prohibitedRawOutput": ["ambient environment values", "credentials", "personal data", "live model output", "Slack output", "provider output", "production logs/config/state/lock content"],
+    "secretScan": {
+      "deterministic": true,
+      "covers": ["credentials", "private keys", "provider tokens", "personal email"],
+      "requiredBeforeStaging": true,
+      "findingResult": "story FAIL and commit/push blocked"
+    }
+  },
+  "amendments": {
+    "protocolChangeAfterObservation": "invalidate-prior-comparisons-and-fully-rerun-every-affected-candidate",
+    "requiredFields": ["utc", "reason", "new manifest SHA-256", "invalidated comparisons", "affected candidates"],
+    "current": []
+  },
+  "decisionBoundary": {
+    "output": ["evidence scores", "ties", "uncertainty", "blockers", "residual responsibilities"],
+    "prohibited": ["adoption label", "recommendation label", "winner label", "migration authorization", "rollout", "production PM2 configuration", "default change", "production mutation"],
+    "selectionRequires": "separate human-approved issue or ADR after terminal critics and First Mate synthesis"
+  }
+}

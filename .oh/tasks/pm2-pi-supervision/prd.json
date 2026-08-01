@@ -292,8 +292,8 @@
         ".oh/tasks/pm2-pi-supervision/progress.txt"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Validated planning gate; artifact-only draft PR #679 remains open/draft and required typecheck evidence is in evidence/US-001/."
     },
     {
       "id": "US-002",
@@ -315,8 +315,8 @@
         ".oh/tasks/pm2-pi-supervision/progress.txt"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "User explicitly authorized implementation in the current Pi chat after draft PR #679; exact kickoff line is in progress.txt and typecheck evidence is in evidence/US-002/."
     },
     {
       "id": "US-003",
@@ -338,8 +338,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-003/"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated fixture contract, 16 tests, exact verify, node checks, typecheck, and zero-finding secret scan; candidate launch safely remains NOT RUN because network isolation is unavailable."
     },
     {
       "id": "US-004",
@@ -361,8 +361,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-004/"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated frozen benchmark manifest hash ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b and all exact/shared verification; no candidate observation occurred."
     },
     {
       "id": "US-005",
@@ -383,8 +383,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-005/"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated exact run and all shared gates: verified safe NOT RUN before launch because network namespace isolation is unavailable; 0/3 measured, no imputation, metadata unchanged, cleanup clean."
     },
     {
       "id": "US-006",
@@ -406,8 +406,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-006/"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated exact command and shared gates: PM2 7.0.3/Pi source pin and direct topology obligations recorded; verified safe NOT RUN before launch due unavailable network isolation, so direct transport remains LIVE-UNVERIFIED and no wrapper was substituted."
     },
     {
       "id": "US-007",
@@ -428,8 +428,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-007/"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated separately named wrapper obligations and exact/shared gates; safe NOT RUN because US-006 was not proven infeasible solely on transport and network isolation is unavailable; no substitution or launch."
     },
     {
       "id": "US-008",
@@ -451,8 +451,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-008/"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated fake-provider/extension probe obligations and exact/shared gates; safe NOT RUN with no runnable RPC topology, zero model turns, and zero production extension/settings loads."
     },
     {
       "id": "US-009",
@@ -474,8 +474,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-009/"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated direct no-mode control obligations and exact/shared gates; safe NOT RUN before launch, with resolved mode deliberately unobserved/unassumed."
     },
     {
       "id": "US-010",
@@ -496,8 +496,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-010/"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated read-only PTY utility metadata and exact/shared gates; safe NOT RUN before utility/PM2/Pi launch due unavailable network isolation; no install or fetch."
     },
     {
       "id": "US-011",
@@ -518,8 +518,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-011/"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated exact 2100s fault command and shared gates: all five faults × three slots are verified non-comparable NOT RUN, with null metrics, zero launches/faults/signals, no Slack recovery claim, unchanged metadata, and clean cleanup."
     },
     {
       "id": "US-012",
@@ -541,8 +541,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-012/"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated exact 2100s fault command and shared gates: all five faults × three slots are verified non-comparable NOT RUN, with null metrics, zero launches/faults/signals, no Slack recovery claim, unchanged metadata, and clean cleanup."
     },
     {
       "id": "US-013",
@@ -564,8 +564,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-013/"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated exact 2100s fault command and shared gates: all five faults × three slots are verified non-comparable NOT RUN, with null metrics, zero launches/faults/signals, no Slack recovery claim, unchanged metadata, and clean cleanup."
     },
     {
       "id": "US-014",
@@ -586,8 +586,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-014/"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated exact 2100s fault command and shared gates: all five faults × three slots are verified non-comparable NOT RUN, with null metrics, zero launches/faults/signals, no Slack recovery claim, unchanged metadata, and clean cleanup."
     },
     {
       "id": "US-015",
@@ -608,8 +608,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-015/"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated exact 2100s fault command and shared gates: all five faults × three slots are verified non-comparable NOT RUN, with null metrics, zero launches/faults/signals, no Slack recovery claim, unchanged metadata, and clean cleanup."
     },
     {
       "id": "US-016",
@@ -635,8 +635,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-016/"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated exact comparison and shared gates: frozen ordering applied without imputation/weight changes; 75/75 NOT RUN, zero measured/comparable/ranked, all five explicitly tied and unranked; policy and traceability scans pass."
     },
     {
       "id": "US-017",
@@ -658,8 +658,8 @@
         ".oh/tasks/pm2-pi-supervision/progress.txt"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated the independent terminal report, exact PASS H0/M0/L0 footer after bounded re-review, required typecheck, and critic mutation boundary."
     },
     {
       "id": "US-018",
@@ -681,8 +681,8 @@
         ".oh/tasks/pm2-pi-supervision/progress.txt"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated the independent terminal report, exact PASS H0/M0/L0 footer after bounded re-review, required typecheck, and critic mutation boundary."
     },
     {
       "id": "US-019",
@@ -706,8 +706,8 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-019/"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "First Mate validated both terminal critics at H0/M0/L0, exact US-019 verify, cleanup and metadata-boundary proofs, final synthesis, policy/secret scans, expanded tests, syntax checks, typecheck, and task-local diff check. Study closes with all runtime candidates NOT RUN/non-comparable and no selection authority."
     }
   ]
 }

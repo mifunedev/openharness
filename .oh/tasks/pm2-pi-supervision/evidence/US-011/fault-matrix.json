@@ -1,0 +1,129 @@
+{
+  "kind": "preregistered-fault-matrix",
+  "story": "US-011",
+  "candidate": "baseline",
+  "status": "NOT RUN",
+  "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b",
+  "manifestFrozenUnchanged": true,
+  "faultOrder": [
+    "clean-exit",
+    "non-zero-exit",
+    "rapid-crash-loop",
+    "SIGTERM",
+    "synthetic-live-unhealthy-sentinel"
+  ],
+  "repetitionsPerFault": 3,
+  "expectedSlotCount": 15,
+  "registeredSlotCount": 15,
+  "slotOrder": [
+    {
+      "registrationOrder": 1,
+      "fault": "clean-exit",
+      "repetition": 1
+    },
+    {
+      "registrationOrder": 2,
+      "fault": "clean-exit",
+      "repetition": 2
+    },
+    {
+      "registrationOrder": 3,
+      "fault": "clean-exit",
+      "repetition": 3
+    },
+    {
+      "registrationOrder": 4,
+      "fault": "non-zero-exit",
+      "repetition": 1
+    },
+    {
+      "registrationOrder": 5,
+      "fault": "non-zero-exit",
+      "repetition": 2
+    },
+    {
+      "registrationOrder": 6,
+      "fault": "non-zero-exit",
+      "repetition": 3
+    },
+    {
+      "registrationOrder": 7,
+      "fault": "rapid-crash-loop",
+      "repetition": 1
+    },
+    {
+      "registrationOrder": 8,
+      "fault": "rapid-crash-loop",
+      "repetition": 2
+    },
+    {
+      "registrationOrder": 9,
+      "fault": "rapid-crash-loop",
+      "repetition": 3
+    },
+    {
+      "registrationOrder": 10,
+      "fault": "SIGTERM",
+      "repetition": 1
+    },
+    {
+      "registrationOrder": 11,
+      "fault": "SIGTERM",
+      "repetition": 2
+    },
+    {
+      "registrationOrder": 12,
+      "fault": "SIGTERM",
+      "repetition": 3
+    },
+    {
+      "registrationOrder": 13,
+      "fault": "synthetic-live-unhealthy-sentinel",
+      "repetition": 1
+    },
+    {
+      "registrationOrder": 14,
+      "fault": "synthetic-live-unhealthy-sentinel",
+      "repetition": 2
+    },
+    {
+      "registrationOrder": 15,
+      "fault": "synthetic-live-unhealthy-sentinel",
+      "repetition": 3
+    }
+  ],
+  "prerequisites": [
+    {
+      "story": "US-005",
+      "firstMatePassed": true,
+      "candidate": "baseline",
+      "status": "NOT RUN",
+      "measuredRepetitions": 0,
+      "comparable": false,
+      "blocker": "fresh user/network namespace unavailable; candidate launch is prohibited",
+      "evidence": "evidence/US-005/aggregate.json",
+      "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b"
+    }
+  ],
+  "networkIsolation": "NOT RUN",
+  "blocker": "prerequisite candidate behavior is NOT RUN and fresh user/network namespace unavailable; candidate launch is prohibited; every fault slot is safely NOT RUN before candidate launch, fault injection, or signal",
+  "executionBoundary": {
+    "candidateLaunchCount": 0,
+    "faultInjectionCount": 0,
+    "signalAttempts": 0,
+    "observations": 0,
+    "allSlotsNonComparable": true
+  },
+  "sentinelUnexecutedObligations": {
+    "action": "exercise the synthetic live-unhealthy sentinel",
+    "executed": false,
+    "childPidRequired": "same-and-running",
+    "publicStderrSymptomRequired": "SYNTHETIC_STALE_CONTEXT",
+    "publicSymptomSurfaceRequired": "common public stderr/health surface available identically to every candidate",
+    "ordinarySyntheticWorkRequired": "blocked until externally observable recovery action",
+    "hiddenCandidateChannel": "prohibited",
+    "creditRule": "credit detection/recovery only to the actual component that observes the common public symptom and acts while the same child remains alive",
+    "classification": "simulation-not-proof-of-Slack-recovery",
+    "slackRecoveryProofClaimed": false
+  }
+}

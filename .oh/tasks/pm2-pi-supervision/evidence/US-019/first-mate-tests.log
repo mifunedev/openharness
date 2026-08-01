@@ -1,0 +1,340 @@
+TAP version 13
+# Subtest: US-016 accepts only the unchanged frozen lexicographic contract
+ok 1 - US-016 accepts only the unchanged frozen lexicographic contract
+  ---
+  duration_ms: 0.868873
+  type: 'test'
+  ...
+# Subtest: traceability reads and hashes every bounded US-005 through US-015 evidence file
+ok 2 - traceability reads and hashes every bounded US-005 through US-015 evidence file
+  ---
+  duration_ms: 13.03844
+  type: 'test'
+  ...
+# Subtest: all safe NOT RUN candidates remain one non-comparable tie group with no ranks or imputed scores
+ok 3 - all safe NOT RUN candidates remain one non-comparable tie group with no ranks or imputed scores
+  ---
+  duration_ms: 1.805383
+  type: 'test'
+  ...
+# Subtest: comparison preserves explicit blockers and the separate human decision boundary
+ok 4 - comparison preserves explicit blockers and the separate human decision boundary
+  ---
+  duration_ms: 0.96143
+  type: 'test'
+  ...
+# Subtest: comparison implementation has no process, network, PM2, Pi, or production-content access path
+ok 5 - comparison implementation has no process, network, PM2, Pi, or production-content access path
+  ---
+  duration_ms: 0.22787
+  type: 'test'
+  ...
+# Subtest: env -i contract creates empty disposable homes and 0700 PM2_HOME
+ok 6 - env -i contract creates empty disposable homes and 0700 PM2_HOME
+  ---
+  duration_ms: 3.804239
+  type: 'test'
+  ...
+# Subtest: non-empty disposable auth/config home fails closed
+ok 7 - non-empty disposable auth/config home fails closed
+  ---
+  duration_ms: 2.5214
+  type: 'test'
+  ...
+# Subtest: network-denial failure returns safe NOT RUN
+ok 8 - network-denial failure returns safe NOT RUN
+  ---
+  duration_ms: 0.196671
+  type: 'test'
+  ...
+# Subtest: global/default and cluster PM2 commands are denied
+ok 9 - global/default and cluster PM2 commands are denied
+  ---
+  duration_ms: 2.379845
+  type: 'test'
+  ...
+# Subtest: lifecycle performs cleanup after success and assertion failure
+ok 10 - lifecycle performs cleanup after success and assertion failure
+  ---
+  duration_ms: 2.55179
+  type: 'test'
+  ...
+# Subtest: EXIT, INT, TERM, HUP, and timeout invoke one idempotent bounded cleanup
+ok 11 - EXIT, INT, TERM, HUP, and timeout invoke one idempotent bounded cleanup
+  ---
+  duration_ms: 3.236464
+  type: 'test'
+  ...
+# Subtest: metadata snapshots are constrained to the four identity-only commands
+ok 12 - metadata snapshots are constrained to the four identity-only commands
+  ---
+  duration_ms: 0.464319
+  type: 'test'
+  ...
+# Subtest: baseline source is synthetic-only and has no process, network, or production imports
+ok 13 - baseline source is synthetic-only and has no process, network, or production imports
+  ---
+  duration_ms: 0.514899
+  type: 'test'
+  ...
+# Subtest: US-007 through US-010 accept only their unchanged frozen manifest contracts
+ok 14 - US-007 through US-010 accept only their unchanged frozen manifest contracts
+  ---
+  duration_ms: 1.146629
+  type: 'test'
+  ...
+# Subtest: US-007 refuses wrapper substitution when direct transport remains LIVE-UNVERIFIED
+ok 15 - US-007 refuses wrapper substitution when direct transport remains LIVE-UNVERIFIED
+  ---
+  duration_ms: 0.712813
+  type: 'test'
+  ...
+# Subtest: US-007 rejects a false claim that direct transport was proven infeasible
+ok 16 - US-007 rejects a false claim that direct transport was proven infeasible
+  ---
+  duration_ms: 0.095806
+  type: 'test'
+  ...
+# Subtest: US-008 records fake-provider API obligations with zero model turns and production loads
+ok 17 - US-008 records fake-provider API obligations with zero model turns and production loads
+  ---
+  duration_ms: 0.212158
+  type: 'test'
+  ...
+# Subtest: US-009 preserves no-mode observations as null instead of assuming print mode
+ok 18 - US-009 preserves no-mode observations as null instead of assuming print mode
+  ---
+  duration_ms: 0.222952
+  type: 'test'
+  ...
+# Subtest: US-010 detects installed PTY utility metadata without execution, install, or fetch
+ok 19 - US-010 detects installed PTY utility metadata without execution, install, or fetch
+  ---
+  duration_ms: 1.90001
+  type: 'test'
+  ...
+# Subtest: US-010 records the PTY boundary but does not launch while isolation is unavailable
+ok 20 - US-010 records the PTY boundary but does not launch while isolation is unavailable
+  ---
+  duration_ms: 1.375146
+  type: 'test'
+  ...
+# Subtest: control characterization module cannot launch processes, open sockets, install, or fetch
+ok 21 - control characterization module cannot launch processes, open sockets, install, or fetch
+  ---
+  duration_ms: 0.162119
+  type: 'test'
+  ...
+# Subtest: US-006 accepts only the unchanged frozen direct topology manifest
+ok 22 - US-006 accepts only the unchanged frozen direct topology manifest
+  ---
+  duration_ms: 1.109338
+  type: 'test'
+  ...
+# Subtest: PM2 package identity is exactly pinned to cited 7.0.3 metadata
+ok 23 - PM2 package identity is exactly pinned to cited 7.0.3 metadata
+  ---
+  duration_ms: 0.469497
+  type: 'test'
+  ...
+# Subtest: unavailable network isolation yields three direct NOT RUN slots without PM2, Pi, or wrapper launch
+ok 24 - unavailable network isolation yields three direct NOT RUN slots without PM2, Pi, or wrapper launch
+  ---
+  duration_ms: 0.364005
+  type: 'test'
+  ...
+# Subtest: direct topology retains every stdin/stdout/ready/EOF/exit ownership obligation as unverified
+ok 25 - direct topology retains every stdin/stdout/ready/EOF/exit ownership obligation as unverified
+  ---
+  duration_ms: 0.214254
+  type: 'test'
+  ...
+# Subtest: safe NOT RUN refuses a PROVEN-network value instead of silently running or substituting
+ok 26 - safe NOT RUN refuses a PROVEN-network value instead of silently running or substituting
+  ---
+  duration_ms: 0.120543
+  type: 'test'
+  ...
+# Subtest: public installed Pi source is characterized read-only without executing Pi
+ok 27 - public installed Pi source is characterized read-only without executing Pi
+  ---
+  duration_ms: 0.607584
+  type: 'test'
+  ...
+# Subtest: direct characterization module cannot launch a child process or implement a wrapper
+ok 28 - direct characterization module cannot launch a child process or implement a wrapper
+  ---
+  duration_ms: 0.184237
+  type: 'test'
+  ...
+# Subtest: bounded JSONL preserves sequence/type and parses extension_ui_request
+ok 29 - bounded JSONL preserves sequence/type and parses extension_ui_request
+  ---
+  duration_ms: 1.528182
+  type: 'test'
+  ...
+# Subtest: malformed and unterminated JSONL fail closed
+ok 30 - malformed and unterminated JSONL fail closed
+  ---
+  duration_ms: 0.353448
+  type: 'test'
+  ...
+# Subtest: oversized JSONL line and total stream fail closed
+ok 31 - oversized JSONL line and total stream fail closed
+  ---
+  duration_ms: 0.153501
+  type: 'test'
+  ...
+# Subtest: secret scan rejects deterministic credential and personal-data fixtures
+ok 32 - secret scan rejects deterministic credential and personal-data fixtures
+  ---
+  duration_ms: 3.325248
+  type: 'test'
+  ...
+# Subtest: secret scan accepts bounded synthetic summaries
+ok 33 - secret scan accepts bounded synthetic summaries
+  ---
+  duration_ms: 1.616361
+  type: 'test'
+  ...
+# Subtest: proc parser uses exact Linux parent and start-time fields
+ok 34 - proc parser uses exact Linux parent and start-time fields
+  ---
+  duration_ms: 0.893697
+  type: 'test'
+  ...
+# Subtest: successful cleanup is reverse-order, exact-PID, bounded, and idempotent
+ok 35 - successful cleanup is reverse-order, exact-PID, bounded, and idempotent
+  ---
+  duration_ms: 2.452078
+  type: 'test'
+  ...
+# Subtest: PID reuse/start-time mismatch is rejected before a signal
+ok 36 - PID reuse/start-time mismatch is rejected before a signal
+  ---
+  duration_ms: 1.059248
+  type: 'test'
+  ...
+# Subtest: US-011 through US-015 accept only the unchanged frozen five-fault manifest
+ok 37 - US-011 through US-015 accept only the unchanged frozen five-fault manifest
+  ---
+  duration_ms: 1.274735
+  type: 'test'
+  ...
+# Subtest: story map is exactly US-011 through US-015 with the frozen candidate identities
+ok 38 - story map is exactly US-011 through US-015 with the frozen candidate identities
+  ---
+  duration_ms: 0.551741
+  type: 'test'
+  ...
+# Subtest: every candidate preregisters exactly five faults times three repetitions in frozen order
+ok 39 - every candidate preregisters exactly five faults times three repetitions in frozen order
+  ---
+  duration_ms: 0.872357
+  type: 'test'
+  ...
+# Subtest: every NOT RUN slot retains all manifest fields with null metrics and explicit non-censor semantics
+ok 40 - every NOT RUN slot retains all manifest fields with null metrics and explicit non-censor semantics
+  ---
+  duration_ms: 0.290962
+  type: 'test'
+  ...
+# Subtest: synthetic sentinel preserves exact public-stderr/live-PID/block-work obligations as unexecuted only
+ok 41 - synthetic sentinel preserves exact public-stderr/live-PID/block-work obligations as unexecuted only
+  ---
+  duration_ms: 0.150605
+  type: 'test'
+  ...
+# Subtest: aggregate does not turn unexecuted slots into zero latency, restart, lifecycle, or semantic metrics
+ok 42 - aggregate does not turn unexecuted slots into zero latency, restart, lifecycle, or semantic metrics
+  ---
+  duration_ms: 0.204261
+  type: 'test'
+  ...
+# Subtest: prerequisite validation requires exact dependencies to be First-Mate-passed safe NOT RUN with frozen hash
+ok 43 - prerequisite validation requires exact dependencies to be First-Mate-passed safe NOT RUN with frozen hash
+  ---
+  duration_ms: 0.260095
+  type: 'test'
+  ...
+# Subtest: safe fault path rejects proven isolation instead of launching, faulting, or signaling
+ok 44 - safe fault path rejects proven isolation instead of launching, faulting, or signaling
+  ---
+  duration_ms: 0.081208
+  type: 'test'
+  ...
+# Subtest: fault runner has no candidate launch, process registry, PM2, Pi, fault-injection, or signal API
+ok 45 - fault runner has no candidate launch, process registry, PM2, Pi, fault-injection, or signal API
+  ---
+  duration_ms: 0.317303
+  type: 'test'
+  ...
+# Subtest: US-005 accepts only the unchanged frozen baseline manifest
+ok 46 - US-005 accepts only the unchanged frozen baseline manifest
+  ---
+  duration_ms: 1.887381
+  type: 'test'
+  ...
+# Subtest: unavailable network isolation creates three safe NOT RUN rows before launch
+ok 47 - unavailable network isolation creates three safe NOT RUN rows before launch
+  ---
+  duration_ms: 0.591179
+  type: 'test'
+  ...
+# Subtest: metadata delta excludes only the short-lived ps observer and detects other changes
+ok 48 - metadata delta excludes only the short-lived ps observer and detects other changes
+  ---
+  duration_ms: 0.337064
+  type: 'test'
+  ...
+# Subtest: US-019 accepts only each terminal critic latest exact H0/M0/L0 PASS footer
+ok 49 - US-019 accepts only each terminal critic latest exact H0/M0/L0 PASS footer
+  ---
+  duration_ms: 1.283392
+  type: 'test'
+  ...
+# Subtest: US-019 aggregates only the eleven bounded cleanup proofs and proves no fixture-owned process existed
+ok 50 - US-019 aggregates only the eleven bounded cleanup proofs and proves no fixture-owned process existed
+  ---
+  duration_ms: 2.358001
+  type: 'test'
+  ...
+# Subtest: US-019 metadata proof uses only authorized identity fields and bounded per-run equality
+ok 51 - US-019 metadata proof uses only authorized identity fields and bounded per-run equality
+  ---
+  duration_ms: 0.642849
+  type: 'test'
+  ...
+# Subtest: US-019 final synthesis policy preserves all candidate behavior as NOT RUN and requires a separate human decision
+ok 52 - US-019 final synthesis policy preserves all candidate behavior as NOT RUN and requires a separate human decision
+  ---
+  duration_ms: 0.353132
+  type: 'test'
+  ...
+# Subtest: US-019 policy scan fails closed on a prohibited output label or missing human decision boundary
+ok 53 - US-019 policy scan fails closed on a prohibited output label or missing human decision boundary
+  ---
+  duration_ms: 0.193749
+  type: 'test'
+  ...
+# Subtest: delegated US-019 verification requires passed dependencies while preserving US-019 passes false
+ok 54 - delegated US-019 verification requires passed dependencies while preserving US-019 passes false
+  ---
+  duration_ms: 0.487369
+  type: 'test'
+  ...
+# Subtest: US-019 verifier has no live process, metadata snapshot, network, PM2, or production-content execution path
+ok 55 - US-019 verifier has no live process, metadata snapshot, network, PM2, or production-content execution path
+  ---
+  duration_ms: 0.270494
+  type: 'test'
+  ...
+1..55
+# tests 55
+# suites 0
+# pass 55
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 72.608486

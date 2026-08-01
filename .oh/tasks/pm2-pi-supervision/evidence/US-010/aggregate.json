@@ -1,0 +1,20 @@
+{
+  "kind": "pty-control-aggregate",
+  "story": "US-010",
+  "candidate": "pm2-pty-control",
+  "status": "NOT RUN",
+  "reason": "compatible PTY utility metadata is present, but fresh user/network namespace isolation is unavailable; the PTY control is safely NOT RUN before utility, PM2, baseline, or Pi launch",
+  "requestedRepetitions": 3,
+  "measuredRepetitions": 0,
+  "notRunRepetitions": 3,
+  "requiredRunCompleteness": "0/3",
+  "metrics": "not-comparable",
+  "imputation": false,
+  "selectiveRetries": false,
+  "comparable": false,
+  "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b",
+  "utilityMetadataStatus": "SOURCE-VERIFIED-METADATA",
+  "utilityVersion": "2.38.1-5+deb12u3",
+  "compatibilityMetadataDetected": true,
+  "resolvedMode": null
+}

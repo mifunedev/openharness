@@ -1,0 +1,127 @@
+{
+  "kind": "direct-rpc-transport",
+  "story": "US-006",
+  "candidate": "pm2-direct-rpc-topology",
+  "result": "NOT RUN",
+  "feasibility": "LIVE-UNVERIFIED",
+  "infeasibleClaimed": false,
+  "blocker": "fresh user/network namespace unavailable; candidate launch is prohibited",
+  "framingRequired": "UTF-8 LF-delimited JSONL",
+  "bounds": {
+    "maxLineBytes": 65536,
+    "maxFramesPerRepetition": 10000,
+    "maxTotalBytesPerRepetition": 8388608
+  },
+  "pm2LogsUsedAsTransport": false,
+  "writableRetainedStdinProven": false,
+  "losslessStdoutConsumerProven": false,
+  "readySignalProven": false,
+  "eofPropagationProven": false,
+  "exitCodePropagationProven": false,
+  "wrapperFallbackUsed": false,
+  "requestedSequences": 3,
+  "measuredSequences": 0,
+  "notRunSequences": 3,
+  "requiredRunCompleteness": "0/3",
+  "sequenceEvidence": [
+    {
+      "kind": "direct-rpc-transport-sequence",
+      "story": "US-006",
+      "candidate": "pm2-direct-rpc-topology",
+      "repetition": 1,
+      "status": "NOT RUN",
+      "outcome": "NOT RUN",
+      "reason": "fresh user/network namespace unavailable; candidate launch is prohibited",
+      "request": {
+        "byteCount": null,
+        "frameCount": null,
+        "sequence": null,
+        "types": null,
+        "sha256": null
+      },
+      "response": {
+        "byteCount": null,
+        "frameCount": null,
+        "sequence": null,
+        "types": null,
+        "sha256": null
+      },
+      "byteFrameEquality": null,
+      "extensionUiRequestParsed": null,
+      "candidateLaunched": false,
+      "pm2DaemonPid": null,
+      "piPid": null,
+      "wrapperPid": null,
+      "comparable": false,
+      "censored": false,
+      "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b"
+    },
+    {
+      "kind": "direct-rpc-transport-sequence",
+      "story": "US-006",
+      "candidate": "pm2-direct-rpc-topology",
+      "repetition": 2,
+      "status": "NOT RUN",
+      "outcome": "NOT RUN",
+      "reason": "fresh user/network namespace unavailable; candidate launch is prohibited",
+      "request": {
+        "byteCount": null,
+        "frameCount": null,
+        "sequence": null,
+        "types": null,
+        "sha256": null
+      },
+      "response": {
+        "byteCount": null,
+        "frameCount": null,
+        "sequence": null,
+        "types": null,
+        "sha256": null
+      },
+      "byteFrameEquality": null,
+      "extensionUiRequestParsed": null,
+      "candidateLaunched": false,
+      "pm2DaemonPid": null,
+      "piPid": null,
+      "wrapperPid": null,
+      "comparable": false,
+      "censored": false,
+      "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b"
+    },
+    {
+      "kind": "direct-rpc-transport-sequence",
+      "story": "US-006",
+      "candidate": "pm2-direct-rpc-topology",
+      "repetition": 3,
+      "status": "NOT RUN",
+      "outcome": "NOT RUN",
+      "reason": "fresh user/network namespace unavailable; candidate launch is prohibited",
+      "request": {
+        "byteCount": null,
+        "frameCount": null,
+        "sequence": null,
+        "types": null,
+        "sha256": null
+      },
+      "response": {
+        "byteCount": null,
+        "frameCount": null,
+        "sequence": null,
+        "types": null,
+        "sha256": null
+      },
+      "byteFrameEquality": null,
+      "extensionUiRequestParsed": null,
+      "candidateLaunched": false,
+      "pm2DaemonPid": null,
+      "piPid": null,
+      "wrapperPid": null,
+      "comparable": false,
+      "censored": false,
+      "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b"
+    }
+  ],
+  "imputation": false,
+  "selectiveRetries": false,
+  "comparable": false
+}

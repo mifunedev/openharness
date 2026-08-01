@@ -1,0 +1,713 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/677-pm2-pi-supervision",
+  "description": "Credentialless, disposable, pre-kickoff study of PM2 7.0.3 and Pi supervision. Planning closes through current critic re-review, exact validation, and an artifact-only draft PR; a distinct explicit-human-kickoff gate blocks all implementation. Outputs are evidence and uncertainty only, with no adoption, recommendation, production configuration, or production mutation.",
+  "artifactContract": {
+    "scopeRoot": ".oh/tasks/pm2-pi-supervision/",
+    "evidenceRoot": ".oh/tasks/pm2-pi-supervision/evidence/US-<id>/",
+    "executionContract": [
+      "Implementation is forbidden until the distinct US-002 explicit-human-kickoff gate passes from a new, unambiguous human authorization after US-001; authorization is never inferred",
+      "All benchmark, process-launch, fault-injection, and PM2 work uses a mktemp runtime root; task artifacts and read-only source inspection are the only exemptions",
+      "Never execute or load production bridge, recovery extension, settings, scripts, config, state, locks, logs, tmux sessions, or gateway runtime; metadata-only pre/post snapshots use git status/diff path names, tmux session identity, and process identity without reading production content",
+      "Never edit production scripts/config, Docker/devcontainer files, manifests, lockfiles, settings, images, sessions, or runtime; never replace/remove tmux; never use PM2 cluster/modules/startup/save/resurrect, global install, added dependencies, persistent dump/service/daemon, or production configuration",
+      "Spawn runtime children from env -i with only PATH, HOME, XDG_CONFIG_HOME, XDG_STATE_HOME, XDG_CACHE_HOME, TMPDIR, LANG=C.UTF-8, LC_ALL=C.UTF-8, TZ=UTC, and manifest-listed fixture non-secrets; HOME/XDG/TMP and mode-0700 PM2_HOME are fresh runtime-root children; no ambient values or auth stores are read, copied, inventoried, or mounted",
+      "Negative preflight rejects prohibited credential-key patterns, escaping allowlisted paths, or non-empty disposable auth/config homes; it inspects only the constructed child environment, never ambient values",
+      "Deny outbound network or mark the candidate NOT RUN; the sole setup exception is exact https://registry.npmjs.org/pm2/-/pm2-7.0.3.tgz with pinned integrity, no auth/config, and offline dependency resolution; any other fetch or cache miss is NOT RUN",
+      "Use only synthetic data and a deterministic local fake/test provider under denied network; if that cannot avoid credential discovery and a live/provider-backed model turn, the extension probe and dependent RPC evidence are NOT RUN",
+      "Register every spawned PID immediately with PID, parent, /proc start time, role, candidate, and namespace in $FIXTURE_ROOT/run/owned-pids.jsonl; signal only a revalidated exact registered descendant or isolated PM2 PID",
+      "Install idempotent EXIT, INT, TERM, and HUP traps plus outer timeout; cleanup exact PIDs in reverse order with TERM, five-second wait, then KILL only after revalidation; cleanup failure stops the graph and requires human inspection",
+      "Prohibit pkill, killall, pattern signals, tmux kill-server, existing tmux targets, pm2 delete all, pm2 kill, and every PM2 command lacking explicit fixture PM2_HOME; exact isolated process-name deletion and exact registered daemon-PID signaling only",
+      "Direct RPC means PM2 script target Pi --mode rpc with proven stdin owner/writer, stdout consumer, ready signal, LF-JSONL command path, EOF/exit propagation, and byte/frame losslessness; PM2 logs are not transport; infeasibility is safe NOT RUN",
+      "The conditional PM2 RPC-host wrapper is a separately named candidate: PM2 targets the fixture wrapper, wrapper owns Pi RPC pipes and a mode-0600 runtime-root Unix socket, and PM2/wrapper/Pi responsibilities are separate; it never silently substitutes for direct RPC",
+      "JSONL is UTF-8 LF framed, maximum 64 KiB per line, 10000 frames and 8 MiB total per repetition, fail-closed on malformed/oversized input, with sequence/type/count/SHA-256 evidence and explicit extension_ui_request handling",
+      "Preregister three measured repetitions per runnable candidate/fault, monotonic nanosecond durations, UTC audit timestamps, 15-second ready deadline, 30-second idle window, 10-second detection deadline, 30-second recovery deadline, 10-second cleanup deadline, and 120-second total repetition deadline",
+      "Frozen fault order is clean exit, non-zero exit, rapid crash loop, SIGTERM, and synthetic live-unhealthy sentinel; aggregate medians, inclusive min-max, and n/3; timeouts are censored failures, no selective retries or imputation, and NOT RUN is not comparable",
+      "Frozen evidence ordering is lexicographic: safety/cleanup, required-run completeness, lifecycle success, semantic-health success, observability completeness, median recovery latency, then operational-responsibility count; ties remain ties and ordering is not a recommendation",
+      "The sentinel keeps the child PID alive/running, emits SYNTHETIC_STALE_CONTEXT on common public stderr, and blocks synthetic ordinary work; no hidden candidate signal; attribute detection/recovery to the actual component and label it a simulation",
+      "Evidence uses synthetic payloads, 1 MiB retained-log cap, structured summaries/hashes where raw content is unnecessary, path/control-character scrubbing, and deterministic credential/personal-data scan before staging; any finding fails and blocks commit/push",
+      "Terminal output contains evidence scores, ties, uncertainty, blockers, and residual responsibilities only; it must not label adopt, recommended, or winner, authorize migration/rollout, supply production PM2 configuration, or alter defaults; selection requires a separate human-approved issue or ADR"
+    ],
+    "verificationCommands": [
+      "timeout 180s node --test .oh/tasks/pm2-pi-supervision/fixture/tests/*.test.mjs",
+      "find .oh/tasks/pm2-pi-supervision/fixture -type f -name '*.mjs' -print0 | sort -z | xargs -0 -r -n1 node --check",
+      "timeout 180s node .oh/tasks/pm2-pi-supervision/fixture/secret-scan.mjs .oh/tasks/pm2-pi-supervision/evidence"
+    ],
+    "verificationPolicy": "Exact story commands and shared commands must exit 0 without || true or ignored failures; UTC start/end, stdout/stderr, and exit code go to each story verification.jsonl"
+  },
+  "taskGraph": {
+    "policy": "dependency-first; no node starts before every incoming dependency passes; serial delegates read progress.txt; delegates append completion evidence and never self-certify passes; First Mate alone validates criteria and updates passes",
+    "nodes": [
+      {
+        "id": "critic-prd-alignment",
+        "assignedDelegate": "critic-prd-alignment",
+        "dependsOn": [],
+        "unlocks": [
+          "US-001"
+        ]
+      },
+      {
+        "id": "critic-execution-safety",
+        "assignedDelegate": "critic-execution-safety",
+        "dependsOn": [],
+        "unlocks": [
+          "US-001"
+        ]
+      },
+      {
+        "id": "US-001",
+        "assignedDelegate": "first-mate-gate",
+        "dependsOn": [
+          "critic-prd-alignment",
+          "critic-execution-safety"
+        ],
+        "unlocks": [
+          "US-002"
+        ]
+      },
+      {
+        "id": "US-002",
+        "assignedDelegate": "first-mate-kickoff-recorder",
+        "dependsOn": [
+          "US-001"
+        ],
+        "unlocks": [
+          "US-003"
+        ],
+        "gateType": "explicit-human-kickoff",
+        "inferenceProhibited": true
+      },
+      {
+        "id": "US-003",
+        "assignedDelegate": "fixture-contract-implementer",
+        "dependsOn": [
+          "US-002"
+        ],
+        "unlocks": [
+          "US-004"
+        ]
+      },
+      {
+        "id": "US-004",
+        "assignedDelegate": "benchmark-protocol-implementer",
+        "dependsOn": [
+          "US-003"
+        ],
+        "unlocks": [
+          "US-005",
+          "US-006"
+        ]
+      },
+      {
+        "id": "US-005",
+        "assignedDelegate": "baseline-runner",
+        "dependsOn": [
+          "US-004"
+        ],
+        "unlocks": [
+          "US-011"
+        ]
+      },
+      {
+        "id": "US-006",
+        "assignedDelegate": "direct-rpc-topology-implementer",
+        "dependsOn": [
+          "US-004"
+        ],
+        "unlocks": [
+          "US-007",
+          "US-008",
+          "US-009",
+          "US-012"
+        ]
+      },
+      {
+        "id": "US-007",
+        "assignedDelegate": "rpc-host-wrapper-implementer",
+        "dependsOn": [
+          "US-006"
+        ],
+        "unlocks": [
+          "US-008",
+          "US-009",
+          "US-013"
+        ]
+      },
+      {
+        "id": "US-008",
+        "assignedDelegate": "extension-api-probe-implementer",
+        "dependsOn": [
+          "US-006",
+          "US-007"
+        ],
+        "unlocks": [
+          "US-012",
+          "US-013"
+        ]
+      },
+      {
+        "id": "US-009",
+        "assignedDelegate": "no-mode-control-runner",
+        "dependsOn": [
+          "US-006",
+          "US-007"
+        ],
+        "unlocks": [
+          "US-010",
+          "US-014"
+        ]
+      },
+      {
+        "id": "US-010",
+        "assignedDelegate": "pty-control-runner",
+        "dependsOn": [
+          "US-009"
+        ],
+        "unlocks": [
+          "US-015"
+        ]
+      },
+      {
+        "id": "US-011",
+        "assignedDelegate": "baseline-fault-runner",
+        "dependsOn": [
+          "US-005"
+        ],
+        "unlocks": [
+          "US-016"
+        ]
+      },
+      {
+        "id": "US-012",
+        "assignedDelegate": "direct-rpc-fault-runner",
+        "dependsOn": [
+          "US-006",
+          "US-008"
+        ],
+        "unlocks": [
+          "US-016"
+        ]
+      },
+      {
+        "id": "US-013",
+        "assignedDelegate": "rpc-host-fault-runner",
+        "dependsOn": [
+          "US-007",
+          "US-008"
+        ],
+        "unlocks": [
+          "US-016"
+        ]
+      },
+      {
+        "id": "US-014",
+        "assignedDelegate": "no-mode-fault-runner",
+        "dependsOn": [
+          "US-009"
+        ],
+        "unlocks": [
+          "US-016"
+        ]
+      },
+      {
+        "id": "US-015",
+        "assignedDelegate": "pty-fault-runner",
+        "dependsOn": [
+          "US-010"
+        ],
+        "unlocks": [
+          "US-016"
+        ]
+      },
+      {
+        "id": "US-016",
+        "assignedDelegate": "comparison-analyst",
+        "dependsOn": [
+          "US-011",
+          "US-012",
+          "US-013",
+          "US-014",
+          "US-015"
+        ],
+        "unlocks": [
+          "US-017",
+          "US-018"
+        ]
+      },
+      {
+        "id": "US-017",
+        "assignedDelegate": "critic-final-evidence",
+        "dependsOn": [
+          "US-016"
+        ],
+        "unlocks": [
+          "US-019"
+        ],
+        "boundedReportPath": ".oh/tasks/pm2-pi-supervision/critique-final-evidence.md"
+      },
+      {
+        "id": "US-018",
+        "assignedDelegate": "critic-final-safety-scope",
+        "dependsOn": [
+          "US-016"
+        ],
+        "unlocks": [
+          "US-019"
+        ],
+        "boundedReportPath": ".oh/tasks/pm2-pi-supervision/critique-final-safety-scope.md"
+      },
+      {
+        "id": "US-019",
+        "assignedDelegate": "first-mate-final-synthesis",
+        "dependsOn": [
+          "US-017",
+          "US-018"
+        ],
+        "unlocks": []
+      }
+    ]
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Close the artifact-only planning gate",
+      "description": "As the First Mate, I want the current critics, remediation, exact validation, and an artifact-only draft PR completed before any authorization to implement is considered.",
+      "acceptanceCriteria": [
+        "critic-prd-alignment writes only .oh/tasks/pm2-pi-supervision/critique-prd.md, and critic-execution-safety writes only .oh/tasks/pm2-pi-supervision/critique-safety.md; each re-review has a dated verdict/count and no unresolved H or M finding; the First Mate alone synthesizes both into assessment.md and progress.txt",
+        "Every finding is resolved consistently in prd.md, prd.json, prompt.md, assessment.md, and progress.txt; semantic parity covers every story ID/title/description/criterion/dependency/priority/delegate and terminal critic nodes",
+        "From the worktree root, test \"$(git branch --show-current)\" = feat/677-pm2-pi-supervision; for f in prd.md prd.json prompt.md assessment.md progress.txt critique-prd.md critique-safety.md; do test -f \".oh/tasks/pm2-pi-supervision/$f\"; done; jq empty .oh/tasks/pm2-pi-supervision/prd.json; and jq -e '.schemaVersion == 1 and .branchName == \"feat/677-pm2-pi-supervision\" and ([.userStories[].passes] | all(. == false)) and ([.userStories[].notes] | all(. == \"\")) and ([.userStories[].priority] == ([.userStories[].priority] | sort))' .oh/tasks/pm2-pi-supervision/prd.json all exit 0, with output recorded in progress.txt",
+        "The First Mate intentionally stages only approved task files using git add -f -- .oh/tasks/pm2-pi-supervision, verifies test -n \"$(git diff --cached --name-only)\", ! git diff --cached --name-only | grep -Ev '^\\.oh/tasks/pm2-pi-supervision/', and git diff --cached --check -- .oh/tasks/pm2-pi-supervision all exit 0, records the staged check in progress.txt, commits with git commit -m 'task: plan PM2 Pi supervision study', and pushes only branch feat/677-pm2-pi-supervision",
+        "The First Mate creates a draft PR with gh pr create --draft --base development --head feat/677-pm2-pi-supervision, then verifies via gh pr view --json url,number,baseRefName,headRefName,isDraft,files that base/head/draft are exact, the file list is non-empty, and every changed path starts .oh/tasks/pm2-pi-supervision/; PR URL/number, commit, and exact changed paths are appended to progress.txt",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "critic-prd-alignment",
+        "critic-execution-safety"
+      ],
+      "assignedDelegate": "first-mate-gate",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/critique-prd.md",
+        ".oh/tasks/pm2-pi-supervision/critique-safety.md",
+        ".oh/tasks/pm2-pi-supervision/assessment.md#first-mate-critic-synthesis",
+        ".oh/tasks/pm2-pi-supervision/progress.txt"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Record the explicit human kickoff",
+      "description": "As a maintainer, I want implementation blocked on a distinct, auditable human authorization after planning closes.",
+      "acceptanceCriteria": [
+        "US-001 is validated passes true and its draft PR remains open, draft, based on development, and task-folder-only",
+        "A human supplies a new explicit statement authorizing implementation for issue #677 after US-001 completion; issue creation, prior conversation, critic approval, commit, push, draft PR creation, review, or merge is never inferred as authorization",
+        "first-mate-kickoff-recorder appends the exact authorization quote, source, author, and UTC timestamp to progress.txt as one line beginning KICKOFF issue=#677; absent or ambiguous authorization leaves this story false and all later stories blocked",
+        "No install, fixture execution, process launch, fault injection, or benchmark occurs while recording this gate",
+        "After human validation of the source and quote, grep -Eq '^KICKOFF issue=#677 author=.+ utc=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z source=.+ quote=.+$' .oh/tasks/pm2-pi-supervision/progress.txt exits 0; the command and exit are appended to progress.txt",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-001"
+      ],
+      "assignedDelegate": "first-mate-kickoff-recorder",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/progress.txt"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Build the baseline fixture contract",
+      "description": "As an investigator, I want the isolated fixture, fake workload, ownership registry, and cleanup contract implemented before any measurement.",
+      "acceptanceCriteria": [
+        "Fixture-owned files under .oh/tasks/pm2-pi-supervision/fixture/ implement the immutable boundary, allowlisted env -i, disposable HOME/XDG/TMP, mode-0700 PM2_HOME, denied-network proof or safe NOT RUN, exact PID/start-time registry, traps, deadlines, idempotent cleanup, metadata-only production snapshots, bounded evidence, and deterministic secret scan from the artifact contract",
+        "The baseline executable is purpose-built and credentialless, reproduces only launch/ready/idle/exit/restart/log/semantic-sentinel lifecycle surfaces, and never executes or loads a production bridge, supervisor, extension, config, state, lock, log, or tmux asset",
+        "Fixture tests include successful cleanup, assertion failure, INT, TERM, timeout, PID-reuse mismatch, denied global/default PM2 commands, network-denial failure, malformed/oversized JSONL, and secret-scan rejection",
+        "Shared code gates and timeout 180s node .oh/tasks/pm2-pi-supervision/fixture/verify.mjs --story US-003 --evidence .oh/tasks/pm2-pi-supervision/evidence/US-003 exit 0 with evidence in evidence/US-003/verification.jsonl; no benchmark candidate is launched",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-002"
+      ],
+      "assignedDelegate": "fixture-contract-implementer",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/fixture/",
+        ".oh/tasks/pm2-pi-supervision/evidence/US-003/"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Preregister the benchmark manifest",
+      "description": "As an investigator, I want measurement and ordering rules frozen before observing candidates.",
+      "acceptanceCriteria": [
+        "evidence/benchmark-manifest.json encodes all artifact-contract candidates, at least three measured repetitions, clocks, signals, deadlines, idle window, recreation policy, fault order, censor/failure handling, median/min-max and n/3 aggregation, lexicographic ordering, tie/NOT RUN treatment, and amendment/full-rerun rule",
+        "The manifest defines the exact synthetic sentinel and credits detection/recovery only to the component observing the common public symptom while the child remains alive; it labels the result a simulation",
+        "The manifest defines evidence caps/redaction, synthetic-only payloads, prohibited raw output, secret scan, and immutable production/environment/process constraints",
+        "Shared code gates and timeout 180s node .oh/tasks/pm2-pi-supervision/fixture/verify.mjs --story US-004 --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --evidence .oh/tasks/pm2-pi-supervision/evidence/US-004 exit 0; evidence/US-004/manifest.sha256 records the pre-observation hash",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-003"
+      ],
+      "assignedDelegate": "benchmark-protocol-implementer",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json",
+        ".oh/tasks/pm2-pi-supervision/evidence/US-004/"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Run the disposable baseline",
+      "description": "As an investigator, I want baseline measurements from the purpose-built fixture without touching current runtime surfaces.",
+      "acceptanceCriteria": [
+        "The baseline run uses only source-derived expectations and the disposable baseline executable; it does not read or execute production sessions, process content, logs, config, state, locks, scripts, bridge, or extensions",
+        "Exactly three independent baseline repetitions record launch-to-ready, 30-second idle survival, clean exit, non-zero recovery, status/restarts, bounded log access, and cleanup under the frozen manifest",
+        "timeout 420s node .oh/tasks/pm2-pi-supervision/fixture/run.mjs --story US-005 --candidate baseline --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-005 plus shared code gates exit 0",
+        "evidence/US-005/verification.jsonl, sanitized run JSONL, aggregate JSON, production metadata delta, and cleanup proof are complete; any safety/cleanup failure stops the graph",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-004"
+      ],
+      "assignedDelegate": "baseline-runner",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-005/"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Prove direct PM2-to-Pi RPC topology feasibility",
+      "description": "As an investigator, I want direct PM2-to-Pi transport proven before it is treated as a runnable candidate.",
+      "acceptanceCriteria": [
+        "Setup resolves exactly PM2 7.0.3 with pinned integrity under the exact-fetch/offline rule and records package/version evidence; any other required network fetch is refused and yields safe NOT RUN",
+        "PM2's exact script target is Pi with explicit --mode rpc; evidence maps PM2 daemon and Pi PIDs, stdin owner/writer, stdout consumer, ready signal, command path, retained-open-stdin behavior, EOF shutdown, and exit-code propagation",
+        "Three synthetic request/response sequences prove UTF-8 LF-delimited JSONL byte/frame count, order, type, and SHA-256 equality within bounds; PM2 logs are not transport; inability to prove writable stdin and lossless stdout marks direct RPC NOT RUN without fallback substitution",
+        "timeout 420s node .oh/tasks/pm2-pi-supervision/fixture/run.mjs --story US-006 --candidate pm2-direct-rpc-topology --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-006 plus shared code gates exit 0 for a verified runnable or verified safe NOT RUN result",
+        "evidence/US-006/ includes topology, version/integrity, transport, production metadata delta, and cleanup proof",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-004"
+      ],
+      "assignedDelegate": "direct-rpc-topology-implementer",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-006/"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Evaluate the separately named RPC-host wrapper topology",
+      "description": "As an investigator, I want any wrapper required for RPC transport measured as a different candidate rather than attributed to direct PM2 supervision of Pi.",
+      "acceptanceCriteria": [
+        "If US-006 is runnable, record NOT RUN (not required by protocol) without executing a wrapper; if US-006 is NOT RUN only for direct transport infeasibility, implement the separately named PM2 7.0.3 plus RPC-host wrapper plus Pi RPC candidate exactly as the artifact contract",
+        "For a runnable wrapper, PM2 targets the fixture wrapper, the wrapper owns Pi byte pipes and a mode-0600 runtime-root Unix socket, and three sequences prove lossless bounded LF-JSONL relay plus ready/EOF/exit propagation; PM2, wrapper, and Pi responsibilities/PIDs are distinct",
+        "The wrapper performs no semantic-watchdog or provider/network function, is not production configuration, and is never reported as the direct candidate",
+        "timeout 420s node .oh/tasks/pm2-pi-supervision/fixture/run.mjs --story US-007 --candidate pm2-rpc-host-wrapper --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-007 plus shared code gates exit 0 for a verified runnable or safe NOT RUN result, with topology/transport/cleanup evidence in evidence/US-007/",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-006"
+      ],
+      "assignedDelegate": "rpc-host-wrapper-implementer",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-007/"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Probe extension APIs with a deterministic fake provider",
+      "description": "As an investigator, I want mode-independent API behavior checked without credentials, network, Slack, or a live model turn.",
+      "acceptanceCriteria": [
+        "Each runnable RPC topology uses only a disposable probe extension, synthetic prompt, deterministic local fake/test provider, denied network, and allowlisted empty auth homes; production bridge/recovery extension/settings are never loaded",
+        "The probe attempts extension-injected sendUserMessage() and observes corresponding turn_end plus bounded frame-type handling including extension_ui_request; it performs no live/provider-backed model turn; if the fake provider contract cannot be proven, record NOT RUN",
+        "Lossless JSONL checks, sanitized frame counts/hashes, no-secret evidence, topology attribution, and cleanup are recorded separately per runnable RPC candidate",
+        "timeout 420s node .oh/tasks/pm2-pi-supervision/fixture/run.mjs --story US-008 --candidate rpc-extension-probe --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-008 plus shared code gates exit 0, with evidence in evidence/US-008/",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-006",
+        "US-007"
+      ],
+      "assignedDelegate": "extension-api-probe-implementer",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-008/"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Run the direct no-mode control",
+      "description": "As an investigator, I want a direct PM2 control without explicit mode to isolate Pi mode selection.",
+      "acceptanceCriteria": [
+        "Exactly PM2 7.0.3 launches Pi directly without --mode rpc under the same isolated contract and records stdin/stdout TTY state, resolved mode, ready/idle/exit/restart behavior for three repetitions",
+        "The control uses no RPC wrapper, PTY wrapper, production asset, credential, network, or live model turn; expected print-mode behavior is observation, not assumption",
+        "timeout 420s node .oh/tasks/pm2-pi-supervision/fixture/run.mjs --story US-009 --candidate pm2-direct-no-mode --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-009 plus shared code gates exit 0 for runnable or safe NOT RUN",
+        "evidence/US-009/ contains mode, lifecycle, metadata-only delta, and cleanup proof",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-006",
+        "US-007"
+      ],
+      "assignedDelegate": "no-mode-control-runner",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-009/"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Run the optional PTY control",
+      "description": "As an investigator, I want an optional PTY control without installing another dependency.",
+      "acceptanceCriteria": [
+        "If a compatible PTY utility is already present, exactly PM2 7.0.3 launches the disposable baseline/Pi control through it for three repetitions and records utility version, TTY/mode, lifecycle, and responsibility boundary; otherwise record NOT RUN with the missing prerequisite and install nothing",
+        "The control uses no production asset, credential, network, live model turn, manifest edit, lockfile edit, or global install",
+        "timeout 420s node .oh/tasks/pm2-pi-supervision/fixture/run.mjs --story US-010 --candidate pm2-pty-control --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-010 plus shared code gates exit 0 for runnable or safe NOT RUN",
+        "evidence/US-010/ contains prerequisite, mode/lifecycle, metadata-only delta, and cleanup proof",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-009"
+      ],
+      "assignedDelegate": "pty-control-runner",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-010/"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Run bounded baseline faults",
+      "description": "As an investigator, I want the frozen five-fault sequence applied to the baseline candidate in one bounded iteration.",
+      "acceptanceCriteria": [
+        "Run three independent repetitions of each frozen fault against only the baseline; the sentinel keeps the child alive/running, blocks ordinary synthetic work, emits the common symptom, and attributes recovery to the baseline watchdog or none",
+        "Every row records detection source/action, monotonic latency, restart count, PID/exit/final status, bounded logs, outcome, censoring, production metadata delta, and cleanup; no selective retry occurs",
+        "timeout 2100s node .oh/tasks/pm2-pi-supervision/fixture/run-faults.mjs --story US-011 --candidate baseline --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-011 plus shared code gates exit 0",
+        "Complete sanitized raw/aggregate/verification/cleanup evidence exists in evidence/US-011/; a cleanup/safety failure stops the graph",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-005"
+      ],
+      "assignedDelegate": "baseline-fault-runner",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-011/"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Run bounded direct-RPC faults",
+      "description": "As an investigator, I want the frozen faults applied only if direct RPC is runnable.",
+      "acceptanceCriteria": [
+        "If direct RPC is runnable, run three repetitions of each fault and attribute semantic detection/recovery only to observed components while the child remains alive; otherwise propagate verified NOT RUN without starting a substitute",
+        "Every runnable row records all manifest fields, lossless protocol evidence where applicable, and exact cleanup; no PM2-only semantic recovery claim is allowed without same-child live recovery evidence",
+        "timeout 2100s node .oh/tasks/pm2-pi-supervision/fixture/run-faults.mjs --story US-012 --candidate pm2-direct-rpc --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-012 plus shared code gates exit 0 for complete runs or safe NOT RUN",
+        "Complete evidence exists in evidence/US-012/; a cleanup/safety failure stops the graph",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-006",
+        "US-008"
+      ],
+      "assignedDelegate": "direct-rpc-fault-runner",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-012/"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Run bounded RPC-host-wrapper faults",
+      "description": "As an investigator, I want wrapper topology faults measured separately when that candidate is runnable.",
+      "acceptanceCriteria": [
+        "If the RPC-host wrapper is runnable, run three repetitions of each fault and separately attribute PM2, wrapper, Pi, transport, and semantic behavior; otherwise propagate verified NOT RUN",
+        "The wrapper receives no hidden sentinel knowledge, and wrapper/PM2 restarts are not reported as direct Pi supervision or semantic recovery without same-child evidence",
+        "timeout 2100s node .oh/tasks/pm2-pi-supervision/fixture/run-faults.mjs --story US-013 --candidate pm2-rpc-host-wrapper --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-013 plus shared code gates exit 0 for complete runs or safe NOT RUN",
+        "Complete sanitized raw/aggregate/verification/cleanup evidence exists in evidence/US-013/; a cleanup/safety failure stops the graph",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-007",
+        "US-008"
+      ],
+      "assignedDelegate": "rpc-host-fault-runner",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-013/"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Run bounded no-mode-control faults",
+      "description": "As an investigator, I want the no-mode control fault behavior measured independently.",
+      "acceptanceCriteria": [
+        "If the no-mode control is runnable, run three repetitions of each fault with resolved-mode evidence and no semantic credit absent same-child detection/recovery; otherwise propagate verified NOT RUN",
+        "Every row follows the frozen timing, aggregation, bounds, attribution, metadata-only, and cleanup contract",
+        "timeout 2100s node .oh/tasks/pm2-pi-supervision/fixture/run-faults.mjs --story US-014 --candidate pm2-direct-no-mode --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-014 plus shared code gates exit 0 for complete runs or safe NOT RUN",
+        "Complete evidence exists in evidence/US-014/; a cleanup/safety failure stops the graph",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-009"
+      ],
+      "assignedDelegate": "no-mode-fault-runner",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-014/"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Run bounded PTY-control faults",
+      "description": "As an investigator, I want optional PTY fault behavior measured independently when available.",
+      "acceptanceCriteria": [
+        "If the PTY control is runnable, run three repetitions of each fault and distinguish PTY utility, PM2, Pi, and semantic responsibilities; otherwise propagate verified NOT RUN",
+        "Every row follows the frozen timing, aggregation, bounds, attribution, metadata-only, and cleanup contract",
+        "timeout 2100s node .oh/tasks/pm2-pi-supervision/fixture/run-faults.mjs --story US-015 --candidate pm2-pty-control --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --output .oh/tasks/pm2-pi-supervision/evidence/US-015 plus shared code gates exit 0 for complete runs or safe NOT RUN",
+        "Complete evidence exists in evidence/US-015/; a cleanup/safety failure stops the graph",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-010"
+      ],
+      "assignedDelegate": "pty-fault-runner",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/evidence/US-015/"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Compare and order evidence without recommendation",
+      "description": "As an analyst, I want the preregistered comparison applied without turning it into an adoption decision.",
+      "acceptanceCriteria": [
+        "assessment.md links every claim to bounded evidence and labels it SOURCE-VERIFIED, LIVE-VERIFIED, LIVE-UNVERIFIED, or NOT RUN; source/disposable-baseline comparisons never claim inspection of production runtime content",
+        "The frozen aggregation and lexicographic rules produce scores, ties, uncertainty, blockers, retained custom-supervisor responsibilities, and operational-responsibility counts; no post-observation weighting or imputation occurs",
+        "The report contains none of adopt, recommended, or winner as an output label, provides no migration authorization/rollout/default architecture/production PM2 configuration, and states that a separate human-approved issue or ADR is required for selection",
+        "timeout 180s node .oh/tasks/pm2-pi-supervision/fixture/compare.mjs --story US-016 --manifest .oh/tasks/pm2-pi-supervision/evidence/benchmark-manifest.json --evidence-root .oh/tasks/pm2-pi-supervision/evidence --output .oh/tasks/pm2-pi-supervision/evidence/US-016 plus shared code gates exit 0; comparison, traceability, policy scan, and verification evidence exists in evidence/US-016/",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-011",
+        "US-012",
+        "US-013",
+        "US-014",
+        "US-015"
+      ],
+      "assignedDelegate": "comparison-analyst",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/assessment.md",
+        ".oh/tasks/pm2-pi-supervision/evidence/US-016/"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Run the terminal evidence critic",
+      "description": "As the First Mate, I want an independent critic to check traceability and preregistered comparison after analysis.",
+      "acceptanceCriteria": [
+        "critic-final-evidence receives read-only scope for task artifacts/evidence and writes its full bounded report only to .oh/tasks/pm2-pi-supervision/critique-final-evidence.md plus a concise dated completion entry in progress.txt",
+        "The critic verifies repetitions, manifest hash/amendments, raw-to-aggregate calculations, censored/NOT RUN handling, claim links/labels, ordering rules, RPC topology attribution, and absence of unsupported semantic-recovery claims",
+        "The report records exact commands/evidence, severity counts, and PASS only with no unresolved H or M; it ends with exact footer Final verdict: PASS (H0 / M0 / L<n>).; the critic does not edit PRD, JSON, assessment, evidence, or pass state",
+        "test -s .oh/tasks/pm2-pi-supervision/critique-final-evidence.md && grep -Eq '^Final verdict: PASS \\(H0 / M0 / L[0-9]+\\)\\.$' .oh/tasks/pm2-pi-supervision/critique-final-evidence.md exits 0, and the First Mate records the command/exit in progress.txt",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-016"
+      ],
+      "assignedDelegate": "critic-final-evidence",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/critique-final-evidence.md",
+        ".oh/tasks/pm2-pi-supervision/progress.txt"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Run the terminal safety/scope critic",
+      "description": "As the First Mate, I want an independent critic to check isolation, cleanup, confidentiality, and decision boundaries after analysis.",
+      "acceptanceCriteria": [
+        "critic-final-safety-scope receives read-only scope for task artifacts/evidence plus metadata-only repository/runtime checks and writes its full bounded report only to .oh/tasks/pm2-pi-supervision/critique-final-safety-scope.md plus a concise dated completion entry in progress.txt",
+        "The critic verifies allowlisted credentialless execution, denied network, no live model turn, exact owned-PID cleanup, unchanged production metadata, evidence bounds/redaction/secret scan, no production config, and no adoption/recommendation output",
+        "The report records exact commands/evidence, severity counts, and PASS only with no unresolved H or M; it ends with exact footer Final verdict: PASS (H0 / M0 / L<n>).; the critic does not edit PRD, JSON, assessment, evidence, or pass state",
+        "test -s .oh/tasks/pm2-pi-supervision/critique-final-safety-scope.md && grep -Eq '^Final verdict: PASS \\(H0 / M0 / L[0-9]+\\)\\.$' .oh/tasks/pm2-pi-supervision/critique-final-safety-scope.md exits 0, and the First Mate records the command/exit in progress.txt",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-016"
+      ],
+      "assignedDelegate": "critic-final-safety-scope",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/critique-final-safety-scope.md",
+        ".oh/tasks/pm2-pi-supervision/progress.txt"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Synthesize terminal critics and close the study",
+      "description": "As the First Mate, I want terminal findings resolved and validated without delegates self-certifying completion.",
+      "acceptanceCriteria": [
+        "The First Mate reads both bounded terminal reports, resolves every H and M in the owning story/artifact through bounded rework and re-review, and writes synthesis only to assessment.md#terminal-first-mate-synthesis and progress.txt",
+        "The First Mate validates every story criterion against exact evidence before changing any passes; delegates never set passes, and all terminal stories remain false until criteria are proven",
+        "timeout 180s node .oh/tasks/pm2-pi-supervision/fixture/verify.mjs --story US-019 --evidence .oh/tasks/pm2-pi-supervision/evidence/US-019 plus shared code gates exit 0, final secret/policy scan passes, and production metadata matches the pre-study snapshot",
+        "The final assessment contains evidence/uncertainty/blockers/residual responsibilities only, no production configuration or state change, and an explicit separate-human-decision boundary; evidence/US-019/verification.jsonl and cleanup proof are complete",
+        "Typecheck passes: timeout 180s pnpm typecheck exits 0 from the worktree root, with stdout/stderr, UTC start/end, and exit code recorded in the story's declared evidence path"
+      ],
+      "dependsOn": [
+        "US-017",
+        "US-018"
+      ],
+      "assignedDelegate": "first-mate-final-synthesis",
+      "evidencePaths": [
+        ".oh/tasks/pm2-pi-supervision/assessment.md#terminal-first-mate-synthesis",
+        ".oh/tasks/pm2-pi-supervision/progress.txt",
+        ".oh/tasks/pm2-pi-supervision/evidence/US-019/"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

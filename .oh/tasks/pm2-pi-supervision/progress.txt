@@ -1,0 +1,70 @@
+# progress
+
+## 2026-08-01 — Task #2 planning artifacts complete
+
+- Scope: GitHub issue #677, planning only; no prototype, installation, configuration, dependency, runtime, commit, push, or PR action performed.
+- Worktree verified: `/home/sandbox/harness/.oh/worktrees/feat/677-pm2-pi-supervision`.
+- Branch verified: `feat/677-pm2-pi-supervision`.
+- Created only the requested task artifacts: `prd.md`, `prd.json`, `prompt.md`, `assessment.md`, and `progress.txt`.
+- PRD/Ralph evidence: `prd.json` has `schemaVersion: 1`, branch `feat/677-pm2-pi-supervision`, priorities 1-6 in dependency-first order, explicit dependencies/delegate assignments, objective criteria including `Typecheck passes`, and all six `passes` values set to `false`.
+- Source assessment evidence: inspected Open Harness commit `c059690c3142e39fa5288a7ff2e31c6822242688`, installed Pi 0.82.1 source/docs, pinned bridge commit `dca59db0482e97a9ef85e1a3a49da937e9b94bc5`, PM2 tag `v7.0.3` commit `01d4f6d59c5eaf4ff6683bb38824dcf38d25b289`, and npm metadata/integrity.
+- Safety gate: no experiment may start until separate explicit kickoff, two US-001 critics approve, and a task-artifacts-only draft PR targets `development`.
+
+STATUS: PLANNING COMPLETE — AWAITING EXPLICIT KICKOFF
+
+## 2026-08-01 01:43 UTC — critic-prd-alignment complete
+
+- Verdict: **FAIL** — unresolved high-severity mismatches remain.
+- Findings: **H5 / M6 / L0**.
+- Report: `.oh/tasks/pm2-pi-supervision/critique-prd.md`.
+
+## 2026-08-01 01:48 UTC — critic-execution-safety complete
+
+- Verdict: **FAIL** — unresolved high-severity safety and sequencing findings remain.
+- Findings: **H7 / M6 / L0**.
+- Report: `.oh/tasks/pm2-pi-supervision/critique-safety.md`.
+
+## 2026-08-01 01:53 UTC — implementer-remediation complete
+
+- Scope: docs-only, pre-kickoff remediation inside `.oh/tasks/pm2-pi-supervision/`; no critic report was altered and no install, fixture/prototype execution, process/runtime action, commit, push, or PR action was performed.
+- Supersession: the earlier `STATUS: PLANNING COMPLETE — AWAITING EXPLICIT KICKOFF` entry is historical and **superseded**. Planning is not complete; both existing critic verdicts remain FAIL until bounded re-review.
+- Gate order repaired: US-001 now owns current critic re-review, H/M remediation, exact cross-artifact validation, artifact-only commit/push, and a task-folder-only draft PR to `development`. It has no kickoff criterion. Distinct US-002 records a new explicit human kickoff after US-001 and blocks every implementation story; kickoff is never inferred.
+- Ralph graph repaired: nineteen dependency-first, one-iteration stories now separately own fixture contract, preregistered manifest, baseline run, direct RPC feasibility, conditional separately named RPC-host wrapper, fake-provider extension probe, direct no-mode control, optional PTY control, candidate-bounded fault runs, comparison, two terminal critics, and First Mate synthesis. All `passes` remain `false`; all `notes` are empty.
+- Safety contract repaired: allowlisted `env -i`; disposable HOME/XDG/TMP and mode-0700 `PM2_HOME`; no ambient auth/credentials; denied network except the exact pinned PM2 tarball setup fetch; deterministic fake provider or `NOT RUN`; no live/provider-backed model turn; exact PID/start-time registry; signal traps; idempotent bounded cleanup; no global/default PM2 or name-pattern kill commands; metadata-only production snapshots.
+- Evidence contract repaired: direct and wrapper RPC topologies are distinct, LF-JSONL is lossless/bounded/fail-closed, at least three repetitions and exact clocks/deadlines/aggregation/ordering are preregistered, the synthetic sentinel preserves a live child, evidence is bounded/redacted/secret-scanned, and every story names exact verification commands and evidence paths.
+- Decision boundary repaired: no adoption/recommendation/winner label, migration authorization, production configuration, default change, or production mutation; any selection requires a separate human-approved issue or ADR.
+- Files remediated: `prd.md`, `prd.json`, `prompt.md`, `assessment.md`, `progress.txt` only.
+- Delegate validation: `jq empty` and schema/branch/19-story/all-false/all-empty/sorted-priority checks passed; `git diff --check -- .oh/tasks/pm2-pi-supervision` passed; branch is exact; scripted markdown/JSON checks passed for all 19 IDs, titles, descriptions, criterion counts, dependencies, delegates, topological priorities, and graph unlock edges. These remediation checks do not replace the two critic re-reviews or First Mate US-001 validation.
+
+STATUS: REMEDIATION COMPLETE — AWAITING BOTH CRITIC RE-REVIEWS, FIRST MATE ARTIFACT VALIDATION, AND ARTIFACT-ONLY DRAFT PR. NO HUMAN KICKOFF RECORDED.
+
+## 2026-08-01 02:07 UTC — critic-prd-alignment re-review complete
+
+- Verdict: **PASS** — all prior H/M remediations, all 19-story markdown/JSON semantics and graph fields, Ralph all-false/all-empty initialization, kickoff order, exact US-001 planning gate, and one-iteration sizing verified.
+- Findings: **H0 / M0 / L0**.
+- Report: `.oh/tasks/pm2-pi-supervision/critique-prd.md` (appended Re-review section; original FAIL preserved).
+
+## 2026-08-01 02:14 UTC — critic-execution-safety re-review complete
+
+- Verdict: **FAIL** — **H0 / M1 / L0**; all prior safety boundaries are remediated except US-001's pre-stage `git diff --check`, which inspects zero ignored/untracked artifact bytes and lacks a post-force-add cached-diff check.
+- Report: `.oh/tasks/pm2-pi-supervision/critique-safety.md` (appended Re-review section; original FAIL preserved).
+
+## 2026-08-01 02:19 UTC — critic-execution-safety second re-review complete
+
+- Verdict: **PASS** — **H0 / M0 / L0**; US-001 now performs whitespace validation after force-add via the required cached-diff check, Markdown/JSON semantics remain aligned, and all seven artifact files are whitespace-clean.
+- Report: `.oh/tasks/pm2-pi-supervision/critique-safety.md` (appended Second re-review section; prior history preserved).
+
+## 2026-08-01 — critic-prd-alignment final re-review complete
+
+- PASS (H0 / M0 / L0): all 19 markdown/JSON stories have exactly one semantically matching objective `Typecheck passes` criterion; IDs, titles, descriptions, dependencies, delegates, priorities, passes, and notes are unchanged.
+
+## 2026-08-01T02:25:52Z — First Mate pre-PR artifact validation
+
+- Both adversarial critics' latest bounded verdicts are **PASS (H0 / M0 / L0)**; original failure history remains preserved in their reports.
+- First Mate synthesis is recorded in `assessment.md#first-mate-critic-synthesis` and authorizes only the artifact-only draft PR.
+- Required seven task files exist; branch is exactly `feat/677-pm2-pi-supervision`; `jq empty` passed.
+- Custom Ralph validation passed: schemaVersion 1, branch match, 19 sequential dependency-first stories, graph/delegate parity, objective non-empty criteria, one mirrored `Typecheck passes` criterion per story, every `passes` false, and every `notes` empty.
+- No `KICKOFF issue=#677` record exists; US-002 and all implementation remain blocked.
+- `git add -n -f -- .oh/tasks/pm2-pi-supervision` enumerated exactly seven files and no path outside the task folder.
+- Main-checkout tracked status matches the pre-work snapshot; no prototype, package, lockfile, Docker, entrypoint, gateway, supervisor, process, token, or runtime change was made by this worktree.
+- Post-force-add validation passed: the cached diff is non-empty, contains exactly the seven approved task-folder files, and `git diff --cached --check -- .oh/tasks/pm2-pi-supervision` exits `0`.

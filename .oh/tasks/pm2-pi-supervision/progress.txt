@@ -68,3 +68,14 @@ STATUS: REMEDIATION COMPLETE — AWAITING BOTH CRITIC RE-REVIEWS, FIRST MATE ART
 - `git add -n -f -- .oh/tasks/pm2-pi-supervision` enumerated exactly seven files and no path outside the task folder.
 - Main-checkout tracked status matches the pre-work snapshot; no prototype, package, lockfile, Docker, entrypoint, gateway, supervisor, process, token, or runtime change was made by this worktree.
 - Post-force-add validation passed: the cached diff is non-empty, contains exactly the seven approved task-folder files, and `git diff --cached --check -- .oh/tasks/pm2-pi-supervision` exits `0`.
+
+## 2026-08-01T02:27:04Z — Artifact-only draft PR checkpoint reached
+
+- Planning commit: `46f06b6c924382282d524c956a35b0295f200b69` (`task: plan PM2 Pi supervision study`).
+- Push: `upstream/feat/677-pm2-pi-supervision`.
+- Draft PR: https://github.com/mifunedev/openharness/pull/679 (number 679).
+- Verified via GitHub: state `OPEN`, `isDraft=true`, base `development`, head `feat/677-pm2-pi-supervision`, exact requested title.
+- Verified PR files: `assessment.md`, `critique-prd.md`, `critique-safety.md`, `prd.json`, `prd.md`, `progress.txt`, and `prompt.md`, all beneath `.oh/tasks/pm2-pi-supervision/`; no other path appears.
+- Implementation status: **NOT STARTED**. No explicit human kickoff is recorded; US-002 through US-019 remain blocked and all Ralph `passes` remain `false`.
+
+STATUS: PLANNING CHECKPOINT COMPLETE — DRAFT PR OPEN; AWAITING SEPARATE EXPLICIT IMPLEMENTATION KICKOFF.

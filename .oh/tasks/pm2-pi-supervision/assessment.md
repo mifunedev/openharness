@@ -50,7 +50,7 @@ Critics did not edit this assessment or shared pass state. The First Mate perfor
 
 ### Artifact-only draft PR proof
 
-Pending. US-001 requires a non-empty intentional ignored-artifact stage, artifact-only commit, branch push, and draft PR based on `development`; every changed path must begin `.oh/tasks/pm2-pi-supervision/`. Record commit, PR number/URL, base/head/draft state, and exact file list in `progress.txt`. No implementation/runtime path is permitted.
+Verified at the planning checkpoint: commit `46f06b6c924382282d524c956a35b0295f200b69` was pushed on `feat/677-pm2-pi-supervision`, and draft PR [#679](https://github.com/mifunedev/openharness/pull/679) is open with base `development`, the exact feature head, and only the seven `.oh/tasks/pm2-pi-supervision/` artifact paths. Implementation remains unstarted and unauthorized; US-002 is still false and no kickoff is recorded.
 
 ### Explicit human kickoff
 

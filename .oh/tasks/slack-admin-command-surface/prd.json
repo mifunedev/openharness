@@ -17,7 +17,8 @@
       ],
       "evidence": [
         ".oh/docs/integrations/slack.md separates Pi-side /msg-bridge from Slack DM admin text handlers.",
-        ".oh/skills/t3/references/sandbox-processes.md no longer says /trusted or /channels are typed into the pane."
+        ".oh/skills/t3/references/sandbox-processes.md no longer says /trusted or /channels are typed into the pane.",
+        "Root package audit proves pi-messenger-bridge README separates /msg-bridge commands from Admin commands (in DM with the bot), and source registers only msg-bridge as a Pi command."
       ]
     },
     {
@@ -25,7 +26,9 @@
       "title": "Document Slack slash-command caveat and fallback",
       "status": "completed",
       "passes": true,
-      "dependencies": ["US-001"],
+      "dependencies": [
+        "US-001"
+      ],
       "acceptanceCriteria": [
         "Docs explain that these are not Slack-native slash commands in the shipped manifest.",
         "Docs provide fallback inspection/config commands: gateway status, tmux capture-pane, jq .auth, and .pi/msg-bridge.json pre-seeding.",
@@ -33,7 +36,8 @@
       ],
       "evidence": [
         ".oh/docs/integrations/slack.md Admin DM text handlers section documents the caveat and fallbacks.",
-        ".oh/docs/integrations/slack.md Smoke Test and Troubleshooting now recommend a plain-text DM first."
+        ".oh/docs/integrations/slack.md Smoke Test and Troubleshooting now recommend a plain-text DM first.",
+        "Root package audit proves the shipped Slack manifest has message events and no Slack-native slash-command definitions."
       ]
     },
     {
@@ -41,7 +45,10 @@
       "title": "Guard the docs contract",
       "status": "completed",
       "passes": true,
-      "dependencies": ["US-001", "US-002"],
+      "dependencies": [
+        "US-001",
+        "US-002"
+      ],
       "acceptanceCriteria": [
         "A Tier-A eval probe checks Slack docs for the command-surface contract.",
         "The probe fails if known misleading phrases reappear.",
@@ -49,7 +56,8 @@
       ],
       "evidence": [
         ".oh/evals/probes/slack-admin-command-surface.sh added and executable.",
-        "bash .oh/skills/eval/run.sh --probe slack-admin-command-surface -> PASS."
+        "bash .oh/skills/eval/run.sh --probe slack-admin-command-surface -> PASS.",
+        "Eval probe now requires the root-package audit artifact and package-grounding text in Slack docs."
       ]
     },
     {
@@ -57,7 +65,11 @@
       "title": "Submit a reviewable PR",
       "status": "completed",
       "passes": true,
-      "dependencies": ["US-001", "US-002", "US-003"],
+      "dependencies": [
+        "US-001",
+        "US-002",
+        "US-003"
+      ],
       "acceptanceCriteria": [
         "CHANGELOG.md includes an Unreleased entry.",
         "The branch is committed and pushed.",
@@ -76,5 +88,6 @@
     "grep -R \"/trusted\\|/channels\" -n .oh/docs .oh/skills README.md .oh/README.md .pi/install .devcontainer harness.yaml.example",
     "git diff --check",
     "git ls-files --stage .oh/evals/probes/slack-admin-command-surface.sh .oh/tasks/slack-admin-command-surface"
-  ]
+  ],
+  "rootPackageAudit": ".oh/tasks/slack-admin-command-surface/root-package-audit.md"
 }

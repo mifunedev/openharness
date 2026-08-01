@@ -9,6 +9,7 @@ DOC="$ROOT/.oh/docs/integrations/slack.md"
 CONNECTING="$ROOT/.oh/docs/connecting.md"
 PI_DOC="$ROOT/.oh/docs/harnesses/pi.md"
 T3_PROCESSES="$ROOT/.oh/skills/t3/references/sandbox-processes.md"
+ROOT_PACKAGE_AUDIT="$ROOT/.oh/tasks/slack-admin-command-surface/root-package-audit.md"
 MANIFEST="$ROOT/.pi/install/slack-manifest.json"
 
 fail() {
@@ -33,6 +34,8 @@ reject_regex() {
 need_literal "$DOC" "Pi command surface" "Inside the Pi session, the bridge exposes **one** Pi slash command"
 need_literal "$DOC" "Pi /msg-bridge command" '`/msg-bridge status` — connection state plus trusted-user/channel counts.'
 need_literal "$DOC" "Slack DM admin handler boundary" "Slack DM admin text handlers"
+need_literal "$DOC" "root package README grounding" "This mirrors the root package"
+need_literal "$DOC" "source grounding" 'registers only `msg-bridge` as a Pi command'
 need_literal "$DOC" "Slack slash caveat" "not Slack-native slash commands in the shipped manifest"
 need_literal "$DOC" "gateway fallback" "gateway status"
 need_literal "$DOC" "tmux fallback" "tmux capture-pane -t client-slack-pi -p | grep -F '[Slack] Bot user ID:'"
@@ -41,6 +44,9 @@ need_literal "$DOC" "plain-text auth trigger" "DM the bot plain text"
 need_literal "$CONNECTING" "connecting doc boundary" "Trust/channel admin is handled by challenge auth and Slack DM admin text handlers, not separate Pi commands."
 need_literal "$PI_DOC" "Pi harness doc boundary" "trusted-user/channel admin is handled by Slack DM admin text handlers"
 need_literal "$T3_PROCESSES" "tmux process doc boundary" "Slack trust/channel admin is handled by DM"
+need_literal "$ROOT_PACKAGE_AUDIT" "root package audit artifact" "## Grounded RCA"
+need_literal "$ROOT_PACKAGE_AUDIT" "root package README evidence" "README.md:141 ### Admin commands (in DM with the bot)"
+need_literal "$ROOT_PACKAGE_AUDIT" "root package source evidence" "src/index.ts:275 pi.registerCommand(\"msg-bridge\", {"
 
 # Negative contract: old misleading in-session guidance must not return.
 reject_regex "$DOC" "old in-session /trusted guidance" 'inside the session.*(/trusted|/channels)'

@@ -99,7 +99,12 @@ Then, inside the session, use:
 - `/msg-bridge connect` / `/msg-bridge disconnect` — Socket Mode lifecycle.
 
 Do **not** look for `/trusted`, `/channels`, `/enable`, `/disable`, or `/help`
-as Pi TUI commands. Those are bridge-owned Slack DM admin text handlers (§ 6)
+as Pi TUI commands. This mirrors the root package: `pi-messenger-bridge`'s
+README lists `/msg-bridge ...` under `## Commands`, then lists `/trusted`,
+`/channels`, `/enable`, `/disable`, `/revoke`, `/toggletools`, and `/help` in a
+separate "Admin commands (in DM with the bot)" section. The package source also
+registers only `msg-bridge` as a Pi command and routes trusted Slack DM text to
+`handleAdminCommand`. Those admin actions therefore belong to Slack DMs (§ 6)
 after the user passes challenge auth (§ 5). Auth/channel changes persist to
 `~/.pi/msg-bridge.json` (owned and rewritten by the package); `gateway pi`
 preserves them across restarts, never clobbering live grants (bug #289).
@@ -284,10 +289,12 @@ to manage trust and per-chat behavior:
 | `/disable <chatId>` | Disable the bot in a chat |
 | `/help` | Show the bridge's admin DM help |
 
-These are not Slack-native slash commands in the shipped manifest: they do not
-appear in Slack slash-command autocomplete, and some Slack clients/workspaces
-may intercept `/help` or other leading-slash text before it reaches the bot. If
-that happens, use the supported inspection/configuration fallbacks:
+These are not Slack-native slash commands in the shipped manifest: the app is
+configured for Socket Mode message events (`app_mention`, `message.channels`,
+`message.groups`, `message.im`) and has no slash-command definitions. They do
+not appear in Slack slash-command autocomplete. If a leading-slash DM is handled
+by Slack UI instead of arriving as a bot DM event, use the supported
+inspection/configuration fallbacks:
 
 ```bash
 gateway status

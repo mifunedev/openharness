@@ -17,3 +17,10 @@
   - PR opened: https://github.com/mifunedev/openharness/pull/678
 
 STATUS: COMPLETE
+
+## Root package audit addendum
+
+- [x] Audited `pi-messenger-bridge` root package README and source at installed commit `dca59db0482e97a9ef85e1a3a49da937e9b94bc5`.
+- [x] Added `.oh/tasks/slack-admin-command-surface/root-package-audit.md` with exact commands, line evidence, grounded RCA, and best approach.
+- [x] Updated `.oh/docs/integrations/slack.md` to ground the command-surface split in the root package README/source and shipped Slack manifest.
+- [x] Expanded `.oh/evals/probes/slack-admin-command-surface.sh` to require the root-package audit artifact and package-grounding text.

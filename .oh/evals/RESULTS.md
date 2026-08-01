@@ -89,7 +89,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | skill-paths | A | 2026-07-24 21:44 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
 | skills-dir-clean | A | 2026-07-24 21:44 | PASS | conversation 2026-06-29 — Pi parses every top-level `.md` in the skills |
 | skills-vendored | A | 2026-07-24 21:44 | PASS | absorb .mifune submodule into .oh — the skills/agents/hooks pack is vendored |
-| slack-admin-command-surface | A | 2026-08-01 01:50 | PASS | issue #354 — Slack bridge docs must distinguish Pi /msg-bridge commands from Slack DM admin text handlers |
+| slack-admin-command-surface | A | 2026-08-01 02:08 | PASS | issue #354 — Slack bridge docs must distinguish Pi /msg-bridge commands from Slack DM admin text handlers |
 | spec-family-contract | A | 2026-07-24 21:44 | PASS | conversation 2026-06-19 (spec-* family split, issue #265); consolidated into /spec dispatcher 2026-06-23 (one skill, args) |
 | submitted-by-trailers | A | 2026-07-24 21:44 | PASS | conversation 2026-06-12 (commit attribution trailers) |
 | sync-skill-contract | A | 2026-07-24 21:44 | PASS | issue #331 — /sync dispatcher skill (bidirectional origin↔upstream sync) |

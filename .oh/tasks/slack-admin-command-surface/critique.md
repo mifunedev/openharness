@@ -29,3 +29,21 @@ Resolution:
 - Updated `progress.txt` with completed story evidence and `STATUS: READY_FOR_PR`.
 - Planned `git add -f .oh/tasks/slack-admin-command-surface` before commit.
 - Added `git ls-files --stage .oh/evals/probes/slack-admin-command-surface.sh .oh/tasks/slack-admin-command-surface` to verification commands.
+
+## Operator critique — root package grounding
+
+Finding:
+
+- **High**: The initial PR grounded the fix mostly in installed/generated harness evidence and did not explicitly audit the root `pi-messenger-bridge` package README/source, even though the original package README is the source of the admin-command wording.
+
+Resolution:
+
+- Audited the installed package metadata and cloned the package source at the resolved commit `dca59db0482e97a9ef85e1a3a49da937e9b94bc5`.
+- Added `.oh/tasks/slack-admin-command-surface/root-package-audit.md` with root README/source evidence:
+  - README `## Commands` lists `/msg-bridge ...`.
+  - README `Admin commands (in DM with the bot)` lists `/help`, `/trusted`, `/channels`, etc.
+  - `src/index.ts` registers only `msg-bridge` as a Pi command.
+  - `src/transports/slack.ts` routes trusted DM slash text to `handleAdminCommand`.
+  - `src/auth/challenge-auth.ts` gates admin handlers on trust.
+  - `.pi/install/slack-manifest.json` has message events and no Slack-native slash-command definitions.
+- Updated docs and eval guard to cite/require this grounding.

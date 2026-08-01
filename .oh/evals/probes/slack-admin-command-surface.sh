@@ -71,7 +71,7 @@ if [ -z "$trusted_line" ] || [ -z "$heading_line" ] || [ "$trusted_line" -le "$h
 fi
 
 # Runtime pin must select the fork branch containing Slack slash handlers.
-need_literal "$ROOT/.oh/scripts/gateway.sh" "bridge slash-command handler pin" 'feat/slack-thread-replies-admin-commands'
+need_literal "$ROOT/.oh/scripts/gateway.sh" "bridge slash-command handler pin" 'c8b96e9d0fb69611c4e67ae298d1d10d83792a26'
 need_literal "$ROOT/.oh/scripts/gateway.sh" "bridge pin reconciliation marker" '.openharness-pin'
 need_literal "$ROOT/.oh/scripts/gateway.sh" "bridge pin reconciliation check" 'installed_pin" != "$FORK_PIN'
 

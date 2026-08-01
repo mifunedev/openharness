@@ -34,7 +34,7 @@ HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 # TEMPORARY fork pin — carries thread replies + Slack admin slash handlers;
 # revert once upstream merges and publishes them (see .pi/UPSTREAM.md).
-FORK_PIN="github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies-admin-commands"
+FORK_PIN="github:ryaneggz/pi-messenger-bridge#c8b96e9d0fb69611c4e67ae298d1d10d83792a26"
 
 usage() {
   echo "Usage:"

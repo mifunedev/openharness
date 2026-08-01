@@ -368,8 +368,8 @@ connection. Replies post **in a thread** anchored to the triggering channel
 message (`thread_ts`); DMs stay flat. The harness normally consumes the package
 as published, but while that thread-reply patch is unreleased it temporarily
 pins the entrypoint's `npm install` line to a fork branch
-(`github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies-admin-commands`), reverting to
-`pi-messenger-bridge@<version>` once the upstream PR lands. Source lives upstream at
+(`github:ryaneggz/pi-messenger-bridge#c8b96e9d0fb69611c4e67ae298d1d10d83792a26`), the exact fork commit containing thread replies and admin slash-command handlers; re-pin to
+`pi-messenger-bridge@<version>` once upstream publishes them. Source lives upstream at
 [tintinweb/pi-messenger-bridge](https://github.com/tintinweb/pi-messenger-bridge).
 
 For upstream lineage, the version-pin model, the quarterly review cadence, and

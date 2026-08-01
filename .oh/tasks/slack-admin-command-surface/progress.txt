@@ -33,3 +33,8 @@ STATUS: COMPLETE
 - [x] Updated integration docs to instruct existing installs to update/recreate the Slack app from the manifest.
 - [x] Updated eval guard to require manifest command declarations and handler-capable fork pin.
 - [x] Opened package PR: https://github.com/ryaneggz/pi-messenger-bridge/pull/1
+
+## Merge preparation
+
+- [x] Merged package PR https://github.com/ryaneggz/pi-messenger-bridge/pull/1 as `c8b96e9d0fb69611c4e67ae298d1d10d83792a26`.
+- [x] Replaced mutable package branch pin with exact landed commit before harness merge.

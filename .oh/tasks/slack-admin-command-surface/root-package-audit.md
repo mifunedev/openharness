@@ -161,6 +161,6 @@ The package root README documents `/trusted`, but specifically under "Admin comm
    - `.pi/msg-bridge.json` pre-seeding plus `gateway pi --restart`
 
 Implemented package branch/PR:
-`github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies-admin-commands`
-(https://github.com/ryaneggz/pi-messenger-bridge/pull/1)
-(commits `aec340e`, `86cbd50`). Clean-source package checks (`npm run clean` before test): typecheck PASS, 86 tests PASS (including trusted-DM dispatch, channel rejection, and untrusted challenge coverage), build PASS. A clean `npm install github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies-admin-commands` smoke test also produced `dist/transports/slack.js` containing `this.app.command(...)`.
+https://github.com/ryaneggz/pi-messenger-bridge/pull/1, landed as exact commit
+`c8b96e9d0fb69611c4e67ae298d1d10d83792a26` (source commits `aec340e`,
+`86cbd50`). Clean-source package checks (`npm run clean` before test): typecheck PASS, 86 tests PASS (including trusted-DM dispatch, channel rejection, and untrusted challenge coverage), build PASS. A clean `npm install github:ryaneggz/pi-messenger-bridge#feat/slack-thread-replies-admin-commands` smoke test also produced `dist/transports/slack.js` containing `this.app.command(...)`.

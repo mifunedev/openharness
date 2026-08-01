@@ -2,6 +2,7 @@
   "name": "slack-admin-command-surface",
   "issue": 354,
   "objective": "Clarify Slack bridge admin command surfaces and guard the docs contract.",
+  "pullRequest": "https://github.com/mifunedev/openharness/pull/678",
   "userStories": [
     {
       "id": "US-001",
@@ -54,8 +55,8 @@
     {
       "id": "US-004",
       "title": "Submit a reviewable PR",
-      "status": "in_progress",
-      "passes": false,
+      "status": "completed",
+      "passes": true,
       "dependencies": ["US-001", "US-002", "US-003"],
       "acceptanceCriteria": [
         "CHANGELOG.md includes an Unreleased entry.",
@@ -64,7 +65,8 @@
       ],
       "evidence": [
         "CHANGELOG.md includes an Unreleased/Fixed entry.",
-        "Pending commit, push, and PR URL."
+        "Branch bug/354-slack-admin-surface pushed to origin.",
+        "PR opened: https://github.com/mifunedev/openharness/pull/678"
       ]
     }
   ],

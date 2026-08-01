@@ -11,8 +11,9 @@
 - [x] US-003 — Guard the docs contract
   - Added executable `.oh/evals/probes/slack-admin-command-surface.sh`.
   - Verified with `bash .oh/skills/eval/run.sh --probe slack-admin-command-surface`.
-- [ ] US-004 — Submit a reviewable PR
+- [x] US-004 — Submit a reviewable PR
   - Changelog entry added.
-  - Pending commit, push, and PR URL.
+  - Branch `bug/354-slack-admin-surface` committed and pushed.
+  - PR opened: https://github.com/mifunedev/openharness/pull/678
 
-STATUS: READY_FOR_PR
+STATUS: COMPLETE

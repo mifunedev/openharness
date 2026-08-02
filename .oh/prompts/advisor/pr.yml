@@ -19,11 +19,11 @@ advisor:
       submitted changes. 
   query:
     - Begin by exploring best approach, generate /prd -> /ralph
-    - /delegate 2 adversarial critics to audit plan, prd.md, and prd.json alignment and correctness.
+    - /delegate 2 adversarial critics to audit the plan, prd.md, and prd.json for alignment and correctness
     - design subtask dependency graph from the prd.json to track task completion with assigned delegates
     - /compact session context before implementation phase
-    - Validate each delegate result against the user story acceptanceCriteria before marking passes true.
+    - Validate each delegate result against the user story acceptanceCriteria before marking passes true
     - /goal Advisor orchestrates delegated workflow to complete $TASK
-    - delegate /audit pr
+    - Delegate /audit pr
     - /retro auto-approve
     - Ready PR.

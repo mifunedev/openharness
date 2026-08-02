@@ -1,0 +1,58 @@
+# Progress — rfcs-decision-route
+
+## Codebase Patterns
+
+- `.oh/tasks/*` is gitignored except `README.md` (`.gitignore:12-13`) — this folder needs `git add -f`.
+- Base and push to `upstream` (mifunedev); `origin` (ryaneggz) is a stale fork. Merging into
+  `upstream/development` does not auto-close `Closes #N` — close manually.
+- `.claude/agents/*.md` are materialized copies synced by `.oh/scripts/link-providers.sh`, NOT
+  symlinks. Editing `.oh/agents/*.md` alone does not reach the provider-facing agent.
+- `.oh/manifest.json` vendors `evals/**` but not `docs/**`, so any probe over `.oh/docs/` must
+  `exit 2` in a downstream `oh init` checkout.
+- `.oh/crons/cleanup-tasks.md:76-77` archives a task only when `progress.txt` **ends with** a line
+  matching exactly `STATUS: COMPLETE`. A `STATUS: COMPLETE` line followed by addenda does not fire.
+
+## US-001 — 2026-08-02
+
+**Title:** Record the council verdict and correct the issue
+**Files changed:** `.oh/tasks/rfcs-decision-route/{prd.md,prd.json,council.md,prompt.md,progress.txt}`
+**Result:** council complete, verdict NO-GO, artifacts committed to draft PR
+
+### What I did
+
+Ran the First Mate council per `.oh/prompts/advisor/plan.yml`: `architect`, `pm`, `designer` in
+parallel with a shared brief preamble, then synthesis with four rulings, then two adversarial critics,
+then the approve gate.
+
+- Wave 1 produced three analyses. All three independently rejected all four source-proposal
+  mechanisms. The designer measured the cold-start path and split it into two sub-questions with very
+  different deltas (0 and 7→3), refusing to inflate the weaker one.
+- Wave 2 synthesis scored the residual 13/14 (GO) and the source proposal 2/14 (NO-GO).
+- Wave 3 critics returned **HALT** (implementer lens) and **REVISE-PRD** (maintainer lens).
+- Wave 4 rescored the residual to **8/14 with a C2 veto → NO-GO**.
+
+Every critic factual challenge was verified by the orchestrator rather than accepted on report, and
+**all of them were upheld** — including two against claims this council had itself asserted.
+
+### Learnings for future iterations
+
+- The decisive question was framing, not design. "Is this surface underspecified or unused" was
+  answerable in one command (`git log --diff-filter=A` on the ad hoc records vs. the destination),
+  and it inverted a verdict three constructive agents had converged on. Date the evidence before
+  scoring it.
+- Constructive agents cannot produce a NO-GO. `architect`, `pm`, and `designer` were each asked "what
+  should this be," so all three produced a design. Only the critics could conclude "nothing."
+- The council asserted a probe-break as "verified" after confirming the probe hard-codes a path and
+  that the cron archives — without checking whether the cron's predicate fires on that file. It does
+  not. That is `.oh/context/IDENTITY.md:8` (asserting a proxy rather than the behaviour) committed
+  inside a document that cites it.
+- `## Wiki Alignment` — the isomorphic precedent for the proposed `## Decision Record` block — is
+  present in 1 of 8 `prd.md` files despite being a mandatory pipeline step. Before adding a PRD
+  field, measure the compliance rate of the field you are copying.
+
+## Status
+
+US-001 complete. US-002 (RFC index rot) and US-003 (dangling `.claude/rules/` reference) are the
+carve-out defects and remain open on this branch.
+
+Not complete — two stories remain.

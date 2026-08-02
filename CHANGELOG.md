@@ -10,6 +10,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 ### Changed
+- Expose the supported GPT-5.6 variants in Pi's model selector ([#684](https://github.com/mifunedev/openharness/issues/684)).
 - Expand Advisor planning with a designer lens and make implementation/PR prompts explicitly finish with delegated audits and retrospectives ([#680](https://github.com/mifunedev/openharness/issues/680)).
 ### Fixed
 - Make Slack bridge admin commands discoverable and functional by declaring `/help`, `/trusted`, `/channels`, `/enable`, `/disable`, `/revoke`, and `/toggletools` in `.pi/install/slack-manifest.json`, pinning bridge-side Socket Mode command handlers, and separating Slack commands from Pi's `/msg-bridge` surface in docs ([#354](https://github.com/ryaneggz/openharness/issues/354)).

@@ -36,24 +36,24 @@ the decision is auditable without rerunning the council.
 
 **Acceptance Criteria:**
 
-- [ ] `.oh/tasks/rfcs-decision-route/prd.md` contains a `## Council Verdict` section with both
+- [x] `.oh/tasks/rfcs-decision-route/prd.md` contains a `## Council Verdict` section with both
       scorecards (source proposal and residual), each scoring C1–C7 as 0/1/2 with a total out of 14.
-- [ ] The residual scorecard shows `C2 = 0` and the verdict reads `NO-GO`.
-- [ ] `.oh/tasks/rfcs-decision-route/council.md` contains the three wave-1 analyses, four First Mate
+- [x] The residual scorecard shows `C2 = 0` and the verdict reads `NO-GO`.
+- [x] `.oh/tasks/rfcs-decision-route/council.md` contains the three wave-1 analyses, four First Mate
       rulings, both critics' findings in
       `[SEVERITY] [STORY] [FINDING] | [EVIDENCE] | [RECOMMENDATION]` format, and ends with
       `STATUS: SPEC-DENIED`.
-- [ ] A `## Rejected from the source proposal` section names all four elements with one repo fact each.
-- [ ] A `## Corrections` section records the two false claims this council made and caught.
-- [ ] No shipped artifact claims `.oh/docs/rfcs/` is four months dormant. Verified in both places:
+- [x] A `## Rejected from the source proposal` section names all four elements with one repo fact each.
+- [x] A `## Corrections` section records the false claims this council made and caught.
+- [x] No shipped artifact claims `.oh/docs/rfcs/` is four months dormant. Verified in both places:
       `gh issue view 686 --repo mifunedev/openharness --json body --jq .body | grep -ciE "four months|one ADR"` → `0`,
       and the same grep over `.oh/tasks/rfcs-decision-route/*.md` → `0` outside the `## Corrections`
       section that records the error. *(Checked: the issue body never carried the stat — it appeared
       only in council drafts, so no issue edit was required. The AC originally assumed otherwise and
       is corrected here rather than reported as satisfied on a false premise.)*
-- [ ] Issue #686 carries a comment stating the verdict and linking the PR, so a reader of the issue
+- [x] Issue #686 carries a comment stating the verdict and linking the PR, so a reader of the issue
       does not have to open the PR to learn the outcome.
-- [ ] `git ls-files .oh/tasks/rfcs-decision-route` lists all five files.
+- [x] `git ls-files .oh/tasks/rfcs-decision-route` lists all five files.
 
 ### US-002: Fix the live RFC index rot
 
@@ -62,26 +62,33 @@ human enters through, so a quarter of the corpus is not invisible.
 
 **Acceptance Criteria:**
 
-- [ ] `.oh/docs/README.md` § Reference gains a link to `rfcs/rfc-runtime-support.md`.
-- [ ] `grep -c "rfc-runtime-support" .oh/docs/README.md` returns `≥1` (returns `0` on `development`).
-- [ ] Every file matching `.oh/docs/rfcs/*.md` except `README.md` is linked from `.oh/docs/README.md`;
-      verify the set difference is empty.
-- [ ] CHANGELOG `## [Unreleased]` gains a `### Fixed` entry referencing #686.
+- [x] `.oh/docs/README.md` § Reference gains a link to `rfcs/rfc-runtime-support.md`.
+- [x] `grep -c "rfc-runtime-support" .oh/docs/README.md` returns `≥1` (returns `0` on `development`).
+      *Result: `1`.*
+- [x] Every file matching `.oh/docs/rfcs/*.md` except `README.md` is linked from `.oh/docs/README.md`;
+      verify the set difference is empty. *Result: empty across all four tracked records.*
+- [x] CHANGELOG `## [Unreleased]` gains a `### Fixed` entry referencing #686.
 
-### US-003: Fix the dangling `.claude/rules/` reference in the critic agent
+### US-003: Fix the dangling `.claude/rules/` reference in the crew agents
 
-**Description:** As an agent author, I want `critic.md` to reference only paths that exist, so its
-instructions stay internally consistent.
+**Description:** As an agent author, I want the crew agents to reference only paths that exist, so
+their instructions stay internally consistent.
 
 **Acceptance Criteria:**
 
-- [ ] `.oh/agents/critic.md:32`'s `.claude/rules/` bullet is removed or repointed to a path that
-      exists; `ls -d .claude/rules` currently fails.
-- [ ] `grep -c 'claude/rules' .oh/agents/critic.md` returns `0`.
-- [ ] `bash .oh/scripts/link-providers.sh` is run and `diff .oh/agents/critic.md .claude/agents/critic.md`
-      shows the change propagated — `.claude/agents/critic.md` is a **materialized copy, not a
-      symlink**, so editing the `.oh/` original alone does not reach the Claude-facing agent.
-- [ ] `bash .oh/skills/eval/run.sh` shows no probe transitioning green→red.
+- [x] `.oh/agents/critic.md:32`'s `.claude/rules/` bullet is removed or repointed to a path that
+      exists; `ls -d .claude/rules` currently fails. *Repointed to `.oh/context/IDENTITY.md`.*
+- [x] `grep -c 'claude/rules' .oh/agents/critic.md` returns `0`.
+- [x] `diff .oh/agents/critic.md .claude/agents/critic.md` is clean. **AC corrected:** the original
+      criterion asserted `.claude/agents/critic.md` is a materialized copy requiring a
+      `link-providers.sh` run. It is not. `.claude/agents` is tracked in git as a **directory
+      symlink** (mode `120000` → `../.oh/agents`, `link-providers.sh:44`), so the two paths share an
+      inode (`4263547`) and propagation is automatic. No sync step exists or is needed. See
+      `### Corrections` #3.
+- [x] **Scope amendment:** `.oh/agents/implementer.md:31` carries the identical dangling bullet,
+      found by the same grep. Fixed in the same way and `allowed_locations` amended to match, rather
+      than half-fixing a two-instance defect. Recorded, not silent.
+- [x] `bash .oh/skills/eval/run.sh` shows no probe transitioning green→red.
 
 ## 4. Functional Requirements
 
@@ -277,7 +284,7 @@ ADR-0001 pre-emptively deferred.
 
 ### Corrections
 
-This council made two errors and caught both. Recorded rather than quietly fixed.
+This council made three errors and caught all three. Recorded rather than quietly fixed.
 
 1. **A "verified" claim that was not verified.** The council asserted that
    `.oh/evals/probes/slack-admin-command-surface.sh` would break when the cleanup cron archived its
@@ -290,6 +297,14 @@ This council made two errors and caught both. Recorded rather than quietly fixed
    drafts. `.oh/docs/rfcs/README.md` was created 2026-07-02 and ADR-0001 on 2026-07-03 — about one
    month. The corrected framing (4 of 7 records post-date the formal option) is both accurate and a
    stronger argument, in the opposite direction.
+3. **A false claim about provider wiring, carried into an acceptance criterion.** US-003 AC3
+   originally required running `.oh/scripts/link-providers.sh` because `.claude/agents/*.md` are
+   "materialized copies, not symlinks." They are not copies. `git ls-files -s .claude` shows
+   `.claude/agents` at mode `120000` → `../.oh/agents`, and `.oh/agents/critic.md` and
+   `.claude/agents/critic.md` share inode `4263547`. The belief was carried in from a prior session's
+   notes and restated in `progress.txt` § Codebase Patterns without being checked against this repo.
+   Both are corrected. Same failure mode as #1 — a remembered proxy asserted in place of the
+   behaviour — which is the second instance in one task and the reason the pattern is worth naming.
 
 ### Re-entry bar
 

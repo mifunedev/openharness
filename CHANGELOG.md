@@ -13,6 +13,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Expose the supported GPT-5.6 variants in Pi's model selector ([#684](https://github.com/mifunedev/openharness/issues/684)).
 - Expand Advisor planning with a designer lens and make implementation/PR prompts explicitly finish with delegated audits and retrospectives ([#680](https://github.com/mifunedev/openharness/issues/680)).
 ### Fixed
+- Index `.oh/docs/rfcs/rfc-runtime-support.md` from `.oh/docs/README.md`, which had left a quarter of the RFC/ADR corpus unreachable from the index humans enter through, and repoint the dangling `.claude/rules/` context bullet in the `critic` and `implementer` agents at `.oh/context/IDENTITY.md` — that directory was removed by the B-state M4 rules collapse ([#686](https://github.com/mifunedev/openharness/issues/686)).
 - Make Slack bridge admin commands discoverable and functional by declaring `/help`, `/trusted`, `/channels`, `/enable`, `/disable`, `/revoke`, and `/toggletools` in `.pi/install/slack-manifest.json`, pinning bridge-side Socket Mode command handlers, and separating Slack commands from Pi's `/msg-bridge` surface in docs ([#354](https://github.com/ryaneggz/openharness/issues/354)).
 ### Removed
 ### Deprecated

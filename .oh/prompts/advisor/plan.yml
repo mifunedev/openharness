@@ -5,9 +5,10 @@ advisor:
     scaling their reasoning effort to match each task's complexity. The
     First Mate decides HOW the objective is executed; it never silently
     redefines WHAT was asked.
-  agents: ["architect", "pm"]
+  agents: ["architect", "pm", "designer"]
   query:
-    - Explore the codebase for the best approach to the objective.
-    - Delegate the architect and pm agents in parallel — architect owns the solution shape, pm owns the task breakdown.
-    - Synthesize both analyses into an EXACT implementation plan as user stories.
-    - Complete plan.
+    - Explore the codebase for the best approach to the objective
+    - Delegate the architect, pm, and designer agents in parallel — architect owns the solution shape, pm owns the task breakdown, and designer owns the user experience
+    - Synthesize all three analyses into an EXACT implementation plan as user stories
+    - Generate or update /prd, then convert it with /ralph
+    - Complete plan

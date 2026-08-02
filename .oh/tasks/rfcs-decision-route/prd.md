@@ -45,8 +45,14 @@ the decision is auditable without rerunning the council.
       `STATUS: SPEC-DENIED`.
 - [ ] A `## Rejected from the source proposal` section names all four elements with one repo fact each.
 - [ ] A `## Corrections` section records the two false claims this council made and caught.
-- [ ] Issue #686's body is edited so it no longer claims `.oh/docs/rfcs/` is four months dormant;
-      verify with `gh issue view 686 --json body --jq .body | grep -c "four months"` → `0`.
+- [ ] No shipped artifact claims `.oh/docs/rfcs/` is four months dormant. Verified in both places:
+      `gh issue view 686 --repo mifunedev/openharness --json body --jq .body | grep -ciE "four months|one ADR"` → `0`,
+      and the same grep over `.oh/tasks/rfcs-decision-route/*.md` → `0` outside the `## Corrections`
+      section that records the error. *(Checked: the issue body never carried the stat — it appeared
+      only in council drafts, so no issue edit was required. The AC originally assumed otherwise and
+      is corrected here rather than reported as satisfied on a false premise.)*
+- [ ] Issue #686 carries a comment stating the verdict and linking the PR, so a reader of the issue
+      does not have to open the PR to learn the outcome.
 - [ ] `git ls-files .oh/tasks/rfcs-decision-route` lists all five files.
 
 ### US-002: Fix the live RFC index rot

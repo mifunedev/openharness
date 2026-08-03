@@ -7,11 +7,14 @@ import { describe, expect, it } from "vitest";
 const ROOT = join(import.meta.dirname, "../../..");
 const SCRIPT = join(ROOT, ".oh", "scripts", "sandbox-boot-smoke.sh");
 
-function fixture(opts: { dockerExecAlwaysFails?: boolean } = {}) {
+function fixture(
+  opts: { dockerExecAlwaysFails?: boolean; runtimeExecFails?: boolean } = {},
+) {
   const dir = mkdtempSync(join(tmpdir(), "sandbox-boot-smoke-"));
   const bin = join(dir, "bin");
   mkdirSync(bin, { recursive: true });
   const composeLog = join(dir, "compose.log");
+  const dockerLog = join(dir, "docker.log");
   const execCount = join(dir, "exec-count");
 
   const compose = join(dir, "compose.sh");
@@ -36,6 +39,7 @@ exit 0
   writeFileSync(
     docker,
     `#!/usr/bin/env bash
+printf '%s\n' "$*" >> ${JSON.stringify(dockerLog)}
 case "$1" in
   exec)
     count=0
@@ -44,6 +48,10 @@ case "$1" in
     printf '%s' "$count" > ${JSON.stringify(execCount)}
     if [ "${opts.dockerExecAlwaysFails ? "1" : "0"}" = "1" ] || [ "$count" -lt 2 ]; then
       echo 'health not ready' >&2
+      exit 1
+    fi
+    if [ "${opts.runtimeExecFails ? "1" : "0"}" = "1" ] && [ "$count" -ge 3 ]; then
+      echo 'required utility unavailable' >&2
       exit 1
     fi
     echo 'sandbox healthcheck ok'
@@ -64,7 +72,7 @@ exit 2
   );
   chmodSync(docker, 0o755);
 
-  return { dir, bin, compose, composeLog };
+  return { dir, bin, compose, composeLog, dockerLog };
 }
 
 function runSmoke(fx: ReturnType<typeof fixture>, extraEnv: Record<string, string> = {}) {
@@ -95,6 +103,30 @@ describe("sandbox boot smoke", () => {
     const composeCalls = readFileSync(fx.composeLog, "utf8");
     expect(composeCalls).toContain("up -d --no-build sandbox");
     expect(composeCalls).toContain("ps -q sandbox");
+    expect(composeCalls).toContain("down -v --remove-orphans");
+    const dockerCalls = readFileSync(fx.dockerLog, "utf8");
+    expect(dockerCalls).toContain("exec -u sandbox cid-123 sh -lc");
+    expect(dockerCalls).toContain("command -v lsof");
+    expect(dockerCalls).toContain("lsof -v");
+    expect(dockerCalls).toContain("command -v htop");
+    expect(dockerCalls).toContain("htop --version");
+    expect(dockerCalls).toContain("command -v telnet");
+    expect(dockerCalls).toContain("telnet --version");
+  });
+
+  it("diagnoses a failed sandbox-user runtime assertion and tears down", () => {
+    const fx = fixture({ runtimeExecFails: true });
+
+    const result = runSmoke(fx);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "required utilities, Herdr runtime, or writable state is unavailable",
+    );
+    expect(result.stderr).toContain("--- docker compose ps");
+    expect(result.stderr).toContain("--- container health inspect (cid-123)");
+    expect(result.stderr).toContain("entrypoint log tail");
+    const composeCalls = readFileSync(fx.composeLog, "utf8");
     expect(composeCalls).toContain("down -v --remove-orphans");
   });
 

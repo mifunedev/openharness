@@ -307,6 +307,9 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 | jq | JSON processing |
 | ripgrep (`rg`) | Fast code search |
 | curl, wget | HTTP clients |
+| lsof | Inspect open files and the processes using them inside the sandbox |
+| htop | Interactive process viewer for the sandbox |
+| telnet | Plaintext network diagnostic client supplied by `inetutils-telnet`; not SSH or a secure shell |
 | nano | Text editor |
 | openssh-client | `ssh-keygen` for GitHub auth flows |
 | bash-completion | Tab completion |

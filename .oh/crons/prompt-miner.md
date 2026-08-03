@@ -39,15 +39,29 @@ This cron is **opt-in and cap-gated**:
 
 ## Steps
 
-### 1. Mine the last 24h (report-only)
+### 1. Mine a trailing 14-day corpus (report-only)
 
-Run the interactive skill in report-only mode over the 24h window — `--hours`
-avoids the midnight-UTC double-count/miss that `--since`/`--until` (YYYY-MM-DD
-day-granularity) would introduce:
+Run the interactive skill in report-only mode. `--hours` avoids the midnight-UTC
+double-count/miss that `--since`/`--until` (YYYY-MM-DD day-granularity) would
+introduce:
 
 ```bash
-/prompt-miner --hours 24 --report-only
+/prompt-miner --hours 336 --report-only
 ```
+
+**The mining window is deliberately decoupled from the run cadence.** This cron
+fires daily, but it mines a trailing 14 days, because the marker gate needs
+`sessions_supporting ≥ 10` inside a *single* session-type stratum
+(`references/markers.md`) and a 24h corpus cannot supply that. Measured on the
+live corpus 2026-08-03, largest stratum per window: 24h → 4, 168h → 6,
+**336h → 18**. A 24h window made `NO-CORPUS` arithmetically guaranteed — which is
+what the first 23 runs of this cron reported, every time, without exception
+(19 `NO-CORPUS` + 4 `NO-SESSIONS`, zero `MINING-COMPLETE`).
+
+Consecutive daily runs therefore overlap heavily and will re-observe the same
+sessions. That is intended: the report is a rolling view of a 14-day corpus, not
+a daily delta, and marker promotion is a property of the corpus rather than of
+any single day.
 
 This writes `.oh/memory/<today>/prompt-miner-<date>.md` (+ `.json`) and appends the
 mandatory `.oh/memory/<today>/log.md` entry via `render-log-entry.sh`. `--report-only`

@@ -18,6 +18,7 @@ import {
   validateWeights,
   resolveGroundTruth,
   buildWeaknessRecords,
+  withinWindow,
   DEFAULT_WEIGHTS,
   MARKER_FEATURE_KEYS,
 } from "../mine-traces.mjs";
@@ -396,4 +397,85 @@ test("weakness records serialize no raw human-prompt substring from the fixtures
     assert.ok(!serialized.includes(needle), `weakness records leaked prompt text: ${needle}`);
   }
   for (const w of data.weaknesses) assert.equal("promptText" in w, false);
+});
+
+// ---------------------------------------------------------------------------
+// #692 — window overlap semantics and sidechain exclusion
+// ---------------------------------------------------------------------------
+
+const T = (iso) => Date.parse(iso);
+const WINDOW = { start: T("2026-08-02T00:00:00Z"), end: T("2026-08-03T00:00:00Z") };
+
+test("withinWindow admits a session that STARTED before the window but was active inside it", () => {
+  // The regression this pins. Events are merged across resumed files keyed by
+  // sessionId, so a long-lived session keeps its ORIGINAL firstTs. The old
+  // implementation compared that single point against both bounds, so a session
+  // started 30h ago and worked in continuously was invisible to --hours 24 —
+  // and the daily cron runs a windowed query. Those resumed sessions are the
+  // high-signal ones.
+  const resumed = { firstTs: T("2026-07-24T17:48:00Z"), lastTs: T("2026-08-02T20:00:00Z") };
+  assert.equal(withinWindow(resumed, WINDOW), true);
+});
+
+test("withinWindow admits a session that starts inside the window and runs past its end", () => {
+  const straddlesEnd = { firstTs: T("2026-08-02T23:00:00Z"), lastTs: T("2026-08-04T01:00:00Z") };
+  assert.equal(withinWindow(straddlesEnd, WINDOW), true);
+});
+
+test("withinWindow admits a session fully contained in the window", () => {
+  const inside = { firstTs: T("2026-08-02T04:00:00Z"), lastTs: T("2026-08-02T06:00:00Z") };
+  assert.equal(withinWindow(inside, WINDOW), true);
+});
+
+test("withinWindow still excludes sessions that do not overlap at all", () => {
+  const before = { firstTs: T("2026-07-01T00:00:00Z"), lastTs: T("2026-07-02T00:00:00Z") };
+  const after = { firstTs: T("2026-08-05T00:00:00Z"), lastTs: T("2026-08-06T00:00:00Z") };
+  assert.equal(withinWindow(before, WINDOW), false);
+  assert.equal(withinWindow(after, WINDOW), false);
+});
+
+test("withinWindow admits everything when no bounds are set", () => {
+  const any = { firstTs: T("2020-01-01T00:00:00Z"), lastTs: T("2020-01-02T00:00:00Z") };
+  assert.equal(withinWindow(any, {}), true);
+});
+
+test("withinWindow rejects a session with no usable timestamps", () => {
+  assert.equal(withinWindow({ firstTs: null, lastTs: null }, WINDOW), false);
+});
+
+test("classifyLine flags Claude sidechain records so they can be excluded", () => {
+  // Sidechain records carry the PARENT's sessionId and message.role "user", so
+  // without this flag a delegate briefing is counted as a human turn and
+  // corrupts correctionDensity / turnBloat / toolErrorRate for exactly the
+  // delegating sessions worth mining.
+  const sidechain = classifyLine(
+    {
+      type: "user",
+      timestamp: "2026-08-02T12:00:00Z",
+      sessionId: "parent-session-id",
+      isSidechain: true,
+      message: { role: "user", content: "You are a subagent. Do the thing." },
+    },
+    "claude",
+  );
+  assert.equal(sidechain.isSidechain, true);
+  assert.equal(sidechain.sessionId, "parent-session-id");
+
+  const real = classifyLine(
+    {
+      type: "user",
+      timestamp: "2026-08-02T12:00:00Z",
+      sessionId: "parent-session-id",
+      message: { role: "user", content: "fix the thing" },
+    },
+    "claude",
+  );
+  assert.equal(real.isSidechain, false);
+
+  // Absent/!== true must never be treated as sidechain.
+  const weird = classifyLine(
+    { type: "user", timestamp: "2026-08-02T12:00:00Z", sessionId: "s", isSidechain: "true", message: { role: "user", content: "x" } },
+    "claude",
+  );
+  assert.equal(weird.isSidechain, false);
 });

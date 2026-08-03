@@ -1270,6 +1270,72 @@ esac
       ),
     ).toBe(true);
   });
+
+  // Orphan a linked worktree the way it happens in production: the directory
+  // survives while its .git/worktrees/<name> admin entry is gone, so `git
+  // status` fails outright instead of reporting changes (#694).
+  const orphanWorktree = (repo: string, name: string): string => {
+    const wt = path.join(repo, ".oh/worktrees", "cron", name);
+    git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
+    rmSync(path.join(repo, ".git", "worktrees", name), { recursive: true, force: true });
+    return wt;
+  };
+
+  it("reports an orphaned fallback worktree as orphaned, not dirty", () => {
+    const { repo } = initRepoWithFallbackWorktrees();
+    const orphanWt = orphanWorktree(repo, "cron-autopilot-orphan");
+
+    const state = inspectFallbackWorktree(orphanWt);
+
+    // The regression this pins: a `git status` FAILURE was being reported as
+    // dirty=true, which made the reaper preserve the directory forever and log
+    // WORKTREE_DIRTY on every fire (15 consecutive days in production).
+    expect(state.orphaned).toBe(true);
+    expect(state.dirty).toBe(false);
+    expect(state.changes).toEqual([]);
+    expect(state.reason ?? "").not.toBe("");
+  });
+
+  it("removes an orphaned fallback worktree while still preserving a dirty one", () => {
+    const { repo, dirtyWt } = initRepoWithFallbackWorktrees();
+    const orphanWt = orphanWorktree(repo, "cron-autopilot-orphan");
+    const priorCwd = process.cwd();
+    const appendSpy = vi.mocked(fsModule.appendFileSync);
+    appendSpy.mockClear();
+
+    try {
+      process.chdir(repo);
+      pruneAndCountFallbackWorktrees("autopilot");
+    } finally {
+      process.chdir(priorCwd);
+    }
+
+    // The orphan is reaped under its own outcome...
+    expect(existsSync(orphanWt)).toBe(false);
+    expect(
+      appendSpy.mock.calls.some((c) =>
+        String(c[1]).includes("\tautopilot\tWORKTREE_ORPHANED\t"),
+      ),
+    ).toBe(true);
+
+    // ...and it must NOT be reported as dirty, or the distinction is pointless.
+    expect(
+      appendSpy.mock.calls.some((c) =>
+        String(c[1]).includes("\tautopilot\tWORKTREE_DIRTY\t") &&
+        String(c[1]).includes("cron-autopilot-orphan"),
+      ),
+    ).toBe(false);
+
+    // Genuinely dirty worktrees keep the old behavior exactly.
+    expect(existsSync(dirtyWt)).toBe(true);
+    expect(readFileSync(path.join(dirtyWt, "uncommitted.txt"), "utf-8")).toBe("salvage me\n");
+    expect(
+      appendSpy.mock.calls.some((c) =>
+        String(c[1]).includes("\tautopilot\tWORKTREE_DIRTY\t") &&
+        String(c[1]).includes("?? uncommitted.txt"),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("onJobError", () => {

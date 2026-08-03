@@ -628,6 +628,48 @@ export interface FallbackWorktreeState {
   ref: string;
   changes: string[];
   reason?: string;
+  /**
+   * The directory is not a usable linked worktree at all — its git admin entry
+   * under .git/worktrees/<name> is gone, so `git status` cannot report on it.
+   * Distinct from `dirty`: dirty means "there is work to salvage", orphaned
+   * means "there is nothing here to inspect". See #694.
+   */
+  orphaned?: boolean;
+}
+
+/**
+ * Positively identify an orphaned linked worktree.
+ *
+ * A linked worktree is a directory containing a `.git` FILE of the form
+ * `gitdir: <abs-path-to-.git/worktrees/<name>>`. It is orphaned when that admin
+ * directory no longer exists — the state that made a stale cron worktree log
+ * WORKTREE_DIRTY on every fire for 15 straight days (#694).
+ *
+ * This is a structural test on purpose. Matching `git status` stderr for
+ * "fatal: not a git repository" would be locale-dependent, and — more
+ * importantly — a `git status` failure has other causes (permissions, a missing
+ * git binary, a genuinely corrupt repo). Those must NOT be read as "safe to
+ * delete", so anything this function cannot prove is an orphan keeps the old
+ * preserve-and-log-dirty behavior.
+ */
+function isOrphanedWorktree(wtPath: string): boolean {
+  const dotGit = path.join(wtPath, ".git");
+  let raw: string;
+  try {
+    const st = fs.statSync(dotGit);
+    // A real (non-linked) repository has .git as a DIRECTORY. Never treat that
+    // as an orphan — it is not a linked worktree and is not ours to remove.
+    if (!st.isFile()) return false;
+    raw = fs.readFileSync(dotGit, "utf-8");
+  } catch {
+    // No .git entry at all inside the cron worktree root: git cannot manage it,
+    // so there is no worktree here to preserve.
+    return true;
+  }
+  const match = /^gitdir:\s*(.+?)\s*$/m.exec(raw);
+  if (!match) return true;
+  const admin = path.resolve(path.dirname(dotGit), match[1]);
+  return !fs.existsSync(admin);
 }
 
 function worktreeRef(wtPath: string): string {
@@ -650,6 +692,12 @@ export function inspectFallbackWorktree(wtPath: string): FallbackWorktreeState {
   const ref = worktreeRef(wtPath);
   if (status.status !== 0) {
     const reason = (status.stderr || status.error?.message || "git status failed").trim();
+    // A status FAILURE is not evidence of uncommitted work. Only report the
+    // orphan outcome when the directory is provably not a linked worktree;
+    // every other failure keeps preserving the directory for manual salvage.
+    if (isOrphanedWorktree(wtPath)) {
+      return { dirty: false, orphaned: true, ref, changes: [], reason };
+    }
     return { dirty: true, ref, changes: [], reason };
   }
 
@@ -689,6 +737,18 @@ export function pruneAndCountFallbackWorktrees(id: string): number {
     }
 
     const state = inspectFallbackWorktree(wt);
+    if (state.orphaned) {
+      // No git admin entry, so `git worktree remove` would itself fail and
+      // `git worktree prune` cannot reach it (prune clears entries whose
+      // DIRECTORY is missing — this is the inverse). Remove the directory.
+      log(id, "WORKTREE_ORPHANED", `${wt} ref=${state.ref} reason=${(state.reason ?? "").slice(0, 160)}`);
+      try {
+        fs.rmSync(wt, { recursive: true, force: true });
+      } catch (err) {
+        log(id, "WORKTREE_ORPHAN_RM_FAILED", `${wt} ${String(err).slice(0, 160)}`);
+      }
+      continue;
+    }
     if (state.dirty) {
       log(id, "WORKTREE_DIRTY", `${wt} ref=${state.ref} changes=${formatWorktreeChanges(state)}`);
       continue;

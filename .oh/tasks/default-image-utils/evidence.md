@@ -54,11 +54,13 @@ The bounded smoke was attempted with a unique compose project, prebuilt test ima
 
 Ready PR: [#704](https://github.com/mifunedev/openharness/pull/704), targeting `development`.
 
-| Workflow / check | Result | Duration | URL |
-|---|---|---|---|
-| CI: Harness — Lint, Typecheck, Build & Test | PASS | 30s | https://github.com/mifunedev/openharness/actions/runs/30836061561/job/91761402736 |
-| CI: Harness — Boot Path Lint (shellcheck + hadolint) | PASS | 18s | https://github.com/mifunedev/openharness/actions/runs/30836061561/job/91761402724 |
-| CI: Harness — Eval Probe Regression Gate | PASS | 24s | https://github.com/mifunedev/openharness/actions/runs/30836061561/job/91761402646 |
-| CI: Sandbox Boot Guard — Validate sandbox compose and image build | PASS | 1m59s | https://github.com/mifunedev/openharness/actions/runs/30836061459/job/91761402184 |
+Current-head source of truth: [PR #704 checks](https://github.com/mifunedev/openharness/pull/704/checks). This PR-scoped link follows the current head; commit-specific job links are intentionally omitted because an evidence-only follow-up commit would make them stale.
 
-Deterministic focused PR acquisition/classification after checks completed returned `ci=PASS`, `evidenceComplete=true`, `promotable=true`, `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`, `primaryState=ready`, and `readyToMerge=true`.
+| Required workflow / check | Current-head result |
+|---|---|
+| CI: Harness — Lint, Typecheck, Build & Test | PASS |
+| CI: Harness — Boot Path Lint (shellcheck + hadolint) | PASS |
+| CI: Harness — Eval Probe Regression Gate | PASS |
+| CI: Sandbox Boot Guard — Validate sandbox compose and image build | PASS |
+
+Deterministic focused PR acquisition/classification after the current-head checks completed returned `ci=PASS`, `evidenceComplete=true`, `promotable=true`, `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`, `primaryState=ready`, and `readyToMerge=true`.

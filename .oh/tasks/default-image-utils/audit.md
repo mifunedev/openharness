@@ -40,7 +40,7 @@ No high- or medium-severity findings.
 | US-001 | Dockerfile diff + image/dpkg/command evidence | PASS |
 | US-002 | Smoke script + 3 focused Vitests + shellcheck | PASS |
 | US-003 | Installation Utilities table + changelog | PASS |
-| US-004 | Local gates pass; PR/CI and deterministic PR audit pending | PENDING |
+| US-004 | Local gates, required current-head PR CI, and deterministic PR audit complete; see `evidence.md` | PASS |
 
 ## Deterministic PR audit
 

@@ -31,6 +31,35 @@ number is reconstructable.
 | `incomplete` | `1` if there is no clean final assistant turn (stop ∉ {`end_turn`, `stop`}) and the session is not `abandoned`; a session with no assistant turn at all counts as incomplete. |
 | `turnBloat` | `clamp((assistantTurns − K) / K, 0, 1)`, `K = 40`. |
 
+### Subagent (sidechain) turns are excluded — and why
+
+Claude writes each subagent's trace to `<project-dir>/<session-id>/subagents/agent-*.jsonl`
+and marks every record `isSidechain: true`. Those records carry the **parent's**
+`sessionId`, and the engine's file walk recurses, so they merge into the parent's
+bucket unless filtered. They also carry `message.role: "user"` / `"assistant"`.
+
+**The engine excludes them from every signal above.** Left in, a delegate briefing
+is counted as a *human turn*, which:
+
+- inflates the `correctionDensity` denominator (total human prompts) **and** its
+  numerator, since briefings routinely contain `fix`, `not`, `instead`, `stop` —
+  all in the negation lexicon below;
+- inflates `turnBloat` via the subagent's assistant turns;
+- mixes the subagent's tool errors into the parent's `toolErrorRate`.
+
+This is not a marginal correction. Measured on the live corpus 2026-08-03:
+**45,167 sidechain lines against 42,679 non-sidechain** — the majority of the
+corpus by volume — concentrated in exactly the delegating sessions the miner is
+most likely to rank highly. Because delegation scales with task complexity, the
+uncorrected signal systematically penalizes the sessions worth learning from, and
+any marker mined from it would be an artifact of *how much a session delegated*
+rather than of how it was prompted.
+
+Excluded rather than scored as their own unit: a sidechain has no independently
+typed human first prompt, so it has no place in the session-type stratification
+that `markers.md` makes mandatory. The count is reported as
+`manifest.sidechainTurnsExcluded` so the exclusion stays auditable.
+
 ### Negation lexicon (correctionDensity)
 
 `no`, `wrong`, `revert`, `undo`, `actually`, `stop`, `don't`, `instead`,

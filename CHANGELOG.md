@@ -10,7 +10,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 ### Changed
-- Release every push to `main` or `master` only after validation, using retry-safe UTC CalVer reservations, immutable CalVer/`sha-<full-SHA>` GHCR tags, canonical-branch digest promotion for `latest`, gated CLI publication, and post-image GitHub Release finalization ([#689](https://github.com/mifunedev/openharness/issues/689)).
+- Set the default Pi driver to `openai-codex/gpt-5.6-luna` with `max` reasoning while retaining Sol, Terra, and Luna in the model selector ([#700](https://github.com/mifunedev/openharness/issues/700)).
+- Release every push to `main` or `master` only after validation, using retry-safe UTC CalVer reservations, immutable CalVer/`sha-<full-SHA>` GHCR tags, canonical-branch digest promotion for `latest`, gated CLI publication, and post-image GitHub Release finalization ([#689](https://github.com/ryaneggz/openharness/issues/689)).
 - Expose the supported GPT-5.6 variants in Pi's model selector ([#684](https://github.com/mifunedev/openharness/issues/684)).
 - Expand Advisor planning with a designer lens and make implementation/PR prompts explicitly finish with delegated audits and retrospectives ([#680](https://github.com/mifunedev/openharness/issues/680)).
 ### Fixed

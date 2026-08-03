@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "project": "OpenHarness",
+  "branchName": "feat/703-default-image-utils",
+  "description": "Equip the default Debian Bookworm sandbox image with lsof, htop, and the inetutils-telnet diagnostic client.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install diagnostic utilities in the default image",
+      "description": "As an OpenHarness user, I want common diagnostics baked into the default image so that I can inspect processes and test plaintext network endpoints without runtime package installation.",
+      "acceptanceCriteria": [
+        ".devcontainer/Dockerfile adds lsof, htop, and inetutils-telnet to the existing first system-package apt install layer",
+        "The layer preserves debian:bookworm-slim, --no-install-recommends, one update/install operation, and apt-list cleanup",
+        "The transitional telnet package is not installed; inetutils-telnet is installed and provides /usr/bin/telnet",
+        "A build-time guard resolves lsof, htop, and telnet",
+        "Existing users, ports, entrypoint, and unrelated image behavior remain unchanged",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Validated by successful image build 464320d309be and sandbox-user dpkg/command/version evidence in evidence.md."
+    },
+    {
+      "id": "US-002",
+      "title": "Verify utilities during sandbox boot smoke",
+      "description": "As an OpenHarness maintainer, I want runtime assertions as the sandbox user so that a successful image build cannot hide unusable diagnostic commands.",
+      "acceptanceCriteria": [
+        "The successful boot path runs command resolution and successful version invocations for lsof, htop, and telnet through docker exec -u sandbox",
+        "Existing healthcheck, Herdr version, writable state, timeout diagnostics, and EXIT teardown behavior remain covered",
+        "Vitest proves all utility commands are wired into the runtime assertion",
+        "Vitest proves runtime assertion failure emits diagnostics and still tears down",
+        "Focused Vitest and shell syntax checks pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Focused Vitest passed 3/3; CI-equivalent shellcheck passed; runtime-failure diagnostics and teardown are covered."
+    },
+    {
+      "id": "US-003",
+      "title": "Document the image utility contract",
+      "description": "As an OpenHarness user, I want the bundled diagnostics documented accurately so that I understand their purpose and security limitations.",
+      "acceptanceCriteria": [
+        ".oh/docs/installation.md lists lsof, htop, and telnet in the canonical Utilities table",
+        "Documentation states that telnet is a plaintext diagnostic client supplied by inetutils-telnet, not a secure shell",
+        "CHANGELOG.md adds an Unreleased/Added entry linked to issue #703",
+        "No documentation claims host-process visibility or new multi-architecture support",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Canonical Utilities table and Unreleased/Added changelog entry updated with required security wording and issue link."
+    },
+    {
+      "id": "US-004",
+      "title": "Validate and deliver a ready PR",
+      "description": "As an OpenHarness maintainer, I want reproducible local and CI evidence so that the default image change is safe to review.",
+      "acceptanceCriteria": [
+        "Focused Vitest, bash -n, shellcheck, and hadolint pass",
+        "Docker build and sandbox-user dpkg-query, command resolution, and version checks pass for all requested utilities",
+        "Full sandbox boot smoke passes where feasible or a concrete blocker is recorded",
+        "Frozen install and actual repository lint, format, typecheck, build, tests, scripts, security, pin, compose, and eval gates are run",
+        "Adversarial implementation audit and deterministic PR audit report PASS or PROMOTABLE",
+        "The commit is pushed and required CI including Harness and Sandbox Boot Guard passes on a ready PR targeting development",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Depends on US-001 through US-003."
+    }
+  ]
+}

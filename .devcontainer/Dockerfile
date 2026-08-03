@@ -9,7 +9,10 @@ ENV TZ=America/Denver
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client openssh-server build-essential ca-certificates curl wget sudo gosu git jq gnupg \
     lsb-release nano ripgrep tmux unzip bash-completion procps less \
-    iproute2 zsh cron \
+    iproute2 zsh cron lsof htop inetutils-telnet \
+ && command -v lsof >/dev/null \
+ && command -v htop >/dev/null \
+ && command -v telnet >/dev/null \
  && rm -rf /var/lib/apt/lists/*
 
 # ─── Node.js 22.x ──────────────────────────────────────────────────

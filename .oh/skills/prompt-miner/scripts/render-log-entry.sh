@@ -54,7 +54,13 @@ DAY="$(date -u +%Y-%m-%d)"
 #   AUTOPILOT_LOG_ROOT  ->  CRON_WORKTREE main-worktree mapping  ->  toplevel
 # This mirrors .oh/crons/prompt-miner.md:102 and the standing convention
 # documented at .oh/crons/README.md:120.
-ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1{sub(/^worktree /,"");print;exit}')}"
+# The `|| true` and the `$1 == "worktree"` guard are both load-bearing under
+# `set -euo pipefail` (above): if CRON_WORKTREE points at something that is not
+# a git repo — precisely what a reaped worktree looks like — `git` exits
+# non-zero, `pipefail` propagates that out of the command substitution, and `-e`
+# would abort the script HERE instead of falling through to the fallback below.
+# Same idiom as .oh/skills/autopilot/autopilot-caps.sh:109.
+ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 # Resolve the memory dir through the shared resolver (honors paths.memory /
 # MEMORY_DIR); fall back to the .oh/memory default if oh-path is unavailable.

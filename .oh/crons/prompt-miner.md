@@ -99,7 +99,7 @@ root checkout). Mirror the autopilot convention: honor `$AUTOPILOT_LOG_ROOT` if
 set, else map `$CRON_WORKTREE` back to its shared root, else the current toplevel.
 
 ```bash
-ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1{sub(/^worktree /,"");print;exit}')}"
+ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
   | "$ROOT/.oh/scripts/locked-append.sh" "$ROOT/.oh/crons/.cron.log"

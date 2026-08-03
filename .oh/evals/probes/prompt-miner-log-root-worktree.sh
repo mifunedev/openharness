@@ -121,6 +121,27 @@ if [ ! -f "$OVERRIDE/.oh/memory/$DAY/log.md" ]; then
   exit 1
 fi
 
+# --- a bad CRON_WORKTREE must DEGRADE, not abort (#693 adversarial review) ---
+# The helper runs under `set -euo pipefail`. Without `|| true` inside the
+# command substitution, a CRON_WORKTREE pointing at a non-repo makes git exit
+# non-zero, pipefail propagates it, and -e kills the script before the fallback
+# line can run. A reaped worktree is exactly that condition, so this must not be
+# fatal. This is a regression guard: pre-fix the variable was never consulted,
+# so a stray value was harmless — the fix must not make it lethal.
+NOTREPO="$TMP/notarepo"
+mkdir -p "$NOTREPO"
+out3="$(cd "$WT" && env -u AUTOPILOT_LOG_ROOT CRON_WORKTREE="$NOTREPO" \
+  bash "$HELPER" --result DRY-RUN --sessions-scanned 0 --markers-found 0 2>&1)"
+rc3=$?
+if [ $rc3 -ne 0 ]; then
+  echo "REGRESSION: helper exited $rc3 with CRON_WORKTREE set to a non-repo path." >&2
+  echo "  Under 'set -euo pipefail' the worktree-list command substitution must end" >&2
+  echo "  in '|| true' so resolution falls through instead of aborting the script." >&2
+  echo "$out3" | head -10 >&2
+  exit 1
+fi
+
 echo "PASS: helper resolved the main worktree root from inside a linked worktree,"
-echo "      and AUTOPILOT_LOG_ROOT still takes precedence"
+echo "      AUTOPILOT_LOG_ROOT still takes precedence, and a bad CRON_WORKTREE"
+echo "      degrades instead of aborting"
 exit 0

@@ -662,13 +662,20 @@ function isOrphanedWorktree(wtPath: string): boolean {
     if (!st.isFile()) return false;
     raw = fs.readFileSync(dotGit, "utf-8");
   } catch {
-    // No .git entry at all inside the cron worktree root: git cannot manage it,
-    // so there is no worktree here to preserve.
-    return true;
+    // FAIL CLOSED. Reaching here means .git is absent, unreadable, or errored —
+    // and an I/O failure reading the pointer is not evidence that the pointer
+    // says what we hope. A `.git` file we cannot read (permissions, an
+    // interrupted write) belongs to a worktree that may hold real uncommitted
+    // work, and this function's caller DELETES what it returns true for. So
+    // only a pointer we successfully read and resolve can authorize removal.
+    return false;
   }
+  // Likewise: a present-but-unparseable .git file is a corruption signal, not
+  // an orphan signal. Preserve it and let it surface as WORKTREE_DIRTY.
   const match = /^gitdir:\s*(.+?)\s*$/m.exec(raw);
-  if (!match) return true;
+  if (!match) return false;
   const admin = path.resolve(path.dirname(dotGit), match[1]);
+  // The one provable case: we read the pointer, and its target is gone.
   return !fs.existsSync(admin);
 }
 

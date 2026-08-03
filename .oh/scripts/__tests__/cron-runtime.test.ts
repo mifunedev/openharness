@@ -1271,15 +1271,6 @@ esac
     ).toBe(true);
   });
 
-  // Orphan a linked worktree the way it happens in production: the directory
-  // survives while its .git/worktrees/<name> admin entry is gone, so `git
-  // status` fails outright instead of reporting changes (#694).
-  const orphanWorktree = (repo: string, name: string): string => {
-    const wt = path.join(repo, ".oh/worktrees", "cron", name);
-    git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
-    rmSync(path.join(repo, ".git", "worktrees", name), { recursive: true, force: true });
-    return wt;
-  };
 
   it("reports an orphaned fallback worktree as orphaned, not dirty", () => {
     const { repo } = initRepoWithFallbackWorktrees();
@@ -1294,6 +1285,61 @@ esac
     expect(state.dirty).toBe(false);
     expect(state.changes).toEqual([]);
     expect(state.reason ?? "").not.toBe("");
+  });
+
+  // Orphan a linked worktree the way it happens in production: the directory
+  // survives while its .git/worktrees/<name> admin entry is gone, so `git
+  // status` fails outright instead of reporting changes (#694).
+  const orphanWorktree = (repo: string, name: string): string => {
+    const wt = path.join(repo, ".oh/worktrees", "cron", name);
+    git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
+    rmSync(path.join(repo, ".git", "worktrees", name), { recursive: true, force: true });
+    return wt;
+  };
+
+  it("does NOT classify a worktree as orphaned when its .git file is unreadable", () => {
+    // Fail-closed guard. An I/O failure reading the .git pointer is not evidence
+    // that the worktree is disposable — and the caller DELETES what is reported
+    // orphaned. A permissions error must preserve, not remove.
+    const { repo } = initRepoWithFallbackWorktrees();
+    const wt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-unreadable");
+    git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
+    const dotGit = path.join(wt, ".git");
+    chmodSync(dotGit, 0o000);
+    try {
+      const state = inspectFallbackWorktree(wt);
+      expect(state.orphaned ?? false).toBe(false);
+    } finally {
+      chmodSync(dotGit, 0o644);
+    }
+  });
+
+  it("does NOT classify a worktree as orphaned when its .git file is corrupt", () => {
+    // A present-but-unparseable .git file (e.g. an interrupted write) is a
+    // corruption signal, not an orphan signal.
+    const { repo } = initRepoWithFallbackWorktrees();
+    const wt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-corrupt");
+    git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
+    writeFileSync(path.join(wt, ".git"), "this is not a gitdir pointer\n");
+
+    const state = inspectFallbackWorktree(wt);
+
+    expect(state.orphaned ?? false).toBe(false);
+  });
+
+  it("does not count an orphaned worktree toward the live count", () => {
+    const { repo } = initRepoWithFallbackWorktrees();
+    orphanWorktree(repo, "cron-autopilot-orphan-count");
+    const priorCwd = process.cwd();
+    let live: number;
+    try {
+      process.chdir(repo);
+      live = pruneAndCountFallbackWorktrees("autopilot");
+    } finally {
+      process.chdir(priorCwd);
+    }
+    // Only in-use worktrees count; an orphan is reaped, never counted.
+    expect(live).toBe(0);
   });
 
   it("removes an orphaned fallback worktree while still preserving a dirty one", () => {

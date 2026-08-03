@@ -5,6 +5,21 @@
 // The `git` binary is the single allowed external (ground-truth cross-ref), gated
 // behind --no-git. See references/scoring.md, references/markers.md,
 // references/report-schema.md for the contracts this engine implements.
+//
+// CLI-entrypoint detection is a BASENAME match on process.argv[1], NOT
+// `import.meta.url === pathToFileURL(argv[1])` — node resolves the symlink for
+// import.meta.url but not for argv[1], so the latter silently no-ops when the
+// script is invoked through the .claude/skills dir-symlink that SKILL.md Step 1
+// and the daily cron both prescribe (issue #663;
+// prompt-miner-engine-symlink-guard-bug). Same form as
+// rlm/scripts/query-context.mjs and weigh/scripts/score-trajectories.mjs.
+//
+// Known blast radius of the basename form, shared with both siblings: it trusts
+// the basename of argv[1] globally rather than file identity, so a DIFFERENT file
+// that happens to be named mine-traces.mjs and imports this module would run
+// main(). Nothing in this repo is so named. A realpath comparison would be both
+// symlink- and collision-safe, but adopting it here alone would leave three
+// sibling engines with three different guards; change all three together or none.
 
 import fs from "node:fs";
 import readline from "node:readline";
@@ -12,7 +27,6 @@ import path from "node:path";
 import os from "node:os";
 import process from "node:process";
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
 
 // ---------------------------------------------------------------------------
 // Constants & contracts
@@ -194,12 +208,17 @@ export function classifyLine(line, harness) {
     isHuman: false,
     sessionId: null,
     gitBranch: null,
+    // Claude marks subagent (delegate) traces with isSidechain: true. Those
+    // records carry the PARENT's sessionId, so they merge into the parent's
+    // bucket unless they are filtered out. See the exclusion in readTraceFile.
+    isSidechain: false,
   };
   if (!isPlainObject(line)) return base;
 
   if (harness === "claude") {
     base.ts = typeof line.timestamp === "string" ? line.timestamp : null;
     base.sessionId = typeof line.sessionId === "string" ? line.sessionId : null;
+    base.isSidechain = line.isSidechain === true;
     base.gitBranch = typeof line.gitBranch === "string" ? line.gitBranch : null;
     const msg = isPlainObject(line.message) ? line.message : null;
 
@@ -891,6 +910,18 @@ async function readFileEvents(file, harness, store, counters) {
       piSessionId = ev.sessionId;
     }
     if (ev.kind === "other" && !ev.sessionId) continue;
+    // Exclude subagent (sidechain) turns from the parent session's feature
+    // vector. `listFiles` recurses, so <session-id>/subagents/agent-*.jsonl is
+    // already ingested, and every line there carries the PARENT's sessionId
+    // with message.role "user"/"assistant". Left in, a delegate briefing is
+    // counted as a HUMAN turn, which inflates the human-prompt denominator and
+    // corrupts turnBloat / correctionDensity / toolErrorRate for exactly the
+    // delegating sessions most worth mining (#692). Measured on the live
+    // corpus: 45,167 sidechain lines vs 42,679 non-sidechain — the majority.
+    if (ev.isSidechain) {
+      counters.sidechainTurnsExcluded += 1;
+      continue;
+    }
     events.push(ev);
   }
 
@@ -912,12 +943,24 @@ async function readFileEvents(file, harness, store, counters) {
   }
 }
 
-function withinWindow(agg, window) {
+// A session is in-window when its ACTIVITY SPAN OVERLAPS the window — not when
+// it happens to START inside it.
+//
+// The old form compared a single point (`agg.firstTs || agg.lastTs`) against
+// both bounds. Because events are merged across resumed files keyed by
+// sessionId, a long-lived session keeps its ORIGINAL firstTs, so a session
+// started 30h ago and worked in continuously ever since was invisible to
+// `--hours 24` — and the daily cron runs `--hours 24`. Those resumed sessions
+// are the high-signal ones (#692).
+export function withinWindow(agg, window) {
   if (!window.start && !window.end) return true;
-  const ref = agg.firstTs || agg.lastTs;
-  if (!ref) return false;
-  if (window.start && ref < window.start) return false;
-  if (window.end && ref > window.end) return false;
+  const start = agg.firstTs || agg.lastTs;
+  const end = agg.lastTs || agg.firstTs;
+  if (!start || !end) return false;
+  // Overlap test: the session ended before the window opened, or began after
+  // it closed → out. Anything else intersects.
+  if (window.start && end < window.start) return false;
+  if (window.end && start > window.end) return false;
   return true;
 }
 
@@ -925,7 +968,7 @@ async function run(args) {
   const generatedAt = args.now ? new Date(args.now).toISOString() : new Date().toISOString();
   const utcDate = generatedAt.slice(0, 10);
   const window = resolveWindow(args, generatedAt);
-  const counters = { malformedLines: 0, skippedFiles: 0 };
+  const counters = { malformedLines: 0, skippedFiles: 0, sidechainTurnsExcluded: 0 };
   const store = new Map();
 
   const files = enumerateFiles(args);
@@ -1010,6 +1053,7 @@ async function run(args) {
     toolErrorsTotal,
     toolResultsTotal,
     malformedLines: counters.malformedLines,
+    sidechainTurnsExcluded: counters.sidechainTurnsExcluded,
     skippedFiles: counters.skippedFiles,
     weights: args.weights,
     scoreModel: SCORE_MODEL,
@@ -1047,6 +1091,7 @@ function renderMarkdown(dataset, top) {
   lines.push(`- sessionsScanned: ${manifest.sessionsScanned}`);
   lines.push(`- sessionsRanked: ${manifest.sessionsRanked}`);
   lines.push(`- malformedLines: ${manifest.malformedLines}`);
+  lines.push(`- sidechainTurnsExcluded: ${manifest.sidechainTurnsExcluded ?? 0}`);
   lines.push(`- skippedFiles: ${manifest.skippedFiles}`);
   lines.push(`- scoreModel: ${manifest.scoreModel}`);
   lines.push("");
@@ -1137,6 +1182,7 @@ async function main() {
   );
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+// Basename-match entrypoint detection (symlink-safe; see header note).
+if (path.basename(process.argv[1] || "") === "mine-traces.mjs") {
   main();
 }

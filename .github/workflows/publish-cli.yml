@@ -2,18 +2,27 @@ name: Publish CLI to npm
 
 # Publishes the standalone `oh` CLI (`.oh/cli`) to npm as @mifune/openharness.
 #
-# The CLI's semver is independent of the repo's CalVer release tags, so this is
-# its own workflow rather than a job chained onto Release:
-#   - workflow_dispatch lets a CLI-only change (README, patch bump) publish
-#     WITHOUT cutting a CalVer release.
-#   - the CalVer tag trigger preserves auto-publish on every release.
-# The version guard makes a run a clean no-op when the CLI version is already
-# on the registry, so running on every release tag is safe and idempotent.
+# The CLI's semver is independent of the repo's CalVer release tags. This
+# reusable workflow is called by release.yml after image publication, and can
+# also be dispatched for a CLI-only change. Both callers must identify the exact
+# commit to publish; the version guard makes an existing version a successful
+# no-op.
 on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact commit or ref containing the CLI package to publish
+        required: true
+        type: string
+    secrets:
+      NPM_TOKEN:
+        required: true
   workflow_dispatch:
-  push:
-    tags:
-      - "[0-9][0-9][0-9][0-9].[0-9]*.[0-9]*"
+    inputs:
+      ref:
+        description: Exact commit or ref containing the CLI package to publish
+        required: true
+        type: string
 
 jobs:
   publish-npm:
@@ -23,9 +32,10 @@ jobs:
       contents: read
       id-token: write # provenance attestation
     steps:
-      - name: Checkout
+      - name: Checkout the requested commit
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.ref }}
           submodules: recursive
 
       - name: Setup Node 22.x

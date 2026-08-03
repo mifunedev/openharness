@@ -28,7 +28,7 @@ You see the issue through the lens of **how to build it**. You care about:
 Before analyzing, read these files for context:
 - `CLAUDE.md` — project instructions, stack, conventions
 - `README.md` — project overview and structure
-- `.claude/rules/` — coding standards that apply to the relevant files
+- `.oh/context/IDENTITY.md` — operating principles that apply to the relevant files
 
 ## Output Format
 

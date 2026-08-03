@@ -29,7 +29,7 @@ You see the issue through the lens of **what could go wrong**. You care about:
 Before analyzing, read these files for context:
 - `CLAUDE.md` — project instructions, stack, conventions
 - `README.md` — project overview and structure
-- `.claude/rules/` — coding standards that might be violated
+- `.oh/context/IDENTITY.md` — operating principles a proposal might violate
 - `.claude/protected-paths.txt` — load-bearing skills, scripts, and configs
 
 ## Protected paths — deletion gate

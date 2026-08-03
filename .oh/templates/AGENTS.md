@@ -54,7 +54,7 @@ Skills are loaded from `.oh/skills/` via each provider's `skills` symlink, so
 | `/eval` | run the probe suite, write `.oh/evals/RESULTS.md` |
 | `/git` | issues, branches, commits, PR titles/bodies, releases |
 | `/ci-status` | after a push — poll CI, report pass/fail |
-| `/release` | CalVer release — branch, tag, push, image |
+| `/release` | CalVer release — push to `main`/`master`; the workflow validates, reserves the CalVer, and publishes |
 | `/health-check` | triage host memory/disk/Docker before a heavy build |
 | `/agent-browser` | open a URL headless for screenshots / preview checks |
 | `/cloudflared` | expose a sandbox port via a public tunnel |

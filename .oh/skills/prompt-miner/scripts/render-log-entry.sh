@@ -2,7 +2,8 @@
 # render-log-entry.sh — append the mandatory prompt-miner memory-log entry.
 #
 # Mirrors the autopilot/caps logging shape: it resolves the shared harness root
-# (git rev-parse --show-toplevel) and appends a single Memory-Improvement-Protocol
+# (the MAIN worktree, even when invoked from a linked one) and appends a single
+# Memory-Improvement-Protocol
 # record to .oh/memory/<UTC-date>/log.md through the repo-root .oh/scripts/locked-append.sh
 # helper so the whole multi-line record is serialized under flock. Diagnostics go
 # to stderr; the helper never edits .oh/memory/MEMORY.md or .oh/context/IDENTITY.md.
@@ -41,10 +42,26 @@ fi
 TIME="${TIME:-$(date -u +%H:%M)}"
 DAY="$(date -u +%Y-%m-%d)"
 
-# Resolve the shared harness root. Under a worktree this still resolves to the
-# current toplevel; the cron path may export AUTOPILOT_LOG_ROOT to redirect the
-# write to the shared root checkout (matching the autopilot convention).
-ROOT="${AUTOPILOT_LOG_ROOT:-$(git rev-parse --show-toplevel)}"
+# Resolve the SHARED harness root — never the ephemeral worktree.
+#
+# `git rev-parse --show-toplevel` returns the *linked worktree* when this runs
+# under `worktree: true` (which .oh/crons/prompt-miner.md declares), so using it
+# alone wrote the daily log into .oh/worktrees/cron/<session>/ and lost it when
+# the runtime reaped the worktree (#693; fired 07-10, 07-14, 07-19). Callers are
+# not required to export anything: `git worktree list --porcelain` prints the
+# MAIN worktree first, so NR==1 is the shared root from inside any linked
+# worktree. Precedence is preserved for callers that do set the variable:
+#   AUTOPILOT_LOG_ROOT  ->  CRON_WORKTREE main-worktree mapping  ->  toplevel
+# This mirrors .oh/crons/prompt-miner.md:102 and the standing convention
+# documented at .oh/crons/README.md:120.
+# The `|| true` and the `$1 == "worktree"` guard are both load-bearing under
+# `set -euo pipefail` (above): if CRON_WORKTREE points at something that is not
+# a git repo — precisely what a reaped worktree looks like — `git` exits
+# non-zero, `pipefail` propagates that out of the command substitution, and `-e`
+# would abort the script HERE instead of falling through to the fallback below.
+# Same idiom as .oh/skills/autopilot/autopilot-caps.sh:109.
+ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
+ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 # Resolve the memory dir through the shared resolver (honors paths.memory /
 # MEMORY_DIR); fall back to the .oh/memory default if oh-path is unavailable.
 MEM_DIR="$(sh "$ROOT/.oh/scripts/oh-path" memory 2>/dev/null || printf '%s' "$ROOT/.oh/memory")"

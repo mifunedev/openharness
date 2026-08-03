@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/686-rfcs-decision-route",
+  "description": "Council assessment of an externally-proposed ADR/RFC pipeline for .oh/docs/rfcs/. Verdict: NO-GO on the machinery (source proposal 2/14 with two vetoes; residual design 8/14 with a C2 veto after adversarial review). Decisive finding: 4 of 7 hand-rolled decision records were authored 16-28 days AFTER the formal .oh/docs/rfcs/ destination already existed, so the surface is routed around rather than underspecified. Ships the two orthogonal defects the council found and an explicit re-entry bar.",
+  "artifact_contract": {
+    "required_artifacts": [
+      ".oh/tasks/rfcs-decision-route/prd.md",
+      ".oh/tasks/rfcs-decision-route/prd.json",
+      ".oh/tasks/rfcs-decision-route/council.md",
+      ".oh/tasks/rfcs-decision-route/prompt.md",
+      ".oh/tasks/rfcs-decision-route/progress.txt"
+    ],
+    "allowed_locations": [
+      ".oh/tasks/rfcs-decision-route/",
+      ".oh/docs/README.md",
+      ".oh/agents/critic.md",
+      ".oh/agents/implementer.md",
+      "CHANGELOG.md"
+    ],
+    "allowed_locations_amendment": "Added .oh/agents/implementer.md after discovering it carries the identical dangling .claude/rules/ bullet at :31 (same grep, same one-line fix, same zero risk); half-fixing a two-instance defect would guarantee a duplicate follow-up. Removed .claude/agents/critic.md: it is not a separate file — .claude/agents is tracked at mode 120000 as a directory symlink to ../.oh/agents, so it shares an inode with the .oh/ original.",
+    "forbidden_destructive_edits": [
+      "AGENTS.md",
+      ".oh/context/",
+      ".oh/memory/",
+      ".oh/skills/prd/SKILL.md",
+      ".oh/skills/wiki/references/schema.md",
+      ".oh/skills/retro/references/memory-protocol.md",
+      ".oh/docs/rfcs/adr-0001-standards-scope.md"
+    ],
+    "verification_commands": [
+      "git diff upstream/development...HEAD --stat -- AGENTS.md .oh/context/ .oh/memory/",
+      "grep -c 'rfc-runtime-support' .oh/docs/README.md",
+      "grep -c 'claude/rules' .oh/agents/critic.md .oh/agents/implementer.md",
+      "git ls-files -s .claude | grep '120000 .* .claude/agents$'",
+      "bash .oh/skills/eval/run.sh"
+    ],
+    "acceptance_criteria": [
+      "Both scorecards present with C1-C7 scored 0/1/2 and a total out of 14",
+      "Residual scorecard shows C2 = 0 and the verdict reads NO-GO",
+      "Always-loaded diff is empty",
+      "Zero new executables, zero new skills, zero new CI jobs"
+    ],
+    "rollback_conditions": [
+      "Any green->red probe regression in .oh/evals/RESULTS.md beyond the two already red on development",
+      "Any change to a file in the always-loaded set",
+      "Any SKILL.md or agent description: frontmatter change"
+    ],
+    "final_handoff_requirements": [
+      "bash .oh/skills/eval/run.sh green with no new regression",
+      "CI green via /ci-status",
+      "PR marked ready only after /audit implementation PASSes"
+    ]
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Record the council verdict and correct the issue",
+      "description": "As the operator, I want the go/no-go assessment committed alongside its evidence so the decision is auditable without rerunning the council.",
+      "acceptanceCriteria": [
+        "prd.md contains a ## Council Verdict section with both scorecards, each scoring C1-C7 as 0/1/2 with a total out of 14",
+        "The residual scorecard shows C2 = 0 and the verdict reads NO-GO",
+        "council.md contains the three wave-1 analyses, four First Mate rulings, both critics' findings in [SEVERITY] [STORY] [FINDING] | [EVIDENCE] | [RECOMMENDATION] format, and ends with STATUS: SPEC-DENIED",
+        "A ## Rejected from the source proposal section names all four elements with one repo fact each",
+        "A ## Corrections section records the two false claims this council made and caught",
+        "Issue #686 body no longer claims four months dormancy: gh issue view 686 --json body --jq .body | grep -c 'four months' returns 0",
+        "git ls-files .oh/tasks/rfcs-decision-route lists all five files"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "The issue-body AC was corrected mid-build: gh issue view 686 showed the body never carried the 'four months' stat, so no issue edit was required."
+    },
+    {
+      "id": "US-002",
+      "title": "Fix the live RFC index rot",
+      "description": "As a maintainer, I want every file in .oh/docs/rfcs/ reachable from the index a human enters through, so a quarter of the corpus is not invisible.",
+      "acceptanceCriteria": [
+        ".oh/docs/README.md section Reference gains a link to rfcs/rfc-runtime-support.md",
+        "grep -c 'rfc-runtime-support' .oh/docs/README.md returns 1 or more (returns 0 on development)",
+        "Every file matching .oh/docs/rfcs/*.md except README.md is linked from .oh/docs/README.md; the set difference is empty",
+        "CHANGELOG ## [Unreleased] gains a ### Fixed entry referencing #686"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "rfc-runtime-support.md was the only unlinked record; the set difference over .oh/docs/rfcs/*.md minus README.md is now empty."
+    },
+    {
+      "id": "US-003",
+      "title": "Fix the dangling .claude/rules/ reference in the crew agents",
+      "description": "As an agent author, I want the crew agents to reference only paths that exist, so their instructions stay internally consistent.",
+      "acceptanceCriteria": [
+        ".oh/agents/critic.md line 32 .claude/rules/ bullet is removed or repointed to a path that exists (repointed to .oh/context/IDENTITY.md)",
+        "grep -c 'claude/rules' .oh/agents/critic.md returns 0",
+        "CORRECTED AC: diff .oh/agents/critic.md .claude/agents/critic.md is clean with no link-providers.sh run, because .claude/agents is tracked at mode 120000 as a directory symlink to ../.oh/agents (link-providers.sh:44) and the two paths share inode 4263547. The original AC asserted a materialized copy requiring a sync step; that was false and is recorded in prd.md Corrections #3.",
+        "SCOPE AMENDMENT: .oh/agents/implementer.md line 31 carries the identical dangling bullet and is fixed the same way; grep -c 'claude/rules' .oh/agents/implementer.md returns 0",
+        "bash .oh/skills/eval/run.sh shows no probe transitioning green to red"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Out of scope, reported not fixed: .oh/docs/harnesses/deepagents.md:113 references .claude/rules/sandbox-processes.md (moved to .oh/skills/t3/references/) and .oh/docs/roadmap.md:17 describes .claude/rules as auto-loading. Both are docs prose on a different surface. .oh/skills/builder/references/rule.md deliberately documents .claude/rules/<name>.md as a Claude-specific exception and is asserted by .oh/evals/probes/builder-skill-consolidation.sh:85 — it must NOT be changed."
+    }
+  ]
+}

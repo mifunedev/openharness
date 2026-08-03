@@ -24,10 +24,13 @@ auto-merged.
 
 This cron is **opt-in and cap-gated**:
 
-- **Kill-switch**: this cron ships `enabled: false`. It does not fire until an
-  operator flips it to `enabled: true` and reloads the runtime (`SIGHUP` —
-  `kill -HUP "$(cat .oh/crons/.pid)"` from inside the container). Disabling again is a
-  one-line edit + reload; never delete the file (preserves history).
+- **Kill-switch**: this cron is currently `enabled: true` in the frontmatter above
+  and fires daily. To stop it, flip that line to `enabled: false` and reload the
+  runtime (`SIGHUP` — `kill -HUP "$(cat .oh/crons/.pid)"` from inside the
+  container); re-enabling is the same one-line edit + reload. Never delete the
+  file (preserves history). The frontmatter `enabled:` value is the single source
+  of truth — this paragraph previously claimed the cron shipped disabled while the
+  tracked file said otherwise (issue #663 review).
 - **Caps**: the `preflight: .oh/skills/prompt-miner/prompt-miner-caps.sh` gate
   runs **before** any worktree/tmux/agent and counts open PRs labeled
   `prompt-miner` on `mifunedev/openharness`. On a capped day it logs `SKIPPED-CAP-*`

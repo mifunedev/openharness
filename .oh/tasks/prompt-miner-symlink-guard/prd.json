@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/663-prompt-miner-symlink-guard",
+  "description": "Fix the prompt-miner engine's CLI-entrypoint guard, which silently no-ops when invoked through the .claude/skills dir-symlink that SKILL.md Step 1 and the daily cron both prescribe. Council verdict PARTIAL-GO: ship the symlink-safe basename guard plus a probe that closes the blind spot both existing prompt-miner probes share (they hardcode the real .oh/ path); cut the else/process.exit(70) branch (refuted by construction \u2014 kills any host process importing the module) and the SKILL.md ${CLAUDE_SKILL_DIR} repoint (premise measured in a non-skill shell). Explicitly does NOT fix NO-CORPUS: measured 2026-08-03, largest stratum is 6 at 24h and 9 at 168h against a floor of 10, and the cron has logged 19 NO-CORPUS + 4 NO-SESSIONS with zero markers ever mined.",
+  "artifact_contract": {
+    "required_artifacts": [
+      ".oh/tasks/prompt-miner-symlink-guard/prd.md",
+      ".oh/tasks/prompt-miner-symlink-guard/prd.json",
+      ".oh/tasks/prompt-miner-symlink-guard/prompt.md",
+      ".oh/tasks/prompt-miner-symlink-guard/progress.txt"
+    ],
+    "allowed_locations": [
+      ".oh/tasks/prompt-miner-symlink-guard/",
+      ".oh/skills/prompt-miner/scripts/mine-traces.mjs",
+      ".oh/evals/probes/prompt-miner-symlink-entrypoint.sh",
+      ".oh/evals/RESULTS.md",
+      ".oh/crons/prompt-miner.md",
+      "CHANGELOG.md"
+    ],
+    "forbidden_destructive_edits": [
+      "AGENTS.md",
+      ".oh/context/",
+      ".oh/memory/",
+      ".oh/skills/prompt-miner/SKILL.md",
+      ".oh/skills/rlm/scripts/query-context.mjs",
+      ".oh/skills/weigh/scripts/score-trajectories.mjs",
+      ".oh/evals/probes/prompt-miner-schema-compat.sh",
+      ".oh/evals/probes/prompt-miner-weakness-record.sh"
+    ],
+    "verification_commands": [
+      "node .claude/skills/prompt-miner/scripts/mine-traces.mjs --dry-run --no-git --fixtures-dir .oh/skills/prompt-miner/scripts/__tests__/fixtures",
+      "node --test .oh/skills/prompt-miner/scripts/__tests__/mine-traces.test.mjs",
+      "bash .oh/evals/probes/prompt-miner-symlink-entrypoint.sh",
+      "bash .oh/skills/eval/run.sh",
+      "git diff upstream/development...HEAD --stat -- AGENTS.md .oh/context/ .oh/memory/"
+    ],
+    "acceptance_criteria": [
+      "The .claude/skills invocation path produces a parseable dataset with sessionsScanned > 0",
+      "The new probe fails when the pre-fix guard is restored, and when the anti-pattern is added to any other .oh/skills/**/*.mjs in forward order, reverse operand order, or reverse order split across two lines",
+      "The new probe still passes with three comment-only occurrences of the anti-pattern present",
+      "No green->red probe transition versus upstream/development",
+      "Zero new skills, zero new CI jobs, exactly one new executable (the probe)",
+      "prd.md states the measured corpus ceiling and that NO-CORPUS is unchanged"
+    ],
+    "rollback_conditions": [
+      "Any green->red probe regression beyond next-dev-prod, already REGRESSION on development",
+      "Any change to a file in the always-loaded set",
+      "Any SKILL.md or agent description: frontmatter change",
+      "mine-traces.test.mjs dropping below 19/19"
+    ],
+    "final_handoff_requirements": [
+      "bash .oh/skills/eval/run.sh with no new regression",
+      "CI green via /ci-status",
+      "Companion issues #692, #693 and #694 filed and the #663 close comment carrying the ceiling table, before #663 is closed"
+    ]
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "The documented invocation path runs",
+      "description": "As an agent following SKILL.md Step 1 or the daily cron, I want mine-traces.mjs to actually execute when invoked through .claude/skills, so a silent exit 0 is never mistaken for an empty corpus.",
+      "acceptanceCriteria": [
+        "node .claude/skills/prompt-miner/scripts/mine-traces.mjs --dry-run --no-git --fixtures-dir <fixtures> exits 0 with a parseable dataset and sessionsScanned > 0",
+        "The real .oh/skills/... path produces the same result",
+        "The guard is path.basename(process.argv[1] || '') === 'mine-traces.mjs' \u2014 the stricter rlm precedent, not weigh's .endsWith",
+        "The now-unused pathToFileURL import is removed (it had exactly one call site)",
+        "A header comment names the failure mode, issue #663, and both sibling precedents",
+        "node --test .oh/skills/prompt-miner/scripts/__tests__/mine-traces.test.mjs passes 19/19 and importing the module as a library still does not invoke main()"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "No else branch. Critic 1 built the proposed else/process.exit(70) variant and ran it: importing the module from any non-*.test.mjs file exits the host process before the importer's next line, uncatchable around a static or dynamic import. The module deliberately exports DEFAULT_WEIGHTS, classifyLine and scoreSession. ROUND 2: critic 1 found (SEVERITY: M) that the basename form trusts basename(argv[1]) globally, not file identity \u2014 a DIFFERENT file named mine-traces.mjs that imports this module would fire main(), and without --dry-run would call writeReports(). Verified no such file exists (find . -name mine-traces.mjs). Deliberately NOT switched to a realpath comparison: that would be collision-safe but would leave three sibling engines with three different guards, re-creating the divergence this PR exists to end. Recorded in the engine header with the instruction to change all three together or none. Critic 1 also confirmed (SEVERITY: L) that .oh/evals/probes/*.sh is outside the CI shellcheck glob, downloaded shellcheck v0.10.0 and ran it on the new probe anyway: exit 0, zero findings at -S warning."
+    },
+    {
+      "id": "US-002",
+      "title": "A probe catches the blind spot, not just the instance",
+      "description": "As the harness, I want an eval probe that invokes the engine through a real directory symlink and rejects the anti-pattern repo-wide, so instance #4 is caught mechanically rather than by a cron agent rediscovering it.",
+      "acceptanceCriteria": [
+        "Behavioral guard: the probe builds its own ln -s \"$ROOT/.oh/skills\" \"$TMP/skills\" rather than depending on .claude/skills being materialized, invokes the engine through it, and asserts exit 0, non-empty stdout, parseable JSON and sessionsScanned > 0",
+        "Static guard: no executable line under .oh/skills/**/*.mjs compares import.meta.url with === in EITHER operand order, nor hands process.argv to pathToFileURL(; comment lines excluded",
+        "Hermetic: --fixtures-dir plus --no-git; no network, no real traces",
+        "Honest exit 2 when node, the skill dir, the fixtures, or symlink support is absent",
+        "Mutation M1 \u2014 restoring the pre-fix guard turns the probe red on the behavioral assertion",
+        "Mutation M2a \u2014 forward-order anti-pattern in .oh/skills/rlm/scripts/query-context.mjs turns it red",
+        "Mutation M2b \u2014 REVERSE-order anti-pattern (pathToFileURL(...).href === import.meta.url) turns it red",
+        "Mutation M2c \u2014 reverse order split across two lines turns it red",
+        "Mutation M0 \u2014 the three comment-only occurrences present today do not trip the static guard",
+        "A row lands in .oh/evals/RESULTS.md via /eval"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "prompt-miner-schema-compat.sh:14 and prompt-miner-weakness-record.sh:16 both hardcode SKILL_DIR=\"$ROOT/.oh/skills/prompt-miner\", so both stayed green through 23 days of the defect being live. That shared blind spot is what US-002 closes. ROUND 2: critic 1 refuted the first version of the static guard (SEVERITY: H) \u2014 it matched only import.meta.url on the LEFT of ===, so the operand-reversed form passed the probe with the live defect in the tree; the critic appended exactly that line to rlm/scripts/query-context.mjs and got exit 0. Fixed by matching both operand orders plus a mechanism-level pathToFileURL([^)]*process.argv pattern that also catches the line-split form a pure operand-order regex cannot see."
+    },
+    {
+      "id": "US-003",
+      "title": "The cron file stops contradicting itself",
+      "description": "As an operator reading .oh/crons/prompt-miner.md, I want the kill-switch paragraph to describe the frontmatter that is actually tracked, so the file is not self-refuting.",
+      "acceptanceCriteria": [
+        "The body describes the actual enabled: true state and the flip-to-false kill switch",
+        "The frontmatter is named as the single source of truth",
+        "schedule, timezone, enabled, preflight and every cap are unchanged \u2014 no behavior change"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Resolved toward the tracked state, deliberately against the council's initial lean toward disabling. The evidence for disabling (23 days, zero markers, an unreachable floor) is misleading: this cron filed #663. Its realized value has been defect discovery, not marker mining, so disabling it would remove the instrument that found the bug this PR fixes. ROUND 2: critic 2 attacked this as ratifying drift and produced the archaeology that settles it the other way \u2014 enabled: true was set by a dedicated commit, 'feat: enable the prompt-miner daily cron (#277)', landed 2026-06-25 in forward-sync 85d42384 (body line 622), ~5 weeks before this PR. The code was the deliberate, older, tracked state; the doc paragraph never caught up. Critic 2 also corroborated the authorship claim: #663 createdAt 2026-07-22T11:03:12Z is 2 seconds after .cron.log's 07-22 result line at 11:03:10."
+    },
+    {
+      "id": "US-004",
+      "title": "The ceiling is on the record",
+      "description": "As a future reader of #663, I want the measured corpus ceiling and the companion defects on the record, so this fix is never misread as 'prompt-miner is fixed'.",
+      "acceptanceCriteria": [
+        "Companion issues filed against mifunedev/openharness, labeled prompt-miner, before #663 is closed: #692 (corpus floor \u2014 withinWindow firstTs at mine-traces.mjs:922-924, hardcoded project dir at :817, absent isSidechain), #693 (render-log-entry.sh:47 worktree log-loss), #694 (cron reaper logs WORKTREE_DIRTY forever for an orphaned worktree)",
+        "Scoped by fix session and verification rather than one-per-defect: #692 bundles the three engine collection defects because they share one fix and one question (does the ceiling move?); #693 is a helper-resolution fix; #694 is cron-runtime, not engine",
+        "The PR body and the #663 close comment carry the measured ceiling table",
+        "The close comment states plainly that NO-CORPUS is unchanged"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Critic 2 verified zero companion issues existed at council time \u2014 gh issue list --label prompt-miner returned only #663 \u2014 so 'file follow-ups' was an unexecuted promise until this story landed. Filed before the PR opened. #692 demands a decision (fix collection and re-measure / restratify the floor / re-scope the skill), not only a patch, because the observed max stratum across 23 cron days is 2,3,5,5,6,9 \u2014 fixing collection raises the ceiling but is not established to clear the floor of 10. ROUND 2: #694 added after critic 2 observed the PR was arguing 'keep the cron because its realized value is defect discovery' while leaving an open defect its own log had shouted for 15 consecutive days unfiled \u2014 the argument failing to pay its own bill."
+    }
+  ]
+}

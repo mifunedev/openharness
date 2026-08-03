@@ -1,21 +1,29 @@
 name: Release
 
+# Run every release-branch push. Do not add one shared concurrency group:
+# GitHub keeps only one pending run per group and could drop intermediate pushes.
 on:
   push:
-    tags:
-      - "[0-9][0-9][0-9][0-9].[0-9]*.[0-9]*"
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
   validate:
-    name: "Validate"
+    name: Validate
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-      - name: Checkout
+      - name: Checkout the event commit
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           submodules: recursive
 
       - name: Ensure Mifune submodule
@@ -68,9 +76,10 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout
+      - name: Checkout the event commit
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           submodules: recursive
 
       - name: Ensure Mifune submodule
@@ -90,15 +99,16 @@ jobs:
           failure-threshold: warning
 
   eval-probes:
-    name: "Eval Probe Regression Gate"
+    name: Eval Probe Regression Gate
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-      - name: Checkout
+      - name: Checkout the event commit
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           submodules: recursive
 
       - name: Link provider skills
@@ -107,52 +117,57 @@ jobs:
       - name: Run eval probe suite
         run: bash .oh/skills/eval/run.sh
 
-  release:
-    name: Build & Release
-    runs-on: ubuntu-latest
+  reserve:
+    name: Reserve UTC CalVer draft
     needs: [validate, boot-lint, eval-probes]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      releaseVersion: ${{ steps.reserve_release.outputs.releaseVersion }}
+      releaseSha: ${{ steps.reserve_release.outputs.releaseSha }}
+      releaseId: ${{ steps.reserve_release.outputs.releaseId }}
+      publishedNoop: ${{ steps.reserve_release.outputs.publishedNoop }}
+
+    steps:
+      - name: Checkout the validated event commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Atomically reserve the CalVer tag and ensure its draft release
+        id: reserve_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ github.sha }}
+          # The push event snapshots this repository timestamp as integer epoch
+          # seconds; retries keep it unchanged, including after UTC midnight.
+          RELEASE_TIMESTAMP: ${{ github.event.repository.pushed_at }}
+        run: node .oh/scripts/reserve-github-release.mjs
+
+  publish-image:
+    name: Build, smoke, and publish GHCR image
+    needs: reserve
+    if: ${{ needs.reserve.outputs.publishedNoop != 'true' }}
+    runs-on: ubuntu-latest
+    # `needs` is valid in job concurrency expressions. Atomic reservations give
+    # distinct push SHAs distinct versions; only same-SHA retries share this key.
+    concurrency:
+      group: release-image-${{ needs.reserve.outputs.releaseVersion }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
       packages: write
 
     steps:
-      - name: Checkout
+      - name: Checkout the reserved commit
         uses: actions/checkout@v7
         with:
+          ref: ${{ needs.reserve.outputs.releaseSha }}
           submodules: recursive
 
       - name: Ensure Mifune submodule
         run: bash .oh/scripts/link-providers.sh --init
-
-      - name: Parse tag
-        id: parse
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Extract release notes from CHANGELOG
-        id: notes
-        run: |
-          VERSION="${{ steps.parse.outputs.version }}"
-          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
-          awk -v ver="$VERSION" '
-            $0 ~ ("^## \\[" ver "\\] - ") { in_block=1; next }
-            in_block && /^## \[/ { exit }
-            in_block && /^---[[:space:]]*$/ { exit }
-            in_block { print }
-          ' CHANGELOG.md > "$NOTES_FILE"
-          if [ ! -s "$NOTES_FILE" ] || ! grep -q '[^[:space:]]' "$NOTES_FILE"; then
-            echo "Release $VERSION — see CHANGELOG.md and commit history." > "$NOTES_FILE"
-          fi
-          echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
-
-      - name: Setup Node 22.x
-        uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -164,19 +179,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image
+      - name: Build immutable Docker image tags
         env:
+          RELEASE_SHA: ${{ needs.reserve.outputs.releaseSha }}
+          RELEASE_VERSION: ${{ needs.reserve.outputs.releaseVersion }}
           SANDBOX_NAME: openharness-release-smoke-${{ github.run_id }}
         run: |
-          IMAGE=ghcr.io/mifunedev/openharness:${{ steps.parse.outputs.version }}
-          LATEST=ghcr.io/mifunedev/openharness:latest
-          SMOKE_IMAGE=sandbox-${SANDBOX_NAME}
+          VERSION_IMAGE="ghcr.io/mifunedev/openharness:${RELEASE_VERSION}"
+          SHA_IMAGE="ghcr.io/mifunedev/openharness:sha-${RELEASE_SHA}"
+          SMOKE_IMAGE="sandbox-${SANDBOX_NAME}"
+          docker buildx build --load -f .devcontainer/Dockerfile \
+            -t "$VERSION_IMAGE" -t "$SHA_IMAGE" -t "$SMOKE_IMAGE" .
 
-          docker build -f .devcontainer/Dockerfile -t "$IMAGE" -t "$LATEST" -t "$SMOKE_IMAGE" .
-
-      # Keep this pre-push smoke gate between build and push: it boots the
-      # exact image object that will be published to GHCR, via the sandbox-* tag
-      # consumed by .devcontainer/docker-compose.yml.
+      # Keep this pre-push smoke gate between build and publication: it boots
+      # the exact image object that carries both immutable GHCR tags.
       - name: Smoke-test Docker image before publish
         env:
           SANDBOX_NAME: openharness-release-smoke-${{ github.run_id }}
@@ -185,20 +201,111 @@ jobs:
           BOOT_SMOKE_UP_ARGS: "up -d --no-build"
         run: bash .oh/scripts/sandbox-boot-smoke.sh
 
-      - name: Push Docker image
+      - name: Push immutable CalVer and sha-full-SHA tags
+        env:
+          RELEASE_SHA: ${{ needs.reserve.outputs.releaseSha }}
+          RELEASE_VERSION: ${{ needs.reserve.outputs.releaseVersion }}
         run: |
-          IMAGE=ghcr.io/mifunedev/openharness:${{ steps.parse.outputs.version }}
-          LATEST=ghcr.io/mifunedev/openharness:latest
+          docker push "ghcr.io/mifunedev/openharness:${RELEASE_VERSION}"
+          docker push "ghcr.io/mifunedev/openharness:sha-${RELEASE_SHA}"
 
-          docker push "$IMAGE"
-          docker push "$LATEST"
+      - name: Promote latest from the canonical branch by digest
+        env:
+          RELEASE_BRANCH: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ needs.reserve.outputs.releaseSha }}
+          RELEASE_VERSION: ${{ needs.reserve.outputs.releaseVersion }}
+        run: .oh/scripts/promote-release-latest.sh promote
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+  publish-cli:
+    name: Publish CLI for the released commit
+    needs: [reserve, publish-image]
+    if: ${{ needs.reserve.outputs.publishedNoop != 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/publish-cli.yml
+    with:
+      ref: ${{ needs.reserve.outputs.releaseSha }}
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  finalize:
+    name: Finalize GitHub Release
+    needs: [reserve, publish-image, publish-cli]
+    if: ${{ always() && needs.reserve.outputs.publishedNoop != 'true' && needs.publish-image.result == 'success' && needs.publish-cli.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout the published commit
+        uses: actions/checkout@v7
         with:
-          name: v${{ steps.parse.outputs.version }}
-          body_path: ${{ steps.notes.outputs.notes_file }}
+          ref: ${{ needs.reserve.outputs.releaseSha }}
 
-  # The `oh` CLI publish lives in its own workflow (.github/workflows/publish-cli.yml)
-  # so a CLI-only change can publish via workflow_dispatch without a CalVer release;
-  # it also triggers on the same release tags, independently of this job.
+      - name: Extract release notes from CHANGELOG
+        env:
+          RELEASE_VERSION: ${{ needs.reserve.outputs.releaseVersion }}
+        run: |
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          awk -v ver="$RELEASE_VERSION" '
+            $0 ~ ("^## \[" ver "\] - ") { in_block=1; next }
+            in_block && /^## \[/ { exit }
+            in_block && /^---[[:space:]]*$/ { exit }
+            in_block { print }
+          ' CHANGELOG.md > "$NOTES_FILE"
+          if [ ! -s "$NOTES_FILE" ] || ! grep -q '[^[:space:]]' "$NOTES_FILE"; then
+            awk '
+              /^## \[Unreleased\]$/ { in_block=1; next }
+              in_block && /^## \[/ { exit }
+              in_block && /^---[[:space:]]*$/ { exit }
+              in_block { print }
+            ' CHANGELOG.md > "$NOTES_FILE"
+          fi
+          if [ ! -s "$NOTES_FILE" ] || ! grep -q '[^[:space:]]' "$NOTES_FILE"; then
+            echo "Release $RELEASE_VERSION — see CHANGELOG.md and commit history." > "$NOTES_FILE"
+          fi
+
+      # Re-run the same canonical main-else-master rule after CLI publication.
+      # This fresh remote read makes noncanonical releases unconditionally
+      # make_latest=false and catches a newer canonical push before finalization.
+      - name: Check canonical branch for GitHub latest-release status
+        id: github_latest
+        env:
+          RELEASE_BRANCH: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ needs.reserve.outputs.releaseSha }}
+        run: .oh/scripts/promote-release-latest.sh check
+
+      - name: Publish the draft after image and CLI publication
+        uses: actions/github-script@v7
+        env:
+          MAKE_LATEST: ${{ steps.github_latest.outputs.makeLatest }}
+          RELEASE_ID: ${{ needs.reserve.outputs.releaseId }}
+          RELEASE_VERSION: ${{ needs.reserve.outputs.releaseVersion }}
+        with:
+          script: |
+            const fs = require("fs");
+            const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+            const releaseId = Number(process.env.RELEASE_ID);
+            const releaseVersion = process.env.RELEASE_VERSION;
+            const body = fs.readFileSync(`${process.env.RUNNER_TEMP}/release-notes.md`, "utf8");
+            if (!Number.isSafeInteger(releaseId) || releaseId <= 0) {
+              throw new Error(`invalid release ID: ${process.env.RELEASE_ID}`);
+            }
+            if (!new Set(["true", "false"]).has(process.env.MAKE_LATEST)) {
+              throw new Error(`invalid make_latest decision: ${process.env.MAKE_LATEST}`);
+            }
+            if (body.trim() === "") {
+              throw new Error(`empty release notes for ${releaseVersion}`);
+            }
+            await github.rest.repos.updateRelease({
+              owner,
+              repo,
+              release_id: releaseId,
+              name: `v${releaseVersion}`,
+              body,
+              draft: false,
+              make_latest: process.env.MAKE_LATEST,
+            });
+
+  # publish-cli.yml also remains independently dispatchable with an explicit ref.

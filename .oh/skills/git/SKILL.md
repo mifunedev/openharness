@@ -107,7 +107,7 @@ Entry format: one line, imperative mood, link PR or issue.
 - Slack thread replies in multi-channel mode ([#42](https://github.com/mifunedev/openharness/pull/42)).
 ```
 
-At release time, `/release` promotes `[Unreleased]` to new `## [<VERSION>] - YYYY-MM-DD` section and re-seeds empty `[Unreleased]` block. Do **not** hand-edit versioned sections after tag ships.
+Automatic branch-push releases use the matching `## [<VERSION>] - YYYY-MM-DD` section when one already exists; otherwise they publish the current `[Unreleased]` body. Do **not** hand-edit a versioned section after its tag ships.
 
 ## Worktrees
 
@@ -196,59 +196,33 @@ Keep stacks shallow: one level routine, two levels rare, three levels means some
 
 ## Releases
 
-Versioning: **CalVer** `YYYY.M.D` for first release of day, then `YYYY.M.D-N` (N starts at 2) for subsequent releases.
+Every push to `main` or `master` triggers `.github/workflows/release.yml`. The
+workflow checks out the exact event SHA and requires validation, boot-path lint,
+and eval probes to pass before it mutates a tag, GitHub Release, or package.
+Do **not** manually pre-create a release tag or `release/<version>` branch.
 
-Release branch: `release/<VERSION>` (e.g., `release/2026.4.18-2`).
+Versioning is UTC CalVer: `YYYY.M.D` for the first reservation from a push date,
+then `YYYY.M.D-1`, `-2`, and onward. Git-ref creation is the atomic reservation.
+A retry uses the original event timestamp and reuses a same-SHA draft; a retry of
+an already-published same-SHA release is a successful no-op. Foreign collisions
+advance without a production cap.
 
-Pushing tag triggers `.github/workflows/release.yml` — its release gate runs lint, format check, typecheck, build, test, root-scripts tests, pnpm-pin drift checks, boot-path lint (shellcheck + hadolint), and the eval-probe regression gate (mirroring CI) before it builds `ghcr.io/mifunedev/openharness:<VERSION>`, pushes to GHCR, and creates the GitHub Release.
-
-Branch model: `development` is the integration branch; `main` is the
-release line. A release **promotes `development` into `main`**, cuts the
-release branch from `main`, tags it, then leaves both branches converged.
-The full flow is:
+The artifact sequence is:
 
 ```
-development → main → release/<VERSION> → tag <VERSION> → main & development in sync
+main|master push → validate + boot-lint + eval → reserve tag + draft
+                 → build + smoke → push CalVer + sha-<full-SHA> GHCR tags
+                 → canonical latest-by-digest → publish/no-op CLI
+                 → publish GitHub Release
 ```
 
-`release.yml` triggers purely on the tag push and checks out the **tagged
-commit** (branch-agnostic), so the build is correct regardless of which
-branch the tag sits on. The `main` promotion is what keeps the release
-line authoritative — skipping it silently drifts `main` behind every
-release.
-
-Pre-flight before tagging:
-- On intended source branch (`development`), no uncommitted changes
-- `development` pushed and CI green
-
-Procedure:
-
-```bash
-VERSION=$(date '+%Y.%-m.%-d')                             # append -N if tag exists
-
-# 1. Promote CHANGELOG [Unreleased] → [VERSION], commit on development, push.
-#    (the /release skill automates this; see § Changelog)
-git push origin development
-
-# 2. Promote development → main (fast-forward; main is the release line).
-#    main must be strictly behind development — verify it is fast-forwardable:
-git fetch origin main development
-git merge-base --is-ancestor origin/main origin/development \
-  && echo "FF-safe" || echo "DIVERGED — reconcile before releasing"
-git push origin origin/development:main                   # clean FF, no merge commit
-
-# 3. Cut the release branch from main and tag.
-git checkout -b "release/$VERSION" origin/main
-git push origin "release/$VERSION"
-git tag "$VERSION" && git push origin "$VERSION"          # triggers CI release
-
-# 4. After tag CI passes, main and development are already converged
-#    (both at the promotion commit). No extra sync needed when step 2
-#    was a fast-forward. If main had diverged and a merge was required,
-#    merge main back into development to re-converge.
-```
-
-After pushing tag, monitor `.github/workflows/release.yml` and verify both GitHub Release and GHCR image. Use `/release` skill for full automated procedure (version detection, pre-flight, **main promotion**, tag, CI polling, verification).
+The mutable/latest branch is canonically `main` when it exists, otherwise
+`master`. A helper fetches both refs immediately before digest promotion, so a
+`master` run can never regress `latest` when `main` exists; stale canonical runs
+also skip it. GitHub `make_latest` repeats the same fresh canonical check and is
+always false for the noncanonical branch. The GitHub Release stays draft until
+immutable image and successful/no-op CLI publication finish. See `/release` for
+the fast-forward promotion, monitoring, and verification procedure.
 
 ## After Push
 

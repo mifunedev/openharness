@@ -42,6 +42,18 @@ No high- or medium-severity findings.
 | US-003 | Installation Utilities table + changelog | PASS |
 | US-004 | Local gates pass; PR/CI and deterministic PR audit pending | PENDING |
 
+## Deterministic PR audit
+
+After required checks completed, the repository's production acquisition/classifier pipeline returned:
+
+```json
+{"ci":"PASS","evidenceComplete":true,"isDraft":false,"mergeStateStatus":"CLEAN","mergeable":"MERGEABLE","primaryState":"ready","promotable":true,"readyToMerge":true}
+```
+
+Native verdict: **PR-AUDIT-PROMOTABLE**.
+
 ## Verdict
 
-**IMPLEMENTATION-AUDIT-PASS (pre-PR)** — no unmitigated high/medium issue. Promotion remains gated on a ready PR, required CI including Sandbox Boot Guard, and the deterministic focused PR classifier.
+**IMPLEMENTATION-AUDIT-PASS** — all four stories pass, no unmitigated high/medium issue, local verification is green, required Harness and Sandbox Boot Guard CI is green, and deterministic PR evidence is complete/promotable. The PR remains unmerged for human review.
+
+AUDIT-PASS

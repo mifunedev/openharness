@@ -20,6 +20,6 @@ None. These observations are captured in this task's evidence and are either env
 
 ## Outcome
 
-The implementation stayed within scope, direct image validation passed, and no code rework followed the self-audit. Final completion still depends on PR CI and focused PR classification.
+The implementation stayed within scope, direct image validation passed, and no code rework followed the self-audit. PR #704 is ready and unmerged; required Harness and Sandbox Boot Guard CI passed, and the deterministic focused classifier returned complete, promotable, clean evidence.
 
 STATUS: RETRO-DONE

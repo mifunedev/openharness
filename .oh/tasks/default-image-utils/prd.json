@@ -65,8 +65,8 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "Depends on US-001 through US-003."
+      "passes": true,
+      "notes": "All local gates passed; PR #704 is ready, mergeable, clean, CI-green including Harness and Sandbox Boot Guard, and the deterministic classifier reports promotable=true with complete evidence."
     }
   ]
 }

@@ -280,3 +280,35 @@ STATUS: IMPLEMENTATION STUDY COMPLETE — EVIDENCE-BOUND SAFE NOT RUN; SEPARATE 
 - Expanded 55-test suite, all fixture syntax checks, root typecheck, deterministic zero-finding evidence secret scan, terminal policy scan, cleanup proof, absolute-path scan, timeout-provenance scan, and task-local diff check all pass.
 - Final evidence remains 75/75 `NOT RUN`, zero launches/runtime roots/owned PIDs/signals, five-way non-comparable tie, and no selection authority.
 - Main checkout has no dirty path outside the seven-path pre-work set. One pre-existing path (`.pi/msg-bridge.json`) was independently resolved during the long-running delegated study; this worktree did not touch the main checkout.
+
+## 2026-08-03 — STATUS CORRECTION (council review of the enhancement/prompt-miner queue)
+
+The ledger's "all 19 Ralph stories now pass" overstated the result. Corrected to
+**17/19 passing, 2 blocked**.
+
+US-005 and US-011 were marked `passes: true` against acceptance criteria written
+UNCONDITIONALLY:
+
+- US-005 AC2 — "**Exactly three independent baseline repetitions record** launch-to-ready,
+  30-second idle survival, clean exit, non-zero recovery, status/restarts, bounded log
+  access, and cleanup under the frozen manifest." Actual: 0/3 measured.
+- US-011 AC1 — "**Run three independent repetitions of each frozen fault** against only the
+  baseline..." Actual: 0/15 measured.
+
+Neither AC contains a NOT RUN branch, and AC3 in both cases requires the command to exit 0
+with no "or safe NOT RUN" qualifier. The command did exit 0 — by declining to run.
+
+This is a narrow correction, not a blanket one. US-006, US-009 and US-012 keep
+`passes: true` because their ACs were drafted with explicit conditional escapes
+("...exit 0 **for runnable or safe NOT RUN**"; "**If** direct RPC is runnable... **otherwise**
+propagate verified NOT RUN"). Those passes are defensible; these two were not.
+
+Also recorded for the reviewer: US-019 was set `passes: true` by the supervising First Mate
+role after the delegate left it `false` (see the 2026-08-01T04:26:28Z entry above). That is
+disclosed rather than reversed — the underlying verification was re-run — but a reviewer
+should weigh a self-certified terminal gate accordingly.
+
+Issue #677's own acceptance criterion 6 — "Results rank candidate architectures and document
+prerequisites without making an adoption decision" — is **NOT MET**. Prerequisites were
+documented; nothing was ranked, because nothing ran. The issue stays open pending a human
+decision to either restate AC 6 or supply an isolation-capable environment.

@@ -383,8 +383,9 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-005/"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "First Mate validated exact run and all shared gates: verified safe NOT RUN before launch because network namespace isolation is unavailable; 0/3 measured, no imputation, metadata unchanged, cleanup clean."
+      "passes": false,
+      "notes": "First Mate validated exact run and all shared gates: verified safe NOT RUN before launch because network namespace isolation is unavailable; 0/3 measured, no imputation, metadata unchanged, cleanup clean. | CORRECTED 2026-08-03: this AC is written UNCONDITIONALLY (US-005 AC2 'Exactly three independent baseline repetitions record...'; US-011 AC1 'Run three independent repetitions of each frozen fault...') and was not met — 0 measured. Unlike US-006/US-009/US-012, whose ACs carry an explicit 'or safe NOT RUN' branch, these two have no such escape, so passes:true overstated the result. Reset to false pending an environment with fresh user/network namespace isolation.",
+      "blockedBy": "namespace-isolation-unavailable"
     },
     {
       "id": "US-006",
@@ -518,8 +519,9 @@
         ".oh/tasks/pm2-pi-supervision/evidence/US-011/"
       ],
       "priority": 11,
-      "passes": true,
-      "notes": "First Mate validated exact 2100s fault command and shared gates: all five faults × three slots are verified non-comparable NOT RUN, with null metrics, zero launches/faults/signals, no Slack recovery claim, unchanged metadata, and clean cleanup."
+      "passes": false,
+      "notes": "First Mate validated exact 2100s fault command and shared gates: all five faults × three slots are verified non-comparable NOT RUN, with null metrics, zero launches/faults/signals, no Slack recovery claim, unchanged metadata, and clean cleanup. | CORRECTED 2026-08-03: this AC is written UNCONDITIONALLY (US-005 AC2 'Exactly three independent baseline repetitions record...'; US-011 AC1 'Run three independent repetitions of each frozen fault...') and was not met — 0 measured. Unlike US-006/US-009/US-012, whose ACs carry an explicit 'or safe NOT RUN' branch, these two have no such escape, so passes:true overstated the result. Reset to false pending an environment with fresh user/network namespace isolation.",
+      "blockedBy": "namespace-isolation-unavailable"
     },
     {
       "id": "US-012",

@@ -1,0 +1,177 @@
+TASK: prompt-miner symlink-safe CLI entrypoint (#663)
+BRANCH: task/663-prompt-miner-symlink-guard
+BASE: upstream/development @ afe43273
+
+--- 2026-08-03 — council (plan.yml: architect ‖ pm ‖ designer → 2 critics)
+
+Ground truth established by live reproduction BEFORE briefing any agent:
+  node .claude/skills/prompt-miner/scripts/mine-traces.mjs --hours 24 --dry-run  → exit 0, ZERO stdout
+  node .oh/skills/prompt-miner/scripts/mine-traces.mjs   --hours 24 --dry-run  → full JSON dataset
+
+Verdicts: architect GO · pm GO (mis-scoped as a "fixed" signal) · designer GO+3
+          critic 1 PARTIAL-GO · critic 2 NO-GO → synthesis PARTIAL-GO (narrow).
+
+Two proposals REFUTED BY CONSTRUCTION, not merely doubted:
+  P2 else/process.exit(70) — critic 1 built the exact patch and ran it. Importing
+     the module from any non-*.test.mjs file exits the host process before the
+     importer's next line. Not catchable around a static or dynamic import.
+     Today's test file survives only by accidentally being named .test.mjs.
+  P5 SKILL.md:92 off ${CLAUDE_SKILL_DIR} — premise ("the variable is unset") was
+     measured in a bare shell, which never exercises skill-body injection.
+     builder/references/skill.md:112 documents it as CLI-injected; ~7 skills use it.
+
+--- 2026-08-03 — build
+
+US-001 PASS  Guard → path.basename(process.argv[1] || "") === "mine-traces.mjs".
+             Stricter rlm form (exact ===) chosen over weigh's .endsWith; the two
+             in-tree precedents genuinely differ, so the tighter one wins.
+             Removed the now-unused pathToFileURL import (one call site, line 15).
+             Header comment names the failure mode, #663, and both precedents.
+             VERIFIED: .claude path → sessionsScanned=3; .oh path → identical.
+             VERIFIED: node --test mine-traces.test.mjs → 19/19 pass.
+
+US-002 PASS  .oh/evals/probes/prompt-miner-symlink-entrypoint.sh (tier A).
+             Behavioral guard builds its OWN ln -s "$ROOT/.oh/skills" "$TMP/skills"
+             rather than depending on .claude/skills being materialized.
+             Static guard rejects executable `import.meta.url ===` anywhere under
+             .oh/skills/**/*.mjs, excluding comment lines.
+             Falsifiability — three scripted mutations, each reverted:
+               M1 restore pre-fix guard        → exit 1, behavioral message ✓
+               M2 anti-pattern into rlm engine → exit 1, static message + path:line ✓
+               M3 3 comment-only occurrences   → exit 0 (no false positive) ✓
+
+US-003 PASS  .oh/crons/prompt-miner.md kill-switch paragraph now describes the
+             tracked enabled: true state. Frontmatter named as source of truth.
+             DELIBERATELY AGAINST the council's initial lean toward disabling:
+             the "23 days / zero markers" evidence is misleading because THIS CRON
+             FILED #663. Its realized value is defect discovery, not marker mining.
+             Zero frontmatter changes — schedule, timezone, enabled, preflight,
+             caps all byte-identical. No behavior change.
+
+US-004 PASS  Companion issues filed BEFORE the PR opened (critic 2 verified zero
+             existed at council time, making "file follow-ups" an unexecuted promise):
+               #692 corpus floor structurally unreachable — withinWindow firstTs
+                    (:922-924), hardcoded project dir (:817), absent isSidechain
+               #693 render-log-entry.sh:47 worktree log-loss
+             Two issues, not four: the three engine defects share one fix session
+             and one verification (does the ceiling move?). Splitting them would
+             let each be closed without ever answering that question.
+
+--- Measurements re-run at build time (not carried from the council)
+
+  24h  → scanned=9  strata {other:6, cron:2, impl:1}  largest = 6
+  168h → scanned=14 strata {other:9, cron:3, impl:2}  largest = 9
+  floor (markers.md:57) = sessions_supporting >= 10   → BOTH BELOW
+  .cron.log lifetime: 19 NO-CORPUS + 4 NO-SESSIONS, zero MINING-COMPLETE
+
+This PR converts a silent zero into an articulate zero. It does NOT fix NO-CORPUS
+and must not be read as doing so. Stated in prd.md, the PR body, and the #663
+close comment.
+
+--- Guards
+
+  eval:  90 PASS / 3 SKIPPED / 1 REGRESSION (next-dev-prod, pre-existing, unchanged)
+         NO green->red. New probe lands as new-pass.
+         Two SKIPPED transitions DIAGNOSED, not assumed:
+           autopilot-preflight-gate  needs gitignored harness.yaml (main checkout only)
+           cc-safety-net-wiring      needs a binary absent outside the sandbox image;
+                                     its static-wiring half passed
+         Neither touches any file in this diff.
+  always-loaded delta: 0 (AGENTS.md, .oh/context/, .oh/memory/ — empty diff)
+  net new: 1 executable (the probe) · 0 skills · 0 CI jobs · 0 frontmatter edits
+
+--- 2026-08-03 — round 2 (pr.yml: 2 adversarial critics vs commit dcbed225)
+
+Both returned STATUS: FAIL. Both found something real. Both were right.
+
+CRITIC 1 (implementer lens) — H, FIXED
+  The static guard matched only `import\.meta\.url[[:space:]]*===`, so the
+  operand-reversed form — pathToFileURL(argv[1]).href === import.meta.url,
+  functionally identical — passed the probe with the live defect in the tree.
+  The critic appended exactly that line to rlm/scripts/query-context.mjs and
+  got exit 0. Fixed by matching both operand orders PLUS a mechanism-level
+  pathToFileURL\([^)]*process\.argv pattern that also catches the line-split
+  form an operand-order regex cannot see.
+  Re-verified, all 5: M0 clean=0 · M1 pre-fix guard=1 · M2a forward=1 ·
+  M2b reverse=1 · M2c reverse+line-split=1.
+  Note on the earlier round: the original 3 mutations only ever tried the bug
+  in the same syntactic order as the bug being fixed. That under-covers the
+  class. Both critics flagged it independently.
+
+CRITIC 1 — M, DOCUMENTED NOT FIXED
+  The basename form trusts basename(argv[1]) globally, not file identity: a
+  DIFFERENT file named mine-traces.mjs importing this module fires main(), and
+  without --dry-run would call writeReports(). Verified no such file exists.
+  A realpath comparison would be collision-safe, but adopting it here alone
+  leaves three sibling engines with three different guards — re-creating the
+  divergence this PR exists to end. Recorded in the engine header instead:
+  change all three together or none.
+
+CRITIC 1 — L: .oh/evals/probes/*.sh is outside the CI shellcheck glob. The
+  critic downloaded shellcheck v0.10.0 and ran it anyway: exit 0, zero findings
+  at -S warning.
+
+CRITIC 2 (value/evidence lens) — H, CLAIM WITHDRAWN
+  The PRD argued the workaround "does not always hold", citing the 2026-07-22
+  disagreement between .oh/memory/2026-07-22/log.md (NO-SESSIONS, scanned=0)
+  and issue #663's body (NO-CORPUS, 3 sessions), and concluding "the no-op
+  landed and wrote a wrong record."
+  RE-VERIFIED MYSELF, and the critic is right. The discrepancy is real; the
+  ATTRIBUTION was invented. Both primary sources give the same cause and it is
+  not the symlink no-op:
+    .cron.log:61              scanned=0 (2 long-lived sessions active in-window
+                              but firstTs predates 24h window)
+    memory/2026-07-22/log.md:6  same wording
+  That is the withinWindow defect — #692 material, not #663. Why the two records
+  disagree on session count is unestablished and the PRD no longer claims to know.
+  WITHDRAWN rather than softened, because it was cited as load-bearing.
+  This is IDENTITY.md:8 — asserting a remembered proxy instead of the measured
+  cause — committed inside a document that cites it. Second time this session.
+
+CRITIC 2 — M, FILED AS #694
+  .cron.log has logged WORKTREE_DIRTY for cron-prompt-miner-0718-0500 on EVERY
+  fire from 07-19 through 08-02 — 15 consecutive days. VERIFIED: the directory
+  exists on disk with NO .git/worktrees/ entry, so `git status` errors with
+  "fatal: not a git repository" and the runtime maps that failure into the DIRTY
+  branch, preserving the orphan for "manual salvage" forever. A git status
+  FAILURE is being read as evidence of uncommitted work; opposite conditions.
+  Filed because the PR was arguing "keep the cron, its realized value is defect
+  discovery" while leaving an open defect its own log had shouted for 15 days —
+  the argument failing to pay its own bill. Cron-runtime scope, so separate
+  from #692/#693.
+
+CRITIC 2 — L, both corrected in prd.md
+  - builder/references/skill.md:112 does not use the literal phrase
+    "CLI-injected"; it lists ${CLAUDE_SKILL_DIR} under "Arguments and dynamic
+    context" beside $ARGUMENTS/$0/$1. Now marked as a paraphrase. The critic
+    independently counted the convention at exactly 7 skills.
+  - "no green->red" was accurate but incomplete: baseline carried 2 REGRESSIONs,
+    this run shows 1, because cc-safety-net-wiring went REGRESSION->SKIPPED for
+    an unrelated environmental reason. Now stated so no reader credits this PR.
+  - .oh/crons/.cron.log is gitignored and lives only in the main checkout. Now
+    disclosed as a reproducibility caveat on every claim drawn from it.
+
+CRITIC 2 — REFUTED (my claims survived independent re-derivation)
+  24h 9/largest 6 · 168h 14/largest 9 · floor >=10 at markers.md:57 ·
+  .cron.log 19/4/0 · the 07-19 "ran via .oh/ real path" quote · the four days
+  naming the symlink bug · the else/exit(70) cut (17 named exports, the test
+  file imports them as a library) · the ~7-skill CLAUDE_SKILL_DIR count ·
+  #692/#693 scoping honesty · eval 90/3/1 · unit tests 19/19 ·
+  always-loaded-delta zero.
+
+CRITIC 2 — US-003 REFUTED, and it found BETTER evidence than I had
+  Attacked the cron decision as ratifying drift, then settled it the other way:
+  enabled: true was set by a dedicated commit, "feat: enable the prompt-miner
+  daily cron (#277)", landed 2026-06-25 in forward-sync 85d42384 (body line 622)
+  — ~5 weeks before this PR. VERIFIED. The code was the deliberate, older,
+  tracked state; the doc paragraph never caught up. Fixing the doc is correcting
+  stale prose, not ratifying drift.
+  Also corroborated the authorship claim: #663 createdAt 2026-07-22T11:03:12Z is
+  2 seconds after .cron.log's 07-22 result line at 11:03:10.
+
+CRITIC 2 — /audit eval-quality Check 7: TRIPS the raw signal (+1 probe, +0
+  capability movement; .oh/evals/capability/ untouched, and none of CB-001..004
+  measures prompt-miner). Not a gate — eval-quality.md:122-131 defines Check 7 as
+  a suite-level advisory. Now stated plainly in prd.md rather than left implicit.
+
+STATUS: COMPLETE

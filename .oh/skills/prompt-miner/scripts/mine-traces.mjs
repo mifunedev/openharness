@@ -5,6 +5,21 @@
 // The `git` binary is the single allowed external (ground-truth cross-ref), gated
 // behind --no-git. See references/scoring.md, references/markers.md,
 // references/report-schema.md for the contracts this engine implements.
+//
+// CLI-entrypoint detection is a BASENAME match on process.argv[1], NOT
+// `import.meta.url === pathToFileURL(argv[1])` — node resolves the symlink for
+// import.meta.url but not for argv[1], so the latter silently no-ops when the
+// script is invoked through the .claude/skills dir-symlink that SKILL.md Step 1
+// and the daily cron both prescribe (issue #663;
+// prompt-miner-engine-symlink-guard-bug). Same form as
+// rlm/scripts/query-context.mjs and weigh/scripts/score-trajectories.mjs.
+//
+// Known blast radius of the basename form, shared with both siblings: it trusts
+// the basename of argv[1] globally rather than file identity, so a DIFFERENT file
+// that happens to be named mine-traces.mjs and imports this module would run
+// main(). Nothing in this repo is so named. A realpath comparison would be both
+// symlink- and collision-safe, but adopting it here alone would leave three
+// sibling engines with three different guards; change all three together or none.
 
 import fs from "node:fs";
 import readline from "node:readline";
@@ -12,7 +27,6 @@ import path from "node:path";
 import os from "node:os";
 import process from "node:process";
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
 
 // ---------------------------------------------------------------------------
 // Constants & contracts
@@ -1137,6 +1151,7 @@ async function main() {
   );
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+// Basename-match entrypoint detection (symlink-safe; see header note).
+if (path.basename(process.argv[1] || "") === "mine-traces.mjs") {
   main();
 }

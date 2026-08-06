@@ -12,6 +12,15 @@
       "Read(file_path=**/.aws/credentials)",
       "Read(file_path=**/.aws/config)",
       "Read(file_path=**/.gcp/**)",
+      "Read(file_path=**/.config)",
+      "Read(file_path=**/.config/**)",
+      "Write(file_path=**/.config)",
+      "Write(file_path=**/.config/**)",
+      "Edit(file_path=**/.config)",
+      "Edit(file_path=**/.config/**)",
+      "NotebookEdit(notebook_path=**/.config/**)",
+      "Bash(command=*/.config/*)",
+      "Bash(command=*/.config)",
       "Read(file_path=**/.config/gcloud/**)",
       "Read(file_path=**/.azure/**)",
       "Read(file_path=**/.kube/config)",
@@ -89,7 +98,7 @@
         ]
       },
       {
-        "matcher": "Read|Write|Edit|NotebookEdit",
+        "matcher": "Read|Write|Edit|NotebookEdit|Grep|Glob",
         "hooks": [
           {
             "type": "command",

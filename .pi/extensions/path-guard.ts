@@ -7,6 +7,12 @@ export const SENSITIVE_PATHS: RegExp[] = [
   /\.pem$/,
   /\.key$/,
   /(^|\/)id_(rsa|ed25519|ecdsa)$/,
+  // Operator-only configuration directory (repo root and $HOME). Anchored to a
+  // whole path segment so ordinary tool config (jest.config.js, .configrc) is
+  // untouched. Mirrors the `.config/` tier in .oh/hooks/deny-secret-paths.sh —
+  // note this extension only covers write/edit in interactive mode, so the
+  // deterministic hooks remain the enforcing layer.
+  /(^|\/)\.config(\/|$)/,
 ];
 
 export function isSensitivePath(p: string): boolean {

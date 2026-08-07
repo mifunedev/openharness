@@ -10,6 +10,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Security
 
+- Pin transitive `nanoid` to the patched `^3.3.17` range to close GHSA-2v37-7h3g-55p8 through the Vitest → Vite → PostCSS dependency path.
 - Block agent reads and writes to operator-owned `settings.local.json` files across Claude, Codex, and shared Open Harness hooks ([#710](https://github.com/mifunedev/openharness/issues/710)).
 
 ### Added

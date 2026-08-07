@@ -575,6 +575,7 @@ describe("runInit", () => {
       ".codex/config.toml",
       ".codex/hooks.json",
       ".codex/hooks/deny-env-dump.sh",
+      ".codex/hooks/deny-local-settings.sh",
       ".pi/settings.json",
       ".pi/APPEND_SYSTEM.md",
       ".hermes/config.yaml",
@@ -588,6 +589,7 @@ describe("runInit", () => {
     expect(cs.enabledMcpjsonServers).toBeUndefined();
     // The codex hook keeps its +x bit.
     expect(statSync(join(t, ".codex/hooks/deny-env-dump.sh")).mode & 0o111).not.toBe(0);
+    expect(statSync(join(t, ".codex/hooks/deny-local-settings.sh")).mode & 0o111).not.toBe(0);
   });
 
   it("full (default): creates provider skill/agent/hook symlinks", async () => {

@@ -1,25 +1,29 @@
 #!/usr/bin/env bash
 # tier: A
-# source: operator directive 2026-08-06 (.config/ is operator-only)
-# desc: both secret guards deny the operator-only dot-config directory for read
-#       and write, stay silent on ordinary tool config, and remain wired up
+# source: operator directives 2026-08-06 (.config/ and settings.local.json are operator-only)
+# desc: shared and provider hooks deny operator-only configuration for read and
+#       write, stay silent on ordinary tool config, and remain wired up
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 FILE_HOOK="$ROOT/.oh/hooks/deny-secret-paths.sh"
 CMD_HOOK="$ROOT/.oh/hooks/deny-env-dump.sh"
 SETTINGS="$ROOT/.claude/settings.json"
+CODEX_HOOK="$ROOT/.codex/hooks/deny-local-settings.sh"
+CODEX_SETTINGS="$ROOT/.codex/hooks.json"
 
-for f in "$FILE_HOOK" "$CMD_HOOK"; do
+for f in "$FILE_HOOK" "$CMD_HOOK" "$CODEX_HOOK"; do
   if [[ ! -x "$f" ]]; then
     echo "SKIPPED: hook file absent or not executable: $f" >&2
     exit 2
   fi
 done
-if [[ ! -f "$SETTINGS" ]]; then
-  echo "SKIPPED: settings file absent: $SETTINGS" >&2
-  exit 2
-fi
+for f in "$SETTINGS" "$CODEX_SETTINGS"; do
+  if [[ ! -f "$f" ]]; then
+    echo "SKIPPED: settings file absent: $f" >&2
+    exit 2
+  fi
+done
 if ! command -v jq >/dev/null 2>&1; then
   echo "SKIPPED: jq unavailable" >&2
   exit 2
@@ -69,6 +73,12 @@ assert deny "$FILE_HOOK" "$A_READ"  "file guard allowed a read under \$HOME/$SEG
 assert deny "$FILE_HOOK" "$A_WRITE" "file guard allowed a write under the repo-root $SEG"
 assert deny "$FILE_HOOK" "$A_DIR"   "file guard allowed access to the $SEG directory itself"
 assert deny "$FILE_HOOK" "$A_GREP"  "file guard allowed a Grep/Glob path into $SEG"
+A_LOCAL_READ=$(fixture a-local-read "$(jq -nc '{tool_input:{file_path:"/home/sandbox/harness/.claude/settings.local.json"}}')")
+A_LOCAL_WRITE=$(fixture a-local-write "$(jq -nc '{tool_input:{file_path:"/tmp/settings.local.json"}}')")
+assert deny "$FILE_HOOK" "$A_LOCAL_READ"  "shared file guard allowed a settings.local.json read"
+assert deny "$FILE_HOOK" "$A_LOCAL_WRITE" "shared file guard allowed a settings.local.json write"
+assert deny "$CODEX_HOOK" "$A_LOCAL_READ"  "Codex file guard allowed a settings.local.json read"
+assert deny "$CODEX_HOOK" "$A_LOCAL_WRITE" "Codex file guard allowed a settings.local.json write"
 
 # --- assertion group B: file tools stay silent on ordinary tool config ---
 B_JEST=$(fixture b-jest "$(jq -nc '{tool_input:{file_path:"/home/sandbox/harness/jest.config.js"}}')")
@@ -85,6 +95,10 @@ assert deny "$CMD_HOOK" "$C_CAT"   "command guard allowed a read of $SEG"
 assert deny "$CMD_HOOK" "$C_MKDIR" "command guard allowed a write into $SEG"
 assert deny "$CMD_HOOK" "$C_TAR"   "command guard allowed an archive route out of $SEG"
 assert deny "$CMD_HOOK" "$C_PY"    "command guard only covers shell verbs — python reached $SEG"
+C_LOCAL_READ=$(fixture c-local-read "$(jq -nc '{tool_input:{command:"cat .claude/settings.local.json"}}')")
+C_LOCAL_WRITE=$(fixture c-local-write "$(jq -nc '{tool_input:{command:"python3 -c \"open(\\\"settings.local.json\\\", \\\"w\\\")\""}}')")
+assert deny "$CMD_HOOK" "$C_LOCAL_READ"  "command guard allowed a settings.local.json read"
+assert deny "$CMD_HOOK" "$C_LOCAL_WRITE" "command guard allowed a settings.local.json write"
 
 # --- assertion group D: Bash guard tolerates ordinary tool config ---
 D_JEST=$(fixture d-jest "$(jq -nc '{tool_input:{command:"npx jest --config jest.config.js"}}')")
@@ -99,6 +113,7 @@ E_ENV=$(fixture e-env "$(jq -nc '{tool_input:{file_path:"/home/sandbox/harness/.
 E_TMPL=$(fixture e-tmpl "$(jq -nc '{tool_input:{file_path:"/home/sandbox/harness/.env.example"}}')")
 assert deny  "$FILE_HOOK" "$E_ENV"  "file guard stopped denying env files"
 assert allow "$FILE_HOOK" "$E_TMPL" "file guard lost the env-template exemption"
+assert allow "$CODEX_HOOK" "$E_ENV"  "Codex local-settings hook broadened beyond settings.local.json"
 
 # --- assertion F: wiring — the file guard must actually run for Grep/Glob ---
 matcher=$(jq -r '.hooks.PreToolUse[]? | select(.hooks[]?.command // "" | contains("deny-secret-paths")) | .matcher' "$SETTINGS")
@@ -113,13 +128,22 @@ for tool in Read Write Edit Grep Glob; do
   fi
 done
 
-# --- assertion G: wiring — deny-list mirrors the directory for read and write ---
-for rule in "Read(file_path=**/$SEG/**)" "Write(file_path=**/$SEG/**)" "Edit(file_path=**/$SEG/**)"; do
+# --- assertion G: wiring — deny-list mirrors protected paths for read and write ---
+for rule in "Read(file_path=**/$SEG/**)" "Write(file_path=**/$SEG/**)" "Edit(file_path=**/$SEG/**)" \
+  "Read(file_path=**/settings.local.json)" "Write(file_path=**/settings.local.json)" "Edit(file_path=**/settings.local.json)"; do
   if ! jq -e --arg r "$rule" '.permissions.deny | index($r)' "$SETTINGS" >/dev/null; then
     echo "REGRESSION: permissions.deny is missing '$rule'" >&2
     exit 1
   fi
 done
 
-echo "PASS: operator-only $SEG directory is denied for read and write by both guards, ordinary tool config is unaffected, and the wiring covers Read/Write/Edit/Grep/Glob" >&2
+codex_matcher=$(jq -r '.hooks.PreToolUse[]? | select(.hooks[]?.command // "" | contains("deny-local-settings")) | .matcher' "$CODEX_SETTINGS")
+for tool in Read Write Edit; do
+  if [[ "$codex_matcher" != *"$tool"* ]]; then
+    echo "REGRESSION: Codex file-guard matcher '$codex_matcher' does not cover $tool" >&2
+    exit 1
+  fi
+done
+
+echo "PASS: operator-only $SEG and settings.local.json are denied for read and write by shared/Claude/Codex guards; ordinary tool config is unaffected" >&2
 exit 0

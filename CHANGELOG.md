@@ -8,6 +8,10 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Security
+
+- Block agent reads and writes to operator-owned `settings.local.json` files across Claude, Codex, and shared Open Harness hooks ([#710](https://github.com/mifunedev/openharness/issues/710)).
+
 ### Added
 - Deny agents both read and write access to the operator-only `.config/` directory — at the repo root and in `$HOME` — as a first-class tier in both `PreToolUse` guards, replacing the two hand-picked leaves (`.config/gcloud/**`, `.config/gh/hosts.yml`) that were all the deny-list previously covered. The Bash tier is deliberately **verb-agnostic**: any command naming the directory is denied, not just the enumerated `READ_CMD` readers, because a verb allowlist leaks through `python`/`node`/`perl`/`tar` and every tool added later (`mkdir`, `tar`, `python3`, and a `docker exec` subshell are all covered by the probe). Both tiers anchor on a whole path **segment**, so `jest.config.js`, `vitest.config.ts`, `--config foo`, `git config`, and `.oh/config.json` are unaffected, and the pre-existing secret family — including the `.env.example` template exemption — is unchanged. Closes a related read hole in the same pass: `deny-secret-paths.sh` was wired for `Read|Write|Edit|NotebookEdit` and inspected only `tool_input.file_path`, so `Grep`/`Glob` could walk into a directory `Read` was blocked from; it now runs for those tools too and scans every path-shaped field (`file_path`, `notebook_path`, `path`, `glob`) while deliberately leaving Grep's content `pattern` alone. Pinned by `operator-config-guard.sh`, which asserts the behaviour *and* the wiring and was verified to fail when the guard is neutered. Provider coverage stays asymmetric and is documented as such: claude is fully covered, codex inherits the Bash tier only, and the pi extension addition is write/edit and interactive-mode only ([#707](https://github.com/mifunedev/openharness/issues/707)).
 - Add `lsof`, `htop`, and the `inetutils-telnet` plaintext diagnostic client to the default sandbox image ([#703](https://github.com/mifunedev/openharness/issues/703)).

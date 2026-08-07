@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Install the reviewed pi-langfuse release with its patched OpenTelemetry dependency.
+# Install the reviewed pi-langfuse release with its shutdown patch and patched OpenTelemetry dependency.
 set -euo pipefail
 
-PI_LANGFUSE_VERSION="1.5.7"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PI_LANGFUSE_VERSION="1.5.9"
 OTEL_SDK_NODE_VERSION="0.220.0"
 PI_AGENT_DIR="${PI_AGENT_DIR:-$HOME/.pi/agent}"
 NPM_ROOT="$PI_AGENT_DIR/npm"
@@ -51,6 +52,7 @@ printf 'Installing pi-langfuse@%s in user scope...\n' "$PI_LANGFUSE_VERSION"
 pi install "npm:pi-langfuse@$PI_LANGFUSE_VERSION"
 
 npm install --prefix "$NPM_ROOT" --omit=dev --legacy-peer-deps
+node "$SCRIPT_DIR/patch-langfuse-shutdown.mjs" "$NPM_ROOT/node_modules/pi-langfuse"
 npm audit --prefix "$NPM_ROOT" --audit-level=low
 
-printf 'pi-langfuse@%s installed with a clean npm audit.\n' "$PI_LANGFUSE_VERSION"
+printf 'pi-langfuse@%s installed, shutdown patch applied, with a clean npm audit.\n' "$PI_LANGFUSE_VERSION"

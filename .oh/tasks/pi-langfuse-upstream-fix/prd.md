@@ -2,24 +2,26 @@
 
 ## Introduction / Overview
 
-Open Harness PR #716 provides a guarded local workaround for `pi-langfuse@1.5.9`:
+Open Harness PR #716 now uses a pinned fork of `pi-langfuse@1.5.9`:
 when the extension's bounded shutdown controller aborts an in-flight REST fallback
-request, the package currently records the expected `AbortError` as a runtime
-failure and prints a misleading `Failed to flush/shutdown cleanly` stack.
+request, the package's upstream fix classifies that expected cancellation without
+printing a misleading `Failed to flush/shutdown cleanly` stack.
 
-This PRD prepares the corresponding upstream fix for
-[`gooyoung/pi-langfuse`](https://github.com/gooyoung/pi-langfuse). The upstream
-change should make the package itself classify only its own shutdown-controller
-abort as an expected bounded timeout. Once that fix is released, Open Harness
-can remove its source patcher and pin the upstream release directly.
+This PRD prepares and records the corresponding upstream fix for
+[`gooyoung/pi-langfuse`](https://github.com/gooyoung/pi-langfuse). Until the
+maintainer reviews and releases it, Open Harness installs the exact
+`ryaneggz/pi-langfuse` commit used by upstream PR #14. After release, the
+installer can migrate from the fork pin to the upstream release directly.
 
 ### Current state
 
 - Upstream package: `pi-langfuse@1.5.9`
 - Published upstream commit: `3243208ea89d6fdc2b5f0e66660a4a626880ebd0`
 - Source target: `src/langfuse.ts`, `doShutdownRuntime()` catch branch
-- Local workaround: Open Harness PR #716, issue #715
-- Local behavior: bounded best-effort shutdown remains unchanged; expected
+- Upstream fix PR: [gooyoung/pi-langfuse#14](https://github.com/gooyoung/pi-langfuse/pull/14)
+- Interim source: `ryaneggz/pi-langfuse@51a59c854859bbb08a43baad98f0b9eb4a94588c`
+- Open Harness consumer: PR #716, issue #715
+- Current behavior: bounded best-effort shutdown remains unchanged; expected
   timeout noise is suppressed, while unrelated failures remain visible
 
 ## Goals
@@ -28,8 +30,8 @@ can remove its source patcher and pin the upstream release directly.
 - Preserve the existing bounded shutdown deadline and telemetry semantics.
 - Keep real shutdown, network, ingestion, and cleanup errors diagnosable.
 - Add a regression test that exercises the real upstream shutdown path.
-- Publish a patched upstream release and provide a safe migration path for
-  Open Harness's local workaround.
+- Publish a patched upstream release and provide a safe migration path from
+  Open Harness's interim fork pin.
 
 ## User Stories
 
@@ -107,8 +109,8 @@ upstream fix without losing the integrity guarantees added by PR #716.
       and regression test before changing its pin.
 - [ ] The installer switches to the fixed upstream version and passes the
       existing npm audit gate.
-- [ ] `.pi/install/patch-langfuse-shutdown.mjs` and its workaround-only tests
-      are removed or reduced to migration coverage.
+- [ ] The installer switches from the fork commit to the reviewed upstream
+      release and its source-registration tests are updated for that migration.
 - [ ] Integration docs explain that the upstream release contains the fix and
       no local source mutation is needed.
 - [ ] Full Open Harness tests, typecheck, security audit, CI, and PR audit pass.
@@ -130,8 +132,8 @@ upstream fix without losing the integrity guarantees added by PR #716.
   branch.
 - **FR-6:** The upstream package must publish a new patch release from the
   reviewed source after tests pass.
-- **FR-7:** Open Harness must keep its local patch until the released upstream
-  package is verified; migration must be a separate, auditable change.
+- **FR-7:** Open Harness must keep the immutable fork pin until the released
+  upstream package is verified; migration must be a separate, auditable change.
 
 ## Non-Goals
 
@@ -146,39 +148,27 @@ upstream fix without losing the integrity guarantees added by PR #716.
 
 ## Design / Upstream Fix Details
 
-The upstream change is intentionally small and should remain in
-`src/langfuse.ts`:
+The upstream change is intentionally small and remains in
+`src/langfuse.ts`: `withShutdownDeadline()` receives the shutdown controller
+signal only for REST fallback ingestion, then catches an error as expected only
+when the signal is aborted, the error is exactly `signal.reason`, it is an
+`Error`, and its name is `AbortError`. It emits a debug-only deadline message;
+all other errors retain the existing runtime-error and warning path.
 
-```ts
-} catch (e) {
-  const isExpectedShutdownAbort =
-    controller.signal.aborted &&
-    e === controller.signal.reason &&
-    e instanceof Error &&
-    e.name === "AbortError";
-  if (isExpectedShutdownAbort) {
-    debugLog("📊 Langfuse: Shutdown deadline reached before telemetry completed");
-  } else {
-    rememberRuntimeError("runtime shutdown", e);
-    console.warn("📊 Langfuse: Failed to flush/shutdown cleanly", e);
-  }
-}
-```
-
-The upstream test should mock `fetch` so its rejection follows the supplied
-`AbortSignal` and uses `signal.reason`. It should assert both observable
-outcomes: expected aborts leave `getLastRuntimeError()` empty and do not warn;
-real failures still set the error and warn.
+The upstream test mocks `fetch` so its rejection follows the supplied
+`AbortSignal` and uses `signal.reason`. It asserts both observable outcomes:
+expected aborts do not warn or update `getLastRuntimeError()`; unrelated aborts
+still warn.
 
 ## Technical Considerations
 
 - The upstream package is TypeScript and runs through Pi's package loader.
 - The current package engine requires Node 22 or newer.
-- Open Harness PR #716 currently verifies the published npm integrity, the
-  targeted source branch, patch idempotence, expected-vs-real errors, and the
-  existing OpenTelemetry audit override.
-- The local workaround is intentionally fail-closed because a newer upstream
-  source must be reviewed before the local mutation is removed or retargeted.
+- Open Harness PR #716 verifies the fork source commit in the npm lockfile,
+  user-scoped registration, expected-vs-real error behavior in the upstream
+  tests, and the existing OpenTelemetry audit override.
+- The interim fork pin is intentionally immutable and fail-closed; a newer
+  upstream source must be reviewed before the installer pin changes.
 - The upstream PR should include the exact reproduction, the focused test
   command, and the bounded-best-effort caveat.
 

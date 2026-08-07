@@ -2,71 +2,36 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import {
-  PATCHED_SHUTDOWN_BLOCK,
-  PI_LANGFUSE_INTEGRITY,
-  PI_LANGFUSE_VERSION,
-  VULNERABLE_SHUTDOWN_BLOCK,
-} from "../../../.pi/install/patch-langfuse-shutdown.mjs";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../..");
 const INSTALLER = join(ROOT, ".pi/install/install-langfuse.sh");
-const PATCHER = join(ROOT, ".pi/install/patch-langfuse-shutdown.mjs");
-
-const SHUTDOWN_FIXTURE_SOURCE = `export let lastRuntimeError = null;
-
-export async function runShutdown(error, shouldAbort) {
-  lastRuntimeError = null;
-  const controller = new AbortController();
-  if (shouldAbort) {
-    controller.abort();
-  }
-  const thrownError = shouldAbort && error === "controller" ? controller.signal.reason : error;
-  const debugLog = (message) => {
-    if (process.env.PI_LANGFUSE_DEBUG === "1" || process.env.PI_LANGFUSE_DEBUG === "true") {
-      console.log(message);
-    }
-  };
-  const rememberRuntimeError = (scope, value) => {
-    lastRuntimeError = {
-      scope,
-      message: value instanceof Error ? value.message : String(value),
-    };
-  };
-  {
-    try {
-      throw thrownError;
-${VULNERABLE_SHUTDOWN_BLOCK} finally {
-      // The real implementation performs cleanup here.
-    }
-  }
-  return lastRuntimeError;
-}
-`;
+const PI_LANGFUSE_VERSION = "1.5.9";
+const PI_LANGFUSE_COMMIT = "51a59c854859bbb08a43baad98f0b9eb4a94588c";
+const PI_LANGFUSE_SOURCE = `git+https://github.com/ryaneggz/pi-langfuse.git#${PI_LANGFUSE_COMMIT}`;
+const PI_LANGFUSE_RESOLVED = `git+ssh://git@github.com/ryaneggz/pi-langfuse.git#${PI_LANGFUSE_COMMIT}`;
 
 function fixture(
   auditExit = 0,
   packageVersion = PI_LANGFUSE_VERSION,
-  source = SHUTDOWN_FIXTURE_SOURCE,
-  packageIntegrity = PI_LANGFUSE_INTEGRITY,
+  packageResolved = PI_LANGFUSE_RESOLVED,
+  removeExit = 1,
+  removeMessage = `No matching package found for npm:pi-langfuse@${PI_LANGFUSE_VERSION}`,
 ) {
   const home = mkdtempSync(join(tmpdir(), "pi-langfuse-install-"));
   const bin = join(home, "bin");
   const npmRoot = join(home, ".pi/agent/npm");
   const packageRoot = join(npmRoot, "node_modules/pi-langfuse");
-  const sourcePath = join(packageRoot, "src/langfuse.ts");
   const piLog = join(home, "pi.log");
   const npmLog = join(home, "npm.log");
   mkdirSync(bin, { recursive: true });
-  mkdirSync(join(packageRoot, "src"), { recursive: true });
+  mkdirSync(packageRoot, { recursive: true });
   writeFileSync(
     join(npmRoot, "package.json"),
     `${JSON.stringify({
       name: "pi-extensions",
       private: true,
-      dependencies: { "pi-langfuse": `^${PI_LANGFUSE_VERSION}` },
+      dependencies: { existing: "1.0.0" },
       overrides: { existing: "1.0.0" },
     }, null, 2)}\n`,
   );
@@ -74,7 +39,6 @@ function fixture(
     join(packageRoot, "package.json"),
     `${JSON.stringify({ name: "pi-langfuse", version: packageVersion }, null, 2)}\n`,
   );
-  writeFileSync(sourcePath, source);
   writeFileSync(
     join(npmRoot, "package-lock.json"),
     `${JSON.stringify({
@@ -84,15 +48,29 @@ function fixture(
         "": { name: "pi-extensions", private: true },
         "node_modules/pi-langfuse": {
           version: packageVersion,
-          integrity: packageIntegrity,
+          resolved: packageResolved,
         },
       },
     }, null, 2)}\n`,
   );
-  writeFileSync(join(bin, "pi"), '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$PI_LOG"\n');
+  writeFileSync(piLog, "");
+  writeFileSync(npmLog, "");
+  writeFileSync(
+    join(bin, "pi"),
+    `#!/usr/bin/env bash
+printf "%s\\n" "$*" >> "$PI_LOG"
+if [ "$1" = remove ] && [ "$PI_REMOVE_EXIT" -ne 0 ]; then
+  printf "%s\\n" "$PI_REMOVE_MESSAGE" >&2
+  exit "$PI_REMOVE_EXIT"
+fi
+`,
+  );
   writeFileSync(
     join(bin, "npm"),
-    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "$NPM_LOG"\nif [ "$1" = audit ]; then exit "$AUDIT_EXIT"; fi\n`,
+    `#!/usr/bin/env bash
+printf '%s\\n' "$*" >> "$NPM_LOG"
+if [ "$1" = audit ]; then exit "$AUDIT_EXIT"; fi
+`,
   );
   chmodSync(join(bin, "pi"), 0o755);
   chmodSync(join(bin, "npm"), 0o755);
@@ -101,7 +79,6 @@ function fixture(
     home,
     npmRoot,
     packageRoot,
-    sourcePath,
     piLog,
     npmLog,
     env: {
@@ -111,6 +88,8 @@ function fixture(
       PI_LOG: piLog,
       NPM_LOG: npmLog,
       AUDIT_EXIT: String(auditExit),
+      PI_REMOVE_EXIT: String(removeExit),
+      PI_REMOVE_MESSAGE: removeMessage,
     },
   };
 }
@@ -120,25 +99,23 @@ describe("pi-langfuse installer", () => {
     execFileSync("bash", ["-n", INSTALLER]);
   });
 
-  it("pins the package, applies the scoped patch, and audits idempotently", () => {
+  it("pins the maintained fork, registers it in user scope, and audits idempotently", () => {
     const test = fixture();
 
     execFileSync("bash", [INSTALLER], { env: test.env });
-    const patchedSource = readFileSync(test.sourcePath, "utf8");
     execFileSync("bash", [INSTALLER], { env: test.env });
 
     const manifest = JSON.parse(readFileSync(join(test.npmRoot, "package.json"), "utf8"));
-    expect(manifest.dependencies["pi-langfuse"]).toBe(`^${PI_LANGFUSE_VERSION}`);
+    expect(manifest.dependencies["pi-langfuse"]).toBe(PI_LANGFUSE_SOURCE);
     expect(manifest.overrides).toEqual({
       existing: "1.0.0",
       "pi-langfuse": { "@opentelemetry/sdk-node": "0.220.0" },
     });
-    expect(readFileSync(test.sourcePath, "utf8")).toBe(patchedSource);
-    expect(patchedSource).toContain(PATCHED_SHUTDOWN_BLOCK);
-    expect(patchedSource).not.toContain(VULNERABLE_SHUTDOWN_BLOCK);
     expect(readFileSync(test.piLog, "utf8").trim().split("\n")).toEqual([
-      `install npm:pi-langfuse@${PI_LANGFUSE_VERSION}`,
-      `install npm:pi-langfuse@${PI_LANGFUSE_VERSION}`,
+      `remove npm:pi-langfuse@${PI_LANGFUSE_VERSION}`,
+      `install ${test.packageRoot}`,
+      `remove npm:pi-langfuse@${PI_LANGFUSE_VERSION}`,
+      `install ${test.packageRoot}`,
     ]);
     const npmCalls = readFileSync(test.npmLog, "utf8").trim().split("\n");
     expect(npmCalls).toEqual([
@@ -149,68 +126,16 @@ describe("pi-langfuse installer", () => {
     ]);
   });
 
-  it("suppresses only the shutdown controller's AbortError", async () => {
-    const test = fixture();
-    execFileSync(process.execPath, [PATCHER, test.packageRoot]);
-    const modulePath = join(test.home, "shutdown-fixture.mjs");
-    writeFileSync(modulePath, readFileSync(test.sourcePath, "utf8"));
-    const shutdown = await import(pathToFileURL(modulePath).href);
-    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const debug = vi.spyOn(console, "log").mockImplementation(() => {});
-    const previousDebug = process.env.PI_LANGFUSE_DEBUG;
-
-    try {
-      process.env.PI_LANGFUSE_DEBUG = "1";
-      expect(await shutdown.runShutdown("controller", true)).toBeNull();
-      expect(warning).not.toHaveBeenCalled();
-      expect(debug).toHaveBeenCalledWith(
-        "📊 Langfuse: Shutdown deadline reached before telemetry completed",
-      );
-
-      delete process.env.PI_LANGFUSE_DEBUG;
-      expect(await shutdown.runShutdown(new DOMException("external abort", "AbortError"), false))
-        .toMatchObject({ scope: "runtime shutdown", message: "external abort" });
-      expect(warning).toHaveBeenCalledTimes(1);
-
-      expect(await shutdown.runShutdown(new Error("network failure"), true))
-        .toMatchObject({ scope: "runtime shutdown", message: "network failure" });
-      expect(warning).toHaveBeenCalledTimes(2);
-    } finally {
-      if (previousDebug === undefined) {
-        delete process.env.PI_LANGFUSE_DEBUG;
-      } else {
-        process.env.PI_LANGFUSE_DEBUG = previousDebug;
-      }
-      warning.mockRestore();
-      debug.mockRestore();
-    }
-  });
-
-  it("fails closed when the reviewed shutdown branch changes", () => {
-    const changedSource = SHUTDOWN_FIXTURE_SOURCE.replace(
-      VULNERABLE_SHUTDOWN_BLOCK,
-      VULNERABLE_SHUTDOWN_BLOCK.replace("runtime shutdown", "changed shutdown"),
-    );
-    const test = fixture(0, PI_LANGFUSE_VERSION, changedSource);
+  it("fails closed when the lockfile resolves a different fork commit", () => {
+    const test = fixture(0, PI_LANGFUSE_VERSION, `${PI_LANGFUSE_RESOLVED}-different`);
     const result = spawnSync("bash", [INSTALLER], { env: test.env, encoding: "utf8" });
 
     expect(result.status).toBe(1);
-    expect(`${result.stdout}\n${result.stderr}`).toContain("refusing to patch an unknown package");
+    expect(`${result.stdout}\n${result.stderr}`).toContain("reviewed pi-langfuse fork commit");
     expect(readFileSync(test.npmLog, "utf8")).not.toContain(" audit ");
   });
 
-  it("fails when the final npm audit is not clean", () => {
-    const test = fixture(1);
-    const result = spawnSync("bash", [INSTALLER], { env: test.env, encoding: "utf8" });
-
-    expect(result.status).toBe(1);
-    expect(readFileSync(test.sourcePath, "utf8")).toContain(PATCHED_SHUTDOWN_BLOCK);
-    expect(readFileSync(test.npmLog, "utf8")).toContain(
-      `audit --prefix ${test.npmRoot} --audit-level=low`,
-    );
-  });
-
-  it("rejects an unexpected pi-langfuse version", () => {
+  it("fails closed when the fork package version changes", () => {
     const test = fixture(0, "1.5.8");
     const result = spawnSync("bash", [INSTALLER], { env: test.env, encoding: "utf8" });
 
@@ -220,11 +145,22 @@ describe("pi-langfuse installer", () => {
     );
   });
 
-  it("rejects an unexpected npm tarball integrity", () => {
-    const test = fixture(0, PI_LANGFUSE_VERSION, SHUTDOWN_FIXTURE_SOURCE, "sha512-not-reviewed");
+  it("fails when the final npm audit is not clean", () => {
+    const test = fixture(1);
     const result = spawnSync("bash", [INSTALLER], { env: test.env, encoding: "utf8" });
 
     expect(result.status).toBe(1);
-    expect(`${result.stdout}\n${result.stderr}`).toContain("tarball integrity");
+    expect(readFileSync(test.npmLog, "utf8")).toContain(
+      `audit --prefix ${test.npmRoot} --audit-level=low`,
+    );
+  });
+
+  it("does not hide an unexpected registry-removal failure", () => {
+    const test = fixture(0, PI_LANGFUSE_VERSION, PI_LANGFUSE_RESOLVED, 1, "permission denied");
+    const result = spawnSync("bash", [INSTALLER], { env: test.env, encoding: "utf8" });
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("permission denied");
+    expect(readFileSync(test.npmLog, "utf8")).toBe("");
   });
 });

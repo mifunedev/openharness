@@ -19,30 +19,35 @@ privacy sections for the CLI you use before enabling either integration.
 ## Pi
 
 [`pi-langfuse` v1.5.9](https://www.npmjs.com/package/pi-langfuse/v/1.5.9) is a
-Pi package. The published package resolves to
-[commit `3243208ea89d6fdc2b5f0e66660a4a626880ebd0`](https://github.com/gooyoung/pi-langfuse/commit/3243208ea89d6fdc2b5f0e66660a4a626880ebd0).
-Pi packages can execute arbitrary code, so review that source before installing
-it.
+Pi package. While the upstream shutdown fix is under review, Open Harness uses
+the maintained fork at commit
+[`51a59c854859bbb08a43baad98f0b9eb4a94588c`](https://github.com/ryaneggz/pi-langfuse/commit/51a59c854859bbb08a43baad98f0b9eb4a94588c),
+which is the source for upstream PR
+[#14](https://github.com/gooyoung/pi-langfuse/pull/14). Pi packages can execute
+arbitrary code, so review that source before installing it.
 
-Install the reviewed release through the repository-owned helper:
+Install the pinned fork through the repository-owned helper:
 
 ```bash
 bash .pi/install/install-langfuse.sh
 ```
 
-The helper installs `pi-langfuse@1.5.9` in user scope, applies a
-version- and reviewed-shutdown-branch-gated local patch, applies a scoped
-`@opentelemetry/sdk-node@0.220.0` override in Pi's managed npm manifest, and
-requires a clean `npm audit`. The local patch classifies only an `AbortError`
-caused by pi-langfuse's own shutdown controller as an expected bounded timeout;
-with `PI_LANGFUSE_DEBUG=1` it remains visible as a debug message, while other
-shutdown errors still update runtime status and emit the normal warning. The
-patch is idempotent and fails closed if the package version or targeted source
-branch changes, so rerun the helper after any package reinstall or `~/.pi`
+The helper installs the fork commit in user scope through Pi's managed npm
+root, registers the installed path with Pi, applies the scoped
+`@opentelemetry/sdk-node@0.220.0` override, verifies the package lock resolves
+the exact reviewed commit, and requires a clean `npm audit`. The upstream fix
+classifies only an `AbortError` caused by pi-langfuse's own shutdown controller
+as an expected bounded timeout; with `PI_LANGFUSE_DEBUG=1` it remains visible as
+a debug message, while other shutdown errors still update runtime status and
+emit the normal warning. Rerun the helper after any package reinstall or `~/.pi`
 volume reset. The OpenTelemetry override remediates the vulnerable tree selected
 by pi-langfuse's declared `^0.218.0` range without npm audit's unsafe
 recommendation to downgrade pi-langfuse to `1.0.0`; unrelated npm overrides are
 preserved.
+
+This fork pin is temporary and intentionally immutable. If upstream merges and
+publishes #14, migrate the installer to that reviewed upstream release in a
+separate change; do not follow a moving branch automatically.
 
 This is deliberately **not** an Open Harness default package. It instruments Pi
 sessions only; it does not instrument standalone Claude Code, Codex CLI, or

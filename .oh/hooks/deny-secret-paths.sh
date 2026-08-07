@@ -22,11 +22,11 @@ mapfile -t paths < <(jq -r '
 
 [ "${#paths[@]}" -eq 0 ] && exit 0
 
-# Operator-only configuration. `.config/` — at the repo root and in $HOME — is
-# owned by the operator; agents get neither read nor write. Anchored to a whole
-# path SEGMENT so ordinary tool config (jest.config.js, app.config, .configrc)
-# is unaffected.
-OPERATOR_PATH='(^|/)\.config(/|$)'
+# Operator-only configuration. `.config/` — at the repo root and in $HOME — and
+# provider-local settings are owned by the operator; agents get neither read nor
+# write. Anchors prevent ordinary tool config (jest.config.js, app.config,
+# .configrc) from matching.
+OPERATOR_PATH='(^|/)\.config(/|$)|(^|/)settings\.local\.json$'
 
 # Mirrors .claude/settings.json permissions.deny Read(...) globs.
 DENY_PATH='(^|/)\.env([^/]*)?$'                 # **/.env*
@@ -73,7 +73,7 @@ emit() {
 
 for path in "${paths[@]}"; do
   if grep -qEi -- "$OPERATOR_PATH" <<<"$path"; then
-    emit deny "Operator-only path guard (deny): refusing to access $path — the .config/ directory holds operator-managed configuration and is off-limits to agents for both read and write. This is a deliberate policy, not a misconfiguration: do not retry via Bash, a subshell, a symlink, or a relative path. If you need a value from it, ask the operator to paste only that value into the chat."
+    emit deny "Operator-only path guard (deny): refusing to access $path — .config/ and settings.local.json hold operator-managed configuration and are off-limits to agents for both read and write. This is a deliberate policy, not a misconfiguration: do not retry via Bash, a subshell, a symlink, or a relative path. If you need a value from it, ask the operator to paste only that value into the chat."
     exit 0
   fi
 done

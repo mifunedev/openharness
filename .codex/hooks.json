@@ -14,6 +14,16 @@
             "command": "sh -c '[ \"$CC_SAFETY_NET_OFF\" = \"1\" ] || ! command -v cc-safety-net >/dev/null 2>&1 || exec cc-safety-net hook --claude-code'"
           }
         ]
+      },
+      {
+        "matcher": "Read|Write|Edit|NotebookEdit|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/deny-local-settings.sh\"",
+            "statusMessage": "Checking file path for operator-only settings"
+          }
+        ]
       }
     ]
   }

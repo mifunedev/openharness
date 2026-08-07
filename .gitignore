@@ -60,6 +60,7 @@ workspace/startup.sh
 **/.pnpm-store
 **/.claude/plans
 **/.claude/specs/*
+**/.claude/settings.local.json
 **/auth.json
 **/.credentials.json
 

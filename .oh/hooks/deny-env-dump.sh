@@ -62,6 +62,7 @@ DENY+='|\bdocker[[:space:]]+(secret|config)[[:space:]]+inspect\b'
 # so prose that merely mentions the path in a commit/PR body still passes; the
 # `-F file` / `--body-file` pattern covers the inline-message case.
 OPERATOR_PATH='(^|[^A-Za-z0-9._-])\.config([^A-Za-z0-9_-]|$)'
+OPERATOR_PATH+='|(^|[^A-Za-z0-9._-])settings\.local\.json([^A-Za-z0-9._-]|$)'
 
 # Tier 1b — reading secret-laden files via shell tools. Checked separately from
 # the main DENY (below) so a basename-allowlist can exempt tracked template env
@@ -122,7 +123,7 @@ emit() {
 if grep -qEi -- "$DENY" <<<"$cmd"; then
   emit deny 'Secret-exposure guard (deny): command matches a high-risk pattern — bulk env dump (env/set/export -p/declare -x/-p/compgen/printenv/proc environ), shell history, echo/printf of a secret-named variable (TOKEN/SECRET/KEY/PASSWORD/AUTH/CREDENTIAL/BEARER/SLACK_*/OPENAI_*/ANTHROPIC_*/GH_TOKEN/AWS_SECRET), Authorization header with variable interpolation, or a token-printing CLI (gh auth token, gcloud auth print-*-token, aws configure get, kubectl get secret -o yaml/json, docker secret/config inspect). These almost always leak credentials into the transcript and prompt cache. Do NOT retry a variant that bypasses this check. Ask the user to run the command themselves and paste only the specific non-secret output you need.'
 elif grep -qEi -- "$OPERATOR_PATH" <<<"$cmd"; then
-  emit deny 'Operator-only path guard (deny): command references the .config/ directory, which holds operator-managed configuration and is off-limits to agents for both read and write. This is a deliberate policy, not a misconfiguration — do not retry a variant that spells the path differently, resolves it through a variable or symlink, or reaches it from a subshell. If you need a value from it, ask the operator to paste only that value into the chat. If you only need to *mention* the path in prose (commit message, PR body), pass it via a file (`git commit -F msg.txt`, `gh pr create --body-file body.md`) or a HEREDOC, which this guard strips.'
+  emit deny 'Operator-only path guard (deny): command references .config/ or settings.local.json, which hold operator-managed configuration and are off-limits to agents for both read and write. This is a deliberate policy, not a misconfiguration — do not retry a variant that spells the path differently, resolves it through a variable or symlink, or reaches it from a subshell. If you need a value from it, ask the operator to paste only that value into the chat. If you only need to mention the path in prose (commit message, PR body), pass it via a file (`git commit -F msg.txt`, `gh pr create --body-file body.md`) or a HEREDOC, which this guard strips.'
 elif grep -qEi -- "$SECRET_PATH_DENY" <<<"$cmd"; then
   # Allowlist: template env files (.example.env, .env.example, .env.sample, .env.template, …)
   # are tracked and hold no real secrets — allow reads against them. Deny all other env

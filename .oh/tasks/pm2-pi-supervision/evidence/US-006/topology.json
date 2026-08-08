@@ -1,0 +1,108 @@
+{
+  "kind": "direct-rpc-topology",
+  "story": "US-006",
+  "candidate": "pm2-direct-rpc-topology",
+  "result": "NOT RUN",
+  "reason": "fresh user/network namespace unavailable; candidate launch is prohibited",
+  "directCandidateOnly": true,
+  "wrapperSubstituted": false,
+  "wrapperProcessLaunched": false,
+  "pm2LogsUsedAsTransport": false,
+  "scriptTarget": "<HOST_TOOL_ROOT>/bin/pi",
+  "resolvedScriptTarget": "<HOST_TOOL_ROOT>/lib/node_modules/@earendil-works/pi-coding-agent/dist/cli.js",
+  "scriptArguments": [
+    "--mode",
+    "rpc"
+  ],
+  "exactTargetStatement": "PM2 script target is the installed Pi executable; Pi is the intended PM2 child.",
+  "intendedParentage": "PM2 daemon -> Pi --mode rpc",
+  "processMap": {
+    "pm2Daemon": {
+      "pid": null,
+      "parentPid": null,
+      "procStartTime": null,
+      "status": "NOT RUN"
+    },
+    "pi": {
+      "pid": null,
+      "parentPid": null,
+      "procStartTime": null,
+      "status": "NOT RUN"
+    },
+    "wrapper": null
+  },
+  "proofObligations": [
+    {
+      "id": "pm2-daemon-pid",
+      "requirement": "exact PM2 daemon PID and ownership registration",
+      "status": "LIVE-UNVERIFIED",
+      "observedValue": null,
+      "note": "No end-to-end value is claimed because the launch prerequisite failed."
+    },
+    {
+      "id": "pi-pid",
+      "requirement": "exact Pi child PID, parent PM2 identity, and ownership registration",
+      "status": "LIVE-UNVERIFIED",
+      "observedValue": null,
+      "note": "No end-to-end value is claimed because the launch prerequisite failed."
+    },
+    {
+      "id": "stdin-owner-writer",
+      "requirement": "retained writable Pi stdin owner and external fixture writer",
+      "status": "LIVE-UNVERIFIED",
+      "observedValue": null,
+      "note": "No end-to-end value is claimed because the launch prerequisite failed."
+    },
+    {
+      "id": "stdout-consumer",
+      "requirement": "lossless Pi stdout consumer independent of PM2 logs",
+      "status": "LIVE-UNVERIFIED",
+      "observedValue": null,
+      "note": "No end-to-end value is claimed because the launch prerequisite failed."
+    },
+    {
+      "id": "ready-signal",
+      "requirement": "first valid Pi RPC public stdout frame inside the ready deadline",
+      "status": "LIVE-UNVERIFIED",
+      "observedValue": null,
+      "note": "No end-to-end value is claimed because the launch prerequisite failed."
+    },
+    {
+      "id": "lf-jsonl-command-path",
+      "requirement": "bounded UTF-8 LF JSONL from fixture writer to Pi stdin",
+      "status": "LIVE-UNVERIFIED",
+      "observedValue": null,
+      "note": "No end-to-end value is claimed because the launch prerequisite failed."
+    },
+    {
+      "id": "retained-open-stdin",
+      "requirement": "stdin remains open while RPC service is expected to live",
+      "status": "LIVE-UNVERIFIED",
+      "observedValue": null,
+      "note": "No end-to-end value is claimed because the launch prerequisite failed."
+    },
+    {
+      "id": "eof-shutdown",
+      "requirement": "writer EOF reaches Pi and produces bounded shutdown",
+      "status": "SOURCE-VERIFIED-PI-ONLY",
+      "observedValue": null,
+      "note": "Pi source installs a stdin end shutdown handler; PM2-to-Pi EOF propagation was not observed."
+    },
+    {
+      "id": "exit-code-propagation",
+      "requirement": "Pi exit code propagates through PM2 status without substitution",
+      "status": "LIVE-UNVERIFIED",
+      "observedValue": null,
+      "note": "No end-to-end value is claimed because the launch prerequisite failed."
+    },
+    {
+      "id": "byte-frame-losslessness",
+      "requirement": "request and response byte/frame count, order, type, and SHA-256 equality",
+      "status": "LIVE-UNVERIFIED",
+      "observedValue": null,
+      "note": "No end-to-end value is claimed because the launch prerequisite failed."
+    }
+  ],
+  "networkIsolation": "NOT RUN",
+  "candidateLaunchCount": 0
+}

@@ -1,0 +1,108 @@
+{
+  "kind": "pty-control-responsibility-boundary",
+  "story": "US-010",
+  "candidate": "pm2-pty-control",
+  "result": "NOT RUN",
+  "responsibilities": [
+    {
+      "component": "PM2 7.0.3",
+      "boundary": "supervise the already-present PTY utility as its exact child; PM2 does not itself supply PTY semantics"
+    },
+    {
+      "component": "PTY utility",
+      "boundary": "allocate and own the PTY and execute the disposable baseline/Pi control; no semantic-health function"
+    },
+    {
+      "component": "disposable baseline/Pi control",
+      "boundary": "resolve and expose its actual TTY/mode/lifecycle behavior"
+    },
+    {
+      "component": "fixture",
+      "boundary": "observe TTY, mode, ready, idle, exit, restart, metadata, and cleanup without production assets"
+    }
+  ],
+  "observed": {
+    "stdinTty": null,
+    "stdoutTty": null,
+    "resolvedMode": null,
+    "lifecycle": null
+  },
+  "resolvedModeClaimed": false,
+  "semanticWatchdogFunction": false,
+  "liveModelTurns": 0,
+  "productionAssetsLoaded": 0,
+  "repetitionEvidence": [
+    {
+      "kind": "pty-control-repetition",
+      "story": "US-010",
+      "candidate": "pm2-pty-control",
+      "repetition": 1,
+      "status": "NOT RUN",
+      "outcome": "NOT RUN",
+      "reason": "compatible PTY utility metadata is present, but fresh user/network namespace isolation is unavailable; the PTY control is safely NOT RUN before utility, PM2, baseline, or Pi launch",
+      "candidateLaunched": false,
+      "observationPerformed": false,
+      "comparable": false,
+      "censored": false,
+      "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b",
+      "utilityPid": null,
+      "pm2DaemonPid": null,
+      "controlPid": null,
+      "stdinTty": null,
+      "stdoutTty": null,
+      "resolvedMode": null,
+      "readyObserved": null,
+      "idleSurvivalNs": null,
+      "exitCode": null,
+      "restartCount": null
+    },
+    {
+      "kind": "pty-control-repetition",
+      "story": "US-010",
+      "candidate": "pm2-pty-control",
+      "repetition": 2,
+      "status": "NOT RUN",
+      "outcome": "NOT RUN",
+      "reason": "compatible PTY utility metadata is present, but fresh user/network namespace isolation is unavailable; the PTY control is safely NOT RUN before utility, PM2, baseline, or Pi launch",
+      "candidateLaunched": false,
+      "observationPerformed": false,
+      "comparable": false,
+      "censored": false,
+      "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b",
+      "utilityPid": null,
+      "pm2DaemonPid": null,
+      "controlPid": null,
+      "stdinTty": null,
+      "stdoutTty": null,
+      "resolvedMode": null,
+      "readyObserved": null,
+      "idleSurvivalNs": null,
+      "exitCode": null,
+      "restartCount": null
+    },
+    {
+      "kind": "pty-control-repetition",
+      "story": "US-010",
+      "candidate": "pm2-pty-control",
+      "repetition": 3,
+      "status": "NOT RUN",
+      "outcome": "NOT RUN",
+      "reason": "compatible PTY utility metadata is present, but fresh user/network namespace isolation is unavailable; the PTY control is safely NOT RUN before utility, PM2, baseline, or Pi launch",
+      "candidateLaunched": false,
+      "observationPerformed": false,
+      "comparable": false,
+      "censored": false,
+      "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b",
+      "utilityPid": null,
+      "pm2DaemonPid": null,
+      "controlPid": null,
+      "stdinTty": null,
+      "stdoutTty": null,
+      "resolvedMode": null,
+      "readyObserved": null,
+      "idleSurvivalNs": null,
+      "exitCode": null,
+      "restartCount": null
+    }
+  ]
+}

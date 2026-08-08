@@ -1,0 +1,153 @@
+{
+  "kind": "terminal-production-metadata-boundary-proof",
+  "story": "US-019",
+  "status": "PASS",
+  "metadataOnly": true,
+  "productionContentRead": false,
+  "authorizedIdentityMetadata": {
+    "git-status": "tracked changed-path status only",
+    "git-diff-paths": "tracked changed-path names only",
+    "tmux-session-identities": "session name, ID, creation time, and attached flag only",
+    "process-identities": "PID, parent PID, start time, and command name only"
+  },
+  "sourceDeltaCount": 11,
+  "sourceDeltas": [
+    {
+      "story": "US-005",
+      "path": "evidence/US-005/production-metadata-delta.json",
+      "sha256": "d1263633ff899ebbc0ac1726868dcbc378dbf81b9a2ebcc8aecc3af1e763b16f",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-006",
+      "path": "evidence/US-006/production-metadata-delta.json",
+      "sha256": "2896464d400c228612a3bf4c7dfee5e51c8bdebcbf920468e9b537268705ef89",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-007",
+      "path": "evidence/US-007/production-metadata-delta.json",
+      "sha256": "c6aee4c8879d942cb7bd003599ae79797b11bda9d3f02cc54be3d523c8bc22f6",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-008",
+      "path": "evidence/US-008/production-metadata-delta.json",
+      "sha256": "7e5a42528726b7c6602737e6492f5a1ea559c22cd73ffb272b937a0446d71298",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-009",
+      "path": "evidence/US-009/production-metadata-delta.json",
+      "sha256": "7a5340f6aad8692e09b798772b31ebc6df21bdbb894f289b7f14412445e1051a",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-010",
+      "path": "evidence/US-010/production-metadata-delta.json",
+      "sha256": "de893988b125db8b56b15222b3eb82895eb405d37473d591ddbfca4636c40c7a",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-011",
+      "path": "evidence/US-011/production-metadata-delta.json",
+      "sha256": "bb1594694d288e6bb8ccd5fe0540ed6ed01e19988d99c49c0dec751e1f5af73f",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-012",
+      "path": "evidence/US-012/production-metadata-delta.json",
+      "sha256": "673300e2f0fb1c0c0867ddaf84f4fb76628094553fd7c5e0f84f52af9392474f",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-013",
+      "path": "evidence/US-013/production-metadata-delta.json",
+      "sha256": "b3e086dfa28d3ad13e0367265841c88c16667bcf4f1dd095cb482e7f131db8f4",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-014",
+      "path": "evidence/US-014/production-metadata-delta.json",
+      "sha256": "0d78799118406d135b800e0dcf7effcfa1c1be9aabdf30976c13c604520b6620",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    },
+    {
+      "story": "US-015",
+      "path": "evidence/US-015/production-metadata-delta.json",
+      "sha256": "270b8faf3cd61489e19f8e90e22f24a15804ce7048da150751086c20e922b0a9",
+      "bytes": 1571,
+      "commandNames": [
+        "git-diff-paths",
+        "git-status",
+        "process-identities",
+        "tmux-session-identities"
+      ]
+    }
+  ],
+  "everyCapturedPerRunDeltaUnchanged": true,
+  "proofScope": "each already-captured bounded pre/post delta independently; no new live metadata capture",
+  "currentAmbientIdentitySnapshotCaptured": false,
+  "volatileAmbientProcessIdentitiesGloballyIdenticalClaimed": false,
+  "globalContinuityClaimed": false
+}

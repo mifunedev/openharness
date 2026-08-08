@@ -1,0 +1,19 @@
+{
+  "kind": "extension-api-probe-aggregate",
+  "story": "US-008",
+  "candidate": "rpc-extension-probe",
+  "status": "NOT RUN",
+  "reason": "no RPC topology is runnable and denied-network proof is unavailable; fake-provider and extension API probe remains safely NOT RUN before extension/provider/Pi load or model turn",
+  "requestedRepetitions": 3,
+  "measuredRepetitions": 0,
+  "notRunRepetitions": 3,
+  "requiredRunCompleteness": "0/3",
+  "metrics": "not-comparable",
+  "imputation": false,
+  "selectiveRetries": false,
+  "comparable": false,
+  "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b",
+  "runnableRpcTopologyCount": 0,
+  "liveModelTurns": 0,
+  "providerBackedModelTurns": 0
+}

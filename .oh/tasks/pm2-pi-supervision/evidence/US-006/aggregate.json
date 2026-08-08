@@ -1,0 +1,16 @@
+{
+  "kind": "direct-rpc-topology-aggregate",
+  "story": "US-006",
+  "candidate": "pm2-direct-rpc-topology",
+  "status": "NOT RUN",
+  "reason": "fresh user/network namespace unavailable; candidate launch is prohibited",
+  "requestedRepetitions": 3,
+  "measuredRepetitions": 0,
+  "notRunRepetitions": 3,
+  "requiredRunCompleteness": "0/3",
+  "transportFeasibility": "LIVE-UNVERIFIED",
+  "metrics": "not-comparable",
+  "imputation": false,
+  "selectiveRetries": false,
+  "manifestHash": "ed79d0e7f623938e92e17cc2b3203b07074f5d796f0de3abeb5013700fc2e31b"
+}

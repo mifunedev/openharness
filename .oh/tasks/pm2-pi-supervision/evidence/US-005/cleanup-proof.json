@@ -1,0 +1,13 @@
+{
+  "kind": "cleanup-proof",
+  "status": "clean-no-candidate-launched",
+  "reason": "fresh user/network namespace unavailable; candidate launch is prohibited",
+  "candidateLaunchCount": 0,
+  "runtimeRootsCreated": 0,
+  "ownedRegistryCreated": false,
+  "registeredOwnedProcessCount": 0,
+  "signalAttempts": 0,
+  "remainingOwnedPids": [],
+  "residue": "none-created",
+  "idempotent": true
+}

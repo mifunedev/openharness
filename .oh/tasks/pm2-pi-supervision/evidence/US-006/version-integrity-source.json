@@ -1,0 +1,53 @@
+{
+  "kind": "version-integrity-source-evidence",
+  "story": "US-006",
+  "candidate": "pm2-direct-rpc-topology",
+  "pm2": {
+    "status": "SOURCE-VERIFIED",
+    "resolvedPackageIdentity": {
+      "exact": true,
+      "package": "pm2",
+      "version": "7.0.3",
+      "nodeEngine": ">=18",
+      "integrity": "sha512-zRJOdburpb9OEPB0uqoNT8C1Gp7hPJPVy4Kr67XJNuT9UlMQcOt1WXrYQUmwqKPHk8FyauvP1CPhqoCrCaPw0Q==",
+      "tarballUrl": "https://registry.npmjs.org/pm2/-/pm2-7.0.3.tgz"
+    },
+    "source": {
+      "metadataCommandCitedNotExecuted": "npm view pm2@7.0.3 version engines dist.integrity",
+      "taskEvidence": ".oh/tasks/pm2-pi-supervision/assessment.md#source-baseline",
+      "upstreamTag": "v7.0.3",
+      "upstreamTagCommit": "01d4f6d59c5eaf4ff6683bb38824dcf38d25b289",
+      "upstreamSource": "https://github.com/Unitech/pm2/tree/v7.0.3"
+    },
+    "runtimeResolution": {
+      "status": "NOT RUN",
+      "reason": "fresh user/network namespace unavailable; candidate launch is prohibited",
+      "exactFetchAttempted": false,
+      "otherFetchAttempted": false,
+      "npmAuthOrConfigRead": false,
+      "ambientCacheInspected": false,
+      "offlineDependencyResolution": "NOT RUN",
+      "cacheOrDependencyMissPolicy": "NOT RUN without alternate fetch, dependency, lockfile, or global install",
+      "executableLoaded": false
+    }
+  },
+  "pi": {
+    "status": "SOURCE-VERIFIED",
+    "package": "@earendil-works/pi-coding-agent",
+    "version": "0.82.1",
+    "commandPath": "<HOST_TOOL_ROOT>/bin/pi",
+    "resolvedScript": "<HOST_TOOL_ROOT>/lib/node_modules/@earendil-works/pi-coding-agent/dist/cli.js",
+    "binTarget": "dist/cli.js",
+    "candidateExecuted": false,
+    "packageJsonSha256": "d1d4d2c7df821306abdbbcda59c8538214a6a7c87d1f9e3258e113154dbcd524",
+    "mainSourceSha256": "425a66d684ef16d8e07b578ace29b249a783f36a1df24433d3c489e63f3da8a6",
+    "rpcSourceSha256": "c87945c1b3e81db3d7672735e9846a64b892e7184bc3d796d1affcd187b76ec2",
+    "sourceReferences": [
+      "installed package.json name/version/bin fields",
+      "dist/main.js resolveAppMode: explicit mode rpc selects RPC",
+      "dist/modes/rpc/rpc-mode.js: stdin LF-JSONL reader, raw stdout frames, stdin end shutdown",
+      "docs/rpc.md: LF-only JSONL and extension_ui_request protocol"
+    ]
+  },
+  "networkFetches": []
+}

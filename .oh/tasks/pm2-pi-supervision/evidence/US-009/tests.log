@@ -1,0 +1,214 @@
+TAP version 13
+# Subtest: env -i contract creates empty disposable homes and 0700 PM2_HOME
+ok 1 - env -i contract creates empty disposable homes and 0700 PM2_HOME
+  ---
+  duration_ms: 3.52376
+  type: 'test'
+  ...
+# Subtest: non-empty disposable auth/config home fails closed
+ok 2 - non-empty disposable auth/config home fails closed
+  ---
+  duration_ms: 1.408599
+  type: 'test'
+  ...
+# Subtest: network-denial failure returns safe NOT RUN
+ok 3 - network-denial failure returns safe NOT RUN
+  ---
+  duration_ms: 0.186191
+  type: 'test'
+  ...
+# Subtest: global/default and cluster PM2 commands are denied
+ok 4 - global/default and cluster PM2 commands are denied
+  ---
+  duration_ms: 1.713877
+  type: 'test'
+  ...
+# Subtest: lifecycle performs cleanup after success and assertion failure
+ok 5 - lifecycle performs cleanup after success and assertion failure
+  ---
+  duration_ms: 1.321821
+  type: 'test'
+  ...
+# Subtest: EXIT, INT, TERM, HUP, and timeout invoke one idempotent bounded cleanup
+ok 6 - EXIT, INT, TERM, HUP, and timeout invoke one idempotent bounded cleanup
+  ---
+  duration_ms: 2.257487
+  type: 'test'
+  ...
+# Subtest: metadata snapshots are constrained to the four identity-only commands
+ok 7 - metadata snapshots are constrained to the four identity-only commands
+  ---
+  duration_ms: 0.388632
+  type: 'test'
+  ...
+# Subtest: baseline source is synthetic-only and has no process, network, or production imports
+ok 8 - baseline source is synthetic-only and has no process, network, or production imports
+  ---
+  duration_ms: 0.292465
+  type: 'test'
+  ...
+# Subtest: US-007 through US-010 accept only their unchanged frozen manifest contracts
+ok 9 - US-007 through US-010 accept only their unchanged frozen manifest contracts
+  ---
+  duration_ms: 1.370239
+  type: 'test'
+  ...
+# Subtest: US-007 refuses wrapper substitution when direct transport remains LIVE-UNVERIFIED
+ok 10 - US-007 refuses wrapper substitution when direct transport remains LIVE-UNVERIFIED
+  ---
+  duration_ms: 0.742132
+  type: 'test'
+  ...
+# Subtest: US-007 rejects a false claim that direct transport was proven infeasible
+ok 11 - US-007 rejects a false claim that direct transport was proven infeasible
+  ---
+  duration_ms: 0.130687
+  type: 'test'
+  ...
+# Subtest: US-008 records fake-provider API obligations with zero model turns and production loads
+ok 12 - US-008 records fake-provider API obligations with zero model turns and production loads
+  ---
+  duration_ms: 0.21902
+  type: 'test'
+  ...
+# Subtest: US-009 preserves no-mode observations as null instead of assuming print mode
+ok 13 - US-009 preserves no-mode observations as null instead of assuming print mode
+  ---
+  duration_ms: 0.246974
+  type: 'test'
+  ...
+# Subtest: US-010 detects installed PTY utility metadata without execution, install, or fetch
+ok 14 - US-010 detects installed PTY utility metadata without execution, install, or fetch
+  ---
+  duration_ms: 2.134095
+  type: 'test'
+  ...
+# Subtest: US-010 records the PTY boundary but does not launch while isolation is unavailable
+ok 15 - US-010 records the PTY boundary but does not launch while isolation is unavailable
+  ---
+  duration_ms: 1.337128
+  type: 'test'
+  ...
+# Subtest: control characterization module cannot launch processes, open sockets, install, or fetch
+ok 16 - control characterization module cannot launch processes, open sockets, install, or fetch
+  ---
+  duration_ms: 0.156183
+  type: 'test'
+  ...
+# Subtest: US-006 accepts only the unchanged frozen direct topology manifest
+ok 17 - US-006 accepts only the unchanged frozen direct topology manifest
+  ---
+  duration_ms: 1.045857
+  type: 'test'
+  ...
+# Subtest: PM2 package identity is exactly pinned to cited 7.0.3 metadata
+ok 18 - PM2 package identity is exactly pinned to cited 7.0.3 metadata
+  ---
+  duration_ms: 0.398468
+  type: 'test'
+  ...
+# Subtest: unavailable network isolation yields three direct NOT RUN slots without PM2, Pi, or wrapper launch
+ok 19 - unavailable network isolation yields three direct NOT RUN slots without PM2, Pi, or wrapper launch
+  ---
+  duration_ms: 0.36914
+  type: 'test'
+  ...
+# Subtest: direct topology retains every stdin/stdout/ready/EOF/exit ownership obligation as unverified
+ok 20 - direct topology retains every stdin/stdout/ready/EOF/exit ownership obligation as unverified
+  ---
+  duration_ms: 0.196372
+  type: 'test'
+  ...
+# Subtest: safe NOT RUN refuses a PROVEN-network value instead of silently running or substituting
+ok 21 - safe NOT RUN refuses a PROVEN-network value instead of silently running or substituting
+  ---
+  duration_ms: 0.089562
+  type: 'test'
+  ...
+# Subtest: public installed Pi source is characterized read-only without executing Pi
+ok 22 - public installed Pi source is characterized read-only without executing Pi
+  ---
+  duration_ms: 0.600258
+  type: 'test'
+  ...
+# Subtest: direct characterization module cannot launch a child process or implement a wrapper
+ok 23 - direct characterization module cannot launch a child process or implement a wrapper
+  ---
+  duration_ms: 0.224869
+  type: 'test'
+  ...
+# Subtest: bounded JSONL preserves sequence/type and parses extension_ui_request
+ok 24 - bounded JSONL preserves sequence/type and parses extension_ui_request
+  ---
+  duration_ms: 1.649528
+  type: 'test'
+  ...
+# Subtest: malformed and unterminated JSONL fail closed
+ok 25 - malformed and unterminated JSONL fail closed
+  ---
+  duration_ms: 0.384782
+  type: 'test'
+  ...
+# Subtest: oversized JSONL line and total stream fail closed
+ok 26 - oversized JSONL line and total stream fail closed
+  ---
+  duration_ms: 0.237325
+  type: 'test'
+  ...
+# Subtest: secret scan rejects deterministic credential and personal-data fixtures
+ok 27 - secret scan rejects deterministic credential and personal-data fixtures
+  ---
+  duration_ms: 2.367711
+  type: 'test'
+  ...
+# Subtest: secret scan accepts bounded synthetic summaries
+ok 28 - secret scan accepts bounded synthetic summaries
+  ---
+  duration_ms: 0.778626
+  type: 'test'
+  ...
+# Subtest: proc parser uses exact Linux parent and start-time fields
+ok 29 - proc parser uses exact Linux parent and start-time fields
+  ---
+  duration_ms: 0.84313
+  type: 'test'
+  ...
+# Subtest: successful cleanup is reverse-order, exact-PID, bounded, and idempotent
+ok 30 - successful cleanup is reverse-order, exact-PID, bounded, and idempotent
+  ---
+  duration_ms: 2.355215
+  type: 'test'
+  ...
+# Subtest: PID reuse/start-time mismatch is rejected before a signal
+ok 31 - PID reuse/start-time mismatch is rejected before a signal
+  ---
+  duration_ms: 0.966329
+  type: 'test'
+  ...
+# Subtest: US-005 accepts only the unchanged frozen baseline manifest
+ok 32 - US-005 accepts only the unchanged frozen baseline manifest
+  ---
+  duration_ms: 1.916014
+  type: 'test'
+  ...
+# Subtest: unavailable network isolation creates three safe NOT RUN rows before launch
+ok 33 - unavailable network isolation creates three safe NOT RUN rows before launch
+  ---
+  duration_ms: 0.591669
+  type: 'test'
+  ...
+# Subtest: metadata delta excludes only the short-lived ps observer and detects other changes
+ok 34 - metadata delta excludes only the short-lived ps observer and detects other changes
+  ---
+  duration_ms: 0.29813
+  type: 'test'
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 34
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 58.103838

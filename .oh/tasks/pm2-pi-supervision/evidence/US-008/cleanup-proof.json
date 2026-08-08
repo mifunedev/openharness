@@ -1,0 +1,22 @@
+{
+  "kind": "cleanup-proof",
+  "status": "clean-no-candidate-launched",
+  "reason": "fresh user/network namespace unavailable; candidate launch is prohibited",
+  "candidateLaunchCount": 0,
+  "pm2DaemonLaunchCount": 0,
+  "piLaunchCount": 0,
+  "wrapperLaunchCount": 0,
+  "ptyUtilityLaunchCount": 0,
+  "providerModelTurnCount": 0,
+  "productionExtensionLoadCount": 0,
+  "productionSettingsLoadCount": 0,
+  "packageFetchProcessCount": 0,
+  "runtimeRootsCreated": 0,
+  "ownedRegistryCreated": false,
+  "registeredOwnedProcessCount": 0,
+  "signalAttempts": 0,
+  "remainingOwnedPids": [],
+  "residue": "none-created",
+  "wrapperSubstituted": false,
+  "idempotent": true
+}

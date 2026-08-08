@@ -164,6 +164,9 @@ red from gate 2.
 - **Fork PR classification.** It consumes the same private classifier JSON as
   `/audit pr` and `/audit prs`.
 - **Re-run a passing gate.** Fail-fast: stop at the first failing gate.
+- **Write the reviewer evidence doc.** The per-gate observations above are what
+  `.oh/tasks/<slug>/evidence.md` is built from, but the orchestrating caller writes and
+  commits it — see [`reviewer-evidence-doc.md`](reviewer-evidence-doc.md).
 
 ---
 

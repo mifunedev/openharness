@@ -25,7 +25,12 @@
       "Bash(command=*cat*.env*)",
       "Bash(command=*cat*.git-credentials*)",
       "Bash(command=*cat*auth.json*)",
-      "Bash(command=*curl*-H*Authorization*)"
+      "Bash(command=*curl*-H*Authorization*)",
+      "Bash(command=*inspect*Config.Env*)",
+      "Bash(command=*inspect*ContainerSpec.Env*)",
+      "Bash(command=*inspect*{{json .}}*)",
+      "Bash(command=*inspect*{{ json . }}*)",
+      "Bash(command=*inspect*{{.}}*)"
     ],
     "defaultMode": "bypassPermissions"
   },

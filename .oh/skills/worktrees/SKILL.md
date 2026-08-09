@@ -15,6 +15,85 @@ allowed-tools: Bash
 
 Manage `.oh/worktrees/`. Full policy: `/git` § Worktrees; `.oh/context/rules/git.md` is only a compatibility pointer.
 
+## CHANGE ROUTING — TRACK VS RESET
+
+`~/harness` and `$WORKTREES_ROOT/project/<owner>/<repo>` are different Git
+boundaries. The parent harness ignores the latter; a project clone's files are
+never changes to the harness. Classify changes before committing, resetting, or
+removing anything. A dirty checkout is not disposable merely because it lives
+under `.oh/worktrees/`.
+
+### `~/harness` — harness control plane
+
+**Track/preserve** deliberate, durable harness changes, including:
+
+- `.oh/skills/`, `.oh/agents/`, `.oh/hooks/`, `.oh/scripts/`, `.devcontainer/`,
+  `.github/`, `workspace/`, docs, templates, and supported configuration
+  defaults.
+- `.oh/worktrees/README.md` and other lifecycle documentation.
+- Curated wiki entries and the wiki index when intentionally promoted. The wiki
+  corpus is ignored by default; use `git add -f` only for reviewed entries.
+  Never promote `corpus/raw/` snapshots by accident.
+- A handoff only when it is deliberately shared, scrubbed of secrets, and meant
+  to be durable in this harness checkout or its private operator fork.
+
+**Reset/remove** only known local, generated, or abandoned state, such as:
+
+- worktree contents, task progress, memory/log state, plans/spec scratch,
+  screenshots, build output, dependencies, local env/auth files, and caches
+  covered by `.gitignore`;
+- an explicit operator-local setting or a tracked edit that was reviewed and
+  rejected.
+
+Do not reset a tracked source/config/doc change just because it is unstaged, and
+do not delete an untracked file before inspecting it. For root state, inspect
+both index and worktree changes:
+
+```bash
+git -C ~/harness status --short --untracked-files=all
+git -C ~/harness diff --name-status
+git -C ~/harness diff --cached --name-status
+```
+
+Use `git restore <path>` only for identified files. Preview cleanup with
+`git clean -nd` (or `git clean -ndX` for ignored files); route destructive
+`reset`/`clean` operations through `.oh/scripts/git-maintenance.sh` as required
+by `/git`.
+
+### `$WORKTREES_ROOT/project/<owner>/<repo>` — independent project clone
+
+These directories have their own `.git` and their own branch/remote policy.
+Run status and diffs with `git -C "$PROJECT"`, never from `~/harness`.
+
+**Track/preserve in the project repository** intentional source, tests,
+migrations, documentation, CI, deployment, and project configuration changes.
+A reviewed `.example.env` or environment-variable guide is project source;
+real `.env*`, credentials, auth files, and local overrides are not. Commit
+preserved work on a project branch and push it to that project's remote, not to
+the harness remote.
+
+**Reset/remove in the project repository** only generated output, dependency
+and build caches, logs, local secret/config files, nested worktree state after
+confirming no child worktree is active, or changes the owner explicitly
+abandons. An active nested worktree is operational state: preserve it, do not
+add its path to the parent clone, and inspect the child repository separately.
+Do not blanket-reset source or docs because a clone is being cleaned.
+
+Before removing or resetting a project clone:
+
+```bash
+PROJECT="$WORKTREES_ROOT/project/<owner>/<repo>"
+git -C "$PROJECT" status --short --untracked-files=all
+git -C "$PROJECT" diff --name-status
+git -C "$PROJECT" ls-files --others --exclude-standard
+git -C "$PROJECT" worktree list --porcelain
+```
+
+If status is non-empty, stop and classify each path. Preserve intentional work
+by committing it on the project branch, or by making an explicit patch/backup;
+discard only after the owner confirms. A project clone with dirty, unclassified
+work must not be removed with `rm -rf`.
+
 ## DETECT BASE
 
 Run first. Every create/remove op needs `$BASE` and `$WORKTREES_ROOT`.
@@ -147,8 +226,17 @@ REPO=some-project
 mkdir -p "$WORKTREES_ROOT/project/$OWNER"
 git clone "https://github.com/$OWNER/$REPO.git" "$WORKTREES_ROOT/project/$OWNER/$REPO"
 
-# Remove
-rm -rf "$WORKTREES_ROOT/project/$OWNER/$REPO"
+# Remove only after the CHANGE ROUTING preflight above.
+PROJECT="$WORKTREES_ROOT/project/$OWNER/$REPO"
+if ! git -C "$PROJECT" status --porcelain=v1 --untracked-files=all; then
+  echo "Cannot inspect project clone; refusing removal: $PROJECT" >&2
+  exit 1
+fi
+if [ -n "$(git -C "$PROJECT" status --porcelain=v1 --untracked-files=all)" ]; then
+  echo "Dirty project clone; preserve or explicitly classify changes first: $PROJECT" >&2
+  exit 1
+fi
+rm -rf "$PROJECT"
 ```
 
 No `git worktree` for these. Plain `git clone` / `rm -rf`.

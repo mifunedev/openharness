@@ -14,7 +14,7 @@ describe("project Pi settings", () => {
     const settings = readPiSettings();
 
     expect(settings.packages).toEqual([
-      "npm:@tintinweb/pi-subagents@0.7.1",
+      "npm:@tintinweb/pi-subagents@0.12.0",
       "npm:@tintinweb/pi-tasks@0.7.0",
       "npm:@narumitw/pi-goal@0.4.2",
       "npm:@narumitw/pi-plan-mode@0.4.2",

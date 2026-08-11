@@ -118,28 +118,111 @@ describe("client-slack bridge supervisor", () => {
 
   it("restarts pi on stale-ctx and crash, clears the lock, stops on a clean exit", () => {
     const text = readFileSync(SUPERVISOR, "utf8");
-    // Detects the pi "extension ctx is stale" failure and kills the bridge pi
-    // (matched by its unique --extension path) so the loop relaunches it fresh.
     expect(text).toContain("ctx is stale");
     expect(text).toContain("pkill -f 'pi-messenger-bridge/dist/index.js'");
-    // pi runs interactive on the pane TTY: no `| tee` pipe and no --mode rpc, so
-    // the loaded UI extensions render instead of flooding stdout with JSON. A 2nd
-    // --extension co-loads the Codex retry-recovery extension. Assert on the pi
-    // command line itself so comment wording can't satisfy the negatives.
+    // Exact order matters: bridge posts the acknowledgement before the compact
+    // extension's later turn_end invokes ctx.compact.
     const piLine = text.split("\n").find((l) => /^\s*pi --extension/.test(l)) ?? "";
     expect(piLine).toContain("--approve");
-    expect(piLine).toContain('--extension "$RECOVERY_ENTRY"');
+    const bridgeAt = piLine.indexOf('--extension "$BRIDGE_ENTRY"');
+    const recoveryAt = piLine.indexOf('--extension "$RECOVERY_ENTRY"');
+    const compactAt = piLine.indexOf('--extension "$COMPACT_ENTRY"');
+    expect(bridgeAt).toBeGreaterThan(-1);
+    expect(recoveryAt).toBeGreaterThan(bridgeAt);
+    expect(compactAt).toBeGreaterThan(recoveryAt);
     expect(piLine).not.toContain("--mode rpc");
     expect(piLine).not.toContain("tee");
     expect(piLine).toContain('2>>"$LOG"');
     expect(text).toContain("bridge-recovery");
+    expect(text).toContain("slack-compact");
     expect(text).toContain("rc=$?");
-    // Clears the single-instance lock before each (re)launch.
     expect(text).toContain('rm -f "$LOCK"');
-    // A clean pi exit (rc=0) breaks the loop; anything else restarts.
     expect(text).toMatch(/\$rc"?\s+-eq\s+0/);
     expect(text).toContain("break");
-    expect(text).toContain("restarting in 3s");
+    expect(text).toContain('RESTART_DELAY="${GATEWAY_RESTART_DELAY:-3}"');
+    expect(text).toContain('restarting in ${RESTART_DELAY}s');
+  });
+
+  it("uses a fresh nonce-bound completion marker to record and proactively restart", () => {
+    const text = readFileSync(SUPERVISOR, "utf8");
+    expect(text).toContain("od -An -N24 -tx1 /dev/urandom");
+    expect(text).toContain("export SLACK_COMPACT_NONCE");
+    expect(text).toContain('tail -s 0.1 -Fn0 "$LOG"');
+    expect(text).toContain('current_marker="[openharness-slack-compact-complete:${SLACK_COMPACT_NONCE}]"');
+    expect(text).toContain('date -u +%s >"$COMPACT_FILE"');
+    expect(text).toContain("Slack compaction completed — restarting pi to reconnect");
+  });
+
+  it("ignores old markers, accepts only the current launch nonce, then reconnects", () => {
+    const temp = mkdtempSync(join(tmpdir(), "slack-compact-supervisor-"));
+    const bin = join(temp, "bin");
+    const state = join(temp, "state");
+    const log = join(temp, "gateway.log");
+    const count = join(temp, "launches");
+    const pid = join(temp, "pi.pid");
+    mkdirSync(bin);
+    mkdirSync(state);
+    writeFileSync(log, `[openharness-slack-compact-complete:${"f".repeat(48)}]\n`);
+
+    writeFileSync(
+      join(bin, "pi"),
+      [
+        "#!/usr/bin/env bash",
+        'n=$(cat "$PI_COUNT" 2>/dev/null || printf 0)',
+        "n=$((n + 1))",
+        'printf "%s\\n" "$n" > "$PI_COUNT"',
+        'printf "%s\\n" "$$" > "$PI_PID_FILE"',
+        'if [ "$n" -eq 1 ]; then',
+        "  trap 'exit 0' TERM",
+        "  sleep 1.5",
+        '  printf "[openharness-slack-compact-complete:%s]\\n" "$SLACK_COMPACT_NONCE" >&2',
+        "  while true; do sleep 1; done",
+        "fi",
+        "exit 0",
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    writeFileSync(
+      join(bin, "pkill"),
+      [
+        "#!/usr/bin/env bash",
+        'if [ "${1:-}" = "-f" ] && [ -s "$PI_PID_FILE" ]; then',
+        '  kill "$(cat "$PI_PID_FILE")" 2>/dev/null || true',
+        "fi",
+        "exit 0",
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+
+    execFileSync("bash", [SUPERVISOR], {
+      timeout: 15_000,
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH ?? ""}`,
+        HOME: temp,
+        HARNESS: temp,
+        LOG: log,
+        GATEWAY_STATE_DIR: state,
+        GATEWAY_HEARTBEAT_INTERVAL: "1",
+        GATEWAY_RESTART_DELAY: "0",
+        BRIDGE_ENTRY: "/fixture/pi-messenger-bridge/dist/index.js",
+        RECOVERY_ENTRY: "/fixture/bridge-recovery/index.ts",
+        COMPACT_ENTRY: "/fixture/slack-compact/index.ts",
+        PI_COUNT: count,
+        PI_PID_FILE: pid,
+      },
+    });
+
+    expect(readFileSync(count, "utf8").trim()).toBe("2");
+    expect(readFileSync(join(state, "pi.compact"), "utf8").trim()).toMatch(/^\d+$/);
+    const stateText = readFileSync(join(state, "pi.state"), "utf8");
+    expect(stateText).toContain("launches=2");
+    expect(stateText).not.toMatch(/[a-f0-9]{48}/);
+    const logText = readFileSync(log, "utf8");
+    expect(logText.match(/Slack compaction completed — restarting pi to reconnect/g)).toHaveLength(1);
+    expect(logText).toContain("pi exited rc=0 — restarting in 0s");
   });
 
   it("is referenced by gateway.sh, which the entrypoint delegates to", () => {

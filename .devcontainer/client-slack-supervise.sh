@@ -4,7 +4,9 @@
 #
 # Launched by .devcontainer/entrypoint.sh (pi) or .oh/scripts/gateway.sh with
 # HARNESS / LOG exported, plus:
-#   pi (default):  PI_SLACK_* tokens, BRIDGE_ENTRY, RECOVERY_ENTRY.
+#   pi (default):  PI_SLACK_* tokens, BRIDGE_ENTRY, RECOVERY_ENTRY,
+#                  COMPACT_ENTRY. The supervisor alone generates and exports a
+#                  fresh SLACK_COMPACT_NONCE for each Pi launch.
 #   hermes:        GATEWAY_BACKEND=hermes and SUPERVISE_CMD=<the hermes launch
 #                  command> — a GENERIC crash-restart loop with NONE of the
 #                  pi-specific stale-ctx/lock/recovery logic below.
@@ -29,9 +31,19 @@
 # the entrypoint additionally mirrors the visible pane into $LOG (ANSI-stripped)
 # via `tmux pipe-pane`. Both feed the stale-ctx watchdog below.
 #
-# A 2nd --extension loads the standalone Codex retry-recovery extension
-# (.pi/bridge-recovery/index.ts), which re-injects a failed Slack-originated turn
-# once on `previous_response_not_found` — recovery the npm bridge lacks.
+# Extension load order is deliberate: (1) npm bridge owns authorization and
+# response delivery, (2) standalone Codex retry-recovery re-injects a failed
+# Slack-originated turn once on `previous_response_not_found`, then (3) the
+# gateway-only Slack compaction extension observes bridge-stamped input and its
+# later turn_end runs only after the bridge has posted the acknowledgement.
+#
+# Successful Slack-requested compaction replaces the session and would stale the
+# bridge ctx. For every Pi launch this supervisor generates an unpredictable
+# nonce, exports it only to that launch, and tails $LOG from EOF. The compaction
+# extension emits the exact nonce-bound marker only from ctx.compact.onComplete;
+# the watchdog accepts only its current nonce, records recovery, and kills Pi so
+# this loop reconnects before another Slack event reaches stale ctx. Old log or
+# transcript marker text cannot replay across launches. Errors emit no marker.
 #
 # Health/observability: each launch stamps a non-secret state file and a
 # background ticker refreshes a heartbeat (proving the session is actively
@@ -49,6 +61,7 @@ SUPERVISE_CMD="${SUPERVISE_CMD:-}"
 HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 BRIDGE_ENTRY="${BRIDGE_ENTRY:-$HARNESS/.pi/bridge/node_modules/pi-messenger-bridge/dist/index.js}"
 RECOVERY_ENTRY="${RECOVERY_ENTRY:-$HARNESS/.pi/bridge-recovery/index.ts}"
+COMPACT_ENTRY="${COMPACT_ENTRY:-$HARNESS/.pi/slack-compact/index.ts}"
 LOG="${LOG:-/tmp/client-slack-$BACKEND.log}"
 LOCK="$HOME/.pi/msg-bridge.lock"
 
@@ -57,10 +70,13 @@ STATE_DIR="${GATEWAY_STATE_DIR:-$HOME/.pi/gateway}"
 STATE="$STATE_DIR/$BACKEND.state"
 HEARTBEAT_FILE="$STATE_DIR/$BACKEND.heartbeat"
 STALE_FILE="$STATE_DIR/$BACKEND.stale"
+COMPACT_FILE="$STATE_DIR/$BACKEND.compact"
+RESTART_TRIGGER_FILE="$STATE_DIR/$BACKEND.restart-trigger"
 HEARTBEAT_INTERVAL="${GATEWAY_HEARTBEAT_INTERVAL:-20}"
+RESTART_DELAY="${GATEWAY_RESTART_DELAY:-3}"
 LOG_MAX_BYTES="${GATEWAY_LOG_MAX_BYTES:-5242880}"  # 5 MiB
 mkdir -p "$STATE_DIR" 2>/dev/null || true
-rm -f "$STALE_FILE" 2>/dev/null || true
+rm -f "$STALE_FILE" "$COMPACT_FILE" "$RESTART_TRIGGER_FILE" 2>/dev/null || true
 
 if [ "$BACKEND" = pi ] && [ -n "${PI_SLACK_BOT_TOKEN:-}" ]; then TOKEN_STATE=present
 elif [ "$BACKEND" = pi ]; then TOKEN_STATE=absent
@@ -107,7 +123,23 @@ cap_log() {
 
 while true; do
   LAUNCHES=$((LAUNCHES + 1))
-  [ "$BACKEND" = pi ] && { rm -f "$LOCK" 2>/dev/null || true; }
+  if [ "$BACKEND" = pi ]; then
+    rm -f "$LOCK" "$RESTART_TRIGGER_FILE" 2>/dev/null || true
+    # 24 bytes => 192 bits of per-launch entropy. Keep the nonce out of argv,
+    # human log lines, and state files; only the extension marker contains it.
+    SLACK_COMPACT_NONCE=$(od -An -N24 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')
+    case "$SLACK_COMPACT_NONCE" in
+      ''|*[!0-9a-f]*)
+        echo "[bridge-supervisor] failed to generate Slack compaction recovery nonce — stopping" >>"$LOG"
+        break
+        ;;
+    esac
+    if [ "${#SLACK_COMPACT_NONCE}" -ne 48 ]; then
+      echo "[bridge-supervisor] invalid Slack compaction recovery nonce — stopping" >>"$LOG"
+      break
+    fi
+    export SLACK_COMPACT_NONCE
+  fi
   echo "[bridge-supervisor] launching $BACKEND bridge ($(date -u +%FT%TZ))" >>"$LOG"
   write_state
 
@@ -118,23 +150,45 @@ while true; do
 
   WD=""
   if [ "$BACKEND" = pi ]; then
-    # Watchdog: tail $LOG from end-of-file (old stale-ctx lines never re-trigger),
-    # strip ANSI/CR so a TUI-rendered error is still greppable, record the recovery
-    # for `gateway status`, and kill the bridge pi — matched by its unique
-    # --extension path — on the first stale-ctx line so the loop relaunches a
-    # fresh, non-stale process. Fully redirected (incl. stdin from /dev/null) so it
-    # never reads the pane pty or holds a stdout pipe open.
-    ( tail -Fn0 "$LOG" 2>/dev/null \
-        | sed -u 's/\x1b\[[0-9;?]*[A-Za-z]//g; s/\r//g' \
-        | grep -m1 'ctx is stale' >/dev/null 2>&1 \
-        && { echo "[bridge-supervisor] stale-ctx detected — restarting pi ($(date -u +%FT%TZ))" >>"$LOG"; \
-             date -u +%s >"$STALE_FILE" 2>/dev/null; \
-             pkill -f 'pi-messenger-bridge/dist/index.js'; } ) </dev/null >/dev/null 2>&1 &
+    # One watcher handles both recovery classes. It tails from EOF, strips
+    # ANSI/CR, and exact-matches the current launch's nonce marker. The marker
+    # stays in shell data, never process argv. On either event it records
+    # non-secret recovery state and kills the bridge Pi by its unique extension
+    # path so this loop relaunches a fresh ctx.
+    ( event=""
+      current_marker="[openharness-slack-compact-complete:${SLACK_COMPACT_NONCE}]"
+      while IFS= read -r line; do
+        line=$(printf '%s\n' "$line" | sed 's/\x1b\[[0-9;?]*[A-Za-z]//g; s/\r//g')
+        if [[ "$line" == *"ctx is stale"* ]]; then
+          event=stale
+          break
+        fi
+        if [ "$line" = "$current_marker" ]; then
+          event=compact
+          break
+        fi
+      done < <(tail -s 0.1 -Fn0 "$LOG" 2>/dev/null)
+      case "$event" in
+        stale)
+          echo "[bridge-supervisor] stale-ctx detected — restarting pi ($(date -u +%FT%TZ))" >>"$LOG"
+          date -u +%s >"$STALE_FILE" 2>/dev/null
+          printf 'stale\n' >"$RESTART_TRIGGER_FILE" 2>/dev/null
+          ;;
+        compact)
+          echo "[bridge-supervisor] Slack compaction completed — restarting pi to reconnect ($(date -u +%FT%TZ))" >>"$LOG"
+          date -u +%s >"$COMPACT_FILE" 2>/dev/null
+          printf 'compact\n' >"$RESTART_TRIGGER_FILE" 2>/dev/null
+          ;;
+        *) exit 0 ;;
+      esac
+      pkill -f 'pi-messenger-bridge/dist/index.js'
+    ) </dev/null >/dev/null 2>&1 &
     WD=$!
 
     # Interactive TTY launch: stdin+stdout = pane pty (-> interactive mode, no JSON
-    # flood, stays alive at idle), stderr -> $LOG. No pipe, no --mode rpc.
-    pi --extension "$BRIDGE_ENTRY" --extension "$RECOVERY_ENTRY" --approve 2>>"$LOG"
+    # flood, stays alive at idle), stderr -> $LOG. No pipe, no --mode rpc. Exact
+    # load order is bridge -> Codex recovery -> Slack compaction.
+    pi --extension "$BRIDGE_ENTRY" --extension "$RECOVERY_ENTRY" --extension "$COMPACT_ENTRY" --approve 2>>"$LOG"
     rc=$?
   else
     # Generic backend (hermes): crash-restart-with-backoff only. SUPERVISE_CMD
@@ -153,11 +207,16 @@ while true; do
   pkill -P "$HB" 2>/dev/null || true
   if [ -n "$WD" ]; then kill "$WD" 2>/dev/null || true; pkill -P "$WD" 2>/dev/null || true; fi
 
-  if [ "$rc" -eq 0 ]; then
+  restart_trigger=""
+  if [ "$BACKEND" = pi ] && [ -f "$RESTART_TRIGGER_FILE" ]; then
+    restart_trigger=$(cat "$RESTART_TRIGGER_FILE" 2>/dev/null || true)
+    rm -f "$RESTART_TRIGGER_FILE" 2>/dev/null || true
+  fi
+  if [ "$rc" -eq 0 ] && [ -z "$restart_trigger" ]; then
     echo "[bridge-supervisor] $BACKEND exited cleanly (rc=0) — stopping ($(date -u +%FT%TZ))" >>"$LOG"
     rm -f "$HEARTBEAT_FILE" 2>/dev/null || true
     break
   fi
-  echo "[bridge-supervisor] $BACKEND exited rc=$rc — restarting in 3s ($(date -u +%FT%TZ))" >>"$LOG"
-  sleep 3
+  echo "[bridge-supervisor] $BACKEND exited rc=$rc — restarting in ${RESTART_DELAY}s ($(date -u +%FT%TZ))" >>"$LOG"
+  sleep "$RESTART_DELAY"
 done

@@ -60,7 +60,7 @@ session_live() { tmux ls -F '#{session_name}' 2>/dev/null | grep -Fxq "$1"; }
 ANSI_STRIP="sed -u 's/\\x1b\\[[0-9;?]*[A-Za-z]//g; s/\\r//g'"
 
 # Non-secret runtime state the supervisor writes (see client-slack-supervise.sh):
-# $STATE_DIR/<backend>.{state,heartbeat,stale}. Used to report health, not just
+# $STATE_DIR/<backend>.{state,heartbeat,stale,compact}. Used to report health, not just
 # session existence, in `gateway status`.
 STATE_DIR="${GATEWAY_STATE_DIR:-$HOME/.pi/gateway}"
 STALE_AFTER="${GATEWAY_STALE_AFTER:-60}"   # seconds without a heartbeat => not healthy
@@ -85,10 +85,12 @@ _state_age() {
 backend_health() {
   local b="$1"
   local state="$STATE_DIR/$b.state" hb="$STATE_DIR/$b.heartbeat" stale="$STATE_DIR/$b.stale"
-  local token launches hbage staleage extra=""
+  local compact="$STATE_DIR/$b.compact"
+  local token launches hbage staleage compactage extra=""
   launches=$(_state_kv "$state" launches) || launches=""
   if [ -n "$launches" ] && [ "$launches" -gt 1 ] 2>/dev/null; then extra=" · $((launches - 1)) restart(s)"; fi
-  if staleage=$(_state_age "$stale"); then extra="$extra · recovered ${staleage}s ago"; fi
+  if staleage=$(_state_age "$stale"); then extra="$extra · stale-ctx recovered ${staleage}s ago"; fi
+  if compactage=$(_state_age "$compact"); then extra="$extra · compaction reconnected ${compactage}s ago"; fi
   token=$(_state_kv "$state" bridge_token) || token=""
   if [ "$token" = absent ]; then printf 'running · disconnected (no PI_SLACK token)%s' "$extra"; return 0; fi
   if hbage=$(_state_age "$hb") && [ "$hbage" -le "$STALE_AFTER" ] 2>/dev/null; then
@@ -162,9 +164,14 @@ start_pi() {
   local bridge_entry="$bridge_dir/node_modules/pi-messenger-bridge/dist/index.js"
   local bridge_pin_file="$bridge_dir/.openharness-pin"
   local recovery_entry="$HARNESS/.pi/bridge-recovery/index.ts"
+  local compact_entry="$HARNESS/.pi/slack-compact/index.ts"
 
   command -v pi >/dev/null 2>&1 \
     || { echo "[gateway] 'pi' not found on PATH — run inside the sandbox" >&2; return 1; }
+  [ -f "$recovery_entry" ] \
+    || { echo "[gateway] missing Pi recovery extension: $recovery_entry" >&2; return 1; }
+  [ -f "$compact_entry" ] \
+    || { echo "[gateway] missing Slack compaction extension: $compact_entry" >&2; return 1; }
 
   # Tokens (optional): source from the Compose env file if not already exported.
   # Extract only the two keys as DATA (never eval the file), never echo values.
@@ -204,6 +211,7 @@ start_pi() {
     printf 'export HARNESS=%q\n'        "$HARNESS"
     printf 'export BRIDGE_ENTRY=%q\n'   "$bridge_entry"
     printf 'export RECOVERY_ENTRY=%q\n' "$recovery_entry"
+    printf 'export COMPACT_ENTRY=%q\n'  "$compact_entry"
     printf 'export LOG=%q\n'            "$log"
     [ -n "${PI_SLACK_APP_TOKEN:-}" ] && printf 'export PI_SLACK_APP_TOKEN=%q\n' "$PI_SLACK_APP_TOKEN"
     [ -n "${PI_SLACK_BOT_TOKEN:-}" ] && printf 'export PI_SLACK_BOT_TOKEN=%q\n' "$PI_SLACK_BOT_TOKEN"

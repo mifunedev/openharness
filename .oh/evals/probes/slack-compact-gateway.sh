@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #739 / independent FAIL — authenticated package-owned Slack compaction must preserve session continuity and use private exact-PID recovery
-# desc: Exact bridge pin owns request correlation while supervisor owns isolated --continue session and unlinked one-shot IPC
+# desc: Exact bridge pin owns turn-boundary correlation while supervisor owns isolated --continue session and exact-peer Unix IPC
 # shellcheck disable=SC2016
 set -euo pipefail
 
@@ -10,7 +10,7 @@ GATEWAY="$ROOT/.oh/scripts/gateway.sh"
 SUPERVISOR="$ROOT/.devcontainer/client-slack-supervise.sh"
 DOC="$ROOT/.oh/docs/integrations/slack.md"
 ARTIFACT_SMOKE="$ROOT/.oh/scripts/smoke-slack-bridge-artifact.sh"
-PIN="81d8ed92b88cb9dfc71db0a9db084d1169fec36d"
+PIN="a445513961af60b11f00d0ef9f55a58e5e14fabd"
 
 fail() { echo "REGRESSION: $*" >&2; exit 1; }
 need() {
@@ -35,14 +35,20 @@ need "$SUPERVISOR" 'SESSION_DIR="${GATEWAY_PI_SESSION_DIR:-$STATE_DIR/pi-session
 need "$SUPERVISOR" '--session-dir "$SESSION_DIR" --continue' "Pi does not explicitly continue the isolated gateway session"
 need "$SUPERVISOR" 'chmod 700 "$SESSION_DIR"' "gateway session directory is not private"
 
-# Private one-shot IPC: watcher open handshake precedes launch, FIFO is unlinked,
-# and the completion path has no forgeable log/env nonce sentinel.
-need "$SUPERVISOR" 'mkfifo -m 600 "$IPC_FIFO"' "private FIFO creation missing"
-need "$SUPERVISOR" 'export PI_MSG_BRIDGE_COMPACT_FD="$COMPACT_WRITE_FD"' "anonymous pipe fd not passed to bridge"
-need "$SUPERVISOR" 'wait_for_file "$IPC_OPEN"' "watcher-open synchronization missing"
-need "$SUPERVISOR" 'rm -f "$IPC_FIFO"' "FIFO is not unlinked after inheritance"
-need "$SUPERVISOR" 'IFS= read -r -N 1 byte' "one-shot completion read missing"
-reject "$SUPERVISOR" 'SLACK_COMPACT_NONCE|openharness-slack-compact-complete' "forgeable nonce/log sentinel remains"
+# Private one-shot IPC: mode-0600 Unix listener is ready before launch, accepts
+# only the exact direct-child Pi SID/PGID through Linux peer credentials, and the
+# path is explicitly not treated as a secret.
+need "$SUPERVISOR" 'socket.SO_PEERCRED' "Linux peer-credential authentication missing"
+need "$SUPERVISOR" 'os.chmod(socket_path, 0o600)' "compact socket is not mode 0600"
+need "$SUPERVISOR" 'wait_for_file "$IPC_READY"' "listener-ready synchronization missing"
+need "$SUPERVISOR" 'export PI_MSG_BRIDGE_COMPACT_SOCKET="$IPC_SOCKET"' "compact socket path not passed to Pi"
+need "$SUPERVISOR" 'peer_ppid != supervisor_pid' "peer is not bound to supervisor direct child"
+need "$SUPERVISOR" 'peer_pgid != peer_pid' "peer is not bound to isolated Pi process group"
+need "$SUPERVISOR" 'peer_sid != peer_pid' "peer is not bound to isolated Pi session"
+need "$SUPERVISOR" 'connection.recv(2) == b"C"' "one-shot completion read missing"
+need "$SUPERVISOR" 'connection.sendall(b"A")' "authenticated completion acknowledgement missing"
+need "$SUPERVISOR" 'rendezvous metadata, not a secret' "socket path is falsely presented as a secret"
+reject "$SUPERVISOR" 'PI_MSG_BRIDGE_COMPACT_FD|mkfifo|SLACK_COMPACT_NONCE|openharness-slack-compact-complete' "forgeable legacy IPC remains"
 
 # Exact isolated group, bounded TERM→KILL, completion-vs-rc synchronization, and cleanup.
 need "$SUPERVISOR" 'setsid pi --session-dir "$SESSION_DIR"' "Pi is not launched in an isolated session/process group"
@@ -51,6 +57,7 @@ need "$SUPERVISOR" 'kill -KILL -- "-$pgid"' "bounded escalation does not KILL st
 need "$SUPERVISOR" 'cd "$HARNESS"' "supervisor does not pin Pi continuation cwd to the harness"
 reject "$SUPERVISOR" 'pkill[[:space:]]+-[fP]' "broad pkill remains in supervisor recovery"
 need "$SUPERVISOR" 'wait "$COMPACT_WATCHER"' "main loop does not settle completion watcher before rc gate"
+need "$SUPERVISOR" 'terminate_authenticated_group "$authenticated_pid"' "authenticated peer group is not restarted exactly"
 need "$SUPERVISOR" 'trap on_signal INT TERM HUP' "signal cleanup trap missing"
 need "$SUPERVISOR" 'trap cleanup_all EXIT' "EXIT cleanup trap missing"
 need "$SUPERVISOR" 'rm -f "$HEARTBEAT_FILE"' "heartbeat cleanup missing"
@@ -61,7 +68,10 @@ need "$SUPERVISOR" 'date -u +%s >"$COMPACT_FILE"' "compaction recovery status mi
 # false native Slack slash-command claim.
 need "$DOC" 'posts the acknowledgement directly to' "direct acknowledgement undocumented"
 need "$DOC" 'originating Slack chat/thread' "origin chat/thread correlation undocumented"
-need "$DOC" 'private inherited one-shot pipe' "private IPC contract undocumented"
+need "$DOC" 'Linux peer credentials' "exact-peer IPC contract undocumented"
+need "$DOC" 'path is not a secret' "socket-path threat model undocumented"
+need "$DOC" '`message_start`' "late remote destination activation undocumented"
+need "$DOC" '`message_end`' "internal correlation marker removal undocumented"
 need "$DOC" '--session-dir' "continued isolated session contract undocumented"
 need "$DOC" 'register or claim a native Slack' "native slash caveat missing"
 need "$DOC" '`/compact` slash command' "native slash command caveat missing"
@@ -69,4 +79,4 @@ if grep -Fq '"command": "/compact"' "$ROOT/.pi/install/slack-manifest.json"; the
   fail "Slack manifest falsely registers native /compact"
 fi
 
-echo "PASS: package-owned Slack compact is correlated, continued, private-IPC, and exact-PID supervised" >&2
+echo "PASS: package-owned Slack compact is turn-correlated, continued, exact-peer IPC, and exact-group supervised" >&2

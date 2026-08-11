@@ -310,22 +310,26 @@ describe("client-slack bridge supervisor", () => {
     40_000,
   );
 
-  it("prepares a private one-shot IPC watcher before launch and settles it before rc", () => {
+  it("prepares an exact-peer one-shot socket before launch and settles it before rc", () => {
     const text = readFileSync(SUPERVISOR, "utf8");
     const prepareAt = text.indexOf("prepare_compact_watcher");
+    const readyAt = text.indexOf('wait_for_file "$IPC_READY"', prepareAt);
     const launchAt = text.indexOf('setsid pi --session-dir "$SESSION_DIR"');
-    const closeAt = text.indexOf("close_compact_writer", launchAt);
-    const waitAt = text.indexOf('wait "$COMPACT_WATCHER"', closeAt);
+    const waitAt = text.indexOf('wait "$COMPACT_WATCHER"', launchAt);
     const rcGateAt = text.indexOf('if [ "$rc" -eq 0 ]', waitAt);
     expect(prepareAt).toBeGreaterThan(-1);
-    expect(launchAt).toBeGreaterThan(prepareAt);
-    expect(text).toContain("mkfifo -m 600");
-    expect(text).toContain('export PI_MSG_BRIDGE_COMPACT_FD="$COMPACT_WRITE_FD"');
-    expect(text).toContain('rm -f "$IPC_FIFO"');
+    expect(readyAt).toBeGreaterThan(prepareAt);
+    expect(launchAt).toBeGreaterThan(readyAt);
+    expect(text).toContain("socket.SO_PEERCRED");
+    expect(text).toContain("os.chmod(socket_path, 0o600)");
+    expect(text).toContain('export PI_MSG_BRIDGE_COMPACT_SOCKET="$IPC_SOCKET"');
+    expect(text).toContain("peer_ppid != supervisor_pid");
+    expect(text).toContain("peer_pgid != peer_pid");
+    expect(text).toContain("peer_sid != peer_pid");
+    expect(text).not.toContain("PI_MSG_BRIDGE_COMPACT_FD");
     expect(text).not.toContain("SLACK_COMPACT_NONCE");
     expect(text).not.toContain("openharness-slack-compact-complete");
-    expect(closeAt).toBeGreaterThan(launchAt);
-    expect(waitAt).toBeGreaterThan(closeAt);
+    expect(waitAt).toBeGreaterThan(launchAt);
     expect(rcGateAt).toBeGreaterThan(waitAt);
   });
 
@@ -339,11 +343,46 @@ describe("client-slack bridge supervisor", () => {
     const toolForge = join(temp, "tool-forge");
     const reopened = join(temp, "reopened");
     const descendantPidFile = join(temp, "descendant-pid");
+    const forgeChild = join(temp, "forge-child.js");
     const piSibling = join(temp, "pi-sibling");
     const hermesSibling = join(temp, "hermes-sibling");
     mkdirSync(bin);
     mkdirSync(state);
     writeFileSync(log, "C\n[openharness-slack-compact-complete:forged-pane-text]\n");
+    writeFileSync(
+      forgeChild,
+      [
+        'const fs = require("node:fs");',
+        'const net = require("node:net");',
+        'const parentEnv = fs.readFileSync(`/proc/${process.ppid}/environ`, "utf8").split("\\0");',
+        'const entry = parentEnv.find((value) => value.startsWith("PI_MSG_BRIDGE_COMPACT_SOCKET="));',
+        'const socketPath = entry?.slice("PI_MSG_BRIDGE_COMPACT_SOCKET=".length);',
+        'let procWrite = false;',
+        'for (const fd of fs.readdirSync(`/proc/${process.ppid}/fd`)) {',
+        '  try {',
+        '    if (!fs.readlinkSync(`/proc/${process.ppid}/fd/${fd}`).startsWith("socket:")) continue;',
+        '    const handle = fs.openSync(`/proc/${process.ppid}/fd/${fd}`, "w");',
+        '    fs.writeSync(handle, Buffer.from("C"));',
+        '    fs.closeSync(handle);',
+        '    procWrite = true;',
+        '  } catch {}',
+        '}',
+        'let socketAttempt = false;',
+        'let finished = false;',
+        'const finish = () => {',
+        '  if (finished) return;',
+        '  finished = true;',
+        '  fs.writeFileSync(process.env.TOOL_FORGE, JSON.stringify({ discovered: Boolean(socketPath), procWrite, socketAttempt }));',
+        '};',
+        'if (!socketPath) { finish(); process.exit(2); }',
+        'const client = net.createConnection({ path: socketPath });',
+        'client.once("connect", () => { socketAttempt = true; client.end("C"); });',
+        'client.once("error", finish);',
+        'client.once("close", finish);',
+        'setTimeout(() => { client.destroy(); finish(); }, 1000).unref();',
+        '',
+      ].join("\n"),
+    );
 
     writeFileSync(
       join(bin, "pi"),
@@ -351,6 +390,7 @@ describe("client-slack bridge supervisor", () => {
         "#!/usr/bin/env node",
         'const fs = require("node:fs");',
         'const { spawn, spawnSync } = require("node:child_process");',
+        'const net = require("node:net");',
         'const args = process.argv.slice(2);',
         'const countPath = process.env.PI_COUNT;',
         'const n = Number(fs.existsSync(countPath) ? fs.readFileSync(countPath, "utf8") : "0") + 1;',
@@ -362,17 +402,25 @@ describe("client-slack bridge supervisor", () => {
         'const session = `${process.env.EXPECTED_SESSION_DIR}/active.jsonl`;',
         'if (n === 1) {',
         '  fs.writeFileSync(session, "{\\"type\\":\\"compaction\\",\\"summary\\":\\"active-path\\"}\\n");',
-        '  const fd = Number(process.env.PI_MSG_BRIDGE_COMPACT_FD);',
-        '  const forged = spawnSync("bash", ["-c", `printf C >&${fd}`], { env: process.env });',
-        '  fs.writeFileSync(process.env.TOOL_FORGE, `${forged.status}\\n`);',
+        '  const socketPath = process.env.PI_MSG_BRIDGE_COMPACT_SOCKET;',
+        '  if ((fs.statSync(socketPath).mode & 0o777) !== 0o600) process.exit(42);',
+        '  const forged = spawnSync(process.execPath, [process.env.FORGE_CHILD], { env: { TOOL_FORGE: process.env.TOOL_FORGE } });',
+        '  if (forged.status !== 0) process.exit(43);',
+        '  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);',
+        '  const forgedTrigger = fs.existsSync(process.env.EXPECTED_RESTART_TRIGGER);',
+        '  const forgeResult = JSON.parse(fs.readFileSync(process.env.TOOL_FORGE, "utf8"));',
+        '  fs.writeFileSync(process.env.TOOL_FORGE, JSON.stringify({ ...forgeResult, forgedTrigger }));',
         '  const descendant = spawn("bash", ["-c", "trap \\\'\\\' TERM; while true; do sleep 1; done"], { stdio: "ignore" });',
         '  descendant.unref();',
         '  fs.writeFileSync(process.env.DESCENDANT_PID_FILE, `${descendant.pid}\\n`);',
-        '  fs.writeSync(fd, Buffer.from("C"));',
+        '  const client = net.createConnection({ path: socketPath });',
+        '  client.once("connect", () => client.write("C"));',
+        '  client.once("data", (reply) => process.exit(reply.toString() === "A" ? 0 : 45));',
+        '  client.once("error", () => process.exit(44));',
+        '} else {',
+        '  if (fs.readFileSync(session, "utf8").includes("active-path")) fs.writeFileSync(process.env.REOPENED, session);',
         '  process.exit(0);',
         '}',
-        'if (fs.readFileSync(session, "utf8").includes("active-path")) fs.writeFileSync(process.env.REOPENED, session);',
-        'process.exit(0);',
         "",
       ].join("\n"),
       { mode: 0o755 },
@@ -403,6 +451,8 @@ describe("client-slack bridge supervisor", () => {
           PI_COUNT: count,
           ARGS_FILE: argsFile,
           TOOL_FORGE: toolForge,
+          FORGE_CHILD: forgeChild,
+          EXPECTED_RESTART_TRIGGER: join(state, "pi.restart-trigger"),
           REOPENED: reopened,
           DESCENDANT_PID_FILE: descendantPidFile,
           EXPECTED_SESSION_DIR: join(state, "pi-sessions"),
@@ -410,7 +460,12 @@ describe("client-slack bridge supervisor", () => {
       });
 
       expect(readFileSync(count, "utf8").trim()).toBe("2");
-      expect(readFileSync(toolForge, "utf8").trim()).not.toBe("0");
+      expect(JSON.parse(readFileSync(toolForge, "utf8"))).toEqual({
+        discovered: true,
+        procWrite: false,
+        socketAttempt: true,
+        forgedTrigger: false,
+      });
       expect(readFileSync(reopened, "utf8").trim()).toBe(join(state, "pi-sessions/active.jsonl"));
       expect(readFileSync(argsFile, "utf8").match(/--continue/g)).toHaveLength(2);
       expect(readFileSync(join(state, "pi.compact"), "utf8").trim()).toMatch(/^\d+$/);

@@ -192,18 +192,27 @@ attached. EXIT, INT, TERM, and HUP cleanup tears down the exact launch group and
 watcher/ticker children and removes the bridge lock, heartbeat, PID/PGID, and
 transient restart state.
 
-Successful compaction uses no log marker or environment nonce. Before launching
-Pi, the supervisor creates a private inherited one-shot pipe, synchronizes until
-the reader is open, passes the write descriptor to the bridge package, and
-unlinks the FIFO pathname. Ordinary Node tool subprocesses inherit only stdio,
-so they may see an fd number in the environment but do not possess the pipe;
-pane output and old logs have no signaling path. The package disconnects Slack
-first, writes one byte, and closes its descriptor. The watcher records
-`compaction reconnected` and terminates the exact supervised group. After Pi exits,
-the supervisor closes its writer and waits for the one-shot watcher to settle
-**before** evaluating rc, so immediate completion and simultaneous completion +
-rc=0 cannot be lost. Launch two then uses the same `--session-dir --continue`
-path rather than starting bare Pi.
+Successful compaction uses no log marker, inherited descriptor, or environment
+secret. Before launching Pi, the supervisor binds a Unix-domain listener inside
+the mode-700 gateway state directory, chmods the socket itself to 0600, starts
+listening, and publishes readiness before Pi can run. The path is not a secret: a real tool child can discover it from its parent environment and try
+the one-byte protocol. The listener uses Linux peer credentials (`SO_PEERCRED`)
+to require that the connecting PID is the supervisor's exact direct child and
+that its SID and PGID both equal that PID. A tool child, pane process, or sibling
+therefore connects under a different PID and is rejected even with the full
+path and protocol.
+
+After confirmed Slack disconnect, the package connects from the Pi process
+itself and writes one byte. The listener authenticates Pi, returns a one-byte
+acknowledgement, records `compaction reconnected`, and terminates only that
+authenticated process group with bounded TERM then KILL. This exact group close
+still runs if the Pi leader exits immediately after acknowledgement, so stubborn
+descendants cannot escape. The supervisor waits for the one-shot listener to
+settle **before** evaluating rc, so immediate completion and simultaneous
+completion + rc=0 cannot be lost. The socket, readiness file, PID/PGID
+observability files, and restart state are removed on every normal or signal
+exit. Launch two then uses the same `--session-dir --continue` path rather than
+starting bare Pi.
 
 ### 4.5 Codex retry-recovery
 
@@ -247,15 +256,22 @@ ownership even when Pi supplies distinct `ExtensionContext` wrappers; the
 `compact` call. Authenticated inbound callbacks are serialized, and
 overlap/direct-next messages receive an in-progress response without entering
 the context being replaced. Ordinary remote turns likewise hold their production
-queue item through `agent_settled`, so overlapping chats/threads cannot overwrite
-the response destination after `sendUserMessage` merely enqueues a turn.
+queue item through `agent_settled`, but do **not** assign a Slack destination when
+`sendUserMessage` merely enqueues behind local/TUI work. Each request gets an
+unpredictable internal correlation id appended to its queued text. Only the
+matching user `message_start` activates that request's chat/thread; a supported
+`message_end` replacement strips the marker from the finalized user message
+before provider context and session persistence. Thus a local assistant/tool
+`turn_end` before the remote start has no Slack destination, while identical
+remote content in different chats/threads remains independently correlated in
+FIFO order.
 
 The package then calls Pi's documented
 `ctx.compact({ customInstructions, onComplete, onError })`. On success it closes
 the logical intake gate immediately, disconnects the exact Slack transport, and
-only then writes to the supervisor's private pipe. If Slack's stop call rejects,
+only then connects to the supervisor's exact-peer Unix socket. If Slack's stop call rejects,
 the provider preserves the live app handle and connected state while the
-controller retries; no restart byte is sent unless disconnect is confirmed.
+controller retries; no restart byte is sent unless disconnect is confirmed and the listener acknowledges the authenticated Pi peer.
 Session/request generations guard late completion/error callbacks after
 replacement. On compact-provider error the gateway stays connected and re-arms
 without a restart loop.
@@ -439,7 +455,7 @@ Slack compaction is package-owned, not patched or vendored in the harness.
 Replies post **in a thread** anchored to the triggering channel message
 (`thread_ts`); DMs stay flat. While these changes are unreleased, the harness
 pins the exact reviewed fork commit
-`git+https://github.com/ryaneggz/pi-messenger-bridge.git#81d8ed92b88cb9dfc71db0a9db084d1169fec36d`
+`git+https://github.com/ryaneggz/pi-messenger-bridge.git#a445513961af60b11f00d0ef9f55a58e5e14fabd`
 from [ryaneggz/pi-messenger-bridge#2](https://github.com/ryaneggz/pi-messenger-bridge/pull/2),
 which includes thread replies, admin handlers, and supervised compact control.
 Re-pin to `pi-messenger-bridge@<version>` once upstream publishes them. Source lives upstream at

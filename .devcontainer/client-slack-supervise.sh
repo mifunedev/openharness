@@ -7,11 +7,12 @@
 # Slack compact request, exact chat/thread acknowledgement, ctx.compact call,
 # and Slack disconnect. This supervisor owns only process/session continuity.
 #
-# Compact completion crosses that boundary through a per-launch anonymous pipe:
-# the supervisor creates a mode-700 private FIFO, opens a synchronized one-shot
-# reader before Pi starts, passes only the inherited write fd, then unlinks the
-# FIFO. Node does not pass non-stdio descriptors to ordinary tool subprocesses.
-# Pane/log text and tool output therefore cannot forge the completion byte.
+# Compact completion crosses that boundary through a per-launch Unix-domain
+# socket. Its mode-0600 listener is ready before Pi starts and accepts the
+# completion byte only from the exact supervised Pi PID, authenticated with
+# Linux SO_PEERCRED plus direct-child/session/group identity. The pathname is
+# rendezvous metadata, not a secret: tool children may discover it but have a
+# different peer PID and are rejected.
 #
 # NOTE: intentionally no `set -e`; non-zero wait/kill results are normal control
 # flow in a supervisor.
@@ -58,16 +59,15 @@ if ! cd "$HARNESS"; then
 fi
 
 STARTED_ISO="$(date -u +%FT%TZ)"
+SUPERVISOR_PID=$$
 LAUNCHES=0
 HB=""
 COMPACT_WATCHER=""
 STALE_WATCHER=""
 PI_PID=""
 PI_PGID=""
-COMPACT_WRITE_FD=""
-IPC_FIFO=""
+IPC_SOCKET=""
 IPC_READY=""
-IPC_OPEN=""
 IPC_SETTLED=""
 STOPPING=0
 
@@ -109,6 +109,8 @@ terminate_exact_tree() {
   local pid="$1" child
   case "$pid" in ''|*[!0-9]*) return 0 ;; esac
   if [ -r "/proc/$pid/task/$pid/children" ]; then
+    # /proc children is a single whitespace-delimited PID record by contract.
+    # shellcheck disable=SC2013
     for child in $(cat "/proc/$pid/task/$pid/children" 2>/dev/null); do
       terminate_exact_tree "$child"
     done
@@ -127,13 +129,42 @@ terminate_exact_pid() {
   if kill -0 "$pid" 2>/dev/null; then kill -KILL "$pid" 2>/dev/null || true; fi
 }
 
-# Pi launches in a fresh session/process group whose PGID equals its recorded
-# leader PID. Signal only that verified group. TERM gets a bounded grace period,
-# then KILL closes stubborn descendants without touching sibling Pi/Hermes jobs.
+# Pi launches as the supervisor's direct child in a fresh session/process group
+# whose SID/PGID equal its PID. Revalidate that exact identity before signaling;
+# PID/PGID state files are observability only and are never sufficient authority.
+is_exact_supervised_leader() {
+  local leader="$1" identity ppid pgid sid
+  case "$leader" in ''|*[!0-9]*) return 1 ;; esac
+  identity=$(ps -o ppid=,pgid=,sid= -p "$leader" 2>/dev/null) || return 1
+  read -r ppid pgid sid <<<"$identity"
+  [ "$ppid" = "$SUPERVISOR_PID" ] && [ "$pgid" = "$leader" ] && [ "$sid" = "$leader" ]
+}
+
+# Signal only the revalidated group. TERM gets a bounded grace period, then KILL
+# closes stubborn descendants without touching sibling Pi/Hermes jobs.
 terminate_exact_group() {
   local pgid="$1" leader="$2" attempts=200
   case "$pgid:$leader" in *[!0-9:]*) return 0 ;; esac
   [ -n "$pgid" ] && [ "$pgid" = "$leader" ] || return 0
+  is_exact_supervised_leader "$leader" || return 0
+  kill -TERM -- "-$pgid" 2>/dev/null || true
+  while kill -0 -- "-$pgid" 2>/dev/null && [ "$attempts" -gt 0 ]; do
+    attempts=$((attempts - 1))
+    sleep 0.01
+  done
+  if kill -0 -- "-$pgid" 2>/dev/null; then
+    kill -KILL -- "-$pgid" 2>/dev/null || true
+  fi
+}
+
+# A group reaching this helper was established while its leader was alive:
+# either SO_PEERCRED plus direct-child SID/PGID authenticated the compact peer,
+# or the supervisor itself observed its just-launched child at SID=PGID=PID.
+# Keep that exact group identity usable after the leader exits so descendants
+# cannot escape.
+terminate_authenticated_group() {
+  local pgid="$1" attempts=50
+  case "$pgid" in ''|*[!0-9]*) return 0 ;; esac
   kill -TERM -- "-$pgid" 2>/dev/null || true
   while kill -0 -- "-$pgid" 2>/dev/null && [ "$attempts" -gt 0 ]; do
     attempts=$((attempts - 1))
@@ -154,7 +185,7 @@ wait_for_file() {
 }
 
 claim_restart_and_signal() {
-  local kind="$1" pid pgid attempts=500
+  local kind="$1" authenticated_pid="${2:-}" pid pgid attempts=500
   mkdir "$RESTART_CLAIM_DIR" 2>/dev/null || return 0
   printf '%s\n' "$kind" >"$RESTART_TRIGGER_FILE" 2>/dev/null
   case "$kind" in
@@ -167,26 +198,23 @@ claim_restart_and_signal() {
       echo "[bridge-supervisor] stale-ctx detected — restarting exact Pi process group ($(date -u +%FT%TZ))" >>"$LOG"
       ;;
   esac
-  while { [ ! -s "$PI_PID_FILE" ] || [ ! -s "$PI_GROUP_FILE" ]; } && [ "$attempts" -gt 0 ]; do
-    attempts=$((attempts - 1))
-    sleep 0.01
-  done
-  pid=$(cat "$PI_PID_FILE" 2>/dev/null || true)
-  pgid=$(cat "$PI_GROUP_FILE" 2>/dev/null || true)
+  if [ "$kind" = compact ] && [ -n "$authenticated_pid" ]; then
+    terminate_authenticated_group "$authenticated_pid"
+    return 0
+  else
+    while { [ ! -s "$PI_PID_FILE" ] || [ ! -s "$PI_GROUP_FILE" ]; } && [ "$attempts" -gt 0 ]; do
+      attempts=$((attempts - 1))
+      sleep 0.01
+    done
+    pid=$(cat "$PI_PID_FILE" 2>/dev/null || true)
+    pgid=$(cat "$PI_GROUP_FILE" 2>/dev/null || true)
+  fi
   terminate_exact_group "$pgid" "$pid"
 }
 
-close_compact_writer() {
-  if [ -n "$COMPACT_WRITE_FD" ]; then
-    eval "exec ${COMPACT_WRITE_FD}>&-"
-    COMPACT_WRITE_FD=""
-    unset PI_MSG_BRIDGE_COMPACT_FD
-  fi
-}
-
 stop_launch_helpers() {
-  close_compact_writer
   if [ -n "$COMPACT_WATCHER" ]; then
+    terminate_exact_tree "$COMPACT_WATCHER"
     wait "$COMPACT_WATCHER" 2>/dev/null || true
     COMPACT_WATCHER=""
   fi
@@ -200,8 +228,9 @@ stop_launch_helpers() {
     wait "$HB" 2>/dev/null || true
     HB=""
   fi
-  rm -f "$PI_PID_FILE" "$PI_GROUP_FILE" "$IPC_FIFO" "$IPC_READY" "$IPC_OPEN" "$IPC_SETTLED" 2>/dev/null || true
-  IPC_FIFO=""; IPC_READY=""; IPC_OPEN=""; IPC_SETTLED=""
+  unset PI_MSG_BRIDGE_COMPACT_SOCKET
+  rm -f "$PI_PID_FILE" "$PI_GROUP_FILE" "$IPC_SOCKET" "$IPC_READY" "$IPC_SETTLED" 2>/dev/null || true
+  IPC_SOCKET=""; IPC_READY=""; IPC_SETTLED=""
 }
 
 cleanup_all() {
@@ -238,31 +267,85 @@ prepare_compact_watcher() {
   local base
   base=$(mktemp "$STATE_DIR/.compact-ipc.XXXXXX" 2>/dev/null) || return 1
   rm -f "$base"
-  IPC_FIFO="$base.fifo"
+  IPC_SOCKET="$base.sock"
   IPC_READY="$base.ready"
-  IPC_OPEN="$base.open"
   IPC_SETTLED="$base.settled"
-  mkfifo -m 600 "$IPC_FIFO" || return 1
 
   (
-    local read_fd byte=""
-    : >"$IPC_READY"
-    exec {read_fd}<"$IPC_FIFO" || { : >"$IPC_SETTLED"; exit 1; }
-    : >"$IPC_OPEN"
-    if IFS= read -r -N 1 byte <&$read_fd && [ "$byte" = C ]; then
-      claim_restart_and_signal compact
+    local authenticated_pid="" rc=1
+    authenticated_pid=$(python3 - "$IPC_SOCKET" "$IPC_READY" "$SUPERVISOR_PID" <<'PY'
+import os
+import socket
+import struct
+import sys
+
+socket_path, ready_path, supervisor_pid_text = sys.argv[1:]
+supervisor_pid = int(supervisor_pid_text)
+server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+try:
+    if not hasattr(socket, "SO_PEERCRED"):
+        raise RuntimeError("Linux SO_PEERCRED is required")
+    try:
+        os.unlink(socket_path)
+    except FileNotFoundError:
+        pass
+    server.bind(socket_path)
+    os.chmod(socket_path, 0o600)
+    server.listen(16)
+    with open(ready_path, "x", encoding="utf-8"):
+        pass
+
+    while True:
+        connection, _ = server.accept()
+        try:
+            credentials = connection.getsockopt(
+                socket.SOL_SOCKET,
+                socket.SO_PEERCRED,
+                struct.calcsize("3i"),
+            )
+            peer_pid, _peer_uid, _peer_gid = struct.unpack("3i", credentials)
+            with open(f"/proc/{peer_pid}/stat", encoding="utf-8") as stat_file:
+                stat = stat_file.read()
+            fields = stat[stat.rfind(")") + 2 :].split()
+            peer_ppid = int(fields[1])
+            peer_pgid = int(fields[2])
+            peer_sid = int(fields[3])
+            if (
+                peer_ppid != supervisor_pid
+                or peer_pgid != peer_pid
+                or peer_sid != peer_pid
+            ):
+                continue
+            if connection.recv(2) == b"C":
+                connection.sendall(b"A")
+                print(peer_pid, flush=True)
+                sys.exit(0)
+        except (FileNotFoundError, ProcessLookupError, ValueError):
+            continue
+        finally:
+            connection.close()
+finally:
+    server.close()
+    try:
+        os.unlink(socket_path)
+    except FileNotFoundError:
+        pass
+PY
+    )
+    rc=$?
+    if [ "$rc" -eq 0 ] && [[ "$authenticated_pid" =~ ^[0-9]+$ ]]; then
+      claim_restart_and_signal compact "$authenticated_pid"
+    elif [ "$rc" -ne 143 ]; then
+      echo "[bridge-supervisor] compact peer listener exited without an authenticated Pi PID (rc=$rc)" >>"$LOG"
     fi
-    eval "exec ${read_fd}<&-"
     : >"$IPC_SETTLED"
+    exit "$rc"
   ) </dev/null >/dev/null 2>&1 &
   COMPACT_WATCHER=$!
 
   wait_for_file "$IPC_READY" || return 1
-  exec {COMPACT_WRITE_FD}>"$IPC_FIFO" || return 1
-  export PI_MSG_BRIDGE_COMPACT_FD="$COMPACT_WRITE_FD"
-  wait_for_file "$IPC_OPEN" || return 1
-  rm -f "$IPC_FIFO"
-  IPC_FIFO=""
+  [ "$(stat -c %a "$IPC_SOCKET" 2>/dev/null || true)" = 600 ] || return 1
+  export PI_MSG_BRIDGE_COMPACT_SOCKET="$IPC_SOCKET"
   return 0
 }
 
@@ -283,9 +366,6 @@ prepare_stale_watcher() {
   offset=$(stat -c %s "$LOG" 2>/dev/null || echo 0)
   (
     local current chunk carry=""
-    # This watcher must not retain the compact pipe's write end; otherwise an
-    # ordinary clean Pi exit could never produce EOF for the one-shot reader.
-    if [ -n "$COMPACT_WRITE_FD" ]; then eval "exec ${COMPACT_WRITE_FD}>&-"; fi
     : >"$ready"
     while true; do
       current=$(stat -c %s "$LOG" 2>/dev/null || echo 0)
@@ -351,13 +431,16 @@ while true; do
       rc=$?
       # The leader may exit before descendants. Always close the isolated group
       # with bounded TERM→KILL before the next launch.
-      terminate_exact_group "$PI_PGID" "$PI_PID"
+      terminate_authenticated_group "$PI_PGID"
     fi
 
-    # Closing the supervisor's writer after the exact Pi exits gives the reader
-    # either the completion byte or EOF. Wait for that settled result before
-    # evaluating rc, covering simultaneous completion + rc=0.
-    close_compact_writer
+    # Give an authenticated listener a bounded window to publish its restart
+    # claim after acknowledging the byte. A clean unrelated exit leaves the
+    # one-shot listener waiting, so stop it after that window. Settle either
+    # path before evaluating rc, including simultaneous completion + rc=0.
+    if ! wait_for_file "$IPC_SETTLED" 100; then
+      terminate_exact_tree "$COMPACT_WATCHER"
+    fi
     wait "$COMPACT_WATCHER" 2>/dev/null || true
     COMPACT_WATCHER=""
     PI_PID=""

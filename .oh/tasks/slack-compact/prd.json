@@ -12,7 +12,8 @@
       "acceptanceCriteria": [
         "Exact originating chat/thread acknowledgement succeeds before compaction",
         "Active prior work settles before compaction and no arbitrary turn_end is used",
-        "Overlaps serialize; post failure/provider failure/empty/tool/direct-next cases are deterministic",
+        "Overlaps serialize; local turn_end before remote message_start stays local; identical cross-chat content correlates independently",
+        "Unpredictable internal request ids are removed by finalized message replacement before provider/session use",
         "Untrimmed instruction controls and generation-late callbacks are tested"
       ],
       "priority": 1,
@@ -20,13 +21,13 @@
     },
     {
       "id": "US-002",
-      "title": "Private one-shot exact-PID supervisor",
-      "description": "Replace nonce/log signaling with watcher-ready-before-launch inherited unlinked pipe IPC and exact target cleanup.",
+      "title": "Private one-shot exact-peer supervisor",
+      "description": "Replace nonce/log/fd signaling with listener-ready-before-launch mode-0600 Unix IPC, Linux peer-credential authentication, and exact target cleanup.",
       "acceptanceCriteria": [
-        "Tool and pane output cannot forge completion",
-        "Slack disconnect precedes one-shot signal",
-        "Immediate completion plus rc0 restarts exactly the supervised PID",
-        "EXIT, INT, TERM, and HUP cleanup removes transient state, lock, and heartbeat while siblings survive"
+        "A real child can discover parent env/path and attempt /proc/socket forgery but cannot trigger",
+        "The exact Pi PID succeeds through SO_PEERCRED and Slack disconnect precedes the one-shot signal",
+        "Immediate completion plus rc0 restarts exactly the authenticated supervised process group",
+        "EXIT, INT, TERM, and HUP cleanup unlinks transient socket/state, lock, and heartbeat while siblings survive"
       ],
       "priority": 2,
       "passes": true

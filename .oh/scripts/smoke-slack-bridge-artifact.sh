@@ -3,7 +3,7 @@
 # through the real extension session_start/session_shutdown lifecycle.
 set -euo pipefail
 
-PIN="git+https://github.com/ryaneggz/pi-messenger-bridge.git#81d8ed92b88cb9dfc71db0a9db084d1169fec36d"
+PIN="git+https://github.com/ryaneggz/pi-messenger-bridge.git#a445513961af60b11f00d0ef9f55a58e5e14fabd"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/slack-bridge-artifact.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT INT TERM HUP
 
@@ -14,8 +14,14 @@ ENTRY="$TMP/install/node_modules/pi-messenger-bridge/dist/index.js"
 CONTROL="$TMP/install/node_modules/pi-messenger-bridge/dist/compact-control.js"
 [ -f "$ENTRY" ] || { echo "installed bridge entry missing: $ENTRY" >&2; exit 1; }
 [ -f "$CONTROL" ] || { echo "installed compact controller missing: $CONTROL" >&2; exit 1; }
-grep -Fq '81d8ed92b88cb9dfc71db0a9db084d1169fec36d' "$TMP/install/package-lock.json" \
+grep -Fq 'a445513961af60b11f00d0ef9f55a58e5e14fabd' "$TMP/install/package-lock.json" \
   || { echo "installed bridge lock is not bound to the reviewed commit" >&2; exit 1; }
+grep -Fq 'PI_MSG_BRIDGE_COMPACT_SOCKET' "$CONTROL" \
+  || { echo "installed bridge lacks Unix compact endpoint" >&2; exit 1; }
+if grep -Fq 'PI_MSG_BRIDGE_COMPACT_FD' "$CONTROL"; then
+  echo "installed bridge still exposes forgeable compact fd" >&2
+  exit 1
+fi
 
 env -u PI_SLACK_APP_TOKEN -u PI_SLACK_BOT_TOKEN \
   -u PI_TELEGRAM_TOKEN -u PI_WHATSAPP_AUTH_PATH -u PI_DISCORD_TOKEN \
@@ -61,6 +67,12 @@ for (const handler of handlers.get("session_shutdown") ?? []) {
 if (!commandRegistered) throw new Error("installed bridge did not register /msg-bridge");
 if (!(handlers.get("agent_settled")?.length > 0)) {
   throw new Error("installed bridge did not register agent_settled control");
+}
+if (!(handlers.get("message_start")?.length > 0)) {
+  throw new Error("installed bridge did not register remote-turn start correlation");
+}
+if (!(handlers.get("message_end")?.length > 0)) {
+  throw new Error("installed bridge did not register finalized marker removal");
 }
 NODE
 

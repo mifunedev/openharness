@@ -237,11 +237,13 @@ cleanup_all() {
   local live_pgid=""
   [ "$STOPPING" -eq 0 ] || return 0
   STOPPING=1
-  if [ -n "$PI_PID" ]; then
-    live_pgid="$PI_PGID"
-    if [ -z "$live_pgid" ]; then
-      live_pgid=$(ps -o pgid= -p "$PI_PID" 2>/dev/null | tr -d ' ' || true)
-    fi
+  if [ -n "$PI_PGID" ] && [ "$PI_PGID" = "$PI_PID" ]; then
+    # PI_PGID is recorded only after this supervisor observed SID=PGID=PID for
+    # its direct child. Group existence, not continued leader existence, is the
+    # cleanup authority: the leader may already be gone while descendants live.
+    terminate_authenticated_group "$PI_PGID"
+  elif [ -n "$PI_PID" ]; then
+    live_pgid=$(ps -o pgid= -p "$PI_PID" 2>/dev/null | tr -d ' ' || true)
     if [ "$live_pgid" = "$PI_PID" ]; then
       terminate_exact_group "$live_pgid" "$PI_PID"
     else
@@ -251,7 +253,8 @@ cleanup_all() {
     fi
   fi
   stop_launch_helpers
-  rm -f "$HEARTBEAT_FILE" "$PI_PID_FILE" "$PI_GROUP_FILE" "$RESTART_TRIGGER_FILE" 2>/dev/null || true
+  rm -f "$STATE" "$HEARTBEAT_FILE" "$STALE_FILE" "$COMPACT_FILE" \
+    "$PI_PID_FILE" "$PI_GROUP_FILE" "$RESTART_TRIGGER_FILE" 2>/dev/null || true
   if [ "$BACKEND" = pi ]; then rm -f "$LOCK" 2>/dev/null || true; fi
   rmdir "$RESTART_CLAIM_DIR" 2>/dev/null || true
 }
@@ -414,8 +417,10 @@ while true; do
     PI_PGID=""
     attempts=200
     while [ "$attempts" -gt 0 ]; do
-      PI_PGID=$(ps -o pgid= -p "$PI_PID" 2>/dev/null | tr -d ' ' || true)
-      [ "$PI_PGID" = "$PI_PID" ] && break
+      if is_exact_supervised_leader "$PI_PID"; then
+        PI_PGID="$PI_PID"
+        break
+      fi
       attempts=$((attempts - 1))
       sleep 0.01
     done

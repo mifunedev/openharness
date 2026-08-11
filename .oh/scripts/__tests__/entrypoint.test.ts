@@ -468,8 +468,8 @@ describe("client-slack bridge supervisor", () => {
       });
       expect(readFileSync(reopened, "utf8").trim()).toBe(join(state, "pi-sessions/active.jsonl"));
       expect(readFileSync(argsFile, "utf8").match(/--continue/g)).toHaveLength(2);
-      expect(readFileSync(join(state, "pi.compact"), "utf8").trim()).toMatch(/^\d+$/);
-      expect(readFileSync(join(state, "pi.state"), "utf8")).toContain("launches=2");
+      expect(existsSync(join(state, "pi.compact"))).toBe(false);
+      expect(existsSync(join(state, "pi.state"))).toBe(false);
       expect(readFileSync(log, "utf8").match(/Slack compaction completed/g)).toHaveLength(1);
       const descendantPid = readFileSync(descendantPidFile, "utf8").trim();
       const descendantStat = `/proc/${descendantPid}/stat`;
@@ -539,11 +539,140 @@ describe("client-slack bridge supervisor", () => {
     });
 
     expect(existsSync(join(temp, ".pi/msg-bridge.lock"))).toBe(false);
+    expect(existsSync(join(state, "pi.state"))).toBe(false);
     expect(existsSync(join(state, "pi.heartbeat"))).toBe(false);
     expect(existsSync(join(state, "pi.pid"))).toBe(false);
     expect(readdirSync(state).some((name) => name.includes("compact-ipc") || name.includes("restart-"))).toBe(false);
     expect(existsSync(join(state, "pi-sessions"))).toBe(true);
   });
+
+  it(
+    "kills the authenticated group on signal after its leader exits while preserving a sibling",
+    async () => {
+      const temp = mkdtempSync(join(tmpdir(), "slack-supervisor-leader-gone-"));
+      const bin = join(temp, "bin");
+      const state = join(temp, "state");
+      const log = join(temp, "gateway.log");
+      const leaderFile = join(temp, "leader-pid");
+      const descendantFile = join(temp, "descendant-pid");
+      const siblingReady = join(temp, "sibling-ready");
+      mkdirSync(bin);
+      mkdirSync(state);
+      mkdirSync(join(temp, ".pi"), { recursive: true });
+      writeFileSync(log, "");
+      writeFileSync(
+        join(bin, "pi"),
+        [
+          "#!/usr/bin/env bash",
+          'printf "locked\\n" > "$HOME/.pi/msg-bridge.lock"',
+          "bash -c 'trap \"\" TERM HUP INT; while true; do sleep 1; done' </dev/null >/dev/null 2>&1 &",
+          'printf "%s\\n" "$!" > "$DESCENDANT_PID_FILE"',
+          'printf "%s\\n" "$$" > "$LEADER_PID_FILE"',
+          'attempts=200; while [ ! -s "$EXPECTED_PGID_FILE" ] && [ "$attempts" -gt 0 ]; do attempts=$((attempts - 1)); sleep 0.01; done',
+          "exit 0",
+          "",
+        ].join("\n"),
+        { mode: 0o755 },
+      );
+
+      const sibling = spawn("bash", [
+        "-c",
+        `trap 'exit 0' TERM; printf alive > ${JSON.stringify(siblingReady)}; while true; do sleep 1; done`,
+      ]);
+      const supervisor = spawn("bash", [SUPERVISOR], {
+        stdio: "ignore",
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH ?? ""}`,
+          HOME: temp,
+          HARNESS: temp,
+          LOG: log,
+          GATEWAY_STATE_DIR: state,
+          GATEWAY_HEARTBEAT_INTERVAL: "0.05",
+          BRIDGE_ENTRY: "/fixture/pi-messenger-bridge/dist/index.js",
+          RECOVERY_ENTRY: "/fixture/bridge-recovery/index.ts",
+          LEADER_PID_FILE: leaderFile,
+          DESCENDANT_PID_FILE: descendantFile,
+          EXPECTED_PGID_FILE: join(state, "pi.pgid"),
+        },
+      });
+
+      let descendantPid = "";
+      const processState = (pid: string): string | undefined => {
+        if (!/^\d+$/.test(pid)) return undefined;
+        const statPath = `/proc/${pid}/stat`;
+        if (!existsSync(statPath)) return undefined;
+        const stat = readFileSync(statPath, "utf8");
+        return stat.slice(stat.lastIndexOf(")") + 2).split(" ")[0];
+      };
+      try {
+        for (
+          let i = 0;
+          i < 300 &&
+          (!existsSync(leaderFile) ||
+            !existsSync(descendantFile) ||
+            !existsSync(join(state, "pi.heartbeat")) ||
+            !existsSync(siblingReady));
+          i += 1
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        expect(existsSync(leaderFile)).toBe(true);
+        expect(existsSync(descendantFile)).toBe(true);
+        const leaderPid = readFileSync(leaderFile, "utf8").trim();
+        descendantPid = readFileSync(descendantFile, "utf8").trim();
+
+        for (let i = 0; i < 200 && ![undefined, "Z"].includes(processState(leaderPid)); i += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        expect([undefined, "Z"]).toContain(processState(leaderPid));
+        expect(processState(descendantPid)).not.toBeUndefined();
+        expect(processState(descendantPid)).not.toBe("Z");
+        expect(supervisor.exitCode).toBeNull();
+
+        // Preempt the normal post-wait group close while only the stubborn
+        // descendant remains. Signal cleanup must trust the recorded PGID,
+        // rather than returning early because leader validation now fails.
+        supervisor.kill("SIGTERM");
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error("supervisor did not stop")), 5000);
+          supervisor.once("exit", () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+        });
+
+        const descendantState = processState(descendantPid);
+        expect([undefined, "Z"]).toContain(descendantState);
+        expect(sibling.exitCode).toBeNull();
+        expect(readFileSync(siblingReady, "utf8")).toBe("alive");
+        expect(existsSync(join(temp, ".pi/msg-bridge.lock"))).toBe(false);
+        for (const name of [
+          "pi.state",
+          "pi.heartbeat",
+          "pi.pid",
+          "pi.pgid",
+          "pi.stale",
+          "pi.compact",
+          "pi.restart-trigger",
+        ]) {
+          expect(existsSync(join(state, name)), name).toBe(false);
+        }
+        expect(
+          readdirSync(state).some(
+            (name) => name.includes("compact-ipc") || name.includes("restart-claim"),
+          ),
+        ).toBe(false);
+      } finally {
+        if (supervisor.exitCode === null) supervisor.kill("SIGKILL");
+        if (descendantPid && ![undefined, "Z"].includes(processState(descendantPid))) {
+          process.kill(Number(descendantPid), "SIGKILL");
+        }
+        sibling.kill("SIGTERM");
+      }
+    },
+    15_000,
+  );
 
   it("keeps generic Hermes supervision out of Pi lock/session/IPC state", () => {
     const temp = mkdtempSync(join(tmpdir(), "hermes-supervisor-"));

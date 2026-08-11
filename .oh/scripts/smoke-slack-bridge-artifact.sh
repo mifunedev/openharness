@@ -3,7 +3,7 @@
 # through the real extension session_start/session_shutdown lifecycle.
 set -euo pipefail
 
-PIN="git+https://github.com/ryaneggz/pi-messenger-bridge.git#a445513961af60b11f00d0ef9f55a58e5e14fabd"
+PIN="git+https://github.com/ryaneggz/pi-messenger-bridge.git#4056384d7e3901809019e006185a68987fcc8c0b"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/slack-bridge-artifact.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT INT TERM HUP
 
@@ -14,7 +14,7 @@ ENTRY="$TMP/install/node_modules/pi-messenger-bridge/dist/index.js"
 CONTROL="$TMP/install/node_modules/pi-messenger-bridge/dist/compact-control.js"
 [ -f "$ENTRY" ] || { echo "installed bridge entry missing: $ENTRY" >&2; exit 1; }
 [ -f "$CONTROL" ] || { echo "installed compact controller missing: $CONTROL" >&2; exit 1; }
-grep -Fq 'a445513961af60b11f00d0ef9f55a58e5e14fabd' "$TMP/install/package-lock.json" \
+grep -Fq '4056384d7e3901809019e006185a68987fcc8c0b' "$TMP/install/package-lock.json" \
   || { echo "installed bridge lock is not bound to the reviewed commit" >&2; exit 1; }
 grep -Fq 'PI_MSG_BRIDGE_COMPACT_SOCKET' "$CONTROL" \
   || { echo "installed bridge lacks Unix compact endpoint" >&2; exit 1; }

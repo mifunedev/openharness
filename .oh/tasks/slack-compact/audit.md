@@ -4,8 +4,8 @@
 
 Final review findings against harness PR #740 and bridge PR #2:
 
-1. **HIGH — IPC forgery through inherited fd:** closed by removing the fd/FIFO design. The per-launch mode-0600 Unix socket is listening before Pi starts and authorizes the exact Pi PID with Linux `SO_PEERCRED` plus direct-child SID/PGID identity. The pathname is explicitly non-secret rendezvous metadata. The behavioral supervisor test launches a real child that reads its parent environment, scans `/proc/$PPID/fd`, and connects with the known one-byte protocol; no restart occurs. A connection from the exact Pi PID succeeds, launch two resumes the compacted path, and bounded exact-group TERM→KILL removes a stubborn descendant while sibling Pi/Hermes processes survive.
-2. **MEDIUM — queued remote destination active during local turn:** closed by assigning no destination at enqueue time. Each remote request carries a 256-bit random internal id; matching user `message_start` activates its metadata, and Pi's supported finalized `message_end` replacement removes the marker before provider context/session persistence. Behavioral bridge tests prove a Slack arrival during a local assistant/tool turn leaves that response local, then sends the remote response exactly once. Two chats/threads with identical visible content retain independent FIFO correlation.
+1. **MEDIUM — active remote destination survives local steering:** closed by recording the source of every active user turn. A correlated remote `message_start` activates that exact destination; any unmarked local/TUI steer or follow-up `message_start` switches delivery back to local without discarding the unresolved remote queue owner. Behavioral bridge tests prove both pre-settlement local steering and a local follow-up after a remote response never post to Slack, the remote queue settles at `agent_settled`, a later remote request still works, and identical cross-chat/thread FIFO remains unchanged.
+2. **MEDIUM — signal cleanup skips a group after its Pi leader exits:** closed by treating the already-authenticated recorded PGID as cleanup authority while the group exists, rather than revalidating the departed leader. Signal/EXIT cleanup applies bounded TERM→KILL to that group and removes supervisor state, heartbeat, PID/PGID, socket/restart files, and lock. The behavioral supervisor test preempts cleanup after the leader is gone while a descendant ignores TERM; the descendant dies, an unrelated sibling survives, and all transient state is removed.
 
 ## Compatibility review
 
@@ -18,14 +18,10 @@ Final review findings against harness PR #740 and bridge PR #2:
 
 ## Verification evidence
 
-- Bridge: `npm test` — 120 tests passed.
-- Bridge: `npm run lint` — passed.
-- Bridge: `npm run typecheck` — passed.
-- Bridge: `npm run build` — passed.
-- Bridge head `a445513961af60b11f00d0ef9f55a58e5e14fabd`: `npm test` (120), lint, typecheck, build, and pack dry-run — passed.
-- Harness focused supervisor/gateway suites: 35 tests passed, including exact installed artifact lifecycle.
-- Harness full suite under a clean test environment: 39 files / 490 tests passed.
-- Harness lint, format check, typecheck, build, Bash syntax, Dockerized ShellCheck, JSON parse, template parity, and `git diff --check` — passed.
+- Bridge head `4056384d7e3901809019e006185a68987fcc8c0b`: `npm test` (122 tests), `npm run lint`, `npm run typecheck`, and `npm run build` — passed.
+- Harness focused supervisor/gateway suites: 36 tests passed, including the exact installed artifact lifecycle and leader-gone signal preemption; the new signal test also passed three repeated focused runs.
+- Harness full suite under a clean test environment: 39 files / 491 tests passed.
+- Harness lint, format check, typecheck, build, Bash syntax, Dockerized ShellCheck across 36 boot scripts, JSON parse, template parity, exact installed-artifact smoke, and `git diff --check` — passed.
 - Eval: 98 probes ran; 94 PASS, 4 environment-appropriate SKIPPED, 0 REGRESSION. Both Slack probes pass at the exact bridge pin.
 - Harness CI runs `.oh/scripts/smoke-slack-bridge-artifact.sh`, so the consumer gate installs and exercises the exact reviewed bridge head rather than relying only on source-repository checks.
 

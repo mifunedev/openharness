@@ -188,9 +188,11 @@ restart Pi, but every Pi launch runs as an isolated session/process group whose
 PGID equals its recorded leader PID. Recovery sends bounded TERM then KILL only
 to that verified group, so stubborn descendants die without name-based `pkill`
 and unrelated Pi/Hermes sessions survive. The pane TTY descriptors remain
-attached. EXIT, INT, TERM, and HUP cleanup tears down the exact launch group and
-watcher/ticker children and removes the bridge lock, heartbeat, PID/PGID, and
-transient restart state.
+attached. EXIT, INT, TERM, and HUP cleanup uses the already-authenticated,
+recorded PGID while that group exists, even if the Pi leader PID has exited;
+it applies the same bounded TERM-to-KILL close, tears down watcher/ticker
+children, and removes the bridge lock, supervisor state, heartbeat, PID/PGID,
+socket, and transient restart state.
 
 Successful compaction uses no log marker, inherited descriptor, or environment
 secret. Before launching Pi, the supervisor binds a Unix-domain listener inside
@@ -455,7 +457,7 @@ Slack compaction is package-owned, not patched or vendored in the harness.
 Replies post **in a thread** anchored to the triggering channel message
 (`thread_ts`); DMs stay flat. While these changes are unreleased, the harness
 pins the exact reviewed fork commit
-`git+https://github.com/ryaneggz/pi-messenger-bridge.git#a445513961af60b11f00d0ef9f55a58e5e14fabd`
+`git+https://github.com/ryaneggz/pi-messenger-bridge.git#4056384d7e3901809019e006185a68987fcc8c0b`
 from [ryaneggz/pi-messenger-bridge#2](https://github.com/ryaneggz/pi-messenger-bridge/pull/2),
 which includes thread replies, admin handlers, and supervised compact control.
 Re-pin to `pi-messenger-bridge@<version>` once upstream publishes them. Source lives upstream at

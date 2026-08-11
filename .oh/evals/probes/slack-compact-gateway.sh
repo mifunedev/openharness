@@ -10,7 +10,7 @@ GATEWAY="$ROOT/.oh/scripts/gateway.sh"
 SUPERVISOR="$ROOT/.devcontainer/client-slack-supervise.sh"
 DOC="$ROOT/.oh/docs/integrations/slack.md"
 ARTIFACT_SMOKE="$ROOT/.oh/scripts/smoke-slack-bridge-artifact.sh"
-PIN="a445513961af60b11f00d0ef9f55a58e5e14fabd"
+PIN="4056384d7e3901809019e006185a68987fcc8c0b"
 
 fail() { echo "REGRESSION: $*" >&2; exit 1; }
 need() {
@@ -60,7 +60,8 @@ need "$SUPERVISOR" 'wait "$COMPACT_WATCHER"' "main loop does not settle completi
 need "$SUPERVISOR" 'terminate_authenticated_group "$authenticated_pid"' "authenticated peer group is not restarted exactly"
 need "$SUPERVISOR" 'trap on_signal INT TERM HUP' "signal cleanup trap missing"
 need "$SUPERVISOR" 'trap cleanup_all EXIT' "EXIT cleanup trap missing"
-need "$SUPERVISOR" 'rm -f "$HEARTBEAT_FILE"' "heartbeat cleanup missing"
+need "$SUPERVISOR" 'terminate_authenticated_group "$PI_PGID"' "signal cleanup depends on the exited Pi leader instead of its authenticated PGID"
+need "$SUPERVISOR" 'rm -f "$STATE" "$HEARTBEAT_FILE"' "supervisor state and heartbeat cleanup missing"
 need "$SUPERVISOR" 'if [ "$BACKEND" = pi ]; then rm -f "$LOCK"' "Pi lock cleanup missing"
 need "$SUPERVISOR" 'date -u +%s >"$COMPACT_FILE"' "compaction recovery status missing"
 

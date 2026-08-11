@@ -55,7 +55,7 @@ describe("gateway client-session launcher", () => {
   });
 
   it("reconciles the installed bridge when the reviewed fork pin changes", () => {
-    expect(gateway()).toContain("a445513961af60b11f00d0ef9f55a58e5e14fabd");
+    expect(gateway()).toContain("4056384d7e3901809019e006185a68987fcc8c0b");
     expect(gateway()).toContain(".openharness-pin");
     expect(gateway()).toContain('installed_pin" != "$FORK_PIN');
     expect(gateway()).toContain('printf \'%s\\n\' "$FORK_PIN" >"$bridge_pin_file"');

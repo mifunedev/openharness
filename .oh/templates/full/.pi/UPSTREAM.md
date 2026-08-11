@@ -7,7 +7,7 @@
 | **Capability** | Messenger bridge (Telegram / WhatsApp / Slack / Discord / Matrix) |
 | **Package** | `pi-messenger-bridge` ([tintinweb/pi-messenger-bridge](https://github.com/tintinweb/pi-messenger-bridge)) |
 | **License** | MIT |
-| **Install / load** | `npm install "github:ryaneggz/pi-messenger-bridge#c8b96e9d0fb69611c4e67ae298d1d10d83792a26"` into gitignored `.pi/bridge/` (TEMPORARY exact-commit fork pin carrying the unreleased Slack thread-reply patch plus Slack admin slash-command handlers; the fork's `prepare` script builds `dist/` on install); loaded via `--extension` only in the `client-slack-pi` tmux session, interactive on the pane TTY (no `--mode rpc`), under `.devcontainer/client-slack-supervise.sh`; local `.pi/bridge-recovery/` and `.pi/slack-compact/` co-extensions load second/third for Codex retry and Slack-requested compaction recovery |
+| **Install / load** | `npm install "github:ryaneggz/pi-messenger-bridge#965de09fdfbe156c4369df84091723614c0b6600"` into gitignored `.pi/bridge/` (TEMPORARY exact-commit fork pin from [ryaneggz/pi-messenger-bridge#2](https://github.com/ryaneggz/pi-messenger-bridge/pull/2), carrying thread replies, admin handlers, and authenticated supervised compact control; `prepare` builds `dist/`); loaded via `--extension` only in `client-slack-pi`, with local `.pi/bridge-recovery/` second for Codex retry, under `.devcontainer/client-slack-supervise.sh` using an isolated continued session and private one-shot IPC |
 | **Vendored** | No — npm package dependency, not a port |
 
 ## Relationship Model
@@ -16,10 +16,10 @@ The Slack (and other transport) capability is now provided by the community
 npm package **pi-messenger-bridge**. This is a **package dependency**, not a
 vendored or hand-ported in-tree extension:
 
-- The package is installed via npm into a gitignored `.pi/bridge/` directory and loaded via `--extension` only in the dedicated `client-slack-pi` tmux session, wrapped by `.devcontainer/client-slack-supervise.sh` for stale-ctx, crash, and successful-compaction reconnects. Pi runs interactive on the pane TTY (no `--mode rpc`). Two sibling in-tree extensions — `.pi/bridge-recovery/` second for Codex `previous_response_not_found` retry-recovery and `.pi/slack-compact/` third for exact authorized Slack compaction requests — are local Open Harness co-extensions, **not** package patches. Both stay outside `.pi/extensions/` auto-discovery and are absent from `.pi/settings.json`, so every non-gateway Pi session is unaffected. Exact order lets the package's earlier `turn_end` deliver the acknowledgement before Slack compaction begins.
-- The pin in `.oh/scripts/gateway.sh`'s `FORK_PIN` **is** the review/bump artifact. It currently points at exact merged commit `github:ryaneggz/pi-messenger-bridge#c8b96e9d0fb69611c4e67ae298d1d10d83792a26` (Slack thread-reply patch plus admin slash-command handlers from [ryaneggz/pi-messenger-bridge#1](https://github.com/ryaneggz/pi-messenger-bridge/pull/1)); once upstream publishes a release, re-pin it to `pi-messenger-bridge@<release>`.
-- Package source lives upstream at `tintinweb/pi-messenger-bridge`; the harness consumes it as published and never edits `node_modules`. Gateway-specific recovery behavior belongs in the two tracked local co-extensions instead.
-- Track the package by version pin only. The one current exception is the **temporary fork pin** above, authorized to ship the Slack thread-reply fix and admin slash-command handlers ahead of an upstream release; it reverts to a published `pi-messenger-bridge@<release>` as soon as the upstream PR lands. Do **not** vendor the package source into the tree.
+- The package is installed via npm into a gitignored `.pi/bridge/` directory and loaded only in the dedicated `client-slack-pi` tmux session. It owns authorization, exact compact-request correlation, originating-thread acknowledgement, overlap serialization, `ctx.compact`, generation guards, Slack disconnect, and one-shot completion notification. The harness neither patches `node_modules` nor carries a duplicate compact extension.
+- `.devcontainer/client-slack-supervise.sh` owns process/session continuity: mode-700 isolated session storage with explicit `--continue`, watcher-before-launch private unlinked pipe IPC, exact-PID restart, and lifecycle cleanup. `.pi/bridge-recovery/` remains the sole local co-extension for Codex `previous_response_not_found` retry.
+- The pin in `.oh/scripts/gateway.sh`'s `FORK_PIN` **is** the review/bump artifact. It points at exact tested commit `github:ryaneggz/pi-messenger-bridge#965de09fdfbe156c4369df84091723614c0b6600` from [ryaneggz/pi-messenger-bridge#2](https://github.com/ryaneggz/pi-messenger-bridge/pull/2); once upstream publishes a release containing these changes, re-pin to `pi-messenger-bridge@<release>`.
+- Track the package by exact version/commit pin only. Do **not** vendor package source or patch `node_modules`.
 
 This model keeps the integration thin: upstream maintains the multi-transport
 bridge, the harness just pins which release it runs.
@@ -38,9 +38,9 @@ table and customization log retired with it.
 
 **Owner**: `@ryaneggz`
 **Schedule**: Quarterly (check for a newer `pi-messenger-bridge` release)
-**Last reviewed**: 2026-06-21
+**Last reviewed**: 2026-08-11
 
 On each review:
 1. Check whether `tintinweb/pi-messenger-bridge` has published a newer release.
-2. If so (or once the thread-reply PR is released), update `.oh/scripts/gateway.sh`'s `FORK_PIN` from the fork commit to `pi-messenger-bridge@<release>` and validate.
-3. Verify the Slack transport still loads and bridges turns after the bump.
+2. If so (or once fork PR #2 is released upstream), update `.oh/scripts/gateway.sh`'s `FORK_PIN` from the exact fork commit to `pi-messenger-bridge@<release>` and validate.
+3. Verify Slack thread/admin behavior plus acknowledgement-first compact, private IPC restart, and continued-session recovery after the bump.

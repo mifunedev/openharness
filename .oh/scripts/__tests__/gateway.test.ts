@@ -16,10 +16,10 @@ describe("gateway client-session launcher", () => {
     execFileSync("bash", ["-n", GATEWAY]);
   });
 
-  it("runs the pi backend under the self-healing supervisor with the gateway-only compact extension", () => {
+  it("runs Pi under the self-healing supervisor with package-owned compact control", () => {
     expect(gateway()).toContain(".devcontainer/client-slack-supervise.sh");
-    expect(gateway()).toContain('.pi/slack-compact/index.ts');
-    expect(gateway()).toContain("export COMPACT_ENTRY=%q");
+    expect(gateway()).not.toContain(".pi/slack-compact/index.ts");
+    expect(gateway()).not.toContain("COMPACT_ENTRY");
   });
 
   it("runs the hermes backend via `hermes gateway run`", () => {
@@ -52,7 +52,7 @@ describe("gateway client-session launcher", () => {
   });
 
   it("reconciles the installed bridge when the reviewed fork pin changes", () => {
-    expect(gateway()).toContain("c8b96e9d0fb69611c4e67ae298d1d10d83792a26");
+    expect(gateway()).toContain("965de09fdfbe156c4369df84091723614c0b6600");
     expect(gateway()).toContain(".openharness-pin");
     expect(gateway()).toContain('installed_pin" != "$FORK_PIN');
     expect(gateway()).toContain('printf \'%s\\n\' "$FORK_PIN" >"$bridge_pin_file"');
@@ -102,9 +102,7 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     const pwned = join(temp, "pwned");
     mkdirSync(join(harness, ".devcontainer"), { recursive: true });
     mkdirSync(join(harness, ".pi/bridge-recovery"), { recursive: true });
-    mkdirSync(join(harness, ".pi/slack-compact"), { recursive: true });
     writeFileSync(join(harness, ".pi/bridge-recovery/index.ts"), "// recovery fixture\n");
-    writeFileSync(join(harness, ".pi/slack-compact/index.ts"), "// compact fixture\n");
     mkdirSync(home, { recursive: true });
     mkdirSync(bin);
 
@@ -140,13 +138,13 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
       ].join("\n"),
       { mode: 0o755 },
     );
-    // pi stub: records token values, extension path/order, and nonce presence.
+    // pi stub: records token values and package/recovery extension order.
     writeFileSync(
       join(bin, "pi"),
       [
         "#!/usr/bin/env bash",
-        "printf 'PI_SLACK_APP_TOKEN=%s\\nPI_SLACK_BOT_TOKEN=%s\\nCOMPACT_ENTRY=%s\\nNONCE_LENGTH=%s\\nARGS=%s\\n' \\",
-        "  \"$PI_SLACK_APP_TOKEN\" \"$PI_SLACK_BOT_TOKEN\" \"$COMPACT_ENTRY\" \"${#SLACK_COMPACT_NONCE}\" \"$*\" > \"$PI_ENV_FILE\"",
+        "printf 'PI_SLACK_APP_TOKEN=%s\\nPI_SLACK_BOT_TOKEN=%s\\nARGS=%s\\n' \\",
+        "  \"$PI_SLACK_APP_TOKEN\" \"$PI_SLACK_BOT_TOKEN\" \"$*\" > \"$PI_ENV_FILE\"",
         "",
       ].join("\n"),
       { mode: 0o755 },
@@ -159,9 +157,7 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
       join(harness, ".devcontainer", "client-slack-supervise.sh"),
       [
         "#!/usr/bin/env bash",
-        "SLACK_COMPACT_NONCE=0123456789abcdef0123456789abcdef0123456789abcdef",
-        "export SLACK_COMPACT_NONCE",
-        'exec pi --extension "${BRIDGE_ENTRY:-x}" --extension "${RECOVERY_ENTRY:-y}" --extension "${COMPACT_ENTRY:-z}" --approve',
+        'exec pi --session-dir "${GATEWAY_STATE_DIR:-$HOME/.pi/gateway}/pi-sessions" --continue --extension "${BRIDGE_ENTRY:-x}" --extension "${RECOVERY_ENTRY:-y}" --approve',
         "",
       ].join("\n"),
       { mode: 0o755 },
@@ -207,11 +203,11 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     const recorded = readFileSync(piEnv, "utf8");
     expect(recorded).toContain("PI_SLACK_APP_TOKEN=xapp token; touch $PWNED\n");
     expect(recorded).toContain("PI_SLACK_BOT_TOKEN=xoxb'quoted\n");
-    expect(recorded).toContain(`COMPACT_ENTRY=${join(harness, ".pi/slack-compact/index.ts")}\n`);
-    expect(recorded).toContain("NONCE_LENGTH=48\n");
     expect(recorded).toContain(
-      `ARGS=--extension ${join(harness, ".pi/bridge/node_modules/pi-messenger-bridge/dist/index.js")} --extension ${join(harness, ".pi/bridge-recovery/index.ts")} --extension ${join(harness, ".pi/slack-compact/index.ts")} --approve`,
+      `ARGS=--session-dir ${join(harness, ".pi/gateway/pi-sessions")} --continue --extension ${join(harness, ".pi/bridge/node_modules/pi-messenger-bridge/dist/index.js")} --extension ${join(harness, ".pi/bridge-recovery/index.ts")} --approve`,
     );
+    expect(recorded).not.toContain("slack-compact");
+    expect(recorded).not.toContain("NONCE");
     expect(existsSync(pwned)).toBe(false);
 
     // The non-secret config was seeded into ~/.pi (tokens stay out of it).

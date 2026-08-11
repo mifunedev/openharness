@@ -161,48 +161,45 @@ The sibling Hermes gateway client is the same command: `gateway hermes` (session
 `client-slack-hermes`). Under the hood `gateway pi` / the supervisor run:
 
 ```bash
-pi --extension .pi/bridge/node_modules/pi-messenger-bridge/dist/index.js \
+pi --session-dir ~/.pi/gateway/pi-sessions --continue \
+   --extension .pi/bridge/node_modules/pi-messenger-bridge/dist/index.js \
    --extension .pi/bridge-recovery/index.ts \
-   --extension .pi/slack-compact/index.ts \
    --approve            # interactive on the pane TTY — no --mode rpc, no | tee
 ```
 
-pi runs **interactive**, attached to the pane's real TTY, so the loaded UI
-extensions render in the TUI instead of flooding stdout with
-`extension_ui_request` JSON frames — and the REPL stays alive at idle (no
-`--mode rpc`, no `| tee` pipe). Logs are captured out-of-band: pi's stderr goes
-to `/tmp/client-slack-pi.log`, and `gateway.sh` mirrors the pane there
-(ANSI-stripped) with `tmux pipe-pane`. `--approve` trusts the project-local
-files so the extension loads. The second `--extension` (`.pi/bridge-recovery/index.ts`) adds Codex
-retry-recovery (§ 4.5); the third (`.pi/slack-compact/index.ts`) adds the
-Slack-requested compaction flow (§ 4.6). Both local co-extensions live outside
-`.pi/extensions/` auto-discovery. The bridge and these gateway helpers are
-loaded **only** here — none is pinned globally in `.pi/settings.json`, so local
-TUI, cron, and other `pi` sessions are unaffected and do not compete for the
-Slack connection.
+Pi runs **interactive**, attached to the pane's real TTY, so loaded UI extensions
+render in the TUI instead of flooding stdout with `extension_ui_request` JSON
+frames, and the REPL stays alive at idle. The private mode-700 session directory
+belongs only to this gateway. Every launch explicitly uses `--continue`, so the
+second launch reopens the first launch's active path, including its newly written
+compaction entry. Logs are captured out of band in `/tmp/client-slack-pi.log`.
+The package owns Slack compaction (§ 4.6); the only local co-extension is
+`.pi/bridge-recovery/index.ts` for Codex retry-recovery (§ 4.5). Neither is
+globally pinned, so local TUI, cron, Hermes, and sibling Pi sessions remain
+unaffected.
 
 ### 4.4 Self-healing supervisor
 
-The `client-slack-pi` session does not run that `pi` command directly — it runs it
-under a thin supervisor, `.devcontainer/client-slack-supervise.sh`, which
-relaunches pi whenever the bridge dies. This exists because
-pi-messenger-bridge binds its long-lived Slack socket to a **session-scoped pi
-ctx**: when pi replaces the session (compaction, fork, model switch, reload),
-that ctx goes stale and every subsequent Slack message throws
-`extension ctx is stale after session replacement or reload`. The package has
-no recovery hook, so the process keeps running while the bridge silently stops
-responding. The supervisor tails the log for that stale-ctx signature (and
-catches any non-zero crash), kills the bridge pi, clears the single-instance
-lock (`~/.pi/msg-bridge.lock`), and relaunches a fresh process that reconnects.
-For Slack-requested compaction it restarts proactively: every Pi launch gets a
-new unpredictable supervisor-owned nonce; only `ctx.compact.onComplete` may
-emit that nonce-bound marker, and the watcher tails from EOF and accepts only
-the current launch's exact marker. Old logs or transcript text therefore cannot
-replay a restart. `gateway status` reports a recent `compaction reconnected`
-recovery; look for the `[Slack] Bot user ID:` connect marker (§ 7) again after a
-restart. Compaction errors emit no marker and do not restart-loop. A clean pi
-exit (`rc=0`) stops the loop. The manual relaunch below is only needed to pick
-up config edits, not to recover from stale-ctx or successful Slack compaction.
+The `client-slack-pi` session runs under
+`.devcontainer/client-slack-supervise.sh`. Crashes and the legacy
+`extension ctx is stale after session replacement or reload` signature still
+restart Pi, but every recovery signals only the exact PID recorded for that
+launch. There is no name-based `pkill`; sibling Pi sessions survive. EXIT, INT,
+TERM, and HUP cleanup tears down the exact watcher/ticker children and removes
+the bridge lock, heartbeat, PID, and transient restart state.
+
+Successful compaction uses no log marker or environment nonce. Before launching
+Pi, the supervisor creates a private inherited one-shot pipe, synchronizes until
+the reader is open, passes the write descriptor to the bridge package, and
+unlinks the FIFO pathname. Ordinary Node tool subprocesses inherit only stdio,
+so they may see an fd number in the environment but do not possess the pipe;
+pane output and old logs have no signaling path. The package disconnects Slack
+first, writes one byte, and closes its descriptor. The watcher records
+`compaction reconnected` and signals the exact supervised PID. After Pi exits,
+the supervisor closes its writer and waits for the one-shot watcher to settle
+**before** evaluating rc, so immediate completion and simultaneous completion +
+rc=0 cannot be lost. Launch two then uses the same `--session-dir --continue`
+path rather than starting bare Pi.
 
 ### 4.5 Codex retry-recovery
 
@@ -219,8 +216,8 @@ retry chains fresh and succeeds. It does not patch the npm package.
 
 ### 4.6 Compact the current Pi Slack session from Slack
 
-An **already-authorized** Slack user can send one of these complete, ordinary
-DM/message texts to the bot (case-insensitive):
+An **already-authorized** Slack user can send one of these complete,
+case-insensitive ordinary messages:
 
 ```text
 compact session
@@ -228,41 +225,35 @@ compact current session
 compact the current session
 ```
 
-The grammar is deliberately exact. Questions, mentions, or conversation that
-merely contains “compact” do not trigger it. The command applies only to the
-**current dedicated `client-slack-pi` session**; it never affects a local Pi TUI,
-cron, Hermes, another transport, or another saved session. This extension trusts
-the bridge's security boundary: `pi-messenger-bridge` must authorize the Slack
-user and channel **before** it stamps and forwards `[📱 @… via slack]: …` input.
-The local extension accepts only that Slack stamp from extension-originated
-input; it does not create a second authorization system.
+The exact pinned `pi-messenger-bridge` package recognizes the control only
+**after** its normal user/channel trust check. It binds an immutable request to
+the authenticated message metadata and posts the acknowledgement directly to
+the originating Slack chat/thread:
 
-The bot first posts this short acknowledgement through the normal bridge reply
-path (including normal channel thread behavior):
+> Compaction requested. I’ll compact this session, then the gateway will restart
+> and reconnect.
 
-> Compaction requested. I’ll compact this session, then the Slack gateway will
-> restart and reconnect.
+A successful `chat.postMessage` is the commit point. If Slack delivery fails,
+the package does not compact, disconnect, or signal. If another Pi turn is
+active, the acknowledged request waits for `agent_settled`; it never attaches
+to an arbitrary later text turn. Empty responses, tool turns, and provider
+errors therefore cannot steal the request. Authenticated inbound callbacks are
+serialized, and overlap/direct-next messages receive an in-progress response
+without entering the context being replaced.
 
-Only after a non-empty, tool-free acknowledgement turn reaches the bridge's
-`turn_end` does the helper call Pi's documented
-`ctx.compact({ customInstructions, onComplete, onError })`. On success the
-supervisor immediately restarts Pi, clears the bridge lock, and reconnects
-Socket Mode before a later Slack event can reach the replaced/stale context.
-The acknowledgement is intentionally not a completion confirmation; the old
-process cannot send one after replacement. Check `gateway status` or the Socket
-Mode connect marker when confirmation matters.
+The package then calls Pi's documented
+`ctx.compact({ customInstructions, onComplete, onError })`. On success it closes
+the logical intake gate immediately, disconnects the exact Slack transport, and
+only then writes to the supervisor's private pipe. Session/request generations
+guard late completion/error callbacks after replacement. On error the gateway
+stays connected and re-arms without a restart loop.
 
-The extension also accepts stamped regular text of the form
-`/compact [instructions]` when such text reaches Pi. Instructions are limited to
-500 characters and may not contain control characters. Open Harness does **not**
-register or claim a native Slack `/compact` slash command: it is absent from the
-Slack app manifest, and Slack normally intercepts unregistered slash syntax.
-Use the natural message forms above as the supported surface.
-
-Duplicate requests while acknowledgement/compaction is in flight receive a
-brief already-in-progress reply and cannot start a second compaction. If
-compaction fails, the gateway stays connected, logs a safe failure line, and
-re-arms for a later request without a supervisor restart loop.
+The package also accepts ordinary text `/compact [instructions]` if Slack passes
+it through. The exact **untrimmed** instruction capture is checked before
+normalization: C0, DEL, and C1 controls are rejected, and the limit is 500
+Unicode code points. Open Harness does **not** register or claim a native Slack
+`/compact` slash command; it is absent from the app manifest. Use the natural
+message forms as the supported surface.
 
 ### 4.7 Run and verify (read-only)
 
@@ -431,15 +422,15 @@ installs it via npm into a gitignored `.pi/bridge/` directory and loads it via
 `--extension` only in the dedicated `client-slack-pi` tmux session
 (`.devcontainer/entrypoint.sh`) — it is not globally pinned in
 `.pi/settings.json`, so no other `pi` session competes for the Slack
-connection. The harness additionally co-loads its local
-`.pi/bridge-recovery/` and `.pi/slack-compact/` helpers only in that gateway;
-they do not patch the npm package and remain outside Pi auto-discovery. Replies
-post **in a thread** anchored to the triggering channel
-message (`thread_ts`); DMs stay flat. The harness normally consumes the package
-as published, but while that thread-reply patch is unreleased it temporarily
-pins the entrypoint's `npm install` line to a fork branch
-(`github:ryaneggz/pi-messenger-bridge#c8b96e9d0fb69611c4e67ae298d1d10d83792a26`), the exact fork commit containing thread replies and admin slash-command handlers; re-pin to
-`pi-messenger-bridge@<version>` once upstream publishes them. Source lives upstream at
+connection. The harness co-loads only `.pi/bridge-recovery/` for Codex retry;
+Slack compaction is package-owned, not patched or vendored in the harness.
+Replies post **in a thread** anchored to the triggering channel message
+(`thread_ts`); DMs stay flat. While these changes are unreleased, the harness
+pins the exact reviewed fork commit
+`github:ryaneggz/pi-messenger-bridge#965de09fdfbe156c4369df84091723614c0b6600`
+from [ryaneggz/pi-messenger-bridge#2](https://github.com/ryaneggz/pi-messenger-bridge/pull/2),
+which includes thread replies, admin handlers, and supervised compact control.
+Re-pin to `pi-messenger-bridge@<version>` once upstream publishes them. Source lives upstream at
 [tintinweb/pi-messenger-bridge](https://github.com/tintinweb/pi-messenger-bridge).
 
 For upstream lineage, the version-pin model, the quarterly review cadence, and

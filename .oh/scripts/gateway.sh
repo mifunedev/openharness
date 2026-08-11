@@ -32,9 +32,9 @@ set -u
 
 HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 SLACK_ENV="$HARNESS/.devcontainer/.env"
-# TEMPORARY fork pin — carries thread replies + Slack admin slash handlers;
-# revert once upstream merges and publishes them (see .pi/UPSTREAM.md).
-FORK_PIN="github:ryaneggz/pi-messenger-bridge#c8b96e9d0fb69611c4e67ae298d1d10d83792a26"
+# TEMPORARY exact fork pin — thread replies, Slack admin handlers, and the
+# reviewed supervised-compaction control from ryaneggz/pi-messenger-bridge#2.
+FORK_PIN="github:ryaneggz/pi-messenger-bridge#965de09fdfbe156c4369df84091723614c0b6600"
 
 usage() {
   echo "Usage:"
@@ -164,14 +164,11 @@ start_pi() {
   local bridge_entry="$bridge_dir/node_modules/pi-messenger-bridge/dist/index.js"
   local bridge_pin_file="$bridge_dir/.openharness-pin"
   local recovery_entry="$HARNESS/.pi/bridge-recovery/index.ts"
-  local compact_entry="$HARNESS/.pi/slack-compact/index.ts"
 
   command -v pi >/dev/null 2>&1 \
     || { echo "[gateway] 'pi' not found on PATH — run inside the sandbox" >&2; return 1; }
   [ -f "$recovery_entry" ] \
     || { echo "[gateway] missing Pi recovery extension: $recovery_entry" >&2; return 1; }
-  [ -f "$compact_entry" ] \
-    || { echo "[gateway] missing Slack compaction extension: $compact_entry" >&2; return 1; }
 
   # Tokens (optional): source from the Compose env file if not already exported.
   # Extract only the two keys as DATA (never eval the file), never echo values.
@@ -211,7 +208,6 @@ start_pi() {
     printf 'export HARNESS=%q\n'        "$HARNESS"
     printf 'export BRIDGE_ENTRY=%q\n'   "$bridge_entry"
     printf 'export RECOVERY_ENTRY=%q\n' "$recovery_entry"
-    printf 'export COMPACT_ENTRY=%q\n'  "$compact_entry"
     printf 'export LOG=%q\n'            "$log"
     [ -n "${PI_SLACK_APP_TOKEN:-}" ] && printf 'export PI_SLACK_APP_TOKEN=%q\n' "$PI_SLACK_APP_TOKEN"
     [ -n "${PI_SLACK_BOT_TOKEN:-}" ] && printf 'export PI_SLACK_BOT_TOKEN=%q\n' "$PI_SLACK_BOT_TOKEN"

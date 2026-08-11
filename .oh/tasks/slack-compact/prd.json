@@ -1,40 +1,60 @@
 {
   "project": "slack-compact",
   "issue": 739,
-  "goal": "Allow an authorized Slack user to compact the current dedicated Pi gateway session with acknowledgement-before-compaction and proactive nonce-bound supervisor recovery.",
+  "source": "mifunedev/openharness#739",
+  "branch": "feat/739-slack-compact",
+  "description": "Authenticated package-owned Slack compaction with continued session and private exact-PID supervision",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Gateway-only Slack command parser and acknowledgement state machine",
+      "title": "Package-owned authenticated compact control",
+      "description": "Extend the exact-pinned bridge fork where authorization, immutable message metadata, direct transport send, and disconnect are available.",
       "acceptanceCriteria": [
-        "Only exact bridge-stamped Slack command messages trigger",
-        "Natural grammar and optional bounded /compact instructions are tested",
-        "A non-empty tool-free acknowledgement turn precedes ctx.compact",
-        "Duplicate, error, and session lifecycle states are one-shot and reset safely"
+        "Exact originating chat/thread acknowledgement succeeds before compaction",
+        "Active prior work settles before compaction and no arbitrary turn_end is used",
+        "Overlaps serialize; post failure/provider failure/empty/tool/direct-next cases are deterministic",
+        "Untrimmed instruction controls and generation-late callbacks are tested"
       ],
-      "dependsOn": []
+      "priority": 1,
+      "passes": true
     },
     {
       "id": "US-002",
-      "title": "Nonce-bound proactive supervisor recovery",
+      "title": "Private one-shot exact-PID supervisor",
+      "description": "Replace nonce/log signaling with watcher-ready-before-launch inherited unlinked pipe IPC and exact target cleanup.",
       "acceptanceCriteria": [
-        "Supervisor owns a fresh unpredictable nonce per Pi launch",
-        "Extension is loaded third and receives nonce only in the dedicated Pi gateway",
-        "Only current onComplete marker triggers recorded restart/reconnect",
-        "Stale ctx, crashes, locks, heartbeat, Hermes, and interactive TTY behavior remain intact"
+        "Tool and pane output cannot forge completion",
+        "Slack disconnect precedes one-shot signal",
+        "Immediate completion plus rc0 restarts exactly the supervised PID",
+        "EXIT, INT, TERM, and HUP cleanup removes transient state, lock, and heartbeat while siblings survive"
       ],
-      "dependsOn": ["US-001"]
+      "priority": 2,
+      "passes": true
     },
     {
       "id": "US-003",
-      "title": "Regression tests, probe, and operator documentation",
+      "title": "Continue the compacted active session",
+      "description": "Use an isolated private session directory and explicit continuation on every launch.",
       "acceptanceCriteria": [
-        "Vitest and shell tests cover extension and launch wiring",
-        "Tier-A probe guards gateway-only/API/grammar/restart contract",
-        "Slack and upstream docs describe trust, scope, behavior, caveat, and troubleshooting",
-        "Changelog links issue #739"
+        "Launch command contains --session-dir and --continue",
+        "Launch two reopens launch one's compaction entry",
+        "Persistent session data survives supervisor cleanup"
       ],
-      "dependsOn": ["US-001", "US-002"]
+      "priority": 3,
+      "passes": true
+    },
+    {
+      "id": "US-004",
+      "title": "Preserve integration compatibility and evidence",
+      "description": "Keep thread/admin/trust/Codex/Hermes/token paths intact and update all provenance, docs, eval, and test surfaces.",
+      "acceptanceCriteria": [
+        "Harness pins the exact tested fork commit and has no package patch/vendor/local duplicate",
+        "UPSTREAM root/template are byte-identical and changelog/doc/task artifacts describe the final architecture",
+        "Focused/full package and harness gates plus CI and deterministic audit pass",
+        "Neither PR is merged"
+      ],
+      "priority": 4,
+      "passes": false
     }
   ]
 }

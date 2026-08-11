@@ -1,3 +1,9 @@
-# Standing implementation prompt
+# Execution prompt
 
-Implement issue #739 only in `feat/739-slack-compact`. Treat the npm bridge as an unchanged trusted dependency: it authorizes Slack users/channels before stamping and forwarding input. Keep Slack compaction as a local, gateway-only co-extension outside Pi auto-discovery. Acknowledge through the normal assistant/bridge turn before invoking documented `ctx.compact`; then use a per-launch unpredictable supervisor nonce to trigger an EOF-tailed proactive restart only after successful completion. Never expose Slack token values, claim a native Slack `/compact` command, affect local TUI/other transports, or weaken existing recovery, threading, auth, heartbeat, lock, Hermes, or TTY behavior.
+Fix independent FAIL at harness head `4fb07864`: move authenticated compact
+correlation/delivery/disconnect into an exact-pinned focused bridge-fork PR;
+replace nonce/log signaling with watcher-ready private one-shot inherited pipe
+IPC and exact-PID cleanup; relaunch through an isolated persistent session
+directory with explicit continuation; close every mandatory finding in
+`prd.md`; preserve thread/admin/trust/Codex/Hermes/token behavior; run exhaustive
+fork+harness verification and audits; push both PRs without merging.

@@ -1,1 +1,92 @@
 # progress
+
+## Codebase Patterns
+
+- **The task folder is tracked but gitignored.** `.oh/tasks/<slug>/` matches a `.gitignore` rule,
+  yet `prd.md` / `prd.json` / `progress.txt` are already tracked (added with `-f` when scaffolded).
+  A plain `git add .oh/tasks/...` fails with "paths are ignored" AND aborts the whole `git add`
+  invocation — including the non-ignored paths listed alongside it. Stage the task folder with
+  `git add -f` in a **separate** command from the rest of the story's files.
+- **Quality-check script names.** From the repo root: `pnpm run typecheck` (no hyphen; delegates to
+  `npm --prefix .oh/cli run typecheck` → `tsc --noEmit`) and `pnpm test` (vitest, 39 files / 481
+  tests, ~5s). `pnpm run type-check` does not exist. Root `lint` is a no-op.
+- **New RFCs must be indexed in TWO places.** `.oh/docs/rfcs/README.md` (the `## Index` table) and
+  `.oh/docs/README.md` (the flat RFC bullet list, ~line 74-78). CHANGELOG #686 records the repo
+  paying for a missed index entry, so treat both rows as part of "create an RFC", not scope creep.
+- **Ground-truth the socket/dockerd facts before citing them.** Verified this iteration:
+  `.devcontainer/docker-compose.yml:20-26` states the host socket is NOT mounted by default;
+  `.oh/scripts/docker-compose.sh:136` appends `docker-compose.docker-sock.yml` only when
+  `truthy()` (`:63`) accepts `sandbox.docker_socket` / `DOCKER_SOCKET`; `.devcontainer/Dockerfile:37`
+  installs `docker-ce-cli` + `docker-compose-plugin` and no `dockerd`.
+- **The base compose bind is `..:${OH_PROJECT_ROOT:-/home/sandbox/harness}`** — a host path mapped
+  to a fixed in-target path, so host and target paths are NOT identical in general. The RFC's
+  "identical-path mapping only" stance is therefore a **contract-level** restriction (nothing above
+  the seam translates paths; `resolveProjectRoot` yields one string used for both file reads and
+  compose invocation), not a claim about the compose file. Do not restate it as a deployment fact.
+
+---
+
+## US-001 — 2026-08-10 23:05 UTC
+
+**Title**: Ratify the Phase-0 brain/hands boundary in the RFC layer
+**Files changed**: `.oh/docs/rfcs/rfc-brain-hands-boundary.md` (new), `.oh/docs/rfcs/rfc-runtime-support.md`, `.oh/docs/rfcs/README.md`, `.oh/docs/README.md`, `.oh/tasks/execution-target-contract/prd.md`, `CHANGELOG.md`
+**Commit**: e9c893d7
+**Result**: PASS
+
+### What I did
+
+Authored `.oh/docs/rfcs/rfc-brain-hands-boundary.md` covering all eight content ACs: the authority
+clause in the header, the brain/hands responsibility table (ralph, cron, autopilot, memory as
+brain; `oh gateway` brain-side by design), the eval split as a capability **rule** rather than a
+list, the four-class state taxonomy (`WorkspaceState` / `ExecutionState` / `HarnessAuthState` /
+`SessionState`) with § 4.1 documenting the Hermes known-violation, § 5 the workspace stance with
+§ 5.1 calling the two-field shape speculative, and § 6 the `attach()` synchrony decision plus its
+`contractVersion: 2` migration path. Amended `rfc-runtime-support.md` at all five required sites:
+§ Purpose and the § 1 A1/A3 rows now say the host socket is opt-in and off by default and the image
+ships the docker CLI but no `dockerd`; § 8 gained Sysbox as a net-new item 1 with the seven existing
+entries renumbered down by one in their original relative order; § 9's DinD open decision is struck
+through and marked ANSWERED with cross-links to #731, #733, and the new RFC. Added the `### Added`
+CHANGELOG entry and both index rows.
+
+Per the Captain's build note 1, the boundary rationale was **moved out of** `prd.md` (the US-001
+"Artifact (a)" narrative and the "Why `attach()` is synchronous" prose) and replaced with citations
+into the RFC's numbered sections. `wc -w` before: **5931**; after: **5590** (−341, net decrease as
+required). Docs-only surface: `git diff --stat` confirms no file under `.oh/cli/` was touched.
+
+### Verification
+
+```
+$ pnpm run typecheck
+> openharness@0.1.0 typecheck
+> (test -d .oh/cli/node_modules || npm --prefix .oh/cli ci --ignore-scripts) && npm --prefix .oh/cli run typecheck
+> @mifune/openharness@0.2.0 typecheck
+> tsc --noEmit
+        (clean — no diagnostics)
+
+$ pnpm test
+ Test Files  39 passed (39)
+      Tests  481 passed (481)
+   Duration  4.43s
+```
+
+### Learnings for future iterations
+
+- **The Hermes known-violation has real evidence** — don't invent it. `.oh/docs/harnesses/hermes.md`
+  shows Hermes bundling brain (memory, auto-skills, scheduling, sub-agent delegation) with hands
+  (its own container sandboxing across local/Docker/SSH/Singularity/Modal), with all state including
+  `auth.json` fused in the project-local `.hermes/` blob; and its dashboard is toggled via a compose
+  overlay (`.devcontainer/docker-compose.hermes-dashboard.yml`), i.e. brain-side policy riding on
+  substrate config. Both facets are written into RFC § 4.1.
+- **US-002's `target.ts` header must dodge probe C2.** The RFC's § 6 rationale names `docker exec`
+  and `lifecycle.ts:298` freely — that is fine in a doc. The `target.ts` header comment must NOT:
+  cite "the codebase bans shell strings; every subprocess invocation is argv-array form" and "the
+  existing synchronous process-runner seam" instead. Verified line numbers for that header:
+  `LifecycleRunner` at `lifecycle.ts:49-53`, `spawnSync` at `:59`, `runShell` at `:298`.
+- **`RunResult` confirmed for US-003.** `.oh/cli/src/commands/lifecycle.ts:39-46` has
+  `status | error | stdout` and no `stderr`, while the capture branch already passes
+  `stdio: ["ignore", "pipe", "pipe"]` (`:61`) and discards `r.stderr` (`:63-68`). The additive
+  `stderr?: string` change US-003 specifies is a two-line edit exactly where the PRD says it is.
+- **RFC § 6 is now the citable source** for why `runShell` must stay sync. US-004 should link it
+  rather than re-argue it — the authority clause makes restating it a defect.
+
+---

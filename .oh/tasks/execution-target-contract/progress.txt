@@ -90,3 +90,81 @@ $ pnpm test
   rather than re-argue it — the authority clause makes restating it a defect.
 
 ---
+
+## US-002 — 2026-08-10 23:12 UTC
+
+**Title**: Define the provider-neutral `ExecutionTarget` contract
+**Files changed**: `.oh/cli/src/lib/execution/target.ts` (new, 143 lines)
+**Commit**: 21816693
+**Result**: PASS
+
+### What I did
+
+Authored `.oh/cli/src/lib/execution/target.ts` as types-and-interface only — zero imports, zero
+runtime code — exporting `ExecutionStatus`, `ExecutionCapability`, `ExecRequest`, `ExecResult`, and
+`ExecutionTarget` exactly as the PRD sketch specifies: `argv: string[]` (no `command` field), the
+five-state status union including `"absent"`, the six-member capability union with `"snapshot"` as a
+literal only, `capabilities(): Promise<ReadonlySet<ExecutionCapability>>`, required `ExecResult.stderr`,
+and `attach?(request: ExecRequest): number` **synchronous** while every other method stays async.
+The file header records the three deliberate refinements to #733's sketch plus the `contractVersion: 2`
+migration path, worded generically per the C2 constraint, and cites `rfc-brain-hands-boundary.md`
+§ 5 / § 5.1 / § 6 rather than restating them (the RFC's authority clause).
+
+Docker-noun surface is one two-line window: the `| "docker"` literal at `target.ts:65` and its doc
+comment at `:64`. Everything else in the file — header included — is clean.
+
+### Verification
+
+Probe dry-runs against the **final committed** text (US-002 AC + US-005 C2/C3 pre-check):
+
+```
+C2 (Docker nouns, excluding the "docker" literal line + its doc-comment line): PASS
+C3 (grep 'snapshot('):                                                        PASS (no match)
+no runtime imports (grep '^\s*(import|require|export .* from)'):              PASS (zero)
+no `command:` field:                                                          PASS (prose only)
+exports: ExecutionStatus, ExecutionCapability, ExecRequest, ExecResult, ExecutionTarget
+attach signature at :136 → `attach?(request: ExecRequest): number;`           PASS (not a Promise)
+```
+
+Cited line numbers re-verified against real files: `lifecycle.ts:49-53` is `LifecycleRunner`, `:59` is
+`spawnRunner`; RFC `## 5` at :118, `### 5.1` at :139, `## 6` at :159.
+
+```
+$ pnpm run typecheck
+> @mifune/openharness@0.2.0 typecheck
+> tsc --noEmit
+        (clean — no diagnostics)
+
+$ pnpm test
+ Test Files  39 passed (39)
+      Tests  481 passed (481)
+   Duration  3.80s
+```
+
+Test count is unchanged from US-001 (39/481) — expected: this story adds no tests, US-005 does.
+
+### Learnings for future iterations
+
+- **US-005's probe C2 has a pinned exclusion window.** The only Docker nouns in `target.ts` are on
+  `:65` (`  | "docker"`) and its doc comment on `:64`. Implement C2 as: drop any line matching
+  `\| "docker"` **and the single line immediately above it**, then grep the remainder
+  case-insensitively for `container|compose|image|volume|dockerd|docker`. That exact awk filter is
+  already dry-run green against the committed file. Do not write C2 as a whole-file grep with a
+  `docker`-line-only exclusion — it would trip on the doc comment.
+- **C3's grep must be `snapshot(`, not `snapshot`.** The capability literal and its doc comment both
+  say "snapshot"; only the `(` distinguishes a method declaration. The doc comment is deliberately
+  worded to avoid an adjacent open paren.
+- **No CHANGELOG entry for US-002 — that is correct, not an omission.** US-002's AC list has no
+  CHANGELOG criterion because a types-only internal file has no user-visible impact; US-004 carries
+  the `### Changed` entry for the behavior-preserving reroute. Do not add a second entry.
+- **US-003's DI seam already has two precedents to copy.** `RemoteRunner` (`lib/remote.ts:33-37`) and
+  `LifecycleRunner` (`commands/lifecycle.ts:49-53`) are the same shape:
+  `(cmd, args, opts) => RunResult` with a module-private `spawnRunner` default and an optional
+  `run?` option on the public options interface. `lib/remote.ts`'s `RunResult` **already has
+  `stderr?: string`** (`:29`) — so US-003's additive `stderr?` on the lifecycle `RunResult` is
+  matching an existing in-repo convention, not inventing one.
+- **`ExecRequest.stdio`'s default is deliberately left to the implementation** ("Omitted → the
+  implementation's documented default"). US-003 may pick the adapter's default freely without
+  contradicting the contract.
+
+---

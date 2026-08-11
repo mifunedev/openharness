@@ -34,7 +34,7 @@ HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 # TEMPORARY exact fork pin — thread replies, Slack admin handlers, and the
 # reviewed supervised-compaction control from ryaneggz/pi-messenger-bridge#2.
-FORK_PIN="github:ryaneggz/pi-messenger-bridge#81d8ed92b88cb9dfc71db0a9db084d1169fec36d"
+FORK_PIN="git+https://github.com/ryaneggz/pi-messenger-bridge.git#81d8ed92b88cb9dfc71db0a9db084d1169fec36d"
 
 usage() {
   echo "Usage:"

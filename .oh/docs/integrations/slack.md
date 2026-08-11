@@ -439,7 +439,7 @@ Slack compaction is package-owned, not patched or vendored in the harness.
 Replies post **in a thread** anchored to the triggering channel message
 (`thread_ts`); DMs stay flat. While these changes are unreleased, the harness
 pins the exact reviewed fork commit
-`github:ryaneggz/pi-messenger-bridge#81d8ed92b88cb9dfc71db0a9db084d1169fec36d`
+`git+https://github.com/ryaneggz/pi-messenger-bridge.git#81d8ed92b88cb9dfc71db0a9db084d1169fec36d`
 from [ryaneggz/pi-messenger-bridge#2](https://github.com/ryaneggz/pi-messenger-bridge/pull/2),
 which includes thread replies, admin handlers, and supervised compact control.
 Re-pin to `pi-messenger-bridge@<version>` once upstream publishes them. Source lives upstream at

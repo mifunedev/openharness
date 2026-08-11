@@ -23,7 +23,7 @@ reject() {
 }
 
 # The reviewed package commit is the only compact implementation artifact.
-need "$GATEWAY" "github:ryaneggz/pi-messenger-bridge#$PIN" "gateway is not pinned to reviewed compact-control commit"
+need "$GATEWAY" "git+https://github.com/ryaneggz/pi-messenger-bridge.git#$PIN" "gateway is not pinned to reviewed compact-control commit"
 [ ! -e "$ROOT/.pi/slack-compact" ] || fail "in-tree Slack compact implementation must not coexist with package control"
 [ ! -e "$ROOT/.oh/templates/full/.pi/slack-compact" ] || fail "template vendors a duplicate Slack compact implementation"
 reject "$GATEWAY" 'COMPACT_ENTRY|slack-compact/index\.ts' "gateway still loads removed local compact extension"

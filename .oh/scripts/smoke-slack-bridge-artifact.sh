@@ -3,12 +3,12 @@
 # through the real extension session_start/session_shutdown lifecycle.
 set -euo pipefail
 
-PIN="github:ryaneggz/pi-messenger-bridge#81d8ed92b88cb9dfc71db0a9db084d1169fec36d"
+PIN="git+https://github.com/ryaneggz/pi-messenger-bridge.git#81d8ed92b88cb9dfc71db0a9db084d1169fec36d"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/slack-bridge-artifact.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT INT TERM HUP
 
 mkdir -p "$TMP/home" "$TMP/install"
-npm install --prefix "$TMP/install" --no-fund --no-audit "$PIN" >/dev/null
+GIT_SSH_COMMAND=false npm install --prefix "$TMP/install" --no-fund --no-audit "$PIN" >/dev/null
 
 ENTRY="$TMP/install/node_modules/pi-messenger-bridge/dist/index.js"
 CONTROL="$TMP/install/node_modules/pi-messenger-bridge/dist/compact-control.js"

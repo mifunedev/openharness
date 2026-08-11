@@ -1,6 +1,12 @@
-import { spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, existsSync, readFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
+import {
+  assertSpawned,
+  requireLifecycleScript,
+  spawnRunner,
+  type LifecycleRunner,
+  type RunResult,
+} from "../lib/execution/runner.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import * as prompt from "../lib/prompt.js";
 
@@ -32,42 +38,12 @@ export interface LifecycleIO {
 }
 
 /**
- * Outcome of one subprocess run — the shape a fake runner returns in tests.
- * Mirrors the useful subset of `spawnSync`'s return value; fakes branch on
- * `error.code` ("ENOENT") vs a non-zero `status`, never a real subprocess.
+ * The subprocess seam lives in `lib/execution/runner.ts` (issue #733) so the
+ * lifecycle verbs and the execution targets share one runner. Re-exported here
+ * for back-compat: `LifecycleRunner`/`RunResult` keep resolving from this
+ * module's original import path.
  */
-export interface RunResult {
-  /** Exit status; null when the process never ran. */
-  status: number | null;
-  /** Spawn-level failure, e.g. `code: "ENOENT"` (binary not on PATH). */
-  error?: { code?: string; message?: string };
-  /** Captured stdout — only populated by `stdio: "capture"` runs. */
-  stdout?: string;
-}
-
-/** Injectable subprocess runner (DI seam in the style of `RemoteRunner`). */
-export type LifecycleRunner = (
-  cmd: string,
-  args: string[],
-  opts: { stdio: "inherit" | "capture"; env?: NodeJS.ProcessEnv },
-) => RunResult;
-
-/**
- * Real runner. `"inherit"` hands the terminal to the child (live docker build
- * output, interactive shells); `"capture"` collects stdout for config lookups.
- */
-const spawnRunner: LifecycleRunner = (cmd, args, opts) => {
-  const r =
-    opts.stdio === "capture"
-      ? spawnSync(cmd, args, { env: opts.env, stdio: ["ignore", "pipe", "pipe"], encoding: "utf8" })
-      : spawnSync(cmd, args, { env: opts.env, stdio: "inherit" });
-  const err = r.error as (Error & { code?: string }) | undefined;
-  return {
-    status: r.status,
-    error: err ? { code: err.code, message: err.message } : undefined,
-    stdout: typeof r.stdout === "string" ? r.stdout : undefined,
-  };
-};
+export type { LifecycleRunner, RunResult };
 
 /** Options shared by every lifecycle verb. */
 export interface LifecycleOptions {
@@ -112,24 +88,6 @@ export const DEFAULT_SANDBOX_IMAGE = "ghcr.io/mifunedev/openharness:latest";
 function assertInRoot(dest: string, root: string): void {
   if (!(dest === root || dest.startsWith(root + sep))) {
     throw new Error(`refusing to write outside the project root: ${dest}`);
-  }
-}
-
-/** A vendored lifecycle script the verb is about to delegate to must exist. */
-function requireScript(root: string, rel: string): string {
-  const script = join(root, ".oh", "scripts", rel);
-  if (!existsSync(script)) {
-    throw new Error(
-      `missing lifecycle script ${script} — the vendored .oh/ payload looks incomplete; run \`oh update\` to re-vendor it`,
-    );
-  }
-  return script;
-}
-
-/** Throw when the child never ran at all (spawn-level failure, not a bad exit). */
-function assertSpawned(r: RunResult, what: string): void {
-  if (r.error) {
-    throw new Error(`failed to run ${what}${r.error.message ? ` (${r.error.message})` : ""}`);
   }
 }
 
@@ -244,7 +202,7 @@ export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise
   const root = resolveProjectRoot(opts.cwd);
   seedHarnessYaml(root, io);
   await maybePromptDockerSocket(root, io, run);
-  const script = requireScript(root, "docker-compose.sh");
+  const script = requireLifecycleScript(root, "docker-compose.sh");
 
   // `--image` implies `--no-build` (skipping the build is the whole point);
   // `--no-build` on its own suppresses the build without pinning an image.
@@ -321,7 +279,7 @@ export function runShell(opts: ShellOptions, io: LifecycleIO): number {
 export function runGateway(args: string[], opts: LifecycleOptions): number {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const script = requireScript(root, "gateway.sh");
+  const script = requireLifecycleScript(root, "gateway.sh");
   const r = run("bash", [script, ...args], {
     stdio: "inherit",
     env: { ...process.env, OH_PROJECT_ROOT: root },

@@ -353,3 +353,132 @@ count did not move while the routing did.
 - **Bumping a wiki entry's `updated:` re-sorts the README index.** `wiki-readme-index.sh` builds the
   expected table with `sort -r` on `<updated> <slug>`, so the row MOVES — editing it in place leaves
   the probe red. Move the row and change its `Tags`/`Updated` cells in the same pass.
+
+## US-005 — 2026-08-10 23:40 UTC
+
+**Title**: Prove no regression — tests + tier-A probe
+**Files changed**: `.oh/cli/src/__tests__/execution-target.test.ts` (new), `.oh/scripts/__tests__/compose-args.test.ts`, `.oh/evals/probes/execution-target-contract.sh` (new, `+x`)
+**Commit**: `a2b3bf9a`
+**Result**: PASS
+
+### What I did
+
+Three surfaces plus the two execute-phase follow-ups.
+
+**`execution-target.test.ts`** (20 cases, injected fake runner only — no real subprocess): exact
+`provision()` argv in one child (`bash <script> --repo-dir <root> up -d --build`) plus the
+`--no-build`/`OH_SANDBOX_IMAGE` variant and the `ExecutionExitError(17)` path; exact `attach()` argv
+(`["exec","-it","-u","sandbox","my-box","zsh"]`) with `typeof code === "number"` asserted, so the
+contractVersion-1 sync decision is pinned by a test rather than by convention; capability discovery
+in BOTH socket states via a synthetic `--print-argv` dump, including the `-f` argv the adapter uses
+to ask; a minimal `exec()` case proving `{status:0,stdout:"hi",stderr:"warn"}` →
+`{exitCode:0,stdout:"hi",stderr:"warn"}` (stderr genuinely plumbed, not hardcoded) and a second case
+mapping `cwd`/`env`/`user`/`timeoutMs` onto flags; and a dedicated `stdio:"inherit"` block proving
+the streaming path is exercised, not only `"capture"`.
+
+**`compose-args.test.ts`** gained one equivalence case: the adapter's `provision()` argv is captured
+through a fake runner, then the REAL vendored script (copied into the fixture, with
+`harness-config.sh` beside it) expands both the adapter's tail and the frozen pre-#733 tail
+(`up -d --build`, the same verb the Makefile pins) through `--print-argv`. The two compose argv
+arrays are identical, and are asserted against a literal expectation so two identical empties cannot
+pass. The per-invocation `mktemp` harness-env path is normalized to `<harness-env>` before comparing.
+
+**`execution-target-contract.sh`** — tier A, exactly five checks, standard 3-state oracle.
+C4 and C3 run on a comment-STRIPPED copy of the source (a character-scanner `awk` that removes
+`/* */` and `//`), so surviving doc prose about the old `docker exec` invocation can neither trip
+nor falsely satisfy them; C4 then collapses whitespace and looks for an argv literal beginning
+`["exec"` or the adjacent pair `"exec","-it"`. C2 excludes exactly the `"docker"` capability literal
+line and the doc-comment line above it (located by line number, not by pattern-guessing) and bans
+substrate nouns everywhere else. C5 is a whole-line `grep -Fx` after stripping the recipe tab.
+SKIPPED (exit 2) when `.oh/cli/src` or `Makefile` is absent (a vendored `.oh/` payload), and also
+when comment-stripping fails to yield recognizable code — never a silent green.
+
+**Follow-ups (both required by AC, both done in this session):** issue
+[#738](https://github.com/mifunedev/openharness/issues/738) filed under EPIC #731 for the `oh update`
+manifest gap, and linked from PR #736's description under a new "Open questions resolved into
+tracked work" section; comment `5249379675` posted on EPIC #731 (a comment, not a body edit)
+assigning the identical-path-mapping vs. openharness-cloud#104 question to the #734 **planning**
+spec.
+
+### Verification
+
+Probe verified BY REJECTION — all five checks, each broken in turn and restored:
+
+```
+--- C1: target.ts moved away        → exit=1  "…target.ts is absent — the execution contract has no home"
+--- C2: appended "// a container …" → exit=1  "…names a substrate outside the "docker" capability literal (143:…)"
+--- C3: appended snapshot(): …      → exit=1  "…declares a snapshot method (145:export interface Snapshotter …)"
+--- C4: re-added ["exec","-it",…]   → exit=1  "…constructs an engine argv literal beginning with "exec""
+--- C5: -it → -i in the Makefile    → exit=1  "…no longer contains the verbatim line `docker exec -it -u …`"
+--- restored → git status clean of edits, probe exit=0
+```
+
+C2 dry-run against the FINAL committed header (AC-required, closes critique M on the header wording):
+
+```
+capability literal at line 65; exclusion window = lines 64-65
+banned-noun hits in the header (lines 1-40):  (none)
+banned-noun hits in the whole file outside the exclusion window:  (none)
+```
+
+Compat oracle, across the WHOLE slice (not just this commit):
+
+```
+$ git diff --stat 72a8e7e2..HEAD -- .oh/cli/src/__tests__/lifecycle.test.ts   (empty)
+$ git diff --stat 72a8e7e2..HEAD -- Makefile                                  (empty)
+```
+
+Full probe suite (97 probes, 30s timeout each):
+
+```
+PASS=94 REGRESSION=2 SKIPPED=2 OTHER=0
+non-green: cc-safety-net-wiring.sh  (.pi/npm/package.json pins a different cc-safety-net than 1.0.6)
+           next-dev-prod.sh         (a live `next dev` on :3005 — host process state)
+$ bash .oh/evals/probes/execution-target-contract.sh   → PASS (exit 0)
+```
+
+Both reds are pre-existing and untouched by this slice: `git diff --name-only 72a8e7e2..HEAD`
+lists no `.pi/` path, and the second reads live host processes, not repo state.
+
+```
+$ pnpm run typecheck
+> @mifune/openharness@0.2.0 typecheck
+> tsc --noEmit
+        (clean — no diagnostics)
+
+$ pnpm test
+ Test Files  40 passed (40)
+      Tests  502 passed (502)
+   Duration  3.81s
+```
+
+39 files / 481 tests → 40 / 502 (+1 file, +21 tests) with zero existing assertions edited.
+
+### Learnings for future iterations
+
+- **No CHANGELOG entry, deliberately.** US-001 (`### Added`, the RFC) and US-004 (`### Changed`,
+  lifecycle routing) carry the user-visible impact; the PRD gives US-005 no CHANGELOG AC because
+  tests and a probe change nothing an operator sees. Don't add one retroactively.
+- **`.oh/scripts/__tests__/*.test.ts` CAN import CLI source.** `../../cli/src/lib/execution/index.js`
+  resolves under vitest (one root project, `vitest.config.ts` includes all three test globs, and
+  Vite maps the TS-style `.js` specifier to the `.ts` file). It is NOT covered by
+  `pnpm run typecheck`, which only runs `tsc --noEmit` inside `.oh/cli/` — type errors in that
+  directory surface only at vitest transform time, so run the file, don't trust typecheck.
+- **`--print-argv` output is not byte-stable across invocations.** The harness env file is a
+  per-invocation `mktemp` path (`openharness-harness-yaml-env.XXXX`), so any argv-equality assertion
+  between two runs must normalize it first. The pre-existing tests in that file dodge this by
+  asserting `argv[5]` positionally with `toContain`; a whole-array `toEqual` cannot.
+- **Comment-stripping is what makes a "no engine argv" probe honest.** A naive `grep -q "docker exec"`
+  over `lifecycle.ts` is red today purely from prose (`runGateway`'s doc block still explains why it
+  is NOT routed). Strip comments first, then match argv-literal shape — and sanity-check that the
+  stripper still yields recognizable code, exiting 2 rather than 0 if it does not.
+- **Probes are discovered by glob, not registered.** `/eval` globs `.oh/evals/probes/*.sh`; there is
+  no index to update. A new probe with no `RESULTS.md` row is emitted as `new-pass` on the next run.
+  Adding a hand-written row would be churn, so this story does not touch `RESULTS.md`.
+- **Open questions become issues, not task-folder notes.** Both follow-ups were AC-mandated for a
+  reason recorded in the PRD: archived task folders vanish and their flags with them. Verify the
+  claim before filing — `.oh/manifest.json`'s `include` list genuinely has no `docs/**`, and
+  `shouldShip()` returns false for anything unmatched, so #738 is a real defect and not a guess.
+
+---
+STATUS: COMPLETE

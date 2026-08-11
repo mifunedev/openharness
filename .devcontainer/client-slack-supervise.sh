@@ -33,6 +33,7 @@ COMPACT_FILE="$STATE_DIR/$BACKEND.compact"
 RESTART_TRIGGER_FILE="$STATE_DIR/$BACKEND.restart-trigger"
 RESTART_CLAIM_DIR="$STATE_DIR/$BACKEND.restart-claim"
 PI_PID_FILE="$STATE_DIR/$BACKEND.pid"
+PI_GROUP_FILE="$STATE_DIR/$BACKEND.pgid"
 SESSION_DIR="${GATEWAY_PI_SESSION_DIR:-$STATE_DIR/pi-sessions}"
 HEARTBEAT_INTERVAL="${GATEWAY_HEARTBEAT_INTERVAL:-20}"
 RESTART_DELAY="${GATEWAY_RESTART_DELAY:-3}"
@@ -44,12 +45,17 @@ if [ "$BACKEND" = pi ]; then
   mkdir -p "$SESSION_DIR" 2>/dev/null || true
   chmod 700 "$SESSION_DIR" 2>/dev/null || true
 fi
-rm -f "$STALE_FILE" "$COMPACT_FILE" "$RESTART_TRIGGER_FILE" "$PI_PID_FILE" 2>/dev/null || true
+rm -f "$STALE_FILE" "$COMPACT_FILE" "$RESTART_TRIGGER_FILE" "$PI_PID_FILE" "$PI_GROUP_FILE" 2>/dev/null || true
 rmdir "$RESTART_CLAIM_DIR" 2>/dev/null || true
 
 if [ "$BACKEND" = pi ] && [ -n "${PI_SLACK_BOT_TOKEN:-}" ]; then TOKEN_STATE=present
 elif [ "$BACKEND" = pi ]; then TOKEN_STATE=absent
 else TOKEN_STATE="n/a"; fi
+
+if ! cd "$HARNESS"; then
+  echo "[bridge-supervisor] harness cwd unavailable: $HARNESS" >>"$LOG"
+  exit 1
+fi
 
 STARTED_ISO="$(date -u +%FT%TZ)"
 LAUNCHES=0
@@ -57,6 +63,7 @@ HB=""
 COMPACT_WATCHER=""
 STALE_WATCHER=""
 PI_PID=""
+PI_PGID=""
 COMPACT_WRITE_FD=""
 IPC_FIFO=""
 IPC_READY=""
@@ -109,25 +116,21 @@ terminate_exact_tree() {
   kill -TERM "$pid" 2>/dev/null || true
 }
 
-force_exact_tree() {
-  local pid="$1" child
-  case "$pid" in ''|*[!0-9]*) return 0 ;; esac
-  if [ -r "/proc/$pid/task/$pid/children" ]; then
-    for child in $(cat "/proc/$pid/task/$pid/children" 2>/dev/null); do
-      force_exact_tree "$child"
-    done
-  fi
-  kill -KILL "$pid" 2>/dev/null || true
-}
-
-ensure_exact_exit() {
-  local pid="$1" attempts=200
-  case "$pid" in ''|*[!0-9]*) return 0 ;; esac
-  while kill -0 "$pid" 2>/dev/null && [ "$attempts" -gt 0 ]; do
+# Pi launches in a fresh session/process group whose PGID equals its recorded
+# leader PID. Signal only that verified group. TERM gets a bounded grace period,
+# then KILL closes stubborn descendants without touching sibling Pi/Hermes jobs.
+terminate_exact_group() {
+  local pgid="$1" leader="$2" attempts=200
+  case "$pgid:$leader" in *[!0-9:]*) return 0 ;; esac
+  [ -n "$pgid" ] && [ "$pgid" = "$leader" ] || return 0
+  kill -TERM -- "-$pgid" 2>/dev/null || true
+  while kill -0 -- "-$pgid" 2>/dev/null && [ "$attempts" -gt 0 ]; do
     attempts=$((attempts - 1))
     sleep 0.01
   done
-  if kill -0 "$pid" 2>/dev/null; then force_exact_tree "$pid"; fi
+  if kill -0 -- "-$pgid" 2>/dev/null; then
+    kill -KILL -- "-$pgid" 2>/dev/null || true
+  fi
 }
 
 wait_for_file() {
@@ -140,26 +143,26 @@ wait_for_file() {
 }
 
 claim_restart_and_signal() {
-  local kind="$1" pid attempts=500
+  local kind="$1" pid pgid attempts=500
   mkdir "$RESTART_CLAIM_DIR" 2>/dev/null || return 0
   printf '%s\n' "$kind" >"$RESTART_TRIGGER_FILE" 2>/dev/null
   case "$kind" in
     compact)
       date -u +%s >"$COMPACT_FILE" 2>/dev/null
-      echo "[bridge-supervisor] Slack compaction completed — restarting exact pi pid ($(date -u +%FT%TZ))" >>"$LOG"
+      echo "[bridge-supervisor] Slack compaction completed — restarting exact Pi process group ($(date -u +%FT%TZ))" >>"$LOG"
       ;;
     stale)
       date -u +%s >"$STALE_FILE" 2>/dev/null
-      echo "[bridge-supervisor] stale-ctx detected — restarting exact pi pid ($(date -u +%FT%TZ))" >>"$LOG"
+      echo "[bridge-supervisor] stale-ctx detected — restarting exact Pi process group ($(date -u +%FT%TZ))" >>"$LOG"
       ;;
   esac
-  while [ ! -s "$PI_PID_FILE" ] && [ "$attempts" -gt 0 ]; do
+  while { [ ! -s "$PI_PID_FILE" ] || [ ! -s "$PI_GROUP_FILE" ]; } && [ "$attempts" -gt 0 ]; do
     attempts=$((attempts - 1))
     sleep 0.01
   done
   pid=$(cat "$PI_PID_FILE" 2>/dev/null || true)
-  case "$pid" in ''|*[!0-9]*) return 0 ;; esac
-  kill -TERM "$pid" 2>/dev/null || true
+  pgid=$(cat "$PI_GROUP_FILE" 2>/dev/null || true)
+  terminate_exact_group "$pgid" "$pid"
 }
 
 close_compact_writer() {
@@ -186,19 +189,18 @@ stop_launch_helpers() {
     wait "$HB" 2>/dev/null || true
     HB=""
   fi
-  rm -f "$PI_PID_FILE" "$IPC_FIFO" "$IPC_READY" "$IPC_OPEN" "$IPC_SETTLED" 2>/dev/null || true
+  rm -f "$PI_PID_FILE" "$PI_GROUP_FILE" "$IPC_FIFO" "$IPC_READY" "$IPC_OPEN" "$IPC_SETTLED" 2>/dev/null || true
   IPC_FIFO=""; IPC_READY=""; IPC_OPEN=""; IPC_SETTLED=""
 }
 
 cleanup_all() {
   [ "$STOPPING" -eq 0 ] || return 0
   STOPPING=1
-  if [ -n "$PI_PID" ]; then
-    terminate_exact_tree "$PI_PID"
-    ensure_exact_exit "$PI_PID"
+  if [ -n "$PI_PID" ] && [ -n "$PI_PGID" ]; then
+    terminate_exact_group "$PI_PGID" "$PI_PID"
   fi
   stop_launch_helpers
-  rm -f "$HEARTBEAT_FILE" "$PI_PID_FILE" "$RESTART_TRIGGER_FILE" 2>/dev/null || true
+  rm -f "$HEARTBEAT_FILE" "$PI_PID_FILE" "$PI_GROUP_FILE" "$RESTART_TRIGGER_FILE" 2>/dev/null || true
   if [ "$BACKEND" = pi ]; then rm -f "$LOCK" 2>/dev/null || true; fi
   rmdir "$RESTART_CLAIM_DIR" 2>/dev/null || true
 }
@@ -242,6 +244,18 @@ prepare_compact_watcher() {
   return 0
 }
 
+launch_pi_isolated() {
+  # A non-interactive supervisor backgrounds Pi, which would otherwise inherit
+  # /dev/null on stdin. Reopen the tmux controlling TTY before setsid, then exec
+  # so the recorded PID is the isolated Pi session/group leader.
+  if [ -r /dev/tty ]; then
+    exec setsid pi --session-dir "$SESSION_DIR" --continue \
+      --extension "$BRIDGE_ENTRY" --extension "$RECOVERY_ENTRY" --approve </dev/tty
+  fi
+  exec setsid pi --session-dir "$SESSION_DIR" --continue \
+    --extension "$BRIDGE_ENTRY" --extension "$RECOVERY_ENTRY" --approve
+}
+
 prepare_stale_watcher() {
   local ready="$STATE_DIR/.stale-ready.$$.${LAUNCHES}" offset
   offset=$(stat -c %s "$LOG" 2>/dev/null || echo 0)
@@ -276,7 +290,7 @@ prepare_stale_watcher() {
 
 while true; do
   LAUNCHES=$((LAUNCHES + 1))
-  rm -f "$RESTART_TRIGGER_FILE" "$PI_PID_FILE" 2>/dev/null || true
+  rm -f "$RESTART_TRIGGER_FILE" "$PI_PID_FILE" "$PI_GROUP_FILE" 2>/dev/null || true
   rmdir "$RESTART_CLAIM_DIR" 2>/dev/null || true
   if [ "$BACKEND" = pi ]; then rm -f "$LOCK" 2>/dev/null || true; fi
 
@@ -293,13 +307,30 @@ while true; do
 
     # The watcher handshakes above complete before Pi starts. Every launch uses
     # the same private directory and explicit continuation, including launch 1.
-    pi --session-dir "$SESSION_DIR" --continue \
-      --extension "$BRIDGE_ENTRY" --extension "$RECOVERY_ENTRY" --approve 2>>"$LOG" &
+    launch_pi_isolated 2>>"$LOG" &
     PI_PID=$!
-    printf '%s\n' "$PI_PID" >"$PI_PID_FILE"
-    wait "$PI_PID"
-    rc=$?
-    PI_PID=""
+    PI_PGID=""
+    attempts=200
+    while [ "$attempts" -gt 0 ]; do
+      PI_PGID=$(ps -o pgid= -p "$PI_PID" 2>/dev/null | tr -d ' ' || true)
+      [ "$PI_PGID" = "$PI_PID" ] && break
+      attempts=$((attempts - 1))
+      sleep 0.01
+    done
+    if [ "$PI_PGID" != "$PI_PID" ]; then
+      echo "[bridge-supervisor] failed to isolate exact Pi process group" >>"$LOG"
+      kill -TERM "$PI_PID" 2>/dev/null || true
+      wait "$PI_PID" 2>/dev/null || true
+      rc=1
+    else
+      printf '%s\n' "$PI_PID" >"$PI_PID_FILE"
+      printf '%s\n' "$PI_PGID" >"$PI_GROUP_FILE"
+      wait "$PI_PID"
+      rc=$?
+      # The leader may exit before descendants. Always close the isolated group
+      # with bounded TERM→KILL before the next launch.
+      terminate_exact_group "$PI_PGID" "$PI_PID"
+    fi
 
     # Closing the supervisor's writer after the exact Pi exits gives the reader
     # either the completion byte or EOF. Wait for that settled result before
@@ -307,6 +338,8 @@ while true; do
     close_compact_writer
     wait "$COMPACT_WATCHER" 2>/dev/null || true
     COMPACT_WATCHER=""
+    PI_PID=""
+    PI_PGID=""
   else
     if [ -z "$SUPERVISE_CMD" ]; then
       echo "[bridge-supervisor] no SUPERVISE_CMD for backend '$BACKEND' — exiting" >>"$LOG"

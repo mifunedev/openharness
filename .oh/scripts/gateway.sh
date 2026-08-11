@@ -34,7 +34,7 @@ HARNESS="${HARNESS:-${OH_PROJECT_ROOT:-/home/sandbox/harness}}"
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 # TEMPORARY exact fork pin — thread replies, Slack admin handlers, and the
 # reviewed supervised-compaction control from ryaneggz/pi-messenger-bridge#2.
-FORK_PIN="github:ryaneggz/pi-messenger-bridge#965de09fdfbe156c4369df84091723614c0b6600"
+FORK_PIN="github:ryaneggz/pi-messenger-bridge#81d8ed92b88cb9dfc71db0a9db084d1169fec36d"
 
 usage() {
   echo "Usage:"
@@ -213,8 +213,8 @@ start_pi() {
     [ -n "${PI_SLACK_BOT_TOKEN:-}" ] && printf 'export PI_SLACK_BOT_TOKEN=%q\n' "$PI_SLACK_BOT_TOKEN"
   } >>"$envf"
 
-  if tmux new-session -d -s "$session" \
-       "bash -c '. \"$envf\"; rm -f \"$envf\"; exec bash \"$HARNESS/.devcontainer/client-slack-supervise.sh\"'"; then
+  if tmux new-session -d -c "$HARNESS" -s "$session" \
+       "bash -c '. \"$envf\"; rm -f \"$envf\"; cd \"$HARNESS\" || exit 1; exec bash \"$HARNESS/.devcontainer/client-slack-supervise.sh\"'"; then
     # pi runs interactive (no `| tee`), so mirror the pane into the log,
     # ANSI-stripped, for the stale-ctx watchdog and humans.
     tmux pipe-pane -o -t "$session" "$ANSI_STRIP >> $log" 2>/dev/null || true
@@ -386,8 +386,8 @@ start_hermes() {
     printf 'export SUPERVISE_CMD=%q\n'   "$run_cmd"
   } >>"$envf"
 
-  if tmux new-session -d -s "$session" \
-       "bash -c '. \"$envf\"; rm -f \"$envf\"; exec bash \"$HARNESS/.devcontainer/client-slack-supervise.sh\"'"; then
+  if tmux new-session -d -c "$HARNESS" -s "$session" \
+       "bash -c '. \"$envf\"; rm -f \"$envf\"; cd \"$HARNESS\" || exit 1; exec bash \"$HARNESS/.devcontainer/client-slack-supervise.sh\"'"; then
     tmux pipe-pane -o -t "$session" "$ANSI_STRIP >> $log" 2>/dev/null || true
   else
     rm -f "$envf"

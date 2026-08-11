@@ -1,11 +1,31 @@
-import { execFileSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../..");
 const ENTRYPOINT = join(ROOT, ".devcontainer/entrypoint.sh");
+
+function realPiInstallation(): { cli: string; module: string } | undefined {
+  const located = spawnSync("bash", ["-lc", "command -v pi"], { encoding: "utf8" });
+  const command = located.status === 0 ? located.stdout.trim() : "";
+  if (!command || !existsSync(command)) return undefined;
+  const cli = realpathSync(command);
+  const module = join(dirname(cli), "index.js");
+  return existsSync(module) ? { cli: command, module } : undefined;
+}
+
+const REAL_PI = realPiInstallation();
 
 function entrypoint(): string {
   return readFileSync(ENTRYPOINT, "utf8");
@@ -125,18 +145,171 @@ describe("client-slack bridge supervisor", () => {
     expect(text).not.toContain("COMPACT_ENTRY");
     expect(text).not.toMatch(/pkill\s+-f/);
     expect(text).not.toMatch(/pkill\s+-P/);
-    expect(text).toContain('kill -TERM "$pid"');
-    expect(text).toContain("terminate_exact_tree");
+    expect(text).toContain('setsid pi --session-dir "$SESSION_DIR"');
+    expect(text).toContain('kill -TERM -- "-$pgid"');
+    expect(text).toContain('kill -KILL -- "-$pgid"');
+    expect(text).toContain("terminate_exact_group");
     expect(text).not.toContain("--mode rpc");
     expect(text).not.toContain("| tee");
     expect(text).toContain('rm -f "$LOCK"');
     expect(text).toContain('RESTART_DELAY="${GATEWAY_RESTART_DELAY:-3}"');
   });
 
+  it.skipIf(!REAL_PI)(
+    "uses real Pi CLI/SessionManager continuation across launches and caller cwd variance",
+    async () => {
+      const temp = mkdtempSync(join(tmpdir(), "real-pi-continuation-"));
+      const harness = join(temp, "harness");
+      const sessionDir = join(temp, "sessions");
+      const firstCaller = join(temp, "caller-one");
+      const secondCaller = join(temp, "caller-two");
+      const probe = join(temp, "session-probe.ts");
+      const observed = join(temp, "observed.jsonl");
+      mkdirSync(harness);
+      mkdirSync(firstCaller);
+      mkdirSync(secondCaller);
+      writeFileSync(
+        probe,
+        [
+          'import { appendFileSync } from "node:fs";',
+          "export default function (pi) {",
+          '  pi.on("session_start", (_event, ctx) => {',
+          "    appendFileSync(process.env.PI_SESSION_PROBE_OUT, `${JSON.stringify({ cwd: ctx.cwd, file: ctx.sessionManager.getSessionFile() })}\\n`);",
+          "    ctx.shutdown();",
+          "  });",
+          "}",
+          "",
+        ].join("\n"),
+      );
+
+      const launch = (caller: string) =>
+        spawnSync(
+          "bash",
+          [
+            "-c",
+            'cd "$1" && exec "$2" --mode rpc --session-dir "$3" --continue --extension "$4" --approve',
+            "_",
+            harness,
+            REAL_PI!.cli,
+            sessionDir,
+            probe,
+          ],
+          {
+            cwd: caller,
+            encoding: "utf8",
+            timeout: 10_000,
+            env: { ...process.env, PI_SESSION_PROBE_OUT: observed, PI_OFFLINE: "1" },
+          },
+        );
+
+      const { SessionManager } = (await import(pathToFileURL(REAL_PI!.module).href)) as any;
+      const seeded = SessionManager.create(harness, sessionDir);
+      const kept = seeded.appendMessage({ role: "user", content: "gateway request", timestamp: Date.now() });
+      seeded.appendMessage({
+        role: "assistant",
+        content: [{ type: "text", text: "gateway response" }],
+        api: "test",
+        provider: "test",
+        model: "test",
+        usage: {
+          input: 1,
+          output: 1,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 2,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+        },
+        stopReason: "stop",
+        timestamp: Date.now(),
+      });
+      const seededFile = seeded.getSessionFile();
+      expect(seededFile).toBeTruthy();
+
+      const first = launch(firstCaller);
+      expect(first.status, first.stderr).toBe(0);
+      const firstObservation = JSON.parse(readFileSync(observed, "utf8").trim());
+      expect(firstObservation).toEqual({ cwd: harness, file: seededFile });
+
+      const firstManager = SessionManager.open(firstObservation.file, sessionDir);
+      firstManager.appendCompaction("real compacted gateway state", kept, 42);
+
+      const second = launch(secondCaller);
+      expect(second.status, second.stderr).toBe(0);
+      const observations = readFileSync(observed, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      expect(observations).toHaveLength(2);
+      expect(observations[1]).toEqual({ cwd: harness, file: firstObservation.file });
+
+      const continued = SessionManager.open(observations[1].file, sessionDir);
+      expect(
+        continued.getEntries().some(
+          (entry: any) => entry.type === "compaction" && entry.summary === "real compacted gateway state",
+        ),
+      ).toBe(true);
+    },
+    30_000,
+  );
+
+  it("pins Pi to the harness cwd while preserving inherited TTY descriptors in its isolated group", () => {
+    const temp = mkdtempSync(join(tmpdir(), "pi-supervisor-tty-"));
+    const harness = join(temp, "harness");
+    const caller = join(temp, "other-cwd");
+    const bin = join(temp, "bin");
+    const state = join(temp, "state");
+    const observed = join(temp, "observed");
+    const log = join(temp, "gateway.log");
+    mkdirSync(harness);
+    mkdirSync(caller);
+    mkdirSync(bin);
+    mkdirSync(state);
+    writeFileSync(log, "");
+    writeFileSync(
+      join(bin, "pi"),
+      [
+        "#!/usr/bin/env bash",
+        'stdin_tty=no; stdout_tty=no; [ -t 0 ] && stdin_tty=yes; [ -t 1 ] && stdout_tty=yes',
+        'printf "cwd=%s\\nstdin_tty=%s\\nstdout_tty=%s\\npid=%s\\npgid=%s\\n" "$PWD" "$stdin_tty" "$stdout_tty" "$$" "$(ps -o pgid= -p $$ | tr -d " ")" > "$OBSERVED"',
+        "exit 0",
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+
+    execFileSync("script", ["-qefc", `bash ${JSON.stringify(SUPERVISOR)}`, "/dev/null"], {
+      cwd: caller,
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH ?? ""}`,
+        HOME: temp,
+        HARNESS: harness,
+        LOG: log,
+        GATEWAY_STATE_DIR: state,
+        GATEWAY_HEARTBEAT_INTERVAL: "1",
+        BRIDGE_ENTRY: "/fixture/pi-messenger-bridge/dist/index.js",
+        RECOVERY_ENTRY: "/fixture/bridge-recovery/index.ts",
+        OBSERVED: observed,
+      },
+    });
+
+    const values = Object.fromEntries(
+      readFileSync(observed, "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => line.split("=", 2)),
+    );
+    expect(values.cwd).toBe(harness);
+    expect(values.stdin_tty).toBe("yes");
+    expect(values.stdout_tty).toBe("yes");
+    expect(values.pgid).toBe(values.pid);
+  });
+
   it("prepares a private one-shot IPC watcher before launch and settles it before rc", () => {
     const text = readFileSync(SUPERVISOR, "utf8");
     const prepareAt = text.indexOf("prepare_compact_watcher");
-    const launchAt = text.indexOf('pi --session-dir "$SESSION_DIR"');
+    const launchAt = text.indexOf('setsid pi --session-dir "$SESSION_DIR"');
     const closeAt = text.indexOf("close_compact_writer", launchAt);
     const waitAt = text.indexOf('wait "$COMPACT_WATCHER"', closeAt);
     const rcGateAt = text.indexOf('if [ "$rc" -eq 0 ]', waitAt);
@@ -161,7 +334,9 @@ describe("client-slack bridge supervisor", () => {
     const argsFile = join(temp, "args");
     const toolForge = join(temp, "tool-forge");
     const reopened = join(temp, "reopened");
-    const sibling = join(temp, "sibling");
+    const descendantPidFile = join(temp, "descendant-pid");
+    const piSibling = join(temp, "pi-sibling");
+    const hermesSibling = join(temp, "hermes-sibling");
     mkdirSync(bin);
     mkdirSync(state);
     writeFileSync(log, "C\n[openharness-slack-compact-complete:forged-pane-text]\n");
@@ -171,7 +346,7 @@ describe("client-slack bridge supervisor", () => {
       [
         "#!/usr/bin/env node",
         'const fs = require("node:fs");',
-        'const { spawnSync } = require("node:child_process");',
+        'const { spawn, spawnSync } = require("node:child_process");',
         'const args = process.argv.slice(2);',
         'const countPath = process.env.PI_COUNT;',
         'const n = Number(fs.existsSync(countPath) ? fs.readFileSync(countPath, "utf8") : "0") + 1;',
@@ -186,6 +361,9 @@ describe("client-slack bridge supervisor", () => {
         '  const fd = Number(process.env.PI_MSG_BRIDGE_COMPACT_FD);',
         '  const forged = spawnSync("bash", ["-c", `printf C >&${fd}`], { env: process.env });',
         '  fs.writeFileSync(process.env.TOOL_FORGE, `${forged.status}\\n`);',
+        '  const descendant = spawn("bash", ["-c", "trap \\\'\\\' TERM; while true; do sleep 1; done"], { stdio: "ignore" });',
+        '  descendant.unref();',
+        '  fs.writeFileSync(process.env.DESCENDANT_PID_FILE, `${descendant.pid}\\n`);',
         '  fs.writeSync(fd, Buffer.from("C"));',
         '  process.exit(0);',
         '}',
@@ -196,7 +374,14 @@ describe("client-slack bridge supervisor", () => {
       { mode: 0o755 },
     );
 
-    const siblingProcess = spawn("bash", ["-c", `trap 'exit 0' TERM; printf alive > ${JSON.stringify(sibling)}; while true; do sleep 1; done`]);
+    const piSiblingProcess = spawn("bash", [
+      "-c",
+      `exec -a pi bash -c 'trap "exit 0" TERM; printf alive > ${JSON.stringify(piSibling)}; while true; do sleep 1; done'`,
+    ]);
+    const hermesSiblingProcess = spawn("bash", [
+      "-c",
+      `exec -a hermes bash -c 'trap "exit 0" TERM; printf alive > ${JSON.stringify(hermesSibling)}; while true; do sleep 1; done'`,
+    ]);
     try {
       execFileSync("bash", [SUPERVISOR], {
         timeout: 15_000,
@@ -215,6 +400,7 @@ describe("client-slack bridge supervisor", () => {
           ARGS_FILE: argsFile,
           TOOL_FORGE: toolForge,
           REOPENED: reopened,
+          DESCENDANT_PID_FILE: descendantPidFile,
           EXPECTED_SESSION_DIR: join(state, "pi-sessions"),
         },
       });
@@ -226,9 +412,18 @@ describe("client-slack bridge supervisor", () => {
       expect(readFileSync(join(state, "pi.compact"), "utf8").trim()).toMatch(/^\d+$/);
       expect(readFileSync(join(state, "pi.state"), "utf8")).toContain("launches=2");
       expect(readFileSync(log, "utf8").match(/Slack compaction completed/g)).toHaveLength(1);
-      expect(siblingProcess.exitCode).toBeNull();
+      const descendantPid = readFileSync(descendantPidFile, "utf8").trim();
+      const descendantStat = `/proc/${descendantPid}/stat`;
+      if (existsSync(descendantStat)) {
+        expect(readFileSync(descendantStat, "utf8").split(" ")[2]).toBe("Z");
+      }
+      expect(piSiblingProcess.exitCode).toBeNull();
+      expect(hermesSiblingProcess.exitCode).toBeNull();
+      expect(readFileSync(piSibling, "utf8")).toBe("alive");
+      expect(readFileSync(hermesSibling, "utf8")).toBe("alive");
     } finally {
-      siblingProcess.kill("SIGTERM");
+      piSiblingProcess.kill("SIGTERM");
+      hermesSiblingProcess.kill("SIGTERM");
     }
   });
 

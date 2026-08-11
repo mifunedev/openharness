@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../..");
 const GATEWAY = join(ROOT, ".oh/scripts/gateway.sh");
+const BRIDGE_ARTIFACT_SMOKE = join(ROOT, ".oh/scripts/smoke-slack-bridge-artifact.sh");
 
 function gateway(): string {
   return readFileSync(GATEWAY, "utf8");
@@ -18,6 +19,8 @@ describe("gateway client-session launcher", () => {
 
   it("runs Pi under the self-healing supervisor with package-owned compact control", () => {
     expect(gateway()).toContain(".devcontainer/client-slack-supervise.sh");
+    expect(gateway()).toContain('tmux new-session -d -c "$HARNESS" -s "$session"');
+    expect(gateway()).toContain('cd \\"$HARNESS\\" || exit 1');
     expect(gateway()).not.toContain(".pi/slack-compact/index.ts");
     expect(gateway()).not.toContain("COMPACT_ENTRY");
   });
@@ -52,11 +55,30 @@ describe("gateway client-session launcher", () => {
   });
 
   it("reconciles the installed bridge when the reviewed fork pin changes", () => {
-    expect(gateway()).toContain("965de09fdfbe156c4369df84091723614c0b6600");
+    expect(gateway()).toContain("81d8ed92b88cb9dfc71db0a9db084d1169fec36d");
     expect(gateway()).toContain(".openharness-pin");
     expect(gateway()).toContain('installed_pin" != "$FORK_PIN');
     expect(gateway()).toContain('printf \'%s\\n\' "$FORK_PIN" >"$bridge_pin_file"');
   });
+
+  it(
+    "installs the exact bridge artifact and runs its real extension lifecycle",
+    async () => {
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn("bash", [BRIDGE_ARTIFACT_SMOKE], { stdio: "pipe" });
+        let stderr = "";
+        child.stderr.on("data", (chunk) => {
+          stderr += String(chunk);
+        });
+        child.once("error", reject);
+        child.once("exit", (code, signal) => {
+          if (code === 0) resolve();
+          else reject(new Error(`artifact smoke exited ${code ?? signal}: ${stderr}`));
+        });
+      });
+    },
+    310_000,
+  );
 
   it("reports a recent compaction reconnect without exposing recovery nonce data", () => {
     const temp = mkdtempSync(join(tmpdir(), "gateway-status-"));

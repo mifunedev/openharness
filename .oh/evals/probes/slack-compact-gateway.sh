@@ -9,7 +9,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 GATEWAY="$ROOT/.oh/scripts/gateway.sh"
 SUPERVISOR="$ROOT/.devcontainer/client-slack-supervise.sh"
 DOC="$ROOT/.oh/docs/integrations/slack.md"
-PIN="965de09fdfbe156c4369df84091723614c0b6600"
+ARTIFACT_SMOKE="$ROOT/.oh/scripts/smoke-slack-bridge-artifact.sh"
+PIN="81d8ed92b88cb9dfc71db0a9db084d1169fec36d"
 
 fail() { echo "REGRESSION: $*" >&2; exit 1; }
 need() {
@@ -26,6 +27,8 @@ need "$GATEWAY" "github:ryaneggz/pi-messenger-bridge#$PIN" "gateway is not pinne
 [ ! -e "$ROOT/.pi/slack-compact" ] || fail "in-tree Slack compact implementation must not coexist with package control"
 [ ! -e "$ROOT/.oh/templates/full/.pi/slack-compact" ] || fail "template vendors a duplicate Slack compact implementation"
 reject "$GATEWAY" 'COMPACT_ENTRY|slack-compact/index\.ts' "gateway still loads removed local compact extension"
+need "$ARTIFACT_SMOKE" "$PIN" "installed-artifact lifecycle smoke is not bound to reviewed bridge commit"
+need "$ARTIFACT_SMOKE" 'session_start' "installed-artifact smoke does not execute the extension lifecycle"
 
 # Launch two must reopen launch one's compacted active path.
 need "$SUPERVISOR" 'SESSION_DIR="${GATEWAY_PI_SESSION_DIR:-$STATE_DIR/pi-sessions}"' "isolated persistent gateway session directory missing"
@@ -41,8 +44,11 @@ need "$SUPERVISOR" 'rm -f "$IPC_FIFO"' "FIFO is not unlinked after inheritance"
 need "$SUPERVISOR" 'IFS= read -r -N 1 byte' "one-shot completion read missing"
 reject "$SUPERVISOR" 'SLACK_COMPACT_NONCE|openharness-slack-compact-complete' "forgeable nonce/log sentinel remains"
 
-# Exact target, completion-vs-rc synchronization, and cleanup.
-need "$SUPERVISOR" 'kill -TERM "$pid"' "watcher does not signal recorded exact Pi pid"
+# Exact isolated group, bounded TERM→KILL, completion-vs-rc synchronization, and cleanup.
+need "$SUPERVISOR" 'setsid pi --session-dir "$SESSION_DIR"' "Pi is not launched in an isolated session/process group"
+need "$SUPERVISOR" 'kill -TERM -- "-$pgid"' "watcher does not TERM the recorded exact Pi process group"
+need "$SUPERVISOR" 'kill -KILL -- "-$pgid"' "bounded escalation does not KILL stubborn descendants"
+need "$SUPERVISOR" 'cd "$HARNESS"' "supervisor does not pin Pi continuation cwd to the harness"
 reject "$SUPERVISOR" 'pkill[[:space:]]+-[fP]' "broad pkill remains in supervisor recovery"
 need "$SUPERVISOR" 'wait "$COMPACT_WATCHER"' "main loop does not settle completion watcher before rc gate"
 need "$SUPERVISOR" 'trap on_signal INT TERM HUP' "signal cleanup trap missing"

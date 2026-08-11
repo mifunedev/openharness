@@ -11,6 +11,28 @@ dispatcher (an Advisor running several independent tasks runs one ralph loop per
 each loop may, but need not, use `/delegate` inside). Default to implementing directly; reach for
 `/delegate` only for genuinely parallelizable, disjoint-file work within your one story.
 
+## Build notes (Captain-approved — read before choosing your story)
+
+1. **US-001 absorbs the PRD's narrative weight.** Per `critique.md` round-2 Critic B [SEVERITY: L]
+   ("PRD is the repo's longest at ~5.9k words; restructure into the US-001 RFC rather than growing
+   further"), when you author `.oh/docs/rfcs/rfc-brain-hands-boundary.md` you must **move the
+   boundary rationale out of `prd.md` and into the RFC**, leaving `prd.md` **citing** the RFC.
+   **Do not grow `prd.md`.** Its net word count must not increase in the US-001 commit — verify with
+   `wc -w .oh/tasks/execution-target-contract/prd.md` before and after and record both numbers in
+   your `progress.txt` entry. The RFC's own AUTHORITY CLAUSE (US-001 AC) makes it the sole source of
+   truth, so restating rationale in `prd.md` is a defect, not redundancy.
+
+2. **Quality-check commands (the root scripts are named differently from step 4's sketch).** The
+   root `package.json` exposes `typecheck` (no hyphen), `test`, and a no-op `lint`. The CLI package
+   is a separate npm project under `.oh/cli/`. Run, from the repo root:
+   ```bash
+   pnpm run typecheck    # → npm --prefix .oh/cli run typecheck (tsc --noEmit)
+   pnpm test             # → vitest run
+   ```
+   `pnpm run type-check` (hyphenated) does **not** exist; do not use it — behind `|| true` it exits
+   silently and would let untypechecked code reach a commit. Both commands above must be green
+   before you commit, and you must paste their real tail output into `progress.txt`.
+
 ## Your job in one iteration
 
 Pick **one** user story, implement it, commit, mark it `passes: true`, and append a progress entry. Then exit. The next iteration handles the next story. Do not attempt multiple stories per iteration.
@@ -38,13 +60,12 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
 
 3. **Implement the chosen story** — make the file changes, additions, deletions specified in the story's `acceptanceCriteria`. Confine the work to that story; resist scope creep.
 
-4. **Run quality checks** before commit:
+4. **Run quality checks** before commit (see Build note 2 — these are the real script names):
    ```bash
-   pnpm run type-check 2>/dev/null || true
-   pnpm run lint 2>/dev/null || true
-   pnpm run test 2>/dev/null || true
+   pnpm run typecheck
+   pnpm test
    ```
-   If checks fail, fix them. Do not commit broken code.
+   If checks fail, fix them. Do not commit broken code. Do not mask failures with `|| true`.
 
 5. **Commit** with this message format (per `.claude/skills/git/SKILL.md`):
    ```

@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "../../..");
 const GATEWAY = join(ROOT, ".oh/scripts/gateway.sh");
+const BRIDGE_ARTIFACT_SMOKE = join(ROOT, ".oh/scripts/smoke-slack-bridge-artifact.sh");
 
 function gateway(): string {
   return readFileSync(GATEWAY, "utf8");
@@ -16,8 +17,12 @@ describe("gateway client-session launcher", () => {
     execFileSync("bash", ["-n", GATEWAY]);
   });
 
-  it("runs the pi backend under the self-healing supervisor", () => {
+  it("runs Pi under the self-healing supervisor with package-owned compact control", () => {
     expect(gateway()).toContain(".devcontainer/client-slack-supervise.sh");
+    expect(gateway()).toContain('tmux new-session -d -c "$HARNESS" -s "$session"');
+    expect(gateway()).toContain('cd \\"$HARNESS\\" || exit 1');
+    expect(gateway()).not.toContain(".pi/slack-compact/index.ts");
+    expect(gateway()).not.toContain("COMPACT_ENTRY");
   });
 
   it("runs the hermes backend via `hermes gateway run`", () => {
@@ -50,10 +55,61 @@ describe("gateway client-session launcher", () => {
   });
 
   it("reconciles the installed bridge when the reviewed fork pin changes", () => {
-    expect(gateway()).toContain("c8b96e9d0fb69611c4e67ae298d1d10d83792a26");
+    expect(gateway()).toContain("4056384d7e3901809019e006185a68987fcc8c0b");
     expect(gateway()).toContain(".openharness-pin");
     expect(gateway()).toContain('installed_pin" != "$FORK_PIN');
     expect(gateway()).toContain('printf \'%s\\n\' "$FORK_PIN" >"$bridge_pin_file"');
+  });
+
+  it(
+    "installs the exact bridge artifact and runs its real extension lifecycle",
+    async () => {
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn("bash", [BRIDGE_ARTIFACT_SMOKE], { stdio: "pipe" });
+        let stderr = "";
+        child.stderr.on("data", (chunk) => {
+          stderr += String(chunk);
+        });
+        child.once("error", reject);
+        child.once("exit", (code, signal) => {
+          if (code === 0) resolve();
+          else reject(new Error(`artifact smoke exited ${code ?? signal}: ${stderr}`));
+        });
+      });
+    },
+    310_000,
+  );
+
+  it("reports a recent compaction reconnect without exposing recovery nonce data", () => {
+    const temp = mkdtempSync(join(tmpdir(), "gateway-status-"));
+    const bin = join(temp, "bin");
+    const state = join(temp, "state");
+    mkdirSync(bin);
+    mkdirSync(state);
+    writeFileSync(
+      join(bin, "tmux"),
+      '#!/usr/bin/env bash\n[ "$1" = ls ] && printf "client-slack-pi\\n"\n',
+      { mode: 0o755 },
+    );
+    writeFileSync(
+      join(state, "pi.state"),
+      "backend=pi\nsession=client-slack-pi\nbridge_token=present\nlaunches=2\n",
+    );
+    const now = Math.floor(Date.now() / 1000).toString();
+    writeFileSync(join(state, "pi.heartbeat"), `${now}\n`);
+    writeFileSync(join(state, "pi.compact"), `${now}\n`);
+
+    const output = execFileSync("bash", [GATEWAY, "status"], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH ?? ""}`,
+        GATEWAY_STATE_DIR: state,
+      },
+    });
+    expect(output).toContain("client-slack-pi  healthy");
+    expect(output).toContain("compaction reconnected");
+    expect(output).not.toMatch(/[a-f0-9]{48}/);
   });
 });
 
@@ -67,7 +123,8 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     const piEnv = join(temp, "pi-env.txt");
     const pwned = join(temp, "pwned");
     mkdirSync(join(harness, ".devcontainer"), { recursive: true });
-    mkdirSync(join(harness, ".pi"), { recursive: true });
+    mkdirSync(join(harness, ".pi/bridge-recovery"), { recursive: true });
+    writeFileSync(join(harness, ".pi/bridge-recovery/index.ts"), "// recovery fixture\n");
     mkdirSync(home, { recursive: true });
     mkdirSync(bin);
 
@@ -103,10 +160,15 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
       ].join("\n"),
       { mode: 0o755 },
     );
-    // pi stub: records the PI_SLACK_* values it actually received in its env.
+    // pi stub: records token values and package/recovery extension order.
     writeFileSync(
       join(bin, "pi"),
-      `#!/usr/bin/env bash\nprintf 'PI_SLACK_APP_TOKEN=%s\nPI_SLACK_BOT_TOKEN=%s\n' "$PI_SLACK_APP_TOKEN" "$PI_SLACK_BOT_TOKEN" > "$PI_ENV_FILE"\n`,
+      [
+        "#!/usr/bin/env bash",
+        "printf 'PI_SLACK_APP_TOKEN=%s\\nPI_SLACK_BOT_TOKEN=%s\\nARGS=%s\\n' \\",
+        "  \"$PI_SLACK_APP_TOKEN\" \"$PI_SLACK_BOT_TOKEN\" \"$*\" > \"$PI_ENV_FILE\"",
+        "",
+      ].join("\n"),
       { mode: 0o755 },
     );
     // npm stub: gateway.sh npm-installs the bridge when missing; no-op here.
@@ -115,7 +177,11 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     // here it just exec's the pi stub once so we can inspect the env it got.
     writeFileSync(
       join(harness, ".devcontainer", "client-slack-supervise.sh"),
-      '#!/usr/bin/env bash\nexec pi --extension "${BRIDGE_ENTRY:-x}" --extension "${RECOVERY_ENTRY:-y}" --approve\n',
+      [
+        "#!/usr/bin/env bash",
+        'exec pi --session-dir "${GATEWAY_STATE_DIR:-$HOME/.pi/gateway}/pi-sessions" --continue --extension "${BRIDGE_ENTRY:-x}" --extension "${RECOVERY_ENTRY:-y}" --approve',
+        "",
+      ].join("\n"),
       { mode: 0o755 },
     );
 
@@ -156,9 +222,14 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     });
 
     // Tokens round-trip to pi verbatim as data, and the injection never fired.
-    expect(readFileSync(piEnv, "utf8")).toBe(
-      ["PI_SLACK_APP_TOKEN=xapp token; touch $PWNED", "PI_SLACK_BOT_TOKEN=xoxb'quoted", ""].join("\n"),
+    const recorded = readFileSync(piEnv, "utf8");
+    expect(recorded).toContain("PI_SLACK_APP_TOKEN=xapp token; touch $PWNED\n");
+    expect(recorded).toContain("PI_SLACK_BOT_TOKEN=xoxb'quoted\n");
+    expect(recorded).toContain(
+      `ARGS=--session-dir ${join(harness, ".pi/gateway/pi-sessions")} --continue --extension ${join(harness, ".pi/bridge/node_modules/pi-messenger-bridge/dist/index.js")} --extension ${join(harness, ".pi/bridge-recovery/index.ts")} --approve`,
     );
+    expect(recorded).not.toContain("slack-compact");
+    expect(recorded).not.toContain("NONCE");
     expect(existsSync(pwned)).toBe(false);
 
     // The non-secret config was seeded into ~/.pi (tokens stay out of it).

@@ -1,0 +1,61 @@
+{
+  "project": "slack-compact",
+  "issue": 739,
+  "source": "mifunedev/openharness#739",
+  "branch": "feat/739-slack-compact",
+  "description": "Authenticated package-owned Slack compaction with continued session and private exact-PID supervision",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Package-owned authenticated compact control",
+      "description": "Extend the exact-pinned bridge fork where authorization, immutable message metadata, direct transport send, and disconnect are available.",
+      "acceptanceCriteria": [
+        "Exact originating chat/thread acknowledgement succeeds before compaction",
+        "Active prior work settles before compaction and no arbitrary turn_end is used",
+        "Overlaps serialize; local turn_end before remote message_start stays local; identical cross-chat content correlates independently",
+        "Unpredictable internal request ids are removed by finalized message replacement before provider/session use",
+        "Untrimmed instruction controls and generation-late callbacks are tested"
+      ],
+      "priority": 1,
+      "passes": true
+    },
+    {
+      "id": "US-002",
+      "title": "Private one-shot exact-peer supervisor",
+      "description": "Replace nonce/log/fd signaling with listener-ready-before-launch mode-0600 Unix IPC, Linux peer-credential authentication, and exact target cleanup.",
+      "acceptanceCriteria": [
+        "A real child can discover parent env/path and attempt /proc/socket forgery but cannot trigger",
+        "The exact Pi PID succeeds through SO_PEERCRED and Slack disconnect precedes the one-shot signal",
+        "Immediate completion plus rc0 restarts exactly the authenticated supervised process group",
+        "EXIT, INT, TERM, and HUP cleanup unlinks transient socket/state, lock, and heartbeat while siblings survive"
+      ],
+      "priority": 2,
+      "passes": true
+    },
+    {
+      "id": "US-003",
+      "title": "Continue the compacted active session",
+      "description": "Use an isolated private session directory and explicit continuation on every launch.",
+      "acceptanceCriteria": [
+        "Launch command contains --session-dir and --continue",
+        "Launch two reopens launch one's compaction entry",
+        "Persistent session data survives supervisor cleanup"
+      ],
+      "priority": 3,
+      "passes": true
+    },
+    {
+      "id": "US-004",
+      "title": "Preserve integration compatibility and evidence",
+      "description": "Keep thread/admin/trust/Codex/Hermes/token paths intact and update all provenance, docs, eval, and test surfaces.",
+      "acceptanceCriteria": [
+        "Harness pins the exact tested fork commit and has no package patch/vendor/local duplicate",
+        "UPSTREAM root/template are byte-identical and changelog/doc/task artifacts describe the final architecture",
+        "Focused/full package and harness gates plus CI and deterministic audit pass",
+        "Neither PR is merged"
+      ],
+      "priority": 4,
+      "passes": true
+    }
+  ]
+}

@@ -82,28 +82,12 @@ slices build against one contract instead of re-deriving the boundary.
 This story is **gated first**: US-002..US-005 make design choices (workspace shape, capability
 set, what stays brain-side) that are only defensible if the boundary is already written down.
 
-**Artifact (a) — NEW RFC `.oh/docs/rfcs/rfc-brain-hands-boundary.md`** must contain:
-
-1. **Brain/hands responsibility table.** Ralph, cron, autopilot, and memory are **brain**
-   (orchestration/policy/state). Evals are **split by a stated capability rule**: an eval that
-   only reads repo files is brain-side; an eval that needs to execute inside the environment is
-   hands-side. The rule must be written as a rule, not a case list.
-2. **The four-class state taxonomy**: `WorkspaceState` (user/project filesystem),
-   `ExecutionState` (execution-machine state), `HarnessAuthState` (provider/auth/credentials),
-   `SessionState` (orchestration/session identity) — with the **Hermes known-violation**
-   documented explicitly as a known Phase-0 violation, not silently omitted.
-3. **Workspace stance**: the contract carries `workspace: { hostRoot, targetRoot }`.
-   **Identical-path mapping (`hostRoot === targetRoot`) is the ONLY supported Phase-0 worktree
-   configuration**; non-identical mapping is documented as explicitly unsupported in Phase-0.
-   The RFC must additionally state that **the two-field shape is speculative**: in Phase-0 only
-   the degenerate equal case is legal, so the second field currently carries *permission*, not
-   *semantics*. The Sysbox slice is expected to give it real semantics (or collapse it back to a
-   single field) — the RFC says so in as many words rather than implying the shape is settled.
-
-**RFC header (authority clause) — required.** The RFC opens with an explicit authority statement:
-*"This file is the sole authority for Phase-0 brain/hands boundary decisions. Do not restate its
-content in future PRDs, task folders, or wiki entries — cite it."* This is what keeps the decision
-from fragmenting across prd.md + RFC + wiki with three copies to reconcile.
+**Artifact (a) — NEW RFC `.oh/docs/rfcs/rfc-brain-hands-boundary.md`.** Its content is
+**not restated here** — the RFC's own authority clause forbids exactly that. The decisions live
+in `rfc-brain-hands-boundary.md` § 2 (brain/hands table), § 3 (eval capability rule), § 4 (the
+four-class state taxonomy) and § 4.1 (the Hermes known-violation), § 5 and § 5.1 (workspace
+stance; the speculative second field), and § 6 (`attach()` synchrony and its migration path).
+The acceptance criteria below are the buildable checklist; the RFC is the source of truth.
 
 **Artifact (b) — AMEND `.oh/docs/rfcs/rfc-runtime-support.md`** with:
 
@@ -212,31 +196,13 @@ export interface ExecutionTarget {
 
 #### Why `attach()` is synchronous (resolves critique H1)
 
-Round 1 flagged a real internal contradiction: the PRD demanded both an async
-`attach(): Promise<number>` *and* "every `lifecycle.test.ts` assertion passes UNCHANGED", while
-`runShell` is `export function runShell(opts, io): number` (`.oh/cli/src/commands/lifecycle.ts:298`)
-and its tests assert synchronously — `expect(runShell(...)).toBe(0)`
-(`lifecycle.test.ts:362`, `:428`) and `expect(() => runShell(...)).toThrow(...)` (`:435`). An async
-`attach()` forces `runShell` to return a `Promise`, which `toBe(0)` and `toThrow()` cannot observe.
-
-**Decision (option A — keep the compat oracle literally true): `attach()` is declared synchronous
-in `contractVersion: 1`.** Rationale, all verifiable in today's code:
-
-- The entire execution seam this contract wraps is **already synchronous**. `LifecycleRunner` is
-  `(cmd, args, opts) => RunResult` (`lifecycle.ts:49-53`) and the real runner is `spawnSync`
-  (`lifecycle.ts:59`). A sync `attach()` is the *existing* pattern, not a concession.
-- `attach()` is a **terminal handoff**: it inherits stdio, blocks until the child exits, and
-  returns the exit code. There is nothing to await — the async signature would have been
-  ceremony wrapping a `spawnSync`.
-- `runSandbox` is **already `async`** (its tests `await runSandbox(...)`, `lifecycle.test.ts:113`),
-  so `provision?(): Promise<void>` needs no change and is left async. The asymmetry is deliberate
-  and documented, not accidental.
-- `contractVersion: 1` is the versioning escape hatch. **Documented migration path:** if the
-  Sysbox slice (or #732's remote/durable sessions) needs a non-blocking attach, it bumps to
-  `contractVersion: 2` with `attach(): Promise<number>` — or adds a sibling async method — and
-  migrates `runShell` and its assertions then, as a deliberate, separately-reviewed change. That
-  migration note is written into `rfc-brain-hands-boundary.md` in US-001 and into the `target.ts`
-  header comment.
+Round 1 flagged a real internal contradiction: an async `attach(): Promise<number>` forces
+`runShell` to return a `Promise`, which `expect(runShell(...)).toBe(0)` and
+`expect(() => runShell(...)).toThrow(...)` cannot observe — so "every `lifecycle.test.ts`
+assertion passes UNCHANGED" was unachievable as written. **Decision: `attach()` is synchronous in
+`contractVersion: 1`.** The rationale and the `contractVersion: 2` migration path are recorded in
+`rfc-brain-hands-boundary.md` § 6 (US-001) and in the `target.ts` header comment (US-002); they
+are cited, not restated here.
 
 Because of this, the US-005 **COMPAT ORACLE stays at its strongest form: zero assertion edits in
 `lifecycle.test.ts`.** It is not downgraded to "assertions may be updated mechanically".

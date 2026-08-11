@@ -1,0 +1,40 @@
+{
+  "project": "slack-compact",
+  "issue": 739,
+  "goal": "Allow an authorized Slack user to compact the current dedicated Pi gateway session with acknowledgement-before-compaction and proactive nonce-bound supervisor recovery.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Gateway-only Slack command parser and acknowledgement state machine",
+      "acceptanceCriteria": [
+        "Only exact bridge-stamped Slack command messages trigger",
+        "Natural grammar and optional bounded /compact instructions are tested",
+        "A non-empty tool-free acknowledgement turn precedes ctx.compact",
+        "Duplicate, error, and session lifecycle states are one-shot and reset safely"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "US-002",
+      "title": "Nonce-bound proactive supervisor recovery",
+      "acceptanceCriteria": [
+        "Supervisor owns a fresh unpredictable nonce per Pi launch",
+        "Extension is loaded third and receives nonce only in the dedicated Pi gateway",
+        "Only current onComplete marker triggers recorded restart/reconnect",
+        "Stale ctx, crashes, locks, heartbeat, Hermes, and interactive TTY behavior remain intact"
+      ],
+      "dependsOn": ["US-001"]
+    },
+    {
+      "id": "US-003",
+      "title": "Regression tests, probe, and operator documentation",
+      "acceptanceCriteria": [
+        "Vitest and shell tests cover extension and launch wiring",
+        "Tier-A probe guards gateway-only/API/grammar/restart contract",
+        "Slack and upstream docs describe trust, scope, behavior, caveat, and troubleshooting",
+        "Changelog links issue #739"
+      ],
+      "dependsOn": ["US-001", "US-002"]
+    }
+  ]
+}

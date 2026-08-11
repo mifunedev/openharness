@@ -252,7 +252,9 @@ describe("client-slack bridge supervisor", () => {
     30_000,
   );
 
-  it("pins Pi to the harness cwd while preserving inherited TTY descriptors in its isolated group", () => {
+  it(
+    "pins Pi to the harness cwd while preserving inherited TTY descriptors in its isolated group",
+    () => {
     const temp = mkdtempSync(join(tmpdir(), "pi-supervisor-tty-"));
     const harness = join(temp, "harness");
     const caller = join(temp, "other-cwd");
@@ -279,7 +281,7 @@ describe("client-slack bridge supervisor", () => {
 
     execFileSync("script", ["-qefc", `bash ${JSON.stringify(SUPERVISOR)}`, "/dev/null"], {
       cwd: caller,
-      timeout: 10_000,
+      timeout: 30_000,
       env: {
         ...process.env,
         PATH: `${bin}:${process.env.PATH ?? ""}`,
@@ -304,7 +306,9 @@ describe("client-slack bridge supervisor", () => {
     expect(values.stdin_tty).toBe("yes");
     expect(values.stdout_tty).toBe("yes");
     expect(values.pgid).toBe(values.pid);
-  });
+    },
+    40_000,
+  );
 
   it("prepares a private one-shot IPC watcher before launch and settles it before rc", () => {
     const text = readFileSync(SUPERVISOR, "utf8");

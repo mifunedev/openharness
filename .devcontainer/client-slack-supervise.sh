@@ -116,6 +116,17 @@ terminate_exact_tree() {
   kill -TERM "$pid" 2>/dev/null || true
 }
 
+terminate_exact_pid() {
+  local pid="$1" attempts=200
+  case "$pid" in ''|*[!0-9]*) return 0 ;; esac
+  kill -TERM "$pid" 2>/dev/null || true
+  while kill -0 "$pid" 2>/dev/null && [ "$attempts" -gt 0 ]; do
+    attempts=$((attempts - 1))
+    sleep 0.01
+  done
+  if kill -0 "$pid" 2>/dev/null; then kill -KILL "$pid" 2>/dev/null || true; fi
+}
+
 # Pi launches in a fresh session/process group whose PGID equals its recorded
 # leader PID. Signal only that verified group. TERM gets a bounded grace period,
 # then KILL closes stubborn descendants without touching sibling Pi/Hermes jobs.
@@ -194,10 +205,21 @@ stop_launch_helpers() {
 }
 
 cleanup_all() {
+  local live_pgid=""
   [ "$STOPPING" -eq 0 ] || return 0
   STOPPING=1
-  if [ -n "$PI_PID" ] && [ -n "$PI_PGID" ]; then
-    terminate_exact_group "$PI_PGID" "$PI_PID"
+  if [ -n "$PI_PID" ]; then
+    live_pgid="$PI_PGID"
+    if [ -z "$live_pgid" ]; then
+      live_pgid=$(ps -o pgid= -p "$PI_PID" 2>/dev/null | tr -d ' ' || true)
+    fi
+    if [ "$live_pgid" = "$PI_PID" ]; then
+      terminate_exact_group "$live_pgid" "$PI_PID"
+    else
+      # Signal can arrive between fork and setsid/PGID observation. Kill the
+      # exact not-yet-isolated leader rather than leaving that launch orphaned.
+      terminate_exact_pid "$PI_PID"
+    fi
   fi
   stop_launch_helpers
   rm -f "$HEARTBEAT_FILE" "$PI_PID_FILE" "$PI_GROUP_FILE" "$RESTART_TRIGGER_FILE" 2>/dev/null || true
@@ -319,7 +341,7 @@ while true; do
     done
     if [ "$PI_PGID" != "$PI_PID" ]; then
       echo "[bridge-supervisor] failed to isolate exact Pi process group" >>"$LOG"
-      kill -TERM "$PI_PID" 2>/dev/null || true
+      terminate_exact_pid "$PI_PID"
       wait "$PI_PID" 2>/dev/null || true
       rc=1
     else

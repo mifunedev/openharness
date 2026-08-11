@@ -277,3 +277,79 @@ Test count unchanged (39/481) — expected: US-005 adds the tests.
   wants them, add the method first.
 
 ---
+
+## US-004 — 2026-08-10 23:28 UTC
+
+**Title**: Route `oh sandbox` and `oh shell` through the contract
+**Files changed**: `.oh/cli/src/commands/lifecycle.ts`, `.oh/skills/wiki/corpus/oh-cli-portable-lifecycle.md`, `.oh/skills/wiki/corpus/README.md`, `CHANGELOG.md`
+**Commit**: `ca5c73cf`
+**Result**: PASS
+
+### What I did
+
+`runSandbox` now resolves a target via `resolveExecutionTarget({projectRoot, run, build: !useNoBuild, env})`
+and calls `provision()`, translating `ExecutionExitError` back into its own return code (which is
+exactly the old `return r.status ?? 1`); spawn-level failures still propagate. `runShell` calls
+`target.attach({argv: ["zsh"], user: "sandbox"})` — no `["exec","-it",…]` literal survives anywhere in
+`lifecycle.ts` — catches `ExecutionSpawnError` with `code === "ENOENT"` and rethrows the byte-identical
+``docker is required for `oh shell` but was not found on PATH``. Both doc comments were rewritten to
+describe delegation rather than a literal invocation, and `runGateway`'s doc block gained the
+brain-side rationale (its body is untouched). Revised the wiki entry to describe the seam as a
+verb/side/route/delegates-to table, and added the `### Changed` CHANGELOG entry.
+
+### Verification
+
+Compat oracle, all mechanical:
+
+```
+$ git diff --stat -- .oh/cli/src/__tests__/lifecycle.test.ts     (empty — zero assertion edits)
+$ grep -n "export function runShell" .oh/cli/src/commands/lifecycle.ts
+290:export function runShell(opts: ShellOptions, io: LifecycleIO): number {
+   → the signature line is CONTEXT in `git diff`, not a changed line
+$ grep -n '"exec"' .oh/cli/src/commands/lifecycle.ts              (none)
+$ grep -cF 'docker exec -it -u $(SHELL_USER) $(SHELL_CONTAINER) zsh' Makefile   → 1
+$ git diff --stat -- Makefile                                    (empty)
+$ wc -w .oh/skills/wiki/corpus/oh-cli-portable-lifecycle.md       → 836   (was 657, cap 900)
+$ bash .oh/evals/probes/wiki-readme-index.sh
+PASS: .oh/skills/wiki/corpus/README.md Index matches the git-tracked corpus/*.md frontmatter
+```
+
+```
+$ pnpm run typecheck
+> @mifune/openharness@0.2.0 typecheck
+> tsc --noEmit
+        (clean — no diagnostics)
+
+$ pnpm test
+ Test Files  39 passed (39)
+      Tests  481 passed (481)
+   Duration  4.51s
+```
+
+Test count still 39/481 — expected: US-005 adds the tests. The point of this story is that the
+count did not move while the routing did.
+
+### Learnings for future iterations
+
+- **The `oh update` follow-up issue (US-005 AC) is real and now has a second data point.** The wiki
+  entry's `/home/sandbox/project` claim, line-cited to `init.ts:503`, is FALSE — that line writes
+  `/home/sandbox/harness`, and `grep -rn "sandbox/project" .oh/cli/src/` has zero hits. The
+  "retrofit gap" bullet stated the inverse of current behavior too. Both were removed as part of the
+  required prose trim. **I did not re-audit the entry's other citations** (the `cli.ts` / `remote.ts`
+  paragraphs are as ingested on 2026-07-03) — that is a known, deliberate scope boundary, not a
+  claim they are correct.
+- **`runSandbox` keeps a `requireLifecycleScript` preflight even though `provision()` re-checks it.**
+  This is deliberate, not redundancy: the check must fire BEFORE the `image mode: …` / `no-build
+  mode: …` log line so an incomplete `.oh/` payload fails in the same order it did before. No test
+  pins that ordering today; US-005 could add one. The call is idempotent and spawns nothing.
+- **Nothing in `runSandbox` may call `capabilities()`.** It shells a second `--print-argv` child, and
+  `lifecycle.test.ts:114` asserts the whole `calls` array with `toEqual` — exactly one child. The
+  socket opt-in that `runSandbox` prompts for and the `"docker"` capability the adapter discovers are
+  two different reads of the same fact; do not merge them.
+- **US-005's probe C4 has a clean target.** After this story `lifecycle.ts` contains no `"exec"`
+  string literal at all, so an argv-literal check (`["exec", "-it", …]` constructed outside the
+  adapter) is unambiguous. The surviving prose does say "docker exec" in `runGateway`-adjacent
+  comments and the CHANGELOG, which is exactly why C4 must not be a text grep.
+- **Bumping a wiki entry's `updated:` re-sorts the README index.** `wiki-readme-index.sh` builds the
+  expected table with `sort -r` on `<updated> <slug>`, so the row MOVES — editing it in place leaves
+  the probe red. Move the row and change its `Tags`/`Updated` cells in the same pass.

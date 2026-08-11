@@ -27,7 +27,7 @@ Final review findings against harness PR #740 and bridge PR #2:
 - Harness full suite under a clean test environment: 39 files / 490 tests passed.
 - Harness lint, format check, typecheck, build, Bash syntax, Dockerized ShellCheck, JSON parse, template parity, and `git diff --check` — passed.
 - Eval: 98 probes ran; 94 PASS, 4 environment-appropriate SKIPPED, 0 REGRESSION. Both Slack probes pass at the exact bridge pin.
-- GitHub CI and consumer exact-pin status are checked after the normal harness push and reported with final heads.
+- Harness CI runs `.oh/scripts/smoke-slack-bridge-artifact.sh`, so the consumer gate installs and exercises the exact reviewed bridge head rather than relying only on source-repository checks.
 
 ## Verdict
 

@@ -106,6 +106,9 @@ jobs:
       - name: Test
         run: pnpm test:scripts
 
+      - name: Smoke exact Slack bridge artifact
+        run: bash .oh/scripts/smoke-slack-bridge-artifact.sh
+
   boot-lint:
     name: Boot Path Lint (shellcheck + hadolint)
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}

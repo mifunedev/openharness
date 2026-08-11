@@ -54,7 +54,7 @@
         "Neither PR is merged"
       ],
       "priority": 4,
-      "passes": false
+      "passes": true
     }
   ]
 }

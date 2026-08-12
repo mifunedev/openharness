@@ -43,6 +43,16 @@
   the header. `session-prompt.md` ends its header with a literal
   `END CONTRACT HEADER -->` marker line and declares the ordering scope as
   body-only; US-009's probe must skip to that line before comparing.
+- **A comment starting `# shellcheck <word>` is parsed as a DIRECTIVE, even in
+  prose.** `# shellcheck does not flag it.` inside a header block fails the file
+  with `SC1073/SC1072: Couldn't parse this shellcheck directive`. Reword so the
+  literal `shellcheck` is never the first word after `# ` (e.g. "which no linter
+  flags"). Mid-sentence mentions are fine — `session-runner.sh` has several.
+- **`set -o pipefail` turns `producer | head -n 1` into a landmine.** `head`
+  closing the pipe early gives the producer SIGPIPE (141), and a no-match `grep`
+  gives 1; either sinks the whole command substitution, and a trailing
+  `|| var=""` then CLOBBERS the value the substitution already captured. Wrap the
+  producer instead: `var="$( { producer || true; } | head -n 1)"`.
 - **A sourced library must not `set` shell options at file scope**, and must not
   use `set -u` even function-scoped: under `set -u` an unbound expansion
   terminates the whole shell, which from a sourced library means killing the
@@ -170,6 +180,81 @@ relative ordering in the body (lines 91 → 98 → 110 → 130 → 167 → 190 �
   chaining `cd`+`git add`+`git commit` in one call. Use separate calls and
   repeated `-m` flags — each `-m` becomes its own paragraph, which is enough
   for a full commit body plus the `Submitted-by:` trailer as the final `-m`.
+
+---
+
+## US-003 — 2026-08-12 10:50 UTC
+
+**Title**: `.oh/scripts/firstmate.sh` — the executor entrypoint
+**Files changed**: `.oh/scripts/firstmate.sh` (new, executable),
+`.oh/scripts/lib/task-contract.sh` (new), `.oh/scripts/__tests__/firstmate.test.ts` (new)
+**Commit**: e970f885
+**Result**: PASS
+
+### What I did
+
+Wrote the opt-in executor entrypoint and its 37-case vitest suite. The slug +
+four-file validation went into a new **shared sourced helper**
+`.oh/scripts/lib/task-contract.sh` (the AC's preferred option) carrying
+ralph.sh's exact message strings with a provenance comment naming
+`ralph.sh:394-414` as their source; `ralph.sh` stays zero-diff. The entrypoint
+composes: whole-line `STATUS: COMPLETE` short-circuit → cross-executor ralph
+guard (`tmux has-session -t <bare slug>`) → `runner_detect` → atomic
+`mkdir` launch claim with a `runner_alive` cross-check and stale-lock reclaim →
+`render_session_prompt` → `runner_launch` + `runner_verify_cwd` → launch banner
+→ `runner_watch`. `--kill <slug>` is the escape hatch. Every failure path runs
+`runner_abort` (teardown → lock removal → `FIRSTMATE-INCOMPLETE`), and an
+`INT`/`TERM` trap is installed the moment the lock is claimed. Checks: 564/564
+vitest across 41 files (`ralph.test.ts` untouched and green), `pnpm run
+typecheck` clean, shellcheck clean at BOTH default and `-S warning` on
+`firstmate.sh` and `task-contract.sh`, and `git diff` empty for
+`.oh/scripts/ralph.sh` and `.oh/prompts/`.
+
+### Learnings for future iterations
+
+- **`.oh/scripts/lib/task-contract.sh` is a THIRD new lib file.** US-004's AC
+  names only `firstmate.sh` and `lib/session-runner.sh` for
+  `.claude/protected-paths.txt`. Adding `lib/task-contract.sh` alongside them is
+  the consistent call (same "load-bearing shared infra" rationale), but it is
+  NOT in US-004's AC text — decide deliberately rather than by omission.
+- **The renderer STRIPS the contract header.** `render_session_prompt` drops
+  everything through the `END CONTRACT HEADER -->` line before substituting, so
+  the anchor bookkeeping never reaches the session. US-009's probe reads the
+  TEMPLATE (not the rendered output), so this is invisible to it — but any
+  future check that greps a *rendered* prompt for anchors will find only the
+  body's copies.
+- **Deliberate deviation from PRD §5's launch sketch, recorded in the file
+  header**: the sketch is `<harness> "/goal <rendered-prompt>"`. There is no
+  `/goal` skill in this repo (`ls .oh/skills/` has no `goal` entry) and a ~7KB
+  argv nested inside `bash -lc '…'` is a quoting hazard, so the prompt is
+  written to `$FIRSTMATE_PROMPT_FILE` and piped in on stdin — ralph.sh:191's
+  proven shape. US-008's wiki entry and US-004's SKILL.md should describe the
+  stdin shape, not the `/goal` one.
+- **`FIRSTMATE_HARNESS_CMD` is the hermetic-test seam** and US-010 will want it:
+  it fully overrides the launched command, and the session's exports
+  (`FIRSTMATE_SESSION=1`, `FIRSTMATE_SLUG`, `FIRSTMATE_TASK_DIR`,
+  `FIRSTMATE_PROMPT_FILE`) reach it. The end-to-end "watch to completion" test
+  uses it plus `RUNNER_POLL_INTERVAL_S=1` to drive a real foreground run to the
+  sentinel in ~50ms.
+- **`--no-watch` deliberately leaves the lock claimed**, because with nobody
+  watching, nobody enforces the budget or runs the exit path. The banner says so
+  and points at `--kill`. Do not "fix" it by releasing the lock — that would
+  reopen the TOCTOU window the atomic `mkdir` closes.
+- **The tmux stub needs to be TARGET-AWARE.** firstmate asks `tmux has-session`
+  about two different names — the bare slug (ralph guard) and
+  `agent-firstmate-<slug>` (its own liveness oracle) — so a stub with one global
+  `STUB_TMUX_HAS_SESSION` rc cannot express "a ralph session is live but mine is
+  not". `firstmate.test.ts`'s stub parses `-t` and matches against a
+  space-separated `STUB_TMUX_SESSIONS` list.
+- **The herdr stub's probe output must carry the MARKER.**
+  `runner_local_fingerprint` strips `FIRSTMATE-FINGERPRINT ` before returning,
+  so a stub echoing that bare value back produces "no fingerprint obtained", not
+  a match. Re-add the marker (`matchingProbeOutput()` in the suite).
+- **CHANGELOG is US-008's, by the PRD's own allocation.** No `## [Unreleased]`
+  entry was added here; US-001 and US-002 did the same. US-008's AC
+  ("CHANGELOG.md gains an entry under `## [Unreleased]`") is the single entry
+  for the whole feature — it must cover `firstmate.sh` and the ladder, not just
+  the `sandbox-processes.md` change.
 
 ---
 

@@ -102,6 +102,24 @@
   at L32 is `$SKILL`-only, so the same-looking edit is free in one skill and
   requires a lockstep probe update in the other. Never generalize "that string
   is pinned" across files without checking the variable.
+- **A grep-based probe must exclude COMMENTS AND LOG LINES, or well-documented
+  code passes after it is deleted.** Every well-written file in this repo
+  explains itself, so `grep -Fq '<thing>'` is satisfied by the header comment
+  that documents `<thing>`, by the `runner_log "…: <thing>"` line that reports
+  it, and by the error message that names it. Filter to executable lines
+  (`grep -v '^\s*#'` plus dropping `printf|echo|runner_log` lines) before
+  asserting a guard or an invocation exists; where a literal legitimately
+  appears in BOTH a test and its own error message, require it to co-occur with
+  `grep` on the same line. The same filter prevents the mirror-image bug: an
+  "every invocation passes flag X" check otherwise fails on the `printf 'Error:
+  <cmd> failed'` line.
+- **Verify a probe by REJECTION — mutate the source and confirm it goes red.**
+  Copy the probe plus only the files it reads into a `mktemp -d` tree (probes
+  resolve `ROOT` from `BASH_SOURCE`, so a scratch root Just Works, and no
+  `git init` is needed — a git-dependent assertion simply contributes one
+  constant line to the baseline that you filter out). Then `sed` one guard away
+  at a time. Four of US-009's assertions were green against deliberately broken
+  copies until this pass caught them.
 
 ---
 
@@ -608,5 +626,79 @@ including `wiki-readme-index`.
 - **US-009 next** must pin `readlink CLAUDE.md` = `AGENTS.md` and `ralph.sh`
   still exists; note that `.oh/evals/probes/` is NOT in CI's shellcheck glob and
   carries pre-existing SC2016 infos, so gate new probes on `--severity=warning`.
+
+---
+
+## US-009 — 2026-08-12 17:35 UTC
+
+**Title**: two new probes, zero new SKIPPED rows
+**Files changed**: `.oh/evals/probes/firstmate-executor-contract.sh` (new),
+`.oh/evals/probes/session-runner-ladder.sh` (new), `.oh/evals/RESULTS.md`,
+`CHANGELOG.md`
+**Commit**: 4272aac2
+**Result**: PASS
+
+### What I did
+
+Wrote both probes and then **verified them by rejection** — 19 mutations of the
+pinned sources, each checked to turn the relevant probe red in a scratch root.
+`firstmate-executor-contract.sh` asserts the executable entrypoint, the
+whole-line `STATUS: COMPLETE` sentinel + `| tee` pipe, a firstmate arm AND a
+ralph arm on BOTH executor toggles (with `SHIP_SPEC_EXECUTOR:-ralph`
+byte-identical), the eight ordered anchor keywords in the session-prompt BODY,
+`.oh/prompts/` zero-diff, `readlink CLAUDE.md` = `AGENTS.md`, and that
+`ralph.sh` still exists. `session-runner-ladder.sh` asserts the ladder order,
+the two-literal health predicate, the nesting guard ahead of any probe pane,
+the fingerprint gate's degrade-and-log, `resolve_timeout_ms` + the 14400000
+default bounding every watch, teardown/unlock/`FIRSTMATE-INCOMPLETE` on every
+exit path, `--no-focus` on every launch, `pane close` as the teardown verb, the
+forbidden-command set (with `herdr agent get` explicitly permitted), and no
+file-scope `set`. `/eval` reports both PASS; shellcheck is clean at all
+severities; typecheck clean; 564/564 vitest; the eight named existing probes
+plus `eval-gate`/`eval-runner-exit`/`skills-vendored` all still exit 0.
+
+### Learnings for future iterations
+
+- **A passing probe proves nothing — mutation-test every assertion.** Four of
+  mine were satisfiable by PROSE after the code they pinned was deleted:
+  deleting the `HERDR_ENV` nesting guard left its explanatory comment (probe
+  stayed green); swapping `herdr pane close` for a nonexistent verb left the
+  `runner_log "teardown: herdr pane close $pane"` line; deleting the `| tee`
+  pipe left two header lines documenting it; and deleting the `herdr status`
+  test left the error message that NAMES `status: running`. Fix: a `code_only`
+  filter (`grep -v '^\s*#'` + drop `printf|echo|runner_log` lines), and for
+  message-vs-test cases require the literal to co-occur with `grep` on the same
+  line.
+- **The inverse false-positive is just as easy.** `grep -n 'herdr agent start'`
+  matched `printf 'Error: herdr agent start returned no pane id'`, failing a
+  clean file. Any "every invocation does X" check needs the same code-only
+  filter on BOTH sides.
+- **`.oh/skills/eval/run.sh --probe <id>` writes ONE row and carries the rest
+  forward** from a snapshot taken before the write — so a new probe can be
+  scored without restamping all ~95 rows. But the rewrite loop enumerates
+  `probes/*.sh`, so any probe with no row at all gets a `| — | (not run) |`
+  placeholder appended as a side effect: `docker-inspect-env-guard` and
+  `operator-config-guard` (both added after the stale 2026-08-03 run) appeared
+  that way. I ran both — green — so the four added rows are all PASS.
+- **RESULTS.md's carried-forward SKIPPED baseline is 3, not the 2 the AC
+  states**: `autopilot-preflight-gate`, `debugmcp-availability`, and
+  `cc-safety-net-wiring`. All three predate this branch and are unchanged; zero
+  new SKIPPED rows were introduced. Worth a line in the PR description so a
+  reviewer counting rows against the AC is not surprised.
+- **Probes that ship WITH the code they pin need no SKIPPED guard.** The
+  `[ -f ] || exit 2` pattern (spec-family-contract) exists for probes that may
+  run against a cold/pre-merge tree; a probe added in the same commit as its
+  target cannot. Both of mine treat a missing artifact as REGRESSION, which is
+  what makes the ralph.sh tripwire meaningful.
+- **A scratch ROOT is enough to mutation-test a probe** — probes resolve
+  `ROOT` from `BASH_SOURCE`, so copying the probe plus only the files it reads
+  into a `mktemp -d` tree lets you mutate freely. No `git init` needed: probe 1's
+  git assertion just adds one constant "not a git repository" line to the
+  baseline, and every other failure is still individually distinguishable.
+- **US-010 is the last story** and is the heavy one: two throwaway slugs, a
+  disposable non-merging worktree, the real tmux-arm run to `STATUS: COMPLETE`,
+  the herdr gate-refusal capture, teardown of both locks and folders, the
+  `PROVISIONAL PENDING US-010` wiki promotion pass (grep count must reach 0),
+  and `evidence.md`.
 
 ---

@@ -75,6 +75,18 @@
   ~25 have rows (`herdr`, `fanout`, `weigh`, `rlm`, `blog`, `sync`, `approve`,
   `critique`, `benchmark` have none). A missing row is not evidence a skill is
   absent — check `ls .oh/skills/`.
+- **CC Safety Net blocks multi-line `while … done < <(cmd)` shell loops** with
+  "Command could not be safely analyzed (strict mode)" — even read-only ones.
+  Reproducing a probe's row-generator inline is therefore not available; either
+  hand-compute the affected rows or restructure into single-line commands.
+  Re-running the same shape just fails again.
+- **Wiki probes enumerate `git ls-files`, not the filesystem.** `corpus/*` is
+  gitignored-by-default, so `wiki-readme-index.sh` (and any consumer built the
+  same way) cannot see a brand-new entry until it is `git add -f`'d. Stage the
+  entry and its raw snapshot BEFORE regenerating `corpus/README.md`, or the
+  probe passes against an already-stale index. The index sort key is
+  `"<updated> <slug>"` reverse-sorted — same-date entries order by slug
+  descending.
 - **`.oh/tasks/<slug>/` is gitignored; task bookkeeping needs `git add -f`.**
   A plain `git add` of `prd.json`/`progress.txt` fails with "paths are ignored by
   one of your .gitignore files" even though the files are already tracked.

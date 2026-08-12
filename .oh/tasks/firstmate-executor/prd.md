@@ -69,7 +69,9 @@ the `prd.json` task graph, launched through a **herdr → tmux → foreground** 
 2. **Rollout:** opt-in first. `--executor=firstmate` ships alongside the unchanged `ralph` default;
    the default flip is a follow-up PR after green live runs.
 3. **ROUTING:** record the Luna/Sol table verbatim as target routing; today's delegations use the
-   Fable/Opus block.
+   Opus block. *(Amended by the Captain at the PR gate: Fable is too expensive — Fable 5 lists at
+   $10/$50 per MTok against Opus 5's $5/$25 — so every Fable row moves to Opus at the same effort
+   tier. Opus 5 supports the full `low`→`max` ladder, so the tiers transfer unchanged.)*
 4. **Autopilot:** pass-through flag only (pure deferral to `/ship-spec --executor=firstmate`); its
    inline ralph fallback is untouched.
 
@@ -100,12 +102,18 @@ P1–P10; **P11 is split to its own issue.**
 
 ## 3. ROUTING
 
-Recorded verbatim as target routing; today's delegations use the Fable/Opus block.
+Recorded verbatim as target routing; today's delegations use the Opus block.
 
 > **Not shipped by this PR.** The Luna/Sol block below is **target/aspirational routing and is NOT in
 > effect** — it is planning context captured verbatim per Captain decision #3, with no story, AC, or
-> FR that writes it into `.oh/context/rules/first-mate.md` or anywhere else. The **Fable/Opus** block
+> FR that writes it into `.oh/context/rules/first-mate.md` or anywhere else. The **Opus** block
 > is what today's delegations actually use. See Non-Goals.
+>
+> **Cost amendment (Captain, at the PR gate).** The second block originally routed FIRSTMATE,
+> ADVISOR, CRITIQUE, AUDIT, and RETRO to Fable. Fable is too expensive for this workload — Fable 5
+> lists at $10/$50 per MTok versus Opus 5's $5/$25 — so those five rows now route to Opus at their
+> original effort tiers. Opus 5 supports the whole `low`/`medium`/`high`/`xhigh`/`max` ladder, so no
+> tier had to be re-mapped. The Luna/Sol target block above is unchanged.
 
 ```
 FIRSTMATE=Luna max
@@ -118,20 +126,20 @@ RETRO=Sol - high | xhigh
 CLEANUP=Luna - max
 GIT=Luna - max
 ---
-FIRSTMATE=Fable - high | xhigh
-ADVISOR=Fable - xhigh | max
+FIRSTMATE=Opus - high | xhigh
+ADVISOR=Opus - xhigh | max
 PLAN=Opus - high | xhigh | max
-CRITIQUE=Fable - medium | high
+CRITIQUE=Opus - medium | high
 IMPLEMENT=Opus - low | medium
-AUDIT=Fable - high | xhigh | max
-RETRO=Fable - high | xhigh
+AUDIT=Opus - high | xhigh | max
+RETRO=Opus - high | xhigh
 CLEANUP=Opus - low | medium
 GIT=Opus - low | medium
 ```
 
-**Delegation for this build (today's Fable/Opus block):** P1/P2/P5/P8/P9 = IMPLEMENT Opus
-low–medium workers under Fable audit; P3 = architecture — Opus plan tier with Fable (xhigh) advisor
-review; P7/P11 = Opus low; audits = Fable high/xhigh.
+**Delegation for this build (today's Opus block):** P1/P2/P5/P8/P9 = IMPLEMENT Opus
+low–medium workers under Opus audit; P3 = architecture — Opus plan tier with an Opus (xhigh) advisor
+review; P7/P11 = Opus low; audits = Opus high/xhigh.
 
 ---
 
@@ -921,7 +929,7 @@ that the executor is proven, not merely described.
 - **Shipping the §3 ROUTING table.** The Luna/Sol block is **planning context recorded verbatim, not
   shipped by this PR**. No story, AC, or FR writes it into `.oh/context/rules/first-mate.md` § Effort
   Scaling or anywhere else. It is **target/aspirational routing and explicitly not in effect** —
-  today's delegations use the Fable/Opus block. A later reviewer must not mistake it for an
+  today's delegations use the Opus block. A later reviewer must not mistake it for an
   implemented change.
 - **Compatibility beyond the pinned herdr 0.7.4.** Every CLI shape this design depends on
   (`agent start` JSON, `agent get` exit codes, `wait output`, `pane list`, the `status: running` /

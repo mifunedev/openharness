@@ -535,3 +535,66 @@ content-identical to HEAD, `spec-family-contract.sh` PASSes, typecheck clean,
   spelled exactly.
 
 ---
+
+## US-008 — 2026-08-12 11:20 UTC
+
+**Title**: `sandbox-processes.md` — add a runner ladder (never a rewrite) + AGENTS.md + wiki entry
+**Files changed**: `.oh/skills/t3/references/sandbox-processes.md`, `AGENTS.md`,
+`CHANGELOG.md`, `.oh/skills/wiki/corpus/build-executor-ladder.md` (new),
+`.oh/skills/wiki/corpus/raw/2026-08-12-build-executor-ladder.md` (new),
+`.oh/skills/wiki/corpus/audit-architecture.md`, `.oh/skills/wiki/corpus/README.md`
+**Commit**: 7bdbe396
+**Result**: PASS
+
+### What I did
+
+Added (never rewrote) a `### Runner ladder for agentic build sessions` subsection
+to `sandbox-processes.md` § Source of Truth: managed/headless processes stay
+tmux — re-affirmed — while agentic build sessions climb herdr → tmux
+(`agent-firstmate-<slug>`) → foreground, with the four herdr conjuncts, the
+hard-error override, and the unchanged `| tee` log convention. Appended a
+matching paragraph to `AGENTS.md` § Exposing apps (a different section from
+US-004's Skills row, so neither edit reverts the other) and wrote the feature's
+single `## [Unreleased] → ### Added` CHANGELOG entry covering the executor, the
+ladder, the ship-spec Stage 10 arm, the autopilot deferral, and the `/spec
+execute` sentence. Created the 698-word `build-executor-ladder` wiki entry (two
+orthogonal axes as a Mermaid diagram, line-cited to all four required files, the
+executor-vs-role-charter disambiguation, ralph-stays-default + `STATUS:
+COMPLETE`-is-invariant, 3× `PROVISIONAL PENDING US-010`) plus a real provenance
+raw snapshot quoting the four new files at commit `17f04920`. Verified: pure
+insertion (`grep -c '^-'` = 1), both gateway literals still 1 hit each,
+`readlink CLAUDE.md` = `AGENTS.md` with an empty `diff`, `ralph.sh` and
+`.oh/prompts/` zero-diff, typecheck clean, 564/564 vitest, and 18 probes green
+including `wiki-readme-index`.
+
+### Learnings for future iterations
+
+- **`git add -f` the new wiki files BEFORE regenerating the README index.**
+  `wiki-readme-index.sh` enumerates `git ls-files`, not a filesystem glob, so a
+  brand-new entry is invisible to it until staged — regenerate first and the
+  probe passes against a README that is already stale.
+- **The README index sort key is `"<updated> <slug>"` reverse-sorted**, not
+  `updated` alone. Two entries sharing a date order by slug descending
+  (`build-executor-ladder` before `audit-architecture`; the pre-existing
+  `molt-…` before `managed-agents` at 2026-08-08 confirms it). You can hand-edit
+  two rows correctly without regenerating the whole table.
+- **CC Safety Net blocks multi-line `while … done < <(git ls-files)` loops**
+  ("could not be safely analyzed (strict mode)"). Reproducing the probe's
+  generator inline is not available; either hand-compute the changed rows (what
+  I did) or restructure into single-line commands. Do not retry the same shape.
+- **Bumping a cross-linked entry's `updated:` is part of adding a back-link.**
+  I added `[[build-executor-ladder]]` to `audit-architecture`'s See Also (the
+  PRD's Wiki Alignment says that entry "gains a `[[…]]` cross-link") — which
+  makes it a write, so `updated:` moves to today and its README row moves with
+  it. Nothing pins `audit-architecture`'s content, so this was probe-safe.
+- **US-010 greps this exact literal**: `PROVISIONAL PENDING US-010` appears 3×
+  in `build-executor-ladder.md` — on the degrade path, the fingerprint-gate
+  refusal, and end-to-end `STATUS: COMPLETE`. All three must be promoted or
+  corrected (grep count → 0) before the PR is marked ready.
+- **Body word count excludes frontmatter and the H1**: 698 / 900 for the entry.
+  State that number in the PR description (US-008 AC).
+- **US-009 next** must pin `readlink CLAUDE.md` = `AGENTS.md` and `ralph.sh`
+  still exists; note that `.oh/evals/probes/` is NOT in CI's shellcheck glob and
+  carries pre-existing SC2016 infos, so gate new probes on `--severity=warning`.
+
+---

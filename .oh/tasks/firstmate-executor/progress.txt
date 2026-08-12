@@ -29,6 +29,20 @@
   enforces that yet. Extending the glob touches `.github/workflows/`, which is
   outside US-001's ACs and is push-restricted for HTTPS tokens — flagged for a
   human/later story rather than done here.
+- **Angle brackets are the repo's placeholder notation — so a "closed set of
+  placeholders" needs a second notation for runtime-fill text.**
+  `.claude/skills/ship-spec/templates/prompt.md` mixes real render-time tokens
+  (`<slug>`, `<issue>`) with illustrative ones the *session* fills (`<NNN>`,
+  `<story title>`, `<YYYY-MM-DD>`), which makes "every `<...>` in the body is a
+  placeholder" false. `session-prompt.md` splits them: `<angle>` = renderer
+  substitutes, `{curly}` = session fills at runtime, declared in the header.
+  A one-line `grep -o '<[^ <>]*>' | sort -u` then IS the closed-set oracle.
+- **A contract recorded verbatim in a file's own header makes an ordering
+  probe vacuous unless the header is excluded.** The anchor list lives in the
+  header in the asserted order, so every anchor's first occurrence would be in
+  the header. `session-prompt.md` ends its header with a literal
+  `END CONTRACT HEADER -->` marker line and declares the ordering scope as
+  body-only; US-009's probe must skip to that line before comparing.
 - **A sourced library must not `set` shell options at file scope**, and must not
   use `set -u` even function-scoped: under `set -u` an unbound expansion
   terminates the whole shell, which from a sourced library means killing the
@@ -98,6 +112,64 @@ typecheck` clean, shellcheck clean at BOTH default and `-S warning` severity,
   `FIRSTMATE_TIMEOUT_MS=0` under a short harness timeout and assert the process
   was KILLED (`signal` set, no `RC=` printed) rather than having returned — which
   proves `0` did not become the ceiling.
+
+---
+
+## US-002 — 2026-08-12 10:36 UTC
+
+**Title**: session-prompt template + renderer contract
+**Files changed**: `.oh/skills/firstmate/templates/session-prompt.md` (new)
+**Commit**: 86b1928b
+**Result**: PASS
+
+### What I did
+
+Wrote the skill-owned session prompt that drives one long-lived First-Mate
+session over the whole `prd.json` task graph — a derivative of
+`.oh/prompts/advisor/implement.yml` + `pr.yml` step order, with `.oh/prompts/`
+left zero-diff. The body encodes the task-graph load, per-story `/compact`,
+the exact per-story cycle (implement → quality checks → commit with a
+`Submitted-by:` trailer → validate `acceptanceCriteria` → flip `passes: true`
+→ append progress), First-Mate-only certification, the max-3 bounded
+AUDIT-FAIL → `BLOCKED` rule, the dual-channel `STATUS: COMPLETE` contract,
+resume semantics, and the herdr/`/delegate` policy stated as prompt-level
+policy rather than a server guarantee. Both of this story's machine-checkable
+contracts live in the file's own header and were verified mechanically:
+the closed placeholder set (`grep -o '<[^ <>]*>' | sort -u` over the whole
+file returns exactly `<branch>`, `<issue>`, `<slug>`) and the 8-anchor
+relative ordering in the body (lines 91 → 98 → 110 → 130 → 167 → 190 → 191 →
+192, strictly increasing). `pnpm run typecheck` clean; 527/527 vitest across
+40 files; no `SKILL.md` created or modified.
+
+### Learnings for future iterations
+
+- **The anchor list US-009's probe must hardcode is, in order:**
+  `dependency graph`, `/compact`, `acceptanceCriteria`, `passes: true`,
+  `/audit implementation`, `evidence.md`, `/retro`, `Ready PR` — with pack
+  provenance `implement.yml:23,24,25,25,27,—,28` and `pr.yml:23,24,25,25,—,
+  28-32,33,34`. The probe must compare **first occurrence** and must start
+  **after** the `END CONTRACT HEADER -->` line, or it passes vacuously on the
+  header's own verbatim copy of the list.
+- **The three anchors that were nearly impossible to place naturally** are
+  `evidence.md`, `/retro`, and `Ready PR` — they belong to `/ship-spec`
+  Stages 11-13, which US-005 leaves unmodified, so the session must NOT run
+  them. They appear in §6 as an explicit *handoff* sentence ("`/ship-spec`
+  owns the tail") which satisfies the ordering without falsely claiming the
+  session does that work. Do not "fix" that sentence into an instruction.
+- **`/audit pr` is deliberately NOT an anchor** even though it is `pr.yml:27`:
+  it sits between anchors 5 and 6 in the pack but is out of session scope, and
+  including it would have forced the template to instruct work US-005
+  reserves for ship-spec. The header records this exclusion, and US-009's
+  probe must not add it back.
+- **US-003's renderer has exactly three tokens to substitute** — `<slug>`,
+  `<branch>`, `<issue>` — and `<issue>` is BARE DIGITS: the template already
+  writes `#<issue>` where a `#`-prefixed reference is wanted, so the renderer
+  must not prepend one. Curly-brace text is not its business.
+- **`git commit -F -` with a heredoc is blocked by the Bash safety net** in
+  this environment ("could not be safely analyzed (strict mode)"), and so is
+  chaining `cd`+`git add`+`git commit` in one call. Use separate calls and
+  repeated `-m` flags — each `-m` becomes its own paragraph, which is enough
+  for a full commit body plus the `Submitted-by:` trailer as the final `-m`.
 
 ---
 

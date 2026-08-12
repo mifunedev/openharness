@@ -58,6 +58,26 @@
   terminates the whole shell, which from a sourced library means killing the
   CALLER. Express strictness as explicit argument validation that RETURNS
   non-zero. Same reason libraries return errors instead of calling `exit`.
+- **Provider skill dirs are blanket symlinks — never hand-mirror a skill.**
+  `.pi/skills`, `.claude/skills`, and `.codex/skills` all point at
+  `../.oh/skills`, so writing `.oh/skills/<name>/SKILL.md` exposes it under all
+  three providers with zero provider-side edits. `skills-vendored.sh` pins this.
+  Same shape at the root: `CLAUDE.md -> AGENTS.md`, so edit `AGENTS.md` only.
+- **`.claude/protected-paths.txt` entries are matched with `grep -Fxq` — whole
+  line, exact.** One legacy entry (`.oh/agents/advisor.md`) carries a trailing
+  inline comment, so the format tolerates one, but a consumer matching that path
+  exactly would miss it. Put rationale on its own `#` line above the entries.
+- **A new `.oh/skills/<name>/SKILL.md` registers into the CURRENT session**
+  immediately (a `<system-reminder>` announces it). Free confirmation that the
+  frontmatter parsed — a malformed `description:` surfaces at write time, not at
+  the next session.
+- **AGENTS.md's Skills table is curated, not exhaustive.** 43 skill dirs exist;
+  ~25 have rows (`herdr`, `fanout`, `weigh`, `rlm`, `blog`, `sync`, `approve`,
+  `critique`, `benchmark` have none). A missing row is not evidence a skill is
+  absent — check `ls .oh/skills/`.
+- **`.oh/tasks/<slug>/` is gitignored; task bookkeeping needs `git add -f`.**
+  A plain `git add` of `prd.json`/`progress.txt` fails with "paths are ignored by
+  one of your .gitignore files" even though the files are already tracked.
 
 ---
 
@@ -255,6 +275,66 @@ typecheck` clean, shellcheck clean at BOTH default and `-S warning` on
   ("CHANGELOG.md gains an entry under `## [Unreleased]`") is the single entry
   for the whole feature — it must cover `firstmate.sh` and the ladder, not just
   the `sandbox-processes.md` change.
+
+---
+
+## US-004 — 2026-08-12 10:55 UTC
+
+**Title**: `/firstmate` SKILL.md + protected-paths registration
+**Files changed**: `.oh/skills/firstmate/SKILL.md` (new),
+`.claude/protected-paths.txt`, `AGENTS.md`
+**Commit**: bf276399
+**Result**: PASS
+
+### What I did
+
+Wrote the 323-line `/firstmate` SKILL.md — executor contract (opt-in third arm,
+ralph still default, `STATUS: COMPLETE` as the invariant terminal interface),
+the herdr → tmux → foreground ladder with its zeroth nesting guard and three
+eligibility conjuncts, the naming contract, the `FIRSTMATE_TIMEOUT_MS` session
+budget via `resolve_timeout_ms`, the watch matrix (progress.txt is the authority
+in every mode) with per-mode liveness oracles, the recovery matrix
+(FIRSTMATE-INCOMPLETE / PR stays draft + resume comment / mid-run herdr loss
+degrades to file-polling / stale lock is reclaimable), the per-mode manual kill
+procedure, per-slug concurrency guidance, and the env-var table. It opens with
+the executor-vs-role-charter disambiguation table. Registered `firstmate` plus
+three script paths in `protected-paths.txt` and added the `/firstmate` Skills row
+to `AGENTS.md` only. Checks: `readlink CLAUDE.md` → `AGENTS.md` and
+`diff AGENTS.md CLAUDE.md` empty (verified again after the commit), 564/564
+vitest across 41 files, `pnpm run typecheck` clean, 14 plausibly-affected probes
+green (incl. `skills-dir-clean`, `skill-paths`, `first-mate-charter`,
+`autopilot-executor-toggle`, `ralph-fallback-order`, `spec-family-contract`),
+and `git diff --stat` empty for `.oh/scripts/ralph.sh`, `.oh/prompts/`, `.pi/`.
+
+### Learnings for future iterations
+
+- **`.oh/scripts/lib/task-contract.sh` WAS added to `protected-paths.txt`**, one
+  path beyond US-004's two named ones, on the identical "load-bearing shared
+  infra" rationale plus that file's own same-PR rule. US-003 flagged the choice;
+  this is the resolution. No probe pins the file's entry set (only
+  `markitdown-wiki-ingest.sh` greps it, for its own path), so the addition is
+  probe-safe.
+- **`protected-paths.txt` is consumed with `grep -Fxq` — whole-line exact
+  match.** `.oh/agents/advisor.md` carries a trailing inline comment, so the
+  format tolerates one, but any consumer matching that path exactly would break.
+  Put rationale on its own `#` line above the entries, not after them.
+- **Pi/Claude/Codex needed ZERO provider edits** — `.pi/skills`,
+  `.claude/skills`, and `.codex/skills` are all blanket symlinks to
+  `../.oh/skills`, so `.oh/skills/firstmate/SKILL.md` appeared under all three
+  the moment it was written (verified with `ls -l` on each). Never hand-mirror a
+  skill into a provider dir.
+- **The new skill self-registered into this session's own skill list** the moment
+  the file was written (a `<system-reminder>` announced `firstmate` as available).
+  Useful signal that frontmatter parsed; also means a malformed `description:`
+  would surface immediately rather than at the next session.
+- **US-008's remaining AGENTS.md edit must not re-litigate the Skills table.**
+  The `/firstmate` row is now at line 190, between `/spec` and `/teach`. US-008
+  edits the same file for the runner-ladder mention — keep the two edits in
+  different sections so neither reverts the other.
+- **`.oh/skills/` has 43 skill dirs but AGENTS.md's table lists ~25.** The table
+  is curated, not exhaustive (`herdr`, `fanout`, `weigh`, `rlm`, `blog`, `sync`,
+  `approve`, `critique`, `benchmark` are all absent). Do not treat a missing row
+  as evidence a skill does not exist.
 
 ---
 

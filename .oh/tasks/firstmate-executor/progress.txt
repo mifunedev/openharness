@@ -78,6 +78,18 @@
 - **`.oh/tasks/<slug>/` is gitignored; task bookkeeping needs `git add -f`.**
   A plain `git add` of `prd.json`/`progress.txt` fails with "paths are ignored by
   one of your .gitignore files" even though the files are already tracked.
+- **Prove "region X is unmodified" by extracting the region from both sides and
+  diffing it** — not by reading hunk headers. `git show HEAD:<file> | awk
+  '/^### <marker>/{f=1} f' > /tmp/old` vs. the same awk on the worktree copy,
+  then `diff`. Hunk headers alone can't distinguish "untouched" from "shifted by
+  an insertion at the boundary", which is exactly the failure an
+  additive-only AC is guarding against.
+- **A probe pin belongs to ONE target file — read which shell variable the grep
+  takes.** `autopilot-executor-toggle.sh` greps `$SKILL` (autopilot),
+  `$SHIP` (ship-spec), `$CRON`, and `$AGENTS` in one file; the argument-hint pin
+  at L32 is `$SKILL`-only, so the same-looking edit is free in one skill and
+  requires a lockstep probe update in the other. Never generalize "that string
+  is pinned" across files without checking the variable.
 
 ---
 
@@ -335,6 +347,68 @@ and `git diff --stat` empty for `.oh/scripts/ralph.sh`, `.oh/prompts/`, `.pi/`.
   is curated, not exhaustive (`herdr`, `fanout`, `weigh`, `rlm`, `blog`, `sync`,
   `approve`, `critique`, `benchmark` are all absent). Do not treat a missing row
   as evidence a skill does not exist.
+
+---
+
+## US-005 — 2026-08-12 11:02 UTC
+
+**Title**: `/ship-spec` Stage 10 opt-in arm
+**Files changed**: `.oh/skills/ship-spec/SKILL.md` (= `.claude/skills/ship-spec/SKILL.md`)
+**Commit**: 1475ba1a
+**Result**: PASS
+
+### What I did
+
+Made `--executor=firstmate` a real `/ship-spec` flag, additively. Stage 1 gained
+the `*--executor=firstmate*) SHIP_SPEC_EXECUTOR=firstmate` case arm and
+`firstmate` in the `ralph|delegate-advisor)` validation list; Stage 10 gained an
+"Opt-in (`firstmate`)" subsection carrying the step-(2) substitution for the
+Advisor `/goal` prompt, the `.oh/scripts/firstmate.sh` invocations, a per-mode
+session-handle/log/watch-command table, the `FIRSTMATE_TIMEOUT_MS` bound, and the
+`FIRSTMATE-INCOMPLETE` → stays-draft recovery mirroring `RALPH-INCOMPLETE`.
+Verified mechanically: `grep -Fx` on the byte-identical default line, the
+136-line Stage 11–13 tail diffed byte-for-byte against `HEAD`, `ralph.sh` and
+`.oh/prompts/` zero-diff, `readlink CLAUDE.md` = `AGENTS.md`. 14 probes green
+(incl. `autopilot-executor-toggle`, `ship-spec-ready-finalization`,
+`autopilot-upstream-default`, `autopilot-pi-agent`), 564/564 vitest across 41
+files, `pnpm run typecheck` clean.
+
+### Learnings for future iterations
+
+- **A case arm's ACs are satisfiable while the flag still fails.** The AC pair
+  (new arm + validation list) exists precisely because line 68's
+  `case "$SHIP_SPEC_EXECUTOR" in ralph|delegate-advisor)` hard-exits on anything
+  else. Adding the arm alone yields `ERROR: invalid SHIP_SPEC_EXECUTOR=firstmate`.
+  US-006 has the same two-part shape in autopilot (~L204) — do not land one half.
+  I executed the extracted snippet across all five `ARGUMENTS` values plus two
+  env-var shapes rather than eyeballing it; `--executor=bogus` silently resolves
+  to `ralph` (pre-existing, unchanged — only the *env var* path hard-errors).
+- **`/ship-spec`'s own argument-hint is NOT probe-pinned; `/autopilot`'s IS.**
+  Only `.oh/evals/probes/autopilot-executor-toggle.sh:32` pins a hint bracket,
+  and it targets `$SKILL` (the autopilot skill), never `$SHIP`. So extending
+  ship-spec's hint is free, while US-006's identical-looking edit REQUIRES the
+  lockstep probe update in the same commit. Do not generalize from this story.
+- **The two `$SHIP` pins are the whole ship-spec surface of that probe** (L69
+  the default line, L70 the delegate-advisor arm). Everything else in ship-spec
+  is unpinned by it — but `ship-spec-ready-finalization.sh` separately pins five
+  tokens (`ready-for-review PR`, ``Stage 13 — `gh pr ready` ``,
+  `Finalization contract`, `/eval`, `/ci-status`) and greps for *forbidden*
+  draft-only phrasings, so new Stage-10 prose must not reintroduce
+  "manual: `gh pr ready`"-style wording.
+- **"Stages 11–13 unmodified" is cheap to prove, so prove it.**
+  `git show HEAD:<file> | awk '/^### Stage 11 —/{f=1} f'` vs. the same awk on
+  the worktree copy, then `diff`. Hunk-header inspection (`git diff -U0 | grep
+  '^@@'`) plus the stage line numbers is the corroborating check — an insertion
+  *at* the boundary would shift Stage 11 without appearing to touch it.
+- **`.claude/skills/ship-spec/` and `.oh/skills/ship-spec/` are the same file.**
+  `.claude/skills`, `.pi/skills`, `.codex/skills` are all blanket symlinks to
+  `../.oh/skills`, so the AC's `.claude/...` path and git's `.oh/...` path name
+  one inode. Stage the `.oh/` path; editing through either works, but only the
+  real path is what git records.
+- **CHANGELOG is still US-008's single entry for the whole feature** (US-001
+  through US-005 have all deferred it). US-008 must therefore cover the
+  ship-spec/autopilot opt-in arms too, not just its own `sandbox-processes.md`
+  change.
 
 ---
 

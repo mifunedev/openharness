@@ -473,3 +473,65 @@ byte-identical, and the three pinned case arms at exactly one occurrence each.
   not just `sandbox-processes.md`.
 
 ---
+
+## US-007 — 2026-08-12 11:10 UTC
+
+**Title**: `/spec execute` names the third executor
+**Files changed**: `.oh/skills/spec/references/execute.md` (= `.claude/skills/spec/references/execute.md`)
+**Commit**: 142f098f
+**Result**: PASS
+
+### What I did
+
+Added exactly one sentence to §1 "Commitment + build" of
+`.oh/skills/spec/references/execute.md`, immediately after the paragraph that
+already enumerates `--executor=ralph` (default) and `--executor=delegate-advisor`
+(legacy): it names `--executor=firstmate` as the third, opt-in executor, states
+that it launches ONE long-lived First-Mate session over the whole
+`.oh/tasks/<slug>/` task graph and reaches the same `STATUS: COMPLETE` terminal
+interface, and defers its mechanics to `/ship-spec` Stage 10's
+"Opt-in (`firstmate`)" subsection — so `/spec execute` composes rather than forks
+the build literals, per the file's own Core-principle paragraph. Verified: the
+diff is a PURE INSERTION (4 added lines, zero modified/deleted — `grep -c '^-'`
+returns 1, the `--- a/...` header), the §2 AUDIT-FAIL loop-back text is
+content-identical to HEAD, `spec-family-contract.sh` PASSes, typecheck clean,
+564/564 vitest, and `autopilot-executor-toggle` / `ralph-fallback-order` /
+`ship-spec-ready-finalization` / `first-mate-charter` are all still green.
+
+### Learnings for future iterations
+
+- **A one-sentence insertion into hard-wrapped prose is only a PURE insertion if
+  you append at a paragraph boundary.** My first attempt spliced the sentence
+  mid-paragraph before the closing "Use that skill's stage text / as the
+  authority..." line, which re-flowed that line and produced a *modified* line
+  (`grep -c '^-'` = 2). Appending after the paragraph's final line instead gives
+  4 pure `+` lines. US-008's `sandbox-processes.md` AC makes exactly this a
+  machine-checked invariant (`grep -c '^-'` must return 1) — build the edit that
+  way from the start rather than discovering it at verification time.
+- **"Text X is unchanged" ACs mean CONTENT, not line numbers.** Diffing
+  `grep -n -A2 'AUDIT-FAIL'` against HEAD reports a false failure the moment any
+  insertion above it shifts the line numbers. Drop `-n` (or diff the extracted
+  block) to check what the AC actually asserts.
+- **`.claude/skills` is a blanket symlink to `../.oh/skills`, so `.claude/...`
+  and `.oh/...` are the same file** — confirmed here by `ls -i` returning one
+  inode for both `execute.md` paths. Edit and stage the `.oh/` path (that is what
+  `git ls-files` tracks); the `.claude/` view updates for free. Same relationship
+  already noted for `ship-spec` in US-005's entry.
+- **`spec-family-contract.sh` pins the two phrases every `/spec` reference doc
+  must keep**: `.oh/tasks/<slug>/` (the folder interface) and
+  `AGENTS.md § The Workflow` (the authority), plus a ban on a `^## Handoff`
+  heading. My sentence happens to reuse the `.oh/tasks/<slug>/` literal, but any
+  future edit to these four reference docs must not remove either phrase or add
+  a `## Handoff` section.
+- **CHANGELOG is STILL unwritten for this whole feature.** US-001..US-007 have
+  now all deferred it (no US-007 AC names it either). US-008 owns the single
+  `## [Unreleased]` entry and must cover the ship-spec Stage 10 arm, the
+  autopilot arm, AND this `/spec execute` sentence — not just its own
+  `sandbox-processes.md` change.
+- **Three stories remain and they are the heavy ones**: US-008 (docs + wiki entry
+  + raw snapshot + README regen), US-009 (two new probes), US-010 (live per-mode
+  smoke + evidence.md + the `PROVISIONAL PENDING US-010` wiki confirmation pass).
+  US-010 greps the wiki entry US-008 writes, so the literal marker string must be
+  spelled exactly.
+
+---

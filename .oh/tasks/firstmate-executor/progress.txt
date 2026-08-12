@@ -1,1 +1,103 @@
 # progress
+
+## Codebase Patterns
+
+- **Shell tests are vitest, not bats.** Shell scripts are tested from
+  `.oh/scripts/__tests__/*.test.ts` by spawning `bash -c "source <script>; <snippet>"`
+  (see `ralph.test.ts` for the original of this pattern). Tests placed under
+  `.oh/skills/` NEVER run — `vitest.config.ts` includes only
+  `.oh/scripts/__tests__/**`, `.pi/**/__tests__/**`, `.oh/cli/**/__tests__/**`.
+- **Stub external CLIs via a fixture bin dir on PATH.** `session-runner.test.ts`
+  writes `herdr`/`tmux` stubs whose behavior is driven entirely by `STUB_*` env
+  vars and which append every invocation to `$STUB_CALLS`. Two PATH shapes:
+  *isolated* (PATH = fixture dir only, with coreutils symlinked in) proves a tool
+  is genuinely ABSENT; *prepended* (fixture + real PATH) merely shadows it. The
+  calls file is also the proof of a NEGATIVE — "the guard never invoked herdr" is
+  asserted as "the calls file does not exist".
+- **`pnpm run test` does not work here; use `npx vitest run`.** The root `test`
+  script is `vitest run`, but vitest is not linked into `node_modules/.bin` in
+  this worktree. `pnpm run typecheck` works normally.
+- **shellcheck is not installed in the sandbox and there is no sudo.** Run it as
+  `docker --config /tmp/dockercfg run --rm -i koalaman/shellcheck:stable - < <file>`
+  — feed the file on STDIN, because a `-v "$PWD:/mnt"` bind mount resolves
+  against the HOST filesystem (the docker socket is the host's), so the
+  container-side path does not exist. A clean `/tmp/dockercfg/config.json`
+  containing `{}` works around `error getting credentials`.
+- **CI's shellcheck glob is `.oh/scripts/*.sh` — it does NOT cover
+  `.oh/scripts/lib/*.sh`.** (`.github/workflows/ci-harness.yml:126`,
+  `release.yml:92`.) The new library is shellcheck-clean, but nothing in CI
+  enforces that yet. Extending the glob touches `.github/workflows/`, which is
+  outside US-001's ACs and is push-restricted for HTTPS tokens — flagged for a
+  human/later story rather than done here.
+- **A sourced library must not `set` shell options at file scope**, and must not
+  use `set -u` even function-scoped: under `set -u` an unbound expansion
+  terminates the whole shell, which from a sourced library means killing the
+  CALLER. Express strictness as explicit argument validation that RETURNS
+  non-zero. Same reason libraries return errors instead of calling `exit`.
+
+---
+
+## US-001 — 2026-08-12 10:30 UTC
+
+**Title**: `.oh/scripts/lib/session-runner.sh` — the runner ladder
+**Files changed**: `.oh/scripts/lib/session-runner.sh` (new),
+`.oh/scripts/__tests__/session-runner.test.ts` (new)
+**Commit**: ad9b5d4d
+**Result**: PASS
+
+### What I did
+
+Wrote the sourceable runner-ladder library and its 46-case vitest suite. The
+library defines the five required functions (`runner_detect`, `runner_launch`,
+`runner_verify_cwd`, `runner_alive`, `runner_teardown`) plus `resolve_timeout_ms`,
+`runner_watch`, `runner_abort`, `runner_install_abort_trap` and the shared
+naming/log/lock path helpers US-003 will reuse. herdr eligibility is the zeroth
+nesting guard plus three conjuncts (`command -v herdr`, the two-literal
+`herdr status` health predicate, the execution-context fingerprint gate);
+every other outcome degrades down the ladder with the reason written to the
+firstmate log, while an explicit `--runner`/`OH_RUNNER` that cannot be honoured
+is a hard error. `resolve_timeout_ms` is the single budget source and rejects
+`0`/negative/non-numeric/empty/out-of-range. All checks are green: 527/527
+vitest across 40 files (incl. an untouched `ralph.test.ts`), `pnpm run
+typecheck` clean, shellcheck clean at BOTH default and `-S warning` severity,
+`git diff` empty for `.oh/scripts/ralph.sh` and `.oh/prompts/`, and no
+`SKILL.md` touched.
+
+### Learnings for future iterations
+
+- **The fingerprint gate is provably symmetric.** The caller-side fingerprint and
+  the probe-pane fingerprint are produced by the SAME snippet
+  (`RUNNER_PROBE_SCRIPT`, run locally via `bash -lc` and in the pane via
+  `herdr agent start ... -- bash -lc`), so "gathered the same way" is true by
+  construction. Do not re-derive one of the two sides separately.
+- **`herdr status` verified live in this sandbox**: `status: running` and
+  `compatible: yes` are indented lines under a `server:` block — a plain
+  `grep -q 'status: running'` matches. There is no single "healthy" field, which
+  is exactly why the predicate is those two literals.
+- **The `| tee` is built ONCE** into the shared `inner` command string and used by
+  all three launch branches, so the behavioral contract holds while a naive
+  `grep -c 'tee'` over the file counts 1, not 3. The US-009 probe must assert the
+  literal's PRESENCE (or the behavior), never a count of three.
+- **`--no-focus` appears twice on purpose**: once in the session launch, once in
+  the detection probe pane. A probe asserting "every herdr launch has
+  `--no-focus`" should compare the count of `herdr agent start` occurrences with
+  the count of `--no-focus`.
+- **US-003 should source, not re-derive.** `runner_lock_path`, `runner_log_path`,
+  `runner_session_log_path`, `runner_agent_name` and `runner_tmux_session` are
+  already here and honour `RUNNER_TMPDIR` (default `/tmp`, overridable for
+  tests). `runner_abort` is the whole exit-path contract in one call.
+  `runner_teardown` recovers the pane id from `herdr agent get` when the calling
+  process did not launch the session — that is what `firstmate.sh --kill` needs.
+- **Deliberate deviation recorded in the file header**: the foreground branch does
+  NOT `exec` (as the PRD sketch shows). `exec` would replace the shell and
+  forfeit the FR-9a exit contract, so the command runs as a supervised child
+  watched by the same bounded poll tmux mode uses. The foreground `| tee` is new
+  behavior, not ralph parity.
+- **Testing "the budget was rejected" needs a negative timing assertion.** You
+  cannot assert a 4-hour ceiling directly; instead run the watch with
+  `FIRSTMATE_TIMEOUT_MS=0` under a short harness timeout and assert the process
+  was KILLED (`signal` set, no `RC=` printed) rather than having returned — which
+  proves `0` did not become the ceiling.
+
+---
+

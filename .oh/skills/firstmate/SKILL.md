@@ -304,7 +304,7 @@ The session itself exports `FIRSTMATE_SESSION=1`, `FIRSTMATE_SLUG`,
 signal inner `/delegate` calls key off to avoid selecting the herdr runner —
 **instruction, not mechanical enforcement**.
 
-## Related
+## See Also
 
 - [`.oh/scripts/firstmate.sh`](../../scripts/firstmate.sh) — the entrypoint
   (protected path)

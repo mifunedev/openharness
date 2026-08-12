@@ -41,6 +41,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | debugmcp-availability | A | 2026-08-03 03:38 | SKIPPED | issue #297 — DebugMCP MCP debug-server availability |
 | delegate-model-effort-policy | A | 2026-08-03 03:38 | PASS | conversation 2026-07-11 (delegate model inheritance and thinking policy) |
 | devtcp-hook | A | 2026-08-03 03:38 | PASS | .oh/memory/MEMORY.md 2026-06-10 (zsh /dev/tcp) |
+| docker-inspect-env-guard | A | 2026-08-12 17:26 | PASS | operator directive 2026-08-08 (agents keep the docker socket, but must |
 | docs-build-fast-path | A | 2026-08-03 03:38 | PASS | #455 — docs builds must stay out of fast harness/eval/release gates; #536 — docs site externalized to openharness-web; docs markdown relocated to .oh/docs/ |
 | drift-check-cron-staleness-glob | A | 2026-08-03 03:38 | PASS | issue #98; issue #225 (restart-required cron frontmatter/config drift) |
 | entrypoint-pnpm-manifest-fingerprint | A | 2026-08-03 03:38 | PASS | issue #521 (manifest-aware sandbox installs) 2026-07-01 |
@@ -49,6 +50,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | eval-results-atomic | A | 2026-08-03 03:38 | PASS | issue #83 (eval-results-atomic-write) |
 | eval-runner-exit | A | 2026-08-03 03:38 | PASS | .oh/memory/MEMORY.md 2026-06-11 (eval-runner-exit) #29 |
 | first-mate-charter | A | 2026-08-03 03:38 | PASS | .oh/tasks/first-mate-charter/ (issue #660) — First Mate role charter + advisor prompt pack must stay present, tracked, resolvable, and effort-vocabulary-aligned with /delegate |
+| firstmate-executor-contract | A | 2026-08-12 17:26 | PASS | .oh/tasks/firstmate-executor/ (issue #746) — the opt-in firstmate build executor is additive to ralph and shares its terminal interface |
 | get-oh-bootstrap | A | 2026-08-03 03:38 | PASS | get-oh.sh bootstrap — the Node-bootstrapping host-side path to the standalone `oh` CLI (also on npm as @mifune/openharness; see oh-npm-package.sh) |
 | git-skill | A | 2026-08-03 03:38 | PASS | conversation 2026-06-15 — rules are not always supported; git workflow must be the /git skill |
 | harness-audit-empty-output-gate | A | 2026-08-03 03:38 | PASS | issue #246 — /audit harness must fail closed on empty auditor outputs |
@@ -72,6 +74,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | oh-shipped-repo-overridable | A | 2026-08-03 03:38 | PASS | issue #531 follow-on (de-hardcode residual — shipped .oh shell scripts keep the upstream repo overridable) |
 | oh-standalone-lifecycle | A | 2026-08-03 03:38 | PASS | issue #564 |
 | oh-update | A | 2026-08-03 03:38 | PASS | issue #531 Phase 3 (oh update — upgrade only the .oh control plane) |
+| operator-config-guard | A | 2026-08-12 17:26 | PASS | operator directives 2026-08-06 (.config/ and settings.local.json are operator-only) |
 | owned-surface-guard | A | 2026-08-03 03:38 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | pnpm-audit-ci-gate | A | 2026-08-03 03:38 | PASS | issue #171 — pnpm security audits must run in CI |
 | post-bridge-publish-confirmation | A | 2026-08-03 03:38 | PASS | #523 — post-bridge live publishing requires an explicit final confirmation gate |
@@ -87,6 +90,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | rl-delegation-write-worker | A | 2026-08-03 03:38 | PASS | .oh/memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |
 | rlm-context-budget | A | 2026-08-03 03:38 | PASS | .oh/tasks/rlm-weighted-trajectories/prd.json US-006 |
 | sandbox-boot-guard-ci | A | 2026-08-03 03:38 | PASS | issue #449 (sandbox image build CI guard) 2026-06-19 |
+| session-runner-ladder | A | 2026-08-12 17:26 | PASS | .oh/tasks/firstmate-executor/ (issue #746) — the shared herdr -> tmux -> foreground runner ladder and its safety gates |
 | ship-spec-ready-finalization | A | 2026-08-03 03:38 | PASS | issue #134 — /ship-spec must finalize ready PRs after gates, not stop at draft scaffold |
 | skill-paths | A | 2026-08-03 03:38 | PASS | issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard |
 | skills-dir-clean | A | 2026-08-03 03:38 | PASS | conversation 2026-06-29 — Pi parses every top-level `.md` in the skills |

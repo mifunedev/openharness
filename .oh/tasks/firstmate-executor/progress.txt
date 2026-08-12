@@ -412,3 +412,64 @@ files, `pnpm run typecheck` clean.
 
 ---
 
+
+## US-006 — 2026-08-12 11:06 UTC
+
+**Title**: `/autopilot` pass-through flag
+**Files changed**: `.oh/skills/autopilot/SKILL.md` (= `.claude/skills/autopilot/SKILL.md`), `.oh/evals/probes/autopilot-executor-toggle.sh`
+**Commit**: ddbec416
+**Result**: PASS
+
+### What I did
+
+Landed the `firstmate` arm in `/autopilot` as pure deferral, both halves of the
+two-part edit together: the additive `*--executor=firstmate*) EXECUTOR=firstmate`
+case arm AND `firstmate` in the `case "$EXECUTOR" in ship-spec|delegate-advisor|ralph)`
+validation list (~L204). Added a §5 `#### firstmate` subsection mirroring
+`delegate-advisor` (passes `--executor=firstmate` to `/ship-spec`, no autopilot-side
+build mechanics, reuses the `DELEGATE-FAIL` compensation) with the
+`FIRSTMATE_TIMEOUT_MS` cap stated where the arm is described, plus the
+argument-hint bracket, the toggle prose, the design-notes executor bullet, the
+`DELEGATE-FAIL` token row, and two Reference rows. The probe's pinned bracket
+literal was updated in the SAME commit per the lockstep AC, and I added a new
+probe assertion for the validation list so the two halves can never land apart.
+Verified: both required probes green, the full suite 94 PASS / 0 FAIL, 564/564
+vitest, typecheck clean, `ralph.sh` + `.oh/prompts/` zero-diff, §5 ralph fallback
+byte-identical, and the three pinned case arms at exactly one occurrence each.
+
+### Learnings for future iterations
+
+- **Execute the extracted snippet; don't eyeball a two-part case edit.** I ran
+  the live `EXECUTOR=` block against 7 `ARGUMENTS` values and 5
+  `AUTOPILOT_EXECUTOR` values. `--executor=firstmate` → `firstmate` (exit 0),
+  `AUTOPILOT_EXECUTOR=bogus` → exit 1. Note the asymmetry US-005 also found:
+  `--executor=bogus` silently resolves to the default (the `case` just doesn't
+  match), while only the *env-var* path hard-errors. Pre-existing, unchanged.
+- **When you break a pinned literal by design, ADD an assertion for the thing
+  that was un-pinned.** The bracket edit was the AC's sanctioned probe break;
+  the validation list at ~L204 was pinned by nothing, which is exactly why the
+  critique flagged it as a silent-failure hazard. I pinned it
+  (`grep -Fq 'case "$EXECUTOR" in ship-spec|delegate-advisor|ralph|firstmate)'`)
+  so the arm and the list are now mechanically coupled.
+- **`shellcheck` on `.oh/evals/probes/` is info-noisy at baseline and NOT in
+  CI.** `autopilot-executor-toggle.sh` has 24 pre-existing SC2016 infos (the
+  correct single-quoted `grep -F` idiom); mine made 25. CI runs
+  `shellcheck -S warning` over `.oh/scripts/*.sh` and friends — probes are not
+  in the glob at all. Compare against `git show HEAD:<file> | shellcheck -`
+  before calling an info-level hit a regression, and gate on `--severity=warning`.
+- **A third probe SKIPs in this environment: `next-dev-prod.sh`** ("no
+  mifunedev/website process or app-website tmux session"). It is
+  environment-conditional and unrelated to this branch — it skips at HEAD too.
+  US-009's AC pins the SKIPPED baseline at 2 (`autopilot-preflight-gate`,
+  `debugmcp-availability`); expect 3 here and attribute the third to the absent
+  website process, not to a regression.
+- **The deferral must set no budget sentinel — verify with a grep for the
+  ASSIGNMENT, not the mention.** `grep -nE 'FIRSTMATE_TIMEOUT_MS[[:space:]]*=|export FIRSTMATE_TIMEOUT_MS'`
+  returns nothing in the autopilot skill while 5 read-only mentions document the
+  cap. Enforcement stays in US-001's `resolve_timeout_ms`.
+- **CHANGELOG still unwritten for this whole feature.** US-001..US-006 have all
+  deferred it (no US-006 AC names it). US-008 owns the single `## [Unreleased]`
+  entry and must now cover the ship-spec Stage 10 arm AND this autopilot arm,
+  not just `sandbox-processes.md`.
+
+---

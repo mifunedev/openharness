@@ -214,6 +214,12 @@ Interactive apps and development servers belong in Herdr panes. Managed/headless
 services (cron, gateways, watchdogs) use named tmux sessions — see
 `.oh/skills/t3/references/sandbox-processes.md`.
 
+Agentic build sessions (one long-lived agent over a whole `.oh/tasks/<slug>/`
+task graph — the `firstmate` executor) pick neither up front: they resolve their
+host through a **herdr → tmux (`agent-` session) → foreground** ladder, degrading
+downward with the reason logged. See `/firstmate` and
+`.oh/skills/t3/references/sandbox-processes.md` § Source of Truth.
+
 ## What You Do
 
 - Commit and push changes to the harness itself (.devcontainer/, .oh/install/, workspace/ templates, .oh/scripts/, .oh/crons/)

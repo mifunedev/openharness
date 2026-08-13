@@ -101,21 +101,25 @@ run. The script writes to no file under the registry it scans.
 
 ## How a publisher reads the result
 
-The exit code alone does not tell a publisher whether their change is safe.
-Against live `master` the check exits 1 today and will keep exiting 1 until the
-registry repairs its five `KNOWN` defects, because `KNOWN` deliberately does not
-suppress the exit code.
+The check exits 0 against live `master` as of `eab0a14`, so today the exit code
+answers the publisher's question directly: a nonzero exit means your change added
+drift.
 
-Read the `neither` count instead. It is the number of findings that are neither
-accepted nor already triaged — that is, the drift this run is the first to see.
+That is true only while the `KNOWN` backlog is empty. `KNOWN` deliberately does
+not suppress the exit code, so one triaged-but-unrepaired defect makes the check
+exit 1 for everyone until the registry repairs it. It stayed that way from day
+one until mifunedev/skills#8. Read the `neither` count and you are correct in
+both regimes: it is the number of findings that are neither accepted nor already
+triaged — the drift this run is the first to see.
 
 | Output | Meaning for a publisher |
 |---|---|
-| `neither: 0` | No new drift. The surviving findings are the recorded `KNOWN` backlog. |
+| `neither: 0` | No new drift. Any surviving findings are the recorded `KNOWN` backlog. |
 | `neither: N` (N > 0) | Your change added N unportable references. Repair them, or add an entry with a reason. |
 
-The exit code stays honest about the registry's true state; `neither` is the
-signal that answers "did I make it worse".
+A `stale exception` line names an entry that matches no line in the file it
+names. It does not fail the run. It means a repair landed and the entry can go —
+which is how the five day-one `KNOWN` entries were retired.
 
 ## The two probes
 
@@ -247,16 +251,15 @@ repository.
 
 To close that gap, a scheduled job under `.oh/crons/` would clone the registry
 and run the probe armed. That is the only option that also catches a commit made
-directly against the registry, which the publishing step cannot see. It is not
-built here: the check exits 1 against live master until the five recorded
-defects are repaired there, so a cron added today would page on a known backlog
-from its first run. Repair the `KNOWN` entries first, then schedule it.
+directly against the registry, which the publishing step cannot see.
 
-That repair is open as mifunedev/skills#8. Against that branch the check reports
-`findings: 9`, `labelled KNOWN: 0`, `neither: 0`, exit 0. When it merges, the
-five `KNOWN` entries below match no line and report as `stale exceptions`, which
-does not fail the run — so neither merge order breaks anything. Delete them in a
-follow-up after that merge, and the cron becomes viable.
+That job was blocked at first, for a stated reason: the check exited 1 against
+live master until the five recorded defects were repaired there, so a cron added
+then would have paged on a known backlog from its first run. mifunedev/skills#8
+repaired all five and merged as `eab0a14`. The check now reports `findings: 9`,
+`labelled KNOWN: 0`, `neither: 0`, exit 0 against live master, and the armed
+probe passes. **The cron is unblocked and remains unbuilt.** Whoever adds it
+starts from a green baseline, so its first page means real drift.
 
 ## How far this check reaches
 
@@ -277,8 +280,13 @@ and left unfixed.
 
 ## The exception list
 
-Day-one state, measured against registry master `1d11ab6`: 8 `ALLOW` entries and
-5 `KNOWN` entries.
+Current state, measured against registry master `eab0a14`: 8 `ALLOW` entries and
+no `KNOWN` entries. The check exits 0.
+
+Day one held 5 more, all `KNOWN`, recording the defects the first sweep found and
+left standing. mifunedev/skills#8 repaired every one, so those entries matched no
+line and were deleted here. `.oh/tasks/registry-drift-lint/sweep.md` keeps the
+dated record of what they were.
 
 ```allow
 # CLASS | RULE | registry-relative path | 12-hex line hash | reason
@@ -290,9 +298,4 @@ ALLOW | OH-PATH | skills/ste/SKILL.md | dc032d4b6850 | inside the [ -x ] existen
 ALLOW | OH-PATH | skills/ste/SKILL.md | e6bc73aa7bbf | inside the [ -x ] existence guard; the whole block is a no-op outside a harness checkout
 ALLOW | DANGLING-REF | skills/harness-context/SKILL.md | 0c9d156752cb | enumerates the harness repository per-directory READMEs; not a file this skill folder ships
 ALLOW | HARNESS-SKILL | skills/reflect/SKILL.md | 7d0773a55384 | names a Claude Code built-in command, which an installer on that client already has
-KNOWN | DANGLING-REF | skills/ship-spec/SKILL.md | d7a496099f8f | tells the reader to run a script this skill folder does not ship; repair is a registry change, which issue #758 criterion 5 puts out of scope
-KNOWN | DANGLING-REF | skills/ship-spec/SKILL.md | b9903733862f | tells the reader to run a script this skill folder does not ship; repair is a registry change, which issue #758 criterion 5 puts out of scope
-KNOWN | DANGLING-REF | skills/ship-spec/SKILL.md | 4526ba2e1c82 | tells the reader to run a script this skill folder does not ship; repair is a registry change, which issue #758 criterion 5 puts out of scope
-KNOWN | HARNESS-SKILL | skills/ste/SKILL.md | 16906cfed0ee | names a skill the registry does not publish; the registry ships reflect. Repair is a registry change, out of scope here
-KNOWN | OH-PATH | skills/ste/SKILL.md | 01ede414c12b | bare cross-repository pointer with no installer fallback; this is historical defect 3, repaired only into a conditional. Repair is a registry change, out of scope here
 ```

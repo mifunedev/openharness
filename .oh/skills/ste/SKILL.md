@@ -77,28 +77,27 @@ Restart <component> after <duration>.
 Ask the author for `<component>` and `<duration>`. A guessed duration reads as
 fact and survives every later edit.
 
-## Precedence over `/caveman`
+## Precedence over an output-compression mode
 
-STE governs *artifacts*. `/caveman` governs *conversation*.
+STE governs *artifacts*. A compression mode governs *conversation*.
 
 | Text | Standard |
 |---|---|
 | docs, specs, runbooks, README files, code comments | `/ste` |
 | commit messages, PR bodies, PR comments, issue bodies | `/ste` |
-| the live chat reply to the operator | `/caveman` |
+| the live chat reply to the operator | the compression mode |
 
-Rewrite a caveman-compressed draft to STE rules before you commit the draft,
-post the draft, or write the draft to disk. Level `full` drops articles and
-leaves fragments standing (`.oh/skills/caveman/SKILL.md:31`), which breaks the
-full-sentence rule. Do not run `/caveman-compress` against a file that `/ste`
+Some agent setups run a terse output mode that drops articles and leaves
+sentence fragments standing. Such a mode breaks the full-sentence rule. Rewrite
+a compressed draft to STE rules before you commit the draft, post the draft, or
+write the draft to disk. Never run a compression pass against a file that `/ste`
 governs.
 
-STE adopts two `/caveman` clauses by reference rather than restating them:
+Two clauses hold whichever mode runs:
 
-- never compress code, commands, identifiers, or error strings
-  (`.oh/skills/caveman/SKILL.md:41-46`);
+- never compress code, commands, identifiers, or error strings;
 - drop back to plain prose for security warnings and for irreversible-action
-  confirmations (`.oh/skills/caveman/SKILL.md:48-57`).
+  confirmations.
 
 ## Rewrite mode
 

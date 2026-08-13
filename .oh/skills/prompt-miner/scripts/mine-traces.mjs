@@ -425,9 +425,15 @@ export function scoreSession(agg, weights = DEFAULT_WEIGHTS, groundTruth = { has
     penalties.turnBloat;
   const bonus = groundTruth.hasBonus ? w.groundTruthBonus : 0;
   const score = clamp(base + bonus, 0, 100);
+  // The uncensored sibling of `score`. `base` is already capped at 100 by
+  // construction and `bonus` adds up to 15 more, so the clamped `score` is
+  // censored above 100 — an effect size computed on it reads a flattened upper
+  // tail. Marker effect sizes correlate against THIS field (references/markers.md).
+  const scoreUncapped = base + bonus;
 
   return {
     score: Number(score.toFixed(2)),
+    scoreUncapped: Number(scoreUncapped.toFixed(2)),
     scoreBreakdown: {
       base: Number(base.toFixed(2)),
       groundTruthBonus: bonus,
@@ -1017,6 +1023,7 @@ async function run(args) {
       noHumanPrompt: agg.noHumanPrompt,
       sessionType,
       score: scored.score,
+      scoreUncapped: scored.scoreUncapped,
       scoreBreakdown: scored.scoreBreakdown,
       groundTruth: gt,
       features,

@@ -197,6 +197,71 @@ test("ground-truth bonus is added and the total is capped at 100", () => {
   assert.equal(score, 100); // 100 + 15 capped at 100
 });
 
+// --- scoreUncapped: the uncensored sibling of score ------------------------
+
+test("scoreUncapped carries the uncensored total while score stays clamped at 100", () => {
+  const clean = aggregateSession(
+    [
+      { kind: "human", isHuman: true, text: "go", ts: "2026-01-01T00:00:00Z" },
+      { kind: "assistant", stopReason: "end_turn", ts: "2026-01-01T00:01:00Z" },
+    ],
+    { sessionId: "u", harness: "claude" },
+  );
+  const scored = scoreSession(clean, DEFAULT_WEIGHTS, { hasBonus: true });
+  assert.equal(scored.score, 100, "score is still clamped");
+  assert.equal(scored.scoreUncapped, 115, "base 100 + bonus 15, uncensored");
+  assert.ok(scored.scoreUncapped > 100, "the ceiling does not censor scoreUncapped");
+  // Sibling of score, not nested in the breakdown.
+  assert.ok(!("scoreUncapped" in scored.scoreBreakdown), "not nested in scoreBreakdown");
+});
+
+test("a maximally-penalized session floors scoreUncapped at 0 without going negative", () => {
+  // Built as a literal agg: aggregateSession can never emit all five signals at
+  // their maximum at once (abandoned and incomplete are mutually exclusive, and
+  // correctionDensity counts follow-ups only, so it is (n-1)/n < 1). scoreSession
+  // is pure, so the worst case the weights permit is exercised directly.
+  const worst = {
+    toolErrorRate: 1,
+    correctionDensity: 1,
+    abandoned: 1,
+    incomplete: 1,
+    turnBloat: 1,
+  };
+  const scored = scoreSession(worst, DEFAULT_WEIGHTS, { hasBonus: false });
+  // 100 - 35 - 30 - 20 - 10 - 5 = 0
+  assert.equal(scored.scoreUncapped, 0, "lower bound is unaffected by the change");
+  assert.equal(scored.score, 0);
+  assert.ok(scored.scoreUncapped >= 0, "current weights cannot produce a negative");
+});
+
+test("scoreUncapped is emitted on both sessions[] and unranked[] of a fixture run", () => {
+  // --min-turns 4 splits the fixtures: the 3-turn session falls to unranked[].
+  const out = execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--min-turns", "4", "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const data = JSON.parse(out);
+  assert.ok(data.sessions.length > 0, "ranked population is non-empty");
+  assert.ok(data.unranked.length > 0, "unranked population is non-empty");
+  for (const r of [...data.sessions, ...data.unranked]) {
+    assert.equal(typeof r.scoreUncapped, "number", `scoreUncapped on ${r.sessionId}`);
+  }
+});
+
+test("sessions[] ranking still sorts on the clamped score, not scoreUncapped", () => {
+  const out = execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const data = JSON.parse(out);
+  const expected = [...data.sessions]
+    .sort((a, b) => b.score - a.score || String(a.sessionId).localeCompare(String(b.sessionId)))
+    .map((s) => s.sessionId);
+  assert.deepEqual(data.sessions.map((s) => s.sessionId), expected);
+});
+
 // --- --no-git ground-truth stub path (bonus = 0) ---------------------------
 
 test("--no-git stubs the ground-truth bonus to 0 even when a PR URL is present", () => {

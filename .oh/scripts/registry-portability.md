@@ -222,6 +222,35 @@ exit code alone, unless you pass `--strict-exceptions`.
 - `template/`, which a new skill author copies from, sits outside `skills/` and is
   not scanned.
 
+## When this check actually runs
+
+Nothing runs the registry scan automatically. `OH_REGISTRY_CHECKOUT` is set in no
+GitHub workflow and no cron; it appears only in the probe that reads it and in
+this file. CI runs the probe suite (`.github/workflows/ci-harness.yml` and
+`release.yml` both call `.oh/skills/eval/run.sh`), so the gate probe fires on
+every run — but the registry-scanning probe finds no checkout there and reports
+SKIPPED every time.
+
+So the two halves have different triggers:
+
+| What | Runs when | Automatic |
+|---|---|---|
+| Gate wiring (`registry-portability-gate.sh`) | every CI run | yes |
+| Registry scan (the linter, and the probe that wraps it) | a human runs it | no |
+
+The scan's intended trigger is the publishing step in
+`.oh/skills/builder/references/skill.md`: run it against a checkout before
+opening the registry pull request. That is a documented manual procedure, not an
+automated gate, and it catches drift only on the path that goes through this
+repository.
+
+To close that gap, a scheduled job under `.oh/crons/` would clone the registry
+and run the probe armed. That is the only option that also catches a commit made
+directly against the registry, which the publishing step cannot see. It is not
+built here: the check exits 1 against live master until the five recorded
+defects are repaired there, so a cron added today would page on a known backlog
+from its first run. Repair the `KNOWN` entries first, then schedule it.
+
 ## How far this check reaches
 
 The registry has no CI workflow. Its `.github/` directory holds issue and pull

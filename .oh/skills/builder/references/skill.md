@@ -166,6 +166,11 @@ the required gate before opening the registry pull request:
 bash .oh/scripts/registry-portability.sh --registry <path-to-registry-checkout>
 ```
 
+Read the `neither` count in the output, not the exit code. The check exits 1
+against the registry today because five recorded defects still stand there, so
+`neither: 0` — and not exit 0 — is the result that means your change added no
+new unportable reference.
+
 See `.oh/scripts/registry-portability.md` for the rule set and the procedure
 for adding an exception. The registry has no CI, so this gate is the only
 automated check on the portable copy.

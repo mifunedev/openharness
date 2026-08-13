@@ -96,12 +96,46 @@ Two further flags:
   one.
 - `--strict-exceptions` turns a stale exception entry into exit 1.
 
-The probe `.oh/evals/probes/registry-portability.sh` reads the checkout path from
-the environment variable `OH_REGISTRY_CHECKOUT`. The probe reports SKIPPED when
-that variable is unset.
-
 Every run prints the number of skill folders and files it read, including a clean
 run. The script writes to no file under the registry it scans.
+
+## How a publisher reads the result
+
+The exit code alone does not tell a publisher whether their change is safe.
+Against live `master` the check exits 1 today and will keep exiting 1 until the
+registry repairs its five `KNOWN` defects, because `KNOWN` deliberately does not
+suppress the exit code.
+
+Read the `neither` count instead. It is the number of findings that are neither
+accepted nor already triaged — that is, the drift this run is the first to see.
+
+| Output | Meaning for a publisher |
+|---|---|
+| `neither: 0` | No new drift. The surviving findings are the recorded `KNOWN` backlog. |
+| `neither: N` (N > 0) | Your change added N unportable references. Repair them, or add an entry with a reason. |
+
+The exit code stays honest about the registry's true state; `neither` is the
+signal that answers "did I make it worse".
+
+## The two probes
+
+| Probe | Reads | Skips when |
+|---|---|---|
+| `.oh/evals/probes/registry-portability.sh` | the published registry | `OH_REGISTRY_CHECKOUT` is unset |
+| `.oh/evals/probes/registry-portability-gate.sh` | this repository | never |
+
+The first probe scans the registry, so it needs a checkout and reports SKIPPED
+without one. That is every run in CI, which has no registry clone. It is the
+right result for that contract — a tree you do not have cannot be scanned — but
+it means the first probe guards nothing by default.
+
+The second probe carries the half of the contract that lives in this repository,
+so it is always armed. It asserts the linter is present and still fails closed,
+the `allow` block parses and every entry is well formed, and the publishing step
+in `.oh/skills/builder/references/skill.md` still names the gate. Those are the
+ways this check gets silently disarmed: deleted, made unparseable, or left with
+no caller. None of them would turn the first probe red, because the first probe
+is not running.
 
 ## Exit codes
 

@@ -103,21 +103,36 @@
 #     only list/get/read/send/rename/focus/wait/start/attach/explain. Teardown
 #     is `herdr pane close <pane_id>`; a stop/kill verb would fail silently
 #     inside a trap.
-#   * herdr panes may be HOST processes. Mechanism, confirmed 2026-08-12: the
-#     operator's config directory is bind-mounted read-write into this
-#     container, so the container's herdr CLI reads the HOST operator's herdr
-#     config — socket path and server address included — connects to the HOST's
-#     herdr server, and panes spawn outside the sandbox. That is why herdr
-#     eligibility carries the execution-context gate below.
-#
-#     This is a deployment defect, not a property of herdr. It is one of two
+#   * herdr panes may be HOST processes. This was true of the deployment that
+#     built the gate: the operator's config directory was bind-mounted
+#     read-write into the container, so the container's herdr CLI read the HOST
+#     operator's herdr config — socket path and server address included —
+#     connected to the HOST's herdr server, and panes spawned outside the
+#     sandbox. A deployment defect, not a property of herdr; one of two
 #     host-root escape paths tracked under EPIC #731 as issue #756.
 #
-#     MIGRATION TRIGGER: when #756 closes, the container's herdr CLI reaches an
-#     in-container server and the gate stops rejecting herdr by itself. Do NOT
-#     delete the gate then — it is a build-correctness guard, and its job is to
-#     prove environment identity rather than to assume it. Re-verify with a live
-#     probe pane and update these notes with the observed result.
+#     MIGRATION RESULT, observed 2026-08-13 after #756 closed. The trigger this
+#     note used to carry has been discharged; recording what the live re-probe
+#     actually showed rather than what it predicted:
+#
+#       - The config bind is gone. The herdr CLI now reaches an in-container
+#         server, `herdr agent start --cwd <container path>` is honoured
+#         instead of ignored, and the probe pane returns the caller's own
+#         environment. Caller and probe both read
+#         `host=<container> docker=yes worktree=yes`.
+#       - So the fingerprint comparison now PASSES where it used to fail. The
+#         gate stays regardless: it is a build-correctness guard whose job is to
+#         PROVE environment identity, not to encode one deployment's topology.
+#       - The prediction that the gate "stops rejecting herdr by itself" was
+#         WRONG, and closing #756 is what exposed why. A second defect had been
+#         masked by the first: the probe pane exited before its own read, so no
+#         fingerprint could ever be obtained and herdr was refused everywhere,
+#         including in a correct environment. Fixed in #761 by the keep-alive
+#         below — see RUNNER_PROBE_KEEPALIVE_SUFFIX.
+#
+#     The lesson worth keeping: a gate that is failing for one reason can hide a
+#     second reason it would fail anyway. Removing the cause does not prove the
+#     gate works — only re-probing does.
 #
 # ---------------------------------------------------------------------------
 # Deliberate deviations from the PRD sketch
@@ -159,6 +174,25 @@ RUNNER_FINGERPRINT_MARKER='FIRSTMATE-FINGERPRINT'
 # shellcheck disable=SC2016  # deliberately unexpanded: this is a script to be
 # evaluated inside the probe pane / a child shell, not here.
 RUNNER_PROBE_SCRIPT='wt="$1"; h="$(hostname 2>/dev/null || uname -n 2>/dev/null || echo unknown)"; d=no; [ -e /.dockerenv ] && d=yes; w=no; [ -d "$wt" ] && w=yes; printf "FIRSTMATE-FINGERPRINT host=%s docker=%s worktree=%s\n" "$h" "$d" "$w"'
+
+# The probe pane must OUTLIVE the read. herdr destroys a pane the moment its
+# command returns, and `herdr pane read` on a destroyed pane answers
+# `{"code":"pane_not_found"}` — so a probe that prints one line and exits races
+# its own reader and loses. The gate then reports "no fingerprint obtained" for
+# an environment that in fact matches, which makes the herdr rung unreachable
+# everywhere rather than only where the environment differs (#761).
+#
+# The keep-alive is a SUFFIX applied only to the pane invocation. It is never
+# folded into RUNNER_PROBE_SCRIPT, because that snippet also runs locally in
+# runner_local_fingerprint, and "the same snippet runs in the probe pane and
+# locally" is what makes the comparison true by construction rather than by
+# convention. A sleeping local fingerprint would also stall every caller.
+#
+# $2 is the keep-alive budget in seconds, passed positionally by
+# runner_probe_fingerprint. It is an upper bound, not a cost: the gate closes
+# the pane as soon as the read completes, on the match and the mismatch path
+# alike, so the sleep is cut short in every normal run.
+RUNNER_PROBE_KEEPALIVE_SUFFIX='; sleep "${2:-30}"'
 
 # Mutable state. Declared here so a caller running under `set -u` can read them
 # before the first launch.
@@ -292,6 +326,25 @@ runner_local_fingerprint() { # <worktree>
   bash -lc "$RUNNER_PROBE_SCRIPT" firstmate-probe "${1:-}" 2>/dev/null | runner_extract_fingerprint
 }
 
+# Seconds the probe pane must stay alive: the read window plus a margin. Derived
+# from the one timeout source so the two can never drift apart. Rejects empty,
+# non-numeric and absurdly small values back to a usable floor.
+runner_probe_keepalive_s() {
+  local ms="${RUNNER_PROBE_TIMEOUT_MS:-15000}" s
+  case "$ms" in '' | *[!0-9]*) ms=15000 ;; esac
+  s=$((ms / 1000 + 5))
+  [ "$s" -lt 5 ] && s=5
+  printf '%s\n' "$s"
+}
+
+# The snippet the probe PANE runs: the shared fingerprint script plus the
+# keep-alive. Split out so both the tests and session-runner-ladder.sh can
+# assert on the composition instead of re-deriving it.
+runner_probe_pane_script() {
+  local composed="${RUNNER_PROBE_SCRIPT}${RUNNER_PROBE_KEEPALIVE_SUFFIX}"
+  printf '%s' "$composed"
+}
+
 # Names the fields that differ between two fingerprints, so the logged degrade
 # reason says WHICH field disagreed rather than only that something did.
 runner_fingerprint_diff() { # <caller_fp> <probe_fp>
@@ -307,18 +360,20 @@ runner_fingerprint_diff() { # <caller_fp> <probe_fp>
   printf '%s\n' "${diff:-unknown}"
 }
 
-# Launches a SHORT-LIVED probe pane, reads its environment fingerprint back,
-# and closes the pane again on BOTH verdicts. Echoes the probe's fingerprint;
-# returns non-zero when no fingerprint could be obtained.
+# Launches a probe pane, reads its environment fingerprint back, and closes the
+# pane again on BOTH verdicts. Echoes the probe's fingerprint; returns non-zero
+# when no fingerprint could be obtained. The pane is kept alive across the read
+# rather than being allowed to exit on its own — see RUNNER_PROBE_KEEPALIVE_SUFFIX.
 runner_probe_fingerprint() { # <slug> <worktree>
   local -
   set -o pipefail
   local slug="${1:-}" worktree="${2:-}"
   local probe_name="firstmate-probe-$slug-$$"
-  local start_json pane_id probe_out fingerprint
+  local start_json pane_id probe_out fingerprint keepalive_s
 
+  keepalive_s="$(runner_probe_keepalive_s)"
   start_json="$(herdr agent start "$probe_name" --cwd "$worktree" --no-focus \
-    -- bash -lc "$RUNNER_PROBE_SCRIPT" firstmate-probe "$worktree" 2>/dev/null)" || start_json=""
+    -- bash -lc "$(runner_probe_pane_script)" firstmate-probe "$worktree" "$keepalive_s" 2>/dev/null)" || start_json=""
   pane_id="$(runner_parse_pane_id "$start_json")"
 
   if [ -z "$pane_id" ]; then

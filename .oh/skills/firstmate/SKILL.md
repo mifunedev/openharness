@@ -133,18 +133,32 @@ runner is never a silent regression to the ralph loop.
 2. `herdr status` shows **both literal fields** `status: running` **and**
    `compatible: yes`. There is no single "healthy" flag; these two literals are
    the entire health predicate. Binary-up/server-down degrades to tmux.
-3. **Execution-context gate.** A short-lived probe pane emits an environment
-   fingerprint (hostname, presence of `/.dockerenv`, whether the target worktree
-   path resolves in that pane) and it is compared against the caller's own
+3. **Execution-context gate.** A probe pane emits an environment fingerprint
+   (hostname, presence of `/.dockerenv`, whether the target worktree path
+   resolves in that pane) and it is compared against the caller's own
    fingerprint gathered the same way. **Any mismatch ⇒ herdr is ineligible**: the
    ladder degrades to tmux and the reason — both fingerprints and which field
    differed — is written to the firstmate log. The gate closes its own probe pane
    with `herdr pane close <pane_id>` on both verdicts.
 
-> **In this deployment the gate refuses herdr.** herdr panes are **host**
-> processes while the harness runs **inside the container**, so the fingerprints
-> differ and the ladder degrades to tmux. `AGENTS.md` requires all building and
-> testing inside the sandbox, so this is the correct outcome, not a defect.
+   The probe pane carries a **keep-alive** so it outlives its own read. herdr
+   destroys a pane the moment its command returns, and a read against a
+   destroyed pane answers `pane_not_found` — so a probe that prints one line and
+   exits loses the race, and the gate reports "no fingerprint" for an
+   environment that actually matches (#761). The keep-alive is applied only to
+   the pane invocation, never to the shared fingerprint snippet, which also runs
+   in-process for the caller side. Its budget derives from
+   `RUNNER_PROBE_TIMEOUT_MS`, and it is an upper bound rather than a cost: the
+   gate closes the pane as soon as the read completes.
+
+> **Whether the gate admits herdr is a property of the deployment.** It refuses
+> whenever the probe pane cannot be shown to run in the caller's environment —
+> which was the case while the operator config bind (#756) made the container's
+> herdr CLI drive the HOST server. After #756 closed, a live re-probe measured
+> caller and probe as identical. `AGENTS.md` requires all building and testing
+> inside the sandbox, so a refusal is the correct outcome, never a defect — but
+> a refusal that fires in a *matching* environment is one, which is what #761
+> fixed.
 > Standing up an in-environment herdr server is a separate decision.
 
 An explicit `OH_RUNNER=<x>` / `--runner <x>` naming an unavailable runner is a

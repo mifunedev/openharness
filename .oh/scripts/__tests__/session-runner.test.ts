@@ -119,7 +119,21 @@ case "$sub" in
   pane)
     verb="\${1:-}"; shift || true
     case "$verb" in
-      read) printf '%s\\n' "\${STUB_HERDR_PROBE_OUT:-}" ;;
+      read)
+        # Model herdr's real pane lifetime. herdr destroys a pane the instant
+        # its command returns, and a read against a destroyed pane answers
+        # pane_not_found — which is the whole of #761. A stub that always
+        # replays the probe output is MORE FORGIVING than herdr, and that is
+        # why 46 tests passed while the live gate could never admit herdr.
+        # A pane is readable here only if its start invocation carried a
+        # keep-alive, so dropping the keep-alive in production fails the suite.
+        if [ "\${STUB_HERDR_PANE_MODEL:-lifetime}" = "lifetime" ] &&
+          ! grep -q '^herdr agent start .*sleep' "\${STUB_CALLS:-/dev/null}" 2>/dev/null; then
+          printf '{"code":"pane_not_found","message":"pane not found"}\\n' >&2
+          exit 1
+        fi
+        printf '%s\\n' "\${STUB_HERDR_PROBE_OUT:-}"
+        ;;
       list)
         printf '{"id":"cli:pane:list","result":{"panes":[{"pane_id":"%s","foreground_cwd":"%s","cwd":"%s"}],"type":"pane_list"}}\\n' \\
           "\${STUB_HERDR_PANE_ID:-w7:p3}" "\${STUB_HERDR_FG_CWD:-/w}" "\${STUB_HERDR_FG_CWD:-/w}"
@@ -424,6 +438,70 @@ describe("runner_detect ladder", () => {
     });
     expect(r.stdout.trim()).toBe("herdr");
     expect(readFileSync(t.callsFile, "utf-8")).toMatch(/herdr pane close w7:p3/);
+  });
+
+  // --- #761: the probe pane must outlive its own read ----------------------
+
+  it("keeps the probe pane alive across the read, and derives the budget from the one timeout source", () => {
+    const t = makeTask("ladder");
+    const bin = makeBin({ herdr: true, tmux: true, isolated: true });
+    sh(`runner_detect ladder '${t.worktree}'`, {
+      env: detectEnv(t, bin, {
+        STUB_HERDR_PROBE_OUT: `FIRSTMATE-FINGERPRINT ${callerFingerprint(t.worktree)}`,
+        RUNNER_PROBE_TIMEOUT_MS: "20000",
+      }),
+    });
+    const start = readFileSync(t.callsFile, "utf-8")
+      .split("\n")
+      .find((l) => l.includes("agent start"));
+    // The keep-alive rides the pane invocation ...
+    expect(start).toContain('sleep "${2:-30}"');
+    // ... and its budget is the read window plus a margin, not a literal.
+    expect(start).toMatch(/\s25$/);
+  });
+
+  it("reproduces #761: a probe pane that exits before the read is unreadable", () => {
+    const t = makeTask("ladder");
+    const bin = makeBin({ herdr: true, tmux: true, isolated: true });
+    // STUB_HERDR_PANE_MODEL=none restores the old, too-forgiving stub: it
+    // replays pane output regardless of whether the pane could still exist.
+    // Under the faithful default the same run must still succeed, which is
+    // what proves the keep-alive is load-bearing rather than decorative.
+    const forgiving = sh(`runner_detect ladder '${t.worktree}'`, {
+      env: detectEnv(t, bin, {
+        STUB_HERDR_PROBE_OUT: `FIRSTMATE-FINGERPRINT ${callerFingerprint(t.worktree)}`,
+        STUB_HERDR_PANE_MODEL: "none",
+      }),
+    });
+    expect(forgiving.stdout.trim()).toBe("herdr");
+
+    const t2 = makeTask("ladder");
+    const faithful = sh(`runner_detect ladder '${t2.worktree}'`, {
+      env: detectEnv(t2, bin, {
+        STUB_HERDR_PROBE_OUT: `FIRSTMATE-FINGERPRINT ${callerFingerprint(t2.worktree)}`,
+      }),
+    });
+    expect(faithful.stdout.trim()).toBe("herdr");
+  });
+
+  it("never puts the keep-alive on the LOCAL fingerprint path", () => {
+    const t = makeTask("ladder");
+    const bin = makeBin({ herdr: true, tmux: true, isolated: true });
+    // The shared snippet stays sleep-free: runner_local_fingerprint runs it
+    // in-process, so a keep-alive there would stall every caller and would
+    // also break "the same snippet runs in both places".
+    const r = sh(`printf '%s' "$RUNNER_PROBE_SCRIPT"`, {
+      env: detectEnv(t, bin),
+    });
+    expect(r.stdout).not.toContain("sleep");
+    expect(r.stdout).toContain("FIRSTMATE-FINGERPRINT");
+
+    const started = Date.now();
+    const local = sh(`runner_local_fingerprint '${t.worktree}'`, {
+      env: detectEnv(t, bin),
+    });
+    expect(local.stdout).toContain("host=");
+    expect(Date.now() - started).toBeLessThan(5000);
   });
 
   it("degrades to tmux when the probe pane yields no fingerprint at all", () => {

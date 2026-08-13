@@ -132,6 +132,39 @@ probe_fn="$(fn_body runner_probe_fingerprint)"
 printf '%s\n' "$probe_fn" | code_only | grep -Fq 'herdr pane close' \
   || missing+=("runner_probe_fingerprint: the probe pane is not closed (the gate leaks a pane per detection)")
 
+# The probe pane must OUTLIVE its own read (#761). herdr destroys a pane as soon as its
+# command returns, and a read against a destroyed pane answers pane_not_found — so a probe
+# that prints one line and exits loses the race and the gate reports "no fingerprint" for an
+# environment that actually matches. That failure is invisible where the environment already
+# differs, which is why it survived the original build: it makes the herdr rung unreachable
+# EVERYWHERE rather than only where it should be.
+printf '%s\n' "$probe_fn" | code_only | grep -Fq 'runner_probe_pane_script' \
+  || missing+=("runner_probe_fingerprint: the pane runs the bare fingerprint snippet — it exits before the read and the gate can never admit herdr (#761)")
+grep -Fq 'RUNNER_PROBE_KEEPALIVE_SUFFIX=' "$RUNNER" \
+  || missing+=("session-runner.sh: RUNNER_PROBE_KEEPALIVE_SUFFIX is gone — nothing keeps the probe pane alive across the read")
+pane_script_fn="$(fn_body runner_probe_pane_script)"
+printf '%s\n' "$pane_script_fn" | code_only | grep -Fq 'RUNNER_PROBE_SCRIPT' \
+  || missing+=("runner_probe_pane_script: the pane snippet is not built from RUNNER_PROBE_SCRIPT — pane and caller fingerprints stop being the same snippet")
+printf '%s\n' "$pane_script_fn" | code_only | grep -Fq 'RUNNER_PROBE_KEEPALIVE_SUFFIX' \
+  || missing+=("runner_probe_pane_script: the keep-alive suffix is not applied to the pane snippet")
+
+# The keep-alive belongs to the PANE invocation only. RUNNER_PROBE_SCRIPT also runs in-process
+# via runner_local_fingerprint, so a sleep folded into it would stall every caller and would
+# break "the same snippet runs in the probe pane and locally".
+grep -E '^RUNNER_PROBE_SCRIPT=' "$RUNNER" | grep -Fq 'sleep' \
+  && missing+=("session-runner.sh: the keep-alive leaked into RUNNER_PROBE_SCRIPT — runner_local_fingerprint would sleep on every call")
+printf '%s\n' "$(fn_body runner_local_fingerprint)" | code_only | grep -Fq 'runner_probe_pane_script' \
+  && missing+=("runner_local_fingerprint: the caller-side fingerprint runs the keep-alive pane snippet instead of the bare one")
+
+# The keep-alive budget is DERIVED from the single timeout source, so the two cannot drift.
+keepalive_fn="$(fn_body runner_probe_keepalive_s)"
+if [ -z "$keepalive_fn" ]; then
+  missing+=("session-runner.sh: runner_probe_keepalive_s is missing — the keep-alive budget has no source")
+else
+  printf '%s\n' "$keepalive_fn" | code_only | grep -Fq 'RUNNER_PROBE_TIMEOUT_MS' \
+    || missing+=("runner_probe_keepalive_s: the keep-alive is not derived from RUNNER_PROBE_TIMEOUT_MS — the pane can die inside the read window")
+fi
+
 # --- (6) session budget: one source, the 14400000 default, bounded polling --
 grep -Fq 'RUNNER_DEFAULT_TIMEOUT_MS=14400000' "$RUNNER" \
   || missing+=("session-runner.sh: the 14400000 (4h) session-budget default literal is gone")

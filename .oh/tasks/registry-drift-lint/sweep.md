@@ -31,9 +31,31 @@ The issue says 17 skills. The registry holds 18 folders as of `1d11ab6`, because
 | `harness-context` | 1 | 1 `ALLOW` |
 | `reflect` | 1 | 1 `ALLOW` |
 
-Clean: `agent-browser`, `ci-status`, `context-audit`, `delegate`,
-`harness-audit`, `interview`, `post-bridge`, `prd`, `ralph`, `release`,
-`render-html`, `skill-lint`, `strategic-proposal`, `worktrees`.
+The 14 clean folders are not listed here by name. Three of them are still
+published under the audit vocabulary this repository retired in #645, and
+`.oh/evals/probes/audit-stale-references.sh` fails any tracked file that revives
+those tokens. Reproduce the list from the command instead:
+
+```bash
+# an exceptions file holding an empty allow block, so nothing is suppressed
+printf 'none\n```allow\n```\n' > /tmp/none.md
+comm -13 \
+  <(bash .oh/scripts/registry-portability.sh --registry <checkout> --allow /tmp/none.md \
+      | sed -n 's#^skills/\([^/]*\)/.*#\1#p' | sort -u) \
+  <(ls -d <checkout>/skills/*/ | xargs -n1 basename | sort)
+```
+
+Pass the empty allow block, not the shipped one: the default run hides the
+`ALLOW`-suppressed skills and reports 16 clean folders rather than 14.
+
+That omission is itself a finding. The registry still ships three skills under
+names this repository replaced with the `/audit` dispatcher, so the published
+tree is a vocabulary generation behind the canonical one. The portability linter
+does not catch this: a stale *name* resolves fine for an installer, who never
+had the new one. It is drift of the kind issue #758 is about, and it needs a
+different check — a published-name-versus-canonical-name comparison, which is
+the diff-based Option A the issue describes, not the standalone lint of Option C
+built here.
 
 The check exits **1** against live `master`. That is the correct result, not a
 bug in the check: five real defects stand in the published copies, `KNOWN` does

@@ -143,3 +143,60 @@
   a diff. Self-caught false alarm, disclosed rather than buried — the correction is sound.
   18 of 19 acceptanceCriteria verified. The 19th (the guarding probe exits 0) is repo-wide and
   is deferred to the final gate run, after the artifacts are force-added.
+
+## Session 2 — rescue after container recreate
+
+[advisor] RESCUE. The wave-1 session was killed by a container recreate. Its output survived
+  only as uncommitted files in this worktree: no commits, no branch history, no PR, nothing
+  pushed. 766 lines in exactly one place on disk. Committed verbatim as 86ad2256 BEFORE
+  reading or judging any of it. US-003, US-005, US-006 and the gate run were never started.
+
+[advisor] merged upstream/development ec64f667 (4 commits). No conflict; CHANGELOG and
+  RESULTS.md both merged clean, so neither documented conflict procedure was needed.
+
+[advisor] inherited work assessed on its merits and ACCEPTED. The linter reproduces the
+  wave-1 oracle exactly against live registry master 1d11ab6: 18 folders, 31 files,
+  14 findings, 9 suppressed by 8 ALLOW entries, 5 KNOWN, 0 unclassified, 0 stale.
+  shellcheck -S warning clean on both scripts (the CI gate covers .oh/scripts/*.sh).
+
+[advisor] US-006 historical rejection proof — DONE, and stronger than the plan required.
+  Ran against registry 036a53f with the SHIPPED production exception list, no fixture and
+  no weakening. All three #751 defects report as NEW (neither: 3): /caveman at
+  ste/SKILL.md:102 and ste/references/rules.md:420, and the .oh/ memory-protocol path at
+  ste/SKILL.md:285. The whole-line hash claim from session 1 is now measured, not asserted:
+  the KNOWN entry 01ede414c12b (the repaired line on master) is reported STALE at 036a53f
+  instead of masking the pre-repair line 27bf235ad29e.
+
+[advisor] AC4 literal injection test — a .oh/ path and a `/autopilot` command appended to
+  skills/worktrees/SKILL.md are both caught on one line (neither: 0 -> 2, named at :140);
+  removing them returns to the exact baseline (findings 14, neither 0).
+
+[advisor] fail-closed verified by rejection: 8/8 untrustworthy runs exit 2, never 0. An
+  empty-but-present allow block correctly exits 1 with all 14 findings unsuppressed, not 2.
+
+[advisor] US-005 sweep — WRITTEN to sweep.md. The contract file already cited that path and
+  the file did not exist; the citation was dangling in the inherited work.
+
+[advisor] PROBE DEFECT FOUND AND FIXED. Measured both states rather than reasoning about
+  them: unarmed -> SKIPPED (exit 2), armed against live master -> REGRESSION (exit 1),
+  because KNOWN deliberately does not suppress. The probe is green in ZERO configurations
+  and guards nothing in CI, which never has a registry checkout. Its skip is nonetheless
+  HONEST for its own contract — .oh/evals/README.md blesses SKIPPED for an absent target and
+  forbids synthetic fixtures — so it is kept unchanged and a companion added.
+  registry-portability-gate.sh reads only this repo and can never skip: linter present and
+  still fail-closed, allow block parseable and every entry well-formed, and the builder
+  publishing step still naming the gate (critique B-HIGH3 landed that invocation site; if it
+  is edited away the gate loses its only caller and nothing goes red).
+  Verified by rejection: broken 8 ways, red on all 8.
+
+[advisor] /eval caught a REGRESSION IN MY OWN sweep.md — audit-stale-references went
+  PASS -> REGRESSION because the sweep enumerated the registry's clean folders by name, three
+  of which are vocabulary this repo retired in #645. Did NOT add an exclusion to that probe;
+  weakening an unrelated oracle to fit a new doc is the wrong trade. Replaced the enumeration
+  with a verified reproduction command and surfaced the stale-name observation as a finding
+  the portability lint cannot catch. Re-ran: 104 probes, 0 regressions.
+  The first reproduction command I wrote (--allow /dev/null) was itself wrong — it exits 2,
+  since /dev/null carries no allow block. Caught by running it instead of trusting it.
+
+[advisor] gates: shellcheck clean, bash -n clean, /eval 104 probes 0 regressions,
+  registry-portability-gate new-pass. Artifacts force-added (.oh/tasks is gitignored).

@@ -74,6 +74,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [RFC / ADR index](rfcs/README.md)
 - [ADR-0001: #532 standards scope](rfcs/adr-0001-standards-scope.md)
 - [Runtime support — axes taxonomy & the "supported runtime" contract (#592)](rfcs/rfc-runtime-support.md)
+- [The brain/hands boundary — Phase-0 decisions for the execution seam (#733)](rfcs/rfc-brain-hands-boundary.md)
 - [Self-improving harness roadmap curation (#525)](rfcs/rfc-selfimprove-roadmap.md)
 - [Trace/event ledger RFC (#525 foundation)](rfcs/rfc-trace-ledger.md)
 - [Property testing](property-testing.md)

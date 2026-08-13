@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
 import {
+  resolveExecutionTarget,
+  type LifecycleRunner,
+} from "../../cli/src/lib/execution/index.js";
+import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -188,6 +193,85 @@ describe("scripts/docker-compose.sh", () => {
     const argv = printArgv();
     expect(argv).toContain(path.join(tmp, "relative/overlay.yml"));
     expect(argv).toContain(absolute);
+  });
+});
+
+/**
+ * The compose argv `oh sandbox` produced BEFORE it routed through the execution
+ * contract (issue #733) — the same verb the Makefile pins at
+ * `$(COMPOSE) up -d --build`. Frozen here as the oracle's expected side, so the
+ * comparison below is against recorded history, not against itself.
+ */
+const TODAYS_SANDBOX_COMPOSE_ARGS = ["up", "-d", "--build"];
+
+/**
+ * The harness-env file is a per-invocation `mktemp` path under `--print-argv`,
+ * so two otherwise-identical runs differ at that one entry. Collapse it to a
+ * placeholder before comparing argv arrays.
+ */
+function normalizeHarnessEnv(argv: string[]): string[] {
+  return argv.map((a) => (a.includes("openharness-harness-yaml-env.") ? "<harness-env>" : a));
+}
+
+describe("execution target argv equivalence (issue #733)", () => {
+  it("provision() expands to argv identical to today's, via --print-argv as the non-executing oracle", async () => {
+    // Make the fixture an equipped repo: the adapter delegates to the VENDORED
+    // script, so copy the real one (plus the config reader it shells out to)
+    // rather than stubbing it — the oracle must be the genuine script.
+    mkdirSync(path.join(tmp, ".oh", "scripts"), { recursive: true });
+    const vendored = path.join(tmp, ".oh", "scripts", "docker-compose.sh");
+    copyFileSync(SCRIPT, vendored);
+    copyFileSync(
+      path.join(REPO_ROOT, ".oh", "scripts", "harness-config.sh"),
+      path.join(tmp, ".oh", "scripts", "harness-config.sh"),
+    );
+    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
+
+    // Fake runner: capture what the adapter WOULD spawn; never spawn it.
+    const calls: { cmd: string; args: string[] }[] = [];
+    const run: LifecycleRunner = (cmd, args) => {
+      calls.push({ cmd, args: [...args] });
+      return { status: 0 };
+    };
+
+    await resolveExecutionTarget({ projectRoot: tmp, run }).provision();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].cmd).toBe("bash");
+    const [script, ...rest] = calls[0].args;
+    expect(script).toBe(vendored);
+    expect(rest.slice(0, 2)).toEqual(["--repo-dir", tmp]);
+
+    // (1) The adapter neither invents, drops, nor reorders a compose verb.
+    const adapterComposeArgs = rest.slice(2);
+    expect(adapterComposeArgs).toEqual(TODAYS_SANDBOX_COMPOSE_ARGS);
+
+    // (2) The real script expands the adapter's tail and today's tail to the
+    //     same compose argv — the equivalence the seam is required to preserve.
+    const expand = (args: string[]): string[] => {
+      const result = spawnSync("bash", [script, "--repo-dir", tmp, "--print-argv", ...args], {
+        encoding: "utf8",
+      });
+      expect(result.stderr).toBe("");
+      expect(result.status).toBe(0);
+      return normalizeHarnessEnv(result.stdout.trimEnd().split("\n"));
+    };
+    const viaAdapter = expand(adapterComposeArgs);
+    const viaToday = expand(TODAYS_SANDBOX_COMPOSE_ARGS);
+    expect(viaAdapter).toEqual(viaToday);
+
+    // (3) And that argv is still the real thing, not two identical empties.
+    expect(viaAdapter).toEqual([
+      "docker",
+      "compose",
+      "--env-file",
+      "<harness-env>",
+      "-f",
+      path.join(tmp, ".devcontainer", "docker-compose.yml"),
+      "up",
+      "-d",
+      "--build",
+    ]);
   });
 });
 

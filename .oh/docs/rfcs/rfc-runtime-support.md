@@ -10,12 +10,17 @@ in what order, are #591's child issues.
 ## Purpose
 
 Today the harness has exactly one substrate — a single privileged `debian:bookworm-slim`
-container per repo with the host Docker socket bind-mounted in (`.devcontainer/docker-compose.yml`)
-— a root-on-host boundary that is fine for a trusted single operator but the weakest link the
-moment untrusted, agent-generated code runs unattended on a shared VM ("remote-first, lights-out
-software factory", `README.md`). There is no isolation tier above it, no per-task blast-radius
-containment, and no first-class "ship the app" runtime beyond a localhost `cloudflared` tunnel.
-Before adding any of those, we ratify the vocabulary and the bar.
+container per repo (`.devcontainer/docker-compose.yml`). The host Docker socket is **opt-in and
+off by default**: it is a separate overlay (`.devcontainer/docker-compose.docker-sock.yml`)
+applied only when `sandbox.docker_socket` / `DOCKER_SOCKET` is truthy
+(`.oh/scripts/docker-compose.sh:136`). The image ships the **docker CLI but no `dockerd`**
+(`docker-ce-cli` + `docker-compose-plugin`, `.devcontainer/Dockerfile:37`), so in-sandbox Docker
+work depends on that opt-in socket — and enabling it is a root-on-host boundary that is fine for
+a trusted single operator but the weakest link the moment untrusted, agent-generated code runs
+unattended on a shared VM ("remote-first, lights-out software factory", `README.md`). There is no
+isolation tier above the privileged container, no per-task blast-radius containment, and no
+first-class "ship the app" runtime beyond a localhost `cloudflared` tunnel. Before adding any of
+those, we ratify the vocabulary and the bar.
 
 ## 1. The three-axis taxonomy
 
@@ -24,9 +29,9 @@ so every candidate is tagged to the axis it serves.
 
 | Axis | Question | Today | The gap |
 |---|---|---|---|
-| **A1 — Substrate** | Where does the *sandbox itself* run, and how isolated is it? | 1 privileged container + bind-mounted host Docker socket | No stronger isolation tier for untrusted / lights-out / multi-tenant runs |
+| **A1 — Substrate** | Where does the *sandbox itself* run, and how isolated is it? | 1 privileged container; docker CLI but no `dockerd`, and the host Docker socket is an **opt-in overlay, off by default** | No stronger isolation tier for untrusted / lights-out / multi-tenant runs |
 | **A2 — Deploy target** | Where do the *apps agents build* get shipped? | BYO tunnel (`cloudflared`), Railway *smoke-test only*, GHCR publish | No "ship it" runtime — only "expose localhost" |
-| **A3 — Scale / fan-out** | How do we run *N tasks in parallel*? | git worktrees in the *one* container + tmux ralph loops | No per-task isolated sandbox; all tasks share one kernel + one Docker socket |
+| **A3 — Scale / fan-out** | How do we run *N tasks in parallel*? | git worktrees in the *one* container + tmux ralph loops | No per-task isolated sandbox; all tasks share one kernel, and — since the image has no `dockerd` — the *same* opt-in host socket whenever it is enabled at all |
 
 ## 2. The "supported runtime" contract (ratifiable)
 
@@ -108,21 +113,29 @@ lease/sync/run pattern, or **integrate** Crabbox directly? Reference wiki entrie
 
 ## 8. Proposed child-issue ordering (implements this contract; filed under #591)
 
-1. **A1 · gVisor overlay** — cheapest, most reversible; sets the "one-toggle, probe-guarded, documented" support template the others reuse.
-2. **A1 · Firecracker microVM** — land #384.
-3. **A1 · Kata Containers**.
-4. **A1/A3 · Managed sandbox integrations** (E2B / Daytona / Fly / CF Sandboxes / Modal) — BYO-account.
-5. **A3 · CI-as-runtime** (`CI_RUNNER` dind).
-6. **A2 · Deploy-skill family** (Wrangler / flyctl / Railway-full).
-7. **Landscape memo** — `blog/` companion to `2026-06-07-containers-microvms-vms.md`.
+1. **A1 · Sysbox execution target** — the scheduled next slice of [#731](https://github.com/mifunedev/openharness/issues/731), landing behind the `ExecutionTarget` contract from [#733](https://github.com/mifunedev/openharness/issues/733). Unprivileged containers that run their *own* `dockerd`, so the tier gains stronger isolation **without** trading away sibling-container capability (see §9).
+2. **A1 · gVisor overlay** — cheapest, most reversible; sets the "one-toggle, probe-guarded, documented" support template the others reuse.
+3. **A1 · Firecracker microVM** — land #384.
+4. **A1 · Kata Containers**.
+5. **A1/A3 · Managed sandbox integrations** (E2B / Daytona / Fly / CF Sandboxes / Modal) — BYO-account.
+6. **A3 · CI-as-runtime** (`CI_RUNNER` dind).
+7. **A2 · Deploy-skill family** (Wrangler / flyctl / Railway-full).
+8. **Landscape memo** — `blog/` companion to `2026-06-07-containers-microvms-vms.md`.
 
 ## 9. Open decisions
 
 - **Primary driver** — isolation-security vs. fan-out vs. deploy-convenience (reorders §8).
 - **Self-hosted vs managed** — own the isolation fleet (gVisor/Firecracker/Kata) or rent it; for
   managed, does "supported" = a documented BYO-account integration?
-- **DinD trade-off** — must a gVisor/microVM tier preserve Docker-in-Docker / the host socket, or is
-  losing sibling-container capability acceptable for stronger isolation?
+- ~~**DinD trade-off**~~ — **ANSWERED**: the trade is not forced. Sysbox gives the tier its **own
+  `dockerd`** inside an unprivileged container, so a stronger-isolation tier keeps
+  sibling-container capability instead of losing it — which is why Sysbox is now §8 item 1. The
+  host socket stays what it already is: opt-in and off by default (§Purpose). Decided under
+  [#731](https://github.com/mifunedev/openharness/issues/731) /
+  [#733](https://github.com/mifunedev/openharness/issues/733); the boundary that makes a second
+  execution target an implementation detail is recorded in
+  [`rfc-brain-hands-boundary.md`](rfc-brain-hands-boundary.md). Still open *per candidate*: what
+  gVisor and Firecracker tiers do, since neither ships a nested daemon for free.
 - **Control-plane vs substrate-swap (Crabbox)** — offload model vs. per-task substrate for A3.
 - **Install-matrix constraint** — must every supported tier work across all install paths, or may
   advanced substrates be VM-only (documented as such)?

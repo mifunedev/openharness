@@ -417,7 +417,7 @@ Right: Warning: `make destroy` removes the `openharness` container and every
 
 ### 43. Write a warning in full prose
 
-Write every warning as complete sentences. Never compress a warning with the `/caveman` output mode, an abbreviation, or a fragment. Compression of a warning drops the actor, the object, or the condition.
+Write every warning as complete sentences. Never compress a warning with an output-compression mode, an abbreviation, or a fragment. Compression of a warning drops the actor, the object, or the condition.
 
 ```text
 Wrong: WARN: destroy = data gone

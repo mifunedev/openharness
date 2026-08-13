@@ -16,7 +16,16 @@
 # ---------------------------------------------------------------------------
 # `.oh/docs/rfcs/rfc-brain-hands-boundary.md` is the sole authority for the
 # Phase-0 brain/hands seam (see its AUTHORITY CLAUSE). This header CITES it and
-# deliberately does not restate it. Two clauses bind this library:
+# deliberately does not restate it.
+#
+# FORWARD REFERENCE: that file is not in this tree. It arrives with #733 (PR
+# #736), which is open alongside this branch. Merge #736 first and the path
+# resolves; merge this branch first and the path is dangling until #736 lands.
+# The citation is deliberate either way — the clauses below are quoted so this
+# header stays readable on its own, and the seam they describe is what the
+# execution-context gate implements.
+#
+# Two clauses bind this library:
 #
 #   * Section 2 (brain/hands responsibility table) puts the iteration loop —
 #     ralph, and firstmate after it — on the BRAIN side: "It *invokes* hands; it

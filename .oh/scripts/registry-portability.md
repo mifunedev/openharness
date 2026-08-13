@@ -213,8 +213,9 @@ exit code alone, unless you pass `--strict-exceptions`.
 - `HARNESS-SKILL` reads single-word routes only. A two-word route is not
   reported.
 - `OH-PATH` covers `.oh/` only. The adjacent class is real and larger: the
-  registry carries 79 `.claude/` references across 15 of its 18 skills. Widening
-  the rule is a follow-up, deliberately left out of this change.
+  registry carries 82 `.claude/` references across 15 of its 18 skills, measured
+  at `1d11ab6`. Widening the rule is a follow-up, deliberately left out of this
+  change.
 - A command the client provides, such as a Claude Code built-in, is
   indistinguishable from a skill the registry is missing. The rule reports both,
   and the exception list dispositions them. There is no suppression set of client
@@ -250,6 +251,12 @@ directly against the registry, which the publishing step cannot see. It is not
 built here: the check exits 1 against live master until the five recorded
 defects are repaired there, so a cron added today would page on a known backlog
 from its first run. Repair the `KNOWN` entries first, then schedule it.
+
+That repair is open as mifunedev/skills#8. Against that branch the check reports
+`findings: 9`, `labelled KNOWN: 0`, `neither: 0`, exit 0. When it merges, the
+five `KNOWN` entries below match no line and report as `stale exceptions`, which
+does not fail the run — so neither merge order breaks anything. Delete them in a
+follow-up after that merge, and the cron becomes viable.
 
 ## How far this check reaches
 

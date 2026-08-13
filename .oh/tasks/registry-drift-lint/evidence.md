@@ -178,10 +178,17 @@ the enumeration was replaced with a reproduction command. Re-run: 0 regressions.
 - **`registry-portability` shows `new-fail` in the delta column** because it
   moved from absent to `SKIPPED`. It is excluded from the pass rate and is not a
   regression.
-- **Five `KNOWN` defects are unrepaired**, by design — criterion 5 puts registry
-  changes out of scope. They are itemized with suggested repairs in `sweep.md`.
-- **`.claude/` references are out of scope**: 79 across 15 of the 18 skills,
-  recorded as a follow-up in the contract § Limitations.
+- **Five `KNOWN` defects are unrepaired in this pull request**, by design —
+  criterion 5 puts registry changes out of scope. They are itemized with
+  suggested repairs in `sweep.md`, and are now repaired in the registry's own
+  repository as mifunedev/skills#8, where `scripts/validate.sh` passes 109
+  checks and this linter reports `labelled KNOWN: 0`, `neither: 0`, exit 0.
+  Their exception entries stay in the allow block here: once #8 merges they
+  report as `stale exceptions`, which does not fail a run, so neither merge
+  order breaks. Deleting them is a follow-up after that merge.
+- **`.claude/` references are out of scope**: 82 across 15 of the 18 skills,
+  measured at `1d11ab6` and recorded as a follow-up in the contract
+  § Limitations.
 
 ## CI
 

@@ -3,9 +3,15 @@
 Issue #758 criterion 5 asks for one sweep of the skills already in the registry,
 with hits **reported rather than silently fixed**. This file is that report.
 
-Nothing in the registry was changed. Every repair named below is still
-outstanding. The registry is a separate repository; a fix there is a pull
-request against `mifunedev/skills`, which this change deliberately does not make.
+Nothing in the registry was changed by this pull request. The registry is a
+separate repository; a fix there is a pull request against `mifunedev/skills`,
+which this change deliberately does not make.
+
+The five repairs named below were then made in that repository, as
+mifunedev/skills#8, opened after this sweep was written and reviewed against it.
+Against that branch the check reports `findings: 9`, `labelled KNOWN: 0`,
+`neither: 0`, exit 0. The numbers in this file describe registry `master` at
+`1d11ab6`, which is the state this sweep measured; they stand until #8 merges.
 
 ## What was scanned
 
@@ -81,6 +87,13 @@ Suggested repairs, for whoever opens the registry pull request:
 - **5**: delete the path, or restate the sentence so it does not point outside
   the installer's tree.
 
+mifunedev/skills#8 takes the second option in each case: 1–3 name the loop
+runner the host repository supplies, 4 and 5 both name the `/reflect` skill,
+which the registry publishes and which holds the protocol. That pull request
+also repairs a sixth site this lint cannot see — `skills/ship-spec/SKILL.md:30`
+names the same script inside a mermaid node, and `DANGLING-REF` reads backticked
+spans only.
+
 ## The 9 accepted references (`ALLOW`)
 
 These resolve to nothing for an installer too, and are accepted anyway. Each
@@ -104,8 +117,8 @@ line, so one entry suppresses both.
 
 ## What this sweep does not cover
 
-- **`.claude/` references.** The registry carries 79 of them across 15 of its 18
-  skills. The same class of defect, an order of magnitude larger. `OH-PATH`
+- **`.claude/` references.** The registry carries 82 of them across 15 of its 18
+  skills (`grep -roh '\.claude/[A-Za-z0-9._/-]*' skills/ | wc -l` at `1d11ab6`). The same class of defect, an order of magnitude larger. `OH-PATH`
   covers `.oh/` only. Widening the rule is left as a follow-up so this sweep
   reports a number that was actually measured.
 - **`template/`.** It sits outside `skills/` and is not scanned.

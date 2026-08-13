@@ -1,0 +1,91 @@
+# progress — ccsn-probe-resolved-version (issue #759)
+
+## Subtask dependency graph (from prd.json rev 2)
+
+US-001 assertion (d) rewrite   <- (none)              [DONE]     delegate: general-purpose, thinking: high
+US-002 before/after default    <- US-001              [DONE]     delegate: general-purpose, thinking: medium
+US-003 rejection + mutation    <- US-001              [DONE]     delegate: general-purpose, thinking: high
+US-004 scoreboard/changelog    <- US-002, US-003      [DONE]     First Mate inline (owns RESULTS.md per brief)
+
+Waves: W1 = {US-001} · W2 = {US-002 ∥ US-003} · W3 = {US-004}
+
+US-001 is a single-file edit that both verification stories depend on, so it runs
+alone. US-002 and US-003 are independent: US-002 exercises the default path with
+a worktree-local fixture, US-003 exercises the override with scratchpad trees.
+They must not run concurrently against the same fixture path, so US-002 owns
+`<worktree>/.pi/npm/` and US-003 owns the scratchpad only.
+
+Effort per `.oh/context/rules/first-mate.md` § Effort Scaling: US-001 and US-003
+are `complex` (cross-cutting constraints, verbatim-protected neighbouring
+assertions, a probe that must reject as well as accept) → `high`. US-002 is
+`standard` → `medium`.
+
+## Log
+
+- plan: `/prd` rev 1 written from the diagnosed defect in issue #759; `/ralph`
+  produced prd.json rev 1 (4 stories).
+- critique: 2 adversarial critics delegated in parallel (implementer lens, user
+  lens). Both returned REVISE. 13 findings, 13 accepted, 0 rejected. Every claim
+  re-verified against real state by the First Mate before disposition.
+- The four HIGH findings were all one class: proof that could pass for the wrong
+  reason. The worktree has no `.pi/npm/`, so the probe was ALREADY green here at
+  HEAD; a bare-fixture-root rejection test exits 1 from unrelated assertions; and
+  the proposed override could be disarmed with an empty directory.
+- plan rev 2 written: default-path before/after over one identical fixture,
+  exactly-one-(d)-line rejection with an assertion-stripped mutation check,
+  override must resolve a real version (R1/R6), node instead of jq (CI provisions
+  Node and never jq), declared-but-unresolved is a failure (R5).
+- US-001 [delegate, general-purpose/high]: assertion (d) rewritten. `PI_PKG` at line
+  23 became `PI_NPM` (the one hunk outside the (d) region, allowed by the
+  briefing); the manifest path moved into the (d) region as `PI_MANIFEST`, so
+  nothing dangles. `d_json_read` parses with `node -e`; `d_check` turns every
+  problem into a `(d)` line and never exits early. R1-R7 implemented at lines
+  93-130.
+- US-001 [First Mate verification]: not taken on report. `git diff` inspected
+  hunk by hunk — only line 23 and the (d) region changed, (a),(b),(c),(e),(f) and
+  the live-binary block are byte-identical. Re-ran four cases myself:
+  `bash -n` rc=0; worktree default (no `.pi/npm`) rc=0; override at the real tree
+  rc=0; the unmodified probe in the main checkout still rc=1. Also re-ran two
+  rejection cases independently: a drifted installed package produced exactly one
+  gap line naming the file and `1.0.9`, and an existing empty directory under the
+  override failed per R6.
+- US-001 acceptance criterion 10 (behavioral proof that (a)-(f) survive a missing
+  interpreter) was out of the implementation delegate's scope. Reassigned to
+  US-003, which already owns the negative-path evidence.
+- US-003 AC 2 amended before briefing: "exactly one failure line" holds for a
+  single-source drifted tree, and the criterion now also requires that EVERY
+  failure line begins with `(d)`. A tree with both sources drifted emits two
+  lines by design (DD-2), so the original wording was unsatisfiable there. The
+  intent — the exit code is attributable to assertion (d) alone — is preserved
+  and is carried mainly by the AC 8 mutation check.
+- `/compact` step: not applicable in this session — the context budget after
+  planning was well inside limits and no compaction boundary was reached, so
+  nothing was dropped before the implementation phase. Recorded rather than
+  silently skipped.
+- W2 ran US-002 and US-003 in parallel. US-002 owned the worktree's gitignored
+  `.pi/npm/` fixture; US-003 set the override on every case, so the two never
+  contended for the same path.
+- US-002 [delegate]: fixture built, HEAD probe rc=1, fixed probe rc=0, drifted
+  default path rc=1, fixture removed, live-tree checksums identical.
+- US-003 [delegate]: 11 cases, all as expected, including the assertion-stripped
+  mutant, a positive control, and the interpreter-missing behavioral guard.
+- US-002/US-003 [First Mate verification]: re-ran the before/after and the
+  mutation check myself. My mutation run used the DEFAULT path rather than the
+  override, which is the stronger form: stripping lines 48-131 makes the same
+  drifted `$ROOT/.pi/npm` tree exit 0 where the real probe exits 1.
+- US-004 [First Mate]: the suite was run TWICE on this machine to make the
+  regression floor honest. Run A restored the probe to `HEAD` and ran all 99
+  probes; run B ran them with the fix and the task artifacts staged, so
+  `audit-stale-references.sh` could see the new tracked files. Both runs: 96
+  PASS, 3 SKIPPED, 0 REGRESSION. A per-probe status diff of the two scoreboards
+  is byte-identical, so nothing moved green→red.
+- US-004 [honest reading of the scoreboard]: run A proved the critics right.
+  With the probe UNFIXED at `HEAD`, `cc-safety-net-wiring` already reported
+  `PASS` in this worktree, because the worktree has no `.pi/npm/` for assertion
+  (d) to read. The committed row moves `SKIPPED` → `PASS`, and that movement is
+  explained by the live binary being reachable on `PATH`, not by this fix. The
+  scoreboard row is therefore recorded as bookkeeping. The fix evidence is the
+  US-002 before/after over one identical fixture.
+- The 3 SKIPPED probes (`autopilot-preflight-gate`, `debugmcp-availability`,
+  `next-dev-prod`) are pre-existing and skip identically in both runs. They are
+  unrelated to this change.

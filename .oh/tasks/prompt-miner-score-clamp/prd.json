@@ -1,0 +1,78 @@
+{
+    "schemaVersion": 1,
+    "project": "prompt-miner score clamp censors the statistic the marker gate reads",
+    "branchName": "fix/778-prompt-miner-score-clamp",
+    "description": "rev 2, revised against 15 findings from two adversarial critics (2 high, 7 medium, 6 low; see critique.md). scoreSession at .oh/skills/prompt-miner/scripts/mine-traces.mjs:427 computes clamp(base + bonus, 0, 100). base is already capped at 100 by construction and bonus adds up to 15, so every low-friction ground-truth session lands on the ceiling: 15 of 37 other-stratum sessions (41%) sit at exactly 100 on the 2026-08-13 run. The marker gate (references/markers.md:55-58) promotes on a standardized mean difference in that censored score. Measured: lenWords>=25 in stratum other is d=0.332 capped with 19/37 leave-one-out folds under the bar, and d=0.423 uncensored with 0/37 folds under the bar - the clamp, not the data, decides the robustness verdict. Fix: emit scoreUncapped = base + bonus as an additive sibling of score (score itself unchanged, still clamped), add a per-stratum manifest.ceilingSaturation census computed over rankable with atCeiling counting stored rounded score === 100, name scoreUncapped as the correlation scale in markers.md AND in SKILL.md (the doc an agent actually executes), and add a stability guard: the marker record carries effect_size (uncensored, authoritative) alongside effect_size_capped, and a marker whose two scales disagree on sign or on bar-clearing is reported UNSTABLE and is not promotable on either scale. The guard is what keeps the net change stricter rather than looser: it would have blocked the 2026-08-09 referencesSkill promotion that #730 already identified as a clamp artifact. Explicitly does NOT close #730 (cross-window irreproducibility); no window, threshold, or cross-run rule is touched.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "scoreSession emits the uncensored value alongside the clamped score",
+            "description": "As the analyst mining markers, I want the uncensored score emitted alongside the clamped one, so that an effect size is computed on a variable that is not censored at its upper bound.",
+            "acceptanceCriteria": [
+                "scoreSession returns a new field scoreUncapped = Number((base + bonus).toFixed(2)) with no clamp applied to it",
+                "score is unchanged: still Number(clamp(base + bonus, 0, 100).toFixed(2))",
+                "A test feeds a session with base + bonus > 100 and pins score === 100 while scoreUncapped > 100 on the same return value",
+                "A test feeds a maximally-penalized session (all five signals at their clamped maximum, no ground-truth bonus) and pins scoreUncapped === 0, proving the lower bound is unaffected and no negative value is producible under the current weights",
+                "scoreUncapped appears on records in BOTH sessions[] and unranked[] of the emitted JSON, verified against a fixture run, because both come from one scoreSession call before the rankable split at mine-traces.mjs:1040",
+                "scoreUncapped is a sibling of score, NOT nested inside scoreBreakdown",
+                "A test asserts the sessions[] ordering is identical to sorting by score descending, proving ranking still sorts on the clamped field (mine-traces.mjs:1041)",
+                "node --test .oh/skills/prompt-miner/scripts/__tests__/ exits 0",
+                "Attribution check: deleting the scoreUncapped line from scoreSession makes the suite exit non-zero, proving the new assertions are wired to the behavior under test",
+                "DEFAULT_WEIGHTS, the penalty arithmetic, SCORE_MODEL's formula string terms, and MARKER_FEATURE_KEYS are unchanged, proven by git diff"
+            ],
+            "dependencies": [],
+            "delegate": "First Mate inline",
+            "thinking": "medium"
+        },
+        {
+            "id": "US-002",
+            "title": "The manifest and markdown report carry a per-stratum ceiling-saturation census",
+            "description": "As the operator reading a cron report, I want to see how much of each stratum sits on the ceiling, so that I can tell when the display scale has stopped discriminating without recomputing anything.",
+            "acceptanceCriteria": [
+                "manifest.ceilingSaturation is an object keyed by session type; each value is { atCeiling: <int>, total: <int> }",
+                "It is computed over the rankable population ONLY (the same set sessions[] is built from), not over all scanned sessions",
+                "A fixture containing a noHumanPrompt session (sessionType null) pins that no null key appears in ceilingSaturation",
+                "atCeiling counts records whose stored, rounded score field is exactly 100 - not scoreUncapped and not an unrounded intermediate; a test pins that a record with scoreUncapped 112.5 and score 100 counts, and a record with score 99.99 does not",
+                "Session types with zero rankable sessions are omitted from the object",
+                "The markdown report renders the census under the EXISTING ## Manifest heading in the same flat '- key: value' bullet style as the adjacent lines (mine-traces.mjs:1086-1097), one line per stratum, e.g. '- ceilingSaturation.other: 15/37'",
+                "No new ## heading is added to the markdown report, proven by diffing the set of heading lines before and after against a fixture run",
+                "--dry-run still writes no files: a test with a temp --out dir pins that the directory contains no prompt-miner-*.json or .md after a --dry-run invocation",
+                "The privacy contract holds: a test asserts the emitted JSON contains no promptText key when --include-prompt-text is not passed",
+                "node --test .oh/skills/prompt-miner/scripts/__tests__/ exits 0"
+            ],
+            "dependencies": [
+                "US-001"
+            ],
+            "delegate": "First Mate inline",
+            "thinking": "medium"
+        },
+        {
+            "id": "US-003",
+            "title": "Every doc that names the correlation scale names scoreUncapped, and markers.md documents the stability guard",
+            "description": "As a future agent applying the promotion bar, I want each doc that mentions the correlation scale to name scoreUncapped, so that the ambiguity that produced the manual d_cap/d_unc workaround cannot recur - and I want the stability guard written where the marker contract lives.",
+            "acceptanceCriteria": [
+                "references/markers.md states that effect_size is computed against scoreUncapped and gives the one-clause reason (the clamped scale is censored above 100)",
+                "references/markers.md documents the stability guard: the marker record carries both effect_size (uncensored, authoritative) and effect_size_capped (the same statistic against the clamped score)",
+                "The UNSTABLE condition is stated with BOTH branches: (a) sign(effect_size) != sign(effect_size_capped), or (b) exactly one of |effect_size| >= 0.3 and |effect_size_capped| >= 0.3 holds",
+                "references/markers.md states explicitly that an UNSTABLE marker is reported with both values and the reason, is never promotable on either scale, and is never translated into a memory proposal or an auto-filed issue",
+                "The falsifiable-marker JSON example in references/markers.md includes an effect_size_capped key",
+                "The sessions_supporting >= 10 and effect_size >= 0.3 thresholds and the 'Mandatory session-type stratification' section are unchanged, proven by git diff",
+                "The NO-CORPUS vs NO-CANDIDATE section of references/markers.md is unchanged, proven by git diff",
+                "SKILL.md line 135's phrase 'against the session `score`' is changed to name scoreUncapped; grep for that exact phrase in SKILL.md returns no match",
+                "SKILL.md Step 2's dataset description lists scoreUncapped and manifest.ceilingSaturation",
+                "SKILL.md Step 3 instructs that an UNSTABLE marker is reported but not proposed",
+                "SKILL.md Step 4's propose-then-confirm gate text, the result-tag table, and the Privacy contract section are unchanged, proven by git diff",
+                "references/report-schema.md's manifest field table has a ceilingSaturation row, and its sessions[] / unranked[] shape example has a scoreUncapped line",
+                "references/scoring.md documents scoreUncapped beside the existing 'score = clamp(friction + groundTruthBonus, 0, 100)' line (scoring.md:16) and states that score is censored above 100 while scoreUncapped is not",
+                "CHANGELOG.md gains one entry under ## [Unreleased] -> ### Fixed describing the censored statistic, the measured saturation (15/37 other-stratum sessions at the ceiling on 2026-08-13), the lenWords capped-vs-uncensored LOO split (19/37 vs 0/37 folds under the bar), the additive scoreUncapped field, the UNSTABLE stability guard and what it would have blocked (the 2026-08-09 referencesSkill promotion), and an explicit statement that this does NOT close #730, linking issue #778",
+                "No file outside .oh/skills/prompt-miner/, .oh/tasks/prompt-miner-score-clamp/, and CHANGELOG.md is modified, proven by git diff --stat"
+            ],
+            "dependencies": [
+                "US-001",
+                "US-002"
+            ],
+            "delegate": "First Mate inline",
+            "thinking": "medium"
+        }
+    ]
+}

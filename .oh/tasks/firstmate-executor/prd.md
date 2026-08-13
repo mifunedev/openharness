@@ -81,14 +81,40 @@ the `prd.json` task graph, launched through a **herdr → tmux → foreground** 
    audience-misalignment finding (B-H, `[STORY: *]`): three executors is a deliberate operator
    choice, not an unexamined default.
 
+   > **Supersession note (recorded 2026-08-12).** An earlier revision of this plan locked a
+   > *different* decision 5 — *"defer herdr; ship tmux → foreground."* The shipped ladder keeps the
+   > herdr rung, so that earlier decision is **superseded, not silently dropped.** What makes the
+   > reversal safe is decision 6's execution-context gate: the herdr rung ships *disabled by
+   > evidence* in any deployment where the probe cannot prove same-environment execution — which is
+   > every deployment carrying the #756 config bind, including this one. Deferring the rung and
+   > gating the rung produce the same runtime behavior here; gating additionally supports
+   > deployments whose herdr server already runs in-environment.
+
 6. **Execution-context gate (ORCHESTRATOR AMENDMENT — pending Captain review at the PR gate).** Not a
    Captain-issued decision: an orchestrator extension of Captain decision-adjacent constraint *"if
    herdr is not installed, fall back to tmux"* to the case **"installed but out-of-environment."**
-   Q0 (§15) is now **RESOLVED by live probe**: herdr panes are **host** processes, outside the
-   sandbox, while `AGENTS.md` requires all building and testing **inside** the sandbox. Therefore
-   **herdr mode is eligible only when `runner_detect` proves same-environment execution** (the
-   fingerprint gate in §5's Detection row and US-001); on mismatch the ladder degrades to tmux with
-   the reason logged. In **this** deployment the gate refuses herdr and firstmate runs in tmux mode;
+   Q0 (§15) is now **RESOLVED by live probe**: in this deployment herdr panes run as **host**
+   processes, outside the sandbox, while `AGENTS.md` requires all building and testing **inside**
+   the sandbox.
+
+   **Mechanism, established 2026-08-12 (after the probe).** Panes are not host processes because of
+   anything herdr does. The operator's config directory is bind-mounted read-write into this
+   container, so the container's herdr CLI reads the **host operator's** herdr config — socket path
+   and server address included — and drives the **host's** herdr server. The probe measured the
+   symptom; the bind is the cause. It is one of two host-root escape paths now tracked under
+   EPIC #731 as **issue #756**. Two consequences for how this decision should be read:
+
+   - **"herdr panes are host processes" describes this deployment, not herdr.** The code was always
+     the more honest of the two artifacts — `session-runner.sh` hedges "herdr panes **may be** HOST
+     processes." Read this decision the same way.
+   - **The gate is a build-correctness guard and it stays after #756 closes.** Its job is to *prove*
+     same-environment execution before a build runs, not to encode a fact about one deployment.
+     When #756 lands, the gate should begin admitting herdr on its own. That is the verification
+     signal, not a reason to delete the gate.
+
+   Therefore **herdr mode is eligible only when `runner_detect` proves same-environment execution**
+   (the fingerprint gate in §5's Detection row and US-001); on mismatch the ladder degrades to tmux
+   with the reason logged. In **this** deployment the gate refuses herdr and firstmate runs in tmux mode;
    herdr-primary remains fully supported for deployments whose herdr server runs in-environment. The
    PR description must surface this amendment explicitly for Captain review (US-010 AC, §14).
 

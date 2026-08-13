@@ -12,6 +12,24 @@
 # its own private copy of the ladder.
 #
 # ---------------------------------------------------------------------------
+# Where this sits relative to the execution-boundary RFC
+# ---------------------------------------------------------------------------
+# `.oh/docs/rfcs/rfc-brain-hands-boundary.md` is the sole authority for the
+# Phase-0 brain/hands seam (see its AUTHORITY CLAUSE). This header CITES it and
+# deliberately does not restate it. Two clauses bind this library:
+#
+#   * Section 2 (brain/hands responsibility table) puts the iteration loop —
+#     ralph, and firstmate after it — on the BRAIN side: "It *invokes* hands; it
+#     is not hands." This ladder is therefore how the brain reaches a session
+#     HOST. It is not an execution target and must not grow into one.
+#   * Section 5 (workspace stance) makes `hostRoot === targetRoot` the ONLY
+#     supported Phase-0 mapping: "no consumer above the seam may translate a
+#     host path into an in-target path." This library never translates. When the
+#     execution-context gate finds the candidate runner's environment differs
+#     from the caller's, it REFUSES that runner rather than rewriting paths
+#     across the boundary.
+#
+# ---------------------------------------------------------------------------
 # CONTRACT: THE CALLER OWNS SHELL OPTIONS; THIS LIBRARY MUST NOT MUTATE THEM.
 # ---------------------------------------------------------------------------
 # There is deliberately NO `set -euo pipefail` at file scope. A file-scope
@@ -79,9 +97,21 @@
 #     only list/get/read/send/rename/focus/wait/start/attach/explain. Teardown
 #     is `herdr pane close <pane_id>`; a stop/kill verb would fail silently
 #     inside a trap.
-#   * herdr panes may be HOST processes: the container's herdr CLI drives the
-#     host's server over a mounted socket. That is why herdr eligibility
-#     carries the execution-context gate below.
+#   * herdr panes may be HOST processes. Mechanism, confirmed 2026-08-12: the
+#     operator's config directory is bind-mounted read-write into this
+#     container, so the container's herdr CLI reads the HOST operator's herdr
+#     config — socket path and server address included — connects to the HOST's
+#     herdr server, and panes spawn outside the sandbox. That is why herdr
+#     eligibility carries the execution-context gate below.
+#
+#     This is a deployment defect, not a property of herdr. It is one of two
+#     host-root escape paths tracked under EPIC #731 as issue #756.
+#
+#     MIGRATION TRIGGER: when #756 closes, the container's herdr CLI reaches an
+#     in-container server and the gate stops rejecting herdr by itself. Do NOT
+#     delete the gate then — it is a build-correctness guard, and its job is to
+#     prove environment identity rather than to assume it. Re-verify with a live
+#     probe pane and update these notes with the observed result.
 #
 # ---------------------------------------------------------------------------
 # Deliberate deviations from the PRD sketch

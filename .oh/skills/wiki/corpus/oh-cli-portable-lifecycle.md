@@ -3,11 +3,14 @@ title: "oh CLI Portable Lifecycle"
 slug: oh-cli-portable-lifecycle
 tags: [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target]
 created: 2026-07-03
-updated: 2026-08-10
+updated: 2026-08-13
 sources:
   - .oh/cli/src/cli.ts
   - .oh/cli/src/commands/init.ts
   - .oh/cli/src/commands/update.ts
+  - .oh/cli/src/lib/manifest.ts
+  - .oh/cli/src/lib/vendor.ts
+  - .oh/manifest.json
   - .oh/cli/src/commands/lifecycle.ts
   - .oh/cli/src/lib/execution/target.ts
   - .oh/cli/src/lib/execution/docker-compose-target.ts
@@ -37,8 +40,14 @@ confidence: provisional
 ## Summary
 Issue #564 gives a consumer repo a standalone lifecycle that needs no OpenHarness checkout kept around: `oh init --from-remote` equips the repo by fetching the payload from the public repo, then `oh sandbox`, `oh shell`, and `oh gateway` drive the sandbox by wrapping the vendored `.oh/scripts/` — the same scripts the source repo's Makefile drives. Bundling the payload into a published binary is a stated non-goal, gated on the npm publish decision.
 
+Issue #738 adds `docs/**` to the `.oh/manifest.json` include list. `oh init` and `oh update` now deliver `.oh/docs/` markdown, while the manifest still excludes `.oh/patches/`.
+
 ## Detail
 **Payload sourcing (`oh init`)** — precedence `--from <dir>` > `--from-remote` > the CLI's own bundled payload (`cli.ts:139-141`; the two flags conflict, `cli.ts:305-308`). With no source flag and no bundled payload — the installed-binary case, detected via the `manifest.json` marker (`cli.ts:464-469`) — `resolveInitSource` auto-falls back to a remote fetch with a one-line notice naming URL and ref (`cli.ts:498-534`). `--from` sets only the payload source; `--from-remote` sets BOTH payload and templates from the fetched checkout (`cli.ts:478-484`). `oh update` never falls back: it requires `--from` or `--from-remote` (`cli.ts:383-388`) and upgrades only `.oh/` (`cli.ts:110-111`).
+
+**Manifest delivery** — `.oh/manifest.json` defines POSIX globs relative to `.oh/` (`manifest.ts:4-8`). `shouldShip()` requires an include match and rejects an exclude match (`manifest.ts:59-70`). The source manifest includes `docs/**` and omits `patches/**` (`.oh/manifest.json:2-23`).
+
+`copyOhPayload()` applies this decision during both `oh init` and `oh update` (`vendor.ts:76-85`). The function copies the cited `.oh/docs/rfcs/rfc-brain-hands-boundary.md`. The path guard rejects writes outside the target `.oh/` (`vendor.ts:17-21,119-120`). This entry cites the RFC and does not restate its decisions.
 
 **Remote fetch** — `git clone --depth 1 [--branch <ref>] -- <url> <tmp>` of `https://github.com/mifunedev/openharness` (`remote.ts:13,101-103`) with `GIT_TERMINAL_PROMPT=0` and a 120 s timeout (`remote.ts:14,106`). `runWithRemoteSource` makes the temp checkout, wraps the whole run in try/finally cleanup, and prints `fetched payload vX (installed CLI vY)` so version skew is visible (`cli.ts:577-594`).
 
@@ -60,7 +69,7 @@ Equipped repos mount the project at `/home/sandbox/harness`, the `workspaceFolde
 - Version skew: default ref is the clone's default branch; the printed skew line plus `--ref <branch|tag>` pinning are the guard (`cli.ts:589`; `remote.ts:102`).
 - Bundling non-goal: shipping the payload inside a published package is gated on publishing (`cli.ts:492-493`; `.oh/cli/package.json` stays `"private": true`); the bundled-payload branch only fires for source-checkout builds.
 
-DeepWiki comparison (2026-07-03): no public DeepWiki page covers the `oh` CLI consumer lifecycle — the public wiki tracks the pre-#531 layout; this entry fills that gap. Not re-attempted in the 2026-08-10 revision (no network in the build session).
+DeepWiki comparison (2026-08-13): the required comparison used source snapshot `8e145e31`. DeepWiki lists public `docs/` pages but does not describe `.oh/manifest.json`, `oh init`, `oh update`, or `.oh/docs/` delivery. Local sources define those contracts. The comparison found a local coverage gap and does not change the `docs/**` decision.
 
 ## System Relationships
 ```mermaid

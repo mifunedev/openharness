@@ -109,3 +109,50 @@ strictly below `sessionsScanned`, the markdown bullet format + heading-set check
   values `{ atCeiling, total }`, computed over the rankable population.
 
 ---
+
+## US-003 — 2026-08-13 06:14 UTC
+
+**Title**: Every doc that names the correlation scale names scoreUncapped, and markers.md documents the stability guard
+**Files changed**: `.oh/skills/prompt-miner/SKILL.md`, `.oh/skills/prompt-miner/references/markers.md`, `.oh/skills/prompt-miner/references/report-schema.md`, `.oh/skills/prompt-miner/references/scoring.md`, `CHANGELOG.md`
+**Commit**: 63ba85cc
+**Result**: PASS
+
+### What I did
+
+Docs-only story. Named `scoreUncapped` as the correlation scale in all four docs
+that mention it: `markers.md` (intro + `effect_size` bullet + a new
+`effect_size_capped` bullet and JSON key), `SKILL.md` (the Step 3 phrase "against
+the session `score`" is gone; Step 2's dataset list now carries `scoreUncapped`
+and `manifest.ceilingSaturation`), `report-schema.md` (a `ceilingSaturation`
+manifest row and a `scoreUncapped` line in the record shape), and `scoring.md`
+(the formula block now shows both `score` and `scoreUncapped`, with the censoring
+explained). Added the `### Stability guard: UNSTABLE markers` section to
+`markers.md` with both branches (sign disagreement; exactly-one-clears-the-bar)
+and the never-promotable / no-memory-proposal / no-auto-file rule, plus a short
+mirror of it in SKILL.md Step 3 that routes UNSTABLE markers away from Step 4.
+CHANGELOG entry added under `## [Unreleased]` → `### Fixed`.
+
+### Learnings for future iterations
+
+- **The "unchanged, proven by git diff" ACs are satisfiable by construction**:
+  every addition here is a new section or a new bullet appended *after* the
+  protected text (thresholds, stratification, NO-CORPUS, Step 4's gate/result-tag
+  table/Privacy contract). `git diff -U1` on the two files shows no hunk touching
+  any of them — worth checking with `-U1` rather than eyeballing the default `-U3`,
+  which drags protected lines into the context and makes the diff look larger.
+- `git diff --stat` is the cheap oracle for the "no file outside X is modified" AC:
+  5 files, all inside `.oh/skills/prompt-miner/` + `CHANGELOG.md`.
+- **No wiki work was needed**: `prd.md` § Wiki Alignment is `Impact:
+  NOT-APPLICABLE` with `Local entries: none`, so the wiki-alignment discipline in
+  the loop prompt does not bind on this task. Read that section before assuming it
+  does.
+- The five prompt-miner/skill probes (`prompt-miner-schema-compat`,
+  `-symlink-entrypoint`, `-weakness-record`, `-log-root-worktree`, `skill-paths`)
+  all pass and are a fast regression net for doc+engine changes in this skill.
+- The `node --test <dir>/` environmental deviation recorded in US-001/US-002 did
+  not bite here (no test changes), but the glob form still exits 0 at 36/36 after
+  the doc edits.
+
+---
+
+STATUS: COMPLETE

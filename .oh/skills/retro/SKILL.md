@@ -106,7 +106,7 @@ Seed hypotheses by asking, for each subsystem, what *this session* revealed abou
 | Subsystem | Guiding question (what did this session reveal?) | Lives in / deep-dive skill |
 |-----------|--------------------------------------------------|----------------------------|
 | Continual learning | Did prior memory/identity get used, ignored, or contradicted? Did anything durable emerge? | `.oh/memory/MEMORY.md`, `.oh/context/IDENTITY.md` |
-| Context compression | Was loaded context bloated/redundant, or did a rule prove load-bearing? | `/audit context`, `/caveman` |
+| Context compression | Was loaded context bloated/redundant, or did a rule prove load-bearing? | `/audit context` |
 | Reinforcement learning | Did advisor/executor or recursive-decomposition patterns help or hurt? Over/under-delegation? | `.oh/agents/advisor.md` |
 | Wiki | Did the session surface knowledge that belongs in the wiki, or hit stale/missing entries? | `/wiki ingest`, `/wiki lint` |
 | Docs | Did human-facing doc gaps or inaccuracies surface? | `docs/` (site/blog live in `mifunedev/openharness-web`) |

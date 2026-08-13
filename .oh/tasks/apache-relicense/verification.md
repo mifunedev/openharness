@@ -57,6 +57,10 @@ $ git diff upstream/development -- .oh/skills/wiki/corpus/raw/2026-07-18-markitd
 ```
 All 8 byte-identical to `upstream/development`. **MET.**
 
+> **Superseded 2026-08-13.** The five `caveman` skills were removed entirely by
+> [#752](https://github.com/mifunedev/openharness/issues/752) after usage evidence showed zero invocations.
+> The observations below were accurate when recorded and are kept as the dated evidence for that task.
+
 **caveman LICENSE files:**
 ```
 $ ls -la .oh/skills/caveman*/LICENSE

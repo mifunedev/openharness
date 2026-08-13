@@ -9,15 +9,6 @@ of the License is included in the LICENSE file.
 Third-Party Attributions
 =========================
 
-caveman (.oh/skills/caveman, caveman-commit, caveman-review,
-caveman-compress, caveman-stats)
-  Copyright (c) 2026 Julius Brussee
-  Licensed under the MIT License.
-  Vendored from github:JuliusBrussee/caveman. See .oh/skills.lock for the
-  source, commit, and checksum provenance, and .oh/skills/caveman*/LICENSE
-  for the full license text. Not relicensed; this notice does not restate
-  or modify the MIT terms.
-
 typescript (referenced in .oh/cli/package-lock.json) is the sole dependency
 in this repository declaring "license": "Apache-2.0". It is a devDependency
 (.oh/cli/package.json, "devDependencies") used only for type-checking and is

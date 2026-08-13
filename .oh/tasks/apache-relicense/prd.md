@@ -52,7 +52,7 @@ the managed platform, not restrictions on modifying the runtime.
 |---|---|---|
 | DP-1 | Canonical copyright holder | **`Ryan Eggleston, d/b/a Mifune Dev (mifune.dev)`** (revised — see § 11) |
 | DP-2 | The 15 Mifune-Dev per-skill `LICENSE` files | **Deleted**, not relicensed |
-| DP-3 | The 5 `caveman` per-skill `LICENSE` files | **Untouched** — third-party copyright |
+| DP-3 | The 5 `caveman` per-skill `LICENSE` files | **Untouched** — third-party copyright. Superseded 2026-08-13: the five `caveman` skills were removed entirely ([#752](https://github.com/mifunedev/openharness/issues/752)) after usage evidence showed zero invocations. Deleting vendored MIT code is permitted — attribution obligations attach to distribution, so they lapse once distribution stops. DP-3 constrained *relicensing*, not removal. |
 | DP-4 | License-consistency enforcement (eval probe, CI gate) | **Deferred** — out of scope, fast-follow |
 | DP-5 | SPDX per-file headers | **No** |
 | DP-6 | OCI image label + root `package.json` license field | **In scope** |

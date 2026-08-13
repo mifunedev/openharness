@@ -178,7 +178,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `.oh/context/rules/git.md`, which is now only a pointer for providers that load rules. |
 | `/builder` | Author or refine one provider-portable artifact via `/builder <agent\|skill\|command\|rule> <name-or-request>`; shared discovery and validation live in the dispatcher, with one authoritative reference per type. |
 | `/audit` | Explicit nine-target dispatcher: `implementation`, `pr`, `prs`, `harness`, `context`, `skills`, `eval-quality`, `drift`, and `full`; routes to native verdict owners, report-only by default, with one correlated run/log |
-| `/health-check` | Triage host memory/disk/Docker before starting a stack; rank reclaim levers by safety×yield, prune build cache, confirm destructive removal |
+| `/health-check` | Triage container memory/disk/CPU before starting a stack, labelled with the scope measured; Docker inventory, the safety×yield reclaim ladder and the build-cache prune are **host-only** — a socket-less sandbox states that once and emits the procedure for the orchestrator to run at the host project root instead of failing per command |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
 | `/t3` | Start, inspect, and stop the T3 Code browser UI (`npx t3`) in a sandbox tmux session, with pairing-URL discovery and log/status helpers |
 | `/interview` | Adaptive pre-work clarifier — batches 2–4 task-specific questions via `AskUserQuestion`, then proceeds |

@@ -55,7 +55,7 @@ Skills are loaded from `.oh/skills/` via each provider's `skills` symlink, so
 | `/git` | issues, branches, commits, PR titles/bodies, releases |
 | `/ci-status` | after a push — poll CI, report pass/fail |
 | `/release` | CalVer release — push to `main`/`master`; the workflow validates, reserves the CalVer, and publishes |
-| `/health-check` | triage host memory/disk/Docker before a heavy build |
+| `/health-check` | container memory/disk/CPU triage before a heavy build; Docker reclaim is host-only, emitted as a procedure rather than run in-container |
 | `/agent-browser` | open a URL headless for screenshots / preview checks |
 | `/cloudflared` | expose a sandbox port via a public tunnel |
 | `/wiki` | knowledge-base ingest / query / lint |

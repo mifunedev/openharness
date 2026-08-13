@@ -1,0 +1,96 @@
+{
+  "name": "health-check-host-side",
+  "issue": 762,
+  "objective": "Rehome /health-check's Docker triage to the host-side orchestrator role and make the socket-less sandbox path emit one clear scope statement, with a verdict that refuses what it can no longer conclude, instead of nine connection failures.",
+  "refs": [756, 731],
+  "revision": "post-critique — see critique.md; 13 findings accepted, 1 amended, 1 rejected with reason",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Deterministic scope preflight, with a round-trip gate on `available`",
+      "status": "pending",
+      "passes": false,
+      "dependencies": [],
+      "acceptanceCriteria": [
+        ".oh/skills/health-check/scripts/scope-preflight.sh exists, is executable, and passes `bash -n`.",
+        "It emits SCOPE, DOCKER_CLI, DOCKER_ENDPOINT, DOCKER_TRIAGE and METRICS_SCOPE as KEY=VALUE lines on stdout.",
+        "DOCKER_TRIAGE is one of exactly three values: available, host-only, unreachable. No `unverified` terminal state exists — every path resolves.",
+        "DOCKER_TRIAGE=available requires a completed `docker version` round-trip under `timeout`, NOT `[ -S path ]` alone: a socket file that exists while the daemon is dead or unreadable must report `unreachable`, never `available`.",
+        "It tests the endpoint, not the docker binary: with /usr/bin/docker present and /var/run/docker.sock absent it reports DOCKER_TRIAGE=host-only.",
+        "The host-only branch makes ZERO daemon contact — no `docker version`, `ps`, `system df` or `stats`. Endpoint resolution via `docker context inspect` is permitted because it reads local config and needs no daemon.",
+        "A non-unix endpoint (e.g. DOCKER_HOST=tcp://...) gets the same single round-trip and resolves to available or unreachable — it is never refused unseen, and never retried per-command.",
+        "Endpoint resolution order is HEALTH_CHECK_DOCKER_SOCK, then DOCKER_HOST, then `docker context inspect --format '{{.Endpoints.docker.Host}}'`, then /var/run/docker.sock, then ${XDG_RUNTIME_DIR}/docker.sock.",
+        "It emits exactly one human-readable statement in the host-only and unreachable branches, and zero such statements when Docker triage is available.",
+        "That statement names why (issue #756), what is skipped, who runs the host block (the orchestrator at the host project root), and where the block is — it is not a bare `docker unavailable`.",
+        "HEALTH_CHECK_DOCKER_SOCK overrides the tested endpoint, so every branch is reachable under test.",
+        "It exits 0 on every branch, including host-only and unreachable — a classification step must not itself read as the failure being removed."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "US-002",
+      "title": "SKILL.md branches on the preflight, marks Docker host-only, and refuses the verdict it cannot support",
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-001"],
+      "acceptanceCriteria": [
+        "A step 0 runs scripts/scope-preflight.sh before any other command and states the three-way branch on DOCKER_TRIAGE.",
+        "Step 0 states explicitly that the KEY=VALUE lines select the branch and are NOT the report, and that only the single statement is surfaced to the user.",
+        "The host-only and unreachable branches instruct an explicit skip of the Docker steps with no daemon call attempted.",
+        "Step 2 (Docker breakdown), step 5 (docker stats RAM reclaim) and the tier 1-4 reclaim ladder each carry an explicit host-only marker gated on the preflight result.",
+        "A host-side procedure section carries the Docker inventory, the reclaim ladder and the tier-1 prune as commands the ORCHESTRATOR runs at the host project root — naming that role, not a generic operator.",
+        "The host-side section specifies the round trip in BOTH directions: what the orchestrator pastes back, and what the report concludes if nobody returns — Docker headroom is stated UNKNOWN, never left silently pending.",
+        "Under DOCKER_TRIAGE=host-only with a build-shaped target, the Disk verdict row renders `N/A — host-only` instead of a RAG rating computed from container df, and the report states that no build-sizing verdict is possible from inside the container.",
+        "Container-local questions (will `npm install` OOM this container) keep a real RAG rating, because there the container view is the correct view.",
+        "Step 1 and the verdict table label the scope the metrics measured (container vs host) rather than asserting host.",
+        "The SKILL.md:44 claim that Docker lives on the root overlay so root df is the binding number is corrected, not merely relabelled.",
+        "The overview no longer claims unconditional sandbox-host triage.",
+        "The literal string `docker stats` survives, so health-check-docker-stats.sh stays green.",
+        "The literal string `AUDIT_RUN_ID` survives, so memory-log-locked-append.sh:16-18 stays green.",
+        "The literal line `.oh/scripts/locked-append.sh \"$MEM/$TODAY/log.md\" <<EOF` survives, so memory-log-locked-append.sh:19 stays green.",
+        "The dangling /docker-disk-cleanup reference at SKILL.md:72 is removed and its substantive advice retained."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "US-003",
+      "title": "Behavioural probe pins the degrade, verified by rejection",
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-001", "US-002"],
+      "acceptanceCriteria": [
+        ".oh/evals/probes/health-check-socket-degrade.sh added, executable, tier A, with source and desc headers.",
+        "The probe EXECUTES scope-preflight.sh; it does not merely assert the skill file exists.",
+        "Host-only arm: an absent endpoint yields DOCKER_TRIAGE=host-only and exactly one statement.",
+        "Zero-daemon-contact arm: a `docker` shim first on PATH records every subcommand it receives to a sentinel; after a host-only run the sentinel contains no daemon-contacting subcommand. Static grep alone does not satisfy this.",
+        "Available arm: the same shim exiting 0 for the round-trip yields DOCKER_TRIAGE=available and zero host-only statements — the rejection arm lives inside the probe.",
+        "Unreachable arm: an endpoint present with the shim exiting non-zero yields DOCKER_TRIAGE=unreachable, exactly one statement, and exit 0 — proving a dead socket is not classified available.",
+        "Real-socket arm: a genuine unix socket bound at the overridden path is accepted as an endpoint. Guarded by `command -v python3 || exit 2`, and bound under `mktemp -d /tmp/hc-probe.XXXXXX` because AF_UNIX sun_path is limited to 108 bytes and a deep path fails for reasons unrelated to the test.",
+        "The probe asserts SKILL.md wires step 0 to the script, since an unwired script is a no-op.",
+        "All fixtures live outside the repo tree and are removed by an EXIT trap, so a crash mid-probe leaks nothing into git status.",
+        "The probe SKIPs (exit 2) rather than failing when a precondition it cannot create is unavailable.",
+        "Every assertion is shown to FAIL against a deliberately broken copy of the script and of SKILL.md, recorded in evidence.md.",
+        "bash .oh/skills/eval/run.sh --probe health-check-socket-degrade exits 0, and the full suite shows no new green-to-red transition."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "US-004",
+      "title": "Scope claims align across every surface that advertises the skill",
+      "status": "pending",
+      "passes": false,
+      "dependencies": ["US-002"],
+      "acceptanceCriteria": [
+        "AGENTS.md:181 and .oh/templates/AGENTS.md:58 each pair `container` with the memory/disk/CPU triage and `host-only` with the Docker reclaim — a mechanical check, not a vibe check. Neither row may imply in-container Docker triage.",
+        "The skill's description frontmatter no longer claims host resources unconditionally — it is injected into every session, so it is the most load-bearing claim of the set.",
+        "The frontmatter TRIGGER list is reworded too, not only the description: `free up space` and `reclaim resources` must not imply an in-container action the skill can no longer perform.",
+        "CLAUDE.md needs no separate edit because it is a symlink to AGENTS.md (verified by `ls -la`, not assumed).",
+        ".oh/skills/audit/references/full.md decides the question rather than offering an either/or: a socket-less --health-target composition yields container-scope evidence only, is recorded `partial` (never `complete`), and the envelope carries METRICS_SCOPE/DOCKER_TRIAGE.",
+        "`partial` is used rather than `deferred`, because `deferred` in that file promises a rerun recovers the evidence and an in-container rerun cannot.",
+        "CHANGELOG.md gains an Unreleased entry under Changed citing #762.",
+        "No provider surface holds a stale copy: .claude, .codex, .pi and .hermes all resolve through symlinks to .oh/skills (verified by readlink)."
+      ],
+      "evidence": []
+    }
+  ]
+}

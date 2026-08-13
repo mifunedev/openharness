@@ -166,9 +166,10 @@ the required gate before opening the registry pull request:
 bash .oh/scripts/registry-portability.sh --registry <path-to-registry-checkout>
 ```
 
-Read the `neither` count in the output, not the exit code. The check exits 1
-against the registry today because five recorded defects still stand there, so
-`neither: 0` — and not exit 0 — is the result that means your change added no
+The check exits 0 against the registry today, so a nonzero exit means your change
+added drift. Read the `neither` count as well: it counts findings that are
+neither accepted nor already triaged, and it stays correct even when a `KNOWN`
+backlog is holding the exit code at 1. `neither: 0` means your change added no
 new unportable reference.
 
 See `.oh/scripts/registry-portability.md` for the rule set and the procedure

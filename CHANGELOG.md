@@ -8,6 +8,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Fixed
+- Repair seven entries in `.claude/protected-paths.txt` that resolved to nothing, and add `.oh/evals/probes/protected-paths-resolve.sh` so a rename cannot silently disarm a guard again. A guard entry that matches nothing protects nothing **and reads identical to one that passes**, which is why all seven survived since 2026-05-03. `cloudflared-tunnel` was listed while the skill directory is `.oh/skills/cloudflared`, so `/cloudflared` had no protection at all. Four `spec-*` entries had never been directories — the `/spec` dispatcher implements them as `.oh/skills/spec/references/{plan,critique,execute,retro}.md`, which now carry the protection. `.oh/install/cloudflared-tunnel.sh` was deleted at some point and is replaced by `.oh/skills/cloudflared/scripts/run.sh`. `.claude/specs/structure-spec-v0.7.md` sat under a path `.gitignore:66` excludes, so it could never resolve and is removed. The probe parses the file's documented format — bare names are skills, everything else is a repo-relative path, with a slash-free entry allowed to resolve either way so the root `Makefile` entry stays valid — and was verified by rejection against all four original defect shapes ([#753](https://github.com/mifunedev/openharness/issues/753)).
+
 ### Security
 
 - Pin transitive `nanoid` to the patched `^3.3.17` range to close GHSA-2v37-7h3g-55p8 through the Vitest → Vite → PostCSS dependency path.

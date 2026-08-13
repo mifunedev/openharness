@@ -331,5 +331,9 @@ if [ "$findings" -gt 0 ]; then
   exit 1
 fi
 
-printf 'ste-check: no findings in %d file(s).\n' "${#files[@]}" >&2
+# A clean exit reads as approval, so it carries its own residual. Two defects in
+# the 10-question check are NOT machine-detectable here, and both were measured
+# escaping a green run: see SKILL.md and ste-checker-contract.sh section 7.
+printf 'ste-check: no findings in %d file(s). Two defects escape every detector: a condition that trails the action it guards (question 4), and a sentence that opens with a pronoun naming no antecedent (question 7). Run the 10-question check in %s/SKILL.md.\n' \
+  "${#files[@]}" "$SKILL_ROOT" >&2
 exit 0

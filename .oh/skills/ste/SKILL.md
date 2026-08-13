@@ -235,8 +235,17 @@ The checker strips inline code spans before every match. Wrap a banned word in
 backticks whenever you must name the word itself.
 
 The checker catches mechanical defects. The checker misses missing actors,
-missing units, and invented values. A clean exit means the prose passed the
+missing units, and invented values. Two further defects escape every detector.
+The first defect is a condition that trails the action it guards. The second
+defect is a sentence that opens with a pronoun naming no antecedent. Questions 4
+and 7 catch both defects by hand. A clean exit means the prose passed the
 detectors, not that the prose passed review. Run the 10-question check yourself.
+
+No detector covers those two defects, and none should. A trailing condition
+reads correctly in approved specimens at `references/examples.md`, so a
+question-4 detector turns `--blocks after` red. A sentence-initial pronoun with
+a named antecedent one sentence earlier is correct prose, and the checker reads
+one line at a time, so a question-7 detector cannot tell the two apart.
 
 ## Guardrails
 

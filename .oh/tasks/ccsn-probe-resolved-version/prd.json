@@ -1,0 +1,81 @@
+{
+    "schemaVersion": 1,
+    "project": "cc-safety-net-wiring assertion (d) asserts the resolved version",
+    "branchName": "bug/759-ccsn-probe-resolved-version",
+    "description": "rev 2, revised against 13 findings from two adversarial critics (see critique.md). Assertion (d) of .oh/evals/probes/cc-safety-net-wiring.sh matches the declared dependency range in the boot-generated .pi/npm/package.json, which npm writes as a caret range, so the tier-A probe reports REGRESSION while every oracle agrees the pin is 1.0.6. Replace the range match with a resolved-version check read from .pi/npm/package-lock.json and .pi/npm/node_modules/cc-safety-net/package.json, keep the absent-runtime-state posture, close the override disarm hole, and verify the assertion by rejection with a mutation check.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "Assertion (d) reads the resolved version",
+            "description": "As a harness maintainer, I want assertion (d) to compare the resolved cc-safety-net version against the pin, so that the probe reports drift that is real and stays silent when there is none.",
+            "acceptanceCriteria": [
+                "Assertion (d) reads the resolved version from .pi/npm/package-lock.json (.packages[\"node_modules/cc-safety-net\"].version, falling back to .dependencies[\"cc-safety-net\"].version) and from .pi/npm/node_modules/cc-safety-net/package.json (.version)",
+                "The old range match is gone: git diff shows the grep -Eq range line removed, and no assertion compares the declared range against the pin",
+                "Every resolved source that exists is checked, and a mismatch in either source fails the probe with its own line",
+                "Each (d) failure line names the file, the version found, the pin, and one remediation clause",
+                "Rules R1 through R7 in prd.md are implemented as written",
+                "The JSON interpreter is invoked only when a source file exists; the probe never exits 2 for a missing interpreter, and never aborts under set -euo pipefail on unparseable JSON",
+                "The assertion-(d) comment describes resolved-version semantics rather than the removed range match",
+                "bash -n .oh/evals/probes/cc-safety-net-wiring.sh exits 0",
+                "git diff shows no textual change to assertions (a), (b), (c), (e), (f) or to the live-binary block",
+                "Behavioral proof that (a) through (f) are unchanged: with node removed from PATH and .claude/settings.json deliberately broken in a scratch copy, the probe still exits 1 and still names (a)"
+            ],
+            "priority": 1,
+            "passes": true,
+            "notes": "Validated by the First Mate, not self-certified. git diff inspected hunk by hunk: only line 23 (PI_PKG -> PI_NPM) and the (d) region changed; (a),(b),(c),(e),(f) and the live-binary block are byte-identical. R1-R7 live at lines 93-130. AC 10 was reassigned to US-003 and met there: with node stripped from PATH a correct .claude/settings.json produced no (a) line and a broken one still exited 1 naming (a)."
+        },
+        {
+            "id": "US-002",
+            "title": "Before and after on the default path",
+            "description": "As a reviewer, I want one controlled comparison over identical input, so that I can tell a real fix from a probe that was already green.",
+            "acceptanceCriteria": [
+                "A throwaway fixture is materialized at the worktree's own gitignored .pi/npm/, carrying package.json declaring \"cc-safety-net\": \"^1.0.6\", package-lock.json resolving 1.0.6, and node_modules/cc-safety-net/package.json at 1.0.6",
+                "With CC_SAFETY_NET_PROBE_PI_NPM unset, the probe at HEAD (git show HEAD:.oh/evals/probes/cc-safety-net-wiring.sh) run against that fixture exits 1 and names (d)",
+                "With CC_SAFETY_NET_PROBE_PI_NPM unset, the fixed probe run against the same fixture exits 0 and prints its PASS line",
+                "With the override unset and the fixture's resolved version changed to a version other than 1.0.6, the fixed probe exits 1, proving the default path reads $ROOT/.pi/npm rather than only the override",
+                "The fixture is removed afterwards and git status --porcelain is clean of it",
+                "With no .pi/npm/ present, the fixed probe exits 0 and assertion (d) contributes no failure line",
+                "Read-only cross-check: pointed by the override at the real tree /home/sandbox/harness/.pi/npm, the fixed probe exits 0",
+                "sha256sum of the three real files under /home/sandbox/harness/.pi/npm/ is recorded before and after all verification runs and is identical",
+                "Both raw outputs from criteria 2 and 3 are captured verbatim for evidence.md"
+            ],
+            "priority": 2,
+            "passes": true,
+            "notes": "Validated by the First Mate, who re-ran the before/after personally rather than accepting the delegate's transcript. Identical fixture, override unset, default path: HEAD's probe rc=1 naming (d); the fixed probe rc=0. Drifting the fixture to 1.0.9 with the override still unset gave rc=1, which is what rules out a fix that only works through the override. Fixture removed; git status clean; the live .pi/npm checksums are unchanged."
+        },
+        {
+            "id": "US-003",
+            "title": "Verification by rejection",
+            "description": "As a harness maintainer, I want proof that assertion (d) rejects, so that its green state is evidence rather than decoration.",
+            "acceptanceCriteria": [
+                "Every rejection run keeps ROOT at the real repo and varies only CC_SAFETY_NET_PROBE_PI_NPM, so unrelated assertions cannot supply the exit code",
+                "Pointed at a tree whose resolved version is not 1.0.6, the probe exits 1, every failure line begins with (d), and for a single-source drifted tree stderr carries exactly one failure line naming the file and the version found (a both-sources-drifted tree emits two lines by design, per DD-2)",
+                "A lock-only tree and an installed-package-only tree each fail on their own",
+                "A tree whose declared range is exactly 1.0.6 but whose resolved version is not still fails",
+                "A tree that declares cc-safety-net but resolves nothing fails (R5)",
+                "CC_SAFETY_NET_PROBE_PI_NPM set to a path that does not exist fails (R1)",
+                "CC_SAFETY_NET_PROBE_PI_NPM set to an existing empty directory fails (R6), so the override cannot disarm the assertion",
+                "Mutation check: with assertion (d) stripped from a scratch copy of the probe, the drifted tree from criterion 2 exits 0, proving the exit code came from assertion (d) and nothing else",
+                "Every rejection run uses a temporary tree under the scratchpad, and the real .pi/npm/ tree keeps the checksums recorded in US-002"
+            ],
+            "priority": 3,
+            "passes": true,
+            "notes": "Eleven cases, all as expected. The First Mate re-ran the mutation check independently and on the DEFAULT path (the delegate ran it through the override): with lines 48-131 stripped, the same drifted tree exits 0 where the real probe exits 1, so the exit code is attributable to assertion (d) alone. Positive control included so the rejections cannot be passing for the wrong reason."
+        },
+        {
+            "id": "US-004",
+            "title": "Scoreboard, changelog, tracked artifacts",
+            "description": "As a reviewer, I want the suite scoreboard and the changelog to record this fix, so that the change is auditable from the diff alone.",
+            "acceptanceCriteria": [
+                "bash .oh/skills/eval/run.sh completes and .oh/evals/RESULTS.md shows cc-safety-net-wiring with status PASS, recorded as bookkeeping because the row was SKIPPED and would have flipped without this fix",
+                "A pre-change and a post-change run of the same 99-probe suite are compared, and no probe moves PASS to REGRESSION",
+                "CHANGELOG.md gains one bullet under [Unreleased] / Fixed that cites issue #759",
+                "evidence.md follows .oh/skills/audit/references/reviewer-evidence-doc.md: audit run id, verbatim native verdict, each of the six issue acceptance criteria mapped to observed proof, the US-002 before and after outputs quoted verbatim, and a gaps section stating that the SKIPPED to PASS row is not evidence of the fix",
+                ".oh/tasks/ccsn-probe-resolved-version/ holds prd.md, prd.json, critique.md, progress.txt and evidence.md, and git ls-files reports all five as tracked"
+            ],
+            "priority": 4,
+            "passes": false,
+            "notes": ""
+        }
+    ]
+}

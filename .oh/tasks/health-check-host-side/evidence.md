@@ -1,8 +1,10 @@
 # Evidence — health-check-host-side
 
 - **PR**: #764 (mifunedev/openharness, base `development`) · **Branch**: `task/762-health-check-host-side`
-- **Audit run**: `audit-20260813T060219Z-296946` · **Verdict**: `PR-AUDIT-PROMOTABLE`
-- **Prior run**: `audit-20260813T055733Z-263366` → `PR-AUDIT-BLOCKED` (recorded below; it caught a real conflict)
+- **Audit run**: `audit-20260813T063007Z-386144` · **Verdict**: `PR-AUDIT-PROMOTABLE`, `flags: (none)`
+- **Prior runs**, both recorded below because each caught something real:
+  - `audit-20260813T055733Z-263366` → `PR-AUDIT-BLOCKED` — a genuine merge conflict
+  - `audit-20260813T060219Z-296946` → `PR-AUDIT-PROMOTABLE` with `flags: title-convention` — a genuine title defect I dismissed before fixing it
 - **Closes**: #762 · **Refs**: #756, #731
 
 Every claim below quotes a command that ran and its real output. Nothing here is
@@ -36,7 +38,8 @@ at the host project root — a role root `AGENTS.md` already defines and already
 | Boot validation | `bash .oh/scripts/link-providers.sh --check` | `Providers OK: .pi/.claude/.codex skills -> .oh/skills (vendored pack present)`, rc=0 | PASS |
 | CI | `gh pr checks 764` | 4/4 `pass` — Boot Path Lint 26s, Eval Probe Regression Gate 28s, Lint/Typecheck/Build/Test 37s, Validate sandbox compose 2m4s | PASS |
 | Merge state | `gh pr view 764` | `mergeable=MERGEABLE state=CLEAN draft=false` | PASS |
-| PR audit | `audit-run.sh pr 764 -- route-driver.sh` | `promotable: true`, `evidenceComplete: true` → `PR-AUDIT-PROMOTABLE` | PASS |
+| PR audit | `audit-run.sh pr 764 -- route-driver.sh` | `promotable: true`, `evidenceComplete: true`, `flags: (none)` → `PR-AUDIT-PROMOTABLE` | PASS |
+| PR title | `/git` SKILL.md:82 literal format | `FROM task/762-health-check-host-side TO development` — flag cleared on the final run | PASS (after correction) |
 | Diff correctness | — | Explicitly outside `/audit pr` scope (`references/pr.md`: "Diff correctness is outside audit scope"). Covered instead by the two pre-build critics and the rejection harness. | GAP, stated |
 
 ## Acceptance criteria → proof

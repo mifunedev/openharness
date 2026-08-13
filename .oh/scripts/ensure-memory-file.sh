@@ -3,8 +3,13 @@
 #
 # .oh/memory/MEMORY.md is the long-term "Lessons Learned" ledger the /retro
 # skill appends to and CLAUDE.md's session-start reads. It is gitignored
-# (local per-instance state), so a fresh clone / fresh sandbox starts WITHOUT
-# it — and an unconditional read (session start, retro dedup) then hits ENOENT.
+# (untracked state), so a fresh clone / fresh sandbox starts WITHOUT it — and an
+# unconditional read (session start, retro dedup) then hits ENOENT.
+#
+# There is ONE ledger per checkout, not one per worktree: oh-path anchors the
+# `memory` name to the main worktree (#768). Running this from inside a linked
+# worktree therefore seeds — or finds — the checkout's shared file, and never
+# creates a private copy that would be deleted with the branch.
 #
 # This script creates the file with its canonical header IF AND ONLY IF it is
 # missing. It never touches an existing file, so it is safe to run on every

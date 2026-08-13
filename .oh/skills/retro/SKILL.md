@@ -203,17 +203,19 @@ printf "%s\n" "<candidate line>" | bash "${CLAUDE_SKILL_DIR}/scripts/check-memor
 
 ### 7. Write approved changes
 
-First ensure the durable ledger exists (it is gitignored/local-per-instance, so
-a fresh clone lacks it; this seeds the `## Lessons Learned` header idempotently
-and never overwrites):
+First ensure the durable ledger exists (it is gitignored, so a fresh clone lacks
+it; this seeds the `## Lessons Learned` header idempotently and never
+overwrites). It prints the resolved path — one ledger serves every worktree of
+the checkout, so write to that path, not to a relative `.oh/memory/`:
 
 ```bash
+MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"
 sh .oh/scripts/ensure-memory-file.sh
 ```
 
 For each APPROVED item:
 
-**`.oh/memory/MEMORY.md`** — append under `## Lessons Learned`:
+**`$MEM/MEMORY.md`** — append under `## Lessons Learned`:
 ```markdown
 - **YYYY-MM-DD**: <lesson>
 ```
@@ -244,7 +246,7 @@ LOG_ENTRY=$(bash "${CLAUDE_SKILL_DIR}/scripts/render-log-entry.sh" \
   --hypotheses <total> --supported <n> --refuted <n> --inconclusive <n> \
   --memory <n> --identity <n> \
   --observation "<one sentence — strongest supported finding, or no durable patterns>")
-printf "%s\n" "$LOG_ENTRY" | .oh/scripts/locked-append.sh ".oh/memory/$TODAY/log.md"
+printf "%s\n" "$LOG_ENTRY" | .oh/scripts/locked-append.sh "$MEM/$TODAY/log.md"
 ```
 
 Use `--result DRY-RUN` for dry-runs and `--result SKIPPED-TRIVIAL` for trivial skips.

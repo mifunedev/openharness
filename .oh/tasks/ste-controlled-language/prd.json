@@ -23,8 +23,8 @@
         "The script detects all six classes: hedges and qualifiers, vague nouns and pronouns, passive-voice markers, sentences over the word cap, compound actions in one step, and non-approved words from the dictionary."
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "Built first. US-001, US-003, and US-005 all assert against it."
+      "passes": true,
+      "notes": "PASS. verify.sh asserts rc 0/1/2, the six detector classes, and that a scan leaves the file byte-identical."
     },
     {
       "id": "US-001",
@@ -41,8 +41,8 @@
         "`bash .oh/skills/ste/scripts/ste-check.sh .oh/skills/ste/references/rules.md` exits 0."
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Depends on US-004 for the self-check."
+      "passes": true,
+      "notes": "PASS. 10 \"## \" headings, 53 \"### \" rules, checker rc=0."
     },
     {
       "id": "US-002",
@@ -58,8 +58,8 @@
         "`bash .oh/skills/ste/scripts/ste-check.sh .oh/skills/ste/references/dictionary.md` exits 0."
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Depends on US-004. The self-check passes only because the checker strips inline code spans."
+      "passes": true,
+      "notes": "PASS. 198 entry rows, all four scope statements present, every row backticks both word columns, checker rc=0."
     },
     {
       "id": "US-003",
@@ -79,8 +79,8 @@
         "`bash .oh/skills/ste/scripts/ste-check.sh --blocks before .oh/skills/ste/references/examples.md` exits 1 and reports a finding from every one of the six detector classes."
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Depends on US-004. The before blocks are the committed regression fixture for the checker."
+      "passes": true,
+      "notes": "PASS. 24 before fences = 24 after fences, 13 distinct domains, --blocks before rc=1 with all six classes, --blocks after rc=0."
     },
     {
       "id": "US-005",
@@ -104,8 +104,8 @@
         "`bash .oh/skills/ste/scripts/ste-check.sh .oh/skills/ste/SKILL.md` exits 0."
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "Depends on US-001 through US-004 for exact filenames and checker behaviour."
+      "passes": true,
+      "notes": "PASS. 292 lines, both dimension-D headings, frontmatter inside the allow-list, checker rc=0."
     },
     {
       "id": "US-006",
@@ -117,8 +117,8 @@
         "No repository file outside `.oh/skills/ste/`, `.oh/tasks/ste-controlled-language/`, `AGENTS.md`, and `CHANGELOG.md` changes."
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PASS. One /ste row in AGENTS.md, one ### Added line linking issue 750."
     },
     {
       "id": "US-007",
@@ -135,8 +135,8 @@
         "`git diff --name-only upstream/development...HEAD` lists no path under `.oh/memory/` and no `.oh/evals/RESULTS.md`."
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PASS. verify.sh exits 0 across 62 checks. Probe suite 97/97 byte-identical to the pre-change baseline. Evidence recorded in evidence.md."
     },
     {
       "id": "US-008",
@@ -152,8 +152,8 @@
         "`./scripts/validate.sh` prints PASS."
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "Must not start before US-007 passes. Any later content edit invalidates the checksum."
+      "passes": true,
+      "notes": "PASS. skills-ref validate OK, refresh-checksums run last, validate.sh PASS (109 checks). mifunedev/skills PR 7."
     },
     {
       "id": "US-009",
@@ -166,8 +166,8 @@
         "One follow-up issue records the council verdict on `/caveman` consolidation and names the licensing artifacts a removal would touch."
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PASS. openharness PR 751, skills PR 7, follow-up issues 752 (caveman scope) and 753 (protected-paths)."
     }
   ]
 }

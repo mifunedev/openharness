@@ -223,7 +223,14 @@ Exit codes: `0` clean, `1` one finding or more, `2` bad arguments.
 
 The checker reports `file:line: RULE-ID message` and writes to no file. Six rule
 identifiers cover the detectors: `HEDGE`, `VAGUE`, `PASSIVE`, `LONG`,
-`COMPOUND`, `WORD`.
+`COMPOUND`, `WORD`. A seventh, `FENCE`, marks an unclosed fenced block.
+
+Two rules keep a green exit honest:
+
+- An unclosed fence leaves later lines unscanned. The checker reports `FENCE`
+  and exits 1 rather than exiting clean on a document the checker did not read.
+- A `--blocks` tag that matches no fenced block exits 2. A typo in the tag
+  cannot pass as a clean scan.
 
 The checker strips inline code spans before every match. Wrap a banned word in
 backticks whenever you must name the word itself.

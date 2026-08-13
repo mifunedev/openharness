@@ -42,7 +42,37 @@ if command grep -q 'CLAUDE_SKILL_DIR' "$CHECK"; then fail "reads CLAUDE_SKILL_DI
 expect_rc "no arguments" 2 bash "$CHECK"
 expect_rc "unknown option" 2 bash "$CHECK" --nope README.md
 expect_rc "missing file" 2 bash "$CHECK" /nonexistent/ste-fixture.md
+expect_rc "directory argument" 2 bash "$CHECK" "$SKILL"
 expect_rc "bad --max-words" 2 bash "$CHECK" --max-words abc "$SKILL/SKILL.md"
+
+# The four fail-open shapes the PR audit on #751 found. Each exited 0 while
+# scanning little or nothing. A linter that passes by reading nothing is worse
+# than no linter, because the green exit is read as proof.
+FIX=$(mktemp -d); trap 'rm -rf "$FIX"' EXIT
+printf 'Intro.\n\n```bash\ncode\nThe runner basically utilizes things.\n' > "$FIX/unclosed.md"
+expect_rc "unclosed fence must not exempt the rest of the file" 1 bash "$CHECK" "$FIX/unclosed.md"
+# The checker exits 1 here by design; pipefail would otherwise mask the grep.
+{ bash "$CHECK" "$FIX/unclosed.md" 2>/dev/null || true; } | command grep -q ' FENCE ' \
+  && pass "unclosed fence reports a FENCE finding" || fail "unclosed fence is not reported"
+printf -- '---\nThe runner basically utilizes things.\nMore prose that basically utilizes things.\n' > "$FIX/rule.md"
+expect_rc "a leading horizontal rule is not frontmatter" 1 bash "$CHECK" "$FIX/rule.md"
+printf -- '---\nname: x\ndescription: The thing is basically processed\n---\n\nRun the command.\n' > "$FIX/front.md"
+expect_rc "real frontmatter is still skipped" 0 bash "$CHECK" "$FIX/front.md"
+printf '~~~text\ncode\n```\nThe runner basically utilizes things.\n~~~\n' > "$FIX/mixed.md"
+expect_rc "a backtick line must not close a tilde fence" 0 bash "$CHECK" "$FIX/mixed.md"
+expect_rc "an unknown --blocks tag must not pass vacuously" 2 bash "$CHECK" --blocks nosuchtag "$SKILL/references/examples.md"
+expect_rc "an empty --blocks tag is a usage error" 2 bash "$CHECK" --blocks '' "$SKILL/references/examples.md"
+printf 'The data is processed by the worker.\n' > "$FIX/passive.md"
+expect_rc "PASSIVE fires on a real passive clause" 1 bash "$CHECK" "$FIX/passive.md"
+printf 'The measured value is indeed correct.\nThe disk is speed limited.\n' > "$FIX/nonverb.md"
+expect_rc "PASSIVE stays silent on non-participles ending in ed" 0 bash "$CHECK" "$FIX/nonverb.md"
+printf 'Read the guide at www.example.com/things/various for more.\n' > "$FIX/url.md"
+expect_rc "a bare hostname is stripped before matching" 0 bash "$CHECK" "$FIX/url.md"
+
+# The probe that keeps every assertion above enforced after merge.
+PROBE=.oh/evals/probes/ste-checker-contract.sh
+[ -x "$PROBE" ] && pass "$PROBE is executable" || fail "$PROBE missing or not executable"
+expect_rc "the checker-contract probe passes" 0 bash "$PROBE"
 
 # The checker must not write to the file it scans.
 BEFORE_SUM=$(md5sum "$SKILL/references/examples.md" | cut -d' ' -f1)

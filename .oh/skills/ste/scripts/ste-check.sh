@@ -35,10 +35,15 @@ Rule identifiers:
   LONG      a sentence above the word cap
   COMPOUND  more than one action in one step
   WORD      a non-approved word that the dictionary maps to a replacement
+  FENCE     an unclosed fenced block, which left later lines unscanned
+
+A --blocks tag that matches no fenced block exits 2 rather than 0, so a typo in
+the tag cannot pass as a clean scan.
 USAGE
 }
 
 blocks=""
+blocks_set=0
 max_words=25
 files=()
 
@@ -47,8 +52,8 @@ while [ "$#" -gt 0 ]; do
     -h|--help) usage; exit 0 ;;
     --blocks)
       [ "$#" -ge 2 ] || { printf 'ste-check: --blocks needs a value\n' >&2; usage; exit 2; }
-      blocks="$2"; shift 2 ;;
-    --blocks=*) blocks="${1#*=}"; shift ;;
+      blocks="$2"; blocks_set=1; shift 2 ;;
+    --blocks=*) blocks="${1#*=}"; blocks_set=1; shift ;;
     --max-words)
       [ "$#" -ge 2 ] || { printf 'ste-check: --max-words needs a value\n' >&2; usage; exit 2; }
       max_words="$2"; shift 2 ;;
@@ -64,6 +69,11 @@ case "$max_words" in
 esac
 [ "$max_words" -gt 0 ] || { printf 'ste-check: --max-words must be above 0\n' >&2; exit 2; }
 
+if [ "$blocks_set" -eq 1 ] && [ -z "$blocks" ]; then
+  printf 'ste-check: --blocks needs a non-empty tag\n' >&2
+  exit 2
+fi
+
 if [ "${#files[@]}" -eq 0 ]; then
   printf 'ste-check: give at least one file\n' >&2
   usage
@@ -78,13 +88,23 @@ for f in "${files[@]}"; do
 done
 
 findings=0
+blocks_matched=0
 for f in "${files[@]}"; do
+  # A leading `---` is YAML frontmatter only when a closing `---` follows it.
+  # Without this pre-pass a document that opens with a horizontal rule looks
+  # like unterminated frontmatter, and the whole file would be skipped clean.
+  has_front=0
+  if [ "$(head -n 1 "$f")" = "---" ] \
+     && awk 'NR>1 && $0=="---"{found=1; exit} END{exit !found}' "$f"; then
+    has_front=1
+  fi
+
   count=$(
-    awk -v want_tag="$blocks" -v cap="$max_words" -v fname="$f" '
+    awk -v want_tag="$blocks" -v cap="$max_words" -v has_front="$has_front" '
     function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
 
     function report(lineno, rule, msg) {
-      printf "%s:%d: %s %s\n", fname, lineno, rule, msg
+      printf "%s:%d: %s %s\n", FILENAME, lineno, rule, msg
       hits++
     }
 
@@ -94,16 +114,28 @@ for f in "${files[@]}"; do
 
     BEGIN {
       hits = 0
+      blocks_seen = 0
       SEP = sprintf("%c", 1)
       in_front = 0
       in_fence = 0
       fence_mark = ""
       fence_tag = ""
+      fence_open_line = 0
 
       split("basically|simply|obviously|essentially|probably|perhaps|maybe|somewhat|fairly|quite|really|actually|typically|usually|normally|ideally|arguably|presumably|roughly|more or less|of course|needless to say|kind of|sort of|it seems|i think|we think|should probably|might want to|feel free to", HEDGE, "|")
       split("things|stuff|something|someone|somehow|anything|various|several|a while|soon|appropriate|proper|adequate|sufficient|reasonable|as needed|as appropriate|if necessary|as required|and so on|the system|the tool|the thing", VAGUE, "|")
       split("utilize|utilise|utilizes|utilises|leverage|leverages|facilitate|facilitates|in order to|prior to|subsequent to|at this point in time|due to the fact that|in the event that|a number of|the majority of|commence|terminate|ascertain|endeavor|endeavour|aforementioned|hereinafter|whilst|amongst|going forward|best in class|seamless|robust|powerful|simply put", WORD, "|")
       split("run|start|stop|restart|open|close|add|remove|delete|create|install|uninstall|configure|set|unset|enable|disable|check|verify|confirm|copy|move|rename|edit|update|upgrade|build|deploy|push|pull|commit|merge|rebase|clone|fetch|click|select|choose|enter|type|save|load|read|write|send|wait|apply|revert|reset|mount|unmount|export|import|replace|append|prepend|attach|detach|record|report|print|log", VERB, "|")
+
+      # Auxiliaries that can head a passive clause.
+      split("is|are|was|were|be|been|being", AUXLIST, "|")
+      for (i in AUXLIST) AUX[AUXLIST[i]] = 1
+      # Words that end in "ed" but are not past participles. Without this set
+      # the passive regex fires on "is indeed", "is speed", "is seed".
+      split("indeed|speed|seed|need|feed|deed|breed|greed|creed|hundred|sacred|naked|wicked|embed|inbred|shred", NVLIST, "|")
+      for (i in NVLIST) NONVERB[NVLIST[i]] = 1
+      split("done|made|built|sent|set|put|written|given|taken|shown|kept|held|left|found|lost|chosen|driven|known|thrown|drawn|grown|torn|worn|run|read|cut|split|shut|hit|let|spread|cast|rebuilt|overwritten|rewritten", IRLIST, "|")
+      for (i in IRLIST) IRREG[IRLIST[i]] = 1
 
       # "just" needs a guard. The word is a hedge next to a verb, and a
       # legitimate adverb next to a time word.
@@ -117,7 +149,9 @@ for f in "${files[@]}"; do
     }
 
     # ---- YAML frontmatter -------------------------------------------------
-    NR == 1 && $0 == "---" { in_front = 1; next }
+    # has_front is 0 when no closing delimiter exists, so an opening horizontal
+    # rule never swallows the document.
+    has_front == 1 && NR == 1 && $0 == "---" { in_front = 1; next }
     in_front == 1 && $0 == "---" { in_front = 0; next }
     in_front == 1 { next }
 
@@ -133,14 +167,20 @@ for f in "${files[@]}"; do
       n = split(info, parts, /[ \t]+/)
       fence_tag = (n > 0 ? parts[n] : "")
       in_fence = 1
+      fence_open_line = NR
+      if (want_tag != "" && fence_tag == want_tag) blocks_seen++
       next
     }
     in_fence == 1 && stripped ~ /^(```+|~~~+)[ \t]*$/ {
       match(stripped, /^(`+|~+)/)
       closer = substr(stripped, RSTART, RLENGTH)
-      if (length(closer) >= length(fence_mark)) {
+      # A closer must use the same marker character as the opener, not merely
+      # the same length. A ``` line inside a ~~~ block does not close it.
+      if (substr(closer, 1, 1) == substr(fence_mark, 1, 1) \
+          && length(closer) >= length(fence_mark)) {
         in_fence = 0
         fence_tag = ""
+        fence_open_line = 0
         next
       }
     }
@@ -167,6 +207,7 @@ for f in "${files[@]}"; do
       gsub(/`[^`]*`/, " ", line)             # inline code spans
       gsub(/\]\([^)]*\)/, "] ", line)        # link targets
       gsub(/https?:\/\/[^ )>]+/, " ", line)  # bare URLs
+      gsub(/(^|[ (])www\.[^ )>]+/, " ", line) # bare hostnames
       gsub(/<!--.*-->/, " ", line)           # inline HTML comments
       gsub(/<[^ >]+>/, " ", line)            # placeholder angle brackets
 
@@ -201,10 +242,16 @@ for f in "${files[@]}"; do
       }
 
       # ---- PASSIVE --------------------------------------------------------
-      if (padded ~ / (is|are|was|were|be|been|being) [a-z][a-z]+ed /) {
-        report(NR, "PASSIVE", "rewrite in the active voice with a named actor")
-      } else if (padded ~ / (is|are|was|were|be|been|being) (done|made|built|sent|set|put|written|given|taken|shown|kept|held|left|found|lost|chosen|driven|known|thrown|drawn|grown|torn|worn|run|read|cut|split|shut|hit|let|spread|cast|rebuilt|overwritten|rewritten) /) {
-        report(NR, "PASSIVE", "rewrite in the active voice with a named actor")
+      # Scan word by word so a non-participle such as "indeed" or "speed"
+      # after an auxiliary does not read as passive voice.
+      np = split(probe, W, " ")
+      for (i = 1; i < np; i++) {
+        if (!(W[i] in AUX)) continue
+        w = W[i + 1]
+        if ((w ~ /^[a-z][a-z]+ed$/ && !(w in NONVERB)) || (w in IRREG)) {
+          report(NR, "PASSIVE", "rewrite in the active voice with a named actor")
+          break
+        }
       }
 
       # ---- LONG -----------------------------------------------------------
@@ -244,17 +291,39 @@ for f in "${files[@]}"; do
       }
     }
 
-    END { print hits }
+    END {
+      # An unclosed fence exempts the rest of the file. Report it rather than
+      # exiting clean, so a truncated document can never pass silently.
+      if (in_fence == 1) {
+        report(fence_open_line, "FENCE",
+               "unclosed fenced block; lines after this one were not scanned")
+      }
+      printf "##STE## %d %d\n", hits, blocks_seen
+    }
     ' "$f"
   ) || {
     printf 'ste-check: failed to scan %s\n' "$f" >&2
     exit 2
   }
-  # The awk program prints findings first and the count last.
-  file_hits=$(printf '%s\n' "$count" | tail -n 1)
+  # The awk program prints findings first and one summary line last.
+  summary=$(printf '%s\n' "$count" | tail -n 1)
+  case "$summary" in
+    '##STE## '*) : ;;
+    *) printf 'ste-check: internal error scanning %s\n' "$f" >&2; exit 2 ;;
+  esac
+  file_hits=${summary#'##STE## '}; file_blocks=${file_hits#* }; file_hits=${file_hits%% *}
   printf '%s\n' "$count" | sed '$d' | { grep . || true; }
   findings=$(( findings + file_hits ))
+  blocks_matched=$(( blocks_matched + file_blocks ))
 done
+
+# A --blocks tag that matches no fence would otherwise pass vacuously, which
+# makes any "--blocks after must exit 0" assertion satisfiable by a typo.
+if [ "$blocks_set" -eq 1 ] && [ "$blocks_matched" -eq 0 ]; then
+  printf 'ste-check: no fenced block tagged "%s" in %d file(s); nothing was scanned\n' \
+    "$blocks" "${#files[@]}" >&2
+  exit 2
+fi
 
 if [ "$findings" -gt 0 ]; then
   printf 'ste-check: %d finding(s) in %d file(s). Standard: %s/SKILL.md\n' \

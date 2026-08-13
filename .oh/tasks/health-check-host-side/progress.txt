@@ -97,9 +97,14 @@ independent of each other once US-002 lands.
   #760's own probe confirmed still green here.
 - /audit pr run 2 (audit-20260813T060219Z-296946): PR-AUDIT-PROMOTABLE.
   promotable=true, evidenceComplete=true, MERGEABLE/CLEAN, CI 4/4 pass.
-- title-convention flag is non-gating and pre-existing: pr-classify.sh:72 tests
-  ^FROM .+ TO .+$, which no PR in this repo matches. promotable=($rfr or $rtm) and
-  never reads flags. Left alone deliberately — worth its own ticket.
+- title-convention: I got this WRONG first. Sampled the 5 newest PRs, saw
+  `type: description`, and called the classifier's ^FROM .+ TO .+$ test dead noise.
+  Over 30 PRs, 20 match it, and /git SKILL.md:82 states the rule literally:
+  "Format: FROM <source-branch> TO <target-branch>". I had conflated it with the
+  COMMIT format (SKILL.md:91). Retitled to
+  "FROM task/762-health-check-host-side TO development"; flag cleared on re-audit.
+  Lesson: when a checker disagrees with me, "the checker is broken" is the most
+  expensive conclusion available — and a 5-item sample is not an oracle.
 - evidence.md written per audit/references/reviewer-evidence-doc.md: observed
   commands and real output only, correlated to the run id and verbatim verdict,
   with the diff-correctness gap stated rather than papered over.

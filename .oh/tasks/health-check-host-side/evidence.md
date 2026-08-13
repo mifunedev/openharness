@@ -220,12 +220,18 @@ base rather than hand-resolved — a hand-merged scoreboard describes neither br
 
 ## Honest notes
 
-- **`title-convention` is a non-gating pre-existing flag.** It fires because
-  `pr-classify.sh:72` tests `^FROM .+ TO .+$`, which no PR in this repository
-  matches — the five most recent all use `type: description`. `promotable` is
-  `($rfr or $rtm)` and does not read flags, so it did not affect the verdict. Left
-  alone deliberately: contorting this title would not fix a classifier that flags
-  every PR. Worth its own ticket, not this one.
+- **`title-convention` was a correct finding about this PR, and I first dismissed it
+  wrongly.** I checked the five most recent PRs, saw them all using
+  `type: description`, and concluded the classifier's `^FROM .+ TO .+$` test matched
+  nothing and was therefore noise. That was a sampling error. Over the last 30 PRs,
+  20 use `FROM <head> TO <base>`, and `/git` SKILL.md:82 states the rule outright:
+  *"Format: `FROM <source-branch> TO <target-branch>` (literal)"*. I had conflated
+  it with the **commit** format (`<type>: <description>`, SKILL.md:91), which this
+  PR's commits do follow. The title is now
+  `FROM task/762-health-check-host-side TO development` and the flag clears. The
+  classifier was right; the audit was right; my dismissal was wrong.
+  Recorded rather than quietly amended, because "the checker is broken" is the most
+  expensive wrong conclusion available when a checker disagrees with you.
 - **`readyForReview: false` with `readyToMerge: true`** is correct, not a
   contradiction: the PR was never a draft, so there is nothing to promote *to*
   review. The remaining gate is the human merge.

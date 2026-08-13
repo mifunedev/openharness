@@ -187,6 +187,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/ralph` | Convert markdown PRD → `.oh/tasks/<name>/prd.json` for the Ralph runner |
 | `/ship-spec` | End-to-end spec (all-in-one form of the `spec-*` family): `/prd` → critics → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR; the single source of the protected build mechanics |
 | `/spec` | Dispatcher for the decomposed workflow (`/spec <plan\|critique\|execute\|retro>`, routes to `references/{plan,critique,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state); **critique** = the `plan ⇄ critique` loop (`/critique` 2 critics + `/approve` gate; `DENIED` → `/spec plan`); **execute** = `build ⇄ audit → spec-retro → improve → groom` to a ready PR at the human merge gate (composes `/ship-spec` mechanics + `/audit implementation`); **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/` |
+| `/firstmate` | The opt-in **third build executor** (`--executor=firstmate`): one long-lived First-Mate session over a whole `.oh/tasks/<slug>/` task graph, launched through the **herdr → tmux → foreground** runner ladder, where `ralph` launches 50 fresh single-story processes. `ralph` stays the default; `STATUS: COMPLETE` (whole line in `progress.txt`) is the invariant terminal interface for all three. Documents the ladder's detection gates, the naming contract (`firstmate-<slug>`, `agent-firstmate-<slug>`), the `FIRSTMATE_TIMEOUT_MS` session budget, the watch/recovery matrices, and the per-mode kill procedure. **Not** the First Mate *role charter* (`.oh/context/rules/first-mate.md`) — see the skill's disambiguation note |
 | `/teach` | Post-implementation communication pass — revise/propose the relevant wiki model, then teach the operator the mental model, verification evidence, caveats, and understanding checks |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
 | `/watchdog` | Generic stuck/stale automation watchdog. Current primary action: inspect autopilot draft PRs, complete stale/stuck branches, and remove draft only after the PR is green/mergeable/clean; also kills tmux sessions frozen at usage-limit/resume prompts. Never merges. |
@@ -212,6 +213,12 @@ without any of these.
 Interactive apps and development servers belong in Herdr panes. Managed/headless
 services (cron, gateways, watchdogs) use named tmux sessions — see
 `.oh/skills/t3/references/sandbox-processes.md`.
+
+Agentic build sessions (one long-lived agent over a whole `.oh/tasks/<slug>/`
+task graph — the `firstmate` executor) pick neither up front: they resolve their
+host through a **herdr → tmux (`agent-` session) → foreground** ladder, degrading
+downward with the reason logged. See `/firstmate` and
+`.oh/skills/t3/references/sandbox-processes.md` § Source of Truth.
 
 ## What You Do
 

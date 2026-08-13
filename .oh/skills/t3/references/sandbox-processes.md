@@ -10,6 +10,34 @@ restart, and log capture across all internal apps.
 `tmux` is preinstalled in the sandbox image; a default `.tmux.conf` is
 baked in (see commit `b30cef9`).
 
+### Runner ladder for agentic build sessions (added, does not replace the above)
+
+**Managed / headless processes stay tmux — re-affirmed.** Cron runtimes,
+gateway clients, watchdogs, dev servers, and tunnels are all still named tmux
+sessions, for exactly the reasons the § "Gateway client sessions" and § "Why"
+sections below give. Nothing in this addition relaxes that.
+
+**Agentic build sessions** — one long-lived agent holding a whole
+`.oh/tasks/<slug>/` task graph, e.g. the `firstmate` executor
+(`.oh/scripts/firstmate.sh`) — are the one category that does *not* assume tmux
+up front. They resolve their host through a three-rung ladder, top rung first:
+
+| Rung | Selected when | Session / handle |
+|------|---------------|------------------|
+| 1. herdr | `herdr` is installed **and** `herdr status` reports both `status: running` and `compatible: yes` **and** the caller is not already inside a herdr pane **and** a short-lived probe pane proves the pane runs in the caller's own environment | herdr agent `firstmate-<slug>` |
+| 2. tmux | any herdr precondition fails — not installed, server down, nested, or out-of-environment | tmux session `agent-firstmate-<slug>` (the `agent-` category below) |
+| 3. foreground | tmux is unavailable too | the child process itself |
+
+Degradation is automatic and downward-only, with the reason logged; an explicit
+`--runner <x>` / `OH_RUNNER=<x>` naming an unavailable rung is a hard error
+instead of a silent degrade. Every rung pipes `2>&1 | tee /tmp/<session>.log`,
+so the one-log-file-per-session convention below holds unchanged in all three
+modes.
+
+Ladder implementation: `.oh/scripts/lib/session-runner.sh`. Executor contract,
+watch matrix, and per-mode kill procedure: `/firstmate`
+(`.oh/skills/firstmate/SKILL.md`).
+
 ## Session Naming
 
 Format: `<category>-<identifier>` (kebab-case inside each segment).

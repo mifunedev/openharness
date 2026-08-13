@@ -3,10 +3,10 @@ title: "Audit Architecture"
 slug: audit-architecture
 tags: [audit, pr, workflow, safety, observability]
 created: 2026-07-17
-updated: 2026-07-17
+updated: 2026-08-12
 sources:
   - raw/2026-07-17-audit-architecture.md
-related: [oh-cli-portable-lifecycle]
+related: [oh-cli-portable-lifecycle, build-executor-ladder]
 confidence: confirmed
 ---
 
@@ -48,3 +48,4 @@ flowchart LR
 
 ## See Also
 - [[oh-cli-portable-lifecycle]]
+- [[build-executor-ladder]]

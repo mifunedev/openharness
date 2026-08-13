@@ -18,6 +18,7 @@ import {
   validateWeights,
   resolveGroundTruth,
   buildWeaknessRecords,
+  computeCeilingSaturation,
   withinWindow,
   DEFAULT_WEIGHTS,
   MARKER_FEATURE_KEYS,
@@ -543,4 +544,132 @@ test("classifyLine flags Claude sidechain records so they can be excluded", () =
     "claude",
   );
   assert.equal(weird.isSidechain, false);
+});
+
+// --- ceiling-saturation census (manifest + markdown) -----------------------
+
+test("computeCeilingSaturation counts the stored rounded score === 100, not scoreUncapped", () => {
+  const census = computeCeilingSaturation([
+    // On the ceiling: the clamp censored 112.5 down to exactly 100.
+    { sessionType: "impl", score: 100, scoreUncapped: 112.5 },
+    // NOT on the ceiling: 99.99 rounds to nothing else, it is simply below.
+    { sessionType: "impl", score: 99.99, scoreUncapped: 99.99 },
+    { sessionType: "other", score: 100, scoreUncapped: 100 },
+  ]);
+  assert.deepEqual(census, {
+    impl: { atCeiling: 1, total: 2 },
+    other: { atCeiling: 1, total: 1 },
+  });
+});
+
+test("computeCeilingSaturation omits null session types and zero-session strata", () => {
+  const census = computeCeilingSaturation([
+    { sessionType: null, score: 100 },
+    { sessionType: "cron", score: 50 },
+  ]);
+  assert.deepEqual(Object.keys(census), ["cron"]);
+  assert.ok(!("null" in census), "no stringified null key");
+  assert.equal(census.cron.atCeiling, 0);
+});
+
+// A fixture dir carrying a noHumanPrompt session (assistant lines only → the
+// only way sessionType is null) next to the normal samples.
+function fixturesWithNoHumanSession() {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pm-census-"));
+  for (const f of fs.readdirSync(FIXTURES)) {
+    fs.copyFileSync(path.join(FIXTURES, f), path.join(tmp, f));
+  }
+  fs.writeFileSync(
+    path.join(tmp, "claude-nohuman.jsonl"),
+    [
+      '{"type":"assistant","sessionId":"claude-nohuman","timestamp":"2026-06-18T09:00:00.000Z","message":{"role":"assistant","stop_reason":"tool_use","content":[{"type":"text","text":"resuming"}]}}',
+      '{"type":"assistant","sessionId":"claude-nohuman","timestamp":"2026-06-18T09:00:01.000Z","message":{"role":"assistant","stop_reason":"end_turn","content":[{"type":"text","text":"done"}]}}',
+    ].join("\n") + "\n",
+  );
+  return tmp;
+}
+
+test("manifest.ceilingSaturation is built from rankable only and carries no null key", () => {
+  const tmp = fixturesWithNoHumanSession();
+  const out = execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", tmp, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const data = JSON.parse(out);
+  const census = data.manifest.ceilingSaturation;
+
+  assert.ok(
+    data.unranked.some((s) => s.noHumanPrompt && s.sessionType === null),
+    "the fixture really did produce a null-type session",
+  );
+  assert.ok(!("null" in census), "no null key in ceilingSaturation");
+  for (const key of Object.keys(census)) assert.notEqual(key, "null");
+
+  // The census population is exactly sessions[] (rankable), not everything scanned.
+  const totals = Object.values(census).reduce((n, c) => n + c.total, 0);
+  assert.equal(totals, data.sessions.length);
+  assert.ok(totals < data.manifest.sessionsScanned, "rankable is a strict subset here");
+
+  // Shape: every value is { atCeiling: int, total: int } and matches sessions[].
+  const expected = {};
+  for (const s of data.sessions) {
+    expected[s.sessionType] ??= { atCeiling: 0, total: 0 };
+    expected[s.sessionType].total += 1;
+    if (s.score === 100) expected[s.sessionType].atCeiling += 1;
+  }
+  assert.deepEqual(census, expected);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("the markdown report renders the census as flat bullets and adds no new heading", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pm-md-"));
+  execFileSync(
+    "node",
+    [ENGINE, "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--out", tmp, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const mdPath = fs.readdirSync(tmp).find((f) => f.endsWith(".md"));
+  const md = fs.readFileSync(path.join(tmp, mdPath), "utf8");
+  const lines = md.split("\n");
+
+  const census = lines.filter((l) => l.startsWith("- ceilingSaturation."));
+  assert.ok(census.length > 0, "at least one census bullet rendered");
+  for (const l of census) assert.match(l, /^- ceilingSaturation\.[a-z]+: \d+\/\d+$/);
+
+  // The bullets live under the EXISTING ## Manifest heading.
+  const manifestIdx = lines.indexOf("## Manifest");
+  const nextHeadingIdx = lines.findIndex((l, i) => i > manifestIdx && l.startsWith("## "));
+  const firstCensusIdx = lines.findIndex((l) => l.startsWith("- ceilingSaturation."));
+  assert.ok(firstCensusIdx > manifestIdx && firstCensusIdx < nextHeadingIdx);
+
+  // No new heading of any level was introduced by the census.
+  const headings = lines.filter((l) => /^#{1,6} /.test(l));
+  assert.ok(!headings.some((h) => /ceiling/i.test(h)), "no census heading added");
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("--dry-run writes no report files into an explicit --out dir", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pm-dryrun-"));
+  execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--out", tmp, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const written = fs.readdirSync(tmp).filter((f) => /^prompt-miner-.*\.(json|md)$/.test(f));
+  assert.deepEqual(written, [], "dry-run wrote no report artifacts");
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("the privacy contract holds: no promptText key without --include-prompt-text", () => {
+  const out = execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  assert.ok(!out.includes("promptText"), "no promptText key anywhere in the emitted JSON");
+  const data = JSON.parse(out);
+  for (const r of [...data.sessions, ...data.unranked]) {
+    assert.ok(!("promptText" in r), `no promptText on ${r.sessionId}`);
+  }
 });

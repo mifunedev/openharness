@@ -496,6 +496,25 @@ export function extractFeatures(text) {
   };
 }
 
+// Per-stratum census of how much of the RANKABLE population sits on the display
+// ceiling. `score` is clamped at 100, so a stratum whose sessions pile up there
+// has stopped discriminating — the operator can read that off the report instead
+// of recomputing it. Counts the STORED, rounded `score` field (not `scoreUncapped`,
+// not an unrounded intermediate), because that is the number the report displays.
+// Session types with no rankable sessions are omitted; a null type cannot appear,
+// because `rankable` excludes noHumanPrompt sessions (the only null-type records).
+export function computeCeilingSaturation(records) {
+  const census = {};
+  for (const r of records) {
+    const type = r.sessionType;
+    if (type == null) continue;
+    if (!census[type]) census[type] = { atCeiling: 0, total: 0 };
+    census[type].total += 1;
+    if (r.score === 100) census[type].atCeiling += 1;
+  }
+  return census;
+}
+
 export function detectSessionType(text) {
   const t = typeof text === "string" ? text : "";
   if (!t.trim()) return "other";
@@ -1057,6 +1076,7 @@ async function run(args) {
     window,
     sessionsScanned,
     sessionsRanked: rankable.length,
+    ceilingSaturation: computeCeilingSaturation(rankable),
     toolErrorsTotal,
     toolResultsTotal,
     malformedLines: counters.malformedLines,
@@ -1097,6 +1117,13 @@ function renderMarkdown(dataset, top) {
   lines.push(`- window: ${manifest.window.start || "(open)"} → ${manifest.window.end || "(open)"}`);
   lines.push(`- sessionsScanned: ${manifest.sessionsScanned}`);
   lines.push(`- sessionsRanked: ${manifest.sessionsRanked}`);
+  // Flat bullets under the EXISTING ## Manifest heading — no new heading, so the
+  // report's section structure is unchanged. Sorted by type for a stable diff.
+  for (const [type, c] of Object.entries(manifest.ceilingSaturation || {}).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    lines.push(`- ceilingSaturation.${type}: ${c.atCeiling}/${c.total}`);
+  }
   lines.push(`- malformedLines: ${manifest.malformedLines}`);
   lines.push(`- sidechainTurnsExcluded: ${manifest.sidechainTurnsExcluded ?? 0}`);
   lines.push(`- skippedFiles: ${manifest.skippedFiles}`);

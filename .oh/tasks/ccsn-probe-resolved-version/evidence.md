@@ -2,7 +2,7 @@
 
 - **PR**: #760 (`mifunedev/openharness`, base `development`) · **Branch**: `bug/759-ccsn-probe-resolved-version`
 - **Issue**: [#759](https://github.com/mifunedev/openharness/issues/759)
-- **Audit run**: `<AUDIT_RUN_ID>` · **Verdict**: `<NATIVE-VERDICT>`
+- **Audit run**: `audit-20260813T053704Z-181806` · **Verdict**: `PR-AUDIT-PROMOTABLE`
 
 Every command below was executed. Every output block is real and trimmed, never
 reconstructed. Where a gate was not run, or where a claim is weaker than it
@@ -31,7 +31,7 @@ to its neighbours.
 | Independent re-verification | Every load-bearing case re-run from scratch by a second session (§ 9) | before/after, 10-case rejection matrix, mutation, interpreter guard — all reproduced | PASS |
 | Verification by rejection | 11 negative cases + a positive control + an assertion-stripped mutant | every case as expected; mutant exits 0 where the real probe exits 1 | PASS |
 | Neighbouring assertions | (a),(b),(c),(e),(f) + live-binary block, textually and behaviorally | diff shows no change; with `node` off `PATH` a broken `(a)` still exits 1 naming `(a)` | PASS |
-| Promotable / CI | `/audit pr` focused classifier for PR #760 | `<classifier summary>` | `<result>` |
+| Promotable / CI | `/audit pr 760` focused classifier, run twice (§ 10) | CI `PASS` (4/4), `MERGEABLE`, `CLEAN`, `promotable: true`, `evidenceComplete: true` | `PR-AUDIT-PROMOTABLE` |
 | UI | browser criteria | n/a — no story declares browser verification | N/A |
 
 ## Observed output
@@ -377,6 +377,44 @@ The three `SKIPPED` rows are the same pre-existing ones named above. The suite i
 
 The worktree fixture at `.pi/npm/` was removed after these runs, so the tree that
 produced the scoreboard is the tree that ships.
+
+### 10. Promotability gate
+
+`/audit pr 760` was run twice through the audit lifecycle boundary, inline rather
+than delegated. The first run is kept here because its verdict was *not* a pass,
+and the reason is the point:
+
+```text
+$ .oh/skills/audit/scripts/audit-run.sh pr 760 --repo mifunedev/openharness -- .oh/skills/audit/scripts/route-driver.sh
+run: audit-20260813T053510Z-176441
+  CI: PENDING | mergeable: MERGEABLE | clean: UNSTABLE
+  promotable: false | evidenceComplete: false
+AUDIT-EVIDENCE: PR-AUDIT-UNKNOWN
+```
+
+`UNKNOWN`, not `BLOCKED`: one check (`Validate sandbox compose and image build`)
+was still in flight, so the evidence set was incomplete. The route declines to
+infer readiness from an incomplete rollup. Re-run once all four checks concluded:
+
+```text
+$ .oh/skills/audit/scripts/audit-run.sh pr 760 --repo mifunedev/openharness -- .oh/skills/audit/scripts/route-driver.sh
+run: audit-20260813T053704Z-181806
+  CI: PASS | mergeable: MERGEABLE | clean: CLEAN
+  readyForReview: true | readyToMerge: false | evidenceComplete: true | promotable: true
+AUDIT-EVIDENCE: PR-AUDIT-PROMOTABLE
+```
+
+```text
+$ gh pr checks 760 --repo mifunedev/openharness
+Boot Path Lint (shellcheck + hadolint)      pass  15s
+Eval Probe Regression Gate                  pass  26s
+Lint, Typecheck, Build & Test               pass  33s
+Validate sandbox compose and image build    pass  2m17s
+```
+
+`readyToMerge` is `false` and stays `false`: no review decision is recorded. That
+is the human merge gate, and neither the audit route nor this session touches it.
+No `gh pr merge` was run.
 
 ## Acceptance criteria → proof
 

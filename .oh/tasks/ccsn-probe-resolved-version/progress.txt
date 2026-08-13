@@ -124,4 +124,15 @@ restarting it. The approach was found sound and was kept.
   REGRESSION, runner `rc=0`. The suite grew from 99 to 102 because the merge
   brought three probes in from `development`.
 
+- `/audit pr 760` run inline through the audit boundary, not delegated — a
+  delegated auditor that dies on a spend cap leaves the gate undone and silent.
+  First run returned `PR-AUDIT-UNKNOWN` with one check still in flight; after all
+  four concluded, `audit-20260813T053704Z-181806` returned
+  `PR-AUDIT-PROMOTABLE` (CI `PASS`, `MERGEABLE`, `CLEAN`, `readyForReview: true`).
+  `readyToMerge` is `false` — no review decision — which is the human merge gate
+  and was left untouched. Recorded in `evidence.md` § 10.
+- PR title left as `FROM bug/759-ccsn-probe-resolved-version TO development`. This
+  looks like an unfilled template but is the convention `/git` SKILL.md:82
+  mandates literally; it was nearly "corrected" before the skill was checked.
+
 STATUS: COMPLETE

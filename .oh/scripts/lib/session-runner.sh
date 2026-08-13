@@ -18,12 +18,9 @@
 # Phase-0 brain/hands seam (see its AUTHORITY CLAUSE). This header CITES it and
 # deliberately does not restate it.
 #
-# FORWARD REFERENCE: that file is not in this tree. It arrives with #733 (PR
-# #736), which is open alongside this branch. Merge #736 first and the path
-# resolves; merge this branch first and the path is dangling until #736 lands.
-# The citation is deliberate either way — the clauses below are quoted so this
-# header stays readable on its own, and the seam they describe is what the
-# execution-context gate implements.
+# The RFC landed with #733 (PR #736, merged 2026-08-13), so the path above
+# resolves. The clauses are quoted below anyway, so this header stays readable
+# without opening the RFC.
 #
 # Two clauses bind this library:
 #

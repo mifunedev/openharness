@@ -1,0 +1,116 @@
+{
+    "schemaVersion": 1,
+    "project": "/retro logs its promotion counts before the gate resolves",
+    "branchName": "task/767-retro-log-gate-order",
+    "description": "rev 2, revised against 13 findings from two adversarial critics (see critique.md). .oh/skills/retro/SKILL.md orders gate (§6) -> write (§7) -> log (§8), but §8 is unconditional and renders --memory/--identity promotion counts. On a non-auto-approve run the agent's turn ends AT the gate, so the log entry is written with counts that are not yet knowable and is wrong the instant the operator approves; the log is append-only so it cannot be corrected in place. Fix shape B: give render-log-entry.sh an explicit GATE-PENDING result whose promotion fields are the literal 'pending', append that entry BEFORE the proposal block prints, and append a resolving OP entry carrying --resolves <HH:MM> after the operator answers. Shape A (defer the append) is rejected because a run abandoned at the gate would leave no trace at all.",
+    "userStories": [
+        {
+            "id": "US-001",
+            "title": "render-log-entry.sh gains a pending promotion state and a resolves marker",
+            "description": "As a harness maintainer, I want the log renderer to express 'the gate is still open' and 'this entry resolves that gate', so that no /retro run can ever emit a promotion count it does not yet know.",
+            "acceptanceCriteria": [
+                "--result accepts GATE-PENDING in addition to OP, DRY-RUN and SKIPPED-TRIVIAL; no other --result value is added",
+                "--memory and --identity accept a non-negative integer or the literal string pending; the other four counts (--hypotheses, --supported, --refuted, --inconclusive) accept integers ONLY",
+                "--hypotheses pending exits 64 under every --result value, proving MEMORY/IDENTITY were split out of the shared integer loop rather than the shared regex being widened",
+                "--result GATE-PENDING --memory pending --identity pending exits 0 and stdout contains the exact line '- **Promoted**: pending gate resolution'",
+                "--result GATE-PENDING with an integer --memory (or an integer --identity) exits 64",
+                "--result OP with --memory pending exits 64",
+                "A mixed pair (--memory pending --identity 0) exits 64 under --result GATE-PENDING and under --result OP",
+                "--resolves HH:MM with --result OP and integer counts exits 0 and stdout contains the exact line '- **Resolves**: the GATE-PENDING entry from HH:MM UTC' immediately after the Promoted line",
+                "--resolves with --result DRY-RUN, SKIPPED-TRIVIAL or GATE-PENDING exits 64",
+                "--resolves with a value failing the ^[0-2][0-9]:[0-5][0-9]$ regex exits 64",
+                "The usage() heredoc and the -h/--help output list GATE-PENDING in the --result enum, the pending option on --memory/--identity, and [--resolves HH:MM]",
+                "Byte-identity on the untouched path: for --result OP with integer counts and no --resolves, the new script's stdout is byte-identical to the pre-change script's stdout for the same arguments, proven by diffing the two outputs",
+                "bash -n on the script exits 0"
+            ],
+            "dependencies": [],
+            "delegate": "First Mate inline",
+            "thinking": "medium"
+        },
+        {
+            "id": "US-002",
+            "title": "SKILL.md appends the gate-pending entry before the proposal block prints",
+            "description": "As the agent running /retro, I want the step order to tell me to log the open gate before I print the block that ends my turn, so that an abandoned run still leaves a trace and a resumed run reports the real counts.",
+            "acceptanceCriteria": [
+                "§6 contains a subsection that appends a GATE-PENDING entry with --memory pending --identity pending",
+                "That subsection appears at a LOWER line number than the proposal-block template containing 'Type APPROVE to write', and carries an explicit warning that nothing after the proposal block is guaranteed to run",
+                "The full ordering chain holds by line number: the §6 heading < the GATE-PENDING append < the 'Type APPROVE to write' proposal block < the '### 7. Write approved changes' heading < the --resolves instruction in §8",
+                "§6 states that the GATE-PENDING entry is appended once, on the first yield only, and is not repeated when an EDIT answer causes the block to be re-presented",
+                "§6 names the four single-entry paths that must NOT open a gate trace: --dry-run, trivial skip, nothing to propose, and auto-approve",
+                "§8 documents the resolving form: --result OP with the real counts plus --resolves <HH:MM of the GATE-PENDING entry>",
+                "§8 instructs that --memory/--identity are derived by counting the lines actually appended in §7, not the size of the proposal list",
+                "auto-approve appears in the frontmatter argument-hint and is defined in §6 as the mode that resolves the gate inside the same turn",
+                "The 'always append a log entry' guarantee is preserved: §8 still opens with an unconditional instruction, and the Anti-patterns 'Skipping the log' bullet still forbids skipping",
+                "The Anti-patterns list gains a bullet forbidding resolved counts before resolution, naming GATE-PENDING, and a reading rule that an unresolved GATE-PENDING entry is read as SKIP",
+                "No change to the six-subsystem lens table, the verdict rubric, the confidence rubric, the promotion rule, or the §5a triage-tag table, proven by git diff",
+                "references/memory-protocol.md, references/report-schema.md, scripts/validate-retro-report.sh and scripts/check-memory-duplicates.sh are byte-unchanged, proven by git diff --stat",
+                "Every literal already asserted by the probe's pre-existing missing[] list still greps clean against the edited SKILL.md"
+            ],
+            "dependencies": [
+                "US-001"
+            ],
+            "delegate": "First Mate inline",
+            "thinking": "high"
+        },
+        {
+            "id": "US-003",
+            "title": "The provider surfaces stay consistent",
+            "description": "As CI, I want the .oh, .pi and .claude retro views to agree, so that the probe reads the file the agent actually loads.",
+            "acceptanceCriteria": [
+                "Only .oh/skills/... paths were edited; git status shows no new tracked files under .pi/ or .claude/",
+                "ls -ld .pi/skills .claude/skills .codex/skills still shows symlinks to ../.oh/skills, and git ls-files -s reports mode 120000 for the tracked two",
+                "bash .oh/scripts/link-providers.sh --check exits 0",
+                "diff -qr .pi/skills/retro .claude/skills/retro exits 0 with no output"
+            ],
+            "dependencies": [
+                "US-001",
+                "US-002"
+            ],
+            "delegate": "First Mate inline",
+            "thinking": "low"
+        },
+        {
+            "id": "US-004",
+            "title": "The probe pins the new contract, verified by rejection and by mutation",
+            "description": "As a reviewer, I want the probe to fail on a tree that reintroduces the defect, so that the fix cannot silently regress.",
+            "acceptanceCriteria": [
+                "The probe asserts the helper accepts --result GATE-PENDING with pending counts and renders the exact pending Promoted line",
+                "It asserts the helper rejects (exit 64) GATE-PENDING with integer counts",
+                "It asserts the helper rejects (exit 64) a non-GATE-PENDING result with pending counts",
+                "It asserts the helper rejects (exit 64) pending on a non-promotion count (--hypotheses pending)",
+                "It asserts the helper accepts --resolves with OP and renders the exact Resolves line, and rejects --resolves with a non-OP result",
+                "It asserts the SKILL.md ordering chain by line number, anchored at BOTH ends: §6 heading < GATE-PENDING append < proposal block < §7 heading < --resolves",
+                "Every anchor line number is checked non-empty AND numeric before any arithmetic comparison, with its own REGRESSION message naming the missing anchor — a deleted anchor must fail, not coerce to 0 and pass",
+                "Every new assertion emits a REGRESSION message that is unique within the probe, so a failure is attributable by message alone",
+                "Verified by rejection, per assertion: a tree broken in exactly that one way makes the probe exit non-zero with that assertion's own message. Anchor DELETION and anchor REORDERING are exercised as two distinct broken trees",
+                "Verified by mutation, per assertion: deleting that assertion from the probe makes the same broken tree exit 0, which attributes the non-zero exit to the assertion and not to a neighbour",
+                "The probe still passes against the fixed tree, and the pre-existing assertions are textually unchanged, proven by git diff",
+                "bash .oh/skills/eval/run.sh completes and retro-deterministic-contract.sh is PASS",
+                "Known limit, stated not hidden: the probe pins TEXT ordering. It cannot prove a live agent ran the append before yielding. prd.md § Verification and the PR body both say so"
+            ],
+            "dependencies": [
+                "US-002",
+                "US-003"
+            ],
+            "delegate": "First Mate inline",
+            "thinking": "high"
+        },
+        {
+            "id": "US-005",
+            "title": "Changelog, evidence, and the eval scoreboard",
+            "description": "As a reviewer, I want the change recorded and its proof committed, so that I can judge it without re-running anything.",
+            "acceptanceCriteria": [
+                ".oh/tasks/767-retro-log-gate-order/evidence.md follows .oh/skills/audit/references/reviewer-evidence-doc.md: observed commands and real output only, a gate with no observed output recorded as a gap",
+                "evidence.md contains the verify-by-rejection and mutation transcripts for every new probe assertion",
+                "CHANGELOG.md gains one entry under ## [Unreleased] / ### Fixed citing issue #767, stating the defect, the chosen shape, why the deferred-append shape was rejected, and what the change does NOT fix (the count is still a self-report)",
+                ".oh/evals/RESULTS.md is regenerated by the eval runner, never hand-edited",
+                "The task folder is committed with git add -f (.oh/tasks is gitignored)"
+            ],
+            "dependencies": [
+                "US-004"
+            ],
+            "delegate": "First Mate inline",
+            "thinking": "medium"
+        }
+    ]
+}

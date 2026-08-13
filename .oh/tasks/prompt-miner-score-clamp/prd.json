@@ -22,7 +22,9 @@
             ],
             "dependencies": [],
             "delegate": "First Mate inline",
-            "thinking": "medium"
+            "thinking": "medium",
+            "passes": true,
+            "notes": "Completed iteration 1 on 2026-08-13; commit 3928f65b. Deviation: the pinned command `node --test <dir>/` cannot run in this environment (node v22.23.2 fails directory discovery with 'Could not find'/MODULE_NOT_FOUND, reproduced on a clean tmp dir and on the pre-change tree). Verified with the file-glob form instead: `node --test .oh/skills/prompt-miner/scripts/__tests__/*.test.mjs` exits 0, 34/34."
         },
         {
             "id": "US-002",

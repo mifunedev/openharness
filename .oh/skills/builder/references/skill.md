@@ -13,6 +13,7 @@ Harness, write `.oh/skills/<name>/SKILL.md`; `.claude/skills`, `.codex/skills`, 
 5. [Resources](#resources)
 6. [Validate](#validate)
 7. [Report](#report)
+8. [Publish to the registry](#publish-to-the-registry)
 
 ## Choose a reference skill
 
@@ -155,3 +156,22 @@ must not require another chain of references to become usable.
 **Invocation**: `/<name> <arguments, if any>`
 **Validation**: <checks and results>
 ```
+
+## Publish to the registry
+
+When this skill is published as a portable copy to `mifunedev/skills`, run
+the required gate before opening the registry pull request:
+
+```bash
+bash .oh/scripts/registry-portability.sh --registry <path-to-registry-checkout>
+```
+
+The check exits 0 against the registry today, so a nonzero exit means your change
+added drift. Read the `neither` count as well: it counts findings that are
+neither accepted nor already triaged, and it stays correct even when a `KNOWN`
+backlog is holding the exit code at 1. `neither: 0` means your change added no
+new unportable reference.
+
+See `.oh/scripts/registry-portability.md` for the rule set and the procedure
+for adding an exception. The registry has no CI, so this gate is the only
+automated check on the portable copy.

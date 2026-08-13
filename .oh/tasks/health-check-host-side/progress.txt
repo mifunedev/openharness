@@ -86,3 +86,22 @@ independent of each other once US-002 lands.
   a missing or non-executable preflight. `link-providers.sh --check` rc=0.
 - Full suite: 103 probes, zero REGRESSION/ERROR. Diff vs the pre-change
   scoreboard is exactly one added row. The 3 SKIPPED are pre-existing.
+
+### Audit + PR — 2026-08-13
+- PR #764 opened against upstream development (branches live on upstream, not the
+  fork — verified from the head-repo of the 5 most recent PRs).
+- /audit pr run 1 (audit-20260813T055733Z-263366): PR-AUDIT-BLOCKED, and correctly
+  so — #760 had landed on development after my merge, conflicting on exactly the
+  two files the briefing predicted. CHANGELOG auto-merged with both entries intact;
+  RESULTS.md REGENERATED via /eval against the merged base, never hand-resolved.
+  #760's own probe confirmed still green here.
+- /audit pr run 2 (audit-20260813T060219Z-296946): PR-AUDIT-PROMOTABLE.
+  promotable=true, evidenceComplete=true, MERGEABLE/CLEAN, CI 4/4 pass.
+- title-convention flag is non-gating and pre-existing: pr-classify.sh:72 tests
+  ^FROM .+ TO .+$, which no PR in this repo matches. promotable=($rfr or $rtm) and
+  never reads flags. Left alone deliberately — worth its own ticket.
+- evidence.md written per audit/references/reviewer-evidence-doc.md: observed
+  commands and real output only, correlated to the run id and verbatim verdict,
+  with the diff-correctness gap stated rather than papered over.
+
+STATUS: COMPLETE

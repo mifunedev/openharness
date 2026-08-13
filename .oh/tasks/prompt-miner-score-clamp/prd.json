@@ -46,7 +46,9 @@
                 "US-001"
             ],
             "delegate": "First Mate inline",
-            "thinking": "medium"
+            "thinking": "medium",
+            "passes": true,
+            "notes": "Completed iteration 2 on 2026-08-13; commit 66675e45. Same environmental deviation as US-001: verified with `node --test .oh/skills/prompt-miner/scripts/__tests__/*.test.mjs` (36/36, exit 0), since the directory form of the command is unrunnable on node v22.23.2 here."
         },
         {
             "id": "US-003",

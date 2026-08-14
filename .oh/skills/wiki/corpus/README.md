@@ -29,9 +29,9 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target] | 2026-08-13 |
 | build-executor-ladder | Build Executor Ladder | [build-loop, executor, ralph, firstmate, delegate-advisor, herdr, tmux, runner-ladder, ship-spec, autopilot] | 2026-08-12 |
 | audit-architecture | Audit Architecture | [audit, pr, workflow, safety, observability] | 2026-08-12 |
-| oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target] | 2026-08-10 |
 | molt-agentic-reinforcement-learning | Molt: A Scalable PyTorch-Native Training Framework for Agentic Reinforcement Learning | [agentic-rl, training, readability, observability, trajectories, async, correctness, agent-harness, nvidia] | 2026-08-08 |
 | managed-agents | Scaling Managed Agents: Decoupling the brain from the hands | [agents, meta-harness, sessions, sandbox, resilience, security, scaling, anthropic, model-evolution] | 2026-08-08 |
 | document-ingestion | Local Document Ingestion | [wiki, ingestion, markitdown, documents, provenance, security] | 2026-07-18 |

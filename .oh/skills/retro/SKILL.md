@@ -1,6 +1,6 @@
 ---
 name: retro
-argument-hint: "[--dry-run] [--focus <subsystem>]"
+argument-hint: "[--dry-run] [--focus <subsystem>] [auto-approve]"
 allowed-tools: Read, Grep, Bash, Edit
 description: |
   Scientific session-closing retrospective: scan the current conversation,
@@ -181,6 +181,55 @@ The probe id follows the pattern `<subsystem-slug>-<YYYYMMDD>` (e.g., `memory-sc
 
 ### 6. Propose-then-confirm gate
 
+The gate is where the run hands control back to the operator. Work through 6a → 6b → 6c **in that order**. The order is the point: 6c ends the turn, so anything you have not done by then may never happen.
+
+#### 6a. Filter duplicates, then fix the candidate list
+
+Pipe candidate lines through the self-contained duplicate helper and skip exact/substantive duplicates it reports:
+
+```bash
+printf "%s\n" "<candidate line>" | bash "${CLAUDE_SKILL_DIR}/scripts/check-memory-duplicates.sh"
+```
+
+What survives is the proposal list. Do not change it after this point in the run.
+
+#### 6b. Open the gate trace — run this BEFORE printing the proposal block
+
+Append a `GATE-PENDING` entry now, while the counts are still honestly unknown:
+
+```bash
+TODAY=$(date -u +%Y-%m-%d)
+MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"; mkdir -p "$MEM/$TODAY"
+GATE_TIME=$(date -u +%H:%M)
+bash "${CLAUDE_SKILL_DIR}/scripts/render-log-entry.sh" \
+  --result GATE-PENDING \
+  --subsystems "<which of the 6 produced signals, or focus: name>" \
+  --hypotheses <total> --supported <n> --refuted <n> --inconclusive <n> \
+  --memory pending --identity pending \
+  --time "$GATE_TIME" \
+  --observation "<one sentence — strongest supported finding>" \
+  | .oh/scripts/locked-append.sh "$MEM/$TODAY/log.md"
+```
+
+Keep `$GATE_TIME`; §8 needs it to point the resolving entry back at this one.
+
+The promotion counts are **not knowable here** — the operator has not answered — so the helper refuses an integer under `GATE-PENDING`. That refusal is the fix for the defect where this entry claimed `Promoted: 0` and the operator then approved three lessons.
+
+**Append this once, on the first yield only.** If the operator answers `EDIT <n> <text>` and you re-present a revised block, the gate is still the same gate: do not append a second `GATE-PENDING` entry.
+
+**Skip 6b entirely on the four paths that never open a gate** — each of these logs one ordinary entry at §8 and nothing else:
+
+| Path | §8 entry |
+|------|----------|
+| `--dry-run` | `--result DRY-RUN` |
+| Trivial session (announced skip) | `--result SKIPPED-TRIVIAL` |
+| Qualify filter left nothing to propose | `--result OP --memory 0 --identity 0` |
+| `auto-approve` | `--result OP` with the real counts |
+
+`auto-approve` resolves the gate inside the same turn — you present, decide, and write without handing control back — so the counts *are* known when §8 runs and one entry is correct. This is the common invocation path (`.oh/prompts/advisor/implement.yml`, `.oh/prompts/advisor/pr.yml`), which is exactly why the gated path's log timing went unexamined for so long. Everything else is a gated run and needs 6b.
+
+#### 6c. Present the proposal block
+
 Before writing to `.oh/memory/MEMORY.md` or `.oh/context/IDENTITY.md`, present the proposed additions as a clearly formatted block. Each proposed line shows its `[subsystem · confidence]` tag and a one-clause evidence basis:
 
 ```
@@ -193,27 +242,25 @@ Proposed IDENTITY.md addition(s):
 Type APPROVE to write, SKIP to discard any item, or EDIT <n> <new text> to revise.
 ```
 
+**This block is the last thing you write before your turn ends. Nothing placed after it is guaranteed to run.** That is why 6b comes first.
+
 Do not write to either file until the user responds. Log-tier entries do not require approval. If `--dry-run` was passed, write only the required `.oh/memory/<UTC-date>/log.md` entry with `Result: DRY-RUN`; never write MEMORY.md or IDENTITY.md in dry-run mode.
-
-Before proposing, pipe candidate lines through the self-contained duplicate helper and skip exact/substantive duplicates it reports:
-
-```bash
-printf "%s\n" "<candidate line>" | bash "${CLAUDE_SKILL_DIR}/scripts/check-memory-duplicates.sh"
-```
 
 ### 7. Write approved changes
 
-First ensure the durable ledger exists (it is gitignored/local-per-instance, so
-a fresh clone lacks it; this seeds the `## Lessons Learned` header idempotently
-and never overwrites):
+First ensure the durable ledger exists (it is gitignored, so a fresh clone lacks
+it; this seeds the `## Lessons Learned` header idempotently and never
+overwrites). It prints the resolved path — one ledger serves every worktree of
+the checkout, so write to that path, not to a relative `.oh/memory/`:
 
 ```bash
+MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"
 sh .oh/scripts/ensure-memory-file.sh
 ```
 
 For each APPROVED item:
 
-**`.oh/memory/MEMORY.md`** — append under `## Lessons Learned`:
+**`$MEM/MEMORY.md`** — append under `## Lessons Learned`:
 ```markdown
 - **YYYY-MM-DD**: <lesson>
 ```
@@ -244,10 +291,29 @@ LOG_ENTRY=$(bash "${CLAUDE_SKILL_DIR}/scripts/render-log-entry.sh" \
   --hypotheses <total> --supported <n> --refuted <n> --inconclusive <n> \
   --memory <n> --identity <n> \
   --observation "<one sentence — strongest supported finding, or no durable patterns>")
-printf "%s\n" "$LOG_ENTRY" | .oh/scripts/locked-append.sh ".oh/memory/$TODAY/log.md"
+printf "%s\n" "$LOG_ENTRY" | .oh/scripts/locked-append.sh "$MEM/$TODAY/log.md"
 ```
 
 Use `--result DRY-RUN` for dry-runs and `--result SKIPPED-TRIVIAL` for trivial skips.
+
+**Derive `--memory` and `--identity` by counting the lines you actually appended in §7** — not the length of the proposal list. An operator who answered `SKIP` to two of three items produces `--memory 1`, not `--memory 3`.
+
+**If §6b opened a gate trace, this entry resolves it.** Add `--resolves` pointing at the `GATE-PENDING` entry's timestamp (`$GATE_TIME` from §6b):
+
+```bash
+LOG_ENTRY=$(bash "${CLAUDE_SKILL_DIR}/scripts/render-log-entry.sh" \
+  --result OP \
+  --subsystems "<same as the GATE-PENDING entry>" \
+  --hypotheses <total> --supported <n> --refuted <n> --inconclusive <n> \
+  --memory <n> --identity <n> \
+  --resolves "$GATE_TIME" \
+  --observation "<one sentence — strongest supported finding>")
+printf "%s\n" "$LOG_ENTRY" | .oh/scripts/locked-append.sh "$MEM/$TODAY/log.md"
+```
+
+The gated run therefore leaves two entries — the open gate, then its resolution — and neither is ever edited. The four no-gate paths in §6b leave one entry and omit `--resolves`.
+
+If the gate was opened on an earlier UTC day, the resolving entry still goes in **today's** log. `--resolves` takes `HH:MM`; say which day in `--observation`.
 
 ## MEMORY.md vs IDENTITY.md boundary
 
@@ -296,7 +362,9 @@ Claude Code skills cannot self-trigger. True automatic firing at session end wou
 - **Double-writing.** If a lesson already exists in MEMORY.md or IDENTITY.md, link or skip. Never add a duplicate.
 - **Graduating prematurely.** One session is evidence, not a principle. IDENTITY.md entries need cross-session generalization.
 - **Reading outside current context.** Do not read prior `log.md` files or external transcripts. Scope is the open conversation only.
-- **Skipping the log.** Every invocation — op, dry-run, trivial skip — appends a log entry. No exceptions.
+- **Skipping the log.** Every invocation — op, dry-run, trivial skip — appends a log entry. No exceptions. A gated run appends two: the `GATE-PENDING` entry at §6b and its resolution at §8. Neither is ever edited.
+- **Reporting resolved counts before resolution.** A run that hands control back at the gate does not know what was promoted. Log it `GATE-PENDING` with `--memory pending --identity pending`; never guess a number that the operator's answer is about to falsify.
+- **Reading a `GATE-PENDING` entry as a result.** It is an open question, not an outcome. An entry with no later `Resolves` line pointing at it is an abandoned gate — read it as `SKIP`. Nothing reconciles these automatically.
 - **Promoting an unfalsifiable claim.** If no session evidence could refute it, it's not a hypothesis — it cannot be promoted.
 - **Overfitting one session.** Single-session support is not a principle; that is the MEMORY.md → IDENTITY.md graduation bar.
 - **Confirmation bias.** Every hypothesis must be tested for disconfirming evidence, not just supporting evidence.

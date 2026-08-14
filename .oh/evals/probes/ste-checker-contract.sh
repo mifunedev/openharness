@@ -98,4 +98,29 @@ BEFORE="$(md5sum "$EX" | cut -d' ' -f1)"
 bash "$CHECK" --blocks before "$EX" >/dev/null 2>&1 || true
 [ "$(md5sum "$EX" | cut -d' ' -f1)" = "$BEFORE" ] || fail "the checker modified the file it scanned"
 
+# ---------------------------------------------------------------------------
+# 7. A clean exit names the two defects it cannot see.
+#
+#    Measured 2026-08-13, first production use of the skill: ste-check.sh exited
+#    0 with zero findings on a document carrying BOTH defects, and the hand-run
+#    10-question check then caught them. Neither is worth a detector — a
+#    question-4 detector fires on approved `after` specimens and turns
+#    --blocks after red, and a question-7 detector cannot separate a bare
+#    pronoun from one whose antecedent sits in the previous sentence, because
+#    the checker reads one line at a time.
+#
+#    So the exit-0 line carries the residual instead. Without this, a green run
+#    reads as approval of prose the detectors never examined.
+# ---------------------------------------------------------------------------
+printf 'The operator runs the migration.\n' > "$TMP/clean-residual.md"
+clean_err="$(bash "$CHECK" "$TMP/clean-residual.md" 2>&1 >/dev/null || true)"
+case "$clean_err" in
+  *'no findings'*) ;;
+  *) fail "the clean exit no longer reports 'no findings'" ;;
+esac
+printf '%s' "$clean_err" | grep -Fq 'condition' \
+  || fail "the clean exit does not name the trailing-condition escape (10-question rule 4)"
+printf '%s' "$clean_err" | grep -Fq 'antecedent' \
+  || fail "the clean exit does not name the bare-pronoun escape (10-question rule 7)"
+
 echo 'PASS: the /ste checker rejects, accepts, and refuses to pass vacuously' >&2

@@ -64,6 +64,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | heartbeat-logging-contract | A | 2026-08-13 06:50 | PASS | issue #447 (heartbeat log append hardening) 2026-06-18 |
 | locked-append-critical-path | A | 2026-08-13 06:50 | PASS | issue #204 (lock shared runtime log appends) 2026-06-15 |
 | markitdown-wiki-ingest | A | 2026-08-13 06:50 | PASS | issue #649 — pinned local-document normalization contract for /wiki ingest |
+| memory-dir-shared-across-worktrees | A | 2026-08-13 07:05 | PASS | .oh/scripts/oh-path (#768) |
 | memory-gitignore-claim | A | 2026-08-13 06:50 | PASS | issue #101 |
 | memory-log-locked-append | A | 2026-08-13 06:50 | PASS | issue #476 and #645 — memory appends are locked and audit has one log owner |
 | next-dev-prod | A | 2026-08-13 06:50 | SKIPPED | .oh/memory/MEMORY.md 2026-06-04 |
@@ -88,8 +89,8 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | prompt-miner-weakness-record | A | 2026-08-13 06:50 | PASS | issue #580 — prompt-miner weakness-record (WH-xxx) cluster output |
 | protected-paths-resolve | A | 2026-08-13 06:50 | PASS | issue #753 — .claude/protected-paths.txt named 7 paths that did not exist. |
 | ralph-fallback-order | A | 2026-08-13 06:50 | PASS | conversation 2026-06-12 (Ralph default fallback order) |
-| registry-portability-gate | A | 2026-08-13 06:50 | PASS | issue #758 |
 | registry-portability | A | 2026-08-13 06:50 | SKIPPED | issue #758 |
+| registry-portability-gate | A | 2026-08-13 06:50 | PASS | issue #758 |
 | repo-map-contract | A | 2026-08-13 06:50 | PASS | issue #464 — repo map must optimize orientation without adding a tree dependency or unmeasured performance claims |
 | retro-deterministic-contract | A | 2026-08-13 06:50 | PASS | issue #443 — /retro deterministic output and self-contained helper contract |
 | rl-delegation-write-worker | A | 2026-08-13 06:50 | PASS | .oh/memory/MEMORY.md 2026-06-10 (rl-delegation) #57 |

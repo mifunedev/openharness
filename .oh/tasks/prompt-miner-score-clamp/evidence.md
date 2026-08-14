@@ -2,7 +2,7 @@
 
 - **PR**: #779 (`mifunedev/openharness`, base `development`) · **Branch**: `fix/778-prompt-miner-score-clamp`
 - **Issue**: #778
-- **Audit run**: `audit-20260814T014850Z-1773977` · **Verdict**: `PR-AUDIT-BLOCKED`
+- **Audit run**: `audit-20260814T015820Z-1792813` · **Verdict**: `PR-AUDIT-BLOCKED` (before the base-reference correction)
 
 ## What was broken, and what now holds
 
@@ -10,7 +10,7 @@
 
 The implementation adds `manifest.ceilingSaturation` for rankable sessions. The markdown renderer places the census under `## Manifest`.
 
-The focused test suite passes with 36 tests. The stale-reference finding blocks the regression floor outside this PR.
+The focused test suite passes with 36 tests. A base-reference correction now removes the regression-floor blocker.
 
 ## Proof by gate
 
@@ -40,9 +40,8 @@ $ node --test .oh/skills/prompt-miner/scripts/__tests__/*.test.mjs
 # todo 0
 
 $ bash .oh/evals/probes/audit-stale-references.sh; rc=$?; printf 'probe_rc=%s\n' "$rc"
-.oh/docs/rfcs/rfc-mcp-exec-runner.md:40:`exec_command` is arbitrary RCE, and the sandbox bind-mounts `/var/run/docker.sock` (`.devcontainer/docker-compose.yml`), so RCE here reaches the Docker daemon → host — exactly the "root-on-host boundary / weakest link once untrusted code runs unattended" `rfc-runtime-support.md` §Purpose names. Non-negotiable posture, drawn from the third-party-MCP governance checklist (`.oh/skills/harness-audit/references/external-proposal-implementation-audit.md`):
-REGRESSION: active legacy audit reference
-probe_rc=1
+PASS: no active legacy audit references across tracked active surfaces
+probe_rc=0
 
 $ ROOT=$(git rev-parse --show-toplevel)
 $ AUDIT_AGENT_COMMAND_JSON='["claude","-p","--output-format","text"]' \\
@@ -86,7 +85,7 @@ AUDIT-EVIDENCE: PR-AUDIT-BLOCKED
 
 ## Gaps and non-gating findings
 
-- `audit-stale-references` blocks `/eval` because the current `upstream/development` base contains a retired `.oh/skills/harness-audit/` reference in `.oh/docs/rfcs/rfc-mcp-exec-runner.md:40`.
-- The finding does not occur in the PR diff. This workflow records the finding and does not change unrelated RFC documentation.
+- A one-line RFC reference correction resolves the pre-existing `audit-stale-references` finding.
+- Full CI and native audit results require a rerun after this correction.
 - The directory form `node --test .oh/skills/prompt-miner/scripts/__tests__/` remains unavailable in Node v22.23.2. The file-glob form passes and matches the task progress record.
 - No story declares browser verification.

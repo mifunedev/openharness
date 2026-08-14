@@ -2,7 +2,7 @@
 
 - **PR**: #779 (`mifunedev/openharness`, base `development`) · **Branch**: `fix/778-prompt-miner-score-clamp`
 - **Issue**: #778
-- **Audit run**: `audit-20260814T015820Z-1792813` · **Verdict**: `PR-AUDIT-BLOCKED` (before the base-reference correction)
+- **Audit run**: `audit-20260814T024205Z-1880360` · **Verdict**: `PR-AUDIT-PROMOTABLE`
 
 ## What was broken, and what now holds
 
@@ -18,9 +18,9 @@ The focused test suite passes with 36 tests. A base-reference correction now rem
 |------|------------------|----------|--------|
 | Task graph | `prd.json` stories | `3/3 stories pass` | PASS |
 | Focused tests | Prompt-miner Node test suite | `36/36` tests pass | PASS |
-| Regression floor | `/eval` runner | 105 probes; 100 PASS, 1 REGRESSION, 4 SKIPPED | BLOCKED |
-| CI | GitHub checks | Three checks pass; `Eval Probe Regression Gate` fails | BLOCKED |
-| Promotable / audit | Native PR classifier | `PR-AUDIT-BLOCKED`; `evidenceComplete: true`; `promotable: false` | BLOCKED |
+| Regression floor | `/eval` runner | 105 probes; 101 PASS, 0 REGRESSION, 4 SKIPPED | PASS |
+| CI | GitHub checks | Four checks pass | PASS |
+| Promotable / audit | Native PR classifier | `PR-AUDIT-PROMOTABLE`; `evidenceComplete: true`; `promotable: true` | PASS |
 | UI | Browser criteria | No story declares browser verification | N/A |
 
 ## Observed output
@@ -47,27 +47,25 @@ $ ROOT=$(git rev-parse --show-toplevel)
 $ AUDIT_AGENT_COMMAND_JSON='["claude","-p","--output-format","text"]' \\
 >   "$ROOT/.oh/skills/audit/scripts/audit-run.sh" pr 779 --repo mifunedev/openharness --base development -- \\
 >   "$ROOT/.oh/skills/audit/scripts/route-driver.sh"
-## PR audit — mifunedev/openharness#779
+**PR audit — mifunedev/openharness#779** (run `audit-20260814T024205Z-1880360`)
 
 | Field | Value |
 |---|---|
 | Number | 779 |
-| CI | **FAIL** |
-| Mergeability | MERGEABLE (`mergeStateStatus: UNSTABLE`) |
-| Clean state | not clean — `UNSTABLE` |
+| CI | PASS |
+| Mergeability | MERGEABLE |
+| Clean state | CLEAN |
 | Review decision | *(none)* |
-| Primary state | draft (`draftStatus: wip`, `draftLimbo: false`) |
+| Primary state | draft |
 | Flags | *(none)* |
-| `readyForReview` | **false** |
-| `readyToMerge` | **false** |
-| Evidence complete | true |
-| Promotable | false |
+| `readyForReview` | true |
+| `readyToMerge` | false |
+| `evidenceComplete` | true |
+| `promotable` | true |
 
-Blocking evidence: the `Eval Probe Regression Gate` check (workflow `CI: Harness`) concluded FAILURE; the other three checks (Lint/Typecheck/Build & Test, Sandbox Boot Guard, Boot Path Lint) are SUCCESS. PR is still a draft with no review decision.
+Notes: draft status `promotable`, no draft limbo, age 0d (422s), references issues #730 and #778. Evidence complete and promotable → PR-AUDIT-PROMOTABLE. No repository file written; no `gh pr ready` or merge performed (`--proof` not requested).
 
-`PR-AUDIT-BLOCKED`
-
-AUDIT-EVIDENCE: PR-AUDIT-BLOCKED
+AUDIT-EVIDENCE: PR-AUDIT-PROMOTABLE
 ```
 
 ## Acceptance criteria → proof
@@ -86,6 +84,6 @@ AUDIT-EVIDENCE: PR-AUDIT-BLOCKED
 ## Gaps and non-gating findings
 
 - A one-line RFC reference correction resolves the pre-existing `audit-stale-references` finding.
-- Full CI and native audit results require a rerun after this correction.
+- The whole-file `/ste` check reports 12 pre-existing findings outside the changed security paragraph. The changed paragraph uses short active sentences.
 - The directory form `node --test .oh/skills/prompt-miner/scripts/__tests__/` remains unavailable in Node v22.23.2. The file-glob form passes and matches the task progress record.
 - No story declares browser verification.

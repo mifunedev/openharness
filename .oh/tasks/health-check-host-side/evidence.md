@@ -1,8 +1,8 @@
 # Evidence — health-check-host-side
 
 - **PR**: #764 (mifunedev/openharness, base `development`) · **Branch**: `task/762-health-check-host-side`
-- **Audit run**: `audit-20260814T025409Z-1913061` · **Verdict**: `PR-AUDIT-PROMOTABLE`, `flags: (none)`
-  - Head at audit time: `71053ee8`. Log terminal state: `complete`.
+- **Audit run**: `audit-20260814T030749Z-1949989` · **Verdict**: `PR-AUDIT-PROMOTABLE`, `flags: (none)`
+  - Head at audit time: `8d853d89`. Log terminal state: `complete`, exit `0`.
   - That run audited every implementation and scoreboard change. The run could not
     audit the commit that adds this paragraph, because that commit did not exist
     yet. A comment on PR #764 carries a final confirming `/audit pr` run against the
@@ -12,6 +12,7 @@
   - `audit-20260813T055733Z-263366` → `PR-AUDIT-BLOCKED` — a genuine merge conflict
   - `audit-20260813T060219Z-296946` → `PR-AUDIT-PROMOTABLE` with `flags: title-convention` — a genuine title defect I dismissed before fixing it
   - `audit-20260813T063007Z-386144` → `PR-AUDIT-PROMOTABLE` — superseded by a second conflict when `development` moved again
+  - `audit-20260814T025409Z-1913061` → `PR-AUDIT-PROMOTABLE` at head `71053ee8` — superseded when `development` moved a fourth time
 - **Closes**: #762 · **Refs**: #756, #731
 
 Every claim below quotes a command that ran and its real output. Nothing here is
@@ -40,12 +41,12 @@ at the host project root — a role root `AGENTS.md` already defines and already
 | Task graph | `prd.json` 4 stories, artifact contract | 4/4 `status: completed`, `passes: true`; `prd.md` + `prd.json` + `critique.md` + `progress.txt` + this file committed under `.oh/tasks/health-check-host-side/` | PASS |
 | Regression floor | `bash .oh/skills/eval/run.sh` | `ran 106 probe(s)`, rc=0, zero `REGRESSION`/`ERROR`; 4 `SKIPPED` all pre-existing | PASS |
 | New behavioural probe | `health-check-socket-degrade` | `PASS: preflight resolves every endpoint, contacts no daemon when host-only, and refuses to call a dead socket available` | PASS |
-| Rejection (attribution) | 11 mutations, each expected to fire its **own** assertion | `11 attributed, 0 unattributed`; both files restored byte-identical. Still binding: both files are byte-identical at `71053ee8` to the commit the harness ran against — see "Byte identity across the merges" | PASS |
+| Rejection (attribution) | 11 mutations, each expected to fire its **own** assertion | `11 attributed, 0 unattributed`; both files restored byte-identical. Still binding: both files are byte-identical at `8d853d89` to the commit the harness ran against — see "Byte identity across the merges" | PASS |
 | Constraining probes | the 3 probes that pin this skill | `health-check-docker-stats` PASS, `memory-log-locked-append` PASS, `audit-dispatcher-contract` PASS | PASS |
 | Boot validation | `bash .oh/scripts/link-providers.sh --check` | `Providers OK: .pi/.claude/.codex skills -> .oh/skills (vendored pack present)`, rc=0 | PASS |
 | Typecheck / build / test | `pnpm run typecheck`, `pnpm run build:harness`, `pnpm test:scripts` | `tsc --noEmit` clean; `dist/oh.js 79.7kb`; `Test Files 42 passed (42)`, `Tests 590 passed (590)` | PASS |
-| Shellcheck | the CI glob, plus the two new scripts | CI glob rc=0; `scope-preflight.sh` and `health-check-socket-degrade.sh` rc=0. Verified by rejection: a control script with `SC2034`/`SC2154`/`SC2164` exits 1 | PASS |
-| CI | `gh pr checks 764` | 4/4 `pass` — Boot Path Lint 13s, Eval Probe Regression Gate 25s, Lint/Typecheck/Build/Test 36s, Validate sandbox compose 2m35s | PASS |
+| Shellcheck | the CI glob, plus the two new scripts | CI glob rc=0; `scope-preflight.sh` and `health-check-socket-degrade.sh` rc=0. Verified by rejection: a control script with `SC2034`/`SC2154`/`SC2164` exits 1. Recorded from the build session. `command -v shellcheck` finds no binary in the current container. The CI **Boot Path Lint (shellcheck + hadolint)** job re-verifies the final head, and it passed in 23s | PASS (CI-owned) |
+| CI | `gh pr checks 764` | 4/4 `pass` — Boot Path Lint 23s, Eval Probe Regression Gate 24s, Lint/Typecheck/Build/Test 37s, Validate sandbox compose 2m10s | PASS |
 | Merge state | `gh pr view 764` | `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`, `isDraft=false` | PASS |
 | PR audit | `audit-run.sh pr 764 -- route-driver.sh` | `promotable: true`, `evidenceComplete: true`, `flags: (none)` → `PR-AUDIT-PROMOTABLE` | PASS |
 | PR title | `/git` SKILL.md:82 literal format | `FROM task/762-health-check-host-side TO development` — flag cleared on the final run | PASS (after correction) |
@@ -266,8 +267,8 @@ regenerated scoreboard.
 
 ## Byte identity across the merges
 
-None of the three merges changed this branch's implementation. Blob hashes at the
-audited commit `4802b3ea` and at the merged head `71053ee8`:
+None of the four merges changed this branch's implementation. Blob hashes at the
+audited commit `4802b3ea` and at the merged head `8d853d89`:
 
 ```
 $ git rev-parse 4802b3ea:<path> HEAD:<path>
@@ -305,6 +306,11 @@ merges. Without them, the result would carry forward on assumption.
   authorized step taken only after CI went green, the native verdict came back
   `PR-AUDIT-PROMOTABLE`, and the branch reported `MERGEABLE`/`CLEAN`.
 - **The `103 probe(s)` figure in an earlier draft of this file was stale, not wrong
-  at the time.** That figure described the first full run. Three `development`
+  at the time.** That figure described the first full run. Four `development`
   merges later the suite holds 106 probes. I refreshed the figure rather than leave
   it implying that a run measured this tree when no run had.
+- **The fourth `development` merge (`c95caf01`, prompt-miner score clamp) merged
+  clean and added no probe.** The regenerated scoreboard differs from the previous
+  one by timestamps alone: every changed row is a `last-run` field, and no probe
+  changed status. Verified by normalising the timestamp out of the diff and
+  confirming each remaining line appears on both sides.

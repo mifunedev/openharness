@@ -1173,7 +1173,11 @@ function renderMarkdown(dataset, top) {
 function resolveMemoryDir() {
   const ohPath = path.join(import.meta.dirname, "..", "..", "..", "scripts", "oh-path");
   try {
-    const out = execFileSync("sh", [ohPath, "memory"], { encoding: "utf8" }).trim();
+    // `--no-create`: resolve only. writeReports() creates the dated subdirectory
+    // it actually writes to, and a `--dry-run` must not leave a directory behind.
+    const out = execFileSync("sh", [ohPath, "memory", "--no-create"], {
+      encoding: "utf8",
+    }).trim();
     if (out) return out;
   } catch {
     /* resolver unavailable — fall back to the documented default */

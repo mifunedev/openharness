@@ -110,6 +110,16 @@ export function copyOhPayload(
       skipped++;
       continue;
     }
+    // Cron runtime state, not payload. `.oh/crons/` ships its `*.md` definitions,
+    // but the runtime writes `.cron.log` and `.pid` beside them; both are
+    // gitignored, so whether they exist depends only on whether this checkout has
+    // ever run a cron. Shipping them puts one machine's log into a fresh project
+    // and makes `oh init` non-idempotent the moment a run creates one.
+    if (segments[segments.length - 1] === ".cron.log" || segments[segments.length - 1] === ".pid") {
+      report?.("skip-volatile", rel);
+      skipped++;
+      continue;
+    }
     if (manifest && !shouldShip(rel, manifest)) {
       report?.("skip-not-in-payload", rel);
       skipped++;

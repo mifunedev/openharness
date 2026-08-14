@@ -39,10 +39,16 @@ export interface CronEntry {
 // oh-path is anchored to its own location, so the answer does not depend on this
 // process's CWD. Degrade to the documented default if it cannot run at all —
 // a resolver failure must not stop the runtime from booting.
+// `--no-create` is load-bearing: this runs at module import, and oh-path
+// otherwise `mkdir -p`s the directory it resolves. Importing this module would
+// then create `.oh/crons/` in whatever repo the importer happens to be in — the
+// CLI's init test caught exactly that, vendoring a `.cron.log` that appeared
+// between its two runs. Resolution must not touch the filesystem; entrypoint.sh
+// pre-creates these directories at boot.
 function ohPath(name: string, fallback: string): string {
   const res = spawnSync(
     path.join(import.meta.dirname, "oh-path"),
-    [name],
+    [name, "--no-create"],
     { encoding: "utf8" },
   );
   const out = res.status === 0 ? res.stdout.trim() : "";
@@ -149,7 +155,10 @@ export function isValidSchedule(schedule: string): boolean {
 // `logFn` defaults to the module-private `log` and exists ONLY for test
 // injection (mirrors onJobError(id, err, logFn = log)); it carries no
 // external-stability guarantee. Existing loadCrons(dir) call sites stay valid.
-export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
+export function loadCrons(
+  dir: string = CRONS_DIR,
+  logFn: typeof log = logTo(dir),
+): CronEntry[] {
   if (!fs.existsSync(dir)) return [];
   const out: CronEntry[] = [];
   for (const f of fs.readdirSync(dir).filter((n: string) => n.endsWith(".md")).sort()) {
@@ -317,14 +326,31 @@ export function reloadBody(entry: CronEntry): string {
   return fresh;
 }
 
-function log(id: string, status: string, msg = ""): void {
+function appendLog(file: string, id: string, status: string, msg: string): void {
   const line = `${new Date().toISOString()}\t${id}\t${status}\t${msg.replace(/\s+/g, " ").slice(0, 200)}\n`;
   try {
-    fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
-    fs.appendFileSync(LOG_FILE, line);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.appendFileSync(file, line);
   } catch {
     /* best-effort */
   }
+}
+
+function log(id: string, status: string, msg = ""): void {
+  appendLog(LOG_FILE, id, status, msg);
+}
+
+// A logger bound to the crons directory being scheduled, so `.cron.log` always
+// lands beside the crons it describes. In production `dir` IS `CRONS_DIR` and
+// this returns `log` itself, so the boot path is byte-identical. It matters for
+// a caller scheduling some OTHER directory — a test, or a second tree: the
+// module-level `LOG_FILE` would send those lines to the real repo's log. The
+// removed `CRONS_DIR` env var used to double as that redirect, silently.
+function logTo(dir: string): typeof log {
+  const file = path.join(dir, ".cron.log");
+  if (path.resolve(file) === path.resolve(LOG_FILE)) return log;
+  return (id: string, status: string, msg = ""): void =>
+    appendLog(file, id, status, msg);
 }
 
 function shellQuote(value: string): string {
@@ -1072,9 +1098,12 @@ export function resetActiveJobs(): void {
 // default to the real `log` / `constructCron`.
 export function scheduleAll(
   dir: string = CRONS_DIR,
-  logFn = log,
+  logFnArg?: typeof log,
   mkCron: (entry: CronEntry) => Cron | void = constructCron,
 ): BootResult {
+  // Default the logger to one bound to `dir` rather than to the module-level
+  // LOG_FILE, so scheduling directory X never writes into directory Y's log.
+  const logFn = logFnArg ?? logTo(dir);
   // Clear the prior generation's handles at the START of each call so a reload
   // (US-002) registers only this call's jobs; the prior handles are stopped by
   // the SIGHUP handler before it re-invokes scheduleAll.
@@ -1144,7 +1173,7 @@ export function sighupHandler(dir: string = CRONS_DIR): void {
       }
     }
     const { scheduled, skipped } = scheduleAll(dir);
-    log("system", "RELOAD", `${scheduled} scheduled, ${skipped} skipped`);
+    logTo(dir)("system", "RELOAD", `${scheduled} scheduled, ${skipped} skipped`);
   } finally {
     reloading = false;
   }

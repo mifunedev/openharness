@@ -28,6 +28,7 @@ required_execs=(
   ".oh/skills/autopilot/autopilot-caps.sh"
   ".oh/skills/cloudflared/scripts/run.sh"
   ".oh/skills/audit/scripts/context-audit-runner.sh"
+  ".oh/skills/health-check/scripts/scope-preflight.sh"
   ".oh/skills/eval/run.sh"
   ".oh/skills/prompt-miner/prompt-miner-caps.sh"
   ".oh/skills/prompt-miner/scripts/render-log-entry.sh"

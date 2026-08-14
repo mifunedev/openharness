@@ -26,11 +26,11 @@ to Autonomous Research Loops*, arXiv 2607.07663v1 (July 2026), 1,250 papers
 The survey organizes self-improving AI on two axes: **what improves**
 (deployment-time behavior, training-time policy, the evaluator, the research
 process) and **loop closure** (human-in-the-loop → fully autonomous). Its
-load-bearing claim is that every improvement loop is bounded by the quality of
-the signal it substitutes for human judgment, so **self-evaluation is the
-architecture, not a support function**. It separates *bounded self-refinement*
-(convergent, evaluable, industrial practice) from *open-ended RSI*, and finds
-the corpus's mass sitting in human-on-the-loop settings.
+load-bearing claim: the signal a loop substitutes for human judgment bounds what
+that loop can reach, so **self-evaluation is the architecture, not a support
+function**. The survey separates *bounded self-refinement* (convergent,
+evaluable, industrial practice) from *open-ended RSI*. It finds the corpus's
+mass sitting in human-on-the-loop settings.
 
 ## Detail
 **Verification hierarchy (§5.2).** Four rungs by reliability: (1) formal
@@ -51,9 +51,9 @@ skills raise pass rates 16.2 points while **LLM-authored skills provide no
 measurable gain**. The **Red Queen Gödel Machine** attacks the assumption of a
 *stationary evaluation criterion* by co-evolving agents with their evaluators.
 **SHARP** argues the opposite constraint for low-signal domains: bound the
-self-modification surface to something auditable, diffable, and revertible.
-A federating skill library carries a distinct risk — corruption that is
-permanently encoded, self-amplifying, and transmissible without sustained
+self-modification surface to an artifact a reviewer can audit, diff, and revert.
+A federating skill library carries a distinct risk: corruption that stays
+permanently encoded, amplifies itself, and transmits without sustained
 attacker access.
 
 **Failure modes (§5.3).** Self-confirming loops (shared weights ⇒ correlated

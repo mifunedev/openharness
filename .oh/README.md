@@ -241,13 +241,13 @@ allowlist** read from `.oh/manifest.json` — an `{ "include": [...], "exclude":
 `cli/**`, `README.md`, `manifest.json`). A path ships **iff** it matches at least
 one `include` pattern and zero `exclude` patterns (exclude wins).
 
-**What is intentionally NOT shipped:** `.oh/patches/` (repo-specific dependency
-patches) is **omitted from `include`**, so it is never vendored into a consumer
-repo. It is **not deleted** — it stays physically in this repo; it is simply not
-part of the payload. (The Docusaurus docs *site* formerly under `.oh/docs/` was
-migrated out to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
-(#536); `.oh/docs/` now holds the GitHub-readable markdown docs, which the manifest
-also does not ship — `docs/**` is absent from `include`.)
+**The manifest excludes** `.oh/patches/` (repo-specific dependency patches). The
+manifest omits `patches/**` from `include`, so the payload never vendors those files
+into a consumer repo. The files remain in this repository. The manifest now ships
+`.oh/docs/` through `docs/**`. The payload includes the GitHub-readable markdown,
+including the cited `.oh/docs/rfcs/rfc-brain-hands-boundary.md`. The rendered
+Docusaurus docs *site* remains external at
+[`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web) (#536).
 
 - **The manifest ships itself** — `manifest.json` is in `include`, so the policy
   **propagates forward**: a consumer's next `oh update` reads the *source's*

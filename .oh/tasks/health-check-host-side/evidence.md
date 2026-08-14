@@ -3,10 +3,11 @@
 - **PR**: #764 (mifunedev/openharness, base `development`) · **Branch**: `task/762-health-check-host-side`
 - **Audit run**: `audit-20260814T025409Z-1913061` · **Verdict**: `PR-AUDIT-PROMOTABLE`, `flags: (none)`
   - Head at audit time: `71053ee8`. Log terminal state: `complete`.
-  - That run audited every implementation and scoreboard change. It could not audit
-    the commit that adds this paragraph, because that commit did not exist yet. A
-    final confirming `/audit pr` run against the head that includes this file is
-    posted as a comment on PR #764, which closes the correlation without regress.
+  - That run audited every implementation and scoreboard change. The run could not
+    audit the commit that adds this paragraph, because that commit did not exist
+    yet. A comment on PR #764 carries a final confirming `/audit pr` run against the
+    head that includes this file. That comment closes the correlation without
+    regress.
 - **Prior runs**, each recorded below because each caught something real:
   - `audit-20260813T055733Z-263366` → `PR-AUDIT-BLOCKED` — a genuine merge conflict
   - `audit-20260813T060219Z-296946` → `PR-AUDIT-PROMOTABLE` with `flags: title-convention` — a genuine title defect I dismissed before fixing it

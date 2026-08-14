@@ -155,10 +155,7 @@ export function isValidSchedule(schedule: string): boolean {
 // `logFn` defaults to the module-private `log` and exists ONLY for test
 // injection (mirrors onJobError(id, err, logFn = log)); it carries no
 // external-stability guarantee. Existing loadCrons(dir) call sites stay valid.
-export function loadCrons(
-  dir: string = CRONS_DIR,
-  logFn: typeof log = logTo(dir),
-): CronEntry[] {
+export function loadCrons(dir: string = CRONS_DIR, logFn = log): CronEntry[] {
   if (!fs.existsSync(dir)) return [];
   const out: CronEntry[] = [];
   for (const f of fs.readdirSync(dir).filter((n: string) => n.endsWith(".md")).sort()) {
@@ -326,31 +323,14 @@ export function reloadBody(entry: CronEntry): string {
   return fresh;
 }
 
-function appendLog(file: string, id: string, status: string, msg: string): void {
+function log(id: string, status: string, msg = ""): void {
   const line = `${new Date().toISOString()}\t${id}\t${status}\t${msg.replace(/\s+/g, " ").slice(0, 200)}\n`;
   try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.appendFileSync(file, line);
+    fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+    fs.appendFileSync(LOG_FILE, line);
   } catch {
     /* best-effort */
   }
-}
-
-function log(id: string, status: string, msg = ""): void {
-  appendLog(LOG_FILE, id, status, msg);
-}
-
-// A logger bound to the crons directory being scheduled, so `.cron.log` always
-// lands beside the crons it describes. In production `dir` IS `CRONS_DIR` and
-// this returns `log` itself, so the boot path is byte-identical. It matters for
-// a caller scheduling some OTHER directory — a test, or a second tree: the
-// module-level `LOG_FILE` would send those lines to the real repo's log. The
-// removed `CRONS_DIR` env var used to double as that redirect, silently.
-function logTo(dir: string): typeof log {
-  const file = path.join(dir, ".cron.log");
-  if (path.resolve(file) === path.resolve(LOG_FILE)) return log;
-  return (id: string, status: string, msg = ""): void =>
-    appendLog(file, id, status, msg);
 }
 
 function shellQuote(value: string): string {
@@ -1098,12 +1078,9 @@ export function resetActiveJobs(): void {
 // default to the real `log` / `constructCron`.
 export function scheduleAll(
   dir: string = CRONS_DIR,
-  logFnArg?: typeof log,
+  logFn = log,
   mkCron: (entry: CronEntry) => Cron | void = constructCron,
 ): BootResult {
-  // Default the logger to one bound to `dir` rather than to the module-level
-  // LOG_FILE, so scheduling directory X never writes into directory Y's log.
-  const logFn = logFnArg ?? logTo(dir);
   // Clear the prior generation's handles at the START of each call so a reload
   // (US-002) registers only this call's jobs; the prior handles are stopped by
   // the SIGHUP handler before it re-invokes scheduleAll.
@@ -1173,7 +1150,7 @@ export function sighupHandler(dir: string = CRONS_DIR): void {
       }
     }
     const { scheduled, skipped } = scheduleAll(dir);
-    logTo(dir)("system", "RELOAD", `${scheduled} scheduled, ${skipped} skipped`);
+    log("system", "RELOAD", `${scheduled} scheduled, ${skipped} skipped`);
   } finally {
     reloading = false;
   }

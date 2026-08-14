@@ -32,11 +32,12 @@ The memory directory has ONE source of truth, resolved deterministically by
 | 2 | default `.oh/memory` | what every fresh harness/`oh init` uses |
 
 There is **no environment layer**. A `MEMORY_DIR` variable once sat ahead of
-`harness.yaml`, and callers wrote `${MEMORY_DIR:-$(oh-path memory)}` to read it.
-`docker-compose.yml` set it unconditionally, so the `:-` fallback never fired and
-`oh-path` never ran — callers used the raw relative string, which resolves
-against the CALLER'S CWD. Inside a worktree that is the worktree root, so each
-worktree wrote its own stranded ledger. Setting `MEMORY_DIR` now does nothing.
+`harness.yaml`, and callers wrote `${MEMORY_DIR:-$(oh-path memory)}` to read the
+variable. `docker-compose.yml` set `MEMORY_DIR` unconditionally, so the `:-`
+fallback never fired and `oh-path` never ran — callers used the raw relative
+string, which resolves against the CALLER'S CWD. Inside a worktree that CWD is
+the worktree root, so each worktree wrote its own stranded ledger. Setting
+`MEMORY_DIR` now does nothing.
 
 ```bash
 MEM="$(bash .oh/scripts/oh-path memory)"   # absolute, CWD-independent

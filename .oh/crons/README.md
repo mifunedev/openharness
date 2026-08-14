@@ -147,6 +147,6 @@ Set `crons.dir` in `harness.yaml` to point the runtime at a different directory
 (default: `.oh/crons`). `.oh/scripts/oh-path` reads that file; there is no
 `CRONS_DIR` environment variable.
 
-Isolated cron worktrees are fixed at `.oh/worktrees/cron/`. That path stays
-relative on purpose: it is resolved when a fire happens, so a cron operating on
-another repo gets that repo's worktree root rather than the harness root's.
+The runtime puts isolated cron worktrees at `.oh/worktrees/cron/`. It keeps
+that path relative on purpose and resolves it at fire time. A cron that operates
+on another repo therefore gets that repo's worktree root, not the harness root.

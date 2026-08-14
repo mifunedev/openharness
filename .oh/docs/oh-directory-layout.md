@@ -36,6 +36,8 @@ Every entry below is present in a fresh clone unless noted otherwise.
 | `tasks/` | dir | Ralph/spec task workdirs — ephemeral build scratch (`<slug>/prd.md`, `prd.json`, `progress.txt`). | `.oh/scripts/ralph.sh`, the `cleanup-tasks` cron, `/spec` and `/ship-spec`. |
 | `templates/` | dir | The `oh init` scaffold payload (`AGENTS.md`, `harness.yaml`, `gitignore`, `.devcontainer/`, `full/`) materialized into a fresh checkout. | `oh init` (`.oh/cli/src/commands/init.ts`). |
 
+The manifest ships `docs/**` and omits `patches/**`.
+
 ## Not in a fresh clone
 
 Referenced by `.oh/README.md`'s Contents table but **not present** in the tracked

@@ -40,14 +40,16 @@ describe("copyOhPayload — manifest filtering", () => {
       from,
       "manifest.json",
       JSON.stringify({
-        include: ["cli/**", "manifest.json"],
+        include: ["cli/**", "docs/**", "manifest.json"],
         exclude: ["**/node_modules/**", "**/dist/**"],
       }),
     );
     write(from, "cli/src/cli.ts", "x");
     write(from, "cli/node_modules/pkg/index.js", "y");
     write(from, "cli/dist/oh.js", "z");
-    write(from, "docs/readme.md", "d"); // not in include
+    write(from, "docs/readme.md", "d");
+    write(from, "docs/rfcs/rfc-brain-hands-boundary.md", "rfc");
+    write(from, "patches/p.diff", "patch");
 
     const target = mkTmp();
     const targetOh = path.join(target, ".oh");
@@ -57,11 +59,17 @@ describe("copyOhPayload — manifest filtering", () => {
 
     expect(fs.existsSync(path.join(targetOh, "cli/src/cli.ts"))).toBe(true);
     expect(fs.existsSync(path.join(targetOh, "manifest.json"))).toBe(true);
-    // Excluded / pruned / not-in-payload are absent.
+    // Volatile files and the non-payload patch are absent.
     expect(fs.existsSync(path.join(targetOh, "cli/node_modules/pkg/index.js"))).toBe(false);
     expect(fs.existsSync(path.join(targetOh, "cli/dist/oh.js"))).toBe(false);
-    expect(fs.existsSync(path.join(targetOh, "docs/readme.md"))).toBe(false);
-    expect(res.written).toBe(2);
+    expect(fs.existsSync(path.join(targetOh, "docs/readme.md"))).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(targetOh, "docs/rfcs/rfc-brain-hands-boundary.md"),
+      ),
+    ).toBe(true);
+    expect(fs.existsSync(path.join(targetOh, "patches/p.diff"))).toBe(false);
+    expect(res.written).toBe(4);
   });
 
   it("null manifest = legacy mode: ships all real files except pruned volatile dirs", () => {

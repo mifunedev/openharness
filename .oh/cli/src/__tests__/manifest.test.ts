@@ -110,8 +110,15 @@ describe("shouldShip", () => {
     ).toBe(true);
 
     expect(
-      shouldShip("docs/intro.md", {
-        include: ["cli/**", "README.md"],
+      shouldShip("docs/rfcs/rfc-brain-hands-boundary.md", {
+        include: ["cli/**", "README.md", "docs/**"],
+        exclude: [],
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldShip("patches/p.diff", {
+        include: ["cli/**", "README.md", "docs/**"],
         exclude: [],
       }),
     ).toBe(false);
@@ -182,7 +189,7 @@ describe("loadManifest", () => {
 // ---------------------------------------------------------------------------
 
 describe("runUpdate — manifest payload filtering", () => {
-  it("INTEGRATION: overlays only allow-listed payload; docs/patches/dist excluded; project untouched", async () => {
+  it("INTEGRATION: overlays allow-listed docs; patches/dist excluded; project untouched", async () => {
     // Use ONE dedicated base dir so the project-untouched assertion owns its parent.
     const base = mkTmp();
     const src = path.join(base, "src-checkout");
@@ -200,7 +207,7 @@ describe("runUpdate — manifest payload filtering", () => {
       src,
       ".oh/manifest.json",
       JSON.stringify({
-        include: ["cli/**", "README.md", "manifest.json"],
+        include: ["cli/**", "docs/**", "README.md", "manifest.json"],
         exclude: ["**/dist/**"],
       }),
     );
@@ -208,6 +215,11 @@ describe("runUpdate — manifest payload filtering", () => {
     writeFile(src, ".oh/cli/dist/oh.js", "console.log('built');\n");
     writeFile(src, ".oh/README.md", "# control plane\n");
     writeFile(src, ".oh/docs/site.md", "# docs site\n");
+    writeFile(
+      src,
+      ".oh/docs/rfcs/rfc-brain-hands-boundary.md",
+      "# RFC\n",
+    );
     writeFile(src, ".oh/patches/p.diff", "--- a\n+++ b\n");
 
     // Fake equipped target: older version + a PROJECT file outside .oh/.
@@ -233,8 +245,13 @@ describe("runUpdate — manifest payload filtering", () => {
     expect(fs.existsSync(path.join(tgt, ".oh/README.md"))).toBe(true);
     expect(fs.existsSync(path.join(tgt, ".oh/manifest.json"))).toBe(true);
 
-    // docs/, patches/, and dist/ were NOT shipped.
-    expect(fs.existsSync(path.join(tgt, ".oh/docs/site.md"))).toBe(false);
+    // The copier ships docs/ and skips patches/ and dist/.
+    expect(fs.existsSync(path.join(tgt, ".oh/docs/site.md"))).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(tgt, ".oh/docs/rfcs/rfc-brain-hands-boundary.md"),
+      ),
+    ).toBe(true);
     expect(fs.existsSync(path.join(tgt, ".oh/patches/p.diff"))).toBe(false);
     expect(fs.existsSync(path.join(tgt, ".oh/cli/dist/oh.js"))).toBe(false);
 
@@ -243,9 +260,9 @@ describe("runUpdate — manifest payload filtering", () => {
       harnessBefore,
     );
 
-    // The skip line for a non-payload file is emitted.
+    // The copier emits the skip line for a non-payload file.
     expect(
-      out.some((l) => l.includes("skip docs/site.md (not in payload)")),
+      out.some((l) => l.includes("skip patches/p.diff (not in payload)")),
     ).toBe(true);
   });
 
@@ -278,9 +295,10 @@ describe("runUpdate — manifest payload filtering", () => {
     const rc = await runUpdate({ targetDir: tgt, fromDir: src }, io);
 
     expect(rc).toBe(0);
-    // Overlay-all: docs/ IS created when there is no manifest.
+    // Legacy mode copies docs/ and patches/ when the source has no manifest.
     expect(fs.existsSync(path.join(tgt, ".oh/docs/site.md"))).toBe(true);
-    // The legacy-mode warning is emitted.
+    expect(fs.existsSync(path.join(tgt, ".oh/patches/p.diff"))).toBe(true);
+    // The update command emits the legacy-mode warning.
     expect(out.some((l) => l.includes("legacy mode"))).toBe(true);
   });
 });

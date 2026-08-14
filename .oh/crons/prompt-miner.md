@@ -2,7 +2,7 @@
 id: prompt-miner
 schedule: "0 5 * * *"
 timezone: America/Denver
-enabled: true
+enabled: false
 overlap: false
 catchup: false
 tmux: true
@@ -24,10 +24,10 @@ auto-merged.
 
 This cron is **opt-in and cap-gated**:
 
-- **Kill-switch**: this cron is currently `enabled: true` in the frontmatter above
-  and fires daily. To stop it, flip that line to `enabled: false` and reload the
+- **Kill-switch**: this cron is currently `enabled: false` in the frontmatter above
+  and does not fire. To start it, flip that line to `enabled: true` and reload the
   runtime (`SIGHUP` — `kill -HUP "$(cat .oh/crons/.pid)"` from inside the
-  container); re-enabling is the same one-line edit + reload. Never delete the
+  container); disabling again is the same one-line edit + reload. Never delete the
   file (preserves history). The frontmatter `enabled:` value is the single source
   of truth — this paragraph previously claimed the cron shipped disabled while the
   tracked file said otherwise (issue #663 review).

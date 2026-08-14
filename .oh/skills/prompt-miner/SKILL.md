@@ -114,9 +114,13 @@ Read the emitted `prompt-miner-<UTC-date>.json` (or the `--dry-run` stdout). The
 shape is documented in `references/report-schema.md`:
 
 - `manifest` — `sessionsScanned`, `sessionsRanked`, `toolErrorsTotal`,
-  `malformedLines`, `skippedFiles`, `weights`, `window`, `scoreModel`.
-- `sessions[]` — ranked (score desc), each with `score`, `scoreBreakdown`,
-  `sessionType`, and a `features` vector (the 13 `markerFeatureKeys`).
+  `malformedLines`, `skippedFiles`, `weights`, `window`, `scoreModel`,
+  `ceilingSaturation` (per-stratum `{ atCeiling, total }` census over the rankable
+  population — how much of each session type sits on the clamp ceiling).
+- `sessions[]` — ranked (`score` desc), each with `score`, `scoreUncapped`
+  (the same value before the 0..100 clamp — the correlation scale for Step 3),
+  `scoreBreakdown`, `sessionType`, and a `features` vector (the 13
+  `markerFeatureKeys`).
 - `unranked[]` — `noHumanPrompt` / below-`minTurns` sessions (kept, not ranked).
 - `weaknesses[]` — metadata-only `WH-<NNN>` harness-weakness records clustering
   repeated failure signals across the corpus; deterministic, and **never** carries
@@ -132,7 +136,8 @@ the ranking — the score is a **heuristic proxy**, not a verdict (see
 For each **session-type stratum** (`impl`, `retro`, `query`, `audit`, `cron`,
 `other`) — never pooled across types (pooling manufactures Simpson's-paradox
 artifacts; see `references/markers.md`) — correlate each feature in
-`markerFeatureKeys` against the session `score`. Emit each marker in the exact
+`markerFeatureKeys` against the session `scoreUncapped` — **not** `score`, which is
+censored above 100 (see `references/markers.md`). Emit each marker in the exact
 falsifiable schema from `references/markers.md`:
 
 ```json
@@ -142,12 +147,20 @@ falsifiable schema from `references/markers.md`:
   "threshold": true,
   "sessions_supporting": 14,
   "sessions_contradicting": 3,
-  "effect_size": 0.41
+  "effect_size": 0.41,
+  "effect_size_capped": 0.36
 }
 ```
 
 A marker is **reportable** only when, within a single stratum,
 `sessions_supporting ≥ 10` **and** `effect_size ≥ 0.3`.
+
+**Stability guard.** Compute `effect_size_capped` — the same statistic against the
+clamped `score` — for every marker. A marker whose two scales disagree on sign, or
+where exactly one of `|effect_size| ≥ 0.3` and `|effect_size_capped| ≥ 0.3` holds,
+is `UNSTABLE`: **report** it with both values and the reason, but do **not** carry
+it into Step 4 — it is not promotable on either scale, earns no memory proposal,
+and files no issue. See `references/markers.md` § Stability guard.
 
 **Corpus-size gate.** If **no** session type reaches the `sessions_supporting ≥ 10`
 floor: announce `RESULT: NO-CORPUS`, report that the corpus is too small to mine

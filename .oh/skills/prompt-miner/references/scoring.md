@@ -13,8 +13,19 @@ friction = 100
   − 20 * abandoned          (0 | 1)
   − 10 * incomplete         (0 | 1)
   −  5 * turnBloat          (clamped 0..1)
-score = clamp(friction + groundTruthBonus, 0, 100)
+score         = clamp(friction + groundTruthBonus, 0, 100)
+scoreUncapped =       friction + groundTruthBonus
 ```
+
+`score` is the display and ranking scale; `sessions[]` sorts by it. It is
+**censored above 100** — `friction` is already capped at 100 by construction and
+`groundTruthBonus` adds up to 15, so every low-friction ground-truth session lands
+on the ceiling and becomes indistinguishable from every other one there.
+`scoreUncapped` is the same sum with **no clamp**, so it is not censored and can
+exceed 100. Correlate markers against `scoreUncapped`, never `score` (see
+`markers.md`); read `manifest.ceilingSaturation` to see how much of each stratum
+the clamp is currently collapsing. The lower bound is unaffected: no negative
+value is producible under the current weights.
 
 Each coefficient is a `--weights` key (see *Weights* below). The `scoreBreakdown`
 object on every session records `base`, `groundTruthBonus`, `groundTruthReason`,

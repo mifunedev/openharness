@@ -425,9 +425,15 @@ export function scoreSession(agg, weights = DEFAULT_WEIGHTS, groundTruth = { has
     penalties.turnBloat;
   const bonus = groundTruth.hasBonus ? w.groundTruthBonus : 0;
   const score = clamp(base + bonus, 0, 100);
+  // The uncensored sibling of `score`. `base` is already capped at 100 by
+  // construction and `bonus` adds up to 15 more, so the clamped `score` is
+  // censored above 100 — an effect size computed on it reads a flattened upper
+  // tail. Marker effect sizes correlate against THIS field (references/markers.md).
+  const scoreUncapped = base + bonus;
 
   return {
     score: Number(score.toFixed(2)),
+    scoreUncapped: Number(scoreUncapped.toFixed(2)),
     scoreBreakdown: {
       base: Number(base.toFixed(2)),
       groundTruthBonus: bonus,
@@ -488,6 +494,25 @@ export function extractFeatures(text) {
     urlCount: countMatches(t, /https?:\/\//g),
     hedgingCount,
   };
+}
+
+// Per-stratum census of how much of the RANKABLE population sits on the display
+// ceiling. `score` is clamped at 100, so a stratum whose sessions pile up there
+// has stopped discriminating — the operator can read that off the report instead
+// of recomputing it. Counts the STORED, rounded `score` field (not `scoreUncapped`,
+// not an unrounded intermediate), because that is the number the report displays.
+// Session types with no rankable sessions are omitted; a null type cannot appear,
+// because `rankable` excludes noHumanPrompt sessions (the only null-type records).
+export function computeCeilingSaturation(records) {
+  const census = {};
+  for (const r of records) {
+    const type = r.sessionType;
+    if (type == null) continue;
+    if (!census[type]) census[type] = { atCeiling: 0, total: 0 };
+    census[type].total += 1;
+    if (r.score === 100) census[type].atCeiling += 1;
+  }
+  return census;
 }
 
 export function detectSessionType(text) {
@@ -1017,6 +1042,7 @@ async function run(args) {
       noHumanPrompt: agg.noHumanPrompt,
       sessionType,
       score: scored.score,
+      scoreUncapped: scored.scoreUncapped,
       scoreBreakdown: scored.scoreBreakdown,
       groundTruth: gt,
       features,
@@ -1050,6 +1076,7 @@ async function run(args) {
     window,
     sessionsScanned,
     sessionsRanked: rankable.length,
+    ceilingSaturation: computeCeilingSaturation(rankable),
     toolErrorsTotal,
     toolResultsTotal,
     malformedLines: counters.malformedLines,
@@ -1090,6 +1117,13 @@ function renderMarkdown(dataset, top) {
   lines.push(`- window: ${manifest.window.start || "(open)"} → ${manifest.window.end || "(open)"}`);
   lines.push(`- sessionsScanned: ${manifest.sessionsScanned}`);
   lines.push(`- sessionsRanked: ${manifest.sessionsRanked}`);
+  // Flat bullets under the EXISTING ## Manifest heading — no new heading, so the
+  // report's section structure is unchanged. Sorted by type for a stable diff.
+  for (const [type, c] of Object.entries(manifest.ceilingSaturation || {}).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    lines.push(`- ceilingSaturation.${type}: ${c.atCeiling}/${c.total}`);
+  }
   lines.push(`- malformedLines: ${manifest.malformedLines}`);
   lines.push(`- sidechainTurnsExcluded: ${manifest.sidechainTurnsExcluded ?? 0}`);
   lines.push(`- skippedFiles: ${manifest.skippedFiles}`);

@@ -14,7 +14,7 @@
 # This script creates the file with its canonical header IF AND ONLY IF it is
 # missing. It never touches an existing file, so it is safe to run on every
 # boot and from any skill. The memory directory is resolved through oh-path so
-# it honors paths.memory / MEMORY_DIR exactly like every other caller.
+# it honors harness.yaml paths.memory exactly like every other caller.
 #
 # Usage:  ensure-memory-file.sh        # seed if missing, print path
 set -eu

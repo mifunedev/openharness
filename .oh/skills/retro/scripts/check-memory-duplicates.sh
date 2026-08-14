@@ -6,8 +6,8 @@ set -euo pipefail
 # catch double-writes without making subjective semantic judgments.
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT=$(cd "$SCRIPT_DIR/../../../.." && pwd)
-# Resolve the memory dir through the shared resolver (honors paths.memory /
-# MEMORY_DIR); fall back to the .oh/memory default if oh-path is unavailable.
+# Resolve the memory dir through the shared resolver (honors harness.yaml
+# paths.memory); fall back to the .oh/memory default if oh-path is unavailable.
 MEM_DIR="$(sh "$ROOT/.oh/scripts/oh-path" memory --no-create 2>/dev/null || printf '%s' "$ROOT/.oh/memory")"
 MEMORY_FILE="$MEM_DIR/MEMORY.md"
 IDENTITY_FILE="$ROOT/.oh/context/IDENTITY.md"

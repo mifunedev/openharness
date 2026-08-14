@@ -111,10 +111,10 @@ Automatic branch-push releases use the matching `## [<VERSION>] - YYYY-MM-DD` se
 
 ## Worktrees
 
-Default path: `.oh/worktrees/<branch>` at project root, configurable with `WORKTREES_DIR` / `paths.worktrees`. Independent project clones (own `.git`, not harness branches) live under `.oh/worktrees/project/<project-name>/<repo>/` by default — see `.oh/worktrees/README.md`.
+Default path: `.oh/worktrees/<branch>` at project root, configurable with `paths.worktrees` in `harness.yaml`. Independent project clones (own `.git`, not harness branches) live under `.oh/worktrees/project/<project-name>/<repo>/` by default — see `.oh/worktrees/README.md`.
 
 ```bash
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
+WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf %s .oh/worktrees)"
 mkdir -p "$WORKTREES_ROOT"
 git worktree add "$WORKTREES_ROOT/<branch>" <branch>                # existing branch
 git worktree add -b <prefix>/<issue#>-<short-desc> \

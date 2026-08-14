@@ -47,12 +47,17 @@ ssh:
   # password_auth: false       # SANDBOX_SSH_PASSWORD_AUTH — allow password login (uses SANDBOX_PASSWORD)
 
 crons:
-  # dir: .oh/crons             # CRONS_DIR — directory the cron runtime scans
+  # dir: .oh/crons             # directory the cron runtime scans
   # agent_bin: claude          # CRON_AGENT_BIN — binary that fires scheduled tasks
 
+# Directory locations. These are read by .oh/scripts/oh-path, the one resolver
+# every skill, cron, and script asks. There is no matching environment variable:
+# a <NAME>_DIR layer used to sit ahead of this file, and callers read the raw
+# value instead of calling the resolver, which reintroduced the CWD dependence
+# oh-path exists to remove. Change a path here and every caller follows.
 paths:
-  # memory: .oh/memory         # MEMORY_DIR — long-term memory + dated session logs
-  # worktrees: .oh/worktrees   # WORKTREES_DIR — ignored git worktree and project-clone root
+  # memory: .oh/memory         # long-term memory + dated session logs
+  # worktrees: .oh/worktrees   # ignored git worktree and project-clone root
 
 autopilot:
   # Configurable defaults for the deterministic caps gate

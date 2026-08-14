@@ -60,14 +60,12 @@ fi
 fail=0
 note() { echo "REGRESSION: $*" >&2; fail=$((fail + 1)); }
 
-# `oh-path` honors MEMORY_DIR / CRONS_DIR / ... ahead of its own anchoring. The
-# ambient environment exports MEMORY_DIR=.oh/memory (docker-compose), which is
-# relative and therefore still exercises the anchor — but an operator with an
-# ABSOLUTE override would mask the assertion entirely. Clear the overrides so the
-# probe tests the resolver, not the environment it happens to run in.
+# No environment scrubbing here, deliberately. `oh-path` has no environment
+# layer, so a `<NAME>_DIR` variable in the ambient environment must not change
+# any answer below — assertion (d) asserts exactly that, and clearing the
+# variables first would hide a regression that reintroduced the layer.
 run_oh_path() {
-  ( cd "$WT" && env -u MEMORY_DIR -u CRONS_DIR -u EVALS_DIR -u TASKS_DIR \
-      -u CONTEXT_DIR -u WORKTREES_DIR sh ./.oh/scripts/oh-path "$1" 2>/dev/null )
+  ( cd "$WT" && sh ./.oh/scripts/oh-path "$1" 2>/dev/null )
 }
 
 # (a) memory resolves to the MAIN worktree, not the caller's worktree.
@@ -92,12 +90,21 @@ for name in crons evals tasks context; do
   fi
 done
 
-# (d) an ABSOLUTE override is still honored verbatim — anchoring applies only to
-#     relative values, so paths.memory / MEMORY_DIR keep working.
-GOT_ABS="$( cd "$WT" && MEMORY_DIR="$TMP/abs" sh ./.oh/scripts/oh-path memory 2>/dev/null )"
-if [ "$GOT_ABS" != "$TMP/abs" ]; then
-  note "(d) an absolute MEMORY_DIR was rewritten: got '$GOT_ABS', expected '$TMP/abs'"
-fi
+# (d) there is NO environment layer. A `<NAME>_DIR` variable must not move any
+#     name. The layer existed so harness.yaml could be passed through compose,
+#     but it also let callers read the raw relative string and skip the resolver
+#     (`${MEMORY_DIR:-$(oh-path memory)}`) — which resolves against the CALLER'S
+#     CWD and put each worktree's ledger back inside that worktree, undoing (a)
+#     and (b) at every call site. An absolute value is the sharpest probe: if the
+#     layer returns, the answer becomes $TMP/abs instead of the anchored path.
+for name in memory crons; do
+  envvar="$(printf '%s' "$name" | tr 'a-z' 'A-Z')_DIR"
+  got="$( cd "$WT" && env "$envvar=$TMP/abs" sh ./.oh/scripts/oh-path "$name" 2>/dev/null )"
+  if [ "$got" = "$TMP/abs" ]; then
+    note "(d) $envvar changed the answer for '$name' — the environment override" \
+         "layer is back; oh-path must read harness.yaml only"
+  fi
+done
 
 if [ "$fail" -ne 0 ]; then
   echo "memory-dir-shared-across-worktrees: $fail assertion(s) failed" >&2

@@ -542,7 +542,7 @@ Always run this step, regardless of outcome. Get the current UTC time:
 ```bash
 date -u +%H:%M
 TODAY=$(date -u +%Y-%m-%d)
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"; mkdir -p "$MEM/$TODAY"
+MEM="$(bash .oh/scripts/oh-path memory)"; mkdir -p "$MEM/$TODAY"
 ```
 
 When `AUDIT_RUN_ID` is inherited, return a structured ingest observation carrying

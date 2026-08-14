@@ -56,10 +56,7 @@ services:
       - XAI_API_KEY=${XAI_API_KEY:-}
       - OH_PROJECT_ROOT=${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - OH_IMAGE_ONLY=1
-      - CRONS_DIR=${CRONS_DIR:-.oh/crons}
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
-      - MEMORY_DIR=${MEMORY_DIR:-.oh/memory}
-      - WORKTREES_DIR=${WORKTREES_DIR:-.oh/worktrees}
     stdin_open: true
     tty: true
     init: true

@@ -1165,6 +1165,22 @@ function renderMarkdown(dataset, top) {
   return `${lines.join("\n")}\n`;
 }
 
+// Ask the shared resolver where memory lives. This read `process.env.MEMORY_DIR
+// || ".oh/memory"`, which resolved against the CWD — inside a worktree that is
+// the worktree root, so reports landed in a stranded per-branch directory
+// instead of the checkout's one ledger. oh-path applies the main-worktree anchor
+// and is located from this file, never from the CWD.
+function resolveMemoryDir() {
+  const ohPath = path.join(import.meta.dirname, "..", "..", "..", "scripts", "oh-path");
+  try {
+    const out = execFileSync("sh", [ohPath, "memory"], { encoding: "utf8" }).trim();
+    if (out) return out;
+  } catch {
+    /* resolver unavailable — fall back to the documented default */
+  }
+  return path.resolve(".oh/memory");
+}
+
 function writeReports(outDir, utcDate, dataset, top) {
   fs.mkdirSync(outDir, { recursive: true });
   const jsonPath = path.join(outDir, `prompt-miner-${utcDate}.json`);
@@ -1209,7 +1225,7 @@ async function main() {
     return;
   }
 
-  const outDir = args.out || path.join(process.env.MEMORY_DIR || ".oh/memory", utcDate);
+  const outDir = args.out || path.join(resolveMemoryDir(), utcDate);
   const { jsonPath, mdPath } = writeReports(outDir, utcDate, dataset, args.top);
   process.stdout.write(
     `wrote ${jsonPath}\nwrote ${mdPath}\nscanned=${manifest.sessionsScanned} ranked=${manifest.sessionsRanked} malformed=${manifest.malformedLines} skipped=${manifest.skippedFiles}\n`,

@@ -24,16 +24,22 @@ minimum record needed to avoid repeating the same mistakes across sessions.
 ## Where memory lives — resolve it, don't hardcode it
 
 The memory directory has ONE source of truth, resolved deterministically by
-`.oh/scripts/oh-path` (the same pattern `CRONS_DIR` uses for `crons/`):
+`.oh/scripts/oh-path` (the same resolver every harness directory uses):
 
 | Precedence | Source | Notes |
 |---|---|---|
-| 1 | env override `MEMORY_DIR` | exported into the sandbox by `docker-compose.yml` + `entrypoint.sh` |
-| 2 | `harness.yaml` → `paths.memory` | uncomment to relocate the directory project-wide |
-| 3 | default `.oh/memory` | what every fresh harness/`oh init` uses |
+| 1 | `harness.yaml` → `paths.memory` | uncomment to relocate the directory project-wide |
+| 2 | default `.oh/memory` | what every fresh harness/`oh init` uses |
+
+There is **no environment layer**. A `MEMORY_DIR` variable once sat ahead of
+`harness.yaml`, and callers wrote `${MEMORY_DIR:-$(oh-path memory)}` to read it.
+`docker-compose.yml` set it unconditionally, so the `:-` fallback never fired and
+`oh-path` never ran — callers used the raw relative string, which resolves
+against the CALLER'S CWD. Inside a worktree that is the worktree root, so each
+worktree wrote its own stranded ledger. Setting `MEMORY_DIR` now does nothing.
 
 ```bash
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"   # absolute, CWD-independent
+MEM="$(bash .oh/scripts/oh-path memory)"   # absolute, CWD-independent
 ```
 
 `oh-path` returns the same absolute path no matter the caller's working
@@ -96,7 +102,7 @@ directory before writing:
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d)
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"   # → .oh/memory by default
+MEM="$(bash .oh/scripts/oh-path memory)"   # → .oh/memory by default
 mkdir -p "$MEM/$TODAY"
 # then append to "$MEM/$TODAY/log.md"
 ```

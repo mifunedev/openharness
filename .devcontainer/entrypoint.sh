@@ -582,16 +582,13 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
 fi
 
 # ─── Resolve + pre-create the memory directory ────────────────────
-# Single source of truth = MEMORY_DIR (docker-compose passes harness.yaml's
-# paths.memory through here; default .oh/memory). Pre-creating it at boot means
+# Single source of truth = .oh/scripts/oh-path, which reads harness.yaml
+# paths.memory and defaults to .oh/memory. It creates the directory itself, so
 # the first skill/cron write lands in the resolved dir instead of racing a mkdir
-# — and never silently falls back to a phantom relative `memory/`. Mirrors the
-# CRONS_PATH block below; see .oh/scripts/oh-path for the shared resolver.
-case "${MEMORY_DIR:-.oh/memory}" in
-  /*) MEMORY_PATH="${MEMORY_DIR}" ;;
-  *)  MEMORY_PATH="$HARNESS/${MEMORY_DIR:-.oh/memory}" ;;
-esac
-mkdir -p "$MEMORY_PATH"
+# — and never silently falls back to a phantom relative `memory/`. This block
+# used to re-implement the resolver against MEMORY_DIR; asking oh-path means the
+# main-worktree anchor for `memory` applies here too.
+MEMORY_PATH=$(sh "$HARNESS/.oh/scripts/oh-path" memory)
 # Seed the durable lessons ledger (.oh/memory/MEMORY.md) if missing. It is
 # gitignored/local-per-instance, so a fresh clone lacks it and the session-start
 # read + /retro dedup would hit ENOENT until first write. Idempotent: never
@@ -599,15 +596,11 @@ mkdir -p "$MEMORY_PATH"
 sh "$HARNESS/.oh/scripts/ensure-memory-file.sh" >/dev/null 2>&1 || true
 
 # ─── Resolve + pre-create the worktrees directory ─────────────────
-# Single source of truth = WORKTREES_DIR (docker-compose passes
-# paths.worktrees through here; default .oh/worktrees). Cron worktree isolation
-# and the /worktrees skill use this root so ignored branch/project clones stay
-# under the .oh control-plane namespace.
-case "${WORKTREES_DIR:-.oh/worktrees}" in
-  /*) WORKTREES_PATH="${WORKTREES_DIR}" ;;
-  *)  WORKTREES_PATH="$HARNESS/${WORKTREES_DIR:-.oh/worktrees}" ;;
-esac
-mkdir -p "$WORKTREES_PATH"
+# Single source of truth = .oh/scripts/oh-path, which reads harness.yaml
+# paths.worktrees and defaults to .oh/worktrees. Cron worktree isolation and the
+# /worktrees skill use this root so ignored branch/project clones stay under the
+# .oh control-plane namespace.
+WORKTREES_PATH=$(sh "$HARNESS/.oh/scripts/oh-path" worktrees)
 
 # ─── Start/supervise cron runtime in tmux sessions ────────────────
 # Per SPEC v0.7 §"Croner runtime" + .oh/skills/t3/references/sandbox-processes.md.
@@ -615,11 +608,7 @@ mkdir -p "$WORKTREES_PATH"
 # supervisor: if cron-system disappears after boot, it restarts the runtime
 # without requiring a container restart. Logs tee to /tmp/cron-system.log and
 # /tmp/cron-watchdog.log.
-case "${CRONS_DIR:-.oh/crons}" in
-  /*) CRONS_PATH="${CRONS_DIR}" ;;
-  *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-.oh/crons}" ;;
-esac
-mkdir -p "$CRONS_PATH"
+CRONS_PATH=$(sh "$HARNESS/.oh/scripts/oh-path" crons)
 # Bind-mounted; sandbox UID is synced to host UID above, so no chown.
 if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
   if gosu sandbox tmux has-session -t system-cron 2>/dev/null; then

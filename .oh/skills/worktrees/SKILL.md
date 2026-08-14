@@ -101,7 +101,7 @@ Run first. Every create/remove op needs `$BASE` and `$WORKTREES_ROOT`.
 ```bash
 BASE=$(git show-ref --verify --quiet refs/heads/development && echo development || \
        git show-ref --verify --quiet refs/heads/main && echo main || echo master)
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
+WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf %s .oh/worktrees)"
 echo "$BASE"
 echo "$WORKTREES_ROOT"
 ```

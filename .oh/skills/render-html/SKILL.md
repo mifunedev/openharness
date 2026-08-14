@@ -60,7 +60,7 @@ If `slug` collides with an existing file in today's date directory, append `-2`,
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d)
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"   # resolver → default .oh/memory
+MEM="$(bash .oh/scripts/oh-path memory)"   # resolver → default .oh/memory
 mkdir -p "$MEM/$TODAY"
 OUT="$MEM/$TODAY/<slug>.html"
 ```

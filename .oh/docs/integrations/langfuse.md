@@ -70,7 +70,7 @@ Start from the Open Harness checkout:
 
 ```bash
 cd /path/to/openharness
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
+WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf %s .oh/worktrees)"
 mkdir -p "$WORKTREES_ROOT/project/langfuse"
 git clone https://github.com/langfuse/langfuse.git \
   "$WORKTREES_ROOT/project/langfuse/langfuse"
@@ -82,7 +82,7 @@ Git worktree. If it is already cloned, update it instead:
 
 ```bash
 cd /path/to/openharness
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
+WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf %s .oh/worktrees)"
 cd "$WORKTREES_ROOT/project/langfuse/langfuse"
 git pull --ff-only
 ```

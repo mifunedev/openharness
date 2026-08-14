@@ -2,7 +2,8 @@
 
 Ignored scratch space for two kinds of checkouts that live under the harness
 control-plane namespace without polluting tracked source. This is the default
-root; override with `WORKTREES_DIR` or `paths.worktrees` when needed.
+root; set `paths.worktrees` in `harness.yaml` to relocate it. There is no
+`WORKTREES_DIR` environment variable.
 
 The split is by **kind of repo**, not by *who* owns it:
 

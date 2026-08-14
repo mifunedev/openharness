@@ -62,8 +62,8 @@ DAY="$(date -u +%Y-%m-%d)"
 # Same idiom as .oh/skills/autopilot/autopilot-caps.sh:109.
 ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
-# Resolve the memory dir through the shared resolver (honors paths.memory /
-# MEMORY_DIR); fall back to the .oh/memory default if oh-path is unavailable.
+# Resolve the memory dir through the shared resolver (honors harness.yaml
+# paths.memory); fall back to the .oh/memory default if oh-path is unavailable.
 MEM_DIR="$(sh "$ROOT/.oh/scripts/oh-path" memory 2>/dev/null || printf '%s' "$ROOT/.oh/memory")"
 LOG_DIR="$MEM_DIR/$DAY"
 LOG_FILE="$LOG_DIR/log.md"

@@ -97,9 +97,20 @@ describe("harness-config.sh env mode", () => {
   });
 
   it("strips trailing inline comment from values", () => {
-    const f = fixture("crons:\n  dir: crons   # comment\n");
+    const f = fixture("crons:\n  agent_bin: codex   # comment\n");
     const { stdout } = run(["env", f]);
-    expect(stdout.trim()).toBe("CRONS_DIR=crons");
+    expect(stdout.trim()).toBe("CRON_AGENT_BIN=codex");
+  });
+
+  it("does not map any path key to a <NAME>_DIR variable", () => {
+    // Directory resolution belongs to .oh/scripts/oh-path, which reads
+    // harness.yaml directly. Exporting these as environment variables is what
+    // let callers read the raw relative string and skip the resolver.
+    const f = fixture(
+      "crons:\n  dir: crons\npaths:\n  memory: mem\n  worktrees: wt\n",
+    );
+    const { stdout } = run(["env", f]);
+    expect(stdout.trim()).toBe("");
   });
 
   it("ignores unknown and secret-named keys", () => {

@@ -90,7 +90,7 @@ fi
 if [ "$MODE" = "--baseline" ]; then
   echo "=== Baseline probe run ==="
   run_probes "baseline"
-  # Persist to memory for durable comparison (resolver honors paths.memory / MEMORY_DIR)
+  # Persist to memory for durable comparison (resolver honors paths.memory)
   if [ -n "${AUDIT_LOG_ROOT:-}" ]; then MEM_DIR="$AUDIT_LOG_ROOT/.oh/memory"
   else MEM_DIR="$(sh "$HARNESS/.oh/scripts/oh-path" memory 2>/dev/null || printf '%s' "$HARNESS/.oh/memory")"; fi
   mkdir -p "$MEM_DIR/$TODAY/context-audit-baseline"

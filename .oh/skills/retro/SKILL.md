@@ -199,7 +199,7 @@ Append a `GATE-PENDING` entry now, while the counts are still honestly unknown:
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d)
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"; mkdir -p "$MEM/$TODAY"
+MEM="$(bash .oh/scripts/oh-path memory)"; mkdir -p "$MEM/$TODAY"
 GATE_TIME=$(date -u +%H:%M)
 bash "${CLAUDE_SKILL_DIR}/scripts/render-log-entry.sh" \
   --result GATE-PENDING \
@@ -254,7 +254,7 @@ overwrites). It prints the resolved path — one ledger serves every worktree of
 the checkout, so write to that path, not to a relative `.oh/memory/`:
 
 ```bash
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"
+MEM="$(bash .oh/scripts/oh-path memory)"
 sh .oh/scripts/ensure-memory-file.sh
 ```
 
@@ -279,7 +279,7 @@ Always run this step, regardless of whether anything was promoted. Get the curre
 ```bash
 date -u +%H:%M
 TODAY=$(date -u +%Y-%m-%d)
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"; mkdir -p "$MEM/$TODAY"
+MEM="$(bash .oh/scripts/oh-path memory)"; mkdir -p "$MEM/$TODAY"
 ```
 
 Render the log entry with the skill-local helper, then append it with the shared locked append primitive:

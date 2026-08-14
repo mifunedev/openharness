@@ -62,8 +62,8 @@ repointed to the real `.oh/…` location:
 Every consumer pinning those literals was updated: the skills and cron bodies that
 call `.oh/scripts/locked-append.sh`, the `Makefile`'s `COMPOSE := .oh/scripts/docker-compose.sh`,
 the boot-lint shellcheck glob, vitest's `.oh/scripts/__tests__/**`, the eval probes,
-and the `CRONS_DIR` default (`.oh/crons`) in `docker-compose.yml`, `entrypoint.sh`,
-and `cron-runtime.ts`. Nothing reads the bare root paths anymore.
+and the crons directory default (`.oh/crons`) in `entrypoint.sh` and
+`cron-runtime.ts`. Nothing reads the bare root paths anymore.
 
 The relocated task workdirs (`tasks/` → `.oh/tasks/`) moved **without** a
 back-compat symlink — every consumer was repointed to the real `.oh/tasks/` path
@@ -73,7 +73,7 @@ a symlink and nothing reads the bare `tasks/` path anymore.
 
 The ignored worktree root moved into the control-plane namespace as
 `.oh/worktrees/` **without** a back-compat symlink. Runtime creation is routed
-through `WORKTREES_DIR` / `paths.worktrees` (default `.oh/worktrees`), the
+through `paths.worktrees` (default `.oh/worktrees`), the
 `/worktrees` skill creates branch/project clones there, and cron worktree
 isolation uses `.oh/worktrees/cron/`.
 

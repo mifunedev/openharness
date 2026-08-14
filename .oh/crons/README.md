@@ -143,6 +143,10 @@ The bare `kill -HUP "$(cat .oh/crons/.pid)"` form works only from *inside* the c
 
 ## Override
 
-Set `CRONS_DIR=<path>` to point the runtime at a different directory
-(default: `.oh/crons`). Set `WORKTREES_DIR=<path>` to relocate isolated cron
-worktrees and `/worktrees` scratch roots (default: `.oh/worktrees`).
+Set `crons.dir` in `harness.yaml` to point the runtime at a different directory
+(default: `.oh/crons`). `.oh/scripts/oh-path` reads that file; there is no
+`CRONS_DIR` environment variable.
+
+Isolated cron worktrees are fixed at `.oh/worktrees/cron/`. That path stays
+relative on purpose: it is resolved when a fire happens, so a cron operating on
+another repo gets that repo's worktree root rather than the harness root's.

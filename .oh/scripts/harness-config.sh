@@ -75,10 +75,11 @@ BEGIN {
     envmap["ssh.enabled"]           = "SANDBOX_SSH"
     envmap["ssh.port"]              = "SANDBOX_SSH_PORT"
     envmap["ssh.password_auth"]     = "SANDBOX_SSH_PASSWORD_AUTH"
-    envmap["crons.dir"]             = "CRONS_DIR"
+    # No entry maps a harness.yaml path to a <NAME>_DIR variable. Directory
+    # resolution belongs to .oh/scripts/oh-path, which reads harness.yaml
+    # directly; exporting the same value as an environment variable gave callers
+    # a way to read the raw string and skip the resolver.
     envmap["crons.agent_bin"]       = "CRON_AGENT_BIN"
-    envmap["paths.memory"]          = "MEMORY_DIR"
-    envmap["paths.worktrees"]       = "WORKTREES_DIR"
     section  = ""
     list_key = ""
     in_list  = 0

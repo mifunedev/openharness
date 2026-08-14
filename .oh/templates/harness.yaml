@@ -36,6 +36,8 @@ ssh:
   # password_auth: false       # SANDBOX_SSH_PASSWORD_AUTH — allow password login (uses SANDBOX_PASSWORD)
 
 paths:
-  # memory: .oh/memory         # MEMORY_DIR — session logs + MEMORY.md (default .oh/memory).
+  # memory: .oh/memory         # session logs + MEMORY.md (default .oh/memory).
                                #   Resolved by .oh/scripts/oh-path; change here to relocate
-                               #   memory project-wide without editing any skill.
+                               #   memory project-wide without editing any skill. There is
+                               #   no MEMORY_DIR environment variable — this file is the
+                               #   only knob, so no caller can skip the resolver.

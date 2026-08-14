@@ -56,7 +56,9 @@ grep -qF 'remaining request is empty or only' "$SKILL" || fail "dispatcher does 
 grep -qF 'stop without reading' "$SKILL" || fail "missing fail-closed invalid-type behavior"
 grep -qF '.oh/scripts/locked-append.sh' "$SKILL" || fail "Memory Protocol does not use the locked append helper"
 grep -qF '.oh/scripts/oh-path' "$SKILL" || fail "Memory Protocol does not resolve the configured memory root"
-grep -qF 'MEMORY_DIR' "$SKILL" || fail "Memory Protocol omits the memory environment override"
+if grep -qF 'MEMORY_DIR' "$SKILL"; then
+  fail "Memory Protocol reads MEMORY_DIR; oh-path is the only resolver and \${MEMORY_DIR:-...} skips it"
+fi
 grep -qF '<OP | DRY-RUN | PARTIAL | FAIL>' "$SKILL" || fail "Memory Protocol does not represent all run outcomes"
 grep -q '^### Qualify and improve$' "$SKILL" || fail "Memory Protocol omits the qualify/improve pass"
 grep -qF "use \`/retro\`'s propose-then-confirm gate" "$SKILL" || fail "Memory Protocol omits controlled durable promotion"

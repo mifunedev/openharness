@@ -32,11 +32,33 @@ export interface CronEntry {
   filePath: string;
 }
 
-const CRONS_DIR = path.resolve(process.env.CRONS_DIR || ".oh/crons");
-// Keep relative WORKTREES_DIR values relative until use so tests and callers that
-// chdir into a fixture repo get repo-local fallback worktrees, matching the
-// relative fallback-root behavior.
-const WORKTREES_DIR = process.env.WORKTREES_DIR || ".oh/worktrees";
+// Ask the shared resolver (.oh/scripts/oh-path) rather than re-implementing it
+// here. This module used to read process.env.CRONS_DIR / WORKTREES_DIR, which was
+// the third of four independent implementations of the same relative/absolute
+// rule; the env layer is gone and harness.yaml paths.<name> is the one knob.
+// oh-path is anchored to its own location, so the answer does not depend on this
+// process's CWD. Degrade to the documented default if it cannot run at all —
+// a resolver failure must not stop the runtime from booting.
+function ohPath(name: string, fallback: string): string {
+  const res = spawnSync(
+    path.join(import.meta.dirname, "oh-path"),
+    [name],
+    { encoding: "utf8" },
+  );
+  const out = res.status === 0 ? res.stdout.trim() : "";
+  return out || path.resolve(fallback);
+}
+
+const CRONS_DIR = ohPath("crons", ".oh/crons");
+
+// `worktrees` deliberately does NOT go through ohPath: it must stay RELATIVE
+// until use. FALLBACK_WORKTREE_DIR is path.resolve()d at fire time against the
+// process CWD, so a cron firing inside a fixture or a different repo gets that
+// repo's own .oh/worktrees/cron/ rather than the harness root's. An absolute
+// value here would silently relocate every fallback worktree. Reaching this
+// constant used to require the WORKTREES_DIR env var, so harness.yaml
+// paths.worktrees never configured it either; the default is now the whole rule.
+const WORKTREES_DIR = ".oh/worktrees";
 const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";
@@ -1105,7 +1127,12 @@ export function scheduleAll(
 // helper (id "system", matching the BOOT precedent) reusing scheduleAll's
 // disjoint scheduled/skipped counts — no inline appendFileSync, no duplicated
 // format.
-export function sighupHandler(): void {
+// `dir` exists so a test can point one reload at a fixture directory. It used to
+// do that by setting process.env.CRONS_DIR before importing this module, which
+// only worked because the runtime read the environment; an explicit parameter is
+// the smaller seam and survives the removal of that env layer. The signal
+// registration passes nothing, so production always reloads CRONS_DIR.
+export function sighupHandler(dir: string = CRONS_DIR): void {
   if (reloading) return;
   reloading = true;
   try {
@@ -1116,7 +1143,7 @@ export function sighupHandler(): void {
         /* best-effort: a handle that fails to stop must not abort the reload */
       }
     }
-    const { scheduled, skipped } = scheduleAll();
+    const { scheduled, skipped } = scheduleAll(dir);
     log("system", "RELOAD", `${scheduled} scheduled, ${skipped} skipped`);
   } finally {
     reloading = false;

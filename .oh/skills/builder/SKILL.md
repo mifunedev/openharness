@@ -115,7 +115,7 @@ ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 TODAY=$(date -u +%Y-%m-%d)
 TIME=$(date -u +%H:%M)
 if [ -x "$ROOT/.oh/scripts/oh-path" ] && [ -x "$ROOT/.oh/scripts/locked-append.sh" ]; then
-  MEM="${MEMORY_DIR:-$(bash "$ROOT/.oh/scripts/oh-path" memory)}"
+  MEM="$(bash "$ROOT/.oh/scripts/oh-path" memory)"
   mkdir -p "$MEM/$TODAY"
   "$ROOT/.oh/scripts/locked-append.sh" "$MEM/$TODAY/log.md" <<EOF
 

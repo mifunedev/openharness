@@ -235,7 +235,7 @@ outer `/audit` owns the single log. Direct invocation logs normally. Per
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M)
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"; mkdir -p "$MEM/$TODAY"
+MEM="$(bash .oh/scripts/oh-path memory)"; mkdir -p "$MEM/$TODAY"
 .oh/scripts/locked-append.sh "$MEM/$TODAY/log.md" <<EOF
 
 ## Health-Check -- $TIME UTC

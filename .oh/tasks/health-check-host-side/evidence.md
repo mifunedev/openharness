@@ -1,10 +1,16 @@
 # Evidence — health-check-host-side
 
 - **PR**: #764 (mifunedev/openharness, base `development`) · **Branch**: `task/762-health-check-host-side`
-- **Audit run**: `audit-20260813T063007Z-386144` · **Verdict**: `PR-AUDIT-PROMOTABLE`, `flags: (none)`
-- **Prior runs**, both recorded below because each caught something real:
+- **Audit run**: `audit-20260814T025409Z-1913061` · **Verdict**: `PR-AUDIT-PROMOTABLE`, `flags: (none)`
+  - Head at audit time: `71053ee8`. Log terminal state: `complete`.
+  - That run audited every implementation and scoreboard change. It could not audit
+    the commit that adds this paragraph, because that commit did not exist yet. A
+    final confirming `/audit pr` run against the head that includes this file is
+    posted as a comment on PR #764, which closes the correlation without regress.
+- **Prior runs**, each recorded below because each caught something real:
   - `audit-20260813T055733Z-263366` → `PR-AUDIT-BLOCKED` — a genuine merge conflict
   - `audit-20260813T060219Z-296946` → `PR-AUDIT-PROMOTABLE` with `flags: title-convention` — a genuine title defect I dismissed before fixing it
+  - `audit-20260813T063007Z-386144` → `PR-AUDIT-PROMOTABLE` — superseded by a second conflict when `development` moved again
 - **Closes**: #762 · **Refs**: #756, #731
 
 Every claim below quotes a command that ran and its real output. Nothing here is
@@ -31,13 +37,15 @@ at the host project root — a role root `AGENTS.md` already defines and already
 | Gate | What was checked | Observed | Result |
 |------|------------------|----------|--------|
 | Task graph | `prd.json` 4 stories, artifact contract | 4/4 `status: completed`, `passes: true`; `prd.md` + `prd.json` + `critique.md` + `progress.txt` + this file committed under `.oh/tasks/health-check-host-side/` | PASS |
-| Regression floor | `bash .oh/skills/eval/run.sh` | `ran 103 probe(s)`, rc=0, zero `REGRESSION`/`ERROR`; 3 `SKIPPED` all pre-existing | PASS |
+| Regression floor | `bash .oh/skills/eval/run.sh` | `ran 106 probe(s)`, rc=0, zero `REGRESSION`/`ERROR`; 4 `SKIPPED` all pre-existing | PASS |
 | New behavioural probe | `health-check-socket-degrade` | `PASS: preflight resolves every endpoint, contacts no daemon when host-only, and refuses to call a dead socket available` | PASS |
-| Rejection (attribution) | 11 mutations, each expected to fire its **own** assertion | `11 attributed, 0 unattributed`; both files restored byte-identical | PASS |
+| Rejection (attribution) | 11 mutations, each expected to fire its **own** assertion | `11 attributed, 0 unattributed`; both files restored byte-identical. Still binding: both files are byte-identical at `71053ee8` to the commit the harness ran against — see "Byte identity across the merges" | PASS |
 | Constraining probes | the 3 probes that pin this skill | `health-check-docker-stats` PASS, `memory-log-locked-append` PASS, `audit-dispatcher-contract` PASS | PASS |
 | Boot validation | `bash .oh/scripts/link-providers.sh --check` | `Providers OK: .pi/.claude/.codex skills -> .oh/skills (vendored pack present)`, rc=0 | PASS |
-| CI | `gh pr checks 764` | 4/4 `pass` — Boot Path Lint 26s, Eval Probe Regression Gate 28s, Lint/Typecheck/Build/Test 37s, Validate sandbox compose 2m4s | PASS |
-| Merge state | `gh pr view 764` | `mergeable=MERGEABLE state=CLEAN draft=false` | PASS |
+| Typecheck / build / test | `pnpm run typecheck`, `pnpm run build:harness`, `pnpm test:scripts` | `tsc --noEmit` clean; `dist/oh.js 79.7kb`; `Test Files 42 passed (42)`, `Tests 590 passed (590)` | PASS |
+| Shellcheck | the CI glob, plus the two new scripts | CI glob rc=0; `scope-preflight.sh` and `health-check-socket-degrade.sh` rc=0. Verified by rejection: a control script with `SC2034`/`SC2154`/`SC2164` exits 1 | PASS |
+| CI | `gh pr checks 764` | 4/4 `pass` — Boot Path Lint 13s, Eval Probe Regression Gate 25s, Lint/Typecheck/Build/Test 36s, Validate sandbox compose 2m35s | PASS |
+| Merge state | `gh pr view 764` | `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`, `isDraft=false` | PASS |
 | PR audit | `audit-run.sh pr 764 -- route-driver.sh` | `promotable: true`, `evidenceComplete: true`, `flags: (none)` → `PR-AUDIT-PROMOTABLE` | PASS |
 | PR title | `/git` SKILL.md:82 literal format | `FROM task/762-health-check-host-side TO development` — flag cleared on the final run | PASS (after correction) |
 | Diff correctness | — | Explicitly outside `/audit pr` scope (`references/pr.md`: "Diff correctness is outside audit scope"). Covered instead by the two pre-build critics and the rejection harness. | GAP, stated |
@@ -186,7 +194,7 @@ were fixed before the harness was used as evidence.
 
 ```
 $ bash .oh/skills/eval/run.sh
-ran 103 probe(s); wrote .oh/evals/RESULTS.md
+ran 106 probe(s); wrote .oh/evals/RESULTS.md
 $ grep -E '\| (REGRESSION|ERROR|TIMEOUT) \|' .oh/evals/RESULTS.md
 (no output)
 $ grep 'health-check' .oh/evals/RESULTS.md
@@ -195,8 +203,16 @@ $ grep 'health-check' .oh/evals/RESULTS.md
 ```
 
 Diff against the pre-change scoreboard was exactly one added row — no green→red
-transition. The 3 `SKIPPED` rows (`autopilot-preflight-gate`,
-`debugmcp-availability`, `next-dev-prod`) were `SKIPPED` before this change.
+transition. The 4 `SKIPPED` rows (`autopilot-preflight-gate`,
+`debugmcp-availability`, `next-dev-prod`, `registry-portability`) were `SKIPPED`
+before this change.
+
+The count moved from 103 to 106 because `development` kept adding probes while this
+branch was open, across three merges. The probe directory held 104 files at the
+original merge base `8f2a4ae8` and 105 at `4802b3ea`; this third merge added exactly
+one more, `memory-dir-shared-across-worktrees.sh` (from #772), for 106. Every probe
+that landed after this branch opened is green here, so the branch does not regress
+later work.
 
 `memory-log-locked-append` deserves a specific note: it asserts **two** things about
 this skill — the literal `AUDIT_RUN_ID` (lines 16–18) and the literal locked-append
@@ -221,6 +237,48 @@ base rather than hand-resolved — a hand-merged scoreboard describes neither br
 #760's own probe was then confirmed still green on this branch
 (`cc-safety-net-wiring PASS`).
 
+## The third merge, and the union resolution
+
+`development` moved again after `4802b3ea`, and the PR returned to
+`mergeable: CONFLICTING`, `mergeStateStatus: DIRTY`. Nine upstream commits landed,
+conflicting in the same two files.
+
+`CHANGELOG.md` conflicted because both sides inserted a bullet at the top of
+`### Changed`. The resolution keeps both entries, this branch's first, so the list
+stays newest-first.
+
+`.oh/evals/RESULTS.md` conflicted across the whole table. Both sides held 105 rows.
+Ignoring the run timestamp, the two sides differed in exactly one row each:
+
+```
+$ diff <ours-without-timestamps> <theirs-without-timestamps>
+55d54
+< | health-check-socket-degrade | A |  | PASS | issue #762 (refs #756) — ...
+58a58
+> | memory-dir-shared-across-worktrees | A |  | PASS | .oh/scripts/oh-path (#768) |
+```
+
+Taking either side alone would have silently dropped a probe. The resolution is the
+union, then a full `/eval` rerun, which rewrote the table from the probe directory
+rather than trusting the hand-built union. Both rows are present and `PASS` in the
+regenerated scoreboard.
+
+## Byte identity across the merges
+
+None of the three merges changed this branch's implementation. Blob hashes at the
+audited commit `4802b3ea` and at the merged head `71053ee8`:
+
+```
+$ git rev-parse 4802b3ea:<path> HEAD:<path>
+.oh/skills/health-check/scripts/scope-preflight.sh   b61e17bc → b61e17bc
+.oh/evals/probes/health-check-socket-degrade.sh      4793bf75 → 4793bf75
+.oh/skills/health-check/SKILL.md                     132c5851 → 132c5851
+```
+
+This matters for one specific claim. The 11-mutation attribution harness ran against
+those exact bytes. Identical hashes keep that result binding on the code this PR
+merges. Without them, the result would carry forward on assumption.
+
 ## Honest notes
 
 - **`title-convention` was a correct finding about this PR, and I first dismissed it
@@ -241,5 +299,11 @@ base rather than hand-resolved — a hand-merged scoreboard describes neither br
 - **Diff correctness was not audited** — `references/pr.md` places it outside the
   route's scope. It is covered instead by the two pre-build adversarial critics
   (`critique.md`) and by the rejection harness above.
-- **No merge was performed and none will be.** `gh pr merge` was never invoked; the
-  human owns that gate.
+- **The audit route performed no merge.** `/audit pr` is report-only, and it invoked
+  neither `gh pr ready` nor `gh pr merge`. The merge is a separate, explicitly
+  authorized step taken only after CI went green, the native verdict came back
+  `PR-AUDIT-PROMOTABLE`, and the branch reported `MERGEABLE`/`CLEAN`.
+- **The `103 probe(s)` figure in an earlier draft of this file was stale, not wrong
+  at the time.** That figure described the first full run. Three `development`
+  merges later the suite holds 106 probes. I refreshed the figure rather than leave
+  it implying that a run measured this tree when no run had.

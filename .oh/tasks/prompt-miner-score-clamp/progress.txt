@@ -1,0 +1,158 @@
+# progress
+
+## Codebase Patterns
+
+- **`node --test <dir>` does not work in this sandbox** (node v22.23.2). It fails
+  with `Could not find '.'` / `MODULE_NOT_FOUND` on the directory path. Reproduced
+  on a clean `mktemp -d` fixture and on the pre-change tree, so it is environmental,
+  not a repo defect. Use the file-glob form:
+  `node --test .oh/skills/prompt-miner/scripts/__tests__/*.test.mjs` (exit 0).
+  Any AC that pins the directory form must be read as "the suite passes".
+- **`.oh/skills/**` is not in the vitest globs** (`vitest.config.ts:5-9`), so this
+  suite never runs in CI. Every test AC here is verified by explicit invocation.
+- **Root quality scripts**: `pnpm run typecheck` (NOT `type-check`), `pnpm run lint`
+  (a no-op echo at root).
+- **`scoreSession` is pure** — it takes a plain `agg` object, so worst-case inputs
+  that `aggregateSession` can never produce (e.g. `abandoned` and `incomplete` both
+  1, which the aggregator makes mutually exclusive) can be exercised with a literal.
+- **Fixture split**: the three fixtures all rank by default. Pass `--min-turns 4` to
+  push the 3-turn `claude-good` session into `unranked[]` when a test needs both
+  populations non-empty. `--no-git` means no session earns the ground-truth bonus,
+  so no fixture session exceeds 100 uncapped without a synthetic `scoreSession` call.
+
+---
+
+## US-001 — 2026-08-13 05:30 UTC
+
+**Title**: scoreSession emits the uncensored value alongside the clamped score
+**Files changed**: `.oh/skills/prompt-miner/scripts/mine-traces.mjs`, `.oh/skills/prompt-miner/scripts/__tests__/mine-traces.test.mjs`
+**Commit**: 3928f65b
+**Result**: PASS
+
+### What I did
+
+Added `scoreUncapped = Number((base + bonus).toFixed(2))` to `scoreSession`'s return
+value as a sibling of `score` (not nested in `scoreBreakdown`), and threaded it onto
+the session record built at `mine-traces.mjs:1026` — one call site before the
+rankable/unranked split, so it lands on both `sessions[]` and `unranked[]`. `score`
+itself is untouched: still `clamp(base + bonus, 0, 100)`. Added four tests: the
+ceiling case (`score === 100` while `scoreUncapped === 115`), the floor case (all
+five signals at max → `scoreUncapped === 0`, no negative producible under the current
+weights), a fixture run asserting `scoreUncapped` on both populations, and a control
+pinning that `sessions[]` still sorts by clamped `score` descending.
+
+Verified R7 by `git diff`: `DEFAULT_WEIGHTS`, the penalty arithmetic, `SCORE_MODEL`,
+and `MARKER_FEATURE_KEYS` are all absent from the diff. The whole change is +7 lines
+of engine, additive.
+
+### Learnings for future iterations
+
+- **The attribution check passed**: deleting the `scoreUncapped:` line from
+  `scoreSession` turns 3 of the 4 new tests red (exit 1). The 4th (ranking order) is
+  a deliberate control that stays green — it pins behavior the change must NOT alter.
+- **The pinned test command in US-001's ACs is unrunnable here.** See Codebase
+  Patterns. I did not "fix" the AC or the environment; I ran the equivalent glob form
+  and recorded the deviation in `prd.json` `notes`. US-002 and US-003 pin the same
+  command and will hit the same wall.
+- `abandoned` and `incomplete` are **mutually exclusive** in `aggregateSession`
+  (`incomplete = !clean && !abandoned`), and `correctionDensity` counts follow-ups
+  only, so it is always `(n-1)/n < 1`. A "maximally penalized" session cannot be
+  built from an event list — use a literal `agg`.
+- US-002 needs a fixture with a `noHumanPrompt` session (`sessionType` null) to pin
+  that no `null` key appears in `ceilingSaturation`. The current fixtures have none;
+  that story will need to add one, or construct the dataset in-process.
+- CHANGELOG is owned by US-003, not this story — no entry added here.
+
+---
+
+## US-002 — 2026-08-13 05:52 UTC
+
+**Title**: The manifest and markdown report carry a per-stratum ceiling-saturation census
+**Files changed**: `.oh/skills/prompt-miner/scripts/mine-traces.mjs`, `.oh/skills/prompt-miner/scripts/__tests__/mine-traces.test.mjs`
+**Commit**: 66675e45
+**Result**: PASS
+
+### What I did
+
+Added an exported pure `computeCeilingSaturation(records)` that censuses the
+rankable population by `sessionType` into `{ atCeiling, total }`, counting the
+stored rounded `score === 100` (not `scoreUncapped`, not an intermediate). Wired it
+into the manifest as `ceilingSaturation` immediately after `sessionsRanked`, using
+`rankable` — the same array `sessions[]` is built from. `renderMarkdown` emits one
+`- ceilingSaturation.<type>: <n>/<m>` bullet per stratum, key-sorted, under the
+existing `## Manifest` heading; no new heading at any level. Six tests added:
+the 112.5→100 counts / 99.99 doesn't case, null-type and zero-stratum omission,
+a fixture run pinning census === a recomputation over `sessions[]` and totals
+strictly below `sessionsScanned`, the markdown bullet format + heading-set check,
+`--dry-run --out <tmp>` writing nothing, and the no-`promptText` privacy contract.
+
+### Learnings for future iterations
+
+- **Attribution was verified by three separate mutations**, not one: deleting the
+  manifest line → 2 red; flipping the count to `scoreUncapped === 100` → 1 red;
+  deleting the markdown render loop → 1 red. Each new assertion is wired to a
+  distinct behavior, so a single fix cannot turn the whole set green.
+- **`sessionType` is never null for a rankable session.** `detectSessionType`
+  returns `"other"` for empty/unmatched text and never null; the only null-type
+  records are `noHumanPrompt` ones, which `rankable` already filters out
+  (`mine-traces.mjs:1047`). The null-key guard in the census is therefore
+  belt-and-braces — but the test still proves the fixture produced a real null-type
+  session before asserting its absence, so the test is not vacuous.
+- **Built the noHumanPrompt fixture in a temp dir** (copy `fixtures/` + add a
+  `claude-nohuman.jsonl` of assistant-only lines) rather than adding it to the
+  shared `fixtures/`, which would have shifted the session counts other tests pin.
+- **The census is non-trivial on the stock fixtures**: `{"impl": {atCeiling: 1,
+  total: 3}}` — one 100, plus 82.5 and 40. Useful as a quick smoke value.
+- US-003 is docs-only (markers.md, SKILL.md, report-schema.md, scoring.md,
+  CHANGELOG.md). It must add a `ceilingSaturation` row to report-schema.md's
+  manifest field table describing exactly this shape: keyed by session type,
+  values `{ atCeiling, total }`, computed over the rankable population.
+
+---
+
+## US-003 — 2026-08-13 06:14 UTC
+
+**Title**: Every doc that names the correlation scale names scoreUncapped, and markers.md documents the stability guard
+**Files changed**: `.oh/skills/prompt-miner/SKILL.md`, `.oh/skills/prompt-miner/references/markers.md`, `.oh/skills/prompt-miner/references/report-schema.md`, `.oh/skills/prompt-miner/references/scoring.md`, `CHANGELOG.md`
+**Commit**: 63ba85cc
+**Result**: PASS
+
+### What I did
+
+Docs-only story. Named `scoreUncapped` as the correlation scale in all four docs
+that mention it: `markers.md` (intro + `effect_size` bullet + a new
+`effect_size_capped` bullet and JSON key), `SKILL.md` (the Step 3 phrase "against
+the session `score`" is gone; Step 2's dataset list now carries `scoreUncapped`
+and `manifest.ceilingSaturation`), `report-schema.md` (a `ceilingSaturation`
+manifest row and a `scoreUncapped` line in the record shape), and `scoring.md`
+(the formula block now shows both `score` and `scoreUncapped`, with the censoring
+explained). Added the `### Stability guard: UNSTABLE markers` section to
+`markers.md` with both branches (sign disagreement; exactly-one-clears-the-bar)
+and the never-promotable / no-memory-proposal / no-auto-file rule, plus a short
+mirror of it in SKILL.md Step 3 that routes UNSTABLE markers away from Step 4.
+CHANGELOG entry added under `## [Unreleased]` → `### Fixed`.
+
+### Learnings for future iterations
+
+- **The "unchanged, proven by git diff" ACs are satisfiable by construction**:
+  every addition here is a new section or a new bullet appended *after* the
+  protected text (thresholds, stratification, NO-CORPUS, Step 4's gate/result-tag
+  table/Privacy contract). `git diff -U1` on the two files shows no hunk touching
+  any of them — worth checking with `-U1` rather than eyeballing the default `-U3`,
+  which drags protected lines into the context and makes the diff look larger.
+- `git diff --stat` is the cheap oracle for the "no file outside X is modified" AC:
+  5 files, all inside `.oh/skills/prompt-miner/` + `CHANGELOG.md`.
+- **No wiki work was needed**: `prd.md` § Wiki Alignment is `Impact:
+  NOT-APPLICABLE` with `Local entries: none`, so the wiki-alignment discipline in
+  the loop prompt does not bind on this task. Read that section before assuming it
+  does.
+- The five prompt-miner/skill probes (`prompt-miner-schema-compat`,
+  `-symlink-entrypoint`, `-weakness-record`, `-log-root-worktree`, `skill-paths`)
+  all pass and are a fast regression net for doc+engine changes in this skill.
+- The `node --test <dir>/` environmental deviation recorded in US-001/US-002 did
+  not bite here (no test changes), but the glob form still exits 0 at 36/36 after
+  the doc edits.
+
+---
+
+STATUS: COMPLETE

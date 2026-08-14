@@ -37,7 +37,9 @@ Mapped to `rfc-runtime-support.md` §2:
 
 ## 4. Security — the gating concern
 
-`exec_command` is arbitrary RCE, and the sandbox bind-mounts `/var/run/docker.sock` (`.devcontainer/docker-compose.yml`), so RCE here reaches the Docker daemon → host — exactly the "root-on-host boundary / weakest link once untrusted code runs unattended" `rfc-runtime-support.md` §Purpose names. Non-negotiable posture, drawn from the third-party-MCP governance checklist (`.oh/skills/audit/references/external-proposal-audit.md`):
+`exec_command` is arbitrary RCE. The sandbox bind-mounts `/var/run/docker.sock` (`.devcontainer/docker-compose.yml`). RCE reaches the Docker daemon → host. This fact matches the "root-on-host boundary / weakest link once untrusted code runs unattended" `rfc-runtime-support.md` §Purpose.
+
+The posture is non-negotiable. The external proposal decision audit defines this posture (`.oh/skills/audit/references/external-proposal-audit.md`):
 
 - **Off by default**, opt-in single toggle; default installs unchanged (`.oh/templates/full/`, `init.test.ts` stay green).
 - **Loopback-bound by default**; external reach only via a deliberate `cloudflared` tunnel or explicit `forwardPorts`. **Never `0.0.0.0` by default.**

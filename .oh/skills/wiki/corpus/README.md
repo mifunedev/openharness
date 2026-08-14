@@ -29,6 +29,7 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| recursive-self-improvement-survey | Recursive Self-Improvement in AI (survey, arXiv 2607.07663) | [rsi, self-improvement, verification-hierarchy, skill-libraries, harness-evolution, self-evaluation, model-collapse, capability-benchmark] | 2026-08-13 |
 | oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target] | 2026-08-13 |
 | build-executor-ladder | Build Executor Ladder | [build-loop, executor, ralph, firstmate, delegate-advisor, herdr, tmux, runner-ladder, ship-spec, autopilot] | 2026-08-12 |
 | audit-architecture | Audit Architecture | [audit, pr, workflow, safety, observability] | 2026-08-12 |

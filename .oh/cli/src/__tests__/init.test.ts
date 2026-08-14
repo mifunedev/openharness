@@ -103,10 +103,13 @@ describe("runInit", () => {
 
     expect(code).toBe(0);
     // Every per-file action is a skip (gitignore reports its own skip phrasing).
-    for (const line of second.out) {
-      const trimmed = line.trim();
-      expect(trimmed.startsWith("skip ")).toBe(true);
-    }
+    // Assert on the collected offenders rather than line-by-line: a bare
+    // `expect(false).toBe(true)` names neither the line nor the file, which is
+    // useless when the failure only reproduces in CI.
+    const offenders = second.out
+      .map((line) => line.trim())
+      .filter((line) => !line.startsWith("skip "));
+    expect(offenders).toEqual([]);
     expect(
       second.out.some((l) => l.includes("skip .gitignore (no new entries)")),
     ).toBe(true);

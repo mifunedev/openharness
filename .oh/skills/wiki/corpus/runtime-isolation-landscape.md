@@ -3,10 +3,11 @@ title: "Runtime Isolation Landscape (2026)"
 slug: runtime-isolation-landscape
 tags: [runtime, isolation, sandbox, gvisor, firecracker, kata, microvm, cloudflare, e2b, daytona, fly, modal]
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-19
 sources:
   - raw/2026-07-04-runtime-isolation-landscape.md
-related: [crabbox-remote-exec-control-plane, sandbox-dependency-installs]
+  - raw/2026-08-19-gvisor-wsl2-spike.md
+related: [crabbox-remote-exec-control-plane, sandbox-dependency-installs, gvisor-wsl2-substrate]
 confidence: provisional
 ---
 
@@ -15,6 +16,7 @@ confidence: provisional
 ## Relevant Source Files
 - `raw/2026-07-04-runtime-isolation-landscape.md` — WebFetch snapshot (isolation strategies) + the multi-source 2026 landscape corpus.
 - `.oh/docs/rfcs/rfc-runtime-support.md` — the Open Harness runtime-support RFC whose fit matrix this entry backs.
+- `raw/2026-08-19-gvisor-wsl2-spike.md` — the 2026-08-19 measurement that confirmed the gVisor row.
 
 ## Summary
 A reference map of the 2026 sandbox-isolation options for running agent-generated code, ranked by isolation depth and tagged to the harness's runtime axes (A1 substrate, A2 deploy, A3 fan-out). The load-bearing fact: **plain containers are Level-1 isolation** ("insufficient for anything an LLM generates"), which is exactly the harness's current substrate — one privileged container sharing the host kernel and Docker socket. Stronger tiers (gVisor → Kata/Firecracker) exist and are what an A1 upgrade would adopt.
@@ -32,6 +34,25 @@ A reference map of the 2026 sandbox-isolation options for running agent-generate
 
 **Categorization for adoption.** *Primitives* (Firecracker/gVisor) suit teams running their own fleet; *embeddable runtimes* (E2B, microsandbox) add code-exec quickly; *managed platforms* (Modal/Northflank/Daytona) suit data-heavy/GPU/zero-ops. For Open Harness the cheapest, most reversible first experiment is a **gVisor overlay** — a large isolation gain over `--privileged` + host socket for roughly one command's cost.
 
+## Measured rows (2026-08-19)
+
+An operator measured two tiers on a WSL2 host. The rest of this entry stays
+provisional, because nobody has measured the other tiers on a harness host.
+
+**gVisor — CONFIRMED.** `runsc` boots, holds a detached tmux session, and runs
+nested `dockerd`. The workload sees kernel `4.19.0-gvisor` against a host kernel of
+`6.18.33.2-microsoft-standard-WSL2`. Cost: 1.15x wall-clock and 2.05x CPU on an
+`npm ci` over 1055 dependencies. Quote both ratios. The entry's claim that a gVisor
+overlay is "the cheapest, most reversible first experiment" now rests on a
+measurement.
+
+**MicroSandbox — BLOCKED.** The installer requires glibc 2.39 or newer. The WSL2
+host reports 2.35, and the devcontainer reports 2.36. `/dev/kvm` presence does not
+unblock the tier.
+
+Detail and the host prerequisites live in [[gvisor-wsl2-substrate]].
+
 ## See Also
+- [[gvisor-wsl2-substrate]]
 - [[crabbox-remote-exec-control-plane]]
 - [[sandbox-dependency-installs]]

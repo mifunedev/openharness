@@ -62,14 +62,33 @@ friction reduction does not qualify as "supported" under this contract.
 
 | Candidate | Axis | Isolation / shape | Notes |
 |---|---|---|---|
-| **gVisor (`runsc`)** | A1 | syscall interposition, shared kernel | Cheapest first landing; drop-in OCI runtime; large step up from `--privileged` + host socket |
+| **gVisor (`runsc`)** | A1 | syscall interposition, shared kernel | **MEASURED 2026-08-19 — GREEN.** Boots, holds a detached tmux session, runs nested `dockerd`. Cost 1.15x wall and 2.05x CPU. See [`rfc-gvisor-support.md`](rfc-gvisor-support.md) |
 | **Firecracker microVM** | A1 | kernel-per-sandbox (deepest) | Continues research spike #384; suits untrusted/multi-tenant |
 | **Kata Containers** | A1 | microVM depth + OCI/compose compat | Lowest-friction path to microVM-grade isolation *while keeping `docker compose`* |
+| **MicroSandbox (`msb`)** | A1 | microVM, KVM-backed | **MEASURED 2026-08-19 — BLOCKED.** The installer requires glibc 2.39. The devcontainer reports 2.36. The WSL2 host reports 2.35. `/dev/kvm` presence does not unblock the tier |
 | **E2B / Daytona / Fly Machines / Cloudflare Sandboxes / Modal** | A1/A3 | managed sandbox-as-a-service | Supported = one-toggle **BYO-account** integration; double as the fan-out answer |
 | **Cloudflare Workers/Pages (Wrangler)** | A2 | V8 isolate / edge | Deploy target for agent-built apps |
 | **Fly.io / Railway-full / Vercel** | A2 | managed PaaS | Deploy targets; Railway upgrades from today's smoke-test |
 | **CI-as-runtime (self-hosted GH Actions dind)** | A3 | container on runner | Already half-owned via `CI_RUNNER` (`.github/workflows/sandbox-boot-guard.yml`) |
 | **Crabbox** | A3 | remote-exec control plane | See §6 — lease→sync→run→release offload, not a substrate swap |
+
+### 4a. Measured rows
+
+Two rows above report a measurement instead of an estimate. An operator ran the
+substrate spike on a WSL2 host on 2026-08-19.
+
+gVisor returns GREEN. The tmux result decides the tier, because the Open Harness
+process model makes tmux normative, and no upstream document states how `runsc`
+handles PTYs.
+
+MicroSandbox returns BLOCKED on a glibc floor. Both harness machines fall below the
+floor. glibc 2.39 needs Ubuntu 24.04 or newer.
+
+Quote both gVisor cost ratios. A workload that waits on the network hides the
+userspace-kernel cost inside wall-clock time. A CPU-bound workload pays 2.05x.
+
+Evidence: [#802](https://github.com/mifunedev/openharness/issues/802) and
+[#803](https://github.com/mifunedev/openharness/pull/803).
 
 ## 5. Cloudflare, specifically (myth-bust)
 

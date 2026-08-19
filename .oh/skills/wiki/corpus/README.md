@@ -29,6 +29,8 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
+| runtime-isolation-landscape | Runtime Isolation Landscape (2026) | [runtime, isolation, sandbox, gvisor, firecracker, kata, microvm, cloudflare, e2b, daytona, fly, modal] | 2026-08-19 |
+| gvisor-wsl2-substrate | gVisor as a WSL2 Substrate (measured) | [runtime, isolation, sandbox, gvisor, runsc, wsl2, docker, tmux, microsandbox, substrate] | 2026-08-19 |
 | recursive-self-improvement-survey | Recursive Self-Improvement in AI (survey, arXiv 2607.07663) | [rsi, self-improvement, verification-hierarchy, skill-libraries, harness-evolution, self-evaluation, model-collapse, capability-benchmark] | 2026-08-13 |
 | oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target] | 2026-08-13 |
 | build-executor-ladder | Build Executor Ladder | [build-loop, executor, ralph, firstmate, delegate-advisor, herdr, tmux, runner-ladder, ship-spec, autopilot] | 2026-08-12 |
@@ -36,7 +38,6 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 | molt-agentic-reinforcement-learning | Molt: A Scalable PyTorch-Native Training Framework for Agentic Reinforcement Learning | [agentic-rl, training, readability, observability, trajectories, async, correctness, agent-harness, nvidia] | 2026-08-08 |
 | managed-agents | Scaling Managed Agents: Decoupling the brain from the hands | [agents, meta-harness, sessions, sandbox, resilience, security, scaling, anthropic, model-evolution] | 2026-08-08 |
 | document-ingestion | Local Document Ingestion | [wiki, ingestion, markitdown, documents, provenance, security] | 2026-07-18 |
-| runtime-isolation-landscape | Runtime Isolation Landscape (2026) | [runtime, isolation, sandbox, gvisor, firecracker, kata, microvm, cloudflare, e2b, daytona, fly, modal] | 2026-07-04 |
 | crabbox-remote-exec-control-plane | Crabbox — Remote-Exec Control Plane | [runtime, sandbox, remote-execution, fan-out, control-plane, crabbox, cloudflare-workers, ssh, rsync] | 2026-07-04 |
 | fresh-machine-setup | Fresh-Machine Setup Flow | [setup, onboarding, installation, gateway, ssh, github, slack] | 2026-07-02 |
 | sandbox-dependency-installs | Sandbox Dependency Installs | [sandbox, devcontainer, pnpm, dependencies, boot] | 2026-07-01 |

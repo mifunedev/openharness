@@ -4,7 +4,9 @@
 **Axis:** A1 (substrate)
 **Parent contract:** [`rfc-runtime-support.md`](rfc-runtime-support.md)
 **Implementation epic:** [#591](https://github.com/mifunedev/openharness/issues/591)
-**Measurement:** [#802](https://github.com/mifunedev/openharness/issues/802), [#803](https://github.com/mifunedev/openharness/pull/803)
+**Tracking issue:** [#806](https://github.com/mifunedev/openharness/issues/806)
+**Raw measurement:** `.oh/skills/wiki/corpus/raw/2026-08-19-gvisor-wsl2-spike.md`
+**Host runbook:** [`../gvisor-host-runbook.md`](../gvisor-host-runbook.md)
 
 ## Purpose
 
@@ -130,6 +132,27 @@ proposes no config key, and adds no `ExecutionTarget` implementation.
 
 **Defers.** The probe. A probe that asserts gVisor behavior needs a host that runs
 `runsc`. CI runners do not. A probe that skips on every runner asserts nothing.
+
+## 8a. Status, and what blocks acceptance
+
+This RFC is Draft. The measurement is complete and green. The adoption decision is
+open.
+
+Three conditions block an `Accepted` verdict. Issue
+[#806](https://github.com/mifunedev/openharness/issues/806) holds the full resume
+procedure.
+
+| ID | Condition | Gates the others? |
+|---|---|---|
+| B1 | EPIC #731 must state one config key | YES |
+| B2 | A second host, and a second architecture | no |
+| B3 | One CPU-bound workload behind the cost number | no |
+
+B1 is the real gate. Two selectors for one decision fork the `ExecutionTarget` seam.
+
+Every fact in this RFC traces to
+`.oh/skills/wiki/corpus/raw/2026-08-19-gvisor-wsl2-spike.md`, which ships in the
+same change. A reader needs no other branch.
 
 ## 9. Open decisions
 

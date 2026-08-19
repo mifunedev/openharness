@@ -87,8 +87,10 @@ floor. glibc 2.39 needs Ubuntu 24.04 or newer.
 Quote both gVisor cost ratios. A workload that waits on the network hides the
 userspace-kernel cost inside wall-clock time. A CPU-bound workload pays 2.05x.
 
-Evidence: [#802](https://github.com/mifunedev/openharness/issues/802) and
-[#803](https://github.com/mifunedev/openharness/pull/803).
+Evidence: `.oh/skills/wiki/corpus/raw/2026-08-19-gvisor-wsl2-spike.md`. The gVisor
+proposal is [#806](https://github.com/mifunedev/openharness/issues/806). The
+MicroSandbox unblock is
+[#805](https://github.com/mifunedev/openharness/issues/805).
 
 ## 5. Cloudflare, specifically (myth-bust)
 

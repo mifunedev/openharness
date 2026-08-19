@@ -1,0 +1,142 @@
+# progress — microsandbox-substrate
+
+## Step 1 — partition gate (COMPLETE, awaiting operator confirmation)
+
+Actor: First Mate (this session). Artifact: `partition.md`.
+
+### Ground truth re-measured in this container
+
+All values match the brief. I took no value on trust.
+
+- `uname -r` -> `6.18.33.2-microsoft-standard-WSL2`
+- `/etc/os-release` -> Debian GNU/Linux 12 (bookworm)
+- `ls -l /dev/kvm` -> ABSENT (`No such file or directory`)
+- `ls -l /var/run/docker.sock` -> ABSENT (`No such file or directory`)
+- `docker info` -> FAILS (`dial unix /var/run/docker.sock: connect: no such file or directory`)
+- `command -v msb` -> not installed
+- `command -v runsc` -> not installed
+- `ldd --version` -> glibc 2.36
+- `grep -c -w vmx /proc/cpuinfo` -> 64
+- `node --version` -> v22.23.2; `pnpm --version` -> 10.33.0
+- `curl https://registry.npmjs.org/` -> HTTP 200
+
+Two false-presence traps confirmed by round trip, per the plan's own warning:
+
+1. `vmx` is present in `/proc/cpuinfo` and `/dev/kvm` is absent. A CPU-flag check
+   reports a false GREEN.
+2. `/usr/bin/docker` exists and reaches no daemon. `command -v docker` succeeds and
+   the round trip fails.
+
+This container boots no sandbox, builds no image, and runs no microVM.
+
+### Verification tooling proven by rejection
+
+`bash .oh/skills/ste/scripts/ste-check.sh <fixture>`
+
+- Bad fixture (`facilitate`, `in order to`, passive voice): **exit 1**, 6 findings.
+- Clean fixture: **exit 0**, no findings.
+
+Observed caveat: the same checker exits **1** with 12 findings against the existing
+`.oh/docs/rfcs/rfc-runtime-support.md`. Whole-file exit 0 is a reachable gate for a
+NEW file only. Amended files use `--blocks after`.
+
+### Partition result
+
+| Phase | Class |
+|---|---|
+| P0 `wsl2-substrate-spike` | BLOCKED — needs a shell on the WSL2 host |
+| P2 `microsandbox-rfc-amendment` | BUILDABLE, narrowed to the fit-matrix row |
+| P3 `microsandbox-workspace-image` | BLOCKED — needs a Docker daemon and `/dev/kvm` |
+| P4 `microsandbox-execution-target` | CLAIMED — EPIC #731 sysbox slice, 3 layers |
+| P5 `microsandbox-cold-boot-restore` | BLOCKED — gate is "P4 merged"; needs a boot |
+| P6 `microsandbox-supported-contract` | BLOCKED — contract leg 3 needs a boot |
+| P7 `microsandbox-docs-ia` | BLOCKED — the feature the docs describe does not exist |
+| P8 `gvisor-support-rfc` | BUILDABLE — RFC only, no code, no measurement |
+
+The plan defines no P1; its § "Revision" states P0 replaces P1.
+
+### Collision evidence for P4
+
+Read: `.oh/worktrees/plan/731-sysbox-execution-target/.oh/tasks/sysbox-execution-target/`
+(`plan-v2.md`, `progress.txt`). EPIC #731 stays OPEN. The slice stays uncommitted with
+no open PR (`gh pr list --repo mifunedev/openharness --state open` returns #740,
+#636, #624 only).
+
+Three collision layers, not one:
+
+1. Identical files — `index.ts:29-34`, `execution-target.test.ts`,
+   `execution-target-contract.sh`, the `harness-config.sh` allowlist.
+2. Config key — P4 adds `sandbox.substrate`; the sysbox slice adds `sandbox.runtime`
+   (D2'). Two selectors for one decision.
+3. Topology — P4 addresses ONE service; the sysbox slice's D1' splits compose into a
+   brain service and a hands service, and names a same-container runtime swap as the
+   error its own v1 made. The designs disagree about what the seam addresses.
+
+P2's `targetRoot` half is also claimed: sysbox D4' takes
+`rfc-brain-hands-boundary.md` § 5.1's open request first.
+
+### Four findings that need an operator decision
+
+- F1 — P8's gate ("P7 merged") contradicts P0's outcome table ("P8 first" in 2 of 4
+  outcomes). P7 carries the BLOCKED class, so P8-first is the only surviving reading.
+- F2 — P8-first rests on a P0 GREEN result that nobody has measured. That order is
+  defensible for a document that reports no measurement; the RFC must say P0 has not
+  run.
+- F3 — P4 as written forks the execution seam (layers 2 and 3 above).
+- F4 — "ste-check exits 0" is unreachable on amended docs; measured above.
+
+### Recommendation
+
+Build P8 in full, plus P2 narrowed to the fit-matrix row. Everything else goes to
+`next-tasks.md` with its exact unblocking condition. Smallest coherent alternative:
+P8 alone.
+
+**STOPPED at the Step 1 gate. No build started. No PRD, no branch commit, no PR.**
+
+---
+
+## 2026-08-18 — P0 spike executed on the WSL2 host
+
+The operator authorized path A. The spike ran on the WSL2 host, not in the
+devcontainer.
+
+### Result
+
+| Candidate | Path | Boots | tmux | npm ci ratio | Nested dockerd | Verdict |
+|---|---|---|---|---|---|---|
+| gVisor `runsc` | A | YES | YES | 1.15x wall, 2.05x CPU | YES | GREEN |
+| MicroSandbox `msb` | n/a | n/a | n/a | n/a | n/a | BLOCKED |
+
+gVisor GREEN on path A. The outcome table maps that result to "the gVisor RFC goes
+first, and MicroSandbox drops to a remote-host and CI substrate".
+
+MicroSandbox BLOCKED. The installer requires glibc 2.39. The host reports 2.35. The
+devcontainer reports 2.36. Both machines fall below the floor.
+
+### Findings closed
+
+- F1 closes. P0 GREEN promotes P8 to first position.
+- F2 closes. The spike measured the P0 result, so the RFC reports measurements.
+
+### Findings raised
+
+- C2 — the MicroSandbox blocker is glibc, not `/dev/kvm`. The host exposes
+  `/dev/kvm`, and the phases stay BLOCKED.
+- C5 — the host runbook misstates the WSL2 init system. The host runs `systemd` as
+  PID 1.
+- C6 — Docker Engine and Docker Desktop contend for `/var/run/docker.sock`. The
+  spike moved the Engine to `/run/docker-engine.sock`.
+
+### Artifacts
+
+- `p0-spike-results.md` — the result table, the measurements, and the raw output.
+- `partition-v2.md` — the re-derived partition. Each phase names its target machine.
+- `next-tasks.md` — one entry per BLOCKED and CLAIMED phase, with its unblocking
+  condition.
+- `gvisor-host-runbook.md` — the host procedures. Verify, exercise, revert.
+
+All four files pass `ste-check.sh` at exit 0.
+
+### State
+
+P8 is not built. The build of the gVisor RFC remains open.

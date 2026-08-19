@@ -45,6 +45,12 @@ msb run alpine --exec 'echo ok'  # expect "ok"
 
 The final two commands form the round trip. `msb self doctor` alone proves nothing.
 
+## Where this work is tracked
+
+MicroSandbox work runs in [#805](https://github.com/mifunedev/openharness/issues/805).
+gVisor work runs in [#806](https://github.com/mifunedev/openharness/issues/806), and
+left this folder. `gvisor-moved.md` records the split.
+
 ## MicroSandbox needs two unblocks, not one
 
 The P0 spike found the glibc floor. A later check found a second blocker. Both must

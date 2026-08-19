@@ -95,7 +95,7 @@ P8 alone.
 
 ---
 
-## 2026-08-18 — P0 spike executed on the WSL2 host
+## 2026-08-19 — P0 spike executed on the WSL2 host
 
 The operator authorized path A. The spike ran on the WSL2 host, not in the
 devcontainer.

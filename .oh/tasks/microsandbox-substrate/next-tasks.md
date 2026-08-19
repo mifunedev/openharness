@@ -11,7 +11,7 @@ Measured result: `p0-spike-results.md`
 
 | Phase | Class after P0 | Unblocking condition |
 |---|---|---|
-| P0 `wsl2-substrate-spike` | **DONE** | Completed 2026-08-18. See `p0-spike-results.md`. |
+| P0 `wsl2-substrate-spike` | **DONE** | Completed 2026-08-19. See `p0-spike-results.md`. |
 | P2 `microsandbox-rfc-amendment` | BUILDABLE | None. Ready to build. |
 | P3 `microsandbox-workspace-image` | BLOCKED | A host with glibc 2.39 or newer. |
 | P4 `microsandbox-execution-target` | CLAIMED | A landed design decision on EPIC #731. |
@@ -44,6 +44,60 @@ msb run alpine --exec 'echo ok'  # expect "ok"
 ```
 
 The final two commands form the round trip. `msb self doctor` alone proves nothing.
+
+## MicroSandbox needs two unblocks, not one
+
+The P0 spike found the glibc floor. A later check found a second blocker. Both must
+clear before `msb` runs anywhere in this harness.
+
+### Blocker 1 — glibc 2.39
+
+Measured on 2026-08-19 with `docker run --rm <image> ldd --version`:
+
+| Image | glibc | Clears the 2.39 floor? |
+|---|---|---|
+| `debian:bookworm-slim` (the devcontainer base today) | 2.36 | NO |
+| `ubuntu:24.04` | 2.39 | Yes, at the floor |
+| `debian:trixie-slim` | 2.41 | Yes, with headroom |
+
+`.devcontainer/Dockerfile:1` pins `debian:bookworm-slim`. A move to
+`debian:trixie-slim` keeps the Debian family, and changes three lines: the `FROM`
+line, the Docker apt repo line at `:35`, and the cloudflared apt repo line at `:43`.
+
+The WSL2 host reports glibc 2.35, and an Ubuntu 22.04 host cannot clear the floor
+without a distribution upgrade. The container path costs less than the host path.
+
+### Blocker 2 — no `/dev/kvm` in the sandbox
+
+`msb` boots a microVM, and a microVM needs KVM.
+
+`.devcontainer/docker-compose.yml` declares no `devices:` key, no `privileged`, and
+no `cap_add`. The sandbox therefore reaches no KVM device, whatever its glibc
+version. A glibc bump alone does not unblock `msb`.
+
+The WSL2 host does expose `/dev/kvm` as a character device, and the operator's
+account holds the `kvm` group. The device exists. The sandbox cannot reach it.
+
+**Unblocking condition.** Add a device mapping to the sandbox service, and place the
+`sandbox` user in the `kvm` group inside the image.
+
+```yaml
+devices:
+  - /dev/kvm:/dev/kvm
+```
+
+Verify by round trip, not by presence:
+
+```bash
+ls -l /dev/kvm                   # presence only, proves nothing
+msb self doctor                  # expect exit 0
+msb run alpine --exec 'echo ok'  # expect "ok"
+```
+
+### Order
+
+Blocker 2 can land before blocker 1. A `/dev/kvm` mapping is independent of the base
+image. Blocker 1 without blocker 2 installs `msb` and still boots no microVM.
 
 ## P4 — `microsandbox-execution-target`
 
@@ -110,7 +164,7 @@ original reason would expect the host to unblock these phases. The host does not
 ### C3 — finding F2 is resolved
 
 F2 states that P8-first rests on an unmeasured P0 GREEN. The P0 spike measured
-GREEN on 2026-08-18. The gVisor RFC now reports measurements. F2 closes.
+GREEN on 2026-08-19. The gVisor RFC now reports measurements. F2 closes.
 
 ### C4 — finding F1 is resolved
 

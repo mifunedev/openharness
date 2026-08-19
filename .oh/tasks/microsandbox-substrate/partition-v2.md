@@ -51,7 +51,7 @@ The plan defines no P1. The plan's revision section states that P0 replaces P1.
 ### P0 moved from BLOCKED to DONE
 
 `partition.md` blocked P0 on the absence of a shell on the WSL2 host. The operator
-ran the spike on the WSL2 host on 2026-08-18. `p0-spike-results.md` holds the
+ran the spike on the WSL2 host on 2026-08-19. `p0-spike-results.md` holds the
 result table and the raw output.
 
 ### P3, P5, and P6 keep the BLOCKED class for a different reason

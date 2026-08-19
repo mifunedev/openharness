@@ -1,6 +1,6 @@
 # P0 spike result — WSL2 host substrate measurement
 
-**Date:** 2026-08-18 (UTC)
+**Date:** 2026-08-19 (UTC)
 **Host:** WSL2, Ubuntu 22.04.5 LTS, kernel `6.18.33.2-microsoft-standard-WSL2`, glibc 2.35
 **Path taken:** A — Docker Engine installed in this distribution
 

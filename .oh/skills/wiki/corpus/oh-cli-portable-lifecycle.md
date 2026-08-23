@@ -3,7 +3,7 @@ title: "oh CLI Portable Lifecycle"
 slug: oh-cli-portable-lifecycle
 tags: [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target]
 created: 2026-07-03
-updated: 2026-08-13
+updated: 2026-08-23
 sources:
   - .oh/cli/src/cli.ts
   - .oh/cli/src/commands/init.ts
@@ -88,4 +88,5 @@ flowchart LR
 
 ## See Also
 - [[fresh-machine-setup]]
+- [[release-versioning]] — the harness release version; the `@mifune/openharness` npm version is independent of it.
 - `.oh/docs/rfcs/rfc-brain-hands-boundary.md` — authority for the brain/hands split this entry routes through.

@@ -43,3 +43,34 @@ than four. Splitting them would have left the test file red between commits.
   rather than throwing the "completed without a GitHub Release" error.
 
 ---
+## US-005..US-007 — 2026-08-23 UTC
+
+**Title**: Docs and skills sweep, wiki entry, changelog and version
+**Files changed**: AGENTS.md, .oh/templates/AGENTS.md, SECURITY.md, CHANGELOG.md, .oh/docs/contributing.md, .oh/docs/deployment-prebuilt-image.md, .oh/scripts/README.md, .oh/skills/git/SKILL.md, .oh/skills/release/SKILL.md, .oh/skills/sync/SKILL.md, .oh/skills/strategic-proposal/SKILL.md, .oh/evals/probes/oh-npm-package.sh, .github/workflows/publish-cli.yml, .oh/skills/wiki/corpus/release-versioning.md, .oh/skills/wiki/corpus/raw/2026-08-23-release-versioning.md, .oh/skills/wiki/corpus/README.md
+**Result**: PASS
+
+### What I did
+
+Rewrote every doc that described the release scheme. The two narrative rewrites are
+`.oh/skills/git/SKILL.md` § Releases and `.oh/skills/release/SKILL.md`, which gains a
+pre-flight that refuses an already-tagged version and a missing CHANGELOG section. Added
+the `release-versioning` wiki entry with an in-repo provenance snapshot, and promoted the
+`[Unreleased]` body to `## [0.1.0] - 2026-08-23`. `package.json` was already `0.1.0`, so
+US-007 needed no bump.
+
+### Learnings for future iterations
+
+- `.oh/docs/contributing.md` carried a **stale manual release procedure** ("computes the
+  next version, creates a release branch, tags and pushes") that already contradicted the
+  workflow before this change. It is replaced, not merely re-worded.
+- The corpus is gitignored: a new wiki entry needs `git add -f`, and
+  `wiki-readme-index.sh` only sees it once tracked. The probe compares the README table
+  against **git-tracked** frontmatter, so add first, then regenerate the index.
+- `ste-check.sh` leaves 2 residual findings on the wiki entry (line 23 PASSIVE, line 46
+  VAGUE) that inspection does not support — the checker reads one line at a time and its
+  own SKILL.md documents this class. Not chased further.
+- The CalVer grep sweep does not reach zero and should not: 4 CHANGELOG history entries
+  describe past releases and must not be edited, and 6 further mentions are deliberate
+  contrastive comments in the new code, tests, and SECURITY.md history sentence.
+
+---

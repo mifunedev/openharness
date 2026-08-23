@@ -158,24 +158,40 @@ gh pr create --base development \
 
 ## Releases
 
-Open Harness uses CalVer versioning: `YYYY.M.D` for the first release of the day, then `YYYY.M.D-N` (N ≥ 2) for subsequent releases.
+Open Harness uses SemVer versioning: `MAJOR.MINOR.PATCH`, tagged
+`vMAJOR.MINOR.PATCH`. Root `package.json` holds the version. No other file
+records it.
 
-Releases are automated via the `/release` skill, which:
+A release is a deliberate bump, not a side effect of a push. Every push to
+`main` or `master` runs `.github/workflows/release.yml`, which validates the
+commit, then publishes the version `package.json` names:
 
-1. Computes the next version
-2. Creates a release branch
-3. Promotes `[Unreleased]` to the new version in CHANGELOG.md
-4. Tags and pushes to trigger CI
-5. Verifies the GitHub Release and GHCR image
+1. Validation, boot-path lint, and the eval probe suite must pass first
+2. The workflow reads the version from root `package.json`
+3. Creating `refs/tags/v<version>` reserves the version — this act is atomic
+4. Build and smoke-test the image
+5. Push the GHCR image tags `:<version>` and `:sha-<SHA>`, both bare — the `v`
+   prefix belongs to the git tag, not to the registry
+6. Promote `latest` by immutable digest from the canonical branch
+7. Publish the CLI
+8. Publish the GitHub Release
 
-Run the skill from inside the orchestrator sandbox:
+To cut a release, bump the version in `package.json` and add the matching
+`## [<version>]` section to `CHANGELOG.md` in the same PR, then promote
+`development` to `main`. If you push to `main` without bumping the version, the
+run is a clean, **green** no-op: the reserve step reports the version as already
+released and every publication job skips.
+
+Do **not** manually pre-create a release tag or a `release/<version>` branch.
+
+Run the release skill from inside the orchestrator sandbox:
 
 ```bash
 /release
 ```
 
-For details on the full workflow and manual procedure, see `/git`
-(`.claude/skills/git/SKILL.md`) in the repo.
+For details on the full workflow, see `/git` (`.claude/skills/git/SKILL.md`) in
+the repo.
 
 ---
 

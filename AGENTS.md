@@ -173,7 +173,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 
 | Skill | When |
 |-------|------|
-| `/release` | CalVer release — push to `main`/`master`; the workflow validates, reserves the CalVer, and publishes |
+| `/release` | SemVer release — bump the version in `package.json`, push to `main`/`master`; the workflow validates, reserves the tag, and publishes |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
 | `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `.oh/context/rules/git.md`, which is now only a pointer for providers that load rules. |
 | `/builder` | Author or refine one provider-portable artifact via `/builder <agent\|skill\|command\|rule> <name-or-request>`; shared discovery and validation live in the dispatcher, with one authoritative reference per type. |

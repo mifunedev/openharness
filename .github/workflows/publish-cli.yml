@@ -2,7 +2,7 @@ name: Publish CLI to npm
 
 # Publishes the standalone `oh` CLI (`.oh/cli`) to npm as @mifune/openharness.
 #
-# The CLI's semver is independent of the repo's CalVer release tags. This
+# The CLI's version is independent of the harness release tags. This
 # reusable workflow is called by release.yml after image publication, and can
 # also be dispatched for a CLI-only change. Both callers must identify the exact
 # commit to publish; the version guard makes an existing version a successful

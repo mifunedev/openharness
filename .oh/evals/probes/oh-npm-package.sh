@@ -69,7 +69,7 @@ done
 
 # CI must carry the publish-npm job that pushes the package to the registry. The
 # publish lives in its own workflow (publish-cli.yml) so a CLI-only change can
-# publish via workflow_dispatch without a CalVer release; fall back to release.yml
+# publish via workflow_dispatch without a harness release; fall back to release.yml
 # for older layouts that still chain the job there.
 PUB="$ROOT/.github/workflows/publish-cli.yml"
 REL="$ROOT/.github/workflows/release.yml"

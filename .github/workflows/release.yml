@@ -118,7 +118,7 @@ jobs:
         run: bash .oh/skills/eval/run.sh
 
   reserve:
-    name: Reserve UTC CalVer draft
+    name: Reserve SemVer draft
     needs: [validate, boot-lint, eval-probes]
     runs-on: ubuntu-latest
     permissions:
@@ -135,14 +135,22 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Atomically reserve the CalVer tag and ensure its draft release
+      # Root package.json is the single source of truth for the release version.
+      # It is a committed file, so retries read the same value, and cutting a
+      # release is a deliberate bump rather than a function of the push clock.
+      - name: Read the release version from package.json
+        id: release_version
+        run: |
+          V=$(node -p "require('./package.json').version")
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Release version from package.json: $V"
+
+      - name: Atomically reserve the SemVer tag and ensure its draft release
         id: reserve_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_SHA: ${{ github.sha }}
-          # The push event snapshots this repository timestamp as integer epoch
-          # seconds; retries keep it unchanged, including after UTC midnight.
-          RELEASE_TIMESTAMP: ${{ github.event.repository.pushed_at }}
+          RELEASE_VERSION: ${{ steps.release_version.outputs.version }}
         run: node .oh/scripts/reserve-github-release.mjs
 
   publish-image:
@@ -201,7 +209,7 @@ jobs:
           BOOT_SMOKE_UP_ARGS: "up -d --no-build"
         run: bash .oh/scripts/sandbox-boot-smoke.sh
 
-      - name: Push immutable CalVer and sha-full-SHA tags
+      - name: Push immutable SemVer and sha-full-SHA tags
         env:
           RELEASE_SHA: ${{ needs.reserve.outputs.releaseSha }}
           RELEASE_VERSION: ${{ needs.reserve.outputs.releaseVersion }}

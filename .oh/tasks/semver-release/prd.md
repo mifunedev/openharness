@@ -75,8 +75,13 @@ that the version is a deliberate input and not a side effect of the push time.
 - [ ] `.oh/scripts/release-reservation.mjs` no longer exports `formatUtcCalVerBase` or
       `buildUtcCalVerCandidate`.
 - [ ] A new `parseSemVer(version)` accepts `0.1.0`, `1.2.3`, and `10.0.0`.
-- [ ] `parseSemVer` rejects `01.2.3`, `1.2`, `2026.8.7`, `v1.2.3`, and the empty string,
-      throwing `ReleaseReservationError` with code `INVALID_SEMVER_VERSION`.
+- [ ] `parseSemVer` rejects `01.2.3`, `2026.08.07`, `1.2`, `2026.8.7-1`, `1.0.0-rc.1`,
+      `v1.2.3`, the empty string, and a non-string, throwing `ReleaseReservationError`
+      with code `INVALID_SEMVER_VERSION`.
+- [ ] A bare `2026.8.7` is **accepted**. It is well-formed SemVer, so the validator cannot
+      reject it. The guard against a CalVer release is that the version now comes from
+      `package.json` rather than the clock; what the validator rejects are the CalVer
+      forms that are not valid SemVer — the `-N` same-day suffix and zero-padded dates.
 - [ ] `reserveReleaseVersion` calls `attemptCreate` exactly once. There is no collision
       loop, no `maxForeignCollisions` option, and no `MAX_COLLISIONS_EXCEEDED` code.
 - [ ] An `attemptCreate` outcome of `foreign-collision` returns
@@ -122,7 +127,7 @@ a SemVer version, so that a malformed version cannot reach the registry.
 - [ ] `.oh/scripts/promote-release-latest.sh` validates `RELEASE_VERSION` against
       `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$` and its error text names
       SemVer.
-- [ ] Feeding it `2026.8.3` exits non-zero with that error.
+- [ ] Feeding it `2026.8.3-1` or `2026.08.03` exits non-zero with that error.
 - [ ] Feeding it `0.1.0` passes validation.
 - [ ] The digest-based `latest` promotion and the canonical `main`-else-`master` check are
       unchanged.

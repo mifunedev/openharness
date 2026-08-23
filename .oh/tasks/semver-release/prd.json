@@ -11,7 +11,8 @@
       "acceptanceCriteria": [
         "`.oh/scripts/release-reservation.mjs` no longer exports `formatUtcCalVerBase` or `buildUtcCalVerCandidate`",
         "A new exported `parseSemVer(version)` accepts `0.1.0`, `1.2.3`, and `10.0.0`",
-        "`parseSemVer` rejects `01.2.3`, `1.2`, `2026.8.7`, `v1.2.3`, and the empty string, throwing `ReleaseReservationError` with code `INVALID_SEMVER_VERSION`",
+        "`parseSemVer` rejects `01.2.3`, `2026.08.07`, `1.2`, `2026.8.7-1`, `1.0.0-rc.1`, `v1.2.3`, the empty string, and a non-string, throwing `ReleaseReservationError` with code `INVALID_SEMVER_VERSION`",
+        "A bare `2026.8.7` is accepted — it is well-formed SemVer, so the validator cannot reject it; the guard against a CalVer release is that the version now comes from `package.json` rather than the clock",
         "`reserveReleaseVersion({ attemptCreate, version })` calls `attemptCreate` exactly once; there is no collision loop, no `maxForeignCollisions` option, and no `MAX_COLLISIONS_EXCEEDED` code",
         "An `attemptCreate` outcome of `foreign-collision` returns `{ kind: \"already-released\", version }` instead of advancing to a next candidate",
         "The `created`, `same-sha-draft`, `same-sha-published`, and `invalid-state` outcomes keep their existing result shapes",
@@ -21,8 +22,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-08-23; mechanism commit"
     },
     {
       "id": "US-002",
@@ -42,8 +43,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-08-23; mechanism commit"
     },
     {
       "id": "US-003",
@@ -51,7 +52,7 @@
       "description": "As a release engineer, I want the latest-promotion helper to validate a SemVer version, so that a malformed version cannot reach the registry.",
       "acceptanceCriteria": [
         "`.oh/scripts/promote-release-latest.sh` validates `RELEASE_VERSION` against `^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$` and its error text names SemVer",
-        "Feeding it `2026.8.3` exits non-zero with that error",
+        "Feeding it `2026.8.3-1` or `2026.08.03` exits non-zero with that error",
         "Feeding it `0.1.0` passes validation",
         "The digest-based latest promotion and the canonical main-else-master check are unchanged",
         "`.oh/scripts/__tests__/release-latest.test.ts` uses `0.1.0` throughout and carries the CalVer rejection case",
@@ -59,8 +60,8 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-08-23; mechanism commit"
     },
     {
       "id": "US-004",
@@ -78,8 +79,8 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed 2026-08-23; mechanism commit"
     },
     {
       "id": "US-005",

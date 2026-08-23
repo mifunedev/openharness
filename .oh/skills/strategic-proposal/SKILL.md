@@ -100,7 +100,7 @@ Assemble a structured markdown briefing to pass to ALL 5 experts:
 ### Infrastructure
 - Docker Compose + opt-in PostgreSQL 16 overlay
 - CI/CD: GitHub Actions (lint, format, type-check, build, test, E2E)
-- Release: CalVer → GHCR Docker image
+- Release: SemVer → GHCR Docker image
 - Agent: 8 skills, 7 sub-agents, 4 heartbeats, memory protocol
 
 ### Community Signal

@@ -8,7 +8,7 @@ built and smoke-tested, to GHCR:
 
 ```
 ghcr.io/mifunedev/openharness:latest      # newest release
-ghcr.io/mifunedev/openharness:<CalVer>    # e.g. 2026.7.5 — pin for reproducibility
+ghcr.io/mifunedev/openharness:<version>   # e.g. 0.1.0 — pin for reproducibility
 ```
 
 **Prebuilt-image mode** runs that published image instead of building, so a

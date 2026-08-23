@@ -94,7 +94,7 @@ Format: `<type>: <description>` where `<type>` ∈ `feat` · `fix` · `task` · 
 
 ## Changelog
 
-Root `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com) with CalVer tags.
+Root `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com) with SemVer versions and `v`-prefixed tags.
 
 Every PR with user-visible impact MUST add entry under `## [Unreleased]` heading, in same commit as change. Categories: `### Added` · `### Changed` · `### Fixed` · `### Removed` · `### Deprecated` · `### Security`.
 
@@ -201,17 +201,30 @@ workflow checks out the exact event SHA and requires validation, boot-path lint,
 and eval probes to pass before it mutates a tag, GitHub Release, or package.
 Do **not** manually pre-create a release tag or `release/<version>` branch.
 
-Versioning is UTC CalVer: `YYYY.M.D` for the first reservation from a push date,
-then `YYYY.M.D-1`, `-2`, and onward. Git-ref creation is the atomic reservation.
-A retry uses the original event timestamp and reuses a same-SHA draft; a retry of
-an already-published same-SHA release is a successful no-op. Foreign collisions
-advance without a production cap.
+Versioning is SemVer: `MAJOR.MINOR.PATCH`, tagged `vMAJOR.MINOR.PATCH`. Root
+`package.json` holds the version. No other file records it. The workflow reads
+that file and never derives a version from the clock, so cutting a release is a
+deliberate bump, not a side effect of pushing.
+
+Creating `refs/tags/v<version>` is the atomic reservation. A retry reads the same
+version from the same commit, so it reuses a same-SHA draft, and a retry of an
+already-published same-SHA release is a successful no-op.
+
+**An unbumped push to `main` is a clean skip, not a failure.** When the tag
+already exists on a different commit, the reserve step reports the version as
+already released, sets `publishedNoop=true`, and the image, CLI, and finalize
+jobs all skip. The run stays **green**. To publish again, bump the version.
+
+The `v` prefix appears only in the git tag and the GitHub Release name. The step
+output, the GHCR image tags, and the concurrency group all stay bare
+(`ghcr.io/mifunedev/openharness:0.1.0`).
 
 The artifact sequence is:
 
 ```
-main|master push → validate + boot-lint + eval → reserve tag + draft
-                 → build + smoke → push CalVer + sha-<full-SHA> GHCR tags
+main|master push → validate + boot-lint + eval → read version from package.json
+                 → reserve v<version> tag + draft
+                 → build + smoke → push <version> + sha-<full-SHA> GHCR tags
                  → canonical latest-by-digest → publish/no-op CLI
                  → publish GitHub Release
 ```

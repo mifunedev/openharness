@@ -82,8 +82,8 @@ if [[ "$make_latest" != true ]]; then
 fi
 
 : "${RELEASE_VERSION:?RELEASE_VERSION is required for promote mode}"
-if [[ ! "$RELEASE_VERSION" =~ ^[0-9]{4}\.[1-9][0-9]*\.[1-9][0-9]*(-[1-9][0-9]*)?$ ]]; then
-  echo "RELEASE_VERSION must be a UTC CalVer version" >&2
+if [[ ! "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+  echo "RELEASE_VERSION must be a SemVer version (MAJOR.MINOR.PATCH)" >&2
   exit 64
 fi
 

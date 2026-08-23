@@ -43,7 +43,7 @@ function run(
       IMAGE_REPOSITORY: "ghcr.io/example/openharness",
       RELEASE_BRANCH: "main",
       RELEASE_SHA: MAIN_SHA,
-      RELEASE_VERSION: "2026.8.3",
+      RELEASE_VERSION: "0.1.0",
       ...overrides,
     },
   });
@@ -86,10 +86,10 @@ describe("promote-release-latest.sh", () => {
     const result = run("promote");
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain("Promoted ghcr.io/example/openharness:2026.8.3");
+    expect(result.stdout).toContain("Promoted ghcr.io/example/openharness:0.1.0");
     expect(readFileSync(dockerLog, "utf8").trim().split("\n")).toEqual([
-      "buildx imagetools inspect ghcr.io/example/openharness:2026.8.3",
-      `buildx imagetools create --tag ghcr.io/example/openharness:latest ghcr.io/example/openharness:2026.8.3@${DIGEST}`,
+      "buildx imagetools inspect ghcr.io/example/openharness:0.1.0",
+      `buildx imagetools create --tag ghcr.io/example/openharness:latest ghcr.io/example/openharness:0.1.0@${DIGEST}`,
     ]);
   });
 
@@ -137,6 +137,28 @@ describe("promote-release-latest.sh", () => {
     expect(readFileSync(output, "utf8")).toBe(
       `canonicalBranch=main\ncanonicalSha=${MAIN_SHA}\nmakeLatest=false\n`,
     );
+    expect(existsSync(dockerLog)).toBe(false);
+  });
+
+  // Exit 0 on a valid version proves nothing about the validator. Feed it the
+  // CalVer forms that are not valid SemVer and require the rejection.
+  it.each(["2026.8.3-1", "2026.08.03", "1.2", "1.2.3.4", "v0.1.0", "0.1.0-rc.1"])(
+    "rejects the non-SemVer version %j before invoking docker",
+    (version) => {
+      const result = run("promote", { RELEASE_VERSION: version });
+
+      expect(result.status).toBe(64);
+      expect(result.stderr).toContain("SemVer");
+      expect(existsSync(dockerLog)).toBe(false);
+    },
+  );
+
+  // An unset version is caught earlier, by the required-variable guard.
+  it("requires RELEASE_VERSION in promote mode", () => {
+    const result = run("promote", { RELEASE_VERSION: "" });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("RELEASE_VERSION is required");
     expect(existsSync(dockerLog)).toBe(false);
   });
 

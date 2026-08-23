@@ -74,3 +74,38 @@ US-007 needed no bump.
   contrastive comments in the new code, tests, and SECURITY.md history sentence.
 
 ---
+## US-008 — 2026-08-23 UTC
+
+**Title**: Verification of the whole path
+**Files changed**: none (verification only)
+**Result**: PASS
+
+### What I did
+
+- `pnpm test:scripts`: 603 tests in 42 files, all pass.
+- Mutation checks, each restored afterward: neutering `SEMVER_PATTERN` turns 3 tests red;
+  neutering the shell regex turns 6 red; dropping the `v` from `releaseTagName` turns 5
+  red across all four reservation paths. Every new assertion earns its failure.
+- `pnpm run typecheck` passes. Root `lint` and `format:check` are echo stubs.
+- `bash .oh/skills/eval/run.sh`: 106 probes, 105 PASS / 5 SKIPPED, no green-to-red
+  regression against the `upstream/development` baseline (104 PASS / 6 SKIPPED — one
+  probe moved SKIPPED to PASS once the wiki entry became tracked).
+- Four-row dry run against a stub `fetchImpl`: every row POSTs exactly
+  `{"ref":"refs/tags/v0.1.0","sha":...}` and returns a bare `releaseVersion=0.1.0`.
+  `created`/false, `reused-draft`/false, `published-no-op`/true, `already-released`/true.
+- `finalize`'s own awk extraction run locally with `ver=0.1.0` returns the 51-line
+  `## [0.1.0]` body, so the release will publish real notes.
+- `bash -n` on the shell script and a YAML parse of `release.yml` both clean. `shellcheck`
+  is absent from this sandbox; CI runs it.
+
+### Not verified here (needs the real remote)
+
+End-to-end release. `/release --dry-run`, the `gh run watch`, the `git tag --points-at`
+check, and the `:0.1.0`-versus-`:latest` digest comparison all require the push to `main`,
+which is after the human merge gate. The **skip-path** check (a docs-only push to `main`
+without a bump must be green) likewise runs post-merge and is the case most likely to be
+wrong, so it should not be skipped.
+
+---
+
+STATUS: COMPLETE

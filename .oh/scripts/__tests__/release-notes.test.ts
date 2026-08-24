@@ -31,11 +31,13 @@ Format follows Keep a Changelog.
 let fixture = "";
 
 /**
- * Run an extraction expression the way the workflow does. `escapeStrings`
- * models the awk implementation: gawk drops an invalid `\[` escape inside a
- * string literal, mawk keeps it. The runner is gawk, so that is the semantics
- * a regression test must assert against — this sandbox's awk is mawk and
- * silently passes the broken expression.
+ * Run an extraction expression the way the workflow does. `gawkSemantics`
+ * selects which resolution of the pre-fix escape to feed awk: gawk drops an
+ * invalid `\[` inside a string literal, mawk keeps it. Both variants are
+ * spelled so the regex they build is identical under any awk, so this test
+ * asserts the same thing on a mawk sandbox and a gawk runner. Passing the raw
+ * `\[` through instead would make the test depend on the local awk — which is
+ * exactly the trap that let the bug ship.
  */
 function extract(source: "workflow" | "legacy-dynamic-regex", version: string, gawkSemantics = true) {
   const changelog = join(fixture, "CHANGELOG.md");
@@ -48,8 +50,14 @@ function extract(source: "workflow" | "legacy-dynamic-regex", version: string, g
     });
   }
 
-  // The pre-fix expression, with the escape resolved as the named awk would.
-  const bracket = gawkSemantics ? ["[", "]"] : ["\\[", "\\]"];
+  // The pre-fix expression, with the escape ALREADY RESOLVED the way the named
+  // awk resolves it. Both forms are written so the regex they build is the same
+  // under any awk — otherwise this test would itself depend on which awk runs,
+  // which is the very bug it exists to pin.
+  //   gawk: `\[` in a string is an invalid escape -> backslash dropped -> `[`
+  //         builds `^## [0.1.0] - `, a CHARACTER CLASS, matching nothing.
+  //   mawk: the backslash survives -> `\[` builds `^## \[0.1.0\] - `, a literal.
+  const bracket = gawkSemantics ? ["[", "]"] : ["\\\\[", "\\\\]"];
   const legacy = `
     $0 ~ ("^## ${bracket[0]}" ver "${bracket[1]} - ") { in_block=1; next }
     in_block && /^## \\[/ { exit }
@@ -109,7 +117,7 @@ describe("release notes extraction", () => {
     expect(extract("legacy-dynamic-regex", "0.1.0", true).trim()).toBe("");
   });
 
-  it("the pre-fix dynamic regex passes under mawk semantics, which is why it hid", () => {
+  it("the same expression matches once the bracket survives into the regex (mawk)", () => {
     expect(extract("legacy-dynamic-regex", "0.1.0", false)).toContain("The versioned section body.");
   });
 

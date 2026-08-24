@@ -194,11 +194,11 @@ describe("round-trip through the vendored parser", () => {
       expect(isInstallFlagEnabled(root, key, realSh)).toBe(true);
 
       // ...and `env` mode emits the build arg docker compose consumes.
-      const env = realSh("sh", [
-        join(root, ".oh", "scripts", "harness-config.sh"),
-        "env",
-        harnessYamlPath(root),
-      ]);
+      const env = realSh(
+        "sh",
+        [join(root, ".oh", "scripts", "harness-config.sh"), "env", harnessYamlPath(root)],
+        { stdio: "capture" },
+      );
       expect(env.status).toBe(0);
       expect(env.stdout).toContain(`INSTALL_${key.toUpperCase()}=true`);
     },

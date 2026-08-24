@@ -3,7 +3,7 @@ title: "Build Executor Ladder"
 slug: build-executor-ladder
 tags: [build-loop, executor, firstmate, herdr, tmux, runner-ladder, spec-execute, autopilot]
 created: 2026-08-12
-updated: 2026-08-23
+updated: 2026-08-24
 sources:
   - raw/2026-08-12-build-executor-ladder.md
 related: [audit-architecture]
@@ -22,7 +22,7 @@ confidence: provisional
 ## Summary
 Open Harness builds a planned `.oh/tasks/<slug>/` folder along **one variable axis**. The *executor* — what drives the task graph — is fixed: `.oh/scripts/firstmate.sh` runs ONE long-lived First-Mate session over the whole `prd.json`. Only the *runner* — which session manager hosts that session — varies, along the ladder herdr → tmux → foreground. The common mistake is conflating the two: `firstmate` is the executor, `herdr` is a runner.
 
-> **Name disambiguation.** `firstmate` (lowercase, this page) is the **build executor** — `.oh/scripts/firstmate.sh`, the `firstmate-<slug>` session. **First Mate** is the **supervisory role charter** at `.oh/context/rules/first-mate.md`, consumed by `.oh/prompts/advisor/*`. The overload is intentional: the executor runs the role's workflow, because its session prompt derives from that pack's step order (`.oh/skills/firstmate/SKILL.md:21`). Never leave which one is meant implicit.
+> **Name disambiguation — and the overload is now resolved (2026-08-23, spec-simplification US-004).** `firstmate` is the **build executor**: `.oh/scripts/firstmate.sh`, the `firstmate-<slug>` session. The separate **First Mate role charter** (`.oh/context/rules/first-mate.md`) and the `.oh/prompts/advisor/` pack that consumed it were **deleted** — a second, discoverable description of the same workflow is a route an agent can be pulled onto mid-task. The build workflow the child session runs now lives in exactly one place: `.oh/skills/firstmate/templates/session-prompt.md`. That template was a zero-diff derivative of the deleted pack, so the derivative became the source and no step order was lost.
 
 ## Detail
 **The executor.** There is exactly one, reached by every build path — `/spec execute`, and every `/autopilot` run, which defers its whole build to it. It runs **ONE long-lived session over the whole `prd.json` task graph**, with context hygiene supplied by a mandated `/compact` at every story boundary rather than by process death.
@@ -40,6 +40,8 @@ Open Harness builds a planned `.oh/tasks/<slug>/` folder along **one variable ax
 **Bounds and exits.** Wall clock is the ceiling. `resolve_timeout_ms` is the single budget source: `FIRSTMATE_TIMEOUT_MS` defaults to `14400000` (4 h), and `0`, negative, non-numeric, and empty values are rejected back to that default. Expiry, launch failure, and operator abort all run `runner_teardown` (`herdr pane close`, or `tmux kill-session`), delete `/tmp/firstmate-<slug>.lock`, and append `FIRSTMATE-INCOMPLETE`; the PR stays draft with a resume comment. Teardown must never abort on its first branch: the herdr pane lookup is best-effort and returns 0 when no such agent exists, or `--kill` exits silently leaving the session running and the lock claimed (observed and fixed 2026-08-23). The lock is an atomic `mkdir` launch-claim, because the read-only liveness oracles cannot close the check-then-start window alone. **Live-verified for tmux mode** (US-010): one session walked a two-story graph to the whole-line sentinel in 2 m 51 s, which the watch loop observed before tearing the session down and clearing the lock. herdr mode has **not** been run end to end here — the gate refuses it. One caveat the run exposed: the session appends the sentinel *before* its final bookkeeping commit, so a 5-second-poll teardown can cut that commit off.
 
 **Process norms.** The ladder was **added** to `.oh/skills/t3/references/sandbox-processes.md:13`, not substituted for the tmux rule: managed/headless processes (cron, gateways, watchdogs, dev servers, tunnels) stay tmux; only agentic build sessions climb the ladder.
+
+**DeepWiki comparison.** Run 2026-08-24 against `https://deepwiki.com/mifunedev/openharness` (Overview page). DeepWiki is **stale on this topic**: it still names `scripts/ralph.sh` among the implementation skills and gives no executor count or ladder, so it describes the pre-US-002 world in which several executor arms coexisted. `.oh/scripts/ralph.sh` was deleted on 2026-08-23. This page is authoritative over DeepWiki here; the disagreement is upstream lag, not an unresolved question.
 
 ## System Relationships
 ```mermaid

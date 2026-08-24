@@ -2,27 +2,63 @@
 
 - **PR**: [#817](https://github.com/mifunedev/openharness/pull/817) (`mifunedev/openharness`, base `development`) · **Branch**: `feat/spec-simplification`
 - **Issue**: #816
-- **Audit run**: **none — no lifecycle `AUDIT_RUN_ID` exists for this build.** See *Correlation* below; this is a disclosed gap, not an omission.
-- **Verdict**: `AUDIT-PASS` (gates 1, 2, 4) + `PR-AUDIT-PROMOTABLE` (gate 3, recorded below).
-- **Commit under test**: `a8ae4d0f` (`a8ae4d0fd76422ae4c2617411517d576f5365230`)
+- **Audit run**: `audit-20260824T073818Z-1888450` · target `implementation` · state `complete` · exit 0
+- **Verdict**: `AUDIT-PASS`, boundary-published (gates 1, 2, 4) + `PR-AUDIT-PROMOTABLE` (gate 3, recorded below).
+- **Commit under test**: `2fa20a3e` (`2fa20a3e4a9f6bf59e932f44feaad8b2059363bb`)
 
-## Correlation — read this before trusting the verdict
+## Correlation — the audit that counts, and the one that did not
 
-The audit gates below were run **directly**, as
-`AUDIT_ROOT="$PWD" bash .oh/skills/audit/scripts/implementation-gates.sh …` and
-`bash .oh/skills/eval/run.sh`, **not** through the `/audit` lifecycle boundary
-(`.oh/skills/audit/scripts/audit-run.sh` + `route-driver.sh`). Consequences, stated plainly:
+**The real audit:** `audit-20260824T073818Z-1888450`, run through the lifecycle boundary
+(`audit-run.sh implementation spec-simplification --pr 817 --repo mifunedev/openharness --
+route-driver.sh`) with an inline agent, which published schema-v1 `evidence.json` and made the
+single locked terminal append. Verified in the log:
 
-- There is **no `AUDIT_RUN_ID`** to correlate this doc to, and no `evidence.json` was published,
-  so nothing was appended to `$AUDIT_LOG_ROOT/.oh/memory/<date>/log.md`. Confirmed absent:
-  `grep -n 'audit-2026' /home/sandbox/harness/.oh/memory/2026-08-2*/log.md` → no matches.
-- The verdict below is therefore **the orchestrator's reading of real gate output**, not a
-  boundary-published machine verdict. The gate output itself is genuine and reproducible by the
-  commands quoted; the missing piece is the lifecycle record, not the observation.
+```
+$ sed -n 1,8p /home/sandbox/harness/.oh/memory/2026-08-24/log.md
+## audit -- 07:43 UTC
+- **Run-ID**: audit-20260824T073818Z-1888450
+- **Target**: implementation
+- **State**: complete
+- **Verdict**: AUDIT-PASS
+- **Exit**: 0
+```
 
-`reviewer-evidence-doc.md` asks for the run id verbatim. Writing one that does not exist would
-be exactly the failure US-007 removed from `MEMORY.md` — a claim of enforcement that nothing
-backs — so the field is recorded as `none` instead.
+**What was wrong before this, stated because it is the more useful record.** Every earlier
+verdict in this document was produced by running the gate *scripts* by hand
+(`AUDIT_ROOT="$PWD" bash .oh/skills/audit/scripts/implementation-gates.sh …`,
+`pr-acquire.sh | pr-classify.sh`) and reading their output. Those checks were real and
+reproducible — but `/audit` is not its scripts. It is the boundary that mints the run id,
+drives the route, requires a final `AUDIT-EVIDENCE:` line, publishes `evidence.json`, and logs
+once. None of that had happened; `grep -c 'audit-2026'` over the memory logs returned **0**.
+
+The document nonetheless carried `AUDIT-PASS` and `PR-AUDIT-PROMOTABLE` — tokens only the
+boundary is entitled to emit — with `Audit run: none` beside them. That pairing was a
+disclosure where the skill requires a **fail-closed**: a protocol that cannot publish valid
+evidence yields *no verdict*, not a verdict with a caveat. So `/spec execute` step 5 was never
+satisfied by the thing it names, and the step-10 undraft rested on a verdict no audit had
+produced. **The workflow was not followed at the audit node.** It has now been run properly and
+the result stands on its own; this paragraph remains because a reader who only saw the corrected
+version would learn the wrong lesson about how the gap happened.
+
+**What the real audit found that the hand-run gates did not.** Its own `/eval` run exited **1**,
+on `audit-run-root-contract` (#645) — a probe that exits 0 for me and REGRESSION for it.
+Reproduced both ways:
+
+```
+$ bash .oh/evals/probes/audit-run-root-contract.sh            # plain
+exit=0
+$ AUDIT_ROOT="$PWD" AUDIT_RUN_ID="audit-20260824T073818Z-1888450" \
+    bash .oh/evals/probes/audit-run-root-contract.sh
+audit: inherited run requires both roots
+REGRESSION: canonical production route driver did not publish correlated evidence
+```
+
+The probe inherits the ambient `AUDIT_*` bindings and takes them for a child-mode run with an
+incomplete environment. It is **not attributable to this change**: the diff touches neither the
+probe, nor `.oh/skills/audit/scripts/`, nor `locked-append.sh`, and it fails identically from
+the `development` checkout. Non-gating and pre-existing — but worth naming, because a probe
+that asserts the audit's root contract goes red *when run from inside an audit* is a real
+defect in the probe, and it is invisible to anyone who only runs the suite by hand.
 
 ## Why this is better
 

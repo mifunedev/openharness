@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/spec-simplification",
+  "description": "Make /spec the single primary method of implementation and make the pipeline answer back to the plan. Remove the critique/approve gate, collapse three build executors to firstmate alone, absorb /ship-spec and the advisor prompt pack into /spec execute, require a plan-vs-built reconciliation at the merge gate, delete the ceremony nothing reads, and stop MEMORY.md asserting probe enforcement that does not exist.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Remove the critique/approve gate",
+      "description": "As an operator, I want the workflow to stop halting at a gate that produces nothing I read, so that the path from plan to build is uninterrupted.",
+      "acceptanceCriteria": [
+        "`AGENTS.md` § The Workflow describes `select -> plan -> execute -> merge -> reset` in its prose, its surface table, and its mermaid diagram; no `spec-critique` or `approve` node remains in any of the three",
+        "`.oh/skills/spec/SKILL.md` dispatches exactly three subcommands (plan, execute, retro); the `critique` arm and its argument-hint entry are gone",
+        "`.oh/skills/spec/references/critique.md` is deleted",
+        "`.oh/skills/spec/references/execute.md` no longer carries the APPROVED precondition (was lines 39-42) and no longer refers to a `critique.md` verdict",
+        "`.oh/skills/critique/` and `.oh/skills/approve/` are deleted",
+        "`.oh/evals/probes/spec-family-contract.sh` asserts the three surviving subcommands and fails when a fourth reference-doc is expected; it is verified by rejection against a deliberately broken copy",
+        "A repo-wide grep for `/critique`, `/approve`, `spec-critique`, `SPEC-APPROVED`, and `SPEC-DENIED` returns hits only in `CHANGELOG.md`",
+        "`bash .oh/skills/eval/run.sh` shows no green-to-red regression other than probes this story rewrites"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Critique's redesign is explicitly a separate ticket. This story removes it from the path; it does not attempt to fix it."
+    },
+    {
+      "id": "US-002",
+      "title": "Collapse to one build executor",
+      "description": "As a reader of any build doc, I want exactly one build path, so that I do not have to work out which executor arm ran before anything else makes sense.",
+      "acceptanceCriteria": [
+        "`.oh/scripts/ralph.sh`, `.oh/scripts/__tests__/ralph.test.ts`, and `.oh/skills/ship-spec/templates/prompt.md` are deleted",
+        "No executor toggle survives: `--executor`, `SHIP_SPEC_EXECUTOR`, and `AUTOPILOT_EXECUTOR` are removed rather than reduced to a single accepted value",
+        "`.oh/skills/ship-spec/SKILL.md` Stage 10, `.oh/skills/autopilot/SKILL.md` (toggle plus the `ralph` fallback section), `.oh/skills/spec/references/execute.md`, `.oh/agents/advisor.md` (the `Monitored async ralph loop` variant at lines 26, 98, 212), and `AGENTS.md` line 194 no longer name ralph or delegate-advisor as a build arm",
+        "`prd.json` and the `/ralph` skill that produces it are RETAINED — the task contract has 15 consumers including `firstmate.sh`, `.oh/scripts/lib/task-contract.sh`, `.oh/cli/src/commands/init.ts`, and 7 probes",
+        "`.oh/evals/probes/autopilot-executor-toggle.sh` is rewritten for a no-toggle single-executor world, not deleted",
+        "`.oh/evals/probes/advisor-monitored-loop.sh` is rewritten to assert the firstmate launch contract instead of the ralph variant name, not deleted",
+        "`.oh/evals/probes/firstmate-executor-contract.sh` no longer asserts a `ralph` arm or that `ralph.sh` exists",
+        "Each rewritten probe is verified by rejection: it fails against a deliberately broken copy before it passes against the real tree",
+        "A repo-wide grep for `ralph.sh`, `RALPH_`, and `delegate-advisor` returns hits only in `CHANGELOG.md`"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Removing every toggle removes the fallback: recovery from a misbehaving ladder or child session is fix-forward only."
+    },
+    {
+      "id": "US-003",
+      "title": "Absorb /ship-spec into /spec execute",
+      "description": "As a reader of /spec execute, I want the build mechanics to be in the file I am reading, so that learning what the build does does not send me to a second skill.",
+      "acceptanceCriteria": [
+        "`.oh/skills/spec/references/execute.md` inlines the former `/ship-spec` Stage 5 (issue), 8-9 (branch, scaffold commit, draft PR), 10 (build launch), 11 (`/eval`), 11.25 (wiki revision), and 12-13 (`/audit pr` then undraft), and reads top-to-bottom with no deferral",
+        "The `execute.md` deferral paragraph (was lines 14-19, `reuses those by reference` / `single source of build literals`) is gone",
+        "`.oh/skills/ship-spec/` is deleted",
+        "`/autopilot` and `.oh/crons/autopilot.md` invoke `/spec` instead of `/ship-spec --issue`",
+        "`.oh/agents/advisor.md` line 98, `.oh/crons/prompt-miner.md`, `.oh/docs/glossary.md`, `.oh/docs/oh-directory-layout.md`, `.oh/evals/datasets/README.md`, and `.oh/docs/integrations/pi-autoresearch.md` no longer reference `/ship-spec`",
+        "`.oh/evals/capability/tasks/CB-001-ship-harness-change.md` and `CB-002-walk-the-workflow.md` are RE-AUTHORED against the new pipeline — these are the ceiling instrument and must not be dropped",
+        "A repo-wide grep for `ship-spec` and `SHIP_SPEC` returns hits only in `CHANGELOG.md`",
+        "A full build runs end-to-end with `.oh/skills/ship-spec/` absent"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Settled: absorb and delete in a single change. Highest-risk story — transcription errors land in the only remaining path with no fallback. Do not relax a protected-build-literals probe to make this pass."
+    },
+    {
+      "id": "US-004",
+      "title": "Remove the advisor prompt pack",
+      "description": "As an agent on a long-horizon task, I want no secondary implementation path discoverable in the file layout, so that exploring the repo mid-task cannot pull me onto a retired route.",
+      "acceptanceCriteria": [
+        "The whole `.oh/prompts/advisor/` directory is deleted, including `implement.yml`, `pr.yml`, and `plan.yml`",
+        "The Pi mirror `.pi/prompts/advisor/pr.md` is deleted",
+        "`.oh/context/rules/first-mate.md` (the First Mate role charter) and `.oh/evals/probes/first-mate-charter.sh` are deleted",
+        "`.oh/agents/architect.md` line 8 no longer names `plan.yml` as its entry point; the agent is either repointed at `/spec plan` or retired with the pack",
+        "`.oh/evals/probes/firstmate-executor-contract.sh` assertion 5 (`git diff --quiet -- .oh/prompts/`, was lines 146-151) is REMOVED, not stubbed to true; its provenance comments at lines 8-9 and 103-106 name `.oh/skills/firstmate/templates/session-prompt.md` as the owner of the step order",
+        "The anchor-order assertion still passes because the ordered anchor list is recorded verbatim in the template header at `session-prompt.md` lines 42-52",
+        "`.oh/skills/audit/references/pr.md` line 9 and `reviewer-evidence-doc.md` lines 17 and 24 repoint the `evidence.md` contract at `/spec execute`",
+        "`.oh/skills/retro/SKILL.md` line 229 no longer cites `implement.yml` / `pr.yml` as the common `auto-approve` invocation path",
+        "`.oh/skills/firstmate/SKILL.md` line 29, `session-prompt.md` lines 34-35, `AGENTS.md` line 31, and `.oh/prompts/README.md` line 27 are updated",
+        "A repo-wide grep for `prompts/advisor` and `first-mate.md` returns hits only in `CHANGELOG.md`"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Settled: cleaner is better — plan.yml and the charter go with the pack. The derivative becomes the source."
+    },
+    {
+      "id": "US-005",
+      "title": "Make the plan the contract the build answers to",
+      "description": "As an operator whose understanding stops at the plan handed to a compacted agent, I want the merge gate to tell me how the built thing differs from that plan, so that approving a merge is an informed act.",
+      "acceptanceCriteria": [
+        "`evidence.md` is a GATE CONDITION at the merge gate in `.oh/skills/spec/references/execute.md`, not merely a step in a rendered prompt; the undraft path refuses without it",
+        "`execute.md` states the required shape of `evidence.md`: what the plan asked for, what was built, where they diverged and why, and what remains unverified",
+        "`/teach` is invoked before the merge gate in `execute.md` (it is currently referenced only in the `AGENTS.md` skills table and wired into no pipeline)",
+        "The build narrative in `progress.txt` is promoted into the PR body rather than discarded at the `STATUS: COMPLETE` sentinel",
+        "`execute.md` carries a PR body template with the sections plan / built / divergence / unverified",
+        "A probe asserts the merge gate requires `evidence.md`, verified by rejection against a tree where the file is absent",
+        "ACCEPTANCE TEST (human, not a probe): a reader who did not watch the build reads the merge-gate output and can state what changed, why it differs from the plan, and what is still unverified"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Most of this is inherited, not invented: evidence.md is already ANCHOR 6 of firstmate's step order, alongside /audit implementation (5), /retro (7), and Ready PR (8). The gap is that the pipeline never requires or surfaces it."
+    },
+    {
+      "id": "US-006",
+      "title": "Delete the ceremony that emits nothing readable",
+      "description": "As a maintainer, I want steps that produce outputs nothing consumes to be removed, so that the cost of a cycle buys something.",
+      "acceptanceCriteria": [
+        "The four `STATUS: SPEC-*` tokens (`SPEC-PLANNED`, `SPEC-EXECUTED`, `SPEC-BLOCKED`, `SPEC-RETRO-DONE`) are removed; a repo-wide grep over `*.sh`, `*.ts`, `*.mjs`, `*.json`, `*.yml` confirms they never had an executable consumer and now have no definition either",
+        "The mandatory per-node `## spec-*` memory-log append is dropped, or narrowed to the single shape `.oh/crons/heartbeat.md` actually reads",
+        "The groom tail (`/audit skills`, `/wiki lint`, `/audit drift`) is cut from `/spec execute`; `/audit drift` already runs hourly via the heartbeat cron",
+        "`/eval` runs ONCE per cycle: the `/audit implementation` Gate 2 and `/benchmark` Signal 1 read that result instead of re-running the suite; probe executions per cycle drop from 318 to 106",
+        "The silent `git add` inherited from `ship-spec/SKILL.md` line 294 is fixed to `git add -f` for the gitignored `.oh/tasks/` path",
+        "`.oh/tasks/README.md` lines 22-24 no longer contradict `.gitignore` line 12",
+        "The PR still reaches ready-for-review through the surviving gates after these removals"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Each removal was proved by a negative grep during planning: the STATUS tokens and the spec-* log entries have zero executable consumers repo-wide."
+    },
+    {
+      "id": "US-007",
+      "title": "Make memory's claims true",
+      "description": "As a reader of MEMORY.md, I want every enforcement claim in it to be real, so that I can trust which lessons are actually guarded.",
+      "acceptanceCriteria": [
+        "Every unbacked `probe:` field is stripped from `.oh/memory/MEMORY.md` — all 73 cited probe ids currently resolve to no file",
+        "The 32 verified-dead entries (9 obsolete/falsified, 17 one-time narratives, 4 out-of-domain, 6 repo-derivable) and the 49 entries restating an `IDENTITY.md` principle are ANNOTATED IN PLACE with their verdict and evidence — NOT deleted this pass",
+        "A new probe asserts every `probe:` id in `MEMORY.md` resolves to a real `.oh/evals/probes/<id>.sh`; it FAILS against today's MEMORY.md and passes after the strip",
+        "A new probe asserts `MEMORY_DIR` is absolute or unset; it currently resolves to the relative `.oh/memory`, shadowing the `oh-path` resolver added by PR #772",
+        "`MEMORY.md`'s `Closes #N` auto-close rule is moved into `.oh/skills/git/SKILL.md` next to lines 88 and 260, finishing what issue #768 claimed to close",
+        "`.oh/skills/retro/scripts/check-memory-duplicates.sh` no longer relies on fixed-string `grep -Fqi` alone, so a rephrased duplicate is detected",
+        "A tier size budget exists so the always-on context tier cannot regrow silently; MEMORY.md is currently 55% of an 84 KB tier",
+        "Both new probes are verified by rejection, not by exit 0"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Settled: this pass annotates, the next pass deletes. MEMORY.md is gitignored and untracked, so a deletion leaves no diff and no undo. The probe: strip is safe to land early; the annotation pass should land last so the marks reflect what the run learned."
+    }
+  ]
+}

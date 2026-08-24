@@ -9,7 +9,7 @@
       "title": "Remove the critique/approve gate",
       "description": "As an operator, I want the workflow to stop halting at a gate that produces nothing I read, so that the path from plan to build is uninterrupted.",
       "acceptanceCriteria": [
-        "`AGENTS.md` § The Workflow describes `select -> plan -> execute -> merge -> reset` in its prose, its surface table, and its mermaid diagram; no `spec-critique` or `approve` node remains in any of the three",
+        "`AGENTS.md` \u00a7 The Workflow describes `select -> plan -> execute -> merge -> reset` in its prose, its surface table, and its mermaid diagram; no `spec-critique` or `approve` node remains in any of the three",
         "`.oh/skills/spec/SKILL.md` dispatches exactly three subcommands (plan, execute, retro); the `critique` arm and its argument-hint entry are gone",
         "`.oh/skills/spec/references/critique.md` is deleted",
         "`.oh/skills/spec/references/execute.md` no longer carries the APPROVED precondition (was lines 39-42) and no longer refers to a `critique.md` verdict",
@@ -20,7 +20,7 @@
       ],
       "priority": 1,
       "passes": true,
-      "notes": "2026-08-23 (a1f64de2): critique/approve gate removed from AGENTS.md, /spec, /ship-spec Stages 3-4; three probes rewritten and verified by rejection; 106 probes 102 PASS 4 SKIPPED 0 REGRESSION. Deviation on the grep AC: completed-run records under .oh/tasks/**, the frozen DS-010 oracle, and the probes' own negative assertions still contain the token — see progress.txt."
+      "notes": "2026-08-23 (a1f64de2): critique/approve gate removed from AGENTS.md, /spec, /ship-spec Stages 3-4; three probes rewritten and verified by rejection; 106 probes 102 PASS 4 SKIPPED 0 REGRESSION. Deviation on the grep AC: completed-run records under .oh/tasks/**, the frozen DS-010 oracle, and the probes' own negative assertions still contain the token \u2014 see progress.txt."
     },
     {
       "id": "US-002",
@@ -30,7 +30,7 @@
         "`.oh/scripts/ralph.sh`, `.oh/scripts/__tests__/ralph.test.ts`, and `.oh/skills/ship-spec/templates/prompt.md` are deleted",
         "No executor toggle survives: `--executor`, `SHIP_SPEC_EXECUTOR`, and `AUTOPILOT_EXECUTOR` are removed rather than reduced to a single accepted value",
         "`.oh/skills/ship-spec/SKILL.md` Stage 10, `.oh/skills/autopilot/SKILL.md` (toggle plus the `ralph` fallback section), `.oh/skills/spec/references/execute.md`, `.oh/agents/advisor.md` (the `Monitored async ralph loop` variant at lines 26, 98, 212), and `AGENTS.md` line 194 no longer name ralph or delegate-advisor as a build arm",
-        "`prd.json` and the `/ralph` skill that produces it are RETAINED — the task contract has 15 consumers including `firstmate.sh`, `.oh/scripts/lib/task-contract.sh`, `.oh/cli/src/commands/init.ts`, and 7 probes",
+        "`prd.json` and the `/ralph` skill that produces it are RETAINED \u2014 the task contract has 15 consumers including `firstmate.sh`, `.oh/scripts/lib/task-contract.sh`, `.oh/cli/src/commands/init.ts`, and 7 probes",
         "`.oh/evals/probes/autopilot-executor-toggle.sh` is rewritten for a no-toggle single-executor world, not deleted",
         "`.oh/evals/probes/advisor-monitored-loop.sh` is rewritten to assert the firstmate launch contract instead of the ralph variant name, not deleted",
         "`.oh/evals/probes/firstmate-executor-contract.sh` no longer asserts a `ralph` arm or that `ralph.sh` exists",
@@ -40,13 +40,13 @@
         "The pi arm keeps its `\"$(cat <prompt>)\"` argv shape but drops `--print` from `FIRSTMATE_PI_FLAGS` for the same reason",
         "`FIRSTMATE_CLAUDE_FLAGS` default no longer contains `--print`",
         "A probe asserts no executor launch path contains `--print`, verified by rejection",
-        "`.oh/scripts/lib/session-runner.sh` no longer wraps the launched command in `| tee <log>`. That pipe makes the child stdout a PIPE rather than a TTY, which an interactive agent session cannot run under — OBSERVED 2026-08-23: the child started, printed only startup warnings, and never advanced. Logging moves to `tmux pipe-pane` (or herdr's own pane capture), which preserves the TTY",
-        "`firstmate-executor-contract.sh` no longer asserts that the `| tee` log pipe survives — that assertion pins the defect above in place",
+        "`.oh/scripts/lib/session-runner.sh` no longer wraps the launched command in `| tee <log>`. That pipe makes the child stdout a PIPE rather than a TTY, which an interactive agent session cannot run under \u2014 OBSERVED 2026-08-23: the child started, printed only startup warnings, and never advanced. Logging moves to `tmux pipe-pane` (or herdr's own pane capture), which preserves the TTY",
+        "`firstmate-executor-contract.sh` no longer asserts that the `| tee` log pipe survives \u2014 that assertion pins the defect above in place",
         "`.oh/scripts/firstmate.sh --kill <slug>` actually kills the session and clears the lock. OBSERVED 2026-08-23: it exited silently, left `agent-firstmate-<slug>` running and `/tmp/firstmate-<slug>.lock` claimed, and appended no `FIRSTMATE-INCOMPLETE` line. Covered by a probe verified by rejection"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": "Removing every toggle removes the fallback: recovery from a misbehaving ladder or child session is fix-forward only."
+      "passes": true,
+      "notes": "2026-08-24 (ac8aa433): every executor toggle removed (not narrowed); ralph.sh, its vitest suite, and the ralph prompt template deleted; prd.json + /ralph retained. Three launch defects fixed (--print, the tee pipe, silent --kill). 3 probes rewritten, 4 repointed, 1 deleted with its subject, 2 added \u2014 all verified by rejection. AC-9 deviation stated in progress.txt (frozen oracle + probes' own negative assertions)."
     },
     {
       "id": "US-003",
@@ -58,13 +58,13 @@
         "`.oh/skills/ship-spec/` is deleted",
         "`/autopilot` and `.oh/crons/autopilot.md` invoke `/spec` instead of `/ship-spec --issue`",
         "`.oh/agents/advisor.md` line 98, `.oh/crons/prompt-miner.md`, `.oh/docs/glossary.md`, `.oh/docs/oh-directory-layout.md`, `.oh/evals/datasets/README.md`, and `.oh/docs/integrations/pi-autoresearch.md` no longer reference `/ship-spec`",
-        "`.oh/evals/capability/tasks/CB-001-ship-harness-change.md` and `CB-002-walk-the-workflow.md` are RE-AUTHORED against the new pipeline — these are the ceiling instrument and must not be dropped",
+        "`.oh/evals/capability/tasks/CB-001-ship-harness-change.md` and `CB-002-walk-the-workflow.md` are RE-AUTHORED against the new pipeline \u2014 these are the ceiling instrument and must not be dropped",
         "A repo-wide grep for `ship-spec` and `SHIP_SPEC` returns hits only in `CHANGELOG.md`",
         "A full build runs end-to-end with `.oh/skills/ship-spec/` absent"
       ],
       "priority": 3,
       "passes": false,
-      "notes": "Settled: absorb and delete in a single change. Highest-risk story — transcription errors land in the only remaining path with no fallback. Do not relax a protected-build-literals probe to make this pass."
+      "notes": "Settled: absorb and delete in a single change. Highest-risk story \u2014 transcription errors land in the only remaining path with no fallback. Do not relax a protected-build-literals probe to make this pass."
     },
     {
       "id": "US-004",
@@ -84,7 +84,7 @@
       ],
       "priority": 4,
       "passes": false,
-      "notes": "Settled: cleaner is better — plan.yml and the charter go with the pack. The derivative becomes the source."
+      "notes": "Settled: cleaner is better \u2014 plan.yml and the charter go with the pack. The derivative becomes the source."
     },
     {
       "id": "US-005",
@@ -125,8 +125,8 @@
       "title": "Make memory's claims true",
       "description": "As a reader of MEMORY.md, I want every enforcement claim in it to be real, so that I can trust which lessons are actually guarded.",
       "acceptanceCriteria": [
-        "Every unbacked `probe:` field is stripped from `.oh/memory/MEMORY.md` — all 73 cited probe ids currently resolve to no file",
-        "The 32 verified-dead entries (9 obsolete/falsified, 17 one-time narratives, 4 out-of-domain, 6 repo-derivable) and the 49 entries restating an `IDENTITY.md` principle are ANNOTATED IN PLACE with their verdict and evidence — NOT deleted this pass",
+        "Every unbacked `probe:` field is stripped from `.oh/memory/MEMORY.md` \u2014 all 73 cited probe ids currently resolve to no file",
+        "The 32 verified-dead entries (9 obsolete/falsified, 17 one-time narratives, 4 out-of-domain, 6 repo-derivable) and the 49 entries restating an `IDENTITY.md` principle are ANNOTATED IN PLACE with their verdict and evidence \u2014 NOT deleted this pass",
         "A new probe asserts every `probe:` id in `MEMORY.md` resolves to a real `.oh/evals/probes/<id>.sh`; it FAILS against today's MEMORY.md and passes after the strip",
         "A new probe asserts `MEMORY_DIR` is absolute or unset; it currently resolves to the relative `.oh/memory`, shadowing the `oh-path` resolver added by PR #772",
         "`MEMORY.md`'s `Closes #N` auto-close rule is moved into `.oh/skills/git/SKILL.md` next to lines 88 and 260, finishing what issue #768 claimed to close",

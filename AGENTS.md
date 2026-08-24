@@ -135,16 +135,16 @@ Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspa
 ## The Workflow
 
 <!-- workflow-canonical -->
-The harness has one canonical **operative path**: `select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`. `autopilot` selects work; the `spec-*` family plans, critiques, executes, and reflects; the human merges; the runner resets. **`autopilot` is the designated sole runner.**
+The harness has one canonical **operative path**: `select → spec-plan → spec-execute → merge → reset|clean`. `autopilot` selects work; the `spec-*` family plans, executes, and reflects; the human merges; the runner resets. **`autopilot` is the designated sole runner.**
 
-> The `/spec` dispatcher's four subcommands (`/spec plan` · `/spec critique` · `/spec execute` · `/spec retro`) are the canonical decomposed workflow — each pointed at a `.oh/tasks/<slug>/` folder, runnable independently or fanned out via `/delegate`. `/ship-spec` remains the all-in-one composer that runs the same `plan → critique → execute → retro` pipeline in one invocation (what `/autopilot` drives) and is the single source of the protected build mechanics the `/spec` nodes compose. This section (`§ The Workflow`) is the sole canonical workflow.
+> The `/spec` dispatcher's three subcommands (`/spec plan` · `/spec execute` · `/spec retro`) are the canonical decomposed workflow — each pointed at a `.oh/tasks/<slug>/` folder, runnable independently or fanned out via `/delegate`. `/ship-spec` remains the all-in-one composer that runs the same `plan → execute → retro` pipeline in one invocation (what `/autopilot` drives) and is the single source of the protected build mechanics the `/spec` nodes compose. This section (`§ The Workflow`) is the sole canonical workflow.
+>
+> **Approving the plan is the commitment gate.** There is no separate critique or approve node: the operator's read of `prd.md` is the go/no-go, and the build answers back to it at the merge gate.
 
 ```mermaid
 flowchart LR
     SEL["select<br/>(autopilot)"] -->|issue| PLAN["spec-plan<br/>(/spec plan)"]
-    PLAN --> CRIT{"spec-critique<br/>2 critics + approve"}
-    CRIT -->|DENIED: revise| PLAN
-    CRIT -->|APPROVED| BUILD["build"]
+    PLAN --> BUILD["build"]
     subgraph EXEC["spec-execute (/spec execute)"]
         direction LR
         BUILD --> AUDIT{"audit implementation<br/>task graph + eval + focused PR classifier"}
@@ -158,16 +158,16 @@ flowchart LR
     RESET -.->|next item| SEL
 ```
 
-**Two adversarial critic loops:** `spec-plan ⇄ spec-critique` vets the plan; `build ⇄ audit` vets the build — the same mechanism, looping until critics are satisfied.
+**One adversarial loop:** `build ⇄ audit` vets the build, looping until the build satisfies its own task graph. The plan itself is vetted by the operator who approves it, not by a critic node.
 
 | Surface | Owns | Does NOT own | The seam |
 |---|---|---|---|
 | **autopilot** | select — issue selection + `pm` decompose, caps, session | the build, the merge | hands the issue to `spec-plan` |
-| **`/spec` dispatcher** | `spec-plan` (task artifacts + wiki), `spec-critique` (2 critics + approve), `spec-execute` (build⇄audit→spec-retro→improve→groom), `spec-retro` | selection, merge | each subcommand is pointed at a `.oh/tasks/<slug>/` folder |
+| **`/spec` dispatcher** | `spec-plan` (task artifacts + wiki), `spec-execute` (build⇄audit→spec-retro→improve→groom), `spec-retro` | selection, merge | each subcommand is pointed at a `.oh/tasks/<slug>/` folder |
 | **human** | merge — final gate, no auto-merge | selection, build | reviews the finished unit |
 | **runner** | `reset \| clean` — worktree/branch cleanup, state reset | judgment | closes the cycle back to select |
 
-The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec critique`, `/spec execute`, `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/audit skills` · `/wiki lint` · `/audit drift` before the human merge.
+The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec execute` and `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/audit skills` · `/wiki lint` · `/audit drift` before the human merge.
 
 ## Skills
 
@@ -185,8 +185,8 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/imagine` | One-shot draft PRD sketch from a fuzzy scenario → `.claude/specs/<slug>/spec.md` (gitignored scratch, includes mermaid diagram); feeds `/ship-spec --plan <path>` |
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `.oh/tasks/<name>/prd.json` for the Ralph runner |
-| `/ship-spec` | End-to-end spec (all-in-one form of the `spec-*` family): `/prd` → critics → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR; the single source of the protected build mechanics |
-| `/spec` | Dispatcher for the decomposed workflow (`/spec <plan\|critique\|execute\|retro>`, routes to `references/{plan,critique,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state); **critique** = the `plan ⇄ critique` loop (`/critique` 2 critics + `/approve` gate; `DENIED` → `/spec plan`); **execute** = `build ⇄ audit → spec-retro → improve → groom` to a ready PR at the human merge gate (composes `/ship-spec` mechanics + `/audit implementation`); **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/` |
+| `/ship-spec` | End-to-end spec (all-in-one form of the `spec-*` family): `/prd` → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR; the single source of the protected build mechanics |
+| `/spec` | Dispatcher for the decomposed workflow (`/spec <plan\|execute\|retro>`, routes to `references/{plan,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state) — approving that plan **is** the commitment gate; **execute** = `build ⇄ audit → spec-retro → improve → groom` to a ready PR at the human merge gate (composes `/ship-spec` mechanics + `/audit implementation`); **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/` |
 | `/firstmate` | The opt-in **third build executor** (`--executor=firstmate`): one long-lived First-Mate session over a whole `.oh/tasks/<slug>/` task graph, launched through the **herdr → tmux → foreground** runner ladder, where `ralph` launches 50 fresh single-story processes. `ralph` stays the default; `STATUS: COMPLETE` (whole line in `progress.txt`) is the invariant terminal interface for all three. Documents the ladder's detection gates, the naming contract (`firstmate-<slug>`, `agent-firstmate-<slug>`), the `FIRSTMATE_TIMEOUT_MS` session budget, the watch/recovery matrices, and the per-mode kill procedure. **Not** the First Mate *role charter* (`.oh/context/rules/first-mate.md`) — see the skill's disambiguation note |
 | `/teach` | Post-implementation communication pass — revise/propose the relevant wiki model, then teach the operator the mental model, verification evidence, caveats, and understanding checks |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |

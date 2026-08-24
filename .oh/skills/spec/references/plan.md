@@ -7,17 +7,17 @@
 > `$ARGUMENTS`. Authority: `AGENTS.md § The Workflow`.
 
 The **plan** node of the `spec-*` family (`AGENTS.md § The Workflow`:
-`select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean`). It takes
+`select → spec-plan → spec-execute → merge → reset|clean`). It takes
 a topic / plan file / issue and produces the **`.oh/tasks/<slug>/` folder** — the universal
 interface every other `/spec` node is pointed at.
 
 **Core principle: plan cheaply, commit nothing.** `plan` writes only local files
-under `.oh/tasks/<slug>/`. It runs no critics and creates no GitHub-side state — that keeps
-the plan ⇄ critique loop fully reversible (`rm -rf .oh/tasks/<slug>/`) until `/spec critique`
-clears it (`AGENTS.md § The Workflow` invariant: critic-before-commitment).
+under `.oh/tasks/<slug>/`. It creates no GitHub-side state, so the folder stays fully
+reversible (delete `.oh/tasks/<slug>/`) until the operator approves the `prd.md`.
+**That approval is the commitment gate** (`AGENTS.md § The Workflow`).
 
 This is the decomposed form of `/ship-spec` Stages 1–2.5, 6–7. `/ship-spec` remains the
-all-in-one composer that runs the whole `plan → critique → execute → retro` pipeline in
+all-in-one composer that runs the whole `plan → execute → retro` pipeline in
 one invocation (what `/autopilot` drives); the `/spec` dispatcher is the same pipeline split
 so each node can be run independently or fanned out at scale via `/delegate`.
 
@@ -86,16 +86,16 @@ done
 ## Output
 
 `.oh/tasks/<slug>/` holding the four-file contract (`prd.md`, `prd.json`, `prompt.md`,
-`progress.txt`). No `critique.md` yet (that is `/spec critique`). No issue, branch, or PR.
+`progress.txt`). No issue, branch, or PR.
 
 ---
 
 ## What this node does NOT do
 
-- **Run critics or decide.** That is `/spec critique` (which composes `/critique` +
-  `/approve`). `plan` only produces the folder.
+- **Decide whether to build.** Approving the `prd.md` this node writes **is** the
+  commitment gate — the operator makes that call. `plan` only produces the folder.
 - **Create GitHub-side state.** No `gh issue create`, no branch, no PR — the whole point
-  is to keep the plan ⇄ critique loop reversible before commitment. It *consumes* a
+  is to keep the folder reversible before commitment. It *consumes* a
   pre-existing issue number (`--issue <N>`) for the branch name but never opens, edits, or
   closes an issue/PR.
 - **Build.** Implementation is `/spec execute`.
@@ -121,9 +121,9 @@ Then run the qualify/improve pass.
 
 ## Pipeline position
 
-Within `AGENTS.md § The Workflow` (`select → spec-plan ⇄ spec-critique → spec-execute →
-merge → reset|clean`), `plan` is the **plan** node; the next step is
-`/spec critique <slug>`. On a complete four-file folder, print this bare token as the final
+Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
+merge → reset|clean`), `plan` is the **plan** node; the next step is the operator's
+approval of `prd.md`, then `/spec execute <slug>`. On a complete four-file folder, print this bare token as the final
 line:
 
     STATUS: SPEC-PLANNED

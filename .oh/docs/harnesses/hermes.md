@@ -68,7 +68,7 @@ curl -fsSL -o hermes-install.sh https://hermes-agent.nousresearch.com/install.sh
 bash hermes-install.sh --skip-setup --skip-browser
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://hermes-agent.nousresearch.com/install.sh --skip-setup --skip-browser` gives the installer a fetch/review/approve gate. `vet` is optional and is not required by Open Harness.
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://hermes-agent.nousresearch.com/install.sh --skip-setup --skip-browser` gives the installer a fetch, review, and approve gate. `vet` is optional and is not required by Open Harness.
 
 That keeps `make sandbox` non-interactive. User setup remains explicit
 inside the running sandbox.

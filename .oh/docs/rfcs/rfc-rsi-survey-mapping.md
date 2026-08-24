@@ -17,7 +17,7 @@ The survey's §3.5–3.6 describes what Open Harness is. That section describes 
 | Survey axis | Open Harness | Consequence |
 |---|---|---|
 | **What improves** | Deployment-time harness and skill evolution (§3.5–3.6). The weights stay frozen. | §4 (training-time self-iteration) and §7's takeoff debate stay **out of scope**. Do not import their machinery. Do not import their alarm. |
-| **Loop closure** | Human-on-the-loop. `/approve` gates the plan. The human gates the merge. `/autopilot` never auto-merges. `.oh/skills/wiki` admits only orchestrator writes. | The survey finds reliability in this regime. This posture is a **deliberate design decision, not a missing feature**. |
+| **Loop closure** | Human-on-the-loop. The operator's approval of `prd.md` gates the plan. The human gates the merge. `/autopilot` never auto-merges. `.oh/skills/wiki` admits only orchestrator writes. | The survey finds reliability in this regime. This posture is a **deliberate design decision, not a missing feature**. |
 
 The survey's §3.6 assessment applies verbatim: persistence changes which faults survive. An inference-time mistake evaporates. A corrupted skill in a shipped library propagates.
 
@@ -29,7 +29,7 @@ The survey's §3.6 assessment applies verbatim: persistence changes which faults
 |---|---|---|
 | **1 — formal** | Sound by construction | None. `shellcheck` and `pnpm -r type-check` are the closest, and neither one is sound. |
 | **2 — execution** | Reliable, incomplete, eventually gamed | `.oh/evals/probes/*.sh` (105 deterministic three-state oracles, run in CI by `ci-harness.yml` and `release.yml`), `/ci-status`, `.oh/cli` unit suites. |
-| **3 — learned judge** | Bounded by the judge's competence; itself an optimization target | `/critique`'s two critics, `/approve`, `/audit implementation`, `/audit pr`, `/benchmark`, and the rubric scoring behind `.oh/evals/capability/RESULTS.md`. |
+| **3 — learned judge** | Bounded by the judge's competence; itself an optimization target | `/audit implementation`, `/audit pr`, `/benchmark`, and the rubric scoring behind `.oh/evals/capability/RESULTS.md`. |
 | **4 — intrinsic** | Cheapest, most gameable | `STATUS: COMPLETE` in `progress.txt` — the terminal interface for **all three** build executors (`ralph`, `firstmate`, `delegate-advisor`) — plus every self-reported count in `.oh/memory/<date>/log.md`. |
 
 Two readings follow the table. Each reading changes what a reviewer trusts.
@@ -49,11 +49,11 @@ Each finding states a survey result, the in-repo exhibit, and what the exhibit p
 
 **What the exhibit proves:** the harness reproduces SkillsBench inside its own instrument. `/benchmark` already encodes the correct verdict — *machinery added with no benchmark movement is NOT-BENEFICIAL by definition* — and the ceiling has not moved. The survey turns a suspected local problem into an expected field-wide one. That reframing changes the response. The response is not to score harder. The response is to **measure authorship provenance**. Nothing on disk separates a harness-authored skill from a human-authored skill, so no one can test the 16.2-point gap here.
 
-### F2 — Mirror Loop predicts `plan ⇄ critique` decay
+### F2 — Mirror Loop predicted `plan ⇄ critique` decay (retired)
 
 **Survey (§5.2):** ten rounds of ungrounded self-critique lose 55% of informational change. **One** grounding step at round three restores forward movement.
 
-**Exhibit:** `/spec plan ⇄ /spec critique` runs two critics that share weights with the planner. Those critics read only local artifacts: the `.oh/tasks/<slug>/` files that exist before any GitHub state, any probe run, and any build. The loop places rung 3 in judgement over rung 3, and no rule bounds the round count. In the `build ⇄ audit` loop, `/eval` and CI execute and return a rung-2 signal. That loop is the healthy contrast.
+**Exhibit (historical):** `/spec plan ⇄ /spec critique` ran two critics that shared weights with the planner. Those critics read only local artifacts: the `.oh/tasks/<slug>/` files that exist before any GitHub state, any probe run, and any build. The loop placed rung 3 in judgement over rung 3, and no rule bounded the round count. **That loop was removed** (`AGENTS.md § The Workflow`): the operator's approval of `prd.md` is now the commitment gate. In the `build ⇄ audit` loop, `/eval` and CI execute and return a rung-2 signal. That loop is the surviving healthy contrast.
 
 **What the exhibit proves:** `AGENTS.md § The Workflow` calls the two adversarial loops the same mechanism. The two loops are not the same mechanism. One loop reads a grounded signal and one loop does not, and the survey supplies the measurement that separates them.
 

@@ -6,10 +6,10 @@
 > The dispatcher passes the argument string after `execute` to this procedure as
 > `$ARGUMENTS`. Authority: `AGENTS.md § The Workflow`.
 
-The **execute** node of the `spec-*` family (`AGENTS.md § The Workflow`). Pointed at an
-**APPROVED** `.oh/tasks/<slug>/` folder (cleared by `/spec critique`), it drives the build to
-a ready-for-review PR and stops at the human merge gate. It contains the second adversarial
-loop — `build ⇄ audit` — mirroring the `spec-plan ⇄ spec-critique` loop that vetted the plan.
+The **execute** node of the `spec-*` family (`AGENTS.md § The Workflow`). Pointed at a
+planned `.oh/tasks/<slug>/` folder whose `prd.md` the operator has approved, it drives the
+build to a ready-for-review PR and stops at the human merge gate. It contains the workflow's
+one adversarial loop — `build ⇄ audit`.
 
 **Core principle: compose the protected build machinery; own only the spec-* tail.** The
 heavy build/finalize mechanics already live in `/ship-spec` Stages 8–13 (worktree Advisor
@@ -20,7 +20,7 @@ literals (and its protected probes stay green). What `execute` adds is the
 folder-pointed `build ⇄ audit` loop and the post-PASS tail named in `AGENTS.md § The
 Workflow`: `spec-retro → improve → groom`.
 
-`/ship-spec` is still the all-in-one composer that runs `plan → critique → execute` in one
+`/ship-spec` is still the all-in-one composer that runs `plan → execute` in one
 invocation (what `/autopilot` drives). `execute` is the decomposed execute stage,
 runnable on its own folder or fanned out at scale via `/delegate`.
 
@@ -36,10 +36,11 @@ runnable on its own folder or fanned out at scale via `/delegate`.
 | `--remote <name>` | Git remote (resolved from `--repo` if absent). |
 | `--base <branch>` | PR base + branch start point (default `development`). |
 
-Precondition: `/spec critique <slug>` returned `SPEC-APPROVED`. If `.oh/tasks/<slug>/` is not
-APPROVED (no `critique.md`, or its verdict is `DENIED`), refuse and route back to
-`/spec critique` — do not build an ungated spec (`AGENTS.md § The Workflow`
-critic-before-commitment invariant).
+Precondition: `.oh/tasks/<slug>/` carries the four-file contract (`prd.md`, `prd.json`,
+`prompt.md`, `progress.txt`) produced by `/spec plan`, and its `prd.md` has been approved.
+**Approving the plan is the commitment gate** — there is no separate critique or approve
+node (`AGENTS.md § The Workflow`). If the folder is incomplete, refuse and route back to
+`/spec plan`.
 
 ---
 
@@ -47,7 +48,7 @@ critic-before-commitment invariant).
 
 ### 1. Commitment + build (`/ship-spec` Stages 5, 8–11 by reference)
 
-Now that the spec is APPROVED, GitHub-side state may be created: **locate** the issue
+The approved plan is the commitment, so GitHub-side state may now be created: **locate** the issue
 (`prd.json`'s `branchName` already embeds `<N>` — in the canonical flow that is the issue
 `/autopilot` selected and `/spec plan` consumed; open one only in a standalone run that has
 no issue yet), create the branch `<prefix>/<N>-<slug>`, commit the scaffold, push, and open
@@ -145,7 +146,7 @@ The composed skills each log their own entries. `execute` adds one roll-up to
 
 ## Pipeline position
 
-Within `AGENTS.md § The Workflow` (`select → spec-plan ⇄ spec-critique → spec-execute →
+Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
 merge → reset|clean`), `execute` is the **execute** node — it ends at the human merge
 gate (next step: the human merges; the runner then resets/cleans). When a gate blocks the
 undraft, the next step is to resume the build or fix the named gate. Print one of these bare

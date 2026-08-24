@@ -20,7 +20,6 @@ Pick **one** user story, implement it, commit, mark it `passes: true`, and appen
 1. **Read context** — in this order:
    - `.oh/tasks/<slug>/prd.json` — find the lowest-`priority` story where `passes: false`. That is your story for this iteration.
    - `.oh/tasks/<slug>/progress.txt` — read the "Codebase Patterns" section at the top (if any) and the most recent few iterations to see what's been done.
-   - `.oh/tasks/<slug>/critique.md` — if present, the critic findings the stories must satisfy.
    - If `.oh/tasks/<slug>/prd.md` contains `## Wiki Alignment`, read it before choosing the story. When `Impact: REQUIRED`, the relevant story must keep wiki updates aligned with the PRD and the recorded DeepWiki comparison.
    - `.oh/skills/wiki/references/schema.md` when your story touches `.oh/skills/wiki/corpus/` or the PRD's Wiki Alignment section says `Impact: REQUIRED`.
    - `.claude/skills/git/SKILL.md` for branch + commit conventions.

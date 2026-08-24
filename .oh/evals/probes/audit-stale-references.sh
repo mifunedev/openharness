@@ -15,7 +15,7 @@ while IFS= read -r hit; do
   path=${hit%%:*}; rest=${hit#*:}; line=${rest#*:}
   case "$path:$line" in
     .oh/evals/probes/audit-dispatcher-contract.sh:*|.oh/evals/probes/audit-stale-references.sh:*) continue;;
-    .oh/tasks/audit-consolidation/prd.md:*|.oh/tasks/audit-consolidation/critique.md:*|.oh/tasks/audit-consolidation/prompt.md:*|.oh/tasks/audit-consolidation/reference-inventory.md:*) continue;;
+    .oh/tasks/audit-consolidation/prd.md:*|.oh/tasks/audit-consolidation/prompt.md:*|.oh/tasks/audit-consolidation/reference-inventory.md:*) continue;;
     .oh/skills.lock:*Migrated*provenance*) continue;;
     .oh/scripts/link-providers.sh:*context-audit-runner.sh*|.oh/skills/audit/references/context.md:*context-audit-*|.oh/skills/audit/scripts/context-audit-runner.sh:*context-audit-*) continue;;
     .oh/skills/audit/references/pr.md:*pr-audit-proof*|.oh/skills/audit/references/prs.md:*pr-audit-proof*) continue;;

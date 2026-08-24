@@ -15,7 +15,7 @@ scientific session-closing pass — falsifiable hypotheses, evidence for *and* a
 verdict + confidence, and a propose-then-confirm promotion into `.oh/memory/MEMORY.md` /
 `.oh/context/IDENTITY.md`. `retro` is the execution-side application of it: point `/retro`
 at the just-built `.oh/tasks/<slug>/` run so the reflection is anchored to that unit's
-artifacts (`prd.md`, `progress.txt`, `prd.json`, `critique.md`, the `/audit implementation` evidence)
+artifacts (`prd.md`, `progress.txt`, `prd.json`, the `/audit implementation` evidence)
 rather than the whole ambient session.
 
 It is **not** a second retro engine. The propose-then-confirm gate, the six-subsystem lens,
@@ -40,7 +40,7 @@ and fall back to a plain `/retro` on the session, or skip with a logged note.
 
 Invoke `/retro` with the execution scope made explicit — gather signals primarily from
 this task's artifacts: what the `prd.md` intended vs. what `progress.txt` shows shipped,
-which `critique.md` findings materialized, what the `build ⇄ audit` loop revealed (how many
+what the `build ⇄ audit` loop revealed (how many
 FAIL→build cycles, and why), and any coupling/constraint the run surfaced. Then let `/retro`
 do its scientific pass: form falsifiable hypotheses, test each for and against, assign
 verdict + confidence, and present supported `medium`+ lessons for confirmation before any
@@ -80,7 +80,7 @@ did not, add one line to `.oh/memory/<UTC-date>/log.md` per `.oh/skills/retro/re
 
 ## Pipeline position
 
-Within `AGENTS.md § The Workflow` (`select → spec-plan ⇄ spec-critique → spec-execute →
+Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
 merge → reset|clean`), `retro` runs inside the `spec-execute` tail (`build ⇄ audit →
 spec-retro → improve → groom`); the next step is `improve` (compound · compress ·
 benchmark). Print this bare token as the final line:

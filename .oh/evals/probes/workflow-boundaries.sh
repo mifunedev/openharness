@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # tier: A
 # source: conversation 2026-06-19 (workflow consolidation, issue #259)
-# desc: AGENTS.md § The Workflow names the canonical operative path (in order), the single runner, and the /ship-spec-today caveat — guards the consolidated workflow from silent re-drift
+# desc: AGENTS.md § The Workflow names the canonical operative path (in order), the single runner, and the /ship-spec-today caveat — guards the consolidated workflow from silent re-drift.
+# note: the critique/approve node was removed 2026-08-23 (spec-simplification US-001); the path literal below is the post-removal one and must not regain a critique stage.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -28,7 +29,8 @@ fi
 # encodes phase ORDER, so a single fixed-string match guards both presence and ordering.
 missing=()
 grep -qF '<!-- workflow-canonical -->' <<<"$section" || missing+=("the <!-- workflow-canonical --> anchor")
-grep -qF 'select → spec-plan ⇄ spec-critique → spec-execute → merge → reset|clean' <<<"$section" || missing+=("the in-order operative-path string")
+grep -qF 'select → spec-plan → spec-execute → merge → reset|clean' <<<"$section" || missing+=("the in-order operative-path string")
+if grep -qF 'spec-critique' <<<"$section"; then missing+=("no revived spec-critique node (the gate was removed in US-001)"); fi
 grep -qF 'designated sole runner' <<<"$section" || missing+=("the single-runner statement")
 grep -qF '/ship-spec' <<<"$section" || missing+=("the /ship-spec current-monolith caveat")
 

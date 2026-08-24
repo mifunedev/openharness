@@ -49,7 +49,6 @@ Read the task artifacts first:
 1. `.oh/tasks/<slug>/prd.md` — intended goals, non-goals, and acceptance criteria.
 2. `.oh/tasks/<slug>/progress.txt` — implementation chronology, files changed, commits, and Codebase Patterns.
 3. `.oh/tasks/<slug>/prd.json` — story pass state and branch name when present.
-4. `.oh/tasks/<slug>/critique.md` — critic findings and mitigations when present.
 5. Eval/audit/verification evidence when present: `.oh/evals/RESULTS.md`, targeted probe output in `progress.txt`, `/audit implementation` or `/audit pr` notes, CI status, and commit/PR evidence.
 6. The relevant wiki entry (`.oh/skills/wiki/corpus/<wiki-slug>.md`) before drafting the teaching response.
 

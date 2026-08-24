@@ -28,3 +28,52 @@ rather than trusting them if a story depends on an exact figure.
 ## Story log
 
 <!-- Append one entry per story: what you did, files changed, learnings. -->
+
+## US-001 — 2026-08-23 (UTC)
+
+**Title**: Remove the critique/approve gate
+**Files changed**: AGENTS.md, .oh/templates/AGENTS.md, .claude/protected-paths.txt,
+.oh/skills/spec/{SKILL.md,references/{plan,execute,retro}.md}, .oh/skills/spec/references/critique.md (deleted),
+.oh/skills/critique/ (deleted), .oh/skills/approve/ (deleted),
+.oh/skills/ship-spec/{SKILL.md,templates/prompt.md}, .oh/skills/teach/SKILL.md,
+.oh/evals/probes/{spec-family-contract,workflow-boundaries,audit-dispatcher-contract,audit-stale-references}.sh,
+.oh/evals/capability/tasks/{CB-001-ship-harness-change,CB-002-walk-the-workflow}.md,
+.oh/docs/rfcs/rfc-rsi-survey-mapping.md, .oh/docs/harnesses/{grok-build,hermes}.md,
+.oh/scripts/registry-portability.md, .oh/evals/RESULTS.md
+**Commit**: a1f64de2
+**Result**: PASS
+
+### What I did
+Removed the critique/approve node from the canonical path in all three AGENTS.md surfaces
+(prose, mermaid, seam table), dropped the `critique` subcommand from the `/spec` dispatcher,
+deleted `references/critique.md` plus the `/critique` and `/approve` skills, and removed
+`/ship-spec` Stages 3-4 along with their halt-table and idempotency rows. `/spec execute`'s
+APPROVED precondition became a four-file-contract + approved-`prd.md` precondition.
+Three probes were rewritten rather than deleted to green, each verified by rejection.
+
+### Learnings for future iterations
+- **Four probes went red, not three.** `audit-dispatcher-contract.sh:26` carried
+  `critique` and `approve` in its "retained instrument" list — nothing in the PRD named it.
+  Run the full suite BEFORE assuming the PRD's probe inventory is complete.
+- `workflow-boundaries.sh` runs under `set -euo pipefail`. A bare
+  `grep -q X && missing+=(...)` negative assertion is legal there (bash exempts non-final
+  commands in an `&&` list) but reads as a bug; write it as an explicit `if`.
+- The `/critique` grep pattern also matches the *path* `.oh/tasks/<slug>/critique.md`, so a
+  no-residue sweep must cover every doc that names that artifact — `/teach`, the ralph
+  prompt template, and the `/ship-spec` handoff/compact text all did.
+- `.claude/protected-paths.txt:71` listed `references/critique.md`. A protected-path entry
+  must be removed in the same change that deletes the file, or the path guard fires later
+  with no context.
+- **Stated deviation from AC-7 (grep returns hits only in `CHANGELOG.md`).** Three classes
+  of hit remain and were left deliberately:
+  1. `.oh/tasks/**` completed-run artifacts (14 tracked `critique.md` files plus the
+     `prompt.md`/`prd.md` of past runs). These are the historical record of what past
+     builds produced — the same class as `CHANGELOG.md`, not a route an agent can follow.
+  2. `.oh/evals/datasets/autopilot-runs/DS-010-*/oracle/changed-files.txt` — a frozen
+     oracle of one historical run. Editing it falsifies the dataset.
+  3. The rewritten probes' own negative assertions and the prose that states the gate is
+     gone (`ship-spec/SKILL.md:41`). These exist to keep it gone.
+  Two genuine false positives WERE fixed: `fetch/review/approve gate` in the grok-build and
+  hermes installer docs (unrelated third-party prose) was reworded.
+
+---

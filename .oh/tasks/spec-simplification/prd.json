@@ -19,8 +19,8 @@
         "`bash .oh/skills/eval/run.sh` shows no green-to-red regression other than probes this story rewrites"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": "Critique's redesign is explicitly a separate ticket. This story removes it from the path; it does not attempt to fix it."
+      "passes": true,
+      "notes": "2026-08-23 (a1f64de2): critique/approve gate removed from AGENTS.md, /spec, /ship-spec Stages 3-4; three probes rewritten and verified by rejection; 106 probes 102 PASS 4 SKIPPED 0 REGRESSION. Deviation on the grep AC: completed-run records under .oh/tasks/**, the frozen DS-010 oracle, and the probes' own negative assertions still contain the token — see progress.txt."
     },
     {
       "id": "US-002",

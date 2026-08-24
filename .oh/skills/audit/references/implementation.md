@@ -98,7 +98,7 @@ AUDIT_RUN_ID="$AUDIT_RUN_ID" AUDIT_ROOT="$AUDIT_ROOT" AUDIT_LOG_ROOT="$AUDIT_LOG
 
 Block only on a **new** `green→red` regression or a non-zero runner exit. A
 pre-existing red with an unchanged delta is non-gating but MUST be disclosed in
-the verdict. (Mirrors `/ship-spec` Stage 11 and `.oh/evals/probes/eval-gate.sh`.)
+the verdict. (Mirrors `/spec execute`'s `/eval` gate and `.oh/evals/probes/eval-gate.sh`.)
 
 ### Gate 3 — Promotable / CI state
 

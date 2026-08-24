@@ -87,7 +87,7 @@ Sections must appear in this order: H1, optional `## Relevant Source Files`, `##
 Use the public DeepWiki for `mifunedev/openharness` as the model for new or substantially revised architecture pages: source files first, then concise synthesis, then component relationships, then navigation. A page meets the standard when:
 
 - **Relevant source files are explicit**: list the files that make the page true before the summary, not as vague bibliography. Prefer local repo paths; cite external URLs only when the page is about an external artifact.
-- **Claims are line-cited**: repository behavior, stage ordering, lifecycle claims, and invariants cite source paths with line numbers such as `AGENTS.md:111` or `.claude/skills/ship-spec/SKILL.md:20`.
+- **Claims are line-cited**: repository behavior, stage ordering, lifecycle claims, and invariants cite source paths with line numbers such as `AGENTS.md:111` or `.claude/skills/spec/references/execute.md:20`.
 - **Relationships are visible**: when the page explains a pipeline, runtime, or architecture, include a compact Mermaid diagram or table that shows ownership, ordering, and handoff boundaries.
 - **Synthesis stays separate from evidence**: use prose to explain what the cited files imply, but do not let unsupported interpretation look like a source fact.
 - **Navigation closes the loop**: `## See Also` points to adjacent wiki entries using `[[slug]]` links, mirroring DeepWiki's page-to-page navigation.

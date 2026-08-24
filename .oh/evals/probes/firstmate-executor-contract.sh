@@ -3,7 +3,7 @@
 # source: .oh/tasks/spec-simplification/ (issue #816, US-002) — one build executor, no toggle
 # desc: .oh/scripts/firstmate.sh exists and is executable; the whole-line `STATUS: COMPLETE`
 #       sentinel survives on the executor surface; NO executor toggle exists anywhere
-#       (--executor / SHIP_SPEC_EXECUTOR / AUTOPILOT_EXECUTOR are removed, not reduced to a
+#       (--executor / SPEC_EXECUTOR / AUTOPILOT_EXECUTOR are removed, not reduced to a
 #       single accepted value); the session-prompt template's ordered anchor keywords keep the
 #       advisor prompt pack's relative step order while .oh/prompts/ stays zero-diff; and
 #       CLAUDE.md is still a symlink to AGENTS.md.
@@ -22,7 +22,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 FIRSTMATE="$ROOT/.oh/scripts/firstmate.sh"
 RUNNER="$ROOT/.oh/scripts/lib/session-runner.sh"
 TEMPLATE="$ROOT/.oh/skills/firstmate/templates/session-prompt.md"
-SHIP="$ROOT/.claude/skills/ship-spec/SKILL.md"
+SPEC="$ROOT/.claude/skills/spec/references/execute.md"
 AUTOPILOT="$ROOT/.claude/skills/autopilot/SKILL.md"
 
 # No SKIPPED path: this probe ships in the same commit as the executor it pins, so a missing
@@ -60,18 +60,18 @@ fi
 # comments are excluded so a file may DOCUMENT the removal without failing this check.
 # `--executor` is matched with a leading `--` guard so words like "executor" in prose
 # stay legal; the point is that no *flag* or env var selects a build arm.
-for pair in "ship-spec:$SHIP" "autopilot:$AUTOPILOT"; do
+for pair in "spec-execute:$SPEC" "autopilot:$AUTOPILOT"; do
   name="${pair%%:*}"
   file="${pair#*:}"
   if [ ! -f "$file" ]; then
-    missing+=("$name SKILL.md absent — cannot verify the toggle is gone")
+    missing+=("$name procedure absent — cannot verify the toggle is gone")
     continue
   fi
   code="$(grep -v '^[[:space:]]*#' "$file")"
   printf '%s\n' "$code" | grep -Fq -- '--executor=' \
     && missing+=("$name still carries an --executor= flag arm (the toggle must be removed, not reduced to one value)")
-  printf '%s\n' "$code" | grep -Fq 'SHIP_SPEC_EXECUTOR' \
-    && missing+=("$name still references SHIP_SPEC_EXECUTOR")
+  printf '%s\n' "$code" | grep -Fq 'SPEC_EXECUTOR' \
+    && missing+=("$name still references a SPEC_EXECUTOR toggle")
   printf '%s\n' "$code" | grep -Fq 'AUTOPILOT_EXECUTOR' \
     && missing+=("$name still references AUTOPILOT_EXECUTOR")
 done

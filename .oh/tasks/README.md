@@ -1,7 +1,7 @@
 # `.oh/tasks/`
 
 Spec task workdirs. Each `<slug>/` subfolder is one autonomous build
-session's four-file contract, created by `/spec plan` or `/ship-spec` (the
+session's four-file contract, created by `/spec plan` (the
 `/ralph` skill produces the `prd.json` inside it) and built by
 `.oh/scripts/firstmate.sh <slug>`.
 

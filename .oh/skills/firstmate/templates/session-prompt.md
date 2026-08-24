@@ -58,7 +58,7 @@ scope, therefore not asserted):
     critics — plan-side; both already ran before this session launches.
   - implement.yml:26 / pr.yml:26 `/goal Advisor orchestrates delegated
     workflow` — that IS the launch of this session, not a step inside it.
-  - pr.yml:27 `/audit pr` — owned by `/ship-spec` Stage 12, after this
+  - pr.yml:27 `/audit pr` — owned by `/spec execute` step 9, after this
     session's terminal handoff.
 
 ADDITIONS BEYOND THE PACK (explicitly OUT of the anchor list and OUT of the
@@ -185,7 +185,7 @@ The contract is **dual-channel**, and both channels are required:
 Never emit that bare standalone line for any other reason; to refer to it in
 prose, call it "the completion marker".
 
-After the marker, this session's job is done. `/ship-spec` owns the tail:
+After the marker, this session's job is done. `/spec execute` owns the tail:
 `/eval`, `/audit pr`, recording the reviewer proof in
 `.oh/tasks/<slug>/evidence.md` per
 `.oh/skills/audit/references/reviewer-evidence-doc.md`, `/retro`, and finally

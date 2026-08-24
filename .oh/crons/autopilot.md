@@ -20,9 +20,9 @@ session **in an isolated git worktree** (`$CRON_WORKTREE`, set by the cron
 runtime because this cron declares `worktree: true`). The shared root checkout is
 never touched, so the run can never dirty it or be skipped for overlap. Your job
 is to select the next harness-infra improvement, construct the PM/advisor plan,
-then run `/ship-spec --issue`, which builds and finalizes the item end-to-end
-(compacts, worktree Advisor, the firstmate build session, `/eval`, `/audit pr` undraft)
-into a ready-for-review PR. Autopilot defers the build to `/ship-spec` rather than
+then run `/spec plan` + `/spec execute`, which build and finalize the item end-to-end
+(worktree Advisor, the firstmate build session, `/eval`, `/audit pr` undraft)
+into a ready-for-review PR. Autopilot defers the build to `/spec` rather than
 re-running implement/eval/finalize itself.
 
 Invoke the `/autopilot` skill. Reminders:
@@ -34,8 +34,8 @@ Invoke the `/autopilot` skill. Reminders:
   top-ranked finding and build it** this same run. GitHub issues are the queue.
 - **Every PR states its selection rationale** in the description — why this item
   was chosen this session (queue position, or the research finding + ranking).
-- **There is one build path and autopilot defers to it**: use `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, firstmate build session, /eval, /audit pr undraft) into a ready-for-review PR`, then let `/ship-spec` own the build — it compacts, runs the worktree Advisor + `.oh/scripts/firstmate.sh "$SLUG"`, gates on `/eval`, and undrafts via `/audit pr`. There is no executor toggle and no inline fallback.
-- **The `/eval` gate runs inside `/ship-spec`** before it marks the PR ready; a
+- **There is one build path and autopilot defers to it**: use `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /spec plan + /spec execute to build it end-to-end (worktree Advisor, firstmate build session, /eval, /audit pr undraft) into a ready-for-review PR`, then let `/spec execute` own the build — it opens the branch and draft PR, runs the worktree Advisor + `.oh/scripts/firstmate.sh "$SLUG"`, gates on `/eval` inside its `build ⇄ audit` loop, and undrafts via `/audit pr`. There is no executor toggle and no inline fallback.
+- **The `/eval` gate runs inside `/spec execute`** before it marks the PR ready; a
   new green→red probe regression keeps the PR draft.
 - **Caps**: at most 6 open `autopilot` PRs created per UTC day AND 10 total open
   at any time. A close/merge frees a slot. **Never auto-merge.** These caps are

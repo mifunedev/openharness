@@ -25,7 +25,7 @@ allowed-tools: Bash, Read
 > |---|---|---|
 > | What | This skill: the build executor | An operator-authored role definition |
 > | Where | `.oh/scripts/firstmate.sh`, `.oh/scripts/lib/session-runner.sh`, `.oh/skills/firstmate/` | [`.oh/context/rules/first-mate.md`](../../context/rules/first-mate.md) |
-> | Reached by | `/ship-spec` Stage 10, which every `/autopilot` run defers to | `.oh/prompts/advisor/*` (`plan.yml`, `implement.yml`, `pr.yml`) reference it |
+> | Reached by | `/spec execute`, which every `/autopilot` run defers to | `.oh/prompts/advisor/*` (`plan.yml`, `implement.yml`, `pr.yml`) reference it |
 > | Identity | a *session*: `firstmate-<slug>` | a *role*: adaptive decomposition, routing, supervision, verification, synthesis |
 >
 > The executor's session prompt is a **derivative of that charter's prompt pack**
@@ -38,8 +38,8 @@ allowed-tools: Bash, Read
 ## The executor contract
 
 `firstmate` is **the** build shape. There is no executor toggle and no
-alternative arm: every build — `/spec execute`, `/ship-spec` Stage 10, and every
-`/autopilot` run that defers to it — reaches this one path.
+alternative arm: every build — `/spec execute`, and every `/autopilot` run that
+defers to it — reaches this one path.
 
 | | the build executor |
 |---|---|
@@ -330,5 +330,5 @@ signal inner `/delegate` calls key off to avoid selecting the herdr runner —
 - [`.oh/skills/t3/references/sandbox-processes.md`](../t3/references/sandbox-processes.md)
   — process-management norm: managed/headless services stay tmux; agentic build
   sessions use this ladder
-- `/ship-spec` Stage 10 — the one build path this executor serves
+- `/spec execute` — the one build path this executor serves
 - `/herdr` — driving the herdr CLI itself

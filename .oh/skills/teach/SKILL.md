@@ -19,14 +19,14 @@ It is **not** an implementation, audit, retro, or merge gate. `/teach` does not 
 
 ## When to use
 
-- `/teach <task-slug>` after a Ralph/ship-spec task reaches implementation completion and audit/eval evidence is available.
+- `/teach <task-slug>` after a `/spec execute` build reaches implementation completion and audit/eval evidence is available.
 - `/teach --wiki <slug>` when the relevant knowledge model is known and should be checked before teaching.
 - "teach me this change" or "explain what shipped" after a non-trivial harness change.
 - Post-implementation operator communication: converting PR artifacts into a concise mental model, consequences, caveats, and checks.
 
 ## When NOT to use
 
-- **Before implementation is complete.** Use `/ship-spec` or `.oh/scripts/firstmate.sh` to finish the task first.
+- **Before implementation is complete.** Use `/spec execute` or `.oh/scripts/firstmate.sh` to finish the task first.
 - **To decide promotability.** Use `/audit implementation <slug>` for one implementation or `/audit pr <N>` for one PR.
 - **To capture session lessons.** Use `/retro` for falsifiable hypotheses and memory promotion.
 - **To create a new research wiki entry from an external source.** Use `/wiki ingest` for source capture; `/teach` may revise an existing task-relevant entry or propose edits.
@@ -60,7 +60,7 @@ Before teaching, decide whether the existing wiki model is still accurate:
 
 - **No wiki entry exists** — propose a concise wiki entry title/slug and the evidence it should cite. Do not teach as if the wiki already contains it.
 - **Wiki entry exists and remains accurate** — note `Wiki action: no change` with one sentence explaining why.
-- **Wiki entry exists but the implementation changed or finalized the provisional model created during `/ship-spec`** — revise the wiki first when the change is small, source-backed by the task artifacts, and safe for the orchestrator to write. Otherwise propose a concrete patch or bullet list of revisions before teaching.
+- **Wiki entry exists but the implementation changed or finalized the provisional model created during `/spec plan`** — revise the wiki first when the change is small, source-backed by the task artifacts, and safe for the orchestrator to write. Otherwise propose a concrete patch or bullet list of revisions before teaching.
 
 The wiki update/proposal must happen before the final teaching output. The operator should learn from the corrected model, not from stale PR archaeology.
 

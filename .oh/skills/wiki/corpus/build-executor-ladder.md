@@ -1,7 +1,7 @@
 ---
 title: "Build Executor Ladder"
 slug: build-executor-ladder
-tags: [build-loop, executor, firstmate, herdr, tmux, runner-ladder, ship-spec, autopilot]
+tags: [build-loop, executor, firstmate, herdr, tmux, runner-ladder, spec-execute, autopilot]
 created: 2026-08-12
 updated: 2026-08-23
 sources:
@@ -15,7 +15,7 @@ confidence: provisional
 ## Relevant Source Files
 - `.oh/scripts/firstmate.sh:1` — the build-executor entrypoint: contract validation, sentinel short-circuit, atomic launch-claim lock, prompt render, sentinel watch.
 - `.oh/scripts/lib/session-runner.sh:1` — the runner ladder itself: detection gates, session budget, liveness oracle, teardown.
-- `.claude/skills/ship-spec/SKILL.md:58` — Stage 1's statement that there is no executor argument; Stage 10 is the build seam.
+- `.claude/skills/spec/references/execute.md:70` — the statement that there is no executor argument; step 4 is the build seam.
 - `.oh/skills/t3/references/sandbox-processes.md:13` — the process-management norm the ladder was *added* to.
 - `.oh/skills/firstmate/SKILL.md:1` — the operator-facing executor contract, watch/recovery matrices, per-mode teardown procedure.
 
@@ -25,11 +25,11 @@ Open Harness builds a planned `.oh/tasks/<slug>/` folder along **one variable ax
 > **Name disambiguation.** `firstmate` (lowercase, this page) is the **build executor** — `.oh/scripts/firstmate.sh`, the `firstmate-<slug>` session. **First Mate** is the **supervisory role charter** at `.oh/context/rules/first-mate.md`, consumed by `.oh/prompts/advisor/*`. The overload is intentional: the executor runs the role's workflow, because its session prompt derives from that pack's step order (`.oh/skills/firstmate/SKILL.md:21`). Never leave which one is meant implicit.
 
 ## Detail
-**The executor.** There is exactly one, reached by every build path — `/spec execute`, `/ship-spec` Stage 10, and every `/autopilot` run, which defers its whole build to `/ship-spec`. It runs **ONE long-lived session over the whole `prd.json` task graph**, with context hygiene supplied by a mandated `/compact` at every story boundary rather than by process death.
+**The executor.** There is exactly one, reached by every build path — `/spec execute`, and every `/autopilot` run, which defers its whole build to it. It runs **ONE long-lived session over the whole `prd.json` task graph**, with context hygiene supplied by a mandated `/compact` at every story boundary rather than by process death.
 
 **The toggles are gone (2026-08-23, spec-simplification US-002).** Until then three executor arms coexisted — a 50-fresh-process loop as the default, a `/delegate` worker fan-out, and this session as an opt-in third — selected by `--executor` / `SHIP_SPEC_EXECUTOR` / `AUTOPILOT_EXECUTOR`. All three toggles and both other arms were **removed rather than reduced to a single accepted value**, so a reader of any build doc meets one path and no arm-selection question. The stated cost: removing every alternative removes the fallback, so **recovery from a misbehaving ladder or child session is fix-forward only** — leave the PR draft, keep the resumable `.oh/tasks/<slug>/` state, fix the executor.
 
-**The invariant interface.** The build terminates on the whole line `STATUS: COMPLETE` in `.oh/tasks/<slug>/progress.txt`, dual-channelled with the same line as the session's sole final output line. `firstmate.sh` short-circuits to exit 0 when that line is already present, and `/ship-spec`, `/autopilot`, and `/spec execute` all reconcile that one outcome.
+**The invariant interface.** The build terminates on the whole line `STATUS: COMPLETE` in `.oh/tasks/<slug>/progress.txt`, dual-channelled with the same line as the session's sole final output line. `firstmate.sh` short-circuits to exit 0 when that line is already present, and `/spec execute` and `/autopilot` both reconcile that one outcome.
 
 **The runner ladder.** `runner_detect` (`.oh/scripts/lib/session-runner.sh`) resolves the host top rung first. herdr is eligible only under four conjuncts: the binary exists; `herdr status` reports both literals `status: running` **and** `compatible: yes`; the caller is not itself inside a herdr pane (`HERDR_ENV` — the zeroth check, so detection can never nest); and a short-lived **probe pane's environment fingerprint** (hostname, `/.dockerenv`, worktree resolution) matches the caller's own. Any failure degrades to a tmux `agent-firstmate-<slug>` session, then to foreground, with the reason logged. All three rungs run the same workflow over the same task graph — degrading the runner never changes what is built. **Live-verified** (US-010, 2026-08-12): with herdr masked off `PATH`, `runner_detect` logged `herdr is not installed (command -v herdr failed); degrading to tmux` and the run completed on the tmux rung.
 

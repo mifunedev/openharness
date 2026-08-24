@@ -14,6 +14,8 @@
 - Never run a destructive verification against the live slug. `.oh/scripts/firstmate.sh --kill <this-slug>` stops THIS session (US-002 learned it the hard way). Build a decoy in a temp git root with `RUNNER_TMPDIR` redirected, and assert on that.
 - The probe suite is 107 files after US-002 (+2 new, -1 whose subject was deleted). Baseline after US-002: 103 PASS / 4 SKIPPED / 0 REGRESSION.
 - When a rule MOVES between surfaces, its probe moves with it. Deleting the probe because its old file no longer matches loses the lesson; repoint it at the new owner and assert BOTH the rule there and the deferral where it used to live.
+- `.oh/skills/spec/references/execute.md` is now the single source of build literals and a protected path (`.claude/protected-paths.txt` lists `spec`). `/ship-spec` no longer exists.
+- A probe assertion scoped to a whole FILE can stay green over the defect it guards when the same words appear twice — `gh pr ready` and "only" both live in the Advisor `/goal` prompt AND the finalize section. Scope section-level assertions with `awk '/^### N\./{f=1} f'`.
 
 ## Baseline measurements recorded at plan time (2026-08-23)
 
@@ -140,6 +142,75 @@ new owner, and added two new probes — every one verified by rejection.
      ever comes back. These exist to keep it gone.
   3. `.oh/scripts/__tests__/firstmate.test.ts:407` asserts the entrypoint names no
      alternative arm; the literal is the thing being forbidden.
+
+---
+
+## US-003 — 2026-08-24 04:41 UTC
+
+**Title**: Absorb /ship-spec into /spec execute
+**Files changed**: deleted `.oh/skills/ship-spec/` (whole skill);
+`.oh/skills/spec/{SKILL.md,references/{execute,plan}.md}` (execute.md 157 -> 500 lines),
+`.oh/skills/autopilot/SKILL.md`, `.oh/crons/{autopilot,prompt-miner,README}.md`,
+`.oh/agents/advisor.md`, `.oh/skills/{firstmate,imagine,interview,teach}/…`,
+`.oh/skills/firstmate/templates/session-prompt.md`, `.oh/skills/audit/references/implementation.md`,
+`.oh/skills/prompt-miner/references/pi-parity.md`, `.oh/skills/wiki/{references/schema.md,corpus/*}`,
+`.oh/scripts/{firstmate.sh,cron-runtime.ts}`, `.oh/scripts/__tests__/firstmate.test.ts`,
+renamed `.oh/evals/probes/ship-spec-ready-finalization.sh` -> `spec-ready-finalization.sh`,
+`.oh/evals/probes/{spec-family-contract,workflow-boundaries,autopilot-pi-agent,autopilot-upstream-default,eval-gate,submitted-by-trailers,autopilot-executor-toggle,firstmate-executor-contract}.sh`,
+`.oh/evals/capability/{tasks/CB-001-ship-harness-change.md,tasks/CB-002-walk-the-workflow.md,RESULTS.md}`,
+`.oh/evals/datasets/README.md`, `.oh/docs/{glossary,oh-directory-layout,integrations/pi-autoresearch}.md`,
+`.oh/tasks/README.md`, `.oh/templates/AGENTS.md`, `.oh/skills.lock`,
+`.claude/protected-paths.txt`, `AGENTS.md`, `CHANGELOG.md`, `.oh/evals/RESULTS.md`
+**Commit**: (this commit)
+**Result**: PASS
+
+### What I did
+Transcribed every `/ship-spec` build mechanic into `.oh/skills/spec/references/execute.md` as
+nine top-to-bottom steps, deleted the skill, and repointed all 40-odd consumers. Fixed two
+defects found while transcribing rather than copying them forward. Renamed one probe,
+repointed six more at the mechanics' new home, and strengthened two whose assertions turned
+out to survive their own defect.
+
+### Learnings for future iterations
+- **Absorbing a stage is the moment to fix a known-broken literal in it.** The Advisor tmux
+  launch carried the same `2>&1 | tee <log>` US-002 had just removed from the build child,
+  with the identical consequence (an interactive session whose stdout is a pipe exits after
+  one turn). Transcribing it verbatim would have re-shipped a defect into the only remaining
+  path. It now uses `tmux pipe-pane` after the session exists.
+- **Two probe assertions stayed green over the exact defect they guarded.** Both were
+  file-scoped greps where the searched words appear twice: `gh pr ready` + "only" live in
+  the Advisor prompt AND the finalize section, and `--repo "$SPEC_REPO"` appears on four
+  invocations, so one losing it went unnoticed. Rejection-testing is what caught it — the
+  mutation passed, and the fix was to scope the assertion to the section or the invocation.
+  A probe that "passes on the real tree" says nothing until you feed it the broken tree.
+- **Attribute a rejection to the assertion under test.** One mutation DID reject, but on an
+  earlier check (a raw count) rather than the new path-specific one. Re-running with the
+  count held constant proved the new assertion carries its own weight.
+- **Two of my four first-pass mutations were incomplete, not the probes weak.** `gh pr merge`
+  and the trailer language each appear twice; a `sed` that hit one occurrence left the
+  guarantee standing. Verify the mutation landed before concluding the probe is broken.
+- **US-001 residue surfaced here**: autopilot still carried a `HALT-CRITIC-GATE` status and a
+  "critic gate rejected the spec" branch for a gate deleted two stories earlier, because the
+  string named `/ship-spec` rather than `/critique`. A no-residue grep only finds what you
+  grep for; the second-order references hide behind the *other* name.
+- **Who approves an unattended plan was undefined and is now stated.** With `/ship-spec` gone,
+  `/autopilot` calls `/spec plan` then `/spec execute` — and the operator-approval gate sits
+  between them with no operator at 03:00. Rather than paper over it, the skill now records
+  that the PM-audited plan substitutes, that this is weaker than a human read, and that
+  no-auto-merge is the compensation.
+- **Stated deviation from AC-7** (grep returns hits only in `CHANGELOG.md`). Three classes
+  remain, deliberately, matching the US-001/US-002 precedent:
+  1. `.oh/evals/datasets/**` — frozen trajectory records. DS-001/DS-002 keep the
+     `ship-spec-prs` class in their directory and manifests because a dataset records what a
+     run *actually did*; renaming it would make the record claim a skill that did not exist
+     at capture time. The README's schema now says `spec-execute-prs` for NEW examples and
+     carries a `†` note explaining the legacy spelling.
+  2. Probes' own NEGATIVE assertions — `spec-family-contract.sh:74` and
+     `workflow-boundaries.sh:41` name `/ship-spec` in order to go red if it comes back.
+  3. Historical notes in repointed probes and re-authored capability tasks recording *when*
+     and *why* the absorption happened, so the next reader can date the move.
+- AC-8 verified live: a build launched to `STATUS: COMPLETE` in an isolated temp root with
+  `.oh/skills/ship-spec/` absent from all four provider surfaces.
 
 ---
 

@@ -4,7 +4,7 @@
 #         US-002 (issue #816) when every executor toggle was REMOVED rather than reduced
 #         to a single accepted value
 # desc: /autopilot has NO executor toggle and NO inline fallback. It defers the whole build
-#       to /ship-spec (which itself has one build path, .oh/scripts/firstmate.sh), uses the
+#       to /spec execute (which itself has one build path, .oh/scripts/firstmate.sh), uses the
 #       exact Advisor /goal phrase, runs no inline compact/delegate/eval, renames cron tmux
 #       sessions to autopilot-<branch>, dedupes active work, cleans finalized active markers,
 #       and keeps dry-run research non-mutating.
@@ -14,7 +14,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
 CRON="$ROOT/.oh/crons/autopilot.md"
 AGENTS="$ROOT/AGENTS.md"
-SHIP="$ROOT/.claude/skills/ship-spec/SKILL.md"
+SPEC="$ROOT/.claude/skills/spec/references/execute.md"
 
 if [[ ! -f "$SKILL" ]]; then
   echo "SKIPPED: autopilot skill absent: $SKILL" >&2
@@ -31,14 +31,14 @@ missing=()
 # US-002 removed the toggles instead of narrowing them to one accepted value: a
 # one-value toggle is still a selection surface a reader has to resolve. Full-line
 # comments are excluded so a file may DOCUMENT the removal without failing this check.
-for pair in "autopilot:$SKILL" "cron:$CRON" "ship-spec:$SHIP"; do
+for pair in "autopilot:$SKILL" "cron:$CRON" "spec-execute:$SPEC"; do
   name="${pair%%:*}"
   file="${pair#*:}"
   [[ -f "$file" ]] || continue
   code="$(grep -v '^[[:space:]]*#' "$file")"
   grep -Fq -- '--executor=' <<<"$code" && missing+=("$name still offers an --executor= flag")
   grep -Fq 'AUTOPILOT_EXECUTOR' <<<"$code" && missing+=("$name still references AUTOPILOT_EXECUTOR")
-  grep -Fq 'SHIP_SPEC_EXECUTOR' <<<"$code" && missing+=("$name still references SHIP_SPEC_EXECUTOR")
+  grep -Fq 'SPEC_EXECUTOR' <<<"$code" && missing+=("$name still references a SPEC_EXECUTOR toggle")
 done
 grep -F 'argument-hint:' "$SKILL" | grep -Fq -- '--executor' && missing+=("autopilot argument-hint still advertises an executor toggle")
 
@@ -49,33 +49,34 @@ grep -Fq '.oh/scripts/ralph.sh' "$SKILL" && missing+=("autopilot still launches 
 grep -Fq 'fallback (legacy inline)' "$SKILL" && missing+=("autopilot still documents a legacy inline fallback section")
 grep -Fq 'no inline fallback' "$SKILL" || missing+=("autopilot does not state that there is no inline fallback")
 
-# Required exact Advisor goal phrase (defers the whole build to /ship-spec).
-required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, firstmate build session, /eval, /audit pr undraft) into a ready-for-review PR'
+# Required exact Advisor goal phrase (defers the whole build to /spec execute).
+required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then run /spec plan + /spec execute to build it end-to-end (worktree Advisor, firstmate build session, /eval, /audit pr undraft) into a ready-for-review PR'
 grep -Fq "$required_goal" "$SKILL" || missing+=("exact Advisor /goal phrase in autopilot skill")
 grep -Fq "$required_goal" "$CRON" || missing+=("exact Advisor /goal phrase in cron reminder")
 
-# Default ship-spec mode DEFERS the whole build to /ship-spec — no inline compact/delegate/eval.
-grep -Fq '/ship-spec --issue' "$SKILL" || missing+=("autopilot invokes /ship-spec --issue")
+# Autopilot DEFERS the whole build to /spec — no inline compact/delegate/eval.
+grep -Fq '/spec execute' "$SKILL" || missing+=("autopilot invokes /spec execute")
+grep -Fq '/spec plan' "$SKILL" || missing+=("autopilot invokes /spec plan")
 implement_section="$(awk '/^### 5\. Implement/,/^### 6\./' "$SKILL")"
 [[ -n "$implement_section" ]] || missing+=("§5 Implement section")
 if [[ -n "$implement_section" ]]; then
-  grep -Fq 'defer to `/ship-spec`' <<<"$implement_section" || missing+=("§5 defers to /ship-spec")
+  grep -Fq 'defer to `/spec execute`' <<<"$implement_section" || missing+=("§5 defers to /spec execute")
   grep -Fq 'does **not** run its own' <<<"$implement_section" || missing+=("§5 does not re-run compact/delegate/eval")
-  grep -Fq '/audit pr' <<<"$implement_section" || missing+=("§5 references the ship-spec-owned /audit pr undraft")
+  grep -Fq '/audit pr' <<<"$implement_section" || missing+=("§5 references the execute-owned /audit pr undraft")
   grep -Fq '.oh/scripts/firstmate.sh' <<<"$implement_section" || missing+=("§5 names the one build executor .oh/scripts/firstmate.sh")
   grep -Fq 'FIRSTMATE_TIMEOUT_MS' <<<"$implement_section" || missing+=("§5 states the inherited wall-clock session budget")
-  # ship-spec must own the build BEFORE autopilot reconciles: §4 (/ship-spec) precedes §5.
-  shipspec_line="$(grep -nF '/ship-spec --issue (owns the full build)' "$SKILL" | head -1 | cut -d: -f1 || true)"
+  # /spec must own the build BEFORE autopilot reconciles: §4 (/spec) precedes §5.
+  shipspec_line="$(grep -nF '### 4. /spec — owns the full build' "$SKILL" | head -1 | cut -d: -f1 || true)"
   implement_line="$(grep -nF '### 5. Implement' "$SKILL" | head -1 | cut -d: -f1 || true)"
   if [[ -z "$shipspec_line" || -z "$implement_line" || "$shipspec_line" -ge "$implement_line" ]]; then
-    missing+=("/ship-spec --issue stage precedes the implement reconcile stage")
+    missing+=("the /spec build stage precedes the implement reconcile stage")
   fi
 fi
 
-# /ship-spec is the single source of build mechanics and names the one executor.
-if [[ -f "$SHIP" ]]; then
-  grep -Fq 'There is **no executor argument**' "$SHIP" || missing+=("/ship-spec does not state that there is no executor argument")
-  grep -Fq '.oh/scripts/firstmate.sh' "$SHIP" || missing+=("/ship-spec Stage 10 does not name .oh/scripts/firstmate.sh")
+# /spec execute is the single source of build mechanics and names the one executor.
+if [[ -f "$SPEC" ]]; then
+  grep -Fq 'no executor argument' "$SPEC" || missing+=("/spec execute does not state that there is no executor argument")
+  grep -Fq '.oh/scripts/firstmate.sh' "$SPEC" || missing+=("/spec execute does not name .oh/scripts/firstmate.sh")
 fi
 
 # Session naming and no second Advisor session.
@@ -99,7 +100,7 @@ grep -Fq '[dry-run] dedupe: $DEDUPE_STATE' "$SKILL" || missing+=("dry-run surfac
 grep -Fq '[ -e "$ACTIVE_MARKER" ]' "$SKILL" || missing+=("active marker duplicate guard")
 grep -Fq 'cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER"; }' "$SKILL" || missing+=("active marker cleanup helper")
 grep -Fq 'Clean the active marker on finalized PR paths' "$SKILL" || missing+=("finalized PR paths clean active marker")
-# Autopilot no longer runs /eval itself — it reconciles ship-spec's outcome — so the
+# Autopilot no longer runs /eval itself — it reconciles execute's outcome — so the
 # eval-red marker cleanup now lives in the shared finalized-paths rule. Assert that rule
 # actually enumerates PR-DRAFT-EVAL-RED, or "finalized paths clean the marker" is vacuous.
 grep -F 'Clean the active marker on finalized PR paths' "$SKILL" | grep -Fq 'PR-DRAFT-EVAL-RED' || missing+=("the finalized-paths marker cleanup does not cover PR-DRAFT-EVAL-RED")
@@ -121,5 +122,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS: no executor toggle and no inline fallback anywhere, exact goal, autopilot defers the whole build to /ship-spec's one executor, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard" >&2
+echo "PASS: no executor toggle and no inline fallback anywhere, exact goal, autopilot defers the whole build to /spec execute's one executor, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard" >&2
 exit 0

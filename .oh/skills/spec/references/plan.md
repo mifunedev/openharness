@@ -16,7 +16,7 @@ under `.oh/tasks/<slug>/`. It creates no GitHub-side state, so the folder stays 
 reversible (delete `.oh/tasks/<slug>/`) until the operator approves the `prd.md`.
 **That approval is the commitment gate** (`AGENTS.md § The Workflow`).
 
-This is the decomposed form of `/ship-spec` Stages 1–2.5, 6–7. `/ship-spec` remains the
+This is the planning half of the pipeline; `/spec execute` is the
 all-in-one composer that runs the whole `plan → execute → retro` pipeline in
 one invocation (what `/autopilot` drives); the `/spec` dispatcher is the same pipeline split
 so each node can be run independently or fanned out at scale via `/delegate`.
@@ -29,7 +29,7 @@ so each node can be run independently or fanned out at scale via `/delegate`.
 |-----|---------|
 | `<topic>` | Free-text feature description — the seed for `/prd`. Required unless `--plan` or `--issue` supplies the spec. |
 | `--plan <path>` | A plan file (e.g. `/imagine` output) used as comprehensive `/prd` input; skips `/prd`'s clarifying questions. |
-| `--issue <N>` | The issue number this spec builds — **consumed by the `/ralph` step** (the branch name embeds it, so `/ralph` hard-fails without it). In the canonical `select → spec-plan` flow, `/autopilot` supplies the selected issue (`AGENTS.md § The Workflow` seam: *autopilot hands the issue to spec-plan*). For a fresh manual topic with no issue, open one first (per `/git`) or use `/ship-spec`, which opens the issue after its own critic gate. `plan` only **reads** `<N>` — it never opens, edits, or closes an issue. |
+| `--issue <N>` | The issue number this spec builds — **consumed by the `/ralph` step** (the branch name embeds it, so `/ralph` hard-fails without it). In the canonical `select → spec-plan` flow, `/autopilot` supplies the selected issue (`AGENTS.md § The Workflow` seam: *autopilot hands the issue to spec-plan*). For a fresh manual topic with no issue, open one first (per `/git`) or let `/spec execute` open one in a standalone run. `plan` only **reads** `<N>` — it never opens, edits, or closes an issue. |
 | `--slug <slug>` | Override the derived slug. Must match `[a-z0-9-]+`, ≤5 words, not `archive`. |
 | `--prefix <type>` | Branch/issue prefix (default `feat`), per `.claude/skills/git/SKILL.md`. |
 | `--repo <owner/name>` | Recorded for downstream `/spec execute`; not acted on here. Default `mifunedev/openharness`. |
@@ -44,33 +44,38 @@ folder for `/spec execute` to consume.
 
 Run these in order; each is an existing primitive — compose, don't re-derive.
 
-1. **Derive `<slug>`** (`/ship-spec` Stage 1 rules): lowercase kebab-case, `[a-z0-9-]+`,
+1. **Derive `<slug>`** (per the `/prd` skill's rules): lowercase kebab-case, `[a-z0-9-]+`,
    ≤5 hyphen-words, not `archive`. The slug is the universal key — task directory, branch
    second segment, tmux session name. Choose once; reject and ask for a shorter name if
    invalid. `--slug` overrides derivation.
 
-2. **`/prd` → `.oh/tasks/<slug>/prd.md`** (Stage 2). Invoke the `prd` skill with `<topic>`
+2. **`/prd` → `.oh/tasks/<slug>/prd.md`**. Invoke the `prd` skill with `<topic>`
    (or `--plan` content, with an explicit instruction to skip clarifying questions when a
    plan is supplied). Verify `.oh/tasks/<slug>/prd.md` exists before continuing.
 
-3. **Wiki alignment** (Stage 2.5). Read `.oh/skills/wiki/references/schema.md`, compare the topic against
+3. **Wiki alignment**. Read `.oh/skills/wiki/references/schema.md`, compare the topic against
    the public DeepWiki for this repo, and record a `## Wiki Alignment` section in
    `prd.md` (`Impact: REQUIRED | NOT-APPLICABLE`, local entries, spec alignment, DeepWiki
    comparison, and — when REQUIRED — the wiki acceptance criteria a story must carry). The
-   exact shape is `/ship-spec` Stage 2.5; reuse it verbatim so `/spec execute`'s wiki gate
+   exact shape is the `## Wiki Alignment` block below; reuse it verbatim so `/spec execute`'s wiki gate
    can read it.
 
-4. **`/ralph` → `.oh/tasks/<slug>/prd.json`** (Stage 6). Invoke the `ralph` skill:
+4. **`/ralph` → `.oh/tasks/<slug>/prd.json`**. Invoke the `ralph` skill:
    `.oh/tasks/<slug>/ --issue <N> --prefix <prefix>`. It writes `prd.json` with
    `branchName: <prefix>/<N>-<slug>`. Verify it parses
    (`node -e "require('./.oh/tasks/<slug>/prd.json')"`). **`/ralph` hard-fails without
    `--issue <N>`** (the branch name embeds it) — in the canonical flow `<N>` is the issue
    `/autopilot` selected; for a fresh manual topic with no issue, open one first per `/git`
-   or use `/ship-spec`. `plan` consumes the number; it never creates the issue.
+   or let `/spec execute` open one in a standalone run. `plan` consumes the number; it never creates the issue.
 
-5. **Scaffold `prompt.md` + `progress.txt`** (Stage 7). Clone
-   `.claude/skills/ship-spec/templates/prompt.md`, substituting `<slug>`,
-   `<prefix>/<N>-<slug>`, and `#<issue>`. Write `.oh/tasks/<slug>/progress.txt` with the
+5. **Scaffold `prompt.md` + `progress.txt`.** There is one prompt template — the build
+   executor's own, `.oh/skills/firstmate/templates/session-prompt.md`. Render it into
+   `.oh/tasks/<slug>/prompt.md` with the same closed three-placeholder substitution
+   `render_session_prompt` in `.oh/scripts/firstmate.sh` performs: `<slug>` → this task's
+   slug; `<branch>` → `prd.json`'s `branchName`; `<issue>` → the issue number as **bare
+   digits** (the body writes `#<issue>` itself). Strip the template's contract header
+   (everything through the `END CONTRACT HEADER -->` line) and confirm no `<placeholder>`
+   token survives the render. Write `.oh/tasks/<slug>/progress.txt` with the
    `# progress` header only.
 
 Verify the four-file contract before handing off:

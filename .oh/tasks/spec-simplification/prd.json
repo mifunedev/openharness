@@ -63,8 +63,8 @@
         "A full build runs end-to-end with `.oh/skills/ship-spec/` absent"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": "Settled: absorb and delete in a single change. Highest-risk story \u2014 transcription errors land in the only remaining path with no fallback. Do not relax a protected-build-literals probe to make this pass."
+      "passes": true,
+      "notes": "2026-08-24: /ship-spec absorbed into .oh/skills/spec/references/execute.md (157 -> 500 lines, nine top-to-bottom steps, no deferral) and the skill deleted; /spec added to protected-paths. All consumers repointed; $SHIP_SPEC_* -> $SPEC_*; agent-ship-<slug> -> agent-spec-<slug>. Two defects fixed while transcribing (the Advisor tee pipe; the banner's phantom logs). One probe renamed, six repointed, two STRENGTHENED after rejection-testing showed they survived their own defect. CB-001/CB-002 re-authored. AC-8 verified live. AC-7 deviation stated in progress.txt (frozen datasets + probes' negative assertions + dated notes)."
     },
     {
       "id": "US-004",

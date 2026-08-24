@@ -19,7 +19,6 @@ select → plan → execute → merge → reset
 - **plan** (`/spec plan`) turns a topic/issue into a `.oh/tasks/<slug>/` folder
   (PRD + `prd.json`). Approving that PRD **is** the commitment gate.
 - **execute** (`/spec execute`) builds ⇄ audits to a ready PR (the human merges).
-- `/ship-spec` is the all-in-one composer that runs the same pipeline end-to-end.
 
 One adversarial loop guards quality: `build ⇄ audit` vets the build. The plan is
 vetted by the operator who approves it.
@@ -43,7 +42,6 @@ Skills are loaded from `.oh/skills/` via each provider's `skills` symlink, so
 | Skill | When |
 |-------|------|
 | `/spec` | plan / execute / retro — the decomposed build workflow |
-| `/ship-spec` | end-to-end spec → ready PR in one invocation |
 | `/prd` | generate a PRD from a feature description |
 | `/ralph` | convert a markdown PRD → `.oh/tasks/<name>/prd.json` |
 | `/delegate` | parallel sub-agent coordinator — execute a plan in waves |

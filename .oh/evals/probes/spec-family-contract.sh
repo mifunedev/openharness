@@ -11,7 +11,9 @@
 #       Workflow as its authority, and carries NO loop-style ## Handoff section (a
 #       vestige of the executable-loop framework removed in #263; the /spec nodes
 #       declare their place with ## Pipeline position); AGENTS.md § The Workflow
-#       names each /spec <sub> invocation; the all-in-one /ship-spec composer remains present.
+#       names each /spec <sub> invocation; and there is NO all-in-one composer beside the
+#       dispatcher — /ship-spec was absorbed into references/execute.md and deleted
+#       (spec-simplification US-003), so execute.md must carry the build mechanics itself.
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -65,8 +67,20 @@ for f in "$SPEC/SKILL.md" "$SPEC/references"/plan.md \
   grep -qE '^## Handoff' "$f" && missing+=("$rel: carries a loop-style ## Handoff section (must use ## Pipeline position)")
 done
 
-# (3) the all-in-one composer the family decomposes must still exist (protected monolith).
-[ -f "$SKILLS/ship-spec/SKILL.md" ] || missing+=("ship-spec: the all-in-one composer must remain present")
+# (3) there is NO all-in-one composer beside the dispatcher, and execute.md holds the build
+#     mechanics itself rather than deferring to one. Both halves are needed: deleting the
+#     composer while execute.md still says "reuses those by reference" would leave the only
+#     build path pointing at nothing.
+[ -e "$SKILLS/ship-spec" ] && missing+=("ship-spec: the all-in-one composer must be absorbed and deleted, not left beside /spec")
+EXEC="$SPEC/references/execute.md"
+if [ -f "$EXEC" ]; then
+  grep -qF 'reuses those by reference' "$EXEC" && missing+=("execute.md still defers its build mechanics by reference instead of holding them")
+  grep -qF 'single source of build literals' "$EXEC" && missing+=("execute.md still names another skill as the single source of build literals")
+  # The mechanics must actually be present, or "no deferral" is satisfied by an empty file.
+  for literal in 'gh pr create' 'gh pr ready' 'gh issue' 'git push' 'firstmate.sh' '/audit pr' '/eval'; do
+    grep -qF "$literal" "$EXEC" || missing+=("execute.md does not carry the build literal '$literal'")
+  done
+fi
 
 # (4) AGENTS.md § The Workflow must name each /spec <sub> invocation so an operator can find it,
 #     and must NOT name a retired one.
@@ -88,5 +102,5 @@ if [ "${#missing[@]}" -gt 0 ]; then
   exit 1
 fi
 
-echo "PASS: /spec dispatcher present, three procedures folder-pointed + AGENTS-authored, no loop ## Handoff, legacy split gone, retired critique/approve gate absent, ship-spec intact" >&2
+echo "PASS: /spec dispatcher present, three procedures folder-pointed + AGENTS-authored, no loop ## Handoff, legacy split gone, retired critique/approve gate absent, no all-in-one composer beside it, execute.md carries the build literals" >&2
 exit 0

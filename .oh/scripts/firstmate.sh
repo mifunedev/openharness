@@ -238,7 +238,7 @@ firstmate_issue_number() { # <prd_json>
   fi
   issue="$(firstmate_json_field "$prd" '(.issue // .issueNumber // empty) | tostring')"
   if [ -z "$issue" ] && [ -f "$prd" ]; then
-    # /ship-spec records the issue in prose ("… (issue #746)"), not as a field.
+    # A task folder records its issue in prose ("… (issue #746)"), not as a field.
     # `|| true` absorbs both no-match (status 1) and SIGPIPE from `head`; under
     # `set -o pipefail` either would otherwise sink the whole substitution.
     issue="$( { grep -oE '#[0-9]+' "$prd" || true; } | head -n 1 | tr -d '#')"
@@ -382,7 +382,10 @@ firstmate_watch_command() { # <mode> <slug>
   case "$mode" in
     herdr) printf 'herdr agent read %s --lines 80\n' "$(runner_agent_name "$slug")" ;;
     tmux) printf 'tmux attach -t %s\n' "$(runner_tmux_session "$slug")" ;;
-    *) printf 'tail -f %s\n' "$(runner_session_log_path "$mode" "$slug")" ;;
+    # foreground writes NO session log — the child inherits this shell's stdio so it
+    # keeps a TTY (see the interactive-session note in this file's header). Printing a
+    # `tail -f <log>` here would send the operator to a file the child never writes.
+    *) printf 'this terminal (the child inherits its stdio)\n' ;;
   esac
 }
 
@@ -489,7 +492,13 @@ firstmate_launch() { # <slug>
   printf '│  runner:   %s\n' "$mode"
   printf '│  handle:   %s\n' "$(firstmate_session_handle "$mode" "$slug")"
   printf '│  harness:  %s\n' "$harness"
-  printf '│  log:      %s\n' "$(runner_session_log_path "$mode" "$slug")"
+  # Only tmux mode captures the session to a file (via pipe-pane); herdr owns its own
+  # pane capture and foreground keeps none, so advertising a path there is a lie.
+  case "$mode" in
+    tmux) printf '│  log:      %s\n' "$(runner_session_log_path "$mode" "$slug")" ;;
+    herdr) printf '│  log:      (herdr pane capture — read it with the watch command)\n' ;;
+    *) printf '│  log:      (none — foreground inherits this terminal)\n' ;;
+  esac
   printf '│  budget:   %sms\n' "$(resolve_timeout_ms "$slug")"
   printf '│  prompt:   %s\n' "$prompt_file"
   printf '│  progress: %s\n' "$progress"

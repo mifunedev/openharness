@@ -33,7 +33,7 @@ Every entry below is present in a fresh clone unless noted otherwise.
 | `memory/` | dir | The harness's long-term memory (`MEMORY.md` + topic notes, tracked) and gitignored dated session logs (`[0-9]*/log.md`). | `/retro` and the crons (via `locked-append.sh`); session start. |
 | `scripts/` | dir | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `firstmate.sh`, `locked-append.sh`, `harness-config.sh`, `link-providers.sh`, `git-maintenance.sh` — the file-invoked destructive-git shim the cc-safety-net guard permits by design, …). | The `Makefile`, CI, `cron-runtime`, and the provider link step. |
 | `skills/` | dir | The vendored provider-portable skill pack (one dir per skill). | Agent providers via symlinks (`.claude/skills`, `.codex/skills`, `.pi/skills` → `.oh/skills`); the Skill tool. |
-| `tasks/` | dir | Spec task workdirs — ephemeral build scratch (`<slug>/prd.md`, `prd.json`, `prompt.md`, `progress.txt`). | `.oh/scripts/firstmate.sh`, the `cleanup-tasks` cron, `/spec` and `/ship-spec`. |
+| `tasks/` | dir | Spec task workdirs — ephemeral build scratch (`<slug>/prd.md`, `prd.json`, `prompt.md`, `progress.txt`). | `.oh/scripts/firstmate.sh`, the `cleanup-tasks` cron, and `/spec`. |
 | `templates/` | dir | The `oh init` scaffold payload (`AGENTS.md`, `harness.yaml`, `gitignore`, `.devcontainer/`, `full/`) materialized into a fresh checkout. | `oh init` (`.oh/cli/src/commands/init.ts`). |
 
 The manifest ships `docs/**` and omits `patches/**`.

@@ -26,7 +26,7 @@ ralph
 audit
 delegate
 strategic-proposal
-ship-spec
+spec
 eval
 health-check
 retro

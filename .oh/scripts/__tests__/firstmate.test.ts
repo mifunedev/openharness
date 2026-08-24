@@ -691,9 +691,13 @@ describe("launch", () => {
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("runner:   herdr");
     expect(r.stdout).toContain("handle:   firstmate-herdr-slug (pane w7:p3)");
-    expect(r.stdout).toContain(
+    // herdr owns its own pane capture and writes no file at the session-log path, so the
+    // banner must NOT advertise one — an operator sent to `tail` an unwritten file reads
+    // an empty session as a dead one. The watch command is the real handle.
+    expect(r.stdout).not.toContain(
       path.join(repo.runnerTmp, "firstmate-herdr-slug.log"),
     );
+    expect(r.stdout).toContain("log:      (herdr pane capture");
     expect(r.stdout).toContain("watch:    herdr agent read firstmate-herdr-slug");
 
     const calls = readCalls(repo);

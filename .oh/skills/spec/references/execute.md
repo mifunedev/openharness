@@ -11,18 +11,11 @@ planned `.oh/tasks/<slug>/` folder whose `prd.md` the operator has approved, it 
 build to a ready-for-review PR and stops at the human merge gate. It contains the workflow's
 one adversarial loop — `build ⇄ audit`.
 
-**Core principle: compose the protected build machinery; own only the spec-* tail.** The
-heavy build/finalize mechanics already live in `/ship-spec` Stages 8–13 (worktree Advisor
-launched via `/goal`, the one build executor `.oh/scripts/firstmate.sh`, the `/eval`
-gate, the `/audit pr` promotable undraft). `execute` **reuses those by reference** —
-it does not re-implement or fork them, so `/ship-spec` stays the single source of build
-literals (and its protected probes stay green). What `execute` adds is the
-folder-pointed `build ⇄ audit` loop and the post-PASS tail named in `AGENTS.md § The
-Workflow`: `spec-retro → improve → groom`.
-
-`/ship-spec` is still the all-in-one composer that runs `plan → execute` in one
-invocation (what `/autopilot` drives). `execute` is the decomposed execute stage,
-runnable on its own folder or fanned out at scale via `/delegate`.
+**This file is the whole build.** Every mechanic it needs — the issue, the branch, the draft
+PR, the build launch, the `/eval` gate, the wiki gate, the promotable classification, and the
+undraft — is written out below, in order, with no deferral to another skill. Reading it
+top to bottom tells you what the build does; you never have to open a second skill to learn
+the next step.
 
 ---
 
@@ -36,31 +29,238 @@ runnable on its own folder or fanned out at scale via `/delegate`.
 | `--remote <name>` | Git remote (resolved from `--repo` if absent). |
 | `--base <branch>` | PR base + branch start point (default `development`). |
 
+```bash
+SPEC_REPO="${SPEC_REPO:-mifunedev/openharness}"
+SPEC_BASE="${SPEC_BASE:-development}"
+case "${ARGUMENTS:-}" in *--repo*) SPEC_REPO=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--repo[ =]\([^ ]*\).*/\1/p') ;; esac
+case "${ARGUMENTS:-}" in *--base*) SPEC_BASE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--base[ =]\([^ ]*\).*/\1/p') ;; esac
+resolve_spec_remote() {
+  git remote -v | awk -v repo="$SPEC_REPO" '
+    BEGIN { want=tolower(repo) }
+    $3 == "(fetch)" {
+      url=$2
+      sub(/\.git$/, "", url)
+      sub(/^.*github.com[:\/]/, "", url)
+      if (tolower(url) == want) { print $1; exit }
+    }'
+}
+case "${ARGUMENTS:-}" in *--remote*) SPEC_REMOTE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--remote[ =]\([^ ]*\).*/\1/p') ;; esac
+SPEC_REMOTE="${SPEC_REMOTE:-$(resolve_spec_remote)}"
+[ -n "$SPEC_REMOTE" ] || { echo "ERROR: no local git remote for $SPEC_REPO"; exit 1; }
+echo "spec execute target: repo=$SPEC_REPO remote=$SPEC_REMOTE base=$SPEC_BASE"
+```
+
+Do not let implicit `gh` repo resolution or a bare `git push origin` send this build's
+issue or PR to a fork. The remote is resolved from the repo URL, and the run fails closed
+when no local remote matches.
+
 Precondition: `.oh/tasks/<slug>/` carries the four-file contract (`prd.md`, `prd.json`,
 `prompt.md`, `progress.txt`) produced by `/spec plan`, and its `prd.md` has been approved.
 **Approving the plan is the commitment gate** — there is no separate critique or approve
 node (`AGENTS.md § The Workflow`). If the folder is incomplete, refuse and route back to
 `/spec plan`.
 
+**There is no executor argument.** The build has exactly one path:
+`.oh/scripts/firstmate.sh <slug>` — ONE long-lived First-Mate session over the whole task
+graph, launched through the herdr → tmux → foreground runner ladder (see `/firstmate`). Its
+terminal interface is the whole line `STATUS: COMPLETE` in `.oh/tasks/<slug>/progress.txt`.
+
 ---
 
 ## The pipeline
 
-### 1. Commitment + build (`/ship-spec` Stages 5, 8–11 by reference)
+### 1. Locate (or open) the issue
 
-The approved plan is the commitment, so GitHub-side state may now be created: **locate** the issue
-(`prd.json`'s `branchName` already embeds `<N>` — in the canonical flow that is the issue
-`/autopilot` selected and `/spec plan` consumed; open one only in a standalone run that has
-no issue yet), create the branch `<prefix>/<N>-<slug>`, commit the scaffold, push, and open
-the **draft** PR (observability checkpoint). Then drive the build exactly as `/ship-spec` Stage 10
-specifies — an expert `/worktrees` Advisor in a tmux session (`agent-ship-<slug>`) via
-`/goal` that runs **the one build executor**, `.oh/scripts/firstmate.sh <slug>` — ONE long-lived
-First-Mate session over the whole `.oh/tasks/<slug>/` task graph, watched in an isolated worktree
-to `STATUS: COMPLETE`. There is no executor argument and no alternative arm. `/delegate` is an
-optional within-story fan-out tool inside that session, never a replacement for the story cycle.
-Use that skill's stage text as the authority for the mechanics; do not duplicate them here.
+The approved plan is the commitment, so GitHub-side state may now be created.
 
-### 2. `build ⇄ audit` — the second adversarial loop
+`prd.json`'s `branchName` already embeds `<N>`. In the canonical flow that is the issue
+`/autopilot` selected and `/spec plan` consumed — **locate** it, do not open a second one:
+
+```bash
+gh issue view <N> --repo "$SPEC_REPO"
+```
+
+Open an issue only in a standalone run that has none yet. Compose the body from `prd.md`'s
+introduction and goals; the title format is `<prefix>: <slug-as-prose>` per
+`.claude/skills/git/SKILL.md`:
+
+```bash
+gh issue create \
+  --repo "$SPEC_REPO" \
+  --title "<prefix>: <slug-as-prose>" \
+  --label "<prefix>" \
+  --body-file <(printf '%s\n' \
+    "## Summary" \
+    "<from prd.md introduction>" \
+    "" \
+    "## Goals" \
+    "<from prd.md goals>" \
+    "" \
+    "## PRD" \
+    "- .oh/tasks/<slug>/prd.md (this branch)" \
+    "" \
+    "## Wiki Alignment" \
+    "- Impact: <REQUIRED | NOT-APPLICABLE from prd.md>" \
+    "- DeepWiki comparison: <one-line summary from prd.md>" \
+    "" \
+    "## Tracking" \
+    "Planned by /spec plan; the operator approved prd.md, which is the commitment gate. Draft PR to follow.")
+```
+
+Capture the issue number `<N>`. If `gh label create <prefix> --repo "$SPEC_REPO"` is needed
+(the label does not exist), create it first with a sensible color. Heredoc bodies are safe —
+the `deny-env-dump.sh` hook strips heredoc bodies before pattern-scanning, so
+`--body "$(cat <<'EOF' ... EOF)"` is fine.
+
+### 2. Branch + scaffold commit + push
+
+```bash
+# Resume-safe: checkout existing branch or create new
+git fetch "$SPEC_REMOTE" "$SPEC_BASE"
+git checkout -b "<prefix>/<N>-<slug>" "$SPEC_REMOTE/$SPEC_BASE" 2>/dev/null \
+  || git checkout "<prefix>/<N>-<slug>"
+
+git add -f ".oh/tasks/<slug>/"
+git commit -m "$(cat <<'EOF'
+<prefix>: scaffold <slug> task
+
+Four-file contract:
+- prd.md: <N> user stories
+- prd.json: schemaVersion 1, branchName <prefix>/<N>-<slug>
+- prompt.md: the rendered build-session prompt
+- progress.txt: empty header
+
+Tracks #<N>. PRD generated by /prd; converted by /ralph.
+
+Submitted-by: <active submitter>
+EOF
+)"
+
+git push -u "$SPEC_REMOTE" "<prefix>/<N>-<slug>"
+```
+
+`.oh/tasks/` is gitignored, so the `-f` on that `git add` is load-bearing: a bare
+`git add .oh/tasks/<slug>/` stages nothing and the scaffold commit silently omits the
+contract.
+
+`Submitted-by:` is mandatory and must name the model/agent that actually submits the commit
+(for example `Submitted-by: Claude`, `Submitted-by: Codex`, or `Submitted-by: Pi`). Do not
+hard-code Claude when the active submitter is a fallback harness.
+
+Pre-commit hook runs lint + tests; do not bypass.
+
+### 3. `gh pr create --draft` — the observability checkpoint
+
+```bash
+gh pr create \
+  --repo "$SPEC_REPO" \
+  --draft \
+  --base "$SPEC_BASE" \
+  --head "<prefix>/<N>-<slug>" \
+  --title "FROM <prefix>/<N>-<slug> TO $SPEC_BASE" \
+  --body "$(cat <<'EOF'
+Closes #<N>.
+
+**Status: DRAFT — implementation, /eval, and /audit pr promotable gates are still pending.**
+
+## Summary
+<from prd.md introduction, 2-3 lines>
+
+## Stories
+<numbered list from prd.json — title only>
+
+## Next steps (automated)
+1. Launch the expert `/worktrees` Advisor in tmux session `agent-spec-<slug>`.
+2. Advisor: run `.oh/scripts/firstmate.sh <slug>` in an isolated worktree; watch to `STATUS: COMPLETE`; run `/audit implementation`; revise required wiki entries against the spec and DeepWiki comparison.
+3. A separate executor runs `/audit pr` immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that fresh audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output — including draft-age and draft-cap/backlog warnings — is only a resume/investigation hint, never an undraft signal.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code) via /spec execute
+EOF
+)"
+```
+
+Capture the PR URL and PR number `<PR>`. This is an observability checkpoint, not the
+terminal state.
+
+### 4. Launch the build
+
+This node does not implement inline. It launches an **expert Advisor on `/worktrees`** — the
+per-task orchestrator that runs the one build executor and watches it to completion — in its
+own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode persists the run
+to completion. Session name `agent-spec-<slug>` (sanitize slashes/space → `-`), distinct
+from the `agent-firstmate-<slug>` session the executor's own tmux rung creates.
+
+**Build worktree — reuse vs. create.** When `$CRON_WORKTREE` is set (autopilot's default),
+this run is ALREADY inside an isolated worktree that step 2 put on the feature branch, so the
+Advisor **reuses it** — it does NOT create a second worktree (a second `git worktree add` for
+the same branch would nest under the cron worktree via the relative path, or fail with
+`branch already checked out`). Standalone (no `$CRON_WORKTREE`) the Advisor creates
+`.oh/worktrees/<prefix>/<N>-<slug>`. Start the Advisor session **in the build worktree** with
+`-c`, and bake the worktree path into the prompt — a new tmux session does not inherit
+`$CRON_WORKTREE` from the launching client, so passing it via env is unreliable:
+
+```bash
+SESSION="agent-spec-<slug>"   # e.g. printf %s "<slug>" | tr '/:[:space:]' '-'
+WT="${CRON_WORKTREE:-}"       # set by the cron runtime in worktree mode; empty standalone
+tmux new-session -d -s "$SESSION" -c "${WT:-$PWD}" \
+  '<harness> "/goal <advisor-prompt>"'
+tmux pipe-pane -o -t "$SESSION" "cat >> /tmp/$SESSION.log"
+# <harness> = the active agent CLI (pi | claude | codex); pi matches the cron default
+```
+
+**Do not pipe or redirect the launched command.** The Advisor is an interactive, multi-turn
+session; a `2>&1 | tee <log>` on it replaces its stdout with a pipe, and the session exits
+after one turn instead of driving the build. `tmux pipe-pane` attaches to the pane *after*
+it exists, which captures the same output while leaving the pane a terminal. This is the
+same rule the build executor enforces on its own child
+(`.oh/scripts/lib/session-runner.sh`).
+
+**Advisor `/goal` prompt** (one line; fill the placeholders — when `$CRON_WORKTREE` is set,
+substitute its actual path for `<worktree>` and use the "reuse" branch of step 1):
+
+> `/goal` As an **expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.oh/worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) **Run the build executor**: `.oh/scripts/firstmate.sh <slug>` from the build worktree, and **own the `STATUS: COMPLETE` watch yourself** (poll `.oh/tasks/<slug>/progress.txt` plus the session's liveness; never delegate the watch to a sub-agent that returns early). Do NOT launch herdr from inside the build session; inner fan-out is `/delegate` only, and `/delegate` never replaces the story cycle. (3) Run the `build ⇄ audit` loop (step 5) until `/audit implementation` returns AUDIT-PASS, including its `/eval` and wiki gates. (4) Run `/compact` to clear the implementation context before the promotable gate. (5) In a **separate executor**, run `/audit pr` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
+
+The Advisor owns steps 5–9 inside its session. This node's turn ends after launching it and
+reporting the session name; the ready-for-review PR is produced asynchronously. The build
+session commits each story on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer; worktree
+isolation keeps concurrent work off the shared checkout. If `tmux` is unavailable, the
+executor's own ladder degrades to foreground — continue there.
+
+**The build executor.** `.oh/scripts/firstmate.sh <slug>` runs ONE long-lived First-Mate
+session over the whole `prd.json` task graph. It resolves the runner through the
+**herdr → tmux → foreground ladder** (herdr only when installed, healthy, non-nested, and
+proven same-environment by the fingerprint gate; anything else degrades down the ladder with
+the reason logged), renders the session prompt, claims `/tmp/firstmate-<slug>.lock`, and
+watches to the sentinel:
+
+```bash
+# from the build worktree (${CRON_WORKTREE:-$PWD}), same reuse-vs-create rule as above
+.oh/scripts/firstmate.sh <slug>                  # launches + watches to the sentinel
+.oh/scripts/firstmate.sh --runner tmux <slug>    # pin the runner; unavailable choice = HARD ERROR
+.oh/scripts/firstmate.sh --kill <slug>           # operator escape hatch: teardown + clear lock + record
+```
+
+**Never run `--kill` against a slug whose session is your own.** To verify a kill path,
+create a throwaway decoy with a different name and kill that.
+
+The launch banner prints the resolved runner mode, the session handle, the harness, the
+budget, and the watch command. Watch handles by mode:
+
+| Mode | Session handle | Watch command |
+|---|---|---|
+| herdr | `firstmate-<slug>` | `herdr agent read firstmate-<slug> --lines 80` |
+| tmux | `agent-firstmate-<slug>` | `tmux attach -t agent-firstmate-<slug>` |
+| foreground | the child pid | the terminal it was launched from (stdio is inherited) |
+
+**`.oh/tasks/<slug>/progress.txt` is the authority in every runner mode.** The session is
+**wall-clock bounded** by `FIRSTMATE_TIMEOUT_MS` (default `14400000` = 4h); on expiry, launch
+failure, or operator abort the executor tears down, removes the lock, and appends
+`FIRSTMATE-INCOMPLETE` to `progress.txt` — the PR then **stays draft** with a resume comment.
+Mid-run herdr loss degrades the watch to file-polling the same `progress.txt`; the herdr
+**server is never stopped or restarted**. Full contract, ladder, and recovery matrix live in
+`/firstmate` (`.oh/skills/firstmate/SKILL.md`).
+
+### 5. `build ⇄ audit` — the adversarial loop
 
 When the build reports complete, run the per-unit verdict gate:
 
@@ -68,26 +268,63 @@ When the build reports complete, run the per-unit verdict gate:
 /audit implementation <slug> --pr <N> --repo <owner/name> --base <base> --branch <prefix>/<N>-<slug>
 ```
 
-`/audit implementation` composes `prd.json` task-graph conformance + the `/eval` regression floor +
-`/audit pr` promotable classification (+ `/agent-browser` for UI stories) into one verdict:
+`/audit implementation` composes `prd.json` task-graph conformance + the `/eval` regression
+floor + `/audit pr` promotable classification (+ `/agent-browser` for UI stories) into one
+verdict:
 
-- `AUDIT-FAIL` → loop back to **build**: resume the Advisor / `.oh/scripts/firstmate.sh <slug>` to
-  finish the unmet stories, then re-audit. This is the build-side adversary — keep looping
+- `AUDIT-FAIL` → loop back to **build**: resume the Advisor / `.oh/scripts/firstmate.sh <slug>`
+  to finish the unmet stories, then re-audit. This is the build-side adversary — keep looping
   until the build satisfies its own task graph.
 - `AUDIT-PASS` → the build is promotable; continue to the tail.
 
-The wiki-revision gate (`/ship-spec` Stage 11.25) applies inside this loop when
-`prd.md`'s `## Wiki Alignment` is `Impact: REQUIRED`: required `.oh/skills/wiki/corpus/*.md` entries are
-revised against the implemented behavior + DeepWiki comparison and `.oh/skills/wiki/corpus/README.md` is
-refreshed before the audit can PASS.
+Two gates run inside this loop and must both clear before the audit can PASS.
 
-### 3. `spec-retro` — capture the lessons
+**The `/eval` gate.** Run `/eval` (the Advisor runs this inside its session) while still on
+the work branch. If it updates `.oh/evals/RESULTS.md`, commit the benchmark refresh on the
+branch. Treat only a NEW green→red probe regression or a non-zero eval runner exit as
+blocking; a pre-existing red with an unchanged delta is non-gating but should be disclosed in
+the PR. Key on the **delta and the runner's exit code**, never on the bare presence of a
+`REGRESSION` row — a probe that was already red on the base is pre-existing and this PR did
+not cause it.
+
+**The wiki-revision gate.** If `.oh/tasks/<slug>/prd.md` has `## Wiki Alignment` with
+`Impact: REQUIRED`, revise the named `.oh/skills/wiki/corpus/*.md` entries after
+implementation and before the promotable gate. The revision must align with:
+
+- the PRD's goals, non-goals, acceptance criteria, and completed behavior;
+- the DeepWiki comparison `/spec plan` recorded;
+- `.oh/skills/wiki/references/schema.md`'s DeepWiki-style standard: relevant source files,
+  line-cited claims, system relationships for pipeline/runtime/architecture topics, and
+  `## See Also` navigation.
+
+Refresh `.oh/skills/wiki/corpus/README.md` via `/wiki lint` or the atomic fallback in
+`/wiki ingest`, then run:
+
+```bash
+bash .oh/evals/probes/wiki-readme-index.sh
+```
+
+Commit wiki changes with the implementation branch. If the wiki impact was `REQUIRED` and the
+named entries were not updated or the index probe fails, leave the PR draft and comment the
+missing wiki gate.
+
+**`/compact` after implement.** The build and `/eval` have spent significant context in the
+Advisor's session; run `/compact` so the promotable gate and the undraft decision start
+clean. Preserve the finalize keys:
+
+```text
+Preserve /spec execute finalize context: slug <slug>, branch <prefix>/<N>-<slug>, issue #<N>, PR #<PR>, implementation complete (STATUS: COMPLETE), /eval result, wiki alignment gate result (REQUIRED updated or NOT-APPLICABLE), undraft gate (/audit pr promotable → gh pr ready, else comment + stay draft), no auto-merge, tmux session agent-spec-<slug> left alive.
+```
+
+Non-blocking — if `/compact` is unavailable or errors, log a warning and continue.
+
+### 6. `spec-retro` — capture the lessons
 
 On `AUDIT-PASS`, run `/spec retro <slug>` (the execution-side retro). It turns the run's
 signals into falsifiable, evidence-tested lessons and promotes the supported ones behind a
 propose-then-confirm gate. Always logs.
 
-### 4. `improve` — compound · compress · benchmark
+### 7. `improve` — compound · compress · benchmark
 
 The self-improvement tail (`AGENTS.md § The Workflow`):
 
@@ -97,29 +334,135 @@ The self-improvement tail (`AGENTS.md § The Workflow`):
 - **benchmark** — confirm the change earned its complexity (`/benchmark`): the `/eval`
   regression floor stays green AND the capability-benchmark ceiling held or moved.
 
-### 5. `groom` — pre-merge health checks
+### 8. `groom` — pre-merge health checks
 
 Before handing to the human, run the grooming triad named in `AGENTS.md § The Workflow`:
 `/audit skills` · `/wiki lint` · `/audit drift`. These are report-only health checks; surface
 findings, do not block the merge on advisory output.
 
-### 6. Undraft → human merge gate
+### 9. Promotable gate → undraft → human merge gate
 
-Mark the PR ready (`gh pr ready <N>`) **only** when `/audit implementation` PASSED and an immediately
-preceding fresh `/audit pr <N> --repo <owner/name> --base <base>` classifies it promotable (CI green + mergeable + clean) — exactly the
-`/ship-spec` Stage 12–13 gate. Then **stop**. The human owns the merge (`AGENTS.md § The
-Workflow`: *human merge — final gate, no auto-merge*). Never `gh pr merge`.
+Push the branch so CI runs:
+
+```bash
+git push "$SPEC_REMOTE" HEAD
+```
+
+Then hand off to a **separate executor** (a `/delegate` worker or `Agent` call — "another
+executor") whose sole job is to run `/audit pr` focused on PR `#<PR>` in `$SPEC_REPO`
+immediately before any undraft attempt and report its draft sub-status. `/audit pr` is
+read-only: it classifies the draft as **promotable** only when CI is green AND the PR is
+mergeable AND clean (it reads the `statusCheckRollup`, so it subsumes a bare `/ci-status`
+check). The executor returns `promotable` / `still-WIP` / `limbo`. Do not infer green from
+silence — a no-run CI status is not promotable. Do not treat heartbeat stale-draft watchdog
+output as promotable evidence; it is only a signal to investigate or resume the draft.
+
+Mark the PR ready **only** when `/audit implementation` PASSED and that immediately preceding
+fresh `/audit pr` classified it promotable:
+
+```bash
+gh pr ready <PR> --repo "$SPEC_REPO"
+```
+
+Otherwise (not promotable: red/pending CI, conflicts, or a new eval regression) keep the PR
+draft and add a comment naming the blocking gate plus resume/fix instructions:
+
+```bash
+gh pr comment <PR> --repo "$SPEC_REPO" --body "spec execute: PR left draft — <blocking gate>. Resume: <command>."
+```
+
+Then **stop**. The human owns the merge (`AGENTS.md § The Workflow`: *human merge — final
+gate, no auto-merge*). Never `gh pr merge`. The `agent-spec-<slug>` tmux session is left
+alive for attach/continue (per `.oh/skills/t3/references/sandbox-processes.md`). Print the PR
+URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline output.
+
+---
+
+## Halt conditions
+
+| Step | Halt trigger | Recovery |
+|---|---|---|
+| pre | Four-file contract incomplete, or `prd.md` not approved | Refuse; route back to `/spec plan` |
+| 1 | `gh issue create` fails (auth, label, repo perms) | Diagnose; create the issue manually; re-run with the issue located |
+| 2 | Pre-commit hook fails (lint, tests) | Fix the issue; re-run from step 2 |
+| 3 | `gh pr create` fails (no remote, branch missing on target remote) | Verify the push from step 2; re-run from step 3 |
+| 4 | The build session stalls, times out, or leaves acceptance criteria incomplete | Leave the PR draft and comment the resume command (`.oh/scripts/firstmate.sh <slug>` / attach `agent-spec-<slug>`). A missing `tmux` is not a failure here — the executor's ladder degrades to foreground on its own |
+| 5 | `/eval` reports a NEW green→red regression or exits non-zero | Leave the PR draft; fix or document the regression, then re-run `/eval` |
+| 5 | Wiki impact REQUIRED but entries are missing, stale against the implemented behavior, not compared against DeepWiki, or the README index probe fails | Leave the PR draft; fix the wiki entries/index, then re-run the wiki gate |
+| 5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue |
+| 9 | `/audit pr` cannot classify (gh/API error), or CI is red/pending so the PR is not promotable | Leave the PR draft; fix CI and re-run the audit executor |
+| 9 | PR not promotable, or `gh pr ready` fails | Leave draft + comment the blocking gate; diagnose PR state/permissions; never merge |
+
+## Idempotency
+
+Every step checks for prior state and resumes rather than duplicating:
+
+| Step | Resume check | Behavior |
+|---|---|---|
+| 1 | The issue named by `prd.json`'s `branchName` exists, or `--pr <N>` was passed | Reuse `<N>`; never create a duplicate |
+| 2 | Branch exists on the target remote | Checkout + commit on top |
+| 3 | Draft PR exists for this branch | Update the body; do not create a duplicate |
+| 4 | `progress.txt` already says `STATUS: COMPLETE`; or the `agent-spec-<slug>` / `agent-firstmate-<slug>` session is already running | Skip relaunch — attach/monitor the existing session (the executor refuses a second launch while `/tmp/firstmate-<slug>.lock` is held); worktree present → reuse |
+| 5 | `.oh/evals/RESULTS.md` already reflects the current probe set and no new regression exists | Continue; otherwise re-run `/eval` |
+| 5 | Wiki impact NOT-APPLICABLE, or required entries already match the implementation and the index probe passes | Continue |
+| 9 | `/audit pr` already classified this PR promotable | Continue to the undraft |
+| 9 | PR is already ready-for-review | Print the terminal status; do not mutate |
+
+The whole pipeline can be re-invoked safely. Failed step = fix + re-run; resume happens
+automatically.
+
+## Finalization contract
+
+`execute` opens a draft PR early so reviewers can observe the scaffold, but a successful run
+does not stop there. The terminal successful state is a **ready-for-review** PR, reached only
+after implementation completes, `/audit implementation` returns AUDIT-PASS, `/eval` shows no
+new green→red regression, required wiki entries are updated against the spec and DeepWiki
+comparison, and a separate `/audit pr` executor immediately classifies the PR **promotable**
+(CI green + mergeable + clean) before `gh pr ready`. Draft is reserved for blocked states: an
+incomplete build, a new eval regression, missing or stale wiki alignment, a not-promotable PR
+(red/pending CI or conflicts), or an explicit user stop. Heartbeat stale-draft watchdog output
+may trigger investigation or resume work, but it never authorizes `gh pr ready`. Never
+auto-merge.
 
 ---
 
 ## What this node does NOT do
 
-- **Re-implement the build machinery.** It composes `/ship-spec` Stages 8–13; that skill is
-  the single source of worktree/firstmate/eval/audit pr literals.
 - **Merge.** The terminal state is a **ready** PR. Merge is the human's gate; reset/clean is
   the runner's job after merge.
 - **Select work.** Selection is `/autopilot`'s; `execute` builds the one folder it is
   handed.
+- **Plan.** The four-file folder and its approved `prd.md` come from `/spec plan`.
+
+---
+
+## Reference
+
+### Branch + commit conventions (from `.claude/skills/git/SKILL.md`)
+
+- Branch: `<prefix>/<issue#>-<slug>`
+- Commit: `<type>: <description>` (where `<type>` matches `<prefix>` for scaffold commits)
+- PR title: `FROM <branch> TO <target>` (literal)
+- PR body: `Closes #<N>` link required
+
+### Primitives this composes
+
+| Primitive | Path | Role |
+|---|---|---|
+| `.oh/scripts/firstmate.sh` | `.oh/scripts/firstmate.sh` | Step 4 — the one build executor: one long-lived session over the whole task graph, run inside the worktree |
+| Session-prompt template | `.oh/skills/firstmate/templates/session-prompt.md` | The one prompt template the executor renders |
+| `/worktrees` skill | `.claude/skills/worktrees/SKILL.md` | Step 4 — isolated `.oh/worktrees/<branch>` for the implementation |
+| `/goal` (Pi extension) | `.pi/settings.json` (`@narumitw/pi-goal`) | Step 4 — persists the Advisor run to completion |
+| `/delegate` skill | `.claude/skills/delegate/SKILL.md` | Step 4 — optional within-story fan-out inside the build session |
+| `/audit implementation` | `.claude/skills/audit/SKILL.md` | Step 5 — the per-unit verdict gate |
+| `/eval` skill | `.claude/skills/eval/SKILL.md` | Step 5 — probe regression floor |
+| Wiki schema | `.oh/skills/wiki/references/schema.md` | Step 5 — DeepWiki-style source-backed wiki alignment |
+| `/compact` | (built-in) | Step 5 — clears implementation context before the promotable gate |
+| `/audit pr` skill | `.claude/skills/audit/SKILL.md` | Step 9 — promotable classification (gates the undraft) |
+| `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | CI verification (subsumed by `/audit pr`'s promotable check) |
+| advisor agent | `.oh/agents/advisor.md` | Step 4 — the Advisor handoff briefing |
+| sandbox-processes norm | `.oh/skills/t3/references/sandbox-processes.md` | Step 4 — session naming for the Advisor |
+| Protected-paths list | `.claude/protected-paths.txt` | Load-bearing items a spec must not propose deleting |
 
 ---
 

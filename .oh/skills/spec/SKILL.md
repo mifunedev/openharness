@@ -4,8 +4,8 @@ description: >-
   Dispatcher for the canonical decomposed workflow (AGENTS.md § The Workflow) —
   routes the first token of $ARGUMENTS to one of three subcommands: plan,
   execute, or retro. Each is pointed at a .oh/tasks/<slug>/ folder (the universal
-  interface) and is the same independently-runnable, fan-out-able node /ship-spec
-  decomposes into. Full per-subcommand procedures live in
+  interface) and is independently runnable and fan-out-able. This is the ONLY
+  build path: there is no all-in-one composer beside it. Full per-subcommand procedures live in
   references/{plan,execute,retro}.md. Authority: AGENTS.md § The Workflow.
   TRIGGER when: a topic/plan/issue needs to become a buildable task folder, "plan
   <topic>", "scaffold the task for <issue>" -> plan; an approved .oh/tasks/<slug>/
@@ -23,11 +23,12 @@ selects the subcommand; everything after it is that subcommand's own argument
 string. Each subcommand's full procedure lives in a reference doc under
 `references/` — read that doc and follow it as the authoritative instructions.
 
-This is the decomposed form of `/ship-spec`. `/ship-spec` remains the all-in-one
-composer that runs the same `plan → execute → retro` pipeline in one
-invocation (what `/autopilot` drives) and is the single source of the protected
-build mechanics each `/spec` node composes. The dispatcher is the same pipeline
-split so each node can be run independently or fanned out at scale via `/delegate`.
+This is the **only** spec pipeline; there is no all-in-one composer beside it.
+`references/execute.md` holds the build mechanics in full — the issue, the branch,
+the draft PR, the build launch, the `/eval` and wiki gates, the promotable
+classification, and the undraft — so learning what the build does never sends a
+reader to a second skill. The dispatcher splits the pipeline so each node can be
+run independently or fanned out at scale via `/delegate`.
 
 ## Subcommands
 
@@ -62,15 +63,17 @@ esac
 
 - **Authority is `AGENTS.md § The Workflow`** — the canonical operative path
   (`select → spec-plan → spec-execute → merge → reset|clean`),
-  the single designated runner (`/autopilot`), and the `/ship-spec` caveat all
+  and the single designated runner (`/autopilot`) both
   live there. Defer to it; do not redefine the workflow here.
 - **The `.oh/tasks/<slug>/` folder is the universal interface** — `plan` produces it;
   `execute` and `retro` are each pointed at it. The `<slug>` is the
   universal key (task directory, branch second segment, tmux session name).
 - **Compose, don't fork** — each node reuses existing loop-node skills rather than
   re-implementing them: `plan` composes `/prd` + `/ralph`; `execute` composes
-  `/ship-spec` build mechanics + `/audit implementation`; `retro` composes `/retro`. `/ship-spec` stays the single source of the
-  protected build literals (and its probes stay green).
+  `.oh/scripts/firstmate.sh` + `/audit implementation` + `/eval` + `/audit pr`;
+  `retro` composes `/retro`. The build **literals** — the `gh` invocations, the
+  branch and PR shapes, the Advisor launch — live in `references/execute.md`,
+  which is the single source for them and is a protected path.
 - **One adversarial loop** — `build ⇄ audit` inside `execute` vets the build
   (`AUDIT-FAIL` routes back to build). The plan itself is vetted by the operator
   who approves it: **approving `prd.md` is the commitment gate**, and nothing
@@ -86,9 +89,6 @@ esac
 
 ## When NOT to use
 
-- **`/ship-spec`** — when you want the all-in-one composer that runs the whole
-  `plan → execute → retro` pipeline in one invocation (what
-  `/autopilot` drives).
 - **`/autopilot`** — selection (which issue to build) is the runner's job; `/spec`
   builds the one folder it is handed.
 
@@ -97,6 +97,4 @@ esac
 - `references/plan.md`, `references/execute.md`,
   `references/retro.md` — the full per-subcommand procedures (authoritative).
 - `AGENTS.md § The Workflow` — the canonical workflow this dispatcher decomposes.
-- `.oh/skills/ship-spec/SKILL.md` — the all-in-one composer + protected build
-  mechanics each node reuses.
 - `.oh/skills/retro/references/memory-protocol.md` — Memory Improvement Protocol governing the log step.

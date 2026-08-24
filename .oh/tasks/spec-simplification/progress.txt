@@ -18,6 +18,7 @@
 - A probe assertion scoped to a whole FILE can stay green over the defect it guards when the same words appear twice — `gh pr ready` and "only" both live in the Advisor `/goal` prompt AND the finalize section. Scope section-level assertions with `awk '/^### N\./{f=1} f'`.
 - `.oh/skills/firstmate/templates/session-prompt.md` is the SOURCE of the build's step order (US-004 deleted the advisor pack it was derived from). Changing the anchor order is a workflow change, not a formatting edit.
 - The probe suite is 106 files after US-004 (`first-mate-charter.sh` deleted with its subject).
+- Anchor a section-scoped probe assertion on the section's NAME, never its number. Inserting a step renumbers everything after it, and `awk '/^### 9\./{f=1} f'` then selects the wrong region (or the whole tail) without failing.
 
 ## Baseline measurements recorded at plan time (2026-08-23)
 
@@ -262,6 +263,54 @@ the `evidence.md` contract and `/retro`'s auto-approve note at `/spec execute`.
   usual three classes: the probe's own negative assertions (they name the paths in order to
   keep them gone), and dated historical notes in `AGENTS.md`, `session-prompt.md`, and
   `/firstmate` recording what was removed and why.
+
+---
+
+## US-005 — 2026-08-24 04:56 UTC
+
+**Title**: Make the plan the contract the build answers to
+**Files changed**: `.oh/skills/spec/references/execute.md` (new steps 6 `evidence.md` +
+7 `/teach`; steps renumbered to 11; the promotable gate grew the evidence gate and the
+PR-body promotion; halt + idempotency + finalization rows),
+`.oh/skills/audit/references/reviewer-evidence-doc.md` (gate-condition framing, the
+tracked rule, the four questions, the shape),
+`.oh/evals/probes/spec-ready-finalization.sh`, `AGENTS.md`, `CHANGELOG.md`
+**Commit**: (this commit)
+**Result**: PASS (AC-7 is a human read at the merge gate — see below)
+
+### What I did
+Made `evidence.md` a gate condition the undraft path refuses without, and required it to
+answer what the plan asked for / what was built / where they diverged / what is unverified.
+Wired `/teach` in as step 7. Promoted the `progress.txt` narrative into the PR body with
+those same four sections. Extended the evidence-doc contract to match, and grew
+`spec-ready-finalization` to own the gate — verified by rejection on six mutations.
+
+### Learnings for future iterations
+- **A number-anchored section assertion breaks the moment you insert a step.** Adding steps
+  6 and 7 renumbered 7-9 to 9-11, and the probe's `awk '/^### 9\./{f=1} f'` then matched
+  `### 9. improve` and swallowed the whole tail — so the gate check "passed" against the
+  wrong region. Anchored on the section NAME instead, and rejection-tested that renumbering
+  alone keeps the probe green while softening the gate still turns it red.
+- **Existence is not availability for a gitignored path.** `evidence.md` written but added
+  without `-f` is on disk and missing from the PR diff. The gate checks `git ls-files
+  --error-unmatch`, not `test -f`, and the probe asserts that specific check — a mutation
+  swapping it for `test -f` is rejected.
+- **An empty section must be written, not omitted.** "Where it diverged" and "what remains
+  unverified" are exactly the two things a reviewer cannot recover from the diff, so silence
+  there is read as "nothing diverged, nothing unchecked" — the most expensive claim the
+  pipeline can make by accident. Both are required to say `None` / `Nothing` explicitly.
+- `/teach` had 0 invocations across 550 traces because nothing called it. Adding a skill to
+  a table is not wiring it in; a step in a pipeline is.
+- **AC-7 is OUTSTANDING and belongs to the operator.** It reads: "a reader who did not watch
+  the build reads the merge-gate output and can state what changed, why it differs from the
+  plan, and what is still unverified" — and it is marked *human, not a probe*. I built the
+  output that makes that read possible and verified its structure by rejection, but I cannot
+  self-certify a human's comprehension, and asserting I had would be exactly the kind of
+  unearned claim this story exists to prevent. The first real merge gate that runs this
+  pipeline is where AC-7 gets its verdict.
+- I did not write this task's own `evidence.md`: `/spec execute` owns the tail (§6 of this
+  session's contract), and a build session that writes its own reviewer evidence is grading
+  its own exam.
 
 ---
 

@@ -318,13 +318,50 @@ Preserve /spec execute finalize context: slug <slug>, branch <prefix>/<N>-<slug>
 
 Non-blocking — if `/compact` is unavailable or errors, log a warning and continue.
 
-### 6. `spec-retro` — capture the lessons
+### 6. Write `evidence.md` — the answer back to the plan
+
+**This is a gate condition, not a formality.** Step 9 refuses to undraft without it.
+
+The operator's understanding of this work stops at the plan they approved. Everything after
+that happened inside a compacted session they did not watch. `evidence.md` is how the build
+answers back to that plan, and it is the artifact that makes approving a merge an informed
+act rather than a trusting one.
+
+Write `.oh/tasks/<slug>/evidence.md` and **commit it on the branch**, so it travels in the PR
+diff. The full contract — path, linkage, observed-output rule, correlation to one audit run,
+honesty about gaps — is `.oh/skills/audit/references/reviewer-evidence-doc.md`. Follow it, and
+make sure the doc answers these four questions in this order:
+
+1. **What the plan asked for** — the approved `prd.md`'s goals in the operator's terms, not a
+   restatement of the story titles.
+2. **What was built** — the observable behavior that now holds, with the commands and real
+   output that show it.
+3. **Where they diverged, and why** — every place the build differs from the approved plan:
+   a criterion satisfied differently, a deviation taken deliberately, a scope call made
+   mid-build. **A run with no divergence says "none" explicitly**; silence here reads as
+   "nothing diverged" and is the most expensive thing this document can get wrong.
+4. **What remains unverified** — gates that were skipped, criteria that were argued rather
+   than observed, pre-existing reds carried forward, and anything a reviewer would have to
+   check by hand.
+
+`/audit implementation` and `/audit pr` are read-only and do not write this file; this node
+writes it from what those routes observed.
+
+### 7. `/teach` — hand the operator the model, not the diff
+
+Run `/teach <slug>` before the merge gate. It reads the completed task artifacts and the
+relevant wiki entry, revises the wiki when implementation changed the provisional model, and
+states the final mental model, the verification evidence, the caveats, and the understanding
+checks. A reviewer who was not present for the build gets the model here; `evidence.md` gets
+them the proof.
+
+### 8. `spec-retro` — capture the lessons
 
 On `AUDIT-PASS`, run `/spec retro <slug>` (the execution-side retro). It turns the run's
 signals into falsifiable, evidence-tested lessons and promotes the supported ones behind a
 propose-then-confirm gate. Always logs.
 
-### 7. `improve` — compound · compress · benchmark
+### 9. `improve` — compound · compress · benchmark
 
 The self-improvement tail (`AGENTS.md § The Workflow`):
 
@@ -334,13 +371,13 @@ The self-improvement tail (`AGENTS.md § The Workflow`):
 - **benchmark** — confirm the change earned its complexity (`/benchmark`): the `/eval`
   regression floor stays green AND the capability-benchmark ceiling held or moved.
 
-### 8. `groom` — pre-merge health checks
+### 10. `groom` — pre-merge health checks
 
 Before handing to the human, run the grooming triad named in `AGENTS.md § The Workflow`:
 `/audit skills` · `/wiki lint` · `/audit drift`. These are report-only health checks; surface
 findings, do not block the merge on advisory output.
 
-### 9. Promotable gate → undraft → human merge gate
+### 11. Promotable gate → undraft → human merge gate
 
 Push the branch so CI runs:
 
@@ -357,15 +394,73 @@ check). The executor returns `promotable` / `still-WIP` / `limbo`. Do not infer 
 silence — a no-run CI status is not promotable. Do not treat heartbeat stale-draft watchdog
 output as promotable evidence; it is only a signal to investigate or resume the draft.
 
-Mark the PR ready **only** when `/audit implementation` PASSED and that immediately preceding
-fresh `/audit pr` classified it promotable:
+**The evidence gate.** Before the undraft, `.oh/tasks/<slug>/evidence.md` must exist, be
+committed on the branch, and answer the four questions step 6 names. **Refuse the undraft
+without it** — a PR whose reviewer cannot see how the built thing differs from the plan they
+approved is not ready for review, whatever CI says:
+
+```bash
+if [ ! -f ".oh/tasks/<slug>/evidence.md" ]; then
+  gh pr comment <PR> --repo "$SPEC_REPO" --body "spec execute: PR left draft — .oh/tasks/<slug>/evidence.md is missing. The merge gate requires the build's answer back to the approved plan (what was asked, what was built, where they diverged, what is unverified). Resume: write it, commit it on the branch, re-run the promotable gate."
+  # terminal status: DRAFT-BLOCKED (evidence)
+  exit 0
+fi
+git ls-files --error-unmatch ".oh/tasks/<slug>/evidence.md" >/dev/null 2>&1 \
+  || { echo "ERROR: evidence.md exists but is untracked — .oh/tasks/ is gitignored; commit it with 'git add -f'"; exit 1; }
+```
+
+The `git ls-files` half is not redundant: `.oh/tasks/` is gitignored, so an `evidence.md` that
+was written but added without `-f` is present on disk and **absent from the PR diff** — which
+is the same as not having it, from the reviewer's seat.
+
+**Promote the build narrative into the PR body.** `progress.txt` holds the per-story record
+the build session wrote — what it did, what it learned, what it deviated on — and today that
+narrative dies at the sentinel. Update the PR body from it and from `evidence.md` so the
+reviewer meets the work in the PR rather than by opening the task folder:
+
+```bash
+gh pr edit <PR> --repo "$SPEC_REPO" --body "$(cat <<'EOF'
+Closes #<N>.
+
+**Status: READY — /audit implementation PASSED, /eval clean, /audit pr promotable.**
+
+## What the plan asked for
+<from the approved prd.md's goals, in the operator's terms — 2-4 lines>
+
+## What was built
+<the observable behavior that now holds, one line per story, from progress.txt>
+
+## Where it diverged from the plan, and why
+<every deliberate deviation, differently-satisfied criterion, and mid-build scope call — or the single word "None">
+
+## What remains unverified
+<skipped gates, argued-not-observed criteria, pre-existing reds carried forward, anything needing a hand check — or "Nothing">
+
+## Evidence
+- `.oh/tasks/<slug>/evidence.md` — observed output per gate, correlated to audit run `<AUDIT_RUN_ID>`
+- `.oh/tasks/<slug>/progress.txt` — the per-story build narrative
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code) via /spec execute
+EOF
+)"
+```
+
+The **divergence** and **unverified** sections are the two the reviewer cannot reconstruct
+from the diff, so neither may be omitted; an empty one is written as `None` / `Nothing`
+explicitly. A body that silently drops them reads as "nothing diverged, nothing unchecked",
+which is the most expensive claim this pipeline can make by accident.
+
+Then mark the PR ready — **only** when `/audit implementation` PASSED, `evidence.md` is
+present and committed, and that immediately preceding fresh `/audit pr` classified it
+promotable:
 
 ```bash
 gh pr ready <PR> --repo "$SPEC_REPO"
 ```
 
-Otherwise (not promotable: red/pending CI, conflicts, or a new eval regression) keep the PR
-draft and add a comment naming the blocking gate plus resume/fix instructions:
+Otherwise (not promotable: red/pending CI, conflicts, a new eval regression, or missing
+evidence) keep the PR draft and add a comment naming the blocking gate plus resume/fix
+instructions:
 
 ```bash
 gh pr comment <PR> --repo "$SPEC_REPO" --body "spec execute: PR left draft — <blocking gate>. Resume: <command>."
@@ -390,8 +485,11 @@ URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline outpu
 | 5 | `/eval` reports a NEW green→red regression or exits non-zero | Leave the PR draft; fix or document the regression, then re-run `/eval` |
 | 5 | Wiki impact REQUIRED but entries are missing, stale against the implemented behavior, not compared against DeepWiki, or the README index probe fails | Leave the PR draft; fix the wiki entries/index, then re-run the wiki gate |
 | 5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue |
-| 9 | `/audit pr` cannot classify (gh/API error), or CI is red/pending so the PR is not promotable | Leave the PR draft; fix CI and re-run the audit executor |
-| 9 | PR not promotable, or `gh pr ready` fails | Leave draft + comment the blocking gate; diagnose PR state/permissions; never merge |
+| 6 | `evidence.md` cannot be written because a gate produced no observed output | Record the gap in the doc and leave the PR draft — a gate with no observed output is a gap, never a pass |
+| 7 | `/teach` errors or has no wiki entry to revise | Non-blocking; note it and continue — the evidence doc still carries the proof |
+| 11 | `.oh/tasks/<slug>/evidence.md` is missing, or present but untracked (added without `-f`) | Leave the PR draft (`DRAFT-BLOCKED (evidence)`); write and commit it, then re-run the promotable gate |
+| 11 | `/audit pr` cannot classify (gh/API error), or CI is red/pending so the PR is not promotable | Leave the PR draft; fix CI and re-run the audit executor |
+| 11 | PR not promotable, or `gh pr ready` fails | Leave draft + comment the blocking gate; diagnose PR state/permissions; never merge |
 
 ## Idempotency
 
@@ -405,8 +503,9 @@ Every step checks for prior state and resumes rather than duplicating:
 | 4 | `progress.txt` already says `STATUS: COMPLETE`; or the `agent-spec-<slug>` / `agent-firstmate-<slug>` session is already running | Skip relaunch — attach/monitor the existing session (the executor refuses a second launch while `/tmp/firstmate-<slug>.lock` is held); worktree present → reuse |
 | 5 | `.oh/evals/RESULTS.md` already reflects the current probe set and no new regression exists | Continue; otherwise re-run `/eval` |
 | 5 | Wiki impact NOT-APPLICABLE, or required entries already match the implementation and the index probe passes | Continue |
-| 9 | `/audit pr` already classified this PR promotable | Continue to the undraft |
-| 9 | PR is already ready-for-review | Print the terminal status; do not mutate |
+| 6 | `evidence.md` exists and correlates to the CURRENT audit run id | Reuse; a doc citing a stale run id is rewritten, not kept |
+| 11 | `/audit pr` already classified this PR promotable | Continue to the undraft |
+| 11 | PR is already ready-for-review | Print the terminal status; do not mutate |
 
 The whole pipeline can be re-invoked safely. Failed step = fix + re-run; resume happens
 automatically.
@@ -417,10 +516,12 @@ automatically.
 does not stop there. The terminal successful state is a **ready-for-review** PR, reached only
 after implementation completes, `/audit implementation` returns AUDIT-PASS, `/eval` shows no
 new green→red regression, required wiki entries are updated against the spec and DeepWiki
-comparison, and a separate `/audit pr` executor immediately classifies the PR **promotable**
+comparison, **`.oh/tasks/<slug>/evidence.md` is committed and answers back to the approved
+plan**, and a separate `/audit pr` executor immediately classifies the PR **promotable**
 (CI green + mergeable + clean) before `gh pr ready`. Draft is reserved for blocked states: an
-incomplete build, a new eval regression, missing or stale wiki alignment, a not-promotable PR
-(red/pending CI or conflicts), or an explicit user stop. Heartbeat stale-draft watchdog output
+incomplete build, a new eval regression, missing or stale wiki alignment, **missing or
+untracked evidence**, a not-promotable PR (red/pending CI or conflicts), or an explicit user
+stop. Heartbeat stale-draft watchdog output
 may trigger investigation or resume work, but it never authorizes `gh pr ready`. Never
 auto-merge.
 
@@ -458,7 +559,9 @@ auto-merge.
 | `/eval` skill | `.claude/skills/eval/SKILL.md` | Step 5 — probe regression floor |
 | Wiki schema | `.oh/skills/wiki/references/schema.md` | Step 5 — DeepWiki-style source-backed wiki alignment |
 | `/compact` | (built-in) | Step 5 — clears implementation context before the promotable gate |
-| `/audit pr` skill | `.claude/skills/audit/SKILL.md` | Step 9 — promotable classification (gates the undraft) |
+| Reviewer evidence doc | `.oh/skills/audit/references/reviewer-evidence-doc.md` | Step 6 — the contract `evidence.md` follows |
+| `/teach` skill | `.claude/skills/teach/SKILL.md` | Step 7 — hands the operator the final mental model |
+| `/audit pr` skill | `.claude/skills/audit/SKILL.md` | Step 11 — promotable classification (gates the undraft) |
 | `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | CI verification (subsumed by `/audit pr`'s promotable check) |
 | advisor agent | `.oh/agents/advisor.md` | Step 4 — the Advisor handoff briefing |
 | sandbox-processes norm | `.oh/skills/t3/references/sandbox-processes.md` | Step 4 — session naming for the Advisor |

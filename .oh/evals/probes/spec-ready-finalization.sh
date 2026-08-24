@@ -35,12 +35,14 @@ done
 # SCOPE MATTERS. `gh pr ready` and the word "only" both appear in the Advisor `/goal`
 # prompt earlier in the file, so an unscoped context grep stays green after the actual
 # step-9 gate is deleted. Assert against the FINALIZATION SECTION alone.
-final_section="$(awk '/^### 9\./{f=1} f' "$EXEC")"
+# Anchor on the section's NAME, not its number: steps get inserted and renumbered, and a
+# number-anchored awk silently selects the wrong region (or the whole tail) when they do.
+final_section="$(awk '/^### [0-9]+\. Promotable gate/{f=1} f' "$EXEC")"
 if [[ -z "$final_section" ]]; then
-  echo "REGRESSION: /spec execute has no step-9 promotable/undraft section" >&2
+  echo "REGRESSION: /spec execute has no 'Promotable gate → undraft' section" >&2
   exit 1
 fi
-if ! grep -qE 'ready \*\*only\*\* when|only when .*promotable|only if it is classified promotable' <<<"$final_section"; then
+if ! grep -qE 'ready[^.]*\*\*only\*\* when|only when .*promotable|only if it is classified promotable' <<<"$final_section"; then
   echo "REGRESSION: /spec execute's gh pr ready is no longer gated on the promotable classification" >&2
   exit 1
 fi
@@ -52,6 +54,30 @@ if ! grep -qF 'Never `gh pr merge`' <<<"$final_section"; then
   echo "REGRESSION: /spec execute's finalization section no longer forbids gh pr merge" >&2
   exit 1
 fi
+
+# US-005: the merge gate answers back to the approved plan. evidence.md is a GATE
+# CONDITION, not a step in a rendered prompt — the undraft path must refuse without it.
+if ! grep -qF 'evidence.md' <<<"$final_section"; then
+  echo "REGRESSION: /spec execute's merge gate no longer requires .oh/tasks/<slug>/evidence.md" >&2
+  exit 1
+fi
+if ! grep -qE 'Refuse the undraft|left draft[^|]*evidence\.md is missing' <<<"$final_section"; then
+  echo "REGRESSION: /spec execute mentions evidence.md but no longer REFUSES the undraft without it" >&2
+  exit 1
+fi
+# .oh/tasks/ is gitignored, so an untracked evidence.md is absent from the PR diff — which
+# is the same as not having it. The gate must check tracked-ness, not just existence.
+if ! grep -qF 'git ls-files --error-unmatch' <<<"$final_section"; then
+  echo "REGRESSION: /spec execute's evidence gate no longer verifies evidence.md is TRACKED (gitignored path)" >&2
+  exit 1
+fi
+# The two sections a reviewer cannot reconstruct from the diff.
+for section in 'diverged' 'unverified'; do
+  if ! grep -qi "$section" <<<"$final_section"; then
+    echo "REGRESSION: /spec execute's PR body no longer carries the '$section' section" >&2
+    exit 1
+  fi
+done
 
 spec_line=$(grep -E '^\| `/spec` \|' "$AGENTS" || true)
 if [[ -z "$spec_line" ]]; then
@@ -76,5 +102,5 @@ if [[ -e "$PI_EXEC" ]] && ! grep -qF 'Finalization contract' "$PI_EXEC"; then
   exit 1
 fi
 
-echo "PASS: /spec execute treats the draft PR as a checkpoint and a gated ready-for-review PR as the successful terminal state" >&2
+echo "PASS: /spec execute treats the draft PR as a checkpoint, refuses the undraft without a tracked evidence.md, surfaces divergence + unverified in the PR body, and gates ready-for-review on the promotable classification" >&2
 exit 0

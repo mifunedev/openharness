@@ -100,8 +100,8 @@
         "ACCEPTANCE TEST (human, not a probe): a reader who did not watch the build reads the merge-gate output and can state what changed, why it differs from the plan, and what is still unverified"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": "Most of this is inherited, not invented: evidence.md is already ANCHOR 6 of firstmate's step order, alongside /audit implementation (5), /retro (7), and Ready PR (8). The gap is that the pipeline never requires or surfaces it."
+      "passes": true,
+      "notes": "2026-08-24: evidence.md is a GATE CONDITION in /spec execute \u2014 the undraft refuses without it, and refuses an untracked one (gitignored path, so untracked == absent from the PR diff). It must answer plan/built/divergence/unverified, with empty sections written None/Nothing explicitly. /teach wired in as step 7. progress.txt promoted into a PR body carrying those four sections. spec-ready-finalization grew the gate and was re-anchored on the section NAME after renumbering broke its number anchor; 6 mutations rejected. AC-7 is explicitly a HUMAN read at the merge gate and remains OUTSTANDING \u2014 not self-certified."
     },
     {
       "id": "US-006",

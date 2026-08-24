@@ -20,6 +20,13 @@ import {
 } from "./commands/harness.js";
 import { harnessIds } from "./lib/harnesses/catalog.js";
 import {
+  runSubstrateInstall,
+  runSubstrateList,
+  runSubstrateStatus,
+  type SubstrateIO,
+} from "./commands/substrate.js";
+import { DEFAULT_SUBSTRATE, substrateIds } from "./lib/substrates/catalog.js";
+import {
   fetchRemoteSource,
   DEFAULT_REPO_URL,
   type FetchRemoteSourceOptions,
@@ -89,6 +96,7 @@ Usage:
   oh sandbox                Provision and start the sandbox (docker compose up)
   oh shell [container]      Open a zsh shell in the running sandbox container
   oh harness <args...>      Install and inspect agent CLI harnesses
+  oh substrate <args...>    Inspect host support for isolation substrates
   oh gateway <args...>      Manage a messaging client session (pi|hermes)
   oh cloud <args...>        Manage OpenHarness Cloud nodes
   oh --version              Print version
@@ -288,6 +296,32 @@ export interface InitArgs {
   minimal: boolean;
   copyClaude: boolean;
   verbose: boolean;
+}
+
+export function printSubstrateHelp(): void {
+  process.stdout.write(`oh substrate — Inspect host support for isolation substrates
+
+Usage:
+  oh substrate list                   List known substrates and host support
+  oh substrate status [name]          Show the measured host requirements
+  oh substrate install [name]         Install a substrate into the sandbox
+                                      (default: ${DEFAULT_SUBSTRATE})
+
+This command installs a TOOL and reports host readiness. It selects no runtime,
+writes no config, and changes nothing about how the sandbox boots — choosing a
+substrate is tracked in #731 (see #806 for the open selector decision).
+
+\`install\` measures the host first and refuses to run an installer that cannot
+succeed, printing each unmet requirement with its remediation. \`--force\` is how
+you override that judgement.
+
+Flags:
+  --force          Attempt the install even when the host preflight fails
+  --json           Machine-readable output (list/status)
+
+Substrates:
+${substrateIds().map((s) => `  ${s}`).join("\n")}
+`);
 }
 
 export function parseInitArgs(rest: string[]): ParseResult<InitArgs> {
@@ -555,6 +589,59 @@ export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
   if (name !== undefined) args.name = name;
   return { ok: true, args };
 }
+
+/** Parsed `oh substrate` args. */
+interface SubstrateArgs {
+  help: boolean;
+  force: boolean;
+  json: boolean;
+  subcommand?: "list" | "install" | "status";
+  name?: string;
+}
+
+export function parseSubstrateArgs(rest: string[]): ParseResult<SubstrateArgs> {
+  const args: SubstrateArgs = { help: false, force: false, json: false };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
+  }
+
+  const positionals: string[] = [];
+  for (const token of rest) {
+    if (token === "--force") {
+      args.force = true;
+    } else if (token === "--json") {
+      args.json = true;
+    } else if (token.startsWith("-")) {
+      return { ok: false, error: `oh substrate: unknown flag "${token}"` };
+    } else {
+      positionals.push(token);
+    }
+  }
+
+  const [sub, name, ...extra] = positionals;
+  if (sub !== "list" && sub !== "install" && sub !== "status") {
+    return {
+      ok: false,
+      error: `oh substrate: unknown subcommand "${sub}" — expected list, install, or status`,
+      showHelp: true,
+    };
+  }
+  if (extra.length > 0) {
+    return { ok: false, error: `oh substrate: unexpected argument "${extra[0]}"` };
+  }
+  if (sub === "list" && name !== undefined) {
+    return { ok: false, error: `oh substrate list: unexpected argument "${name}"` };
+  }
+
+  args.subcommand = sub;
+  // `install` with no name is the documented default, NOT an error — the
+  // operator asked for one obvious substrate, and naming it every time would
+  // be ceremony. `list`/`status` keep undefined meaning "all".
+  if (name !== undefined) args.name = name;
+  else if (sub === "install") args.name = DEFAULT_SUBSTRATE;
+  return { ok: true, args };
+}
+
 
 /** Parsed `oh gateway` args — everything after a leading help flag is verbatim. */
 export interface GatewayArgs {
@@ -906,6 +993,32 @@ async function main(argv: string[]): Promise<number> {
       { persistOnly: a.persistOnly, noPersist: a.noPersist },
       io,
     );
+  }
+
+  if (first === "substrate") {
+    const parsed = parseSubstrateArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printSubstrateHelp();
+      return 1;
+    }
+    if (parsed.args.help) {
+      printSubstrateHelp();
+      return 0;
+    }
+    const a = parsed.args;
+    const io: SubstrateIO = {
+      stdout: (s) => process.stdout.write(s),
+      stderr: (s) => process.stderr.write(s),
+    };
+    if (a.subcommand === "list") {
+      return await runSubstrateList({ json: a.json }, io);
+    }
+    if (a.subcommand === "status") {
+      return await runSubstrateStatus(a.name, { json: a.json }, io);
+    }
+    // parseSubstrateArgs defaults `name` for `install`.
+    return await runSubstrateInstall(a.name as string, { force: a.force }, io);
   }
 
   if (first === "cloud") {

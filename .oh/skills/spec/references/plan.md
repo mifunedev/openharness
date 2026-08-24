@@ -53,12 +53,16 @@ Run these in order; each is an existing primitive — compose, don't re-derive.
    (or `--plan` content, with an explicit instruction to skip clarifying questions when a
    plan is supplied). Verify `.oh/tasks/<slug>/prd.md` exists before continuing.
 
-3. **Wiki alignment**. Read `.oh/skills/wiki/references/schema.md`, compare the topic against
-   the public DeepWiki for this repo, and record a `## Wiki Alignment` section in
-   `prd.md` (`Impact: REQUIRED | NOT-APPLICABLE`, local entries, spec alignment, DeepWiki
-   comparison, and — when REQUIRED — the wiki acceptance criteria a story must carry). The
-   exact shape is the `## Wiki Alignment` block below; reuse it verbatim so `/spec execute`'s wiki gate
-   can read it.
+3. **Wiki alignment**. Read `.oh/skills/wiki/references/schema.md` and record a
+   `## Wiki Alignment` section in `prd.md` (`Impact: REQUIRED | NOT-APPLICABLE`, local
+   entries, spec alignment, and — when REQUIRED — the wiki acceptance criteria a story must
+   carry). The exact shape is the `## Wiki Alignment` block below; reuse it verbatim so
+   `/spec execute`'s wiki gate can read it.
+
+   **There is no DeepWiki comparison step.** The public DeepWiki for this repo does not
+   regenerate on any schedule this workflow can depend on, so a comparison against it
+   measures upstream lag, not the plan. Alignment is judged against the repo's own sources
+   and the local corpus only.
 
 4. **`/ralph` → `.oh/tasks/<slug>/prd.json`**. Invoke the `ralph` skill:
    `.oh/tasks/<slug>/ --issue <N> --prefix <prefix>`. It writes `prd.json` with

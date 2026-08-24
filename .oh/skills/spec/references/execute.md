@@ -101,7 +101,6 @@ gh issue create \
     "" \
     "## Wiki Alignment" \
     "- Impact: <REQUIRED | NOT-APPLICABLE from prd.md>" \
-    "- DeepWiki comparison: <one-line summary from prd.md>" \
     "" \
     "## Tracking" \
     "Planned by /spec plan; the operator approved prd.md, which is the commitment gate. Draft PR to follow.")
@@ -171,7 +170,7 @@ Closes #<N>.
 
 ## Next steps (automated)
 1. Launch the expert `/worktrees` Advisor in tmux session `agent-spec-<slug>`.
-2. Advisor: run `.oh/scripts/firstmate.sh <slug>` in an isolated worktree; watch to `STATUS: COMPLETE`; run `/audit implementation`; revise required wiki entries against the spec and DeepWiki comparison.
+2. Advisor: run `.oh/scripts/firstmate.sh <slug>` in an isolated worktree; watch to `STATUS: COMPLETE`; run `/audit implementation`; revise required wiki entries against the spec.
 3. A separate executor runs `/audit pr` immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that fresh audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output — including draft-age and draft-cap/backlog warnings — is only a resume/investigation hint, never an undraft signal.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code) via /spec execute
@@ -316,10 +315,15 @@ starts reporting a floor it never measured.
 implementation and before the promotable gate. The revision must align with:
 
 - the PRD's goals, non-goals, acceptance criteria, and completed behavior;
-- the DeepWiki comparison `/spec plan` recorded;
-- `.oh/skills/wiki/references/schema.md`'s DeepWiki-style standard: relevant source files,
-  line-cited claims, system relationships for pipeline/runtime/architecture topics, and
-  `## See Also` navigation.
+- `.oh/skills/wiki/references/schema.md`'s source-backed architecture standard: relevant
+  source files, line-cited claims, system relationships for pipeline/runtime/architecture
+  topics, and `## See Also` navigation.
+
+There is **no DeepWiki comparison** in this gate. The public DeepWiki for this repo
+regenerates on no schedule the gate can depend on, so requiring the comparison made the gate
+answerable only by an unreliable third party — a disagreement with it measures upstream lag,
+never the build. Wiki alignment is judged against the repo's own sources and the local
+corpus.
 
 Refresh `.oh/skills/wiki/corpus/README.md` via `/wiki lint` or the atomic fallback in
 `/wiki ingest`, then run:
@@ -507,7 +511,7 @@ URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline outpu
 | 3 | `gh pr create` fails (no remote, branch missing on target remote) | Verify the push from step 2; re-run from step 3 |
 | 4 | The build session stalls, times out, or leaves acceptance criteria incomplete | Leave the PR draft and comment the resume command (`.oh/scripts/firstmate.sh <slug>` / attach `agent-spec-<slug>`). A missing `tmux` is not a failure here — the executor's ladder degrades to foreground on its own |
 | 5 | `/eval` reports a NEW green→red regression or exits non-zero | Leave the PR draft; fix or document the regression, then re-run `/eval` |
-| 5 | Wiki impact REQUIRED but entries are missing, stale against the implemented behavior, not compared against DeepWiki, or the README index probe fails | Leave the PR draft; fix the wiki entries/index, then re-run the wiki gate |
+| 5 | Wiki impact REQUIRED but entries are missing, stale against the implemented behavior, or the README index probe fails | Leave the PR draft; fix the wiki entries/index, then re-run the wiki gate |
 | 5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue |
 | 6 | `evidence.md` cannot be written because a gate produced no observed output | Record the gap in the doc and leave the PR draft — a gate with no observed output is a gap, never a pass |
 | 7 | `/teach` errors or has no wiki entry to revise | Non-blocking; note it and continue — the evidence doc still carries the proof |
@@ -539,8 +543,8 @@ automatically.
 `execute` opens a draft PR early so reviewers can observe the scaffold, but a successful run
 does not stop there. The terminal successful state is a **ready-for-review** PR, reached only
 after implementation completes, `/audit implementation` returns AUDIT-PASS, `/eval` shows no
-new green→red regression, required wiki entries are updated against the spec and DeepWiki
-comparison, **`.oh/tasks/<slug>/evidence.md` is committed and answers back to the approved
+new green→red regression, required wiki entries are updated against the spec,
+**`.oh/tasks/<slug>/evidence.md` is committed and answers back to the approved
 plan**, and a separate `/audit pr` executor immediately classifies the PR **promotable**
 (CI green + mergeable + clean) before `gh pr ready`. Draft is reserved for blocked states: an
 incomplete build, a new eval regression, missing or stale wiki alignment, **missing or
@@ -581,7 +585,7 @@ auto-merge.
 | `/delegate` skill | `.claude/skills/delegate/SKILL.md` | Step 4 — optional within-story fan-out inside the build session |
 | `/audit implementation` | `.claude/skills/audit/SKILL.md` | Step 5 — the per-unit verdict gate |
 | `/eval` skill | `.claude/skills/eval/SKILL.md` | Step 5 — probe regression floor |
-| Wiki schema | `.oh/skills/wiki/references/schema.md` | Step 5 — DeepWiki-style source-backed wiki alignment |
+| Wiki schema | `.oh/skills/wiki/references/schema.md` | Step 5 — source-backed wiki alignment |
 | `/compact` | (built-in) | Step 5 — clears implementation context before the promotable gate |
 | Reviewer evidence doc | `.oh/skills/audit/references/reviewer-evidence-doc.md` | Step 6 — the contract `evidence.md` follows |
 | `/teach` skill | `.claude/skills/teach/SKILL.md` | Step 7 — hands the operator the final mental model |

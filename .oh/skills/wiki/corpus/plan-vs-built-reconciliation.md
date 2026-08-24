@@ -34,7 +34,7 @@ The pipeline had ~10 verification nodes and zero comprehension nodes: every gate
 
 **The build narrative is promoted, not stranded.** `progress.txt` holds the per-story record; step 10 folds it and `evidence.md` into the PR body so the reviewer meets the work in the PR rather than by opening the task folder (`execute.md:440-448`).
 
-**DeepWiki comparison.** Run 2026-08-24 against `https://deepwiki.com/mifunedev/openharness` (Overview page). DeepWiki has **no** entry for this concept: it does not mention `evidence.md` or any plan-versus-built reconciliation gate, and its planning-phase table still lists `/ship-spec` with the gloss *"Convert specs into executable tasks via a critic"* — the critic gate US-001 removed. So this page is **net-new relative to DeepWiki**, not a re-synthesis of it, and the divergence is upstream staleness rather than a contradiction to resolve.
+**DeepWiki comparison.** Run 2026-08-24 against `https://deepwiki.com/mifunedev/openharness` (Overview page). DeepWiki has **no** entry for this concept: it does not mention `evidence.md` or any plan-versus-built reconciliation gate, and its planning-phase table still lists `/ship-spec` with the gloss *"Convert specs into executable tasks via a critic"* — the critic gate US-001 removed. So this page is **net-new relative to DeepWiki**, not a re-synthesis of it, and the divergence is upstream staleness rather than a contradiction to resolve. **The workflow no longer runs this comparison** (2026-08-24): DeepWiki regenerates on no schedule the gate could depend on, so `/spec plan` and `/spec execute` dropped it — the staleness recorded here is the evidence for that removal, kept as rationale rather than as a standing obligation.
 
 ## System Relationships
 

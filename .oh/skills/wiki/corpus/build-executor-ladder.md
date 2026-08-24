@@ -41,7 +41,7 @@ Open Harness builds a planned `.oh/tasks/<slug>/` folder along **one variable ax
 
 **Process norms.** The ladder was **added** to `.oh/skills/t3/references/sandbox-processes.md:13`, not substituted for the tmux rule: managed/headless processes (cron, gateways, watchdogs, dev servers, tunnels) stay tmux; only agentic build sessions climb the ladder.
 
-**DeepWiki comparison.** Run 2026-08-24 against `https://deepwiki.com/mifunedev/openharness` (Overview page). DeepWiki is **stale on this topic**: it still names `scripts/ralph.sh` among the implementation skills and gives no executor count or ladder, so it describes the pre-US-002 world in which several executor arms coexisted. `.oh/scripts/ralph.sh` was deleted on 2026-08-23. This page is authoritative over DeepWiki here; the disagreement is upstream lag, not an unresolved question.
+**DeepWiki is not a source here.** A 2026-08-24 read still named the deleted `scripts/ralph.sh` and gave no ladder. That staleness is why `/spec plan` and `/spec execute` dropped the DeepWiki comparison the same day: it regenerates on no schedule a gate can depend on. This page is authoritative.
 
 ## System Relationships
 ```mermaid

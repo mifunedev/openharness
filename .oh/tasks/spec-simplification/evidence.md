@@ -158,6 +158,16 @@ Curated corpus entries land with `git add -f` (`.gitignore:85`).
    `firstmate.sh --kill spec-simplification` against its own live slug while verifying the kill
    path. Recovery was a resume, not a restart. Destructive verification now uses a throwaway
    decoy session.
+9. **The DeepWiki comparison was removed from the workflow after the PR went ready**, on
+   operator instruction: the public DeepWiki for this repo regenerates on no schedule the gate
+   could depend on. This build's own comparison is the evidence — it found `scripts/ralph.sh`
+   still listed a day after deletion, and `/ship-spec` still glossed with the critic gate US-001
+   removed. A gate answerable only by an unreliable third party measures upstream lag, not the
+   build. Dropped from `/spec plan` step 3, the `/spec execute` wiki gate, its failure-mode row,
+   the issue-body template, and the finalization contract; the wiki schema's standard is now
+   named for what it requires (source files, line-cited claims, relationships, navigation)
+   rather than for DeepWiki. The two corpus entries keep the observation as rationale. Probes:
+   the 10 that read the edited files all PASS.
 
 ## What remains unverified
 

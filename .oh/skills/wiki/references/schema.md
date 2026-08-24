@@ -1,6 +1,6 @@
 # Wiki — Schema and Authoring Rules
 
-The Open Harness wiki (`.oh/skills/wiki/corpus/`) is a personal-scale knowledge base compiled and maintained by the orchestrator. Its target quality bar is the DeepWiki treatment of `mifunedev/openharness`: architecture-first pages that explain source-backed system relationships, not loose notes. Entity pages hold **facts and synthesis** about recurring topics; they are loaded directly into context on demand (via `/wiki query`) rather than retrieved through vector search.
+The Open Harness wiki (`.oh/skills/wiki/corpus/`) is a personal-scale knowledge base compiled and maintained by the orchestrator. Its target quality bar is architecture-first pages that explain source-backed system relationships, not loose notes. Entity pages hold **facts and synthesis** about recurring topics; they are loaded directly into context on demand (via `/wiki query`) rather than retrieved through vector search.
 
 `.oh/skills/wiki/references/schema.md` is the sole schema document for `.oh/skills/wiki/corpus/`. There is no `.oh/skills/wiki/corpus/CLAUDE.md` — that would collide with the root `CLAUDE.md` symlink to `AGENTS.md`.
 
@@ -24,7 +24,7 @@ The sharp test: *Is this a fact or synthesis about a topic, intended to be read 
 
 ## 2. Entry schema
 
-Every wiki entry is a single markdown file at `.oh/skills/wiki/corpus/<slug>.md` with YAML frontmatter followed by a bounded, source-backed body. The minimum body is three sections; architecture and harness-mechanism entries use the DeepWiki-style expansion below.
+Every wiki entry is a single markdown file at `.oh/skills/wiki/corpus/<slug>.md` with YAML frontmatter followed by a bounded, source-backed body. The minimum body is three sections; architecture and harness-mechanism entries use the source-backed expansion below.
 
 ### Frontmatter
 
@@ -82,15 +82,15 @@ Field definitions:
 
 Sections must appear in this order: H1, optional `## Relevant Source Files`, `## Summary`, `## Detail`, optional `## System Relationships`, `## See Also`. Architecture/harness entries SHOULD include both optional sections; simple external-concept entries may omit them. `## Summary`, `## Detail`, and `## See Also` are always present even if `## See Also` has no bullets yet.
 
-### DeepWiki-style standard
+### Source-backed architecture standard
 
-Use the public DeepWiki for `mifunedev/openharness` as the model for new or substantially revised architecture pages: source files first, then concise synthesis, then component relationships, then navigation. A page meets the standard when:
+New or substantially revised architecture pages follow one shape: source files first, then concise synthesis, then component relationships, then navigation. A page meets the standard when:
 
 - **Relevant source files are explicit**: list the files that make the page true before the summary, not as vague bibliography. Prefer local repo paths; cite external URLs only when the page is about an external artifact.
 - **Claims are line-cited**: repository behavior, stage ordering, lifecycle claims, and invariants cite source paths with line numbers such as `AGENTS.md:111` or `.claude/skills/spec/references/execute.md:20`.
 - **Relationships are visible**: when the page explains a pipeline, runtime, or architecture, include a compact Mermaid diagram or table that shows ownership, ordering, and handoff boundaries.
 - **Synthesis stays separate from evidence**: use prose to explain what the cited files imply, but do not let unsupported interpretation look like a source fact.
-- **Navigation closes the loop**: `## See Also` points to adjacent wiki entries using `[[slug]]` links, mirroring DeepWiki's page-to-page navigation.
+- **Navigation closes the loop**: `## See Also` points to adjacent wiki entries using `[[slug]]` links, so a reader can walk between related pages.
 
 ### Word cap and sub-articles
 

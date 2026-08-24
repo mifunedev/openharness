@@ -1,9 +1,9 @@
 # Evidence — spec-simplification
 
-- **PR**: (opened at step 10 of this run; see the PR body for the link) · **Repo**: `mifunedev/openharness`, base `development` · **Branch**: `feat/spec-simplification`
+- **PR**: [#817](https://github.com/mifunedev/openharness/pull/817) (`mifunedev/openharness`, base `development`) · **Branch**: `feat/spec-simplification`
 - **Issue**: #816
 - **Audit run**: **none — no lifecycle `AUDIT_RUN_ID` exists for this build.** See *Correlation* below; this is a disclosed gap, not an omission.
-- **Verdict**: `AUDIT-PASS` on gates 1, 2 and 4; gate 3 recorded separately below.
+- **Verdict**: `AUDIT-PASS` (gates 1, 2, 4) + `PR-AUDIT-PROMOTABLE` (gate 3, recorded below).
 - **Commit under test**: `a8ae4d0f` (`a8ae4d0fd76422ae4c2617411517d576f5365230`)
 
 ## Correlation — read this before trusting the verdict
@@ -177,9 +177,55 @@ Curated corpus entries land with `git add -f` (`.gitignore:85`).
    entries. It was already over at 1058 before this change. Schema § 2's remedy is a sub-article
    split; trimming live-verified detail to meet a word cap is an operator's call, not a drive-by.
 5. **The four `SKIPPED` probes** are carried forward unchanged, not made to pass.
-6. **CI has never run on this branch** before this push. Gate 3's verdict is recorded below from
-   a real classification, or the PR stays draft.
+6. ~~**CI has never run on this branch.**~~ Resolved in this run: all four checks green and
+   `pr-classify` returned `promotable: true`. See *Gate 3* below.
 
-## Gate 3 — promotable / CI (recorded after the push)
+## Gate 3 — promotable / CI: **PASS (`PR-AUDIT-PROMOTABLE`)**
 
-_Appended in the same run, from real `gh` output — see the section added below._
+PR [#817](https://github.com/mifunedev/openharness/pull/817) (`mifunedev/openharness`, base
+`development`). Branch pushed to `upstream` — `origin` is a stale fork.
+
+All four required checks settled green on `e1a75d42`:
+
+```
+$ gh pr checks 817 --repo mifunedev/openharness
+Boot Path Lint (shellcheck + hadolint)      pass  16s
+Eval Probe Regression Gate                  pass  25s
+Lint, Typecheck, Build & Test               pass  43s
+Validate sandbox compose and image build    pass
+```
+
+Classified by the production seam, not by eyeballing the checks:
+
+```
+$ bash .oh/skills/audit/scripts/pr-acquire.sh pr --repo mifunedev/openharness --pr 817 \
+    | bash .oh/skills/audit/scripts/pr-classify.sh
+{"ci":"PASS","draftStatus":"promotable","evidenceComplete":true,"flags":["size-convention"],
+ "mergeStateStatus":"CLEAN","mergeable":"MERGEABLE","promotable":true,"readyForReview":true,
+ "readyToMerge":false,...}
+```
+
+The evidence gate was checked before the undraft, both halves:
+
+```
+$ git ls-files --error-unmatch .oh/tasks/spec-simplification/evidence.md
+.oh/tasks/spec-simplification/evidence.md
+TRACKED-OK
+```
+
+Two notes a reviewer should not have to infer:
+
+- **`flags: ["size-convention"]` is advisory and did not gate.** The promotable classification
+  never reads `flags`; the diff is large (108 files) because six of the seven stories are
+  deletions. Recorded, not dismissed.
+- **`readyToMerge: false` is correct and expected.** There is no review yet, and the human owns
+  the merge — `AGENTS.md § The Workflow`: *human merge — final gate, no auto-merge*. Nothing in
+  this run merges anything.
+- **`issueReferences` lists 194, 297 and 758 alongside 816.** Those three are the tracking
+  issues for the four pre-existing `SKIPPED` probes, mentioned in the PR body's *unverified*
+  section. Only #816 carries a closing keyword.
+
+**Undraft correlation.** This section, the CI observation, and the classification above were
+committed and pushed *before* the undraft, which re-triggered CI on the new head. The undraft
+was performed only after a **fresh** classification on that final commit — a green measured
+against an earlier tree is not evidence about the tree being reviewed.

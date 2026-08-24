@@ -19,6 +19,8 @@
 - `.oh/skills/firstmate/templates/session-prompt.md` is the SOURCE of the build's step order (US-004 deleted the advisor pack it was derived from). Changing the anchor order is a workflow change, not a formatting edit.
 - The probe suite is 106 files after US-004 (`first-mate-charter.sh` deleted with its subject).
 - Anchor a section-scoped probe assertion on the section's NAME, never its number. Inserting a step renumbers everything after it, and `awk '/^### 9\./{f=1} f'` then selects the wrong region (or the whole tail) without failing.
+- `/eval` runs ONCE per cycle. `/spec execute` publishes `.oh/tasks/<slug>/eval-result.json` (commit-keyed, `git add -f`); `/audit implementation` Gate 2 and `/benchmark` Signal 1 read it and must compare `.commit` to `HEAD` before reusing. A stale or missing record means RUN, never PASS.
+- There are no `STATUS: SPEC-*` tokens. Nodes report what they produced; never infer success from silence.
 
 ## Baseline measurements recorded at plan time (2026-08-23)
 
@@ -311,6 +313,50 @@ those same four sections. Extended the evidence-doc contract to match, and grew
 - I did not write this task's own `evidence.md`: `/spec execute` owns the tail (§6 of this
   session's contract), and a build session that writes its own reviewer evidence is grading
   its own exam.
+
+---
+
+## US-006 — 2026-08-24 05:04 UTC
+
+**Title**: Delete the ceremony that emits nothing readable
+**Files changed**: `.oh/skills/spec/SKILL.md`,
+`.oh/skills/spec/references/{execute,plan,retro}.md`,
+`.oh/skills/audit/references/implementation.md`, `.oh/skills/benchmark/SKILL.md`,
+NEW `.oh/evals/probes/eval-runs-once-per-cycle.sh`, `.oh/tasks/README.md`,
+`AGENTS.md`, `CHANGELOG.md`, `.oh/evals/RESULTS.md`
+**Commit**: (this commit)
+**Result**: PASS
+
+### What I did
+Removed the four `STATUS: SPEC-*` tokens after re-confirming zero executable consumers,
+narrowed the per-node memory append to one entry per run in the heartbeat's own shape, cut
+the groom triad from `/spec execute`, and made `/eval` run once per cycle by publishing a
+commit-keyed result the two downstream gates read. Fixed the `.oh/tasks/README.md` /
+`.gitignore` contradiction. New probe pins the single-run contract from both ends.
+
+### Learnings for future iterations
+- **Removing a token is not the same as removing the rule it carried.** All four
+  `STATUS: SPEC-*` tokens were ceremony, but the sentence beside them — *never infer success
+  from silence* — was the real content. Each node now states what it produced instead, and
+  the negative claim ("there is no such token, it had no consumer") is kept in place so the
+  next reader does not re-add it as an obvious improvement.
+- **The risk in de-duplicating a gate is not the duplication, it is the silent inheritance.**
+  Making `/eval` run once was easy; making the reuse honest was the work. Without comparing
+  the record's `commit` to `HEAD`, "read the cycle's result" quietly becomes "assume the
+  cycle's result", and the pipeline reports a floor it never measured. The freshness key and
+  the run-not-pass fallback are the load-bearing parts, and the probe mutates exactly that
+  case (`jq -r .commit` → `jq -r .ranAt`) to prove it is caught.
+- **A gitignored artifact needs `git add -f` at every site that writes one.** `eval-result.json`
+  joins `prd.*`, `prompt.md`, `progress.txt`, and `evidence.md` in that list; a record written
+  but not force-added is invisible to a downstream reader in a fresh worktree, which reads as
+  "no record" and triggers a re-run — the exact cost this story removed.
+- **Cutting a step means cutting every diagram and table that draws it.** `groom` survived in
+  the AGENTS.md mermaid graph, the seam table, the skills-table row, the dispatcher's
+  subcommand table, and `retro.md`'s "what this node does NOT do" list. A step deleted only
+  from its own section still reads as live everywhere else.
+- Renumbering `/spec execute`'s steps (11 → 10 after the groom cut) is now routine because
+  US-005 re-anchored the probe on the section NAME. That earlier fix paid for itself one
+  story later.
 
 ---
 

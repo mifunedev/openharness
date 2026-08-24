@@ -1,4 +1,4 @@
-# `/spec execute` — build ⇄ audit → spec-retro → improve → groom
+# `/spec execute` — build ⇄ audit → evidence → teach → spec-retro → improve
 
 > Detail doc for the **`execute`** subcommand of the `/spec` skill
 > (`.oh/skills/spec/SKILL.md`). Argument form:
@@ -279,13 +279,37 @@ verdict:
 
 Two gates run inside this loop and must both clear before the audit can PASS.
 
-**The `/eval` gate.** Run `/eval` (the Advisor runs this inside its session) while still on
-the work branch. If it updates `.oh/evals/RESULTS.md`, commit the benchmark refresh on the
-branch. Treat only a NEW green→red probe regression or a non-zero eval runner exit as
-blocking; a pre-existing red with an unchanged delta is non-gating but should be disclosed in
-the PR. Key on the **delta and the runner's exit code**, never on the bare presence of a
-`REGRESSION` row — a probe that was already red on the base is pre-existing and this PR did
-not cause it.
+**The `/eval` gate — run ONCE per cycle.** Run `/eval` while still on the work branch. If it
+updates `.oh/evals/RESULTS.md`, commit the benchmark refresh on the branch. Treat only a NEW
+green→red probe regression or a non-zero eval runner exit as blocking; a pre-existing red with
+an unchanged delta is non-gating but should be disclosed in the PR. Key on the **delta and the
+runner's exit code**, never on the bare presence of a `REGRESSION` row — a probe that was
+already red on the base is pre-existing and this PR did not cause it.
+
+This is the **only** suite run in the cycle. `/audit implementation` Gate 2 and `/benchmark`
+Signal 1 read this result instead of re-running; three runs of the same 106 probes against the
+same commit cost 318 probe executions and told us the same thing once. Publish the result
+where they can find it, keyed to the commit it actually ran against:
+
+```bash
+bash .oh/skills/eval/run.sh ; rc=$?
+cat > ".oh/tasks/<slug>/eval-result.json" <<EOF
+{
+  "commit": "$(git rev-parse HEAD)",
+  "runnerExit": $rc,
+  "ranAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "newRegressions": [<probe ids that went green→red this run, or empty>],
+  "preExistingReds": [<probe ids already red on the base — non-gating, still disclosed>]
+}
+EOF
+git add -f ".oh/tasks/<slug>/eval-result.json"
+```
+
+**`commit` is the freshness key, and it is what keeps the reuse honest.** A downstream reader
+reuses this record only while `commit` equals the current `git rev-parse HEAD`. The moment the
+branch moves, the record describes code that is no longer under test, and the reader must run
+the suite itself rather than inherit a stale green. Reuse without that check is how a pipeline
+starts reporting a floor it never measured.
 
 **The wiki-revision gate.** If `.oh/tasks/<slug>/prd.md` has `## Wiki Alignment` with
 `Impact: REQUIRED`, revise the named `.oh/skills/wiki/corpus/*.md` entries after
@@ -369,15 +393,15 @@ The self-improvement tail (`AGENTS.md § The Workflow`):
   `.oh/memory/MEMORY.md`, mint a probe from any guardrail lesson).
 - **compress** — keep the always-loaded context lean and clear (`/audit context`).
 - **benchmark** — confirm the change earned its complexity (`/benchmark`): the `/eval`
-  regression floor stays green AND the capability-benchmark ceiling held or moved.
+  regression floor stays green AND the capability-benchmark ceiling held or moved. It reads
+  step 5's `eval-result.json` for the floor; it does not re-run the suite.
 
-### 10. `groom` — pre-merge health checks
+The **groom triad** (`/audit skills` · `/wiki lint` · `/audit drift`) is deliberately NOT here.
+`/audit drift` already runs hourly from the heartbeat cron, and the other two are report-only
+health checks that never blocked a merge — running them per cycle spent the cycle's budget on
+advisory output nobody gated on. Run them on their own cadence, or on demand.
 
-Before handing to the human, run the grooming triad named in `AGENTS.md § The Workflow`:
-`/audit skills` · `/wiki lint` · `/audit drift`. These are report-only health checks; surface
-findings, do not block the merge on advisory output.
-
-### 11. Promotable gate → undraft → human merge gate
+### 10. Promotable gate → undraft → human merge gate
 
 Push the branch so CI runs:
 
@@ -487,9 +511,9 @@ URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline outpu
 | 5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue |
 | 6 | `evidence.md` cannot be written because a gate produced no observed output | Record the gap in the doc and leave the PR draft — a gate with no observed output is a gap, never a pass |
 | 7 | `/teach` errors or has no wiki entry to revise | Non-blocking; note it and continue — the evidence doc still carries the proof |
-| 11 | `.oh/tasks/<slug>/evidence.md` is missing, or present but untracked (added without `-f`) | Leave the PR draft (`DRAFT-BLOCKED (evidence)`); write and commit it, then re-run the promotable gate |
-| 11 | `/audit pr` cannot classify (gh/API error), or CI is red/pending so the PR is not promotable | Leave the PR draft; fix CI and re-run the audit executor |
-| 11 | PR not promotable, or `gh pr ready` fails | Leave draft + comment the blocking gate; diagnose PR state/permissions; never merge |
+| 10 | `.oh/tasks/<slug>/evidence.md` is missing, or present but untracked (added without `-f`) | Leave the PR draft (`DRAFT-BLOCKED (evidence)`); write and commit it, then re-run the promotable gate |
+| 10 | `/audit pr` cannot classify (gh/API error), or CI is red/pending so the PR is not promotable | Leave the PR draft; fix CI and re-run the audit executor |
+| 10 | PR not promotable, or `gh pr ready` fails | Leave draft + comment the blocking gate; diagnose PR state/permissions; never merge |
 
 ## Idempotency
 
@@ -504,8 +528,8 @@ Every step checks for prior state and resumes rather than duplicating:
 | 5 | `.oh/evals/RESULTS.md` already reflects the current probe set and no new regression exists | Continue; otherwise re-run `/eval` |
 | 5 | Wiki impact NOT-APPLICABLE, or required entries already match the implementation and the index probe passes | Continue |
 | 6 | `evidence.md` exists and correlates to the CURRENT audit run id | Reuse; a doc citing a stale run id is rewritten, not kept |
-| 11 | `/audit pr` already classified this PR promotable | Continue to the undraft |
-| 11 | PR is already ready-for-review | Print the terminal status; do not mutate |
+| 10 | `/audit pr` already classified this PR promotable | Continue to the undraft |
+| 10 | PR is already ready-for-review | Print the terminal status; do not mutate |
 
 The whole pipeline can be re-invoked safely. Failed step = fix + re-run; resume happens
 automatically.
@@ -561,7 +585,7 @@ auto-merge.
 | `/compact` | (built-in) | Step 5 — clears implementation context before the promotable gate |
 | Reviewer evidence doc | `.oh/skills/audit/references/reviewer-evidence-doc.md` | Step 6 — the contract `evidence.md` follows |
 | `/teach` skill | `.claude/skills/teach/SKILL.md` | Step 7 — hands the operator the final mental model |
-| `/audit pr` skill | `.claude/skills/audit/SKILL.md` | Step 11 — promotable classification (gates the undraft) |
+| `/audit pr` skill | `.claude/skills/audit/SKILL.md` | Step 10 — promotable classification (gates the undraft) |
 | `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | CI verification (subsumed by `/audit pr`'s promotable check) |
 | advisor agent | `.oh/agents/advisor.md` | Step 4 — the Advisor handoff briefing |
 | sandbox-processes norm | `.oh/skills/t3/references/sandbox-processes.md` | Step 4 — session naming for the Advisor |
@@ -571,18 +595,19 @@ auto-merge.
 
 ## Memory Protocol
 
-The composed skills each log their own entries. `execute` adds one roll-up to
-`.oh/memory/<UTC-date>/log.md` per `.oh/skills/retro/references/memory-protocol.md`:
+The composed skills each log their own entries. `execute` adds **one** roll-up per run — not
+one per node — to `.oh/memory/<UTC-date>/log.md`, in the three-field shape the heartbeat cron
+actually reads (`Result` / `Action` / `Observation`; `.oh/crons/heartbeat.md`):
 
 ```markdown
 ## spec-execute -- HH:MM UTC
-- **Result**: OP | PARTIAL | FAIL
-- **Slug / PR**: <slug> / #<N>
-- **Audit**: AUDIT-PASS | AUDIT-FAIL (loop count <n>)
-- **Tail**: spec-retro <done> · improve <done> · groom <findings>
-- **Terminal**: READY (pending human merge) | DRAFT-BLOCKED (<gate>)
-- **Observation**: <one sentence>
+- **Result**: READY | DRAFT-BLOCKED | FAIL
+- **Action**: <slug> #<PR> — <what the run did, one line>
+- **Observation**: <the most important signal, one sentence>
 ```
+
+The per-node mandatory append is gone. Nothing consumed the extra fields, and a log the
+heartbeat reads as prose is not made more readable by three more structured keys per run.
 
 ---
 
@@ -591,13 +616,14 @@ The composed skills each log their own entries. `execute` adds one roll-up to
 Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
 merge → reset|clean`), `execute` is the **execute** node — it ends at the human merge
 gate (next step: the human merges; the runner then resets/cleans). When a gate blocks the
-undraft, the next step is to resume the build or fix the named gate. Print one of these bare
-tokens as the final line:
+undraft, the next step is to resume the build or fix the named gate.
 
-    STATUS: SPEC-EXECUTED
+Report the terminal state as **`READY`** (the PR is ready for review) or
+**`DRAFT-BLOCKED (<gate>)`** naming the gate that held it, alongside the PR URL. The PR's own
+draft/ready state is the authority — it is what the next reader and the next run both look at.
 
-    STATUS: SPEC-BLOCKED
-
-The `/spec` family's authority is `AGENTS.md § The Workflow`. Never infer a
-promotable PR from silence — a build that crashed or an unrun CI is `SPEC-BLOCKED`, not
-`SPEC-EXECUTED`.
+There is no `STATUS: SPEC-*` token. The four that used to be printed here
+(`SPEC-PLANNED` / `SPEC-EXECUTED` / `SPEC-BLOCKED` / `SPEC-RETRO-DONE`) had **zero executable
+consumers repo-wide** — nothing parsed them, so they were ceremony that emitted a line and
+bought nothing. Never infer a promotable PR from silence: a build that crashed or an unrun CI
+is `DRAFT-BLOCKED`, not ready.

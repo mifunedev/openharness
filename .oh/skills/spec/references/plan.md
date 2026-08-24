@@ -128,11 +128,13 @@ Then run the qualify/improve pass.
 
 Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
 merge → reset|clean`), `plan` is the **plan** node; the next step is the operator's
-approval of `prd.md`, then `/spec execute <slug>`. On a complete four-file folder, print this bare token as the final
-line:
+approval of `prd.md`, then `/spec execute <slug>`.
 
-    STATUS: SPEC-PLANNED
+The terminal artifact is the folder itself: `.oh/tasks/<slug>/` carrying the four-file
+contract, with `prd.md` awaiting the operator's approval. Report the folder path and the
+story count. There is no `STATUS: SPEC-PLANNED` token — it had no executable consumer, so
+printing it bought nothing.
 
 The `/spec` family's authority is `AGENTS.md § The Workflow`. If the
-four-file contract is incomplete, print the missing file and emit no `STATUS:` line — a
+four-file contract is incomplete, print the missing file and report the folder as incomplete — a
 missing artifact is a failure, not a clean plan.

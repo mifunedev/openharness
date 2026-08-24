@@ -117,8 +117,8 @@
         "The PR still reaches ready-for-review through the surviving gates after these removals"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "Each removal was proved by a negative grep during planning: the STATUS tokens and the spec-* log entries have zero executable consumers repo-wide."
+      "passes": true,
+      "notes": "2026-08-24: four STATUS: SPEC-* tokens removed (zero executable consumers re-confirmed by grep over sh/ts/mjs/json/yml); the rule they carried (never infer success from silence) kept as each node's terminal report. Memory append narrowed to ONE entry per run in the heartbeat's Result/Action/Observation shape. Groom triad cut from /spec execute. /eval now runs once: execute publishes a commit-keyed eval-result.json (git add -f) that audit Gate 2 and benchmark Signal 1 read, validating .commit against HEAD \u2014 stale or missing means RUN, never PASS. 318 -> 106 probe executions per cycle. tasks/README no longer contradicts .gitignore. New probe eval-runs-once-per-cycle, 8 mutations rejected including blind-trust reuse. Gate chain to ready-for-review traced intact."
     },
     {
       "id": "US-007",

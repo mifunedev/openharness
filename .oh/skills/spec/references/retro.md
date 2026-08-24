@@ -6,9 +6,9 @@
 > `$ARGUMENTS`. Authority: `AGENTS.md § The Workflow`.
 
 The **reflection** node of the `spec-*` family (`AGENTS.md § The Workflow`). It runs
-inside `/spec execute`'s tail, after `build ⇄ audit` reaches `AUDIT-PASS` and before the
-`improve` and `groom` steps, to turn the execution run into durable, evidence-tested
-lessons.
+inside `/spec execute`'s tail, after `build ⇄ audit` reaches `AUDIT-PASS` and the evidence
+and `/teach` steps have run, and before `improve`, to turn the execution run into durable,
+evidence-tested lessons.
 
 **Core principle: compose `/retro`, scoped to this task.** `/retro` already implements the
 scientific session-closing pass — falsifiable hypotheses, evidence for *and* against, a
@@ -57,8 +57,10 @@ still require explicit approval (or are skipped under `--dry-run`).
   gate are `/retro`'s; `retro` only scopes them to the task.
 - **Audit or decide promotability.** That was `/audit implementation` (the `build ⇄ audit` loop) earlier in
   `/spec execute`.
-- **Run the grooming triad.** `/audit skills` · `/wiki lint` · `/audit drift` are the `groom`
-  step of `/spec execute`, after this one.
+- **Run the grooming triad.** `/audit skills` · `/wiki lint` · `/audit drift` are no longer a
+  step of `/spec execute` at all — the triad was cut in US-003's follow-on because
+  `/audit drift` already runs hourly from the heartbeat cron and the other two never blocked
+  a merge. Run them on their own cadence, or on demand.
 - **Merge or undraft.** No GitHub-side mutation — reflection only.
 
 ---
@@ -82,10 +84,12 @@ did not, add one line to `.oh/memory/<UTC-date>/log.md` per `.oh/skills/retro/re
 
 Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
 merge → reset|clean`), `retro` runs inside the `spec-execute` tail (`build ⇄ audit →
-spec-retro → improve → groom`); the next step is `improve` (compound · compress ·
-benchmark). Print this bare token as the final line:
+evidence → teach → spec-retro → improve`); the next step is `improve` (compound · compress ·
+benchmark).
 
-    STATUS: SPEC-RETRO-DONE
+The terminal artifact is the log entry plus whatever the propose-then-confirm gate actually
+wrote. Report the counts. There is no `STATUS: SPEC-RETRO-DONE` token — it had no executable
+consumer.
 
 The `/spec` family's authority is `AGENTS.md § The Workflow`. `retro`
 always completes (like `/retro`), so the execute tail always continues to `improve`.

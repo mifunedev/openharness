@@ -35,7 +35,7 @@ run independently or fanned out at scale via `/delegate`.
 | Subcommand | Arg shape | Purpose | Procedure |
 |---|---|---|---|
 | `plan` | `<topic> [--plan <path>] [--issue <N>] [--slug <slug>] [--prefix <type>] [--repo <o/n>] [--base <branch>]` | Turn a topic/plan/issue into a fully-scaffolded `.oh/tasks/<slug>/` four-file folder | `references/plan.md` |
-| `execute` | `<slug> [--pr <N>] [--repo <o/n>] [--remote <name>] [--base <branch>]` | `build ⇄ audit → spec-retro → improve → groom` to a ready PR, stopping at the human merge gate | `references/execute.md` |
+| `execute` | `<slug> [--pr <N>] [--repo <o/n>] [--remote <name>] [--base <branch>]` | `build ⇄ audit → evidence → teach → spec-retro → improve` to a ready PR, stopping at the human merge gate | `references/execute.md` |
 | `retro` | `<slug> [--dry-run]` | Execution-side `/retro` scoped to a built `.oh/tasks/<slug>/` | `references/retro.md` |
 
 ## Dispatch
@@ -78,14 +78,18 @@ esac
   (`AUDIT-FAIL` routes back to build). The plan itself is vetted by the operator
   who approves it: **approving `prd.md` is the commitment gate**, and nothing
   GitHub-side exists until `execute` starts.
-- **Honest STATUS tokens** — each subcommand prints exactly one bare token as its
-  final line on success: `plan` → `STATUS: SPEC-PLANNED`; `execute` →
-  `STATUS: SPEC-EXECUTED` or `STATUS: SPEC-BLOCKED`; `retro` →
-  `STATUS: SPEC-RETRO-DONE`. Never infer success from silence — a missing
-  artifact, crashed build, or undecided gate emits no `STATUS:` line.
-- **Memory Improvement Protocol** — every invocation of every subcommand appends
-  a log entry to `.oh/memory/<UTC-date>/log.md` under `## spec-<sub> -- HH:MM UTC`,
-  then runs the qualify/improve pass per `.oh/skills/retro/references/memory-protocol.md`. No exceptions.
+- **Honest terminal reports** — each subcommand reports what it actually produced: `plan`
+  the folder path and story count; `execute` `READY` or `DRAFT-BLOCKED (<gate>)` with the PR
+  URL; `retro` the promotion counts. There are no `STATUS: SPEC-*` tokens — all four had
+  **zero executable consumers repo-wide**, so printing them was ceremony. The rule they
+  encoded still holds and is what matters: never infer success from silence. A missing
+  artifact, a crashed build, or an undecided gate is reported as blocked, never as done.
+- **Memory Improvement Protocol** — each subcommand appends **one** entry per run to
+  `.oh/memory/<UTC-date>/log.md` under `## spec-<sub> -- HH:MM UTC`, in the three-field
+  `Result` / `Action` / `Observation` shape the heartbeat cron reads
+  (`.oh/crons/heartbeat.md`), then runs the qualify/improve pass per
+  `.oh/skills/retro/references/memory-protocol.md`. One entry per run, not one per node:
+  nothing consumed the extra structure.
 
 ## When NOT to use
 

@@ -149,11 +149,12 @@ flowchart LR
         direction LR
         BUILD --> AUDIT{"audit implementation<br/>task graph + eval + focused PR classifier"}
         AUDIT -->|FAIL: fix| BUILD
-        AUDIT -->|PASS| SRETRO["spec-retro<br/>/retro"]
+        AUDIT -->|PASS| EVID["evidence.md<br/>plan · built · divergence · unverified"]
+        EVID --> TEACH["/teach<br/>hand over the model"]
+        TEACH --> SRETRO["spec-retro<br/>/retro"]
         SRETRO --> IMPROVE["improve<br/>compound · compress · benchmark"]
-        IMPROVE --> GROOM["groom<br/>audit skills · wiki lint · audit drift"]
     end
-    GROOM --> MERGE["merge<br/>(human)"]
+    IMPROVE --> MERGE["merge<br/>(human)"]
     MERGE --> RESET["reset | clean<br/>(runner)"]
     RESET -.->|next item| SEL
 ```
@@ -163,11 +164,11 @@ flowchart LR
 | Surface | Owns | Does NOT own | The seam |
 |---|---|---|---|
 | **autopilot** | select — issue selection + `pm` decompose, caps, session | the build, the merge | hands the issue to `spec-plan` |
-| **`/spec` dispatcher** | `spec-plan` (task artifacts + wiki), `spec-execute` (build⇄audit→spec-retro→improve→groom), `spec-retro` | selection, merge | each subcommand is pointed at a `.oh/tasks/<slug>/` folder |
+| **`/spec` dispatcher** | `spec-plan` (task artifacts + wiki), `spec-execute` (build⇄audit→evidence→teach→spec-retro→improve), `spec-retro` | selection, merge | each subcommand is pointed at a `.oh/tasks/<slug>/` folder |
 | **human** | merge — final gate, no auto-merge | selection, build | reviews the finished unit |
 | **runner** | `reset \| clean` — worktree/branch cleanup, state reset | judgment | closes the cycle back to select |
 
-The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec execute` and `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → spec-retro → improve → groom**, where groom runs `/audit skills` · `/wiki lint` · `/audit drift` before the human merge.
+The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec execute` and `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → evidence → teach → spec-retro → improve**, ending at the human merge gate. The groom triad (`/audit skills` · `/wiki lint` · `/audit drift`) is deliberately not in it: `/audit drift` runs hourly from the heartbeat cron, and the other two are report-only checks that never blocked a merge.
 
 ## Skills
 
@@ -185,7 +186,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/imagine` | One-shot draft PRD sketch from a fuzzy scenario → `.claude/specs/<slug>/spec.md` (gitignored scratch, includes mermaid diagram); feeds `/spec plan --plan <path>` |
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `.oh/tasks/<name>/prd.json` — the structured task graph the build executor walks |
-| `/spec` | Dispatcher for the canonical workflow (`/spec <plan\|execute\|retro>`, routes to `references/{plan,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state) — approving that plan **is** the commitment gate; **execute** = issue → branch → draft PR → build → `build ⇄ audit → spec-retro → improve → groom` → promotable undraft to a **ready-for-review PR** at the human merge gate — it holds the build mechanics in full and is a protected path; **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/`. There is no all-in-one composer beside it |
+| `/spec` | Dispatcher for the canonical workflow (`/spec <plan\|execute\|retro>`, routes to `references/{plan,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state) — approving that plan **is** the commitment gate; **execute** = issue → branch → draft PR → build → `build ⇄ audit → evidence → teach → spec-retro → improve` → promotable undraft to a **ready-for-review PR** at the human merge gate, refusing the undraft without a committed `evidence.md` — it holds the build mechanics in full and is a protected path; **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/`. There is no all-in-one composer beside it |
 | `/firstmate` | **The build executor** — there is exactly one. `.oh/scripts/firstmate.sh <slug>` runs one long-lived First-Mate session over a whole `.oh/tasks/<slug>/` task graph, launched through the **herdr → tmux → foreground** runner ladder. `STATUS: COMPLETE` (whole line in `progress.txt`) is its terminal interface. Documents the ladder's detection gates, the naming contract (`firstmate-<slug>`, `agent-firstmate-<slug>`), the `FIRSTMATE_TIMEOUT_MS` session budget, the watch/recovery matrices, and the per-mode teardown procedure. The build workflow it runs lives in one place, `.oh/skills/firstmate/templates/session-prompt.md` |
 | `/teach` | Post-implementation communication pass — revise/propose the relevant wiki model, then teach the operator the mental model, verification evidence, caveats, and understanding checks. **Wired into `/spec execute` step 7**, before the merge gate: the reviewer gets the model from `/teach` and the proof from `evidence.md` |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |

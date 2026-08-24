@@ -87,14 +87,30 @@ fails on a missing path lives at
 
 ### Gate 2 — Regression floor (`/eval`)
 
-The probe suite must stay green for this change. Run the runner and gate on its
-**exit code + delta**, not its prose:
+The probe suite must stay green for this change. Gate on the runner's **exit code +
+delta**, not its prose.
+
+**Read the cycle's result before running the suite.** `/spec execute` runs `/eval` once
+per cycle and publishes `.oh/tasks/<slug>/eval-result.json`. Reuse it **only while it
+describes the code under test** — that is, while its `commit` equals the current
+`HEAD`:
 
 ```bash
-AUDIT_RUN_ID="$AUDIT_RUN_ID" AUDIT_ROOT="$AUDIT_ROOT" AUDIT_LOG_ROOT="$AUDIT_LOG_ROOT" bash "$AUDIT_ROOT/.oh/skills/eval/run.sh" ; rc=$?
-# rc=0 → no NEW green→red regression this run (pass)
+RESULT=".oh/tasks/<slug>/eval-result.json"
+if [ -f "$RESULT" ] && [ "$(jq -r .commit "$RESULT")" = "$(git rev-parse HEAD)" ]; then
+  rc="$(jq -r .runnerExit "$RESULT")"          # inherit the cycle's single run
+else
+  AUDIT_RUN_ID="$AUDIT_RUN_ID" AUDIT_ROOT="$AUDIT_ROOT" AUDIT_LOG_ROOT="$AUDIT_LOG_ROOT" \
+    bash "$AUDIT_ROOT/.oh/skills/eval/run.sh" ; rc=$?
+fi
+# rc=0 → no NEW green→red regression for this commit (pass)
 # rc=1 → at least one new regression (FAIL gate2)
 ```
+
+The commit check is what keeps the reuse honest: the moment the branch moves, the
+record describes code that is no longer under test, and this gate runs the suite
+itself rather than inheriting a stale green. **Never** reuse a record whose `commit`
+you did not compare, and never treat a missing record as a pass.
 
 Block only on a **new** `green→red` regression or a non-zero runner exit. A
 pre-existing red with an unchanged delta is non-gating but MUST be disclosed in

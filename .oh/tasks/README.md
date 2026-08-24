@@ -19,9 +19,12 @@ A task directory typically contains:
 
 - `<taskdesc>` is kebab-case and matches the branch name's `<short-desc>`
   segment when the task corresponds to a harness branch.
-- `prd.json` and `progress.txt` are tracked so a session can be resumed
-  from another checkout; transient runner state under
-  `.ralph/` (logs, archives, last-branch pointer) is gitignored.
+- **This whole directory is gitignored** (`.gitignore`: `.oh/tasks/*` with
+  `!.oh/tasks/README.md`), so only this guide is tracked by default. Task files a PR
+  must carry — `prd.md`, `prd.json`, `prompt.md`, `progress.txt`, `evidence.md`,
+  `eval-result.json` — are added explicitly with **`git add -f`**. A bare
+  `git add .oh/tasks/<slug>/` stages nothing and commits silently without them, which
+  is the same as never having written them from a reviewer's seat.
 - **Do not edit `progress.txt` by hand** — the runner appends to it.
 
 ## Lifecycle

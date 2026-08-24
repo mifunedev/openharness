@@ -11,7 +11,12 @@ The twelfth is a task decision and lives in
 
 This file is a record, not a live specification. Where it describes a path or a
 file that has since moved or been deleted, the description is true of the version
-named beside it and may not be true today.
+named beside it and may not be true today. Do not repair a path or a skill name
+quoted below to match the present — that would falsify the record.
+
+For the same reason `.oh/evals/probes/audit-stale-references.sh` excludes this
+file, exactly as it already excludes `CHANGELOG.md`: a skill named in a 2026-05
+entry is a historical fact, not a stale reference awaiting a fix.
 
 > Note: `.oh/memory/MEMORY.md` is gitignored, so lesson-shaped entries are kept
 > here rather than there — routing them to an ignored file would have deleted

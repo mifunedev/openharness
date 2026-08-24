@@ -56,9 +56,10 @@ These names describe separate layers, not interchangeable jobs:
   Source: [`intro.md`](intro.md).
 
 - **loop** — A repeated implement → commit → check cycle driven until a
-  completion marker appears. The reference implementation is the Ralph loop,
-  which re-invokes the agent on a task until `progress.txt` contains the line
-  `STATUS: COMPLETE`. Source: [`.oh/scripts/ralph.sh`](../scripts/ralph.sh).
+  completion marker appears. The reference implementation is the build
+  executor's per-story cycle, which walks a task graph until `progress.txt`
+  contains the line `STATUS: COMPLETE`.
+  Source: [`.oh/scripts/firstmate.sh`](../scripts/firstmate.sh).
 
 - **model** — The LLM an agent or CLI uses to produce reasoning, text, and
   tool-call requests. The model is only one part of an agent session; the
@@ -93,9 +94,9 @@ These names describe separate layers, not interchangeable jobs:
   host machine. Source: [`.devcontainer/`](../../.devcontainer/).
 
 - **session** — A single named run of an agent, typically a tmux session in the
-  sandbox. `ralph.sh` launches its loop in a named tmux session, and autopilot
-  uses per-run `autopilot-<branch>` sessions.
-  Source: [`.oh/scripts/ralph.sh`](../scripts/ralph.sh) and
+  sandbox. `firstmate.sh` launches its build session through the herdr → tmux →
+  foreground ladder, and autopilot uses per-run `autopilot-<branch>` sessions.
+  Source: [`.oh/scripts/firstmate.sh`](../scripts/firstmate.sh) and
   [`sandbox-processes.md`](../skills/t3/references/sandbox-processes.md).
 
 - **skill** — A packaged, invocable workflow (a `SKILL.md` plus optional

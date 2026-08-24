@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# .oh/scripts/firstmate.sh — the `firstmate` executor entrypoint.
+# .oh/scripts/firstmate.sh — the build-executor entrypoint. There is exactly one.
 #
 # Usage:
 #   .oh/scripts/firstmate.sh [--runner herdr|tmux|foreground] [--harness claude|pi|codex]
@@ -7,14 +7,14 @@
 #   .oh/scripts/firstmate.sh --kill <slug>
 #
 # Launches ONE long-lived First-Mate session over the whole `.oh/tasks/<slug>/`
-# task graph, where ralph launches 50 fresh processes each holding one story.
-# The session manager is resolved by the shared ladder in
+# task graph. The session manager is resolved by the shared ladder in
 # `.oh/scripts/lib/session-runner.sh` (herdr -> tmux -> foreground); the slug and
 # four-file validation come from `.oh/scripts/lib/task-contract.sh`; the session
 # prompt is rendered from `.oh/skills/firstmate/templates/session-prompt.md`.
 #
-# `.oh/scripts/ralph.sh` is UNTOUCHED and stays the default executor. firstmate
-# is opt-in, reached only via `--executor=firstmate`.
+# This is the ONLY build executor. There is no toggle and no alternative arm, so
+# there is also no fallback: recovery from a misbehaving ladder or child session
+# is fix-forward only.
 #
 # ---------------------------------------------------------------------------
 # Naming contract (PRD section 5)
@@ -35,8 +35,10 @@
 #                           session-runner.sh — 0, negative, non-numeric and
 #                           empty are rejected there and the default applies.
 #   FIRSTMATE_HARNESS       claude | pi | codex (default: claude)
-#   FIRSTMATE_CLAUDE_FLAGS  default: --dangerously-skip-permissions --print
-#   FIRSTMATE_PI_FLAGS      default: --print
+#   FIRSTMATE_CLAUDE_FLAGS  default: --dangerously-skip-permissions
+#                           (NO --print: the child must stay an INTERACTIVE
+#                            session, see the launch note below)
+#   FIRSTMATE_PI_FLAGS      default: (empty, for the same reason)
 #   FIRSTMATE_HARNESS_CMD   full override of the launched command; the rendered
 #                           prompt path is exported as $FIRSTMATE_PROMPT_FILE
 #   FIRSTMATE_BRANCH        override the <branch> placeholder
@@ -48,12 +50,32 @@
 # Deliberate deviation from the PRD section 5 launch sketch
 # ---------------------------------------------------------------------------
 # The sketch shows `<harness> "/goal <rendered-prompt>"`. There is no `/goal`
-# skill in this repo (`.oh/skills/` has no `goal` entry), and threading a
-# multi-kilobyte prompt through an argv nested inside `bash -lc '...'` is a
-# quoting hazard. The rendered prompt is therefore written to
-# $FIRSTMATE_PROMPT_FILE and piped in on stdin — the shape ralph.sh:191 already
-# proves (`printf '%s' "$task" | claude $flags`). The rendered prompt IS the
-# goal brief, so no wrapper verb is lost.
+# skill in this repo (`.oh/skills/` has no `goal` entry). The rendered prompt is
+# written to $FIRSTMATE_PROMPT_FILE and read back inside the LAUNCHED shell as
+# `"$(cat <file>)"`, so it reaches the harness as a single initial argv. The
+# rendered prompt IS the goal brief, so no wrapper verb is lost.
+#
+# ---------------------------------------------------------------------------
+# THE CHILD SESSION IS INTERACTIVE. DO NOT PIPE THE PROMPT IN, AND NO --print
+# ---------------------------------------------------------------------------
+# This was the shape until 2026-08-23 (spec-simplification US-002):
+#
+#     cat <prompt> | claude --dangerously-skip-permissions --print
+#
+# Two things it got wrong, and both are load-bearing:
+#
+#   * `--print` makes the harness answer once and exit. A First Mate session has
+#     to walk a whole task graph over many turns, so a one-shot child cannot do
+#     the job it was launched for.
+#   * Feeding the prompt on stdin makes stdin a PIPE, not a TTY. An interactive
+#     agent session refuses to run without a terminal.
+#
+# OBSERVED 2026-08-23: the child started, printed only startup warnings, and
+# never advanced. The prompt therefore travels as initial argv, and the session
+# stays live and attachable in its herdr pane or tmux session.
+#
+# The same rule binds `.oh/scripts/lib/session-runner.sh`: it must not wrap the
+# launched command in a `tee` log pipe either — see the note above runner_launch.
 
 set -euo pipefail
 
@@ -274,9 +296,10 @@ render_session_prompt() { # <template> <slug> <branch> <issue>
 
 # ─── the launched command ────────────────────────────────────────────
 
-# Invocation shapes are ralph.sh's (run_claude:191, run_pi:200, run_codex:206)
-# with the prompt taken from a file instead of a shell variable, because the
-# rendered prompt is far larger than a ralph iteration's prompt.md read.
+# Every arm delivers the rendered prompt as a single INITIAL ARGV read back from
+# $FIRSTMATE_PROMPT_FILE inside the launched shell, and no arm carries `--print`.
+# Both rules exist so the child stays an interactive, attachable, multi-turn
+# session — see the interactive-session note in this file's header.
 firstmate_harness_command() { # <harness> <prompt_file>
   local harness="${1:-}" prompt_file="${2:-}"
 
@@ -289,13 +312,15 @@ firstmate_harness_command() { # <harness> <prompt_file>
 
   case "$harness" in
     claude)
-      printf 'cat %q | claude %s\n' "$prompt_file" \
-        "${FIRSTMATE_CLAUDE_FLAGS:---dangerously-skip-permissions --print}"
+      # shellcheck disable=SC2016  # deliberately unexpanded: the $(cat …) must
+      # be evaluated inside the LAUNCHED shell, not here. The prompt is initial
+      # ARGV, never stdin — see the interactive-session note in the header.
+      printf 'claude %s "$(cat %q)"\n' \
+        "${FIRSTMATE_CLAUDE_FLAGS:---dangerously-skip-permissions}" "$prompt_file"
       ;;
     pi)
-      # shellcheck disable=SC2016  # deliberately unexpanded: the $(cat …) must
-      # be evaluated inside the LAUNCHED shell, not here.
-      printf 'pi %s "$(cat %q)"\n' "${FIRSTMATE_PI_FLAGS:---print}" "$prompt_file"
+      # shellcheck disable=SC2016  # same: expanded by the launched shell.
+      printf 'pi %s "$(cat %q)"\n' "${FIRSTMATE_PI_FLAGS:-}" "$prompt_file"
       ;;
     codex)
       # shellcheck disable=SC2016  # same: expanded by the launched shell.
@@ -309,23 +334,6 @@ firstmate_harness_command() { # <harness> <prompt_file>
 }
 
 # ─── guards ──────────────────────────────────────────────────────────
-
-# CROSS-EXECUTOR GUARD. ralph names its tmux session after the BARE slug
-# (ralph.sh:434), firstmate names its own `agent-firstmate-<slug>` — so both
-# executors can be mid-flight on the same task folder without colliding on a
-# session name, corrupting progress.txt and prd.json between them. The sentinel
-# short-circuit only covers the already-COMPLETE case, never a live ralph run.
-firstmate_guard_ralph() { # <slug>
-  local slug="${1:-}"
-  command -v tmux >/dev/null 2>&1 || return 0
-  if tmux has-session -t "$slug" 2>/dev/null; then
-    printf "Error: executor conflict — a ralph tmux session named '%s' is already running this task.\n" "$slug" >&2
-    printf "Hint: watch it (tmux attach -t %s) or stop it (tmux kill-session -t %s) before launching firstmate.\n" \
-      "$slug" "$slug" >&2
-    return 1
-  fi
-  return 0
-}
 
 # THE LAUNCH-CLAIM GUARD. `mkdir` is atomic: exactly one process can create the
 # directory, which closes the check-then-start TOCTOU window that ANY read-only
@@ -430,8 +438,6 @@ firstmate_launch() { # <slug>
     printf '✓ STATUS: COMPLETE is already present in %s — nothing to launch.\n' "$progress"
     exit 0
   fi
-
-  firstmate_guard_ralph "$slug" || exit 1
 
   mode="$(runner_detect "$slug" "$root" "$REQUESTED_RUNNER")" || rc=$?
   if [ "$rc" -ne 0 ] || [ -z "$mode" ]; then

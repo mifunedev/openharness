@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # tier: A
-# source: conversation 2026-06-12 (commit attribution trailers)
-# desc: ship-spec/autopilot/Ralph prompts require Submitted-by trailers for the active submitter
+# source: conversation 2026-06-12 (commit attribution trailers); repointed by
+#         spec-simplification US-002 (issue #816) when the ralph prompt template was deleted
+# desc: the scaffold path (/ship-spec) and the build path (the firstmate session-prompt
+#       template) both require a Submitted-by trailer naming the ACTIVE submitter, and
+#       neither hard-codes a specific model as co-author
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SHIP="$ROOT/.claude/skills/ship-spec/SKILL.md"
-PROMPT="$ROOT/.claude/skills/ship-spec/templates/prompt.md"
-AUTOPILOT="$ROOT/.claude/skills/autopilot/SKILL.md"
+PROMPT="$ROOT/.oh/skills/firstmate/templates/session-prompt.md"
 
-for file in "$SHIP" "$PROMPT" "$AUTOPILOT"; do
+for file in "$SHIP" "$PROMPT"; do
   if [[ ! -f "$file" ]]; then
     echo "SKIPPED: required file absent: $file" >&2
     exit 2
@@ -18,13 +20,21 @@ done
 
 missing=()
 grep -q 'Submitted-by:' "$SHIP" || missing+=("ship-spec scaffold commit trailer")
-grep -q 'Submitted-by:' "$PROMPT" || missing+=("Ralph prompt commit trailer")
-grep -q 'Submitted-by:' "$AUTOPILOT" || missing+=("autopilot eval commit trailer")
-grep -qi 'active submitter\|active harness\|RALPH_HARNESS' "$PROMPT" || missing+=("active submitter guidance in Ralph prompt")
-grep -q 'RALPH_HARNESS' "$AUTOPILOT" || missing+=("autopilot uses active harness env")
+grep -q 'Submitted-by:' "$PROMPT" || missing+=("build session-prompt commit trailer")
+
+# The trailer must name whoever ACTUALLY submits, not a fixed name. Both surfaces state
+# this in their own words, so accept either phrasing on either file.
+grep -qi 'active submitter\|active harness\|model/agent that actually' "$SHIP" \
+  || missing+=("ship-spec does not tie the trailer to the active submitter")
+grep -qi 'active submitter\|active harness\|model/agent that actually' "$PROMPT" \
+  || missing+=("the session prompt does not tie the trailer to the active submitter")
+
+# The trailer is MANDATORY on the build path — a merely-suggested trailer is how
+# attribution silently stops happening.
+grep -qi 'mandatory' "$PROMPT" || missing+=("the session prompt does not mark the Submitted-by trailer mandatory")
 
 if grep -q 'Co-Authored-By: Claude Opus' "$SHIP"; then
-  echo "REGRESSION: ship-spec still hard-codes Claude Opus co-author trailer" >&2
+  echo "REGRESSION: ship-spec still hard-codes a Claude Opus co-author trailer" >&2
   exit 1
 fi
 
@@ -33,5 +43,5 @@ if (( ${#missing[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: ship-spec, autopilot, and Ralph prompt require Submitted-by trailers tied to active submitter" >&2
+echo "PASS: ship-spec and the build session prompt both require a mandatory Submitted-by trailer tied to the active submitter" >&2
 exit 0

@@ -13,7 +13,7 @@ one adversarial loop — `build ⇄ audit`.
 
 **Core principle: compose the protected build machinery; own only the spec-* tail.** The
 heavy build/finalize mechanics already live in `/ship-spec` Stages 8–13 (worktree Advisor
-launched via `/goal`, `/delegate` workers each running `scripts/ralph.sh`, the `/eval`
+launched via `/goal`, the one build executor `.oh/scripts/firstmate.sh`, the `/eval`
 gate, the `/audit pr` promotable undraft). `execute` **reuses those by reference** —
 it does not re-implement or fork them, so `/ship-spec` stays the single source of build
 literals (and its protected probes stay green). What `execute` adds is the
@@ -54,15 +54,11 @@ The approved plan is the commitment, so GitHub-side state may now be created: **
 no issue yet), create the branch `<prefix>/<N>-<slug>`, commit the scaffold, push, and open
 the **draft** PR (observability checkpoint). Then drive the build exactly as `/ship-spec` Stage 10
 specifies — an expert `/worktrees` Advisor in a tmux session (`agent-ship-<slug>`) via
-`/goal` that, by default (`--executor=ralph`), **monitors `scripts/ralph.sh <slug>` directly**
-in an isolated worktree to `STATUS: COMPLETE` (`/delegate` is an optional within-iteration
-fan-out tool, never a replacement for the loop; `--executor=delegate-advisor` selects the
-legacy `/delegate --plan .oh/tasks/<slug>/prd.json` worker fan-out). Use that skill's stage text
-as the authority for the mechanics; do not duplicate them here.
-A third, opt-in executor — `--executor=firstmate` — instead launches ONE long-lived First-Mate
-session over the whole `.oh/tasks/<slug>/` task graph and reaches the same `STATUS: COMPLETE`
-terminal interface, with its mechanics likewise deferred to `/ship-spec` Stage 10's
-"Opt-in (`firstmate`)" subsection.
+`/goal` that runs **the one build executor**, `.oh/scripts/firstmate.sh <slug>` — ONE long-lived
+First-Mate session over the whole `.oh/tasks/<slug>/` task graph, watched in an isolated worktree
+to `STATUS: COMPLETE`. There is no executor argument and no alternative arm. `/delegate` is an
+optional within-story fan-out tool inside that session, never a replacement for the story cycle.
+Use that skill's stage text as the authority for the mechanics; do not duplicate them here.
 
 ### 2. `build ⇄ audit` — the second adversarial loop
 
@@ -75,7 +71,7 @@ When the build reports complete, run the per-unit verdict gate:
 `/audit implementation` composes `prd.json` task-graph conformance + the `/eval` regression floor +
 `/audit pr` promotable classification (+ `/agent-browser` for UI stories) into one verdict:
 
-- `AUDIT-FAIL` → loop back to **build**: resume the Advisor / `scripts/ralph.sh <slug>` to
+- `AUDIT-FAIL` → loop back to **build**: resume the Advisor / `.oh/scripts/firstmate.sh <slug>` to
   finish the unmet stories, then re-audit. This is the build-side adversary — keep looping
   until the build satisfies its own task graph.
 - `AUDIT-PASS` → the build is promotable; continue to the tail.
@@ -119,7 +115,7 @@ Workflow`: *human merge — final gate, no auto-merge*). Never `gh pr merge`.
 ## What this node does NOT do
 
 - **Re-implement the build machinery.** It composes `/ship-spec` Stages 8–13; that skill is
-  the single source of worktree/delegate/ralph/eval/audit pr literals.
+  the single source of worktree/firstmate/eval/audit pr literals.
 - **Merge.** The terminal state is a **ready** PR. Merge is the human's gate; reset/clean is
   the runner's job after merge.
 - **Select work.** Selection is `/autopilot`'s; `execute` builds the one folder it is

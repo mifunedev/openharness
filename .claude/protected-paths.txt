@@ -33,11 +33,10 @@ retro
 firstmate
 
 # --- Orchestrator scripts (.oh/scripts/) ---
-.oh/scripts/ralph.sh
 .oh/scripts/firstmate.sh
-# The two `lib/` entries below are load-bearing shared infra reusable by ANY
-# executor (the herdr -> tmux -> foreground runner ladder, and the slug +
-# four-file task-folder contract firstmate.sh shares with ralph.sh's wording).
+# The two `lib/` entries below are load-bearing shared infra (the herdr -> tmux
+# -> foreground runner ladder, and the slug + four-file task-folder contract
+# every consumer of a task folder shares).
 # Whole-line entries only — no inline comments, since consumers match with
 # `grep -Fxq`.
 .oh/scripts/lib/session-runner.sh

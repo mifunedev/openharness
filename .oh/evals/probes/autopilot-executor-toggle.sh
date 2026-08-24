@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # tier: A
-# source: conversation 2026-06-13 (autopilot executor); 2026-06-27 (ralph-default flip)
-# desc: /autopilot defaults to the ship-spec deferral whose Stage 10 build executor is the
-#       Advisor-monitored ralph loop (/delegate optional inside, never a replacement); keeps
-#       delegate-advisor + inline ralph as explicit opt-in flags, uses the exact Advisor /goal
-#       phrase, defers the whole build to /ship-spec (no inline compact/delegate/eval —
-#       ship-spec owns them + the /audit pr undraft), renames cron tmux sessions to
-#       autopilot-<branch>, dedupes active work, cleans finalized active markers, and keeps
-#       dry-run research non-mutating.
+# source: conversation 2026-06-13 (autopilot executor); rewritten by spec-simplification
+#         US-002 (issue #816) when every executor toggle was REMOVED rather than reduced
+#         to a single accepted value
+# desc: /autopilot has NO executor toggle and NO inline fallback. It defers the whole build
+#       to /ship-spec (which itself has one build path, .oh/scripts/firstmate.sh), uses the
+#       exact Advisor /goal phrase, runs no inline compact/delegate/eval, renames cron tmux
+#       sessions to autopilot-<branch>, dedupes active work, cleans finalized active markers,
+#       and keeps dry-run research non-mutating.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -27,50 +27,55 @@ fi
 
 missing=()
 
-# Executor toggle: default ship-spec (Advisor-monitored ralph build), explicit
-# delegate-advisor + inline ralph + firstmate opt-ins.
-grep -F 'argument-hint:' "$SKILL" | grep -Fq '[--executor=ship-spec|delegate-advisor|ralph|firstmate]' || missing+=("argument hint includes executor toggle")
-grep -Fq 'EXECUTOR="${AUTOPILOT_EXECUTOR:-ship-spec}"' "$SKILL" || missing+=("AUTOPILOT_EXECUTOR default ship-spec")
-grep -Fq '*--executor=ship-spec*) EXECUTOR=ship-spec' "$SKILL" || missing+=("CLI --executor=ship-spec toggle")
-grep -Fq '*--executor=delegate-advisor*) EXECUTOR=delegate-advisor' "$SKILL" || missing+=("CLI --executor=delegate-advisor toggle")
-grep -Fq '*--executor=ralph*) EXECUTOR=ralph' "$SKILL" || missing+=("CLI --executor=ralph toggle")
-grep -Fq '*--executor=firstmate*) EXECUTOR=firstmate' "$SKILL" || missing+=("CLI --executor=firstmate toggle")
-# The two-part edit: the case arm alone is inert while the validation list rejects firstmate.
-grep -Fq 'case "$EXECUTOR" in ship-spec|delegate-advisor|ralph|firstmate)' "$SKILL" || missing+=("firstmate accepted by the AUTOPILOT_EXECUTOR validation list")
-grep -Fq '.oh/scripts/ralph.sh "$SLUG"' "$SKILL" || missing+=("Ralph inline fallback still launches .oh/scripts/ralph.sh")
-grep -Fq '#### `ralph` fallback' "$SKILL" || missing+=("Ralph inline fallback section")
+# --- NO executor toggle anywhere ------------------------------------------
+# US-002 removed the toggles instead of narrowing them to one accepted value: a
+# one-value toggle is still a selection surface a reader has to resolve. Full-line
+# comments are excluded so a file may DOCUMENT the removal without failing this check.
+for pair in "autopilot:$SKILL" "cron:$CRON" "ship-spec:$SHIP"; do
+  name="${pair%%:*}"
+  file="${pair#*:}"
+  [[ -f "$file" ]] || continue
+  code="$(grep -v '^[[:space:]]*#' "$file")"
+  grep -Fq -- '--executor=' <<<"$code" && missing+=("$name still offers an --executor= flag")
+  grep -Fq 'AUTOPILOT_EXECUTOR' <<<"$code" && missing+=("$name still references AUTOPILOT_EXECUTOR")
+  grep -Fq 'SHIP_SPEC_EXECUTOR' <<<"$code" && missing+=("$name still references SHIP_SPEC_EXECUTOR")
+done
+grep -F 'argument-hint:' "$SKILL" | grep -Fq -- '--executor' && missing+=("autopilot argument-hint still advertises an executor toggle")
 
-# Required exact Advisor goal phrase (defers the whole build to /ship-spec; Advisor-managed ralph).
-required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /audit pr undraft) into a ready-for-review PR'
+# --- no inline fallback executor ------------------------------------------
+# The whole point of removing the toggle is that there is one build path. An inline
+# arm that drives a loop itself would restore the arm-selection question.
+grep -Fq '.oh/scripts/ralph.sh' "$SKILL" && missing+=("autopilot still launches the retired inline ralph fallback")
+grep -Fq 'fallback (legacy inline)' "$SKILL" && missing+=("autopilot still documents a legacy inline fallback section")
+grep -Fq 'no inline fallback' "$SKILL" || missing+=("autopilot does not state that there is no inline fallback")
+
+# Required exact Advisor goal phrase (defers the whole build to /ship-spec).
+required_goal='/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, firstmate build session, /eval, /audit pr undraft) into a ready-for-review PR'
 grep -Fq "$required_goal" "$SKILL" || missing+=("exact Advisor /goal phrase in autopilot skill")
 grep -Fq "$required_goal" "$CRON" || missing+=("exact Advisor /goal phrase in cron reminder")
 
 # Default ship-spec mode DEFERS the whole build to /ship-spec — no inline compact/delegate/eval.
 grep -Fq '/ship-spec --issue' "$SKILL" || missing+=("autopilot invokes /ship-spec --issue")
-default_section="$(awk '/#### `ship-spec` \(default\)/,/#### `delegate-advisor`/' "$SKILL")"
-[[ -n "$default_section" ]] || missing+=("ship-spec default executor section")
-if [[ -n "$default_section" ]]; then
-  grep -Fq 'defer to `/ship-spec`' <<<"$default_section" || missing+=("ship-spec section defers to /ship-spec")
-  grep -Fq 'does **not** run its own' <<<"$default_section" || missing+=("ship-spec section does not re-run compact/delegate/eval")
-  grep -Fq '/audit pr' <<<"$default_section" || missing+=("ship-spec section references the ship-spec-owned /audit pr undraft")
-  grep -Fq 'Advisor-monitored' <<<"$default_section" || missing+=("ship-spec section names the Advisor-monitored ralph loop default")
-  grep -Fq '`/delegate` optional inside' <<<"$default_section" || missing+=("ship-spec section marks /delegate optional inside the loop")
-  # ship-spec must own the build BEFORE autopilot reconciles: §4 (/ship-spec) precedes §5 (executor).
+implement_section="$(awk '/^### 5\. Implement/,/^### 6\./' "$SKILL")"
+[[ -n "$implement_section" ]] || missing+=("§5 Implement section")
+if [[ -n "$implement_section" ]]; then
+  grep -Fq 'defer to `/ship-spec`' <<<"$implement_section" || missing+=("§5 defers to /ship-spec")
+  grep -Fq 'does **not** run its own' <<<"$implement_section" || missing+=("§5 does not re-run compact/delegate/eval")
+  grep -Fq '/audit pr' <<<"$implement_section" || missing+=("§5 references the ship-spec-owned /audit pr undraft")
+  grep -Fq '.oh/scripts/firstmate.sh' <<<"$implement_section" || missing+=("§5 names the one build executor .oh/scripts/firstmate.sh")
+  grep -Fq 'FIRSTMATE_TIMEOUT_MS' <<<"$implement_section" || missing+=("§5 states the inherited wall-clock session budget")
+  # ship-spec must own the build BEFORE autopilot reconciles: §4 (/ship-spec) precedes §5.
   shipspec_line="$(grep -nF '/ship-spec --issue (owns the full build)' "$SKILL" | head -1 | cut -d: -f1 || true)"
-  executor_line="$(grep -nF '### 5. Implement — executor' "$SKILL" | head -1 | cut -d: -f1 || true)"
-  if [[ -z "$shipspec_line" || -z "$executor_line" || "$shipspec_line" -ge "$executor_line" ]]; then
-    missing+=("/ship-spec --issue stage precedes the executor reconcile stage")
+  implement_line="$(grep -nF '### 5. Implement' "$SKILL" | head -1 | cut -d: -f1 || true)"
+  if [[ -z "$shipspec_line" || -z "$implement_line" || "$shipspec_line" -ge "$implement_line" ]]; then
+    missing+=("/ship-spec --issue stage precedes the implement reconcile stage")
   fi
 fi
 
-# delegate-advisor is now an explicit OPT-IN section (no longer the default).
-grep -Fq '#### `delegate-advisor`' "$SKILL" || missing+=("delegate-advisor opt-in section (no longer the default)")
-
-# /ship-spec (the single source of build mechanics) defaults its Stage 10 executor to ralph,
-# and keeps delegate-advisor as the opt-in flag.
+# /ship-spec is the single source of build mechanics and names the one executor.
 if [[ -f "$SHIP" ]]; then
-  grep -Fq 'SHIP_SPEC_EXECUTOR="${SHIP_SPEC_EXECUTOR:-ralph}"' "$SHIP" || missing+=("/ship-spec default executor ralph")
-  grep -Fq '*--executor=delegate-advisor*) SHIP_SPEC_EXECUTOR=delegate-advisor' "$SHIP" || missing+=("/ship-spec --executor=delegate-advisor opt-in")
+  grep -Fq 'There is **no executor argument**' "$SHIP" || missing+=("/ship-spec does not state that there is no executor argument")
+  grep -Fq '.oh/scripts/firstmate.sh' "$SHIP" || missing+=("/ship-spec Stage 10 does not name .oh/scripts/firstmate.sh")
 fi
 
 # Session naming and no second Advisor session.
@@ -94,8 +99,11 @@ grep -Fq '[dry-run] dedupe: $DEDUPE_STATE' "$SKILL" || missing+=("dry-run surfac
 grep -Fq '[ -e "$ACTIVE_MARKER" ]' "$SKILL" || missing+=("active marker duplicate guard")
 grep -Fq 'cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER"; }' "$SKILL" || missing+=("active marker cleanup helper")
 grep -Fq 'Clean the active marker on finalized PR paths' "$SKILL" || missing+=("finalized PR paths clean active marker")
-grep -F 'Memory log `Result: PR-DRAFT-EVAL-RED`' "$SKILL" | grep -Fq '`cleanup_active_marker`' || missing+=("eval-red finalized path cleans active marker before exit")
-grep -Fq 'Keep `ACTIVE_MARKER` only on incomplete executor paths' "$SKILL" || missing+=("incomplete executor paths keep active marker")
+# Autopilot no longer runs /eval itself — it reconciles ship-spec's outcome — so the
+# eval-red marker cleanup now lives in the shared finalized-paths rule. Assert that rule
+# actually enumerates PR-DRAFT-EVAL-RED, or "finalized paths clean the marker" is vacuous.
+grep -F 'Clean the active marker on finalized PR paths' "$SKILL" | grep -Fq 'PR-DRAFT-EVAL-RED' || missing+=("the finalized-paths marker cleanup does not cover PR-DRAFT-EVAL-RED")
+grep -Fq 'Keep `ACTIVE_MARKER` only on the incomplete-build path' "$SKILL" || missing+=("the incomplete-build path keeps the active marker")
 
 # Dry-run research must not create GitHub issues before the dry-run exit.
 dryrun_line="$(grep -nF 'exit before any `gh issue create` mutation' "$SKILL" | head -1 | cut -d: -f1 || true)"
@@ -105,14 +113,13 @@ if [[ -z "$dryrun_line" || -z "$issue_create_line" || "$dryrun_line" -ge "$issue
 fi
 
 # Top-level docs should advertise the changed operator contract.
-grep -Fq 'AUTOPILOT_EXECUTOR=ralph' "$AGENTS" || missing+=("AGENTS documents inline Ralph toggle")
-grep -Fq 'Advisor-monitored `scripts/ralph.sh` loop' "$AGENTS" || missing+=("AGENTS documents Advisor-monitored ralph default")
-grep -Fq -- '--executor=delegate-advisor' "$AGENTS" || missing+=("AGENTS documents delegate-advisor opt-in")
+grep -Fq 'There is no executor toggle and no inline fallback' "$AGENTS" || missing+=("AGENTS states there is no executor toggle and no inline fallback")
+grep -Fq '.oh/scripts/firstmate.sh' "$AGENTS" || missing+=("AGENTS names the one build executor")
 
 if (( ${#missing[@]} )); then
-  printf 'REGRESSION: autopilot executor toggle contract missing: %s\n' "${missing[*]}" >&2
+  printf 'REGRESSION: autopilot single-executor contract broken: %s\n' "${missing[*]}" >&2
   exit 1
 fi
 
-echo "PASS: autopilot defaults to ship-spec (Advisor-monitored ralph; /delegate optional inside), exact goal, defers the build to /ship-spec, delegate-advisor + inline ralph + firstmate opt-ins, /ship-spec default executor ralph, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard" >&2
+echo "PASS: no executor toggle and no inline fallback anywhere, exact goal, autopilot defers the whole build to /ship-spec's one executor, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard" >&2
 exit 0

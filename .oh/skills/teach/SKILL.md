@@ -26,7 +26,7 @@ It is **not** an implementation, audit, retro, or merge gate. `/teach` does not 
 
 ## When NOT to use
 
-- **Before implementation is complete.** Use `/ship-spec`, `/delegate`, or `scripts/ralph.sh` to finish the task first.
+- **Before implementation is complete.** Use `/ship-spec` or `.oh/scripts/firstmate.sh` to finish the task first.
 - **To decide promotability.** Use `/audit implementation <slug>` for one implementation or `/audit pr <N>` for one PR.
 - **To capture session lessons.** Use `/retro` for falsifiable hypotheses and memory promotion.
 - **To create a new research wiki entry from an external source.** Use `/wiki ingest` for source capture; `/teach` may revise an existing task-relevant entry or propose edits.

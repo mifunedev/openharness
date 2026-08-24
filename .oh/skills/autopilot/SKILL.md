@@ -6,8 +6,8 @@ description: |
   first-principles `/audit harness` research, files its own `autopilot`
   ticket from the top-ranked finding, and builds that. Decomposes via the pm
   agent, then runs `/ship-spec --issue`, which owns the build end-to-end
-  (the two compacts bracketing implement, a worktree Advisor, `/delegate`
-  workers running `.oh/scripts/ralph.sh`, the `/eval` gate, and the `/audit pr`
+  (the two compacts bracketing implement, a worktree Advisor, the one build
+  executor `.oh/scripts/firstmate.sh`, the `/eval` gate, and the `/audit pr`
   promotable undraft) through to a ready-for-review PR whose description
   states why this item was selected.
   Harness-infra only (skills/rules/docs/scripts/crons/wiki) — never sandbox
@@ -15,18 +15,20 @@ description: |
   autopilot PRs created per UTC day AND 10 total open; never auto-merges.
   TRIGGER when: the hourly .oh/crons/autopilot.md fires, or invoked manually on
   demand (e.g. /autopilot --dry-run to preview the next selection).
-argument-hint: "[--dry-run] [--executor=ship-spec|delegate-advisor|ralph|firstmate] [--repo <owner/name>] [--remote <name>] [--base <branch>]"
+argument-hint: "[--dry-run] [--repo <owner/name>] [--remote <name>] [--base <branch>]"
 ---
 
 # Autopilot
 
-Unattended self-improvement loop for the harness. Each run picks one harness-infra item from the GitHub `autopilot` issue queue (or researches and files one when the queue is empty), builds it end-to-end through `pm decompose → /goal Advisor handoff → /ship-spec --issue`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. `/ship-spec` now owns the whole build pipeline (`/compact → worktree Advisor → Advisor-monitored .oh/scripts/ralph.sh loop → /eval → /compact → /audit pr undraft`); autopilot **defers** to it rather than re-running implement/eval/finalize. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
+Unattended self-improvement loop for the harness. Each run picks one harness-infra item from the GitHub `autopilot` issue queue (or researches and files one when the queue is empty), builds it end-to-end through `pm decompose → /goal Advisor handoff → /ship-spec --issue`, and lands a ready-for-review PR whose description opens with **why this item was selected this session**. `/ship-spec` owns the whole build pipeline (`/compact → worktree Advisor → .oh/scripts/firstmate.sh → /eval → /compact → /audit pr undraft`); autopilot **defers** to it rather than re-running implement/eval/finalize. Scope is strictly **harness-infra only** (skills/rules/docs/scripts/crons/wiki) — never sandbox application code, never auto-merge.
 
-Executor toggle: `--executor=ship-spec|delegate-advisor|ralph|firstmate`, or `AUTOPILOT_EXECUTOR=ship-spec|delegate-advisor|ralph|firstmate`. Default `ship-spec` **defers the whole build to `/ship-spec`** (which owns the worktree Advisor, the two compacts, an **Advisor-monitored `.oh/scripts/ralph.sh` loop** with `/delegate` optional inside an iteration, `/eval`, and the `/audit pr` promotable undraft). `delegate-advisor` is the same deferral but passes `--executor=delegate-advisor` to `/ship-spec` for the legacy `/delegate --plan` worker fan-out. `firstmate` is likewise pure deferral — it passes `--executor=firstmate` to `/ship-spec` so Stage 10 launches one long-lived First-Mate session over the whole task graph, wall-clock bounded by `FIRSTMATE_TIMEOUT_MS` (default `14400000` = 4h). `ralph` remains a legacy inline fallback that drives `.oh/scripts/ralph.sh "$SLUG"` directly against the scaffolded task and finalizes inline (idempotent: a no-op if `/ship-spec` already reached `STATUS: COMPLETE`).
+**There is no executor toggle.** Autopilot has exactly one build path: it **defers the whole build to `/ship-spec`**, which owns the worktree Advisor, the two compacts, the one build executor `.oh/scripts/firstmate.sh <slug>` (one long-lived First-Mate session over the whole task graph, wall-clock bounded by `FIRSTMATE_TIMEOUT_MS`, default `14400000` = 4h), `/eval`, and the `/audit pr` promotable undraft. Autopilot owns **no build mechanics of its own** — §5–§7 are reconciliation, not re-execution.
 
-When fired by the hourly cron, the run lives in its own detached Pi tmux session (`tmux: true` in `.oh/crons/autopilot.md`). In the default `ship-spec` mode (and `delegate-advisor`) this same cron-created Pi session is the expert Advisor runtime; do **not** spawn a second advisor session. After the work branch is known, rename the tmux session to `autopilot-<branch>` with slashes sanitized, e.g. `autopilot-feat-123-slug`, so a human can attach and continue. Leave `autopilot-<branch>` sessions alive for manual attach/continue/reap after a PR exists (see § Session lifecycle).
+There is no inline fallback. Recovery from a misbehaving executor is fix-forward: leave the PR draft, record the resumable `.oh/tasks/<slug>/` state, and let the next run resume it.
 
-`--dry-run` prints the selection decision (queue ticket or research finding), executor mode, dedupe state, and open-PR counts, then exits without calling `/ship-spec`, `/delegate`, or the Ralph runner and without touching git or GitHub.
+When fired by the hourly cron, the run lives in its own detached Pi tmux session (`tmux: true` in `.oh/crons/autopilot.md`). This same cron-created Pi session is the expert Advisor runtime; do **not** spawn a second advisor session. After the work branch is known, rename the tmux session to `autopilot-<branch>` with slashes sanitized, e.g. `autopilot-feat-123-slug`, so a human can attach and continue. Leave `autopilot-<branch>` sessions alive for manual attach/continue/reap after a PR exists (see § Session lifecycle).
+
+`--dry-run` prints the selection decision (queue ticket or research finding), dedupe state, and open-PR counts, then exits without calling `/ship-spec` and without touching git or GitHub.
 
 **Default target repo:** future autopilot runs act on canonical upstream by default: `AUTOPILOT_REPO=mifunedev/openharness`, `AUTOPILOT_BASE=development`, and `AUTOPILOT_REMOTE` resolved from the local remote URL that matches that repo (`upstream` in this checkout, normally `origin` in fresh installs). Do not let implicit `gh` repo resolution or `git push origin` send autopilot issues/PRs to a fork. Operators can override with `--repo`, `--remote`, `--base`, or the matching `AUTOPILOT_*` env vars.
 
@@ -194,20 +196,11 @@ OVERLAP_PIDFILE="${CRON_OVERLAP_PIDFILE:-}"  # e.g. /tmp/cron-autopilot.pid, or 
 # Backward-compatible fallback for an already-running pre-#126 cron runtime: it
 # exports SESSION/KEEP but not CRON_OVERLAP_PIDFILE until the runtime restarts.
 [ -z "$OVERLAP_PIDFILE" ] && [ -n "$SESSION" ] && OVERLAP_PIDFILE="/tmp/cron-autopilot.pid"
-EXECUTOR="${AUTOPILOT_EXECUTOR:-ship-spec}"
-# CLI flag wins over env: /autopilot --executor=ralph
-case "${ARGUMENTS:-}" in
-  *--executor=ship-spec*) EXECUTOR=ship-spec ;;
-  *--executor=delegate-advisor*) EXECUTOR=delegate-advisor ;;
-  *--executor=ralph*) EXECUTOR=ralph ;;
-  *--executor=firstmate*) EXECUTOR=firstmate ;;
-esac
-case "$EXECUTOR" in ship-spec|delegate-advisor|ralph|firstmate) ;; *) echo "ERROR: invalid AUTOPILOT_EXECUTOR=$EXECUTOR"; exit 1 ;; esac
-# Session budget: autopilot NEVER sets FIRSTMATE_TIMEOUT_MS. The firstmate arm inherits
+# There is no executor selection. Autopilot always defers the build to /ship-spec.
+# Session budget: autopilot NEVER sets FIRSTMATE_TIMEOUT_MS. The build session inherits
 # whatever the operator/environment provides, and .oh/scripts/lib/session-runner.sh's
 # resolve_timeout_ms rejects 0/negative/non-numeric/empty back to the 14400000 (4h) default —
 # so no unattended run can launch an unbounded session.
-echo "autopilot executor: $EXECUTOR"
 
 safe_branch_session() { printf '%s' "autopilot-$1" | tr '/:' '--' | tr '[:space:]' '-' | tr -cd 'A-Za-z0-9_.=-'; }
 cleanup_active_marker() { [ -n "${ACTIVE_MARKER:-}" ] && rm -f "$ACTIVE_MARKER"; }
@@ -322,10 +315,9 @@ while IFS= read -r row; do
 ```
 [dry-run] mode: $SELECTION_MODE
 [dry-run] selected: #$ISSUE_NUM ($SLUG)        # research path: "would file + build: <finding>"
-[dry-run] executor: $EXECUTOR
 [dry-run] open autopilot PRs created today: $OPEN_TODAY (cap 6); total open: $TOTAL_OPEN (ceiling 10)
 [dry-run] dedupe: $DEDUPE_STATE
-[dry-run] exiting without calling /ship-spec, /delegate, or .oh/scripts/ralph.sh
+[dry-run] exiting without calling /ship-spec
 ```
 
 In `--dry-run`, the research path ranks findings but MUST NOT `gh issue create` — print the would-be finding instead. Then exit 0.
@@ -361,27 +353,27 @@ Pass a 5-field advisor-model briefing:
 
 Capture the pm output as `PM_DESC` (the first sentence) and `PM_PLAN` (the rest). This PM/advisor plan is constructed **before** the implementation goal is started and becomes the input to the goal prompt.
 
-In the default `ship-spec` mode (and `delegate-advisor`), set the active goal with this exact phrase (preserve it verbatim for observability and eval coverage):
+Set the active goal with this exact phrase (preserve it verbatim for observability and eval coverage):
 
 ```text
-/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /audit pr undraft) into a ready-for-review PR
+/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, firstmate build session, /eval, /audit pr undraft) into a ready-for-review PR
 ```
 
-Include `ISSUE_NUM`, `SLUG`, `BRANCH`, `AUTOPILOT_REPO`, `AUTOPILOT_REMOTE`, `AUTOPILOT_BASE`, `SELECTION_RATIONALE`, `PM_DESC`, and `PM_PLAN` immediately under the goal prompt so the Advisor can audit the plan and run `/ship-spec`, which now owns the rest of the build (compacts, the worktree Advisor + Advisor-monitored ralph, `/eval`, and the `/audit pr` undraft) — autopilot does not re-run those steps itself.
+Include `ISSUE_NUM`, `SLUG`, `BRANCH`, `AUTOPILOT_REPO`, `AUTOPILOT_REMOTE`, `AUTOPILOT_BASE`, `SELECTION_RATIONALE`, `PM_DESC`, and `PM_PLAN` immediately under the goal prompt so the Advisor can audit the plan and run `/ship-spec`, which owns the rest of the build (compacts, the worktree Advisor + the firstmate build session, `/eval`, and the `/audit pr` undraft) — autopilot does not re-run those steps itself.
 
 ### 4. /ship-spec --issue (owns the full build)
 
-In the default `ship-spec` mode (and `delegate-advisor`) the active `/goal` drives this step from the PM plan. Run `/ship-spec` against the existing ticket (the `--issue` flag links it instead of opening a duplicate):
+The active `/goal` drives this step from the PM plan. Run `/ship-spec` against the existing ticket (the `--issue` flag links it instead of opening a duplicate):
 
 ```
 /ship-spec "$PM_DESC" --plan <PM_PLAN content> --prefix feat --issue $ISSUE_NUM --repo "$AUTOPILOT_REPO" --remote "$AUTOPILOT_REMOTE" --base "$AUTOPILOT_BASE"
 ```
 
-In the `delegate-advisor` and `firstmate` modes, append the matching `--executor=$EXECUTOR` flag to that invocation — passing the flag through **is** the entire mechanism of those two arms (§5); autopilot adds no build step of its own. The default `ship-spec` mode passes no `--executor` flag, leaving `/ship-spec` on its own `ralph` default.
+`/ship-spec` takes no executor flag — it has one build path. Autopilot adds no build step of its own.
 
-`/ship-spec` now runs the **entire pipeline**: `/prd` → 2 critics → (skips issue creation, reuses #$ISSUE_NUM) → `/ralph` (JSON) → branch `feat/$ISSUE_NUM-$SLUG` → draft PR → `/compact` (before implement) → the implement phase (in autopilot's default worktree mode, ship-spec detects `$CRON_WORKTREE` and builds **inline in that same worktree** — already on the feature branch — driving the Advisor-monitored `.oh/scripts/ralph.sh` loop by default (`/delegate` optional inside an iteration; `--executor=delegate-advisor` for the legacy worker fan-out); standalone, it instead launches an expert `/worktrees` Advisor in its own `agent-ship-<slug>` tmux session) → `/eval` → `/compact` (after implement) → `/audit pr` promotable → `gh pr ready` (or left draft with a comment). **Capture `PR_NUM`, the actual `BRANCH`, and ship-spec's terminal status (`READY` or `DRAFT-BLOCKED`).** After the branch exists, ensure the cron tmux session is named `$(safe_branch_session "$BRANCH")` (for example `autopilot-feat-123-slug`) and keep `ACTIVE_MARKER=/tmp/$(safe_branch_session "$BRANCH").active` until the run is finalized or left for manual continuation.
+`/ship-spec` runs the **entire pipeline**: `/prd` → (skips issue creation, reuses #$ISSUE_NUM) → `/ralph` (JSON) → branch `feat/$ISSUE_NUM-$SLUG` → draft PR → `/compact` (before implement) → the implement phase (in autopilot's default worktree mode, ship-spec detects `$CRON_WORKTREE` and builds **inline in that same worktree** — already on the feature branch — running `.oh/scripts/firstmate.sh "$SLUG"`; standalone, it instead launches an expert `/worktrees` Advisor in its own `agent-ship-<slug>` tmux session) → `/eval` → `/compact` (after implement) → `/audit pr` promotable → `gh pr ready` (or left draft with a comment). **Capture `PR_NUM`, the actual `BRANCH`, and ship-spec's terminal status (`READY` or `DRAFT-BLOCKED`).** After the branch exists, ensure the cron tmux session is named `$(safe_branch_session "$BRANCH")` (for example `autopilot-feat-123-slug`) and keep `ACTIVE_MARKER=/tmp/$(safe_branch_session "$BRANCH").active` until the run is finalized or left for manual continuation.
 
-Because `/ship-spec` owns implement → eval → audit → undraft, **§5–§7 are reconciliation, not re-execution** in the `ship-spec`/`delegate-advisor` deferring modes: autopilot reads ship-spec's outcome and applies its own caps / selection-rationale / session-lifecycle / branch-restore. The `ralph` fallback (§5) is the only path where autopilot drives the loop itself.
+Because `/ship-spec` owns implement → eval → audit → undraft, **§5–§7 are reconciliation, not re-execution**: autopilot reads ship-spec's outcome and applies its own caps / selection-rationale / session-lifecycle / branch-restore. There is no path on which autopilot drives a build itself.
 
 **Critic HALT handling** — if `/ship-spec` emits `HALT` (critic gate rejected the spec):
 - Comment the verdict on the ticket and block it so it can't retry-loop hourly:
@@ -408,123 +400,38 @@ if ! gh pr view "$PR_NUM" --repo "$AUTOPILOT_REPO" --json body --jq .body | grep
 fi
 ```
 
-### 5. Implement — executor
+### 5. Implement — defer to `/ship-spec`
 
-Dispatch by executor. In the `ship-spec`/`delegate-advisor` deferring modes `/ship-spec` (§4) has already built **and finalized**; in `ralph` mode autopilot drives the loop inline.
+There is one build path and autopilot does not drive it. `/ship-spec` (§4) owns the entire build inside its own `agent-ship-<slug>` worktree-Advisor session: the two compacts bracketing implement, the one build executor `.oh/scripts/firstmate.sh "$SLUG"` (ONE long-lived First-Mate session over the whole `.oh/tasks/$SLUG/prd.json` task graph, launched through the herdr → tmux → foreground runner ladder), the `/eval` gate, and the `/audit pr` promotable undraft. Autopilot does **not** run its own `/compact`, `/delegate`, `.oh/scripts/firstmate.sh`, or `/eval`, and does **not** spawn a second Advisor session. There is nothing to drive here — proceed to §6/§7 to reconcile ship-spec's terminal outcome. Contract, watch matrix, recovery matrix, and per-mode kill procedure live in `/firstmate` (`.oh/skills/firstmate/SKILL.md`).
 
-#### `ship-spec` (default) — defer to `/ship-spec`
+**Session budget (mandatory for unattended runs)** — the build session is bounded by **wall clock**, and that cap is what keeps an overnight autopilot fire from running unbounded. The deferral **inherits** `FIRSTMATE_TIMEOUT_MS` (default `14400000` = 4h) and **must not strip, override, or weaken it**: autopilot sets `FIRSTMATE_TIMEOUT_MS` nowhere — not to `0`, not to empty, not to any "no timeout"/infinite sentinel. Enforcement lives in `resolve_timeout_ms` (`.oh/scripts/lib/session-runner.sh`), the executor's only budget source, which rejects `0`, negative, non-numeric, and empty values back to the `14400000` default with the rejection logged. On expiry the executor tears down, clears `/tmp/firstmate-$SLUG.lock`, and appends `FIRSTMATE-INCOMPLETE` to `progress.txt`; `/ship-spec` then returns `DRAFT-BLOCKED` with the PR left draft.
 
-`/ship-spec` (§4) owns the entire build inside its own `agent-ship-<slug>` worktree-Advisor session: the two compacts bracketing implement, an **Advisor-monitored `.oh/scripts/ralph.sh` loop** (`/delegate` optional inside an iteration; never a replacement for the loop), the `/eval` gate, and the `/audit pr` promotable undraft. Autopilot does **not** run its own `/compact`, `/delegate`, `.oh/scripts/ralph.sh`, or `/eval` in these deferring modes, and does **not** spawn a second Advisor session. There is nothing to drive here — proceed to §6/§7 to reconcile ship-spec's terminal outcome.
-
-**Delegate-advisor failure compensation** — if `/ship-spec` returns `DRAFT-BLOCKED` because its implement/`/delegate` phase failed, stalled, or left acceptance criteria incomplete (eval/CI reds are reconciled in §6/§7):
+**Build failure compensation** — if `/ship-spec` returns `DRAFT-BLOCKED` because its implement phase failed, stalled, timed out, or left acceptance criteria incomplete (eval/CI reds are reconciled in §6/§7):
 ```bash
-gh pr comment "$PR_NUM" --repo "$AUTOPILOT_REPO" --body "autopilot: /ship-spec did not complete .oh/tasks/$SLUG/prd.json (implement/delegate phase). PR left draft; attach to tmux session $SESSION (or agent-ship-$SLUG) and resume. Status: DELEGATE-FAIL."
+gh pr comment "$PR_NUM" --repo "$AUTOPILOT_REPO" --body "autopilot: /ship-spec did not complete .oh/tasks/$SLUG/prd.json (implement phase). PR left draft; .oh/tasks/$SLUG/ state is resumable — attach to tmux session $SESSION (or agent-ship-$SLUG) and resume. Status: BUILD-INCOMPLETE."
 ```
-- Memory log `Result: DELEGATE-FAIL`, liveness `DELEGATE-FAIL`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), leave `ACTIVE_MARKER` in place for duplicate suppression, the canonical scoped restore (`git checkout development -- "${OWNED_PATHS[@]}"` then `git checkout development`, then assert `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit 1 (non-destructive — never auto-close the issue or PR).
+- Memory log `Result: BUILD-INCOMPLETE`, liveness `BUILD-INCOMPLETE`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), leave `ACTIVE_MARKER` in place for duplicate suppression, the canonical scoped restore (`git checkout development -- "${OWNED_PATHS[@]}"` then `git checkout development`, then assert `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit 1 (non-destructive — never auto-close the issue or PR).
 
-#### `delegate-advisor` — defer to `/ship-spec` with the `/delegate` worker fan-out
-
-Same deferral as `ship-spec`, but autopilot passes `--executor=delegate-advisor` to `/ship-spec`, so Stage 10 uses the legacy `/delegate --plan .oh/tasks/<slug>/prd.json` worker fan-out instead of the Advisor-monitored ralph loop. Autopilot still does **not** run its own `/compact`/`/delegate`/`/eval`; the same delegate-advisor failure compensation above applies. Reconcile in §6/§7.
-
-#### `firstmate` — defer to `/ship-spec` with the long-lived First-Mate session (opt-in)
-
-**Pure deferral, exactly like `delegate-advisor`** — autopilot owns **no new build mechanics** here. It passes `--executor=firstmate` to `/ship-spec` (§4), so Stage 10 launches `.oh/scripts/firstmate.sh "$SLUG"` — ONE long-lived First-Mate session over the whole `.oh/tasks/$SLUG/prd.json` task graph through the herdr → tmux → foreground runner ladder — instead of the Advisor-monitored ralph loop. `ralph` remains the default; this arm is reached only by an explicit `--executor=firstmate` / `AUTOPILOT_EXECUTOR=firstmate`. Autopilot does **not** run its own `/compact`/`/delegate`/`.oh/scripts/firstmate.sh`/`/eval`, and does **not** spawn a second Advisor session. Contract, watch matrix, recovery matrix, and per-mode kill procedure live in `/firstmate` (`.oh/skills/firstmate/SKILL.md`); the ship-spec seam is Stage 10's "Opt-in (`firstmate`)" subsection. Terminal interface is unchanged — the whole line `STATUS: COMPLETE` in `.oh/tasks/$SLUG/progress.txt`, the same sentinel `ralph` reaches — so §6/§7 reconcile identically.
-
-**Session budget (mandatory for unattended runs)** — a firstmate session is bounded by **wall clock**, not by ralph's 50-iteration ceiling, so the cap is what keeps an overnight autopilot fire from running unbounded. The deferral **inherits** `FIRSTMATE_TIMEOUT_MS` (default `14400000` = 4h) and **must not strip, override, or weaken it**: autopilot sets `FIRSTMATE_TIMEOUT_MS` nowhere on this path — not to `0`, not to empty, not to any "no timeout"/infinite sentinel. Enforcement lives in `resolve_timeout_ms` (`.oh/scripts/lib/session-runner.sh`), the executor's only budget source, which rejects `0`, negative, non-numeric, and empty values back to the `14400000` default with the rejection logged. On expiry the executor tears down, clears `/tmp/firstmate-$SLUG.lock`, and appends `FIRSTMATE-INCOMPLETE` to `progress.txt`; `/ship-spec` then returns `DRAFT-BLOCKED` with the PR left draft — which autopilot reconciles through the **same delegate-advisor failure compensation above** (`DELEGATE-FAIL`: comment, persist the session, keep `ACTIVE_MARKER`, scoped restore, exit 1). Reconcile in §6/§7.
-
-#### `ralph` fallback (legacy inline)
-
-When `EXECUTOR=ralph` (from `--executor=ralph` or `AUTOPILOT_EXECUTOR=ralph`), bypass ship-spec's Advisor handoff and drive the resumable loop inline. The task is already scaffolded on `feat/$ISSUE_NUM-$SLUG` (§4); launch the loop here — it runs in its own tmux session named `$SLUG`, committing one story per iteration to the branch (idempotent: it reattaches/exits immediately if `progress.txt` already shows `STATUS: COMPLETE`):
-
-```bash
-.oh/scripts/ralph.sh "$SLUG"
-```
-
-Then **bash-poll** `.oh/tasks/$SLUG/progress.txt` for the terminal sentinel. Each round is bounded under the Bash tool ceiling; **re-run the round** until it reports `RALPH: DONE` or `RALPH: SESSION-GONE`, up to ~8 rounds (~64 min wall-clock):
-
-```bash
-# one poll round — re-run until it prints RALPH: DONE or RALPH: SESSION-GONE
-end=$(( $(date +%s) + 480 ))
-while [ "$(date +%s)" -lt "$end" ]; do
-  grep -q '^STATUS: COMPLETE' ".oh/tasks/$SLUG/progress.txt" && { echo "RALPH: DONE"; break; }
-  tmux has-session -t "$SLUG" 2>/dev/null || { echo "RALPH: SESSION-GONE"; break; }
-  sleep 30
-done
-```
-
-- `RALPH: DONE` (or `SESSION-GONE` **with** `STATUS: COMPLETE` in `progress.txt`) → implementation finished; the loop's commits are on the work branch — proceed to §6.
-- After ~8 rounds with no sentinel, or `SESSION-GONE` **without** `STATUS: COMPLETE` → **Ralph incomplete** (timeout / loop died / all harnesses exhausted). Handle below.
-
-**Ralph-incomplete compensation** — the partial implementation is committed on the branch and the four-file task state is resumable:
-```bash
-tmux kill-session -t "$SLUG" 2>/dev/null || true
-gh pr comment "$PR_NUM" --repo "$AUTOPILOT_REPO" --body "autopilot: Ralph loop did not reach STATUS: COMPLETE (timeout / exhausted / error). PR left draft; .oh/tasks/$SLUG/ state is resumable — re-run \`.oh/scripts/ralph.sh $SLUG\` to continue. Status: RALPH-INCOMPLETE."
-```
-- Memory log `Result: RALPH-INCOMPLETE`, liveness `RALPH-INCOMPLETE`, **persist the session** (`[ -n "$KEEP" ] && touch "$KEEP"`), leave `ACTIVE_MARKER` in place for duplicate suppression, the canonical scoped restore (`git checkout development -- "${OWNED_PATHS[@]}"` then `git checkout development`, then assert `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit 1 (non-destructive — never auto-close the issue or PR).
+There is **no inline fallback executor**. Recovery is fix-forward: the branch, the draft PR, and the four-file task state are all resumable by the next run or by an operator.
 
 ### 6. Eval gate
 
-**`ship-spec`/`delegate-advisor`**: `/ship-spec` already ran the `/eval` gate inside its pipeline (a new green→red regression there leaves the PR draft). Do **not** re-run `/eval` — its outcome is part of ship-spec's terminal state, reconciled in §7.
-
-**`ralph` fallback**: after the inline loop completes (§5), **while still on the work branch**, run the probe suite:
-
-```
-/eval
-```
-
-- If `/eval` updates `.oh/evals/RESULTS.md`, commit it on the branch:
-  ```bash
-  git add .oh/evals/RESULTS.md && git commit -m "$(printf 'task: refresh evals benchmark\n\nSubmitted-by: %s\n' "${RALPH_HARNESS:-Claude}")" || true
-  ```
-
-**Decision rule** (ralph fallback) — key on the runner's exit code and the green→red **delta**, NOT on the bare presence of a `REGRESSION` row in `.oh/evals/RESULTS.md`. A probe that was already red on the base (`$AUTOPILOT_REMOTE/$AUTOPILOT_BASE`) is **pre-existing** — this PR did not cause it, so it must not block. **PROCEED** to §7 when BOTH of these hold:
-
-1. the `/eval` runner exited `0`, AND
-2. every regressed probe's delta is `unchanged` vs the base (already-red — NOT a NEW green→red transition).
-
-**Keep the PR draft** (status `PR-DRAFT-EVAL-RED`) only on a **NEW (green→red) regression OR a non-zero runner exit**:
-  ```bash
-  gh pr comment "$PR_NUM" --repo "$AUTOPILOT_REPO" --body "autopilot: /eval reported a NEW (green→red) probe regression (<probe ids>) or a non-zero runner exit. PR left draft; resolve before marking ready."
-  ```
-  Memory log `Result: PR-DRAFT-EVAL-RED`, liveness `PR-DRAFT-EVAL-RED`, then `[ -n "$KEEP" ] && touch "$KEEP"`, `cleanup_active_marker`, the canonical scoped restore (`git checkout development -- "${OWNED_PATHS[@]}"` then `git checkout development`, then assert `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` and `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`), exit.
-
-> **Diagnostic note (non-gating):** file-scope overlap does not gate. If a regressed probe reads a file this PR changed, the runner-exit + delta signal still governs — a self-referential probe (e.g. `eval-gate` on an autopilot edit) whose delta is `unchanged` does NOT block. The delta is the authoritative causation signal.
-
-- **All clear, or only pre-existing reds (`unchanged` delta) with runner exit 0** → when a pre-existing red is present, **post it on the PR** for honesty (do not claim an all-green board), then proceed to §7.
+`/ship-spec` already ran the `/eval` gate inside its pipeline (a new green→red regression there leaves the PR draft). Do **not** re-run `/eval` — its outcome is part of ship-spec's terminal state, reconciled in §7.
 
 ### 7. Finalize
 
-**`ship-spec`/`delegate-advisor`** — `/ship-spec` already finalized (it pushed, ran `/audit pr`, and either `gh pr ready`'d a promotable PR or left it draft with a comment). Autopilot **reconciles** ship-spec's terminal status; it does **not** re-run `/audit pr` or `gh pr ready`:
+`/ship-spec` already finalized (it pushed, ran `/audit pr`, and either `gh pr ready`'d a promotable PR or left it draft with a comment). Autopilot **reconciles** ship-spec's terminal status; it does **not** push, re-run `/audit pr`, or call `gh pr ready`:
 
 - ship-spec reported `READY` → memory log `Result: PR-READY`, liveness `PR-READY`.
 - ship-spec reported `DRAFT-BLOCKED` → leave the PR draft; memory log `Result: PR-DRAFT-CI-RED` (or `PR-DRAFT-EVAL-RED` when the block was a new eval regression), matching liveness.
-
-**`ralph` fallback** — autopilot finalizes the inline build itself.
-
-**Push the branch**:
-```bash
-git push "$AUTOPILOT_REMOTE" HEAD
-```
-
-**Undraft gate** — run `/audit pr` focused on this PR and key on its draft sub-status:
-
-- **Promotable** (`/audit pr` reports CI green + mergeable + clean):
-  ```bash
-  gh pr ready "$PR_NUM" --repo "$AUTOPILOT_REPO"
-  ```
-  Memory log `Result: PR-READY`, liveness `PR-READY`.
-- **Not promotable** (red/pending CI, conflicts, or `/audit pr` could not classify):
-  - Leave the PR **draft** (do NOT call `gh pr ready`).
-  - `gh pr comment "$PR_NUM" --repo "$AUTOPILOT_REPO" --body "autopilot: /audit pr did not classify this PR promotable (CI red/pending or conflicts). PR left draft. Resolve and mark ready manually."`
-  - Memory log `Result: PR-DRAFT-CI-RED`, liveness `PR-DRAFT-CI-RED`.
 
 **Never call `gh pr merge`** — autopilot does not auto-merge under any condition.
 
 **Persist the session** (a PR exists on every §7 path): `[ -n "$KEEP" ] && touch "$KEEP"`.
 
-**Clean the active marker on finalized PR paths**: after the run creates or updates a terminal PR state (`PR-READY`, `PR-DRAFT-CI-RED`, or `PR-DRAFT-EVAL-RED`), run `cleanup_active_marker` before restore/exit. The open PR and persisted `autopilot-<branch>` session are now the duplicate guards; leaving `/tmp/$SAFE_SESSION.active` behind would permanently suppress a future run after the PR/session is closed. Keep `ACTIVE_MARKER` only on incomplete executor paths (`DELEGATE-FAIL`, `RALPH-INCOMPLETE`) where manual continuation is expected.
+**Clean the active marker on finalized PR paths**: after the run creates or updates a terminal PR state (`PR-READY`, `PR-DRAFT-CI-RED`, or `PR-DRAFT-EVAL-RED`), run `cleanup_active_marker` before restore/exit. The open PR and persisted `autopilot-<branch>` session are now the duplicate guards; leaving `/tmp/$SAFE_SESSION.active` behind would permanently suppress a future run after the PR/session is closed. Keep `ACTIVE_MARKER` only on the incomplete-build path (`BUILD-INCOMPLETE`) where manual continuation is expected.
 
-**Release the overlap lock before restoring** (mandatory for kept Pi sessions): after any terminal PR state (`PR-READY`, `PR-DRAFT-CI-RED`, or `PR-DRAFT-EVAL-RED`), run `release_overlap_lock` before the restore. Kept Pi sessions intentionally stay alive for manual review, so the cron wrapper may not regain control to remove `/tmp/cron-autopilot.pid`; the skill must clear `$CRON_OVERLAP_PIDFILE` itself once the run is terminal. Incomplete executor paths (`DELEGATE-FAIL`, `RALPH-INCOMPLETE`) keep the lock because manual continuation is expected.
+**Release the overlap lock before restoring** (mandatory for kept Pi sessions): after any terminal PR state (`PR-READY`, `PR-DRAFT-CI-RED`, or `PR-DRAFT-EVAL-RED`), run `release_overlap_lock` before the restore. Kept Pi sessions intentionally stay alive for manual review, so the cron wrapper may not regain control to remove `/tmp/cron-autopilot.pid`; the skill must clear `$CRON_OVERLAP_PIDFILE` itself once the run is terminal. The incomplete-build path (`BUILD-INCOMPLETE`) keeps the lock because manual continuation is expected.
 
 **Restore branch** (root mode only — when `$CRON_WORKTREE` is set the whole restore is skipped: a worktree run never touched root and its worktree is discarded by the runtime/heartbeat, so there is nothing to restore. In root mode it is mandatory — the next cron fire's §1 branch guard only passes on `development`). Canonical **scoped restore** — a non-destructive two-step that discards only this run's own OWNED-path residue, then switches HEAD. Committed work is safe on the branch / draft PR. The scope step MUST precede the branch switch (it clears owned residue that would otherwise make a non-forced `git checkout development` refuse). It touches only **tracked** files, so an untracked owned-path orphan from a mid-run crash is NOT auto-removed (`git clean` is deliberately NOT used — too destructive across `.oh/tasks/`, `.oh/memory/`, `.claude/`); clean such orphans manually. Any **foreign** change OUTSIDE the owned surface — modified or staged (e.g. `.codex/config.toml`) — survives byte-for-byte (left in place / left staged) and is ignored by the scoped assertion and the next §1 check:
 ```bash
@@ -546,8 +453,7 @@ TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M); mkdir -p "$AUTOPILOT_LOG_ROO
 .oh/scripts/locked-append.sh "$AUTOPILOT_LOG_ROOT/.oh/memory/$TODAY/log.md" <<EOF
 
 ## Autopilot -- $TIME UTC
-- **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | RALPH-INCOMPLETE | DELEGATE-FAIL | BLOCKED-OWNED-WIP | FAIL>
-- **Executor**: <ship-spec | delegate-advisor | ralph>
+- **Result**: <SKIPPED-CAP-TOTAL | SKIPPED-CAP-DAILY | NOTHING-NEW | PR-READY | PR-DRAFT-CI-RED | PR-DRAFT-EVAL-RED | HALT-CRITIC-GATE | BUILD-INCOMPLETE | BLOCKED-OWNED-WIP | FAIL>
 - **Selected**: <#issue + slug, or "none">
 - **Session**: <tmux session name, or "none">
 - **Action**: <one-line summary of what was done>
@@ -564,12 +470,12 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 - **Selection rationale**: every PR autopilot opens MUST carry a `## Selection rationale` section as the FIRST section of its description, stating why this item was chosen this session (queue position, or the research finding + impact ranking).
 - **No auto-merge**: autopilot finalizes a *ready-for-review* PR; a human merges. The word "merge" must never appear in an autopilot-generated commit message, PR body, or `gh` command.
 - **Caps**: at most 6 open autopilot PRs created per UTC day AND 10 total open at any time. A close/merge frees a slot.
-- **Implementation executor**: default `ship-spec` (`AUTOPILOT_EXECUTOR` unset) runs the exact `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, Advisor-managed ralph, /eval, /audit pr undraft) into a ready-for-review PR` prompt and **defers the whole build to `/ship-spec`** — ship-spec owns the compacts, the worktree Advisor + an Advisor-monitored `.oh/scripts/ralph.sh` loop (`/delegate` optional inside an iteration), `/eval`, and the `/audit pr` undraft. Autopilot does not run its own `/compact`/`/delegate`/`/eval` in these deferring modes; it reconciles ship-spec's terminal outcome and leaves `autopilot-<branch>` alive. `delegate-advisor` is the same deferral but passes `--executor=delegate-advisor` to ship-spec for the legacy `/delegate` worker fan-out. `firstmate` is the same deferral again, passing `--executor=firstmate` so Stage 10 launches one long-lived First-Mate session over the whole task graph — opt-in only, adds no autopilot-side build mechanics, and inherits (never overrides) the `FIRSTMATE_TIMEOUT_MS` wall-clock cap, default `14400000` = 4h. `ralph` mode is an explicit legacy inline fallback via `--executor=ralph` or `AUTOPILOT_EXECUTOR=ralph` and drives `.oh/scripts/ralph.sh "$SLUG"` inline.
+- **One build path, no toggle**: autopilot runs the exact `/goal Audit plan /w @"pm (agent)" using ultrathink, then run /ship-spec --issue to build it end-to-end (worktree Advisor, firstmate build session, /eval, /audit pr undraft) into a ready-for-review PR` prompt and **defers the whole build to `/ship-spec`** — ship-spec owns the compacts, the worktree Advisor, the one build executor `.oh/scripts/firstmate.sh`, `/eval`, and the `/audit pr` undraft. Autopilot does not run its own `/compact`/`/delegate`/`/eval`; it reconciles ship-spec's terminal outcome and leaves `autopilot-<branch>` alive. The build session inherits (never overrides) the `FIRSTMATE_TIMEOUT_MS` wall-clock cap, default `14400000` = 4h. There is no inline fallback.
 - **Non-destructive failure**: never auto-close issues or PRs. On failure, comment + log. Human inspection is the recovery path.
 - **autopilot-blocked**: a critic HALT labels the ticket `autopilot-blocked`, excluding it from the queue query until a human removes the label — a bad ticket can't retry-loop hourly.
 - **Idempotent labels**: the `gh label create … 2>/dev/null || true` pattern is safe to run every pulse.
 - **Liveness on every path**: every exit calls `log_liveness "<TOKEN>"`, which appends to `$AUTOPILOT_LOG_ROOT/.oh/crons/.cron.log` via `.oh/scripts/locked-append.sh` — skip, halt, error, success. In worktree mode that path is the shared root checkout, not `$CRON_WORKTREE`; a missing liveness line looks like a crash.
-- **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `RALPH-INCOMPLETE`, `DELEGATE-FAIL`). In the ship-spec/delegate-advisor deferring modes, the persisted session name is `autopilot-<branch>` (sanitized, e.g. `autopilot-feat-123-slug`) and is intentionally left alive for manual attach/continue/reap; no separate advisor session is created. No-PR paths never touch the keep-marker and must call `close_no_pr_session` after memory/liveness logging (cap skips, duplicate/NOTHING-NEW, no-survivor research, critic HALT before PR, FAIL, and BLOCKED-OWNED-WIP) so attachable Pi TUI sessions do not linger. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
+- **Session lifecycle**: persist the per-run tmux session (`[ -n "$KEEP" ] && touch "$KEEP"`) iff the run produced a PR (`PR-READY`, `PR-DRAFT-CI-RED`, `PR-DRAFT-EVAL-RED`, `BUILD-INCOMPLETE`). The persisted session name is `autopilot-<branch>` (sanitized, e.g. `autopilot-feat-123-slug`) and is intentionally left alive for manual attach/continue/reap; no separate advisor session is created. No-PR paths never touch the keep-marker and must call `close_no_pr_session` after memory/liveness logging (cap skips, duplicate/NOTHING-NEW, no-survivor research, critic HALT before PR, FAIL, and BLOCKED-OWNED-WIP) so attachable Pi TUI sessions do not linger. The `[ -n "$KEEP" ]` guard means manual runs (no tmux) are unaffected.
 - **Branch restore (canonical scoped restore)**: every path that changed the working branch (all paths reaching §4+) must run the two-step `git checkout development -- "${OWNED_PATHS[@]}"` (discard own owned-path residue — tracked staged AND unstaged) THEN `git checkout development` (switch HEAD), then assert BOTH `git diff --quiet -- "${OWNED_PATHS[@]}" && git diff --cached --quiet -- "${OWNED_PATHS[@]}" || { echo "ERROR: autopilot restore left a dirty owned tree"; exit 1; }` AND `[ "$(git rev-parse --abbrev-ref HEAD)" = "development" ] || exit 1`. The scope step MUST precede the switch (it clears owned residue that a non-forced `git checkout development` would otherwise refuse to overwrite). It discards only the run's own owned-path residue (committed work is preserved on the feature branch / draft PR); it touches only tracked files, so an untracked owned-path orphan from a mid-run crash is cleaned manually (`git clean` is deliberately NOT used); and any foreign change OUTSIDE the owned surface survives byte-for-byte (left in place / left staged), ignored by the scoped assertion and the next §1 check. The owned-scoped assertion mirrors the §1 owned check, so "assertion passes" ≡ "the next fire's §1 guard will pass". §1 additionally self-heals a *clean*-but-stranded branch (its forced tree-wide checkout is the only remaining `-f` form); a *dirty* owned tree at §1 still blocks (BLOCKED-OWNED-WIP) to protect any owned WIP.
 
 ## Reference
@@ -582,11 +488,10 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 | `SKIPPED-CAP-DAILY` | ≥6 autopilot PRs created this UTC day are still open; skipped until one closes/merges or the day rolls over |
 | `NOTHING-NEW` | No actionable ticket (queue empty, or all open tickets already have PRs) AND `/audit harness` produced no finding that survives dedupe — research ran but had nothing fresh to file. _(Replaces the retired `IN-FLIGHT` token: a single in-flight PR no longer ends the run; it falls through to research.)_ |
 | `PR-READY` | End-to-end success; PR marked ready with green CI |
-| `PR-DRAFT-CI-RED` | PR left draft because the PR was not promotable per `/audit pr` (CI red/pending or conflicts) — set by `/ship-spec` in the ship-spec/delegate-advisor modes, or by the ralph fallback's own `/audit pr` gate |
-| `PR-DRAFT-EVAL-RED` | PR left draft because `/eval` reported a NEW (green→red) probe regression or a non-zero runner exit (inside `/ship-spec` in the ship-spec/delegate-advisor modes, or autopilot's inline `/eval` in ralph mode) |
+| `PR-DRAFT-CI-RED` | PR left draft because the PR was not promotable per `/audit pr` (CI red/pending or conflicts) — set by `/ship-spec` |
+| `PR-DRAFT-EVAL-RED` | PR left draft because `/eval` reported a NEW (green→red) probe regression or a non-zero runner exit, inside `/ship-spec` |
 | `HALT-CRITIC-GATE` | `/ship-spec` critic gate rejected the spec; ticket labeled `autopilot-blocked`, no PR opened |
-| `RALPH-INCOMPLETE` | §5 Ralph fallback loop did not reach `STATUS: COMPLETE` (timeout, loop died, or all harnesses exhausted) after `/ship-spec` opened a PR; PR left draft — `.oh/tasks/$SLUG/` state is resumable via `.oh/scripts/ralph.sh $SLUG` |
-| `DELEGATE-FAIL` | `/ship-spec`'s implement phase (the Advisor-monitored ralph loop, the `/delegate` fan-out under `--executor=delegate-advisor`, or the First-Mate session under `--executor=firstmate` — the latter typically after a `FIRSTMATE-INCOMPLETE` budget expiry) failed or stalled on `.oh/tasks/$SLUG/prd.json` in the deferring modes; PR left draft and the `autopilot-<branch>` / `agent-ship-<slug>` session is left alive for manual continuation |
+| `BUILD-INCOMPLETE` | `/ship-spec`'s implement phase — the First-Mate build session, typically after a `FIRSTMATE-INCOMPLETE` budget expiry — failed or stalled on `.oh/tasks/$SLUG/prd.json`; PR left draft and the `autopilot-<branch>` / `agent-ship-<slug>` session is left alive for manual continuation. `.oh/tasks/$SLUG/` state is resumable via `.oh/scripts/firstmate.sh $SLUG` |
 | `SPAWNED_WORKTREE` | Emitted by the cron runtime (not this skill): a `worktree: true` fire spawned in an isolated `.oh/worktrees/cron/<session>` worktree (the default for autopilot) so the root checkout stays clean |
 | `SKIPPED_OVERLAP` | Emitted by the cron runtime (not this skill): a previous fire of this id was still running with `overlap: false`. **No longer reachable for autopilot** (`worktree: true` always isolates instead of skipping); retained for non-worktree crons (heartbeat/cleanup/eval) |
 | `ERR_WORKTREE` | Emitted by the cron runtime (not this skill): a `worktree: true` fire could not create its isolated worktree (no base ref, or `git worktree add` failed). A surfaced FAILURE, never a silent skip |
@@ -602,11 +507,10 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 | `$AUTOPILOT_LOG_ROOT/.oh/crons/.cron.log` | Append-only liveness log read by the cron runtime; resolves to the shared root checkout when `$CRON_WORKTREE` is set |
 | `$AUTOPILOT_LOG_ROOT/.oh/memory/<today>/log.md` | Daily session log; autopilot appends an entry each run; resolves to the shared root checkout when `$CRON_WORKTREE` is set |
 | `.claude/agents/pm.md` | pm agent definition (invoked via `Agent subagent_type: pm`) |
-| `$CRON_TMUX_SESSION` / `$CRON_KEEP_MARKER` | Per-run tmux session name + keep-marker path, set by the cron runtime (empty on manual runs); the ship-spec/delegate-advisor modes rename the session to `autopilot-<branch>` after branch discovery |
+| `$CRON_TMUX_SESSION` / `$CRON_KEEP_MARKER` | Per-run tmux session name + keep-marker path, set by the cron runtime (empty on manual runs); the session is renamed to `autopilot-<branch>` after branch discovery |
 | `$CRON_OVERLAP_PIDFILE` | Per-id overlap lock path (for autopilot, `/tmp/cron-autopilot.pid`) exported by the cron runtime; terminal PR paths remove it so a kept Pi review session does not trigger hourly `SKIPPED_OVERLAP`. In worktree mode the runtime exports a session-scoped path instead (the id lock is never held), so this is a harmless no-op there |
 | `$CRON_WORKTREE` | Absolute path of the isolated worktree this run executes in, set by the cron runtime for `worktree: true` crons (empty on root/manual runs). When set, §1 skips the root-clean guards and §7 skips the branch restore — the worktree is ephemeral and source work never touches the root checkout |
 | `$AUTOPILOT_LOG_ROOT` | Shared checkout root used only for runtime observability appends (`.oh/crons/.cron.log`, `.oh/memory/<today>/log.md`); defaults to the current checkout in root/manual mode and resolves above `.oh/worktrees/cron/<session>` in worktree mode |
 | `AUTOPILOT_REPO` | Canonical GitHub repo target for issues, PRs, labels, and cap counts. Defaults to `mifunedev/openharness`; cron runtime exports it from `repo:` frontmatter. |
 | `AUTOPILOT_REMOTE` | Local git remote whose URL matches `$AUTOPILOT_REPO` (`upstream` in this checkout, normally `origin` in fresh installs). Used for fetch/push. |
-| `AUTOPILOT_EXECUTOR` | Optional executor toggle: `ship-spec` (default, defers to `/ship-spec`), `delegate-advisor` (defer with the `/delegate` fan-out), `firstmate` (defer with the long-lived First-Mate session), or `ralph` (legacy inline) |
-| `FIRSTMATE_TIMEOUT_MS` | Wall-clock session budget for the `firstmate` arm only; default `14400000` (4h). Autopilot never sets it — it is inherited and validated by `resolve_timeout_ms` (`.oh/scripts/lib/session-runner.sh`), which rejects `0`/negative/non-numeric/empty back to the default so an unattended run can never launch an unbounded session |
+| `FIRSTMATE_TIMEOUT_MS` | Wall-clock session budget for the build session; default `14400000` (4h). Autopilot never sets it — it is inherited and validated by `resolve_timeout_ms` (`.oh/scripts/lib/session-runner.sh`), which rejects `0`/negative/non-numeric/empty back to the default so an unattended run can never launch an unbounded session |

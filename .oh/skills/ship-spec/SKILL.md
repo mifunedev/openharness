@@ -9,12 +9,12 @@ description: |
   CI gates pass.
   TRIGGER when: asked to scaffold a spec end-to-end, "ship a spec",
   "set up a task PR", or after planning a feature and ready to formalize.
-argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent] [--issue <N>] [--executor=ralph|delegate-advisor|firstmate] [--repo <owner/name>] [--remote <name>] [--base <branch>]"
+argument-hint: "<feature-description> [--plan <path>] [--prefix feat|bug|task|audit|skill|agent] [--issue <N>] [--repo <owner/name>] [--remote <name>] [--base <branch>]"
 ---
 
 # Ship Spec
 
-Compose the existing primitives (`/prd`, wiki synthesis per `.oh/skills/wiki/references/schema.md`, DeepWiki comparison, `/ralph`, `gh`, `git`, `/compact`, an expert `/worktrees` Advisor launched via `/goal`, an Advisor-monitored `scripts/ralph.sh` loop (`/delegate` optional inside), `/eval`, `/audit pr`) into one durable invocation that produces a fully-scaffolded task and a ready-for-review PR. The draft PR is an observability checkpoint while implementation is pending, not the terminal state. After scaffolding, the orchestrator compacts and hands off to an expert Advisor — launched in its own tmux session via a `/goal`-prefixed prompt — that isolates work in a worktree, **drives an Advisor-monitored `scripts/ralph.sh` loop by default** (`--executor=ralph`; `/delegate` is an optional within-iteration fan-out tool, never a replacement for the loop; `--executor=delegate-advisor` selects the legacy `/delegate` worker fan-out), revises required wiki entries from implementation evidence, then undrafts the PR through a `/audit pr` promotable gate. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
+Compose the existing primitives (`/prd`, wiki synthesis per `.oh/skills/wiki/references/schema.md`, DeepWiki comparison, `/ralph`, `gh`, `git`, `/compact`, `.oh/scripts/firstmate.sh`, `/eval`, `/audit pr`) into one durable invocation that produces a fully-scaffolded task and a ready-for-review PR. The draft PR is an observability checkpoint while implementation is pending, not the terminal state. After scaffolding, the orchestrator compacts and launches **the one build executor** — `.oh/scripts/firstmate.sh <slug>`, a single long-lived First-Mate session over the whole task graph — then revises required wiki entries from implementation evidence and undrafts the PR through a `/audit pr` promotable gate. Each stage produces an inspectable artifact; the pipeline is resumable from any stage.
 
 **Core principle: the approved plan is the commitment gate.** The PRD is reviewed by the operator before the issue is opened, the branch created, or anything is pushed. The cheapest thing to revise is the spec itself — make that the gate. There is no separate critic node (`AGENTS.md § The Workflow`).
 
@@ -30,7 +30,7 @@ flowchart TD
     G --> G2["7.5 /compact (before implement)<br/>after PRD artifacts"]
     G2 --> H["8. Branch + commit + push"]
     H --> I["9. gh pr create --draft<br/>(observability checkpoint)"]
-    I --> J["10. Launch /worktrees Advisor in tmux via /goal<br/>→ Advisor-monitored scripts/ralph.sh loop (default)<br/>→ /delegate optional inside; monitor to STATUS: COMPLETE"]
+    I --> J["10. .oh/scripts/firstmate.sh &lt;slug&gt;<br/>one long-lived session over the task graph<br/>watch to STATUS: COMPLETE"]
     J --> K["11. /eval gate"]
     K --> W2["11.25 Wiki revision gate<br/>if Wiki Alignment required"]
     W2 --> K2["11.5 /compact (after implement)<br/>before the audit"]
@@ -54,16 +54,18 @@ Extract:
 - **`--repo <owner/name>`** (optional, default `mifunedev/openharness`) — GitHub repository for issue/PR operations.
 - **`--remote <name>`** (optional, default resolved from `--repo`) — git remote to fetch/push work branches.
 - **`--base <branch>`** (optional, default `development`) — PR base and branch start point.
-- **`--executor=ralph|delegate-advisor|firstmate`** (optional, default `ralph`) — Stage 10 build executor. `ralph` (default): the Advisor monitors `scripts/ralph.sh` directly (the Monitored async loop; `/delegate` is an optional within-iteration fan-out tool, never a replacement for the loop). `delegate-advisor`: the legacy `/delegate --plan .oh/tasks/<slug>/prd.json` worker fan-out. `firstmate` (opt-in): `.oh/scripts/firstmate.sh <slug>` — ONE long-lived First-Mate session over the whole task graph, launched through the herdr → tmux → foreground runner ladder (see `/firstmate` and Stage 10's opt-in subsection). All three reach the same terminal interface: the whole line `STATUS: COMPLETE` in `.oh/tasks/<slug>/progress.txt`.
+
+There is **no executor argument**. Stage 10 has exactly one build path:
+`.oh/scripts/firstmate.sh <slug>` — ONE long-lived First-Mate session over the
+whole task graph, launched through the herdr → tmux → foreground runner ladder
+(see `/firstmate`). Its terminal interface is the whole line `STATUS: COMPLETE`
+in `.oh/tasks/<slug>/progress.txt`.
 
 ```bash
 SHIP_SPEC_REPO="${SHIP_SPEC_REPO:-mifunedev/openharness}"
 SHIP_SPEC_BASE="${SHIP_SPEC_BASE:-development}"
 case "${ARGUMENTS:-}" in *--repo*) SHIP_SPEC_REPO=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--repo[ =]\([^ ]*\).*/\1/p') ;; esac
 case "${ARGUMENTS:-}" in *--base*) SHIP_SPEC_BASE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--base[ =]\([^ ]*\).*/\1/p') ;; esac
-SHIP_SPEC_EXECUTOR="${SHIP_SPEC_EXECUTOR:-ralph}"
-case "${ARGUMENTS:-}" in *--executor=delegate-advisor*) SHIP_SPEC_EXECUTOR=delegate-advisor ;; *--executor=firstmate*) SHIP_SPEC_EXECUTOR=firstmate ;; *--executor=ralph*) SHIP_SPEC_EXECUTOR=ralph ;; esac
-case "$SHIP_SPEC_EXECUTOR" in ralph|delegate-advisor|firstmate) ;; *) echo "ERROR: invalid SHIP_SPEC_EXECUTOR=$SHIP_SPEC_EXECUTOR"; exit 1 ;; esac
 resolve_ship_spec_remote() {
   git remote -v | awk -v repo="$SHIP_SPEC_REPO" '
     BEGIN { want=tolower(repo) }
@@ -77,7 +79,7 @@ resolve_ship_spec_remote() {
 case "${ARGUMENTS:-}" in *--remote*) SHIP_SPEC_REMOTE=$(printf '%s\n' "$ARGUMENTS" | sed -n 's/.*--remote[ =]\([^ ]*\).*/\1/p') ;; esac
 SHIP_SPEC_REMOTE="${SHIP_SPEC_REMOTE:-$(resolve_ship_spec_remote)}"
 [ -n "$SHIP_SPEC_REMOTE" ] || { echo "ERROR: no local git remote for $SHIP_SPEC_REPO"; exit 1; }
-echo "ship-spec target: repo=$SHIP_SPEC_REPO remote=$SHIP_SPEC_REMOTE base=$SHIP_SPEC_BASE executor=$SHIP_SPEC_EXECUTOR"
+echo "ship-spec target: repo=$SHIP_SPEC_REPO remote=$SHIP_SPEC_REMOTE base=$SHIP_SPEC_BASE"
 ```
 
 Derive `<slug>` per `/prd` rules: lowercase, kebab-case, `[a-z0-9-]+`, **≤5 words**, not `archive`. Reject and ask for a shorter name if invalid.
@@ -169,11 +171,18 @@ The skill produces `.oh/tasks/<slug>/prd.json` with `branchName: <prefix>/<N>-<s
 
 ### Stage 7 — Scaffold `prompt.md` + `progress.txt`
 
-Clone `.claude/skills/ship-spec/templates/prompt.md` as the template (it ships with `<slug>`, `<prefix>/<N>-<slug>`, `<NNN>`, and `#<issue>` placeholders). Adapt:
-- Replace `<slug>` with this task's slug throughout
-- Replace `<prefix>/<N>-<slug>` with the real branch name
-- Replace `#<issue>` with the tracking issue number
-- Confirm the read-context list (step 1) points at this task's prd.md, prd.json, progress.txt (the template already references `.oh/agents/advisor.md`)
+There is one prompt template — the executor's own:
+`.oh/skills/firstmate/templates/session-prompt.md`. Render it into
+`.oh/tasks/<slug>/prompt.md` with the same closed three-placeholder
+substitution `render_session_prompt` in `.oh/scripts/firstmate.sh` performs:
+
+- `<slug>` → this task's slug
+- `<branch>` → `prd.json`'s `branchName` (`<prefix>/<N>-<slug>`)
+- `<issue>` → the tracking issue number, **bare digits** (the body writes `#<issue>` itself)
+
+Strip the template's contract header (everything through the
+`END CONTRACT HEADER -->` line) and confirm no `<placeholder>` token survives
+the render.
 
 Write `.oh/tasks/<slug>/progress.txt` with header only:
 
@@ -215,7 +224,7 @@ git commit -m "$(cat <<'EOF'
 Four-file contract per SPEC v0.7 §tasks/:
 - prd.md: <N> user stories
 - prd.json: schemaVersion 1, branchName <prefix>/<N>-<slug>
-- prompt.md: Ralph iteration instructions
+- prompt.md: the rendered build-session prompt
 - progress.txt: empty header
 
 Tracks #<N>. PRD generated by /prd; converted by /ralph.
@@ -256,7 +265,7 @@ Closes #<N>.
 
 ## Next steps (automated)
 1. Launch the expert `/worktrees` Advisor in tmux session `agent-ship-<slug>` via `/goal` (the pre-implement `/compact` already ran in Stage 7.5).
-2. Advisor: monitor `scripts/ralph.sh <slug>` directly in an isolated worktree (`--executor=ralph`, the default Monitored async loop; `/delegate` optional inside an iteration — `--executor=delegate-advisor` for the legacy worker fan-out); monitor to `STATUS: COMPLETE`; run `/eval`; revise required wiki entries against the spec and DeepWiki comparison; then `/compact` before the audit.
+2. Advisor: run `.oh/scripts/firstmate.sh <slug>` in an isolated worktree; watch to `STATUS: COMPLETE`; run `/eval`; revise required wiki entries against the spec and DeepWiki comparison; then `/compact` before the audit.
 3. A separate executor runs `/audit pr` immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that fresh audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output — including draft-age and draft-cap/backlog warnings — is only a resume/investigation hint, never an undraft signal.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code) via /ship-spec
@@ -268,7 +277,7 @@ Capture the PR URL and PR number `<PR>`. This is an observability checkpoint, no
 
 ### Stage 10 — Launch the expert `/worktrees` Advisor (tmux + `/goal`)
 
-The orchestrator does not implement inline. It launches an **expert Advisor on `/worktrees`** — the per-task orchestrator that, by default (`--executor=ralph`), monitors the `scripts/ralph.sh` loop directly to completion (and may run one loop per independent task in parallel; `/delegate` is optional inside an iteration), with `--executor=delegate-advisor` drives the legacy `/delegate` ralph executors, or with `--executor=firstmate` launches one long-lived First-Mate session over the whole task graph (see "Opt-in (`firstmate`)" below) — in its own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode persists the run to completion. Session name `agent-ship-<slug>` (sanitize slashes/space → `-`), distinct from the `<slug>`-named loop sessions `scripts/ralph.sh` creates and from the `agent-firstmate-<slug>` session the firstmate executor's tmux rung creates. The Advisor session is launched in **all three** modes.
+The orchestrator does not implement inline. It launches an **expert Advisor on `/worktrees`** — the per-task orchestrator that runs **the one build executor**, `.oh/scripts/firstmate.sh <slug>`, and watches it to completion — in its own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode persists the run to completion. Session name `agent-ship-<slug>` (sanitize slashes/space → `-`), distinct from the `agent-firstmate-<slug>` session the executor's tmux rung creates.
 
 **Build worktree — reuse vs. create.** When `$CRON_WORKTREE` is set (autopilot's default), this run is ALREADY inside an isolated worktree that Stage 8 put on the feature branch, so the Advisor **reuses it** — it does NOT create a second worktree (a second `git worktree add` for the same branch would nest under the cron worktree via the relative path, or fail with `branch already checked out`). Standalone (no `$CRON_WORKTREE`) the Advisor creates `.oh/worktrees/<prefix>/<N>-<slug>` as before. Start the Advisor session **in the build worktree** with `-c`, and bake the worktree path into the prompt — a new tmux session does not inherit `$CRON_WORKTREE` from the launching client, so passing it via env is unreliable:
 
@@ -282,17 +291,13 @@ tmux new-session -d -s "$SESSION" -c "${WT:-$PWD}" \
 
 **Advisor `/goal` prompt** (one line; fill the placeholders — when `$CRON_WORKTREE` is set, substitute its actual path for `<worktree>` and use the "reuse" branch of step 1):
 
-> `/goal` As an **expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.oh/worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) **Drive the build per `$SHIP_SPEC_EXECUTOR` (default `ralph`).** *Default (`ralph`)* — the Monitored async loop: launch `scripts/ralph.sh <slug>` in a named tmux session and **own the `STATUS: COMPLETE` watch yourself** (poll `.oh/tasks/<slug>/progress.txt` + the loop's tmux liveness; never delegate the watch to a sub-agent that returns early). A ralph iteration **may** call `/delegate` to fan out one story's disjoint files, but `/delegate` does **not** replace the loop. Given multiple **independent** tasks, run one `scripts/ralph.sh` per task in parallel (each its own slug + tmux session) and monitor each to its own `STATUS: COMPLETE`. *Opt-in (`--executor=delegate-advisor`)* — instead orchestrate with `/delegate --plan .oh/tasks/<slug>/prd.json`: spawn `general-purpose` worker(s) that each `cd` into that worktree and run `scripts/ralph.sh <slug>`, monitoring `.oh/tasks/<slug>/progress.txt` for `STATUS: COMPLETE` and the workers' tmux liveness. (3) Run the `/eval` gate (Stage 11). (4) If `.oh/tasks/<slug>/prd.md` has `## Wiki Alignment` with `Impact: REQUIRED`, revise the named `.oh/skills/wiki/corpus/*.md` entries after implementation so they match the spec's final behavior and acceptance criteria, include DeepWiki-style relevant source files/line citations/system relationships, preserve the recorded DeepWiki comparison, and refresh `.oh/skills/wiki/corpus/README.md`; verify with `bash .oh/evals/probes/wiki-readme-index.sh`. (5) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (6) In a **separate executor**, run `/audit pr` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SHIP_SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
+> `/goal` As an **expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.oh/worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) **Run the build executor**: `.oh/scripts/firstmate.sh <slug>` from the build worktree, and **own the `STATUS: COMPLETE` watch yourself** (poll `.oh/tasks/<slug>/progress.txt` plus the session's liveness; never delegate the watch to a sub-agent that returns early). Do NOT launch herdr from inside the build session; inner fan-out is `/delegate` only, and `/delegate` never replaces the story cycle. (3) Run the `/eval` gate (Stage 11). (4) If `.oh/tasks/<slug>/prd.md` has `## Wiki Alignment` with `Impact: REQUIRED`, revise the named `.oh/skills/wiki/corpus/*.md` entries after implementation so they match the spec's final behavior and acceptance criteria, include DeepWiki-style relevant source files/line citations/system relationships, preserve the recorded DeepWiki comparison, and refresh `.oh/skills/wiki/corpus/README.md`; verify with `bash .oh/evals/probes/wiki-readme-index.sh`. (5) Run `/compact` (Stage 11.5) to clear the implementation context before the audit. (6) In a **separate executor**, run `/audit pr` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SHIP_SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
 
-The Advisor owns Stages 11–13 inside its session. The orchestrator's turn ends after launching it and reporting the session name; the ready-for-review PR is produced asynchronously by the Advisor. Each worker commits the implementation on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer (per `templates/prompt.md`); worktree isolation keeps concurrent work off the shared checkout (avoiding the autopilot shared-checkout contamination class). If `tmux` is unavailable, fall back to running the executor inline (`scripts/ralph.sh <slug>`) and continue to Stage 11 in the foreground. Stage 13 still requires a fresh Stage 12 `/audit pr` immediately before `gh pr ready`; stale-draft watchdog/heartbeat output cannot substitute for that audit.
+The Advisor owns Stages 11–13 inside its session. The orchestrator's turn ends after launching it and reporting the session name; the ready-for-review PR is produced asynchronously by the Advisor. The build session commits each story on `<prefix>/<N>-<slug>` with a `Submitted-by:` trailer; worktree isolation keeps concurrent work off the shared checkout (avoiding the autopilot shared-checkout contamination class). If `tmux` is unavailable, the executor's own ladder degrades to foreground — continue to Stage 11 there. Stage 13 still requires a fresh Stage 12 `/audit pr` immediately before `gh pr ready`; stale-draft watchdog/heartbeat output cannot substitute for that audit.
 
-#### Opt-in (`firstmate`)
+#### The build executor
 
-**Additive third arm — `ralph` remains the default and is retained indefinitely.** When `$SHIP_SPEC_EXECUTOR=firstmate`, everything above is unchanged except **step (2) of the Advisor `/goal` prompt**: instead of launching 50 fresh single-story `scripts/ralph.sh` processes, the Advisor launches **ONE long-lived First-Mate session over the whole `.oh/tasks/<slug>/prd.json` task graph**. Full contract, ladder, watch matrix, recovery matrix, and per-mode kill procedure live in `/firstmate` (`.oh/skills/firstmate/SKILL.md`) — this subsection is the ship-spec seam only.
-
-Substitute this for step (2) in the Advisor prompt above:
-
-> *Opt-in (`--executor=firstmate`)* — instead run `.oh/scripts/firstmate.sh <slug>` from the build worktree and **own the `STATUS: COMPLETE` watch yourself**. The script resolves the runner itself through the **herdr → tmux → foreground ladder** (herdr only when installed, healthy, non-nested, and proven same-environment by the fingerprint gate; anything else degrades down the ladder with the reason logged), renders the session prompt, claims `/tmp/firstmate-<slug>.lock`, and watches to the sentinel. Do NOT launch herdr from inside the build session; inner fan-out is `/delegate` only.
+`.oh/scripts/firstmate.sh <slug>` runs **ONE long-lived First-Mate session over the whole `.oh/tasks/<slug>/prd.json` task graph**. The script resolves the runner itself through the **herdr → tmux → foreground ladder** (herdr only when installed, healthy, non-nested, and proven same-environment by the fingerprint gate; anything else degrades down the ladder with the reason logged), renders the session prompt, claims `/tmp/firstmate-<slug>.lock`, and watches to the sentinel. Full contract, ladder, watch matrix, recovery matrix, and per-mode kill procedure live in `/firstmate` (`.oh/skills/firstmate/SKILL.md`) — this subsection is the ship-spec seam only.
 
 **Launch + watch path:**
 
@@ -311,7 +316,7 @@ The launch banner prints the resolved runner mode, the session handle, the harne
 | tmux | `agent-firstmate-<slug>` | `/tmp/agent-firstmate-<slug>.log` | `tmux attach -t agent-firstmate-<slug>` |
 | foreground | the child pid | `/tmp/firstmate-<slug>.log` | `tail -f /tmp/firstmate-<slug>.log` |
 
-**`.oh/tasks/<slug>/progress.txt` is the authority in every mode** — the whole line `STATUS: COMPLETE` is the same terminal interface `ralph` uses, so Stages 11–13 are reached identically and need no change. The session is **wall-clock bounded** by `FIRSTMATE_TIMEOUT_MS` (default `14400000` = 4h); on expiry, launch failure, or operator abort the executor tears down, removes the lock, and appends `FIRSTMATE-INCOMPLETE` to `progress.txt` — the PR then **stays draft** with a resume comment, exactly as `RALPH-INCOMPLETE` does (Failure mode 10). Mid-run herdr loss degrades the watch to file-polling the same `progress.txt`; the herdr **server is never stopped or restarted**.
+**`.oh/tasks/<slug>/progress.txt` is the authority in every runner mode** — the whole line `STATUS: COMPLETE` is the terminal interface, so Stages 11–13 are reached identically in all three. The session is **wall-clock bounded** by `FIRSTMATE_TIMEOUT_MS` (default `14400000` = 4h); on expiry, launch failure, or operator abort the executor tears down, removes the lock, and appends `FIRSTMATE-INCOMPLETE` to `progress.txt` — the PR then **stays draft** with a resume comment (Failure mode 10). Mid-run herdr loss degrades the watch to file-polling the same `progress.txt`; the herdr **server is never stopped or restarted**.
 
 ### Stage 11 — `/eval` gate
 
@@ -334,7 +339,7 @@ Commit wiki changes with the implementation branch. If the wiki impact was `REQU
 
 ### Stage 11.5 — `/compact` after implement (before the audit)
 
-The second of the two compacts that bracket the implement phase. The ralph loop and `/eval` have spent significant context in the Advisor's session; run `/compact` so the `/audit pr` audit and the undraft decision start clean. Preserve the finalize keys:
+The second of the two compacts that bracket the implement phase. The build session and `/eval` have spent significant context in the Advisor's session; run `/compact` so the `/audit pr` audit and the undraft decision start clean. Preserve the finalize keys:
 
 ```text
 Preserve /ship-spec finalize context: slug <slug>, branch <prefix>/<N>-<slug>, issue #<N>, PR #<PR>, implementation complete (STATUS: COMPLETE), /eval result, wiki alignment gate result (REQUIRED updated or NOT-APPLICABLE), undraft gate (/audit pr promotable → gh pr ready, else comment + stay draft), no auto-merge, tmux session agent-ship-<slug> left alive.
@@ -375,7 +380,7 @@ Never auto-merge. The `agent-ship-<slug>` tmux session is left alive for attach/
 | 7.5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue (stages 8–9 re-read from disk) |
 | 8 | Pre-commit hook fails (lint, tests) | Fix issue; re-run from stage 8 |
 | 9 | `gh pr create` fails (no remote, branch missing on target remote) | Verify push from stage 8; re-run from stage 9 |
-| 10 | `tmux` unavailable, or the Advisor/worker stalls, times out, or leaves acceptance criteria incomplete | If `tmux` is missing, run the executor inline; otherwise leave PR draft and comment the resume command (`scripts/ralph.sh <slug>` / attach `agent-ship-<slug>`) |
+| 10 | The build session stalls, times out, or leaves acceptance criteria incomplete | Leave PR draft and comment the resume command (`.oh/scripts/firstmate.sh <slug>` / attach `agent-ship-<slug>`). A missing `tmux` is not a failure here — the executor's ladder degrades to foreground on its own |
 | 11 | `/eval` reports a NEW green→red regression or exits non-zero | Leave PR draft; fix or document the regression, then re-run `/eval` |
 | 11.25 | Wiki impact REQUIRED but entries are missing, stale against the implemented behavior, not compared against DeepWiki, or README index probe fails | Leave PR draft; fix wiki entries/index, then re-run the wiki gate |
 | 11.5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue to the audit |
@@ -396,7 +401,7 @@ Every stage checks for prior state and resumes rather than duplicating:
 | 7.5 | (no resume — context optimization) | Always safe to run; skip silently if `/compact` is unavailable |
 | 8 | Branch exists on target remote | Checkout + commit on top |
 | 9 | Draft PR exists for this branch | Update body + comment-update; don't create duplicate |
-| 10 | `progress.txt` already says `STATUS: COMPLETE`; or the `agent-ship-<slug>`/ralph tmux session is already running | Skip relaunch — attach/monitor the existing session (`scripts/ralph.sh` reattaches idempotently); worktree present → reuse |
+| 10 | `progress.txt` already says `STATUS: COMPLETE`; or the `agent-ship-<slug>` / `agent-firstmate-<slug>` session is already running | Skip relaunch — attach/monitor the existing session (the executor refuses a second launch while `/tmp/firstmate-<slug>.lock` is held); worktree present → reuse |
 | 11 | `.oh/evals/RESULTS.md` already reflects the current probe set and no new regression exists | Continue to the audit step; otherwise re-run `/eval` |
 | 11.25 | Wiki impact NOT-APPLICABLE, or required entries already match implementation and index probe passes | Continue to compact/audit |
 | 11.5 | (no resume — context optimization) | Always safe to run; skip silently if `/compact` is unavailable |
@@ -407,7 +412,7 @@ The whole pipeline can be re-invoked safely. Failed stage = fix + re-run; resume
 
 ## Finalization contract
 
-`/ship-spec` opens a draft PR early so reviewers can observe the scaffold, but a successful run does not stop there. After scaffolding it compacts and hands off to an expert `/worktrees` Advisor (launched in a tmux session via `/goal`) that drives `/delegate` workers each running `scripts/ralph.sh`. The terminal successful state is a ready-for-review PR, reached only after implementation completes, `/eval` shows no new green→red regression, required wiki entries are updated against the spec and DeepWiki comparison, and a separate `/audit pr` executor immediately classifies the PR **promotable** (CI green + mergeable + clean) before `gh pr ready`. Draft is reserved for blocked states: incomplete executor, new eval regression, missing/stale wiki alignment, not-promotable PR (red/pending CI or conflicts), or an explicit user stop. Heartbeat stale-draft watchdog output may trigger investigation/resume work, but it never authorizes `gh pr ready`. Never auto-merge.
+`/ship-spec` opens a draft PR early so reviewers can observe the scaffold, but a successful run does not stop there. After scaffolding it compacts and hands off to an expert `/worktrees` Advisor (launched in a tmux session via `/goal`) that runs the one build executor, `.oh/scripts/firstmate.sh <slug>`. The terminal successful state is a ready-for-review PR, reached only after implementation completes, `/eval` shows no new green→red regression, required wiki entries are updated against the spec and DeepWiki comparison, and a separate `/audit pr` executor immediately classifies the PR **promotable** (CI green + mergeable + clean) before `gh pr ready`. Draft is reserved for blocked states: incomplete executor, new eval regression, missing/stale wiki alignment, not-promotable PR (red/pending CI or conflicts), or an explicit user stop. Heartbeat stale-draft watchdog output may trigger investigation/resume work, but it never authorizes `gh pr ready`. Never auto-merge.
 
 ## Reference
 
@@ -434,13 +439,13 @@ The whole pipeline can be re-invoked safely. Failed stage = fix + re-run; resume
 | Wiki rules | `.oh/skills/wiki/references/schema.md` | Stages 2.5 & 11.25 — DeepWiki-style source-backed wiki alignment |
 | `/compact` | (built-in) | Stages 7.5 & 11.5 — bracket the implement phase (before implement after PRD artifacts; after implement before the audit) |
 | `/worktrees` skill | `.claude/skills/worktrees/SKILL.md` | Stage 10 — isolated `.oh/worktrees/<branch>` for the implementation |
-| `/delegate` skill | `.claude/skills/delegate/SKILL.md` | Stage 10 — Advisor spawns workers in waves |
+| `/delegate` skill | `.claude/skills/delegate/SKILL.md` | Stage 10 — optional within-story fan-out inside the build session |
 | `/goal` (Pi extension) | `.pi/settings.json` (`@narumitw/pi-goal`) | Stage 10 — persists the Advisor run to completion |
-| `scripts/ralph.sh` | `scripts/ralph.sh` | Stage 10 — per-worker implementation loop, run inside the worktree |
+| `.oh/scripts/firstmate.sh` | `.oh/scripts/firstmate.sh` | Stage 10 — the one build executor: one long-lived session over the whole task graph, run inside the worktree |
 | `/eval` skill | `.claude/skills/eval/SKILL.md` | Stage 11 — probe regression gate |
 | `/audit pr` skill | `.claude/skills/audit/SKILL.md` | Stage 12 — promotable classification (gates the undraft) |
 | `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | CI verification (subsumed by `/audit pr`'s promotable check) |
 | advisor-model rule | `.oh/agents/advisor.md` | Advisor handoff |
 | sandbox-processes rule | `.oh/skills/t3/references/sandbox-processes.md` | Stage 10 — tmux session naming for the Advisor |
 | Protected-paths list | `.claude/protected-paths.txt` | Stage 2 — load-bearing items the PRD must not propose deleting |
-| Ralph prompt template | `.claude/skills/ship-spec/templates/prompt.md` | Stage 7 — prompt.md template |
+| Session-prompt template | `.oh/skills/firstmate/templates/session-prompt.md` | Stage 7 — the one prompt.md template |

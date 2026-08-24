@@ -1,8 +1,9 @@
 # `.oh/tasks/`
 
-Ralph task workdirs. Each `<taskdesc>/` subfolder is one autonomous
-Ralph session created by the `/ralph` skill (or by running
-`.oh/scripts/ralph.sh <taskdesc>` directly).
+Spec task workdirs. Each `<slug>/` subfolder is one autonomous build
+session's four-file contract, created by `/spec plan` or `/ship-spec` (the
+`/ralph` skill produces the `prd.json` inside it) and built by
+`.oh/scripts/firstmate.sh <slug>`.
 
 A task directory typically contains:
 
@@ -32,4 +33,4 @@ A task directory typically contains:
 - `archive/` contents are gitignored except for archived task files
   themselves (see root `.gitignore`).
 
-See `.oh/scripts/ralph.sh` for the runner entry point.
+See `.oh/scripts/firstmate.sh` for the build-executor entry point.

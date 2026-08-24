@@ -11,6 +11,9 @@
 - `.oh/skills` tests are excluded from the vitest globs, so `node --test` suites under `.oh/skills` never run in CI. A test-based acceptance criterion there is unenforceable — prefer a probe.
 - The probe suite is 106 files. `bash .oh/skills/eval/run.sh` is the runner. As of planning it was 7 days stale (RESULTS.md was touched 2026-08-23 but every row's last-run reads 2026-08-16) and sat at 102 PASS / 4 SKIPPED / 0 REGRESSION.
 - Verify a probe by rejection: feed it input it must reject and confirm the failure is attributable to the assertion under test. Exit 0 proves nothing.
+- Never run a destructive verification against the live slug. `.oh/scripts/firstmate.sh --kill <this-slug>` stops THIS session (US-002 learned it the hard way). Build a decoy in a temp git root with `RUNNER_TMPDIR` redirected, and assert on that.
+- The probe suite is 107 files after US-002 (+2 new, -1 whose subject was deleted). Baseline after US-002: 103 PASS / 4 SKIPPED / 0 REGRESSION.
+- When a rule MOVES between surfaces, its probe moves with it. Deleting the probe because its old file no longer matches loses the lesson; repoint it at the new owner and assert BOTH the rule there and the deferral where it used to live.
 
 ## Baseline measurements recorded at plan time (2026-08-23)
 
@@ -77,3 +80,68 @@ Three probes were rewritten rather than deleted to green, each verified by rejec
   hermes installer docs (unrelated third-party prose) was reworded.
 
 ---
+## US-002 — 2026-08-24 04:25 UTC
+
+**Title**: Collapse to one build executor
+**Files changed**: deleted `.oh/scripts/ralph.sh`, `.oh/scripts/__tests__/ralph.test.ts`,
+`.oh/skills/ship-spec/templates/prompt.md`, `.oh/evals/probes/ralph-fallback-order.sh`;
+`.oh/scripts/{firstmate.sh,cron-runtime.ts,README.md}`, `.oh/scripts/lib/{session-runner,task-contract}.sh`,
+`.oh/scripts/__tests__/{firstmate,session-runner,cron-runtime,autopilot-caps}.test.ts`,
+`.oh/skills/{ship-spec,autopilot,firstmate,teach,rlm}/…`, `.oh/skills/spec/references/execute.md`,
+`.oh/skills/ste/references/rules.md`, `.oh/agents/advisor.md`, `.oh/crons/autopilot.md`,
+`.oh/evals/probes/{firstmate-executor-contract,autopilot-executor-toggle,advisor-monitored-loop,submitted-by-trailers,eval-gate,clean-restore,autopilot-upstream-default,cron-claude-codex-fallback}.sh`,
+NEW `.oh/evals/probes/{executor-launch-interactive,executor-kill-clears-session}.sh`,
+`.oh/skills/wiki/corpus/{build-executor-ladder.md,README.md}`, `.oh/docs/**`, `.oh/README.md`,
+`.oh/tasks/README.md`, `.claude/protected-paths.txt`, `AGENTS.md`, `CHANGELOG.md`, `.oh/evals/RESULTS.md`
+**Commit**: (this commit)
+**Result**: PASS
+
+### What I did
+Removed every executor toggle rather than narrowing it to one value, deleted the second
+build arm and the ralph prompt template, and repointed `.oh/tasks/<slug>/prompt.md` at the
+one remaining template. Fixed three live defects in the surviving executor: the headless
+`--print`/stdin launch, the `| tee` pipe that took the child's TTY, and the silently-failing
+`--kill`. Rewrote three probes for the no-toggle world, repointed four more at each rule's
+new owner, and added two new probes — every one verified by rejection.
+
+### Learnings for future iterations
+- **Verify a destructive path against a decoy, never the live slug.** The previous session
+  killed itself proving its own `--kill` fix worked. `executor-kill-clears-session.sh`
+  encodes the safe shape: a temp git root, `RUNNER_TMPDIR` redirected, and the slug
+  `firstmate-kill-probe`.
+- **A probe that outlives its subject must move to the rule's new owner, not be deleted to
+  green.** `eval-gate` guarded a lesson (pre-existing reds don't block) that migrated from
+  autopilot §6 into `/ship-spec` Stage 11 when autopilot stopped running `/eval`. It now
+  asserts the rule on ship-spec AND the deferral on autopilot, so relocating it again
+  without moving the probe trips it.
+- **A raw count assertion is Goodhartable.** `clean-restore` counted ≥4 scoped-restore
+  sites; removing §6 left 3. Lowering the threshold alone would have let three restores
+  sitting in prose satisfy it. Verified: a mutation that strips the restore from the
+  `BUILD-INCOMPLETE` path *while holding the count at 3* is caught only by the added
+  path-specific assertion.
+- **Three probe surfaces went red that the PRD did not name** — `autopilot-upstream-default`
+  (it read the deleted ralph prompt template), `clean-restore`, and `eval-gate`. Same lesson
+  as US-001: run the full suite before trusting the PRD's probe inventory.
+- **`RALPH_HARNESS` was live code, not prose.** The cron runtime exports it on the
+  claude→codex fallback. AC-9's `RALPH_` grep forced a real rename to `FIRSTMATE_HARNESS`
+  across `cron-runtime.ts`, its two test files, and a probe.
+- **Six vitest tests pinned the removed behavior**, including one asserting the `| tee` pipe
+  survived — the exact defect. A test that pins a defect must be rewritten in the same
+  change that fixes it, or the fix cannot land.
+- The foreground rung's session log path collides with the runner's own narrative log
+  (`runner_log_path` and `runner_session_log_path` both yield `firstmate-<slug>.log`
+  outside tmux mode). Assert on that file's CONTENT, not its existence.
+- **Stated deviation from AC-9** (grep returns hits only in `CHANGELOG.md`). Three classes
+  remain, deliberately, matching US-001's precedent:
+  1. `.oh/evals/datasets/ship-spec-prs/DS-002-*/oracle/diff.patch` — a frozen oracle of a
+     historical run; editing it falsifies the dataset.
+  2. The rewritten probes' own NEGATIVE assertions (`firstmate-executor-contract.sh:81`,
+     `autopilot-executor-toggle.sh:48`) — they name `ralph.sh` in order to go red if it
+     ever comes back. These exist to keep it gone.
+  3. `.oh/scripts/__tests__/firstmate.test.ts:407` asserts the entrypoint names no
+     alternative arm; the literal is the thing being forbidden.
+
+---
+
+FIRSTMATE-INCOMPLETE 2026-08-24T00:35:23Z — operator kill via firstmate.sh --kill
+<!-- RESUMED 2026-08-24: the kill was self-inflicted (the session verified its own --kill fix against its own slug). US-002 finished in the resumed session. -->

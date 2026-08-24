@@ -30,7 +30,7 @@ The survey's §3.6 assessment applies verbatim: persistence changes which faults
 | **1 — formal** | Sound by construction | None. `shellcheck` and `pnpm -r type-check` are the closest, and neither one is sound. |
 | **2 — execution** | Reliable, incomplete, eventually gamed | `.oh/evals/probes/*.sh` (105 deterministic three-state oracles, run in CI by `ci-harness.yml` and `release.yml`), `/ci-status`, `.oh/cli` unit suites. |
 | **3 — learned judge** | Bounded by the judge's competence; itself an optimization target | `/audit implementation`, `/audit pr`, `/benchmark`, and the rubric scoring behind `.oh/evals/capability/RESULTS.md`. |
-| **4 — intrinsic** | Cheapest, most gameable | `STATUS: COMPLETE` in `progress.txt` — the terminal interface for **all three** build executors (`ralph`, `firstmate`, `delegate-advisor`) — plus every self-reported count in `.oh/memory/<date>/log.md`. |
+| **4 — intrinsic** | Cheapest, most gameable | `STATUS: COMPLETE` in `progress.txt` — the terminal interface of the one build executor (`firstmate`) — plus every self-reported count in `.oh/memory/<date>/log.md`. |
 
 Two readings follow the table. Each reading changes what a reviewer trusts.
 

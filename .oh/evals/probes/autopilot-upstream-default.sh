@@ -9,10 +9,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 AUTO="$ROOT/.claude/skills/autopilot/SKILL.md"
 SHIP="$ROOT/.claude/skills/ship-spec/SKILL.md"
-PROMPT="$ROOT/.claude/skills/ship-spec/templates/prompt.md"
 missing=()
 
-for f in "$AUTO" "$SHIP" "$PROMPT"; do
+for f in "$AUTO" "$SHIP"; do
   [[ -f "$f" ]] || missing+=("missing $f")
 done
 
@@ -25,7 +24,11 @@ if [[ -f "$AUTO" ]]; then
   grep -Fq 'gh issue list --repo "$AUTOPILOT_REPO"' "$AUTO" || missing+=("autopilot queue reads target repo")
   grep -Fq 'gh issue create --repo "$AUTOPILOT_REPO"' "$AUTO" || missing+=("autopilot research issues create in target repo")
   grep -Fq 'gh pr list --repo "$AUTOPILOT_REPO"' "$AUTO" || missing+=("autopilot PR reads target repo")
-  grep -Fq 'git push "$AUTOPILOT_REMOTE" HEAD' "$AUTO" || missing+=("autopilot fallback pushes target remote")
+  # Autopilot no longer pushes: /ship-spec owns the whole build including the push,
+  # so the target-remote guarantee moves with it (asserted on $SHIP below). What
+  # autopilot must still do is hand the resolved target through rather than let gh
+  # or git resolve it implicitly.
+  grep -Fq 'git push "$AUTOPILOT_REMOTE" HEAD' "$AUTO" && missing+=("autopilot pushes directly again — the build, and its push, belong to /ship-spec")
   grep -Fq -- '--repo "$AUTOPILOT_REPO" --remote "$AUTOPILOT_REMOTE" --base "$AUTOPILOT_BASE"' "$AUTO" || missing+=("autopilot passes target repo/remote/base to ship-spec")
 fi
 
@@ -38,15 +41,15 @@ if [[ -f "$SHIP" ]]; then
   grep -Fq 'gh pr create \' "$SHIP" && grep -Fq -- '--repo "$SHIP_SPEC_REPO"' "$SHIP" || missing+=("ship-spec PR creation uses target repo")
   grep -Fq 'git push -u "$SHIP_SPEC_REMOTE"' "$SHIP" || missing+=("ship-spec scaffold push uses target remote")
   grep -Fq 'gh pr ready <PR> --repo "$SHIP_SPEC_REPO"' "$SHIP" || missing+=("ship-spec undraft uses target repo")
+  grep -Fq 'git push "$SHIP_SPEC_REMOTE" HEAD' "$SHIP" || missing+=("ship-spec pre-audit push uses target remote")
 fi
 
-if [[ -f "$PROMPT" ]]; then
-  grep -Fq ': "${SHIP_SPEC_REMOTE:?SHIP_SPEC_REMOTE must name the git remote that matches SHIP_SPEC_REPO}"' "$PROMPT" || missing+=("ralph prompt requires resolved target remote")
-  grep -Fq 'git fetch "$SHIP_SPEC_REMOTE" "${SHIP_SPEC_BASE:-development}"' "$PROMPT" || missing+=("ralph prompt fetches target remote/base")
-fi
+# The build session prompt is deliberately NOT checked for remote pinning: the one
+# build executor commits locally and never pushes, so it has no remote to get wrong.
+# Every remote-bearing operation lives in /ship-spec, asserted above.
 
 # No autonomous path should depend on the personal fork literal.
-if grep -R "ryaneggz/openharness" "$AUTO" "$SHIP" "$PROMPT" >/dev/null 2>&1; then
+if grep -R "ryaneggz/openharness" "$AUTO" "$SHIP" >/dev/null 2>&1; then
   missing+=("autonomous autopilot docs contain personal fork literal")
 fi
 

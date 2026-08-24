@@ -8,6 +8,17 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Removed
+- **Collapse to one build executor.** Every executor toggle is **removed rather than reduced to a single accepted value** — `--executor`, `SHIP_SPEC_EXECUTOR`, and `AUTOPILOT_EXECUTOR` are gone from `/ship-spec`, `/autopilot`, `.oh/crons/autopilot.md`, `/spec execute`, `/firstmate`, and `AGENTS.md`, because a one-value toggle is still a selection surface a reader has to resolve. `.oh/scripts/ralph.sh`, `.oh/scripts/__tests__/ralph.test.ts`, and `.oh/skills/ship-spec/templates/prompt.md` are deleted; `.oh/tasks/<slug>/prompt.md` is now rendered from the one prompt template, `.oh/skills/firstmate/templates/session-prompt.md`. `prd.json` and the `/ralph` skill that produces it are **retained** — the four-file task contract has 15 consumers. Autopilot's `RALPH-INCOMPLETE`/`DELEGATE-FAIL` statuses collapse into one `BUILD-INCOMPLETE`, and the `RALPH_HARNESS` cron-fallback env var becomes `FIRSTMATE_HARNESS`. The stated cost: removing every alternative removes the fallback, so recovery from a misbehaving ladder or child session is **fix-forward only**.
+
+### Fixed
+- **The build session launched headless and never advanced.** `.oh/scripts/firstmate.sh` built `cat <prompt> | claude --dangerously-skip-permissions --print`, which got two load-bearing things wrong: `--print` makes the harness answer once and exit, and feeding the prompt on stdin makes stdin a pipe rather than a TTY. Observed 2026-08-23: the child started, printed only startup warnings, and never advanced. The prompt now travels as initial argv read back inside the launched shell, and no arm carries `--print`.
+- **`| tee` in the launch path took the child's TTY away.** `.oh/scripts/lib/session-runner.sh` wrapped every launched command in `2>&1 | tee <log>`, with the same consequence. No branch pipes or redirects the command any more: tmux mode attaches `tmux pipe-pane` *after* the pane exists, herdr mode uses its own pane capture, and foreground mode inherits the caller's stdio and keeps no session log.
+- **`.oh/scripts/firstmate.sh --kill <slug>` failed silently.** It exited 1 with no output, left `agent-firstmate-<slug>` running, left `/tmp/firstmate-<slug>.lock` claimed, and appended no `FIRSTMATE-INCOMPLETE` line, because `herdr agent get` exits 1 for a nonexistent agent and that return propagated out of `runner_resolve_pane_id` under the caller's `set -euo pipefail`, killing teardown on its first branch. The lookup is now genuinely best-effort.
+
+### Changed
+- Probes follow the contract they pin rather than the file that used to hold it: `firstmate-executor-contract`, `autopilot-executor-toggle`, and `advisor-monitored-loop` are **rewritten for a no-toggle single-executor world** (never deleted to green); `submitted-by-trailers`, `eval-gate`, `clean-restore`, and `autopilot-upstream-default` are repointed at each rule's new owner; `ralph-fallback-order` is deleted with its subject. Two probes are added — `executor-launch-interactive` (no `--print`, no pipe or redirect on any launch path) and `executor-kill-clears-session` (an end-to-end `--kill` against a decoy slug, never a live one). Every rewritten and added probe is **verified by rejection**: it fails against a deliberately broken copy, on the assertion under test, before it passes against the real tree.
+
 ## [0.1.0] - 2026-08-23
 
 ### Fixed

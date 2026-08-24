@@ -436,5 +436,41 @@ the `Closes #N` rule into `/git`.
 
 ---
 
+## /audit implementation — 2026-08-24 05:52 UTC
+
+Run against the completed graph per § 5 of this session's contract.
+
+| Gate | Result | Evidence |
+|---|---|---|
+| 1 — task graph + artifact contract | **PASS** | `implementation-gates.sh gate1 spec-simplification` → `task-graph: 7/7 stories pass`, exit 0. No `artifact_contract` block declared, so that sub-check passes unchanged. |
+| 2 — regression floor (`/eval`) | **PASS** | runner exit 0; 110 probes, 106 PASS / 4 SKIPPED / **0 REGRESSION**. The 4 SKIPPED are pre-existing and `unchanged`: `autopilot-preflight-gate`, `debugmcp-availability`, `next-dev-prod`, `registry-portability`. Disclosed, non-gating. |
+| 3 — promotable / CI | **NO-RUN → deferred** | No PR exists for `feat/spec-simplification` (`gh pr list --head` → `[]`) and the branch is unpushed, so no CI run has been dispatched. Per the route, a `NO-RUN` status is **not** a pass. |
+| 4 — UI verification | **N/A** | `implementation-gates.sh browser-required` → exit 1: no story declares browser verification, so `agent-browser` was not invoked at all. |
+
+**Verdict: gates 1, 2 and 4 satisfied; gate 3 is NO-RUN, not failed-on-merit.**
+
+Gate 3 cannot be satisfied from inside this session, and that is by design rather than an
+escape: § 6 of the First-Mate contract assigns the push, `/eval`, `/audit pr`, the evidence
+doc and the undraft to the tail (`/spec execute`), and explicitly says *do not run that tail
+yourself*. Dispatching CI requires pushing the branch — an outward-facing action this session
+is not the owner of. So the honest report is that the build satisfies its own task graph and
+its regression floor, and the promotability verdict belongs to the tail that owns the push.
+
+This is **not** an `AUDIT-FAIL` routed back to `implement`: no story is unmet, and § 5's
+re-brief loop exists for unmet stories. Re-running the build would change nothing about
+gate 3.
+
+**Outstanding, both by construction and both recorded above:**
+- **US-005 AC-7** — a human read of the merge-gate output. Marked *human, not a probe* in the
+  spec. The output it needs is built and structurally verified; the verdict is the operator's.
+- **US-007 AC-2 (semantic half)** — the `obsolete` / `falsified` / `one-time-narrative` /
+  `out-of-domain` / `repo-derivable` / `restates-identity` verdicts for the ledger. Not
+  fabricated; the worksheet at `.oh/memory/MEMORY-audit-worksheet.md` carries a blank
+  `verdict:` per entry for the operator's read.
+
+---
+
+STATUS: COMPLETE
+
 FIRSTMATE-INCOMPLETE 2026-08-24T00:35:23Z — operator kill via firstmate.sh --kill
 <!-- RESUMED 2026-08-24: the kill was self-inflicted (the session verified its own --kill fix against its own slug). US-002 finished in the resumed session. -->

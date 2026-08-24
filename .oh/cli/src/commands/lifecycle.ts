@@ -1,5 +1,5 @@
-import { appendFileSync, copyFileSync, existsSync, readFileSync } from "node:fs";
-import { join, resolve, sep } from "node:path";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   ExecutionExitError,
   ExecutionSpawnError,
@@ -13,6 +13,11 @@ import {
   type RunResult,
 } from "../lib/execution/runner.js";
 import { resolveProjectRoot } from "../lib/project.js";
+import {
+  assertInRoot,
+  readConfigValue,
+  seedHarnessYaml as seedHarnessYamlFile,
+} from "../lib/harness-yaml.js";
 import * as prompt from "../lib/prompt.js";
 
 /**
@@ -95,30 +100,20 @@ export const DEFAULT_CONTAINER_NAME = "openharness";
 export const DEFAULT_SANDBOX_IMAGE = "ghcr.io/mifunedev/openharness:latest";
 
 /**
- * Path-escape guard for the one writer in this module (the harness.yaml seed):
- * the resolved dest MUST be inside the project root. Mirrors init.ts's
- * `assertInTarget` invariant.
- */
-function assertInRoot(dest: string, root: string): void {
-  if (!(dest === root || dest.startsWith(root + sep))) {
-    throw new Error(`refusing to write outside the project root: ${dest}`);
-  }
-}
-
-/**
  * Defensive config seed (FR-11's one writer): copy `harness.yaml.example` →
  * `harness.yaml` when the example exists and the target is missing — parity
  * with `make harness-config` for source-repo-style checkouts. `oh init`-equipped
  * repos already have harness.yaml, so this is a no-op there. Reports exactly
  * one operation-log line when (and only when) it writes.
+ *
+ * The copy itself, and the `assertInRoot` path-escape invariant that guards it,
+ * now live in `../lib/harness-yaml.ts` so `oh harness` shares them instead of
+ * forking them. This wrapper keeps the IO side (the one log line) here.
  */
 function seedHarnessYaml(root: string, io: LifecycleIO): void {
-  const dest = resolve(root, "harness.yaml");
-  const example = resolve(root, "harness.yaml.example");
-  assertInRoot(dest, root);
-  if (existsSync(dest) || !existsSync(example)) return;
-  copyFileSync(example, dest);
-  io.stdout("create harness.yaml (from harness.yaml.example)\n");
+  if (seedHarnessYamlFile(root)) {
+    io.stdout("create harness.yaml (from harness.yaml.example)\n");
+  }
 }
 
 /**
@@ -129,12 +124,7 @@ function seedHarnessYaml(root: string, io: LifecycleIO): void {
  * NOT re-prompt.
  */
 function dockerSocketConfigured(root: string, run: LifecycleRunner): boolean {
-  const script = join(root, ".oh", "scripts", "harness-config.sh");
-  const harnessYaml = join(root, "harness.yaml");
-  if (existsSync(script) && existsSync(harnessYaml)) {
-    const r = run("sh", [script, "get", "sandbox.docker_socket", harnessYaml], { stdio: "capture" });
-    if (!r.error && r.status === 0 && (r.stdout ?? "").trim() !== "") return true;
-  }
+  if (readConfigValue(root, "sandbox.docker_socket", run) !== undefined) return true;
   const envFile = join(root, ".devcontainer", ".env");
   if (existsSync(envFile)) {
     try {
@@ -186,13 +176,7 @@ async function maybePromptDockerSocket(root: string, io: LifecycleIO, run: Lifec
  * mandatory-explicit-path contract as `configuredContainerName`.
  */
 function configuredImage(root: string, run: LifecycleRunner): string | undefined {
-  const script = join(root, ".oh", "scripts", "harness-config.sh");
-  const harnessYaml = join(root, "harness.yaml");
-  if (!existsSync(script) || !existsSync(harnessYaml)) return undefined;
-  const r = run("sh", [script, "get", "sandbox.image", harnessYaml], { stdio: "capture" });
-  if (r.error || r.status !== 0) return undefined;
-  const name = (r.stdout ?? "").trim();
-  return name === "" ? undefined : name;
+  return readConfigValue(root, "sandbox.image", run);
 }
 
 /**
@@ -256,21 +240,18 @@ export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise
 
 /**
  * `sandbox.name` from `<root>/harness.yaml` via the vendored parser, or
- * undefined when unconfigured. The harness.yaml path argument is MANDATORY and
- * explicit: `harness-config.sh get` defaults to a cwd-relative `harness.yaml`
- * and silently exits 0 with no output when that file is absent
- * (harness-config.sh:36,57) — from a nested cwd the name would wrongly
- * collapse to the default. This is the one captured-stdout lookup; the verbs
- * themselves run with inherited stdio.
+ * undefined when unconfigured. The mandatory-explicit-path contract that makes
+ * this correct from a nested cwd now lives on `readConfigValue` in
+ * `../lib/harness-yaml.ts` — see its doc comment.
+ *
+ * Exported so `oh harness` resolves the container the same way `oh shell` does
+ * rather than forking the precedence rule.
  */
-function configuredContainerName(root: string, run: LifecycleRunner): string | undefined {
-  const script = join(root, ".oh", "scripts", "harness-config.sh");
-  const harnessYaml = join(root, "harness.yaml");
-  if (!existsSync(script) || !existsSync(harnessYaml)) return undefined;
-  const r = run("sh", [script, "get", "sandbox.name", harnessYaml], { stdio: "capture" });
-  if (r.error || r.status !== 0) return undefined;
-  const name = (r.stdout ?? "").trim();
-  return name === "" ? undefined : name;
+export function configuredContainerName(
+  root: string,
+  run: LifecycleRunner,
+): string | undefined {
+  return readConfigValue(root, "sandbox.name", run);
 }
 
 /**

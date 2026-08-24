@@ -29,6 +29,18 @@ upstream documentation below for canonical facts about Hermes.
 
 ## Install (optional)
 
+The shortest path is the CLI, which sets the `harness.yaml` flag **and**
+installs into the already-running sandbox without a rebuild:
+
+```bash
+oh harness install hermes
+```
+
+See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only`,
+`--no-persist`, and what happens when the sandbox is not running.
+
+### Manual path
+
 Hermes is disabled by default. To install it into the sandbox image, set
 `harness.yaml`:
 

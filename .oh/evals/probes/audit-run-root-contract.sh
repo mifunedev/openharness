@@ -52,12 +52,18 @@ cat >"$tmp/fake-agent" <<'AGENT'
 prompt=${!#}
 grep -q 'AUDIT_TARGET: drift' <<<"$prompt" || exit 9
 grep -q '# test route drift' <<<"$prompt" || exit 9
+# The agent receives every binding it needs as prompt TEXT. Inheriting the lifecycle
+# identity as environment is what made this very probe grade its caller instead of the
+# repo, twice (AUDIT_ROOT/AUDIT_RUN_ID, then AUDIT_SIGNALS_RESET). The driver must scrub
+# it; a leak here is a real defect, so fail loudly rather than tolerate it.
+leaked=$(printenv | grep -c '^AUDIT_' || true)
+[[ $leaked -eq 0 ]] || { printf 'agent inherited %s AUDIT_* variable(s)\n' "$leaked" >&2; exit 8; }
 printf 'route report\nAUDIT-EVIDENCE: DRIFT-OK\n'
 AGENT
 chmod +x "$tmp/fake-agent"
 AUDIT_AGENT_COMMAND_JSON="[\"$tmp/fake-agent\"]" CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" \
   bash "$RUN" drift -- "$REPO/.oh/skills/audit/scripts/route-driver.sh" >/dev/null \
-  || fail 'canonical production route driver did not publish correlated evidence'
+  || fail 'canonical production route driver did not publish correlated evidence (rc 8 = it leaked AUDIT_* into the agent)'
 CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" pr 7 --base stack-parent -- "$tmp/complete-driver" >/dev/null
 CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" prs --mine -- "$tmp/complete-driver" >/dev/null
 CRON_WORKTREE="$tmp" AUTOPILOT_LOG_ROOT="$tmp" bash "$RUN" full --repo owner/name -- "$tmp/complete-driver" >/dev/null

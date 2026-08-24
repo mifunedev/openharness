@@ -6,11 +6,11 @@ title: "MicroSandbox"
 
 [MicroSandbox](https://github.com/microsandbox/microsandbox) is a microVM tier:
 one real kernel per sandbox, KVM-backed. It is the default — and currently the
-only — substrate `oh substrate install` knows how to install.
+only — runtime `oh runtime install` knows how to install.
 
 ```bash
-oh substrate status microsandbox   # what this host has, and what it needs
-oh substrate install               # microsandbox is the default name
+oh runtime status microsandbox   # what this host has, and what it needs
+oh runtime install               # microsandbox is the default name
 ```
 
 ## This harness cannot run it yet
@@ -37,7 +37,7 @@ Measured glibc across the candidates:
 **Both must clear.** A glibc bump alone installs `msb` and still boots no
 microVM, because a microVM needs KVM.
 
-Neither fix belongs to `oh substrate`: the base image is on its own upgrade track
+Neither fix belongs to `oh runtime`: the base image is on its own upgrade track
 ([#807](https://github.com/mifunedev/openharness/issues/807)) and the `devices:`
 key is a compose change. Both are tracked in
 [#805](https://github.com/mifunedev/openharness/issues/805).
@@ -102,6 +102,6 @@ msb run alpine --exec 'echo ok'  # expect "ok"
 
 ## Related
 
-- [Substrates overview](overview.md) — why the CLI selects no runtime
+- [Runtimes overview](overview.md) — why the CLI selects no runtime
 - [#805](https://github.com/mifunedev/openharness/issues/805) — the two blockers
 - [#803](https://github.com/mifunedev/openharness/pull/803) — the P0 measurement record

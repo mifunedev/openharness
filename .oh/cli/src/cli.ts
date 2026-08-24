@@ -20,12 +20,12 @@ import {
 } from "./commands/harness.js";
 import { harnessIds } from "./lib/harnesses/catalog.js";
 import {
-  runSubstrateInstall,
-  runSubstrateList,
-  runSubstrateStatus,
-  type SubstrateIO,
-} from "./commands/substrate.js";
-import { DEFAULT_SUBSTRATE, substrateIds } from "./lib/substrates/catalog.js";
+  runRuntimeInstall,
+  runRuntimeList,
+  runRuntimeStatus,
+  type RuntimeIO,
+} from "./commands/runtime.js";
+import { DEFAULT_RUNTIME, runtimeIds } from "./lib/runtimes/catalog.js";
 import {
   fetchRemoteSource,
   DEFAULT_REPO_URL,
@@ -96,7 +96,7 @@ Usage:
   oh sandbox                Provision and start the sandbox (docker compose up)
   oh shell [container]      Open a zsh shell in the running sandbox container
   oh harness <args...>      Install and inspect agent CLI harnesses
-  oh substrate <args...>    Inspect host support for isolation substrates
+  oh runtime <args...>      Inspect the sandbox's isolation runtime
   oh gateway <args...>      Manage a messaging client session (pi|hermes)
   oh cloud <args...>        Manage OpenHarness Cloud nodes
   oh --version              Print version
@@ -298,29 +298,32 @@ export interface InitArgs {
   verbose: boolean;
 }
 
-export function printSubstrateHelp(): void {
-  process.stdout.write(`oh substrate — Inspect host support for isolation substrates
+export function printRuntimeHelp(): void {
+  process.stdout.write(`oh runtime — Inspect the sandbox's isolation runtime
+
+A runtime is the isolation boundary the sandbox runs ON (a Docker container
+today). A harness is an agent CLI that runs INSIDE it — see \`oh harness\`.
 
 Usage:
-  oh substrate list                   List known substrates and host support
-  oh substrate status [name]          Show the measured host requirements
-  oh substrate install [name]         Install a substrate into the sandbox
-                                      (default: ${DEFAULT_SUBSTRATE})
+  oh runtime list                   Every known runtime, and which one is in use
+  oh runtime status [name]          The measured requirements behind each verdict
+  oh runtime install [name]         Install a runtime into the sandbox
+                                    (default: ${DEFAULT_RUNTIME})
 
-This command installs a TOOL and reports host readiness. It selects no runtime,
-writes no config, and changes nothing about how the sandbox boots — choosing a
-substrate is tracked in #731 (see #806 for the open selector decision).
+This command REPORTS, and installs a tool. It selects no runtime, writes no
+config, and changes nothing about how the sandbox boots — choosing one is
+tracked in #731 (see #806 for the open selector decision).
 
-\`install\` measures the host first and refuses to run an installer that cannot
-succeed, printing each unmet requirement with its remediation. \`--force\` is how
-you override that judgement.
+\`install\` measures first and refuses to run an installer that cannot succeed,
+printing each unmet requirement with its remediation. \`--force\` overrides that
+judgement.
 
 Flags:
-  --force          Attempt the install even when the host preflight fails
+  --force          Attempt the install even when the preflight fails
   --json           Machine-readable output (list/status)
 
-Substrates:
-${substrateIds().map((s) => `  ${s}`).join("\n")}
+Runtimes:
+${runtimeIds().map((r) => `  ${r}`).join("\n")}
 `);
 }
 
@@ -590,8 +593,8 @@ export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
   return { ok: true, args };
 }
 
-/** Parsed `oh substrate` args. */
-interface SubstrateArgs {
+/** Parsed `oh runtime` args. */
+interface RuntimeArgs {
   help: boolean;
   force: boolean;
   json: boolean;
@@ -599,8 +602,8 @@ interface SubstrateArgs {
   name?: string;
 }
 
-export function parseSubstrateArgs(rest: string[]): ParseResult<SubstrateArgs> {
-  const args: SubstrateArgs = { help: false, force: false, json: false };
+export function parseRuntimeArgs(rest: string[]): ParseResult<RuntimeArgs> {
+  const args: RuntimeArgs = { help: false, force: false, json: false };
   if (rest.length === 0 || isHelpFlag(rest[0])) {
     return { ok: true, args: { ...args, help: true } };
   }
@@ -612,7 +615,7 @@ export function parseSubstrateArgs(rest: string[]): ParseResult<SubstrateArgs> {
     } else if (token === "--json") {
       args.json = true;
     } else if (token.startsWith("-")) {
-      return { ok: false, error: `oh substrate: unknown flag "${token}"` };
+      return { ok: false, error: `oh runtime: unknown flag "${token}"` };
     } else {
       positionals.push(token);
     }
@@ -622,23 +625,23 @@ export function parseSubstrateArgs(rest: string[]): ParseResult<SubstrateArgs> {
   if (sub !== "list" && sub !== "install" && sub !== "status") {
     return {
       ok: false,
-      error: `oh substrate: unknown subcommand "${sub}" — expected list, install, or status`,
+      error: `oh runtime: unknown subcommand "${sub}" — expected list, install, or status`,
       showHelp: true,
     };
   }
   if (extra.length > 0) {
-    return { ok: false, error: `oh substrate: unexpected argument "${extra[0]}"` };
+    return { ok: false, error: `oh runtime: unexpected argument "${extra[0]}"` };
   }
   if (sub === "list" && name !== undefined) {
-    return { ok: false, error: `oh substrate list: unexpected argument "${name}"` };
+    return { ok: false, error: `oh runtime list: unexpected argument "${name}"` };
   }
 
   args.subcommand = sub;
   // `install` with no name is the documented default, NOT an error — the
-  // operator asked for one obvious substrate, and naming it every time would
+  // operator asked for one obvious runtime, and naming it every time would
   // be ceremony. `list`/`status` keep undefined meaning "all".
   if (name !== undefined) args.name = name;
-  else if (sub === "install") args.name = DEFAULT_SUBSTRATE;
+  else if (sub === "install") args.name = DEFAULT_RUNTIME;
   return { ok: true, args };
 }
 
@@ -995,30 +998,30 @@ async function main(argv: string[]): Promise<number> {
     );
   }
 
-  if (first === "substrate") {
-    const parsed = parseSubstrateArgs(argv.slice(1));
+  if (first === "runtime") {
+    const parsed = parseRuntimeArgs(argv.slice(1));
     if (!parsed.ok) {
       process.stderr.write(`${parsed.error}\n`);
-      if (parsed.showHelp) printSubstrateHelp();
+      if (parsed.showHelp) printRuntimeHelp();
       return 1;
     }
     if (parsed.args.help) {
-      printSubstrateHelp();
+      printRuntimeHelp();
       return 0;
     }
     const a = parsed.args;
-    const io: SubstrateIO = {
+    const io: RuntimeIO = {
       stdout: (s) => process.stdout.write(s),
       stderr: (s) => process.stderr.write(s),
     };
     if (a.subcommand === "list") {
-      return await runSubstrateList({ json: a.json }, io);
+      return await runRuntimeList({ json: a.json }, io);
     }
     if (a.subcommand === "status") {
-      return await runSubstrateStatus(a.name, { json: a.json }, io);
+      return await runRuntimeStatus(a.name, { json: a.json }, io);
     }
-    // parseSubstrateArgs defaults `name` for `install`.
-    return await runSubstrateInstall(a.name as string, { force: a.force }, io);
+    // parseRuntimeArgs defaults `name` for `install`.
+    return await runRuntimeInstall(a.name as string, { force: a.force }, io);
   }
 
   if (first === "cloud") {

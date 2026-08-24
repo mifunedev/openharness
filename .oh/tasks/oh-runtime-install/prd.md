@@ -1,4 +1,4 @@
-# PRD — `oh substrate`: install and inspect isolation substrates
+# PRD — `oh runtime`: install and inspect isolation runtimes
 
 ## Problem
 
@@ -8,18 +8,20 @@ the blockers, check `.devcontainer/Dockerfile`'s base image for its glibc, then
 check `.devcontainer/docker-compose.yml` for a `devices:` key. The answer is
 knowable by measurement in under a second, and nothing measures it.
 
-The substrate work is also spread thin — EPIC #731, the P0 spike (#802/#803),
+The runtime work is also spread thin — EPIC #731, the P0 spike (#802/#803),
 the MicroSandbox unblock (#805), and the gVisor RFC (#806/#804) — with no single
-surface that says what exists and where each one stands.
+surface that says what exists and where each one stands. And nothing reports the
+runtime you are **currently** on, or whether it is healthy.
 
 ## Goal
 
-One command that reports host readiness for every measured substrate, and
-installs the default one when the host can actually run it.
+One command that names the runtime in use, reports host readiness for every
+other measured runtime, and installs the default one when the host can actually
+run it.
 
 ## Non-goals
 
-- **Selecting a substrate.** Nothing here changes how the sandbox boots.
+- **Selecting a runtime.** Nothing here changes how the sandbox boots.
   `resolveExecutionTarget` is untouched.
 - **Writing a config key.** See D1.
 - **Clearing the MicroSandbox blockers.** The base image is #807's; the
@@ -71,6 +73,36 @@ the command supplies the measurement, the operator supplies the decision.
 **Rejected: warn and proceed.** A warning followed by the upstream installer's
 own error trains the operator to ignore the warning.
 
+### D3a — `runtime`, not `substrate`
+
+"Substrate" is precise and not widely understood. `runtime` is the word Docker
+already uses (`docker run --runtime=runsc`) and the word this repo already uses
+(`.oh/docs/rfcs/rfc-runtime-support.md`), so operators meet a familiar term.
+
+**Naming the command does not settle the config key.** #806 § B1 is about the
+*key*, and D1 means this command writes none. Picking `runtime` for the noun
+leans the vocabulary toward one candidate, and that is worth stating plainly —
+but it decides nothing, because there is nothing persisted to decide.
+
+Renaming also resolves the doc-path discrepancy the first draft flagged:
+`rfc-runtime-support.md` § 2 specifies `.oh/docs/runtimes/<name>.md`, which is
+now where these docs live.
+
+### D3b — list the runtime already in use, and check it
+
+Docker is a first-class catalog entry, not a placeholder. A table showing only
+the runtimes you *cannot* use answers "what could I move to" while silently
+skipping "what am I on, and is it healthy".
+
+Its check is **host-scoped** (`docker version --format '{{.Server.Version}}'`),
+because the daemon lives on the machine holding the `oh` binary; a check run
+inside the sandbox would answer about the wrong kernel. This adds a `scope`
+field to `PreflightCheck` — `"host"` vs `"target"` — and the host check runs
+even when the container is unreachable, because "the sandbox will not start" and
+"the daemon is down" are different problems.
+
+`install docker` refuses: there is nothing to install.
+
 ### D4 — a new top-level noun, not a subcommand of `oh sandbox`
 
 `oh sandbox` is a flags-only verb meaning "provision and start" (`cli.ts`,
@@ -78,11 +110,15 @@ own error trains the operator to ignore the warning.
 a verb and a dispatcher. `oh harness` already established the sibling-noun
 pattern, and every parse/help/test shape mirrors it one-for-one.
 
-### D5 — two catalog entries, though only one is installable
+### D5 — three catalog entries, though only one is installable
 
-gVisor ships as `state: "planned"`, not installable, pointing at #806. It
-measured GREEN and will land; a one-entry catalog would encode a false singleton
-and need a schema change to accept it.
+`docker` (active), `microsandbox` (blocked, installable), `gvisor` (planned).
+
+gVisor is **planned and not implemented here**: it is a host-side Docker
+runtime, so `oh runtime` cannot install it, and it declares no checks because
+there is nothing yet to probe. It is listed because it measured GREEN and will
+land — a one-entry catalog would encode a false singleton and need a schema
+change to accept it.
 
 ### D6 — the installer argv is cited, not reconstructed
 
@@ -95,12 +131,15 @@ guess against, so the catalog cites the spike and a test pins the string.
 
 | # | Requirement |
 |---|---|
-| FR-1 | `oh substrate list [--json]` prints every entry with tier, state, supported, installed. Exit 0. |
-| FR-2 | `oh substrate status [name] [--json]` adds the measured value behind each verdict (glibc read, `/dev/kvm` present) plus remediation for failures. Exit 0. |
-| FR-3 | `oh substrate install [name] [--force]` defaults `name` to `microsandbox`. |
+| FR-1 | `oh runtime list [--json]` prints every entry with tier, state, supported, and in-use. Exit 0. |
+| FR-1a | Exactly one entry reports `IN USE`, and only when the sandbox is actually running. |
+| FR-1b | The docker daemon is probed on the **host**, and is probed even when the container is unreachable. |
+| FR-1c | `oh runtime install docker` exits 1 saying there is nothing to install. |
+| FR-2 | `oh runtime status [name] [--json]` adds the measured value behind each verdict (glibc read, `/dev/kvm` present) plus remediation for failures. Exit 0. |
+| FR-3 | `oh runtime install [name] [--force]` defaults `name` to `microsandbox`. |
 | FR-4 | A failing preflight prints both blockers and exits 1 with zero install attempt. |
 | FR-5 | `--force` proceeds past a failing preflight. |
-| FR-6 | `oh substrate install gvisor` exits 1 with a pointer to #806 and does no container work. |
+| FR-6 | `oh runtime install gvisor` exits 1 with a pointer to #806 and does no container work. |
 | FR-7 | A stopped or absent container exits 0 with a hint and zero `docker exec`. |
 | FR-8 | An unreadable probe reports unknown (`?`), never "unsupported". |
 | FR-9 | Every container call goes through `ExecutionTarget`; no direct `docker` spawn, no `kind` branch. |
@@ -108,15 +147,19 @@ guess against, so the catalog cites the spike and a test pins the string.
 
 ## Test plan
 
-- `substrate-catalog.test.ts` — catalog shape; a drift test pinning the glibc
+- `runtime-catalog.test.ts` — catalog shape; a drift test pinning the glibc
   floor at 2.39, the `/dev/kvm` requirement, and the #803 installer string
   against `.devcontainer/Dockerfile`'s actual base; `compareVersions` numeric
   ordering (`2.9 < 2.39`, the bug a lexical compare would introduce).
-- `substrate.test.ts` — parse, help, and every exit path against DI-injected
+- `runtime.test.ts` — parse, help, and every exit path against DI-injected
   runner fakes: blocked host, ready host, one-blocker-clear, `--force`, stopped
   container, already-installed, failing installer, failing doctor, unknown name,
-  and a harness.yaml byte-identity assertion across all verbs.
-- `.oh/evals/probes/substrate-preflight-gate.sh` — tier A, source-grep only.
+  and a harness.yaml byte-identity assertion across all verbs. Plus the docker
+  entry: in-use only when running, a host-scoped daemon probe that is not a
+  `docker exec`, the version actually read, a **down** daemon rendering FAIL
+  with remediation, the probe still running when the container is unreachable,
+  and `install docker` refusing.
+- `.oh/evals/probes/runtime-preflight-gate.sh` — tier A, source-grep only.
   Asserts no config key in code, no build arg, both blockers declared, the
   installer provenance, the gate returning 1, the `--force` override, no direct
   docker, and CLI reachability. Verified by rejection: 11 injected defects, each
@@ -130,8 +173,6 @@ glibc floor against *both* the WSL2 host (2.35) and the devcontainer (2.36) and
 does not settle which is intended. A microVM tier that replaces the container
 would plausibly install on the host. Routed to #731 alongside B1.
 
-**Doc path.** `.oh/docs/substrates/` mirrors the noun and the
-`.oh/docs/harnesses/` precedent, but `rfc-runtime-support.md` § 2 specifies
-`.oh/docs/runtimes/<name>.md` for *supported* runtimes. Neither entry is
-supported yet, so that contract does not bind — but the discrepancy should be
-settled when one is adopted.
+**Doc path — resolved.** The first draft used `.oh/docs/substrates/` and flagged
+that `rfc-runtime-support.md` § 2 specifies `.oh/docs/runtimes/<name>.md`. The
+rename (D3a) puts these docs at the path the RFC already named.

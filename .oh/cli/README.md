@@ -57,11 +57,12 @@ oh harness list                 # what exists, what is enabled, what is installe
 oh harness install opencode     # persist the flag + install into the running sandbox
 ```
 
-Check whether this host could run a deeper isolation tier:
+Check the isolation runtime the sandbox is on, and what a deeper tier needs:
 
 ```bash
-oh substrate status             # the measured requirements, not a bare verdict
-oh substrate install            # microsandbox; refuses if the host cannot run it
+oh runtime list                 # which runtime is in use, and what else exists
+oh runtime status               # the measured requirements, not a bare verdict
+oh runtime install              # microsandbox; refuses if the host cannot run it
 ```
 
 ## Commands
@@ -74,7 +75,7 @@ oh substrate install            # microsandbox; refuses if the host cannot run i
 | `oh sandbox` | Provision and start the sandbox (`docker compose up -d --build`). |
 | `oh shell [container]` | Open a `zsh` shell in the running sandbox container. |
 | `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `harness.yaml` flag **and** installs into the running sandbox — no rebuild. |
-| `oh substrate <list\|install\|status>` | Inspect host support for isolation substrates and install MicroSandbox. Measures the host and refuses an install that cannot succeed (`--force` overrides). Selects no runtime and writes no config. |
+| `oh runtime <list\|install\|status>` | Report the isolation runtime in use (Docker today) and install MicroSandbox. Measures first and refuses an install that cannot succeed (`--force` overrides). Selects no runtime and writes no config. |
 | `oh gateway <args…>` | Manage a messaging client session (Slack bridge for `pi`/`hermes`). |
 | `oh cloud <args…>` | Configure credentials and manage OpenHarness Cloud SSH keys and nodes. |
 | `oh --version` | Print the CLI version. |

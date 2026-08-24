@@ -1,10 +1,10 @@
 {
-  "label": "Substrates",
+  "label": "Runtimes",
   "position": 10,
   "collapsible": true,
   "collapsed": true,
   "link": {
     "type": "doc",
-    "id": "substrates/overview"
+    "id": "runtimes/overview"
   }
 }

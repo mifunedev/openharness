@@ -135,8 +135,8 @@
         "Both new probes are verified by rejection, not by exit 0"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": "Settled: this pass annotates, the next pass deletes. MEMORY.md is gitignored and untracked, so a deletion leaves no diff and no undo. The probe: strip is safe to land early; the annotation pass should land last so the marks reflect what the run learned."
+      "passes": true,
+      "notes": "2026-08-24: 76 unbacked probe: claims stripped to `probe: none` and marked, via the tracked, idempotent, dry-run-by-default .oh/skills/retro/scripts/memory-audit.py (backup kept) \u2014 the ledger is untracked so the SCRIPT is the reviewable artifact. 105-row audit worksheet emitted. Three probes added (claims-resolve, MEMORY_DIR absolute-or-unset, tier size budget), all verified by rejection; the anchoring assertion needed a real linked-worktree fixture because the mutation is inert in a plain repo. Relative-MEMORY_DIR shadow fixed in both compose files; the probe warns rather than gates on a stale ambient value no commit can change. Duplicate checker now catches rephrasings (threshold 0.50, calibrated both directions). Closes #N rule moved into /git. DEVIATION: AC-2's obsolete/falsified/one-time/out-of-domain/repo-derivable/restates-identity verdicts are SEMANTIC and were not fabricated \u2014 set-overlap flagged 0 of 105 in both directions; the worksheet leaves a blank verdict per entry for the operator's read."
     }
   ]
 }

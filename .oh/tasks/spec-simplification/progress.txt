@@ -21,6 +21,8 @@
 - Anchor a section-scoped probe assertion on the section's NAME, never its number. Inserting a step renumbers everything after it, and `awk '/^### 9\./{f=1} f'` then selects the wrong region (or the whole tail) without failing.
 - `/eval` runs ONCE per cycle. `/spec execute` publishes `.oh/tasks/<slug>/eval-result.json` (commit-keyed, `git add -f`); `/audit implementation` Gate 2 and `/benchmark` Signal 1 read it and must compare `.commit` to `HEAD` before reusing. A stale or missing record means RUN, never PASS.
 - There are no `STATUS: SPEC-*` tokens. Nodes report what they produced; never infer success from silence.
+- `MEMORY.md` lives in the MAIN checkout only (gitignored, `.gitignore:56`) and `oh-path` anchors `memory` there. Resolve it with `sh .oh/scripts/oh-path memory`, NEVER `${MEMORY_DIR:-...}` — a set relative value makes the `:-` fallback dead code and resolves against your CWD.
+- Editing an untracked file leaves no diff, no review, and no undo. Land the *script* that edits it instead: tracked, idempotent, dry-run by default, with a timestamped backup.
 
 ## Baseline measurements recorded at plan time (2026-08-23)
 
@@ -357,6 +359,80 @@ commit-keyed result the two downstream gates read. Fixed the `.oh/tasks/README.m
 - Renumbering `/spec execute`'s steps (11 → 10 after the groom cut) is now routine because
   US-005 re-anchored the probe on the section NAME. That earlier fix paid for itself one
   story later.
+
+---
+
+## US-007 — 2026-08-24 05:40 UTC
+
+**Title**: Make memory's claims true
+**Files changed**: NEW `.oh/skills/retro/scripts/memory-audit.py`,
+NEW `.oh/evals/probes/{memory-probe-claims-resolve,memory-dir-absolute-or-unset,context-tier-size-budget}.sh`,
+`.oh/skills/retro/scripts/check-memory-duplicates.sh`, `.oh/skills/git/SKILL.md`,
+`.devcontainer/docker-compose.yml`, `.devcontainer/docker-compose.image-only.yml`,
+`CHANGELOG.md`, `.oh/evals/RESULTS.md`;
+outside git (gitignored, via the committed script): `.oh/memory/MEMORY.md` (76 claims
+stripped + marked), `.oh/memory/MEMORY-audit-worksheet.md` (new, 105 rows),
+`.oh/memory/MEMORY.md.bak-20260824T053109Z` (backup)
+**Commit**: (this commit)
+**Result**: PASS (AC-2 partial — the semantic half is the operator's; see below)
+
+### What I did
+Stripped all 76 unbacked `probe:` claims to an explicit `probe: none`, marked each entry, and
+emitted a 105-row audit worksheet — all through a tracked, idempotent, dry-run-by-default
+script with a backup, because the ledger itself is untracked. Added three probes (claims
+resolve, MEMORY_DIR absolute-or-unset, tier size budget), fixed the relative-`MEMORY_DIR`
+shadow in both compose files, taught the duplicate checker to catch rephrasings, and moved
+the `Closes #N` rule into `/git`.
+
+### Learnings for future iterations
+- **`MEMORY.md` is not in this worktree, and that was the bug, not an accident.** It is
+  gitignored and `oh-path` anchors `memory` to the MAIN checkout — but every caller writes
+  `${MEMORY_DIR:-$(oh-path memory)}`, and the ambient `MEMORY_DIR=.oh/memory` makes the `:-`
+  fallback dead code. The relative string then resolves against the caller's CWD. PR #772
+  fixed the resolver; this idiom shadowed the fix everywhere. Proved it live: the resolver
+  says `/home/sandbox/harness/.oh/memory`, the idiom says `.oh/memory`, and that path does
+  not exist here.
+- **A probe whose only remedy is outside the repo must warn, not gate.** The ambient
+  `MEMORY_DIR` is inherited from a container started before the fix, and no commit can change
+  a running process's environment. Gating on it would leave the probe red on every existing
+  sandbox forever — and a permanently-red probe is how a board stops being read. It gates on
+  the compose declaration and the resolver's anchoring (both commit-fixable, both verified by
+  rejection) and warns loudly on the live value.
+- **My first implementation reported success and changed nothing.** A 76-line `sed` program
+  built with `printf`, post-processed by `awk`: it printed "written", and the file was
+  byte-identical to the backup. That is precisely the "claims enforcement it does not have"
+  failure this story is about, reproduced in the tool built to fix it. Rewrote it in Python
+  and verified by counting the actual replacements (76) and re-running (0). **Never trust a
+  transform's own success message — count what it changed.**
+- **Two of my rejection fixtures were wrong before the probes were.** The tier-share
+  assertion fired on a fixture whose stub files made IDENTITY.md 96% of a 3 KB tier, and the
+  anchoring mutation was **inert** in a plain repo because `_root` and the main worktree are
+  the same path there. The second is the sharper lesson: a mutation that cannot change the
+  outcome reads exactly like a passing probe. It needed a real main-repo + linked-worktree
+  pair to exercise at all (`reject-anchor.sh`).
+- **A checker's PASS line must not overstate what it checked.** After the strip, the probe
+  said "all 1 probe: id(s) resolve" — the 1 was the `none` sentinel it had skipped. Counting
+  the skipped sentinel as a verified claim is the same species of false confidence as the
+  unbacked claims themselves. Now partitioned and reported honestly.
+- **Calibrate a heuristic against both directions before shipping it.** The near-duplicate
+  ratio was initially `hits / proposal_words`, which flagged 0 of 105 — right for "is this
+  proposal already present", wrong for "does this entry restate a principle". And my first
+  positive test set was invalid: two of its three "rephrasings" were of entries in a
+  *different* memory file, so the tool looked broken when the test was.
+- **Stated deviation on AC-2 (annotate the 32 verified-dead + 49 IDENTITY-restating
+  entries).** All 105 entries are annotated where a verdict is *provable*: 76 carry
+  `[audit: probe claim was unbacked — stripped, verdict pending operator read]`. The
+  classifications `obsolete` / `falsified` / `one-time-narrative` / `out-of-domain` /
+  `repo-derivable` / `restates-identity` are **semantic** and I did not fabricate them.
+  `IDENTITY.md` holds five broad meta-principles; a ledger entry restating one is a concrete
+  incident sharing almost none of its vocabulary — measured, set-overlap flagged 0 of 105 in
+  BOTH ratio directions. A script asserting those 81 verdicts would be inventing evidence,
+  which is the exact failure this story exists to remove from the ledger. The worksheet lays
+  every entry beside the five principles with a blank `verdict:` field for the operator's
+  read. **That half of AC-2 is outstanding and is a human pass, like US-005's AC-7.**
+- **Stated deviation on AC-1/AC-2 landing.** `MEMORY.md` is untracked, so these edits appear
+  in no diff and this PR cannot show them. The reviewable artifact is the committed script
+  plus the backup path; the ledger change is real and verifiable by running the probe.
 
 ---
 

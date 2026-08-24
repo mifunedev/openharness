@@ -88,6 +88,18 @@ Example: `FROM feat/42-slack-thread-replies TO development`
 - Link issue: `Closes #<issue#>` (or `Fixes`/`Resolves`)
 - Target default target branch (`development` → `main` → `master`, whichever exists)
 
+> **`Closes #N` does NOT auto-close the issue in this repo — close it by hand after every
+> merge.** GitHub honors a closing trailer only on merge into the **default** branch. PRs
+> here target `development` while the default branch is `main`, so the trailer registers as
+> a `referenced` timeline event and nothing else. Verified on #759 (whose `closed` event
+> carries `commit=none`) and independently on #753 from PR #757. Keep writing the trailer —
+> it is the machine-readable link a reader follows — but treat the close as a separate
+> manual step:
+>
+> ```bash
+> gh issue close <N> --repo <owner/name> --comment "Merged in #<PR>."
+> ```
+
 ## Commit Messages
 
 Format: `<type>: <description>` where `<type>` ∈ `feat` · `fix` · `task` · `audit` · `skill`
@@ -258,3 +270,5 @@ Let `$BASE` = default target branch (detected per rule above).
 4. Commit with `<type>: <description>`
 5. `git push -u origin <branch>` → then `/ci-status` (if skill exists)
 6. `gh pr create --base $BASE --title "FROM <branch> TO $BASE" --body "Closes #<issue#>"`
+7. After the merge, **close the issue manually** — `Closes #N` does not fire when the PR
+   targets a non-default branch (see § PR Bodies): `gh issue close <issue#> --repo <owner/name>`

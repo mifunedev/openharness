@@ -2,7 +2,7 @@
 
 - **PR**: [#817](https://github.com/mifunedev/openharness/pull/817) (`mifunedev/openharness`, base `development`) · **Branch**: `feat/spec-simplification`
 - **Issue**: #816
-- **Audit run**: `audit-20260824T080223Z-2009901` · target `implementation` · state `complete` · exit 0
+- **Audit run**: `audit-20260824T084359Z-2211295` · target `implementation` · state `complete` · exit 0 — the fifth, and the first with no environment-derived red (see below)
   (re-run after the `/teach` deletion; the first boundary audit,
   `audit-20260824T073818Z-1888450`, described the tree before it)
 - **Verdict**: `AUDIT-PASS`, boundary-published (gates 1, 2, 4) + `PR-AUDIT-PROMOTABLE` (gate 3, recorded below).
@@ -259,6 +259,41 @@ Curated corpus entries land with `git add -f` (`.gitignore:85`).
    named for what it requires (source files, line-cited claims, relationships, navigation)
    rather than for DeepWiki. The two corpus entries keep the observation as rationale. Probes:
    the 10 that read the edited files all PASS.
+
+## The audit gate was grading its caller, not the repo
+
+Running the boundary audit five times on essentially one tree produced **PASS → PASS →
+FAIL → PASS → PASS**. Nothing about the repository changed between the first four. The
+verdict was a function of how the suite was launched.
+
+Two distinct leaks, both now fixed, both verified by rejection:
+
+| Leak | Effect | Fix |
+| --- | --- | --- |
+| `route-driver.sh` handed the launched agent the whole `AUDIT_*` environment | Gate 2 runs the probe suite *inside* that agent, so probes asserting the audit contract read the caller's run id as their own identity | the agent launches under `env -u` for all nine variables — it needs none, every binding it uses is already prompt text |
+| `audit-run.sh` marked its signal re-exec done with an **exported** `AUDIT_SIGNALS_RESET=1` | any descendant running `audit-run.sh` skipped its own re-exec, kept `SIGINT` ignored, and failed the propagation assertion | the marker moved to argv (`--audit-signals-reset`), which does not cross a process boundary uninvited |
+
+Unsetting the variable after the guard does **not** fix the second one — the guard has
+already trusted the inherited value. That was my first attempt and it still failed under a
+leaked value; the argv marker is what actually closes it.
+
+`audit-run-root-contract.sh` now asserts the launched agent's environment carries **zero**
+`AUDIT_*` variables, so this class cannot come back silently. Nothing checked it before,
+which is why it took five audits to see. Rejection-tested: restoring the driver leak fails
+the probe (rc 8, naming the leak), and reverting the argv marker reproduces the original
+`INT not propagated` red.
+
+**Why the audit shells out to a CLI at all** — the question that surfaced this. It is not a
+headless-design decision: `audit-run.sh` is a blocking parent that launches the route as a
+child, waits on it, then requires an evidence file and writes one locked log line, so route
+work must *be* a subprocess that finishes first — and the only subprocess that can act like
+an assistant is the CLI. #646's own PRD described route work as sub-agents. No headless
+caller exists: crons, `/autopilot`, `/spec execute` and CI all invoke `/audit` inside an
+assistant turn, so the in-session case is the only case and was never designed for. The
+shape is kept deliberately — a verdict gate benefits from a context that cannot inherit the
+builder's framing of "done" — but `SKILL.md` no longer reads as *CLI or nothing*: the
+boundary requires target-correlated schema-v1 evidence, and any protocol that publishes it
+satisfies the contract.
 
 ## Protected paths deleted, and why
 

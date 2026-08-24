@@ -35,7 +35,7 @@ run independently or fanned out at scale via `/delegate`.
 | Subcommand | Arg shape | Purpose | Procedure |
 |---|---|---|---|
 | `plan` | `<topic> [--plan <path>] [--issue <N>] [--slug <slug>] [--prefix <type>] [--repo <o/n>] [--base <branch>]` | Turn a topic/plan/issue into a fully-scaffolded `.oh/tasks/<slug>/` four-file folder | `references/plan.md` |
-| `execute` | `<slug> [--pr <N>] [--repo <o/n>] [--remote <name>] [--base <branch>]` | `build ⇄ audit → evidence → teach → spec-retro → improve` to a ready PR, stopping at the human merge gate | `references/execute.md` |
+| `execute` | `<slug> [--pr <N>] [--repo <o/n>] [--remote <name>] [--base <branch>]` | `build ⇄ audit → evidence → spec-retro → improve` to a ready PR, stopping at the human merge gate | `references/execute.md` |
 | `retro` | `<slug> [--dry-run]` | Execution-side `/retro` scoped to a built `.oh/tasks/<slug>/` | `references/retro.md` |
 
 ## Dispatch

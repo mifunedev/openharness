@@ -116,7 +116,7 @@ the duplicate paths to one, and make the pipeline answer back to the plan.**
 | US-002 | Exactly one build executor. `--executor`, `SHIP_SPEC_EXECUTOR`, and `AUTOPILOT_EXECUTOR` were **removed, not narrowed to one accepted value**; `.oh/scripts/ralph.sh`, its test suite, and the ralph prompt template are deleted. Three live launch defects fixed in passing (below). |
 | US-003 | `/spec execute` holds the build mechanics in full — 157 → 500+ lines, no "see `/ship-spec`" deferral. `.oh/skills/ship-spec/` is deleted and ~40 consumers repointed. |
 | US-004 | `.oh/prompts/`, `.pi/prompts/advisor/`, and `.oh/context/rules/first-mate.md` are deleted. The zero-diff derivative (`session-prompt.md`) became the source, so the workflow is discoverable in exactly one place. |
-| US-005 | `.oh/tasks/<slug>/evidence.md` is a **gate condition**: the undraft refuses without it, and refuses an *untracked* one. `/teach` is wired into step 7. `progress.txt` is promoted into the PR body instead of dying at the sentinel. |
+| US-005 | `.oh/tasks/<slug>/evidence.md` is a **gate condition**: the undraft refuses without it, and refuses an *untracked* one. `/teach` was wired into step 7, then deleted — see divergence 10. `progress.txt` is promoted into the PR body instead of dying at the sentinel. |
 | US-006 | Four `STATUS: SPEC-*` tokens with no consumer are gone; the groom triad left the per-cycle path; `/eval` runs once per cycle (318 → 110 probe executions). |
 | US-007 | `MEMORY.md`'s 76 unbacked `probe:` claims are rewritten to explicit `probe: none` and marked; the relative-`MEMORY_DIR` shadow is fixed; the duplicate checker now catches rephrasings. |
 
@@ -232,6 +232,17 @@ Curated corpus entries land with `git add -f` (`.gitignore:85`).
    `firstmate.sh --kill spec-simplification` against its own live slug while verifying the kill
    path. Recovery was a resume, not a restart. Destructive verification now uses a throwaway
    decoy session.
+10. **`/teach` was deleted after US-005 shipped it — this build reverses its own decision.**
+   US-005's criteria included wiring `/teach` into `/spec execute` step 7, and that criterion
+   passed. The audit council's comprehension lens then showed the node was ceremonial:
+   `execute.md` marked it non-blocking, nothing required it to produce a durable artifact,
+   and on the one build that ran this pipeline it left no trace in `progress.txt` or the PR.
+   On the operator's instruction it is now deleted, with its step and the pipeline string.
+   **A passed acceptance criterion is not evidence the thing was worth keeping** — it only
+   proves the thing was built. Recorded here rather than quietly dropped, because a reviewer
+   comparing the story table against the diff will otherwise find a criterion whose subject
+   no longer exists.
+
 9. **The DeepWiki comparison was removed from the workflow after the PR went ready**, on
    operator instruction: the public DeepWiki for this repo regenerates on no schedule the gate
    could depend on. This build's own comparison is the evidence — it found `scripts/ralph.sh`

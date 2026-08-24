@@ -1,4 +1,4 @@
-# `/spec execute` — build ⇄ audit → evidence → teach → spec-retro → improve
+# `/spec execute` — build ⇄ audit → evidence → spec-retro → improve
 
 > Detail doc for the **`execute`** subcommand of the `/spec` skill
 > (`.oh/skills/spec/SKILL.md`). Argument form:
@@ -348,7 +348,8 @@ Non-blocking — if `/compact` is unavailable or errors, log a warning and conti
 
 ### 6. Write `evidence.md` — the answer back to the plan
 
-**This is a gate condition, not a formality.** Step 9 refuses to undraft without it.
+**This is a gate condition, not a formality.** Step 9 refuses to undraft without it — and it is
+now the *only* node between the build and the reviewer that carries the model across.
 
 The operator's understanding of this work stops at the plan they approved. Everything after
 that happened inside a compacted session they did not watch. `evidence.md` is how the build
@@ -381,21 +382,13 @@ make sure the doc answers these five questions in this order:
 `/audit implementation` and `/audit pr` are read-only and do not write this file; this node
 writes it from what those routes observed.
 
-### 7. `/teach` — hand the operator the model, not the diff
-
-Run `/teach <slug>` before the merge gate. It reads the completed task artifacts and the
-relevant wiki entry, revises the wiki when implementation changed the provisional model, and
-states the final mental model, the verification evidence, the caveats, and the understanding
-checks. A reviewer who was not present for the build gets the model here; `evidence.md` gets
-them the proof.
-
-### 8. `spec-retro` — capture the lessons
+### 7. `spec-retro` — capture the lessons
 
 On `AUDIT-PASS`, run `/spec retro <slug>` (the execution-side retro). It turns the run's
 signals into falsifiable, evidence-tested lessons and promotes the supported ones behind a
 propose-then-confirm gate. Always logs.
 
-### 9. `improve` — compound · compress · benchmark
+### 8. `improve` — compound · compress · benchmark
 
 The self-improvement tail (`AGENTS.md § The Workflow`):
 
@@ -411,7 +404,7 @@ The **groom triad** (`/audit skills` · `/wiki lint` · `/audit drift`) is delib
 health checks that never blocked a merge — running them per cycle spent the cycle's budget on
 advisory output nobody gated on. Run them on their own cadence, or on demand.
 
-### 10. Promotable gate → undraft → human merge gate
+### 9. Promotable gate → undraft → human merge gate
 
 Push the branch so CI runs:
 
@@ -520,9 +513,8 @@ URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline outpu
 | 5 | Wiki impact REQUIRED but entries are missing, stale against the implemented behavior, or the README index probe fails | Leave the PR draft; fix the wiki entries/index, then re-run the wiki gate |
 | 5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue |
 | 6 | `evidence.md` cannot be written because a gate produced no observed output | Record the gap in the doc and leave the PR draft — a gate with no observed output is a gap, never a pass |
-| 7 | `/teach` errors or has no wiki entry to revise | Non-blocking; note it and continue — the evidence doc still carries the proof |
-| 10 | `.oh/tasks/<slug>/evidence.md` is missing, or present but untracked (added without `-f`) | Leave the PR draft (`DRAFT-BLOCKED (evidence)`); write and commit it, then re-run the promotable gate |
-| 10 | `/audit pr` cannot classify (gh/API error), or CI is red/pending so the PR is not promotable | Leave the PR draft; fix CI and re-run the audit executor |
+| 9 | `.oh/tasks/<slug>/evidence.md` is missing, or present but untracked (added without `-f`) | Leave the PR draft (`DRAFT-BLOCKED (evidence)`); write and commit it, then re-run the promotable gate |
+| 9 | `/audit pr` cannot classify (gh/API error), or CI is red/pending so the PR is not promotable | Leave the PR draft; fix CI and re-run the audit executor |
 | 10 | PR not promotable, or `gh pr ready` fails | Leave draft + comment the blocking gate; diagnose PR state/permissions; never merge |
 
 ## Idempotency
@@ -594,8 +586,7 @@ auto-merge.
 | Wiki schema | `.oh/skills/wiki/references/schema.md` | Step 5 — source-backed wiki alignment |
 | `/compact` | (built-in) | Step 5 — clears implementation context before the promotable gate |
 | Reviewer evidence doc | `.oh/skills/audit/references/reviewer-evidence-doc.md` | Step 6 — the contract `evidence.md` follows |
-| `/teach` skill | `.claude/skills/teach/SKILL.md` | Step 7 — hands the operator the final mental model |
-| `/audit pr` skill | `.claude/skills/audit/SKILL.md` | Step 10 — promotable classification (gates the undraft) |
+| `/audit pr` skill | `.claude/skills/audit/SKILL.md` | Step 9 — promotable classification (gates the undraft) |
 | `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | CI verification (subsumed by `/audit pr`'s promotable check) |
 | advisor agent | `.oh/agents/advisor.md` | Step 4 — the Advisor handoff briefing |
 | sandbox-processes norm | `.oh/skills/t3/references/sandbox-processes.md` | Step 4 — session naming for the Advisor |

@@ -7,7 +7,7 @@
 
 The **reflection** node of the `spec-*` family (`AGENTS.md § The Workflow`). It runs
 inside `/spec execute`'s tail, after `build ⇄ audit` reaches `AUDIT-PASS` and the evidence
-and `/teach` steps have run, and before `improve`, to turn the execution run into durable,
+step has run, and before `improve`, to turn the execution run into durable,
 evidence-tested lessons.
 
 **Core principle: compose `/retro`, scoped to this task.** `/retro` already implements the
@@ -84,7 +84,7 @@ did not, add one line to `.oh/memory/<UTC-date>/log.md` per `.oh/skills/retro/re
 
 Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
 merge → reset|clean`), `retro` runs inside the `spec-execute` tail (`build ⇄ audit →
-evidence → teach → spec-retro → improve`); the next step is `improve` (compound · compress ·
+evidence → spec-retro → improve`); the next step is `improve` (compound · compress ·
 benchmark).
 
 The terminal artifact is the log entry plus whatever the propose-then-confirm gate actually

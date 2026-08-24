@@ -47,16 +47,23 @@ report-only contract.
 - **Tracked**: `.oh/tasks/` is gitignored, so the file must be added with `git add -f`.
   An untracked `evidence.md` exists on disk and is **absent from the PR diff** — from
   the reviewer's seat that is identical to not having written it at all.
-- **Answers back to the plan**: the four sections below are not optional prose. Two of
-  them — *divergence* and *unverified* — are the things a reviewer cannot reconstruct
+- **Answers back to the plan**: the five sections below are not optional prose. Three of
+  them — *why this is better*, *divergence* and *unverified* — are the things a reviewer cannot reconstruct
   from the diff, so an empty one is written as `None` / `Nothing` explicitly. Omitting
   them reads as "nothing diverged, nothing unchecked", the most expensive claim this
   document can make by accident.
 
-## The four questions
+## The five questions
 
 Every doc answers these, in this order, before the per-gate proof:
 
+0. **Why this is better than not doing it** — the first question, because it is the only
+   one a reviewer cannot answer for themselves. State the *before* and the *after* as the
+   operator experiences them, with a number wherever one exists, and name the cost paid to
+   get there. A benefit nobody can measure is written as *claimed, unmeasured* — never
+   dressed up as proven. Verification output belongs to questions 2 and 4; this question
+   is about consequence, not correctness. A doc that proves every gate green and never
+   says what improved has failed its reader.
 1. **What the plan asked for** — the approved `prd.md`'s goals in the operator's terms,
    not a restatement of the story titles.
 2. **What was built** — the observable behavior that now holds.
@@ -67,6 +74,12 @@ Every doc answers these, in this order, before the per-gate proof:
    pre-existing reds carried forward, anything a reviewer must check by hand.
    Explicitly `Nothing` when there is none.
 
+**Why question 0 is first and separate.** Questions 1–4 prove the change is *correct*.
+None of them establishes it was *worth making*. A doc can pass every gate, diverge nowhere,
+and leave nothing unverified while the reader still cannot say what is better than the repo
+without it — which is the review they were actually asked for. Correctness evidence answers
+the auditor; this question answers the operator.
+
 ## Shape
 
 ```markdown
@@ -74,6 +87,12 @@ Every doc answers these, in this order, before the per-gate proof:
 
 - **PR**: #<N> (<owner/name>, base <branch>) · **Branch**: <branch>
 - **Audit run**: <AUDIT_RUN_ID> · **Verdict**: <NATIVE-VERDICT>
+
+## Why this is better
+
+<the before/after a reviewer would otherwise have to infer: what was worse without this
+change, what is better now, the number where one exists, and what it cost. Benefits with
+no measurement behind them are labelled "claimed, unmeasured".>
 
 ## What the plan asked for
 

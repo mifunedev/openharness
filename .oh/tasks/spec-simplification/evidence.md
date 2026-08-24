@@ -24,6 +24,43 @@ The audit gates below were run **directly**, as
 be exactly the failure US-007 removed from `MEMORY.md` — a claim of enforcement that nothing
 backs — so the field is recorded as `none` instead.
 
+## Why this is better
+
+The repo without this change still worked. Here is what was worse, and what it cost to fix.
+
+| Without this change | With it | Measured |
+| --- | --- | --- |
+| **The build executor could not launch a working session.** `firstmate.sh` built `cat <prompt> \| claude --print`: `--print` makes the harness answer once and exit, and a piped prompt means stdin is not a TTY. Observed 2026-08-23: the child started, printed warnings, never advanced. A fourth instance sat in the Advisor tmux launch. | The prompt travels as argv, no arm carries `--print`, nothing pipes the launch command. Two new probes fail if any of it returns. | broken → works; `executor-launch-interactive`, `executor-kill-clears-session` verified by rejection |
+| **`--kill` failed silently** — exit 1, no output, session left running, lock left claimed, no `FIRSTMATE-INCOMPLETE` line. A prior session of this build killed itself with it and the failure was invisible. | Teardown completes and records. | broken → works |
+| **Reading the build path meant resolving which of three executor arms ran first.** Every skill, probe, and doc carried a three-way toggle. | One arm. The other two are deleted, not defaulted. | live references to a toggle or `ralph.sh`: **100 → 3**, and all three are assertions of absence |
+| **The build mechanics lived in two skills**, with `/spec execute` deferring into `/ship-spec`'s body — and the copies had drifted (ship-spec's critics carried a wiki-alignment item `/critique` lacked). | One file, read top to bottom, no hop. | 2 files / 701 lines → **1 file / 633 lines**, `/spec` family bytes **86,528 → 53,009** |
+| **A gate stopped the workflow to spend 2–4 critic agents whose output never reached the operator.** | No halt, no critic spend. The operator's read of `prd.md` is the gate. | **2–4 agents per plan → 0** |
+| **`/eval` ran three times per cycle on the same commit** — in `/spec execute`, `/audit implementation` Gate 2, and `/benchmark` Signal 1 — to learn the same thing three times. | Runs once; the two downstream gates read a commit-keyed record. | **318 → 110 probe executions**; suite wall-clock measured at **22s**, so ~**44s of redundant execution removed per cycle** |
+| **Every session loaded 8,161 B of `.oh/context/rules/`** on top of everything else. | 414 B. | **−95%**, paid by every session forever |
+| **`MEMORY.md` asserted 76 lessons were probe-guarded. Zero of the 76 ids resolved to a file.** Every one read "this is enforced" while nothing enforced it — worse than claiming nothing, because it stops you looking. | All 76 read `probe: none`, explicitly. | **76 false enforcement claims → 0**, via a tracked idempotent script |
+| **The reviewer got a diff and a green check.** Nothing said where the build departed from the plan they approved. | `evidence.md` ships in the diff and the undraft refuses without it. | this document; **benefit to review quality is claimed, unmeasured** |
+
+**What it cost, stated as plainly as the gains:**
+
+- **No fallback executor.** Removing every alternative removes the recovery path: a
+  misbehaving ladder is now fix-forward only.
+- **No adversarial check on the plan.** The deleted critics also read
+  `.claude/protected-paths.txt` and hard-halted on a protected deletion. Nothing in the
+  surviving path reads that list — and this change is exactly the shape it guarded, deleting
+  three listed paths while amending the list in the same commits. The compensating control is
+  the operator's read.
+- **One file is now 633 lines.** Fewer places to look, more to read in the place that is left.
+- **The comprehension benefit is unproven.** Every number above is a count of code, config,
+  or execution. Whether a reviewer actually understands a change better because of
+  `evidence.md` and `/teach` is not measured here, and the two human-only criteria
+  (US-005 AC-7, US-007 AC-2) are where that would show up.
+
+**How you would falsify the headline claim.** If the pipeline is genuinely simpler, the next
+build should touch one executor path, run one suite, and produce one document a reviewer can
+act on. If the next task instead reintroduces a branch, re-runs the suite in a downstream
+gate, or ships an `evidence.md` whose divergence section says "None" while the diff shows
+otherwise, this change did not hold.
+
 ## What the plan asked for
 
 The plan's complaint was not that the pipeline was incorrect but that it was **unaccountable to

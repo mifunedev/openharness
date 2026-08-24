@@ -358,8 +358,14 @@ act rather than a trusting one.
 Write `.oh/tasks/<slug>/evidence.md` and **commit it on the branch**, so it travels in the PR
 diff. The full contract — path, linkage, observed-output rule, correlation to one audit run,
 honesty about gaps — is `.oh/skills/audit/references/reviewer-evidence-doc.md`. Follow it, and
-make sure the doc answers these four questions in this order:
+make sure the doc answers these five questions in this order:
 
+0. **Why this is better than not doing it** — the before and after in the operator's terms,
+   with a number wherever one exists, and the cost paid to get it. This question comes first
+   because it is the only one the reviewer cannot answer from the diff, the gates, or the
+   plan. **A doc that proves every gate green and never says what improved has failed.** A
+   benefit with no measurement behind it is written *claimed, unmeasured* rather than
+   asserted — and "the gates are green" is not an answer to this question.
 1. **What the plan asked for** — the approved `prd.md`'s goals in the operator's terms, not a
    restatement of the story titles.
 2. **What was built** — the observable behavior that now holds, with the commands and real
@@ -423,7 +429,7 @@ silence — a no-run CI status is not promotable. Do not treat heartbeat stale-d
 output as promotable evidence; it is only a signal to investigate or resume the draft.
 
 **The evidence gate.** Before the undraft, `.oh/tasks/<slug>/evidence.md` must exist, be
-committed on the branch, and answer the four questions step 6 names. **Refuse the undraft
+committed on the branch, and answer the five questions step 6 names. **Refuse the undraft
 without it** — a PR whose reviewer cannot see how the built thing differs from the plan they
 approved is not ready for review, whatever CI says:
 

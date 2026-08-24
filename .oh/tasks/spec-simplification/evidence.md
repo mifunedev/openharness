@@ -191,6 +191,55 @@ Curated corpus entries land with `git add -f` (`.gitignore:85`).
 6. ~~**CI has never run on this branch.**~~ Resolved in this run: all four checks green and
    `pr-classify` returned `promotable: true`. See *Gate 3* below.
 
+## Audit council — five lenses, and what they changed
+
+After the PR reached ready-for-review, five auditors reviewed the branch against its
+pre-change state (`60f8c12d`), one lens each: deletion safety, claims-vs-reality,
+enforcement strength, operator comprehension, and the final commit + reversibility. **All
+five returned `PASS-WITH-CONCERNS`.** Nothing was found fabricated; the recurring shape was
+*true underneath, tightened in the retelling*. Their defect findings are fixed in
+`635f67cd` — a dangling `## Wiki Alignment` pointer with no block behind it, the build
+session prompt still teaching the deleted critic gate, `REPO_MAP.md` still describing the
+removed model, the `318 → 106` arithmetic, the missing CHANGELOG entry, an internal
+contradiction in this document, a live corpus entry still calling the DeepWiki comparison
+required, a probe a one-line historical note could defeat, and `AGENTS.md` being absent from
+every CI path filter.
+
+**Benchmark against the previous state.** The suite was run in three isolated worktrees:
+old tree + its own 106 probes → 101 PASS / 5 SKIPPED; new tree + its 110 → 105 PASS / 5
+SKIPPED; and the controlling comparison, **today's 110 probes against the old tree → 88 PASS
+/ 17 REGRESSION**. Those 17 are the behaviors the pre-change state could not satisfy. Live
+surfaces carrying an executor toggle or a `ralph.sh` reference: **100 → 3**, and all three
+survivors are assertions of absence. `.oh/context/rules/` 8,161 B → 414 B. The `/spec`
+family 86,528 B → 53,009 B while absorbing a deleted skill.
+
+Three findings were deliberately **not** actioned, and a reviewer should weigh them:
+
+1. **The protected-paths check lost its automated enforcement.** The deleted critics read
+   `.claude/protected-paths.txt` and escalated any `[PROTECTED-PATH]` hit to a hard halt
+   before any GitHub state existed. No node in the surviving path reads that list; it
+   appears once, as a passive row in a primitives table. This PR is itself the shape the
+   check existed to catch: it deletes `ship-spec`, `.oh/scripts/ralph.sh` and
+   `critique.md` — all three on the list at `60f8c12d` — while amending the list in the
+   same commits (`a1f64de2`, `ac8aa433`, `e0a98940`), which keeps
+   `protected-paths-resolve` green. The removal is deliberate and documented; the
+   compensating control is the operator's read, i.e. this document.
+2. **`evidence.md`'s undraft refusal is an instruction, not machine enforcement.** The
+   refusal lives in `execute.md`'s step 10 as a bash block an agent is asked to run;
+   `pr-classify.sh`'s `evidenceComplete` reads PR *body* completeness, not this file. The
+   probe guards the wording, and the wording is section-scoped, so it fails when the gate
+   text is deleted — but nothing stops an agent from running `gh pr ready` anyway.
+3. **Two claimed invariants have no probe at all** — the absence of `STATUS: SPEC-*`
+   tokens, and the absence of the DeepWiki comparison. Both are prose-only today.
+
+**One rule this PR ships cannot be fully satisfied by the record that ships it.**
+`eval-result.json` is keyed to `635f67cd`, the tree the suite actually ran against; the
+commit that adds the record necessarily moves `HEAD` past it. A reader applying the
+freshness key literally (`commit == HEAD`) will always see the final record as stale. The
+honest reading is *the record keys the last commit that changed testable state*, and a
+reader whose comparison fails runs the suite — which is still the safe direction. Recorded
+here rather than papered over by re-keying to a commit the suite never saw.
+
 ## Gate 3 — promotable / CI: **PASS (`PR-AUDIT-PROMOTABLE`)**
 
 PR [#817](https://github.com/mifunedev/openharness/pull/817) (`mifunedev/openharness`, base

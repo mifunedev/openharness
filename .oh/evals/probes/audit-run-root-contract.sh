@@ -3,6 +3,16 @@
 # source: issue #645 — executable immutable audit root/run/log correlation
 # desc: production lifecycle validates before state, preserves child identity, cleans temp, and locks one append
 set -euo pipefail
+# This probe drives audit-run.sh from a TOP-LEVEL position: it asserts what a fresh
+# lifecycle does, and sets AUDIT_RUN_ID/AUDIT_ROOT/AUDIT_LOG_ROOT itself for the one
+# child-mode case it tests. When the suite is run from INSIDE an audit (`/audit
+# implementation` -> Gate 2 -> run.sh), those variables are already exported, audit-run.sh
+# reads them as a half-configured child ("inherited run requires both roots"), and the
+# probe reports a green->red that describes the caller's environment rather than the repo.
+# Clearing the inherited identity is not weakening the check -- every binding the probe
+# actually asserts is set explicitly below.
+unset AUDIT_RUN_ID AUDIT_ROOT AUDIT_LOG_ROOT AUDIT_TMP_ROOT AUDIT_EVIDENCE_PATH \
+      AUDIT_ROUTE AUDIT_TARGET AUDIT_TARGET_ARGS_JSON AUDIT_AGENT_COMMAND_JSON
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; RUN="$REPO/.oh/skills/audit/scripts/audit-run.sh"
 tmp=$(mktemp -d); tmpdir=$(mktemp -d); trap 'rm -rf "$tmp" "$tmpdir"' EXIT
 mkdir -p "$tmp/.oh/skills/audit/references" "$tmp/.oh/scripts"

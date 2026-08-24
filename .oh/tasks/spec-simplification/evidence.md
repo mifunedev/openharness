@@ -2,13 +2,19 @@
 
 - **PR**: [#817](https://github.com/mifunedev/openharness/pull/817) (`mifunedev/openharness`, base `development`) · **Branch**: `feat/spec-simplification`
 - **Issue**: #816
-- **Audit run**: `audit-20260824T073818Z-1888450` · target `implementation` · state `complete` · exit 0
+- **Audit run**: `audit-20260824T080223Z-2009901` · target `implementation` · state `complete` · exit 0
+  (re-run after the `/teach` deletion; the first boundary audit,
+  `audit-20260824T073818Z-1888450`, described the tree before it)
 - **Verdict**: `AUDIT-PASS`, boundary-published (gates 1, 2, 4) + `PR-AUDIT-PROMOTABLE` (gate 3, recorded below).
-- **Commit under test**: `2fa20a3e` (`2fa20a3e4a9f6bf59e932f44feaad8b2059363bb`)
+- **Commit under test**: `04011777` (`040117775f71b51c6923a2db927242457d4c3d98`)
 
 ## Correlation — the audit that counts, and the one that did not
 
-**The real audit:** `audit-20260824T073818Z-1888450`, run through the lifecycle boundary
+**The audit that stands:** `audit-20260824T080223Z-2009901` — `AUDIT-PASS`, graph 7/7, eval 0,
+promotable true, UI n/a. It re-ran because the `/teach` deletion changed the tree the first one
+had described; an audit of a tree that no longer exists is not evidence about this PR.
+
+**The first boundary audit:** `audit-20260824T073818Z-1888450`, run through the lifecycle boundary
 (`audit-run.sh implementation spec-simplification --pr 817 --repo mifunedev/openharness --
 route-driver.sh`) with an inline agent, which published schema-v1 `evidence.json` and made the
 single locked terminal append. Verified in the log:

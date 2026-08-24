@@ -260,6 +260,46 @@ Curated corpus entries land with `git add -f` (`.gitignore:85`).
    rather than for DeepWiki. The two corpus entries keep the observation as rationale. Probes:
    the 10 that read the edited files all PASS.
 
+## Protected paths deleted, and why
+
+`.claude/protected-paths.txt` at the merge base (`60f8c12d`) listed three things this branch
+deletes. The list is *"load-bearing skills, scripts, and config that must NOT be proposed for
+deletion or deprecation without an explicit override note"* — this section is that note, and
+`protected-path-deletion.sh` now refuses the branch without it.
+
+| Deleted | Listed as | Why it goes |
+| --- | --- | --- |
+| `.oh/scripts/ralph.sh` (with `.oh/scripts/__tests__/ralph.test.ts`) | `.oh/scripts/ralph.sh` | US-002 collapses three build executors to one. Its terminal interface (`STATUS: COMPLETE` in `progress.txt`) and its claude→codex fallback are both preserved — the fallback by `cron-claude-codex-fallback.sh`, the interface by `firstmate.sh`. **Cost stated plainly**: removing every alternative removes the fallback, so recovery from a misbehaving ladder is fix-forward only. |
+| `.oh/skills/ship-spec/` (`SKILL.md`, `templates/prompt.md`) | `ship-spec` | US-003 absorbs every build mechanic into `.oh/skills/spec/references/execute.md`, which grew 160 → 633 lines to hold them with no deferral. `spec` **replaces** `ship-spec` on the protected list rather than the slot going empty. |
+| `.oh/skills/spec/references/critique.md` | `.oh/skills/spec/references/critique.md` | US-001 removes the critique/approve gate; the operator's approval of `prd.md` is the commitment gate. **This is the one deletion with a residual cost that is not fully paid back** — see below. |
+
+**The critique deletion took a safety property with it, and this probe is the repayment.**
+The critics were an opinion generator, and opinions about a plan are cheap to ignore. But that
+node also carried one *deterministic* check: cross-check proposed deletions against
+`.claude/protected-paths.txt` and halt on a hit — written for PR #212, which deleted six
+load-bearing skills under a defensible-sounding rationale and took two weeks to surface
+(`.oh/agents/critic.md:41`). After US-001 the only readers of that list are two agents the
+`/spec` path never invokes, a boot presence check, and `protected-paths-resolve.sh` — which
+asserts only that *surviving* entries resolve. **Deleting a path and its list line in the same
+commit therefore stayed green**, and that is exactly what `a1f64de2`, `ac8aa433` and
+`e0a98940` each did in this branch.
+
+`.oh/evals/probes/protected-path-deletion.sh` restores the property without restoring the
+node: no agents, no halt stage, ~40 lines, sub-second, already wired because `/eval` runs on
+the work branch inside `build ⇄ audit`. It reads the list **as of the merge base** — the one
+version an in-PR amendment cannot reach — and requires each deleted protected path to be named
+verbatim in a tracked `evidence.md`. You may still delete anything; you may not delete it
+silently. On its first run against this branch it failed, naming
+`.oh/skills/spec/references/critique.md` as deleted and unjustified — the table above is the
+justification it demanded, written because a probe asked for it rather than because anyone
+remembered.
+
+**What is still not covered:** the plan itself has no adversarial reader. `/audit
+implementation` checks conformance *to* the task graph, so a defect inside an approved plan
+passes it by construction — and passes more cleanly the better the build executes. This probe
+narrows that to the deletion case only, which is the case with a named historical failure
+behind it.
+
 ## What remains unverified
 
 1. **US-005 AC-7 — a human read of the merge-gate output.** Marked *human, not a probe* in the

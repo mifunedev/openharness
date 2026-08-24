@@ -18,6 +18,7 @@ import {
   validateWeights,
   resolveGroundTruth,
   buildWeaknessRecords,
+  computeCeilingSaturation,
   withinWindow,
   DEFAULT_WEIGHTS,
   MARKER_FEATURE_KEYS,
@@ -195,6 +196,71 @@ test("ground-truth bonus is added and the total is capped at 100", () => {
   );
   const { score } = scoreSession(clean, DEFAULT_WEIGHTS, { hasBonus: true });
   assert.equal(score, 100); // 100 + 15 capped at 100
+});
+
+// --- scoreUncapped: the uncensored sibling of score ------------------------
+
+test("scoreUncapped carries the uncensored total while score stays clamped at 100", () => {
+  const clean = aggregateSession(
+    [
+      { kind: "human", isHuman: true, text: "go", ts: "2026-01-01T00:00:00Z" },
+      { kind: "assistant", stopReason: "end_turn", ts: "2026-01-01T00:01:00Z" },
+    ],
+    { sessionId: "u", harness: "claude" },
+  );
+  const scored = scoreSession(clean, DEFAULT_WEIGHTS, { hasBonus: true });
+  assert.equal(scored.score, 100, "score is still clamped");
+  assert.equal(scored.scoreUncapped, 115, "base 100 + bonus 15, uncensored");
+  assert.ok(scored.scoreUncapped > 100, "the ceiling does not censor scoreUncapped");
+  // Sibling of score, not nested in the breakdown.
+  assert.ok(!("scoreUncapped" in scored.scoreBreakdown), "not nested in scoreBreakdown");
+});
+
+test("a maximally-penalized session floors scoreUncapped at 0 without going negative", () => {
+  // Built as a literal agg: aggregateSession can never emit all five signals at
+  // their maximum at once (abandoned and incomplete are mutually exclusive, and
+  // correctionDensity counts follow-ups only, so it is (n-1)/n < 1). scoreSession
+  // is pure, so the worst case the weights permit is exercised directly.
+  const worst = {
+    toolErrorRate: 1,
+    correctionDensity: 1,
+    abandoned: 1,
+    incomplete: 1,
+    turnBloat: 1,
+  };
+  const scored = scoreSession(worst, DEFAULT_WEIGHTS, { hasBonus: false });
+  // 100 - 35 - 30 - 20 - 10 - 5 = 0
+  assert.equal(scored.scoreUncapped, 0, "lower bound is unaffected by the change");
+  assert.equal(scored.score, 0);
+  assert.ok(scored.scoreUncapped >= 0, "current weights cannot produce a negative");
+});
+
+test("scoreUncapped is emitted on both sessions[] and unranked[] of a fixture run", () => {
+  // --min-turns 4 splits the fixtures: the 3-turn session falls to unranked[].
+  const out = execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--min-turns", "4", "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const data = JSON.parse(out);
+  assert.ok(data.sessions.length > 0, "ranked population is non-empty");
+  assert.ok(data.unranked.length > 0, "unranked population is non-empty");
+  for (const r of [...data.sessions, ...data.unranked]) {
+    assert.equal(typeof r.scoreUncapped, "number", `scoreUncapped on ${r.sessionId}`);
+  }
+});
+
+test("sessions[] ranking still sorts on the clamped score, not scoreUncapped", () => {
+  const out = execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const data = JSON.parse(out);
+  const expected = [...data.sessions]
+    .sort((a, b) => b.score - a.score || String(a.sessionId).localeCompare(String(b.sessionId)))
+    .map((s) => s.sessionId);
+  assert.deepEqual(data.sessions.map((s) => s.sessionId), expected);
 });
 
 // --- --no-git ground-truth stub path (bonus = 0) ---------------------------
@@ -478,4 +544,132 @@ test("classifyLine flags Claude sidechain records so they can be excluded", () =
     "claude",
   );
   assert.equal(weird.isSidechain, false);
+});
+
+// --- ceiling-saturation census (manifest + markdown) -----------------------
+
+test("computeCeilingSaturation counts the stored rounded score === 100, not scoreUncapped", () => {
+  const census = computeCeilingSaturation([
+    // On the ceiling: the clamp censored 112.5 down to exactly 100.
+    { sessionType: "impl", score: 100, scoreUncapped: 112.5 },
+    // NOT on the ceiling: 99.99 rounds to nothing else, it is simply below.
+    { sessionType: "impl", score: 99.99, scoreUncapped: 99.99 },
+    { sessionType: "other", score: 100, scoreUncapped: 100 },
+  ]);
+  assert.deepEqual(census, {
+    impl: { atCeiling: 1, total: 2 },
+    other: { atCeiling: 1, total: 1 },
+  });
+});
+
+test("computeCeilingSaturation omits null session types and zero-session strata", () => {
+  const census = computeCeilingSaturation([
+    { sessionType: null, score: 100 },
+    { sessionType: "cron", score: 50 },
+  ]);
+  assert.deepEqual(Object.keys(census), ["cron"]);
+  assert.ok(!("null" in census), "no stringified null key");
+  assert.equal(census.cron.atCeiling, 0);
+});
+
+// A fixture dir carrying a noHumanPrompt session (assistant lines only → the
+// only way sessionType is null) next to the normal samples.
+function fixturesWithNoHumanSession() {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pm-census-"));
+  for (const f of fs.readdirSync(FIXTURES)) {
+    fs.copyFileSync(path.join(FIXTURES, f), path.join(tmp, f));
+  }
+  fs.writeFileSync(
+    path.join(tmp, "claude-nohuman.jsonl"),
+    [
+      '{"type":"assistant","sessionId":"claude-nohuman","timestamp":"2026-06-18T09:00:00.000Z","message":{"role":"assistant","stop_reason":"tool_use","content":[{"type":"text","text":"resuming"}]}}',
+      '{"type":"assistant","sessionId":"claude-nohuman","timestamp":"2026-06-18T09:00:01.000Z","message":{"role":"assistant","stop_reason":"end_turn","content":[{"type":"text","text":"done"}]}}',
+    ].join("\n") + "\n",
+  );
+  return tmp;
+}
+
+test("manifest.ceilingSaturation is built from rankable only and carries no null key", () => {
+  const tmp = fixturesWithNoHumanSession();
+  const out = execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", tmp, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const data = JSON.parse(out);
+  const census = data.manifest.ceilingSaturation;
+
+  assert.ok(
+    data.unranked.some((s) => s.noHumanPrompt && s.sessionType === null),
+    "the fixture really did produce a null-type session",
+  );
+  assert.ok(!("null" in census), "no null key in ceilingSaturation");
+  for (const key of Object.keys(census)) assert.notEqual(key, "null");
+
+  // The census population is exactly sessions[] (rankable), not everything scanned.
+  const totals = Object.values(census).reduce((n, c) => n + c.total, 0);
+  assert.equal(totals, data.sessions.length);
+  assert.ok(totals < data.manifest.sessionsScanned, "rankable is a strict subset here");
+
+  // Shape: every value is { atCeiling: int, total: int } and matches sessions[].
+  const expected = {};
+  for (const s of data.sessions) {
+    expected[s.sessionType] ??= { atCeiling: 0, total: 0 };
+    expected[s.sessionType].total += 1;
+    if (s.score === 100) expected[s.sessionType].atCeiling += 1;
+  }
+  assert.deepEqual(census, expected);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("the markdown report renders the census as flat bullets and adds no new heading", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pm-md-"));
+  execFileSync(
+    "node",
+    [ENGINE, "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--out", tmp, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const mdPath = fs.readdirSync(tmp).find((f) => f.endsWith(".md"));
+  const md = fs.readFileSync(path.join(tmp, mdPath), "utf8");
+  const lines = md.split("\n");
+
+  const census = lines.filter((l) => l.startsWith("- ceilingSaturation."));
+  assert.ok(census.length > 0, "at least one census bullet rendered");
+  for (const l of census) assert.match(l, /^- ceilingSaturation\.[a-z]+: \d+\/\d+$/);
+
+  // The bullets live under the EXISTING ## Manifest heading.
+  const manifestIdx = lines.indexOf("## Manifest");
+  const nextHeadingIdx = lines.findIndex((l, i) => i > manifestIdx && l.startsWith("## "));
+  const firstCensusIdx = lines.findIndex((l) => l.startsWith("- ceilingSaturation."));
+  assert.ok(firstCensusIdx > manifestIdx && firstCensusIdx < nextHeadingIdx);
+
+  // No new heading of any level was introduced by the census.
+  const headings = lines.filter((l) => /^#{1,6} /.test(l));
+  assert.ok(!headings.some((h) => /ceiling/i.test(h)), "no census heading added");
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("--dry-run writes no report files into an explicit --out dir", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pm-dryrun-"));
+  execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--out", tmp, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  const written = fs.readdirSync(tmp).filter((f) => /^prompt-miner-.*\.(json|md)$/.test(f));
+  assert.deepEqual(written, [], "dry-run wrote no report artifacts");
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("the privacy contract holds: no promptText key without --include-prompt-text", () => {
+  const out = execFileSync(
+    "node",
+    [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--now", "2026-06-19T00:00:00.000Z"],
+    { encoding: "utf8" },
+  );
+  assert.ok(!out.includes("promptText"), "no promptText key anywhere in the emitted JSON");
+  const data = JSON.parse(out);
+  for (const r of [...data.sessions, ...data.unranked]) {
+    assert.ok(!("promptText" in r), `no promptText on ${r.sessionId}`);
+  }
 });

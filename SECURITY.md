@@ -6,10 +6,13 @@ repository, and the **sandboxed agent environment** it provisions.
 
 ## Supported Versions
 
-Open Harness ships on a rolling [CalVer](https://calver.org/) line
-(`YYYY.M.D`, with a `-N` suffix for additional same-day releases). Only the
-**most recent release** receives security updates — there are no long-term
-support branches.
+Open Harness ships on a rolling [SemVer](https://semver.org/) line
+(`MAJOR.MINOR.PATCH`, tagged `vMAJOR.MINOR.PATCH`). Only the **most recent
+release** receives security updates — there are no long-term support branches.
+
+The project is on its `0.x` line. Under SemVer, `0.x` makes no compatibility
+promise: a minor bump may change behavior. Releases before `v0.1.0` used a
+CalVer scheme (`YYYY.M.D`); those tags stay as history and are not supported.
 
 | Version | Supported |
 | ------- | --------- |

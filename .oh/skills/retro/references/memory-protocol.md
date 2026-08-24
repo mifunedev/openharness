@@ -36,12 +36,20 @@ The memory directory has ONE source of truth, resolved deterministically by
 MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"   # absolute, CWD-independent
 ```
 
-`oh-path` anchors to the repo root (the parent of its own `.oh/`), so it returns
-the same absolute path no matter the caller's working directory — a cron in a
-worktree, a sub-agent, and the orchestrator all land in the same place. **Resolve
-the path this way; never write a bare relative `memory/`.** A bare `memory/`
-silently creates a *phantom* `memory/` at the repo root whenever no back-compat
-symlink is present (e.g. a fresh `oh init` project), splitting the journal in two.
+`oh-path` returns the same absolute path no matter the caller's working
+directory — a cron in a worktree, a sub-agent, and the orchestrator all land in
+the same place. **Resolve the path this way; never write a bare relative
+`.oh/memory/`.** A bare relative path resolves against the caller's own
+directory, so it splits the journal in two: a phantom `memory/` at a fresh
+`oh init` project root, or a private ledger inside whichever worktree ran the
+command.
+
+`memory` is the one name `oh-path` anchors to the **main worktree** rather than
+to the caller's own root. Every other name (`crons`, `evals`, `tasks`,
+`context`) stays branch-scoped, because a probe or a task must resolve the
+worktree it is testing. The journal is the exception: one ledger serves every
+worktree of the checkout. Before #768 it did not, and each worktree kept a
+private ledger that was deleted with its branch.
 To move memory in future, change `paths.memory` once — every caller follows, with
 no per-skill edits.
 
@@ -52,19 +60,30 @@ Every path below shows the **default** (`.oh/memory`); read each as
 
 ```
 .oh/memory/
-  MEMORY.md              # long-term lessons (gitignored - local-per-instance; auto-seeded)
+  MEMORY.md              # long-term lessons (gitignored - one per checkout; auto-seeded)
   <topic>.md             # per-topic reference notes (tracked or gitignored per need)
   YYYY-MM-DD/
-    log.md               # daily append log (gitignored - local-only; not committed)
+    log.md               # daily append log (gitignored - one per checkout; not committed)
 ```
 
 Both `MEMORY.md` and the `.oh/memory/YYYY-MM-DD/` directory are gitignored (via
-`.gitignore`'s `.oh/memory/MEMORY.md` and `.oh/memory/[0-9]*/` rules), so the
-durable ledger and daily logs are **local-per-instance** — they do not survive a
-fresh clone. Because `MEMORY.md` is therefore absent on a fresh clone/sandbox,
-it is auto-seeded (header only) by `.oh/scripts/ensure-memory-file.sh` — the
-container entrypoint runs it at boot, and `/retro` runs it before its first
-write, so the session-start read never hits ENOENT. Only `README.md` and
+`.gitignore`'s `.oh/memory/MEMORY.md` and `.oh/memory/[0-9]*/` rules). Read that
+scope precisely, because getting it wrong hid a defect through three separate
+point-fixes:
+
+- **One per checkout.** Resolve through `oh-path` and every worktree of a
+  checkout reads and writes the same ledger. Lessons written on a branch are
+  visible to the next session before that branch merges.
+- **Not shared beyond it.** The files are untracked, so they do not reach
+  another clone, another operator, or another provider's agent. A fact that must
+  travel that far belongs in a tracked file — `.oh/context/IDENTITY.md` once it
+  has generalized into a principle.
+
+Because `MEMORY.md` is absent on a fresh clone or sandbox, it is auto-seeded
+(header only) by `.oh/scripts/ensure-memory-file.sh` — the container entrypoint
+runs it at boot, and `/retro` runs it before its first write, so the
+session-start read never hits ENOENT. An empty ledger means the file was just
+created. It is not evidence that a fact went unrecorded. Only `README.md` and
 explicitly reviewed topic notes persist in git. Public release branches should
 not carry `MEMORY.md`, daily logs, or maintainer-private notes.
 

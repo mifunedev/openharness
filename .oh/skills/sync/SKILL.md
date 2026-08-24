@@ -111,7 +111,7 @@ These apply to all subcommands; the reference docs assume them.
 
 - **`/audit drift`** directly — for a standalone read-only drift report with
   no intention to sync. `/sync status` wraps it; `/audit drift` is the raw tool.
-- **`/release`** — for cutting a CalVer tag after upstream development is
+- **`/release`** — for cutting a SemVer tag after upstream development is
   already clean. `/sync publish` brings the fork's changes in; `/release` then
   tags a release from the canonical `main` branch.
 - **`/audit prs`** — for a bulk PR triage pass unrelated to syncing.

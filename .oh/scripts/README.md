@@ -9,8 +9,8 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | `ralph.sh`        | Ralph loop runner: `scripts/ralph.sh [--harness=…] <taskdesc>`     |
 | `link-providers.sh` | Creates/repairs the provider skill/agent/hook symlinks into `.oh/` and validates the vendored pack is present. |
 | `repo-orientation-benchmark-score.mjs` | Scores the CB-004 repo-orientation A/B benchmark report |
-| `release-reservation.mjs` | Computes UTC CalVer candidates and collision progression for releases |
-| `reserve-github-release.mjs` | Atomically reserves a CalVer tag and recovers its same-SHA GitHub draft |
+| `release-reservation.mjs` | Validates the SemVer release version and drives the reservation state machine |
+| `reserve-github-release.mjs` | Atomically reserves the `v<version>` tag and recovers its same-SHA GitHub draft |
 | `promote-release-latest.sh` | Fresh-checks canonical `main`-else-`master` and promotes its image to `latest` by digest |
 | `cron-runtime.ts` | Croner runtime — scans `.oh/crons/*.md`, schedules, fires each job     |
 | `prompt-miner-caps.sh` | Origin-scoped PR-cap preflight for `.oh/crons/prompt-miner.md` — execs `autopilot-caps.sh` with `AUTOPILOT_REPO=mifunedev/openharness` + `AUTOPILOT_LABEL=prompt-miner` |

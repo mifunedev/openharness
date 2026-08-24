@@ -58,6 +58,10 @@ in an isolated worktree to `STATUS: COMPLETE` (`/delegate` is an optional within
 fan-out tool, never a replacement for the loop; `--executor=delegate-advisor` selects the
 legacy `/delegate --plan .oh/tasks/<slug>/prd.json` worker fan-out). Use that skill's stage text
 as the authority for the mechanics; do not duplicate them here.
+A third, opt-in executor — `--executor=firstmate` — instead launches ONE long-lived First-Mate
+session over the whole `.oh/tasks/<slug>/` task graph and reaches the same `STATUS: COMPLETE`
+terminal interface, with its mechanics likewise deferred to `/ship-spec` Stage 10's
+"Opt-in (`firstmate`)" subsection.
 
 ### 2. `build ⇄ audit` — the second adversarial loop
 

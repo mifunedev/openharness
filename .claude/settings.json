@@ -12,6 +12,19 @@
       "Read(file_path=**/.aws/credentials)",
       "Read(file_path=**/.aws/config)",
       "Read(file_path=**/.gcp/**)",
+      "Read(file_path=**/settings.local.json)",
+      "Write(file_path=**/settings.local.json)",
+      "Edit(file_path=**/settings.local.json)",
+      "NotebookEdit(notebook_path=**/settings.local.json)",
+      "Read(file_path=**/.config)",
+      "Read(file_path=**/.config/**)",
+      "Write(file_path=**/.config)",
+      "Write(file_path=**/.config/**)",
+      "Edit(file_path=**/.config)",
+      "Edit(file_path=**/.config/**)",
+      "NotebookEdit(notebook_path=**/.config/**)",
+      "Bash(command=*/.config/*)",
+      "Bash(command=*/.config)",
       "Read(file_path=**/.config/gcloud/**)",
       "Read(file_path=**/.azure/**)",
       "Read(file_path=**/.kube/config)",
@@ -35,7 +48,11 @@
       "Read(file_path=**/.wget-hsts)",
       "Bash(command=*cat*.env*)",
       "Bash(command=*printenv*)",
-      "Bash(command=*docker inspect*)",
+      "Bash(command=*inspect*Config.Env*)",
+      "Bash(command=*inspect*ContainerSpec.Env*)",
+      "Bash(command=*inspect*{{json .}}*)",
+      "Bash(command=*inspect*{{ json . }}*)",
+      "Bash(command=*inspect*{{.}}*)",
       "Bash(cat **/.env*)",
       "Bash(command=*env | grep*)",
       "Bash(command=*env|grep*)",
@@ -89,7 +106,7 @@
         ]
       },
       {
-        "matcher": "Read|Write|Edit|NotebookEdit",
+        "matcher": "Read|Write|Edit|NotebookEdit|Grep|Glob",
         "hooks": [
           {
             "type": "command",
@@ -129,7 +146,7 @@
       }
     ]
   },
-  "effortLevel": "xhigh",
+  "effortLevel": "medium",
   "plansDirectory": ".claude/plans",
   "model": "claude-opus-5[1m]",
   "statusLine": {

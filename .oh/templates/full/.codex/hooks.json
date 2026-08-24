@@ -10,6 +10,16 @@
             "statusMessage": "Checking Bash command for secret exposure"
           }
         ]
+      },
+      {
+        "matcher": "Read|Write|Edit|NotebookEdit|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/deny-local-settings.sh\"",
+            "statusMessage": "Checking file path for operator-only settings"
+          }
+        ]
       }
     ]
   }

@@ -1,0 +1,120 @@
+# Progress — rfcs-decision-route
+
+## Codebase Patterns
+
+- `.oh/tasks/*` is gitignored except `README.md` (`.gitignore:12-13`) — this folder needs `git add -f`.
+- Base and push to `upstream` (mifunedev); `origin` (ryaneggz) is a stale fork. Merging into
+  `upstream/development` does not auto-close `Closes #N` — close manually.
+- **CORRECTED:** `.claude/agents` is tracked in git as a **directory symlink** (mode `120000` →
+  `../.oh/agents`, created by `.oh/scripts/link-providers.sh:44`). Editing `.oh/agents/<name>.md`
+  reaches the Claude-facing agent immediately — same inode, no sync step. An earlier revision of this
+  file asserted the opposite ("materialized copies synced by `link-providers.sh`"); that was carried
+  in from prior-session notes and was never true of this repo. Verify with
+  `git ls-files -s .claude | grep '^120000'`.
+- `.oh/manifest.json` vendors `evals/**` but not `docs/**`, so any probe over `.oh/docs/` must
+  `exit 2` in a downstream `oh init` checkout.
+- `.oh/crons/cleanup-tasks.md:76-77` archives a task only when `progress.txt` **ends with** a line
+  matching exactly `STATUS: COMPLETE`. A `STATUS: COMPLETE` line followed by addenda does not fire.
+- `.claude/rules/` does not exist and is not generated — the B-state M4 collapse moved it to
+  `.oh/context/rules/`. But `.oh/skills/builder/references/rule.md` documents `.claude/rules/<name>.md`
+  as a deliberate Claude-specific exception, and `.oh/evals/probes/builder-skill-consolidation.sh:85`
+  asserts that literal string. Do not "fix" rule.md.
+
+## US-001 — 2026-08-02
+
+**Title:** Record the council verdict and correct the issue
+**Files changed:** `.oh/tasks/rfcs-decision-route/{prd.md,prd.json,council.md,prompt.md,progress.txt}`
+**Result:** council complete, verdict NO-GO, artifacts committed to draft PR
+
+### What I did
+
+Ran the First Mate council per `.oh/prompts/advisor/plan.yml`: `architect`, `pm`, `designer` in
+parallel with a shared brief preamble, then synthesis with four rulings, then two adversarial critics,
+then the approve gate.
+
+- Wave 1 produced three analyses. All three independently rejected all four source-proposal
+  mechanisms. The designer measured the cold-start path and split it into two sub-questions with very
+  different deltas (0 and 7→3), refusing to inflate the weaker one.
+- Wave 2 synthesis scored the residual 13/14 (GO) and the source proposal 2/14 (NO-GO).
+- Wave 3 critics returned **HALT** (implementer lens) and **REVISE-PRD** (maintainer lens).
+- Wave 4 rescored the residual to **8/14 with a C2 veto → NO-GO**.
+
+Every critic factual challenge was verified by the orchestrator rather than accepted on report, and
+**all of them were upheld** — including two against claims this council had itself asserted.
+
+### Learnings for future iterations
+
+- The decisive question was framing, not design. "Is this surface underspecified or unused" was
+  answerable in one command (`git log --diff-filter=A` on the ad hoc records vs. the destination),
+  and it inverted a verdict three constructive agents had converged on. Date the evidence before
+  scoring it.
+- Constructive agents cannot produce a NO-GO. `architect`, `pm`, and `designer` were each asked "what
+  should this be," so all three produced a design. Only the critics could conclude "nothing."
+- The council asserted a probe-break as "verified" after confirming the probe hard-codes a path and
+  that the cron archives — without checking whether the cron's predicate fires on that file. It does
+  not. That is `.oh/context/IDENTITY.md:8` (asserting a proxy rather than the behaviour) committed
+  inside a document that cites it.
+- `## Wiki Alignment` — the isomorphic precedent for the proposed `## Decision Record` block — is
+  present in 1 of 8 `prd.md` files despite being a mandatory pipeline step. Before adding a PRD
+  field, measure the compliance rate of the field you are copying.
+
+## US-002 — 2026-08-02
+
+**Title:** Fix the live RFC index rot
+**Files changed:** `.oh/docs/README.md`, `CHANGELOG.md`
+**Result:** all four tracked records reachable from the index; set difference empty
+
+### What I did
+
+Added `rfcs/rfc-runtime-support.md` to `.oh/docs/README.md` § Reference, positioned to keep the
+existing index-then-ADR-then-RFC-alphabetical order. Verified the general property rather than the
+single instance: iterated `.oh/docs/rfcs/*.md` minus `README.md` and asserted each is linked —
+the set difference is empty. CHANGELOG `### Fixed` entry under `## [Unreleased]` references #686.
+
+### Learnings for future iterations
+
+- The single-instance AC (`grep -c rfc-runtime-support`) and the property AC (set difference empty)
+  are not the same check. The first passes forever after one edit; only the second would have caught
+  the *next* unlinked record. Write the property check even when fixing one instance.
+
+## US-003 — 2026-08-02
+
+**Title:** Fix the dangling `.claude/rules/` reference in the crew agents
+**Files changed:** `.oh/agents/critic.md`, `.oh/agents/implementer.md`
+**Result:** both dangling bullets repointed at `.oh/context/IDENTITY.md`; grep returns 0 in both
+
+### What I did
+
+Before editing, verified `.claude/rules/` is genuinely absent rather than generated: absent in the
+worktree *and* the main checkout, zero tracked paths beneath it, and no mention in
+`link-providers.sh`. Repointed both bullets to `.oh/context/IDENTITY.md`, which is the surviving
+"standards an agent might violate" surface after the B-state M4 collapse.
+
+Two deviations from the written plan, both recorded rather than silent:
+
+1. **Scope amendment.** The same grep that found `critic.md:32` found the identical bullet at
+   `implementer.md:31`. Fixed both and amended `allowed_locations`; half-fixing a two-instance defect
+   guarantees a duplicate follow-up.
+2. **AC correction.** US-003's third AC required running `link-providers.sh` because
+   `.claude/agents/*.md` are "materialized copies, not symlinks." They are not. See § Codebase
+   Patterns. The AC and `progress.txt` were both wrong and are both corrected.
+
+Left deliberately unfixed and reported instead: `.oh/docs/harnesses/deepagents.md:113` and
+`.oh/docs/roadmap.md:17` also reference `.claude/rules`. Docs prose on a different surface — widening
+into them is genuine scope creep, unlike a sibling agent file with a byte-identical defect.
+
+### Learnings for future iterations
+
+- Two of this task's three recorded errors are the same failure: a remembered proxy asserted in place
+  of the behaviour. Both were memory-sourced beliefs about *this* repo that were stale. A memory note
+  naming a file, mode, or mechanism is a hypothesis to re-check, not a fact to cite.
+- "Is this path dangling?" is not answered by `ls`. It is answered by `ls` **plus** "is anything
+  generating it" — here, grepping `link-providers.sh` and `git ls-files`. The same check that
+  confirmed the defect also disproved the sync-step AC.
+
+## Status
+
+US-001, US-002, and US-003 are complete and verified. The council's NO-GO on the ADR/RFC machinery
+stands; only the two orthogonal defects it surfaced were built.
+
+STATUS: COMPLETE

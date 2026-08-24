@@ -5,5 +5,6 @@
 - Advisor -> /compact session context before implementation phase
 - Advisor -> implement opus delegate fan out with reasoning correlated to subtask complexity
 - Advisor -> delegates /audit pr
+- Advisor -> records audit proof in .oh/tasks/[task-name]/evidence.md (see .oh/skills/audit/references/reviewer-evidence-doc.md), commits it, links it from the PR body
 - Advisor -> /retro auto-approve
 - Advisor -> Ready PR.

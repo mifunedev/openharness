@@ -18,26 +18,36 @@ privacy sections for the CLI you use before enabling either integration.
 
 ## Pi
 
-[`pi-langfuse` v1.5.7](https://www.npmjs.com/package/pi-langfuse/v/1.5.7) is a
-Pi package. The published package resolves to
-[commit `131c1af13c24043890e820508ff1d7c1efc78ebe`](https://github.com/gooyoung/pi-langfuse/commit/131c1af13c24043890e820508ff1d7c1efc78ebe).
-Pi packages can execute arbitrary code, so review that source before installing
-it.
+[`pi-langfuse` v1.5.9](https://www.npmjs.com/package/pi-langfuse/v/1.5.9) is a
+Pi package. While the upstream shutdown fix is under review, Open Harness uses
+the maintained fork at commit
+[`51a59c854859bbb08a43baad98f0b9eb4a94588c`](https://github.com/ryaneggz/pi-langfuse/commit/51a59c854859bbb08a43baad98f0b9eb4a94588c),
+which is the source for upstream PR
+[#14](https://github.com/gooyoung/pi-langfuse/pull/14). Pi packages can execute
+arbitrary code, so review that source before installing it.
 
-Install the reviewed release through the repository-owned helper:
+Install the pinned fork through the repository-owned helper:
 
 ```bash
 bash .pi/install/install-langfuse.sh
 ```
 
-The helper installs `pi-langfuse@1.5.7` in user scope, applies a scoped
-`@opentelemetry/sdk-node@0.220.0` override in Pi's managed npm manifest, and
-requires a clean `npm audit`. The override remediates the vulnerable
-OpenTelemetry tree selected by pi-langfuse's declared `^0.218.0` range without
-npm audit's unsafe recommendation to downgrade pi-langfuse to `1.0.0`. It is
-idempotent, preserves unrelated npm overrides, and remains in the persistent
-`~/.pi` volume across sandbox rebuilds. Rerun the helper if that volume is reset
-or if a future package operation reports an audit finding.
+The helper installs the fork commit in user scope through Pi's managed npm
+root, registers the installed path with Pi, applies the scoped
+`@opentelemetry/sdk-node@0.220.0` override, verifies the package lock resolves
+the exact reviewed commit, and requires a clean `npm audit`. The upstream fix
+classifies only an `AbortError` caused by pi-langfuse's own shutdown controller
+as an expected bounded timeout; with `PI_LANGFUSE_DEBUG=1` it remains visible as
+a debug message, while other shutdown errors still update runtime status and
+emit the normal warning. Rerun the helper after any package reinstall or `~/.pi`
+volume reset. The OpenTelemetry override remediates the vulnerable tree selected
+by pi-langfuse's declared `^0.218.0` range without npm audit's unsafe
+recommendation to downgrade pi-langfuse to `1.0.0`; unrelated npm overrides are
+preserved.
+
+This fork pin is temporary and intentionally immutable. If upstream merges and
+publishes #14, migrate the installer to that reviewed upstream release in a
+separate change; do not follow a moving branch automatically.
 
 This is deliberately **not** an Open Harness default package. It instruments Pi
 sessions only; it does not instrument standalone Claude Code, Codex CLI, or
@@ -311,6 +321,7 @@ meets the need, and treat the Langfuse deployment as an external data boundary.
 | Old key or host still wins | A complete saved config takes precedence for credentials and host. Use `/langfuse-status` to see its source, then rerun `/langfuse-setup` to replace stale saved values. |
 | Wrong URL | With environment-only setup, use `LANGFUSE_BASE_URL`; it wins over `LANGFUSE_HOST`. A saved host still wins over either, so update or remove the stale saved config deliberately. |
 | Connection refused or timeout | Check the location table: sandbox `localhost` is not the Docker host; use `host.docker.internal` for the host, or explicitly share a Compose network for a service hostname. |
+| `DOMException [AbortError]` during shutdown | Rerun `bash .pi/install/install-langfuse.sh` so the reviewed local patch is applied. The package's own bounded deadline is best-effort and may leave telemetry incomplete; unexpected shutdown errors remain visible. |
 | TLS or DNS error | Use the externally reachable HTTPS URL, verify the hostname resolves from the Pi process, and provide a certificate chain trusted by that process. |
 | Test works but no useful trace | Send a real Pi prompt after `/langfuse-test`, then use `/langfuse-status` and Pi output for the last runtime error and effective capture policy. |
 | Usage or cost is absent | These fields are conditional on provider events. Some providers do not expose them; inspect raw observations and do not treat their absence as a tracing failure. |

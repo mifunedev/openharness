@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  copyFileSync,
   existsSync,
   lstatSync,
   mkdtempSync,
@@ -282,6 +283,65 @@ describe("runInit", () => {
     expect(existsSync(join(t, ".oh/cli/dist"))).toBe(false);
     // The devcontainer lives at .devcontainer/, never vendored under .oh/.
     expect(existsSync(join(t, ".oh/devcontainer"))).toBe(false);
+  });
+
+  it("manifest payload: delivers docs, excludes patches, and preserves project files", async () => {
+    const source = freshTmp();
+    const sourceOh = join(source, ".oh");
+    const target = freshTmp();
+    const sentinel = "project file must remain byte-identical\n";
+    const sentinelPath = join(target, "project-sentinel.txt");
+    const rfcPath = join(sourceOh, "docs/rfcs/rfc-brain-hands-boundary.md");
+
+    mkdirSync(dirname(rfcPath), { recursive: true });
+    mkdirSync(join(sourceOh, "patches"), { recursive: true });
+    copyFileSync(
+      join(SOURCE_OH, "docs/rfcs/rfc-brain-hands-boundary.md"),
+      rfcPath,
+    );
+    writeFileSync(join(sourceOh, "patches/p.diff"), "source patch\n");
+    writeFileSync(
+      join(sourceOh, "manifest.json"),
+      JSON.stringify({ include: ["docs/**", "manifest.json"], exclude: [] }),
+    );
+    writeFileSync(sentinelPath, sentinel);
+
+    expect(
+      await runInit(
+        opts(target, { sourceOhDir: sourceOh, minimal: true, yes: true }),
+        makeIO().io,
+      ),
+    ).toBe(0);
+
+    expect(
+      readFileSync(
+        join(target, ".oh/docs/rfcs/rfc-brain-hands-boundary.md"),
+        "utf8",
+      ),
+    ).toBe(readFileSync(rfcPath, "utf8"));
+    expect(existsSync(join(target, ".oh/patches/p.diff"))).toBe(false);
+    expect(readFileSync(sentinelPath, "utf8")).toBe(sentinel);
+  });
+
+  it("legacy source without a manifest still vendors its .oh/ files", async () => {
+    const source = freshTmp();
+    const sourceOh = join(source, ".oh");
+    const target = freshTmp();
+    mkdirSync(sourceOh, { recursive: true });
+    writeFileSync(join(sourceOh, "legacy.txt"), "legacy payload\n");
+
+    const { io, out } = makeIO();
+    expect(
+      await runInit(
+        opts(target, { sourceOhDir: sourceOh, minimal: true, yes: true }),
+        io,
+      ),
+    ).toBe(0);
+
+    expect(readFileSync(join(target, ".oh/legacy.txt"), "utf8")).toBe(
+      "legacy payload\n",
+    );
+    expect(out.join("")).toContain("legacy mode");
   });
 
   it("--yes determinism: two runs vendor an identical .oh/ file set", async () => {
@@ -575,6 +635,7 @@ describe("runInit", () => {
       ".codex/config.toml",
       ".codex/hooks.json",
       ".codex/hooks/deny-env-dump.sh",
+      ".codex/hooks/deny-local-settings.sh",
       ".pi/settings.json",
       ".pi/APPEND_SYSTEM.md",
       ".hermes/config.yaml",
@@ -588,6 +649,7 @@ describe("runInit", () => {
     expect(cs.enabledMcpjsonServers).toBeUndefined();
     // The codex hook keeps its +x bit.
     expect(statSync(join(t, ".codex/hooks/deny-env-dump.sh")).mode & 0o111).not.toBe(0);
+    expect(statSync(join(t, ".codex/hooks/deny-local-settings.sh")).mode & 0o111).not.toBe(0);
   });
 
   it("full (default): creates provider skill/agent/hook symlinks", async () => {

@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "task/814-semver-release",
+  "description": "Move release versioning from clock-derived UTC CalVer to SemVer read from root package.json, with a v-prefixed git tag, a green skip on an unbumped push, and a v0.0.0 checkpoint of the pre-refinement state.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "SemVer state machine",
+      "description": "As a release engineer, I want the pure reservation state machine to validate a supplied SemVer version instead of deriving a CalVer version from a clock, so that the version is a deliberate input and not a side effect of the push time.",
+      "acceptanceCriteria": [
+        "`.oh/scripts/release-reservation.mjs` no longer exports `formatUtcCalVerBase` or `buildUtcCalVerCandidate`",
+        "A new exported `parseSemVer(version)` accepts `0.1.0`, `1.2.3`, and `10.0.0`",
+        "`parseSemVer` rejects `01.2.3`, `2026.08.07`, `1.2`, `2026.8.7-1`, `1.0.0-rc.1`, `v1.2.3`, the empty string, and a non-string, throwing `ReleaseReservationError` with code `INVALID_SEMVER_VERSION`",
+        "A bare `2026.8.7` is accepted — it is well-formed SemVer, so the validator cannot reject it; the guard against a CalVer release is that the version now comes from `package.json` rather than the clock",
+        "`reserveReleaseVersion({ attemptCreate, version })` calls `attemptCreate` exactly once; there is no collision loop, no `maxForeignCollisions` option, and no `MAX_COLLISIONS_EXCEEDED` code",
+        "An `attemptCreate` outcome of `foreign-collision` returns `{ kind: \"already-released\", version }` instead of advancing to a next candidate",
+        "The `created`, `same-sha-draft`, `same-sha-published`, and `invalid-state` outcomes keep their existing result shapes",
+        "`ReleaseReservationError` keeps its existing constructor signature",
+        "`.oh/scripts/__tests__/release-reservation.test.ts` covers each accept and reject case above",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Completed 2026-08-23; mechanism commit"
+    },
+    {
+      "id": "US-002",
+      "title": "GitHub bridge reads the version and prefixes the tag",
+      "description": "As a release engineer, I want the GitHub bridge to take the version from the environment and create a v-prefixed tag ref, so that the reservation names the tag the repository convention expects while the bare version keeps flowing downstream.",
+      "acceptanceCriteria": [
+        "`.oh/scripts/reserve-github-release.mjs` no longer exports or uses `parseReleaseTimestamp`, and `reserveGitHubRelease` no longer takes `releaseTimestamp` or `maxForeignCollisions`",
+        "`reserveGitHubRelease` takes a `releaseVersion` argument and validates it through `parseSemVer`",
+        "Reserving `0.1.0` POSTs to `/git/refs` with request body ref `refs/tags/v0.1.0`",
+        "One helper derives every tag-shaped string, so the create path and the recovery path cannot drift",
+        "`ensureDraftRelease` sets `tag_name` to `v0.1.0`; `assertRelease`, `resolveTagCommit`, `getPublishedRelease`, and `findExactDraftRelease` compare against the same v-prefixed tag",
+        "An existing `v0.1.0` tag on a different SHA returns `publishedNoop: true` and `reservationKind: already-released`; it does not throw and does not bump",
+        "`githubOutputLines` still emits `releaseVersion=0.1.0` bare, along with `releaseSha`, `releaseId`, `publishedNoop`, and `reservationKind`",
+        "`main()` reads `RELEASE_VERSION` in place of `RELEASE_TIMESTAMP` and fails with a clear message when it is absent",
+        "The already-released path prints a log line naming the version and telling the reader to bump `package.json`",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Completed 2026-08-23; mechanism commit"
+    },
+    {
+      "id": "US-003",
+      "title": "latest-promotion accepts SemVer and rejects CalVer",
+      "description": "As a release engineer, I want the latest-promotion helper to validate a SemVer version, so that a malformed version cannot reach the registry.",
+      "acceptanceCriteria": [
+        "`.oh/scripts/promote-release-latest.sh` validates `RELEASE_VERSION` against `^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$` and its error text names SemVer",
+        "Feeding it `2026.8.3-1` or `2026.08.03` exits non-zero with that error",
+        "Feeding it `0.1.0` passes validation",
+        "The digest-based latest promotion and the canonical main-else-master check are unchanged",
+        "`.oh/scripts/__tests__/release-latest.test.ts` uses `0.1.0` throughout and carries the CalVer rejection case",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Completed 2026-08-23; mechanism commit"
+    },
+    {
+      "id": "US-004",
+      "title": "Release workflow reads the version from package.json",
+      "description": "As a maintainer, I want the release workflow to read the version from root package.json, so that cutting a release is an explicit commit rather than a side effect of the push clock.",
+      "acceptanceCriteria": [
+        "The `reserve` job in `.github/workflows/release.yml` reads `node -p \"require('./package.json').version\"` and passes it as `RELEASE_VERSION`",
+        "The `RELEASE_TIMESTAMP` env var and its immutable-timestamp comment are gone",
+        "The `reserve` job name names SemVer, not CalVer",
+        "`publish-image`, `publish-cli`, and `finalize` are unchanged and still gate on `needs.reserve.outputs.publishedNoop != 'true'`",
+        "No `push: tags:` trigger is added; the branch push stays the only trigger",
+        "The GHCR tag stays bare and the GitHub Release name stays `v${releaseVersion}`",
+        "The workflow-shape assertions in `.oh/scripts/__tests__/release-reservation.test.ts` are updated for the version-read step and still pin step ordering, the docker push line, the concurrency group, and the absence of a tag trigger",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Completed 2026-08-23; mechanism commit"
+    },
+    {
+      "id": "US-005",
+      "title": "Docs and skills describe SemVer",
+      "description": "As a contributor, I want every document that describes the release scheme to describe SemVer, so that no reader follows an obsolete CalVer procedure.",
+      "acceptanceCriteria": [
+        "`CHANGELOG.md` line 5 names SemVer and v-prefixed tags",
+        "`.oh/skills/git/SKILL.md` section Releases describes the bump-driven flow, states that an unbumped push is a clean skip, and its artifact sequence names SemVer",
+        "`.oh/skills/release/SKILL.md` pre-flight requires a bumped `package.json` version with a matching CHANGELOG section, and its tag-discovery regex is `^v[0-9]+\\.[0-9]+\\.[0-9]+$`",
+        "`.oh/docs/contributing.md` replaces both the CalVer definition and the stale manual create-a-release-branch-and-tag procedure",
+        "`AGENTS.md`, `.oh/templates/AGENTS.md`, `SECURITY.md`, `.oh/docs/deployment-prebuilt-image.md`, `.oh/scripts/README.md`, `.oh/skills/sync/SKILL.md`, `.oh/skills/strategic-proposal/SKILL.md`, and `.oh/evals/probes/oh-npm-package.sh` no longer describe the release scheme as CalVer",
+        "A repo-wide case-insensitive `calver` grep over `*.md`, `*.mjs`, `*.sh`, `*.yml`, and `*.ts` returns only the four `CHANGELOG.md` history entries that describe past releases",
+        "Prose follows `/ste`",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Completed 2026-08-23; docs/wiki/changelog commit"
+    },
+    {
+      "id": "US-006",
+      "title": "Wiki entry for the release versioning contract",
+      "description": "As an agent reading the corpus, I want one entry that states how a release is versioned and published, so that the contract is discoverable without reading the workflow.",
+      "acceptanceCriteria": [
+        "`.oh/skills/wiki/corpus/release-versioning.md` exists and satisfies `.oh/skills/wiki/references/schema.md` for frontmatter fields and body sections",
+        "The entry states the source of truth, the tag prefix rule, the four reserve outcomes, and the `v0.0.0` checkpoint",
+        "Claims about repository behavior cite concrete source paths",
+        "`/wiki lint` reports no new findings",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Completed 2026-08-23; docs/wiki/changelog commit"
+    },
+    {
+      "id": "US-007",
+      "title": "Changelog and version for the first SemVer release",
+      "description": "As a maintainer, I want package.json and CHANGELOG.md to agree on 0.1.0, so that the first SemVer release publishes with real notes.",
+      "acceptanceCriteria": [
+        "Root `package.json` version is `0.1.0`",
+        "`CHANGELOG.md` has a `## [0.1.0] - <date>` section describing the versioning switch",
+        "Running the `finalize` job's awk extraction locally with `RELEASE_VERSION=0.1.0` yields that section's body",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Completed 2026-08-23; docs/wiki/changelog commit"
+    },
+    {
+      "id": "US-008",
+      "title": "Verification of the whole path",
+      "description": "As a maintainer, I want the change proved rather than assumed, so that the first real release does not discover a defect.",
+      "acceptanceCriteria": [
+        "`pnpm test:scripts` passes",
+        "Each new assertion is proved to earn its failure by mutation: deleting the SemVer regex turns the rejection cases red",
+        "`pnpm run typecheck` passes",
+        "`bash .oh/skills/eval/run.sh` shows no green-to-red probe regression against the recorded baseline",
+        "A local dry run calls `reserveGitHubRelease` with a stub `fetchImpl` for all four rows of the behavior table and asserts the exact `refs/tags/v0.1.0` request body and the `publishedNoop` value in each",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Completed 2026-08-23; 603 tests pass, 3 mutations verified, 106 probes no regression, 4-row dry run"
+    }
+  ]
+}

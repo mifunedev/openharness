@@ -10,12 +10,16 @@
 # slash-prefixed. Scripts and files use repo-relative paths.
 # Lines starting with # are comments. Blank lines are ignored.
 #
-# Last reviewed: 2026-05-03 (issue #218)
+# Last reviewed: 2026-08-13 (issue #753)
+#
+# Every entry is checked by .oh/evals/probes/protected-paths-resolve.sh.
+# An entry that resolves to nothing protects nothing, and reads identical
+# to one that passes — so a rename silently disarms the guard.
 
 # --- Orchestrator skills (.claude/skills/) ---
 release
 ci-status
-cloudflared-tunnel
+cloudflared
 agent-browser
 prd
 ralph
@@ -23,16 +27,21 @@ audit
 delegate
 strategic-proposal
 ship-spec
-spec-plan
-spec-critique
-spec-execute
-spec-retro
 eval
 health-check
 retro
+firstmate
 
 # --- Orchestrator scripts (.oh/scripts/) ---
 .oh/scripts/ralph.sh
+.oh/scripts/firstmate.sh
+# The two `lib/` entries below are load-bearing shared infra reusable by ANY
+# executor (the herdr -> tmux -> foreground runner ladder, and the slug +
+# four-file task-folder contract firstmate.sh shares with ralph.sh's wording).
+# Whole-line entries only — no inline comments, since consumers match with
+# `grep -Fxq`.
+.oh/scripts/lib/session-runner.sh
+.oh/scripts/lib/task-contract.sh
 .oh/scripts/cron-runtime.ts
 .oh/scripts/sandbox-healthcheck.sh
 .oh/scripts/link-providers.sh
@@ -42,7 +51,7 @@ Makefile
 
 # --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
 .oh/install/banner.sh
-.oh/install/cloudflared-tunnel.sh
+.oh/skills/cloudflared/scripts/run.sh
 .devcontainer/entrypoint.sh
 .devcontainer/Dockerfile
 
@@ -58,9 +67,10 @@ Makefile
 .oh/skills/t3/references/sandbox-processes.md
 .oh/agents/advisor.md  # advisor delegation + recursive-decomposition norm, now an agent (was .oh/skills/advisor/)
 .oh/skills/retro/references/memory-protocol.md
-
-# --- Specs that other artifacts cross-reference ---
-.claude/specs/structure-spec-v0.7.md
+.oh/skills/spec/references/plan.md
+.oh/skills/spec/references/critique.md
+.oh/skills/spec/references/execute.md
+.oh/skills/spec/references/retro.md
 
 # --- Orchestrator identity layer (session-loaded by AGENTS.md bootloader) ---
 .oh/context/SOUL.md

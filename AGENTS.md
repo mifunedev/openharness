@@ -173,12 +173,12 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 
 | Skill | When |
 |-------|------|
-| `/release` | CalVer release — push to `main`/`master`; the workflow validates, reserves the CalVer, and publishes |
+| `/release` | SemVer release — bump the version in `package.json`, push to `main`/`master`; the workflow validates, reserves the tag, and publishes |
 | `/ci-status` | After `git push` — poll CI, report pass/fail |
 | `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `.oh/context/rules/git.md`, which is now only a pointer for providers that load rules. |
 | `/builder` | Author or refine one provider-portable artifact via `/builder <agent\|skill\|command\|rule> <name-or-request>`; shared discovery and validation live in the dispatcher, with one authoritative reference per type. |
 | `/audit` | Explicit nine-target dispatcher: `implementation`, `pr`, `prs`, `harness`, `context`, `skills`, `eval-quality`, `drift`, and `full`; routes to native verdict owners, report-only by default, with one correlated run/log |
-| `/health-check` | Triage host memory/disk/Docker before starting a stack; rank reclaim levers by safety×yield, prune build cache, confirm destructive removal |
+| `/health-check` | Triage container memory/disk/CPU before starting a stack, labelled with the scope measured; Docker inventory, the safety×yield reclaim ladder and the build-cache prune are **host-only** — a socket-less sandbox states that once and emits the procedure for the orchestrator to run at the host project root instead of failing per command |
 | `/agent-browser` | Open a URL headless for screenshots / preview checks |
 | `/t3` | Start, inspect, and stop the T3 Code browser UI (`npx t3`) in a sandbox tmux session, with pairing-URL discovery and log/status helpers |
 | `/interview` | Adaptive pre-work clarifier — batches 2–4 task-specific questions via `AskUserQuestion`, then proceeds |
@@ -187,6 +187,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/ralph` | Convert markdown PRD → `.oh/tasks/<name>/prd.json` for the Ralph runner |
 | `/ship-spec` | End-to-end spec (all-in-one form of the `spec-*` family): `/prd` → critics → `/ralph` → gh issue → branch → draft PR checkpoint → implementation/eval/CI → ready-for-review PR; the single source of the protected build mechanics |
 | `/spec` | Dispatcher for the decomposed workflow (`/spec <plan\|critique\|execute\|retro>`, routes to `references/{plan,critique,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state); **critique** = the `plan ⇄ critique` loop (`/critique` 2 critics + `/approve` gate; `DENIED` → `/spec plan`); **execute** = `build ⇄ audit → spec-retro → improve → groom` to a ready PR at the human merge gate (composes `/ship-spec` mechanics + `/audit implementation`); **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/` |
+| `/firstmate` | The opt-in **third build executor** (`--executor=firstmate`): one long-lived First-Mate session over a whole `.oh/tasks/<slug>/` task graph, launched through the **herdr → tmux → foreground** runner ladder, where `ralph` launches 50 fresh single-story processes. `ralph` stays the default; `STATUS: COMPLETE` (whole line in `progress.txt`) is the invariant terminal interface for all three. Documents the ladder's detection gates, the naming contract (`firstmate-<slug>`, `agent-firstmate-<slug>`), the `FIRSTMATE_TIMEOUT_MS` session budget, the watch/recovery matrices, and the per-mode kill procedure. **Not** the First Mate *role charter* (`.oh/context/rules/first-mate.md`) — see the skill's disambiguation note |
 | `/teach` | Post-implementation communication pass — revise/propose the relevant wiki model, then teach the operator the mental model, verification evidence, caveats, and understanding checks |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
 | `/watchdog` | Generic stuck/stale automation watchdog. Current primary action: inspect autopilot draft PRs, complete stale/stuck branches, and remove draft only after the PR is green/mergeable/clean; also kills tmux sessions frozen at usage-limit/resume prompts. Never merges. |
@@ -196,7 +197,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `.oh/memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
 | `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `.oh/skills/retro/references/memory-protocol.md` |
 | `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `.oh/memory/<date>/`; raw prompt text is off by default. The daily `.oh/crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/ship-spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
-| `/caveman` | Token-compression output mode (`lite`/`full`/`ultra`/`wenyan`); subcommands `/caveman-commit`, `/caveman-review`, `/caveman-compress <file>`, `/caveman-stats`. Never compresses code, security warnings, or irreversible-action confirmations |
+| `/ste` | Simplified-Technical-English writing standard for **artifact** prose — docs, runbooks, specs, commit/PR bodies, code comments. 53 rules in 9 sections (`references/rules.md`), a 198-word non-approved→approved map (`references/dictionary.md`), 24 before/after pairs across 13 domains (`references/examples.md`), and a dependency-free checker (`scripts/ste-check.sh`, exit `0` clean / `1` findings / `2` usage; `--blocks after` scans only tagged fences). Never simplifies code, commands, identifiers, paths, or quoted literals; marks a missing value `<like-this>` instead of inventing it. **Precedence:** `/ste` governs anything git-tracked or GitHub-posted; an output-compression mode governs only the live chat reply. Claims no ASD-STE100 certification or compliance |
 | `/wiki` | Dispatcher for the wiki knowledge base (corpus at `.oh/skills/wiki/corpus/`, gitignored-by-default + whitelisted): `ingest <url\|path> [--slug]` / `ingest --from-draft <slug> [--allow-stale]` (capture a source or promote a draft), `query <topic>` (frontmatter OR-search, read top ≤3 by `updated:` desc), `lint [--dry-run]` (5 health checks + atomic `corpus/README.md` regen). Schema: `.oh/skills/wiki/references/schema.md` |
 
 Provision / destroy / repair are plain `docker compose` commands — see
@@ -212,6 +213,12 @@ without any of these.
 Interactive apps and development servers belong in Herdr panes. Managed/headless
 services (cron, gateways, watchdogs) use named tmux sessions — see
 `.oh/skills/t3/references/sandbox-processes.md`.
+
+Agentic build sessions (one long-lived agent over a whole `.oh/tasks/<slug>/`
+task graph — the `firstmate` executor) pick neither up front: they resolve their
+host through a **herdr → tmux (`agent-` session) → foreground** ladder, degrading
+downward with the reason logged. See `/firstmate` and
+`.oh/skills/t3/references/sandbox-processes.md` § Source of Truth.
 
 ## What You Do
 

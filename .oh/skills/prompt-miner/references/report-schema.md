@@ -33,6 +33,7 @@ regardless; the flag documents that contract for the SKILL layer.
 | `window` | `{ start, end }` (ISO or `null`); `--hours` takes precedence over `--since` |
 | `sessionsScanned` | sessions in-window after dedupe |
 | `sessionsRanked` | ranked subset (`!noHumanPrompt` and `turns >= minTurns`) |
+| `ceilingSaturation` | per-stratum clamp-ceiling census, keyed by `sessionType`: `{ "other": { "atCeiling": 15, "total": 37 }, ... }`. Computed over the **rankable** population only (the set `sessions[]` is built from), not all scanned sessions. `atCeiling` counts records whose stored, rounded `score` is exactly `100`. Strata with zero rankable sessions are omitted; no `null` key is ever emitted. Rendered under the existing `## Manifest` heading as `- ceilingSaturation.<type>: <n>/<m>` |
 | `toolErrorsTotal` / `toolResultsTotal` | corpus totals (the schema-compat probe asserts `toolErrorsTotal > 0`) |
 | `malformedLines` | unparseable JSONL lines tolerated (never thrown) |
 | `skippedFiles` | files over `--max-file-mb` (separate counter from `malformedLines`) |
@@ -59,6 +60,7 @@ regardless; the flag documents that contract for the SKILL layer.
   "noHumanPrompt": false,
   "sessionType": "impl",          // null when noHumanPrompt
   "score": 82.5,
+  "scoreUncapped": 82.5,          // base + bonus, unclamped; > 100 possible. See scoring.md
   "scoreBreakdown": {             // see scoring.md
     "base": 82.5,
     "groundTruthBonus": 0,

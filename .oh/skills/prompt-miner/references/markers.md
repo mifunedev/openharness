@@ -1,8 +1,11 @@
 # prompt-miner — Marker Contract
 
 The engine emits an objective **feature vector** per attributed prompt; the SKILL
-step correlates those features against the session `score` to mine **markers** —
-falsifiable claims about which prompt traits produce better sessions.
+step correlates those features against the session `scoreUncapped` to mine
+**markers** — falsifiable claims about which prompt traits produce better
+sessions. `effect_size` is computed against `scoreUncapped`, not `score`, because
+the clamped scale is censored above 100 — every low-friction ground-truth session
+piles onto the ceiling, so differences between good sessions vanish.
 
 ## Feature taxonomy
 
@@ -40,15 +43,19 @@ Each mined marker is a claim of this exact shape:
   "threshold": true,
   "sessions_supporting": 14,
   "sessions_contradicting": 3,
-  "effect_size": 0.41
+  "effect_size": 0.41,
+  "effect_size_capped": 0.36
 }
 ```
 
 - `direction` — `positive` (feature ⇒ higher score) or `negative`.
 - `threshold` — the boolean value or numeric cut the claim is stated at.
 - `sessions_supporting` / `sessions_contradicting` — counts within the stratum.
-- `effect_size` — standardized mean score difference (Cohen's-d style) between
-  sessions that meet the threshold and those that don't.
+- `effect_size` — standardized mean difference (Cohen's-d style) in
+  `scoreUncapped` between sessions that meet the threshold and those that don't.
+  This is the **authoritative** scale.
+- `effect_size_capped` — the same statistic computed against the clamped `score`.
+  Carried for the stability guard below; never the promotion scale.
 
 ### Promotion thresholds
 
@@ -56,6 +63,19 @@ A marker is **reportable** only when, **within a single session-type stratum**:
 
 - `sessions_supporting ≥ 10`, **and**
 - `effect_size ≥ 0.3`.
+
+### Stability guard: `UNSTABLE` markers
+
+A marker is **`UNSTABLE`** when either branch holds:
+
+- **(a) sign disagreement** — `sign(effect_size) != sign(effect_size_capped)`; or
+- **(b) bar disagreement** — exactly one of `|effect_size| ≥ 0.3` and
+  `|effect_size_capped| ≥ 0.3` holds.
+
+An `UNSTABLE` marker is **reported** with both values and the reason, and is
+**never promotable on either scale**. It is never translated into a memory
+proposal and never auto-files an issue. When the two scales disagree, the clamp —
+not the data — is deciding the verdict, so the claim is not falsifiable yet.
 
 ### Mandatory session-type stratification
 

@@ -7,6 +7,10 @@
       "Read(file_path=**/*id_rsa*)",
       "Read(file_path=**/*id_ed25519*)",
       "Read(file_path=**/.aws/credentials)",
+      "Read(file_path=**/settings.local.json)",
+      "Write(file_path=**/settings.local.json)",
+      "Edit(file_path=**/settings.local.json)",
+      "NotebookEdit(notebook_path=**/settings.local.json)",
       "Read(file_path=**/.config/gcloud/**)",
       "Read(file_path=**/.kube/config)",
       "Read(file_path=**/.npmrc)",
@@ -21,7 +25,12 @@
       "Bash(command=*cat*.env*)",
       "Bash(command=*cat*.git-credentials*)",
       "Bash(command=*cat*auth.json*)",
-      "Bash(command=*curl*-H*Authorization*)"
+      "Bash(command=*curl*-H*Authorization*)",
+      "Bash(command=*inspect*Config.Env*)",
+      "Bash(command=*inspect*ContainerSpec.Env*)",
+      "Bash(command=*inspect*{{json .}}*)",
+      "Bash(command=*inspect*{{ json . }}*)",
+      "Bash(command=*inspect*{{.}}*)"
     ],
     "defaultMode": "bypassPermissions"
   },

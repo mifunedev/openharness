@@ -28,12 +28,15 @@ fi
 missing=()
 
 # Executor toggle: default ship-spec (Advisor-monitored ralph build), explicit
-# delegate-advisor + inline ralph opt-ins.
-grep -F 'argument-hint:' "$SKILL" | grep -Fq '[--executor=ship-spec|delegate-advisor|ralph]' || missing+=("argument hint includes executor toggle")
+# delegate-advisor + inline ralph + firstmate opt-ins.
+grep -F 'argument-hint:' "$SKILL" | grep -Fq '[--executor=ship-spec|delegate-advisor|ralph|firstmate]' || missing+=("argument hint includes executor toggle")
 grep -Fq 'EXECUTOR="${AUTOPILOT_EXECUTOR:-ship-spec}"' "$SKILL" || missing+=("AUTOPILOT_EXECUTOR default ship-spec")
 grep -Fq '*--executor=ship-spec*) EXECUTOR=ship-spec' "$SKILL" || missing+=("CLI --executor=ship-spec toggle")
 grep -Fq '*--executor=delegate-advisor*) EXECUTOR=delegate-advisor' "$SKILL" || missing+=("CLI --executor=delegate-advisor toggle")
 grep -Fq '*--executor=ralph*) EXECUTOR=ralph' "$SKILL" || missing+=("CLI --executor=ralph toggle")
+grep -Fq '*--executor=firstmate*) EXECUTOR=firstmate' "$SKILL" || missing+=("CLI --executor=firstmate toggle")
+# The two-part edit: the case arm alone is inert while the validation list rejects firstmate.
+grep -Fq 'case "$EXECUTOR" in ship-spec|delegate-advisor|ralph|firstmate)' "$SKILL" || missing+=("firstmate accepted by the AUTOPILOT_EXECUTOR validation list")
 grep -Fq '.oh/scripts/ralph.sh "$SLUG"' "$SKILL" || missing+=("Ralph inline fallback still launches .oh/scripts/ralph.sh")
 grep -Fq '#### `ralph` fallback' "$SKILL" || missing+=("Ralph inline fallback section")
 
@@ -111,5 +114,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS: autopilot defaults to ship-spec (Advisor-monitored ralph; /delegate optional inside), exact goal, defers the build to /ship-spec, delegate-advisor + inline ralph opt-ins, /ship-spec default executor ralph, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard" >&2
+echo "PASS: autopilot defaults to ship-spec (Advisor-monitored ralph; /delegate optional inside), exact goal, defers the build to /ship-spec, delegate-advisor + inline ralph + firstmate opt-ins, /ship-spec default executor ralph, safe tmux naming, dedupe guard, active-marker cleanup, dry-run guard" >&2
 exit 0

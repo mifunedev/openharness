@@ -20,10 +20,15 @@ advisor:
   query:
     - Begin by exploring best approach, generate /prd -> /ralph
     - /delegate 2 adversarial critics to audit the plan, prd.md, and prd.json for alignment and correctness
-    - design subtask dependency graph from the prd.json to track task completion with assigned delegates
+    - design subtask dependency graph (todo list) from the prd.json to track task completion with assigned delegates
     - /compact session context before implementation phase
     - Validate each delegate result against the user story acceptanceCriteria before marking passes true
     - /goal Advisor orchestrates delegated workflow to complete $TASK
     - Delegate /audit pr
+    - >
+      Record the audit's proof for the reviewer in .oh/tasks/[task-name]/evidence.md
+      per .oh/skills/audit/references/reviewer-evidence-doc.md — observed commands and
+      real output only, correlated to the audit run id and native verdict — then commit
+      it with the change and link it from the PR body
     - /retro auto-approve
     - Ready PR.

@@ -1,18 +1,32 @@
 #!/usr/bin/env bash
-# PreToolUse file-path guard: blocks Read/Write/Edit/NotebookEdit against
-# known secret/credential paths. Mirrors the Read(...) deny list in
-# .claude/settings.json — present as a hook because `bypassPermissions`
-# defaultMode skips the permission engine entirely, so deny rules alone
-# don't fire.
+# PreToolUse file-path guard: blocks Read/Write/Edit/NotebookEdit/Grep/Glob
+# against operator-only paths and known secret/credential paths. Mirrors the
+# Read(...) deny list in .claude/settings.json — present as a hook because
+# `bypassPermissions` defaultMode skips the permission engine entirely, so deny
+# rules alone don't fire.
 #
-# Works by inspecting tool_input.file_path (or notebook_path) and matching
-# it case-insensitively against a combined regex of the deny-listed globs.
+# Works by inspecting every path-shaped field of tool_input and matching each
+# case-insensitively against a combined regex of the deny-listed globs.
 set -euo pipefail
 
 input=$(cat)
-path=$(jq -r '.tool_input.file_path // .tool_input.notebook_path // ""' <<<"$input")
 
-[ -z "$path" ] && exit 0
+# Path-shaped inputs across the matched tools: Read/Write/Edit use file_path,
+# NotebookEdit uses notebook_path, Grep/Glob use path (and Grep also takes a
+# glob filter). Grep's `pattern` is a regex over file *contents*, not a path,
+# so it is deliberately not scanned.
+mapfile -t paths < <(jq -r '
+  [.tool_input.file_path, .tool_input.notebook_path, .tool_input.path, .tool_input.glob]
+  | map(select(type == "string" and . != ""))
+  | .[]' <<<"$input")
+
+[ "${#paths[@]}" -eq 0 ] && exit 0
+
+# Operator-only configuration. `.config/` — at the repo root and in $HOME — and
+# provider-local settings are owned by the operator; agents get neither read nor
+# write. Anchors prevent ordinary tool config (jest.config.js, app.config,
+# .configrc) from matching.
+OPERATOR_PATH='(^|/)\.config(/|$)|(^|/)settings\.local\.json$'
 
 # Mirrors .claude/settings.json permissions.deny Read(...) globs.
 DENY_PATH='(^|/)\.env([^/]*)?$'                 # **/.env*
@@ -57,11 +71,21 @@ emit() {
   }'
 }
 
-if grep -qEi -- "$DENY_PATH" <<<"$path"; then
-  # Template env files (.example.env, .env.example, etc.) are tracked and hold no real secrets — allow.
-  base=$(basename "$path")
-  if grep -qiE '\.env' <<<"$base" && grep -qiE '(example|sample|template)' <<<"$base"; then
+for path in "${paths[@]}"; do
+  if grep -qEi -- "$OPERATOR_PATH" <<<"$path"; then
+    emit deny "Operator-only path guard (deny): refusing to access $path — .config/ and settings.local.json hold operator-managed configuration and are off-limits to agents for both read and write. This is a deliberate policy, not a misconfiguration: do not retry via Bash, a subshell, a symlink, or a relative path. If you need a value from it, ask the operator to paste only that value into the chat."
     exit 0
   fi
-  emit deny "Secret-exposure guard (deny): refusing to access $path — matches a credential / secret file pattern (env file, private key, cert, cloud credentials, shell history, or similar). This mirrors the permissions.deny list in .claude/settings.json; it's enforced as a hook so it still blocks under bypassPermissions mode. If you genuinely need a specific non-secret value from this file, ask the user to paste only that value into the chat."
-fi
+done
+
+for path in "${paths[@]}"; do
+  if grep -qEi -- "$DENY_PATH" <<<"$path"; then
+    # Template env files (.example.env, .env.example, etc.) are tracked and hold no real secrets — allow.
+    base=$(basename "$path")
+    if grep -qiE '\.env' <<<"$base" && grep -qiE '(example|sample|template)' <<<"$base"; then
+      continue
+    fi
+    emit deny "Secret-exposure guard (deny): refusing to access $path — matches a credential / secret file pattern (env file, private key, cert, cloud credentials, shell history, or similar). This mirrors the permissions.deny list in .claude/settings.json; it's enforced as a hook so it still blocks under bypassPermissions mode. If you genuinely need a specific non-secret value from this file, ask the user to paste only that value into the chat."
+    exit 0
+  fi
+done

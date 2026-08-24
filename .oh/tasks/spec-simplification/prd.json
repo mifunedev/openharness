@@ -83,8 +83,8 @@
         "A repo-wide grep for `prompts/advisor` and `first-mate.md` returns hits only in `CHANGELOG.md`"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": "Settled: cleaner is better \u2014 plan.yml and the charter go with the pack. The derivative becomes the source."
+      "passes": true,
+      "notes": "2026-08-24: .oh/prompts/ (whole dir), .pi/prompts/advisor/, the First Mate charter, and first-mate-charter.sh deleted. session-prompt.md became the SOURCE of the step order and says so; the probe asserts that claim. The .oh/prompts/ zero-diff guard was removed (not stubbed) and replaced by stay-deleted assertions for all three paths \u2014 verified by rejection, including that guard (4)'s anchor order is still enforced after guard (5) went. architect repointed at /spec plan. AC-9 deviation stated: prompts/README.md is deleted rather than updated, since AC-1 removes its only subject."
     },
     {
       "id": "US-005",

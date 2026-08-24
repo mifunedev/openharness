@@ -16,6 +16,8 @@
 - When a rule MOVES between surfaces, its probe moves with it. Deleting the probe because its old file no longer matches loses the lesson; repoint it at the new owner and assert BOTH the rule there and the deferral where it used to live.
 - `.oh/skills/spec/references/execute.md` is now the single source of build literals and a protected path (`.claude/protected-paths.txt` lists `spec`). `/ship-spec` no longer exists.
 - A probe assertion scoped to a whole FILE can stay green over the defect it guards when the same words appear twice — `gh pr ready` and "only" both live in the Advisor `/goal` prompt AND the finalize section. Scope section-level assertions with `awk '/^### N\./{f=1} f'`.
+- `.oh/skills/firstmate/templates/session-prompt.md` is the SOURCE of the build's step order (US-004 deleted the advisor pack it was derived from). Changing the anchor order is a workflow change, not a formatting edit.
+- The probe suite is 106 files after US-004 (`first-mate-charter.sh` deleted with its subject).
 
 ## Baseline measurements recorded at plan time (2026-08-23)
 
@@ -211,6 +213,55 @@ out to survive their own defect.
      and *why* the absorption happened, so the next reader can date the move.
 - AC-8 verified live: a build launched to `STATUS: COMPLETE` in an isolated temp root with
   `.oh/skills/ship-spec/` absent from all four provider surfaces.
+
+---
+
+## US-004 — 2026-08-24 04:47 UTC
+
+**Title**: Remove the advisor prompt pack
+**Files changed**: deleted `.oh/prompts/` (whole dir: `advisor/{plan,implement,pr}.yml` + `README.md`),
+`.pi/prompts/advisor/pr.md`, `.oh/context/rules/first-mate.md`, `.oh/evals/probes/first-mate-charter.sh`;
+`.oh/agents/{advisor,architect}.md`, `.oh/skills/firstmate/{SKILL.md,templates/session-prompt.md}`,
+`.oh/skills/audit/references/{pr,reviewer-evidence-doc}.md`, `.oh/skills/retro/SKILL.md`,
+`.oh/evals/probes/firstmate-executor-contract.sh`, `AGENTS.md`, `CHANGELOG.md`, `.oh/evals/RESULTS.md`
+**Commit**: (this commit)
+**Result**: PASS
+
+### What I did
+Deleted the advisor prompt pack, its Pi mirror, and the First Mate role charter, then made the
+session-prompt template the source of the step order it used to mirror. Removed the
+`.oh/prompts/` zero-diff guard rather than stubbing it, and replaced it with assertions that
+the deleted paths stay deleted. Repointed the `architect` agent at `/spec plan`, and repointed
+the `evidence.md` contract and `/retro`'s auto-approve note at `/spec execute`.
+
+### Learnings for future iterations
+- **Removing a guard can silently disarm its neighbour.** Guard (5) was the `.oh/prompts/`
+  zero-diff check and guard (4) is the anchor-order check; they were adjacent and both about
+  the same relationship. Rejection-tested explicitly that breaking the anchor order still goes
+  red after (5) was deleted — that assertion is what proves the deletion was surgical.
+- **A deletion needs a successor claim, not just an absence.** `[ -e <path> ] && missing+=(...)`
+  on all three deleted paths turns "we removed it" into "it stays removed". Verified by
+  rejection: recreating the pack, the Pi mirror, or the charter each goes red on its own line.
+- **When the derivative becomes the source, say so IN the file.** The template's header used to
+  cite `implement.yml:23` line-by-line for every anchor. Those citations now point at nothing,
+  so they were replaced with an explicit `THIS FILE IS THE SOURCE` claim — and the probe
+  asserts that claim, so a future edit cannot quietly demote it back to a mirror.
+- **Deleting a drift-guard is only safe once you check the other side.** `first-mate-charter.sh`
+  guarded that the charter's four `/delegate` complexity labels matched `/delegate`'s own. The
+  charter was a duplicate of that table; `delegate-model-effort-policy.sh` already asserts all
+  four labels against `/delegate` directly, so the lesson survives the deletion. Confirmed by
+  reading that probe before deleting, not after.
+- The disambiguation table in `/firstmate` became vacuous once the charter was deleted (one
+  column described a file that no longer exists), so it was replaced with a short note on the
+  name's history. A table that documents a distinction that no longer exists is the same class
+  of ceremony this spec removes.
+- **Stated deviation from AC-9/AC-10.** AC-9 says `.oh/prompts/README.md` line 27 is "updated";
+  the whole file is DELETED instead, because AC-1 removes its only subject and a README
+  describing an empty directory is exactly the discoverable ghost this story exists to remove.
+  The remaining `prompts/advisor` / `first-mate.md` grep hits outside `CHANGELOG.md` are the
+  usual three classes: the probe's own negative assertions (they name the paths in order to
+  keep them gone), and dated historical notes in `AGENTS.md`, `session-prompt.md`, and
+  `/firstmate` recording what was removed and why.
 
 ---
 

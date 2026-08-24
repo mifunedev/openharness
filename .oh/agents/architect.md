@@ -4,8 +4,9 @@ description: |
   Solution-shape analyst for issue/task triage. Decides placement, structure,
   integration approach, non-duplication boundaries, and risks/constraints for a
   change. Produces a decisive architecture memo — choices, not option surveys.
-  TRIGGER when: spawned as a planning/solution-shape sub-agent (with PM) by the
-  First Mate advisor prompts (.oh/prompts/advisor/plan.yml).
+  TRIGGER when: spawned as a planning/solution-shape sub-agent (with PM) during
+  /spec plan, or by any caller that needs the shape decided before a task graph
+  is written.
 tools: Read, Glob, Grep, Bash
 model: sonnet
 ---

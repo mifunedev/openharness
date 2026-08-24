@@ -14,14 +14,14 @@ separate, tracked Markdown artifact for humans.
 `/audit implementation` and `/audit pr` are read-only: they decide, they do not
 mutate the repository. Neither route creates, updates, or commits this file. The
 **orchestrating caller** writes it from the observations those routes returned — in
-the shipped workflow that caller is `.oh/prompts/advisor/pr.yml`, after its
+the shipped workflow that caller is `/spec execute`, after its
 `/audit pr` delegation returns. A route that wrote this file itself would break its
 report-only contract.
 
 ## Contract
 
 - **Path**: `.oh/tasks/<slug>/evidence.md` — inside the scoped task folder, so it is
-  included with the submitted changes (`.oh/prompts/advisor/pr.yml` warning 3).
+  included with the submitted changes — the evidence doc ships with the PR it vouches for, never as a side artifact.
 - **Linked**: the PR body links it by path; a doc no reviewer is pointed at is not
   evidence.
 - **Observed only**: every claim quotes output that actually ran during the audit —

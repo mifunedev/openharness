@@ -17,23 +17,16 @@ allowed-tools: Bash, Read
 
 # firstmate — the build executor
 
-> **Name disambiguation — read this first.** Two different things in this repo
-> share the name, and the overload is **intentional**: the executor runs the
-> role's workflow.
->
-> | | **`firstmate` — the build executor** | **First Mate — the supervisory role charter** |
-> |---|---|---|
-> | What | This skill: the build executor | An operator-authored role definition |
-> | Where | `.oh/scripts/firstmate.sh`, `.oh/scripts/lib/session-runner.sh`, `.oh/skills/firstmate/` | [`.oh/context/rules/first-mate.md`](../../context/rules/first-mate.md) |
-> | Reached by | `/spec execute`, which every `/autopilot` run defers to | `.oh/prompts/advisor/*` (`plan.yml`, `implement.yml`, `pr.yml`) reference it |
-> | Identity | a *session*: `firstmate-<slug>` | a *role*: adaptive decomposition, routing, supervision, verification, synthesis |
->
-> The executor's session prompt is a **derivative of that charter's prompt pack**
-> — `.oh/skills/firstmate/templates/session-prompt.md` follows the
-> `implement.yml` + `pr.yml` step order. That is why the names match. When a
-> reader says "First Mate," they mean the role; when a command says
-> `firstmate.sh`, it means this executor. Never leave which one is meant
-> implicit.
+> **On the name.** `firstmate` used to be two things: this build executor, and a
+> separate operator-authored **First Mate role charter** at
+> `.oh/context/rules/first-mate.md`, consumed by the `.oh/prompts/advisor/` prompt
+> pack. Both the charter and the pack were **deleted** in spec-simplification
+> US-004 (issue #816) — a second, discoverable implementation path is a route an
+> agent can be pulled onto mid-task. The executor's session prompt had been a
+> derivative of that pack; the derivative became the source. So there is nothing
+> left to disambiguate: `firstmate`, `First Mate`, and
+> `.oh/skills/firstmate/templates/session-prompt.md` now all name one thing, and
+> that template is where the role's workflow lives.
 
 ## The executor contract
 
@@ -325,8 +318,6 @@ signal inner `/delegate` calls key off to avoid selecting the herdr runner —
   + four-file validation, shared by every consumer of a task folder
 - [`templates/session-prompt.md`](templates/session-prompt.md) — the session
   prompt the entrypoint renders
-- [`.oh/context/rules/first-mate.md`](../../context/rules/first-mate.md) — the
-  **role charter** (see the disambiguation note above)
 - [`.oh/skills/t3/references/sandbox-processes.md`](../t3/references/sandbox-processes.md)
   — process-management norm: managed/headless services stay tmux; agentic build
   sessions use this ladder

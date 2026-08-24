@@ -31,22 +31,27 @@ introduces no token this header does not declare.
 2. STEP-ORDER EQUIVALENCE — ORDERED ANCHOR-KEYWORD LIST (recorded verbatim)
 -----------------------------------------------------------------------------
 
-Derived at authoring time from `.oh/prompts/advisor/implement.yml` and
-`.oh/prompts/advisor/pr.yml` (both files are ZERO-DIFF — this template is a
-derivative, not an edit). "Step-order equivalence" means EXACTLY this: the
-anchor literals below appear in the template BODY in the same relative order,
-compared by FIRST OCCURRENCE. Nothing fuzzy, nothing interpretive, no
-markdown-vs-YAML similarity judgement.
+THIS FILE IS THE SOURCE. The step order below was originally derived from the
+advisor prompt pack (`.oh/prompts/advisor/implement.yml` + `pr.yml`), which was
+DELETED in spec-simplification US-004 (issue #816) — a second, discoverable
+implementation path is exactly what that story removed. The derivative became
+the source: this list is now authoritative on its own, not a mirror of another
+file. "Step-order equivalence" means EXACTLY this: the anchor literals below
+appear in the template BODY in the same relative order, compared by FIRST
+OCCURRENCE. Nothing fuzzy, nothing interpretive.
 
-  ANCHOR 1: `dependency graph`      <- implement.yml:23 / pr.yml:23
-  ANCHOR 2: `/compact`              <- implement.yml:24 / pr.yml:24
-  ANCHOR 3: `acceptanceCriteria`    <- implement.yml:25 / pr.yml:25 (first half)
-  ANCHOR 4: `passes: true`          <- implement.yml:25 / pr.yml:25 (second half,
-                                       "before marking passes true")
-  ANCHOR 5: `/audit implementation` <- implement.yml:27
-  ANCHOR 6: `evidence.md`           <- pr.yml:28-32
-  ANCHOR 7: `/retro`                <- implement.yml:28 / pr.yml:33
-  ANCHOR 8: `Ready PR`              <- pr.yml:34
+  ANCHOR 1: `dependency graph`
+  ANCHOR 2: `/compact`
+  ANCHOR 3: `acceptanceCriteria`
+  ANCHOR 4: `passes: true`      (the session flips the flag only after validating)
+  ANCHOR 5: `/audit implementation`
+  ANCHOR 6: `evidence.md`
+  ANCHOR 7: `/retro`
+  ANCHOR 8: `Ready PR`
+
+Changing this order is a deliberate change to the build workflow, not a
+formatting edit: `.oh/evals/probes/firstmate-executor-contract.sh` asserts the
+body follows it.
 
 ORDERING SCOPE: the assertion applies to the BODY ONLY — everything after the
 `END CONTRACT HEADER` marker line below. This header records the list

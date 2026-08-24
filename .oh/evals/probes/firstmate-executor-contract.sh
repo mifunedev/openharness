@@ -4,8 +4,9 @@
 # desc: .oh/scripts/firstmate.sh exists and is executable; the whole-line `STATUS: COMPLETE`
 #       sentinel survives on the executor surface; NO executor toggle exists anywhere
 #       (--executor / SPEC_EXECUTOR / AUTOPILOT_EXECUTOR are removed, not reduced to a
-#       single accepted value); the session-prompt template's ordered anchor keywords keep the
-#       advisor prompt pack's relative step order while .oh/prompts/ stays zero-diff; and
+#       single accepted value); the session-prompt template's ordered anchor keywords appear in
+#       its body in the order its own contract header records — the template OWNS that order
+#       now, since the advisor prompt pack it was derived from was deleted in US-004; and
 #       CLAUDE.md is still a symlink to AGENTS.md.
 #
 # The `| tee` launch pipe is deliberately NOT asserted here — it was REMOVED in US-002
@@ -82,11 +83,12 @@ done
   && missing+=(".oh/scripts/ralph.sh still exists — the second executor arm must be deleted, not left dormant")
 
 # --- (4) step-order equivalence, asserted MECHANICALLY ----------------------
-# The ordered anchor-keyword list below was derived at authoring time from
-# .oh/prompts/advisor/implement.yml and .oh/prompts/advisor/pr.yml and is recorded verbatim
-# in the session-prompt template's own contract header. "Equivalence" means exactly this:
-# these anchors appear in the template BODY in the same relative order, compared by first
-# occurrence. Nothing fuzzy, no markdown-vs-YAML similarity judgement.
+# The ordered anchor-keyword list below is recorded verbatim in the session-prompt template's
+# own contract header (.oh/skills/firstmate/templates/session-prompt.md), which is the OWNER
+# of the build's step order. It was originally derived from the advisor prompt pack; that pack
+# was deleted in US-004, so the derivative became the source and there is no second file to
+# stay in sync with. "Equivalence" means exactly this: these anchors appear in the template
+# BODY in the same relative order, compared by first occurrence. Nothing fuzzy.
 #
 # ORDERING SCOPE IS BODY-ONLY. The header records the list in the asserted order, so
 # including it would make this check vacuous; the template ends its header with the literal
@@ -125,12 +127,21 @@ else
   fi
 fi
 
-# --- (5) .oh/prompts/ is untouched — the template is a derivative, not an edit
-if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
-  git -C "$ROOT" diff --quiet -- .oh/prompts/ \
-    || missing+=(".oh/prompts/ has uncommitted changes — the session-prompt template must derive from the advisor pack, never edit it")
-else
-  missing+=("not a git repository at $ROOT — cannot verify .oh/prompts/ is zero-diff")
+# --- (5) the deleted prompt pack must not come back -------------------------
+# The old assertion here was `git diff --quiet -- .oh/prompts/`, guarding that the template
+# stayed a derivative of a pack it must never edit. US-004 deleted the pack instead: a second
+# discoverable implementation path is a route an agent can be pulled onto mid-task. The guard
+# is REMOVED rather than stubbed to true, and replaced by its successor claim — the path must
+# stay gone, and the template must carry the step order itself.
+[ -e "$ROOT/.oh/prompts/advisor" ] \
+  && missing+=(".oh/prompts/advisor/ is back — the second implementation path was deleted in US-004 and must stay deleted")
+[ -e "$ROOT/.pi/prompts/advisor" ] \
+  && missing+=(".pi/prompts/advisor/ is back — the Pi mirror of the deleted pack must stay deleted")
+[ -e "$ROOT/.oh/context/rules/first-mate.md" ] \
+  && missing+=(".oh/context/rules/first-mate.md is back — the role charter was deleted with its pack in US-004")
+if [ -f "$TEMPLATE" ]; then
+  grep -Fq 'THIS FILE IS THE SOURCE' "$TEMPLATE" \
+    || missing+=("session-prompt.md no longer claims ownership of the step order (it is the source now, not a mirror)")
 fi
 
 # --- (6) CLAUDE.md is still a symlink to AGENTS.md -------------------------
@@ -146,5 +157,5 @@ if [ "${#missing[@]}" -gt 0 ]; then
   exit 1
 fi
 
-echo "PASS: firstmate.sh executable + sentinel intact, no executor toggle anywhere, second arm deleted, session-prompt anchors in advisor-pack order, .oh/prompts/ zero-diff, CLAUDE.md->AGENTS.md" >&2
+echo "PASS: firstmate.sh executable + sentinel intact, no executor toggle anywhere, second arm deleted, session-prompt owns its anchor order, the deleted prompt pack + charter stay deleted, CLAUDE.md->AGENTS.md" >&2
 exit 0

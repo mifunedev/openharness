@@ -59,8 +59,10 @@ verbatim, so including it would make the check vacuous.
 
 PACK STEPS DELIBERATELY EXCLUDED from the anchor list (not in this session's
 scope, therefore not asserted):
-  - implement.yml:21 / pr.yml:21 `/prd -> /ralph` and :22 the 2 adversarial
-    critics — plan-side; both already ran before this session launches.
+  - implement.yml:21 / pr.yml:21 `/prd -> /ralph` — plan-side, runs before
+    this session launches. (:22's 2 adversarial critics no longer exist at all:
+    spec-simplification US-001 deleted the critique/approve gate. The operator's
+    read of `prd.md` is the commitment gate.)
   - implement.yml:26 / pr.yml:26 `/goal Advisor orchestrates delegated
     workflow` — that IS the launch of this session, not a step inside it.
   - pr.yml:27 `/audit pr` — owned by `/spec execute` step 9, after this
@@ -89,9 +91,10 @@ story by story.
 
 ## 1. Load the task graph
 
-Read `.oh/tasks/<slug>/prd.md` for intent, `critique.md` (if present) for the
-critic findings the stories must satisfy, and the `## Codebase Patterns`
-section at the top of `progress.txt`.
+Read `.oh/tasks/<slug>/prd.md` for intent and the `## Codebase Patterns`
+section at the top of `progress.txt`. There is no `critique.md` — the
+critique/approve gate was removed (US-001), and `prd.md` as the operator
+approved it is the contract the stories must satisfy.
 
 Then design the subtask **dependency graph** from `prd.json`: load
 `userStories[]` **ordered by `priority`** into this session's native task

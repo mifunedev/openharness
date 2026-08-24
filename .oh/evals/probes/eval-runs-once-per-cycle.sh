@@ -24,32 +24,47 @@ done
 
 missing=()
 
+# Section-scoped reads. A whole-file grep is satisfied by ANY line in the file --
+# including a historical note saying the gate was REMOVED -- so each assertion below
+# reads only the section that must carry it. Verified by rejection: gutting a gate
+# and appending one prose line carrying its literals keeps a whole-file grep green.
+EXEC_GATE="$(awk '/^\*\*The `\/eval` gate/{f=1} f && /^### [0-9]+\./{if (seen++) exit} f' "$EXEC")"
+IMPL_GATE="$(awk '/^### Gate 2 /{f=1} f{print} f && /^### Gate 3 /{exit}' "$IMPL")"
+BENCH_GATE="$(awk '/^### Signal 1 /{f=1} f{print} f && /^### Signal 2 /{exit}' "$BENCH")"
+
+for pair in "spec-execute:$EXEC_GATE" "audit-implementation:$IMPL_GATE" "benchmark:$BENCH_GATE"; do
+  if [ -z "${pair#*:}" ]; then
+    echo "REGRESSION: ${pair%%:*} no longer has the /eval gate section this probe reads" >&2
+    exit 1
+  fi
+done
+
 # --- the producer ----------------------------------------------------------
-grep -Fq 'eval-result.json' "$EXEC" || missing+=("/spec execute does not publish eval-result.json")
-grep -Fq 'run ONCE per cycle' "$EXEC" || missing+=("/spec execute no longer states that the suite runs once per cycle")
-grep -Fq 'git rev-parse HEAD' "$EXEC" || missing+=("/spec execute's eval-result.json records no commit key (downstream reuse could not be validated)")
+grep -Fq 'eval-result.json' <<<"$EXEC_GATE" || missing+=("/spec execute does not publish eval-result.json in its /eval gate section")
+grep -Fq 'run ONCE per cycle' <<<"$EXEC_GATE" || missing+=("/spec execute no longer states that the suite runs once per cycle")
+grep -Fq 'git rev-parse HEAD' <<<"$EXEC_GATE" || missing+=("/spec execute's eval-result.json records no commit key (downstream reuse could not be validated)")
 # The record must be committed, or a downstream reader in a fresh worktree cannot see it.
-grep -Fq "git add -f \".oh/tasks/<slug>/eval-result.json\"" "$EXEC" \
+grep -Fq "git add -f \".oh/tasks/<slug>/eval-result.json\"" <<<"$EXEC_GATE" \
   || missing+=("/spec execute does not 'git add -f' eval-result.json (.oh/tasks/ is gitignored, so it would not travel)")
 
 # --- the two readers ------------------------------------------------------
 # Each must (a) read the record, and (b) compare its commit to HEAD before trusting it.
 # (b) is the whole guarantee: without it, "reuse" silently becomes "assume".
-for pair in "audit-implementation:$IMPL" "benchmark:$BENCH"; do
+for pair in "audit-implementation:$IMPL_GATE" "benchmark:$BENCH_GATE"; do
   name="${pair%%:*}"
   file="${pair#*:}"
-  if ! grep -Fq 'eval-result.json' "$file"; then
+  if ! grep -Fq 'eval-result.json' <<<"$file"; then
     missing+=("$name does not read eval-result.json — it re-runs the suite the cycle already ran")
     continue
   fi
-  grep -Fq 'jq -r .commit' "$file" \
+  grep -Fq 'jq -r .commit' <<<"$file" \
     || missing+=("$name reads eval-result.json without comparing its .commit to HEAD (it would inherit a stale green)")
-  grep -Fq 'git rev-parse HEAD' "$file" \
+  grep -Fq 'git rev-parse HEAD' <<<"$file" \
     || missing+=("$name does not resolve HEAD to validate the record's freshness")
-  grep -Fq 'jq -r .runnerExit' "$file" \
+  grep -Fq 'jq -r .runnerExit' <<<"$file" \
     || missing+=("$name does not read the recorded runner exit code")
   # The fallback must still exist: a stale or missing record means RUN, never PASS.
-  grep -Fq 'run.sh' "$file" \
+  grep -Fq 'run.sh' <<<"$file" \
     || missing+=("$name has no fallback that actually runs the suite when the record is stale or absent")
 done
 

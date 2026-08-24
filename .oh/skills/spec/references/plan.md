@@ -64,6 +64,24 @@ Run these in order; each is an existing primitive — compose, don't re-derive.
    measures upstream lag, not the plan. Alignment is judged against the repo's own sources
    and the local corpus only.
 
+   ```markdown
+   ## Wiki Alignment
+
+   - **Impact**: REQUIRED | NOT-APPLICABLE
+   - **Local entries**: `.oh/skills/wiki/corpus/<slug>.md` to create/update, or `none`
+   - **Spec alignment**: <how the wiki entry must reflect this PRD's goals, non-goals, and acceptance criteria>
+   - **Acceptance criteria**: <wiki update checks to add to the relevant story when REQUIRED>
+   ```
+
+   `Impact: REQUIRED` when the task changes harness architecture, skill behavior, agent
+   roles, runtime flow, conceptual vocabulary, or public prose that introduces a reusable
+   mechanism. `Impact: NOT-APPLICABLE` is allowed for narrow code/test chores, but it must
+   say why. When impact is REQUIRED, revise the PRD so at least one story carries acceptance
+   criteria for: the local entry aligned with goals/non-goals/final behavior; the
+   source-backed body shape (relevant source files, line-cited claims, system relationships
+   when applicable, `## See Also`); and `.oh/skills/wiki/corpus/README.md` index freshness
+   via `/wiki lint` or `bash .oh/evals/probes/wiki-readme-index.sh`.
+
 4. **`/ralph` → `.oh/tasks/<slug>/prd.json`**. Invoke the `ralph` skill:
    `.oh/tasks/<slug>/ --issue <N> --prefix <prefix>`. It writes `prd.json` with
    `branchName: <prefix>/<N>-<slug>`. Verify it parses

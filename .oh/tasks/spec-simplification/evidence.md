@@ -44,7 +44,7 @@ the duplicate paths to one, and make the pipeline answer back to the plan.**
 | US-003 | `/spec execute` holds the build mechanics in full — 157 → 500+ lines, no "see `/ship-spec`" deferral. `.oh/skills/ship-spec/` is deleted and ~40 consumers repointed. |
 | US-004 | `.oh/prompts/`, `.pi/prompts/advisor/`, and `.oh/context/rules/first-mate.md` are deleted. The zero-diff derivative (`session-prompt.md`) became the source, so the workflow is discoverable in exactly one place. |
 | US-005 | `.oh/tasks/<slug>/evidence.md` is a **gate condition**: the undraft refuses without it, and refuses an *untracked* one. `/teach` is wired into step 7. `progress.txt` is promoted into the PR body instead of dying at the sentinel. |
-| US-006 | Four `STATUS: SPEC-*` tokens with no consumer are gone; the groom triad left the per-cycle path; `/eval` runs once per cycle (318 → 106 probe executions). |
+| US-006 | Four `STATUS: SPEC-*` tokens with no consumer are gone; the groom triad left the per-cycle path; `/eval` runs once per cycle (318 → 110 probe executions). |
 | US-007 | `MEMORY.md`'s 76 unbacked `probe:` claims are rewritten to explicit `probe: none` and marked; the relative-`MEMORY_DIR` shadow is fixed; the duplicate checker now catches rephrasings. |
 
 ### Gate 1 — task graph + artifact contract: **PASS**
@@ -114,7 +114,8 @@ PASS: .oh/skills/wiki/corpus/README.md Index matches the git-tracked corpus/*.md
 `.oh/context/rules/first-mate.md` and `.oh/prompts/advisor/*`, both deleted by US-004 — so the
 entry was routing readers to the very second path that story removed). New entry
 `plan-vs-built-reconciliation` added for the gap the PRD named, with raw provenance capture.
-The required DeepWiki comparison **was run** (2026-08-24, `deepwiki.com/mifunedev/openharness`)
+A DeepWiki comparison **was run** (2026-08-24, `deepwiki.com/mifunedev/openharness`) while the
+gate still required one — see divergence 9, which removed that requirement
 and is recorded in both entries: upstream is **stale, not contradictory** — it still lists
 `scripts/ralph.sh` among the implementation skills and still glosses `/ship-spec` as *"Convert
 specs into executable tasks via a critic"*, and has no reconciliation concept at all.

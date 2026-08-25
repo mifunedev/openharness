@@ -6,7 +6,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT"
 pat='(^|[^A-Za-z0-9-])(pr-audit|harness-audit|context-audit|skill-lint|eval-lint|drift-check)([^A-Za-z0-9-]|$)|\.oh/skills/(pr-audit|harness-audit|context-audit|skill-lint|eval-lint|drift-check)(/|$)|auditor\.md'
 set +e
-hits=$(git grep -n -E "$pat" -- ':!CHANGELOG.md' ':!.oh/evals/RESULTS.md' ':!.oh/evals/datasets/**' ':!.oh/tasks/archive/**')
+# `preserved-changelog-rationale.md` is verbatim CHANGELOG.md history, quoted
+# under a header that says so — the same reason CHANGELOG.md itself is excluded.
+# It is a record of what shipped, not an active surface, so a skill named in a
+# 2026-05 entry is a historical fact rather than a stale reference to repair.
+hits=$(git grep -n -E "$pat" -- ':!CHANGELOG.md' ':!.oh/docs/rfcs/preserved-changelog-rationale.md' ':!.oh/evals/RESULTS.md' ':!.oh/evals/datasets/**' ':!.oh/tasks/archive/**')
 rc=$?; set -e
 [[ $rc -eq 0 || $rc -eq 1 ]] || { echo 'REGRESSION: stale-reference inventory failed' >&2; exit 1; }
 bad=()

@@ -93,23 +93,63 @@ bottom. Treat it as a starting point, not a runbook, and please report what you
 find.
 :::
 
-### What has to be true first
+### Step 1 — Install `msb` on your host
 
-On **your host**, not in the container:
+**On your host, not in the container.** This is the step `oh runtime install`
+does *not* do for you: that command installs `msb` inside the sandbox, which is
+the wrong side for this.
 
-1. glibc ≥ 2.39 and `/dev/kvm` present — the same floor `msb` always needs.
-2. `msb` installed from upstream: `curl -sSL https://get.microsandbox.dev | sh`.
-3. `msb run alpine --exec 'echo ok'` prints `ok`. If that round trip fails, stop
-   here — the problem is msb, not Open Harness.
+Check the floor first — `msb` needs both, and neither is Open Harness's
+requirement:
 
-### The mapping
+```bash
+ldd --version | head -1        # need glibc >= 2.39
+test -e /dev/kvm && echo kvm   # need KVM
+```
 
-Compose key → msb config key. Container paths are the same on both sides.
+If either fails, stop. On Linux, KVM usually means adding yourself to the `kvm`
+group and confirming virtualisation is enabled in firmware. On macOS or Windows
+you need a Linux VM with nested virtualisation; WSL2 exposes `/dev/kvm` only on
+recent builds.
+
+Then install and prove it works:
+
+```bash
+curl -sSL https://get.microsandbox.dev | sh
+msb self doctor                  # expect exit 0
+msb run alpine --exec 'echo ok'  # expect "ok"
+```
+
+**The second command is the gate.** `msb self doctor` alone proves nothing. If
+`msb run alpine` does not print `ok`, the problem is msb on your host and no
+amount of Open Harness configuration will fix it.
+
+### Step 2 — Create the directories the sandbox will bind
+
+msb binds **host paths**, where compose used named volumes. Use dedicated
+directories — the entrypoint runs `chown -R sandbox:sandbox` and `chmod 700`
+against these, so never point them at your real `~/.ssh` or `~/.config`:
+
+```bash
+mkdir -p ~/.openharness-msb/{workspace,claude,config,herdr,ssh}
+```
+
+**Leave `workspace/` empty.** The entrypoint seeds the control plane from the
+image's baked `/opt/oh-seed` on first boot, guarded by `[ ! -d "$dest/.oh" ]`.
+Point it at a directory that already contains a `.oh/` and the seed is skipped
+**with no error message** — every step in that path is `|| true` — leaving a
+harness with no control plane.
+
+### Step 3 — Write the config
+
+#### Compose key to msb key
+
+Container paths are the same on both sides.
 
 | Compose (`docker-compose.image-only.yml`) | msb config | Notes |
 |---|---|---|
 | `image:` | `image:` | `ghcr.io/mifunedev/openharness:latest`, public |
-| `volumes:` (named) | `mounts:` | msb binds **host paths**, not named volumes — see the ownership warning below |
+| `volumes:` (named) | `mounts:` | msb binds **host paths**, not named volumes — the directories from Step 2 |
 | `environment:` | `env:` | two keys are load-bearing; see below |
 | `ports:` (overlays only) | `network.ports:` | the base stack declares none — it is exec-based |
 | *(implicit)* | `network.policy: public` | first boot needs broad egress |
@@ -117,10 +157,10 @@ Compose key → msb config key. Container paths are the same on both sides.
 | `extra_hosts: host.docker.internal` | *(no equivalent)* | only self-hosted Langfuse uses it |
 | `healthcheck:` | *(no equivalent)* | run `.oh/scripts/sandbox-healthcheck.sh` manually |
 
-### The minimum that should boot
+#### The file
 
-Derived from the Flavor B `docker run` recipe. Use **dedicated directories** —
-do not bind your real `~/.ssh`; see the warning below.
+Save as `sandbox.yaml`. Derived from the verified `docker run` recipe — the same
+five environment variables and five mounts.
 
 ```yaml
 image: ghcr.io/mifunedev/openharness:latest
@@ -145,23 +185,59 @@ network:
   policy: public
 ```
 
+Twelve named volumes exist in the compose file; the five above are the set the
+verified `docker run` recipe uses. The other seven are per-harness auth for CLIs
+you may not use — add them as you enable those harnesses.
+
+### Step 4 — Start it
+
 ```bash
 msb run --conf sandbox.yaml --name openharness
-msb exec openharness -- zsh     # then run `herdr`
-msb ls
-msb stop openharness
+msb ls                                    # confirm it is running
 ```
 
-Twelve named volumes exist in the compose file; the five above are the set the
-documented `docker run` recipe uses. The other seven are per-harness auth for
-CLIs you may not use — add them as you enable those harnesses.
+First boot pulls the image and seeds the workspace, so give it time.
 
-**The workspace mount must start empty.** The entrypoint seeds the control plane
-from the image's baked `/opt/oh-seed` on first boot, guarded by
-`[ ! -d "$dest/.oh" ]`. Point it at a directory that already contains a `.oh/`
-and the seed is silently skipped — you get a harness with no control plane and
-**no error message**, because every step in that path is `|| true`. A healthy
-first boot logs `Providers OK: …`; verify it.
+### Step 5 — Verify the seed before you rely on it
+
+This is the step that catches a silent half-boot:
+
+```bash
+msb exec openharness -- bash -lc '
+  ls /home/sandbox/harness/.oh >/dev/null \
+  && bash /home/sandbox/harness/.oh/scripts/link-providers.sh --check \
+  && echo SEED_OK'
+```
+
+A healthy boot prints `Providers OK: …` and `SEED_OK`. If `.oh` is missing, the
+seed was skipped — stop the sandbox, empty the workspace directory, and start
+again.
+
+### Step 6 — Attach and work
+
+```bash
+msb exec openharness -- zsh     # interactive shell, as under `docker exec`
+```
+
+Then, inside — exactly as in any Open Harness sandbox:
+
+```bash
+herdr                           # start the terminal workspace
+gh auth login && gh auth setup-git
+claude                          # or codex, pi, hermes
+```
+
+**`msb exec` is your only door.** VS Code's "Attach to Running Container" does
+not work — this is not a container. If you want an editor attached, use Remote-SSH
+to the host and drive the sandbox from a terminal, or enable the SSH overlay
+inside the sandbox and connect to that.
+
+Stop and restart without losing state — the bind directories hold everything:
+
+```bash
+msb stop openharness
+msb run --conf sandbox.yaml --name openharness   # second boot skips the seed
+```
 
 ### What you lose
 
@@ -188,10 +264,10 @@ Ranked by what they cost if wrong:
    `chown -R 1000` means the same thing on both sides.
 5. **`msb exec` semantics** matching `docker exec -u sandbox`.
 
-**Ownership warning.** Under Docker, volume contents sit root-owned outside your
-home directory. Under an msb bind they sit in your filesystem, and the entrypoint
-runs `chown -R sandbox:sandbox` plus `chmod 700` on the SSH path. Bind dedicated
-directories, never your real `~/.ssh` or `~/.config`.
+**Where your secrets now live.** Under Docker, volume contents sat root-owned
+outside your home directory. Under an msb bind they sit in your own filesystem in
+plaintext. Not new secrets, but a new location — back up and permission
+`~/.openharness-msb/` accordingly.
 
 ## What `install` does on a blocked host
 

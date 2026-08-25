@@ -278,7 +278,7 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 | DeepAgents | `deepagents` | LangChain's multi-provider terminal agent (`deepagents-cli` via `uv tool install`) | optional: set `install.deepagents: true` in `harness.yaml` (or `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env`) |
 | Hermes | `hermes` | Nous Research's self-improving agent CLI | optional: set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`) |
 | Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | optional: set `install.grok_build: true` in `harness.yaml` (or `INSTALL_GROK_BUILD=true` in `.devcontainer/.env`) |
-| agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: set `install.agent_browser: true` in `harness.yaml` (or `INSTALL_AGENT_BROWSER=true` in `.devcontainer/.env`) |
+| agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: `oh tool install agent-browser`, or set `install.agent_browser: true` in `harness.yaml` (or `INSTALL_AGENT_BROWSER=true` in `.devcontainer/.env`) |
 
 ### Runtimes & package managers
 
@@ -291,11 +291,16 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 
 ### DevOps & infrastructure
 
+`oh tool list` reports which of these are present, and `oh tool status <name>`
+adds a version where the tool has a verified version flag. They are baked into
+the image, so there is nothing to install.
+
 | Tool | Purpose |
 |------|---------|
 | Herdr (`herdr`) | Default multi-agent terminal workspace; state persists across rebuilds in dedicated volumes |
 | Docker CLI + Compose | Container management from inside the sandbox (host docker socket bind-mounted by the base compose) |
 | GitHub CLI (`gh`) | PRs, issues, releases from the terminal |
+| cloudflared | Cloudflare Tunnel client, for exposing a sandbox port (see the `/cloudflared` skill) |
 | tmux | Detachable terminal sessions for long-running agents |
 | croner | Markdown-frontmatter cron scheduler for autonomous agent tasks |
 

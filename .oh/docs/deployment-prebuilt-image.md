@@ -252,6 +252,14 @@ skip the wait loop and just exec once `docker ps` shows the container `Up`. The
 compose path (`docker-compose.image-only.yml`) defines the healthcheck, so there
 the wait loop works as written — or use `make shell` / `oh shell`.
 
+### The same image runs under MicroSandbox
+
+`msb` runs standard OCI images, so this image is also what you point MicroSandbox
+at if you want a microVM rather than a container. The `docker run` recipe above
+is the invocation to translate — see
+[Running Open Harness on MicroSandbox](runtimes/microsandbox.md#running-open-harness-on-microsandbox).
+Untested end to end; the risks are listed there.
+
 ### Single-arch caveat
 
 Same caveat as Flavor A above: the published image targets the CI runner's

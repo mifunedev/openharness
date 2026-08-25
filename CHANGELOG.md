@@ -13,6 +13,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Add `oh runtime <list|install|status>`, reporting the container runtime in use and gating a MicroSandbox install on the measured glibc and `/dev/kvm` blockers. It selects no runtime ([#823](https://github.com/mifunedev/openharness/pull/823)).
 - Add `oh tool <list|install|status>` for sandbox tooling that is neither an agent CLI nor a runtime, making `agent-browser` installable without a rebuild behind a ~1 GB download gate ([#824](https://github.com/mifunedev/openharness/pull/824)).
 - Add `oh stop|restart|logs|ps`, closing the lifecycle gap where `make` had verbs the CLI did not, and publish one `make` vs `oh` mapping doc that the other docs link to ([#825](https://github.com/mifunedev/openharness/pull/825)).
+- Document running Open Harness on MicroSandbox by pointing `msb` at the published image, and re-scope the microsandbox blockers as devcontainer measurements that say nothing about the reader's host.
 - Add a "which door am I?" table plus two guard probes: `harness-yaml-schema-parity.sh` and `oh-init-headless-config.sh`.
 - Add `ssh.enabled`/`ssh.port` and `sandbox.docker_socket` prompts to the `oh init` wizard, the two settings most likely to need hand-editing.
 

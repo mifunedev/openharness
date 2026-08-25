@@ -13,23 +13,44 @@ oh runtime status microsandbox   # what this host has, and what it needs
 oh runtime install               # microsandbox is the default name
 ```
 
-## This harness cannot run it yet
+## Two different questions
+
+This page answers both, and they have different answers. Read the one you are
+actually asking.
+
+| | Question | Answer |
+|---|---|---|
+| **(a)** | Can `oh runtime install microsandbox` succeed *in this devcontainer*? | **No** — two measured blockers, below. |
+| **(b)** | Can I run Open Harness **on** MicroSandbox, from my own host? | **Possibly yes, today** — see [Running Open Harness on MicroSandbox](#running-open-harness-on-microsandbox). Nothing on this page measures your host. |
+
+The distinction matters because the two use different commands on different
+machines. `oh runtime install` installs `msb` **inside the container**
+(`installUser: "sandbox"`, and both its checks are target-scoped). If you want
+msb as the **runner** for Open Harness, you install msb on your **host**, from
+upstream — `oh runtime install` is not that command and wires nothing up.
+
+## `oh runtime install` cannot succeed in this devcontainer
 
 Both blockers below were **measured**, not assumed
 ([#805](https://github.com/mifunedev/openharness/issues/805), from the P0 spike
 in [#803](https://github.com/mifunedev/openharness/pull/803)). `msb` has never
 produced a binary in this harness, so there is no local round trip.
 
-| Requirement | This harness | Why |
+**Everything in this section measures the devcontainer, not your host.** Both
+preflight checks are target-scoped, so they answer question (a) only. A current
+host — Ubuntu 24.04 ships glibc 2.39 and `/dev/kvm` — may clear both and is
+simply not measured here.
+
+| Requirement | This devcontainer | Why |
 |---|---|---|
 | glibc >= 2.39 | **2.36** | `.devcontainer/Dockerfile` pins `debian:bookworm-slim`. The installer refuses below 2.39. |
 | `/dev/kvm` present | **absent** | `.devcontainer/docker-compose.yml` declares no `devices:` key, so the container reaches no KVM. |
 
 Measured glibc across the candidates:
 
-| Target | glibc | Clears the floor |
+| Target (all container-side except the first) | glibc | Clears the floor |
 |---|---|---|
-| WSL2 host (Ubuntu 22.04.5) | 2.35 | no |
+| WSL2 host (Ubuntu 22.04.5) — *this harness's own host, not a claim about hosts generally* | 2.35 | no |
 | Devcontainer (`debian:bookworm-slim`) | 2.36 | no |
 | `ubuntu:24.04` | 2.39 | yes, exactly at the floor |
 | `debian:trixie-slim` | 2.41 | yes, with headroom |
@@ -41,6 +62,136 @@ Neither fix belongs to `oh runtime`: the base image is on its own upgrade track
 ([#807](https://github.com/mifunedev/openharness/issues/807)) and the `devices:`
 key is a compose change. Both are tracked in
 [#805](https://github.com/mifunedev/openharness/issues/805).
+
+## Running Open Harness on MicroSandbox
+
+This is question (b), and it does not go through the `oh` CLI at all.
+
+**MicroSandbox is not a Docker runtime.** You cannot point `docker compose` at it
+the way you can point it at gVisor (`--runtime=runsc`). It is its own VM manager
+with its own CLI. So it does not plug into the boot path — **it replaces it.**
+msb becomes the runner, and the thing it runs is the image Open Harness already
+publishes:
+
+```
+ghcr.io/mifunedev/openharness:latest
+```
+
+msb runs standard OCI images from any registry, so no new image is needed. The
+invocation to translate is **not** the compose stack — it is the plain
+`docker run` recipe in
+[Prebuilt-image deployment](../deployment-prebuilt-image.md) (Flavor B), which
+already boots the harness with no compose, no CLI, and no build: five environment
+variables and five mounts.
+
+:::caution UNTESTED
+Nobody has executed this end to end. `msb` has never produced a binary in this
+harness (see the blockers above), so this section is a **translation of a verified
+`docker run` recipe into a documented msb schema** — every part is individually
+grounded, and the combination is not. The five specific risks are listed at the
+bottom. Treat it as a starting point, not a runbook, and please report what you
+find.
+:::
+
+### What has to be true first
+
+On **your host**, not in the container:
+
+1. glibc ≥ 2.39 and `/dev/kvm` present — the same floor `msb` always needs.
+2. `msb` installed from upstream: `curl -sSL https://get.microsandbox.dev | sh`.
+3. `msb run alpine --exec 'echo ok'` prints `ok`. If that round trip fails, stop
+   here — the problem is msb, not Open Harness.
+
+### The mapping
+
+Compose key → msb config key. Container paths are the same on both sides.
+
+| Compose (`docker-compose.image-only.yml`) | msb config | Notes |
+|---|---|---|
+| `image:` | `image:` | `ghcr.io/mifunedev/openharness:latest`, public |
+| `volumes:` (named) | `mounts:` | msb binds **host paths**, not named volumes — see the ownership warning below |
+| `environment:` | `env:` | two keys are load-bearing; see below |
+| `ports:` (overlays only) | `network.ports:` | the base stack declares none — it is exec-based |
+| *(implicit)* | `network.policy: public` | first boot needs broad egress |
+| `command: sleep infinity` | `cmd:` | the image has no long-running CMD of its own |
+| `extra_hosts: host.docker.internal` | *(no equivalent)* | only self-hosted Langfuse uses it |
+| `healthcheck:` | *(no equivalent)* | run `.oh/scripts/sandbox-healthcheck.sh` manually |
+
+### The minimum that should boot
+
+Derived from the Flavor B `docker run` recipe. Use **dedicated directories** —
+do not bind your real `~/.ssh`; see the warning below.
+
+```yaml
+image: ghcr.io/mifunedev/openharness:latest
+workdir: /home/sandbox/harness
+cmd: ["sleep", "infinity"]
+
+env:
+  OH_IMAGE_ONLY: "1"                          # load-bearing
+  OH_PROJECT_ROOT: /home/sandbox/harness      # load-bearing — must equal the mount target
+  GIT_USER_NAME: "<your-name>"
+  GIT_USER_EMAIL: "<your-email>"
+  GH_TOKEN: "${GH_TOKEN}"
+
+mounts:
+  - "~/.openharness-msb/workspace:/home/sandbox/harness"
+  - "~/.openharness-msb/claude:/home/sandbox/.claude"
+  - "~/.openharness-msb/config:/home/sandbox/.config"
+  - "~/.openharness-msb/herdr:/home/sandbox/.herdr"
+  - "~/.openharness-msb/ssh:/home/sandbox/.ssh"
+
+network:
+  policy: public
+```
+
+```bash
+msb run --conf sandbox.yaml --name openharness
+msb exec openharness -- zsh     # then run `herdr`
+msb ls
+msb stop openharness
+```
+
+Twelve named volumes exist in the compose file; the five above are the set the
+documented `docker run` recipe uses. The other seven are per-harness auth for
+CLIs you may not use — add them as you enable those harnesses.
+
+**The workspace mount must start empty.** The entrypoint seeds the control plane
+from the image's baked `/opt/oh-seed` on first boot, guarded by
+`[ ! -d "$dest/.oh" ]`. Point it at a directory that already contains a `.oh/`
+and the seed is silently skipped — you get a harness with no control plane and
+**no error message**, because every step in that path is `|| true`. A healthy
+first boot logs `Providers OK: …`; verify it.
+
+### What you lose
+
+| | |
+|---|---|
+| **The host Docker socket** | **Gone, and this is the headline.** A microVM has no host `dockerd` to reach. Nested-Docker work stops: `/health-check`'s inventory, container work from inside the sandbox, and — most importantly — **`oh sandbox` / `make sandbox` run *inside* an msb-hosted harness have no daemon.** You cannot manage a harness from in there. |
+| **VS Code "Attach to Running Container"** | Gone. It is not a container. Options B and C in [Connecting](../connecting.md) do not apply; you get `msb exec`. |
+| `host.docker.internal` | No equivalent. Affects self-hosted Langfuse only. |
+| The compose healthcheck | No equivalent. `max_duration` / `idle_timeout` are different semantics — set them explicitly, or a VM manager built for ephemeral work may reap a harness that is meant to run for weeks. |
+
+### The five untested inferences
+
+Ranked by what they cost if wrong:
+
+1. **The entrypoint needs root.** The Dockerfile declares no `USER`, and the
+   entrypoint runs `chpasswd`, `usermod`, and `chown -R` before dropping to
+   `gosu sandbox`. If msb starts it non-root, **the boot half-fails silently** —
+   those calls are `|| true`. This is the highest risk in the translation.
+2. **Reaping.** msb's `idle_timeout` / `max_duration` defaults are unknown, and
+   Open Harness is explicitly one long-lived sandbox running agents on cron.
+3. **ENTRYPOINT/CMD inheritance.** msb exposes explicit `entrypoint:` / `cmd:`
+   fields, which suggests it may not inherit them from the image.
+4. **Bind UID mapping** through the microVM's filesystem transport — whether
+   `chown -R 1000` means the same thing on both sides.
+5. **`msb exec` semantics** matching `docker exec -u sandbox`.
+
+**Ownership warning.** Under Docker, volume contents sit root-owned outside your
+home directory. Under an msb bind they sit in your filesystem, and the entrypoint
+runs `chown -R sandbox:sandbox` plus `chmod 700` on the SSH path. Bind dedicated
+directories, never your real `~/.ssh` or `~/.config`.
 
 ## What `install` does on a blocked host
 
@@ -89,7 +240,7 @@ tier that replaces the container would plausibly be installed on the host. If
 #731 settles it the other way, this command's target changes — and that is a
 reason it writes no config today.
 
-## The round trip that would prove it works
+## The round trip that would prove `msb` works
 
 From #805's acceptance list. Neither has ever passed here:
 
@@ -99,6 +250,9 @@ msb run alpine --exec 'echo ok'  # expect "ok"
 ```
 
 `msb self doctor` alone proves nothing. The second command is the round trip.
+
+Both prove that **`msb`** works. Neither says anything about Open Harness running
+on it — that is question (b), and it is a different exercise.
 
 ## Related
 

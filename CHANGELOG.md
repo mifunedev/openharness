@@ -22,6 +22,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Lead the README and quickstart with the two scripted installers and demote the untested manual clone sequence into the collapsed section, merging its two duplicate copies into one.
 
 ### Fixed
+- Correct the MicroSandbox runner walkthrough: set `entrypoint:` explicitly (without it the seed and provider linking never run), drop the unsubstituted `GH_TOKEN`, name the mount/env differences from the `docker run` recipe it is derived from, and re-rank the untested inferences so the boot-breaking one is first.
 - Collapse the two disagreeing `harness.yaml` line editors into one `setKeyInSection` in `lib/harness-yaml.ts`; the wizard's section-blind copy silently dropped answers for keys absent from the template.
 - Reconcile `.oh/templates/harness.yaml` with `harness.yaml.example`, restoring the `sandbox.docker_socket`/`image`/`pull_policy`, `paths.worktrees`, `crons`, `autopilot`, `slack`, and `compose` keys that had no home to be written into.
 - Correct `harness.yaml.example`'s claim that `pull_policy` reaches the VS Code "Reopen in Container" path — it does not, and no key in the file does.

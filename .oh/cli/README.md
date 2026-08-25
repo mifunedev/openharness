@@ -65,6 +65,13 @@ oh runtime status               # the measured requirements, not a bare verdict
 oh runtime install              # microsandbox; refuses if the host cannot run it
 ```
 
+Everything else the sandbox ships — a headless browser, the GitHub CLI:
+
+```bash
+oh tool list                    # what is present, and what is installable
+oh tool install agent-browser   # asks before the ~1 GB Chromium download
+```
+
 ## Commands
 
 | Command | What it does |
@@ -75,6 +82,7 @@ oh runtime install              # microsandbox; refuses if the host cannot run i
 | `oh sandbox` | Provision and start the sandbox (`docker compose up -d --build`). |
 | `oh shell [container]` | Open a `zsh` shell in the running sandbox container. |
 | `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `harness.yaml` flag **and** installs into the running sandbox — no rebuild. |
+| `oh tool <list\|install\|status>` | Install and inspect sandbox tooling that is neither an agent CLI nor a runtime (agent-browser, `gh`, `herdr`, `cloudflared`, Docker CLI). A large download is confirmed first. |
 | `oh runtime <list\|install\|status>` | Report the isolation runtime in use (Docker today) and install MicroSandbox. Measures first and refuses an install that cannot succeed (`--force` overrides). Selects no runtime and writes no config. |
 | `oh gateway <args…>` | Manage a messaging client session (Slack bridge for `pi`/`hermes`). |
 | `oh cloud <args…>` | Configure credentials and manage OpenHarness Cloud SSH keys and nodes. |

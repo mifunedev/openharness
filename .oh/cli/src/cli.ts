@@ -27,6 +27,13 @@ import {
 } from "./commands/runtime.js";
 import { DEFAULT_RUNTIME, runtimeIds } from "./lib/runtimes/catalog.js";
 import {
+  runToolInstall,
+  runToolList,
+  runToolStatus,
+  type ToolIO,
+} from "./commands/tool.js";
+import { installableToolIds, toolIds } from "./lib/tools/catalog.js";
+import {
   fetchRemoteSource,
   DEFAULT_REPO_URL,
   type FetchRemoteSourceOptions,
@@ -97,6 +104,7 @@ Usage:
   oh shell [container]      Open a zsh shell in the running sandbox container
   oh harness <args...>      Install and inspect agent CLI harnesses
   oh runtime <args...>      Inspect the sandbox's isolation runtime
+  oh tool <args...>         Install and inspect sandbox tooling
   oh gateway <args...>      Manage a messaging client session (pi|hermes)
   oh cloud <args...>        Manage OpenHarness Cloud nodes
   oh --version              Print version
@@ -324,6 +332,37 @@ Flags:
 
 Runtimes:
 ${runtimeIds().map((r) => `  ${r}`).join("\n")}
+`);
+}
+
+export function printToolHelp(): void {
+  process.stdout.write(`oh tool — Install and inspect sandbox tooling
+
+Tooling that is neither an agent CLI (see \`oh harness\`) nor an isolation
+runtime (see \`oh runtime\`) — a headless browser, a tunnel client, the
+GitHub CLI.
+
+Usage:
+  oh tool list                      List known tools and their state
+  oh tool status [name]             Show installed state and version
+  oh tool install <name>            Install a tool into the sandbox
+
+Most tools are baked into the image and are report-only; \`install\` works on:
+${installableToolIds().map((t) => `  ${t}`).join("\n")}
+
+\`install\` does BOTH halves: it sets the harness.yaml \`install:\` flag so the
+choice survives the next container start, AND installs into the already-running
+container. It never rebuilds or restarts the sandbox. A large download is
+confirmed first, and a non-interactive run without --yes installs nothing.
+
+Flags:
+  --persist-only   Only set the harness.yaml install: flag (no container work)
+  --no-persist     Live-install only; leave harness.yaml unchanged
+  --yes            Accept a large download without prompting
+  --json           Machine-readable output (list/status)
+
+Tools:
+${toolIds().map((t) => `  ${t}`).join("\n")}
 `);
 }
 
@@ -644,6 +683,68 @@ export function parseRuntimeArgs(rest: string[]): ParseResult<RuntimeArgs> {
   else if (sub === "install") args.name = DEFAULT_RUNTIME;
   return { ok: true, args };
 }
+
+/** Parsed `oh tool` args. */
+interface ToolArgs {
+  help: boolean;
+  persistOnly: boolean;
+  noPersist: boolean;
+  yes: boolean;
+  json: boolean;
+  subcommand?: "list" | "install" | "status";
+  name?: string;
+}
+
+export function parseToolArgs(rest: string[]): ParseResult<ToolArgs> {
+  const args: ToolArgs = {
+    help: false, persistOnly: false, noPersist: false, yes: false, json: false,
+  };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
+  }
+
+  const positionals: string[] = [];
+  for (const token of rest) {
+    if (token === "--persist-only") args.persistOnly = true;
+    else if (token === "--no-persist") args.noPersist = true;
+    else if (token === "--yes" || token === "-y") args.yes = true;
+    else if (token === "--json") args.json = true;
+    else if (token.startsWith("-")) {
+      return { ok: false, error: `oh tool: unknown flag "${token}"` };
+    } else positionals.push(token);
+  }
+
+  const [sub, name, ...extra] = positionals;
+  if (sub !== "list" && sub !== "install" && sub !== "status") {
+    return {
+      ok: false,
+      error: `oh tool: unknown subcommand "${sub}" — expected list, install, or status`,
+      showHelp: true,
+    };
+  }
+  if (extra.length > 0) {
+    return { ok: false, error: `oh tool: unexpected argument "${extra[0]}"` };
+  }
+  // No default name: most tools are baked in, so there is no one obvious
+  // thing to install. `oh runtime install` can default; this cannot.
+  if (sub === "install" && name === undefined) {
+    return { ok: false, error: "oh tool install: a tool name is required", showHelp: true };
+  }
+  if (sub === "list" && name !== undefined) {
+    return { ok: false, error: `oh tool list: unexpected argument "${name}"` };
+  }
+  if (args.persistOnly && args.noPersist) {
+    return {
+      ok: false,
+      error: "oh tool: --persist-only conflicts with --no-persist — pass at most one",
+    };
+  }
+
+  args.subcommand = sub;
+  if (name !== undefined) args.name = name;
+  return { ok: true, args };
+}
+
 
 
 /** Parsed `oh gateway` args — everything after a leading help flag is verbatim. */
@@ -1022,6 +1123,36 @@ async function main(argv: string[]): Promise<number> {
     }
     // parseRuntimeArgs defaults `name` for `install`.
     return await runRuntimeInstall(a.name as string, { force: a.force }, io);
+  }
+
+  if (first === "tool") {
+    const parsed = parseToolArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printToolHelp();
+      return 1;
+    }
+    if (parsed.args.help) {
+      printToolHelp();
+      return 0;
+    }
+    const a = parsed.args;
+    const io: ToolIO = {
+      stdout: (s) => process.stdout.write(s),
+      stderr: (s) => process.stderr.write(s),
+    };
+    if (a.subcommand === "list") {
+      return await runToolList({ json: a.json }, io);
+    }
+    if (a.subcommand === "status") {
+      return await runToolStatus(a.name, { json: a.json }, io);
+    }
+    // parseToolArgs guarantees `name` is set for `install`.
+    return await runToolInstall(
+      a.name as string,
+      { persistOnly: a.persistOnly, noPersist: a.noPersist, yes: a.yes },
+      io,
+    );
   }
 
   if (first === "cloud") {

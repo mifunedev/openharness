@@ -6,10 +6,13 @@ import { runInit, type InitIO, type InitOptions } from "./commands/init.js";
 import { runUpdate } from "./commands/update.js";
 import { runCloud } from "./commands/cloud.js";
 import {
+  runComposeVerb,
   runGateway,
   runSandbox,
   runShell,
+  composeVerbs,
   DEFAULT_CONTAINER_NAME,
+  type ComposeVerb,
   type LifecycleIO,
 } from "./commands/lifecycle.js";
 import {
@@ -102,6 +105,10 @@ Usage:
   oh update                 Upgrade the .oh/ control plane from a newer source
   oh sandbox                Provision and start the sandbox (docker compose up)
   oh shell [container]      Open a zsh shell in the running sandbox container
+  oh stop                   Stop the sandbox, preserving volumes
+  oh restart                Restart the sandbox service
+  oh logs                   Tail sandbox logs (follows)
+  oh ps                     Show sandbox service status
   oh harness <args...>      Install and inspect agent CLI harnesses
   oh runtime <args...>      Inspect the sandbox's isolation runtime
   oh tool <args...>         Install and inspect sandbox tooling
@@ -363,6 +370,32 @@ Flags:
 
 Tools:
 ${toolIds().map((t) => `  ${t}`).join("\n")}
+`);
+}
+
+/**
+ * One help block for all four compose verbs — they differ only in the word.
+ * `oh destroy` and a `make config` equivalent are deliberately absent; see
+ * `.oh/docs/lifecycle-commands.md` for why.
+ */
+export function printComposeVerbHelp(verb: ComposeVerb): void {
+  const what: Record<ComposeVerb, string> = {
+    stop: "Stop the sandbox, preserving volumes for a later restart",
+    restart: "Restart the sandbox service",
+    logs: "Tail the sandbox compose logs (follows until interrupted)",
+    ps: "Show sandbox service status",
+  };
+  process.stdout.write(`oh ${verb} — ${what[verb]}
+
+Usage:
+  oh ${verb} [-- <extra docker compose args>]
+
+Equivalent to \`make ${verb}\` — both run .oh/scripts/docker-compose.sh, which is
+the single implementation. Use whichever is available: \`make\` needs no Node and
+works in a source checkout; \`oh\` works anywhere, including an \`oh init\` repo
+that has no Makefile.
+
+See .oh/docs/lifecycle-commands.md for the full mapping.
 `);
 }
 
@@ -1067,6 +1100,25 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     return runShell({ container: parsed.args.container }, lifecycleIo());
+  }
+
+  // The compose lifecycle verbs. `--`-separated extras pass straight through to
+  // docker compose; anything else is rejected rather than silently forwarded.
+  if ((composeVerbs() as string[]).includes(first)) {
+    const verb = first as ComposeVerb;
+    const rest = argv.slice(1);
+    if (isHelpFlag(rest[0])) {
+      printComposeVerbHelp(verb);
+      return 0;
+    }
+    const sep = rest.indexOf("--");
+    if (sep === -1 && rest.length > 0) {
+      process.stderr.write(
+        `oh ${verb}: unexpected argument "${rest[0]}" — pass extra docker compose args after \`--\`\n`,
+      );
+      return 1;
+    }
+    return runComposeVerb(verb, {}, sep === -1 ? [] : rest.slice(sep + 1));
   }
 
   if (first === "harness") {

@@ -301,6 +301,67 @@ export function runShell(opts: ShellOptions, io: LifecycleIO): number {
  * the execution contract would put a brain responsibility on the hands side of
  * the boundary. See `.oh/docs/rfcs/rfc-brain-hands-boundary.md`.
  */
+/**
+ * The compose verbs `oh` exposes 1:1 with the Makefile's targets.
+ *
+ * WHY THESE FOUR AND NOT SIX. `make destroy` runs `down -v`, which wipes the
+ * named volumes holding provider auth — a passthrough with no confirmation
+ * policy would make data loss one typo away, so it stays make-only until that
+ * policy is designed. `make config` has no entry either: `oh config` already
+ * means "configure an integration", and overloading it would be worse than the
+ * gap. Both exceptions are recorded in `.oh/docs/lifecycle-commands.md`, and a
+ * probe asserts they stay recorded rather than silently growing.
+ */
+const COMPOSE_VERBS = Object.freeze({
+  stop: Object.freeze(["stop"]),
+  restart: Object.freeze(["restart"]),
+  logs: Object.freeze(["logs", "-f"]),
+  ps: Object.freeze(["ps"]),
+});
+
+/** The verbs `runComposeVerb` accepts — the keys of `COMPOSE_VERBS`. */
+export type ComposeVerb = keyof typeof COMPOSE_VERBS;
+
+/** Every compose verb name, for help text and the dispatcher. */
+export function composeVerbs(): ComposeVerb[] {
+  return Object.keys(COMPOSE_VERBS) as ComposeVerb[];
+}
+
+/**
+ * `oh stop | restart | logs | ps` — the compose lifecycle verbs the Makefile
+ * already had and the CLI did not.
+ *
+ * THIS CLOSES A SURFACE GAP, NOT A LOGIC GAP. `make stop` and this verb run the
+ * same `.oh/scripts/docker-compose.sh`; the script has always been the single
+ * implementation, and `oh sandbox` reaches it too (via the compose target's
+ * `provision()`). What was missing was only that a user who had `oh` still had
+ * to switch tools mid-lifecycle — and an `oh init` repo has no Makefile at all.
+ *
+ * BRAIN-SIDE, deliberately NOT routed through `ExecutionTarget`. These manage
+ * the environment from outside rather than executing work inside a provisioned
+ * one, which is the same reasoning that keeps `runGateway` off the contract.
+ * `contractVersion: 1` has exactly `provision()` and `attach()`; adding methods
+ * for them would widen a versioned interface to no benefit.
+ *
+ * No compose argv is assembled here beyond the constant verb — the script owns
+ * overlay resolution, project naming, and env plumbing, and duplicating any of
+ * that in TypeScript is how the two front doors would start to drift.
+ */
+export function runComposeVerb(
+  verb: ComposeVerb,
+  opts: LifecycleOptions,
+  extra: string[] = [],
+): number {
+  const run = opts.run ?? spawnRunner;
+  const root = resolveProjectRoot(opts.cwd);
+  const script = requireLifecycleScript(root, "docker-compose.sh");
+  const r = run("bash", [script, ...COMPOSE_VERBS[verb], ...extra], {
+    stdio: "inherit",
+  });
+  assertSpawned(r, `bash ${script} ${verb}`);
+  return r.status ?? 1;
+}
+
 export function runGateway(args: string[], opts: LifecycleOptions): number {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);

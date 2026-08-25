@@ -12,6 +12,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Add `oh harness <list|install|status>` to install optional harnesses into a running sandbox without a rebuild, persisting the choice to `install.<key>` for the next build ([#821](https://github.com/mifunedev/openharness/pull/821)).
 - Add `oh runtime <list|install|status>`, reporting the container runtime in use and gating a MicroSandbox install on the measured glibc and `/dev/kvm` blockers. It selects no runtime ([#823](https://github.com/mifunedev/openharness/pull/823)).
 - Add `oh tool <list|install|status>` for sandbox tooling that is neither an agent CLI nor a runtime, making `agent-browser` installable without a rebuild behind a ~1 GB download gate ([#824](https://github.com/mifunedev/openharness/pull/824)).
+- Add `oh stop|restart|logs|ps`, closing the lifecycle gap where `make` had verbs the CLI did not, and publish one `make` vs `oh` mapping doc that the other docs link to ([#825](https://github.com/mifunedev/openharness/pull/825)).
 
 ## [0.1.0] - 2026-08-23
 

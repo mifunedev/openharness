@@ -19,7 +19,7 @@
 - **Parallel by design.** The worktrees skill fans one sandbox into isolated git worktrees — parallel branches, delegated sub-agents, even other cloned repos.
 - **Remote-first, lights-out.** Runs the same on your laptop or a cloud VM; on a VM it's an unattended software factory — agents build on a schedule, reachable over Slack.
 - **Agents that work while you sleep.** A tiny croner runtime reads `.oh/crons/*.md` markdown and wakes the agent on a schedule.
-- **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites).)
+- **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites). Inside the sandbox the same verbs are `oh sandbox` / `oh shell` — see [lifecycle commands](.oh/docs/lifecycle-commands.md).)
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
 - **Herdr-first interactive work.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in). After entering the sandbox, run [Herdr](.oh/docs/integrations/herdr.md) first; keep setup, agents, tests, and servers organized in its persistent panes. Headless Slack and cron infrastructure remain independent.

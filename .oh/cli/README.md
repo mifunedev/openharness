@@ -81,6 +81,10 @@ oh tool install agent-browser   # asks before the ~1 GB Chromium download
 | `oh update` | Upgrade only the `.oh/` control plane from a newer source (`--from <dir>` / `--from-remote`); your project source is untouched. |
 | `oh sandbox` | Provision and start the sandbox (`docker compose up -d --build`). |
 | `oh shell [container]` | Open a `zsh` shell in the running sandbox container. |
+| `oh stop` | Stop the sandbox, preserving volumes. |
+| `oh restart` | Restart the sandbox service. |
+| `oh logs` | Tail the sandbox compose logs. |
+| `oh ps` | Show sandbox service status. |
 | `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `harness.yaml` flag **and** installs into the running sandbox — no rebuild. |
 | `oh tool <list\|install\|status>` | Install and inspect sandbox tooling that is neither an agent CLI nor a runtime (agent-browser, `gh`, `herdr`, `cloudflared`, Docker CLI). A large download is confirmed first. |
 | `oh runtime <list\|install\|status>` | Report the isolation runtime in use (Docker today) and install MicroSandbox. Measures first and refuses an install that cannot succeed (`--force` overrides). Selects no runtime and writes no config. |
@@ -88,6 +92,11 @@ oh tool install agent-browser   # asks before the ~1 GB Chromium download
 | `oh cloud <args…>` | Configure credentials and manage OpenHarness Cloud SSH keys and nodes. |
 | `oh --version` | Print the CLI version. |
 | `oh --help` | Show help; every subcommand also accepts `--help`. |
+
+These mirror the root `Makefile`'s targets one-for-one and run the same
+`.oh/scripts/docker-compose.sh`. Which one is canonical depends on where you
+are — see [lifecycle commands](../docs/lifecycle-commands.md), which also
+explains why `oh destroy` deliberately does not exist.
 
 `oh init` and `oh update` fetch their payload on demand — with no local source they shallow-clone
 the public OpenHarness repo into a temp dir and remove it after the run (`--from-remote`, `--ref <ref>`).

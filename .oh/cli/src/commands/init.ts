@@ -16,6 +16,7 @@ import path from "node:path";
 import { loadManifest } from "../lib/manifest.js";
 import { copyOhPayload, type CopyReport } from "../lib/vendor.js";
 import { upsertEnvFile } from "../lib/env.js";
+import { setKeyInSection } from "../lib/harness-yaml.js";
 import * as prompt from "../lib/prompt.js";
 
 export interface InitIO {
@@ -305,8 +306,8 @@ export async function runInit(
       } else {
         let content = readFileSync(harnessPath, "utf8");
         const applied: string[] = [];
-        for (const { key, value } of answers.harness) {
-          const next = setHarnessKey(content, key, value);
+        for (const { section, key, value } of answers.harness) {
+          const next = setKeyInSection(content, section, key, value).content;
           if (next !== content) {
             content = next;
             applied.push(key);
@@ -604,8 +605,12 @@ function writeClaudeAlias(ctx: WriteCtx, copyClaude: boolean): void {
 // ---------------------------------------------------------------------------
 
 interface WizardAnswers {
-  /** harness.yaml keys to activate: each uncomments + substitutes a value. */
-  harness: { key: string; value: string }[];
+  /**
+   * harness.yaml keys to activate: each uncomments + substitutes a value.
+   * `section` is the column-0 block the key lives under — the shared writer is
+   * section-scoped, so two sections may carry the same key name safely.
+   */
+  harness: { section: string; key: string; value: string }[];
   /** Secret env vars for .devcontainer/.env (never harness.yaml). */
   secrets: Record<string, string>;
 }
@@ -625,25 +630,25 @@ async function confirmWith(
 async function runWizard(io: InitIO): Promise<WizardAnswers> {
   const askFn = io.ask ?? prompt.ask;
   const askSecretFn = io.askSecret ?? prompt.askSecret;
-  const harness: { key: string; value: string }[] = [];
+  const harness: { section: string; key: string; value: string }[] = [];
   const secrets: Record<string, string> = {};
 
   prompt.header("Configure your harness  (press Enter to accept the shown default)");
 
-  prompt.step(1, 3, "Project");
+  prompt.step(1, 4, "Project");
   const name = await askFn("Sandbox name [my-project]:");
-  if (name) harness.push({ key: "name", value: name });
+  if (name) harness.push({ section: "sandbox", key: "name", value: name });
 
   const tz = await askFn("Timezone [America/Denver]:");
-  if (tz) harness.push({ key: "timezone", value: tz });
+  if (tz) harness.push({ section: "sandbox", key: "timezone", value: tz });
 
   const gitName = await askFn("Git user name:");
-  if (gitName) harness.push({ key: "user_name", value: gitName });
+  if (gitName) harness.push({ section: "git", key: "user_name", value: gitName });
 
   const gitEmail = await askFn("Git user email:");
-  if (gitEmail) harness.push({ key: "user_email", value: gitEmail });
+  if (gitEmail) harness.push({ section: "git", key: "user_email", value: gitEmail });
 
-  prompt.step(2, 3, "Optional installs");
+  prompt.step(2, 4, "Optional installs");
   const installs: { key: string; desc: string }[] = [
     { key: "opencode", desc: "OpenCode TUI coding agent" },
     { key: "deepagents", desc: "DeepAgents multi-agent runtime" },
@@ -653,10 +658,34 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
   ];
   for (const inst of installs) {
     const yes = await confirmWith(askFn, `Install ${inst.key} — ${inst.desc}?`, false);
-    if (yes) harness.push({ key: inst.key, value: "true" });
+    if (yes) harness.push({ section: "install", key: inst.key, value: "true" });
   }
 
-  prompt.step(3, 3, "Secrets");
+  // Step 3 covers the two settings that most often bite a new user and are not
+  // reachable any other way short of hand-editing the file. Deliberately NOT a
+  // push toward full key coverage: the remaining keys are advanced, each has an
+  // env-var escape hatch, and `compose.overrides` is a list the line editor
+  // cannot emit.
+  prompt.step(3, 4, "Access (off by default)");
+  const sshOn = await confirmWith(askFn, "Enable sshd for direct container SSH?", false);
+  if (sshOn) {
+    harness.push({ section: "ssh", key: "enabled", value: "true" });
+    const sshPort = await askFn("SSH host port [2222]:");
+    if (sshPort) harness.push({ section: "ssh", key: "port", value: sshPort });
+  }
+
+  prompt.info(
+    "Mounting the host Docker socket is effectively HOST ROOT — an agent can start a",
+  );
+  prompt.info("privileged container that mounts the host filesystem. Enable only if needed.");
+  const sockOn = await confirmWith(askFn, "Mount host Docker socket into the sandbox?", false);
+  if (sockOn) {
+    harness.push({ section: "sandbox", key: "docker_socket", value: "true" });
+    // Also persisted to .devcontainer/.env by `oh sandbox`, because the VS Code
+    // "Reopen in Container" path cannot read harness.yaml.
+  }
+
+  prompt.step(4, 4, "Secrets");
   prompt.info("Stored ONLY in .devcontainer/.env (gitignored), never in harness.yaml:");
   const gh = await askSecretFn("GH_TOKEN (blank to skip):");
   if (gh) {
@@ -677,29 +706,6 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
   }
 
   return { harness, secrets };
-}
-
-/**
- * harness.yaml write = line-regex uncomment (NO YAML parser). Find the COMMENTED
- * two-level key line (`<indent># <key>: <default> [ # inline comment]`) and
- * replace it with `<indent><key>: <value>[ inline comment]`. Every other line is
- * left byte-identical. Keys absent from the template are a no-op (the value has
- * no home). Limitation: flat two-level keys only — matches the template format.
- */
-function setHarnessKey(content: string, key: string, value: string): string {
-  const lines = content.split("\n");
-  const keyRe = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`^(\\s*)#\\s?(${keyRe})\\s*:\\s*([^\\n]*?)(\\s+#.*)?\\s*$`);
-  for (let i = 0; i < lines.length; i++) {
-    const m = re.exec(lines[i]);
-    if (m) {
-      const indent = m[1];
-      const inline = m[4] ?? "";
-      lines[i] = `${indent}${key}: ${value}${inline}`;
-      return lines.join("\n");
-    }
-  }
-  return content;
 }
 
 /**

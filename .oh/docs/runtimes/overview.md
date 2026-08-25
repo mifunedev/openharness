@@ -68,6 +68,15 @@ nothing yet to probe. See
 Three entries rather than one is deliberate. A single-entry catalog would encode
 a false singleton and need a schema change the moment gVisor lands.
 
+### The two candidates are reached differently
+
+gVisor **is** a Docker runtime (`--runtime=runsc`), so it can in principle be
+reached through the existing compose stack. MicroSandbox is **not** — it is its
+own VM manager, so it cannot plug into the boot path and instead
+[replaces it, running the published image directly](microsandbox.md#running-open-harness-on-microsandbox).
+That asymmetry is why the two need different framing, and it is independent of
+anything `oh runtime` does.
+
 ## Why the CLI stops short of selecting one
 
 Two proposals name the selector differently — `sandbox.substrate` (the substrate
@@ -89,3 +98,7 @@ persists nothing, so whichever name wins, it stays correct.
   would bake a guaranteed-failing install into every image (see
   [MicroSandbox](microsandbox.md)).
 - It does not rebuild or restart the sandbox.
+
+None of that stops you running Open Harness **on** a different runtime yourself —
+it just means the CLI is not how you do it. See
+[Running Open Harness on MicroSandbox](microsandbox.md#running-open-harness-on-microsandbox).

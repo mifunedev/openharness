@@ -19,7 +19,7 @@
 - **Parallel by design.** The worktrees skill fans one sandbox into isolated git worktrees — parallel branches, delegated sub-agents, even other cloned repos.
 - **Remote-first, lights-out.** Runs the same on your laptop or a cloud VM; on a VM it's an unattended software factory — agents build on a schedule, reachable over Slack.
 - **Agents that work while you sleep.** A tiny croner runtime reads `.oh/crons/*.md` markdown and wakes the agent on a schedule.
-- **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites). Inside the sandbox the same verbs are `oh sandbox` / `oh shell` — see [lifecycle commands](.oh/docs/lifecycle-commands.md).)
+- **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites-clone-path). Inside the sandbox the same verbs are `oh sandbox` / `oh shell` — see [lifecycle commands](.oh/docs/lifecycle-commands.md).)
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
 - **Herdr-first interactive work.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in). After entering the sandbox, run [Herdr](.oh/docs/integrations/herdr.md) first; keep setup, agents, tests, and servers organized in its persistent panes. Headless Slack and cron infrastructure remain independent.
@@ -31,30 +31,58 @@
 
 ## 📦 Install
 
-Open Harness runs one project in one Docker sandbox. The recommended path is
-**clone-and-own**: clone upstream, then make your **own private repo** the `origin` and keep
-`mifunedev/openharness` as `upstream` so you can pull framework updates and contribute back.
+Open Harness runs one project in one Docker sandbox. There are two doors, and
+they solve different problems — pick by what you have, not by preference.
 
-Host prerequisites: [Docker](https://docs.docker.com/get-docker/) with the Compose plugin,
-[Git](https://git-scm.com/), and `make` (build-essential) — full list in
-[Prerequisites](.oh/docs/installation.md#prerequisites).
+### 1. Pick your door
 
-### 1. Basic setup
+**A. I want an Open Harness sandbox of my own** — needs Docker + Git, **no Node**.
 
 ```bash
-# a. Clone upstream:
-git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
-
-# b. Materialize local config, then edit it BEFORE building — set sandbox.name,
-#    sandbox.timezone, git.user_name, git.user_email, and any optional installs
-#    (Hermes, agent-browser, …). Secrets stay in .devcontainer/.env.
-make harness-config
-nano harness.yaml
-
-# c. Build the image, enter the sandbox, then open its primary workspace:
-make sandbox && make shell
+curl -fsSL https://oh.mifune.dev/install.sh | bash
+cd ~/.openharness && make shell
 herdr
 ```
+
+Review-first alternative (download, review, then run — no extra dependency):
+
+```bash
+curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
+# Review openharness-install.sh in your editor or pager before running it.
+bash openharness-install.sh
+```
+
+The installer clones into `~/.openharness`, prompts for your sandbox name,
+timezone, git identity and optional installs, then builds and starts the
+container (~10 min cold, ~30s warm). Review-first and fork variants are under
+*Other install methods* below.
+
+**B. I already have a project and want to equip it** — needs **Node ≥ 20** on the host.
+
+```bash
+npm install -g @mifune/openharness   # already have Node >= 20? this is all you need
+cd <your-project>
+oh init          # equip the repo with Open Harness
+oh sandbox       # provision + start the sandbox
+```
+
+No Node yet? Bootstrap it with `curl -fsSL https://oh.mifune.dev/get-oh.sh | bash`
+— or review-first (download, review, then run):
+
+```bash
+curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh
+# Review get-oh.sh in your editor or pager before running it.
+bash get-oh.sh
+```
+
+`oh init` vendors the `.oh/` control plane into **your** repo rather than cloning
+this one. It runs the same interactive setup as door A, writing your answers to
+`harness.yaml`.
+
+Which one you took decides your lifecycle verbs — `make` for door A, `oh` for
+door B. See [Which door am I?](.oh/docs/lifecycle-commands.md) for the full
+split, and [Prerequisites](.oh/docs/installation.md#prerequisites-clone-path)
+for the host requirements of each.
 
 `herdr` should be your first inside-sandbox command. Run the remaining setup,
 authentication, agents, tests, and servers from its panes. That is already a working sandbox. To make it **yours** (private `origin` + `upstream`) and
@@ -97,23 +125,36 @@ tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
 > Codex, …) can drive. It's optional and not tied to any single agent — see the
 > [DebugMCP runbook](.oh/docs/integrations/debugmcp.md#confirmed-setup-runbook).
 
-<details><summary>Other install methods (one-line installer · fork-and-clone)</summary>
+<details><summary>Other install methods (manual setup · review-first · fork-and-clone)</summary>
 
-**One-line installer (upstream):**
+**Manual setup — clone and configure before the first build.**
+
+> Not covered by CI; the scripted installers in *Pick your door* are. If a step
+> here has drifted, prefer `install.sh`.
+
+Kept because it is the only path that lets you edit `harness.yaml` **before** the
+~10-minute first image build — `install.sh` builds immediately — and because
+audit-first operators want to read every command before running any of them.
 
 ```bash
-curl -fsSL https://oh.mifune.dev/install.sh | bash
+# a. Clone upstream:
+git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
+
+# b. Materialize local config, then edit it BEFORE building — set sandbox.name,
+#    sandbox.timezone, git.user_name, git.user_email, and any optional installs
+#    (Hermes, agent-browser, …). Secrets stay in .devcontainer/.env.
+make harness-config
+nano harness.yaml
+
+# c. Build the image, enter the sandbox, then open its primary workspace:
+make sandbox && make shell
+herdr
 ```
 
-Review-first alternative (no extra dependency):
+Most of the pre-build edit is also reachable non-interactively from `install.sh`
+via the `SANDBOX_NAME`, `INSTALL_*`, and `DOCKER_SOCKET` environment overrides.
 
-```bash
-curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
-# Review openharness-install.sh in your editor or pager before running it.
-bash openharness-install.sh
-```
-
-Open Harness requires Docker with the Compose plugin, Git, and make on the host. The installer clones into `~/.openharness`, offers to share your host `gh` token, writes `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm).
+Open Harness requires Docker with the Compose plugin, Git, and make on the host. The installer clones into `~/.openharness`, offers to share your host `gh` token, writes your non-secret answers to `harness.yaml` and secrets to `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm).
 
 **Fork and clone (self-hosting):**
 
@@ -229,16 +270,12 @@ from tracked `harness.yaml.example` by `make harness-config` (also run by
 changes with `make destroy && make sandbox`.
 Full key reference: [Quickstart → Configuration](.oh/docs/quickstart.md#configuration).
 
-<details><summary>Manual setup (no installer)</summary>
-
-```bash
-git clone https://github.com/mifunedev/openharness.git && cd openharness
-make sandbox
-make shell
-herdr            # first inside-sandbox command
-```
-
-</details>
+`harness.yaml` is authoritative for the `make` and `oh` paths. The VS Code
+"Reopen in Container" path loads `.devcontainer/docker-compose.yml` directly and
+cannot read it — settings you need there must also be set in
+`.devcontainer/.env`. See
+[the prebuilt-image deployment guide](.oh/docs/deployment-prebuilt-image.md) for
+the recipe.
 
 ## ✨ What you get
 

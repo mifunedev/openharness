@@ -4,7 +4,7 @@ title: "Quickstart"
 
 # Quickstart
 
-This guide takes you from zero to a running sandbox with an interactive shell in under five minutes. Required host dependencies are [Docker](https://docs.docker.com/get-docker/) with the Compose plugin, [Git](https://git-scm.com/), and `make` (build-essential) — the full list with install commands is in [Prerequisites](./installation.md#prerequisites).
+This guide takes you from zero to a running sandbox with an interactive shell in under five minutes. Required host dependencies are [Docker](https://docs.docker.com/get-docker/) with the Compose plugin, [Git](https://git-scm.com/), and `make` (build-essential) — the full list with install commands is in [Prerequisites](./installation.md#prerequisites-clone-path).
 
 ## Before you start
 
@@ -12,11 +12,40 @@ Install Docker with the Compose plugin ([docs.docker.com/get-docker](https://doc
 
 ## Install
 
-The recommended path is **clone-and-own** — clone upstream, materialize local
-`harness.yaml` from `harness.yaml.example`, edit it, then build (same as the
-[README](https://github.com/mifunedev/openharness#-install)). To then make the
-sandbox *yours* with a private repo + upstream, continue with the
-[end-to-end walkthrough](#end-to-end-setup-walkthrough) below.
+Two doors, solving different problems — pick by what you have (same as the
+[README](https://github.com/mifunedev/openharness#-install), and see
+[Which door am I?](./lifecycle-commands.md) for the split).
+
+**A. I want an Open Harness sandbox of my own** — Docker + Git, no Node:
+
+```bash
+curl -fsSL https://oh.mifune.dev/install.sh | bash
+```
+
+The installer clones into `~/.openharness`, prompts for your sandbox name,
+timezone, git identity and optional installs, prompts to share your host `gh`
+token, and brings the sandbox up via `docker compose` (~10 min cold, ~30s warm).
+
+**B. I already have a project and want to equip it** — needs Node ≥ 20 on the host:
+
+```bash
+npm install -g @mifune/openharness
+cd <your-project> && oh init && oh sandbox
+```
+
+To then make the sandbox *yours* with a private repo + upstream, continue with
+the [end-to-end walkthrough](#end-to-end-setup-walkthrough) below.
+
+<details><summary>Other install methods (manual setup · review-first · fork-and-clone)</summary>
+
+**Manual setup — clone and configure before the first build.**
+
+> Not covered by CI; the scripted installers above are. If a step here has
+> drifted, prefer `install.sh`.
+
+Kept because it is the only path that lets you edit `harness.yaml` **before** the
+~10-minute first image build, and because audit-first operators want to read
+every command before running any of them.
 
 ```bash
 # 1. Clone upstream:
@@ -32,21 +61,13 @@ nano harness.yaml
 make sandbox
 ```
 
-<details><summary>Other install methods (one-line installer · fork-and-clone)</summary>
-
-```bash
-curl -fsSL https://oh.mifune.dev/install.sh | bash
-```
-
-Review-first alternative, without adding a host dependency:
+Review-first one-line install, without adding a host dependency:
 
 ```bash
 curl -fsSL -o openharness-install.sh https://oh.mifune.dev/install.sh
 # Review openharness-install.sh in your editor or pager before running it.
 bash openharness-install.sh
 ```
-
-The installer clones into `~/.openharness`, prompts to share your host `gh` token, writes `.devcontainer/.env` with safe defaults, creates `harness.yaml` from the template when missing, and brings the sandbox up via `docker compose`.
 
 **Self-hosting from an existing clone:** run `bash .oh/scripts/install.sh` from inside the directory — it detects the local clone automatically.
 
@@ -194,7 +215,7 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
 (see [Set up agents inside Herdr](#set-up-agents-inside-herdr)); the explicit commands shown are equivalents.
 
 1. **Install host prerequisites** — Docker (+ Compose), Git, and `make`
-   ([details](./installation.md#prerequisites)):
+   ([details](./installation.md#prerequisites-clone-path)):
    ```bash
    sudo apt-get install -y build-essential   # provides make (Debian/Ubuntu)
    ```

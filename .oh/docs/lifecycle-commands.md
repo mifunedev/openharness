@@ -14,6 +14,25 @@ runs `.oh/scripts/docker-compose.sh`. `make sandbox` calls it directly;
 target. The script owns overlay resolution, project naming, and env plumbing.
 Nothing is duplicated except the name you type.
 
+## Which door am I?
+
+Before the table below can help, you need to know which kind of repo you are
+standing in. That is decided by how you installed, and the two installers are
+**not** alternatives — they solve different problems and neither can do the
+other's job.
+
+| You want | Install with | Repo you end up in | Lifecycle door |
+|---|---|---|---|
+| An Open Harness sandbox of your own | `install.sh` (the `curl` one-liner) — needs Docker + Git, **no Node** | a clone of this repo at `~/.openharness`, mounted at `/home/sandbox/harness` | `make` |
+| To equip a project you already have | `oh init` — needs **Node ≥ 20** on the host | your own repo, with `.oh/` vendored in and no Makefile, mounted at `/home/sandbox/project` | `oh` |
+
+`install.sh` runs when no repo and no Node exist yet — it checks Docker, clones,
+wires provider symlinks, then configures. `oh init` cannot do that: it needs
+Node already on `PATH` and a repo already present. The reverse holds too —
+`install.sh` can only ever produce a clone of Open Harness, never equip
+`~/my-app`. See `.oh/scripts/install.sh` for the bootstrapper's own statement of
+this split.
+
 ## Which one is canonical
 
 It depends on where you are, not on preference.

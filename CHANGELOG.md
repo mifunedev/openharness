@@ -13,6 +13,17 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Add `oh runtime <list|install|status>`, reporting the container runtime in use and gating a MicroSandbox install on the measured glibc and `/dev/kvm` blockers. It selects no runtime ([#823](https://github.com/mifunedev/openharness/pull/823)).
 - Add `oh tool <list|install|status>` for sandbox tooling that is neither an agent CLI nor a runtime, making `agent-browser` installable without a rebuild behind a ~1 GB download gate ([#824](https://github.com/mifunedev/openharness/pull/824)).
 - Add `oh stop|restart|logs|ps`, closing the lifecycle gap where `make` had verbs the CLI did not, and publish one `make` vs `oh` mapping doc that the other docs link to ([#825](https://github.com/mifunedev/openharness/pull/825)).
+- Add a "which door am I?" table plus two guard probes: `harness-yaml-schema-parity.sh` and `oh-init-headless-config.sh`.
+- Add `ssh.enabled`/`ssh.port` and `sandbox.docker_socket` prompts to the `oh init` wizard, the two settings most likely to need hand-editing.
+
+### Changed
+- Write `install.sh`'s non-secret answers to `harness.yaml` rather than the lower-precedence `.devcontainer/.env`, keeping `DOCKER_SOCKET` in `.env` as a documented exception.
+- Lead the README and quickstart with the two scripted installers and demote the untested manual clone sequence into the collapsed section, merging its two duplicate copies into one.
+
+### Fixed
+- Collapse the two disagreeing `harness.yaml` line editors into one `setKeyInSection` in `lib/harness-yaml.ts`; the wizard's section-blind copy silently dropped answers for keys absent from the template.
+- Reconcile `.oh/templates/harness.yaml` with `harness.yaml.example`, restoring the `sandbox.docker_socket`/`image`/`pull_policy`, `paths.worktrees`, `crons`, `autopilot`, `slack`, and `compose` keys that had no home to be written into.
+- Correct `harness.yaml.example`'s claim that `pull_policy` reaches the VS Code "Reopen in Container" path — it does not, and no key in the file does.
 
 ## [0.1.0] - 2026-08-23
 

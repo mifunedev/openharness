@@ -16,8 +16,10 @@ import type { LifecycleRunner } from "./execution/runner.js";
  * parser and stays the single source of truth for the grammar; this module
  * shells out to it. The one thing the script deliberately cannot do is WRITE —
  * its modes are `env|compose-overrides|get`, read-only by design — so
- * `setInstallFlag` is the minimal-diff line editor that fills that gap without
- * adding a `set` mode to the script or re-implementing its parser in TS.
+ * `setKeyInSection` is the minimal-diff line editor that fills that gap without
+ * adding a `set` mode to the script or re-implementing its parser in TS. It is
+ * the ONLY writer — `oh init`'s wizard calls it too, rather than carrying the
+ * second, section-blind regex editor it used to have.
  *
  * THE GRAMMAR THE WRITER MUST RESPECT (from harness-config.sh's awk program):
  *   - a section header is `name:` at COLUMN 0 with no value,
@@ -103,7 +105,7 @@ export function isInstallFlagEnabled(root: string, key: string, run: LifecycleRu
   return readConfigValue(root, `install.${key}`, run) === "true";
 }
 
-/** What `setInstallFlag` did, so the caller can report it precisely. */
+/** What a write did, so the caller can report it precisely. */
 export type InstallFlagOutcome =
   /** The key already read `true`; the file was not touched. */
   | "already-set"
@@ -140,27 +142,69 @@ export function setInstallFlag(root: string, key: string): InstallFlagOutcome {
   }
 
   const original = readFileSync(file, "utf8");
-  const lines = original.split("\n");
+  const { content, outcome } = setKeyInSection(original, "install", key, "true");
+  if (content !== original) writeFileSync(file, content);
+  return outcome;
+}
+
+/** The result of a content-level write: the new text and what happened. */
+export interface SetKeyResult {
+  content: string;
+  outcome: InstallFlagOutcome;
+}
+
+/**
+ * THE ONE `harness.yaml` LINE EDITOR. Pure — takes file text, returns file text
+ * — so both the file-level writer (`setInstallFlag`) and `oh init`'s wizard,
+ * which batches several keys through one read/write pair and must also support
+ * `--dry-run`, share exactly one implementation of the grammar.
+ *
+ * It replaced a second, section-blind regex editor that lived in
+ * `commands/init.ts`. The two disagreed on the missing-key case — that one
+ * silently no-opped, so a wizard answer for a key absent from the template was
+ * dropped without a word. This one is authoritative and always records the key.
+ *
+ * Resolution order, scoped to the named section:
+ *
+ *   1. a live `  <key>: <value>` line       → rewrite the value (or `already-set`)
+ *   2. a commented `  # <key>: <value>` line → UNCOMMENT IN PLACE, keeping the
+ *      trailing ` # ENV_VAR — …` comment, so the line count is unchanged and
+ *      the diff is one character class
+ *   3. neither                               → insert a new key line
+ *   4. no such section at all                → append the section plus the key
+ *
+ * Idempotent: a key already holding `value` returns `already-set` with the
+ * content unchanged.
+ */
+export function setKeyInSection(
+  content: string,
+  section: string,
+  key: string,
+  value: string,
+): SetKeyResult {
+  const lines = content.split("\n");
 
   // A section header is `name:` at column 0 with no value (harness-config.sh's
-  // awk matches exactly this). Find `install:` and the extent of its body.
+  // awk matches exactly this). Find the target section and its body extent.
   const sectionHeader = /^[a-zA-Z_][a-zA-Z0-9_]*:[ \t]*(#.*)?$/;
-  const installStart = lines.findIndex((l) => /^install:[ \t]*(#.*)?$/.test(l));
+  const headerRe = new RegExp(`^${escapeRegExp(section)}:[ \\t]*(#.*)?$`);
+  const start = lines.findIndex((l) => headerRe.test(l));
 
-  if (installStart === -1) {
-    // No `install:` section. Append it with the key, keeping exactly one
-    // trailing newline on the file.
-    const body = original.replace(/\n+$/, "");
-    const next = `${body}\n\ninstall:\n  ${key}: true\n`;
-    writeFileSync(file, next);
-    return "section-added";
+  if (start === -1) {
+    // No such section. Append it with the key, keeping exactly one trailing
+    // newline on the file.
+    const body = content.replace(/\n+$/, "");
+    return {
+      content: `${body}\n\n${section}:\n  ${key}: ${value}\n`,
+      outcome: "section-added",
+    };
   }
 
   // The section ends at the next column-0 header, or at end of file.
-  let installEnd = lines.length;
-  for (let i = installStart + 1; i < lines.length; i++) {
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
     if (sectionHeader.test(lines[i])) {
-      installEnd = i;
+      end = i;
       break;
     }
   }
@@ -173,34 +217,31 @@ export function setInstallFlag(root: string, key: string): InstallFlagOutcome {
   // normalizes to the 2-space indent the parser requires.
   const commentedKey = new RegExp(`^[ \\t]*#[ \\t]*${escapeRegExp(key)}:[ \\t]*([^#\\n]*)(#.*)?$`);
 
-  for (let i = installStart + 1; i < installEnd; i++) {
+  for (let i = start + 1; i < end; i++) {
     const live = liveKey.exec(lines[i]);
     if (live) {
-      if (live[1].trim() === "true") return "already-set";
+      if (live[1].trim() === value) return { content, outcome: "already-set" };
       const trailing = live[2] ? `            ${live[2]}` : "";
-      lines[i] = `  ${key}: true${trailing}`;
-      writeFileSync(file, lines.join("\n"));
-      return "updated";
+      lines[i] = `  ${key}: ${value}${trailing}`;
+      return { content: lines.join("\n"), outcome: "updated" };
     }
   }
 
-  for (let i = installStart + 1; i < installEnd; i++) {
+  for (let i = start + 1; i < end; i++) {
     const commented = commentedKey.exec(lines[i]);
     if (commented) {
       // Uncomment in place: same line index, same trailing comment, so the file
       // keeps its line count and the diff is a single line.
       const trailing = commented[2] ? `            ${commented[2]}` : "";
-      lines[i] = `  ${key}: true${trailing}`;
-      writeFileSync(file, lines.join("\n"));
-      return "uncommented";
+      lines[i] = `  ${key}: ${value}${trailing}`;
+      return { content: lines.join("\n"), outcome: "uncommented" };
     }
   }
 
   // The section exists but names this key nowhere — insert it as the first
   // entry of the section body.
-  lines.splice(installStart + 1, 0, `  ${key}: true`);
-  writeFileSync(file, lines.join("\n"));
-  return "added";
+  lines.splice(start + 1, 0, `  ${key}: ${value}`);
+  return { content: lines.join("\n"), outcome: "added" };
 }
 
 /** Escape a literal for embedding in a RegExp — keys are `[a-z_]`, but do not assume. */

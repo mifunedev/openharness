@@ -4,9 +4,15 @@ title: "Installation"
 
 # Installation
 
-Open Harness is a portable harness — a single repo that boots an isolated Docker sandbox for your project. Installation clones the repo and runs `docker compose` against `.devcontainer/docker-compose.yml` — there is no host CLI, agent, or Node toolchain required on the host.
+Open Harness is a portable harness — a single repo that boots an isolated Docker sandbox for your project. This page documents the **clone path**: installation clones the repo and runs `docker compose` against `.devcontainer/docker-compose.yml`, with no host CLI, agent, or Node toolchain required on the host.
 
-## Prerequisites
+There is a second door. If you have a project already and want to equip it in
+place rather than clone this repo, use the `oh` CLI —
+[Standalone CLI (`oh`)](#standalone-cli-oh-equip-an-existing-repo) below. That path needs **Node ≥ 20 on the host**; the prerequisites in the next
+section apply to the clone path only. See
+[Lifecycle commands → Which door am I?](lifecycle-commands.md) for the split.
+
+## Prerequisites (clone path)
 
 | Dependency | Required for | Install |
 |---|---|---|
@@ -14,7 +20,7 @@ Open Harness is a portable harness — a single repo that boots an isolated Dock
 | git | Cloning the repo | [git-scm.com](https://git-scm.com/) |
 | make (build-essential) | The `make sandbox` / `make shell` / `make destroy` wrappers around `docker compose` | `sudo apt-get install build-essential` (Debian/Ubuntu) · Xcode Command Line Tools (macOS) |
 
-That is the entire host requirement. Node.js, pnpm, and any AI CLI live inside the sandbox.
+That is the entire host requirement **for this path**. Node.js, pnpm, and any AI CLI live inside the sandbox. (The `oh` CLI path is the one exception — it needs Node ≥ 20 on the host.)
 
 ## Self-hosting: I already have a clone
 
@@ -25,7 +31,7 @@ cd <your-clone>
 bash .oh/scripts/install.sh
 ```
 
-The installer prompts for `SANDBOX_NAME`, writes `.devcontainer/.env`, and starts the sandbox. No `OH_GITHUB_REPO` environment variable required.
+The installer prompts for `SANDBOX_NAME`, timezone, git identity and optional installs, writes those to `harness.yaml` (secrets to `.devcontainer/.env`), and starts the sandbox. No `OH_GITHUB_REPO` environment variable required.
 
 ### Fork-and-clone
 
@@ -102,7 +108,7 @@ The installer:
 
 1. Verifies Docker and git are present (warns if `make`, used by the lifecycle targets, is missing).
 2. Clones the repo into `~/.openharness` (or pulls latest if the directory already exists).
-3. Prompts for `SANDBOX_NAME`, then writes `.devcontainer/.env`.
+3. Prompts for `SANDBOX_NAME`, timezone, git identity and optional installs, then writes them to `harness.yaml` — secrets go to `.devcontainer/.env`.
 4. Creates `harness.yaml` from `harness.yaml.example` when missing (all keys commented — inert until you edit).
 5. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
 6. Prints the next-step commands (open a shell, stop, tear down).

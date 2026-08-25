@@ -27,6 +27,10 @@ git:
   # user_email: you@example.com    # GIT_USER_EMAIL
 
 install:
+  # `oh harness install <name>` writes these keys for you — it uncomments the
+  # line in place AND installs into the running sandbox, no rebuild. The four
+  # harness keys map to `oh harness` names: opencode, grok-build, deepagents,
+  # hermes. `agent_browser` is not a harness and is not managed by that command.
   # opencode: false            # INSTALL_OPENCODE — OpenCode CLI (build arg)
   # grok_build: false          # INSTALL_GROK_BUILD — Grok Build CLI (build arg)
   # deepagents: false          # INSTALL_DEEPAGENTS — DeepAgents CLI (build arg)

@@ -13,6 +13,13 @@ import {
   type LifecycleIO,
 } from "./commands/lifecycle.js";
 import {
+  runHarnessInstall,
+  runHarnessList,
+  runHarnessStatus,
+  type HarnessIO,
+} from "./commands/harness.js";
+import { harnessIds } from "./lib/harnesses/catalog.js";
+import {
   fetchRemoteSource,
   DEFAULT_REPO_URL,
   type FetchRemoteSourceOptions,
@@ -81,6 +88,7 @@ Usage:
   oh update                 Upgrade the .oh/ control plane from a newer source
   oh sandbox                Provision and start the sandbox (docker compose up)
   oh shell [container]      Open a zsh shell in the running sandbox container
+  oh harness <args...>      Install and inspect agent CLI harnesses
   oh gateway <args...>      Manage a messaging client session (pi|hermes)
   oh cloud <args...>        Manage OpenHarness Cloud nodes
   oh --version              Print version
@@ -203,6 +211,31 @@ Runs \`docker exec -it -u sandbox <container> zsh\`. Container-name precedence:
 the positional argument > sandbox.name in <root>/harness.yaml (read via the
 vendored .oh/scripts/harness-config.sh) > "${DEFAULT_CONTAINER_NAME}". Works from any
 subdirectory of an equipped repo; exits with docker's exit code.
+`);
+}
+
+/** Exported for tests. */
+export function printHarnessHelp(): void {
+  process.stdout.write(`oh harness — Install and inspect agent CLI harnesses
+
+Usage:
+  oh harness list                     List known harnesses and their state
+  oh harness install <name>           Install a harness into the sandbox
+  oh harness status [name]            Show installed/enabled state
+
+\`install\` does BOTH halves: it sets the harness.yaml \`install:\` flag so the
+choice survives the next image build, AND installs into the already-running
+container so the harness is usable now. It never rebuilds or restarts the
+sandbox. When the sandbox is not running it persists the flag, prints a hint,
+and exits 0.
+
+Flags:
+  --persist-only   Only set the harness.yaml install: flag (no container work)
+  --no-persist     Live-install only; leave harness.yaml unchanged
+  --json           Machine-readable output (list/status)
+
+Harnesses:
+${harnessIds().map((h) => `  ${h}`).join("\n")}
 `);
 }
 
@@ -456,6 +489,70 @@ export function parseShellArgs(rest: string[]): ParseResult<ShellArgs> {
     }
     args.container = token;
   }
+  return { ok: true, args };
+}
+
+/** Parsed `oh harness` args. */
+export interface HarnessArgs {
+  help: boolean;
+  /** `list` | `install` | `status`; undefined when only `--help` was given. */
+  subcommand?: "list" | "install" | "status";
+  /** The `<name>` positional — required by `install`, optional for `status`. */
+  name?: string;
+  persistOnly: boolean;
+  noPersist: boolean;
+  json: boolean;
+}
+
+export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
+  const args: HarnessArgs = { help: false, persistOnly: false, noPersist: false, json: false };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
+  }
+
+  const positionals: string[] = [];
+  for (const token of rest) {
+    if (token === "--persist-only") {
+      args.persistOnly = true;
+    } else if (token === "--no-persist") {
+      args.noPersist = true;
+    } else if (token === "--json") {
+      args.json = true;
+    } else if (token.startsWith("-")) {
+      return { ok: false, error: `oh harness: unknown flag "${token}"` };
+    } else {
+      positionals.push(token);
+    }
+  }
+
+  const [sub, name, ...extra] = positionals;
+  if (sub !== "list" && sub !== "install" && sub !== "status") {
+    return {
+      ok: false,
+      error: `oh harness: unknown subcommand "${sub}" — expected list, install, or status`,
+      showHelp: true,
+    };
+  }
+  if (extra.length > 0) {
+    return { ok: false, error: `oh harness: unexpected argument "${extra[0]}"` };
+  }
+  if (sub === "install" && name === undefined) {
+    return { ok: false, error: "oh harness install: a harness name is required", showHelp: true };
+  }
+  if (sub === "list" && name !== undefined) {
+    return { ok: false, error: `oh harness list: unexpected argument "${name}"` };
+  }
+  // The two escape hatches are opposites — persisting only while also refusing
+  // to persist would leave the command with nothing to do.
+  if (args.persistOnly && args.noPersist) {
+    return {
+      ok: false,
+      error: "oh harness: --persist-only conflicts with --no-persist — pass at most one",
+    };
+  }
+
+  args.subcommand = sub;
+  if (name !== undefined) args.name = name;
   return { ok: true, args };
 }
 
@@ -779,6 +876,36 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     return runShell({ container: parsed.args.container }, lifecycleIo());
+  }
+
+  if (first === "harness") {
+    const parsed = parseHarnessArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printHarnessHelp();
+      return 1;
+    }
+    if (parsed.args.help) {
+      printHarnessHelp();
+      return 0;
+    }
+    const a = parsed.args;
+    const io: HarnessIO = {
+      stdout: (s) => process.stdout.write(s),
+      stderr: (s) => process.stderr.write(s),
+    };
+    if (a.subcommand === "list") {
+      return await runHarnessList({ json: a.json }, io);
+    }
+    if (a.subcommand === "status") {
+      return await runHarnessStatus(a.name, { json: a.json }, io);
+    }
+    // parseHarnessArgs guarantees `name` is set for `install`.
+    return await runHarnessInstall(
+      a.name as string,
+      { persistOnly: a.persistOnly, noPersist: a.noPersist },
+      io,
+    );
   }
 
   if (first === "cloud") {

@@ -50,6 +50,13 @@ oh sandbox       # docker compose up -d --build
 oh shell         # open a zsh shell in the running container
 ```
 
+Add an agent harness at any point — this needs no rebuild:
+
+```bash
+oh harness list                 # what exists, what is enabled, what is installed
+oh harness install opencode     # persist the flag + install into the running sandbox
+```
+
 ## Commands
 
 | Command | What it does |
@@ -59,6 +66,7 @@ oh shell         # open a zsh shell in the running container
 | `oh update` | Upgrade only the `.oh/` control plane from a newer source (`--from <dir>` / `--from-remote`); your project source is untouched. |
 | `oh sandbox` | Provision and start the sandbox (`docker compose up -d --build`). |
 | `oh shell [container]` | Open a `zsh` shell in the running sandbox container. |
+| `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `harness.yaml` flag **and** installs into the running sandbox — no rebuild. |
 | `oh gateway <args…>` | Manage a messaging client session (Slack bridge for `pi`/`hermes`). |
 | `oh cloud <args…>` | Configure credentials and manage OpenHarness Cloud SSH keys and nodes. |
 | `oh --version` | Print the CLI version. |

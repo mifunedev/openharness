@@ -149,7 +149,6 @@ describe("autopilot-caps.sh — exit-code + STATUS contract", () => {
     // heartbeat/watchdog parsing is unchanged.
     expect(block).toContain("## Autopilot --");
     expect(block).toContain("- **Result**: SKIPPED-CAP-DAILY");
-    expect(block).toContain("- **Executor**: delegate-advisor");
     expect(block).toContain("- **Selected**: none");
     expect(block).toContain("- **Session**: none");
     expect(block).toContain(
@@ -160,16 +159,17 @@ describe("autopilot-caps.sh — exit-code + STATUS contract", () => {
     );
   });
 
-  it("honors AUTOPILOT_EXECUTOR / CRON_TMUX_SESSION in the memory block", () => {
+  it("honors CRON_TMUX_SESSION in the memory block and emits no Executor line", () => {
     run({
       GH_BIN: ghStub("6"),
       AUTOPILOT_TOTAL_CAP: "99",
-      AUTOPILOT_EXECUTOR: "ralph",
       CRON_TMUX_SESSION: "cron-autopilot-0615-1105",
     });
     const block = memoryLog();
-    expect(block).toContain("- **Executor**: ralph");
     expect(block).toContain("- **Session**: cron-autopilot-0615-1105");
+    // There is one build path, so the memory block has no executor field to
+    // report. A resurrected line here would mean the toggle came back.
+    expect(block).not.toContain("- **Executor**:");
   });
 
   it("fails OPEN (PROCEED-GH-ERROR, exit 0) and writes no logs when gh errors", () => {

@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -645,7 +646,7 @@ describe("runner_launch", () => {
     expect(r.stdout.trim()).toBe("w9:p42");
   });
 
-  it("passes --no-focus and tees the herdr log", () => {
+  it("passes --no-focus and never pipes the launched herdr command", () => {
     const t = makeTask("launch");
     const bin = makeBin({ herdr: true, isolated: true });
     sh(`runner_launch herdr launch '${t.worktree}' 'echo hi' >/dev/null 2>&1`, {
@@ -661,13 +662,16 @@ describe("runner_launch", () => {
     expect(start).toBeDefined();
     expect(start).toContain("--no-focus");
     expect(start).toContain("firstmate-launch");
-    expect(start).toContain(`2>&1 | tee ${t.runnerTmp}/firstmate-launch.log`);
+    // No pipe, no redirect: herdr owns its own pane capture, and a pipe here
+    // would replace the child's TTY (the defect observed 2026-08-23).
+    expect(start).not.toContain("| tee");
+    expect(start).not.toContain("2>&1");
     // The cd is inside the launched command, not only in the --cwd flag:
     // runner flags that claim to set a cwd frequently set only metadata.
     expect(start).toContain(`cd ${t.worktree} &&`);
   });
 
-  it("tees the tmux log and uses the agent- category session name", () => {
+  it("logs tmux via pipe-pane, unpiped, under the agent- category session name", () => {
     const t = makeTask("launch");
     const bin = makeBin({ tmux: true, isolated: true });
     sh(`runner_launch tmux launch '${t.worktree}' 'echo hi' >/dev/null 2>&1`, {
@@ -683,18 +687,35 @@ describe("runner_launch", () => {
     expect(call).toBeDefined();
     expect(call).toContain("-s agent-firstmate-launch");
     expect(call).toContain(`-c ${t.worktree}`);
-    expect(call).toContain(
-      `2>&1 | tee ${t.runnerTmp}/agent-firstmate-launch.log`,
-    );
+    // The launched command itself is never piped — the pane must stay a terminal.
+    expect(call).not.toContain("| tee");
+    // Logging attaches AFTER the pane exists, which preserves that terminal.
+    const pipePane = readFileSync(t.callsFile, "utf-8")
+      .split("\n")
+      .find((l) => l.includes("pipe-pane"));
+    expect(pipePane).toBeDefined();
+    expect(pipePane).toContain("-t agent-firstmate-launch");
+    expect(pipePane).toContain(`${t.runnerTmp}/agent-firstmate-launch.log`);
   });
 
-  it("tees the foreground log too (new behavior — ralph's fallback does not log)", () => {
+  it("lets the foreground child inherit stdio and writes no session log", () => {
     const t = makeTask("launch");
+    // The child must keep the caller's terminal, so its output arrives on the
+    // caller's own stdout rather than in a log file. runner_launch's own banner
+    // goes to stderr, so stdout carries the child's output alone.
     const r = sh(
-      `runner_launch foreground launch '${t.worktree}' 'echo hello-foreground' >/dev/null 2>&1\nwait "$RUNNER_FG_PID"\ncat "${t.runnerTmp}/firstmate-launch.log"`,
+      `runner_launch foreground launch '${t.worktree}' 'echo hello-foreground' 2>/dev/null\nwait "$RUNNER_FG_PID"`,
       { env: { PATH: process.env.PATH, RUNNER_TMPDIR: t.runnerTmp } },
     );
     expect(r.stdout).toContain("hello-foreground");
+    // No session log is written in foreground mode. The runner's own narrative
+    // log shares that path, so assert on its CONTENT: the child's output must
+    // not be captured into it, which is what a pipe or redirect would do.
+    const narrative = existsSync(`${t.runnerTmp}/firstmate-launch.log`)
+      ? readFileSync(`${t.runnerTmp}/firstmate-launch.log`, "utf-8")
+      : "";
+    expect(narrative).not.toContain("hello-foreground");
+    expect(narrative).toContain("stdio inherited; no session log");
   });
 
   it("fails loudly when herdr agent start returns no pane id", () => {

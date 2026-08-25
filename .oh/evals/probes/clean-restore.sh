@@ -32,11 +32,31 @@ fi
 # Literal match REQUIRES `grep -F`: the `[`/`]`/`@` in `${OWNED_PATHS[@]}` are BRE
 # metacharacters and a non-`-F` grep would silently mis-match — the exact grep form is
 # load-bearing here (mirrors the owned-surface-guard probe). The threshold is 4 to match
-# the §5/§6/§7-code/Guidelines restore sites in SKILL.md exactly (issue #81).
+# the restore sites in SKILL.md exactly. It was 4 while autopilot ran its own eval
+# gate; §6 became a pure deferral in spec-simplification US-002 (issue #816) and its
+# restore site went with it, leaving §5 (BUILD-INCOMPLETE) / §7-code / Guidelines.
 # shellcheck disable=SC2016  # the literal ${OWNED_PATHS[@]} must NOT expand — it is matched verbatim
 scoped_count="$(grep -Fc 'git checkout development -- "${OWNED_PATHS[@]}"' "$SKILL" || true)"
-if (( scoped_count < 4 )); then
-  echo "REGRESSION: expected >= 4 'git checkout development -- \"\${OWNED_PATHS[@]}\"' scoped-restore sites, found $scoped_count" >&2
+if (( scoped_count < 3 )); then
+  echo "REGRESSION: expected >= 3 'git checkout development -- \"\${OWNED_PATHS[@]}\"' scoped-restore sites, found $scoped_count" >&2
+  exit 1
+fi
+
+# A bare count is Goodhartable — three restores all sitting in the Guidelines prose
+# would satisfy it. Name the paths that must each carry one, so deleting the restore
+# from a terminal exit path trips this even while the total holds.
+# The BUILD-INCOMPLETE path spells the restore out inline, because it exits early and
+# never reaches the shared §7 tail.
+if ! grep -F 'BUILD-INCOMPLETE' "$SKILL" | grep -Fq 'git checkout development -- "${OWNED_PATHS[@]}"'; then
+  echo "REGRESSION: the BUILD-INCOMPLETE exit path no longer runs the scoped restore inline" >&2
+  exit 1
+fi
+
+# Every other terminal path reaches §7's shared restore, so that rule must still claim
+# universal scope. Without this clause a §7 path could quietly stop restoring while the
+# raw count above still held.
+if ! grep -Fq 'every path that changed the working branch (all paths reaching §4+)' "$SKILL"; then
+  echo "REGRESSION: the Guidelines no longer bind the scoped restore to every path reaching §4+" >&2
   exit 1
 fi
 

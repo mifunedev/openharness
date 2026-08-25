@@ -9,7 +9,7 @@ tmux: true
 worktree: true
 preflight: .oh/skills/prompt-miner/prompt-miner-caps.sh
 repo: mifunedev/openharness
-description: Daily prompt-miner — mine 24h of session traces for prompt-quality markers and ship a top finding to the origin fork via /ship-spec (opt-in, cap-gated)
+description: Daily prompt-miner — mine 24h of session traces for prompt-quality markers and ship a top finding to the origin fork via /spec (opt-in, cap-gated)
 ---
 
 # prompt-miner
@@ -19,7 +19,7 @@ session **in an isolated git worktree** (`$CRON_WORKTREE`, set by the cron runti
 because this cron declares `worktree: true`). The shared root checkout is never
 touched for source/branch work. Your job is to mine the last 24h of session
 traces for a high-confidence prompt-quality marker and, when one clears the bar,
-ship it to the **origin fork** through `/ship-spec` — never upstream, never
+ship it to the **origin fork** through `/spec` — never upstream, never
 auto-merged.
 
 This cron is **opt-in and cap-gated**:
@@ -88,13 +88,15 @@ Read the mined markers (stratified by session type; see `references/markers.md`)
   bar) or `NO-CORPUS` (no stratum reached the `sessions_supporting ≥ 10` floor) to
   the daily log and **stop**. No issue, no branch, no PR.
 
-### 3. Ship the candidate to origin via `/ship-spec`
+### 3. Ship the candidate to origin via `/spec`
 
-Hand the issue to `/ship-spec`, which owns the build end-to-end (worktree Advisor,
+Hand the issue to `/spec`, which owns plan and build end-to-end (worktree Advisor,
 `/delegate` + ralph, the `/eval` gate, `/audit pr` undraft) and targets the fork:
 
 ```bash
-/ship-spec --repo mifunedev/openharness --base development --issue <N>
+/spec plan --issue <N> --repo mifunedev/openharness --base development
+# then, once the operator approves prd.md:
+/spec execute <slug> --repo mifunedev/openharness --base development
 ```
 
 Capture the **created PR number**, then label the PR itself — GitHub does **not**
@@ -123,7 +125,7 @@ printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
 
 - **Never auto-merge.** This cron opens a PR and labels it; a human merges.
 - **Never edit `.oh/memory/MEMORY.md` or `.oh/context/IDENTITY.md` directly.** Improvements
-  land as loop-gated PRs through `/ship-spec` (which does not walk retro/compound),
+  land as loop-gated PRs through `/spec` (whose execute node walks retro/compound),
   never as unattended memory/identity mutations. The interactive `/prompt-miner`
   Step-4 gate is the only memory-writing path, and it requires human `APPROVE`.
 - **Origin-only.** Issue, PR, and ground-truth cross-ref target

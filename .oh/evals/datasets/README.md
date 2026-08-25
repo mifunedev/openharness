@@ -25,7 +25,7 @@ candidate diff still earns its example's reward.
 ## Per-example folder layout
 
 Each example lives at `evals/datasets/<dataset>/<DS-id>-<slug>/`. `<dataset>` is
-the trajectory class (`ship-spec-prs`, `autopilot-runs`, `retro-cycles`);
+the trajectory class (`spec-execute-prs`, `autopilot-runs`, `retro-cycles`);
 `<DS-id>` is the never-reused `DS-NNN` id; `<slug>` is a short kebab label.
 
 | Path | Holds |
@@ -50,12 +50,12 @@ the trajectory class (`ship-spec-prs`, `autopilot-runs`, `retro-cycles`);
 |---|---|---|---|
 | `id` | string | yes | `DS-NNN`; matches the folder's `DS-id` and the `## Catalogue` row. |
 | `slug` | string | yes | Kebab label; matches the folder's `<slug>`. |
-| `dataset` | string | yes | Trajectory class: `ship-spec-prs` \| `autopilot-runs` \| `retro-cycles`. |
+| `dataset` | string | yes | Trajectory class: `spec-execute-prs` \| `autopilot-runs` \| `retro-cycles`. |
 | `title` | string | yes | Human-readable one-line title. |
 | `created` | date | yes | UTC `YYYY-MM-DD` the example was captured. |
 | `source` | object | yes | Provenance. PR examples: `{repo, pr, issue, merge_commit, url}`. Retro examples: `{repo, memory_ref, lesson_date, origin}`. |
-| `trajectory` | object | yes | `{kind, outcome}` — e.g. `kind: "ship-spec"`, `outcome: "merged"`. |
-| `skills` | array | yes | Skills the trajectory exercised (e.g. `["ship-spec","eval"]`). |
+| `trajectory` | object | yes | `{kind, outcome}` — e.g. `kind: "spec-execute"`, `outcome: "merged"`. |
+| `skills` | array | yes | Skills the trajectory exercised (e.g. `["spec","eval"]`). |
 | `reward_kind` | array | yes | One or more reward modes (table below). |
 | `oracle` | object | yes | `{summary, changed_files, changed_file_count, diff?, lesson?}` — relative paths into `oracle/` plus the file count; `diff`/`lesson` present only when stored. |
 | `content_hash` | string | yes | `sha256:<hex>` taken over `oracle/changed-files.txt` — the drift anchor. |
@@ -93,10 +93,18 @@ directions; column 1 is the bare `DS-NNN`).
 
 | id | dataset | title | source | reward_kind |
 |---|---|---|---|---|
-| DS-001 | ship-spec-prs | Add default Pi Monitor support | PR #147 (closes #146) | diff_similarity, artifact_presence |
-| DS-002 | ship-spec-prs | Run pnpm security audits in CI | PR #172 (closes #171) | diff_similarity, artifact_presence, test_execution |
+| DS-001 | ship-spec-prs † | Add default Pi Monitor support | PR #147 (closes #146) | diff_similarity, artifact_presence |
+| DS-002 | ship-spec-prs † | Run pnpm security audits in CI | PR #172 (closes #171) | diff_similarity, artifact_presence, test_execution |
 | DS-010 | autopilot-runs | Correct the /harness-audit memory path | PR #177 (closes #176) | diff_similarity, artifact_presence |
 | DS-020 | retro-cycles | Brief critics with diverse lenses (retro lesson) | /retro 2026-05-11 → memory/MEMORY.md | artifact_presence, diff_similarity |
+
+† **Legacy class name.** `/ship-spec` was absorbed into `/spec execute` and deleted
+(spec-simplification US-003, 2026-08-24). The class for NEW examples is
+`spec-execute-prs`, as the schema above records. DS-001 and DS-002 keep the
+`ship-spec-prs` directory and manifest they were captured under: a dataset is a frozen
+record of what a run actually did, and renaming the class those runs were recorded in
+would make the record claim a skill that did not exist at capture time. Read the on-disk
+`ship-spec-prs/` folder as the historical spelling of `spec-execute-prs`.
 
 ## Pointers
 

@@ -71,8 +71,8 @@ no-op such as `-- true`, stale evidence, a symlink, or mismatched target fails c
 routes publish it with `scripts/audit-evidence.sh complete <NATIVE-VERDICT>` only after their
 checks finish.
 
-For the normal inline-agent protocol, use the shipped production driver; do not substitute a
-preflight callback:
+The shipped production driver runs the route through a non-interactive agent process. Use it
+rather than substituting a preflight callback:
 
 ```bash
 ROOT=$(git rev-parse --show-toplevel)
@@ -85,7 +85,14 @@ AUDIT_AGENT_COMMAND_JSON='["claude","-p","--output-format","text"]' \
 The driver supplies the selected route and correlated bindings to that agent, requires its
 final `AUDIT-EVIDENCE: <NATIVE-VERDICT>` line, and atomically publishes the evidence contract.
 Set `AUDIT_AGENT_COMMAND_JSON` to the equivalent non-interactive argv for another provider.
-Non-scriptable protocols that cannot run this driver or publish valid evidence fail closed.
+The driver launches that agent with the `AUDIT_*` lifecycle variables **scrubbed from its
+environment** — it receives every binding it needs as prompt text, and an agent that inherits
+the identity instead grades its caller's environment rather than the repository.
+
+**What the boundary requires is target-correlated schema-v1 evidence, not a particular process
+shape.** This driver is the shipped way to produce it; any protocol that publishes evidence
+bound to the exact run id, target, and validated argument array satisfies the contract equally.
+A protocol that cannot publish it fails closed.
 Do not run the boundary merely to obtain environment JSON and then execute route work outside
 it. An inherited ID identifies child mode and is never replaced or independently logged. The
 generated ID matches `audit-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9._-]+`.

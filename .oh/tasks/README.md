@@ -1,8 +1,9 @@
 # `.oh/tasks/`
 
-Ralph task workdirs. Each `<taskdesc>/` subfolder is one autonomous
-Ralph session created by the `/ralph` skill (or by running
-`.oh/scripts/ralph.sh <taskdesc>` directly).
+Spec task workdirs. Each `<slug>/` subfolder is one autonomous build
+session's four-file contract, created by `/spec plan` (the
+`/ralph` skill produces the `prd.json` inside it) and built by
+`.oh/scripts/firstmate.sh <slug>`.
 
 A task directory typically contains:
 
@@ -18,9 +19,12 @@ A task directory typically contains:
 
 - `<taskdesc>` is kebab-case and matches the branch name's `<short-desc>`
   segment when the task corresponds to a harness branch.
-- `prd.json` and `progress.txt` are tracked so a session can be resumed
-  from another checkout; transient runner state under
-  `.ralph/` (logs, archives, last-branch pointer) is gitignored.
+- **This whole directory is gitignored** (`.gitignore`: `.oh/tasks/*` with
+  `!.oh/tasks/README.md`), so only this guide is tracked by default. Task files a PR
+  must carry — `prd.md`, `prd.json`, `prompt.md`, `progress.txt`, `evidence.md`,
+  `eval-result.json` — are added explicitly with **`git add -f`**. A bare
+  `git add .oh/tasks/<slug>/` stages nothing and commits silently without them, which
+  is the same as never having written them from a reviewer's seat.
 - **Do not edit `progress.txt` by hand** — the runner appends to it.
 
 ## Lifecycle
@@ -32,4 +36,4 @@ A task directory typically contains:
 - `archive/` contents are gitignored except for archived task files
   themselves (see root `.gitignore`).
 
-See `.oh/scripts/ralph.sh` for the runner entry point.
+See `.oh/scripts/firstmate.sh` for the build-executor entry point.

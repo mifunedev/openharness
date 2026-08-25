@@ -6,6 +6,6 @@ Render one compact evidence table from classifier JSON: number, CI, mergeability
 
 Emit `PR-AUDIT-PROMOTABLE` iff `.promotable == true && .evidenceComplete == true`; emit `PR-AUDIT-BLOCKED` for complete non-promotable evidence; otherwise emit `PR-AUDIT-UNKNOWN`.
 
-This route writes no repository file. When the caller is an orchestrating workflow that must leave the reviewer proof in the PR (e.g. `.oh/prompts/advisor/pr.yml`), it — not this route — records the returned observations in `.oh/tasks/<slug>/evidence.md` per [`reviewer-evidence-doc.md`](reviewer-evidence-doc.md).
+This route writes no repository file. When the caller is an orchestrating workflow that must leave the reviewer proof in the PR (e.g. `/spec execute`'s promotable gate), it — not this route — records the returned observations in `.oh/tasks/<slug>/evidence.md` per [`reviewer-evidence-doc.md`](reviewer-evidence-doc.md).
 
 `--deep` may add bounded root-cause evidence for this PR but cannot alter classification. Diff correctness is outside audit scope. `--proof` is the sole focused write: preview the exact idempotent `<!-- pr-audit-proof -->` comment and require confirmation; `--dry-run` writes nothing. Re-acquire and classify immediately before a confirmed write, tagged `freshPreAction: true`. Never call `gh pr ready` or merge.

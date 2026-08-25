@@ -22,7 +22,7 @@ with zero maintenance and no second copy to keep in sync.
 
 This is why the two `.pi`-aware eval probes
 (`.oh/evals/probes/locked-append-critical-path.sh`,
-`.oh/evals/probes/ship-spec-ready-finalization.sh`) read `.pi/skills/<name>/SKILL.md`
+`.oh/evals/probes/spec-ready-finalization.sh`) read `.pi/skills/<name>/SKILL.md`
 directly and find the same content the `.claude` side has: the symlink makes them
 the same file. A per-skill byte-copy parity probe would be redundant here.
 

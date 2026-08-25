@@ -10,12 +10,8 @@
 # ---------------------------------------------------------------------------
 # WORDING PROVENANCE
 # ---------------------------------------------------------------------------
-# The error and hint strings below are taken from `.oh/scripts/ralph.sh` — the
-# slug check at ralph.sh:394-397, the task-dir check at ralph.sh:402-406, and
-# the four-file loop at ralph.sh:409-414 — so that an operator sees the SAME
-# message whichever executor rejected the folder. `.oh/scripts/ralph.sh` itself
-# is a protected path and stays ZERO-DIFF this round, so it does not source this
-# file; the duplication is deliberate and this comment is its attribution.
+# The error and hint strings below are the canonical wording for a rejected task
+# folder, so an operator sees the SAME message whichever consumer rejected it.
 #
 # ---------------------------------------------------------------------------
 # CONTRACT: THE CALLER OWNS SHELL OPTIONS; THIS LIBRARY MUST NOT MUTATE THEM.
@@ -26,7 +22,7 @@
 # which no linter flags. These functions RETURN non-zero on failure; a sourced
 # library must never `exit` the caller's shell.
 
-# The four-file contract, in the order ralph.sh checks them.
+# The four-file contract, in canonical order.
 TASK_CONTRACT_FILES=(prd.md prd.json prompt.md progress.txt)
 
 # Per SPEC: kebab-case and shell-safe, because the slug becomes part of a

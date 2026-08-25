@@ -80,6 +80,8 @@ config: harness-config ## Print effective harness.yaml-derived env and resolved 
 help: ## List available targets with descriptions
 	@printf "Open Harness — Make targets:\n"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-	@printf "\nSandbox CLI (run \033[36minside\033[0m the sandbox after \033[36mmake shell\033[0m):\n"
+	@printf "\nSame verbs via the \033[36moh\033[0m CLI (inside the sandbox, or in an \033[36moh init\033[0m repo):\n"
+	@printf "  \033[36moh sandbox\033[0m / \033[36mshell\033[0m / \033[36mstop\033[0m / \033[36mrestart\033[0m / \033[36mlogs\033[0m / \033[36mps\033[0m / \033[36mgateway\033[0m\n"
+	@printf "  Both run .oh/scripts/docker-compose.sh. Mapping: \033[36m.oh/docs/lifecycle-commands.md\033[0m\n"
 	@printf "  \033[36moh --help\033[0m  List all \033[36moh\033[0m subcommands\n"
 	@printf "  Slack bridge setup: see \033[36m.oh/docs/integrations/slack.md\033[0m\n"

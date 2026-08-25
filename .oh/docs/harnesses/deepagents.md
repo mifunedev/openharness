@@ -23,6 +23,18 @@ mix or non-interactive shell-allow-list model is the right fit for a task.
 
 ## Install (optional)
 
+The shortest path is the CLI, which sets the `harness.yaml` flag **and**
+installs into the already-running sandbox without a rebuild:
+
+```bash
+oh harness install deepagents
+```
+
+See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only`,
+`--no-persist`, and what happens when the sandbox is not running.
+
+### Manual path
+
 Enable DeepAgents in `harness.yaml`:
 
 ```yaml

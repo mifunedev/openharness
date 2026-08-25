@@ -112,14 +112,39 @@ Every PR with user-visible impact MUST add entry under `## [Unreleased]` heading
 
 Skip entries only for pure chores with no runtime or workflow effect (internal refactors, test-only changes, typo fixes). When in doubt, add entry.
 
-Entry format: one line, imperative mood, link PR or issue.
+Entry format: ONE sentence, imperative mood, **≤ 250 characters**, link the PR or issue.
+
+An entry states WHAT changed and its user-visible effect. Never why. Never alternatives considered. Never implementation detail.
 
 ```markdown
 ### Added
 - Slack thread replies in multi-channel mode ([#42](https://github.com/mifunedev/openharness/pull/42)).
 ```
 
-Automatic branch-push releases use the matching `## [<VERSION>] - YYYY-MM-DD` section when one already exists; otherwise they publish the current `[Unreleased]` body. Do **not** hand-edit a versioned section after its tag ships.
+Displaced detail has a destination — put it there, not in the entry:
+
+| Detail | Destination |
+|--------|-------------|
+| Rationale, rejected alternatives | The PR body — the `([#N])` link is the pointer |
+| Task/spec decisions | `.oh/tasks/<slug>/prd.md` |
+| Architecture decisions | `.oh/docs/rfcs/` |
+| Incident narrative, lessons | `.oh/memory/MEMORY.md` |
+
+BAD (real entry, 3,579 chars — a design doc wearing a bullet):
+
+```markdown
+- Add `oh harness <list|install|status>` so installing an agent harness stops requiring a full image rebuild. Adding one of the four optional harnesses previously meant knowing that `harness.yaml` carries an `install:` section, …
+```
+
+GOOD (233 chars — same fact, rationale left to the PR):
+
+```markdown
+- Add `oh harness <list|install|status>` to install optional harnesses into a running sandbox without a rebuild, persisting the choice to `install.<key>` for the next build ([#821](https://github.com/mifunedev/openharness/pull/821)).
+```
+
+Enforced by `.oh/evals/probes/changelog-entry-length.sh` (report-only) over `## [Unreleased]`.
+
+Automatic branch-push releases use the matching `## [<VERSION>] - YYYY-MM-DD` section when one already exists; otherwise they publish the current `[Unreleased]` body. Do **not** hand-edit a versioned section after its tag ships, except for a repo-wide reformat that changes no facts.
 
 ## Worktrees
 

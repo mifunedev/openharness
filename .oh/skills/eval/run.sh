@@ -74,6 +74,7 @@ RESULTS_ORIG=""
 now="$(date -u +'%Y-%m-%d %H:%M')"
 declare -A NEWROW
 regressions=()
+stuck=()
 ran=0
 
 shopt -s nullglob
@@ -108,6 +109,9 @@ for probe in "$PROBES_DIR"/*.sh; do
   # green->red is the recurrence signal; first run has no prior, so never fires
   if [ "$prior" = "PASS" ] && [ "$status" != "PASS" ] && [ "$status" != "SKIPPED" ]; then
     regressions+=("$id ($src): was PASS, now $status — ${reason:-no reason}")
+  fi
+  if [ "$status" != "PASS" ] && [ "$status" != "SKIPPED" ] && [ "$prior" != "PASS" ]; then
+    stuck+=("$id ($src): $status, delta=$delta — ${reason:-no reason}")
   fi
 
   NEWROW[$id]="| $id | $tier | $now | $status | $src |"
@@ -151,6 +155,10 @@ tmp=""
 if [ "${#regressions[@]}" -gt 0 ]; then
   echo "REGRESSIONS (${#regressions[@]}):"
   for r in "${regressions[@]}"; do echo "  - $r"; done
+fi
+if [ "${#stuck[@]}" -gt 0 ]; then
+  echo "PERSISTENT RED (${#stuck[@]}) — not gating, no green->red delta:"
+  for r in "${stuck[@]}"; do echo "  - $r"; done
 fi
 echo "ran $ran probe(s); wrote $RESULTS"
 if [ "${#regressions[@]}" -gt 0 ]; then exit 1; fi

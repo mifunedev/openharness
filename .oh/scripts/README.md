@@ -6,7 +6,7 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | File              | Purpose                                                            |
 | ----------------- | ------------------------------------------------------------------ |
 | `install.sh`      | Curl-piped installer — bootstraps a fresh harness checkout         |
-| `ralph.sh`        | Ralph loop runner: `scripts/ralph.sh [--harness=…] <taskdesc>`     |
+| `firstmate.sh`    | The build executor: `.oh/scripts/firstmate.sh [--harness=…] <slug>` |
 | `link-providers.sh` | Creates/repairs the provider skill/agent/hook symlinks into `.oh/` and validates the vendored pack is present. |
 | `repo-orientation-benchmark-score.mjs` | Scores the CB-004 repo-orientation A/B benchmark report |
 | `release-reservation.mjs` | Validates the SemVer release version and drives the reservation state machine |

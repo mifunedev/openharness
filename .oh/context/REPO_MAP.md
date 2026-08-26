@@ -93,7 +93,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Git/GitHub workflow, PRs, releases | `.pi/skills/git/`, `.pi/skills/audit/`, `.pi/skills/ci-status/`, `.github/workflows/` | Canonical branch/PR/release conventions and CI gates. |
 | Cron/autopilot behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts`, `.pi/skills/autopilot/`, `.oh/skills/autopilot/autopilot-caps.sh` | Scheduled prompts, runtime supervision, caps, and watchdog. |
 | Eval/probe regressions | `.oh/evals/README.md`, `.oh/evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
-| Task/spec implementation state | `.oh/tasks/README.md`, `.oh/tasks/<active-task>/` | PRD, critique, Ralph JSON, prompt, and task-specific artifacts. |
+| Task/spec implementation state | `.oh/tasks/README.md`, `.oh/tasks/<active-task>/` | PRD, task-graph JSON, prompt, evidence, and task-specific artifacts. |
 | Docs | `README.md`, `.oh/docs/README.md`, `.oh/docs/` | GitHub-readable markdown; site/blog lives in `mifunedev/openharness-web`. |
 | CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi provider extensions, manifests, and runtime config; `.pi/` is not the v1 Mifune mount. |
@@ -116,7 +116,7 @@ Ignore these unless the task explicitly targets them:
 | `.oh/memory/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki ingest --from-draft`. |
 | `.oh/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.oh/skills/wiki/corpus/*.md` entry. |
 | `workspace/.slack/`, `workspace/.pi/`, `workspace/.ralph/`, `workspace/startup.sh` | Runtime state and local/sensitive sandbox artifacts. | Debugging Slack/Pi/Ralph runtime state or startup generation. |
-| `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific Ralph run status; prefer `tail` over full read. |
+| `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific build-session status; prefer `tail` over full read. |
 | `.oh/evals/datasets/**/oracle/`, `.oh/evals/datasets/**/diff.patch`, `.oh/evals/datasets/**/changed-files.txt` | Expected-output fixtures, not implementation guidance. | Updating/verifying a dataset oracle. |
 
 ## On-demand search targets
@@ -134,7 +134,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `.oh/` | OpenHarness runtime machinery grouped as one unit: the `oh` CLI (`.oh/cli/`), installer/lifecycle scripts (`.oh/scripts/`), container-install inputs (`.oh/install/`), deploy config (`.oh/config.json`). The docs site moved to `mifunedev/openharness-web`. | Read `.oh/README.md` first; find harness tooling addressed as a namespace. |
 | `.oh/context/` | Voice, identity, tools, repo map, user collaboration, and rules. | Load operating principles and process constraints. |
 | `.oh/crons/` | Scheduled agent prompts and heartbeat/autopilot jobs. | Understand recurring automation; read `.oh/crons/README.md` first. |
-| `.oh/scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, Ralph, caps. | Find executable implementation behind docs/skills; read `.oh/scripts/README.md` first. |
+| `.oh/scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, the build executor, caps. | Find executable implementation behind docs/skills; read `.oh/scripts/README.md` first. |
 | `.oh/scripts/__tests__/` | Vitest coverage for harness scripts. | Locate targeted tests for script changes. |
 | `.oh/evals/probes/` | Regression probes used by `/eval` and CI. | Add or inspect behavior guards. |
 | `.oh/evals/capability/` | Capability benchmark specs/results vs regression probes. | Evaluate progress-ceiling tasks. |
@@ -143,7 +143,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `.oh/cli/package.json` | CLI package-local scripts and dependencies. | Run package-specific build/typecheck. |
 | `.oh/docs/` | GitHub-readable product docs. | Update product docs; start at `.oh/docs/README.md`. |
 | `.oh/skills/wiki/corpus/*.md` | Curated internal knowledge pages. | Reuse durable research before reading raw sources; read `.oh/skills/wiki/corpus/README.md` for index. |
-| `.oh/tasks/<active-task>/` | `prd.md`, `prd.json`, `critique.md`, `prompt.md`; `progress.txt` only for Ralph run status. | Verify task graph or implementation scope before reading runtime progress. |
+| `.oh/tasks/<active-task>/` | `prd.md`, `prd.json`, `prompt.md`, `evidence.md`; `progress.txt` only for build-session status. | Verify task graph or implementation scope before reading runtime progress. |
 | `.github/workflows/` | CI, docs, release workflow definitions. | Debug/check GitHub Actions behavior. |
 | `.devcontainer/` | Sandbox Dockerfile, compose, devcontainer config, entrypoint. | Change sandbox image/runtime provisioning. |
 | `.pi/extensions/` | In-tree Pi extension source, especially Slack bridge. | Modify Pi integration behavior. |

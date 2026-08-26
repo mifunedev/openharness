@@ -23,6 +23,18 @@ mix or non-interactive shell-allow-list model is the right fit for a task.
 
 ## Install (optional)
 
+The shortest path is the CLI, which sets the `harness.yaml` flag **and**
+installs into the already-running sandbox without a rebuild:
+
+```bash
+oh harness install deepagents
+```
+
+See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only`,
+`--no-persist`, and what happens when the sandbox is not running.
+
+### Manual path
+
 Enable DeepAgents in `harness.yaml`:
 
 ```yaml
@@ -138,32 +150,24 @@ Flags:
 - `-n "$task"` — non-interactive single task.
 - `-q --no-stream` — quiet, buffered output for clean log capture.
 
-### Ralph usage
+### Build-executor usage
 
-`scripts/ralph.sh` accepts `deepagents` as an explicit harness:
-
-```bash
-scripts/ralph.sh --harness=deepagents <task-name>
-# or
-RALPH_HARNESS=deepagents scripts/ralph.sh <task-name>
-```
-
-DeepAgents is never auto-selected by Ralph fallback — it must be chosen
-explicitly. The default invocation is:
+The build executor (`.oh/scripts/firstmate.sh`) has built-in arms for
+`claude`, `pi`, and `codex` only. DeepAgents is reached through the full
+command override instead — the rendered prompt path is exported as
+`$FIRSTMATE_PROMPT_FILE`:
 
 ```bash
-deepagents -y --shell-allow-list recommended -q --no-stream --max-turns 25 -n "$task"
+FIRSTMATE_HARNESS_CMD='deepagents -y --shell-allow-list recommended -q --no-stream --max-turns 25 -n "$(cat "$FIRSTMATE_PROMPT_FILE")"' \
+  .oh/scripts/firstmate.sh <slug>
 ```
 
-Two environment overrides apply:
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `RALPH_DEEPAGENTS_FLAGS` | `-y --shell-allow-list recommended -q --no-stream` | Override the flag string before the task. **Do not include `--max-turns` here** — the cap is appended separately. |
-| `RALPH_DEEPAGENTS_MAX_TURNS` | `25` | Per-call turn cap, always appended as `--max-turns "$RALPH_DEEPAGENTS_MAX_TURNS"` so a single DeepAgents call cannot hang the iteration. |
+DeepAgents is never auto-selected — it must be chosen explicitly. Keep the
+prompt as initial argv and add no `--print`-style one-shot flag: the build
+session must stay interactive and multi-turn (see `/firstmate`).
 
 > **`--shell-allow-list all` warning.** Choosing `--shell-allow-list all`
-> via `RALPH_DEEPAGENTS_FLAGS` grants unrestricted non-interactive shell
+> grants unrestricted non-interactive shell
 > execution. Combined with the mounted Docker socket (enabled by default
 > in the base compose file), this can affect sibling containers or the
 > host Docker daemon. Only use `all` for trusted tasks where

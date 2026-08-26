@@ -507,7 +507,7 @@ export function buildCronAgentCommand(opts: {
     `echo "cron-runtime: Claude limit detected; retrying with Codex" | tee -a ${quotedLogFile}; ` +
     cronLogCommand(id, "AGENT_FALLBACK", "'from=claude to=codex'") +
     `active_agent=codex; ` +
-    `export RALPH_HARNESS=codex; ` +
+    `export FIRSTMATE_HARNESS=codex; ` +
     `${resumeCodex}` +
     logAgentStart +
     `codex exec --sandbox danger-full-access "$(cat ${quotedPromptFile})" 2>&1 | tee -a ${quotedLogFile}; ` +
@@ -589,7 +589,7 @@ function detectBaseRef(remote = "origin"): string | null {
 
 // Absolute working directory of every live tmux pane. This remains the primary
 // liveness signal because autopilot may rename its session
-// (cron-autopilot-<ts> → autopilot-<branch>) and ship-spec may run work inside a
+// (cron-autopilot-<ts> → autopilot-<branch>) and /spec execute may run work inside a
 // separate Advisor session (agent-ship-<slug>).
 function livePaneCwds(): string[] {
   const r = spawnSync("tmux", ["list-panes", "-a", "-F", "#{pane_current_path}"], {

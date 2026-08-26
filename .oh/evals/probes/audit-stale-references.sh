@@ -6,7 +6,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT"
 pat='(^|[^A-Za-z0-9-])(pr-audit|harness-audit|context-audit|skill-lint|eval-lint|drift-check)([^A-Za-z0-9-]|$)|\.oh/skills/(pr-audit|harness-audit|context-audit|skill-lint|eval-lint|drift-check)(/|$)|auditor\.md'
 set +e
-hits=$(git grep -n -E "$pat" -- ':!CHANGELOG.md' ':!.oh/evals/RESULTS.md' ':!.oh/evals/datasets/**' ':!.oh/tasks/archive/**')
+# `preserved-changelog-rationale.md` is verbatim CHANGELOG.md history, quoted
+# under a header that says so — the same reason CHANGELOG.md itself is excluded.
+# It is a record of what shipped, not an active surface, so a skill named in a
+# 2026-05 entry is a historical fact rather than a stale reference to repair.
+hits=$(git grep -n -E "$pat" -- ':!CHANGELOG.md' ':!.oh/docs/rfcs/preserved-changelog-rationale.md' ':!.oh/evals/RESULTS.md' ':!.oh/evals/datasets/**' ':!.oh/tasks/archive/**')
 rc=$?; set -e
 [[ $rc -eq 0 || $rc -eq 1 ]] || { echo 'REGRESSION: stale-reference inventory failed' >&2; exit 1; }
 bad=()
@@ -15,7 +19,7 @@ while IFS= read -r hit; do
   path=${hit%%:*}; rest=${hit#*:}; line=${rest#*:}
   case "$path:$line" in
     .oh/evals/probes/audit-dispatcher-contract.sh:*|.oh/evals/probes/audit-stale-references.sh:*) continue;;
-    .oh/tasks/audit-consolidation/prd.md:*|.oh/tasks/audit-consolidation/critique.md:*|.oh/tasks/audit-consolidation/prompt.md:*|.oh/tasks/audit-consolidation/reference-inventory.md:*) continue;;
+    .oh/tasks/audit-consolidation/prd.md:*|.oh/tasks/audit-consolidation/prompt.md:*|.oh/tasks/audit-consolidation/reference-inventory.md:*) continue;;
     .oh/skills.lock:*Migrated*provenance*) continue;;
     .oh/scripts/link-providers.sh:*context-audit-runner.sh*|.oh/skills/audit/references/context.md:*context-audit-*|.oh/skills/audit/scripts/context-audit-runner.sh:*context-audit-*) continue;;
     .oh/skills/audit/references/pr.md:*pr-audit-proof*|.oh/skills/audit/references/prs.md:*pr-audit-proof*) continue;;
@@ -31,7 +35,6 @@ bare_audit='`/audit`'
 for caller in \
   .oh/skills/wiki/corpus/recursive-language-models.md \
   .oh/skills/weigh \
-  .oh/skills/teach \
   .oh/skills/benchmark/SKILL.md \
   .oh/skills/spec/SKILL.md \
   .oh/skills/spec/references/execute.md \

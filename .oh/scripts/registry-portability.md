@@ -62,7 +62,7 @@ reports that token when it starts with `/` and the remainder names no folder
 under `skills/`. The registry is the installer's whole world, so a slash command
 outside it is unreachable.
 
-The backtick is required. A bare `/dev/null` or `tasks/<slug>/critique.md` is a
+The backtick is required. A bare `/dev/null` or `tasks/<slug>/progress.txt` is a
 filesystem path, not a slash command, and a looser pattern reports over 100 false
 hits across the registry. Because the rule takes the first token, an invocation
 that carries arguments, such as a backticked `/name <arg>`, is still read.

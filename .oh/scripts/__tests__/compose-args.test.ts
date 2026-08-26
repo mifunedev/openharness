@@ -292,13 +292,35 @@ describe("compose helper wiring", () => {
     expect(text).not.toContain("COMPOSE_FILES=\"-f .devcontainer/docker-compose.yml\"");
   });
 
-  it("installer keeps host defaults out of tracked harness.yaml", () => {
+  // REVERSED (was "installer keeps host defaults out of tracked harness.yaml").
+  // The installer used to write every non-secret answer to .devcontainer/.env
+  // while its own closing text named harness.yaml as the file that wins — so the
+  // user's answers landed in the LOSING file. Compose tolerated it (it falls back
+  // to .env for every overlay decision); the `oh` CLI does not, because it
+  // resolves sandbox.name and install.* from harness.yaml only. Non-secrets now
+  // go to harness.yaml, which both doors read.
+  it("installer writes non-secret answers to harness.yaml, the file that wins", () => {
     const text = readFileSync(INSTALL, "utf8");
     expect(text).toContain("Existing .devcontainer/.env preserved");
-    expect(text).toContain("Keeping host\n# defaults here (not in shared config)");
-    expect(text).toContain('SANDBOX_NAME=$(_env_val "$SANDBOX_NAME")');
-    expect(text).toContain("GIT_USER_NAME=%s\\n");
-    expect(text).not.toContain('__YAML="$REPO_DIR/harness.yaml"');
-    expect(text).not.toContain('ok "harness.yaml: sandbox.name');
+    // The single line editor, respecting harness-config.sh's awk grammar.
+    expect(text).toContain("_yaml_set() {");
+    expect(text).toContain("_cfg_set sandbox name       SANDBOX_NAME");
+    expect(text).toContain("_cfg_set git     user_name  GIT_USER_NAME");
+    // harness.yaml must be materialized BEFORE the prompts, or the answers have
+    // nowhere to land.
+    expect(text.indexOf("Created harness.yaml from harness.yaml.example")).toBeLessThan(
+      text.indexOf("_cfg_set sandbox name"),
+    );
+    // Optional installs land as harness.yaml install.* keys, matching what
+    // `oh harness install <name>` writes.
+    expect(text).toContain("_yaml_set install");
+    // Secrets stay in .devcontainer/.env, never in harness.yaml.
+    expect(text).toContain("GH_TOKEN=");
+    expect(text).not.toContain("_yaml_set sandbox gh_token");
+    // DOCKER_SOCKET is the ONE documented non-secret exception: the VS Code
+    // "Reopen in Container" path loads the compose file directly and cannot read
+    // harness.yaml, so a socket opt-in recorded only there would be invisible.
+    expect(text).toContain("DELIBERATE EXCEPTION");
+    expect(text).toContain("printf 'DOCKER_SOCKET=true\\n' >> \"$REPO_DIR/.devcontainer/.env\"");
   });
 });

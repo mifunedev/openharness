@@ -63,7 +63,7 @@ DeepWiki at generated repo navigation. (`workspace/` and `docs/` stay at root as
 identity/state/content, not machinery addressed as a unit.) The Ralph/spec
 task workdirs (`tasks/`) were reclassified as machinery and moved under
 `.oh/tasks/` with no back-compat symlink; every consumer (the `cleanup-tasks`
-cron, `ralph.sh`, the eval probes, and the vendored skill/agent references)
+cron, the build executor, the eval probes, and the vendored skill/agent references)
 was repointed to the real `.oh/tasks/` path because git index operations
 cannot traverse a symlink and nothing reads the bare `tasks/` path anymore.
 
@@ -188,7 +188,7 @@ rides along when the skill syncs — the same portability thesis as rules→skil
 |---|---|---|
 | `locked-append.sh` | STAY — concurrency primitive, max-shared | root |
 | `cron-runtime.ts` | STAY — the cron engine (runtime) | root |
-| `ralph.sh` | STAY — shared build executor (spec-* + autopilot) | root |
+| `firstmate.sh` | STAY — the build executor (spec-* + autopilot) | root |
 | `ablate.sh` | STAY — shared ablation harness (audit family) | root |
 | `autopilot-caps.sh` | → SKILL | `.oh/skills/autopilot/` |
 | `prompt-miner-caps.sh` | → SKILL | `.oh/skills/prompt-miner/` |

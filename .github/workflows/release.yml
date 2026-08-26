@@ -256,8 +256,13 @@ jobs:
           RELEASE_VERSION: ${{ needs.reserve.outputs.releaseVersion }}
         run: |
           NOTES_FILE="$RUNNER_TEMP/release-notes.md"
-          awk -v ver="$RELEASE_VERSION" '
-            $0 ~ ("^## \[" ver "\] - ") { in_block=1; next }
+          # Match the heading as a literal prefix, never as a built regex. In an
+          # awk string, `\[` is not an escape: gawk drops the backslash, so a
+          # pattern built as ("^## \[" ver "\] - ") becomes a character class and
+          # matches nothing. mawk keeps it, which is why this reads as correct in
+          # a local sandbox and fails on the runner. `index()` has no such trap.
+          awk -v hdr="## [$RELEASE_VERSION] - " '
+            index($0, hdr) == 1 { in_block=1; next }
             in_block && /^## \[/ { exit }
             in_block && /^---[[:space:]]*$/ { exit }
             in_block { print }

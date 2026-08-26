@@ -26,6 +26,8 @@ on:
       - ".devcontainer/**"
       - "workspace/**"
       - ".oh/evals/**"
+      - "AGENTS.md"
+      - "CLAUDE.md"
   pull_request:
     paths:
       - "packages/**"
@@ -47,6 +49,8 @@ on:
       - ".devcontainer/**"
       - "workspace/**"
       - ".oh/evals/**"
+      - "AGENTS.md"
+      - "CLAUDE.md"
 
 concurrency:
   group: ci-harness-${{ github.ref }}

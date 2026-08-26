@@ -29,6 +29,18 @@ upstream documentation below for canonical facts about Hermes.
 
 ## Install (optional)
 
+The shortest path is the CLI, which sets the `harness.yaml` flag **and**
+installs into the already-running sandbox without a rebuild:
+
+```bash
+oh harness install hermes
+```
+
+See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only`,
+`--no-persist`, and what happens when the sandbox is not running.
+
+### Manual path
+
 Hermes is disabled by default. To install it into the sandbox image, set
 `harness.yaml`:
 
@@ -68,7 +80,7 @@ curl -fsSL -o hermes-install.sh https://hermes-agent.nousresearch.com/install.sh
 bash hermes-install.sh --skip-setup --skip-browser
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://hermes-agent.nousresearch.com/install.sh --skip-setup --skip-browser` gives the installer a fetch/review/approve gate. `vet` is optional and is not required by Open Harness.
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://hermes-agent.nousresearch.com/install.sh --skip-setup --skip-browser` gives the installer a fetch, review, and approve gate. `vet` is optional and is not required by Open Harness.
 
 That keeps `make sandbox` non-interactive. User setup remains explicit
 inside the running sandbox.

@@ -88,6 +88,18 @@ Example: `FROM feat/42-slack-thread-replies TO development`
 - Link issue: `Closes #<issue#>` (or `Fixes`/`Resolves`)
 - Target default target branch (`development` → `main` → `master`, whichever exists)
 
+> **`Closes #N` does NOT auto-close the issue in this repo — close it by hand after every
+> merge.** GitHub honors a closing trailer only on merge into the **default** branch. PRs
+> here target `development` while the default branch is `main`, so the trailer registers as
+> a `referenced` timeline event and nothing else. Verified on #759 (whose `closed` event
+> carries `commit=none`) and independently on #753 from PR #757. Keep writing the trailer —
+> it is the machine-readable link a reader follows — but treat the close as a separate
+> manual step:
+>
+> ```bash
+> gh issue close <N> --repo <owner/name> --comment "Merged in #<PR>."
+> ```
+
 ## Commit Messages
 
 Format: `<type>: <description>` where `<type>` ∈ `feat` · `fix` · `task` · `audit` · `skill`
@@ -100,14 +112,39 @@ Every PR with user-visible impact MUST add entry under `## [Unreleased]` heading
 
 Skip entries only for pure chores with no runtime or workflow effect (internal refactors, test-only changes, typo fixes). When in doubt, add entry.
 
-Entry format: one line, imperative mood, link PR or issue.
+Entry format: ONE sentence, imperative mood, **≤ 250 characters**, link the PR or issue.
+
+An entry states WHAT changed and its user-visible effect. Never why. Never alternatives considered. Never implementation detail.
 
 ```markdown
 ### Added
 - Slack thread replies in multi-channel mode ([#42](https://github.com/mifunedev/openharness/pull/42)).
 ```
 
-Automatic branch-push releases use the matching `## [<VERSION>] - YYYY-MM-DD` section when one already exists; otherwise they publish the current `[Unreleased]` body. Do **not** hand-edit a versioned section after its tag ships.
+Displaced detail has a destination — put it there, not in the entry:
+
+| Detail | Destination |
+|--------|-------------|
+| Rationale, rejected alternatives | The PR body — the `([#N])` link is the pointer |
+| Task/spec decisions | `.oh/tasks/<slug>/prd.md` |
+| Architecture decisions | `.oh/docs/rfcs/` |
+| Incident narrative, lessons | `.oh/memory/MEMORY.md` |
+
+BAD (real entry, 3,579 chars — a design doc wearing a bullet):
+
+```markdown
+- Add `oh harness <list|install|status>` so installing an agent harness stops requiring a full image rebuild. Adding one of the four optional harnesses previously meant knowing that `harness.yaml` carries an `install:` section, …
+```
+
+GOOD (233 chars — same fact, rationale left to the PR):
+
+```markdown
+- Add `oh harness <list|install|status>` to install optional harnesses into a running sandbox without a rebuild, persisting the choice to `install.<key>` for the next build ([#821](https://github.com/mifunedev/openharness/pull/821)).
+```
+
+Enforced by `.oh/evals/probes/changelog-entry-length.sh` (report-only) over `## [Unreleased]`.
+
+Automatic branch-push releases use the matching `## [<VERSION>] - YYYY-MM-DD` section when one already exists; otherwise they publish the current `[Unreleased]` body. Do **not** hand-edit a versioned section after its tag ships, except for a repo-wide reformat that changes no facts.
 
 ## Worktrees
 
@@ -258,3 +295,5 @@ Let `$BASE` = default target branch (detected per rule above).
 4. Commit with `<type>: <description>`
 5. `git push -u origin <branch>` → then `/ci-status` (if skill exists)
 6. `gh pr create --base $BASE --title "FROM <branch> TO $BASE" --body "Closes #<issue#>"`
+7. After the merge, **close the issue manually** — `Closes #N` does not fire when the PR
+   targets a non-default branch (see § PR Bodies): `gh issue close <issue#> --repo <owner/name>`

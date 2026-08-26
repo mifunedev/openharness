@@ -25,7 +25,7 @@ agents:
 
 loops:
   schedules: .oh/crons/
-  ralph: .oh/scripts/ralph.sh
+  build_executor: .oh/scripts/firstmate.sh
   task_artifacts: .oh/tasks/
 
 policies:

@@ -37,6 +37,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Remove the `workspace` scope from `/audit skills`; `all` now means the root scope alone.
 
 ### Changed
+- Default Claude Code to concise replies, no memory of its own (`autoMemoryEnabled` + `autoDreamEnabled`), the harness `/git` policy instead of the built-in one, and no spinner tips ([#834](https://github.com/mifunedev/openharness/issues/834)).
 - **`/retro` becomes report-only.** It keeps the scientific pass and promotes only to `.oh/context/IDENTITY.md` behind its propose-then-confirm gate. It writes no log.
 - A supported `/retro` lesson that does not generalize is now reported and dropped; an anti-pattern forbids inventing a file to hold it. The subsystem lens drops from six to five.
 - Rename `check-memory-duplicates.sh` to `check-identity-duplicates.sh`; it consults `IDENTITY.md` alone. The `GATE-PENDING` / `--resolves` contract from #767 retires with the log it wrote.

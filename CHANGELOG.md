@@ -8,6 +8,16 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Fixed
+- **`uv python install` now works as the `sandbox` user without `sudo`.** The Dockerfile created `/home/sandbox/.local/share/uv/tools` with `install -d -o sandbox -g sandbox`, which applies ownership to the final component only — the intermediate `.../share/uv` was left `root:root`. The first `uv python install 3.11` as `sandbox` therefore died with `failed to create directory /home/sandbox/.local/share/uv/python: Permission denied`, and the obvious workaround (`sudo uv python install`) installed under `/root/.local`, unreadable by the agent. Every directory level is now named explicitly, parents first.
+- The boot-time ownership repair now covers the uv tree. The UID-sync sweep only rewrites paths owned by the *old* sandbox UID, so a root-owned uv directory was never repaired; an existing container is now self-healing across restarts.
+
+### Added
+- `.oh/scripts/provision-python.sh` — idempotent, user-scoped uv/Python provisioning. It drops from root to the target user with `HOME` pinned, guarantees the uv install/cache/tool directories are user-owned, installs a managed interpreter and an `ipykernel` venv, writes `PRIME_AGENT_KERNEL_PYTHON` to `~/.local/share/oh/python-env.sh`, and verifies the kernel before reporting success. Failures print the exact repair command instead of a bare permission denial, and refuse to suggest `sudo uv`. Modes: `--verify`, `--print-env`.
+- `ENV UV_PYTHON_INSTALL_DIR` and `ENV UV_CACHE_DIR` pin uv's managed-interpreter and cache trees under `/home/sandbox`, so nothing falls back to `/root`.
+- `ARG INSTALL_PYTHON_KERNEL=true` (with `ARG OH_PYTHON_VERSION=3.11`) bakes the interpreter and kernel venv into the image as `sandbox`, so a fresh boot needs no network. The entrypoint re-runs the same script every boot behind `OH_PROVISION_PYTHON` (default `true`), non-fatally.
+- Login shells source `~/.local/share/oh/python-env.sh`, so `PRIME_AGENT_KERNEL_PYTHON` needs no manual repair.
+
 ### Removed
 - **Remove the `.oh/memory` tier entirely.** Code is the source of truth. The directory, its tracked `README.md`, the `MEMORY.md` ledger, and dated session logs are gone as a concept — not relocated.
 - **Remove file logging from the harness.** No skill, cron, or script writes a run log under `.oh/`. Runs report to the terminal; the only durable trail left is `.oh/crons/.cron.log`, the cron liveness line.

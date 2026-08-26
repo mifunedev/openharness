@@ -11,7 +11,7 @@
 - The repo strips explanatory comments from tracked code (#837), but deliberate, load-bearing comments (the Cloudflare 404 exception) are allowed and no probe forbids them.
 - Confirmed live: `pkg.cloudflare.com/cloudflared/dists/trixie/Release` -> 404, `.../bookworm/Release` -> 200, `download.docker.com/linux/debian/dists/trixie/Release` -> 200.
 
-## US-001 — 2026-08-26 15:12 UTC
+## US-001 — 2026-08-26 21:12 UTC
 
 **Title**: Move the Dockerfile to Trixie
 **Files changed**: `.devcontainer/Dockerfile`, `.oh/scripts/__tests__/sandbox-base-image.test.ts`, `CHANGELOG.md`, `.oh/cli/src/lib/runtimes/catalog.ts`
@@ -25,7 +25,7 @@ Moved the sandbox base to `debian:trixie-slim` and switched Docker's apt suite t
 The `FROM` change alone turned `runtime-catalog.test.ts` red, because its remediation-synchronization test compares the catalog string against the live Dockerfile pin. The minimal remediation-string fix landed here to keep the commit green; the fuller runtime and documentation reconciliation is US-002's scope.
 
 ---
-## US-002 — 2026-08-26 15:15 UTC
+## US-002 — 2026-08-26 21:15 UTC
 
 **Title**: Reconcile runtime and documentation claims
 **Files changed**: `.oh/cli/src/__tests__/runtime-catalog.test.ts`, `.oh/evals/probes/runtime-preflight-gate.sh`, `.oh/docs/installation.md`, `.oh/docs/rfcs/rfc-runtime-support.md`, `.oh/docs/integrations/debugmcp.md`, `.oh/docs/runtimes/microsandbox.md`, `.oh/docs/runtimes/overview.md`, `.oh/docs/runtimes/docker.md`
@@ -39,7 +39,7 @@ Replaced the two-blocker framing with two measured requirements, of which only `
 Synchronization assertions beat literal-string assertions for facts that live in two files: the old test hard-coded `debian:bookworm-slim` on both sides, so it was correct only by coincidence. Reading the live `FROM` and asserting containment survives the next base bump. Confirmed the new probe check fails correctly by reverting the catalog string in a scratch copy — it reported both drift lines and exited 1.
 
 ---
-## US-003 — 2026-08-26 15:20 UTC
+## US-003 — 2026-08-26 21:20 UTC
 
 **Title**: Verify the default image and ownership contract
 **Files changed**: `.oh/scripts/verify-sandbox-image.sh`, `.oh/scripts/node-pnpm-parity.sh`, `.oh/scripts/sandbox-boot-smoke.sh`, `.oh/scripts/README.md`, `.oh/scripts/__tests__/verify-sandbox-image.test.ts`, `.oh/scripts/__tests__/node-pnpm-parity.test.ts`, `.oh/scripts/__tests__/sandbox-boot-smoke.test.ts`, `.github/workflows/sandbox-boot-guard.yml`, `.github/workflows/sandbox-base-parity.yml`
@@ -55,7 +55,7 @@ This environment has the Docker **client** but no daemon (`docker info` fails), 
 `set -o pipefail` makes `x=$(grep ... | head -1)` abort the script when grep finds nothing, so the intended "could not read the pin" error never printed. `|| true` on the substitution restores the explicit diagnostic. The unit test for the empty-Dockerfile case is what caught it.
 
 ---
-## US-004 — 2026-08-26 15:22 UTC
+## US-004 — 2026-08-26 21:22 UTC
 
 **Title**: Validate arm64 and optional installers
 **Files changed**: `.github/workflows/sandbox-compatibility.yml`, `.oh/evals/probes/sandbox-boot-guard-ci.sh`, `CHANGELOG.md`

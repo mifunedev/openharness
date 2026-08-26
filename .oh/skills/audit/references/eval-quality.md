@@ -132,6 +132,56 @@ flag.
 
 ---
 
+### 3a. Triage a red target before you judge it
+
+A red target is not evidence until both questions below are answered. Each is one
+command. Skipping either has produced a wrong verdict in this repo.
+
+**Is the behavior actually a defect, or is it policy?**
+
+Grep the probe suite for the path **and** for the words that describe the
+behavior. Both, because a probe may guard a behavior by asserting on the document
+that specifies it rather than on the code that implements it:
+
+```bash
+grep -rl '<file-under-test>' .oh/evals/probes/
+grep -rl '<behavior-in-words>' .oh/evals/probes/
+```
+
+Read what the matching probes assert. If a probe asserts the behavior you were
+about to call a bug, it is a deliberate contract — changing it turns that probe
+red. This repo carries no code comments, so **intent lives in the probe suite**;
+the probe is the comment.
+
+Catches: proposing a "fix" to `.oh/skills/eval/run.sh`'s `prior = PASS` gate,
+which is deliberate policy enforced by `eval-gate.sh`.
+
+The path grep alone does **not** catch that one, and the reason is the trap worth
+remembering: `eval-gate.sh` asserts against `.oh/skills/spec/references/execute.md`,
+the spec prose, and never mentions `run.sh` at all. `grep -rl 'eval/run.sh'`
+returns five probes, none of them the one that matters. `grep -rl 'delta'` and
+`grep -rl 'green->red'` both return it. When the path grep comes back empty or
+irrelevant, that is not an all-clear — it means the guard is phrased in terms of
+the behavior, so search for the behavior.
+
+**Is it red where it gates, or only here?**
+
+```bash
+gh run view <run-id> --log | grep '<probe-id>'
+```
+
+A probe red locally and green on CI is reporting the environment, not the repo.
+Cause and impact are different questions and a verdict needs both. Catches:
+recommending removal or a deep rewrite for `audit-run-root-contract`, which was
+`PASS` on every CI run while red in the sandbox, because the sandbox's PID 1 does
+not reap zombies and `kill -0` succeeds on a zombie.
+
+When a hedge appears in your own reasoning — "I'd want to verify", "assuming",
+"worth checking" — that clause is a required check, not a caveat. Do not issue a
+verdict that depends on it until it is answered.
+
+---
+
 ### 4. Compute the verdict — KEEP / GROOM / CUT
 
 Tally each target's raised flags from checks 1–6 (check 7 is a suite-level
@@ -161,9 +211,10 @@ per-target recommendations. The concrete emit block and a sample matrix are in
 **§ Scoring procedure**. Close with the check-7 suite-level machinery-growth
 footnote.
 
-### 6. Memory Protocol
+### 6. Return to the dispatcher
 
-Return this structured observation to the outer dispatcher and suppress target logging/retro; the dispatcher owns the locked append:
+When `AUDIT_RUN_ID` is inherited, return this structured observation instead of
+reporting a run record of your own; the outer dispatcher prints the single record:
 
 ```markdown
 ## [Eval Lint] — HH:MM UTC
@@ -172,8 +223,6 @@ Return this structured observation to the outer dispatcher and suppress target l
 - **Keep**: K | **Groom**: G | **Cut**: C
 - **Observation**: [one sentence — top finding]
 ```
-
-Memory Improvement Protocol.
 
 ## Scoring procedure
 

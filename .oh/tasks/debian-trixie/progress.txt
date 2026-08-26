@@ -106,3 +106,7 @@ STATUS: COMPLETE
 ## Audit repair — 2026-08-26
 
 Moved fixed-image Node/pnpm parity into automatic PR compatibility CI, removed the dispatch-only workflow, and required numeric dotted versions from default and optional tools. Strengthened deterministic tests and the CI guard probe for these contracts.
+
+## Operator review — 2026-08-26
+
+Removed the permanent arm64 compatibility job. The successful QEMU build remains one-time migration evidence. Permanent compatibility CI now checks fixed-base Node/pnpm parity and the amd64 all-optionals image.

@@ -1,11 +1,10 @@
 name: "CI: Sandbox Compatibility"
 
 # Dockerfile-scoped compatibility CI for the sandbox base (#807): compare the
-# exact Node and pnpm versions on fixed Bookworm and Trixie bases, build and
-# verify the default image on arm64, and build one amd64 image with every
-# optional INSTALL_* path enabled. These builds pull expensive, mutable vendor
-# installers, so the path filter stays narrow. This workflow never logs in or
-# pushes.
+# exact Node and pnpm versions on fixed Bookworm and Trixie bases, then build one
+# amd64 image with every optional INSTALL_* path enabled. The vendor installers
+# are expensive and mutable, so the path filter stays narrow. This workflow
+# never logs in or pushes.
 
 on:
   workflow_dispatch:
@@ -50,62 +49,6 @@ jobs:
           bash .oh/scripts/node-pnpm-parity.sh \
             debian:bookworm-slim \
             debian:trixie-slim
-
-  arm64-default-image:
-    name: Build and verify the default arm64 image
-    # Prefer a native arm64 runner when the repository provides one
-    # (vars.CI_RUNNER_ARM64); otherwise fall back to an amd64 runner and
-    # emulate through QEMU + Buildx. The Dockerfile's own Herdr SHA check runs
-    # inside the build either way, so a wrong-architecture download fails the
-    # build rather than shipping.
-    runs-on: ${{ vars.CI_RUNNER_ARM64 || 'ubuntu-latest' }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          submodules: recursive
-
-      - name: Ensure Mifune submodule
-        run: bash .oh/scripts/link-providers.sh --init
-
-      - name: Detect runner architecture
-        id: arch
-        run: |
-          native="$(dpkg --print-architecture)"
-          echo "native=$native" >> "$GITHUB_OUTPUT"
-          if [ "$native" = "arm64" ]; then
-            echo "emulated=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "emulated=true" >> "$GITHUB_OUTPUT"
-          fi
-          echo "runner is $native; emulation needed: $([ "$native" = arm64 ] && echo no || echo yes)"
-
-      - name: Set up QEMU
-        if: steps.arch.outputs.emulated == 'true'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # --load keeps the result in the local daemon so the verifier can run it.
-      # The Dockerfile's `sha256sum -c -` and `test "$(herdr --version)"` steps
-      # execute during this build, so the arm64 Herdr pin is exercised here.
-      - name: Build the default arm64 image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: .devcontainer/Dockerfile
-          platforms: linux/arm64
-          push: false
-          load: true
-          tags: openharness-sandbox-arm64:${{ github.sha }}
-
-      - name: Verify the arm64 image contract
-        run: bash .oh/scripts/verify-sandbox-image.sh openharness-sandbox-arm64:${{ github.sha }}
 
   optional-installers-image:
     name: Build one amd64 image with every optional installer

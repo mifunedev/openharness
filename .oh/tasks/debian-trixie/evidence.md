@@ -8,7 +8,7 @@
 
 Before this change, every rebuilt sandbox used Debian 12 Bookworm, now oldstable. MicroSandbox's glibc `>= 2.39` prerequisite failed on glibc 2.36. The updated sandbox follows Debian 13 Trixie stable and clears that prerequisite. It retains Node `v22.23.2`, pnpm `10.33.0`, the default tools, the Herdr pins, and the ownership behavior. The updated documentation identifies `/dev/kvm` as the remaining MicroSandbox blocker.
 
-The cost is 27 changed files and two Dockerfile-scoped compatibility builds: one arm64 image and one amd64 all-optionals image. The permanent CI also performs a 46-second Bookworm/Trixie Node-pnpm parity check. Expensive vendor builds do not run for broad `.oh/**` changes.
+The cost is 27 changed files and one Dockerfile-scoped amd64 all-optionals build. Permanent CI also performs a 46-second Bookworm/Trixie Node-pnpm parity check. The arm64 build remains one-time migration evidence and is not a permanent CI gate. Expensive vendor builds do not run for broad `.oh/**` changes.
 
 ## What the plan asked for
 
@@ -18,17 +18,18 @@ Move the image to `debian:trixie-slim`, move Docker's apt suite to Trixie, and r
 
 `.devcontainer/Dockerfile:1,31,36-40` now pins Trixie, uses Docker's Trixie repository, and documents Cloudflare's Bookworm exception. `.oh/scripts/verify-sandbox-image.sh` verifies the distribution, repositories, built-in `1000:1000` user, Node/pnpm, Herdr version and architecture checksum, and numeric version output from required tools. `.oh/scripts/sandbox-boot-smoke.sh:81` proves runtime bind ownership.
 
-`.github/workflows/sandbox-compatibility.yml:38-52,102,128-147` automatically compares Node/pnpm across fixed Bookworm and Trixie bases, builds and runs arm64, and builds one amd64 image with all four optional installers. Runtime diagnostics retain both measured prerequisites while stating that Trixie clears glibc and default compose still lacks `/dev/kvm` (`.oh/cli/src/lib/runtimes/catalog.ts:100-110`; `.oh/docs/runtimes/microsandbox.md:49-59`).
+`.github/workflows/sandbox-compatibility.yml` automatically compares Node/pnpm across fixed Bookworm and Trixie bases and builds one amd64 image with all four optional installers. Runtime diagnostics retain both measured prerequisites while stating that Trixie clears glibc and default compose still lacks `/dev/kvm` (`.oh/cli/src/lib/runtimes/catalog.ts:100-110`; `.oh/docs/runtimes/microsandbox.md:49-59`).
 
 ## Where it diverged from the plan, and why
 
 - US-003 initially put one-time Node/pnpm parity in a new dispatch-only workflow. Adversarial review found that a new manual workflow cannot run before merge. The review also found that its inputs created an expression-to-shell injection risk. The repair moved parity into the automatic PR compatibility workflow with fixed image references.
 - Version guards initially accepted arbitrary nonempty zero-exit output. CI exposed an emulation warning as false evidence, and adversarial review exposed the broader false-positive. The final verifier and optional checks require numeric dotted versions.
 - US-002 also updated `.oh/docs/runtimes/{overview,docker}.md` because the source sweep found active Bookworm substrate claims there. This change reconciles claims and does not expand runtime behavior.
+- After review, the operator removed permanent arm64 CI. The successful QEMU run remains one-time migration evidence, but future PRs do not rebuild arm64.
 
 ## What remains unverified
 
-- GitHub Actions built and ran arm64 under QEMU fallback instead of native arm64 hardware. The workflow prefers `vars.CI_RUNNER_ARM64` when configured.
+- The one-time arm64 proof used QEMU fallback instead of native arm64 hardware. There is no permanent arm64 CI gate.
 - The task did not test or change multi-platform GHCR publication. Issue #807 explicitly excludes publication changes.
 - No story declares browser criteria, so the audit did not run UI verification.
 
@@ -94,7 +95,7 @@ sandbox boot smoke: sandbox user, bind mount, and sandbox-created files all reso
 ```text
 $ gh pr checks 851 --repo mifunedev/openharness
 Boot Path Lint (shellcheck + hadolint)                         pass
-Build and verify the default arm64 image                       pass
+Build and verify the default arm64 image                       pass (one-time migration evidence)
 Build one amd64 image with every optional installer            pass
 Eval Probe Regression Gate                                     pass
 Lint, Typecheck, Build & Test                                  pass
@@ -109,10 +110,10 @@ Verify exact Node and pnpm parity across Debian bases          pass
 | US-001 | Trixie base; Docker Trixie suite; Cloudflare Bookworm exception | `.devcontainer/Dockerfile:1,31,36-40`; CI passed `sandbox-base-image.test.ts` |
 | US-001 | User-visible changelog | `CHANGELOG.md` under `[Unreleased]` → `Changed`; `changelog-entry-length` PASS |
 | US-002 | glibc cleared; `/dev/kvm` remains | `.oh/cli/src/lib/runtimes/catalog.ts:100-110`; `.oh/docs/runtimes/microsandbox.md:49-59`; `runtime-preflight-gate` PASS |
-| US-003 | Default tools and Herdr checksum | arm64 output above; the boot and optional jobs passed the amd64 verifier |
+| US-003 | Default tools and Herdr checksum | the boot and optional jobs passed the amd64 verifier; the one-time arm64 output appears above |
 | US-003 | Built-in and runtime ownership | image verifier reported `1000:1000`; compose boot reported synchronized `1001:1001` |
 | US-003 | Exact Node/pnpm parity | fixed-base parity output above; [job 98344609985](https://github.com/mifunedev/openharness/actions/runs/33019069348/job/98344609985) |
-| US-004 | arm64 build | Herdr build checksum plus verifier; [job 98344609788](https://github.com/mifunedev/openharness/actions/runs/33019069348/job/98344609788) |
+| US-004 | one-time arm64 build | Herdr build checksum plus verifier; [job 98344609788](https://github.com/mifunedev/openharness/actions/runs/33019069348/job/98344609788); permanent gate removed after operator review |
 | US-004 | All optional installers | four numeric versions above; [job 98344609954](https://github.com/mifunedev/openharness/actions/runs/33019069348/job/98344609954) |
 | US-004 | No registry write or release change | compatibility workflow has `contents: read`, `push: false`, no login; `release.yml` absent from the diff |
 

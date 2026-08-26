@@ -4,7 +4,7 @@
 #         issue #807 (Debian Trixie base compatibility and parity CI)
 # desc: PR CI must validate sandbox compose config and locally build the devcontainer image
 #       without registry writes, run the reusable image verifier, compare fixed Debian bases,
-#       and exercise arm64 plus every optional INSTALL_* path with real version evidence.
+#       and exercise every optional INSTALL_* path with real version evidence.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -87,10 +87,10 @@ else
     fi
   fi
 
-  chas 'platforms: linux/arm64' "no arm64 build platform"
-  chas 'docker/setup-qemu-action' "no QEMU fallback for a non-native arm64 runner"
-  chas 'vars.CI_RUNNER_ARM64' "no native arm64 runner preference"
   chas 'bash .oh/scripts/verify-sandbox-image.sh' "does not run the reusable image verifier"
+  if grep -Eq 'arm64-default-image|linux/arm64|docker/setup-qemu-action|CI_RUNNER_ARM64' <<<"$compat"; then
+    missing+=("compatibility workflow: retains the removed permanent arm64 build")
+  fi
   for arg in INSTALL_HERMES INSTALL_DEEPAGENTS INSTALL_OPENCODE INSTALL_GROK_BUILD; do
     chas "--build-arg $arg=true" "does not build with $arg=true"
   done
@@ -131,5 +131,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS sandbox boot guard validates compose and boot, while compatibility CI checks fixed-image Node/pnpm parity, arm64, and numeric dotted versions from every optional installer without registry writes" >&2
+echo "PASS sandbox boot guard validates compose and boot, while compatibility CI checks fixed-image Node/pnpm parity and numeric dotted versions from every optional installer without registry writes" >&2
 exit 0

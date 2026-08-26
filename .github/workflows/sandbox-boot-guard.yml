@@ -85,7 +85,6 @@ jobs:
       # Reusable image verification: base distribution, apt suites, the built-in
       # sandbox UID/GID contract, the Node/pnpm pins, the architecture-specific
       # Herdr checksum, and version output from every required default tool.
-      # The compatibility workflow runs this same script against arm64.
       - name: Verify sandbox image contract
         run: bash .oh/scripts/verify-sandbox-image.sh openharness-sandbox-boot-guard:${{ github.sha }}
 

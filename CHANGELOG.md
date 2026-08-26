@@ -8,6 +8,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-26
+
 ### Added
 - Add `oh harness <list|install|status>` to install optional harnesses into a running sandbox without a rebuild, persisting the choice to `install.<key>` for the next build ([#821](https://github.com/mifunedev/openharness/pull/821)).
 - Add `oh runtime <list|install|status>`, reporting the container runtime in use and gating a MicroSandbox install on the measured glibc and `/dev/kvm` blockers. It selects no runtime ([#823](https://github.com/mifunedev/openharness/pull/823)).

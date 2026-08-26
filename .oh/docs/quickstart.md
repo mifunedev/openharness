@@ -175,7 +175,7 @@ paths:
   worktrees: .oh/worktrees     # WORKTREES_DIR
 ```
 
-The file also has `paths:`, `crons:`, `autopilot:`, `slack:`, and `compose:` sections (all commented out by default) — uncomment the keys you need. See tracked `harness.yaml.example` for every available key and its default.
+The file also has `paths:`, `crons:`, `slack:`, and `compose:` sections (all commented out by default) — uncomment the keys you need. See tracked `harness.yaml.example` for every available key and its default.
 
 **Secrets** — keep in `.devcontainer/.env` only (gitignored):
 

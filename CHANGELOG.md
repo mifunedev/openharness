@@ -8,6 +8,22 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-25
+
+### Removed
+- Remove the `autopilot` self-improvement loop entirely: the `/autopilot` skill, the hourly `.oh/crons/autopilot.md` cron (already `enabled: false`), the `autopilot-caps.sh` PR-cap gate, the `autopilot-runs` eval dataset, and eight `autopilot-*` probes. The loop had not run in some time and is better rebuilt than maintained.
+- Remove the `/watchdog` skill and its three probes. It existed to babysit autopilot's unattended draft PRs and stuck `autopilot-*` tmux sessions; with no unattended runner producing them there is nothing to watch. **`cron-watchdog` — the tmux supervisor that restarts `cron-system` — is unrelated and untouched.**
+- Remove `.oh/docs/roadmap.md` and stop `/strategic-proposal` writing it. The pinned GitHub roadmap issue is the live surface; the in-repo copy went stale and only cost context to read.
+- Remove `prompt-miner-caps.sh` (both copies), which wrapped the deleted cap gate. **`.oh/crons/prompt-miner.md` is now uncapped and stays `enabled: false`** — re-add a cap gate before enabling it; see its § Caps.
+- Remove the `autopilot:` section from `harness.yaml.example` and `.oh/templates/harness.yaml`, and the `owned-surface-guard`, `clean-restore`, and `locked-append-critical-path` probes, whose subject was the deleted skill.
+
+### Changed
+- `AGENTS.md` § The Workflow: the canonical operative path is now `spec-plan → spec-execute → merge → reset|clean`. The `select` node and its designated sole runner are gone — a human enters at `/spec plan`. `workflow-boundaries.sh` asserts the new shape.
+- The harness-infra self-edit surface (`OWNED_PATHS`) moves from the deleted skill to `.oh/docs/repair-operator-registry.md` § Tier 1, which is now its source of truth. `security-considerations.md` § 6 is downgraded from ENFORCED to DOCTRINE to say so honestly.
+- Capability tasks CB-001 and CB-002 record a **baseline reset**: pre-0.3.0 scores are not comparable on the `unattended` axis, since the unattended runner no longer exists.
+
+- Rename the cron runtime's per-cron environment exports to match what they actually are: `AUTOPILOT_REPO` -> `CRON_REPO`, `AUTOPILOT_REMOTE` -> `CRON_REMOTE`, `AUTOPILOT_LOG_ROOT` -> `CRON_LOG_ROOT`. They are generic plumbing for any cron declaring `repo:` or `worktree: true`, never autopilot-specific, and joining the existing `CRON_WORKTREE`/`CRON_AGENT_BIN`/`CRON_KEEP_MARKER` family leaves no vestigial vocabulary behind. **Breaking for any out-of-tree consumer that sets the old names** — in-tree there are none.
+
 ## [0.2.0] - 2026-08-26
 
 ### Added

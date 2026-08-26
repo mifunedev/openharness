@@ -31,7 +31,7 @@ allowed-tools: Bash, Read
 ## The executor contract
 
 `firstmate` is **the** build shape. There is no executor toggle and no
-alternative arm: every build — `/spec execute`, and every `/autopilot` run that
+alternative arm: every build — `/spec execute`, and every run that
 defers to it — reaches this one path.
 
 | | the build executor |
@@ -182,7 +182,7 @@ construction.
 
 The default is deliberately conservative — sized for a real build, so a
 long-running build is never falsely marked `FIRSTMATE-INCOMPLETE`. Do not
-curve-fit it down to a smoke run's observed duration. Autopilot's pass-through
+curve-fit it down to a smoke run's observed duration. The pass-through
 inherits the cap; no unattended run may launch an unbounded session.
 
 On expiry the session is treated as **death without sentinel** (see Recovery).

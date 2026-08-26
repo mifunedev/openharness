@@ -29,8 +29,8 @@ if [[ -n "$hits" ]]; then
 fi
 
 # Guard 2 — the apps/->packages/ monorepo rename (issue #69). The `apps/` tree no
-# longer exists; the canonical paths are `packages/docs/`, `packages/README.md`, and
-# `docs/roadmap.md` (the strategic-proposal §9 write target). These tokens have NO
+# longer exists; the canonical paths are `packages/docs/` and `packages/README.md`.
+# (`src/data/roadmap.ts` retired to `docs/roadmap.md`, itself removed in 0.3.0.) These tokens have NO
 # legitimate use under .claude/skills/, so any reappearance is the exact drift PR #44
 # left behind — it corrected some apps/ refs but silently missed apps/docs. No
 # exclusion is needed: zero skills legitimately mention these tokens.

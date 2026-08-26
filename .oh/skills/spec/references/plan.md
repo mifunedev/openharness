@@ -18,7 +18,7 @@ reversible (delete `.oh/tasks/<slug>/`) until the operator approves the `prd.md`
 
 This is the planning half of the pipeline; `/spec execute` is the
 all-in-one composer that runs the whole `plan → execute → retro` pipeline in
-one invocation (what `/autopilot` drives); the `/spec` dispatcher is the same pipeline split
+one invocation; the `/spec` dispatcher is the same pipeline split
 so each node can be run independently or fanned out at scale via `/delegate`.
 
 ---
@@ -87,7 +87,7 @@ Run these in order; each is an existing primitive — compose, don't re-derive.
    `branchName: <prefix>/<N>-<slug>`. Verify it parses
    (`node -e "require('./.oh/tasks/<slug>/prd.json')"`). **`/ralph` hard-fails without
    `--issue <N>`** (the branch name embeds it) — in the canonical flow `<N>` is the issue
-   `/autopilot` selected; for a fresh manual topic with no issue, open one first per `/git`
+   was selected; for a fresh manual topic with no issue, open one first per `/git`
    or let `/spec execute` open one in a standalone run. `plan` consumes the number; it never creates the issue.
 
 5. **Scaffold `prompt.md` + `progress.txt`.** There is one prompt template — the build

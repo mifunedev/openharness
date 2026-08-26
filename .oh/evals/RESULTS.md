@@ -18,20 +18,11 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | audit-run-root-contract | A | 2026-08-25 18:32 | PASS | issue #645 — executable immutable audit root/run/log correlation |
 | audit-shellcheck-coverage | A | 2026-08-25 18:32 | PASS | issue #645 — private audit scripts require release and CI lint coverage |
 | audit-stale-references | A | 2026-08-25 18:32 | PASS | issue #645 — clean-breaking audit migration |
-| autopilot-executor-toggle | A | 2026-08-25 18:32 | PASS | conversation 2026-06-13 (autopilot executor); rewritten by spec-simplification |
-| autopilot-merged-pr-reference-dedupe | A | 2026-08-25 18:32 | PASS | issue #468 — autopilot must not rebuild open tickets whose development PRs already merged |
-| autopilot-no-pr-session-close | A | 2026-08-25 18:32 | PASS | issue #209 (autopilot no-PR tmux session closure) 2026-06-16 |
-| autopilot-open-pr-reference-dedupe | A | 2026-08-25 18:32 | PASS | issue #437 — autopilot must not start duplicate work when open PRs reference the same issue without linked-PR metadata |
-| autopilot-pi-agent | A | 2026-08-25 18:32 | PASS | issue #116 (autopilot Pi tmux alignment) 2026-06-14; issue #118 (attachable Pi TUI tmux) 2026-06-14; issue #126 (kept Pi overlap lock release) 2026-06-14; issue #142 (worktree-by-default, skip→worktree) 2026-06-14 |
-| autopilot-preflight-gate | A | 2026-08-25 18:32 | SKIPPED | issue #194 (deterministic autopilot caps preflight gate) 2026-06-15 |
-| autopilot-upstream-default | A | 2026-08-25 18:32 | PASS | issue #420 — future autopilots must target canonical repo, not personal fork |
-| autopilot-worktree-log-root | A | 2026-08-25 18:32 | PASS | issue #152 (persist autopilot worktree logs) 2026-06-15 |
 | boot-lint-glob | A | 2026-08-25 18:32 | PASS | issue #90, issue #120 |
 | builder-skill-consolidation | A | 2026-08-25 18:32 | PASS | issue #643 — consolidate artifact builders behind one /builder dispatcher |
 | capability-benchmark-schema | A | 2026-08-25 18:32 | PASS | issue #167 — capability benchmark instrument |
 | cc-safety-net-wiring | A | 2026-08-25 18:32 | PASS | .oh/tasks/cc-safety-net/prd.json US-007 2026-07-19 |
 | changelog-entry-length | A | 2026-08-25 18:32 | PASS | conversation 2026-08-24 — CHANGELOG.md grew to 259KB of bullet prose because "one line" was unquantified |
-| clean-restore | A | 2026-08-25 18:32 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | cleanup-tasks-scoped-guard | A | 2026-08-25 18:32 | PASS | issue #85 |
 | cleanup-tasks-worktree-grooming | A | 2026-08-25 18:32 | PASS | issue #168; issue #327 |
 | codex-stale-response-retry | A | 2026-08-25 18:32 | PASS | issue #506 — Codex previous_response_not_found RCA |
@@ -67,7 +58,6 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | health-check-docker-stats | A | 2026-08-25 18:32 | PASS | .oh/memory/MEMORY.md 2026-06-10 (docker stats vs ps Size) |
 | health-check-socket-degrade | A | 2026-08-25 18:32 | PASS | issue #762 (refs #756) — /health-check degrades to one statement, not nine failures |
 | heartbeat-logging-contract | A | 2026-08-25 18:32 | PASS | issue #447 (heartbeat log append hardening) 2026-06-18 |
-| locked-append-critical-path | A | 2026-08-25 18:32 | PASS | issue #204 (lock shared runtime log appends) 2026-06-15 |
 | make-oh-lifecycle-parity | A | 2026-08-25 18:32 | PASS | the Makefile/oh surface-gap consolidation — two front doors onto |
 | markitdown-wiki-ingest | A | 2026-08-25 18:32 | PASS | issue #649 — pinned local-document normalization contract for /wiki ingest |
 | memory-dir-absolute-or-unset | A | 2026-08-25 18:32 | PASS | .oh/tasks/spec-simplification/ (issue #816, US-007) — OBSERVED: `MEMORY_DIR=.oh/memory` |
@@ -87,7 +77,6 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | oh-standalone-lifecycle | A | 2026-08-25 18:32 | PASS | issue #564 |
 | oh-update | A | 2026-08-25 18:32 | PASS | issue #531 Phase 3 (oh update — upgrade only the .oh control plane) |
 | operator-config-guard | A | 2026-08-25 18:32 | PASS | operator directives 2026-08-06 (.config/ and settings.local.json are operator-only) |
-| owned-surface-guard | A | 2026-08-25 18:32 | PASS | issue #63 (autopilot-stray-wip-guard) 2026-06-12; issue #81 (owned-paths-zsh-split) 2026-06-13 |
 | pnpm-audit-ci-gate | A | 2026-08-25 18:32 | PASS | issue #171 — pnpm security audits must run in CI |
 | post-bridge-publish-confirmation | A | 2026-08-25 18:32 | PASS | #523 — post-bridge live publishing requires an explicit final confirmation gate |
 | prd-output-path-contract | A | 2026-08-25 18:32 | PASS | .oh/memory/MEMORY.md 2026-06-19 |
@@ -117,9 +106,6 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | submitted-by-trailers | A | 2026-08-25 18:32 | PASS | conversation 2026-06-12 (commit attribution trailers); repointed by |
 | sync-skill-contract | A | 2026-08-25 18:32 | PASS | issue #331 — /sync dispatcher skill (bidirectional origin↔upstream sync) |
 | tool-catalog-boundary | A | 2026-08-25 18:32 | PASS | agent-browser's exclusion from the harness catalog (#821) and the |
-| watchdog-completed-session-reap | A | 2026-08-25 18:32 | PASS | issue #235 (completed autopilot PR session reaping) |
-| watchdog-draft-prs | A | 2026-08-25 18:32 | PASS | conversation 2026-06-15 (generic watchdog + stale draft PR recovery) |
-| watchdog-stuck-sessions | A | 2026-08-25 18:32 | PASS | issue #240 (Codex zero-credit stuck autopilot sessions) 2026-06-17 |
 | weigh-scorer-contract | A | 2026-08-25 18:32 | PASS | .oh/tasks/rlm-weighted-trajectories/prd.json US-003 (2026-06-27) |
 | wiki-readme-index | A | 2026-08-25 18:32 | PASS | issue #132 — wiki README index drift guard |
 | workflow-boundaries | A | 2026-08-25 18:32 | PASS | conversation 2026-06-19 (workflow consolidation, issue #259) |

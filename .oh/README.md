@@ -112,7 +112,7 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 | `cli/` | The in-tree `oh` CLI (standalone npm package; built into the image as `/opt/oh`). Old path: `packages/oh/` (no symlink — repointed). |
 | `install/` | Container-install inputs (`.zshrc`, `.tmux.conf`, `banner.sh`, `install.sh` prerequisites) consumed by the Dockerfile + entrypoint. Old path: `install/` (no symlink — repointed). |
 | `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `firstmate.sh`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (no symlink — repointed). |
-| `crons/` | Scheduled-agent cron definitions (`heartbeat.md`, `autopilot.md`, `cleanup-tasks.md`, …) read by `.oh/scripts/cron-runtime.ts`, plus the gitignored runtime `.cron.log`/`.pid`. Old path: `crons/` (no symlink — repointed). |
+| `crons/` | Scheduled-agent cron definitions (`heartbeat.md`, `cleanup-tasks.md`, `eval-weekly.md`, …) read by `.oh/scripts/cron-runtime.ts`, plus the gitignored runtime `.cron.log`/`.pid`. Old path: `crons/` (no symlink — repointed). |
 | `evals/` | The fitness-function suite — regression probes (`probes/`), capability benchmark (`capability/`), trajectory datasets (`datasets/`), and the `RESULTS.md` scoreboard. Old path: `evals/` (no symlink — repointed). |
 | `memory/` | The harness's long-term memory (`MEMORY.md` + topic notes, tracked) and gitignored dated session logs (`[0-9]*/log.md`). Old path: `memory/` (no symlink — repointed). |
 | `worktrees/` | Gitignored branch worktrees, cron isolation worktrees, and durable project/harness clones. Old path: root worktree directory (no symlink — repointed). |
@@ -159,7 +159,7 @@ source instead of the bundled `.oh/templates/`.
   `entrypoint.sh`, and the two client scripts (`client-slack-supervise.sh` /
   `seed-msg-bridge.sh`). Everything the sandbox boots from lives here, in the one
   conventional location — no split, no compat shim.
-- `harness.yaml` — the CI path filters and the `autopilot-preflight-gate` /
+- `harness.yaml` — the CI path filters and the
   `harness-ci-core-paths` / `sandbox-boot-guard-ci` probes pin it at repo root.
 - `config.json` — relocated *logically* to `.oh/config.json` (now the canonical
   read location); the gitignored file itself is user-local runtime state, and the
@@ -273,5 +273,4 @@ manifest, so `oh init`/`oh update` carry it into a target with the rest of `.oh/
 ## Pointers
 
 - `.oh/context/directory-readme.md` — the README-as-directory-anchor convention this file follows.
-- `.oh/docs/roadmap.md` — the B-state primitive-taxonomy migration; `.oh/` machinery grouping.
 - `.oh/skills/` — the vendored provider-portable primitive pack (skills/agents/hooks), absorbed from the former `.mifune` submodule.

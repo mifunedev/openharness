@@ -35,7 +35,7 @@ herdr integration status
 - Use Herdr workspaces, tabs, and panes for interactive setup, agents, tests, servers, and reviews.
 - Detach with `Ctrl-b q`; run `herdr` again to reattach while the container keeps running.
 - Open Harness automation worktrees stay under `.oh/worktrees`; open those paths in Herdr. Herdr-created worktrees default to `~/.herdr/worktrees`.
-- Cron, Slack gateway, watchdog, and other headless infrastructure remain in their existing tmux sessions. Do not run Herdr inside those managed sessions.
+- Cron, Slack gateway, the cron supervisor, and other headless infrastructure remain in their existing tmux sessions. Do not run Herdr inside those managed sessions.
 - A raw shell or direct agent command remains a recovery path if Herdr is unavailable.
 
 ## Persistence

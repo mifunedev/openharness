@@ -11,7 +11,7 @@ description: |
   wait for a pane's output or an agent's status, check Herdr server/session
   status, or install a Herdr provider integration.
   Do NOT trigger for tmux-managed headless services (cron, Slack gateway,
-  watchdog) — those stay in their own tmux sessions.
+  cron supervisor) — those stay in their own tmux sessions.
 allowed-tools: Bash, Read
 ---
 

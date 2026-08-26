@@ -163,7 +163,7 @@ see do not need the helper.
 
 The helper provides record-level serialization on this host. It is not a
 durable queue, database, or cross-host lock, and it does not migrate historical
-entries. The first migrated critical path is autopilot/caps logging; broader
+entries. The first migrated critical path was the cron caps logging; broader
 heartbeat, watchdog, and manual-skill writers are follow-up surfaces.
 
 The convention that prevents corruption:

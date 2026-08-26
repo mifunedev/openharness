@@ -112,7 +112,7 @@ enabled: true
 agent: pi
 tmux: true
 worktree: true
-preflight: scripts/autopilot-caps.sh
+preflight: scripts/example-caps.sh
 ---
 
 # Valid scheduled cron
@@ -305,7 +305,7 @@ if ! printf '%s\n' "$output" | grep -qF 'frontmatter/config may be stale until S
   echo "REGRESSION: inert cron diagnostic does not name restart-required frontmatter/config and the reschedule/restart recovery" >&2
   fail=1
 fi
-for required in 'schedule=0 * * * *' 'enabled=true' 'agent=pi' 'tmux=true' 'worktree=true' 'preflight=scripts/autopilot-caps.sh'; do
+for required in 'schedule=0 * * * *' 'enabled=true' 'agent=pi' 'tmux=true' 'worktree=true' 'preflight=scripts/example-caps.sh'; do
   if ! printf '%s\n' "$output" | grep -qF "$required"; then
     echo "REGRESSION: inert cron diagnostic is missing current frontmatter field value: $required" >&2
     fail=1

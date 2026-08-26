@@ -140,8 +140,8 @@ else
     resolved_root=$(git -C "$script_root" rev-parse --show-toplevel)
   fi
   resolved_root=$(cd "$resolved_root" && pwd -P)
-  if [[ -n ${AUTOPILOT_LOG_ROOT:-} ]] && git -C "$AUTOPILOT_LOG_ROOT" rev-parse --show-toplevel >/dev/null 2>&1; then
-    resolved_log_root=$(git -C "$AUTOPILOT_LOG_ROOT" rev-parse --show-toplevel)
+  if [[ -n ${CRON_LOG_ROOT:-} ]] && git -C "$CRON_LOG_ROOT" rev-parse --show-toplevel >/dev/null 2>&1; then
+    resolved_log_root=$(git -C "$CRON_LOG_ROOT" rev-parse --show-toplevel)
   else
     resolved_log_root=$(git -C "$resolved_root" worktree list --porcelain | awk 'NR==1 && $1=="worktree" {sub(/^worktree /,""); print; exit}')
   fi

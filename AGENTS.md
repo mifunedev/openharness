@@ -139,7 +139,7 @@ Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspa
 ## The Workflow
 
 <!-- workflow-canonical -->
-The harness has one canonical **operative path**: `select → spec-plan → spec-execute → merge → reset|clean`. `autopilot` selects work; the `spec-*` family plans, executes, and reflects; the human merges; the runner resets. **`autopilot` is the designated sole runner.**
+The harness has one canonical **operative path**: `spec-plan → spec-execute → merge → reset|clean`. A human enters at `spec-plan`; the `spec-*` family plans, executes, and reflects; the human merges; the runner resets. **There is no automated selection node** — the `autopilot` runner that used to own one was removed in 0.3.0, and work is chosen by a human pointing `/spec plan` at a topic, plan, or issue.
 
 > The `/spec` dispatcher's three subcommands (`/spec plan` · `/spec execute` · `/spec retro`) are the canonical workflow — each pointed at a `.oh/tasks/<slug>/` folder, runnable independently or fanned out via `/delegate`. There is **no all-in-one composer beside them**: `/spec execute` holds the build mechanics in full — the issue, the branch, the draft PR, the build launch, the `/eval` and wiki gates, the promotable classification, and the undraft — so learning what the build does never sends a reader to a second skill. This section (`§ The Workflow`) is the sole canonical workflow.
 >
@@ -147,8 +147,7 @@ The harness has one canonical **operative path**: `select → spec-plan → spec
 
 ```mermaid
 flowchart LR
-    SEL["select<br/>(autopilot)"] -->|issue| PLAN["spec-plan<br/>(/spec plan)"]
-    PLAN --> BUILD["build"]
+    PLAN["spec-plan<br/>(/spec plan)"] --> BUILD["build"]
     subgraph EXEC["spec-execute (/spec execute)"]
         direction LR
         BUILD --> AUDIT{"audit implementation<br/>task graph + eval + focused PR classifier"}
@@ -159,19 +158,18 @@ flowchart LR
     end
     IMPROVE --> MERGE["merge<br/>(human)"]
     MERGE --> RESET["reset | clean<br/>(runner)"]
-    RESET -.->|next item| SEL
+    RESET -.->|next item| PLAN
 ```
 
 **One adversarial loop:** `build ⇄ audit` vets the build, looping until the build satisfies its own task graph. The plan itself is vetted by the operator who approves it, not by a critic node.
 
 | Surface | Owns | Does NOT own | The seam |
 |---|---|---|---|
-| **autopilot** | select — issue selection + `pm` decompose, caps, session | the build, the merge | hands the issue to `spec-plan` |
 | **`/spec` dispatcher** | `spec-plan` (task artifacts + wiki), `spec-execute` (build⇄audit→evidence→spec-retro→improve), `spec-retro` | selection, merge | each subcommand is pointed at a `.oh/tasks/<slug>/` folder |
-| **human** | merge — final gate, no auto-merge | selection, build | reviews the finished unit |
-| **runner** | `reset \| clean` — worktree/branch cleanup, state reset | judgment | closes the cycle back to select |
+| **human** | selection — choosing the work — and merge, the final gate; no auto-merge | the build | picks the unit, reviews the finished unit |
+| **runner** | `reset \| clean` — worktree/branch cleanup, state reset | judgment | closes the cycle back to `spec-plan` |
 
-The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec execute` and `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → evidence → spec-retro → improve**, ending at the human merge gate. The groom triad (`/audit skills` · `/wiki lint` · `/audit drift`) is deliberately not in it: `/audit drift` runs hourly from the heartbeat cron, and the other two are report-only checks that never blocked a merge.
+The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec execute` and `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → evidence → spec-retro → improve**, ending at the human merge gate. The groom triad (`/audit skills` · `/wiki lint` · `/audit drift`) is deliberately not in it: `/audit drift` runs from the heartbeat cron, and the other two are report-only checks that never blocked a merge.
 
 ## Skills
 
@@ -192,8 +190,6 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/spec` | Dispatcher for the canonical workflow (`/spec <plan\|execute\|retro>`, routes to `references/{plan,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state) — approving that plan **is** the commitment gate; **execute** = issue → branch → draft PR → build → `build ⇄ audit → evidence → spec-retro → improve` → promotable undraft to a **ready-for-review PR** at the human merge gate, refusing the undraft without a committed `evidence.md` — it holds the build mechanics in full and is a protected path; **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/`. There is no all-in-one composer beside it |
 | `/firstmate` | **The build executor** — there is exactly one. `.oh/scripts/firstmate.sh <slug>` runs one long-lived First-Mate session over a whole `.oh/tasks/<slug>/` task graph, launched through the **herdr → tmux → foreground** runner ladder. `STATUS: COMPLETE` (whole line in `progress.txt`) is its terminal interface. Documents the ladder's detection gates, the naming contract (`firstmate-<slug>`, `agent-firstmate-<slug>`), the `FIRSTMATE_TIMEOUT_MS` session budget, the watch/recovery matrices, and the per-mode teardown procedure. The build workflow it runs lives in one place, `.oh/skills/firstmate/templates/session-prompt.md` |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
-| `/watchdog` | Generic stuck/stale automation watchdog. Current primary action: inspect autopilot draft PRs, complete stale/stuck branches, and remove draft only after the PR is green/mergeable/clean; also kills tmux sessions frozen at usage-limit/resume prompts. Never merges. |
-| `/autopilot` | Self-improvement loop — issue-queue-first selection (build the oldest open `autopilot` issue; researches + files its own ticket when empty), PM plan → exact `/goal` Advisor handoff → `/spec plan` + `/spec execute`, which **own the whole build** (the branch, the draft PR, a worktree Advisor running the one build executor `.oh/scripts/firstmate.sh`, the `build ⇄ audit` loop with `/eval` inside it, `/audit pr` undraft); autopilot **defers** and reconciles the outcome (no inline compact/delegate/eval/finalize). There is no executor toggle and no inline fallback; every PR states its selection rationale; per-run Pi tmux sessions renamed `autopilot-<branch>` and left alive after PR creation; cap 6 open PRs/day + 10 total open, no auto-merge |
 | `/eval` | Run the context fitness-function probe suite (`.oh/evals/probes/*.sh`) against real state, write the `.oh/evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
 | `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `.oh/memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |

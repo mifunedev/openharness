@@ -24,7 +24,6 @@ FIRSTMATE="$ROOT/.oh/scripts/firstmate.sh"
 RUNNER="$ROOT/.oh/scripts/lib/session-runner.sh"
 TEMPLATE="$ROOT/.oh/skills/firstmate/templates/session-prompt.md"
 SPEC="$ROOT/.claude/skills/spec/references/execute.md"
-AUTOPILOT="$ROOT/.claude/skills/autopilot/SKILL.md"
 
 # No SKIPPED path: this probe ships in the same commit as the executor it pins, so a missing
 # artifact is a REGRESSION rather than a not-applicable run.
@@ -61,7 +60,7 @@ fi
 # comments are excluded so a file may DOCUMENT the removal without failing this check.
 # `--executor` is matched with a leading `--` guard so words like "executor" in prose
 # stay legal; the point is that no *flag* or env var selects a build arm.
-for pair in "spec-execute:$SPEC" "autopilot:$AUTOPILOT"; do
+for pair in "spec-execute:$SPEC"; do
   name="${pair%%:*}"
   file="${pair#*:}"
   if [ ! -f "$file" ]; then

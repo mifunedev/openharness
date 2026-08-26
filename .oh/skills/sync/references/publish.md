@@ -104,8 +104,8 @@ When upstream is structurally ahead, reconcile toward upstream's structure:
 
 - A fork-only skill that upstream superseded → check if the upstream
   replacement is present; if so, drop the fork version and its now-
-  contradictory probe. (Example: upstream's `/watchdog` superseded fork's
-  `autopilot-watchdog` skill; both probes cannot coexist.)
+  contradictory probe. (Example: a renamed upstream skill superseding a fork's
+  older equivalent; both probes cannot coexist.)
 - Two probes with contradictory contracts → resolve to keep BOTH only when
   they guard genuinely different invariants; otherwise keep the upstream one.
 

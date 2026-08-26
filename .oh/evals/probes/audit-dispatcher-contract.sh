@@ -23,7 +23,7 @@ for old in pr-audit harness-audit context-audit skill-lint eval-lint drift-check
   [[ ! -d "$ROOT/.oh/skills/$old" ]] || fail "legacy skill remains: $old"
 done
 [[ ! -e "$ROOT/.oh/agents/auditor.md" ]] || fail 'legacy auditor remains'
-for kept in eval benchmark ci-status health-check watchdog wiki; do
+for kept in eval benchmark ci-status health-check wiki; do
   [[ -f "$ROOT/.oh/skills/$kept/SKILL.md" ]] || fail "retained instrument missing: $kept"
 done
 # critique/approve were NOT absorbed into /audit — they were retired outright with the

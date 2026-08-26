@@ -5,7 +5,7 @@
 # `git clean -f`, `git branch -D`, `git worktree remove --force`, `git push --force`) in
 # every mode, and its built-in git rules are NOT allowlistable. Script-file invocation
 # (`bash .oh/scripts/git-maintenance.sh ...`) is not analyzed by the guard, so the harness's
-# own legitimate destructive git — the reset|clean runner, /watchdog, worktree/branch
+# own legitimate destructive git — the reset|clean runner, worktree/branch
 # grooming — routes through this script instead of inline agent Bash.
 #
 # Usage:

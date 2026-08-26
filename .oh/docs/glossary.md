@@ -95,7 +95,7 @@ These names describe separate layers, not interchangeable jobs:
 
 - **session** — A single named run of an agent, typically a tmux session in the
   sandbox. `firstmate.sh` launches its build session through the herdr → tmux →
-  foreground ladder, and autopilot uses per-run `autopilot-<branch>` sessions.
+  foreground ladder.
   Source: [`.oh/scripts/firstmate.sh`](../scripts/firstmate.sh) and
   [`sandbox-processes.md`](../skills/t3/references/sandbox-processes.md).
 

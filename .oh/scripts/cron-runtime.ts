@@ -25,8 +25,8 @@ export interface CronEntry {
   // worktree. A fail-open optimization — a gate error proceeds (PREFLIGHT_ERROR).
   preflight?: string;
   // Optional canonical GitHub repository (`owner/name`) for this cron. The
-  // runtime exports it as AUTOPILOT_REPO and resolves the matching local git
-  // remote as AUTOPILOT_REMOTE so gh and git operations target the same repo.
+  // runtime exports it as CRON_REPO and resolves the matching local git
+  // remote as CRON_REMOTE so gh and git operations target the same repo.
   repo?: string;
   body: string;
   filePath: string;
@@ -395,8 +395,8 @@ export function buildTmuxWrapper(opts: {
   const quotedAgent = shellQuote(agentBin);
   const quotedPidFile = shellQuote(pidFile);
   const worktreeExport = opts.worktree ? ` CRON_WORKTREE=${shellQuote(opts.worktree)}` : "";
-  const repoExport = opts.repo ? ` AUTOPILOT_REPO=${shellQuote(opts.repo)}` : "";
-  const remoteExport = opts.remote ? ` AUTOPILOT_REMOTE=${shellQuote(opts.remote)}` : "";
+  const repoExport = opts.repo ? ` CRON_REPO=${shellQuote(opts.repo)}` : "";
+  const remoteExport = opts.remote ? ` CRON_REMOTE=${shellQuote(opts.remote)}` : "";
   return (
     `echo $$ > ${quotedPidFile}; ` +
     `export CRON_TMUX_SESSION=${shellQuote(session)} CRON_KEEP_MARKER=${shellQuote(`/tmp/${session}.keep`)} CRON_OVERLAP_PIDFILE=${quotedPidFile}${worktreeExport}${repoExport}${remoteExport}; ` +
@@ -450,8 +450,8 @@ export function buildCronAgentCommand(opts: {
   const quotedLogFile = shellQuote(logFile);
   const exitOrReturn = exitOnComplete ? `exit $status` : `true`;
   const envExport =
-    (repo ? `export AUTOPILOT_REPO=${shellQuote(repo)}; ` : "") +
-    (remote ? `export AUTOPILOT_REMOTE=${shellQuote(remote)}; ` : "");
+    (repo ? `export CRON_REPO=${shellQuote(repo)}; ` : "") +
+    (remote ? `export CRON_REMOTE=${shellQuote(remote)}; ` : "");
   const resumeInit = resumeFile
     ? `printf '%s' ${quotedAgent} > ${shellQuote(resumeFile)}; `
     : "";
@@ -525,7 +525,7 @@ export function buildCronAgentCommand(opts: {
 // rather than silent disk/session bloat. Dead-session worktrees are pruned before
 // the count, and the heartbeat reaps stuck sessions + their worktrees hourly, so in
 // steady state the live count tracks in-flight/kept-for-review runs and stays well
-// under this ceiling (aligned with autopilot's 6-PR/day creation cap).
+// under this ceiling.
 const WORKTREE_MAX_CONCURRENT = 6;
 
 // Liveness probe: signal 0 throws iff the pid is gone (or unsignalable).
@@ -588,8 +588,7 @@ function detectBaseRef(remote = "origin"): string | null {
 }
 
 // Absolute working directory of every live tmux pane. This remains the primary
-// liveness signal because autopilot may rename its session
-// (cron-autopilot-<ts> → autopilot-<branch>) and /spec execute may run work inside a
+// liveness signal because a cron may rename its session and /spec execute may run work inside a
 // separate Advisor session (agent-ship-<slug>).
 function livePaneCwds(): string[] {
   const r = spawnSync("tmux", ["list-panes", "-a", "-F", "#{pane_current_path}"], {
@@ -608,8 +607,8 @@ function liveTmuxSessionNames(): string[] {
 // A worktree is "in use" iff some live tmux pane is working inside it (its own
 // dir or a descendant), OR the cron-created session still has the same name as
 // the worktree basename. The basename fallback protects early-run Pi sessions
-// before autopilot renames cron-autopilot-<ts> to autopilot-<branch>; it is only
-// a fallback, so renamed Advisor/autopilot sessions still rely on pane-cwd
+// before a cron renames its session; it is only
+// a fallback, so renamed Advisor sessions still rely on pane-cwd
 // liveness and cannot keep arbitrary stale worktrees alive by name accident.
 export function worktreeInUse(
   wtPath: string,
@@ -721,7 +720,7 @@ function formatWorktreeChanges(state: FallbackWorktreeState): string {
 
 // Remove fallback worktrees that no live tmux pane is working inside (self-healing),
 // then return the count still in use. Pane-cwd liveness (above) is robust to the
-// autopilot session rename and to the Advisor session sharing the worktree. A
+// cron session rename and to the Advisor session sharing the worktree. A
 // dead-pane worktree is still preserved when it has modified/untracked files —
 // cleanup may reclaim only disposable state, and dirty worktrees require manual salvage.
 export function pruneAndCountFallbackWorktrees(id: string): number {
@@ -919,8 +918,8 @@ export function runPreflight(
     cwd: process.cwd(),
     env: {
       ...process.env,
-      ...(entry.repo ? { AUTOPILOT_REPO: entry.repo } : {}),
-      ...(repoRemote ? { AUTOPILOT_REMOTE: repoRemote } : {}),
+      ...(entry.repo ? { CRON_REPO: entry.repo } : {}),
+      ...(repoRemote ? { CRON_REMOTE: repoRemote } : {}),
     },
     encoding: "utf-8",
     timeout: timeoutMs,

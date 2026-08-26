@@ -31,7 +31,7 @@ only — never a `.oh/tasks/` subfolder.
    self-flags the sweep) blocks the run; foreign WIP elsewhere in the
    shared checkout — an in-flight feature branch, a concurrent session's
    edits — is untouched and does NOT abort the sweep, mirroring the
-   autopilot loop's `BLOCKED-OWNED-WIP` owned-surface convention. If that
+   cron system's `BLOCKED-OWNED-WIP` owned-surface convention. If that
    scoped status is non-empty, abort: append a note to
    `.oh/memory/$TODAY/log.md`, emit the distinct liveness token to
    `.oh/crons/.cron.log`

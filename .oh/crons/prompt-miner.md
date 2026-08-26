@@ -7,7 +7,6 @@ overlap: false
 catchup: false
 tmux: true
 worktree: true
-preflight: .oh/skills/prompt-miner/prompt-miner-caps.sh
 repo: mifunedev/openharness
 description: Daily prompt-miner — mine 24h of session traces for prompt-quality markers and ship a top finding to the origin fork via /spec (opt-in, cap-gated)
 ---
@@ -31,11 +30,13 @@ This cron is **opt-in and cap-gated**:
   file (preserves history). The frontmatter `enabled:` value is the single source
   of truth — this paragraph previously claimed the cron shipped disabled while the
   tracked file said otherwise (issue #663 review).
-- **Caps**: the `preflight: .oh/skills/prompt-miner/prompt-miner-caps.sh` gate
-  runs **before** any worktree/tmux/agent and counts open PRs labeled
-  `prompt-miner` on `mifunedev/openharness`. On a capped day it logs `SKIPPED-CAP-*`
-  + liveness and spawns nothing. Caps are origin-scoped (the wrapper re-points
-  `.oh/skills/autopilot/autopilot-caps.sh` at the fork + the `prompt-miner` label).
+- **Caps**: THIS CRON IS CURRENTLY UNCAPPED. Its `preflight:` gate was removed in
+  0.3.0 with the autopilot machinery it was built on — the gate had no enabled
+  consumer. The cron ships `enabled: false`, so nothing runs uncapped today.
+  **Before flipping `enabled: true`, restore a cap gate** that counts open PRs
+  labeled `prompt-miner` on `mifunedev/openharness` and wire it back as
+  `preflight:`; recover the previous implementation from git history
+  (`git log -- .oh/skills/autopilot/autopilot-caps.sh`).
 
 ## Steps
 
@@ -101,7 +102,7 @@ Hand the issue to `/spec`, which owns plan and build end-to-end (worktree Adviso
 
 Capture the **created PR number**, then label the PR itself — GitHub does **not**
 propagate the issue's label onto the PR, so an unlabeled PR would silently defeat
-the cap (the preflight counts PRs by label, not issues):
+the cap once a preflight gate is restored (it counts PRs by label, not issues):
 
 ```bash
 gh pr edit <PR> --repo mifunedev/openharness --add-label prompt-miner
@@ -111,11 +112,11 @@ gh pr edit <PR> --repo mifunedev/openharness --add-label prompt-miner
 
 Append a `.oh/crons/.cron.log` liveness line, resolving the **shared root** under
 worktree mode (the worktree is reaped after the run; humans + heartbeat read the
-root checkout). Mirror the autopilot convention: honor `$AUTOPILOT_LOG_ROOT` if
+root checkout). Mirror the autopilot convention: honor `$CRON_LOG_ROOT` if
 set, else map `$CRON_WORKTREE` back to its shared root, else the current toplevel.
 
 ```bash
-ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
+ROOT="${CRON_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
   | "$ROOT/.oh/scripts/locked-append.sh" "$ROOT/.oh/crons/.cron.log"

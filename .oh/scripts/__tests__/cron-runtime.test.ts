@@ -440,7 +440,7 @@ describe("buildTmuxWrapper", () => {
     });
 
     expect(repoWrapper).toContain(
-      "AUTOPILOT_REPO='mifunedev/openharness' AUTOPILOT_REMOTE='upstream';",
+      "CRON_REPO='mifunedev/openharness' CRON_REMOTE='upstream';",
     );
   });
 
@@ -539,8 +539,8 @@ describe("buildCronAgentCommand", () => {
       remote: "upstream",
     });
 
-    expect(command).toContain("export AUTOPILOT_REPO='mifunedev/openharness';");
-    expect(command).toContain("export AUTOPILOT_REMOTE='upstream';");
+    expect(command).toContain("export CRON_REPO='mifunedev/openharness';");
+    expect(command).toContain("export CRON_REMOTE='upstream';");
   });
 
   it("preserves explicit non-Claude CRON_AGENT_BIN behavior without Codex fallback", () => {
@@ -1672,7 +1672,7 @@ describe("runPreflight + the fire() preflight gate", () => {
       expect(expectedRemote).toBe("upstream");
       writeFileSync(
         script,
-        `#!/usr/bin/env bash\nprintf '%s %s\\n' "$AUTOPILOT_REPO" "$AUTOPILOT_REMOTE" > ${JSON.stringify(out)}\necho PROCEED\n`,
+        `#!/usr/bin/env bash\nprintf '%s %s\\n' "$CRON_REPO" "$CRON_REMOTE" > ${JSON.stringify(out)}\necho PROCEED\n`,
         { mode: 0o755 },
       );
 

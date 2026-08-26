@@ -74,7 +74,7 @@ terminal interface is the whole line `STATUS: COMPLETE` in `.oh/tasks/<slug>/pro
 The approved plan is the commitment, so GitHub-side state may now be created.
 
 `prd.json`'s `branchName` already embeds `<N>`. In the canonical flow that is the issue
-`/autopilot` selected and `/spec plan` consumed — **locate** it, do not open a second one:
+the human selected and `/spec plan` consumed — **locate** it, do not open a second one:
 
 ```bash
 gh issue view <N> --repo "$SPEC_REPO"
@@ -189,7 +189,7 @@ own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode pers
 to completion. Session name `agent-spec-<slug>` (sanitize slashes/space → `-`), distinct
 from the `agent-firstmate-<slug>` session the executor's own tmux rung creates.
 
-**Build worktree — reuse vs. create.** When `$CRON_WORKTREE` is set (autopilot's default),
+**Build worktree — reuse vs. create.** When `$CRON_WORKTREE` is set (a `worktree: true` cron's default),
 this run is ALREADY inside an isolated worktree that step 2 put on the feature branch, so the
 Advisor **reuses it** — it does NOT create a second worktree (a second `git worktree add` for
 the same branch would nest under the cron worktree via the relative path, or fail with
@@ -557,7 +557,7 @@ auto-merge.
 
 - **Merge.** The terminal state is a **ready** PR. Merge is the human's gate; reset/clean is
   the runner's job after merge.
-- **Select work.** Selection is `/autopilot`'s; `execute` builds the one folder it is
+- **Select work.** Selection is the human's; `execute` builds the one folder it is
   handed.
 - **Plan.** The four-file folder and its approved `prd.md` come from `/spec plan`.
 

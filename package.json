@@ -1,6 +1,6 @@
 {
   "name": "openharness",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Open Harness \u2014 AI Agent Sandbox Orchestrator",
   "license": "Apache-2.0",

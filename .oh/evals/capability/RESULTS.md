@@ -16,3 +16,10 @@ inspection; rows are re-scored and overwritten per id by the `run.sh` runner.
 | CB-004 | 2026-07-03 | PARTIAL | PARTIAL | PARTIAL | 1.00 | repo-map contract + A/B manifest/scorer exist (#462), but no completed workload-mix token/tool/time benchmark yet · Δ +0.00 machinery-added vs 1.00 baseline · check=PASS |
 
 <!-- suite score = 1.42 / 2.00 = mean(1.33, 1.67, 1.67, 1.00) · PASS=2 PARTIAL=1 FAIL=0; SKIPPED a task only when the capability is absent from the eval environment -->
+
+> **Baseline reset — 0.3.0 (autopilot removal).** Every score above was taken
+> while an unattended `autopilot` runner existed. That runner and its `select`
+> node were removed in 0.3.0. Scores recorded before 0.3.0 are NOT comparable to
+> later ones on the `unattended` axis for CB-001 and CB-002; the rows are kept as
+> a historical record, not as a baseline to measure against. See the
+> `## Baseline reset` note in each task file.

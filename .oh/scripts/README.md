@@ -13,7 +13,7 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | `reserve-github-release.mjs` | Atomically reserves the `v<version>` tag and recovers its same-SHA GitHub draft |
 | `promote-release-latest.sh` | Fresh-checks canonical `main`-else-`master` and promotes its image to `latest` by digest |
 | `cron-runtime.ts` | Croner runtime — scans `.oh/crons/*.md`, schedules, fires each job     |
-| `prompt-miner-caps.sh` | Origin-scoped PR-cap preflight for `.oh/crons/prompt-miner.md` — execs `autopilot-caps.sh` with `AUTOPILOT_REPO=mifunedev/openharness` + `AUTOPILOT_LABEL=prompt-miner` |
+| `prompt-miner-caps.sh` | REMOVED in 0.3.0 with the autopilot cap gate it wrapped — see `.oh/crons/prompt-miner.md` § Caps | <!-- legacy: `autopilot-caps.sh` with `CRON_REPO=mifunedev/openharness` + `AUTOPILOT_LABEL=prompt-miner` |
 | `__tests__/`      | Vitest unit tests (`vitest.config.ts` at repo root targets this)   |
 
 ## Conventions

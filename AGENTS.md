@@ -23,10 +23,6 @@ Read these files at the start of every session — they encode voice, principles
 - `.oh/context/TOOLS.md` — environment inventory; skip rediscovery
 - `.oh/context/REPO_MAP.md` — source-map command, search routing, and low-signal folders to disregard
 - `.oh/context/USER.md` — working-relationship patterns; living document
-- `.oh/memory/MEMORY.md` — long-term lessons learned (append-only)
-- Today's `.oh/memory/<today>/log.md` if it exists (today = `date -u +%Y-%m-%d`) — recent session activity
-
-After **every** skill or agent run, fire the Memory Improvement Protocol (log → qualify → improve) — its canonical home is now the `/retro` skill (`.oh/skills/retro/references/memory-protocol.md`).
 
 The always-loaded `.oh/context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — with the advisor delegation + recursive-decomposition norm now the `advisor` agent (`.oh/agents/advisor.md`, invoked via the Agent tool rather than a slash command), and the repo-authoring convention staying a plain doc at `.oh/context/directory-readme.md`. The First Mate role charter and the `.oh/prompts/advisor/` pack that consumed it were **deleted** in spec-simplification US-004: a second, discoverable implementation path is a route an agent can be pulled onto mid-task, and the build workflow now lives in exactly one place — `.oh/skills/firstmate/templates/session-prompt.md`. The always-on tier is now just the `.oh/context/` identity files listed above; load the relevant skill when a task calls for its norm.
 
@@ -104,7 +100,7 @@ Verify the sandbox is healthy.
    make shell
    ```
    Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
-   - `AGENTS.md` exists in `workspace/`
+   - `AGENTS.md` exists at the repo root
    - Target agent CLI is installed (`claude --version`)
    - Docker socket accessible if needed (`docker ps`)
 3. **Check the cron runtime** (if heartbeats configured under `.oh/crons/`):
@@ -192,9 +188,9 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
 | `/eval` | Run the context fitness-function probe suite (`.oh/evals/probes/*.sh`) against real state, write the `.oh/evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
-| `/render-html` | Render an artifact as a bespoke, self-contained HTML file under `.oh/memory/<date>/<slug>.html` for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
-| `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses six learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs, memory scaffolding) through the session lens, then proposes `MEMORY.md`/`IDENTITY.md` additions for confirmation before writing (always logs). Operationalizes `.oh/skills/retro/references/memory-protocol.md` |
-| `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `MEMORY.md`/`IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in gitignored `.oh/memory/<date>/`; raw prompt text is off by default. The daily `.oh/crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
+| `/render-html` | Render an artifact as a bespoke, self-contained HTML file under ephemeral `$TMPDIR` scratch for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
+| `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses five learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs) through the session lens, then proposes `.oh/context/IDENTITY.md` additions for confirmation before writing. Report-only otherwise: it writes no log |
+| `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `.oh/context/IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in ephemeral `$TMPDIR` scratch; raw prompt text is off by default. The daily `.oh/crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
 | `/ste` | Simplified-Technical-English writing standard for **artifact** prose — docs, runbooks, specs, commit/PR bodies, code comments. 53 rules in 9 sections (`references/rules.md`), a 198-word non-approved→approved map (`references/dictionary.md`), 24 before/after pairs across 13 domains (`references/examples.md`), and a dependency-free checker (`scripts/ste-check.sh`, exit `0` clean / `1` findings / `2` usage; `--blocks after` scans only tagged fences). Never simplifies code, commands, identifiers, paths, or quoted literals; marks a missing value `<like-this>` instead of inventing it. **Precedence:** `/ste` governs anything git-tracked or GitHub-posted; an output-compression mode governs only the live chat reply. Claims no ASD-STE100 certification or compliance |
 | `/wiki` | Dispatcher for the wiki knowledge base (corpus at `.oh/skills/wiki/corpus/`, gitignored-by-default + whitelisted): `ingest <url\|path> [--slug]` / `ingest --from-draft <slug> [--allow-stale]` (capture a source or promote a draft), `query <topic>` (frontmatter OR-search, read top ≤3 by `updated:` desc), `lint [--dry-run]` (5 health checks + atomic `corpus/README.md` regen). Schema: `.oh/skills/wiki/references/schema.md` |
 
@@ -220,13 +216,13 @@ downward with the reason logged. See `/firstmate` and
 
 ## What You Do
 
-- Commit and push changes to the harness itself (.devcontainer/, .oh/install/, workspace/ templates, .oh/scripts/, .oh/crons/)
+- Commit and push changes to the harness itself (.devcontainer/, .oh/install/, .oh/templates/, .oh/scripts/, .oh/crons/)
 - Manage branches via git
 - Review diffs across agent branches
 - Provision, validate, and tear down the sandbox (`docker compose up -d --build`, `docker compose down -v`, `docker exec`, etc.)
 - Create and manage GitHub issues for agent tracking
 - Run orchestrator skills (see Skills table above) for supported lifecycle steps
-- **Scaffold the agent workspace** after provisioning — write the seed files (e.g. `AGENTS.md`, identity scaffolding, initial cron entries under `.oh/crons/`) based on the agent's role. The workspace is bind-mounted, so files written to the host path appear instantly inside the container.
+- **Scaffold the agent's identity** after provisioning — write the seed files (e.g. `.oh/context/` identity files, initial cron entries under `.oh/crons/`) based on the agent's role. The repo is bind-mounted, so files written to the host path appear instantly inside the container.
 
 ## What You Do NOT Do
 
@@ -248,6 +244,7 @@ The harness root is `/home/sandbox/harness` inside the sandbox.
 Orchestrator scripts live in `.oh/scripts/`, scheduled agents in `.oh/crons/`,
 sandbox environment in `.devcontainer/`, the shared primitive pack (skills,
 agents, hooks) vendored under `.oh/skills`, `.oh/agents`, `.oh/hooks`, and the
-agent template in `workspace/`. Claude, Codex, Pi, and Hermes expose `.oh/skills`
-through provider-specific symlinks (`.pi/` remains the Pi provider surface in v1). Per-directory `README.md` files
+`oh init` scaffold template in `.oh/templates/`. Claude, Codex, Pi, Prime Agent,
+and Hermes expose `.oh/skills` through provider-specific symlinks (`.pi/` remains the Pi
+provider surface in v1; Prime Agent's is `.prime/agent/skills`). Per-directory `README.md` files
 explain anything whose purpose isn't obvious from the name.

@@ -393,7 +393,7 @@ propose-then-confirm gate. Always logs.
 The self-improvement tail (`AGENTS.md § The Workflow`):
 
 - **compound** — promote durable knowledge so it is reused, not re-derived (`/wiki ingest`,
-  `.oh/memory/MEMORY.md`, mint a probe from any guardrail lesson).
+  `.oh/context/IDENTITY.md`, mint a probe from any guardrail lesson).
 - **compress** — keep the always-loaded context lean and clear (`/audit context`).
 - **benchmark** — confirm the change earned its complexity (`/benchmark`): the `/eval`
   regression floor stays green AND the capability-benchmark ceiling held or moved. It reads
@@ -591,26 +591,6 @@ auto-merge.
 | advisor agent | `.oh/agents/advisor.md` | Step 4 — the Advisor handoff briefing |
 | sandbox-processes norm | `.oh/skills/t3/references/sandbox-processes.md` | Step 4 — session naming for the Advisor |
 | Protected-paths list | `.claude/protected-paths.txt` | Load-bearing items a spec must not propose deleting |
-
----
-
-## Memory Protocol
-
-The composed skills each log their own entries. `execute` adds **one** roll-up per run — not
-one per node — to `.oh/memory/<UTC-date>/log.md`, in the three-field shape the heartbeat cron
-actually reads (`Result` / `Action` / `Observation`; `.oh/crons/heartbeat.md`):
-
-```markdown
-## spec-execute -- HH:MM UTC
-- **Result**: READY | DRAFT-BLOCKED | FAIL
-- **Action**: <slug> #<PR> — <what the run did, one line>
-- **Observation**: <the most important signal, one sentence>
-```
-
-The per-node mandatory append is gone. Nothing consumed the extra fields, and a log the
-heartbeat reads as prose is not made more readable by three more structured keys per run.
-
----
 
 ## Pipeline position
 

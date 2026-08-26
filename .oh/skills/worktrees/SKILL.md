@@ -28,7 +28,7 @@ under `.oh/worktrees/`.
 **Track/preserve** deliberate, durable harness changes, including:
 
 - `.oh/skills/`, `.oh/agents/`, `.oh/hooks/`, `.oh/scripts/`, `.devcontainer/`,
-  `.github/`, `workspace/`, docs, templates, and supported configuration
+  `.github/`, docs, templates, and supported configuration
   defaults.
 - `.oh/worktrees/README.md` and other lifecycle documentation.
 - Curated wiki entries and the wiki index when intentionally promoted. The wiki

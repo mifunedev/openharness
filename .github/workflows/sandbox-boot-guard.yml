@@ -9,7 +9,6 @@ on:
     paths:
       - ".devcontainer/**"
       - ".oh/**"
-      - "workspace/**"
       - "packages/oh/**"
       - ".oh/scripts/docker-compose.sh"
       - ".oh/scripts/sandbox-boot-smoke.sh"
@@ -22,7 +21,6 @@ on:
     paths:
       - ".devcontainer/**"
       - ".oh/**"
-      - "workspace/**"
       - "packages/oh/**"
       - ".oh/scripts/docker-compose.sh"
       - ".oh/scripts/sandbox-boot-smoke.sh"

@@ -100,7 +100,7 @@ RESULT=".oh/tasks/<slug>/eval-result.json"
 if [ -f "$RESULT" ] && [ "$(jq -r .commit "$RESULT")" = "$(git rev-parse HEAD)" ]; then
   rc="$(jq -r .runnerExit "$RESULT")"          # inherit the cycle's single run
 else
-  AUDIT_RUN_ID="$AUDIT_RUN_ID" AUDIT_ROOT="$AUDIT_ROOT" AUDIT_LOG_ROOT="$AUDIT_LOG_ROOT" \
+  AUDIT_RUN_ID="$AUDIT_RUN_ID" AUDIT_ROOT="$AUDIT_ROOT" \
     bash "$AUDIT_ROOT/.oh/skills/eval/run.sh" ; rc=$?
 fi
 # rc=0 → no NEW green→red regression for this commit (pass)
@@ -188,7 +188,7 @@ red from gate 2.
 
 ## Memory Protocol
 
-Return this structured observation to the outer dispatcher; do not append or run retro from this route. The dispatcher performs the one locked append under `AUDIT_LOG_ROOT`:
+Return this structured observation to the outer dispatcher; do not report a run record from this route. The dispatcher prints the one terminal run record:
 
 ```markdown
 ## audit -- HH:MM UTC

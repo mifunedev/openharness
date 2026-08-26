@@ -2,9 +2,9 @@
 name: render-html
 description: |
   Render an artifact (or in-context material) as a bespoke, self-contained
-  HTML file for one-shot human consumption. Writes to
-  .oh/memory/<UTC-date>/<slug>.html. Output is gitignored — these are
-  consumption artifacts, not source.
+  HTML file for one-shot human consumption. Writes to ephemeral scratch
+  under $TMPDIR — these are consumption artifacts, not source, and
+  nothing under .oh/ persists them.
   TRIGGER when: asked to render HTML, generate an HTML report, visualize an
   audit/council/lint/digest, "make this readable", "make a dashboard for",
   or as a follow-up to /audit harness, /strategic-proposal, /audit skills.
@@ -28,13 +28,13 @@ Common targets in this harness:
 - `/audit harness` tier-ranked report → filterable findings dashboard
 - `/strategic-proposal` council artifact → phase-column roadmap with critic challenges inline
 - `/audit skills` verdict matrix → sortable scoring table with CURRENT/STALE/BROKEN/DELETE badges
-- Weekly memory digest from N days of `log.md` → timeline coloured by skill outcome
+- Weekly digest of cron liveness (`.oh/crons/.cron.log`) → timeline coloured by outcome
 
 ## When NOT to use
 
 Skip when the artifact is **source or pipeline input** — Markdown stays the substrate of the harness:
 - PRDs (`.oh/tasks/*/prd.md`), briefings, commit messages, PR bodies, `CHANGELOG.md`
-- Memory log entries themselves (`.oh/memory/<date>/log.md`)
+- The cron liveness trail itself (`.oh/crons/.cron.log`)
 - Skill/identity sources (`CLAUDE.md`, `.oh/context/`, `.claude/skills/`)
 - Agent-to-agent handoffs (advisor → executor briefings)
 
@@ -60,9 +60,9 @@ If `slug` collides with an existing file in today's date directory, append `-2`,
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d)
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"   # resolver → default .oh/memory
-mkdir -p "$MEM/$TODAY"
-OUT="$MEM/$TODAY/<slug>.html"
+OUT_DIR="${TMPDIR:-/tmp}/oh-render/$TODAY"             # ephemeral, outside the repo
+mkdir -p "$OUT_DIR"
+OUT="$OUT_DIR/<slug>.html"
 ```
 
 Always use UTC. Always create the directory first.
@@ -99,48 +99,30 @@ Use the `Write` tool. Confirm the byte size is plausible (>2 KB for any non-triv
 ### 6. Report to the user
 
 Return three lines:
-1. Absolute path: `.oh/memory/<date>/<slug>.html`
+1. The absolute path to the file (under `$TMPDIR/oh-render/<date>/`), and that it is ephemeral — copy it out to keep it.
 2. A one-sentence summary of what was rendered (so the user knows what they'll see).
-3. The open command suggestion: `/agent-browser file://$(pwd)/.oh/memory/<date>/<slug>.html` (or `open file://...` if running locally).
-
-### 7. Memory Protocol
-
-Append to `.oh/memory/<UTC-date>/log.md`:
-
-```markdown
-## render-html -- HH:MM UTC
-- **Result**: OP | DRY-RUN | PARTIAL | FAIL
-- **Slug**: <slug>
-- **Source**: <path or "in-context">
-- **Intent**: <one-line>
-- **Path**: .oh/memory/<date>/<slug>.html
-- **Size**: <bytes>
-- **Observation**: <one sentence — what shape the artifact took, e.g. "filterable severity table with 17 rows + inline SVG dependency map">
-```
-
-Then run the qualify/improve loop per `.oh/skills/retro/references/memory-protocol.md`. If you learned something non-obvious about which HTML shape suited this artifact type, that may merit a line in `.oh/memory/MEMORY.md`.
+3. The open command suggestion: `/agent-browser file://<absolute-path>` (or `open file://...` if running locally).
 
 ## Anti-patterns
 
 - **Templating.** "Generic dashboard template, fill in the variables." Defeats the thesis. Generate bespoke each time.
 - **External assets.** CDN links to Tailwind, Google Fonts, Chart.js, etc. The artifact must work offline and travel as one file.
 - **Decorative JS.** Animations, fade-ins, gradients. The reader is making a decision, not watching a demo.
-- **Rendering source.** Producing `prd.html`, `CLAUDE.html`, `MEMORY.html`. Those files are pipeline input or indexed source — leave them in Markdown.
+- **Rendering source.** Producing `prd.html`, `CLAUDE.html`, `IDENTITY.html`. Those files are pipeline input or indexed source — leave them in Markdown.
 - **Multi-file output.** Separate `.css`/`.js` companions. Single file or nothing.
-- **Writing outside `.oh/memory/<date>/`.** No exceptions. The location is the convention.
+- **Writing anywhere under the repo.** The output is ephemeral scratch, never a tracked or ignored path inside `.oh/`. No exceptions.
 - **Overwriting an existing artifact.** Suffix `-2`, `-3` instead — older renders may still be referenced in the conversation.
-- **Skipping the memory log.** Every run logs, op or fail. The qualify/improve loop is not optional.
 
 ## Examples
 
 ```
-/render-html audit-harness-tier --from .oh/memory/2026-05-18/audit-raw.md --intent "pick next 3 actions"
-→ .oh/memory/2026-05-18/audit-harness-tier.html
+/render-html audit-harness-tier --from /tmp/audit-raw.md --intent "pick next 3 actions"
+→ $TMPDIR/oh-render/2026-05-18/audit-harness-tier.html
 
 /render-html roadmap-council --intent "review council deliberation before publishing pinned issue"
-→ .oh/memory/2026-05-18/roadmap-council.html
+→ $TMPDIR/oh-render/2026-05-18/roadmap-council.html
   (source was the strategic-proposal output already in context)
 
-/render-html week-19-digest --from .oh/memory/ --intent "what shipped this week"
-→ .oh/memory/2026-05-18/week-19-digest.html
+/render-html week-19-digest --from .oh/crons/.cron.log --intent "what ran this week"
+→ $TMPDIR/oh-render/2026-05-18/week-19-digest.html
 ```

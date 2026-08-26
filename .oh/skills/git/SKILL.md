@@ -29,20 +29,6 @@ This checkout commonly has two remotes:
 Before every commit or PR, inspect the changed paths and choose the remote
 explicitly. Do not assume `origin` is the public target.
 
-**Memory is private. Never commit memory artifacts to the public upstream repo.**
-Anything under `.oh/memory/` — especially `.oh/memory/MEMORY.md`, dated session logs,
-retro notes, and private lessons — belongs only in your private fork
-(`origin`) unless the operator gives an explicit one-off exception. If a public
-PR branch contains `.oh/memory/` changes, remove them before pushing/creating the PR,
-and preserve them separately on an `origin`-only branch or PR.
-
-Use this quick guard before pushing to `upstream`:
-
-```bash
-git diff --name-only upstream/development...HEAD | grep '^.oh/memory/' \
-  && { echo "BLOCK: memory changes must go to origin only"; exit 1; }
-```
-
 ## Issue Titles
 
 Format: `<prefix>(<issue#>): <shortdesc>`
@@ -85,16 +71,21 @@ Example: `FROM feat/42-slack-thread-replies TO development`
 
 ## PR Bodies
 
-- Link issue: `Closes #<issue#>` (or `Fixes`/`Resolves`)
+- Link issue: `Closes #<issue#>` (or `Fixes`/`Resolves`) in the PR title or body
 - Target default target branch (`development` → `main` → `master`, whichever exists)
 
-> **`Closes #N` does NOT auto-close the issue in this repo — close it by hand after every
-> merge.** GitHub honors a closing trailer only on merge into the **default** branch. PRs
-> here target `development` while the default branch is `main`, so the trailer registers as
-> a `referenced` timeline event and nothing else. Verified on #759 (whose `closed` event
-> carries `commit=none`) and independently on #753 from PR #757. Keep writing the trailer —
-> it is the machine-readable link a reader follows — but treat the close as a separate
-> manual step:
+> **`Closes #N` closes the issue on merge into `development` — the workflow does it, not
+> GitHub.** GitHub honors a closing trailer only on merge into the **default** branch. PRs
+> here target `development` while the default branch is `main`, so GitHub records the
+> trailer as a `referenced` timeline event and nothing else. Verified on #759 (whose
+> `closed` event carries `commit=none`) and independently on #753 from PR #757.
+> `.github/workflows/close-issues-on-development.yml` closes the gap: on a **merged** PR
+> into `development` it parses the title and body for the nine closing keywords and closes
+> each referenced issue as `completed` (#841).
+>
+> The trailer is therefore load-bearing — write it on every PR. Close by hand only when the
+> automation cannot see the merge (a direct push, a merge into another branch, or a PR whose
+> body carried no trailer):
 >
 > ```bash
 > gh issue close <N> --repo <owner/name> --comment "Merged in #<PR>."
@@ -128,7 +119,7 @@ Displaced detail has a destination — put it there, not in the entry:
 | Rationale, rejected alternatives | The PR body — the `([#N])` link is the pointer |
 | Task/spec decisions | `.oh/tasks/<slug>/prd.md` |
 | Architecture decisions | `.oh/docs/rfcs/` |
-| Incident narrative, lessons | `.oh/memory/MEMORY.md` |
+| Durable, generalized lessons | `.oh/context/IDENTITY.md` |
 
 BAD (real entry, 3,579 chars — a design doc wearing a bullet):
 
@@ -295,5 +286,6 @@ Let `$BASE` = default target branch (detected per rule above).
 4. Commit with `<type>: <description>`
 5. `git push -u origin <branch>` → then `/ci-status` (if skill exists)
 6. `gh pr create --base $BASE --title "FROM <branch> TO $BASE" --body "Closes #<issue#>"`
-7. After the merge, **close the issue manually** — `Closes #N` does not fire when the PR
-   targets a non-default branch (see § PR Bodies): `gh issue close <issue#> --repo <owner/name>`
+7. After the merge, confirm the issue closed. The `close-issues-on-development` workflow
+   closes it from the `Closes #N` trailer (see § PR Bodies). If the merge bypassed a PR into
+   `development`, close it by hand: `gh issue close <issue#> --repo <owner/name>`

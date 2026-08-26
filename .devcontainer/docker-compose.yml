@@ -88,15 +88,6 @@ services:
       - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
       - CRONS_DIR=${CRONS_DIR:-.oh/crons}
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
-      # NO relative default. `MEMORY_DIR` is precedence-1 in .oh/scripts/oh-path, so a
-      # relative value here is inherited by every caller using the
-      # `${MEMORY_DIR:-$(oh-path memory)}` idiom — where the `:-` never fires, the raw
-      # relative string is used, and it resolves against the CALLER'S CWD. Inside a linked
-      # worktree that is a per-branch empty ledger, which is exactly the bug #768/#772
-      # fixed in the resolver and this line re-introduced downstream. Left unset, every
-      # caller falls through to oh-path, which anchors `memory` to the MAIN worktree.
-      # Set it explicitly ONLY to an absolute path.
-      - MEMORY_DIR=${MEMORY_DIR:-}
       - WORKTREES_DIR=${WORKTREES_DIR:-.oh/worktrees}
     stdin_open: true
     tty: true

@@ -22,41 +22,20 @@ sent.
 
 ## Tasks
 
-1. Compute `TODAY=$(date -u +%Y-%m-%d)` and ensure the log directory
-   exists: `mkdir -p ".oh/memory/$TODAY"`.
-2. Run the eval suite and capture full output to a temp file:
+1. Run the eval suite and capture full output to a temp file:
    ```bash
    bash .oh/skills/eval/run.sh > /tmp/eval-weekly-out.txt 2>&1 || true
    ```
-3. Check for regressions:
+2. Check for regressions:
    ```bash
    grep -E "^  - " /tmp/eval-weekly-out.txt || true
    ```
-4. If any lines matching `^  - ` were found (these are the regression
-   entries produced by `run.sh`), append one dated entry per run to
-   `.oh/memory/$TODAY/log.md` through `.oh/scripts/locked-append.sh`:
+3. If any lines matching `^  - ` were found (these are the regression
+   entries produced by `run.sh`), name each regressed probe and its source
+   field in the reply. `run.sh` has already written the durable record to
+   `.oh/evals/RESULTS.md`; this cron adds no second copy.
 
-   ```
-   ## eval-weekly -- HH:MM UTC
-   - **Result**: REGRESSION
-   - **Probe**: <probe-id from regression line>
-   - **Source**: <source field from regression line>
-   - **Observation**: probe regressed from PASS; see .oh/evals/RESULTS.md for current status
-   ```
-
-   Use one `## eval-weekly -- HH:MM UTC` heading block per run (not per
-   probe). List each regressed probe as a separate bullet under
-   `- **Probe**:` within that block.
-
-   If there are no regressions, append instead:
-   ```
-   ## eval-weekly -- HH:MM UTC
-   - **Result**: OK
-   - **Probes**: <N from "ran N probe(s)" line>
-   - **Observation**: all probes passed or skipped; no regressions
-   ```
-
-5. **Liveness:** append one liveness line to `.oh/crons/.cron.log` through
+4. **Liveness:** append one liveness line to `.oh/crons/.cron.log` through
    `.oh/scripts/locked-append.sh`:
    ```bash
    printf '[%s] eval-weekly: %s\n' "$(date -Iseconds)" "<OK|REGRESSION(N)>" | .oh/scripts/locked-append.sh .oh/crons/.cron.log

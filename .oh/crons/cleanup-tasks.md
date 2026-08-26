@@ -16,7 +16,7 @@ Per SPEC v0.7 §"Weekly cleanup cron": completed tasks move into the
 dated archive under `.oh/tasks/`; incomplete tasks are left alone with a
 note. The same weekly pass also grooms stale `.oh/worktrees/` branch
 checkouts, but it never touches the durable `.oh/worktrees/agent/` or
-`.oh/worktrees/project/` namespaces. `.oh/memory/` carries journal artifacts
+`.oh/worktrees/project/` namespaces. `.oh/crons/.cron.log` carries liveness
 only — never a `.oh/tasks/` subfolder.
 
 ## Tasks
@@ -33,7 +33,7 @@ only — never a `.oh/tasks/` subfolder.
    edits — is untouched and does NOT abort the sweep, mirroring the
    cron system's `BLOCKED-OWNED-WIP` owned-surface convention. If that
    scoped status is non-empty, abort: append a note to
-   `.oh/memory/$TODAY/log.md`, emit the distinct liveness token to
+   the reply, emit the distinct liveness token to
    `.oh/crons/.cron.log`
    (`printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "BLOCKED-TASKS-WIP" | .oh/scripts/locked-append.sh .oh/crons/.cron.log`),
    and stop here — do NOT fall through to step 7's `OK` line. This
@@ -82,7 +82,7 @@ only — never a `.oh/tasks/` subfolder.
        (falls back to `mv` + `git -C .oh/worktrees/archive/$TODAY add` if
        `git mv` rejects an untracked path).
    - Otherwise, leave the folder in place and append a one-line note to
-     `.oh/memory/$TODAY/log.md` recording that `<taskdesc>` is still active
+     the reply recording that `<taskdesc>` is still active
      (include the last `progress.txt` modification time).
 5. **Groom stale `.oh/worktrees/` branch checkouts** from the shared repo
    root after the task scan. Initialize `W=0` plus a `GROOMED_WORKTREES`
@@ -121,7 +121,7 @@ only — never a `.oh/tasks/` subfolder.
      recursively.
    - Remove empty non-reserved namespace directories left behind by the
      sweep (`find .oh/worktrees -mindepth 1 -maxdepth 1 -type d ! -name agent ! -name project -empty -delete`), then run `git worktree prune`.
-   - Append a one-line note to `.oh/memory/$TODAY/log.md` for each skipped
+   - Add a one-line note to the reply for each skipped
      registered worktree or preserved orphan, recording the reason (`open-pr`,
      `live-pane`, `too-new`, `dirty`, `staged`, `untracked`, `missing-upstream`,
      `unpushed`, `orphan-nonempty`, or `orphan-live-pane`) and its last commit
@@ -139,7 +139,7 @@ only — never a `.oh/tasks/` subfolder.
      If `gh pr create` reports the PR already exists, capture its URL
      via `gh pr view --json url -q .url` instead.
 7. After the sweep, append a single summary line to
-   `.oh/memory/$TODAY/log.md`: `cleanup-tasks: archived N, skipped M, groomed W worktrees, pr <url-or-none>`.
+   the reply: `cleanup-tasks: archived N, skipped M, groomed W worktrees, pr <url-or-none>`.
 8. **Mandatory closing steps (always run):**
    - **Tear down the worktree** — covers normal completion, the
      nothing-to-archive case (`N = 0`), and partial runs; complements the

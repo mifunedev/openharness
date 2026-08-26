@@ -14,8 +14,6 @@ The sharp test: *Is this a fact or synthesis about a topic, intended to be read 
 | --- | --- | --- | --- |
 | `.oh/skills/*/SKILL.md` | Behavioral norms (prescriptive) | Deliberate orchestrator revision | Wiki holds **facts**, skills hold **how to behave** |
 | `.oh/context/IDENTITY.md` | Cross-session operating principles | Orchestrator, deliberate | Wiki is codebase/domain knowledge; IDENTITY is "always do X" |
-| `.oh/memory/MEMORY.md` | Distilled experiential lessons ("run on date X showed Y") | Orchestrator via `/retro` | Wiki entries are **reference**; memory is **journal** |
-| `.oh/memory/<topic>.md` | Ad-hoc reference notes, no schema, no retrieval | Any session | Wiki wins after a note is re-derived twice and earns a schema |
 | `docs/` | Human-facing prose | Orchestrator / contributors | Wiki is LLM-readable; docs are human-readable |
 | `.claude/skills/*/SKILL.md` | Executable procedures | Orchestrator | Skills are *how to do*; wiki is *what is true* |
 | `.oh/skills/wiki/corpus/raw/` | Immutable source captures (snapshots of fetched pages, papers) | Skills writing snapshots only | Same surface; raw is upstream, wiki entries are synthesis |
@@ -37,9 +35,6 @@ created: 2026-05-23
 updated: 2026-05-23
 sources:
   - raw/2026-05-23-github-docs-fine-grained-pat.md
-  # aspirational: .oh/memory/MEMORY.md heading anchors are not stable today;
-  # once MEMORY.md gains stable anchors, entries may cite them as:
-  #   - .oh/memory/MEMORY.md#<anchor>
 related: [github-auth-sandbox, ci-secrets-handling]
 confidence: confirmed   # provisional | confirmed | deprecated
 ---

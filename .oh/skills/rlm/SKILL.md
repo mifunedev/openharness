@@ -142,16 +142,14 @@ invocation is documented as a contract in `references/recursion-budget.md`.
 
 Write the recursion trace (chunk map used, per-chunk sub-agent findings, the
 `/weigh` selections, the final synthesized answer, and the budget actually consumed)
-to the **gitignored** path:
+to ephemeral scratch outside the repo:
 
 ```
-.oh/memory/<UTC-date>/rlm-<slug>-<HHMMSS>.json     # UTC-date = date -u +%Y-%m-%d
+$TMPDIR/oh-rlm/<UTC-date>/rlm-<slug>-<HHMMSS>.json   # UTC-date = date -u +%Y-%m-%d
 ```
 
-Then append a one-line entry to `.oh/memory/<UTC-date>/log.md` per the Memory Improvement
-Protocol (`.oh/skills/retro/references/memory-protocol.md`). The trace makes the
-recursion auditable; it is a consumption artifact, never staged or committed. Announce
-`RESULT: RLM-COMPLETE`.
+The trace makes the recursion auditable; it is a consumption artifact, never staged
+or committed. Announce `RESULT: RLM-COMPLETE`.
 
 ## Anti-patterns
 

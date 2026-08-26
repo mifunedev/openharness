@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: .oh/tasks/spec-simplification/ (issue #816, US-007) — the always-on tier was 85,256 B
-#         / ~21,300 tokens, of which MEMORY.md was 47,948 B (56%), and nothing stopped it
+#         / ~21,300 tokens, of which one file was 47,948 B (56%), and nothing stopped it
 #         growing: every session appends, no session deletes.
 # desc: the always-loaded context tier stays inside a declared budget, and no single file
 #       dominates it. This is a RATCHET, not a measurement: the tier is read in full by every
@@ -18,12 +18,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 # "what does every future session now read that it did not read before, and why is that
 # worth it?" — and should say so in the CHANGELOG entry that raises it.
 TIER_BUDGET_BYTES=96000     # ~24,000 tokens. Today: 85,256 B (~21,300).
-SINGLE_FILE_SHARE_MAX=60    # percent. Today: MEMORY.md at 56%.
+SINGLE_FILE_SHARE_MAX=60    # percent. Historical worst case: one file at 56%.
 
 # `memory` is shared across worktrees and gitignored — resolve it through oh-path (which
-# anchors it to the MAIN worktree) rather than reading $MEMORY_DIR, whose relative value
 # would point at a per-worktree empty ledger and understate the tier.
-MEM_DIR="$(sh "$ROOT/.oh/scripts/oh-path" memory --no-create 2>/dev/null || printf '%s' "$ROOT/.oh/memory")"
 
 FILES=(
   "$ROOT/AGENTS.md"
@@ -32,7 +30,6 @@ FILES=(
   "$ROOT/.oh/context/TOOLS.md"
   "$ROOT/.oh/context/REPO_MAP.md"
   "$ROOT/.oh/context/USER.md"
-  "$MEM_DIR/MEMORY.md"
 )
 
 total=0
@@ -40,7 +37,7 @@ largest=0
 largest_name=""
 report=()
 for f in "${FILES[@]}"; do
-  # A missing file is not a failure: MEMORY.md is gitignored and absent in a fresh clone.
+  # A missing file is not a failure: a fresh clone may not carry every context file.
   # It just does not contribute to the tier that clone actually loads.
   [[ -f "$f" ]] || continue
   b=$(wc -c < "$f" | tr -d ' ')

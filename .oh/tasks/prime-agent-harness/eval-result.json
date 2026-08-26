@@ -1,0 +1,8 @@
+{
+  "commit": "7f8cd6405b98bf37d07820f08db83db5a935ac2b",
+  "runnerExit": 0,
+  "ranAt": "2026-08-26T18:31:58Z",
+  "newRegressions": [],
+  "preExistingReds": ["audit-run-root-contract"],
+  "flaky": ["drift-check-cron-staleness-glob"]
+}

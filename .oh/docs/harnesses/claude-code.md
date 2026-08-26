@@ -61,7 +61,7 @@ claude
 claude -p "Explain the structure of the packages/ directory"
 
 # Point at a specific working directory
-claude --cwd /home/sandbox/harness/workspace
+claude --cwd /home/sandbox/harness
 ```
 
 Run inside a dedicated tmux session to keep the agent alive across disconnects:

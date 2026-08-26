@@ -64,23 +64,6 @@ Verify: <commands and pass/fail>
 Result: CREATED | DRY-RUN | BLOCKED
 ```
 
-## Memory Protocol
-
-Append a log entry to `.oh/memory/<UTC-date>/log.md` for every invocation:
-
-```markdown
-## blog -- HH:MM UTC
-- **Result**: CREATED | DRY-RUN | BLOCKED | FAIL
-- **Scenario**: <one-line scenario>
-- **Source**: <source path/url or inferred>
-- **Target**: <target repo/path or inferred>
-- **Post**: <post path or none>
-- **Promo**: <promo artifact path or none>
-- **Observation**: <one sentence about source quality, media risk, promotion readiness, or verification>
-```
-
-Then run the qualify/improve loop from `.oh/skills/retro/references/memory-protocol.md`. Prefer improving this skill or its references over adding duplicate MEMORY.md notes when the lesson is procedural.
-
 ## Example
 
 ```text

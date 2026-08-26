@@ -142,11 +142,20 @@ Example:
 FROM feat/42-slack-thread-replies TO development
 ```
 
-Link the issue in the body:
+Link the issue in the title or the body with a closing keyword:
 
 ```
 Closes #42
 ```
+
+`Closes`, `Fixes` and `Resolves` all work, and each grammatical variant works
+(`Closed`, `Fixed`, `Resolved`). List every issue the pull request completes —
+one keyword per issue. A bare `#42` links the issue but does not close it.
+
+When the pull request merges into `development`, the workflow
+[`.github/workflows/close-issues-on-development.yml`](../../.github/workflows/close-issues-on-development.yml)
+closes each referenced issue as `completed`. Closing the pull request without
+merging it closes no issue.
 
 Create the PR:
 

@@ -189,6 +189,36 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     docsPath: ".oh/docs/harnesses/t3code.md",
     kind: "on-demand",
   },
+  {
+    // Never baked into the image, so it has no `INSTALL_*` key: the upstream
+    // installer resolves the latest release at run time, and pinning it in the
+    // Dockerfile would make this catalog the second place a version lives.
+    //
+    // Three details in the argv are load-bearing:
+    //   - `npm_config_prefix` puts the global install under the sandbox user's
+    //     own prefix (the same one pi uses), so the default root-owned
+    //     /usr/lib/node_modules is never written and `prime-agent update`
+    //     needs no sudo.
+    //   - `setsid --wait` drops the controlling terminal. The installer's two
+    //     confirmation prompts read /dev/tty directly, so redirecting stdin
+    //     does not silence them; with no controlling terminal they report
+    //     "No terminal detected" and proceed.
+    //   - `PRIME_AGENT_BOOTSTRAP_KERNEL_ON_INSTALL=0` skips the IPython
+    //     runtime (uv + Python 3.11 + ipykernel). The agent prepares it on
+    //     first ipython use, which keeps the on-demand install light.
+    id: "prime-agent",
+    title: "Prime Agent",
+    binary: "prime-agent",
+    installArgv: [
+      "bash",
+      "-lc",
+      "curl -fsSL https://app.primeintellect.ai/prime-agent/install.sh | PRIME_AGENT_BOOTSTRAP_KERNEL_ON_INSTALL=0 npm_config_prefix=/home/sandbox/.local setsid --wait sh",
+    ],
+    installUser: "sandbox",
+    verifyArgv: ["prime-agent", "--version"],
+    docsPath: ".oh/docs/harnesses/prime-agent.md",
+    kind: "on-demand",
+  },
 ];
 
 /** Catalog lookup by doc slug. `undefined` when the name is unknown. */

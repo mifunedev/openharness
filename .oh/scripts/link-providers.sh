@@ -16,7 +16,6 @@ required_files=(
   ".oh/skills/git/SKILL.md"
   ".oh/skills/t3/references/sandbox-processes.md"
   ".oh/agents/advisor.md"
-  ".oh/skills/retro/references/memory-protocol.md"
   ".oh/skills/wiki/references/schema.md"
   ".oh/skills/eval/run.sh"
 )
@@ -29,9 +28,7 @@ required_execs=(
   ".oh/skills/audit/scripts/context-audit-runner.sh"
   ".oh/skills/health-check/scripts/scope-preflight.sh"
   ".oh/skills/eval/run.sh"
-  ".oh/skills/prompt-miner/scripts/render-log-entry.sh"
-  ".oh/skills/retro/scripts/check-memory-duplicates.sh"
-  ".oh/skills/retro/scripts/render-log-entry.sh"
+  ".oh/skills/retro/scripts/check-identity-duplicates.sh"
   ".oh/skills/retro/scripts/validate-retro-report.sh"
   ".oh/skills/t3/scripts/t3-code.sh"
 )
@@ -43,6 +40,7 @@ provider_links=(
   ".claude/agents|../.oh/agents"
   ".claude/hooks|../.oh/hooks"
   ".codex/agents|../.claude/agents"
+  ".prime/agent/skills|../../.oh/skills"
 )
 
 HERMES_LINK=".hermes/skills/openharness"
@@ -88,6 +86,7 @@ print_state() {
   cat >&2 <<EOF
 Vendored skill pack: .oh/skills (expected to exist as tracked files)
 Provider surfaces:   .pi/skills .claude/skills .codex/skills -> ../.oh/skills
+                     .prime/agent/skills -> ../../.oh/skills
 Remediation: bash .oh/scripts/link-providers.sh --init
 EOF
 }
@@ -248,4 +247,4 @@ if [ "$failures" -ne 0 ]; then
   exit 1
 fi
 
-printf 'Providers OK: .pi/.claude/.codex skills -> .oh/skills (vendored pack present)\n'
+printf 'Providers OK: .pi/.claude/.codex/.prime skills -> .oh/skills (vendored pack present)\n'

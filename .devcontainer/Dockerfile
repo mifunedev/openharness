@@ -180,7 +180,24 @@ RUN useradd -m -s /bin/zsh sandbox \
 # must not target root-owned tool dirs by default.
 ENV UV_TOOL_DIR=/home/sandbox/.local/share/uv/tools
 ENV UV_TOOL_BIN_DIR=/home/sandbox/.local/bin
-RUN install -d -o sandbox -g sandbox "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" \
+# uv also writes a managed-interpreter dir and a cache dir. Pin both to
+# user-scoped paths so `uv python install` never falls back to /root/.local or
+# /root/.cache — the agent runs as `sandbox`, so a root-owned interpreter is
+# unusable no matter how it got installed.
+ENV UV_PYTHON_INSTALL_DIR=/home/sandbox/.local/share/uv/python
+ENV UV_CACHE_DIR=/home/sandbox/.cache/uv
+# `install -d -o U -g G a/b/c` applies -o/-g to the FINAL component only;
+# intermediate parents it has to create are left root-owned. Creating just
+# `.../uv/tools` therefore produced a root-owned `.../uv`, and the first
+# `uv python install 3.11` as sandbox died with
+# "failed to create directory /home/sandbox/.local/share/uv/python: Permission denied".
+# Name every level explicitly, parents first, so each one is owned by sandbox.
+RUN install -d -o sandbox -g sandbox \
+      /home/sandbox/.local \
+      /home/sandbox/.local/share \
+      /home/sandbox/.local/share/uv \
+      /home/sandbox/.cache \
+      "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR" \
  && chown -R sandbox:sandbox /opt/uv 2>/dev/null || true \
  && if [ -d /usr/local/lib/hermes-agent ]; then chown -R sandbox:sandbox /usr/local/lib/hermes-agent; fi
 
@@ -213,6 +230,8 @@ RUN printf '%s\n' \
       'export NPM_USER_PREFIX="/home/sandbox/.local"' \
       'export PNPM_HOME="/usr/local/share/pnpm"' \
       'export PATH="$NPM_USER_PREFIX/bin:$PNPM_HOME:$PATH"' \
+      '# uv/Python env written by .oh/scripts/provision-python.sh (PRIME_AGENT_KERNEL_PYTHON).' \
+      '[ -r "$HOME/.local/share/oh/python-env.sh" ] && . "$HOME/.local/share/oh/python-env.sh"' \
       | tee -a /home/sandbox/.profile /home/sandbox/.zprofile \
  && chown sandbox:sandbox /home/sandbox/.profile /home/sandbox/.zprofile
 
@@ -233,11 +252,10 @@ RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness",
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
-# ─── Copy install scripts + workspace (for CI; bind mount overrides at runtime)
+# ─── Copy install scripts (for CI; bind mount overrides at runtime)
 # Real path .oh/install/ — COPY does not traverse the back-compat install symlink.
 COPY --chown=sandbox:sandbox .oh/install/ /home/sandbox/install/
 RUN chmod +x /home/sandbox/install/*.sh
-COPY --chown=sandbox:sandbox workspace/ ${OH_PROJECT_ROOT}/workspace/
 
 # Flavor B (#609): bake a non-shadowed seed copy of the repo/control-plane so
 # the image-only path can populate an empty named workspace volume on first
@@ -246,6 +264,19 @@ COPY --chown=sandbox:sandbox workspace/ ${OH_PROJECT_ROOT}/workspace/
 # Tradeoff: bakes the repo into the image (size cost) for the seeding path only;
 # the primary bind-mount build ignores /opt/oh-seed at runtime.
 COPY --chown=sandbox:sandbox . /opt/oh-seed/
+
+# ─── User-scoped Python provisioning ───────────────────────────────
+# Bake the managed interpreter + kernel venv into the image so a fresh boot
+# needs no network. Run as `sandbox` with HOME pinned: a root-run `uv python
+# install` would land under /root/.local, which the agent user cannot read.
+# The entrypoint re-runs the same idempotent script on every boot.
+ARG INSTALL_PYTHON_KERNEL=true
+ARG OH_PYTHON_VERSION=3.11
+RUN if [ "${INSTALL_PYTHON_KERNEL}" = "true" ]; then \
+      su - sandbox -c "OH_PYTHON_VERSION='${OH_PYTHON_VERSION}' bash /opt/oh-seed/.oh/scripts/provision-python.sh"; \
+    else \
+      echo "Skipping Python kernel provisioning (INSTALL_PYTHON_KERNEL=false)"; \
+    fi
 
 # ─── Entrypoint ────────────────────────────────────────────────────
 COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh

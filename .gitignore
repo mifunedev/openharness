@@ -38,11 +38,6 @@
 .oh/crons/.pid
 .oh/crons/*.log
 
-# Ralph runtime files (keep prd.json + progress.txt tracked for recovery)
-workspace/.ralph/.last-branch
-workspace/.ralph/ralph-*.log
-workspace/.ralph/.claude/
-
 # pi-autoresearch runtime state (benchmarks, logs, session config)
 **/.auto/
 
@@ -50,20 +45,6 @@ workspace/.ralph/.claude/
 **/.ralph/archives/
 **/src/generated/
 
-# Slack runtime data (channel logs, context, attachments — keep MEMORY.md tracked)
-workspace/.slack/*/
-workspace/.slack/events/
-workspace/.slack/settings.json
-
-# Memory runtime/state — keep .oh/memory/README.md tracked; ignore private memory and dated logs.
-.oh/memory/MEMORY.md
-.oh/memory/[0-9]*/
-
-# Pi project config (generated symlinks)
-workspace/.pi/
-
-# Startup script (contains runtime config, tokens sourced from env)
-workspace/startup.sh
 **/.pnpm-store
 **/.claude/plans
 **/.claude/specs/*
@@ -77,6 +58,12 @@ workspace/startup.sh
 !/.hermes/hooks/
 !/.hermes/config.yaml
 !/.hermes/config.yml
+
+# prime-agent project-local runtime state. Credentials already fall under the
+# **/auth.json rule above; these are the session and telemetry files the agent
+# writes beside its tracked config.
+.prime/agent/sessions/
+.prime/agent/telemetry.json
 
 **/scheduled_tasks.lock
 # Legacy/future workspace package build artifacts

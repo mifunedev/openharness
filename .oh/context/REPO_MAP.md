@@ -23,7 +23,7 @@ Why: `git rev-parse --show-toplevel` stops a subdirectory launch from mapping on
 3. Pick one row from the search routing guide before running broad `rg`.
 4. When a routed directory has `README.md`, read that first.
 5. Disregard the folders in the skip table by default; open them only for listed exception cases.
-6. Prefer curated `.oh/skills/wiki/corpus/*.md` and `.oh/memory/MEMORY.md` over raw logs/snapshots.
+6. Prefer curated `.oh/skills/wiki/corpus/*.md` and `.oh/context/IDENTITY.md` over raw logs/snapshots.
 
 ## Performance caveat and acceptance metric
 
@@ -97,9 +97,8 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Docs | `README.md`, `.oh/docs/README.md`, `.oh/docs/` | GitHub-readable markdown; site/blog lives in `mifunedev/openharness-web`. |
 | CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi provider extensions, manifests, and runtime config; `.pi/` is not the v1 Mifune mount. |
-| Skill behavior | `.oh/skills/`, `.pi/skills/`, `.claude/skills/` | Source of truth is the vendored `.oh/skills/` pack; provider paths are symlinks into it. |
-| Durable knowledge | `.oh/skills/wiki/corpus/README.md`, `.oh/skills/wiki/corpus/*.md`, `.oh/memory/MEMORY.md` | Curated wiki pages and long-term lessons; prefer these before raw logs. |
-| Agent workspace seed files | `workspace/AGENTS.md`, `workspace/CLAUDE.md` | Template files bind-mounted into the sandbox workspace. |
+| Skill behavior | `.oh/skills/`, `.pi/skills/`, `.claude/skills/`, `.prime/agent/skills/` | Source of truth is the vendored `.oh/skills/` pack; provider paths are symlinks into it. |
+| Durable knowledge | `.oh/skills/wiki/corpus/README.md`, `.oh/skills/wiki/corpus/*.md`, `.oh/context/IDENTITY.md` | Curated wiki pages and cross-session principles; prefer these before raw logs. |
 
 ## Disregard by default
 
@@ -112,10 +111,8 @@ Ignore these unless the task explicitly targets them:
 | `node_modules/`, `.pnpm/`, `.pi/npm/node_modules/`, `.hermes/lsp/node_modules/` | Vendor dependencies; huge and low-signal. | Debugging dependency installation or package resolution. |
 | `.oh/cli/dist/` | Generated build output. | Verifying generated CLI artifacts. |
 | `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
-| `.oh/memory/YYYY-MM-DD/`, `.oh/memory/*/log.md` | High-churn session logs. | Loading today's required startup log or investigating a dated event. |
-| `.oh/memory/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki ingest --from-draft`. |
+| `.oh/crons/.cron.log` | Append-only cron liveness trail, one line per pulse. | Checking whether a cron still fires. |
 | `.oh/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.oh/skills/wiki/corpus/*.md` entry. |
-| `workspace/.slack/`, `workspace/.pi/`, `workspace/.ralph/`, `workspace/startup.sh` | Runtime state and local/sensitive sandbox artifacts. | Debugging Slack/Pi/Ralph runtime state or startup generation. |
 | `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific build-session status; prefer `tail` over full read. |
 | `.oh/evals/datasets/**/oracle/`, `.oh/evals/datasets/**/diff.patch`, `.oh/evals/datasets/**/changed-files.txt` | Expected-output fixtures, not implementation guidance. | Updating/verifying a dataset oracle. |
 
@@ -148,6 +145,6 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `.devcontainer/` | Sandbox Dockerfile, compose, devcontainer config, entrypoint. | Change sandbox image/runtime provisioning. |
 | `.pi/extensions/` | In-tree Pi extension source, especially Slack bridge. | Modify Pi integration behavior. |
 | `.pi/skills/`, `.claude/skills/` | Skill contracts for Pi and Claude providers. | Update slash-skill behavior; sync both copies when mirrored. |
-| `workspace/AGENTS.md` | Seed instructions copied into the agent workspace. | Change new sandbox agent identity/scaffold. |
+| `.oh/templates/AGENTS.md` | Seed instructions written by `oh init` into a new project. | Change what a fresh `oh init` scaffold says. |
 
 Rule: tracked source first; generated/vendor/runtime/history-heavy folders are context poison unless debugging that exact subsystem.

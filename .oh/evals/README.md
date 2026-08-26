@@ -4,7 +4,7 @@ This directory is the harness's **fitness function**: a corpus of deterministic
 **probes** that turn lessons into runnable, exit-code-scored checks against
 *real state*. A rectification is provably "done" when its probe is green; a
 recurrence surfaces as a was-green-now-red regression. See
-`.oh/tasks/context-fitness-evals/prd.md` for the full design and `.oh/skills/retro/references/memory-protocol.md`
+`.oh/tasks/context-fitness-evals/prd.md` for the full design
 for how lessons map to probes.
 
 ## Subfolders
@@ -38,7 +38,7 @@ exact contract `grep -E '^# (tier|source|desc):'`):
 ```sh
 #!/usr/bin/env bash
 # tier: A          # A | ablation
-# source: .oh/memory/MEMORY.md 2026-06-04   # the lesson/rule this probe closes
+# source: retro lesson 2026-06-04          # the lesson/rule this probe closes
 # desc: public mifune.dev is not served by `next dev`
 set -euo pipefail
 # ... inspect REAL state (running processes, actual files, live sandbox) — never mocks ...

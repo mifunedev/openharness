@@ -12,7 +12,6 @@ Use this reference when an `add to wiki` request arrives while the main checkout
    - create `.oh/skills/wiki/corpus/raw/<date>-<slug>.md` as local provenance
    - create/update `.oh/skills/wiki/corpus/<slug>.md`
    - regenerate `.oh/skills/wiki/corpus/README.md` via `/wiki lint` or the atomic fallback
-   - append `.oh/memory/<date>/log.md`
 4. Commit and push only the tracked deliverables, normally `.oh/skills/wiki/corpus/<slug>.md` and `.oh/skills/wiki/corpus/README.md`.
 5. In the final report, name the worktree path, branch, commit, and note any gitignored provenance files.
 

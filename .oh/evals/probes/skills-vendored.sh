@@ -27,14 +27,13 @@ fail() {
 for path in \
   .oh/skills/git/SKILL.md \
   .oh/skills/t3/references/sandbox-processes.md \
-  .oh/skills/retro/references/memory-protocol.md \
   .oh/skills/wiki/references/schema.md; do
   [ -f "$path" ] || fail "vendored pack file missing: $path"
   git ls-files --error-unmatch "$path" >/dev/null 2>&1 || fail "pack file not tracked in-repo: $path"
 done
 
 # 4. Provider symlinks resolve into the vendored .oh/ pack.
-for link in .pi/skills .claude/skills .codex/skills .claude/agents .claude/hooks .codex/agents; do
+for link in .pi/skills .claude/skills .codex/skills .claude/agents .claude/hooks .codex/agents .prime/agent/skills; do
   [ -L "$link" ] || fail "$link is not a symlink"
   [ -e "$link" ] || fail "$link target does not resolve"
 done
@@ -56,6 +55,7 @@ if [ "${SKILLS_VENDORED_SKIP_CLEAN_CLONE:-0}" != "1" ]; then
   [ -f .pi/skills/git/SKILL.md ] || fail "Pi skill symlink does not resolve in a clean clone"
   [ -f .claude/skills/spec/SKILL.md ] || fail "Claude skill symlink does not resolve in a clean clone"
   [ -f .codex/skills/git/SKILL.md ] || fail "Codex skill symlink does not resolve in a clean clone"
+  [ -f .prime/agent/skills/git/SKILL.md ] || fail "prime-agent skill symlink does not resolve in a clean clone"
   INSTALL_HERMES=false bash .oh/scripts/link-providers.sh --check >/dev/null
   INSTALL_HERMES=false bash .oh/scripts/link-providers.sh --init >/dev/null   # idempotent
   # Opt-in Hermes: --init creates the runtime link on demand.

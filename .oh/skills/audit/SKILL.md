@@ -32,7 +32,7 @@ usage: /audit <implementation|pr|prs|harness|context|skills|eval-quality|drift|f
 | `prs` | `/audit prs [--repo O/N] [filters/actions]` | buckets + `PRS-AUDIT-COMPLETE` / `PRS-AUDIT-PARTIAL` |
 | `harness` | `/audit harness [--focus area] [--external URL|path] [actions]` | Tier 1/2/3 + Recommended Next 3 Actions |
 | `context` | `/audit context [all|--baseline|--ablate file]` | `KEEP` / `TRIM` / `DEMOTE` / `CUT` |
-| `skills` | `/audit skills [all|root|workspace|name]` | `CURRENT` / `STALE` / `BROKEN` / `DELETE` |
+| `skills` | `/audit skills [all|root|name]` | `CURRENT` / `STALE` / `BROKEN` / `DELETE` |
 | `eval-quality` | `/audit eval-quality [all|probes|capability|id]` | `KEEP` / `GROOM` / `CUT` |
 | `drift` | `/audit drift` | per-class `OK` / aggregate `DRIFT:` |
 | `full` | `/audit full [--repo O/N] [--focus area] [--health-target target]` | `AUDIT-CAMPAIGN-COMPLETE` / `AUDIT-CAMPAIGN-PARTIAL` |
@@ -56,7 +56,7 @@ Use the executable lifecycle boundary
 for every valid invocation. The route driver is mandatory and is the actual selected-target
 execution (not a preflight command); it reads the exported `AUDIT_ROUTE`. The boundary
 validates all target arguments and the driver before lifecycle creation, resolves and exports
-immutable `AUDIT_ROOT`, `AUDIT_LOG_ROOT`, and `AUDIT_RUN_ID`, maps the target to exactly one
+immutable `AUDIT_ROOT` and `AUDIT_RUN_ID`, maps the target to exactly one
 route, supplies invocation-scoped `AUDIT_TMP_ROOT` and `AUDIT_EVIDENCE_PATH`, changes to
 `AUDIT_ROOT`, and invokes the driver with `<target> <validated-target-args...>` verbatim
 (also exporting `AUDIT_TARGET` and `AUDIT_TARGET_ARGS_JSON`). It keeps the lifecycle open

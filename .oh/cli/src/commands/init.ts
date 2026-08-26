@@ -227,17 +227,8 @@ export async function runInit(
   if (!minimal) {
     const wr: WriteCtx = { t, dryRun, force, report, stats };
 
-    // Phase 2a: seed memory/ and tasks/ as EMPTY dirs (README stub each). This
-    // harness's own memory/PRDs are NEVER shipped — init creates them fresh.
-    writeGenerated(
-      wr,
-      ".oh/memory/README.md",
-      "# .oh/memory/\n\nLong-term, append-only lessons for this project's agents. " +
-        "`MEMORY.md` is the index; daily logs live under `<UTC-date>/`.\n\n" +
-        "Resolve this directory with `.oh/scripts/oh-path memory` (or the " +
-        "`MEMORY_DIR` env var) rather than hardcoding a path — set " +
-        "`MEMORY_DIR` in `.devcontainer/.env` to relocate it.\n",
-    );
+    // Phase 2a: seed tasks/ as an EMPTY dir (README stub). This harness's own
+    // PRDs are NEVER shipped — init creates the directory fresh.
     writeGenerated(
       wr,
       ".oh/tasks/README.md",
@@ -253,9 +244,6 @@ export async function runInit(
     if (existsSync(sourceDevcontainer) && statSync(sourceDevcontainer).isDirectory()) {
       copyDevcontainer(sourceDevcontainer, wr);
       writeGenerated(wr, ".devcontainer/devcontainer.json", DEVCONTAINER_JSON);
-      // The harness Dockerfile `COPY workspace/` expects an in-repo workspace
-      // template; seed a stub so a local image build has a source to copy.
-      writeGenerated(wr, "workspace/README.md", WORKSPACE_README);
     } else {
       prompt.warn(
         `Source devcontainer not found at ${sourceDevcontainer}; skipped full .devcontainer/ scaffold.`,
@@ -362,9 +350,11 @@ export async function runInit(
     prompt.info(`  (${vFiltered} non-payload source file(s) skipped — pass --verbose to list)`);
   }
   if (!minimal) {
-    prompt.ok("Wrote AGENTS.md + CLAUDE.md and seeded empty memory/ + tasks/");
+    prompt.ok("Wrote AGENTS.md + CLAUDE.md and seeded an empty tasks/");
     prompt.ok("Copied the full .devcontainer/ (local image build)");
-    prompt.ok("Configured 4 provider surfaces (.claude .codex .pi .hermes) → vendored .oh/skills");
+    prompt.ok(
+      "Configured 5 provider surfaces (.claude .codex .pi .prime .hermes) → vendored .oh/skills",
+    );
   }
   if (force && totalOverwritten > 0) {
     prompt.warn(`--force overwrote ${totalOverwritten} existing file(s).`);
@@ -525,15 +515,10 @@ const DEVCONTAINER_JSON = `${JSON.stringify(
   2,
 )}\n`;
 
-const WORKSPACE_README =
-  "# workspace/\n\n" +
-  "In-container agent workspace template. The harness image copies this into " +
-  "`$OH_PROJECT_ROOT/workspace/` at build time. Seed it with your project's " +
-  "in-sandbox agent scaffolding (e.g. an `AGENTS.md` for the running agent).\n";
-
 // Provider skill/agent/hook symlinks into the vendored `.oh/` pack. init creates
 // them for the target; link-providers.sh repairs them. `.codex` reuses
-// `.claude`'s agents/specs.
+// `.claude`'s agents/specs. `.prime` nests its surface one level deeper, so its
+// target climbs two directories rather than one.
 const PROVIDER_LINKS: [string, string][] = [
   [".pi/skills", "../.oh/skills"],
   [".claude/skills", "../.oh/skills"],
@@ -542,6 +527,7 @@ const PROVIDER_LINKS: [string, string][] = [
   [".claude/hooks", "../.oh/hooks"],
   [".codex/agents", "../.claude/agents"],
   [".codex/specs", "../.claude/specs"],
+  [".prime/agent/skills", "../../.oh/skills"],
 ];
 
 /** Create/refresh a symlink at `<t>/<linkRel>` → `linkTarget` (create/skip/overwrite). */

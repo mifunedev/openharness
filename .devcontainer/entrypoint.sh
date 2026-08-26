@@ -25,7 +25,7 @@ repair_home_mount_ownership() {
   # sandbox user's numeric uid:gid so this remains correct after UID/GID sync,
   # even when the primary group is remapped to an existing host group whose
   # name is not `sandbox`.
-  for dir in .claude .codex .pi .grok .deepagents .herdr .cloudflared .config .cc-safety-net .ssh; do
+  for dir in .claude .codex .pi .prime .grok .deepagents .herdr .cloudflared .config .cc-safety-net .ssh; do
     if [ -d "/home/sandbox/$dir" ]; then
       chown -hR "$owner" "/home/sandbox/$dir" 2>/dev/null || true
       [ "$dir" = ".ssh" ] && chmod 700 "/home/sandbox/$dir" 2>/dev/null || true
@@ -54,6 +54,24 @@ repair_home_mount_ownership() {
   if [ -d "$OPENCODE_STATE" ]; then
     chown -hR "$owner" "$OPENCODE_STATE" 2>/dev/null || true
   fi
+
+  # uv's user-scoped state. The UID-sync sweep below only rewrites paths owned
+  # by the OLD sandbox UID, so a root-owned dir here is never repaired by it —
+  # and a root-owned `.../share/uv` is exactly what made `uv python install`
+  # fail with "Permission denied" for the sandbox user. Create the whole chain
+  # explicitly (install -d only chowns its final component) and chown the uv
+  # subtrees recursively so a stray `sudo uv` run is self-healing on next boot.
+  install -d -o sandbox -g sandbox \
+    /home/sandbox/.local/share/uv \
+    /home/sandbox/.local/share/uv/tools \
+    /home/sandbox/.local/share/uv/python \
+    /home/sandbox/.cache \
+    /home/sandbox/.cache/uv 2>/dev/null || true
+  for uv_dir in /home/sandbox/.local/share/uv /home/sandbox/.cache/uv; do
+    if [ -d "$uv_dir" ]; then
+      chown -hR "$owner" "$uv_dir" 2>/dev/null || true
+    fi
+  done
 }
 
 # >>> seed_workspace_volume >>>
@@ -187,6 +205,19 @@ if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
   if ! gosu sandbox bash "$HARNESS/.oh/scripts/link-providers.sh" --init; then
     echo "[entrypoint] failed to link provider skills; run: bash .oh/scripts/link-providers.sh --init"
     exit 1
+  fi
+fi
+
+# ─── User-scoped uv/Python provisioning ─────────────────────────────
+# Idempotent: a fully provisioned home is a no-op, so this runs on every boot
+# and repairs a container whose uv state predates the ownership fix. The script
+# drops to the sandbox user itself and pins HOME, so nothing lands under /root.
+# Non-fatal: a sandbox without Python must still boot, but the failure is
+# surfaced with the exact repair command rather than swallowed.
+if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
+   && [ -x "$HARNESS/.oh/scripts/provision-python.sh" ]; then
+  if ! bash "$HARNESS/.oh/scripts/provision-python.sh"; then
+    echo "[entrypoint] WARNING: Python provisioning did not complete; run: bash .oh/scripts/provision-python.sh" >&2
   fi
 fi
 
@@ -580,23 +611,6 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
     fi
   fi
 fi
-
-# ─── Resolve + pre-create the memory directory ────────────────────
-# Single source of truth = MEMORY_DIR (docker-compose passes .devcontainer/.env's
-# MEMORY_DIR through here; default .oh/memory). Pre-creating it at boot means
-# the first skill/cron write lands in the resolved dir instead of racing a mkdir
-# — and never silently falls back to a phantom relative `memory/`. Mirrors the
-# CRONS_PATH block below; see .oh/scripts/oh-path for the shared resolver.
-case "${MEMORY_DIR:-.oh/memory}" in
-  /*) MEMORY_PATH="${MEMORY_DIR}" ;;
-  *)  MEMORY_PATH="$HARNESS/${MEMORY_DIR:-.oh/memory}" ;;
-esac
-mkdir -p "$MEMORY_PATH"
-# Seed the durable lessons ledger (.oh/memory/MEMORY.md) if missing. It is
-# gitignored/local-per-instance, so a fresh clone lacks it and the session-start
-# read + /retro dedup would hit ENOENT until first write. Idempotent: never
-# overwrites an existing file. See .oh/scripts/ensure-memory-file.sh.
-sh "$HARNESS/.oh/scripts/ensure-memory-file.sh" >/dev/null 2>&1 || true
 
 # ─── Resolve + pre-create the worktrees directory ─────────────────
 # Single source of truth = WORKTREES_DIR (docker-compose passes

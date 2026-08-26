@@ -244,11 +244,11 @@ Manual final audit:
 - All source sections and source images are accounted for in the audit, even if not published.
 - The post states what was corrected or qualified from the raw source where that matters.
 
-## Step 9 — Report and log
+## Step 9 — Report
 
 Return the `/blog` output contract from `SKILL.md`, including the `Promo:` path when generated.
 
-Append the memory log entry described in `SKILL.md`. Then run the qualify/improve loop. If the lesson is procedural, update this playbook instead of adding a MEMORY.md entry.
+If the run surfaced a procedural lesson, update this playbook.
 
 ## Example: Open Harness Loom demo
 

@@ -95,7 +95,7 @@ directions; column 1 is the bare `DS-NNN`).
 |---|---|---|---|---|
 | DS-001 | ship-spec-prs † | Add default Pi Monitor support | PR #147 (closes #146) | diff_similarity, artifact_presence |
 | DS-002 | ship-spec-prs † | Run pnpm security audits in CI | PR #172 (closes #171) | diff_similarity, artifact_presence, test_execution |
-| DS-020 | retro-cycles | Brief critics with diverse lenses (retro lesson) | /retro 2026-05-11 → memory/MEMORY.md | artifact_presence, diff_similarity |
+| DS-020 | retro-cycles | Brief critics with diverse lenses (retro lesson) | /retro 2026-05-11 -> .oh/context/IDENTITY.md | artifact_presence, diff_similarity |
 
 † **Legacy class name.** `/ship-spec` was absorbed into `/spec execute` and deleted
 (spec-simplification US-003, 2026-08-24). The class for NEW examples is

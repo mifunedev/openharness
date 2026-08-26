@@ -1,6 +1,6 @@
 # Full audit campaign
 
-Run inline from the top-level session under the inherited immutable `AUDIT_RUN_ID`, `AUDIT_ROOT`, and `AUDIT_LOG_ROOT`. Compose in cost order:
+Run inline from the top-level session under the inherited immutable `AUDIT_RUN_ID` and `AUDIT_ROOT`. Compose in cost order:
 
 1. `/audit drift`
 2. `/eval` in audit-child mode (regression floor; scoreboard write disclosed)

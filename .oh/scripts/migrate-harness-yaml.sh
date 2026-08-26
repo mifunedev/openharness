@@ -59,7 +59,6 @@ BEGIN {
     envmap["ssh.password_auth"]     = "SANDBOX_SSH_PASSWORD_AUTH"
     envmap["crons.dir"]             = "CRONS_DIR"
     envmap["crons.agent_bin"]       = "CRON_AGENT_BIN"
-    envmap["paths.memory"]          = "MEMORY_DIR"
     envmap["paths.worktrees"]       = "WORKTREES_DIR"
     section  = ""
     list_key = ""

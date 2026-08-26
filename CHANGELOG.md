@@ -8,17 +8,18 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
-### Removed
-- **Remove the `.oh/memory` tier entirely.** Code is the source of truth. The directory, its tracked `README.md`, the `MEMORY.md` ledger, and dated session logs are gone as a concept — not relocated.
-- **Remove file logging from the harness.** No skill, cron, or script writes a run log under `.oh/`. Runs report to the terminal; the only durable trail left is `.oh/crons/.cron.log`, the cron liveness line.
-- Remove the seeder `.oh/scripts/ensure-memory-file.sh`, its boot pre-create block, `MEMORY_DIR` from both compose files and both `.example.env` templates, and the `memory` name from `.oh/scripts/oh-path`.
-- Remove `AUDIT_LOG_ROOT` entirely. It existed only to resolve a shared log root, so `audit-run.sh` now validates and exports one root, and `route-driver.sh` scrubs one fewer variable.
-- Remove `.oh/skills/retro/references/memory-protocol.md`, `.oh/skills/retro/scripts/{render-log-entry.sh,memory-audit.py}`, and `.oh/skills/prompt-miner/scripts/render-log-entry.sh`.
-- Remove the Memory-Improvement-Protocol log step from 20 skills. `oh init` no longer seeds `.oh/memory/`.
-- Remove 9 eval probes whose subject no longer exists, plus the `probe-memory.md` context-ablation probe. See the PR body for the list.
-- **Remove the `workspace/` template directory.** It held two tracked files (`AGENTS.md` and a `CLAUDE.md` symlink) and never was the container's working directory — `workspaceFolder` is and stays the repo root.
-- Remove the Dockerfile `COPY workspace/`, the `workspace/**` CI path filters, the eight `workspace/*` gitignore rules, and the `workspace/README.md` stub `oh init` used to scaffold.
-- Remove the `workspace` scope from `/audit skills`; `all` now means the root scope alone.
+### Fixed
+- **`uv python install` now works as the `sandbox` user without `sudo`.** `install -d -o sandbox -g sandbox .../uv/tools` chowns the final component only, so the intermediate `.../share/uv` stayed `root:root`.
+- Root cause detail: `uv python install` writes `.../uv/python`, a sibling of `tools` inside that root-owned directory, so it failed with `Permission denied`. Every level is now named explicitly, parents first.
+- The boot-time ownership repair now covers the uv tree. The UID-sync sweep only rewrites paths owned by the *old* sandbox UID, so a root-owned uv directory was never repaired. Existing containers self-heal on restart.
+
+### Added
+- `.oh/scripts/provision-python.sh` — idempotent, user-scoped uv/Python provisioning. Drops from root to the target user with `HOME` pinned, installs a managed interpreter and an `ipykernel` venv, and verifies the kernel.
+- The script writes `PRIME_AGENT_KERNEL_PYTHON` to `~/.local/share/oh/python-env.sh`, which login shells source. Modes: `--verify`, `--print-env`.
+- Provisioning failures print the exact repair command instead of a bare permission denial, and refuse to suggest `sudo uv` — that installs under `/root/.local`, unreadable by the agent user.
+- `ENV UV_PYTHON_INSTALL_DIR` and `ENV UV_CACHE_DIR` pin uv's managed-interpreter and cache trees under `/home/sandbox`, so nothing falls back to `/root`.
+- `ARG INSTALL_PYTHON_KERNEL=true` (with `ARG OH_PYTHON_VERSION=3.11`) bakes the interpreter and kernel venv into the image as `sandbox`, so a fresh boot needs no network.
+- The entrypoint re-runs the same idempotent script every boot behind `OH_PROVISION_PYTHON` (default `true`), non-fatally.
 
 ### Changed
 - **`/retro` becomes report-only.** It keeps the scientific pass and promotes only to `.oh/context/IDENTITY.md` behind its propose-then-confirm gate. It writes no log.

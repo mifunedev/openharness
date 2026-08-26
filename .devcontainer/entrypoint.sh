@@ -54,6 +54,24 @@ repair_home_mount_ownership() {
   if [ -d "$OPENCODE_STATE" ]; then
     chown -hR "$owner" "$OPENCODE_STATE" 2>/dev/null || true
   fi
+
+  # uv's user-scoped state. The UID-sync sweep below only rewrites paths owned
+  # by the OLD sandbox UID, so a root-owned dir here is never repaired by it —
+  # and a root-owned `.../share/uv` is exactly what made `uv python install`
+  # fail with "Permission denied" for the sandbox user. Create the whole chain
+  # explicitly (install -d only chowns its final component) and chown the uv
+  # subtrees recursively so a stray `sudo uv` run is self-healing on next boot.
+  install -d -o sandbox -g sandbox \
+    /home/sandbox/.local/share/uv \
+    /home/sandbox/.local/share/uv/tools \
+    /home/sandbox/.local/share/uv/python \
+    /home/sandbox/.cache \
+    /home/sandbox/.cache/uv 2>/dev/null || true
+  for uv_dir in /home/sandbox/.local/share/uv /home/sandbox/.cache/uv; do
+    if [ -d "$uv_dir" ]; then
+      chown -hR "$owner" "$uv_dir" 2>/dev/null || true
+    fi
+  done
 }
 
 # >>> seed_workspace_volume >>>
@@ -187,6 +205,19 @@ if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
   if ! gosu sandbox bash "$HARNESS/.oh/scripts/link-providers.sh" --init; then
     echo "[entrypoint] failed to link provider skills; run: bash .oh/scripts/link-providers.sh --init"
     exit 1
+  fi
+fi
+
+# ─── User-scoped uv/Python provisioning ─────────────────────────────
+# Idempotent: a fully provisioned home is a no-op, so this runs on every boot
+# and repairs a container whose uv state predates the ownership fix. The script
+# drops to the sandbox user itself and pins HOME, so nothing lands under /root.
+# Non-fatal: a sandbox without Python must still boot, but the failure is
+# surfaced with the exact repair command rather than swallowed.
+if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
+   && [ -x "$HARNESS/.oh/scripts/provision-python.sh" ]; then
+  if ! bash "$HARNESS/.oh/scripts/provision-python.sh"; then
+    echo "[entrypoint] WARNING: Python provisioning did not complete; run: bash .oh/scripts/provision-python.sh" >&2
   fi
 fi
 

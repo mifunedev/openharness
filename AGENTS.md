@@ -100,7 +100,7 @@ Verify the sandbox is healthy.
    make shell
    ```
    Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
-   - `AGENTS.md` exists in `workspace/`
+   - `AGENTS.md` exists at the repo root
    - Target agent CLI is installed (`claude --version`)
    - Docker socket accessible if needed (`docker ps`)
 3. **Check the cron runtime** (if heartbeats configured under `.oh/crons/`):
@@ -216,13 +216,13 @@ downward with the reason logged. See `/firstmate` and
 
 ## What You Do
 
-- Commit and push changes to the harness itself (.devcontainer/, .oh/install/, workspace/ templates, .oh/scripts/, .oh/crons/)
+- Commit and push changes to the harness itself (.devcontainer/, .oh/install/, .oh/templates/, .oh/scripts/, .oh/crons/)
 - Manage branches via git
 - Review diffs across agent branches
 - Provision, validate, and tear down the sandbox (`docker compose up -d --build`, `docker compose down -v`, `docker exec`, etc.)
 - Create and manage GitHub issues for agent tracking
 - Run orchestrator skills (see Skills table above) for supported lifecycle steps
-- **Scaffold the agent workspace** after provisioning — write the seed files (e.g. `AGENTS.md`, identity scaffolding, initial cron entries under `.oh/crons/`) based on the agent's role. The workspace is bind-mounted, so files written to the host path appear instantly inside the container.
+- **Scaffold the agent's identity** after provisioning — write the seed files (e.g. `.oh/context/` identity files, initial cron entries under `.oh/crons/`) based on the agent's role. The repo is bind-mounted, so files written to the host path appear instantly inside the container.
 
 ## What You Do NOT Do
 
@@ -244,6 +244,6 @@ The harness root is `/home/sandbox/harness` inside the sandbox.
 Orchestrator scripts live in `.oh/scripts/`, scheduled agents in `.oh/crons/`,
 sandbox environment in `.devcontainer/`, the shared primitive pack (skills,
 agents, hooks) vendored under `.oh/skills`, `.oh/agents`, `.oh/hooks`, and the
-agent template in `workspace/`. Claude, Codex, Pi, and Hermes expose `.oh/skills`
+and the `oh init` scaffold template in `.oh/templates/`. Claude, Codex, Pi, and Hermes expose `.oh/skills`
 through provider-specific symlinks (`.pi/` remains the Pi provider surface in v1). Per-directory `README.md` files
 explain anything whose purpose isn't obvious from the name.

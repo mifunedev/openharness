@@ -36,7 +36,7 @@ is obsolete):
 - **repo root** — everything forced to root by *external* tooling
   (`.devcontainer/` for the devcontainer spec + Docker COPY,
   `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) **plus** live
-  identity/state the harness edits in place (`workspace/`). The GitHub-readable
+  identity/state the harness edits in place (`.oh/context/`). The GitHub-readable
   markdown docs now live under `.oh/docs/`, the scheduled-agent crons under
   `.oh/crons/`, the eval suite under `.oh/evals/`, long-term memory under
   the identity core under `.oh/context/`, the worktree/project-clone
@@ -146,7 +146,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the always-on identity core (`.oh/context/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`workspace/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the always-on identity core (`.oh/context/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`.oh/context/`) |
 
 ### Why these specifically stay at root
 

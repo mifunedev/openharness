@@ -244,9 +244,6 @@ export async function runInit(
     if (existsSync(sourceDevcontainer) && statSync(sourceDevcontainer).isDirectory()) {
       copyDevcontainer(sourceDevcontainer, wr);
       writeGenerated(wr, ".devcontainer/devcontainer.json", DEVCONTAINER_JSON);
-      // The harness Dockerfile `COPY workspace/` expects an in-repo workspace
-      // template; seed a stub so a local image build has a source to copy.
-      writeGenerated(wr, "workspace/README.md", WORKSPACE_README);
     } else {
       prompt.warn(
         `Source devcontainer not found at ${sourceDevcontainer}; skipped full .devcontainer/ scaffold.`,
@@ -515,12 +512,6 @@ const DEVCONTAINER_JSON = `${JSON.stringify(
   null,
   2,
 )}\n`;
-
-const WORKSPACE_README =
-  "# workspace/\n\n" +
-  "In-container agent workspace template. The harness image copies this into " +
-  "`$OH_PROJECT_ROOT/workspace/` at build time. Seed it with your project's " +
-  "in-sandbox agent scaffolding (e.g. an `AGENTS.md` for the running agent).\n";
 
 // Provider skill/agent/hook symlinks into the vendored `.oh/` pack. init creates
 // them for the target; link-providers.sh repairs them. `.codex` reuses

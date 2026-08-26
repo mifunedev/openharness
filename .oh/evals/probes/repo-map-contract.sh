@@ -113,13 +113,14 @@ if [[ -f "$REPO_MAP" ]]; then
     }
     root_out=$(run_helper ".") || fails+=("ancestor helper failed for repo root")
     grep -Fxq 'AGENTS.md' <<<"${root_out:-}" || fails+=("ancestor helper for . did not return AGENTS.md")
-
-    new_path_out=$(run_helper "workspace/new-dir/new-file.md") || fails+=("ancestor helper failed for new workspace path")
-    grep -Fxq 'workspace/AGENTS.md' <<<"${new_path_out:-}" || fails+=("ancestor helper for new workspace path missing workspace/AGENTS.md")
-    grep -Fxq 'AGENTS.md' <<<"${new_path_out:-}" || fails+=("ancestor helper for new workspace path missing root AGENTS.md")
-    if grep -Fxq 'workspace/CLAUDE.md' <<<"${new_path_out:-}"; then
-      fails+=("ancestor helper did not de-dupe workspace/CLAUDE.md symlink")
+    # Root carries AGENTS.md plus a CLAUDE.md symlink to it; only one may surface.
+    if grep -Fxq 'CLAUDE.md' <<<"${root_out:-}"; then
+      fails+=("ancestor helper did not de-dupe the root CLAUDE.md symlink")
     fi
+
+    new_path_out=$(run_helper ".oh/templates/new-dir/new-file.md") || fails+=("ancestor helper failed for a new nested path")
+    grep -Fxq '.oh/templates/AGENTS.md' <<<"${new_path_out:-}" || fails+=("ancestor helper for a new nested path missing .oh/templates/AGENTS.md")
+    grep -Fxq 'AGENTS.md' <<<"${new_path_out:-}" || fails+=("ancestor helper for a new nested path missing root AGENTS.md")
 
     absolute_out=$(run_helper "$ROOT") || fails+=("ancestor helper failed for absolute repo root")
     grep -Fxq 'AGENTS.md' <<<"${absolute_out:-}" || fails+=("ancestor helper for absolute repo root did not return AGENTS.md")

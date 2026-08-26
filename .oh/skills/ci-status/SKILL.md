@@ -105,7 +105,7 @@ For Eval Probe Regression Gate failures, immediately inspect the failed probe na
 - **NO RUN**: No workflow's `on:` filter matched the push, or `PR_NUMBER` was set but `gh pr checks` returned no rows (the PR exists but no workflows were triggered yet). *(Note: the workflow names below reflect this harness's layout and may differ in other checkouts.)*
   - `ci-harness.yml` — push only: `packages/**`, `.oh/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, itself
   - Docs site CI/deploy lives in `mifunedev/openharness-web`; this repo has no `docs.yml` Docusaurus workflow.
-  - `conciseness.yml` — push or PR: `workspace/*.md`, `workspace/.claude/rules/*.md`, itself
+  - `conciseness.yml` — push or PR: `AGENTS.md`, `.oh/context/*.md`, itself
   - `release.yml` — every push to `main` or `master`; validation precedes automatic release publication
 
   Infrastructure-only PRs (devcontainer/scripts/install/) trigger NOTHING on push — that's expected. `pull_request`-event workflows still fire when the PR opens. Diagnose with: `git diff --name-only HEAD~1 HEAD` and compare against each workflow's `on:` block.

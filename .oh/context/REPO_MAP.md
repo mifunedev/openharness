@@ -99,7 +99,6 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi provider extensions, manifests, and runtime config; `.pi/` is not the v1 Mifune mount. |
 | Skill behavior | `.oh/skills/`, `.pi/skills/`, `.claude/skills/` | Source of truth is the vendored `.oh/skills/` pack; provider paths are symlinks into it. |
 | Durable knowledge | `.oh/skills/wiki/corpus/README.md`, `.oh/skills/wiki/corpus/*.md`, `.oh/context/IDENTITY.md` | Curated wiki pages and cross-session principles; prefer these before raw logs. |
-| Agent workspace seed files | `workspace/AGENTS.md`, `workspace/CLAUDE.md` | Template files bind-mounted into the sandbox workspace. |
 
 ## Disregard by default
 
@@ -114,7 +113,6 @@ Ignore these unless the task explicitly targets them:
 | `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
 | `.oh/crons/.cron.log` | Append-only cron liveness trail, one line per pulse. | Checking whether a cron still fires. |
 | `.oh/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.oh/skills/wiki/corpus/*.md` entry. |
-| `workspace/.slack/`, `workspace/.pi/`, `workspace/.ralph/`, `workspace/startup.sh` | Runtime state and local/sensitive sandbox artifacts. | Debugging Slack/Pi/Ralph runtime state or startup generation. |
 | `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific build-session status; prefer `tail` over full read. |
 | `.oh/evals/datasets/**/oracle/`, `.oh/evals/datasets/**/diff.patch`, `.oh/evals/datasets/**/changed-files.txt` | Expected-output fixtures, not implementation guidance. | Updating/verifying a dataset oracle. |
 
@@ -147,6 +145,6 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `.devcontainer/` | Sandbox Dockerfile, compose, devcontainer config, entrypoint. | Change sandbox image/runtime provisioning. |
 | `.pi/extensions/` | In-tree Pi extension source, especially Slack bridge. | Modify Pi integration behavior. |
 | `.pi/skills/`, `.claude/skills/` | Skill contracts for Pi and Claude providers. | Update slash-skill behavior; sync both copies when mirrored. |
-| `workspace/AGENTS.md` | Seed instructions copied into the agent workspace. | Change new sandbox agent identity/scaffold. |
+| `.oh/templates/AGENTS.md` | Seed instructions written by `oh init` into a new project. | Change what a fresh `oh init` scaffold says. |
 
 Rule: tracked source first; generated/vendor/runtime/history-heavy folders are context poison unless debugging that exact subsystem.

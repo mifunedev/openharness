@@ -38,11 +38,6 @@
 .oh/crons/.pid
 .oh/crons/*.log
 
-# Ralph runtime files (keep prd.json + progress.txt tracked for recovery)
-workspace/.ralph/.last-branch
-workspace/.ralph/ralph-*.log
-workspace/.ralph/.claude/
-
 # pi-autoresearch runtime state (benchmarks, logs, session config)
 **/.auto/
 
@@ -50,16 +45,6 @@ workspace/.ralph/.claude/
 **/.ralph/archives/
 **/src/generated/
 
-# Slack runtime data (channel logs, context, attachments)
-workspace/.slack/*/
-workspace/.slack/events/
-workspace/.slack/settings.json
-
-# Pi project config (generated symlinks)
-workspace/.pi/
-
-# Startup script (contains runtime config, tokens sourced from env)
-workspace/startup.sh
 **/.pnpm-store
 **/.claude/plans
 **/.claude/specs/*

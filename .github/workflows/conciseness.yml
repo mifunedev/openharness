@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "workspace/*.md"
-      - "workspace/.claude/rules/*.md"
+      - "AGENTS.md"
+      - ".oh/context/*.md"
       - ".github/workflows/conciseness.yml"
   pull_request:
     paths:
-      - "workspace/*.md"
-      - "workspace/.claude/rules/*.md"
+      - "AGENTS.md"
+      - ".oh/context/*.md"
+      - ".github/workflows/conciseness.yml"
 
 permissions:
   contents: read
@@ -56,7 +57,7 @@ jobs:
           echo "|------|-------|-------------|----------|------|"
 
           # Scan identity files
-          for file in workspace/AGENTS.md workspace/SOUL.md workspace/TOOLS.md workspace/USER.md workspace/HEARTBEAT.md; do
+          for file in AGENTS.md .oh/context/SOUL.md .oh/context/IDENTITY.md .oh/context/TOOLS.md .oh/context/USER.md .oh/context/REPO_MAP.md; do
             [ -f "$file" ] || continue
             label="$(basename "$file" .md)"
 
@@ -81,37 +82,6 @@ jobs:
             fi
           done
 
-          # Scan rules files (exclude non-compressed files)
-          for file in workspace/.claude/rules/*.md; do
-            [ -f "$file" ] || continue
-            name="$(basename "$file" .md)"
-
-            # Skip files that are never compressed
-            case "$name" in
-              token-conservation) continue ;;
-            esac
-
-            label="rules/$name"
-            prose=$(strip_non_prose "$file")
-            word_count=$(echo "$prose" | wc -w | tr -d ' ')
-
-            if [ "$word_count" -eq 0 ]; then
-              echo "| $label | 0 | 0 | 0 | SKIP |"
-              continue
-            fi
-
-            filler_count=$(echo "$prose" | grep -oiE "$filler_pattern" | wc -l | tr -d ' ')
-            density=$(( filler_count * 100 / word_count ))
-            total=$((total + 1))
-
-            if [ "$density" -le "$threshold" ]; then
-              echo "| $label | $word_count | $filler_count | $density% | PASS |"
-              pass=$((pass + 1))
-            else
-              echo "| $label | $word_count | $filler_count | $density% | FAIL |"
-              fail=$((fail + 1))
-            fi
-          done
 
           echo ""
           echo "--- Summary ---"

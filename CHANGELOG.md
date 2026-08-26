@@ -16,6 +16,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Remove `.oh/skills/retro/references/memory-protocol.md`, `.oh/skills/retro/scripts/{render-log-entry.sh,memory-audit.py}`, and `.oh/skills/prompt-miner/scripts/render-log-entry.sh`.
 - Remove the Memory-Improvement-Protocol log step from 20 skills. `oh init` no longer seeds `.oh/memory/`.
 - Remove 9 eval probes whose subject no longer exists, plus the `probe-memory.md` context-ablation probe. See the PR body for the list.
+- **Remove the `workspace/` template directory.** It held two tracked files (`AGENTS.md` and a `CLAUDE.md` symlink) and never was the container's working directory — `workspaceFolder` is and stays the repo root.
+- Remove the Dockerfile `COPY workspace/`, the `workspace/**` CI path filters, the eight `workspace/*` gitignore rules, and the `workspace/README.md` stub `oh init` used to scaffold.
+- Remove the `workspace` scope from `/audit skills`; `all` now means the root scope alone.
 
 ### Changed
 - **`/retro` becomes report-only.** It keeps the scientific pass and promotes only to `.oh/context/IDENTITY.md` behind its propose-then-confirm gate. It writes no log.
@@ -27,6 +30,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - `.oh/scripts/oh-path` now resolves every name against the repo root, so `_ablate_log_root` and the memory special cases in `ablate.sh` and `context-audit-runner.sh` go too.
 - The heartbeat, cleanup-tasks, eval-weekly, and prompt-miner crons stop logging to memory. `.oh/crons/.cron.log` is now each cron's only durable per-pulse signal, and `locked-append.sh` survives as its writer.
 - Rewrite `heartbeat-logging-contract.sh` and `audit-run-root-contract.sh` around the liveness line and the stderr run record. Retarget `CB-003` and `DS-020` from `MEMORY.md` to `IDENTITY.md`.
+- Retarget the `conciseness.yml` workflow from the deleted `workspace/*.md` seeds to the real identity files (`AGENTS.md`, `.oh/context/*.md`); its path filters would otherwise have matched nothing.
+- Retarget `repo-map-contract.sh`'s ancestor-helper fixture to `.oh/templates/`, and move its symlink de-dupe assertion onto the root `CLAUDE.md`.
 
 ## [0.4.0] - 2026-08-26
 

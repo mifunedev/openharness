@@ -58,14 +58,14 @@
       "class": "light-orientation",
       "prompt": "Find the Pi extension or integration source for Slack bridge work.",
       "expected_paths": [".pi/extensions/", ".pi/settings.json", ".oh/docs/integrations/slack.md"],
-      "forbidden_patterns": [".pi/npm/node_modules/", "workspace/.slack/", "node_modules/"]
+      "forbidden_patterns": [".pi/npm/node_modules/", "node_modules/"]
     },
     {
       "id": "RO-005",
       "class": "deep-orientation",
-      "prompt": "Find all surfaces needed to change new sandbox workspace seed instructions and verify the change.",
-      "expected_paths": ["workspace/AGENTS.md", "workspace/CLAUDE.md", "AGENTS.md", ".oh/evals/probes/"],
-      "forbidden_patterns": ["workspace/.pi/", "workspace/.ralph/", "workspace/.slack/", "node_modules/"]
+      "prompt": "Find all surfaces needed to change the orchestrator seed instructions and verify the change.",
+      "expected_paths": ["AGENTS.md", ".oh/templates/AGENTS.md", ".oh/evals/probes/"],
+      "forbidden_patterns": [".pi/npm/node_modules/", "node_modules/"]
     },
     {
       "id": "RO-006",

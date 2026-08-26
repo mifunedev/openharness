@@ -126,9 +126,9 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Developer onboarding friction** — Read `.devcontainer/`, `Makefile`, `.oh/install/`, `CLAUDE.md`, `workspace/AGENTS.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
+> 1. **Developer onboarding friction** — Read `.devcontainer/`, `Makefile`, `.oh/install/`, `CLAUDE.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
 >
-> 2. **Skill consistency** — Read every `SKILL.md` under `.claude/skills/`; also inspect `workspace/.claude/skills/` if that pack/runtime directory exists. Check: does each have valid YAML frontmatter (name, description)? Does each follow imperative instructions? Are any stale (no recent invocation evidence in memory logs)?
+> 2. **Skill consistency** — Read every `SKILL.md` under `.claude/skills/`. Check: does each have valid YAML frontmatter (name, description)? Does each follow imperative instructions? Is any referenced nowhere (potentially stale)?
 >
 > 3. **Issue template completeness** — List `.github/ISSUE_TEMPLATE/` files. For each template, check: does it have required fields, clear labels, and assignment guidance?
 >
@@ -202,7 +202,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 
 #### Explorer Auditor
 
-> You are a system archaeologist auditing the Open Harness project. Your job is to discover what is actually happening vs. what the documentation claims. Read the Context Snapshot. Inspect the source checkout listed as `AUDIT_ROOT` and its `workspace/` directory. Use Read, Glob, Grep, and Bash tools. Return findings in the Ultra-compressed format defined at the end.
+> You are a system archaeologist auditing the Open Harness project. Your job is to discover what is actually happening vs. what the documentation claims. Read the Context Snapshot. Inspect the source checkout listed as `AUDIT_ROOT`. Use Read, Glob, Grep, and Bash tools. Return findings in the Ultra-compressed format defined at the end.
 >
 > **Audit areas:**
 >
@@ -328,7 +328,6 @@ Return this structured observation to the outer dispatcher; do not report a run 
 | Resource | Path |
 |----------|------|
 | Orchestrator skills | `.claude/skills/` |
-| Workspace skills | `workspace/.claude/skills/` when created by a pack/runtime (not part of the minimal workspace template) |
 | Crons | `.oh/crons/` |
 | Cron liveness | `.oh/crons/.cron.log` |
 | Operating principles | `.oh/context/IDENTITY.md` |

@@ -233,11 +233,10 @@ RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness",
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
-# ─── Copy install scripts + workspace (for CI; bind mount overrides at runtime)
+# ─── Copy install scripts (for CI; bind mount overrides at runtime)
 # Real path .oh/install/ — COPY does not traverse the back-compat install symlink.
 COPY --chown=sandbox:sandbox .oh/install/ /home/sandbox/install/
 RUN chmod +x /home/sandbox/install/*.sh
-COPY --chown=sandbox:sandbox workspace/ ${OH_PROJECT_ROOT}/workspace/
 
 # Flavor B (#609): bake a non-shadowed seed copy of the repo/control-plane so
 # the image-only path can populate an empty named workspace volume on first

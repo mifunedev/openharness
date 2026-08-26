@@ -533,12 +533,6 @@ describe("runInit", () => {
     expect(compose).toContain("/home/sandbox/harness");
   });
 
-  it("full (default): seeds a workspace/ stub for the image build", async () => {
-    const t = freshTmp();
-    expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
-    expect(existsSync(join(t, "workspace/README.md"))).toBe(true);
-  });
-
   it("--minimal: thin scaffold only (no full devcontainer, no empty seeds, no workspace)", async () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true, minimal: true }), makeIO().io)).toBe(0);
@@ -548,7 +542,6 @@ describe("runInit", () => {
     // Full-scaffold-only artifacts are absent.
     expect(existsSync(join(t, ".devcontainer/Dockerfile"))).toBe(false);
     expect(existsSync(join(t, ".oh/tasks/README.md"))).toBe(false);
-    expect(existsSync(join(t, "workspace/README.md"))).toBe(false);
     // The thin devcontainer.json stub is image-based (no dockerComposeFile).
     const dc = JSON.parse(
       readFileSync(join(t, ".devcontainer/devcontainer.json"), "utf8"),

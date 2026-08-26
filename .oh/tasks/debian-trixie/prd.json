@@ -66,8 +66,8 @@
         "Tests pass"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "2026-08-26: sandbox-compatibility.yml builds/verifies arm64 (native runner or QEMU) and one all-optional amd64 image reporting four CLI versions, read-only and push-free; sandbox-boot-guard-ci.sh extended in place, release.yml untouched (commit 953f7dc4)."
     }
   ]
 }

@@ -55,3 +55,19 @@ This environment has the Docker **client** but no daemon (`docker info` fails), 
 `set -o pipefail` makes `x=$(grep ... | head -1)` abort the script when grep finds nothing, so the intended "could not read the pin" error never printed. `|| true` on the substitution restores the explicit diagnostic. The unit test for the empty-Dockerfile case is what caught it.
 
 ---
+## US-004 — 2026-08-26 15:22 UTC
+
+**Title**: Validate arm64 and optional installers
+**Files changed**: `.github/workflows/sandbox-compatibility.yml`, `.oh/evals/probes/sandbox-boot-guard-ci.sh`, `CHANGELOG.md`
+**Commit**: 953f7dc4
+**Result**: PASS
+
+### What I did
+Added a Dockerfile-path-scoped compatibility workflow with two jobs. The arm64 job prefers a native runner through `vars.CI_RUNNER_ARM64`, falls back to QEMU plus Buildx, builds `linux/arm64` with `load: true` so the Dockerfile's own `sha256sum -c -` and `herdr --version` checks execute, then runs the reusable verifier against the loaded image. The optional job builds one amd64 image with all four `INSTALL_*` args true, re-runs the verifier, and reports a version from `hermes`, `deepagents`, `opencode` and `grok`. Permissions are `contents: read`; there is no login, no push, no secret. Extended `sandbox-boot-guard-ci.sh` rather than adding a probe: it now also asserts the boot guard job name, the verifier invocation, and every compatibility contract, and fails if `release.yml` starts referencing the new workflow.
+
+### Learnings for future iterations
+The path filter is the load-bearing design choice. The boot guard's `.oh/**` filter would have fired these vendor installer builds on every harness edit, so the probe asserts the narrow Dockerfile filter *and* explicitly rejects a broad `.oh/**` entry in this workflow — the cheaper failure mode is worth guarding against directly. Confirmed both new probe branches fail correctly by deleting the workflow and by flipping the arm64 platform and one build arg in a scratch copy.
+
+`oh-init-headless-config.sh` skips whenever `.oh/cli/dist/` is absent, which silently turns the 94/0/3 baseline into 93/0/4. Run `pnpm run build` before reading eval counts, or a clean run looks like a lost probe.
+
+---

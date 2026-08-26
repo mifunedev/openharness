@@ -39,3 +39,19 @@ Replaced the two-blocker framing with two measured requirements, of which only `
 Synchronization assertions beat literal-string assertions for facts that live in two files: the old test hard-coded `debian:bookworm-slim` on both sides, so it was correct only by coincidence. Reading the live `FROM` and asserting containment survives the next base bump. Confirmed the new probe check fails correctly by reverting the catalog string in a scratch copy — it reported both drift lines and exited 1.
 
 ---
+## US-003 — 2026-08-26 15:20 UTC
+
+**Title**: Verify the default image and ownership contract
+**Files changed**: `.oh/scripts/verify-sandbox-image.sh`, `.oh/scripts/node-pnpm-parity.sh`, `.oh/scripts/sandbox-boot-smoke.sh`, `.oh/scripts/README.md`, `.oh/scripts/__tests__/verify-sandbox-image.test.ts`, `.oh/scripts/__tests__/node-pnpm-parity.test.ts`, `.oh/scripts/__tests__/sandbox-boot-smoke.test.ts`, `.github/workflows/sandbox-boot-guard.yml`, `.github/workflows/sandbox-base-parity.yml`
+**Commit**: 3866a69d
+**Result**: PASS
+
+### What I did
+Added `verify-sandbox-image.sh <image-ref>`: it reads the image architecture, resolves the matching `herdr_sha` straight out of the Dockerfile, and checks the Trixie codename, both apt suites, the built-in `sandbox` UID/GID `1000:1000`, Node major 22, exact pnpm 10.33.0, Herdr 0.7.4 plus its checksum, and version output from `gh`, Docker, Cloudflared, Bun and uv. Extended `sandbox-boot-smoke.sh` with `verify_bind_ownership`, which asserts the runtime sandbox user, the bind-mounted checkout owner, and the host checkout owner all agree, then writes and stats a marker file. Wired the verifier into the existing `Validate sandbox compose and image build` job between build and boot, leaving the job name and the compose boot smoke intact. Shipped `node-pnpm-parity.sh` and a dispatch-only read-only workflow for the one-time Bookworm-vs-Trixie Node/pnpm comparison.
+
+### Learnings for future iterations
+This environment has the Docker **client** but no daemon (`docker info` fails), exactly as the PRD's Technical Considerations predicted. Both new scripts are therefore tested against a fake `docker` earlier on `PATH` — 13 and 3 deterministic cases including every rejection path. The parity **numbers** are the one thing that cannot be produced here: the mechanism is committed and unit-tested, and the comparison run itself belongs to the CI/PR evidence step.
+
+`set -o pipefail` makes `x=$(grep ... | head -1)` abort the script when grep finds nothing, so the intended "could not read the pin" error never printed. `|| true` on the substitution restores the explicit diagnostic. The unit test for the empty-Dockerfile case is what caught it.
+
+---

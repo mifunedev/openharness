@@ -49,8 +49,8 @@
         "Tests pass"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "2026-08-26: verify-sandbox-image.sh (13 tests) + boot-smoke bind-ownership checks (5 tests) + boot-guard job wiring, job name unchanged; node/pnpm parity mechanism shipped as node-pnpm-parity.sh and a dispatch-only workflow, the evidence run itself requires a Docker daemon and executes in CI (commit 3866a69d)."
     },
     {
       "id": "US-004",

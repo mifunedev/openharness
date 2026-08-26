@@ -29,7 +29,7 @@ The memory directory has ONE source of truth, resolved deterministically by
 | Precedence | Source | Notes |
 |---|---|---|
 | 1 | env override `MEMORY_DIR` | exported into the sandbox by `docker-compose.yml` + `entrypoint.sh` |
-| 2 | `harness.yaml` → `paths.memory` | uncomment to relocate the directory project-wide |
+| 2 | `.devcontainer/.env` → `MEMORY_DIR` | uncomment to relocate the directory project-wide (absolute paths only) |
 | 3 | default `.oh/memory` | what every fresh harness/`oh init` uses |
 
 ```bash

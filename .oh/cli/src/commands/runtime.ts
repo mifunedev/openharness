@@ -111,10 +111,10 @@ function isReachable(status: string): boolean {
 
 /**
  * Resolve the sandbox `ExecutionTarget`, reusing `oh shell`'s container-name
- * precedence (harness.yaml `sandbox.name` > the default) instead of forking it.
+ * precedence (`.env` `SANDBOX_NAME` > the default) instead of forking it.
  */
 function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
-  const name = configuredContainerName(root, run) ?? DEFAULT_CONTAINER_NAME;
+  const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
   return resolveExecutionTarget({ projectRoot: root, container: name, run });
 }
 

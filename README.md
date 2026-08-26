@@ -13,7 +13,7 @@
   <img src=".github/assets/mifune-banner.jpg" alt="Open Harness" width="100%">
 </p>
 
-**Open Harness provides the sandbox; you choose the harness.** It's a Docker-based workspace, agent-tended over time: clone-and-own the repo, set one `harness.yaml`, and `make sandbox` boots a long-lived container where the coding agent of your choice — Claude Code, Codex, Pi (Hermes, Grok, and more opt-in) — works on its own branch and identity. Because it's just Docker, it runs **identically on your laptop or a remote VM** — and remote is the default: deployed on a VM, Open Harness becomes a **lights-out software factory**, where the agent works unattended, on a schedule and reachable over Slack, fanning out across isolated **git worktrees** — parallel branches, delegated sub-agents, even other cloned repos — while you're away and your laptop stays clean.
+**Open Harness provides the sandbox; you choose the harness.** It's a Docker-based workspace, agent-tended over time: clone-and-own the repo, set one `.env`, and `make sandbox` boots a long-lived container where the coding agent of your choice — Claude Code, Codex, Pi (Hermes, Grok, and more opt-in) — works on its own branch and identity. Because it's just Docker, it runs **identically on your laptop or a remote VM** — and remote is the default: deployed on a VM, Open Harness becomes a **lights-out software factory**, where the agent works unattended, on a schedule and reachable over Slack, fanning out across isolated **git worktrees** — parallel branches, delegated sub-agents, even other cloned repos — while you're away and your laptop stays clean.
 
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
 - **Parallel by design.** The worktrees skill fans one sandbox into isolated git worktrees — parallel branches, delegated sub-agents, even other cloned repos.
@@ -77,7 +77,7 @@ bash get-oh.sh
 
 `oh init` vendors the `.oh/` control plane into **your** repo rather than cloning
 this one. It runs the same interactive setup as door A, writing your answers to
-`harness.yaml`.
+`.devcontainer/.env`.
 
 Which one you took decides your lifecycle verbs — `make` for door A, `oh` for
 door B. See [Which door am I?](.oh/docs/lifecycle-commands.md) for the full
@@ -132,7 +132,7 @@ tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
 > Not covered by CI; the scripted installers in *Pick your door* are. If a step
 > here has drifted, prefer `install.sh`.
 
-Kept because it is the only path that lets you edit `harness.yaml` **before** the
+Kept because it is the only path that lets you edit `.devcontainer/.env` **before** the
 ~10-minute first image build — `install.sh` builds immediately — and because
 audit-first operators want to read every command before running any of them.
 
@@ -140,11 +140,11 @@ audit-first operators want to read every command before running any of them.
 # a. Clone upstream:
 git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
 
-# b. Materialize local config, then edit it BEFORE building — set sandbox.name,
-#    sandbox.timezone, git.user_name, git.user_email, and any optional installs
-#    (Hermes, agent-browser, …). Secrets stay in .devcontainer/.env.
-make harness-config
-nano harness.yaml
+# b. Materialize local config, then edit it BEFORE building — set SANDBOX_NAME,
+#    TZ, GIT_USER_NAME, GIT_USER_EMAIL, and any optional INSTALL_* keys
+#    (Hermes, agent-browser, …). Secrets go in the same file; it is gitignored.
+cp .devcontainer/.example.env .devcontainer/.env
+nano .devcontainer/.env
 
 # c. Build the image, enter the sandbox, then open its primary workspace:
 make sandbox && make shell
@@ -154,7 +154,7 @@ herdr
 Most of the pre-build edit is also reachable non-interactively from `install.sh`
 via the `SANDBOX_NAME`, `INSTALL_*`, and `DOCKER_SOCKET` environment overrides.
 
-Open Harness requires Docker with the Compose plugin, Git, and make on the host. The installer clones into `~/.openharness`, offers to share your host `gh` token, writes your non-secret answers to `harness.yaml` and secrets to `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm).
+Open Harness requires Docker with the Compose plugin, Git, and make on the host. The installer clones into `~/.openharness`, offers to share your host `gh` token, writes your answers to `.devcontainer/.env`, and builds the image (~10 min cold, ~30s warm).
 
 **Fork and clone (self-hosting):**
 
@@ -244,11 +244,11 @@ herdr           # first command: open the primary interactive workspace
 # from Herdr panes, launch any core agent:
 #   claude     # Claude Code (default)
 #   codex      # OpenAI Codex CLI
-#   opencode   # OpenCode (optional: set install.opencode: true in harness.yaml and rebuild)
+#   opencode   # OpenCode (optional: set INSTALL_OPENCODE=true in .devcontainer/.env and rebuild)
 #   pi         # Pi Coding Agent
-#   deepagents # LangChain DeepAgents (optional: set install.deepagents: true in harness.yaml and rebuild)
-#   hermes     # Nous Research Hermes (optional: set install.hermes: true in harness.yaml and rebuild)
-#   grok       # xAI Grok Build (optional: set install.grok_build: true in harness.yaml and rebuild)
+#   deepagents # LangChain DeepAgents (optional: set INSTALL_DEEPAGENTS=true in .devcontainer/.env and rebuild)
+#   hermes     # Nous Research Hermes (optional: set INSTALL_HERMES=true in .devcontainer/.env and rebuild)
+#   grok       # xAI Grok Build (optional: set INSTALL_GROK_BUILD=true in .devcontainer/.env and rebuild)
 make destroy     # stop and remove the sandbox
 make help        # all targets
 ```
@@ -261,21 +261,23 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 ## ⚙️ Configure (optional)
 
-`harness.yaml` is local gitignored config for shared non-secret settings, generated
-from tracked `harness.yaml.example` by `make harness-config` (also run by
-`make sandbox`). It holds `sandbox.*`, `git.*`, optional installs, `paths.*`
-(overrides like `paths.worktrees`), Slack allowlists, and compose overlays. **Secrets stay in the gitignored `.devcontainer/.env`**
-(`GH_TOKEN`, `PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`) — never in
-`harness.yaml`. Active keys in `harness.yaml` override `.devcontainer/.env`; apply
-changes with `make destroy && make sandbox`.
+`.devcontainer/.env` is the one configuration file — gitignored, generated from
+tracked `.devcontainer/.example.env`. It holds the sandbox identity, git
+identity, optional `INSTALL_*` builds, directory overrides like `WORKTREES_DIR`,
+the SSH and Docker-socket toggles, and the secrets (`GH_TOKEN`,
+`PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`). Apply changes with
+`make destroy && make sandbox`.
 Full key reference: [Quickstart → Configuration](.oh/docs/quickstart.md#configuration).
 
-`harness.yaml` is authoritative for the `make` and `oh` paths. The VS Code
-"Reopen in Container" path loads `.devcontainer/docker-compose.yml` directly and
-cannot read it — settings you need there must also be set in
-`.devcontainer/.env`. See
+It is read on **every** path, including VS Code "Reopen in Container" — that path
+loads `.devcontainer/docker-compose.yml` directly, and compose auto-loads the
+`.env` beside it. A `harness.yaml` layer used to sit in front of this file and
+was invisible on exactly that path; it was removed in 0.4.0, and a leftover one
+is migrated into `.env` automatically on the next lifecycle command. Compose
+overlay *paths* are the one thing `.env` cannot express and live in
+`composeOverrides[]` in `.oh/config.json`. See
 [the prebuilt-image deployment guide](.oh/docs/deployment-prebuilt-image.md) for
-the recipe.
+the image-mode recipe.
 
 ## ✨ What you get
 

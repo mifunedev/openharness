@@ -4,14 +4,14 @@ title: "Harnesses Overview"
 
 # Harnesses Overview
 
-Open Harness ships with three agent CLIs in the default sandbox image: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, and **Grok Build** are optional image-level installs controlled by `harness.yaml` `install:` keys (or `.devcontainer/.env` build flags). **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
+Open Harness ships with three agent CLIs in the default sandbox image: **Claude Code** (default), **Codex**, and **Pi**. **OpenCode**, **DeepAgents**, **Hermes**, and **Grok Build** are optional image-level installs controlled by the `INSTALL_*` keys in `.devcontainer/.env`. **T3 Code** runs on demand via the `/t3` skill (or directly with `npx t3`) as a browser UI on port 3773. Inside the sandbox, run `herdr` first, then launch whichever agent you prefer from its panes and switch between them at any time. Reserve tmux for Open Harness's managed/headless cron, gateway, and watchdog infrastructure.
 
 Open Harness is the harness; the **agent** is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox or edit the Dockerfile. For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package — see [Slack integration](../integrations/slack.md). The product surface is one developer, one project, one agent — not racing or stacking multiple CLIs against each other.
 
 ## Installing a harness
 
 `oh harness` is the shortest path. It does both halves in one command: it sets
-the `harness.yaml` `install:` flag so the choice survives the next image build,
+the `.devcontainer/.env` `INSTALL_*` flag so the choice survives the next image build,
 **and** installs the CLI into the already-running container so it is usable now.
 It never rebuilds or restarts the sandbox.
 
@@ -29,10 +29,10 @@ Two escape hatches:
 
 | Flag | Effect |
 |---|---|
-| `--persist-only` | Only set the `harness.yaml` flag; do no container work |
-| `--no-persist` | Live-install only; leave `harness.yaml` unchanged (ephemeral — a container recreate loses it) |
+| `--persist-only` | Only set the `.devcontainer/.env` flag; do no container work |
+| `--no-persist` | Live-install only; leave `.devcontainer/.env` unchanged (ephemeral — a container recreate loses it) |
 
-The manual path still works: uncomment the key in `harness.yaml` (or set the
+The manual path still works: uncomment the key in `.devcontainer/.env` (or export the
 `INSTALL_*` build flag in `.devcontainer/.env`) and run
 `make destroy && make sandbox`.
 
@@ -56,7 +56,7 @@ claude --version
 codex --version
 pi --version
 
-# Optional image-level CLIs, present only when enabled in harness.yaml (or .devcontainer/.env):
+# Optional image-level CLIs, present only when enabled in .devcontainer/.env:
 opencode --version      # install.opencode: true
 deepagents -v           # install.deepagents: true
 hermes --version        # install.hermes: true

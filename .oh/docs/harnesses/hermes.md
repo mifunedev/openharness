@@ -10,7 +10,7 @@ skills from experience, scheduled task automation, sub-agent delegation,
 container sandboxing across multiple backends, and bridges to chat
 platforms (Telegram, Discord, Slack, WhatsApp, Signal, Email).
 
-Hermes is an **optional image-level runtime** in Open Harness. When enabled (set `install.hermes: true` in `harness.yaml` or `INSTALL_HERMES=true` in `.devcontainer/.env`), it sits alongside `claude`, `codex`,
+Hermes is an **optional image-level runtime** in Open Harness. When enabled (set `INSTALL_HERMES=true` in `.devcontainer/.env`), it sits alongside `claude`, `codex`,
 `pi`, `opencode`, and `deepagents` as a sandbox CLI primitive. See the
 upstream documentation below for canonical facts about Hermes.
 
@@ -29,7 +29,7 @@ upstream documentation below for canonical facts about Hermes.
 
 ## Install (optional)
 
-The shortest path is the CLI, which sets the `harness.yaml` flag **and**
+The shortest path is the CLI, which sets the `.devcontainer/.env` flag **and**
 installs into the already-running sandbox without a rebuild:
 
 ```bash
@@ -41,15 +41,12 @@ See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only
 
 ### Manual path
 
-Hermes is disabled by default. To install it into the sandbox image, set
-`harness.yaml`:
+Hermes is disabled by default. To install it into the sandbox image, uncomment
+the key in `.devcontainer/.env`:
 
-```yaml
-install:
-  hermes: true
+```bash
+INSTALL_HERMES=true
 ```
-
-Or set `INSTALL_HERMES=true` in `.devcontainer/.env` (legacy).
 
 Then rebuild/restart the sandbox:
 
@@ -126,7 +123,7 @@ the bind-mounted `.hermes/` directory from the checkout. Remove that
 directory manually if you want a full Hermes project-state reset.
 
 The Hermes binary itself is installed in the image when
-`install.hermes: true` is set in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`), under the installer's root Linux FHS layout
+`INSTALL_HERMES=true` is set in `.devcontainer/.env`, under the installer's root Linux FHS layout
 (`/usr/local/lib/hermes-agent` with a `/usr/local/bin/hermes` launcher).
 Disabling the flag on a future rebuild omits the executable; project-local
 state remains in `.hermes/` until removed.
@@ -194,12 +191,11 @@ It is **disabled by default** and opt-in per sandbox.
 
 ### Enabling
 
-In `harness.yaml`, set alongside `install.hermes: true`:
+In `.devcontainer/.env`, set alongside `INSTALL_HERMES=true`:
 
-```yaml
-hermes:
-  dashboard: true
-  dashboard_port: 9119   # optional; 9119 is the default
+```bash
+HERMES_DASHBOARD=true
+HERMES_DASHBOARD_PORT=9119   # optional; 9119 is the default
 ```
 
 Then rebuild:
@@ -208,14 +204,13 @@ Then rebuild:
 make stop && make sandbox
 ```
 
-The legacy `.devcontainer/.env` vars `HERMES_DASHBOARD=true` /
-`HERMES_DASHBOARD_PORT=9119` still work as a fallback (migrated to
-`harness.yaml`). Both paths require `install.hermes: true` (or
-`INSTALL_HERMES=true`) to take effect.
+`HERMES_DASHBOARD` requires `INSTALL_HERMES=true` to take effect: the dashboard
+overlay is applied whether or not Hermes is installed, but there is nothing for
+it to serve without the binary.
 
 ### What auto-launches
 
-When both `install.hermes: true` and `hermes.dashboard: true` are set (or
+When both `INSTALL_HERMES=true` and `HERMES_DASHBOARD=true` are set (or
 the equivalent legacy env vars), the entrypoint starts the dashboard in a
 named tmux session:
 
@@ -281,7 +276,7 @@ vars — see upstream Hermes documentation for the full list.
 
 The sandbox onboarding banner reports Hermes as:
 
-- `❌ not installed` — set `install.hermes: true` in `harness.yaml` (or `INSTALL_HERMES=true` in `.devcontainer/.env`) and rebuild — when the binary is absent from PATH.
+- `❌ not installed` — set `INSTALL_HERMES=true` in `.devcontainer/.env` and rebuild — when the binary is absent from PATH.
 - `✅ installed — run: hermes setup` — when the binary is on PATH but
   `~/.hermes/auth.json` is absent or empty.
 - `✅ authenticated` — when `~/.hermes/auth.json` exists and is

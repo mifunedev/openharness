@@ -1,7 +1,7 @@
 # Hermes dashboard overlay.
 #
 # Included automatically by Makefile/install.sh only when HERMES_DASHBOARD is
-# truthy via harness.yaml or legacy .devcontainer/.env. The host bind stays
+# truthy via `HERMES_DASHBOARD` in .devcontainer/.env. The host bind stays
 # loopback-only; the in-container process binds all interfaces so Docker's port
 # publishing can reach it.
 

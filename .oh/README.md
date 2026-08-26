@@ -34,7 +34,7 @@ is obsolete):
   was externalized to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
   (#536), and the GitHub-readable markdown it rendered now lives at `.oh/docs/`.
 - **repo root** — everything forced to root by *external* tooling
-  (`.devcontainer/` for the devcontainer spec + Docker COPY, `harness.yaml`,
+  (`.devcontainer/` for the devcontainer spec + Docker COPY,
   `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) **plus** live
   identity/state the harness edits in place (`workspace/`). The GitHub-readable
   markdown docs now live under `.oh/docs/`, the scheduled-agent crons under
@@ -124,7 +124,7 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 ## oh init (Phase 2)
 
 `oh init [dir]` scaffolds a fresh harness checkout (defaulting to the current
-directory) by materializing the payload under `.oh/templates/` — `harness.yaml`,
+directory) by materializing the payload under `.oh/templates/` —
 `AGENTS.md`, a `gitignore` seed, and a `.devcontainer/devcontainer.json` whose
 `workspaceFolder` is pinned to `/home/sandbox/project`. The command is
 `runInit` (exported from `cli/src/commands/init.ts`, dispatched from `cli.ts`).
@@ -148,7 +148,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the long-term memory + session logs (`.oh/memory/`), the always-on identity core (`.oh/context/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `harness.yaml`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`workspace/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the long-term memory + session logs (`.oh/memory/`), the always-on identity core (`.oh/context/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`workspace/`) |
 
 ### Why these specifically stay at root
 
@@ -159,8 +159,11 @@ source instead of the bundled `.oh/templates/`.
   `entrypoint.sh`, and the two client scripts (`client-slack-supervise.sh` /
   `seed-msg-bridge.sh`). Everything the sandbox boots from lives here, in the one
   conventional location — no split, no compat shim.
-- `harness.yaml` — the CI path filters and the
-  `harness-ci-core-paths` / `sandbox-boot-guard-ci` probes pin it at repo root.
+- `.devcontainer/.example.env` — the tracked configuration schema. The CI path
+  filters and the `harness-ci-core-paths` / `sandbox-boot-guard-ci` probes pin
+  it beside the compose files it documents. Its local copy,
+  `.devcontainer/.env`, is the one configuration surface; the `harness.yaml`
+  layer that used to sit in front of it was removed in 0.4.0.
 - `config.json` — relocated *logically* to `.oh/config.json` (now the canonical
   read location); the gitignored file itself is user-local runtime state, and the
   legacy repo-root path still works as a fallback for older installs.

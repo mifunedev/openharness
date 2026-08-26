@@ -26,7 +26,7 @@ vi.mock("../cli.js", async (importOriginal) => {
 const { parseToolArgs, printToolHelp, printOhHelp } = await import("../cli.js");
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const REAL_EXAMPLE = join(REPO_ROOT, "harness.yaml.example");
+const REAL_EXAMPLE = join(REPO_ROOT, ".devcontainer", ".example.env");
 
 const cleanups: string[] = [];
 afterEach(() => {
@@ -39,9 +39,9 @@ function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-tool-"));
   cleanups.push(d);
   mkdirSync(join(d, ".oh", "scripts"), { recursive: true });
-  writeFileSync(join(d, ".oh", "scripts", "harness-config.sh"), "#!/bin/sh\n");
-  copyFileSync(REAL_EXAMPLE, join(d, "harness.yaml.example"));
-  copyFileSync(REAL_EXAMPLE, join(d, "harness.yaml"));
+  mkdirSync(join(d, ".devcontainer"), { recursive: true });
+  copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".example.env"));
+  copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".env"));
   return d;
 }
 
@@ -106,16 +106,16 @@ const isInstallCall = (c: RecordedCall): boolean =>
   c.cmd === "docker" && c.args[0] === "exec" && c.args.some((a) => a.includes("--with-deps"));
 
 /**
- * The `install.agent_browser` KEY line, not the prose above it.
+ * The `INSTALL_AGENT_BROWSER` KEY line, not the prose above it.
  *
- * The `install:` section carries a comment mentioning `agent_browser`, so a
- * plain substring search finds the comment first and every assertion below
+ * The optional-installs block carries a comment mentioning `agent_browser`, so
+ * a plain substring search finds the comment first and every assertion below
  * would test the wrong line.
  */
 const flagLine = (root: string): string | undefined =>
-  readFileSync(join(root, "harness.yaml"), "utf8")
+  readFileSync(join(root, ".devcontainer", ".env"), "utf8")
     .split("\n")
-    .find((l) => /^\s*#?\s*agent_browser:/.test(l));
+    .find((l) => /^\s*#?\s*INSTALL_AGENT_BROWSER=/.test(l));
 
 describe("oh tool — argument parsing", () => {
   it("shows help with no args", () => {
@@ -247,7 +247,7 @@ describe("oh tool install — the ~1 GB download gate", () => {
     const { io, out } = makeIo(false);
     await runToolInstall("agent-browser", { cwd: root, run: liveHost().run }, io);
     // The durable half is the whole reason persist runs first.
-    expect(flagLine(root)).toMatch(/^ {2}agent_browser: true/);
+    expect(flagLine(root)).toMatch(/^INSTALL_AGENT_BROWSER=true$/);
     expect(out.join("")).toContain("next container start");
   });
 
@@ -282,7 +282,7 @@ describe("oh tool install — the ~1 GB download gate", () => {
     expect(await runToolInstall("agent-browser", { cwd: root, run, persistOnly: true }, io)).toBe(0);
     expect(asked).toEqual([]);
     expect(calls.some((c) => c.args[0] === "exec")).toBe(false);
-    expect(flagLine(root)).toMatch(/^ {2}agent_browser: true/);
+    expect(flagLine(root)).toMatch(/^INSTALL_AGENT_BROWSER=true$/);
   });
 
   it("does not ask when the tool is already installed", async () => {
@@ -319,16 +319,16 @@ describe("oh tool install — the other exits", () => {
     const { io, out } = makeIo(true);
     expect(await runToolInstall("agent-browser", { cwd: root, run }, io)).toBe(0);
     expect(calls.some((c) => c.args[0] === "exec")).toBe(false);
-    expect(flagLine(root)).toMatch(/^ {2}agent_browser: true/);
+    expect(flagLine(root)).toMatch(/^INSTALL_AGENT_BROWSER=true$/);
     expect(out.join("")).toContain("oh sandbox");
   });
 
-  it("--no-persist leaves harness.yaml untouched", async () => {
+  it("--no-persist leaves .devcontainer/.env untouched", async () => {
     const root = makeRepo();
-    const before = readFileSync(join(root, "harness.yaml"), "utf8");
+    const before = readFileSync(join(root, ".devcontainer", ".env"), "utf8");
     const { io } = makeIo(true);
     await runToolInstall("agent-browser", { cwd: root, run: liveHost().run, noPersist: true }, io);
-    expect(readFileSync(join(root, "harness.yaml"), "utf8")).toBe(before);
+    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe(before);
   });
 
   it("keeps the flag set when the installer fails", async () => {
@@ -338,7 +338,7 @@ describe("oh tool install — the other exits", () => {
     );
     const { io, err } = makeIo(true);
     expect(await runToolInstall("agent-browser", { cwd: root, run }, io)).toBe(7);
-    expect(flagLine(root)).toMatch(/^ {2}agent_browser: true/);
+    expect(flagLine(root)).toMatch(/^INSTALL_AGENT_BROWSER=true$/);
     expect(err.join("")).toContain("next container start");
   });
 

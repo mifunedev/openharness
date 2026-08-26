@@ -19,7 +19,7 @@ fi
 
 fails=()
 
-[[ -f "$TEMPLATES/harness.yaml" ]] || fails+=(".oh/templates/harness.yaml exists")
+[[ -f "$TEMPLATES/.devcontainer/.example.env" ]] || fails+=(".oh/templates/.devcontainer/.example.env exists")
 [[ -f "$TEMPLATES/AGENTS.md" ]] || fails+=(".oh/templates/AGENTS.md exists")
 [[ -f "$TEMPLATES/gitignore" ]] || fails+=(".oh/templates/gitignore exists")
 [[ -f "$DEVCONTAINER" ]] || fails+=(".oh/templates/.devcontainer/devcontainer.json exists")

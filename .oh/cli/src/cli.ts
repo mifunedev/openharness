@@ -166,8 +166,8 @@ Scaffolds a complete, locally-buildable OpenHarness project into a target repo
 the skills/agents/hooks pack), seeds empty memory/ + tasks/, copies the full
 .devcontainer/ for a local image build, writes a project AGENTS.md (+ CLAUDE.md),
 and configures the .claude/.codex/.pi/.hermes provider surfaces as symlinks into
-.oh/skills. In a TTY (without --yes) it runs a short config wizard for
-harness.yaml + .devcontainer/.env.
+.oh/skills. In a TTY (without --yes) it runs a short config wizard that writes
+.devcontainer/.env.
 
 Payload source precedence: --from <dir> > --from-remote > the CLI's own bundled
 .oh/ payload. With no source flag and no bundled payload (installed binary —
@@ -204,9 +204,9 @@ Usage:
   oh sandbox [--image[=<ref>]] [--no-build]
 
 Works from any subdirectory of an equipped repo (walks up to the nearest
-directory containing .oh/). Seeds harness.yaml from harness.yaml.example when
-the example exists and no harness.yaml does, then delegates to the vendored
-compose wrapper:
+directory containing .oh/). Seeds .devcontainer/.env from
+.devcontainer/.example.env when the example exists and no .env does, then
+delegates to the vendored compose wrapper:
 
   bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build
 
@@ -215,7 +215,8 @@ By default it builds the image locally. Prebuilt-image mode skips that build:
 Flags:
   --image[=<ref>]  Run the prebuilt image instead of building locally (implies
                    --no-build). Ref resolves last-wins: --image=<ref> >
-                   harness.yaml sandbox.image > ghcr.io/mifunedev/openharness:latest.
+                   .devcontainer/.env OH_SANDBOX_IMAGE >
+                   ghcr.io/mifunedev/openharness:latest.
   --no-build       Suppress the local build and reuse an existing image without
                    pinning one (advanced; pairs with a prior build or --image).
 
@@ -231,9 +232,9 @@ Usage:
   oh shell [container]
 
 Runs \`docker exec -it -u sandbox <container> zsh\`. Container-name precedence:
-the positional argument > sandbox.name in <root>/harness.yaml (read via the
-vendored .oh/scripts/harness-config.sh) > "${DEFAULT_CONTAINER_NAME}". Works from any
-subdirectory of an equipped repo; exits with docker's exit code.
+the positional argument > SANDBOX_NAME in <root>/.devcontainer/.env >
+"${DEFAULT_CONTAINER_NAME}". Works from any subdirectory of an equipped repo;
+exits with docker's exit code.
 `);
 }
 
@@ -246,15 +247,15 @@ Usage:
   oh harness install <name>           Install a harness into the sandbox
   oh harness status [name]            Show installed/enabled state
 
-\`install\` does BOTH halves: it sets the harness.yaml \`install:\` flag so the
-choice survives the next image build, AND installs into the already-running
+\`install\` does BOTH halves: it sets the \`.devcontainer/.env\` INSTALL_* flag so
+the choice survives the next image build, AND installs into the already-running
 container so the harness is usable now. It never rebuilds or restarts the
 sandbox. When the sandbox is not running it persists the flag, prints a hint,
 and exits 0.
 
 Flags:
-  --persist-only   Only set the harness.yaml install: flag (no container work)
-  --no-persist     Live-install only; leave harness.yaml unchanged
+  --persist-only   Only set the .devcontainer/.env INSTALL_* flag (no container work)
+  --no-persist     Live-install only; leave .devcontainer/.env unchanged
   --json           Machine-readable output (list/status)
 
 Harnesses:
@@ -357,14 +358,14 @@ Usage:
 Most tools are baked into the image and are report-only; \`install\` works on:
 ${installableToolIds().map((t) => `  ${t}`).join("\n")}
 
-\`install\` does BOTH halves: it sets the harness.yaml \`install:\` flag so the
-choice survives the next container start, AND installs into the already-running
+\`install\` does BOTH halves: it sets the \`.devcontainer/.env\` INSTALL_* flag so
+the choice survives the next container start, AND installs into the already-running
 container. It never rebuilds or restarts the sandbox. A large download is
 confirmed first, and a non-interactive run without --yes installs nothing.
 
 Flags:
-  --persist-only   Only set the harness.yaml install: flag (no container work)
-  --no-persist     Live-install only; leave harness.yaml unchanged
+  --persist-only   Only set the .devcontainer/.env INSTALL_* flag (no container work)
+  --no-persist     Live-install only; leave .devcontainer/.env unchanged
   --yes            Accept a large download without prompting
   --json           Machine-readable output (list/status)
 

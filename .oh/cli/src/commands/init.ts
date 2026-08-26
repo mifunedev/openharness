@@ -15,8 +15,8 @@ import {
 import path from "node:path";
 import { loadManifest } from "../lib/manifest.js";
 import { copyOhPayload, type CopyReport } from "../lib/vendor.js";
-import { upsertEnvFile } from "../lib/env.js";
-import { setKeyInSection } from "../lib/harness-yaml.js";
+import { writeEnvFile } from "../lib/env.js";
+import { setKeyInEnv } from "../lib/env-file.js";
 import * as prompt from "../lib/prompt.js";
 
 export interface InitIO {
@@ -235,8 +235,8 @@ export async function runInit(
       "# .oh/memory/\n\nLong-term, append-only lessons for this project's agents. " +
         "`MEMORY.md` is the index; daily logs live under `<UTC-date>/`.\n\n" +
         "Resolve this directory with `.oh/scripts/oh-path memory` (or the " +
-        "`MEMORY_DIR` env var) rather than hardcoding a path — change " +
-        "`paths.memory` in `harness.yaml` to relocate it.\n",
+        "`MEMORY_DIR` env var) rather than hardcoding a path — set " +
+        "`MEMORY_DIR` in `.devcontainer/.env` to relocate it.\n",
     );
     writeGenerated(
       wr,
@@ -295,39 +295,52 @@ export async function runInit(
 
   const answers: WizardAnswers = interactive
     ? await runWizard(io)
-    : { harness: [], secrets: {} };
+    : { env: {}, secrets: {} };
 
   // --- Config writes (vendor → wizard → config) -------------------------------
-  if (answers.harness.length > 0) {
-    const harnessPath = path.join(t, "harness.yaml");
-    if (existsSync(harnessPath) || dryRun) {
-      if (dryRun) {
-        report(`update harness.yaml (${answers.harness.length} keys)`);
-      } else {
-        let content = readFileSync(harnessPath, "utf8");
-        const applied: string[] = [];
-        for (const { section, key, value } of answers.harness) {
-          const next = setKeyInSection(content, section, key, value).content;
-          if (next !== content) {
-            content = next;
-            applied.push(key);
-          }
-        }
-        writeFileSync(harnessPath, content, "utf8");
-        report(`update harness.yaml (${applied.length} keys)`);
-      }
-    }
-  }
-
-  const secretKeys = Object.keys(answers.secrets);
-  if (secretKeys.length > 0) {
+  // ONE write, to ONE file. Non-secret answers and secrets both land in
+  // `.devcontainer/.env`: since harness.yaml was removed, there is no second
+  // surface to split them across, and `.env` is the only one the VS Code
+  // "Reopen in Container" path can read. Non-secret keys go through
+  // `setKeyInEnv` so a commented template line is uncommented in place rather
+  // than shadowed by an appended duplicate.
+  const configVars: Record<string, string> = { ...answers.env, ...answers.secrets };
+  const configKeys = Object.keys(configVars);
+  if (configKeys.length > 0) {
+    const secretCount = Object.keys(answers.secrets).length;
+    const label =
+      secretCount > 0
+        ? `${configKeys.length} keys, ${secretCount} secret${secretCount === 1 ? "" : "s"}`
+        : `${configKeys.length} keys`;
     if (dryRun) {
-      report(`update .devcontainer/.env (${secretKeys.length} secrets)`);
+      report(`update .devcontainer/.env (${label})`);
     } else {
       const envDir = path.join(t, ".devcontainer");
       mkdirSync(envDir, { recursive: true });
-      upsertEnvFile(path.join(envDir, ".env"), answers.secrets);
-      report(`update .devcontainer/.env (${secretKeys.length} secrets)`);
+      const envPath = path.join(envDir, ".env");
+      // Seed from the template that was just scaffolded, so the operator's
+      // answers land as UNCOMMENTED lines inside the documented file rather
+      // than as a bare list of keys with none of the prose explaining them.
+      const examplePath = path.join(envDir, ".example.env");
+      if (!existsSync(envPath) && existsSync(examplePath)) {
+        copyFileSync(examplePath, envPath);
+      }
+      let content = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
+      const applied: string[] = [];
+      for (const [key, value] of Object.entries(configVars)) {
+        const next = setKeyInEnv(content, key, value).content;
+        if (next !== content) {
+          content = next;
+          applied.push(key);
+        }
+      }
+      writeEnvFile(envPath, content);
+      const appliedSecrets = applied.filter((k) => k in answers.secrets).length;
+      report(
+        `update .devcontainer/.env (${applied.length} keys${
+          appliedSecrets > 0 ? `, ${appliedSecrets} secret${appliedSecrets === 1 ? "" : "s"}` : ""
+        })`,
+      );
     }
   }
 
@@ -606,12 +619,13 @@ function writeClaudeAlias(ctx: WriteCtx, copyClaude: boolean): void {
 
 interface WizardAnswers {
   /**
-   * harness.yaml keys to activate: each uncomments + substitutes a value.
-   * `section` is the column-0 block the key lives under — the shared writer is
-   * section-scoped, so two sections may carry the same key name safely.
+   * Non-secret `.devcontainer/.env` keys to activate: each uncomments the
+   * template line in place and substitutes a value. Env keys are flat and
+   * globally unique, so the section coordinate the harness.yaml writer needed
+   * is gone with it.
    */
-  harness: { section: string; key: string; value: string }[];
-  /** Secret env vars for .devcontainer/.env (never harness.yaml). */
+  env: Record<string, string>;
+  /** Secret env vars. Same file — kept separate only so the log can count them. */
   secrets: Record<string, string>;
 }
 
@@ -630,23 +644,23 @@ async function confirmWith(
 async function runWizard(io: InitIO): Promise<WizardAnswers> {
   const askFn = io.ask ?? prompt.ask;
   const askSecretFn = io.askSecret ?? prompt.askSecret;
-  const harness: { section: string; key: string; value: string }[] = [];
+  const env: Record<string, string> = {};
   const secrets: Record<string, string> = {};
 
   prompt.header("Configure your harness  (press Enter to accept the shown default)");
 
   prompt.step(1, 4, "Project");
   const name = await askFn("Sandbox name [my-project]:");
-  if (name) harness.push({ section: "sandbox", key: "name", value: name });
+  if (name) env.SANDBOX_NAME = name;
 
   const tz = await askFn("Timezone [America/Denver]:");
-  if (tz) harness.push({ section: "sandbox", key: "timezone", value: tz });
+  if (tz) env.TZ = tz;
 
   const gitName = await askFn("Git user name:");
-  if (gitName) harness.push({ section: "git", key: "user_name", value: gitName });
+  if (gitName) env.GIT_USER_NAME = gitName;
 
   const gitEmail = await askFn("Git user email:");
-  if (gitEmail) harness.push({ section: "git", key: "user_email", value: gitEmail });
+  if (gitEmail) env.GIT_USER_EMAIL = gitEmail;
 
   prompt.step(2, 4, "Optional installs");
   const installs: { key: string; desc: string }[] = [
@@ -658,20 +672,20 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
   ];
   for (const inst of installs) {
     const yes = await confirmWith(askFn, `Install ${inst.key} — ${inst.desc}?`, false);
-    if (yes) harness.push({ section: "install", key: inst.key, value: "true" });
+    if (yes) env[`INSTALL_${inst.key.toUpperCase()}`] = "true";
   }
 
   // Step 3 covers the two settings that most often bite a new user and are not
   // reachable any other way short of hand-editing the file. Deliberately NOT a
-  // push toward full key coverage: the remaining keys are advanced, each has an
-  // env-var escape hatch, and `compose.overrides` is a list the line editor
-  // cannot emit.
+  // push toward full key coverage: the remaining keys are advanced and every one
+  // of them is documented in `.devcontainer/.example.env`, which is now the
+  // schema document — a reader who needs one edits it there.
   prompt.step(3, 4, "Access (off by default)");
   const sshOn = await confirmWith(askFn, "Enable sshd for direct container SSH?", false);
   if (sshOn) {
-    harness.push({ section: "ssh", key: "enabled", value: "true" });
+    env.SANDBOX_SSH = "true";
     const sshPort = await askFn("SSH host port [2222]:");
-    if (sshPort) harness.push({ section: "ssh", key: "port", value: sshPort });
+    if (sshPort) env.SANDBOX_SSH_PORT = sshPort;
   }
 
   prompt.info(
@@ -680,13 +694,14 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
   prompt.info("privileged container that mounts the host filesystem. Enable only if needed.");
   const sockOn = await confirmWith(askFn, "Mount host Docker socket into the sandbox?", false);
   if (sockOn) {
-    harness.push({ section: "sandbox", key: "docker_socket", value: "true" });
-    // Also persisted to .devcontainer/.env by `oh sandbox`, because the VS Code
-    // "Reopen in Container" path cannot read harness.yaml.
+    // The same key `oh sandbox`'s opt-in prompt writes, in the same file — the
+    // VS Code "Reopen in Container" path reads it too, which is the whole point
+    // of collapsing configuration onto `.env`.
+    env.DOCKER_SOCKET = "true";
   }
 
   prompt.step(4, 4, "Secrets");
-  prompt.info("Stored ONLY in .devcontainer/.env (gitignored), never in harness.yaml:");
+  prompt.info("Stored in .devcontainer/.env, which is gitignored — never committed:");
   const gh = await askSecretFn("GH_TOKEN (blank to skip):");
   if (gh) {
     secrets.GH_TOKEN = gh;
@@ -705,7 +720,7 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
     prompt.ok(`PI_SLACK_APP_TOKEN set (${prompt.redact(slackApp)})`);
   }
 
-  return { harness, secrets };
+  return { env, secrets };
 }
 
 /**

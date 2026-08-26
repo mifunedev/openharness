@@ -55,7 +55,7 @@ make shell <agent-name>
 claude
 ```
 
-The positional argument to `make shell` is the **container name** (defaults to `openharness`, or `sandbox.name` from `harness.yaml`). Append `SHELL_USER=<user>` to connect as a non-default user, e.g. `make shell <agent-name> SHELL_USER=postgres`.
+The positional argument to `make shell` is the **container name** (defaults to `openharness`, or `SANDBOX_NAME` from `.devcontainer/.env`). Append `SHELL_USER=<user>` to connect as a non-default user, e.g. `make shell <agent-name> SHELL_USER=postgres`.
 
 ### 3. Verify
 

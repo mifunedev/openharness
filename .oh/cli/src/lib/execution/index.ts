@@ -8,7 +8,7 @@ import type { ExecutionTarget } from "./target.js";
  * The execution-target entry point (EPIC #731, issue #733).
  *
  * `resolveExecutionTarget()` is INTERNAL: it is the CLI's own seam, not a user
- * surface. There is deliberately no harness.yaml key, CLI flag, or env var that
+ * surface. There is deliberately no `.env` key, CLI flag, or env var that
  * selects a target — Docker Compose is the only implementation in Phase-0, and
  * a selector would be configuration for a choice that does not exist yet. The
  * next substrate arrives by adding an implementation here, not by asking the

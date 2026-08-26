@@ -79,7 +79,7 @@ If you need a port reachable beyond your laptop — for example, to share a prev
 
 **1. Compose overlay binding `0.0.0.0`**
 
-Add a custom compose file that binds the port on all interfaces and merge it in via `compose.overrides:` in `harness.yaml` (tracked) or `composeOverrides[]` in `config.json` (user-local, gitignored):
+Add a custom compose file that binds the port on all interfaces and merge it in via `composeOverrides[]` in `.oh/config.json` (gitignored):
 
 ```yaml
 # docker-compose.my-expose.yml

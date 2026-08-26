@@ -27,7 +27,7 @@ const { parseHarnessArgs, printHarnessHelp, printOhHelp } = await import("../cli
 
 // src/__tests__ -> src -> .oh/cli -> .oh -> repo root
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const REAL_EXAMPLE = join(REPO_ROOT, "harness.yaml.example");
+const REAL_EXAMPLE = join(REPO_ROOT, ".devcontainer", ".example.env");
 
 const cleanups: string[] = [];
 afterEach(() => {
@@ -37,18 +37,15 @@ afterEach(() => {
 
 /**
  * An equipped-repo fixture. mkdtemp only — NEVER the real worktree root, whose
- * harness.yaml the installer would edit for real.
+ * .devcontainer/.env the installer would edit for real.
  */
 function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-harness-cmd-"));
   cleanups.push(d);
   mkdirSync(join(d, ".oh", "scripts"), { recursive: true });
-  // `readConfigValue` requires the vendored parser to EXIST before it shells
-  // out. A stub is enough here — the fake runner answers for it, and
-  // harness-yaml.test.ts is where the real script runs.
-  writeFileSync(join(d, ".oh", "scripts", "harness-config.sh"), "#!/bin/sh\n");
-  copyFileSync(REAL_EXAMPLE, join(d, "harness.yaml.example"));
-  copyFileSync(REAL_EXAMPLE, join(d, "harness.yaml"));
+  mkdirSync(join(d, ".devcontainer"), { recursive: true });
+  copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".example.env"));
+  copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".env"));
   return d;
 }
 
@@ -95,7 +92,8 @@ function makeIo(): { out: string[]; err: string[]; io: HarnessIO } {
 }
 
 const text = (lines: string[]): string => lines.join("");
-const readYaml = (root: string): string => readFileSync(join(root, "harness.yaml"), "utf8");
+const readEnv = (root: string): string =>
+  readFileSync(join(root, ".devcontainer", ".env"), "utf8");
 /** Every `docker exec` in the recorded calls — the "did it touch the container" oracle. */
 const execCalls = (calls: RecordedCall[]): RecordedCall[] =>
   calls.filter((c) => c.cmd === "docker" && c.args[0] === "exec");
@@ -191,41 +189,41 @@ describe("help", () => {
 // ---------------------------------------------------------------------------
 
 describe("runHarnessInstall persists the flag", () => {
-  it("sets install.opencode and says so", async () => {
+  it("sets INSTALL_OPENCODE and says so", async () => {
     const root = makeRepo();
     const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
     const { out, io } = makeIo();
 
     expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(0);
-    expect(readYaml(root)).toMatch(/^ {2}opencode: true/m);
-    expect(text(out)).toContain("install.opencode");
+    expect(readEnv(root)).toMatch(/^INSTALL_OPENCODE=true$/m);
+    expect(text(out)).toContain("INSTALL_OPENCODE");
   });
 
-  it("maps the slug to the underscored key — grok-build -> install.grok_build", async () => {
+  it("maps the slug to the underscored key — grok-build -> INSTALL_GROK_BUILD", async () => {
     const root = makeRepo();
     const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
     expect(await runHarnessInstall("grok-build", { cwd: root, run }, makeIo().io)).toBe(0);
-    expect(readYaml(root)).toMatch(/^ {2}grok_build: true/m);
+    expect(readEnv(root)).toMatch(/^INSTALL_GROK_BUILD=true$/m);
   });
 
-  it("does NOT write harness.yaml for a harness with no install key", async () => {
+  it("does NOT write .devcontainer/.env for a harness with no install key", async () => {
     const root = makeRepo();
-    const before = readYaml(root);
+    const before = readEnv(root);
     const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
     const { out, io } = makeIo();
 
     expect(await runHarnessInstall("claude-code", { cwd: root, run }, io)).toBe(0);
-    expect(readYaml(root)).toBe(before);
-    expect(text(out)).toMatch(/no harness\.yaml install key/);
+    expect(readEnv(root)).toBe(before);
+    expect(text(out)).toMatch(/no \.devcontainer\/\.env install key/);
   });
 
-  it("--no-persist leaves harness.yaml untouched", async () => {
+  it("--no-persist leaves .devcontainer/.env untouched", async () => {
     const root = makeRepo();
-    const before = readYaml(root);
+    const before = readEnv(root);
     const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
 
     await runHarnessInstall("hermes", { cwd: root, run, noPersist: true }, makeIo().io);
-    expect(readYaml(root)).toBe(before);
+    expect(readEnv(root)).toBe(before);
   });
 
   it("--persist-only writes the flag and never touches the container", async () => {
@@ -234,19 +232,19 @@ describe("runHarnessInstall persists the flag", () => {
     expect(
       await runHarnessInstall("hermes", { cwd: root, run, persistOnly: true }, makeIo().io),
     ).toBe(0);
-    expect(readYaml(root)).toMatch(/^ {2}hermes: true/m);
+    expect(readEnv(root)).toMatch(/^INSTALL_HERMES=true$/m);
     expect(calls.filter((c) => c.cmd === "docker")).toEqual([]);
   });
 
-  it("seeds harness.yaml from the example when it is missing", async () => {
+  it("seeds .devcontainer/.env from the example when it is missing", async () => {
     const root = makeRepo();
-    rmSync(join(root, "harness.yaml"));
+    rmSync(join(root, ".devcontainer", ".env"));
     const { run } = makeRunner((c, a) => (isInspect(c, a) ? exited : undefined));
     const { out, io } = makeIo();
 
     expect(await runHarnessInstall("hermes", { cwd: root, run }, io)).toBe(0);
-    expect(text(out)).toContain("create harness.yaml");
-    expect(readYaml(root)).toMatch(/^ {2}hermes: true/m);
+    expect(text(out)).toContain("create .devcontainer/.env");
+    expect(readEnv(root)).toMatch(/^INSTALL_HERMES=true$/m);
   });
 });
 
@@ -261,7 +259,7 @@ describe("runHarnessInstall against the container", () => {
     const { out, io } = makeIo();
 
     expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(0);
-    expect(readYaml(root)).toMatch(/^ {2}opencode: true/m);
+    expect(readEnv(root)).toMatch(/^INSTALL_OPENCODE=true$/m);
     expect(text(out)).toContain("oh sandbox");
     expect(execCalls(calls)).toEqual([]);
   });
@@ -321,7 +319,7 @@ describe("runHarnessInstall against the container", () => {
     expect(execCalls(calls).some((c) => c.args.includes("opencode-ai"))).toBe(false);
     expect(text(out)).toContain("already installed");
     // The durable half still landed.
-    expect(readYaml(root)).toMatch(/^ {2}opencode: true/m);
+    expect(readEnv(root)).toMatch(/^INSTALL_OPENCODE=true$/m);
   });
 
   it("keeps the persisted flag when the installer fails, and says the rebuild will pick it up", async () => {
@@ -334,8 +332,8 @@ describe("runHarnessInstall against the container", () => {
     const { err, io } = makeIo();
 
     expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(7);
-    expect(readYaml(root)).toMatch(/^ {2}opencode: true/m);
-    expect(text(err)).toContain("install.opencode: true");
+    expect(readEnv(root)).toMatch(/^INSTALL_OPENCODE=true$/m);
+    expect(text(err)).toContain("INSTALL_OPENCODE=true");
   });
 
   it("reports a missing docker binary without losing the persisted flag", async () => {
@@ -348,19 +346,19 @@ describe("runHarnessInstall against the container", () => {
 
     expect(await runHarnessInstall("hermes", { cwd: root, run }, io)).toBe(1);
     expect(text(err)).toMatch(/docker is required/);
-    expect(readYaml(root)).toMatch(/^ {2}hermes: true/m);
+    expect(readEnv(root)).toMatch(/^INSTALL_HERMES=true$/m);
   });
 
   it("rejects an unknown harness with the valid ids and writes nothing", async () => {
     const root = makeRepo();
-    const before = readYaml(root);
+    const before = readEnv(root);
     const { calls, run } = makeRunner();
     const { err, io } = makeIo();
 
     expect(await runHarnessInstall("emacs", { cwd: root, run }, io)).toBe(1);
     expect(text(err)).toContain('unknown harness "emacs"');
     expect(text(err)).toContain("opencode");
-    expect(readYaml(root)).toBe(before);
+    expect(readEnv(root)).toBe(before);
     expect(calls).toEqual([]);
   });
 
@@ -368,11 +366,11 @@ describe("runHarnessInstall against the container", () => {
     const root = makeRepo();
     const { run } = makeRunner((c, a) => (isInspect(c, a) ? running : undefined));
     await runHarnessInstall("hermes", { cwd: root, run }, makeIo().io);
-    const once = readYaml(root);
+    const once = readEnv(root);
 
     const { out, io } = makeIo();
     expect(await runHarnessInstall("hermes", { cwd: root, run }, io)).toBe(0);
-    expect(readYaml(root)).toBe(once);
+    expect(readEnv(root)).toBe(once);
     expect(text(out)).toContain("already");
   });
 });
@@ -408,13 +406,13 @@ describe("runHarnessList", () => {
 
   it("--json emits the same data machine-readably", async () => {
     const root = makeRepo();
-    writeFileSync(join(root, "harness.yaml"), "install:\n  hermes: true\n");
+    writeFileSync(join(root, ".devcontainer", ".env"), "INSTALL_HERMES=true\n");
     const { run } = makeRunner((c, a) => {
       if (isInspect(c, a)) return exited;
       // The flag read goes through the vendored parser; the fake stands in for
-      // it here so this test stays a pure unit (harness-yaml.test.ts drives the
+      // it here so this test stays a pure unit (env-file.test.ts drives the
       // real script).
-      if (c === "sh" && a.includes("install.hermes")) {
+      if (c === "sh" && a.includes("INSTALL_HERMES")) {
         return { status: 0, stdout: "true\n", stderr: "" };
       }
       return undefined;

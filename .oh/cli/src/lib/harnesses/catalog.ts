@@ -25,7 +25,7 @@
 export type HarnessKind =
   /** In the default image build (the `AGENTS` build-arg list). */
   | "default"
-  /** Behind an `INSTALL_*` build arg / `harness.yaml` `install:` key. */
+  /** Behind an `INSTALL_*` build arg / `.devcontainer/.env` key. */
   | "optional"
   /** Never baked in; fetched at use time (`npx`). */
   | "on-demand";
@@ -39,7 +39,7 @@ export interface HarnessEntry {
   /** Executable this harness puts on PATH. */
   readonly binary: string;
   /**
-   * `harness.yaml` key WITHOUT the `install.` prefix, e.g. `grok_build`.
+   * `INSTALL_*` key in lower snake_case WITHOUT the prefix, e.g. `grok_build`.
    * NOTE the underscore — the key is `install.grok_build` while the slug is
    * `grok-build`. `undefined` for `default` and `on-demand` harnesses, which
    * have no flag; the installer must never invent one for them.
@@ -65,7 +65,7 @@ export interface HarnessEntry {
 /**
  * Every harness documented under `.oh/docs/harnesses/`, and only those.
  *
- * `install.agent_browser` lives in the same `harness.yaml` `install:` section but
+ * `INSTALL_AGENT_BROWSER` lives in the same `.devcontainer/.env` namespace but
  * is a browser tool, not a harness — it is deliberately absent, and `oh harness`
  * must never write it.
  */
@@ -179,7 +179,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
   {
     // Never baked into the image. `npx --yes t3` fetches it at use time, which
     // is also what the `/t3` skill does — so "installing" it is a no-op fetch
-    // that warms the npx cache. It has no harness.yaml key by design.
+    // that warms the npx cache. It has no `INSTALL_*` key by design.
     id: "t3code",
     title: "T3 Code",
     binary: "t3",

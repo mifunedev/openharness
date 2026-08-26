@@ -8,11 +8,12 @@ import type { ExecutionTarget } from "../lib/execution/target.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import { confirm } from "../lib/prompt.js";
 import {
-  harnessYamlPath,
+  envFilePath,
+  installEnvKey,
   isInstallFlagEnabled,
-  seedHarnessYaml,
+  seedEnvFile,
   setInstallFlag,
-} from "../lib/harness-yaml.js";
+} from "../lib/env-file.js";
 import {
   findTool,
   installableToolIds,
@@ -26,23 +27,24 @@ import { configuredContainerName, DEFAULT_CONTAINER_NAME } from "./lifecycle.js"
  * `oh tool <list|install|status>` — the sandbox tooling that is neither an
  * agent CLI (`oh harness`) nor an isolation runtime (`oh runtime`).
  *
- * WHAT THIS SOLVES: `agent-browser` shares the `harness.yaml` `install:` section
- * with the optional harnesses but is not one, so `oh harness` deliberately
- * refuses it — leaving the only way to add it a hand-edit of `harness.yaml`
- * followed by a full container recreate, because the entrypoint installs it at
+ * WHAT THIS SOLVES: `agent-browser` shares the `INSTALL_*` namespace in
+ * `.devcontainer/.env` with the optional harnesses but is not one, so
+ * `oh harness` deliberately refuses it — leaving the only way to add it a
+ * hand-edit of `.env` followed by a full container recreate, because the entrypoint installs it at
  * boot. And nothing could answer "is `gh` actually in this image, and what
  * version" without opening a shell.
  *
  * INSTALL IS PERSIST-FIRST, like `oh harness` and unlike `oh runtime`:
  *
- *   1. persist `install.agent_browser: true` in harness.yaml — cheap, always
+ *   1. persist `INSTALL_AGENT_BROWSER=true` in `.devcontainer/.env` — cheap, always
  *      possible, and the reason the choice survives the next container recreate;
  *   2. install into the ALREADY-RUNNING container, so it is usable now.
  *
  * `oh runtime`'s refusal to persist anything is specific to the unmade #731
- * selector decision and does NOT transfer here: `install.agent_browser` already
- * exists in `harness-config.sh`'s envmap and in `harness.yaml.example`, so this
- * command writes a key the schema already defines and changes no schema.
+ * selector decision and does NOT transfer here: `INSTALL_AGENT_BROWSER` is
+ * already interpolated by `.devcontainer/docker-compose.yml` and documented in
+ * `.devcontainer/.example.env`, so this command writes a key the schema already
+ * defines and changes no schema.
  *
  * THE DOWNLOAD GATE. agent-browser pulls Chromium, roughly 1 GB. No harness
  * install downloads anything comparable, so this is the one place the CLI asks
@@ -78,9 +80,9 @@ export interface ToolOptions {
 }
 
 export interface ToolInstallOptions extends ToolOptions {
-  /** Only set the harness.yaml flag; do no container work. */
+  /** Only set the `.devcontainer/.env` flag; do no container work. */
   persistOnly?: boolean;
-  /** Live-install only; leave harness.yaml untouched. */
+  /** Live-install only; leave `.devcontainer/.env` untouched. */
   noPersist?: boolean;
   /** Skip the large-download confirmation. */
   yes?: boolean;
@@ -91,7 +93,7 @@ interface ToolRow {
   id: string;
   title: string;
   kind: string;
-  /** `install.<key>` reads `true` in harness.yaml. `null` when it has no key. */
+  /** `INSTALL_<KEY>` reads `true` in `.devcontainer/.env`. `null` when it has no key. */
   enabled: boolean | null;
   /** Binary present in the container, or `null` when unreachable. */
   installed: boolean | null;
@@ -106,7 +108,7 @@ function isReachable(status: string): boolean {
 }
 
 function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
-  const name = configuredContainerName(root, run) ?? DEFAULT_CONTAINER_NAME;
+  const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
   return resolveExecutionTarget({ projectRoot: root, container: name, run });
 }
 
@@ -167,7 +169,7 @@ async function collectRows(
     if (!(err instanceof ExecutionSpawnError)) throw err;
   }
 
-  const configured = existsSync(harnessYamlPath(root));
+  const configured = existsSync(envFilePath(root));
   const rows: ToolRow[] = [];
   for (const entry of entries) {
     const installed = reachable ? await probeInstalled(target, entry) : null;
@@ -178,7 +180,7 @@ async function collectRows(
       enabled:
         entry.toolKey === undefined
           ? null
-          : configured && isInstallFlagEnabled(root, entry.toolKey, run),
+          : configured && isInstallFlagEnabled(root, entry.toolKey),
       installed,
       // Only ask a present binary for its version.
       version: reachable && installed === true ? await probeVersion(target, entry) : null,
@@ -328,14 +330,15 @@ export async function runToolInstall(
 
   // ---- 1. persist -------------------------------------------------------
   if (!opts.noPersist && entry.toolKey !== undefined) {
-    if (seedHarnessYaml(root)) {
-      io.stdout("create harness.yaml (from harness.yaml.example)\n");
+    if (seedEnvFile(root)) {
+      io.stdout("create .devcontainer/.env (from .devcontainer/.example.env)\n");
     }
+    const key = installEnvKey(entry.toolKey);
     const outcome = setInstallFlag(root, entry.toolKey);
     io.stdout(
       outcome === "already-set"
-        ? `harness.yaml: install.${entry.toolKey} already true\n`
-        : `harness.yaml: set install.${entry.toolKey}: true (${outcome})\n`,
+        ? `.devcontainer/.env: ${key} already true\n`
+        : `.devcontainer/.env: set ${key}=true (${outcome})\n`,
     );
   }
 
@@ -378,7 +381,7 @@ export async function runToolInstall(
   if (!(await confirmDownload(entry, opts, io))) {
     if (!opts.noPersist && entry.toolKey !== undefined) {
       io.stdout(
-        `harness.yaml keeps install.${entry.toolKey}: true — the next container start will install it.\n`,
+        `.devcontainer/.env keeps ${installEnvKey(entry.toolKey)}=true — the next container start will install it.\n`,
       );
     }
     return 1;
@@ -394,7 +397,7 @@ export async function runToolInstall(
     io.stderr(
       `oh tool: installing ${entry.id} failed (exit ${r.exitCode}).\n` +
         (entry.toolKey !== undefined && !opts.noPersist
-          ? `harness.yaml keeps install.${entry.toolKey}: true — the next container start will retry it.\n`
+          ? `.devcontainer/.env keeps ${installEnvKey(entry.toolKey)}=true — the next container start will retry it.\n`
           : ""),
     );
     return r.exitCode;

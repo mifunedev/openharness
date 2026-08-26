@@ -8,7 +8,7 @@
  *   this file                everything else the sandbox ships
  *
  * `agent-browser` is the entry that forced the third table. It lives in the
- * same `harness.yaml` `install:` section as the optional harnesses, so it looks
+ * same `INSTALL_*` namespace in `.devcontainer/.env` as the optional harnesses, so it looks
  * like one — but it is a headless browser, not an agent, and
  * `__tests__/harness-catalog.test.ts` asserts its exclusion from that catalog.
  * The exclusion was always correct; until now it had no destination.
@@ -69,7 +69,7 @@ export interface ToolEntry {
    */
   readonly versionArgv?: readonly string[];
   /**
-   * `harness.yaml` key WITHOUT the `install.` prefix. Only `opt-in` tools have
+   * `INSTALL_*` key in lower snake_case WITHOUT the prefix. Only `opt-in` tools have
    * one; the installer must never invent a key for a baked-in tool.
    */
   readonly toolKey?: string;

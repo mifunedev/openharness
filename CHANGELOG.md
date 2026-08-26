@@ -8,6 +8,27 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-26
+
+### Removed
+- **Remove `harness.yaml` entirely.** Configuration collapses to `.devcontainer/.env` plus the `oh` CLI. Deleted: `harness.yaml.example`, `.oh/templates/harness.yaml`, the 163-line awk parser `.oh/scripts/harness-config.sh`, the 251-line `.oh/cli/src/lib/harness-yaml.ts`, their two test files, the `harness-yaml-schema-parity` probe, and the `make harness-config` target. The layer never earned its place: every key it mapped already existed as a compose env var with a default, and it was **invisible on the VS Code "Reopen in Container" path**, which names `.devcontainer/docker-compose.yml` directly and so reads only `.devcontainer/.env`. A key set in `harness.yaml` silently did nothing there.
+- Remove the derived `.devcontainer/.harness.yaml.env` artifact and the second `--env-file` that carried it. The wrapper now passes exactly one env-file — the same one compose auto-loads on the VS Code path — so the two doors cannot disagree by construction.
+
+### Added
+- Add `.oh/scripts/migrate-harness-yaml.sh`: a **one-shot automatic migration** so no existing install silently loses a setting. It runs from `.oh/scripts/docker-compose.sh` and `.oh/scripts/install.sh`, so it fires on every lifecycle verb; it translates the 21 allowlisted keys into `.env` (uncommenting template lines in place), moves `compose.overrides` into `.oh/config.json` `composeOverrides[]`, renames the file to `harness.yaml.migrated`, and prints every value it carried over — including both sides of any value it replaced. Absent a `harness.yaml` it exits 0 immediately. It is **self-contained**, carrying its own copy of the deleted parser, so the whole compatibility story is one file to delete in a later release.
+- Add `.oh/cli/src/lib/env-file.ts` — the one `.env` reader/writer, replacing `lib/harness-yaml.ts`. Reads go through the existing `loadEnvInto`, so no fifth env parser was added; writes carry over the uncomment-in-place discipline. Config reads are now plain filesystem reads: `oh sandbox` and `oh shell` spawn **zero** subprocesses to resolve configuration, where every read used to shell out to the vendored parser.
+- Add three probes replacing the deleted parity probe: `env-schema-parity.sh` (the two `.example.env` templates carry the same keys, and every var any `docker-compose*.yml` interpolates is documented — this closes a real gap: `DOCKER_SOCKET`, `SANDBOX_SSH`, `SANDBOX_SSH_PORT`, `OH_SANDBOX_IMAGE`, `OH_PULL_POLICY` and `SKIP_PNPM_INSTALL` were consumed but documented nowhere), `harness-yaml-migration.sh` (append / uncomment-in-place / preserve / overwrite, plus a silent second run), and `compose-config-path-parity.sh` (**the wrapper path and the VS Code path resolve the same service** — the parity `harness.yaml` made impossible).
+
+### Changed
+- **`.devcontainer/.example.env` is now the schema document**, carrying all 25 keys with their defaults and prose, lifted from `harness.yaml.example`. Its "Migrated to harness.yaml" block is gone. `.oh/templates/.devcontainer/.example.env` is brought to key parity — an `oh init` repo shipped a template documenting three vars.
+- **The installer's config writes always run.** `install.sh` put its entire config block inside `if [ ! -f .devcontainer/.env ]`, so re-running it over an existing install wrote nothing; with `.env` as the only surface that would have become a total no-op. `.env` is now seeded when absent and the writes always follow, each idempotent and one line wide. Host detections (timezone, git identity) still only seed a fresh file, so a re-run never silently overwrites a hand-edited value.
+- `.oh/scripts/docker-compose.sh` drops five `harness.yaml` resolution ladders (hermes-dashboard, docker-socket, ssh.enabled, ssh.port, sandbox.name) and the `compose-overrides` loop; each collapses onto the `.env` fallback that was already the next line. The overlay `-f` list is byte-identical before and after, verified against a recorded baseline.
+- `.oh/scripts/oh-path` loses its `paths.<name>` ladder: the precedence is now `<NAME>_DIR` env → `.oh/<name>`.
+- `oh init`'s wizard writes **one** file. It used to split non-secret answers to `harness.yaml` and secrets to `.env`; both now land in `.env` in a single write, through the same line editor, so the operator's answers appear as uncommented lines inside the documented template.
+- CI path filters and their probes move from `harness.yaml.example` to `.devcontainer/.example.env` (`ci-harness.yml`, `sandbox-boot-guard.yml`, `harness-ci-core-paths.sh`, `sandbox-boot-guard-ci.sh`). `oh-init-headless-config.sh` retargets to the `.example.env` template and additionally asserts `--yes` writes no `.env` at all.
+- `.gitignore` keeps `/harness.yaml` and `.devcontainer/.harness.yaml.env` for one more release so a stale local artifact from a pre-0.4.0 checkout is never committed, and adds `/harness.yaml.migrated`.
+
+
 ## [0.3.0] - 2026-08-25
 
 ### Removed

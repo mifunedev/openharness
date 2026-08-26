@@ -26,7 +26,7 @@ vi.mock("../cli.js", async (importOriginal) => {
 const { parseRuntimeArgs, printRuntimeHelp, printOhHelp } = await import("../cli.js");
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const REAL_EXAMPLE = join(REPO_ROOT, "harness.yaml.example");
+const REAL_EXAMPLE = join(REPO_ROOT, ".devcontainer", ".example.env");
 
 const cleanups: string[] = [];
 afterEach(() => {
@@ -39,9 +39,9 @@ function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-runtime-"));
   cleanups.push(d);
   mkdirSync(join(d, ".oh", "scripts"), { recursive: true });
-  writeFileSync(join(d, ".oh", "scripts", "harness-config.sh"), "#!/bin/sh\n");
-  copyFileSync(REAL_EXAMPLE, join(d, "harness.yaml.example"));
-  copyFileSync(REAL_EXAMPLE, join(d, "harness.yaml"));
+  mkdirSync(join(d, ".devcontainer"), { recursive: true });
+  copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".example.env"));
+  copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".env"));
   return d;
 }
 
@@ -460,9 +460,9 @@ describe("oh runtime install — the other exits", () => {
 });
 
 describe("oh runtime never writes configuration", () => {
-  it("leaves harness.yaml byte-identical across every verb", async () => {
+  it("leaves .devcontainer/.env byte-identical across every verb", async () => {
     const root = makeRepo();
-    const before = readFileSync(join(root, "harness.yaml"), "utf8");
+    const before = readFileSync(join(root, ".devcontainer", ".env"), "utf8");
     const { io } = makeIo();
 
     await runRuntimeList({ cwd: root, run: blockedHost().run }, io);
@@ -470,6 +470,6 @@ describe("oh runtime never writes configuration", () => {
     await runRuntimeInstall("microsandbox", { cwd: root, run: blockedHost().run }, io);
     await runRuntimeInstall("microsandbox", { cwd: root, run: readyHost().run }, io);
 
-    expect(readFileSync(join(root, "harness.yaml"), "utf8")).toBe(before);
+    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe(before);
   });
 });

@@ -64,65 +64,71 @@ function runWithFakeDocker(args: string[]): string[] {
 }
 
 describe("scripts/docker-compose.sh", () => {
-  it("prints read-like argv with a temporary harness env file", () => {
-    const persistent = path.join(tmp, ".devcontainer", ".harness.yaml.env");
+  it("passes .devcontainer/.env as the ONE --env-file, and derives nothing", () => {
+    // Before 0.4.0 this script generated a SECOND env-file from harness.yaml —
+    // a temporary one for read-like invocations, a persistent
+    // .devcontainer/.harness.yaml.env otherwise. That derived file was
+    // invisible to the VS Code path, which reads .devcontainer/.env only. It is
+    // gone: one surface, one --env-file, and no artifact left behind.
+    const derived = path.join(tmp, ".devcontainer", ".harness.yaml.env");
     writeFileSync(path.join(tmp, ".devcontainer", ".env"), "SANDBOX_NAME=example\n");
-    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
 
     const argv = printArgv();
-    expect(argv.slice(0, 6)).toEqual([
+    expect(argv).toEqual([
       "docker",
       "compose",
       "--env-file",
       path.join(tmp, ".devcontainer", ".env"),
-      "--env-file",
-      argv[5],
-    ]);
-    expect(argv[5]).toContain("openharness-harness-yaml-env.");
-    expect(argv[5]).not.toBe(persistent);
-    expect(argv.slice(6)).toEqual([
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "config",
     ]);
-    expect(existsSync(persistent)).toBe(false);
+    expect(existsSync(derived)).toBe(false);
   });
 
-  it("keeps harness.yaml and config.json override paths as literal argv entries", () => {
-    const sentinel = path.join(tmp, "SHOULD_NOT_EXIST");
-    const harnessOverride = `over rides/harness ; touch ${sentinel}.yml`;
-    const configOverride = "local config/override $(printf hacked).yml";
+  it("omits --env-file entirely when there is no .devcontainer/.env", () => {
+    const argv = printArgv();
+    expect(argv).not.toContain("--env-file");
+    expect(argv).toEqual([
+      "docker",
+      "compose",
+      "-f",
+      path.join(tmp, ".devcontainer", "docker-compose.yml"),
+      "config",
+    ]);
+  });
 
-    writeFileSync(
-      path.join(tmp, "harness.yaml"),
-      "hermes:\n  dashboard: true\ncompose:\n  overrides:\n" +
-        `    - "${harnessOverride}"\n` +
-        "    - overlays/harness-two.yml\n",
-    );
+  it("keeps config.json override paths as literal argv entries", () => {
+    // Shell-metacharacter-bearing paths must survive as ONE argv entry each.
+    // harness.yaml's compose.overrides list is gone; .oh/config.json's
+    // composeOverrides[] is the only list surface, and the migrator moves any
+    // existing entries into it.
+    const sentinel = path.join(tmp, "SHOULD_NOT_EXIST");
+    const hostile = `over rides/config ; touch ${sentinel}.yml`;
+    const substitution = "local config/override $(printf hacked).yml";
+
+    writeFileSync(path.join(tmp, ".devcontainer", ".env"), "HERMES_DASHBOARD=true\n");
     writeFileSync(
       path.join(tmp, "config.json"),
-      JSON.stringify({ composeOverrides: [configOverride] }),
+      JSON.stringify({ composeOverrides: [hostile, "overlays/config-two.yml", substitution] }),
     );
 
     const argv = printArgv(["up", "-d", "--build"]);
-    expect(argv.slice(0, 4)).toEqual([
+    expect(argv).toEqual([
       "docker",
       "compose",
       "--env-file",
-      argv[3],
-    ]);
-    expect(argv[3]).toContain("openharness-harness-yaml-env.");
-    expect(argv.slice(4)).toEqual([
+      path.join(tmp, ".devcontainer", ".env"),
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.hermes-dashboard.yml"),
       "-f",
-      path.join(tmp, harnessOverride),
+      path.join(tmp, hostile),
       "-f",
-      path.join(tmp, "overlays/harness-two.yml"),
+      path.join(tmp, "overlays/config-two.yml"),
       "-f",
-      path.join(tmp, configOverride),
+      path.join(tmp, substitution),
       "up",
       "-d",
       "--build",
@@ -150,49 +156,70 @@ describe("scripts/docker-compose.sh", () => {
     expect(argv).not.toContain(path.join(tmp, legacyOverride));
   });
 
-  it("keeps persistent harness env generation for lifecycle commands", () => {
-    const persistent = path.join(tmp, ".devcontainer", ".harness.yaml.env");
-    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
+  it("executes the same argv it prints — --print-argv is a faithful oracle", () => {
+    writeFileSync(path.join(tmp, ".devcontainer", ".env"), "SANDBOX_NAME=from-env\n");
 
     const argv = runWithFakeDocker(["up", "-d"]);
 
     expect(argv).toEqual([
       "compose",
       "--env-file",
-      persistent,
+      path.join(tmp, ".devcontainer", ".env"),
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "up",
       "-d",
     ]);
-    expect(readFileSync(persistent, "utf8")).toContain("SANDBOX_NAME=from-yaml");
-  });
-
-  it("uses a temporary harness env file for compose config without overwriting persistent state", () => {
-    const persistent = path.join(tmp, ".devcontainer", ".harness.yaml.env");
-    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
-    writeFileSync(persistent, "SANDBOX_NAME=old\n");
-
-    const argv = runWithFakeDocker(["config", "--quiet"]);
-
-    expect(argv.slice(0, 4)).toEqual(["compose", "--env-file", argv[2], "-f"]);
-    expect(argv[2]).toContain("openharness-harness-yaml-env.");
-    expect(argv[2]).not.toBe(persistent);
-    expect(readFileSync(persistent, "utf8")).toBe("SANDBOX_NAME=old\n");
+    // No derived artifact is created on the executing path either.
+    expect(existsSync(path.join(tmp, ".devcontainer", ".harness.yaml.env"))).toBe(false);
   });
 
   it("preserves repo-root-relative resolution for absolute and relative overrides", () => {
     const absolute = path.join(tmp, "absolute overlay.yml");
     writeFileSync(
-      path.join(tmp, "harness.yaml"),
-      "compose:\n  overrides:\n" +
-        "    - relative/overlay.yml\n" +
-        `    - "${absolute}"\n`,
+      path.join(tmp, "config.json"),
+      JSON.stringify({ composeOverrides: ["relative/overlay.yml", absolute] }),
     );
 
     const argv = printArgv();
     expect(argv).toContain(path.join(tmp, "relative/overlay.yml"));
     expect(argv).toContain(absolute);
+  });
+
+  it("migrates a leftover harness.yaml on first run, then never again", () => {
+    // The wrapper is the path every `make` and `oh` lifecycle verb goes
+    // through, so it is where an existing install gets carried over. Migration
+    // output goes to STDERR so --print-argv stays parseable — which is exactly
+    // why printArgv() asserts an empty stderr and cannot be used here.
+    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
+
+    const first = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
+      encoding: "utf8",
+    });
+    expect(first.status).toBe(0);
+    expect(first.stderr).toContain("SANDBOX_NAME=from-yaml");
+    expect(existsSync(path.join(tmp, "harness.yaml"))).toBe(false);
+    expect(existsSync(path.join(tmp, "harness.yaml.migrated"))).toBe(true);
+    expect(readFileSync(path.join(tmp, ".devcontainer", ".env"), "utf8")).toContain(
+      "SANDBOX_NAME=from-yaml",
+    );
+    // stdout is still nothing but argv.
+    expect(first.stdout.trimEnd().split("\n")).toEqual([
+      "docker",
+      "compose",
+      "--env-file",
+      path.join(tmp, ".devcontainer", ".env"),
+      "-f",
+      path.join(tmp, ".devcontainer", "docker-compose.yml"),
+      "config",
+    ]);
+
+    const second = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
+      encoding: "utf8",
+    });
+    expect(second.status).toBe(0);
+    expect(second.stderr).toBe("");
+    expect(second.stdout).toBe(first.stdout);
   });
 });
 
@@ -204,28 +231,16 @@ describe("scripts/docker-compose.sh", () => {
  */
 const TODAYS_SANDBOX_COMPOSE_ARGS = ["up", "-d", "--build"];
 
-/**
- * The harness-env file is a per-invocation `mktemp` path under `--print-argv`,
- * so two otherwise-identical runs differ at that one entry. Collapse it to a
- * placeholder before comparing argv arrays.
- */
-function normalizeHarnessEnv(argv: string[]): string[] {
-  return argv.map((a) => (a.includes("openharness-harness-yaml-env.") ? "<harness-env>" : a));
-}
-
 describe("execution target argv equivalence (issue #733)", () => {
   it("provision() expands to argv identical to today's, via --print-argv as the non-executing oracle", async () => {
     // Make the fixture an equipped repo: the adapter delegates to the VENDORED
-    // script, so copy the real one (plus the config reader it shells out to)
-    // rather than stubbing it — the oracle must be the genuine script.
+    // script, so copy the real one rather than stubbing it — the oracle must be
+    // the genuine script. No config reader is copied alongside it any more;
+    // the script parses no YAML and shells out to nothing.
     mkdirSync(path.join(tmp, ".oh", "scripts"), { recursive: true });
     const vendored = path.join(tmp, ".oh", "scripts", "docker-compose.sh");
     copyFileSync(SCRIPT, vendored);
-    copyFileSync(
-      path.join(REPO_ROOT, ".oh", "scripts", "harness-config.sh"),
-      path.join(tmp, ".oh", "scripts", "harness-config.sh"),
-    );
-    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
+    writeFileSync(path.join(tmp, ".devcontainer", ".env"), "SANDBOX_NAME=from-env\n");
 
     // Fake runner: capture what the adapter WOULD spawn; never spawn it.
     const calls: { cmd: string; args: string[] }[] = [];
@@ -254,7 +269,7 @@ describe("execution target argv equivalence (issue #733)", () => {
       });
       expect(result.stderr).toBe("");
       expect(result.status).toBe(0);
-      return normalizeHarnessEnv(result.stdout.trimEnd().split("\n"));
+      return result.stdout.trimEnd().split("\n");
     };
     const viaAdapter = expand(adapterComposeArgs);
     const viaToday = expand(TODAYS_SANDBOX_COMPOSE_ARGS);
@@ -265,7 +280,7 @@ describe("execution target argv equivalence (issue #733)", () => {
       "docker",
       "compose",
       "--env-file",
-      "<harness-env>",
+      path.join(tmp, ".devcontainer", ".env"),
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "up",
@@ -292,35 +307,42 @@ describe("compose helper wiring", () => {
     expect(text).not.toContain("COMPOSE_FILES=\"-f .devcontainer/docker-compose.yml\"");
   });
 
-  // REVERSED (was "installer keeps host defaults out of tracked harness.yaml").
-  // The installer used to write every non-secret answer to .devcontainer/.env
-  // while its own closing text named harness.yaml as the file that wins — so the
-  // user's answers landed in the LOSING file. Compose tolerated it (it falls back
-  // to .env for every overlay decision); the `oh` CLI does not, because it
-  // resolves sandbox.name and install.* from harness.yaml only. Non-secrets now
-  // go to harness.yaml, which both doors read.
-  it("installer writes non-secret answers to harness.yaml, the file that wins", () => {
+  // REVERSED TWICE. The installer first wrote every non-secret answer to
+  // .devcontainer/.env while naming harness.yaml as the file that wins, so the
+  // answers landed in the LOSING file; that was fixed by routing them to
+  // harness.yaml. harness.yaml is now gone, and .env is the file BOTH doors
+  // read — so the answers come back here, and this time the two agree.
+  it("installer writes every answer to .devcontainer/.env, and the config writes ALWAYS run", () => {
     const text = readFileSync(INSTALL, "utf8");
-    expect(text).toContain("Existing .devcontainer/.env preserved");
-    // The single line editor, respecting harness-config.sh's awk grammar.
-    expect(text).toContain("_yaml_set() {");
-    expect(text).toContain("_cfg_set sandbox name       SANDBOX_NAME");
-    expect(text).toContain("_cfg_set git     user_name  GIT_USER_NAME");
-    // harness.yaml must be materialized BEFORE the prompts, or the answers have
+    // The single line editor, uncommenting the template line in place.
+    expect(text).toContain("_env_set() {");
+    expect(text).toContain("_env_set SANDBOX_NAME");
+    expect(text).toContain("_env_set GIT_USER_NAME");
+    expect(text).not.toContain("_yaml_set");
+    expect(text).not.toContain("_cfg_set");
+
+    // .env must be materialized BEFORE the prompts, or the answers have
     // nowhere to land.
-    expect(text.indexOf("Created harness.yaml from harness.yaml.example")).toBeLessThan(
-      text.indexOf("_cfg_set sandbox name"),
+    expect(text.indexOf("Created .devcontainer/.env from")).toBeLessThan(
+      text.indexOf("_env_set SANDBOX_NAME"),
     );
-    // Optional installs land as harness.yaml install.* keys, matching what
+
+    // THE REGRESSION THIS PINS: the config block used to sit inside
+    // `if [ ! -f .devcontainer/.env ]`, so re-running the installer over an
+    // existing install wrote nothing. With .env as the only surface that would
+    // be a total no-op. The existing-file branch must now only REPORT, never
+    // gate the writes that follow.
+    expect(text).toContain("Existing .devcontainer/.env preserved — updating keys in place");
+    expect(text).toContain("THE CONFIG WRITES ALWAYS RUN");
+
+    // Optional installs land as INSTALL_* keys, matching what
     // `oh harness install <name>` writes.
-    expect(text).toContain("_yaml_set install");
-    // Secrets stay in .devcontainer/.env, never in harness.yaml.
+    expect(text).toContain('_env_set "INSTALL_$1" true');
+
+    // A pre-0.4.0 harness.yaml is carried over exactly once.
+    expect(text).toContain("migrate-harness-yaml.sh");
+
+    // Secrets live in the same file, and no key writes one by another name.
     expect(text).toContain("GH_TOKEN=");
-    expect(text).not.toContain("_yaml_set sandbox gh_token");
-    // DOCKER_SOCKET is the ONE documented non-secret exception: the VS Code
-    // "Reopen in Container" path loads the compose file directly and cannot read
-    // harness.yaml, so a socket opt-in recorded only there would be invisible.
-    expect(text).toContain("DELIBERATE EXCEPTION");
-    expect(text).toContain("printf 'DOCKER_SOCKET=true\\n' >> \"$REPO_DIR/.devcontainer/.env\"");
   });
 });

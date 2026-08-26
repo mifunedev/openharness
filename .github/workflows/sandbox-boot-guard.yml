@@ -15,7 +15,7 @@ on:
       - ".oh/scripts/sandbox-boot-smoke.sh"
       - ".oh/scripts/harness-config.sh"
       - "Makefile"
-      - "harness.yaml.example"
+      - ".devcontainer/.example.env"
       - ".dockerignore"
       - ".github/workflows/sandbox-boot-guard.yml"
   pull_request:
@@ -28,7 +28,7 @@ on:
       - ".oh/scripts/sandbox-boot-smoke.sh"
       - ".oh/scripts/harness-config.sh"
       - "Makefile"
-      - "harness.yaml.example"
+      - ".devcontainer/.example.env"
       - ".dockerignore"
       - ".github/workflows/sandbox-boot-guard.yml"
 

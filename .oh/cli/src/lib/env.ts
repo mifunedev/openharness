@@ -65,11 +65,22 @@ export function upsertEnvFile(
     output += appended.join("\n") + "\n";
   }
 
+  writeEnvFile(envPath, output);
+}
+
+/**
+ * Atomic 0600 write of a whole env file: temp file in the same directory,
+ * fsync, then rename. Exported because `oh init`'s wizard composes its content
+ * in memory (through the `setKeyInEnv` line editor, so template lines are
+ * uncommented in place) and must land it with the same durability and mode as
+ * `upsertEnvFile` — the file can hold secrets on either path.
+ */
+export function writeEnvFile(envPath: string, content: string): void {
   const tmpPath = `${envPath}.tmp.${process.pid}`;
   let fd: number | undefined;
   try {
     fd = openSync(tmpPath, "w", 0o600);
-    writeFileSync(tmpPath, output, "utf8");
+    writeFileSync(tmpPath, content, "utf8");
     fsyncSync(fd);
     closeSync(fd);
     fd = undefined;

@@ -94,7 +94,7 @@ persists nothing, so whichever name wins, it stays correct.
 ## What this does not do
 
 - It does not change how the sandbox boots. No runtime is selected.
-- It does not write `harness.yaml`, and adds no Dockerfile build arg. A build arg
+- It writes no configuration key, and adds no Dockerfile build arg. A build arg
   would bake a guaranteed-failing install into every image (see
   [MicroSandbox](microsandbox.md)).
 - It does not rebuild or restart the sandbox.

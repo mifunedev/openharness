@@ -36,7 +36,7 @@ templates are committed.
 
 - **Mechanism:** [`.gitignore`](../../.gitignore)
   - `**/.env*` (`.gitignore:2`) ignores every real env file, anywhere in the tree.
-  - `.devcontainer/.harness.yaml.env` (`.gitignore:7`) — the derived env artifact the Makefile generates from `harness.yaml`.
+  - `.devcontainer/.harness.yaml.env` (`.gitignore:7`) — a derived env artifact from before 0.4.0. Nothing generates it any more; the ignore line stays one release so a stale local copy is never committed.
   - `/.oh/config.json` (`.gitignore:8`) — host-local harness config.
   - `**/auth.json` and `**/.credentials.json` (`.gitignore:63-64`) — provider auth blobs.
 - **Template allowlist:** the *tracked* files are templates that hold no real secrets — e.g. [`.devcontainer/.example.env`](../../.devcontainer/.example.env) and `.claude/.example.env.claude`. The operator copies the template to the real (gitignored) `.devcontainer/.env`; `install.sh` writes host defaults there. The `.example.env` header spells this out.
@@ -123,7 +123,7 @@ event.
 Agents run inside a container, not on the host.
 
 - **Mechanism:** [`.devcontainer/docker-compose.yml`](../../.devcontainer/docker-compose.yml) + [`.devcontainer/devcontainer.json`](../../.devcontainer/devcontainer.json) + [`.devcontainer/Dockerfile`](../../.devcontainer/Dockerfile). The repo is bind-mounted (`docker-compose.yml:32`); the agent runs as the non-root `sandbox` user (`devcontainer.json:6`); auth lives in named volumes, not on the host FS.
-- **Caveat 1 — the Docker socket (OFF by default; opt-in).** `/var/run/docker.sock` is **no longer mounted by default** — it is an explicit opt-in via the [`docker-compose.docker-sock.yml`](../../.devcontainer/docker-compose.docker-sock.yml) overlay, applied only when `DOCKER_SOCKET` is truthy (`harness.yaml` `sandbox.docker_socket: true`, or `DOCKER_SOCKET=true` in `.devcontainer/.env`). Both interactive installers prompt for it and **default to off**: `install.sh` (the `curl | bash` path) and `oh sandbox` (the `oh` CLI / `get-oh.sh` path). Enabling it is a deliberate capability trade-off: **socket access is effectively host root** (an agent can start a privileged container that mounts the host FS), so the container becomes *isolation for convenience and blast-radius reduction, not a hard security boundary* against a hostile agent. Leave it off unless the agent genuinely must drive Docker; if it must and you still need a hard boundary, run a rootless/proxied Docker. **VS Code "Reopen in Container"** reads `docker-compose.yml` directly and bypasses the wrapper, so it never mounts the socket; to enable it there, add `docker-compose.docker-sock.yml` to `dockerComposeFile` in [`devcontainer.json`](../../.devcontainer/devcontainer.json).
+- **Caveat 1 — the Docker socket (OFF by default; opt-in).** `/var/run/docker.sock` is **no longer mounted by default** — it is an explicit opt-in via the [`docker-compose.docker-sock.yml`](../../.devcontainer/docker-compose.docker-sock.yml) overlay, applied only when `DOCKER_SOCKET=true` in `.devcontainer/.env`. Both interactive installers prompt for it and **default to off**: `install.sh` (the `curl | bash` path) and `oh sandbox` (the `oh` CLI / `get-oh.sh` path). Enabling it is a deliberate capability trade-off: **socket access is effectively host root** (an agent can start a privileged container that mounts the host FS), so the container becomes *isolation for convenience and blast-radius reduction, not a hard security boundary* against a hostile agent. Leave it off unless the agent genuinely must drive Docker; if it must and you still need a hard boundary, run a rootless/proxied Docker. **VS Code "Reopen in Container"** reads `docker-compose.yml` directly and bypasses the wrapper, so it never mounts the socket; to enable it there, add `docker-compose.docker-sock.yml` to `dockerComposeFile` in [`devcontainer.json`](../../.devcontainer/devcontainer.json).
 - **Caveat 2 — permissions bypassed inside.** `CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true` (`docker-compose.yml:48`) turns off the interactive permission engine inside the sandbox. This is the *reason* the §2 guards are implemented as hooks (which still fire) rather than relying on deny-list prompts (which are skipped).
 
 **Bottom line:** the sandbox reliably keeps agent work off the host
@@ -136,7 +136,7 @@ expose to whichever trust level you choose.
 - **Caveat 3 — the optional sshd overlay (RECOMMENDED to configure).** The base
   container publishes **no ports** and runs **no** SSH daemon. The opt-in overlay
   ([`.devcontainer/docker-compose.ssh.yml`](../../.devcontainer/docker-compose.ssh.yml),
-  enabled via `ssh.enabled` in `harness.yaml`) starts `sshd` and ships a **safe
+  enabled via `SANDBOX_SSH=true` in `.devcontainer/.env`) starts `sshd` and ships a **safe
   default posture**: host bind **loopback-only** (`127.0.0.1`), **public-key auth**,
   `PermitRootLogin no`, and password auth **off**. Two operator choices weaken that
   and are your responsibility: switching the bind to `0.0.0.0` (public interface),
@@ -152,7 +152,7 @@ expose to whichever trust level you choose.
 No agent merges its own work to the trunk.
 
 - **Doctrine:** [`AGENTS.md`](../../AGENTS.md) § The Workflow — the canonical path ends `… → merge (human) → reset|clean`, and the ownership table states the human owns *"merge — final gate, no auto-merge"* (`AGENTS.md:158`, mermaid `MERGE` node `AGENTS.md:147`). The runner resets; it never merges.
-- **No unattended merger exists:** the `autopilot` self-improvement loop and its rate-capping preflight were removed in 0.3.0. No scheduled agent now opens or promotes PRs unattended, so there is no automated path to a merge at all.
+- **No unattended merger exists:** the `autopilot` self-improvement loop and its rate-capping preflight were removed in 0.4.0. No scheduled agent now opens or promotes PRs unattended, so there is no automated path to a merge at all.
 - **RECOMMENDED (hard gate):** the ultimate enforcement of "no agent merges" is **GitHub branch protection** (required reviews / restricted merge) on `development`/`main`. That lives in repo settings, not this tree — configure it. Without it, "no auto-merge" rests on the agents' skill definitions, not a server-side block.
 
 ## 6. Harness-infra self-edit surface — **DOCTRINE (was ENFORCED)**
@@ -160,7 +160,7 @@ No agent merges its own work to the trunk.
 An agent editing this repo touches harness infrastructure, never sandbox
 application code.
 
-- **Status change (0.3.0):** this control was *mechanically* enforced by the
+- **Status change (0.4.0):** this control was *mechanically* enforced by the
   `autopilot` loop's `OWNED_PATHS` clean-state check and scoped restore. Both
   were removed with the loop. The boundary is now doctrine, not a running check.
 - **Boundary:** the path set is recorded in

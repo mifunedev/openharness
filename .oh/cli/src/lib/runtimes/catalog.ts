@@ -13,7 +13,7 @@
  * `sandbox.substrate` vs `sandbox.runtime` as an open decision owned by #731,
  * and this file writes neither — see below.
  *
- * WHY THIS TABLE DECLARES NO `harness.yaml` KEY, AND NO DOCKERFILE BUILD ARG:
+ * WHY THIS TABLE DECLARES NO `INSTALL_*` KEY, AND NO DOCKERFILE BUILD ARG:
  *
  *  - No config key. #806 § B1 states that settling the selector outside #731
  *    forks the `ExecutionTarget` seam at `../execution/index.ts`. So

@@ -1,0 +1,108 @@
+name: "Close linked issues on development merge"
+
+# GitHub applies a closing keyword automatically only when a pull request merges
+# into the repository default branch. The default branch here is `main` and every
+# pull request targets `development`, so `Closes #N` never fires on its own. This
+# workflow closes those issues instead, and leaves the default branch alone.
+#
+# The trigger is `pull_request_target`, not `pull_request`: a `pull_request` run
+# started by a fork receives a read-only token, so `issues: write` would be
+# unusable and a fork pull request would never close its issue.
+# `pull_request_target` runs the base-branch workflow with a writable token.
+# The usual `pull_request_target` hazard is running untrusted head-branch code.
+# This workflow never does that: `actions/checkout` takes its default ref, which
+# is the base branch, and the only author-controlled values (the title and the
+# body) reach the script through `env` as plain strings.
+
+on:
+  pull_request_target:
+    types:
+      - closed
+    branches:
+      - development
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: close-issues-on-development-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  close-linked-issues:
+    name: Close referenced issues
+    # A pull request that closes without merging must not close any issue.
+    if: github.event.pull_request.merged == true
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Close each referenced issue
+        uses: actions/github-script@v7
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          script: |
+            const path = require("path");
+            const { pathToFileURL } = require("url");
+            const parserPath = path.join(
+              process.env.GITHUB_WORKSPACE,
+              ".oh",
+              "scripts",
+              "closing-keywords.mjs",
+            );
+            const { parseClosingRefs } = await import(pathToFileURL(parserPath).href);
+
+            const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+            const prNumber = Number(process.env.PR_NUMBER);
+            if (!Number.isSafeInteger(prNumber) || prNumber <= 0) {
+              throw new Error(`invalid pull request number: ${process.env.PR_NUMBER}`);
+            }
+
+            const issueNumbers = parseClosingRefs(process.env.PR_TITLE, process.env.PR_BODY);
+            if (issueNumbers.length === 0) {
+              core.info(`PR #${prNumber} carries no closing keyword. Nothing to close.`);
+              return;
+            }
+            core.info(`PR #${prNumber} references: ${issueNumbers.map((n) => `#${n}`).join(", ")}`);
+
+            // One bad reference must not hide the rest, so collect the failures
+            // and report them after every issue has had its turn.
+            const failures = [];
+
+            for (const issue_number of issueNumbers) {
+              try {
+                const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number });
+
+                if (issue.pull_request) {
+                  core.info(`Skipping #${issue_number}: it is a pull request, not an issue.`);
+                  continue;
+                }
+                if (issue.state === "closed") {
+                  core.info(`Skipping #${issue_number}: already closed.`);
+                  continue;
+                }
+
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number,
+                  state: "closed",
+                  state_reason: "completed",
+                });
+                core.info(`Closed #${issue_number} as completed (merged in #${prNumber}).`);
+              } catch (error) {
+                failures.push(`#${issue_number}: ${error.message}`);
+              }
+            }
+
+            if (failures.length > 0) {
+              throw new Error(`failed to close ${failures.length} issue(s): ${failures.join("; ")}`);
+            }

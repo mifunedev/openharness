@@ -74,7 +74,7 @@ function buildEquippedRepo(
   }
 
   const project = opts.project ?? {
-    "harness.yaml": "name: my-harness\n",
+    ".devcontainer/.env": "SANDBOX_NAME=my-harness\n",
     "src/app.ts": "console.log('app');\n",
   };
   for (const [rel, content] of Object.entries(project)) {
@@ -162,7 +162,7 @@ describe("runUpdate", () => {
     });
 
     // Capture project files + top-level dir listing before.
-    const harnessBefore = readFile(target, "harness.yaml");
+    const envBefore = readFile(target, ".devcontainer/.env");
     const appBefore = readFile(target, "src/app.ts");
     const topBefore = fs.readdirSync(target).sort();
     // Snapshot the dedicated base dir (parent of <target>) so we can prove
@@ -175,7 +175,7 @@ describe("runUpdate", () => {
     expect(rc).toBe(0);
 
     // Project files byte-identical.
-    expect(readFile(target, "harness.yaml")).toBe(harnessBefore);
+    expect(readFile(target, ".devcontainer/.env")).toBe(envBefore);
     expect(readFile(target, "src/app.ts")).toBe(appBefore);
 
     // No NEW top-level entry in <target> (only .oh/ contents should change).

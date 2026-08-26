@@ -8,7 +8,7 @@ OpenCode is a terminal coding agent that can run interactively or execute one-sh
 
 ## Install (optional)
 
-The shortest path is the CLI, which sets the `harness.yaml` flag **and**
+The shortest path is the CLI, which sets the `.devcontainer/.env` flag **and**
 installs into the already-running sandbox without a rebuild:
 
 ```bash
@@ -20,7 +20,7 @@ See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only
 
 ### Manual path
 
-Enable OpenCode in `harness.yaml`:
+Enable OpenCode in `.devcontainer/.env`:
 
 ```yaml
 install:

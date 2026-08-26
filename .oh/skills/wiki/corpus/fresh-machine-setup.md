@@ -31,7 +31,7 @@ confidence: provisional
 ## Summary
 Validated 2026-07-01 on a bare OVHcloud host: the path from a fresh Linux machine to an
 authenticated multi-agent Open Harness sandbox is 13 ordered steps. Steps 1–4 run on the
-**host** (install deps, clone, edit `harness.yaml`, bring the sandbox up); steps 5–13 run
+**host** (install deps, clone, edit `.devcontainer/.env`, bring the sandbox up); steps 5–13 run
 **inside the sandbox** (GitHub SSH auth, private origin + upstream, per-harness auth, Slack,
 gateway run/verify). Each fact has one canonical doc home, and `quickstart.md` is the single
 self-sufficient human walkthrough.
@@ -39,9 +39,10 @@ self-sufficient human walkthrough.
 ## Detail
 Host prerequisites are Docker (+ Compose), Git, and **make** — the `make sandbox` / `make
 shell` wrappers make `make` non-optional (a long-standing "Docker + Git only" doc gap, now
-fixed). Configuration lives in `harness.yaml` (`sandbox.*`, `git.user_name` /
-`git.user_email`, optional installs); secrets stay in the gitignored devcontainer env file,
-never in `harness.yaml`.
+fixed). Configuration lives in `.devcontainer/.env` (`SANDBOX_NAME`, `TZ`, `GIT_USER_NAME` /
+`GIT_USER_EMAIL`, optional `INSTALL_*` keys) — since 0.4.0 the ONE config surface, read on
+every path including VS Code "Reopen in Container". Secrets live in the same gitignored
+file; nothing is committed.
 
 The recommended repo topology is **clone-and-own**: clone upstream, create a *private* repo
 as `origin`, keep `mifunedev/openharness` as `upstream`. Both remotes use SSH URLs so pushes
@@ -76,7 +77,7 @@ live for this entry. Commands themselves live in `quickstart.md`, not here.
 flowchart TD
   subgraph Host
     S1[1 install docker/git/make] --> S2[2 clone to ~/.openharness]
-    S2 --> S3[3 edit harness.yaml]
+    S2 --> S3[3 edit .devcontainer/.env]
     S3 --> S4[4 make sandbox / make shell]
   end
   subgraph Sandbox

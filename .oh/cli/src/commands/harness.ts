@@ -7,11 +7,12 @@ import { spawnRunner, type LifecycleRunner } from "../lib/execution/runner.js";
 import type { ExecutionTarget } from "../lib/execution/target.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import {
-  harnessYamlPath,
+  envFilePath,
+  installEnvKey,
   isInstallFlagEnabled,
-  seedHarnessYaml,
+  seedEnvFile,
   setInstallFlag,
-} from "../lib/harness-yaml.js";
+} from "../lib/env-file.js";
 import {
   findHarness,
   harnessIds,
@@ -24,15 +25,15 @@ import { configuredContainerName, DEFAULT_CONTAINER_NAME } from "./lifecycle.js"
  * `oh harness <list|install|status>` — install and inspect agent CLI harnesses.
  *
  * THE PROBLEM THIS SOLVES: adding an optional harness used to mean knowing that
- * `harness.yaml` has an `install:` section, knowing the key is `install.grok_build`
- * while the doc slug is `grok-build`, uncommenting a line by hand in a file whose
- * parser accepts a two-space indent and nothing else, and then running
+ * `.devcontainer/.env` carries `INSTALL_*` keys, knowing the key is
+ * `INSTALL_GROK_BUILD` while the doc slug is `grok-build`, uncommenting a line
+ * by hand in a gitignored file, and then running
  * `make destroy && make sandbox` — a full image rebuild that throws the container
  * away for what is a one-package operation.
  *
  * THE INSTALL IS BOTH HALVES, deliberately (PRD decision D2):
  *
- *   1. persist `install.<key>: true` in harness.yaml — cheap, always possible,
+ *   1. persist `INSTALL_<KEY>=true` in `.devcontainer/.env` — cheap, always possible,
  *      and the reason the choice survives the next rebuild;
  *   2. install into the ALREADY-RUNNING container, so it is usable now.
  *
@@ -66,9 +67,9 @@ export interface HarnessOptions {
 }
 
 export interface HarnessInstallOptions extends HarnessOptions {
-  /** Only set the harness.yaml flag; do no container work. */
+  /** Only set the `.devcontainer/.env` flag; do no container work. */
   persistOnly?: boolean;
-  /** Live-install only; leave harness.yaml untouched. */
+  /** Live-install only; leave `.devcontainer/.env` untouched. */
   noPersist?: boolean;
 }
 
@@ -77,7 +78,7 @@ interface HarnessState {
   id: string;
   title: string;
   kind: string;
-  /** `install.<key>` reads `true` in harness.yaml. `null` when it has no key. */
+  /** `INSTALL_<KEY>` reads `true` in `.devcontainer/.env`. `null` when it has no key. */
   enabled: boolean | null;
   /** Binary present in the container, or `null` when the container is unreachable. */
   installed: boolean | null;
@@ -91,10 +92,10 @@ function isReachable(status: string): boolean {
 
 /**
  * Resolve the sandbox `ExecutionTarget`, reusing `oh shell`'s container-name
- * precedence (harness.yaml `sandbox.name` > the default) instead of forking it.
+ * precedence (`.env` `SANDBOX_NAME` > the default) instead of forking it.
  */
 function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
-  const name = configuredContainerName(root, run) ?? DEFAULT_CONTAINER_NAME;
+  const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
   return resolveExecutionTarget({ projectRoot: root, container: name, run });
 }
 
@@ -139,7 +140,7 @@ async function collectStates(
     if (!(err instanceof ExecutionSpawnError)) throw err;
   }
 
-  const configured = existsSync(harnessYamlPath(root));
+  const configured = existsSync(envFilePath(root));
   const states: HarnessState[] = [];
   for (const entry of entries) {
     states.push({
@@ -149,7 +150,7 @@ async function collectStates(
       enabled:
         entry.harnessKey === undefined
           ? null
-          : configured && isInstallFlagEnabled(root, entry.harnessKey, run),
+          : configured && isInstallFlagEnabled(root, entry.harnessKey),
       installed: reachable ? await probeInstalled(target, entry) : null,
       docs: entry.docsPath,
     });
@@ -250,21 +251,22 @@ export async function runHarnessInstall(
   // ---- 1. persist -------------------------------------------------------
   if (!opts.noPersist) {
     if (entry.harnessKey === undefined) {
-      // `default` and `on-demand` harnesses have no `install:` key. Say so
-      // rather than inventing one — a fabricated key would be silently ignored
-      // by harness-config.sh's allowlist and mislead the next reader.
+      // `default` and `on-demand` harnesses have no `INSTALL_*` key. Say so
+      // rather than inventing one — a fabricated key would be interpolated by
+      // nothing in docker-compose.yml and mislead the next reader.
       io.stdout(
-        `${entry.id}: ${entry.kind} harness — no harness.yaml install key, nothing to persist\n`,
+        `${entry.id}: ${entry.kind} harness — no .devcontainer/.env install key, nothing to persist\n`,
       );
     } else {
-      if (seedHarnessYaml(root)) {
-        io.stdout("create harness.yaml (from harness.yaml.example)\n");
+      if (seedEnvFile(root)) {
+        io.stdout("create .devcontainer/.env (from .devcontainer/.example.env)\n");
       }
+      const key = installEnvKey(entry.harnessKey);
       const outcome = setInstallFlag(root, entry.harnessKey);
       io.stdout(
         outcome === "already-set"
-          ? `harness.yaml: install.${entry.harnessKey} already true\n`
-          : `harness.yaml: set install.${entry.harnessKey}: true (${outcome})\n`,
+          ? `.devcontainer/.env: ${key} already true\n`
+          : `.devcontainer/.env: set ${key}=true (${outcome})\n`,
       );
     }
   }
@@ -314,7 +316,7 @@ export async function runHarnessInstall(
     io.stderr(
       `oh harness: installing ${entry.id} failed (exit ${r.exitCode}).\n` +
         (entry.harnessKey !== undefined && !opts.noPersist
-          ? `harness.yaml keeps install.${entry.harnessKey}: true — the next image build will install it.\n`
+          ? `.devcontainer/.env keeps ${installEnvKey(entry.harnessKey)}=true — the next image build will install it.\n`
           : ""),
     );
     return r.exitCode;

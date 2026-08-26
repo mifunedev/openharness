@@ -37,8 +37,8 @@ const {
 
 // ---------------------------------------------------------------------------
 // Test infrastructure — mkdtemp fixtures only, injected runners only. Never the
-// real worktree root (its harness.yaml.example would fire the sandbox seed) and
-// never a real docker/bash subprocess.
+// real worktree root (its .devcontainer/.example.env would fire the sandbox
+// seed) and never a real docker/bash subprocess.
 // ---------------------------------------------------------------------------
 
 const cleanups: string[] = [];
@@ -106,7 +106,8 @@ describe("runSandbox", () => {
   it("delegates the EXACT vendored argv with inherited stdio and returns the child's exit code", async () => {
     const root = makeRepo();
     const script = addScript(root, "docker-compose.sh");
-    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  name: x\n");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(join(root, ".devcontainer", ".env"), "SANDBOX_NAME=x\nDOCKER_SOCKET=false\n");
     const { calls, run } = makeRunner([{ status: 0 }]);
     const { out, io } = makeIo();
 
@@ -118,8 +119,8 @@ describe("runSandbox", () => {
         opts: { stdio: "inherit" },
       },
     ]);
-    // harness.yaml already existed → no seed, no operation-log line.
-    // No io.ask injected + non-TTY → the Docker-socket prompt never fires.
+    // .devcontainer/.env already existed → no seed, no operation-log line.
+    // DOCKER_SOCKET already set → the Docker-socket prompt never fires either.
     expect(out).toEqual([]);
   });
 
@@ -130,38 +131,44 @@ describe("runSandbox", () => {
     expect(await runSandbox({ cwd: root, run }, makeIo().io)).toBe(17);
   });
 
-  it("seeds harness.yaml from harness.yaml.example with exactly one operation-log line", async () => {
+  it("seeds .devcontainer/.env from .example.env with exactly one operation-log line", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
-    writeFileSync(join(root, "harness.yaml.example"), "sandbox:\n  name: seeded\n");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(join(root, ".devcontainer", ".example.env"), "SANDBOX_NAME=seeded\nDOCKER_SOCKET=false\n");
     const { run } = makeRunner();
     const { out, io } = makeIo();
 
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
-    expect(readFileSync(join(root, "harness.yaml"), "utf8")).toBe("sandbox:\n  name: seeded\n");
-    expect(out).toEqual(["create harness.yaml (from harness.yaml.example)\n"]);
+    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe(
+      "SANDBOX_NAME=seeded\nDOCKER_SOCKET=false\n",
+    );
+    expect(out).toEqual(["create .devcontainer/.env (from .devcontainer/.example.env)\n"]);
   });
 
-  it("seed is a no-op when harness.yaml already exists (never overwritten, no log line)", async () => {
+  it("seed is a no-op when .devcontainer/.env already exists (never overwritten, no log line)", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
-    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  name: mine\n");
-    writeFileSync(join(root, "harness.yaml.example"), "sandbox:\n  name: template\n");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(join(root, ".devcontainer", ".env"), "SANDBOX_NAME=mine\nDOCKER_SOCKET=false\n");
+    writeFileSync(join(root, ".devcontainer", ".example.env"), "SANDBOX_NAME=template\n");
     const { out, io } = makeIo();
 
     expect(await runSandbox({ cwd: root, run: makeRunner().run }, io)).toBe(0);
-    expect(readFileSync(join(root, "harness.yaml"), "utf8")).toBe("sandbox:\n  name: mine\n");
+    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe(
+      "SANDBOX_NAME=mine\nDOCKER_SOCKET=false\n",
+    );
     expect(out).toEqual([]);
   });
 
-  it("seed is a no-op when no harness.yaml.example exists (oh init-equipped repos)", async () => {
+  it("seed is a no-op when no .example.env exists (nothing to copy from)", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     const { calls, run } = makeRunner();
     const { out, io } = makeIo();
 
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
-    expect(existsSync(join(root, "harness.yaml"))).toBe(false);
+    expect(existsSync(join(root, ".devcontainer", ".env"))).toBe(false);
     expect(out).toEqual([]);
     expect(calls).toHaveLength(1); // compose still runs
   });
@@ -250,13 +257,43 @@ describe("runSandbox", () => {
     expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe("DOCKER_SOCKET=false\n");
   });
 
-  it("does NOT prompt when sandbox.docker_socket is set in harness.yaml", async () => {
+  it("treats a COMMENTED template line as unconfigured and still prompts", async () => {
+    // The seeded .env ships `# DOCKER_SOCKET=false`. A commented line is
+    // documentation, not a standing choice — reading it as one would silence
+    // the security prompt for every fresh install.
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(join(root, ".devcontainer", ".env"), "# DOCKER_SOCKET=false\n");
+    const { run } = makeRunner();
+    let asked = 0;
+    const io: LifecycleIO = {
+      stdout: () => {},
+      stderr: () => {},
+      ask: async () => {
+        asked++;
+        return "y";
+      },
+    };
+
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(asked).toBe(1);
+    // Uncommented IN PLACE, not appended: one line in, one line out.
+    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe("DOCKER_SOCKET=true\n");
+  });
+
+  it("reads config with ZERO subprocesses — only compose is spawned", async () => {
+    // harness.yaml needed a vendored parser, so every config read was a
+    // subprocess. `.env` is read in-process, so the ONLY spawn left is compose
+    // itself. This is the assertion that the parser shell-out is gone.
     const root = makeRepo();
     const composeScript = addScript(root, "docker-compose.sh");
-    addScript(root, "harness-config.sh");
-    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  docker_socket: true\n");
-    // call 0 = harness-config get (returns "true"); call 1 = compose up.
-    const { calls, run } = makeRunner([{ status: 0, stdout: "true\n" }, { status: 0 }]);
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(
+      join(root, ".devcontainer", ".env"),
+      "DOCKER_SOCKET=true\nSANDBOX_NAME=configured\nOH_SANDBOX_IMAGE=ghcr.io/x/y:cfg\n",
+    );
+    const { calls, run } = makeRunner([{ status: 0 }]);
     let asked = 0;
     const io: LifecycleIO = {
       stdout: () => {},
@@ -269,17 +306,12 @@ describe("runSandbox", () => {
 
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(asked).toBe(0);
-    expect(calls[0].args).toEqual([
-      join(root, ".oh", "scripts", "harness-config.sh"),
-      "get",
-      "sandbox.docker_socket",
-      join(root, "harness.yaml"),
-    ]);
-    expect(calls[1].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--build"]);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--build"]);
   });
 
   // ── Prebuilt-image mode (--image / --no-build) ───────────────────────────
-  it("--image (bare, no harness.yaml image) → up -d --no-build + OH_SANDBOX_IMAGE=<default>", async () => {
+  it("--image (bare, no OH_SANDBOX_IMAGE) → up -d --no-build + OH_SANDBOX_IMAGE=<default>", async () => {
     const root = makeRepo();
     const script = addScript(root, "docker-compose.sh");
     const { calls, run } = makeRunner([{ status: 0 }]);
@@ -294,45 +326,37 @@ describe("runSandbox", () => {
     expect(out.join("")).toContain(`image mode: ${DEFAULT_SANDBOX_IMAGE}`);
   });
 
-  it("--image=<ref> wins over harness.yaml sandbox.image (explicit ref → no image lookup)", async () => {
+  it("--image=<ref> wins over .env OH_SANDBOX_IMAGE (explicit ref short-circuits the read)", async () => {
     const root = makeRepo();
     const composeScript = addScript(root, "docker-compose.sh");
-    addScript(root, "harness-config.sh");
-    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  image: ghcr.io/x/y:pinned\n");
-    // call 0 = the docker-socket opt-in lookup (fires whenever both files exist,
-    // returns empty → unconfigured, non-TTY → no prompt); call 1 = compose up.
-    // No sandbox.image lookup happens — the explicit ref short-circuits it.
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(
+      join(root, ".devcontainer", ".env"),
+      "OH_SANDBOX_IMAGE=ghcr.io/x/y:pinned\nDOCKER_SOCKET=false\n",
+    );
     const { calls, run } = makeRunner([{ status: 0 }]);
     const ref = "ghcr.io/mifunedev/openharness:2026.7.5";
 
     expect(await runSandbox({ cwd: root, run, image: true, imageRef: ref }, makeIo().io)).toBe(0);
-    expect(calls).toHaveLength(2);
-    expect(calls.some((c) => c.args.includes("sandbox.image"))).toBe(false);
-    expect(calls[1].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--no-build"]);
-    expect(calls[1].opts.env?.OH_SANDBOX_IMAGE).toBe(ref);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--no-build"]);
+    expect(calls[0].opts.env?.OH_SANDBOX_IMAGE).toBe(ref);
   });
 
-  it("--image (bare) reads harness.yaml sandbox.image via the vendored parser", async () => {
+  it("--image (bare) reads OH_SANDBOX_IMAGE from .devcontainer/.env", async () => {
     const root = makeRepo();
     const composeScript = addScript(root, "docker-compose.sh");
-    const configScript = addScript(root, "harness-config.sh");
-    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  image: ghcr.io/x/y:configured\n");
-    // call 0 = docker-socket opt-in lookup (empty → unconfigured); call 1 =
-    // sandbox.image lookup → the configured ref; call 2 = compose up.
-    const { calls, run } = makeRunner([
-      { status: 0 },
-      { status: 0, stdout: "ghcr.io/x/y:configured\n" },
-      { status: 0 },
-    ]);
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(
+      join(root, ".devcontainer", ".env"),
+      "OH_SANDBOX_IMAGE=ghcr.io/x/y:configured\nDOCKER_SOCKET=false\n",
+    );
+    const { calls, run } = makeRunner([{ status: 0 }]);
 
     expect(await runSandbox({ cwd: root, run, image: true }, makeIo().io)).toBe(0);
-    expect(calls[1]).toEqual({
-      cmd: "sh",
-      args: [configScript, "get", "sandbox.image", join(root, "harness.yaml")],
-      opts: { stdio: "capture" },
-    });
-    expect(calls[2].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--no-build"]);
-    expect(calls[2].opts.env?.OH_SANDBOX_IMAGE).toBe("ghcr.io/x/y:configured");
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--no-build"]);
+    expect(calls[0].opts.env?.OH_SANDBOX_IMAGE).toBe("ghcr.io/x/y:configured");
   });
 
   it("--no-build alone → up -d --no-build with NO OH_SANDBOX_IMAGE pinned", async () => {
@@ -353,10 +377,10 @@ describe("runSandbox", () => {
 // ---------------------------------------------------------------------------
 
 describe("runShell", () => {
-  it("positional container wins — no harness-config lookup even when configured", () => {
+  it("positional container wins — the .env value is not consulted", () => {
     const root = makeRepo();
-    addScript(root, "harness-config.sh");
-    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  name: configured\n");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(join(root, ".devcontainer", ".env"), "SANDBOX_NAME=configured\n");
     const { calls, run } = makeRunner([{ status: 0 }]);
 
     expect(runShell({ cwd: root, run, container: "custom-box" }, makeIo().io)).toBe(0);
@@ -369,41 +393,36 @@ describe("runShell", () => {
     ]);
   });
 
-  it("reads sandbox.name via harness-config.sh with the EXPLICIT <root>/harness.yaml path, from a nested cwd", () => {
+  it("reads SANDBOX_NAME from <root>/.devcontainer/.env, from a nested cwd", () => {
+    // The read is anchored to the resolved project ROOT, never the caller's
+    // CWD. A CWD-relative lookup would make every value look unset from a
+    // subdirectory — the contract `readEnvValue` documents.
     const root = makeRepo();
-    const configScript = addScript(root, "harness-config.sh");
-    writeFileSync(join(root, "harness.yaml"), "sandbox:\n  name: my-sandbox\n");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(join(root, ".devcontainer", ".env"), "SANDBOX_NAME=my-sandbox\n");
     const nested = join(root, "pkg", "web");
     mkdirSync(nested, { recursive: true });
-    // Captured-stdout lookup first, then the inherit-stdio docker exec.
-    const { calls, run } = makeRunner([
-      { status: 0, stdout: "my-sandbox\n" },
-      { status: 0 },
-    ]);
+    const { calls, run } = makeRunner([{ status: 0 }]);
 
     expect(runShell({ cwd: nested, run }, makeIo().io)).toBe(0);
-    expect(calls[0]).toEqual({
-      cmd: "sh",
-      args: [configScript, "get", "sandbox.name", join(root, "harness.yaml")],
-      opts: { stdio: "capture" },
-    });
-    expect(calls[1].cmd).toBe("docker");
-    expect(calls[1].args).toEqual(["exec", "-it", "-u", "sandbox", "my-sandbox", "zsh"]);
+    // No parser subprocess: the docker exec is the ONLY call.
+    expect(calls).toHaveLength(1);
+    expect(calls[0].cmd).toBe("docker");
+    expect(calls[0].args).toEqual(["exec", "-it", "-u", "sandbox", "my-sandbox", "zsh"]);
   });
 
-  it(`falls back to "${DEFAULT_CONTAINER_NAME}" when sandbox.name is unset (empty lookup output)`, () => {
+  it(`falls back to "${DEFAULT_CONTAINER_NAME}" when SANDBOX_NAME is unset`, () => {
     const root = makeRepo();
-    addScript(root, "harness-config.sh");
-    writeFileSync(join(root, "harness.yaml"), "git:\n  user_name: someone\n");
-    const { calls, run } = makeRunner([{ status: 0, stdout: "" }, { status: 0 }]);
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(join(root, ".devcontainer", ".env"), "GIT_USER_NAME=someone\n");
+    const { calls, run } = makeRunner([{ status: 0 }]);
 
     expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
-    expect(calls[1].args[4]).toBe(DEFAULT_CONTAINER_NAME);
+    expect(calls[0].args[4]).toBe(DEFAULT_CONTAINER_NAME);
   });
 
-  it(`skips the lookup entirely and uses "${DEFAULT_CONTAINER_NAME}" when harness.yaml is absent`, () => {
+  it(`uses "${DEFAULT_CONTAINER_NAME}" when .devcontainer/.env is absent`, () => {
     const root = makeRepo();
-    addScript(root, "harness-config.sh");
     const { calls, run } = makeRunner([{ status: 0 }]);
 
     expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
@@ -619,7 +638,7 @@ describe("help surfaces", () => {
     const sandbox = captureStdout(printSandboxHelp);
     expect(sandbox).toContain("oh sandbox");
     expect(sandbox).toContain("docker-compose.sh --repo-dir <root> up -d --build");
-    expect(sandbox).toContain("harness.yaml.example");
+    expect(sandbox).toContain(".devcontainer/.example.env");
 
     const shell = captureStdout(printShellHelp);
     expect(shell).toContain("oh shell [container]");

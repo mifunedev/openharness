@@ -378,229 +378,162 @@ fi
 
 mkdir -p "$REPO_DIR/.devcontainer"
 
-# ─── Materialize harness.yaml BEFORE configuring ─────────────────────
-# The installer's non-secret answers are written INTO this file, so it has to
-# exist first. harness.yaml is gitignored; the .example is tracked and ships
-# fully commented. Peer impl: Makefile harness-config target, seedHarnessYaml().
-if [ ! -f "$REPO_DIR/harness.yaml" ]; then
-  if [ -f "$REPO_DIR/harness.yaml.example" ]; then
-    cp "$REPO_DIR/harness.yaml.example" "$REPO_DIR/harness.yaml"
-    ok "Created harness.yaml from harness.yaml.example"
+# ─── Materialize .devcontainer/.env BEFORE configuring ───────────────
+# The installer's answers are written INTO this file, so it has to exist first.
+# .devcontainer/.env is gitignored; the .example is tracked, ships fully
+# commented, and is the schema document for every key. Peer impl: seedEnvFile()
+# in .oh/cli/src/lib/env-file.ts.
+ENV_FILE="$REPO_DIR/.devcontainer/.env"
+mkdir -p "$REPO_DIR/.devcontainer"
+if [ ! -f "$ENV_FILE" ]; then
+  if [ -f "$REPO_DIR/.devcontainer/.example.env" ]; then
+    cp "$REPO_DIR/.devcontainer/.example.env" "$ENV_FILE"
+    chmod 600 "$ENV_FILE" 2>/dev/null || true
+    ok "Created .devcontainer/.env from .devcontainer/.example.env"
   else
-    warn "harness.yaml.example missing — sandbox will boot from .devcontainer/.env only."
+    : > "$ENV_FILE"
+    chmod 600 "$ENV_FILE" 2>/dev/null || true
+    warn ".devcontainer/.example.env missing — sandbox will boot from compose defaults only."
+  fi
+  __ENV_WAS_NEW=1
+else
+  ok "Existing .devcontainer/.env preserved — updating keys in place"
+  __ENV_WAS_NEW=0
+fi
+
+# Carry over a harness.yaml left by a pre-0.4.0 install, exactly once. The
+# migrator is self-contained and a no-op when there is no harness.yaml.
+if [ -f "$REPO_DIR/harness.yaml" ] && [ -f "$REPO_DIR/.oh/scripts/migrate-harness-yaml.sh" ]; then
+  sh "$REPO_DIR/.oh/scripts/migrate-harness-yaml.sh" "$REPO_DIR"
+fi
+
+# Set one "KEY=value" line in .devcontainer/.env, UNCOMMENTING the template's
+# commented line in place so the surrounding prose keeps describing a key that
+# is now live. Appends only when the key is named nowhere. Same discipline as
+# setKeyInEnv() in the CLI and _env_set in migrate-harness-yaml.sh.
+_env_set() {   # $1 = key, $2 = value
+  [ -n "${2:-}" ] || return 0
+  awk -v key="$1" -v val="$2" '
+    BEGIN { done = 0 }
+    !done && $0 ~ "^" key "=" { print key "=" val; done = 1; next }
+    !done && $0 ~ "^[[:space:]]*#[[:space:]]*" key "=" { print key "=" val; done = 1; next }
+    { print }
+    END { if (!done) print key "=" val }
+  ' "$ENV_FILE" > "$ENV_FILE.oh-tmp" || { rm -f "$ENV_FILE.oh-tmp"; return 1; }
+  mv "$ENV_FILE.oh-tmp" "$ENV_FILE" || return 1
+  ok ".devcontainer/.env: $1"
+}
+
+# THE CONFIG WRITES ALWAYS RUN. They used to sit inside `if [ ! -f .env ]`, so
+# re-running the installer over an existing install wrote nothing. With .env as
+# the only configuration surface that would have made a re-run a total no-op.
+# Every write below is idempotent and edits one line, so an existing file keeps
+# its hand edits everywhere the installer does not have an answer.
+
+# Portable in-place sed: GNU sed uses -i, BSD/macOS requires -i ''
+_sedi() {
+  if sed --version >/dev/null 2>&1; then
+    sed -i "$@"
+  else
+    sed -i '' "$@"
+  fi
+}
+# Escape sed replacement-string special chars for | delimiter (|, &, \)
+_sed_val() {
+  printf '%s' "$1" \
+    | sed 's/\\/\\\\/g' \
+    | sed 's/|/\\|/g' \
+    | sed 's/&/\\&/g'
+}
+
+# Detect host values
+__TZ="$(cat /etc/timezone 2>/dev/null || echo America/Los_Angeles)"
+__GIT_NAME="$(git config --get user.name 2>/dev/null || true)"
+__GIT_EMAIL="$(git config --get user.email 2>/dev/null || true)"
+
+_env_set SANDBOX_NAME   "$SANDBOX_NAME"
+# Host detections only seed a FRESH file. On a re-run they would silently
+# overwrite a value the operator changed by hand, which the one-line diff would
+# not make obvious.
+if [ "$__ENV_WAS_NEW" = "1" ]; then
+  _env_set TZ             "$__TZ"
+  _env_set GIT_USER_NAME  "$__GIT_NAME"
+  _env_set GIT_USER_EMAIL "$__GIT_EMAIL"
+fi
+
+unset __TZ __GIT_NAME __GIT_EMAIL
+
+# ─── Auto-detect host gh token ────────────────────────────────────────
+__GH_AUTOCONFIGURED=0
+if command -v gh >/dev/null 2>&1 && ! grep -qE '^GH_TOKEN=.+' "$ENV_FILE"; then
+  if __GH_TOKEN_RAW="$(gh auth token 2>/dev/null)" && [ -n "$__GH_TOKEN_RAW" ]; then
+    banner "Detected host gh token"
+    if prompt_yn "Share host gh token with sandbox? (skips in-sandbox 'gh auth login')" y; then
+      __GHT_SAFE="$(_sed_val "$__GH_TOKEN_RAW")"
+      _sedi "s|^GH_TOKEN=.*|GH_TOKEN=${__GHT_SAFE}|" "$ENV_FILE"
+      ok "Wrote GH_TOKEN to .devcontainer/.env"
+      __GH_AUTOCONFIGURED=1
+      unset __GHT_SAFE
+    else
+      ok "Skipped — you'll run 'gh auth login' inside the sandbox"
+    fi
+    unset __GH_TOKEN_RAW
   fi
 fi
 
-# Uncomment (or overwrite) one "  key: value" line inside a top-level section of
-# harness.yaml, preserving the template's trailing "# ENV_VAR — description"
-# comment. Writes the grammar harness-config.sh parses: section header at column
-# 0, key at EXACTLY two-space indent. Returns non-zero if the write did not take,
-# so callers can fall back to .devcontainer/.env.
-_yaml_set() {   # $1 = section, $2 = key, $3 = value
-  __ys_f="$REPO_DIR/harness.yaml"
-  [ -f "$__ys_f" ] || return 1
-  # A '#' in the value cannot survive the parser's trailing-comment strip.
-  case "$3" in *'#'*) return 1 ;; esac
-  awk -v sect="$1" -v key="$2" -v val="$3" '
-    /^[a-zA-Z_][a-zA-Z0-9_]*:[[:space:]]*(#.*)?$/ {
-        cur = $0; sub(/:.*/, "", cur)
-    }
-    {
-        if (!done && cur == sect && $0 ~ "^[[:space:]]*#?[[:space:]]*" key ":") {
-            cmt = ""
-            if (match($0, /[[:space:]]#[^#]*$/)) cmt = substr($0, RSTART)
-            printf "  %s: %s%s\n", key, val, cmt
-            done = 1
-            next
-        }
-        print
-    }
-  ' "$__ys_f" > "$__ys_f.oh-tmp" 2>/dev/null || { rm -f "$__ys_f.oh-tmp"; return 1; }
-  mv "$__ys_f.oh-tmp" "$__ys_f" || return 1
-  # Verify through the real parser rather than trusting the rewrite.
-  [ "$(sh "$REPO_DIR/.oh/scripts/harness-config.sh" get "$1.$2" "$__ys_f" 2>/dev/null)" = "$3" ]
+# ─── Optional installs (extra agents/features — OFF by default) ──────
+# Each maps to an INSTALL_* build arg/env in .devcontainer/docker-compose.yml.
+# Enabling one rebuilds the image with that CLI; agent_browser also pulls
+# ~1 GB of Chromium. A pre-set INSTALL_* env var is honored (non-interactive
+# installs); otherwise we prompt — but only with a TTY, and --yes/--no keep
+# the lean default (nothing extra) rather than auto-enabling everything.
+banner "Optional installs (off by default)"
+_opt_install() {   # $1 = INSTALL_ suffix, $2 = human label
+  local __k="INSTALL_$1"
+  if [ "${!__k:-}" = "true" ]; then
+    _env_set "INSTALL_$1" true
+    return 0
+  fi
+  # Already enabled in an existing .env — leave the standing choice alone.
+  if grep -qE "^INSTALL_$1=true" "$ENV_FILE"; then
+    return 0
+  fi
+  if [ "$ASSUME_YES" = true ] || [ "$ASSUME_NO" = true ] || [ ! -r /dev/tty ]; then
+    return 0
+  fi
+  if prompt_yn "Install $2?" n; then
+    _env_set "INSTALL_$1" true
+  fi
 }
+_opt_install HERMES        "Hermes — Nous self-improving agent CLI"
+_opt_install OPENCODE      "OpenCode — OpenAI-OAuth terminal agent"
+_opt_install DEEPAGENTS    "DeepAgents — LangChain multi-provider agent"
+_opt_install GROK_BUILD    "Grok Build — xAI terminal agent"
+_opt_install AGENT_BROWSER "agent-browser + Chromium (~1 GB)"
 
-if [ -f "$REPO_DIR/.devcontainer/.env" ]; then
-  ok "Existing .devcontainer/.env preserved (delete it to regenerate)"
-else
-  # Detect host values for harness.yaml pre-population
-  __TZ="$(cat /etc/timezone 2>/dev/null || echo America/Los_Angeles)"
-  __GIT_NAME="$(git config --get user.name 2>/dev/null || true)"
-  __GIT_EMAIL="$(git config --get user.email 2>/dev/null || true)"
-
-  # Portable in-place sed: GNU sed uses -i, BSD/macOS requires -i ''
-  _sedi() {
-    if sed --version >/dev/null 2>&1; then
-      sed -i "$@"
-    else
-      sed -i '' "$@"
-    fi
-  }
-  # Escape sed replacement-string special chars for | delimiter (|, &, \)
-  _sed_val() {
-    printf '%s' "$1" \
-      | sed 's/\\/\\\\/g' \
-      | sed 's/|/\\|/g' \
-      | sed 's/&/\\&/g'
-  }
-
-  # Quote generated values so the file remains source-able even when a value
-  # contains spaces (for example, a git user name). Docker Compose env files
-  # strip these quotes, and `source .devcontainer/.env` keeps the same values.
-  _env_val() {
-    printf "'"
-    printf '%s' "$1" | sed "s/'/'\\\\''/g"
-    printf "'"
-  }
-
-  # ── Local .env (gitignored host defaults + secrets) ──────────────────
-  # Secrets ONLY, plus the keys the VS Code "Reopen in Container" path needs
-  # (it loads .devcontainer/docker-compose.yml directly and cannot read
-  # harness.yaml). Every other non-secret answer goes to harness.yaml below,
-  # which is the file that wins for the `make` and `oh` paths.
-  cat > "$REPO_DIR/.devcontainer/.env" <<'ENVEOF'
-# ─── Open Harness — Local Configuration ─────────────────────────────
-# Gitignored host-local settings generated by install.sh.
-#
-# This file holds SECRETS and the few keys the VS Code "Reopen in Container"
-# path requires. Your non-secret installer answers (sandbox name, timezone, git
-# identity, optional installs) were written to harness.yaml instead — that is
-# the file the `make` and `oh` paths read, and its active keys WIN over this one.
-#
-# Edit freely; rerun
-#   make destroy && make sandbox
-# to apply changes.
-ENVEOF
-
-  # ── Non-secret answers → harness.yaml (the winning file) ─────────────
-  # Fall back to .devcontainer/.env per key if the write does not take, so a
-  # missing/edited template degrades to the previous behavior instead of
-  # silently dropping the answer.
-  _cfg_set() {   # $1 = section, $2 = yaml key, $3 = env key, $4 = value
-    [ -n "$4" ] || return 0
-    if _yaml_set "$1" "$2" "$4"; then
-      ok "harness.yaml: $1.$2"
-    else
-      printf '%s=%s\n' "$3" "$(_env_val "$4")" >> "$REPO_DIR/.devcontainer/.env"
-      warn "Could not write $1.$2 to harness.yaml — wrote $3 to .devcontainer/.env instead"
-    fi
-  }
-  _cfg_set sandbox name       SANDBOX_NAME    "$SANDBOX_NAME"
-  _cfg_set sandbox timezone   TZ              "$__TZ"
-  _cfg_set git     user_name  GIT_USER_NAME   "$__GIT_NAME"
-  _cfg_set git     user_email GIT_USER_EMAIL  "$__GIT_EMAIL"
-
-  cat >> "$REPO_DIR/.devcontainer/.env" <<'ENVEOF'
-
-# ─── GitHub (primary git auth method) ────────────────────────────────
-# Personal Access Token for GitHub CLI authentication inside the sandbox.
-# On startup, entrypoint auto-runs gh auth login/setup-git and (if
-# admin:public_key scope is granted) uploads an ed25519 SSH key.
-# Create one at: https://github.com/settings/tokens?type=beta
-# Scopes needed: repo, read:org, admin:public_key (for SSH key upload)
-GH_TOKEN=
-
-# ─── Slack bot (pi-messenger-bridge) ─────────────────────────────────
-# See .oh/docs/integrations/slack.md.
-
-# Slack app-level token for Socket Mode connection (starts with xapp-).
-# PI_SLACK_APP_TOKEN=xapp-...
-
-# Slack bot OAuth token for posting messages (starts with xoxb-).
-# PI_SLACK_BOT_TOKEN=xoxb-...
-ENVEOF
-  ok "Wrote .devcontainer/.env (local defaults + secrets)"
-
-  unset __TZ __GIT_NAME __GIT_EMAIL
-
-  # ─── Auto-detect host gh token ────────────────────────────────────────
-  __GH_AUTOCONFIGURED=0
-  if command -v gh >/dev/null 2>&1; then
-    if __GH_TOKEN_RAW="$(gh auth token 2>/dev/null)" && [ -n "$__GH_TOKEN_RAW" ]; then
-      banner "Detected host gh token"
-      if prompt_yn "Share host gh token with sandbox? (skips in-sandbox 'gh auth login')" y; then
-        __GHT_SAFE="$(_sed_val "$__GH_TOKEN_RAW")"
-        _sedi "s|^GH_TOKEN=.*|GH_TOKEN=${__GHT_SAFE}|" "$REPO_DIR/.devcontainer/.env"
-        ok "Wrote GH_TOKEN to .devcontainer/.env"
-        __GH_AUTOCONFIGURED=1
-        unset __GHT_SAFE
-      else
-        ok "Skipped — you'll run 'gh auth login' inside the sandbox"
-      fi
-      unset __GH_TOKEN_RAW
-    fi
-  fi
-
-  # ─── Optional installs (extra agents/features — OFF by default) ──────
-  # Each maps to an INSTALL_* build arg/env in .devcontainer/docker-compose.yml.
-  # Enabling one rebuilds the image with that CLI; agent_browser also pulls
-  # ~1 GB of Chromium. A pre-set INSTALL_* env var is honored (non-interactive
-  # installs); otherwise we prompt — but only with a TTY, and --yes/--no keep
-  # the lean default (nothing extra) rather than auto-enabling everything.
-  banner "Optional installs (off by default)"
-  # Enabled flags land in harness.yaml under install.*, matching what
-  # `oh harness install <name>` writes, so the two agree on one source of truth.
-  _opt_enable() {   # $1 = INSTALL_ suffix, $2 = harness.yaml key under install:
-    if _yaml_set install "$2" true; then
-      ok "harness.yaml: install.$2: true"
-    else
-      printf 'INSTALL_%s=true\n' "$1" >> "$REPO_DIR/.devcontainer/.env"
-      warn "Could not write install.$2 to harness.yaml — wrote INSTALL_$1 to .devcontainer/.env instead"
-    fi
-  }
-  _opt_install() {   # $1 = INSTALL_ suffix, $2 = human label, $3 = yaml key
-    local __k="INSTALL_$1"
-    if [ "${!__k:-}" = "true" ]; then
-      _opt_enable "$1" "$3"
-      ok "install.$3 enabled (from environment)"
-      return 0
-    fi
-    if [ "$ASSUME_YES" = true ] || [ "$ASSUME_NO" = true ] || [ ! -r /dev/tty ]; then
-      return 0
-    fi
-    if prompt_yn "Install $2?" n; then
-      _opt_enable "$1" "$3"
-    fi
-  }
-  _opt_install HERMES        "Hermes — Nous self-improving agent CLI"   hermes
-  _opt_install OPENCODE      "OpenCode — OpenAI-OAuth terminal agent"   opencode
-  _opt_install DEEPAGENTS    "DeepAgents — LangChain multi-provider agent" deepagents
-  _opt_install GROK_BUILD    "Grok Build — xAI terminal agent"          grok_build
-  _opt_install AGENT_BROWSER "agent-browser + Chromium (~1 GB)"         agent_browser
-
-  # ─── Host Docker socket (OFF by default — security-sensitive) ────────
-  # Mounting /var/run/docker.sock lets the agent drive Docker, but socket
-  # access is effectively HOST ROOT (an agent can start a privileged container
-  # that mounts the host filesystem). Off by default; a pre-set DOCKER_SOCKET
-  # env honors non-interactive installs; --yes/--no keep the socket OFF.
-  # docker-compose.sh reads this DOCKER_SOCKET key and applies the
-  # docker-compose.docker-sock.yml overlay when truthy.
-  #
-  # DELIBERATE EXCEPTION: unlike every other non-secret answer above, this one
-  # stays in .devcontainer/.env. The VS Code "Reopen in Container" path loads
-  # .devcontainer/docker-compose.yml directly and cannot read harness.yaml, so a
-  # socket opt-in recorded only there would be invisible under VS Code. The CLI
-  # makes the same call — see the docker-socket persist in .oh/cli lifecycle.
-  banner "Host Docker socket (off by default)"
-  __want_sock=0
-  if [ "${DOCKER_SOCKET:-}" = "true" ]; then
-    __want_sock=1
-    ok "DOCKER_SOCKET=true (from environment)"
-  elif [ "$ASSUME_YES" = true ] || [ "$ASSUME_NO" = true ] || [ ! -r /dev/tty ]; then
-    :
-  elif prompt_yn "Mount host Docker socket into the sandbox? (effectively host root — enable only if the agent must drive Docker)" n; then
-    __want_sock=1
-  fi
-  if [ "$__want_sock" = "1" ]; then
-    printf 'DOCKER_SOCKET=true\n' >> "$REPO_DIR/.devcontainer/.env"
-    ok "DOCKER_SOCKET=true — host Docker socket will be mounted"
-  fi
-  unset __want_sock
+# ─── Host Docker socket (OFF by default — security-sensitive) ────────
+# Mounting /var/run/docker.sock lets the agent drive Docker, but socket
+# access is effectively HOST ROOT (an agent can start a privileged container
+# that mounts the host filesystem). Off by default; a pre-set DOCKER_SOCKET
+# env honors non-interactive installs; --yes/--no keep the socket OFF.
+# docker-compose.sh reads this DOCKER_SOCKET key and applies the
+# docker-compose.docker-sock.yml overlay when truthy.
+banner "Host Docker socket (off by default)"
+if grep -qE '^DOCKER_SOCKET=' "$ENV_FILE"; then
+  # A standing choice, live in the file — never re-prompt over it.
+  ok "DOCKER_SOCKET already set — leaving it alone"
+elif [ "${DOCKER_SOCKET:-}" = "true" ]; then
+  _env_set DOCKER_SOCKET true
+  ok "DOCKER_SOCKET=true (from environment) — host Docker socket will be mounted"
+elif [ "$ASSUME_YES" = true ] || [ "$ASSUME_NO" = true ] || [ ! -r /dev/tty ]; then
+  :
+elif prompt_yn "Mount host Docker socket into the sandbox? (effectively host root — enable only if the agent must drive Docker)" n; then
+  _env_set DOCKER_SOCKET true
+  ok "DOCKER_SOCKET=true — host Docker socket will be mounted"
 fi
 
 # ─── 5. Bring up the sandbox ─────────────────────────────────────────
-# harness.yaml was materialized and populated in step 4, before the config
+# .devcontainer/.env was materialized and populated in step 4, before the config
 # prompts, so the answers had somewhere to land.
 
 banner "Building and starting sandbox"
@@ -617,11 +550,11 @@ ok "Sandbox '$SANDBOX_NAME' started"
 printf "\n${GREEN}Installation complete!${NC}\n\n"
 printf "  ${CYAN}Configuration${NC}\n"
 printf "  ──────────────────────────────────────\n"
-printf "       ${CYAN}harness.yaml${NC}        — your answers were written here. Local (gitignored)\n"
-printf "                             shared config; active keys override local env.\n"
-printf "       ${CYAN}.devcontainer/.env${NC}  — gitignored secrets, plus the keys the VS Code\n"
-printf "                             \"Reopen in Container\" path needs (it cannot read harness.yaml).\n"
-printf "                             Defaults work; edit either file if you want to customize.\n"
+printf "       ${CYAN}.devcontainer/.env${NC}  — your answers were written here. The ONE local\n"
+printf "                             (gitignored) config file, read on every path including\n"
+printf "                             VS Code \"Reopen in Container\".\n"
+printf "       ${CYAN}.devcontainer/.example.env${NC} — the tracked schema: every key, with its default.\n"
+printf "                             Defaults work; edit .env if you want to customize.\n"
 printf "\n"
 printf "  ${CYAN}Lifecycle (from %s)${NC}\n" "$REPO_DIR"
 printf "  ──────────────────────────────────────\n"
@@ -643,7 +576,7 @@ printf "       oh harness install opencode      — OpenCode terminal agent\n"
 printf "       oh harness install deepagents    — LangChain DeepAgents\n"
 printf "       oh harness install grok-build    — xAI Grok Build\n"
 printf "       oh tool install agent-browser    — headless Chromium for screenshots / previews (~1 GB)\n"
-printf "                                          (each uncomments the harness.yaml key for you)\n"
+printf "                                          (each uncomments the .devcontainer/.env key for you)\n"
 printf "\n"
 printf "  ${CYAN}Messaging gateways${NC}\n"
 printf "  ──────────────────────────────────────\n"

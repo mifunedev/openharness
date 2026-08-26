@@ -85,7 +85,7 @@ oh tool install agent-browser   # asks before the ~1 GB Chromium download
 | `oh restart` | Restart the sandbox service. |
 | `oh logs` | Tail the sandbox compose logs. |
 | `oh ps` | Show sandbox service status. |
-| `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `harness.yaml` flag **and** installs into the running sandbox — no rebuild. |
+| `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `.devcontainer/.env` `INSTALL_*` flag **and** installs into the running sandbox — no rebuild. |
 | `oh tool <list\|install\|status>` | Install and inspect sandbox tooling that is neither an agent CLI nor a runtime (agent-browser, `gh`, `herdr`, `cloudflared`, Docker CLI). A large download is confirmed first. |
 | `oh runtime <list\|install\|status>` | Report the isolation runtime in use (Docker today) and install MicroSandbox. Measures first and refuses an install that cannot succeed (`--force` overrides). Selects no runtime and writes no config. |
 | `oh gateway <args…>` | Manage a messaging client session (Slack bridge for `pi`/`hermes`). |

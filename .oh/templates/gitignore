@@ -1,6 +1,9 @@
 # OpenHarness — secrets & runtime (never commit).
+# harness.yaml was removed in 0.4.0; these stay one more release so a stale
+# local artifact is never accidentally committed.
 /harness.yaml
 /harness.yml
+/harness.yaml.migrated
 .devcontainer/.env
 .claude/.env.claude
 .hermes/.env

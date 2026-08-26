@@ -160,10 +160,9 @@ describe("agent-browser matches the entrypoint that really installs it", () => {
 
   it("keeps the env plumbing wired end to end", () => {
     expect(read(".devcontainer/docker-compose.yml")).toContain("INSTALL_AGENT_BROWSER");
-    expect(read(".oh/scripts/harness-config.sh")).toContain(
-      'envmap["install.agent_browser"] = "INSTALL_AGENT_BROWSER"',
-    );
-    expect(read("harness.yaml.example")).toMatch(/agent_browser/);
+    // One surface, one key: `.devcontainer/.env` documents it and compose
+    // interpolates it. There is no envmap in between any more.
+    expect(read(".devcontainer/.example.env")).toMatch(/^#\s*INSTALL_AGENT_BROWSER=/m);
   });
 });
 

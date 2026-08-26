@@ -74,7 +74,7 @@ Two harness-specific notes:
 
 - **`docker_socket` is off by default.** Mounting the host
   `/var/run/docker.sock` into the sandbox is effectively host root, so it is
-  opt-in via `harness.yaml` `sandbox.docker_socket`. See
+  opt-in via `DOCKER_SOCKET` in `.devcontainer/.env`. See
   [security considerations](../security-considerations.md).
 - **The container is the unit of disposal.** `make destroy` removes containers
   and volumes; provider auth persists in named volumes across a rebuild.

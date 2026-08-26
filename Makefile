@@ -5,14 +5,11 @@
 
 -include .devcontainer/.env
 
-HARNESS_YAML      := harness.yaml
-HARNESS_TEMPLATE  := harness.yaml.example
 COMPOSE           := .oh/scripts/docker-compose.sh
 
-# SANDBOX_NAME resolution: harness.yaml wins over .devcontainer/.env; fallback openharness.
+# SANDBOX_NAME comes from the `-include .devcontainer/.env` above; fallback openharness.
 # Command-line "make ... SANDBOX_NAME=x" overrides all assignments automatically.
-SANDBOX_NAME_YAML := $(shell [ -f $(HARNESS_YAML) ] && sh .oh/scripts/harness-config.sh get sandbox.name $(HARNESS_YAML))
-SANDBOX_NAME      := $(or $(SANDBOX_NAME_YAML),$(SANDBOX_NAME),openharness)
+SANDBOX_NAME      := $(or $(SANDBOX_NAME),openharness)
 
 SHELL_USER        ?= sandbox
 SHELL_CONTAINER ?= $(SANDBOX_NAME)
@@ -32,17 +29,9 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: sandbox shell destroy stop logs ps restart config help gateway harness-config
+.PHONY: sandbox shell destroy stop logs ps restart config help gateway
 
-harness-config: ## Create local harness.yaml from harness.yaml.example if missing
-	@if [ ! -f "$(HARNESS_YAML)" ]; then \
-		cp "$(HARNESS_TEMPLATE)" "$(HARNESS_YAML)"; \
-		printf "Created $(HARNESS_YAML) from $(HARNESS_TEMPLATE). Edit it before rebuilding if needed.\n"; \
-	else \
-		printf "$(HARNESS_YAML) already exists; leaving local config untouched.\n"; \
-	fi
-
-sandbox: harness-config ## Provision and start the sandbox
+sandbox: ## Provision and start the sandbox
 	$(COMPOSE) up -d --build
 
 shell: ## Connect to a running container (default: $(SANDBOX_NAME)). Usage: make shell [container] [SHELL_USER=user]
@@ -66,15 +55,7 @@ restart: ## Restart the service
 gateway: ## Start a messaging client session: make gateway <pi|hermes> (flags/--stop via the script)
 	@bash .oh/scripts/gateway.sh $(GATEWAY_ARGS)
 
-config: harness-config ## Print effective harness.yaml-derived env and resolved compose config
-	@if [ -f $(HARNESS_YAML) ]; then \
-		sh .oh/scripts/harness-config.sh env $(HARNESS_YAML) > .devcontainer/.harness.yaml.env; \
-		printf "==> Derived env from $(HARNESS_YAML):\n"; \
-		cat .devcontainer/.harness.yaml.env; \
-		printf "\n"; \
-	else \
-		printf "No $(HARNESS_YAML) found — no derived env.\n"; \
-	fi
+config: ## Print the resolved compose config (.devcontainer/.env is the only config surface)
 	$(COMPOSE) config
 
 help: ## List available targets with descriptions

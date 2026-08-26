@@ -23,7 +23,7 @@ alongside the container's main process, so the cron runtime, healthcheck, and
 
 ## 2. Enable the overlay
 
-Turn on the `ssh` section in your local `harness.yaml` (uncomment the keys):
+Uncomment the SSH keys in your local `.devcontainer/.env`:
 
 ```yaml
 ssh:
@@ -32,7 +32,7 @@ ssh:
   # password_auth: false     # leave off; use a key (section 3)
 ```
 
-Public-key material can't live in `harness.yaml` (its parser is single-line), so
+Public-key material is not a secret but is multi-line, so
 put your key in the gitignored `.devcontainer/.env`:
 
 ```bash
@@ -138,7 +138,7 @@ oh-1.example.com  A  203.0.113.10
 oh-2.example.com  A  203.0.113.10
 ```
 
-Each tenant's `harness.yaml` sets a unique loopback port, e.g. tenant-1 →
+Each tenant's `.devcontainer/.env` sets a unique loopback port, e.g. tenant-1 →
 `ssh.port: 12201`, tenant-2 → `ssh.port: 12202`. Pick a free port per tenant:
 
 ```bash

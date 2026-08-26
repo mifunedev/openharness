@@ -228,10 +228,10 @@ describe("runUpdate — manifest payload filtering", () => {
       ".oh/cli/package.json",
       JSON.stringify({ version: "0.1.0" }),
     );
-    writeFile(tgt, "harness.yaml", "name: my-harness\n");
+    writeFile(tgt, ".devcontainer/.env", "SANDBOX_NAME=my-harness\n");
 
-    const harnessBefore = fs.readFileSync(
-      path.join(tgt, "harness.yaml"),
+    const envBefore = fs.readFileSync(
+      path.join(tgt, ".devcontainer/.env"),
       "utf8",
     );
 
@@ -256,8 +256,8 @@ describe("runUpdate — manifest payload filtering", () => {
     expect(fs.existsSync(path.join(tgt, ".oh/cli/dist/oh.js"))).toBe(false);
 
     // Project file outside .oh/ is byte-identical (untouched).
-    expect(fs.readFileSync(path.join(tgt, "harness.yaml"), "utf8")).toBe(
-      harnessBefore,
+    expect(fs.readFileSync(path.join(tgt, ".devcontainer/.env"), "utf8")).toBe(
+      envBefore,
     );
 
     // The copier emits the skip line for a non-payload file.
@@ -289,7 +289,7 @@ describe("runUpdate — manifest payload filtering", () => {
       ".oh/cli/package.json",
       JSON.stringify({ version: "0.1.0" }),
     );
-    writeFile(tgt, "harness.yaml", "name: my-harness\n");
+    writeFile(tgt, ".devcontainer/.env", "SANDBOX_NAME=my-harness\n");
 
     const { out, io } = mkIo();
     const rc = await runUpdate({ targetDir: tgt, fromDir: src }, io);

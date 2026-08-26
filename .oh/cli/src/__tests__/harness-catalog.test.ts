@@ -26,8 +26,8 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", ".."
 const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), "utf8");
 
 const DOCKERFILE = read(".devcontainer/Dockerfile");
-const HARNESS_CONFIG_SH = read(".oh/scripts/harness-config.sh");
-const HARNESS_YAML_EXAMPLE = read("harness.yaml.example");
+const COMPOSE_YML = read(".devcontainer/docker-compose.yml");
+const EXAMPLE_ENV = read(".devcontainer/.example.env");
 
 /** Version-like tokens in an argv, e.g. the `0.2.39` grok-build pin. */
 function versionPins(argv: readonly string[]): string[] {
@@ -61,10 +61,10 @@ describe("harness catalog", () => {
     }
   });
 
-  it("excludes agent_browser — it shares the install: section but is not a harness", () => {
+  it("excludes agent_browser — it shares the INSTALL_* namespace but is not a harness", () => {
     expect(HARNESS_CATALOG.some((h) => h.harnessKey === "agent_browser")).toBe(false);
-    // Guard the premise: the key really is in the install: section.
-    expect(HARNESS_YAML_EXAMPLE).toMatch(/agent_browser/);
+    // Guard the premise: the key really is in the INSTALL_* namespace.
+    expect(EXAMPLE_ENV).toMatch(/INSTALL_AGENT_BROWSER=/);
   });
 
   it("documents every harness under .oh/docs/harnesses/<id>.md", () => {
@@ -94,23 +94,23 @@ describe("harness catalog", () => {
     );
 
     it.each(flagged.map((h) => [h.id, h] as const))(
-      "%s: harness.yaml key is in harness-config.sh's envmap",
+      "%s: the INSTALL_* key derived from harnessKey IS the build arg, and compose forwards it",
       (_id, h) => {
-        expect(HARNESS_CONFIG_SH).toContain(`install.${h.harnessKey}`);
-        // The envmap must map it to the SAME build arg the catalog names.
-        const row = new RegExp(
-          `envmap\\["install\\.${h.harnessKey}"\\]\\s*=\\s*"${h.buildArg}"`,
-        );
-        expect(HARNESS_CONFIG_SH).toMatch(row);
+        // Since harness.yaml was removed there is no envmap translating
+        // `install.<key>` into an env var: the key IS `INSTALL_<KEY>`, derived
+        // mechanically by installEnvKey(). Pin that derivation against the
+        // catalog's own buildArg so a rename of either half cannot drift past
+        // the other unnoticed.
+        expect(`INSTALL_${(h.harnessKey as string).toUpperCase()}`).toBe(h.buildArg);
+        // ...and compose must actually forward it into the image build.
+        expect(COMPOSE_YML).toContain(`${h.buildArg}: \${${h.buildArg}:-false}`);
       },
     );
 
     it.each(flagged.map((h) => [h.id, h] as const))(
-      "%s: key ships in harness.yaml.example's install: section",
+      "%s: key ships documented in .devcontainer/.example.env, the schema document",
       (_id, h) => {
-        const install = HARNESS_YAML_EXAMPLE.split(/^install:/m)[1] ?? "";
-        const section = install.split(/^[a-zA-Z_]+:/m)[0];
-        expect(section).toContain(`${h.harnessKey}:`);
+        expect(EXAMPLE_ENV).toMatch(new RegExp(`^#\\s*${h.buildArg}=`, "m"));
       },
     );
 
@@ -153,7 +153,7 @@ describe("harness catalog", () => {
 
   it("findHarness resolves known ids and rejects unknown ones", () => {
     expect(findHarness("opencode")?.harnessKey).toBe("opencode");
-    // The slug/key mismatch that makes hand-editing harness.yaml error-prone.
+    // The slug/key mismatch that makes hand-editing .devcontainer/.env error-prone.
     expect(findHarness("grok-build")?.harnessKey).toBe("grok_build");
     expect(findHarness("nope")).toBeUndefined();
   });

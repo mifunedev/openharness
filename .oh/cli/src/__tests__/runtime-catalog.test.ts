@@ -100,14 +100,14 @@ describe("no runtime selector is introduced", () => {
     }
   });
 
-  it("declares no harness.yaml key and no Dockerfile build arg", () => {
+  it("declares no INSTALL_* key and no Dockerfile build arg", () => {
     for (const s of RUNTIME_CATALOG) {
       expect(Object.keys(s), s.id).not.toContain("harnessKey");
       expect(Object.keys(s), s.id).not.toContain("buildArg");
     }
   });
 
-  it("imports no harness.yaml writer", () => {
+  it("imports no .devcontainer/.env writer", () => {
     const body = read(".oh/cli/src/commands/runtime.ts");
     expect(body).not.toContain("setInstallFlag");
     expect(body).not.toContain("seedHarnessYaml");

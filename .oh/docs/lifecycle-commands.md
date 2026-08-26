@@ -59,7 +59,7 @@ This is why neither surface delegates to the other: making the Makefile call
 | `make gateway <pi\|hermes>` | `oh gateway <args…>` | `.oh/scripts/gateway.sh` |
 | `make destroy` | — | see below |
 | `make config` | — | see below |
-| `make harness-config` | *(implicit in `oh sandbox`)* | seeds `harness.yaml` from the example |
+| *(implicit in `make sandbox`)* | *(implicit in `oh sandbox`)* | seeds `.devcontainer/.env` from `.example.env` |
 | — | `oh init` · `oh update` · `oh harness` · `oh runtime` · `oh tool` · `oh cloud` · `oh config <integration>` | no `make` equivalent, by design |
 
 `oh <verb> -- <args>` forwards extra arguments to `docker compose`, e.g.
@@ -95,7 +95,7 @@ reasoning that keeps `oh gateway` off it. See
 
 ## What is not consolidated, and why
 
-- **The two `harness.yaml` seeds.** `make harness-config` and the CLI's
+- **The two `.devcontainer/.env` seeds.** `make sandbox` and the CLI's
   `seedHarnessYaml()` both copy the example. Unifying them means the Makefile
   shelling into Node, which the host-prerequisite promise forbids. Two small
   implementations of one `cp` is the cheaper trade.

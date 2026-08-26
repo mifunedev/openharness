@@ -45,7 +45,7 @@ for src in "$CATALOG" "$CMD"; do
   fi
 done
 
-# The harness.yaml writers exist one directory away and are easy to reach for.
+# The .devcontainer/.env writers exist one directory away and are easy to reach for.
 for sym in setInstallFlag seedHarnessYaml; do
   if grep -qF "$sym" "$CMD"; then
     missing+=("commands/runtime.ts: imports $sym — this command persists no configuration")
@@ -54,7 +54,7 @@ done
 
 # A build arg would bake a guaranteed-failing install into the image (#805).
 if grep -qE 'buildArg|harnessKey' "$CATALOG"; then
-  missing+=("runtimes/catalog.ts: declares a build arg / harness.yaml key — see the file header")
+  missing+=("runtimes/catalog.ts: declares a build arg / INSTALL_* key — see the file header")
 fi
 
 # --- 2. Both measured blockers are declared -----------------------------------

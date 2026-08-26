@@ -329,7 +329,7 @@ EOF
     if [ "$_pw_auth" = "no" ] && [ "$_have_keys" -eq 0 ]; then
       echo "[entrypoint] WARNING: sshd starting with NO authorized_keys and password auth OFF —" >&2
       echo "[entrypoint]          no one can log in. Set SANDBOX_SSH_AUTHORIZED_KEYS in .devcontainer/.env" >&2
-      echo "[entrypoint]          or ssh.password_auth: true in harness.yaml. See .oh/docs/integrations/sshd.md" >&2
+      echo "[entrypoint]          or SANDBOX_SSH_PASSWORD_AUTH=true in .devcontainer/.env. See .oh/docs/integrations/sshd.md" >&2
     fi
 
     if /usr/sbin/sshd; then
@@ -582,8 +582,8 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
 fi
 
 # ─── Resolve + pre-create the memory directory ────────────────────
-# Single source of truth = MEMORY_DIR (docker-compose passes harness.yaml's
-# paths.memory through here; default .oh/memory). Pre-creating it at boot means
+# Single source of truth = MEMORY_DIR (docker-compose passes .devcontainer/.env's
+# MEMORY_DIR through here; default .oh/memory). Pre-creating it at boot means
 # the first skill/cron write lands in the resolved dir instead of racing a mkdir
 # — and never silently falls back to a phantom relative `memory/`. Mirrors the
 # CRONS_PATH block below; see .oh/scripts/oh-path for the shared resolver.

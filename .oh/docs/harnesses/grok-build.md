@@ -10,7 +10,7 @@ Grok Build is **optional** in Open Harness and is **excluded from the default im
 
 ## Install (optional)
 
-The shortest path is the CLI, which sets the `harness.yaml` flag **and**
+The shortest path is the CLI, which sets the `.devcontainer/.env` flag **and**
 installs into the already-running sandbox without a rebuild:
 
 ```bash
@@ -22,7 +22,7 @@ See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only
 
 ### Manual path
 
-Enable Grok Build in `harness.yaml`:
+Enable Grok Build in `.devcontainer/.env`:
 
 ```yaml
 install:
@@ -63,7 +63,7 @@ Verify the install inside the sandbox:
 grok --version
 ```
 
-If `grok` is not found, confirm `install.grok_build: true` is set in `harness.yaml` (or `INSTALL_GROK_BUILD=true` in `.devcontainer/.env`) and rebuild.
+If `grok` is not found, confirm `INSTALL_GROK_BUILD=true` is set in `.devcontainer/.env` and rebuild.
 
 ## Authentication
 

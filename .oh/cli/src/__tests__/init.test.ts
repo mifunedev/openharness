@@ -80,14 +80,13 @@ describe("runInit", () => {
     const code = await runInit(opts(t), io);
 
     expect(code).toBe(0);
-    expect(existsSync(join(t, "harness.yaml"))).toBe(true);
     expect(existsSync(join(t, ".devcontainer/devcontainer.json"))).toBe(true);
     expect(existsSync(join(t, ".devcontainer/.example.env"))).toBe(true);
     expect(existsSync(join(t, "AGENTS.md"))).toBe(true);
     expect(existsSync(join(t, ".gitignore"))).toBe(true);
     // The top-level README.md must NOT be copied.
     expect(existsSync(join(t, "README.md"))).toBe(false);
-    expect(out.some((l) => l.includes("create harness.yaml"))).toBe(true);
+    expect(out.some((l) => l.includes("create .devcontainer/.example.env"))).toBe(true);
   });
 
   it("skip-without-force: a second run skips existing files and changes nothing", async () => {
@@ -141,7 +140,7 @@ describe("runInit", () => {
     for (const line of out) {
       expect(line.startsWith("[dry-run] ")).toBe(true);
     }
-    expect(existsSync(join(t, "harness.yaml"))).toBe(false);
+    expect(existsSync(join(t, ".devcontainer/.example.env"))).toBe(false);
     expect(existsSync(join(t, ".devcontainer/devcontainer.json"))).toBe(false);
     expect(existsSync(join(t, ".gitignore"))).toBe(false);
     expect(existsSync(join(t, "AGENTS.md"))).toBe(false);
@@ -277,7 +276,7 @@ describe("runInit", () => {
     expect(existsSync(join(t, ".oh/README.md"))).toBe(true);
     expect(existsSync(join(t, ".oh/cli/package.json"))).toBe(true);
     expect(existsSync(join(t, ".oh/cli/src/cli.ts"))).toBe(true);
-    expect(existsSync(join(t, ".oh/templates/harness.yaml"))).toBe(true);
+    expect(existsSync(join(t, ".oh/templates/.devcontainer/.example.env"))).toBe(true);
     // Volatile build artifacts are never shipped.
     expect(existsSync(join(t, ".oh/cli/node_modules"))).toBe(false);
     expect(existsSync(join(t, ".oh/cli/dist"))).toBe(false);
@@ -398,7 +397,7 @@ describe("runInit", () => {
 
   // --- US-002 wizard ---------------------------------------------------------
 
-  it("wizard: injected answers land in harness.yaml + .env; secrets stay out of harness.yaml; untouched lines byte-identical", async () => {
+  it("wizard: every answer lands in ONE .devcontainer/.env write; untouched lines byte-identical", async () => {
     const t = freshTmp();
     const ask = async (q: string): Promise<string> => {
       if (q.includes("Sandbox name")) return "my-cool-sandbox";
@@ -423,40 +422,45 @@ describe("runInit", () => {
     const code = await runInit(opts(t, { yes: false }), io);
     expect(code).toBe(0);
 
-    const hy = readFileSync(join(t, "harness.yaml"), "utf8");
+    const env = readFileSync(join(t, ".devcontainer/.env"), "utf8");
     // Set keys are uncommented AND given the answer value.
-    expect(hy).toMatch(/^  name: my-cool-sandbox/m);
-    expect(hy).toMatch(/^  timezone: America\/New_York/m);
-    expect(hy).toMatch(/^  user_name: Ada Lovelace/m);
-    expect(hy).toMatch(/^  user_email: ada@example.com/m);
-    expect(hy).toMatch(/^  agent_browser: true/m);
-    // A declined install stays commented (default applies).
-    expect(hy).toMatch(/^  # hermes: false/m);
-    // Secrets are NEVER written to harness.yaml.
-    expect(hy).not.toContain("ghp_supersecrettoken12345");
-    expect(hy).not.toContain("GH_TOKEN");
+    expect(env).toMatch(/^SANDBOX_NAME=my-cool-sandbox$/m);
+    expect(env).toMatch(/^TZ=America\/New_York$/m);
+    expect(env).toMatch(/^GIT_USER_NAME=Ada Lovelace$/m);
+    expect(env).toMatch(/^GIT_USER_EMAIL=ada@example.com$/m);
+    expect(env).toMatch(/^INSTALL_AGENT_BROWSER=true$/m);
+    // A declined install stays commented (the compose default applies).
+    expect(env).toMatch(/^#\s*INSTALL_HERMES=false/m);
+    // The secret lands in the SAME file — there is no second surface any more.
+    expect(env).toContain("GH_TOKEN=ghp_supersecrettoken12345");
 
-    // Every line whose key the user did NOT set is byte-identical to the template.
-    const tmpl = readFileSync(join(TEMPLATES, "harness.yaml"), "utf8").split("\n");
-    const result = hy.split("\n");
+    // ONE write, reported once: the operation log names .env exactly once for
+    // the whole wizard, not once per key and not once per surface.
+    const envWrites = out.filter((l) => l.includes("update .devcontainer/.env"));
+    expect(envWrites).toHaveLength(1);
+
+    // Every line whose key the user did NOT set is byte-identical to the
+    // template — the uncomment-in-place discipline, measured.
+    const tmpl = readFileSync(
+      join(TEMPLATES, ".devcontainer", ".example.env"),
+      "utf8",
+    ).split("\n");
+    const result = env.split("\n");
     expect(result).toHaveLength(tmpl.length);
     const touched = new Set([
-      "name",
-      "timezone",
-      "user_name",
-      "user_email",
-      "agent_browser",
+      "SANDBOX_NAME",
+      "TZ",
+      "GIT_USER_NAME",
+      "GIT_USER_EMAIL",
+      "INSTALL_AGENT_BROWSER",
+      "GH_TOKEN",
     ]);
     for (let i = 0; i < tmpl.length; i++) {
-      const m = tmpl[i].match(/^\s*#\s?([A-Za-z0-9_]+)\s*:/);
+      const m = tmpl[i].match(/^\s*#?\s*([A-Z0-9_]+)\s*=/);
       const key = m ? m[1] : undefined;
       if (key && touched.has(key)) continue;
       expect(result[i]).toBe(tmpl[i]);
     }
-
-    // Secret lands in .devcontainer/.env only.
-    const env = readFileSync(join(t, ".devcontainer/.env"), "utf8");
-    expect(env).toContain("GH_TOKEN=ghp_supersecrettoken12345");
   });
 
   it("wizard: --yes skips the wizard even when a reader is injected", async () => {
@@ -475,9 +479,10 @@ describe("runInit", () => {
 
     expect(code).toBe(0);
     expect(asked).toBe(0);
-    // Template default left commented (nothing uncommented).
-    const hy = readFileSync(join(t, "harness.yaml"), "utf8");
-    expect(hy).toMatch(/^  # name: my-project/m);
+    // Template defaults left commented (nothing uncommented), and with no
+    // answers to record there is no .env at all.
+    const example = readFileSync(join(t, ".devcontainer/.example.env"), "utf8");
+    expect(example).toMatch(/^#\s*SANDBOX_NAME=/m);
     expect(existsSync(join(t, ".devcontainer/.env"))).toBe(false);
   });
 

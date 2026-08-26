@@ -1,7 +1,7 @@
 # Docker-socket overlay (opt-in — see .oh/docs/security-considerations.md).
 #
 # Applied by .oh/scripts/docker-compose.sh only when DOCKER_SOCKET is truthy
-# (harness.yaml `sandbox.docker_socket` or .devcontainer/.env DOCKER_SOCKET).
+# (the DOCKER_SOCKET key in .devcontainer/.env).
 # Mounting the host Docker socket gives the sandboxed agent effectively host
 # root (it can start a privileged container that mounts the host filesystem),
 # so enable this ONLY when the agent must drive Docker. entrypoint.sh guards on

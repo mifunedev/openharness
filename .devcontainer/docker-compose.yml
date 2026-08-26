@@ -20,17 +20,17 @@
 # The host Docker socket is NOT mounted here by default (socket access is
 # effectively host root). It is an opt-in overlay — docker-compose.docker-sock.yml
 # — applied by .oh/scripts/docker-compose.sh only when DOCKER_SOCKET is truthy
-# (harness.yaml `sandbox.docker_socket` or .devcontainer/.env). The VS Code
-# "Reopen in Container" path reads THIS file directly and bypasses that wrapper,
-# so it never gets the socket; add the overlay to devcontainer.json to enable it
-# there. See .oh/docs/security-considerations.md.
+# in .devcontainer/.env. The VS Code "Reopen in Container" path reads THIS file
+# directly and bypasses that wrapper, so it never gets the socket; add the
+# overlay to devcontainer.json to enable it there. See
+# .oh/docs/security-considerations.md.
 
 name: ${SANDBOX_NAME:-openharness}
 
 services:
   sandbox:
     # Default is a LOCAL build tagged sandbox-<name>. Set OH_SANDBOX_IMAGE
-    # (harness.yaml `sandbox.image`, e.g. ghcr.io/mifunedev/openharness:latest)
+    # in .devcontainer/.env (e.g. ghcr.io/mifunedev/openharness:latest)
     # to run the prebuilt image instead — the CLI path pairs this with
     # `up -d --no-build` (`oh sandbox --image`); the VS Code "Reopen in
     # Container" path relies on pull_policy since it can't pass --no-build.

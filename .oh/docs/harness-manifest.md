@@ -5,9 +5,9 @@ file could take if a project wants a local manifest. It is **descriptive, not
 normative**: Open Harness does not require this file, does not validate this
 shape, and does not treat it as a registry-backed schema or conformance target.
 
-The real runtime configuration file today is the repo-root `harness.yaml`,
-generated from [`harness.yaml.example`](../../harness.yaml.example) and read by
-[`harness-config.sh`](../scripts/harness-config.sh). That file controls sandbox
+The real runtime configuration file today is `.devcontainer/.env`,
+generated from [`.devcontainer/.example.env`](../../.devcontainer/.example.env) and read by
+[`docker-compose.sh`](../scripts/docker-compose.sh). That file controls sandbox
 settings. The example below is only a pointer map over the existing `.oh/`
 control-plane surfaces described in the [`.oh/` directory layout](oh-directory-layout.md).
 

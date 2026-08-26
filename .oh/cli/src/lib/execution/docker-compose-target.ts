@@ -19,13 +19,13 @@ import type {
  *
  * It WRAPS the proven lifecycle machinery instead of reimplementing it: every
  * compose operation delegates to `.oh/scripts/docker-compose.sh`, which stays
- * the single source of truth for harness.yaml-derived env, compose overrides,
+ * the single source of truth for env-file wiring, compose overrides,
  * the docker-socket opt-in, the SSH overlay and its port-collision preflight,
  * the Hermes overlay, sandbox naming, and project-root behavior. No compose
  * `-f <overlay>` argv is assembled here, so today's behavior is preserved by
  * construction rather than by luck.
  *
- * Brain-side decisions stay brain-side: the harness.yaml seed, the interactive
+ * Brain-side decisions stay brain-side: the `.env` seed, the interactive
  * Docker-socket opt-in prompt, sandbox image resolution, and container-name
  * precedence all remain in `../../commands/lifecycle.ts`. This adapter is told
  * what to run; it does not decide policy.
@@ -48,7 +48,7 @@ export interface DockerComposeTargetOptions {
   projectRoot: string;
   /**
    * Container name for `attach()`, `exec()`, and `status()`. Resolution
-   * (positional arg > harness.yaml `sandbox.name` > the default) is a
+   * (positional arg > `.env` `SANDBOX_NAME` > the default) is a
    * brain-side decision and stays with the caller; this adapter never guesses.
    */
   container?: string;
@@ -142,7 +142,7 @@ export class DockerComposeExecutionTarget implements ExecutionTarget {
    * reimplement it, this asks the script's own non-executing oracle:
    * `--print-argv` emits the compose argv it WOULD run, one entry per line, and
    * the socket overlay is present in the `-f` list exactly when the opt-in is
-   * on. No `truthy()` port, no harness.yaml parsing, no `DOCKER_SOCKET` read.
+   * on. No `truthy()` port, no env-file parsing, no `DOCKER_SOCKET` read.
    *
    * `"files"` and `"ports"` are deliberately NOT advertised: this contract
    * declares no method for moving files or forwarding ports, so claiming them

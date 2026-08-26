@@ -24,7 +24,7 @@ identity, running identically on your laptop or an unattended, lights-out remote
 Full terminal, VS Code, and Remote-SSH options: see [Connecting to the sandbox](connecting.md).
 
 [Hermes](harnesses/hermes.md) — Nous Research's self-improving agent CLI — is an opt-in harness: set
-`install.hermes: true` in harness.yaml, rebuild, then run `hermes setup`.
+`INSTALL_HERMES=true` in .devcontainer/.env, rebuild, then run `hermes setup`.
 
 ## How the primitive pack ships
 

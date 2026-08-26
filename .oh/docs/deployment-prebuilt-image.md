@@ -49,17 +49,17 @@ which the compose file interpolates at `image:`.
 
 `--no-build` on its own suppresses the build and reuses whatever image compose
 already resolves (a previously built `sandbox-<name>`, or a `sandbox.image` set
-in `harness.yaml`) without pinning one — an advanced escape hatch.
+in `.devcontainer/.env`) without pinning one — an advanced escape hatch.
 
 ### Which image ref wins (last wins)
 
 ```
 ghcr.io/mifunedev/openharness:latest      (built-in default)
-  └─ harness.yaml  sandbox.image: <ref>   (project default — see harness.yaml.example)
+  └─ .devcontainer/.env  OH_SANDBOX_IMAGE=<ref>   (project default — see .example.env)
        └─ oh sandbox --image=<ref>        (per-invocation override)
 ```
 
-Set a durable project default in `harness.yaml`:
+Set a durable project default in `.devcontainer/.env`:
 
 ```yaml
 sandbox:
@@ -88,7 +88,7 @@ OH_SANDBOX_IMAGE=ghcr.io/mifunedev/openharness:latest \
 ```
 
 `OH_SANDBOX_IMAGE` in the process environment takes precedence over the
-`harness.yaml`-derived `--env-file`, so it overrides a `sandbox.image` pin — the
+`.env` `--env-file`, so it overrides an `OH_SANDBOX_IMAGE` pin — the
 same last-wins ordering as the CLI.
 
 ## VS Code "Reopen in Container"

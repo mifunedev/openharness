@@ -105,32 +105,6 @@ pi -e npm:pi-autoresearch@1.6.0
 Then confirm the autoresearch skill commands and `/autoresearch` command appear
 in Pi's command list.
 
-## Relationship to `/autopilot`
-
-`pi-autoresearch` overlaps with `/autopilot` in one narrow sense: both are
-autonomous loops that mutate git state, run measurements, and decide whether a
-change is worth keeping.
-
-They are not substitutes.
-
-| Surface | Owner | Scope | Stop/guard model |
-|---------|-------|-------|------------------|
-| `/autopilot` | Open Harness | Scheduled harness-infra self-improvement: select an issue, build a PR, run eval/CI/PR gates, respect daily/total PR caps. | Harness caps, issue/PR dedupe, `/eval`, `/audit pr`, `/spec`, and operator review. |
-| `pi-autoresearch` | Operator-invoked Pi package | Metric optimization in a chosen working directory: try ideas, benchmark, log, keep/revert, repeat. | `.auto/config.json maxIterations`, interrupt controls, optional checks/hooks, and finalization into review branches. |
-
-The overlap points are benchmark-driven keep/revert decisions, long-running
-autonomy, token spend, and git mutations. For v1, Open Harness only exposes and
-documents the package. It does **not** wire `pi-autoresearch` into `/autopilot`,
-`/benchmark`, `/eval`, or `/spec`.
-
-Follow-on questions before any integration:
-
-- Can `pi-autoresearch` run held-out capability-benchmark experiments without
-  bypassing `/autopilot`'s issue/PR/eval governance?
-- Should `/benchmark` call autoresearch for exploratory optimization, or should
-  it remain a verdict gate only?
-- How would autoresearch session state be bounded by the same caps that protect
-  scheduled `/autopilot` runs?
 
 ## Troubleshooting
 

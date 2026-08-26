@@ -35,16 +35,7 @@ that catches anything time-sensitive without doing real work.
     `DRIFT: <summary>`. When `/audit drift` reports all classes clean,
     append nothing extra — the existing `HEARTBEAT_OK` reply stays
     unchanged; do NOT add a per-pulse "no drift" block on clean runs.
-2.8. **Watchdog nudge.** Run `/watchdog --action all --repo mifunedev/openharness`.
-    The watchdog is generic, but its current required action is autopilot draft
-    PR recovery: determine whether draft PRs are active, stuck, or stale; if a
-    draft is already green/mergeable/clean, remove draft with `gh pr ready`; if
-    it is stale but not promotable, complete the remaining work on that PR branch,
-    run targeted checks, push, and only then remove draft. It may also kill tmux
-    sessions frozen at usage-limit/resume prompts, or reap completed autopilot PR
-    sessions only after the PR is terminal and the pane is idle. It never merges
-    PRs and never kills sessions on age alone.
-2.10. **One-shot scheduled maintenance (date-gated).** Compute the current
+2.8. **One-shot scheduled maintenance (date-gated).** Compute the current
     Denver date and hour:
     ```bash
     SDATE=$(TZ=America/Denver date +%Y-%m-%d)
@@ -73,12 +64,7 @@ that catches anything time-sensitive without doing real work.
 - Drift detected by `/audit drift` → include in reply as
   `DRIFT: <summary>` and note in `.oh/memory/<today>/log.md`. Clean run →
   no extra output.
-- Watchdog nudge (step 2.8) → completed/undrafted stale PRs, killed stuck
-  sessions, reaped completed autopilot PR sessions, or active-watch signals →
-  include in reply as `NUDGE: <action>` (and `WATCHING: ...` for active or
-  open-PR items) and note in `.oh/memory/<today>/log.md`. Clean watchdog run → no
-  extra output.
-- Scheduled maintenance (step 2.10) → when the one-shot maintenance fired,
+- Scheduled maintenance (step 2.8) → when the one-shot maintenance fired,
   include `MAINT: restart-273 launched (detached)` and note it in
   `.oh/memory/<today>/log.md`. The detached restart script writes its own
   separate `restart-273:` liveness line and #273 comment.
@@ -110,7 +96,7 @@ that catches anything time-sensitive without doing real work.
   ```
 
   where `<status>` is one of `OK`, `OK (N watching)`, `OK (stale ralph: <name>)`,
-  `OK (resolved: <item-snippet>)`, `OK (watchdog: <summary>)`, or `OK (maint)`.
+  `OK (resolved: <item-snippet>)`, or `OK (maint)`.
   This is the cron's only per-pulse liveness signal — it MUST
   execute every pulse regardless of what else happened.
 

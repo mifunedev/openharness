@@ -75,7 +75,7 @@ _anchor="$_root"
 # all worktrees of one checkout read and write the same file.
 #
 # `git worktree list --porcelain` prints the main worktree first — the same
-# idiom already hand-rolled in render-log-entry.sh, autopilot-caps.sh, and
+# idiom already hand-rolled in render-log-entry.sh and
 # audit-run.sh, which each worked around this resolver rather than fixing it.
 #
 # Degrade to `_root` whenever git cannot answer: no git binary, not a repo (a

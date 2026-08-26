@@ -25,7 +25,7 @@ Every entry below is present in a fresh clone unless noted otherwise.
 | `agents/` | dir | Provider-portable sub-agent definitions (`pm`, `critic`, `implementer`, `advisor`, and specialists). Audit routing belongs to `/audit`, not an agent registry. | Agent providers via symlinks (`.claude/agents` → `.oh/agents`); the Agent tool. |
 | `cli/` | dir | The in-tree `oh` CLI — a standalone npm package built into the image as `/opt/oh`. | `npm --prefix .oh/cli`; the `oh` binary (`oh init` / `oh update`). |
 | `context/` | dir | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) plus the collapsed `rules/` provider pointers. | Session start per `AGENTS.md`; symlinked provider surfaces. |
-| `crons/` | dir | Scheduled-agent cron definitions (`heartbeat.md`, `autopilot.md`, `cleanup-tasks.md`, `eval-weekly.md`, `prompt-miner.md`) plus the gitignored runtime `.cron.log`/`.pid`. | `.oh/scripts/cron-runtime.ts`. |
+| `crons/` | dir | Scheduled-agent cron definitions (`heartbeat.md`, `cleanup-tasks.md`, `eval-weekly.md`, `prompt-miner.md`) plus the gitignored runtime `.cron.log`/`.pid`. | `.oh/scripts/cron-runtime.ts`. |
 | `docs/` | dir | The GitHub-readable markdown docs — this directory. Markdown only; no build machinery (the rendered site lives in [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)). | Humans on GitHub / DeepWiki; `manifest.json` vendors `docs/**` for installed users. |
 | `evals/` | dir | The fitness-function suite — regression `probes/` (incl. `cc-safety-net-wiring.sh`, the destructive-command guard wiring probe), the `capability/` benchmark, trajectory `datasets/`, and the `RESULTS.md` scoreboard. | `/eval` and the `.oh/scripts` eval runner. |
 | `hooks/` | dir | Provider-portable **secret-exposure** hook scripts (`deny-env-dump.sh`, `deny-secret-paths.sh`, `notify_slack.sh`, `warn-devtcp.sh`). The complementary **destructive-command** guard (cc-safety-net) is not a script here — it is a global binary baked into the image plus guard-wrapped entries in the provider configs (`.claude/settings.json`, `.codex/hooks.json`, the `npm:cc-safety-net` package in `.pi/settings.json`); see [security-considerations.md §3](security-considerations.md). | Agent providers via symlinks (`.claude/hooks` → `.oh/hooks`). |
@@ -64,5 +64,4 @@ must not be treated as real until a change actually creates them:
 
 - [`.oh/README.md`](../README.md) — the governing principle and the `.oh/`-vs-root boundary.
 - [Descriptive `.oh/harness.yml` example](harness-manifest.md) — an example-only pointer map over the real `.oh/` surfaces, not a required manifest schema.
-- [`.oh/docs/roadmap.md`](roadmap.md) — the primitive-taxonomy migration this layout came out of.
 - [`.oh/context/directory-readme.md`](../context/directory-readme.md) — the README-as-directory-anchor convention.

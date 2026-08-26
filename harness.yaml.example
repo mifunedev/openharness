@@ -73,14 +73,6 @@ paths:
   # memory: .oh/memory         # MEMORY_DIR — long-term memory + dated session logs
   # worktrees: .oh/worktrees   # WORKTREES_DIR — ignored git worktree and project-clone root
 
-autopilot:
-  # Configurable defaults for the deterministic caps gate
-  # (.oh/skills/autopilot/autopilot-caps.sh, wired as the autopilot cron's `preflight:`).
-  # Read live at each fire — uncomment to change without a rebuild. An
-  # AUTOPILOT_TOTAL_CAP / AUTOPILOT_DAILY_CAP env var still overrides these.
-  # total_cap: 10              # AUTOPILOT_TOTAL_CAP — max open autopilot PRs at any time
-  # daily_cap: 6               # AUTOPILOT_DAILY_CAP — max open autopilot PRs created per UTC day
-
 slack:
   # Slack is configured via the pi-messenger-bridge package, not here.
   # Tokens PI_SLACK_APP_TOKEN / PI_SLACK_BOT_TOKEN live in .devcontainer/.env;

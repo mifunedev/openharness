@@ -4,7 +4,7 @@ This directory is the harness's **example corpus**: a catalogue of concrete,
 verifiable *trajectories* — a real prompt, the real change it produced, and a
 machine-checkable oracle for that change. Inspired by HuggingFace's
 [Repo2RLEnv](https://github.com/huggingface/Repo2RLEnv), each example turns a
-shipped PR, an autopilot run, or a retro lesson into a reward-bearing instance a
+shipped PR or a retro lesson into a reward-bearing instance a
 candidate trajectory can be **scored against** (or an existing trajectory
 **improved from**). Where the probe suite asks "did we break it?" and the
 capability benchmark asks "did we get better?", this corpus supplies the
@@ -25,7 +25,7 @@ candidate diff still earns its example's reward.
 ## Per-example folder layout
 
 Each example lives at `evals/datasets/<dataset>/<DS-id>-<slug>/`. `<dataset>` is
-the trajectory class (`spec-execute-prs`, `autopilot-runs`, `retro-cycles`);
+the trajectory class (`spec-execute-prs`, `retro-cycles`);
 `<DS-id>` is the never-reused `DS-NNN` id; `<slug>` is a short kebab label.
 
 | Path | Holds |
@@ -50,7 +50,7 @@ the trajectory class (`spec-execute-prs`, `autopilot-runs`, `retro-cycles`);
 |---|---|---|---|
 | `id` | string | yes | `DS-NNN`; matches the folder's `DS-id` and the `## Catalogue` row. |
 | `slug` | string | yes | Kebab label; matches the folder's `<slug>`. |
-| `dataset` | string | yes | Trajectory class: `spec-execute-prs` \| `autopilot-runs` \| `retro-cycles`. |
+| `dataset` | string | yes | Trajectory class: `spec-execute-prs` \| `retro-cycles`. |
 | `title` | string | yes | Human-readable one-line title. |
 | `created` | date | yes | UTC `YYYY-MM-DD` the example was captured. |
 | `source` | object | yes | Provenance. PR examples: `{repo, pr, issue, merge_commit, url}`. Retro examples: `{repo, memory_ref, lesson_date, origin}`. |
@@ -95,7 +95,6 @@ directions; column 1 is the bare `DS-NNN`).
 |---|---|---|---|---|
 | DS-001 | ship-spec-prs † | Add default Pi Monitor support | PR #147 (closes #146) | diff_similarity, artifact_presence |
 | DS-002 | ship-spec-prs † | Run pnpm security audits in CI | PR #172 (closes #171) | diff_similarity, artifact_presence, test_execution |
-| DS-010 | autopilot-runs | Correct the /harness-audit memory path | PR #177 (closes #176) | diff_similarity, artifact_presence |
 | DS-020 | retro-cycles | Brief critics with diverse lenses (retro lesson) | /retro 2026-05-11 → memory/MEMORY.md | artifact_presence, diff_similarity |
 
 † **Legacy class name.** `/ship-spec` was absorbed into `/spec execute` and deleted

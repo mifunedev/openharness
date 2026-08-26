@@ -86,7 +86,7 @@ wired exactly as §2 describes. Both fire on the same `PreToolUse`/`Bash`
 event.
 
 - **What it is:** [cc-safety-net](https://github.com/kenryu42/cc-safety-net) `@1.0.6` (MIT), a community-maintained `PreToolUse` hook that **semantically parses** the Bash command (via `shell-quote`, not a regex) and denies destructive intent: `rm -rf` targets, `git reset --hard`, `git checkout --` discards, `git push --force`, `git stash clear`, `git clean -f`, `find -delete`, `dd`/`mkfs`/`shred`, and destructive interpreter one-liners. Semantic parsing means shell-wrapper evasion (`bash -c "…"`, `xargs`, command chaining) is followed and blocked too, not just the surface form.
-- **Fail-closed under STRICT:** `CC_SAFETY_NET_STRICT=1` (`docker-compose.yml:69`) closes the one fail-open hole — unparseable shell syntax **ALLOWS** by default; STRICT **denies** it. Malformed input JSON is denied unconditionally (source-verified). `CC_SAFETY_NET_WORKTREE=1` (`docker-compose.yml:70`) unblocks *bare* `git reset --hard` / `clean -fd` / `checkout -- .` inside a verified linked worktree (autopilot builds there) without unblocking `reset --hard <ref>`. No `PARANOID`/`DEBUG` modes.
+- **Fail-closed under STRICT:** `CC_SAFETY_NET_STRICT=1` (`docker-compose.yml:69`) closes the one fail-open hole — unparseable shell syntax **ALLOWS** by default; STRICT **denies** it. Malformed input JSON is denied unconditionally (source-verified). `CC_SAFETY_NET_WORKTREE=1` (`docker-compose.yml:70`) unblocks *bare* `git reset --hard` / `clean -fd` / `checkout -- .` inside a verified linked worktree (cron and build worktrees live there) without unblocking `reset --hard <ref>`. No `PARANOID`/`DEBUG` modes.
 - **Why a hook, not a prompt:** same rationale as §2 — the sandbox runs with `bypassPermissions` / `approval_policy=never`, so the permission engine is off (§4, Caveat 2) and hooks are the *only* enforcement layer. **A prompt asks; a hook enforces** (§7). Docker remains the real security boundary; this is a footgun net, not a sandbox (see the honesty note in the runbook below).
 - **Per-provider wiring:**
   - **claude** — a guard-wrapped entry appended to `PreToolUse`→`Bash`→`hooks[]` in [`.claude/settings.json`](../../.claude/settings.json:87): `sh -c '[ "$CC_SAFETY_NET_OFF" = "1" ] || ! command -v cc-safety-net >/dev/null 2>&1 || exec cc-safety-net hook --claude-code'`. The `command -v` clause makes the hook a clean **no-op when the binary is absent** (outside the built sandbox image — CI checkouts, host clones, `.oh/worktrees/` project clones) instead of emitting `exec: cc-safety-net: not found` on every Bash call; loud enforcement of the binary's presence stays at the STRICT-scoped boot gate (`link-providers.sh`), never on the per-command hot path. The existing §2 hook entries are byte-for-byte unchanged.
@@ -113,7 +113,7 @@ event.
 - **Rollout / restart step (required).** The guard binds at process spawn, so long-lived sessions started **before** the guard landed stay unguarded until restarted — without this step they defeat the purpose indefinitely. After the merge and image rebuild:
   - **Simplest — recreate the container** (restarts every session with the new image + env): `docker compose -f .devcontainer/docker-compose.yml up -d --build` (or `make sandbox`).
   - **Or restart the long-lived sessions in place:**
-    - `cron-system` (and `autopilot-*` run sessions): `tmux kill-session -t cron-system` — the `cron-watchdog` supervisor respawns it automatically ([`entrypoint.sh:653-656`](../../.devcontainer/entrypoint.sh)); per-run `autopilot-<branch>` sessions are transient and pick up the guard on their next hourly cron.
+    - `cron-system`: `tmux kill-session -t cron-system` — the `cron-watchdog` supervisor respawns it automatically ([`entrypoint.sh:653-656`](../../.devcontainer/entrypoint.sh)).
     - `client-slack-pi` (Slack bridge): `gateway pi --restart` (see [Integrations → Slack](integrations/slack.md)).
 - **Audit trail.** Every block logs to `~/.cc-safety-net/logs/<session_id>.jsonl` with secrets redacted. The `~/.cc-safety-net` directory is a Docker **named volume** (`docker-compose.yml:57,109`), so the log survives rebuilds.
 - **Honesty note — the script-file gap cuts both ways.** The same script-file route the harness uses for its own destructive git is also the model's evasion route: an agent that writes its own `.sh` and runs it bypasses this layer entirely. That is **accepted**. cc-safety-net (per its own README) is a footgun net, not a security control — **Docker is the security boundary** (§4). This layer catches accidents, not a determined adversary who controls the model.
@@ -152,17 +152,22 @@ expose to whichever trust level you choose.
 No agent merges its own work to the trunk.
 
 - **Doctrine:** [`AGENTS.md`](../../AGENTS.md) § The Workflow — the canonical path ends `… → merge (human) → reset|clean`, and the ownership table states the human owns *"merge — final gate, no auto-merge"* (`AGENTS.md:158`, mermaid `MERGE` node `AGENTS.md:147`). The runner resets; it never merges.
-- **Enforced in autopilot:** the self-improvement loop [`.oh/skills/autopilot/SKILL.md`](../../.oh/skills/autopilot/SKILL.md) **never auto-merges** and is rate-capped by the deterministic preflight [`.oh/skills/autopilot/autopilot-caps.sh`](../../.oh/skills/autopilot/autopilot-caps.sh) — cap **6 PRs/UTC-day** and **10 total open** (`autopilot-caps.sh:16-19,29-30`). On a capped hour the runtime spawns *no* session at all.
+- **No unattended merger exists:** the `autopilot` self-improvement loop and its rate-capping preflight were removed in 0.3.0. No scheduled agent now opens or promotes PRs unattended, so there is no automated path to a merge at all.
 - **RECOMMENDED (hard gate):** the ultimate enforcement of "no agent merges" is **GitHub branch protection** (required reviews / restricted merge) on `development`/`main`. That lives in repo settings, not this tree — configure it. Without it, "no auto-merge" rests on the agents' skill definitions, not a server-side block.
 
-## 6. Autopilot owned-surface guard — **ENFORCED**
+## 6. Harness-infra self-edit surface — **DOCTRINE (was ENFORCED)**
 
-The unattended loop can only touch harness infrastructure, never sandbox
-application code, and cleans up only after itself.
+An agent editing this repo touches harness infrastructure, never sandbox
+application code.
 
-- **Mechanism:** [`.oh/skills/autopilot/SKILL.md`](../../.oh/skills/autopilot/SKILL.md) defines `OWNED_PATHS` (`SKILL.md:134`) — the exact set it may mutate (`.claude/`, `.oh/context/`, `docs/`, `scripts/`, `.oh/crons/`, `.oh/skills/wiki/`, `.oh/evals/`, `.oh/memory/`, `.oh/tasks/`, `CHANGELOG.md`). The §1 clean-state check and every restore scope to that array.
-- **Scope guard:** "harness-infra only … never sandbox application code" (`SKILL.md:549`) — the same boundary as `CLAUDE.md` § What You Do NOT Do.
-- **Non-destructive restore:** a dirty *owned* surface skips the run with a distinct `BLOCKED-OWNED-WIP` token (never a bare `FAIL`); the scoped restore discards only the run's own owned-path residue and leaves any *foreign* change outside the owned set byte-for-byte untouched (`SKILL.md:159-177,560`). `git clean` is deliberately not used.
+- **Status change (0.3.0):** this control was *mechanically* enforced by the
+  `autopilot` loop's `OWNED_PATHS` clean-state check and scoped restore. Both
+  were removed with the loop. The boundary is now doctrine, not a running check.
+- **Boundary:** the path set is recorded in
+  [`.oh/docs/repair-operator-registry.md`](repair-operator-registry.md) § Tier 1,
+  which is now its source of truth.
+- **Scope guard:** "harness-infra only … never sandbox application code" — see
+  `CLAUDE.md` § What You Do NOT Do, which is unchanged and still normative.
 
 ## 7. Untrusted model output — the harness is the authority — **RECOMMENDED (doctrine)**
 

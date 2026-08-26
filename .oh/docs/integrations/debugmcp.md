@@ -287,7 +287,7 @@ For the **optional installer** option:
 ```bash
 gh issue create \
   --title "DebugMCP: optional installer for headless extension host" \
-  --label autopilot \
+  --label enhancement \
   --body "Decision-gate outcome: optional installer (see .oh/docs/integrations/debugmcp.md § Maintainer Decision Gate).
 Build an opt-in installer (script or flag) that provisions a headless VS Code
 extension host plus the ozzafar.debugmcpextension v2.0.1 and verifies the MCP
@@ -301,7 +301,7 @@ For the **default capability** option:
 ```bash
 gh issue create \
   --title "DebugMCP: make the debug capability active by default" \
-  --label autopilot \
+  --label enhancement \
   --body "Decision-gate outcome: default capability (see .oh/docs/integrations/debugmcp.md § Maintainer Decision Gate).
 Bake a headless VS Code extension host + ozzafar.debugmcpextension v2.0.1 into
 the devcontainer image so DebugMCP is active out of the box. Scope the image-size

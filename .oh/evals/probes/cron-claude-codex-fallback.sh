@@ -36,8 +36,8 @@ if ! awk '
   exit 1
 fi
 
-if grep -q 'autopilot.*codex exec\|codex exec.*autopilot' "$RUNTIME"; then
-  echo "REGRESSION: cron Codex fallback appears scoped to autopilot instead of global helper" >&2
+if grep -qE 'codex exec' "$RUNTIME" && grep -qE '^[^#]*\b(id|cron)\b[^#]*codex exec' "$RUNTIME"; then
+  echo "REGRESSION: cron Codex fallback appears scoped to one cron instead of a global helper" >&2
   exit 1
 fi
 

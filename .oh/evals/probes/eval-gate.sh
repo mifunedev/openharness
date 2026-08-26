@@ -5,16 +5,14 @@
 #       presence of a REGRESSION row. The rule lives with whoever RUNS the gate: that moved
 #       from autopilot §6 to the build path's own /eval gate in spec-simplification US-002,
 #       and moved again with that path when /ship-spec was absorbed into /spec execute (US-003).
-#       Issue #816. Both halves are
-#       asserted — the rule on its owner, and the deferral on autopilot — so the lesson
-#       cannot be lost by relocating it again without moving this probe too.
+#       Issue #816. The autopilot half of this assertion was dropped in 0.3.0 when autopilot
+#       was removed; the rule is asserted on /spec execute, its sole owner and runner.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-SKILL="$ROOT/.claude/skills/autopilot/SKILL.md"
 SPEC="$ROOT/.claude/skills/spec/references/execute.md"
 
-for f in "$SKILL" "$SPEC"; do
+for f in "$SPEC"; do
   if [[ ! -f "$f" ]]; then
     echo "SKIPPED: required file absent: $f" >&2
     exit 2
@@ -47,28 +45,10 @@ grep -qi 'exit'                <<<"$spec_section" || missing+=("runner exit-code
 grep -qi 'pre-existing'        <<<"$spec_section" || missing+=("pre-existing-red carve-out")
 grep -qi 'delta\|unchanged'    <<<"$spec_section" || missing+=("delta/unchanged language")
 
-# --- the deferral, on the surface that no longer runs the gate -------------
-ap_section=$(awk '
-  /^### 6\. Eval gate/ {f=1; print; next}
-  f && /^### / {f=0}
-  f {print}
-' "$SKILL")
-
-if [[ -z "$ap_section" ]]; then
-  missing+=("autopilot no longer has a '### 6. Eval gate' section to state where the gate ran")
-else
-  grep -qi 'do \*\*not\*\* re-run\|does not re-run' <<<"$ap_section" \
-    || missing+=("autopilot §6 does not say the gate already ran inside /spec execute and must not be re-run")
-  # If autopilot starts running /eval again, the rule has to come back with it.
-  if grep -qE '^\s*/eval\s*$' <<<"$ap_section"; then
-    missing+=("autopilot §6 invokes /eval again — the delta/exit-code rule must be restated here if the gate moves back")
-  fi
-fi
-
 if (( ${#missing[@]} )); then
   echo "REGRESSION: the eval gate's delta/exit-code rule is broken: ${missing[*]}" >&2
   exit 1
 fi
 
-echo "PASS: /spec execute keys the eval gate on green->red delta + runner exit code (no bare-REGRESSION gate), and autopilot §6 defers to it rather than re-running" >&2
+echo "PASS: /spec execute keys the eval gate on green->red delta + runner exit code (no bare-REGRESSION gate)" >&2
 exit 0

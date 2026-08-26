@@ -80,4 +80,3 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [Trace/event ledger RFC (#525 foundation)](rfcs/rfc-trace-ledger.md)
 - [Property testing](property-testing.md)
 - [Resources](resources.md)
-- [Roadmap](roadmap.md)

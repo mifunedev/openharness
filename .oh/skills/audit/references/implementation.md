@@ -2,7 +2,7 @@
 
 The **audit** gate, composed by `/spec execute` in `AGENTS.md § The Workflow`. It answers
 one question: *does this one implementation satisfy its task graph and is it
-promotable?* — and emits exactly one verdict the `/autopilot` runner routes on.
+promotable?* — and emits exactly one verdict the caller routes on.
 
 **Core principle: compose, don't re-derive — and never infer green from silence.**
 This skill owns the *verdict*, not the checks. Each gate below is an existing

@@ -37,7 +37,7 @@ MAP=/tmp/oh-restart-273.sessions.txt
 # which is not expected in the one-shot window). The heartbeat gate checks the same path.
 SENTINEL="/tmp/oh-restart-273.done"
 
-# Durable sessions to preserve across the restart. Transients (cron-autopilot-*, agent-*,
+# Durable sessions to preserve across the restart. Transients (cron-<id>-*, agent-*,
 # the heartbeat's own session) are intentionally NOT relaunched.
 DURABLE_RE='^(cron-system|cron-watchdog|app-.*|expose-public-.*)$'
 # Fixed relaunch order: website origin before tunnel; cron-system before its watchdog.

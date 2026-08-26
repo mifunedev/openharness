@@ -14,23 +14,20 @@ that already draws the line — a proposal generator or an auditor cites this
 page instead of re-deriving the boundary.
 
 > **The safe tier is guarded by a path set, not a hook.** There is no
-> `owned-surface-guard` *hook* on disk. The tier-1 boundary is the
-> `OWNED_PATHS` array in `.oh/skills/autopilot/SKILL.md` (the §1 clean-state
-> check and every §5–§7 restore scope to it). The only file on disk named
-> `owned-surface-guard.sh` is the eval probe
-> `.oh/evals/probes/owned-surface-guard.sh`, which asserts the array is used in
-> its word-splitting `"${OWNED_PATHS[@]}"` form — it is a *test of* the tier-1
-> surface, not a separate enforcer and not a tier source.
+> `owned-surface-guard` *hook* on disk, and since 0.3.0 there is no enforcing
+> script either: the `OWNED_PATHS` array lived in `.oh/skills/autopilot/SKILL.md`
+> and was removed with that loop, along with the
+> `.oh/evals/probes/owned-surface-guard.sh` probe that tested it. **This page is
+> now the source of truth for the tier-1 path set** — it is doctrine a reviewer
+> applies, not a check a runtime performs.
 
 ## Tier 1 — safe-by-default
 
-Edits confined to the harness-infra self-edit surface. The unattended loop
-mutates only these paths; a foreign edit outside the set neither blocks a run
-nor is clobbered by the restore. A repair whose entire file set is inside this
-surface is **safe-by-default** — no extra gate beyond the standard build ⇄ audit
-loop and the human merge.
+Edits confined to the harness-infra self-edit surface. A repair whose entire
+file set is inside this surface is **safe-by-default** — no extra gate beyond the
+standard build ⇄ audit loop and the human merge.
 
-**Source of truth — `OWNED_PATHS`, defined once at `.oh/skills/autopilot/SKILL.md:134`:**
+**Source of truth — the tier-1 path set, defined here since 0.3.0:**
 
 ```bash
 OWNED_PATHS=(.claude/ .oh/context/ docs/ scripts/ .oh/crons/ .oh/skills/wiki/ .oh/evals/ .oh/memory/ .oh/tasks/ CHANGELOG.md)
@@ -101,7 +98,7 @@ is a human, applied at a review gate; no automation merges these.
 
 | Tier | Repair class | Drawn by |
 |------|--------------|----------|
-| 1 | safe-by-default | `OWNED_PATHS` self-edit surface — `.oh/skills/autopilot/SKILL.md:134` |
+| 1 | safe-by-default | the tier-1 self-edit surface — this page § Tier 1` |
 | 2 | stronger-gate | `deny-env-dump.sh` · `deny-secret-paths.sh` · `warn-devtcp.sh` + `security-considerations.md §2` |
 | 3 | human-approval-required | `CLAUDE.md` § "What You Do NOT Do" · `AGENTS.md` § The Workflow · `security-considerations.md §4`/`§5` |
 

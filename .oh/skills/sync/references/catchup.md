@@ -17,7 +17,7 @@ Read `references/topology.md` before starting.
    ```bash
    git log upstream/development --oneline -30
    ```
-   Note: autopilot PRs to upstream land as squash merges. The squash
+   Note: PRs to upstream land as squash merges. The squash
    commit's diff is exactly the feature delta.
 
 4. Confirm the working tree is clean (`git status --porcelain` = empty).

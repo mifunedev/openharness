@@ -48,7 +48,7 @@ Format: `<category>-<identifier>` (kebab-case inside each segment).
 | `cloudflared-` | `cloudflared-3000` | Cloudflare tunnels for shared previews |
 | `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes. Interactive CLIs (`claude`, `codex`, `opencode`) are normally foreground in a terminal or VS Code, not detached in tmux. |
 | `client-` | `client-slack-pi`, `client-slack-hermes`, `client-discord` | External-surface clients that bridge an in-sandbox agent to a third-party UI |
-| `cron-` | `cron-heartbeat`, `cron-autopilot-0613-1805`, `cron-system` | Scheduled cron jobs and the cron runtime. |
+| `cron-` | `cron-heartbeat`, `cron-cleanup-tasks-0613-1805`, `cron-system` | Scheduled cron jobs and the cron runtime. |
 
 Reserved prefix: `system-`. Do not use for user apps.
 

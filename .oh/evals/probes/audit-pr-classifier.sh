@@ -41,7 +41,7 @@ for bad in BRAND_NEW ''; do p=$(jq -c --arg x "$bad" '.+{statusCheckRollup:[{con
 p=$(jq -c '.+{statusCheckRollup:[null]}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '.ci+":"+(.evidenceComplete|tostring)'<<<"$out") == UNKNOWN:false ]]||fail null-item
 for review in APPROVED '' null; do p=$(jq -c --arg r "$review" '.+{statusCheckRollup:[{conclusion:"SUCCESS"}],reviewDecision:(if $r=="null" then null else $r end)}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '[.readyForReview,.readyToMerge,.promotable]|join(":")'<<<"$out") == false:true:true ]]||fail "solo readiness $review"; done
 p=$(jq -c '.+{isDraft:true,statusCheckRollup:[{conclusion:"SUCCESS"}],updatedAt:"2026-06-01T00:00:00Z"}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '[.draftStatus,.draftLimbo,.readyForReview,.readyToMerge]|join(":")'<<<"$out") == promotable:true:true:false ]]||fail limbo
-p=$(jq -c '.+{isDraft:true,statusCheckRollup:[{conclusion:"SUCCESS"}],updatedAt:"2026-07-17T10:00:00Z"}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '.ageSeconds|tostring'<<<"$out") == 7200 ]] || fail 'exact watchdog ageSeconds missing'
+p=$(jq -c '.+{isDraft:true,statusCheckRollup:[{conclusion:"SUCCESS"}],updatedAt:"2026-07-17T10:00:00Z"}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '.ageSeconds|tostring'<<<"$out") == 7200 ]] || fail 'exact 2h ageSecondsatchdog ageSeconds missing'
 # Focused stacked PRs classify against their explicit parent base, not development.
 p=$(jq -c '.+{baseRefName:"skill/parent",statusCheckRollup:[{conclusion:"SUCCESS"}]}'<<<"$base")
 stack=$(env pr "[$p]" | jq '.options.expectedBase="skill/parent"' | bash "$C")

@@ -3,14 +3,14 @@ name: strategic-proposal
 description: |
   Spawn 5 domain experts to propose roadmap items, then an AI council drafts a
   roadmap, a Strategic Critic challenges it, and the council finalizes with
-  revisions. Updates the pinned roadmap issue and /roadmap page data.
+  revisions. Updates the pinned roadmap issue.
   TRIGGER when: asked to build roadmap, prioritize features, strategic proposal,
   "what should we build next", or rank product priorities.
 ---
 
 # Strategic Proposal
 
-Spawn 5 specialized expert sub-agents in parallel, each proposing roadmap items from their domain. An Expert AI Council drafts the roadmap, a Strategic Critic challenges it with adversarial backpressure, and the Council finalizes with revisions. The result is published as a pinned GitHub issue and written to `docs/roadmap.md`.
+Spawn 5 specialized expert sub-agents in parallel, each proposing roadmap items from their domain. An Expert AI Council drafts the roadmap, a Strategic Critic challenges it with adversarial backpressure, and the Council finalizes with revisions. The result is published as a pinned GitHub issue.
 
 **Core principle: SIGNAL OVER FEATURES.** Items require evidence of user demand before entering "Build Now" phase. Infrastructure prerequisites are exempt. The Critic ensures the council isn't inflating signal or sandbagging complexity.
 
@@ -54,8 +54,7 @@ flowchart TD
     CRITIC --> F2["Strategic Council FINAL (opus)<br>Incorporate critique, revise or defend"]
     F2 --> G["Find/create pinned issue (label: roadmap)"]
     G --> H["Update pinned issue body"]
-    H --> I["Write roadmap data to docs/roadmap.md"]
-    I --> MEM_OP[Memory Protocol]
+    H --> MEM_OP[Memory Protocol]
     MEM_OP --> Z_OP["Report: roadmap updated"]
 ```
 
@@ -197,11 +196,7 @@ If it already exists, update:
 gh issue edit <NUMBER> --repo mifunedev/openharness --body "<council output>"
 ```
 
-### 9. Write roadmap data to docs/roadmap.md
-
-Parse the council's FINAL roadmap table and write it to `docs/roadmap.md` as a single markdown table (one row per roadmap item). If the file does not exist yet, create it with a brief intro section followed by the table.
-
-### 10. Memory Improvement Protocol
+### 9. Memory Improvement Protocol
 
 **a) Log** — append to `.oh/memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d`:
 
@@ -233,7 +228,6 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 | Expert: Agent Systems | `.claude/agents/expert-agent-systems.md` |
 | Strategic Council | `.claude/agents/strategic-council.md` |
 | Strategic Critic | `.claude/agents/strategic-critic.md` |
-| Roadmap data | `docs/roadmap.md` |
 | Identity | `IDENTITY.md` |
 | Memory | `MEMORY.md` |
 | Daily Logs | `.oh/memory/YYYY-MM-DD/log.md` |

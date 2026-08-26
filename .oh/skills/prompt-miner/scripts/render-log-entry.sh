@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # render-log-entry.sh — append the mandatory prompt-miner memory-log entry.
 #
-# Mirrors the autopilot/caps logging shape: it resolves the shared harness root
+# Mirrors the cron liveness logging shape: it resolves the shared harness root
 # (the MAIN worktree, even when invoked from a linked one) and appends a single
 # Memory-Improvement-Protocol
 # record to .oh/memory/<UTC-date>/log.md through the repo-root .oh/scripts/locked-append.sh
@@ -59,7 +59,7 @@ DAY="$(date -u +%Y-%m-%d)"
 # a git repo — precisely what a reaped worktree looks like — `git` exits
 # non-zero, `pipefail` propagates that out of the command substitution, and `-e`
 # would abort the script HERE instead of falling through to the fallback below.
-# Same idiom as .oh/skills/autopilot/autopilot-caps.sh:109.
+# Same idiom the removed cron cap gate used (0.3.0).
 ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 # Resolve the memory dir through the shared resolver (honors paths.memory /

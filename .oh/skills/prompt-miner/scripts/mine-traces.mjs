@@ -519,7 +519,7 @@ export function detectSessionType(text) {
   const t = typeof text === "string" ? text : "";
   if (!t.trim()) return "other";
   const lower = t.toLowerCase();
-  if (/heartbeat|\bcron\b|scheduled run|autopilot/.test(lower)) return "cron";
+  if (/heartbeat|\bcron\b|scheduled run/.test(lower)) return "cron";
   if (/\bretro\b|retrospect/.test(lower)) return "retro";
   if (/\baudit\b|\bcritique\b|\breview\b|pr-audit/.test(lower)) return "audit";
   const firstWord = (lower.split(/\s+/).filter(Boolean)[0] || "").replace(/[^a-z']/g, "");

@@ -109,7 +109,7 @@ above, which governs individual probe results).
 | `0` | No new green→red regressions this run. Pre-existing `REGRESSION` rows whose status is unchanged do **not** trigger a non-zero exit. |
 | `1` | One or more probes transitioned from a prior `PASS` to `REGRESSION` in this run. |
 
-This `0`/`1` contract is what the autopilot §6 eval gate and the
+This `0`/`1` contract is what the `/spec execute` eval gate and the
 `eval-weekly` cron rely on when checking whether a run is clean.
 
 ## CI gate (`eval-probes`)

@@ -63,7 +63,7 @@ esac
 
 - **Authority is `AGENTS.md § The Workflow`** — the canonical operative path
   (`select → spec-plan → spec-execute → merge → reset|clean`),
-  and the single designated runner (`/autopilot`) both
+  and the human who selects the work both
   live there. Defer to it; do not redefine the workflow here.
 - **The `.oh/tasks/<slug>/` folder is the universal interface** — `plan` produces it;
   `execute` and `retro` are each pointed at it. The `<slug>` is the
@@ -93,7 +93,7 @@ esac
 
 ## When NOT to use
 
-- **`/autopilot`** — selection (which issue to build) is the runner's job; `/spec`
+- **selection** — choosing which issue to build is the human's job; `/spec`
   builds the one folder it is handed.
 
 ## See Also

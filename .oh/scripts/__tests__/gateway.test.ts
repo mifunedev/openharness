@@ -37,10 +37,7 @@ describe("gateway client-session launcher", () => {
   });
 
   it("matches session names EXACTLY (no client-slack-hermes prefix collision)", () => {
-    // grep -Fxq guards against `has-session -t client-slack` prefix-matching the
-    // sibling client-slack-hermes session.
     expect(gateway()).toContain("grep -Fxq");
-    // No actual `tmux has-session` CALL (a comment may explain why we avoid it).
     expect(gateway()).not.toMatch(/^\s*tmux has-session/m);
   });
 
@@ -71,23 +68,18 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     mkdirSync(home, { recursive: true });
     mkdirSync(bin);
 
-    // Malicious tokens: a command-injection attempt + an embedded single quote.
     writeFileSync(
       join(harness, ".devcontainer", ".env"),
       ["PI_SLACK_APP_TOKEN=xapp token; touch $PWNED", "PI_SLACK_BOT_TOKEN=xoxb'quoted"].join("\n"),
     );
-    // Versioned, non-secret bridge config gateway.sh seeds into ~/.pi.
     writeFileSync(
       join(harness, ".pi", "msg-bridge.json"),
       JSON.stringify({ autoConnect: true, auth: { trustedUsers: [] } }),
     );
-    // gateway.sh invokes the real seed-msg-bridge.sh; copy it in.
     cpSync(
       join(ROOT, ".devcontainer/seed-msg-bridge.sh"),
       join(harness, ".devcontainer/seed-msg-bridge.sh"),
     );
-    // Stub tmux: ls reports no sessions (so start proceeds); new-session captures
-    // the launch command; pipe-pane/kill-session/has-session are no-ops.
     writeFileSync(
       join(bin, "tmux"),
       [
@@ -103,16 +95,12 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
       ].join("\n"),
       { mode: 0o755 },
     );
-    // pi stub: records the PI_SLACK_* values it actually received in its env.
     writeFileSync(
       join(bin, "pi"),
       `#!/usr/bin/env bash\nprintf 'PI_SLACK_APP_TOKEN=%s\nPI_SLACK_BOT_TOKEN=%s\n' "$PI_SLACK_APP_TOKEN" "$PI_SLACK_BOT_TOKEN" > "$PI_ENV_FILE"\n`,
       { mode: 0o755 },
     );
-    // npm stub: gateway.sh npm-installs the bridge when missing; no-op here.
     writeFileSync(join(bin, "npm"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
-    // Stub supervisor: the real one runs a restart loop (covered separately);
-    // here it just exec's the pi stub once so we can inspect the env it got.
     writeFileSync(
       join(harness, ".devcontainer", "client-slack-supervise.sh"),
       '#!/usr/bin/env bash\nexec pi --extension "${BRIDGE_ENTRY:-x}" --extension "${RECOVERY_ENTRY:-y}" --approve\n',
@@ -135,7 +123,6 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
       },
     });
 
-    // The captured tmux launch command must not carry raw token text in argv.
     const tmuxLines = readFileSync(tmuxArgs, "utf8").trim().split("\n");
     const tmuxCommand = tmuxLines[tmuxLines.length - 1] ?? "";
     expect(tmuxCommand).toContain("bash -c");
@@ -143,8 +130,6 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
     expect(tmuxCommand).not.toContain("xapp token; touch $PWNED");
     expect(tmuxCommand).not.toContain("xoxb'quoted");
 
-    // Run that launch command: it sources the mode-600 env file, deletes it,
-    // and exec's the supervisor → pi stub, which records the env it received.
     execFileSync("bash", ["-c", tmuxCommand], {
       env: {
         ...env,
@@ -155,13 +140,11 @@ describe("gateway pi: launches client-slack-pi handling tokens as data", () => {
       },
     });
 
-    // Tokens round-trip to pi verbatim as data, and the injection never fired.
     expect(readFileSync(piEnv, "utf8")).toBe(
       ["PI_SLACK_APP_TOKEN=xapp token; touch $PWNED", "PI_SLACK_BOT_TOKEN=xoxb'quoted", ""].join("\n"),
     );
     expect(existsSync(pwned)).toBe(false);
 
-    // The non-secret config was seeded into ~/.pi (tokens stay out of it).
     const seeded = join(home, ".pi/msg-bridge.json");
     expect(existsSync(seeded)).toBe(true);
     expect(readFileSync(seeded, "utf8")).toContain("autoConnect");

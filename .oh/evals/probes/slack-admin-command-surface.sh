@@ -31,7 +31,6 @@ reject_regex() {
 [ -f "$DOC" ] || fail "missing Slack integration doc"
 [ -f "$MANIFEST" ] || fail "missing Slack manifest"
 
-# Positive contract: Pi command surface, Slack DM admin handlers, caveat, fallbacks.
 need_literal "$DOC" "Pi command surface" "Inside the Pi session, the bridge exposes **one** Pi slash command"
 need_literal "$DOC" "Pi /msg-bridge command" '`/msg-bridge status` — connection state plus trusted-user/channel counts.'
 need_literal "$DOC" "Slack admin command boundary" "manifest-backed Slack admin commands"
@@ -49,28 +48,24 @@ need_literal "$ROOT_PACKAGE_AUDIT" "root package audit artifact" "## Grounded RC
 need_literal "$ROOT_PACKAGE_AUDIT" "root package README evidence" "README.md:141 ### Admin commands (in DM with the bot)"
 need_literal "$ROOT_PACKAGE_AUDIT" "root package source evidence" "src/index.ts:275 pi.registerCommand(\"msg-bridge\", {"
 
-# Negative contract: old misleading in-session guidance must not return.
 reject_regex "$DOC" "old in-session /trusted guidance" 'inside the session.*(/trusted|/channels)'
 reject_regex "$DOC" "old attach guidance" 'run `/msg-bridge`, `/trusted`, or `/channels` inside the session'
 reject_regex "$T3_PROCESSES" "old t3 pane command guidance" '`/msg-bridge`, `/trusted`,[[:space:]]*$'
 reject_regex "$T3_PROCESSES" "old t3 /channels pane guidance" '`/channels` are typed \*\*into\*\* that pane'
 reject_regex "$DOC" "DM table mislabels /msg-bridge" '^\| `/msg-bridge status` \|'
 
-# The shipped app manifest must declare every package-owned admin command.
 need_literal "$MANIFEST" "DM event subscription" '"message.im"'
 for command in /help /trusted /revoke /channels /enable /disable /toggletools; do
   need_literal "$MANIFEST" "manifest admin command $command" "\"command\": \"$command\""
 done
 cmp -s "$MANIFEST" "$TEMPLATE_MANIFEST" || fail "root and full-template Slack manifests differ"
 
-# `/trusted` and `/channels` must live under the Slack admin command section.
 trusted_line=$(grep -nF '| `/trusted` |' "$DOC" | cut -d: -f1 | head -1 || true)
 heading_line=$(grep -nF '## 6. Admin Slack commands' "$DOC" | cut -d: -f1 | head -1 || true)
 if [ -z "$trusted_line" ] || [ -z "$heading_line" ] || [ "$trusted_line" -le "$heading_line" ]; then
   fail "/trusted must appear under Admin Slack commands"
 fi
 
-# Runtime pin must select the fork branch containing Slack slash handlers.
 need_literal "$ROOT/.oh/scripts/gateway.sh" "bridge slash-command handler pin" 'c8b96e9d0fb69611c4e67ae298d1d10d83792a26'
 need_literal "$ROOT/.oh/scripts/gateway.sh" "bridge pin reconciliation marker" '.openharness-pin'
 need_literal "$ROOT/.oh/scripts/gateway.sh" "bridge pin reconciliation check" 'installed_pin" != "$FORK_PIN'

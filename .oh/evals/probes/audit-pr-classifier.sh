@@ -13,7 +13,6 @@ check_ci(){ local raw=$1 expect=$2 field=${3:-conclusion}; p=$(jq -c --arg f "$f
 for x in ACTION_REQUIRED CANCELLED ERROR FAILURE STARTUP_FAILURE STALE TIMED_OUT; do check_ci "$x" FAIL; done
 for x in EXPECTED IN_PROGRESS PENDING QUEUED REQUESTED WAITING; do check_ci "$x" PENDING status; done
 for x in SUCCESS NEUTRAL SKIPPED; do check_ci "$x" PASS; done
-# Real gh statusCheckRollup shapes carry COMPLETED status together with a conclusion.
 for case_expect in checkRunSuccess:PASS checkRunFailure:FAIL checkRunPending:PENDING statusContextSuccess:PASS failurePrecedesPending:FAIL unknownConclusion:UNKNOWN; do
   key=${case_expect%:*}; expect=${case_expect#*:}
   item=$(jq -c --arg key "$key" '.[$key]' "$REAL")
@@ -21,13 +20,10 @@ for case_expect in checkRunSuccess:PASS checkRunFailure:FAIL checkRunPending:PEN
   out=$(env pr "[$p]"|bash "$C")
   [[ $(jq -r .ci<<<"$out") == "$expect" ]] || fail "real GitHub shape $key"
 done
-# Contradictory CheckRun state may retain a priority CI value, but evidence is incomplete.
 for item in '{"__typename":"CheckRun","name":"ci","status":"IN_PROGRESS","conclusion":"SUCCESS"}' '{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":null}'; do
   p=$(jq -c --argjson item "$item" '.+{statusCheckRollup:[$item]}'<<<"$base"); out=$(env pr "[$p]"|bash "$C")
   [[ $(jq -r .evidenceComplete<<<"$out") == false ]] || fail 'contradictory CheckRun evidence accepted as complete'
 done
-# StatusContext has a distinct contract: nonempty context + state only. A
-# conclusion/status field, missing context, or unknown typename is malformed.
 for item in \
   '{"__typename":"StatusContext","context":"ci","state":"SUCCESS","conclusion":"SUCCESS"}' \
   '{"__typename":"StatusContext","state":"SUCCESS"}' \
@@ -42,7 +38,6 @@ p=$(jq -c '.+{statusCheckRollup:[null]}'<<<"$base"); out=$(env pr "[$p]"|bash "$
 for review in APPROVED '' null; do p=$(jq -c --arg r "$review" '.+{statusCheckRollup:[{conclusion:"SUCCESS"}],reviewDecision:(if $r=="null" then null else $r end)}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '[.readyForReview,.readyToMerge,.promotable]|join(":")'<<<"$out") == false:true:true ]]||fail "solo readiness $review"; done
 p=$(jq -c '.+{isDraft:true,statusCheckRollup:[{conclusion:"SUCCESS"}],updatedAt:"2026-06-01T00:00:00Z"}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '[.draftStatus,.draftLimbo,.readyForReview,.readyToMerge]|join(":")'<<<"$out") == promotable:true:true:false ]]||fail limbo
 p=$(jq -c '.+{isDraft:true,statusCheckRollup:[{conclusion:"SUCCESS"}],updatedAt:"2026-07-17T10:00:00Z"}'<<<"$base"); out=$(env pr "[$p]"|bash "$C"); [[ $(jq -r '.ageSeconds|tostring'<<<"$out") == 7200 ]] || fail 'exact 2h ageSecondsatchdog ageSeconds missing'
-# Focused stacked PRs classify against their explicit parent base, not development.
 p=$(jq -c '.+{baseRefName:"skill/parent",statusCheckRollup:[{conclusion:"SUCCESS"}]}'<<<"$base")
 stack=$(env pr "[$p]" | jq '.options.expectedBase="skill/parent"' | bash "$C")
 [[ $(jq -r '[.promotable,(.flags|index("base-convention")==null)]|join(":")'<<<"$stack") == true:true ]] || fail 'focused stacked base override'

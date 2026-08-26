@@ -4,12 +4,6 @@
 # desc: the registry portability gate stays armed — linter present and fail-closed, exception list parseable, invocation site still cites it
 set -euo pipefail
 
-# Companion to registry-portability.sh. That probe scans the published registry
-# and therefore SKIPS whenever no checkout is supplied, which is every run in
-# CI. This probe carries the half of the contract that lives in THIS repository,
-# so it is always armed and can never skip: it asserts the gate is still wired
-# and still fails closed. A gate nobody calls, or one that exits 0 on a scan it
-# could not perform, is disarmed without anything going red.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 LINTER="$ROOT/.oh/scripts/registry-portability.sh"
@@ -21,21 +15,14 @@ fail() {
   exit 1
 }
 
-# 1. The linter exists and is runnable.
 [[ -f "$LINTER" ]] || fail "the portability linter is absent: .oh/scripts/registry-portability.sh"
 bash -n "$LINTER" 2>/dev/null || fail "the portability linter is not valid bash: .oh/scripts/registry-portability.sh"
 
-# 2. The exception list is present and parseable. The linter fails closed when
-#    this file is unreadable, so a malformed contract would turn every run into
-#    exit 2 — a permanent SKIPPED that reads like "nothing to report".
 [[ -f "$CONTRACT" ]] || fail "the exception list is absent: .oh/scripts/registry-portability.md"
 
 blocks=$(grep -c '^```allow$' "$CONTRACT" || true)
 (( blocks == 1 )) || fail "expected exactly one fenced block tagged allow in registry-portability.md, found $blocks"
 
-# Every entry inside the block must carry five fields, a known class, and a
-# 12-hex line hash. A malformed entry is skipped with a warning by the linter,
-# which silently drops a suppression or a triage record.
 malformed=$(
   awk '
     /^```allow$/ { inblock = 1; next }
@@ -61,15 +48,9 @@ if [[ -n "$malformed" ]]; then
   exit 1
 fi
 
-# 3. The gate still has a caller. The check was landed with no invocation site
-#    at all; the publishing step in the builder reference is the one place that
-#    tells an author to run it before opening a registry pull request.
 grep -q 'registry-portability\.sh' "$CALLER" \
   || fail "the builder publishing step no longer cites registry-portability.sh — the gate has no caller"
 
-# 4. The linter fails closed. A scan that could not run must never report a pass.
-#    Verified by rejection against a path that does not exist, not by trusting
-#    the good case.
 absent="$ROOT/.oh/scripts/.registry-portability-probe-absent-$$"
 set +e
 bash "$LINTER" --registry "$absent" >/dev/null 2>&1

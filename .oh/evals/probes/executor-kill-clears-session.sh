@@ -27,8 +27,6 @@ if ! command -v git >/dev/null 2>&1; then
   exit 2
 fi
 
-# NEVER a real slug. A destructive verification needs a target it can afford to
-# destroy, and it must live outside the real repo and the real /tmp namespace.
 DECOY="firstmate-kill-probe"
 WORK="$(mktemp -d)"
 TMPD="$WORK/tmp"
@@ -42,11 +40,6 @@ printf '# progress\n' >"$WORK/repo/.oh/tasks/$DECOY/progress.txt"
 
 missing=()
 
-# --- (1) the exact abort: a non-zero best-effort lookup must not kill its caller ---
-# `herdr agent get` exits 1 for a nonexistent agent. Under `set -euo pipefail` that
-# return propagated out of the command substitution in runner_teardown and killed the
-# whole --kill run before its first teardown branch. A stub herdr reproduces that
-# without needing a real herdr server.
 printf '#!/bin/sh\nexit 1\n' >"$WORK/bin/herdr"
 printf '#!/bin/sh\nexit 1\n' >"$WORK/bin/jq"
 chmod +x "$WORK/bin/herdr" "$WORK/bin/jq"
@@ -61,14 +54,12 @@ if ! PATH="$WORK/bin:$PATH" bash -c '
   missing+=("runner_resolve_pane_id kills its caller when 'herdr agent get' exits non-zero — this is the exact defect that made --kill exit 1 silently")
 fi
 
-# --- (2) end to end: --kill on a live decoy session ------------------------
 tmux_used=0
 if command -v tmux >/dev/null 2>&1 && tmux -V >/dev/null 2>&1; then
   if tmux new-session -d -s "agent-firstmate-$DECOY" 'sleep 600' 2>/dev/null; then
     tmux_used=1
   fi
 fi
-# Claim the launch lock the way a real run does, so --kill has something to clear.
 mkdir -p "$TMPD/firstmate-$DECOY.lock"
 
 kill_out="$(cd "$WORK/repo" && RUNNER_TMPDIR="$TMPD" bash .oh/scripts/firstmate.sh --kill "$DECOY" 2>&1)"

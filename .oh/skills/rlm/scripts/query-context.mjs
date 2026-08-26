@@ -1,38 +1,15 @@
 #!/usr/bin/env node
-// rlm query-context primitive: address a large artifact WITHOUT ingesting it.
-// Given <path> [--grep <re>] [--slice L1:L2] [--chunk <size>] [--map] it returns
-// (as JSON to stdout) the addressed slice + a chunk map (per-chunk line range and
-// byte offsets; for --grep, match locations as {line, col}). The anti-context-rot
-// move: the root agent ADDRESSES context instead of dumping the whole file into its
-// window. Pure, zero npm deps; node v22 built-ins only.
-//
-// A hard max-bytes guard (MAX_SLICE_BYTES, overridable via --max-bytes) ensures a
-// slice/grep result is NEVER an unbounded blob: when a requested span exceeds the
-// cap it is truncated at a line boundary, `truncated: true` is set, and `bytesOmitted`
-// reports how much was withheld. --map returns ONLY the chunk map (no content).
-//
-// CLI-entrypoint detection is a BASENAME match on process.argv[1] (ends with
-// query-context.mjs), NOT `import.meta.url === pathToFileURL(argv[1])` — the latter
-// silently no-ops when the script is invoked through the .claude/skills dir-symlink
-// (prompt-miner-engine-symlink-guard-bug).
 
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-// ---------------------------------------------------------------------------
-// Constants & contracts
-// ---------------------------------------------------------------------------
 
-// Hard ceiling on the bytes any single slice/grep result may return. The guard
-// truncates at a line boundary once a span would exceed this, so the tool can
-// never hand back an unbounded blob (the whole point of context-as-environment).
-export const MAX_SLICE_BYTES = 32 * 1024; // 32 KiB
+export const MAX_SLICE_BYTES = 32 * 1024;
 
-// Default chunk size (in lines) when --chunk is not supplied.
 export const DEFAULT_CHUNK_SIZE = 100;
 
-const NEWLINE = 0x0a; // '\n'
+const NEWLINE = 0x0a;
 
 const USAGE = `usage: query-context.mjs <path> [options]
   --grep <re>        report match locations ({line, col, byteOffset}) for a regex
@@ -45,14 +22,7 @@ const USAGE = `usage: query-context.mjs <path> [options]
 Output is JSON on stdout. A slice/grep result is capped at the max-bytes guard:
 when exceeded it is truncated at a line boundary with truncated:true + bytesOmitted.`;
 
-// ---------------------------------------------------------------------------
-// Line indexing (pure: Buffer -> per-line byte ranges)
-// ---------------------------------------------------------------------------
 
-// buildLineIndex scans the buffer for newline BYTES (0x0a) so byte offsets stay
-// correct for multibyte UTF-8 content. Each entry's [start, end) byte span INCLUDES
-// the trailing newline, so concatenating consecutive lines reproduces the file
-// exactly. `text` is the line content WITHOUT its trailing newline (for grep cols).
 export function buildLineIndex(buf) {
   const lines = [];
   let start = 0;
@@ -68,17 +38,12 @@ export function buildLineIndex(buf) {
   return lines;
 }
 
-// ---------------------------------------------------------------------------
-// Chunk map (pure)
-// ---------------------------------------------------------------------------
 
-// buildChunkMap partitions the line index into fixed-size chunks and reports each
-// chunk's 1-based inclusive line range and absolute byte offsets — never any content.
 export function buildChunkMap(lines, chunkSize) {
   const size = Math.max(1, Math.floor(chunkSize));
   const chunks = [];
   for (let lo = 0; lo < lines.length; lo += size) {
-    const hi = Math.min(lo + size, lines.length); // exclusive line index
+    const hi = Math.min(lo + size, lines.length);
     const startByte = lines[lo].start;
     const endByte = lines[hi - 1].end;
     chunks.push({
@@ -94,14 +59,7 @@ export function buildChunkMap(lines, chunkSize) {
   return chunks;
 }
 
-// ---------------------------------------------------------------------------
-// Bounded slice (pure: enforces the max-bytes guard at a line boundary)
-// ---------------------------------------------------------------------------
 
-// buildBoundedSlice returns the byte span for the inclusive 0-based line range
-// [loIdx, hiIdx], truncated at a line boundary so returnedBytes <= maxBytes. A
-// single first line larger than the cap is hard-cut at the byte cap. The result
-// always satisfies returnedBytes <= maxBytes — never an unbounded blob.
 export function buildBoundedSlice(buf, lines, loIdx, hiIdx, maxBytes = MAX_SLICE_BYTES) {
   const cap = Math.max(1, Math.floor(maxBytes));
   const startByte = lines[loIdx].start;
@@ -109,7 +67,7 @@ export function buildBoundedSlice(buf, lines, loIdx, hiIdx, maxBytes = MAX_SLICE
   const requestedBytes = requestedEndByte - startByte;
 
   let endByte = startByte;
-  let lastLineIdx = loIdx - 1; // -1 relative => 0 lines returned (only on hard-cut)
+  let lastLineIdx = loIdx - 1;
   let truncated = false;
 
   for (let i = loIdx; i <= hiIdx; i += 1) {
@@ -117,7 +75,6 @@ export function buildBoundedSlice(buf, lines, loIdx, hiIdx, maxBytes = MAX_SLICE
     if (cumulative > cap) {
       truncated = true;
       if (i === loIdx) {
-        // Even the first line overflows the cap → hard byte cut (partial line).
         endByte = startByte + cap;
         lastLineIdx = loIdx;
       }
@@ -143,15 +100,7 @@ export function buildBoundedSlice(buf, lines, loIdx, hiIdx, maxBytes = MAX_SLICE
   };
 }
 
-// ---------------------------------------------------------------------------
-// Grep (pure: regex match locations, capped by the max-bytes guard)
-// ---------------------------------------------------------------------------
 
-// grepLines runs the regex per line and reports every match as {line, col,
-// byteOffset, chunkIndex, text}. col is a 1-based CHARACTER column within the line;
-// byteOffset is the absolute byte position of the match. The cumulative bytes of the
-// returned match `text` previews are capped at maxBytes — once exceeded, further
-// matches are withheld (truncated:true + bytesOmitted), so the result is bounded.
 export function grepLines(lines, pattern, chunkSize, maxBytes = MAX_SLICE_BYTES) {
   const cap = Math.max(1, Math.floor(maxBytes));
   const size = Math.max(1, Math.floor(chunkSize));
@@ -184,7 +133,6 @@ export function grepLines(lines, pattern, chunkSize, maxBytes = MAX_SLICE_BYTES)
           text: preview,
         });
       }
-      // Guard against zero-width matches looping forever.
       if (m.index === re.lastIndex) re.lastIndex += 1;
     }
   }
@@ -200,13 +148,7 @@ export function grepLines(lines, pattern, chunkSize, maxBytes = MAX_SLICE_BYTES)
   };
 }
 
-// ---------------------------------------------------------------------------
-// Analysis (pure: Buffer + options -> the output record)
-// ---------------------------------------------------------------------------
 
-// analyze is the pure core the CLI wraps: given the file buffer and parsed options
-// it produces the JSON-able result object. No I/O here (the caller reads the file),
-// so it is fully unit-testable.
 export function analyze(buf, opts) {
   const chunkSize = opts.chunk != null ? opts.chunk : DEFAULT_CHUNK_SIZE;
   const maxBytes = opts.maxBytes != null ? opts.maxBytes : MAX_SLICE_BYTES;
@@ -222,7 +164,6 @@ export function analyze(buf, opts) {
     chunkMap,
   };
 
-  // --map is exclusive: ONLY the chunk map, never any content.
   if (opts.map) {
     out.mode = "map";
     return out;
@@ -233,8 +174,6 @@ export function analyze(buf, opts) {
     out.grep = grepLines(lines, opts.grep, chunkSize, maxBytes);
   }
 
-  // Default (no --grep, no --slice) addresses the WHOLE file as a slice — which the
-  // guard then bounds, so even a bare `query-context <bigfile>` is never unbounded.
   if (opts.slice || opts.grep == null) {
     if (lines.length === 0) {
       out.mode = out.mode || "slice";
@@ -262,15 +201,11 @@ export function analyze(buf, opts) {
   return out;
 }
 
-// Clamp a 1-based line number into the file's range.
 function clampLine(n, total) {
   if (!Number.isFinite(n)) return 1;
   return Math.min(Math.max(1, Math.floor(n)), total);
 }
 
-// ---------------------------------------------------------------------------
-// CLI parsing (pure)
-// ---------------------------------------------------------------------------
 
 export function parseArgs(argv) {
   const args = {
@@ -341,9 +276,6 @@ export function parseSlice(raw) {
   return { from, to };
 }
 
-// ---------------------------------------------------------------------------
-// main (impure: reads the file, prints JSON)
-// ---------------------------------------------------------------------------
 
 function main() {
   let args;
@@ -373,7 +305,6 @@ function main() {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-// Basename-match entrypoint detection (symlink-safe; see header note).
 if (path.basename(process.argv[1] || "") === "query-context.mjs") {
   main();
 }

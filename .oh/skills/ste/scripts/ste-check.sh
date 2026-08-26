@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-# ste-check.sh — report controlled-language violations in Markdown prose.
-#
-# The script reads files. The script writes no file. The script reports each
-# finding on one line as `file:line: RULE-ID message`.
-#
-# Exit codes:
-#   0  every scanned line passed every detector
-#   1  the script reported at least one finding
-#   2  the caller passed an invalid argument
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -90,9 +81,6 @@ done
 findings=0
 blocks_matched=0
 for f in "${files[@]}"; do
-  # A leading `---` is YAML frontmatter only when a closing `---` follows it.
-  # Without this pre-pass a document that opens with a horizontal rule looks
-  # like unterminated frontmatter, and the whole file would be skipped clean.
   has_front=0
   if [ "$(head -n 1 "$f")" = "---" ] \
      && awk 'NR>1 && $0=="---"{found=1; exit} END{exit !found}' "$f"; then
@@ -305,7 +293,6 @@ for f in "${files[@]}"; do
     printf 'ste-check: failed to scan %s\n' "$f" >&2
     exit 2
   }
-  # The awk program prints findings first and one summary line last.
   summary=$(printf '%s\n' "$count" | tail -n 1)
   case "$summary" in
     '##STE## '*) : ;;
@@ -317,8 +304,6 @@ for f in "${files[@]}"; do
   blocks_matched=$(( blocks_matched + file_blocks ))
 done
 
-# A --blocks tag that matches no fence would otherwise pass vacuously, which
-# makes any "--blocks after must exit 0" assertion satisfiable by a typo.
 if [ "$blocks_set" -eq 1 ] && [ "$blocks_matched" -eq 0 ]; then
   printf 'ste-check: no fenced block tagged "%s" in %d file(s); nothing was scanned\n' \
     "$blocks" "${#files[@]}" >&2
@@ -331,9 +316,6 @@ if [ "$findings" -gt 0 ]; then
   exit 1
 fi
 
-# A clean exit reads as approval, so it carries its own residual. Two defects in
-# the 10-question check are NOT machine-detectable here, and both were measured
-# escaping a green run: see SKILL.md and ste-checker-contract.sh section 7.
 printf 'ste-check: no findings in %d file(s). Two defects escape every detector: a condition that trails the action it guards (question 4), and a sentence that opens with a pronoun naming no antecedent (question 7). Run the 10-question check in %s/SKILL.md.\n' \
   "${#files[@]}" "$SKILL_ROOT" >&2
 exit 0

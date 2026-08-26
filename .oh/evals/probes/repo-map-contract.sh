@@ -61,7 +61,6 @@ if [[ -f "$REPO_MAP" ]]; then
   done
 
   if grep -Eiq '(^|[^[:alnum:]_/-])tree([[:space:]]|$)' "$REPO_MAP"; then
-    # The only allowed reference is the prose warning against raw filesystem tree.
     allowed=$(grep -Fi 'do not paste a raw filesystem tree into context' "$REPO_MAP" | wc -l | tr -d ' ')
     total=$(grep -Eio '(^|[^[:alnum:]_/-])tree([[:space:]]|$)' "$REPO_MAP" | wc -l | tr -d ' ')
     if [[ "$total" != "$allowed" ]]; then
@@ -113,7 +112,6 @@ if [[ -f "$REPO_MAP" ]]; then
     }
     root_out=$(run_helper ".") || fails+=("ancestor helper failed for repo root")
     grep -Fxq 'AGENTS.md' <<<"${root_out:-}" || fails+=("ancestor helper for . did not return AGENTS.md")
-    # Root carries AGENTS.md plus a CLAUDE.md symlink to it; only one may surface.
     if grep -Fxq 'CLAUDE.md' <<<"${root_out:-}"; then
       fails+=("ancestor helper did not de-dupe the root CLAUDE.md symlink")
     fi

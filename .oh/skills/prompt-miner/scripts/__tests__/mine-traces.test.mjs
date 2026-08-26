@@ -1,5 +1,3 @@
-// node --test suite for the prompt-miner engine. Pure node:test + node:assert —
-// no vitest/tsx. Run: node --test .claude/skills/prompt-miner/scripts/__tests__/
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -28,7 +26,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ENGINE = path.join(HERE, "..", "mine-traces.mjs");
 const FIXTURES = path.join(HERE, "fixtures");
 
-// --- Claude string-vs-array human-prompt detection -------------------------
 
 test("Claude: string user content is a human prompt; array content is a tool_result", () => {
   const human = classifyLine(
@@ -84,7 +81,6 @@ test("Claude: <command-name>, isMeta, and non-external lines are excluded as met
   assert.equal(sdk.isHuman, false);
 });
 
-// --- nested is_error (Claude) vs toolResult.isError (Pi) -------------------
 
 test("Claude tool error is nested in the array; Pi error is on the toolResult message", () => {
   const claudeErr = classifyLine(
@@ -94,7 +90,6 @@ test("Claude tool error is nested in the array; Pi error is on the toolResult me
   assert.equal(claudeErr.kind, "tool_result");
   assert.equal(claudeErr.isError, true);
 
-  // Real Pi shape: message.isError
   const piErrFlat = classifyLine(
     { type: "message", message: { role: "toolResult", isError: true, content: [] } },
     "pi",
@@ -102,7 +97,6 @@ test("Claude tool error is nested in the array; Pi error is on the toolResult me
   assert.equal(piErrFlat.kind, "tool_result");
   assert.equal(piErrFlat.isError, true);
 
-  // Documented Pi shape: message.toolResult.isError
   const piErrNested = classifyLine(
     { type: "message", message: { role: "toolResult", toolResult: { isError: true } } },
     "pi",
@@ -126,7 +120,6 @@ test("Pi: type=message role=user is a human prompt with joined text blocks", () 
   assert.match(ev.text, /Create the baz module/);
 });
 
-// --- abandonment / incompleteness from last assistant stop -----------------
 
 test("abandonment via aborted; incompleteness via non-end_turn/stop; clean via end_turn", () => {
   const aborted = aggregateSession(
@@ -160,10 +153,8 @@ test("abandonment via aborted; incompleteness via non-end_turn/stop; clean via e
   assert.equal(clean.incomplete, 0);
 });
 
-// --- score-breakdown arithmetic on a known input ---------------------------
 
 test("score-breakdown arithmetic matches the documented formula", () => {
-  // Build: 2 human prompts (1 corrective), 1 tool error of 1 result, incomplete end.
   const events = [
     { kind: "human", isHuman: true, text: "Add the bar feature.", ts: "2026-01-01T00:00:00Z" },
     { kind: "assistant", stopReason: "tool_use", ts: "2026-01-01T00:01:00Z" },
@@ -172,13 +163,12 @@ test("score-breakdown arithmetic matches the documented formula", () => {
     { kind: "assistant", stopReason: "tool_use", ts: "2026-01-01T00:04:00Z" },
   ];
   const agg = aggregateSession(events, { sessionId: "k", harness: "claude" });
-  assert.equal(agg.toolErrorRate, 1); // 1/1
-  assert.equal(agg.correctionDensity, 0.5); // 1 corrective / 2 human
+  assert.equal(agg.toolErrorRate, 1);
+  assert.equal(agg.correctionDensity, 0.5);
   assert.equal(agg.incomplete, 1);
   assert.equal(agg.abandoned, 0);
 
   const { score, scoreBreakdown } = scoreSession(agg, DEFAULT_WEIGHTS, { hasBonus: false });
-  // 100 - 35*1 - 30*0.5 - 20*0 - 10*1 - 5*0 = 40
   assert.equal(score, 40);
   assert.equal(scoreBreakdown.penalties.toolErrorRate, 35);
   assert.equal(scoreBreakdown.penalties.correctionDensity, 15);
@@ -195,10 +185,9 @@ test("ground-truth bonus is added and the total is capped at 100", () => {
     { sessionId: "g", harness: "claude" },
   );
   const { score } = scoreSession(clean, DEFAULT_WEIGHTS, { hasBonus: true });
-  assert.equal(score, 100); // 100 + 15 capped at 100
+  assert.equal(score, 100);
 });
 
-// --- scoreUncapped: the uncensored sibling of score ------------------------
 
 test("scoreUncapped carries the uncensored total while score stays clamped at 100", () => {
   const clean = aggregateSession(
@@ -212,15 +201,10 @@ test("scoreUncapped carries the uncensored total while score stays clamped at 10
   assert.equal(scored.score, 100, "score is still clamped");
   assert.equal(scored.scoreUncapped, 115, "base 100 + bonus 15, uncensored");
   assert.ok(scored.scoreUncapped > 100, "the ceiling does not censor scoreUncapped");
-  // Sibling of score, not nested in the breakdown.
   assert.ok(!("scoreUncapped" in scored.scoreBreakdown), "not nested in scoreBreakdown");
 });
 
 test("a maximally-penalized session floors scoreUncapped at 0 without going negative", () => {
-  // Built as a literal agg: aggregateSession can never emit all five signals at
-  // their maximum at once (abandoned and incomplete are mutually exclusive, and
-  // correctionDensity counts follow-ups only, so it is (n-1)/n < 1). scoreSession
-  // is pure, so the worst case the weights permit is exercised directly.
   const worst = {
     toolErrorRate: 1,
     correctionDensity: 1,
@@ -229,14 +213,12 @@ test("a maximally-penalized session floors scoreUncapped at 0 without going nega
     turnBloat: 1,
   };
   const scored = scoreSession(worst, DEFAULT_WEIGHTS, { hasBonus: false });
-  // 100 - 35 - 30 - 20 - 10 - 5 = 0
   assert.equal(scored.scoreUncapped, 0, "lower bound is unaffected by the change");
   assert.equal(scored.score, 0);
   assert.ok(scored.scoreUncapped >= 0, "current weights cannot produce a negative");
 });
 
 test("scoreUncapped is emitted on both sessions[] and unranked[] of a fixture run", () => {
-  // --min-turns 4 splits the fixtures: the 3-turn session falls to unranked[].
   const out = execFileSync(
     "node",
     [ENGINE, "--dry-run", "--no-git", "--harness", "all", "--fixtures-dir", FIXTURES, "--min-turns", "4", "--now", "2026-06-19T00:00:00.000Z"],
@@ -263,7 +245,6 @@ test("sessions[] ranking still sorts on the clamped score, not scoreUncapped", (
   assert.deepEqual(data.sessions.map((s) => s.sessionId), expected);
 });
 
-// --- --no-git ground-truth stub path (bonus = 0) ---------------------------
 
 test("--no-git stubs the ground-truth bonus to 0 even when a PR URL is present", () => {
   const events = [
@@ -281,12 +262,10 @@ test("--no-git stubs the ground-truth bonus to 0 even when a PR URL is present",
   const stubbed = resolveGroundTruth(agg, { noGit: true });
   assert.equal(stubbed.hasBonus, false);
 
-  // With git enabled, the same PR URL earns the bonus (no git calls needed).
   const live = resolveGroundTruth(agg, { noGit: false, commitTimes: [] });
   assert.equal(live.hasBonus, true);
 });
 
-// --- redaction (line-level + block-level key) ------------------------------
 
 test("redact scrubs line-level tokens and a block-level PEM key body", () => {
   const pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIabc123lineone\nlinetwoXYZ\n-----END RSA PRIVATE KEY-----";
@@ -309,7 +288,6 @@ test("redact scrubs line-level tokens and a block-level PEM key body", () => {
   assert.ok(out.includes("[REDACTED]"));
 });
 
-// --- --weights validation ---------------------------------------------------
 
 test("validateWeights rejects bad objects and accepts a complete one", () => {
   assert.throws(() => validateWeights("not-an-object"), /JSON object/);
@@ -322,7 +300,6 @@ test("validateWeights rejects bad objects and accepts a complete one", () => {
   assert.equal(ok.toolErrorRate, 50);
 });
 
-// --- feature extraction + session-type detection ---------------------------
 
 test("extractFeatures captures the documented marker keys", () => {
   const f = extractFeatures("Implement `foo` in src/foo.mjs per the acceptance criteria. See #42 and https://x.test/y");
@@ -343,7 +320,6 @@ test("detectSessionType classifies the first prompt", () => {
   assert.equal(detectSessionType("What does the wiki say about X?"), "query");
 });
 
-// --- session merge / no_human_prompt ---------------------------------------
 
 test("sessions with no human prompt are flagged no_human_prompt", () => {
   const agg = aggregateSession(
@@ -354,7 +330,6 @@ test("sessions with no human prompt are flagged no_human_prompt", () => {
   assert.equal(agg.firstHumanPrompt, null);
 });
 
-// --- integration: CLI dry-run over fixtures (+ malformed tolerance) ---------
 
 test("CLI --dry-run --no-git over fixtures: non-zero sessions and tool errors", () => {
   const out = execFileSync(
@@ -394,11 +369,7 @@ test("CLI rejects an unknown flag with a non-zero exit", () => {
   assert.throws(() => execFileSync("node", [ENGINE, "--bogus"], { encoding: "utf8", stdio: "pipe" }));
 });
 
-// --- weakness records (WH-<NNN>): shape, determinism, privacy ---------------
 
-// Synthetic sessions: tool_error fires in 2 of 3 (>= WEAKNESS_MIN_FREQUENCY),
-// so exactly one WH-001 record is produced. Ordering is intentionally jumbled
-// (sessionId z before a, harness pi before claude) to exercise the sorts.
 const SYNTH_SESSIONS = [
   { sessionId: "z-sess", harness: "pi", gitBranch: "feat/z", toolErrors: 1, incomplete: 0, abandoned: 0, scoreBreakdown: { signals: { correctionDensity: 0 } } },
   { sessionId: "a-sess", harness: "claude", gitBranch: "feat/a", toolErrors: 2, incomplete: 0, abandoned: 0, scoreBreakdown: { signals: { correctionDensity: 0 } } },
@@ -425,8 +396,6 @@ test("buildWeaknessRecords returns exactly the 7 metadata fields, all non-empty,
   assert.ok(typeof rec.recommended_repair_surface === "string" && rec.recommended_repair_surface.length > 0);
   assert.ok(Array.isArray(rec.affected_agents) && rec.affected_agents.length > 0);
   assert.ok(Array.isArray(rec.supporting_traces) && rec.supporting_traces.length > 0);
-  // Privacy: no promptText key on the record OR on any supporting trace; traces
-  // are session-id metadata only.
   assert.equal("promptText" in rec, false);
   for (const t of rec.supporting_traces) {
     assert.equal("promptText" in t, false);
@@ -438,7 +407,6 @@ test("buildWeaknessRecords is byte-identical across two calls and stable under i
   const a = JSON.stringify(buildWeaknessRecords(SYNTH_SESSIONS));
   const b = JSON.stringify(buildWeaknessRecords(SYNTH_SESSIONS));
   assert.equal(a, b, "two calls on the same input are byte-identical");
-  // WH-001 must not flip when the same sessions arrive in a different order.
   const shuffled = [SYNTH_SESSIONS[2], SYNTH_SESSIONS[0], SYNTH_SESSIONS[1]];
   assert.equal(JSON.stringify(buildWeaknessRecords(shuffled)), a, "stable under reorder");
 });
@@ -452,7 +420,6 @@ test("weakness records serialize no raw human-prompt substring from the fixtures
   const data = JSON.parse(out);
   assert.ok(Array.isArray(data.weaknesses) && data.weaknesses.length >= 1, ">= 1 WH record");
   const serialized = JSON.stringify(data.weaknesses);
-  // Distinctive human-prompt substrings that live verbatim in the fixture .jsonl.
   const humanPromptSubstrings = [
     "Implement the foo widget",
     "Add the bar feature",
@@ -465,20 +432,11 @@ test("weakness records serialize no raw human-prompt substring from the fixtures
   for (const w of data.weaknesses) assert.equal("promptText" in w, false);
 });
 
-// ---------------------------------------------------------------------------
-// #692 — window overlap semantics and sidechain exclusion
-// ---------------------------------------------------------------------------
 
 const T = (iso) => Date.parse(iso);
 const WINDOW = { start: T("2026-08-02T00:00:00Z"), end: T("2026-08-03T00:00:00Z") };
 
 test("withinWindow admits a session that STARTED before the window but was active inside it", () => {
-  // The regression this pins. Events are merged across resumed files keyed by
-  // sessionId, so a long-lived session keeps its ORIGINAL firstTs. The old
-  // implementation compared that single point against both bounds, so a session
-  // started 30h ago and worked in continuously was invisible to --hours 24 —
-  // and the daily cron runs a windowed query. Those resumed sessions are the
-  // high-signal ones.
   const resumed = { firstTs: T("2026-07-24T17:48:00Z"), lastTs: T("2026-08-02T20:00:00Z") };
   assert.equal(withinWindow(resumed, WINDOW), true);
 });
@@ -510,10 +468,6 @@ test("withinWindow rejects a session with no usable timestamps", () => {
 });
 
 test("classifyLine flags Claude sidechain records so they can be excluded", () => {
-  // Sidechain records carry the PARENT's sessionId and message.role "user", so
-  // without this flag a delegate briefing is counted as a human turn and
-  // corrupts correctionDensity / turnBloat / toolErrorRate for exactly the
-  // delegating sessions worth mining.
   const sidechain = classifyLine(
     {
       type: "user",
@@ -538,7 +492,6 @@ test("classifyLine flags Claude sidechain records so they can be excluded", () =
   );
   assert.equal(real.isSidechain, false);
 
-  // Absent/!== true must never be treated as sidechain.
   const weird = classifyLine(
     { type: "user", timestamp: "2026-08-02T12:00:00Z", sessionId: "s", isSidechain: "true", message: { role: "user", content: "x" } },
     "claude",
@@ -546,13 +499,10 @@ test("classifyLine flags Claude sidechain records so they can be excluded", () =
   assert.equal(weird.isSidechain, false);
 });
 
-// --- ceiling-saturation census (manifest + markdown) -----------------------
 
 test("computeCeilingSaturation counts the stored rounded score === 100, not scoreUncapped", () => {
   const census = computeCeilingSaturation([
-    // On the ceiling: the clamp censored 112.5 down to exactly 100.
     { sessionType: "impl", score: 100, scoreUncapped: 112.5 },
-    // NOT on the ceiling: 99.99 rounds to nothing else, it is simply below.
     { sessionType: "impl", score: 99.99, scoreUncapped: 99.99 },
     { sessionType: "other", score: 100, scoreUncapped: 100 },
   ]);
@@ -572,8 +522,6 @@ test("computeCeilingSaturation omits null session types and zero-session strata"
   assert.equal(census.cron.atCeiling, 0);
 });
 
-// A fixture dir carrying a noHumanPrompt session (assistant lines only → the
-// only way sessionType is null) next to the normal samples.
 function fixturesWithNoHumanSession() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pm-census-"));
   for (const f of fs.readdirSync(FIXTURES)) {
@@ -606,12 +554,10 @@ test("manifest.ceilingSaturation is built from rankable only and carries no null
   assert.ok(!("null" in census), "no null key in ceilingSaturation");
   for (const key of Object.keys(census)) assert.notEqual(key, "null");
 
-  // The census population is exactly sessions[] (rankable), not everything scanned.
   const totals = Object.values(census).reduce((n, c) => n + c.total, 0);
   assert.equal(totals, data.sessions.length);
   assert.ok(totals < data.manifest.sessionsScanned, "rankable is a strict subset here");
 
-  // Shape: every value is { atCeiling: int, total: int } and matches sessions[].
   const expected = {};
   for (const s of data.sessions) {
     expected[s.sessionType] ??= { atCeiling: 0, total: 0 };
@@ -637,13 +583,11 @@ test("the markdown report renders the census as flat bullets and adds no new hea
   assert.ok(census.length > 0, "at least one census bullet rendered");
   for (const l of census) assert.match(l, /^- ceilingSaturation\.[a-z]+: \d+\/\d+$/);
 
-  // The bullets live under the EXISTING ## Manifest heading.
   const manifestIdx = lines.indexOf("## Manifest");
   const nextHeadingIdx = lines.findIndex((l, i) => i > manifestIdx && l.startsWith("## "));
   const firstCensusIdx = lines.findIndex((l) => l.startsWith("- ceilingSaturation."));
   assert.ok(firstCensusIdx > manifestIdx && firstCensusIdx < nextHeadingIdx);
 
-  // No new heading of any level was introduced by the census.
   const headings = lines.filter((l) => /^#{1,6} /.test(l));
   assert.ok(!headings.some((h) => /ceiling/i.test(h)), "no census heading added");
   fs.rmSync(tmp, { recursive: true, force: true });

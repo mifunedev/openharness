@@ -1,25 +1,4 @@
 #!/usr/bin/env node
-// prompt-miner engine: parse Claude+Pi session traces, score each session by a
-// friction+ground-truth outcome proxy, extract prompt feature vectors, and emit a
-// ranked, redacted report (json + md). Zero npm deps; node v22 built-ins only.
-// The `git` binary is the single allowed external (ground-truth cross-ref), gated
-// behind --no-git. See references/scoring.md, references/markers.md,
-// references/report-schema.md for the contracts this engine implements.
-//
-// CLI-entrypoint detection is a BASENAME match on process.argv[1], NOT
-// `import.meta.url === pathToFileURL(argv[1])` — node resolves the symlink for
-// import.meta.url but not for argv[1], so the latter silently no-ops when the
-// script is invoked through the .claude/skills dir-symlink that SKILL.md Step 1
-// and the daily cron both prescribe (issue #663;
-// prompt-miner-engine-symlink-guard-bug). Same form as
-// rlm/scripts/query-context.mjs and weigh/scripts/score-trajectories.mjs.
-//
-// Known blast radius of the basename form, shared with both siblings: it trusts
-// the basename of argv[1] globally rather than file identity, so a DIFFERENT file
-// that happens to be named mine-traces.mjs and imports this module would run
-// main(). Nothing in this repo is so named. A realpath comparison would be both
-// symlink- and collision-safe, but adopting it here alone would leave three
-// sibling engines with three different guards; change all three together or none.
 
 import fs from "node:fs";
 import readline from "node:readline";
@@ -28,12 +7,7 @@ import os from "node:os";
 import process from "node:process";
 import { execFileSync } from "node:child_process";
 
-// ---------------------------------------------------------------------------
-// Constants & contracts
-// ---------------------------------------------------------------------------
 
-// Friction coefficients (the formula in references/scoring.md). Every key here is
-// REQUIRED when --weights is supplied; values must be finite, non-negative numbers.
 export const DEFAULT_WEIGHTS = Object.freeze({
   toolErrorRate: 35,
   correctionDensity: 30,
@@ -43,10 +17,8 @@ export const DEFAULT_WEIGHTS = Object.freeze({
   groundTruthBonus: 15,
 });
 
-// Turn-bloat reference point: assistantTurns beyond K saturate the penalty.
 export const TURN_BLOAT_K = 40;
 
-// Corrective-follow-up lexicon (highest-variance signal — see references/scoring.md).
 export const NEGATION_LEXICON = Object.freeze([
   "no",
   "wrong",
@@ -62,7 +34,6 @@ export const NEGATION_LEXICON = Object.freeze([
   "fix",
 ]);
 
-// Hedging lexicon for the prompt feature vector.
 const HEDGING_LEXICON = [
   "maybe",
   "perhaps",
@@ -77,7 +48,6 @@ const HEDGING_LEXICON = [
   "i guess",
 ];
 
-// Imperative verbs that mark an action-first prompt (startsImperative, impl type).
 const IMPERATIVE_VERBS = new Set([
   "add",
   "build",
@@ -112,7 +82,6 @@ const IMPERATIVE_VERBS = new Set([
   "design",
 ]);
 
-// The feature keys the marker step correlates against outcome.
 export const MARKER_FEATURE_KEYS = Object.freeze([
   "lenChars",
   "lenWords",
@@ -134,9 +103,6 @@ export const SCORE_MODEL =
 
 const PR_URL_RE = /github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/i;
 
-// ---------------------------------------------------------------------------
-// Small helpers
-// ---------------------------------------------------------------------------
 
 export function clamp(value, lo, hi) {
   if (!Number.isFinite(value)) return lo;
@@ -147,7 +113,6 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-// Concatenate Claude/Pi content blocks into a single plain-text string.
 function blocksToText(content) {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
@@ -162,9 +127,6 @@ function blocksToText(content) {
   return parts.join("\n");
 }
 
-// ---------------------------------------------------------------------------
-// Weights
-// ---------------------------------------------------------------------------
 
 export function validateWeights(obj) {
   if (!isPlainObject(obj)) {
@@ -188,15 +150,7 @@ export function validateWeights(obj) {
   return { ...obj };
 }
 
-// ---------------------------------------------------------------------------
-// Line classification (pure, per single JSONL line)
-// ---------------------------------------------------------------------------
 
-// classifyLine normalizes ONE parsed JSONL object into a common event shape:
-//   { kind, ts, isError, stopReason, usage, text, isHuman, sessionId, gitBranch }
-// kind ∈ "human" | "assistant" | "tool_result" | "meta" | "other".
-// Session identity for Pi is resolved at the file layer (Pi message lines carry
-// none), so sessionId/gitBranch may be null here for Pi.
 export function classifyLine(line, harness) {
   const base = {
     kind: "other",
@@ -208,9 +162,6 @@ export function classifyLine(line, harness) {
     isHuman: false,
     sessionId: null,
     gitBranch: null,
-    // Claude marks subagent (delegate) traces with isSidechain: true. Those
-    // records carry the PARENT's sessionId, so they merge into the parent's
-    // bucket unless they are filtered out. See the exclusion in readTraceFile.
     isSidechain: false,
   };
   if (!isPlainObject(line)) return base;
@@ -233,7 +184,6 @@ export function classifyLine(line, harness) {
     if (line.type === "user" && msg) {
       const content = msg.content;
       if (typeof content === "string") {
-        // Real typed human prompt vs. meta/command wrappers.
         const isExternal = line.userType === "external";
         const notMeta = line.isMeta !== true;
         const roleUser = msg.role === "user";
@@ -250,7 +200,6 @@ export function classifyLine(line, harness) {
         return base;
       }
       if (Array.isArray(content)) {
-        // Array-valued user content = tool results, NOT a prompt. Errors are NESTED.
         base.kind = "tool_result";
         base.isError = content.some(
           (b) => isPlainObject(b) && b.type === "tool_result" && b.is_error === true,
@@ -261,16 +210,15 @@ export function classifyLine(line, harness) {
       return base;
     }
 
-    return base; // last-prompt, attachment, pr-link, ai-title, mode, etc.
+    return base;
   }
 
   if (harness === "pi") {
     base.ts = typeof line.timestamp === "string" ? line.timestamp : null;
     if (line.type === "session") {
-      // Carry session id so the file layer can resolve it.
       base.kind = "other";
       base.sessionId = typeof line.id === "string" ? line.id : null;
-      base.gitBranch = typeof line.cwd === "string" ? null : null; // Pi has no branch
+      base.gitBranch = typeof line.cwd === "string" ? null : null;
       return base;
     }
     if (line.type !== "message" || !isPlainObject(line.message)) return base;
@@ -292,8 +240,6 @@ export function classifyLine(line, harness) {
     }
     if (role === "toolResult") {
       base.kind = "tool_result";
-      // Real Pi traces put the flag at message.isError; the documented schema also
-      // allows message.toolResult.isError — accept either.
       const nested = isPlainObject(msg.toolResult) ? msg.toolResult.isError === true : false;
       base.isError = nested || msg.isError === true;
       return base;
@@ -304,9 +250,6 @@ export function classifyLine(line, harness) {
   return base;
 }
 
-// ---------------------------------------------------------------------------
-// Session aggregation (pure, over a merged list of normalized events)
-// ---------------------------------------------------------------------------
 
 function matchesLexicon(text, lexicon) {
   const lower = text.toLowerCase();
@@ -321,8 +264,6 @@ function matchesLexicon(text, lexicon) {
   return false;
 }
 
-// aggregateSession folds normalized events (already merged across resumed files for
-// one sessionId) into the per-session counts scoring needs.
 export function aggregateSession(events, meta = {}) {
   const humanPrompts = [];
   let assistantTurns = 0;
@@ -371,7 +312,6 @@ export function aggregateSession(events, meta = {}) {
 
   const clean = lastAssistantStop === "end_turn" || lastAssistantStop === "stop";
   const abandoned = lastAssistantStop === "aborted" ? 1 : 0;
-  // No clean final assistant turn (and not explicitly aborted) ⇒ incomplete.
   const incomplete = !clean && !abandoned ? 1 : 0;
   const turnBloat = clamp((assistantTurns - TURN_BLOAT_K) / TURN_BLOAT_K, 0, 1);
 
@@ -402,11 +342,7 @@ export function aggregateSession(events, meta = {}) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Scoring (pure: ground-truth resolution is injected)
-// ---------------------------------------------------------------------------
 
-// scoreSession applies the friction formula. groundTruth = { hasBonus, reason }.
 export function scoreSession(agg, weights = DEFAULT_WEIGHTS, groundTruth = { hasBonus: false }) {
   const w = weights;
   const penalties = {
@@ -425,10 +361,6 @@ export function scoreSession(agg, weights = DEFAULT_WEIGHTS, groundTruth = { has
     penalties.turnBloat;
   const bonus = groundTruth.hasBonus ? w.groundTruthBonus : 0;
   const score = clamp(base + bonus, 0, 100);
-  // The uncensored sibling of `score`. `base` is already capped at 100 by
-  // construction and `bonus` adds up to 15 more, so the clamped `score` is
-  // censored above 100 — an effect size computed on it reads a flattened upper
-  // tail. Marker effect sizes correlate against THIS field (references/markers.md).
   const scoreUncapped = base + bonus;
 
   return {
@@ -457,9 +389,6 @@ export function scoreSession(agg, weights = DEFAULT_WEIGHTS, groundTruth = { has
   };
 }
 
-// ---------------------------------------------------------------------------
-// Prompt feature extraction & session-type detection (pure)
-// ---------------------------------------------------------------------------
 
 function countMatches(text, re) {
   const m = text.match(re);
@@ -496,13 +425,6 @@ export function extractFeatures(text) {
   };
 }
 
-// Per-stratum census of how much of the RANKABLE population sits on the display
-// ceiling. `score` is clamped at 100, so a stratum whose sessions pile up there
-// has stopped discriminating — the operator can read that off the report instead
-// of recomputing it. Counts the STORED, rounded `score` field (not `scoreUncapped`,
-// not an unrounded intermediate), because that is the number the report displays.
-// Session types with no rankable sessions are omitted; a null type cannot appear,
-// because `rankable` excludes noHumanPrompt sessions (the only null-type records).
 export function computeCeilingSaturation(records) {
   const census = {};
   for (const r of records) {
@@ -530,23 +452,9 @@ export function detectSessionType(text) {
   return "other";
 }
 
-// ---------------------------------------------------------------------------
-// Weakness records (pure) — cluster repeated harness-level failure signals into
-// metadata-only WH-<NNN> records. A weakness record NEVER carries prompt text in
-// ANY mode (not even --include-prompt-text); supporting_traces holds session-id
-// metadata only. See references/report-schema.md and rfc-selfimprove-roadmap.md
-// items 4 + 6 (the likely_harness_layer / recommended_repair_surface vocab).
-// ---------------------------------------------------------------------------
 
-// A single occurrence is not a pattern: a signal must recur in at least this many
-// sessions before it earns a weakness record.
 export const WEAKNESS_MIN_FREQUENCY = 2;
 
-// Fixed failure-signal taxonomy. Declaration order is the deterministic tiebreak
-// when two clusters share a frequency, so WH-001 never flips across identical
-// runs. `likely_harness_layer` and `recommended_repair_surface` use the exact
-// RFC item 4 + 6 enum terms (harness layer: artifact contract | audit gate |
-// handoff | terminal status; repair surface: skill rule | probe | verifier).
 const WEAKNESS_SIGNALS = Object.freeze([
   {
     key: "tool_error",
@@ -578,10 +486,6 @@ const WEAKNESS_SIGNALS = Object.freeze([
   },
 ]);
 
-// buildWeaknessRecords clusters sessions by the fixed failure-signal taxonomy and
-// emits one metadata-only WH-<NNN> record per signal met by >= minFrequency
-// sessions. Pure + deterministic: clusters sort by frequency desc then taxonomy
-// order, so WH-001 is stable across byte-identical inputs.
 export function buildWeaknessRecords(sessions, opts = {}) {
   const list = Array.isArray(sessions) ? sessions : [];
   const total = list.length;
@@ -595,10 +499,8 @@ export function buildWeaknessRecords(sessions, opts = {}) {
     const matched = list.filter((s) => signal.match(s));
     if (matched.length < minFrequency) continue;
 
-    // affected agents: distinct harness values, sorted (deterministic).
     const affected_agents = [...new Set(matched.map((s) => s?.harness).filter(Boolean))].sort();
 
-    // supporting traces: session-id METADATA ONLY — never prompt text, in any mode.
     const supporting_traces = matched
       .map((s) => ({
         sessionId: s?.sessionId ?? null,
@@ -619,7 +521,6 @@ export function buildWeaknessRecords(sessions, opts = {}) {
     });
   }
 
-  // Deterministic ordering: frequency desc, then taxonomy declaration order asc.
   clusters.sort((a, b) => b.count - a.count || a.order - b.order);
 
   return clusters.map((c, i) => ({
@@ -633,30 +534,21 @@ export function buildWeaknessRecords(sessions, opts = {}) {
   }));
 }
 
-// ---------------------------------------------------------------------------
-// Redaction (pure)
-// ---------------------------------------------------------------------------
 
 export function redact(text) {
   if (typeof text !== "string") return text;
   let out = text;
-  // Block-level first: PEM key bodies (multiline) then long base64/hex runs.
   out = out.replace(/-----BEGIN [A-Z0-9 ]*KEY-----[\s\S]*?-----END [A-Z0-9 ]*KEY-----/g, "[REDACTED]");
-  // Line-level token shapes (run before the generic >=40 run so they read cleanly).
   out = out.replace(/sk-ant-[A-Za-z0-9_-]+/g, "[REDACTED]");
   out = out.replace(/sk-[A-Za-z0-9_-]+/g, "[REDACTED]");
   out = out.replace(/github_pat_[A-Za-z0-9_]+/g, "[REDACTED]");
   out = out.replace(/\bgh[opsu]_[A-Za-z0-9]+/g, "[REDACTED]");
   out = out.replace(/\bAKIA[0-9A-Z]{12,}/g, "[REDACTED]");
   out = out.replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/g, "Bearer [REDACTED]");
-  // Generic high-entropy runs (≥40 base64/hex chars) last.
   out = out.replace(/[A-Za-z0-9+/=]{40,}/g, "[REDACTED]");
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// CLI parsing
-// ---------------------------------------------------------------------------
 
 const USAGE = `usage: mine-traces.mjs [options]
   --harness all|claude|pi   (default all)
@@ -796,9 +688,6 @@ export function parseArgs(argv) {
   return args;
 }
 
-// ---------------------------------------------------------------------------
-// File enumeration & windowing (impure)
-// ---------------------------------------------------------------------------
 
 function expandHome(p) {
   if (p.startsWith("~")) return path.join(os.homedir(), p.slice(1));
@@ -838,7 +727,6 @@ function listFiles(dir, predicate) {
   return out;
 }
 
-// Returns [{file, harness}]. Fixtures override real traces when --fixtures-dir set.
 function enumerateFiles(args) {
   if (args.fixturesDir) {
     const dir = expandHome(args.fixturesDir);
@@ -862,18 +750,13 @@ function enumerateFiles(args) {
   return result;
 }
 
-// Pi filename: <ts>_<uuid>.jsonl → uuid segment is the session id fallback.
 function piSessionIdFromFile(file) {
   const base = path.basename(file).replace(/\.jsonl$/, "");
   const idx = base.indexOf("_");
   return idx >= 0 ? base.slice(idx + 1) : base;
 }
 
-// ---------------------------------------------------------------------------
-// Ground-truth (git)
-// ---------------------------------------------------------------------------
 
-// Fetch origin/development once and return a list of commit unix-timestamps.
 function loadGitCommitTimes() {
   try {
     execFileSync("git", ["fetch", "origin", "development", "--depth=200"], {
@@ -881,7 +764,6 @@ function loadGitCommitTimes() {
       timeout: 60000,
     });
   } catch {
-    // best-effort fetch; fall through to whatever ref exists locally
   }
   try {
     const out = execFileSync("git", ["log", "--format=%ct", "origin/development", "-n", "200"], {
@@ -909,12 +791,8 @@ export function resolveGroundTruth(agg, { noGit, commitTimes = [] }) {
   return { hasBonus: false, reason: "none" };
 }
 
-// ---------------------------------------------------------------------------
-// Pipeline (impure): read → aggregate → score → feature → rank → report
-// ---------------------------------------------------------------------------
 
 async function readFileEvents(file, harness, store, counters) {
-  // Pi: resolve one sessionId per file (from a `session` line or filename).
   let piSessionId = harness === "pi" ? piSessionIdFromFile(file) : null;
 
   const events = [];
@@ -935,14 +813,6 @@ async function readFileEvents(file, harness, store, counters) {
       piSessionId = ev.sessionId;
     }
     if (ev.kind === "other" && !ev.sessionId) continue;
-    // Exclude subagent (sidechain) turns from the parent session's feature
-    // vector. `listFiles` recurses, so <session-id>/subagents/agent-*.jsonl is
-    // already ingested, and every line there carries the PARENT's sessionId
-    // with message.role "user"/"assistant". Left in, a delegate briefing is
-    // counted as a HUMAN turn, which inflates the human-prompt denominator and
-    // corrupts turnBloat / correctionDensity / toolErrorRate for exactly the
-    // delegating sessions most worth mining (#692). Measured on the live
-    // corpus: 45,167 sidechain lines vs 42,679 non-sidechain — the majority.
     if (ev.isSidechain) {
       counters.sidechainTurnsExcluded += 1;
       continue;
@@ -950,7 +820,6 @@ async function readFileEvents(file, harness, store, counters) {
     events.push(ev);
   }
 
-  // Group into the store, keyed by sessionId (merge resumed sessions across files).
   if (harness === "claude") {
     for (const ev of events) {
       const sid = ev.sessionId;
@@ -968,22 +837,11 @@ async function readFileEvents(file, harness, store, counters) {
   }
 }
 
-// A session is in-window when its ACTIVITY SPAN OVERLAPS the window — not when
-// it happens to START inside it.
-//
-// The old form compared a single point (`agg.firstTs || agg.lastTs`) against
-// both bounds. Because events are merged across resumed files keyed by
-// sessionId, a long-lived session keeps its ORIGINAL firstTs, so a session
-// started 30h ago and worked in continuously ever since was invisible to
-// `--hours 24` — and the daily cron runs `--hours 24`. Those resumed sessions
-// are the high-signal ones (#692).
 export function withinWindow(agg, window) {
   if (!window.start && !window.end) return true;
   const start = agg.firstTs || agg.lastTs;
   const end = agg.lastTs || agg.firstTs;
   if (!start || !end) return false;
-  // Overlap test: the session ended before the window opened, or began after
-  // it closed → out. Anything else intersects.
   if (window.start && end < window.start) return false;
   if (window.end && start > window.end) return false;
   return true;
@@ -1011,7 +869,6 @@ async function run(args) {
     await readFileEvents(file, harness, store, counters);
   }
 
-  // Aggregate + score every session.
   const commitTimes = args.noGit ? [] : loadGitCommitTimes();
   let sessions = [];
   for (const bucket of store.values()) {
@@ -1055,7 +912,6 @@ async function run(args) {
     sessions.push(record);
   }
 
-  // Window filter, then last-n (most-recent firstTs), then ranking.
   sessions = sessions.filter((s) => withinWindow({ firstTs: s.window.firstTs, lastTs: s.window.lastTs }, window));
   const sessionsScanned = sessions.length;
   const toolErrorsTotal = sessions.reduce((sum, s) => sum + s.toolErrors, 0);
@@ -1066,8 +922,6 @@ async function run(args) {
   const rankable = sessions.filter((s) => !s.noHumanPrompt && s.turns >= args.minTurns);
   rankable.sort((a, b) => b.score - a.score || String(a.sessionId).localeCompare(String(b.sessionId)));
 
-  // Weakness records cluster harness-level failure signals across ALL in-window
-  // sessions (ranked + unranked) — metadata only, never prompt text.
   const weaknesses = buildWeaknessRecords(sessions);
 
   const manifest = {
@@ -1101,9 +955,6 @@ async function run(args) {
   return { dataset, manifest, rankable, utcDate };
 }
 
-// ---------------------------------------------------------------------------
-// Report rendering
-// ---------------------------------------------------------------------------
 
 function renderMarkdown(dataset, top) {
   const { manifest, sessions, weaknesses = [] } = dataset;
@@ -1117,8 +968,6 @@ function renderMarkdown(dataset, top) {
   lines.push(`- window: ${manifest.window.start || "(open)"} → ${manifest.window.end || "(open)"}`);
   lines.push(`- sessionsScanned: ${manifest.sessionsScanned}`);
   lines.push(`- sessionsRanked: ${manifest.sessionsRanked}`);
-  // Flat bullets under the EXISTING ## Manifest heading — no new heading, so the
-  // report's section structure is unchanged. Sorted by type for a stable diff.
   for (const [type, c] of Object.entries(manifest.ceilingSaturation || {}).sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
@@ -1145,8 +994,6 @@ function renderMarkdown(dataset, top) {
   lines.push(sep);
   for (const s of sessions.slice(-top).reverse()) lines.push(fmtRow(s));
   lines.push("");
-  // Weakness records: metadata-only WH-<NNN> clusters. No prompt text is
-  // rendered — only the fixed taxonomy summary + session-id counts.
   lines.push("## Weakness records");
   lines.push("");
   if (!weaknesses.length) {
@@ -1174,9 +1021,6 @@ function writeReports(outDir, utcDate, dataset, top) {
   return { jsonPath, mdPath };
 }
 
-// ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
 
 async function main() {
   let args;
@@ -1218,7 +1062,6 @@ async function main() {
   );
 }
 
-// Basename-match entrypoint detection (symlink-safe; see header note).
 if (path.basename(process.argv[1] || "") === "mine-traces.mjs") {
   main();
 }

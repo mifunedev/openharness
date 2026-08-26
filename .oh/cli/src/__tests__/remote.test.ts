@@ -13,9 +13,6 @@ import {
   type RunResult,
 } from "../lib/remote.js";
 
-// ---------------------------------------------------------------------------
-// Test infrastructure
-// ---------------------------------------------------------------------------
 
 const cleanups: string[] = [];
 
@@ -31,7 +28,6 @@ afterEach(() => {
   }
 });
 
-/** Run git in a fixture repo with a hermetic identity (argv-array form). */
 function git(cwd: string, args: string[]): void {
   execFileSync(
     "git",
@@ -40,11 +36,6 @@ function git(cwd: string, args: string[]): void {
   );
 }
 
-/**
- * Build a local git fixture repo (pinned default branch `main`) with a
- * `marker.txt` commit, plus a `feature-x` branch whose marker differs.
- * Returns its file:// URL — the ONLY transport tests clone over (no network).
- */
 function makeFixtureRepo(): string {
   const repo = mkTmp("oh-remote-fixture-");
   git(repo, ["-c", "init.defaultBranch=main", "init"]);
@@ -58,7 +49,6 @@ function makeFixtureRepo(): string {
   return pathToFileURL(repo).href;
 }
 
-/** Fake runner capturing every invocation and returning a canned result. */
 function makeFakeRunner(result: RunResult): {
   run: RemoteRunner;
   calls: { cmd: string; args: string[]; env: NodeJS.ProcessEnv; timeoutMs: number }[];
@@ -71,9 +61,6 @@ function makeFakeRunner(result: RunResult): {
   return { run, calls };
 }
 
-// ---------------------------------------------------------------------------
-// fetchRemoteSource — behavior contract
-// ---------------------------------------------------------------------------
 
 describe("fetchRemoteSource", () => {
   it("clones a file:// fixture into the caller-supplied dir and returns its path", () => {
@@ -84,7 +71,6 @@ describe("fetchRemoteSource", () => {
 
     expect(got).toBe(dest);
     expect(readFileSync(join(dest, "marker.txt"), "utf8")).toBe("main-payload\n");
-    // Pristine git checkout, not a bare copy.
     expect(existsSync(join(dest, ".git"))).toBe(true);
   });
 
@@ -136,7 +122,6 @@ describe("fetchRemoteSource", () => {
   });
 
   it("clone failure surfaces git's stderr, the URL tried, and the --from fallback", () => {
-    // Nonexistent file:// path — real git, non-zero exit, zero network I/O.
     const missing = pathToFileURL(join(mkTmp("oh-remote-missing-"), "no-such-repo")).href;
     const dest = mkTmp("oh-remote-dest-");
 

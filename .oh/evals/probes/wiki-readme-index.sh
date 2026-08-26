@@ -23,12 +23,6 @@ actual_tmp="$(mktemp)"
 rows_tmp="$(mktemp)"
 trap 'rm -f "$expected_tmp" "$actual_tmp" "$rows_tmp"' EXIT
 
-# Enumerate ONLY git-tracked entries (the whitelisted curated corpus), not a raw
-# filesystem glob: corpus/* is gitignored-by-default, so a fresh CI clone carries
-# only the whitelisted set the committed README is built from, and an operator's
-# local-only scratch entry can never make this probe red. raw/ snapshots are
-# excluded explicitly (they carry no slug: frontmatter anyway). The skill pack is
-# vendored under .oh/, so the corpus is tracked directly in the Open Harness repo.
 tracked_wiki_files() {
   git -C "$ROOT" ls-files -- '.oh/skills/wiki/corpus/*.md' ':!:.oh/skills/wiki/corpus/raw/*'
 }

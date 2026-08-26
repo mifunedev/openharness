@@ -1,25 +1,15 @@
 #!/usr/bin/env bash
-# banner.sh — sourced from bash and zsh to print a one-shot onboarding banner
-# on interactive shell start. Never use `exit` here; always use `return`.
 
-# Only print in interactive shells
 case $- in *i*) ;; *) return 0 ;; esac
 
-# Guard against nested shells
 [ -n "$OH_BANNER_SHOWN" ] && return 0
 export OH_BANNER_SHOWN=1
 
-# ---------------------------------------------------------------------------
-# Collect environment info
-# ---------------------------------------------------------------------------
 
 sandbox_name="${SANDBOX_NAME:-$(hostname)}"
 timezone="${TZ:-$(date +%Z 2>/dev/null)}"
 project_dir="${HOME}/harness"
 
-# Parse compose overlays from the harness config.json. Canonical location is
-# .oh/config.json (the OpenHarness machinery namespace; see .oh/README.md); the
-# legacy repo-root config.json is still read as a fallback for older installs.
 overlays=""
 config_json="${HOME}/harness/.oh/config.json"
 [ -f "$config_json" ] || config_json="${HOME}/harness/config.json"
@@ -31,9 +21,6 @@ if command -v jq >/dev/null 2>&1; then
 fi
 [ -z "$overlays" ] && overlays="(none)"
 
-# ---------------------------------------------------------------------------
-# Onboarding status checks
-# ---------------------------------------------------------------------------
 
 case "${OH_BANNER_STATUS_STYLE:-auto}" in
   emoji)
@@ -59,7 +46,6 @@ case "${OH_BANNER_STATUS_STYLE:-auto}" in
     ;;
 esac
 
-# gh — check auth status and extract username
 gh_status="$status_x"
 gh_detail="not authenticated — run: gh auth login"
 if command -v gh >/dev/null 2>&1 && gh auth status -h github.com >/dev/null 2>&1; then
@@ -73,7 +59,6 @@ if command -v gh >/dev/null 2>&1 && gh auth status -h github.com >/dev/null 2>&1
   fi
 fi
 
-# claude — check for populated .credentials.json
 claude_status="$status_x"
 claude_detail="not authenticated — run: claude"
 if [ -s "${HOME}/.claude/.credentials.json" ]; then
@@ -81,7 +66,6 @@ if [ -s "${HOME}/.claude/.credentials.json" ]; then
   claude_detail="authenticated"
 fi
 
-# codex — check for populated auth.json
 codex_status="$status_x"
 codex_detail="not authenticated — run: codex"
 if [ -s "${HOME}/.codex/auth.json" ]; then
@@ -89,7 +73,6 @@ if [ -s "${HOME}/.codex/auth.json" ]; then
   codex_detail="authenticated"
 fi
 
-# pi — check for populated .pi directory
 pi_status="$status_x"
 pi_detail="not authenticated — run: pi"
 if [ -s "${HOME}/.pi/agent/auth.json" ]; then
@@ -97,7 +80,6 @@ if [ -s "${HOME}/.pi/agent/auth.json" ]; then
   pi_detail="authenticated"
 fi
 
-# opencode — check for populated provider auth file
 opencode_status="$status_x"
 opencode_detail="not installed — set INSTALL_OPENCODE=true and rebuild"
 if command -v opencode >/dev/null 2>&1; then
@@ -110,8 +92,6 @@ if command -v opencode >/dev/null 2>&1; then
   fi
 fi
 
-# grok — optional image-level CLI; auth state lives under ~/.grok, with
-# XAI_API_KEY as a secret-only non-interactive fallback.
 grok_status="$status_x"
 grok_detail="not installed — enable via install.grok_build / INSTALL_GROK_BUILD"
 if command -v grok >/dev/null 2>&1; then
@@ -127,9 +107,6 @@ if command -v grok >/dev/null 2>&1; then
   fi
 fi
 
-# deepagents — installed status from PATH; configured status from
-# ~/.deepagents/.env or ~/.deepagents/config.toml so that an empty mounted
-# directory (named volume on first boot) is not treated as authenticated.
 deepagents_status="$status_x"
 deepagents_detail="not installed — set INSTALL_DEEPAGENTS=true and rebuild"
 if command -v deepagents >/dev/null 2>&1; then
@@ -142,9 +119,6 @@ if command -v deepagents >/dev/null 2>&1; then
   fi
 fi
 
-# hermes — optional image-level CLI; auth status checks HERMES_HOME's
-# auth.json (project-local, gitignored) rather than config.yaml/.env,
-# because setup can seed config files before the user authenticates.
 hermes_status="$status_x"
 hermes_detail="not installed — set INSTALL_HERMES=true and rebuild"
 if command -v hermes >/dev/null 2>&1; then
@@ -157,7 +131,6 @@ if command -v hermes >/dev/null 2>&1; then
   fi
 fi
 
-# dashboard — hermes-related dashboard service; leave empty if hermes not installed
 dashboard_status=""
 dashboard_detail=""
 if command -v hermes >/dev/null 2>&1; then
@@ -184,9 +157,6 @@ if command -v oh >/dev/null 2>&1; then
   oh_detail="${oh_version:-installed}"
 fi
 
-# ---------------------------------------------------------------------------
-# Print banner
-# ---------------------------------------------------------------------------
 
 printf '\n'
 printf '━━━ openharness: %s ━━━\n' "$sandbox_name"
@@ -218,9 +188,6 @@ printf '  Complete setup, authentication, agents, tests, and servers inside Herd
 printf '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
 printf '\n'
 
-# Migration guard — orchestrator → sandbox user revert
-# Fires only when the old /home/orchestrator directory still exists and the
-# current user is sandbox (upgraded container post-revert, no volume reset).
 if [ -d "/home/orchestrator" ] && [ "$(whoami)" = "sandbox" ]; then
   printf '\n'
   printf '  [!] Container reverted orchestrator → sandbox. /home/orchestrator still present.\n'

@@ -10,7 +10,6 @@ import {
 } from "../commands/lifecycle.js";
 import type { LifecycleRunner, RunResult } from "../lib/execution/runner.js";
 
-// cli.ts has a top-level side effect: main(process.argv.slice(2)).then(process.exit).
 vi.mock("../cli.js", async (importOriginal) => {
   const original = process.exit;
   process.exit = (() => {}) as never;
@@ -31,7 +30,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** An equipped-repo fixture with the vendored compose script present. */
 function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-compose-verb-"));
   cleanups.push(d);
@@ -59,14 +57,10 @@ function makeRunner(result: RunResult = { status: 0 }): {
 
 describe("compose verbs — the surface gap they close", () => {
   it("exposes exactly the four non-destructive verbs", () => {
-    // `destroy` and a `config` equivalent are deliberately absent — see
-    // .oh/docs/lifecycle-commands.md and the probe that keeps them documented.
     expect(composeVerbs()).toEqual(["stop", "restart", "logs", "ps"]);
   });
 
   it("does not expose destroy", () => {
-    // `down -v` wipes the volumes holding provider auth. It needs a
-    // confirmation policy, not a passthrough.
     expect(composeVerbs()).not.toContain("destroy" as ComposeVerb);
   });
 });
@@ -145,10 +139,6 @@ describe("help", () => {
   });
 });
 
-/**
- * The consolidation's real invariant: the two front doors must keep agreeing.
- * These read the repo's own Makefile, not a fixture.
- */
 describe("parity with the Makefile", () => {
   const MAKEFILE = read("Makefile");
 
@@ -159,15 +149,11 @@ describe("parity with the Makefile", () => {
   });
 
   it("keeps the Makefile free of direct `docker compose` calls", () => {
-    // Both doors run .oh/scripts/docker-compose.sh; a raw call in a recipe
-    // would fork overlay resolution and project naming.
     const recipes = MAKEFILE.split("\n").filter((l) => l.startsWith("\t"));
     for (const line of recipes) expect(line).not.toContain("docker compose");
   });
 
   it("leaves the pinned `make shell` line verbatim", () => {
-    // execution-target-contract.sh C5 asserts this too. Restated here so that
-    // changing it fails from both sides.
     expect(MAKEFILE).toContain("docker exec -it -u $(SHELL_USER) $(SHELL_CONTAINER) zsh");
   });
 

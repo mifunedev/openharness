@@ -1,17 +1,5 @@
 #!/usr/bin/env bash
-# Executable lifecycle and route bridge for one /audit target.
-# Usage: audit-run.sh <target> [target args] -- <route-driver> [driver options]
 set -euo pipefail
-# Bash started as an asynchronous job inherits SIGINT ignored. Re-exec once through
-# GNU env so direct and process-group launches can install reliable handlers.
-#
-# The "already re-exec'd" marker travels in ARGV, not the environment. It was
-# AUDIT_SIGNALS_RESET=1, which is exported and therefore inherited by every descendant:
-# a nested audit-run.sh -- a probe driving the boundary from inside an audit -- saw the
-# flag, skipped this re-exec, kept SIGINT ignored, and reported a signal-propagation
-# failure that described its caller rather than the repository. argv does not cross a
-# process boundary uninvited, so the marker cannot leak. An inherited env value is now
-# cleared and grants no skip.
 unset AUDIT_SIGNALS_RESET
 if [[ ${1:-} == --audit-signals-reset ]]; then
   shift
@@ -44,7 +32,6 @@ while (($#)); do
   if [[ $1 == -- ]]; then shift; command=("$@"); break; fi
   args+=("$1"); shift
 done
-# The bridge must remain open around actual route work; a preflight-only invocation is invalid.
 ((${#command[@]})) || usage
 repo_re='^[^/[:space:]]+/[^/[:space:]]+$'; number_re='^[1-9][0-9]*$'; uint_re='^[0-9]+$'
 value(){ (($2 < ${#args[@]})) && [[ -n ${args[$2]} && ${args[$2]} != --* ]]; }
@@ -185,8 +172,6 @@ trap 'forward_signal INT' INT
 trap 'forward_signal TERM' TERM
 trap 'forward_signal HUP' HUP
 cd "$AUDIT_ROOT"
-# The driver receives the validated target and target arguments verbatim after its own options.
-# AUDIT_ROUTE and AUDIT_TARGET_ARGS_JSON provide equivalent named/machine-readable bindings.
 if [[ ${AUDIT_FORCE_DIRECT:-} != 1 ]] && command -v setsid >/dev/null 2>&1; then
   env --default-signal=INT,TERM,HUP setsid -- "${command[@]}" "$target" "${args[@]}" & child_pid=$!; child_group=true
 else
@@ -199,8 +184,6 @@ if [[ -n $interrupted ]]; then
   wait "$child_pid" 2>/dev/null || true
   rc=$((128 + $(kill -l "$interrupted")))
 elif [[ $rc -eq 0 ]]; then
-  # Exit zero is only transport success. Completion requires atomic evidence
-  # produced by route work and correlated to this exact run, target, and argv.
   if [[ ! -f $AUDIT_EVIDENCE_PATH || -L $AUDIT_EVIDENCE_PATH ]] \
     || ! jq -e --arg id "$AUDIT_RUN_ID" --arg target "$target" --argjson args "$AUDIT_TARGET_ARGS_JSON" '
       .schemaVersion==1 and .runId==$id and .target==$target and .targetArgs==$args
@@ -215,9 +198,6 @@ elif [[ $rc -eq 0 ]]; then
 fi
 trap - INT TERM HUP
 if [[ $outer == true ]]; then
-  # The run record is REPORTED, never written. The `.oh/logs` tier this used to
-  # append to was deleted; a run's correlation data belongs in the operator's
-  # terminal, not in a file nobody reads back.
   finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   state=complete; [[ $rc -eq 0 ]] || state=failed; [[ -z $interrupted ]] || state=interrupted
   printf 'audit -- run-id=%s target=%s state=%s verdict=%s exit=%s started=%s finished=%s\n' \

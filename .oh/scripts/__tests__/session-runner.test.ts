@@ -21,18 +21,11 @@ const REPO_ROOT = path.resolve(__dirname, "../../..");
 const LIB = path.join(REPO_ROOT, ".oh", "scripts", "lib", "session-runner.sh");
 const LIB_SOURCE = readFileSync(LIB, "utf-8");
 
-// Absolute bash, resolved once via the parent's PATH. The ladder tests hand the
-// child a PATH containing ONLY a fixture bin dir (that is how "herdr absent" /
-// "tmux absent" are staged), and spawnSync resolves a bare command name against
-// that stripped child PATH — which would ENOENT.
 const BASH = (() => {
   const r = spawnSync("bash", ["-c", "command -v bash"], { encoding: "utf-8" });
   return (r.stdout ?? "").trim() || "/usr/bin/bash";
 })();
 
-// Real paths of the tools the library itself shells out to. Symlinked into an
-// isolated fixture bin so a test can withhold `herdr`/`tmux` specifically
-// without also withholding coreutils.
 const PASSTHROUGH_TOOLS = [
   "bash",
   "sh",
@@ -73,14 +66,6 @@ afterEach(() => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Fixture binaries
-//
-// The stubs are driven entirely by STUB_* env vars, so one stub covers every
-// herdr/tmux shape the ladder has to cope with. Every invocation is appended to
-// $STUB_CALLS, which is how the tests assert that (for example) the nesting
-// guard never reached `herdr agent start`.
-// ---------------------------------------------------------------------------
 
 const HERDR_STUB = `#!/usr/bin/env bash
 printf '%s\\n' "herdr $*" >> "\${STUB_CALLS:-/dev/null}"
@@ -158,16 +143,8 @@ esac
 `;
 
 interface BinOpts {
-  /** Write the herdr stub into the fixture bin. */
   herdr?: boolean;
-  /** Write the tmux stub into the fixture bin. */
   tmux?: boolean;
-  /**
-   * Isolated: the child PATH is ONLY the fixture bin (plus symlinked
-   * coreutils), so a tool with no stub is genuinely absent. Non-isolated: the
-   * fixture bin is prepended to the real PATH, so stubs shadow the real
-   * binaries and everything else stays reachable.
-   */
   isolated?: boolean;
 }
 
@@ -193,7 +170,6 @@ function makeBin(opts: BinOpts): { dir: string; pathEnv: string } {
       try {
         symlinkSync(real, path.join(dir, tool));
       } catch {
-        /* already present (e.g. a stub of the same name) */
       }
     }
     return { dir, pathEnv: dir };
@@ -209,11 +185,6 @@ interface RunResult {
   ms: number;
 }
 
-/**
- * Source the library in a fresh bash and run `snippet`. Sourcing only defines
- * functions and assigns constants — the library sets no shell options, so the
- * caller's option state (and this test runner's) is never touched.
- */
 function sh(
   snippet: string,
   opts: { env?: NodeJS.ProcessEnv; timeoutMs?: number } = {},
@@ -233,7 +204,6 @@ function sh(
   };
 }
 
-/** A task folder with a progress.txt, plus an isolated RUNNER_TMPDIR. */
 function makeTask(slug: string, progress = "# progress\n") {
   const root = tmpDir("sr-task-");
   const taskDir = path.join(root, "tasks", slug);
@@ -254,10 +224,6 @@ function makeTask(slug: string, progress = "# progress\n") {
   };
 }
 
-/**
- * Everything the stubs were asked to do. Absent file = the stub was never
- * invoked at all, which is exactly what the nesting guard has to achieve.
- */
 function readCalls(t: ReturnType<typeof makeTask>): string {
   try {
     return readFileSync(t.callsFile, "utf-8");
@@ -266,7 +232,6 @@ function readCalls(t: ReturnType<typeof makeTask>): string {
   }
 }
 
-/** The fingerprint the CALLER will compute, so a stub can match or diverge. */
 function callerFingerprint(worktree: string): string {
   const r = spawnSync(
     BASH,
@@ -276,9 +241,6 @@ function callerFingerprint(worktree: string): string {
   return (r.stdout ?? "").trim();
 }
 
-// ---------------------------------------------------------------------------
-// resolve_timeout_ms — the ONLY source of the session budget
-// ---------------------------------------------------------------------------
 
 describe("resolve_timeout_ms", () => {
   const DEFAULT = "14400000";
@@ -305,9 +267,6 @@ describe("resolve_timeout_ms", () => {
     expect(r.stderr).not.toContain("rejected");
   });
 
-  // 0 is the dangerous one: herdr's `wait output --timeout 0` semantics are
-  // unknown, and an unvalidated 0 would make the poll ceilings expire instantly
-  // (or never). Routing every consumer through this helper makes it unreachable.
   for (const [label, value] of [
     ["zero", "0"],
     ["negative", "-1"],
@@ -334,9 +293,6 @@ describe("resolve_timeout_ms", () => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// runner_detect — the ladder and its degrade cases
-// ---------------------------------------------------------------------------
 
 describe("runner_detect ladder", () => {
   function detectEnv(
@@ -353,7 +309,6 @@ describe("runner_detect ladder", () => {
     };
   }
 
-  // Degrade case 1 — herdr absent.
   it("degrades to tmux when herdr is not installed", () => {
     const t = makeTask("ladder");
     const bin = makeBin({ tmux: true, isolated: true });
@@ -364,7 +319,6 @@ describe("runner_detect ladder", () => {
     expect(r.stderr).toContain("herdr is not installed");
   });
 
-  // Degrade case 2 — binary up, server down.
   it("degrades to tmux when the herdr binary is up but the server is down", () => {
     const t = makeTask("ladder");
     const bin = makeBin({ herdr: true, tmux: true, isolated: true });
@@ -374,11 +328,9 @@ describe("runner_detect ladder", () => {
     expect(r.stdout.trim()).toBe("tmux");
     expect(r.stderr).toContain("status: running");
     expect(r.stderr).toContain("compatible: yes");
-    // Never probed: the health predicate failed first.
     expect(readFileSync(t.callsFile, "utf-8")).not.toContain("agent start");
   });
 
-  // Degrade case 3 — no herdr, no tmux.
   it("degrades to foreground when neither herdr nor tmux is installed", () => {
     const t = makeTask("ladder");
     const bin = makeBin({ isolated: true });
@@ -389,10 +341,6 @@ describe("runner_detect ladder", () => {
     expect(r.stderr).toContain("tmux is not installed");
   });
 
-  // Degrade case 4 — the execution-context gate, mismatch path. The stubbed
-  // probe pane answers with a fingerprint from a DIFFERENT machine, which is
-  // exactly the live topology this sandbox has (herdr panes are host
-  // processes). No real herdr is involved.
   it("degrades to tmux when the probe pane's fingerprint does not match the caller's", () => {
     const t = makeTask("ladder");
     const bin = makeBin({ herdr: true, tmux: true, isolated: true });
@@ -404,10 +352,8 @@ describe("runner_detect ladder", () => {
     });
     expect(r.stdout.trim()).toBe("tmux");
     expect(r.stderr).toContain("fingerprint mismatch");
-    // The reason names WHICH fields differed, and carries both fingerprints.
     expect(r.stderr).toMatch(/fingerprint mismatch on [a-z,]*host/);
     expect(r.stderr).toContain("host=some-other-host");
-    // And it was written to the firstmate log, not only to stderr.
     const log = readFileSync(
       path.join(t.runnerTmp, "firstmate-ladder.log"),
       "utf-8",
@@ -441,7 +387,6 @@ describe("runner_detect ladder", () => {
     expect(readFileSync(t.callsFile, "utf-8")).toMatch(/herdr pane close w7:p3/);
   });
 
-  // --- #761: the probe pane must outlive its own read ----------------------
 
   it("keeps the probe pane alive across the read, and derives the budget from the one timeout source", () => {
     const t = makeTask("ladder");
@@ -455,19 +400,13 @@ describe("runner_detect ladder", () => {
     const start = readFileSync(t.callsFile, "utf-8")
       .split("\n")
       .find((l) => l.includes("agent start"));
-    // The keep-alive rides the pane invocation ...
     expect(start).toContain('sleep "${2:-30}"');
-    // ... and its budget is the read window plus a margin, not a literal.
     expect(start).toMatch(/\s25$/);
   });
 
   it("reproduces #761: a probe pane that exits before the read is unreadable", () => {
     const t = makeTask("ladder");
     const bin = makeBin({ herdr: true, tmux: true, isolated: true });
-    // STUB_HERDR_PANE_MODEL=none restores the old, too-forgiving stub: it
-    // replays pane output regardless of whether the pane could still exist.
-    // Under the faithful default the same run must still succeed, which is
-    // what proves the keep-alive is load-bearing rather than decorative.
     const forgiving = sh(`runner_detect ladder '${t.worktree}'`, {
       env: detectEnv(t, bin, {
         STUB_HERDR_PROBE_OUT: `FIRSTMATE-FINGERPRINT ${callerFingerprint(t.worktree)}`,
@@ -488,9 +427,6 @@ describe("runner_detect ladder", () => {
   it("never puts the keep-alive on the LOCAL fingerprint path", () => {
     const t = makeTask("ladder");
     const bin = makeBin({ herdr: true, tmux: true, isolated: true });
-    // The shared snippet stays sleep-free: runner_local_fingerprint runs it
-    // in-process, so a keep-alive there would stall every caller and would
-    // also break "the same snippet runs in both places".
     const r = sh(`printf '%s' "$RUNNER_PROBE_SCRIPT"`, {
       env: detectEnv(t, bin),
     });
@@ -515,8 +451,6 @@ describe("runner_detect ladder", () => {
     expect(r.stderr).toContain("no probe fingerprint obtained");
   });
 
-  // The nesting guard is the ZEROTH check: a detection path that itself nests a
-  // pane would be self-defeating, so no probe may be launched at all.
   it("nesting guard: HERDR_ENV=1 rules herdr out without launching a probe pane", () => {
     const t = makeTask("ladder");
     const bin = makeBin({ herdr: true, tmux: true, isolated: true });
@@ -528,7 +462,6 @@ describe("runner_detect ladder", () => {
     expect(r.stderr).toContain("allow_nested=false");
     const calls = readCalls(t);
     expect(calls).not.toContain("agent start");
-    // Not even `herdr status` — the guard short-circuits before any herdr call.
     expect(calls.trim()).toBe("");
   });
 
@@ -543,9 +476,6 @@ describe("runner_detect ladder", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Explicit overrides are hard errors, never silent degrades
-// ---------------------------------------------------------------------------
 
 describe("runner_detect overrides", () => {
   it("rejects an unknown runner name", () => {
@@ -569,8 +499,6 @@ describe("runner_detect overrides", () => {
     expect(r.stderr).toContain("herdr is not installed");
   });
 
-  // The override may never force a silent host-side run: an installed, healthy
-  // but OUT-OF-ENVIRONMENT herdr is a hard error naming the mismatch.
   it("hard-errors — naming the fingerprint mismatch — when herdr is requested but out-of-environment", () => {
     const t = makeTask("ov");
     const bin = makeBin({ herdr: true, tmux: true, isolated: true });
@@ -624,9 +552,6 @@ describe("runner_detect overrides", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// runner_launch — pane id provenance, --no-focus, and the tee in every branch
-// ---------------------------------------------------------------------------
 
 describe("runner_launch", () => {
   it("parses the pane id out of the agent_started payload and exposes it via runner_pane_id", () => {
@@ -662,12 +587,8 @@ describe("runner_launch", () => {
     expect(start).toBeDefined();
     expect(start).toContain("--no-focus");
     expect(start).toContain("firstmate-launch");
-    // No pipe, no redirect: herdr owns its own pane capture, and a pipe here
-    // would replace the child's TTY (the defect observed 2026-08-23).
     expect(start).not.toContain("| tee");
     expect(start).not.toContain("2>&1");
-    // The cd is inside the launched command, not only in the --cwd flag:
-    // runner flags that claim to set a cwd frequently set only metadata.
     expect(start).toContain(`cd ${t.worktree} &&`);
   });
 
@@ -687,9 +608,7 @@ describe("runner_launch", () => {
     expect(call).toBeDefined();
     expect(call).toContain("-s agent-firstmate-launch");
     expect(call).toContain(`-c ${t.worktree}`);
-    // The launched command itself is never piped — the pane must stay a terminal.
     expect(call).not.toContain("| tee");
-    // Logging attaches AFTER the pane exists, which preserves that terminal.
     const pipePane = readFileSync(t.callsFile, "utf-8")
       .split("\n")
       .find((l) => l.includes("pipe-pane"));
@@ -700,17 +619,11 @@ describe("runner_launch", () => {
 
   it("lets the foreground child inherit stdio and writes no session log", () => {
     const t = makeTask("launch");
-    // The child must keep the caller's terminal, so its output arrives on the
-    // caller's own stdout rather than in a log file. runner_launch's own banner
-    // goes to stderr, so stdout carries the child's output alone.
     const r = sh(
       `runner_launch foreground launch '${t.worktree}' 'echo hello-foreground' 2>/dev/null\nwait "$RUNNER_FG_PID"`,
       { env: { PATH: process.env.PATH, RUNNER_TMPDIR: t.runnerTmp } },
     );
     expect(r.stdout).toContain("hello-foreground");
-    // No session log is written in foreground mode. The runner's own narrative
-    // log shares that path, so assert on its CONTENT: the child's output must
-    // not be captured into it, which is what a pipe or redirect would do.
     const narrative = existsSync(`${t.runnerTmp}/firstmate-launch.log`)
       ? readFileSync(`${t.runnerTmp}/firstmate-launch.log`, "utf-8")
       : "";
@@ -734,9 +647,6 @@ describe("runner_launch", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// One pane id, three consumers
-// ---------------------------------------------------------------------------
 
 describe("pane id provenance", () => {
   it("feeds the SAME captured pane id to runner_verify_cwd, the watch, and teardown", () => {
@@ -763,9 +673,7 @@ describe("pane id provenance", () => {
     expect(r.stdout).toContain("WATCH_OK");
 
     const calls = readFileSync(t.callsFile, "utf-8");
-    // The watch waits on the captured id...
     expect(calls).toMatch(/herdr wait output w9:p42 --match \^STATUS: COMPLETE\$/);
-    // ...and teardown closes that same id.
     expect(calls).toContain("herdr pane close w9:p42");
   });
 
@@ -788,9 +696,6 @@ describe("pane id provenance", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// runner_alive — read-only oracles
-// ---------------------------------------------------------------------------
 
 describe("runner_alive", () => {
   it("uses `herdr agent get`'s exit code as the herdr-mode oracle", () => {
@@ -838,15 +743,11 @@ describe("runner_alive", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// runner_teardown — `pane close`, never a nonexistent stop/kill verb
-// ---------------------------------------------------------------------------
 
 describe("runner_teardown", () => {
   it("closes the pane in herdr mode, recovering the id from the server when it has none", () => {
     const t = makeTask("down");
     const bin = makeBin({ herdr: true, isolated: true });
-    // No prior launch in this shell: the id has to come back out of `agent get`.
     sh(`runner_teardown herdr down >/dev/null 2>&1`, {
       env: {
         PATH: bin.pathEnv,
@@ -878,9 +779,6 @@ describe("runner_teardown", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// runner_watch — bounded by resolve_timeout_ms, and the single exit path
-// ---------------------------------------------------------------------------
 
 describe("runner_watch", () => {
   it("returns success as soon as the whole-line sentinel is in progress.txt", () => {
@@ -897,8 +795,6 @@ describe("runner_watch", () => {
     expect(r.stdout).toContain("DONE");
   });
 
-  // The exit-path contract: teardown ran, the lock is gone, and the run is
-  // recorded as FIRSTMATE-INCOMPLETE. A retained lock would wedge the slug.
   it("on budget expiry: tears down, removes the lock, and appends FIRSTMATE-INCOMPLETE", () => {
     const t = makeTask("watch");
     const bin = makeBin({ tmux: true, isolated: true });
@@ -910,7 +806,7 @@ describe("runner_watch", () => {
           PATH: bin.pathEnv,
           RUNNER_TMPDIR: t.runnerTmp,
           STUB_CALLS: t.callsFile,
-          STUB_TMUX_HAS_SESSION: "0", // session stays "alive" until the budget runs out
+          STUB_TMUX_HAS_SESSION: "0",
           FIRSTMATE_TIMEOUT_MS: "1000",
           RUNNER_POLL_INTERVAL_S: "0.2",
         },
@@ -939,7 +835,7 @@ describe("runner_watch", () => {
         PATH: bin.pathEnv,
         RUNNER_TMPDIR: t.runnerTmp,
         STUB_CALLS: t.callsFile,
-        STUB_TMUX_HAS_SESSION: "1", // gone
+        STUB_TMUX_HAS_SESSION: "1",
         RUNNER_POLL_INTERVAL_S: "0.2",
       },
       timeoutMs: 30_000,
@@ -950,8 +846,6 @@ describe("runner_watch", () => {
     );
   });
 
-  // The poll ceiling comes from resolve_timeout_ms and nowhere else. Both
-  // halves matter: a valid budget must actually stop the loop...
   it("bounds the tmux/foreground poll loop by the resolved budget", () => {
     const t = makeTask("watch");
     const bin = makeBin({ tmux: true, isolated: true });
@@ -970,9 +864,6 @@ describe("runner_watch", () => {
     expect(r.ms).toBeLessThan(30_000);
   });
 
-  // ...and a rejected one must NOT become the ceiling. With FIRSTMATE_TIMEOUT_MS=0
-  // an unvalidated budget would expire instantly; the validated default (4h)
-  // means this watch is still polling when the test kills it.
   it("does not expire instantly when FIRSTMATE_TIMEOUT_MS=0 is rejected", () => {
     const t = makeTask("watch");
     const bin = makeBin({ tmux: true, isolated: true });
@@ -987,7 +878,6 @@ describe("runner_watch", () => {
       },
       timeoutMs: 4_000,
     });
-    // Killed by the test harness rather than having returned on its own.
     expect(r.signal).not.toBeNull();
     expect(r.stdout).not.toContain("RC=");
     expect(readFileSync(t.progressFile, "utf-8")).not.toContain(
@@ -996,10 +886,6 @@ describe("runner_watch", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// runner_abort — the single exit path, callable directly (launch failure,
-// operator abort)
-// ---------------------------------------------------------------------------
 
 describe("runner_abort", () => {
   it("removes the lock even when the task folder is missing", () => {
@@ -1020,14 +906,8 @@ describe("runner_abort", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// The caller owns shell options
-// ---------------------------------------------------------------------------
 
 describe("sourcing is option-neutral", () => {
-  // A file-scope `set` in a sourced library silently rewrites the caller's
-  // option state for the rest of its execution — and shellcheck does not flag
-  // it. Both callers below must come out exactly as they went in.
   for (const [label, prelude] of [
     ["a strict caller", "set -euo pipefail"],
     ["a non-strict caller", "set +e +u +o pipefail"],
@@ -1053,9 +933,6 @@ describe("sourcing is option-neutral", () => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Static contract — the things a future edit must not quietly drop
-// ---------------------------------------------------------------------------
 
 describe("session-runner.sh static contract", () => {
   it("defines the five public ladder functions", () => {
@@ -1095,7 +972,6 @@ describe("session-runner.sh static contract", () => {
   it("uses `herdr agent get` (the liveness oracle) and `pane close` (the only teardown verb)", () => {
     expect(LIB_SOURCE).toContain("herdr agent get");
     expect(LIB_SOURCE).toContain("herdr pane close");
-    // 0.7.4 has no stop/kill verb; either would fail silently inside a trap.
     expect(LIB_SOURCE).not.toMatch(/herdr agent (stop|kill)/);
   });
 

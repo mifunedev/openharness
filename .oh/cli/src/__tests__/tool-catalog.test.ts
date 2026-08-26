@@ -11,7 +11,6 @@ import {
 import { HARNESS_CATALOG } from "../lib/harnesses/catalog.js";
 import { RUNTIME_CATALOG } from "../lib/runtimes/catalog.js";
 
-// src/__tests__ -> src -> .oh/cli -> .oh -> repo root
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const read = (p: string): string => readFileSync(join(REPO_ROOT, p), "utf8");
 
@@ -27,9 +26,6 @@ describe("tool catalog shape", () => {
   });
 
   it("has exactly one installable tool", () => {
-    // The rest are baked into the image. This is the same shape as the runtime
-    // catalog (3 entries, 1 installable): reporting on something you cannot
-    // install is the point, not filler.
     expect(installableToolIds()).toEqual(["agent-browser"]);
   });
 
@@ -46,17 +42,12 @@ describe("tool catalog shape", () => {
   });
 
   it("checks presence with `command -v`, never a version flag", () => {
-    // Presence and version are different questions, and the shell cannot be
-    // wrong about PATH.
     for (const t of TOOL_CATALOG) {
       expect(t.verifyArgv.join(" "), t.id).toContain(`command -v ${t.binary}`);
     }
   });
 
   it("declares a version probe only where the flag is a safe standard", () => {
-    // herdr and agent-browser are omitted deliberately: neither binary was
-    // available to confirm its flag, and the repo's rule (set by `msb`) is to
-    // cite a verified source or omit, never guess.
     const withVersion = TOOL_CATALOG.filter((t) => t.versionArgv !== undefined).map((t) => t.id);
     expect(withVersion).toEqual(["cloudflared", "docker-cli", "gh"]);
     for (const t of TOOL_CATALOG) {
@@ -68,18 +59,12 @@ describe("tool catalog shape", () => {
     for (const t of TOOL_CATALOG) {
       for (const argv of [t.installArgv, t.verifyArgv, t.versionArgv]) {
         if (!argv) continue;
-        // `${` would be a template hole. `$PNPM_HOME` is fine — the container's
-        // own login shell expands it, and nothing user-supplied reaches it.
         for (const token of argv) expect(token, `${t.id}: ${token}`).not.toContain("${");
       }
     }
   });
 });
 
-/**
- * The three catalogs must stay disjoint. A tool appearing in two tables means
- * two commands claim it and two drift tests assert different ground truths.
- */
 describe("the three catalogs are disjoint", () => {
   it("shares no id with the harness or runtime catalog", () => {
     const harness = new Set(HARNESS_CATALOG.map((h) => h.id));
@@ -95,24 +80,16 @@ describe("the three catalogs are disjoint", () => {
   });
 
   it("keeps docker-cli distinct from the docker RUNTIME", () => {
-    // Not a duplicate: one is the client binary in the image, the other is the
-    // isolation boundary and its daemon. The ids differ on purpose.
     expect(findTool("docker-cli")).toBeDefined();
     expect(findTool("docker")).toBeUndefined();
     expect(RUNTIME_CATALOG.some((r) => r.id === "docker")).toBe(true);
   });
 
   it("leaves agent_browser excluded from the harness catalog", () => {
-    // harness-catalog.test.ts asserts this too. Restated here so that moving it
-    // INTO the harness table fails from both sides.
     expect(HARNESS_CATALOG.some((h) => h.harnessKey === "agent_browser")).toBe(false);
   });
 });
 
-/**
- * Drift test for agent-browser. Its ground truth is `entrypoint.sh` — NOT the
- * Dockerfile — and the inverse assertion is what keeps this catalog honest.
- */
 describe("agent-browser matches the entrypoint that really installs it", () => {
   const ab = findTool("agent-browser")!;
   const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
@@ -124,8 +101,6 @@ describe("agent-browser matches the entrypoint that really installs it", () => {
   });
 
   it("is installed by the entrypoint and is ABSENT from the Dockerfile", () => {
-    // This absence is the whole reason `entrypointGuard` exists as a separate
-    // field. An unasserted premise is how these tables drift.
     expect(ENTRYPOINT).toContain("INSTALL_AGENT_BROWSER");
     expect(read(".devcontainer/Dockerfile")).not.toContain("INSTALL_AGENT_BROWSER");
   });
@@ -160,8 +135,6 @@ describe("agent-browser matches the entrypoint that really installs it", () => {
 
   it("keeps the env plumbing wired end to end", () => {
     expect(read(".devcontainer/docker-compose.yml")).toContain("INSTALL_AGENT_BROWSER");
-    // One surface, one key: `.devcontainer/.env` documents it and compose
-    // interpolates it. There is no envmap in between any more.
     expect(read(".devcontainer/.example.env")).toMatch(/^#\s*INSTALL_AGENT_BROWSER=/m);
   });
 });

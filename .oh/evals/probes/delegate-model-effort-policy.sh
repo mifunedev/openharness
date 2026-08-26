@@ -14,12 +14,10 @@ fi
 
 problems=()
 
-# Default worker routing inherits the active session model by leaving model unset.
 if ! grep -Eiq 'omit(ted)? (the )?(Agent )?`?model`? (argument|parameter).*(inherit|parent|session)|inherit.*(parent|session).*(omit|omitted|unset).*(model|`model`)' "$SKILL"; then
   problems+=("default policy does not inherit the parent/session model through an omitted Agent model argument")
 fi
 
-# The real Agent argument is `thinking`, not an invented `effort` argument.
 if ! grep -Eiq 'Agent( tool)?[^.]*`thinking` parameter|pass Agent `thinking`|call Agent with `thinking:' "$SKILL"; then
   problems+=("policy does not explicitly use the Agent thinking parameter")
 fi
@@ -27,7 +25,6 @@ if grep -Eiq '`effort` (argument|parameter)|`effort:|with `effort:|\*\*Effort\*\
   problems+=("policy still presents effort as an Agent parameter or task-schema field")
 fi
 
-# Keep every complexity mapping independently recognizable.
 if ! grep -Eiq 'simple.*mechanical.*`?low`?' "$SKILL"; then
   problems+=("thinking matrix is missing simple/mechanical -> low")
 fi
@@ -54,15 +51,12 @@ if ! { grep -Eiq 'override.*model|model.*override' "$SKILL" && grep -Eiq 'record
   problems+=("model overrides do not require a recorded explicit reason")
 fi
 
-# Routine named-tier routing is incompatible with inherited-model routing.
 for tier in luna terra sol haiku sonnet opus; do
   if grep -Eiq "(^|[^[:alnum:]_-])${tier}([^[:alnum:]_-]|$)" "$SKILL"; then
     problems+=("legacy routine model-routing tier remains: $tier")
   fi
 done
 
-# DeepSWE is external evidence about coding performance, not proof of harness
-# inheritance or simple-task routing; keep that volatile claim out of this policy.
 if grep -Eiq 'DeepSWE|leaderboard' "$SKILL"; then
   problems+=("volatile external benchmark language appears in durable delegate policy")
 fi

@@ -54,8 +54,6 @@ done
 grep -qF 'Usage: /builder <agent|skill|command|rule> <name-or-request>' "$SKILL" || fail "missing exact invalid-argument usage"
 grep -qF 'remaining request is empty or only' "$SKILL" || fail "dispatcher does not reject an empty request after a valid type"
 grep -qF 'stop without reading' "$SKILL" || fail "missing fail-closed invalid-type behavior"
-# The `.oh/memory` tier was deleted; /builder logs nothing. A reintroduced write
-# target here is the defect this replaces the old Memory-Protocol assertions with.
 if grep -qF '.oh/memory' "$SKILL"; then fail "builder references the deleted .oh/memory tier"; fi
 if grep -qF 'MEMORY_DIR' "$SKILL"; then fail "builder reintroduced the MEMORY_DIR override"; fi
 

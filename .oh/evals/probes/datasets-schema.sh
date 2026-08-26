@@ -12,7 +12,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 DS="$ROOT/.oh/evals/datasets"
 README="$DS/README.md"
 
-# Assertion 1 — corpus not present on this branch => SKIPPED (not a regression).
 if [[ ! -f "$README" ]]; then
   echo "SKIPPED: datasets corpus absent: $README" >&2
   exit 2
@@ -21,7 +20,6 @@ command -v jq >/dev/null 2>&1 || { echo "SKIPPED: jq not on PATH" >&2; exit 2; }
 
 fails=()
 
-# Assertion 2 — >=3 example folders matching <dataset>/DS-*/.
 shopt -s nullglob
 example_dirs=("$DS"/*/DS-*/)
 shopt -u nullglob
@@ -33,13 +31,11 @@ ids=()
 for d in "${example_dirs[@]}"; do
   d="${d%/}"
   rel="${d#"$ROOT"/}"
-  # Assertion 3 — required files per example folder.
   [[ -f "$d/manifest.json" ]] || fails+=("$rel: missing manifest.json")
   [[ -f "$d/prompt.md" ]]     || fails+=("$rel: missing prompt.md")
   [[ -d "$d/oracle" ]]        || fails+=("$rel: missing oracle/ directory")
   [[ -x "$d/verify.sh" ]]     || fails+=("$rel: missing executable verify.sh")
 
-  # Assertion 4 — manifest parses + required fields + DS-<n> id.
   if [[ -f "$d/manifest.json" ]]; then
     jq -e '.id and .slug and .dataset and .title and (.source|type=="object") and (.reward_kind|type=="array") and (.oracle|type=="object")' \
       "$d/manifest.json" >/dev/null 2>&1 || fails+=("$rel/manifest.json: missing required fields or invalid JSON")
@@ -51,13 +47,11 @@ for d in "${example_dirs[@]}"; do
     fi
   fi
 
-  # Assertion 5 — hermetic verify.sh self-check exits 0.
   if [[ -x "$d/verify.sh" ]]; then
     bash "$d/verify.sh" >/dev/null 2>&1 || fails+=("$rel/verify.sh: self-check did not exit 0")
   fi
 done
 
-# Assertion 6 — bidirectional drift: every example id has a `| DS-NNN |` catalogue row, and vice-versa.
 cat_ids=()
 while read -r cid; do
   [[ -n "$cid" ]] && cat_ids+=("$cid")
@@ -74,7 +68,6 @@ else
   fails+=("could not extract example ids (${#ids[@]}) or catalogue ids (${#cat_ids[@]})")
 fi
 
-# Assertion 7 — every capability `datasets:` frontmatter ref resolves to a real example id.
 CAP_TASKS="$ROOT/.oh/evals/capability/tasks"
 if [[ -d "$CAP_TASKS" && ${#ids[@]} -gt 0 ]]; then
   while read -r ref; do

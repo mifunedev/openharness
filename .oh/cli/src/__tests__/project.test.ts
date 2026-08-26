@@ -4,8 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveProjectRoot } from "../lib/project.js";
 
-// All fixtures are mkdtemp dirs — never the real repo (whose root contains a
-// real .oh/ and would satisfy the walk from any cwd inside it).
 
 const cleanups: string[] = [];
 

@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
-# /eval runner — discover .oh/evals/probes/*.sh, run each against real state, and
-# write the .oh/evals/RESULTS.md benchmark scoreboard (overwrite-row-per-probe).
-# Exit-code oracle per probe: 0=PASS 1=REGRESSION 2=SKIPPED 124=TIMEOUT other=ERROR.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# The skill may be reached through agent-specific symlinks (`.claude/skills`) or
-# directly through the neutral `.oh/skills` source directory. Walk upward until the
-# repo's eval corpus is found instead of hard-coding a fixed depth.
 if [ -n "${AUDIT_ROOT:-}" ]; then
   ROOT="$(cd "$AUDIT_ROOT" && pwd -P)"
 else
@@ -34,26 +28,20 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# Temp-file handle for the atomic scoreboard write (assigned at the write block).
-# Initialized empty BEFORE the --ablate guard so the guarded EXIT trap is harmless
-# on the ablation exec path (the exec at run.sh:~49 replaces this shell entirely).
 tmp=""
 trap '[ -n "$tmp" ] && rm -f "$tmp"' EXIT
 
-# Recover through the single shared lock/sentinel state machine.
 # shellcheck source=.oh/scripts/ablate.sh
 source "$ROOT/.oh/scripts/ablate.sh"
 ablate_recover
 
-# --- ablation mode (M-1): run one probe with/without a target file via the shared
-#     swap/restore/trap mechanics in .oh/scripts/ablate.sh; reports LOAD-BEARING|PRUNABLE ---
 if [ -n "$ABLATE_TARGET" ]; then
   [ -n "$FILTER_PROBE" ] || { echo "--ablate requires --probe <id>" >&2; exit 64; }
   ABL_PROBE="$PROBES_DIR/$FILTER_PROBE.sh"
   [ -f "$ABL_PROBE" ] || { echo "no such probe: $FILTER_PROBE" >&2; exit 64; }
   case "$ABLATE_TARGET" in
-    /*) ABL_TGT="$ABLATE_TARGET" ;;                 # absolute — use as-is
-    *)  ABL_TGT="$ROOT/$ABLATE_TARGET" ;;           # relative — resolve against eval repo root, NOT cwd
+    /*) ABL_TGT="$ABLATE_TARGET" ;;
+    *)  ABL_TGT="$ROOT/$ABLATE_TARGET" ;;
   esac
   exec bash "$ROOT/.oh/scripts/ablate.sh" "$ABL_TGT" "$ABL_PROBE"
 fi
@@ -64,10 +52,6 @@ prior_row() {
 }
 prior_status() { prior_row "$1" | awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/,"",$5); print $5}'; }
 
-# Capture the pre-write scoreboard ONCE. Carry-forward (prior_row) reads this
-# snapshot, never the live $RESULTS — so a filtered run can't erase untouched
-# rows, and a crash mid-write leaves the original file intact (atomic mv below).
-# set -e-safe: the [ -f ] short-circuits the cat so a missing file can't abort.
 RESULTS_ORIG=""
 [ -f "$RESULTS" ] && RESULTS_ORIG="$(cat "$RESULTS")"
 
@@ -96,7 +80,7 @@ for probe in "$PROBES_DIR"/*.sh; do
     124) status="TIMEOUT" ;;
     *) status="ERROR" ;;
   esac
-  reason="${reason%%$'\n'*}"   # first stderr line only
+  reason="${reason%%$'\n'*}"
 
   prior="$(prior_status "$id")"
   if [ -z "$prior" ]; then
@@ -106,7 +90,6 @@ for probe in "$PROBES_DIR"/*.sh; do
   else
     delta="${prior}->${status}"
   fi
-  # green->red is the recurrence signal; first run has no prior, so never fires
   if [ "$prior" = "PASS" ] && [ "$status" != "PASS" ] && [ "$status" != "SKIPPED" ]; then
     regressions+=("$id ($src): was PASS, now $status — ${reason:-no reason}")
   fi
@@ -119,10 +102,6 @@ for probe in "$PROBES_DIR"/*.sh; do
   ran=$((ran + 1))
 done
 
-# --- rewrite RESULTS.md: build the full scoreboard into a temp sibling file, then
-#     replace the live file in ONE atomic mv -f. New rows for probes run this
-#     invocation; carry prior rows (from the RESULTS_ORIG snapshot) for the rest.
-#     The temp path is a SIBLING of $RESULTS (same filesystem) so mv -f is atomic. ---
 tmp="$RESULTS.tmp.$$"
 cat > "$tmp" <<'HDR'
 # Probe results — benchmark scoreboard
@@ -151,7 +130,6 @@ printf '\n<!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIP
 mv -f "$tmp" "$RESULTS"
 tmp=""
 
-# --- summary to stdout: regressions first ---
 if [ "${#regressions[@]}" -gt 0 ]; then
   echo "REGRESSIONS (${#regressions[@]}):"
   for r in "${regressions[@]}"; do echo "  - $r"; done

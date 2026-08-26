@@ -16,20 +16,7 @@ import {
   setKeyInEnv,
 } from "../lib/env-file.js";
 
-/**
- * Tests for the `.devcontainer/.env` reader/writer — the module that replaced
- * `lib/harness-yaml.ts` when harness.yaml was removed in 0.4.0.
- *
- * mkdtemp fixtures only — NEVER the real worktree root, whose `.example.env`
- * would fire the seed and whose `.env` the writer would edit for real.
- *
- * The round-trip test is the ONLY place a real subprocess is acceptable: it runs
- * the vendored `.oh/scripts/migrate-harness-yaml.sh` (which carries its own
- * writer) against a temp fixture, proving the TS writer and the shell writer
- * agree on the grammar. It spawns no docker.
- */
 
-// src/__tests__ -> src -> .oh/cli -> .oh -> repo root
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const REAL_EXAMPLE = join(REPO_ROOT, ".devcontainer", ".example.env");
 const REAL_MIGRATOR = join(REPO_ROOT, ".oh", "scripts", "migrate-harness-yaml.sh");
@@ -39,7 +26,6 @@ afterEach(() => {
   while (cleanups.length > 0) rmSync(cleanups.pop()!, { recursive: true, force: true });
 });
 
-/** A repo fixture carrying the REAL tracked template. */
 function makeRepo(withEnv = true): string {
   const d = mkdtempSync(join(tmpdir(), "oh-env-file-"));
   cleanups.push(d);
@@ -51,9 +37,6 @@ function makeRepo(withEnv = true): string {
 
 const readEnv = (root: string): string => readFileSync(envFilePath(root), "utf8");
 
-// ---------------------------------------------------------------------------
-// setKeyInEnv — the pure line editor
-// ---------------------------------------------------------------------------
 
 describe("setKeyInEnv", () => {
   it("uncomments a template line IN PLACE, keeping the line count and the prose", () => {
@@ -69,7 +52,6 @@ describe("setKeyInEnv", () => {
     expect(outcome).toBe("uncommented");
     expect(content.split("\n")).toHaveLength(before.split("\n").length);
     expect(content.split("\n")[1]).toBe("SANDBOX_NAME=mine");
-    // The surrounding lines are untouched — the diff is exactly one line.
     expect(content.split("\n")[0]).toBe("# ─── Sandbox identity ───");
     expect(content.split("\n")[2]).toBe("# TZ=America/Los_Angeles");
   });
@@ -117,9 +99,6 @@ describe("setKeyInEnv", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// readEnvValue
-// ---------------------------------------------------------------------------
 
 describe("readEnvValue", () => {
   it("reads a live key and treats a commented one as unset", () => {
@@ -149,9 +128,6 @@ describe("readEnvValue", () => {
   });
 
   it("is anchored to the ROOT, never the process CWD", () => {
-    // The bug this pins: a CWD-relative lookup makes every value look unset
-    // from a nested directory, which is how `oh shell` silently fell back to
-    // the default container name when run from a subdirectory.
     const root = makeRepo(false);
     writeFileSync(envFilePath(root), "SANDBOX_NAME=anchored\n");
     const nested = join(root, "pkg", "web");
@@ -166,9 +142,6 @@ describe("readEnvValue", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// seedEnvFile / setEnvValue / setInstallFlag
-// ---------------------------------------------------------------------------
 
 describe("seedEnvFile", () => {
   it("copies the template when .env is missing, and reports that it wrote", () => {
@@ -222,7 +195,6 @@ describe("setInstallFlag", () => {
   it("seeds the file first when .env does not exist yet", () => {
     const root = makeRepo(false);
     expect(setInstallFlag(root, "hermes")).toBe("uncommented");
-    // Seeded from the template, so the prose came along with the key.
     expect(readEnv(root)).toContain("Open Harness");
     expect(readEnv(root)).toMatch(/^INSTALL_HERMES=true$/m);
   });
@@ -240,16 +212,9 @@ describe("assertInRoot", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Round trip against the shell writer
-// ---------------------------------------------------------------------------
 
 describe("round trip with the vendored shell writer", () => {
   it("the migrator's awk writer and setEnvValue produce the same file", () => {
-    // TWO writers exist by design: this TS one for the CLI, and the awk one
-    // inside migrate-harness-yaml.sh (self-contained so the whole harness.yaml
-    // compatibility story is one deletable file). They MUST agree on
-    // uncomment-in-place, or a migrated install and a CLI-configured one drift.
     const viaTs = makeRepo();
     setEnvValue(viaTs, "SANDBOX_NAME", "roundtrip");
     setEnvValue(viaTs, "TZ", "America/Denver");

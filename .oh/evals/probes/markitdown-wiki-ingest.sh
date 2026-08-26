@@ -30,7 +30,6 @@ need_regex() {
   grep -Eqi -- "$regex" "$INGEST" || failures+=("$label")
 }
 
-# Pilot routing and exact upstream CLI identity.
 for ext in .pdf .docx .pptx .xlsx; do
   need_literal "supported extension absent: $ext" "$ext"
 done
@@ -45,7 +44,6 @@ need_literal "existing text route is not excluded from MarkItDown" 'Do not send 
 need_literal "plugin prohibition absent" 'do not pass `-p`/`--use-plugins`'
 need_literal "cloud/LLM prohibition absent" '`--use-cu`'
 
-# Prospective conversion and archive/input ceilings.
 need_literal "conversion timeout absent" 'timeout 120s'
 need_literal "dedicated temporary directory absent" 'mktemp -d'
 need_literal "native thread-pool bounding absent" 'OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1'
@@ -59,7 +57,6 @@ need_literal "whitespace-only output check absent" "grep -q '[^[:space:]]'"
 need_regex "non-zero/timeout/cap failure semantics absent" 'non-zero .*including timeout or file-limit termination'
 need_literal "set-e-safe conversion status capture absent" ') || CONVERT_STATUS=$?'
 
-# Input identity/signature and archive traversal boundaries.
 need_literal "symlink rejection absent" 'symlinks are not accepted'
 need_literal "regular-file rejection absent" 'source is not a regular file'
 need_literal "option-like basename rejection absent" 'option-like basenames are not accepted'
@@ -73,7 +70,6 @@ need_literal "OOXML traversal component rejection absent" '".." in parts'
 need_literal "metadata-only no-extraction boundary absent" 'Do not extract members.'
 need_regex "malformed ZIP fail-closed semantics absent" 'malformed or uninspectable ZIP metadata fails closed'
 
-# Trust, review, provenance, atomic publication, and rollback.
 need_regex "untrusted extraction boundary absent" 'lossy, untrusted (source data|extracted content)'
 need_regex "embedded instructions are not prohibited" 'embedded instructions.*must never be executed'
 need_regex "document relationships/links are not prohibited" 'OOXML external relationship.*zero converter-originated requests'
@@ -109,10 +105,8 @@ need_regex "rollback changelog explanation absent" 'separate reviewed PR with a 
 need_regex "raw provenance rollback default absent" 'immutable raw original/Markdown provenance remains by default'
 need_regex "no-schema-dependency rollback absent" 'No schema migration.*depend on MarkItDown'
 
-# This load-bearing probe must protect itself in the same change.
 grep -Fxq "$SELF_REL" "$PROTECTED" || failures+=("$SELF_REL not registered in .claude/protected-paths.txt")
 
-# No repository-owned executable/code wrapper and no image/package installation.
 while IFS= read -r -d '' path; do
   [[ "$path" == "$SELF_REL" ]] && continue
   if grep -qi 'markitdown' "$ROOT/$path"; then

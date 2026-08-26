@@ -52,10 +52,6 @@ describe("devcontainer entrypoint auth volume ownership", () => {
 
     expect(block).toContain("uid_reconcile_step()");
     expect(block).toContain("WARNING: failed to");
-    // Scope the "no swallowed failures" guard to the host-reconciliation
-    // branch itself. The sibling `OH_IMAGE_ONLY` (no-bind) branch legitimately
-    // best-efforts a volume chown with `2>/dev/null || true`; it is not host
-    // UID reconciliation (it deliberately skips it), so it is excluded here.
     const reconBranch = block.slice(block.indexOf('elif [ -d "$HARNESS_DIR" ]'));
     expect(reconBranch).not.toContain("2>/dev/null || true");
     expect(reconBranch).not.toContain("groupmod -g \"$HOST_GID\" sandbox 2>/dev/null");
@@ -118,14 +114,8 @@ describe("client-slack bridge supervisor", () => {
 
   it("restarts pi on stale-ctx and crash, clears the lock, stops on a clean exit", () => {
     const text = readFileSync(SUPERVISOR, "utf8");
-    // Detects the pi "extension ctx is stale" failure and kills the bridge pi
-    // (matched by its unique --extension path) so the loop relaunches it fresh.
     expect(text).toContain("ctx is stale");
     expect(text).toContain("pkill -f 'pi-messenger-bridge/dist/index.js'");
-    // pi runs interactive on the pane TTY: no `| tee` pipe and no --mode rpc, so
-    // the loaded UI extensions render instead of flooding stdout with JSON. A 2nd
-    // --extension co-loads the Codex retry-recovery extension. Assert on the pi
-    // command line itself so comment wording can't satisfy the negatives.
     const piLine = text.split("\n").find((l) => /^\s*pi --extension/.test(l)) ?? "";
     expect(piLine).toContain("--approve");
     expect(piLine).toContain('--extension "$RECOVERY_ENTRY"');
@@ -134,9 +124,7 @@ describe("client-slack bridge supervisor", () => {
     expect(piLine).toContain('2>>"$LOG"');
     expect(text).toContain("bridge-recovery");
     expect(text).toContain("rc=$?");
-    // Clears the single-instance lock before each (re)launch.
     expect(text).toContain('rm -f "$LOCK"');
-    // A clean pi exit (rc=0) breaks the loop; anything else restarts.
     expect(text).toMatch(/\$rc"?\s+-eq\s+0/);
     expect(text).toContain("break");
     expect(text).toContain("restarting in 3s");
@@ -145,7 +133,6 @@ describe("client-slack bridge supervisor", () => {
   it("is referenced by gateway.sh, which the entrypoint delegates to", () => {
     const gateway = readFileSync(join(ROOT, ".oh/scripts/gateway.sh"), "utf8");
     expect(gateway).toContain(".devcontainer/client-slack-supervise.sh");
-    // The entrypoint no longer launches the supervisor directly — it hands off.
     expect(entrypoint()).toContain(".oh/scripts/gateway.sh pi");
   });
 });
@@ -203,8 +190,6 @@ describe("msg-bridge seed/merge (seed-msg-bridge.sh)", () => {
   });
 
   it("preserves operator grants on reboot while adopting non-grant seed structure", () => {
-    // Tracked seed ships EMPTY grants but a NEW non-grant field (showWidget).
-    // The package-written runtime file holds the operator's real grants.
     const { raw } = runSeed(
       { autoConnect: true, showWidget: true, auth: { trustedUsers: [] } },
       JSON.stringify({
@@ -216,10 +201,8 @@ describe("msg-bridge seed/merge (seed-msg-bridge.sh)", () => {
       }),
     ) as { raw: string };
     const merged = JSON.parse(raw);
-    // A restart must NOT wipe the operator's trust (bug #289).
     expect(merged.auth.trustedUsers).toEqual(["slack:UOPERATOR"]);
     expect(merged.auth.channels).toHaveProperty("CCHANNEL");
-    // Non-grant structure is adopted from the tracked seed.
     expect(merged.showWidget).toBe(true);
   });
 
@@ -228,7 +211,6 @@ describe("msg-bridge seed/merge (seed-msg-bridge.sh)", () => {
     const { raw } = runSeed({ autoConnect: true, auth: { trustedUsers: [] } }, malformed) as {
       raw: string;
     };
-    // jq fails → the existing runtime file is preserved, never overwritten by the seed.
     expect(raw).toBe(malformed);
   });
 });

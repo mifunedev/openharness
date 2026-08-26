@@ -19,7 +19,6 @@ SKILL_DIR="$ROOT/.oh/skills/prompt-miner"
 ENGINE_REL="prompt-miner/scripts/mine-traces.mjs"
 FIXTURES="$SKILL_DIR/scripts/__tests__/fixtures"
 
-# --- SKIPPED: hard prerequisites genuinely absent --------------------------
 if [[ ! -d "$ROOT/.oh/skills" ]]; then
   echo "SKIPPED: skills dir absent: $ROOT/.oh/skills" >&2
   exit 2
@@ -41,16 +40,11 @@ TMP="$(mktemp -d)"
 cleanup() { rm -rf "$TMP"; }
 trap cleanup EXIT
 
-# Reproduce the provider layout: a *directory* symlink standing in for
-# `.claude/skills -> ../.oh/skills`. Built here rather than reusing the real
-# .claude/skills so the probe still guards the behavior in a checkout where the
-# provider symlinks have not been materialized.
 if ! ln -s "$ROOT/.oh/skills" "$TMP/skills" 2>/dev/null; then
   echo "SKIPPED: filesystem does not support symlinks (cannot reproduce provider layout)" >&2
   exit 2
 fi
 
-# --- Guard 1 (behavioral): the symlinked invocation must actually run ------
 set +e
 out="$(node "$TMP/skills/$ENGINE_REL" --dry-run --no-git --fixtures-dir "$FIXTURES" 2>/dev/null)"
 rc=$?
@@ -90,15 +84,6 @@ if ! [[ "$scanned" =~ ^[0-9]+$ ]] || (( scanned == 0 )); then
   exit 1
 fi
 
-# --- Guard 2 (static): the anti-pattern must not return anywhere -----------
-# Two independent patterns, because one is evadable:
-#   (a) an `import.meta.url` identity comparison in EITHER operand order —
-#       `pathToFileURL(argv[1]).href === import.meta.url` is the same bug and a
-#       left-hand-only regex misses it entirely;
-#   (b) `pathToFileURL(` applied to `process.argv` on one line — the mechanism
-#       itself, which catches operand orders and line-splits (a) cannot see.
-# Executable lines only: all three skill engines carry the comparison inside a
-# WARNING comment naming this bug, and those must not trip the check.
 offenders="$(
   git -C "$ROOT" grep -nE \
     'import\.meta\.url[[:space:]]*===|===[[:space:]]*import\.meta\.url|pathToFileURL\([^)]*process\.argv' \

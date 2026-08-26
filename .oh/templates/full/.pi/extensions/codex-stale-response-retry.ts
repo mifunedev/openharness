@@ -1,15 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-// Recover non-Slack Pi turns that fail because the Codex Responses provider
-// reused stale WebSocket continuation state (`previous_response_id`).
-//
-// Installed pi-ai@0.79.9 clears that stale continuation after the failed
-// request, but the failed user turn is lost because the agent-level retry
-// classifier does not treat `previous_response_not_found` as retryable. This
-// project-local extension re-queues the same user text once, so the next request
-// is sent with a fresh/full context. Slack-originated messages are deliberately
-// skipped: the dedicated `.pi/bridge-recovery/` extension owns those because it
-// is co-loaded with pi-messenger-bridge and preserves Slack reply delivery state.
 
 const SLACK_PREFIX_RE = /^\[(📱 |Slack #)/;
 const RECOVERABLE_RE = /previous_response_not_found|previous response .*not found/i;

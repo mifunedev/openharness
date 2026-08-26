@@ -59,7 +59,6 @@ describe("copyOhPayload — manifest filtering", () => {
 
     expect(fs.existsSync(path.join(targetOh, "cli/src/cli.ts"))).toBe(true);
     expect(fs.existsSync(path.join(targetOh, "manifest.json"))).toBe(true);
-    // Volatile files and the non-payload patch are absent.
     expect(fs.existsSync(path.join(targetOh, "cli/node_modules/pkg/index.js"))).toBe(false);
     expect(fs.existsSync(path.join(targetOh, "cli/dist/oh.js"))).toBe(false);
     expect(fs.existsSync(path.join(targetOh, "docs/readme.md"))).toBe(true);
@@ -125,7 +124,7 @@ describe("copyOhPayload — skipExisting vs force vs dryRun", () => {
 
     const target = mkTmp();
     const targetOh = path.join(target, ".oh");
-    write(targetOh, "scripts/foo.sh", "LOCAL"); // pre-existing local edit
+    write(targetOh, "scripts/foo.sh", "LOCAL");
 
     const manifest = loadManifest(from);
 

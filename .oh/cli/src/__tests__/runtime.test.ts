@@ -11,9 +11,6 @@ import {
 } from "../commands/runtime.js";
 import type { LifecycleRunner, RunResult } from "../lib/execution/runner.js";
 
-// cli.ts has a top-level side effect: main(process.argv.slice(2)).then(process.exit).
-// Same guard as harness.test.ts: stub process.exit around the import so the
-// module body's main() call cannot terminate the vitest worker.
 vi.mock("../cli.js", async (importOriginal) => {
   const original = process.exit;
   process.exit = (() => {}) as never;
@@ -34,7 +31,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** An equipped-repo fixture. mkdtemp only — never the real worktree root. */
 function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-runtime-"));
   cleanups.push(d);
@@ -75,7 +71,6 @@ const isExecOf = (cmd: string, args: string[], token: string): boolean =>
 const running: RunResult = { status: 0, stdout: "running\n", stderr: "" };
 const exited: RunResult = { status: 0, stdout: "exited\n", stderr: "" };
 
-/** A container that reports `running`, with msb absent and both blockers present. */
 function blockedHost(extra: (cmd: string, args: string[]) => RunResult | undefined = () => undefined) {
   return makeRunner((cmd, args) => {
     const custom = extra(cmd, args);
@@ -90,7 +85,6 @@ function blockedHost(extra: (cmd: string, args: string[]) => RunResult | undefin
   });
 }
 
-/** A host that clears both blockers. */
 function readyHost(extra: (cmd: string, args: string[]) => RunResult | undefined = () => undefined) {
   return makeRunner((cmd, args) => {
     const custom = extra(cmd, args);
@@ -227,7 +221,6 @@ describe("oh runtime — docker, the runtime in use", () => {
     const docker = rows.find((r: { id: string }) => r.id === "docker");
     expect(docker.active).toBe(true);
     expect(docker.state).toBe("active");
-    // Nothing else is in use — the sandbox runs on one thing.
     expect(rows.filter((r: { active: boolean }) => r.active).length).toBe(1);
   });
 
@@ -247,7 +240,6 @@ describe("oh runtime — docker, the runtime in use", () => {
     await runRuntimeList({ cwd: root, run }, io);
     const probe = calls.find(isDaemonProbe);
     expect(probe).toBeDefined();
-    // `docker version …`, never `docker exec … docker version …`.
     expect(probe!.args).toEqual(["version", "--format", "{{.Server.Version}}"]);
   });
 
@@ -265,7 +257,6 @@ describe("oh runtime — docker, the runtime in use", () => {
 
   it("says the daemon is down instead of implying it is fine", async () => {
     const root = makeRepo();
-    // The whole reason docker is in the table: a dead daemon must be visible.
     const { run } = blockedHost((cmd, args) =>
       cmd === "docker" && args[0] === "version"
         ? { status: 1, stdout: "", stderr: "Cannot connect to the Docker daemon\n" }
@@ -280,9 +271,6 @@ describe("oh runtime — docker, the runtime in use", () => {
 
   it("still probes the daemon when the container is unreachable", async () => {
     const root = makeRepo();
-    // A host-scoped check does not depend on the sandbox running — that is the
-    // point of the scope field, and it is what makes `status` useful when the
-    // container will not start.
     const { calls, run } = makeRunner((cmd, args) => (isInspect(cmd, args) ? exited : undefined));
     const { io } = makeIo();
     await runRuntimeList({ cwd: root, run }, io);
@@ -305,7 +293,6 @@ describe("oh runtime status", () => {
     const { io, out } = makeIo();
     expect(await runRuntimeStatus("microsandbox", { cwd: root, run }, io)).toBe(0);
     const text = out.join("");
-    // The whole point of `status` over `list`: the numbers, not just a verdict.
     expect(text).toContain("2.36");
     expect(text).toContain(">= 2.39");
     expect(text).toContain("/dev/kvm");
@@ -323,7 +310,6 @@ describe("oh runtime status", () => {
 
   it("reports unknown, not unsupported, when the probe cannot run", async () => {
     const root = makeRepo();
-    // glibc probe fails to produce a parseable line.
     const { run } = blockedHost((cmd, args) =>
       isExecOf(cmd, args, "ldd --version")
         ? { status: 127, stdout: "", stderr: "not found\n" }
@@ -388,7 +374,6 @@ describe("oh runtime install — the preflight gate", () => {
 
   it("refuses when only one blocker clears", async () => {
     const root = makeRepo();
-    // glibc fine, KVM still absent.
     const { calls, run } = readyHost((cmd, args) =>
       isExecOf(cmd, args, "/dev/kvm") ? { status: 1, stdout: "", stderr: "" } : undefined,
     );
@@ -425,7 +410,6 @@ describe("oh runtime install — the other exits", () => {
     const { io, err } = makeIo();
     expect(await runRuntimeInstall("gvisor", { cwd: root, run }, io)).toBe(1);
     expect(err.join("")).toContain("#806");
-    // Not installable means not even reachable — no container work at all.
     expect(calls.length).toBe(0);
   });
 
@@ -445,7 +429,6 @@ describe("oh runtime install — the other exits", () => {
       isExecOf(cmd, args, "doctor") ? { status: 1, stdout: "", stderr: "" } : undefined,
     );
     const { io, out } = makeIo();
-    // The install itself succeeded; the doctor is diagnosing the host.
     expect(await runRuntimeInstall("microsandbox", { cwd: root, run }, io)).toBe(0);
     expect(out.join("")).toContain("msb self doctor");
   });

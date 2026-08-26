@@ -6,10 +6,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; cd "$ROOT"
 pat='(^|[^A-Za-z0-9-])(pr-audit|harness-audit|context-audit|skill-lint|eval-lint|drift-check)([^A-Za-z0-9-]|$)|\.oh/skills/(pr-audit|harness-audit|context-audit|skill-lint|eval-lint|drift-check)(/|$)|auditor\.md'
 set +e
-# `preserved-changelog-rationale.md` is verbatim CHANGELOG.md history, quoted
-# under a header that says so — the same reason CHANGELOG.md itself is excluded.
-# It is a record of what shipped, not an active surface, so a skill named in a
-# 2026-05 entry is a historical fact rather than a stale reference to repair.
 hits=$(git grep -n -E "$pat" -- ':!CHANGELOG.md' ':!.oh/docs/rfcs/preserved-changelog-rationale.md' ':!.oh/evals/RESULTS.md' ':!.oh/evals/datasets/**' ':!.oh/tasks/archive/**')
 rc=$?; set -e
 [[ $rc -eq 0 || $rc -eq 1 ]] || { echo 'REGRESSION: stale-reference inventory failed' >&2; exit 1; }
@@ -28,8 +24,6 @@ while IFS= read -r hit; do
   bad+=("$hit")
 done <<<"$hits"
 if ((${#bad[@]})); then printf '%s\n' "${bad[@]}" >&2; echo 'REGRESSION: active legacy audit reference' >&2; exit 1; fi
-# Workflow callers that mean the per-unit gate must name the implementation
-# route. A bare namespace token is not executable and silently revives /audit <slug>.
 # shellcheck disable=SC2016 # literal Markdown route token
 bare_audit='`/audit`'
 for caller in \
@@ -48,12 +42,10 @@ done
 if grep -nF 'mechanics + `/audit`' AGENTS.md; then
   echo 'REGRESSION: workflow summary uses bare implementation audit route' >&2; exit 1
 fi
-# Canonical skill discovery must not regress to provider symlink scans.
 # shellcheck disable=SC2016 # literal documented environment variable
 canonical_skills='$AUDIT_ROOT/.oh/skills/'
 grep -qF "$canonical_skills" .oh/skills/audit/references/skills.md \
   || { echo 'REGRESSION: skills audit does not scan canonical .oh/skills' >&2; exit 1; }
-# Assert breadth explicitly so future pathspec narrowing cannot silently drop active classes.
 for path in AGENTS.md .oh/docs/README.md .oh/docs/artifact-contract-schema.md .oh/templates/AGENTS.md .oh/crons/heartbeat.md .github/workflows/ci-harness.yml .oh/evals/capability/tasks/CB-001-ship-harness-change.md .oh/skills/benchmark/SKILL.md .oh/skills/spec/references/retro.md .oh/tasks/archive/2026-07-27/audit-consolidation/progress.txt; do
   git ls-files --error-unmatch "$path" >/dev/null || { echo "REGRESSION: stale-reference coverage path missing: $path" >&2; exit 1; }
 done

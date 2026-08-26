@@ -11,7 +11,6 @@ INIT_CMD="$ROOT/.oh/cli/src/commands/init.ts"
 CLI="$ROOT/.oh/cli/src/cli.ts"
 DEVCONTAINER="$TEMPLATES/.devcontainer/devcontainer.json"
 
-# SKIPPED (exit 2): the feature is not present on this branch yet.
 if [[ ! -d "$TEMPLATES" || ! -f "$INIT_CMD" ]]; then
   echo "SKIPPED: oh init scaffold not present (.oh/templates dir and/or .oh/cli/src/commands/init.ts absent)" >&2
   exit 2

@@ -10,9 +10,6 @@
 #       add`/`git worktree remove` lifecycle — the old shared-checkout
 #       `git switch -c "archive/` is gone. So foreign WIP elsewhere neither aborts
 #       the sweep nor leaks into the archive commit.
-# NOTE: this is a STATIC grep oracle over markdown (.oh/crons/cleanup-tasks.md), NOT a
-#       runtime execution test of the cron — same limitation as owned-surface-guard.sh.
-#       It guards the documented procedure against silent revert, not its behavior.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -23,17 +20,11 @@ if [[ ! -f "$CRON" ]]; then
   exit 2
 fi
 
-# --- (a) the pre-flight is path-scoped to .oh/tasks/ --------------------------------------
-# On an UNMODIFIED cron the pre-flight is tree-wide, so this scoped form is absent → exit 1
-# (the symmetric-oracle anchor). `grep -F` keeps the `--porcelain` / `--` literal.
 if ! grep -Fq 'git status --porcelain -- .oh/tasks/' "$CRON"; then
   echo "REGRESSION: pre-flight is not scoped to .oh/tasks/ (missing 'git status --porcelain -- .oh/tasks/')" >&2
   exit 1
 fi
 
-# --- (b) no bare unscoped `git status --porcelain` survives ---------------------------
-# List every `git status --porcelain` line, then drop the pathspec-scoped `-- .oh/tasks/`
-# lines. Anything left is a bare tree-wide check that would abort the sweep on foreign WIP.
 unscoped="$(grep -n 'git status --porcelain' "$CRON" \
   | grep -v -- '-- .oh/tasks/' \
   || true)"
@@ -43,26 +34,20 @@ if [[ -n "$unscoped" ]]; then
   exit 1
 fi
 
-# --- (c) a dirty .oh/tasks/ emits the distinct BLOCKED-TASKS-WIP liveness token -----------
 if ! grep -q 'BLOCKED-TASKS-WIP' "$CRON"; then
   echo "REGRESSION: BLOCKED-TASKS-WIP token missing from .oh/crons/cleanup-tasks.md" >&2
   exit 1
 fi
 
-# --- (d) the archive work is isolated in a worktree (add + remove lifecycle) -----------
 if ! grep -q 'git worktree add' "$CRON"; then
   echo "REGRESSION: 'git worktree add' missing — archive work is not isolated in a worktree" >&2
   exit 1
 fi
-# Teardown may be inline `git worktree remove` or (post cc-safety-net) the
-# guard-compatible shim `git-maintenance.sh worktree-remove` — either satisfies
-# the crash-safe-teardown lesson this probe encodes.
 if ! grep -Eq 'git worktree remove|git-maintenance\.sh worktree-remove' "$CRON"; then
   echo "REGRESSION: worktree teardown missing ('git worktree remove' or git-maintenance.sh worktree-remove) — not crash-safe" >&2
   exit 1
 fi
 
-# --- (e) the old shared-checkout `git switch -c "archive/` is gone (asymmetric oracle) -
 if grep -Fq 'git switch -c "archive/' "$CRON"; then
   echo "REGRESSION: old shared-checkout 'git switch -c \"archive/' pattern still present" >&2
   exit 1

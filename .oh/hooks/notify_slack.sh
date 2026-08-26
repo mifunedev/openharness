@@ -2,10 +2,8 @@
 
 set -euo pipefail
 
-# Get script directory for fallback env path
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Prefer global env file, fall back to repo-local .claude/.env.claude
 PREFERRED_ENV_PATH="$HOME/.env/.claude/.env.claude"
 FALLBACK_ENV_PATH="$(dirname "$SCRIPT_DIR")/.env.claude"
 
@@ -15,10 +13,7 @@ else
     DOTENV_PATH="$FALLBACK_ENV_PATH"
 fi
 
-# Load env file if it exists. Slack notifications are optional, so missing
-# env files are a no-op instead of a hook failure.
 if [[ -f "$DOTENV_PATH" ]]; then
-    # Export variables from env file (handles quoted values and comments)
     set -a
     # shellcheck disable=SC1090
     source "$DOTENV_PATH"
@@ -26,14 +21,11 @@ if [[ -f "$DOTENV_PATH" ]]; then
     echo "Loaded env from: $DOTENV_PATH" >&2
 fi
 
-# Skip Slack notifications when no webhook is configured. This hook should
-# never fail a Claude stop/notification event just because Slack is disabled.
 if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
     echo "Slack notification skipped: SLACK_WEBHOOK_URL is not set" >&2
     exit 0
 fi
 
-# Read input JSON from stdin
 INPUT_JSON=$(cat)
 
 if [[ -z "$INPUT_JSON" ]]; then
@@ -41,20 +33,16 @@ if [[ -z "$INPUT_JSON" ]]; then
     exit 1
 fi
 
-# Parse JSON fields using jq
 EVENT=$(echo "$INPUT_JSON" | jq -r '.hook_event_name // ""')
 CWD=$(echo "$INPUT_JSON" | jq -r '.cwd // ""')
 SESSION_ID=$(echo "$INPUT_JSON" | jq -r '.session_id // ""')
 
-# Get current timestamp
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-# Function to extract final response from transcript JSONL file
 get_final_response() {
     local transcript_path="$1"
     local max_length="${2:-1500}"
 
-    # Expand ~ in path
     transcript_path="${transcript_path/#\~/$HOME}"
 
     if [[ -z "$transcript_path" || ! -f "$transcript_path" ]]; then
@@ -62,8 +50,6 @@ get_final_response() {
         return
     fi
 
-    # Extract final assistant response from JSONL
-    # Look for entries with type=assistant and extract text content
     local final_response=""
     final_response=$(jq -rs '
         [.[] | select(.type == "assistant" and .message.role == "assistant" and .message.content)]
@@ -85,7 +71,6 @@ get_final_response() {
         return
     fi
 
-    # Truncate if too long
     if [[ ${#final_response} -gt $max_length ]]; then
         echo "${final_response:0:$max_length}...
 _(truncated)_"
@@ -94,7 +79,6 @@ _(truncated)_"
     fi
 }
 
-# Build Slack message based on event type
 TEXT=""
 case "$EVENT" in
     "Notification")
@@ -129,10 +113,8 @@ ${FINAL_RESPONSE}
         ;;
 esac
 
-# Build Slack payload
 SLACK_PAYLOAD=$(jq -n --arg text "$TEXT" '{"text": $text}')
 
-# Send to Slack
 HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" \
     -X POST "$SLACK_WEBHOOK_URL" \
     -H "Content-Type: application/json" \
@@ -143,10 +125,8 @@ HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" \
     exit 1
 }
 
-# Extract HTTP status code (last line)
 HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
 
-# Check for success (2xx status codes)
 if [[ ! "$HTTP_CODE" =~ ^2[0-9][0-9]$ ]]; then
     RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
     echo "Failed to send Slack notification: HTTP $HTTP_CODE - $RESPONSE_BODY" >&2

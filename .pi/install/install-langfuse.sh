@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Install the pinned pi-langfuse fork with the patched OpenTelemetry dependency.
 set -euo pipefail
 
 PI_LANGFUSE_VERSION="1.5.9"

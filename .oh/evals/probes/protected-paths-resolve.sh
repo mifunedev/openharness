@@ -21,13 +21,10 @@ LIST=".claude/protected-paths.txt"
 broken=()
 count=0
 
-# Entry format, per the file's own header: bare names are skills; everything else
-# is a repo-relative path. `Makefile` is the one slash-free non-skill entry, so a
-# slash-free entry resolves as either a skill directory or a repo-root path.
 while IFS= read -r raw || [ -n "$raw" ]; do
-  line="${raw%%#*}"                              # strip trailing comment
-  line="${line#"${line%%[![:space:]]*}"}"        # ltrim
-  line="${line%"${line##*[![:space:]]}"}"        # rtrim
+  line="${raw%%#*}"
+  line="${line#"${line%%[![:space:]]*}"}"
+  line="${line%"${line##*[![:space:]]}"}"
   [ -n "$line" ] || continue
   count=$((count + 1))
   case "$line" in

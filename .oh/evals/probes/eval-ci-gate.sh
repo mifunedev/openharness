@@ -12,8 +12,6 @@ if [[ ! -f "$WORKFLOW" ]]; then
   exit 2
 fi
 
-# Unanchored match: the invocation is indented under the eval-probes job's
-# `run:` step, so a `^bash` anchor would match nothing. Mirror boot-lint-glob.sh.
 if grep -q 'bash .oh/skills/eval/run.sh' "$WORKFLOW"; then
   echo "PASS: eval-probes CI gate invokes 'bash .oh/skills/eval/run.sh' in $WORKFLOW" >&2
   exit 0

@@ -1,42 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Surface silent set -e exits — without this, any non-zero return mid-script
-# kills bash with no `ERROR:` line and the user is left staring at a prompt
-# wondering why install bailed.
 trap 'printf "\n\033[0;31mERROR:\033[0m install.sh aborted (exit %s) at line %s: %s\n" "$?" "$LINENO" "$BASH_COMMAND" >&2' ERR
 
-# ─── Colours / helpers ───────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 banner() { printf "\n${CYAN}==> %s${NC}\n" "$*"; }
 ok()     { printf "${GREEN} ✓  %s${NC}\n" "$*"; }
 warn()   { printf "${YELLOW}WARN: %s${NC}\n" "$*" >&2; }
 die()    { printf "${RED}ERROR: %s${NC}\n" "$*" >&2; exit 1; }
 
-# ─── normalize_gh_slug: strip GitHub URL decoration → owner/repo ─────
-# Handles four forms:
-#   https://github.com/owner/repo.git  →  owner/repo
-#   https://github.com/owner/repo      →  owner/repo
-#   git@github.com:owner/repo.git      →  owner/repo
-#   git@github.com:owner/repo          →  owner/repo
 normalize_gh_slug() {
   local _url="$1"
-  # Strip https://github.com/ prefix (case-insensitive via tr would add
-  # complexity; GitHub slugs are case-insensitive but we preserve original case
-  # for comparison — OH_GITHUB_REPO is user-supplied already normalized).
   _url="${_url#https://github.com/}"
-  # Strip git@github.com: prefix
   _url="${_url#git@github.com:}"
-  # Strip trailing .git suffix
   _url="${_url%.git}"
   printf '%s' "$_url"
 }
 
 
-# ─── prompt_input: env-var > /dev/tty > default fallback > die ──────
-# Args: $1=varname, $2=prompt msg, $3=default (optional), $4=-s for secret
-# Reads from /dev/tty so curl-piped installs still get keystrokes (stdin
-# is the script source in pipe mode, not the user's keyboard).
 prompt_input() {
   local __var="$1"; local __msg="$2"; local __default="${3:-}"; local __secret="${4:-}"
   if [ -n "${!__var:-}" ]; then
@@ -67,10 +48,6 @@ prompt_input() {
   fi
 }
 
-# ─── prompt_yn: yes/no prompt with /dev/tty discipline ──────────────
-# Args: $1=prompt msg, $2=default ("y" or "n")
-# Returns 0 for yes, 1 for no.
-# Respects ASSUME_YES=true and ASSUME_NO=true.
 prompt_yn() {
   local __msg="$1"; local __default="${2:-y}"
   if [ "${ASSUME_YES:-false}" = true ]; then
@@ -103,7 +80,6 @@ prompt_yn() {
   fi
 }
 
-# ─── Help ────────────────────────────────────────────────────────────
 print_help() {
   cat <<HELPEOF
 Open Harness — Installer
@@ -164,7 +140,6 @@ Examples:
 HELPEOF
 }
 
-# ─── Arg parsing ─────────────────────────────────────────────────────
 ASSUME_YES="${OH_ASSUME_YES:+true}"; ASSUME_YES="${ASSUME_YES:-false}"
 ASSUME_NO=false
 
@@ -191,12 +166,10 @@ done
 
 [ "$ASSUME_YES" = true ] && [ "$ASSUME_NO" = true ] && die "--yes and --no are mutually exclusive."
 
-# ─── Banner ──────────────────────────────────────────────────────────
 printf "\n${CYAN}╔══════════════════════════════════════╗${NC}\n"
 printf "${CYAN}║   Open Harness — Installer           ║${NC}\n"
 printf "${CYAN}╚══════════════════════════════════════╝${NC}\n\n"
 
-# ─── 1. Check Docker ────────────────────────────────────────────────
 banner "Checking Docker"
 if ! command -v docker >/dev/null 2>&1; then
   die "Docker is not installed. Install Docker from: https://docs.docker.com/get-docker/"
@@ -207,38 +180,28 @@ fi
 ok "Docker $(docker --version | awk '{print $3}') — OK"
 ok "Docker Compose $(docker compose version --short) — OK"
 
-# ─── 2. Check git ────────────────────────────────────────────────────
 banner "Checking git"
 if ! command -v git >/dev/null 2>&1; then
   die "git is required to clone or update Open Harness. Install git from: https://git-scm.com"
 fi
 ok "git $(git --version | awk '{print $3}') — OK"
 
-# ─── 2b. Check make (soft — lifecycle convenience, not required to install) ─
-# install.sh drives docker compose directly, so make is not needed to install.
-# The documented lifecycle (make shell / make destroy / make help) is, though —
-# warn rather than die so a make-less host still gets a running sandbox.
 if ! command -v make >/dev/null 2>&1; then
   warn "make not found — the sandbox still comes up, but the documented lifecycle (make shell / make destroy / make help) needs it. Install build-essential (Debian/Ubuntu) or Xcode Command Line Tools (macOS)."
 fi
 
-# ─── 3. Resolve repo directory ────────────────────────────────────────
 banner "Resolving repository"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
-# install.sh lives at .oh/scripts/install.sh; the repo root is two levels up.
 REPO_CANDIDATE="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)"
 
 if [ -n "$REPO_CANDIDATE" ] && [ -f "$REPO_CANDIDATE/.devcontainer/docker-compose.yml" ] && [ -f "$REPO_CANDIDATE/.oh/scripts/install.sh" ]; then
   REPO_DIR="$REPO_CANDIDATE"
   ok "Using local repo: $REPO_DIR"
 else
-  # Install target is ~/.openharness (hidden dir, no collision with repo subdirs).
-  # OLD_REPO is the post-#200 path that was briefly the install target.
   OLD_REPO="$HOME/openharness"
   REPO_DIR="$HOME/.openharness"
 
-  # ── OH_GITHUB_REPO: fork-parameterized clone source ───────────────────
   OH_GITHUB_REPO="${OH_GITHUB_REPO:-mifunedev/openharness}"
   if [[ ! "$OH_GITHUB_REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
     die "OH_GITHUB_REPO must be <owner>/<repo>: got '$OH_GITHUB_REPO'"
@@ -247,13 +210,11 @@ else
     warn "Cloning from fork: $OH_GITHUB_REPO"
   fi
 
-  # ── OH_GITHUB_REF: alias for OH_INSTALL_REF (OH_GITHUB_REF wins if set) ─
   if [ -n "${OH_GITHUB_REF:-}" ] && [ -n "${OH_INSTALL_REF:-}" ] && [ "$OH_GITHUB_REF" != "$OH_INSTALL_REF" ]; then
     warn "OH_GITHUB_REF and OH_INSTALL_REF both set with different values; OH_GITHUB_REF wins."
   fi
   OH_GITHUB_REF="${OH_GITHUB_REF:-${OH_INSTALL_REF:-}}"
 
-  # ── Population classification + migration ─────────────────────────────
   __HAS_OLD=0; __HAS_NEW=0
   [ -d "$OLD_REPO/.git" ] && __HAS_OLD=1
   if [ -d "$REPO_DIR" ] && [ ! -d "$REPO_DIR/.git" ]; then
@@ -263,12 +224,10 @@ else
   [ -d "$REPO_DIR/.git" ] && __HAS_NEW=1
 
   if [ "$__HAS_OLD" = "1" ] && [ "$__HAS_NEW" = "1" ]; then
-    # ── B+C collision: both paths exist ───────────────────────────────────
     __OLD_DIRTY=0; __NEW_DIRTY=0
     git -C "$OLD_REPO" diff --quiet 2>/dev/null && git -C "$OLD_REPO" diff --cached --quiet 2>/dev/null || __OLD_DIRTY=1
     git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null || __NEW_DIRTY=1
     if [ "$__OLD_DIRTY" = "1" ] && [ "$__NEW_DIRTY" = "0" ]; then
-      # OLD has changes; keep OLD as active (rename to new), archive NEW
       __ARCHIVE="${REPO_DIR}.legacy.$(date +%Y%m%d%H%M%S)"
       mv "$REPO_DIR" "$__ARCHIVE"
       warn "Archived $REPO_DIR → $__ARCHIVE"
@@ -276,13 +235,11 @@ else
       mv "$OLD_REPO" "$REPO_DIR"
       ok "Migrated $OLD_REPO → $REPO_DIR (had local changes — autostashed)"
     elif [ "$__NEW_DIRTY" = "1" ] && [ "$__OLD_DIRTY" = "0" ]; then
-      # NEW has changes; keep NEW, archive OLD
       __ARCHIVE="${OLD_REPO}.legacy.$(date +%Y%m%d%H%M%S)"
       mv "$OLD_REPO" "$__ARCHIVE"
       warn "Archived $OLD_REPO → $__ARCHIVE"
       ok "Keeping $REPO_DIR (had local changes)"
     else
-      # Neither (or both) dirty: prefer OLD_REPO (post-#200, more recent install)
       __ARCHIVE="${REPO_DIR}.legacy.$(date +%Y%m%d%H%M%S)"
       mv "$REPO_DIR" "$__ARCHIVE"
       warn "Archived $REPO_DIR → $__ARCHIVE"
@@ -292,17 +249,13 @@ else
     fi
     unset __OLD_DIRTY __NEW_DIRTY __ARCHIVE
   elif [ "$__HAS_OLD" = "1" ] && [ "$__HAS_NEW" = "0" ]; then
-    # ── Population B: ~/openharness only — rename to ~/.openharness ────────
     git -C "$OLD_REPO" stash push -u -m "install.sh: pre-rename autostash" 2>/dev/null || true
     mv "$OLD_REPO" "$REPO_DIR"
     ok "Migrated $OLD_REPO → $REPO_DIR"
   fi
-  # Population C (~/.openharness only) and A (neither) fall through to the
-  # pull / clone logic below.
   unset __HAS_OLD __HAS_NEW OLD_REPO
 
   if [ -d "$REPO_DIR/.git" ]; then
-    # ── US-003: Validate remote origin matches OH_GITHUB_REPO ─────────────
     __ORIGIN_RAW="$(git -C "$REPO_DIR" remote get-url origin 2>/dev/null || true)"
     __ORIGIN_SLUG="$(normalize_gh_slug "${__ORIGIN_RAW:-}")"
     __EXPECTED_SLUG="$(normalize_gh_slug "$OH_GITHUB_REPO")"
@@ -314,7 +267,6 @@ else
       warn "  3. Re-run with the desired OH_GITHUB_REPO and (if needed) OH_GITHUB_REF."
       warn "  Note: rm -rf also discards any local changes and pinned OH_INSTALL_REF state."
     else
-      # ── Pull (clean tree only) ─────────────────────────────────────────────
       if git -C "$REPO_DIR" diff --quiet 2>/dev/null && git -C "$REPO_DIR" diff --cached --quiet 2>/dev/null; then
         printf "  Repository exists — pulling latest changes...\n"
         git -C "$REPO_DIR" pull --ff-only
@@ -325,7 +277,6 @@ else
     fi
     unset __ORIGIN_RAW __ORIGIN_SLUG __EXPECTED_SLUG
   else
-    # ── Population A: fresh clone ──────────────────────────────────────────
     if [ -n "$OH_GITHUB_REF" ]; then
       git clone --branch "$OH_GITHUB_REF" "https://github.com/${OH_GITHUB_REPO}.git" "$REPO_DIR"
       ok "Repository cloned at ref '$OH_GITHUB_REF': $REPO_DIR"
@@ -335,8 +286,6 @@ else
     fi
   fi
 
-  # ── Shell CWD notice (for B migration) ────────────────────────────────
-  # If the user's shell was open in ~/openharness, that path no longer exists.
   printf "\n"
   warn "If your current shell is still in ~/openharness, run: cd ~/.openharness"
   printf "\n"
@@ -344,45 +293,23 @@ fi
 
 cd "$REPO_DIR"
 
-# The skills/agents/hooks pack is vendored under .oh/. Wire (or repair) the
-# provider symlinks into it before the sandbox build/provider startup reads them.
 if [ -x .oh/scripts/link-providers.sh ]; then
   bash .oh/scripts/link-providers.sh --init
 fi
 
-# ─── 4. Configure sandbox ────────────────────────────────────────────
 banner "Configuring sandbox"
 
-# Default the sandbox/compose project name to the repo dir's basename, but strip
-# a leading dot: the install target is ~/.openharness, and ".openharness" both
-# reads like a folder path and is an invalid docker-compose project name (must
-# start with an alphanumeric). Fall back to "openharness" if stripping empties it.
 DEFAULT_NAME=$(basename "$REPO_DIR"); DEFAULT_NAME="${DEFAULT_NAME#.}"
 [ -n "$DEFAULT_NAME" ] || DEFAULT_NAME="openharness"
 prompt_input SANDBOX_NAME "Container name" "$DEFAULT_NAME"
 ok "Name: $SANDBOX_NAME"
 
-# ─── Guard: don't clobber a sandbox that already exists under this name ──
-# The compose service uses container_name=$SANDBOX_NAME and image
-# sandbox-$SANDBOX_NAME (.devcontainer/docker-compose.yml). Bringing the
-# sandbox up while a container of the same name exists — running OR stopped —
-# would recreate it and can lose its bind-mounted .devcontainer/.env and
-# .hermes state. Names must be unique; refuse unless the operator explicitly
-# opts into replacing it with OH_REPLACE=1. `docker ps -a` covers stopped
-# containers too, so an idle prior install isn't silently overwritten. (A
-# leftover clone with NO container is safe: its .env/.hermes are reused, not
-# lost, so we don't block on the directory alone.)
 if [ "${OH_REPLACE:-}" != "1" ] && docker ps -a --format '{{.Names}}' 2>/dev/null | grep -Fxq "$SANDBOX_NAME"; then
   die "A sandbox named '$SANDBOX_NAME' already exists (a container with that name is present — running or stopped) — refusing to overwrite it and risk losing its .devcontainer/.env or .hermes state. Choose a unique name (re-run with SANDBOX_NAME=<name>), or pass OH_REPLACE=1 to rebuild this one in place."
 fi
 
 mkdir -p "$REPO_DIR/.devcontainer"
 
-# ─── Materialize .devcontainer/.env BEFORE configuring ───────────────
-# The installer's answers are written INTO this file, so it has to exist first.
-# .devcontainer/.env is gitignored; the .example is tracked, ships fully
-# commented, and is the schema document for every key. Peer impl: seedEnvFile()
-# in .oh/cli/src/lib/env-file.ts.
 ENV_FILE="$REPO_DIR/.devcontainer/.env"
 mkdir -p "$REPO_DIR/.devcontainer"
 if [ ! -f "$ENV_FILE" ]; then
@@ -401,17 +328,11 @@ else
   __ENV_WAS_NEW=0
 fi
 
-# Carry over a harness.yaml left by a pre-0.4.0 install, exactly once. The
-# migrator is self-contained and a no-op when there is no harness.yaml.
 if [ -f "$REPO_DIR/harness.yaml" ] && [ -f "$REPO_DIR/.oh/scripts/migrate-harness-yaml.sh" ]; then
   sh "$REPO_DIR/.oh/scripts/migrate-harness-yaml.sh" "$REPO_DIR"
 fi
 
-# Set one "KEY=value" line in .devcontainer/.env, UNCOMMENTING the template's
-# commented line in place so the surrounding prose keeps describing a key that
-# is now live. Appends only when the key is named nowhere. Same discipline as
-# setKeyInEnv() in the CLI and _env_set in migrate-harness-yaml.sh.
-_env_set() {   # $1 = key, $2 = value
+_env_set() {
   [ -n "${2:-}" ] || return 0
   awk -v key="$1" -v val="$2" '
     BEGIN { done = 0 }
@@ -425,12 +346,7 @@ _env_set() {   # $1 = key, $2 = value
 }
 
 # THE CONFIG WRITES ALWAYS RUN. They used to sit inside `if [ ! -f .env ]`, so
-# re-running the installer over an existing install wrote nothing. With .env as
-# the only configuration surface that would have made a re-run a total no-op.
-# Every write below is idempotent and edits one line, so an existing file keeps
-# its hand edits everywhere the installer does not have an answer.
 
-# Portable in-place sed: GNU sed uses -i, BSD/macOS requires -i ''
 _sedi() {
   if sed --version >/dev/null 2>&1; then
     sed -i "$@"
@@ -438,7 +354,6 @@ _sedi() {
     sed -i '' "$@"
   fi
 }
-# Escape sed replacement-string special chars for | delimiter (|, &, \)
 _sed_val() {
   printf '%s' "$1" \
     | sed 's/\\/\\\\/g' \
@@ -446,15 +361,11 @@ _sed_val() {
     | sed 's/&/\\&/g'
 }
 
-# Detect host values
 __TZ="$(cat /etc/timezone 2>/dev/null || echo America/Los_Angeles)"
 __GIT_NAME="$(git config --get user.name 2>/dev/null || true)"
 __GIT_EMAIL="$(git config --get user.email 2>/dev/null || true)"
 
 _env_set SANDBOX_NAME   "$SANDBOX_NAME"
-# Host detections only seed a FRESH file. On a re-run they would silently
-# overwrite a value the operator changed by hand, which the one-line diff would
-# not make obvious.
 if [ "$__ENV_WAS_NEW" = "1" ]; then
   _env_set TZ             "$__TZ"
   _env_set GIT_USER_NAME  "$__GIT_NAME"
@@ -463,7 +374,6 @@ fi
 
 unset __TZ __GIT_NAME __GIT_EMAIL
 
-# ─── Auto-detect host gh token ────────────────────────────────────────
 __GH_AUTOCONFIGURED=0
 if command -v gh >/dev/null 2>&1 && ! grep -qE '^GH_TOKEN=.+' "$ENV_FILE"; then
   if __GH_TOKEN_RAW="$(gh auth token 2>/dev/null)" && [ -n "$__GH_TOKEN_RAW" ]; then
@@ -481,20 +391,13 @@ if command -v gh >/dev/null 2>&1 && ! grep -qE '^GH_TOKEN=.+' "$ENV_FILE"; then
   fi
 fi
 
-# ─── Optional installs (extra agents/features — OFF by default) ──────
-# Each maps to an INSTALL_* build arg/env in .devcontainer/docker-compose.yml.
-# Enabling one rebuilds the image with that CLI; agent_browser also pulls
-# ~1 GB of Chromium. A pre-set INSTALL_* env var is honored (non-interactive
-# installs); otherwise we prompt — but only with a TTY, and --yes/--no keep
-# the lean default (nothing extra) rather than auto-enabling everything.
 banner "Optional installs (off by default)"
-_opt_install() {   # $1 = INSTALL_ suffix, $2 = human label
+_opt_install() {
   local __k="INSTALL_$1"
   if [ "${!__k:-}" = "true" ]; then
     _env_set "INSTALL_$1" true
     return 0
   fi
-  # Already enabled in an existing .env — leave the standing choice alone.
   if grep -qE "^INSTALL_$1=true" "$ENV_FILE"; then
     return 0
   fi
@@ -511,16 +414,8 @@ _opt_install DEEPAGENTS    "DeepAgents — LangChain multi-provider agent"
 _opt_install GROK_BUILD    "Grok Build — xAI terminal agent"
 _opt_install AGENT_BROWSER "agent-browser + Chromium (~1 GB)"
 
-# ─── Host Docker socket (OFF by default — security-sensitive) ────────
-# Mounting /var/run/docker.sock lets the agent drive Docker, but socket
-# access is effectively HOST ROOT (an agent can start a privileged container
-# that mounts the host filesystem). Off by default; a pre-set DOCKER_SOCKET
-# env honors non-interactive installs; --yes/--no keep the socket OFF.
-# docker-compose.sh reads this DOCKER_SOCKET key and applies the
-# docker-compose.docker-sock.yml overlay when truthy.
 banner "Host Docker socket (off by default)"
 if grep -qE '^DOCKER_SOCKET=' "$ENV_FILE"; then
-  # A standing choice, live in the file — never re-prompt over it.
   ok "DOCKER_SOCKET already set — leaving it alone"
 elif [ "${DOCKER_SOCKET:-}" = "true" ]; then
   _env_set DOCKER_SOCKET true
@@ -532,21 +427,15 @@ elif prompt_yn "Mount host Docker socket into the sandbox? (effectively host roo
   ok "DOCKER_SOCKET=true — host Docker socket will be mounted"
 fi
 
-# ─── 5. Bring up the sandbox ─────────────────────────────────────────
-# .devcontainer/.env was materialized and populated in step 4, before the config
-# prompts, so the answers had somewhere to land.
 
 banner "Building and starting sandbox"
 printf "${CYAN}==> Building image — ~10 min on cold cache, ~30s on warm cache. Compose output below.${NC}\n"
-# .oh/scripts/docker-compose.sh centralizes env-file + compose-overlay argv construction
-# and preserves each override path as a single literal argument.
 (
   cd "$REPO_DIR"
   "$REPO_DIR/.oh/scripts/docker-compose.sh" up -d --build
 )
 ok "Sandbox '$SANDBOX_NAME' started"
 
-# ─── Next Steps ──────────────────────────────────────────────────────
 printf "\n${GREEN}Installation complete!${NC}\n\n"
 printf "  ${CYAN}Configuration${NC}\n"
 printf "  ──────────────────────────────────────\n"

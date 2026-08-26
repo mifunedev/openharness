@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import factory from "../index";
 
-// Fire-the-handler test harness (mirrors .pi/extensions/__tests__/path-guard.test.ts):
-// .pi/** is NOT CI-typechecked, so we exercise the extension by invoking its
-// registered handlers, never by importing pi itself.
 type Handler = (event: unknown, ctx?: unknown) => Promise<unknown> | unknown;
 
 function makePi() {
@@ -47,7 +44,7 @@ describe("slack bridge codex retry-recovery", () => {
     factory(pi);
     const messages = [slackUser("[📱 @Ryan via slack]: Links?"), assistantError(STALE)];
     await fire("agent_end", { messages });
-    await fire("agent_end", { messages }); // our retry hit the same error -> give up
+    await fire("agent_end", { messages });
     expect(sendUserMessage).toHaveBeenCalledOnce();
   });
 

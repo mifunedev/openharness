@@ -1,14 +1,8 @@
-# Open Harness — Makefile
-# Override sandbox name: make shell SANDBOX_NAME=mycontainer
-# Connect to a different running container: make shell portfolio-advisor
-# Connect as a specific user: make shell some-container SHELL_USER=postgres
 
 -include .devcontainer/.env
 
 COMPOSE           := .oh/scripts/docker-compose.sh
 
-# SANDBOX_NAME comes from the `-include .devcontainer/.env` above; fallback openharness.
-# Command-line "make ... SANDBOX_NAME=x" overrides all assignments automatically.
 SANDBOX_NAME      := $(or $(SANDBOX_NAME),openharness)
 
 SHELL_USER        ?= sandbox
@@ -21,7 +15,6 @@ ifeq ($(firstword $(MAKECMDGOALS)),shell)
   endif
 endif
 
-# `make gateway <pi|hermes>` — forward the backend as a positional word.
 ifeq ($(firstword $(MAKECMDGOALS)),gateway)
   GATEWAY_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
   $(foreach a,$(GATEWAY_ARGS),$(eval $a:;@:))

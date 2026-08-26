@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Executable production gates shared by /audit implementation fixtures and route.
 set -euo pipefail
 : "${AUDIT_ROOT:?AUDIT_ROOT is required}"
 AUDIT_ROOT=$(cd "$AUDIT_ROOT" && pwd -P)
@@ -27,8 +26,6 @@ case $mode in
       path="$AUDIT_ROOT/$artifact"
       resolved=$(realpath -e -- "$path" 2>/dev/null) \
         || { echo "FAIL gate1: required_artifact missing: $artifact" >&2; exit 1; }
-      # Exact canonical equality rejects '..', duplicate separators, and symlinks in
-      # any path component; the prefix check keeps every artifact below AUDIT_ROOT.
       [[ $resolved == "$AUDIT_ROOT/"* && $resolved == "$path" ]] \
         || { echo "FAIL gate1: required_artifact is non-canonical, symlinked, or outside AUDIT_ROOT: $artifact" >&2; exit 1; }
     done < <(jq -r '.artifact_contract.required_artifacts // [] | .[]' "$prd")
@@ -52,8 +49,6 @@ case $mode in
     snapshot_repo(){
       local out=$1 path rel
       {
-        # Git evidence covers index/worktree semantics. The filesystem walk also
-        # hashes ignored, untracked, and already-dirty content (excluding .git).
         git -C "$AUDIT_ROOT" status --porcelain=v1 -z --untracked-files=all
         git -C "$AUDIT_ROOT" diff --binary --no-ext-diff
         git -C "$AUDIT_ROOT" diff --cached --binary --no-ext-diff

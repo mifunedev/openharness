@@ -11,9 +11,6 @@ import {
 } from "../commands/tool.js";
 import type { LifecycleRunner, RunResult } from "../lib/execution/runner.js";
 
-// cli.ts has a top-level side effect: main(process.argv.slice(2)).then(process.exit).
-// Same guard as harness.test.ts: stub process.exit around the import so the
-// module body's main() call cannot terminate the vitest worker.
 vi.mock("../cli.js", async (importOriginal) => {
   const original = process.exit;
   process.exit = (() => {}) as never;
@@ -34,7 +31,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** An equipped-repo fixture. mkdtemp only — never the real worktree root. */
 function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-tool-"));
   cleanups.push(d);
@@ -88,7 +84,6 @@ const isExecOf = (cmd: string, args: string[], token: string): boolean =>
 const running: RunResult = { status: 0, stdout: "running\n", stderr: "" };
 const exited: RunResult = { status: 0, stdout: "exited\n", stderr: "" };
 
-/** Container running; agent-browser absent. */
 function liveHost(extra: (cmd: string, args: string[]) => RunResult | undefined = () => undefined) {
   return makeRunner((cmd, args) => {
     const custom = extra(cmd, args);
@@ -101,17 +96,9 @@ function liveHost(extra: (cmd: string, args: string[]) => RunResult | undefined 
   });
 }
 
-/** The `docker exec` that actually runs the installer. */
 const isInstallCall = (c: RecordedCall): boolean =>
   c.cmd === "docker" && c.args[0] === "exec" && c.args.some((a) => a.includes("--with-deps"));
 
-/**
- * The `INSTALL_AGENT_BROWSER` KEY line, not the prose above it.
- *
- * The optional-installs block carries a comment mentioning `agent_browser`, so
- * a plain substring search finds the comment first and every assertion below
- * would test the wrong line.
- */
 const flagLine = (root: string): string | undefined =>
   readFileSync(join(root, ".devcontainer", ".env"), "utf8")
     .split("\n")
@@ -125,8 +112,6 @@ describe("oh tool — argument parsing", () => {
   });
 
   it("requires a name for install — there is no obvious default", () => {
-    // Unlike `oh runtime install`, most tools are baked in, so no single tool
-    // is the sensible implicit target.
     const r = parseToolArgs(["install"]);
     expect(r.ok).toBe(false);
     expect(!r.ok && r.showHelp).toBe(true);
@@ -164,7 +149,6 @@ describe("oh tool — help", () => {
     const text = w.mock.calls.map((c) => String(c[0])).join("");
     expect(text).toContain("oh harness");
     expect(text).toContain("oh runtime");
-    // Distinguishes "known" from "installable" — most tools are report-only.
     expect(text).toContain("agent-browser");
     expect(text).toContain("gh");
   });
@@ -233,7 +217,6 @@ describe("oh tool install — the ~1 GB download gate", () => {
   it("fails closed when non-interactive without --yes", async () => {
     const root = makeRepo();
     const { calls, run } = liveHost();
-    // No injected confirm and no TTY in vitest → the fail-closed path.
     const { io, err } = makeIo();
     expect(await runToolInstall("agent-browser", { cwd: root, run }, io)).toBe(1);
     expect(calls.some(isInstallCall)).toBe(false);
@@ -246,7 +229,6 @@ describe("oh tool install — the ~1 GB download gate", () => {
     const root = makeRepo();
     const { io, out } = makeIo(false);
     await runToolInstall("agent-browser", { cwd: root, run: liveHost().run }, io);
-    // The durable half is the whole reason persist runs first.
     expect(flagLine(root)).toMatch(/^INSTALL_AGENT_BROWSER=true$/);
     expect(out.join("")).toContain("next container start");
   });
@@ -269,7 +251,7 @@ describe("oh tool install — the ~1 GB download gate", () => {
   it("--yes bypasses the prompt entirely", async () => {
     const root = makeRepo();
     const { calls, run } = liveHost();
-    const { io, asked } = makeIo(false); // would decline if consulted
+    const { io, asked } = makeIo(false);
     expect(await runToolInstall("agent-browser", { cwd: root, run, yes: true }, io)).toBe(0);
     expect(asked).toEqual([]);
     expect(calls.some(isInstallCall)).toBe(true);
@@ -294,7 +276,6 @@ describe("oh tool install — the ~1 GB download gate", () => {
     );
     const { io, asked, out } = makeIo(true);
     expect(await runToolInstall("agent-browser", { cwd: root, run }, io)).toBe(0);
-    // Nobody should approve a download that would not have happened.
     expect(asked).toEqual([]);
     expect(calls.some(isInstallCall)).toBe(false);
     expect(out.join("")).toContain("already installed");

@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// Score the repo-orientation A/B benchmark described by CB-004.
-// Usage: node scripts/repo-orientation-benchmark-score.mjs --manifest <tasks.json> --report <runs.json>
 
 import { readFileSync, statSync } from "node:fs";
 import path from "node:path";

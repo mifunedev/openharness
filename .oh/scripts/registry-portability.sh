@@ -1,47 +1,11 @@
 #!/usr/bin/env bash
-#
-# registry-portability.sh - portability linter for the published skill registry.
-#
-# Reads a checkout of the published registry and reports every reference that a
-# bare installer cannot resolve: harness-only paths, harness-only slash
-# commands, and citations of files the portable copy does not carry.
-#
-# The registry checkout is read-only. This script writes nothing under it.
-#
-# Usage:
-#   registry-portability.sh --registry <dir> [--allow <file>] [--strict-exceptions]
-#
-#   --registry <dir>       checkout of the published registry (required)
-#   --allow <file>         exceptions source; default <script dir>/registry-portability.md
-#   --strict-exceptions    make a stale exception entry fail the run
-#
-# Rules:
-#   OH-PATH        a harness-only path reference on the line.
-#   HARNESS-SKILL  a backticked slash command naming no folder under skills/.
-#   DANGLING-REF   a backticked references/<f>.md or scripts/<f>.sh that the
-#                  skill folder does not carry.
-#
-# Exceptions come from the single fenced block tagged allow inside the
-# exceptions file. Each entry is five pipe-separated fields:
-#   CLASS | RULE | <registry-relative path> | <12-hex line hash> | <reason>
-# CLASS is ALLOW (suppresses the finding) or KNOWN (labels it as triaged
-# without suppressing it). The key is the path, the rule, and the first 12 hex
-# characters of the sha256 of the trimmed source line.
-#
-# Exit codes:
-#   0  every finding was suppressed by an ALLOW entry, or there were none
-#   1  a finding survived, or a stale entry was found under --strict-exceptions
-#   2  the run could not be trusted: bad registry, empty scan, unreadable
-#      exceptions file. Never reported as a pass.
 
 set -euo pipefail
 export LC_ALL=C
 
 readonly PROG=registry-portability
 
-# --- constants ---------------------------------------------------------------
 
-# Filesystem roots a backticked absolute path names instead of a skill.
 readonly UNIX_ROOTS=" bin boot dev etc home lib media mnt opt proc root run sbin srv sys tmp usr var "
 readonly META_PREFIXES=(foo bar baz qux)
 
@@ -51,7 +15,6 @@ readonly RE_REF='^(references|scripts)/[A-Za-z0-9._-]+\.(md|sh)'
 readonly RE_NAME='^[a-z][a-z0-9-]*$'
 readonly RE_HASH='^[0-9a-f]{12}$'
 
-# --- helpers -----------------------------------------------------------------
 
 usage() {
   cat <<'EOF'
@@ -74,8 +37,6 @@ warn() {
   printf '%s: %s\n' "$PROG" "$1" >&2
 }
 
-# Strip leading and trailing whitespace. Result lands in TRIMMED; no subshell,
-# so this stays cheap enough to call once per line of every scanned file.
 TRIMMED=""
 trim() {
   local s=$1
@@ -84,7 +45,6 @@ trim() {
   TRIMMED=$s
 }
 
-# --- arguments ---------------------------------------------------------------
 
 REGISTRY=""
 ALLOW_FILE=""
@@ -141,10 +101,6 @@ if [[ ! -f $ALLOW_FILE ]]; then fatal "exceptions file not found: $ALLOW_FILE"; 
 WORKDIR=$(mktemp -d "${TMPDIR:-/tmp}/$PROG.XXXXXX")
 trap 'rm -rf "$WORKDIR"' EXIT
 
-# --- discover skill folders --------------------------------------------------
-# A plain glob over an already-validated directory. No process substitution:
-# a failure there is invisible to set -e and yields an empty list with status 0,
-# which is the exact fail-open this script exists to prevent.
 
 declare -a SKILL_DIRS=()
 declare -A SKILL_SET=()
@@ -157,9 +113,6 @@ done
 
 if (( ${#SKILL_DIRS[@]} == 0 )); then fatal "no skill folder under: $SKILLS_DIR"; fi
 
-# --- collect target files ----------------------------------------------------
-# find writes to a real file whose status is checked, and the reader loop is fed
-# by a redirect rather than a pipe, so the arrays it fills survive the loop.
 
 declare -a TARGET_FILE=()
 declare -a TARGET_BASE=()
@@ -178,10 +131,6 @@ if (( ${#TARGET_FILE[@]} == 0 )); then
   fatal "no *.md or *.sh file under any skill folder in: $SKILLS_DIR"
 fi
 
-# --- line hashes -------------------------------------------------------------
-# Hashes are computed one whole file at a time and cached: the trimmed lines are
-# written to a scratch directory and hashed in a single call, so a large file
-# costs one process rather than one per line.
 
 declare -A HASH_DONE=()
 declare -A LINE_HASH=()
@@ -216,8 +165,6 @@ ensure_hashes() {
   rm -rf "$dir" "$dir.sums"
 }
 
-# Result lands in HASH_RESULT. A command substitution would run the cache fill
-# in a subshell and throw the cache away with it.
 HASH_RESULT=""
 line_hash() {
   local rel=$1 lineno=$2
@@ -225,7 +172,6 @@ line_hash() {
   HASH_RESULT=${LINE_HASH["$rel:$lineno"]:-000000000000}
 }
 
-# --- rule helpers ------------------------------------------------------------
 
 is_skill_folder() {
   [[ -n ${SKILL_SET[$1]:-} ]]
@@ -243,8 +189,6 @@ is_placeholder() {
   return 1
 }
 
-# True when the token is already inside a harness path reported on this line, so
-# the same text is never reported twice.
 covered_by_oh_path() {
   local token=$1 seen
   if (( ${#OH_TOKENS[@]} == 0 )); then return 1; fi
@@ -254,7 +198,6 @@ covered_by_oh_path() {
   return 1
 }
 
-# --- scan --------------------------------------------------------------------
 
 declare -a FINDINGS=()
 declare -a OH_TOKENS=()
@@ -311,7 +254,6 @@ for index in "${!TARGET_FILE[@]}"; do
   done < "$file"
 done
 
-# --- exceptions --------------------------------------------------------------
 
 declare -A EXC_CLASS=()
 declare -a EXC_PATHS=()
@@ -388,7 +330,6 @@ if (( seen_block == 0 )); then
   fatal "no fenced block tagged allow in: $ALLOW_FILE"
 fi
 
-# --- report ------------------------------------------------------------------
 
 printf 'registry: %s\n' "$REGISTRY"
 printf 'exceptions: %s\n' "$ALLOW_FILE"
@@ -403,8 +344,6 @@ if (( ${#FINDINGS[@]} > 0 )); then
 else
   : > "$RAW"
 fi
-# Sorted by path, then line number, then rule, then token, and deduplicated on
-# that same tuple, so two runs over one tree print byte-identical output.
 if ! sort -t $'\t' -k1,1 -k2,2n -k3,3 -k4,4 -u "$RAW" > "$SORTED"; then
   fatal "cannot sort findings"
 fi
@@ -438,8 +377,6 @@ while IFS=$'\t' read -r rel_path lineno rule token; do
     "<ALLOW-or-KNOWN>" "$rule" "$rel_path" "$hash" "<reason>"
 done < "$SORTED"
 
-# Staleness is evaluated only against the file the entry names, never against
-# the whole tree, so an entry cannot be kept alive by an unrelated file.
 stale=0
 if (( ${#EXC_PATHS[@]} > 0 )); then
   for index in "${!EXC_PATHS[@]}"; do

@@ -16,8 +16,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$ROOT" || { echo "SKIPPED: cannot enter repo root" >&2; exit 2; }
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "SKIPPED: not a git repository" >&2; exit 2; }
 
-# Resolve the base branch through the first ref that exists; a checkout with none
-# (a shallow CI clone, a detached export) cannot compute a deletion set at all.
 BASE_REF=""
 for ref in development upstream/development origin/development; do
   if git rev-parse --verify --quiet "$ref" >/dev/null 2>&1; then BASE_REF="$ref"; break; fi
@@ -31,12 +29,8 @@ LIST=".claude/protected-paths.txt"
 git cat-file -e "$BASE:$LIST" 2>/dev/null \
   || { echo "SKIPPED: $LIST absent at the merge base" >&2; exit 2; }
 
-# Deletions introduced by this branch. On development itself this is empty and the
-# probe is a no-op pass rather than a skip -- an empty deletion set IS the passing state.
 mapfile -t deleted < <(git diff --diff-filter=D --name-only "$BASE"..HEAD 2>/dev/null)
 
-# The protected list as of the merge base. Strip comments (including the inline kind
-# the file's own format note forbids but one entry carries) and blanks.
 mapfile -t entries < <(
   git show "$BASE:$LIST" 2>/dev/null \
     | sed 's/[[:space:]]*#.*$//' \
@@ -45,13 +39,9 @@ mapfile -t entries < <(
 )
 ((${#entries[@]})) || { echo "SKIPPED: $LIST at the merge base has no entries" >&2; exit 2; }
 
-# Every tracked evidence.md outside the archive is a place a justification may live.
 mapfile -t evidence_files < <(git ls-files '.oh/tasks/*/evidence.md' | grep -v '^\.oh/tasks/archive/')
 
-# Read the COMMITTED content, never the working tree. An uncommitted justification is
-# present on disk and absent from the PR diff -- from the reviewer's seat, identical to
-# never having written it, which is the same trap the evidence.md gate exists for.
-justified() {  # $1 = string that must appear verbatim in some committed evidence doc
+justified() {
   local needle="$1" doc
   for doc in "${evidence_files[@]}"; do
     git show "HEAD:$doc" 2>/dev/null | grep -qF -- "$needle" && return 0
@@ -62,8 +52,8 @@ justified() {  # $1 = string that must appear verbatim in some committed evidenc
 hits=() unjustified=()
 for entry in "${entries[@]}"; do
   case "$entry" in
-    */*) target="$entry" ;;          # repo-relative path
-    *)   target=".oh/skills/$entry/" ;;  # bare skill name -> its directory
+    */*) target="$entry" ;;
+    *)   target=".oh/skills/$entry/" ;;
   esac
 
   hit=""
@@ -77,7 +67,6 @@ for entry in "${entries[@]}"; do
   [ -n "$hit" ] || continue
 
   hits+=("$entry -> $hit")
-  # The entry OR the concrete deleted path satisfies it; both name the same removal.
   if ! justified "$entry" && ! justified "$hit"; then
     unjustified+=("$entry (deleted: $hit)")
   fi

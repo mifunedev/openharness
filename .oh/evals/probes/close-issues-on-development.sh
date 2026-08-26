@@ -38,23 +38,16 @@ has 'state_reason: "completed"' "completed state reason"
 has 'PR_TITLE: ${{ github.event.pull_request.title }}' "title passed through env"
 has 'PR_BODY: ${{ github.event.pull_request.body }}' "body passed through env"
 
-# pull_request_target resolves the workflow from the DEFAULT branch (main), where
-# this file does not exist — it would never fire. This is the bug the trigger swap
-# fixed; the probe keeps it from coming back.
 if grep -Eq '^[[:space:]]*pull_request_target:' <<<"$text"; then
   echo "REGRESSION close-issues-on-development must not use pull_request_target: it resolves from the default branch, where this workflow does not exist" >&2
   exit 1
 fi
 
-# The workflow must never run head-branch code: it checks out the base ref and
-# only imports the parser. An explicit head ref would make this an ACE surface.
 if grep -Eq 'ref:[[:space:]]*\$\{\{[[:space:]]*github\.event\.pull_request\.head' <<<"$text"; then
   echo "REGRESSION close-issues-on-development must not check out the pull request head ref" >&2
   exit 1
 fi
 
-# Author-controlled strings must reach the script through env, never through
-# template interpolation inside the script body.
 if grep -Eq '^[[:space:]]+.*\$\{\{[[:space:]]*github\.event\.pull_request\.(title|body)' <<<"$(sed -n '/script: |/,$p' <<<"$text")"; then
   echo "REGRESSION close-issues-on-development interpolates PR title/body into the script body" >&2
   exit 1

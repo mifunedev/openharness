@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Canonical production bridge from audit-run.sh to a non-scriptable inline agent.
-# AUDIT_AGENT_COMMAND_JSON is a JSON argv array whose final argument will be the prompt.
 set -euo pipefail
 : "${AUDIT_ROOT:?AUDIT_ROOT is required}"
 : "${AUDIT_ROUTE:?AUDIT_ROUTE is required}"
@@ -25,11 +23,6 @@ prompt="$AUDIT_TMP_ROOT/route-prompt.txt"; output="$AUDIT_TMP_ROOT/route-output.
   cat "$AUDIT_ROUTE"
 } >"$prompt"
 rc=0
-# Launch the agent with the lifecycle identity SCRUBBED. Every binding it uses is already
-# in the prompt above as text; inheriting them as environment means the agent's own tool
-# calls (Gate 2 runs the probe suite) see an audit identity that is not theirs and grade
-# the caller instead of the tree. Observed twice: AUDIT_ROOT/AUDIT_RUN_ID and
-# AUDIT_SIGNALS_RESET each produced a green->red that reproduced on an unmodified base.
 env -u AUDIT_RUN_ID -u AUDIT_ROOT -u AUDIT_SIGNALS_RESET \
     -u AUDIT_TMP_ROOT -u AUDIT_EVIDENCE_PATH -u AUDIT_ROUTE -u AUDIT_TARGET \
     -u AUDIT_TARGET_ARGS_JSON -u AUDIT_AGENT_COMMAND_JSON \

@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Atomically publish target-correlated terminal evidence for audit-run.sh.
-# Usage: audit-evidence.sh complete <native-verdict-token>
 set -euo pipefail
 [[ ${1:-} == complete && $# -eq 2 ]] || { echo 'usage: audit-evidence.sh complete <native-verdict-token>' >&2; exit 64; }
 : "${AUDIT_RUN_ID:?AUDIT_RUN_ID is required}"

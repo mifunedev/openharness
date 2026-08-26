@@ -36,7 +36,6 @@ decision_for() {
 }
 
 assert() {
-  # assert <want> <command> <label>
   local want="$1" got
   got=$(decision_for "$2")
   if [[ "$got" != "$want" ]]; then
@@ -45,8 +44,7 @@ assert() {
   fi
 }
 
-# --- group A: env-exposing inspect shapes are denied ---
-ENV_FIELD='.Config.'"En"'v'   # split so a plain grep of this probe is not itself a leak vector
+ENV_FIELD='.Config.'"En"'v'
 assert deny "docker inspect openharness" \
   "bare inspect dumps full JSON including the env block"
 assert deny "docker container inspect openharness" \
@@ -66,7 +64,6 @@ assert deny "docker inspect web | jq '.[0].State'" \
 assert deny "podman inspect mycontainer" \
   "the podman equivalent bypassed the guard"
 
-# --- group B: narrow field reads stay allowed (inspect is NOT blanket-blocked) ---
 assert allow "docker inspect --format '{{.State.Health.Status}}' openharness" \
   "guard over-blocked a narrow health-status read"
 assert allow "docker container inspect -f '{{.State.Status}}' openharness" \
@@ -80,16 +77,13 @@ assert allow "docker inspect oh-sbx-local --format '{{range \$name, \$_ := .Netw
 assert allow "docker image inspect --format '{{.Id}}' node:20" \
   "guard over-blocked an image-id read"
 
-# --- group C: neighbouring docker commands are untouched ---
 assert allow "docker ps -a" "guard leaked onto docker ps"
 assert allow "docker compose up -d --build" "guard leaked onto docker compose"
 assert allow "docker exec -it openharness tmux ls" "guard leaked onto docker exec"
 
-# --- group D: secret/config objects stay hard-denied (no template makes them safe) ---
 assert deny "docker sec""ret inspect foo" "docker secret inspect stopped being denied"
 assert deny "docker con""fig inspect foo" "docker config inspect stopped being denied"
 
-# --- group E: wiring — deny-list mirrors the env-shaped patterns ---
 for rule in "Bash(command=*inspect*Config.Env*)" "Bash(command=*inspect*{{json .}}*)" "Bash(command=*inspect*{{.}}*)"; do
   if ! jq -e --arg r "$rule" '.permissions.deny | index($r)' "$SETTINGS" >/dev/null; then
     echo "REGRESSION: permissions.deny is missing '$rule'" >&2
@@ -97,13 +91,11 @@ for rule in "Bash(command=*inspect*Config.Env*)" "Bash(command=*inspect*{{json .
   fi
 done
 
-# --- group F: wiring — the blanket block stays OFF (deliberate: inspect is usable) ---
 if jq -e '.permissions.deny | index("Bash(command=*docker inspect*)")' "$SETTINGS" >/dev/null; then
   echo "REGRESSION: permissions.deny blanket-blocks docker inspect again — the policy is field-level denial, not a full block" >&2
   exit 1
 fi
 
-# --- group G: wiring — the Bash guard is still attached to the Bash matcher ---
 matcher=$(jq -r '.hooks.PreToolUse[]? | select(.hooks[]?.command // "" | contains("deny-env-dump")) | .matcher' "$SETTINGS")
 if [[ "$matcher" != *"Bash"* ]]; then
   echo "REGRESSION: deny-env-dump.sh is no longer wired to the Bash matcher in $SETTINGS" >&2

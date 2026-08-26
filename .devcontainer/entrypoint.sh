@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-# Match the container's docker group GID to the host socket's GID
-# so the sandbox user can use Docker without sudo.
 SOCK=/var/run/docker.sock
 if [ -S "$SOCK" ]; then
   HOST_GID=$(stat -c '%g' "$SOCK")
@@ -21,10 +19,6 @@ repair_home_mount_ownership() {
   owner="$(sandbox_ownership)"
   echo "[entrypoint] repairing sandbox auth mount ownership as $owner"
 
-  # Fix ownership of mounted volumes (created as root by Docker). Use the
-  # sandbox user's numeric uid:gid so this remains correct after UID/GID sync,
-  # even when the primary group is remapped to an existing host group whose
-  # name is not `sandbox`.
   for dir in .claude .codex .pi .prime .grok .deepagents .herdr .cloudflared .config .cc-safety-net .ssh; do
     if [ -d "/home/sandbox/$dir" ]; then
       chown -hR "$owner" "/home/sandbox/$dir" 2>/dev/null || true
@@ -34,16 +28,10 @@ repair_home_mount_ownership() {
 
   # Legacy Hermes home state may exist from earlier layouts. Do not recurse
   # into $HERMES_HOME when it points at the bind-mounted checkout; that
-  # project-local runtime is handled by the Hermes block after UID sync.
   if [ -d "/home/sandbox/.hermes" ]; then
     chown -hR "$owner" "/home/sandbox/.hermes" 2>/dev/null || true
   fi
 
-  # Fix ownership of parents Docker auto-creates as root to satisfy named-volume
-  # or bind-mount targets, which then block the sandbox user from creating
-  # sibling dirs (EACCES on first run). Non-recursive so the bind-mounted
-  # children (`.local/share/opencode`, `.config/gh`) stay under the explicit
-  # repairs below.
   for parent in /home/sandbox/.local /home/sandbox/.local/share /home/sandbox/.config; do
     if [ -d "$parent" ]; then
       chown -h "$owner" "$parent" 2>/dev/null || true
@@ -55,12 +43,6 @@ repair_home_mount_ownership() {
     chown -hR "$owner" "$OPENCODE_STATE" 2>/dev/null || true
   fi
 
-  # uv's user-scoped state. The UID-sync sweep below only rewrites paths owned
-  # by the OLD sandbox UID, so a root-owned dir here is never repaired by it —
-  # and a root-owned `.../share/uv` is exactly what made `uv python install`
-  # fail with "Permission denied" for the sandbox user. Create the whole chain
-  # explicitly (install -d only chowns its final component) and chown the uv
-  # subtrees recursively so a stray `sudo uv` run is self-healing on next boot.
   install -d -o sandbox -g sandbox \
     /home/sandbox/.local/share/uv \
     /home/sandbox/.local/share/uv/tools \
@@ -75,21 +57,11 @@ repair_home_mount_ownership() {
 }
 
 # >>> seed_workspace_volume >>>
-# First-boot seed for OH_IMAGE_ONLY (no-bind) mode: populate an empty named
-# workspace volume from the image's baked control plane (/opt/oh-seed by
-# default). Self-contained: uses only $1 (dest) + $OH_IMAGE_SEED_SRC so the
-# eval probe can source it in isolation. Sets OH_IMAGE_SEEDED_THIS_BOOT.
 seed_workspace_volume() {
   local dest="$1"
   local marker="$dest/.oh/.image-seeded"
   local src="${OH_IMAGE_SEED_SRC:-/opt/oh-seed}"
   OH_IMAGE_SEEDED_THIS_BOOT=0
-  # Self-heal: backfill tracked .claude control-plane config that a prior
-  # (pre-fix) image failed to seed. Copy ONLY when the dest file is absent and
-  # the seed carries it, so operator edits are never clobbered. Runs before the
-  # marker early-return so an already-marked-but-incomplete volume heals in
-  # place — no volume wipe. Idempotent. protected-paths.txt is boot-critical
-  # (link-providers.sh --init hard-requires it); settings.json wires hooks.
   if [ -n "$src" ] && [ -d "$src/.claude" ]; then
     local _rel
     for _rel in protected-paths.txt settings.json; do
@@ -102,7 +74,6 @@ seed_workspace_volume() {
   if [ -f "$marker" ]; then
     return 0
   fi
-  # Clobber guard: only seed when the control plane is absent (marker AND emptiness).
   if [ -n "$src" ] && [ -d "$src" ] && [ ! -d "$dest/.oh" ]; then
     cp -a "$src/." "$dest/" 2>/dev/null || true
   fi
@@ -117,14 +88,7 @@ seed_workspace_volume() {
 repair_home_mount_ownership
 
 # ─── Host UID reconciliation ────────────────────────────────────────
-# The repo is bind-mounted at /home/sandbox/harness with its host UID/GID.
-# To avoid permission drift between host and container (host edits files
-# created in-container and vice versa; git authorship stays consistent),
-# we sync the sandbox user's UID/GID to the host owner. After the sync,
-# anything sandbox creates inside the container is owned by the host
-# user on the host filesystem — no chown handoff needed.
 OH_PROJECT_ROOT="${OH_PROJECT_ROOT:-/home/sandbox/harness}"
-# DEPRECATED alias — prefer $OH_PROJECT_ROOT
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
 
 uid_reconcile_step() {
@@ -176,31 +140,15 @@ elif [ -d "$HARNESS_DIR" ]; then
   fi
 fi
 
-# Set the sandbox user's password. This is BOTH the remote login password
-# (e.g. `su sandbox` / SSH password auth) AND the sudo password: sudo now
-# requires it (/etc/sudoers.d/sandbox is `sandbox ALL=(ALL) ALL`, no NOPASSWD),
-# so an interactive operator who knows it can escalate, but a non-interactive
-# internal agent hits the password prompt and fails (`sudo -n` -> error). We
-# run as root here (before the gosu drop), so no sudo is needed to set it.
-# Unconditional — independent of whether the UID/GID reconcile above succeeded.
-# The trailing `|| echo ... >&2` (not a bare `|| true`) keeps a chpasswd
-# failure (e.g. read-only /etc on some hosts) from aborting boot under
-# `set -e`, while still surfacing it as a warning; never log $PW itself.
 PW="${SANDBOX_PASSWORD:-test1234}"
 echo "sandbox:${PW}" | chpasswd || echo "[entrypoint] WARNING: failed to set sandbox password" >&2
 unset PW
 
 # UID/GID reconciliation can change the numeric identity behind the sandbox
-# user after Docker-created auth volumes were repaired above. Repeat the
-# idempotent repair with the final uid:gid so persisted credentials remain
-# readable on hosts where UID 1000 is already occupied.
 repair_home_mount_ownership
 
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
 
-# How the skill pack is wired: the shared skills/agents/hooks are vendored
-# directly under .oh/ (no submodule). Create/repair the provider symlinks into
-# .oh/ before any provider symlink, hook, eval runner, or Hermes skill path reads it.
 if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
   if ! gosu sandbox bash "$HARNESS/.oh/scripts/link-providers.sh" --init; then
     echo "[entrypoint] failed to link provider skills; run: bash .oh/scripts/link-providers.sh --init"
@@ -208,12 +156,6 @@ if [ -x "$HARNESS/.oh/scripts/link-providers.sh" ]; then
   fi
 fi
 
-# ─── User-scoped uv/Python provisioning ─────────────────────────────
-# Idempotent: a fully provisioned home is a no-op, so this runs on every boot
-# and repairs a container whose uv state predates the ownership fix. The script
-# drops to the sandbox user itself and pins HOME, so nothing lands under /root.
-# Non-fatal: a sandbox without Python must still boot, but the failure is
-# surfaced with the exact repair command rather than swallowed.
 if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
    && [ -x "$HARNESS/.oh/scripts/provision-python.sh" ]; then
   if ! bash "$HARNESS/.oh/scripts/provision-python.sh"; then
@@ -222,20 +164,12 @@ if [ "${OH_PROVISION_PYTHON:-true}" = "true" ] \
 fi
 
 # Hermes keeps all runtime state — including auth.json — inside the
-# project-local HERMES_HOME directory. An earlier design symlinked
-# auth.json into the home-scoped ~/.hermes named volume, but that volume
-# is a different filesystem from the bind-mounted checkout, so hermes'
-# atomic_replace() (write-temp-then-os.replace) died with EXDEV on every
-# auth write. Keeping auth on the same device as its temp file fixes it;
-# HERMES_HOME is gitignored, so credentials stay out of version control.
 if [ "${INSTALL_HERMES:-false}" = "true" ]; then
   HERMES_RUNTIME="${HERMES_HOME:-$HARNESS/.hermes}"
   HERMES_LEGACY_AUTH="/home/sandbox/.hermes/auth.json"
 
   mkdir -p "$HERMES_RUNTIME"
 
-  # Heal the legacy cross-device symlink: drop it and restore any
-  # credentials that reached the old volume as a real file.
   if [ -L "$HERMES_RUNTIME/auth.json" ]; then
     rm -f "$HERMES_RUNTIME/auth.json"
     if [ -s "$HERMES_LEGACY_AUTH" ]; then
@@ -243,11 +177,6 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
     fi
   fi
 
-  # Share the harness' vendored skill pack with Hermes through its normal
-  # HERMES_HOME skills tree. Claude, Codex, and Pi point at the same neutral
-  # /home/sandbox/harness/.oh/skills directory; Hermes keeps its bundled/runtime
-  # skills under $HERMES_RUNTIME/skills and gets the harness collection as a
-  # symlinked child so one primitive is visible to every agent.
   HERMES_SHARED_SKILLS_DIR="$HARNESS/.oh/skills"
   HERMES_SHARED_SKILLS_LINK="$HERMES_RUNTIME/skills/openharness"
   mkdir -p "$HERMES_RUNTIME/skills"
@@ -267,22 +196,10 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
 
   chown -hR "$(sandbox_ownership)" "$HERMES_RUNTIME" 2>/dev/null || true
 
-  # The venv is a system path (outside /home/sandbox) that the Dockerfile
-  # chowned to the build-time sandbox UID. If the UID-sync above remapped
-  # sandbox to the host UID, the venv is left orphaned and ad-hoc
-  # `uv pip install --python .../venv 'hermes-agent[slack]'` fails EACCES.
-  # Re-chown the install dir + uv tools to the current sandbox UID.
   for d in /usr/local/lib/hermes-agent /opt/uv; do
     [ -d "$d" ] && chown -hR "$(sandbox_ownership)" "$d" 2>/dev/null || true
   done
 
-  # ─── Start Hermes dashboard in tmux session (opt-in) ────────────────
-  # Guard: HERMES_DASHBOARD=true AND hermes binary on PATH AND tmux on PATH.
-  # Idempotent: skip if the session already exists.
-  # Runs as sandbox user via gosu; logs tee to /tmp/app-hermes-dashboard.log.
-  # HERMES_DASHBOARD_HOST defaults to 127.0.0.1; set to 0.0.0.0 when the
-  # compose overlay publishes the port (Docker's published-port path requires
-  # the process to bind a non-loopback interface).
   if [ "${HERMES_DASHBOARD:-false}" = "true" ] && command -v hermes &>/dev/null \
      && command -v tmux &>/dev/null; then
     _dash_port="${HERMES_DASHBOARD_PORT:-9119}"
@@ -308,25 +225,13 @@ if [ "${INSTALL_HERMES:-false}" = "true" ]; then
   fi
 fi
 
-# ─── Optional: sshd for direct container SSH (opt-in via SANDBOX_SSH=true) ──
-# Publishes over the docker-compose.ssh.yml overlay. We start sshd as a
-# BACKGROUND daemon (no -D) so it runs alongside `sleep infinity` — PID 1 stays
-# the healthcheck-friendly sleep, matching how cron/hermes run as side services.
-# Auth is public-key by default; password auth (using SANDBOX_PASSWORD, applied
-# via chpasswd above) only when SANDBOX_SSH_PASSWORD_AUTH is truthy. Idempotent:
-# skip if sshd is already running. Runs as root (needed to bind port 22 + manage
-# host keys); never logs the password or key material.
 if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
   if pgrep -x sshd >/dev/null 2>&1; then
     echo "[entrypoint] sshd already running — skipping"
   else
     mkdir -p /run/sshd
-    ssh-keygen -A >/dev/null 2>&1 || true   # generate host keys if missing
+    ssh-keygen -A >/dev/null 2>&1 || true
 
-    # Seed the sandbox user's authorized_keys from env (public key material is
-    # not secret; it rides in .devcontainer/.env because it can be multi-line).
-    # Compose env files are single-line in practice, so also accept literal \n
-    # separators and normalize them into real authorized_keys lines.
     _ssh_dir=/home/sandbox/.ssh
     _have_keys=0
     if [ -n "${SANDBOX_SSH_AUTHORIZED_KEYS:-}" ]; then
@@ -339,16 +244,14 @@ if [ "${SANDBOX_SSH:-false}" = "true" ] && [ -x /usr/sbin/sshd ]; then
       chown -R "$(sandbox_ownership)" "$_ssh_dir"
       _have_keys=1
     elif [ -s "$_ssh_dir/authorized_keys" ]; then
-      _have_keys=1   # operator bind-mounted or pre-seeded keys
+      _have_keys=1
     fi
 
-    # Password auth: only when explicitly enabled.
     _pw_auth=no
     case "$(printf '%s' "${SANDBOX_SSH_PASSWORD_AUTH:-false}" | tr '[:upper:]' '[:lower:]')" in
       1|true|yes|on) _pw_auth=yes ;;
     esac
 
-    # Hardened drop-in — Debian's default sshd_config Includes sshd_config.d/*.conf.
     mkdir -p /etc/ssh/sshd_config.d
     cat > /etc/ssh/sshd_config.d/openharness.conf <<EOF
 # Managed by Open Harness entrypoint — regenerated every boot.
@@ -371,23 +274,12 @@ EOF
   fi
 fi
 
-# ─── Attach banner wiring (idempotent) ──────────────────────────────
-# Source .oh/install/banner.sh from the sandbox user's .bashrc so every
-# interactive shell (docker exec, VS Code) shows
-# sandbox + onboarding status. Safe to run on every boot.
 BASHRC="/home/sandbox/.bashrc"
 if [ -f "$BASHRC" ] && ! grep -q 'source.*\.oh/install/banner.sh' "$BASHRC"; then
   gosu sandbox bash -c "echo 'source ${OH_PROJECT_ROOT}/.oh/install/banner.sh 2>/dev/null' >> ~/.bashrc"
   echo "[entrypoint] attach banner wired into .bashrc"
 fi
 
-# ─── GitHub CLI auth via PAT (optional) ─────────────────────────────
-# When GH_TOKEN is provided, persist it into ~/.config/gh/hosts.yml on
-# disk (via the config-dir volume that backs ~/.config) so auth survives env changes and
-# `gh auth setup-git` has proper host config to reference. gh refuses
-# `--with-token` while GH_TOKEN is in env, so unset it in the subprocess.
-# Disk-auth check uses `env -u GH_TOKEN` so we don't mistake the env var
-# for a persisted login.
 if [ -n "${GH_TOKEN:-}" ]; then
   if ! gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh auth status &>/dev/null; then
     if echo "$GH_TOKEN" | gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh auth login --with-token 2>/dev/null; then
@@ -400,8 +292,6 @@ if [ -n "${GH_TOKEN:-}" ]; then
   fi
 fi
 
-# ─── Git identity + credential helper ───────────────────────────────
-# Set git user from env vars (fallback to gh-authenticated user)
 if [ -n "${GIT_USER_NAME:-}" ]; then
   gosu sandbox git config --global user.name "$GIT_USER_NAME"
 elif gosu sandbox gh auth status &>/dev/null; then
@@ -412,30 +302,18 @@ if [ -n "${GIT_USER_EMAIL:-}" ]; then
   gosu sandbox git config --global user.email "$GIT_USER_EMAIL"
 elif gosu sandbox gh auth status &>/dev/null; then
   GH_EMAIL=$(gosu sandbox gh api user --jq .email 2>/dev/null || true)
-  # GitHub may return null for private emails — use noreply fallback
   if [ -z "$GH_EMAIL" ] || [ "$GH_EMAIL" = "null" ]; then
     GH_LOGIN=$(gosu sandbox gh api user --jq .login 2>/dev/null || true)
     [ -n "$GH_LOGIN" ] && GH_EMAIL="${GH_LOGIN}@users.noreply.github.com"
   fi
   [ -n "$GH_EMAIL" ] && gosu sandbox git config --global user.email "$GH_EMAIL"
 fi
-# Register gh as git credential helper so `git push`/`git fetch` just work
-# over HTTPS on first attach — no SSH key setup required.
-# Must run with GH_TOKEN unset: gh refuses setup-git when env-var auth
-# would shadow the stored host config it's trying to wire up.
 if gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh auth status &>/dev/null; then
   if gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh auth setup-git 2>/dev/null; then
     echo "[entrypoint] git credential helper configured via gh auth setup-git"
   fi
 fi
 
-# ─── SSH key generation + GitHub upload ─────────────────────────────
-# Mirrors what the interactive `gh auth login` flow does when you pick
-# SSH as the git protocol: generate an ed25519 keypair and register the
-# public key with GitHub. `gh auth login --with-token` has no SSH path,
-# so we do it ourselves. Requires the PAT to carry `admin:public_key`
-# scope; without it the generation still runs but the upload is skipped
-# (HTTPS + credential helper continues to work).
 if [ -n "${GH_TOKEN:-}" ] && gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh auth status &>/dev/null; then
   SSH_DIR="/home/sandbox/.ssh"
   SSH_KEY="$SSH_DIR/id_ed25519"
@@ -465,17 +343,7 @@ if [ -n "${GH_TOKEN:-}" ] && gosu sandbox env -u GH_TOKEN -u GITHUB_TOKEN gh aut
   fi
 fi
 
-# ─── pnpm install at harness root ──────────────────────────────────
-# Root package.json declares deps that aren't bundled into Pi or any
-# global CLI: `croner` for .oh/scripts/cron-runtime.ts, plus dev tooling such
-# as `@sinclair/typebox` (kept as a devDep for tooling parity). The Slack
-# bridge no longer needs root npm deps — it is the `pi-messenger-bridge`
-# package, npm-installed into a gitignored `.pi/bridge/` dir and loaded only
-# in the dedicated client-slack-pi session (see the Slack restore block below).
-# The harness is bind-mounted, so a Dockerfile-time install gets shadowed
-# at runtime; we install when the root dependency manifest fingerprint differs
 # from the marker stored alongside node_modules. Set SKIP_PNPM_INSTALL=1 to opt
-# out (e.g. air-gapped envs managing deps externally).
 pnpm_workspace_package_patterns() {
   local workspace="$1/pnpm-workspace.yaml"
   [ -f "$workspace" ] || return 0
@@ -523,7 +391,6 @@ pnpm_workspace_package_patterns() {
 
 pnpm_manifest_rel_is_excluded() {
   case "$1" in
-    # Defensive: legacy root .worktrees/ may exist in old checkouts; never scan it.
     .git/*|.oh/worktrees/*|.worktrees/*|node_modules/*|*/node_modules/*)
       return 0
       ;;
@@ -612,47 +479,23 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
   fi
 fi
 
-# ─── Resolve + pre-create the worktrees directory ─────────────────
-# Single source of truth = WORKTREES_DIR (docker-compose passes
-# paths.worktrees through here; default .oh/worktrees). Cron worktree isolation
-# and the /worktrees skill use this root so ignored branch/project clones stay
-# under the .oh control-plane namespace.
 case "${WORKTREES_DIR:-.oh/worktrees}" in
   /*) WORKTREES_PATH="${WORKTREES_DIR}" ;;
   *)  WORKTREES_PATH="$HARNESS/${WORKTREES_DIR:-.oh/worktrees}" ;;
 esac
 mkdir -p "$WORKTREES_PATH"
 
-# ─── Start/supervise cron runtime in tmux sessions ────────────────
-# Per SPEC v0.7 §"Croner runtime" + .oh/skills/t3/references/sandbox-processes.md.
-# `cron-system` runs .oh/scripts/cron-runtime.ts. `cron-watchdog` is the outer
-# supervisor: if cron-system disappears after boot, it restarts the runtime
-# without requiring a container restart. Logs tee to /tmp/cron-system.log and
-# /tmp/cron-watchdog.log.
 case "${CRONS_DIR:-.oh/crons}" in
   /*) CRONS_PATH="${CRONS_DIR}" ;;
   *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-.oh/crons}" ;;
 esac
 mkdir -p "$CRONS_PATH"
-# Bind-mounted; sandbox UID is synced to host UID above, so no chown.
 if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
   if gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
     echo "[entrypoint] legacy system-cron tmux session detected — stopping it before starting cron-watchdog"
     gosu sandbox tmux kill-session -t system-cron 2>/dev/null || true
   fi
 
-  # This helper must be REWRITABLE on a container RESTART (`docker start`). The
-  # entrypoint runs as root; the previous version chowned this file to the
-  # sandbox user (1000:1000, mode 755). On the second boot /tmp still holds it
-  # (container writable-layer, not tmpfs), so the root entrypoint's `cat >` had
-  # to overwrite a file it no longer owned — which fails with EACCES on node
-  # runtimes that drop CAP_DAC_OVERRIDE, and the global `set -e` then promoted
-  # that one failed redirect into a fatal boot abort (container crash-loop on
-  # restart). Fix: keep the file root-owned (root can always rewrite a file it
-  # owns via the owner mode bits — no CAP_DAC_OVERRIDE needed); the sandbox only
-  # needs to READ it, since it is launched via `bash <path>`. rm any stale
-  # sandbox-owned copy left by an older image, and never let this OPTIONAL
-  # supervisor kill the sandbox boot.
   rm -f /tmp/cron-watchdog.sh 2>/dev/null || true
   if cat > /tmp/cron-watchdog.sh <<'CRON_WATCHDOG'
 #!/usr/bin/env bash
@@ -687,22 +530,6 @@ CRON_WATCHDOG
   fi
 fi
 
-# ─── Restore client-slack-pi session if Slack is configured ───────────
-# The pi-messenger-bridge Slack client (the /msg-bridge config surface) is
-# intentionally NOT pinned in .pi/settings.json — it loads ONLY in the dedicated
-# client-slack-pi session. Boot and manual `gateway pi` share ONE launch path:
-# .oh/scripts/gateway.sh, which sources PI_SLACK_* from the sandbox-owned,
-# mode-600 .env, seeds the non-secret bridge config (preserving the operator's
-# runtime trust grants, bug #289), clears the single-instance lock, npm-installs
-# the fork-pinned bridge if missing, and runs the self-healing supervisor in the
-# client-slack-pi session. Here we only gate on Slack being configured (both
-# tokens present in .env) and pi being installed, then hand off as the sandbox
-# user. The sibling hermes gateway client (client-slack-hermes) is NOT
-# auto-started — bring it up manually with `gateway hermes`.
-#
-# Expose the launcher as a bare `gateway` command. Recreated every boot
-# (idempotent) pointing at the live bind-mounted script, so edits to gateway.sh
-# take effect without an image rebuild.
 ln -sf "$HARNESS/.oh/scripts/gateway.sh" /usr/local/bin/gateway 2>/dev/null || true
 SLACK_ENV="$HARNESS/.devcontainer/.env"
 if [ -f "$SLACK_ENV" ] \
@@ -719,7 +546,6 @@ else
   echo "[entrypoint] Slack not configured (or pi missing) — skipping client-slack-pi"
 fi
 
-# ─── Optional: agent-browser (opt-in via INSTALL_AGENT_BROWSER=true) ──
 if [ "${INSTALL_AGENT_BROWSER:-false}" = "true" ] && ! command -v agent-browser &>/dev/null; then
   echo "[entrypoint] Installing agent-browser (INSTALL_AGENT_BROWSER=true)..."
   pnpm add -g agent-browser@0.8.5 \
@@ -729,7 +555,6 @@ if [ "${INSTALL_AGENT_BROWSER:-false}" = "true" ] && ! command -v agent-browser 
     || echo "[entrypoint] agent-browser install failed — skipping"
 fi
 
-# Source any harness-pack entrypoint hooks (installed by `oh harness add`)
 for hook in /usr/local/bin/*-entrypoint-hook.sh; do
   [ -x "$hook" ] && "$hook"
 done

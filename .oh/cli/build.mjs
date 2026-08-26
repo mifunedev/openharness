@@ -1,6 +1,3 @@
-// Bundle .oh/cli/src/cli.ts → dist/oh.js with package.json version inlined.
-// `__OH_VERSION__` is replaced at build time so the runtime VERSION constant
-// can never drift from what npm/git tags say the package version is.
 
 import { build } from "esbuild";
 import { readFileSync, chmodSync } from "node:fs";
@@ -25,6 +22,4 @@ await build({
   logLevel: "info",
 });
 
-// The bundle has a shebang and is the `oh` bin target — make it executable so a
-// bare `oh` on PATH keeps working after every rebuild (esbuild writes 0o644).
 chmodSync(outfile, 0o755);

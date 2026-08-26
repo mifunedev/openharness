@@ -4,8 +4,6 @@
 # desc: /health-check retains the docker stats in-container-reclaim step
 set -euo pipefail
 
-# Resolve repo root from this script's location, never cwd: /eval runs probes
-# from an arbitrary working directory.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SKILL="$ROOT/.claude/skills/health-check/SKILL.md"
 

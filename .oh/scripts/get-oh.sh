@@ -1,52 +1,19 @@
 #!/usr/bin/env bash
 
-# ─── Sourced-vs-executed detection ───────────────────────────────────
-# When this script is `source`d (e.g. `source <(curl -fsSL .../get-oh.sh)`)
-# so it can mutate the CALLER's live PATH, it must NOT enable strict mode,
-# must NOT install traps on the caller's interactive shell, and must NOT
-# `exit` — any of those would corrupt or kill the interactive session.
 if [ "${BASH_SOURCE[0]}" != "$0" ]; then _OH_SOURCED=1; else _OH_SOURCED=0; fi
 
-# Strict mode only when executed as its own process — never when sourced.
 [ "$_OH_SOURCED" = 0 ] && set -euo pipefail
 
-# get-oh.sh — install the standalone `oh` CLI onto a host.
-#
-# This script is the npm-free bootstrap: it places the single, self-contained
-# `oh` binary at its destination (default ~/.local/bin/oh) and nothing else — it
-# does NOT clone the harness repo and does NOT touch the sandbox install dir or
-# any existing config. It prefers a prebuilt bundle (https://oh.mifune.dev/oh.js)
-# and falls back to building from source in a temp dir if that download fails.
-# (The CLI is also published to npm as `@mifune/openharness` — `npm i -g
-# @mifune/openharness` — for hosts that already have Node >= 20.)
-#
-# `oh init` fetches its scaffold payload on demand (a shallow clone into a temp
-# dir that it deletes), so no local repo is needed after install.
-#
-# Requires Node.js >= 20 to RUN `oh`; if it's missing this script offers to
-# install nvm + Node 22 and sources it so `oh` works in the same shell.
-# git is only needed for the build fallback and for `oh init`'s payload fetch.
 
-# Surface silent set -e exits — without this, any non-zero return mid-script
-# kills bash with no `ERROR:` line and the user is left staring at a prompt.
-# Executed path only: never install traps on a sourcing caller's shell.
 [ "$_OH_SOURCED" = 0 ] && trap 'printf "\n\033[0;31mERROR:\033[0m get-oh.sh aborted (exit %s) at line %s: %s\n" "$?" "$LINENO" "$BASH_COMMAND" >&2' ERR
 
-# ─── Colours / helpers ───────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 banner() { printf "\n${CYAN}==> %s${NC}\n" "$*"; }
 ok()     { printf "${GREEN} ✓  %s${NC}\n" "$*"; }
 warn()   { printf "${YELLOW}WARN: %s${NC}\n" "$*" >&2; }
 die()    { printf "${RED}ERROR: %s${NC}\n" "$*" >&2; if [ "${_OH_SOURCED:-0}" = 1 ]; then _oh_cleanup; return 1; else exit 1; fi; }
-# Remove the temp dir. On the executed path an EXIT trap calls this; on the
-# sourced path there is no EXIT trap (we must not install one on the caller),
-# so we invoke it explicitly at the end and from die().
 _oh_cleanup() { [ -n "${TMP:-}" ] && rm -rf "$TMP" 2>/dev/null || true; }
 
-# ─── prompt_yn: yes/no prompt with /dev/tty discipline ──────────────
-# Reads keystrokes from /dev/tty so it works when the script is piped from
-# curl (stdin is the script source in pipe mode, not the keyboard).
-# Respects ASSUME_YES / ASSUME_NO. Returns 0 for yes, 1 for no.
 prompt_yn() {
   local __msg="$1"; local __default="${2:-y}"
   if [ "${ASSUME_YES:-false}" = true ]; then return 0; fi
@@ -65,7 +32,6 @@ prompt_yn() {
   fi
 }
 
-# ─── Help ────────────────────────────────────────────────────────────
 print_help() {
   cat <<HELPEOF
 Open Harness — install the standalone 'oh' CLI
@@ -102,7 +68,6 @@ Examples:
 HELPEOF
 }
 
-# ─── Arg parsing ─────────────────────────────────────────────────────
 ASSUME_YES="${OH_ASSUME_YES:+true}"; ASSUME_YES="${ASSUME_YES:-false}"
 ASSUME_NO=false
 while [ $# -gt 0 ]; do
@@ -117,7 +82,6 @@ while [ $# -gt 0 ]; do
 done
 [ "$ASSUME_YES" = true ] && [ "$ASSUME_NO" = true ] && die "--yes and --no are mutually exclusive."
 
-# ─── Config (env-overridable) ────────────────────────────────────────
 OH_BIN_DIR="${OH_BIN_DIR:-$HOME/.local/bin}"
 OH_JS_URL="${OH_JS_URL:-https://oh.mifune.dev/oh.js}"
 OH_GITHUB_REPO="${OH_GITHUB_REPO:-mifunedev/openharness}"
@@ -127,7 +91,6 @@ fi
 OH_GITHUB_REF="${OH_GITHUB_REF:-${OH_INSTALL_REF:-}}"
 OH_NVM_VERSION="${OH_NVM_VERSION:-v0.40.3}"
 
-# Detect a local OpenHarness checkout (used only as a build-fallback source).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
 LOCAL_CLI_DIR=""
 if [ -n "$SCRIPT_DIR" ]; then
@@ -135,7 +98,6 @@ if [ -n "$SCRIPT_DIR" ]; then
   if [ -n "$__cand" ] && [ -f "$__cand/.oh/cli/package.json" ]; then LOCAL_CLI_DIR="$__cand/.oh/cli"; fi
 fi
 
-# ─── Node install (offer nvm + Node 22 when missing/too old) ─────────
 node_major() { node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0; }
 
 install_node_via_nvm() {
@@ -144,14 +106,11 @@ install_node_via_nvm() {
   if [ ! -s "$NVM_DIR/nvm.sh" ]; then
     curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/${OH_NVM_VERSION}/install.sh" | bash
   fi
-  # nvm.sh is not `set -eu` clean; relax strict mode while sourcing + installing,
-  # then source it into THIS shell so `node` works right away.
   set +eu
   # shellcheck source=/dev/null
   . "$NVM_DIR/nvm.sh"
   nvm install 22
   nvm use 22
-  # Restore strict mode only when executed; never enable set -e in a sourcing caller.
   [ "$_OH_SOURCED" = 0 ] && set -eu
 }
 
@@ -175,7 +134,6 @@ ensure_node() {
   ok "Node.js $(node --version) — OK"
 }
 
-# ─── Obtain oh.js ────────────────────────────────────────────────────
 build_from_source() {
   local workdir="$1" clidir
   command -v git >/dev/null 2>&1 || die "git is required to build 'oh' from source (prebuilt download failed). Install git from https://git-scm.com"
@@ -197,17 +155,13 @@ build_from_source() {
   [ -f "$OH_JS" ] || die "build did not produce $OH_JS"
 }
 
-# ─── Main ────────────────────────────────────────────────────────────
 printf "\n${CYAN}╔══════════════════════════════════════╗${NC}\n"
 printf "${CYAN}║   Open Harness — install 'oh' CLI    ║${NC}\n"
 printf "${CYAN}╚══════════════════════════════════════╝${NC}\n\n"
 
-# `|| return 1` is dead code when executed (die exits under strict mode); it only
-# fires on the sourced path, where die returns instead of killing the caller's shell.
 ensure_node || return 1
 
 TMP="$(mktemp -d)"
-# EXIT trap only on the executed path; the sourced path cleans up explicitly.
 [ "$_OH_SOURCED" = 0 ] && trap '_oh_cleanup' EXIT
 OH_JS=""
 
@@ -220,9 +174,6 @@ else
   build_from_source "$TMP"
 fi
 
-# ─── Install to destination (single self-contained file) ─────────────
-# Guard against a sourced run continuing past a failed fetch/build (die returns
-# rather than exits when sourced), which would otherwise try to install nothing.
 if [ -z "${OH_JS:-}" ] || [ ! -f "$OH_JS" ]; then
   warn "Could not obtain the 'oh' bundle (download and source build both failed)."
   _oh_cleanup
@@ -234,8 +185,6 @@ mkdir -p "$OH_BIN_DIR"
 install -m 0755 "$OH_JS" "$OH_BIN_DIR/oh"
 ok "Installed $OH_BIN_DIR/oh"
 
-# ─── Ensure it's on PATH ─────────────────────────────────────────────
-# EXPORT_LINE is the resolved activation line ($OH_BIN_DIR expanded, $PATH literal).
 EXPORT_LINE="export PATH=\"$OH_BIN_DIR:\$PATH\""
 case ":$PATH:" in
   *":$OH_BIN_DIR:"*) PATH_OK=1 ;;
@@ -244,7 +193,6 @@ esac
 NEED_PATH=0
 if [ "$PATH_OK" = "0" ]; then
   NEED_PATH=1
-  # Idempotent profile append so FUTURE shells pick it up (append only, never dup).
   for prof in "$HOME/.zprofile" "$HOME/.profile" "$HOME/.bashrc"; do
     if [ -f "$prof" ] && ! grep -qsF "$OH_BIN_DIR" "$prof"; then
       printf '\n# Added by Open Harness get-oh.sh\n%s\n' "$EXPORT_LINE" >> "$prof"
@@ -252,8 +200,6 @@ if [ "$PATH_OK" = "0" ]; then
       break
     fi
   done
-  # Sourced path: mutate the CALLER's live PATH so `oh` is usable immediately in
-  # the current shell — prepend only when not already present.
   if [ "$_OH_SOURCED" = 1 ]; then
     export PATH="$OH_BIN_DIR:$PATH"
     PATH_OK=1
@@ -262,7 +208,6 @@ if [ "$PATH_OK" = "0" ]; then
   fi
 fi
 
-# ─── Done ────────────────────────────────────────────────────────────
 banner "Done"
 if [ "$PATH_OK" = "1" ]; then
   ok "oh $("$OH_BIN_DIR/oh" --version 2>/dev/null || echo '(run: oh --version)')"
@@ -278,11 +223,6 @@ Next steps:
 Upgrade later by re-running get-oh.sh.
 DONEEOF
 
-# ─── PATH activation (executed path) ─────────────────────────────────
-# A child `bash` cannot mutate its parent's PATH, so when run as its own
-# process we can only PRINT how to activate `oh` in the CURRENT shell. Make
-# this the last, unmissable thing the user sees — with the resolved line and
-# the same-shell sourcing alternative.
 if [ "$_OH_SOURCED" = 0 ] && [ "$NEED_PATH" = "1" ]; then
   printf "\n${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}\n"
   printf "${YELLOW}║  ACTION REQUIRED — activate 'oh' in your CURRENT shell        ║${NC}\n"
@@ -293,5 +233,4 @@ if [ "$_OH_SOURCED" = 0 ] && [ "$NEED_PATH" = "1" ]; then
   printf "  …or just open a new terminal.\n"
 fi
 
-# Sourced path has no EXIT trap — clean the temp dir up explicitly.
 [ "$_OH_SOURCED" = 1 ] && _oh_cleanup

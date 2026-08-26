@@ -1,5 +1,3 @@
-// node --test suite for the weigh scorer. Pure node:test + node:assert — no
-// vitest/tsx. Run: node --test .oh/skills/weigh/scripts/__tests__/
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
@@ -23,7 +21,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SCORER = path.join(HERE, "..", "score-trajectories.mjs");
 const FIXTURE = path.join(HERE, "fixtures", "cohort-sample.json");
 
-// A reusable cohort matching the fixture (so unit tests don't read the file).
 const COHORT = [
   { id: "t-alpha", costTokens: 1200, evalRc: 0, auditVerdict: "PASS", clusterId: "c1", clusterSize: 3, judgeScore: 0.9 },
   { id: "t-bravo", costTokens: 2400, evalRc: 0, auditVerdict: null, clusterId: "c1", clusterSize: 3, judgeScore: 0.7 },
@@ -31,7 +28,6 @@ const COHORT = [
   { id: "t-delta", costTokens: 1500, evalRc: 1, auditVerdict: "FAIL", clusterId: "c3", clusterSize: 1, judgeScore: 0.3 },
 ];
 
-// --- frozen contract --------------------------------------------------------
 
 test("DEFAULT_WEIGHTS is frozen, has the exact keys, and sums to 100", () => {
   assert.ok(Object.isFrozen(DEFAULT_WEIGHTS));
@@ -58,7 +54,6 @@ test("TRAJECTORY_SCHEMA is a named JSON-Schema describing the trajectory record"
   assert.deepEqual(TRAJECTORY_SCHEMA.required, ["id"]);
 });
 
-// --- weight() normalization + breakdown reconstructability ------------------
 
 test("weight() normalizes each sub-signal to [0,1]", () => {
   const ctx = cohortStats(COHORT);
@@ -67,12 +62,10 @@ test("weight() normalizes each sub-signal to [0,1]", () => {
   for (const k of WEIGHT_KEYS) {
     assert.ok(s[k] >= 0 && s[k] <= 1, `signal ${k} in [0,1]`);
   }
-  // consistency = clusterSize/N = 3/4; evalPass(0)=1; auditPass(PASS)=1; judge=0.9
   assert.equal(s.consistency, 0.75);
   assert.equal(s.evalPass, 1);
   assert.equal(s.auditPass, 1);
   assert.equal(s.judge, 0.9);
-  // cost cohort-relative: alpha=1200, min=800, max=2400 → 1-(400/1600)=0.75
   assert.equal(s.cost, 0.75);
 });
 
@@ -86,7 +79,6 @@ test("weightBreakdown is fully reconstructable (contributions = weight*signal, s
     sum += bd.contributions[k];
   }
   assert.ok(Math.abs(sum - bd.rawWeight) < 1e-9, "contributions sum to rawWeight");
-  // alpha hand-computed: 30*.75 + 20*1 + 15*1 + 10*.75 + 25*.9 = 87.5
   assert.equal(r.weight, 87.5);
 });
 
@@ -99,15 +91,13 @@ test("evalPass/auditPass/judge default mappings (null/skipped → neutral)", () 
   assert.equal(weight({ id: "e", auditVerdict: "PASS" }, ctx).weightBreakdown.signals.auditPass, 1);
   assert.equal(weight({ id: "f", auditVerdict: "FAIL" }, ctx).weightBreakdown.signals.auditPass, 0);
   assert.equal(weight({ id: "g", auditVerdict: null }, ctx).weightBreakdown.signals.auditPass, 0.5);
-  // judge disabled (null) → neutral 0.5
   assert.equal(weight({ id: "h", judgeScore: null }, ctx).weightBreakdown.signals.judge, 0.5);
 });
 
-// --- the hard eligibility floor ---------------------------------------------
 
 test("hard floor: evalRc===1 || auditVerdict==='FAIL' marks a trajectory ineligible", () => {
   const ctx = cohortStats(COHORT);
-  const delta = weight(COHORT[3], ctx); // evalRc:1 AND FAIL
+  const delta = weight(COHORT[3], ctx);
   assert.equal(delta.eligible, false);
   assert.equal(delta.floorViolated, true);
   assert.equal(delta.floorCause, "eval-regression+audit-fail");
@@ -128,12 +118,10 @@ test("--soft converts the hard floor into a down-weight (eligible, scaled weight
   assert.equal(hard.eligible, false);
   assert.equal(soft.eligible, true);
   assert.equal(soft.weightBreakdown.softFactor, SOFT_FLOOR_FACTOR);
-  // soft.weight is the raw weight scaled by SOFT_FLOOR_FACTOR (within display rounding)
   assert.ok(soft.weight < hard.weightBreakdown.rawWeight, "soft weight is down-weighted");
   assert.ok(Math.abs(soft.weight - hard.weightBreakdown.rawWeight * SOFT_FLOOR_FACTOR) < 1e-3);
 });
 
-// --- selection methods ------------------------------------------------------
 
 test("select best-of-n (default) picks the argmax eligible — never the floor-breaker", () => {
   const r = select(COHORT);
@@ -148,7 +136,6 @@ test("select best-of-n (default) picks the argmax eligible — never the floor-b
 
 test("select vote picks the largest self-consistency cluster's best member", () => {
   const r = select(COHORT, { method: "vote" });
-  // c1 (alpha+bravo) is the largest eligible cluster; best member = alpha.
   assert.equal(r.selected, "t-alpha");
   assert.equal(r.cluster.size, 2);
   assert.notEqual(r.selected, "t-delta");
@@ -159,7 +146,6 @@ test("select softmax returns a normalized distribution and an argmax selection",
   assert.equal(r.selected, "t-alpha");
   const total = r.distribution.reduce((s, d) => s + d.p, 0);
   assert.ok(Math.abs(total - 1) < 1e-6, "softmax distribution sums to ~1");
-  // the floor-breaker is excluded from the distribution
   assert.ok(!r.distribution.some((d) => d.id === "t-delta"));
 });
 
@@ -174,7 +160,6 @@ test("select rejects an unknown method", () => {
   assert.throws(() => select(COHORT, { method: "bogus" }), /unknown --method/);
 });
 
-// --- NO-SELECTION shape (all-floor-fail cohort) -----------------------------
 
 test("select returns the explicit NO-SELECTION shape when nothing is eligible", () => {
   const allFail = [
@@ -192,7 +177,6 @@ test("select returns the explicit NO-SELECTION shape when nothing is eligible", 
   ]);
 });
 
-// --- judge:0 full determinism ----------------------------------------------
 
 test("judge:0 yields a fully deterministic, judge-free weight (identical across runs)", () => {
   const w0 = { ...DEFAULT_WEIGHTS, judge: 0 };
@@ -200,17 +184,14 @@ test("judge:0 yields a fully deterministic, judge-free weight (identical across 
   const b = select(COHORT, { weights: w0 });
   assert.equal(a.selected, b.selected);
   assert.equal(a.selected, "t-alpha");
-  // every judge contribution is exactly 0 → the judge signal cannot move the pick
   for (const row of a.scored) {
     assert.equal(row.weightBreakdown.contributions.judge, 0);
   }
-  // a wildly different judgeScore on the same deterministic signals changes nothing
   const tampered = COHORT.map((t) => ({ ...t, judgeScore: 0 }));
   const c = select(tampered, { weights: w0 });
   assert.equal(c.selected, "t-alpha");
 });
 
-// --- validateWeights() rejections -------------------------------------------
 
 test("validateWeights rejects non-object/missing/negative/non-finite/unknown-key", () => {
   assert.throws(() => validateWeights("not-an-object"), /JSON object/);
@@ -234,7 +215,6 @@ test("clamp coerces non-finite to lo and bounds the range", () => {
   assert.equal(clamp(0.4, 0, 1), 0.4);
 });
 
-// --- CLI: absent --now throws + exits 1 -------------------------------------
 
 test("CLI throws and exits non-zero when --now is absent (no Date.now() fallback)", () => {
   assert.throws(

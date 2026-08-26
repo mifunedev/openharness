@@ -18,7 +18,6 @@ import { fileURLToPath } from "node:url";
 
 import { runInit, type InitOptions, type InitIO } from "../commands/init.js";
 
-/** Sorted POSIX relpaths of every file under `<root>/.oh/`. */
 function listOh(root: string): string[] {
   const ohRoot = join(root, ".oh");
   const acc: string[] = [];
@@ -33,14 +32,11 @@ function listOh(root: string): string[] {
   return acc.sort();
 }
 
-// THREE levels up from src/__tests__/ to reach .oh/, then into templates.
-// (Two levels would wrongly resolve .oh/cli/templates.)
 const TEMPLATES = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../../../templates",
 );
 
-// The repo's own `.oh/` — the vendor source. THREE levels up from src/__tests__/.
 const SOURCE_OH = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 function makeIO(): { io: InitIO; out: string[]; err: string[] } {
@@ -84,7 +80,6 @@ describe("runInit", () => {
     expect(existsSync(join(t, ".devcontainer/.example.env"))).toBe(true);
     expect(existsSync(join(t, "AGENTS.md"))).toBe(true);
     expect(existsSync(join(t, ".gitignore"))).toBe(true);
-    // The top-level README.md must NOT be copied.
     expect(existsSync(join(t, "README.md"))).toBe(false);
     expect(out.some((l) => l.includes("create .devcontainer/.example.env"))).toBe(true);
   });
@@ -101,7 +96,6 @@ describe("runInit", () => {
     const code = await runInit(opts(t), second.io);
 
     expect(code).toBe(0);
-    // Every per-file action is a skip (gitignore reports its own skip phrasing).
     for (const line of second.out) {
       const trimmed = line.trim();
       expect(trimmed.startsWith("skip ")).toBe(true);
@@ -171,14 +165,12 @@ describe("runInit", () => {
     expect(afterSecond).toBe(afterFirst);
     expect(afterSecond.endsWith("\n")).toBe(true);
 
-    // No duplicate non-empty lines.
     const lines = afterSecond.split("\n").filter((l) => l.trim() !== "");
     expect(new Set(lines).size).toBe(lines.length);
   });
 
   it("partial-existing .gitignore: appends only the missing entries", async () => {
     const t = freshTmp();
-    // Pre-seed with one of the template's entries.
     writeFileSync(join(t, ".gitignore"), ".devcontainer/.env\n");
 
     const templateLines = readFileSync(join(TEMPLATES, "gitignore"), "utf8")
@@ -198,7 +190,6 @@ describe("runInit", () => {
 
     const result = readFileSync(join(t, ".gitignore"), "utf8");
     const resultLines = result.split("\n").filter((l) => l.trim() !== "");
-    // All template entries present, exactly once each, no dupes.
     expect(new Set(resultLines).size).toBe(resultLines.length);
     for (const l of templateLines) {
       expect(resultLines).toContain(l.trimEnd());
@@ -217,7 +208,6 @@ describe("runInit", () => {
     );
 
     expect(code).toBe(0);
-    // Template scaffold writes nothing (only README.md, which is skipped).
     expect(existsSync(join(t, ".gitignore"))).toBe(false);
     expect(existsSync(join(t, "README.md"))).toBe(false);
     expect(statSync(t).isDirectory()).toBe(true);
@@ -233,7 +223,6 @@ describe("runInit", () => {
 
     expect(code).toBe(1);
     expect(err.join("")).not.toBe("");
-    // No scaffolding occurred next to the file.
     expect(existsSync(join(parent, ".gitignore"))).toBe(false);
   });
 
@@ -264,7 +253,6 @@ describe("runInit", () => {
     expect(parsed.workspaceFolder).toBe("/home/sandbox/harness");
   });
 
-  // --- US-001 vendor ---------------------------------------------------------
 
   it("vendor: init --yes populates .oh/ with manifest-shipped files, excludes volatile", async () => {
     const t = freshTmp();
@@ -277,10 +265,8 @@ describe("runInit", () => {
     expect(existsSync(join(t, ".oh/cli/package.json"))).toBe(true);
     expect(existsSync(join(t, ".oh/cli/src/cli.ts"))).toBe(true);
     expect(existsSync(join(t, ".oh/templates/.devcontainer/.example.env"))).toBe(true);
-    // Volatile build artifacts are never shipped.
     expect(existsSync(join(t, ".oh/cli/node_modules"))).toBe(false);
     expect(existsSync(join(t, ".oh/cli/dist"))).toBe(false);
-    // The devcontainer lives at .devcontainer/, never vendored under .oh/.
     expect(existsSync(join(t, ".oh/devcontainer"))).toBe(false);
   });
 
@@ -364,7 +350,6 @@ describe("runInit", () => {
     const msg = err.join("");
     expect(msg).toContain(resolve(bogus));
     expect(msg).toContain("--from-remote");
-    // Nothing vendored on the precondition failure.
     expect(existsSync(join(t, ".oh"))).toBe(false);
   });
 
@@ -395,7 +380,6 @@ describe("runInit", () => {
     expect(listOh(t)).toEqual(ohBefore);
   });
 
-  // --- US-002 wizard ---------------------------------------------------------
 
   it("wizard: every answer lands in ONE .devcontainer/.env write; untouched lines byte-identical", async () => {
     const t = freshTmp();
@@ -405,7 +389,7 @@ describe("runInit", () => {
       if (q.includes("Git user name")) return "Ada Lovelace";
       if (q.includes("Git user email")) return "ada@example.com";
       if (q.includes("agent_browser")) return "y";
-      return ""; // decline other installs / accept blank text defaults
+      return "";
     };
     const askSecret = async (q: string): Promise<string> =>
       q.includes("GH_TOKEN") ? "ghp_supersecrettoken12345" : "";
@@ -418,29 +402,21 @@ describe("runInit", () => {
       askSecret,
     };
 
-    // yes:false + injected reader → wizard runs even without a TTY.
     const code = await runInit(opts(t, { yes: false }), io);
     expect(code).toBe(0);
 
     const env = readFileSync(join(t, ".devcontainer/.env"), "utf8");
-    // Set keys are uncommented AND given the answer value.
     expect(env).toMatch(/^SANDBOX_NAME=my-cool-sandbox$/m);
     expect(env).toMatch(/^TZ=America\/New_York$/m);
     expect(env).toMatch(/^GIT_USER_NAME=Ada Lovelace$/m);
     expect(env).toMatch(/^GIT_USER_EMAIL=ada@example.com$/m);
     expect(env).toMatch(/^INSTALL_AGENT_BROWSER=true$/m);
-    // A declined install stays commented (the compose default applies).
     expect(env).toMatch(/^#\s*INSTALL_HERMES=false/m);
-    // The secret lands in the SAME file — there is no second surface any more.
     expect(env).toContain("GH_TOKEN=ghp_supersecrettoken12345");
 
-    // ONE write, reported once: the operation log names .env exactly once for
-    // the whole wizard, not once per key and not once per surface.
     const envWrites = out.filter((l) => l.includes("update .devcontainer/.env"));
     expect(envWrites).toHaveLength(1);
 
-    // Every line whose key the user did NOT set is byte-identical to the
-    // template — the uncomment-in-place discipline, measured.
     const tmpl = readFileSync(
       join(TEMPLATES, ".devcontainer", ".example.env"),
       "utf8",
@@ -479,21 +455,17 @@ describe("runInit", () => {
 
     expect(code).toBe(0);
     expect(asked).toBe(0);
-    // Template defaults left commented (nothing uncommented), and with no
-    // answers to record there is no .env at all.
     const example = readFileSync(join(t, ".devcontainer/.example.env"), "utf8");
     expect(example).toMatch(/^#\s*SANDBOX_NAME=/m);
     expect(existsSync(join(t, ".devcontainer/.env"))).toBe(false);
   });
 
-  // --- Full scaffold (P2: vendor content + empty seeds + full devcontainer) ---
 
   it("full (default): vendors context/crons/evals as content", async () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
     expect(existsSync(join(t, ".oh/context/REPO_MAP.md"))).toBe(true);
     expect(existsSync(join(t, ".oh/crons/heartbeat.md"))).toBe(true);
-    // evals/ ships its probe suite as content.
     expect(readdirSync(join(t, ".oh/evals")).length).toBeGreaterThan(0);
   });
 
@@ -501,7 +473,6 @@ describe("runInit", () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
     expect(readdirSync(join(t, ".oh/tasks"))).toEqual(["README.md"]);
-    // This harness's own PRDs are never shipped.
     expect(existsSync(join(t, ".oh/memory"))).toBe(false);
   });
 
@@ -518,31 +489,23 @@ describe("runInit", () => {
     expect(dc.dockerComposeFile).toBe("docker-compose.yml");
     expect(dc.service).toBe("sandbox");
     expect(dc.workspaceFolder).toBe("/home/sandbox/harness");
-    // The ghcr image is present ONLY as a documented fallback key, never active.
     expect(dc.image).toBeUndefined();
     expect(dc["// image"]).toContain("ghcr.io/mifunedev/openharness");
 
-    // The relocated compose build context targets the repo root (one level up).
     const compose = readFileSync(join(t, ".devcontainer/docker-compose.yml"), "utf8");
     expect(compose).toContain("context: ..");
     expect(compose).not.toContain("context: ../..");
 
-    // The compose file is copied VERBATIM: its workspace path stays the
-    // parameterized `${OH_PROJECT_ROOT:-/home/sandbox/harness}` default, which
-    // resolves to the harness path — no per-target rewrite is applied.
     expect(compose).toContain("/home/sandbox/harness");
   });
 
   it("--minimal: thin scaffold only (no full devcontainer, no empty seeds, no workspace)", async () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true, minimal: true }), makeIO().io)).toBe(0);
-    // Thin compat files + vendored .oh/ are still present.
     expect(existsSync(join(t, ".oh/manifest.json"))).toBe(true);
     expect(existsSync(join(t, "AGENTS.md"))).toBe(true);
-    // Full-scaffold-only artifacts are absent.
     expect(existsSync(join(t, ".devcontainer/Dockerfile"))).toBe(false);
     expect(existsSync(join(t, ".oh/tasks/README.md"))).toBe(false);
-    // The thin devcontainer.json stub is image-based (no dockerComposeFile).
     const dc = JSON.parse(
       readFileSync(join(t, ".devcontainer/devcontainer.json"), "utf8"),
     );
@@ -583,7 +546,6 @@ describe("runInit", () => {
     );
   });
 
-  // --- Full scaffold (P3: AGENTS-lite + CLAUDE + vendored skill pack + providers) -
 
   it("full (default): writes the project AGENTS.md-lite", async () => {
     const t = freshTmp();
@@ -600,7 +562,6 @@ describe("runInit", () => {
     const claude = join(t, "CLAUDE.md");
     expect(lstatSync(claude).isSymbolicLink()).toBe(true);
     expect(readlinkSync(claude)).toBe("AGENTS.md");
-    // Resolves to the same content as AGENTS.md.
     expect(readFileSync(claude, "utf8")).toBe(readFileSync(join(t, "AGENTS.md"), "utf8"));
   });
 
@@ -615,7 +576,6 @@ describe("runInit", () => {
   it("full (default): vendors the skill pack into .oh/ and writes NO submodule", async () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
-    // The skills/agents/hooks pack is vendored directly — no submodule, no .gitmodules.
     expect(existsSync(join(t, ".gitmodules"))).toBe(false);
     expect(existsSync(join(t, ".mifune"))).toBe(false);
     expect(existsSync(join(t, ".oh/skills/git/SKILL.md"))).toBe(true);
@@ -641,10 +601,8 @@ describe("runInit", () => {
     ]) {
       expect(existsSync(join(t, rel))).toBe(true);
     }
-    // settings.json is valid JSON and is the trimmed project default (no MCP / Slack).
     const cs = JSON.parse(readFileSync(join(t, ".claude/settings.json"), "utf8"));
     expect(cs.enabledMcpjsonServers).toBeUndefined();
-    // The codex hook keeps its +x bit.
     expect(statSync(join(t, ".codex/hooks/deny-env-dump.sh")).mode & 0o111).not.toBe(0);
     expect(statSync(join(t, ".codex/hooks/deny-local-settings.sh")).mode & 0o111).not.toBe(0);
   });
@@ -670,8 +628,6 @@ describe("runInit", () => {
   it("provider symlinks resolve into the vendored .oh/skills pack", async () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
-    // No DI/fake needed: the skill pack is vendored with .oh/, so the provider
-    // symlinks resolve immediately — no submodule materialization step.
     expect(existsSync(join(t, ".claude/skills/git/SKILL.md"))).toBe(true);
     expect(existsSync(join(t, ".codex/skills/git/SKILL.md"))).toBe(true);
     expect(existsSync(join(t, ".pi/skills/git/SKILL.md"))).toBe(true);
@@ -687,7 +643,6 @@ describe("runInit", () => {
     expect(existsSync(join(t, ".pi/settings.json"))).toBe(false);
   });
 
-  // --- Full scaffold (P4: dry-run plan, verbose, gitignore union, idempotency)-
 
   it("--dry-run previews the WHOLE full plan and writes nothing", async () => {
     const t = freshTmp();
@@ -696,17 +651,14 @@ describe("runInit", () => {
 
     expect(code).toBe(0);
     for (const line of out) expect(line.startsWith("[dry-run] ")).toBe(true);
-    // The plan covers every full-scaffold surface.
     const joined = out.join("");
     expect(joined).toContain("create .devcontainer/Dockerfile");
     expect(joined).toContain("create .devcontainer/devcontainer.json");
     expect(joined).toContain("create CLAUDE.md");
     expect(joined).toContain("create .claude/settings.json");
     expect(joined).toContain("create .claude/skills");
-    // The vendored skill pack ships with the .oh/ payload (no submodule).
     expect(joined).toContain("create .oh/skills/git/SKILL.md");
     expect(joined).toContain("create .oh/tasks/README.md");
-    // Nothing was written.
     expect(existsSync(join(t, ".oh"))).toBe(false);
     expect(existsSync(join(t, ".devcontainer"))).toBe(false);
     expect(existsSync(join(t, ".gitmodules"))).toBe(false);
@@ -753,7 +705,6 @@ describe("runInit", () => {
 
     const { io, out } = makeIO();
     expect(await runInit(opts(t, { yes: true }), io)).toBe(0);
-    // Every per-file action is a skip.
     for (const line of out) expect(line.trim().startsWith("skip ")).toBe(true);
     expect(listOh(t)).toEqual(ohBefore);
     expect(readFileSync(join(t, ".gitignore"), "utf8")).toBe(giBefore);

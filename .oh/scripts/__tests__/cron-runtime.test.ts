@@ -14,12 +14,6 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-// Repoint the runtime's CRONS_DIR — a const captured at module-load time from
-// process.env.CRONS_DIR — at an isolated tmp path BEFORE ../cron-runtime is
-// imported. vi.hoisted runs ahead of all imports, so the exported
-// sighupHandler()'s internal scheduleAll() (called with no dir arg) re-reads
-// THIS dir and never the repo's real .oh/crons/ directory (US-004 AC). Per-pid keeps
-// parallel vitest workers from colliding on the path.
 const SIGHUP_CRONS_DIR = vi.hoisted(() => {
   const dir = `/tmp/cron-sighup-test-crons-${process.pid}`;
   process.env.CRONS_DIR = dir;
@@ -54,9 +48,6 @@ import {
   worktreeInUse,
 } from "../cron-runtime";
 
-// Mock only appendFileSync (the log() writer) as a no-op spy so reloadBody's
-// BODY_RELOADED / BODY_RELOAD_ERR signals are observable without polluting the
-// real .oh/crons/.cron.log during test runs. All other node:fs exports pass through.
 vi.mock("node:fs", async (importOriginal) => {
   const real = await importOriginal<typeof import("node:fs")>();
   return { ...real, appendFileSync: vi.fn() };
@@ -160,7 +151,6 @@ Heartbeat body.
         "autopilot.md",
       )?.preflight,
     ).toBe("scripts/autopilot-caps.sh");
-    // Absent frontmatter key → undefined (forward-compat additive parse).
     expect(
       parseCronFile(`---\nschedule: "* * * * *"\n---\nbody\n`, "c.md")?.preflight,
     ).toBeUndefined();
@@ -192,8 +182,6 @@ Heartbeat body.
 });
 
 describe("decideOverlap", () => {
-  // worktree:true ALWAYS isolates (the issue #142 default) — independent of the
-  // overlap flag, whether a pidfile exists, or whether its holder is alive.
   it("returns 'worktree' for a worktree cron regardless of lock state", () => {
     for (const pidfileExists of [false, true]) {
       for (const holderAlive of [false, true]) {
@@ -216,7 +204,6 @@ describe("decideOverlap", () => {
     expect(
       decideOverlap({ overlap: false, worktree: false, pidfileExists: false, holderAlive: false }),
     ).toBe("run");
-    // stale pidfile (exists but its pid is dead) → reclaim, do not skip
     expect(
       decideOverlap({ overlap: false, worktree: false, pidfileExists: true, holderAlive: false }),
     ).toBe("run");
@@ -299,9 +286,6 @@ describe("isValidSchedule", () => {
   });
 
   it("never throws and leaves no live timer behind for any input", () => {
-    // appendFileSync is mocked, so a probe that wrongly armed a timer and fired
-    // would not surface here — instead assert the contract directly: no input
-    // (valid or garbage) throws, and the call is fully synchronous.
     for (const s of ["0 * * * *", "not-a-cron", "", "* * * *", "@@@"]) {
       expect(() => isValidSchedule(s)).not.toThrow();
     }
@@ -310,11 +294,9 @@ describe("isValidSchedule", () => {
 
 describe("tmuxSessionName", () => {
   it("formats cron-<id>-<MMDD>-<HHMM> from local time, zero-padded", () => {
-    // 2026-06-10 18:05 local (month is 0-indexed → 5 = June).
     expect(tmuxSessionName("autopilot", new Date(2026, 5, 10, 18, 5))).toBe(
       "cron-autopilot-0610-1805",
     );
-    // Single-digit month/day/hour/minute all pad to two digits.
     expect(tmuxSessionName("x", new Date(2026, 0, 2, 3, 4))).toBe("cron-x-0102-0304");
   });
 });
@@ -453,19 +435,15 @@ describe("buildTmuxWrapper", () => {
       pidFile: "/tmp/cron-autopilot-0610-1805.pid",
       worktree: "/home/sandbox/harness/.oh/worktrees/cron/cron-autopilot-0610-1805",
     });
-    // session-scoped lock (NOT the id-scoped /tmp/cron-autopilot.pid) so a worktree
-    // fire never clobbers the primary run's overlap lock.
     expect(wt).toContain("echo $$ > '/tmp/cron-autopilot-0610-1805.pid';");
     expect(wt).toContain("rm -f '/tmp/cron-autopilot-0610-1805.pid';");
     expect(wt).not.toContain("/tmp/cron-autopilot.pid");
-    // CRON_WORKTREE is exported so the agent (autopilot §1/§7) knows it is isolated.
     expect(wt).toContain(
       "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.oh/worktrees/cron/cron-autopilot-0610-1805';",
     );
   });
 
   it("omits CRON_WORKTREE and defaults to the id-scoped pidfile for a primary fire", () => {
-    // No pidFile/worktree opts → byte-identical to the historical primary path.
     expect(wrapper).toContain("echo $$ > '/tmp/cron-autopilot.pid';");
     expect(wrapper).not.toContain("CRON_WORKTREE=");
   });
@@ -729,24 +707,18 @@ describe("scheduleAll", () => {
     `---\nid: ${id}\nschedule: "${schedule}"\nenabled: true\n---\nbody\n`;
 
   it("schedules valid crons, skips an invalid sibling, and logs an accurate BOOT summary", () => {
-    // Files load in alphabetical order: agood (valid), bbad (invalid → dropped
-    // at load time by US-002's filter), cgood (valid).
     writeFileSync(path.join(tmp, "agood.md"), cron("agood", "0 * * * *"));
     writeFileSync(path.join(tmp, "bbad.md"), cron("bbad", "not-a-cron"));
     writeFileSync(path.join(tmp, "cgood.md"), cron("cgood", "*/5 * * * *"));
 
     const spy = vi.fn();
     const constructed: string[] = [];
-    // Inject a no-op mkCron so no real croner timer is armed in the test.
     const result = scheduleAll(tmp, spy, (e) => {
       constructed.push(e.id);
     });
 
-    // The two valid crons are constructed; the invalid one never reaches mkCron.
     expect(constructed).toEqual(["agood", "cgood"]);
     expect(result).toEqual({ scheduled: 2, skipped: 1 });
-    // The BOOT summary preserves the token and reads "2 scheduled, 1 skipped";
-    // logging it at all proves the loop completed without exiting early.
     expect(spy).toHaveBeenCalledWith("system", "BOOT", "2 scheduled, 1 skipped");
   });
 
@@ -766,9 +738,6 @@ describe("scheduleAll", () => {
   });
 
   it("fault-isolates a construction throw (defense-in-depth): skips only the throwing cron", () => {
-    // All three schedules are VALID, so they pass the load-time filter — this
-    // bypasses US-002 and exercises the construction try/catch directly via an
-    // injected mkCron that simulates a residual croner construction throw.
     writeFileSync(path.join(tmp, "aok.md"), cron("aok", "0 * * * *"));
     writeFileSync(path.join(tmp, "bboom.md"), cron("bboom", "0 * * * *"));
     writeFileSync(path.join(tmp, "cok.md"), cron("cok", "0 * * * *"));
@@ -780,10 +749,8 @@ describe("scheduleAll", () => {
       constructed.push(e.id);
     });
 
-    // The throwing cron is skipped; construction continues for the rest.
     expect(constructed).toEqual(["aok", "cok"]);
     expect(result).toEqual({ scheduled: 2, skipped: 1 });
-    // The construction throw is logged SCHED_INVALID for that id, with the error.
     const invalid = spy.mock.calls.find(
       (c) => c[0] === "bboom" && c[1] === "SCHED_INVALID",
     );
@@ -862,7 +829,6 @@ describe("scheduleAll", () => {
       if (e.id === "cboom") throw new Error("construct fail");
     });
 
-    // bload dropped at load time, cboom dropped at construction, aok scheduled.
     expect(result).toEqual({ scheduled: 1, skipped: 2 });
     expect(spy).toHaveBeenCalledWith("system", "BOOT", "1 scheduled, 2 skipped");
   });
@@ -896,7 +862,6 @@ describe("acquireLock", () => {
 
   it("steals stale lock when previous PID is dead", () => {
     const pidFile = path.join(tmp, ".pid");
-    // Pick a high PID unlikely to be running.
     writeFileSync(pidFile, "999999");
     expect(acquireLock(pidFile)).toBe(true);
     expect(readFileSync(pidFile, "utf-8")).toBe(String(process.pid));
@@ -987,7 +952,6 @@ describe("reloadEntryForFire", () => {
     expect(liveEntry?.agentBin).toBe("pi");
     expect(liveEntry?.preflight).toBe("scripts/autopilot-caps.sh");
     expect(liveEntry?.repo).toBe("mifunedev/openharness");
-    // Body stays cached here so reloadBody remains the single BODY_RELOADED logger.
     expect(liveEntry?.body).toBe("original body\n");
     const lines = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(lines.some((line) => line.includes("ENTRY_RELOADED") && line.includes("agentBin,preflight,repo"))).toBe(true);
@@ -1000,13 +964,9 @@ describe("reloadEntryForFire", () => {
       `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nbody\n`,
     );
     const [entry] = loadCrons(tmp);
-    // loadCrons yields a dir-qualified (absolute) filePath.
     expect(path.isAbsolute(entry.filePath)).toBe(true);
 
     const liveEntry = reloadEntryForFire(entry);
-    // The reloaded entry MUST retain the original absolute path, not a bare
-    // basename — otherwise a later reloadBody() reads a CWD-relative path and
-    // silently falls back to the stale cached body.
     expect(liveEntry).not.toBeNull();
     expect(path.isAbsolute(liveEntry!.filePath)).toBe(true);
     expect(liveEntry!.filePath).toBe(entry.filePath);
@@ -1038,7 +998,6 @@ describe("reloadBody", () => {
   });
 
   it("returns the on-disk body when it has been mutated after CronEntry was built", () => {
-    // Write the initial cron file and load it via loadCrons to get a dir-qualified CronEntry.
     const cronFile = path.join(tmp, "hot.md");
     writeFileSync(
       cronFile,
@@ -1047,7 +1006,6 @@ describe("reloadBody", () => {
     const [entry] = loadCrons(tmp);
     expect(entry.body).toBe("original body\n");
 
-    // Mutate only the body on disk — keep frontmatter intact so parseCronFile succeeds.
     writeFileSync(
       cronFile,
       `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nupdated body\n`,
@@ -1057,20 +1015,13 @@ describe("reloadBody", () => {
     appendSpy.mockClear();
     const result = reloadBody(entry);
 
-    // Should return the fresh on-disk body, not the cached entry.body.
     expect(result).toBe("updated body\n");
 
-    // BODY_RELOADED must be logged because the on-disk body differed from entry.body.
     const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
   });
 
   it("reads the fresh body regardless of cwd after a metadata reload (regression: #275 CWD-relative read)", () => {
-    // Reproduce the LIVE failure chain: reloadEntryForFire() returns the live
-    // entry the runtime reuses for subsequent fires; that entry's filePath must
-    // stay absolute. With the basename bug it became "hot.md", so a later
-    // reloadBody() — running from a cwd that is NOT the crons dir — resolves the
-    // read CWD-relative, hits ENOENT, and silently returns the stale body.
     const cronFile = path.join(tmp, "hot.md");
     writeFileSync(
       cronFile,
@@ -1079,11 +1030,9 @@ describe("reloadBody", () => {
     const [entry] = loadCrons(tmp);
     expect(path.isAbsolute(entry.filePath)).toBe(true);
 
-    // The runtime reloads metadata before a fire; reuse that returned entry.
     const liveEntry = reloadEntryForFire(entry);
     expect(liveEntry).not.toBeNull();
 
-    // A frontmatter-preserving body edit lands on disk before the next fire.
     writeFileSync(
       cronFile,
       `---\nid: hot\nschedule: "* * * * *"\nenabled: true\n---\nupdated body\n`,
@@ -1093,7 +1042,6 @@ describe("reloadBody", () => {
     appendSpy.mockClear();
 
     const prevCwd = process.cwd();
-    // chdir to a directory that is NOT the crons dir (the OS temp root).
     process.chdir(tmpdir());
     let result: string;
     try {
@@ -1102,7 +1050,6 @@ describe("reloadBody", () => {
       process.chdir(prevCwd);
     }
 
-    // Must read the on-disk body, not silently fall back to the cached one.
     expect(result).toBe("updated body\n");
     const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(loggedArgs.some((line) => line.includes("BODY_RELOADED"))).toBe(true);
@@ -1110,9 +1057,6 @@ describe("reloadBody", () => {
   });
 
   it("hot-reloads via an absolute filePath after the process cwd changes", () => {
-    // loadCrons() invoked with a RELATIVE dir must still resolve filePath to an
-    // absolute path (#517 path.resolve), so a later reloadBody() from a changed
-    // cwd reads the on-disk body instead of falling back to the cached one.
     const prevCwd = process.cwd();
     const root = path.join(tmp, "cron-root");
     const cronsDir = path.join(root, "crons");
@@ -1147,7 +1091,6 @@ describe("reloadBody", () => {
   });
 
   it("returns cached entry.body and logs BODY_RELOAD_ERR when filePath is unreadable", () => {
-    // Build a hand-crafted entry pointing at a nonexistent path.
     const missingPath = path.join(tmp, "ghost.md");
     const entry = {
       id: "ghost",
@@ -1165,10 +1108,8 @@ describe("reloadBody", () => {
     appendSpy.mockClear();
     const result = reloadBody(entry);
 
-    // Should fall back to the cached body.
     expect(result).toBe("cached body\n");
 
-    // BODY_RELOAD_ERR must appear in at least one appendFileSync call.
     const loggedArgs = appendSpy.mock.calls.map((c) => String(c[1]));
     expect(loggedArgs.some((line) => line.includes("BODY_RELOAD_ERR"))).toBe(true);
   });
@@ -1278,18 +1219,12 @@ esac
 
     const state = inspectFallbackWorktree(orphanWt);
 
-    // The regression this pins: a `git status` FAILURE was being reported as
-    // dirty=true, which made the reaper preserve the directory forever and log
-    // WORKTREE_DIRTY on every fire (15 consecutive days in production).
     expect(state.orphaned).toBe(true);
     expect(state.dirty).toBe(false);
     expect(state.changes).toEqual([]);
     expect(state.reason ?? "").not.toBe("");
   });
 
-  // Orphan a linked worktree the way it happens in production: the directory
-  // survives while its .git/worktrees/<name> admin entry is gone, so `git
-  // status` fails outright instead of reporting changes (#694).
   const orphanWorktree = (repo: string, name: string): string => {
     const wt = path.join(repo, ".oh/worktrees", "cron", name);
     git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
@@ -1298,9 +1233,6 @@ esac
   };
 
   it("does NOT classify a worktree as orphaned when its .git file is unreadable", () => {
-    // Fail-closed guard. An I/O failure reading the .git pointer is not evidence
-    // that the worktree is disposable — and the caller DELETES what is reported
-    // orphaned. A permissions error must preserve, not remove.
     const { repo } = initRepoWithFallbackWorktrees();
     const wt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-unreadable");
     git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
@@ -1315,8 +1247,6 @@ esac
   });
 
   it("does NOT classify a worktree as orphaned when its .git file is corrupt", () => {
-    // A present-but-unparseable .git file (e.g. an interrupted write) is a
-    // corruption signal, not an orphan signal.
     const { repo } = initRepoWithFallbackWorktrees();
     const wt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-corrupt");
     git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
@@ -1338,7 +1268,6 @@ esac
     } finally {
       process.chdir(priorCwd);
     }
-    // Only in-use worktrees count; an orphan is reaped, never counted.
     expect(live).toBe(0);
   });
 
@@ -1356,7 +1285,6 @@ esac
       process.chdir(priorCwd);
     }
 
-    // The orphan is reaped under its own outcome...
     expect(existsSync(orphanWt)).toBe(false);
     expect(
       appendSpy.mock.calls.some((c) =>
@@ -1364,7 +1292,6 @@ esac
       ),
     ).toBe(true);
 
-    // ...and it must NOT be reported as dirty, or the distinction is pointless.
     expect(
       appendSpy.mock.calls.some((c) =>
         String(c[1]).includes("\tautopilot\tWORKTREE_DIRTY\t") &&
@@ -1372,7 +1299,6 @@ esac
       ),
     ).toBe(false);
 
-    // Genuinely dirty worktrees keep the old behavior exactly.
     expect(existsSync(dirtyWt)).toBe(true);
     expect(readFileSync(path.join(dirtyWt, "uncommitted.txt"), "utf-8")).toBe("salvage me\n");
     expect(
@@ -1386,8 +1312,6 @@ esac
 
 describe("onJobError", () => {
   it("logs an ERR_JOB line through the injected logger", () => {
-    // Inject a spy logger so the test is fully deterministic and never touches
-    // the filesystem or the real .oh/crons/.cron.log (the default logger is log()).
     const spy = vi.fn();
     onJobError("testjob", new Error("disk full"), spy);
     expect(spy).toHaveBeenCalledTimes(1);
@@ -1426,11 +1350,6 @@ describe("readFailureTail", () => {
 });
 
 describe("SIGHUP reload", () => {
-  // These tests drive the exported sighupHandler() directly (not scheduleAll) per
-  // US-004. The handler calls scheduleAll() with no dir arg, so it re-reads
-  // SIGHUP_CRONS_DIR — repointed via the vi.hoisted block at the top of this file
-  // — instead of the repo's real .oh/crons/. resetActiveJobs() clears the
-  // module-private registry between cases.
   const appendSpy = () => vi.mocked(fsModule.appendFileSync);
   const loggedLines = (): string[] =>
     appendSpy().mock.calls.map((c) => String(c[1]));
@@ -1438,9 +1357,6 @@ describe("SIGHUP reload", () => {
     loggedLines().filter((l) => l.includes("\tRELOAD\t"));
   const validCron = (id: string, schedule = "0 * * * *"): string =>
     `---\nid: ${id}\nschedule: "${schedule}"\nenabled: true\n---\nbody\n`;
-  // A valid 5-field pattern whose next run (next Jan 1) is far enough out that a
-  // real croner timer armed by the handler's private constructCron never fires
-  // during the test; the afterEach safety-reschedule stops it afterward.
   const FAR_FUTURE = "0 0 1 1 *";
 
   const emptyCronsDir = (): void => {
@@ -1455,11 +1371,6 @@ describe("SIGHUP reload", () => {
   });
 
   afterEach(() => {
-    // The handler arms REAL croner timers (via the private constructCron, which
-    // croner does not unref) for any file left in SIGHUP_CRONS_DIR; those handles
-    // live in the module-private activeJobs registry and aren't otherwise
-    // reachable to .stop(). Empty the dir and run one more reschedule so the
-    // handler stops the last generation (and arms nothing), leaving no live timer.
     emptyCronsDir();
     sighupHandler();
     resetActiveJobs();
@@ -1471,8 +1382,6 @@ describe("SIGHUP reload", () => {
   });
 
   it("stops every prior job handle before re-arming (.stop on each)", () => {
-    // Seed activeJobs with two fake handles via an injected mkCron so no real
-    // timer is armed and each handle carries an observable .stop spy.
     writeFileSync(path.join(tmp, "a.md"), validCron("a"));
     writeFileSync(path.join(tmp, "b.md"), validCron("b"));
     const stops = [vi.fn(), vi.fn()];
@@ -1490,13 +1399,11 @@ describe("SIGHUP reload", () => {
     sighupHandler();
     expect(reloadLines().at(-1)).toContain("1 scheduled, 0 skipped");
 
-    // Add a second file: the next reload re-reads the dir and counts both.
     appendSpy().mockClear();
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "two.md"), validCron("two", FAR_FUTURE));
     sighupHandler();
     expect(reloadLines().at(-1)).toContain("2 scheduled, 0 skipped");
 
-    // Remove the first file: the next reload drops it.
     appendSpy().mockClear();
     rmSync(path.join(SIGHUP_CRONS_DIR, "one.md"));
     sighupHandler();
@@ -1504,9 +1411,6 @@ describe("SIGHUP reload", () => {
   });
 
   it("isolates a malformed cron file during reload without crashing", () => {
-    // A valid sibling plus a file with an invalid schedule: loadCrons drops the
-    // bad one (SCHED_INVALID) at reload time exactly as at boot, the good one
-    // stays scheduled, and the handler neither throws nor exits.
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "good.md"), validCron("good", FAR_FUTURE));
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "bad.md"), validCron("bad", "not-a-cron"));
 
@@ -1517,7 +1421,6 @@ describe("SIGHUP reload", () => {
   it("writes a RELOAD liveness line via the appendFileSync spy", () => {
     sighupHandler();
     expect(loggedLines().some((l) => l.includes("\tRELOAD\t"))).toBe(true);
-    // RELOAD reuses the private log() format with id "system" (BOOT precedent).
     expect(reloadLines().at(-1)).toContain("\tsystem\tRELOAD\t");
   });
 
@@ -1528,35 +1431,23 @@ describe("SIGHUP reload", () => {
   });
 
   it("is re-entrancy-safe: a SIGHUP arriving mid-reload is a no-op", () => {
-    // Seed one fake handle whose .stop re-enters sighupHandler() while the first
-    // reload is still in progress; the reload-lock must make that second call a
-    // no-op so the reschedule runs exactly once.
     writeFileSync(path.join(tmp, "a.md"), validCron("a"));
     const stop = vi.fn(() => {
-      sighupHandler(); // mid-reload: must return immediately (reloading === true)
+      sighupHandler();
     });
     scheduleAll(tmp, vi.fn(), () => ({ stop }) as unknown as Cron);
 
     sighupHandler();
 
-    // The handle is stopped exactly once: the re-entrant call returned before the
-    // stop loop, so it neither re-stopped the handle nor re-ran scheduleAll.
     expect(stop).toHaveBeenCalledTimes(1);
-    // Exactly one reschedule completed → exactly one BOOT and one RELOAD line.
     expect(reloadLines()).toHaveLength(1);
     expect(loggedLines().filter((l) => l.includes("\tBOOT\t"))).toHaveLength(1);
   });
 });
 
 describe("runPreflight + the fire() preflight gate", () => {
-  // Build a real executable preflight script with a chosen exit code and stdout,
-  // then point a CronEntry at it. This mirrors buildTmuxWrapper's runWrapper
-  // helper (real spawn against a throwaway script) — there is no child_process
-  // mock in this suite, and runPreflight calls spawnSync for real.
   const preflightScript = (opts: { exit: number; stdout?: string; sleep?: number }): string => {
     const p = path.join(tmp, `preflight-${process.pid}-${Math.random().toString(16).slice(2)}.sh`);
-    // Emit one `echo` per line so a multi-line `stdout` becomes real newlines in
-    // the child's output (a single `echo "a\nb"` would print a literal backslash-n).
     const echoes =
       opts.stdout != null
         ? opts.stdout.split("\n").map((l) => `echo ${JSON.stringify(l)}`).join("\n") + "\n"
@@ -1626,7 +1517,6 @@ describe("runPreflight + the fire() preflight gate", () => {
   });
 
   it("fails CLOSED (non-zero status) and logs PREFLIGHT_ERROR when the gate times out", () => {
-    // 50ms budget against a 2s sleep → spawnSync kills it (error/null status).
     const r = runPreflight(entry(preflightScript({ exit: 10, sleep: 2 })), 50);
     expect(r.status).not.toBe(0);
     expect(r.reason).toBe("preflight-error: exec-error");
@@ -1634,8 +1524,6 @@ describe("runPreflight + the fire() preflight gate", () => {
   });
 
   it("fire() short-circuits on a non-zero gate: logs SKIPPED_PREFLIGHT and never spawns", () => {
-    // tmux:true would normally reach fireTmux's real `spawn("tmux", …)`, but the
-    // gate returns first, so no SPAWNED/SPAWNED_WORKTREE line is ever logged.
     const cronFile = path.join(tmp, "autopilot.md");
     const script = preflightScript({ exit: 10, stdout: "SKIPPED-CAP-DAILY" });
     writeFileSync(

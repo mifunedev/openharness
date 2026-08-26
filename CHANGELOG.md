@@ -9,7 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Changed
-- Set `outputStyle: "Concise"` and `autoMemoryEnabled: false` in `.claude/settings.json` and the `oh init` template: Claude Code answers without preamble and writes no memory of its own ([#834](https://github.com/mifunedev/openharness/issues/834)).
+- Default Claude Code to concise replies, no memory of its own (`autoMemoryEnabled` + `autoDreamEnabled`), the harness `/git` policy instead of the built-in one, and no spinner tips ([#834](https://github.com/mifunedev/openharness/issues/834)).
 
 ## [0.4.0] - 2026-08-26
 

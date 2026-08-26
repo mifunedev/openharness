@@ -1,6 +1,9 @@
 {
   "outputStyle": "Concise",
   "autoMemoryEnabled": false,
+  "autoDreamEnabled": false,
+  "includeGitInstructions": false,
+  "spinnerTipsEnabled": false,
   "permissions": {
     "deny": [
       "Read(file_path=**/.env*)",

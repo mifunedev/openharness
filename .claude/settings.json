@@ -149,6 +149,9 @@
   "effortLevel": "medium",
   "outputStyle": "Concise",
   "autoMemoryEnabled": false,
+  "autoDreamEnabled": false,
+  "includeGitInstructions": false,
+  "spinnerTipsEnabled": false,
   "plansDirectory": ".claude/plans",
   "model": "claude-opus-5[1m]",
   "statusLine": {

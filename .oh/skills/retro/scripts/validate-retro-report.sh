@@ -12,7 +12,7 @@ required_literals=(
   '## Hypotheses'
   '| ID | Subsystem | Hypothesis | Evidence for | Evidence against | Verdict | Confidence | Promotion |'
   '## Promotion candidates'
-  '## Log entry'
+  '## Summary'
   'STATUS: RETRO-DONE'
 )
 for literal in "${required_literals[@]}"; do
@@ -41,18 +41,21 @@ awk -F'|' '
     if (against == "") { print "REGRESSION: missing Evidence against" > "/dev/stderr"; exit 1 }
     if (verdict !~ /^(supported|refuted|inconclusive)$/) { print "REGRESSION: bad verdict: " verdict > "/dev/stderr"; exit 1 }
     if (confidence !~ /^(low|medium|high)$/) { print "REGRESSION: bad confidence: " confidence > "/dev/stderr"; exit 1 }
-    if (promotion !~ /^(log-only|MEMORY|IDENTITY|discarded)$/) { print "REGRESSION: bad promotion: " promotion > "/dev/stderr"; exit 1 }
+    if (promotion !~ /^(report-only|IDENTITY|discarded)$/) { print "REGRESSION: bad promotion: " promotion > "/dev/stderr"; exit 1 }
     rows++
   }
   END { if (rows < 1) { print "REGRESSION: no hypothesis rows" > "/dev/stderr"; exit 1 } }
 ' "$REPORT"
 
-# If MEMORY candidates are present, enforce triage tag and probe id shape.
-if grep -Eq '^- [0-9]{4}-[0-9]{2}-[0-9]{2}: .*\[[^]]+ · (low|medium|high) · (harden|proceduralize|eval)\] — probe: ' "$REPORT"; then
-  true
-elif grep -Eq '^- [0-9]{4}-[0-9]{2}-[0-9]{2}: ' "$REPORT"; then
-  echo "REGRESSION: MEMORY candidate missing triage tag or probe id" >&2
-  exit 1
+# Every IDENTITY promotion candidate must carry a triage tag and a probe id.
+if grep -q '^Proposed IDENTITY.md addition(s):' "$REPORT"; then
+  while IFS= read -r cand; do
+    [[ "$cand" == "- none" ]] && continue
+    if ! grep -Eq '\[[^]]+ · (low|medium|high) · (harden|proceduralize|eval)\] — probe: ' <<<"$cand"; then
+      echo "REGRESSION: IDENTITY candidate missing triage tag or probe id: $cand" >&2
+      exit 1
+    fi
+  done < <(awk '/^Proposed IDENTITY\.md addition\(s\):/{f=1;next} f&&/^## /{f=0} f&&/^- /{print}' "$REPORT")
 fi
 
 echo "PASS: retro report satisfies deterministic schema" >&2

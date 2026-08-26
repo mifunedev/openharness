@@ -16,10 +16,8 @@ that catches anything time-sensitive without doing real work.
 
 ## Tasks
 
-1. Read today's `.oh/memory/<today>/log.md` (create the directory if it
-   does not exist; today is `date -u +%Y-%m-%d`).
-2. Check active Ralph sessions: for each `.oh/tasks/*/progress.txt`, note
-   any whose last update is older than 2 hours. Surface those in the log.
+1. Check active Ralph sessions: for each `.oh/tasks/*/progress.txt`, note
+   any whose last update is older than 2 hours. Surface those in the reply.
 2.5. Read the `## Active items` section below. For each item, decide
     whether resolution can be confirmed using ONLY the validation
     mechanisms enumerated in that section. If yes, surface
@@ -30,8 +28,7 @@ that catches anything time-sensitive without doing real work.
     that file.
 2.7. Run `/audit drift`. If it reports any findings (framework drift
     `origin`↔`upstream`, branch-behind/append-file drift, or
-    cron-staleness drift), surface
-    each finding in `.oh/memory/<today>/log.md` and include in the reply as
+    cron-staleness drift), include each finding in the reply as
     `DRIFT: <summary>`. When `/audit drift` reports all classes clean,
     append nothing extra — the existing `HEARTBEAT_OK` reply stays
     unchanged; do NOT add a per-pulse "no drift" block on clean runs.
@@ -50,8 +47,7 @@ that catches anything time-sensitive without doing real work.
       while a failed/missed noon run gets one more attempt.
     - Any other date/hour → skip; do no scheduled maintenance this pulse.
 3. Decide whether anything needs action right now.
-4. If yes, act. If no, append a brief "nothing pressing" note to
-   `.oh/memory/<today>/log.md` and exit.
+4. If yes, act. If no, reply `HEARTBEAT_OK` and exit.
 
 ## Reporting
 
@@ -62,31 +58,10 @@ that catches anything time-sensitive without doing real work.
   `WATCHING: <item> (added <date>, age <Nd>)`. Resolved-this-pulse →
   `RESOLVED: <item> — remove the line in next session`.
 - Drift detected by `/audit drift` → include in reply as
-  `DRIFT: <summary>` and note in `.oh/memory/<today>/log.md`. Clean run →
-  no extra output.
+  `DRIFT: <summary>`. Clean run → no extra output.
 - Scheduled maintenance (step 2.8) → when the one-shot maintenance fired,
-  include `MAINT: restart-273 launched (detached)` and note it in
-  `.oh/memory/<today>/log.md`. The detached restart script writes its own
-  separate `restart-273:` liveness line and #273 comment.
-- **Memory log contract (do this either way):** run a shell block that computes
-  `TODAY` and `HEARTBEAT_TIME`, then append a structured record to
-  `.oh/memory/$TODAY/log.md` through `scripts/locked-append.sh`. Do not paste shell
-  expressions into the markdown heading; the log must contain the computed time,
-  never a literal `$(date ...)` string.
-
-  ```bash
-  TODAY=$(date -u +%Y-%m-%d)
-  HEARTBEAT_TIME=$(date -u +%H:%M)
-  mkdir -p ".oh/memory/$TODAY"
-  scripts/locked-append.sh ".oh/memory/$TODAY/log.md" <<EOF
-
-  ## Heartbeat -- $HEARTBEAT_TIME UTC
-  - **Result**: <OK | ACTION | WATCHING | DRIFT | NUDGE | STALE-RALPH>
-  - **Action**: <one-line summary of action taken, or "nothing pressing">
-  - **Observation**: <one sentence with the most important signal>
-  EOF
-  ```
-
+  include `MAINT: restart-273 launched (detached)`. The detached restart script
+  writes its own separate `restart-273:` liveness line and #273 comment.
 - **Mandatory closing step (do this even after long action chains):** append one
   liveness line to `.oh/crons/.cron.log` through `scripts/locked-append.sh`:
 
@@ -165,7 +140,7 @@ in heartbeat replies until re-dated or removed.
 - `gh issue view <N> --json state` — resolved if `state == "CLOSED"`
 - `gh run list --branch <branch> --limit 1 --json conclusion` — resolved if `conclusion == "success"`
 - `gh release list --limit 5` — resolved if the named version is in the output
-- Date-based reminders ("on YYYY-MM-DD do X") — resolved when the date has passed AND a corresponding entry exists in today's `.oh/memory/<today>/log.md` confirming the action
+- Date-based reminders ("on YYYY-MM-DD do X") — resolved when the date has passed AND a corresponding `.oh/crons/.cron.log` liveness line confirms the action
 
 If an item maps to none of these, it is un-checkable. Sessions must
 either rephrase it to fit a check or accept it will surface

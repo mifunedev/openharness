@@ -173,7 +173,6 @@ Return this structured observation to the outer dispatcher and suppress target l
 - **Observation**: [one sentence — top finding]
 ```
 
-See `.oh/skills/retro/references/memory-protocol.md` for the canonical
 Memory Improvement Protocol.
 
 ## Scoring procedure

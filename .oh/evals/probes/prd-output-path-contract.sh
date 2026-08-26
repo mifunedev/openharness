@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: .oh/memory/MEMORY.md 2026-06-19
+# source: retro lesson 2026-06-19
 # desc: /prd skill uses canonical .oh/tasks/<feature-name>/prd.md output path
 set -euo pipefail
 

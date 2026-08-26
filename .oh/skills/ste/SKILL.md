@@ -255,41 +255,6 @@ one line at a time, so a question-7 detector cannot tell the two apart.
 - Never resolve an ambiguity by guessing. Mark the gap and ask.
 - Keep a rewrite reviewable: change wording, keep every technical claim.
 
-## Memory Protocol
-
-At the end of every run, including failures, complete the canonical
-log → qualify → improve cycle when the Open Harness memory scaffold exists.
-
-### Log
-
-```bash
-ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-TODAY=$(date -u +%Y-%m-%d)
-TIME=$(date -u +%H:%M)
-if [ -x "$ROOT/.oh/scripts/oh-path" ] && [ -x "$ROOT/.oh/scripts/locked-append.sh" ]; then
-  MEM="${MEMORY_DIR:-$(bash "$ROOT/.oh/scripts/oh-path" memory)}"
-  mkdir -p "$MEM/$TODAY"
-  "$ROOT/.oh/scripts/locked-append.sh" "$MEM/$TODAY/log.md" <<EOF
-
-## STE -- $TIME UTC
-- **Result**: <OP | PARTIAL | FAIL>
-- **Mode**: <rewrite | author | review>
-- **Artifact**: <path or none>
-- **Checker**: <exit code and finding count, or not run>
-- **Observation**: <one concise finding or no durable finding>
-EOF
-fi
-```
-
-### Qualify and improve
-
-Ask whether a rewrite exposed an undocumented coupling, a recurring ambiguity
-pattern, or a checker gap worth closing. Record `no durable finding` when
-nothing surfaced. Otherwise check `MEMORY.md` and `IDENTITY.md` for duplication,
-then use the propose-then-confirm gate in `/retro` to append one lesson.
-
-See `.oh/skills/retro/references/memory-protocol.md` for the canonical protocol.
-
 ## Reference
 
 | File | Holds |

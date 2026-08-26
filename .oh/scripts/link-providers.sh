@@ -16,7 +16,6 @@ required_files=(
   ".oh/skills/git/SKILL.md"
   ".oh/skills/t3/references/sandbox-processes.md"
   ".oh/agents/advisor.md"
-  ".oh/skills/retro/references/memory-protocol.md"
   ".oh/skills/wiki/references/schema.md"
   ".oh/skills/eval/run.sh"
 )
@@ -29,9 +28,7 @@ required_execs=(
   ".oh/skills/audit/scripts/context-audit-runner.sh"
   ".oh/skills/health-check/scripts/scope-preflight.sh"
   ".oh/skills/eval/run.sh"
-  ".oh/skills/prompt-miner/scripts/render-log-entry.sh"
-  ".oh/skills/retro/scripts/check-memory-duplicates.sh"
-  ".oh/skills/retro/scripts/render-log-entry.sh"
+  ".oh/skills/retro/scripts/check-identity-duplicates.sh"
   ".oh/skills/retro/scripts/validate-retro-report.sh"
   ".oh/skills/t3/scripts/t3-code.sh"
 )

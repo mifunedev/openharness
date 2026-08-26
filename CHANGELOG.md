@@ -8,6 +8,31 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Removed
+- **Remove the `.oh/memory` tier entirely.** Code is the source of truth. The directory, its tracked `README.md`, the `MEMORY.md` ledger, and dated session logs are gone as a concept — not relocated.
+- **Remove file logging from the harness.** No skill, cron, or script writes a run log under `.oh/`. Runs report to the terminal; the only durable trail left is `.oh/crons/.cron.log`, the cron liveness line.
+- Remove the seeder `.oh/scripts/ensure-memory-file.sh`, its boot pre-create block, `MEMORY_DIR` from both compose files and both `.example.env` templates, and the `memory` name from `.oh/scripts/oh-path`.
+- Remove `AUDIT_LOG_ROOT` entirely. It existed only to resolve a shared log root, so `audit-run.sh` now validates and exports one root, and `route-driver.sh` scrubs one fewer variable.
+- Remove `.oh/skills/retro/references/memory-protocol.md`, `.oh/skills/retro/scripts/{render-log-entry.sh,memory-audit.py}`, and `.oh/skills/prompt-miner/scripts/render-log-entry.sh`.
+- Remove the Memory-Improvement-Protocol log step from 20 skills. `oh init` no longer seeds `.oh/memory/`.
+- Remove 9 eval probes whose subject no longer exists, plus the `probe-memory.md` context-ablation probe. See the PR body for the list.
+- **Remove the `workspace/` template directory.** It held two tracked files (`AGENTS.md` and a `CLAUDE.md` symlink) and never was the container's working directory — `workspaceFolder` is and stays the repo root.
+- Remove the Dockerfile `COPY workspace/`, the `workspace/**` CI path filters, the eight `workspace/*` gitignore rules, and the `workspace/README.md` stub `oh init` used to scaffold.
+- Remove the `workspace` scope from `/audit skills`; `all` now means the root scope alone.
+
+### Changed
+- **`/retro` becomes report-only.** It keeps the scientific pass and promotes only to `.oh/context/IDENTITY.md` behind its propose-then-confirm gate. It writes no log.
+- A supported `/retro` lesson that does not generalize is now reported and dropped; an anti-pattern forbids inventing a file to hold it. The subsystem lens drops from six to five.
+- Rename `check-memory-duplicates.sh` to `check-identity-duplicates.sh`; it consults `IDENTITY.md` alone. The `GATE-PENDING` / `--resolves` contract from #767 retires with the log it wrote.
+- **`/prompt-miner` becomes report-only.** `mine-traces.mjs` is unchanged apart from its output root; all 36 engine tests pass. Descriptive markers are reported, not promoted.
+- **`/audit` reports its run record on stderr** instead of appending it to a file, as one `audit -- run-id=… target=… state=… verdict=… exit=…` line per outer run.
+- `/render-html`, `/prompt-miner`, `/weigh`, `/rlm`, `/audit context --baseline`, and wiki drafts write to ephemeral `$TMPDIR` scratch outside the repo. Nothing under `.oh/` persists a run.
+- `.oh/scripts/oh-path` now resolves every name against the repo root, so `_ablate_log_root` and the memory special cases in `ablate.sh` and `context-audit-runner.sh` go too.
+- The heartbeat, cleanup-tasks, eval-weekly, and prompt-miner crons stop logging to memory. `.oh/crons/.cron.log` is now each cron's only durable per-pulse signal, and `locked-append.sh` survives as its writer.
+- Rewrite `heartbeat-logging-contract.sh` and `audit-run-root-contract.sh` around the liveness line and the stderr run record. Retarget `CB-003` and `DS-020` from `MEMORY.md` to `IDENTITY.md`.
+- Remove the `conciseness.yml` workflow. It scored `workspace/*.md` seeds; `SOUL.md`/`TOOLS.md`/`USER.md`/`HEARTBEAT.md` left that directory in `d6751b66`, so it has passed on a near-empty set ever since.
+- Retarget `repo-map-contract.sh`'s ancestor-helper fixture to `.oh/templates/`, and move its symlink de-dupe assertion onto the root `CLAUDE.md`.
+
 ## [0.4.0] - 2026-08-26
 
 ### Removed

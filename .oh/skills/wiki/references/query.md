@@ -5,7 +5,6 @@
 > The dispatcher (`.oh/skills/wiki/SKILL.md`) routes here when the first
 > `$ARGUMENTS` token is `query`. Canonical schema: `.oh/skills/wiki/references/schema.md`.
 
-
 # Wiki Query
 
 Search the wiki by topic keyword(s) and load the top matching entry or entries
@@ -215,43 +214,6 @@ done
 After reading, summarize what was loaded: list the slugs read, the total match
 count, and how many were skipped (if any were above the cap).
 
-### 9. Memory Improvement Protocol
-
-Always run this step regardless of match count. Get UTC time first:
-
-```bash
-date -u +%H:%M
-TODAY=$(date -u +%Y-%m-%d)
-mkdir -p "$HARNESS/.oh/memory/$TODAY"
-```
-
-Append to `.oh/memory/<UTC-date>/log.md`:
-
-```markdown
-## /wiki query -- HH:MM UTC
-- **Result**: OP | FAIL
-- **Query**: <topic as typed>
-- **Match-Count**: <total matches before cap>
-- **Read-Slugs**: <comma-separated slugs read into context, or — if zero>
-- **Observation**: <one sentence — what was found or why the result set was empty>
-```
-
-Field definitions:
-
-| Field | Content |
-|-------|---------|
-| `Query` | The exact `<topic>` argument as received |
-| `Match-Count` | Total frontmatter matches before the read cap is applied |
-| `Read-Slugs` | Slugs of entries actually read into context; `—` when `Match-Count = 0` |
-| `Result` | `OP` on success (including empty-result); `FAIL` if the skill errored |
-| `Observation` | One sentence — e.g., "matched 2 entries on `github`; both read into context" |
-
-Then apply the qualify/improve loop per `.oh/skills/retro/references/memory-protocol.md`:
-
-- Did the query reveal a gap in the wiki (topic the user expected to find but didn't)?
-- Is the absence itself a signal worth noting (e.g., "no entry for X despite repeated re-derivation")?
-- If yes, note in the log `Observation` and consider flagging to the orchestrator to run `/wiki ingest`.
-
 ## Extraction Command Reference
 
 The canonical frontmatter extraction command, per `.oh/skills/wiki/references/schema.md` § 6:
@@ -287,4 +249,3 @@ work in the other).
 - `.oh/skills/wiki/references/schema.md` — the locked schema, § 6 (frontmatter extraction canonical command), § 2 (entry schema), § 4 (cross-link convention)
 - `/wiki ingest` — add or update an entry
 - `/wiki lint` — health-check the corpus and regenerate `.oh/skills/wiki/corpus/README.md`
-- `.oh/skills/retro/references/memory-protocol.md` — Memory Improvement Protocol (MIP) governing the log step

@@ -1,6 +1,6 @@
 # prompt-miner — Report Schema
 
-`mine-traces.mjs` emits two artifacts to `--out` (default `.oh/memory/<UTC-date>/`):
+`mine-traces.mjs` emits two artifacts to `--out` (default `$TMPDIR/oh-prompt-miner/<UTC-date>/`):
 
 - `prompt-miner-<UTC-date>.json` — the full dataset (below).
 - `prompt-miner-<UTC-date>.md` — manifest + ranked top-N / bottom-N table.
@@ -9,7 +9,7 @@
 contains **feature vectors + metadata only — never raw prompt text**;
 `--include-prompt-text` adds a redacted `promptText` field per session and prints
 a `WARNING` banner to stderr. `--report-only` writes the report only and never
-mutates `.oh/memory/MEMORY.md` / `.oh/context/IDENTITY.md` — the engine never edits those
+mutates `.oh/context/IDENTITY.md` — the engine never edits that
 regardless; the flag documents that contract for the SKILL layer.
 
 ## Top-level dataset

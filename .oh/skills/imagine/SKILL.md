@@ -126,27 +126,12 @@ Spec: .claude/specs/<slug>/spec.md
 Next: /spec plan --plan .claude/specs/<slug>/spec.md
 ```
 
-## Step 5 — Memory Protocol
-
-Per `.oh/skills/retro/references/memory-protocol.md`, append to `.oh/memory/<UTC-date>/log.md` (create the dated directory if missing):
-
-```markdown
-## imagine -- HH:MM UTC
-- **Result**: OP
-- **Scenario**: <one-line summary of the input>
-- **Slug**: <slug>
-- **Path**: .claude/specs/<slug>/spec.md
-- **Observation**: <one sentence on whether the scenario was rich enough to one-shot, or whether the open-questions section had to carry the weight>
-```
-
-Then run the qualify/improve loop per `.oh/skills/retro/references/memory-protocol.md`. Lessons about scenario-quality patterns (e.g. "scenarios under 10 words usually need a follow-up `/prd` pass") may belong in `.oh/memory/MEMORY.md`.
-
 ## Anti-patterns
 
 - **Asking clarifying questions.** Breaks the one-shot contract. If the scenario is too vague, push the ambiguities into `## Open questions for /prd`; do not interrupt.
 - **Writing a full PRD.** Story seeds are one-liners. Numbered functional requirements, acceptance criteria, success metrics — all `/prd`'s job, not this skill's.
 - **Skipping the mermaid diagram.** The diagram is the cheapest forcing function for "did I actually understand the scenario?" Pick a real type; never emit a placeholder or `// TODO: diagram`.
-- **Writing outside `.claude/specs/<slug>/`.** No spillover into `.oh/tasks/`, `.oh/memory/<topic>.md`, `.oh/skills/wiki/corpus/`, or root. Those surfaces have their own skills.
+- **Writing outside `.claude/specs/<slug>/`.** No spillover into `.oh/tasks/`, `.oh/skills/wiki/corpus/`, or root. Those surfaces have their own skills.
 - **Auto-chaining into `/spec`.** Keep the seam explicit. The user edits the spec before formalizing — that's the entire reason the seam exists.
 - **Truncating the scenario into the slug.** `imagine a long thirty word scenario about ...` → derive the noun phrase (`thirty-word-scenario` or `long-scenario`), not the first five words verbatim.
 

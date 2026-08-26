@@ -163,7 +163,7 @@ Usage:
 
 Scaffolds a complete, locally-buildable OpenHarness project into a target repo
 (default: cwd): vendors the .oh/ control plane (incl. context/crons/evals and
-the skills/agents/hooks pack), seeds empty memory/ + tasks/, copies the full
+the skills/agents/hooks pack), seeds an empty tasks/, copies the full
 .devcontainer/ for a local image build, writes a project AGENTS.md (+ CLAUDE.md),
 and configures the .claude/.codex/.pi/.hermes provider surfaces as symlinks into
 .oh/skills. In a TTY (without --yes) it runs a short config wizard that writes

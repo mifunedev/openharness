@@ -162,19 +162,3 @@ REDIRECT-FLAG: capability suite score flat at <X.XX>/2.00 for <N> cycles while N
 - **Tune the harness to the benchmark.** The task set is held-out
   (`.oh/evals/capability/README.md` § *Held-out discipline*); special-casing to ace a
   task corrupts the instrument.
-
----
-
-## Memory Protocol
-
-After a run, append to `.oh/memory/<UTC-date>/log.md` per `.oh/skills/retro/references/memory-protocol.md`:
-
-```markdown
-## benchmark -- HH:MM UTC
-- **Result**: OP
-- **Verdict**: BENEFICIAL | NOT-BENEFICIAL (signal <1|2>: <reason>)
-- **Floor**: /eval rc=<0|1> (<new green→red?>)
-- **Ceiling**: suite <X.XX> vs base <Y.YY> (<delta>)
-- **Redirect**: none | REDIRECT-FLAG (<N> flat cycles)
-- **Observation**: <one sentence>
-```

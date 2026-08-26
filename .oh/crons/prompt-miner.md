@@ -64,10 +64,9 @@ sessions. That is intended: the report is a rolling view of a 14-day corpus, not
 a daily delta, and marker promotion is a property of the corpus rather than of
 any single day.
 
-This writes `.oh/memory/<today>/prompt-miner-<date>.md` (+ `.json`) and appends the
-mandatory `.oh/memory/<today>/log.md` entry via `render-log-entry.sh`. `--report-only`
-**never** edits `.oh/memory/MEMORY.md` or `.oh/context/IDENTITY.md`. Surface the top
-mined markers in the daily log so a human can review the run without attaching.
+This writes `$TMPDIR/oh-prompt-miner/<today>/prompt-miner-<date>.md` (+ `.json`). `--report-only`
+**never** edits `.oh/context/IDENTITY.md`. Surface the top mined markers in the
+reply so a human can review the run without attaching.
 
 ### 2. Decide: candidate or stop
 
@@ -87,7 +86,7 @@ Read the mined markers (stratified by session type; see `references/markers.md`)
 
 - **Otherwise** append `NO-CANDIDATE` (corpus large enough, nothing cleared the
   bar) or `NO-CORPUS` (no stratum reached the `sessions_supporting ≥ 10` floor) to
-  the daily log and **stop**. No issue, no branch, no PR.
+  the reply and **stop**. No issue, no branch, no PR.
 
 ### 3. Ship the candidate to origin via `/spec`
 
@@ -125,10 +124,10 @@ printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
 ## Guarantees
 
 - **Never auto-merge.** This cron opens a PR and labels it; a human merges.
-- **Never edit `.oh/memory/MEMORY.md` or `.oh/context/IDENTITY.md` directly.** Improvements
-  land as loop-gated PRs through `/spec` (whose execute node walks retro/compound),
-  never as unattended memory/identity mutations. The interactive `/prompt-miner`
-  Step-4 gate is the only memory-writing path, and it requires human `APPROVE`.
+- **Never edit `.oh/context/IDENTITY.md` directly.** Improvements land as
+  loop-gated PRs through `/spec` (whose execute node walks retro/compound),
+  never as unattended identity mutations. The interactive `/prompt-miner`
+  Step-4 gate is the only identity-writing path, and it requires human `APPROVE`.
 - **Origin-only.** Issue, PR, and ground-truth cross-ref target
   `mifunedev/openharness` / `origin/development` — never `upstream`/`mifunedev`.
 - **Harness-infra scope only** (skills/rules/docs/scripts/crons/wiki).

@@ -15,7 +15,7 @@ export OH_BANNER_SHOWN=1
 
 sandbox_name="${SANDBOX_NAME:-$(hostname)}"
 timezone="${TZ:-$(date +%Z 2>/dev/null)}"
-workspace_dir="${HOME}/harness/workspace"
+project_dir="${HOME}/harness"
 
 # Parse compose overlays from the harness config.json. Canonical location is
 # .oh/config.json (the OpenHarness machinery namespace; see .oh/README.md); the
@@ -190,7 +190,7 @@ fi
 
 printf '\n'
 printf '━━━ openharness: %s ━━━\n' "$sandbox_name"
-printf '  Workspace: %s\n' "$workspace_dir"
+printf '  Project:   %s\n' "$project_dir"
 printf '  Timezone:  %s\n' "$timezone"
 printf '  Overlays:  %s\n' "$overlays"
 printf '\n'

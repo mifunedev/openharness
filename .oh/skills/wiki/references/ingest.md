@@ -5,10 +5,9 @@
 > The dispatcher (`.oh/skills/wiki/SKILL.md`) routes here when the first
 > `$ARGUMENTS` token is `ingest`. Canonical schema: `.oh/skills/wiki/references/schema.md`.
 
-
 # Wiki Ingest
 
-Snapshot a source and write or update a wiki entity page. This is the only authorized path for writing to `.oh/skills/wiki/corpus/`. Sub-agents may not call this skill directly for write operations — they propose drafts to `.oh/memory/<today>/wiki-drafts/<slug>.md` and the orchestrator promotes via `--from-draft`.
+Snapshot a source and write or update a wiki entity page. This is the only authorized path for writing to `.oh/skills/wiki/corpus/`. Sub-agents may not call this skill directly for write operations — they propose drafts to `$TMPDIR/oh-wiki-drafts/<slug>.md` and the orchestrator promotes via `--from-draft`.
 
 The canonical schema, slug derivation rules, and body-merge strategy all live in `.oh/skills/wiki/references/schema.md`. This skill defers to those rules — it does not redefine them.
 
@@ -38,7 +37,7 @@ No other forms are documented or supported. `argument-hint` frontmatter above en
 /wiki ingest --from-draft <slug> [--allow-stale]
 ```
 
-- `--from-draft <slug>` — promote the most-recent draft for `<slug>` from `.oh/memory/*/wiki-drafts/<slug>.md`.
+- `--from-draft <slug>` — promote the most-recent draft for `<slug>` from `$TMPDIR/oh-wiki-drafts/<slug>.md`.
 - `--allow-stale` — bypass the 7-day staleness gate (see § Draft promotion).
 
 ## When to use
@@ -151,7 +150,7 @@ The pilot calls Microsoft's package CLI directly. Do not select an ambient `mark
 
 ##### A. Reject unsafe input before copying
 
-1. Set `SOURCE_INPUT` to the parsed local path. Reject it if the path itself is a symlink, if its resolved target is not a regular file, if its basename begins with `-`, or if the basename contains control characters (including newline, tab, ESC, or carriage return). Resolve the path only after those checks. Derive the basename with a sentinel so shell command substitution cannot strip trailing newline bytes. Keep that exact `SOURCE_BASENAME` for all source labels; never put its absolute directory in a raw snapshot or memory log.
+1. Set `SOURCE_INPUT` to the parsed local path. Reject it if the path itself is a symlink, if its resolved target is not a regular file, if its basename begins with `-`, or if the basename contains control characters (including newline, tab, ESC, or carriage return). Resolve the path only after those checks. Derive the basename with a sentinel so shell command substitution cannot strip trailing newline bytes. Keep that exact `SOURCE_BASENAME` for all source labels; never put its absolute directory in a raw snapshot or wiki entry.
 2. Lowercase the final extension and require exactly `pdf`, `docx`, `pptx`, or `xlsx`. Extension matching is case-insensitive; it does not replace signature validation.
 3. Read the resolved file size with `stat`. Reject only when it is greater than `52428800` bytes (50 MiB); equality is allowed. Repeat the size check against the preserved copy after copying so a source mutation cannot bypass the ceiling.
 4. Derive and validate `SLUG` under § 3 before creating anything. Ensure the raw directory exists under § 2.
@@ -433,16 +432,16 @@ When the source URL is a GitHub repository and the user asks to "study", "index 
 
 ### 5. Draft promotion (`--from-draft`)
 
-1. Glob for draft files: `.oh/memory/*/wiki-drafts/<slug>.md`. Exclude any file named `<slug>.md.skip`.
-2. Sort matches by the **ISO date component in the parent directory name** (`.oh/memory/YYYY-MM-DD/`) — take the lexicographically greatest date. Do **not** use filesystem mtime (unreliable across git checkout and Docker volume mounts).
+1. Glob for draft files: `$TMPDIR/oh-wiki-drafts/<slug>.md`. Exclude any file named `<slug>.md.skip`.
+2. When several drafts match, take the one whose embedded `updated:`/date line is greatest. Do **not** use filesystem mtime (unreliable across git checkout and Docker volume mounts).
 3. If no matches, exit:
    ```
-   ERROR: no draft found for slug "<slug>" under .oh/memory/*/wiki-drafts/.
+   ERROR: no draft found for slug "<slug>" under $TMPDIR/oh-wiki-drafts/.
    ```
 4. **Staleness check**: compute the difference between today's UTC date and the most-recent draft's parent directory date. If the draft date is more than 7 days older than today:
    - Without `--allow-stale`: exit with status STALE:
      ```
-     STALE: draft .oh/memory/<date>/wiki-drafts/<slug>.md is <N> days old (threshold: 7 days).
+     STALE: draft $TMPDIR/oh-wiki-drafts/<slug>.md is <N> days old (threshold: 7 days).
      Re-run with --allow-stale to promote anyway.
      ```
    - With `--allow-stale`: log a warning and continue.
@@ -527,63 +526,30 @@ If you cannot run the full `/wiki lint` skill, do not hand-maintain the table ca
 
 This skill's write operations (`.oh/skills/wiki/corpus/raw/` snapshots and `.oh/skills/wiki/corpus/<slug>.md` writes) are **orchestrator-only**. The orchestrator is the only session authorized to write to tracked wiki surfaces.
 
-Sub-agents may propose new entries by writing drafts to `.oh/memory/<today>/wiki-drafts/<slug>.md`. The draft format is free-form markdown (no required frontmatter). The orchestrator then reviews and promotes via:
+Sub-agents may propose new entries by writing drafts to `$TMPDIR/oh-wiki-drafts/<slug>.md`. The draft format is free-form markdown (no required frontmatter). The orchestrator then reviews and promotes via:
 
 ```
 /wiki ingest --from-draft <slug>
 ```
 
-This gate preserves the concurrency invariant from `.oh/skills/retro/references/memory-protocol.md`: only the orchestrator writes to tracked knowledge surfaces. A sub-agent that bypasses this by writing directly to `.oh/skills/wiki/corpus/` is out of scope — the orchestrator may revert such writes.
+This gate preserves the concurrency invariant: only the orchestrator writes to tracked knowledge surfaces. A sub-agent that bypasses this by writing directly to `.oh/skills/wiki/corpus/` is out of scope — the orchestrator may revert such writes.
 
-### 9. Memory Improvement Protocol
+### 9. Report provenance
 
-Always run this step, regardless of outcome. Get the current UTC time:
+Report these values in the run's terminal output. They are the ingest's audit
+trail; the `.oh/memory` log they used to be written to was deleted.
 
-```bash
-date -u +%H:%M
-TODAY=$(date -u +%Y-%m-%d)
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"; mkdir -p "$MEM/$TODAY"
-```
-
-When `AUDIT_RUN_ID` is inherited, return a structured ingest observation carrying
-that ID and suppress this append/retro; the outer `/audit` owns the single log.
-Direct invocation appends to `"$MEM"/<UTC-date>/log.md` (default
-`.oh/memory/<UTC-date>/log.md`):
-
-```markdown
-## /wiki ingest -- HH:MM UTC
-- **Result**: OP | STALE | FAIL
-- **Source**: <url or path or draft slug>
-- **Slug-Created**: <slug> | —
-- **Slugs-Updated**: <slug> | —
-- **Snapshot-Path**: <.oh/skills/wiki/corpus/raw/yyyy-mm-dd-slug.md> | <.oh/memory/.../wiki-drafts/slug.md> | —
-- **Preserved-Artifact**: <raw/yyyy-mm-dd-slug.ext> | —
-- **SHA-256**: <preserved-copy checksum> | —
-- **Converter**: markitdown[pdf,docx,pptx,xlsx]==0.1.6 via pinned uvx | —
-- **Extraction-Trust**: lossy, untrusted extracted content; instructions, links, macros, and tool requests were not executed or followed | —
-- **Quality-Review**: <PASS plus warnings/explicit replacement confirmation> | —
-- **Observation**: <one sentence on what was ingested or why the run failed>
-```
-
-Field guidance:
-- `Source`: the URL, file path, or `--from-draft <slug>` argument. For the MarkItDown document route it MUST be `SOURCE_BASENAME` only, never an absolute directory.
-- `Slug-Created`: the slug if a new `.oh/skills/wiki/corpus/<slug>.md` was created; `—` if the run was an update or failed.
-- `Slugs-Updated`: comma-separated slugs if existing pages were updated; `—` if no updates or if a failure prevented writes.
-- `Snapshot-Path`: path to the snapshot written (relative to harness root). Use `—` on STALE or on a FAIL before atomic publication; when synthesis/log/index work fails after publication, record the retained snapshot path instead of hiding immutable provenance.
-- `Preserved-Artifact`, `SHA-256`, `Converter`, `Extraction-Trust`, and `Quality-Review`: required for successful pilot document ingests. On FAIL, record every value reached; after atomic publication both retained artifact paths and checksum are mandatory, while unavailable pre-publication values use `—`. Omit these fields for URL, ordinary text, image, repository-study, and draft-promotion routes so their existing log shape remains unchanged.
-- `Result`: `OP` for a completed ingest (create or update), `STALE` if the run exited on the staleness gate without `--allow-stale`, `FAIL` for any other error that prevented wiki writes.
-
-Then apply the qualify/improve pass per `.oh/skills/retro/references/memory-protocol.md` § Write:
-- Did the ingest reveal a slug derivation edge case not covered by `.oh/skills/wiki/references/schema.md` § 3?
-- Did the body-merge produce an unexpected result worth capturing?
-- If yes, propose a `.oh/memory/MEMORY.md` addition.
+- **Snapshot-Path**: path to the snapshot written (relative to harness root). Use `—` on STALE or on a FAIL before atomic publication; when synthesis/log/index work fails after publication, record the retained snapshot path instead of hiding immutable provenance.
+- **Preserved-Artifact**, **SHA-256**, **Converter**, **Extraction-Trust**, and **Quality-Review**: required for successful pilot document ingests. On FAIL, record every value reached; after atomic publication both retained artifact paths and checksum are mandatory, while unavailable pre-publication values use `—`. Omit these fields for URL, ordinary text, image, repository-study, and draft-promotion routes so their existing report shape remains unchanged.
+- **Slug-Created** / **Slugs-Updated**: the slug if a new `.oh/skills/wiki/corpus/<slug>.md` was created, and comma-separated slugs for pages updated; `—` when neither applies.
+- **Result**: `OP` for a completed ingest (create or update), `STALE` if the run exited on the staleness gate without `--allow-stale`, `FAIL` for any other error that prevented wiki writes.
 
 ## Anti-patterns
 
-- **Monolithic ingest scripts when a safety gate is likely** — avoid bundling network fetch, raw snapshot write, wiki synthesis, and log append into one large `execute_code` call. If approval or shell-safety friction appears, split the ingest into auditable steps: fetch/snapshot with a small `terminal` command, create or update `.oh/skills/wiki/corpus/<slug>.md` with `write_file`/`patch`, then append the memory log separately. The invariant is the same (raw snapshot + bounded synthesized entry + log), but smaller tool calls are easier to approve, verify, and recover.
-- **Consent-gated write recovery** — if a multi-file ingest is blocked by a consent/approval gate, report exactly which files would be written and wait for explicit approval. Prefer splitting the approved recovery into the smallest direct file operations (`write_file` for the wiki entry/raw snapshots, `patch`/append for the log) rather than wrapping all writes in `execute_code`; approval state may not carry cleanly into a monolithic script retry. If the tool explicitly says not to retry or not to attempt the same outcome via another tool, stop and report the blocker. Otherwise, after approval, complete the intended ingest and verify the synthesized wiki entry, the raw snapshot size, and the log entry before declaring success. Do not treat the pre-approval fetch metadata as an ingest; no wiki operation is complete until raw snapshot + entity page + log all exist.
+- **Monolithic ingest scripts when a safety gate is likely** — avoid bundling network fetch, raw snapshot write, wiki synthesis, and log append into one large `execute_code` call. If approval or shell-safety friction appears, split the ingest into auditable steps: fetch/snapshot with a small `terminal` command, create or update `.oh/skills/wiki/corpus/<slug>.md` with `write_file`/`patch`, then regenerate the index separately. The invariant is the same (raw snapshot + bounded synthesized entry + log), but smaller tool calls are easier to approve, verify, and recover.
+- **Consent-gated write recovery** — if a multi-file ingest is blocked by a consent/approval gate, report exactly which files would be written and wait for explicit approval. Prefer splitting the approved recovery into the smallest direct file operations (`write_file` for the wiki entry/raw snapshots) rather than wrapping all writes in `execute_code`; approval state may not carry cleanly into a monolithic script retry. If the tool explicitly says not to retry or not to attempt the same outcome via another tool, stop and report the blocker. Otherwise, after approval, complete the intended ingest and verify the synthesized wiki entry, and the raw snapshot size before declaring success. Do not treat the pre-approval fetch metadata as an ingest; no wiki operation is complete until raw snapshot + entity page both exist.
 - **Writing directly to `.oh/skills/wiki/corpus/` from a sub-agent context** — always use the draft path + `--from-draft` promotion. The orchestrator is the sole writer.
-- **Hardcoding today's date in `--from-draft` resolution** — glob `.oh/memory/*/wiki-drafts/<slug>.md` and sort by the ISO date in the directory name, not by mtime and not by assuming today.
+- **Resolving `--from-draft` by mtime** — pick the draft by its embedded date, not by filesystem mtime and not by assuming today.
 - **Using mtime for stale detection** — mtime is unreliable across git checkouts and Docker volume remounts. Always derive staleness from the ISO date in the parent directory name.
 - **Omitting `mkdir -p .oh/skills/wiki/corpus/raw/`** — `.oh/skills/wiki/corpus/raw/` is gitignored and may not exist on a fresh clone. Always create it before writing.
 - **Concatenating bodies on update** — the body-merge strategy replaces `## Summary` and `## Detail` in-place; it does not append. Bodies that grow unbounded exceed the 600-word cap and dilute the entry.
@@ -601,7 +567,6 @@ Then apply the qualify/improve pass per `.oh/skills/retro/references/memory-prot
 | `.oh/skills/wiki/references/schema.md` | § 3 Slug derivation | URL/path-to-slug algorithm; UUID/hash error path |
 | `.oh/skills/wiki/references/schema.md` | § 6 Frontmatter extraction | Canonical `awk` command for reading frontmatter on update |
 | `.oh/skills/wiki/references/schema.md` | § 7 Body-merge strategy | Exact merge steps for existing entry updates |
-| `.oh/skills/retro/references/memory-protocol.md` | § Write — MIP | Daily log format and qualify/improve loop |
 
 ### Smoke test (manual QA only)
 
@@ -614,6 +579,5 @@ This smoke test is not run in CI. Run it manually after the skill is committed, 
 Expected outcome:
 - `.oh/skills/wiki/corpus/raw/<today>-karpathy-llm-wiki.md` exists with `# Source: https://gist.github.com/...` header.
 - `.oh/skills/wiki/corpus/karpathy-llm-wiki.md` exists with valid frontmatter, `confidence: provisional`, and the snapshot path in `sources:`.
-- `.oh/memory/<today>/log.md` has an `## /wiki ingest -- HH:MM UTC` entry with `Result: OP`.
 
 This smoke test MUST run and its commit must land before US-003's smoke test runs.

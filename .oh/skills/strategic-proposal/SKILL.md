@@ -39,7 +39,7 @@ flowchart TD
     SKIP --> MEM_SKIP[Memory Protocol]
     MEM_SKIP --> Z_SKIP[HEARTBEAT_OK]
 
-    B -->|Yes| C["Gather context: IDENTITY, MEMORY, schema, routes, issues"]
+    B -->|Yes| C["Gather context: IDENTITY, schema, routes, issues"]
     C --> D["Compose Current State Briefing"]
     D --> E["Spawn 5 experts IN ONE MESSAGE (parallel sonnet)"]
 
@@ -72,7 +72,6 @@ If this fails, log `[strategic-proposal] SKIP: gh CLI not authenticated` → Mem
 
 Read the following to build the briefing:
 - `IDENTITY.md` — stack, mission, URLs
-- `MEMORY.md` — past decisions, lessons learned
 - `Makefile`, `scripts/`, `install/` — orchestrator entrypoints and provisioning surface
 - `docs/` — GitHub-readable core docs; rendered docs site source lives in `mifunedev/openharness-web`
 - Open issues: `gh api "repos/mifunedev/openharness/issues?state=open&per_page=50"`
@@ -100,7 +99,7 @@ Assemble a structured markdown briefing to pass to ALL 5 experts:
 - Docker Compose + opt-in PostgreSQL 16 overlay
 - CI/CD: GitHub Actions (lint, format, type-check, build, test, E2E)
 - Release: SemVer → GHCR Docker image
-- Agent: 8 skills, 7 sub-agents, 4 heartbeats, memory protocol
+- Agent: 8 skills, 7 sub-agents, 4 heartbeats
 
 ### Community Signal
 - Stars: [N], Forks: [N], Watchers: [N]
@@ -196,22 +195,8 @@ If it already exists, update:
 gh issue edit <NUMBER> --repo mifunedev/openharness --body "<council output>"
 ```
 
-### 9. Memory Improvement Protocol
+### 9. Report
 
-**a) Log** — append to `.oh/memory/YYYY-MM-DD/log.md` where today = `date -u +%Y-%m-%d`:
-
-```markdown
-## Strategic Proposal — HH:MM UTC
-- **Result**: OP | SKIP
-- **Item**: Pinned roadmap issue #<NUMBER>
-- **Action**: [roadmap created/updated with N items: X now, Y next, Z later]
-- **Duration**: ~Xs
-- **Observation**: [one sentence — what signal was strongest, what surprised you]
-```
-
-See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
-
-**b) Report**:
 - `HEARTBEAT_OK` (if skipped)
 - Full report: pinned issue # + top 3 "Now" items + signal summary
 
@@ -229,5 +214,3 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 | Strategic Council | `.claude/agents/strategic-council.md` |
 | Strategic Critic | `.claude/agents/strategic-critic.md` |
 | Identity | `IDENTITY.md` |
-| Memory | `MEMORY.md` |
-| Daily Logs | `.oh/memory/YYYY-MM-DD/log.md` |

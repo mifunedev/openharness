@@ -23,7 +23,7 @@ Provisioning, Ralph execution, and the cron runtime live here.
 - TypeScript scripts are run via `tsx` from the root `package.json`
   scripts; tests run via `pnpm test`.
 - Scripts here are **orchestrator-scope only**. Anything an in-sandbox
-  agent needs lives under `workspace/` or `install/`. Per `CLAUDE.md`,
+  agent needs lives under `.oh/templates/` or `install/`. Per `CLAUDE.md`,
   application code does not belong in `scripts/`.
 
 ## Adding a script

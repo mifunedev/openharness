@@ -226,30 +226,6 @@ Build this list from the baseline files and, when needed, one cached verbose sna
 
 Then ask (use `AskUserQuestion`). Run the removal only on explicit approval. With `--dry-run`, propose everything and write nothing — including skipping the tier-1 prune.
 
-### 8. Log (Memory Improvement Protocol)
-
-When `AUDIT_RUN_ID` is inherited, return a structured health observation carrying
-`AUDIT_RUN_ID`, `AUDIT_ROOT`, and `AUDIT_LOG_ROOT` and skip this append/retro; the
-outer `/audit` owns the single log. Direct invocation logs normally. Per
-`.oh/skills/retro/references/memory-protocol.md`:
-
-```bash
-TODAY=$(date -u +%Y-%m-%d); TIME=$(date -u +%H:%M)
-MEM="${MEMORY_DIR:-$(bash .oh/scripts/oh-path memory)}"; mkdir -p "$MEM/$TODAY"
-.oh/scripts/locked-append.sh "$MEM/$TODAY/log.md" <<EOF
-
-## Health-Check -- $TIME UTC
-- **Result**: OP | DRY-RUN
-- **Scope**: <container | host> · **Docker triage**: <available | host-only | unreachable>
-- **Target**: <what was being sized>
-- **Binding constraint**: <disk | memory | none | unknown-host-side>
-- **Reclaimed**: <e.g. builder cache 9.1G; disk 83%→73% — or "none, host-only">
-- **Observation**: <one sentence>
-EOF
-```
-
-Do **not** memorize the raw numbers (they're re-derivable in under a minute — see the memory anti-pattern table). Log the *interpretation*: which resource bound, which lever paid off, and whether the answer was scope-limited.
-
 ## Host-side Docker triage
 
 The relocated half of this skill. Docker inventory and every reclaim lever run where the daemon runs — they are **not** something a sandboxed agent can do, and #756 closed that route deliberately.

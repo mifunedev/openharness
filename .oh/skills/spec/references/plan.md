@@ -127,25 +127,6 @@ done
   closes an issue/PR.
 - **Build.** Implementation is `/spec execute`.
 
----
-
-## Memory Protocol
-
-After a run, append to `.oh/memory/<UTC-date>/log.md` per `.oh/skills/retro/references/memory-protocol.md`:
-
-```markdown
-## spec-plan -- HH:MM UTC
-- **Result**: OP | PARTIAL | FAIL
-- **Slug**: <slug>
-- **Artifacts**: prd.md / prd.json / prompt.md / progress.txt (four-file contract)
-- **Wiki impact**: REQUIRED | NOT-APPLICABLE
-- **Observation**: <one sentence>
-```
-
-Then run the qualify/improve pass.
-
----
-
 ## Pipeline position
 
 Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →

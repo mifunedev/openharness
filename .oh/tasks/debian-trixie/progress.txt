@@ -84,3 +84,21 @@ CI evidence from the arm64 job showed every tool row printing `ok: gh --version 
 `head -1` of a merged `2>&1` stream reports whichever stream spoke first, which under emulation is never the one being measured. The check was passing while its evidence was worthless — a green check whose output does not name what it verified is not evidence. Real CI logs caught what every local unit test missed, because the fake `docker` never emitted the warning.
 
 ---
+## Audit — 2026-08-26 21:59 UTC
+
+**Verdict**: AUDIT-PASS (run-id `audit-20260826T215705Z-306`)
+**Gates**: graph 4/4 · eval rc=0 (97 probes: 94 PASS, 0 REGRESSION, 3 SKIPPED) · promotable=true, ci=PASS, mergeable=CLEAN · ui n/a
+
+The first audit returned AUDIT-FAIL on gate 3 alone: gates 1 and 2 were green, but every CI run on record was against the scaffold commit because the implementation was still unpushed. Pushing `c827c6f6..9d1a0be6` and letting all three workflows land green cleared it. `readyToMerge=false` reflects only the draft state, which `/spec execute` owns.
+
+### CI-observed evidence (what could not be measured locally)
+- arm64 default image, QEMU fallback path: base `trixie`, suites `trixie`/`bookworm`, UID/GID `1000:1000`, Node `v22.23.2`, pnpm `10.33.0`, Herdr `0.7.4`, `uv 0.12.6 (aarch64-unknown-linux-gnu)`.
+- Herdr checksum verified on both architectures — `/usr/local/bin/herdr: OK` in-build, plus the verifier matching the `x86_64` and `aarch64` pins.
+- Optional installers on amd64: Hermes Agent v0.20.5, deepagents-cli 0.3.0, opencode 1.18.23, grok 0.2.39.
+- Bind-ownership contract: `sandbox user, bind mount, and sandbox-created files all resolve to 1001:1001` — the runner is not UID 1000, so the UID sync proved itself rather than passing by coincidence.
+
+### Still not locally observed
+The Bookworm-vs-Trixie node/pnpm parity numbers. `node-pnpm-parity.sh` and its dispatch-only workflow are committed and unit-tested; the comparison run itself needs a Docker daemon and has not been dispatched.
+
+---
+STATUS: COMPLETE

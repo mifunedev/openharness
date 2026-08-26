@@ -10,6 +10,7 @@ import {
   type HarnessIO,
 } from "../commands/harness.js";
 import type { LifecycleRunner, RunResult } from "../lib/execution/runner.js";
+import { HARNESS_CATALOG } from "../lib/harnesses/catalog.js";
 
 // cli.ts has a top-level side effect: main(process.argv.slice(2)).then(process.exit).
 // Same guard as lifecycle.test.ts: stub process.exit around the import so the
@@ -421,7 +422,9 @@ describe("runHarnessList", () => {
 
     await runHarnessList({ cwd: root, run, json: true }, io);
     const parsed = JSON.parse(text(out));
-    expect(parsed).toHaveLength(8);
+    // Every catalog entry is listed. Keyed off the catalog rather than a literal
+    // so adding a harness does not require editing an unrelated assertion.
+    expect(parsed).toHaveLength(HARNESS_CATALOG.length);
     expect(parsed.find((h: { id: string }) => h.id === "hermes").enabled).toBe(true);
     // A harness with no flag reports null, not false — the two differ.
     expect(parsed.find((h: { id: string }) => h.id === "codex").enabled).toBeNull();
@@ -450,7 +453,7 @@ describe("runHarnessStatus", () => {
     const { out, io } = makeIo();
 
     expect(await runHarnessStatus(undefined, { cwd: root, run, json: true }, io)).toBe(0);
-    expect(JSON.parse(text(out))).toHaveLength(8);
+    expect(JSON.parse(text(out))).toHaveLength(HARNESS_CATALOG.length);
   });
 
   it("with a name reports that one harness as an object", async () => {

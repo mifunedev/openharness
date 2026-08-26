@@ -244,6 +244,7 @@ The harness root is `/home/sandbox/harness` inside the sandbox.
 Orchestrator scripts live in `.oh/scripts/`, scheduled agents in `.oh/crons/`,
 sandbox environment in `.devcontainer/`, the shared primitive pack (skills,
 agents, hooks) vendored under `.oh/skills`, `.oh/agents`, `.oh/hooks`, and the
-and the `oh init` scaffold template in `.oh/templates/`. Claude, Codex, Pi, and Hermes expose `.oh/skills`
-through provider-specific symlinks (`.pi/` remains the Pi provider surface in v1). Per-directory `README.md` files
+`oh init` scaffold template in `.oh/templates/`. Claude, Codex, Pi, Prime Agent,
+and Hermes expose `.oh/skills` through provider-specific symlinks (`.pi/` remains the Pi
+provider surface in v1; Prime Agent's is `.prime/agent/skills`). Per-directory `README.md` files
 explain anything whose purpose isn't obvious from the name.

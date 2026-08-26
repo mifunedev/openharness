@@ -1,4 +1,6 @@
 {
+  "outputStyle": "Concise",
+  "autoMemoryEnabled": false,
   "permissions": {
     "deny": [
       "Read(file_path=**/.env*)",

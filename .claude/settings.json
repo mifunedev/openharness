@@ -147,6 +147,8 @@
     ]
   },
   "effortLevel": "medium",
+  "outputStyle": "Concise",
+  "autoMemoryEnabled": false,
   "plansDirectory": ".claude/plans",
   "model": "claude-opus-5[1m]",
   "statusLine": {

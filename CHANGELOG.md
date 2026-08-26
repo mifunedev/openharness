@@ -30,7 +30,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - `.oh/scripts/oh-path` now resolves every name against the repo root, so `_ablate_log_root` and the memory special cases in `ablate.sh` and `context-audit-runner.sh` go too.
 - The heartbeat, cleanup-tasks, eval-weekly, and prompt-miner crons stop logging to memory. `.oh/crons/.cron.log` is now each cron's only durable per-pulse signal, and `locked-append.sh` survives as its writer.
 - Rewrite `heartbeat-logging-contract.sh` and `audit-run-root-contract.sh` around the liveness line and the stderr run record. Retarget `CB-003` and `DS-020` from `MEMORY.md` to `IDENTITY.md`.
-- Retarget the `conciseness.yml` workflow from the deleted `workspace/*.md` seeds to the real identity files (`AGENTS.md`, `.oh/context/*.md`); its path filters would otherwise have matched nothing.
+- Remove the `conciseness.yml` workflow. It scored `workspace/*.md` seeds; `SOUL.md`/`TOOLS.md`/`USER.md`/`HEARTBEAT.md` left that directory in `d6751b66`, so it has passed on a near-empty set ever since.
 - Retarget `repo-map-contract.sh`'s ancestor-helper fixture to `.oh/templates/`, and move its symlink de-dupe assertion onto the root `CLAUDE.md`.
 
 ## [0.4.0] - 2026-08-26

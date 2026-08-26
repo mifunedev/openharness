@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #645 — executable immutable audit root/run/log correlation
-# desc: production lifecycle validates before state, preserves child identity, cleans temp, and locks one append
+# source: issue #645 — executable immutable audit root/run correlation
+# desc: production lifecycle validates before state, preserves child identity, cleans temp, and reports one run record
 set -euo pipefail
 # This probe drives audit-run.sh from a TOP-LEVEL position: it asserts what a fresh
-# lifecycle does, and sets AUDIT_RUN_ID/AUDIT_ROOT/AUDIT_LOG_ROOT itself for the one
-# child-mode case it tests. When the suite is run from INSIDE an audit (`/audit
+# lifecycle does, and sets AUDIT_RUN_ID/AUDIT_ROOT itself for the one child-mode case
+# it tests. When the suite is run from INSIDE an audit (`/audit
 # implementation` -> Gate 2 -> run.sh), those variables are already exported, audit-run.sh
-# reads them as a half-configured child ("inherited run requires both roots"), and the
+# reads them as a half-configured child ("inherited run requires AUDIT_ROOT"), and the
 # probe reports a green->red that describes the caller's environment rather than the repo.
 # Clearing the inherited identity is not weakening the check -- every binding the probe
 # actually asserts is set explicitly below.
-unset AUDIT_RUN_ID AUDIT_ROOT AUDIT_LOG_ROOT AUDIT_TMP_ROOT AUDIT_EVIDENCE_PATH \
+unset AUDIT_RUN_ID AUDIT_ROOT AUDIT_TMP_ROOT AUDIT_EVIDENCE_PATH \
       AUDIT_ROUTE AUDIT_TARGET AUDIT_TARGET_ARGS_JSON AUDIT_AGENT_COMMAND_JSON
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; RUN="$REPO/.oh/skills/audit/scripts/audit-run.sh"
 tmp=$(mktemp -d); tmpdir=$(mktemp -d); trap 'rm -rf "$tmp" "$tmpdir"' EXIT
@@ -67,12 +67,11 @@ AUDIT_AGENT_COMMAND_JSON="[\"$tmp/fake-agent\"]" CRON_WORKTREE="$tmp" CRON_LOG_R
 CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" pr 7 --base stack-parent -- "$tmp/complete-driver" >/dev/null
 CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" prs --mine -- "$tmp/complete-driver" >/dev/null
 CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" full --repo owner/name -- "$tmp/complete-driver" >/dev/null
-rm -rf "$tmp/.oh/logs"
-[[ ! -e "$tmp/.oh/logs" ]] || fail 'invalid target arguments created lifecycle state'
+[[ ! -e "$tmp/.oh/logs" ]] || fail 'a run wrote the deleted .oh/logs tier'
 # Lifecycle remains active around the actual driver and exposes the selected route.
 CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c '
   [[ $AUDIT_ROUTE == "$AUDIT_ROOT/.oh/skills/audit/references/drift.md" ]]
-  [[ ! -e "$AUDIT_LOG_ROOT/.oh/logs" ]]
+  [[ ! -e "$AUDIT_ROOT/.oh/logs" ]]
   [[ $PWD == "$AUDIT_ROOT" ]]
   [[ $AUDIT_TARGET == drift && $AUDIT_TARGET_ARGS_JSON == "[]" ]]
   printf route-ran >"$AUDIT_ROOT/driver-marker"
@@ -80,26 +79,26 @@ CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c '
 '
 [[ $(<"$tmp/driver-marker") == route-ran ]] || fail 'selected route driver did not run/chdir or receive bindings'
 rm "$tmp/driver-marker"
-first_log=$(find "$tmp/.oh/logs" -name audit.md -print -quit)
-[[ -f $first_log && $(grep -c '^## audit --' "$first_log") -eq 1 ]] || fail 'terminal append did not follow driver'
-rm -rf "$tmp/.oh/logs"
-# Two concurrent outer invocations get unique IDs and whole-record locked appends.
+# The run record is REPORTED on stderr and never written to a file.
+rec=$(CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- "$tmp/complete-driver" 2>&1 >/dev/null)
+[[ $(grep -c '^audit -- run-id=' <<<"$rec") -eq 1 ]] || fail 'terminal run record did not follow driver'
+[[ ! -e "$tmp/.oh/logs" ]] || fail 'run record was written to the deleted .oh/logs tier'
+# Two concurrent outer invocations get unique IDs and each reports exactly one record.
 for n in 1 2; do
   CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- \
-    bash -c 'printf "%s|%s|%s" "$AUDIT_RUN_ID" "$AUDIT_ROOT" "$AUDIT_LOG_ROOT" >"$AUDIT_TMP_ROOT/seen"; "$AUDIT_ROOT/.oh/skills/audit/scripts/audit-evidence.sh" complete DRIFT-OK' & pids[n]=$!
+    bash -c 'printf "%s|%s" "$AUDIT_RUN_ID" "$AUDIT_ROOT" >"$AUDIT_TMP_ROOT/seen"; "$AUDIT_ROOT/.oh/skills/audit/scripts/audit-evidence.sh" complete DRIFT-OK' 2>"$tmp/rec.$n" & pids[n]=$!
 done
 wait "${pids[1]}"; wait "${pids[2]}"
-log=$(find "$tmp/.oh/logs" -name audit.md -print -quit); [[ -f $log ]] || fail 'outer log missing'
-[[ $(grep -c '^## audit --' "$log") -eq 2 ]] || fail 'outer append count/locking'
-mapfile -t ids < <(grep '^\- \*\*Run-ID\*\*:' "$log" | awk '{print $3}')
+[[ ! -e "$tmp/.oh/logs" ]] || fail 'concurrent runs wrote the deleted .oh/logs tier'
+mapfile -t ids < <(cat "$tmp/rec.1" "$tmp/rec.2" | sed -n 's/^audit -- run-id=\([^ ]*\).*/\1/p')
 [[ ${#ids[@]} -eq 2 && ${ids[0]} != "${ids[1]}" ]] || fail 'run IDs not unique'
 [[ ${ids[0]} =~ ^audit-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9._-]+$ ]] || fail 'run ID shape'
 [[ -z $(find "$tmpdir" -mindepth 1 -maxdepth 1 ! -name openharness-locked-append -print -quit) ]] || fail 'invocation temp not cleaned'
-# Child mode preserves immutable roots/ID and performs no third append.
+# Child mode preserves the immutable root/ID and reports no record of its own.
 id=${ids[0]}
-AUDIT_RUN_ID="$id" AUDIT_ROOT="$tmp" AUDIT_LOG_ROOT="$tmp" TMPDIR="$tmpdir" bash "$RUN" drift -- \
-  bash -c '[[ "$AUDIT_RUN_ID" == "$1" && "$AUDIT_ROOT" == "$2" && "$AUDIT_LOG_ROOT" == "$2" ]]; "$AUDIT_ROOT/.oh/skills/audit/scripts/audit-evidence.sh" complete DRIFT-OK' _ "$id" "$tmp"
-[[ $(grep -c '^## audit --' "$log") -eq 2 ]] || fail 'child appended independently'
+child_rec=$(AUDIT_RUN_ID="$id" AUDIT_ROOT="$tmp" TMPDIR="$tmpdir" bash "$RUN" drift -- \
+  bash -c '[[ "$AUDIT_RUN_ID" == "$1" && "$AUDIT_ROOT" == "$2" ]]; "$AUDIT_ROOT/.oh/skills/audit/scripts/audit-evidence.sh" complete DRIFT-OK' _ "$id" "$tmp" 2>&1 >/dev/null)
+[[ $(grep -c '^audit -- run-id=' <<<"$child_rec") -eq 0 ]] || fail 'child reported its own run record'
 [[ -z $(find "$tmpdir" -mindepth 1 -maxdepth 1 ! -name openharness-locked-append -print -quit) ]] || fail 'child temp not cleaned'
 # The bridge appends validated arguments verbatim after driver options.
 cat >"$tmp/args-driver" <<'DRIVER'
@@ -114,12 +113,12 @@ mapfile -t seen <"$tmp/args-seen"
 [[ ${seen[3]} == prs && ${seen[4]} == --label && ${seen[5]} == 'needs review' && ${seen[6]} == --base && ${seen[7]} == development ]] || fail 'driver argv not exact'
 # Failed real work stays inside lifecycle and records its nonzero exit.
 set +e
-CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c 'exit 23'
+failed_rec=$(CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c 'exit 23' 2>&1 >/dev/null)
 failed_rc=$?
 set -e
 [[ $failed_rc -eq 23 ]] || fail 'driver failure rc was not propagated'
-grep -A6 '^## audit --' "$log" | grep -q '\*\*State\*\*: failed' || fail 'failed lifecycle not logged'
-grep -A6 '^## audit --' "$log" | grep -q '\*\*Exit\*\*: 23' || fail 'failed exit not logged'
+grep -q 'state=failed' <<<"$failed_rec" || fail 'failed lifecycle not reported'
+grep -q 'exit=23' <<<"$failed_rec" || fail 'failed exit not reported'
 # INT/TERM/HUP reach the complete route process group and leave no descendants.
 cat >"$tmp/signal-driver" <<'DRIVER'
 #!/usr/bin/env bash
@@ -136,7 +135,7 @@ DRIVER
 chmod +x "$tmp/signal-driver"
 for sig in INT TERM HUP; do
   rm -f "$tmp/pids-seen" "$tmp/${sig,,}-seen"
-  SIGNAL_NAME=$sig CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- "$tmp/signal-driver" & wrapper=$!
+  SIGNAL_NAME=$sig CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- "$tmp/signal-driver" 2>"$tmp/sig-rec" & wrapper=$!
   for _ in {1..50}; do [[ -s "$tmp/pids-seen" ]] && break; sleep .05; done
   [[ -s "$tmp/pids-seen" ]] || fail "$sig signal fixture did not start"
   read -r driver_pid grandchild_pid <"$tmp/pids-seen"
@@ -145,8 +144,8 @@ for sig in INT TERM HUP; do
   expected=$((128 + $(kill -l "$sig")))
   [[ $signal_rc -eq $expected && -f "$tmp/${sig,,}-seen" ]] || fail "$sig not propagated/interrupted rc wrong"
   for pid in "$driver_pid" "$grandchild_pid"; do kill -0 "$pid" 2>/dev/null && fail "orphaned $sig route child $pid"; done
-  last_state=$(grep '^\- \*\*State\*\*:' "$log" | tail -1); last_exit=$(grep '^\- \*\*Exit\*\*:' "$log" | tail -1)
-  [[ $last_state == *interrupted && $last_exit == *"$expected" ]] || fail "$sig interrupted lifecycle not logged nonzero"
+  rec_line=$(grep '^audit -- run-id=' "$tmp/sig-rec" | tail -1)
+  [[ $rec_line == *state=interrupted* && $rec_line == *"exit=$expected"* ]] || fail "$sig interrupted lifecycle not reported nonzero"
 done
 # The direct fallback also resets inherited SIGINT and fails nonzero.
 cat >"$tmp/direct-driver" <<'DRIVER'
@@ -164,4 +163,5 @@ kill -INT "$wrapper"
 set +e; wait "$wrapper"; signal_rc=$?; set -e
 [[ $signal_rc -eq 130 && -f "$tmp/int-seen" ]] || fail 'direct SIGINT not propagated/interrupted'
 kill -0 "$driver_pid" 2>/dev/null && fail 'direct route child survived SIGINT'
-echo 'PASS: executable audit evidence/root/run/log/argument/INT/TERM/HUP contract' >&2
+[[ ! -e "$tmp/.oh/logs" ]] || fail 'the run reported into a file instead of stderr'
+echo 'PASS: executable audit evidence/root/run-record/argument/INT/TERM/HUP contract' >&2

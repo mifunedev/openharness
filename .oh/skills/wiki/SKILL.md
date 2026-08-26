@@ -78,7 +78,7 @@ These hold across all three subcommands; the reference docs assume them.
   ```
 - **Orchestrator-only write gate**: `ingest` writes (snapshots + entity pages) and
   `lint`'s `corpus/README.md` regeneration are orchestrator-only. Sub-agents propose
-  drafts to `.oh/logs/<today>/wiki-drafts/<slug>.md`; the orchestrator promotes via
+  drafts to `$TMPDIR/oh-wiki-drafts/<slug>.md`; the orchestrator promotes via
   `/wiki ingest --from-draft <slug>`. A sub-agent that writes directly to the corpus
   is out of scope and may be reverted.
 - **Index reflects tracked entries**: `corpus/README.md`'s Index table is generated

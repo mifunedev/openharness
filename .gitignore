@@ -55,9 +55,6 @@ workspace/.slack/*/
 workspace/.slack/events/
 workspace/.slack/settings.json
 
-# Machine-generated run artifacts (audit run log, rendered reports). Never tracked.
-.oh/logs/
-
 # Pi project config (generated symlinks)
 workspace/.pi/
 

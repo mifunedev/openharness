@@ -112,8 +112,7 @@ Ignore these unless the task explicitly targets them:
 | `node_modules/`, `.pnpm/`, `.pi/npm/node_modules/`, `.hermes/lsp/node_modules/` | Vendor dependencies; huge and low-signal. | Debugging dependency installation or package resolution. |
 | `.oh/cli/dist/` | Generated build output. | Verifying generated CLI artifacts. |
 | `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
-| `.oh/logs/` | Gitignored machine-generated run artifacts (`/audit` run log, rendered reports). | Investigating a dated run. |
-| `.oh/logs/*/wiki-drafts/` | Draft knowledge proposals, not canonical wiki. | Promoting a draft via `/wiki ingest --from-draft`. |
+| `.oh/crons/.cron.log` | Append-only cron liveness trail, one line per pulse. | Checking whether a cron still fires. |
 | `.oh/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.oh/skills/wiki/corpus/*.md` entry. |
 | `workspace/.slack/`, `workspace/.pi/`, `workspace/.ralph/`, `workspace/startup.sh` | Runtime state and local/sensitive sandbox artifacts. | Debugging Slack/Pi/Ralph runtime state or startup generation. |
 | `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific build-session status; prefer `tail` over full read. |

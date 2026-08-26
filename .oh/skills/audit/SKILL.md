@@ -56,7 +56,7 @@ Use the executable lifecycle boundary
 for every valid invocation. The route driver is mandatory and is the actual selected-target
 execution (not a preflight command); it reads the exported `AUDIT_ROUTE`. The boundary
 validates all target arguments and the driver before lifecycle creation, resolves and exports
-immutable `AUDIT_ROOT`, `AUDIT_LOG_ROOT`, and `AUDIT_RUN_ID`, maps the target to exactly one
+immutable `AUDIT_ROOT` and `AUDIT_RUN_ID`, maps the target to exactly one
 route, supplies invocation-scoped `AUDIT_TMP_ROOT` and `AUDIT_EVIDENCE_PATH`, changes to
 `AUDIT_ROOT`, and invokes the driver with `<target> <validated-target-args...>` verbatim
 (also exporting `AUDIT_TARGET` and `AUDIT_TARGET_ARGS_JSON`). It keeps the lifecycle open

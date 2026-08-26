@@ -112,7 +112,7 @@ For each sampled trajectory, attach the deterministic signals the scorer weights
 
 Write the assembled cohort (array of `TRAJECTORY_SCHEMA` records, or a
 `{ "trajectories": [...] }` wrapper) to a gitignored working file, e.g.
-`.oh/logs/<UTC-date>/weigh-<slug>-<HHMMSS>.cohort.json`.
+`$TMPDIR/oh-weigh/<UTC-date>/weigh-<slug>-<HHMMSS>.cohort.json`.
 
 ### Step 4 — Weight + select (the harness-owned step)
 
@@ -122,7 +122,7 @@ scorer itself stays pure:
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/scripts/score-trajectories.mjs" \
-  --cohort ".oh/logs/$(date -u +%F)/weigh-<slug>-<HHMMSS>.cohort.json" \
+  --cohort "${TMPDIR:-/tmp}/oh-weigh/$(date -u +%F)/weigh-<slug>-<HHMMSS>.cohort.json" \
   --method "<best-of-n|vote|softmax|synthesis>" \
   --now "$(date -u +%s)" \
   [--weights '<json>'] [--soft]
@@ -147,8 +147,8 @@ methods `selected` is already the single chosen id — no aggregation step.
 
 ### Step 6 — Persist
 
-Persist the run artifacts to the **gitignored** `.oh/logs/<UTC-date>/`
-directory (matched by `.gitignore` `.oh/logs/`) — never stage them:
+Write the run artifacts to ephemeral scratch under
+`${TMPDIR:-/tmp}/oh-weigh/<UTC-date>/`, outside the repo — never inside `.oh/`:
 - `weigh-<slug>-<HHMMSS>.json` — the full scorer report (config + scored rows +
   selection), the audit trail.
 - `weigh-<slug>-<HHMMSS>.md` — a short human summary: the task, N, method,
@@ -169,7 +169,7 @@ Announce the `RESULT:` tag once Step 6 completes.
   the scorer.
 - **Exceeding the cap.** `N > 8` is rejected — cost grows linearly with N (plus
   `/eval` + `/audit implementation <slug>` per trajectory). Preview with `--dry-run` first.
-- **Committing the artifacts.** `.oh/logs/<UTC-date>/` is gitignored; never stage a
+- **Writing the artifacts into the repo.** They belong in `$TMPDIR`; never stage a
   cohort, report, or summary.
 - **Editing the scorer to change weights inline.** `DEFAULT_WEIGHTS` is
   `Object.freeze`d and probe-pinned; pass `--weights` for a one-off, and route any

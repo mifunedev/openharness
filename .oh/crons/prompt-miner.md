@@ -64,7 +64,7 @@ sessions. That is intended: the report is a rolling view of a 14-day corpus, not
 a daily delta, and marker promotion is a property of the corpus rather than of
 any single day.
 
-This writes `.oh/logs/<today>/prompt-miner-<date>.md` (+ `.json`). `--report-only`
+This writes `$TMPDIR/oh-prompt-miner/<today>/prompt-miner-<date>.md` (+ `.json`). `--report-only`
 **never** edits `.oh/context/IDENTITY.md`. Surface the top mined markers in the
 reply so a human can review the run without attaching.
 

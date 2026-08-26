@@ -88,7 +88,6 @@ services:
       - HERMES_DASHBOARD_PORT=${HERMES_DASHBOARD_PORT:-9119}
       - CRONS_DIR=${CRONS_DIR:-.oh/crons}
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
-      - LOGS_DIR=${LOGS_DIR:-.oh/logs}
       - WORKTREES_DIR=${WORKTREES_DIR:-.oh/worktrees}
     stdin_open: true
     tty: true

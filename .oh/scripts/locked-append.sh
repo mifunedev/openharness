@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Append stdin to a target file, serializing whole-record writes with flock.
-# This is for shared harness runtime logs (.oh/logs/<today>/audit.md, .oh/crons/.cron.log).
+# This is for the shared cron liveness trail (.oh/crons/.cron.log).
 set -euo pipefail
 
 usage() {

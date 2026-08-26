@@ -16,7 +16,7 @@ Per SPEC v0.7 §"Weekly cleanup cron": completed tasks move into the
 dated archive under `.oh/tasks/`; incomplete tasks are left alone with a
 note. The same weekly pass also grooms stale `.oh/worktrees/` branch
 checkouts, but it never touches the durable `.oh/worktrees/agent/` or
-`.oh/worktrees/project/` namespaces. `.oh/logs/` carries run artifacts
+`.oh/worktrees/project/` namespaces. `.oh/crons/.cron.log` carries liveness
 only — never a `.oh/tasks/` subfolder.
 
 ## Tasks

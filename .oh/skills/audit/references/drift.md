@@ -91,7 +91,7 @@ rename history), print `  (no changed paths detected — inspect manually)`.
 
 **Goal**: detect whether HEAD is behind its remote tracking branch, the
 working tree is dirty, or the current branch is unexpected. This section
-is motivated by the append-only-file stale-view trap: `.oh/logs/<date>/audit.md`
+is motivated by the append-only-file stale-view trap: `.oh/crons/.cron.log`
 is appended by concurrent sessions; if HEAD
 drifts behind `origin/<branch>`, the in-context view of these files lags
 behind reality.

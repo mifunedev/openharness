@@ -1,6 +1,6 @@
 # prompt-miner — Report Schema
 
-`mine-traces.mjs` emits two artifacts to `--out` (default `.oh/logs/<UTC-date>/`):
+`mine-traces.mjs` emits two artifacts to `--out` (default `$TMPDIR/oh-prompt-miner/<UTC-date>/`):
 
 - `prompt-miner-<UTC-date>.json` — the full dataset (below).
 - `prompt-miner-<UTC-date>.md` — manifest + ranked top-N / bottom-N table.

@@ -30,11 +30,11 @@ if AUDIT_ROOT="$ROOT" bash "$A" "$target" "$probe" >/dev/null 2>&1; then fail 's
 # Global recovery must reject the symlink even when its destination is empty.
 if AUDIT_ROOT="$ROOT" A="$A" bash -c 'source "$A"; ablate_recover' >/dev/null 2>&1; then fail 'global recovery accepted empty symlinked state directory'; fi
 rm "$state"
-# Every ablatable target now resolves against AUDIT_ROOT alone: the `.oh/memory`
-# tier that AUDIT_LOG_ROOT existed to reach was deleted. A context file under some
-# OTHER root must therefore be rejected, not silently ablated.
+# Every ablatable target resolves against AUDIT_ROOT alone: the `.oh/memory` tier
+# that the second root existed to reach was deleted, and AUDIT_LOG_ROOT with it.
+# A context file under some OTHER root must be rejected, not silently ablated.
 SHARED=$(mktemp -d); mkdir -p "$SHARED/.oh/context"; printf forbidden >"$SHARED/.oh/context/USER.md"
-if AUDIT_ROOT="$ROOT" AUDIT_LOG_ROOT="$SHARED" A="$A" T="$SHARED/.oh/context/USER.md" bash -c 'source "$A"; _ablate_canonical "$T"' >/dev/null 2>&1; then fail 'out-of-root shared target escaped source-root constraint'; fi
+if AUDIT_ROOT="$ROOT" A="$A" T="$SHARED/.oh/context/USER.md" bash -c 'source "$A"; _ablate_canonical "$T"' >/dev/null 2>&1; then fail 'out-of-root target escaped source-root constraint'; fi
 [[ $(<"$SHARED/.oh/context/USER.md") == forbidden ]] || fail 'rejected out-of-root target was mutated'
 rm -rf "$SHARED"; assert_clean
 # SIGKILL cannot trap: the next startup recovery restores exact bytes.

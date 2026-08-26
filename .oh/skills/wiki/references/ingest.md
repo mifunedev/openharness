@@ -7,7 +7,7 @@
 
 # Wiki Ingest
 
-Snapshot a source and write or update a wiki entity page. This is the only authorized path for writing to `.oh/skills/wiki/corpus/`. Sub-agents may not call this skill directly for write operations — they propose drafts to `.oh/logs/<today>/wiki-drafts/<slug>.md` and the orchestrator promotes via `--from-draft`.
+Snapshot a source and write or update a wiki entity page. This is the only authorized path for writing to `.oh/skills/wiki/corpus/`. Sub-agents may not call this skill directly for write operations — they propose drafts to `$TMPDIR/oh-wiki-drafts/<slug>.md` and the orchestrator promotes via `--from-draft`.
 
 The canonical schema, slug derivation rules, and body-merge strategy all live in `.oh/skills/wiki/references/schema.md`. This skill defers to those rules — it does not redefine them.
 
@@ -37,7 +37,7 @@ No other forms are documented or supported. `argument-hint` frontmatter above en
 /wiki ingest --from-draft <slug> [--allow-stale]
 ```
 
-- `--from-draft <slug>` — promote the most-recent draft for `<slug>` from `.oh/logs/*/wiki-drafts/<slug>.md`.
+- `--from-draft <slug>` — promote the most-recent draft for `<slug>` from `$TMPDIR/oh-wiki-drafts/<slug>.md`.
 - `--allow-stale` — bypass the 7-day staleness gate (see § Draft promotion).
 
 ## When to use
@@ -432,16 +432,16 @@ When the source URL is a GitHub repository and the user asks to "study", "index 
 
 ### 5. Draft promotion (`--from-draft`)
 
-1. Glob for draft files: `.oh/logs/*/wiki-drafts/<slug>.md`. Exclude any file named `<slug>.md.skip`.
-2. Sort matches by the **ISO date component in the parent directory name** (`.oh/logs/YYYY-MM-DD/`) — take the lexicographically greatest date. Do **not** use filesystem mtime (unreliable across git checkout and Docker volume mounts).
+1. Glob for draft files: `$TMPDIR/oh-wiki-drafts/<slug>.md`. Exclude any file named `<slug>.md.skip`.
+2. When several drafts match, take the one whose embedded `updated:`/date line is greatest. Do **not** use filesystem mtime (unreliable across git checkout and Docker volume mounts).
 3. If no matches, exit:
    ```
-   ERROR: no draft found for slug "<slug>" under .oh/logs/*/wiki-drafts/.
+   ERROR: no draft found for slug "<slug>" under $TMPDIR/oh-wiki-drafts/.
    ```
 4. **Staleness check**: compute the difference between today's UTC date and the most-recent draft's parent directory date. If the draft date is more than 7 days older than today:
    - Without `--allow-stale`: exit with status STALE:
      ```
-     STALE: draft .oh/logs/<date>/wiki-drafts/<slug>.md is <N> days old (threshold: 7 days).
+     STALE: draft $TMPDIR/oh-wiki-drafts/<slug>.md is <N> days old (threshold: 7 days).
      Re-run with --allow-stale to promote anyway.
      ```
    - With `--allow-stale`: log a warning and continue.
@@ -526,7 +526,7 @@ If you cannot run the full `/wiki lint` skill, do not hand-maintain the table ca
 
 This skill's write operations (`.oh/skills/wiki/corpus/raw/` snapshots and `.oh/skills/wiki/corpus/<slug>.md` writes) are **orchestrator-only**. The orchestrator is the only session authorized to write to tracked wiki surfaces.
 
-Sub-agents may propose new entries by writing drafts to `.oh/logs/<today>/wiki-drafts/<slug>.md`. The draft format is free-form markdown (no required frontmatter). The orchestrator then reviews and promotes via:
+Sub-agents may propose new entries by writing drafts to `$TMPDIR/oh-wiki-drafts/<slug>.md`. The draft format is free-form markdown (no required frontmatter). The orchestrator then reviews and promotes via:
 
 ```
 /wiki ingest --from-draft <slug>
@@ -549,7 +549,7 @@ trail; the `.oh/memory` log they used to be written to was deleted.
 - **Monolithic ingest scripts when a safety gate is likely** — avoid bundling network fetch, raw snapshot write, wiki synthesis, and log append into one large `execute_code` call. If approval or shell-safety friction appears, split the ingest into auditable steps: fetch/snapshot with a small `terminal` command, create or update `.oh/skills/wiki/corpus/<slug>.md` with `write_file`/`patch`, then regenerate the index separately. The invariant is the same (raw snapshot + bounded synthesized entry + log), but smaller tool calls are easier to approve, verify, and recover.
 - **Consent-gated write recovery** — if a multi-file ingest is blocked by a consent/approval gate, report exactly which files would be written and wait for explicit approval. Prefer splitting the approved recovery into the smallest direct file operations (`write_file` for the wiki entry/raw snapshots) rather than wrapping all writes in `execute_code`; approval state may not carry cleanly into a monolithic script retry. If the tool explicitly says not to retry or not to attempt the same outcome via another tool, stop and report the blocker. Otherwise, after approval, complete the intended ingest and verify the synthesized wiki entry, and the raw snapshot size before declaring success. Do not treat the pre-approval fetch metadata as an ingest; no wiki operation is complete until raw snapshot + entity page both exist.
 - **Writing directly to `.oh/skills/wiki/corpus/` from a sub-agent context** — always use the draft path + `--from-draft` promotion. The orchestrator is the sole writer.
-- **Hardcoding today's date in `--from-draft` resolution** — glob `.oh/logs/*/wiki-drafts/<slug>.md` and sort by the ISO date in the directory name, not by mtime and not by assuming today.
+- **Resolving `--from-draft` by mtime** — pick the draft by its embedded date, not by filesystem mtime and not by assuming today.
 - **Using mtime for stale detection** — mtime is unreliable across git checkouts and Docker volume remounts. Always derive staleness from the ISO date in the parent directory name.
 - **Omitting `mkdir -p .oh/skills/wiki/corpus/raw/`** — `.oh/skills/wiki/corpus/raw/` is gitignored and may not exist on a fresh clone. Always create it before writing.
 - **Concatenating bodies on update** — the body-merge strategy replaces `## Summary` and `## Detail` in-place; it does not append. Bodies that grow unbounded exceed the 600-word cap and dilute the entry.

@@ -581,18 +581,6 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
   fi
 fi
 
-# ─── Resolve + pre-create the logs directory ──────────────────────
-# Single source of truth = LOGS_DIR (docker-compose passes .devcontainer/.env's
-# LOGS_DIR through here; default .oh/logs). Pre-creating it at boot means the
-# first skill/cron write lands in the resolved dir instead of racing a mkdir —
-# and never silently falls back to a phantom relative `logs/`. Mirrors the
-# CRONS_PATH block below; see .oh/scripts/oh-path for the shared resolver.
-case "${LOGS_DIR:-.oh/logs}" in
-  /*) LOGS_PATH="${LOGS_DIR}" ;;
-  *)  LOGS_PATH="$HARNESS/${LOGS_DIR:-.oh/logs}" ;;
-esac
-mkdir -p "$LOGS_PATH"
-
 # ─── Resolve + pre-create the worktrees directory ─────────────────
 # Single source of truth = WORKTREES_DIR (docker-compose passes
 # paths.worktrees through here; default .oh/worktrees). Cron worktree isolation

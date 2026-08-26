@@ -2,11 +2,11 @@
 # oh-path — resolve a harness data directory deterministically.
 #
 # Usage:  oh-path <name> [--no-create]
-#   <name>   logs | crons | evals | context | tasks | worktrees
+#   <name>   crons | evals | context | tasks | worktrees
 #            (or any <NAME>_DIR you define)
 #
 # Resolution precedence (first hit wins):
-#   1. environment override   <NAME>_DIR        (e.g. LOGS_DIR=.oh/logs)
+#   1. environment override   <NAME>_DIR        (e.g. CRONS_DIR=.oh/crons)
 #   2. default                .oh/<name>
 #
 # The env var is read from the PROCESS environment. Inside the sandbox that is
@@ -50,7 +50,7 @@ _script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
 _oh_dir=$(dirname -- "$_script_dir")      # <root>/.oh
 _root=$(dirname -- "$_oh_dir")            # <root>
 
-# 1. environment override:  logs → LOGS_DIR, crons → CRONS_DIR, ...
+# 1. environment override:  crons → CRONS_DIR, evals → EVALS_DIR, ...
 _envvar="$(printf '%s' "$_name" | tr 'a-z-' 'A-Z_')_DIR"
 eval "_dir=\${$_envvar:-}"
 

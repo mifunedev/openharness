@@ -128,10 +128,9 @@ command -v -- "${command[0]}" >/dev/null 2>&1 || usage
 script_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd -P)
 if [[ -n ${AUDIT_RUN_ID:-} ]]; then
   [[ $AUDIT_RUN_ID =~ ^audit-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9._-]+$ ]] || { echo 'audit: invalid inherited AUDIT_RUN_ID' >&2; exit 64; }
-  [[ -n ${AUDIT_ROOT:-} && -n ${AUDIT_LOG_ROOT:-} ]] || { echo 'audit: inherited run requires both roots' >&2; exit 64; }
+  [[ -n ${AUDIT_ROOT:-} ]] || { echo 'audit: inherited run requires AUDIT_ROOT' >&2; exit 64; }
   resolved_root=$(cd "$AUDIT_ROOT" && pwd -P) || exit 64
-  resolved_log_root=$(cd "$AUDIT_LOG_ROOT" && pwd -P) || exit 64
-  [[ $resolved_root == "$AUDIT_ROOT" && $resolved_log_root == "$AUDIT_LOG_ROOT" ]] || { echo 'audit: inherited roots must be canonical' >&2; exit 64; }
+  [[ $resolved_root == "$AUDIT_ROOT" ]] || { echo 'audit: inherited root must be canonical' >&2; exit 64; }
   outer=false
 else
   if [[ -n ${CRON_WORKTREE:-} ]] && git -C "$CRON_WORKTREE" rev-parse --show-toplevel >/dev/null 2>&1; then
@@ -140,15 +139,9 @@ else
     resolved_root=$(git -C "$script_root" rev-parse --show-toplevel)
   fi
   resolved_root=$(cd "$resolved_root" && pwd -P)
-  if [[ -n ${CRON_LOG_ROOT:-} ]] && git -C "$CRON_LOG_ROOT" rev-parse --show-toplevel >/dev/null 2>&1; then
-    resolved_log_root=$(git -C "$CRON_LOG_ROOT" rev-parse --show-toplevel)
-  else
-    resolved_log_root=$(git -C "$resolved_root" worktree list --porcelain | awk 'NR==1 && $1=="worktree" {sub(/^worktree /,""); print; exit}')
-  fi
-  resolved_log_root=$(cd "$resolved_log_root" && pwd -P)
   AUDIT_RUN_ID="audit-$(date -u +%Y%m%dT%H%M%SZ)-$BASHPID"
-  AUDIT_ROOT=$resolved_root AUDIT_LOG_ROOT=$resolved_log_root
-  export AUDIT_RUN_ID AUDIT_ROOT AUDIT_LOG_ROOT
+  AUDIT_ROOT=$resolved_root
+  export AUDIT_RUN_ID AUDIT_ROOT
   outer=true
 fi
 route="$AUDIT_ROOT/.oh/skills/audit/references/$target.md"
@@ -222,14 +215,12 @@ elif [[ $rc -eq 0 ]]; then
 fi
 trap - INT TERM HUP
 if [[ $outer == true ]]; then
-  today=$(date -u +%Y-%m-%d); finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  log="$AUDIT_LOG_ROOT/.oh/logs/$today/audit.md"
+  # The run record is REPORTED, never written. The `.oh/logs` tier this used to
+  # append to was deleted; a run's correlation data belongs in the operator's
+  # terminal, not in a file nobody reads back.
+  finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   state=complete; [[ $rc -eq 0 ]] || state=failed; [[ -z $interrupted ]] || state=interrupted
-  if ! printf '## audit -- %s UTC\n- **Run-ID**: %s\n- **Target**: %s\n- **State**: %s\n- **Verdict**: %s\n- **Exit**: %s\n- **Started**: %s\n- **Finished**: %s\n\n' \
-    "$(date -u +%H:%M)" "$AUDIT_RUN_ID" "$target" "$state" "$verdict" "$rc" "$started_at" "$finished_at" \
-    | bash "$AUDIT_ROOT/.oh/scripts/locked-append.sh" "$log"; then
-    echo 'audit: terminal log append failed' >&2
-    [[ $rc -ne 0 ]] || rc=1
-  fi
+  printf 'audit -- run-id=%s target=%s state=%s verdict=%s exit=%s started=%s finished=%s\n' \
+    "$AUDIT_RUN_ID" "$target" "$state" "$verdict" "$rc" "$started_at" "$finished_at" >&2
 fi
 exit "$rc"

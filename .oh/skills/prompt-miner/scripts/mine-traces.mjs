@@ -670,7 +670,7 @@ const USAGE = `usage: mine-traces.mjs [options]
   --include-prompt-text     emit redacted prompt text (default off)
   --no-git                  stub the ground-truth bonus to 0
   --weights <json>          override friction weights (all keys required)
-  --out <dir>               output dir (default .oh/logs/<UTC-date>/)
+  --out <dir>               output dir (default $TMPDIR/oh-prompt-miner/<UTC-date>/)
   --report-only             write the report only (no IDENTITY mutation)
   --dry-run                 print to stdout; write nothing
   --max-file-mb N          (default 50) skip files larger than this
@@ -1209,7 +1209,9 @@ async function main() {
     return;
   }
 
-  const outDir = args.out || path.join(process.env.LOGS_DIR || ".oh/logs", utcDate);
+  const outDir =
+    args.out ||
+    path.join(process.env.TMPDIR || "/tmp", "oh-prompt-miner", utcDate);
   const { jsonPath, mdPath } = writeReports(outDir, utcDate, dataset, args.top);
   process.stdout.write(
     `wrote ${jsonPath}\nwrote ${mdPath}\nscanned=${manifest.sessionsScanned} ranked=${manifest.sessionsRanked} malformed=${manifest.malformedLines} skipped=${manifest.skippedFiles}\n`,

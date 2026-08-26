@@ -90,13 +90,12 @@ fi
 if [ "$MODE" = "--baseline" ]; then
   echo "=== Baseline probe run ==="
   run_probes "baseline"
-  # Persist for durable comparison (resolver honors LOGS_DIR)
-  if [ -n "${AUDIT_LOG_ROOT:-}" ]; then LOG_DIR="$AUDIT_LOG_ROOT/.oh/logs"
-  else LOG_DIR="$(sh "$HARNESS/.oh/scripts/oh-path" logs 2>/dev/null || printf '%s' "$HARNESS/.oh/logs")"; fi
-  mkdir -p "$LOG_DIR/$TODAY/context-audit-baseline"
-  cp "$RESULTS"/baseline-*.txt "$LOG_DIR/$TODAY/context-audit-baseline/"
+  # Ephemeral scratch, outside the repo. Nothing under .oh/ persists a run.
+  OUT_DIR="${TMPDIR:-/tmp}/oh-context-audit/$TODAY"
+  mkdir -p "$OUT_DIR"
+  cp "$RESULTS"/baseline-*.txt "$OUT_DIR/"
   echo ""
-  echo "Baseline saved → $LOG_DIR/$TODAY/context-audit-baseline/"
+  echo "Baseline written → $OUT_DIR/ (ephemeral; copy it out to keep it)"
   exit 0
 fi
 

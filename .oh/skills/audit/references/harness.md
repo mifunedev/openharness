@@ -49,14 +49,13 @@ Read the following before spawning agents. Pass the assembled snapshot to every 
 # The executable outer dispatcher already validated, canonicalized, and exported
 # immutable roots. Routes consume them; they never re-detect or overwrite them.
 : "${AUDIT_ROOT:?outer audit dispatcher did not export AUDIT_ROOT}"
-: "${AUDIT_LOG_ROOT:?outer audit dispatcher did not export AUDIT_LOG_ROOT}"
 : "${AUDIT_RUN_ID:?outer audit dispatcher did not export AUDIT_RUN_ID}"
 
 # Harness structure
 ls "$AUDIT_ROOT/.claude/skills/"
 ls "$AUDIT_ROOT/.claude/agents/" 2>/dev/null || echo "no agents dir"
 ls "$AUDIT_ROOT/.oh/crons/" 2>/dev/null || echo "no crons"
-ls "$AUDIT_LOG_ROOT/.oh/logs/" 2>/dev/null | tail -10
+tail -20 "$AUDIT_ROOT/.oh/crons/.cron.log" 2>/dev/null
 ls "$AUDIT_ROOT/.oh/skills/wiki/corpus/" 2>/dev/null | head -20
 
 # Package health
@@ -85,7 +84,6 @@ Assemble a **Context Snapshot** (compact markdown, ~300 words):
 
 ### Roots
 - AUDIT_ROOT: [source checkout under audit]
-- AUDIT_LOG_ROOT: [runtime log checkout, if different]
 
 ### Skills present
 [list]
@@ -134,7 +132,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 3. **Issue template completeness** — List `.github/ISSUE_TEMPLATE/` files. For each template, check: does it have required fields, clear labels, and assignment guidance?
 >
-> 4. **Wiki utilization** — Count wiki pages under `.oh/skills/wiki/corpus/`. Count `/audit` run logs under `.oh/logs/`. Are logs recent (within 7 days)? Are wiki pages populated or placeholder-empty?
+> 4. **Wiki utilization** — Count wiki pages under `.oh/skills/wiki/corpus/`. For each, is it populated or a placeholder stub? What percentage is populated?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -188,7 +186,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 3. **Worktree cleanup** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list`. Identify orphaned agent branches (`agent/*`) with no recent commits (check `git log --since="7 days ago"`). Is there any automated cleanup?
 >
-> 4. **State corruption risks** — Look for: shared files written by multiple agents concurrently (e.g., `.oh/logs/<date>/audit.md`), no file locking on append operations, mid-commit crash scenarios (partial writes to critical files), compose volumes that could diverge.
+> 4. **State corruption risks** — Look for: shared files written by multiple agents concurrently (e.g., `.oh/crons/.cron.log`), no file locking on append operations, mid-commit crash scenarios (partial writes to critical files), compose volumes that could diverge.
 >
 > **Return format (Ultra compression):**
 > ```
@@ -210,11 +208,11 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Wiki utilization** — List all files under `.oh/skills/wiki/corpus/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
 >
-> 2. **Cron health** — For each cron definition in `.oh/crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check `.oh/logs/` for cron execution traces.
+> 2. **Cron health** — For each cron definition in `.oh/crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check `.oh/crons/.cron.log` for cron execution traces.
 >
 > 3. **Agent worktree status** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list` and `git branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
 >
-> 5. **Skill usage patterns** — Use the Context Snapshot's long-term memory and recent daily-log excerpts from `AUDIT_LOG_ROOT`; keep `.claude/skills/` existence checks on `AUDIT_ROOT`. Which skills appear in memory entries (evidence of use)? Which skills exist in `.claude/skills/` but never appear in logs (potentially stale or unknown)?
+> 5. **Skill usage patterns** — Use the Context Snapshot's `.oh/crons/.cron.log` excerpt plus in-repo references; keep `.claude/skills/` existence checks on `AUDIT_ROOT`. Which skills are referenced by a cron, a workflow, or another skill (evidence of use)? Which exist in `.claude/skills/` but are referenced nowhere (potentially stale or unknown)?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -296,7 +294,7 @@ After all 4 auditors return and pass the auditor-output validation gate, synthes
 
 ### 6. Memory Protocol
 
-Return this structured observation to the outer dispatcher; do not append or run retro from this route. The dispatcher logs it once under `AUDIT_LOG_ROOT`:
+Return this structured observation to the outer dispatcher; do not report a run record from this route. The dispatcher prints it once:
 
 ```markdown
 ## [Harness Audit] — HH:MM UTC
@@ -332,7 +330,7 @@ Return this structured observation to the outer dispatcher; do not append or run
 | Orchestrator skills | `.claude/skills/` |
 | Workspace skills | `workspace/.claude/skills/` when created by a pack/runtime (not part of the minimal workspace template) |
 | Crons | `.oh/crons/` |
-| Run logs | `.oh/logs/YYYY-MM-DD/audit.md` |
+| Cron liveness | `.oh/crons/.cron.log` |
 | Operating principles | `.oh/context/IDENTITY.md` |
 | Wiki | `.oh/skills/wiki/corpus/` |
 | Compose | `.devcontainer/docker-compose.yml` |

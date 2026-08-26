@@ -43,7 +43,7 @@ content. The contract is non-negotiable:
 - `--include-prompt-text` applies a redaction pass (line-level token patterns +
   block-level key bodies) and prints a `WARNING` banner. Use it only when you must
   read the prompt wording, and never commit the result.
-- All artifacts land in the **gitignored** `.oh/logs/<UTC-date>/` directory. Never
+- All artifacts land in ephemeral scratch under `$TMPDIR`, outside the repo. Never
   stage, commit, or paste a transcript or an `--include-prompt-text` report.
 - The engine never edits `.oh/context/IDENTITY.md`. Only Step 4 of this skill
   writes there, and only after explicit `APPROVE`.
@@ -93,7 +93,7 @@ node "${CLAUDE_SKILL_DIR}/scripts/mine-traces.mjs" "${args[@]}"
 ```
 
 The engine writes `prompt-miner-<UTC-date>.json` + `.md` to `--out`
-(default `.oh/logs/<UTC-date>/`), unless `--dry-run` was passed (it prints the JSON
+(default `$TMPDIR/oh-prompt-miner/<UTC-date>/`), unless `--dry-run` was passed (it prints the JSON
 dataset to stdout and writes nothing). The flag surface (defaults in parens):
 
 - `--harness all|claude|pi` (all), `--since`/`--until` (YYYY-MM-DD),

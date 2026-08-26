@@ -65,7 +65,7 @@ describe("provision-python.sh", () => {
 
   it("verifies ipykernel before reporting success", () => {
     const text = script();
-    expect(text).toContain('"$KERNEL_PYTHON" -c "import $mod"');
+    expect(text).toContain('"$KERNEL_PYTHON" -c "import ipykernel"');
     expect(text).toContain("kernel environment is incomplete");
   });
 

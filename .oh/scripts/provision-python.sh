@@ -206,14 +206,10 @@ fi
   "kernel interpreter missing at $KERNEL_PYTHON" \
   "run: bash .oh/scripts/provision-python.sh"
 
-missing=()
-for mod in ipykernel; do
-  "$KERNEL_PYTHON" -c "import $mod" >/dev/null 2>&1 || missing+=("$mod")
-done
-if [ ${#missing[@]} -gt 0 ]; then
-  die "kernel environment is incomplete — missing: ${missing[*]}" \
-      "run: bash .oh/scripts/provision-python.sh"
-fi
+# ipykernel is the one hard requirement: without it the kernel cannot start.
+"$KERNEL_PYTHON" -c "import ipykernel" >/dev/null 2>&1 \
+  || die "kernel environment is incomplete — ipykernel is not importable by $KERNEL_PYTHON" \
+         "run: bash .oh/scripts/provision-python.sh"
 
 # Optional runtime packages: verified when requested, never silently assumed.
 for spec in $KERNEL_PACKAGES; do

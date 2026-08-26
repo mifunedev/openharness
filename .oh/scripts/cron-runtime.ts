@@ -25,10 +25,8 @@ export interface CronEntry {
   // worktree. A fail-open optimization — a gate error proceeds (PREFLIGHT_ERROR).
   preflight?: string;
   // Optional canonical GitHub repository (`owner/name`) for this cron. The
-  // runtime exports it as AUTOPILOT_REPO and resolves the matching local git
-  // remote as AUTOPILOT_REMOTE so gh and git operations target the same repo.
-  // NOTE: the AUTOPILOT_* names are vestigial — the autopilot cron was removed in
-  // 0.3.0 but these are generic per-cron exports. Renaming them is a follow-up.
+  // runtime exports it as CRON_REPO and resolves the matching local git
+  // remote as CRON_REMOTE so gh and git operations target the same repo.
   repo?: string;
   body: string;
   filePath: string;
@@ -397,8 +395,8 @@ export function buildTmuxWrapper(opts: {
   const quotedAgent = shellQuote(agentBin);
   const quotedPidFile = shellQuote(pidFile);
   const worktreeExport = opts.worktree ? ` CRON_WORKTREE=${shellQuote(opts.worktree)}` : "";
-  const repoExport = opts.repo ? ` AUTOPILOT_REPO=${shellQuote(opts.repo)}` : "";
-  const remoteExport = opts.remote ? ` AUTOPILOT_REMOTE=${shellQuote(opts.remote)}` : "";
+  const repoExport = opts.repo ? ` CRON_REPO=${shellQuote(opts.repo)}` : "";
+  const remoteExport = opts.remote ? ` CRON_REMOTE=${shellQuote(opts.remote)}` : "";
   return (
     `echo $$ > ${quotedPidFile}; ` +
     `export CRON_TMUX_SESSION=${shellQuote(session)} CRON_KEEP_MARKER=${shellQuote(`/tmp/${session}.keep`)} CRON_OVERLAP_PIDFILE=${quotedPidFile}${worktreeExport}${repoExport}${remoteExport}; ` +
@@ -452,8 +450,8 @@ export function buildCronAgentCommand(opts: {
   const quotedLogFile = shellQuote(logFile);
   const exitOrReturn = exitOnComplete ? `exit $status` : `true`;
   const envExport =
-    (repo ? `export AUTOPILOT_REPO=${shellQuote(repo)}; ` : "") +
-    (remote ? `export AUTOPILOT_REMOTE=${shellQuote(remote)}; ` : "");
+    (repo ? `export CRON_REPO=${shellQuote(repo)}; ` : "") +
+    (remote ? `export CRON_REMOTE=${shellQuote(remote)}; ` : "");
   const resumeInit = resumeFile
     ? `printf '%s' ${quotedAgent} > ${shellQuote(resumeFile)}; `
     : "";
@@ -920,8 +918,8 @@ export function runPreflight(
     cwd: process.cwd(),
     env: {
       ...process.env,
-      ...(entry.repo ? { AUTOPILOT_REPO: entry.repo } : {}),
-      ...(repoRemote ? { AUTOPILOT_REMOTE: repoRemote } : {}),
+      ...(entry.repo ? { CRON_REPO: entry.repo } : {}),
+      ...(repoRemote ? { CRON_REMOTE: repoRemote } : {}),
     },
     encoding: "utf-8",
     timeout: timeoutMs,

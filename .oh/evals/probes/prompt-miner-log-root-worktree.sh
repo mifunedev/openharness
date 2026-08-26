@@ -68,14 +68,14 @@ restore_main() {
 }
 trap 'restore_main; cleanup' EXIT
 
-# Invoke the helper from INSIDE the linked worktree with no AUTOPILOT_LOG_ROOT
+# Invoke the helper from INSIDE the linked worktree with no CRON_LOG_ROOT
 # and no CRON_WORKTREE — the exact condition the cron hits.
 #
 # Deliberately run $ROOT's copy (the working tree under review), not $WT's copy.
 # $WT is created from HEAD, so testing its copy would check the last commit
 # rather than the change being evaluated. Resolution is cwd-based, so running
 # $ROOT's script with cwd inside $WT reproduces the production condition exactly.
-out="$(cd "$WT" && env -u AUTOPILOT_LOG_ROOT -u CRON_WORKTREE \
+out="$(cd "$WT" && env -u CRON_LOG_ROOT -u CRON_WORKTREE \
   bash "$HELPER" \
     --result DRY-RUN --sessions-scanned 0 --markers-found 0 2>&1)"
 rc=$?
@@ -103,20 +103,20 @@ if ! grep -q 'prompt-miner' "$MAIN_LOG" 2>/dev/null; then
   exit 1
 fi
 
-# --- precedence: an explicit AUTOPILOT_LOG_ROOT must still win (#693 AC bullet 3) ---
+# --- precedence: an explicit CRON_LOG_ROOT must still win (#693 AC bullet 3) ---
 # Existing callers (the cron path recovers by exporting it) must be unaffected.
 OVERRIDE="$TMP/override"
 mkdir -p "$OVERRIDE/.oh/scripts"
-out2="$(cd "$WT" && env -u CRON_WORKTREE AUTOPILOT_LOG_ROOT="$OVERRIDE" \
+out2="$(cd "$WT" && env -u CRON_WORKTREE CRON_LOG_ROOT="$OVERRIDE" \
   bash "$HELPER" --result DRY-RUN --sessions-scanned 0 --markers-found 0 2>&1)"
 rc2=$?
 if [ $rc2 -ne 0 ]; then
-  echo "REGRESSION: helper exited $rc2 with AUTOPILOT_LOG_ROOT set" >&2
+  echo "REGRESSION: helper exited $rc2 with CRON_LOG_ROOT set" >&2
   echo "$out2" | head -20 >&2
   exit 1
 fi
 if [ ! -f "$OVERRIDE/.oh/memory/$DAY/log.md" ]; then
-  echo "REGRESSION: AUTOPILOT_LOG_ROOT no longer takes precedence — nothing written" >&2
+  echo "REGRESSION: CRON_LOG_ROOT no longer takes precedence — nothing written" >&2
   echo "  under $OVERRIDE; existing cron callers that export it would break" >&2
   exit 1
 fi
@@ -130,7 +130,7 @@ fi
 # so a stray value was harmless — the fix must not make it lethal.
 NOTREPO="$TMP/notarepo"
 mkdir -p "$NOTREPO"
-out3="$(cd "$WT" && env -u AUTOPILOT_LOG_ROOT CRON_WORKTREE="$NOTREPO" \
+out3="$(cd "$WT" && env -u CRON_LOG_ROOT CRON_WORKTREE="$NOTREPO" \
   bash "$HELPER" --result DRY-RUN --sessions-scanned 0 --markers-found 0 2>&1)"
 rc3=$?
 if [ $rc3 -ne 0 ]; then
@@ -142,6 +142,6 @@ if [ $rc3 -ne 0 ]; then
 fi
 
 echo "PASS: helper resolved the main worktree root from inside a linked worktree,"
-echo "      AUTOPILOT_LOG_ROOT still takes precedence, and a bad CRON_WORKTREE"
+echo "      CRON_LOG_ROOT still takes precedence, and a bad CRON_WORKTREE"
 echo "      degrades instead of aborting"
 exit 0

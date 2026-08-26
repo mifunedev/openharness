@@ -51,7 +51,7 @@ DAY="$(date -u +%Y-%m-%d)"
 # not required to export anything: `git worktree list --porcelain` prints the
 # MAIN worktree first, so NR==1 is the shared root from inside any linked
 # worktree. Precedence is preserved for callers that do set the variable:
-#   AUTOPILOT_LOG_ROOT  ->  CRON_WORKTREE main-worktree mapping  ->  toplevel
+#   CRON_LOG_ROOT  ->  CRON_WORKTREE main-worktree mapping  ->  toplevel
 # This mirrors .oh/crons/prompt-miner.md:102 and the standing convention
 # documented at .oh/crons/README.md:120.
 # The `|| true` and the `$1 == "worktree"` guard are both load-bearing under
@@ -60,7 +60,7 @@ DAY="$(date -u +%Y-%m-%d)"
 # non-zero, `pipefail` propagates that out of the command substitution, and `-e`
 # would abort the script HERE instead of falling through to the fallback below.
 # Same idiom the removed cron cap gate used (0.3.0).
-ROOT="${AUTOPILOT_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
+ROOT="${CRON_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 # Resolve the memory dir through the shared resolver (honors paths.memory /
 # MEMORY_DIR); fall back to the .oh/memory default if oh-path is unavailable.

@@ -22,8 +22,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - The harness-infra self-edit surface (`OWNED_PATHS`) moves from the deleted skill to `.oh/docs/repair-operator-registry.md` § Tier 1, which is now its source of truth. `security-considerations.md` § 6 is downgraded from ENFORCED to DOCTRINE to say so honestly.
 - Capability tasks CB-001 and CB-002 record a **baseline reset**: pre-0.3.0 scores are not comparable on the `unattended` axis, since the unattended runner no longer exists.
 
-### Notes
-- `cron-runtime.ts` still exports `AUTOPILOT_REPO`/`AUTOPILOT_REMOTE`/`AUTOPILOT_LOG_ROOT`. These are **generic per-cron plumbing**, not autopilot-specific, and renaming them would drag ~125 test references into a deletion PR. Left as marked vestigial debt; the rename is a follow-up.
+- Rename the cron runtime's per-cron environment exports to match what they actually are: `AUTOPILOT_REPO` -> `CRON_REPO`, `AUTOPILOT_REMOTE` -> `CRON_REMOTE`, `AUTOPILOT_LOG_ROOT` -> `CRON_LOG_ROOT`. They are generic plumbing for any cron declaring `repo:` or `worktree: true`, never autopilot-specific, and joining the existing `CRON_WORKTREE`/`CRON_AGENT_BIN`/`CRON_KEEP_MARKER` family leaves no vestigial vocabulary behind. **Breaking for any out-of-tree consumer that sets the old names** — in-tree there are none.
 
 ## [0.2.0] - 2026-08-26
 

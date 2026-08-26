@@ -44,7 +44,7 @@ inside the environment to do its job?"*
 
 | Subsystem | Side | Why |
 |---|---|---|
-| **Ralph** (`.oh/scripts/ralph.sh`, the iteration loop) | **Brain** | Chooses the next story, decides when the loop terminates. It *invokes* hands; it is not hands. |
+| **The build executor** (`.oh/scripts/firstmate.sh`, the story cycle) | **Brain** | Chooses the next story, decides when the loop terminates. It *invokes* hands; it is not hands. |
 | **Cron** (`.oh/crons/`, the scheduled-agent runtime) | **Brain** | Scheduling and cap enforcement are policy. The work a cron fires may be hands-side; the scheduler is not. |
 | **Autopilot** (`/autopilot`) | **Brain** | Issue selection, caps, and the merge gate are pure orchestration. |
 | **Memory** (`.oh/memory/`, `.oh/context/`) | **Brain** | Durable knowledge state. Reading and writing it needs no environment. |

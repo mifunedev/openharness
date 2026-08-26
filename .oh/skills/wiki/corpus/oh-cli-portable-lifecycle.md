@@ -3,7 +3,7 @@ title: "oh CLI Portable Lifecycle"
 slug: oh-cli-portable-lifecycle
 tags: [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target]
 created: 2026-07-03
-updated: 2026-08-23
+updated: 2026-08-24
 sources:
   - .oh/cli/src/cli.ts
   - .oh/cli/src/commands/init.ts
@@ -69,7 +69,7 @@ Equipped repos mount the project at `/home/sandbox/harness`, the `workspaceFolde
 - Version skew: default ref is the clone's default branch; the printed skew line plus `--ref <branch|tag>` pinning are the guard (`cli.ts:589`; `remote.ts:102`).
 - Bundling non-goal: shipping the payload inside a published package is gated on publishing (`cli.ts:492-493`; `.oh/cli/package.json` stays `"private": true`); the bundled-payload branch only fires for source-checkout builds.
 
-DeepWiki comparison (2026-08-13): the required comparison used source snapshot `8e145e31`. DeepWiki lists public `docs/` pages but does not describe `.oh/manifest.json`, `oh init`, `oh update`, or `.oh/docs/` delivery. Local sources define those contracts. The comparison found a local coverage gap and does not change the `docs/**` decision.
+DeepWiki comparison (2026-08-13, when the workflow still required one — the step was removed 2026-08-24): that comparison used source snapshot `8e145e31`. DeepWiki lists public `docs/` pages but does not describe `.oh/manifest.json`, `oh init`, `oh update`, or `.oh/docs/` delivery. Local sources define those contracts. The comparison found a local coverage gap and does not change the `docs/**` decision.
 
 ## System Relationships
 ```mermaid

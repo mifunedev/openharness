@@ -289,7 +289,7 @@ function matchingProbeOutput(worktree: string): string {
 // ---------------------------------------------------------------------------
 
 describe("task-folder validation", () => {
-  it("rejects a slug that is not kebab-case, with ralph.sh's message", () => {
+  it("rejects a slug that is not kebab-case, with the canonical message", () => {
     const repo = makeRepo("ok-slug");
     const r = run(["Bad Slug"], { repo });
     expect(r.status).toBe(2);
@@ -380,41 +380,32 @@ describe("sentinel short-circuit", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Cross-executor guard
+// No cross-executor guard: there is only one executor
 // ---------------------------------------------------------------------------
 
-describe("cross-executor guard", () => {
-  // ralph names its tmux session after the BARE slug; firstmate names its own
-  // agent-firstmate-<slug>. The two never collide on a session name, so nothing
-  // but this guard stops both from writing the same progress.txt.
-  it("refuses to launch while a ralph tmux session for the same slug is live", () => {
+describe("single-executor surface", () => {
+  // The guard that refused to launch beside a bare-slug tmux session existed only
+  // because a SECOND executor named its sessions that way. With one executor, an
+  // unrelated tmux session that happens to share the slug's name is not a conflict
+  // and must not block a build. Concurrency on the same slug is stopped by the
+  // atomic launch-claim lock instead.
+  it("launches even when an unrelated tmux session shares the bare slug name", () => {
     const repo = makeRepo("busy-slug");
     const bin = makeBin({ tmux: true });
-    const r = run(["--runner", "tmux", "busy-slug"], {
+    const r = run(["--runner", "tmux", "--no-watch", "busy-slug"], {
       repo,
       bin,
       env: { STUB_TMUX_SESSIONS: "busy-slug" },
     });
 
-    expect(r.status).not.toBe(0);
-    expect(r.stderr).toContain("executor conflict");
-    expect(r.stderr).toContain("ralph");
-    expect(r.stderr).toContain("busy-slug");
-    // It refuses BEFORE claiming the lock, so a refusal leaves no debris.
-    expect(existsSync(repo.lock)).toBe(false);
-    expect(readCalls(repo)).not.toContain("new-session");
+    expect(r.status).toBe(0);
+    expect(r.stderr).not.toContain("executor conflict");
+    expect(readCalls(repo)).toContain("new-session");
   });
 
-  it("does not mistake its own agent-firstmate-<slug> session for a ralph run", () => {
-    const repo = makeRepo("mine-slug");
-    const bin = makeBin({ tmux: true });
-    const r = run(["--runner", "tmux", "--no-watch", "mine-slug"], {
-      repo,
-      bin,
-      env: { STUB_TMUX_SESSIONS: "agent-firstmate-mine-slug" },
-    });
-
-    expect(r.stderr).not.toContain("executor conflict");
+  it("names no alternative executor arm anywhere in the entrypoint", () => {
+    expect(SCRIPT_SOURCE).not.toMatch(/ralph/i);
+    expect(SCRIPT_SOURCE).not.toContain("--executor");
   });
 });
 
@@ -700,9 +691,13 @@ describe("launch", () => {
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("runner:   herdr");
     expect(r.stdout).toContain("handle:   firstmate-herdr-slug (pane w7:p3)");
-    expect(r.stdout).toContain(
+    // herdr owns its own pane capture and writes no file at the session-log path, so the
+    // banner must NOT advertise one — an operator sent to `tail` an unwritten file reads
+    // an empty session as a dead one. The watch command is the real handle.
+    expect(r.stdout).not.toContain(
       path.join(repo.runnerTmp, "firstmate-herdr-slug.log"),
     );
+    expect(r.stdout).toContain("log:      (herdr pane capture");
     expect(r.stdout).toContain("watch:    herdr agent read firstmate-herdr-slug");
 
     const calls = readCalls(repo);
@@ -726,10 +721,14 @@ describe("launch", () => {
     expect(rendered).toContain("feat/4242-prompt-slug");
     expect(rendered).not.toContain("<slug>");
 
-    // The launch string pipes that file into the harness and tees the log.
+    // The launch string reads that file back as INITIAL ARGV inside the launched
+    // shell, and is never piped or redirected: a pipe on either end leaves the
+    // child without a TTY, and an interactive agent session cannot start there.
     const calls = readCalls(repo);
     expect(calls).toContain(repo.promptFile);
-    expect(calls).toContain("| tee ");
+    expect(calls).toContain('"$(cat ');
+    expect(calls).not.toContain("| tee ");
+    expect(calls).not.toContain("--print");
   });
 
   it("honours FIRSTMATE_HARNESS_CMD and exports the session's own signals", () => {
@@ -852,12 +851,4 @@ describe("static contract", () => {
     expect(SCRIPT_SOURCE).not.toMatch(/herdr channel set/);
   });
 
-  it("leaves .oh/scripts/ralph.sh zero-diff", () => {
-    const r = spawnSync(
-      "git",
-      ["diff", "--stat", "--", ".oh/scripts/ralph.sh"],
-      { cwd: REPO_ROOT, encoding: "utf-8" },
-    );
-    expect((r.stdout ?? "").trim()).toBe("");
-  });
 });

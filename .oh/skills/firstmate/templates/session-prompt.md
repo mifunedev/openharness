@@ -31,22 +31,27 @@ introduces no token this header does not declare.
 2. STEP-ORDER EQUIVALENCE — ORDERED ANCHOR-KEYWORD LIST (recorded verbatim)
 -----------------------------------------------------------------------------
 
-Derived at authoring time from `.oh/prompts/advisor/implement.yml` and
-`.oh/prompts/advisor/pr.yml` (both files are ZERO-DIFF — this template is a
-derivative, not an edit). "Step-order equivalence" means EXACTLY this: the
-anchor literals below appear in the template BODY in the same relative order,
-compared by FIRST OCCURRENCE. Nothing fuzzy, nothing interpretive, no
-markdown-vs-YAML similarity judgement.
+THIS FILE IS THE SOURCE. The step order below was originally derived from the
+advisor prompt pack (`.oh/prompts/advisor/implement.yml` + `pr.yml`), which was
+DELETED in spec-simplification US-004 (issue #816) — a second, discoverable
+implementation path is exactly what that story removed. The derivative became
+the source: this list is now authoritative on its own, not a mirror of another
+file. "Step-order equivalence" means EXACTLY this: the anchor literals below
+appear in the template BODY in the same relative order, compared by FIRST
+OCCURRENCE. Nothing fuzzy, nothing interpretive.
 
-  ANCHOR 1: `dependency graph`      <- implement.yml:23 / pr.yml:23
-  ANCHOR 2: `/compact`              <- implement.yml:24 / pr.yml:24
-  ANCHOR 3: `acceptanceCriteria`    <- implement.yml:25 / pr.yml:25 (first half)
-  ANCHOR 4: `passes: true`          <- implement.yml:25 / pr.yml:25 (second half,
-                                       "before marking passes true")
-  ANCHOR 5: `/audit implementation` <- implement.yml:27
-  ANCHOR 6: `evidence.md`           <- pr.yml:28-32
-  ANCHOR 7: `/retro`                <- implement.yml:28 / pr.yml:33
-  ANCHOR 8: `Ready PR`              <- pr.yml:34
+  ANCHOR 1: `dependency graph`
+  ANCHOR 2: `/compact`
+  ANCHOR 3: `acceptanceCriteria`
+  ANCHOR 4: `passes: true`      (the session flips the flag only after validating)
+  ANCHOR 5: `/audit implementation`
+  ANCHOR 6: `evidence.md`
+  ANCHOR 7: `/retro`
+  ANCHOR 8: `Ready PR`
+
+Changing this order is a deliberate change to the build workflow, not a
+formatting edit: `.oh/evals/probes/firstmate-executor-contract.sh` asserts the
+body follows it.
 
 ORDERING SCOPE: the assertion applies to the BODY ONLY — everything after the
 `END CONTRACT HEADER` marker line below. This header records the list
@@ -54,11 +59,13 @@ verbatim, so including it would make the check vacuous.
 
 PACK STEPS DELIBERATELY EXCLUDED from the anchor list (not in this session's
 scope, therefore not asserted):
-  - implement.yml:21 / pr.yml:21 `/prd -> /ralph` and :22 the 2 adversarial
-    critics — plan-side; both already ran before this session launches.
+  - implement.yml:21 / pr.yml:21 `/prd -> /ralph` — plan-side, runs before
+    this session launches. (:22's 2 adversarial critics no longer exist at all:
+    spec-simplification US-001 deleted the critique/approve gate. The operator's
+    read of `prd.md` is the commitment gate.)
   - implement.yml:26 / pr.yml:26 `/goal Advisor orchestrates delegated
     workflow` — that IS the launch of this session, not a step inside it.
-  - pr.yml:27 `/audit pr` — owned by `/ship-spec` Stage 12, after this
+  - pr.yml:27 `/audit pr` — owned by `/spec execute` step 9, after this
     session's terminal handoff.
 
 ADDITIONS BEYOND THE PACK (explicitly OUT of the anchor list and OUT of the
@@ -84,9 +91,10 @@ story by story.
 
 ## 1. Load the task graph
 
-Read `.oh/tasks/<slug>/prd.md` for intent, `critique.md` (if present) for the
-critic findings the stories must satisfy, and the `## Codebase Patterns`
-section at the top of `progress.txt`.
+Read `.oh/tasks/<slug>/prd.md` for intent and the `## Codebase Patterns`
+section at the top of `progress.txt`. There is no `critique.md` — the
+critique/approve gate was removed (US-001), and `prd.md` as the operator
+approved it is the contract the stories must satisfy.
 
 Then design the subtask **dependency graph** from `prd.json`: load
 `userStories[]` **ordered by `priority`** into this session's native task
@@ -185,7 +193,7 @@ The contract is **dual-channel**, and both channels are required:
 Never emit that bare standalone line for any other reason; to refer to it in
 prose, call it "the completion marker".
 
-After the marker, this session's job is done. `/ship-spec` owns the tail:
+After the marker, this session's job is done. `/spec execute` owns the tail:
 `/eval`, `/audit pr`, recording the reviewer proof in
 `.oh/tasks/<slug>/evidence.md` per
 `.oh/skills/audit/references/reviewer-evidence-doc.md`, `/retro`, and finally

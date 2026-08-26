@@ -16,16 +16,36 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Document running Open Harness on MicroSandbox by pointing `msb` at the published image, and re-scope the microsandbox blockers as devcontainer measurements that say nothing about the reader's host.
 - Add a "which door am I?" table plus two guard probes: `harness-yaml-schema-parity.sh` and `oh-init-headless-config.sh`.
 - Add `ssh.enabled`/`ssh.port` and `sandbox.docker_socket` prompts to the `oh init` wizard, the two settings most likely to need hand-editing.
+- Require `.oh/tasks/<slug>/evidence.md` before `/spec execute` undrafts a PR, and refuse an untracked one, so the reviewer gets the build's answer back to the plan they approved ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Add a "why this is better" question to the reviewer evidence contract, ahead of the four correctness questions, with unmeasured benefits labelled as such ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Add `protected-path-deletion.sh`, which reads `.claude/protected-paths.txt` at the merge base and fails when a listed path is deleted without a justification in a committed `evidence.md` ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Add `memory-probe-claims-resolve.sh` and `context-tier-size-budget.sh` to hold the memory ledger's enforcement claims and the always-on context budget ([#817](https://github.com/mifunedev/openharness/pull/817)).
 
 ### Changed
+- Run `/eval` once per cycle instead of three times: `/spec execute` publishes a commit-keyed `eval-result.json` the downstream gates read, cutting 318 probe executions to 110 ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Promote `progress.txt` into the PR body, so the build narrative reaches the reviewer instead of ending at the `STATUS: COMPLETE` sentinel ([#817](https://github.com/mifunedev/openharness/pull/817)).
 - Write `install.sh`'s non-secret answers to `harness.yaml` rather than the lower-precedence `.devcontainer/.env`, keeping `DOCKER_SOCKET` in `.env` as a documented exception.
 - Lead the README and quickstart with the two scripted installers and demote the untested manual clone sequence into the collapsed section, merging its two duplicate copies into one.
 
 ### Fixed
+- Fix the build session launching headless: the prompt travels as argv instead of stdin and no arm carries `--print`, so the child no longer answers once and exits ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Stop `| tee` in the launch path taking the child's TTY; tmux attaches `pipe-pane` after the pane exists and foreground mode inherits the caller's stdio ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Fix `firstmate.sh --kill` exiting 1 silently while leaving the session running, the lock claimed, and no `FIRSTMATE-INCOMPLETE` line appended ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Stop the `/audit` boundary exporting its lifecycle identity to the agent it launches, which made probes grade their caller and flipped one tree's verdict between runs ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Rewrite 76 unbacked `probe:` claims in the memory ledger to explicit `probe: none` via a tracked idempotent script ([#817](https://github.com/mifunedev/openharness/pull/817)).
 - Correct the MicroSandbox runner walkthrough: set `entrypoint:` explicitly (without it the seed and provider linking never run), drop the unsubstituted `GH_TOKEN`, name the mount/env differences from the `docker run` recipe it is derived from, and re-rank the untested inferences so the boot-breaking one is first.
 - Collapse the two disagreeing `harness.yaml` line editors into one `setKeyInSection` in `lib/harness-yaml.ts`; the wizard's section-blind copy silently dropped answers for keys absent from the template.
 - Reconcile `.oh/templates/harness.yaml` with `harness.yaml.example`, restoring the `sandbox.docker_socket`/`image`/`pull_policy`, `paths.worktrees`, `crons`, `autopilot`, `slack`, and `compose` keys that had no home to be written into.
 - Correct `harness.yaml.example`'s claim that `pull_policy` reaches the VS Code "Reopen in Container" path — it does not, and no key in the file does.
+
+### Removed
+- Remove the critique/approve gate; the operator's approval of `prd.md` is the commitment gate, and no critic agents are spent per plan ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Collapse three build executors to one, deleting `.oh/scripts/ralph.sh` and every executor toggle rather than reducing them to a single accepted value ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Absorb `/ship-spec` into `/spec execute` and delete the skill, so the build mechanics read top to bottom in one file with no deferral ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Delete `.oh/prompts/`, `.pi/prompts/advisor/`, and the First Mate charter, leaving `.oh/skills/firstmate/templates/session-prompt.md` as the only description of the build workflow ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Delete `/teach` and its pipeline step; `evidence.md` carries the model to the reviewer, and the wiki half was already a gate in step 5 ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Delete the DeepWiki comparison from the wiki gate, which regenerates on no schedule the gate can depend on, and rename the schema section to state its own requirements ([#817](https://github.com/mifunedev/openharness/pull/817)).
+- Delete four `STATUS: SPEC-*` tokens with no executable consumer and drop the groom triad from the per-cycle path ([#817](https://github.com/mifunedev/openharness/pull/817)).
 
 ## [0.1.0] - 2026-08-23
 

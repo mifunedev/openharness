@@ -55,7 +55,7 @@ curl -fsSL -o grok-install.sh https://x.ai/cli/install.sh
 bash grok-install.sh 0.2.39
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://x.ai/cli/install.sh 0.2.39` gives the same third-party installer a fetch/review/approve gate. `vet` is optional and is not required by Open Harness.
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://x.ai/cli/install.sh 0.2.39` gives the same third-party installer a fetch, review, and approve gate. `vet` is optional and is not required by Open Harness.
 
 Verify the install inside the sandbox:
 

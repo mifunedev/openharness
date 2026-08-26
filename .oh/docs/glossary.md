@@ -29,7 +29,7 @@ These names describe separate layers, not interchangeable jobs:
 - **artifact** — Any inspectable file a workflow stage produces and a later stage
   or a human then consumes. The canonical example is the `.oh/tasks/<slug>/` task
   folder and its four-file contract (`prd.md`, `prd.json`, `prompt.md`,
-  `progress.txt`), which the `/spec` and `/ship-spec` pipelines read and write as
+  `progress.txt`), which the `/spec` pipeline reads and writes as
   they progress. Source: [`.oh/tasks/`](../tasks/).
 
 - **capability** — What the harness can actually do end-to-end, measured by the
@@ -39,10 +39,10 @@ These names describe separate layers, not interchangeable jobs:
   better. Source: [`.oh/evals/capability/`](../evals/capability/).
 
 - **checkpoint** — An intermediate, observable stage output that is explicitly
-  *not* the terminal state. For example, `/ship-spec` opens a draft PR early as
+  *not* the terminal state. For example, `/spec execute` opens a draft PR early as
   an observability checkpoint while implementation is still pending, then marks
   it ready once the gates pass.
-  Source: [`.oh/skills/ship-spec/SKILL.md`](../skills/ship-spec/SKILL.md).
+  Source: [`.oh/skills/spec/references/execute.md`](../skills/spec/references/execute.md).
 
 - **evaluator / eval** — A deterministic, exit-code-scored probe that checks
   harness state against a recorded lesson; the probe corpus and the `/eval`
@@ -56,9 +56,10 @@ These names describe separate layers, not interchangeable jobs:
   Source: [`intro.md`](intro.md).
 
 - **loop** — A repeated implement → commit → check cycle driven until a
-  completion marker appears. The reference implementation is the Ralph loop,
-  which re-invokes the agent on a task until `progress.txt` contains the line
-  `STATUS: COMPLETE`. Source: [`.oh/scripts/ralph.sh`](../scripts/ralph.sh).
+  completion marker appears. The reference implementation is the build
+  executor's per-story cycle, which walks a task graph until `progress.txt`
+  contains the line `STATUS: COMPLETE`.
+  Source: [`.oh/scripts/firstmate.sh`](../scripts/firstmate.sh).
 
 - **model** — The LLM an agent or CLI uses to produce reasoning, text, and
   tool-call requests. The model is only one part of an agent session; the
@@ -93,9 +94,9 @@ These names describe separate layers, not interchangeable jobs:
   host machine. Source: [`.devcontainer/`](../../.devcontainer/).
 
 - **session** — A single named run of an agent, typically a tmux session in the
-  sandbox. `ralph.sh` launches its loop in a named tmux session, and autopilot
-  uses per-run `autopilot-<branch>` sessions.
-  Source: [`.oh/scripts/ralph.sh`](../scripts/ralph.sh) and
+  sandbox. `firstmate.sh` launches its build session through the herdr → tmux →
+  foreground ladder, and autopilot uses per-run `autopilot-<branch>` sessions.
+  Source: [`.oh/scripts/firstmate.sh`](../scripts/firstmate.sh) and
   [`sandbox-processes.md`](../skills/t3/references/sandbox-processes.md).
 
 - **skill** — A packaged, invocable workflow (a `SKILL.md` plus optional
@@ -119,5 +120,5 @@ These names describe separate layers, not interchangeable jobs:
 
 - **worktree** — A separate git working directory under `.oh/worktrees/` that
   isolates a branch so parallel work doesn't collide; the `/worktrees` skill
-  manages their lifecycle and `/ship-spec` builds each task in one.
+  manages their lifecycle and `/spec execute` builds each task in one.
   Source: [`.oh/skills/worktrees/SKILL.md`](../skills/worktrees/SKILL.md).

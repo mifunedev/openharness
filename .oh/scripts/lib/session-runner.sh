@@ -141,8 +141,15 @@
 #     and forfeit the exit-path contract (teardown -> lock removal ->
 #     FIRSTMATE-INCOMPLETE), so the command is run as a supervised child and
 #     watched by the same bounded poll tmux mode uses.
-#   * The foreground `| tee` is NEW behavior, not ralph parity: ralph.sh's
-#     no-tmux fallback does not log to a file today.
+#   * NO branch wraps the launched command in a `tee` log pipe. That pipe was
+#     removed on 2026-08-23 (spec-simplification US-002) because it makes the
+#     child's stdout a PIPE rather than a TTY, and an interactive agent session
+#     cannot run without a terminal. OBSERVED: the child started, printed only
+#     startup warnings, and never advanced. Logging that preserves the TTY:
+#     tmux mode uses `tmux pipe-pane`, herdr mode uses herdr's own pane capture
+#     (`herdr agent read`), and foreground mode inherits the caller's stdio and
+#     keeps no session log at all. Do not reintroduce a pipe or a redirect on
+#     the launched command — see the same rule in `.oh/scripts/firstmate.sh`.
 
 # --- constants --------------------------------------------------------------
 
@@ -211,8 +218,13 @@ runner_lock_path() { printf '%s\n' "$RUNNER_TMPDIR/firstmate-${1:-}.lock"; }
 # narrative.
 runner_log_path() { printf '%s\n' "$RUNNER_TMPDIR/firstmate-${1:-}.log"; }
 
-# The log the launched session tees into. tmux mode gets its own name so a
+# Where a mode's session output is captured. tmux mode gets its own name so a
 # tmux run and a herdr run of the same slug can never overwrite each other.
+#
+# tmux mode fills this file via `tmux pipe-pane`. herdr mode does NOT write it —
+# herdr owns its pane capture, and the path is returned only so a caller has one
+# name to talk about. foreground mode writes no session log: it inherits the
+# caller's stdio so the child keeps a TTY.
 runner_session_log_path() { # <mode> <slug>
   case "${1:-}" in
     tmux) printf '%s\n' "$RUNNER_TMPDIR/agent-firstmate-${2:-}.log" ;;
@@ -304,12 +316,24 @@ runner_pane_id() { printf '%s\n' "${RUNNER_PANE_ID:-}"; }
 
 # Recovers the pane id from the server when this process did not launch the
 # session itself (e.g. `firstmate.sh --kill` in a fresh shell).
+# Best-effort lookup: "no such agent" is a normal answer, not an error.
+#
+# This function MUST return 0 in that case. Callers run under `set -euo
+# pipefail`, and `herdr agent get` exits 1 for a nonexistent agent, so under
+# pipefail the pipeline below returned 1 — which killed the caller at the
+# `pane="$(runner_resolve_pane_id ...)"` assignment inside runner_teardown.
+#
+# OBSERVED 2026-08-23: `firstmate.sh --kill <slug>` exited 1 with no output,
+# left the tmux session running, left the lock claimed, and appended no
+# FIRSTMATE-INCOMPLETE line — because teardown aborted on its FIRST branch.
+# Do not remove the trailing `|| true`.
 runner_resolve_pane_id() { # <slug>
   local slug="${1:-}"
   command -v herdr >/dev/null 2>&1 || return 0
   command -v jq >/dev/null 2>&1 || return 0
   herdr agent get "$(runner_agent_name "$slug")" 2>/dev/null |
-    jq -r '.result.agent.pane_id // empty' 2>/dev/null
+    jq -r '.result.agent.pane_id // empty' 2>/dev/null || true
+  return 0
 }
 
 # --- execution-context gate -------------------------------------------------
@@ -512,8 +536,14 @@ runner_detect() { # <slug> <worktree> [requested]
 
 # --- launch -----------------------------------------------------------------
 
-# Launches <cmd> in <worktree> under the resolved <mode>. All three branches
-# pipe `2>&1 | tee <log>`; the herdr branch additionally passes --no-focus.
+# Launches <cmd> in <worktree> under the resolved <mode>. The herdr branch
+# additionally passes --no-focus.
+#
+# NO branch redirects or pipes the launched command. The child must keep a TTY
+# or an interactive agent session will not start (see the deviations note at the
+# top of this file). tmux mode captures output with `tmux pipe-pane` AFTER the
+# session exists, which leaves the pane a terminal; herdr mode relies on herdr's
+# own pane capture; foreground mode inherits the caller's stdio.
 #
 # The cd is inside the launched command itself: runner flags that claim to set
 # a working directory frequently set only metadata while the shell starts
@@ -529,7 +559,9 @@ runner_launch() { # <mode> <slug> <worktree> <cmd>
   log="$(runner_session_log_path "$mode" "$slug")"
   agent="$(runner_agent_name "$slug")"
   session="$(runner_tmux_session "$slug")"
-  inner="cd $(printf '%q' "$worktree") && $cmd 2>&1 | tee $(printf '%q' "$log")"
+  # The cd is part of the launched command; the command itself is NEVER piped
+  # or redirected, so the child keeps its TTY.
+  inner="cd $(printf '%q' "$worktree") && $cmd"
 
   case "$mode" in
     herdr)
@@ -541,19 +573,28 @@ runner_launch() { # <mode> <slug> <worktree> <cmd>
         printf 'Error: herdr agent start returned no pane id for %s.\n' "$agent" >&2
         return 1
       fi
-      runner_log "$slug" "launched herdr agent $agent (pane $RUNNER_PANE_ID), log $log"
+      runner_log "$slug" "launched herdr agent $agent (pane $RUNNER_PANE_ID); read it with: herdr agent read $agent"
       ;;
     tmux)
       if ! tmux new-session -d -s "$session" -c "$worktree" "$inner" 2>/dev/null; then
         printf 'Error: tmux new-session failed for %s.\n' "$session" >&2
         return 1
       fi
-      runner_log "$slug" "launched tmux session $session, log $log"
+      # Capture output WITHOUT taking the pane's TTY away. pipe-pane attaches to
+      # the pane after it exists, so the child still runs on a terminal. A
+      # failure here costs the log, never the session.
+      if ! tmux pipe-pane -o -t "$session" "cat >> $(printf '%q' "$log")" 2>/dev/null; then
+        runner_log "$slug" "launched tmux session $session, but pipe-pane logging to $log could not be attached"
+      else
+        runner_log "$slug" "launched tmux session $session, piping pane output to $log"
+      fi
       ;;
     foreground)
+      # Inherits this shell's stdio on purpose: that is the only way a
+      # foreground child keeps a TTY. It therefore writes no session log.
       bash -lc "$inner" &
       RUNNER_FG_PID=$!
-      runner_log "$slug" "launched foreground child pid $RUNNER_FG_PID, log $log"
+      runner_log "$slug" "launched foreground child pid $RUNNER_FG_PID (stdio inherited; no session log)"
       ;;
     *)
       printf 'Error: runner_launch got unknown mode %s.\n' "$mode" >&2
@@ -680,8 +721,10 @@ runner_teardown() { # <mode> <slug>
   case "$mode" in
     herdr)
       local pane
-      pane="$(runner_pane_id)"
-      [ -n "$pane" ] || pane="$(runner_resolve_pane_id "$slug")"
+      pane="$(runner_pane_id)" || pane=""
+      # `|| pane=""`: teardown is the single exit path and must never abort on a
+      # best-effort lookup under the caller's `set -e` (see runner_resolve_pane_id).
+      [ -n "$pane" ] || pane="$(runner_resolve_pane_id "$slug")" || pane=""
       if [ -n "$pane" ]; then
         herdr pane close "$pane" >/dev/null 2>&1 || true
         runner_log "$slug" "teardown: herdr pane close $pane"

@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "project": "Open Harness",
+  "branchName": "feat/spec-simplification",
+  "description": "Make /spec the single primary method of implementation and make the pipeline answer back to the plan. Remove the critique/approve gate, collapse three build executors to firstmate alone, absorb /ship-spec and the advisor prompt pack into /spec execute, require a plan-vs-built reconciliation at the merge gate, delete the ceremony nothing reads, and stop MEMORY.md asserting probe enforcement that does not exist.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Remove the critique/approve gate",
+      "description": "As an operator, I want the workflow to stop halting at a gate that produces nothing I read, so that the path from plan to build is uninterrupted.",
+      "acceptanceCriteria": [
+        "`AGENTS.md` \u00a7 The Workflow describes `select -> plan -> execute -> merge -> reset` in its prose, its surface table, and its mermaid diagram; no `spec-critique` or `approve` node remains in any of the three",
+        "`.oh/skills/spec/SKILL.md` dispatches exactly three subcommands (plan, execute, retro); the `critique` arm and its argument-hint entry are gone",
+        "`.oh/skills/spec/references/critique.md` is deleted",
+        "`.oh/skills/spec/references/execute.md` no longer carries the APPROVED precondition (was lines 39-42) and no longer refers to a `critique.md` verdict",
+        "`.oh/skills/critique/` and `.oh/skills/approve/` are deleted",
+        "`.oh/evals/probes/spec-family-contract.sh` asserts the three surviving subcommands and fails when a fourth reference-doc is expected; it is verified by rejection against a deliberately broken copy",
+        "A repo-wide grep for `/critique`, `/approve`, `spec-critique`, `SPEC-APPROVED`, and `SPEC-DENIED` returns hits only in `CHANGELOG.md`",
+        "`bash .oh/skills/eval/run.sh` shows no green-to-red regression other than probes this story rewrites"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "2026-08-23 (a1f64de2): critique/approve gate removed from AGENTS.md, /spec, /ship-spec Stages 3-4; three probes rewritten and verified by rejection; 106 probes 102 PASS 4 SKIPPED 0 REGRESSION. Deviation on the grep AC: completed-run records under .oh/tasks/**, the frozen DS-010 oracle, and the probes' own negative assertions still contain the token \u2014 see progress.txt."
+    },
+    {
+      "id": "US-002",
+      "title": "Collapse to one build executor",
+      "description": "As a reader of any build doc, I want exactly one build path, so that I do not have to work out which executor arm ran before anything else makes sense.",
+      "acceptanceCriteria": [
+        "`.oh/scripts/ralph.sh`, `.oh/scripts/__tests__/ralph.test.ts`, and `.oh/skills/ship-spec/templates/prompt.md` are deleted",
+        "No executor toggle survives: `--executor`, `SHIP_SPEC_EXECUTOR`, and `AUTOPILOT_EXECUTOR` are removed rather than reduced to a single accepted value",
+        "`.oh/skills/ship-spec/SKILL.md` Stage 10, `.oh/skills/autopilot/SKILL.md` (toggle plus the `ralph` fallback section), `.oh/skills/spec/references/execute.md`, `.oh/agents/advisor.md` (the `Monitored async ralph loop` variant at lines 26, 98, 212), and `AGENTS.md` line 194 no longer name ralph or delegate-advisor as a build arm",
+        "`prd.json` and the `/ralph` skill that produces it are RETAINED \u2014 the task contract has 15 consumers including `firstmate.sh`, `.oh/scripts/lib/task-contract.sh`, `.oh/cli/src/commands/init.ts`, and 7 probes",
+        "`.oh/evals/probes/autopilot-executor-toggle.sh` is rewritten for a no-toggle single-executor world, not deleted",
+        "`.oh/evals/probes/advisor-monitored-loop.sh` is rewritten to assert the firstmate launch contract instead of the ralph variant name, not deleted",
+        "`.oh/evals/probes/firstmate-executor-contract.sh` no longer asserts a `ralph` arm or that `ralph.sh` exists",
+        "Each rewritten probe is verified by rejection: it fails against a deliberately broken copy before it passes against the real tree",
+        "A repo-wide grep for `ralph.sh`, `RALPH_`, and `delegate-advisor` returns hits only in `CHANGELOG.md`",
+        "`.oh/scripts/firstmate.sh` launches an INTERACTIVE child session, not a headless one: the claude arm no longer builds `cat <prompt> | claude ... --print` (was line 292-293). The prompt is delivered as initial argv so the session stays live and attachable in its herdr pane or tmux session",
+        "The pi arm keeps its `\"$(cat <prompt>)\"` argv shape but drops `--print` from `FIRSTMATE_PI_FLAGS` for the same reason",
+        "`FIRSTMATE_CLAUDE_FLAGS` default no longer contains `--print`",
+        "A probe asserts no executor launch path contains `--print`, verified by rejection",
+        "`.oh/scripts/lib/session-runner.sh` no longer wraps the launched command in `| tee <log>`. That pipe makes the child stdout a PIPE rather than a TTY, which an interactive agent session cannot run under \u2014 OBSERVED 2026-08-23: the child started, printed only startup warnings, and never advanced. Logging moves to `tmux pipe-pane` (or herdr's own pane capture), which preserves the TTY",
+        "`firstmate-executor-contract.sh` no longer asserts that the `| tee` log pipe survives \u2014 that assertion pins the defect above in place",
+        "`.oh/scripts/firstmate.sh --kill <slug>` actually kills the session and clears the lock. OBSERVED 2026-08-23: it exited silently, left `agent-firstmate-<slug>` running and `/tmp/firstmate-<slug>.lock` claimed, and appended no `FIRSTMATE-INCOMPLETE` line. Covered by a probe verified by rejection"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "2026-08-24 (ac8aa433): every executor toggle removed (not narrowed); ralph.sh, its vitest suite, and the ralph prompt template deleted; prd.json + /ralph retained. Three launch defects fixed (--print, the tee pipe, silent --kill). 3 probes rewritten, 4 repointed, 1 deleted with its subject, 2 added \u2014 all verified by rejection. AC-9 deviation stated in progress.txt (frozen oracle + probes' own negative assertions)."
+    },
+    {
+      "id": "US-003",
+      "title": "Absorb /ship-spec into /spec execute",
+      "description": "As a reader of /spec execute, I want the build mechanics to be in the file I am reading, so that learning what the build does does not send me to a second skill.",
+      "acceptanceCriteria": [
+        "`.oh/skills/spec/references/execute.md` inlines the former `/ship-spec` Stage 5 (issue), 8-9 (branch, scaffold commit, draft PR), 10 (build launch), 11 (`/eval`), 11.25 (wiki revision), and 12-13 (`/audit pr` then undraft), and reads top-to-bottom with no deferral",
+        "The `execute.md` deferral paragraph (was lines 14-19, `reuses those by reference` / `single source of build literals`) is gone",
+        "`.oh/skills/ship-spec/` is deleted",
+        "`/autopilot` and `.oh/crons/autopilot.md` invoke `/spec` instead of `/ship-spec --issue`",
+        "`.oh/agents/advisor.md` line 98, `.oh/crons/prompt-miner.md`, `.oh/docs/glossary.md`, `.oh/docs/oh-directory-layout.md`, `.oh/evals/datasets/README.md`, and `.oh/docs/integrations/pi-autoresearch.md` no longer reference `/ship-spec`",
+        "`.oh/evals/capability/tasks/CB-001-ship-harness-change.md` and `CB-002-walk-the-workflow.md` are RE-AUTHORED against the new pipeline \u2014 these are the ceiling instrument and must not be dropped",
+        "A repo-wide grep for `ship-spec` and `SHIP_SPEC` returns hits only in `CHANGELOG.md`",
+        "A full build runs end-to-end with `.oh/skills/ship-spec/` absent"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "2026-08-24: /ship-spec absorbed into .oh/skills/spec/references/execute.md (157 -> 500 lines, nine top-to-bottom steps, no deferral) and the skill deleted; /spec added to protected-paths. All consumers repointed; $SHIP_SPEC_* -> $SPEC_*; agent-ship-<slug> -> agent-spec-<slug>. Two defects fixed while transcribing (the Advisor tee pipe; the banner's phantom logs). One probe renamed, six repointed, two STRENGTHENED after rejection-testing showed they survived their own defect. CB-001/CB-002 re-authored. AC-8 verified live. AC-7 deviation stated in progress.txt (frozen datasets + probes' negative assertions + dated notes)."
+    },
+    {
+      "id": "US-004",
+      "title": "Remove the advisor prompt pack",
+      "description": "As an agent on a long-horizon task, I want no secondary implementation path discoverable in the file layout, so that exploring the repo mid-task cannot pull me onto a retired route.",
+      "acceptanceCriteria": [
+        "The whole `.oh/prompts/advisor/` directory is deleted, including `implement.yml`, `pr.yml`, and `plan.yml`",
+        "The Pi mirror `.pi/prompts/advisor/pr.md` is deleted",
+        "`.oh/context/rules/first-mate.md` (the First Mate role charter) and `.oh/evals/probes/first-mate-charter.sh` are deleted",
+        "`.oh/agents/architect.md` line 8 no longer names `plan.yml` as its entry point; the agent is either repointed at `/spec plan` or retired with the pack",
+        "`.oh/evals/probes/firstmate-executor-contract.sh` assertion 5 (`git diff --quiet -- .oh/prompts/`, was lines 146-151) is REMOVED, not stubbed to true; its provenance comments at lines 8-9 and 103-106 name `.oh/skills/firstmate/templates/session-prompt.md` as the owner of the step order",
+        "The anchor-order assertion still passes because the ordered anchor list is recorded verbatim in the template header at `session-prompt.md` lines 42-52",
+        "`.oh/skills/audit/references/pr.md` line 9 and `reviewer-evidence-doc.md` lines 17 and 24 repoint the `evidence.md` contract at `/spec execute`",
+        "`.oh/skills/retro/SKILL.md` line 229 no longer cites `implement.yml` / `pr.yml` as the common `auto-approve` invocation path",
+        "`.oh/skills/firstmate/SKILL.md` line 29, `session-prompt.md` lines 34-35, `AGENTS.md` line 31, and `.oh/prompts/README.md` line 27 are updated",
+        "A repo-wide grep for `prompts/advisor` and `first-mate.md` returns hits only in `CHANGELOG.md`"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "2026-08-24: .oh/prompts/ (whole dir), .pi/prompts/advisor/, the First Mate charter, and first-mate-charter.sh deleted. session-prompt.md became the SOURCE of the step order and says so; the probe asserts that claim. The .oh/prompts/ zero-diff guard was removed (not stubbed) and replaced by stay-deleted assertions for all three paths \u2014 verified by rejection, including that guard (4)'s anchor order is still enforced after guard (5) went. architect repointed at /spec plan. AC-9 deviation stated: prompts/README.md is deleted rather than updated, since AC-1 removes its only subject."
+    },
+    {
+      "id": "US-005",
+      "title": "Make the plan the contract the build answers to",
+      "description": "As an operator whose understanding stops at the plan handed to a compacted agent, I want the merge gate to tell me how the built thing differs from that plan, so that approving a merge is an informed act.",
+      "acceptanceCriteria": [
+        "`evidence.md` is a GATE CONDITION at the merge gate in `.oh/skills/spec/references/execute.md`, not merely a step in a rendered prompt; the undraft path refuses without it",
+        "`execute.md` states the required shape of `evidence.md`: what the plan asked for, what was built, where they diverged and why, and what remains unverified",
+        "`/teach` is invoked before the merge gate in `execute.md` (it is currently referenced only in the `AGENTS.md` skills table and wired into no pipeline)",
+        "The build narrative in `progress.txt` is promoted into the PR body rather than discarded at the `STATUS: COMPLETE` sentinel",
+        "`execute.md` carries a PR body template with the sections plan / built / divergence / unverified",
+        "A probe asserts the merge gate requires `evidence.md`, verified by rejection against a tree where the file is absent",
+        "ACCEPTANCE TEST (human, not a probe): a reader who did not watch the build reads the merge-gate output and can state what changed, why it differs from the plan, and what is still unverified"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "2026-08-24: evidence.md is a GATE CONDITION in /spec execute \u2014 the undraft refuses without it, and refuses an untracked one (gitignored path, so untracked == absent from the PR diff). It must answer plan/built/divergence/unverified, with empty sections written None/Nothing explicitly. /teach wired in as step 7. progress.txt promoted into a PR body carrying those four sections. spec-ready-finalization grew the gate and was re-anchored on the section NAME after renumbering broke its number anchor; 6 mutations rejected. AC-7 is explicitly a HUMAN read at the merge gate and remains OUTSTANDING \u2014 not self-certified."
+    },
+    {
+      "id": "US-006",
+      "title": "Delete the ceremony that emits nothing readable",
+      "description": "As a maintainer, I want steps that produce outputs nothing consumes to be removed, so that the cost of a cycle buys something.",
+      "acceptanceCriteria": [
+        "The four `STATUS: SPEC-*` tokens (`SPEC-PLANNED`, `SPEC-EXECUTED`, `SPEC-BLOCKED`, `SPEC-RETRO-DONE`) are removed; a repo-wide grep over `*.sh`, `*.ts`, `*.mjs`, `*.json`, `*.yml` confirms they never had an executable consumer and now have no definition either",
+        "The mandatory per-node `## spec-*` memory-log append is dropped, or narrowed to the single shape `.oh/crons/heartbeat.md` actually reads",
+        "The groom tail (`/audit skills`, `/wiki lint`, `/audit drift`) is cut from `/spec execute`; `/audit drift` already runs hourly via the heartbeat cron",
+        "`/eval` runs ONCE per cycle: the `/audit implementation` Gate 2 and `/benchmark` Signal 1 read that result instead of re-running the suite; probe executions per cycle drop from 318 to 106",
+        "The silent `git add` inherited from `ship-spec/SKILL.md` line 294 is fixed to `git add -f` for the gitignored `.oh/tasks/` path",
+        "`.oh/tasks/README.md` lines 22-24 no longer contradict `.gitignore` line 12",
+        "The PR still reaches ready-for-review through the surviving gates after these removals"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "2026-08-24: four STATUS: SPEC-* tokens removed (zero executable consumers re-confirmed by grep over sh/ts/mjs/json/yml); the rule they carried (never infer success from silence) kept as each node's terminal report. Memory append narrowed to ONE entry per run in the heartbeat's Result/Action/Observation shape. Groom triad cut from /spec execute. /eval now runs once: execute publishes a commit-keyed eval-result.json (git add -f) that audit Gate 2 and benchmark Signal 1 read, validating .commit against HEAD \u2014 stale or missing means RUN, never PASS. 318 -> 106 probe executions per cycle. tasks/README no longer contradicts .gitignore. New probe eval-runs-once-per-cycle, 8 mutations rejected including blind-trust reuse. Gate chain to ready-for-review traced intact."
+    },
+    {
+      "id": "US-007",
+      "title": "Make memory's claims true",
+      "description": "As a reader of MEMORY.md, I want every enforcement claim in it to be real, so that I can trust which lessons are actually guarded.",
+      "acceptanceCriteria": [
+        "Every unbacked `probe:` field is stripped from `.oh/memory/MEMORY.md` \u2014 all 73 cited probe ids currently resolve to no file",
+        "The 32 verified-dead entries (9 obsolete/falsified, 17 one-time narratives, 4 out-of-domain, 6 repo-derivable) and the 49 entries restating an `IDENTITY.md` principle are ANNOTATED IN PLACE with their verdict and evidence \u2014 NOT deleted this pass",
+        "A new probe asserts every `probe:` id in `MEMORY.md` resolves to a real `.oh/evals/probes/<id>.sh`; it FAILS against today's MEMORY.md and passes after the strip",
+        "A new probe asserts `MEMORY_DIR` is absolute or unset; it currently resolves to the relative `.oh/memory`, shadowing the `oh-path` resolver added by PR #772",
+        "`MEMORY.md`'s `Closes #N` auto-close rule is moved into `.oh/skills/git/SKILL.md` next to lines 88 and 260, finishing what issue #768 claimed to close",
+        "`.oh/skills/retro/scripts/check-memory-duplicates.sh` no longer relies on fixed-string `grep -Fqi` alone, so a rephrased duplicate is detected",
+        "A tier size budget exists so the always-on context tier cannot regrow silently; MEMORY.md is currently 55% of an 84 KB tier",
+        "Both new probes are verified by rejection, not by exit 0"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "2026-08-24: 76 unbacked probe: claims stripped to `probe: none` and marked, via the tracked, idempotent, dry-run-by-default .oh/skills/retro/scripts/memory-audit.py (backup kept) \u2014 the ledger is untracked so the SCRIPT is the reviewable artifact. 105-row audit worksheet emitted. Three probes added (claims-resolve, MEMORY_DIR absolute-or-unset, tier size budget), all verified by rejection; the anchoring assertion needed a real linked-worktree fixture because the mutation is inert in a plain repo. Relative-MEMORY_DIR shadow fixed in both compose files; the probe warns rather than gates on a stale ambient value no commit can change. Duplicate checker now catches rephrasings (threshold 0.50, calibrated both directions). Closes #N rule moved into /git. DEVIATION: AC-2's obsolete/falsified/one-time/out-of-domain/repo-derivable/restates-identity verdicts are SEMANTIC and were not fabricated \u2014 set-overlap flagged 0 of 105 in both directions; the worksheet leaves a blank verdict per entry for the operator's read."
+    }
+  ]
+}

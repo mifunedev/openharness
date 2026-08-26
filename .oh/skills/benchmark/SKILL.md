@@ -58,14 +58,24 @@ missing or ambiguous is treated as NOT-BENEFICIAL, never as beneficial
 
 ### Signal 1 — Regression floor (`/eval`)
 
-A change that breaks the floor is never beneficial, whatever it claims to add.
-Run the runner and gate on its **exit code + delta**, not its prose:
+A change that breaks the floor is never beneficial, whatever it claims to add. Gate on
+the runner's **exit code + delta**, not its prose — and read the cycle's single run
+rather than launching a third one:
 
 ```bash
-bash .claude/skills/eval/run.sh ; rc=$?
-# rc=0 → no NEW green→red regression this run
+RESULT=".oh/tasks/<slug>/eval-result.json"
+if [ -f "$RESULT" ] && [ "$(jq -r .commit "$RESULT")" = "$(git rev-parse HEAD)" ]; then
+  rc="$(jq -r .runnerExit "$RESULT")"          # inherit /spec execute's single run
+else
+  bash .claude/skills/eval/run.sh ; rc=$?
+fi
+# rc=0 → no NEW green→red regression for this commit
 # rc=1 → at least one new green→red regression → NOT-BENEFICIAL (floor broken)
 ```
+
+The `commit` comparison is load-bearing: a record from an earlier HEAD describes code
+that is no longer under test, so it is re-run rather than inherited. A missing record is
+never a pass.
 
 A new `green→red` regression or a non-zero runner exit is an immediate
 `NOT-BENEFICIAL` → `repeat` (after revert). A pre-existing red with an unchanged

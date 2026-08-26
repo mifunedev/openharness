@@ -30,7 +30,7 @@ Skip — and announce the skip — when any of these hold:
 - **Follow-up turn** — same task, context already established earlier in the conversation.
 - **Trivial CLI invocations** — `/release`, `/ci-status`, `gh pr list`, etc.
 - **Plan approval moments** — that's `ExitPlanMode`, not this skill. `AskUserQuestion` is for *picking among options*, not approving a finished plan.
-- **About to run `/prd` or `/ship-spec`** — those have their own clarifier. For v1 the user chooses one or the other; do not stack.
+- **About to run `/prd` or `/spec plan`** — those have their own clarifier. For v1 the user chooses one or the other; do not stack.
 
 ## Instructions
 

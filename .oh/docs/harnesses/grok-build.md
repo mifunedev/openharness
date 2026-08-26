@@ -10,6 +10,18 @@ Grok Build is **optional** in Open Harness and is **excluded from the default im
 
 ## Install (optional)
 
+The shortest path is the CLI, which sets the `harness.yaml` flag **and**
+installs into the already-running sandbox without a rebuild:
+
+```bash
+oh harness install grok-build
+```
+
+See [Harnesses Overview](./overview.md#installing-a-harness) for `--persist-only`,
+`--no-persist`, and what happens when the sandbox is not running.
+
+### Manual path
+
 Enable Grok Build in `harness.yaml`:
 
 ```yaml
@@ -43,7 +55,7 @@ curl -fsSL -o grok-install.sh https://x.ai/cli/install.sh
 bash grok-install.sh 0.2.39
 ```
 
-If you already use [`vet`](https://github.com/vet-run/vet), `vet https://x.ai/cli/install.sh 0.2.39` gives the same third-party installer a fetch/review/approve gate. `vet` is optional and is not required by Open Harness.
+If you already use [`vet`](https://github.com/vet-run/vet), `vet https://x.ai/cli/install.sh 0.2.39` gives the same third-party installer a fetch, review, and approve gate. `vet` is optional and is not required by Open Harness.
 
 Verify the install inside the sandbox:
 

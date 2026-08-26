@@ -13,18 +13,15 @@ supports that work. You write application code; you also own and evolve this fil
 OpenHarness has one canonical operative path:
 
 ```
-select → plan ⇄ critique → execute → merge → reset
+select → plan → execute → merge → reset
 ```
 
 - **plan** (`/spec plan`) turns a topic/issue into a `.oh/tasks/<slug>/` folder
-  (PRD + plan + critique + `prd.json`).
-- **critique** (`/spec critique`) runs adversarial critics + an approve gate
-  before any build.
+  (PRD + `prd.json`). Approving that PRD **is** the commitment gate.
 - **execute** (`/spec execute`) builds ⇄ audits to a ready PR (the human merges).
-- `/ship-spec` is the all-in-one composer that runs the same pipeline end-to-end.
 
-Two adversarial critic loops guard quality: `plan ⇄ critique` vets the plan;
-`build ⇄ audit` vets the build.
+One adversarial loop guards quality: `build ⇄ audit` vets the build. The plan is
+vetted by the operator who approves it.
 
 ## Conventions (`/git`)
 
@@ -44,12 +41,10 @@ Skills are loaded from `.oh/skills/` via each provider's `skills` symlink, so
 
 | Skill | When |
 |-------|------|
-| `/spec` | plan / critique / execute / retro — the decomposed build workflow |
-| `/ship-spec` | end-to-end spec → ready PR in one invocation |
+| `/spec` | plan / execute / retro — the decomposed build workflow |
 | `/prd` | generate a PRD from a feature description |
 | `/ralph` | convert a markdown PRD → `.oh/tasks/<name>/prd.json` |
 | `/delegate` | parallel sub-agent coordinator — execute a plan in waves |
-| `/critique`, `/approve` | adversarial review + the go/no-go gate |
 | `/audit` | explicit nine-target audit dispatcher (`implementation|pr|prs|harness|context|skills|eval-quality|drift|full`) |
 | `/eval` | run the probe suite, write `.oh/evals/RESULTS.md` |
 | `/git` | issues, branches, commits, PR titles/bodies, releases |

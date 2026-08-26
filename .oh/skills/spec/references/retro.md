@@ -6,16 +6,16 @@
 > `$ARGUMENTS`. Authority: `AGENTS.md § The Workflow`.
 
 The **reflection** node of the `spec-*` family (`AGENTS.md § The Workflow`). It runs
-inside `/spec execute`'s tail, after `build ⇄ audit` reaches `AUDIT-PASS` and before the
-`improve` and `groom` steps, to turn the execution run into durable, evidence-tested
-lessons.
+inside `/spec execute`'s tail, after `build ⇄ audit` reaches `AUDIT-PASS` and the evidence
+step has run, and before `improve`, to turn the execution run into durable,
+evidence-tested lessons.
 
 **Core principle: compose `/retro`, scoped to this task.** `/retro` already implements the
 scientific session-closing pass — falsifiable hypotheses, evidence for *and* against, a
 verdict + confidence, and a propose-then-confirm promotion into `.oh/memory/MEMORY.md` /
 `.oh/context/IDENTITY.md`. `retro` is the execution-side application of it: point `/retro`
 at the just-built `.oh/tasks/<slug>/` run so the reflection is anchored to that unit's
-artifacts (`prd.md`, `progress.txt`, `prd.json`, `critique.md`, the `/audit implementation` evidence)
+artifacts (`prd.md`, `progress.txt`, `prd.json`, the `/audit implementation` evidence)
 rather than the whole ambient session.
 
 It is **not** a second retro engine. The propose-then-confirm gate, the six-subsystem lens,
@@ -40,7 +40,7 @@ and fall back to a plain `/retro` on the session, or skip with a logged note.
 
 Invoke `/retro` with the execution scope made explicit — gather signals primarily from
 this task's artifacts: what the `prd.md` intended vs. what `progress.txt` shows shipped,
-which `critique.md` findings materialized, what the `build ⇄ audit` loop revealed (how many
+what the `build ⇄ audit` loop revealed (how many
 FAIL→build cycles, and why), and any coupling/constraint the run surfaced. Then let `/retro`
 do its scientific pass: form falsifiable hypotheses, test each for and against, assign
 verdict + confidence, and present supported `medium`+ lessons for confirmation before any
@@ -57,8 +57,10 @@ still require explicit approval (or are skipped under `--dry-run`).
   gate are `/retro`'s; `retro` only scopes them to the task.
 - **Audit or decide promotability.** That was `/audit implementation` (the `build ⇄ audit` loop) earlier in
   `/spec execute`.
-- **Run the grooming triad.** `/audit skills` · `/wiki lint` · `/audit drift` are the `groom`
-  step of `/spec execute`, after this one.
+- **Run the grooming triad.** `/audit skills` · `/wiki lint` · `/audit drift` are no longer a
+  step of `/spec execute` at all — the triad was cut in US-003's follow-on because
+  `/audit drift` already runs hourly from the heartbeat cron and the other two never blocked
+  a merge. Run them on their own cadence, or on demand.
 - **Merge or undraft.** No GitHub-side mutation — reflection only.
 
 ---
@@ -80,12 +82,14 @@ did not, add one line to `.oh/memory/<UTC-date>/log.md` per `.oh/skills/retro/re
 
 ## Pipeline position
 
-Within `AGENTS.md § The Workflow` (`select → spec-plan ⇄ spec-critique → spec-execute →
+Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
 merge → reset|clean`), `retro` runs inside the `spec-execute` tail (`build ⇄ audit →
-spec-retro → improve → groom`); the next step is `improve` (compound · compress ·
-benchmark). Print this bare token as the final line:
+evidence → spec-retro → improve`); the next step is `improve` (compound · compress ·
+benchmark).
 
-    STATUS: SPEC-RETRO-DONE
+The terminal artifact is the log entry plus whatever the propose-then-confirm gate actually
+wrote. Report the counts. There is no `STATUS: SPEC-RETRO-DONE` token — it had no executable
+consumer.
 
 The `/spec` family's authority is `AGENTS.md § The Workflow`. `retro`
 always completes (like `/retro`), so the execute tail always continues to `improve`.

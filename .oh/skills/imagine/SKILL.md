@@ -5,7 +5,7 @@ description: |
   artifact to .claude/specs/<slug>/spec.md — a path that is gitignored
   by default (`.gitignore:51`), so the spec never enters git history.
   Includes a mermaid diagram. Output is purpose-built as input for
-  `/ship-spec --plan .claude/specs/<slug>/spec.md`, which bypasses
+  `/spec plan --plan .claude/specs/<slug>/spec.md`, which bypasses
   /prd's clarifying questions when a plan is provided. No clarifying
   questions in /imagine itself — generate directly from the <scenario>
   argument.
@@ -16,7 +16,7 @@ argument-hint: "<scenario>"
 
 # Imagine
 
-One-shot generator that turns a fuzzy scenario into a draft PRD sketch under `.claude/specs/<slug>/spec.md`. The output is **scratch-input for `/ship-spec`** — gitignored by default, never committed, designed to be edited locally and then passed via `/ship-spec --plan <path>` to the existing formalization pipeline.
+One-shot generator that turns a fuzzy scenario into a draft PRD sketch under `.claude/specs/<slug>/spec.md`. The output is **scratch-input for `/spec plan`** — gitignored by default, never committed, designed to be edited locally and then passed via `/spec plan --plan <path>` to the formalization pipeline.
 
 ## When to use
 
@@ -27,7 +27,7 @@ One-shot generator that turns a fuzzy scenario into a draft PRD sketch under `.c
 ## When NOT to use
 
 - **`/prd`** — when the feature is already well-defined and ready for a structured PRD with numbered FRs and acceptance criteria. `/imagine` outputs a sketch, not a PRD.
-- **`/ship-spec`** — when ready for the full pipeline (PRD → critics → issue → branch → draft PR). `/imagine` produces input for `/ship-spec`; it does not replace it.
+- **`/spec`** — when ready for the full pipeline (PRD → task folder → issue → branch → draft PR → build). `/imagine` produces input for `/spec plan`; it does not replace it.
 - **`/interview`** — when the goal is to narrow scope on a *known* task. `/imagine` is for *generating* a new task shape from a scenario.
 
 ## The job
@@ -123,7 +123,7 @@ Output exactly two lines (no preamble, no summary):
 
 ```
 Spec: .claude/specs/<slug>/spec.md
-Next: /ship-spec --plan .claude/specs/<slug>/spec.md
+Next: /spec plan --plan .claude/specs/<slug>/spec.md
 ```
 
 ## Step 5 — Memory Protocol
@@ -147,9 +147,9 @@ Then run the qualify/improve loop per `.oh/skills/retro/references/memory-protoc
 - **Writing a full PRD.** Story seeds are one-liners. Numbered functional requirements, acceptance criteria, success metrics — all `/prd`'s job, not this skill's.
 - **Skipping the mermaid diagram.** The diagram is the cheapest forcing function for "did I actually understand the scenario?" Pick a real type; never emit a placeholder or `// TODO: diagram`.
 - **Writing outside `.claude/specs/<slug>/`.** No spillover into `.oh/tasks/`, `.oh/memory/<topic>.md`, `.oh/skills/wiki/corpus/`, or root. Those surfaces have their own skills.
-- **Auto-chaining into `/ship-spec`.** Keep the seam explicit. The user edits the spec before formalizing — that's the entire reason the seam exists.
+- **Auto-chaining into `/spec`.** Keep the seam explicit. The user edits the spec before formalizing — that's the entire reason the seam exists.
 - **Truncating the scenario into the slug.** `imagine a long thirty word scenario about ...` → derive the noun phrase (`thirty-word-scenario` or `long-scenario`), not the first five words verbatim.
 
 ## Why this skill exists
 
-The harness already has `/prd` (Q&A → 9-section PRD) and `/ship-spec` (`/prd` → critics → `/ralph` → issue → branch → draft PR). What was missing was a **fast upstream sketch** for fuzzy ideas: something the user can iterate on locally before answering structured questions. `/imagine` fills that gap without polluting the repo — `.claude/specs/*` is gitignored, so every sketch is scratch by design.
+The harness already has `/prd` (Q&A → 9-section PRD) and `/spec` (`/prd` → `/ralph` → task folder → issue → branch → draft PR → build). What was missing was a **fast upstream sketch** for fuzzy ideas: something the user can iterate on locally before answering structured questions. `/imagine` fills that gap without polluting the repo — `.claude/specs/*` is gitignored, so every sketch is scratch by design.

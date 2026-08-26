@@ -6,12 +6,36 @@ import { runInit, type InitIO, type InitOptions } from "./commands/init.js";
 import { runUpdate } from "./commands/update.js";
 import { runCloud } from "./commands/cloud.js";
 import {
+  runComposeVerb,
   runGateway,
   runSandbox,
   runShell,
+  composeVerbs,
   DEFAULT_CONTAINER_NAME,
+  type ComposeVerb,
   type LifecycleIO,
 } from "./commands/lifecycle.js";
+import {
+  runHarnessInstall,
+  runHarnessList,
+  runHarnessStatus,
+  type HarnessIO,
+} from "./commands/harness.js";
+import { harnessIds } from "./lib/harnesses/catalog.js";
+import {
+  runRuntimeInstall,
+  runRuntimeList,
+  runRuntimeStatus,
+  type RuntimeIO,
+} from "./commands/runtime.js";
+import { DEFAULT_RUNTIME, runtimeIds } from "./lib/runtimes/catalog.js";
+import {
+  runToolInstall,
+  runToolList,
+  runToolStatus,
+  type ToolIO,
+} from "./commands/tool.js";
+import { installableToolIds, toolIds } from "./lib/tools/catalog.js";
 import {
   fetchRemoteSource,
   DEFAULT_REPO_URL,
@@ -81,6 +105,13 @@ Usage:
   oh update                 Upgrade the .oh/ control plane from a newer source
   oh sandbox                Provision and start the sandbox (docker compose up)
   oh shell [container]      Open a zsh shell in the running sandbox container
+  oh stop                   Stop the sandbox, preserving volumes
+  oh restart                Restart the sandbox service
+  oh logs                   Tail sandbox logs (follows)
+  oh ps                     Show sandbox service status
+  oh harness <args...>      Install and inspect agent CLI harnesses
+  oh runtime <args...>      Inspect the sandbox's isolation runtime
+  oh tool <args...>         Install and inspect sandbox tooling
   oh gateway <args...>      Manage a messaging client session (pi|hermes)
   oh cloud <args...>        Manage OpenHarness Cloud nodes
   oh --version              Print version
@@ -207,6 +238,31 @@ subdirectory of an equipped repo; exits with docker's exit code.
 }
 
 /** Exported for tests. */
+export function printHarnessHelp(): void {
+  process.stdout.write(`oh harness — Install and inspect agent CLI harnesses
+
+Usage:
+  oh harness list                     List known harnesses and their state
+  oh harness install <name>           Install a harness into the sandbox
+  oh harness status [name]            Show installed/enabled state
+
+\`install\` does BOTH halves: it sets the harness.yaml \`install:\` flag so the
+choice survives the next image build, AND installs into the already-running
+container so the harness is usable now. It never rebuilds or restarts the
+sandbox. When the sandbox is not running it persists the flag, prints a hint,
+and exits 0.
+
+Flags:
+  --persist-only   Only set the harness.yaml install: flag (no container work)
+  --no-persist     Live-install only; leave harness.yaml unchanged
+  --json           Machine-readable output (list/status)
+
+Harnesses:
+${harnessIds().map((h) => `  ${h}`).join("\n")}
+`);
+}
+
+/** Exported for tests. */
 export function printGatewayHelp(): void {
   process.stdout.write(`oh gateway — Manage a messaging client session (Slack bridge)
 
@@ -255,6 +311,92 @@ export interface InitArgs {
   minimal: boolean;
   copyClaude: boolean;
   verbose: boolean;
+}
+
+export function printRuntimeHelp(): void {
+  process.stdout.write(`oh runtime — Inspect the sandbox's isolation runtime
+
+A runtime is the isolation boundary the sandbox runs ON (a Docker container
+today). A harness is an agent CLI that runs INSIDE it — see \`oh harness\`.
+
+Usage:
+  oh runtime list                   Every known runtime, and which one is in use
+  oh runtime status [name]          The measured requirements behind each verdict
+  oh runtime install [name]         Install a runtime into the sandbox
+                                    (default: ${DEFAULT_RUNTIME})
+
+This command REPORTS, and installs a tool. It selects no runtime, writes no
+config, and changes nothing about how the sandbox boots — choosing one is
+tracked in #731 (see #806 for the open selector decision).
+
+\`install\` measures first and refuses to run an installer that cannot succeed,
+printing each unmet requirement with its remediation. \`--force\` overrides that
+judgement.
+
+Flags:
+  --force          Attempt the install even when the preflight fails
+  --json           Machine-readable output (list/status)
+
+Runtimes:
+${runtimeIds().map((r) => `  ${r}`).join("\n")}
+`);
+}
+
+export function printToolHelp(): void {
+  process.stdout.write(`oh tool — Install and inspect sandbox tooling
+
+Tooling that is neither an agent CLI (see \`oh harness\`) nor an isolation
+runtime (see \`oh runtime\`) — a headless browser, a tunnel client, the
+GitHub CLI.
+
+Usage:
+  oh tool list                      List known tools and their state
+  oh tool status [name]             Show installed state and version
+  oh tool install <name>            Install a tool into the sandbox
+
+Most tools are baked into the image and are report-only; \`install\` works on:
+${installableToolIds().map((t) => `  ${t}`).join("\n")}
+
+\`install\` does BOTH halves: it sets the harness.yaml \`install:\` flag so the
+choice survives the next container start, AND installs into the already-running
+container. It never rebuilds or restarts the sandbox. A large download is
+confirmed first, and a non-interactive run without --yes installs nothing.
+
+Flags:
+  --persist-only   Only set the harness.yaml install: flag (no container work)
+  --no-persist     Live-install only; leave harness.yaml unchanged
+  --yes            Accept a large download without prompting
+  --json           Machine-readable output (list/status)
+
+Tools:
+${toolIds().map((t) => `  ${t}`).join("\n")}
+`);
+}
+
+/**
+ * One help block for all four compose verbs — they differ only in the word.
+ * `oh destroy` and a `make config` equivalent are deliberately absent; see
+ * `.oh/docs/lifecycle-commands.md` for why.
+ */
+export function printComposeVerbHelp(verb: ComposeVerb): void {
+  const what: Record<ComposeVerb, string> = {
+    stop: "Stop the sandbox, preserving volumes for a later restart",
+    restart: "Restart the sandbox service",
+    logs: "Tail the sandbox compose logs (follows until interrupted)",
+    ps: "Show sandbox service status",
+  };
+  process.stdout.write(`oh ${verb} — ${what[verb]}
+
+Usage:
+  oh ${verb} [-- <extra docker compose args>]
+
+Equivalent to \`make ${verb}\` — both run .oh/scripts/docker-compose.sh, which is
+the single implementation. Use whichever is available: \`make\` needs no Node and
+works in a source checkout; \`oh\` works anywhere, including an \`oh init\` repo
+that has no Makefile.
+
+See .oh/docs/lifecycle-commands.md for the full mapping.
+`);
 }
 
 export function parseInitArgs(rest: string[]): ParseResult<InitArgs> {
@@ -458,6 +600,185 @@ export function parseShellArgs(rest: string[]): ParseResult<ShellArgs> {
   }
   return { ok: true, args };
 }
+
+/** Parsed `oh harness` args. */
+export interface HarnessArgs {
+  help: boolean;
+  /** `list` | `install` | `status`; undefined when only `--help` was given. */
+  subcommand?: "list" | "install" | "status";
+  /** The `<name>` positional — required by `install`, optional for `status`. */
+  name?: string;
+  persistOnly: boolean;
+  noPersist: boolean;
+  json: boolean;
+}
+
+export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
+  const args: HarnessArgs = { help: false, persistOnly: false, noPersist: false, json: false };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
+  }
+
+  const positionals: string[] = [];
+  for (const token of rest) {
+    if (token === "--persist-only") {
+      args.persistOnly = true;
+    } else if (token === "--no-persist") {
+      args.noPersist = true;
+    } else if (token === "--json") {
+      args.json = true;
+    } else if (token.startsWith("-")) {
+      return { ok: false, error: `oh harness: unknown flag "${token}"` };
+    } else {
+      positionals.push(token);
+    }
+  }
+
+  const [sub, name, ...extra] = positionals;
+  if (sub !== "list" && sub !== "install" && sub !== "status") {
+    return {
+      ok: false,
+      error: `oh harness: unknown subcommand "${sub}" — expected list, install, or status`,
+      showHelp: true,
+    };
+  }
+  if (extra.length > 0) {
+    return { ok: false, error: `oh harness: unexpected argument "${extra[0]}"` };
+  }
+  if (sub === "install" && name === undefined) {
+    return { ok: false, error: "oh harness install: a harness name is required", showHelp: true };
+  }
+  if (sub === "list" && name !== undefined) {
+    return { ok: false, error: `oh harness list: unexpected argument "${name}"` };
+  }
+  // The two escape hatches are opposites — persisting only while also refusing
+  // to persist would leave the command with nothing to do.
+  if (args.persistOnly && args.noPersist) {
+    return {
+      ok: false,
+      error: "oh harness: --persist-only conflicts with --no-persist — pass at most one",
+    };
+  }
+
+  args.subcommand = sub;
+  if (name !== undefined) args.name = name;
+  return { ok: true, args };
+}
+
+/** Parsed `oh runtime` args. */
+interface RuntimeArgs {
+  help: boolean;
+  force: boolean;
+  json: boolean;
+  subcommand?: "list" | "install" | "status";
+  name?: string;
+}
+
+export function parseRuntimeArgs(rest: string[]): ParseResult<RuntimeArgs> {
+  const args: RuntimeArgs = { help: false, force: false, json: false };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
+  }
+
+  const positionals: string[] = [];
+  for (const token of rest) {
+    if (token === "--force") {
+      args.force = true;
+    } else if (token === "--json") {
+      args.json = true;
+    } else if (token.startsWith("-")) {
+      return { ok: false, error: `oh runtime: unknown flag "${token}"` };
+    } else {
+      positionals.push(token);
+    }
+  }
+
+  const [sub, name, ...extra] = positionals;
+  if (sub !== "list" && sub !== "install" && sub !== "status") {
+    return {
+      ok: false,
+      error: `oh runtime: unknown subcommand "${sub}" — expected list, install, or status`,
+      showHelp: true,
+    };
+  }
+  if (extra.length > 0) {
+    return { ok: false, error: `oh runtime: unexpected argument "${extra[0]}"` };
+  }
+  if (sub === "list" && name !== undefined) {
+    return { ok: false, error: `oh runtime list: unexpected argument "${name}"` };
+  }
+
+  args.subcommand = sub;
+  // `install` with no name is the documented default, NOT an error — the
+  // operator asked for one obvious runtime, and naming it every time would
+  // be ceremony. `list`/`status` keep undefined meaning "all".
+  if (name !== undefined) args.name = name;
+  else if (sub === "install") args.name = DEFAULT_RUNTIME;
+  return { ok: true, args };
+}
+
+/** Parsed `oh tool` args. */
+interface ToolArgs {
+  help: boolean;
+  persistOnly: boolean;
+  noPersist: boolean;
+  yes: boolean;
+  json: boolean;
+  subcommand?: "list" | "install" | "status";
+  name?: string;
+}
+
+export function parseToolArgs(rest: string[]): ParseResult<ToolArgs> {
+  const args: ToolArgs = {
+    help: false, persistOnly: false, noPersist: false, yes: false, json: false,
+  };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
+  }
+
+  const positionals: string[] = [];
+  for (const token of rest) {
+    if (token === "--persist-only") args.persistOnly = true;
+    else if (token === "--no-persist") args.noPersist = true;
+    else if (token === "--yes" || token === "-y") args.yes = true;
+    else if (token === "--json") args.json = true;
+    else if (token.startsWith("-")) {
+      return { ok: false, error: `oh tool: unknown flag "${token}"` };
+    } else positionals.push(token);
+  }
+
+  const [sub, name, ...extra] = positionals;
+  if (sub !== "list" && sub !== "install" && sub !== "status") {
+    return {
+      ok: false,
+      error: `oh tool: unknown subcommand "${sub}" — expected list, install, or status`,
+      showHelp: true,
+    };
+  }
+  if (extra.length > 0) {
+    return { ok: false, error: `oh tool: unexpected argument "${extra[0]}"` };
+  }
+  // No default name: most tools are baked in, so there is no one obvious
+  // thing to install. `oh runtime install` can default; this cannot.
+  if (sub === "install" && name === undefined) {
+    return { ok: false, error: "oh tool install: a tool name is required", showHelp: true };
+  }
+  if (sub === "list" && name !== undefined) {
+    return { ok: false, error: `oh tool list: unexpected argument "${name}"` };
+  }
+  if (args.persistOnly && args.noPersist) {
+    return {
+      ok: false,
+      error: "oh tool: --persist-only conflicts with --no-persist — pass at most one",
+    };
+  }
+
+  args.subcommand = sub;
+  if (name !== undefined) args.name = name;
+  return { ok: true, args };
+}
+
+
 
 /** Parsed `oh gateway` args — everything after a leading help flag is verbatim. */
 export interface GatewayArgs {
@@ -779,6 +1100,111 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     return runShell({ container: parsed.args.container }, lifecycleIo());
+  }
+
+  // The compose lifecycle verbs. `--`-separated extras pass straight through to
+  // docker compose; anything else is rejected rather than silently forwarded.
+  if ((composeVerbs() as string[]).includes(first)) {
+    const verb = first as ComposeVerb;
+    const rest = argv.slice(1);
+    if (isHelpFlag(rest[0])) {
+      printComposeVerbHelp(verb);
+      return 0;
+    }
+    const sep = rest.indexOf("--");
+    if (sep === -1 && rest.length > 0) {
+      process.stderr.write(
+        `oh ${verb}: unexpected argument "${rest[0]}" — pass extra docker compose args after \`--\`\n`,
+      );
+      return 1;
+    }
+    return runComposeVerb(verb, {}, sep === -1 ? [] : rest.slice(sep + 1));
+  }
+
+  if (first === "harness") {
+    const parsed = parseHarnessArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printHarnessHelp();
+      return 1;
+    }
+    if (parsed.args.help) {
+      printHarnessHelp();
+      return 0;
+    }
+    const a = parsed.args;
+    const io: HarnessIO = {
+      stdout: (s) => process.stdout.write(s),
+      stderr: (s) => process.stderr.write(s),
+    };
+    if (a.subcommand === "list") {
+      return await runHarnessList({ json: a.json }, io);
+    }
+    if (a.subcommand === "status") {
+      return await runHarnessStatus(a.name, { json: a.json }, io);
+    }
+    // parseHarnessArgs guarantees `name` is set for `install`.
+    return await runHarnessInstall(
+      a.name as string,
+      { persistOnly: a.persistOnly, noPersist: a.noPersist },
+      io,
+    );
+  }
+
+  if (first === "runtime") {
+    const parsed = parseRuntimeArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printRuntimeHelp();
+      return 1;
+    }
+    if (parsed.args.help) {
+      printRuntimeHelp();
+      return 0;
+    }
+    const a = parsed.args;
+    const io: RuntimeIO = {
+      stdout: (s) => process.stdout.write(s),
+      stderr: (s) => process.stderr.write(s),
+    };
+    if (a.subcommand === "list") {
+      return await runRuntimeList({ json: a.json }, io);
+    }
+    if (a.subcommand === "status") {
+      return await runRuntimeStatus(a.name, { json: a.json }, io);
+    }
+    // parseRuntimeArgs defaults `name` for `install`.
+    return await runRuntimeInstall(a.name as string, { force: a.force }, io);
+  }
+
+  if (first === "tool") {
+    const parsed = parseToolArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printToolHelp();
+      return 1;
+    }
+    if (parsed.args.help) {
+      printToolHelp();
+      return 0;
+    }
+    const a = parsed.args;
+    const io: ToolIO = {
+      stdout: (s) => process.stdout.write(s),
+      stderr: (s) => process.stderr.write(s),
+    };
+    if (a.subcommand === "list") {
+      return await runToolList({ json: a.json }, io);
+    }
+    if (a.subcommand === "status") {
+      return await runToolStatus(a.name, { json: a.json }, io);
+    }
+    // parseToolArgs guarantees `name` is set for `install`.
+    return await runToolInstall(
+      a.name as string,
+      { persistOnly: a.persistOnly, noPersist: a.noPersist, yes: a.yes },
+      io,
+    );
   }
 
   if (first === "cloud") {

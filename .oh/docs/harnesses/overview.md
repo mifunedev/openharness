@@ -8,17 +8,45 @@ Open Harness ships with three agent CLIs in the default sandbox image: **Claude 
 
 Open Harness is the harness; the **agent** is your call. To go beyond the preinstalled options, install via `npm` / `pip` / `cargo` inside the sandbox or edit the Dockerfile. For Pi+Slack specifically, the recommended path is the `pi-messenger-bridge` npm package — see [Slack integration](../integrations/slack.md). The product surface is one developer, one project, one agent — not racing or stacking multiple CLIs against each other.
 
+## Installing a harness
+
+`oh harness` is the shortest path. It does both halves in one command: it sets
+the `harness.yaml` `install:` flag so the choice survives the next image build,
+**and** installs the CLI into the already-running container so it is usable now.
+It never rebuilds or restarts the sandbox.
+
+```bash
+oh harness list                 # what exists, what is enabled, what is installed
+oh harness install opencode     # persist the flag + install into the running sandbox
+oh harness status hermes        # one harness
+```
+
+If the sandbox is not running, the command persists the flag, prints a hint, and
+exits 0 — start the sandbox with `oh sandbox` and re-run it, or let the next
+build pick the harness up.
+
+Two escape hatches:
+
+| Flag | Effect |
+|---|---|
+| `--persist-only` | Only set the `harness.yaml` flag; do no container work |
+| `--no-persist` | Live-install only; leave `harness.yaml` unchanged (ephemeral — a container recreate loses it) |
+
+The manual path still works: uncomment the key in `harness.yaml` (or set the
+`INSTALL_*` build flag in `.devcontainer/.env`) and run
+`make destroy && make sandbox`.
+
 ## Supported agents
 
 | Agent | Role | Start command | Source |
 |---|---|---|---|
 | [Claude Code](./claude-code.md) | Anthropic's terminal coding agent (default) | `claude` | preinstalled |
 | [Codex](./codex.md) | OpenAI's CLI coding agent | `codex` | preinstalled |
-| [OpenCode](./opencode.md) | Terminal coding agent with OpenAI OAuth support | `opencode` | optional: `install.opencode: true` in `harness.yaml` |
+| [OpenCode](./opencode.md) | Terminal coding agent with OpenAI OAuth support | `opencode` | optional: `oh harness install opencode` |
 | [Pi](./pi.md) | Lightweight, customizable agent | `pi` | default |
-| [DeepAgents](./deepagents.md) | LangChain's multi-provider terminal agent | `deepagents` | optional: `install.deepagents: true` in `harness.yaml` |
-| [Hermes](./hermes.md) | Nous Research's self-improving terminal agent | `hermes` | optional: `install.hermes: true` in `harness.yaml` |
-| [Grok Build](./grok-build.md) | xAI's proprietary Grok Build terminal agent | `grok` | optional: `install.grok_build: true` in `harness.yaml` |
+| [DeepAgents](./deepagents.md) | LangChain's multi-provider terminal agent | `deepagents` | optional: `oh harness install deepagents` |
+| [Hermes](./hermes.md) | Nous Research's self-improving terminal agent | `hermes` | optional: `oh harness install hermes` |
+| [Grok Build](./grok-build.md) | xAI's proprietary Grok Build terminal agent | `grok` | optional: `oh harness install grok-build` |
 | [T3 Code](./t3code.md) | Browser UI over Claude/Codex/OpenCode (port 3773) | `/t3` or `npx t3` | on-demand |
 
 ## Verifying installation

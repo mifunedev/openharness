@@ -226,7 +226,7 @@ The promotion counts are **not knowable here** — the operator has not answered
 | Qualify filter left nothing to propose | `--result OP --memory 0 --identity 0` |
 | `auto-approve` | `--result OP` with the real counts |
 
-`auto-approve` resolves the gate inside the same turn — you present, decide, and write without handing control back — so the counts *are* known when §8 runs and one entry is correct. This is the common invocation path (`.oh/prompts/advisor/implement.yml`, `.oh/prompts/advisor/pr.yml`), which is exactly why the gated path's log timing went unexamined for so long. Everything else is a gated run and needs 6b.
+`auto-approve` resolves the gate inside the same turn — you present, decide, and write without handing control back — so the counts *are* known when §8 runs and one entry is correct. This is the common invocation path (an unattended build session running `/spec execute`'s tail), which is exactly why the gated path's log timing went unexamined for so long. Everything else is a gated run and needs 6b.
 
 #### 6c. Present the proposal block
 

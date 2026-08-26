@@ -4,8 +4,19 @@
 set -euo pipefail
 # Bash started as an asynchronous job inherits SIGINT ignored. Re-exec once through
 # GNU env so direct and process-group launches can install reliable handlers.
-if [[ ${AUDIT_SIGNALS_RESET:-} != 1 ]]; then
-  exec env --default-signal=INT,TERM,HUP AUDIT_SIGNALS_RESET=1 bash "$0" "$@"
+#
+# The "already re-exec'd" marker travels in ARGV, not the environment. It was
+# AUDIT_SIGNALS_RESET=1, which is exported and therefore inherited by every descendant:
+# a nested audit-run.sh -- a probe driving the boundary from inside an audit -- saw the
+# flag, skipped this re-exec, kept SIGINT ignored, and reported a signal-propagation
+# failure that described its caller rather than the repository. argv does not cross a
+# process boundary uninvited, so the marker cannot leak. An inherited env value is now
+# cleared and grants no skip.
+unset AUDIT_SIGNALS_RESET
+if [[ ${1:-} == --audit-signals-reset ]]; then
+  shift
+else
+  exec env --default-signal=INT,TERM,HUP bash "$0" --audit-signals-reset "$@"
 fi
 usage_line='usage: /audit <implementation|pr|prs|harness|context|skills|eval-quality|drift|full> [target options]'
 usage() {

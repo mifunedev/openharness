@@ -115,13 +115,13 @@ They are not substitutes.
 
 | Surface | Owner | Scope | Stop/guard model |
 |---------|-------|-------|------------------|
-| `/autopilot` | Open Harness | Scheduled harness-infra self-improvement: select an issue, build a PR, run eval/CI/PR gates, respect daily/total PR caps. | Harness caps, issue/PR dedupe, `/eval`, `/audit pr`, `/ship-spec`, and operator review. |
+| `/autopilot` | Open Harness | Scheduled harness-infra self-improvement: select an issue, build a PR, run eval/CI/PR gates, respect daily/total PR caps. | Harness caps, issue/PR dedupe, `/eval`, `/audit pr`, `/spec`, and operator review. |
 | `pi-autoresearch` | Operator-invoked Pi package | Metric optimization in a chosen working directory: try ideas, benchmark, log, keep/revert, repeat. | `.auto/config.json maxIterations`, interrupt controls, optional checks/hooks, and finalization into review branches. |
 
 The overlap points are benchmark-driven keep/revert decisions, long-running
 autonomy, token spend, and git mutations. For v1, Open Harness only exposes and
 documents the package. It does **not** wire `pi-autoresearch` into `/autopilot`,
-`/benchmark`, `/eval`, or `/ship-spec`.
+`/benchmark`, `/eval`, or `/spec`.
 
 Follow-on questions before any integration:
 

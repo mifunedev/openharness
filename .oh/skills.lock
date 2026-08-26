@@ -116,16 +116,6 @@
         ".oh/skills/render-html"
       ]
     },
-    "ship-spec": {
-      "source": "github:mifunedev/skills",
-      "registry_version": "2026.5.17",
-      "skill_version": "0.1.0",
-      "commit": "c559c100177b3b2edc5d1c29cc3741ce48342e51",
-      "checksum": "sha256:a3c4fb446a435aa14d4d3e55549d9890020f53ff40995f69d02f73240aa719b8",
-      "installed_paths": [
-        ".oh/skills/ship-spec"
-      ]
-    },
     "strategic-proposal": {
       "source": "github:mifunedev/skills",
       "registry_version": "2026.5.17",

@@ -144,7 +144,6 @@ log_skip() {
 
 ## Autopilot -- $time UTC
 - **Result**: $status
-- **Executor**: ${AUTOPILOT_EXECUTOR:-delegate-advisor}
 - **Selected**: none
 - **Session**: ${CRON_TMUX_SESSION:-none}
 - **Action**: $action

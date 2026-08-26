@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Pure, deterministic JSON classifier. No network, mutation, clock, or env defaults.
 set -euo pipefail
 jq -S -c '
 def fail_values: ["ACTION_REQUIRED","CANCELLED","ERROR","FAILURE","STARTUP_FAILURE","STALE","TIMED_OUT"];

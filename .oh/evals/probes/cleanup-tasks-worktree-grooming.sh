@@ -9,9 +9,6 @@
 #       staged / untracked / missing-upstream / unpushed preservation gates before
 #       `git worktree remove --force`, avoid recursive orphan deletion, and report
 #       the groomed count in cron liveness.
-# NOTE: this is a STATIC grep oracle over markdown (.oh/crons/cleanup-tasks.md), NOT a
-#       runtime execution test of the cron. It guards the documented procedure
-#       against silent revert, not shell behavior.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -22,8 +19,6 @@ if [[ ! -f "$CRON" ]]; then
   exit 2
 fi
 
-# The grooming pass must be explicit and must not be mistaken for the temporary
-# archive worktree used to commit task moves.
 if ! grep -Fq 'Groom stale `.oh/worktrees/` branch checkouts' "$CRON"; then
   echo "REGRESSION: cleanup-tasks lacks the .oh/worktrees grooming pass" >&2
   exit 1
@@ -33,7 +28,6 @@ if ! grep -Fq 'git worktree list --porcelain' "$CRON"; then
   exit 1
 fi
 
-# Durable namespaces are never cleanup candidates.
 if ! grep -Fq '.oh/worktrees/agent/' "$CRON" || ! grep -Fq '.oh/worktrees/project/' "$CRON"; then
   echo "REGRESSION: grooming pass does not explicitly preserve .oh/worktrees/agent/ and .oh/worktrees/project/" >&2
   exit 1
@@ -47,8 +41,6 @@ if ! grep -Fq 'excluding `.oh/worktrees/agent/`' "$CRON"; then
   exit 1
 fi
 
-# Safety gates before removal: live pane, open PR, 30-day age, and local-work
-# preservation. The latter prevents stale age from becoming proof of disposability.
 if ! grep -Fq "tmux list-panes -a -F '#{pane_current_path}'" "$CRON"; then
   echo "REGRESSION: grooming pass lacks live tmux-pane protection" >&2
   exit 1
@@ -80,16 +72,11 @@ for reason in dirty staged untracked missing-upstream unpushed; do
   fi
 done
 
-# Registered worktrees use forced worktree removal only after the preservation
-# gate — inline `git worktree remove --force` or (post cc-safety-net) the
-# guard-compatible shim `git-maintenance.sh worktree-remove`.
 if ! grep -Eq 'git worktree remove --force "\$path"|git-maintenance\.sh worktree-remove "\$path"' "$CRON"; then
   echo "REGRESSION: stale registered worktrees are not removed via forced worktree removal" >&2
   exit 1
 fi
 
-# Corrupt/orphan folders are not registered worktrees; they must not be recursively
-# deleted when non-empty/suspicious because that can destroy the only copy of work.
 if grep -Fq 'rm -rf "$path"' "$CRON"; then
   echo "REGRESSION: orphan-folder pruning still authorizes recursive rm -rf" >&2
   exit 1
@@ -103,15 +90,11 @@ if ! grep -Fq 'orphan-nonempty' "$CRON"; then
   exit 1
 fi
 
-# Reporting/liveness includes the groomed count, so the weekly archive's output
-# reflects this second cleanup surface.
 if ! grep -Fq 'groomed W worktrees' "$CRON"; then
   echo "REGRESSION: cleanup-tasks liveness/reporting omits groomed worktree count" >&2
   exit 1
 fi
 
-# The reserved namespace cleanup must not delete agent/project even when removing
-# empty top-level directories.
 if ! grep -Fq '! -name agent ! -name project -empty -delete' "$CRON"; then
   echo "REGRESSION: empty namespace pruning does not preserve agent/project" >&2
   exit 1

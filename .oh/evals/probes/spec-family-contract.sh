@@ -21,12 +21,9 @@ SKILLS="$ROOT/.claude/skills"
 SPEC="$SKILLS/spec"
 AGENTS="$ROOT/AGENTS.md"
 
-# The three surviving subcommands. `critique` was removed in spec-simplification US-001:
-# approving prd.md IS the commitment gate (AGENTS.md § The Workflow).
 subs=(plan execute retro)
 retired_subs=(critique)
 
-# Not applicable when the /spec dispatcher is absent (cold runner / pre-merge main).
 if [ ! -f "$SPEC/SKILL.md" ]; then
   echo "SKIPPED: /spec dispatcher absent (no .claude/skills/spec/SKILL.md)" >&2
   exit 2
@@ -34,19 +31,14 @@ fi
 
 missing=()
 
-# (0) the legacy split skills must be gone (consolidation invariant — one surface, not two).
 for s in spec-plan spec-critique spec-execute spec-retro; do
   [ -e "$SKILLS/$s" ] && missing+=("$s: legacy split skill still present (must be consolidated into /spec)")
 done
 
-# (1) all three subcommand procedures must exist under references/ (a partial family is a bug).
 for s in "${subs[@]}"; do
   [ -f "$SPEC/references/$s.md" ] || missing+=("references/$s.md absent (partial /spec family)")
 done
 
-# (1b) the retired gate must NOT come back — neither as a fourth reference-doc, a
-# standalone skill, nor a dispatched subcommand. This is the assertion US-001 added:
-# a fourth reference-doc is a regression, not a completion.
 for s in "${retired_subs[@]}"; do
   [ -e "$SPEC/references/$s.md" ] && missing+=("references/$s.md present (the $s node was retired — /spec dispatches exactly ${#subs[@]} subcommands)")
   [ -e "$SKILLS/$s" ] && missing+=("$s: retired skill directory still present (.claude/skills/$s)")
@@ -54,36 +46,25 @@ for s in "${retired_subs[@]}"; do
 done
 [ -e "$SKILLS/approve" ] && missing+=("approve: retired skill directory still present (.claude/skills/approve)")
 
-# (2) per-surface contract: folder interface + AGENTS authority + no loop ## Handoff.
 for f in "$SPEC/SKILL.md" "$SPEC/references"/plan.md \
          "$SPEC/references"/execute.md "$SPEC/references"/retro.md; do
   [ -f "$f" ] || continue
   rel="${f#"$ROOT"/}"
   grep -qF '.oh/tasks/<slug>/' "$f" || missing+=("$rel: does not name the .oh/tasks/<slug>/ folder interface")
   grep -qF 'AGENTS.md § The Workflow' "$f" || missing+=("$rel: does not cite AGENTS.md § The Workflow as authority")
-  # The /spec dispatcher is the canonical workflow. A loop-style '## Handoff' section is a
-  # vestige of the executable-loop framework (removed in #263); /spec declares its place with
-  # '## Pipeline position' instead.
   grep -qE '^## Handoff' "$f" && missing+=("$rel: carries a loop-style ## Handoff section (must use ## Pipeline position)")
 done
 
-# (3) there is NO all-in-one composer beside the dispatcher, and execute.md holds the build
-#     mechanics itself rather than deferring to one. Both halves are needed: deleting the
-#     composer while execute.md still says "reuses those by reference" would leave the only
-#     build path pointing at nothing.
 [ -e "$SKILLS/ship-spec" ] && missing+=("ship-spec: the all-in-one composer must be absorbed and deleted, not left beside /spec")
 EXEC="$SPEC/references/execute.md"
 if [ -f "$EXEC" ]; then
   grep -qF 'reuses those by reference' "$EXEC" && missing+=("execute.md still defers its build mechanics by reference instead of holding them")
   grep -qF 'single source of build literals' "$EXEC" && missing+=("execute.md still names another skill as the single source of build literals")
-  # The mechanics must actually be present, or "no deferral" is satisfied by an empty file.
   for literal in 'gh pr create' 'gh pr ready' 'gh issue' 'git push' 'firstmate.sh' '/audit pr' '/eval'; do
     grep -qF "$literal" "$EXEC" || missing+=("execute.md does not carry the build literal '$literal'")
   done
 fi
 
-# (4) AGENTS.md § The Workflow must name each /spec <sub> invocation so an operator can find it,
-#     and must NOT name a retired one.
 if [ -f "$AGENTS" ]; then
   section="$(awk '/^## The Workflow/{f=1; print; next} f && /^## /{f=0} f{print}' "$AGENTS")"
   for s in "${subs[@]}"; do

@@ -140,8 +140,6 @@ describe("promote-release-latest.sh", () => {
     expect(existsSync(dockerLog)).toBe(false);
   });
 
-  // Exit 0 on a valid version proves nothing about the validator. Feed it the
-  // CalVer forms that are not valid SemVer and require the rejection.
   it.each(["2026.8.3-1", "2026.08.03", "1.2", "1.2.3.4", "v0.1.0", "0.1.0-rc.1"])(
     "rejects the non-SemVer version %j before invoking docker",
     (version) => {
@@ -153,7 +151,6 @@ describe("promote-release-latest.sh", () => {
     },
   );
 
-  // An unset version is caught earlier, by the required-variable guard.
   it("requires RELEASE_VERSION in promote mode", () => {
     const result = run("promote", { RELEASE_VERSION: "" });
 

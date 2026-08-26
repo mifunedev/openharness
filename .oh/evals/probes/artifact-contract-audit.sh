@@ -10,7 +10,6 @@ tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/.oh/tasks/fixture" "$tmp/.oh/skills/audit/fixtures"
 cp "$FIX" "$tmp/.oh/tasks/fixture/prd.json"; cp "$FIX" "$tmp/.oh/skills/audit/fixtures/artifact-contract.prd.json"
 fail(){ echo "REGRESSION: $*" >&2; exit 1; }
-# Resolve the documentation link from its containing references directory.
 doc_link=$(grep -o '](\.\./\.\./\.\./docs/artifact-contract-schema.md)' "$REPO/.oh/skills/audit/references/implementation.md" | head -1)
 doc_rel=${doc_link#](}; doc_rel=${doc_rel%)}
 [[ -n $doc_rel && -f "$REPO/.oh/skills/audit/references/$doc_rel" ]] || fail 'artifact schema documentation link is broken'
@@ -27,13 +26,10 @@ if AUDIT_ROOT="$tmp" bash "$GATE" gate1 fixture >/dev/null 2>&1; then fail 'non-
 mkdir -p "$tmp/outside"; printf outside >"$tmp/outside/value"; ln -s "$tmp/outside" "$tmp/.oh/linked-artifacts"
 jq '.artifact_contract.required_artifacts=[".oh/linked-artifacts/value"]' "$tmp/.oh/tasks/fixture/prd.json" >"$tmp/prd.tmp"; mv "$tmp/prd.tmp" "$tmp/.oh/tasks/fixture/prd.json"
 if AUDIT_ROOT="$tmp" bash "$GATE" gate1 fixture >/dev/null 2>&1; then fail 'symlinked artifact component accepted'; fi
-# Contract containers must be arrays; jq iteration must not accidentally coerce
-# malformed strings/objects into a passing graph.
 jq '.artifact_contract.required_artifacts=".oh/skills/audit/fixtures/MISSING-ON-PURPOSE.md"' "$FIX" >"$tmp/.oh/tasks/fixture/prd.json"
 if AUDIT_ROOT="$tmp" bash "$GATE" gate1 fixture >/dev/null 2>&1; then fail 'non-array artifact contract accepted'; fi
 jq '.userStories={passes:true}' "$FIX" >"$tmp/.oh/tasks/fixture/prd.json"
 if AUDIT_ROOT="$tmp" bash "$GATE" gate1 fixture >/dev/null 2>&1; then fail 'non-array userStories contract accepted'; fi
-# A regular prd.json reached through a symlinked task directory is still unsafe.
 mkdir -p "$tmp/external-task"; cp "$FIX" "$tmp/external-task/prd.json"
 ln -s "$tmp/external-task" "$tmp/.oh/tasks/symlink-task"
 if AUDIT_ROOT="$tmp" bash "$GATE" gate1 symlink-task >/dev/null 2>&1; then fail 'symlinked task directory accepted'; fi

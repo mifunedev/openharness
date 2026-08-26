@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# sandbox-boot-smoke.sh — bounded CI smoke test for devcontainer boot health.
 
 set -euo pipefail
 
@@ -47,8 +46,6 @@ while [ "$(date +%s)" -le "$end" ]; do
   if [ -z "$cid" ]; then
     last_status="missing-container"
   else
-    # Prefer the exact healthcheck command wired into compose. Calling it via exec
-    # avoids waiting for Docker's start_period while still exercising the same check.
     # shellcheck disable=SC2086 # HEALTH_CMD intentionally splits into command argv.
     if docker exec "$cid" $HEALTH_CMD >/tmp/sandbox-boot-smoke-health.out 2>/tmp/sandbox-boot-smoke-health.err; then
       if ! docker exec -u sandbox "$cid" sh -lc \

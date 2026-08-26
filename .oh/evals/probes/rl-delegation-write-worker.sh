@@ -13,33 +13,20 @@ if [[ ! -f "$SKILL" ]]; then
   exit 2
 fi
 
-# --- Scope the check to the warning region, NOT the whole file --------------
-# The read-only warning lives in two places (US-001 / US-002); the AC allows
-# either ("and/or"). Extract both candidate regions and check the union so an
-# unrelated `read-only`/`general-purpose` occurrence elsewhere in the file
-# cannot cause a false PASS.
-#
-#   Region 1 — the "Worker configuration:" bullet block under §5 Execute waves:
-#              from the 'Worker configuration:' line to the trailing blank line.
-#   Region 2 — the §Reference "Key Resources" block: from the '### Key Resources'
-#              heading to the next '### '/'## ' heading (or EOF).
 worker_block="$(awk '/^Worker configuration:/{f=1} f{print} f && /^[[:space:]]*$/{exit}' "$SKILL")"
 keyres_block="$(awk '/^### Key Resources/{f=1; next} f && /^(### |## )/{exit} f{print}' "$SKILL")"
 
 region="$(printf '%s\n%s\n' "$worker_block" "$keyres_block")"
 
-# --- Distinguish "region not found" from "phrase missing" -------------------
 if [[ -z "${region//[[:space:]]/}" ]]; then
   echo "REGRESSION: warning region not found in $SKILL (neither the 'Worker configuration:' block nor the '### Key Resources' section could be located)" >&2
   exit 1
 fi
 
 missing=()
-# (a) a read-only warning that explicitly names at least one of implementer/pm/critic
 grep -qi 'read-only' <<<"$region"                 || missing+=("'read-only' warning")
 grep -qiE 'implementer|critic|(^|[^a-z])pm([^a-z]|$)' <<<"$region" \
                                                    || missing+=("an agent name (implementer/pm/critic)")
-# (b) a general-purpose recommendation for write/edit workers
 grep -qi 'general-purpose' <<<"$region"           || missing+=("'general-purpose' recommendation")
 
 if (( ${#missing[@]} > 0 )); then

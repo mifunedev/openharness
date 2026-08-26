@@ -8,14 +8,6 @@
 #       its body in the order its own contract header records — the template OWNS that order
 #       now, since the advisor prompt pack it was derived from was deleted in US-004; and
 #       CLAUDE.md is still a symlink to AGENTS.md.
-#
-# The `| tee` launch pipe is deliberately NOT asserted here — it was REMOVED in US-002
-# because it takes the child's TTY away and an interactive agent session cannot run
-# without a terminal. Asserting its survival would pin that defect in place. Its absence
-# is asserted by `executor-launch-interactive.sh` instead.
-#
-# The single-quoted grep patterns below are pinned LITERALS — the dollar signs are part of
-# the text being searched for, not expansions this file wants performed.
 # shellcheck disable=SC2016
 set -u
 
@@ -25,19 +17,14 @@ RUNNER="$ROOT/.oh/scripts/lib/session-runner.sh"
 TEMPLATE="$ROOT/.oh/skills/firstmate/templates/session-prompt.md"
 SPEC="$ROOT/.claude/skills/spec/references/execute.md"
 
-# No SKIPPED path: this probe ships in the same commit as the executor it pins, so a missing
-# artifact is a REGRESSION rather than a not-applicable run.
 missing=()
 
-# --- (1) the executor entrypoint exists and is executable -------------------
 if [ ! -f "$FIRSTMATE" ]; then
   missing+=(".oh/scripts/firstmate.sh absent (the build-executor entrypoint is gone)")
 elif [ ! -x "$FIRSTMATE" ]; then
   missing+=(".oh/scripts/firstmate.sh is not executable")
 fi
 
-# --- (2) the invariant terminal interface -----------------------------------
-# The build terminates on the WHOLE LINE `STATUS: COMPLETE` in progress.txt.
 if [ -f "$FIRSTMATE" ]; then
   grep -Fq 'STATUS: COMPLETE' "$FIRSTMATE" \
     || missing+=("firstmate.sh does not name the STATUS: COMPLETE sentinel")
@@ -47,19 +34,11 @@ if [ -f "$RUNNER" ]; then
     || missing+=("session-runner.sh: the whole-line sentinel match ^STATUS: COMPLETE\$ is gone (a substring match would fire on prose)")
 fi
 
-# The entrypoint must actually reach the shared ladder, or the assertions above pin
-# files that no longer form one surface.
 if [ -f "$FIRSTMATE" ]; then
   grep -Fq 'lib/session-runner.sh' "$FIRSTMATE" \
     || missing+=("firstmate.sh no longer sources .oh/scripts/lib/session-runner.sh (the executor and the ladder have diverged)")
 fi
 
-# --- (3) NO executor toggle survives, anywhere ------------------------------
-# US-002 removed the toggles rather than reducing them to one accepted value: a
-# single-value toggle is still a selection surface a reader must resolve. Full-line
-# comments are excluded so a file may DOCUMENT the removal without failing this check.
-# `--executor` is matched with a leading `--` guard so words like "executor" in prose
-# stay legal; the point is that no *flag* or env var selects a build arm.
 for pair in "spec-execute:$SPEC"; do
   name="${pair%%:*}"
   file="${pair#*:}"
@@ -76,22 +55,9 @@ for pair in "spec-execute:$SPEC"; do
     && missing+=("$name still references AUTOPILOT_EXECUTOR")
 done
 
-# The build arms the toggle used to select must be gone from the repo, not merely
-# unreferenced by the two skills above.
 [ -e "$ROOT/.oh/scripts/ralph.sh" ] \
   && missing+=(".oh/scripts/ralph.sh still exists — the second executor arm must be deleted, not left dormant")
 
-# --- (4) step-order equivalence, asserted MECHANICALLY ----------------------
-# The ordered anchor-keyword list below is recorded verbatim in the session-prompt template's
-# own contract header (.oh/skills/firstmate/templates/session-prompt.md), which is the OWNER
-# of the build's step order. It was originally derived from the advisor prompt pack; that pack
-# was deleted in US-004, so the derivative became the source and there is no second file to
-# stay in sync with. "Equivalence" means exactly this: these anchors appear in the template
-# BODY in the same relative order, compared by first occurrence. Nothing fuzzy.
-#
-# ORDERING SCOPE IS BODY-ONLY. The header records the list in the asserted order, so
-# including it would make this check vacuous; the template ends its header with the literal
-# `END CONTRACT HEADER -->` marker for exactly this reason.
 ANCHORS=(
   'dependency graph'
   '/compact'
@@ -126,12 +92,6 @@ else
   fi
 fi
 
-# --- (5) the deleted prompt pack must not come back -------------------------
-# The old assertion here was `git diff --quiet -- .oh/prompts/`, guarding that the template
-# stayed a derivative of a pack it must never edit. US-004 deleted the pack instead: a second
-# discoverable implementation path is a route an agent can be pulled onto mid-task. The guard
-# is REMOVED rather than stubbed to true, and replaced by its successor claim — the path must
-# stay gone, and the template must carry the step order itself.
 [ -e "$ROOT/.oh/prompts/advisor" ] \
   && missing+=(".oh/prompts/advisor/ is back — the second implementation path was deleted in US-004 and must stay deleted")
 [ -e "$ROOT/.pi/prompts/advisor" ] \
@@ -143,9 +103,6 @@ if [ -f "$TEMPLATE" ]; then
     || missing+=("session-prompt.md no longer claims ownership of the step order (it is the source now, not a mirror)")
 fi
 
-# --- (6) CLAUDE.md is still a symlink to AGENTS.md -------------------------
-# A severed alias (an independently written CLAUDE.md) must surface as a REGRESSION rather
-# than silently passing a diff that happens to be empty at write time.
 link="$(readlink "$ROOT/CLAUDE.md" 2>/dev/null)" || link=""
 [ "$link" = "AGENTS.md" ] \
   || missing+=("CLAUDE.md is not a symlink to AGENTS.md (readlink printed '${link:-<not a symlink>}')")

@@ -9,7 +9,6 @@ CAP="$ROOT/.oh/evals/capability"
 TASKS="$CAP/tasks"
 RESULTS="$CAP/RESULTS.md"
 
-# Assertion 1 — instrument not present on this branch => SKIPPED (not a regression).
 if [[ ! -f "$CAP/README.md" ]]; then
   echo "SKIPPED: capability-benchmark instrument absent: $CAP/README.md" >&2
   exit 2
@@ -17,7 +16,6 @@ fi
 
 fails=()
 
-# Assertion 2 — >=3 task specs matching CB-*.md.
 shopt -s nullglob
 task_files=("$TASKS"/CB-*.md)
 shopt -u nullglob
@@ -25,7 +23,6 @@ if (( ${#task_files[@]} < 3 )); then
   fails+=("expected >=3 CB-*.md task specs in $TASKS, found ${#task_files[@]}")
 fi
 
-# Assertion 3 — each CB-*.md carries a frontmatter `id:` line and the three sections.
 for f in "${task_files[@]}"; do
   grep -qE '^id:[[:space:]]*CB-[0-9]+' "$f" || fails+=("$f: missing frontmatter '^id: CB-<n>' line")
   grep -qE '^## Task[[:space:]]*$' "$f" || fails+=("$f: missing '## Task' section")
@@ -33,7 +30,6 @@ for f in "${task_files[@]}"; do
   grep -qE '^## Rubric[[:space:]]*$' "$f" || fails+=("$f: missing '## Rubric' section")
 done
 
-# Assertion 4 — scoreboard exists with the canonical header tokens.
 if [[ ! -f "$RESULTS" ]]; then
   fails+=("scoreboard absent: $RESULTS")
 else
@@ -47,7 +43,6 @@ else
   fi
 fi
 
-# Assertion 5 — drift guard: every task id has a scoreboard row.
 if [[ -f "$RESULTS" ]]; then
   while read -r id; do
     [[ -n "$id" ]] || continue

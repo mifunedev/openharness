@@ -1,98 +1,44 @@
 #!/usr/bin/env bash
-# PreToolUse Bash guard: two-tier check for secret exposure.
-#   Tier 1 (deny) — bulk env dumps, history dumps, token-printing CLI commands,
-#                   echo/printf of secret-named variables, auth headers with
-#                   variable interpolation.
-#   Tier 2 (ask)  — narrow reads where the value *might* be public.
-#   otherwise     — allow (hook exits silently).
-#
-# Scans the raw command string, so patterns inside `docker exec ... '...'`
-# or `bash -c '...'` subshells are still caught.
 set -euo pipefail
 
 input=$(cat)
 cmd=$(jq -r '.tool_input.command // ""' <<<"$input")
 
-# Strip HEREDOC bodies before any pattern matching. PR / issue / commit
-# bodies passed via `gh ... --body "$(cat <<'EOF' ... EOF)"` are prose, not
-# shell commands — words like "history" or phrases like "cat .env" inside
-# that prose otherwise match command-shape regexes below and produce false
-# denies. Handles `<<DELIM`, `<<'DELIM'`, `<<"DELIM"`, and `<<-DELIM`.
 if command -v perl >/dev/null 2>&1; then
   cmd=$(perl -0777 -pe 's{<<-?\s*(["\x27]?)(\w+)\1(.*?)\n\s*\2\b}{<<HEREDOC_STRIPPED}gs' <<<"$cmd")
 fi
 
-# Collapse newlines to spaces so character classes don't need to care about
-# them (and so grep's line-oriented regex doesn't split the pattern string
-# either). The literal \n written inside [^#\n] would mean "not \ or n",
-# which wrongly excludes the letter n from any text between cmd and target.
 cmd=${cmd//$'\n'/ }
 
-# Secret-ish variable-name fragments. Matched case-insensitively inside ${VAR}
-# or $VAR dereferences in echo / printf / curl / etc.
 SECRET_NAME='(TOKEN|SECRET|PASSWORD|PASSWD|APIKEY|API_KEY|ACCESS_KEY|PRIVATE_KEY|CREDENTIAL|AUTH|BEARER|SESSION|COOKIE|SLACK_[A-Z_]*|OPENAI_[A-Z_]*|ANTHROPIC_[A-Z_]*|GITHUB_TOKEN|GH_TOKEN|AWS_SECRET|AWS_SESSION|GCP_[A-Z_]*|DATABASE_URL|DB_PASSWORD)'
 
-# Tier 1 — hard deny.
-DENY='(^|[^A-Za-z0-9._/-])env[[:space:]]*[|>;&]'     # env | / env > / env ; / env & at command position
-DENY+='|(^|[^A-Za-z0-9._/-])env[[:space:]]*$'        # bare env at command position (not .env / path/env / example.env)
-DENY+='|\bset[[:space:]]*[|>]'                       # set | / set >
-DENY+='|\bexport[[:space:]]+-p\b'                    # export -p
-DENY+='|\bdeclare[[:space:]]+-[xp]\b'                # declare -x / -p
-DENY+='|\bcompgen[[:space:]]+-[vxAe]'                # compgen -v / -x / -A / -e
-DENY+='|/proc/[^/[:space:]]+/environ'                # /proc/<pid|self>/environ
-DENY+='|\bprintenv[[:space:]]*([|;>&]|$)'            # printenv with no args
-DENY+='|\bhistory\b'                                 # shell history dump
-DENY+='|\bfc[[:space:]]+-l'                          # fc -l (also lists history)
+DENY='(^|[^A-Za-z0-9._/-])env[[:space:]]*[|>;&]'
+DENY+='|(^|[^A-Za-z0-9._/-])env[[:space:]]*$'
+DENY+='|\bset[[:space:]]*[|>]'
+DENY+='|\bexport[[:space:]]+-p\b'
+DENY+='|\bdeclare[[:space:]]+-[xp]\b'
+DENY+='|\bcompgen[[:space:]]+-[vxAe]'
+DENY+='|/proc/[^/[:space:]]+/environ'
+DENY+='|\bprintenv[[:space:]]*([|;>&]|$)'
+DENY+='|\bhistory\b'
+DENY+='|\bfc[[:space:]]+-l'
 DENY+="|\\b(echo|printf)\\b[^#]*\\\$\\{?[A-Z0-9_]*${SECRET_NAME}[A-Z0-9_]*\\}?"
-DENY+="|Authorization:[[:space:]]*['\"]?(Bearer|Basic|Token)[[:space:]]+\\\$"  # auth header with var interpolation
+DENY+="|Authorization:[[:space:]]*['\"]?(Bearer|Basic|Token)[[:space:]]+\\\$"
 DENY+='|\baws[[:space:]]+configure[[:space:]]+get\b'
 DENY+='|\bgh[[:space:]]+auth[[:space:]]+token\b'
 DENY+='|\bgcloud[[:space:]]+auth[[:space:]]+print-(access|identity)-token\b'
 DENY+='|\bkubectl[[:space:]]+get[[:space:]]+secret[^|]*-o[[:space:]]*(yaml|json)'
 DENY+='|\bdocker[[:space:]]+(secret|config)[[:space:]]+inspect\b'
 
-# Tier 1c — `docker inspect` (and podman/nerdctl equivalents). A bare inspect
-# dumps the full container JSON, which carries `Config.Env` — every secret the
-# container was started with. Rather than blocking inspect outright (it is the
-# only way to read health, mounts, networks, labels, restart state), this tier
-# allows exactly the shape that cannot leak env: an explicit narrow Go template.
-#
-#   allowed   docker inspect --format '{{.State.Health.Status}}' web
-#   denied    docker inspect web                    (full JSON → Config.Env)
-#   denied    docker inspect --format '{{json .}}'  (full JSON by template)
-#   denied    docker inspect --format '{{.Config.Env}}'  (the env itself)
-#
-# `docker secret inspect` / `docker config inspect` stay in the hard-deny tier
-# above — those objects are secrets whole, so no template makes them safe.
-# The CLI name must be followed by whitespace and `inspect` must start its own
-# word, so hyphenated filenames (`docker-inspect-env-guard.sh`) and paths do not
-# match — only a real invocation with `inspect` in argument position does.
 DOCKER_INSPECT='\b(docker|podman|nerdctl)[[:space:]]+([^|;&]{0,160}[[:space:]])?inspect\b'
-# A format flag must be present…
 DOCKER_FMT='(--format[=[:space:]]|(^|[[:space:]])-f[=[:space:]])'
-# …and must not name env, nor dump the whole object (or the whole Config
-# subtree, which contains Env) via `{{.}}` / `{{json .}}` / `--format json`.
 DOCKER_FMT_UNSAFE='env'
 DOCKER_FMT_UNSAFE+='|\{\{[[:space:]]*(json[[:space:]]*)?\.(Config)?[[:space:]]*\}\}'
 DOCKER_FMT_UNSAFE+='|(--format|(^|[[:space:]])-f)[=[:space:]]+["\x27]?json["\x27]?([[:space:]]|$)'
 
-# Tier 1a — operator-only `.config/` directory (repo root and $HOME). Unlike the
-# path family below, this is denied for ANY command that names it, not just the
-# READ_CMD verbs: the operator owns the directory outright, so read, write,
-# traversal, and archive routes are all closed rather than enumerated (a verb
-# allowlist leaks through python/node/perl/tar and every tool added later).
-# Anchored to a whole path SEGMENT, so ordinary tool config is untouched —
-# `jest.config.js`, `--config foo`, `git config`, and `.oh/config.json` all have
-# no `.config` path segment and do not match. HEREDOC bodies are stripped above,
-# so prose that merely mentions the path in a commit/PR body still passes; the
-# `-F file` / `--body-file` pattern covers the inline-message case.
 OPERATOR_PATH='(^|[^A-Za-z0-9._-])\.config([^A-Za-z0-9_-]|$)'
 OPERATOR_PATH+='|(^|[^A-Za-z0-9._-])settings\.local\.json([^A-Za-z0-9._-]|$)'
 
-# Tier 1b — reading secret-laden files via shell tools. Checked separately from
-# the main DENY (below) so a basename-allowlist can exempt tracked template env
-# files (.example.env, .env.example, .env.sample, .env.template, …). Mirrors
-# the Read(**/.env*) family of deny rules so bypassPermissions can't slip past.
 SECRET_PATH="(\\.env[^[:space:]/\"']*"
 SECRET_PATH+='|[^[:space:]]*\.pem\b'
 SECRET_PATH+='|[^[:space:]]*\.p12\b'
@@ -126,14 +72,7 @@ SECRET_PATH+='|\.wget-hsts\b)'
 READ_CMD='(cat|tac|less|more|bat|head|tail|xxd|od|strings|hexdump|base64|nano|vim|vi|emacs|view|sed|awk|grep|rg|ripgrep|jq|yq|tee|cp|mv|scp|rsync|install|source|\.)'
 SECRET_PATH_DENY="\\b${READ_CMD}\\b[^#|]*${SECRET_PATH}"
 
-# Tier 2 — ask (narrow / possibly legitimate).
-ASK='\bprintenv[[:space:]]+[A-Za-z_]'                # printenv VAR [VAR ...]
-# Note: the previous catch-all `echo|printf` of any $UPPERCASE_VAR was too
-# broad — it asked on benign `echo "Branch: $BRANCH"` / `echo $SHA` /
-# `echo $VERSION` patterns used throughout skills. The deny tier above
-# already catches `echo`/`printf` of secret-named variables (TOKEN, SECRET,
-# AUTH, KEY, GH_TOKEN, AWS_*, …) with prefix/suffix tolerance, which covers
-# the actual leak surface. Trust other uppercase vars.
+ASK='\bprintenv[[:space:]]+[A-Za-z_]'
 
 emit() {
   jq -n --arg d "$1" --arg r "$2" '{
@@ -148,8 +87,6 @@ emit() {
 if grep -qEi -- "$DENY" <<<"$cmd"; then
   emit deny 'Secret-exposure guard (deny): command matches a high-risk pattern — bulk env dump (env/set/export -p/declare -x/-p/compgen/printenv/proc environ), shell history, echo/printf of a secret-named variable (TOKEN/SECRET/KEY/PASSWORD/AUTH/CREDENTIAL/BEARER/SLACK_*/OPENAI_*/ANTHROPIC_*/GH_TOKEN/AWS_SECRET), Authorization header with variable interpolation, or a token-printing CLI (gh auth token, gcloud auth print-*-token, aws configure get, kubectl get secret -o yaml/json, docker secret/config inspect). These almost always leak credentials into the transcript and prompt cache. Do NOT retry a variant that bypasses this check. Ask the user to run the command themselves and paste only the specific non-secret output you need.'
 elif grep -qEi -- "$DOCKER_INSPECT" <<<"$cmd"; then
-  # Evaluate only the text from `inspect` onward — a format flag belonging to
-  # some earlier command in the same line must not vouch for this one.
   seg=$(grep -oEi -- "${DOCKER_INSPECT}.*" <<<"$cmd" | head -1)
   if ! grep -qEi -- "$DOCKER_FMT" <<<"$seg"; then
     emit deny 'Container-inspect guard (deny): a bare `docker inspect` prints the full container JSON, including `Config.Env` — every environment variable the container was started with, secrets included. Inspect is NOT blocked outright: re-run it with an explicit narrow Go template naming only the field you need, e.g. `docker inspect --format "{{.State.Health.Status}}" <container>`, `--format "{{.NetworkSettings.IPAddress}}"`, or `--format "{{range .Mounts}}{{.Source}} {{end}}"`. Piping the full JSON through jq/grep does not qualify — the guard cannot verify the filter, so use --format. If you genuinely need an env value, ask the operator to paste that one value.'
@@ -159,9 +96,6 @@ elif grep -qEi -- "$DOCKER_INSPECT" <<<"$cmd"; then
 elif grep -qEi -- "$OPERATOR_PATH" <<<"$cmd"; then
   emit deny 'Operator-only path guard (deny): command references .config/ or settings.local.json, which hold operator-managed configuration and are off-limits to agents for both read and write. This is a deliberate policy, not a misconfiguration — do not retry a variant that spells the path differently, resolves it through a variable or symlink, or reaches it from a subshell. If you need a value from it, ask the operator to paste only that value into the chat. If you only need to mention the path in prose (commit message, PR body), pass it via a file (`git commit -F msg.txt`, `gh pr create --body-file body.md`) or a HEREDOC, which this guard strips.'
 elif grep -qEi -- "$SECRET_PATH_DENY" <<<"$cmd"; then
-  # Allowlist: template env files (.example.env, .env.example, .env.sample, .env.template, …)
-  # are tracked and hold no real secrets — allow reads against them. Deny all other env
-  # paths and all non-env secret paths (pem, id_rsa, .aws/credentials, …).
   ALLOWED=0
   mapfile -t env_tokens < <(grep -oEi "[^[:space:]\"']*\\.env[^[:space:]\"']*" <<<"$cmd" || true)
   if [ "${#env_tokens[@]}" -gt 0 ]; then

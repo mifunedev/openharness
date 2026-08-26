@@ -50,7 +50,6 @@ describe("loadCrons — property: ordering-stability (alphabetical regardless of
         (filenames) => {
           const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cron-prop-"));
           try {
-            // Write files in REVERSE-alphabetical order to exercise the sort invariant
             const reversed = [...filenames].sort().reverse();
             for (const filename of reversed) {
               fs.writeFileSync(
@@ -62,8 +61,6 @@ describe("loadCrons — property: ordering-stability (alphabetical regardless of
             const entries = loadCrons(tmpDir);
             const returnedFilePaths = entries.map((e) => e.filePath);
 
-            // Assert returned order is ascending alphabetical sort of input filenames
-            // filePath is now dir-qualified (path.join(dir, f)) so compare against full paths
             const expectedOrder = [...filenames].sort().map((f) => path.join(tmpDir, f));
             expect(returnedFilePaths).toEqual(expectedOrder);
           } finally {

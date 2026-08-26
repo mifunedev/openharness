@@ -1,15 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
 
-// cli.ts has a top-level side effect: main(process.argv.slice(2)).then(process.exit).
-// vi.mock hoisting ensures this mock is applied before the module executes,
-// preventing vitest's process.exit interception from surfacing as an unhandled error.
 vi.mock("../cli.js", async (importOriginal) => {
-  // Stub process.exit before the module body runs its top-level main() call
   const original = process.exit;
   process.exit = (() => {}) as never;
   const mod = await importOriginal<typeof import("../cli.js")>();
-  // Allow a microtask tick for main().then(process.exit) to complete with the stub
   await new Promise((r) => setTimeout(r, 0));
   process.exit = original;
   return mod;

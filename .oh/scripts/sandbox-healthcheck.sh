@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Healthcheck for the Open Harness sandbox container.
-#
-# Docker can keep the container process alive (`sleep infinity`) even when the
-# tmux-managed runtime services that make the sandbox useful have died. This
-# script reports those runtime failures through Docker/Compose health status.
 
 set -u
 

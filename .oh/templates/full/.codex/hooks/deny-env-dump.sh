@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Codex wrapper for the shared Claude Bash secret-exposure guard.
-# Codex PreToolUse currently cannot surface "ask" decisions, so convert those
-# to deny to preserve the no-approval-prompt default without failing open.
 set -euo pipefail
 
 root=$(git rev-parse --show-toplevel)

@@ -7,9 +7,6 @@ import path from 'node:path';
 import { loadManifest } from '../lib/manifest.js';
 import { copyOhPayload, assertDestInTarget, type CopyReport } from '../lib/vendor.js';
 
-// `assertDestInTarget` now lives in lib/vendor.ts (shared by init + update); it
-// is re-exported here so existing importers (src/__tests__/update.test.ts) keep
-// working unchanged.
 export { assertDestInTarget };
 
 export interface UpdateIO {
@@ -24,7 +21,6 @@ export interface UpdateOptions {
   dryRun?: boolean;
 }
 
-/** Parse a semver-ish string into a 3-segment numeric tuple (pre-release/build stripped). */
 function parseVersion(v: string): [number, number, number] {
   const parts = v.split('.');
   while (parts.length < 3) {
@@ -38,7 +34,6 @@ function parseVersion(v: string): [number, number, number] {
   return [seg(parts[0]), seg(parts[1]), seg(parts[2])];
 }
 
-/** -1 if a<b, 0 if equal, 1 if a>b — segment-by-segment numeric compare. */
 function compareVersions(a: string, b: string): number {
   const av = parseVersion(a);
   const bv = parseVersion(b);
@@ -49,7 +44,6 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-/** Read the `version` string from a cli/package.json, defaulting to '0.0.0'. */
 function readCliVersion(ohDir: string): string {
   const pkgPath = path.resolve(ohDir, 'cli', 'package.json');
   try {
@@ -58,7 +52,6 @@ function readCliVersion(ohDir: string): string {
       return parsed.version;
     }
   } catch {
-    // missing / unparseable → fall through
   }
   return '0.0.0';
 }
@@ -67,7 +60,6 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
   const { targetDir, fromDir, force, dryRun } = opts;
   const dryPrefix = dryRun ? '[dry-run] ' : '';
 
-  // AC-2(a): source preconditions
   const fromOh = path.resolve(fromDir, '.oh');
   if (!existsSync(fromOh) || !statSync(fromOh).isDirectory()) {
     io.stderr(
@@ -78,7 +70,6 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
     return 1;
   }
 
-  // AC-2(b): target preconditions
   const targetOh = path.resolve(targetDir, '.oh');
   if (!existsSync(targetOh) || !statSync(targetOh).isDirectory()) {
     io.stderr(
@@ -89,13 +80,11 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
     return 1;
   }
 
-  // AC-2(c): same .oh
   if (fromOh === targetOh) {
     io.stderr('oh update: source and target are the same .oh; nothing to update.\n');
     return 1;
   }
 
-  // AC-3: version gate
   const available = readCliVersion(fromOh);
   const current = readCliVersion(targetOh);
   const cmp = compareVersions(available, current);
@@ -109,7 +98,6 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
     }
     io.stdout(dryPrefix + 'oh update: re-overlay (v' + current + ', --force)\n');
   } else {
-    // available < current
     if (!force) {
       io.stderr(
         'oh update: refusing downgrade (current v' +
@@ -125,8 +113,6 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
     );
   }
 
-  // AC-4 / AC-6: overlay via the shared copier. update preserves its
-  // always-overwrite behavior by NOT passing `skipExisting`.
   const manifest = loadManifest(fromOh);
   if (manifest === null) {
     io.stdout(
@@ -155,8 +141,6 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
         io.stdout(dryPrefix + 'skip ' + rel + ' (not in payload)\n');
         break;
       case 'skip-exists':
-        // update never passes skipExisting, so this is unreachable; handled for
-        // exhaustiveness.
         io.stdout(dryPrefix + 'skip ' + rel + ' (exists)\n');
         break;
     }

@@ -8,7 +8,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CLI_DIR="$ROOT/.oh/cli"
 TEMPLATE="$ROOT/.oh/templates/.devcontainer/.example.env"
 
-# SKIPPED (exit 2): the CLI or its build output is not present on this branch.
 if [[ ! -d "$CLI_DIR" || ! -f "$TEMPLATE" ]]; then
   echo "SKIPPED: oh CLI not present (.oh/cli and/or .oh/templates/.devcontainer/.example.env absent)" >&2
   exit 2
@@ -27,13 +26,6 @@ fails=()
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-# CI provisioning and cron runs have no TTY and must never block on a prompt.
-# `--yes` is the contract: the wizard is skipped entirely, so the seeded
-# .devcontainer/.example.env is the untouched template AND no .devcontainer/.env
-# is written at all — with no answers there is nothing to record, and compose
-# falls through to the defaults baked into docker-compose.yml. A future wizard
-# expansion that leaks a prompt into the --yes path, or that writes a key before
-# the user answers, is a provisioning outage — this probe is the tripwire.
 set +e
 out="$(cd "$work" && node "$CLI_DIR/dist/oh.js" init --yes </dev/null 2>&1)"
 rc=$?
@@ -42,7 +34,6 @@ set -e
 if (( rc != 0 )); then
   fails+=("oh init --yes exited $rc (headless provisioning must succeed): ${out%%$'\n'*}")
 else
-  # Any wizard prompt reaching stdout/stderr under --yes is a regression.
   if grep -qiE 'Configure your harness|\[y/N\]|\[Y/n\]|blank to skip' <<<"$out"; then
     fails+=("oh init --yes emitted a wizard prompt (must be non-interactive)")
   fi

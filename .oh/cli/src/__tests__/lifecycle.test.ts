@@ -13,9 +13,6 @@ import {
   type RunResult,
 } from "../commands/lifecycle.js";
 
-// cli.ts has a top-level side effect: main(process.argv.slice(2)).then(process.exit).
-// Same guard as cli.property.test.ts: stub process.exit around the import so the
-// module body's main() call cannot terminate the vitest worker.
 vi.mock("../cli.js", async (importOriginal) => {
   const original = process.exit;
   process.exit = (() => {}) as never;
@@ -35,11 +32,6 @@ const {
   printShellHelp,
 } = await import("../cli.js");
 
-// ---------------------------------------------------------------------------
-// Test infrastructure — mkdtemp fixtures only, injected runners only. Never the
-// real worktree root (its .devcontainer/.example.env would fire the sandbox
-// seed) and never a real docker/bash subprocess.
-// ---------------------------------------------------------------------------
 
 const cleanups: string[] = [];
 
@@ -50,7 +42,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** An equipped-repo fixture: a root containing `.oh/scripts/`. */
 function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-lifecycle-"));
   cleanups.push(d);
@@ -70,7 +61,6 @@ interface RecordedCall {
   opts: { stdio: "inherit" | "capture"; env?: NodeJS.ProcessEnv };
 }
 
-/** Queue-backed fake runner: returns results[i] for call i (last one repeats). */
 function makeRunner(results: RunResult[] = [{ status: 0 }]): {
   calls: RecordedCall[];
   run: LifecycleRunner;
@@ -89,7 +79,6 @@ function makeIo(): { out: string[]; err: string[]; io: LifecycleIO } {
   return { out, err, io: { stdout: (s) => out.push(s), stderr: (s) => err.push(s) } };
 }
 
-/** Capture a help printer's output without letting it hit the real terminal. */
 function captureStdout(fn: () => void): string {
   const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   fn();
@@ -98,9 +87,6 @@ function captureStdout(fn: () => void): string {
   return text;
 }
 
-// ---------------------------------------------------------------------------
-// runSandbox
-// ---------------------------------------------------------------------------
 
 describe("runSandbox", () => {
   it("delegates the EXACT vendored argv with inherited stdio and returns the child's exit code", async () => {
@@ -119,8 +105,6 @@ describe("runSandbox", () => {
         opts: { stdio: "inherit" },
       },
     ]);
-    // .devcontainer/.env already existed → no seed, no operation-log line.
-    // DOCKER_SOCKET already set → the Docker-socket prompt never fires either.
     expect(out).toEqual([]);
   });
 
@@ -170,15 +154,14 @@ describe("runSandbox", () => {
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(existsSync(join(root, ".devcontainer", ".env"))).toBe(false);
     expect(out).toEqual([]);
-    expect(calls).toHaveLength(1); // compose still runs
+    expect(calls).toHaveLength(1);
   });
 
   it("errors naming the missing docker-compose.sh path (no oh: prefix) without spawning", async () => {
-    const root = makeRepo(); // .oh/scripts exists but the script does not
+    const root = makeRepo();
     const { calls, run } = makeRunner();
     const expected = join(root, ".oh", "scripts", "docker-compose.sh");
 
-    // Now async → a thrown error surfaces as a rejected promise, not a sync throw.
     await expect(runSandbox({ cwd: root, run }, makeIo().io)).rejects.toThrow(expected);
     await expect(runSandbox({ cwd: root, run }, makeIo().io)).rejects.not.toThrow(/oh:/);
     expect(calls).toEqual([]);
@@ -203,7 +186,6 @@ describe("runSandbox", () => {
     );
   });
 
-  // ── Docker-socket opt-in (default OFF; prompt only when interactive) ──────
   it("prompts and writes DOCKER_SOCKET=true to .devcontainer/.env on yes", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
@@ -253,14 +235,10 @@ describe("runSandbox", () => {
 
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(asked).toBe(0);
-    // Standing choice untouched.
     expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe("DOCKER_SOCKET=false\n");
   });
 
   it("treats a COMMENTED template line as unconfigured and still prompts", async () => {
-    // The seeded .env ships `# DOCKER_SOCKET=false`. A commented line is
-    // documentation, not a standing choice — reading it as one would silence
-    // the security prompt for every fresh install.
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
@@ -278,14 +256,10 @@ describe("runSandbox", () => {
 
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(asked).toBe(1);
-    // Uncommented IN PLACE, not appended: one line in, one line out.
     expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe("DOCKER_SOCKET=true\n");
   });
 
   it("reads config with ZERO subprocesses — only compose is spawned", async () => {
-    // harness.yaml needed a vendored parser, so every config read was a
-    // subprocess. `.env` is read in-process, so the ONLY spawn left is compose
-    // itself. This is the assertion that the parser shell-out is gone.
     const root = makeRepo();
     const composeScript = addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
@@ -310,7 +284,6 @@ describe("runSandbox", () => {
     expect(calls[0].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--build"]);
   });
 
-  // ── Prebuilt-image mode (--image / --no-build) ───────────────────────────
   it("--image (bare, no OH_SANDBOX_IMAGE) → up -d --no-build + OH_SANDBOX_IMAGE=<default>", async () => {
     const root = makeRepo();
     const script = addScript(root, "docker-compose.sh");
@@ -372,9 +345,6 @@ describe("runSandbox", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// runShell
-// ---------------------------------------------------------------------------
 
 describe("runShell", () => {
   it("positional container wins — the .env value is not consulted", () => {
@@ -394,9 +364,6 @@ describe("runShell", () => {
   });
 
   it("reads SANDBOX_NAME from <root>/.devcontainer/.env, from a nested cwd", () => {
-    // The read is anchored to the resolved project ROOT, never the caller's
-    // CWD. A CWD-relative lookup would make every value look unset from a
-    // subdirectory — the contract `readEnvValue` documents.
     const root = makeRepo();
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
     writeFileSync(join(root, ".devcontainer", ".env"), "SANDBOX_NAME=my-sandbox\n");
@@ -405,7 +372,6 @@ describe("runShell", () => {
     const { calls, run } = makeRunner([{ status: 0 }]);
 
     expect(runShell({ cwd: nested, run }, makeIo().io)).toBe(0);
-    // No parser subprocess: the docker exec is the ONLY call.
     expect(calls).toHaveLength(1);
     expect(calls[0].cmd).toBe("docker");
     expect(calls[0].args).toEqual(["exec", "-it", "-u", "sandbox", "my-sandbox", "zsh"]);
@@ -437,7 +403,6 @@ describe("runShell", () => {
     const { err, io } = makeIo();
 
     expect(runShell({ cwd: root, run, container: "openharness" }, io)).toBe(126);
-    // docker's raw error already went to the INHERITED stderr; ours follows it.
     expect(err).toEqual(["container `openharness` not running? start it with `oh sandbox`\n"]);
   });
 
@@ -465,9 +430,6 @@ describe("runShell", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// runGateway
-// ---------------------------------------------------------------------------
 
 describe("runGateway", () => {
   it("passes args through VERBATIM with OH_PROJECT_ROOT set and inherited stdio", () => {
@@ -521,9 +483,6 @@ describe("runGateway", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Arg parsing (the cli.ts parse<Cmd>Args convention)
-// ---------------------------------------------------------------------------
 
 describe("parseSandboxArgs", () => {
   it("accepts no arguments and recognizes the help flags", () => {
@@ -621,9 +580,6 @@ describe("parseGatewayArgs", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Help surfaces
-// ---------------------------------------------------------------------------
 
 describe("help surfaces", () => {
   it("oh --help lists all three lifecycle verbs", () => {

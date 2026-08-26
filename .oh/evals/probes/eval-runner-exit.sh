@@ -12,10 +12,8 @@ if [[ ! -f "$RUN_SH" ]]; then
   exit 2
 fi
 
-# Read only the file tail to assert the gate is CO-LOCATED at the exit point.
 tail_content="$(tail -n 12 "$RUN_SH")"
 
-# Require that the regressions-count check AND the exit 1 appear together in the tail.
 if ! grep -qE 'regressions\[@\].*-gt 0.*exit 1' <<<"$tail_content"; then
   echo "REGRESSION: run.sh tail does not contain the co-located regressions-gated exit-1 guard (if [ \"\${#regressions[@]}\" -gt 0 ]; then exit 1; fi)" >&2
   exit 1

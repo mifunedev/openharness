@@ -21,92 +21,41 @@ import {
 } from "../lib/harnesses/catalog.js";
 import { configuredContainerName, DEFAULT_CONTAINER_NAME } from "./lifecycle.js";
 
-/**
- * `oh harness <list|install|status>` — install and inspect agent CLI harnesses.
- *
- * THE PROBLEM THIS SOLVES: adding an optional harness used to mean knowing that
- * `.devcontainer/.env` carries `INSTALL_*` keys, knowing the key is
- * `INSTALL_GROK_BUILD` while the doc slug is `grok-build`, uncommenting a line
- * by hand in a gitignored file, and then running
- * `make destroy && make sandbox` — a full image rebuild that throws the container
- * away for what is a one-package operation.
- *
- * THE INSTALL IS BOTH HALVES, deliberately (PRD decision D2):
- *
- *   1. persist `INSTALL_<KEY>=true` in `.devcontainer/.env` — cheap, always possible,
- *      and the reason the choice survives the next rebuild;
- *   2. install into the ALREADY-RUNNING container, so it is usable now.
- *
- * Live-only would be a trap: a container recreate silently loses the CLI.
- * Flag-only is exactly the rebuild pain being removed. `--persist-only` and
- * `--no-persist` are the escape hatches, and they conflict with each other.
- *
- * WHAT THIS COMMAND NEVER DOES: rebuild or restart the sandbox. A stopped or
- * absent container is the normal "not started yet" case, so it persists the flag,
- * prints the `oh sandbox` hint, and exits 0 rather than punishing the user for it.
- *
- * All container work goes through the `ExecutionTarget` contract — `status()` and
- * `exec()` — never a direct `docker exec` spawn, and never a `kind` check. See
- * `../lib/execution/target.ts` and `.oh/docs/rfcs/rfc-brain-hands-boundary.md`.
- */
 
-/** Output channels — mirrors `LifecycleIO` so tests capture the log and hints. */
 export interface HarnessIO {
   stdout: (s: string) => void;
   stderr: (s: string) => void;
 }
 
-/** Options shared by every `oh harness` verb. */
 export interface HarnessOptions {
-  /** Where the equipped-project-root walk starts (default: process.cwd()). */
   cwd?: string;
-  /** Subprocess runner. Default: real `spawnSync`. Tests inject a fake. */
   run?: LifecycleRunner;
-  /** Emit machine-readable JSON (list/status). */
   json?: boolean;
 }
 
 export interface HarnessInstallOptions extends HarnessOptions {
-  /** Only set the `.devcontainer/.env` flag; do no container work. */
   persistOnly?: boolean;
-  /** Live-install only; leave `.devcontainer/.env` untouched. */
   noPersist?: boolean;
 }
 
-/** Per-harness state as reported by `list` / `status`. */
 interface HarnessState {
   id: string;
   title: string;
   kind: string;
-  /** `INSTALL_<KEY>` reads `true` in `.devcontainer/.env`. `null` when it has no key. */
   enabled: boolean | null;
-  /** Binary present in the container, or `null` when the container is unreachable. */
   installed: boolean | null;
   docs: string;
 }
 
-/** The container-unreachable states — the ones that skip live work entirely. */
 function isReachable(status: string): boolean {
   return status === "ready" || status === "starting";
 }
 
-/**
- * Resolve the sandbox `ExecutionTarget`, reusing `oh shell`'s container-name
- * precedence (`.env` `SANDBOX_NAME` > the default) instead of forking it.
- */
 function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
   const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
   return resolveExecutionTarget({ projectRoot: root, container: name, run });
 }
 
-/**
- * Is the harness's binary present inside the container? `verifyArgv` exiting 0
- * is the oracle. Captured stdio — this is a probe, not user-facing output.
- *
- * Returns `null` when the probe could not run at all (no docker binary), which
- * the callers render as "unknown" rather than "not installed" — claiming a
- * harness is missing because we could not look is worse than saying so.
- */
 async function probeInstalled(
   target: ExecutionTarget,
   entry: HarnessEntry,
@@ -124,7 +73,6 @@ async function probeInstalled(
   }
 }
 
-/** Gather the state of every catalog entry (or one, when `only` is given). */
 async function collectStates(
   root: string,
   run: LifecycleRunner,
@@ -158,7 +106,6 @@ async function collectStates(
   return states;
 }
 
-/** Render one state cell: yes / no / n/a (no flag) / ? (container unreachable). */
 function cell(value: boolean | null, absent: string): string {
   if (value === null) return absent;
   return value ? "yes" : "no";
@@ -184,7 +131,6 @@ function renderTable(states: HarnessState[], io: HarnessIO): void {
   }
 }
 
-/** `oh harness list` — every known harness and its state. */
 export async function runHarnessList(opts: HarnessOptions, io: HarnessIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
@@ -197,14 +143,12 @@ export async function runHarnessList(opts: HarnessOptions, io: HarnessIO): Promi
   return 0;
 }
 
-/** The unknown-name error, shaped like `oh config`'s unknown-integration path. */
 function unknownHarness(name: string, io: HarnessIO): number {
   io.stderr(`oh harness: unknown harness "${name}"\n\n`);
   io.stderr(`Known harnesses:\n${harnessIds().map((h) => `  ${h}`).join("\n")}\n`);
   return 1;
 }
 
-/** `oh harness status [name]` — the same data as `list`, optionally for one. */
 export async function runHarnessStatus(
   name: string | undefined,
   opts: HarnessOptions,
@@ -228,15 +172,6 @@ export async function runHarnessStatus(
   return 0;
 }
 
-/**
- * `oh harness install <name>` — persist the flag, then install into the running
- * container.
- *
- * ORDER MATTERS: persist FIRST. The write is cheap and always possible, and it
- * stays correct even when the live install then fails — the next rebuild will
- * pick the harness up either way, and the failure message says so. Doing it the
- * other way round would lose the durable half whenever the network did.
- */
 export async function runHarnessInstall(
   name: string,
   opts: HarnessInstallOptions,
@@ -248,12 +183,8 @@ export async function runHarnessInstall(
   const entry = findHarness(name);
   if (!entry) return unknownHarness(name, io);
 
-  // ---- 1. persist -------------------------------------------------------
   if (!opts.noPersist) {
     if (entry.harnessKey === undefined) {
-      // `default` and `on-demand` harnesses have no `INSTALL_*` key. Say so
-      // rather than inventing one — a fabricated key would be interpolated by
-      // nothing in docker-compose.yml and mislead the next reader.
       io.stdout(
         `${entry.id}: ${entry.kind} harness — no .devcontainer/.env install key, nothing to persist\n`,
       );
@@ -273,7 +204,6 @@ export async function runHarnessInstall(
 
   if (opts.persistOnly) return 0;
 
-  // ---- 2. live install --------------------------------------------------
   const target = targetFor(root, run);
   let status: string;
   try {
@@ -287,8 +217,6 @@ export async function runHarnessInstall(
   }
 
   if (!isReachable(status)) {
-    // The normal "not started yet" case. The durable half already landed, so
-    // this is success, not failure.
     io.stdout(
       `sandbox not running (${status}) — skipping the live install.\n` +
         "Start it with `oh sandbox`, then re-run this command; or the next build picks it up.\n",

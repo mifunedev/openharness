@@ -42,26 +42,14 @@ import {
   type FetchRemoteSourceOptions,
 } from "./lib/remote.js";
 
-// Injected at build time from package.json#version (see build.mjs).
 declare const __OH_VERSION__: string;
 const VERSION: string = typeof __OH_VERSION__ === "string" ? __OH_VERSION__ : "0.0.0-dev";
 
-// Resolved once at module load. Correct from BOTH `src/cli.ts` and the bundled
-// `dist/oh.js` — both live two levels under `.oh/cli`, so `../../templates`
-// lands on `.oh/templates`. esbuild (bundle:true, format:esm) preserves
-// `import.meta.url` as a live ref to the output file, so this holds at runtime.
 const DEFAULT_TEMPLATES_DIR = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../../templates",
 );
 
-// The CLI's own bundled `.oh/` — the default source `oh init` vendors FROM. From
-// both `src/cli.ts` and `dist/oh.js` (each two levels under `.oh/cli`), `../..`
-// resolves to `.oh` (verified empirically; `DEFAULT_TEMPLATES_DIR` is `.oh/templates`,
-// one level deeper). For an installed binary this parent dir is some unrelated
-// real directory (e.g. `/usr`), NOT a payload — `resolveInitSource` detects that
-// via the manifest marker and auto-falls back to a remote fetch (`--from-remote`).
-// Bundling the payload into a published binary is gated on publishing (#564).
 const DEFAULT_SOURCE_OH_DIR = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../..",
@@ -72,10 +60,6 @@ interface Integration {
   runner: () => Promise<number>;
 }
 
-// No interactive wizards remain — Slack is configured natively by editing
-// `.devcontainer/.env` + `.pi/msg-bridge.json` (see .oh/docs/integrations/slack.md).
-// The framework stays for future integrations; `integrationLines()` renders
-// "(none)" while this record is empty.
 const INTEGRATIONS: Record<string, Integration> = {};
 
 export function isHelpFlag(arg: string | undefined): boolean {
@@ -95,7 +79,6 @@ function integrationLines(): string {
     .join("\n");
 }
 
-/** Exported for tests (asserting the Usage block lists every subcommand). */
 export function printOhHelp(): void {
   process.stdout.write(`oh — Open Harness CLI (v${VERSION})
 
@@ -196,7 +179,6 @@ Flags:
 `);
 }
 
-/** Exported for tests. */
 export function printSandboxHelp(): void {
   process.stdout.write(`oh sandbox — Provision and start the sandbox
 
@@ -224,7 +206,6 @@ Build/pull output streams live; oh sandbox exits with docker compose's exit code
 `);
 }
 
-/** Exported for tests. */
 export function printShellHelp(): void {
   process.stdout.write(`oh shell — Open a shell in the running sandbox container
 
@@ -238,7 +219,6 @@ exits with docker's exit code.
 `);
 }
 
-/** Exported for tests. */
 export function printHarnessHelp(): void {
   process.stdout.write(`oh harness — Install and inspect agent CLI harnesses
 
@@ -263,7 +243,6 @@ ${harnessIds().map((h) => `  ${h}`).join("\n")}
 `);
 }
 
-/** Exported for tests. */
 export function printGatewayHelp(): void {
   process.stdout.write(`oh gateway — Manage a messaging client session (Slack bridge)
 
@@ -289,19 +268,13 @@ This launches an interactive wizard. It takes no flags.
 `);
 }
 
-// ---------------------------------------------------------------------------
-// Arg parsing (exported so flag handling is unit-testable; main() stays
-// dispatch-only per the cli.property.test.ts process.exit-stub pattern)
-// ---------------------------------------------------------------------------
 
 export type ParseResult<T> =
   | { ok: true; args: T }
   | { ok: false; error: string; showHelp?: boolean };
 
-/** Parsed `oh init` flags. */
 export interface InitArgs {
   targetDir?: string;
-  /** Set only when `--templates <dir>` was passed (default applied later). */
   templatesDir?: string;
   fromDir?: string;
   fromRemote: boolean;
@@ -374,11 +347,6 @@ ${toolIds().map((t) => `  ${t}`).join("\n")}
 `);
 }
 
-/**
- * One help block for all four compose verbs — they differ only in the word.
- * `oh destroy` and a `make config` equivalent are deliberately absent; see
- * `.oh/docs/lifecycle-commands.md` for why.
- */
 export function printComposeVerbHelp(verb: ComposeVerb): void {
   const what: Record<ComposeVerb, string> = {
     stop: "Stop the sandbox, preserving volumes for a later restart",
@@ -474,7 +442,6 @@ export function parseInitArgs(rest: string[]): ParseResult<InitArgs> {
   return { ok: true, args };
 }
 
-/** Parsed `oh update` flags. */
 export interface UpdateArgs {
   help: boolean;
   fromDir?: string;
@@ -543,14 +510,10 @@ export function parseUpdateArgs(rest: string[]): ParseResult<UpdateArgs> {
   return { ok: true, args };
 }
 
-/** Parsed `oh sandbox` flags — the prebuilt-image / no-build knobs. */
 export interface SandboxArgs {
   help: boolean;
-  /** `--image` (bare) or `--image=<ref>` was passed — run the prebuilt image. */
   image: boolean;
-  /** Explicit ref from `--image=<ref>` (undefined for a bare `--image`). */
   imageRef?: string;
-  /** `--no-build` was passed — suppress the local build. */
   noBuild: boolean;
 }
 
@@ -581,7 +544,6 @@ export function parseSandboxArgs(rest: string[]): ParseResult<SandboxArgs> {
   return { ok: true, args };
 }
 
-/** Parsed `oh shell` args. */
 export interface ShellArgs {
   help: boolean;
   container?: string;
@@ -602,12 +564,9 @@ export function parseShellArgs(rest: string[]): ParseResult<ShellArgs> {
   return { ok: true, args };
 }
 
-/** Parsed `oh harness` args. */
 export interface HarnessArgs {
   help: boolean;
-  /** `list` | `install` | `status`; undefined when only `--help` was given. */
   subcommand?: "list" | "install" | "status";
-  /** The `<name>` positional — required by `install`, optional for `status`. */
   name?: string;
   persistOnly: boolean;
   noPersist: boolean;
@@ -652,8 +611,6 @@ export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
   if (sub === "list" && name !== undefined) {
     return { ok: false, error: `oh harness list: unexpected argument "${name}"` };
   }
-  // The two escape hatches are opposites — persisting only while also refusing
-  // to persist would leave the command with nothing to do.
   if (args.persistOnly && args.noPersist) {
     return {
       ok: false,
@@ -666,7 +623,6 @@ export function parseHarnessArgs(rest: string[]): ParseResult<HarnessArgs> {
   return { ok: true, args };
 }
 
-/** Parsed `oh runtime` args. */
 interface RuntimeArgs {
   help: boolean;
   force: boolean;
@@ -710,15 +666,11 @@ export function parseRuntimeArgs(rest: string[]): ParseResult<RuntimeArgs> {
   }
 
   args.subcommand = sub;
-  // `install` with no name is the documented default, NOT an error — the
-  // operator asked for one obvious runtime, and naming it every time would
-  // be ceremony. `list`/`status` keep undefined meaning "all".
   if (name !== undefined) args.name = name;
   else if (sub === "install") args.name = DEFAULT_RUNTIME;
   return { ok: true, args };
 }
 
-/** Parsed `oh tool` args. */
 interface ToolArgs {
   help: boolean;
   persistOnly: boolean;
@@ -759,8 +711,6 @@ export function parseToolArgs(rest: string[]): ParseResult<ToolArgs> {
   if (extra.length > 0) {
     return { ok: false, error: `oh tool: unexpected argument "${extra[0]}"` };
   }
-  // No default name: most tools are baked in, so there is no one obvious
-  // thing to install. `oh runtime install` can default; this cannot.
   if (sub === "install" && name === undefined) {
     return { ok: false, error: "oh tool install: a tool name is required", showHelp: true };
   }
@@ -781,42 +731,25 @@ export function parseToolArgs(rest: string[]): ParseResult<ToolArgs> {
 
 
 
-/** Parsed `oh gateway` args — everything after a leading help flag is verbatim. */
 export interface GatewayArgs {
   help: boolean;
-  /** Arguments handed to gateway.sh untouched (never re-interpreted). */
   passthrough: string[];
 }
 
 export function parseGatewayArgs(rest: string[]): ParseResult<GatewayArgs> {
-  // Intercept ONLY a leading --help/-h; a later --help belongs to the script.
   if (rest[0] === "--help" || rest[0] === "-h") {
     return { ok: true, args: { help: true, passthrough: [] } };
   }
   return { ok: true, args: { help: false, passthrough: [...rest] } };
 }
 
-// ---------------------------------------------------------------------------
-// Payload-source decision (the bundled-payload seam)
-// ---------------------------------------------------------------------------
 
-/** The CLI's own bundled payload paths + an injectable existence predicate. */
 export interface BundledPayloadPaths {
-  /** The bundled `.oh/` (production: module-level DEFAULT_SOURCE_OH_DIR). */
   sourceOhDir: string;
-  /** The bundled `.oh/templates` (production: DEFAULT_TEMPLATES_DIR). */
   templatesDir: string;
-  /** Injectable so tests can simulate an installed binary with no payload. */
   exists?: (path: string) => boolean;
 }
 
-/**
- * "Does the CLI's own bundled payload exist?" — the auto-fallback decision.
- * Checks for the payload manifest rather than the bare directory: an installed
- * binary's `../..` resolves to some real directory (e.g. `/usr`) that is NOT an
- * OpenHarness payload, so `manifest.json` is the marker distinguishing a real
- * bundled `.oh/` from an unrelated parent dir.
- */
 export function bundledPayloadExists(
   bundled: { sourceOhDir: string; templatesDir: string },
   exists: (path: string) => boolean = existsSync,
@@ -829,28 +762,10 @@ export type InitSource =
   | {
       kind: "remote";
       ref?: string;
-      /** One-line auto-fallback notice — set ONLY when no source flag was given. */
       notice?: string;
-      /**
-       * Both payload paths inside a fetched checkout. `--from-remote` sets BOTH
-       * `sourceOhDir` AND `templatesDir` (a fetched checkout is complete, so its
-       * templates always match its payload) — deliberately unlike `--from`,
-       * which sets only `sourceOhDir`.
-       */
       paths: (checkoutDir: string) => { sourceOhDir: string; templatesDir: string };
     };
 
-/**
- * Decide where `oh init` sources its payload from.
- *
- * Precedence: `--from-remote` > `--from <dir>` (the flags conflict, so at most
- * one is set) > the CLI's own bundled payload > auto-fallback to a remote fetch
- * when the bundled payload is absent (the installed-binary case — payload
- * bundling into a published binary is gated on publishing, #564).
- *
- * An explicit `--templates <dir>` pins the local path (never silently ignored
- * by the auto-fallback); `runInit`'s preconditions surface any missing source.
- */
 export function resolveInitSource(
   args: Pick<InitArgs, "fromDir" | "fromRemote" | "ref" | "templatesDir">,
   bundled: BundledPayloadPaths,
@@ -865,8 +780,6 @@ export function resolveInitSource(
     return { kind: "remote", ref: args.ref, paths: remotePaths };
   }
   if (args.fromDir !== undefined) {
-    // `--from <checkout>` mirrors `oh update --from`: vendor from `<checkout>/.oh`.
-    // Templates stay at the bundled default unless --templates overrides them.
     return {
       kind: "local",
       sourceOhDir: resolve(join(args.fromDir, ".oh")),
@@ -880,7 +793,6 @@ export function resolveInitSource(
       templatesDir: args.templatesDir ?? bundled.templatesDir,
     };
   }
-  // Auto-fallback: no source flags and no bundled payload (installed binary).
   return {
     kind: "remote",
     ref: args.ref,
@@ -889,27 +801,16 @@ export function resolveInitSource(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Remote-sourced run wrapper
-// ---------------------------------------------------------------------------
 
-/** DI hooks for `runWithRemoteSource` — production callers pass `{ ref }` only. */
 export interface RemoteSourceHooks {
-  /** Branch/tag to fetch (`--ref`). */
   ref?: string;
-  /** Test override: clone URL (a `file://` fixture; default: the public repo). */
   repoUrl?: string;
-  /** Test override: the fetch itself. */
   fetch?: (opts: FetchRemoteSourceOptions) => string;
-  /** Test override: temp-dir factory (default: mkdtempSync under os.tmpdir()). */
   mkdtemp?: () => string;
-  /** Test override: recursive remover for the temp checkout. */
   rm?: (dir: string) => void;
-  /** Where the version-skew line goes (default: process.stdout). */
   stdout?: (s: string) => void;
 }
 
-/** Version of the FETCHED payload — a file read of `<checkout>/.oh/cli/package.json`. */
 function readPayloadVersion(checkoutDir: string): string {
   try {
     const parsed = JSON.parse(
@@ -917,19 +818,10 @@ function readPayloadVersion(checkoutDir: string): string {
     );
     if (parsed && typeof parsed.version === "string") return parsed.version;
   } catch {
-    // absent / unparseable → "unknown"
   }
   return "unknown";
 }
 
-/**
- * Fetch a remote checkout into a fresh temp dir, run `fn` against it, and ALWAYS
- * remove the temp dir afterwards — the try/finally wraps the ENTIRE downstream
- * runInit/runUpdate call, not just the clone. After a successful fetch, prints
- * `fetched payload v<X> (installed CLI v<Y>)` so version skew is visible (X is
- * read from the FETCHED checkout; Y comes from `__OH_VERSION__` — the CLI never
- * reads its own package.json at runtime).
- */
 export async function runWithRemoteSource(
   hooks: RemoteSourceHooks,
   fn: (checkoutDir: string) => Promise<number> | number,
@@ -1066,7 +958,6 @@ async function main(argv: string[]): Promise<number> {
         runUpdate({ targetDir, fromDir: checkoutDir, force, dryRun }, io),
       );
     }
-    // parseUpdateArgs guarantees fromDir is set when --from-remote is absent.
     return await runUpdate({ targetDir, fromDir: fromDir as string, force, dryRun }, io);
   }
 
@@ -1103,8 +994,6 @@ async function main(argv: string[]): Promise<number> {
     return runShell({ container: parsed.args.container }, lifecycleIo());
   }
 
-  // The compose lifecycle verbs. `--`-separated extras pass straight through to
-  // docker compose; anything else is rejected rather than silently forwarded.
   if ((composeVerbs() as string[]).includes(first)) {
     const verb = first as ComposeVerb;
     const rest = argv.slice(1);
@@ -1144,7 +1033,6 @@ async function main(argv: string[]): Promise<number> {
     if (a.subcommand === "status") {
       return await runHarnessStatus(a.name, { json: a.json }, io);
     }
-    // parseHarnessArgs guarantees `name` is set for `install`.
     return await runHarnessInstall(
       a.name as string,
       { persistOnly: a.persistOnly, noPersist: a.noPersist },
@@ -1174,7 +1062,6 @@ async function main(argv: string[]): Promise<number> {
     if (a.subcommand === "status") {
       return await runRuntimeStatus(a.name, { json: a.json }, io);
     }
-    // parseRuntimeArgs defaults `name` for `install`.
     return await runRuntimeInstall(a.name as string, { force: a.force }, io);
   }
 
@@ -1200,7 +1087,6 @@ async function main(argv: string[]): Promise<number> {
     if (a.subcommand === "status") {
       return await runToolStatus(a.name, { json: a.json }, io);
     }
-    // parseToolArgs guarantees `name` is set for `install`.
     return await runToolInstall(
       a.name as string,
       { persistOnly: a.persistOnly, noPersist: a.noPersist, yes: a.yes },

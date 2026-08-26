@@ -4,11 +4,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-// ---------------------------------------------------------------------------
-// Test infrastructure
-// ---------------------------------------------------------------------------
 
-// Track every tmpdir created so afterEach can remove them all.
 let tmpdirs: string[] = [];
 
 function mkTmp(): string {
@@ -43,13 +39,6 @@ function readFile(root: string, rel: string): string {
   return fs.readFileSync(path.join(root, rel), "utf8");
 }
 
-/**
- * Build a fake OpenHarness-equipped repo at `root`.
- * Creates an `.oh/` control plane (cli/package.json with `version`, plus a
- * couple of control-plane files) AND project files OUTSIDE `.oh/` used to
- * assert non-mutation. Everything is written by explicit writeFileSync —
- * nothing is read from the real repo `.oh/`.
- */
 function buildEquippedRepo(
   root: string,
   opts: {
@@ -58,7 +47,6 @@ function buildEquippedRepo(
     project?: Record<string, string>;
   },
 ): void {
-  // The version package.json that gates the update.
   writeFile(
     root,
     ".oh/cli/package.json",
@@ -93,16 +81,12 @@ afterEach(() => {
   tmpdirs = [];
 });
 
-// ---------------------------------------------------------------------------
-// runUpdate — behavior contract
-// ---------------------------------------------------------------------------
 
 describe("runUpdate", () => {
   it("1. UPGRADE: newer source version overlays changed + new files (rc 0)", async () => {
     const from = mkTmp();
     const target = mkTmp();
 
-    // Source is newer (0.2.0) and carries a CHANGED control-plane file plus a NEW file.
     buildEquippedRepo(from, {
       version: "0.2.0",
       controlPlane: {
@@ -123,11 +107,9 @@ describe("runUpdate", () => {
     const rc = await runUpdate({ targetDir: target, fromDir: from }, io);
 
     expect(rc).toBe(0);
-    // Changed file now matches source content.
     expect(readFile(target, ".oh/scripts/foo.sh")).toBe(
       "#!/bin/sh\necho foo-NEW\n",
     );
-    // New file now exists with source content.
     expect(fs.existsSync(path.join(target, ".oh/scripts/brand-new.sh"))).toBe(
       true,
     );
@@ -137,10 +119,6 @@ describe("runUpdate", () => {
   });
 
   it("2. PROJECT UNTOUCHED: nothing outside <target>/.oh/ is mutated or created", async () => {
-    // Put `from` and `target` under ONE dedicated base dir so the "nothing
-    // created outside <target>/.oh/" backstop can assert on a parent we own —
-    // os.tmpdir() itself is a shared namespace concurrent vitest workers write
-    // to, so snapshotting it would be flaky.
     const base = mkTmp();
     const from = path.join(base, "from");
     const target = path.join(base, "target");
@@ -161,26 +139,19 @@ describe("runUpdate", () => {
       },
     });
 
-    // Capture project files + top-level dir listing before.
     const envBefore = readFile(target, ".devcontainer/.env");
     const appBefore = readFile(target, "src/app.ts");
     const topBefore = fs.readdirSync(target).sort();
-    // Snapshot the dedicated base dir (parent of <target>) so we can prove
-    // nothing new appears alongside <target> — runUpdate writes ONLY under
-    // <target>/.oh/, so `base` must still list exactly [from, target].
     const baseBefore = fs.readdirSync(base).sort();
 
     const { io } = mkIo();
     const rc = await runUpdate({ targetDir: target, fromDir: from }, io);
     expect(rc).toBe(0);
 
-    // Project files byte-identical.
     expect(readFile(target, ".devcontainer/.env")).toBe(envBefore);
     expect(readFile(target, "src/app.ts")).toBe(appBefore);
 
-    // No NEW top-level entry in <target> (only .oh/ contents should change).
     expect(fs.readdirSync(target).sort()).toEqual(topBefore);
-    // No new entries alongside <target> in the dedicated base dir.
     expect(fs.readdirSync(base).sort()).toEqual(baseBefore);
   });
 
@@ -207,7 +178,6 @@ describe("runUpdate", () => {
 
     expect(rc).toBe(0);
     expect(out.join("")).toContain("already up to date");
-    // No target file changed (content + mtime unchanged).
     expect(readFile(target, ".oh/scripts/foo.sh")).toBe(ctlBefore);
     expect(fs.statSync(path.join(target, ".oh/scripts/foo.sh")).mtimeMs).toBe(
       mtimeBefore,
@@ -232,12 +202,10 @@ describe("runUpdate", () => {
     const rc = await runUpdate({ ...opts, force: true }, io);
 
     expect(rc).toBe(0);
-    // Force overlay overwrote the local edit back to source content.
     expect(readFile(target, ".oh/scripts/foo.sh")).toBe("#!/bin/sh\necho SOURCE\n");
   });
 
   it("5. DOWNGRADE REFUSE: older source refused (rc 1, 'downgrade'); --force overrides; pre-release suffix treated equal", async () => {
-    // (a) downgrade refused.
     {
       const from = mkTmp();
       const target = mkTmp();
@@ -250,7 +218,6 @@ describe("runUpdate", () => {
       expect(err.join("")).toContain("downgrade");
     }
 
-    // (b) downgrade with --force succeeds.
     {
       const from = mkTmp();
       const target = mkTmp();
@@ -265,8 +232,6 @@ describe("runUpdate", () => {
       expect(rc).toBe(0);
     }
 
-    // (c) pre-release suffix-strip: 0.1.0 (source) vs 0.1.0-dev (target) are EQUAL → no-op.
-    // A naive parseInt would mis-rank these; the suffix must be stripped per segment.
     {
       const from = mkTmp();
       const target = mkTmp();
@@ -281,7 +246,6 @@ describe("runUpdate", () => {
   });
 
   it("6. DRY-RUN: every line prefixed [dry-run], no writes (even with force on a downgrade)", async () => {
-    // (a) upgrade dry-run: rc 0, all lines prefixed, target unchanged on disk.
     {
       const from = mkTmp();
       const target = mkTmp();
@@ -306,19 +270,15 @@ describe("runUpdate", () => {
       );
 
       expect(rc).toBe(0);
-      // Each pushed string is one line; every one must carry the prefix.
       expect(out.length).toBeGreaterThan(0);
       expect(out.every((l) => l.startsWith("[dry-run] "))).toBe(true);
 
-      // A file that would be overwritten still has its OLD content.
       expect(readFile(target, ".oh/scripts/foo.sh")).toBe(overwriteBefore);
-      // A file that would be created does NOT exist.
       expect(fs.existsSync(path.join(target, ".oh/scripts/brand-new.sh"))).toBe(
         false,
       );
     }
 
-    // (b) force + dryRun on a DOWNGRADE: writes NOTHING, rc 0.
     {
       const from = mkTmp();
       const target = mkTmp();
@@ -340,7 +300,6 @@ describe("runUpdate", () => {
       );
 
       expect(rc).toBe(0);
-      // Target untouched despite force, because dryRun suppresses writes.
       expect(readFile(target, ".oh/scripts/foo.sh")).toBe(before);
     }
   });
@@ -353,7 +312,6 @@ describe("runUpdate", () => {
       version: "0.2.0",
       controlPlane: {
         ".oh/scripts/foo.sh": "#!/bin/sh\necho from\n",
-        // Nested volatile segments (NOT top-level) — proves per-segment skip.
         ".oh/cli/node_modules/pkg/index.js": "module.exports = {};\n",
         ".oh/cli/dist/oh.js": "console.log('built');\n",
       },
@@ -364,23 +322,17 @@ describe("runUpdate", () => {
     const rc = await runUpdate({ targetDir: target, fromDir: from }, io);
     expect(rc).toBe(0);
 
-    // Neither volatile path was copied into the target .oh/.
     expect(
       fs.existsSync(path.join(target, ".oh/cli/node_modules/pkg/index.js")),
     ).toBe(false);
     expect(fs.existsSync(path.join(target, ".oh/cli/dist/oh.js"))).toBe(false);
-    // A normal control-plane file still copied.
     expect(fs.existsSync(path.join(target, ".oh/scripts/foo.sh"))).toBe(true);
   });
 });
 
-// ---------------------------------------------------------------------------
-// runUpdate — preconditions
-// ---------------------------------------------------------------------------
 
 describe("runUpdate — preconditions", () => {
   it("8a. missing source .oh/ → rc 1, 'update source not found'", async () => {
-    // fromDir has no .oh/ at all.
     const from = mkTmp();
     const target = mkTmp();
     buildEquippedRepo(target, { version: "0.1.0" });
@@ -395,7 +347,6 @@ describe("runUpdate — preconditions", () => {
     const from = mkTmp();
     const target = mkTmp();
     buildEquippedRepo(from, { version: "0.1.0" });
-    // target is just an empty dir (no .oh/).
 
     const { err, io } = mkIo();
     const rc = await runUpdate({ targetDir: target, fromDir: from }, io);
@@ -414,16 +365,12 @@ describe("runUpdate — preconditions", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// assertDestInTarget — exported path-escape guard
-// ---------------------------------------------------------------------------
 
 describe("assertDestInTarget", () => {
   it("7. throws on escape outside target .oh, allows paths inside", () => {
     const someTarget = mkTmp();
     const targetOh = path.resolve(someTarget, ".oh");
 
-    // Escaping the target .oh/ must throw.
     expect(() =>
       assertDestInTarget(
         path.resolve(targetOh, "../outside.ts"),
@@ -432,12 +379,10 @@ describe("assertDestInTarget", () => {
       ),
     ).toThrow("refusing to write outside target .oh");
 
-    // A path properly nested inside target .oh/ must NOT throw.
     expect(() =>
       assertDestInTarget(path.join(targetOh, "cli/x.ts"), targetOh, path.sep),
     ).not.toThrow();
 
-    // The target .oh/ itself must NOT throw (dest === targetOh).
     expect(() =>
       assertDestInTarget(targetOh, targetOh, path.sep),
     ).not.toThrow();

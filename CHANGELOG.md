@@ -8,6 +8,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Changed
+- Strip explanatory comments from all tracked code — `.ts`/`.mjs`/`.sh`/`.py` plus `oh-path`, the Dockerfile, the Makefile and `.zshrc` — leaving only machine-read directives ([#837](https://github.com/mifunedev/openharness/pull/837)).
+
 ### Fixed
 - The `development` issue closer never fired: `pull_request_target` resolves the workflow from the **default** branch (`main`), where the file does not exist. Swapped to `pull_request` ([#841](https://github.com/mifunedev/openharness/issues/841)).
 - **`uv python install` now works as the `sandbox` user without `sudo`.** `install -d -o sandbox -g sandbox .../uv/tools` chowns the final component only, so the intermediate `.../share/uv` stayed `root:root`.

@@ -17,7 +17,6 @@ if [[ ! -f "$RULE" ]]; then
   exit 2
 fi
 
-# Extract the "## Pipeline variants" section: from its heading to the next "## " heading.
 section=$(awk '
   tolower($0) ~ /^## pipeline variants/ {f=1; print; next}
   f && /^## / {f=0}
@@ -31,19 +30,14 @@ fi
 
 missing=()
 
-# Positive assertions (AND-logic): the variant + its three load-bearing rules.
 grep -qiF 'Monitored async build session'          <<<"$section" || missing+=("Monitored async build session variant name")
 grep -qiF 'owns the sentinel watch'                <<<"$section" || missing+=("caller-owns-the-watch rule")
 grep -qiF 'surfaces blocks'                        <<<"$section" || missing+=("session-surfaces-blocks property")
 grep -qiF 'finalizes through the promotable gate'  <<<"$section" || missing+=("finalize-via-promotable-gate rule")
 
-# The variant must name the ACTUAL launch contract, not a generic "build" word that
-# would stay green after the executor was renamed or removed underneath it.
 grep -qF '.oh/scripts/firstmate.sh'                <<<"$section" || missing+=("the launch contract .oh/scripts/firstmate.sh is not named in the variant")
 grep -qF 'STATUS: COMPLETE'                        <<<"$section" || missing+=("the STATUS: COMPLETE terminal interface is not named in the variant")
 
-# Negative assertion: the retired arm must not come back as a variant. Checked over the
-# WHOLE file, not just the section — a stale mention anywhere re-opens the arm question.
 if grep -qF 'ralph' "$RULE"; then
   echo "REGRESSION: $RULE still names the retired 'ralph' build arm — there is one executor" >&2
   exit 1

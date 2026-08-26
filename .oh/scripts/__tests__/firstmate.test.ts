@@ -31,8 +31,6 @@ const TEMPLATE_REL = path.join(
 const TEMPLATE = path.join(REPO_ROOT, TEMPLATE_REL);
 const SCRIPT_SOURCE = readFileSync(SCRIPT, "utf-8");
 
-// Absolute bash, resolved once via the parent's PATH — the child env is fully
-// controlled below, so a bare "bash" would resolve against the child's PATH.
 const BASH = (() => {
   const r = spawnSync("bash", ["-c", "command -v bash"], { encoding: "utf-8" });
   return (r.stdout ?? "").trim() || "/usr/bin/bash";
@@ -52,14 +50,6 @@ afterEach(() => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Fixture binaries
-//
-// Same shape as session-runner.test.ts: one stub per tool, driven entirely by
-// STUB_* env vars, appending every invocation to $STUB_CALLS. The calls file is
-// also how a NEGATIVE is proven — "the short-circuit launched nothing" is
-// asserted as "the calls file does not exist".
-// ---------------------------------------------------------------------------
 
 const HERDR_STUB = `#!/usr/bin/env bash
 printf '%s\\n' "herdr $*" >> "\${STUB_CALLS:-/dev/null}"
@@ -102,9 +92,6 @@ case "$sub" in
 esac
 `;
 
-// has-session is target-aware: firstmate asks about TWO different names — the
-// bare slug (the ralph cross-executor guard) and agent-firstmate-<slug> (its own
-// liveness oracle) — and the tests must be able to answer them differently.
 const TMUX_STUB = `#!/usr/bin/env bash
 printf '%s\\n' "tmux $*" >> "\${STUB_CALLS:-/dev/null}"
 verb="\${1:-}"
@@ -141,11 +128,6 @@ function makeBin(opts: { herdr?: boolean; tmux?: boolean }): string {
   return dir;
 }
 
-// ---------------------------------------------------------------------------
-// Fixture repo: a task folder honouring the four-file contract, plus the real
-// session-prompt template copied in so the renderer runs against the shipped
-// artifact rather than a stand-in.
-// ---------------------------------------------------------------------------
 
 interface Repo {
   root: string;
@@ -221,8 +203,6 @@ function run(
 ): RunResult {
   const repo = opts.repo;
   const env: NodeJS.ProcessEnv = {
-    // The stub bin is PREPENDED to the real PATH: the tests here need git, jq,
-    // sed and tee to be real, and only want herdr/tmux shadowed.
     PATH: opts.bin ? `${opts.bin}:${process.env.PATH ?? ""}` : process.env.PATH,
     ...(repo
       ? {
@@ -245,7 +225,6 @@ function run(
   };
 }
 
-/** Source firstmate.sh (the source guard stops before the main body) and run a snippet. */
 function sourceCall(
   snippet: string,
   opts: { env?: NodeJS.ProcessEnv; cwd?: string } = {},
@@ -270,11 +249,6 @@ function readCalls(repo: Repo): string {
   }
 }
 
-/**
- * The probe-pane output that MATCHES the caller's own fingerprint, so the
- * execution-context gate lets herdr through. The library strips the marker when
- * it reads a fingerprint back, so the stub has to re-emit the marked line.
- */
 function matchingProbeOutput(worktree: string): string {
   const r = spawnSync(
     BASH,
@@ -284,9 +258,6 @@ function matchingProbeOutput(worktree: string): string {
   return `FIRSTMATE-FINGERPRINT ${(r.stdout ?? "").trim()}`;
 }
 
-// ---------------------------------------------------------------------------
-// Slug + four-file contract (the shared sourced helper)
-// ---------------------------------------------------------------------------
 
 describe("task-folder validation", () => {
   it("rejects a slug that is not kebab-case, with the canonical message", () => {
@@ -304,8 +275,6 @@ describe("task-folder validation", () => {
     expect(r.stderr).toContain("scaffold a task with /prd then /ralph first");
   });
 
-  // The four-file contract is the interface both executors share; a partial
-  // folder is a scaffolding bug, never something to launch a session against.
   for (const missing of ["prd.md", "prd.json", "prompt.md", "progress.txt"]) {
     it(`rejects a task folder missing ${missing}`, () => {
       const files = ["prd.md", "prd.json", "prompt.md", "progress.txt"].filter(
@@ -344,9 +313,6 @@ describe("task-folder validation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Sentinel short-circuit
-// ---------------------------------------------------------------------------
 
 describe("sentinel short-circuit", () => {
   it("exits 0 without launching anything when STATUS: COMPLETE is already present", () => {
@@ -358,7 +324,6 @@ describe("sentinel short-circuit", () => {
 
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("already present");
-    // Proof of the negative: no runner was ever consulted, and no lock claimed.
     expect(readCalls(repo)).toBe("");
     expect(existsSync(repo.lock)).toBe(false);
   });
@@ -379,16 +344,8 @@ describe("sentinel short-circuit", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// No cross-executor guard: there is only one executor
-// ---------------------------------------------------------------------------
 
 describe("single-executor surface", () => {
-  // The guard that refused to launch beside a bare-slug tmux session existed only
-  // because a SECOND executor named its sessions that way. With one executor, an
-  // unrelated tmux session that happens to share the slug's name is not a conflict
-  // and must not block a build. Concurrency on the same slug is stopped by the
-  // atomic launch-claim lock instead.
   it("launches even when an unrelated tmux session shares the bare slug name", () => {
     const repo = makeRepo("busy-slug");
     const bin = makeBin({ tmux: true });
@@ -409,9 +366,6 @@ describe("single-executor surface", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Idempotency: the atomic mkdir launch-claim + the stale-lock reclaim
-// ---------------------------------------------------------------------------
 
 describe("launch-claim lock", () => {
   it("claims /tmp/firstmate-<slug>.lock with an atomic mkdir on a clean launch", () => {
@@ -445,8 +399,6 @@ describe("launch-claim lock", () => {
     expect(readCalls(repo)).not.toContain("new-session");
   });
 
-  // The herdr-mode oracle is `herdr agent get <name>`'s EXIT CODE: 0 =
-  // agent_info (live), 1 = agent_not_found (gone).
   it("cross-checks liveness with `herdr agent get` in herdr mode", () => {
     const repo = makeRepo("held-slug");
     const bin = makeBin({ herdr: true });
@@ -466,7 +418,6 @@ describe("launch-claim lock", () => {
     expect(live.stderr).toContain("already running");
     expect(readCalls(repo)).toContain("herdr agent get firstmate-held-slug");
 
-    // Same lock, but the agent is gone (agent_not_found, exit 1) — reclaimable.
     const gone = run(["--runner", "herdr", "--no-watch", "held-slug"], {
       repo,
       bin,
@@ -480,13 +431,10 @@ describe("launch-claim lock", () => {
     expect(gone.stderr).toContain("stale lock");
   });
 
-  // The kill -9 shape: the lock survived, the session did not. A stale lock must
-  // never wedge a slug permanently.
   it("treats a lock with no live session as stale and reclaimable", () => {
     const repo = makeRepo("stale-slug");
     const bin = makeBin({ tmux: true });
     mkdirSync(repo.lock);
-    // Debris inside the lock proves the reclaim really recreated the directory.
     writeFileSync(path.join(repo.lock, "debris"), "from the crashed run\n");
 
     const r = run(["--runner", "tmux", "--no-watch", "stale-slug"], {
@@ -503,9 +451,6 @@ describe("launch-claim lock", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Exit paths — no path may leave the lock behind
-// ---------------------------------------------------------------------------
 
 describe("exit paths", () => {
   it("removes the lock and appends FIRSTMATE-INCOMPLETE after a launch failure", () => {
@@ -533,8 +478,6 @@ describe("exit paths", () => {
       bin,
       env: {
         STUB_HERDR_PROBE_OUT: fp,
-        // The pane reports a DIFFERENT cwd than the one we launched into: the
-        // cwd flag lied, which in herdr mode means a different environment.
         STUB_HERDR_FG_CWD: "/somewhere/else",
       },
     });
@@ -548,9 +491,6 @@ describe("exit paths", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// render_session_prompt — the renderer lives here (US-003), the contract in US-002
-// ---------------------------------------------------------------------------
 
 describe("render_session_prompt", () => {
   const DECLARED = ["<slug>", "<branch>", "<issue>"];
@@ -561,24 +501,18 @@ describe("render_session_prompt", () => {
     );
     expect(r.status).toBe(0);
 
-    // Every declared token is gone …
     for (const token of DECLARED) {
       expect(r.stdout).not.toContain(token);
     }
-    // … and no OTHER angle-bracket token was introduced either, which is the
-    // second half of the contract: the renderer adds no token of its own.
     const survivors = [...r.stdout.matchAll(/<[^ <>]+>/g)].map((m) => m[0]);
     expect(survivors).toEqual([]);
 
-    // … replaced by the real values, in every position they occurred.
     expect(r.stdout).toContain("# First Mate session — demo-slug");
     expect(r.stdout).toContain(".oh/tasks/demo-slug/prd.json");
     expect(r.stdout).toContain("feat/9-demo");
     expect(r.stdout).toContain("Issue: #9");
   });
 
-  // `{curly}` is US-002's second notation: runtime-fill text the SESSION writes.
-  // Substituting it would destroy the progress-entry and commit templates.
   it("leaves {curly-brace} runtime-fill text untouched", () => {
     const r = sourceCall(
       `render_session_prompt '${TEMPLATE}' demo-slug feat/9-demo 9`,
@@ -594,7 +528,6 @@ describe("render_session_prompt", () => {
     );
     expect(r.stdout).not.toContain("END CONTRACT HEADER");
     expect(r.stdout).not.toContain("ANCHOR 1:");
-    // The body's first and last sections both survive the header strip.
     expect(r.stdout).toContain("## 1. Load the task graph");
     expect(r.stdout).toContain("## 9. Reference");
   });
@@ -622,10 +555,6 @@ describe("render_session_prompt", () => {
     expect(r.stdout).toContain("body for s and <undeclared>");
   });
 
-  // A surviving <slug> in a live session prompt is silent and expensive. The
-  // substitutions run in declaration order, so a later value carrying an earlier
-  // token is the one shape that can reintroduce one — and the self-check refuses
-  // to emit the prompt rather than shipping it half-rendered.
   it("refuses to emit a prompt in which a declared placeholder survived", () => {
     const dir = tmpDir("fm-tpl-");
     const tpl = path.join(dir, "session-prompt.md");
@@ -655,9 +584,6 @@ describe("render_session_prompt", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Launch reporting + the naming contract
-// ---------------------------------------------------------------------------
 
 describe("launch", () => {
   it("prints the resolved runner mode, the session handle, the log path and the watch command", () => {
@@ -691,9 +617,6 @@ describe("launch", () => {
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("runner:   herdr");
     expect(r.stdout).toContain("handle:   firstmate-herdr-slug (pane w7:p3)");
-    // herdr owns its own pane capture and writes no file at the session-log path, so the
-    // banner must NOT advertise one — an operator sent to `tail` an unwritten file reads
-    // an empty session as a dead one. The watch command is the real handle.
     expect(r.stdout).not.toContain(
       path.join(repo.runnerTmp, "firstmate-herdr-slug.log"),
     );
@@ -721,9 +644,6 @@ describe("launch", () => {
     expect(rendered).toContain("feat/4242-prompt-slug");
     expect(rendered).not.toContain("<slug>");
 
-    // The launch string reads that file back as INITIAL ARGV inside the launched
-    // shell, and is never piped or redirected: a pipe on either end leaves the
-    // child without a TTY, and an interactive agent session cannot start there.
     const calls = readCalls(repo);
     expect(calls).toContain(repo.promptFile);
     expect(calls).toContain('"$(cat ');
@@ -744,7 +664,6 @@ describe("launch", () => {
     });
 
     expect(r.status).toBe(0);
-    // The foreground child is detached from this process's wait, so poll briefly.
     const deadline = Date.now() + 10_000;
     while (!existsSync(marker) && Date.now() < deadline) {
       spawnSync(BASH, ["-c", "sleep 0.2"]);
@@ -756,9 +675,6 @@ describe("launch", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// End-to-end: a session that reaches the sentinel
-// ---------------------------------------------------------------------------
 
 describe("watch to completion", () => {
   it("exits 0, tears down and releases the lock once STATUS: COMPLETE lands", () => {
@@ -782,9 +698,6 @@ describe("watch to completion", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// --kill: the manual escape hatch
-// ---------------------------------------------------------------------------
 
 describe("--kill", () => {
   it("clears the lock, tears the session down and records the outcome", () => {
@@ -805,12 +718,10 @@ describe("--kill", () => {
     );
 
     const calls = readCalls(repo);
-    // herdr 0.7.4 has NO agent stop/kill verb — `pane close` is the primitive.
     expect(calls).toContain("herdr pane close w7:p3");
     expect(calls).toContain("tmux kill-session -t agent-firstmate-kill-slug");
     expect(calls).not.toContain("agent stop");
     expect(calls).not.toContain("agent kill");
-    // The server is never stopped or restarted.
     expect(calls).not.toContain("server stop");
     expect(r.stdout).toContain("the herdr server was not stopped or restarted");
   });
@@ -823,9 +734,6 @@ describe("--kill", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Static contract — the things a probe will also pin
-// ---------------------------------------------------------------------------
 
 describe("static contract", () => {
   it("is executable and launches via the US-001 session-runner library", () => {

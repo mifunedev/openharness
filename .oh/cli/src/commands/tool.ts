@@ -23,56 +23,13 @@ import {
 } from "../lib/tools/catalog.js";
 import { configuredContainerName, DEFAULT_CONTAINER_NAME } from "./lifecycle.js";
 
-/**
- * `oh tool <list|install|status>` — the sandbox tooling that is neither an
- * agent CLI (`oh harness`) nor an isolation runtime (`oh runtime`).
- *
- * WHAT THIS SOLVES: `agent-browser` shares the `INSTALL_*` namespace in
- * `.devcontainer/.env` with the optional harnesses but is not one, so
- * `oh harness` deliberately refuses it — leaving the only way to add it a
- * hand-edit of `.env` followed by a full container recreate, because the entrypoint installs it at
- * boot. And nothing could answer "is `gh` actually in this image, and what
- * version" without opening a shell.
- *
- * INSTALL IS PERSIST-FIRST, like `oh harness` and unlike `oh runtime`:
- *
- *   1. persist `INSTALL_AGENT_BROWSER=true` in `.devcontainer/.env` — cheap, always
- *      possible, and the reason the choice survives the next container recreate;
- *   2. install into the ALREADY-RUNNING container, so it is usable now.
- *
- * `oh runtime`'s refusal to persist anything is specific to the unmade #731
- * selector decision and does NOT transfer here: `INSTALL_AGENT_BROWSER` is
- * already interpolated by `.devcontainer/docker-compose.yml` and documented in
- * `.devcontainer/.example.env`, so this command writes a key the schema already
- * defines and changes no schema.
- *
- * THE DOWNLOAD GATE. agent-browser pulls Chromium, roughly 1 GB. No harness
- * install downloads anything comparable, so this is the one place the CLI asks
- * before spending the operator's bandwidth. It FAILS CLOSED: a non-interactive
- * run without `--yes` installs nothing and says which flag it wanted. The
- * durable half still lands, so the next container recreate picks it up.
- *
- * WHAT THIS COMMAND NEVER DOES: rebuild or restart the sandbox. A stopped or
- * absent container is the normal "not started yet" case, so it persists the
- * flag, prints the hint, and exits 0.
- *
- * All container work goes through the `ExecutionTarget` contract — `status()`
- * and `exec()` — never a direct `docker exec` spawn, and never a `kind` check.
- */
 
-/** Output channels, plus the injectable confirmation seam. */
 export interface ToolIO {
   stdout: (s: string) => void;
   stderr: (s: string) => void;
-  /**
-   * Confirmation prompt. Tests inject a fake; production leaves it undefined
-   * and the real `confirm()` is used behind an `isTTY` gate. Mirrors the
-   * `io.ask` seam in `init.ts`.
-   */
   confirm?: (question: string) => Promise<boolean>;
 }
 
-/** Options shared by every `oh tool` verb. */
 export interface ToolOptions {
   cwd?: string;
   run?: LifecycleRunner;
@@ -80,24 +37,17 @@ export interface ToolOptions {
 }
 
 export interface ToolInstallOptions extends ToolOptions {
-  /** Only set the `.devcontainer/.env` flag; do no container work. */
   persistOnly?: boolean;
-  /** Live-install only; leave `.devcontainer/.env` untouched. */
   noPersist?: boolean;
-  /** Skip the large-download confirmation. */
   yes?: boolean;
 }
 
-/** Per-tool state as reported by `list` / `status`. */
 interface ToolRow {
   id: string;
   title: string;
   kind: string;
-  /** `INSTALL_<KEY>` reads `true` in `.devcontainer/.env`. `null` when it has no key. */
   enabled: boolean | null;
-  /** Binary present in the container, or `null` when unreachable. */
   installed: boolean | null;
-  /** First line of `versionArgv` output, or `null` when not declared/readable. */
   version: string | null;
   installable: boolean;
   docs: string;
@@ -112,7 +62,6 @@ function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
   return resolveExecutionTarget({ projectRoot: root, container: name, run });
 }
 
-/** Run an argv in the container, returning `null` if it could not spawn. */
 async function tryExec(
   target: ExecutionTarget,
   argv: readonly string[],
@@ -127,7 +76,6 @@ async function tryExec(
   }
 }
 
-/** Is the tool's binary present? `null` when the probe could not run at all. */
 async function probeInstalled(
   target: ExecutionTarget,
   entry: ToolEntry,
@@ -136,13 +84,6 @@ async function probeInstalled(
   return r === null ? null : r.exitCode === 0;
 }
 
-/**
- * Read the tool's version, when it declares a probe.
- *
- * Returns `null` for a tool with no `versionArgv` — the catalog omits it rather
- * than guess an unverified flag — and `null` when the probe fails, because a
- * failed read is not a version.
- */
 async function probeVersion(
   target: ExecutionTarget,
   entry: ToolEntry,
@@ -182,7 +123,6 @@ async function collectRows(
           ? null
           : configured && isInstallFlagEnabled(root, entry.toolKey),
       installed,
-      // Only ask a present binary for its version.
       version: reachable && installed === true ? await probeVersion(target, entry) : null,
       installable: entry.installArgv !== undefined,
       docs: entry.docsPath,
@@ -191,7 +131,6 @@ async function collectRows(
   return rows;
 }
 
-/** Render one cell: yes / no / n/a (no flag) / ? (container unreachable). */
 function cell(value: boolean | null, absent: string): string {
   if (value === null) return absent;
   return value ? "yes" : "no";
@@ -217,20 +156,16 @@ function renderTable(rows: ToolRow[], io: ToolIO): void {
   }
 }
 
-/** `status` adds the version, where the catalog declares a probe for it. */
 function renderDetail(rows: ToolRow[], io: ToolIO): void {
   renderTable(rows, io);
   for (const r of rows) {
     io.stdout(`\n${r.id} — ${r.title}\n`);
-    // `—` distinguishes "no probe declared" from a failed read; the catalog
-    // omits unverified flags rather than guessing them.
     io.stdout(`  version:    ${r.version ?? "—"}\n`);
     io.stdout(`  installable: ${r.installable ? "yes" : "no"}\n`);
     io.stdout(`  see ${r.docs}\n`);
   }
 }
 
-/** `oh tool list` — every known tool and its state. */
 export async function runToolList(opts: ToolOptions, io: ToolIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
@@ -249,7 +184,6 @@ function unknownTool(name: string, io: ToolIO): number {
   return 1;
 }
 
-/** `oh tool status [name]` — the same data as `list`, plus versions. */
 export async function runToolStatus(
   name: string | undefined,
   opts: ToolOptions,
@@ -273,14 +207,6 @@ export async function runToolStatus(
   return 0;
 }
 
-/**
- * Ask before a large download.
- *
- * Precedence: `--yes` wins; then an injected confirm (tests); then the real
- * prompt, but ONLY on a TTY. A non-interactive run with no `--yes` returns
- * false — fail closed. Silently proceeding would spend a gigabyte of someone's
- * bandwidth in CI.
- */
 async function confirmDownload(
   entry: ToolEntry,
   opts: ToolInstallOptions,
@@ -301,15 +227,6 @@ async function confirmDownload(
   return false;
 }
 
-/**
- * `oh tool install <name>` — persist the flag, then install into the running
- * container.
- *
- * ORDER MATTERS: persist FIRST, exactly as `oh harness install` does. The write
- * is cheap and always possible, and it stays correct even when the download is
- * then declined or fails — the next container start picks the tool up either
- * way, and the message says so.
- */
 export async function runToolInstall(
   name: string,
   opts: ToolInstallOptions,
@@ -328,7 +245,6 @@ export async function runToolInstall(
     return 1;
   }
 
-  // ---- 1. persist -------------------------------------------------------
   if (!opts.noPersist && entry.toolKey !== undefined) {
     if (seedEnvFile(root)) {
       io.stdout("create .devcontainer/.env (from .devcontainer/.example.env)\n");
@@ -344,7 +260,6 @@ export async function runToolInstall(
 
   if (opts.persistOnly) return 0;
 
-  // ---- 2. live install --------------------------------------------------
   const target = targetFor(root, run);
   let status: string;
   try {
@@ -375,9 +290,6 @@ export async function runToolInstall(
     return 1;
   }
 
-  // The gate sits AFTER the persist and AFTER the already-installed check, so
-  // declining costs nothing that was already done and nobody is asked to
-  // approve a download that would not have happened.
   if (!(await confirmDownload(entry, opts, io))) {
     if (!opts.noPersist && entry.toolKey !== undefined) {
       io.stdout(

@@ -40,9 +40,6 @@ export function bold(s: string): string {
 }
 
 export function link(url: string, label: string): string {
-  // OSC 8 hyperlink — supported by VS Code, iTerm2, GNOME Terminal, Windows
-  // Terminal. Unsupported terminals show only the label, so fall back to
-  // "label (url)" so the URL is still copy-pasteable.
   if (!process.stdout.isTTY) return `${label} (${url})`;
   return `\x1b]8;;${url}\x1b\\${label}\x1b]8;;\x1b\\`;
 }
@@ -64,8 +61,6 @@ export async function ask(question: string): Promise<string> {
 }
 
 export async function askSecret(question: string): Promise<string> {
-  // Non-TTY (piped stdin, tests): the raw-mode path can't be used — fall back
-  // to the readline-based echo-suppressed implementation.
   if (!process.stdin.isTTY) return askSecretPiped(question);
 
   process.stdout.write(`  ${question} `);
@@ -75,36 +70,35 @@ export async function askSecret(question: string): Promise<string> {
   const bytes: number[] = [];
   return await new Promise<string>((resolve) => {
     const cleanup = (): void => {
-      try { process.stdin.setRawMode(false); } catch { /* ignore */ }
+      try { process.stdin.setRawMode(false); } catch { }
       process.stdin.pause();
       process.stdin.removeListener("data", onData);
     };
     const onData = (data: Buffer): void => {
       for (const byte of data) {
-        if (byte === 0x03) {                            // Ctrl-C
+        if (byte === 0x03) {
           cleanup();
           process.stdout.write("\n");
-          process.exit(130);                             // 128 + SIGINT(2)
-        } else if (byte === 0x0d || byte === 0x0a) {    // Enter
+          process.exit(130);
+        } else if (byte === 0x0d || byte === 0x0a) {
           cleanup();
           process.stdout.write("\n");
           resolve(Buffer.from(bytes).toString("utf8").trim());
           return;
-        } else if (byte === 0x7f || byte === 0x08) {    // Backspace / DEL
+        } else if (byte === 0x7f || byte === 0x08) {
           if (bytes.length > 0) {
             bytes.pop();
             process.stdout.write("\b \b");
           }
-        } else if (byte === 0x15) {                     // Ctrl-U → clear line
+        } else if (byte === 0x15) {
           while (bytes.length > 0) {
             bytes.pop();
             process.stdout.write("\b \b");
           }
-        } else if (byte >= 0x20) {                      // printable + UTF-8 cont.
+        } else if (byte >= 0x20) {
           bytes.push(byte);
           process.stdout.write("●");
         }
-        // Silently drop other control bytes (Tab, Esc sequences, etc.).
       }
     };
     process.stdin.on("data", onData);
@@ -114,9 +108,6 @@ export async function askSecret(question: string): Promise<string> {
 async function askSecretPiped(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
-  // Suppress echo by intercepting the output writer. Without this, every
-  // keystroke would be echoed to the terminal and the token would be
-  // visible mid-entry.
   const stdoutWrite = process.stdout.write.bind(process.stdout);
   let prompted = false;
   const patched = (chunk: string | Uint8Array): boolean => {
@@ -124,7 +115,7 @@ async function askSecretPiped(question: string): Promise<string> {
       prompted = true;
       return stdoutWrite(chunk);
     }
-    return true; // swallow keystroke echoes
+    return true;
   };
   type WritableHole = { write: (chunk: string | Uint8Array) => boolean };
   (process.stdout as unknown as WritableHole).write = patched;
@@ -134,7 +125,7 @@ async function askSecretPiped(question: string): Promise<string> {
     if (restored) return;
     restored = true;
     (process.stdout as unknown as WritableHole).write = stdoutWrite;
-    try { rl.close(); } catch { /* ignore */ }
+    try { rl.close(); } catch { }
   };
 
   const onSigint = (): void => {

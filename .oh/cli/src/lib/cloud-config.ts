@@ -62,7 +62,5 @@ export async function writeCloudConfig(path: string, config: CloudConfig): Promi
     ...(config.provisionKey ? { provisionKey: config.provisionKey } : {}),
   };
   await writeFile(path, `${JSON.stringify(stored, null, 2)}\n`, { mode: 0o600 });
-  // writeFile preserves an existing file's mode, so enforce the secret-file
-  // contract after every update as well as on first creation.
   await chmod(path, 0o600);
 }

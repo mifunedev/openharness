@@ -3,18 +3,6 @@
 # desc: migrate-harness-yaml.sh carries a live harness.yaml into .devcontainer/.env, renames the file, and is a no-op on the second run
 set -euo pipefail
 
-# WHY THIS PROBE EXISTS. harness.yaml was removed in 0.4.0, and the ONE thing
-# standing between an existing install and a silently lost setting is this
-# migrator. It runs from .oh/scripts/docker-compose.sh and .oh/scripts/install.sh,
-# so it fires on every lifecycle verb — which also means a regression in it is
-# invisible until someone's sandbox comes up with the wrong name.
-#
-# The fixture exercises all four cases that differ:
-#   - a key ABSENT from .env               -> appended
-#   - a key COMMENTED in .env              -> uncommented IN PLACE
-#   - a key already holding the SAME value -> unchanged
-#   - a key holding a DIFFERENT value      -> overwritten (harness.yaml won at
-#     runtime before, so preserving the .env value would change behaviour)
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 MIGRATOR="$ROOT/.oh/scripts/migrate-harness-yaml.sh"
@@ -43,9 +31,6 @@ compose:
     - .devcontainer/docker-compose.probe.yml
 YAML
 
-# TZ commented (must uncomment in place), GIT_USER_NAME already matching,
-# SANDBOX_NAME holding a different value (must be overwritten), INSTALL_HERMES
-# absent entirely (must be appended).
 {
   printf '# TZ=America/Los_Angeles\n'
   printf 'GIT_USER_NAME=Probe User\n'
@@ -68,23 +53,18 @@ get() { grep -E "^$1=" "$work/.devcontainer/.env" | head -1 | cut -d= -f2-; }
 [[ "$(get GIT_USER_NAME)"  == "Probe User"     ]] || fails+=("GIT_USER_NAME lost its already-correct value (got '$(get GIT_USER_NAME)')")
 [[ "$(get INSTALL_HERMES)" == "true"           ]] || fails+=("INSTALL_HERMES not appended (got '$(get INSTALL_HERMES)')")
 
-# Uncomment-in-place, not append: the commented TZ line is REPLACED, so the file
-# gains one line for INSTALL_HERMES and nothing else.
 env_lines_after="$(wc -l < "$work/.devcontainer/.env")"
 (( env_lines_after == env_lines_before + 1 )) \
   || fails+=("expected exactly one new line (INSTALL_HERMES); went from $env_lines_before to $env_lines_after — a commented key was appended instead of uncommented in place")
 grep -qE '^[[:space:]]*#[[:space:]]*TZ=' "$work/.devcontainer/.env" \
   && fails+=("the commented TZ line survived — it must be replaced, not shadowed by an appended duplicate")
 
-# The summary names what changed. A silent migration is the failure mode this
-# whole design exists to avoid.
 grep -qF 'SANDBOX_NAME' <<<"$out" || fails+=("the summary does not name SANDBOX_NAME")
 grep -qF 'stalename'    <<<"$out" || fails+=("the summary does not print the replaced value, so the change is invisible")
 
 [[ -f "$work/harness.yaml.migrated" ]] || fails+=("harness.yaml was not renamed to harness.yaml.migrated")
 [[ -f "$work/harness.yaml"          ]] && fails+=("harness.yaml still exists after migration")
 
-# compose.overrides is a list .env cannot hold, so it moves to .oh/config.json.
 if command -v jq >/dev/null 2>&1; then
   [[ -f "$work/.oh/config.json" ]] || fails+=(".oh/config.json was not created for compose.overrides")
   if [[ -f "$work/.oh/config.json" ]]; then
@@ -94,7 +74,6 @@ if command -v jq >/dev/null 2>&1; then
   fi
 fi
 
-# --- Second run: a pure no-op --------------------------------------------------
 before="$(cat "$work/.devcontainer/.env")"
 set +e
 out2="$(sh "$MIGRATOR" "$work" 2>&1)"

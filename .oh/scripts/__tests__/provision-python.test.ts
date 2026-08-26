@@ -25,8 +25,6 @@ describe("provision-python.sh", () => {
   });
 
   it("creates every level of the uv tree explicitly, parents first", () => {
-    // `install -d -o U -g G a/b/c` chowns only the final component; naming the
-    // parents is what keeps `.../share/uv` from being left root-owned.
     const text = script();
     const dirs = text.slice(text.indexOf('install -d -o "$SANDBOX_USER"'));
     const uvIdx = dirs.indexOf('"$USER_HOME/.local/share/uv" \\');
@@ -42,7 +40,6 @@ describe("provision-python.sh", () => {
     const text = script();
     expect(text).toContain('export UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR:-$HOME/.local/share/uv/python}"');
     expect(text).toContain('export UV_CACHE_DIR="${UV_CACHE_DIR:-$HOME/.cache/uv}"');
-    // A managed interpreter that resolved under /root is a hard failure, not a warning.
     expect(text).toContain("/root/*) die");
     expect(text).not.toMatch(/^\s*sudo uv/m);
   });
@@ -51,8 +48,6 @@ describe("provision-python.sh", () => {
     const text = script();
     const install = text.indexOf('uv python install "$PY_VERSION"');
     expect(install).toBeGreaterThan(-1);
-    // Guarding the install behind `uv python find` would let a system
-    // interpreter mask an unwritable managed tree.
     expect(text).toContain('uv python find --managed-python "$PY_VERSION"');
   });
 

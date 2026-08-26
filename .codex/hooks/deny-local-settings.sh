@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Codex file-tool guard for operator-owned settings.local.json files.
 set -euo pipefail
 
 input=$(cat)

@@ -5,11 +5,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-// ---------------------------------------------------------------------------
-// Test infrastructure
-// ---------------------------------------------------------------------------
 
-// Track every tmpdir created so afterEach can remove them all.
 let tmpdirs: string[] = [];
 
 function mkTmp(): string {
@@ -51,9 +47,6 @@ afterEach(() => {
   tmpdirs = [];
 });
 
-// ---------------------------------------------------------------------------
-// globToRegExp — matcher semantics
-// ---------------------------------------------------------------------------
 
 describe("globToRegExp", () => {
   it("1. `cli/**` matches nested + shallow under cli/ but not siblings/prefix/bare", () => {
@@ -89,9 +82,6 @@ describe("globToRegExp", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// shouldShip — include/exclude with exclude-wins
-// ---------------------------------------------------------------------------
 
 describe("shouldShip", () => {
   it("5. exclude wins over include; non-included paths are dropped", () => {
@@ -125,9 +115,6 @@ describe("shouldShip", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// loadManifest — parsing + the hollow-out guard
-// ---------------------------------------------------------------------------
 
 describe("loadManifest", () => {
   it("present + valid → returns parsed {include, exclude}", () => {
@@ -184,20 +171,15 @@ describe("loadManifest", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// runUpdate — manifest-honoring integration (the headline contract)
-// ---------------------------------------------------------------------------
 
 describe("runUpdate — manifest payload filtering", () => {
   it("INTEGRATION: overlays allow-listed docs; patches/dist excluded; project untouched", async () => {
-    // Use ONE dedicated base dir so the project-untouched assertion owns its parent.
     const base = mkTmp();
     const src = path.join(base, "src-checkout");
     const tgt = path.join(base, "target-repo");
     fs.mkdirSync(src, { recursive: true });
     fs.mkdirSync(tgt, { recursive: true });
 
-    // Fake NEWER source checkout: version 9.9.9 + manifest + a mix of files.
     writeFile(
       src,
       ".oh/cli/package.json",
@@ -222,7 +204,6 @@ describe("runUpdate — manifest payload filtering", () => {
     );
     writeFile(src, ".oh/patches/p.diff", "--- a\n+++ b\n");
 
-    // Fake equipped target: older version + a PROJECT file outside .oh/.
     writeFile(
       tgt,
       ".oh/cli/package.json",
@@ -240,12 +221,10 @@ describe("runUpdate — manifest payload filtering", () => {
 
     expect(rc).toBe(0);
 
-    // Allow-listed payload landed.
     expect(fs.existsSync(path.join(tgt, ".oh/cli/cli.ts"))).toBe(true);
     expect(fs.existsSync(path.join(tgt, ".oh/README.md"))).toBe(true);
     expect(fs.existsSync(path.join(tgt, ".oh/manifest.json"))).toBe(true);
 
-    // The copier ships docs/ and skips patches/ and dist/.
     expect(fs.existsSync(path.join(tgt, ".oh/docs/site.md"))).toBe(true);
     expect(
       fs.existsSync(
@@ -255,12 +234,10 @@ describe("runUpdate — manifest payload filtering", () => {
     expect(fs.existsSync(path.join(tgt, ".oh/patches/p.diff"))).toBe(false);
     expect(fs.existsSync(path.join(tgt, ".oh/cli/dist/oh.js"))).toBe(false);
 
-    // Project file outside .oh/ is byte-identical (untouched).
     expect(fs.readFileSync(path.join(tgt, ".devcontainer/.env"), "utf8")).toBe(
       envBefore,
     );
 
-    // The copier emits the skip line for a non-payload file.
     expect(
       out.some((l) => l.includes("skip patches/p.diff (not in payload)")),
     ).toBe(true);
@@ -273,7 +250,6 @@ describe("runUpdate — manifest payload filtering", () => {
     fs.mkdirSync(src, { recursive: true });
     fs.mkdirSync(tgt, { recursive: true });
 
-    // Same fixture but WITHOUT a manifest.json in the source .oh/.
     writeFile(
       src,
       ".oh/cli/package.json",
@@ -295,10 +271,8 @@ describe("runUpdate — manifest payload filtering", () => {
     const rc = await runUpdate({ targetDir: tgt, fromDir: src }, io);
 
     expect(rc).toBe(0);
-    // Legacy mode copies docs/ and patches/ when the source has no manifest.
     expect(fs.existsSync(path.join(tgt, ".oh/docs/site.md"))).toBe(true);
     expect(fs.existsSync(path.join(tgt, ".oh/patches/p.diff"))).toBe(true);
-    // The update command emits the legacy-mode warning.
     expect(out.some((l) => l.includes("legacy mode"))).toBe(true);
   });
 });

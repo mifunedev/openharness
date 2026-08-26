@@ -10,16 +10,6 @@ import {
   type RunResult,
 } from "../lib/execution/index.js";
 
-/**
- * Unit tests for the `ExecutionTarget` contract's first implementation
- * (EPIC #731, issue #733).
- *
- * Every case runs against an INJECTED fake runner over an mkdtemp fixture — no
- * real subprocess is ever spawned, so the suite asserts the exact argv the
- * adapter WOULD run rather than what a live engine happens to do. The
- * behavioural compat oracle for the CLI verbs themselves lives in
- * `lifecycle.test.ts`, whose assertions are unchanged by this slice.
- */
 
 const cleanups: string[] = [];
 
@@ -29,7 +19,6 @@ afterEach(() => {
   }
 });
 
-/** An equipped-repo fixture: a root containing `.oh/scripts/`. */
 function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-exec-target-"));
   cleanups.push(d);
@@ -37,7 +26,6 @@ function makeRepo(): string {
   return d;
 }
 
-/** Drop a stub script in place so `requireLifecycleScript` is satisfied. */
 function addScript(root: string, name: string): string {
   const p = join(root, ".oh", "scripts", name);
   writeFileSync(p, "#!/usr/bin/env bash\n");
@@ -50,7 +38,6 @@ interface RecordedCall {
   opts: { stdio: "inherit" | "capture"; env?: NodeJS.ProcessEnv; timeoutMs?: number };
 }
 
-/** Queue-backed fake runner: returns results[i] for call i (last one repeats). */
 function makeRunner(results: RunResult[] = [{ status: 0 }]): {
   calls: RecordedCall[];
   run: LifecycleRunner;
@@ -63,10 +50,6 @@ function makeRunner(results: RunResult[] = [{ status: 0 }]): {
   return { calls, run };
 }
 
-/**
- * A `--print-argv` dump, one argv entry per line — the script's own
- * non-executing oracle, which is how the adapter discovers the socket overlay.
- */
 function printArgvDump(root: string, opts: { socket: boolean }): string {
   const dc = join(root, ".devcontainer");
   const lines = ["docker", "compose", "-f", join(dc, "docker-compose.yml")];
@@ -75,9 +58,6 @@ function printArgvDump(root: string, opts: { socket: boolean }): string {
   return `${lines.join("\n")}\n`;
 }
 
-// ---------------------------------------------------------------------------
-// provision()
-// ---------------------------------------------------------------------------
 
 describe("DockerComposeExecutionTarget.provision", () => {
   it("delegates the EXACT vendored argv with inherited stdio, in exactly one child", async () => {
@@ -123,9 +103,6 @@ describe("DockerComposeExecutionTarget.provision", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// attach() — synchronous in contractVersion 1 (target.ts refinement 3)
-// ---------------------------------------------------------------------------
 
 describe("DockerComposeExecutionTarget.attach", () => {
   it("hands over the terminal with the EXACT argv, synchronously", () => {
@@ -135,9 +112,6 @@ describe("DockerComposeExecutionTarget.attach", () => {
 
     const code = target.attach({ argv: ["zsh"], user: "sandbox" });
 
-    // Synchronous by contract: a raw number, never a thenable. This is what
-    // keeps `runShell(): number` — and therefore lifecycle.test.ts's
-    // `expect(runShell(...)).toBe(0)` — valid.
     expect(typeof code).toBe("number");
     expect(code).toBe(0);
     expect(calls).toEqual([
@@ -174,9 +148,6 @@ describe("DockerComposeExecutionTarget.attach", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// capabilities() — discovered, not assumed, in BOTH socket states
-// ---------------------------------------------------------------------------
 
 describe("DockerComposeExecutionTarget.capabilities", () => {
   it('includes "docker" when the socket overlay is ON, and asks the script rather than reimplementing truthy()', async () => {
@@ -223,9 +194,6 @@ describe("DockerComposeExecutionTarget.capabilities", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// exec() — the minimal contract case: argv pass-through + REAL stderr
-// ---------------------------------------------------------------------------
 
 describe("DockerComposeExecutionTarget.exec", () => {
   it("resolves { exitCode, stdout, stderr } from the runner — stderr is plumbed, not stubbed", async () => {
@@ -276,15 +244,10 @@ describe("DockerComposeExecutionTarget.exec", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// stdio: "inherit" — the streaming path, not only "capture"
-// ---------------------------------------------------------------------------
 
 describe("stdio: inherit streaming", () => {
   it('exec({ stdio: "inherit" }) streams to the terminal and captures nothing', async () => {
     const root = makeRepo();
-    // A runner that "leaks" streams even on an inherit run: the adapter must
-    // still report "" for both, because inherited output went to the terminal.
     const { calls, run } = makeRunner([{ status: 0, stdout: undefined, stderr: undefined }]);
     const target = resolveExecutionTarget({ projectRoot: root, container: "my-box", run });
 
@@ -301,17 +264,12 @@ describe("stdio: inherit streaming", () => {
     const target = resolveExecutionTarget({ projectRoot: root, container: "my-box", run });
 
     await target.provision();
-    // `request.stdio` is deliberately NOT consulted by attach(): attaching IS
-    // inheriting, so an explicit "capture" cannot silently swallow the session.
     target.attach({ argv: ["zsh"], user: "sandbox", stdio: "capture" });
 
     expect(calls.map((c) => c.opts.stdio)).toEqual(["inherit", "inherit"]);
   });
 });
 
-// ---------------------------------------------------------------------------
-// status() — engine state mapped onto the contract's five states
-// ---------------------------------------------------------------------------
 
 describe("DockerComposeExecutionTarget.status", () => {
   it.each([

@@ -12,9 +12,6 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-// cli.ts has a top-level side effect: main(process.argv.slice(2)).then(process.exit).
-// Same guard as cli.property.test.ts: stub process.exit around the import so the
-// module body's main() call cannot terminate the vitest worker.
 vi.mock("../cli.js", async (importOriginal) => {
   const original = process.exit;
   process.exit = (() => {}) as never;
@@ -34,9 +31,6 @@ const {
 const { DEFAULT_REPO_URL } = await import("../lib/remote.js");
 const { runInit } = await import("../commands/init.js");
 
-// ---------------------------------------------------------------------------
-// Test infrastructure
-// ---------------------------------------------------------------------------
 
 const cleanups: string[] = [];
 
@@ -52,7 +46,6 @@ afterEach(() => {
   }
 });
 
-/** Run git in a fixture repo with a hermetic identity (argv-array form). */
 function git(cwd: string, args: string[]): void {
   execFileSync(
     "git",
@@ -67,12 +60,6 @@ function writeFile(root: string, rel: string, content: string): void {
   writeFileSync(full, content);
 }
 
-/**
- * Local git fixture shaped like an OpenHarness checkout: an `.oh/` payload
- * (cli/package.json carrying `version`, a README) plus `.oh/templates/` so a
- * remote-sourced runInit can use BOTH paths. file:// is the only transport —
- * no network I/O.
- */
 function makePayloadRepo(version = "9.9.9"): string {
   const repo = mkTmp("oh-cli-remote-fixture-");
   git(repo, ["-c", "init.defaultBranch=main", "init"]);
@@ -86,9 +73,6 @@ function makePayloadRepo(version = "9.9.9"): string {
 
 const BUNDLED = { sourceOhDir: "/bundled/.oh", templatesDir: "/bundled/.oh/templates" };
 
-// ---------------------------------------------------------------------------
-// parseInitArgs
-// ---------------------------------------------------------------------------
 
 describe("parseInitArgs", () => {
   it("parses --from-remote and --ref alongside the existing flags", () => {
@@ -160,9 +144,6 @@ describe("parseInitArgs", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// parseUpdateArgs
-// ---------------------------------------------------------------------------
 
 describe("parseUpdateArgs", () => {
   it("parses --from-remote [--ref] and keeps --from/--dry-run/--force behavior", () => {
@@ -206,7 +187,6 @@ describe("parseUpdateArgs", () => {
     if (!r.ok) {
       expect(r.error).toContain("--from <dir>");
       expect(r.error).toContain("--from-remote");
-      // Not a usage mistake → main must not dump the help text (parity with the old behavior).
       expect(r.showHelp).toBeUndefined();
     }
   });
@@ -225,9 +205,6 @@ describe("parseUpdateArgs", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// resolveInitSource — the bundled-payload seam + both-paths asymmetry
-// ---------------------------------------------------------------------------
 
 describe("resolveInitSource", () => {
   it("asymmetry: --from-remote sets BOTH paths from the checkout; --from sets only sourceOhDir", () => {
@@ -249,7 +226,6 @@ describe("resolveInitSource", () => {
     expect(local.kind).toBe("local");
     if (local.kind === "local") {
       expect(local.sourceOhDir).toBe(resolve(join("/somewhere/checkout", ".oh")));
-      // Templates stay at the bundled default — --from sets ONE path.
       expect(local.templatesDir).toBe(BUNDLED.templatesDir);
     }
   });
@@ -304,21 +280,16 @@ describe("bundledPayloadExists", () => {
       return true;
     };
     expect(bundledPayloadExists(BUNDLED, allThere)).toBe(true);
-    // The decision keys off the manifest marker, not the directory itself.
     expect(probed).toContain(join(BUNDLED.sourceOhDir, "manifest.json"));
     expect(probed).toContain(BUNDLED.templatesDir);
 
     expect(bundledPayloadExists(BUNDLED, () => false)).toBe(false);
-    // Parent dir exists (e.g. /usr for an installed binary) but no manifest → absent.
     expect(
       bundledPayloadExists(BUNDLED, (p) => !p.endsWith("manifest.json")),
     ).toBe(false);
   });
 });
 
-// ---------------------------------------------------------------------------
-// runWithRemoteSource — fetch → downstream run → guaranteed cleanup
-// ---------------------------------------------------------------------------
 
 describe("runWithRemoteSource", () => {
   it("happy path: a file:// fixture flows through a FULL runInit and prints the version-skew line", async () => {
@@ -332,7 +303,6 @@ describe("runWithRemoteSource", () => {
       { repoUrl, stdout: (s) => cliOut.push(s) },
       (checkoutDir) => {
         seenCheckout = checkoutDir;
-        // The exact both-paths wiring main() applies for --from-remote.
         return runInit(
           {
             targetDir: target,
@@ -347,15 +317,11 @@ describe("runWithRemoteSource", () => {
     );
 
     expect(code).toBe(0);
-    // Scaffolded from the FETCHED templates…
     expect(readFileSync(join(target, "AGENTS.md"), "utf8")).toBe(
       "remote-templates-payload\n",
     );
-    // …and vendored through the existing copyOhPayload path.
     expect(readFileSync(join(target, ".oh/README.md"), "utf8")).toBe("# payload\n");
-    // Version-skew line names the FETCHED payload version and the installed CLI's.
     expect(cliOut.join("")).toContain("fetched payload v9.9.9 (installed CLI v");
-    // Temp checkout removed after a successful run.
     expect(seenCheckout).not.toBe("");
     expect(existsSync(seenCheckout)).toBe(false);
   });
@@ -366,7 +332,6 @@ describe("runWithRemoteSource", () => {
     await expect(
       runWithRemoteSource({ repoUrl, stdout: () => {} }, (dir) => {
         checkout = dir;
-        // Prove the fetch really succeeded before the downstream failure.
         expect(existsSync(join(dir, ".oh", "README.md"))).toBe(true);
         throw new Error("downstream write exploded");
       }),

@@ -9,19 +9,7 @@ import {
   HARNESS_CATALOG,
 } from "../lib/harnesses/catalog.js";
 
-/**
- * The DRIFT TEST for the harness catalog.
- *
- * `.devcontainer/Dockerfile` is the ground truth for how a harness is installed.
- * The catalog restates that so the CLI can install one WITHOUT a rebuild — which
- * means the two can silently diverge, and a divergence is invisible in review
- * (nobody diffs a TS table against a Dockerfile by eye). These assertions make
- * the divergence a failing command instead.
- *
- * Reads real repo files, spawns nothing.
- */
 
-// src/__tests__ -> src -> .oh/cli -> .oh -> repo root
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), "utf8");
 
@@ -29,7 +17,6 @@ const DOCKERFILE = read(".devcontainer/Dockerfile");
 const COMPOSE_YML = read(".devcontainer/docker-compose.yml");
 const EXAMPLE_ENV = read(".devcontainer/.example.env");
 
-/** Version-like tokens in an argv, e.g. the `0.2.39` grok-build pin. */
 function versionPins(argv: readonly string[]): string[] {
   const pins = new Set<string>();
   for (const part of argv) {
@@ -63,7 +50,6 @@ describe("harness catalog", () => {
 
   it("excludes agent_browser — it shares the INSTALL_* namespace but is not a harness", () => {
     expect(HARNESS_CATALOG.some((h) => h.harnessKey === "agent_browser")).toBe(false);
-    // Guard the premise: the key really is in the INSTALL_* namespace.
     expect(EXAMPLE_ENV).toMatch(/INSTALL_AGENT_BROWSER=/);
   });
 
@@ -96,13 +82,7 @@ describe("harness catalog", () => {
     it.each(flagged.map((h) => [h.id, h] as const))(
       "%s: the INSTALL_* key derived from harnessKey IS the build arg, and compose forwards it",
       (_id, h) => {
-        // Since harness.yaml was removed there is no envmap translating
-        // `install.<key>` into an env var: the key IS `INSTALL_<KEY>`, derived
-        // mechanically by installEnvKey(). Pin that derivation against the
-        // catalog's own buildArg so a rename of either half cannot drift past
-        // the other unnoticed.
         expect(`INSTALL_${(h.harnessKey as string).toUpperCase()}`).toBe(h.buildArg);
-        // ...and compose must actually forward it into the image build.
         expect(COMPOSE_YML).toContain(`${h.buildArg}: \${${h.buildArg}:-false}`);
       },
     );
@@ -124,16 +104,12 @@ describe("harness catalog", () => {
     );
 
     it("grok-build keeps the Dockerfile's exact pin", () => {
-      // The one hard-pinned installer — assert the pin explicitly so bumping it
-      // in the Dockerfile alone fails here rather than installing a stale CLI.
       const grok = findHarness("grok-build");
       expect(versionPins(grok!.installArgv)).toEqual(["0.2.39"]);
       expect(DOCKERFILE).toContain("bash -s 0.2.39");
     });
 
     it("installs deepagents and pi as the sandbox user, not root", () => {
-      // UV_TOOL_DIR/UV_TOOL_BIN_DIR live under /home/sandbox, and pi installs
-      // under the sandbox user's npm prefix so `pi update` needs no sudo.
       expect(findHarness("deepagents")!.installUser).toBe("sandbox");
       expect(findHarness("pi")!.installUser).toBe("sandbox");
       expect(DOCKERFILE).toContain("UV_TOOL_DIR=/home/sandbox");
@@ -144,8 +120,6 @@ describe("harness catalog", () => {
     for (const h of HARNESS_CATALOG) {
       if (h.installArgv[0] !== "bash") continue;
       expect(h.installArgv[1]).toBe("-lc");
-      // A shell string is only acceptable when it is a fixed literal. Nothing
-      // derived from user input may appear in it.
       expect(h.installArgv[2]).not.toContain("${");
       expect(h.installArgv).toHaveLength(3);
     }
@@ -153,7 +127,6 @@ describe("harness catalog", () => {
 
   it("findHarness resolves known ids and rejects unknown ones", () => {
     expect(findHarness("opencode")?.harnessKey).toBe("opencode");
-    // The slug/key mismatch that makes hand-editing .devcontainer/.env error-prone.
     expect(findHarness("grok-build")?.harnessKey).toBe("grok_build");
     expect(findHarness("nope")).toBeUndefined();
   });

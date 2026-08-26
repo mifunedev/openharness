@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Sole locked/versioned ablation swap, restore, and crash-recovery state machine.
 set -euo pipefail
 
 _ablate_root() { printf '%s\n' "${AUDIT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)}"; }
@@ -53,8 +52,6 @@ _ablate_lock() {
   _ablate_reject_state_symlinks || return 1
   mkdir -p "$ABLATE_STATE_ROOT"
   _ablate_reject_state_symlinks || return 1
-  # The state directory itself is the serialization guard; no persistent guard
-  # file is left behind after a successful run.
   exec {ABLATE_GUARD_FD}<"$ABLATE_STATE_ROOT"
   flock "$ABLATE_GUARD_FD"
   exec {ABLATE_LOCK_FD}>"$ABLATE_LOCK"
@@ -67,8 +64,6 @@ _ablate_lock() {
 }
 _ablate_unlock() {
   [[ -n ${ABLATE_LOCK_FD:-} ]] || return 0
-  # Serialize unlink with lock opening. This prevents a waiter holding an old inode
-  # while a newcomer locks a newly-created inode at the same pathname.
   flock "$ABLATE_GUARD_FD"
   rm -f "$ABLATE_LOCK"
   flock -u "$ABLATE_LOCK_FD" || true
@@ -94,7 +89,6 @@ _ablate_recover_locked() {
         [[ -f $ABLATE_TARGET && ! -L $ABLATE_TARGET ]] || { echo "ablate: contradictory PREPARED state" >&2; return 1; }
         _ablate_same_bytes "$ABLATE_TARGET" "$ABLATE_BACKUP" || { echo "ablate: PREPARED copies differ; refusing overwrite" >&2; return 1; }
       else
-        # Crash window: target was removed after PREPARED, before SWAPPED landed.
         _ablate_restore_copy || return 1
       fi
       _ablate_clear_state
@@ -174,8 +168,6 @@ _ablate_on_trap() {
   case $sig in EXIT) prior=${ABLATE_PRIOR_EXIT:-};; INT) prior=${ABLATE_PRIOR_INT:-};; TERM) prior=${ABLATE_PRIOR_TERM:-};; HUP) prior=${ABLATE_PRIOR_HUP:-};; esac
   trap - EXIT INT TERM HUP
   ablate_restore "$ABLATE_TARGET" || rc=$?
-  # ablate_restore reinstates the exact prior trap definitions. Invoke the
-  # displaced handler once for the signal already being handled.
   [[ -z $prior ]] || eval "$prior"
   [[ $sig == EXIT ]] || exit $((128 + $(kill -l "$sig")))
   return "$rc"

@@ -16,24 +16,18 @@ fail() { echo "REGRESSION: $1" >&2; exit 1; }
 
 content="$(cat "$RUN_SH")"
 
-# (a) No bare `cat > "$RESULTS"` truncation — the header/rows must be built into the
-#     temp sibling, never streamed straight onto the live scoreboard.
 if grep -qE 'cat[[:space:]]+>[[:space:]]*"\$RESULTS"' <<<"$content"; then
   fail "non-atomic write reintroduced: bare \`cat > \"\$RESULTS\"\` truncation present (build into \$tmp, then mv -f)"
 fi
 
-# (b) Final replacement via `mv -f ... "$RESULTS"`.
 if ! grep -qE 'mv[[:space:]]+-f[[:space:]]+.*"\$RESULTS"' <<<"$content"; then
   fail "atomic replacement missing: no \`mv -f ... \"\$RESULTS\"\` found for the final scoreboard swap"
 fi
 
-# (c) EXIT trap referencing the temp-file handle, so a crash mid-write removes the sibling temp.
 if ! grep -qE 'trap[[:space:]].*\$tmp.*EXIT' <<<"$content"; then
   fail "temp-file cleanup trap missing: no \`trap ... \$tmp ... EXIT\` found"
 fi
 
-# (d) prior_row() body must resolve carry-forward from the \$RESULTS_ORIG snapshot,
-#     never via a live \`grep ... "\$RESULTS"\` read of the file being rewritten.
 prior_row_body="$(awk '/^prior_row\(\)/{f=1} f{print} f&&/^}/{exit}' <<<"$content")"
 if [[ -z "$prior_row_body" ]]; then
   fail "prior_row() function not found in run.sh"

@@ -20,13 +20,9 @@ fail() {
 
 [ -d "$SKILLS" ] || fail ".oh/skills is missing"
 
-# Inspect every TOP-LEVEL entry. Directories are skills; the only files allowed are
-# single-file skills, which Pi requires to carry a `description:` in frontmatter.
 while IFS= read -r -d '' entry; do
   base="$(basename "$entry")"
   if [[ "$base" == *.md ]]; then
-    # A top-level .md is a single-file skill — it MUST have a description.
-    # Read the leading YAML frontmatter (between the first pair of `---` fences).
     fm="$(awk 'NR==1 && $0!="---"{exit} NR==1{next} /^---[[:space:]]*$/{exit} {print}' "$entry")"
     if ! grep -qE '^description:[[:space:]]*\S' <<<"$fm"; then
       fail "top-level skills file $base has no \`description:\` frontmatter — Pi loads it as a malformed single-file skill (\"description is required\"). Move non-skill docs out of .oh/skills/."

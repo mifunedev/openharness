@@ -114,10 +114,6 @@ describe("SemVer reservation", () => {
     }
   });
 
-  // A bare CalVer date is well-formed SemVer, so the validator cannot reject it.
-  // The guard against a CalVer release is that the version now comes from
-  // package.json rather than the clock; what fails here are the CalVer forms
-  // that are not valid SemVer — the -N same-day suffix and zero-padded dates.
   it("accepts a bare date-shaped version because it is well-formed SemVer", () => {
     expect(parseSemVer("2026.8.7").version).toBe("2026.8.7");
   });
@@ -214,8 +210,6 @@ describe("GitHub reservation bridge", () => {
       releaseVersion: VERSION,
       reservationKind: "created",
     });
-    // The step output stays bare so GHCR tags and the concurrency group are
-    // unchanged; only the git ref and the Release name carry the v.
     expect(githubOutputLines(result)).toContain("releaseVersion=0.1.0\n");
     expect(githubOutputLines(result)).not.toContain("releaseVersion=v");
     assertFetchDone(fetchImpl);
@@ -240,7 +234,6 @@ describe("GitHub reservation bridge", () => {
       releaseVersion: VERSION,
       reservationKind: "already-released",
     });
-    // No second /git/refs POST: the version is an input, not a search space.
     assertFetchDone(fetchImpl);
   });
 
@@ -320,7 +313,6 @@ describe("release workflow contract", () => {
   it("triggers for main and master without dropping intermediate pushes", () => {
     expect(source).toMatch(/push:\n\s+branches:\n\s+- main\n\s+- master/);
     expect(source).not.toMatch(/^concurrency:/m);
-    // The branch push stays the only trigger; a tag push must not release.
     expect(source).not.toMatch(/push:\n(\s+branches:[\s\S]*?)?\s+tags:/);
   });
 
@@ -331,7 +323,6 @@ describe("release workflow contract", () => {
     expect(source).not.toContain("RELEASE_TIMESTAMP");
     expect(source).not.toContain("github.event.repository.pushed_at");
     expect(source).not.toContain("github.event.head_commit.timestamp");
-    // The version must be read before it is reserved.
     expect(source.indexOf("Read the release version from package.json")).toBeLessThan(
       source.indexOf("Atomically reserve the SemVer tag"),
     );
@@ -358,7 +349,6 @@ describe("release workflow contract", () => {
     expect(source).toContain("docker buildx build --load");
     expect(source).toContain('docker push "ghcr.io/mifunedev/openharness:${RELEASE_VERSION}"');
     expect(source).toContain('docker push "ghcr.io/mifunedev/openharness:sha-${RELEASE_SHA}"');
-    // GHCR tags stay bare — no v prefix reaches the registry.
     expect(source).not.toContain("openharness:v$");
     expect(source).not.toContain('openharness:${RELEASE_SHA}"');
     expect(source).toContain(".oh/scripts/promote-release-latest.sh promote");
@@ -383,7 +373,6 @@ describe("release workflow contract", () => {
     expect(source).toContain("needs.publish-cli.result == 'success'");
     expect(source).toContain("make_latest: process.env.MAKE_LATEST");
     expect(source).toContain("draft: false");
-    // The GitHub Release name carries the v prefix; the version stays bare.
     expect(source).toContain("name: `v${releaseVersion}`");
   });
 });

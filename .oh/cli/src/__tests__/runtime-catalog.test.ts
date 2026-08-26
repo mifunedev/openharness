@@ -11,18 +11,9 @@ import {
   RUNTIME_CATALOG,
 } from "../lib/runtimes/catalog.js";
 
-// src/__tests__ -> src -> .oh/cli -> .oh -> repo root
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const read = (p: string): string => readFileSync(join(REPO_ROOT, p), "utf8");
 
-/**
- * Remove TypeScript comments so an assertion can be about code alone.
- *
- * Deliberately simple: block comments, then line comments whose `//` is not
- * preceded by `:` (which would eat a `https://` URL out of a string literal).
- * It is not a parser and does not need to be — it runs over two files whose
- * shape this repo controls.
- */
 function stripComments(src: string): string {
   return src
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -53,7 +44,6 @@ describe("runtime catalog shape", () => {
 
   it("gives every entry with open work a tracking issue", () => {
     for (const r of RUNTIME_CATALOG) {
-      // `docker` has none, and that is the point: it is in use, not pending.
       if (r.state === "active") expect(r.tracking, r.id).toBeUndefined();
       else expect(r.tracking, r.id).toMatch(/^#\d+$/);
     }
@@ -75,14 +65,6 @@ describe("runtime catalog shape", () => {
   });
 });
 
-/**
- * The load-bearing assertion of this PR: `oh runtime` writes NO config key.
- *
- * #806 § B1 records `sandbox.substrate` vs `sandbox.runtime` as an OPEN
- * decision owned by #731, and says deciding it elsewhere forks the
- * ExecutionTarget seam. If a later change quietly adds a key here, this test
- * and `.oh/evals/probes/runtime-preflight-gate.sh` both go red.
- */
 describe("no runtime selector is introduced", () => {
   const sources = [
     ".oh/cli/src/lib/runtimes/catalog.ts",
@@ -91,9 +73,6 @@ describe("no runtime selector is introduced", () => {
 
   it("names neither candidate config key in the implementation", () => {
     for (const path of sources) {
-      // Comments explaining WHY the key is absent are the whole point of this
-      // PR, so they must survive — the assertion is about CODE. Strip comments
-      // first, then look for either key in what actually executes.
       const body = stripComments(read(path));
       expect(body, path).not.toContain("sandbox.substrate");
       expect(body, path).not.toContain("sandbox.runtime");
@@ -114,11 +93,6 @@ describe("no runtime selector is introduced", () => {
   });
 });
 
-/**
- * Drift test against the measurement record. These two numbers are the whole
- * reason `install` refuses on this host; if the catalog and #805 disagree, the
- * command lies to the operator.
- */
 describe("microsandbox preflight matches the measured blockers (#805)", () => {
   const msb = findRuntime("microsandbox")!;
 
@@ -137,9 +111,6 @@ describe("microsandbox preflight matches the measured blockers (#805)", () => {
   });
 
   it("still describes the base image the Dockerfile actually pins", () => {
-    // The remediation text names debian:bookworm-slim. If the base image is
-    // upgraded (#807) the blocker may clear, and this message must not keep
-    // blaming a base that is no longer there.
     const glibc = msb.preflight.find((c) => c.id === "glibc")!;
     const dockerfile = read(".devcontainer/Dockerfile");
     const claimsBookworm = glibc.remediation.includes("debian:bookworm-slim");
@@ -148,9 +119,6 @@ describe("microsandbox preflight matches the measured blockers (#805)", () => {
   });
 
   it("uses the installer command recorded by the P0 spike, not an invented one", () => {
-    // Provenance: `.oh/tasks/microsandbox-substrate/next-tasks.md` on PR #803.
-    // msb has never produced a binary in this harness, so the spike is the only
-    // ground truth that exists.
     expect(msb.installArgv).toEqual([
       "bash",
       "-lc",
@@ -180,8 +148,6 @@ describe("docker is the active runtime and is checked, not assumed", () => {
   });
 
   it("declares a real check rather than assuming the daemon answers", () => {
-    // The point of listing docker at all: `oh runtime status` must be able to
-    // say "your daemon is down" instead of silently implying it is fine.
     expect(docker.preflight.length).toBeGreaterThan(0);
     const check = docker.preflight[0];
     expect(check.id).toBe("command");
@@ -194,8 +160,6 @@ describe("docker is the active runtime and is checked, not assumed", () => {
   });
 
   it("probes the HOST, not the container", () => {
-    // The daemon lives on the machine holding the `oh` binary. Asking inside
-    // the sandbox would answer about the wrong kernel.
     for (const check of docker.preflight) expect(check.scope).toBe("host");
   });
 
@@ -231,8 +195,6 @@ describe("gvisor is present but not installable", () => {
 
 describe("compareVersions", () => {
   it("compares numerically, not lexically", () => {
-    // The bug this guards: "2.9" > "2.39" under a string compare, which would
-    // pass the glibc floor on a host that does not meet it.
     expect(compareVersions("2.9", "2.39")).toBeLessThan(0);
     expect(compareVersions("2.39", "2.39")).toBe(0);
     expect(compareVersions("2.41", "2.39")).toBeGreaterThan(0);
@@ -248,7 +210,6 @@ describe("compareVersions", () => {
 
 describe("parseGlibcVersion", () => {
   it("takes the trailing version, not the packaging string", () => {
-    // Both real forms measured in #805.
     expect(parseGlibcVersion("ldd (Ubuntu GLIBC 2.35-0ubuntu3.11) 2.35")).toBe("2.35");
     expect(parseGlibcVersion("ldd (Debian GLIBC 2.36-9+deb12u7) 2.36")).toBe("2.36");
     expect(parseGlibcVersion("ldd (GNU libc) 2.39")).toBe("2.39");

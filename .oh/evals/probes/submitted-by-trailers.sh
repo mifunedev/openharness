@@ -22,15 +22,11 @@ missing=()
 grep -q 'Submitted-by:' "$SPEC" || missing+=("/spec execute scaffold commit trailer")
 grep -q 'Submitted-by:' "$PROMPT" || missing+=("build session-prompt commit trailer")
 
-# The trailer must name whoever ACTUALLY submits, not a fixed name. Both surfaces state
-# this in their own words, so accept either phrasing on either file.
 grep -qi 'active submitter\|active harness\|model/agent that actually' "$SPEC" \
   || missing+=("/spec execute does not tie the trailer to the active submitter")
 grep -qi 'active submitter\|active harness\|model/agent that actually' "$PROMPT" \
   || missing+=("the session prompt does not tie the trailer to the active submitter")
 
-# The trailer is MANDATORY on the build path — a merely-suggested trailer is how
-# attribution silently stops happening.
 grep -qi 'mandatory' "$PROMPT" || missing+=("the session prompt does not mark the Submitted-by trailer mandatory")
 
 if grep -q 'Co-Authored-By: Claude Opus' "$SPEC"; then

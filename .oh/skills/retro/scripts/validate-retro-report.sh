@@ -28,7 +28,6 @@ if [[ "$last_line" != 'STATUS: RETRO-DONE' ]]; then
   exit 1
 fi
 
-# Validate table rows enough to catch skipped evidence/verdict/confidence fields.
 awk -F'|' '
   /^\|[[:space:]]*[A-Z0-9-]+[[:space:]]*\|/ {
     id=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", id)
@@ -47,7 +46,6 @@ awk -F'|' '
   END { if (rows < 1) { print "REGRESSION: no hypothesis rows" > "/dev/stderr"; exit 1 } }
 ' "$REPORT"
 
-# Every IDENTITY promotion candidate must carry a triage tag and a probe id.
 if grep -q '^Proposed IDENTITY.md addition(s):' "$REPORT"; then
   while IFS= read -r cand; do
     [[ "$cand" == "- none" ]] && continue

@@ -71,7 +71,6 @@ describe("path-guard extension", () => {
     expect(captured.commands.has("guard")).toBe(true);
   });
 
-  // Fix #1: hasUI guard tests
   describe("headless mode (hasUI === false)", () => {
     it("does not call confirm for write on sensitive path in headless mode", async () => {
       const { ctx } = makeCtx(async () => false, false);
@@ -110,7 +109,6 @@ describe("path-guard extension", () => {
       const { ctx } = makeCtx(async () => false);
       const result = await fire(
         captured.toolCallHandlers,
-        // Fix #5: canonical key is `path` (verified from pi write.ts writeSchema)
         { toolName: "write", input: { path } },
         ctx,
       );
@@ -175,7 +173,6 @@ describe("path-guard extension", () => {
       expect(result).toBeUndefined();
     });
 
-    // Fix #4: capitalized tool names still fire the guard (toLowerCase normalization)
     it("fires guard for capitalized tool names (Write, Edit)", async () => {
       for (const toolName of ["Write", "Edit"]) {
         const { ctx } = makeCtx(async () => false);

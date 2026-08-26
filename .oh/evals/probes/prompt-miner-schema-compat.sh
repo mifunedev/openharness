@@ -15,7 +15,6 @@ SKILL_DIR="$ROOT/.oh/skills/prompt-miner"
 ENGINE="$SKILL_DIR/scripts/mine-traces.mjs"
 FIXTURES="$SKILL_DIR/scripts/__tests__/fixtures"
 
-# --- SKIPPED: hard prerequisites genuinely absent --------------------------
 if [[ ! -d "$SKILL_DIR" ]]; then
   echo "SKIPPED: prompt-miner skill dir absent: $SKILL_DIR" >&2
   exit 2
@@ -33,7 +32,6 @@ if ! command -v node >/dev/null 2>&1; then
   exit 2
 fi
 
-# --- Run the engine hermetically (no git, no network, fixtures only) -------
 set +e
 out="$(node "$ENGINE" --dry-run --no-git --fixtures-dir "$FIXTURES" 2>/dev/null)"
 rc=$?
@@ -44,8 +42,6 @@ if [[ "$rc" -ne 0 || -z "$out" ]]; then
   exit 1
 fi
 
-# --- Assert: non-zero sessions AND non-zero tool-errors --------------------
-# Parse the dry-run JSON with node (the dataset is printed to stdout).
 read -r sessions tool_errors < <(
   printf '%s' "$out" | node -e '
     let d = "";

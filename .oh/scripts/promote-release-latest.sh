@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Promote the canonical release branch's immutable image to latest by digest.
 set -euo pipefail
 
 usage() {
@@ -104,8 +103,6 @@ if [[ -z "$digest" ]]; then
   exit 1
 fi
 
-# Address the immutable source by digest so latest never depends on a mutable
-# local tag or on a second registry tag lookup after the canonical-head check.
 docker buildx imagetools create --tag "$LATEST_IMAGE" "${VERSION_IMAGE}@${digest}"
 printf 'Promoted %s@%s to %s from canonical %s\n' \
   "$VERSION_IMAGE" "$digest" "$LATEST_IMAGE" "$canonical_branch"

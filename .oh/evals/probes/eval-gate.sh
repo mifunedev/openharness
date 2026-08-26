@@ -19,8 +19,6 @@ for f in "$SPEC"; do
   fi
 done
 
-# --- the rule, on the surface that runs the gate ---------------------------
-# The gate now lives inside execute.md's build ⇄ audit loop rather than a numbered stage.
 spec_section=$(awk '
   /^### 5\. `build ⇄ audit`/ {f=1; print; next}
   f && /^### / {f=0}
@@ -32,13 +30,11 @@ if [[ -z "$spec_section" ]]; then
   exit 1
 fi
 
-# Negative assertion: the old bare-presence gate rule must be gone.
 if grep -qE 'Any[[:space:]]+.?REGRESSION' <<<"$spec_section"; then
   echo "REGRESSION: /spec execute's eval gate still uses the bare \"Any \`REGRESSION\`\" rule (must key on delta + exit code)" >&2
   exit 1
 fi
 
-# Positive assertions (AND-logic): the corrected vocabulary must be present.
 missing=()
 grep -qiE 'green.*red'         <<<"$spec_section" || missing+=("green->red language")
 grep -qi 'exit'                <<<"$spec_section" || missing+=("runner exit-code language")

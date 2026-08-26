@@ -11,22 +11,16 @@ VENDOR_TS="$ROOT/.oh/cli/src/lib/vendor.ts"
 CLI_TS="$ROOT/.oh/cli/src/cli.ts"
 TEST_TS="$ROOT/.oh/cli/src/__tests__/update.test.ts"
 
-# SKIPPED: command not present on this base (lets the probe land green pre-slice).
 if [ ! -f "$UPDATE_TS" ]; then
   echo "SKIPPED oh update command not present" >&2
   exit 2
 fi
 
-# update.ts must expose the runUpdate entrypoint.
 if ! grep -q 'export async function runUpdate' "$UPDATE_TS"; then
   echo "REGRESSION update.ts missing 'export async function runUpdate'" >&2
   exit 1
 fi
 
-# Path-escape guard: the guard (assertDestInTarget + its message literal) now lives
-# in the shared lib/vendor.ts, which update.ts imports and applies via copyOhPayload.
-# Verify the message at its source of truth, and that update.ts routes writes through
-# the guarded copier.
 if ! grep -q 'refusing to write outside target .oh' "$VENDOR_TS"; then
   echo "REGRESSION vendor.ts missing path-escape guard message" >&2
   exit 1
@@ -36,7 +30,6 @@ if ! grep -q 'copyOhPayload' "$UPDATE_TS"; then
   exit 1
 fi
 
-# Version gating: must read package.json and refuse downgrades.
 if ! grep -q 'package.json' "$UPDATE_TS"; then
   echo "REGRESSION update.ts missing package.json version reference" >&2
   exit 1
@@ -46,7 +39,6 @@ if ! grep -q 'downgrade' "$UPDATE_TS"; then
   exit 1
 fi
 
-# cli.ts must wire runUpdate and dispatch on the 'update' subcommand.
 if ! grep -q 'runUpdate' "$CLI_TS"; then
   echo "REGRESSION cli.ts does not reference runUpdate" >&2
   exit 1
@@ -56,20 +48,16 @@ if ! grep -Eq 'first === "update"' "$CLI_TS"; then
   exit 1
 fi
 
-# cli.ts help must advertise the update command.
 if ! grep -q 'oh update' "$CLI_TS"; then
   echo "REGRESSION cli.ts help does not advertise 'oh update'" >&2
   exit 1
 fi
 
-# Test file must exist.
 if [ ! -f "$TEST_TS" ]; then
   echo "REGRESSION update.test.ts missing" >&2
   exit 1
 fi
 
-# Negative-guard (static deletion proxy): update.ts must import + reference the
-# shared .oh-scoped path guard (defined in lib/vendor.ts, message checked above).
 for token in 'assertDestInTarget' 'targetOh'; do
   if ! grep -q "$token" "$UPDATE_TS"; then
     echo "REGRESSION update.ts missing negative-guard token: $token" >&2

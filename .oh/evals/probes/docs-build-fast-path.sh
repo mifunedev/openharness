@@ -26,8 +26,6 @@ script_value() {
 
 failures=()
 
-# .oh/docs now holds the GitHub-readable markdown docs; only Docusaurus BUILD
-# machinery (a package.json / docusaurus.config.* / sidebars.*) is forbidden there.
 [[ ! -e "$ROOT/.oh/docs/package.json" ]] || failures+=(".oh/docs must not regain a Docusaurus package.json (the rendered site stays in openharness-web)")
 for __cfg in "$ROOT/.oh/docs"/docusaurus.config.* "$ROOT/.oh/docs"/sidebars.*; do
   [[ -e "$__cfg" ]] && failures+=(".oh/docs must not contain Docusaurus build config: $(basename "$__cfg")")
@@ -78,8 +76,6 @@ done
 grep -Fiq 'deepwiki' "$README" || failures+=("README.md must point readers to DeepWiki for generated navigation")
 grep -Fq '.oh/docs/README.md' "$README" || failures+=("README.md must point readers to .oh/docs/README.md")
 
-# Keep eval/probe code from reintroducing docs-build commands. Historical task
-# artifacts are excluded because they describe old completed work.
 if git -C "$ROOT" grep -nE 'docusaurus build|pnpm (run )?docs:build|pnpm --dir \.oh/docs build|@openharness/docs' -- \
   ':!.oh/evals/probes/docs-build-fast-path.sh' \
   ':!.oh/tasks/**' \

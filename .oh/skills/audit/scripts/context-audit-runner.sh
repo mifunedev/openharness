@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# /audit context runner — Tier-2 ablation harness
-# Usage:
-#   ./runner.sh --ablate <relative-path>   # e.g. .oh/context/IDENTITY.md
-#   ./runner.sh --baseline                 # record baseline probe outputs only
-#
 set -euo pipefail
 
 HARNESS="$(cd "${AUDIT_ROOT:-$(git rev-parse --show-toplevel)}" && pwd -P)"
@@ -15,15 +10,12 @@ trap 'rm -rf "$RESULTS"' EXIT
 source "$HARNESS/.oh/scripts/ablate.sh"
 ablate_recover
 
-# ── helpers ──────────────────────────────────────────────────────────────────
 
 extract_body() {
-  # Strip YAML frontmatter; print body (everything after closing ---)
   awk '/^---/{n++; if(n==2){p=1;next}} p{print}' "$1"
 }
 
 extract_markers() {
-  # Print one marker per line from probe frontmatter markers: list
   awk '/^markers:/{f=1;next} f && /^  - /{print substr($0,5)} f && /^[a-z]/{exit}' "$1"
 }
 
@@ -79,7 +71,6 @@ evaluate() {
   fi
 }
 
-# ── main ─────────────────────────────────────────────────────────────────────
 
 MODE="${1:-}"
 if [ -z "$MODE" ]; then
@@ -90,7 +81,6 @@ fi
 if [ "$MODE" = "--baseline" ]; then
   echo "=== Baseline probe run ==="
   run_probes "baseline"
-  # Ephemeral scratch, outside the repo. Nothing under .oh/ persists a run.
   OUT_DIR="${TMPDIR:-/tmp}/oh-context-audit/$TODAY"
   mkdir -p "$OUT_DIR"
   cp "$RESULTS"/baseline-*.txt "$OUT_DIR/"

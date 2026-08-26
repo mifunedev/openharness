@@ -26,8 +26,6 @@ done
 for kept in eval benchmark ci-status health-check wiki; do
   [[ -f "$ROOT/.oh/skills/$kept/SKILL.md" ]] || fail "retained instrument missing: $kept"
 done
-# critique/approve were NOT absorbed into /audit — they were retired outright with the
-# critique gate (spec-simplification US-001). They must not reappear as standalone skills.
 for retired in critique approve; do
   [[ ! -e "$ROOT/.oh/skills/$retired" ]] || fail "retired gate skill remains: $retired"
 done

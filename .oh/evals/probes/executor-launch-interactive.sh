@@ -6,8 +6,6 @@
 #       `--print` (which makes the harness answer once and exit), and no arm pipes or
 #       redirects the launched command (which replaces the child's TTY with a pipe, and an
 #       interactive agent session cannot run without a terminal). Both defects were live.
-#
-# The single-quoted grep patterns below are pinned LITERALS.
 # shellcheck disable=SC2016
 set -u
 
@@ -24,37 +22,23 @@ done
 
 missing=()
 
-# Both files DOCUMENT these rules in their header comments at length, so a whole-file grep
-# would stay green after the actual defect was reintroduced. Strip full-line comments first;
-# every assertion below reads CODE only.
 fm_code="$(grep -v '^[[:space:]]*#' "$FIRSTMATE")"
 rn_code="$(grep -v '^[[:space:]]*#' "$RUNNER")"
 
-# --- (1) no `--print` on any launch path ------------------------------------
-# `--print` makes the harness answer once and exit; a session that walks a whole task
-# graph over many turns cannot be one-shot.
 printf '%s\n' "$fm_code" | grep -Fq -- '--print' \
   && missing+=("firstmate.sh: a launch path still carries --print (the child would answer once and exit)")
 printf '%s\n' "$rn_code" | grep -Fq -- '--print' \
   && missing+=("session-runner.sh: a launch path still carries --print")
 
-# --- (2) the prompt travels as ARGV, never on stdin -------------------------
-# `cat <prompt> | claude` makes stdin a PIPE rather than a TTY.
 printf '%s\n' "$fm_code" | grep -Eq 'cat [^|]*\| *(claude|pi|codex)' \
   && missing+=("firstmate.sh: a launch arm still pipes the prompt into the harness on stdin (stdin would not be a TTY)")
 
-# Each of the three harness arms must build the prompt as an argv read back inside the
-# LAUNCHED shell. Without this the assertion above is satisfied vacuously by an arm that
-# passes no prompt at all.
 for arm in claude pi codex; do
   printf '%s\n' "$fm_code" | grep -Fq "printf '$arm" \
     || printf '%s\n' "$fm_code" | grep -Fq "$arm %s \"\$(cat" \
     || missing+=("firstmate.sh: the $arm arm does not deliver the prompt as \"\$(cat <file>)\" initial argv")
 done
 
-# --- (3) the launched command is never piped or redirected ------------------
-# `tmux pipe-pane` is the sanctioned logging path: it attaches to the pane AFTER it
-# exists, so the child keeps its terminal. A pipe or redirect ON the command does not.
 printf '%s\n' "$rn_code" | grep -Fq '| tee' \
   && missing+=("session-runner.sh: the launched command is piped into tee again (this takes the child's TTY away — the exact defect observed 2026-08-23)")
 printf '%s\n' "$rn_code" | grep -Eq '\$cmd[^\n]*(\||>)' \

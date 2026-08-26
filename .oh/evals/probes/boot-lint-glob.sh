@@ -16,12 +16,8 @@ for workflow in "${WORKFLOWS[@]}"; do
     exit 2
   fi
 
-  # Unanchored match: the invocation is indented inside a `run: |` block, so a
-  # `^shellcheck` anchor would match nothing. Grab the first matching line.
   line=$(grep 'shellcheck -S warning' "$workflow" | head -1 || true)
 
-  # No false PASS on zero-match: workflow present but the lint line is gone is a
-  # regression, not a pass.
   if [[ -z "$line" ]]; then
     echo "REGRESSION: no 'shellcheck -S warning' invocation found in $workflow" >&2
     exit 1

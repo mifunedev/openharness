@@ -21,8 +21,6 @@ COMPOSE_PRIMARY="$ROOT/.devcontainer/docker-compose.yml"
 DOCKERFILE="$ROOT/.devcontainer/Dockerfile"
 DOC="$ROOT/.oh/docs/deployment-prebuilt-image.md"
 
-# SKIPPED (exit 2): Flavor B (image-only) artifacts are not present on this
-# branch yet — do not REGRESSION on absence.
 if [[ ! -f "$COMPOSE_IO" ]] || [[ ! -f "$ENTRYPOINT" ]] || ! grep -q 'OH_IMAGE_ONLY' "$ENTRYPOINT"; then
   echo "SKIPPED: Flavor B (image-only) artifacts not present (docker-compose.image-only.yml and/or entrypoint.sh OH_IMAGE_ONLY gate absent)" >&2
   exit 2
@@ -30,13 +28,6 @@ fi
 
 fails=()
 
-# (1) entrypoint.sh: the OH_IMAGE_ONLY gate must appear strictly BEFORE the
-#     host-UID-sync `elif [ -d "$HARNESS_DIR" ]` branch, and the seed helper
-#     + its marker must be present.
-# NOTE: each pipe is `|| true`-guarded at the statement level — under
-# `pipefail`, a no-match `grep -n` (exit 1) makes the WHOLE pipeline's exit
-# status non-zero even though `head`/`cut` succeed on empty input, which
-# would otherwise abort the script under `set -e` with no named failure.
 gate_line="$(grep -n 'if \[.*OH_IMAGE_ONLY' "$ENTRYPOINT" | head -1 | cut -d: -f1)" || true
 elif_line="$(grep -n 'elif \[ -d "\$HARNESS_DIR" \]' "$ENTRYPOINT" | head -1 | cut -d: -f1)" || true
 if [[ -z "$gate_line" ]] || [[ -z "$elif_line" ]] || (( gate_line >= elif_line )); then
@@ -47,9 +38,6 @@ grep -Fq 'seed_workspace_volume' "$ENTRYPOINT" \
 grep -Fq '.image-seeded' "$ENTRYPOINT" \
   || fails+=("entrypoint.sh must reference the .image-seeded marker")
 
-# (2) BEHAVIORAL seed sim — extract ONLY the fenced seed_workspace_volume
-#     function (entrypoint.sh ends in `exec "$@"`, so we never source the
-#     whole file) and run it against real mktemp -d dirs.
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
@@ -73,7 +61,6 @@ else
     echo "fixture-sentinel-$$" > "$fixture/.oh/SENTINEL_FIXTURE"
     export OH_IMAGE_SEED_SRC="$fixture"
 
-    # (a) fresh empty dest: seeds .oh/, writes the marker, flags this-boot.
     dest_a="$(mktemp -d "$tmp/dest-a.XXXXXX")"
     if seed_workspace_volume "$dest_a"; then :; fi
     if [[ ! -d "$dest_a/.oh" ]] || [[ ! -f "$dest_a/.oh/.image-seeded" ]] \
@@ -81,15 +68,11 @@ else
       fails+=("seed sim (a): fresh empty dest must seed .oh/, write the .image-seeded marker, and set OH_IMAGE_SEEDED_THIS_BOOT=1")
     fi
 
-    # (b) second call on the same (now-seeded) dest: idempotent, no re-copy.
     if seed_workspace_volume "$dest_a"; then :; fi
     if [[ "${OH_IMAGE_SEEDED_THIS_BOOT:-}" != "0" ]]; then
       fails+=("seed sim (b): a second call on an already-seeded dest must be idempotent (OH_IMAGE_SEEDED_THIS_BOOT=0, no re-copy)")
     fi
 
-    # (c) fresh dest pre-populated with its OWN .oh/ (distinct sentinel, no
-    #     marker): existing content is preserved and the fixture is NOT
-    #     copied in (no clobber of a populated-but-unmarked volume).
     dest_c="$(mktemp -d "$tmp/dest-c.XXXXXX")"
     mkdir -p "$dest_c/.oh"
     echo "own-sentinel-$$" > "$dest_c/.oh/OWN_SENTINEL"
@@ -103,8 +86,6 @@ else
   fi
 fi
 
-# (3) docker-compose.image-only.yml shape: named volume mount, OH_IMAGE_ONLY=1,
-#     parameterized image:, a pull_policy:, and NO build:/`..:` bind mount.
 grep -Eq '^[[:space:]]*-[[:space:]]*oh_workspace:\$\{OH_PROJECT_ROOT' "$COMPOSE_IO" \
   || fails+=("docker-compose.image-only.yml must mount a named oh_workspace volume at \${OH_PROJECT_ROOT}")
 grep -Fq 'OH_IMAGE_ONLY=1' "$COMPOSE_IO" \
@@ -120,8 +101,6 @@ if grep -Eq '^[[:space:]]*-[[:space:]]*\.\.:' "$COMPOSE_IO"; then
   fails+=("docker-compose.image-only.yml must NOT have a '..:' bind mount (no checkout)")
 fi
 
-# (4) REGRESSION FLOOR: the primary docker-compose.yml must still keep its
-#     `..:` bind mount — Flavor B must not touch Flavor A's contract.
 if [[ ! -f "$COMPOSE_PRIMARY" ]]; then
   fails+=("primary docker-compose.yml not found at $COMPOSE_PRIMARY")
 else
@@ -129,7 +108,6 @@ else
     || fails+=("docker-compose.yml lost its '..:' bind mount — regression floor broken")
 fi
 
-# (5) Deploy doc: placeholder gone, mentions oh_workspace + OH_IMAGE_ONLY.
 if [[ ! -f "$DOC" ]]; then
   fails+=("deploy doc not found at $DOC")
 else
@@ -143,8 +121,6 @@ else
     || fails+=("deployment-prebuilt-image.md must mention OH_IMAGE_ONLY")
 fi
 
-# (6) Dockerfile: if present, it must stage /opt/oh-seed for the entrypoint
-#     to seed from. SKIP just this sub-check if the Dockerfile is absent.
 if [[ -f "$DOCKERFILE" ]]; then
   grep -Eq 'COPY.*/opt/oh-seed' "$DOCKERFILE" \
     || fails+=("Dockerfile must stage the seed source (COPY ... /opt/oh-seed/)")
@@ -152,12 +128,6 @@ else
   echo "[oh-image-only-deploy] Dockerfile not present — skipping /opt/oh-seed staging sub-check" >&2
 fi
 
-# (7) .claude control-plane seed contract. The no-bind seed must carry
-#     .claude/protected-paths.txt or link-providers.sh --init crash-loops. Guard
-#     BOTH halves: (a) .dockerignore re-includes it into the /opt/oh-seed build
-#     context (a bare `.claude/` exclusion starves the seed), and (b) the
-#     entrypoint seed fn backfills it so an already-seeded-but-incomplete volume
-#     self-heals without a wipe.
 DOCKERIGNORE="$ROOT/.dockerignore"
 if [[ -f "$DOCKERIGNORE" ]]; then
   grep -Eq '^[[:space:]]*!\.claude/protected-paths\.txt[[:space:]]*$' "$DOCKERIGNORE" \

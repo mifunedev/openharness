@@ -15,7 +15,7 @@ interface RunResult {
   stdout: string;
   stderr: string;
   status: number;
-  output: string; // stdout + stderr combined for convenience
+  output: string;
 }
 
 function run(dockerfile: string, packageJson: string, opts?: { cwd?: string }): RunResult {
@@ -52,9 +52,6 @@ afterEach(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-// ---------------------------------------------------------------------------
-// Case A — matching versions → exit 0
-// ---------------------------------------------------------------------------
 
 describe("check-pnpm-pin.sh — Case A: matching versions", () => {
   it("exits 0 when Dockerfile and package.json pin the same pnpm version", () => {
@@ -67,9 +64,6 @@ describe("check-pnpm-pin.sh — Case A: matching versions", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Case B — differing versions → exit non-zero, output contains both versions
-// ---------------------------------------------------------------------------
 
 describe("check-pnpm-pin.sh — Case B: version mismatch", () => {
   it("exits non-zero and mentions both versions when they differ", () => {
@@ -84,9 +78,6 @@ describe("check-pnpm-pin.sh — Case B: version mismatch", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Case C — Dockerfile has NO corepack prepare pnpm@ line → exit non-zero
-// ---------------------------------------------------------------------------
 
 describe("check-pnpm-pin.sh — Case C: missing corepack line in Dockerfile", () => {
   it("exits non-zero when there is no corepack prepare pnpm@ line", () => {
@@ -99,9 +90,6 @@ describe("check-pnpm-pin.sh — Case C: missing corepack line in Dockerfile", ()
   });
 });
 
-// ---------------------------------------------------------------------------
-// Case D — package.json has +sha suffix; Dockerfile pin is bare semver → exit 0
-// ---------------------------------------------------------------------------
 
 describe("check-pnpm-pin.sh — Case D: package.json has +sha suffix", () => {
   it("exits 0 when the sha suffix is stripped and versions match", () => {
@@ -114,9 +102,6 @@ describe("check-pnpm-pin.sh — Case D: package.json has +sha suffix", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Case E — Dockerfile pins pnpm@latest → exit non-zero (non-semver)
-// ---------------------------------------------------------------------------
 
 describe("check-pnpm-pin.sh — Case E: Dockerfile pins 'latest' (non-semver)", () => {
   it("exits non-zero when Dockerfile uses pnpm@latest instead of a semver", () => {
@@ -126,15 +111,11 @@ describe("check-pnpm-pin.sh — Case E: Dockerfile pins 'latest' (non-semver)", 
     );
     const { status, output } = run(df, pj);
     expect(status).not.toBe(0);
-    // The script emits a distinct error about non-semver, not the missing-line error
     expect(output).toContain("latest");
     expect(output).not.toContain("no 'corepack prepare pnpm@");
   });
 });
 
-// ---------------------------------------------------------------------------
-// CWD-independence — run from a non-repo-root cwd, still passes flags correctly
-// ---------------------------------------------------------------------------
 
 describe("check-pnpm-pin.sh — CWD independence", () => {
   it("exits 0 for matching versions even when cwd is os.tmpdir()", () => {

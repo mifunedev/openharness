@@ -12,13 +12,6 @@ if [[ ! -d "$SKILLS" ]]; then
   exit 2
 fi
 
-# Guard 1 — the two dead renamed-directory tokens from the wiki/cron restructure
-# (docs/wiki/ -> wiki/, workspace/heartbeats/ -> .oh/crons/). No legitimate use anywhere
-# under .claude/skills/.
-#
-# Exclusion: harness-context/SKILL.md contains the prose string "docs/wiki/changelog"
-# (an enumeration of surfaces, not a path). Exclude it by FULL PATH via a piped
-# `grep -v` — GNU `grep --exclude` matches basenames only and is not used here.
 hits=$(grep -rnE 'docs/wiki/|workspace/heartbeats/' "$SKILLS" \
          | grep -v 'harness-context/SKILL.md' || true)
 
@@ -28,12 +21,6 @@ if [[ -n "$hits" ]]; then
   exit 1
 fi
 
-# Guard 2 — the apps/->packages/ monorepo rename (issue #69). The `apps/` tree no
-# longer exists; the canonical paths are `packages/docs/` and `packages/README.md`.
-# (`src/data/roadmap.ts` retired to `docs/roadmap.md`, itself removed in 0.3.0.) These tokens have NO
-# legitimate use under .claude/skills/, so any reappearance is the exact drift PR #44
-# left behind — it corrected some apps/ refs but silently missed apps/docs. No
-# exclusion is needed: zero skills legitimately mention these tokens.
 rename_hits=$(grep -rnE 'apps/docs|apps/README|apps/\*|src/data/roadmap' "$SKILLS" || true)
 
 if [[ -n "$rename_hits" ]]; then

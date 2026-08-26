@@ -1,4 +1,3 @@
-// Reserve a retry-safe GitHub draft release by atomically creating its SemVer tag ref.
 
 import { appendFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -8,10 +7,6 @@ import { parseSemVer, reserveReleaseVersion } from "./release-reservation.mjs";
 
 const GITHUB_API_VERSION = "2022-11-28";
 
-// The single place the `v` prefix is introduced. Every tag-shaped string in this
-// module derives from this helper, so the create path and the recovery path
-// cannot drift apart. The version itself stays bare everywhere else, including
-// the step outputs and the GHCR image tags.
 export function releaseTagName(version) {
   return `v${version}`;
 }
@@ -52,9 +47,6 @@ export async function reserveGitHubRelease({
   }
   if (!token) throw new Error("GITHUB_TOKEN is required");
 
-  // The version comes from root `package.json`, so it is identical across
-  // workflow retries and independent of both the push clock and the commit
-  // timestamp. Reject a malformed one before any GitHub state is touched.
   parseSemVer(releaseVersion);
 
   const repositoryUrl = `${apiUrl.replace(/\/$/, "")}/repos/${repository}`;
@@ -128,8 +120,6 @@ export async function reserveGitHubRelease({
   }
 
   async function findExactDraftRelease(tagName) {
-    // GitHub's release-by-tag endpoint excludes drafts. Authenticated listing
-    // is used only after the exact tag resolves to releaseSha.
     for (let page = 1; ; page += 1) {
       const result = await request(`/releases?per_page=100&page=${page}`);
       if (!result.response.ok) {
@@ -183,8 +173,6 @@ export async function reserveGitHubRelease({
       );
     }
 
-    // Another same-SHA run may win release creation after this run creates or
-    // observes the tag. Re-read only this exact candidate.
     const racedRelease = await recoverExactCandidateRelease(tagName);
     if (!racedRelease) {
       return {
@@ -200,8 +188,6 @@ export async function reserveGitHubRelease({
     version: releaseVersion,
     attemptCreate: async ({ candidateVersion }) => {
       const tagName = releaseTagName(candidateVersion);
-      // Creating the exact ref is the atomic version reservation. A crash after
-      // this succeeds is recoverable because a retry recognizes the same SHA.
       const createRef = await request("/git/refs", {
         method: "POST",
         body: JSON.stringify({ ref: `refs/tags/${tagName}`, sha: releaseSha }),
@@ -220,7 +206,6 @@ export async function reserveGitHubRelease({
           message: `GitHub reported a tag collision but the ref is absent (${errorMessage(createRef.body)})`,
         };
       }
-      // The tag exists on another commit, so this version already shipped.
       if (candidateSha !== releaseSha) return { kind: "foreign-collision" };
 
       const candidateRelease = await recoverExactCandidateRelease(tagName);
@@ -230,8 +215,6 @@ export async function reserveGitHubRelease({
     },
   });
 
-  // An already-released version has no release object of this run's own, and
-  // there is nothing left to publish. It is a clean skip, not a failure.
   if (reservation.kind === "already-released") {
     return {
       publishedNoop: true,

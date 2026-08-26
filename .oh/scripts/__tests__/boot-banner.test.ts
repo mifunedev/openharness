@@ -36,8 +36,6 @@ describe("boot banners", () => {
     expect(block).not.toContain("Start an agent from this shell");
     expect(block).not.toContain("openharness onboard");
     expect(block).not.toContain("Complete setup");
-    // The `oh config slack` wizard was removed with the pi-messenger-bridge
-    // swap (#481/#287); the banner must not advertise a command that errors.
     expect(block).not.toContain("oh config slack");
   });
 

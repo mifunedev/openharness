@@ -8,7 +8,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SCORER="${SCORER:-$ROOT/.oh/skills/weigh/scripts/score-trajectories.mjs}"
 FIXTURE="${FIXTURE:-$ROOT/.oh/skills/weigh/scripts/__tests__/fixtures/cohort-sample.json}"
 
-# 1) Prerequisites — SKIPPED only when node/scorer/fixture are ABSENT.
 if ! command -v node >/dev/null 2>&1; then
   echo "SKIPPED: node not on PATH" >&2
   exit 2
@@ -22,10 +21,6 @@ if [[ ! -f "$FIXTURE" ]]; then
   exit 2
 fi
 
-# 2) + 3) Frozen DEFAULT_WEIGHTS (exact keys + sum 100) AND the required exports,
-# asserted by importing the module (absolute file:// URL → works through the
-# .claude/skills → .oh/skills symlink). A node import/runtime error here is a
-# REAL regression, not a skip.
 if ! err="$(node -e '
   // argv[1] is a guard-neutral placeholder so the scorer module does NOT auto-run
   // main() on import (its CLI guard fires when process.argv[1] ends with
@@ -49,7 +44,6 @@ if ! err="$(node -e '
   exit 1
 fi
 
-# 4) The four selection method names appear in the .mjs source.
 for method in best-of-n vote softmax synthesis; do
   if ! grep -q "$method" "$SCORER"; then
     echo "REGRESSION: selection method name '$method' not found in scorer source" >&2
@@ -57,10 +51,6 @@ for method in best-of-n vote softmax synthesis; do
   fi
 done
 
-# 5) Run the scorer on the fixture (deterministic --now) and assert the evalRc:1
-# floor-breaker is NEVER selected. The scorer is executed (CLI), its JSON output is
-# parsed, and the floor-breaker id is derived from the fixture (no hard-coded id). A
-# scorer runtime/parse error is a REAL regression (exit 1), never a skip.
 if ! err="$(node -e '
   const { execFileSync } = require("node:child_process");
   const fs = require("node:fs");

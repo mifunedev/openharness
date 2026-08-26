@@ -1,8 +1,3 @@
-// Pure SemVer reservation state machine used by the GitHub release bridge.
-//
-// The version is an input, not a derivation: the release workflow reads it from
-// root `package.json` and hands it in. This module performs no I/O and reads no
-// clock, so the same version reserves the same tag on every retry.
 
 export class ReleaseReservationError extends Error {
   constructor(code, message, options = {}) {
@@ -14,9 +9,6 @@ export class ReleaseReservationError extends Error {
   }
 }
 
-// Strict `MAJOR.MINOR.PATCH`. Leading zeros, prerelease identifiers, build
-// metadata, and a `v` prefix are all rejected: the `v` belongs to the tag name,
-// not to the version, and it is added in exactly one place (`releaseTagName`).
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 export function parseSemVer(version) {
@@ -52,9 +44,6 @@ export async function reserveReleaseVersion({ attemptCreate, version }) {
       return { kind: "reused-draft", version: candidateVersion };
     case "same-sha-published":
       return { kind: "published-no-op", version: candidateVersion };
-    // The tag exists on a different commit, so this version already shipped.
-    // Under CalVer this advanced a `-N` suffix; under SemVer the version is a
-    // deliberate input, so the only correct answer is to report it and skip.
     case "foreign-collision":
       return { kind: "already-released", version: candidateVersion };
     case "invalid-state":

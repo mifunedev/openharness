@@ -28,14 +28,11 @@ after=$(git -C "$root" status --porcelain=v1 --untracked-files=all)
 [[ $(grep -c '^--version$' "$calls") -eq 1 && $(grep -c '^open about:blank --session audit-audit-20260717T120000Z-fixture$' "$calls") -eq 1 ]] || fail 'preflight command sequence'
 ! grep -Eqi 'install|npm|pnpm|https?://' "$calls" || fail 'preflight installed or navigated externally'
 [[ -z $(find "$runtime" -mindepth 1 -print -quit) ]] || fail 'browser profile not cleaned'
-# A porcelain-only comparison misses edits to a file that was already dirty.
 printf preexisting-change >>"$root/.oh/tasks/ui/prd.json"
 if AUDIT_ROOT="$root" AUDIT_RUN_ID='audit-20260717T120001Z-fixture' AUDIT_TMP_ROOT="$runtime" \
   MUTATE_FILE="$root/.oh/tasks/ui/prd.json" PATH="$bin:$PATH" bash "$GATE" browser-preflight >/dev/null 2>&1; then
   fail 'content mutation of already-dirty file was not detected'
 fi
-# Git status and ls-files --others both omit ignored files; the content detector
-# must still see browser writes to them.
 printf 'ignored-profile\n' >"$root/.gitignore"; printf original >"$root/ignored-profile"; git -C "$root" add .gitignore; git -C "$root" commit -qm ignore
 if AUDIT_ROOT="$root" AUDIT_RUN_ID='audit-20260717T120002Z-fixture' AUDIT_TMP_ROOT="$runtime" \
   MUTATE_FILE="$root/ignored-profile" PATH="$bin:$PATH" bash "$GATE" browser-preflight >/dev/null 2>&1; then

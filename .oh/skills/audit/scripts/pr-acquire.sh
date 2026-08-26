@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Private GitHub acquisition seam for /audit pr, prs, implementation, and fresh actions.
 set -euo pipefail
 usage() { echo 'usage: pr-acquire.sh <pr|prs> --repo owner/name [--pr N] [--label L] [--author A|--mine] [--base B] [--stale-days N]' >&2; exit 64; }
 mode=${1:-}; shift || true

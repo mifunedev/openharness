@@ -10,7 +10,6 @@ QC="$ROOT/.oh/skills/rlm/scripts/query-context.mjs"
 BUDGET="$ROOT/.oh/skills/rlm/references/recursion-budget.md"
 FIXTURE="$ROOT/.oh/skills/rlm/scripts/__tests__/fixtures/big-sample.txt"
 
-# --- Assertion 1: prerequisites absent => SKIPPED (not a regression) ----------
 if ! command -v node >/dev/null 2>&1; then
   echo "SKIPPED: node not on PATH" >&2
   exit 2
@@ -19,14 +18,11 @@ if [[ ! -f "$QC" ]]; then
   echo "SKIPPED: query-context primitive absent: $QC" >&2
   exit 2
 fi
-# recursion-budget.md is authored by a sibling US-005 story; until it lands the
-# budget-ceiling half of this contract has nothing to assert against -> SKIP.
 if [[ ! -f "$BUDGET" ]]; then
   echo "SKIPPED: recursion-budget reference absent (sibling US-005): $BUDGET" >&2
   exit 2
 fi
 
-# --- Assertion 2: recursion-budget.md declares depth/children/step ceilings ----
 for term in depth children step; do
   if ! grep -qi "$term" "$BUDGET"; then
     echo "REGRESSION: recursion-budget.md missing '$term' ceiling declaration" >&2
@@ -34,22 +30,16 @@ for term in depth children step; do
   fi
 done
 
-# --- Assertion 3: query-context.mjs enforces a max-bytes guard -----------------
-# 3a. structural: the byte-cap constant exists in the source.
 if ! grep -q 'MAX_SLICE_BYTES' "$QC"; then
   echo "REGRESSION: byte-cap constant (MAX_SLICE_BYTES) absent from query-context.mjs" >&2
   exit 1
 fi
 
-# 3b. runtime needs the large fixture; absent => SKIP (no input to bound).
 if [[ ! -f "$FIXTURE" ]]; then
   echo "SKIPPED: max-bytes fixture absent: $FIXTURE" >&2
   exit 2
 fi
 
-# 3c. runtime: a whole-file slice of a large input is bounded by the cap and is
-#     flagged truncated when the input exceeds it. Parse the JSON via node (a
-#     declared prerequisite of this probe) rather than a fragile shell grep.
 set +e
 verdict="$(node "$QC" "$FIXTURE" 2>/dev/null | node -e '
   let raw = "";

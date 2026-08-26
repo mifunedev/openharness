@@ -71,7 +71,6 @@ describe("path-guard extension", () => {
     expect(captured.commands.has("guard")).toBe(true);
   });
 
-  // Fix #1: hasUI guard tests
   describe("headless mode (hasUI === false)", () => {
     it("does not call confirm for write on sensitive path in headless mode", async () => {
       const { ctx } = makeCtx(async () => false, false);
@@ -110,7 +109,6 @@ describe("path-guard extension", () => {
       const { ctx } = makeCtx(async () => false);
       const result = await fire(
         captured.toolCallHandlers,
-        // Fix #5: canonical key is `path` (verified from pi write.ts writeSchema)
         { toolName: "write", input: { path } },
         ctx,
       );
@@ -175,7 +173,6 @@ describe("path-guard extension", () => {
       expect(result).toBeUndefined();
     });
 
-    // Fix #4: capitalized tool names still fire the guard (toLowerCase normalization)
     it("fires guard for capitalized tool names (Write, Edit)", async () => {
       for (const toolName of ["Write", "Edit"]) {
         const { ctx } = makeCtx(async () => false);
@@ -218,7 +215,6 @@ describe("path-guard extension", () => {
       expect(result).toMatchObject({ block: true });
     });
 
-    // Fix #2: case-insensitive RISKY_BASH — uppercase variants must still trigger
     it.each([
       ["RM -RF /tmp/x"],
       ["Sudo apt update"],
@@ -234,7 +230,6 @@ describe("path-guard extension", () => {
       expect(result).toMatchObject({ block: true });
     });
 
-    // Fix #3: bare > /dev/... redirection without leading colon
     it.each([
       ["> /dev/sda"],
       ["dd if=/dev/zero > /dev/sdb"],
@@ -284,7 +279,6 @@ describe("path-guard extension", () => {
       expect(body).toContain("...");
     });
 
-    // Fix #4: capitalized Bash tool name still fires the guard
     it("fires guard for capitalized tool name Bash", async () => {
       const { ctx } = makeCtx(async () => false);
       const result = await fire(

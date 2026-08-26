@@ -12,17 +12,12 @@ missing=()
 [[ -f "$HEARTBEAT" ]] || { echo "SKIPPED: missing $HEARTBEAT" >&2; exit 2; }
 [[ -x "$HELPER" ]] || { echo "SKIPPED: missing executable $HELPER" >&2; exit 2; }
 
-# `.oh/crons/.cron.log` is the heartbeat's ONLY per-pulse durable signal since the
-# `.oh/memory` tier was deleted. It must stay locked, and it must stay mandatory.
 grep -Fq 'scripts/locked-append.sh .oh/crons/.cron.log' "$HEARTBEAT" || missing+=("heartbeat liveness line uses scripts/locked-append.sh")
 grep -Fq 'Mandatory closing step' "$HEARTBEAT" || missing+=("heartbeat marks the liveness append mandatory")
 grep -Fq 'STATUS="<status>"' "$HEARTBEAT" || missing+=("heartbeat computes a STATUS token for the liveness line")
 
-# Regression guard for the old race-prone shared log append.
 grep -Fq '>> .oh/crons/.cron.log' "$HEARTBEAT" && missing+=("heartbeat must not append liveness with raw >>")
 
-# Regression guard: the deleted memory tier must not come back through this prompt.
-# A reintroduced `.oh/memory` write is the defect, not a stylistic drift.
 grep -Fq '.oh/memory' "$HEARTBEAT" && missing+=("heartbeat references the deleted .oh/memory tier")
 grep -Fq 'Memory log contract' "$HEARTBEAT" && missing+=("heartbeat reintroduced the memory log contract")
 

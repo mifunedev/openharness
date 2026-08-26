@@ -7,9 +7,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 const ROOT = join(import.meta.dirname, "../../..");
 const WORKFLOW = join(ROOT, ".github", "workflows", "release.yml");
 
-// The exact CHANGELOG shape that broke the v0.1.0 release: a populated
-// versioned section sitting under an EMPTY [Unreleased]. Both fallbacks are
-// therefore unavailable, so only a correct versioned match yields notes.
 const CHANGELOG = `# Changelog
 
 Format follows Keep a Changelog.
@@ -30,15 +27,6 @@ Format follows Keep a Changelog.
 
 let fixture = "";
 
-/**
- * Run an extraction expression the way the workflow does. `gawkSemantics`
- * selects which resolution of the pre-fix escape to feed awk: gawk drops an
- * invalid `\[` inside a string literal, mawk keeps it. Both variants are
- * spelled so the regex they build is identical under any awk, so this test
- * asserts the same thing on a mawk sandbox and a gawk runner. Passing the raw
- * `\[` through instead would make the test depend on the local awk — which is
- * exactly the trap that let the bug ship.
- */
 function extract(source: "workflow" | "legacy-dynamic-regex", version: string, gawkSemantics = true) {
   const changelog = join(fixture, "CHANGELOG.md");
   writeFileSync(changelog, CHANGELOG, "utf8");
@@ -50,13 +38,6 @@ function extract(source: "workflow" | "legacy-dynamic-regex", version: string, g
     });
   }
 
-  // The pre-fix expression, with the escape ALREADY RESOLVED the way the named
-  // awk resolves it. Both forms are written so the regex they build is the same
-  // under any awk — otherwise this test would itself depend on which awk runs,
-  // which is the very bug it exists to pin.
-  //   gawk: `\[` in a string is an invalid escape -> backslash dropped -> `[`
-  //         builds `^## [0.1.0] - `, a CHARACTER CLASS, matching nothing.
-  //   mawk: the backslash survives -> `\[` builds `^## \[0.1.0\] - `, a literal.
   const bracket = gawkSemantics ? ["[", "]"] : ["\\\\[", "\\\\]"];
   const legacy = `
     $0 ~ ("^## ${bracket[0]}" ver "${bracket[1]} - ") { in_block=1; next }
@@ -67,13 +48,11 @@ function extract(source: "workflow" | "legacy-dynamic-regex", version: string, g
   return execFileSync("awk", ["-v", `ver=${version}`, legacy, changelog], { encoding: "utf8" });
 }
 
-/** Lift the awk program out of the workflow so the test cannot drift from it. */
 function workflowProgram() {
   const source = readFileSync(WORKFLOW, "utf8");
   const match = /awk -v hdr="## \$\{?RELEASE_VERSION\}?\] - "?[^\n]*\n([\s\S]*?)\n\s*' CHANGELOG\.md/.exec(
     source,
   );
-  // Fall back to a direct slice between the awk invocation and its closing quote.
   const begin = source.indexOf(`awk -v hdr=`);
   const end = source.indexOf("' CHANGELOG.md", begin);
   expect(begin, "workflow no longer invokes awk with an hdr variable").toBeGreaterThan(0);
@@ -96,7 +75,6 @@ describe("release notes extraction", () => {
 
     expect(notes).toContain("The versioned section body.");
     expect(notes).toContain("A second line.");
-    // It must stop at the next heading, never bleed into an older release.
     expect(notes).not.toContain("An older release nobody should extract.");
   });
 
@@ -105,14 +83,10 @@ describe("release notes extraction", () => {
   });
 
   it("matches the heading literally, so regex metacharacters cannot widen it", () => {
-    // Under the broken character-class pattern `0.1.0` also matched `0`, `.`
-    // and `1`; a literal prefix must reject a near-miss version outright.
     expect(extract("workflow", "0").trim()).toBe("");
     expect(extract("workflow", "1").trim()).toBe("");
   });
 
-  // Verification by rejection: the expression this replaced must FAIL the
-  // first assertion under the runner's awk. Without this, the fix is unproven.
   it("the pre-fix dynamic regex extracts nothing under gawk semantics", () => {
     expect(extract("legacy-dynamic-regex", "0.1.0", true).trim()).toBe("");
   });
@@ -123,8 +97,6 @@ describe("release notes extraction", () => {
 
   it("the workflow builds no dynamic regex for the versioned heading", () => {
     const source = readFileSync(WORKFLOW, "utf8");
-    // Strip comments: the block deliberately quotes the broken pattern to
-    // explain why it was replaced, and that prose is not executable code.
     const code = source
       .split("\n")
       .filter((line) => !line.trim().startsWith("#"))
@@ -134,7 +106,6 @@ describe("release notes extraction", () => {
     expect(source).toContain("index($0, hdr) == 1");
     expect(code).not.toContain('("^## \\[" ver');
     expect(code).not.toMatch(/\$0 ~ \(/);
-    // The [Unreleased] fallback is a regex LITERAL and stays as it is.
     expect(source).toContain("/^## \\[Unreleased\\]$/");
     expect(source).toContain("see CHANGELOG.md and commit history.");
   });

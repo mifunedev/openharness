@@ -1,51 +1,23 @@
 #!/usr/bin/env node
-// weigh engine: the harness-owned weighted-trajectory scorer. Given a cohort of
-// candidate trajectories (the Workflow tool *proposes* them; this scorer *owns the
-// weight function that picks among them*), normalize each sub-signal to [0,1],
-// weight by a frozen, tunable DEFAULT_WEIGHTS vector, apply the hard eligibility
-// floor, and select/aggregate via best-of-n | vote | softmax | synthesis.
-//
-// PURE: zero npm deps (node v22 built-ins only), and ZERO impurity — no `git`, no
-// `Date.now()`, no model call. `--now <ts>` is REQUIRED (it stamps the report's
-// generatedAt); there is no Date.now() fallback, which keeps the scorer perfectly
-// deterministic for the eval probe and unit tests. See references/scoring.md for
-// the contract this engine implements.
 
 import fs from "node:fs";
 import process from "node:process";
 
-// ---------------------------------------------------------------------------
-// Constants & contracts
-// ---------------------------------------------------------------------------
 
-// Deterministic-first frozen weights (sum 100). 75 of the 100 are signals WE own
-// (consistency + evalPass + auditPass + cost); `judge` is the one model-side
-// coefficient — set it to 0 for a fully deterministic, judge-free weight. Every
-// key here is REQUIRED when --weights is supplied; values must be finite and
-// non-negative. See references/scoring.md.
 export const DEFAULT_WEIGHTS = Object.freeze({
-  consistency: 30, // self-consistency cluster membership   ┐
-  evalPass: 20, //    /eval regression floor                 │ 75 = signals WE own
-  auditPass: 15, //   /audit promotability verdict           │  (deterministic)
-  cost: 10, //        token-cost efficiency (cheaper→higher) ┘
-  judge: 25, //       model-judge verifier — set 0 → fully deterministic weight
+  consistency: 30,
+  evalPass: 20,
+  auditPass: 15,
+  cost: 10,
+  judge: 25,
 });
 
-// The weight keys, in canonical order (single source for iteration + the probe).
 export const WEIGHT_KEYS = Object.freeze(Object.keys(DEFAULT_WEIGHTS));
 
-// The four selection methods this scorer supports.
 export const SELECTION_METHODS = Object.freeze(["best-of-n", "vote", "softmax", "synthesis"]);
 
-// In --soft mode, a floor-violating trajectory stays eligible but its weight is
-// scaled by this factor (a down-weight, not an exclusion) so a least-bad pick is
-// allowed while still ranking below any clean trajectory of comparable signals.
 export const SOFT_FLOOR_FACTOR = 0.25;
 
-// TRAJECTORY_SCHEMA — the single source of truth for the trajectory record shape.
-// US-002's sampling step cites this so spawned agents emit structured output the
-// scorer can consume. It is a named JSON-Schema object (draft 2020-12); the scorer
-// does not runtime-validate against it (zero-dep), it is the published contract.
 export const TRAJECTORY_SCHEMA = Object.freeze({
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://openharness.dev/weigh/trajectory.schema.json",
@@ -110,9 +82,6 @@ const USAGE = `usage: score-trajectories.mjs --cohort <path> --now <ts> [options
   --dry-run         print the resolved config + cohort preview; do not select
   -h | --help`;
 
-// ---------------------------------------------------------------------------
-// Small helpers
-// ---------------------------------------------------------------------------
 
 export function clamp(value, lo, hi) {
   if (!Number.isFinite(value)) return lo;
@@ -129,19 +98,13 @@ function round(value, dp = 4) {
   return Math.round(value * f) / f;
 }
 
-// Accept an array cohort or a { trajectories: [...] } wrapper; return the list.
 function asTrajectoryList(cohort) {
   if (Array.isArray(cohort)) return cohort;
   if (isPlainObject(cohort) && Array.isArray(cohort.trajectories)) return cohort.trajectories;
   throw new Error("cohort must be an array of trajectories or { trajectories: [...] }");
 }
 
-// ---------------------------------------------------------------------------
-// Weights
-// ---------------------------------------------------------------------------
 
-// validateWeights mirrors prompt-miner semantics: must be an object; every key
-// present; finite non-negative; any unknown key is an error.
 export function validateWeights(obj) {
   if (!isPlainObject(obj)) {
     throw new Error("--weights must be a JSON object");
@@ -163,12 +126,7 @@ export function validateWeights(obj) {
   return { ...obj };
 }
 
-// ---------------------------------------------------------------------------
-// Cohort statistics (pure)
-// ---------------------------------------------------------------------------
 
-// cohortStats computes the cohort-relative context weight() needs: N, and the
-// min/max token cost over the trajectories that declare a finite costTokens.
 export function cohortStats(cohort) {
   const list = asTrajectoryList(cohort);
   const n = list.length;
@@ -178,12 +136,7 @@ export function cohortStats(cohort) {
   return { n, minCost, maxCost };
 }
 
-// ---------------------------------------------------------------------------
-// Sub-signal normalization + weight (pure)
-// ---------------------------------------------------------------------------
 
-// Returns the floor-violation cause string for a trajectory, or null if clean.
-// A trajectory may break the floor two ways at once; both are reported, joined.
 function floorCause(traj) {
   const causes = [];
   if (traj.evalRc === 1) causes.push("eval-regression");
@@ -191,12 +144,6 @@ function floorCause(traj) {
   return causes.length ? causes.join("+") : null;
 }
 
-// weight() scores ONE trajectory against the cohort context `ctx` (from
-// cohortStats). Each sub-signal is normalized to [0,1]; the weighted sum (Σ W.k ·
-// signal_k) is the raw weight. Emits a fully reconstructable weightBreakdown
-// (raw signals, normalized signals, per-term contributions, weights used). The
-// hard floor (evalRc===1 || auditVerdict==='FAIL') sets eligible=false; --soft
-// (opts.soft) instead keeps it eligible and scales the weight by SOFT_FLOOR_FACTOR.
 export function weight(traj, ctx, weights = DEFAULT_WEIGHTS, opts = {}) {
   if (!isPlainObject(traj)) throw new Error("weight(): trajectory must be an object");
   const w = weights;
@@ -205,29 +152,21 @@ export function weight(traj, ctx, weights = DEFAULT_WEIGHTS, opts = {}) {
   const maxCost = ctx && Number.isFinite(ctx.maxCost) ? ctx.maxCost : 0;
   const soft = opts.soft === true;
 
-  // --- raw signals -----------------------------------------------------------
   const clusterSize = Number.isFinite(traj.clusterSize) ? traj.clusterSize : 1;
   const judgeScore = Number.isFinite(traj.judgeScore) ? traj.judgeScore : null;
   const costTokens = Number.isFinite(traj.costTokens) ? traj.costTokens : null;
   const evalRc = traj.evalRc;
   const auditVerdict = traj.auditVerdict ?? null;
 
-  // --- normalize each sub-signal to [0,1] ------------------------------------
-  // consistency: cluster membership as a fraction of the cohort.
   const consistency = clamp(clusterSize / n, 0, 1);
-  // judge: verifier score, neutral 0.5 when the judge is disabled (null).
   const judge = clamp(judgeScore ?? 0.5, 0, 1);
-  // evalPass: 0 PASS → 1.0 · 2|null SKIPPED/NA → 0.5 · 1 REGRESSION → 0.0.
   const evalPass = evalRc === 0 ? 1 : evalRc === 1 ? 0 : 0.5;
-  // auditPass: PASS → 1.0 · null NA → 0.5 · FAIL → 0.0.
   const auditPass = auditVerdict === "PASS" ? 1 : auditVerdict === "FAIL" ? 0 : 0.5;
-  // cost: cohort-relative; cheapest → 1, most expensive → 0; neutral 0.5 if absent.
   const cost =
     costTokens === null ? 0.5 : clamp(1 - (costTokens - minCost) / Math.max(maxCost - minCost, 1), 0, 1);
 
   const signals = { consistency, evalPass, auditPass, cost, judge };
 
-  // --- weighted sum (per-term contributions kept full-precision) -------------
   const contributions = {};
   let rawWeight = 0;
   for (const k of WEIGHT_KEYS) {
@@ -238,8 +177,6 @@ export function weight(traj, ctx, weights = DEFAULT_WEIGHTS, opts = {}) {
 
   const cause = floorCause(traj);
   const floorViolated = cause !== null;
-  // Hard floor (default): eligibility excludes floor-violators. --soft: everyone
-  // is eligible, but a violator's weight is scaled down (least-bad pick allowed).
   const eligible = soft ? true : !floorViolated;
   const finalWeight = soft && floorViolated ? rawWeight * SOFT_FLOOR_FACTOR : rawWeight;
 
@@ -261,20 +198,11 @@ export function weight(traj, ctx, weights = DEFAULT_WEIGHTS, opts = {}) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Selection (pure)
-// ---------------------------------------------------------------------------
 
-// Deterministic argmax over scored rows: highest weight wins; ties broken by id
-// ascending so the result is reproducible (no Math.random anywhere in the scorer).
 function argmaxRow(rows) {
   return [...rows].sort((a, b) => b.weight - a.weight || String(a.id).localeCompare(String(b.id)))[0];
 }
 
-// select() scores the whole cohort with weight(), applies the eligibility floor,
-// and picks/aggregates per `method`. When NOTHING is eligible it returns the
-// explicit NO-SELECTION shape — never a silent least-bad pick.
-//   opts: { method, weights, soft, k, tau }
 export function select(cohort, opts = {}) {
   const list = asTrajectoryList(cohort);
   const weights = opts.weights || DEFAULT_WEIGHTS;
@@ -294,7 +222,6 @@ export function select(cohort, opts = {}) {
 
   const eligible = scored.filter((r) => r.eligible);
   if (eligible.length === 0) {
-    // Honest 3-state: no eligible trajectory → name the floor that killed them.
     return { selected: null, reason: "NO-SELECTION", method, weights: { ...weights }, soft, floorViolations, scored };
   }
 
@@ -305,8 +232,6 @@ export function select(cohort, opts = {}) {
   }
 
   if (method === "vote") {
-    // Largest self-consistency cluster among eligible (by member count); tie → the
-    // cluster whose best member has the max weight. Selected = that best member.
     const clusters = new Map();
     for (const r of eligible) {
       const traj = list.find((t) => t.id === r.id);
@@ -332,8 +257,6 @@ export function select(cohort, opts = {}) {
   }
 
   if (method === "softmax") {
-    // Deterministic softmax distribution over eligible weights (temperature tau).
-    // Selection is the argmax of the distribution (no random sampling → pure).
     const maxW = Math.max(...eligible.map((r) => r.weight));
     const exps = eligible.map((r) => Math.exp((r.weight - maxW) / tau));
     const sum = exps.reduce((a, b) => a + b, 0) || 1;
@@ -343,7 +266,6 @@ export function select(cohort, opts = {}) {
     return { ...base, selected: distribution[0].id, tau, distribution };
   }
 
-  // synthesis: return the top-K eligible (by weight) for a synth agent to graft.
   const ranked = [...eligible].sort((a, b) => b.weight - a.weight || String(a.id).localeCompare(String(b.id)));
   const topRows = ranked.slice(0, Math.min(k, ranked.length));
   return {
@@ -354,9 +276,6 @@ export function select(cohort, opts = {}) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// CLI parsing (pure)
-// ---------------------------------------------------------------------------
 
 export function parseArgs(argv) {
   const args = {
@@ -431,7 +350,6 @@ export function parseArgs(argv) {
   return args;
 }
 
-// Resolve --now (unix-seconds or ISO) into an ISO timestamp WITHOUT Date.now().
 function resolveNow(now) {
   if (now == null || now === "") throw new Error("--now <ts> is required (no Date.now() fallback)");
   const ms = /^\d+$/.test(String(now)) ? Number(now) * 1000 : Date.parse(now);
@@ -439,9 +357,6 @@ function resolveNow(now) {
   return new Date(ms).toISOString();
 }
 
-// ---------------------------------------------------------------------------
-// main (impure: reads the cohort file, writes stdout)
-// ---------------------------------------------------------------------------
 
 function main(argv) {
   let args;
@@ -452,7 +367,6 @@ function main(argv) {
     process.exit(64);
   }
 
-  // --now is REQUIRED — there is NO Date.now() fallback (purity + determinism).
   let generatedAt;
   try {
     generatedAt = resolveNow(args.now);
@@ -491,7 +405,6 @@ function main(argv) {
   };
 
   if (args.dryRun) {
-    // --dry-run: show the resolved config + cohort preview; do NOT select.
     process.stdout.write(
       `${JSON.stringify(
         { dryRun: true, ...config, trajectoryIds: list.map((t) => (t ? t.id : null)) },
@@ -513,11 +426,6 @@ function main(argv) {
   process.stdout.write(`${JSON.stringify({ ...config, ...result }, null, 2)}\n`);
 }
 
-// CLI-entrypoint detection: BASENAME match — process.argv[1] ends with
-// score-trajectories.mjs. Do NOT use `import.meta.url === pathToFileURL(argv[1])`:
-// node resolves the symlink for import.meta.url but not for argv[1] when this is
-// invoked through the `.claude/skills` → `.oh/skills` symlink, so the guard
-// silently no-ops (see memory: prompt-miner-engine-symlink-guard-bug).
 if ((process.argv[1] || "").endsWith("score-trajectories.mjs")) {
   main(process.argv.slice(2));
 }

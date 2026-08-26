@@ -13,15 +13,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-# --- the budget ------------------------------------------------------------
-# Raising these is allowed; doing it silently is not. Whoever raises one owns the answer to
-# "what does every future session now read that it did not read before, and why is that
-# worth it?" — and should say so in the CHANGELOG entry that raises it.
-TIER_BUDGET_BYTES=96000     # ~24,000 tokens. Today: 85,256 B (~21,300).
-SINGLE_FILE_SHARE_MAX=60    # percent. Historical worst case: one file at 56%.
+TIER_BUDGET_BYTES=96000
+SINGLE_FILE_SHARE_MAX=60
 
-# `memory` is shared across worktrees and gitignored — resolve it through oh-path (which
-# would point at a per-worktree empty ledger and understate the tier.
 
 FILES=(
   "$ROOT/AGENTS.md"
@@ -37,8 +31,6 @@ largest=0
 largest_name=""
 report=()
 for f in "${FILES[@]}"; do
-  # A missing file is not a failure: a fresh clone may not carry every context file.
-  # It just does not contribute to the tier that clone actually loads.
   [[ -f "$f" ]] || continue
   b=$(wc -c < "$f" | tr -d ' ')
   total=$((total + b))

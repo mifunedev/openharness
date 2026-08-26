@@ -46,12 +46,6 @@ if (( ${#missing[@]} > 0 )); then
   exit 1
 fi
 
-# --- the report-only contract -------------------------------------------------
-# /retro writes NO file except an approved .oh/context/IDENTITY.md line. The
-# `.oh/memory` tier it used to write — a durable ledger plus a dated run log —
-# was deleted outright, so a reintroduced write target is the defect this guards.
-# Each assertion carries a unique `ro-<id>` tag so a failure is attributable by
-# message alone.
 if grep -nF -- '.oh/memory' "$PI_DIR/SKILL.md" >/dev/null 2>&1; then
   echo "REGRESSION: ro-a SKILL.md references the deleted .oh/memory tier:" >&2
   grep -nF -- '.oh/memory' "$PI_DIR/SKILL.md" >&2
@@ -63,11 +57,8 @@ for literal in 'MEMORY.md' 'MEMORY_DIR' 'locked-append.sh' 'render-log-entry.sh'
     exit 1
   fi
 done
-# ro-c: the anti-pattern that names the rule must survive verbatim. Without it a
-# future edit re-adds a ledger "to hold" a non-generalizing lesson.
 grep -Fq 'Inventing a file to save a lesson in.' "$PI_DIR/SKILL.md" \
   || { echo "REGRESSION: ro-c SKILL.md dropped the no-new-ledger anti-pattern" >&2; exit 1; }
-# ro-d: the duplicate helper must consult IDENTITY.md and nothing else.
 helper="$PI_DIR/scripts/check-identity-duplicates.sh"
 grep -Fq 'IDENTITY_FILE="$ROOT/.oh/context/IDENTITY.md"' "$helper" \
   || { echo "REGRESSION: ro-d duplicate helper lost its IDENTITY.md target" >&2; exit 1; }
@@ -76,7 +67,6 @@ if grep -Eq 'MEMORY_FILE|MEM_DIR|oh-path" memory' "$helper"; then
   exit 1
 fi
 
-# --- validator contract -------------------------------------------------------
 report=$(mktemp)
 cat > "$report" <<'REPORT'
 ## Session signals
@@ -103,8 +93,6 @@ REPORT
 "$PI_DIR/scripts/validate-retro-report.sh" "$report" >/dev/null
 rm -f "$report"
 
-# (ro-e) The validator must REJECT the retired `MEMORY` promotion value. Asserting
-# only that a good report passes would leave the enum widening undetected.
 bad=$(mktemp)
 sed 's/| supported | medium | IDENTITY |/| supported | medium | MEMORY |/' > "$bad" <<'REPORT'
 ## Session signals
@@ -131,7 +119,6 @@ if "$PI_DIR/scripts/validate-retro-report.sh" "$bad" >/dev/null 2>&1; then
 fi
 rm -f "$bad"
 
-# (ro-f) An IDENTITY candidate without its triage tag / probe id must be refused.
 bad=$(mktemp)
 cat > "$bad" <<'REPORT'
 ## Session signals

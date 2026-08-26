@@ -1,25 +1,5 @@
 #!/bin/sh
 # migrate-harness-yaml.sh — one-shot migration of a local harness.yaml into
-# .devcontainer/.env, run automatically by every lifecycle path.
-#
-# WHY THIS FILE IS SELF-CONTAINED. It carries its own copy of the awk parser
-# that used to live in .oh/scripts/harness-config.sh. That script is deleted in
-# the same release, so the whole harness.yaml compatibility story is ONE file:
-# delete this script in a later release and nothing else has to change.
-#
-# Behaviour, in order:
-#   1. No harness.yaml  -> exit 0. This is the steady state and costs one [ -f ].
-#   2. Seed .devcontainer/.env from .example.env when it is absent.
-#   3. Translate the 21 allowlisted section.key pairs into KEY=value.
-#   4. Set each key in .env, UNCOMMENTING THE TEMPLATE LINE IN PLACE when the
-#      key ships commented. harness.yaml won at runtime before this change, so a
-#      differing .env value is overwritten -- and both values are printed, so the
-#      change is visible rather than silent.
-#   5. compose.overrides -> merge into .oh/config.json composeOverrides[] via jq.
-#      Without jq the paths are printed for the operator instead of dropped.
-#   6. Remove the derived .devcontainer/.harness.yaml.env.
-#   7. mv harness.yaml harness.yaml.migrated -- idempotent, original preserved.
-#
 # Usage: migrate-harness-yaml.sh [repo-dir]     (default: the repo this lives in)
 
 set -eu
@@ -34,9 +14,6 @@ _env="$_root/.devcontainer/.env"
 _example="$_root/.devcontainer/.example.env"
 _config="$_root/.oh/config.json"
 
-# ── The parser (lifted from the deleted harness-config.sh) ────────────
-# mode=env               KEY=value for the allowlist
-# mode=compose-overrides one overlay path per line
 _parse() {
     awk -v mode="$1" -v sq="'" '
 BEGIN {
@@ -132,7 +109,6 @@ function clean_value(s) {
 _pairs=$(_parse env)
 _overrides=$(_parse compose-overrides)
 
-# ── Read one key out of .env, ignoring commented lines ────────────────
 _env_get() {
     [ -f "$_env" ] || return 0
     awk -F= -v key="$1" '
@@ -141,9 +117,6 @@ _env_get() {
     ' "$_env"
 }
 
-# ── Set one key in .env, uncommenting the template line in place ──────
-# Same discipline as the CLI writer: a commented `# KEY=default` line becomes
-# `KEY=value` at the SAME line index, so the file keeps its shape and prose.
 _env_set() {
     __k="$1"
     __v="$2"
@@ -166,7 +139,6 @@ _env_set() {
 printf 'harness.yaml migration\n'
 printf -- '----------------------\n'
 
-# ── 2. Seed .env when absent ──────────────────────────────────────────
 if [ ! -f "$_env" ]; then
     if [ -f "$_example" ]; then
         cp "$_example" "$_env"
@@ -179,10 +151,8 @@ if [ ! -f "$_env" ]; then
     fi
 fi
 
-# ── 3-4. Translate and write ──────────────────────────────────────────
 _count=0
 if [ -n "$_pairs" ]; then
-    # A value may contain spaces, so split on the FIRST '=' only.
     printf '%s\n' "$_pairs" | while IFS= read -r _pair; do
         [ -n "$_pair" ] || continue
         _key=${_pair%%=*}
@@ -194,7 +164,6 @@ if [ -n "$_pairs" ]; then
         elif [ "$_old" = "$_val" ]; then
             printf '  same    %s=%s\n' "$_key" "$_val"
         else
-            # harness.yaml won at runtime before, so the YAML value is kept.
             printf '  replace %s: %s -> %s\n' "$_key" "$_old" "$_val"
         fi
     done
@@ -202,7 +171,6 @@ if [ -n "$_pairs" ]; then
 fi
 [ "$_count" -gt 0 ] 2>/dev/null || printf '  (no set keys — nothing to carry over)\n'
 
-# ── 5. compose.overrides -> .oh/config.json composeOverrides[] ────────
 if [ -n "$_overrides" ]; then
     if command -v jq >/dev/null 2>&1; then
         [ -f "$_config" ] || printf '{}\n' > "$_config"
@@ -221,13 +189,11 @@ if [ -n "$_overrides" ]; then
     fi
 fi
 
-# ── 6. Drop the derived env-file ──────────────────────────────────────
 if [ -f "$_root/.devcontainer/.harness.yaml.env" ]; then
     rm -f "$_root/.devcontainer/.harness.yaml.env"
     printf '  remove  .devcontainer/.harness.yaml.env (derived — no longer used)\n'
 fi
 
-# ── 7. Retire the file ────────────────────────────────────────────────
 mv "$_yaml" "$_root/harness.yaml.migrated"
 printf '  rename  harness.yaml -> harness.yaml.migrated\n'
 printf -- '----------------------\n'

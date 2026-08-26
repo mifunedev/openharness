@@ -12,9 +12,6 @@ import {
 import type { LifecycleRunner, RunResult } from "../lib/execution/runner.js";
 import { HARNESS_CATALOG } from "../lib/harnesses/catalog.js";
 
-// cli.ts has a top-level side effect: main(process.argv.slice(2)).then(process.exit).
-// Same guard as lifecycle.test.ts: stub process.exit around the import so the
-// module body's main() call cannot terminate the vitest worker.
 vi.mock("../cli.js", async (importOriginal) => {
   const original = process.exit;
   process.exit = (() => {}) as never;
@@ -26,7 +23,6 @@ vi.mock("../cli.js", async (importOriginal) => {
 
 const { parseHarnessArgs, printHarnessHelp, printOhHelp } = await import("../cli.js");
 
-// src/__tests__ -> src -> .oh/cli -> .oh -> repo root
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const REAL_EXAMPLE = join(REPO_ROOT, ".devcontainer", ".example.env");
 
@@ -36,10 +32,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/**
- * An equipped-repo fixture. mkdtemp only — NEVER the real worktree root, whose
- * .devcontainer/.env the installer would edit for real.
- */
 function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-harness-cmd-"));
   cleanups.push(d);
@@ -55,11 +47,6 @@ interface RecordedCall {
   args: string[];
 }
 
-/**
- * Fake runner driven by a per-argv matcher, so a test states only the calls it
- * cares about. Every call is recorded; the default is exit 0 with empty stdout.
- * No real docker, bash, or sh ever runs here.
- */
 function makeRunner(
   reply: (cmd: string, args: string[]) => RunResult | undefined = () => undefined,
 ): { calls: RecordedCall[]; run: LifecycleRunner } {
@@ -71,19 +58,15 @@ function makeRunner(
   return { calls, run };
 }
 
-/** `docker inspect -f {{.State.Status}}` — the call `status()` makes. */
 function isInspect(cmd: string, args: string[]): boolean {
   return cmd === "docker" && args[0] === "inspect";
 }
 
-/** A `docker exec` whose in-container argv contains `token`. */
 function isExecOf(cmd: string, args: string[], token: string): boolean {
   return cmd === "docker" && args[0] === "exec" && args.includes(token);
 }
 
-/** Report the container as running. */
 const running: RunResult = { status: 0, stdout: "running\n", stderr: "" };
-/** Report the container as stopped. */
 const exited: RunResult = { status: 0, stdout: "exited\n", stderr: "" };
 
 function makeIo(): { out: string[]; err: string[]; io: HarnessIO } {
@@ -95,13 +78,9 @@ function makeIo(): { out: string[]; err: string[]; io: HarnessIO } {
 const text = (lines: string[]): string => lines.join("");
 const readEnv = (root: string): string =>
   readFileSync(join(root, ".devcontainer", ".env"), "utf8");
-/** Every `docker exec` in the recorded calls — the "did it touch the container" oracle. */
 const execCalls = (calls: RecordedCall[]): RecordedCall[] =>
   calls.filter((c) => c.cmd === "docker" && c.args[0] === "exec");
 
-// ---------------------------------------------------------------------------
-// parseHarnessArgs
-// ---------------------------------------------------------------------------
 
 describe("parseHarnessArgs", () => {
   it("treats a bare `oh harness` and a help flag as help", () => {
@@ -149,11 +128,7 @@ describe("parseHarnessArgs", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// help
-// ---------------------------------------------------------------------------
 
-/** Capture a help printer's output without letting it hit the real terminal. */
 function captureStdout(fn: () => void): string {
   const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   fn();
@@ -185,9 +160,6 @@ describe("help", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// install — the persist half
-// ---------------------------------------------------------------------------
 
 describe("runHarnessInstall persists the flag", () => {
   it("sets INSTALL_OPENCODE and says so", async () => {
@@ -249,9 +221,6 @@ describe("runHarnessInstall persists the flag", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// install — the live half
-// ---------------------------------------------------------------------------
 
 describe("runHarnessInstall against the container", () => {
   it("on a stopped sandbox: exits 0, sets the flag, hints, and runs zero docker exec", async () => {
@@ -281,7 +250,6 @@ describe("runHarnessInstall against the container", () => {
     const root = makeRepo();
     const { calls, run } = makeRunner((c, a) => {
       if (isInspect(c, a)) return running;
-      // The verify probe must FAIL, or nothing would be installed.
       if (isExecOf(c, a, "--version")) return { status: 1, stdout: "", stderr: "not found" };
       return undefined;
     });
@@ -316,10 +284,8 @@ describe("runHarnessInstall against the container", () => {
     const { out, io } = makeIo();
 
     expect(await runHarnessInstall("opencode", { cwd: root, run }, io)).toBe(0);
-    // The verify probe ran; the installer did not.
     expect(execCalls(calls).some((c) => c.args.includes("opencode-ai"))).toBe(false);
     expect(text(out)).toContain("already installed");
-    // The durable half still landed.
     expect(readEnv(root)).toMatch(/^INSTALL_OPENCODE=true$/m);
   });
 
@@ -376,9 +342,6 @@ describe("runHarnessInstall against the container", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// list / status
-// ---------------------------------------------------------------------------
 
 describe("runHarnessList", () => {
   it("renders one row per catalog entry with the state columns", async () => {
@@ -401,7 +364,6 @@ describe("runHarnessList", () => {
 
     await runHarnessList({ cwd: root, run }, io);
     expect(text(out)).toContain("not running");
-    // "Unknown" must not cost a single probe.
     expect(execCalls(calls)).toEqual([]);
   });
 
@@ -410,9 +372,6 @@ describe("runHarnessList", () => {
     writeFileSync(join(root, ".devcontainer", ".env"), "INSTALL_HERMES=true\n");
     const { run } = makeRunner((c, a) => {
       if (isInspect(c, a)) return exited;
-      // The flag read goes through the vendored parser; the fake stands in for
-      // it here so this test stays a pure unit (env-file.test.ts drives the
-      // real script).
       if (c === "sh" && a.includes("INSTALL_HERMES")) {
         return { status: 0, stdout: "true\n", stderr: "" };
       }
@@ -422,11 +381,8 @@ describe("runHarnessList", () => {
 
     await runHarnessList({ cwd: root, run, json: true }, io);
     const parsed = JSON.parse(text(out));
-    // Every catalog entry is listed. Keyed off the catalog rather than a literal
-    // so adding a harness does not require editing an unrelated assertion.
     expect(parsed).toHaveLength(HARNESS_CATALOG.length);
     expect(parsed.find((h: { id: string }) => h.id === "hermes").enabled).toBe(true);
-    // A harness with no flag reports null, not false — the two differ.
     expect(parsed.find((h: { id: string }) => h.id === "codex").enabled).toBeNull();
   });
 

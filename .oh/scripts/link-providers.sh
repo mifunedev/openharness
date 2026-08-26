@@ -1,15 +1,8 @@
 #!/usr/bin/env bash
-# Create/repair the provider skill/agent/hook symlinks into the vendored .oh/
-# pack, and verify the pack is present. The skills/agents/hooks primitive pack is
-# vendored directly under .oh/ (no submodule), so there is nothing to fetch —
-# this script only wires the provider surfaces to it and validates the result.
 set -euo pipefail
 
 PROTECTED_PATHS_FILE=".claude/protected-paths.txt"
 
-# cc-safety-net destructive-command guard: pinned binary installed at image
-# build time (see .devcontainer/Dockerfile). Boot validation is presence +
-# version only — zero npm-registry access. See install-decision.md.
 CC_SAFETY_NET_PIN="1.0.6"
 
 required_files=(
@@ -63,10 +56,6 @@ case "$mode" in
 esac
 
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-# Inside a git checkout, git wins. Otherwise fall back to the project root
-# (OH_PROJECT_ROOT, else PWD) so `oh init`-equipped projects and standalone
-# trees — which are not git repos — still wire their providers instead of
-# crash-looping the sandbox boot. The real guard is the vendored pack below.
 if [ -z "$repo_root" ]; then
   repo_root="${OH_PROJECT_ROOT:-$PWD}"
 fi
@@ -171,11 +160,6 @@ check_protected_paths() {
 }
 
 check_cc_safety_net() {
-  # New check-kind: the required_* arrays above validate repo-relative files;
-  # cc-safety-net is a global binary on PATH, so it needs a presence + version
-  # check instead. Fails loudly via the shared `fail` path when the binary is
-  # missing or version-mismatched — UNLESS CC_SAFETY_NET_OFF=1, the kill-switch,
-  # which must never brick boot (downgrade to a warning and continue).
   local off="${CC_SAFETY_NET_OFF:-}" version
   if ! command -v cc-safety-net >/dev/null 2>&1; then
     if [ "$off" = "1" ]; then
@@ -211,13 +195,6 @@ check_links() {
     [ -x "$f" ] || fail "required pack executable missing or not executable: $f"
   done
 
-  # cc-safety-net enforcement is scoped to environments where the guard is
-  # actually enabled: the sandbox container exports CC_SAFETY_NET_STRICT=1 via
-  # docker-compose, and the Dockerfile guarantees the binary there. CI runners
-  # and pre-rebuild hosts also run this script (both --init and --check) but
-  # never set that marker — failing there would recreate the #639
-  # boot-adjacent failure class. The eval probe cc-safety-net-wiring.sh owns
-  # non-sandbox verification with proper SKIP semantics.
   if [ "${CC_SAFETY_NET_STRICT:-}" = "1" ]; then
     check_cc_safety_net
   else

@@ -32,6 +32,11 @@ chmod +x "$tmp/complete-driver" "$tmp/.oh/skills/audit/scripts/audit-evidence.sh
 git -C "$tmp" init -q; git -C "$tmp" config user.email test@example.invalid; git -C "$tmp" config user.name test
 git -C "$tmp" add .; git -C "$tmp" commit -qm init
 fail(){ echo "REGRESSION: $*" >&2; exit 1; }
+still_running(){
+  local st
+  st=$(ps -o stat= -p "$1" 2>/dev/null | tr -d '[:space:]')
+  [[ -n $st && ${st#Z} == "$st" ]]
+}
 export TMPDIR="$tmpdir"
 # Invalid usage creates neither temp state nor log.
 set +e; usage_out=$(CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" nope 2>&1); usage_rc=$?; set -e
@@ -143,7 +148,7 @@ for sig in INT TERM HUP; do
   set +e; wait "$wrapper"; signal_rc=$?; set -e
   expected=$((128 + $(kill -l "$sig")))
   [[ $signal_rc -eq $expected && -f "$tmp/${sig,,}-seen" ]] || fail "$sig not propagated/interrupted rc wrong"
-  for pid in "$driver_pid" "$grandchild_pid"; do kill -0 "$pid" 2>/dev/null && fail "orphaned $sig route child $pid"; done
+  for pid in "$driver_pid" "$grandchild_pid"; do still_running "$pid" && fail "orphaned $sig route child $pid"; done
   rec_line=$(grep '^audit -- run-id=' "$tmp/sig-rec" | tail -1)
   [[ $rec_line == *state=interrupted* && $rec_line == *"exit=$expected"* ]] || fail "$sig interrupted lifecycle not reported nonzero"
 done
@@ -162,6 +167,6 @@ driver_pid=$(<"$tmp/pids-seen")
 kill -INT "$wrapper"
 set +e; wait "$wrapper"; signal_rc=$?; set -e
 [[ $signal_rc -eq 130 && -f "$tmp/int-seen" ]] || fail 'direct SIGINT not propagated/interrupted'
-kill -0 "$driver_pid" 2>/dev/null && fail 'direct route child survived SIGINT'
+still_running "$driver_pid" && fail 'direct route child survived SIGINT'
 [[ ! -e "$tmp/.oh/logs" ]] || fail 'the run reported into a file instead of stderr'
 echo 'PASS: executable audit evidence/root/run-record/argument/INT/TERM/HUP contract' >&2

@@ -56,7 +56,7 @@ working** — validated on `oh-remote`, 2026-06-23):
 
 DebugMCP runs inside a VS Code extension host. That host needs a VS Code server
 binary, which is **not** in the current image: the devcontainer is
-`FROM debian:bookworm-slim` (`.devcontainer/Dockerfile:1`) and installs no
+`FROM debian:trixie-slim` (`.devcontainer/Dockerfile:1`) and installs no
 `code`, `code-server`, or `vscode-server` binary at build time — the only `code`
 tokens in the Dockerfile are the `claude-code` npm package
 (`.devcontainer/Dockerfile:102,108`) and the two VS Code *Attach-to-Container*
@@ -77,7 +77,7 @@ This tier is the subject of the open feasibility question.
 
 | Path | Verdict | Evidence / constraint |
 | --- | --- | --- |
-| `code serve-web` | **BLOCKED** | The `serve-web` subcommand requires the VS Code CLI/server, which is **not installed** in the image — no `code` binary exists (`grep -niE 'code-server\|serve-web\|vscode-server' .devcontainer/Dockerfile` returns nothing but the `claude-code` package and the Attach comments). Without a runtime install of the VS Code server, `code serve-web` cannot start. The blocking constraint is the **absent VS Code server binary** in `debian:bookworm-slim`. |
+| `code serve-web` | **BLOCKED** | The `serve-web` subcommand requires the VS Code CLI/server, which is **not installed** in the image — no `code` binary exists (`grep -niE 'code-server\|serve-web\|vscode-server' .devcontainer/Dockerfile` returns nothing but the `claude-code` package and the Attach comments). Without a runtime install of the VS Code server, `code serve-web` cannot start. The blocking constraint is the **absent VS Code server binary** in `debian:trixie-slim`, and the base upgrade does not change it. |
 | code-server (apt / binary) | **UNVERIFIED** | code-server (the Coder fork) is not in the image either, but unlike upstream `code serve-web` it is installable headlessly (`apt`/`.deb`/install script) and bundles its own Open VSX extension marketplace. What would confirm: install code-server at runtime, install `ozzafar.debugmcpextension` from Open VSX, open a workspace, and observe the MCP server bind on `:3001` — none of which has been executed. Open question: whether `ozzafar.debugmcpextension` is published to **Open VSX** (code-server cannot reach the proprietary Microsoft Marketplace). Editing the Dockerfile to bake this in is **out of scope** here (post-decision only). |
 
 ### Operator-side (requires host VS Code)

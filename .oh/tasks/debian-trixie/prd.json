@@ -17,8 +17,8 @@
         "Tests pass"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "2026-08-26: Dockerfile on debian:trixie-slim, Docker apt suite trixie, Cloudflare pinned bookworm with 404 comment; guarded by sandbox-base-image.test.ts (commit 3af58a1c)."
     },
     {
       "id": "US-002",

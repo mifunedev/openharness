@@ -1,2 +1,27 @@
 # progress
 
+
+## Codebase Patterns
+
+- Tests are vitest, run with `npx vitest run` (`pnpm test` fails — vitest is not in root `node_modules`; only `.oh/cli` deps are installed). Typecheck: `pnpm run typecheck`.
+- Vitest include globs: `.oh/scripts/__tests__/**`, `.pi/**/__tests__/**`, `.oh/cli/**/__tests__/**`.
+- `.oh/cli/src/__tests__/runtime-catalog.test.ts` holds a *synchronization* test: the microsandbox glibc remediation string must name the base image the Dockerfile actually pins. Changing `FROM` without the catalog string turns it red.
+- Eval probes are standalone bash: `bash .oh/evals/probes/<name>.sh`, exit 0 PASS / 1 REGRESSION.
+- CHANGELOG `[Unreleased]` bullets are capped at 250 chars by `changelog-entry-length.sh`.
+- The repo strips explanatory comments from tracked code (#837), but deliberate, load-bearing comments (the Cloudflare 404 exception) are allowed and no probe forbids them.
+- Confirmed live: `pkg.cloudflare.com/cloudflared/dists/trixie/Release` -> 404, `.../bookworm/Release` -> 200, `download.docker.com/linux/debian/dists/trixie/Release` -> 200.
+
+## US-001 — 2026-08-26 15:12 UTC
+
+**Title**: Move the Dockerfile to Trixie
+**Files changed**: `.devcontainer/Dockerfile`, `.oh/scripts/__tests__/sandbox-base-image.test.ts`, `CHANGELOG.md`, `.oh/cli/src/lib/runtimes/catalog.ts`
+**Commit**: 3af58a1c
+**Result**: PASS
+
+### What I did
+Moved the sandbox base to `debian:trixie-slim` and switched Docker's apt suite to `trixie`, keeping Cloudflare's suite on `bookworm` behind a two-line comment that records the HTTP 404 on Cloudflare's Trixie suite. Added `sandbox-base-image.test.ts`, five deterministic assertions covering the base pin, both suite decisions, comment adjacency, and the absence of any other non-comment Bookworm reference. Added one 214-character issue-linked `[Unreleased]` -> `Changed` entry.
+
+### Learnings for future iterations
+The `FROM` change alone turned `runtime-catalog.test.ts` red, because its remediation-synchronization test compares the catalog string against the live Dockerfile pin. The minimal remediation-string fix landed here to keep the commit green; the fuller runtime and documentation reconciliation is US-002's scope.
+
+---

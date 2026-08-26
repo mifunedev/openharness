@@ -269,7 +269,9 @@ Project-local Pi packages are loaded from `.pi/settings.json`; the defaults incl
 
 ### Base image
 
-Debian Bookworm (slim). The `sandbox` user has passwordless sudo.
+Debian Trixie (slim), the current Debian stable. The `sandbox` user has passwordless sudo.
+
+Docker's apt repository tracks the `trixie` suite. Cloudflare's stays on `bookworm`: Cloudflare publishes no Trixie suite (`pkg.cloudflare.com/cloudflared/dists/trixie` returns HTTP 404) and its Bookworm `cloudflared` package runs on Trixie.
 
 ### AI agent CLIs
 

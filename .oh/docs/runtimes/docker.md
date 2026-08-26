@@ -82,4 +82,4 @@ Two harness-specific notes:
 ## Related
 
 - [Runtimes overview](overview.md) — why the CLI selects no runtime
-- [MicroSandbox](microsandbox.md) — the microVM candidate, and its two blockers
+- [MicroSandbox](microsandbox.md) — the microVM candidate, and its two measured requirements

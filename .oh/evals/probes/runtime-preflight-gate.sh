@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #806 § B1 (open sandbox.substrate vs sandbox.runtime selector);
-#         issue #805 (glibc 2.39 floor + absent /dev/kvm)
+#         issue #805 (glibc 2.39 floor + /dev/kvm requirement)
 # desc: `oh runtime` installs a tool and reports host readiness without selecting a
 #       runtime — it writes no runtime config key, declares both measured MicroSandbox
-#       blockers, and gates the installer behind the preflight rather than warning past it.
+#       requirements (whether or not either currently fails), keeps its glibc remediation
+#       synchronized with the base image the Dockerfile pins, and gates the installer
+#       behind the preflight rather than warning past it.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -47,9 +49,20 @@ if grep -qE 'buildArg|harnessKey' "$CATALOG"; then
 fi
 
 grep -qF '"2.39"' "$CATALOG" \
-  || missing+=("runtimes/catalog.ts: no glibc 2.39 floor — blocker 1 of #805")
+  || missing+=("runtimes/catalog.ts: no glibc 2.39 floor — requirement 1 of #805")
 grep -qF '/dev/kvm' "$CATALOG" \
-  || missing+=("runtimes/catalog.ts: no /dev/kvm requirement — blocker 2 of #805")
+  || missing+=("runtimes/catalog.ts: no /dev/kvm requirement — requirement 2 of #805")
+
+DOCKERFILE="$ROOT/.devcontainer/Dockerfile"
+if [[ -f "$DOCKERFILE" ]]; then
+  base=$(sed -n 's/^FROM[[:space:]]\+\([^[:space:]]\+\).*/\1/p' "$DOCKERFILE" | head -1)
+  if [[ -n "$base" ]] && ! grep -qF "$base" "$CATALOG"; then
+    missing+=("runtimes/catalog.ts: glibc remediation does not name the pinned base image ($base) — the prose drifted from the Dockerfile")
+  fi
+  if grep -qiF 'bookworm' "$CATALOG"; then
+    missing+=("runtimes/catalog.ts: still names bookworm — stale base-image rationale (#807)")
+  fi
+fi
 
 grep -qF 'get.microsandbox.dev' "$CATALOG" \
   || missing+=("runtimes/catalog.ts: installer is not the command recorded by the #803 spike")

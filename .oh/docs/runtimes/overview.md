@@ -43,7 +43,7 @@ A stopped sandbox is not an error: the command says so and exits 0.
 | Runtime | Tier | State | Installable |
 |---|---|---|---|
 | [Docker container](docker.md) | shared host kernel, namespaces + cgroups | **active** | n/a — already here |
-| [MicroSandbox](microsandbox.md) | microVM — one real kernel per sandbox, KVM-backed | blocked | yes, once two blockers clear |
+| [MicroSandbox](microsandbox.md) | microVM — one real kernel per sandbox, KVM-backed | blocked | yes, once `/dev/kvm` reaches the container |
 | gVisor (`runsc`) | syscall interposition — a userspace kernel, no KVM | planned | no |
 
 ### Docker is listed, and it is checked

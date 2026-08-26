@@ -9,7 +9,7 @@ in what order, are #591's child issues.
 
 ## Purpose
 
-Today the harness has exactly one substrate — a single privileged `debian:bookworm-slim`
+Today the harness has exactly one substrate — a single privileged `debian:trixie-slim`
 container per repo (`.devcontainer/docker-compose.yml`). The host Docker socket is **opt-in and
 off by default**: it is a separate overlay (`.devcontainer/docker-compose.docker-sock.yml`)
 applied only when `sandbox.docker_socket` / `DOCKER_SOCKET` is truthy

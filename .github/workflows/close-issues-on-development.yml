@@ -5,17 +5,20 @@ name: "Close linked issues on development merge"
 # pull request targets `development`, so `Closes #N` never fires on its own. This
 # workflow closes those issues instead, and leaves the default branch alone.
 #
-# The trigger is `pull_request_target`, not `pull_request`: a `pull_request` run
-# started by a fork receives a read-only token, so `issues: write` would be
-# unusable and a fork pull request would never close its issue.
-# `pull_request_target` runs the base-branch workflow with a writable token.
-# The usual `pull_request_target` hazard is running untrusted head-branch code.
-# This workflow never does that: `actions/checkout` takes its default ref, which
-# is the base branch, and the only author-controlled values (the title and the
-# body) reach the script through `env` as plain strings.
+# The trigger is `pull_request`, NOT `pull_request_target`. `pull_request_target`
+# resolves the workflow file from the repository DEFAULT branch, which is `main`,
+# where this file does not exist — so it would never fire for a pull request into
+# `development`. `pull_request` resolves the workflow from the pull request's merge
+# context, so this file on `development` runs for pull requests targeting it.
+#
+# Known limit: a `pull_request` run started from a FORK receives a read-only
+# token, so a fork pull request cannot close its issue and the run fails on the
+# `issues.update` call. Every pull request in this repository is same-repo, where
+# the token is writable. Covering forks needs this workflow on the default branch
+# under `pull_request_target`; do that only when `main` carries the file.
 
 on:
-  pull_request_target:
+  pull_request:
     types:
       - closed
     branches:
@@ -37,9 +40,12 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 
     steps:
-      - name: Checkout base branch
+      # Only `.oh/scripts/closing-keywords.mjs` is needed, and it is never executed
+      # as a build step — it is imported and called with the title and the body.
+      - name: Checkout the base branch
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.base.ref }}
           persist-credentials: false
 
       - name: Close each referenced issue

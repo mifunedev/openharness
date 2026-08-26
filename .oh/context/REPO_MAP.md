@@ -97,7 +97,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Docs | `README.md`, `.oh/docs/README.md`, `.oh/docs/` | GitHub-readable markdown; site/blog lives in `mifunedev/openharness-web`. |
 | CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi provider extensions, manifests, and runtime config; `.pi/` is not the v1 Mifune mount. |
-| Skill behavior | `.oh/skills/`, `.pi/skills/`, `.claude/skills/` | Source of truth is the vendored `.oh/skills/` pack; provider paths are symlinks into it. |
+| Skill behavior | `.oh/skills/`, `.pi/skills/`, `.claude/skills/`, `.prime/agent/skills/` | Source of truth is the vendored `.oh/skills/` pack; provider paths are symlinks into it. |
 | Durable knowledge | `.oh/skills/wiki/corpus/README.md`, `.oh/skills/wiki/corpus/*.md`, `.oh/context/IDENTITY.md` | Curated wiki pages and cross-session principles; prefer these before raw logs. |
 
 ## Disregard by default

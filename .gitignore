@@ -59,6 +59,12 @@
 !/.hermes/config.yaml
 !/.hermes/config.yml
 
+# prime-agent project-local runtime state. Credentials already fall under the
+# **/auth.json rule above; these are the session and telemetry files the agent
+# writes beside its tracked config.
+.prime/agent/sessions/
+.prime/agent/telemetry.json
+
 **/scheduled_tasks.lock
 # Legacy/future workspace package build artifacts
 packages/*/build/

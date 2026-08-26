@@ -352,7 +352,9 @@ export async function runInit(
   if (!minimal) {
     prompt.ok("Wrote AGENTS.md + CLAUDE.md and seeded an empty tasks/");
     prompt.ok("Copied the full .devcontainer/ (local image build)");
-    prompt.ok("Configured 4 provider surfaces (.claude .codex .pi .hermes) → vendored .oh/skills");
+    prompt.ok(
+      "Configured 5 provider surfaces (.claude .codex .pi .prime .hermes) → vendored .oh/skills",
+    );
   }
   if (force && totalOverwritten > 0) {
     prompt.warn(`--force overwrote ${totalOverwritten} existing file(s).`);
@@ -515,7 +517,8 @@ const DEVCONTAINER_JSON = `${JSON.stringify(
 
 // Provider skill/agent/hook symlinks into the vendored `.oh/` pack. init creates
 // them for the target; link-providers.sh repairs them. `.codex` reuses
-// `.claude`'s agents/specs.
+// `.claude`'s agents/specs. `.prime` nests its surface one level deeper, so its
+// target climbs two directories rather than one.
 const PROVIDER_LINKS: [string, string][] = [
   [".pi/skills", "../.oh/skills"],
   [".claude/skills", "../.oh/skills"],
@@ -524,6 +527,7 @@ const PROVIDER_LINKS: [string, string][] = [
   [".claude/hooks", "../.oh/hooks"],
   [".codex/agents", "../.claude/agents"],
   [".codex/specs", "../.claude/specs"],
+  [".prime/agent/skills", "../../.oh/skills"],
 ];
 
 /** Create/refresh a symlink at `<t>/<linkRel>` → `linkTarget` (create/skip/overwrite). */

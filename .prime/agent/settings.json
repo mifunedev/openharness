@@ -1,0 +1,6 @@
+{
+  "theme": "dark",
+  "defaultThinkingLevel": "high",
+  "steeringMode": "one-at-a-time",
+  "followUpMode": "one-at-a-time"
+}

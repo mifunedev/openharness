@@ -112,7 +112,7 @@ For each sampled trajectory, attach the deterministic signals the scorer weights
 
 Write the assembled cohort (array of `TRAJECTORY_SCHEMA` records, or a
 `{ "trajectories": [...] }` wrapper) to a gitignored working file, e.g.
-`.oh/memory/<UTC-date>/weigh-<slug>-<HHMMSS>.cohort.json`.
+`.oh/logs/<UTC-date>/weigh-<slug>-<HHMMSS>.cohort.json`.
 
 ### Step 4 — Weight + select (the harness-owned step)
 
@@ -122,7 +122,7 @@ scorer itself stays pure:
 
 ```bash
 node "${CLAUDE_SKILL_DIR}/scripts/score-trajectories.mjs" \
-  --cohort ".oh/memory/$(date -u +%F)/weigh-<slug>-<HHMMSS>.cohort.json" \
+  --cohort ".oh/logs/$(date -u +%F)/weigh-<slug>-<HHMMSS>.cohort.json" \
   --method "<best-of-n|vote|softmax|synthesis>" \
   --now "$(date -u +%s)" \
   [--weights '<json>'] [--soft]
@@ -145,30 +145,15 @@ is an array, `topK` carries their weights) rather than one winner. Spawn one
 single best answer (take the strongest element of each). For the other three
 methods `selected` is already the single chosen id — no aggregation step.
 
-### Step 6 — Persist + log
+### Step 6 — Persist
 
-1. **Persist** the run artifacts to the **gitignored** `.oh/memory/<UTC-date>/`
-   directory (matched by `.gitignore` `.oh/memory/[0-9]*/`) — never stage them:
-   - `weigh-<slug>-<HHMMSS>.json` — the full scorer report (config + scored rows +
-     selection), the audit trail.
-   - `weigh-<slug>-<HHMMSS>.md` — a short human summary: the task, N, method,
-     weights, the selected id(s) + why (cite the winning `weightBreakdown`), and
-     any `floorViolations`.
-
-2. **Log** per the Memory Improvement Protocol — append to
-   `.oh/memory/<UTC-date>/log.md` (today = `date -u +%Y-%m-%d`):
-
-   ```markdown
-   ## weigh -- HH:MM UTC
-   - **Result**: SELECTED | NO-SELECTION | DRY-RUN
-   - **Task**: "<task or --cohort source>"
-   - **Cohort**: N=<n>, method=<m>, weights=<frozen|custom(judge=<j>)>
-   - **Selected**: <id(s) or "NO-SELECTION (<floor cause>)">
-   - **Observation**: <one sentence>
-   ```
-
-   See `.oh/skills/retro/references/memory-protocol.md` for the canonical
-   Memory Improvement Protocol.
+Persist the run artifacts to the **gitignored** `.oh/logs/<UTC-date>/`
+directory (matched by `.gitignore` `.oh/logs/`) — never stage them:
+- `weigh-<slug>-<HHMMSS>.json` — the full scorer report (config + scored rows +
+  selection), the audit trail.
+- `weigh-<slug>-<HHMMSS>.md` — a short human summary: the task, N, method,
+  weights, the selected id(s) + why (cite the winning `weightBreakdown`), and
+  any `floorViolations`.
 
 Announce the `RESULT:` tag once Step 6 completes.
 
@@ -184,7 +169,7 @@ Announce the `RESULT:` tag once Step 6 completes.
   the scorer.
 - **Exceeding the cap.** `N > 8` is rejected — cost grows linearly with N (plus
   `/eval` + `/audit implementation <slug>` per trajectory). Preview with `--dry-run` first.
-- **Committing the artifacts.** `.oh/memory/<UTC-date>/` is gitignored; never stage a
+- **Committing the artifacts.** `.oh/logs/<UTC-date>/` is gitignored; never stage a
   cohort, report, or summary.
 - **Editing the scorer to change weights inline.** `DEFAULT_WEIGHTS` is
   `Object.freeze`d and probe-pinned; pass `--weights` for a one-off, and route any

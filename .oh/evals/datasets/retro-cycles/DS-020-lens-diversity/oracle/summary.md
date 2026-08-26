@@ -1,6 +1,6 @@
 # Oracle: DS-020 — Brief critics with diverse lenses (retro-promoted lesson)
 
-This trajectory is a `/retro` cycle, not a code change: its provenance is the memory file plus the date it landed (`memory/MEMORY.md` @ 2026-05-11), with no source PR. It is a valid retro outcome because it follows the scientific session-closing shape the `/retro` skill prescribes and the Memory Improvement Protocol (`context/rules/memory.md`) requires.
+This trajectory is a `/retro` cycle, not a code change: its provenance is the identity file plus the date it landed (`.oh/context/IDENTITY.md` @ 2026-05-11), with no source PR. It is a valid retro outcome because it follows the scientific session-closing shape the `/retro` skill prescribes and the `/retro` promotion rules require.
 
 ## Why this is a valid retro outcome
 
@@ -10,13 +10,13 @@ The hypothesis carries cited session evidence, not assertion: two council rounds
 
 Verdict: **supported** (with sufficient confidence to promote). The evidence points one direction and the controlled comparison rules out the count-only confound, so the hypothesis graduates from observation to durable lesson.
 
-It is promoted as exactly **one** durable, non-duplicative bullet appended to `memory/MEMORY.md` under Lessons Learned — descriptive ("a run on 2026-05-11 showed…"), the memory tier rather than the IDENTITY/rules tier, and not a restatement of any existing rule or operating principle.
+It is promoted as exactly **one** durable, non-duplicative bullet appended to `.oh/context/IDENTITY.md` under Lessons learned (append-only) — descriptive ("a run on 2026-05-11 showed…"), the IDENTITY tier, and not a restatement of any existing rule or operating principle.
 
 ## Mapping to CB-003
 
-CB-003's success signal is met: the session yields **≥1 falsifiable hypothesis with an assigned verdict and cited evidence** (the lens-diversity hypothesis, verdict `supported`, evidenced by the two PR #270 council rounds) **AND ≥1 supported lesson durably written** (the single bullet now present in `memory/MEMORY.md`).
+CB-003's success signal is met: the session yields **≥1 falsifiable hypothesis with an assigned verdict and cited evidence** (the lens-diversity hypothesis, verdict `supported`, evidenced by the two PR #270 council rounds) **AND ≥1 supported lesson durably written** (the single bullet now present in `.oh/context/IDENTITY.md`).
 
 ## Reward
 
-- `artifact_presence` = the lesson bullet exists in `memory/MEMORY.md`.
-- `diff_similarity` = a candidate that touches `memory/MEMORY.md` (the single oracle changed file).
+- `artifact_presence` = the lesson bullet exists in `.oh/context/IDENTITY.md`.
+- `diff_similarity` = a candidate that touches `.oh/context/IDENTITY.md` (the single oracle changed file).

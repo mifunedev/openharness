@@ -2,11 +2,11 @@
 # oh-path — resolve a harness data directory deterministically.
 #
 # Usage:  oh-path <name> [--no-create]
-#   <name>   memory | crons | evals | context | tasks | worktrees
+#   <name>   logs | crons | evals | context | tasks | worktrees
 #            (or any <NAME>_DIR you define)
 #
 # Resolution precedence (first hit wins):
-#   1. environment override   <NAME>_DIR        (e.g. MEMORY_DIR=.oh/memory)
+#   1. environment override   <NAME>_DIR        (e.g. LOGS_DIR=.oh/logs)
 #   2. default                .oh/<name>
 #
 # The env var is read from the PROCESS environment. Inside the sandbox that is
@@ -15,8 +15,8 @@
 #
 # The result is anchored to the REPO ROOT (the parent of this script's `.oh/`
 # directory), so it resolves identically no matter the caller's CWD. That is the
-# whole point: skills, crons, and sub-agents stop guessing where memory lives —
-# they ask oh-path. To MOVE a directory in future, change ONE thing (the
+# whole point: skills, crons, and sub-agents stop guessing where a directory
+# lives — they ask oh-path. To MOVE a directory in future, change ONE thing (the
 # <NAME>_DIR env var); every caller follows. No need to edit individual skills.
 #
 # Relative values are resolved against the repo root.
@@ -50,47 +50,17 @@ _script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
 _oh_dir=$(dirname -- "$_script_dir")      # <root>/.oh
 _root=$(dirname -- "$_oh_dir")            # <root>
 
-# 1. environment override:  memory → MEMORY_DIR, crons → CRONS_DIR, ...
+# 1. environment override:  logs → LOGS_DIR, crons → CRONS_DIR, ...
 _envvar="$(printf '%s' "$_name" | tr 'a-z-' 'A-Z_')_DIR"
 eval "_dir=\${$_envvar:-}"
 
 # 2. default  .oh/<name>
 [ -n "$_dir" ] || _dir=".oh/$_name"
 
-# The root a RELATIVE value is measured against.
-_anchor="$_root"
-
-# `memory` is shared, not per-branch: one ledger serves the whole checkout.
-#
-# Every other name (crons, evals, tasks, context, worktrees) is branch-scoped by
-# design — a probe must resolve the worktree it is testing. `memory` is the
-# exception. It is the durable journal, and `_root` above is the parent of THIS
-# script's `.oh/`, which inside a linked git worktree is the worktree root, not
-# the checkout root. Combined with MEMORY.md being gitignored, that gave every
-# worktree its own empty ledger and stranded each session's lessons on a branch
-# that is later deleted (#768). Anchor `memory` to the MAIN worktree instead, so
-# all worktrees of one checkout read and write the same file.
-#
-# `git worktree list --porcelain` prints the main worktree first — the same
-# idiom already hand-rolled in render-log-entry.sh and
-# audit-run.sh, which each worked around this resolver rather than fixing it.
-#
-# Degrade to `_root` whenever git cannot answer: no git binary, not a repo (a
-# fresh `oh init` before `git init`), or a damaged `.git`. This script runs under
-# `set -eu`, so the command substitution ends in `|| true` and a `[ -d ]` guard
-# rejects any non-directory answer — a git failure must never abort a caller.
-if [ "$_name" = "memory" ]; then
-    _main=$(git -C "$_root" worktree list --porcelain 2>/dev/null \
-        | awk 'NR==1 && $1=="worktree" { sub(/^worktree /,""); print; exit }' || true)
-    if [ -n "${_main:-}" ] && [ -d "$_main" ]; then
-        _anchor="$_main"
-    fi
-fi
-
-# Resolve a relative value against the anchor. An absolute value is used verbatim.
+# Resolve a relative value against the repo root. An absolute value is used verbatim.
 case "$_dir" in
     /*) ;;
-    *) _dir="$_anchor/$_dir" ;;
+    *) _dir="$_root/$_dir" ;;
 esac
 
 [ "$_create" -eq 1 ] && mkdir -p "$_dir"

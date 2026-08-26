@@ -5,7 +5,7 @@
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"; A="$REPO/.oh/scripts/ablate.sh"
 ROOT=$(mktemp -d); probe="$ROOT/probe.sh"; trap 'rm -rf "$ROOT"' EXIT
-mkdir -p "$ROOT/.oh/evals" "$ROOT/.oh/context" "$ROOT/.oh/memory"; printf '#!/bin/sh\nexit 0\n' >"$probe"; chmod +x "$probe"
+mkdir -p "$ROOT/.oh/evals" "$ROOT/.oh/context"; printf '#!/bin/sh\nexit 0\n' >"$probe"; chmod +x "$probe"
 target="$ROOT/.oh/context/SOUL.md"; target2="$ROOT/.oh/context/USER.md"
 printf original >"$target"; printf second >"$target2"
 fail(){ echo "REGRESSION: $*" >&2; exit 1; }
@@ -30,12 +30,12 @@ if AUDIT_ROOT="$ROOT" bash "$A" "$target" "$probe" >/dev/null 2>&1; then fail 's
 # Global recovery must reject the symlink even when its destination is empty.
 if AUDIT_ROOT="$ROOT" A="$A" bash -c 'source "$A"; ablate_recover' >/dev/null 2>&1; then fail 'global recovery accepted empty symlinked state directory'; fi
 rm "$state"
-# Shared-memory context lives under AUDIT_LOG_ROOT, while source context stays
-# constrained to AUDIT_ROOT. It uses the same locked recovery owner safely.
-SHARED=$(mktemp -d); mkdir -p "$SHARED/.oh/memory" "$SHARED/.oh/context"; printf shared >"$SHARED/.oh/memory/MEMORY.md"; printf forbidden >"$SHARED/.oh/context/USER.md"
-AUDIT_ROOT="$ROOT" AUDIT_LOG_ROOT="$SHARED" A="$A" T="$SHARED/.oh/memory/MEMORY.md" bash -c 'source "$A"; ablate_swap_out "$T"; [[ ! -e $T ]]; ablate_restore "$T"'
-[[ $(<"$SHARED/.oh/memory/MEMORY.md") == shared ]] || fail 'shared MEMORY bytes not restored'
-if AUDIT_ROOT="$ROOT" AUDIT_LOG_ROOT="$SHARED" A="$A" T="$SHARED/.oh/context/USER.md" bash -c 'source "$A"; _ablate_canonical "$T"' >/dev/null 2>&1; then fail 'non-memory shared target escaped source-root constraint'; fi
+# Every ablatable target now resolves against AUDIT_ROOT alone: the `.oh/memory`
+# tier that AUDIT_LOG_ROOT existed to reach was deleted. A context file under some
+# OTHER root must therefore be rejected, not silently ablated.
+SHARED=$(mktemp -d); mkdir -p "$SHARED/.oh/context"; printf forbidden >"$SHARED/.oh/context/USER.md"
+if AUDIT_ROOT="$ROOT" AUDIT_LOG_ROOT="$SHARED" A="$A" T="$SHARED/.oh/context/USER.md" bash -c 'source "$A"; _ablate_canonical "$T"' >/dev/null 2>&1; then fail 'out-of-root shared target escaped source-root constraint'; fi
+[[ $(<"$SHARED/.oh/context/USER.md") == forbidden ]] || fail 'rejected out-of-root target was mutated'
 rm -rf "$SHARED"; assert_clean
 # SIGKILL cannot trap: the next startup recovery restores exact bytes.
 set +e

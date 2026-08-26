@@ -8,6 +8,27 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Removed
+- **Remove the `.oh/memory` tier entirely.** Code is the source of truth. The directory, its tracked `README.md`, the `MEMORY.md` ledger, and dated session logs are gone as a concept — not relocated.
+- Remove the seeder `.oh/scripts/ensure-memory-file.sh` and its boot pre-create block in `.devcontainer/entrypoint.sh`.
+- Remove `MEMORY_DIR` from both compose files and both `.example.env` templates, and the `memory` name from `.oh/scripts/oh-path` with its main-worktree anchoring special case.
+- Remove `.oh/skills/retro/references/memory-protocol.md`, `.oh/skills/retro/scripts/{render-log-entry.sh,memory-audit.py}`, and `.oh/skills/prompt-miner/scripts/render-log-entry.sh`.
+- Remove the Memory-Improvement-Protocol log step from 20 skills. `oh init` no longer seeds `.oh/memory/`.
+- Remove 9 eval probes whose subject no longer exists, plus the `probe-memory.md` context-ablation probe. See the PR body for the list.
+
+### Added
+- Add `.oh/logs/` (gitignored, `LOGS_DIR`) for machine-generated run artifacts. It is **not** a memory tier: no ledger, no session-start read, nothing tracked.
+- `.oh/logs/` holds the `/audit` run log (`<date>/audit.md`), `/render-html` output, `/prompt-miner` reports, `/weigh` and `/rlm` traces, and wiki drafts. The audit log is what keeps `locked-append.sh` alive.
+
+### Changed
+- **`/retro` becomes report-only.** It keeps the scientific pass and promotes only to `.oh/context/IDENTITY.md` behind its propose-then-confirm gate. It writes no log.
+- A supported `/retro` lesson that does not generalize is now reported and dropped; an anti-pattern forbids inventing a file to hold it. The subsystem lens drops from six to five.
+- Rename `check-memory-duplicates.sh` to `check-identity-duplicates.sh`; it consults `IDENTITY.md` alone. The `GATE-PENDING` / `--resolves` contract from #767 retires with the log it wrote.
+- **`/prompt-miner` becomes report-only.** `mine-traces.mjs` is unchanged apart from its output root (`LOGS_DIR`); all 36 engine tests pass. Descriptive markers are reported, not promoted.
+- `.oh/scripts/oh-path` now resolves every name against the repo root, so `_ablate_log_root` and the `AUDIT_LOG_ROOT` memory special cases in `ablate.sh` and `context-audit-runner.sh` go too.
+- The heartbeat, cleanup-tasks, eval-weekly, and prompt-miner crons stop logging to memory. `.oh/crons/.cron.log` is now each cron's only durable per-pulse signal.
+- Rewrite `heartbeat-logging-contract.sh` to guard that liveness line and a reintroduced-`.oh/memory` regression. Retarget `CB-003` and `DS-020` from `MEMORY.md` to `IDENTITY.md`.
+
 ## [0.4.0] - 2026-08-26
 
 ### Removed

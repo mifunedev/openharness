@@ -29,20 +29,6 @@ This checkout commonly has two remotes:
 Before every commit or PR, inspect the changed paths and choose the remote
 explicitly. Do not assume `origin` is the public target.
 
-**Memory is private. Never commit memory artifacts to the public upstream repo.**
-Anything under `.oh/memory/` — especially `.oh/memory/MEMORY.md`, dated session logs,
-retro notes, and private lessons — belongs only in your private fork
-(`origin`) unless the operator gives an explicit one-off exception. If a public
-PR branch contains `.oh/memory/` changes, remove them before pushing/creating the PR,
-and preserve them separately on an `origin`-only branch or PR.
-
-Use this quick guard before pushing to `upstream`:
-
-```bash
-git diff --name-only upstream/development...HEAD | grep '^.oh/memory/' \
-  && { echo "BLOCK: memory changes must go to origin only"; exit 1; }
-```
-
 ## Issue Titles
 
 Format: `<prefix>(<issue#>): <shortdesc>`
@@ -128,7 +114,7 @@ Displaced detail has a destination — put it there, not in the entry:
 | Rationale, rejected alternatives | The PR body — the `([#N])` link is the pointer |
 | Task/spec decisions | `.oh/tasks/<slug>/prd.md` |
 | Architecture decisions | `.oh/docs/rfcs/` |
-| Incident narrative, lessons | `.oh/memory/MEMORY.md` |
+| Durable, generalized lessons | `.oh/context/IDENTITY.md` |
 
 BAD (real entry, 3,579 chars — a design doc wearing a bullet):
 

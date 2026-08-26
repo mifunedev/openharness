@@ -54,12 +54,10 @@ done
 grep -qF 'Usage: /builder <agent|skill|command|rule> <name-or-request>' "$SKILL" || fail "missing exact invalid-argument usage"
 grep -qF 'remaining request is empty or only' "$SKILL" || fail "dispatcher does not reject an empty request after a valid type"
 grep -qF 'stop without reading' "$SKILL" || fail "missing fail-closed invalid-type behavior"
-grep -qF '.oh/scripts/locked-append.sh' "$SKILL" || fail "Memory Protocol does not use the locked append helper"
-grep -qF '.oh/scripts/oh-path' "$SKILL" || fail "Memory Protocol does not resolve the configured memory root"
-grep -qF 'MEMORY_DIR' "$SKILL" || fail "Memory Protocol omits the memory environment override"
-grep -qF '<OP | DRY-RUN | PARTIAL | FAIL>' "$SKILL" || fail "Memory Protocol does not represent all run outcomes"
-grep -q '^### Qualify and improve$' "$SKILL" || fail "Memory Protocol omits the qualify/improve pass"
-grep -qF "use \`/retro\`'s propose-then-confirm gate" "$SKILL" || fail "Memory Protocol omits controlled durable promotion"
+# The `.oh/memory` tier was deleted; /builder logs nothing. A reintroduced write
+# target here is the defect this replaces the old Memory-Protocol assertions with.
+if grep -qF '.oh/memory' "$SKILL"; then fail "builder references the deleted .oh/memory tier"; fi
+if grep -qF 'MEMORY_DIR' "$SKILL"; then fail "builder reintroduced the MEMORY_DIR override"; fi
 
 AGENT_REF="$REFS/agent.md"
 grep -qF '.oh/agents/<name>.md' "$AGENT_REF" || fail "agent type omits canonical Open Harness placement"

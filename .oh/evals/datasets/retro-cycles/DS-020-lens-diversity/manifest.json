@@ -6,7 +6,7 @@
   "created": "2026-06-15",
   "source": {
     "repo": "ryaneggz/openharness",
-    "memory_ref": "memory/MEMORY.md",
+    "identity_ref": ".oh/context/IDENTITY.md",
     "lesson_date": "2026-05-11",
     "origin": "/retro session"
   },
@@ -24,5 +24,5 @@
   },
   "content_hash": "sha256:728a6b6fdf6bc20a6b77dbd35c648df144d044c9ba11f6949be55ddec1631cb6",
   "capability_tasks": ["CB-003"],
-  "notes": "retro-cycle trajectory: /retro -> durable lesson promotion (no PR; provenance is memory/MEMORY.md @ 2026-05-11)."
+  "notes": "retro-cycle trajectory: /retro -> durable lesson promotion (no PR; provenance is .oh/context/IDENTITY.md @ 2026-05-11)."
 }

@@ -50,14 +50,13 @@ workspace/.ralph/.claude/
 **/.ralph/archives/
 **/src/generated/
 
-# Slack runtime data (channel logs, context, attachments — keep MEMORY.md tracked)
+# Slack runtime data (channel logs, context, attachments)
 workspace/.slack/*/
 workspace/.slack/events/
 workspace/.slack/settings.json
 
-# Memory runtime/state — keep .oh/memory/README.md tracked; ignore private memory and dated logs.
-.oh/memory/MEMORY.md
-.oh/memory/[0-9]*/
+# Machine-generated run artifacts (audit run log, rendered reports). Never tracked.
+.oh/logs/
 
 # Pi project config (generated symlinks)
 workspace/.pi/

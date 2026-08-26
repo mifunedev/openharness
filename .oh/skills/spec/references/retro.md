@@ -12,14 +12,14 @@ evidence-tested lessons.
 
 **Core principle: compose `/retro`, scoped to this task.** `/retro` already implements the
 scientific session-closing pass — falsifiable hypotheses, evidence for *and* against, a
-verdict + confidence, and a propose-then-confirm promotion into `.oh/memory/MEMORY.md` /
+verdict + confidence, and a propose-then-confirm promotion into
 `.oh/context/IDENTITY.md`. `retro` is the execution-side application of it: point `/retro`
 at the just-built `.oh/tasks/<slug>/` run so the reflection is anchored to that unit's
 artifacts (`prd.md`, `progress.txt`, `prd.json`, the `/audit implementation` evidence)
 rather than the whole ambient session.
 
-It is **not** a second retro engine. The propose-then-confirm gate, the six-subsystem lens,
-and the memory-tier rules all live in `/retro`; `retro` only frames the scope and
+It is **not** a second retro engine. The propose-then-confirm gate, the five-subsystem lens,
+and the promotion rules all live in `/retro`; `retro` only frames the scope and
 records that the execution stage ran its retro.
 
 ---
@@ -29,10 +29,10 @@ records that the execution stage ran its retro.
 | Arg | Meaning |
 |-----|---------|
 | `<slug>` | The task slug — the retro reads `.oh/tasks/<slug>/` artifacts as its primary signal source. Required. |
-| `--dry-run` | Passed through to `/retro`: write only the log entry (`Result: DRY-RUN`); never write `MEMORY.md`/`IDENTITY.md`. |
+| `--dry-run` | Passed through to `/retro`: report only (`Result: DRY-RUN`); never write `IDENTITY.md`. |
 
 If `.oh/tasks/<slug>/` has no `progress.txt`/`prd.md`, there is no build to reflect on — say so
-and fall back to a plain `/retro` on the session, or skip with a logged note.
+and fall back to a plain `/retro` on the session, or skip with a note in the report.
 
 ---
 
@@ -44,9 +44,9 @@ what the `build ⇄ audit` loop revealed (how many
 FAIL→build cycles, and why), and any coupling/constraint the run surfaced. Then let `/retro`
 do its scientific pass: form falsifiable hypotheses, test each for and against, assign
 verdict + confidence, and present supported `medium`+ lessons for confirmation before any
-write. Always logs, even on a trivial/no-lesson run.
+write. Always reports, even on a trivial/no-lesson run.
 
-`retro` does not bypass `/retro`'s confirmation gate — `MEMORY.md`/`IDENTITY.md` writes
+`retro` does not bypass `/retro`'s confirmation gate — `IDENTITY.md` writes
 still require explicit approval (or are skipped under `--dry-run`).
 
 ---
@@ -62,23 +62,6 @@ still require explicit approval (or are skipped under `--dry-run`).
   `/audit drift` already runs hourly from the heartbeat cron and the other two never blocked
   a merge. Run them on their own cadence, or on demand.
 - **Merge or undraft.** No GitHub-side mutation — reflection only.
-
----
-
-## Memory Protocol
-
-`/retro` writes its own log entry. `retro` ensures it is tagged to the unit; if `/retro`
-did not, add one line to `.oh/memory/<UTC-date>/log.md` per `.oh/skills/retro/references/memory-protocol.md`:
-
-```markdown
-## spec-retro -- HH:MM UTC
-- **Result**: OP | DRY-RUN
-- **Slug**: <slug>
-- **Lessons**: <n> supported / <n> promoted (or "none durable")
-- **Observation**: <one sentence>
-```
-
----
 
 ## Pipeline position
 

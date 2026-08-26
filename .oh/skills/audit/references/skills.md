@@ -55,7 +55,7 @@ AGE_DAYS=$(( (NOW - MTIME) / 86400 ))
 ```bash
 # Count daily memory logs that mention this skill name (case-insensitive)
 SKILL_NAME="<skill-name>"
-MENTION_COUNT=$(grep -rli "$SKILL_NAME" "$AUDIT_LOG_ROOT/.oh/memory/" 2>/dev/null | wc -l)
+MENTION_COUNT=$(grep -rli "$SKILL_NAME" "$AUDIT_LOG_ROOT/.oh/logs/" 2>/dev/null | wc -l)
 ```
 
 | Mentions | Score |
@@ -193,7 +193,6 @@ Return this structured observation to the outer dispatcher and suppress target l
 - **Observation**: [one sentence — top finding]
 ```
 
-See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
 ## Guidelines
 

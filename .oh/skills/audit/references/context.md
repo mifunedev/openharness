@@ -8,7 +8,6 @@ Score every file in the default-loaded context set on 4 deterministic dimensions
 |-------|-------|-----------|
 | Bootloader | `CLAUDE.md` | always |
 | Context | `.oh/context/SOUL.md`, `.oh/context/IDENTITY.md`, `.oh/context/TOOLS.md`, `.oh/context/REPO_MAP.md`, `.oh/context/USER.md` | session start |
-| Memory | `.oh/memory/MEMORY.md` and `.oh/memory/<UTC-today>/log.md` when present | session start |
 | Skill metadata | frontmatter of all `**/SKILL.md` | always injected |
 
 ## Instructions
@@ -20,7 +19,7 @@ Arguments received: `$ARGUMENTS`
 | Argument | Mode |
 |----------|------|
 | empty or `all` | Tier-1 scorecard only |
-| `--baseline` | Tier-1 scorecard + record durable baseline snapshot to `.oh/memory/YYYY-MM-DD/context-audit-baseline/` |
+| `--baseline` | Tier-1 scorecard + record durable baseline snapshot to `.oh/logs/YYYY-MM-DD/context-audit-baseline/` |
 | `--ablate <file>` | Tier-1 scorecard + Tier-2 ablation against `<file>` (path relative to harness root) |
 
 ### 2. Inventory the default-loaded set
@@ -36,9 +35,7 @@ for f in \
   "$HARNESS/.oh/context/IDENTITY.md" \
   "$HARNESS/.oh/context/TOOLS.md" \
   "$HARNESS/.oh/context/REPO_MAP.md" \
-  "$HARNESS/.oh/context/USER.md" \
-  "$AUDIT_LOG_ROOT/.oh/memory/MEMORY.md" \
-  "$AUDIT_LOG_ROOT/.oh/memory/$TODAY/log.md"; do
+  "$HARNESS/.oh/context/USER.md"; do
   [ -f "$f" ] || continue
   chars=$(wc -c < "$f")
   words=$(wc -w < "$f")
@@ -216,16 +213,13 @@ Return a structured context observation carrying `AUDIT_RUN_ID`, budget, top fin
 ablation verdict, and evidence path. Do not append or run retro from this route; the outer
 dispatcher owns the one locked append under `AUDIT_LOG_ROOT`.
 
-See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
-
 ## Guidelines
 
 - All Tier-1 scoring is deterministic — same shell commands twice produce the same scores. No LLM judgment in Tier 1.
 - Tier-2 ablation uses `trap` to restore the target file even if `claude -p` errors mid-run.
 - The skill-metadata aggregate row gets a budget line but no verdict (it's aggregate; verdicts apply per-file only).
 - Tier-2 probe results are probabilistic, not deterministic — `claude -p` is non-deterministic. Run ablation twice if a verdict is borderline.
-- For before/after token diff: the Memory log's `Budget:` line from each run is the comparison data point. No separate snapshot mechanism needed for the diff.
-- When `--baseline` mode is used, probe outputs are persisted to `.oh/memory/YYYY-MM-DD/context-audit-baseline/` and are gitignored (daily memory dirs are gitignored per `.gitignore`).
+- When `--baseline` mode is used, probe outputs are persisted to `.oh/logs/YYYY-MM-DD/context-audit-baseline/` and are gitignored (`.oh/logs/` is gitignored per `.gitignore`).
 - Do not penalize `CLAUDE.md` on Dimension B (load-bearing) because it's the source of truth and may have few inbound citations by design — it doesn't need to be cited; it is the orchestrator instructions.
 
 ## Reference

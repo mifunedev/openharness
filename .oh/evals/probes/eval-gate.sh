@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
-# source: .oh/memory/MEMORY.md 2026-06-11 (eval-gate)
+# source: retro lesson 2026-06-11 (eval-gate)
 # desc: the eval gate keys on the green→red delta + the runner exit code, never on the bare
 #       presence of a REGRESSION row. The rule lives with whoever RUNS the gate: that moved
 #       from autopilot §6 to the build path's own /eval gate in spec-simplification US-002,

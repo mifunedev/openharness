@@ -237,23 +237,6 @@ For a standard API task, record `Complexity: standard`, `Model override: none
 `model` argument. If `medium` is unsupported, use the nearest supported thinking
 level without changing models.
 
-### 9. Memory Improvement Protocol
-
-Run at the end of **every** execution -- op, dry-run, or error.
-
-**a) Log** -- append to `.oh/memory/<today>/log.md` where today = `date -u +%Y-%m-%d`:
-
-```markdown
-## Delegate -- HH:MM UTC
-- **Result**: OP | DRY-RUN | PARTIAL | FAIL
-- **Plan**: "<plan title or source>"
-- **Action**: [N tasks across M waves, P parallel max; X completed, Y failed, Z blocked]
-- **Duration**: ~Xs
-- **Observation**: [one sentence]
-```
-
-See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
-
 ## Reference
 
 ### Wave Execution Rules
@@ -275,7 +258,5 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 | Agent: PM | `.claude/agents/pm.md` — read-only (no Write/Edit) |
 | Agent: Council | `.claude/agents/council.md` |
 | Identity | `IDENTITY.md` |
-| Memory | `MEMORY.md` |
-| Daily Logs | `.oh/memory/YYYY-MM-DD/log.md` |
 
 The `implementer`/`pm`/`critic` agent types above are read-only and will silently make zero file changes. For any worker that must `Write`/`Edit` files, set `subagent_type: general-purpose` (or `claude`) — both are built-in agent types with no agent-definition file, so there is no `.claude/agents/` path to reference.

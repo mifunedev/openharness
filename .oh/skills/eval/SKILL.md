@@ -59,7 +59,7 @@ code by design — this is not a bug.
 ## Ablation (added by US-006)
 
 `run.sh --ablate <context-file> --probe <id>` runs a probe with and without a
-target rule/memory file loaded (reusing `scripts/ablate.sh`'s swap/restore/trap
+target context file loaded (reusing `scripts/ablate.sh`'s swap/restore/trap
 mechanics — NOT the `claude -p` oracle) and reports `LOAD-BEARING` (regression on
 removal) or `PRUNABLE`. This is the prune-half of the fitness function. See
 US-006 in `.oh/tasks/context-fitness-evals/prd.md`.
@@ -70,18 +70,3 @@ US-006 in `.oh/tasks/context-fitness-evals/prd.md`.
   are deferred — `/eval` is deterministic only. Never hard-gate on a noisy metric.
 - For *scoring* context files for staleness/budget, that is `/audit context` and
   `/audit skills` — `/eval` checks behavior/state, not prose quality.
-
-## Memory Protocol
-
-When `AUDIT_RUN_ID` is inherited, return a structured observation carrying the
-inherited roots/run ID and suppress the append/retro; the outer `/audit` logs once.
-A direct run appends to `.oh/memory/<UTC-date>/log.md` per
-`.oh/skills/retro/references/memory-protocol.md`:
-
-```markdown
-## eval -- HH:MM UTC
-- **Result**: OP
-- **Ran**: <n> probes (<p> PASS / <r> REGRESSION / <s> SKIPPED)
-- **Regressions**: <named, or none>
-- **Observation**: <one sentence>
-```

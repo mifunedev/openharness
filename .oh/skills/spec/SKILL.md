@@ -84,12 +84,6 @@ esac
   **zero executable consumers repo-wide**, so printing them was ceremony. The rule they
   encoded still holds and is what matters: never infer success from silence. A missing
   artifact, a crashed build, or an undecided gate is reported as blocked, never as done.
-- **Memory Improvement Protocol** — each subcommand appends **one** entry per run to
-  `.oh/memory/<UTC-date>/log.md` under `## spec-<sub> -- HH:MM UTC`, in the three-field
-  `Result` / `Action` / `Observation` shape the heartbeat cron reads
-  (`.oh/crons/heartbeat.md`), then runs the qualify/improve pass per
-  `.oh/skills/retro/references/memory-protocol.md`. One entry per run, not one per node:
-  nothing consumed the extra structure.
 
 ## When NOT to use
 
@@ -101,4 +95,3 @@ esac
 - `references/plan.md`, `references/execute.md`,
   `references/retro.md` — the full per-subcommand procedures (authoritative).
 - `AGENTS.md § The Workflow` — the canonical workflow this dispatcher decomposes.
-- `.oh/skills/retro/references/memory-protocol.md` — Memory Improvement Protocol governing the log step.

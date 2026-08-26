@@ -581,22 +581,17 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
   fi
 fi
 
-# ─── Resolve + pre-create the memory directory ────────────────────
-# Single source of truth = MEMORY_DIR (docker-compose passes .devcontainer/.env's
-# MEMORY_DIR through here; default .oh/memory). Pre-creating it at boot means
-# the first skill/cron write lands in the resolved dir instead of racing a mkdir
-# — and never silently falls back to a phantom relative `memory/`. Mirrors the
+# ─── Resolve + pre-create the logs directory ──────────────────────
+# Single source of truth = LOGS_DIR (docker-compose passes .devcontainer/.env's
+# LOGS_DIR through here; default .oh/logs). Pre-creating it at boot means the
+# first skill/cron write lands in the resolved dir instead of racing a mkdir —
+# and never silently falls back to a phantom relative `logs/`. Mirrors the
 # CRONS_PATH block below; see .oh/scripts/oh-path for the shared resolver.
-case "${MEMORY_DIR:-.oh/memory}" in
-  /*) MEMORY_PATH="${MEMORY_DIR}" ;;
-  *)  MEMORY_PATH="$HARNESS/${MEMORY_DIR:-.oh/memory}" ;;
+case "${LOGS_DIR:-.oh/logs}" in
+  /*) LOGS_PATH="${LOGS_DIR}" ;;
+  *)  LOGS_PATH="$HARNESS/${LOGS_DIR:-.oh/logs}" ;;
 esac
-mkdir -p "$MEMORY_PATH"
-# Seed the durable lessons ledger (.oh/memory/MEMORY.md) if missing. It is
-# gitignored/local-per-instance, so a fresh clone lacks it and the session-start
-# read + /retro dedup would hit ENOENT until first write. Idempotent: never
-# overwrites an existing file. See .oh/scripts/ensure-memory-file.sh.
-sh "$HARNESS/.oh/scripts/ensure-memory-file.sh" >/dev/null 2>&1 || true
+mkdir -p "$LOGS_PATH"
 
 # ─── Resolve + pre-create the worktrees directory ─────────────────
 # Single source of truth = WORKTREES_DIR (docker-compose passes

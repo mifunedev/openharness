@@ -66,20 +66,6 @@ After answers come back, write a 2–3 sentence brief that:
 
 If the user types **STOP** during the brief, halt — do not finish the thought, do not start the work.
 
-### 6. Memory Protocol
-
-Append to `.oh/memory/<UTC-date>/log.md`:
-
-```markdown
-## interview -- HH:MM UTC
-- **Result**: OP | SKIPPED-TRIVIAL | INTERRUPTED
-- **Questions**: <count>
-- **Brief**: <one-line summary of the scope brief>
-- **Observation**: <one sentence on whether the questions landed (changed the work, or were noise)>
-```
-
-Then run the qualify/improve loop per `.oh/skills/retro/references/memory-protocol.md`. If a question pattern landed especially well or poorly across runs, that may merit a line in `.oh/memory/MEMORY.md`.
-
 ## Question quality bar
 
 Every question must satisfy **all** of:

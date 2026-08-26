@@ -38,7 +38,7 @@ set +e; usage_out=$(CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" nope 2
 [[ $usage_rc -eq 64 ]] || fail 'unknown target accepted/wrong usage rc'
 [[ ${usage_out%%$'\n'*} == 'usage: /audit <implementation|pr|prs|harness|context|skills|eval-quality|drift|full> [target options]' ]] || fail 'usage first line is not exact'
 for route in implementation pr prs harness context skills eval-quality drift full; do grep -q "^| $route |" <<<"$usage_out" || fail "usage table missing $route"; done
-[[ -z $(find "$tmpdir" -mindepth 1 -print -quit) && ! -e "$tmp/.oh/memory" ]] || fail 'invalid usage created lifecycle state'
+[[ -z $(find "$tmpdir" -mindepth 1 -print -quit) && ! -e "$tmp/.oh/logs" ]] || fail 'invalid usage created lifecycle state'
 if CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" harness --external source --focus x -- true >/dev/null 2>&1; then fail 'external/focus conflict accepted'; fi
 if CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" harness --wiki-ingest -- true >/dev/null 2>&1; then fail 'external-only option reached survey mode'; fi
 if CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" implementation -- true >/dev/null 2>&1; then fail 'missing implementation slug accepted'; fi
@@ -67,12 +67,12 @@ AUDIT_AGENT_COMMAND_JSON="[\"$tmp/fake-agent\"]" CRON_WORKTREE="$tmp" CRON_LOG_R
 CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" pr 7 --base stack-parent -- "$tmp/complete-driver" >/dev/null
 CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" prs --mine -- "$tmp/complete-driver" >/dev/null
 CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" full --repo owner/name -- "$tmp/complete-driver" >/dev/null
-rm -rf "$tmp/.oh/memory"
-[[ ! -e "$tmp/.oh/memory" ]] || fail 'invalid target arguments created lifecycle state'
+rm -rf "$tmp/.oh/logs"
+[[ ! -e "$tmp/.oh/logs" ]] || fail 'invalid target arguments created lifecycle state'
 # Lifecycle remains active around the actual driver and exposes the selected route.
 CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c '
   [[ $AUDIT_ROUTE == "$AUDIT_ROOT/.oh/skills/audit/references/drift.md" ]]
-  [[ ! -e "$AUDIT_LOG_ROOT/.oh/memory" ]]
+  [[ ! -e "$AUDIT_LOG_ROOT/.oh/logs" ]]
   [[ $PWD == "$AUDIT_ROOT" ]]
   [[ $AUDIT_TARGET == drift && $AUDIT_TARGET_ARGS_JSON == "[]" ]]
   printf route-ran >"$AUDIT_ROOT/driver-marker"
@@ -80,16 +80,16 @@ CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- bash -c '
 '
 [[ $(<"$tmp/driver-marker") == route-ran ]] || fail 'selected route driver did not run/chdir or receive bindings'
 rm "$tmp/driver-marker"
-first_log=$(find "$tmp/.oh/memory" -name log.md -print -quit)
+first_log=$(find "$tmp/.oh/logs" -name audit.md -print -quit)
 [[ -f $first_log && $(grep -c '^## audit --' "$first_log") -eq 1 ]] || fail 'terminal append did not follow driver'
-rm -rf "$tmp/.oh/memory"
+rm -rf "$tmp/.oh/logs"
 # Two concurrent outer invocations get unique IDs and whole-record locked appends.
 for n in 1 2; do
   CRON_WORKTREE="$tmp" CRON_LOG_ROOT="$tmp" bash "$RUN" drift -- \
     bash -c 'printf "%s|%s|%s" "$AUDIT_RUN_ID" "$AUDIT_ROOT" "$AUDIT_LOG_ROOT" >"$AUDIT_TMP_ROOT/seen"; "$AUDIT_ROOT/.oh/skills/audit/scripts/audit-evidence.sh" complete DRIFT-OK' & pids[n]=$!
 done
 wait "${pids[1]}"; wait "${pids[2]}"
-log=$(find "$tmp/.oh/memory" -name log.md -print -quit); [[ -f $log ]] || fail 'outer log missing'
+log=$(find "$tmp/.oh/logs" -name audit.md -print -quit); [[ -f $log ]] || fail 'outer log missing'
 [[ $(grep -c '^## audit --' "$log") -eq 2 ]] || fail 'outer append count/locking'
 mapfile -t ids < <(grep '^\- \*\*Run-ID\*\*:' "$log" | awk '{print $3}')
 [[ ${#ids[@]} -eq 2 && ${ids[0]} != "${ids[1]}" ]] || fail 'run IDs not unique'

@@ -56,7 +56,7 @@ Read the following before spawning agents. Pass the assembled snapshot to every 
 ls "$AUDIT_ROOT/.claude/skills/"
 ls "$AUDIT_ROOT/.claude/agents/" 2>/dev/null || echo "no agents dir"
 ls "$AUDIT_ROOT/.oh/crons/" 2>/dev/null || echo "no crons"
-ls "$AUDIT_LOG_ROOT/.oh/memory/" 2>/dev/null | tail -10
+ls "$AUDIT_LOG_ROOT/.oh/logs/" 2>/dev/null | tail -10
 ls "$AUDIT_ROOT/.oh/skills/wiki/corpus/" 2>/dev/null | head -20
 
 # Package health
@@ -69,14 +69,12 @@ ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
 # Worktrees
 git -C "$AUDIT_ROOT" worktree list 2>/dev/null
 
-# Recent long-term memory (durable shared artifact). In cron worktree mode,
-# source inspection stays on AUDIT_ROOT, but long-term lessons live in the
-# shared checkout resolved as AUDIT_LOG_ROOT.
-if [ -r "$AUDIT_LOG_ROOT/.oh/memory/MEMORY.md" ]; then
-  printf 'long_term_memory: loaded %s\n' "$AUDIT_LOG_ROOT/.oh/memory/MEMORY.md"
-  tail -40 "$AUDIT_LOG_ROOT/.oh/memory/MEMORY.md"
+# Cross-session operating principles (tracked, shared).
+if [ -r "$AUDIT_ROOT/.oh/context/IDENTITY.md" ]; then
+  printf 'identity: loaded %s\n' "$AUDIT_ROOT/.oh/context/IDENTITY.md"
+  tail -40 "$AUDIT_ROOT/.oh/context/IDENTITY.md"
 else
-  printf 'long_term_memory: missing-or-unreadable %s\n' "$AUDIT_LOG_ROOT/.oh/memory/MEMORY.md"
+  printf 'identity: missing-or-unreadable %s\n' "$AUDIT_ROOT/.oh/context/IDENTITY.md"
 fi
 ```
 
@@ -136,7 +134,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 3. **Issue template completeness** — List `.github/ISSUE_TEMPLATE/` files. For each template, check: does it have required fields, clear labels, and assignment guidance?
 >
-> 4. **Wiki/memory utilization** — Count wiki pages under `.oh/skills/wiki/corpus/`. Count daily memory logs under `.oh/memory/`. Are logs recent (within 7 days)? Are wiki pages populated or placeholder-empty?
+> 4. **Wiki utilization** — Count wiki pages under `.oh/skills/wiki/corpus/`. Count `/audit` run logs under `.oh/logs/`. Are logs recent (within 7 days)? Are wiki pages populated or placeholder-empty?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -190,7 +188,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 3. **Worktree cleanup** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list`. Identify orphaned agent branches (`agent/*`) with no recent commits (check `git log --since="7 days ago"`). Is there any automated cleanup?
 >
-> 4. **State corruption risks** — Look for: shared files written by multiple agents concurrently (e.g., `MEMORY.md`), no file locking on append operations, mid-commit crash scenarios (partial writes to critical files), compose volumes that could diverge.
+> 4. **State corruption risks** — Look for: shared files written by multiple agents concurrently (e.g., `.oh/logs/<date>/audit.md`), no file locking on append operations, mid-commit crash scenarios (partial writes to critical files), compose volumes that could diverge.
 >
 > **Return format (Ultra compression):**
 > ```
@@ -210,13 +208,11 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Memory system quality** — Use the Context Snapshot's `AUDIT_LOG_ROOT` .oh/memory/log context (not `AUDIT_ROOT` when they differ) to inspect the 5 most recent daily logs. Are entries following the Memory Improvement Protocol (Result/Action/Observation/Duration)? Is quality declining over time (shorter entries, missing fields)? Are entries actually present? Report if `long_term_memory` is `missing-or-unreadable`.
+> 1. **Wiki utilization** — List all files under `.oh/skills/wiki/corpus/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
 >
-> 2. **Wiki utilization** — List all files under `.oh/skills/wiki/corpus/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
+> 2. **Cron health** — For each cron definition in `.oh/crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check `.oh/logs/` for cron execution traces.
 >
-> 3. **Cron health** — For each cron definition in `.oh/crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check memory logs for cron execution traces.
->
-> 4. **Agent worktree status** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list` and `git branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
+> 3. **Agent worktree status** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list` and `git branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
 >
 > 5. **Skill usage patterns** — Use the Context Snapshot's long-term memory and recent daily-log excerpts from `AUDIT_LOG_ROOT`; keep `.claude/skills/` existence checks on `AUDIT_ROOT`. Which skills appear in memory entries (evidence of use)? Which skills exist in `.claude/skills/` but never appear in logs (potentially stale or unknown)?
 >
@@ -309,7 +305,6 @@ Return this structured observation to the outer dispatcher; do not append or run
 - **Observation**: [one sentence — top finding]
 ```
 
-See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
 
 ## Reference
 
@@ -337,8 +332,8 @@ See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Im
 | Orchestrator skills | `.claude/skills/` |
 | Workspace skills | `workspace/.claude/skills/` when created by a pack/runtime (not part of the minimal workspace template) |
 | Crons | `.oh/crons/` |
-| Memory logs | `.oh/memory/YYYY-MM-DD/log.md` |
-| Long-term memory | `.oh/memory/MEMORY.md` |
+| Run logs | `.oh/logs/YYYY-MM-DD/audit.md` |
+| Operating principles | `.oh/context/IDENTITY.md` |
 | Wiki | `.oh/skills/wiki/corpus/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |

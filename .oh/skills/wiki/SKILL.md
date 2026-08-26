@@ -78,19 +78,16 @@ These hold across all three subcommands; the reference docs assume them.
   ```
 - **Orchestrator-only write gate**: `ingest` writes (snapshots + entity pages) and
   `lint`'s `corpus/README.md` regeneration are orchestrator-only. Sub-agents propose
-  drafts to `.oh/memory/<today>/wiki-drafts/<slug>.md`; the orchestrator promotes via
+  drafts to `.oh/logs/<today>/wiki-drafts/<slug>.md`; the orchestrator promotes via
   `/wiki ingest --from-draft <slug>`. A sub-agent that writes directly to the corpus
   is out of scope and may be reverted.
 - **Index reflects tracked entries**: `corpus/README.md`'s Index table is generated
   state owned by `lint`, sorted by `updated:` descending. Never hand-edit it.
-- **Memory Improvement Protocol**: every invocation (OP, DRY-RUN, STALE, FAIL) appends
-  a log entry per `.oh/skills/retro/references/memory-protocol.md`, then runs the
-  qualify/improve pass. The exact log shape is defined per subcommand in its reference.
 
 ## When NOT to use
 
 - A topic that is a **behavioral norm** ("always do X") → a rule/skill, not the wiki.
-- A **session journal** entry ("this run showed Y") → `.oh/memory/`, not the wiki.
+- A **session journal** entry ("this run showed Y") → the run's report, not the wiki.
 - **Human-facing prose** → `docs/`, not the wiki (the wiki is LLM-readable synthesis).
 - Full-text body search → direct `grep`; `query` is intentionally frontmatter-only.
 
@@ -98,5 +95,4 @@ These hold across all three subcommands; the reference docs assume them.
 
 - `.oh/skills/wiki/references/schema.md` — canonical schema and authoring rules
 - `.oh/skills/wiki/references/ingest.md` · `query.md` · `lint.md` — full procedures
-- `.oh/skills/retro/references/memory-protocol.md` — the Memory Improvement Protocol
 - `.oh/evals/probes/wiki-readme-index.sh` — drift guard for the tracked corpus index

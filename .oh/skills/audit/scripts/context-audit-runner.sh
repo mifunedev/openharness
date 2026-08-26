@@ -90,13 +90,13 @@ fi
 if [ "$MODE" = "--baseline" ]; then
   echo "=== Baseline probe run ==="
   run_probes "baseline"
-  # Persist to memory for durable comparison (resolver honors paths.memory / MEMORY_DIR)
-  if [ -n "${AUDIT_LOG_ROOT:-}" ]; then MEM_DIR="$AUDIT_LOG_ROOT/.oh/memory"
-  else MEM_DIR="$(sh "$HARNESS/.oh/scripts/oh-path" memory 2>/dev/null || printf '%s' "$HARNESS/.oh/memory")"; fi
-  mkdir -p "$MEM_DIR/$TODAY/context-audit-baseline"
-  cp "$RESULTS"/baseline-*.txt "$MEM_DIR/$TODAY/context-audit-baseline/"
+  # Persist for durable comparison (resolver honors LOGS_DIR)
+  if [ -n "${AUDIT_LOG_ROOT:-}" ]; then LOG_DIR="$AUDIT_LOG_ROOT/.oh/logs"
+  else LOG_DIR="$(sh "$HARNESS/.oh/scripts/oh-path" logs 2>/dev/null || printf '%s' "$HARNESS/.oh/logs")"; fi
+  mkdir -p "$LOG_DIR/$TODAY/context-audit-baseline"
+  cp "$RESULTS"/baseline-*.txt "$LOG_DIR/$TODAY/context-audit-baseline/"
   echo ""
-  echo "Baseline saved → $MEM_DIR/$TODAY/context-audit-baseline/"
+  echo "Baseline saved → $LOG_DIR/$TODAY/context-audit-baseline/"
   exit 0
 fi
 
@@ -106,12 +106,7 @@ if [ "$MODE" = "--ablate" ]; then
     echo "Error: --ablate requires a file argument (relative to harness root)"
     exit 1
   fi
-  if [ "$TARGET_REL" = ".oh/memory/MEMORY.md" ]; then
-    SHARED_ROOT=$(cd "${AUDIT_LOG_ROOT:-$HARNESS}" && pwd -P)
-    TARGET="$SHARED_ROOT/.oh/memory/MEMORY.md"
-  else
-    TARGET="$HARNESS/$TARGET_REL"
-  fi
+  TARGET="$HARNESS/$TARGET_REL"
   if [ ! -f "$TARGET" ]; then
     echo "Error: file not found: $TARGET"
     exit 1

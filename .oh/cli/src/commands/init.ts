@@ -227,17 +227,8 @@ export async function runInit(
   if (!minimal) {
     const wr: WriteCtx = { t, dryRun, force, report, stats };
 
-    // Phase 2a: seed memory/ and tasks/ as EMPTY dirs (README stub each). This
-    // harness's own memory/PRDs are NEVER shipped — init creates them fresh.
-    writeGenerated(
-      wr,
-      ".oh/memory/README.md",
-      "# .oh/memory/\n\nLong-term, append-only lessons for this project's agents. " +
-        "`MEMORY.md` is the index; daily logs live under `<UTC-date>/`.\n\n" +
-        "Resolve this directory with `.oh/scripts/oh-path memory` (or the " +
-        "`MEMORY_DIR` env var) rather than hardcoding a path — set " +
-        "`MEMORY_DIR` in `.devcontainer/.env` to relocate it.\n",
-    );
+    // Phase 2a: seed tasks/ as an EMPTY dir (README stub). This harness's own
+    // PRDs are NEVER shipped — init creates the directory fresh.
     writeGenerated(
       wr,
       ".oh/tasks/README.md",
@@ -362,7 +353,7 @@ export async function runInit(
     prompt.info(`  (${vFiltered} non-payload source file(s) skipped — pass --verbose to list)`);
   }
   if (!minimal) {
-    prompt.ok("Wrote AGENTS.md + CLAUDE.md and seeded empty memory/ + tasks/");
+    prompt.ok("Wrote AGENTS.md + CLAUDE.md and seeded an empty tasks/");
     prompt.ok("Copied the full .devcontainer/ (local image build)");
     prompt.ok("Configured 4 provider surfaces (.claude .codex .pi .hermes) → vendored .oh/skills");
   }

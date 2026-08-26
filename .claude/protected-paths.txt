@@ -65,7 +65,6 @@ Makefile
 .oh/skills/git/SKILL.md
 .oh/skills/t3/references/sandbox-processes.md
 .oh/agents/advisor.md  # advisor delegation + recursive-decomposition norm, now an agent (was .oh/skills/advisor/)
-.oh/skills/retro/references/memory-protocol.md
 .oh/skills/spec/references/plan.md
 .oh/skills/spec/references/execute.md
 .oh/skills/spec/references/retro.md

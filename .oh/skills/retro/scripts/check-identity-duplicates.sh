@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Reads proposed MEMORY/IDENTITY lines from stdin and reports lines whose lesson
-# text already appears in .oh/memory/MEMORY.md or .oh/context/IDENTITY.md. Exact enough to
-# catch double-writes without making subjective semantic judgments.
+# Reads proposed IDENTITY lines from stdin and reports lines whose lesson text
+# already appears in .oh/context/IDENTITY.md. Exact enough to catch
+# double-writes without making subjective semantic judgments.
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT=$(cd "$SCRIPT_DIR/../../../.." && pwd)
-# Resolve the memory dir through the shared resolver (honors paths.memory /
-# MEMORY_DIR); fall back to the .oh/memory default if oh-path is unavailable.
-MEM_DIR="$(sh "$ROOT/.oh/scripts/oh-path" memory --no-create 2>/dev/null || printf '%s' "$ROOT/.oh/memory")"
-MEMORY_FILE="$MEM_DIR/MEMORY.md"
 IDENTITY_FILE="$ROOT/.oh/context/IDENTITY.md"
 
 status=0
@@ -23,8 +19,7 @@ while IFS= read -r line; do
     | sed -E 's/ \[[^]]+\].*$//')
   [[ -n "$normalized" ]] || continue
   # Pass 1 — exact (fixed-string, case-insensitive). Cheap and certain.
-  if { [[ -f "$MEMORY_FILE" ]] && grep -Fqi -- "$normalized" "$MEMORY_FILE"; } || \
-     { [[ -f "$IDENTITY_FILE" ]] && grep -Fqi -- "$normalized" "$IDENTITY_FILE"; }; then
+  if [[ -f "$IDENTITY_FILE" ]] && grep -Fqi -- "$normalized" "$IDENTITY_FILE"; then
     echo "DUPLICATE: $line" >&2
     status=1
     continue
@@ -40,8 +35,8 @@ while IFS= read -r line; do
   # Deliberately still not semantic: this is a set-overlap heuristic, not a judgment about
   # meaning. It reports a candidate for a human to confirm — the propose-then-confirm gate
   # is what decides.
-  if [[ -f "$MEMORY_FILE" || -f "$IDENTITY_FILE" ]]; then
-    # thresh/minhits calibrated against the real ledger, both directions: a human
+  if [[ -f "$IDENTITY_FILE" ]]; then
+    # thresh/minhits calibrated against the real file, both directions: a human
     # rephrasing of an existing entry scored 0.56 and a synthetic one reusing the entry's
     # own content words scored 0.82, while 8 lessons from domains this harness has never
     # recorded topped out at 0.20. 0.50 sits in that gap with margin on both sides. The
@@ -62,7 +57,7 @@ while IFS= read -r line; do
         for (w in want) { total++; if (w in got) hits++ }
         if (total >= 5 && hits >= minhits && hits / total >= thresh) { print FILENAME ":" FNR; exit }
       }
-    ' - "$MEMORY_FILE" "$IDENTITY_FILE" 2>/dev/null || true)
+    ' - "$IDENTITY_FILE" 2>/dev/null || true)
     if [[ -n "$hit" ]]; then
       echo "NEAR-DUPLICATE: $line" >&2
       echo "  ↳ overlaps an existing entry at $hit — confirm before writing" >&2

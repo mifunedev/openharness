@@ -223,7 +223,7 @@ fi
 trap - INT TERM HUP
 if [[ $outer == true ]]; then
   today=$(date -u +%Y-%m-%d); finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  log="$AUDIT_LOG_ROOT/.oh/memory/$today/log.md"
+  log="$AUDIT_LOG_ROOT/.oh/logs/$today/audit.md"
   state=complete; [[ $rc -eq 0 ]] || state=failed; [[ -z $interrupted ]] || state=interrupted
   if ! printf '## audit -- %s UTC\n- **Run-ID**: %s\n- **Target**: %s\n- **State**: %s\n- **Verdict**: %s\n- **Exit**: %s\n- **Started**: %s\n- **Finished**: %s\n\n' \
     "$(date -u +%H:%M)" "$AUDIT_RUN_ID" "$target" "$state" "$verdict" "$rc" "$started_at" "$finished_at" \

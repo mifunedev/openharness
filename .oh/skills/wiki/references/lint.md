@@ -5,7 +5,6 @@
 > The dispatcher (`.oh/skills/wiki/SKILL.md`) routes here when the first
 > `$ARGUMENTS` token is `lint`. Canonical schema: `.oh/skills/wiki/references/schema.md`.
 
-
 # Wiki Lint
 
 Health-check the `.oh/skills/wiki/corpus/` corpus and regenerate `.oh/skills/wiki/corpus/README.md`. This is
@@ -413,59 +412,6 @@ echo ".oh/skills/wiki/corpus/README.md regenerated (${ENTRIES_COUNT} entries)"
 This protocol ensures that a partial write or generation failure never leaves
 `.oh/skills/wiki/corpus/README.md` in a corrupt or empty state.
 
-### 10. Memory Improvement Protocol
-
-When `AUDIT_RUN_ID` is inherited, return a structured wiki-lint observation
-carrying `AUDIT_RUN_ID`, `AUDIT_ROOT`, result, counts, and README evidence path;
-suppress this append and retro entirely. The outer `/audit` dispatcher owns the
-single locked append under `AUDIT_LOG_ROOT`. A direct `/wiki lint` invocation
-still runs this step regardless of outcome or dry-run.
-
-For a direct invocation, get the current UTC time and resolve the configured
-memory root:
-
-```bash
-date -u +%H:%M
-TODAY=$(date -u +%Y-%m-%d)
-LOG_ROOT="${AUDIT_LOG_ROOT:-$HARNESS}"
-mkdir -p "$LOG_ROOT/.oh/memory/$TODAY"
-```
-
-Append to `$LOG_ROOT/.oh/memory/<UTC-date>/log.md`:
-
-```markdown
-## /wiki lint -- HH:MM UTC
-- **Result**: OP | DRY-RUN | FAIL
-- **Entries-Scanned**: <count>
-- **Stale-90d**: <count>
-- **Deprecated**: <count>
-- **Orphaned**: <count>
-- **Broken-Links**: <count>
-- **Mode**: op | dry-run
-- **Observation**: <one sentence — key finding or "no findings on a fresh corpus">
-```
-
-Field definitions:
-
-| Field | Content |
-|-------|---------|
-| `Entries-Scanned` | Total number of `.oh/skills/wiki/corpus/*.md` files processed |
-| `Stale-90d` | Count of entries with `updated:` > 90 days older than today |
-| `Deprecated` | Count of entries with `confidence: deprecated` |
-| `Orphaned` | Count of entries with zero inbound `[[links]]` |
-| `Broken-Links` | Count of `[[slug]]` references with no matching entry |
-| `Mode` | `op` for a normal run (README regenerated); `dry-run` if `--dry-run` was passed |
-| `Result` | `OP` on success (including dry-run); `FAIL` if the skill errored out |
-| `Observation` | One sentence — e.g., "1 orphan (single-entry corpus, true positive); no other findings" |
-
-Then apply the qualify/improve loop per `.oh/skills/retro/references/memory-protocol.md` § Write:
-
-- Did any finding reveal a gap in the wiki schema or cross-link conventions?
-- Did the atomic write step surface an edge case worth capturing?
-- If yes, propose a `.oh/memory/MEMORY.md` addition.
-
-See `.oh/skills/retro/references/memory-protocol.md` for the canonical Memory Improvement Protocol.
-
 ## Extraction Command Reference
 
 The canonical frontmatter extraction command, per `.oh/skills/wiki/references/schema.md` § 6:
@@ -527,5 +473,4 @@ and distinct recommendations.
   extraction canonical command)
 - `/wiki ingest` — add or update an entry; the only authorized write path to `.oh/skills/wiki/corpus/`
 - `/wiki query` — search the wiki by topic; shares the § 6 extraction command
-- `.oh/skills/retro/references/memory-protocol.md` — Memory Improvement Protocol (MIP) governing the log step
 - `/audit context` — reference for `--dry-run` flag pattern and atomic-write convention

@@ -497,13 +497,12 @@ describe("runInit", () => {
     expect(readdirSync(join(t, ".oh/evals")).length).toBeGreaterThan(0);
   });
 
-  it("full (default): seeds memory/ and tasks/ EMPTY (README stub only)", async () => {
+  it("full (default): seeds tasks/ EMPTY (README stub only)", async () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
-    expect(readdirSync(join(t, ".oh/memory"))).toEqual(["README.md"]);
     expect(readdirSync(join(t, ".oh/tasks"))).toEqual(["README.md"]);
-    // This harness's own MEMORY.md / PRDs are never shipped.
-    expect(existsSync(join(t, ".oh/memory/MEMORY.md"))).toBe(false);
+    // This harness's own PRDs are never shipped.
+    expect(existsSync(join(t, ".oh/memory"))).toBe(false);
   });
 
   it("full (default): copies the full .devcontainer/ + a local-build devcontainer.json", async () => {
@@ -548,7 +547,7 @@ describe("runInit", () => {
     expect(existsSync(join(t, "AGENTS.md"))).toBe(true);
     // Full-scaffold-only artifacts are absent.
     expect(existsSync(join(t, ".devcontainer/Dockerfile"))).toBe(false);
-    expect(existsSync(join(t, ".oh/memory/README.md"))).toBe(false);
+    expect(existsSync(join(t, ".oh/tasks/README.md"))).toBe(false);
     expect(existsSync(join(t, "workspace/README.md"))).toBe(false);
     // The thin devcontainer.json stub is image-based (no dockerComposeFile).
     const dc = JSON.parse(
@@ -713,7 +712,7 @@ describe("runInit", () => {
     expect(joined).toContain("create .claude/skills");
     // The vendored skill pack ships with the .oh/ payload (no submodule).
     expect(joined).toContain("create .oh/skills/git/SKILL.md");
-    expect(joined).toContain("create .oh/memory/README.md");
+    expect(joined).toContain("create .oh/tasks/README.md");
     // Nothing was written.
     expect(existsSync(join(t, ".oh"))).toBe(false);
     expect(existsSync(join(t, ".devcontainer"))).toBe(false);

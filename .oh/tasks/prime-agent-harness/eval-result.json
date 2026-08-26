@@ -1,0 +1,7 @@
+{
+  "commit": "a4c58e4f550b41cdb94b313a257bb51684c8f5bc",
+  "runnerExit": 0,
+  "ranAt": "2026-08-26T18:21:16Z",
+  "newRegressions": [],
+  "preExistingReds": ["audit-run-root-contract"]
+}

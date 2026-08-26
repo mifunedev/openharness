@@ -28,6 +28,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Lead the README and quickstart with the two scripted installers and demote the untested manual clone sequence into the collapsed section, merging its two duplicate copies into one.
 
 ### Fixed
+- Match the release-notes heading with `index()` instead of a regex built by string concatenation, so extraction does not depend on whether the runner's `awk` is mawk or gawk ([#820](https://github.com/mifunedev/openharness/pull/820)).
 - Fix the build session launching headless: the prompt travels as argv instead of stdin and no arm carries `--print`, so the child no longer answers once and exits ([#817](https://github.com/mifunedev/openharness/pull/817)).
 - Stop `| tee` in the launch path taking the child's TTY; tmux attaches `pipe-pane` after the pane exists and foreground mode inherits the caller's stdio ([#817](https://github.com/mifunedev/openharness/pull/817)).
 - Fix `firstmate.sh --kill` exiting 1 silently while leaving the session running, the lock claimed, and no `FIRSTMATE-INCOMPLETE` line appended ([#817](https://github.com/mifunedev/openharness/pull/817)).

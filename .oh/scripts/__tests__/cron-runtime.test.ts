@@ -350,7 +350,7 @@ describe("buildTmuxWrapper", () => {
       agentBin: opts.agentBin,
       promptFile,
     });
-    const result = spawnSync("bash", ["-lc", command], {
+    const result = spawnSync("bash", ["-c", command], {
       env: { ...process.env, PATH: `${binDir}:${process.env.PATH ?? ""}` },
       encoding: "utf-8",
     });

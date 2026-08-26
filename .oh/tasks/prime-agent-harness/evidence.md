@@ -2,7 +2,7 @@
 
 **Task**: `prime-agent-harness` · **Issue**: #838 · **PR**: #839
 **Branch**: `feat/838-prime-agent-harness` · **Worktree**: `.oh/worktrees/feat/838-prime-agent-harness`
-**Implementation commit**: `a4c58e4f`
+**Implementation commit**: `a8817be2` (rebased onto `ecb78a1b`, which removed the `.oh/memory` tier and `workspace/`)
 **Eval record**: `.oh/tasks/prime-agent-harness/eval-result.json`
 
 ---
@@ -128,7 +128,7 @@ prime-agent  on-demand  n/a      ?
 | Gate | Result | Observed |
 |---|---|---|
 | `npm test` (759 tests) | **PASS with one pre-existing red** | `Tests 1 failed \| 758 passed` — `cron-runtime.test.ts > buildTmuxWrapper`. Confirmed pre-existing: it fails identically with this branch's changes stashed (`git stash push -u` → same single failure). |
-| `bash .oh/skills/eval/run.sh` | **runner exit 0**, 105 probes | one `REGRESSION` row, `audit-run-root-contract`, marked `unchanged` by the runner's own delta column — pre-existing, non-gating. `newRegressions: []`. |
+| `bash .oh/skills/eval/run.sh` | **runner exit 0**, 96 probes | one `REGRESSION` row, `audit-run-root-contract`, marked `unchanged` by the runner's own delta column — pre-existing, non-gating. `newRegressions: []`. (Probe count dropped 105 → 96 in the rebase: `ecb78a1b` deleted 10 memory-tier probes.) |
 | `skills-vendored.sh` | PASS, incl. clean-clone | see US-008 below |
 | `wiki-readme-index.sh` | PASS | after adding the index row |
 | `env-schema-parity.sh` | PASS | |
@@ -149,7 +149,7 @@ probe is a real oracle, not a tautology.
 
 ## 4. Where it diverged from the plan, and why
 
-Four divergences. None silent.
+Five divergences. None silent.
 
 1. **The build did not run through `.oh/scripts/firstmate.sh`.** `/spec execute` names one
    build path: an Advisor in `agent-spec-<slug>` running the First-Mate executor over the
@@ -181,6 +181,13 @@ Four divergences. None silent.
    duplicate the credentials rule, because root `.gitignore` has `**/auth.json`. That
    reasoning does not carry to the template, which has no such glob and instead lists
    `.hermes/auth.json` explicitly. The template follows its own convention.
+
+5. **One upstream typo was fixed while resolving a rebase conflict.** `ecb78a1b` left
+   `AGENTS.md` reading `…, and the` / `and the \`oh init\` scaffold template…` — a duplicated
+   clause across a line break. The rebase put the conflict marker through the middle of that
+   sentence, so the sentence had to be rewritten either way; leaving the duplication in a
+   line this PR authored would have been worse than the seven-character fix. Called out
+   because it is outside the approved scope.
 
 Additionally, `.oh/skills/wiki/corpus/raw/2026-08-26-prime-agent-harness.md` was force-added.
 `raw/` is gitignored and the `/worktrees` skill warns against promoting it *by accident*;
@@ -218,6 +225,22 @@ and seven such snapshots are already tracked for the same reason.
 
 - **`audit-run-root-contract` probe is red** (`orphaned INT route child`). Pre-existing,
   `unchanged` delta, carried forward.
+
+- **`drift-check-cron-staleness-glob` is flaky, and this run caught it.** One eval pass
+  reported it `PASS->REGRESSION`, which looks exactly like a regression this PR caused.
+  It is not. The probe's own extracted block was byte-identical between this branch and the
+  base (only the path in the header line differed), and re-running it three times on each:
+
+  ```
+  branch run1 EXIT=0   base run1 EXIT=0
+  branch run2 EXIT=0   base run2 EXIT=1   <-- the base fails it too
+  branch run3 EXIT=0   base run3 EXIT=0
+  ```
+
+  The base commit `ecb78a1b` fails it intermittently on its own, and this PR touches neither
+  `.oh/skills/audit/references/drift.md`, `.oh/crons/`, nor `cron-runtime.ts`. Recorded as
+  `flaky` in `eval-result.json`. **A reviewer who sees this probe red on CI should not read
+  it as caused by this PR** — it deserves its own issue.
 
 - **`.prime/agent/settings.json` values are untested at runtime.** All four keys are
   documented in upstream `docs/settings.md` with the values used, but no session has loaded

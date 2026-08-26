@@ -21,6 +21,7 @@ type Overrides = Partial<{
   herdr: string;
   herdrSha: string;
   missingTool: string;
+  nonVersionTool: string;
   platformWarning: string;
 }>;
 
@@ -41,6 +42,7 @@ function fixture(o: Overrides = {}) {
     herdr: "herdr 0.7.4",
     herdrSha: AMD64_SHA,
     missingTool: "",
+    nonVersionTool: "",
     platformWarning: "",
     ...o,
   };
@@ -68,7 +70,11 @@ case "$cmd" in
     if [ -n ${JSON.stringify(v.platformWarning)} ]; then
       echo "WARNING: The requested image's platform (linux/arm64) does not match the detected host platform" >&2
     fi
-    printf '%s (fake)\\n' "$cmd"
+    if [ -n ${JSON.stringify(v.nonVersionTool)} ] && [ "$cmd" = ${JSON.stringify(v.nonVersionTool)} ]; then
+      printf '%s completed successfully\\n' "$cmd"
+    else
+      printf '%s 1.2.3 (fake)\\n' "$cmd"
+    fi
     ;;
 esac
 exit 0
@@ -127,11 +133,27 @@ describe("verify-sandbox-image", () => {
     expect(result.stderr).toContain(expected);
   });
 
+  it.each([
+    "gh --version",
+    "docker --version",
+    "docker compose version",
+    "cloudflared --version",
+    "bun --version",
+    "uv --version",
+  ])("rejects clean but non-version output from %s", (tool) => {
+    const result = run(fixture({ nonVersionTool: tool }));
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      `${tool} exited cleanly but its version line has no numeric dotted version`,
+    );
+  });
+
   it("reports the tool's own version line, not an emulation platform warning", () => {
     const result = run(fixture({ platformWarning: "1" }));
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("ok: gh --version -> gh --version (fake)");
+    expect(result.stdout).toContain("ok: gh --version -> gh --version 1.2.3 (fake)");
     expect(result.stdout).not.toContain("does not match the detected host platform");
   });
 

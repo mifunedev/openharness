@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #449 (sandbox image build CI guard) 2026-06-19;
-#         issue #807 (Debian Trixie base: arm64 + optional-installer compatibility CI)
+#         issue #807 (Debian Trixie base compatibility and parity CI)
 # desc: PR CI must validate sandbox compose config and locally build the devcontainer image
-#       without registry writes, run the reusable image verifier, and exercise arm64 plus
-#       every optional INSTALL_* path in a Dockerfile-path-scoped compatibility workflow.
+#       without registry writes, run the reusable image verifier, compare fixed Debian bases,
+#       and exercise arm64 plus every optional INSTALL_* path with real version evidence.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -65,6 +65,28 @@ else
   chas_regex() { grep -Eq -- "$1" <<<"$compat" || missing+=("compatibility workflow: $2"); }
 
   chas_regex '^[[:space:]]*contents:[[:space:]]*read[[:space:]]*$' "no read-only contents permission"
+  chas_regex '^[[:space:]]*pull_request:[[:space:]]*$' "no automatic pull_request trigger"
+  chas '".oh/scripts/node-pnpm-parity.sh"' "does not trigger when the parity script changes"
+
+  parity=$(awk '
+    /^  base-node-pnpm-parity:$/ { found=1 }
+    found && /^  [[:alnum:]_-]+:$/ && !/^  base-node-pnpm-parity:$/ { exit }
+    found { print }
+  ' <<<"$compat")
+  if [[ -z "$parity" ]]; then
+    missing+=("compatibility workflow: no automatic Node/pnpm parity job")
+  else
+    phas() { grep -Fq -- "$1" <<<"$parity" || missing+=("compatibility parity job: $2"); }
+    phas_regex() { grep -Eq -- "$1" <<<"$parity" || missing+=("compatibility parity job: $2"); }
+    phas_regex '^    runs-on: ubuntu-latest$' "does not use the fixed Docker-capable amd64 runner"
+    phas 'bash .oh/scripts/node-pnpm-parity.sh \' "does not invoke the Node/pnpm parity script"
+    phas 'debian:bookworm-slim \' "does not fix the baseline to debian:bookworm-slim"
+    phas 'debian:trixie-slim' "does not fix the candidate to debian:trixie-slim"
+    if grep -Eq '\$\{\{[[:space:]]*(inputs|github\.event\.inputs)\.' <<<"$parity"; then
+      missing+=("compatibility parity job: images come from dispatch inputs instead of fixed values")
+    fi
+  fi
+
   chas 'platforms: linux/arm64' "no arm64 build platform"
   chas 'docker/setup-qemu-action' "no QEMU fallback for a non-native arm64 runner"
   chas 'vars.CI_RUNNER_ARM64' "no native arm64 runner preference"
@@ -72,10 +94,19 @@ else
   for arg in INSTALL_HERMES INSTALL_DEEPAGENTS INSTALL_OPENCODE INSTALL_GROK_BUILD; do
     chas "--build-arg $arg=true" "does not build with $arg=true"
   done
-  for tool in hermes deepagents opencode grok; do
-    grep -Eq "(^|[^[:alnum:]_-])$tool([^[:alnum:]_-]|$)" <<<"$compat" \
-      || missing+=("compatibility workflow: never reports a version for $tool")
-  done
+  optional=$(awk '
+    /^  optional-installers-image:$/ { found=1 }
+    found && /^  [[:alnum:]_-]+:$/ && !/^  optional-installers-image:$/ { exit }
+    found { print }
+  ' <<<"$compat")
+  if [[ -z "$optional" ]]; then
+    missing+=("compatibility workflow: no optional installer job")
+  else
+    ohas() { grep -Fq -- "$1" <<<"$optional" || missing+=("compatibility optional installer job: $2"); }
+    ohas 'for tool in hermes deepagents opencode grok; do' "does not check every optional tool in one guarded loop"
+    ohas "if ! grep -Eq '(^|[^[:alnum:]])v?[0-9]+([.][0-9]+)+" "does not require numeric dotted versions"
+    ohas 'did not output a numeric dotted version' "does not fail false-positive output"
+  fi
   chas_regex '^[[:space:]]*-[[:space:]]*"\.devcontainer/Dockerfile"[[:space:]]*$' "is not Dockerfile-path-scoped"
   if grep -Eq '^[[:space:]]*-[[:space:]]*"\.oh/\*\*"[[:space:]]*$' <<<"$compat"; then
     missing+=("compatibility workflow: uses the broad .oh/** filter — expensive vendor installers would run for every harness change")
@@ -84,6 +115,10 @@ else
     echo "REGRESSION sandbox compatibility workflow must not push/login/write packages/use secrets" >&2
     exit 1
   fi
+fi
+
+if [[ -e "$ROOT/.github/workflows/sandbox-base-parity.yml" ]]; then
+  missing+=("standalone dispatch-only sandbox-base-parity.yml still exists")
 fi
 
 RELEASE="$ROOT/.github/workflows/release.yml"
@@ -96,5 +131,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS sandbox boot guard validates compose config, builds and verifies the devcontainer image, boots it through the healthcheck, and the compatibility workflow covers arm64 plus every optional installer without registry writes" >&2
+echo "PASS sandbox boot guard validates compose and boot, while compatibility CI checks fixed-image Node/pnpm parity, arm64, and numeric dotted versions from every optional installer without registry writes" >&2
 exit 0

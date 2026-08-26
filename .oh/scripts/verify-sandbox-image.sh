@@ -119,14 +119,18 @@ first_real_line() {
   grep -vE "^WARNING: The requested image's platform" | grep -m1 -E '[^[:space:]]' || true
 }
 
+has_numeric_dotted_version() {
+  grep -Eq '(^|[^[:alnum:]])v?[0-9]+([.][0-9]+)+([^[:alnum:]]|$)'
+}
+
 for tool in "gh --version" "docker --version" "docker compose version" \
             "cloudflared --version" "bun --version" "uv --version"; do
   if out=$(run "$tool" 2>&1); then
     line=$(first_real_line <<<"$out")
-    if [ -n "$line" ]; then
+    if has_numeric_dotted_version <<<"$line"; then
       ok "$tool -> $line"
     else
-      fail "$tool exited cleanly but printed no version line"
+      fail "$tool exited cleanly but its version line has no numeric dotted version: $line"
     fi
   else
     fail "$tool produced no version output: $(first_real_line <<<"$out")"

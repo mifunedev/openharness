@@ -102,3 +102,7 @@ The Bookworm-vs-Trixie node/pnpm parity numbers. `node-pnpm-parity.sh` and its d
 
 ---
 STATUS: COMPLETE
+
+## Audit repair — 2026-08-26
+
+Moved fixed-image Node/pnpm parity into automatic PR compatibility CI, removed the dispatch-only workflow, and required numeric dotted versions from default and optional tools. Strengthened deterministic tests and the CI guard probe for these contracts.

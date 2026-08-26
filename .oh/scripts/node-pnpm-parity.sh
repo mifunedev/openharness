@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# One-time base-parity evidence: install Node and pnpm in two Debian bases using
-# the exact commands the sandbox Dockerfile uses, and report whether the two
-# report identical versions. Usage: node-pnpm-parity.sh [base-a] [base-b]
+# Base-parity check: install Node and pnpm in two Debian bases using the exact
+# commands the sandbox Dockerfile uses, and require identical reported versions.
+# Usage: node-pnpm-parity.sh [base-a] [base-b]
 
 set -euo pipefail
 

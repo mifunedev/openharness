@@ -1,11 +1,11 @@
 name: "CI: Sandbox Compatibility"
 
-# Dockerfile-scoped compatibility CI for the sandbox base (#807): build and
+# Dockerfile-scoped compatibility CI for the sandbox base (#807): compare the
+# exact Node and pnpm versions on fixed Bookworm and Trixie bases, build and
 # verify the default image on arm64, and build one amd64 image with every
 # optional INSTALL_* path enabled. These builds pull expensive, mutable vendor
-# installers, so the path filter is deliberately narrow — the Dockerfile, its
-# ignore file, the reusable verifier, and this workflow — instead of the broad
-# ".oh/**" filter the boot guard uses. This job never logs in or pushes.
+# installers, so the path filter stays narrow. This workflow never logs in or
+# pushes.
 
 on:
   workflow_dispatch:
@@ -17,12 +17,14 @@ on:
       - ".devcontainer/Dockerfile"
       - ".dockerignore"
       - ".oh/scripts/verify-sandbox-image.sh"
+      - ".oh/scripts/node-pnpm-parity.sh"
       - ".github/workflows/sandbox-compatibility.yml"
   pull_request:
     paths:
       - ".devcontainer/Dockerfile"
       - ".dockerignore"
       - ".oh/scripts/verify-sandbox-image.sh"
+      - ".oh/scripts/node-pnpm-parity.sh"
       - ".github/workflows/sandbox-compatibility.yml"
 
 concurrency:
@@ -33,6 +35,22 @@ permissions:
   contents: read
 
 jobs:
+  base-node-pnpm-parity:
+    name: Verify exact Node and pnpm parity across Debian bases
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Compare fixed Bookworm and Trixie bases
+        run: |
+          bash .oh/scripts/node-pnpm-parity.sh \
+            debian:bookworm-slim \
+            debian:trixie-slim
+
   arm64-default-image:
     name: Build and verify the default arm64 image
     # Prefer a native arm64 runner when the repository provides one
@@ -117,12 +135,17 @@ jobs:
       - name: Verify the optional image still satisfies the default contract
         run: bash .oh/scripts/verify-sandbox-image.sh openharness-sandbox-optional:${{ github.sha }}
 
-      - name: Report a version from every optional CLI
+      - name: Verify a version from every optional CLI
         run: |
           set -euo pipefail
           for tool in hermes deepagents opencode grok; do
             echo "--- $tool --version"
-            docker run --rm --entrypoint /bin/bash \
+            output="$(docker run --rm --entrypoint /bin/bash \
               openharness-sandbox-optional:${{ github.sha }} \
-              -lc "$tool --version"
+              -lc "$tool --version" 2>&1)"
+            printf '%s\n' "$output"
+            if ! grep -Eq '(^|[^[:alnum:]])v?[0-9]+([.][0-9]+)+([^[:alnum:]]|$)' <<<"$output"; then
+              echo "ERROR: $tool --version did not output a numeric dotted version" >&2
+              exit 1
+            fi
           done

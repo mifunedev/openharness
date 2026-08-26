@@ -25,3 +25,17 @@ Moved the sandbox base to `debian:trixie-slim` and switched Docker's apt suite t
 The `FROM` change alone turned `runtime-catalog.test.ts` red, because its remediation-synchronization test compares the catalog string against the live Dockerfile pin. The minimal remediation-string fix landed here to keep the commit green; the fuller runtime and documentation reconciliation is US-002's scope.
 
 ---
+## US-002 — 2026-08-26 15:15 UTC
+
+**Title**: Reconcile runtime and documentation claims
+**Files changed**: `.oh/cli/src/__tests__/runtime-catalog.test.ts`, `.oh/evals/probes/runtime-preflight-gate.sh`, `.oh/docs/installation.md`, `.oh/docs/rfcs/rfc-runtime-support.md`, `.oh/docs/integrations/debugmcp.md`, `.oh/docs/runtimes/microsandbox.md`, `.oh/docs/runtimes/overview.md`, `.oh/docs/runtimes/docker.md`
+**Commit**: b70cd319
+**Result**: PASS
+
+### What I did
+Replaced the two-blocker framing with two measured requirements, of which only `/dev/kvm` still fails. Rewrote the MicroSandbox page's blocked section, its sample `install` output, and its cross-references; corrected the base-image line in installation, the RFC substrate sentence, and both DebugMCP base references. Made the catalog synchronization test base-agnostic (it now reads the pinned `FROM` and requires the remediation to name it) and added two assertions: the remediation may not claim a sub-2.39 glibc or name bookworm, and `/dev/kvm` stays the blocker the default compose actually has. Extended `runtime-preflight-gate.sh` with the same base-image synchronization check.
+
+### Learnings for future iterations
+Synchronization assertions beat literal-string assertions for facts that live in two files: the old test hard-coded `debian:bookworm-slim` on both sides, so it was correct only by coincidence. Reading the live `FROM` and asserting containment survives the next base bump. Confirmed the new probe check fails correctly by reverting the catalog string in a scratch copy — it reported both drift lines and exited 1.
+
+---

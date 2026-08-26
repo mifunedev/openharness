@@ -33,8 +33,8 @@
         "Tests pass"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "2026-08-26: catalog glibc remediation now names debian:trixie-slim, /dev/kvm kept as the sole remaining blocker; docs + runtime-preflight-gate.sh reconciled, historical 2.35/2.36 parser fixtures retained (commit b70cd319)."
     },
     {
       "id": "US-003",

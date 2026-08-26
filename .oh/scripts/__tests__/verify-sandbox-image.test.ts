@@ -21,6 +21,7 @@ type Overrides = Partial<{
   herdr: string;
   herdrSha: string;
   missingTool: string;
+  platformWarning: string;
 }>;
 
 function fixture(o: Overrides = {}) {
@@ -40,6 +41,7 @@ function fixture(o: Overrides = {}) {
     herdr: "herdr 0.7.4",
     herdrSha: AMD64_SHA,
     missingTool: "",
+    platformWarning: "",
     ...o,
   };
 
@@ -62,6 +64,9 @@ case "$cmd" in
     if [ -n ${JSON.stringify(v.missingTool)} ] && [ "$cmd" = ${JSON.stringify(v.missingTool)} ]; then
       echo 'command not found' >&2
       exit 127
+    fi
+    if [ -n ${JSON.stringify(v.platformWarning)} ]; then
+      echo "WARNING: The requested image's platform (linux/arm64) does not match the detected host platform" >&2
     fi
     printf '%s (fake)\\n' "$cmd"
     ;;
@@ -120,6 +125,14 @@ describe("verify-sandbox-image", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(expected);
+  });
+
+  it("reports the tool's own version line, not an emulation platform warning", () => {
+    const result = run(fixture({ platformWarning: "1" }));
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("ok: gh --version -> gh --version (fake)");
+    expect(result.stdout).not.toContain("does not match the detected host platform");
   });
 
   it("rejects an unsupported architecture", () => {

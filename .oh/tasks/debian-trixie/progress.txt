@@ -71,3 +71,16 @@ The path filter is the load-bearing design choice. The boot guard's `.oh/**` fil
 `oh-init-headless-config.sh` skips whenever `.oh/cli/dist/` is absent, which silently turns the 94/0/3 baseline into 93/0/4. Run `pnpm run build` before reading eval counts, or a clean run looks like a lost probe.
 
 ---
+## US-003 follow-up — 2026-08-26 21:45 UTC
+
+**Title**: Report the tool's own version line under emulation
+**Files changed**: `.oh/scripts/verify-sandbox-image.sh`, `.oh/scripts/__tests__/verify-sandbox-image.test.ts`
+**Result**: PASS
+
+### What I did
+CI evidence from the arm64 job showed every tool row printing `ok: gh --version -> WARNING: The requested image's platform ...` instead of a version. `docker run` emits that warning on stderr under QEMU and `2>&1` put it first, so `head -1` reported the runner's complaint rather than the tool. The verifier now skips that warning line and fails a tool that exits cleanly with no version line at all. Added a 14th test that arms the warning and asserts the real line survives.
+
+### Learnings for future iterations
+`head -1` of a merged `2>&1` stream reports whichever stream spoke first, which under emulation is never the one being measured. The check was passing while its evidence was worthless — a green check whose output does not name what it verified is not evidence. Real CI logs caught what every local unit test missed, because the fake `docker` never emitted the warning.
+
+---

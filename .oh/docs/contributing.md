@@ -155,7 +155,8 @@ one keyword per issue. A bare `#42` links the issue but does not close it.
 When the pull request merges into `development`, the workflow
 [`.github/workflows/close-issues-on-development.yml`](../../.github/workflows/close-issues-on-development.yml)
 closes each referenced issue as `completed`. Closing the pull request without
-merging it closes no issue.
+merging it closes no issue. A pull request opened from a fork gets a read-only
+token, so close its issue by hand.
 
 Create the PR:
 

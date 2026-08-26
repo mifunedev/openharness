@@ -84,8 +84,8 @@ Example: `FROM feat/42-slack-thread-replies TO development`
 > each referenced issue as `completed` (#841).
 >
 > The trailer is therefore load-bearing — write it on every PR. Close by hand only when the
-> automation cannot see the merge (a direct push, a merge into another branch, or a PR whose
-> body carried no trailer):
+> automation cannot see the merge (a direct push, a merge into another branch, a PR whose
+> body carried no trailer, or a PR opened from a **fork**, which gets a read-only token):
 >
 > ```bash
 > gh issue close <N> --repo <owner/name> --comment "Merged in #<PR>."

@@ -12,6 +12,9 @@ Provisioning, Ralph execution, and the cron runtime live here.
 | `release-reservation.mjs` | Validates the SemVer release version and drives the reservation state machine |
 | `reserve-github-release.mjs` | Atomically reserves the `v<version>` tag and recovers its same-SHA GitHub draft |
 | `promote-release-latest.sh` | Fresh-checks canonical `main`-else-`master` and promotes its image to `latest` by digest |
+| `verify-sandbox-image.sh` | Verifies a built sandbox image: `verify-sandbox-image.sh <image-ref>` checks the Debian Trixie base, the `trixie`/`bookworm` apt suites, the built-in `sandbox` UID/GID `1000:1000`, Node 22, pnpm 10.33.0, Herdr 0.7.4 against the architecture-specific Dockerfile checksum pin, and version output from `gh`, Docker, Cloudflared, Bun and uv |
+| `sandbox-boot-smoke.sh` | Boots the compose sandbox, polls the healthcheck, and verifies the Herdr runtime plus the bind-mount ownership contract |
+| `node-pnpm-parity.sh` | One-time base-parity evidence: installs Node and pnpm in two Debian bases with the exact Dockerfile commands and reports whether both report identical versions |
 | `cron-runtime.ts` | Croner runtime — scans `.oh/crons/*.md`, schedules, fires each job     |
 | `prompt-miner-caps.sh` | REMOVED in 0.3.0 with the autopilot cap gate it wrapped — see `.oh/crons/prompt-miner.md` § Caps | <!-- legacy: `autopilot-caps.sh` with `CRON_REPO=mifunedev/openharness` + `AUTOPILOT_LABEL=prompt-miner` |
 | `__tests__/`      | Vitest unit tests (`vitest.config.ts` at repo root targets this)   |

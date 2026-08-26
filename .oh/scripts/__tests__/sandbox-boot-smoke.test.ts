@@ -7,9 +7,19 @@ import { describe, expect, it } from "vitest";
 const ROOT = join(import.meta.dirname, "../../..");
 const SCRIPT = join(ROOT, ".oh", "scripts", "sandbox-boot-smoke.sh");
 
+const HOST_UID = String(process.getuid?.() ?? 0);
+const HOST_GID = String(process.getgid?.() ?? 0);
+
 function fixture(
-  opts: { dockerExecAlwaysFails?: boolean; runtimeExecFails?: boolean } = {},
+  opts: {
+    dockerExecAlwaysFails?: boolean;
+    runtimeExecFails?: boolean;
+    runtimeUid?: string;
+    markerOwner?: string;
+  } = {},
 ) {
+  const runtimeUid = opts.runtimeUid ?? HOST_UID;
+  const markerOwner = opts.markerOwner ?? `${HOST_UID}:${HOST_GID}`;
   const dir = mkdtempSync(join(tmpdir(), "sandbox-boot-smoke-"));
   const bin = join(dir, "bin");
   mkdirSync(bin, { recursive: true });
@@ -50,10 +60,21 @@ case "$1" in
       echo 'health not ready' >&2
       exit 1
     fi
-    if [ "${opts.runtimeExecFails ? "1" : "0"}" = "1" ] && [ "$count" -ge 3 ]; then
+    if [ "${opts.runtimeExecFails ? "1" : "0"}" = "1" ] && [ "$count" -eq 3 ]; then
       echo 'required utility unavailable' >&2
       exit 1
     fi
+    all="$*"
+    case "$all" in
+      *"id -u; id -g"*)
+        printf '%s\n%s\n%s\n%s\n' ${JSON.stringify(runtimeUid)} ${JSON.stringify(HOST_GID)} ${JSON.stringify(runtimeUid)} ${JSON.stringify(HOST_GID)}
+        exit 0
+        ;;
+      *"stat -c %u:%g"*)
+        printf '%s\n' ${JSON.stringify(markerOwner)}
+        exit 0
+        ;;
+    esac
     echo 'sandbox healthcheck ok'
     exit 0
     ;;
@@ -112,6 +133,31 @@ describe("sandbox boot smoke", () => {
     expect(dockerCalls).toContain("htop --version");
     expect(dockerCalls).toContain("command -v telnet");
     expect(dockerCalls).toContain("telnet --version");
+    expect(dockerCalls).toContain("id -u; id -g");
+    expect(dockerCalls).toContain("stat -c %u:%g");
+    expect(result.stdout).toContain(
+      `sandbox user, bind mount, and sandbox-created files all resolve to ${HOST_UID}:${HOST_GID}`,
+    );
+  });
+
+  it("fails when the runtime sandbox user does not match the checkout owner", () => {
+    const fx = fixture({ runtimeUid: String(Number(HOST_UID) + 1) });
+
+    const result = runSmoke(fx);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("but the host checkout owner is");
+    expect(readFileSync(fx.composeLog, "utf8")).toContain("down -v --remove-orphans");
+  });
+
+  it("fails when a sandbox-created file is not host-compatible", () => {
+    const fx = fixture({ markerOwner: "0:0" });
+
+    const result = runSmoke(fx);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("a sandbox-created file is owned by 0:0");
+    expect(readFileSync(fx.composeLog, "utf8")).toContain("down -v --remove-orphans");
   });
 
   it("diagnoses a failed sandbox-user runtime assertion and tears down", () => {

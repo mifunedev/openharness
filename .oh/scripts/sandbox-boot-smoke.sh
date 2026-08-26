@@ -33,6 +33,54 @@ status_diagnostics() {
   fi
 }
 
+verify_bind_ownership() {
+  local cid="$1"
+  local project_root=${OH_PROJECT_ROOT:-/home/sandbox/harness}
+  local marker=".sandbox-boot-smoke-owner-$$"
+  local host_uid host_gid observed
+
+  host_uid=$(stat -c %u "$REPO_ROOT")
+  host_gid=$(stat -c %g "$REPO_ROOT")
+
+  observed=$(docker exec -u sandbox "$cid" sh -lc \
+    "id -u; id -g; stat -c %u '$project_root'; stat -c %g '$project_root'") || {
+    echo "sandbox boot smoke failed: could not read sandbox and checkout ownership" >&2
+    return 1
+  }
+
+  local run_uid run_gid mount_uid mount_gid
+  run_uid=$(sed -n 1p <<<"$observed")
+  run_gid=$(sed -n 2p <<<"$observed")
+  mount_uid=$(sed -n 3p <<<"$observed")
+  mount_gid=$(sed -n 4p <<<"$observed")
+
+  if [ "$run_uid:$run_gid" != "$mount_uid:$mount_gid" ]; then
+    echo "sandbox boot smoke failed: runtime sandbox user is $run_uid:$run_gid but the bind-mounted checkout is owned by $mount_uid:$mount_gid" >&2
+    return 1
+  fi
+  if [ "$run_uid:$run_gid" != "$host_uid:$host_gid" ]; then
+    echo "sandbox boot smoke failed: runtime sandbox user is $run_uid:$run_gid but the host checkout owner is $host_uid:$host_gid" >&2
+    return 1
+  fi
+
+  if ! docker exec -u sandbox "$cid" sh -lc \
+    "cd '$project_root' && : > '$marker' && stat -c %u:%g '$marker' && rm -f '$marker'" \
+    >/tmp/sandbox-boot-smoke-owner.out 2>&1; then
+    echo "sandbox boot smoke failed: the sandbox user could not write a marker into the bind-mounted checkout" >&2
+    cat /tmp/sandbox-boot-smoke-owner.out >&2 || true
+    return 1
+  fi
+
+  local marker_owner
+  marker_owner=$(grep -Eo '^[0-9]+:[0-9]+$' /tmp/sandbox-boot-smoke-owner.out | tail -1)
+  if [ "$marker_owner" != "$host_uid:$host_gid" ]; then
+    echo "sandbox boot smoke failed: a sandbox-created file is owned by $marker_owner, not host-compatible $host_uid:$host_gid" >&2
+    return 1
+  fi
+
+  echo "sandbox boot smoke: sandbox user, bind mount, and sandbox-created files all resolve to $host_uid:$host_gid"
+}
+
 trap teardown EXIT
 
 # shellcheck disable=SC2086 # BOOT_SMOKE_UP_ARGS is an intentional argv fragment for CI tuning.
@@ -54,7 +102,11 @@ while [ "$(date +%s)" -le "$end" ]; do
         status_diagnostics "$cid"
         exit 1
       fi
-      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD and Herdr runtime checks"
+      if ! verify_bind_ownership "$cid"; then
+        status_diagnostics "$cid"
+        exit 1
+      fi
+      echo "sandbox boot smoke ok: $SERVICE ($cid) passed $HEALTH_CMD, Herdr runtime, and bind-ownership checks"
       exit 0
     fi
     last_status=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$cid" 2>/dev/null || echo "inspect-failed")

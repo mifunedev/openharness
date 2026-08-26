@@ -1,0 +1,38 @@
+name: "CI: Sandbox Base Parity Evidence"
+
+# One-time, manually dispatched evidence for the Debian Trixie base upgrade
+# (#807): install Node and pnpm in the unchanged Bookworm base and in the Trixie
+# candidate using the exact commands the sandbox Dockerfile uses, and prove the
+# two report identical versions. Permanent enforcement lives in
+# .oh/scripts/verify-sandbox-image.sh, which pins Node major 22 and pnpm exactly
+# rather than a transient Node patch. This workflow never logs in or pushes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_a:
+        description: "Unchanged base to compare against"
+        default: "debian:bookworm-slim"
+      base_b:
+        description: "Candidate base"
+        default: "debian:trixie-slim"
+
+permissions:
+  contents: read
+
+jobs:
+  base-parity:
+    name: Compare node and pnpm across both bases
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Compare node and pnpm versions
+        run: |
+          bash .oh/scripts/node-pnpm-parity.sh \
+            "${{ inputs.base_a }}" \
+            "${{ inputs.base_b }}"

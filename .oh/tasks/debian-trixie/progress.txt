@@ -1,0 +1,112 @@
+# progress
+
+
+## Codebase Patterns
+
+- Tests are vitest, run with `npx vitest run` (`pnpm test` fails — vitest is not in root `node_modules`; only `.oh/cli` deps are installed). Typecheck: `pnpm run typecheck`.
+- Vitest include globs: `.oh/scripts/__tests__/**`, `.pi/**/__tests__/**`, `.oh/cli/**/__tests__/**`.
+- `.oh/cli/src/__tests__/runtime-catalog.test.ts` holds a *synchronization* test: the microsandbox glibc remediation string must name the base image the Dockerfile actually pins. Changing `FROM` without the catalog string turns it red.
+- Eval probes are standalone bash: `bash .oh/evals/probes/<name>.sh`, exit 0 PASS / 1 REGRESSION.
+- CHANGELOG `[Unreleased]` bullets are capped at 250 chars by `changelog-entry-length.sh`.
+- The repo strips explanatory comments from tracked code (#837), but deliberate, load-bearing comments (the Cloudflare 404 exception) are allowed and no probe forbids them.
+- Confirmed live: `pkg.cloudflare.com/cloudflared/dists/trixie/Release` -> 404, `.../bookworm/Release` -> 200, `download.docker.com/linux/debian/dists/trixie/Release` -> 200.
+
+## US-001 — 2026-08-26 21:12 UTC
+
+**Title**: Move the Dockerfile to Trixie
+**Files changed**: `.devcontainer/Dockerfile`, `.oh/scripts/__tests__/sandbox-base-image.test.ts`, `CHANGELOG.md`, `.oh/cli/src/lib/runtimes/catalog.ts`
+**Commit**: 3af58a1c
+**Result**: PASS
+
+### What I did
+Moved the sandbox base to `debian:trixie-slim` and switched Docker's apt suite to `trixie`, keeping Cloudflare's suite on `bookworm` behind a two-line comment that records the HTTP 404 on Cloudflare's Trixie suite. Added `sandbox-base-image.test.ts`, five deterministic assertions covering the base pin, both suite decisions, comment adjacency, and the absence of any other non-comment Bookworm reference. Added one 214-character issue-linked `[Unreleased]` -> `Changed` entry.
+
+### Learnings for future iterations
+The `FROM` change alone turned `runtime-catalog.test.ts` red, because its remediation-synchronization test compares the catalog string against the live Dockerfile pin. The minimal remediation-string fix landed here to keep the commit green; the fuller runtime and documentation reconciliation is US-002's scope.
+
+---
+## US-002 — 2026-08-26 21:15 UTC
+
+**Title**: Reconcile runtime and documentation claims
+**Files changed**: `.oh/cli/src/__tests__/runtime-catalog.test.ts`, `.oh/evals/probes/runtime-preflight-gate.sh`, `.oh/docs/installation.md`, `.oh/docs/rfcs/rfc-runtime-support.md`, `.oh/docs/integrations/debugmcp.md`, `.oh/docs/runtimes/microsandbox.md`, `.oh/docs/runtimes/overview.md`, `.oh/docs/runtimes/docker.md`
+**Commit**: b70cd319
+**Result**: PASS
+
+### What I did
+Replaced the two-blocker framing with two measured requirements, of which only `/dev/kvm` still fails. Rewrote the MicroSandbox page's blocked section, its sample `install` output, and its cross-references; corrected the base-image line in installation, the RFC substrate sentence, and both DebugMCP base references. Made the catalog synchronization test base-agnostic (it now reads the pinned `FROM` and requires the remediation to name it) and added two assertions: the remediation may not claim a sub-2.39 glibc or name bookworm, and `/dev/kvm` stays the blocker the default compose actually has. Extended `runtime-preflight-gate.sh` with the same base-image synchronization check.
+
+### Learnings for future iterations
+Synchronization assertions beat literal-string assertions for facts that live in two files: the old test hard-coded `debian:bookworm-slim` on both sides, so it was correct only by coincidence. Reading the live `FROM` and asserting containment survives the next base bump. Confirmed the new probe check fails correctly by reverting the catalog string in a scratch copy — it reported both drift lines and exited 1.
+
+---
+## US-003 — 2026-08-26 21:20 UTC
+
+**Title**: Verify the default image and ownership contract
+**Files changed**: `.oh/scripts/verify-sandbox-image.sh`, `.oh/scripts/node-pnpm-parity.sh`, `.oh/scripts/sandbox-boot-smoke.sh`, `.oh/scripts/README.md`, `.oh/scripts/__tests__/verify-sandbox-image.test.ts`, `.oh/scripts/__tests__/node-pnpm-parity.test.ts`, `.oh/scripts/__tests__/sandbox-boot-smoke.test.ts`, `.github/workflows/sandbox-boot-guard.yml`, `.github/workflows/sandbox-base-parity.yml`
+**Commit**: 3866a69d
+**Result**: PASS
+
+### What I did
+Added `verify-sandbox-image.sh <image-ref>`: it reads the image architecture, resolves the matching `herdr_sha` straight out of the Dockerfile, and checks the Trixie codename, both apt suites, the built-in `sandbox` UID/GID `1000:1000`, Node major 22, exact pnpm 10.33.0, Herdr 0.7.4 plus its checksum, and version output from `gh`, Docker, Cloudflared, Bun and uv. Extended `sandbox-boot-smoke.sh` with `verify_bind_ownership`, which asserts the runtime sandbox user, the bind-mounted checkout owner, and the host checkout owner all agree, then writes and stats a marker file. Wired the verifier into the existing `Validate sandbox compose and image build` job between build and boot, leaving the job name and the compose boot smoke intact. Shipped `node-pnpm-parity.sh` and a dispatch-only read-only workflow for the one-time Bookworm-vs-Trixie Node/pnpm comparison.
+
+### Learnings for future iterations
+This environment has the Docker **client** but no daemon (`docker info` fails), exactly as the PRD's Technical Considerations predicted. Both new scripts are therefore tested against a fake `docker` earlier on `PATH` — 13 and 3 deterministic cases including every rejection path. The parity **numbers** are the one thing that cannot be produced here: the mechanism is committed and unit-tested, and the comparison run itself belongs to the CI/PR evidence step.
+
+`set -o pipefail` makes `x=$(grep ... | head -1)` abort the script when grep finds nothing, so the intended "could not read the pin" error never printed. `|| true` on the substitution restores the explicit diagnostic. The unit test for the empty-Dockerfile case is what caught it.
+
+---
+## US-004 — 2026-08-26 21:22 UTC
+
+**Title**: Validate arm64 and optional installers
+**Files changed**: `.github/workflows/sandbox-compatibility.yml`, `.oh/evals/probes/sandbox-boot-guard-ci.sh`, `CHANGELOG.md`
+**Commit**: 953f7dc4
+**Result**: PASS
+
+### What I did
+Added a Dockerfile-path-scoped compatibility workflow with two jobs. The arm64 job prefers a native runner through `vars.CI_RUNNER_ARM64`, falls back to QEMU plus Buildx, builds `linux/arm64` with `load: true` so the Dockerfile's own `sha256sum -c -` and `herdr --version` checks execute, then runs the reusable verifier against the loaded image. The optional job builds one amd64 image with all four `INSTALL_*` args true, re-runs the verifier, and reports a version from `hermes`, `deepagents`, `opencode` and `grok`. Permissions are `contents: read`; there is no login, no push, no secret. Extended `sandbox-boot-guard-ci.sh` rather than adding a probe: it now also asserts the boot guard job name, the verifier invocation, and every compatibility contract, and fails if `release.yml` starts referencing the new workflow.
+
+### Learnings for future iterations
+The path filter is the load-bearing design choice. The boot guard's `.oh/**` filter would have fired these vendor installer builds on every harness edit, so the probe asserts the narrow Dockerfile filter *and* explicitly rejects a broad `.oh/**` entry in this workflow — the cheaper failure mode is worth guarding against directly. Confirmed both new probe branches fail correctly by deleting the workflow and by flipping the arm64 platform and one build arg in a scratch copy.
+
+`oh-init-headless-config.sh` skips whenever `.oh/cli/dist/` is absent, which silently turns the 94/0/3 baseline into 93/0/4. Run `pnpm run build` before reading eval counts, or a clean run looks like a lost probe.
+
+---
+## US-003 follow-up — 2026-08-26 21:45 UTC
+
+**Title**: Report the tool's own version line under emulation
+**Files changed**: `.oh/scripts/verify-sandbox-image.sh`, `.oh/scripts/__tests__/verify-sandbox-image.test.ts`
+**Result**: PASS
+
+### What I did
+CI evidence from the arm64 job showed every tool row printing `ok: gh --version -> WARNING: The requested image's platform ...` instead of a version. `docker run` emits that warning on stderr under QEMU and `2>&1` put it first, so `head -1` reported the runner's complaint rather than the tool. The verifier now skips that warning line and fails a tool that exits cleanly with no version line at all. Added a 14th test that arms the warning and asserts the real line survives.
+
+### Learnings for future iterations
+`head -1` of a merged `2>&1` stream reports whichever stream spoke first, which under emulation is never the one being measured. The check was passing while its evidence was worthless — a green check whose output does not name what it verified is not evidence. Real CI logs caught what every local unit test missed, because the fake `docker` never emitted the warning.
+
+---
+## Audit — 2026-08-26 21:59 UTC
+
+**Verdict**: AUDIT-PASS (run-id `audit-20260826T215705Z-306`)
+**Gates**: graph 4/4 · eval rc=0 (97 probes: 94 PASS, 0 REGRESSION, 3 SKIPPED) · promotable=true, ci=PASS, mergeable=CLEAN · ui n/a
+
+The first audit returned AUDIT-FAIL on gate 3 alone: gates 1 and 2 were green, but every CI run on record was against the scaffold commit because the implementation was still unpushed. Pushing `c827c6f6..9d1a0be6` and letting all three workflows land green cleared it. `readyToMerge=false` reflects only the draft state, which `/spec execute` owns.
+
+### CI-observed evidence (what could not be measured locally)
+- arm64 default image, QEMU fallback path: base `trixie`, suites `trixie`/`bookworm`, UID/GID `1000:1000`, Node `v22.23.2`, pnpm `10.33.0`, Herdr `0.7.4`, `uv 0.12.6 (aarch64-unknown-linux-gnu)`.
+- Herdr checksum verified on both architectures — `/usr/local/bin/herdr: OK` in-build, plus the verifier matching the `x86_64` and `aarch64` pins.
+- Optional installers on amd64: Hermes Agent v0.20.5, deepagents-cli 0.3.0, opencode 1.18.23, grok 0.2.39.
+- Bind-ownership contract: `sandbox user, bind mount, and sandbox-created files all resolve to 1001:1001` — the runner is not UID 1000, so the UID sync proved itself rather than passing by coincidence.
+
+### Still not locally observed
+The Bookworm-vs-Trixie node/pnpm parity numbers. `node-pnpm-parity.sh` and its dispatch-only workflow are committed and unit-tested; the comparison run itself needs a Docker daemon and has not been dispatched.
+
+---
+STATUS: COMPLETE
+
+## Audit repair — 2026-08-26
+
+Moved fixed-image Node/pnpm parity into automatic PR compatibility CI, removed the dispatch-only workflow, and required numeric dotted versions from default and optional tools. Strengthened deterministic tests and the CI guard probe for these contracts.
+
+## Operator review — 2026-08-26
+
+Removed the permanent arm64 compatibility job. The successful QEMU build remains one-time migration evidence. Permanent compatibility CI now checks fixed-base Node/pnpm parity and the amd64 all-optionals image.

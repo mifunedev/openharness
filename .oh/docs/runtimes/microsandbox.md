@@ -20,7 +20,7 @@ actually asking.
 
 | Question | Short answer |
 |---|---|
-| **Can `oh runtime install microsandbox` succeed *in this devcontainer*?** | **No** — two measured blockers. See [why it is blocked](#why-oh-runtime-install-microsandbox-is-blocked-here). |
+| **Can `oh runtime install microsandbox` succeed *in this devcontainer*?** | **No** — one remaining blocker, `/dev/kvm`. See [why it is blocked](#why-oh-runtime-install-microsandbox-is-blocked-here). |
 | **Can I run Open Harness *on* MicroSandbox, from my own host?** | **Possibly yes, today** — see [Running Open Harness on MicroSandbox](#running-open-harness-on-microsandbox). Nothing on this page measures your host. |
 
 The distinction matters because the two use different commands on different
@@ -32,7 +32,7 @@ upstream — `oh runtime install` is not that command and wires nothing up.
 
 ## Why `oh runtime install microsandbox` is blocked here
 
-### The two blockers
+### The two requirements, and which one still blocks
 
 Both were **measured**, not assumed
 ([#805](https://github.com/mifunedev/openharness/issues/805), from the P0 spike
@@ -46,32 +46,32 @@ is simply not measured here.
 
 | Requirement | This devcontainer | Why |
 |---|---|---|
-| glibc >= 2.39 | **2.36** | `.devcontainer/Dockerfile` pins `debian:bookworm-slim`. The installer refuses below 2.39. |
-| `/dev/kvm` present | **absent** | `.devcontainer/docker-compose.yml` declares no `devices:` key, so the container reaches no KVM. |
+| glibc >= 2.39 | **cleared** | `.devcontainer/Dockerfile` pins `debian:trixie-slim`, whose glibc clears the 2.39 floor with headroom. |
+| `/dev/kvm` present | **absent — blocks** | `.devcontainer/docker-compose.yml` declares no `devices:` key, so the container reaches no KVM. |
 
-The glibc floor is a base-image decision, not an `oh runtime` one —
-`ubuntu:24.04` clears it exactly (2.39) and `debian:trixie-slim` clears it with
-headroom (2.41). The WSL2 host this harness runs on measures 2.35. Measurements
-for every candidate are in
+The glibc floor was a base-image decision, not an `oh runtime` one, and the base
+upgrade to `debian:trixie-slim`
+([#807](https://github.com/mifunedev/openharness/issues/807)) cleared it. The
+WSL2 host this harness runs on measures 2.35 and is not what the target-scoped
+check reads. Measurements for every candidate are in
 [#803](https://github.com/mifunedev/openharness/pull/803).
 
-**Both must clear.** A glibc bump alone installs `msb` and still boots no
-microVM, because a microVM needs KVM.
+**Both must clear.** glibc now does; `/dev/kvm` does not, so the install still
+stops — a microVM needs KVM, and no glibc version substitutes for it.
 
-Neither fix belongs to `oh runtime`: the base image is on its own upgrade track
-([#807](https://github.com/mifunedev/openharness/issues/807)) and the `devices:`
-key is a compose change. Both are tracked in
-[#805](https://github.com/mifunedev/openharness/issues/805).
+The remaining fix does not belong to `oh runtime` either: the `devices:` key is
+a compose change, tracked in
+[#805](https://github.com/mifunedev/openharness/issues/805). Passing `/dev/kvm`
+into the sandbox is out of scope for the base upgrade.
 
 ### What `install` prints on a blocked host
 
-It measures, reports, and stops — with no network call and no installer run:
+It measures, reports, and stops — with no network call and no installer run.
+On the current Trixie image only the device check fails:
 
 ```
 microsandbox: not supported on this host — nothing was installed.
 
-  glibc      2.36     requires >= 2.39
-             .devcontainer/Dockerfile pins debian:bookworm-slim (glibc 2.36). …
   /dev/kvm   absent   requires present
              .devcontainer/docker-compose.yml declares no `devices:` key, …
 
@@ -85,7 +85,7 @@ upstream error yourself, or on a host you know the probe misread.
 ### What the upstream installer script does
 
 This is what `oh runtime install microsandbox` runs **inside the container**
-once the blockers clear. It is the same upstream script you run on your host in
+once `/dev/kvm` is present. It is the same upstream script you run on your host in
 [Step 1](#step-1--install-msb-on-your-host) — the difference is where.
 
 ```bash
@@ -110,7 +110,8 @@ only side the CLI's `ExecutionTarget` can reach. Whether that is the *right*
 side is open.
 
 #805 measures the glibc floor against *both* the WSL2 host (2.35) and the
-devcontainer (2.36) and does not say which is the intended target. A microVM
+devcontainer (now Trixie, above the 2.39 floor) and does not say which is the
+intended target. A microVM
 tier that replaces the container would plausibly be installed on the host. If
 #731 settles it the other way, this command's target changes — and that is a
 reason it writes no config today.
@@ -145,7 +146,7 @@ already boots the harness with no compose, no CLI, and no build.
 
 :::caution UNTESTED
 Nobody has executed this end to end. `msb` has never produced a binary in this
-harness (see the blockers above), so this section is a **translation of a verified
+harness (see the remaining blocker above), so this section is a **translation of a verified
 `docker run` recipe into a documented msb schema** — every part is individually
 grounded, and the combination is not. The five specific risks are listed at the
 bottom. Treat it as a starting point, not a runbook, and please report what you
@@ -380,5 +381,5 @@ user-selection flag is shown above because none is confirmed.
 ## Related
 
 - [Runtimes overview](overview.md) — why the CLI selects no runtime
-- [#805](https://github.com/mifunedev/openharness/issues/805) — the two blockers
+- [#805](https://github.com/mifunedev/openharness/issues/805) — the two measured requirements
 - [#803](https://github.com/mifunedev/openharness/pull/803) — the P0 measurement record

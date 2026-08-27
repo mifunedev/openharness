@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Changed
+- Upgrade the sandbox base image to `debian:trixie-slim` and move Docker's apt suite to `trixie`; Cloudflare's suite stays on `bookworm` ([#807](https://github.com/mifunedev/openharness/issues/807)).
 - Strip explanatory comments from all tracked code — `.ts`/`.mjs`/`.sh`/`.py` plus `oh-path`, the Dockerfile, the Makefile and `.zshrc` — leaving only machine-read directives ([#837](https://github.com/mifunedev/openharness/pull/837)).
 
 ### Fixed
@@ -18,6 +19,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - The boot-time ownership repair now covers the uv tree. The UID-sync sweep only rewrites paths owned by the *old* sandbox UID, so a root-owned uv directory was never repaired. Existing containers self-heal on restart.
 
 ### Added
+- `.oh/scripts/verify-sandbox-image.sh` — reusable image verifier for the base, apt suites, sandbox UID/GID, Node/pnpm pins, the Herdr checksum, and required tool versions ([#807](https://github.com/mifunedev/openharness/issues/807)).
+- `.github/workflows/sandbox-compatibility.yml` — Dockerfile-scoped CI that builds and verifies arm64 and one amd64 image with every optional installer ([#807](https://github.com/mifunedev/openharness/issues/807)).
 - `.oh/scripts/provision-python.sh` — idempotent, user-scoped uv/Python provisioning. Drops from root to the target user with `HOME` pinned, installs a managed interpreter and an `ipykernel` venv, and verifies the kernel.
 - The script writes `PRIME_AGENT_KERNEL_PYTHON` to `~/.local/share/oh/python-env.sh`, which login shells source. Modes: `--verify`, `--print-env`.
 - Provisioning failures print the exact repair command instead of a bare permission denial, and refuse to suggest `sudo uv` — that installs under `/root/.local`, unreadable by the agent user.

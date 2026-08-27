@@ -110,12 +110,28 @@ describe("microsandbox preflight matches the measured blockers (#805)", () => {
     expect(dev.id === "device" && dev.path).toBe("/dev/kvm");
   });
 
-  it("still describes the base image the Dockerfile actually pins", () => {
+  it("names the base image the Dockerfile actually pins, whatever it is", () => {
     const glibc = msb.preflight.find((c) => c.id === "glibc")!;
     const dockerfile = read(".devcontainer/Dockerfile");
-    const claimsBookworm = glibc.remediation.includes("debian:bookworm-slim");
-    const pinsBookworm = /^FROM\s+debian:bookworm-slim/m.test(dockerfile);
-    expect(claimsBookworm).toBe(pinsBookworm);
+    const pinned = /^FROM\s+(\S+)/m.exec(dockerfile)?.[1];
+
+    expect(pinned).toBeDefined();
+    expect(glibc.remediation).toContain(pinned!);
+  });
+
+  it("does not claim the current base fails the glibc floor", () => {
+    const glibc = msb.preflight.find((c) => c.id === "glibc")!;
+
+    expect(glibc.remediation).not.toMatch(/glibc 2\.3[0-8]/);
+    expect(glibc.remediation).not.toContain("bookworm");
+  });
+
+  it("leaves /dev/kvm as the blocker the default compose still has", () => {
+    const dev = msb.preflight.find((c) => c.id === "device")!;
+    const compose = read(".devcontainer/docker-compose.yml");
+
+    expect(compose).not.toMatch(/^\s*devices:/m);
+    expect(dev.remediation).toContain("devices:");
   });
 
   it("uses the installer command recorded by the P0 spike, not an invented one", () => {

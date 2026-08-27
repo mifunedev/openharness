@@ -1,0 +1,94 @@
+name: "CI: Sandbox Compatibility"
+
+# Dockerfile-scoped compatibility CI for the sandbox base (#807): compare the
+# exact Node and pnpm versions on fixed Bookworm and Trixie bases, then build one
+# amd64 image with every optional INSTALL_* path enabled. The vendor installers
+# are expensive and mutable, so the path filter stays narrow. This workflow
+# never logs in or pushes.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - development
+      - main
+    paths:
+      - ".devcontainer/Dockerfile"
+      - ".dockerignore"
+      - ".oh/scripts/verify-sandbox-image.sh"
+      - ".oh/scripts/node-pnpm-parity.sh"
+      - ".github/workflows/sandbox-compatibility.yml"
+  pull_request:
+    paths:
+      - ".devcontainer/Dockerfile"
+      - ".dockerignore"
+      - ".oh/scripts/verify-sandbox-image.sh"
+      - ".oh/scripts/node-pnpm-parity.sh"
+      - ".github/workflows/sandbox-compatibility.yml"
+
+concurrency:
+  group: sandbox-compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  base-node-pnpm-parity:
+    name: Verify exact Node and pnpm parity across Debian bases
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Compare fixed Bookworm and Trixie bases
+        run: |
+          bash .oh/scripts/node-pnpm-parity.sh \
+            debian:bookworm-slim \
+            debian:trixie-slim
+
+  optional-installers-image:
+    name: Build one amd64 image with every optional installer
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Ensure Mifune submodule
+        run: bash .oh/scripts/link-providers.sh --init
+
+      - name: Build with all INSTALL_* paths enabled
+        run: |
+          docker build \
+            --file .devcontainer/Dockerfile \
+            --build-arg INSTALL_HERMES=true \
+            --build-arg INSTALL_DEEPAGENTS=true \
+            --build-arg INSTALL_OPENCODE=true \
+            --build-arg INSTALL_GROK_BUILD=true \
+            --tag openharness-sandbox-optional:${{ github.sha }} \
+            .
+
+      - name: Verify the optional image still satisfies the default contract
+        run: bash .oh/scripts/verify-sandbox-image.sh openharness-sandbox-optional:${{ github.sha }}
+
+      - name: Verify a version from every optional CLI
+        run: |
+          set -euo pipefail
+          for tool in hermes deepagents opencode grok; do
+            echo "--- $tool --version"
+            output="$(docker run --rm --entrypoint /bin/bash \
+              openharness-sandbox-optional:${{ github.sha }} \
+              -lc "$tool --version" 2>&1)"
+            printf '%s\n' "$output"
+            if ! grep -Eq '(^|[^[:alnum:]])v?[0-9]+([.][0-9]+)+([^[:alnum:]]|$)' <<<"$output"; then
+              echo "ERROR: $tool --version did not output a numeric dotted version" >&2
+              exit 1
+            fi
+          done

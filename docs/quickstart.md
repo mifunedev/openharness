@@ -18,6 +18,9 @@ Two doors, solving different problems — pick by what you have (same as the
 
 **A. I want an Open Harness sandbox of my own** — Docker + Git, no Node:
 
+For a review-first install, download and inspect the script before you run it.
+The review-first alternative appears below.
+
 ```bash
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```

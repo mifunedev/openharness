@@ -3,7 +3,7 @@ title: "Scaling Managed Agents: Decoupling the brain from the hands"
 slug: managed-agents
 tags: [agents, meta-harness, sessions, sandbox, resilience, security, scaling, anthropic, model-evolution]
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-27
 sources:
   - raw/2026-08-08-managed-agents.md
 related: [audit-architecture, runtime-isolation-landscape, recursive-language-models]

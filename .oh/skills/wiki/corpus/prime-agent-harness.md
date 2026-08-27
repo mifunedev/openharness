@@ -3,7 +3,7 @@ title: "Prime Agent Harness Surface"
 slug: prime-agent-harness
 tags: [harness, provider-surface, prime-agent, skills, symlinks, oh-cli, on-demand]
 created: 2026-08-26
-updated: 2026-08-26
+updated: 2026-08-27
 sources:
   - raw/2026-08-26-prime-agent-harness.md
 related: [oh-cli-portable-lifecycle, sandbox-dependency-installs]

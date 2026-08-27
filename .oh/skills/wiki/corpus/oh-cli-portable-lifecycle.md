@@ -3,7 +3,7 @@ title: "oh CLI Portable Lifecycle"
 slug: oh-cli-portable-lifecycle
 tags: [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target]
 created: 2026-07-03
-updated: 2026-08-24
+updated: 2026-08-27
 sources:
   - .oh/cli/src/cli.ts
   - .oh/cli/src/commands/init.ts
@@ -18,7 +18,8 @@ sources:
   - .oh/cli/src/lib/project.ts
   - .oh/scripts/docker-compose.sh
   - .oh/scripts/gateway.sh
-  - .oh/scripts/harness-config.sh
+  - .oh/README.md
+  - docs/oh-directory-layout.md
   - docs/rfcs/rfc-brain-hands-boundary.md
 related: [fresh-machine-setup]
 confidence: provisional
@@ -40,14 +41,14 @@ confidence: provisional
 ## Summary
 Issue #564 gives a consumer repo a standalone lifecycle that needs no OpenHarness checkout kept around: `oh init --from-remote` equips the repo by fetching the payload from the public repo, then `oh sandbox`, `oh shell`, and `oh gateway` drive the sandbox by wrapping the vendored `.oh/scripts/` — the same scripts the source repo's Makefile drives. Bundling the payload into a published binary is a stated non-goal, gated on the npm publish decision.
 
-Issue #738 adds `docs/**` to the `.oh/manifest.json` include list. `oh init` and `oh update` now deliver `docs/` markdown, while the manifest still excludes `.oh/patches/`.
+Issue #738 historically added `docs/**` to the `.oh/manifest.json` include list. The current manifest omits `docs/**`: root `docs/` is project-owned documentation, and `oh init` and `oh update` leave it untouched while the manifest still excludes `.oh/patches/`.
 
 ## Detail
 **Payload sourcing (`oh init`)** — precedence `--from <dir>` > `--from-remote` > the CLI's own bundled payload (`cli.ts:139-141`; the two flags conflict, `cli.ts:305-308`). With no source flag and no bundled payload — the installed-binary case, detected via the `manifest.json` marker (`cli.ts:464-469`) — `resolveInitSource` auto-falls back to a remote fetch with a one-line notice naming URL and ref (`cli.ts:498-534`). `--from` sets only the payload source; `--from-remote` sets BOTH payload and templates from the fetched checkout (`cli.ts:478-484`). `oh update` never falls back: it requires `--from` or `--from-remote` (`cli.ts:383-388`) and upgrades only `.oh/` (`cli.ts:110-111`).
 
-**Manifest delivery** — `.oh/manifest.json` defines POSIX globs relative to `.oh/` (`manifest.ts:4-8`). `shouldShip()` requires an include match and rejects an exclude match (`manifest.ts:59-70`). The source manifest includes `docs/**` and omits `patches/**` (`.oh/manifest.json:2-23`).
+**Manifest delivery** — `.oh/manifest.json` defines POSIX globs relative to `.oh/` (`manifest.ts:4-8`). `shouldShip()` requires an include match and rejects an exclude match (`manifest.ts:59-70`). The current source manifest omits both `docs/**` and `patches/**` (`.oh/manifest.json:1-23`).
 
-`copyOhPayload()` applies this decision during both `oh init` and `oh update` (`vendor.ts:76-85`). The function copies the cited `docs/rfcs/rfc-brain-hands-boundary.md`. The path guard rejects writes outside the target `.oh/` (`vendor.ts:17-21,119-120`). This entry cites the RFC and does not restate its decisions.
+`copyOhPayload()` walks only the source `.oh/` tree and writes only below the target `.oh/` (`vendor.ts:76-85`, `vendor.ts:17-21,119-120`). Root `docs/` is therefore outside both the source walk and the destination guard. The init/update integration tests prove that an existing target `docs/` file remains unchanged (`init.test.ts`, `manifest.test.ts`). This entry cites the RFC and does not restate its decisions.
 
 **Remote fetch** — `git clone --depth 1 [--branch <ref>] -- <url> <tmp>` of `https://github.com/mifunedev/openharness` (`remote.ts:13,101-103`) with `GIT_TERMINAL_PROMPT=0` and a 120 s timeout (`remote.ts:14,106`). `runWithRemoteSource` makes the temp checkout, wraps the whole run in try/finally cleanup, and prints `fetched payload vX (installed CLI vY)` so version skew is visible (`cli.ts:577-594`).
 
@@ -69,7 +70,7 @@ Equipped repos mount the project at `/home/sandbox/harness`, the `workspaceFolde
 - Version skew: default ref is the clone's default branch; the printed skew line plus `--ref <branch|tag>` pinning are the guard (`cli.ts:589`; `remote.ts:102`).
 - Bundling non-goal: shipping the payload inside a published package is gated on publishing (`cli.ts:492-493`; `.oh/cli/package.json` stays `"private": true`); the bundled-payload branch only fires for source-checkout builds.
 
-DeepWiki comparison (2026-08-13, when the workflow still required one — the step was removed 2026-08-24): that comparison used source snapshot `8e145e31`. DeepWiki lists public `docs/` pages but does not describe `.oh/manifest.json`, `oh init`, `oh update`, or `docs/` delivery. Local sources define those contracts. The comparison found a local coverage gap and does not change the `docs/**` decision.
+DeepWiki comparison (2026-08-13, when the workflow still required one — the step was removed 2026-08-24): that comparison used source snapshot `8e145e31`. DeepWiki lists public `docs/` pages but does not describe `.oh/manifest.json`, `oh init`, `oh update`, or the root-docs boundary. Local sources define those contracts. The comparison found a local coverage gap and does not change the `docs/**` decision.
 
 ## System Relationships
 ```mermaid
@@ -81,6 +82,7 @@ flowchart LR
     C --> D["auto-fallback: remote fetch + notice"]
   end
   SRC --> INIT["equipped repo: .oh/ + .devcontainer/"]
+  ROOTDOCS["project-owned root docs/"] -. outside .oh payload .-> INIT
   INIT --> SB["oh sandbox (hands)"] --> PV["ExecutionTarget.provision()"] --> DC["docker-compose.sh --repo-dir &lt;root&gt; up -d"]
   INIT --> SH["oh shell [name] (hands)"] --> AT["ExecutionTarget.attach()"] --> DE["adapter-owned engine argv"]
   INIT --> GW["oh gateway &lt;args&gt; (brain)"] --> GS["gateway.sh (OH_PROJECT_ROOT=&lt;root&gt;)"]

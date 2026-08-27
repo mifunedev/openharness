@@ -3,7 +3,7 @@ title: "Runtime Isolation Landscape (2026)"
 slug: runtime-isolation-landscape
 tags: [runtime, isolation, sandbox, gvisor, firecracker, kata, microvm, cloudflare, e2b, daytona, fly, modal]
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-27
 sources:
   - raw/2026-07-04-runtime-isolation-landscape.md
 related: [crabbox-remote-exec-control-plane, sandbox-dependency-installs]

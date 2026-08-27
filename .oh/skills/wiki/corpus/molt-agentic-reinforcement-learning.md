@@ -3,7 +3,7 @@ title: "Molt: A Scalable PyTorch-Native Training Framework for Agentic Reinforce
 slug: molt-agentic-reinforcement-learning
 tags: [agentic-rl, training, readability, observability, trajectories, async, correctness, agent-harness, nvidia]
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-27
 sources:
   - raw/2026-08-08-molt-agentic-reinforcement-learning.md
 related: [managed-agents, audit-architecture, recursive-language-models, runtime-isolation-landscape]

@@ -3,7 +3,7 @@ title: "Fresh-Machine Setup Flow"
 slug: fresh-machine-setup
 tags: [setup, onboarding, installation, gateway, ssh, github, slack]
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-08-27
 sources:
   - docs/quickstart.md
   - docs/installation.md

@@ -20,13 +20,13 @@ for f in "$SPEC"; do
 done
 
 spec_section=$(awk '
-  /^### 5\. `build ⇄ audit`/ {f=1; print; next}
+  /^### 5\. `implementation ⇄ audit`/ {f=1; print; next}
   f && /^### / {f=0}
   f {print}
 ' "$SPEC")
 
 if [[ -z "$spec_section" ]]; then
-  echo "REGRESSION: could not locate the build ⇄ audit section in $SPEC" >&2
+  echo "REGRESSION: could not locate the implementation ⇄ audit section in $SPEC" >&2
   exit 1
 fi
 

@@ -30,7 +30,6 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
 | prime-agent-harness | Prime Agent Harness Surface | [harness, provider-surface, prime-agent, skills, symlinks, oh-cli, on-demand] | 2026-08-26 |
-| build-executor-ladder | Build Executor Ladder | [build-loop, executor, firstmate, herdr, tmux, runner-ladder, spec-execute] | 2026-08-25 |
 | plan-vs-built-reconciliation | Plan-vs-Built Reconciliation | [spec-execute, evidence, merge-gate, comprehension, audit, task-folder, review] | 2026-08-24 |
 | oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target] | 2026-08-24 |
 | release-versioning | Release Versioning | [release, versioning, semver, calver, github-actions, ghcr, tags, workflow, package-json] | 2026-08-23 |
@@ -44,3 +43,5 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 | fresh-machine-setup | Fresh-Machine Setup Flow | [setup, onboarding, installation, gateway, ssh, github, slack] | 2026-07-02 |
 | sandbox-dependency-installs | Sandbox Dependency Installs | [sandbox, devcontainer, pnpm, dependencies, boot] | 2026-07-01 |
 | recursive-language-models | Recursive Language Models | [rlm, context-as-environment, weighted-trajectories, agent-harness, llm-agents, self-consistency] | 2026-06-27 |
+
+<!-- benchmark: pass-rate = PASS / (PASS + REGRESSION + TIMEOUT); SKIPPED excluded -->

@@ -45,7 +45,7 @@ the production helper `"$AUDIT_ROOT/.oh/skills/audit/scripts/implementation-gate
 the snippets below explain its behavior and are not a second implementation.
 
 **(a) Task-graph conformance.** Every user story in the task graph must be marked
-complete. The ralph loop flips `passes: false → true` as it finishes each story, so
+complete. The Advisor flips `passes: false → true` only after it validates each story, so
 the graph is conformant only when **zero** stories remain unfinished:
 
 ```bash

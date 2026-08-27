@@ -86,7 +86,7 @@ to be visible in the PR body.
 ```markdown
 # Brief — <unit>
 
-You are the First Mate advisor. Run <plan prompt> then <pr prompt>. Delegate the
+You are the build advisor. Run <plan prompt> then <pr prompt>. Delegate the
 sub-agents each names. Deliverable: a ready-for-review PR against <base>.
 
 ## Boundaries — read first

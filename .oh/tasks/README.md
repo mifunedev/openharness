@@ -1,18 +1,17 @@
 # `.oh/tasks/`
 
-Spec task workdirs. Each `<slug>/` subfolder is one autonomous build
-session's four-file contract, created by `/spec plan` (the
-`/ralph` skill produces the `prd.json` inside it) and built by
-`.oh/scripts/firstmate.sh <slug>`.
+Spec task workdirs. Each `<slug>/` subfolder is one `/spec execute` task's
+four-file contract, created by `/spec plan` (the `/ralph` skill produces the
+`prd.json` inside it) and implemented by the single Advisor session.
 
 A task directory typically contains:
 
 | File           | Purpose                                                  |
 | -------------- | -------------------------------------------------------- |
-| `prd.json`     | Ralph-formatted PRD — the runner's authoritative spec    |
+| `prd.json`     | Ralph-formatted PRD — the Advisor's authoritative task graph |
 | `prd.md`       | Human-readable PRD that `prd.json` was generated from    |
-| `prompt.md`    | Optional standing prompt prepended to each Ralph turn    |
-| `progress.txt` | Ralph's running log; ends with `STATUS: COMPLETE` on done |
+| `prompt.md`    | Task-specific instructions for the Advisor's implementation |
+| `progress.txt` | Advisor's running log; ends with `STATUS: COMPLETE` on done |
 | `critique.md`  | Optional critic notes from PRD review                    |
 
 ## Conventions
@@ -25,7 +24,7 @@ A task directory typically contains:
   `eval-result.json` — are added explicitly with **`git add -f`**. A bare
   `git add .oh/tasks/<slug>/` stages nothing and commits silently without them, which
   is the same as never having written them from a reviewer's seat.
-- **Do not edit `progress.txt` by hand** — the runner appends to it.
+- **Do not edit `progress.txt` by hand** — the Advisor appends to it.
 
 ## Lifecycle
 
@@ -36,4 +35,4 @@ A task directory typically contains:
 - `archive/` contents are gitignored except for archived task files
   themselves (see root `.gitignore`).
 
-See `.oh/scripts/firstmate.sh` for the build-executor entry point.
+See `.oh/skills/spec/references/execute.md` for the implementation workflow.

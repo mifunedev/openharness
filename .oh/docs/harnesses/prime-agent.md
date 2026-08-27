@@ -101,8 +101,9 @@ These are deliberate gaps, not oversights:
 
 - **No image-level install.** There is no `INSTALL_PRIME_AGENT` build arg, no compose auth
   volume, and no key in `.devcontainer/.example.env`. The harness is `on-demand` only.
-- **Not a build executor.** `.oh/scripts/firstmate.sh` launches `claude`, `pi`, or `codex`;
-  point `FIRSTMATE_HARNESS_CMD` at Prime Agent to use it there.
+- **No `/spec execute` provider integration.** `/spec execute` uses the active Advisor
+  session and does not launch a provider-specific wrapper; run Prime Agent directly only
+  for a bounded, explicitly selected task.
 - **No messenger bridge.** `.oh/scripts/gateway.sh` accepts only `pi` and `hermes`.
 
 ## Upstream

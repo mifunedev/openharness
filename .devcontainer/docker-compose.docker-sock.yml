@@ -1,4 +1,4 @@
-# Docker-socket overlay (opt-in — see .oh/docs/security-considerations.md).
+# Docker-socket overlay (opt-in — see docs/security-considerations.md).
 #
 # Applied by .oh/scripts/docker-compose.sh only when DOCKER_SOCKET is truthy
 # (the DOCKER_SOCKET key in .devcontainer/.env).

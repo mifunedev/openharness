@@ -38,7 +38,8 @@ describe("runtime catalog shape", () => {
 
   it("gives every entry a docs path", () => {
     for (const r of RUNTIME_CATALOG) {
-      expect(r.docsPath, r.id).toMatch(/^\.oh\/docs\/runtimes\//);
+      expect(r.docsPath, r.id).toMatch(/^docs\/runtimes\//);
+      expect(() => read(r.docsPath)).not.toThrow();
     }
   });
 

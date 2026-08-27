@@ -5,7 +5,7 @@
 # stays loopback-only (127.0.0.1) so the daemon is reachable from the host and
 # through a host-side reverse proxy, but not from the public interface by
 # default — switch the bind to 0.0.0.0 for direct remote SSH, or front it with
-# nginx for multi-tenant routing. See .oh/docs/integrations/sshd.md.
+# nginx for multi-tenant routing. See docs/integrations/sshd.md.
 #
 # Auth is public-key by default: put your public key(s) in
 # SANDBOX_SSH_AUTHORIZED_KEYS (in .devcontainer/.env). Password auth (using

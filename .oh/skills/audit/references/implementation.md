@@ -58,7 +58,7 @@ echo "task-graph: $((total - unfinished))/$total stories pass"
 ```
 
 **(b) Artifact contract.** If the `prd.json` declares an `artifact_contract` block
-(see the [artifact-contract schema](../../../docs/artifact-contract-schema.md)), every
+(see the [artifact-contract schema](../../../../docs/artifact-contract-schema.md)), every
 path in `artifact_contract.required_artifacts` must exist on disk. This is a
 **gating** sub-check — a declared-but-missing artifact is a hard `AUDIT-FAIL`, not
 an advisory warning. The block is **optional and additive**: a `prd.json` with no

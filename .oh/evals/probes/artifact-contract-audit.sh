@@ -10,7 +10,7 @@ tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/.oh/tasks/fixture" "$tmp/.oh/skills/audit/fixtures"
 cp "$FIX" "$tmp/.oh/tasks/fixture/prd.json"; cp "$FIX" "$tmp/.oh/skills/audit/fixtures/artifact-contract.prd.json"
 fail(){ echo "REGRESSION: $*" >&2; exit 1; }
-doc_link=$(grep -o '](\.\./\.\./\.\./docs/artifact-contract-schema.md)' "$REPO/.oh/skills/audit/references/implementation.md" | head -1)
+doc_link=$(grep -o '](\.\./\.\./\.\./\.\./docs/artifact-contract-schema.md)' "$REPO/.oh/skills/audit/references/implementation.md" | head -1)
 doc_rel=${doc_link#](}; doc_rel=${doc_rel%)}
 [[ -n $doc_rel && -f "$REPO/.oh/skills/audit/references/$doc_rel" ]] || fail 'artifact schema documentation link is broken'
 set +e; out=$(AUDIT_ROOT="$tmp" bash "$GATE" gate1 fixture 2>&1); rc=$?; set -e

@@ -118,7 +118,7 @@ Displaced detail has a destination — put it there, not in the entry:
 |--------|-------------|
 | Rationale, rejected alternatives | The PR body — the `([#N])` link is the pointer |
 | Task/spec decisions | `.oh/tasks/<slug>/prd.md` |
-| Architecture decisions | `.oh/docs/rfcs/` |
+| Architecture decisions | `docs/rfcs/` |
 | Durable, generalized lessons | `.oh/context/IDENTITY.md` |
 
 BAD (real entry, 3,579 chars — a design doc wearing a bullet):

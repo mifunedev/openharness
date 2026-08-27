@@ -5,9 +5,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-DOC="$ROOT/.oh/docs/integrations/slack.md"
-CONNECTING="$ROOT/.oh/docs/connecting.md"
-PI_DOC="$ROOT/.oh/docs/harnesses/pi.md"
+DOC="$ROOT/docs/integrations/slack.md"
+CONNECTING="$ROOT/docs/connecting.md"
+PI_DOC="$ROOT/docs/harnesses/pi.md"
 T3_PROCESSES="$ROOT/.oh/skills/t3/references/sandbox-processes.md"
 ROOT_PACKAGE_AUDIT="$ROOT/.oh/tasks/slack-admin-command-surface/root-package-audit.md"
 MANIFEST="$ROOT/.pi/install/slack-manifest.json"

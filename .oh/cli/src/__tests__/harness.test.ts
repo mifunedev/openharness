@@ -263,6 +263,9 @@ describe("runHarnessInstall against the container", () => {
     expect(install!.args).toContain("root");
     expect(install!.args.slice(-4)).toEqual(["npm", "install", "-g", "opencode-ai"]);
     expect(text(out)).toContain("installed");
+    expect(text(out)).toContain(
+      "https://github.com/mifunedev/openharness/blob/main/docs/harnesses/opencode.md",
+    );
   });
 
   it("installs deepagents as the sandbox user, not root", async () => {
@@ -420,7 +423,9 @@ describe("runHarnessStatus", () => {
     expect(await runHarnessStatus("hermes", { cwd: root, run, json: true }, io)).toBe(0);
     const parsed = JSON.parse(text(out));
     expect(parsed.id).toBe("hermes");
-    expect(parsed.docs).toBe(".oh/docs/harnesses/hermes.md");
+    expect(parsed.docs).toBe(
+      "https://github.com/mifunedev/openharness/blob/main/docs/harnesses/hermes.md",
+    );
   });
 
   it("rejects an unknown name with the valid ids", async () => {

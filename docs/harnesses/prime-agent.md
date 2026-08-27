@@ -34,6 +34,15 @@ The manual equivalent:
 curl -fsSL https://app.primeintellect.ai/prime-agent/install.sh | sh
 ```
 
+For a review-first install, download `prime-agent-install.sh`, inspect it, and
+then run it:
+
+```bash
+curl -fsSL -o prime-agent-install.sh https://app.primeintellect.ai/prime-agent/install.sh
+less prime-agent-install.sh
+bash prime-agent-install.sh
+```
+
 Node ≥ 20.6 is required; the sandbox image already satisfies it.
 
 ## Verify installation

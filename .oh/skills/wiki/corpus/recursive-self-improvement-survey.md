@@ -3,7 +3,7 @@ title: "Recursive Self-Improvement in AI (survey, arXiv 2607.07663)"
 slug: recursive-self-improvement-survey
 tags: [rsi, self-improvement, verification-hierarchy, skill-libraries, harness-evolution, self-evaluation, model-collapse, capability-benchmark]
 created: 2026-08-13
-updated: 2026-08-13
+updated: 2026-08-27
 sources:
   - raw/2026-08-13-recursive-self-improvement-survey.md
 related: [recursive-language-models, molt-agentic-reinforcement-learning, audit-architecture]
@@ -17,10 +17,10 @@ to Autonomous Research Loops*, arXiv 2607.07663v1 (July 2026), 1,250 papers
 (2024–2026). Source: <https://arxiv.org/html/2607.07663v1>.
 
 ## Relevant Source Files
-- `.oh/docs/rfcs/rfc-rsi-survey-mapping.md` — the harness-side mapping this entry backs.
+- `docs/rfcs/rfc-rsi-survey-mapping.md` — the harness-side mapping this entry backs.
 - `.oh/evals/probes/` — the harness's level-2 execution-feedback signals (105 probes).
 - `.oh/evals/capability/RESULTS.md` — the ceiling instrument the survey's SkillsBench result predicts.
-- `.oh/docs/rfcs/rfc-selfimprove-roadmap.md` — the #525 child-issue spine the survey converges on.
+- `docs/rfcs/rfc-selfimprove-roadmap.md` — the #525 child-issue spine the survey converges on.
 
 ## Summary
 The survey organizes self-improving AI on two axes: **what improves**

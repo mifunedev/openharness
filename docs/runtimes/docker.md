@@ -40,7 +40,7 @@ docker   container  active  yes        yes
 
 docker — requirements:
   docker     29.7.2     requires exit 0   [host] OK
-  see .oh/docs/runtimes/docker.md
+  see docs/runtimes/docker.md
 ```
 
 `IN USE` is `yes` when the sandbox container is actually running. It is a fact

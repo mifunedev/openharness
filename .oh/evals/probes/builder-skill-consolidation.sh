@@ -94,7 +94,7 @@ for path in "$REFS"/*.md; do
   fi
 done
 
-if grep -qF 'skill-builder' "$ROOT/.oh/docs/oh-directory-layout.md"; then
+if grep -qF 'skill-builder' "$ROOT/docs/oh-directory-layout.md"; then
   fail "current directory-layout docs still advertise skill-builder as an agent"
 fi
 

@@ -21,7 +21,7 @@ Herdr (`herdr`, v0.7.4 in this image) is Open Harness's primary interactive
 workspace: a server process plus attached clients, with workspaces → tabs →
 panes, and agent-state detection per pane. This skill covers driving it from a
 non-interactive agent run. Operator-facing setup, persistence volumes, and the
-attach story live in `.oh/docs/integrations/herdr.md` — do not duplicate them
+attach story live in `docs/integrations/herdr.md` — do not duplicate them
 here.
 
 Full subcommand catalog: `references/command-map.md`. Read it when you need a

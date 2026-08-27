@@ -3,7 +3,7 @@ title: "Prime Agent Harness Surface"
 slug: prime-agent-harness
 tags: [harness, provider-surface, prime-agent, skills, symlinks, oh-cli, on-demand]
 created: 2026-08-26
-updated: 2026-08-26
+updated: 2026-08-27
 sources:
   - raw/2026-08-26-prime-agent-harness.md
 related: [oh-cli-portable-lifecycle, sandbox-dependency-installs]
@@ -20,7 +20,7 @@ confidence: confirmed
 - `.oh/cli/src/__tests__/harness-catalog.test.ts` — the drift test that constrains what a catalog entry may declare.
 - `.oh/evals/probes/skills-vendored.sh` — the parity oracle; resolve loop at `:37`, clean-clone assert at `:59`.
 - `.prime/agent/settings.json`, `.prime/agent/APPEND_SYSTEM.md`, `.prime/agent/.gitignore` — the committed config surface.
-- `.oh/docs/harnesses/prime-agent.md` — the human-facing doc the catalog's `docsPath` requires to exist.
+- `docs/harnesses/prime-agent.md` — the human-facing doc the catalog's `docsPath` requires to exist.
 
 ## Summary
 

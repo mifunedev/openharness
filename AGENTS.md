@@ -166,7 +166,7 @@ Run `make destroy` only for operator-authorized teardown.
 
 In an initialized repository without a Makefile, use the matching `oh` verbs. The
 `make` and `oh` surfaces call `.oh/scripts/docker-compose.sh`. The canonical mapping
-is [`.oh/docs/lifecycle-commands.md`](.oh/docs/lifecycle-commands.md).
+is [`docs/lifecycle-commands.md`](docs/lifecycle-commands.md).
 
 ## How the system fits together
 

@@ -53,7 +53,7 @@ Each finding states a survey result, the in-repo exhibit, and what the exhibit p
 
 **Survey (§5.2):** ten rounds of ungrounded self-critique lose 55% of informational change. **One** grounding step at round three restores forward movement.
 
-**Exhibit (historical):** `/spec plan ⇄ /spec critique` ran two critics that shared weights with the planner. Those critics read only local artifacts: the `.oh/tasks/<slug>/` files that exist before any GitHub state, any probe run, and any build. The loop placed rung 3 in judgement over rung 3, and no rule bounded the round count. **That loop was removed** (the [current `/spec` workflow contract](../../skills/spec/SKILL.md#workflow-contract)): the operator's approval of `prd.md` is now the commitment gate. In the `build ⇄ audit` loop, `/eval` and CI execute and return a rung-2 signal. That loop is the surviving healthy contrast.
+**Exhibit (historical):** `/spec plan ⇄ /spec critique` ran two critics that shared weights with the planner. Those critics read only local artifacts: the `.oh/tasks/<slug>/` files that exist before any GitHub state, any probe run, and any build. The loop placed rung 3 in judgement over rung 3, and no rule bounded the round count. **That loop was removed** (the [current `/spec` workflow contract](../../.oh/skills/spec/SKILL.md#workflow-contract)): the operator's approval of `prd.md` is now the commitment gate. In the `build ⇄ audit` loop, `/eval` and CI execute and return a rung-2 signal. That loop is the surviving healthy contrast.
 
 **What the exhibit proves:** The former planning loop and the surviving build loop are not the same mechanism. One loop reads a grounded signal and one loop does not, and the survey supplies the measurement that separates them.
 

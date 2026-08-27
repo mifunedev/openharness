@@ -40,11 +40,11 @@ describe("default Herdr integration", () => {
 
   it("makes Herdr the first interactive action in canonical onboarding", () => {
     const readme = readRepoFile("README.md");
-    const quickstart = readRepoFile(".oh/docs/quickstart.md");
+    const quickstart = readRepoFile("docs/quickstart.md");
     const agents = readRepoFile("AGENTS.md");
-    const contributing = readRepoFile(".oh/docs/contributing.md");
-    const intro = readRepoFile(".oh/docs/intro.md");
-    const harnessOverview = readRepoFile(".oh/docs/harnesses/overview.md");
+    const contributing = readRepoFile("docs/contributing.md");
+    const intro = readRepoFile("docs/intro.md");
+    const harnessOverview = readRepoFile("docs/harnesses/overview.md");
     const zshrc = readRepoFile(".oh/install/.zshrc");
 
     expect(readme.indexOf("\nherdr\n")).toBeGreaterThan(-1);
@@ -58,8 +58,8 @@ describe("default Herdr integration", () => {
   });
 
   it("documents correct state and direct-image persistence", () => {
-    const herdrDocs = readRepoFile(".oh/docs/integrations/herdr.md");
-    const imageDocs = readRepoFile(".oh/docs/deployment-prebuilt-image.md");
+    const herdrDocs = readRepoFile("docs/integrations/herdr.md");
+    const imageDocs = readRepoFile("docs/deployment-prebuilt-image.md");
 
     expect(herdrDocs).toContain("~/.config/herdr");
     expect(herdrDocs).toContain("~/.herdr/worktrees");

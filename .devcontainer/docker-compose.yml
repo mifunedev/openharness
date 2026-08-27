@@ -23,7 +23,7 @@
 # in .devcontainer/.env. The VS Code "Reopen in Container" path reads THIS file
 # directly and bypasses that wrapper, so it never gets the socket; add the
 # overlay to devcontainer.json to enable it there. See
-# .oh/docs/security-considerations.md.
+# docs/security-considerations.md.
 
 name: ${SANDBOX_NAME:-openharness}
 

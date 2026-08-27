@@ -13,11 +13,11 @@ enforced data cannot drift apart.
 ## Why this file sits beside the script
 
 `.oh/manifest.json` lists `scripts/**` in its include list. It does not list
-`docs/**`, so `.oh/docs/` is not part of the shipped payload. The linter fails
+`docs/**`, so `docs/` is not part of the shipped payload. The linter fails
 closed: it exits 2 when its exception file is missing. A copy of this file under
-`.oh/docs/` would be absent from every installed harness, and the script would
+`docs/` would be absent from every installed harness, and the script would
 hard-error on every run there. The file therefore lives in `.oh/scripts/`.
-`.oh/docs/README.md` carries an index entry so a reviewer can still find it.
+`docs/README.md` carries an index entry so a reviewer can still find it.
 
 ## The two copies
 

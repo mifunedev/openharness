@@ -19,7 +19,7 @@ ENTRYPOINT="$ROOT/.devcontainer/entrypoint.sh"
 COMPOSE_IO="$ROOT/.devcontainer/docker-compose.image-only.yml"
 COMPOSE_PRIMARY="$ROOT/.devcontainer/docker-compose.yml"
 DOCKERFILE="$ROOT/.devcontainer/Dockerfile"
-DOC="$ROOT/.oh/docs/deployment-prebuilt-image.md"
+DOC="$ROOT/docs/deployment-prebuilt-image.md"
 
 if [[ ! -f "$COMPOSE_IO" ]] || [[ ! -f "$ENTRYPOINT" ]] || ! grep -q 'OH_IMAGE_ONLY' "$ENTRYPOINT"; then
   echo "SKIPPED: Flavor B (image-only) artifacts not present (docker-compose.image-only.yml and/or entrypoint.sh OH_IMAGE_ONLY gate absent)" >&2

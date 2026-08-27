@@ -12,7 +12,7 @@
 # Usage:
 #   docker compose -f .devcontainer/docker-compose.image-only.yml up -d
 #
-# See .oh/docs/deployment-prebuilt-image.md for the full Flavor B writeup.
+# See docs/deployment-prebuilt-image.md for the full Flavor B writeup.
 
 name: ${SANDBOX_NAME:-openharness}
 

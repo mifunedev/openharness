@@ -36,9 +36,9 @@ so every candidate is tagged to the axis it serves.
 ## 2. The "supported runtime" contract (ratifiable)
 
 A runtime is **supported** only when it meets *all* of the following — mirroring how agent CLIs
-are supported today (`.oh/docs/harnesses/overview.md`):
+are supported today (`docs/harnesses/overview.md`):
 
-1. **Documented** — a per-runtime doc at `.oh/docs/runtimes/<name>.md` + a runtimes overview, and a
+1. **Documented** — a per-runtime doc at `docs/runtimes/<name>.md` + a runtimes overview, and a
    row in the install matrix.
 2. **One-toggle** — opt-in via a *single* surface: a `harness.yaml` toggle, a compose overlay, or a
    `RUNTIME=` selector. Never a manual multi-step setup.

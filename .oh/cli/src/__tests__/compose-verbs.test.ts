@@ -135,7 +135,9 @@ describe("help", () => {
     printComposeVerbHelp("stop");
     const text = spy.mock.calls.map((c) => String(c[0])).join("");
     expect(text).toContain("make stop");
-    expect(text).toContain("lifecycle-commands.md");
+    expect(text).toContain(
+      "https://github.com/mifunedev/openharness/blob/main/docs/lifecycle-commands.md",
+    );
   });
 });
 
@@ -158,7 +160,7 @@ describe("parity with the Makefile", () => {
   });
 
   it("documents each make-only target in the mapping doc", () => {
-    const map = read(".oh/docs/lifecycle-commands.md");
+    const map = read("docs/lifecycle-commands.md");
     for (const target of ["destroy", "config", "shell"]) {
       expect(map, target).toContain(`make ${target}`);
     }

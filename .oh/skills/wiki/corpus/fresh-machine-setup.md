@@ -3,14 +3,14 @@ title: "Fresh-Machine Setup Flow"
 slug: fresh-machine-setup
 tags: [setup, onboarding, installation, gateway, ssh, github, slack]
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-08-27
 sources:
-  - .oh/docs/quickstart.md
-  - .oh/docs/installation.md
-  - .oh/docs/integrations/github.md
-  - .oh/docs/integrations/debugmcp.md
-  - .oh/docs/integrations/slack.md
-  - .oh/docs/harnesses/hermes.md
+  - docs/quickstart.md
+  - docs/installation.md
+  - docs/integrations/github.md
+  - docs/integrations/debugmcp.md
+  - docs/integrations/slack.md
+  - docs/harnesses/hermes.md
   - .devcontainer/entrypoint.sh
   - .oh/scripts/gateway.sh
 related: [sandbox-dependency-installs, oh-cli-portable-lifecycle]
@@ -20,11 +20,11 @@ confidence: provisional
 # Fresh-Machine Setup Flow
 
 ## Relevant Source Files
-- `.oh/docs/quickstart.md` — the **canonical human walkthrough** (13 ordered steps, commands inlined). This entry is a synthesis + doc-handoff map only; keep it in sync with quickstart's step list.
-- `.oh/docs/installation.md` — host prerequisites (incl. `make`) and the clone-and-own private-origin + upstream pattern.
-- `.oh/docs/integrations/github.md` — SSH auth (interactive + entrypoint auto-keygen).
-- `.oh/docs/integrations/debugmcp.md` — DebugMCP extension runbook.
-- `.oh/docs/integrations/slack.md`, `.oh/docs/harnesses/hermes.md` — Slack config + gateway run/verify.
+- `docs/quickstart.md` — the **canonical human walkthrough** (13 ordered steps, commands inlined). This entry is a synthesis + doc-handoff map only; keep it in sync with quickstart's step list.
+- `docs/installation.md` — host prerequisites (incl. `make`) and the clone-and-own private-origin + upstream pattern.
+- `docs/integrations/github.md` — SSH auth (interactive + entrypoint auto-keygen).
+- `docs/integrations/debugmcp.md` — DebugMCP extension runbook.
+- `docs/integrations/slack.md`, `docs/harnesses/hermes.md` — Slack config + gateway run/verify.
 - `.devcontainer/entrypoint.sh:275-309` — auto SSH keygen + pubkey upload when `GH_TOKEN` carries `admin:public_key`.
 - `.oh/scripts/gateway.sh` — sandbox-only lifecycle for the sibling `client-slack-pi` / `client-slack-hermes` sessions.
 

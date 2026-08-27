@@ -1,0 +1,68 @@
+# progress
+
+## Codebase Patterns
+
+- Root `docs/` is project-owned Markdown and category metadata. The `.oh/` payload remains scoped to `.oh/` and must not copy or overwrite root documentation.
+- When moving a documentation root, adjust relative links by one traversal level: root docs use `../.oh/...` for control-plane files and `../...` for repository-root files. Keep rendered-site `/docs/...` URLs unchanged.
+
+
+## US-001 — 2026-08-27 01:47 UTC
+
+**Title**: Relocate documentation and repair internal links
+**Files changed**: `docs/**` (50 migrated files), `.oh/cli/src/lib/{harnesses,runtimes,tools}/catalog.ts`, related CLI/script tests
+**Commit**: efaef6f3
+**Result**: PASS
+
+### What I did
+Moved the complete tracked `.oh/docs/` tree to root `docs/` with no compatibility symlink. Repaired repository-relative links, traversal depth, explicit Markdown extensions, and direct catalog/test paths while preserving rendered-site and external documentation URLs. Added the root-only Markdown/category metadata guard and verified the exact migrated file set and all local Markdown links.
+
+### Learnings for future iterations
+Root documentation paths are relative to the repository root, so links to `.oh/` need `../.oh/` and links to root files need `../`. Line references must stay outside Markdown link targets so local links resolve correctly.
+
+---
+
+## US-002 — 2026-08-27 01:51 UTC
+
+**Title**: Repoint live guidance and catalog consumers
+**Files changed**: root guidance, `.devcontainer/`, issue template, Makefile, `.oh/` guidance/scripts/skills, catalog output, templates, and current wiki entries
+**Commit**: d3d76a0b
+**Result**: PASS
+
+### What I did
+Repointed current repository guidance, issue instructions, Makefile output, devcontainer messages, installer output, CLI catalog paths, skills, templates, and wiki source references to root `docs/`. Kept changelog and historical task/source records unchanged. The tracked-reference audit now leaves only the documented negative probe guard and historical records.
+
+### Learnings for future iterations
+Path migration needs a classified audit: current consumers move to `docs/`, while changelog entries, archived task evidence, raw snapshots, and historical event examples remain records of the paths that were true when written.
+
+---
+
+## US-003 — 2026-08-27 01:55 UTC
+
+**Title**: Make payload and regression contracts match the root move
+**Files changed**: `.oh/manifest.json`, `.oh/evals/probes/{docs-build-fast-path,oh-payload-manifest,make-oh-lifecycle-parity,oh-image-only-deploy,slack-admin-command-surface,audit-stale-references,builder-skill-consolidation,docker-inspect-env-guard}.sh`, `.github/workflows/ci-harness.yml`
+**Commit**: de4d45b6
+**Result**: PASS
+
+### What I did
+Removed `docs/**` from the `.oh` payload manifest and kept the payload path guard `.oh`-scoped. Updated init/update coverage to preserve target root docs, strengthened the docs fast-path probe to allow only Markdown and `_category_.json`, repointed related probes, and added `docs/**` to both harness CI path filters without widening sandbox boot.
+
+### Learnings for future iterations
+The payload walker receives only the source `.oh` directory, so root docs stay outside the payload by construction. A regression guard must test both the positive file-class allowlist and the negative no-legacy-tree condition.
+
+---
+
+## US-004 — 2026-08-27 02:15 UTC
+
+**Title**: Align durable knowledge and complete verification
+**Files changed**: affected wiki entries and index, `.oh/evals/capability/repo-orientation/tasks.json`, generated `.oh/evals/RESULTS.md`, artifact-link guard, and moved-doc safety examples
+**Commit**: f53c600d
+**Result**: PASS
+
+### What I did
+Updated current wiki source references to root `docs/`, refreshed the generated wiki index, and updated capability orientation tasks. Refreshed eval results through the runner and completed the focused Markdown-link, payload, docs, and full repository checks. The outer Advisor owns the implementation audit, final eval/wiki gate, and `evidence.md`.
+
+### Learnings for future iterations
+A documentation move can expand the scope of an existing safety probe when the probe discovers files by directory. Re-run the probe after a move and add local review-first guidance for newly visible installer examples; keep final audit evidence correlated to the outer audit run.
+
+---
+STATUS: COMPLETE

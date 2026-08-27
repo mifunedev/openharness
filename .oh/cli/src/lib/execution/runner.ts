@@ -16,12 +16,17 @@ export type LifecycleRunner = (
   opts: {
     stdio: "inherit" | "capture";
     env?: NodeJS.ProcessEnv;
+    cwd?: string;
     timeoutMs?: number;
   },
 ) => RunResult;
 
 export const spawnRunner: LifecycleRunner = (cmd, args, opts) => {
-  const common = { env: opts.env, ...(opts.timeoutMs !== undefined ? { timeout: opts.timeoutMs } : {}) };
+  const common = {
+    env: opts.env,
+    ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+    ...(opts.timeoutMs !== undefined ? { timeout: opts.timeoutMs } : {}),
+  };
   const r =
     opts.stdio === "capture"
       ? spawnSync(cmd, args, { ...common, stdio: ["ignore", "pipe", "pipe"], encoding: "utf8" })

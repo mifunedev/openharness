@@ -27,6 +27,7 @@ export interface RuntimeOptions {
   cwd?: string;
   run?: LifecycleRunner;
   json?: boolean;
+  env?: NodeJS.ProcessEnv;
 }
 
 export interface RuntimeInstallOptions extends RuntimeOptions {
@@ -61,9 +62,18 @@ function isReachable(status: string): boolean {
   return status === "ready" || status === "starting";
 }
 
-function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
+function targetFor(
+  root: string,
+  run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
+): ExecutionTarget {
   const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
-  return resolveExecutionTarget({ projectRoot: root, container: name, run });
+  return resolveExecutionTarget({
+    projectRoot: root,
+    container: name,
+    run,
+    ...(env ? { env } : {}),
+  });
 }
 
 function requiredOf(check: PreflightCheck): string {
@@ -89,6 +99,7 @@ async function runCheck(
   check: PreflightCheck,
   run: LifecycleRunner,
   targetReachable: boolean,
+  hostMeasurable: boolean,
 ): Promise<CheckResult> {
   const base = {
     id: check.id,
@@ -102,6 +113,7 @@ async function runCheck(
   let stdout: string;
 
   if (check.scope === "host") {
+    if (!hostMeasurable) return unmeasured(check);
     const argv = [...check.probeArgv];
     const r = run(argv[0], argv.slice(1), { stdio: "capture" });
     if (r.status === null || r.status === undefined) return { ...base, found: "?", ok: null };
@@ -153,7 +165,7 @@ async function probeInstalled(
   try {
     const r = await target.exec({
       argv: [...entry.verifyArgv],
-      user: entry.installUser ?? "sandbox",
+      user: "sandbox",
       stdio: "capture",
     });
     return r.exitCode === 0;
@@ -173,10 +185,12 @@ function verdict(checks: CheckResult[]): boolean | null {
 async function collectRows(
   root: string,
   run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
   only?: RuntimeEntry,
-): Promise<RuntimeRow[]> {
+): Promise<{ rows: RuntimeRow[]; insideSandbox: boolean }> {
   const entries = only ? [only] : [...RUNTIME_CATALOG];
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, env);
+  const hostMeasurable = target.kind !== "local";
 
   let reachable = false;
   try {
@@ -189,7 +203,7 @@ async function collectRows(
   for (const entry of entries) {
     const checks: CheckResult[] = [];
     for (const check of entry.preflight) {
-      checks.push(await runCheck(target, check, run, reachable));
+      checks.push(await runCheck(target, check, run, reachable, hostMeasurable));
     }
     rows.push({
       id: entry.id,
@@ -205,7 +219,7 @@ async function collectRows(
       ...(entry.tracking !== undefined ? { tracking: entry.tracking } : {}),
     });
   }
-  return rows;
+  return { rows, insideSandbox: !hostMeasurable };
 }
 
 function cell(value: boolean | null, absent: string): string {
@@ -213,7 +227,7 @@ function cell(value: boolean | null, absent: string): string {
   return value ? "yes" : "no";
 }
 
-function renderTable(rows: RuntimeRow[], io: RuntimeIO): void {
+function renderTable(rows: RuntimeRow[], io: RuntimeIO, insideSandbox: boolean): void {
   const header = ["RUNTIME", "TIER", "STATE", "SUPPORTED", "IN USE"];
   const body = rows.map((r) => [
     r.id,
@@ -231,13 +245,15 @@ function renderTable(rows: RuntimeRow[], io: RuntimeIO): void {
   for (const row of body) io.stdout(line(row));
   if (rows.some((r) => r.checks.length > 0 && r.supported === null)) {
     io.stdout(
-      "\nSUPPORTED is `?` — that requirement could not be measured. Start the sandbox with `oh sandbox`, then re-run.\n",
+      insideSandbox
+        ? "\nSUPPORTED is `?` — a host requirement cannot be measured from inside the sandbox. Re-run on the host.\n"
+        : "\nSUPPORTED is `?` — that requirement could not be measured. Start the sandbox with `oh sandbox`, then re-run.\n",
     );
   }
 }
 
-function renderDetail(rows: RuntimeRow[], io: RuntimeIO): void {
-  renderTable(rows, io);
+function renderDetail(rows: RuntimeRow[], io: RuntimeIO, insideSandbox: boolean): void {
+  renderTable(rows, io, insideSandbox);
   for (const r of rows) {
     if (r.checks.length === 0) continue;
     io.stdout(`\n${r.id} — requirements:\n`);
@@ -260,11 +276,11 @@ export async function runRuntimeList(
 ): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const rows = await collectRows(root, run);
+  const { rows, insideSandbox } = await collectRows(root, run, opts.env);
   if (opts.json) {
     io.stdout(`${JSON.stringify(rows, null, 2)}\n`);
   } else {
-    renderTable(rows, io);
+    renderTable(rows, io, insideSandbox);
   }
   return 0;
 }
@@ -289,11 +305,11 @@ export async function runRuntimeStatus(
     if (!only) return unknownRuntime(name, io);
   }
 
-  const rows = await collectRows(root, run, only);
+  const { rows, insideSandbox } = await collectRows(root, run, opts.env, only);
   if (opts.json) {
     io.stdout(`${JSON.stringify(only ? rows[0] : rows, null, 2)}\n`);
   } else {
-    renderDetail(rows, io);
+    renderDetail(rows, io, insideSandbox);
   }
   return 0;
 }
@@ -321,7 +337,14 @@ export async function runRuntimeInstall(
     return 1;
   }
 
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, opts.env);
+  if (target.kind === "local") {
+    io.stderr(
+      "oh runtime install changes the sandbox\u2019s Docker configuration and must run on the host, at the project root.\n",
+    );
+    return 1;
+  }
+
   let status: string;
   try {
     status = await target.status();
@@ -353,7 +376,7 @@ export async function runRuntimeInstall(
 
   const checks: CheckResult[] = [];
   for (const check of entry.preflight) {
-    checks.push(await runCheck(target, check, run, true));
+    checks.push(await runCheck(target, check, run, true, true));
   }
   const supported = verdict(checks);
 

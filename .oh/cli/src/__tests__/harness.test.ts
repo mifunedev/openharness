@@ -437,3 +437,37 @@ describe("runHarnessStatus", () => {
     expect(text(err)).toContain('unknown harness "emacs"');
   });
 });
+
+describe("oh harness — inside the sandbox", () => {
+  const INSIDE: NodeJS.ProcessEnv = { OH_EXECUTION_TARGET: "local" };
+
+  it("installs live instead of skipping the install", async () => {
+    const root = makeRepo();
+    const { calls, run } = makeRunner((cmd) =>
+      cmd === "opencode" ? { status: 1, stdout: "", stderr: "" } : undefined,
+    );
+    const { io, out } = makeIo();
+    expect(await runHarnessInstall("opencode", { cwd: root, run, env: INSIDE }, io)).toBe(0);
+    expect(text(out)).not.toContain("skipping the live install");
+    expect(calls.some((c) => c.cmd === "sudo" && c.args.includes("opencode-ai"))).toBe(true);
+    expect(readEnv(root)).toMatch(/^INSTALL_OPENCODE=true$/m);
+  });
+
+  it("verifies as the sandbox user, never through sudo", async () => {
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    const { io } = makeIo();
+    expect(await runHarnessList({ cwd: root, run, env: INSIDE }, io)).toBe(0);
+    expect(calls.some((c) => c.cmd === "sudo")).toBe(false);
+    expect(calls.some((c) => c.cmd === "claude" && c.args.includes("--version"))).toBe(true);
+  });
+
+  it("reports real INSTALLED values without a docker inspect", async () => {
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    const { io, out } = makeIo();
+    expect(await runHarnessStatus("claude-code", { cwd: root, run, env: INSIDE }, io)).toBe(0);
+    expect(calls.some((c) => isInspect(c.cmd, c.args))).toBe(false);
+    expect(text(out)).not.toContain("INSTALLED is `?`");
+  });
+});

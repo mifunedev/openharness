@@ -35,6 +35,7 @@ export interface ToolOptions {
   cwd?: string;
   run?: LifecycleRunner;
   json?: boolean;
+  env?: NodeJS.ProcessEnv;
 }
 
 export interface ToolInstallOptions extends ToolOptions {
@@ -58,9 +59,18 @@ function isReachable(status: string): boolean {
   return status === "ready" || status === "starting";
 }
 
-function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
+function targetFor(
+  root: string,
+  run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
+): ExecutionTarget {
   const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
-  return resolveExecutionTarget({ projectRoot: root, container: name, run });
+  return resolveExecutionTarget({
+    projectRoot: root,
+    container: name,
+    run,
+    ...(env ? { env } : {}),
+  });
 }
 
 async function tryExec(
@@ -81,7 +91,7 @@ async function probeInstalled(
   target: ExecutionTarget,
   entry: ToolEntry,
 ): Promise<boolean | null> {
-  const r = await tryExec(target, entry.verifyArgv, entry.installUser ?? "sandbox");
+  const r = await tryExec(target, entry.verifyArgv, "sandbox");
   return r === null ? null : r.exitCode === 0;
 }
 
@@ -90,7 +100,7 @@ async function probeVersion(
   entry: ToolEntry,
 ): Promise<string | null> {
   if (entry.versionArgv === undefined) return null;
-  const r = await tryExec(target, entry.versionArgv, entry.installUser ?? "sandbox");
+  const r = await tryExec(target, entry.versionArgv, "sandbox");
   if (r === null || r.exitCode !== 0) return null;
   const first = r.stdout.trim().split("\n")[0] ?? "";
   return first === "" ? null : first;
@@ -99,10 +109,11 @@ async function probeVersion(
 async function collectRows(
   root: string,
   run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
   only?: ToolEntry,
 ): Promise<ToolRow[]> {
   const entries = only ? [only] : [...TOOL_CATALOG];
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, env);
 
   let reachable = false;
   try {
@@ -170,7 +181,7 @@ function renderDetail(rows: ToolRow[], io: ToolIO): void {
 export async function runToolList(opts: ToolOptions, io: ToolIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const rows = await collectRows(root, run);
+  const rows = await collectRows(root, run, opts.env);
   if (opts.json) {
     io.stdout(`${JSON.stringify(rows, null, 2)}\n`);
   } else {
@@ -199,7 +210,7 @@ export async function runToolStatus(
     if (!only) return unknownTool(name, io);
   }
 
-  const rows = await collectRows(root, run, only);
+  const rows = await collectRows(root, run, opts.env, only);
   if (opts.json) {
     io.stdout(`${JSON.stringify(only ? rows[0] : rows, null, 2)}\n`);
   } else {
@@ -261,7 +272,7 @@ export async function runToolInstall(
 
   if (opts.persistOnly) return 0;
 
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, opts.env);
   let status: string;
   try {
     status = await target.status();

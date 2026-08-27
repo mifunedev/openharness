@@ -465,3 +465,27 @@ describe("oh runtime never writes configuration", () => {
     expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe(before);
   });
 });
+
+describe("oh runtime — inside the sandbox", () => {
+  const INSIDE: NodeJS.ProcessEnv = { OH_EXECUTION_TARGET: "local" };
+
+  it("refuses to install a runtime from inside the sandbox", async () => {
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    const { io, err } = makeIo();
+    expect(
+      await runRuntimeInstall("microsandbox", { cwd: root, run, env: INSIDE }, io),
+    ).toBe(1);
+    expect(err.join("")).toContain("must run on the host");
+    expect(calls.length).toBe(0);
+  });
+
+  it("reports host-scope checks as unmeasured instead of measuring the container", async () => {
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    const { io, out } = makeIo();
+    expect(await runRuntimeStatus("docker", { cwd: root, run, env: INSIDE }, io)).toBe(0);
+    expect(calls.some((c) => c.cmd === "docker" && c.args[0] === "version")).toBe(false);
+    expect(out.join("")).toContain("?");
+  });
+});

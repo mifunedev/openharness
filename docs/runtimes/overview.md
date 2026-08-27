@@ -38,6 +38,11 @@ command's.
 
 A stopped sandbox is not an error: the command says so and exits 0.
 
+`oh runtime` is host-scoped. Run from inside the sandbox, `install` refuses with
+a host-only error, and host requirements report `SUPPORTED` as `?` because they
+cannot be measured from the container. Re-run on the host for a verdict. See
+[Lifecycle commands → Where you are standing when you type `oh`](../lifecycle-commands.md#where-you-are-standing-when-you-type-oh).
+
 ## What is in the catalog
 
 | Runtime | Tier | State | Installable |

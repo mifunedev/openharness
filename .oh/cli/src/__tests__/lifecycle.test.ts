@@ -40,6 +40,7 @@ afterEach(() => {
     rmSync(cleanups.pop()!, { recursive: true, force: true });
   }
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 function makeRepo(): string {
@@ -605,5 +606,26 @@ describe("help surfaces", () => {
     expect(gateway).toContain("oh gateway <pi|hermes>");
     expect(gateway).toContain("gateway.sh");
     expect(gateway).toContain("OH_PROJECT_ROOT");
+  });
+});
+
+describe("lifecycle inside the sandbox", () => {
+  it("refuses to provision the sandbox from inside it", async () => {
+    vi.stubEnv("OH_EXECUTION_TARGET", "local");
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    const { calls, run } = makeRunner();
+    const { io, err } = makeIo();
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(1);
+    expect(err.join("")).toContain("already inside the sandbox");
+    expect(calls.length).toBe(0);
+  });
+
+  it("opens a shell locally instead of exec-ing into a container", () => {
+    vi.stubEnv("OH_EXECUTION_TARGET", "local");
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
+    expect(calls[0].cmd).toBe("zsh");
   });
 });

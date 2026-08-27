@@ -48,7 +48,7 @@ CHANGELOG.md
 ```
 
 *Runner-logic distinction (prose, not a second tier):* the `scripts/` surface
-holds runner code such as the ralph loop. **Editing** such a file is
+holds workflow code such as the `/spec execute` implementation cycle. **Editing** such a file is
 safe-by-default (it is in the set above); what raises operational caution is
 changing a runner's *runtime behavior*, which is reviewed at the human merge
 gate — the file's home tier does not change, and no path here is repeated in

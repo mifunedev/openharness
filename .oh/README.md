@@ -66,7 +66,7 @@ and `cron-runtime.ts`. Nothing reads the bare root paths anymore.
 
 The relocated task workdirs (`tasks/` → `.oh/tasks/`) moved **without** a
 back-compat symlink — every consumer was repointed to the real `.oh/tasks/` path
-directly (the `cleanup-tasks` cron, the build executor + its vitest, the eval probes, and
+directly (the `cleanup-tasks` cron, the `/spec execute` task graph, the eval probes, and
 the `.mifune` skill/agent references), because git index operations cannot traverse
 a symlink and nothing reads the bare `tasks/` path anymore.
 
@@ -110,7 +110,7 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 | `README.md` | This file — the namespace anchor (keeps `.oh/` in a fresh clone) and the surface's documentation. |
 | `cli/` | The in-tree `oh` CLI (standalone npm package; built into the image as `/opt/oh`). Old path: `packages/oh/` (no symlink — repointed). |
 | `install/` | Container-install inputs (`.zshrc`, `.tmux.conf`, `banner.sh`, `install.sh` prerequisites) consumed by the Dockerfile + entrypoint. Old path: `install/` (no symlink — repointed). |
-| `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `spec-build.sh`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (no symlink — repointed). |
+| `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (no symlink — repointed). |
 | `crons/` | Scheduled-agent cron definitions (`heartbeat.md`, `cleanup-tasks.md`, `eval-weekly.md`, …) read by `.oh/scripts/cron-runtime.ts`, plus the gitignored runtime `.cron.log`/`.pid`. Old path: `crons/` (no symlink — repointed). |
 | `evals/` | The fitness-function suite — regression probes (`probes/`), capability benchmark (`capability/`), trajectory datasets (`datasets/`), and the `RESULTS.md` scoreboard. Old path: `evals/` (no symlink — repointed). |
 | `worktrees/` | Gitignored branch worktrees, cron isolation worktrees, and durable project/harness clones. Old path: root worktree directory (no symlink — repointed). |

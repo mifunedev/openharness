@@ -29,7 +29,6 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 
 | Slug | Title | Tags | Updated |
 | --- | --- | --- | --- |
-| build-session-ladder | Build Session Runner Ladder | [build-loop, executor, build-session, herdr, tmux, runner-ladder, spec-execute] | 2026-08-27 |
 | prime-agent-harness | Prime Agent Harness Surface | [harness, provider-surface, prime-agent, skills, symlinks, oh-cli, on-demand] | 2026-08-26 |
 | plan-vs-built-reconciliation | Plan-vs-Built Reconciliation | [spec-execute, evidence, merge-gate, comprehension, audit, task-folder, review] | 2026-08-24 |
 | oh-cli-portable-lifecycle | oh CLI Portable Lifecycle | [cli, oh, lifecycle, standalone, init, sandbox, remote-fetch, execution-target] | 2026-08-24 |

@@ -35,7 +35,7 @@ run independently or fanned out at scale via `/delegate`.
 | Subcommand | Arg shape | Purpose | Procedure |
 |---|---|---|---|
 | `plan` | `<topic> [--plan <path>] [--issue <N>] [--slug <slug>] [--prefix <type>] [--repo <o/n>] [--base <branch>]` | Turn a topic/plan/issue into a fully-scaffolded `.oh/tasks/<slug>/` four-file folder | `references/plan.md` |
-| `execute` | `<slug> [--pr <N>] [--repo <o/n>] [--remote <name>] [--base <branch>]` | `build ⇄ audit → evidence → spec-retro → improve` to a ready PR, stopping at the human merge gate | `references/execute.md` |
+| `execute` | `<slug> [--pr <N>] [--repo <o/n>] [--remote <name>] [--base <branch>]` | `implementation ⇄ audit → evidence → spec-retro → improve` to a ready PR, stopping at the human merge gate | `references/execute.md` |
 | `retro` | `<slug> [--dry-run]` | Execution-side `/retro` scoped to a built `.oh/tasks/<slug>/` | `references/retro.md` |
 
 ## Dispatch
@@ -68,16 +68,17 @@ esac
 - **The `.oh/tasks/<slug>/` folder is the universal interface** — `plan` produces it;
   `execute` and `retro` are each pointed at it. The `<slug>` is the
   universal key (task directory, branch second segment, tmux session name).
-- **Compose, don't fork** — each node reuses existing loop-node skills rather than
-  re-implementing them: `plan` composes `/prd` + `/ralph`; `execute` composes
-  `.oh/scripts/spec-build.sh` + `/audit implementation` + `/eval` + `/audit pr`;
-  `retro` composes `/retro`. The build **literals** — the `gh` invocations, the
-  branch and PR shapes, the Advisor launch — live in `references/execute.md`,
-  which is the single source for them and is a protected path.
-- **One adversarial loop** — `build ⇄ audit` inside `execute` vets the build
-  (`AUDIT-FAIL` routes back to build). The plan itself is vetted by the operator
-  who approves it: **approving `prd.md` is the commitment gate**, and nothing
-  GitHub-side exists until `execute` starts.
+- **Compose, don't fork** — each node reuses existing skills rather than
+  re-implementing them: `plan` composes `/prd` + `/ralph`; `execute` owns the
+  implementation in one Advisor session, uses `/delegate` only for bounded fan-out,
+  and composes `/audit implementation` + `/eval` + `/audit pr`; `retro` composes
+  `/retro`. The build **literals** — the `gh` invocations, the branch and PR shapes,
+  the Advisor launch, and the handoff-free implementation rules — live in
+  `references/execute.md`, which is the single source for them and is a protected path.
+- **One adversarial loop** — `implementation ⇄ audit` inside `execute` vets the
+  implementation (`AUDIT-FAIL` routes back to the same Advisor session). The plan
+  itself is vetted by the operator who approves it: **approving `prd.md` is the
+  commitment gate**, and nothing GitHub-side exists until `execute` starts.
 - **Honest terminal reports** — each subcommand reports what it actually produced: `plan`
   the folder path and story count; `execute` `READY` or `DRAFT-BLOCKED (<gate>)` with the PR
   URL; `retro` the promotion counts. There are no `STATUS: SPEC-*` tokens — all four had

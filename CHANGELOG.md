@@ -32,7 +32,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Add the `close-issues-on-development` eval probe: the closer stays merged-only, development-only, and capped at `contents: read` + `issues: write` ([#841](https://github.com/mifunedev/openharness/issues/841)).
 
 ### Removed
-- Remove the standalone `firstmate` build executor and fold its build-session runner and prompt into `/spec execute` ([#856](https://github.com/mifunedev/openharness/issues/856)).
+- Remove the standalone `firstmate` concept, runner, prompt, ladder, and active references; `/spec execute` now owns implementation and gates in one Advisor session ([#856](https://github.com/mifunedev/openharness/issues/856)).
 - Remove the default `pi-autoresearch` package and its integration documentation; Pi no longer reports its conflicting dashboard shortcut at startup ([#852](https://github.com/mifunedev/openharness/issues/852)).
 - **Remove the `.oh/memory` tier entirely.** Code is the source of truth. The directory, its tracked `README.md`, the `MEMORY.md` ledger, and dated session logs are gone as a concept — not relocated.
 - **Remove file logging from the harness.** No skill, cron, or script writes a run log under `.oh/`. Runs report to the terminal; the only durable trail left is `.oh/crons/.cron.log`, the cron liveness line.

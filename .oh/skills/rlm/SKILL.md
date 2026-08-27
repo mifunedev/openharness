@@ -11,8 +11,8 @@ description: |
   bounded depth/children/step budget, AGGREGATE (piping competing per-chunk answers
   through /weigh), then PERSIST the recursion trace. The anti-context-rot move:
   ADDRESS context, don't dump the whole artifact into the window. Reuses
-  .oh/scripts/spec-build.sh (the recursion loop) and .oh/worktrees/ (isolated branches) BY
-  REFERENCE — never edits either. Manual-invoke (spawns agents, burns tokens).
+  `/spec execute` task cycle and `.oh/worktrees/` (isolated branches) BY REFERENCE — never
+  edits either. Manual-invoke (spawns agents, burns tokens).
   TRIGGER when: /rlm invoked, or asked to "answer a question over a huge file/log",
   "decompose a large artifact", "recurse over chunks", "address context instead of
   ingesting it", "beat context rot on a long input", "RLM <file> <query>".
@@ -37,13 +37,13 @@ candidate answers a chunk yields. This skill never re-implements selection — i
 
 | Substrate | Owner | How `/rlm` uses it |
 |---|---|---|
-| Recursion **loop** | `.oh/scripts/spec-build.sh` | each story re-reads disk = the REPL step — **reused by reference, never edited** |
+| Recursion **loop** | `/spec execute` | each story re-reads disk = the REPL step — **owned by the active Advisor, never split into another session** |
 | Isolated recursion **branches** | `.oh/worktrees/` (the `/worktrees` skill) | depth-2 sub-trees fork here — **reused by reference, never edited** |
 | Recursion **budget** | `.oh/agents/advisor.md` | the `Max depth N / Max children per level M / Step budget S` triple — `references/recursion-budget.md` points at it and adds a per-run token ceiling |
 | Chunk-map **primitive** | `scripts/query-context.mjs` (US-004, this skill) | partitions the artifact without ingesting it |
 | Candidate **selection** | `/weigh` | scores competing per-chunk answers |
 
-> Do **not** edit `.oh/scripts/spec-build.sh` or anything under `.oh/worktrees/`. `/rlm` is a
+> Do **not** edit `/spec execute`'s task cycle or anything under `.oh/worktrees/`. `/rlm` is a
 > *consumer* of both. The only genuinely new substrate this skill adds is
 > `query-context.mjs` and this procedure.
 
@@ -124,8 +124,7 @@ recurse over a sub-span **only** if its briefing carries `Max depth ≥ 2`; it M
 decrement `Max depth` for its own grandchildren and reserve one final step for its own
 synthesis. Honor the **per-run token ceiling**: when any budget dimension is hit,
 surface the partial findings and the exhausted dimension and emit
-`RESULT: BUDGET-EXHAUSTED` — never silently truncate the recursion. The recursion loop
-**reuses `.oh/scripts/spec-build.sh`** (each story re-reads disk = the REPL step) and
+`RESULT: BUDGET-EXHAUSTED` — never silently truncate the recursion. The recursion loop **reuses `/spec execute`** (each story re-reads disk = the REPL step) and
 isolated recursion branches **reuse `.oh/worktrees/`** forks — both **by reference, no
 edits**.
 
@@ -159,9 +158,8 @@ or committed. Announce `RESULT: RLM-COMPLETE`.
   `Max depth` means flat execution only (.oh/agents/advisor.md § Recursive decomposition).
 - **Re-implementing selection.** Competing per-chunk answers go through `/weigh`; do not
   hand-pick a "best" answer in prose.
-- **Editing the reused substrate.** `.oh/scripts/spec-build.sh` and `.oh/worktrees/` are reused
-  by reference. Editing either is out of scope (and spec-build.sh is explicitly off-limits
-  per the PRD non-goals).
+- **Taking ownership of execution.** `/spec execute` and `.oh/worktrees/` are reused by
+  reference. Editing execution policy or changing worktree ownership is out of scope.
 - **Synthesis pass-through.** A mid-tree node that forwards children's returns verbatim
   adds zero value — integrate, or collapse the level.
 

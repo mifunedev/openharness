@@ -182,7 +182,7 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/interview` | Adaptive pre-work clarifier — batches 2–4 task-specific questions via `AskUserQuestion`, then proceeds |
 | `/imagine` | One-shot draft PRD sketch from a fuzzy scenario → `.claude/specs/<slug>/spec.md` (gitignored scratch, includes mermaid diagram); feeds `/spec plan --plan <path>` |
 | `/prd` | Generate a new PRD from a feature description |
-| `/ralph` | Convert markdown PRD → `.oh/tasks/<name>/prd.json` — the structured task graph the build executor walks |
+| `/ralph` | Convert markdown PRD → `.oh/tasks/<name>/prd.json` — the structured task graph `/spec execute` consumes |
 | `/spec` | Dispatcher for the canonical workflow (`/spec <plan\|execute\|retro>`, routes to `references/{plan,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state) — approving that plan **is** the commitment gate; **execute** = issue → branch → draft PR → build → `build ⇄ audit → evidence → spec-retro → improve` → promotable undraft to a **ready-for-review PR** at the human merge gate, refusing the undraft without a committed `evidence.md` — it holds the build mechanics in full and is a protected path; **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/`. There is no all-in-one composer beside it |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
 | `/eval` | Run the context fitness-function probe suite (`.oh/evals/probes/*.sh`) against real state, write the `.oh/evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
@@ -207,11 +207,10 @@ Interactive apps and development servers belong in Herdr panes. Managed/headless
 services (cron, gateways, watchdogs) use named tmux sessions — see
 `.oh/skills/t3/references/sandbox-processes.md`.
 
-Agentic build sessions (one long-lived agent over a whole `.oh/tasks/<slug>/`
-task graph — the build executor) pick neither up front: they resolve their
-host through a **herdr → tmux (`agent-` session) → foreground** ladder, degrading
-downward with the reason logged. See `.oh/skills/spec/references/execute.md` and
-`.oh/skills/t3/references/sandbox-processes.md` § Source of Truth.
+`/spec execute` runs implementation, validation, evidence, and PR finalization in one
+Advisor-owned session. It may use `/delegate` for bounded, disjoint worker tasks, but it
+does not hand the task to a second implementation owner or a separate session. See
+`.oh/skills/spec/references/execute.md` and `.oh/skills/t3/references/sandbox-processes.md`.
 
 ## What You Do
 

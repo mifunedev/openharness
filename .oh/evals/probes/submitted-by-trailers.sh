@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 # tier: A
-# source: conversation 2026-06-12 (commit attribution trailers); repointed by
-#         spec-simplification US-002 (issue #816) when the ralph prompt template was deleted
-# desc: the scaffold path (/spec execute) and the build path (the build session-prompt
-#       template) both require a Submitted-by trailer naming the ACTIVE submitter, and
-#       neither hard-codes a specific model as co-author
+# source: conversation 2026-06-12 (commit attribution trailers); the single-owner
+#         /spec implementation prompt is the only task-side handoff
+# desc: the scaffold path (/spec execute) and the task prompt both require a Submitted-by
+#       trailer naming the ACTIVE submitter, and neither hard-codes a specific model as co-author
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SPEC="$ROOT/.claude/skills/spec/references/execute.md"
-PROMPT="$ROOT/.oh/skills/spec/templates/session-prompt.md"
+PROMPT="$ROOT/.oh/skills/spec/templates/task-prompt.md"
 
 for file in "$SPEC" "$PROMPT"; do
   if [[ ! -f "$file" ]]; then
@@ -20,7 +19,7 @@ done
 
 missing=()
 grep -q 'Submitted-by:' "$SPEC" || missing+=("/spec execute scaffold commit trailer")
-grep -q 'Submitted-by:' "$PROMPT" || missing+=("build session-prompt commit trailer")
+grep -q 'Submitted-by:' "$PROMPT" || missing+=("task prompt commit trailer")
 
 grep -qi 'active submitter\|active harness\|model/agent that actually' "$SPEC" \
   || missing+=("/spec execute does not tie the trailer to the active submitter")
@@ -39,5 +38,5 @@ if (( ${#missing[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: /spec execute and the build session prompt both require a mandatory Submitted-by trailer tied to the active submitter" >&2
+echo "PASS: /spec execute and the task prompt both require a mandatory Submitted-by trailer tied to the active submitter" >&2
 exit 0

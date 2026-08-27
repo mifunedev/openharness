@@ -17,7 +17,7 @@ mix or non-interactive shell-allow-list model is the right fit for a task.
 - Multi-provider agent (Anthropic, OpenAI, etc.) configurable from a single
   `~/.deepagents/.env` file.
 - Non-interactive mode (`-n "$task"`) with explicit shell-allow-list gating,
-  suitable for Ralph harness loops with a constrained default tool surface.
+  suitable for bounded `/spec execute` worker tasks with a constrained default tool surface.
 - Project-aware: optionally reads memory and skills from a repo-local
   `.deepagents/` directory at the workspace root.
 
@@ -150,21 +150,18 @@ Flags:
 - `-n "$task"` — non-interactive single task.
 - `-q --no-stream` — quiet, buffered output for clean log capture.
 
-### Build-executor usage
+### `/spec execute` usage
 
-The build executor (`.oh/scripts/spec-build.sh`) has built-in arms for
-`claude`, `pi`, and `codex` only. DeepAgents is reached through the full
-command override instead — the rendered prompt path is exported as
-`$SPEC_BUILD_PROMPT_FILE`:
+`/spec execute` owns implementation in one Advisor session. If DeepAgents is the chosen
+provider for a bounded worker, run it directly with a task prompt; do not add a second
+workflow or a provider-specific executor wrapper:
 
 ```bash
-SPEC_BUILD_HARNESS_CMD='deepagents -y --shell-allow-list recommended -q --no-stream --max-turns 25 -n "$(cat "$SPEC_BUILD_PROMPT_FILE")"' \
-  .oh/scripts/spec-build.sh <slug>
+deepagents -y --shell-allow-list recommended -q --no-stream --max-turns 25 -n "$task"
 ```
 
-DeepAgents is never auto-selected — it must be chosen explicitly. Keep the
-prompt as initial argv and add no `--print`-style one-shot flag: the build
-session must stay interactive and multi-turn (see [the build-session contract](../../skills/spec/references/execute.md)).
+DeepAgents is never auto-selected. Keep its shell allow-list explicit and let the Advisor
+validate the worker's result against the story acceptance criteria.
 
 > **`--shell-allow-list all` warning.** Choosing `--shell-allow-list all`
 > grants unrestricted non-interactive shell
@@ -179,7 +176,7 @@ session must stay interactive and multi-turn (see [the build-session contract](.
   `.deepagents/.env`.
 - Pair DeepAgents with a git worktree so its branch is isolated.
 - Inspect non-interactive runs with `tmux attach -t agent-deepagents` (or
-  the Ralph-launched session) to see live progress.
+  the Advisor-owned task session) to see live progress.
 
 ## Upstream documentation
 

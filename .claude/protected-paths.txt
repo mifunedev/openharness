@@ -31,14 +31,6 @@ eval
 health-check
 retro
 # --- Orchestrator scripts (.oh/scripts/) ---
-.oh/scripts/spec-build.sh
-# The two `lib/` entries below are load-bearing shared infra (the herdr -> tmux
-# -> foreground runner ladder, and the slug + four-file task-folder contract
-# every consumer of a task folder shares).
-# Whole-line entries only — no inline comments, since consumers match with
-# `grep -Fxq`.
-.oh/scripts/lib/session-runner.sh
-.oh/scripts/lib/task-contract.sh
 .oh/scripts/cron-runtime.ts
 .oh/scripts/sandbox-healthcheck.sh
 .oh/scripts/link-providers.sh

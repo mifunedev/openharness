@@ -25,7 +25,6 @@ agents:
 
 loops:
   schedules: .oh/crons/
-  build_executor: .oh/scripts/spec-build.sh
   task_artifacts: .oh/tasks/
 
 policies:
@@ -41,8 +40,9 @@ policies:
   version registry.
 - `agents` points at the real provider-portable primitive pack: agent
   definitions, skills, and hooks already live under `.oh/`.
-- `loops` points at today's loop machinery: scheduled cron prompts, the Ralph
-  executor script, and the task artifact directory.
+- `loops` points at today's scheduled cron prompts and task artifact directory.
+  `/spec execute` owns implementation directly; it does not delegate to a separate
+  implementation process.
 - `policies` points at existing policy surfaces instead of inventing a
   `.oh/policies/` directory: the root instructions file, the git workflow skill,
   and hook-enforced guardrails. The guardrails are two complementary layers: the

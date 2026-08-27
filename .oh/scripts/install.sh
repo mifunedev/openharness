@@ -94,7 +94,7 @@ Usage:
 Clones (or pulls) the repo into ~/.openharness, prepares host auth dirs,
 and brings up the sandbox via 'docker compose' — the canonical substrate for
 this installer. A standalone 'oh' CLI is a separate path that equips an
-existing project repo instead (see .oh/docs/installation.md).
+existing project repo instead (see docs/installation.md).
 
 Prerequisites:
   Docker with the Compose plugin
@@ -471,7 +471,7 @@ printf "  ${CYAN}Messaging gateways${NC}\n"
 printf "  ──────────────────────────────────────\n"
 printf "       inside the sandbox:  gateway pi | gateway hermes | gateway status\n"
 printf "       from the host:       make gateway <pi|hermes>\n"
-printf "       details:             .oh/docs/integrations/slack.md\n"
+printf "       details:             docs/integrations/slack.md\n"
 
 if [ "${__GH_AUTOCONFIGURED:-0}" = "0" ]; then
   printf "\n"

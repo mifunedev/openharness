@@ -2,7 +2,7 @@
 
 This file states the legal terms for contributing. For the day-to-day
 workflow — branch naming, commit format, CHANGELOG entries, PR titles, and
-releases — see the canonical guide: [`.oh/docs/contributing.md`](.oh/docs/contributing.md).
+releases — see the canonical guide: [`docs/contributing.md`](docs/contributing.md).
 
 ## Inbound license
 
@@ -41,5 +41,5 @@ contributor; it is a matter of policy, not tooling.
 
 Branching, commit message format, the CHANGELOG, pull request conventions,
 and the release process are all covered in
-[`.oh/docs/contributing.md`](.oh/docs/contributing.md) — that remains the
+[`docs/contributing.md`](docs/contributing.md) — that remains the
 canonical guide.

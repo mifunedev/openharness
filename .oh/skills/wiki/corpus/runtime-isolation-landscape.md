@@ -14,7 +14,7 @@ confidence: provisional
 
 ## Relevant Source Files
 - `raw/2026-07-04-runtime-isolation-landscape.md` — WebFetch snapshot (isolation strategies) + the multi-source 2026 landscape corpus.
-- `.oh/docs/rfcs/rfc-runtime-support.md` — the Open Harness runtime-support RFC whose fit matrix this entry backs.
+- `docs/rfcs/rfc-runtime-support.md` — the Open Harness runtime-support RFC whose fit matrix this entry backs.
 
 ## Summary
 A reference map of the 2026 sandbox-isolation options for running agent-generated code, ranked by isolation depth and tagged to the harness's runtime axes (A1 substrate, A2 deploy, A3 fan-out). The load-bearing fact: **plain containers are Level-1 isolation** ("insufficient for anything an LLM generates"), which is exactly the harness's current substrate — one privileged container sharing the host kernel and Docker socket. Stronger tiers (gVisor → Kata/Firecracker) exist and are what an A1 upgrade would adopt.

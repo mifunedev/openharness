@@ -19,15 +19,15 @@
 - **Parallel by design.** The worktrees skill fans one sandbox into isolated git worktrees — parallel branches, delegated sub-agents, even other cloned repos.
 - **Remote-first, lights-out.** Runs the same on your laptop or a cloud VM; on a VM it's an unattended software factory — agents build on a schedule, reachable over Slack.
 - **Agents that work while you sleep.** A tiny croner runtime reads `.oh/crons/*.md` markdown and wakes the agent on a schedule.
-- **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](.oh/docs/installation.md#prerequisites-clone-path). Inside the sandbox the same verbs are `oh sandbox` / `oh shell` — see [lifecycle commands](.oh/docs/lifecycle-commands.md).)
+- **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](docs/installation.md#prerequisites-clone-path). Inside the sandbox the same verbs are `oh sandbox` / `oh shell` — see [lifecycle commands](docs/lifecycle-commands.md).)
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
-- **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md).
-- **Herdr-first interactive work.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in). After entering the sandbox, run [Herdr](.oh/docs/integrations/herdr.md) first; keep setup, agents, tests, and servers organized in its persistent panes. Headless Slack and cron infrastructure remain independent.
+- **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [docs/integrations/slack.md](docs/integrations/slack.md).
+- **Herdr-first interactive work.** Claude, Codex, and Pi ship by default (Hermes, Grok, and more are opt-in). After entering the sandbox, run [Herdr](docs/integrations/herdr.md) first; keep setup, agents, tests, and servers organized in its persistent panes. Headless Slack and cron infrastructure remain independent.
 
 ---
 
 > 📖 **Read the docs → https://oh.mifune.dev**
-> Rendered, searchable docs, guides, and blog. New here? Start with the [Start Here hub](.oh/docs/README.md).
+> Rendered, searchable docs, guides, and blog. New here? Start with the [Start Here hub](docs/README.md).
 
 ## 📦 Install
 
@@ -80,8 +80,8 @@ this one. It runs the same interactive setup as door A, writing your answers to
 `.devcontainer/.env`.
 
 Which one you took decides your lifecycle verbs — `make` for door A, `oh` for
-door B. See [Which door am I?](.oh/docs/lifecycle-commands.md) for the full
-split, and [Prerequisites](.oh/docs/installation.md#prerequisites-clone-path)
+door B. See [Which door am I?](docs/lifecycle-commands.md) for the full
+split, and [Prerequisites](docs/installation.md#prerequisites-clone-path)
 for the host requirements of each.
 
 `herdr` should be your first inside-sandbox command. Run the remaining setup,
@@ -91,7 +91,7 @@ authenticate the agents, continue with the optional full setup.
 ### 2. Full setup (optional) — private repo, remotes, agent auth
 
 Run these **inside the initial Herdr pane** (`make shell`, then `herdr`). Per-step depth + troubleshooting:
-[quickstart → End-to-end setup walkthrough](.oh/docs/quickstart.md#end-to-end-setup-walkthrough).
+[quickstart → End-to-end setup walkthrough](docs/quickstart.md#end-to-end-setup-walkthrough).
 
 ```bash
 # GitHub auth over SSH — pick SSH, generate a key, paste a token
@@ -113,7 +113,7 @@ pi                           # Pi            (first run walks provider auth; /lo
 hermes setup                 # Hermes        (optional; needs install.hermes: true)
 
 # Configure Slack, then run + verify the gateways (sandbox-only):
-#   config: .oh/docs/integrations/slack.md  ·  .oh/docs/harnesses/hermes.md
+#   config: docs/integrations/slack.md  ·  docs/harnesses/hermes.md
 gateway pi && gateway hermes
 gateway status
 tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
@@ -123,7 +123,7 @@ tmux attach -r -t client-slack-pi   # read-only view; detach with Ctrl-b d
 > *Attach to Running Container*) after `make sandbox`, you can install the `microsoft/DebugMCP`
 > extension to expose a debugging MCP server that **any MCP-capable harness** (Claude Code,
 > Codex, …) can drive. It's optional and not tied to any single agent — see the
-> [DebugMCP runbook](.oh/docs/integrations/debugmcp.md#confirmed-setup-runbook).
+> [DebugMCP runbook](docs/integrations/debugmcp.md#confirmed-setup-runbook).
 
 <details><summary>Other install methods (manual setup · review-first · fork-and-clone)</summary>
 
@@ -180,7 +180,7 @@ curl -fsSL -o openharness-install.sh \
 OH_GITHUB_REPO=<your-org>/<your-fork> bash openharness-install.sh
 ```
 
-If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](.oh/docs/installation.md) for all environment overrides.
+If your fork uses a default branch other than `main`, set `OH_GITHUB_REF=<branch>` and replace `main` in the URL. See [Installation docs](docs/installation.md) for all environment overrides.
 
 **Get the standalone `oh` CLI (equip an existing project repo):**
 
@@ -255,7 +255,7 @@ make help        # all targets
 
 ## 🧪 Testing
 
-- Property-based testing convention: [.oh/docs/property-testing.md](.oh/docs/property-testing.md)
+- Property-based testing convention: [docs/property-testing.md](docs/property-testing.md)
 
 Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Running Container" against `openharness`, or SSH into your host first and then attach.
 
@@ -267,7 +267,7 @@ identity, optional `INSTALL_*` builds, directory overrides like `WORKTREES_DIR`,
 the SSH and Docker-socket toggles, and the secrets (`GH_TOKEN`,
 `PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`). Apply changes with
 `make destroy && make sandbox`.
-Full key reference: [Quickstart → Configuration](.oh/docs/quickstart.md#configuration).
+Full key reference: [Quickstart → Configuration](docs/quickstart.md#configuration).
 
 It is read on **every** path, including VS Code "Reopen in Container" — that path
 loads `.devcontainer/docker-compose.yml` directly, and compose auto-loads the
@@ -276,7 +276,7 @@ was invisible on exactly that path; it was removed in 0.4.0, and a leftover one
 is migrated into `.env` automatically on the next lifecycle command. Compose
 overlay *paths* are the one thing `.env` cannot express and live in
 `composeOverrides[]` in `.oh/config.json`. See
-[the prebuilt-image deployment guide](.oh/docs/deployment-prebuilt-image.md) for
+[the prebuilt-image deployment guide](docs/deployment-prebuilt-image.md) for
 the image-mode recipe.
 
 ## ✨ What you get
@@ -290,13 +290,13 @@ the image-mode recipe.
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
 | **Worktrees** | One sandbox → many isolated git worktrees: parallel branches, delegated sub-agents, satellite project clones under `.oh/worktrees/` |
 | **Crons** | Markdown-defined schedules in `.oh/crons/*.md` driven by the in-container croner runtime |
-| **Multi-agent** | Claude, Codex, Pi by default (Hermes/Grok opt-in); Slack bridging via [pi-messenger-bridge](.oh/docs/integrations/slack.md) |
+| **Multi-agent** | Claude, Codex, Pi by default (Hermes/Grok opt-in); Slack bridging via [pi-messenger-bridge](docs/integrations/slack.md) |
 
 ## 📚 Where to go next
 
 - **[Read the docs → oh.mifune.dev](https://oh.mifune.dev)** — the rendered, searchable documentation site (start here)
-- [Docs index](.oh/docs/README.md) — GitHub-readable docs kept with the core repo
-- [Quickstart](.oh/docs/quickstart.md) — full step-by-step
+- [Docs index](docs/README.md) — GitHub-readable docs kept with the core repo
+- [Quickstart](docs/quickstart.md) — full step-by-step
 - [DeepWiki](https://deepwiki.com/mifunedev/openharness) — generated codebase map
 - [Docs site source](https://github.com/mifunedev/openharness-web) — Docusaurus source repo that builds oh.mifune.dev (contribute doc edits here)
 
@@ -314,7 +314,7 @@ Open Harness is maintained under the [`mifunedev`](https://github.com/mifunedev)
 
 [Apache License 2.0](LICENSE) — copyright Ryan Eggleston, d/b/a Mifune Dev (mifune.dev). Prior MIT releases remain available under MIT; this change governs new code and future releases and does not revoke past grants.
 
-Apache-2.0 covers the runtime, the `oh` CLI, container definitions, and the harness spec. The Mifune Console, the provisioning and fleet-management control plane, and billing / enterprise policy / RBAC / hosted operations are proprietary — see the [open-core boundary](.oh/docs/open-core.md).
+Apache-2.0 covers the runtime, the `oh` CLI, container definitions, and the harness spec. The Mifune Console, the provisioning and fleet-management control plane, and billing / enterprise policy / RBAC / hosted operations are proprietary — see the [open-core boundary](docs/open-core.md).
 
 ## Trademarks
 
@@ -322,4 +322,4 @@ Apache-2.0 §6 grants no permission to use the Mifune or Open Harness names, log
 
 ---
 
-[Read the docs](https://oh.mifune.dev) · [Docs index](.oh/docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)
+[Read the docs](https://oh.mifune.dev) · [Docs index](docs/README.md) · [Docs site source](https://github.com/mifunedev/openharness-web)

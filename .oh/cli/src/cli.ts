@@ -364,7 +364,7 @@ the single implementation. Use whichever is available: \`make\` needs no Node an
 works in a source checkout; \`oh\` works anywhere, including an \`oh init\` repo
 that has no Makefile.
 
-See .oh/docs/lifecycle-commands.md for the full mapping.
+See docs/lifecycle-commands.md for the full mapping.
 `);
 }
 

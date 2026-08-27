@@ -20,7 +20,7 @@ confidence: confirmed
 - `.oh/cli/src/__tests__/harness-catalog.test.ts` — the drift test that constrains what a catalog entry may declare.
 - `.oh/evals/probes/skills-vendored.sh` — the parity oracle; resolve loop at `:37`, clean-clone assert at `:59`.
 - `.prime/agent/settings.json`, `.prime/agent/APPEND_SYSTEM.md`, `.prime/agent/.gitignore` — the committed config surface.
-- `.oh/docs/harnesses/prime-agent.md` — the human-facing doc the catalog's `docsPath` requires to exist.
+- `docs/harnesses/prime-agent.md` — the human-facing doc the catalog's `docsPath` requires to exist.
 
 ## Summary
 

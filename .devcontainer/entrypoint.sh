@@ -263,7 +263,7 @@ EOF
     if [ "$_pw_auth" = "no" ] && [ "$_have_keys" -eq 0 ]; then
       echo "[entrypoint] WARNING: sshd starting with NO authorized_keys and password auth OFF —" >&2
       echo "[entrypoint]          no one can log in. Set SANDBOX_SSH_AUTHORIZED_KEYS in .devcontainer/.env" >&2
-      echo "[entrypoint]          or SANDBOX_SSH_PASSWORD_AUTH=true in .devcontainer/.env. See .oh/docs/integrations/sshd.md" >&2
+      echo "[entrypoint]          or SANDBOX_SSH_PASSWORD_AUTH=true in .devcontainer/.env. See docs/integrations/sshd.md" >&2
     fi
 
     if /usr/sbin/sshd; then
@@ -565,7 +565,7 @@ if [ ! -f "/home/sandbox/.claude/.onboarded" ]; then
   echo "  ┌─────────────────────────────────────────────────┐"
   echo "  │  First boot detected.                           │"
   echo "  │  Optional Slack bridge setup:                   │"
-  echo "  │    see .oh/docs/integrations/slack.md           │"
+  echo "  │    see docs/integrations/slack.md           │"
   echo "  │  First command after attaching:                 │"
   echo "  │    herdr   # then complete setup in its panes   │"
   echo "  └─────────────────────────────────────────────────┘"

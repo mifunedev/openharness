@@ -14,7 +14,7 @@ confidence: provisional
 
 ## Relevant Source Files
 - `raw/2026-07-04-crabbox-remote-exec-control-plane.md` — WebFetch snapshot of the Crabbox "how it works" docs + canonical URLs.
-- `.oh/docs/rfcs/rfc-runtime-support.md` §6 — where Open Harness weighs Crabbox as an A3 (fan-out) option.
+- `docs/rfcs/rfc-runtime-support.md` §6 — where Open Harness weighs Crabbox as an A3 (fan-out) option.
 
 ## Summary
 Crabbox (`crabbox.sh`, `openclaw/crabbox`) is a **remote software testing / execution control plane** for short-lived boxes: "warm a box, sync the diff, run the suite." You keep the local edit-save-run loop but offload the expensive or evidence-producing command to an ephemeral remote runner via **lease → sync → run → release**. For Open Harness it is an **axis-A3 (scale/fan-out)** candidate of a fundamentally different shape than "swap the substrate": a lease/govern/cleanup control plane rather than a per-task substrate.

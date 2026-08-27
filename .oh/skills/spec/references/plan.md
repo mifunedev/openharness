@@ -90,15 +90,13 @@ Run these in order; each is an existing primitive — compose, don't re-derive.
    was selected; for a fresh manual topic with no issue, open one first per `/git`
    or let `/spec execute` open one in a standalone run. `plan` consumes the number; it never creates the issue.
 
-5. **Scaffold `prompt.md` + `progress.txt`.** There is one prompt template — the build
-   executor's own, `.oh/skills/firstmate/templates/session-prompt.md`. Render it into
-   `.oh/tasks/<slug>/prompt.md` with the same closed three-placeholder substitution
-   `render_session_prompt` in `.oh/scripts/firstmate.sh` performs: `<slug>` → this task's
-   slug; `<branch>` → `prd.json`'s `branchName`; `<issue>` → the issue number as **bare
-   digits** (the body writes `#<issue>` itself). Strip the template's contract header
-   (everything through the `END CONTRACT HEADER -->` line) and confirm no `<placeholder>`
-   token survives the render. Write `.oh/tasks/<slug>/progress.txt` with the
-   `# progress` header only.
+5. **Scaffold `prompt.md` + `progress.txt`.** There is one task prompt template,
+   `.oh/skills/spec/templates/task-prompt.md`. Render it into
+   `.oh/tasks/<slug>/prompt.md` by substituting `<slug>`, `<branch>`, and `<issue>` with
+   the task slug, `prd.json`'s `branchName`, and the issue number as bare digits. This
+   prompt is the single Advisor handoff; no separate implementation process or session
+   prompt exists. Confirm no angle-bracket placeholder survives the render. Write
+   `.oh/tasks/<slug>/progress.txt` with the `# progress` header only.
 
 Verify the four-file contract before handing off:
 

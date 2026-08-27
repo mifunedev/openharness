@@ -113,7 +113,7 @@ Ignore these unless the task explicitly targets them:
 | `.oh/cli/node_modules/` | Package-local vendor dependencies. | Debugging package-local dependency state. |
 | `.oh/crons/.cron.log` | Append-only cron liveness trail, one line per pulse. | Checking whether a cron still fires. |
 | `.oh/skills/wiki/corpus/raw/` | Immutable provenance snapshots; often verbose. | Verifying source provenance behind a curated `.oh/skills/wiki/corpus/*.md` entry. |
-| `.oh/tasks/*/progress.txt` | Runtime progress sentinel; terse and stale-prone. | Checking a specific build-session status; prefer `tail` over full read. |
+| `.oh/tasks/*/progress.txt` | Runtime progress record; terse and stale-prone. | Checking implementation progress for a specific `/spec execute` task; prefer `tail` over full read. |
 | `.oh/evals/datasets/**/oracle/`, `.oh/evals/datasets/**/diff.patch`, `.oh/evals/datasets/**/changed-files.txt` | Expected-output fixtures, not implementation guidance. | Updating/verifying a dataset oracle. |
 
 ## On-demand search targets
@@ -131,7 +131,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `.oh/` | OpenHarness runtime machinery grouped as one unit: the `oh` CLI (`.oh/cli/`), installer/lifecycle scripts (`.oh/scripts/`), container-install inputs (`.oh/install/`), deploy config (`.oh/config.json`). The docs site moved to `mifunedev/openharness-web`. | Read `.oh/README.md` first; find harness tooling addressed as a namespace. |
 | `.oh/context/` | Voice, identity, tools, repo map, user collaboration, and rules. | Load operating principles and process constraints. |
 | `.oh/crons/` | Scheduled agent prompts and heartbeat/cleanup jobs. | Understand recurring automation; read `.oh/crons/README.md` first. |
-| `.oh/scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, the build executor, caps. | Find executable implementation behind docs/skills; read `.oh/scripts/README.md` first. |
+| `.oh/scripts/` | Shell/TypeScript automation for install, cron runtime, health checks, and caps. | Find executable implementation behind docs/skills; read `.oh/scripts/README.md` first. |
 | `.oh/scripts/__tests__/` | Vitest coverage for harness scripts. | Locate targeted tests for script changes. |
 | `.oh/evals/probes/` | Regression probes used by `/eval` and CI. | Add or inspect behavior guards. |
 | `.oh/evals/capability/` | Capability benchmark specs/results vs regression probes. | Evaluate progress-ceiling tasks. |
@@ -140,7 +140,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `.oh/cli/package.json` | CLI package-local scripts and dependencies. | Run package-specific build/typecheck. |
 | `.oh/docs/` | GitHub-readable product docs. | Update product docs; start at `.oh/docs/README.md`. |
 | `.oh/skills/wiki/corpus/*.md` | Curated internal knowledge pages. | Reuse durable research before reading raw sources; read `.oh/skills/wiki/corpus/README.md` for index. |
-| `.oh/tasks/<active-task>/` | `prd.md`, `prd.json`, `prompt.md`, `evidence.md`; `progress.txt` only for build-session status. | Verify task graph or implementation scope before reading runtime progress. |
+| `.oh/tasks/<active-task>/` | `prd.md`, `prd.json`, `prompt.md`, `evidence.md`, and `progress.txt` for the `/spec execute` task. | Verify task graph or implementation scope before reading runtime progress. |
 | `.github/workflows/` | CI, docs, release workflow definitions. | Debug/check GitHub Actions behavior. |
 | `.devcontainer/` | Sandbox Dockerfile, compose, devcontainer config, entrypoint. | Change sandbox image/runtime provisioning. |
 | `.pi/extensions/` | In-tree Pi extension source, especially Slack bridge. | Modify Pi integration behavior. |

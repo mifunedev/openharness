@@ -448,7 +448,6 @@ export function buildCronAgentCommand(opts: {
     `echo "cron-runtime: Claude limit detected; retrying with Codex" | tee -a ${quotedLogFile}; ` +
     cronLogCommand(id, "AGENT_FALLBACK", "'from=claude to=codex'") +
     `active_agent=codex; ` +
-    `export FIRSTMATE_HARNESS=codex; ` +
     `${resumeCodex}` +
     logAgentStart +
     `codex exec --sandbox danger-full-access "$(cat ${quotedPromptFile})" 2>&1 | tee -a ${quotedLogFile}; ` +

@@ -50,3 +50,19 @@ Removed `docs/**` from the `.oh` payload manifest and kept the payload path guar
 The payload walker receives only the source `.oh` directory, so root docs stay outside the payload by construction. A regression guard must test both the positive file-class allowlist and the negative no-legacy-tree condition.
 
 ---
+
+## US-004 — 2026-08-27 02:15 UTC
+
+**Title**: Align durable knowledge and complete verification
+**Files changed**: affected wiki entries and index, `.oh/evals/capability/repo-orientation/tasks.json`, generated `.oh/evals/RESULTS.md`, artifact-link guard, and moved-doc safety examples
+**Commit**: f53c600d
+**Result**: PASS
+
+### What I did
+Updated current wiki source references to root `docs/`, refreshed the generated wiki index, and updated capability orientation tasks. Refreshed eval results through the runner and completed the focused Markdown-link, payload, docs, and full repository checks. The outer Advisor owns the implementation audit, final eval/wiki gate, and `evidence.md`.
+
+### Learnings for future iterations
+A documentation move can expand the scope of an existing safety probe when the probe discovers files by directory. Re-run the probe after a move and add local review-first guidance for newly visible installer examples; keep final audit evidence correlated to the outer audit run.
+
+---
+STATUS: COMPLETE

@@ -9,6 +9,7 @@ on:
     paths:
       - "packages/**"
       - ".oh/**"
+      - "docs/**"
       - ".pi/**"
       - "Makefile"
       - ".devcontainer/.example.env"
@@ -31,6 +32,7 @@ on:
     paths:
       - "packages/**"
       - ".oh/**"
+      - "docs/**"
       - ".pi/**"
       - "Makefile"
       - ".devcontainer/.example.env"

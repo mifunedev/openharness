@@ -71,9 +71,9 @@ assert allow "docker container inspect -f '{{.State.Status}}' openharness" \
 assert allow "docker inspect --format '{{.NetworkSettings.IPAddress}}' web" \
   "guard over-blocked a narrow network read"
 assert allow "docker inspect --format '{{json .State.Health}}' openharness" \
-  "guard over-blocked a scoped json subtree (see .oh/docs/installation.md)"
+  "guard over-blocked a scoped json subtree (see docs/installation.md)"
 assert allow "docker inspect oh-sbx-local --format '{{range \$name, \$_ := .NetworkSettings.Networks}}{{\$name}}{{end}}'" \
-  "guard over-blocked the network-discovery template (see .oh/docs/integrations/langfuse.md)"
+  "guard over-blocked the network-discovery template (see docs/integrations/langfuse.md)"
 assert allow "docker image inspect --format '{{.Id}}' node:20" \
   "guard over-blocked an image-id read"
 

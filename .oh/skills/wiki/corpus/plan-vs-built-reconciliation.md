@@ -6,7 +6,7 @@ created: 2026-08-24
 updated: 2026-08-24
 sources:
   - raw/2026-08-24-plan-vs-built-reconciliation.md
-related: [build-executor-ladder, audit-architecture]
+related: [build-session-ladder, audit-architecture]
 confidence: provisional
 ---
 
@@ -59,5 +59,5 @@ flowchart LR
 | `evidence.json` | the audit boundary | the boundary's terminal log | no (invocation-scoped) |
 
 ## See Also
-- [[build-executor-ladder]]
+- [[build-session-ladder]]
 - [[audit-architecture]]

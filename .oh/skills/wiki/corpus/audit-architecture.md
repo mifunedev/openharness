@@ -6,7 +6,7 @@ created: 2026-07-17
 updated: 2026-08-12
 sources:
   - raw/2026-07-17-audit-architecture.md
-related: [oh-cli-portable-lifecycle, build-executor-ladder]
+related: [oh-cli-portable-lifecycle, build-session-ladder]
 confidence: confirmed
 ---
 
@@ -48,4 +48,4 @@ flowchart LR
 
 ## See Also
 - [[oh-cli-portable-lifecycle]]
-- [[build-executor-ladder]]
+- [[build-session-ladder]]

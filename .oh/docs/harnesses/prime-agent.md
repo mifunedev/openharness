@@ -101,8 +101,8 @@ These are deliberate gaps, not oversights:
 
 - **No image-level install.** There is no `INSTALL_PRIME_AGENT` build arg, no compose auth
   volume, and no key in `.devcontainer/.example.env`. The harness is `on-demand` only.
-- **Not a build executor.** `.oh/scripts/firstmate.sh` launches `claude`, `pi`, or `codex`;
-  point `FIRSTMATE_HARNESS_CMD` at Prime Agent to use it there.
+- **Not a build executor.** `.oh/scripts/spec-build.sh` launches `claude`, `pi`, or `codex`;
+  point `SPEC_BUILD_HARNESS_CMD` at Prime Agent to use it there.
 - **No messenger bridge.** `.oh/scripts/gateway.sh` accepts only `pi` and `hermes`.
 
 ## Upstream

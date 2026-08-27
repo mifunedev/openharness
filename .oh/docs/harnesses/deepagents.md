@@ -152,19 +152,19 @@ Flags:
 
 ### Build-executor usage
 
-The build executor (`.oh/scripts/firstmate.sh`) has built-in arms for
+The build executor (`.oh/scripts/spec-build.sh`) has built-in arms for
 `claude`, `pi`, and `codex` only. DeepAgents is reached through the full
 command override instead — the rendered prompt path is exported as
-`$FIRSTMATE_PROMPT_FILE`:
+`$SPEC_BUILD_PROMPT_FILE`:
 
 ```bash
-FIRSTMATE_HARNESS_CMD='deepagents -y --shell-allow-list recommended -q --no-stream --max-turns 25 -n "$(cat "$FIRSTMATE_PROMPT_FILE")"' \
-  .oh/scripts/firstmate.sh <slug>
+SPEC_BUILD_HARNESS_CMD='deepagents -y --shell-allow-list recommended -q --no-stream --max-turns 25 -n "$(cat "$SPEC_BUILD_PROMPT_FILE")"' \
+  .oh/scripts/spec-build.sh <slug>
 ```
 
 DeepAgents is never auto-selected — it must be chosen explicitly. Keep the
 prompt as initial argv and add no `--print`-style one-shot flag: the build
-session must stay interactive and multi-turn (see `/firstmate`).
+session must stay interactive and multi-turn (see [the build-session contract](../../skills/spec/references/execute.md)).
 
 > **`--shell-allow-list all` warning.** Choosing `--shell-allow-list all`
 > grants unrestricted non-interactive shell

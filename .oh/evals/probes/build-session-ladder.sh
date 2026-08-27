@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # tier: A
-# source: .oh/tasks/firstmate-executor/ (issue #746) — the shared herdr -> tmux -> foreground runner ladder and its safety gates
+# source: .oh/tasks/build-executor/ (issue #746) — the shared herdr -> tmux -> foreground runner ladder and its safety gates
 # desc: .oh/scripts/lib/session-runner.sh resolves the ladder herdr -> tmux -> foreground; herdr
 #       health is pinned to the two literal fields `status: running` and `compatible: yes`;
 #       runner_detect carries the nesting guard BEFORE any probe pane and the execution-context
 #       fingerprint gate whose mismatch degrades to tmux with the reason logged; resolve_timeout_ms
 #       is the single session-budget source with the 14400000 default and bounds the tmux/foreground
 #       poll loop; every exit path runs runner_teardown, removes the per-slug lock and appends
-#       FIRSTMATE-INCOMPLETE; every herdr launch passes --no-focus; teardown is `pane close` (0.7.4
+#       BUILD-SESSION-INCOMPLETE; every herdr launch passes --no-focus; teardown is `pane close` (0.7.4
 #       has no agent stop/kill verb); the sourceable library sets no file-scope shell options; and
 #       the herdr commands that would disturb a shared server stay absent while `herdr agent get`
 #       (the liveness oracle) stays present.
@@ -145,8 +145,8 @@ else
     || missing+=("runner_abort: does not resolve the per-slug lock path")
   printf '%s\n' "$abort" | grep -Eq 'rm -[a-z]* "\$lock"' \
     || missing+=("runner_abort: does not remove the lock (a stale lock wedges the slug permanently)")
-  printf '%s\n' "$abort" | grep -Fq 'FIRSTMATE-INCOMPLETE' \
-    || missing+=("runner_abort: does not append FIRSTMATE-INCOMPLETE to progress.txt")
+  printf '%s\n' "$abort" | grep -Fq 'BUILD-SESSION-INCOMPLETE' \
+    || missing+=("runner_abort: does not append BUILD-SESSION-INCOMPLETE to progress.txt")
 fi
 if [ -n "$watch" ]; then
   abort_calls="$(printf '%s\n' "$watch" | grep -c 'runner_abort')"
@@ -205,5 +205,5 @@ if [ "${#missing[@]}" -gt 0 ]; then
   exit 1
 fi
 
-echo "PASS: ladder herdr->tmux->foreground, health pinned to status: running + compatible: yes, nesting guard before the probe pane, fingerprint gate degrades+logs, resolve_timeout_ms bounds every watch at 14400000 default, exit paths teardown+unlock+FIRSTMATE-INCOMPLETE, --no-focus on every launch, teardown via pane close, no server-disturbing commands, agent get oracle intact, no file-scope set" >&2
+echo "PASS: ladder herdr->tmux->foreground, health pinned to status: running + compatible: yes, nesting guard before the probe pane, fingerprint gate degrades+logs, resolve_timeout_ms bounds every watch at 14400000 default, exit paths teardown+unlock+BUILD-SESSION-INCOMPLETE, --no-focus on every launch, teardown via pane close, no server-disturbing commands, agent get oracle intact, no file-scope set" >&2
 exit 0

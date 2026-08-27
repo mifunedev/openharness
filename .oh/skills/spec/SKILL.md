@@ -70,7 +70,7 @@ esac
   universal key (task directory, branch second segment, tmux session name).
 - **Compose, don't fork** — each node reuses existing loop-node skills rather than
   re-implementing them: `plan` composes `/prd` + `/ralph`; `execute` composes
-  `.oh/scripts/firstmate.sh` + `/audit implementation` + `/eval` + `/audit pr`;
+  `.oh/scripts/spec-build.sh` + `/audit implementation` + `/eval` + `/audit pr`;
   `retro` composes `/retro`. The build **literals** — the `gh` invocations, the
   branch and PR shapes, the Advisor launch — live in `references/execute.md`,
   which is the single source for them and is a protected path.

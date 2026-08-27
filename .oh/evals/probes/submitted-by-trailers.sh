@@ -2,14 +2,14 @@
 # tier: A
 # source: conversation 2026-06-12 (commit attribution trailers); repointed by
 #         spec-simplification US-002 (issue #816) when the ralph prompt template was deleted
-# desc: the scaffold path (/spec execute) and the build path (the firstmate session-prompt
+# desc: the scaffold path (/spec execute) and the build path (the build session-prompt
 #       template) both require a Submitted-by trailer naming the ACTIVE submitter, and
 #       neither hard-codes a specific model as co-author
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SPEC="$ROOT/.claude/skills/spec/references/execute.md"
-PROMPT="$ROOT/.oh/skills/firstmate/templates/session-prompt.md"
+PROMPT="$ROOT/.oh/skills/spec/templates/session-prompt.md"
 
 for file in "$SPEC" "$PROMPT"; do
   if [[ ! -f "$file" ]]; then

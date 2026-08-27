@@ -1,10 +1,10 @@
-<!-- FIRSTMATE SESSION-PROMPT TEMPLATE — CONTRACT HEADER (US-002)
+<!-- SPEC_BUILD SESSION-PROMPT TEMPLATE — CONTRACT HEADER (US-002)
 =============================================================================
 
-This file is the skill-owned prompt template for the `firstmate` build
-executor. `render_session_prompt` in `.oh/scripts/firstmate.sh` (US-003)
-substitutes the placeholder tokens declared below and hands the result to one
-long-lived First-Mate session that holds the WHOLE `prd.json` task graph.
+This file is the skill-owned prompt template for the build session.
+`render_session_prompt` in `.oh/scripts/spec-build.sh` (US-003) substitutes the
+placeholder tokens declared below and hands the result to one long-lived
+session that holds the WHOLE `prd.json` task graph.
 
 -----------------------------------------------------------------------------
 1. PLACEHOLDER CONTRACT — CLOSED SET, EXACTLY THREE TOKENS
@@ -50,7 +50,7 @@ OCCURRENCE. Nothing fuzzy, nothing interpretive.
   ANCHOR 8: `Ready PR`
 
 Changing this order is a deliberate change to the build workflow, not a
-formatting edit: `.oh/evals/probes/firstmate-executor-contract.sh` asserts the
+formatting edit: `.oh/evals/probes/spec-build-contract.sh` asserts the
 body follows it.
 
 ORDERING SCOPE: the assertion applies to the BODY ONLY — everything after the
@@ -73,14 +73,14 @@ ordering assertion): `/compact` elevated from one pre-implementation compact
 to EVERY story boundary; the quality-check step; the mandatory
 `Submitted-by:` trailer; the bounded max-3 AUDIT-FAIL re-brief that marks a
 story BLOCKED; the dual-channel `STATUS: COMPLETE` terminal contract; resume
-semantics after `FIRSTMATE-INCOMPLETE`; and the herdr / `/delegate` policy.
+semantics after `BUILD-SESSION-INCOMPLETE`; and the herdr / `/delegate` policy.
 
 =============================================================================
 END CONTRACT HEADER -->
 
-# First Mate session — <slug>
+# Build Session — <slug>
 
-You are the **First Mate** running one long-lived session that implements the
+You are the **Build Session** running one long-lived session that implements the
 `<slug>` task end to end. Unlike a ralph loop — 50 fresh processes, one story
 each — you hold the **whole task graph** in a single session and walk it
 story by story.
@@ -161,7 +161,7 @@ For each story, in this exact order:
 
 ## 4. Who certifies a story
 
-**The First Mate flips `passes: true` — never the delegate.** A delegate
+**The Build Session flips `passes: true` — never the delegate.** A delegate
 reports what it did; it does not certify its own work. You re-read the
 story's `acceptanceCriteria` against the actual repository state and flip the
 flag yourself. **Delegates never self-certify**, and a delegate's claim of
@@ -199,9 +199,9 @@ After the marker, this session's job is done. `/spec execute` owns the tail:
 `.oh/skills/audit/references/reviewer-evidence-doc.md`, `/retro`, and finally
 `Ready PR` (the undraft gate). Do not run that tail yourself.
 
-## 7. Resume after `FIRSTMATE-INCOMPLETE`
+## 7. Resume after `BUILD-SESSION-INCOMPLETE`
 
-A session that died without the marker leaves a `FIRSTMATE-INCOMPLETE` line
+A session that died without the marker leaves a `BUILD-SESSION-INCOMPLETE` line
 in `progress.txt` and a draft PR with a resume comment. On relaunch:
 
 1. **Re-validate the last committed story's `acceptanceCriteria` first**,
@@ -227,7 +227,7 @@ server-side; assume it would succeed and violate the contract.
 When you do fan out with `/delegate`:
 
 - **Instruct the delegates not to select the herdr runner.** This session
-  exports `FIRSTMATE_SESSION=1`, which is the signal they can key off.
+  exports `SPEC_BUILD_SESSION=1`, which is the signal they can key off.
 - This is **instruction only**. Mechanical enforcement of `/delegate`'s
   runner choice is **out of scope this round** — nothing checks or blocks a
   delegate that ignores it, so the instruction must actually be passed

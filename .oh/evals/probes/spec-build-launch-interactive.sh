@@ -10,10 +10,10 @@
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-FIRSTMATE="$ROOT/.oh/scripts/firstmate.sh"
+SPEC_BUILD="$ROOT/.oh/scripts/spec-build.sh"
 RUNNER="$ROOT/.oh/scripts/lib/session-runner.sh"
 
-for f in "$FIRSTMATE" "$RUNNER"; do
+for f in "$SPEC_BUILD" "$RUNNER"; do
   if [ ! -f "$f" ]; then
     echo "SKIPPED: required file absent: $f" >&2
     exit 2
@@ -22,21 +22,21 @@ done
 
 missing=()
 
-fm_code="$(grep -v '^[[:space:]]*#' "$FIRSTMATE")"
+fm_code="$(grep -v '^[[:space:]]*#' "$SPEC_BUILD")"
 rn_code="$(grep -v '^[[:space:]]*#' "$RUNNER")"
 
 printf '%s\n' "$fm_code" | grep -Fq -- '--print' \
-  && missing+=("firstmate.sh: a launch path still carries --print (the child would answer once and exit)")
+  && missing+=("spec-build.sh: a launch path still carries --print (the child would answer once and exit)")
 printf '%s\n' "$rn_code" | grep -Fq -- '--print' \
   && missing+=("session-runner.sh: a launch path still carries --print")
 
 printf '%s\n' "$fm_code" | grep -Eq 'cat [^|]*\| *(claude|pi|codex)' \
-  && missing+=("firstmate.sh: a launch arm still pipes the prompt into the harness on stdin (stdin would not be a TTY)")
+  && missing+=("spec-build.sh: a launch arm still pipes the prompt into the harness on stdin (stdin would not be a TTY)")
 
 for arm in claude pi codex; do
   printf '%s\n' "$fm_code" | grep -Fq "printf '$arm" \
     || printf '%s\n' "$fm_code" | grep -Fq "$arm %s \"\$(cat" \
-    || missing+=("firstmate.sh: the $arm arm does not deliver the prompt as \"\$(cat <file>)\" initial argv")
+    || missing+=("spec-build.sh: the $arm arm does not deliver the prompt as \"\$(cat <file>)\" initial argv")
 done
 
 printf '%s\n' "$rn_code" | grep -Fq '| tee' \

@@ -24,7 +24,7 @@ Read these files at the start of every session — they encode voice, principles
 - `.oh/context/REPO_MAP.md` — source-map command, search routing, and low-signal folders to disregard
 - `.oh/context/USER.md` — working-relationship patterns; living document
 
-The always-loaded `.oh/context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — with the advisor delegation + recursive-decomposition norm now the `advisor` agent (`.oh/agents/advisor.md`, invoked via the Agent tool rather than a slash command), and the repo-authoring convention staying a plain doc at `.oh/context/directory-readme.md`. The First Mate role charter and the `.oh/prompts/advisor/` pack that consumed it were **deleted** in spec-simplification US-004: a second, discoverable implementation path is a route an agent can be pulled onto mid-task, and the build workflow now lives in exactly one place — `.oh/skills/firstmate/templates/session-prompt.md`. The always-on tier is now just the `.oh/context/` identity files listed above; load the relevant skill when a task calls for its norm.
+The always-loaded `.oh/context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — with the advisor delegation + recursive-decomposition norm now the `advisor` agent (`.oh/agents/advisor.md`, invoked via the Agent tool rather than a slash command), and the repo-authoring convention staying a plain doc at `.oh/context/directory-readme.md`. The old role charter and the `.oh/prompts/advisor/` pack that consumed it were **deleted** in spec-simplification US-004: a second, discoverable implementation path is a route an agent can be pulled onto mid-task, and the build workflow now lives in exactly one place — `.oh/skills/spec/templates/session-prompt.md`. The always-on tier is now just the `.oh/context/` identity files listed above; load the relevant skill when a task calls for its norm.
 
 ## Permissions
 
@@ -184,7 +184,6 @@ The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal i
 | `/prd` | Generate a new PRD from a feature description |
 | `/ralph` | Convert markdown PRD → `.oh/tasks/<name>/prd.json` — the structured task graph the build executor walks |
 | `/spec` | Dispatcher for the canonical workflow (`/spec <plan\|execute\|retro>`, routes to `references/{plan,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state) — approving that plan **is** the commitment gate; **execute** = issue → branch → draft PR → build → `build ⇄ audit → evidence → spec-retro → improve` → promotable undraft to a **ready-for-review PR** at the human merge gate, refusing the undraft without a committed `evidence.md` — it holds the build mechanics in full and is a protected path; **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/`. There is no all-in-one composer beside it |
-| `/firstmate` | **The build executor** — there is exactly one. `.oh/scripts/firstmate.sh <slug>` runs one long-lived First-Mate session over a whole `.oh/tasks/<slug>/` task graph, launched through the **herdr → tmux → foreground** runner ladder. `STATUS: COMPLETE` (whole line in `progress.txt`) is its terminal interface. Documents the ladder's detection gates, the naming contract (`firstmate-<slug>`, `agent-firstmate-<slug>`), the `FIRSTMATE_TIMEOUT_MS` session budget, the watch/recovery matrices, and the per-mode teardown procedure. The build workflow it runs lives in one place, `.oh/skills/firstmate/templates/session-prompt.md` |
 | `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
 | `/eval` | Run the context fitness-function probe suite (`.oh/evals/probes/*.sh`) against real state, write the `.oh/evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
 | `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
@@ -211,7 +210,7 @@ services (cron, gateways, watchdogs) use named tmux sessions — see
 Agentic build sessions (one long-lived agent over a whole `.oh/tasks/<slug>/`
 task graph — the build executor) pick neither up front: they resolve their
 host through a **herdr → tmux (`agent-` session) → foreground** ladder, degrading
-downward with the reason logged. See `/firstmate` and
+downward with the reason logged. See `.oh/skills/spec/references/execute.md` and
 `.oh/skills/t3/references/sandbox-processes.md` § Source of Truth.
 
 ## What You Do

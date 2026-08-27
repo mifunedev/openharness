@@ -3,7 +3,7 @@
 # source: conversation 2026-06-19 (issue #257); rewritten by spec-simplification US-002
 #         (issue #816) when the three-executor world collapsed to one
 # desc: the advisor agent (.oh/agents/advisor.md) § Pipeline variants codifies the monitored
-#       async BUILD SESSION variant against the ONE build executor, .oh/scripts/firstmate.sh —
+#       async BUILD SESSION variant against the ONE build executor, .oh/scripts/spec-build.sh —
 #       the CALLER (main loop) owns the STATUS watch (a sub-agent advisor cannot stay alive to
 #       finalize), the session surfaces blocks, finalize routes through the promotable gate.
 #       The retired executor arm must not reappear as a variant name.
@@ -35,7 +35,7 @@ grep -qiF 'owns the sentinel watch'                <<<"$section" || missing+=("c
 grep -qiF 'surfaces blocks'                        <<<"$section" || missing+=("session-surfaces-blocks property")
 grep -qiF 'finalizes through the promotable gate'  <<<"$section" || missing+=("finalize-via-promotable-gate rule")
 
-grep -qF '.oh/scripts/firstmate.sh'                <<<"$section" || missing+=("the launch contract .oh/scripts/firstmate.sh is not named in the variant")
+grep -qF '.oh/scripts/spec-build.sh'                <<<"$section" || missing+=("the launch contract .oh/scripts/spec-build.sh is not named in the variant")
 grep -qF 'STATUS: COMPLETE'                        <<<"$section" || missing+=("the STATUS: COMPLETE terminal interface is not named in the variant")
 
 if grep -qF 'ralph' "$RULE"; then
@@ -48,5 +48,5 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
-echo "PASS: Monitored async build session variant codified against firstmate.sh (caller-owns-watch + surfaces-blocks + promotable-gate finalize), retired arm absent"
+echo "PASS: Monitored async build session variant codified against spec-build.sh (caller-owns-watch + surfaces-blocks + promotable-gate finalize), retired arm absent"
 exit 0

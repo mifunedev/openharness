@@ -138,7 +138,7 @@ Copy every file path, package name, environment variable, function name, and lab
 
 ```text
 Wrong: the oh scripts ralph script
-Right: `.oh/scripts/firstmate.sh`
+Right: `.oh/scripts/spec-build.sh`
 ```
 
 ## 3. Verbs and voice
@@ -368,7 +368,7 @@ Write the unit with every number. Write the absolute path or the repo-relative p
 
 ```text
 Wrong: The timeout is large. Edit the config in the scripts folder.
-Right: The timeout is 600000 ms. Edit `.oh/scripts/firstmate.sh` at line 42.
+Right: The timeout is 600000 ms. Edit `.oh/scripts/spec-build.sh` at line 42.
 ```
 
 ### 39. A heading is not an antecedent

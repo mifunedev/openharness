@@ -18,14 +18,14 @@ sessions, for exactly the reasons the § "Gateway client sessions" and § "Why"
 sections below give. Nothing in this addition relaxes that.
 
 **Agentic build sessions** — one long-lived agent holding a whole
-`.oh/tasks/<slug>/` task graph, e.g. the `firstmate` executor
-(`.oh/scripts/firstmate.sh`) — are the one category that does *not* assume tmux
+`.oh/tasks/<slug>/` task graph, e.g. the `build session` executor
+(`.oh/scripts/spec-build.sh`) — are the one category that does *not* assume tmux
 up front. They resolve their host through a three-rung ladder, top rung first:
 
 | Rung | Selected when | Session / handle |
 |------|---------------|------------------|
-| 1. herdr | `herdr` is installed **and** `herdr status` reports both `status: running` and `compatible: yes` **and** the caller is not already inside a herdr pane **and** a short-lived probe pane proves the pane runs in the caller's own environment | herdr agent `firstmate-<slug>` |
-| 2. tmux | any herdr precondition fails — not installed, server down, nested, or out-of-environment | tmux session `agent-firstmate-<slug>` (the `agent-` category below) |
+| 1. herdr | `herdr` is installed **and** `herdr status` reports both `status: running` and `compatible: yes` **and** the caller is not already inside a herdr pane **and** a short-lived probe pane proves the pane runs in the caller's own environment | herdr agent `build-<slug>` |
+| 2. tmux | any herdr precondition fails — not installed, server down, nested, or out-of-environment | tmux session `agent-build-<slug>` (the `agent-` category below) |
 | 3. foreground | tmux is unavailable too | the child process itself |
 
 Degradation is automatic and downward-only, with the reason logged; an explicit
@@ -35,8 +35,7 @@ so the one-log-file-per-session convention below holds unchanged in all three
 modes.
 
 Ladder implementation: `.oh/scripts/lib/session-runner.sh`. Executor contract,
-watch matrix, and per-mode kill procedure: `/firstmate`
-(`.oh/skills/firstmate/SKILL.md`).
+watch matrix, and per-mode kill procedure: [the build-session contract](../../spec/references/execute.md).
 
 ## Session Naming
 

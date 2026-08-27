@@ -30,10 +30,8 @@ spec
 eval
 health-check
 retro
-firstmate
-
 # --- Orchestrator scripts (.oh/scripts/) ---
-.oh/scripts/firstmate.sh
+.oh/scripts/spec-build.sh
 # The two `lib/` entries below are load-bearing shared infra (the herdr -> tmux
 # -> foreground runner ladder, and the slug + four-file task-folder contract
 # every consumer of a task folder shares).

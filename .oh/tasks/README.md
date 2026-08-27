@@ -3,7 +3,7 @@
 Spec task workdirs. Each `<slug>/` subfolder is one autonomous build
 session's four-file contract, created by `/spec plan` (the
 `/ralph` skill produces the `prd.json` inside it) and built by
-`.oh/scripts/firstmate.sh <slug>`.
+`.oh/scripts/spec-build.sh <slug>`.
 
 A task directory typically contains:
 
@@ -36,4 +36,4 @@ A task directory typically contains:
 - `archive/` contents are gitignored except for archived task files
   themselves (see root `.gitignore`).
 
-See `.oh/scripts/firstmate.sh` for the build-executor entry point.
+See `.oh/scripts/spec-build.sh` for the build-executor entry point.

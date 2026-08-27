@@ -6,7 +6,7 @@ created: 2026-08-13
 updated: 2026-08-13
 sources:
   - raw/2026-08-13-recursive-self-improvement-survey.md
-related: [recursive-language-models, molt-agentic-reinforcement-learning, audit-architecture, build-executor-ladder]
+related: [recursive-language-models, molt-agentic-reinforcement-learning, audit-architecture, build-session-ladder]
 confidence: provisional
 ---
 
@@ -84,4 +84,4 @@ flowchart TD
 - [[recursive-language-models]]
 - [[molt-agentic-reinforcement-learning]]
 - [[audit-architecture]]
-- [[build-executor-ladder]]
+- [[build-session-ladder]]

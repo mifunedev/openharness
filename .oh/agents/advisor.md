@@ -95,7 +95,7 @@ Each variant is a **plan you hand back**; the *caller* executes the mechanics. N
 | **3-step (steered)** | The first attempt will likely need correction | Emit the initial briefing now; tell the caller to bring the executor's output back to you for a targeted critique briefing → caller re-invokes the executor with your critique prepended |
 | **Multi-turn agentic** | Long runs (>10 steps) | Emit a briefing plus checkpoints — tell the caller to return the executor's intermediate observations every N steps so you can write the next guidance block |
 | **Multi-level (recursive)** | A child's task is itself multi-step / parallelizable | Emit a bounded decomposition PLAN (see below) — a tree of child briefings the caller spawns, each carrying its depth / children / step budgets |
-| **Monitored async build session** *(the build executor)* | `/spec execute` builds run `.oh/scripts/firstmate.sh <slug>` as a detached session until its `STATUS: COMPLETE` sentinel | You do **not** run this session. Emit the briefing (the task's acceptance criteria the session consumes) and note that the *caller* launches it, owns the sentinel watch (`COMPLETE` / session-gone / budget expiry), surfaces blocks back for you to re-brief, and finalizes through the promotable gate (draft → `/audit pr` → ready). A sub-agent cannot stay alive to finalize, which is exactly why this is the caller's job, never yours. |
+| **Monitored async build session** *(the build executor)* | `/spec execute` builds run `.oh/scripts/spec-build.sh <slug>` as a detached session until its `STATUS: COMPLETE` sentinel | You do **not** run this session. Emit the briefing (the task's acceptance criteria the session consumes) and note that the *caller* launches it, owns the sentinel watch (`COMPLETE` / session-gone / budget expiry), surfaces blocks back for you to re-brief, and finalizes through the promotable gate (draft → `/audit pr` → ready). A sub-agent cannot stay alive to finalize, which is exactly why this is the caller's job, never yours. |
 
 ## Recursive decomposition — the multi-level plan you emit
 
@@ -209,5 +209,5 @@ You return this and **stop**. The caller — not you — then runs `Agent(subage
 
 - `.oh/agents/implementer.md`, `.oh/agents/pm.md`, `.oh/agents/critic.md` — the executors/analysts your briefings target. You brief them; you do not do their work.
 - `CLAUDE.md` § *What You Do NOT Do* — the orchestrator-vs-application-code boundary above.
-- `.oh/scripts/firstmate.sh` — the monitored async build session the *caller* runs, never you.
-- `.oh/skills/firstmate/templates/session-prompt.md` — the build session's own workflow: the supervisory role the *caller* of this agent plays. This agent defines the briefing artifact; that template defines the role.
+- `.oh/scripts/spec-build.sh` — the monitored async build session the *caller* runs, never you.
+- `.oh/skills/spec/templates/session-prompt.md` — the build session's own workflow: the supervisory role the *caller* of this agent plays. This agent defines the briefing artifact; that template defines the role.

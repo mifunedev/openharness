@@ -15,7 +15,9 @@ fi
 missing=()
 grep -q 'buildCronAgentCommand' "$RUNTIME" || missing+=("shared buildCronAgentCommand helper")
 grep -q 'codex exec --sandbox danger-full-access' "$RUNTIME" || missing+=("Codex fallback command")
-grep -q 'export FIRSTMATE_HARNESS=codex' "$RUNTIME" || missing+=("FIRSTMATE_HARNESS=codex export after fallback")
+if grep -qE 'export [A-Za-z_][A-Za-z0-9_]*HARNESS=codex' "$RUNTIME"; then
+  missing+=("fallback exports executor-specific harness state")
+fi
 helper_calls="$(grep -c 'buildCronAgentCommand({[[:space:]]*$' "$RUNTIME" || true)"
 if (( helper_calls < 2 )); then
   missing+=("tmux and non-tmux helper calls")

@@ -61,8 +61,8 @@ node (`AGENTS.md § The Workflow`). If the folder is incomplete, refuse and rout
 `/spec plan`.
 
 **There is no executor argument.** The build has exactly one path:
-`.oh/scripts/firstmate.sh <slug>` — ONE long-lived First-Mate session over the whole task
-graph, launched through the herdr → tmux → foreground runner ladder (see `/firstmate`). Its
+`.oh/scripts/spec-build.sh <slug>` — ONE long-lived build session over the whole task
+graph, launched through the herdr → tmux → foreground runner ladder. Its
 terminal interface is the whole line `STATUS: COMPLETE` in `.oh/tasks/<slug>/progress.txt`.
 
 ---
@@ -170,7 +170,7 @@ Closes #<N>.
 
 ## Next steps (automated)
 1. Launch the expert `/worktrees` Advisor in tmux session `agent-spec-<slug>`.
-2. Advisor: run `.oh/scripts/firstmate.sh <slug>` in an isolated worktree; watch to `STATUS: COMPLETE`; run `/audit implementation`; revise required wiki entries against the spec.
+2. Advisor: run `.oh/scripts/spec-build.sh <slug>` in an isolated worktree; watch to `STATUS: COMPLETE`; run `/audit implementation`; revise required wiki entries against the spec.
 3. A separate executor runs `/audit pr` immediately before any undraft; this PR is marked ready (`gh pr ready`) only when that fresh audit classifies it promotable (CI green + mergeable + clean). Heartbeat stale-draft watchdog output — including draft-age and draft-cap/backlog warnings — is only a resume/investigation hint, never an undraft signal.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code) via /spec execute
@@ -187,7 +187,7 @@ This node does not implement inline. It launches an **expert Advisor on `/worktr
 per-task orchestrator that runs the one build executor and watches it to completion — in its
 own detached tmux session, driven by a `/goal`-prefixed prompt so goal-mode persists the run
 to completion. Session name `agent-spec-<slug>` (sanitize slashes/space → `-`), distinct
-from the `agent-firstmate-<slug>` session the executor's own tmux rung creates.
+from the `agent-build-<slug>` session the executor's own tmux rung creates.
 
 **Build worktree — reuse vs. create.** When `$CRON_WORKTREE` is set (a `worktree: true` cron's default),
 this run is ALREADY inside an isolated worktree that step 2 put on the feature branch, so the
@@ -217,7 +217,7 @@ same rule the build executor enforces on its own child
 **Advisor `/goal` prompt** (one line; fill the placeholders — when `$CRON_WORKTREE` is set,
 substitute its actual path for `<worktree>` and use the "reuse" branch of step 1):
 
-> `/goal` As an **expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.oh/worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) **Run the build executor**: `.oh/scripts/firstmate.sh <slug>` from the build worktree, and **own the `STATUS: COMPLETE` watch yourself** (poll `.oh/tasks/<slug>/progress.txt` plus the session's liveness; never delegate the watch to a sub-agent that returns early). Do NOT launch herdr from inside the build session; inner fan-out is `/delegate` only, and `/delegate` never replaces the story cycle. (3) Run the `build ⇄ audit` loop (step 5) until `/audit implementation` returns AUDIT-PASS, including its `/eval` and wiki gates. (4) Run `/compact` to clear the implementation context before the promotable gate. (5) In a **separate executor**, run `/audit pr` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
+> `/goal` As an **expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.oh/worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) **Run the build executor**: `.oh/scripts/spec-build.sh <slug>` from the build worktree, and **own the `STATUS: COMPLETE` watch yourself** (poll `.oh/tasks/<slug>/progress.txt` plus the session's liveness; never delegate the watch to a sub-agent that returns early). Do NOT launch herdr from inside the build session; inner fan-out is `/delegate` only, and `/delegate` never replaces the story cycle. (3) Run the `build ⇄ audit` loop (step 5) until `/audit implementation` returns AUDIT-PASS, including its `/eval` and wiki gates. (4) Run `/compact` to clear the implementation context before the promotable gate. (5) In a **separate executor**, run `/audit pr` for PR `#<PR>` and run `gh pr ready <PR> --repo "$SPEC_REPO"` **only if it is classified promotable** (CI green + mergeable + clean); otherwise `gh pr comment` the blocking gate and leave it draft. Never `gh pr merge`. Leave this tmux session alive for attach.
 
 The Advisor owns steps 5–9 inside its session. This node's turn ends after launching it and
 reporting the session name; the ready-for-review PR is produced asynchronously. The build
@@ -225,18 +225,18 @@ session commits each story on `<prefix>/<N>-<slug>` with a `Submitted-by:` trail
 isolation keeps concurrent work off the shared checkout. If `tmux` is unavailable, the
 executor's own ladder degrades to foreground — continue there.
 
-**The build executor.** `.oh/scripts/firstmate.sh <slug>` runs ONE long-lived First-Mate
+**The build executor.** `.oh/scripts/spec-build.sh <slug>` runs ONE long-lived build
 session over the whole `prd.json` task graph. It resolves the runner through the
 **herdr → tmux → foreground ladder** (herdr only when installed, healthy, non-nested, and
 proven same-environment by the fingerprint gate; anything else degrades down the ladder with
-the reason logged), renders the session prompt, claims `/tmp/firstmate-<slug>.lock`, and
+the reason logged), renders the session prompt, claims `/tmp/build-<slug>.lock`, and
 watches to the sentinel:
 
 ```bash
 # from the build worktree (${CRON_WORKTREE:-$PWD}), same reuse-vs-create rule as above
-.oh/scripts/firstmate.sh <slug>                  # launches + watches to the sentinel
-.oh/scripts/firstmate.sh --runner tmux <slug>    # pin the runner; unavailable choice = HARD ERROR
-.oh/scripts/firstmate.sh --kill <slug>           # operator escape hatch: teardown + clear lock + record
+.oh/scripts/spec-build.sh <slug>                  # launches + watches to the sentinel
+.oh/scripts/spec-build.sh --runner tmux <slug>    # pin the runner; unavailable choice = HARD ERROR
+.oh/scripts/spec-build.sh --kill <slug>           # operator escape hatch: teardown + clear lock + record
 ```
 
 **Never run `--kill` against a slug whose session is your own.** To verify a kill path,
@@ -247,17 +247,17 @@ budget, and the watch command. Watch handles by mode:
 
 | Mode | Session handle | Watch command |
 |---|---|---|
-| herdr | `firstmate-<slug>` | `herdr agent read firstmate-<slug> --lines 80` |
-| tmux | `agent-firstmate-<slug>` | `tmux attach -t agent-firstmate-<slug>` |
+| herdr | `build-<slug>` | `herdr agent read build-<slug> --lines 80` |
+| tmux | `agent-build-<slug>` | `tmux attach -t agent-build-<slug>` |
 | foreground | the child pid | the terminal it was launched from (stdio is inherited) |
 
 **`.oh/tasks/<slug>/progress.txt` is the authority in every runner mode.** The session is
-**wall-clock bounded** by `FIRSTMATE_TIMEOUT_MS` (default `14400000` = 4h); on expiry, launch
+**wall-clock bounded** by `BUILD_SESSION_TIMEOUT_MS` (default `14400000` = 4h); on expiry, launch
 failure, or operator abort the executor tears down, removes the lock, and appends
-`FIRSTMATE-INCOMPLETE` to `progress.txt` — the PR then **stays draft** with a resume comment.
+`BUILD-SESSION-INCOMPLETE` to `progress.txt` — the PR then **stays draft** with a resume comment.
 Mid-run herdr loss degrades the watch to file-polling the same `progress.txt`; the herdr
 **server is never stopped or restarted**. Full contract, ladder, and recovery matrix live in
-`/firstmate` (`.oh/skills/firstmate/SKILL.md`).
+the build-session contract in this procedure.
 
 ### 5. `build ⇄ audit` — the adversarial loop
 
@@ -271,7 +271,7 @@ When the build reports complete, run the per-unit verdict gate:
 floor + `/audit pr` promotable classification (+ `/agent-browser` for UI stories) into one
 verdict:
 
-- `AUDIT-FAIL` → loop back to **build**: resume the Advisor / `.oh/scripts/firstmate.sh <slug>`
+- `AUDIT-FAIL` → loop back to **build**: resume the Advisor / `.oh/scripts/spec-build.sh <slug>`
   to finish the unmet stories, then re-audit. This is the build-side adversary — keep looping
   until the build satisfies its own task graph.
 - `AUDIT-PASS` → the build is promotable; continue to the tail.
@@ -508,7 +508,7 @@ URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline outpu
 | 1 | `gh issue create` fails (auth, label, repo perms) | Diagnose; create the issue manually; re-run with the issue located |
 | 2 | Pre-commit hook fails (lint, tests) | Fix the issue; re-run from step 2 |
 | 3 | `gh pr create` fails (no remote, branch missing on target remote) | Verify the push from step 2; re-run from step 3 |
-| 4 | The build session stalls, times out, or leaves acceptance criteria incomplete | Leave the PR draft and comment the resume command (`.oh/scripts/firstmate.sh <slug>` / attach `agent-spec-<slug>`). A missing `tmux` is not a failure here — the executor's ladder degrades to foreground on its own |
+| 4 | The build session stalls, times out, or leaves acceptance criteria incomplete | Leave the PR draft and comment the resume command (`.oh/scripts/spec-build.sh <slug>` / attach `agent-spec-<slug>`). A missing `tmux` is not a failure here — the executor's ladder degrades to foreground on its own |
 | 5 | `/eval` reports a NEW green→red regression or exits non-zero | Leave the PR draft; fix or document the regression, then re-run `/eval` |
 | 5 | Wiki impact REQUIRED but entries are missing, stale against the implemented behavior, or the README index probe fails | Leave the PR draft; fix the wiki entries/index, then re-run the wiki gate |
 | 5 | `/compact` unavailable or errors | Non-blocking; log a warning and continue |
@@ -526,7 +526,7 @@ Every step checks for prior state and resumes rather than duplicating:
 | 1 | The issue named by `prd.json`'s `branchName` exists, or `--pr <N>` was passed | Reuse `<N>`; never create a duplicate |
 | 2 | Branch exists on the target remote | Checkout + commit on top |
 | 3 | Draft PR exists for this branch | Update the body; do not create a duplicate |
-| 4 | `progress.txt` already says `STATUS: COMPLETE`; or the `agent-spec-<slug>` / `agent-firstmate-<slug>` session is already running | Skip relaunch — attach/monitor the existing session (the executor refuses a second launch while `/tmp/firstmate-<slug>.lock` is held); worktree present → reuse |
+| 4 | `progress.txt` already says `STATUS: COMPLETE`; or the `agent-spec-<slug>` / `agent-build-<slug>` session is already running | Skip relaunch — attach/monitor the existing session (the executor refuses a second launch while `/tmp/build-<slug>.lock` is held); worktree present → reuse |
 | 5 | `.oh/evals/RESULTS.md` already reflects the current probe set and no new regression exists | Continue; otherwise re-run `/eval` |
 | 5 | Wiki impact NOT-APPLICABLE, or required entries already match the implementation and the index probe passes | Continue |
 | 6 | `evidence.md` exists and correlates to the CURRENT audit run id | Reuse; a doc citing a stale run id is rewritten, not kept |
@@ -576,8 +576,8 @@ auto-merge.
 
 | Primitive | Path | Role |
 |---|---|---|
-| `.oh/scripts/firstmate.sh` | `.oh/scripts/firstmate.sh` | Step 4 — the one build executor: one long-lived session over the whole task graph, run inside the worktree |
-| Session-prompt template | `.oh/skills/firstmate/templates/session-prompt.md` | The one prompt template the executor renders |
+| `.oh/scripts/spec-build.sh` | `.oh/scripts/spec-build.sh` | Step 4 — the one build executor: one long-lived session over the whole task graph, run inside the worktree |
+| Session-prompt template | `.oh/skills/spec/templates/session-prompt.md` | The one prompt template the executor renders |
 | `/worktrees` skill | `.claude/skills/worktrees/SKILL.md` | Step 4 — isolated `.oh/worktrees/<branch>` for the implementation |
 | `/goal` (Pi extension) | `.pi/settings.json` (`@narumitw/pi-goal`) | Step 4 — persists the Advisor run to completion |
 | `/delegate` skill | `.claude/skills/delegate/SKILL.md` | Step 4 — optional within-story fan-out inside the build session |

@@ -19,12 +19,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
-const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "firstmate.sh");
+const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "spec-build.sh");
 const LIB = path.join(REPO_ROOT, ".oh", "scripts", "lib", "session-runner.sh");
 const TEMPLATE_REL = path.join(
   ".oh",
   "skills",
-  "firstmate",
+  "spec",
   "templates",
   "session-prompt.md",
 );
@@ -185,8 +185,8 @@ function makeRepo(
     taskDir,
     progressFile: path.join(taskDir, "progress.txt"),
     runnerTmp,
-    lock: path.join(runnerTmp, `firstmate-${slug}.lock`),
-    promptFile: path.join(runnerTmp, `firstmate-${slug}.prompt.md`),
+    lock: path.join(runnerTmp, `build-${slug}.lock`),
+    promptFile: path.join(runnerTmp, `build-${slug}.prompt.md`),
     callsFile: path.join(root, "calls.txt"),
   };
 }
@@ -255,7 +255,7 @@ function matchingProbeOutput(worktree: string): string {
     ["-c", `source '${LIB}'\nrunner_local_fingerprint '${worktree}'`],
     { encoding: "utf-8" },
   );
-  return `FIRSTMATE-FINGERPRINT ${(r.stdout ?? "").trim()}`;
+  return `BUILD-SESSION-FINGERPRINT ${(r.stdout ?? "").trim()}`;
 }
 
 
@@ -368,7 +368,7 @@ describe("single-executor surface", () => {
 
 
 describe("launch-claim lock", () => {
-  it("claims /tmp/firstmate-<slug>.lock with an atomic mkdir on a clean launch", () => {
+  it("claims /tmp/build-<slug>.lock with an atomic mkdir on a clean launch", () => {
     const repo = makeRepo("lock-slug");
     const bin = makeBin({ tmux: true });
     const r = run(["--runner", "tmux", "--no-watch", "lock-slug"], {
@@ -390,7 +390,7 @@ describe("launch-claim lock", () => {
     const r = run(["--runner", "tmux", "--no-watch", "live-slug"], {
       repo,
       bin,
-      env: { STUB_TMUX_SESSIONS: "agent-firstmate-live-slug" },
+      env: { STUB_TMUX_SESSIONS: "agent-build-live-slug" },
     });
 
     expect(r.status).not.toBe(0);
@@ -416,7 +416,7 @@ describe("launch-claim lock", () => {
     });
     expect(live.status).not.toBe(0);
     expect(live.stderr).toContain("already running");
-    expect(readCalls(repo)).toContain("herdr agent get firstmate-held-slug");
+    expect(readCalls(repo)).toContain("herdr agent get build-held-slug");
 
     const gone = run(["--runner", "herdr", "--no-watch", "held-slug"], {
       repo,
@@ -453,7 +453,7 @@ describe("launch-claim lock", () => {
 
 
 describe("exit paths", () => {
-  it("removes the lock and appends FIRSTMATE-INCOMPLETE after a launch failure", () => {
+  it("removes the lock and appends BUILD-SESSION-INCOMPLETE after a launch failure", () => {
     const repo = makeRepo("fail-slug");
     const bin = makeBin({ tmux: true });
     const r = run(["--runner", "tmux", "--no-watch", "fail-slug"], {
@@ -465,7 +465,7 @@ describe("exit paths", () => {
     expect(r.status).not.toBe(0);
     expect(existsSync(repo.lock)).toBe(false);
     const progress = readFileSync(repo.progressFile, "utf-8");
-    expect(progress).toContain("FIRSTMATE-INCOMPLETE");
+    expect(progress).toContain("BUILD-SESSION-INCOMPLETE");
     expect(progress).toContain("launch failure");
   });
 
@@ -486,7 +486,7 @@ describe("exit paths", () => {
     expect(r.stderr).toContain("different environment");
     expect(existsSync(repo.lock)).toBe(false);
     expect(readFileSync(repo.progressFile, "utf-8")).toContain(
-      "FIRSTMATE-INCOMPLETE",
+      "BUILD-SESSION-INCOMPLETE",
     );
   });
 });
@@ -507,7 +507,7 @@ describe("render_session_prompt", () => {
     const survivors = [...r.stdout.matchAll(/<[^ <>]+>/g)].map((m) => m[0]);
     expect(survivors).toEqual([]);
 
-    expect(r.stdout).toContain("# First Mate session — demo-slug");
+    expect(r.stdout).toContain("# Build Session — demo-slug");
     expect(r.stdout).toContain(".oh/tasks/demo-slug/prd.json");
     expect(r.stdout).toContain("feat/9-demo");
     expect(r.stdout).toContain("Issue: #9");
@@ -568,8 +568,8 @@ describe("render_session_prompt", () => {
   it("resolves the branch and issue from prd.json", () => {
     const repo = makeRepo("meta-slug", { branch: "feat/77-meta" });
     const prd = path.join(repo.taskDir, "prd.json");
-    const branch = sourceCall(`firstmate_branch_name '${prd}'`);
-    const issue = sourceCall(`firstmate_issue_number '${prd}'`);
+    const branch = sourceCall(`spec_build_branch_name '${prd}'`);
+    const issue = sourceCall(`spec_build_issue_number '${prd}'`);
     expect(branch.stdout.trim()).toBe("feat/77-meta");
     expect(issue.stdout.trim()).toBe("4242");
   });
@@ -577,8 +577,8 @@ describe("render_session_prompt", () => {
   it("renders BARE DIGITS for the issue — the template writes its own #", () => {
     const repo = makeRepo("hash-slug");
     const prd = path.join(repo.taskDir, "prd.json");
-    const r = sourceCall(`firstmate_issue_number '${prd}'`, {
-      env: { PATH: process.env.PATH, FIRSTMATE_ISSUE: "#812" },
+    const r = sourceCall(`spec_build_issue_number '${prd}'`, {
+      env: { PATH: process.env.PATH, SPEC_BUILD_ISSUE: "#812" },
     });
     expect(r.stdout.trim()).toBe("812");
   });
@@ -596,11 +596,11 @@ describe("launch", () => {
 
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("runner:   tmux");
-    expect(r.stdout).toContain("handle:   agent-firstmate-report-slug");
+    expect(r.stdout).toContain("handle:   agent-build-report-slug");
     expect(r.stdout).toContain(
-      path.join(repo.runnerTmp, "agent-firstmate-report-slug.log"),
+      path.join(repo.runnerTmp, "agent-build-report-slug.log"),
     );
-    expect(r.stdout).toContain("watch:    tmux attach -t agent-firstmate-report-slug");
+    expect(r.stdout).toContain("watch:    tmux attach -t agent-build-report-slug");
     expect(r.stdout).toContain("budget:   14400000ms");
   });
 
@@ -616,20 +616,20 @@ describe("launch", () => {
 
     expect(r.status).toBe(0);
     expect(r.stdout).toContain("runner:   herdr");
-    expect(r.stdout).toContain("handle:   firstmate-herdr-slug (pane w7:p3)");
+    expect(r.stdout).toContain("handle:   build-herdr-slug (pane w7:p3)");
     expect(r.stdout).not.toContain(
-      path.join(repo.runnerTmp, "firstmate-herdr-slug.log"),
+      path.join(repo.runnerTmp, "build-herdr-slug.log"),
     );
     expect(r.stdout).toContain("log:      (herdr pane capture");
-    expect(r.stdout).toContain("watch:    herdr agent read firstmate-herdr-slug");
+    expect(r.stdout).toContain("watch:    herdr agent read build-herdr-slug");
 
     const calls = readCalls(repo);
-    expect(calls).toContain("herdr agent start firstmate-herdr-slug");
+    expect(calls).toContain("herdr agent start build-herdr-slug");
     expect(calls).toContain("--no-focus");
     expect(calls).toContain("herdr pane list");
   });
 
-  it("writes the rendered prompt to /tmp/firstmate-<slug>.prompt.md and launches from it", () => {
+  it("writes the rendered prompt to /tmp/build-<slug>.prompt.md and launches from it", () => {
     const repo = makeRepo("prompt-slug");
     const bin = makeBin({ tmux: true });
     const r = run(["--runner", "tmux", "--no-watch", "prompt-slug"], {
@@ -640,7 +640,7 @@ describe("launch", () => {
     expect(r.status).toBe(0);
     expect(existsSync(repo.promptFile)).toBe(true);
     const rendered = readFileSync(repo.promptFile, "utf-8");
-    expect(rendered).toContain("# First Mate session — prompt-slug");
+    expect(rendered).toContain("# Build Session — prompt-slug");
     expect(rendered).toContain("feat/4242-prompt-slug");
     expect(rendered).not.toContain("<slug>");
 
@@ -651,7 +651,7 @@ describe("launch", () => {
     expect(calls).not.toContain("--print");
   });
 
-  it("honours FIRSTMATE_HARNESS_CMD and exports the session's own signals", () => {
+  it("honours SPEC_BUILD_HARNESS_CMD and exports the session's own signals", () => {
     const repo = makeRepo("env-slug");
     const bin = makeBin({ tmux: true });
     const marker = path.join(repo.root, "env-marker.txt");
@@ -659,7 +659,7 @@ describe("launch", () => {
       repo,
       bin,
       env: {
-        FIRSTMATE_HARNESS_CMD: `printf 'session=%s slug=%s prompt=%s\\n' "$FIRSTMATE_SESSION" "$FIRSTMATE_SLUG" "$FIRSTMATE_PROMPT_FILE" > ${marker}`,
+        SPEC_BUILD_HARNESS_CMD: `printf 'session=%s slug=%s prompt=%s\\n' "$SPEC_BUILD_SESSION" "$SPEC_BUILD_SLUG" "$SPEC_BUILD_PROMPT_FILE" > ${marker}`,
       },
     });
 
@@ -685,7 +685,7 @@ describe("watch to completion", () => {
       bin,
       env: {
         RUNNER_POLL_INTERVAL_S: "1",
-        FIRSTMATE_HARNESS_CMD: `printf 'STATUS: COMPLETE\\n' >> "$FIRSTMATE_TASK_DIR/progress.txt"`,
+        SPEC_BUILD_HARNESS_CMD: `printf 'STATUS: COMPLETE\\n' >> "$SPEC_BUILD_TASK_DIR/progress.txt"`,
       },
     });
 
@@ -693,7 +693,7 @@ describe("watch to completion", () => {
     expect(r.stdout).toContain("STATUS: COMPLETE observed");
     expect(existsSync(repo.lock)).toBe(false);
     expect(readFileSync(repo.progressFile, "utf-8")).not.toContain(
-      "FIRSTMATE-INCOMPLETE",
+      "BUILD-SESSION-INCOMPLETE",
     );
   });
 });
@@ -714,12 +714,12 @@ describe("--kill", () => {
     expect(r.status).toBe(0);
     expect(existsSync(repo.lock)).toBe(false);
     expect(readFileSync(repo.progressFile, "utf-8")).toContain(
-      "FIRSTMATE-INCOMPLETE",
+      "BUILD-SESSION-INCOMPLETE",
     );
 
     const calls = readCalls(repo);
     expect(calls).toContain("herdr pane close w7:p3");
-    expect(calls).toContain("tmux kill-session -t agent-firstmate-kill-slug");
+    expect(calls).toContain("tmux kill-session -t agent-build-kill-slug");
     expect(calls).not.toContain("agent stop");
     expect(calls).not.toContain("agent kill");
     expect(calls).not.toContain("server stop");

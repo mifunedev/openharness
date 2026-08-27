@@ -15,10 +15,10 @@ RUNNER_POLL_INTERVAL_S="${RUNNER_POLL_INTERVAL_S:-5}"
 
 RUNNER_TMPDIR="${RUNNER_TMPDIR:-/tmp}"
 
-RUNNER_FINGERPRINT_MARKER='FIRSTMATE-FINGERPRINT'
+RUNNER_FINGERPRINT_MARKER='BUILD-SESSION-FINGERPRINT'
 
 # shellcheck disable=SC2016  # deliberately unexpanded: this is a script to be
-RUNNER_PROBE_SCRIPT='wt="$1"; h="$(hostname 2>/dev/null || uname -n 2>/dev/null || echo unknown)"; d=no; [ -e /.dockerenv ] && d=yes; w=no; [ -d "$wt" ] && w=yes; printf "FIRSTMATE-FINGERPRINT host=%s docker=%s worktree=%s\n" "$h" "$d" "$w"'
+RUNNER_PROBE_SCRIPT='wt="$1"; h="$(hostname 2>/dev/null || uname -n 2>/dev/null || echo unknown)"; d=no; [ -e /.dockerenv ] && d=yes; w=no; [ -d "$wt" ] && w=yes; printf "BUILD-SESSION-FINGERPRINT host=%s docker=%s worktree=%s\n" "$h" "$d" "$w"'
 
 RUNNER_PROBE_KEEPALIVE_SUFFIX='; sleep "${2:-30}"'
 
@@ -27,16 +27,16 @@ RUNNER_FG_PID="${RUNNER_FG_PID:-}"
 RUNNER_INELIGIBLE_REASON="${RUNNER_INELIGIBLE_REASON:-}"
 
 
-runner_agent_name() { printf '%s\n' "firstmate-${1:-}"; }
-runner_tmux_session() { printf '%s\n' "agent-firstmate-${1:-}"; }
-runner_lock_path() { printf '%s\n' "$RUNNER_TMPDIR/firstmate-${1:-}.lock"; }
+runner_agent_name() { printf '%s\n' "build-${1:-}"; }
+runner_tmux_session() { printf '%s\n' "agent-build-${1:-}"; }
+runner_lock_path() { printf '%s\n' "$RUNNER_TMPDIR/build-${1:-}.lock"; }
 
-runner_log_path() { printf '%s\n' "$RUNNER_TMPDIR/firstmate-${1:-}.log"; }
+runner_log_path() { printf '%s\n' "$RUNNER_TMPDIR/build-${1:-}.log"; }
 
 runner_session_log_path() {
   case "${1:-}" in
-    tmux) printf '%s\n' "$RUNNER_TMPDIR/agent-firstmate-${2:-}.log" ;;
-    *) printf '%s\n' "$RUNNER_TMPDIR/firstmate-${2:-}.log" ;;
+    tmux) printf '%s\n' "$RUNNER_TMPDIR/agent-build-${2:-}.log" ;;
+    *) printf '%s\n' "$RUNNER_TMPDIR/build-${2:-}.log" ;;
   esac
 }
 
@@ -53,12 +53,12 @@ resolve_timeout_ms() {
   local slug="${1:-unknown}"
   local default_ms="$RUNNER_DEFAULT_TIMEOUT_MS"
 
-  if [ -z "${FIRSTMATE_TIMEOUT_MS+set}" ]; then
+  if [ -z "${BUILD_SESSION_TIMEOUT_MS+set}" ]; then
     printf '%s\n' "$default_ms"
     return 0
   fi
 
-  local raw="$FIRSTMATE_TIMEOUT_MS"
+  local raw="$BUILD_SESSION_TIMEOUT_MS"
   local why=""
   if [ -z "$raw" ]; then
     why="empty"
@@ -75,7 +75,7 @@ resolve_timeout_ms() {
   fi
 
   if [ -n "$why" ]; then
-    runner_log "$slug" "resolve_timeout_ms: rejected FIRSTMATE_TIMEOUT_MS='$raw' ($why) — using default ${default_ms}ms"
+    runner_log "$slug" "resolve_timeout_ms: rejected BUILD_SESSION_TIMEOUT_MS='$raw' ($why) — using default ${default_ms}ms"
     printf '%s\n' "$default_ms"
     return 0
   fi
@@ -123,7 +123,7 @@ runner_extract_fingerprint() {
 runner_local_fingerprint() {
   local -
   set -o pipefail
-  bash -lc "$RUNNER_PROBE_SCRIPT" firstmate-probe "${1:-}" 2>/dev/null | runner_extract_fingerprint
+  bash -lc "$RUNNER_PROBE_SCRIPT" build-session-probe "${1:-}" 2>/dev/null | runner_extract_fingerprint
 }
 
 runner_probe_keepalive_s() {
@@ -156,12 +156,12 @@ runner_probe_fingerprint() {
   local -
   set -o pipefail
   local slug="${1:-}" worktree="${2:-}"
-  local probe_name="firstmate-probe-$slug-$$"
+  local probe_name="build-session-probe-$slug-$$"
   local start_json pane_id probe_out fingerprint keepalive_s
 
   keepalive_s="$(runner_probe_keepalive_s)"
   start_json="$(herdr agent start "$probe_name" --cwd "$worktree" --no-focus \
-    -- bash -lc "$(runner_probe_pane_script)" firstmate-probe "$worktree" "$keepalive_s" 2>/dev/null)" || start_json=""
+    -- bash -lc "$(runner_probe_pane_script)" build-session-probe "$worktree" "$keepalive_s" 2>/dev/null)" || start_json=""
   pane_id="$(runner_parse_pane_id "$start_json")"
 
   if [ -z "$pane_id" ]; then
@@ -455,11 +455,11 @@ runner_abort() {
   fi
 
   if [ -n "$task_dir" ] && [ -f "$task_dir/progress.txt" ]; then
-    printf 'FIRSTMATE-INCOMPLETE %s — %s\n' \
+    printf 'BUILD-SESSION-INCOMPLETE %s — %s\n' \
       "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$reason" >>"$task_dir/progress.txt" 2>/dev/null || true
   fi
 
-  runner_log "$slug" "abort: $reason — teardown done, lock removed, FIRSTMATE-INCOMPLETE appended"
+  runner_log "$slug" "abort: $reason — teardown done, lock removed, BUILD-SESSION-INCOMPLETE appended"
   return 0
 }
 

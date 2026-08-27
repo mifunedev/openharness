@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: .oh/tasks/spec-simplification/ (issue #816, US-002) — one build executor, no toggle
-# desc: .oh/scripts/firstmate.sh exists and is executable; the whole-line `STATUS: COMPLETE`
+# desc: .oh/scripts/spec-build.sh exists and is executable; the whole-line `STATUS: COMPLETE`
 #       sentinel survives on the executor surface; NO executor toggle exists anywhere
 #       (--executor / SPEC_EXECUTOR / AUTOPILOT_EXECUTOR are removed, not reduced to a
 #       single accepted value); the session-prompt template's ordered anchor keywords appear in
@@ -12,31 +12,31 @@
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-FIRSTMATE="$ROOT/.oh/scripts/firstmate.sh"
+SPEC_BUILD="$ROOT/.oh/scripts/spec-build.sh"
 RUNNER="$ROOT/.oh/scripts/lib/session-runner.sh"
-TEMPLATE="$ROOT/.oh/skills/firstmate/templates/session-prompt.md"
+TEMPLATE="$ROOT/.oh/skills/spec/templates/session-prompt.md"
 SPEC="$ROOT/.claude/skills/spec/references/execute.md"
 
 missing=()
 
-if [ ! -f "$FIRSTMATE" ]; then
-  missing+=(".oh/scripts/firstmate.sh absent (the build-executor entrypoint is gone)")
-elif [ ! -x "$FIRSTMATE" ]; then
-  missing+=(".oh/scripts/firstmate.sh is not executable")
+if [ ! -f "$SPEC_BUILD" ]; then
+  missing+=(".oh/scripts/spec-build.sh absent (the build-executor entrypoint is gone)")
+elif [ ! -x "$SPEC_BUILD" ]; then
+  missing+=(".oh/scripts/spec-build.sh is not executable")
 fi
 
-if [ -f "$FIRSTMATE" ]; then
-  grep -Fq 'STATUS: COMPLETE' "$FIRSTMATE" \
-    || missing+=("firstmate.sh does not name the STATUS: COMPLETE sentinel")
+if [ -f "$SPEC_BUILD" ]; then
+  grep -Fq 'STATUS: COMPLETE' "$SPEC_BUILD" \
+    || missing+=("spec-build.sh does not name the STATUS: COMPLETE sentinel")
 fi
 if [ -f "$RUNNER" ]; then
   grep -Fq '^STATUS: COMPLETE$' "$RUNNER" \
     || missing+=("session-runner.sh: the whole-line sentinel match ^STATUS: COMPLETE\$ is gone (a substring match would fire on prose)")
 fi
 
-if [ -f "$FIRSTMATE" ]; then
-  grep -Fq 'lib/session-runner.sh' "$FIRSTMATE" \
-    || missing+=("firstmate.sh no longer sources .oh/scripts/lib/session-runner.sh (the executor and the ladder have diverged)")
+if [ -f "$SPEC_BUILD" ]; then
+  grep -Fq 'lib/session-runner.sh' "$SPEC_BUILD" \
+    || missing+=("spec-build.sh no longer sources .oh/scripts/lib/session-runner.sh (the executor and the ladder have diverged)")
 fi
 
 for pair in "spec-execute:$SPEC"; do
@@ -69,7 +69,7 @@ ANCHORS=(
   'Ready PR'
 )
 if [ ! -f "$TEMPLATE" ]; then
-  missing+=(".oh/skills/firstmate/templates/session-prompt.md absent (the session prompt the executor renders is gone)")
+  missing+=(".oh/skills/spec/templates/session-prompt.md absent (the session prompt the executor renders is gone)")
 else
   body="$(awk '/END CONTRACT HEADER -->/{f=1; next} f' "$TEMPLATE")"
   if [ -z "$body" ]; then
@@ -96,8 +96,6 @@ fi
   && missing+=(".oh/prompts/advisor/ is back — the second implementation path was deleted in US-004 and must stay deleted")
 [ -e "$ROOT/.pi/prompts/advisor" ] \
   && missing+=(".pi/prompts/advisor/ is back — the Pi mirror of the deleted pack must stay deleted")
-[ -e "$ROOT/.oh/context/rules/first-mate.md" ] \
-  && missing+=(".oh/context/rules/first-mate.md is back — the role charter was deleted with its pack in US-004")
 if [ -f "$TEMPLATE" ]; then
   grep -Fq 'THIS FILE IS THE SOURCE' "$TEMPLATE" \
     || missing+=("session-prompt.md no longer claims ownership of the step order (it is the source now, not a mirror)")
@@ -113,5 +111,5 @@ if [ "${#missing[@]}" -gt 0 ]; then
   exit 1
 fi
 
-echo "PASS: firstmate.sh executable + sentinel intact, no executor toggle anywhere, second arm deleted, session-prompt owns its anchor order, the deleted prompt pack + charter stay deleted, CLAUDE.md->AGENTS.md" >&2
+echo "PASS: spec-build.sh executable + sentinel intact, no executor toggle anywhere, second arm deleted, session-prompt owns its anchor order, the deleted prompt pack + charter stay deleted, CLAUDE.md->AGENTS.md" >&2
 exit 0

@@ -59,7 +59,7 @@ These names describe separate layers, not interchangeable jobs:
   completion marker appears. The reference implementation is the build
   executor's per-story cycle, which walks a task graph until `progress.txt`
   contains the line `STATUS: COMPLETE`.
-  Source: [`.oh/scripts/firstmate.sh`](../scripts/firstmate.sh).
+  Source: [`.oh/scripts/spec-build.sh`](../scripts/spec-build.sh).
 
 - **model** — The LLM an agent or CLI uses to produce reasoning, text, and
   tool-call requests. The model is only one part of an agent session; the
@@ -94,9 +94,9 @@ These names describe separate layers, not interchangeable jobs:
   host machine. Source: [`.devcontainer/`](../../.devcontainer/).
 
 - **session** — A single named run of an agent, typically a tmux session in the
-  sandbox. `firstmate.sh` launches its build session through the herdr → tmux →
+  sandbox. `spec-build.sh` launches its build session through the herdr → tmux →
   foreground ladder.
-  Source: [`.oh/scripts/firstmate.sh`](../scripts/firstmate.sh) and
+  Source: [`.oh/scripts/spec-build.sh`](../scripts/spec-build.sh) and
   [`sandbox-processes.md`](../skills/t3/references/sandbox-processes.md).
 
 - **skill** — A packaged, invocable workflow (a `SKILL.md` plus optional

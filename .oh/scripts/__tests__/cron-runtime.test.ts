@@ -458,7 +458,6 @@ describe("buildTmuxWrapper", () => {
     expect(wrapper).toContain(
       'codex exec --sandbox danger-full-access "$(cat \'/tmp/cron-autopilot-0610-1805.prompt\')" 2>&1 | tee -a \'/tmp/cron-autopilot-0610-1805.log\'',
     );
-    expect(wrapper).toContain("export FIRSTMATE_HARNESS=codex;");
     expect(wrapper).toContain("AGENT_DONE");
     expect(wrapper).toContain('agent=$active_agent exit=$status');
   });
@@ -499,7 +498,6 @@ describe("buildCronAgentCommand", () => {
     expect(command).toContain('claude -p "$(cat \'/tmp/cron-global.prompt\')"');
     expect(command).toContain("grep -Eiq");
     expect(command).toContain("AGENT_START");
-    expect(command).toContain("export FIRSTMATE_HARNESS=codex;");
     expect(command).toContain("AGENT_FALLBACK");
     expect(command).toContain(
       'codex exec --sandbox danger-full-access "$(cat \'/tmp/cron-global.prompt\')"',
@@ -533,7 +531,6 @@ describe("buildCronAgentCommand", () => {
     expect(command).toContain("AGENT_DONE");
     expect(command).toContain('agent=$active_agent exit=$status');
     expect(command).not.toContain("codex exec");
-    expect(command).not.toContain("FIRSTMATE_HARNESS=codex");
     expect(command).not.toContain("AGENT_FALLBACK");
   });
 

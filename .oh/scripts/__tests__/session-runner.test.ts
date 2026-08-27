@@ -219,7 +219,7 @@ function makeTask(slug: string, progress = "# progress\n") {
     worktree,
     runnerTmp,
     progressFile: path.join(taskDir, "progress.txt"),
-    lock: path.join(runnerTmp, `firstmate-${slug}.lock`),
+    lock: path.join(runnerTmp, `build-${slug}.lock`),
     callsFile: path.join(root, "calls.txt"),
   };
 }
@@ -245,7 +245,7 @@ function callerFingerprint(worktree: string): string {
 describe("resolve_timeout_ms", () => {
   const DEFAULT = "14400000";
 
-  it("defaults to 14400000 (4h) when FIRSTMATE_TIMEOUT_MS is unset", () => {
+  it("defaults to 14400000 (4h) when BUILD_SESSION_TIMEOUT_MS is unset", () => {
     const t = makeTask("budget");
     const r = sh(`resolve_timeout_ms budget`, {
       env: { PATH: process.env.PATH, RUNNER_TMPDIR: t.runnerTmp },
@@ -260,7 +260,7 @@ describe("resolve_timeout_ms", () => {
       env: {
         PATH: process.env.PATH,
         RUNNER_TMPDIR: t.runnerTmp,
-        FIRSTMATE_TIMEOUT_MS: "60000",
+        BUILD_SESSION_TIMEOUT_MS: "60000",
       },
     });
     expect(r.stdout.trim()).toBe("60000");
@@ -273,22 +273,22 @@ describe("resolve_timeout_ms", () => {
     ["non-numeric", "abc"],
     ["empty", ""],
   ] as const) {
-    it(`rejects a ${label} FIRSTMATE_TIMEOUT_MS, falls back to the default, and logs it`, () => {
+    it(`rejects a ${label} BUILD_SESSION_TIMEOUT_MS, falls back to the default, and logs it`, () => {
       const t = makeTask("budget");
       const r = sh(`resolve_timeout_ms budget`, {
         env: {
           PATH: process.env.PATH,
           RUNNER_TMPDIR: t.runnerTmp,
-          FIRSTMATE_TIMEOUT_MS: value,
+          BUILD_SESSION_TIMEOUT_MS: value,
         },
       });
       expect(r.stdout.trim()).toBe(DEFAULT);
-      expect(r.stderr).toContain("rejected FIRSTMATE_TIMEOUT_MS");
+      expect(r.stderr).toContain("rejected BUILD_SESSION_TIMEOUT_MS");
       const log = readFileSync(
-        path.join(t.runnerTmp, "firstmate-budget.log"),
+        path.join(t.runnerTmp, "build-budget.log"),
         "utf-8",
       );
-      expect(log).toContain("rejected FIRSTMATE_TIMEOUT_MS");
+      expect(log).toContain("rejected BUILD_SESSION_TIMEOUT_MS");
     });
   }
 });
@@ -347,7 +347,7 @@ describe("runner_detect ladder", () => {
     const r = sh(`runner_detect ladder '${t.worktree}'`, {
       env: detectEnv(t, bin, {
         STUB_HERDR_PROBE_OUT:
-          "FIRSTMATE-FINGERPRINT host=some-other-host docker=no worktree=no",
+          "BUILD-SESSION-FINGERPRINT host=some-other-host docker=no worktree=no",
       }),
     });
     expect(r.stdout.trim()).toBe("tmux");
@@ -355,7 +355,7 @@ describe("runner_detect ladder", () => {
     expect(r.stderr).toMatch(/fingerprint mismatch on [a-z,]*host/);
     expect(r.stderr).toContain("host=some-other-host");
     const log = readFileSync(
-      path.join(t.runnerTmp, "firstmate-ladder.log"),
+      path.join(t.runnerTmp, "build-ladder.log"),
       "utf-8",
     );
     expect(log).toContain("fingerprint mismatch");
@@ -367,7 +367,7 @@ describe("runner_detect ladder", () => {
     sh(`runner_detect ladder '${t.worktree}'`, {
       env: detectEnv(t, bin, {
         STUB_HERDR_PROBE_OUT:
-          "FIRSTMATE-FINGERPRINT host=some-other-host docker=no worktree=no",
+          "BUILD-SESSION-FINGERPRINT host=some-other-host docker=no worktree=no",
       }),
     });
     const calls = readFileSync(t.callsFile, "utf-8");
@@ -380,7 +380,7 @@ describe("runner_detect ladder", () => {
     const bin = makeBin({ herdr: true, tmux: true, isolated: true });
     const r = sh(`runner_detect ladder '${t.worktree}'`, {
       env: detectEnv(t, bin, {
-        STUB_HERDR_PROBE_OUT: `FIRSTMATE-FINGERPRINT ${callerFingerprint(t.worktree)}`,
+        STUB_HERDR_PROBE_OUT: `BUILD-SESSION-FINGERPRINT ${callerFingerprint(t.worktree)}`,
       }),
     });
     expect(r.stdout.trim()).toBe("herdr");
@@ -393,7 +393,7 @@ describe("runner_detect ladder", () => {
     const bin = makeBin({ herdr: true, tmux: true, isolated: true });
     sh(`runner_detect ladder '${t.worktree}'`, {
       env: detectEnv(t, bin, {
-        STUB_HERDR_PROBE_OUT: `FIRSTMATE-FINGERPRINT ${callerFingerprint(t.worktree)}`,
+        STUB_HERDR_PROBE_OUT: `BUILD-SESSION-FINGERPRINT ${callerFingerprint(t.worktree)}`,
         RUNNER_PROBE_TIMEOUT_MS: "20000",
       }),
     });
@@ -409,7 +409,7 @@ describe("runner_detect ladder", () => {
     const bin = makeBin({ herdr: true, tmux: true, isolated: true });
     const forgiving = sh(`runner_detect ladder '${t.worktree}'`, {
       env: detectEnv(t, bin, {
-        STUB_HERDR_PROBE_OUT: `FIRSTMATE-FINGERPRINT ${callerFingerprint(t.worktree)}`,
+        STUB_HERDR_PROBE_OUT: `BUILD-SESSION-FINGERPRINT ${callerFingerprint(t.worktree)}`,
         STUB_HERDR_PANE_MODEL: "none",
       }),
     });
@@ -418,7 +418,7 @@ describe("runner_detect ladder", () => {
     const t2 = makeTask("ladder");
     const faithful = sh(`runner_detect ladder '${t2.worktree}'`, {
       env: detectEnv(t2, bin, {
-        STUB_HERDR_PROBE_OUT: `FIRSTMATE-FINGERPRINT ${callerFingerprint(t2.worktree)}`,
+        STUB_HERDR_PROBE_OUT: `BUILD-SESSION-FINGERPRINT ${callerFingerprint(t2.worktree)}`,
       }),
     });
     expect(faithful.stdout.trim()).toBe("herdr");
@@ -431,7 +431,7 @@ describe("runner_detect ladder", () => {
       env: detectEnv(t, bin),
     });
     expect(r.stdout).not.toContain("sleep");
-    expect(r.stdout).toContain("FIRSTMATE-FINGERPRINT");
+    expect(r.stdout).toContain("BUILD-SESSION-FINGERPRINT");
 
     const started = Date.now();
     const local = sh(`runner_local_fingerprint '${t.worktree}'`, {
@@ -508,7 +508,7 @@ describe("runner_detect overrides", () => {
         RUNNER_TMPDIR: t.runnerTmp,
         STUB_CALLS: t.callsFile,
         STUB_HERDR_PROBE_OUT:
-          "FIRSTMATE-FINGERPRINT host=some-other-host docker=no worktree=no",
+          "BUILD-SESSION-FINGERPRINT host=some-other-host docker=no worktree=no",
       },
     });
     expect(r.status).not.toBe(0);
@@ -586,7 +586,7 @@ describe("runner_launch", () => {
       .find((l) => l.includes("agent start"));
     expect(start).toBeDefined();
     expect(start).toContain("--no-focus");
-    expect(start).toContain("firstmate-launch");
+    expect(start).toContain("build-launch");
     expect(start).not.toContain("| tee");
     expect(start).not.toContain("2>&1");
     expect(start).toContain(`cd ${t.worktree} &&`);
@@ -606,15 +606,15 @@ describe("runner_launch", () => {
       .split("\n")
       .find((l) => l.includes("new-session"));
     expect(call).toBeDefined();
-    expect(call).toContain("-s agent-firstmate-launch");
+    expect(call).toContain("-s agent-build-launch");
     expect(call).toContain(`-c ${t.worktree}`);
     expect(call).not.toContain("| tee");
     const pipePane = readFileSync(t.callsFile, "utf-8")
       .split("\n")
       .find((l) => l.includes("pipe-pane"));
     expect(pipePane).toBeDefined();
-    expect(pipePane).toContain("-t agent-firstmate-launch");
-    expect(pipePane).toContain(`${t.runnerTmp}/agent-firstmate-launch.log`);
+    expect(pipePane).toContain("-t agent-build-launch");
+    expect(pipePane).toContain(`${t.runnerTmp}/agent-build-launch.log`);
   });
 
   it("lets the foreground child inherit stdio and writes no session log", () => {
@@ -624,8 +624,8 @@ describe("runner_launch", () => {
       { env: { PATH: process.env.PATH, RUNNER_TMPDIR: t.runnerTmp } },
     );
     expect(r.stdout).toContain("hello-foreground");
-    const narrative = existsSync(`${t.runnerTmp}/firstmate-launch.log`)
-      ? readFileSync(`${t.runnerTmp}/firstmate-launch.log`, "utf-8")
+    const narrative = existsSync(`${t.runnerTmp}/build-launch.log`)
+      ? readFileSync(`${t.runnerTmp}/build-launch.log`, "utf-8")
       : "";
     expect(narrative).not.toContain("hello-foreground");
     expect(narrative).toContain("stdio inherited; no session log");
@@ -711,7 +711,7 @@ describe("runner_alive", () => {
     });
     expect(live.stdout).toContain("LIVE");
     expect(readFileSync(t.callsFile, "utf-8")).toContain(
-      "herdr agent get firstmate-alive",
+      "herdr agent get build-alive",
     );
 
     const gone = sh(`runner_alive herdr alive || echo GONE`, {
@@ -733,7 +733,7 @@ describe("runner_alive", () => {
     });
     expect(live.stdout).toContain("LIVE");
     expect(readFileSync(t.callsFile, "utf-8")).toContain(
-      "tmux has-session -t agent-firstmate-alive",
+      "tmux has-session -t agent-build-alive",
     );
 
     const gone = sh(`runner_alive tmux alive || echo GONE`, {
@@ -757,7 +757,7 @@ describe("runner_teardown", () => {
       },
     });
     const calls = readFileSync(t.callsFile, "utf-8");
-    expect(calls).toContain("herdr agent get firstmate-down");
+    expect(calls).toContain("herdr agent get build-down");
     expect(calls).toContain("herdr pane close w3:p8");
     expect(calls).not.toContain("agent stop");
     expect(calls).not.toContain("agent kill");
@@ -774,7 +774,7 @@ describe("runner_teardown", () => {
       },
     });
     expect(readFileSync(t.callsFile, "utf-8")).toContain(
-      "tmux kill-session -t agent-firstmate-down",
+      "tmux kill-session -t agent-build-down",
     );
   });
 });
@@ -795,7 +795,7 @@ describe("runner_watch", () => {
     expect(r.stdout).toContain("DONE");
   });
 
-  it("on budget expiry: tears down, removes the lock, and appends FIRSTMATE-INCOMPLETE", () => {
+  it("on budget expiry: tears down, removes the lock, and appends BUILD-SESSION-INCOMPLETE", () => {
     const t = makeTask("watch");
     const bin = makeBin({ tmux: true, isolated: true });
     mkdirSync(t.lock);
@@ -807,7 +807,7 @@ describe("runner_watch", () => {
           RUNNER_TMPDIR: t.runnerTmp,
           STUB_CALLS: t.callsFile,
           STUB_TMUX_HAS_SESSION: "0",
-          FIRSTMATE_TIMEOUT_MS: "1000",
+          BUILD_SESSION_TIMEOUT_MS: "1000",
           RUNNER_POLL_INTERVAL_S: "0.2",
         },
         timeoutMs: 30_000,
@@ -816,17 +816,17 @@ describe("runner_watch", () => {
     expect(r.stdout).toContain("RC=1");
     expect(r.stdout).toContain("LOCK_GONE");
     expect(readFileSync(t.progressFile, "utf-8")).toContain(
-      "FIRSTMATE-INCOMPLETE",
+      "BUILD-SESSION-INCOMPLETE",
     );
     expect(readFileSync(t.progressFile, "utf-8")).toContain(
       "session budget of 1000ms expired",
     );
     expect(readFileSync(t.callsFile, "utf-8")).toContain(
-      "tmux kill-session -t agent-firstmate-watch",
+      "tmux kill-session -t agent-build-watch",
     );
   });
 
-  it("treats death without the sentinel as FIRSTMATE-INCOMPLETE too", () => {
+  it("treats death without the sentinel as BUILD-SESSION-INCOMPLETE too", () => {
     const t = makeTask("watch");
     const bin = makeBin({ tmux: true, isolated: true });
     mkdirSync(t.lock);
@@ -855,7 +855,7 @@ describe("runner_watch", () => {
         RUNNER_TMPDIR: t.runnerTmp,
         STUB_CALLS: t.callsFile,
         STUB_TMUX_HAS_SESSION: "0",
-        FIRSTMATE_TIMEOUT_MS: "2000",
+        BUILD_SESSION_TIMEOUT_MS: "2000",
         RUNNER_POLL_INTERVAL_S: "0.2",
       },
       timeoutMs: 60_000,
@@ -864,7 +864,7 @@ describe("runner_watch", () => {
     expect(r.ms).toBeLessThan(30_000);
   });
 
-  it("does not expire instantly when FIRSTMATE_TIMEOUT_MS=0 is rejected", () => {
+  it("does not expire instantly when BUILD_SESSION_TIMEOUT_MS=0 is rejected", () => {
     const t = makeTask("watch");
     const bin = makeBin({ tmux: true, isolated: true });
     const r = sh(`runner_watch tmux watch '${t.taskDir}'; echo "RC=$?"`, {
@@ -873,7 +873,7 @@ describe("runner_watch", () => {
         RUNNER_TMPDIR: t.runnerTmp,
         STUB_CALLS: t.callsFile,
         STUB_TMUX_HAS_SESSION: "0",
-        FIRSTMATE_TIMEOUT_MS: "0",
+        BUILD_SESSION_TIMEOUT_MS: "0",
         RUNNER_POLL_INTERVAL_S: "0.2",
       },
       timeoutMs: 4_000,
@@ -881,7 +881,7 @@ describe("runner_watch", () => {
     expect(r.signal).not.toBeNull();
     expect(r.stdout).not.toContain("RC=");
     expect(readFileSync(t.progressFile, "utf-8")).not.toContain(
-      "FIRSTMATE-INCOMPLETE",
+      "BUILD-SESSION-INCOMPLETE",
     );
   });
 });

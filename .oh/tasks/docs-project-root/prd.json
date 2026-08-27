@@ -34,8 +34,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PASS 2026-08-27 — d3d76a0b (live guidance, catalogs, skills, wiki, and templates)"
     },
     {
       "id": "US-003",

@@ -20,3 +20,18 @@ Moved the complete tracked `.oh/docs/` tree to root `docs/` with no compatibilit
 Root documentation paths are relative to the repository root, so links to `.oh/` need `../.oh/` and links to root files need `../`. Line references must stay outside Markdown link targets so local links resolve correctly.
 
 ---
+
+## US-002 — 2026-08-27 01:51 UTC
+
+**Title**: Repoint live guidance and catalog consumers
+**Files changed**: root guidance, `.devcontainer/`, issue template, Makefile, `.oh/` guidance/scripts/skills, catalog output, templates, and current wiki entries
+**Commit**: d3d76a0b
+**Result**: PASS
+
+### What I did
+Repointed current repository guidance, issue instructions, Makefile output, devcontainer messages, installer output, CLI catalog paths, skills, templates, and wiki source references to root `docs/`. Kept changelog and historical task/source records unchanged. The tracked-reference audit now leaves only the documented negative probe guard and historical records.
+
+### Learnings for future iterations
+Path migration needs a classified audit: current consumers move to `docs/`, while changelog entries, archived task evidence, raw snapshots, and historical event examples remain records of the paths that were true when written.
+
+---

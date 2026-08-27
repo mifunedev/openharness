@@ -21,9 +21,8 @@ is obsolete):
 - **`.oh/`** — *OpenHarness's own machinery* as one unit, including the
   provider-portable *primitives* — `skills/`, `agents/`, `hooks/` (+ `skills.lock`)
   — exported to the four agent providers via symlinks (`.claude/`, `.codex/`,
-  `.pi/`, `.hermes/`): the `oh` CLI (`cli/`),
-  the GitHub-readable markdown docs (`docs/`, now at `.oh/docs/`), installer +
-  lifecycle scripts (`scripts/`), container-install inputs (`install/`), the
+  `.pi/`, `.hermes/`): the `oh` CLI (`cli/`), installer + lifecycle scripts
+  (`scripts/`), container-install inputs (`install/`), the
   scheduled-agent cron definitions + runtime log (`crons/`), the
   regression/capability eval suite (`evals/`), the long-term memory + session
   logs (`memory/`), the always-on identity core (`context/`), user-local deploy
@@ -32,15 +31,15 @@ is obsolete):
   `.oh/tasks/`). The former top-level `packages/` folder
   was **retired** — its `oh` package moved in here; the Docusaurus docs *site*
   was externalized to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
-  (#536), and the GitHub-readable markdown it rendered now lives at `.oh/docs/`.
-- **repo root** — everything forced to root by *external* tooling
-  (`.devcontainer/` for the devcontainer spec + Docker COPY,
-  `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) **plus** live
-  identity/state the harness edits in place (`.oh/context/`). The GitHub-readable
-  markdown docs now live under `.oh/docs/`, the scheduled-agent crons under
-  `.oh/crons/`, the eval suite under `.oh/evals/`, long-term memory under
-  the identity core under `.oh/context/`, the worktree/project-clone
-  root under `.oh/worktrees/`, and the Ralph/spec task workdirs under `.oh/tasks/`;
+  (#536).
+- **repo root** — human-facing Markdown docs live under `docs/`, alongside
+  everything forced to root by *external* tooling (`.devcontainer/` for the
+  devcontainer spec + Docker COPY, `package.json`, `pnpm-*.yaml`, `.github/`,
+  `.husky/`) **plus** live identity/state the harness edits in place
+  (`.oh/context/`). The scheduled-agent crons remain under `.oh/crons/`, the
+  eval suite under `.oh/evals/`, long-term memory under the identity core under
+  `.oh/context/`, the worktree/project-clone root under `.oh/worktrees/`, and
+  the Ralph/spec task workdirs under `.oh/tasks/`;
   the rendered docs site and the `blog/` archive
   live in `mifunedev/openharness-web`.
 
@@ -90,8 +89,8 @@ paths:
 The former `packages/docs` Docusaurus **site** is **not** in `.oh/` — it was
 externalized to [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)
 (#536), which removed the pnpm-workspace member, the `docs:build`/`docs:dev`/`docs:serve`
-scripts, and the `docs.yml` workflow. The GitHub-readable markdown those scripts
-rendered now lives at `.oh/docs/` (markdown only — no build machinery; guarded by
+scripts, and the `docs.yml` workflow. The GitHub-readable Markdown docs live at
+root `docs/` (Markdown only — no build machinery; guarded by
 `.oh/evals/probes/docs-build-fast-path.sh`).
 
 
@@ -145,7 +144,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, the GitHub-readable markdown docs (`.oh/docs/`), installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the always-on identity core (`.oh/context/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`.oh/context/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), the always-on identity core (`.oh/context/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Human-facing Markdown docs (`docs/`) plus surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) and **live identity/state** edited in place (`.oh/context/`) |
 
 ### Why these specifically stay at root
 
@@ -243,10 +242,10 @@ one `include` pattern and zero `exclude` patterns (exclude wins).
 
 **The manifest excludes** `.oh/patches/` (repo-specific dependency patches). The
 manifest omits `patches/**` from `include`, so the payload never vendors those files
-into a consumer repo. The files remain in this repository. The manifest now ships
-`.oh/docs/` through `docs/**`. The payload includes the GitHub-readable markdown,
-including the cited `.oh/docs/rfcs/rfc-brain-hands-boundary.md`. The rendered
-Docusaurus docs *site* remains external at
+into a consumer repo. The files remain in this repository. The manifest does not
+include `docs/**`. Root `docs/` is project-owned source documentation and is not
+copied or overwritten by `oh init` or `oh update`. The rendered Docusaurus docs
+*site* remains external at
 [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web) (#536).
 
 - **The manifest ships itself** — `manifest.json` is in `include`, so the policy

@@ -34,13 +34,13 @@ tool output as untrusted (§7, untrusted output).
 Real credentials never enter the tracked checkout. Only no-secret
 templates are committed.
 
-- **Mechanism:** [`.gitignore`](../../.gitignore)
+- **Mechanism:** [`.gitignore`](../.gitignore)
   - `**/.env*` (`.gitignore:2`) ignores every real env file, anywhere in the tree.
   - `.devcontainer/.harness.yaml.env` (`.gitignore:7`) — a derived env artifact from before 0.4.0. Nothing generates it any more; the ignore line stays one release so a stale local copy is never committed.
   - `/.oh/config.json` (`.gitignore:8`) — host-local harness config.
   - `**/auth.json` and `**/.credentials.json` (`.gitignore:63-64`) — provider auth blobs.
-- **Template allowlist:** the *tracked* files are templates that hold no real secrets — e.g. [`.devcontainer/.example.env`](../../.devcontainer/.example.env) and `.claude/.example.env.claude`. The operator copies the template to the real (gitignored) `.devcontainer/.env`; `install.sh` writes host defaults there. The `.example.env` header spells this out.
-- **In the sandbox:** auth/state persists in Docker **named volumes** (`claude-auth`, `codex-auth`, `pi-auth`, `ssh-config`, `config-dir`, …), not in the repo — see [`.devcontainer/docker-compose.yml:31-41`](../../.devcontainer/docker-compose.yml).
+- **Template allowlist:** the *tracked* files are templates that hold no real secrets — e.g. [`.devcontainer/.example.env`](../.devcontainer/.example.env) and `.claude/.example.env.claude`. The operator copies the template to the real (gitignored) `.devcontainer/.env`; `install.sh` writes host defaults there. The `.example.env` header spells this out.
+- **In the sandbox:** auth/state persists in Docker **named volumes** (`claude-auth`, `codex-auth`, `pi-auth`, `ssh-config`, `config-dir`, …), not in the repo — see [`.devcontainer/docker-compose.yml:31-41`](../.devcontainer/docker-compose.yml).
 
 **What this does not do:** it does not scan commit *contents* for
 secrets pasted into a tracked file by mistake. That is the job of the
@@ -52,15 +52,15 @@ The harness assumes the permission engine can be bypassed (see §4) and
 puts deterministic **hooks** in front of every tool call so the line
 holds anyway.
 
-- **Command guard:** [`.oh/hooks/deny-env-dump.sh`](../../.oh/hooks/deny-env-dump.sh) (PreToolUse `Bash`) is a two-tier scanner over the raw command string:
+- **Command guard:** [`.oh/hooks/deny-env-dump.sh`](../.oh/hooks/deny-env-dump.sh) (PreToolUse `Bash`) is a two-tier scanner over the raw command string:
   - **Deny** — bulk env dumps (`env|`, `set >`, `export -p`, `declare -x`, `compgen -v`, `printenv`, `/proc/*/environ`), shell history dumps, `echo`/`printf` of a secret-named variable (`*TOKEN*`, `*SECRET*`, `*KEY*`, `SLACK_*`, `ANTHROPIC_*`, `GH_TOKEN`, `AWS_SECRET`, …), `Authorization:` headers with variable interpolation, and token-printing CLIs (`gh auth token`, `gcloud auth print-*-token`, `aws configure get`, `kubectl get secret -o yaml/json`, `docker secret/config inspect`).
   - **Deny (paths)** — reading secret-laden files (`.env*`, `*.pem`, `id_rsa*`, `.aws/credentials`, `.netrc`, `.kube/config`, shell history, …) via `cat`/`sed`/`grep`/`base64`/… , with a basename allowlist that exempts the tracked `*.env.example`/`.sample`/`.template` templates.
   - **Deny (operator-only dir)** — *any* command naming the `.config/` directory as a path segment, at the repo root or in `$HOME`. This tier is verb-agnostic on purpose: the operator owns the directory outright, so read, write, traversal, and archive routes are all closed rather than enumerated (a verb allowlist leaks through `python`/`node`/`perl`/`tar` and every tool added later). Anchored to a whole path segment, so `jest.config.js`, `--config foo`, `git config`, and `.oh/config.json` are unaffected.
   - **Ask** — narrow reads like `printenv VAR` that *might* be public.
   - It strips HEREDOC bodies first (`deny-env-dump.sh:20-23`) so a PR/commit body that merely *mentions* `cat .env` is not falsely denied.
-- **File-path guard:** [`.oh/hooks/deny-secret-paths.sh`](../../.oh/hooks/deny-secret-paths.sh) (PreToolUse `Read|Write|Edit|NotebookEdit|Grep|Glob`) blocks the same credential-path family for the file tools, mirroring the deny globs, and denies the operator-only `.config/` directory for both read and write. It scans every path-shaped field of `tool_input` (`file_path`, `notebook_path`, `path`, `glob`) so `Grep`/`Glob` cannot walk into a denied directory that `Read` is blocked from; Grep's `pattern` is a content regex, not a path, and is deliberately not scanned.
-- **Permission deny-list + wiring:** [`.claude/settings.json`](../../.claude/settings.json) — `permissions.deny` (lines 4-78) lists the same `Read(...)`/`Write(...)`/`Edit(...)`/`Bash(...)` globs, and `hooks.PreToolUse` (lines 82-109) wires both scripts. `defaultMode` is `bypassPermissions` (`.claude/settings.json:79`), which is **exactly why** the hooks exist: deny-list rules alone are skipped under bypass mode, so the hooks re-assert them.
-- **Non-blocking warn:** [`.oh/hooks/warn-devtcp.sh`](../../.oh/hooks/warn-devtcp.sh) prints a stderr warning (never blocks) when a command uses `/dev/tcp` or `/dev/udp`.
+- **File-path guard:** [`.oh/hooks/deny-secret-paths.sh`](../.oh/hooks/deny-secret-paths.sh) (PreToolUse `Read|Write|Edit|NotebookEdit|Grep|Glob`) blocks the same credential-path family for the file tools, mirroring the deny globs, and denies the operator-only `.config/` directory for both read and write. It scans every path-shaped field of `tool_input` (`file_path`, `notebook_path`, `path`, `glob`) so `Grep`/`Glob` cannot walk into a denied directory that `Read` is blocked from; Grep's `pattern` is a content regex, not a path, and is deliberately not scanned.
+- **Permission deny-list + wiring:** [`.claude/settings.json`](../.claude/settings.json) — `permissions.deny` (lines 4-78) lists the same `Read(...)`/`Write(...)`/`Edit(...)`/`Bash(...)` globs, and `hooks.PreToolUse` (lines 82-109) wires both scripts. `defaultMode` is `bypassPermissions` (`.claude/settings.json:79`), which is **exactly why** the hooks exist: deny-list rules alone are skipped under bypass mode, so the hooks re-assert them.
+- **Non-blocking warn:** [`.oh/hooks/warn-devtcp.sh`](../.oh/hooks/warn-devtcp.sh) prints a stderr warning (never blocks) when a command uses `/dev/tcp` or `/dev/udp`.
 
 **Safe pattern — `-F <file>` / `--body-file`.** The command guard scans
 the raw command *string*. When a commit message or PR body legitimately
@@ -89,10 +89,10 @@ event.
 - **Fail-closed under STRICT:** `CC_SAFETY_NET_STRICT=1` (`docker-compose.yml:69`) closes the one fail-open hole — unparseable shell syntax **ALLOWS** by default; STRICT **denies** it. Malformed input JSON is denied unconditionally (source-verified). `CC_SAFETY_NET_WORKTREE=1` (`docker-compose.yml:70`) unblocks *bare* `git reset --hard` / `clean -fd` / `checkout -- .` inside a verified linked worktree (cron and build worktrees live there) without unblocking `reset --hard <ref>`. No `PARANOID`/`DEBUG` modes.
 - **Why a hook, not a prompt:** same rationale as §2 — the sandbox runs with `bypassPermissions` / `approval_policy=never`, so the permission engine is off (§4, Caveat 2) and hooks are the *only* enforcement layer. **A prompt asks; a hook enforces** (§7). Docker remains the real security boundary; this is a footgun net, not a sandbox (see the honesty note in the runbook below).
 - **Per-provider wiring:**
-  - **claude** — a guard-wrapped entry appended to `PreToolUse`→`Bash`→`hooks[]` in [`.claude/settings.json`](../../.claude/settings.json:87): `sh -c '[ "$CC_SAFETY_NET_OFF" = "1" ] || ! command -v cc-safety-net >/dev/null 2>&1 || exec cc-safety-net hook --claude-code'`. The `command -v` clause makes the hook a clean **no-op when the binary is absent** (outside the built sandbox image — CI checkouts, host clones, `.oh/worktrees/` project clones) instead of emitting `exec: cc-safety-net: not found` on every Bash call; loud enforcement of the binary's presence stays at the STRICT-scoped boot gate (`link-providers.sh`), never on the per-command hot path. The existing §2 hook entries are byte-for-byte unchanged.
-  - **codex** — the *same* guard-wrapped command appended as a second `PreToolUse`/`Bash` entry in [`.codex/hooks.json`](../../.codex/hooks.json:14) (codex reads Claude-format hook entries); its pre-existing `deny-env-dump.sh` wrapper is unchanged.
-  - **pi** — no command wrapper: `"npm:cc-safety-net@1.0.6"` is pinned in `packages` of [`.pi/settings.json`](../../.pi/settings.json:29), and the package's native extension auto-registers on `bash`/`Shell` tool calls and fails closed in source. The RETIRED `RISKY_BASH` branch of [`.pi/extensions/path-guard.ts`](../../.pi/extensions/path-guard.ts) (dead code in both headless and TUI modes) is superseded by it; `path-guard.ts` now guards sensitive-path writes/edits only.
-- **Binary + boot gate:** the pinned binary is baked into the image at build time (`RUN npm install -g cc-safety-net@1.0.6`, [`.devcontainer/Dockerfile:146`](../../.devcontainer/Dockerfile)) — boot and hook execution perform **zero** npm-registry access (avoids the #639 boot crash-loop class). [`.oh/scripts/link-providers.sh`](../../.oh/scripts/link-providers.sh) **fails loudly** if the binary is missing or version-mismatched against the pin, scoped to environments where the guard is enabled (`CC_SAFETY_NET_STRICT=1`, exported by docker-compose inside the sandbox — CI checkouts and pre-rebuild hosts only get an informational note) — **unless** `CC_SAFETY_NET_OFF=1`, which downgrades the failure to a warn-and-continue (the kill-switch must never brick boot).
+  - **claude** — a guard-wrapped entry appended to `PreToolUse`→`Bash`→`hooks[]` in [`.claude/settings.json`](../.claude/settings.json):87: `sh -c '[ "$CC_SAFETY_NET_OFF" = "1" ] || ! command -v cc-safety-net >/dev/null 2>&1 || exec cc-safety-net hook --claude-code'`. The `command -v` clause makes the hook a clean **no-op when the binary is absent** (outside the built sandbox image — CI checkouts, host clones, `.oh/worktrees/` project clones) instead of emitting `exec: cc-safety-net: not found` on every Bash call; loud enforcement of the binary's presence stays at the STRICT-scoped boot gate (`link-providers.sh`), never on the per-command hot path. The existing §2 hook entries are byte-for-byte unchanged.
+  - **codex** — the *same* guard-wrapped command appended as a second `PreToolUse`/`Bash` entry in [`.codex/hooks.json`](../.codex/hooks.json):14 (codex reads Claude-format hook entries); its pre-existing `deny-env-dump.sh` wrapper is unchanged.
+  - **pi** — no command wrapper: `"npm:cc-safety-net@1.0.6"` is pinned in `packages` of [`.pi/settings.json`](../.pi/settings.json):29, and the package's native extension auto-registers on `bash`/`Shell` tool calls and fails closed in source. The RETIRED `RISKY_BASH` branch of [`.pi/extensions/path-guard.ts`](../.pi/extensions/path-guard.ts) (dead code in both headless and TUI modes) is superseded by it; `path-guard.ts` now guards sensitive-path writes/edits only.
+- **Binary + boot gate:** the pinned binary is baked into the image at build time (`RUN npm install -g cc-safety-net@1.0.6`, [`.devcontainer/Dockerfile:146`](../.devcontainer/Dockerfile)) — boot and hook execution perform **zero** npm-registry access (avoids the #639 boot crash-loop class). [`.oh/scripts/link-providers.sh`](../.oh/scripts/link-providers.sh) **fails loudly** if the binary is missing or version-mismatched against the pin, scoped to environments where the guard is enabled (`CC_SAFETY_NET_STRICT=1`, exported by docker-compose inside the sandbox — CI checkouts and pre-rebuild hosts only get an informational note) — **unless** `CC_SAFETY_NET_OFF=1`, which downgrades the failure to a warn-and-continue (the kill-switch must never brick boot).
 - **Coverage matrix (post-change):**
 
   | Provider | Destructive-command guard (cc-safety-net) | Secret-exposure guards (§2, unchanged) |
@@ -102,18 +102,18 @@ event.
   | pi | `npm:cc-safety-net` package extension (auto-registers, fails closed) | `SENSITIVE_PATHS` confirm — interactive-mode only; a **headless no-op today** (pre-existing gap, named future work) |
   | hermes | **none** — no hook surface + no upstream support (**documented gap**) | none |
 
-- **Eval:** [`.oh/evals/probes/cc-safety-net-wiring.sh`](../../.oh/evals/probes/cc-safety-net-wiring.sh) asserts every wiring point above (config entries are repo-static — absence is a REGRESSION, never a SKIP; only the live-binary block test may SKIP when the binary is absent outside the built image).
+- **Eval:** [`.oh/evals/probes/cc-safety-net-wiring.sh`](../.oh/evals/probes/cc-safety-net-wiring.sh) asserts every wiring point above (config entries are repo-static — absence is a REGRESSION, never a SKIP; only the live-binary block test may SKIP when the binary is absent outside the built image).
 
 ### Operator runbook
 
 - **False positive? Two overrides.**
   1. **Kill-switch (env-only, no reprovision):** set `CC_SAFETY_NET_OFF=1`. The `sh -c` wrapper on the claude/codex hooks then exits 0 with no output. It affects **newly-spawned provider processes only** — a process already running keeps the guard until it restarts.
   2. **Route the operation through the script:** `bash .oh/scripts/git-maintenance.sh <subcommand>` (`reset-hard <ref>` · `clean` · `branch-delete <branch>` · `worktree-remove <path>` · `push-force <remote> <branch>`). Script-file invocation is not analyzed by the guard, so a legitimate destructive-git op runs while the inline equivalent stays denied. This is how the harness's own automation (the `reset|clean` runner, `/watchdog`, worktree/branch grooming, the `cleanup-tasks` cron) keeps working.
-- **THE PI EXCEPTION.** `CC_SAFETY_NET_OFF=1` does **not** affect pi — pi's guard is a *package extension*, not a command wrapper, so it never reads the env flag. To disable on pi: remove `"npm:cc-safety-net@1.0.6"` from `packages` in [`.pi/settings.json`](../../.pi/settings.json) and **restart the pi session**.
+- **THE PI EXCEPTION.** `CC_SAFETY_NET_OFF=1` does **not** affect pi — pi's guard is a *package extension*, not a command wrapper, so it never reads the env flag. To disable on pi: remove `"npm:cc-safety-net@1.0.6"` from `packages` in [`.pi/settings.json`](../.pi/settings.json) and **restart the pi session**.
 - **Rollout / restart step (required).** The guard binds at process spawn, so long-lived sessions started **before** the guard landed stay unguarded until restarted — without this step they defeat the purpose indefinitely. After the merge and image rebuild:
   - **Simplest — recreate the container** (restarts every session with the new image + env): `docker compose -f .devcontainer/docker-compose.yml up -d --build` (or `make sandbox`).
   - **Or restart the long-lived sessions in place:**
-    - `cron-system`: `tmux kill-session -t cron-system` — the `cron-watchdog` supervisor respawns it automatically ([`entrypoint.sh:653-656`](../../.devcontainer/entrypoint.sh)).
+    - `cron-system`: `tmux kill-session -t cron-system` — the `cron-watchdog` supervisor respawns it automatically ([`entrypoint.sh:653-656`](../.devcontainer/entrypoint.sh)).
     - `client-slack-pi` (Slack bridge): `gateway pi --restart` (see [Integrations → Slack](integrations/slack.md)).
 - **Audit trail.** Every block logs to `~/.cc-safety-net/logs/<session_id>.jsonl` with secrets redacted. The `~/.cc-safety-net` directory is a Docker **named volume** (`docker-compose.yml:57,109`), so the log survives rebuilds.
 - **Honesty note — the script-file gap cuts both ways.** The same script-file route the harness uses for its own destructive git is also the model's evasion route: an agent that writes its own `.sh` and runs it bypasses this layer entirely. That is **accepted**. cc-safety-net (per its own README) is a footgun net, not a security control — **Docker is the security boundary** (§4). This layer catches accidents, not a determined adversary who controls the model.
@@ -122,8 +122,8 @@ event.
 
 Agents run inside a container, not on the host.
 
-- **Mechanism:** [`.devcontainer/docker-compose.yml`](../../.devcontainer/docker-compose.yml) + [`.devcontainer/devcontainer.json`](../../.devcontainer/devcontainer.json) + [`.devcontainer/Dockerfile`](../../.devcontainer/Dockerfile). The repo is bind-mounted (`docker-compose.yml:32`); the agent runs as the non-root `sandbox` user (`devcontainer.json:6`); auth lives in named volumes, not on the host FS.
-- **Caveat 1 — the Docker socket (OFF by default; opt-in).** `/var/run/docker.sock` is **no longer mounted by default** — it is an explicit opt-in via the [`docker-compose.docker-sock.yml`](../../.devcontainer/docker-compose.docker-sock.yml) overlay, applied only when `DOCKER_SOCKET=true` in `.devcontainer/.env`. Both interactive installers prompt for it and **default to off**: `install.sh` (the `curl | bash` path) and `oh sandbox` (the `oh` CLI / `get-oh.sh` path). Enabling it is a deliberate capability trade-off: **socket access is effectively host root** (an agent can start a privileged container that mounts the host FS), so the container becomes *isolation for convenience and blast-radius reduction, not a hard security boundary* against a hostile agent. Leave it off unless the agent genuinely must drive Docker; if it must and you still need a hard boundary, run a rootless/proxied Docker. **VS Code "Reopen in Container"** reads `docker-compose.yml` directly and bypasses the wrapper, so it never mounts the socket; to enable it there, add `docker-compose.docker-sock.yml` to `dockerComposeFile` in [`devcontainer.json`](../../.devcontainer/devcontainer.json).
+- **Mechanism:** [`.devcontainer/docker-compose.yml`](../.devcontainer/docker-compose.yml) + [`.devcontainer/devcontainer.json`](../.devcontainer/devcontainer.json) + [`.devcontainer/Dockerfile`](../.devcontainer/Dockerfile). The repo is bind-mounted (`docker-compose.yml:32`); the agent runs as the non-root `sandbox` user (`devcontainer.json:6`); auth lives in named volumes, not on the host FS.
+- **Caveat 1 — the Docker socket (OFF by default; opt-in).** `/var/run/docker.sock` is **no longer mounted by default** — it is an explicit opt-in via the [`docker-compose.docker-sock.yml`](../.devcontainer/docker-compose.docker-sock.yml) overlay, applied only when `DOCKER_SOCKET=true` in `.devcontainer/.env`. Both interactive installers prompt for it and **default to off**. Review the downloaded installer before you run it with `bash install.sh`: `install.sh` (the `curl | bash` path) and `oh sandbox` (the `oh` CLI / `get-oh.sh` path). Enabling it is a deliberate capability trade-off: **socket access is effectively host root** (an agent can start a privileged container that mounts the host FS), so the container becomes *isolation for convenience and blast-radius reduction, not a hard security boundary* against a hostile agent. Leave it off unless the agent genuinely must drive Docker; if it must and you still need a hard boundary, run a rootless/proxied Docker. **VS Code "Reopen in Container"** reads `docker-compose.yml` directly and bypasses the wrapper, so it never mounts the socket; to enable it there, add `docker-compose.docker-sock.yml` to `dockerComposeFile` in [`devcontainer.json`](../.devcontainer/devcontainer.json).
 - **Caveat 2 — permissions bypassed inside.** `CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS=true` (`docker-compose.yml:48`) turns off the interactive permission engine inside the sandbox. This is the *reason* the §2 guards are implemented as hooks (which still fire) rather than relying on deny-list prompts (which are skipped).
 
 **Bottom line:** the sandbox reliably keeps agent work off the host
@@ -135,14 +135,14 @@ expose to whichever trust level you choose.
 
 - **Caveat 3 — the optional sshd overlay (RECOMMENDED to configure).** The base
   container publishes **no ports** and runs **no** SSH daemon. The opt-in overlay
-  ([`.devcontainer/docker-compose.ssh.yml`](../../.devcontainer/docker-compose.ssh.yml),
+  ([`.devcontainer/docker-compose.ssh.yml`](../.devcontainer/docker-compose.ssh.yml),
   enabled via `SANDBOX_SSH=true` in `.devcontainer/.env`) starts `sshd` and ships a **safe
   default posture**: host bind **loopback-only** (`127.0.0.1`), **public-key auth**,
   `PermitRootLogin no`, and password auth **off**. Two operator choices weaken that
   and are your responsibility: switching the bind to `0.0.0.0` (public interface),
   and enabling password auth while `SANDBOX_PASSWORD` is still the weak default
   (`test1234`). A `make sandbox` **port-collision preflight**
-  ([`.oh/scripts/check-host-port.sh`](../../.oh/scripts/check-host-port.sh)) refuses
+  ([`.oh/scripts/check-host-port.sh`](../.oh/scripts/check-host-port.sh)) refuses
   to create a container on a port already in use, so enabling SSH or adding a tenant
   can't silently clobber another tenant's port. Setup + the nginx multi-tenant recipe:
   [Integrations → SSH](integrations/sshd.md).
@@ -151,7 +151,7 @@ expose to whichever trust level you choose.
 
 No agent merges its own work to the trunk.
 
-- **Doctrine:** [`AGENTS.md`](../../AGENTS.md) § The Workflow — the canonical path ends `… → merge (human) → reset|clean`, and the ownership table states the human owns *"merge — final gate, no auto-merge"* (`AGENTS.md:158`, mermaid `MERGE` node `AGENTS.md:147`). The runner resets; it never merges.
+- **Doctrine:** [`AGENTS.md`](../AGENTS.md) § The Workflow — the canonical path ends `… → merge (human) → reset|clean`, and the ownership table states the human owns *"merge — final gate, no auto-merge"* (`AGENTS.md:158`, mermaid `MERGE` node `AGENTS.md:147`). The runner resets; it never merges.
 - **No unattended merger exists:** the `autopilot` self-improvement loop and its rate-capping preflight were removed in 0.4.0. No scheduled agent now opens or promotes PRs unattended, so there is no automated path to a merge at all.
 - **RECOMMENDED (hard gate):** the ultimate enforcement of "no agent merges" is **GitHub branch protection** (required reviews / restricted merge) on `development`/`main`. That lives in repo settings, not this tree — configure it. Without it, "no auto-merge" rests on the agents' skill definitions, not a server-side block.
 
@@ -164,7 +164,7 @@ application code.
   `autopilot` loop's `OWNED_PATHS` clean-state check and scoped restore. Both
   were removed with the loop. The boundary is now doctrine, not a running check.
 - **Boundary:** the path set is recorded in
-  [`.oh/docs/repair-operator-registry.md`](repair-operator-registry.md) § Tier 1,
+  [`docs/repair-operator-registry.md`](repair-operator-registry.md) § Tier 1,
   which is now its source of truth.
 - **Scope guard:** "harness-infra only … never sandbox application code" — see
   `CLAUDE.md` § What You Do NOT Do, which is unchanged and still normative.

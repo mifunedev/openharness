@@ -4,6 +4,7 @@ import {
 } from "../lib/execution/index.js";
 import { spawnRunner, type LifecycleRunner } from "../lib/execution/runner.js";
 import type { ExecutionTarget } from "../lib/execution/target.js";
+import { sourceDocsUrl } from "../lib/docs.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import {
   compareVersions,
@@ -200,7 +201,7 @@ async function collectRows(
       installed: reachable ? await probeInstalled(target, entry) : null,
       installable: entry.installable,
       checks,
-      docs: entry.docsPath,
+      docs: sourceDocsUrl(entry.docsPath),
       ...(entry.tracking !== undefined ? { tracking: entry.tracking } : {}),
     });
   }
@@ -307,14 +308,15 @@ export async function runRuntimeInstall(
 
   const entry = findRuntime(name);
   if (!entry) return unknownRuntime(name, io);
+  const docsUrl = sourceDocsUrl(entry.docsPath);
 
   if (!entry.installable) {
     io.stderr(`oh runtime: ${entry.id} cannot be installed by this command.\n\n`);
     io.stderr(`${entry.notInstallableReason ?? ""}\n`);
     io.stderr(
       entry.tracking !== undefined
-        ? `Tracked in ${entry.tracking} — see ${entry.docsPath}\n`
-        : `See ${entry.docsPath}\n`,
+        ? `Tracked in ${entry.tracking} — see ${docsUrl}\n`
+        : `See ${docsUrl}\n`,
     );
     return 1;
   }
@@ -380,7 +382,7 @@ export async function runRuntimeInstall(
   });
   if (r.exitCode !== 0) {
     io.stderr(`oh runtime: installing ${entry.id} failed (exit ${r.exitCode}).\n`);
-    io.stderr(`See ${entry.docsPath}${entry.tracking !== undefined ? ` and ${entry.tracking}` : ""}.\n`);
+    io.stderr(`See ${docsUrl}${entry.tracking !== undefined ? ` and ${entry.tracking}` : ""}.\n`);
     return r.exitCode;
   }
 
@@ -393,12 +395,12 @@ export async function runRuntimeInstall(
     if (doctor.exitCode !== 0) {
       io.stdout(
         `${entry.id}: installed, but \`${entry.doctorArgv.join(" ")}\` exited ${doctor.exitCode}.\n` +
-          `See ${entry.docsPath} for the round-trip check.\n`,
+          `See ${docsUrl} for the round-trip check.\n`,
       );
       return 0;
     }
   }
 
-  io.stdout(`${entry.id}: installed — see ${entry.docsPath}\n`);
+  io.stdout(`${entry.id}: installed — see ${docsUrl}\n`);
   return 0;
 }

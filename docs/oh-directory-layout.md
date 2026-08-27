@@ -7,7 +7,7 @@ no new requirements.
 
 For *why* `.oh/` exists and what earns a place in it (the governing principle —
 "a dotdir namespace is earned by function-class"), see
-[`.oh/README.md`](../README.md). This page complements that one: the README is
+[`.oh/README.md`](../.oh/README.md). This page complements that one: the README is
 the rationale, this is the map. It does not restate the governing principle.
 
 > Verify against reality with `ls .oh/`. If this table and the tree disagree,
@@ -26,7 +26,6 @@ Every entry below is present in a fresh clone unless noted otherwise.
 | `cli/` | dir | The in-tree `oh` CLI — a standalone npm package built into the image as `/opt/oh`. | `npm --prefix .oh/cli`; the `oh` binary (`oh init` / `oh update`). |
 | `context/` | dir | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) plus the collapsed `rules/` provider pointers. | Session start per `AGENTS.md`; symlinked provider surfaces. |
 | `crons/` | dir | Scheduled-agent cron definitions (`heartbeat.md`, `cleanup-tasks.md`, `eval-weekly.md`, `prompt-miner.md`) plus the gitignored runtime `.cron.log`/`.pid`. | `.oh/scripts/cron-runtime.ts`. |
-| `docs/` | dir | The GitHub-readable markdown docs — this directory. Markdown only; no build machinery (the rendered site lives in [`mifunedev/openharness-web`](https://github.com/mifunedev/openharness-web)). | Humans on GitHub / DeepWiki; `manifest.json` vendors `docs/**` for installed users. |
 | `evals/` | dir | The fitness-function suite — regression `probes/` (incl. `cc-safety-net-wiring.sh`, the destructive-command guard wiring probe), the `capability/` benchmark, trajectory `datasets/`, and the `RESULTS.md` scoreboard. | `/eval` and the `.oh/scripts` eval runner. |
 | `hooks/` | dir | Provider-portable **secret-exposure** hook scripts (`deny-env-dump.sh`, `deny-secret-paths.sh`, `notify_slack.sh`, `warn-devtcp.sh`). The complementary **destructive-command** guard (cc-safety-net) is not a script here — it is a global binary baked into the image plus guard-wrapped entries in the provider configs (`.claude/settings.json`, `.codex/hooks.json`, the `npm:cc-safety-net` package in `.pi/settings.json`); see [security-considerations.md §3](security-considerations.md). | Agent providers via symlinks (`.claude/hooks` → `.oh/hooks`). |
 | `install/` | dir | Container-install inputs (currently `banner.sh`) consumed while building/booting the sandbox. | `.devcontainer/Dockerfile` + `entrypoint.sh`. |
@@ -35,7 +34,9 @@ Every entry below is present in a fresh clone unless noted otherwise.
 | `tasks/` | dir | Spec task workdirs — ephemeral build scratch (`<slug>/prd.md`, `prd.json`, `prompt.md`, `progress.txt`). | `/spec execute`, the `cleanup-tasks` cron, and `/spec`. |
 | `templates/` | dir | The `oh init` scaffold payload (`AGENTS.md`, `gitignore`, `.devcontainer/` incl. `.example.env`, `full/`) materialized into a fresh checkout. | `oh init` (`.oh/cli/src/commands/init.ts`). |
 
-The manifest ships `docs/**` and omits `patches/**`.
+The root `docs/` directory is project-owned documentation, outside the `.oh/`
+control plane and the `oh init`/`oh update` payload. The manifest omits
+`patches/**` and `docs/**`.
 
 ## Not in a fresh clone
 
@@ -61,6 +62,6 @@ must not be treated as real until a change actually creates them:
 
 ## See also
 
-- [`.oh/README.md`](../README.md) — the governing principle and the `.oh/`-vs-root boundary.
+- [`.oh/README.md`](../.oh/README.md) — the governing principle and the `.oh/`-vs-root boundary.
 - [Descriptive `.oh/harness.yml` example](harness-manifest.md) — an example-only pointer map over the real `.oh/` surfaces, not a required manifest schema.
-- [`.oh/context/directory-readme.md`](../context/directory-readme.md) — the README-as-directory-anchor convention.
+- [`.oh/context/directory-readme.md`](../.oh/context/directory-readme.md) — the README-as-directory-anchor convention.

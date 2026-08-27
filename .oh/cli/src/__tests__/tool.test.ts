@@ -176,7 +176,11 @@ describe("oh tool list / status", () => {
     );
     const { io, out } = makeIo();
     await runToolStatus("gh", { cwd: root, run, json: true }, io);
-    expect(JSON.parse(out.join("")).version).toContain("2.63.2");
+    const status = JSON.parse(out.join(""));
+    expect(status.version).toContain("2.63.2");
+    expect(status.docs).toBe(
+      "https://github.com/mifunedev/openharness/blob/main/docs/installation.md",
+    );
   });
 
   it("reports null, not a guess, for a tool with no version probe", async () => {
@@ -243,9 +247,12 @@ describe("oh tool install — the ~1 GB download gate", () => {
   it("installs when the prompt is accepted", async () => {
     const root = makeRepo();
     const { calls, run } = liveHost();
-    const { io } = makeIo(true);
+    const { io, out } = makeIo(true);
     expect(await runToolInstall("agent-browser", { cwd: root, run }, io)).toBe(0);
     expect(calls.some(isInstallCall)).toBe(true);
+    expect(out.join("")).toContain(
+      "https://github.com/mifunedev/openharness/blob/main/docs/installation.md",
+    );
   });
 
   it("--yes bypasses the prompt entirely", async () => {

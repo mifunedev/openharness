@@ -4,7 +4,7 @@ title: "Open-core boundary"
 
 # Open-core boundary
 
-Open Harness ships under [Apache-2.0](../../LICENSE). Mifune's hosted control
+Open Harness ships under [Apache-2.0](../LICENSE). Mifune's hosted control
 plane is separate and proprietary. This page states that split explicitly so
 an evaluator does not have to infer it from the code.
 
@@ -30,7 +30,7 @@ grant is sufficient for that but leaves three gaps Apache-2.0 closes:
 - an **explicit patent license** from every contributor for claims their
   contribution infringes,
 - **patent-retaliation termination** if a recipient sues over the project,
-- an **explicit withholding of trademark rights** ([§6](../../LICENSE)) — a
+- an **explicit withholding of trademark rights** ([§6](../LICENSE)) — a
   fork may run and sell the software but may not present itself as *Mifune*.
 
 The trademark point is load-bearing precisely because clone-and-own is
@@ -51,5 +51,5 @@ and future releases; it does not revoke past grants.
 
 ## Related
 
-- [`LICENSE`](../../LICENSE) · [`NOTICE`](../../NOTICE)
+- [`LICENSE`](../LICENSE) · [`NOTICE`](../NOTICE)
 - [Security considerations](security-considerations.md)

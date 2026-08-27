@@ -75,7 +75,7 @@ export const RUNTIME_CATALOG: readonly RuntimeEntry[] = Object.freeze([
           "The Docker daemon did not answer. Install Docker Engine and start it — see https://docs.docker.com/engine/install/ — then re-run `oh sandbox`.",
       }),
     ]),
-    docsPath: ".oh/docs/runtimes/docker.md",
+    docsPath: "docs/runtimes/docker.md",
   }),
   Object.freeze({
     id: "microsandbox",
@@ -112,7 +112,7 @@ export const RUNTIME_CATALOG: readonly RuntimeEntry[] = Object.freeze([
           ".devcontainer/docker-compose.yml declares no `devices:` key, so the container reaches no KVM. Tracked in #805.",
       }),
     ]),
-    docsPath: ".oh/docs/runtimes/microsandbox.md",
+    docsPath: "docs/runtimes/microsandbox.md",
     tracking: "#805",
   }),
   Object.freeze({
@@ -124,7 +124,7 @@ export const RUNTIME_CATALOG: readonly RuntimeEntry[] = Object.freeze([
     notInstallableReason:
       "gVisor is planned and not yet implemented here. It is a host-side Docker runtime, not a package installed inside the sandbox, so `oh runtime` cannot install it. It measured GREEN (#806, draft PR #804) but the adoption decision is unmade.",
     preflight: Object.freeze([]),
-    docsPath: ".oh/docs/runtimes/overview.md",
+    docsPath: "docs/runtimes/overview.md",
     tracking: "#806",
   }),
 ]);

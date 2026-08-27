@@ -214,6 +214,9 @@ The published package is the same single self-contained bundle — `oh init`/`oh
 
 **No npm, or no Node yet?** Bootstrap with `get-oh.sh` instead. It installs the single self-contained `oh` binary to `~/.local/bin/oh` — **no repo clone**, and it does not touch an existing `~/.openharness` sandbox. It prefers a prebuilt bundle (`oh.mifune.dev/oh.js`) and falls back to building from source in a temp dir. If Node.js ≥ 20 is missing, it offers to install nvm + Node 22 and sources it so `oh` works in the same shell. `oh init` fetches its scaffold payload on demand.
 
+For a review-first install, download and inspect the script before you run it.
+The review-first alternative appears below.
+
 ```bash
 curl -fsSL https://oh.mifune.dev/get-oh.sh | bash
 ```
@@ -259,7 +262,7 @@ published `ghcr.io/mifunedev/openharness` image instead of building locally — 
 
 ## Next step
 
-Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside the sandbox and start an agent.
+Once installed, proceed to the [Quickstart](./quickstart.md) to authenticate inside the sandbox and start an agent.
 
 ## What's Installed
 

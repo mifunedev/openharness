@@ -28,7 +28,7 @@ Per the requester's scope: **only the proxy** (`index.js` + `package.json`) is i
 
 Mapped to `rfc-runtime-support.md` §2:
 
-1. **Documented** — `.oh/docs/integrations/mcp-exec-runner.md` (mirror `debugmcp.md`: registration + Maintainer Decision Gate) + a runtimes-overview row.
+1. **Documented** — `docs/integrations/mcp-exec-runner.md` (mirror `debugmcp.md`: registration + Maintainer Decision Gate) + a runtimes-overview row.
 2. **One-toggle** — `harness.yaml` `install.mcp_exec_runner` → build-arg/env via `.oh/scripts/harness-config.sh` (mirrors `INSTALL_HERMES`). Never multi-step.
 3. **Validated** — boots inside the sandbox, `GET :3005/health` ok, MCP `initialize` handshake returns a session id, `exec_command` runs; boot-lint + probe floor stay green.
 4. **Guarded** — `.oh/evals/probes/mcp-exec-runner-availability.sh` (handshake + health), mirroring `debugmcp-availability.sh`.
@@ -69,7 +69,7 @@ gh issue create \
   --label autopilot \
   --body "Decision-gate: A3 runner endpoint via the mifunedev/sandboxes exec-server.
 Vendor only index.js+package.json into .oh/mcp/exec-runner/ (repoint /workspace->/home/sandbox/harness, executor->low-priv user, pin SDK).
-Opt-in install.mcp_exec_runner toggle; loopback + required API_KEY; .oh/docs/integrations/mcp-exec-runner.md + eval probe.
+Opt-in install.mcp_exec_runner toggle; loopback + required API_KEY; docs/integrations/mcp-exec-runner.md + eval probe.
 Gate: must satisfy rfc-runtime-support.md §2 contract and §4 security floor. No Dockerfile/compose change until accepted."
 ```
 

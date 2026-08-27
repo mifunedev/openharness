@@ -51,7 +51,7 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    Inside the sandbox (or in an `oh init` repo, which has no Makefile) the same
    verbs are `oh sandbox` / `oh shell` / `oh stop` / `oh restart` / `oh logs` /
    `oh ps`. Both doors run `.oh/scripts/docker-compose.sh` — the single mapping
-   is [.oh/docs/lifecycle-commands.md](.oh/docs/lifecycle-commands.md).
+   is [docs/lifecycle-commands.md](docs/lifecycle-commands.md).
    Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
 
    **Option B — VS Code Attach to Container (local):**
@@ -85,7 +85,7 @@ Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base envir
    session (not globally pinned in `.pi/settings.json`), under the self-healing
    supervisor `.devcontainer/client-slack-supervise.sh` that restarts pi on the
    stale-ctx error and on crashes (see
-   [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md)).
+   [docs/integrations/slack.md](docs/integrations/slack.md)).
 
 ### Validate
 

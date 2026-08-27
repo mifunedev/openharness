@@ -11,7 +11,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 MAKEFILE="$ROOT/Makefile"
 CLI="$ROOT/.oh/cli/src/cli.ts"
 LIFECYCLE="$ROOT/.oh/cli/src/commands/lifecycle.ts"
-MAP="$ROOT/.oh/docs/lifecycle-commands.md"
+MAP="$ROOT/docs/lifecycle-commands.md"
 
 if [[ ! -f "$MAKEFILE" || ! -f "$CLI" ]]; then
   echo "SKIPPED: not a source checkout (Makefile or .oh/cli/src absent)" >&2
@@ -39,7 +39,7 @@ for target in $phony; do
 done
 
 if [[ ! -f "$MAP" ]]; then
-  missing+=("A2: .oh/docs/lifecycle-commands.md is missing — the mapping has no home")
+  missing+=("A2: docs/lifecycle-commands.md is missing — the mapping has no home")
 else
   for target in "${EXCEPTIONS[@]}"; do
     case "$target" in help|harness-config) continue;; esac

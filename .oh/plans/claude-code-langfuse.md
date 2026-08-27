@@ -20,7 +20,7 @@ change.
 
 ## Scope and files
 
-1. Update `.oh/docs/integrations/langfuse.md` with separate Pi and Claude Code
+1. Update `docs/integrations/langfuse.md` with separate Pi and Claude Code
    paths while retaining Pi configuration, privacy precedence, and the local
    self-hosted Langfuse walkthrough.
 2. Add the official Claude marketplace install and configuration commands,
@@ -28,7 +28,7 @@ change.
    remote/Cloud deployments, lifecycle commands, verification, and
    troubleshooting.
 3. Add a concise optional-observability cross-link to
-   `.oh/docs/harnesses/claude-code.md`.
+   `docs/harnesses/claude-code.md`.
 4. Clarify that `.devcontainer/.example.env`'s Langfuse block is Pi-only;
    Claude plugin configuration owns Claude credentials, so no variables are
    added and Compose is not changed.

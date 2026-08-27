@@ -67,7 +67,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [Open-core boundary](open-core.md)
 - [Repair-operator registry](repair-operator-registry.md)
 - [Artifact-contract schema](artifact-contract-schema.md)
-- [Registry portability contract and exception list](../scripts/registry-portability.md)
+- [Registry portability contract and exception list](../.oh/scripts/registry-portability.md)
 - [`.oh/` directory layout](oh-directory-layout.md)
 - [Descriptive `.oh/harness.yml` example](harness-manifest.md)
 - [Glossary](glossary.md)

@@ -53,9 +53,9 @@ describe("harness catalog", () => {
     expect(EXAMPLE_ENV).toMatch(/INSTALL_AGENT_BROWSER=/);
   });
 
-  it("documents every harness under .oh/docs/harnesses/<id>.md", () => {
+  it("documents every harness under docs/harnesses/<id>.md", () => {
     for (const h of HARNESS_CATALOG) {
-      expect(h.docsPath).toBe(`.oh/docs/harnesses/${h.id}.md`);
+      expect(h.docsPath).toBe(`docs/harnesses/${h.id}.md`);
       expect(() => read(h.docsPath)).not.toThrow();
     }
   });

@@ -18,6 +18,9 @@ Two doors, solving different problems — pick by what you have (same as the
 
 **A. I want an Open Harness sandbox of my own** — Docker + Git, no Node:
 
+For a review-first install, download and inspect the script before you run it.
+The review-first alternative appears below.
+
 ```bash
 curl -fsSL https://oh.mifune.dev/install.sh | bash
 ```
@@ -140,7 +143,7 @@ demand via the `/t3` skill or direct `npx`. Authenticate at least one harness be
 - **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `/t3` or `npx t3` (browser UI on port 3773)
 
 Claude Code remains the documented default. See
-[the harnesses overview](./harnesses/overview) for the full list and
+[the harnesses overview](./harnesses/overview.md) for the full list and
 per-harness setup.
 
 [Connecting to the Sandbox](/docs/connecting)

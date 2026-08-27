@@ -94,7 +94,7 @@ discovering it fused in.
 The taxonomy has one **documented, accepted Phase-0 violation**, recorded here rather than
 quietly omitted.
 
-Hermes (`.oh/docs/harnesses/hermes.md`) is an optional image-level agent runtime that bundles
+Hermes (`docs/harnesses/hermes.md`) is an optional image-level agent runtime that bundles
 *both* sides inside one opaque process: persistent memory, auto-generated skills, scheduled
 task automation, and sub-agent delegation (**brain**), plus its own container-sandboxed task
 execution across local / Docker / SSH / Singularity / Modal backends (**hands**). From the

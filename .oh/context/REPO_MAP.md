@@ -94,7 +94,7 @@ Use these routes before broad repo-wide search. If `Start here` names a director
 | Cron behavior | `.oh/crons/README.md`, `.oh/crons/`, `.oh/scripts/cron-runtime.ts` | Scheduled prompts, runtime supervision, caps, and watchdog. |
 | Eval/probe regressions | `.oh/evals/README.md`, `.oh/evals/probes/`, `.pi/skills/eval/` | Tier-A regression probes and eval runner contract. |
 | Task/spec implementation state | `.oh/tasks/README.md`, `.oh/tasks/<active-task>/` | PRD, task-graph JSON, prompt, evidence, and task-specific artifacts. |
-| Docs | `README.md`, `.oh/docs/README.md`, `.oh/docs/` | GitHub-readable markdown; site/blog lives in `mifunedev/openharness-web`. |
+| Docs | `README.md`, `docs/README.md`, `docs/` | GitHub-readable markdown; site/blog lives in `mifunedev/openharness-web`. |
 | CLI code | `.oh/README.md`, `.oh/cli/` | The standalone `oh` CLI package; read `.oh/README.md` first. |
 | Pi extensions and integration code | `.pi/extensions/`, `.pi/install/`, `.pi/settings.json` | Project-local Pi provider extensions, manifests, and runtime config; `.pi/` is not the v1 Mifune mount. |
 | Skill behavior | `.oh/skills/`, `.pi/skills/`, `.claude/skills/`, `.prime/agent/skills/` | Source of truth is the vendored `.oh/skills/` pack; provider paths are symlinks into it. |
@@ -138,7 +138,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 | `.oh/evals/datasets/` | Verifiable issue-to-PR trajectory datasets. | Inspect prompts/manifests before oracle fixtures. |
 | `.oh/cli/src/` | Standalone `oh` CLI source code. | Change CLI behavior; read `.oh/README.md` first. |
 | `.oh/cli/package.json` | CLI package-local scripts and dependencies. | Run package-specific build/typecheck. |
-| `.oh/docs/` | GitHub-readable product docs. | Update product docs; start at `.oh/docs/README.md`. |
+| `docs/` | GitHub-readable product docs. | Update product docs; start at `docs/README.md`. |
 | `.oh/skills/wiki/corpus/*.md` | Curated internal knowledge pages. | Reuse durable research before reading raw sources; read `.oh/skills/wiki/corpus/README.md` for index. |
 | `.oh/tasks/<active-task>/` | `prd.md`, `prd.json`, `prompt.md`, `evidence.md`, and `progress.txt` for the `/spec execute` task. | Verify task graph or implementation scope before reading runtime progress. |
 | `.github/workflows/` | CI, docs, release workflow definitions. | Debug/check GitHub Actions behavior. |

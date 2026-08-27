@@ -85,7 +85,7 @@ REFS=$(grep -rl "$FILE_BASE" \
   "$HARNESS/AGENTS.md" \
   "$HARNESS/CLAUDE.md" \
   "$HARNESS/.oh/context" \
-  "$HARNESS/.oh/docs" 2>/dev/null \
+  "$HARNESS/docs" 2>/dev/null \
   | grep -v "^${f}$" | wc -l)
 ```
 

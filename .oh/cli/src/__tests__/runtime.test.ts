@@ -298,6 +298,9 @@ describe("oh runtime status", () => {
     expect(text).toContain("/dev/kvm");
     expect(text).toContain("absent");
     expect(text).toContain("#805");
+    expect(text).toContain(
+      "https://github.com/mifunedev/openharness/blob/main/docs/runtimes/microsandbox.md",
+    );
   });
 
   it("prints the remediation for a failing check", async () => {
@@ -370,6 +373,9 @@ describe("oh runtime install — the preflight gate", () => {
     expect(await runRuntimeInstall("microsandbox", { cwd: root, run }, io)).toBe(0);
     expect(calls.some(isInstallCall)).toBe(true);
     expect(out.join("")).toContain("installed");
+    expect(out.join("")).toContain(
+      "https://github.com/mifunedev/openharness/blob/main/docs/runtimes/microsandbox.md",
+    );
   });
 
   it("refuses when only one blocker clears", async () => {
@@ -410,6 +416,9 @@ describe("oh runtime install — the other exits", () => {
     const { io, err } = makeIo();
     expect(await runRuntimeInstall("gvisor", { cwd: root, run }, io)).toBe(1);
     expect(err.join("")).toContain("#806");
+    expect(err.join("")).toContain(
+      "https://github.com/mifunedev/openharness/blob/main/docs/runtimes/overview.md",
+    );
     expect(calls.length).toBe(0);
   });
 

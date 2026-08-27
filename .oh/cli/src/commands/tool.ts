@@ -5,6 +5,7 @@ import {
 } from "../lib/execution/index.js";
 import { spawnRunner, type LifecycleRunner } from "../lib/execution/runner.js";
 import type { ExecutionTarget } from "../lib/execution/target.js";
+import { sourceDocsUrl } from "../lib/docs.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import { confirm } from "../lib/prompt.js";
 import {
@@ -125,7 +126,7 @@ async function collectRows(
       installed,
       version: reachable && installed === true ? await probeVersion(target, entry) : null,
       installable: entry.installArgv !== undefined,
-      docs: entry.docsPath,
+      docs: sourceDocsUrl(entry.docsPath),
     });
   }
   return rows;
@@ -315,6 +316,6 @@ export async function runToolInstall(
     return r.exitCode;
   }
 
-  io.stdout(`${entry.id}: installed — see ${entry.docsPath}\n`);
+  io.stdout(`${entry.id}: installed — see ${sourceDocsUrl(entry.docsPath)}\n`);
   return 0;
 }

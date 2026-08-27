@@ -95,11 +95,13 @@ oh tool install agent-browser   # asks before the ~1 GB Chromium download
 
 These mirror the root `Makefile`'s targets one-for-one and run the same
 `.oh/scripts/docker-compose.sh`. Which one is canonical depends on where you
-are — see [lifecycle commands](../docs/lifecycle-commands.md), which also
+are — see [lifecycle commands](https://github.com/mifunedev/openharness/blob/main/docs/lifecycle-commands.md), which also
 explains why `oh destroy` deliberately does not exist.
 
 `oh init` and `oh update` fetch their payload on demand — with no local source they shallow-clone
 the public OpenHarness repo into a temp dir and remove it after the run (`--from-remote`, `--ref <ref>`).
+Root `docs/` remains project-owned and is not part of that payload. Catalog and help output therefore
+links to the Open Harness source documentation instead of a path inside the equipped project.
 
 ## OpenHarness Cloud
 

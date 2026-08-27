@@ -179,6 +179,14 @@ msb self doctor                  # expect exit 0
 msb run alpine --exec 'echo ok'  # expect "ok"
 ```
 
+For a review-first install, download and inspect the script before you run it:
+
+```bash
+curl -sSL -o get-microsandbox.sh https://get.microsandbox.dev
+less get-microsandbox.sh
+bash get-microsandbox.sh
+```
+
 **The second command is the gate.** `msb self doctor` alone proves nothing. If
 `msb run alpine` does not print `ok`, the problem is msb on your host and no
 amount of Open Harness configuration will fix it.

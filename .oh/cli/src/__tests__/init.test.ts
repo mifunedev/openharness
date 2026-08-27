@@ -553,7 +553,8 @@ describe("runInit", () => {
     const agents = readFileSync(join(t, "AGENTS.md"), "utf8");
     expect(agents).toContain("your OpenHarness project");
     expect(agents).toContain("Internal repo map");
-    expect(agents).toContain("/spec");
+    expect(agents).not.toMatch(/^## (How work flows|Skills)$/m);
+    expect(agents).not.toMatch(/`\/[a-z][a-z0-9-]*/);
   });
 
   it("full (default): CLAUDE.md is a symlink -> AGENTS.md", async () => {

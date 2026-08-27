@@ -38,9 +38,6 @@
 .oh/crons/.pid
 .oh/crons/*.log
 
-# pi-autoresearch runtime state (benchmarks, logs, session config)
-**/.auto/
-
 **/.next
 **/.ralph/archives/
 **/src/generated/

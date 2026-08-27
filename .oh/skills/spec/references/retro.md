@@ -3,9 +3,9 @@
 > Detail doc for the **`retro`** subcommand of the `/spec` skill
 > (`.oh/skills/spec/SKILL.md`). Argument form: `retro <slug> [--dry-run]`.
 > The dispatcher passes the argument string after `retro` to this procedure as
-> `$ARGUMENTS`. Authority: `AGENTS.md § The Workflow`.
+> `$ARGUMENTS`. Authority: `.oh/skills/spec/SKILL.md`.
 
-The **reflection** node of the `spec-*` family (`AGENTS.md § The Workflow`). It runs
+The **reflection** node of the `/spec` workflow runs
 inside `/spec execute`'s tail, after `build ⇄ audit` reaches `AUDIT-PASS` and the evidence
 step has run, and before `improve`, to turn the execution run into durable,
 evidence-tested lessons.
@@ -65,14 +65,13 @@ still require explicit approval (or are skipped under `--dry-run`).
 
 ## Pipeline position
 
-Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
-merge → reset|clean`), `retro` runs inside the `spec-execute` tail (`build ⇄ audit →
-evidence → spec-retro → improve`); the next step is `improve` (compound · compress ·
-benchmark).
+Within the workflow owned by `.oh/skills/spec/SKILL.md`, `retro` runs inside the
+`spec-execute` tail (`build ⇄ audit → evidence → spec-retro → improve`). The next
+step is `improve` (compound · compress · benchmark).
 
 The terminal artifact is the log entry plus whatever the propose-then-confirm gate actually
 wrote. Report the counts. There is no `STATUS: SPEC-RETRO-DONE` token — it had no executable
 consumer.
 
-The `/spec` family's authority is `AGENTS.md § The Workflow`. `retro`
-always completes (like `/retro`), so the execute tail always continues to `improve`.
+The `/spec` family's authority is `.oh/skills/spec/SKILL.md`. `retro` always
+completes (like `/retro`), so the execute tail always continues to `improve`.

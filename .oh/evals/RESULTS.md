@@ -9,6 +9,7 @@ probe id; git history is the time series.** Schema and exit-code semantics are i
 | ablate-state-machine | A | 2026-08-27 02:31 | PASS | issue #645 — one locked versioned ablation recovery owner |
 | advisor-monitored-loop | A | 2026-08-27 02:31 | PASS | conversation 2026-06-19 (single-owner implementation workflow, issue #257) |
 | agent-browser-cli | A | 2026-08-27 02:31 | PASS | retro lesson 2026-06-07 (agent-browser 0.8.5 CLI) |
+| agents-identity-contract | A | 2026-08-27 03:33 | PASS | issue #854 — T3-style root identity, glossary, and skill-owned procedures |
 | artifact-contract-audit | A | 2026-08-27 02:31 | PASS | issue #583/#645 — production /audit implementation Gate 1 behavior |
 | audit-dispatcher-contract | A | 2026-08-27 02:31 | PASS | issue #645 — audit consolidation public taxonomy |
 | audit-implementation-behavior | A | 2026-08-27 02:31 | PASS | issue #645 — implementation root/repo/browser behavior |

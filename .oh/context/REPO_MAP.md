@@ -122,7 +122,7 @@ Do not load all of these at once. Pick the row that matches the task, read READM
 
 | Path pattern | Contents | Best first use |
 |---|---|---|
-| `AGENTS.md` | Orchestrator identity, permissions, lifecycle, git workflow, skill map. | Confirm what this agent may do and required startup reads. |
+| `AGENTS.md` | Product identity, glossary, non-negotiables, hazards, and root boundaries. | Learn what Open Harness is and what the root orchestrator must preserve. |
 | `README.md` | User-facing project overview and quick orientation. | Understand product positioning or public claims. |
 | `Makefile` | Common lifecycle targets around sandbox creation, shell, ps, destroy. | Find operator commands and compose entry points. |
 | `package.json` | Root scripts for build/test/typecheck/docs/security audit. | Pick verification commands. |

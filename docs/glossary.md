@@ -106,7 +106,7 @@ These names describe separate layers, not interchangeable jobs:
 - **terminal state** — The end state that closes a workflow cycle. `/spec execute`
   completes implementation only after every story passes; the operative path
   then ends at the human `merge` followed by the runner's `reset | clean`.
-  Source: [`AGENTS.md § The Workflow`](../AGENTS.md#the-workflow).
+  Source: [the `/spec` workflow contract](../.oh/skills/spec/SKILL.md#workflow-contract).
 
 - **tool** — A discrete action an agent can invoke — read a file, run a command,
   call an MCP server. Hooks under `.oh/hooks/` intercept tool calls to enforce

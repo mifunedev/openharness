@@ -203,10 +203,10 @@ You return this and **stop**. The caller — not you — then runs `Agent(subage
 
 ## Orchestrator boundary
 
-`CLAUDE.md` forbids the orchestrator from writing application code, and recursion does not relax it. Decomposition trees are appropriate only for orchestrator workflows that decompose **rule / docs / skill changes** — never for shipping product code inside the sandbox on the agent's behalf. Orchestrator-side trees default to `Max depth: 1`. In-sandbox agents fall under `CLAUDE.md`'s sandbox-side rules, not this one.
+Root `AGENTS.md` § "Agent work stays inside the sandbox" forbids the orchestrator from writing application code, and recursion does not relax it. Decomposition trees are appropriate only for orchestrator workflows that decompose **rule / docs / skill changes** — never for shipping product code inside the sandbox on the agent's behalf. Orchestrator-side trees default to `Max depth: 1`. In-sandbox agents fall under `CLAUDE.md`'s sandbox-side rules, not this one.
 
 ## See also
 
 - `.oh/agents/implementer.md`, `.oh/agents/pm.md`, `.oh/agents/critic.md` — the executors/analysts your briefings target. You brief them; you do not do their work.
-- `CLAUDE.md` § *What You Do NOT Do* — the orchestrator-vs-application-code boundary above.
+- `AGENTS.md` § *Agent work stays inside the sandbox* — the orchestrator-to-application-code boundary above.
 - `.oh/skills/spec/templates/task-prompt.md` — the task briefing the single `/spec execute` Advisor consumes. This agent defines the briefing artifact; the caller owns the workflow and its completion gates.

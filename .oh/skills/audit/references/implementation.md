@@ -1,6 +1,6 @@
 # Audit implementation — per-unit verdict gate
 
-The **audit** gate, composed by `/spec execute` in `AGENTS.md § The Workflow`. It answers
+The **audit** gate, composed by `/spec execute` in `.oh/skills/spec/SKILL.md`. It answers
 one question: *does this one implementation satisfy its task graph and is it
 promotable?* — and emits exactly one verdict the caller routes on.
 

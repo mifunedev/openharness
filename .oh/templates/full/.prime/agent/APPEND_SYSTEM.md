@@ -1,8 +1,8 @@
 ## Project context
 
 You are running inside a project workspace. Read `AGENTS.md` (and `CLAUDE.md`, which is
-an alias of it) if present — they define the project's voice, operating principles, and
-development workflow. Treat them as authoritative for how work happens here.
+an alias of it) if present. They define the project's identity, terminology, operating
+principles, and local boundaries. Treat task-specific procedures as on-demand context.
 
 Application code and core logic are developed and tested within the local environment.
 Refer to project conventions for architecture patterns, tooling, and coding standards.

@@ -10,7 +10,7 @@ created: 2026-06-19
 # CB-002 · Walk the canonical spec-* workflow end-to-end
 
 ## Task
-Walk the harness's canonical operative path (`AGENTS.md` § The Workflow: `spec-plan → spec-execute → merge → reset|clean`) from an issue to a ready-for-review PR, advancing each stage through its honest gate with no dead ends. The capability under test is the ability to mechanically carry one unit of work plan → build → audit while preserving the `build ⇄ audit` adversarial loop and the plan-approval commitment gate, then halting truthfully at the human merge gate rather than auto-merging.
+Walk the canonical operative path in `.oh/skills/spec/SKILL.md` (`spec-plan → spec-execute → merge → reset|clean`) from an issue to a ready-for-review PR, advancing each stage through its honest gate with no dead ends. The capability under test is the ability to mechanically carry one unit of work plan → build → audit while preserving the `build ⇄ audit` adversarial loop and the plan-approval commitment gate, then halting truthfully at the human merge gate rather than auto-merging.
 
 ## Success signal
 - The pipeline (`/spec plan` → `/spec execute`) produces a `.oh/tasks/<slug>/` four-file folder before any build.
@@ -26,7 +26,7 @@ Walk the harness's canonical operative path (`AGENTS.md` § The Workflow: `spec-
 | unattended | Pipeline runs to a ready PR with zero human intervention before merge | Completed but a human had to unblock one stage | Required hands-on driving to advance the stages |
 
 ## Evidence basis
-The canonical workflow in `AGENTS.md` § The Workflow demonstrates this capability: a human enters at `/spec plan`, `/spec execute` owns the build end-to-end, and the human owns merge. Retargeted in #263 from the removed `walk-the-loop` task (which exercised the deleted `/orchestrate` executable-loop runner) to the workflow that replaced it.
+The workflow contract in `.oh/skills/spec/SKILL.md` demonstrates this capability: a human enters at `/spec plan`, `/spec execute` owns the build end-to-end, and the human owns merge. Retargeted in #263 from the removed `walk-the-loop` task (which exercised the deleted `/orchestrate` executable-loop runner) to the workflow that replaced it.
 
 **Re-authored 2026-08-24 (spec-simplification US-003)** when `/ship-spec` was absorbed into
 `/spec execute` and deleted. This is the ceiling instrument for the workflow, so it is kept

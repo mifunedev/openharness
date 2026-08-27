@@ -1,6 +1,7 @@
 import {
   ExecutionSpawnError,
   resolveExecutionTarget,
+  runningInsideSandbox,
 } from "../lib/execution/index.js";
 import { spawnRunner, type LifecycleRunner } from "../lib/execution/runner.js";
 import type { ExecutionTarget } from "../lib/execution/target.js";
@@ -190,7 +191,7 @@ async function collectRows(
 ): Promise<{ rows: RuntimeRow[]; insideSandbox: boolean }> {
   const entries = only ? [only] : [...RUNTIME_CATALOG];
   const target = targetFor(root, run, env);
-  const hostMeasurable = target.kind !== "local";
+  const hostMeasurable = !runningInsideSandbox(env ?? process.env);
 
   let reachable = false;
   try {
@@ -337,14 +338,14 @@ export async function runRuntimeInstall(
     return 1;
   }
 
-  const target = targetFor(root, run, opts.env);
-  if (target.kind === "local") {
+  if (runningInsideSandbox(opts.env ?? process.env)) {
     io.stderr(
       "oh runtime install changes the sandbox\u2019s Docker configuration and must run on the host, at the project root.\n",
     );
     return 1;
   }
 
+  const target = targetFor(root, run, opts.env);
   let status: string;
   try {
     status = await target.status();

@@ -35,3 +35,18 @@ Repointed current repository guidance, issue instructions, Makefile output, devc
 Path migration needs a classified audit: current consumers move to `docs/`, while changelog entries, archived task evidence, raw snapshots, and historical event examples remain records of the paths that were true when written.
 
 ---
+
+## US-003 — 2026-08-27 01:55 UTC
+
+**Title**: Make payload and regression contracts match the root move
+**Files changed**: `.oh/manifest.json`, `.oh/evals/probes/{docs-build-fast-path,oh-payload-manifest,make-oh-lifecycle-parity,oh-image-only-deploy,slack-admin-command-surface,audit-stale-references,builder-skill-consolidation,docker-inspect-env-guard}.sh`, `.github/workflows/ci-harness.yml`
+**Commit**: de4d45b6
+**Result**: PASS
+
+### What I did
+Removed `docs/**` from the `.oh` payload manifest and kept the payload path guard `.oh`-scoped. Updated init/update coverage to preserve target root docs, strengthened the docs fast-path probe to allow only Markdown and `_category_.json`, repointed related probes, and added `docs/**` to both harness CI path filters without widening sandbox boot.
+
+### Learnings for future iterations
+The payload walker receives only the source `.oh` directory, so root docs stay outside the payload by construction. A regression guard must test both the positive file-class allowlist and the negative no-legacy-tree condition.
+
+---

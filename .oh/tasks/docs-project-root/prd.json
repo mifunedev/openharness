@@ -51,8 +51,8 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PASS 2026-08-27 — de4d45b6 (payload boundary, root docs guard, related probes, and CI paths)"
     },
     {
       "id": "US-004",

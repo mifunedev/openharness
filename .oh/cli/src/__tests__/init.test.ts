@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  copyFileSync,
   existsSync,
   lstatSync,
   mkdtempSync,
@@ -270,24 +269,31 @@ describe("runInit", () => {
     expect(existsSync(join(t, ".oh/devcontainer"))).toBe(false);
   });
 
-  it("manifest payload: delivers docs, excludes patches, and preserves project files", async () => {
+  it("manifest payload: preserves root docs, excludes patches, and preserves project files", async () => {
     const source = freshTmp();
     const sourceOh = join(source, ".oh");
     const target = freshTmp();
     const sentinel = "project file must remain byte-identical\n";
     const sentinelPath = join(target, "project-sentinel.txt");
-    const rfcPath = join(sourceOh, "docs/rfcs/rfc-brain-hands-boundary.md");
-
-    mkdirSync(dirname(rfcPath), { recursive: true });
-    mkdirSync(join(sourceOh, "patches"), { recursive: true });
-    copyFileSync(
-      join(SOURCE_OH, "docs/rfcs/rfc-brain-hands-boundary.md"),
-      rfcPath,
+    const sourceDocsPath = join(
+      source,
+      "docs/rfcs/rfc-brain-hands-boundary.md",
     );
+    const targetDocsPath = join(
+      target,
+      "docs/rfcs/rfc-brain-hands-boundary.md",
+    );
+
+    mkdirSync(dirname(sourceDocsPath), { recursive: true });
+    mkdirSync(dirname(targetDocsPath), { recursive: true });
+    mkdirSync(join(sourceOh, "patches"), { recursive: true });
+    writeFileSync(sourceDocsPath, "# source project docs\n");
+    writeFileSync(targetDocsPath, "# target project docs\n");
+    writeFileSync(join(sourceOh, "README.md"), "# control plane\n");
     writeFileSync(join(sourceOh, "patches/p.diff"), "source patch\n");
     writeFileSync(
       join(sourceOh, "manifest.json"),
-      JSON.stringify({ include: ["docs/**", "manifest.json"], exclude: [] }),
+      JSON.stringify({ include: ["README.md", "manifest.json"], exclude: [] }),
     );
     writeFileSync(sentinelPath, sentinel);
 
@@ -298,12 +304,11 @@ describe("runInit", () => {
       ),
     ).toBe(0);
 
-    expect(
-      readFileSync(
-        join(target, ".oh/docs/rfcs/rfc-brain-hands-boundary.md"),
-        "utf8",
-      ),
-    ).toBe(readFileSync(rfcPath, "utf8"));
+    expect(readFileSync(targetDocsPath, "utf8")).toBe(
+      "# target project docs\n",
+    );
+    expect(existsSync(join(target, ".oh", "docs"))).toBe(false);
+    expect(existsSync(join(target, ".oh/README.md"))).toBe(true);
     expect(existsSync(join(target, ".oh/patches/p.diff"))).toBe(false);
     expect(readFileSync(sentinelPath, "utf8")).toBe(sentinel);
   });

@@ -25,7 +25,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installArgv: ["npm", "install", "-g", "@anthropic-ai/claude-code"],
     installUser: "root",
     verifyArgv: ["claude", "--version"],
-    docsPath: ".oh/docs/harnesses/claude-code.md",
+    docsPath: "docs/harnesses/claude-code.md",
     kind: "default",
   },
   {
@@ -35,7 +35,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installArgv: ["npm", "install", "-g", "@openai/codex"],
     installUser: "root",
     verifyArgv: ["codex", "--version"],
-    docsPath: ".oh/docs/harnesses/codex.md",
+    docsPath: "docs/harnesses/codex.md",
     kind: "default",
   },
   {
@@ -53,7 +53,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     ],
     installUser: "sandbox",
     verifyArgv: ["pi", "--version"],
-    docsPath: ".oh/docs/harnesses/pi.md",
+    docsPath: "docs/harnesses/pi.md",
     kind: "default",
   },
   {
@@ -65,7 +65,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installArgv: ["npm", "install", "-g", "opencode-ai"],
     installUser: "root",
     verifyArgv: ["opencode", "--version"],
-    docsPath: ".oh/docs/harnesses/opencode.md",
+    docsPath: "docs/harnesses/opencode.md",
     kind: "optional",
   },
   {
@@ -81,7 +81,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     ],
     installUser: "root",
     verifyArgv: ["grok", "--version"],
-    docsPath: ".oh/docs/harnesses/grok-build.md",
+    docsPath: "docs/harnesses/grok-build.md",
     kind: "optional",
   },
   {
@@ -93,7 +93,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installArgv: ["uv", "tool", "install", "deepagents-cli"],
     installUser: "sandbox",
     verifyArgv: ["deepagents", "--version"],
-    docsPath: ".oh/docs/harnesses/deepagents.md",
+    docsPath: "docs/harnesses/deepagents.md",
     kind: "optional",
   },
   {
@@ -109,7 +109,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     ],
     installUser: "root",
     verifyArgv: ["hermes", "--version"],
-    docsPath: ".oh/docs/harnesses/hermes.md",
+    docsPath: "docs/harnesses/hermes.md",
     kind: "optional",
   },
   {
@@ -119,7 +119,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     installArgv: ["npx", "--yes", "t3", "--version"],
     installUser: "sandbox",
     verifyArgv: ["npx", "--no-install", "t3", "--version"],
-    docsPath: ".oh/docs/harnesses/t3code.md",
+    docsPath: "docs/harnesses/t3code.md",
     kind: "on-demand",
   },
   {
@@ -133,7 +133,7 @@ export const HARNESS_CATALOG: readonly HarnessEntry[] = [
     ],
     installUser: "sandbox",
     verifyArgv: ["prime-agent", "--version"],
-    docsPath: ".oh/docs/harnesses/prime-agent.md",
+    docsPath: "docs/harnesses/prime-agent.md",
     kind: "on-demand",
   },
 ];

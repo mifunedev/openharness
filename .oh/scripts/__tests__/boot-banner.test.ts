@@ -29,7 +29,7 @@ describe("boot banners", () => {
   it("first-boot entrypoint banner points at the Slack bridge setup docs", () => {
     const block = firstBootBlock(readRepoFile(".devcontainer", "entrypoint.sh"));
 
-    expect(block).toContain(".oh/docs/integrations/slack.md");
+    expect(block).toContain("docs/integrations/slack.md");
     expect(block).toContain("Optional Slack bridge setup");
     expect(block).toContain("First command after attaching");
     expect(block).toContain("herdr");

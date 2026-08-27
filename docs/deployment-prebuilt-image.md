@@ -1,7 +1,7 @@
 # Prebuilt-image deployment (skip the local build)
 
 Every default install path builds the sandbox image locally from
-[`.devcontainer/Dockerfile`](../../.devcontainer/Dockerfile) — Node, `gh`, the
+[`.devcontainer/Dockerfile`](../.devcontainer/Dockerfile) — Node, `gh`, the
 Docker CLI, cloudflared, bun, uv, pnpm, and the agent CLIs. On a cold cache that
 is **~10 minutes**. Each tagged release also publishes that exact image, already
 built and smoke-tested, to GHCR:
@@ -94,7 +94,7 @@ same last-wins ordering as the CLI.
 ## VS Code "Reopen in Container"
 
 The VS Code Dev Containers path reads
-[`.devcontainer/docker-compose.yml`](../../.devcontainer/docker-compose.yml)
+[`.devcontainer/docker-compose.yml`](../.devcontainer/docker-compose.yml)
 **directly** and cannot receive `--no-build`, so its build-suppression relies on
 `pull_policy`. Set both in `.devcontainer/.env` (compose auto-loads it):
 
@@ -136,7 +136,7 @@ image itself. Tracked in
 
 ### The recipe
 
-[`.devcontainer/docker-compose.image-only.yml`](../../.devcontainer/docker-compose.image-only.yml)
+[`.devcontainer/docker-compose.image-only.yml`](../.devcontainer/docker-compose.image-only.yml)
 is a standalone compose file — no `..:` bind mount, no `build:` stanza:
 
 ```bash
@@ -184,7 +184,7 @@ clobbered.
 
 ### Clean slate + fresh run (explicit `docker run`)
 
-The [compose file](../../.devcontainer/docker-compose.image-only.yml) is the
+The [compose file](../.devcontainer/docker-compose.image-only.yml) is the
 canonical one-liner (`docker compose -f … up -d`). If you drive Docker directly
 instead, this is the equivalent teardown → fresh run → verify sequence. It
 mirrors the compose file's env and volume set — note it reads `GIT_USER_NAME` /

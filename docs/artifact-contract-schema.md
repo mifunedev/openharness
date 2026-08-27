@@ -13,7 +13,7 @@ they are missing or unverifiable."*
 
 **The block is optional and additive.** A `prd.json` with no `artifact_contract`
 key behaves exactly as before — the block only *adds* enforceable guarantees, it
-never relaxes an existing gate. Today the one field the [`/audit implementation`](../skills/audit/references/implementation.md)
+never relaxes an existing gate. Today the one field the [`/audit implementation`](../.oh/skills/audit/references/implementation.md)
 Gate 1 mechanically enforces is `required_artifacts` (a declared path missing on
 disk is a hard `AUDIT-FAIL`); the remaining fields are declarative contract terms
 a proposal generator, an auditor, or a human reviewer reads and holds the work
@@ -43,7 +43,7 @@ promise on that axis. Field names are canonical — declare them verbatim so a
 
 | Field | Type | Meaning |
 |-------|------|---------|
-| `required_artifacts` | `string[]` | Repo-relative paths the finished task **must** leave on disk. **Enforced:** [`/audit implementation`](../skills/audit/references/implementation.md) Gate 1 `jq`-reads this array and a listed path that is absent is a hard `AUDIT-FAIL`. |
+| `required_artifacts` | `string[]` | Repo-relative paths the finished task **must** leave on disk. **Enforced:** [`/audit implementation`](../.oh/skills/audit/references/implementation.md) Gate 1 `jq`-reads this array and a listed path that is absent is a hard `AUDIT-FAIL`. |
 | `allowed_locations` | `string[]` | Path prefixes the task's edits may land within — the self-edit surface for this unit (typically a subset of `OWNED_PATHS`; see the [repair-operator registry](repair-operator-registry.md) Tier 1). |
 | `forbidden_destructive_edits` | `string[]` | Paths or globs that must **not** be deleted or destructively rewritten — the lines this task promises to leave intact. |
 | `verification_commands` | `string[]` | The exact shell commands that prove the work (probes, eval runner, targeted checks). A reader runs these to confirm the deliverable, not to trust the narrative. |
@@ -58,11 +58,11 @@ A complete `artifact_contract` block, ready to paste at the root of a `prd.json`
 ```json
 "artifact_contract": {
   "required_artifacts": [
-    ".oh/docs/artifact-contract-schema.md",
+    "docs/artifact-contract-schema.md",
     ".oh/evals/probes/artifact-contract-audit.sh"
   ],
   "allowed_locations": [
-    ".oh/docs/",
+    "docs/",
     ".oh/skills/audit/",
     ".oh/evals/probes/"
   ],
@@ -84,7 +84,7 @@ A complete `artifact_contract` block, ready to paste at the root of a `prd.json`
   ],
   "final_handoff_requirements": [
     "bash .oh/skills/eval/run.sh green with no new regression",
-    "Both new docs indexed in .oh/docs/README.md"
+    "Both new docs indexed in docs/README.md"
   ]
 }
 ```
@@ -93,7 +93,7 @@ The smallest useful contract is just the enforced field:
 
 ```json
 "artifact_contract": {
-  "required_artifacts": [".oh/docs/artifact-contract-schema.md"]
+  "required_artifacts": ["docs/artifact-contract-schema.md"]
 }
 ```
 
@@ -102,7 +102,7 @@ The smallest useful contract is just the enforced field:
 - [Repair-operator registry](repair-operator-registry.md) — the trust tiers a
   repair is granted; `allowed_locations`/`forbidden_destructive_edits` map onto
   its Tier-1 self-edit surface and Tier-2/3 guarded surfaces.
-- [`/audit implementation`](../skills/audit/references/implementation.md) — Gate 1 is the enforcer for
+- [`/audit implementation`](../.oh/skills/audit/references/implementation.md) — Gate 1 is the enforcer for
   `required_artifacts`.
 - [Self-improving harness roadmap](rfcs/rfc-selfimprove-roadmap.md) — item 5 is
   this schema's parent RFC; item 7 is the repair registry.

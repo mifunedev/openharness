@@ -420,7 +420,7 @@ describe("runHarnessStatus", () => {
     expect(await runHarnessStatus("hermes", { cwd: root, run, json: true }, io)).toBe(0);
     const parsed = JSON.parse(text(out));
     expect(parsed.id).toBe("hermes");
-    expect(parsed.docs).toBe(".oh/docs/harnesses/hermes.md");
+    expect(parsed.docs).toBe("docs/harnesses/hermes.md");
   });
 
   it("rejects an unknown name with the valid ids", async () => {

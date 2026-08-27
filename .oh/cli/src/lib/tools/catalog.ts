@@ -19,7 +19,7 @@ export interface ToolEntry {
   readonly docsPath: string;
 }
 
-const TOOLS_DOC = ".oh/docs/installation.md";
+const TOOLS_DOC = "docs/installation.md";
 
 export const TOOL_CATALOG: readonly ToolEntry[] = Object.freeze([
   Object.freeze({

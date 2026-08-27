@@ -140,7 +140,7 @@ demand via the `/t3` skill or direct `npx`. Authenticate at least one harness be
 - **[T3 Code](./harnesses/t3code.md)**: authenticate one of Claude / Codex / OpenCode, then `/t3` or `npx t3` (browser UI on port 3773)
 
 Claude Code remains the documented default. See
-[the harnesses overview](./harnesses/overview) for the full list and
+[the harnesses overview](./harnesses/overview.md) for the full list and
 per-harness setup.
 
 [Connecting to the Sandbox](/docs/connecting)

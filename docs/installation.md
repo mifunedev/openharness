@@ -259,7 +259,7 @@ published `ghcr.io/mifunedev/openharness` image instead of building locally — 
 
 ## Next step
 
-Once installed, proceed to the [Quickstart](./quickstart) to authenticate inside the sandbox and start an agent.
+Once installed, proceed to the [Quickstart](./quickstart.md) to authenticate inside the sandbox and start an agent.
 
 ## What's Installed
 

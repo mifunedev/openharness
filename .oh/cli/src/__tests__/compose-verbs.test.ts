@@ -158,7 +158,7 @@ describe("parity with the Makefile", () => {
   });
 
   it("documents each make-only target in the mapping doc", () => {
-    const map = read(".oh/docs/lifecycle-commands.md");
+    const map = read("docs/lifecycle-commands.md");
     for (const target of ["destroy", "config", "shell"]) {
       expect(map, target).toContain(`make ${target}`);
     }

@@ -6,8 +6,8 @@ normative**: Open Harness does not require this file, does not validate this
 shape, and does not treat it as a registry-backed schema or conformance target.
 
 The real runtime configuration file today is `.devcontainer/.env`,
-generated from [`.devcontainer/.example.env`](../../.devcontainer/.example.env) and read by
-[`docker-compose.sh`](../scripts/docker-compose.sh). That file controls sandbox
+generated from [`.devcontainer/.example.env`](../.devcontainer/.example.env) and read by
+[`docker-compose.sh`](../.oh/scripts/docker-compose.sh). That file controls sandbox
 settings. The example below is only a pointer map over the existing `.oh/`
 control-plane surfaces described in the [`.oh/` directory layout](oh-directory-layout.md).
 

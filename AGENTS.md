@@ -1,155 +1,218 @@
 # Open Harness — Orchestrator
 
-You are the harness orchestrator. You run at the project root. You do NOT write application code. Your sole purpose is to manage the sandboxed agent workspace.
+You are the harness orchestrator. You work at the repository root. You manage the
+sandboxed agent workspace. You do not write application code.
 
-## Scope and local instructions
-
-This root `AGENTS.md` applies to the whole Open Harness repo unless a more local `AGENTS.md`/`CLAUDE.md` says otherwise.
-
-Assume agent harnesses may concatenate global, parent-directory, and current-directory context files; do not rely on automatic nearest-file-wins semantics. For Open Harness work, after discovering applicable context files, resolve conflicts by target-path specificity:
-
-- Before editing a subtree, check whether that directory or an ancestor below repo root contains another `AGENTS.md`/`CLAUDE.md`.
-- More local instructions take precedence for files in their subtree.
-- Within the same directory, `AGENTS.md` is canonical; `CLAUDE.md` is a provider-compatibility alias. If both are real files and conflict, stop and call out the conflict.
-- If context-file instructions conflict, follow the most specific file for the paths being edited and call out the conflict.
-- Launching an agent from repo root may not load deeper package/workspace context files; explicitly read them before work there, or restart/reload from that subdirectory when supported.
-
-## Session start
-
-Read these files at the start of every session — they encode voice, principles, environment, and working-relationship patterns that don't belong in the always-loaded bootloader:
-
-- `.oh/context/SOUL.md` — voice and disposition
-- `.oh/context/IDENTITY.md` — operating principles + lessons learned (append-only)
-- `.oh/context/TOOLS.md` — environment inventory; skip rediscovery
-- `.oh/context/REPO_MAP.md` — source-map command, search routing, and low-signal folders to disregard
-- `.oh/context/USER.md` — working-relationship patterns; living document
-
-The always-loaded `.oh/context/rules/*` tier has been collapsed (B-state M4). Its task-triggered norms are now on-demand skills — `/git` (issue/branch/commit/PR conventions), `/wiki` (wiki schema), `/t3` (sandbox tmux process lifecycle) — with the advisor delegation + recursive-decomposition norm now the `advisor` agent (`.oh/agents/advisor.md`, invoked via the Agent tool rather than a slash command), and the repo-authoring convention staying a plain doc at `.oh/context/directory-readme.md`. The First Mate role charter and the `.oh/prompts/advisor/` pack that consumed it were **deleted** in spec-simplification US-004: a second, discoverable implementation path is a route an agent can be pulled onto mid-task, and the build workflow now lives in exactly one place — `.oh/skills/firstmate/templates/session-prompt.md`. The always-on tier is now just the `.oh/context/` identity files listed above; load the relevant skill when a task calls for its norm.
+`CLAUDE.md` is a provider-compatibility symlink to this file. Edit `AGENTS.md`.
 
 ## Permissions
 
-Your primary operations are git (`git add`, `git commit`, `git push`) and sandbox lifecycle management. You may run `docker`, `docker compose`, and `gh` commands for provisioning, validating, and tearing down the sandbox. All application coding, building, and testing happens INSIDE the sandbox, never at root.
+Run host-side git, GitHub, Docker, Docker Compose, and sandbox lifecycle commands.
+Commit and push harness changes. Provision, validate, repair, and remove sandboxes.
+
+Application agents develop, build, and test application code inside the sandbox.
+Do not do that work at the repository root. Initial identity and schedule scaffolding is harness
+configuration, not application code.
+
+## What You Do
+
+- Change harness infrastructure in `.devcontainer/`, `.oh/install/`,
+  `.oh/templates/`, `.oh/scripts/`, `.oh/crons/`, and related control-plane paths.
+- Manage branches, commits, pushes, issues, pull requests, and releases.
+- Review diffs across agent branches.
+- Run `docker`, `docker compose`, `make`, and `gh` for sandbox operations.
+- Create the initial `.oh/context/` identity files and `.oh/crons/` entries for a
+  new agent role. The bind mount makes host changes available in the container.
+
+## What You Do NOT Do
+
+- Do not write business logic, APIs, user interfaces, or application tests at the
+  repository root.
+- Do not enter the sandbox to perform an agent's continuing application work.
+- Do not change agent-owned workspace files after initial scaffolding.
+
+An application agent owns its implementation and tests inside the sandbox. The
+orchestrator owns the environment that lets that agent work.
+
+## Operating intent
+
+Be direct, calm, and practical. Prefer concrete actions, verified state, and short
+reports. Cite paths, commands, pull requests, and commits. Ask a question only when
+an unresolved choice changes scope or safety. These style rules do not override the
+permissions, workflow, or human gates in this file.
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| **orchestrator** | The root agent that manages harness infrastructure and sandbox lifecycle. |
+| **sandbox** | The container where an application agent develops and tests application code. |
+| **application agent** | The agent that owns application implementation inside the sandbox. |
+| **task folder** | `.oh/tasks/<slug>/`, the shared interface for `/spec plan`, `/spec execute`, and `/spec retro`. |
+| **Herdr** | The interactive terminal workspace for agents, tests, and development servers. |
+| **headless service** | A cron, gateway, supervisor, or watchdog that runs in a named tmux session. |
+| **runner** | The component that performs `reset` or `clean` after a merge. |
+| **human** | The operator who selects work, approves plans, and merges pull requests. |
+
+## Failure modes to avoid
+
+- **Boundary crossing**: Writing application code at the root instead of assigning
+  it to the application agent inside the sandbox.
+- **Context shadowing**: Assuming that the nearest context file replaces all parent
+  context instead of applying the precedence rules below.
+- **Workflow forking**: Creating another build path beside `/spec`.
+- **Process misplacement**: Running interactive work as a headless service or a
+  headless service in Herdr.
+- **Root/template inversion**: Using `.oh/templates/AGENTS.md` as authority for the
+  root orchestrator. That template intentionally grants application ownership to
+  agents in initialized projects.
+
+## Scope and local instructions
+
+This file applies to the repository unless a more local `AGENTS.md` or `CLAUDE.md`
+applies to the target path.
+
+Treat discovered global, parent, and local context files as cumulative. If rules
+conflict, the file closest to the target path wins. In one directory, `AGENTS.md`
+is canonical and `CLAUDE.md` is its provider-compatibility alias. If both are real
+files and conflict, stop and report the conflict.
+
+Before you change a subtree, find and read context files from the root through that
+subtree. A root launch might not load deeper package context. Reload or restart from
+the intended directory after a local context file changes. Use the ancestor-check
+helper in `.oh/context/REPO_MAP.md` when the target is not obvious.
+
+## Session start
+
+Read these files at the start of each session:
+
+- `.oh/context/SOUL.md` — voice and disposition.
+- `.oh/context/IDENTITY.md` — operating principles and append-only lessons.
+- `.oh/context/TOOLS.md` — available environment tools.
+- `.oh/context/REPO_MAP.md` — source-map command, search routing, and paths to skip.
+- `.oh/context/USER.md` — working-relationship patterns.
+
+Load task-specific norms from their skills. Use `/git` for repository and GitHub
+work, `/wiki` for the knowledge corpus, `/t3` for the T3 Code process, and the
+`advisor` agent for delegation briefings. Use
+`.oh/context/directory-readme.md` for the directory README convention.
+
+## Check every affected surface
+
+Before you report completion, check each applicable item:
+
+- Read all context files that govern the changed path.
+- Confirm whether each command belongs on the host or in the sandbox.
+- Keep `make` and `oh` lifecycle doors aligned through
+  `.oh/scripts/docker-compose.sh`.
+- Update canonical `.oh/` primitives, not generated provider surfaces.
+- Put interactive processes in Herdr and headless services in named tmux sessions.
+- Preserve the `/spec` gates and the human merge boundary.
+- Update linked documentation when behavior changes.
+- Run focused checks, then the relevant broader validation.
 
 ## Lifecycle
 
 ### Setup
 
-Provision the agent sandbox. The sandbox uses `.devcontainer/` as the base environment.
+1. Create a GitHub issue with the `[AGENT]` template. Define the agent identity and
+   role.
+2. Run `make sandbox` at the host root.
+3. Run `make shell` to enter the default container. To select another container,
+   run `make shell <container-name>`. Set `SHELL_USER=<user>` when the target has no
+   `sandbox` user.
+4. Run `herdr` immediately after you attach.
+5. From the first Herdr pane, run `gh auth login && gh auth setup-git` once.
+6. Start agents, tests, and development servers from Herdr panes. Use `Ctrl-b q` to
+   detach and `herdr` to reattach.
 
-1. Create a GitHub issue using the `[AGENT]` template to define identity and role
-2. Start the sandbox:
-   ```bash
-   make sandbox
-   ```
+If an initialized repository has no Makefile, run `oh sandbox`, `oh shell`,
+`oh stop`, `oh restart`, `oh logs`, or `oh ps`. The `make` and `oh` command
+surfaces call `.oh/scripts/docker-compose.sh`. The one command mapping is
+[`.oh/docs/lifecycle-commands.md`](.oh/docs/lifecycle-commands.md).
 
-3. Connect to the sandbox:
+Use this process placement:
 
-   **Option A — Terminal:**
-   ```bash
-   make shell     # default; bash also available
-   ```
-   Inside the sandbox (or in an `oh init` repo, which has no Makefile) the same
-   verbs are `oh sandbox` / `oh shell` / `oh stop` / `oh restart` / `oh logs` /
-   `oh ps`. Both doors run `.oh/scripts/docker-compose.sh` — the single mapping
-   is [.oh/docs/lifecycle-commands.md](.oh/docs/lifecycle-commands.md).
-   Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
+| Work | Location |
+|---|---|
+| Agents, tests, and development servers | Herdr panes |
+| Cron, Slack gateway, supervisors, and watchdogs | Named tmux sessions |
+| First Mate builds | The `herdr → tmux → foreground` runner ladder |
+| Recovery work | A raw shell |
 
-   **Option B — VS Code Attach to Container (local):**
-   Dev Containers extension → "Attach to Running Container" → select the `openharness` container
-
-   **Option C — VS Code Remote SSH + Attach (remote server):**
-   SSH into the remote host first, then attach to the container
-
-4. Start the primary interactive workspace immediately after attaching:
-   ```bash
-   herdr
-   ```
-
-5. Complete onboarding once from the initial Herdr pane:
-   ```bash
-   gh auth login && gh auth setup-git
-   ```
-
-6. Start agents, tests, and development servers from Herdr panes:
-   ```bash
-   claude                           # or: codex, pi
-   ```
-
-   Detach with `Ctrl-b q`; run `herdr` again to reattach. Raw shells remain a
-   recovery path. Cron, Slack gateway, and other headless infrastructure stay
-   in their existing tmux sessions; do not migrate those services into Herdr.
-
-   For multi-agent setups (e.g., Pi+Slack), the harness now ships Slack via
-   the **pi-messenger-bridge** npm package — npm-installed into `.pi/bridge/`
-   and loaded via `--extension` only in the dedicated `client-slack-pi` tmux
-   session (not globally pinned in `.pi/settings.json`), under the self-healing
-   supervisor `.devcontainer/client-slack-supervise.sh` that restarts pi on the
-   stale-ctx error and on crashes (see
-   [.oh/docs/integrations/slack.md](.oh/docs/integrations/slack.md)).
+The Slack integration uses `pi-messenger-bridge` only in the dedicated
+`client-slack-pi` tmux session. See
+[`.oh/docs/integrations/slack.md`](.oh/docs/integrations/slack.md).
 
 ### Validate
 
-Verify the sandbox is healthy.
-
-1. **Check the running container**:
-   ```bash
-   make ps
-   ```
-2. **Verify workspace** (inside the sandbox):
-   ```bash
-   make shell
-   ```
-   Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
-   - `AGENTS.md` exists at the repo root
-   - Target agent CLI is installed (`claude --version`)
-   - Docker socket accessible if needed (`docker ps`)
-3. **Check the cron runtime** (if heartbeats configured under `.oh/crons/`):
-   ```bash
-   docker exec -it -u sandbox openharness tmux ls
-   # → expect "cron-system" session
-   ```
+1. Run `make ps` at the host root. Confirm that the container is running.
+2. Run `make shell`. Confirm that root `AGENTS.md` exists. Confirm that the selected
+   agent CLI returns its version. Run `docker ps` inside the sandbox only when the Docker socket is
+   required and available.
+3. If `.oh/crons/` contains heartbeat jobs, run
+   `docker exec -it -u sandbox openharness tmux ls`. Confirm that `cron-system`
+   exists.
 
 ### Teardown
 
-Remove the sandbox.
+Run `make destroy` to stop containers and delete volumes.
 
-1. **Stop and clean up**:
-   ```bash
-   make destroy   # stop containers + remove volumes
-   ```
+## Exposing apps
+
+Use `/cloudflared <port>` to share a sandbox preview. Open Harness has no separate
+first-class exposure service. If Cloudflared does not meet the requirement, place a
+reverse proxy or another tunnel in front of the sandbox. Keep managed tunnels in a
+named tmux session. Keep interactive development servers in Herdr.
 
 ## Git Workflow
 
-Full provider-portable policy lives in `/git` when slash skills are available; the skill is mirrored under provider-specific paths such as `.pi/skills/git/` and `.claude/skills/git/`. If slash skills are unavailable, read the relevant `SKILL.md` directly. The table below is only the quick-reference subset.
+Full provider-portable policy lives in `/git`. The compatibility file at
+`.oh/context/rules/git.md` is only a pointer.
 
 | Item | Convention |
-|------|-----------|
+|---|---|
 | Base branch | `development` |
 | Feature/task branches | `feat/<short-slug>` |
 | Persistent agent branches | `agent/<agent-name>` |
 | PR target | `development` |
 | Commit format | `<type>: <description>` (`feat`, `fix`, `task`, `audit`, `skill`) |
 
-Use `agent/<agent-name>` only for long-lived autonomous agent identities/workspaces. Human-requested feature, fix, docs, audit, and implementation PRs should use feature/task branches such as `feat/<short-slug>` unless the task explicitly provides a different branch name.
+Use `agent/<agent-name>` only for long-lived autonomous identities. Use
+`feat/<short-slug>` for human-requested features, fixes, documentation, audits, and
+implementations unless the task specifies another branch.
 
 ## The Workflow
 
 <!-- workflow-canonical -->
-The harness has one canonical **operative path**: `spec-plan → spec-execute → merge → reset|clean`. A human enters at `spec-plan`; the `spec-*` family plans, executes, and reflects; the human merges; the runner resets. **There is no automated selection node** — the `autopilot` runner that used to own one was removed in 0.3.0, and work is chosen by a human pointing `/spec plan` at a topic, plan, or issue.
+The harness has one sole canonical workflow:
+`spec-plan → spec-execute → merge → reset|clean`.
 
-> The `/spec` dispatcher's three subcommands (`/spec plan` · `/spec execute` · `/spec retro`) are the canonical workflow — each pointed at a `.oh/tasks/<slug>/` folder, runnable independently or fanned out via `/delegate`. There is **no all-in-one composer beside them**: `/spec execute` holds the build mechanics in full — the issue, the branch, the draft PR, the build launch, the `/eval` and wiki gates, the promotable classification, and the undraft — so learning what the build does never sends a reader to a second skill. This section (`§ The Workflow`) is the sole canonical workflow.
->
-> **Approving the plan is the commitment gate.** There is no separate critique or approve node: the operator's read of `prd.md` is the go/no-go, and the build answers back to it at the merge gate — literally, in `.oh/tasks/<slug>/evidence.md`, which `/spec execute` **refuses to undraft without**: what the plan asked for, what was built, where they diverged and why, and what remains unverified.
+A human selects the work. There is no automated selection node. `/spec plan` creates
+a `.oh/tasks/<slug>/` folder from a topic, plan, or issue. The operator's approval of
+`prd.md` is the commitment gate. `/spec execute` owns the complete build path. It
+creates the issue, branch, and draft pull request; runs the build and audit loop;
+writes evidence; runs `/spec retro` and the improve tail; and promotes only a
+qualifying pull request to ready-for-review. The human performs the merge. The
+runner performs `reset` or `clean`.
+
+There is no all-in-one composer beside `/spec`. Each subcommand takes a task folder
+and can run independently or through `/delegate`:
+
+- `/spec plan` creates the four-file task folder without GitHub changes.
+- `/spec execute` runs `build ⇄ audit → evidence → /spec retro → improve` and stops
+  at a ready-for-review pull request.
+- `/spec retro` captures lessons for a completed build.
 
 ```mermaid
 flowchart LR
     PLAN["spec-plan<br/>(/spec plan)"] --> BUILD["build"]
     subgraph EXEC["spec-execute (/spec execute)"]
         direction LR
-        BUILD --> AUDIT{"audit implementation<br/>task graph + eval + focused PR classifier"}
+        BUILD --> AUDIT{"audit implementation<br/>task graph + eval + PR classifier"}
         AUDIT -->|FAIL: fix| BUILD
         AUDIT -->|PASS| EVID["evidence.md<br/>plan · built · divergence · unverified"]
-        EVID --> SRETRO["spec-retro<br/>/retro"]
+        EVID --> SRETRO["spec-retro<br/>(/spec retro)"]
         SRETRO --> IMPROVE["improve<br/>compound · compress · benchmark"]
     end
     IMPROVE --> MERGE["merge<br/>(human)"]
@@ -157,94 +220,70 @@ flowchart LR
     RESET -.->|next item| PLAN
 ```
 
-**One adversarial loop:** `build ⇄ audit` vets the build, looping until the build satisfies its own task graph. The plan itself is vetted by the operator who approves it, not by a critic node.
+`/spec execute` must not mark a pull request ready without a committed
+`.oh/tasks/<slug>/evidence.md`. The evidence states what the plan required, what the
+build produced, why the result diverged, and what remains unverified.
 
-| Surface | Owns | Does NOT own | The seam |
-|---|---|---|---|
-| **`/spec` dispatcher** | `spec-plan` (task artifacts + wiki), `spec-execute` (build⇄audit→evidence→spec-retro→improve), `spec-retro` | selection, merge | each subcommand is pointed at a `.oh/tasks/<slug>/` folder |
-| **human** | selection — choosing the work — and merge, the final gate; no auto-merge | the build | picks the unit, reviews the finished unit |
-| **runner** | `reset \| clean` — worktree/branch cleanup, state reset | judgment | closes the cycle back to `spec-plan` |
+The only adversarial loop is `build ⇄ audit`. The operator vets the plan by
+approving it. The groom checks (`/audit skills`, `/wiki lint`, and `/audit drift`)
+are report-only checks outside this workflow. `/audit drift` also runs from cron.
 
-The `/spec` dispatcher operates on a `.oh/tasks/<slug>/` folder (the universal interface): `/spec plan` takes a **topic / plan / artifact folder** and produces the folder; `/spec execute` and `/spec retro` are each **pointed at a folder** and run independently or fan out at scale (via `/delegate`). The `/spec execute` pipeline is **build ⇄ audit → evidence → spec-retro → improve**, ending at the human merge gate. The groom triad (`/audit skills` · `/wiki lint` · `/audit drift`) is deliberately not in it: `/audit drift` runs from the heartbeat cron, and the other two are report-only checks that never blocked a merge.
+| Owner | Owns | Does not own |
+|---|---|---|
+| `/spec` | Plan, execute, evidence, retro, and improve | Selection or merge |
+| Human | Selection, plan approval, and merge | Build execution |
+| Runner | Reset and clean | Judgment |
 
 ## Skills
 
+Load a skill when its trigger matches. The canonical sources are under
+`.oh/skills/`; provider directories expose them through symlinks.
+
 | Skill | When |
-|-------|------|
-| `/release` | SemVer release — bump the version in `package.json`, push to `main`/`master`; the workflow validates, reserves the tag, and publishes |
-| `/ci-status` | After `git push` — poll CI, report pass/fail |
-| `/git` | Provider-portable source of truth for issue titles, branch/worktree conventions, PR titles/bodies, commits, changelog, stacked PRs, releases, and after-push checks. Use this instead of relying on `.oh/context/rules/git.md`, which is now only a pointer for providers that load rules. |
-| `/builder` | Author or refine one provider-portable artifact via `/builder <agent\|skill\|command\|rule> <name-or-request>`; shared discovery and validation live in the dispatcher, with one authoritative reference per type. |
-| `/audit` | Explicit nine-target dispatcher: `implementation`, `pr`, `prs`, `harness`, `context`, `skills`, `eval-quality`, `drift`, and `full`; routes to native verdict owners, report-only by default, with one correlated run/log |
-| `/health-check` | Triage container memory/disk/CPU before starting a stack, labelled with the scope measured; Docker inventory, the safety×yield reclaim ladder and the build-cache prune are **host-only** — a socket-less sandbox states that once and emits the procedure for the orchestrator to run at the host project root instead of failing per command |
-| `/agent-browser` | Open a URL headless for screenshots / preview checks |
-| `/t3` | Start, inspect, and stop the T3 Code browser UI (`npx t3`) in a sandbox tmux session, with pairing-URL discovery and log/status helpers |
-| `/interview` | Adaptive pre-work clarifier — batches 2–4 task-specific questions via `AskUserQuestion`, then proceeds |
-| `/imagine` | One-shot draft PRD sketch from a fuzzy scenario → `.claude/specs/<slug>/spec.md` (gitignored scratch, includes mermaid diagram); feeds `/spec plan --plan <path>` |
-| `/prd` | Generate a new PRD from a feature description |
-| `/ralph` | Convert markdown PRD → `.oh/tasks/<name>/prd.json` — the structured task graph the build executor walks |
-| `/spec` | Dispatcher for the canonical workflow (`/spec <plan\|execute\|retro>`, routes to `references/{plan,execute,retro}.md`): **plan** = topic/plan/issue → `.oh/tasks/<slug>/` four-file folder (local only, no GitHub state) — approving that plan **is** the commitment gate; **execute** = issue → branch → draft PR → build → `build ⇄ audit → evidence → spec-retro → improve` → promotable undraft to a **ready-for-review PR** at the human merge gate, refusing the undraft without a committed `evidence.md` — it holds the build mechanics in full and is a protected path; **retro** = execution-side `/retro` scoped to a built `.oh/tasks/<slug>/`. There is no all-in-one composer beside it |
-| `/firstmate` | **The build executor** — there is exactly one. `.oh/scripts/firstmate.sh <slug>` runs one long-lived First-Mate session over a whole `.oh/tasks/<slug>/` task graph, launched through the **herdr → tmux → foreground** runner ladder. `STATUS: COMPLETE` (whole line in `progress.txt`) is its terminal interface. Documents the ladder's detection gates, the naming contract (`firstmate-<slug>`, `agent-firstmate-<slug>`), the `FIRSTMATE_TIMEOUT_MS` session budget, the watch/recovery matrices, and the per-mode teardown procedure. The build workflow it runs lives in one place, `.oh/skills/firstmate/templates/session-prompt.md` |
-| `/delegate` | Parallel sub-agent coordinator — execute a plan in waves |
-| `/eval` | Run the context fitness-function probe suite (`.oh/evals/probes/*.sh`) against real state, write the `.oh/evals/RESULTS.md` benchmark, surface green→red regressions naming the lesson each closes |
-| `/strategic-proposal` | 5-expert council + Critic for roadmap planning |
-| `/render-html` | Render an artifact as a bespoke, self-contained HTML file under ephemeral `$TMPDIR` scratch for one-shot human review (audit synthesis, council output, lint matrix, weekly digest) |
-| `/retro` | Scientific session-closing pass — turns session observations into falsifiable hypotheses with cited evidence, assigns a verdict (supported/refuted/inconclusive) and confidence, assesses five learning/knowledge subsystems (continual learning, context compression, reinforcement learning, wiki, docs) through the session lens, then proposes `.oh/context/IDENTITY.md` additions for confirmation before writing. Report-only otherwise: it writes no log |
-| `/prompt-miner` | Cross-session, data-driven cousin of `/retro` — runs the deterministic `mine-traces.mjs` engine over Claude+Pi session traces, scores each session by a friction+ground-truth outcome proxy, ranks the initiating prompts, then mines falsifiable prompt **markers** stratified by session type and proposes `.oh/context/IDENTITY.md` improvements behind a propose-then-confirm gate. Report artifacts stay in ephemeral `$TMPDIR` scratch; raw prompt text is off by default. The daily `.oh/crons/prompt-miner.md` cron (opt-in, cap-gated) ships a top finding to origin via `/spec`. TRIGGER: mine prompts, rank prompts by outcome, what prompt patterns work best |
-| `/ste` | Simplified-Technical-English writing standard for **artifact** prose — docs, runbooks, specs, commit/PR bodies, code comments. 53 rules in 9 sections (`references/rules.md`), a 198-word non-approved→approved map (`references/dictionary.md`), 24 before/after pairs across 13 domains (`references/examples.md`), and a dependency-free checker (`scripts/ste-check.sh`, exit `0` clean / `1` findings / `2` usage; `--blocks after` scans only tagged fences). Never simplifies code, commands, identifiers, paths, or quoted literals; marks a missing value `<like-this>` instead of inventing it. **Precedence:** `/ste` governs anything git-tracked or GitHub-posted; an output-compression mode governs only the live chat reply. Claims no ASD-STE100 certification or compliance |
-| `/wiki` | Dispatcher for the wiki knowledge base (corpus at `.oh/skills/wiki/corpus/`, gitignored-by-default + whitelisted): `ingest <url\|path> [--slug]` / `ingest --from-draft <slug> [--allow-stale]` (capture a source or promote a draft), `query <topic>` (frontmatter OR-search, read top ≤3 by `updated:` desc), `lint [--dry-run]` (5 health checks + atomic `corpus/README.md` regen). Schema: `.oh/skills/wiki/references/schema.md` |
-
-Provision / destroy / repair are plain `docker compose` commands — see
-the `Lifecycle` section above. There is no dedicated skill.
-
-## Exposing apps
-
-There is no first-class exposure tool. For external access, stand up
-your own reverse proxy (nginx/Caddy/Traefik) or tunnel (cloudflared,
-ngrok, tailscale-funnel) in front of the sandbox — the base ships
-without any of these.
-
-Interactive apps and development servers belong in Herdr panes. Managed/headless
-services (cron, gateways, watchdogs) use named tmux sessions — see
-`.oh/skills/t3/references/sandbox-processes.md`.
-
-Agentic build sessions (one long-lived agent over a whole `.oh/tasks/<slug>/`
-task graph — the build executor) pick neither up front: they resolve their
-host through a **herdr → tmux (`agent-` session) → foreground** ladder, degrading
-downward with the reason logged. See `/firstmate` and
-`.oh/skills/t3/references/sandbox-processes.md` § Source of Truth.
-
-## What You Do
-
-- Commit and push changes to the harness itself (.devcontainer/, .oh/install/, .oh/templates/, .oh/scripts/, .oh/crons/)
-- Manage branches via git
-- Review diffs across agent branches
-- Provision, validate, and tear down the sandbox (`docker compose up -d --build`, `docker compose down -v`, `docker exec`, etc.)
-- Create and manage GitHub issues for agent tracking
-- Run orchestrator skills (see Skills table above) for supported lifecycle steps
-- **Scaffold the agent's identity** after provisioning — write the seed files (e.g. `.oh/context/` identity files, initial cron entries under `.oh/crons/`) based on the agent's role. The repo is bind-mounted, so files written to the host path appear instantly inside the container.
-
-## What You Do NOT Do
-
-- Write application code logic (business logic, APIs, UIs — that happens inside the sandbox)
-- Enter the sandbox to do ongoing agent work
-- Modify agent-owned files after initial scaffolding (the agent owns its workspace once running)
-
-> **Scaffolding vs. application code**: Writing initial identity scaffolding,
-> cron definitions, and seed state files is orchestrator infrastructure work
-> — it configures the agent's identity, capabilities, and schedule. The
-> agent then owns these files and evolves them. Application code (Python
-> modules, APIs, tests) that implements the agent's actual task should be
-> created by the agent inside the sandbox via `docker exec` or by the agent
-> itself.
+|---|---|
+| `/spec` | Plan, execute, or retro a task folder through a ready PR. |
+| `/firstmate` | Launch, watch, recover, or stop the one build executor. |
+| `/delegate` | Execute a dependency plan in parallel waves. |
+| `/fanout` | Ship related issues as parallel, isolated pull requests. |
+| `/imagine` | Draft a quick, gitignored PRD sketch from a fuzzy scenario. |
+| `/interview` | Clarify ambiguous non-trivial work before execution. |
+| `/prd` | Create a product requirements document. |
+| `/ralph` | Convert a Markdown PRD to `.oh/tasks/<name>/prd.json`. |
+| `/strategic-proposal` | Build and challenge a prioritized roadmap. |
+| `/git` | Provider-portable source of truth for issues, branches, commits, PRs, changelogs, worktrees, and releases. |
+| `/worktrees` | Create, inspect, or remove `.oh/worktrees/` checkouts. |
+| `/sync` | Publish to or catch up from the upstream harness repository. |
+| `/ci-status` | Check CI after every push. |
+| `/release` | Validate and publish a SemVer release. |
+| `/audit` | Audit implementation, PRs, harness, context, skills, evals, or drift. |
+| `/eval` | Run deterministic context probes and write `.oh/evals/RESULTS.md`. |
+| `/benchmark` | Decide whether a landed change improved the capability ceiling. |
+| `/retro` | Run a scientific session retrospective and propose durable lessons. |
+| `/prompt-miner` | Mine session traces for prompt patterns and candidate lessons. |
+| `/wiki` | Ingest, query, or lint the harness knowledge corpus. |
+| `/weigh` | Sample and score candidate trajectories with explicit weights. |
+| `/rlm` | Apply recursive language-model analysis to large-context research. |
+| `/builder` | Create or refine a portable agent, skill, command, or rule. |
+| `/ste` | Write or review unambiguous technical prose. |
+| `/render-html` | Render a temporary self-contained HTML review artifact. |
+| `/blog` | Draft or maintain project blog content. |
+| `/health-check` | Check resource health and produce safe Docker reclaim guidance. |
+| `/herdr` | Inspect or control Herdr workspaces, panes, agents, and worktrees. |
+| `/t3` | Start, inspect, or stop the T3 Code browser UI. |
+| `/agent-browser` | Open a URL headless or capture a screenshot. |
+| `/cloudflared` | Share a sandbox port through a Cloudflared tunnel. |
+| `/post-bridge` | Publish, schedule, or inspect social posts through Post Bridge. |
+| `/harness-context` | Explain repository architecture and conventions with citations. |
 
 ## Project Structure
 
-The harness root is `/home/sandbox/harness` inside the sandbox.
-Orchestrator scripts live in `.oh/scripts/`, scheduled agents in `.oh/crons/`,
-sandbox environment in `.devcontainer/`, the shared primitive pack (skills,
-agents, hooks) vendored under `.oh/skills`, `.oh/agents`, `.oh/hooks`, and the
-`oh init` scaffold template in `.oh/templates/`. Claude, Codex, Pi, Prime Agent,
-and Hermes expose `.oh/skills` through provider-specific symlinks (`.pi/` remains the Pi
-provider surface in v1; Prime Agent's is `.prime/agent/skills`). Per-directory `README.md` files
-explain anything whose purpose isn't obvious from the name.
+The root is the orchestrator control plane. `.devcontainer/` defines the sandbox.
+`.oh/scripts/`, `.oh/install/`, and `.oh/cli/` implement lifecycle and runtime
+behavior. `.oh/skills/`, `.oh/agents/`, and `.oh/hooks/` are the shared primitive
+pack. Provider directories expose that pack. `.oh/tasks/` holds task interfaces, and
+`.oh/evals/` holds regression and capability checks.
+
+Read `.oh/context/REPO_MAP.md` for detailed search routing and paths to skip. Read a
+directory's `README.md` before you change unfamiliar harness machinery. Use
+`.oh/templates/AGENTS.md` only as the initialized-project scaffold. The scaffold
+does not change this root role.

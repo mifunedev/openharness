@@ -14,12 +14,14 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Strip explanatory comments from all tracked code — `.ts`/`.mjs`/`.sh`/`.py` plus `oh-path`, the Dockerfile, the Makefile and `.zshrc` — leaving only machine-read directives ([#837](https://github.com/mifunedev/openharness/pull/837)).
 
 ### Fixed
+- `oh harness install` and `oh tool install` now install live when run inside the sandbox instead of skipping with "sandbox not running"; `list`/`status` report real values instead of `?` ([#861](https://github.com/mifunedev/openharness/issues/861)).
 - The `development` issue closer never fired: `pull_request_target` resolves the workflow from the **default** branch (`main`), where the file does not exist. Swapped to `pull_request` ([#841](https://github.com/mifunedev/openharness/issues/841)).
 - **`uv python install` now works as the `sandbox` user without `sudo`.** `install -d -o sandbox -g sandbox .../uv/tools` chowns the final component only, so the intermediate `.../share/uv` stayed `root:root`.
 - Root cause detail: `uv python install` writes `.../uv/python`, a sibling of `tools` inside that root-owned directory, so it failed with `Permission denied`. Every level is now named explicitly, parents first.
 - The boot-time ownership repair now covers the uv tree. The UID-sync sweep only rewrites paths owned by the *old* sandbox UID, so a root-owned uv directory was never repaired. Existing containers self-heal on restart.
 
 ### Added
+- `oh` detects in-sandbox execution (`OH_EXECUTION_TARGET=local|docker-compose` overrides); `oh sandbox` and `oh runtime install` refuse in-box as host-only ([#861](https://github.com/mifunedev/openharness/issues/861)).
 - `.oh/scripts/verify-sandbox-image.sh` — reusable image verifier for the base, apt suites, sandbox UID/GID, Node/pnpm pins, the Herdr checksum, and required tool versions ([#807](https://github.com/mifunedev/openharness/issues/807)).
 - `.github/workflows/sandbox-compatibility.yml` — Dockerfile-scoped CI that builds and verifies arm64 and one amd64 image with every optional installer ([#807](https://github.com/mifunedev/openharness/issues/807)).
 - `.oh/scripts/provision-python.sh` — idempotent, user-scoped uv/Python provisioning. Drops from root to the target user with `HOME` pinned, installs a managed interpreter and an `ipykernel` venv, and verifies the kernel.

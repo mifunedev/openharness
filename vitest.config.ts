@@ -8,5 +8,8 @@ export default defineConfig({
       ".oh/cli/**/__tests__/**/*.test.ts",
     ],
     globals: true,
+    env: {
+      OH_EXECUTION_TARGET: "docker-compose",
+    },
   },
 });

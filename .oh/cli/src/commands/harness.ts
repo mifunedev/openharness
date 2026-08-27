@@ -32,6 +32,7 @@ export interface HarnessOptions {
   cwd?: string;
   run?: LifecycleRunner;
   json?: boolean;
+  env?: NodeJS.ProcessEnv;
 }
 
 export interface HarnessInstallOptions extends HarnessOptions {
@@ -52,9 +53,18 @@ function isReachable(status: string): boolean {
   return status === "ready" || status === "starting";
 }
 
-function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
+function targetFor(
+  root: string,
+  run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
+): ExecutionTarget {
   const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
-  return resolveExecutionTarget({ projectRoot: root, container: name, run });
+  return resolveExecutionTarget({
+    projectRoot: root,
+    container: name,
+    run,
+    ...(env ? { env } : {}),
+  });
 }
 
 async function probeInstalled(
@@ -64,7 +74,7 @@ async function probeInstalled(
   try {
     const r = await target.exec({
       argv: [...entry.verifyArgv],
-      user: entry.installUser,
+      user: "sandbox",
       stdio: "capture",
     });
     return r.exitCode === 0;
@@ -77,10 +87,11 @@ async function probeInstalled(
 async function collectStates(
   root: string,
   run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
   only?: HarnessEntry,
 ): Promise<HarnessState[]> {
   const entries = only ? [only] : [...HARNESS_CATALOG];
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, env);
 
   let reachable = false;
   try {
@@ -135,7 +146,7 @@ function renderTable(states: HarnessState[], io: HarnessIO): void {
 export async function runHarnessList(opts: HarnessOptions, io: HarnessIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const states = await collectStates(root, run);
+  const states = await collectStates(root, run, opts.env);
   if (opts.json) {
     io.stdout(`${JSON.stringify(states, null, 2)}\n`);
   } else {
@@ -164,7 +175,7 @@ export async function runHarnessStatus(
     if (!only) return unknownHarness(name, io);
   }
 
-  const states = await collectStates(root, run, only);
+  const states = await collectStates(root, run, opts.env, only);
   if (opts.json) {
     io.stdout(`${JSON.stringify(only ? states[0] : states, null, 2)}\n`);
   } else {
@@ -205,7 +216,7 @@ export async function runHarnessInstall(
 
   if (opts.persistOnly) return 0;
 
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, opts.env);
   let status: string;
   try {
     status = await target.status();

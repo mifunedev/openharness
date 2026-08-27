@@ -25,6 +25,11 @@ If the sandbox is not running, the command persists the flag, prints a hint, and
 exits 0 — start the sandbox with `oh sandbox` and re-run it, or let the next
 build pick the harness up.
 
+`oh harness` works from inside the sandbox too. There it installs into the
+environment you are already in, and `list`/`status` report the CLIs actually
+present rather than `?`. See
+[Lifecycle commands → Where you are standing when you type `oh`](../lifecycle-commands.md#where-you-are-standing-when-you-type-oh).
+
 Two escape hatches:
 
 | Flag | Effect |

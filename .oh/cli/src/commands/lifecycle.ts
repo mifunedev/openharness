@@ -3,7 +3,9 @@ import { join } from "node:path";
 import {
   ExecutionExitError,
   ExecutionSpawnError,
+  HostOnlyError,
   resolveExecutionTarget,
+  runningInsideSandbox,
 } from "../lib/execution/index.js";
 import {
   assertSpawned,
@@ -98,6 +100,10 @@ function configuredImage(root: string): string | undefined {
 export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
+  if (runningInsideSandbox()) {
+    io.stderr(`${new HostOnlyError("`oh sandbox`").message}\n`);
+    return 1;
+  }
   seedConfig(root, io);
   await maybePromptDockerSocket(root, io);
   requireLifecycleScript(root, "docker-compose.sh");
@@ -127,6 +133,10 @@ export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise
     return 0;
   } catch (err) {
     if (err instanceof ExecutionExitError) return err.exitCode;
+    if (err instanceof HostOnlyError) {
+      io.stderr(`${err.message}\n`);
+      return 1;
+    }
     throw err;
   }
 }

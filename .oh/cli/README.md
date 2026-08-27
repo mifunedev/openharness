@@ -72,6 +72,12 @@ oh tool list                    # what is present, and what is installable
 oh tool install agent-browser   # asks before the ~1 GB Chromium download
 ```
 
+`oh harness` and `oh tool` also run **inside** the sandbox, where they install
+into the current environment instead of driving the container over Docker
+Compose. Detection is automatic (`/.dockerenv` plus `SANDBOX_NAME`); override it
+with `OH_EXECUTION_TARGET=local` or `OH_EXECUTION_TARGET=docker-compose`.
+`oh sandbox` and `oh runtime install` remain host-only and say so.
+
 ## Commands
 
 | Command | What it does |

@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+
+vi.mock("node:os", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:os")>();
+  return { ...actual, userInfo: () => ({ ...actual.userInfo(), username: "sandbox", uid: 1000 }) };
+});
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -336,5 +341,63 @@ describe("oh tool install — the other exits", () => {
     const { io } = makeIo(true);
     expect(await runToolInstall("chromium", { cwd: root, run }, io)).toBe(1);
     expect(calls.length).toBe(0);
+  });
+});
+
+describe("oh tool — inside the sandbox", () => {
+  const INSIDE: NodeJS.ProcessEnv = { OH_EXECUTION_TARGET: "local" };
+
+  const inBox = (extra: (cmd: string, args: string[]) => RunResult | undefined = () => undefined) =>
+    makeRunner((cmd, args) => {
+      const custom = extra(cmd, args);
+      if (custom) return custom;
+      if (cmd === "bash" && args.join(" ").includes("command -v agent-browser")) {
+        return { status: 1, stdout: "", stderr: "" };
+      }
+      return undefined;
+    });
+
+  it("lists real INSTALLED values without a docker inspect", async () => {
+    const root = makeRepo();
+    const { calls, run } = inBox();
+    const { io, out } = makeIo();
+    expect(await runToolList({ cwd: root, run, env: INSIDE }, io)).toBe(0);
+    expect(calls.some((c) => isInspect(c.cmd, c.args))).toBe(false);
+    const text = out.join("");
+    expect(text).not.toContain("INSTALLED is `?`");
+    expect(text).not.toContain("oh sandbox");
+  });
+
+  it("installs live instead of skipping the install", async () => {
+    const root = makeRepo();
+    const { calls, run } = inBox();
+    const { io, out } = makeIo(true);
+    expect(await runToolInstall("agent-browser", { cwd: root, run, env: INSIDE }, io)).toBe(0);
+    expect(out.join("")).not.toContain("skipping the live install");
+    expect(
+      calls.some((c) => c.cmd === "bash" && c.args.some((a) => a.includes("--with-deps"))),
+    ).toBe(true);
+    expect(flagLine(root)).toMatch(/^INSTALL_AGENT_BROWSER=true$/);
+  });
+
+  it("reports an already-installed tool without running the installer", async () => {
+    const root = makeRepo();
+    const { calls, run } = inBox((cmd, args) =>
+      cmd === "bash" && args.join(" ").includes("command -v agent-browser")
+        ? { status: 0, stdout: "", stderr: "" }
+        : undefined,
+    );
+    const { io, out } = makeIo(true);
+    expect(await runToolInstall("agent-browser", { cwd: root, run, env: INSIDE }, io)).toBe(0);
+    expect(out.join("")).toContain("already installed");
+    expect(calls.some((c) => c.args.some((a) => a.includes("--with-deps")))).toBe(false);
+  });
+
+  it("verifies as the sandbox user, never through sudo", async () => {
+    const root = makeRepo();
+    const { calls, run } = inBox();
+    const { io } = makeIo();
+    await runToolStatus("gh", { cwd: root, run, env: INSIDE }, io);
+    expect(calls.some((c) => c.cmd === "sudo")).toBe(false);
   });
 });

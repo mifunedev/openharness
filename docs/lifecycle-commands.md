@@ -65,6 +65,29 @@ This is why neither surface delegates to the other: making the Makefile call
 `oh <verb> -- <args>` forwards extra arguments to `docker compose`, e.g.
 `oh logs -- --tail 50`.
 
+## Where you are standing when you type `oh`
+
+`oh` runs on the host **and** inside the sandbox, and it resolves a different
+execution target for each. On the host it drives the container through Docker
+Compose. Inside the sandbox it runs commands directly, because the sandbox *is*
+the environment those commands target.
+
+Detection is automatic: `oh` treats itself as in-sandbox when `/.dockerenv`
+exists **and** `SANDBOX_NAME` is set. Override it with
+`OH_EXECUTION_TARGET=local` or `OH_EXECUTION_TARGET=docker-compose`.
+
+| Verb | On the host | Inside the sandbox |
+|---|---|---|
+| `oh harness install` · `oh tool install` | installs into the running container over Docker Compose | installs live, in place |
+| `oh harness list/status` · `oh tool list/status` | reports `?` when the container is not reachable | reports the real state of this environment |
+| `oh runtime list/status` | measures host and container requirements | host-scope requirements report `?` — re-run on the host |
+| `oh runtime install` | installs the runtime | refuses with a host-only error |
+| `oh sandbox` | provisions the sandbox | refuses with a host-only error |
+| `oh shell` | `docker exec` into the container | opens a local `zsh` |
+
+`oh runtime install` and `oh sandbox` change the sandbox's own Docker
+configuration, so they stay host-only rather than failing halfway.
+
 ## The three deliberate exceptions
 
 A probe (`.oh/evals/probes/make-oh-lifecycle-parity.sh`) asserts that every

@@ -18,8 +18,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PASS 2026-08-27 — efaef6f3 (docs relocation, links, and direct path tests)"
     },
     {
       "id": "US-002",

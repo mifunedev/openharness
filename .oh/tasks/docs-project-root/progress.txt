@@ -1,2 +1,22 @@
 # progress
 
+## Codebase Patterns
+
+- Root `docs/` is project-owned Markdown and category metadata. The `.oh/` payload remains scoped to `.oh/` and must not copy or overwrite root documentation.
+- When moving a documentation root, adjust relative links by one traversal level: root docs use `../.oh/...` for control-plane files and `../...` for repository-root files. Keep rendered-site `/docs/...` URLs unchanged.
+
+
+## US-001 — 2026-08-27 01:47 UTC
+
+**Title**: Relocate documentation and repair internal links
+**Files changed**: `docs/**` (50 migrated files), `.oh/cli/src/lib/{harnesses,runtimes,tools}/catalog.ts`, related CLI/script tests
+**Commit**: efaef6f3
+**Result**: PASS
+
+### What I did
+Moved the complete tracked `.oh/docs/` tree to root `docs/` with no compatibility symlink. Repaired repository-relative links, traversal depth, explicit Markdown extensions, and direct catalog/test paths while preserving rendered-site and external documentation URLs. Added the root-only Markdown/category metadata guard and verified the exact migrated file set and all local Markdown links.
+
+### Learnings for future iterations
+Root documentation paths are relative to the repository root, so links to `.oh/` need `../.oh/` and links to root files need `../`. Line references must stay outside Markdown link targets so local links resolve correctly.
+
+---

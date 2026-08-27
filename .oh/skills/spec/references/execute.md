@@ -4,9 +4,9 @@
 > (`.oh/skills/spec/SKILL.md`). Argument form:
 > `execute <slug> [--pr <N>] [--repo <owner/name>] [--remote <name>] [--base <branch>]`.
 > The dispatcher passes the argument string after `execute` to this procedure as
-> `$ARGUMENTS`. Authority: `AGENTS.md § The Workflow`.
+> `$ARGUMENTS`. Authority: `.oh/skills/spec/SKILL.md`.
 
-The **execute** node of the `spec-*` family (`AGENTS.md § The Workflow`). Pointed at a
+The **execute** node of the `/spec` workflow is pointed at a
 planned `.oh/tasks/<slug>/` folder whose `prd.md` the operator has approved, it drives the
 build to a ready-for-review PR and stops at the human merge gate. It contains the workflow's
 one adversarial loop — `build ⇄ audit`.
@@ -57,7 +57,7 @@ when no local remote matches.
 Precondition: `.oh/tasks/<slug>/` carries the four-file contract (`prd.md`, `prd.json`,
 `prompt.md`, `progress.txt`) produced by `/spec plan`, and its `prd.md` has been approved.
 **Approving the plan is the commitment gate** — there is no separate critique or approve
-node (`AGENTS.md § The Workflow`). If the folder is incomplete, refuse and route back to
+node (`.oh/skills/spec/SKILL.md`). If the folder is incomplete, refuse and route back to
 `/spec plan`.
 
 **There is no executor argument.** The build has exactly one path:
@@ -390,7 +390,7 @@ propose-then-confirm gate. Always logs.
 
 ### 8. `improve` — compound · compress · benchmark
 
-The self-improvement tail (`AGENTS.md § The Workflow`):
+The self-improvement tail (`.oh/skills/spec/SKILL.md`):
 
 - **compound** — promote durable knowledge so it is reused, not re-derived (`/wiki ingest`,
   `.oh/context/IDENTITY.md`, mint a probe from any guardrail lesson).
@@ -493,8 +493,8 @@ instructions:
 gh pr comment <PR> --repo "$SPEC_REPO" --body "spec execute: PR left draft — <blocking gate>. Resume: <command>."
 ```
 
-Then **stop**. The human owns the merge (`AGENTS.md § The Workflow`: *human merge — final
-gate, no auto-merge*). Never `gh pr merge`. The `agent-spec-<slug>` tmux session is left
+Then **stop**. The human owns the merge (`.oh/skills/spec/SKILL.md`: human merge is
+the final gate; no auto-merge). Never `gh pr merge`. The `agent-spec-<slug>` tmux session is left
 alive for attach/continue (per `.oh/skills/t3/references/sandbox-processes.md`). Print the PR
 URL and terminal status (`READY` or `DRAFT-BLOCKED`) as the final pipeline output.
 
@@ -594,9 +594,9 @@ auto-merge.
 
 ## Pipeline position
 
-Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
-merge → reset|clean`), `execute` is the **execute** node — it ends at the human merge
-gate (next step: the human merges; the runner then resets/cleans). When a gate blocks the
+Within the workflow owned by `.oh/skills/spec/SKILL.md`, `execute` is the build
+node. It ends at the human merge gate. The runner resets or cleans after the human
+merges. When a gate blocks the
 undraft, the next step is to resume the build or fix the named gate.
 
 Report the terminal state as **`READY`** (the PR is ready for review) or

@@ -39,7 +39,7 @@ working** — validated on `oh-remote`, 2026-06-23):
    activates in the workspace/remote extension host, so it must be present where the IDE runs.
 2. **Attach VS Code to the running container** — Dev Containers → *Attach to Running
    Container* → `openharness` (local), or Remote-SSH to the host first and then attach
-   (`CLAUDE.md` Lifecycle Options B/C). The attach provisions the VS Code server *inside* the
+   ([Connecting to the Sandbox](../connecting.md)). The attach provisions the VS Code server *inside* the
    container — the binary the headless image lacks.
 3. On attach the extension activates and binds the MCP server on `http://localhost:3001/mcp`.
    **Claude Code and Codex are already registered** against that endpoint (see
@@ -88,8 +88,8 @@ the missing-binary constraint above does not apply. They are available today but
 
 | Path | Verdict | Evidence / constraint |
 | --- | --- | --- |
-| VS Code Attach-to-Container (Lifecycle Option B) | **CONFIRMED** | Validated on `oh-remote` (2026-06-23): an attached VS Code session provisioned the server, `ozzafar.debugmcpextension` v2.0.1 installed + activated + bound `:3001`, and a full debug lifecycle (breakpoint → pause → `get_variables_values` → `step_over` → `evaluate_expression`) ran against a Python file. The image is already prepared for Attach-to-Container: `.devcontainer/Dockerfile:197-201` writes `/.devcontainer/devcontainer.json` and a `devcontainer.metadata` LABEL so VS Code attaches as user `sandbox` at `/home/sandbox/harness`. The Dev Containers extension provisions its own VS Code server into the container on attach, supplying the binary the headless tiers lack; DebugMCP can then install and activate in that operator-driven host. Confirmed by `CLAUDE.md` Lifecycle **Option B** (Dev Containers → "Attach to Running Container"). |
-| Remote-SSH + Attach (Lifecycle Option C) | **VIABLE** | Same mechanism over SSH: the operator SSHes to the remote host, then attaches to the container, and VS Code provisions its server. The host IDE supplies the server binary, so the extension host can run. Confirmed by `CLAUDE.md` Lifecycle **Option C** (Remote-SSH then attach). |
+| VS Code Attach-to-Container (Lifecycle Option B) | **CONFIRMED** | Validated on `oh-remote` (2026-06-23): an attached VS Code session provisioned the server, `ozzafar.debugmcpextension` v2.0.1 installed + activated + bound `:3001`, and a full debug lifecycle (breakpoint → pause → `get_variables_values` → `step_over` → `evaluate_expression`) ran against a Python file. The image is already prepared for Attach-to-Container: `.devcontainer/Dockerfile:197-201` writes `/.devcontainer/devcontainer.json` and a `devcontainer.metadata` LABEL so VS Code attaches as user `sandbox` at `/home/sandbox/harness`. The Dev Containers extension provisions its own VS Code server into the container on attach, supplying the binary the headless tiers lack; DebugMCP can then install and activate in that operator-driven host. See [Connecting to the Sandbox](../connecting.md) for Dev Containers → "Attach to Running Container". |
+| Remote-SSH + Attach (Lifecycle Option C) | **VIABLE** | Same mechanism over SSH: the operator SSHes to the remote host, then attaches to the container, and VS Code provisions its server. The host IDE supplies the server binary, so the extension host can run. See [Connecting to the Sandbox](../connecting.md) for Remote-SSH followed by container attach. |
 
 **Summary of the open question.** The container-side, host-free path is **not
 confirmed**: `code serve-web` is **BLOCKED** by the missing VS Code server

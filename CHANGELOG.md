@@ -9,7 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Changed
-- Restructure root agent guidance around product principles, concrete hazards, affected surfaces, and code as the source of truth ([#854](https://github.com/mifunedev/openharness/issues/854)).
+- Refocus root agent guidance on product identity, glossary, hazards, and code as truth; move build workflow authority into its task skill ([#854](https://github.com/mifunedev/openharness/issues/854)).
 - Upgrade the sandbox base image to `debian:trixie-slim` and move Docker's apt suite to `trixie`; Cloudflare's suite stays on `bookworm` ([#807](https://github.com/mifunedev/openharness/issues/807)).
 - Strip explanatory comments from all tracked code — `.ts`/`.mjs`/`.sh`/`.py` plus `oh-path`, the Dockerfile, the Makefile and `.zshrc` — leaving only machine-read directives ([#837](https://github.com/mifunedev/openharness/pull/837)).
 

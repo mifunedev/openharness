@@ -151,7 +151,7 @@ expose to whichever trust level you choose.
 
 No agent merges its own work to the trunk.
 
-- **Doctrine:** [`AGENTS.md`](../../AGENTS.md) § The Workflow — the canonical path ends `… → merge (human) → reset|clean`, and the ownership table states the human owns *"merge — final gate, no auto-merge"* (`AGENTS.md:158`, mermaid `MERGE` node `AGENTS.md:147`). The runner resets; it never merges.
+- **Doctrine:** [the `/spec` workflow contract](../skills/spec/SKILL.md#workflow-contract) — the canonical path ends `… → merge (human) → reset|clean`, and the human alone merges. The runner resets; it never merges.
 - **No unattended merger exists:** the `autopilot` self-improvement loop and its rate-capping preflight were removed in 0.4.0. No scheduled agent now opens or promotes PRs unattended, so there is no automated path to a merge at all.
 - **RECOMMENDED (hard gate):** the ultimate enforcement of "no agent merges" is **GitHub branch protection** (required reviews / restricted merge) on `development`/`main`. That lives in repo settings, not this tree — configure it. Without it, "no auto-merge" rests on the agents' skill definitions, not a server-side block.
 
@@ -167,7 +167,7 @@ application code.
   [`.oh/docs/repair-operator-registry.md`](repair-operator-registry.md) § Tier 1,
   which is now its source of truth.
 - **Scope guard:** "harness-infra only … never sandbox application code" — see
-  `CLAUDE.md` § What You Do NOT Do, which is unchanged and still normative.
+  `AGENTS.md` § "Agent work stays inside the sandbox," which is normative.
 
 ## 7. Untrusted model output — the harness is the authority — **RECOMMENDED (doctrine)**
 
@@ -200,4 +200,4 @@ exploit publicly.
 ## Related
 
 - [Contributing](contributing.md) · [Connecting to the sandbox](connecting.md) · [Installation](installation.md)
-- `AGENTS.md` § The Workflow — the human merge gate in context.
+- [The `/spec` workflow contract](../skills/spec/SKILL.md#workflow-contract) — the human merge gate in context.

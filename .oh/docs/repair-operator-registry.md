@@ -83,11 +83,10 @@ Repairs that a machine may **propose but never land on its own**. The authority
 is a human, applied at a review gate; no automation merges these.
 
 - Sandbox **application code** (business logic, APIs, UIs) is out of bounds for
-  the unattended loop entirely — the scope boundary is stated in
-  `CLAUDE.md` § "What You Do NOT Do" and mirrored by
-  `security-considerations.md §5` (owned-surface guard).
+  the unattended loop entirely. Root `AGENTS.md` § "Agent work stays inside the
+  sandbox" states the scope boundary. `security-considerations.md §5` mirrors it.
 - Any change to the trunk itself: no agent merges its own work. The canonical
-  path in `AGENTS.md` § The Workflow ends `… → merge (human) → reset|clean`,
+  path in `.oh/skills/spec/SKILL.md` ends `… → merge (human) → reset|clean`,
   and the loop is rate-capped and never auto-merges. See
   `security-considerations.md §4` (human merge gate / no auto-merge).
 - The ultimate hard gate for this tier is server-side branch protection on the
@@ -99,7 +98,7 @@ is a human, applied at a review gate; no automation merges these.
 |------|--------------|----------|
 | 1 | safe-by-default | the tier-1 self-edit surface — this page § Tier 1` |
 | 2 | stronger-gate | `deny-env-dump.sh` · `deny-secret-paths.sh` · `warn-devtcp.sh` + `security-considerations.md §2` |
-| 3 | human-approval-required | `CLAUDE.md` § "What You Do NOT Do" · `AGENTS.md` § The Workflow · `security-considerations.md §4`/`§5` |
+| 3 | human-approval-required | `AGENTS.md` § "Agent work stays inside the sandbox" · `.oh/skills/spec/SKILL.md` § Workflow contract · `security-considerations.md §4`/`§5` |
 
 Each token in the Tier 1 surface belongs to Tier 1 only; Tiers 2 and 3 name
 *mechanisms and prose boundaries*, never a Tier 1 path, so no surface is

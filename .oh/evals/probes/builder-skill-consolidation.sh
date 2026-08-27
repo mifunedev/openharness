@@ -83,8 +83,6 @@ if grep -qF 'references/skill.md' "$RULE_REF"; then
   fail "rule type delegates authority to a second type reference"
 fi
 
-grep -qF '| `/builder` |' "$ROOT/AGENTS.md" || fail "active Skills table does not advertise /builder"
-
 for path in "${required[@]}"; do
   lines=$(wc -l < "$path")
   [ "$lines" -lt 500 ] || fail "builder artifact exceeds 499 lines: ${path#"$ROOT/"} ($lines)"

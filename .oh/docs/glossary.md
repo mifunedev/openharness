@@ -107,7 +107,7 @@ These names describe separate layers, not interchangeable jobs:
 - **terminal state** — The end state that stops a loop or closes a workflow
   cycle. For the Ralph loop it is `STATUS: COMPLETE`; for the operative path it
   is the human `merge` followed by the runner's `reset | clean`.
-  Source: [`AGENTS.md § The Workflow`](../../AGENTS.md#the-workflow).
+  Source: [the `/spec` workflow contract](../skills/spec/SKILL.md#workflow-contract).
 
 - **tool** — A discrete action an agent can invoke — read a file, run a command,
   call an MCP server. Hooks under `.oh/hooks/` intercept tool calls to enforce

@@ -43,7 +43,7 @@
       "id": "RO-002",
       "class": "light-orientation",
       "prompt": "Find the git workflow, PR title, branch, and target-base conventions.",
-      "expected_paths": ["AGENTS.md", ".pi/skills/git/", ".claude/skills/git/"],
+      "expected_paths": [".oh/skills/git/", ".pi/skills/git/", ".claude/skills/git/"],
       "forbidden_patterns": ["node_modules/", "wiki/raw/", ".oh/worktrees/"]
     },
     {

@@ -1,12 +1,12 @@
 ---
 name: spec
 description: >-
-  Dispatcher for the canonical decomposed workflow (AGENTS.md § The Workflow) —
-  routes the first token of $ARGUMENTS to one of three subcommands: plan,
-  execute, or retro. Each is pointed at a .oh/tasks/<slug>/ folder (the universal
-  interface) and is independently runnable and fan-out-able. This is the ONLY
-  build path: there is no all-in-one composer beside it. Full per-subcommand procedures live in
-  references/{plan,execute,retro}.md. Authority: AGENTS.md § The Workflow.
+  Canonical decomposed build workflow and dispatcher. Routes the first token of
+  $ARGUMENTS to one of three subcommands: plan, execute, or retro. Each is pointed
+  at a .oh/tasks/<slug>/ folder (the universal interface) and is independently
+  runnable and fan-out-able. This skill owns the ONLY build path; there is no
+  all-in-one composer beside it. Full per-subcommand procedures live in
+  references/{plan,execute,retro}.md.
   TRIGGER when: a topic/plan/issue needs to become a buildable task folder, "plan
   <topic>", "scaffold the task for <issue>" -> plan; an approved .oh/tasks/<slug>/
   folder needs building to a promotable PR, "execute <slug>", "build <slug>" ->
@@ -29,6 +29,21 @@ the draft PR, the build launch, the `/eval` and wiki gates, the promotable
 classification, and the undraft — so learning what the build does never sends a
 reader to a second skill. The dispatcher splits the pipeline so each node can be
 run independently or fanned out at scale via `/delegate`.
+
+## Workflow contract
+
+The canonical operative path is
+`spec-plan → spec-execute → merge → reset|clean`.
+
+There is no automated selection node. A human selects the work and approves
+`prd.md`; that approval is the commitment gate. `/spec execute` runs
+`build ⇄ audit → evidence → spec-retro → improve` and stops at a ready-for-review
+pull request. The human alone merges. The runner performs `reset` or `clean`.
+
+The `.oh/tasks/<slug>/` folder is the interface between all three subcommands.
+`evidence.md` records plan requirements, build results, reasons for divergence,
+and unverified work. `/spec execute` refuses to mark a pull request ready when that
+evidence is absent or uncommitted.
 
 ## Subcommands
 
@@ -61,10 +76,9 @@ esac
 
 ## Shared rules (apply to every subcommand)
 
-- **Authority is `AGENTS.md § The Workflow`** — the canonical operative path
-  (`select → spec-plan → spec-execute → merge → reset|clean`),
-  and the human who selects the work both
-  live there. Defer to it; do not redefine the workflow here.
+- **This skill owns the workflow** — keep the operative path, human selection,
+  plan-approval gate, evidence gate, and human merge boundary in this skill and its
+  three direct references. Do not duplicate the workflow in root instructions.
 - **The `.oh/tasks/<slug>/` folder is the universal interface** — `plan` produces it;
   `execute` and `retro` are each pointed at it. The `<slug>` is the
   universal key (task directory, branch second segment, tmux session name).
@@ -92,6 +106,5 @@ esac
 
 ## See Also
 
-- `references/plan.md`, `references/execute.md`,
-  `references/retro.md` — the full per-subcommand procedures (authoritative).
-- `AGENTS.md § The Workflow` — the canonical workflow this dispatcher decomposes.
+- `references/plan.md`, `references/execute.md`, and
+  `references/retro.md` — the authoritative per-subcommand procedures.

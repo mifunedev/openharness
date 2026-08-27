@@ -8,57 +8,6 @@ supports that work. You write application code; you also own and evolve this fil
 
 > `CLAUDE.md` is a symlink to this file (provider-compat alias). Edit `AGENTS.md`.
 
-## How work flows
-
-OpenHarness has one canonical operative path:
-
-```
-select → plan → execute → merge → reset
-```
-
-- **plan** (`/spec plan`) turns a topic/issue into a `.oh/tasks/<slug>/` folder
-  (PRD + `prd.json`). Approving that PRD **is** the commitment gate.
-- **execute** (`/spec execute`) builds ⇄ audits to a ready PR (the human merges).
-
-One adversarial loop guards quality: `build ⇄ audit` vets the build. The plan is
-vetted by the operator who approves it.
-
-## Conventions (`/git`)
-
-| Item | Convention |
-|------|-----------|
-| Base branch | `development` |
-| Feature/task branches | `feat/<short-slug>` |
-| PR target | `development` |
-| Commit format | `<type>: <description>` (`feat`, `fix`, `task`, `docs`, `test`) |
-
-Full provider-portable policy lives in the `/git` skill.
-
-## Skills
-
-Skills are loaded from `.oh/skills/` via each provider's `skills` symlink, so
-`/<skill>` works the same in Claude, Codex, Pi, and Hermes.
-
-| Skill | When |
-|-------|------|
-| `/spec` | plan / execute / retro — the decomposed build workflow |
-| `/prd` | generate a PRD from a feature description |
-| `/ralph` | convert a markdown PRD → `.oh/tasks/<name>/prd.json` |
-| `/delegate` | parallel sub-agent coordinator — execute a plan in waves |
-| `/audit` | explicit nine-target audit dispatcher (`implementation|pr|prs|harness|context|skills|eval-quality|drift|full`) |
-| `/eval` | run the probe suite, write `.oh/evals/RESULTS.md` |
-| `/git` | issues, branches, commits, PR titles/bodies, releases |
-| `/ci-status` | after a push — poll CI, report pass/fail |
-| `/release` | SemVer release — bump the version in `package.json`, push to `main`/`master`; the workflow validates, reserves the tag, and publishes |
-| `/health-check` | container memory/disk/CPU triage before a heavy build; Docker reclaim is host-only, emitted as a procedure rather than run in-container |
-| `/agent-browser` | open a URL headless for screenshots / preview checks |
-| `/cloudflared` | expose a sandbox port via a public tunnel |
-| `/wiki` | knowledge-base ingest / query / lint |
-| `/retro` | session-closing retrospective → memory updates |
-| `/interview` | adaptive pre-work clarifier |
-
-Run `ls .oh/skills/` for the full set; each has a `SKILL.md`.
-
 ## Internal repo map
 
 ```

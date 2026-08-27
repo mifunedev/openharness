@@ -19,8 +19,8 @@ argument-hint: "[--base <ref>] [--cycles <N>]"
 
 # Benchmark — progress-ceiling verdict gate
 
-The **benchmark** gate, part of `/spec execute`'s improve tail in `AGENTS.md § The
-Workflow`. It answers one question: *was this change actually beneficial — did it
+The **benchmark** gate, part of `/spec execute`'s improve tail in
+`.oh/skills/spec/SKILL.md`. It answers one question: *was this change actually beneficial — did it
 move or hold the capability ceiling without breaking the regression floor, and is
 it worth its complexity?* — and emits exactly one verdict.
 

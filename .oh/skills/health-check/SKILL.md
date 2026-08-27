@@ -230,7 +230,7 @@ Then ask (use `AskUserQuestion`). Run the removal only on explicit approval. Wit
 
 The relocated half of this skill. Docker inventory and every reclaim lever run where the daemon runs — they are **not** something a sandboxed agent can do, and #756 closed that route deliberately.
 
-**Who runs this.** The **orchestrator** — the agent session at the host project root, which root `AGENTS.md` § Permissions already grants `docker` and `docker compose`, and whose own skills table already lists `/health-check`. If you are that session, `DOCKER_TRIAGE` reports `available` and you simply run steps 2 through 7 as written; this section is what you hand to somebody else.
+**Who runs this.** The **orchestrator** — the agent session at the host project root. Root `AGENTS.md` § "Agent work stays inside the sandbox" assigns Docker and sandbox lifecycle to that role. If you are that session, `DOCKER_TRIAGE` reports `available` and you run steps 2 through 7 as written; this section is what you hand to somebody else.
 
 **The round trip, both directions.** A sandboxed agent cannot run this block. Print it, say where it runs, and say what comes back:
 

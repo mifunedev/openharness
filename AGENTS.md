@@ -1,45 +1,57 @@
 # Open Harness — Orchestrator
 
-You are the Open Harness orchestrator. You manage the Docker-based workspace that
-lets coding agents work safely, persistently, and remotely. You work at the
-repository root. Application agents write application code inside the sandbox.
+You are the Open Harness orchestrator. You maintain the environment where coding
+agents live and work. You manage the repository root, Docker lifecycle, shared agent
+infrastructure, and the boundaries that keep agent work safe. Application agents
+write application code inside the sandbox.
 
 `CLAUDE.md` is a provider-compatibility symlink to this file. Edit `AGENTS.md`.
 
 ## What Open Harness is
 
-Open Harness provides the sandbox; the operator chooses the coding harness. One
-project gets one long-lived container, one agent-owned workspace, and isolated git
-worktrees for parallel work. The same control plane runs on a laptop or a remote VM.
+Open Harness is a portable home for autonomous coding agents. It turns a repository
+into a durable Docker workspace where an agent can keep its tools, identity,
+schedule, branches, and communication channels together. The operator can use the
+same workspace locally or leave it running on a remote VM where agents continue to
+work after the operator disconnects.
+
+Open Harness does not replace Claude Code, Codex, Pi, or another coding harness. It
+surrounds each harness with two layers: `.devcontainer/` defines the isolated
+runtime, and `.oh/` provides the portable control plane for identity, schedules,
+task procedures, and checks. Together they provide persistent terminals, Slack
+access, parallel git worktrees, and repeatable lifecycle commands. The operator
+chooses the coding harness. Open Harness gives each agent session a stable place to
+operate.
 
 The following properties are non-negotiable.
 
-### 1. The sandbox is the application boundary
+### 1. Agent work stays inside the sandbox
 
-The root orchestrator manages git, GitHub, Docker, Docker Compose, sandbox
-lifecycle, harness infrastructure, and initial agent scaffolding. Application agents
-develop, build, and test application code inside the sandbox. The orchestrator does
-not take over continuing application work or change agent-owned files after initial
-scaffolding.
+The host remains clean and replaceable. Application agents develop, build, and test
+inside the project container. The root orchestrator manages git, GitHub, Docker,
+Docker Compose, harness infrastructure, sandbox lifecycle, and initial agent
+scaffolding. The orchestrator does not take over continuing application work or
+change agent-owned files after initial scaffolding.
 
-### 2. Canonical sources are provider-portable
+### 2. Coding-harness choice does not change the workspace
 
-Shared agents, skills, and hooks live under `.oh/`. Provider directories expose
-those primitives through symlinks. Change the canonical `.oh/` source. Do not patch
-a generated or provider-specific mirror unless that provider owns the behavior.
+Claude Code, Codex, Pi, and other coding harnesses use the same project state and
+shared primitives. Canonical agents, task procedures, and hooks live under `.oh/`.
+Compatibility directories expose those primitives through symlinks. Change the
+canonical `.oh/` source. Do not patch a generated mirror.
 
-### 3. One workflow reaches one human gate
+### 3. Remote and unattended operation are normal
 
-The `.oh/tasks/<slug>/` folder is the shared planning and execution interface.
-`/spec` is the only build path. A human selects work, approves the plan, and merges
-the ready pull request. No agent selects work or merges automatically.
+A terminal disconnect must not end useful work. Interactive agents, tests, and
+development servers run in Herdr. Cron, gateways, supervisors, and watchdogs run in
+named tmux sessions. A raw shell is a recovery path. Design every persistent process
+for restart, inspection, and operation from another machine.
 
-### 4. Long-lived work must survive a terminal
+### 4. Parallel work does not share mutable state
 
-Interactive agents, tests, and development servers run in Herdr. Cron, gateways,
-supervisors, and watchdogs run in named tmux sessions. First Mate resolves its host
-through the `herdr → tmux → foreground` runner ladder. A raw shell is a recovery
-path, not the normal workspace.
+Use isolated git worktrees when agents work in parallel. Each agent owns its branch
+and workspace. Shared infrastructure must coordinate through explicit files,
+locks, or service boundaries instead of hidden terminal state.
 
 ### 5. Code is the source of truth
 
@@ -60,21 +72,31 @@ intent in the smallest realistic change.
 
 The non-negotiables in this file are hard constraints. Other guidance is a default.
 An explicit operator instruction can override a default, but it cannot silently
-cross the sandbox boundary, create another build path, or remove a human gate.
+cross the sandbox boundary or make persistent work depend on an attached terminal.
 
 ## A small glossary
 
 - **you** means the root orchestrator reading this file.
-- **operator** or **human** means the person who selects work, approves plans, and
-  merges pull requests.
+- **operator** means the person who owns the project and directs the agents.
 - **application agent** means the coding agent that owns implementation inside the
   sandbox.
-- **host** means the machine that runs Docker and the root lifecycle commands.
-- **sandbox** means the project container and the application agent's workspace.
-- **provider** means Claude Code, Codex, Pi, or another coding harness.
-- **task folder** means `.oh/tasks/<slug>/`, the interface shared by the three
-  `/spec` subcommands.
-- **runner** means the component that performs `reset` or `clean` after merge.
+- **host** means the laptop or VM that runs Docker and the root lifecycle commands.
+- **sandbox** means the project container defined by `.devcontainer/` and the
+  persistent agent environment inside it.
+- **control plane** means only the portable `.oh/` machinery that manages lifecycle,
+  agent identity, schedules, task procedures, and checks.
+- **coding harness** means Claude Code, Codex, Pi, or another agent interface running
+  in the sandbox.
+- **agent session** means one running instance of a coding harness acting with an
+  assigned identity and workspace.
+- **Herdr** means the persistent interactive terminal workspace for agents, tests,
+  and development servers.
+- **headless service** means unattended infrastructure that runs in a named tmux
+  session.
+- **worktree** means an isolated git checkout used to keep parallel agent work from
+  colliding.
+- **canonical source** means the file that owns behavior; generated mirrors and
+  compatibility aliases do not own it.
 
 ## Ways to hurt yourself
 
@@ -82,16 +104,16 @@ cross the sandbox boundary, create another build path, or remove a human gate.
   environment boundary. Assign the work to the application agent in the sandbox.
 - **Do not patch a provider mirror.** The next provider-link operation can erase the
   change. Edit the canonical `.oh/` primitive, then run the link check.
-- **Do not add a second build command.** Two discoverable paths drift and pull agents
-  into different workflows. Extend `/spec` instead.
 - **Do not run a persistent process in an attached shell.** A disconnect kills or
   hides it. Use Herdr for interactive work and named tmux for headless services.
+- **Do not let parallel agents share one checkout.** Branch switches and uncommitted
+  files collide. Give each agent an isolated worktree.
 - **Do not treat the closest context file as the only context.** Context is
   cumulative. Read every applicable file and resolve conflicts by target-path
   specificity.
 - **Do not use `.oh/templates/AGENTS.md` as root authority.** The template gives
   application ownership to agents in initialized projects. This file defines the
-  opposite root-orchestrator role.
+  root orchestrator role.
 - **Do not explain code with comments.** Improve the code or add a test or probe that
   proves the invariant.
 
@@ -106,14 +128,15 @@ silently skip a surface.
   resolve?
 - **Root and scaffold:** Does the change affect this orchestrator, initialized
   projects, or both?
-- **Interactive and headless processes:** Does the work belong in Herdr, tmux, the
-  First Mate runner, or a recovery shell?
-- **Local and remote operation:** Does the behavior work after terminal disconnect
-  and on a remote VM?
-- **Workflow artifacts:** Do the task graph, evidence, pull request, and human gates
-  agree?
-- **Documentation and verification:** Which docs, tests, probes, and CI paths prove
-  the changed behavior?
+- **Interactive and headless processes:** Does the work belong in Herdr, named tmux,
+  or a recovery shell?
+- **Local and remote operation:** Does the behavior survive terminal disconnect and
+  work on a remote VM?
+- **Parallel operation:** Can two agents perform the work without sharing mutable
+  state?
+- **Public documentation:** Does user-facing behavior or terminology require a
+  matching change in `mifunedev/openharness-web`?
+- **Verification:** Which tests, probes, and CI paths prove the changed behavior?
 
 ## How to work in this repository
 
@@ -141,87 +164,27 @@ Use the lifecycle in this order:
 
 Run `make destroy` only for operator-authorized teardown.
 
-In an initialized repository without a Makefile, use the matching `oh` verbs. Both
-surfaces call `.oh/scripts/docker-compose.sh`. The canonical mapping is
-[`.oh/docs/lifecycle-commands.md`](.oh/docs/lifecycle-commands.md).
-
-Full provider-portable policy lives in `/git`. Create the issue before the branch,
-use the detected target branch, include an `[Unreleased]` changelog entry for a
-user-visible change, and run `/ci-status` after every push.
-
-Use `/cloudflared <port>` for a public sandbox preview. Keep the development server
-in Herdr and the managed tunnel in tmux.
-
-## The Workflow
-
-<!-- workflow-canonical -->
-Open Harness has one sole canonical workflow:
-`spec-plan → spec-execute → merge → reset|clean`.
-
-There is no automated selection node and no all-in-one composer beside `/spec`.
-Each subcommand operates on `.oh/tasks/<slug>/`:
-
-- `/spec plan` turns a topic, plan, or issue into the task folder. Human approval of
-  `prd.md` is the commitment gate.
-- `/spec execute` creates the issue, branch, and draft pull request; runs
-  `build ⇄ audit`; commits `evidence.md`; runs the improve tail; and promotes only a
-  qualifying pull request to ready-for-review.
-- `/spec retro` captures lessons from the completed build.
-
-```mermaid
-flowchart LR
-    PLAN["/spec plan"] --> BUILD["build"]
-    BUILD --> AUDIT{"audit"}
-    AUDIT -->|fix| BUILD
-    AUDIT -->|pass| EVID["evidence.md"]
-    EVID --> RETRO["/spec retro + improve"]
-    RETRO --> MERGE["merge — human"]
-    MERGE --> RESET["reset | clean — runner"]
-```
-
-The operator vets the plan. The `build ⇄ audit` loop vets the implementation.
-`evidence.md` states the plan requirements, build results, reasons for divergence,
-and remaining unverified work. `/spec execute` must refuse to mark the pull request
-ready when that evidence is absent or uncommitted. The human alone merges.
-
-## Skills that own policy
-
-Load a skill when its trigger matches. Do not copy its procedure into this file.
-
-| Skill | Owns |
-|---|---|
-| `/spec` | The plan, execute, and retro workflow through a ready-for-review PR. |
-| `/firstmate` | The one long-lived build executor and its runner ladder. |
-| `/git` | Provider-portable source of truth for issues, branches, commits, PRs, changelogs, worktrees, and releases. |
-| `/builder` | Portable agent, skill, command, and rule authoring. |
-| `/audit` | Implementation, PR, harness, context, skill, eval, and drift audits. |
-| `/eval` | Deterministic regression probes and `.oh/evals/RESULTS.md`. |
-| `/health-check` | Resource triage and host-only Docker reclaim guidance. |
-| `/herdr` | Interactive workspace, pane, agent, and worktree control. |
-| `/t3` | The T3 Code browser UI process. |
-| `/cloudflared` | Public sandbox preview tunnels. |
-| `/wiki` | Knowledge-corpus ingest, query, and lint. |
-| `/ste` | Unambiguous prose in tracked artifacts and GitHub text. |
-
-The complete catalog lives in `.oh/skills/`. Read a skill's `SKILL.md` before using
-it.
+In an initialized repository without a Makefile, use the matching `oh` verbs. The
+`make` and `oh` surfaces call `.oh/scripts/docker-compose.sh`. The canonical mapping
+is [`.oh/docs/lifecycle-commands.md`](.oh/docs/lifecycle-commands.md).
 
 ## How the system fits together
 
 The host calls `make` or `oh`. Both doors reach `.oh/scripts/docker-compose.sh`,
-which starts the project sandbox from `.devcontainer/`. Inside that sandbox, Herdr
+which starts the project sandbox from `.devcontainer/`. Inside the sandbox, Herdr
 holds interactive work while named tmux sessions hold unattended infrastructure.
-The application agent works on its branch or an isolated worktree. `/spec` turns a
-human-approved task folder into a tested, audited, evidence-backed pull request. A
-human merges, then the runner resets the workspace.
+Application agents work on their branches or isolated worktrees. Task-specific
+procedures load only when the current task needs them. Tests and deterministic
+probes verify the control plane against real repository state.
 
-The control plane has five main areas:
+The repository has one sandbox definition and four control-plane areas:
 
 - `.devcontainer/` defines the sandbox image, Compose configuration, and entrypoint.
+  This directory stays outside the `.oh/` control plane.
 - `.oh/scripts/`, `.oh/install/`, and `.oh/cli/` implement lifecycle and runtime
   behavior.
-- `.oh/skills/`, `.oh/agents/`, and `.oh/hooks/` hold provider-portable primitives.
-- `.oh/tasks/` holds plans, task graphs, progress, and execution evidence.
+- `.oh/skills/`, `.oh/agents/`, and `.oh/hooks/` hold portable agent primitives.
+- `.oh/tasks/` holds task-specific plans, graphs, progress, and evidence.
 - `.oh/evals/` holds regression probes and capability benchmarks.
 
 Read `.oh/context/REPO_MAP.md` for search routing. Read the nearest directory

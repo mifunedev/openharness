@@ -1,19 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
-# source: conversation 2026-06-19 (spec-* family split, issue #265); consolidated into /spec dispatcher 2026-06-23 (one skill, args);
-#         critique/approve gate removed 2026-08-23 (spec-simplification US-001)
-# desc: the canonical decomposed workflow is the single /spec dispatcher
-#       (.claude/skills/spec/SKILL.md) routing plan|execute|retro to
-#       references/{plan,execute,retro}.md; the legacy split spec-* skill dirs are
-#       gone, and so are the retired critique/approve surfaces (the fourth
-#       reference-doc must NOT come back); each procedure (and the dispatcher) is
-#       pointed at the .oh/tasks/<slug>/ folder interface, names AGENTS.md § The
-#       Workflow as its authority, and carries NO loop-style ## Handoff section (a
-#       vestige of the executable-loop framework removed in #263; the /spec nodes
-#       declare their place with ## Pipeline position); AGENTS.md § The Workflow
-#       names each /spec <sub> invocation; and there is NO all-in-one composer beside the
-#       dispatcher — /ship-spec was absorbed into references/execute.md and deleted
-#       (spec-simplification US-003), so execute.md must carry the build mechanics itself.
+# source: issue #265; spec-simplification issue #816; workflow authority issue #854
+# desc: /spec owns the three-node folder workflow and execute.md carries the complete build.
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -51,7 +39,9 @@ for f in "$SPEC/SKILL.md" "$SPEC/references"/plan.md \
   [ -f "$f" ] || continue
   rel="${f#"$ROOT"/}"
   grep -qF '.oh/tasks/<slug>/' "$f" || missing+=("$rel: does not name the .oh/tasks/<slug>/ folder interface")
-  grep -qF 'AGENTS.md § The Workflow' "$f" || missing+=("$rel: does not cite AGENTS.md § The Workflow as authority")
+  if [ "$f" != "$SPEC/SKILL.md" ]; then
+    grep -qF '.oh/skills/spec/SKILL.md' "$f" || missing+=("$rel: does not cite the /spec skill as authority")
+  fi
   grep -qE '^## Handoff' "$f" && missing+=("$rel: carries a loop-style ## Handoff section (must use ## Pipeline position)")
 done
 
@@ -65,16 +55,17 @@ if [ -f "$EXEC" ]; then
   done
 fi
 
+for s in "${subs[@]}"; do
+  pattern=$(printf '| `%s` |' "$s")
+  grep -qF "$pattern" "$SPEC/SKILL.md" || missing+=("/spec skill does not name the '$s' subcommand")
+done
+for s in "${retired_subs[@]}"; do
+  pattern=$(printf '| `%s` |' "$s")
+  grep -qF "$pattern" "$SPEC/SKILL.md" && missing+=("/spec skill still names the retired '$s' node")
+done
 if [ -f "$AGENTS" ]; then
-  section="$(awk '/^## The Workflow/{f=1; print; next} f && /^## /{f=0} f{print}' "$AGENTS")"
-  for s in "${subs[@]}"; do
-    grep -qF "/spec $s" <<<"$section" || missing+=("AGENTS.md § The Workflow does not name /spec $s")
-  done
-  for s in "${retired_subs[@]}"; do
-    grep -qF "/spec $s" <<<"$section" && missing+=("AGENTS.md § The Workflow still names the retired /spec $s node")
-  done
-else
-  missing+=("AGENTS.md absent — cannot verify § The Workflow names the family")
+  grep -qE '^## The Workflow$' "$AGENTS" && missing+=("AGENTS.md still duplicates the /spec workflow")
+  grep -qE '^## Skills($| )' "$AGENTS" && missing+=("AGENTS.md still duplicates the skill catalog")
 fi
 
 if [ "${#missing[@]}" -gt 0 ]; then
@@ -83,5 +74,5 @@ if [ "${#missing[@]}" -gt 0 ]; then
   exit 1
 fi
 
-echo "PASS: /spec dispatcher present, three procedures folder-pointed + AGENTS-authored, no loop ## Handoff, legacy split gone, retired critique/approve gate absent, no all-in-one composer beside it, execute.md carries the build literals" >&2
+echo "PASS: /spec owns the workflow, dispatches three folder-pointed procedures, carries no loop ## Handoff, keeps retired surfaces absent, and holds the build literals" >&2
 exit 0

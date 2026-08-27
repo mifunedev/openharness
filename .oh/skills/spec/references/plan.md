@@ -4,22 +4,20 @@
 > (`.oh/skills/spec/SKILL.md`). Argument form:
 > `plan <topic> [--plan <path>] [--issue <N>] [--slug <slug>] [--prefix feat|bug|task|audit|skill|agent] [--repo <owner/name>] [--base <branch>]`.
 > The dispatcher passes the argument string after `plan` to this procedure as
-> `$ARGUMENTS`. Authority: `AGENTS.md § The Workflow`.
+> `$ARGUMENTS`. Authority: `.oh/skills/spec/SKILL.md`.
 
-The **plan** node of the `spec-*` family (`AGENTS.md § The Workflow`:
-`select → spec-plan → spec-execute → merge → reset|clean`). It takes
+The **plan** node of the `/spec` workflow takes
 a topic / plan file / issue and produces the **`.oh/tasks/<slug>/` folder** — the universal
 interface every other `/spec` node is pointed at.
 
 **Core principle: plan cheaply, commit nothing.** `plan` writes only local files
 under `.oh/tasks/<slug>/`. It creates no GitHub-side state, so the folder stays fully
 reversible (delete `.oh/tasks/<slug>/`) until the operator approves the `prd.md`.
-**That approval is the commitment gate** (`AGENTS.md § The Workflow`).
+**That approval is the commitment gate** (`.oh/skills/spec/SKILL.md`).
 
-This is the planning half of the pipeline; `/spec execute` is the
-all-in-one composer that runs the whole `plan → execute → retro` pipeline in
-one invocation; the `/spec` dispatcher is the same pipeline split
-so each node can be run independently or fanned out at scale via `/delegate`.
+This is the planning node. `/spec execute` consumes the approved folder and runs
+the build workflow. Each `/spec` subcommand can run independently or fan out at
+scale via `/delegate`.
 
 ---
 
@@ -29,7 +27,7 @@ so each node can be run independently or fanned out at scale via `/delegate`.
 |-----|---------|
 | `<topic>` | Free-text feature description — the seed for `/prd`. Required unless `--plan` or `--issue` supplies the spec. |
 | `--plan <path>` | A plan file (e.g. `/imagine` output) used as comprehensive `/prd` input; skips `/prd`'s clarifying questions. |
-| `--issue <N>` | The issue number this spec builds — **consumed by the `/ralph` step** (the branch name embeds it, so `/ralph` hard-fails without it). In the canonical `select → spec-plan` flow, `/autopilot` supplies the selected issue (`AGENTS.md § The Workflow` seam: *autopilot hands the issue to spec-plan*). For a fresh manual topic with no issue, open one first (per `/git`) or let `/spec execute` open one in a standalone run. `plan` only **reads** `<N>` — it never opens, edits, or closes an issue. |
+| `--issue <N>` | The issue number this spec builds — **consumed by the `/ralph` step** (the branch name embeds it, so `/ralph` hard-fails without it). The human selects the issue. For a fresh manual topic with no issue, open one first (per `/git`) or let `/spec execute` open one in a standalone run. `plan` only **reads** `<N>` — it never opens, edits, or closes an issue. |
 | `--slug <slug>` | Override the derived slug. Must match `[a-z0-9-]+`, ≤5 words, not `archive`. |
 | `--prefix <type>` | Branch/issue prefix (default `feat`), per `.claude/skills/git/SKILL.md`. |
 | `--repo <owner/name>` | Recorded for downstream `/spec execute`; not acted on here. Default `mifunedev/openharness`. |
@@ -129,15 +127,14 @@ done
 
 ## Pipeline position
 
-Within `AGENTS.md § The Workflow` (`select → spec-plan → spec-execute →
-merge → reset|clean`), `plan` is the **plan** node; the next step is the operator's
-approval of `prd.md`, then `/spec execute <slug>`.
+Within the workflow owned by `.oh/skills/spec/SKILL.md`, `plan` is the first node.
+The operator approves `prd.md`, then runs `/spec execute <slug>`.
 
 The terminal artifact is the folder itself: `.oh/tasks/<slug>/` carrying the four-file
 contract, with `prd.md` awaiting the operator's approval. Report the folder path and the
 story count. There is no `STATUS: SPEC-PLANNED` token — it had no executable consumer, so
 printing it bought nothing.
 
-The `/spec` family's authority is `AGENTS.md § The Workflow`. If the
-four-file contract is incomplete, print the missing file and report the folder as incomplete — a
+The `/spec` family's authority is `.oh/skills/spec/SKILL.md`. If the four-file
+contract is incomplete, print the missing file and report the folder as incomplete — a
 missing artifact is a failure, not a clean plan.

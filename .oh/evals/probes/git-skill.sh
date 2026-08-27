@@ -7,7 +7,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SKILL="$ROOT/.claude/skills/git/SKILL.md"
 RULE="$ROOT/.oh/context/rules/git.md"
-AGENTS="$ROOT/AGENTS.md"
 WORKTREES="$ROOT/.claude/skills/worktrees/SKILL.md"
 CLEANUP="$ROOT/.oh/crons/cleanup-tasks.md"
 CHANGELOG="$ROOT/CHANGELOG.md"
@@ -39,8 +38,6 @@ if [[ -f "$RULE" ]]; then
   fi
 fi
 
-grep -Fq '| `/git` | Provider-portable source of truth' "$AGENTS" || missing+=("AGENTS lists /git")
-grep -Fq 'Full provider-portable policy lives in `/git`' "$AGENTS" || missing+=("AGENTS git section points to /git")
 grep -Fq 'Full policy: `/git` § Worktrees' "$WORKTREES" || missing+=("/worktrees points to /git")
 grep -Fq 'per `/git`' "$CLEANUP" || missing+=("cleanup cron points to /git")
 grep -Fq '.claude/skills/git/SKILL.md' "$CHANGELOG" || missing+=("CHANGELOG top pointer references skill")

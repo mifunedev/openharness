@@ -202,7 +202,7 @@ Type APPROVE to write, SKIP to discard any item, or EDIT <n> <new text> to revis
 
 **This block is the last thing you write before your turn ends.** Do not write to IDENTITY.md until the user responds. If `--dry-run` was passed, print the report and the proposal block, then stop — never write IDENTITY.md in dry-run mode.
 
-`auto-approve` resolves the gate inside the same turn — you present, decide, and write without handing control back. This is the common unattended path (a build session running `/spec execute`'s tail).
+`auto-approve` resolves the gate inside the same turn — you present, decide, and write without handing control back. This is the common unattended path (the Advisor running `/spec execute`'s tail).
 
 ### 7. Write approved changes
 

@@ -36,6 +36,7 @@ import {
   type ToolIO,
 } from "./commands/tool.js";
 import { installableToolIds, toolIds } from "./lib/tools/catalog.js";
+import { sourceDocsUrl } from "./lib/docs.js";
 import {
   fetchRemoteSource,
   DEFAULT_REPO_URL,
@@ -364,7 +365,7 @@ the single implementation. Use whichever is available: \`make\` needs no Node an
 works in a source checkout; \`oh\` works anywhere, including an \`oh init\` repo
 that has no Makefile.
 
-See docs/lifecycle-commands.md for the full mapping.
+See ${sourceDocsUrl("docs/lifecycle-commands.md")} for the full mapping.
 `);
 }
 

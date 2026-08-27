@@ -38,7 +38,6 @@ Schema rule, frontmatter spec, and all authoring conventions: `.oh/skills/wiki/r
 | managed-agents | Scaling Managed Agents: Decoupling the brain from the hands | [agents, meta-harness, sessions, sandbox, resilience, security, scaling, anthropic, model-evolution] | 2026-08-27 |
 | fresh-machine-setup | Fresh-Machine Setup Flow | [setup, onboarding, installation, gateway, ssh, github, slack] | 2026-08-27 |
 | crabbox-remote-exec-control-plane | Crabbox — Remote-Exec Control Plane | [runtime, sandbox, remote-execution, fan-out, control-plane, crabbox, cloudflare-workers, ssh, rsync] | 2026-08-27 |
-| build-executor-ladder | Build Executor Ladder | [build-loop, executor, firstmate, herdr, tmux, runner-ladder, spec-execute] | 2026-08-25 |
 | plan-vs-built-reconciliation | Plan-vs-Built Reconciliation | [spec-execute, evidence, merge-gate, comprehension, audit, task-folder, review] | 2026-08-24 |
 | release-versioning | Release Versioning | [release, versioning, semver, calver, github-actions, ghcr, tags, workflow, package-json] | 2026-08-23 |
 | audit-architecture | Audit Architecture | [audit, pr, workflow, safety, observability] | 2026-08-12 |

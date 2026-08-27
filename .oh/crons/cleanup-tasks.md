@@ -6,7 +6,7 @@ enabled: true
 overlap: false
 catchup: false
 agent: pi
-description: Weekly Ralph session sweep — archive completed tasks
+description: Weekly `/spec execute` task sweep — archive completed tasks
 ---
 
 # Weekly Task Cleanup
@@ -76,7 +76,7 @@ only — never a `.oh/tasks/` subfolder.
    - If `.oh/tasks/<taskdesc>/progress.txt` ends with a line matching exactly
      `STATUS: COMPLETE`:
      - Kill the matching tmux session if one exists:
-       `tmux kill-session -t <taskdesc> 2>/dev/null || true`.
+       `tmux kill-session -t agent-spec-<taskdesc> 2>/dev/null || true`.
      - Move the folder inside the worktree:
        `git -C .oh/worktrees/archive/$TODAY mv .oh/tasks/<taskdesc> .oh/tasks/archive/$TODAY/<taskdesc>`
        (falls back to `mv` + `git -C .oh/worktrees/archive/$TODAY add` if

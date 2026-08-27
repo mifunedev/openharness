@@ -3,6 +3,7 @@ import {
   ExecutionSpawnError,
   resolveExecutionTarget,
 } from "../lib/execution/index.js";
+import { sourceDocsUrl } from "../lib/docs.js";
 import { spawnRunner, type LifecycleRunner } from "../lib/execution/runner.js";
 import type { ExecutionTarget } from "../lib/execution/target.js";
 import { resolveProjectRoot } from "../lib/project.js";
@@ -100,7 +101,7 @@ async function collectStates(
           ? null
           : configured && isInstallFlagEnabled(root, entry.harnessKey),
       installed: reachable ? await probeInstalled(target, entry) : null,
-      docs: entry.docsPath,
+      docs: sourceDocsUrl(entry.docsPath),
     });
   }
   return states;
@@ -250,6 +251,6 @@ export async function runHarnessInstall(
     return r.exitCode;
   }
 
-  io.stdout(`${entry.id}: installed — see ${entry.docsPath} for authentication\n`);
+  io.stdout(`${entry.id}: installed — see ${sourceDocsUrl(entry.docsPath)} for authentication\n`);
   return 0;
 }

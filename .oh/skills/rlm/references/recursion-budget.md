@@ -82,10 +82,10 @@ contract:
 
 ## Reuse-by-reference (no edits)
 
-The recursion **loop** is `.oh/scripts/firstmate.sh` (each story re-reads disk = the
-REPL step) and isolated recursion **branches** are `.oh/worktrees/` forks (the `/worktrees`
-skill). `/rlm` reuses **both by reference** — it never edits `firstmate.sh` (explicitly
-off-limits per the PRD non-goals) or anything under `.oh/worktrees/`.
+The recursion **loop** is `/spec execute` (each story re-reads disk = the REPL step) and
+isolated recursion **branches** are `.oh/worktrees/` forks (the `/worktrees` skill). `/rlm`
+reuses **both by reference** — it never edits `/spec execute`'s task cycle or anything under
+`.oh/worktrees/`.
 
 ## See Also
 

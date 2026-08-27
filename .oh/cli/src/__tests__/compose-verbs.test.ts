@@ -135,7 +135,9 @@ describe("help", () => {
     printComposeVerbHelp("stop");
     const text = spy.mock.calls.map((c) => String(c[0])).join("");
     expect(text).toContain("make stop");
-    expect(text).toContain("lifecycle-commands.md");
+    expect(text).toContain(
+      "https://github.com/mifunedev/openharness/blob/main/docs/lifecycle-commands.md",
+    );
   });
 });
 

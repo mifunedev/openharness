@@ -60,7 +60,7 @@ EXEC="$SPEC/references/execute.md"
 if [ -f "$EXEC" ]; then
   grep -qF 'reuses those by reference' "$EXEC" && missing+=("execute.md still defers its build mechanics by reference instead of holding them")
   grep -qF 'single source of build literals' "$EXEC" && missing+=("execute.md still names another skill as the single source of build literals")
-  for literal in 'gh pr create' 'gh pr ready' 'gh issue' 'git push' 'firstmate.sh' '/audit pr' '/eval'; do
+  for literal in 'gh pr create' 'gh pr ready' 'gh issue' 'git push' '/delegate' '/audit pr' '/eval'; do
     grep -qF "$literal" "$EXEC" || missing+=("execute.md does not carry the build literal '$literal'")
   done
 fi

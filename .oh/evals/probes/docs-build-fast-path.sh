@@ -27,6 +27,27 @@ script_value() {
 
 failures=()
 
+# Classify old-path records instead of rewriting history: changelog and preserved
+# RFC examples, completed task artifacts, immutable wiki snapshots, the
+# runner-generated scoreboard, and this probe's negative guards are deliberate
+# exceptions. Every other tracked hit is current guidance and must use root docs/.
+set +e
+legacy_docs_hits="$(git -C "$ROOT" grep -nI -F '.oh/docs' -- \
+  ':!CHANGELOG.md' \
+  ':!docs/rfcs/preserved-changelog-rationale.md' \
+  ':!docs/rfcs/rfc-trace-ledger.md' \
+  ':!.oh/tasks/**' \
+  ':!.oh/skills/wiki/corpus/raw/**' \
+  ':!.oh/evals/RESULTS.md' \
+  ':!.oh/evals/probes/docs-build-fast-path.sh')"
+legacy_docs_rc=$?
+set -e
+if [[ $legacy_docs_rc -eq 0 ]]; then
+  failures+=("unclassified active .oh/docs reference: $(tr '\n' ';' <<<"$legacy_docs_hits")")
+elif [[ $legacy_docs_rc -ne 1 ]]; then
+  failures+=("tracked .oh/docs reference audit failed with exit $legacy_docs_rc")
+fi
+
 [[ -d "$DOCS_DIR" ]] || failures+=("docs/ must exist as the project documentation directory")
 [[ ! -e "$ROOT/.oh/docs" && ! -L "$ROOT/.oh/docs" ]] || failures+=(".oh/docs must not exist after the documentation move")
 [[ ! -e "$DOCS_DIR/package.json" ]] || failures+=("docs must not regain a Docusaurus package.json (the rendered site stays in openharness-web)")

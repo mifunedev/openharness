@@ -13,13 +13,13 @@ Move the complete tracked documentation tree to root `docs/` without a duplicate
 
 ## What was built
 
-The build moved the exact 50-file tree from `.oh/docs/` to `docs/`; `.oh/docs/` is absent and root `docs/` contains only Markdown and `_category_.json` metadata. Relative repository links, active guidance, catalogs, skills, wiki entries, templates, payload guards, lifecycle checks, and CI filters now use the root location. The manifest no longer includes `docs/**`, and the payload tests preserve a project's root docs. The build refreshed the wiki index and affected source-backed entries, and the generated eval scoreboard is green.
+The build moved the exact 50-file tree from `.oh/docs/` to `docs/`; `.oh/docs/` is absent and root `docs/` contains only Markdown and `_category_.json` metadata. Relative repository links, active guidance, catalogs, skills, wiki entries, templates, payload guards, lifecycle checks, and CI filters now use the root location. The manifest no longer includes `docs/**`, and the payload tests preserve a project's root docs. The build refreshed the wiki index and affected source-backed entries, and the generated eval scoreboard is green. The final development catch-up preserves the #860 First Mate removal and adds durable source-documentation URLs to CLI catalog, status, install, and lifecycle output. It also strengthens the docs fast-path guard against unclassified active `.oh/docs` references.
 
 ## Where it diverged from the plan, and why
 
 None in product scope. The build retained historical changelog, archived task, raw snapshot, and preserved-rationale records as planned.
 
-Process note: the post-build `/eval` ran once while `HEAD` was `0cfa5908`. Commit `4ef39eee` contains only the generated `.oh/evals/RESULTS.md` and the task eval record; the two states contain no implementation-file changes. The audit reads the record under key `4ef39eee`, its implementation `HEAD`, and reused it without a second eval run.
+Process note: the post-build `/eval` ran once while `HEAD` was `0cfa5908`. Commit `4ef39eee` contains only the generated `.oh/evals/RESULTS.md` and the task eval record; the two states contain no implementation-file changes. The audit reads the record under key `4ef39eee`, its implementation `HEAD`, and reused it without a second eval run. After merging `origin/development` at `4ea6e01e`, the repair ran 121 affected CLI tests, CLI typecheck, and the three focused probes listed below. All exited 0. It did not rerun the full eval, so `eval-result.json` and the historical 97-probe result remain unchanged.
 
 ## What remains unverified
 
@@ -31,6 +31,7 @@ The task graph omits browser-verification criteria, so the UI gate does not run.
 |------|------------------|----------|--------|
 | Task graph | `prd.json` stories and artifact contract | `graph 4/4`; no artifact-contract violation | PASS |
 | Regression floor | `/eval` runner exit and delta | `rc=0`; 97 probes; no new green→red regression; no pre-existing reds | PASS |
+| Development catch-up repair | 5 affected CLI test files, typecheck, `docs-build-fast-path.sh`, `oh-payload-manifest.sh`, and `wiki-readme-index.sh` | 121 tests passed; each command exited 0 | PASS |
 | Promotable / CI | Focused PR classifier | `promotable=true`, `readyForReview=true`, `evidenceComplete=true`, `CI PASS`, `MERGEABLE/CLEAN` | PASS |
 | UI | Browser criteria | `n/a` — no story declares browser verification | N/A |
 

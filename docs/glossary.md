@@ -14,7 +14,7 @@ These names describe separate layers, not interchangeable jobs:
 - **Model** — The LLM selected by a provider; it proposes text and tool calls, while the surrounding agent, harness, and policy decide where those requests run and what is allowed. See the **model** glossary entry.
 - **Agent / CLI** — The process that wraps a model with tools, instructions, and session state, such as Claude Code, Codex, Pi, or a scoped `.oh/agents/` worker. See the **agent** glossary entry.
 - **Harness** — The repo, Docker sandbox, and `.oh/` control plane that give agents a reproducible workspace and lifecycle. See the **harness** glossary entry.
-- **Loop** — A repeated workflow that the harness drives until a terminal state, such as a Ralph run ending on the completion marker. See the **loop** and **terminal state** glossary entries.
+- **Loop** — A repeated workflow that the harness drives until a terminal state, such as the `/spec execute` implementation cycle ending after every story passes. See the **loop** and **terminal state** glossary entries.
 - **Policy** — The provider-portable rules, skills, and hooks that constrain agent behavior and tool use. See the **policy** and **tool** glossary entries.
 - **Trace** — Recorded session evidence consumed later by analysis, not the live execution layer itself. See the **trace** glossary entry.
 
@@ -56,10 +56,9 @@ These names describe separate layers, not interchangeable jobs:
   Source: [`intro.md`](intro.md).
 
 - **loop** — A repeated implement → commit → check cycle driven until a
-  completion marker appears. The reference implementation is the build
-  executor's per-story cycle, which walks a task graph until `progress.txt`
-  contains the line `STATUS: COMPLETE`.
-  Source: [`.oh/scripts/firstmate.sh`](../.oh/scripts/firstmate.sh).
+  completion marker appears. `/spec execute` owns the implementation cycle and
+  records completion in `progress.txt` after every story passes.
+  Source: [`.oh/skills/spec/references/execute.md`](../.oh/skills/spec/references/execute.md).
 
 - **model** — The LLM an agent or CLI uses to produce reasoning, text, and
   tool-call requests. The model is only one part of an agent session; the
@@ -94,9 +93,9 @@ These names describe separate layers, not interchangeable jobs:
   host machine. Source: [`.devcontainer/`](../.devcontainer/).
 
 - **session** — A single named run of an agent, typically a tmux session in the
-  sandbox. `firstmate.sh` launches its build session through the herdr → tmux →
-  foreground ladder.
-  Source: [`.oh/scripts/firstmate.sh`](../.oh/scripts/firstmate.sh) and
+  sandbox. `/spec execute` keeps implementation, validation, evidence, and PR
+  finalization in one Advisor-owned session.
+  Source: [`.oh/skills/spec/references/execute.md`](../.oh/skills/spec/references/execute.md) and
   [`sandbox-processes.md`](../.oh/skills/t3/references/sandbox-processes.md).
 
 - **skill** — A packaged, invocable workflow (a `SKILL.md` plus optional
@@ -104,9 +103,9 @@ These names describe separate layers, not interchangeable jobs:
   slash command; the shared set lives under `.oh/skills/`.
   Source: [`.oh/skills/`](../.oh/skills/).
 
-- **terminal state** — The end state that stops a loop or closes a workflow
-  cycle. For the Ralph loop it is `STATUS: COMPLETE`; for the operative path it
-  is the human `merge` followed by the runner's `reset | clean`.
+- **terminal state** — The end state that closes a workflow cycle. `/spec execute`
+  completes implementation only after every story passes; the operative path
+  then ends at the human `merge` followed by the runner's `reset | clean`.
   Source: [`AGENTS.md § The Workflow`](../AGENTS.md#the-workflow).
 
 - **tool** — A discrete action an agent can invoke — read a file, run a command,

@@ -118,7 +118,7 @@ These names describe separate layers, not interchangeable jobs:
   over Claude and Pi session traces to score prompts by outcome.
   Source: [`mine-traces.mjs`](../.oh/skills/prompt-miner/scripts/mine-traces.mjs).
 
-- **worktree** — A separate git working directory under `.oh/worktrees/` that
+- **worktree** — A separate git working directory under `.worktrees/` that
   isolates a branch so parallel work doesn't collide; the `/worktrees` skill
   manages their lifecycle and `/spec execute` builds each task in one.
   Source: [`.oh/skills/worktrees/SKILL.md`](../.oh/skills/worktrees/SKILL.md).

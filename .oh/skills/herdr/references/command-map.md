@@ -85,7 +85,7 @@ herdr worktree remove --workspace ID [--force] [--json]
 
 `list` reports `branch`, `path`, `is_linked_worktree`, `is_prunable`, and the
 `open_workspace_id` when the worktree is already open. In Open Harness, create
-worktrees through `/worktrees` under `.oh/worktrees/` and use `worktree open`
+worktrees through `/worktrees` under `.worktrees/` and use `worktree open`
 here; `worktree create` defaults elsewhere (`~/.herdr/worktrees`).
 
 ## tab

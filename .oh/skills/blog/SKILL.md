@@ -27,7 +27,7 @@ Arguments received: `$ARGUMENTS`
 1. If `$ARGUMENTS` is empty, ask for a one-line scenario and stop.
 2. Parse any explicit flags:
    - `--source <path|url>` — raw notes, transcript, Loom URL, or source folder.
-   - `--target <repo|path>` — blog repo or site root. Treat `/worktrees ...` as repo-relative `.oh/worktrees/...`, never filesystem root.
+   - `--target <repo|path>` — blog repo or site root. Treat `/worktrees ...` as repo-relative `.worktrees/...`, never filesystem root.
    - `--slug <slug>` — target post slug, lowercase kebab-case.
    - `--promo linkedin,x,channels` — also generate a reviewable promotion artifact for social posts and channel blasts; never publish.
    - `--dry-run` — perform audits and propose filename/outline only; write nothing.

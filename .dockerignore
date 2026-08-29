@@ -7,9 +7,11 @@
 !.claude/protected-paths.txt
 !.claude/settings.json
 !.claude/.example.env.claude
-.oh/worktrees/*
-!.oh/worktrees/README.md
-# Defensive only: legacy root .worktrees/ is no longer canonical.
-.worktrees/
+.worktrees/*
+!.worktrees/AGENTS.md
+!.worktrees/CLAUDE.md
+projects/*
+!projects/AGENTS.md
+!projects/CLAUDE.md
 .git/
 node_modules/

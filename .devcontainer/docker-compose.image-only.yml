@@ -58,7 +58,8 @@ services:
       - OH_IMAGE_ONLY=1
       - CRONS_DIR=${CRONS_DIR:-.oh/crons}
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
-      - WORKTREES_DIR=${WORKTREES_DIR:-.oh/worktrees}
+      - WORKTREES_DIR=${WORKTREES_DIR:-.worktrees}
+      - PROJECTS_DIR=${PROJECTS_DIR:-projects}
     stdin_open: true
     tty: true
     init: true

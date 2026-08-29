@@ -106,7 +106,7 @@ Do not forward delegate output verbatim into the post. Synthesize it.
 Fact-check all product/process claims against current docs or source files in the target/current repo. For Open Harness demo posts, always check:
 
 - default agent CLIs vs optional image-level installs;
-- `.oh/` casing and `.oh/worktrees/` path;
+- `.oh/` casing and `.worktrees/` path;
 - Docker socket posture (off by default; opt in only on trusted hosts);
 - GitHub auth wording (`gh auth login`, SSH flow, PAT scopes when relevant);
 - VS Code attach vs terminal capabilities, especially port forwarding;

@@ -9,12 +9,16 @@
 # Derived env artifact the deleted Makefile target generated (not matched by **/.env*)
 .devcontainer/.harness.yaml.env
 /.oh/config.json
-.oh/worktrees/*
+.worktrees/*
+!.worktrees/AGENTS.md
+!.worktrees/CLAUDE.md
+projects/*
+!projects/AGENTS.md
+!projects/CLAUDE.md
 .claude/worktrees/
 # Task artifacts are local runtime state; keep only the directory guide tracked.
 .oh/tasks/*
 !.oh/tasks/README.md
-!.oh/worktrees/README.md
 
 # Build artifacts
 **/.venv/

@@ -20,7 +20,7 @@ export interface CronEntry {
 }
 
 const CRONS_DIR = path.resolve(process.env.CRONS_DIR || ".oh/crons");
-const WORKTREES_DIR = process.env.WORKTREES_DIR || ".oh/worktrees";
+const WORKTREES_DIR = process.env.WORKTREES_DIR || ".worktrees";
 const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";

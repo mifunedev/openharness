@@ -14,6 +14,10 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+vi.hoisted(() => {
+  delete process.env.WORKTREES_DIR;
+});
+
 const SIGHUP_CRONS_DIR = vi.hoisted(() => {
   const dir = `/tmp/cron-sighup-test-crons-${process.pid}`;
   process.env.CRONS_DIR = dir;
@@ -433,13 +437,13 @@ describe("buildTmuxWrapper", () => {
       agentBin: "pi",
       promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
       pidFile: "/tmp/cron-autopilot-0610-1805.pid",
-      worktree: "/home/sandbox/harness/.oh/worktrees/cron/cron-autopilot-0610-1805",
+      worktree: "/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805",
     });
     expect(wt).toContain("echo $$ > '/tmp/cron-autopilot-0610-1805.pid';");
     expect(wt).toContain("rm -f '/tmp/cron-autopilot-0610-1805.pid';");
     expect(wt).not.toContain("/tmp/cron-autopilot.pid");
     expect(wt).toContain(
-      "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.oh/worktrees/cron/cron-autopilot-0610-1805';",
+      "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805';",
     );
   });
 
@@ -1126,13 +1130,41 @@ describe("fallback worktree pruning", () => {
     git(repo, ["add", "README.md"]);
     git(repo, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"]);
 
-    const dirtyWt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-dirty");
-    const cleanWt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-clean");
+    const dirtyWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-dirty");
+    const cleanWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-clean");
     git(repo, ["worktree", "add", "--detach", dirtyWt, "HEAD"]);
     git(repo, ["worktree", "add", "--detach", cleanWt, "HEAD"]);
     writeFileSync(path.join(dirtyWt, "uncommitted.txt"), "salvage me\n");
     return { repo, dirtyWt, cleanWt };
   };
+
+  it("resolves the cron worktree root from WORKTREES_DIR, defaulting to .worktrees", async () => {
+    const repo = path.join(tmp, "envrepo");
+    mkdirSync(path.join(repo, "custom-wt", "cron"), { recursive: true });
+    mkdirSync(path.join(repo, ".worktrees", "cron"), { recursive: true });
+
+    const priorCwd = process.cwd();
+    const priorDir = process.env.WORKTREES_DIR;
+    try {
+      process.chdir(repo);
+
+      delete process.env.WORKTREES_DIR;
+      vi.resetModules();
+      const dflt = await import("../cron-runtime.ts");
+      expect(dflt.pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
+      expect(existsSync(path.join(repo, ".worktrees", "cron"))).toBe(true);
+
+      process.env.WORKTREES_DIR = "custom-wt";
+      vi.resetModules();
+      const overridden = await import("../cron-runtime.ts");
+      expect(overridden.pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
+    } finally {
+      process.chdir(priorCwd);
+      if (priorDir === undefined) delete process.env.WORKTREES_DIR;
+      else process.env.WORKTREES_DIR = priorDir;
+      vi.resetModules();
+    }
+  });
 
   it("reports dirty fallback worktree state including untracked files", () => {
     const { dirtyWt } = initRepoWithFallbackWorktrees();
@@ -1145,7 +1177,7 @@ describe("fallback worktree pruning", () => {
   });
 
   it("treats a matching live tmux session name as fallback worktree liveness", () => {
-    const wt = path.join(tmp, "repo", ".oh/worktrees", "cron", "cron-autopilot-0618-1505");
+    const wt = path.join(tmp, "repo", ".worktrees", "cron", "cron-autopilot-0618-1505");
 
     expect(worktreeInUse(wt, [], ["cron-autopilot-0618-1505"])).toBe(true);
     expect(worktreeInUse(wt, [path.join(wt, "nested")], [])).toBe(true);
@@ -1223,7 +1255,7 @@ esac
   });
 
   const orphanWorktree = (repo: string, name: string): string => {
-    const wt = path.join(repo, ".oh/worktrees", "cron", name);
+    const wt = path.join(repo, ".worktrees", "cron", name);
     git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
     rmSync(path.join(repo, ".git", "worktrees", name), { recursive: true, force: true });
     return wt;
@@ -1231,7 +1263,7 @@ esac
 
   it("does NOT classify a worktree as orphaned when its .git file is unreadable", () => {
     const { repo } = initRepoWithFallbackWorktrees();
-    const wt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-unreadable");
+    const wt = path.join(repo, ".worktrees", "cron", "cron-autopilot-unreadable");
     git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
     const dotGit = path.join(wt, ".git");
     chmodSync(dotGit, 0o000);
@@ -1245,7 +1277,7 @@ esac
 
   it("does NOT classify a worktree as orphaned when its .git file is corrupt", () => {
     const { repo } = initRepoWithFallbackWorktrees();
-    const wt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-corrupt");
+    const wt = path.join(repo, ".worktrees", "cron", "cron-autopilot-corrupt");
     git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
     writeFileSync(path.join(wt, ".git"), "this is not a gitdir pointer\n");
 

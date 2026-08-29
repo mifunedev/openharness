@@ -140,8 +140,9 @@ silently skip a surface.
 
 ## How to work in this repository
 
-This file is the only always-on context, and Open Harness does not use nested
-`AGENTS.md` files.
+This file is the only always-on context. A nested `AGENTS.md` exists only in
+`.worktrees/` and `projects/`, which hold checkouts this file never reaches.
+Every other directory uses a `README.md`.
 
 Use the lifecycle in this order:
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #168; issue #327
-# desc: the cleanup-tasks weekly sweep grooms stale .oh/worktrees/ branch
-#       checkout folders while preserving durable .oh/worktrees/agent/ identities,
-#       .oh/worktrees/project/ external project clones, and dirty/unpushed stale
+# desc: the cleanup-tasks weekly sweep grooms stale .worktrees/ branch
+#       checkout folders while preserving durable .worktrees/agent/ identities,
+#       the projects/ external clone root, and dirty/unpushed stale
 #       worktrees. The documented procedure must enumerate registered git
 #       worktrees, skip live panes and branches with open PRs, require dirty /
 #       staged / untracked / missing-upstream / unpushed preservation gates before
@@ -19,8 +19,8 @@ if [[ ! -f "$CRON" ]]; then
   exit 2
 fi
 
-if ! grep -Fq 'Groom stale `.oh/worktrees/` branch checkouts' "$CRON"; then
-  echo "REGRESSION: cleanup-tasks lacks the .oh/worktrees grooming pass" >&2
+if ! grep -Fq 'Groom stale `.worktrees/` branch checkouts' "$CRON"; then
+  echo "REGRESSION: cleanup-tasks lacks the .worktrees grooming pass" >&2
   exit 1
 fi
 if ! grep -Fq 'git worktree list --porcelain' "$CRON"; then
@@ -28,16 +28,16 @@ if ! grep -Fq 'git worktree list --porcelain' "$CRON"; then
   exit 1
 fi
 
-if ! grep -Fq '.oh/worktrees/agent/' "$CRON" || ! grep -Fq '.oh/worktrees/project/' "$CRON"; then
-  echo "REGRESSION: grooming pass does not explicitly preserve .oh/worktrees/agent/ and .oh/worktrees/project/" >&2
+if ! grep -Fq '.worktrees/agent/' "$CRON" || ! grep -Fq '`projects/`' "$CRON"; then
+  echo "REGRESSION: grooming pass does not explicitly preserve .worktrees/agent/ and skip projects/" >&2
   exit 1
 fi
-if ! grep -Fq 'NOT under `.oh/worktrees/agent/`, NOT under' "$CRON"; then
-  echo "REGRESSION: registered-worktree candidate filter does not exclude agent/project namespaces" >&2
+if ! grep -Fq 'NOT under `.worktrees/agent/`, NOT under' "$CRON"; then
+  echo "REGRESSION: registered-worktree candidate filter does not exclude the agent/ and projects/ namespaces" >&2
   exit 1
 fi
-if ! grep -Fq 'excluding `.oh/worktrees/agent/`' "$CRON"; then
-  echo "REGRESSION: orphan-folder pruning does not exclude agent/project namespaces" >&2
+if ! grep -Fq 'excluding `.worktrees/agent/`' "$CRON"; then
+  echo "REGRESSION: orphan-folder pruning does not exclude the agent/ and projects/ namespaces" >&2
   exit 1
 fi
 
@@ -95,10 +95,10 @@ if ! grep -Fq 'groomed W worktrees' "$CRON"; then
   exit 1
 fi
 
-if ! grep -Fq '! -name agent ! -name project -empty -delete' "$CRON"; then
-  echo "REGRESSION: empty namespace pruning does not preserve agent/project" >&2
+if ! grep -Fq '! -name agent -empty -delete' "$CRON"; then
+  echo "REGRESSION: empty namespace pruning does not preserve agent/" >&2
   exit 1
 fi
 
-echo "PASS: cleanup-tasks grooms stale non-agent/non-project .oh/worktrees only after preservation gates; dirty/unpushed candidates and non-empty orphans are logged instead of recursively deleted" >&2
+echo "PASS: cleanup-tasks grooms stale non-agent .worktrees only after preservation gates; dirty/unpushed candidates and non-empty orphans are logged instead of recursively deleted" >&2
 exit 0

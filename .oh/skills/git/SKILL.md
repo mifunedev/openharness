@@ -139,21 +139,21 @@ Automatic branch-push releases use the matching `## [<VERSION>] - YYYY-MM-DD` se
 
 ## Worktrees
 
-Default path: `.oh/worktrees/<branch>` at project root, configurable with `WORKTREES_DIR` / `paths.worktrees`. Independent project clones (own `.git`, not harness branches) live under `.oh/worktrees/project/<project-name>/<repo>/` by default — see `.oh/worktrees/README.md`.
+Default path: `.worktrees/<branch>` at the root of the repository the branch belongs to, configurable with `WORKTREES_DIR` / `paths.worktrees`. A project clone under `projects/` keeps its own worktrees the same way, at `projects/<owner>/<repo>/.worktrees/`. Independent project clones (own `.git`, not harness branches) live under `projects/<owner>/<repo>/` by default, configurable with `PROJECTS_DIR` — see `.worktrees/AGENTS.md` and `projects/AGENTS.md`.
 
 ```bash
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
+WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.worktrees}")"
 mkdir -p "$WORKTREES_ROOT"
 git worktree add "$WORKTREES_ROOT/<branch>" <branch>                # existing branch
 git worktree add -b <prefix>/<issue#>-<short-desc> \
   "$WORKTREES_ROOT/<prefix>/<issue#>-<short-desc>" $BASE            # new branch off $BASE
 ```
 
-Example path: `.oh/worktrees/feat/42-slack-thread-replies`
+Example path: `.worktrees/feat/42-slack-thread-replies`
 
 Cleanup: `git worktree remove "$WORKTREES_ROOT/<branch>"`.
 
-`.oh/worktrees/` gitignored (see `.gitignore`); only `.oh/worktrees/README.md` tracked.
+`.worktrees/` and `projects/` gitignored (see `.gitignore`); only `.worktrees/AGENTS.md` and `projects/AGENTS.md` tracked.
 
 ### Stale worktree policy
 

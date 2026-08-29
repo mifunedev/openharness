@@ -1,27 +1,31 @@
 ---
 name: worktrees
 description: |
-  Manage .oh/worktrees/ lifecycle: create worktree, list worktrees, remove worktree,
+  Manage .worktrees/ lifecycle: create worktree, list worktrees, remove worktree,
   clean worktrees, stale worktrees audit, isolate work, project clone.
   TRIGGER when: any git worktree operation, branch isolation needed, stale worktrees
-  review, project clone under .oh/worktrees/project/ (e.g. "clone <owner>/<repo> to
-  worktrees", "add <repo> to .oh/worktrees", "clone this repo into worktrees"), worktree
+  review, project clone under projects/ (e.g. "clone <owner>/<repo> to projects",
+  "add <repo> to projects", "clone this repo into projects"), worktree
   cleanup. A leading-slash harness dir like "/worktrees" still means the repo-relative
-  .oh/worktrees/ — never a literal filesystem-root path.
+  .worktrees/ — never a literal filesystem-root path.
 allowed-tools: Bash
 ---
 
 # Worktrees
 
-Manage `.oh/worktrees/`. Full policy: `/git` § Worktrees.
+Manage `.worktrees/` and `projects/`. Full policy: `/git` § Worktrees.
+
+A repository's worktrees live at that repository's own root, in `.worktrees/`.
+The harness is the first instance of that rule; a project clone under `projects/`
+follows it too, in `projects/<owner>/<repo>/.worktrees/`.
 
 ## CHANGE ROUTING — TRACK VS RESET
 
-`~/harness` and `$WORKTREES_ROOT/project/<owner>/<repo>` are different Git
+`~/harness` and `$PROJECTS_ROOT/<owner>/<repo>` are different Git
 boundaries. The parent harness ignores the latter; a project clone's files are
 never changes to the harness. Classify changes before committing, resetting, or
 removing anything. A dirty checkout is not disposable merely because it lives
-under `.oh/worktrees/`.
+under `.worktrees/`.
 
 ### `~/harness` — harness control plane
 
@@ -30,7 +34,8 @@ under `.oh/worktrees/`.
 - `.oh/skills/`, `.oh/agents/`, `.oh/hooks/`, `.oh/scripts/`, `.devcontainer/`,
   `.github/`, docs, templates, and supported configuration
   defaults.
-- `.oh/worktrees/README.md` and other lifecycle documentation.
+- `.worktrees/AGENTS.md`, `projects/AGENTS.md`, and other lifecycle
+  documentation.
 - Curated wiki entries and the wiki index when intentionally promoted. The wiki
   corpus is ignored by default; use `git add -f` only for reviewed entries.
   Never promote `corpus/raw/` snapshots by accident.
@@ -60,7 +65,7 @@ Use `git restore <path>` only for identified files. Preview cleanup with
 `reset`/`clean` operations through `.oh/scripts/git-maintenance.sh` as required
 by `/git`.
 
-### `$WORKTREES_ROOT/project/<owner>/<repo>` — independent project clone
+### `$PROJECTS_ROOT/<owner>/<repo>` — independent project clone
 
 These directories have their own `.git` and their own branch/remote policy.
 Run status and diffs with `git -C "$PROJECT"`, never from `~/harness`.
@@ -82,7 +87,7 @@ Do not blanket-reset source or docs because a clone is being cleaned.
 Before removing or resetting a project clone:
 
 ```bash
-PROJECT="$WORKTREES_ROOT/project/<owner>/<repo>"
+PROJECT="$PROJECTS_ROOT/<owner>/<repo>"
 git -C "$PROJECT" status --short --untracked-files=all
 git -C "$PROJECT" diff --name-status
 git -C "$PROJECT" ls-files --others --exclude-standard
@@ -98,10 +103,23 @@ work must not be removed with `rm -rf`.
 
 Run first. Every create/remove op needs `$BASE` and `$WORKTREES_ROOT`.
 
+`$WORKTREES_ROOT` is always `.worktrees/` inside **the repository you are standing
+in** — run this from the harness root for harness branches, or from
+`projects/<owner>/<repo>/` to cut a worktree of that project. `oh-path` resolves the
+`WORKTREES_DIR` override, and only exists at the harness root, so the project case
+falls through to the repository toplevel.
+
 ```bash
 BASE=$(git show-ref --verify --quiet refs/heads/development && echo development || \
        git show-ref --verify --quiet refs/heads/main && echo main || echo master)
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
+TOPLEVEL="$(git rev-parse --show-toplevel)"
+if [ -x "$TOPLEVEL/.oh/scripts/oh-path" ]; then
+  WORKTREES_ROOT="$(bash "$TOPLEVEL/.oh/scripts/oh-path" worktrees --no-create 2>/dev/null || printf '%s' "$TOPLEVEL/${WORKTREES_DIR:-.worktrees}")"
+  PROJECTS_ROOT="$(bash "$TOPLEVEL/.oh/scripts/oh-path" projects --no-create 2>/dev/null || printf '%s' "$TOPLEVEL/${PROJECTS_DIR:-projects}")"
+else
+  WORKTREES_ROOT="$TOPLEVEL/.worktrees"
+  PROJECTS_ROOT=""
+fi
 echo "$BASE"
 echo "$WORKTREES_ROOT"
 ```
@@ -223,11 +241,11 @@ Independent repo — not a harness branch. Has its own `.git`.
 # Clone
 OWNER=ryaneggz
 REPO=some-project
-mkdir -p "$WORKTREES_ROOT/project/$OWNER"
-git clone "https://github.com/$OWNER/$REPO.git" "$WORKTREES_ROOT/project/$OWNER/$REPO"
+mkdir -p "$PROJECTS_ROOT/$OWNER"
+git clone "https://github.com/$OWNER/$REPO.git" "$PROJECTS_ROOT/$OWNER/$REPO"
 
 # Remove only after the CHANGE ROUTING preflight above.
-PROJECT="$WORKTREES_ROOT/project/$OWNER/$REPO"
+PROJECT="$PROJECTS_ROOT/$OWNER/$REPO"
 if ! git -C "$PROJECT" status --porcelain=v1 --untracked-files=all; then
   echo "Cannot inspect project clone; refusing removal: $PROJECT" >&2
   exit 1
@@ -240,3 +258,7 @@ rm -rf "$PROJECT"
 ```
 
 No `git worktree` for these. Plain `git clone` / `rm -rf`.
+
+To cut a worktree **of** a project clone, re-run DETECT BASE from inside it —
+`$WORKTREES_ROOT` then resolves to `$PROJECT/.worktrees` and every CREATE, REMOVE,
+and STALE AUDIT block above applies unchanged.

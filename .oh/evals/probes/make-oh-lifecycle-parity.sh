@@ -20,7 +20,7 @@ fi
 
 missing=()
 
-EXCEPTIONS=(help harness-config shell destroy config)
+EXCEPTIONS=(help harness-config shell)
 is_exception() {
   local t=$1 e
   for e in "${EXCEPTIONS[@]}"; do [[ $t == "$e" ]] && return 0; done
@@ -33,6 +33,11 @@ if [[ -z $phony ]]; then
 fi
 for target in $phony; do
   is_exception "$target" && continue
+  if [[ $target == config ]]; then
+    if grep -qF 'first === "compose"' "$CLI" && grep -qF 'runComposeConfig' "$CLI"; then continue; fi
+    missing+=("A1: make target \`config\` has no \`oh compose config\` verb")
+    continue
+  fi
   if grep -qF "first === \"$target\"" "$CLI"; then continue; fi
   if grep -qE "^  $target: " "$LIFECYCLE"; then continue; fi
   missing+=("A1: make target \`$target\` has no \`oh $target\` verb and is not a documented exception")

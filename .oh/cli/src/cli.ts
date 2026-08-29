@@ -6,7 +6,9 @@ import { runInit, type InitIO, type InitOptions } from "./commands/init.js";
 import { runUpdate } from "./commands/update.js";
 import { runCloud } from "./commands/cloud.js";
 import {
+  runComposeConfig,
   runComposeVerb,
+  runDestroy,
   runGateway,
   runSandbox,
   runShell,
@@ -93,6 +95,8 @@ Usage:
   oh restart                Restart the sandbox service
   oh logs                   Tail sandbox logs (follows)
   oh ps                     Show sandbox service status
+  oh destroy                Remove the sandbox and wipe its named volumes
+  oh compose config         Print the resolved docker compose configuration
   oh harness <args...>      Install and inspect agent CLI harnesses
   oh runtime <args...>      Inspect the sandbox's isolation runtime
   oh tool <args...>         Install and inspect sandbox tooling
@@ -354,6 +358,7 @@ export function printComposeVerbHelp(verb: ComposeVerb): void {
     restart: "Restart the sandbox service",
     logs: "Tail the sandbox compose logs (follows until interrupted)",
     ps: "Show sandbox service status",
+    destroy: "Remove the sandbox and wipe its named volumes",
   };
   process.stdout.write(`oh ${verb} — ${what[verb]}
 
@@ -367,6 +372,99 @@ that has no Makefile.
 
 See ${sourceDocsUrl("docs/lifecycle-commands.md")} for the full mapping.
 `);
+}
+
+export function printDestroyHelp(): void {
+  process.stdout.write(`oh destroy — Remove the sandbox and wipe its named volumes
+
+Usage:
+  oh destroy [--yes]
+
+Equivalent to \`make destroy\` — both run .oh/scripts/docker-compose.sh with
+\`down -v\`. This is the one destructive lifecycle verb: \`-v\` deletes the named
+volumes, and those volumes hold every agent CLI login, the gh CLI token, and
+the SSH keys. Use \`oh stop\` when you only want the containers gone.
+
+Before removing anything it names the volumes it will delete and asks you to
+type the sandbox name. A blank line, or any other answer, aborts and changes
+nothing.
+
+Flags:
+  --yes   Skip the prompt. Required when stdin is not a terminal — without a
+          terminal and without --yes, \`oh destroy\` refuses rather than guess.
+
+See ${sourceDocsUrl("docs/lifecycle-commands.md")} for the full mapping.
+`);
+}
+
+export function printComposeHelp(): void {
+  process.stdout.write(`oh compose — Inspect the resolved docker compose setup
+
+Usage:
+  oh compose config [-- <extra docker compose args>]
+
+Subcommands:
+  config   Print the compose configuration .oh/scripts/docker-compose.sh
+           resolves from .devcontainer/.env and .oh/config.json
+
+Equivalent to \`make config\`. This is namespaced under \`oh compose\` because
+\`oh config <integration>\` already means "run an integration wizard".
+
+See ${sourceDocsUrl("docs/lifecycle-commands.md")} for the full mapping.
+`);
+}
+
+export interface DestroyArgs {
+  help: boolean;
+  yes: boolean;
+}
+
+export function parseDestroyArgs(rest: string[]): ParseResult<DestroyArgs> {
+  const args: DestroyArgs = { help: false, yes: false };
+  if (isHelpFlag(rest[0])) return { ok: true, args: { ...args, help: true } };
+  for (const token of rest) {
+    if (token === "--yes") {
+      args.yes = true;
+    } else {
+      return {
+        ok: false,
+        error: `oh destroy: unexpected argument "${token}" — accepts only --yes`,
+      };
+    }
+  }
+  return { ok: true, args };
+}
+
+export interface ComposeArgs {
+  help: boolean;
+  subcommand?: "config";
+  passthrough: string[];
+}
+
+export function parseComposeArgs(rest: string[]): ParseResult<ComposeArgs> {
+  const args: ComposeArgs = { help: false, passthrough: [] };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
+  }
+  if (rest[0] !== "config") {
+    return {
+      ok: false,
+      error: `oh compose: unknown subcommand "${rest[0]}"`,
+      showHelp: true,
+    };
+  }
+  args.subcommand = "config";
+  const tail = rest.slice(1);
+  if (isHelpFlag(tail[0])) return { ok: true, args: { ...args, help: true } };
+  const sep = tail.indexOf("--");
+  if (sep === -1 && tail.length > 0) {
+    return {
+      ok: false,
+      error: `oh compose config: unexpected argument "${tail[0]}" — pass extra docker compose args after \`--\``,
+    };
+  }
+  if (sep !== -1) args.passthrough = tail.slice(sep + 1);
+  return { ok: true, args };
 }
 
 export function parseInitArgs(rest: string[]): ParseResult<InitArgs> {
@@ -993,6 +1091,33 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     return runShell({ container: parsed.args.container }, lifecycleIo());
+  }
+
+  if (first === "destroy") {
+    const parsed = parseDestroyArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      return 1;
+    }
+    if (parsed.args.help) {
+      printDestroyHelp();
+      return 0;
+    }
+    return await runDestroy({ yes: parsed.args.yes }, lifecycleIo());
+  }
+
+  if (first === "compose") {
+    const parsed = parseComposeArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printComposeHelp();
+      return 1;
+    }
+    if (parsed.args.help) {
+      printComposeHelp();
+      return 0;
+    }
+    return runComposeConfig({}, parsed.args.passthrough);
   }
 
   if ((composeVerbs() as string[]).includes(first)) {

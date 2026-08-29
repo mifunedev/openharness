@@ -170,6 +170,7 @@ const COMPOSE_VERBS = Object.freeze({
   restart: Object.freeze(["restart"]),
   logs: Object.freeze(["logs", "-f"]),
   ps: Object.freeze(["ps"]),
+  destroy: Object.freeze(["down", "-v"]),
 });
 
 export type ComposeVerb = keyof typeof COMPOSE_VERBS;
@@ -191,6 +192,82 @@ export function runComposeVerb(
   });
   assertSpawned(r, `bash ${script} ${verb}`);
   return r.status ?? 1;
+}
+
+export function runComposeConfig(opts: LifecycleOptions, extra: string[] = []): number {
+  const run = opts.run ?? spawnRunner;
+  const root = resolveProjectRoot(opts.cwd);
+  const script = requireLifecycleScript(root, "docker-compose.sh");
+  const r = run("bash", [script, "config", ...extra], { stdio: "inherit" });
+  assertSpawned(r, `bash ${script} config`);
+  return r.status ?? 1;
+}
+
+export function namedVolumes(root: string): string[] {
+  let text: string;
+  try {
+    text = readFileSync(join(root, ".devcontainer", "docker-compose.yml"), "utf8");
+  } catch {
+    return [];
+  }
+  const lines = text.split("\n");
+  const start = lines.findIndex((line) => /^volumes:\s*$/.test(line));
+  if (start === -1) return [];
+  const names: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^\S/.test(line)) break;
+    const match = /^ {2}([A-Za-z0-9][A-Za-z0-9_.-]*):\s*$/.exec(line);
+    if (match) names.push(match[1]);
+  }
+  return names;
+}
+
+export interface DestroyOptions extends LifecycleOptions {
+  yes?: boolean;
+}
+
+export function destroyConfirmationPhrase(root: string): string {
+  const fromEnv = process.env.SANDBOX_NAME;
+  if (fromEnv !== undefined && fromEnv !== "") return fromEnv;
+  return configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
+}
+
+export async function runDestroy(opts: DestroyOptions, io: LifecycleIO): Promise<number> {
+  const root = resolveProjectRoot(opts.cwd);
+  const name = destroyConfirmationPhrase(root);
+
+  if (opts.yes !== true) {
+    const interactive = process.stdin.isTTY === true || io.ask !== undefined;
+    if (!interactive) {
+      io.stderr(
+        `oh destroy: refusing to destroy \`${name}\` without a terminal — ` +
+          "re-run with --yes to confirm non-interactively\n",
+      );
+      return 1;
+    }
+
+    const volumes = namedVolumes(root);
+    io.stdout(`\n${prompt.bold(`oh destroy — ${name}`)}\n\n`);
+    io.stdout("`docker compose down -v` removes the containers and deletes\n");
+    io.stdout(
+      volumes.length > 0
+        ? `these named volumes with everything in them:\n\n  ${volumes.join("\n  ")}\n\n`
+        : "every named volume this project owns, with everything in them.\n\n",
+    );
+    io.stdout(
+      "That is the provider authentication those volumes hold — every agent CLI\n" +
+        "login, the gh CLI token, and the SSH keys. Sign-in starts over.\n\n",
+    );
+
+    const askFn = io.ask ?? prompt.ask;
+    const answer = (await askFn(`Type the sandbox name \`${name}\` to destroy it:`)).trim();
+    if (answer !== name) {
+      io.stderr("oh destroy: aborted — nothing was removed\n");
+      return 1;
+    }
+  }
+
+  return runComposeVerb("destroy", opts);
 }
 
 export function runGateway(args: string[], opts: LifecycleOptions): number {

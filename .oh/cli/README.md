@@ -91,6 +91,8 @@ with `OH_EXECUTION_TARGET=local` or `OH_EXECUTION_TARGET=docker-compose`.
 | `oh restart` | Restart the sandbox service. |
 | `oh logs` | Tail the sandbox compose logs. |
 | `oh ps` | Show sandbox service status. |
+| `oh destroy [--yes]` | Remove the sandbox and wipe its named volumes (`docker compose down -v`). Names the volumes, then requires you to type the sandbox name; refuses without a TTY unless `--yes` is passed. |
+| `oh compose config` | Print the compose configuration resolved from `.devcontainer/.env` and `.oh/config.json`. |
 | `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `.devcontainer/.env` `INSTALL_*` flag **and** installs into the running sandbox — no rebuild. |
 | `oh tool <list\|install\|status>` | Install and inspect sandbox tooling that is neither an agent CLI nor a runtime (agent-browser, `gh`, `herdr`, `cloudflared`, Docker CLI). A large download is confirmed first. |
 | `oh runtime <list\|install\|status>` | Report the isolation runtime in use (Docker today) and install MicroSandbox. Measures first and refuses an install that cannot succeed (`--force` overrides). Selects no runtime and writes no config. |
@@ -102,7 +104,7 @@ with `OH_EXECUTION_TARGET=local` or `OH_EXECUTION_TARGET=docker-compose`.
 These mirror the root `Makefile`'s targets one-for-one and run the same
 `.oh/scripts/docker-compose.sh`. Which one is canonical depends on where you
 are — see [lifecycle commands](https://github.com/mifunedev/openharness/blob/main/docs/lifecycle-commands.md), which also
-explains why `oh destroy` deliberately does not exist.
+states the confirmation policy `oh destroy` carries.
 
 `oh init` and `oh update` fetch their payload on demand — with no local source they shallow-clone
 the public OpenHarness repo into a temp dir and remove it after the run (`--from-remote`, `--ref <ref>`).

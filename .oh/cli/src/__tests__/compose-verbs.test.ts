@@ -56,12 +56,12 @@ function makeRunner(result: RunResult = { status: 0 }): {
 }
 
 describe("compose verbs — the surface gap they close", () => {
-  it("exposes exactly the four non-destructive verbs", () => {
-    expect(composeVerbs()).toEqual(["stop", "restart", "logs", "ps"]);
+  it("exposes every lifecycle verb the Makefile has", () => {
+    expect(composeVerbs()).toEqual(["stop", "restart", "logs", "ps", "destroy"]);
   });
 
-  it("does not expose destroy", () => {
-    expect(composeVerbs()).not.toContain("destroy" as ComposeVerb);
+  it("routes destroy through the same table, not a second implementation", () => {
+    expect(composeVerbs()).toContain("destroy" as ComposeVerb);
   });
 });
 
@@ -71,6 +71,7 @@ describe("runComposeVerb", () => {
     ["restart", ["restart"]],
     ["ps", ["ps"]],
     ["logs", ["logs", "-f"]],
+    ["destroy", ["down", "-v"]],
   ] as [ComposeVerb, string[]][])(
     "runs the vendored script with the %s argv the Makefile uses",
     (verb, expected) => {

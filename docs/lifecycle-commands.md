@@ -4,9 +4,10 @@ title: "Lifecycle commands: make vs oh"
 
 # Lifecycle commands: `make` vs `oh`
 
-There are two front doors to the sandbox lifecycle. This page is the single
-source of truth for which is which. Every other document links here rather than
-restating the table.
+`oh` is the front door to the sandbox lifecycle; `make` mirrors it in a source
+checkout that still has a Makefile. This page is the single source of truth for
+which is which. Every other document links here rather than restating the
+table.
 
 **They are not two implementations.** Every compose target — from both doors —
 runs `.oh/scripts/docker-compose.sh`. `make sandbox` calls it directly;
@@ -57,8 +58,8 @@ This is why neither surface delegates to the other: making the Makefile call
 | `make logs` | `oh logs` | `docker-compose.sh logs -f` |
 | `make ps` | `oh ps` | `docker-compose.sh ps` |
 | `make gateway <pi\|hermes>` | `oh gateway <args…>` | `.oh/scripts/gateway.sh` |
-| `make destroy` | — | see below |
-| `make config` | — | see below |
+| `make destroy` | `oh destroy [--yes]` | `docker-compose.sh down -v` — see below |
+| `make config` | `oh compose config` | `docker-compose.sh config` |
 | *(implicit in `make sandbox`)* | *(implicit in `oh sandbox`)* | seeds `.devcontainer/.env` from `.example.env` |
 | — | `oh init` · `oh update` · `oh harness` · `oh runtime` · `oh tool` · `oh cloud` · `oh config <integration>` | no `make` equivalent, by design |
 
@@ -88,23 +89,30 @@ exists **and** `SANDBOX_NAME` is set. Override it with
 `oh runtime install` and `oh sandbox` change the sandbox's own Docker
 configuration, so they stay host-only rather than failing halfway.
 
-## The three deliberate exceptions
+## `oh destroy` and its confirmation policy
+
+`down -v` wipes the named volumes, and those volumes hold provider
+authentication. `oh destroy` is therefore the only lifecycle verb that asks
+before it runs. It names the volumes it is about to delete — read from
+`.devcontainer/docker-compose.yml`, not hardcoded — then requires you to type
+the sandbox name. A blank line, a wrong name, or anything else aborts with a
+non-zero exit and removes nothing.
+
+Non-interactive use is gated on an explicit flag. When stdin is not a terminal
+and `--yes` is absent, `oh destroy` refuses outright rather than assume consent.
+
+## `oh compose config`, not `oh config`
+
+`oh config` already means *"configure an integration"* (`oh config <name>`), so
+the resolved-compose printer lives under its own namespace: `oh compose config`.
+That leaves room for further `oh compose <passthrough>` verbs without ever
+colliding with the integration wizards.
+
+## The one deliberate exception
 
 A probe (`.oh/evals/probes/make-oh-lifecycle-parity.sh`) asserts that every
 `make` target either has an `oh` verb or is named here. The list cannot grow
-silently.
-
-### `make destroy` — no `oh destroy`
-
-`down -v` wipes the named volumes, which hold provider authentication. A
-passthrough with no confirmation policy would put that one typo away. The verb
-is deferred until that policy is designed, not forgotten.
-
-### `make config` — no `oh` equivalent
-
-`oh config` already means *"configure an integration"* (`oh config <name>`).
-Overloading it to also print resolved compose config would be worse than the
-gap. A different verb name may resolve this later.
+silently, and it is now down to one entry.
 
 ### `make shell` — the one raw `docker exec`
 

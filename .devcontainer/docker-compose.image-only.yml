@@ -50,6 +50,7 @@ services:
       # CC_SAFETY_NET_OFF left unset (kill-switch, opt-in per session).
       - CC_SAFETY_NET_STRICT=1
       - CC_SAFETY_NET_WORKTREE=1
+      - CLAUDE_CODE_ENABLE_TODO_TOOLS=1
       - GIT_USER_NAME=${GIT_USER_NAME:-}
       - GIT_USER_EMAIL=${GIT_USER_EMAIL:-}
       - GH_TOKEN=${GH_TOKEN:-}

@@ -8,6 +8,11 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-08-29
+
+### Fixed
+- `tsconfig.build.json` excluded only `src/__tests__/**`, so `prepublishOnly` typechecked `src/lib/__tests__/` and failed on the absent `vitest`, blocking the npm publish after the image had shipped.
+
 ## [0.5.0] - 2026-08-29
 
 ### Added

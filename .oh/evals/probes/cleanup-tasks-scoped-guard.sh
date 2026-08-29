@@ -13,7 +13,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-CRON="$ROOT/.oh/crons/cleanup-tasks.md"
+CRON="$ROOT/crons/cleanup-tasks.md"
 
 if [[ ! -f "$CRON" ]]; then
   echo "SKIPPED: cleanup-tasks cron absent: $CRON" >&2
@@ -35,7 +35,7 @@ if [[ -n "$unscoped" ]]; then
 fi
 
 if ! grep -q 'BLOCKED-TASKS-WIP' "$CRON"; then
-  echo "REGRESSION: BLOCKED-TASKS-WIP token missing from .oh/crons/cleanup-tasks.md" >&2
+  echo "REGRESSION: BLOCKED-TASKS-WIP token missing from crons/cleanup-tasks.md" >&2
   exit 1
 fi
 

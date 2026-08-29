@@ -30,7 +30,7 @@ entry is a historical fact, not a stale reference awaiting a fix.
 
 Shipped in `[2026.7.5] - 2026-07-05`.
 
-> **Relocate the Ralph/spec cron definitions from `crons/` to `.oh/crons/`** so the scheduled-agent surface joins the `.oh/` machinery namespace, with **no** back-compat root symlink — every consumer was repointed to the real `.oh/crons/` path: `cron-runtime.ts` reads, the `locked-append.sh` liveness logs, the cron bodies, the eval probes, and the `CRONS_DIR` default itself (`.oh/crons`) in `docker-compose.yml`/`entrypoint.sh`/`cron-runtime.ts`; `.gitignore`/`protected-paths.txt` entries moved with the dir, and the governing principle (`.oh/README.md`, `docs/roadmap.md`) reclassifies `crons/` as machinery. Paired with a `.mifune` submodule PR repointing cron-path references in the skills.
+> **Relocate the Ralph/spec cron definitions from `crons/` to `crons/`** so the scheduled-agent surface joins the `.oh/` machinery namespace, with **no** back-compat root symlink — every consumer was repointed to the real `crons/` path: `cron-runtime.ts` reads, the `locked-append.sh` liveness logs, the cron bodies, the eval probes, and the `CRONS_DIR` default itself (`crons`) in `docker-compose.yml`/`entrypoint.sh`/`cron-runtime.ts`; `.gitignore`/`protected-paths.txt` entries moved with the dir, and the governing principle (`.oh/README.md`, `docs/roadmap.md`) reclassifies `crons/` as machinery. Paired with a `.mifune` submodule PR repointing cron-path references in the skills.
 
 
 ### Retiring the `.mifune` submodule — the split-source footgun

@@ -51,7 +51,7 @@ content. The contract is non-negotiable:
 ## When to use
 
 - `/prompt-miner` invoked to mine the corpus for prompt-quality markers.
-- Periodically (the daily `.oh/crons/prompt-miner.md` cron drives the unattended path;
+- Periodically (the daily `crons/prompt-miner.md` cron drives the unattended path;
   this skill is the interactive path).
 
 ## When NOT to use

@@ -24,7 +24,7 @@ that catches anything time-sensitive without doing real work.
     `RESOLVED: <item>` so the next session removes the line. If no
     enumerated mechanism applies, surface
     `WATCHING: <item> (un-checkable)` and skip — do not invent ad-hoc
-    checks. Do NOT edit `.oh/crons/heartbeat.md` yourself; sessions own
+    checks. Do NOT edit `crons/heartbeat.md` yourself; sessions own
     that file.
 2.7. Run `/audit drift`. If it reports any findings (framework drift
     `origin`↔`upstream`, branch-behind/append-file drift, or
@@ -63,11 +63,11 @@ that catches anything time-sensitive without doing real work.
   include `MAINT: restart-273 launched (detached)`. The detached restart script
   writes its own separate `restart-273:` liveness line and #273 comment.
 - **Mandatory closing step (do this even after long action chains):** append one
-  liveness line to `.oh/crons/.cron.log` through `scripts/locked-append.sh`:
+  liveness line to `crons/.cron.log` through `scripts/locked-append.sh`:
 
   ```bash
   STATUS="<status>"
-  printf '[%s] heartbeat: %s\n' "$(date -Iseconds)" "$STATUS" | scripts/locked-append.sh .oh/crons/.cron.log
+  printf '[%s] heartbeat: %s\n' "$(date -Iseconds)" "$STATUS" | scripts/locked-append.sh crons/.cron.log
   ```
 
   where `<status>` is one of `OK`, `OK (N watching)`, `OK (stale spec task: <name>)`,
@@ -91,7 +91,7 @@ server teardown.
 **Ordering — the launch is this pulse's FINAL action.** Because the restart tears
 down this agent's own session, first complete the normal Reporting steps for this
 pulse (the `MAINT: restart-273 launched (detached)` reply line, the memory log, and
-the `.oh/crons/.cron.log` liveness line), and ONLY THEN, as the last command, launch the
+the `crons/.cron.log` liveness line), and ONLY THEN, as the last command, launch the
 detached script:
 
 ```bash
@@ -105,10 +105,10 @@ setsid bash "$HARNESS/.oh/scripts/maintenance/restart-openharness-tmux.sh" </dev
 The detached script owns everything after launch: it waits an 8s grace window, then
 captures the live durable session map, kills the server, relaunches the durable
 sessions that were live at capture in dependency order (website origin before its
-tunnel; `cron-system` before `cron-watchdog`), clears a stale `.oh/crons/.pid`, verifies
+tunnel; `cron-system` before `cron-watchdog`), clears a stale `crons/.pid`, verifies
 (durable stack back + cleared argv + a live cron runtime; `mifune.dev` is checked but
 informational, since it rebuilds on its own), appends a `restart-273:` liveness line
-to `.oh/crons/.cron.log` through `scripts/locked-append.sh`, and closes #273 on success
+to `crons/.cron.log` through `scripts/locked-append.sh`, and closes #273 on success
 (comments and stays open if degraded). It is `flock`- and sentinel-guarded
 (`/tmp/oh-restart-273.done`), so the 13:00 retry pulse or any double-fire is a no-op.
 
@@ -140,7 +140,7 @@ in heartbeat replies until re-dated or removed.
 - `gh issue view <N> --json state` — resolved if `state == "CLOSED"`
 - `gh run list --branch <branch> --limit 1 --json conclusion` — resolved if `conclusion == "success"`
 - `gh release list --limit 5` — resolved if the named version is in the output
-- Date-based reminders ("on YYYY-MM-DD do X") — resolved when the date has passed AND a corresponding `.oh/crons/.cron.log` liveness line confirms the action
+- Date-based reminders ("on YYYY-MM-DD do X") — resolved when the date has passed AND a corresponding `crons/.cron.log` liveness line confirms the action
 
 If an item maps to none of these, it is un-checkable. Sessions must
 either rephrase it to fit a check or accept it will surface

@@ -43,10 +43,10 @@ log "killing tmux server now"
 tmux kill-server 2>/dev/null || true
 sleep 2
 
-if [[ -f "$HARNESS/.oh/crons/.pid" ]]; then
-  oldpid="$(cat "$HARNESS/.oh/crons/.pid" 2>/dev/null || true)"
+if [[ -f "$HARNESS/crons/.pid" ]]; then
+  oldpid="$(cat "$HARNESS/crons/.pid" 2>/dev/null || true)"
   if [[ -n "${oldpid:-}" ]] && ! kill -0 "$oldpid" 2>/dev/null; then
-    rm -f "$HARNESS/.oh/crons/.pid"; log "cleared stale .oh/crons/.pid (dead pid $oldpid)"
+    rm -f "$HARNESS/crons/.pid"; log "cleared stale crons/.pid (dead pid $oldpid)"
   fi
 fi
 
@@ -77,8 +77,8 @@ relaunch_one() {
 for s in "${ORDER[@]}"; do
   if [[ "$s" == cron-watchdog ]]; then
     for _ in $(seq 1 20); do
-      if [[ -f "$HARNESS/.oh/crons/.pid" ]]; then
-        rp="$(cat "$HARNESS/.oh/crons/.pid" 2>/dev/null || true)"
+      if [[ -f "$HARNESS/crons/.pid" ]]; then
+        rp="$(cat "$HARNESS/crons/.pid" 2>/dev/null || true)"
         [[ -n "${rp:-}" ]] && kill -0 "$rp" 2>/dev/null && break
       fi
       sleep 1
@@ -106,8 +106,8 @@ if ! pgrep -af 'tmux' 2>/dev/null | grep -q -- '-s system-cron'; then argv_clean
 
 cron_alive="no"
 for _ in $(seq 1 15); do
-  if [[ -f "$HARNESS/.oh/crons/.pid" ]]; then
-    rp="$(cat "$HARNESS/.oh/crons/.pid" 2>/dev/null || true)"
+  if [[ -f "$HARNESS/crons/.pid" ]]; then
+    rp="$(cat "$HARNESS/crons/.pid" 2>/dev/null || true)"
     if [[ -n "${rp:-}" ]] && kill -0 "$rp" 2>/dev/null; then cron_alive="yes"; break; fi
   fi
   sleep 1
@@ -131,10 +131,10 @@ log "verify: status=$status missing=[${missing[*]:-none}] argv-cleared=$argv_cle
 if [[ -x "$HARNESS/.oh/scripts/locked-append.sh" ]]; then
   printf '[%s] restart-273: status=%s argv-cleared=%s cron-alive=%s missing=%s mifune=%s\n' \
     "$(date -Iseconds)" "$status" "$argv_clean" "$cron_alive" "${missing[*]:-none}" "$site" \
-    | "$HARNESS/.oh/scripts/locked-append.sh" "$HARNESS/.oh/crons/.cron.log" || true
+    | "$HARNESS/.oh/scripts/locked-append.sh" "$HARNESS/crons/.cron.log" || true
 fi
 
-body="$(printf 'Automated tmux-server restart (#273) ran via the heartbeat date-gated spec-execute step.\n\n- system-cron argv cleared: %s\n- cron runtime alive (.oh/crons/.pid): %s\n- sessions missing after relaunch: %s\n- https://mifune.dev/ : %s (informational; rebuilds on its own)\n\nLog: %s on the sandbox host.' \
+body="$(printf 'Automated tmux-server restart (#273) ran via the heartbeat date-gated spec-execute step.\n\n- system-cron argv cleared: %s\n- cron runtime alive (crons/.pid): %s\n- sessions missing after relaunch: %s\n- https://mifune.dev/ : %s (informational; rebuilds on its own)\n\nLog: %s on the sandbox host.' \
   "$argv_clean" "$cron_alive" "${missing[*]:-none}" "$site" "$LOGF")"
 
 if command -v gh >/dev/null 2>&1; then

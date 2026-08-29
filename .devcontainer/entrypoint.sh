@@ -491,9 +491,9 @@ case "${PROJECTS_DIR:-projects}" in
 esac
 mkdir -p "$PROJECTS_PATH"
 
-case "${CRONS_DIR:-.oh/crons}" in
+case "${CRONS_DIR:-crons}" in
   /*) CRONS_PATH="${CRONS_DIR}" ;;
-  *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-.oh/crons}" ;;
+  *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-crons}" ;;
 esac
 mkdir -p "$CRONS_PATH"
 if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then

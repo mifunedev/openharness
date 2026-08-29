@@ -12,7 +12,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-CRON="$ROOT/.oh/crons/cleanup-tasks.md"
+CRON="$ROOT/crons/cleanup-tasks.md"
 
 if [[ ! -f "$CRON" ]]; then
   echo "SKIPPED: cleanup-tasks cron absent: $CRON" >&2

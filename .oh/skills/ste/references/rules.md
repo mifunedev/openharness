@@ -514,7 +514,7 @@ Write the open question in the same paragraph as the placeholder. Name the owner
 ```text
 Wrong: The cron runs every `<interval>`.
 Right: The cron runs every `<interval>`. OPEN: confirm the interval in
-       `.oh/crons/heartbeat.md`. Owner: the harness orchestrator.
+       `crons/heartbeat.md`. Owner: the harness orchestrator.
 ```
 
 ### 53. Never trade accuracy for brevity

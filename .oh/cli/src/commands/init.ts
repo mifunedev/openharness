@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { loadManifest } from "../lib/manifest.js";
-import { copyOhPayload, type CopyReport } from "../lib/vendor.js";
+import { copyOhPayload, copyRootPayload, type CopyReport } from "../lib/vendor.js";
 import { writeEnvFile } from "../lib/env.js";
 import { setKeyInEnv } from "../lib/env-file.js";
 import * as prompt from "../lib/prompt.js";
@@ -173,6 +173,38 @@ export async function runInit(
     manifest,
     { force, dryRun, skipExisting: !force },
     vReport,
+  );
+
+  const rootReport: CopyReport = (action, rel) => {
+    switch (action) {
+      case "create":
+        report(`create ${rel}`);
+        vCreated++;
+        break;
+      case "overwrite":
+        report(`overwrite ${rel}`);
+        vOverwritten++;
+        break;
+      case "skip-exists":
+        report(`skip ${rel} (exists)`);
+        stats.skipped++;
+        break;
+      case "skip-not-in-payload":
+        if (verbose) report(`skip ${rel} (not in payload)`);
+        vFiltered++;
+        break;
+      case "skip-volatile":
+        if (verbose) report(`skip ${rel} (volatile)`);
+        vFiltered++;
+        break;
+    }
+  };
+  copyRootPayload(
+    path.dirname(sourceOh),
+    t,
+    manifest,
+    { force, dryRun, skipExisting: !force },
+    rootReport,
   );
 
   if (!minimal) {

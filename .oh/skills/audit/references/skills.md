@@ -53,7 +53,7 @@ AGE_DAYS=$(( (NOW - MTIME) / 86400 ))
 ```bash
 # Count daily memory logs that mention this skill name (case-insensitive)
 SKILL_NAME="<skill-name>"
-MENTION_COUNT=$(grep -rli "$SKILL_NAME" "$AUDIT_ROOT/.oh/crons/.cron.log" 2>/dev/null | wc -l)
+MENTION_COUNT=$(grep -rli "$SKILL_NAME" "$AUDIT_ROOT/crons/.cron.log" 2>/dev/null | wc -l)
 ```
 
 | Mentions | Score |
@@ -199,8 +199,8 @@ Return this structured observation to the outer dispatcher and suppress target l
 - When checking integrity references, skip references to standard Unix paths (`/bin`, `/usr`, `$AUDIT_ROOT` itself as a directory) — only flag references to specific files or skills that do not exist.
 - A skill that is the target of `argument-hint: "all | root | <skill-name>"` style hints should not be penalized for referencing those placeholder tokens.
 - For the single-skill target mode (`$ARGUMENTS` = a skill name), run all 5 dimensions and emit the same table for just that skill, plus its recommendation.
-- Usage evidence comes from in-repo references and `.oh/crons/.cron.log`; source and cron integrity checks stay under `AUDIT_ROOT`.
-- Heartbeat/cron coverage is a bonus signal, not a scored dimension — note it in the Recommendation line if a skill has 0 usage and no cron reference in `.oh/crons/`.
+- Usage evidence comes from in-repo references and `crons/.cron.log`; source and cron integrity checks stay under `AUDIT_ROOT`.
+- Heartbeat/cron coverage is a bonus signal, not a scored dimension — note it in the Recommendation line if a skill has 0 usage and no cron reference in `crons/`.
 
 ## Reference
 

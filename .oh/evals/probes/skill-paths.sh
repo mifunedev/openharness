@@ -16,7 +16,7 @@ hits=$(grep -rnE 'docs/wiki/|workspace/heartbeats/' "$SKILLS" \
          | grep -v 'harness-context/SKILL.md' || true)
 
 if [[ -n "$hits" ]]; then
-  echo "REGRESSION: retired path token(s) reappeared in .claude/skills/ (docs/wiki/ -> wiki/, workspace/heartbeats/ -> .oh/crons/):" >&2
+  echo "REGRESSION: retired path token(s) reappeared in .claude/skills/ (docs/wiki/ -> wiki/, workspace/heartbeats/ -> crons/):" >&2
   echo "$hits" >&2
   exit 1
 fi

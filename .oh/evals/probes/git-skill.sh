@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SKILL="$ROOT/.claude/skills/git/SKILL.md"
 WORKTREES="$ROOT/.claude/skills/worktrees/SKILL.md"
-CLEANUP="$ROOT/.oh/crons/cleanup-tasks.md"
+CLEANUP="$ROOT/crons/cleanup-tasks.md"
 CHANGELOG="$ROOT/CHANGELOG.md"
 
 missing=()

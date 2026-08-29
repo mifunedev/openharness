@@ -17,7 +17,7 @@ assignees: ""
 ## Proposed Implementation
 
 <!-- Describe the approach. Consider:
-  - Which area of the harness does this affect? (.devcontainer/, .oh/install/, docs/, .oh/templates/, .oh/scripts/, .oh/crons/)
+  - Which area of the harness does this affect? (.devcontainer/, .oh/install/, docs/, .oh/templates/, .oh/scripts/, crons/)
   - New skill, rule, or heartbeat needed?
   - Compose overlay change? Dockerfile change?
   - Any new commands or CLI surface?

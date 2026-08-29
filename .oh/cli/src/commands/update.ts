@@ -4,8 +4,8 @@ import {
   readFileSync,
 } from 'node:fs';
 import path from 'node:path';
-import { loadManifest } from '../lib/manifest.js';
-import { copyOhPayload, assertDestInTarget, type CopyReport } from '../lib/vendor.js';
+import { loadManifest, rootPayloadDirs } from '../lib/manifest.js';
+import { copyOhPayload, copyRootPayload, assertDestInTarget, type CopyReport } from '../lib/vendor.js';
 
 export { assertDestInTarget };
 
@@ -148,6 +148,28 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
 
   const { skipped } = copyOhPayload(fromOh, targetOh, manifest, { force, dryRun }, report);
 
+  const rootResult = copyRootPayload(
+    path.resolve(fromDir),
+    path.resolve(targetDir),
+    manifest,
+    { force, dryRun },
+    report,
+  );
+
+  for (const dir of rootPayloadDirs(manifest ?? { include: [], exclude: [] })) {
+    const stranded = path.resolve(targetDir, '.oh', dir);
+    if (existsSync(stranded)) {
+      io.stdout(
+        dryPrefix +
+          'oh update: ' +
+          path.join('.oh', dir) +
+          ' still exists from a pre-move install and is no longer read; move any local edits into ' +
+          dir +
+          '/ and delete it\n',
+      );
+    }
+  }
+
   io.stdout(
     dryPrefix +
       'oh update: ' +
@@ -155,7 +177,7 @@ export async function runUpdate(opts: UpdateOptions, io: UpdateIO): Promise<numb
       ' created, ' +
       overwritten +
       ' overwritten, ' +
-      skipped +
+      (skipped + rootResult.skipped) +
       ' skipped\n',
   );
 

@@ -91,7 +91,7 @@ rename history), print `  (no changed paths detected — inspect manually)`.
 
 **Goal**: detect whether HEAD is behind its remote tracking branch, the
 working tree is dirty, or the current branch is unexpected. This section
-is motivated by the append-only-file stale-view trap: `.oh/crons/.cron.log`
+is motivated by the append-only-file stale-view trap: `crons/.cron.log`
 is appended by concurrent sessions; if HEAD
 drifts behind `origin/<branch>`, the in-context view of these files lags
 behind reality.
@@ -192,10 +192,10 @@ For deep host resource triage (memory, disk, CPU, Docker), defer to
 
 **Step C-1 — resolve runtime start time:**
 
-Prefer the PID stored in `.oh/crons/.pid` via `/proc/<pid>/stat`:
+Prefer the PID stored in `crons/.pid` via `/proc/<pid>/stat`:
 
 ```bash
-PID=$(cat .oh/crons/.pid 2>/dev/null)
+PID=$(cat crons/.pid 2>/dev/null)
 if [ -n "$PID" ] && [ -r "/proc/$PID/stat" ]; then
   # Field 22 of /proc/<pid>/stat is process start time in clock ticks
   # since system boot. Combine with btime from /proc/stat for wall-clock.
@@ -238,23 +238,23 @@ Then print a single `OK` token for class C:
 **Step C-2 — compare cron file mtimes:**
 
 When `RUNTIME_START` is set, check each **schedulable cron file** for a
-mtime strictly after the runtime start time. A `.oh/crons/*.md` file qualifies
+mtime strictly after the runtime start time. A `crons/*.md` file qualifies
 only if it passes the predicate below (a leading `---` frontmatter block
 declaring a non-empty `schedule:` key that parses with the same Croner
 constructor used by `scripts/cron-runtime.ts`, not `enabled: false`, valid
 cron id, filename/id match, and safe `agent:` override) — so non-cron docs like
-`.oh/crons/README.md` and malformed cron files the runtime logs as `SCHED_INVALID`
+`crons/README.md` and malformed cron files the runtime logs as `SCHED_INVALID`
 are skipped by the predicate, never mtime-compared, and never counted.
 Qualification is property-based, not a hard-coded name list. The block also
 extracts the restart-required frontmatter field set for the diagnostic line:
 
 ```bash
 INERT=()
-# Qualify each .oh/crons/*.md as a SCHEDULABLE cron BEFORE the mtime check, mirroring
+# Qualify each crons/*.md as a SCHEDULABLE cron BEFORE the mtime check, mirroring
 # scripts/cron-runtime.ts parseCronFile + loadCrons: a file the runtime never
 # loads cannot be "inert". A file qualifies IFF all of:
 #   1. first line is literally '---' (trailing \r stripped, CRLF-safe) — so a
-#      '---' inside a fenced code block (the .oh/crons/README.md trap) cannot match,
+#      '---' inside a fenced code block (the crons/README.md trap) cannot match,
 #   2. a closing '---' delimiter exists on a later line (well-formed frontmatter),
 #   3. the leading frontmatter has a non-empty, anchored, comment-excluding
 #      schedule: key (^[[:space:]]*schedule: — skips '# schedule:' and substring
@@ -264,7 +264,7 @@ INERT=()
 #   6. any agent: override is safe by the runtime's isValidAgentBin() contract,
 #   7. the schedule parses with Croner, matching the runtime's isValidSchedule()
 #      / SCHED_INVALID path so malformed schedules are skipped, not flagged inert.
-# Non-qualifying files (e.g. .oh/crons/README.md or invalid schedules) are skipped
+# Non-qualifying files (e.g. crons/README.md or invalid schedules) are skipped
 # silently — never mtime-compared, never counted toward the inert aggregate. The
 # predicate is property-based: no hard-coded cron name list or count.
 RESTART_REQUIRED_FRONTMATTER_FIELDS="schedule enabled agent tmux worktree preflight"
@@ -370,7 +370,7 @@ is_schedulable_cron() {
 
   return 0
 }
-for f in .oh/crons/*.md; do
+for f in crons/*.md; do
   is_schedulable_cron "$f" || continue
   FILE_MTIME=$(stat -c '%Y' "$f" 2>/dev/null || stat -f '%m' "$f" 2>/dev/null)
   if [ -n "$FILE_MTIME" ] && [ "$FILE_MTIME" -gt "$RUNTIME_START" ]; then
@@ -394,7 +394,7 @@ Print (do not execute):
 ```
   Recommended: reschedule or restart the cron-system runtime
     # preferred live reschedule when the PID is valid:
-    kill -HUP $(cat .oh/crons/.pid)
+    kill -HUP $(cat crons/.pid)
     # or restart the tmux session:
     tmux kill-session -t cron-system
     # then relaunch via the documented runtime-start procedure in scripts/cron-runtime.ts
@@ -410,14 +410,14 @@ this read-only skill.
 
 - Each class prints exactly one summary line when clean: `(A) Framework drift: OK`, `(B) Branch-behind drift: OK`, `(C) Cron-staleness drift: OK`. The `(C) Cron-staleness drift: OK` clean token is unchanged by the predicate — it still prints whenever no schedulable cron is inert.
 - When a class has findings, it prints one or more `DRIFT-CHECK (<letter>): ...` detail lines followed by a `Recommended:` block.
-- Class (C) evaluates only **schedulable cron files** — `.oh/crons/*.md` files that pass the Step C-2 predicate (a leading `---` frontmatter block declaring a non-empty, Croner-valid `schedule:` key, not `enabled: false`, valid cron id, filename/id match, and safe `agent:` override). Non-scheduled docs such as `.oh/crons/README.md` and malformed schedules the runtime would log as `SCHED_INVALID` are never evaluated, never emitted as a `DRIFT-CHECK (C)` line, and never counted toward the inert aggregate. Qualification is predicate-based, not a hard-coded name list, so a future non-cron file dropped into `.oh/crons/` is handled generically. Detail lines name the restart-required field set (`schedule enabled agent tmux worktree preflight`) and say the frontmatter/config may be stale until SIGHUP reschedule or runtime restart.
+- Class (C) evaluates only **schedulable cron files** — `crons/*.md` files that pass the Step C-2 predicate (a leading `---` frontmatter block declaring a non-empty, Croner-valid `schedule:` key, not `enabled: false`, valid cron id, filename/id match, and safe `agent:` override). Non-scheduled docs such as `crons/README.md` and malformed schedules the runtime would log as `SCHED_INVALID` are never evaluated, never emitted as a `DRIFT-CHECK (C)` line, and never counted toward the inert aggregate. Qualification is predicate-based, not a hard-coded name list, so a future non-cron file dropped into `crons/` is handled generically. Detail lines name the restart-required field set (`schedule enabled agent tmux worktree preflight`) and say the frontmatter/config may be stale until SIGHUP reschedule or runtime restart.
 - When at least one class is non-clean, print a final aggregate line:
 
 ```
 DRIFT: <comma-separated summary of non-clean classes>
 ```
 
-- The aggregate's `cron-staleness drift (N inert file)` term counts only **schedulable cron files**; a non-scheduled doc such as `.oh/crons/README.md` never increments it, and any inline example names a real cron (e.g. `.oh/crons/heartbeat.md`).
+- The aggregate's `cron-staleness drift (N inert file)` term counts only **schedulable cron files**; a non-scheduled doc such as `crons/README.md` never increments it, and any inline example names a real cron (e.g. `crons/heartbeat.md`).
 
 Example (all clean):
 
@@ -434,7 +434,7 @@ DRIFT-CHECK (A): origin/development is 3 behind upstream/development (0 ahead)
   Recommended: git checkout upstream/development -- .claude/skills/git/SKILL.md scripts/cron-runtime.ts
 DRIFT-CHECK (B): ...
 (B) Branch-behind drift: OK
-DRIFT-CHECK (C): .oh/crons/heartbeat.md modified after runtime start — restart-required frontmatter/config may be stale until SIGHUP reschedule or runtime restart (schedule enabled agent tmux worktree preflight; current schedule=0 * * * * enabled=true agent=pi tmux=<unset> worktree=<unset> preflight=<unset>)
+DRIFT-CHECK (C): crons/heartbeat.md modified after runtime start — restart-required frontmatter/config may be stale until SIGHUP reschedule or runtime restart (schedule enabled agent tmux worktree preflight; current schedule=0 * * * * enabled=true agent=pi tmux=<unset> worktree=<unset> preflight=<unset>)
   Recommended: reschedule or restart the cron-system runtime ...
 DRIFT: framework drift (3 behind upstream), cron-staleness drift (1 inert file)
 ```

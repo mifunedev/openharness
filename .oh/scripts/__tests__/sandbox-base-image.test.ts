@@ -7,9 +7,10 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const dockerfile = readFileSync(path.join(repoRoot, ".devcontainer/Dockerfile"), "utf8");
 
 describe("sandbox base image", () => {
-  it("builds from Debian Trixie", () => {
-    expect(dockerfile).toMatch(/^FROM debian:trixie-slim$/m);
+  it("builds from the official Node image on Debian Trixie", () => {
+    expect(dockerfile).toMatch(/^FROM node:22-trixie-slim$/m);
     expect(dockerfile).not.toContain("debian:bookworm-slim");
+    expect(dockerfile).not.toContain("deb.nodesource.com");
   });
 
   it("tracks Trixie for Docker's apt repository", () => {

@@ -1,5 +1,8 @@
 {
   "outputStyle": "Concise",
+  "env": {
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
+  },
   "autoMemoryEnabled": false,
   "autoDreamEnabled": false,
   "includeGitInstructions": false,

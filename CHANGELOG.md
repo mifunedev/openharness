@@ -9,8 +9,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
-- Set `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in the sandbox compose environment so agent sessions keep the todo/task tools that Claude Code 2.1.233+ withholds by default on current models ([#884](https://github.com/mifunedev/openharness/issues/884)).
-- Add `todo-tools-default.sh`, a tier-A probe asserting both sandbox compose files still set `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` ([#884](https://github.com/mifunedev/openharness/issues/884)).
+- Set `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in the sandbox compose env and both Claude settings files, restoring the todo/task tools Claude Code 2.1.233+ withholds on current models ([#884](https://github.com/mifunedev/openharness/issues/884)).
+- Add `todo-tools-default.sh`, a tier-A probe asserting both sandbox compose files and both Claude settings files still set `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` ([#884](https://github.com/mifunedev/openharness/issues/884)).
 - Restore `.oh/agents/` as an empty pack with its `.claude/agents` and `.codex/agents` provider symlinks; no agent is defined in it ([#866](https://github.com/mifunedev/openharness/pull/866)).
 
 ### Removed

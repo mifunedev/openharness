@@ -1,5 +1,8 @@
 {
   "enabledMcpjsonServers": ["debugmcp"],
+  "env": {
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
+  },
   "permissions": {
     "deny": [
       "Read(file_path=**/.env*)",

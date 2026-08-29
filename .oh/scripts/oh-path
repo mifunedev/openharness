@@ -27,7 +27,13 @@ _root=$(dirname -- "$_oh_dir")
 _envvar="$(printf '%s' "$_name" | tr 'a-z-' 'A-Z_')_DIR"
 eval "_dir=\${$_envvar:-}"
 
-[ -n "$_dir" ] || _dir=".oh/$_name"
+if [ -z "$_dir" ]; then
+    case "$_name" in
+        worktrees) _dir=".worktrees" ;;
+        projects)  _dir="projects" ;;
+        *)         _dir=".oh/$_name" ;;
+    esac
+fi
 
 case "$_dir" in
     /*) ;;

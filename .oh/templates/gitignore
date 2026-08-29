@@ -13,3 +13,8 @@
 .prime/agent/telemetry.json
 .oh/cli/dist/
 .oh/cli/node_modules/
+# Worktree and project-clone roots — only the directory guide is tracked.
+.worktrees/*
+!.worktrees/AGENTS.md
+projects/*
+!projects/AGENTS.md

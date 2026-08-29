@@ -83,9 +83,9 @@ contract:
 ## Reuse-by-reference (no edits)
 
 The recursion **loop** is `/spec execute` (each story re-reads disk = the REPL step) and
-isolated recursion **branches** are `.oh/worktrees/` forks (the `/worktrees` skill). `/rlm`
+isolated recursion **branches** are `.worktrees/` forks (the `/worktrees` skill). `/rlm`
 reuses **both by reference** — it never edits `/spec execute`'s task cycle or anything under
-`.oh/worktrees/`.
+`.worktrees/`.
 
 ## See Also
 

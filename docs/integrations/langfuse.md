@@ -56,7 +56,7 @@ Gemini CLI sessions.
 ### Local self-hosted setup walkthrough
 
 The following procedure mirrors a working local installation: clone Langfuse as
-an independent project under Open Harness's `.oh/worktrees/project/` namespace,
+an independent project under Open Harness's `projects/` namespace,
 start its Compose stack, attach the existing sandbox to Langfuse's Docker
 network, and configure Pi against the service hostname. The same service can be
 used by Claude Code after completing steps 1–5; see [Claude Code](#claude-code)
@@ -64,26 +64,27 @@ for its plugin configuration.
 
 Commands run from the normal host terminal unless marked **SANDBOX** or **PI**.
 
-#### 1. Clone Langfuse under `.oh/worktrees`
+#### 1. Clone Langfuse under `projects/`
 
 Start from the Open Harness checkout:
 
 ```bash
 cd /path/to/openharness
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
-mkdir -p "$WORKTREES_ROOT/project/langfuse"
+PROJECTS_ROOT="$(bash .oh/scripts/oh-path projects --no-create 2>/dev/null || printf '%s' "${PROJECTS_DIR:-projects}")"
+mkdir -p "$PROJECTS_ROOT/langfuse"
 git clone https://github.com/langfuse/langfuse.git \
-  "$WORKTREES_ROOT/project/langfuse/langfuse"
-cd "$WORKTREES_ROOT/project/langfuse/langfuse"
+  "$PROJECTS_ROOT/langfuse/langfuse"
+cd "$PROJECTS_ROOT/langfuse/langfuse"
 ```
 
 This is an independent repository with its own `.git`, not a harness branch or
-Git worktree. If it is already cloned, update it instead:
+Git worktree. Its own worktrees, if any, live at
+`projects/langfuse/langfuse/.worktrees/`. If it is already cloned, update it instead:
 
 ```bash
 cd /path/to/openharness
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
-cd "$WORKTREES_ROOT/project/langfuse/langfuse"
+PROJECTS_ROOT="$(bash .oh/scripts/oh-path projects --no-create 2>/dev/null || printf '%s' "${PROJECTS_DIR:-projects}")"
+cd "$PROJECTS_ROOT/langfuse/langfuse"
 git pull --ff-only
 ```
 

@@ -17,7 +17,7 @@ doc + folder anchor) without the empty-file smell.
 2. **Subfolder enumeration** — every meaningful subdirectory gets a
    row in a table (or bullet) with its purpose. Spell out the
    convention; don't assume readers will chase the rule that defined
-   it (e.g. inside `.oh/worktrees/`, list `feat/`, `bug/`, `agent/`, …
+   it (e.g. inside `.worktrees/`, list `feat/`, `bug/`, `agent/`, …
    not just "subfolders mirror branch prefixes").
 3. **Conventions** — naming, lifecycle, gitignore behaviour, anything
    non-obvious to someone landing fresh in the directory.
@@ -47,8 +47,9 @@ mydir/*
 
 ## Examples in this repo
 
-`.oh/worktrees/README.md`, `.oh/README.md`, `.oh/crons/README.md`,
-`.oh/tasks/README.md`, `.oh/scripts/README.md`.
+`.oh/README.md`, `.oh/crons/README.md`, `.oh/tasks/README.md`,
+`.oh/scripts/README.md`. The two git-boundary guides are
+`.worktrees/AGENTS.md` and `projects/AGENTS.md`.
 
 ## When NOT to add a README
 
@@ -60,6 +61,11 @@ mydir/*
 
 A *description* of what a directory holds stays in that directory's
 `README.md`. A *directive* an agent must follow moves to the skill that owns
-the behavior under `.oh/skills/`, and the README links to it. Only the root
-orchestrator contract lives in `AGENTS.md`. Open Harness has no nested
-`AGENTS.md` files.
+the behavior under `.oh/skills/`, and the README links to it. The root
+orchestrator contract lives in `AGENTS.md`.
+
+A nested `AGENTS.md` is reserved for a **git-boundary directory** — `.worktrees/`
+and `projects/`, whose contents are separate checkouts where the root `AGENTS.md`
+is never loaded. Those two carry the guide an agent needs when it lands inside a
+different repository, and they follow the same four-part shape as a README. No
+other directory gets one.

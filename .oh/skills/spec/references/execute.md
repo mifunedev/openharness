@@ -196,7 +196,7 @@ this run is ALREADY inside an isolated worktree that step 2 put on the feature b
 Advisor **reuses it** — it does NOT create a second worktree (a second `git worktree add` for
 the same branch would nest under the cron worktree via the relative path, or fail with
 `branch already checked out`). Standalone (no `$CRON_WORKTREE`) the Advisor creates
-`.oh/worktrees/<prefix>/<N>-<slug>`. Start the Advisor session **in the build worktree** with
+`.worktrees/<prefix>/<N>-<slug>`. Start the Advisor session **in the build worktree** with
 `-c`, and bake the worktree path into the prompt — a new tmux session does not inherit
 `$CRON_WORKTREE` from the launching client, so passing it via env is unreliable:
 
@@ -218,7 +218,7 @@ nested implementation session.
 **Advisor `/goal` prompt** (one line; fill the placeholders — when `$CRON_WORKTREE` is set,
 substitute its actual path for `<worktree>` and use the "reuse" branch of step 1):
 
-> `/goal` As the **single expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.oh/worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) Read `.oh/tasks/<slug>/prompt.md`, implement the dependency-ready stories directly, and use `/delegate` only for bounded disjoint work. Reconcile worker results, validate every acceptance criterion, update `prd.json` and `progress.txt`, and append `STATUS: COMPLETE` only after every story passes. (3) Continue in this same Advisor session with the implementation-side audit loop, `/eval` once, required wiki revision, `/compact`, `evidence.md`, `/spec retro`, improve steps, and a fresh `/audit pr`; run `gh pr ready <PR> --repo "$SPEC_REPO"` only if that audit is promotable (CI green + mergeable + clean). Otherwise comment the blocking gate and leave the PR draft. Never `gh pr merge`. Leave this single session alive for attach.
+> `/goal` As the **single expert Advisor on `/worktrees`**, implement `.oh/tasks/<slug>/prd.json` for PR `#<PR>` on branch `<prefix>/<N>-<slug>`. (1) **If `<worktree>` is already provided** (autopilot's `$CRON_WORKTREE`, already on branch `<prefix>/<N>-<slug>`): `cd <worktree>` and do NOT create another worktree. **Otherwise** create an isolated worktree at `.worktrees/<prefix>/<N>-<slug>` via `/worktrees` and `cd` into it. (2) Read `.oh/tasks/<slug>/prompt.md`, implement the dependency-ready stories directly, and use `/delegate` only for bounded disjoint work. Reconcile worker results, validate every acceptance criterion, update `prd.json` and `progress.txt`, and append `STATUS: COMPLETE` only after every story passes. (3) Continue in this same Advisor session with the implementation-side audit loop, `/eval` once, required wiki revision, `/compact`, `evidence.md`, `/spec retro`, improve steps, and a fresh `/audit pr`; run `gh pr ready <PR> --repo "$SPEC_REPO"` only if that audit is promotable (CI green + mergeable + clean). Otherwise comment the blocking gate and leave the PR draft. Never `gh pr merge`. Leave this single session alive for attach.
 
 The Advisor owns implementation and all post-build gates inside the same session. This node's
 turn ends after launching it and reporting the session name; the ready-for-review PR is
@@ -546,7 +546,7 @@ auto-merge.
 | Primitive | Path | Role |
 |---|---|---|
 | Task prompt template | `.oh/skills/spec/templates/task-prompt.md` | Step 4 — the single Advisor's implementation and gate instructions |
-| `/worktrees` skill | `.claude/skills/worktrees/SKILL.md` | Step 4 — isolated `.oh/worktrees/<branch>` for the implementation |
+| `/worktrees` skill | `.claude/skills/worktrees/SKILL.md` | Step 4 — isolated `.worktrees/<branch>` for the implementation |
 | `/goal` (Pi extension) | `.pi/settings.json` (`@narumitw/pi-goal`) | Step 4 — persists the Advisor run to completion |
 | `/delegate` skill | `.claude/skills/delegate/SKILL.md` | Step 4 — optional bounded fan-out inside the Advisor's implementation session |
 | `/audit implementation` | `.claude/skills/audit/SKILL.md` | Step 5 — the per-unit verdict gate |

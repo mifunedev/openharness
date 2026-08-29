@@ -391,7 +391,7 @@ pnpm_workspace_package_patterns() {
 
 pnpm_manifest_rel_is_excluded() {
   case "$1" in
-    .git/*|.oh/worktrees/*|.worktrees/*|node_modules/*|*/node_modules/*)
+    .git/*|.worktrees/*|projects/*|node_modules/*|*/node_modules/*)
       return 0
       ;;
   esac
@@ -479,11 +479,17 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
   fi
 fi
 
-case "${WORKTREES_DIR:-.oh/worktrees}" in
+case "${WORKTREES_DIR:-.worktrees}" in
   /*) WORKTREES_PATH="${WORKTREES_DIR}" ;;
-  *)  WORKTREES_PATH="$HARNESS/${WORKTREES_DIR:-.oh/worktrees}" ;;
+  *)  WORKTREES_PATH="$HARNESS/${WORKTREES_DIR:-.worktrees}" ;;
 esac
 mkdir -p "$WORKTREES_PATH"
+
+case "${PROJECTS_DIR:-projects}" in
+  /*) PROJECTS_PATH="${PROJECTS_DIR}" ;;
+  *)  PROJECTS_PATH="$HARNESS/${PROJECTS_DIR:-projects}" ;;
+esac
+mkdir -p "$PROJECTS_PATH"
 
 case "${CRONS_DIR:-.oh/crons}" in
   /*) CRONS_PATH="${CRONS_DIR}" ;;

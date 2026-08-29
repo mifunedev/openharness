@@ -20,7 +20,8 @@ conventions, git workflow, or where files live.
    agent does and does not do.
 2. For layout questions, read the per-directory `README.md` files (e.g.
    `.oh/README.md`, `.oh/crons/README.md`, `.oh/tasks/README.md`,
-   `.oh/scripts/README.md`, `.oh/worktrees/README.md`) and the `How the system
+   `.oh/scripts/README.md`) plus the git-boundary guides
+   `.worktrees/AGENTS.md` and `projects/AGENTS.md`, and the `How the system
    fits together` section of `AGENTS.md`. There is no single comprehensive
    tree — use the filesystem and the directory READMEs.
 3. For behavioral norms, now collapsed from an always-on tier into on-demand

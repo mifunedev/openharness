@@ -26,7 +26,7 @@ is obsolete):
   scheduled-agent cron definitions + runtime log (`crons/`), the
   regression/capability eval suite (`evals/`), the long-term memory + session
   logs (`memory/`), user-local deploy
-  config (`config.json`), the ignored worktree/project-clone root (`worktrees/`),
+  config (`config.json`),
   and the Ralph/spec task workdirs (`tasks/` — ephemeral build scratch, now at
   `.oh/tasks/`). The former top-level `packages/` folder
   was **retired** — its `oh` package moved in here; the Docusaurus docs *site*
@@ -36,8 +36,10 @@ is obsolete):
   everything forced to root by *external* tooling (`.devcontainer/` for the
   devcontainer spec + Docker COPY, `package.json`, `pnpm-*.yaml`, `.github/`,
   `.husky/`). The scheduled-agent crons remain under `.oh/crons/`, the
-  eval suite under `.oh/evals/`, the worktree/project-clone root under
-  `.oh/worktrees/`, and the Ralph/spec task workdirs under `.oh/tasks/`;
+  eval suite under `.oh/evals/`, and the Ralph/spec task workdirs under
+  `.oh/tasks/`. The worktree root (`.worktrees/`) and the project-clone root
+  (`projects/`) sit at the repo root, because a repository keeps its worktrees at
+  its own root and a project clone is a peer repo, not control-plane machinery;
   the rendered docs site and the `blog/` archive
   live in `mifunedev/openharness-web`.
 
@@ -66,11 +68,14 @@ directly (the `cleanup-tasks` cron, the `/spec execute` task graph, the eval pro
 the `.mifune` skill/agent references), because git index operations cannot traverse
 a symlink and nothing reads the bare `tasks/` path anymore.
 
-The ignored worktree root moved into the control-plane namespace as
-`.oh/worktrees/` **without** a back-compat symlink. Runtime creation is routed
-through `WORKTREES_DIR` / `paths.worktrees` (default `.oh/worktrees`), the
-`/worktrees` skill creates branch/project clones there, and cron worktree
-isolation uses `.oh/worktrees/cron/`.
+The ignored worktree root briefly lived at `.oh/worktrees/` and moved back **out**
+to the repo root as `.worktrees/`, with no back-compat symlink in either
+direction. Runtime creation is routed through `WORKTREES_DIR` / `paths.worktrees`
+(default `.worktrees`), and cron worktree isolation uses `.worktrees/cron/`.
+Clones of non-harness repositories, formerly `.oh/worktrees/project/<owner>/<repo>/`,
+now live at `projects/<owner>/<repo>/` (`PROJECTS_DIR`, default `projects`), and
+each keeps its own worktrees at `projects/<owner>/<repo>/.worktrees/`. Both roots
+are gitignored except `.worktrees/AGENTS.md` and `projects/AGENTS.md`.
 
 The **`oh` CLI package** moved *without* a back-compat symlink — the `packages/`
 folder is retired, and its consumers were repointed directly to the real `.oh/`
@@ -109,7 +114,6 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 | `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (no symlink — repointed). |
 | `crons/` | Scheduled-agent cron definitions (`heartbeat.md`, `cleanup-tasks.md`, `eval-weekly.md`, …) read by `.oh/scripts/cron-runtime.ts`, plus the gitignored runtime `.cron.log`/`.pid`. Old path: `crons/` (no symlink — repointed). |
 | `evals/` | The fitness-function suite — regression probes (`probes/`), capability benchmark (`capability/`), trajectory datasets (`datasets/`), and the `RESULTS.md` scoreboard. Old path: `evals/` (no symlink — repointed). |
-| `worktrees/` | Gitignored branch worktrees, cron isolation worktrees, and durable project/harness clones. Old path: root worktree directory (no symlink — repointed). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
 
@@ -140,7 +144,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), ignored worktrees/project clones (`.oh/worktrees/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Human-facing Markdown docs (`docs/`) plus surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Human-facing Markdown docs (`docs/`) plus surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) |
 
 ### Why these specifically stay at root
 

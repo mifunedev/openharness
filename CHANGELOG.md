@@ -19,6 +19,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Delete the canonical agent definitions (`.oh/agents/`), `.oh/plans/`, `.oh/handoffs/`, and the accumulated `.oh/tasks/` folders and archive ([#865](https://github.com/mifunedev/openharness/pull/865)).
 
 ### Changed
+- Move git worktrees to `.worktrees/` at each repository's own root and non-harness clones to `projects/<owner>/<repo>/`, each tracking only an `AGENTS.md` guide ([#872](https://github.com/mifunedev/openharness/issues/872)).
 - `/retro` is now strictly report-only and writes no file; `IDENTITY.md` was its only write target. A graduated lesson is nominated as a candidate probe under `.oh/evals/probes/` instead ([#868](https://github.com/mifunedev/openharness/issues/868)).
 - `/prompt-miner` loses its `IDENTITY.md` proposal target and proposes a probe instead ([#868](https://github.com/mifunedev/openharness/issues/868)).
 - Rewrite `context-tier-size-budget.sh` as an `AGENTS.md`-only 9,500 B ratchet, dropping `SINGLE_FILE_SHARE_MAX` — one file in the tier is necessarily 100% of it ([#868](https://github.com/mifunedev/openharness/issues/868)).

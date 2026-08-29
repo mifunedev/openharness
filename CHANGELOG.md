@@ -9,6 +9,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ## [Unreleased]
 
 ### Added
+- `oh destroy` (a name-typing confirmation, `--yes` for non-TTY) and `oh compose config` close the last two `make`-only verbs, so `oh` is the single lifecycle door ([#879](https://github.com/mifunedev/openharness/issues/879)).
 - Restore `.oh/agents/` as an empty pack with its `.claude/agents` and `.codex/agents` provider symlinks; no agent is defined in it ([#866](https://github.com/mifunedev/openharness/pull/866)).
 
 ### Removed

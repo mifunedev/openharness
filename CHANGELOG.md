@@ -30,6 +30,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Strip explanatory comments from all tracked code — `.ts`/`.mjs`/`.sh`/`.py` plus `oh-path`, the Dockerfile, the Makefile and `.zshrc` — leaving only machine-read directives ([#837](https://github.com/mifunedev/openharness/pull/837)).
 
 ### Fixed
+- Repoint the eight skill surfaces that still cited the deleted `.oh/agents/advisor.md`; `/delegate` now owns the recursion-budget triple and `skill-paths.sh` guards the dead path ([#870](https://github.com/mifunedev/openharness/issues/870)).
+- Amend `rfc-rsi-survey-mapping.md`, which still cited the deleted `.oh/memory/` tier as a live rung-4 instrument and as the harness's capital account ([#870](https://github.com/mifunedev/openharness/issues/870)).
 - `oh harness install` and `oh tool install` now install live when run inside the sandbox instead of skipping with "sandbox not running"; `list`/`status` report real values instead of `?` ([#861](https://github.com/mifunedev/openharness/issues/861)).
 - The `development` issue closer never fired: `pull_request_target` resolves the workflow from the **default** branch (`main`), where the file does not exist. Swapped to `pull_request` ([#841](https://github.com/mifunedev/openharness/issues/841)).
 - **`uv python install` now works as the `sandbox` user without `sudo`.** `install -d -o sandbox -g sandbox .../uv/tools` chowns the final component only, so the intermediate `.../share/uv` stayed `root:root`.

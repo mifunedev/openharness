@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
-# source: issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard
-# desc: skill instructions must not reference retired renamed paths — docs/wiki/, workspace/heartbeats/, or the apps/->packages/ monorepo-rename tokens (apps/docs, apps/README, apps/*, src/data/roadmap)
+# source: issue #43 — stale path references; extended by issue #69 — apps/->packages/ rename guard; extended by issue #870 — deleted .oh/agents/advisor.md
+# desc: skill instructions must not reference retired renamed paths — docs/wiki/, workspace/heartbeats/, the apps/->packages/ monorepo-rename tokens (apps/docs, apps/README, apps/*, src/data/roadmap), or the deleted .oh/agents/advisor.md
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -29,5 +29,13 @@ if [[ -n "$rename_hits" ]]; then
   exit 1
 fi
 
-echo "PASS: no retired docs/wiki/, workspace/heartbeats/, or apps/->packages/ rename token in .claude/skills/ (excl harness-context prose)" >&2
+advisor_hits=$(grep -rnF '.oh/agents/advisor.md' "$SKILLS" || true)
+
+if [[ -n "$advisor_hits" ]]; then
+  echo "REGRESSION: deleted .oh/agents/advisor.md cited in .claude/skills/ (the recursion-budget triple is owned by /delegate SKILL.md section Recursion-authorization gate):" >&2
+  echo "$advisor_hits" >&2
+  exit 1
+fi
+
+echo "PASS: no retired docs/wiki/, workspace/heartbeats/, apps/->packages/ rename, or .oh/agents/advisor.md token in .claude/skills/ (excl harness-context prose)" >&2
 exit 0

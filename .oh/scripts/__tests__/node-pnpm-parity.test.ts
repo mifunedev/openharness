@@ -41,24 +41,24 @@ function run(fx: { bin: string }, args: string[] = []) {
 }
 
 describe("node-pnpm-parity", () => {
-  it("reads the NodeSource release and pnpm pin straight from the Dockerfile", () => {
+  it("reads the node base image tag and pnpm pin straight from the Dockerfile", () => {
     const fx = fixture({
-      "debian:bookworm-slim": "v22.14.0 10.33.0",
-      "debian:trixie-slim": "v22.14.0 10.33.0",
+      "node:22-bookworm-slim": "v22.14.0 10.33.0",
+      "node:22-trixie-slim": "v22.14.0 10.33.0",
     });
 
     const result = run(fx);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("NodeSource: https://deb.nodesource.com/setup_22.x");
+    expect(result.stdout).toContain("node base:  node:22-trixie-slim");
     expect(result.stdout).toContain("pnpm pin:   10.33.0");
-    expect(result.stdout).toContain("PARITY: debian:bookworm-slim and debian:trixie-slim");
+    expect(result.stdout).toContain("PARITY: node:22-bookworm-slim and node:22-trixie-slim");
   });
 
   it("reports a divergence between the two bases", () => {
     const fx = fixture({
-      "debian:bookworm-slim": "v22.14.0 10.33.0",
-      "debian:trixie-slim": "v22.15.1 10.33.0",
+      "node:22-bookworm-slim": "v22.14.0 10.33.0",
+      "node:22-trixie-slim": "v22.15.1 10.33.0",
     });
 
     const result = run(fx);
@@ -79,6 +79,6 @@ describe("node-pnpm-parity", () => {
     });
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("could not read the NodeSource URL or the pnpm pin");
+    expect(result.stderr).toContain("could not read the node base image tag or the pnpm pin");
   });
 });

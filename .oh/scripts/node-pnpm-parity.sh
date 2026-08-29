@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Base-parity check: install Node and pnpm in two Debian bases using the exact
-# commands the sandbox Dockerfile uses, and require identical reported versions.
+# Base-parity check: activate pnpm in two Debian-suite variants of the Node base
+# image the sandbox Dockerfile pins, and require identical reported versions.
 # Usage: node-pnpm-parity.sh [base-a] [base-b]
 
 set -euo pipefail
@@ -9,26 +9,24 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 DOCKERFILE=${PARITY_DOCKERFILE:-$REPO_ROOT/.devcontainer/Dockerfile}
 
-BASE_A=${1:-debian:bookworm-slim}
-BASE_B=${2:-debian:trixie-slim}
-
-nodesource_url=$(grep -oE 'https://deb\.nodesource\.com/setup_[0-9]+\.x' "$DOCKERFILE" | head -1 || true)
+node_tag=$(grep -oE '^FROM node:[0-9]+-[a-z]+-slim' "$DOCKERFILE" | head -1 | cut -d: -f2 || true)
 pnpm_pin=$(grep -oE 'corepack prepare pnpm@[0-9]+\.[0-9]+\.[0-9]+' "$DOCKERFILE" | head -1 | cut -d@ -f2 || true)
 
-if [ -z "$nodesource_url" ] || [ -z "$pnpm_pin" ]; then
-  echo "FAIL: could not read the NodeSource URL or the pnpm pin from ${DOCKERFILE#"$REPO_ROOT"/}" >&2
+if [ -z "$node_tag" ] || [ -z "$pnpm_pin" ]; then
+  echo "FAIL: could not read the node base image tag or the pnpm pin from ${DOCKERFILE#"$REPO_ROOT"/}" >&2
   exit 1
 fi
 
-echo "NodeSource: $nodesource_url"
+node_major=${node_tag%%-*}
+
+BASE_A=${1:-node:$node_major-bookworm-slim}
+BASE_B=${2:-node:$node_tag}
+
+echo "node base:  node:$node_tag"
 echo "pnpm pin:   $pnpm_pin"
 
 install_snippet=$(cat <<EOF
 set -e
-apt-get update >/dev/null
-apt-get install -y --no-install-recommends ca-certificates curl gnupg >/dev/null
-curl -fsSL $nodesource_url | bash - >/dev/null 2>&1
-apt-get install -y --no-install-recommends nodejs >/dev/null
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 corepack enable >/dev/null
 corepack prepare pnpm@$pnpm_pin --activate >/dev/null 2>&1

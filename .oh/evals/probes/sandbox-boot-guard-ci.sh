@@ -80,8 +80,8 @@ else
     phas_regex() { grep -Eq -- "$1" <<<"$parity" || missing+=("compatibility parity job: $2"); }
     phas_regex '^    runs-on: ubuntu-latest$' "does not use the fixed Docker-capable amd64 runner"
     phas 'bash .oh/scripts/node-pnpm-parity.sh \' "does not invoke the Node/pnpm parity script"
-    phas 'debian:bookworm-slim \' "does not fix the baseline to debian:bookworm-slim"
-    phas 'debian:trixie-slim' "does not fix the candidate to debian:trixie-slim"
+    phas 'node:22-bookworm-slim \' "does not fix the baseline to node:22-bookworm-slim"
+    phas 'node:22-trixie-slim' "does not fix the candidate to node:22-trixie-slim"
     if grep -Eq '\$\{\{[[:space:]]*(inputs|github\.event\.inputs)\.' <<<"$parity"; then
       missing+=("compatibility parity job: images come from dispatch inputs instead of fixed values")
     fi

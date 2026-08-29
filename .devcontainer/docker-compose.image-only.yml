@@ -57,6 +57,8 @@ services:
       - OH_PROJECT_ROOT=${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - OH_IMAGE_ONLY=1
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-}
+      - LANGFUSE_PRIVACY_PRESET=${LANGFUSE_PRIVACY_PRESET:-metadata-only}
     stdin_open: true
     tty: true
     init: true

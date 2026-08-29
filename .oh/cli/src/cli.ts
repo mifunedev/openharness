@@ -6,6 +6,18 @@ import { runInit, type InitIO, type InitOptions } from "./commands/init.js";
 import { runUpdate } from "./commands/update.js";
 import { runCloud } from "./commands/cloud.js";
 import {
+  configFieldList,
+  runConfigSet,
+  runConfigShow,
+  type ConfigIO,
+} from "./commands/config.js";
+import {
+  runSecretList,
+  runSecretSet,
+  secretKeyList,
+  type SecretIO,
+} from "./commands/secret.js";
+import {
   runComposeConfig,
   runComposeVerb,
   runDestroy,
@@ -87,7 +99,8 @@ export function printOhHelp(): void {
 
 Usage:
   oh init [dir]             Scaffold OpenHarness compat files into a repo
-  oh config <integration>   Configure an integration via interactive wizard
+  oh config <args...>       Read and write oh.json (show|set), or run a wizard
+  oh secret <args...>       Read and write the gitignored root .env (set|list)
   oh update                 Upgrade the .oh/ control plane from a newer source
   oh sandbox                Provision and start the sandbox (docker compose up)
   oh shell [container]      Open a zsh shell in the running sandbox container
@@ -111,14 +124,40 @@ ${integrationLines()}
 }
 
 function printConfigHelp(): void {
-  process.stdout.write(`oh config — Configure integrations
+  process.stdout.write(`oh config — Read and write oh.json, the tracked non-secret settings
 
 Usage:
-  oh config <integration>
+  oh config show                  Print the resolved oh.json
+  oh config set <field> <value>   Set one dotted field, e.g. access.sshPort 2222
+  oh config <integration>         Run an integration wizard
   oh config <integration> --help
+
+oh.json holds every non-secret setting and is tracked by git. Credentials live
+in the gitignored root .env — write those with \`oh secret set <KEY>\`. Apply a
+change with \`oh stop && oh sandbox\`. Field reference:
+${sourceDocsUrl("docs/configuration.md")}
+
+Fields:
+${configFieldList()}
 
 Integrations:
 ${integrationLines()}
+`);
+}
+
+export function printSecretHelp(): void {
+  process.stdout.write(`oh secret — Read and write the gitignored root .env
+
+Usage:
+  oh secret set <KEY>   Prompt for the value (input hidden) and write it to .env
+  oh secret list        List the keys that hold a value, with redacted values
+
+The value is never read from the command line — an argument would land in your
+shell history. \`oh secret list\` never prints a raw value. .env is mode 0600 and
+gitignored; every non-secret setting belongs in oh.json (\`oh config set\`).
+
+Keys:
+${secretKeyList()}
 `);
 }
 
@@ -188,7 +227,7 @@ export function printSandboxHelp(): void {
   process.stdout.write(`oh sandbox — Provision and start the sandbox
 
 Usage:
-  oh sandbox [--image[=<ref>]] [--no-build]
+  oh sandbox [--image[=<ref>]] [--no-build] [--print-argv]
 
 Works from any subdirectory of an equipped repo (walks up to the nearest
 directory containing .oh/). Seeds .devcontainer/.env from
@@ -204,6 +243,7 @@ Flags:
                    --no-build). Ref resolves last-wins: --image=<ref> >
                    .devcontainer/.env OH_SANDBOX_IMAGE >
                    ghcr.io/mifunedev/openharness:latest.
+  --print-argv     Print the docker compose argv that would run, then exit.
   --no-build       Suppress the local build and reuse an existing image without
                    pinning one (advanced; pairs with a prior build or --image).
 
@@ -232,15 +272,15 @@ Usage:
   oh harness install <name>           Install a harness into the sandbox
   oh harness status [name]            Show installed/enabled state
 
-\`install\` does BOTH halves: it sets the \`.devcontainer/.env\` INSTALL_* flag so
-the choice survives the next image build, AND installs into the already-running
-container so the harness is usable now. It never rebuilds or restarts the
+\`install\` does BOTH halves: it sets the \`oh.json\` install.* field so the choice
+survives the next image build, AND installs into the already-running container
+so the harness is usable now. It never rebuilds or restarts the
 sandbox. When the sandbox is not running it persists the flag, prints a hint,
 and exits 0.
 
 Flags:
-  --persist-only   Only set the .devcontainer/.env INSTALL_* flag (no container work)
-  --no-persist     Live-install only; leave .devcontainer/.env unchanged
+  --persist-only   Only set the oh.json install.* field (no container work)
+  --no-persist     Live-install only; leave oh.json unchanged
   --json           Machine-readable output (list/status)
 
 Harnesses:
@@ -336,14 +376,14 @@ Usage:
 Most tools are baked into the image and are report-only; \`install\` works on:
 ${installableToolIds().map((t) => `  ${t}`).join("\n")}
 
-\`install\` does BOTH halves: it sets the \`.devcontainer/.env\` INSTALL_* flag so
-the choice survives the next container start, AND installs into the already-running
+\`install\` does BOTH halves: it sets the \`oh.json\` install.* field so the choice
+survives the next container start, AND installs into the already-running
 container. It never rebuilds or restarts the sandbox. A large download is
 confirmed first, and a non-interactive run without --yes installs nothing.
 
 Flags:
-  --persist-only   Only set the .devcontainer/.env INSTALL_* flag (no container work)
-  --no-persist     Live-install only; leave .devcontainer/.env unchanged
+  --persist-only   Only set the oh.json install.* field (no container work)
+  --no-persist     Live-install only; leave oh.json unchanged
   --yes            Accept a large download without prompting
   --json           Machine-readable output (list/status)
 
@@ -412,6 +452,115 @@ Equivalent to \`make config\`. This is namespaced under \`oh compose\` because
 
 See ${sourceDocsUrl("docs/lifecycle-commands.md")} for the full mapping.
 `);
+}
+
+export const CONFIG_VERBS = ["show", "set"] as const;
+
+export type ConfigVerb = (typeof CONFIG_VERBS)[number];
+
+export interface ConfigArgs {
+  help: boolean;
+  verb?: ConfigVerb;
+  integration?: string;
+  integrationHelp: boolean;
+  key?: string;
+  value?: string;
+}
+
+export function parseConfigArgs(rest: string[]): ParseResult<ConfigArgs> {
+  const args: ConfigArgs = { help: false, integrationHelp: false };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
+  }
+
+  const [head, ...tail] = rest;
+  if (!(CONFIG_VERBS as readonly string[]).includes(head)) {
+    if (tail.length > 0 && isHelpFlag(tail[0])) {
+      return { ok: true, args: { ...args, integration: head, integrationHelp: true } };
+    }
+    if (tail.length > 0) {
+      return {
+        ok: false,
+        error: `oh config ${head}: unexpected argument "${tail[0]}". This wizard takes no flags.`,
+      };
+    }
+    return { ok: true, args: { ...args, integration: head } };
+  }
+
+  const verb = head as ConfigVerb;
+  if (isHelpFlag(tail[0])) return { ok: true, args: { ...args, help: true } };
+
+  if (verb === "show") {
+    if (tail.length > 0) {
+      return { ok: false, error: `oh config show: unexpected argument "${tail[0]}"` };
+    }
+    return { ok: true, args: { ...args, verb } };
+  }
+
+  const [key, value, ...extra] = tail;
+  if (key === undefined || value === undefined) {
+    return {
+      ok: false,
+      error: "oh config set: a field and a value are required, e.g. `oh config set access.sshPort 2222`",
+      showHelp: true,
+    };
+  }
+  if (extra.length > 0) {
+    return {
+      ok: false,
+      error: `oh config set: unexpected argument "${extra[0]}" — quote a value that contains spaces`,
+    };
+  }
+  return { ok: true, args: { ...args, verb, key, value } };
+}
+
+export const SECRET_VERBS = ["set", "list"] as const;
+
+export type SecretVerb = (typeof SECRET_VERBS)[number];
+
+export interface SecretArgs {
+  help: boolean;
+  verb?: SecretVerb;
+  key?: string;
+}
+
+export function parseSecretArgs(rest: string[]): ParseResult<SecretArgs> {
+  const args: SecretArgs = { help: false };
+  if (rest.length === 0 || isHelpFlag(rest[0])) {
+    return { ok: true, args: { ...args, help: true } };
+  }
+
+  const [head, ...tail] = rest;
+  if (!(SECRET_VERBS as readonly string[]).includes(head)) {
+    return {
+      ok: false,
+      error: `oh secret: unknown subcommand "${head}" — expected set or list`,
+      showHelp: true,
+    };
+  }
+
+  const verb = head as SecretVerb;
+  if (isHelpFlag(tail[0])) return { ok: true, args: { ...args, help: true } };
+
+  if (verb === "list") {
+    if (tail.length > 0) {
+      return { ok: false, error: `oh secret list: unexpected argument "${tail[0]}"` };
+    }
+    return { ok: true, args: { ...args, verb } };
+  }
+
+  const [key, ...extra] = tail;
+  if (key === undefined) {
+    return { ok: false, error: "oh secret set: a key is required", showHelp: true };
+  }
+  if (extra.length > 0) {
+    return {
+      ok: false,
+      error:
+        "oh secret set: takes only a key — the value is prompted for, never passed on the command line where your shell history would keep it",
+    };
+  }
+  return { ok: true, args: { ...args, verb, key } };
 }
 
 export interface DestroyArgs {
@@ -614,6 +763,7 @@ export interface SandboxArgs {
   image: boolean;
   imageRef?: string;
   noBuild: boolean;
+  printArgv?: boolean;
 }
 
 export function parseSandboxArgs(rest: string[]): ParseResult<SandboxArgs> {
@@ -624,6 +774,8 @@ export function parseSandboxArgs(rest: string[]): ParseResult<SandboxArgs> {
   for (const token of rest) {
     if (token === "--no-build") {
       args.noBuild = true;
+    } else if (token === "--print-argv") {
+      args.printArgv = true;
     } else if (token === "--image") {
       args.image = true;
     } else if (token.startsWith("--image=")) {
@@ -636,7 +788,7 @@ export function parseSandboxArgs(rest: string[]): ParseResult<SandboxArgs> {
     } else {
       return {
         ok: false,
-        error: `oh sandbox: unexpected argument "${token}" — accepts only --image[=<ref>] and --no-build`,
+        error: `oh sandbox: unexpected argument "${token}" — accepts only --image[=<ref>], --no-build and --print-argv`,
       };
     }
   }
@@ -941,7 +1093,7 @@ export async function runWithRemoteSource(
 }
 
 async function main(argv: string[]): Promise<number> {
-  const [first, second, third] = argv;
+  const [first, second] = argv;
 
   if (!first || isHelpFlag(first)) {
     printOhHelp();
@@ -1006,31 +1158,59 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (first === "config") {
-    if (!second || isHelpFlag(second)) {
+    const parsed = parseConfigArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printConfigHelp();
+      return 1;
+    }
+    const a = parsed.args;
+    if (a.help) {
       printConfigHelp();
-      return second ? 0 : 1;
+      return second === undefined ? 1 : 0;
     }
 
-    const integration = INTEGRATIONS[second];
+    if (a.verb !== undefined) {
+      const io: ConfigIO = {
+        stdout: (s) => process.stdout.write(s),
+        stderr: (s) => process.stderr.write(s),
+      };
+      if (a.verb === "show") return await runConfigShow({}, io);
+      return await runConfigSet(a.key as string, a.value as string, {}, io);
+    }
+
+    const name = a.integration as string;
+    const integration = INTEGRATIONS[name];
     if (!integration) {
-      process.stderr.write(`oh config: unknown integration "${second}"\n\n`);
+      process.stderr.write(`oh config: unknown integration "${name}"\n\n`);
       printConfigHelp();
       return 1;
     }
-
-    if (third && isHelpFlag(third)) {
-      printIntegrationHelp(second, integration);
+    if (a.integrationHelp) {
+      printIntegrationHelp(name, integration);
       return 0;
     }
+    return await integration.runner();
+  }
 
-    if (third !== undefined) {
-      process.stderr.write(
-        `oh config ${second}: unexpected argument "${third}". This wizard takes no flags.\n`,
-      );
+  if (first === "secret") {
+    const parsed = parseSecretArgs(argv.slice(1));
+    if (!parsed.ok) {
+      process.stderr.write(`${parsed.error}\n`);
+      if (parsed.showHelp) printSecretHelp();
       return 1;
     }
-
-    return await integration.runner();
+    const a = parsed.args;
+    if (a.help) {
+      printSecretHelp();
+      return 0;
+    }
+    const io: SecretIO = {
+      stdout: (s) => process.stdout.write(s),
+      stderr: (s) => process.stderr.write(s),
+    };
+    if (a.verb === "list") return await runSecretList({}, io);
+    return await runSecretSet(a.key as string, {}, io);
   }
 
   if (first === "update") {
@@ -1075,6 +1255,7 @@ async function main(argv: string[]): Promise<number> {
         image: parsed.args.image,
         imageRef: parsed.args.imageRef,
         noBuild: parsed.args.noBuild,
+        printArgv: parsed.args.printArgv === true,
       },
       lifecycleIo(),
     );

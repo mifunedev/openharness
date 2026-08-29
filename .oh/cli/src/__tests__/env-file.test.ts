@@ -1,42 +1,37 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import {
   assertInRoot,
   envFilePath,
-  installEnvKey,
+  installFieldPath,
   isInstallFlagEnabled,
   readEnvValue,
   seedEnvFile,
+  setConfigField,
   setEnvValue,
   setInstallFlag,
   setKeyInEnv,
 } from "../lib/env-file.js";
-
-
-const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const REAL_EXAMPLE = join(REPO_ROOT, ".devcontainer", ".example.env");
-const REAL_MIGRATOR = join(REPO_ROOT, ".oh", "scripts", "migrate-harness-yaml.sh");
+import { ohConfigPath } from "../lib/oh-config.js";
 
 const cleanups: string[] = [];
 afterEach(() => {
   while (cleanups.length > 0) rmSync(cleanups.pop()!, { recursive: true, force: true });
 });
 
-function makeRepo(withEnv = true): string {
+function makeRepo(): string {
   const d = mkdtempSync(join(tmpdir(), "oh-env-file-"));
   cleanups.push(d);
   mkdirSync(join(d, ".devcontainer"), { recursive: true });
-  copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".example.env"));
-  if (withEnv) copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".env"));
   return d;
 }
 
 const readEnv = (root: string): string => readFileSync(envFilePath(root), "utf8");
 
+const readConfig = (root: string): Record<string, never> =>
+  JSON.parse(readFileSync(ohConfigPath(root), "utf8"));
 
 describe("setKeyInEnv", () => {
   it("uncomments a template line IN PLACE, keeping the line count and the prose", () => {
@@ -99,36 +94,32 @@ describe("setKeyInEnv", () => {
   });
 });
 
-
 describe("readEnvValue", () => {
   it("reads a live key and treats a commented one as unset", () => {
-    const root = makeRepo(false);
-    writeFileSync(
-      envFilePath(root),
-      "SANDBOX_NAME=live\n# TZ=America/Denver\n",
-    );
+    const root = makeRepo();
+    writeFileSync(envFilePath(root), "SANDBOX_NAME=live\n# TZ=America/Denver\n");
     expect(readEnvValue(root, "SANDBOX_NAME")).toBe("live");
     expect(readEnvValue(root, "TZ")).toBeUndefined();
   });
 
   it("treats an empty value as unset, so a bare `KEY=` never wins a fallback", () => {
-    const root = makeRepo(false);
+    const root = makeRepo();
     writeFileSync(envFilePath(root), "GH_TOKEN=\n");
     expect(readEnvValue(root, "GH_TOKEN")).toBeUndefined();
   });
 
   it("strips the enclosing quotes compose also strips", () => {
-    const root = makeRepo(false);
+    const root = makeRepo();
     writeFileSync(envFilePath(root), "GIT_USER_NAME='Ada Lovelace'\n");
     expect(readEnvValue(root, "GIT_USER_NAME")).toBe("Ada Lovelace");
   });
 
   it("returns undefined when the file does not exist at all", () => {
-    expect(readEnvValue(makeRepo(false), "SANDBOX_NAME")).toBeUndefined();
+    expect(readEnvValue(makeRepo(), "SANDBOX_NAME")).toBeUndefined();
   });
 
   it("is anchored to the ROOT, never the process CWD", () => {
-    const root = makeRepo(false);
+    const root = makeRepo();
     writeFileSync(envFilePath(root), "SANDBOX_NAME=anchored\n");
     const nested = join(root, "pkg", "web");
     mkdirSync(nested, { recursive: true });
@@ -142,61 +133,79 @@ describe("readEnvValue", () => {
   });
 });
 
-
 describe("seedEnvFile", () => {
-  it("copies the template when .env is missing, and reports that it wrote", () => {
-    const root = makeRepo(false);
-    expect(seedEnvFile(root)).toBe(true);
-    expect(readEnv(root)).toBe(readFileSync(REAL_EXAMPLE, "utf8"));
+  it("is a no-op when there is no template to copy from", () => {
+    const root = makeRepo();
+    expect(seedEnvFile(root)).toBe(false);
+    expect(existsSync(envFilePath(root))).toBe(false);
   });
 
-  it("never overwrites an existing .env, and reports that it did nothing", () => {
-    const root = makeRepo(false);
+  it("never overwrites an existing file", () => {
+    const root = makeRepo();
     writeFileSync(envFilePath(root), "MINE=1\n");
     expect(seedEnvFile(root)).toBe(false);
     expect(readEnv(root)).toBe("MINE=1\n");
   });
-
-  it("is a no-op when there is no template to copy from", () => {
-    const d = mkdtempSync(join(tmpdir(), "oh-env-file-bare-"));
-    cleanups.push(d);
-    mkdirSync(join(d, ".devcontainer"), { recursive: true });
-    expect(seedEnvFile(d)).toBe(false);
-  });
 });
 
-describe("setInstallFlag", () => {
-  it("maps an install key to its INSTALL_* env var", () => {
-    expect(installEnvKey("opencode")).toBe("INSTALL_OPENCODE");
-    expect(installEnvKey("grok_build")).toBe("INSTALL_GROK_BUILD");
-    expect(installEnvKey("agent_browser")).toBe("INSTALL_AGENT_BROWSER");
+describe("install flags", () => {
+  it("maps an install key to its oh.json field", () => {
+    expect(installFieldPath("opencode")).toBe("install.opencode");
+    expect(installFieldPath("grok_build")).toBe("install.grokBuild");
+    expect(installFieldPath("agent_browser")).toBe("install.agentBrowser");
   });
 
-  it("uncomments the real template's key in place and reads back as enabled", () => {
+  it("writes the flag to oh.json and never to a dotenv", () => {
     const root = makeRepo();
     expect(isInstallFlagEnabled(root, "hermes")).toBe(false);
 
-    const before = readEnv(root).split("\n").length;
-    expect(setInstallFlag(root, "hermes")).toBe("uncommented");
+    expect(setInstallFlag(root, "hermes")).toBe("updated");
 
-    expect(readEnv(root).split("\n")).toHaveLength(before);
-    expect(readEnv(root)).toMatch(/^INSTALL_HERMES=true$/m);
+    expect(readConfig(root)).toMatchObject({ install: { hermes: true } });
     expect(isInstallFlagEnabled(root, "hermes")).toBe(true);
+    expect(existsSync(envFilePath(root))).toBe(false);
+    expect(existsSync(join(root, ".env"))).toBe(false);
   });
 
-  it("is idempotent — a second call writes nothing", () => {
+  it("is idempotent — a second call rewrites nothing", () => {
     const root = makeRepo();
     setInstallFlag(root, "opencode");
-    const after = readEnv(root);
+    const after = readFileSync(ohConfigPath(root), "utf8");
     expect(setInstallFlag(root, "opencode")).toBe("already-set");
-    expect(readEnv(root)).toBe(after);
+    expect(readFileSync(ohConfigPath(root), "utf8")).toBe(after);
   });
 
-  it("seeds the file first when .env does not exist yet", () => {
-    const root = makeRepo(false);
-    expect(setInstallFlag(root, "hermes")).toBe("uncommented");
-    expect(readEnv(root)).toContain("Open Harness");
-    expect(readEnv(root)).toMatch(/^INSTALL_HERMES=true$/m);
+  it("reports `added` for a field the defaults leave unset", () => {
+    const root = makeRepo();
+    expect(setConfigField(root, "git.userName", "Ada Lovelace")).toBe("added");
+  });
+});
+
+describe("setEnvValue", () => {
+  it("routes a compose variable to its oh.json field", () => {
+    const root = makeRepo();
+    expect(setEnvValue(root, "DOCKER_SOCKET", "true")).toBe("updated");
+    expect(readConfig(root)).toMatchObject({ access: { dockerSocket: true } });
+    expect(existsSync(envFilePath(root))).toBe(false);
+  });
+
+  it("refuses a key that has no oh.json field rather than falling back to a dotenv", () => {
+    const root = makeRepo();
+    expect(() => setEnvValue(root, "GH_TOKEN", "ghp_example")).toThrow(/oh secret set/);
+    expect(existsSync(envFilePath(root))).toBe(false);
+  });
+});
+
+describe("setConfigField", () => {
+  it("creates a missing section and validates the value", () => {
+    const root = makeRepo();
+    expect(setConfigField(root, "access.sshPort", "2200")).toBe("updated");
+    expect(readConfig(root)).toMatchObject({ access: { sshPort: 2200 } });
+    expect(() => setConfigField(root, "access.sshPort", "0")).toThrow(/1 and 65535/);
+  });
+
+  it("refuses an unknown field", () => {
+    expect(() => setConfigField(makeRepo(), "access.nope", "1")).toThrow(/unknown oh.json field/);
   });
 });
 
@@ -209,25 +218,5 @@ describe("assertInRoot", () => {
   it("refuses an escape, including a sibling with the root as a string prefix", () => {
     expect(() => assertInRoot("/etc/passwd", "/repo")).toThrow(/outside the project root/);
     expect(() => assertInRoot("/repo-evil/.env", "/repo")).toThrow(/outside the project root/);
-  });
-});
-
-
-describe("round trip with the vendored shell writer", () => {
-  it("the migrator's awk writer and setEnvValue produce the same file", () => {
-    const viaTs = makeRepo();
-    setEnvValue(viaTs, "SANDBOX_NAME", "roundtrip");
-    setEnvValue(viaTs, "TZ", "America/Denver");
-    setEnvValue(viaTs, "INSTALL_HERMES", "true");
-
-    const viaShell = makeRepo();
-    writeFileSync(
-      join(viaShell, "harness.yaml"),
-      "sandbox:\n  name: roundtrip\n  timezone: America/Denver\ninstall:\n  hermes: true\n",
-    );
-    const r = spawnSync("sh", [REAL_MIGRATOR, viaShell], { encoding: "utf8" });
-    expect(r.status).toBe(0);
-
-    expect(readEnv(viaShell)).toBe(readEnv(viaTs));
   });
 });

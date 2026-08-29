@@ -42,6 +42,9 @@ export function renderComposeVars(config: OhConfig): RenderedVar[] {
     put("SKIP_PNPM_INSTALL", config.build.skipPnpmInstall ? "1" : "0");
   }
 
+  put("LANGFUSE_BASE_URL", config.langfuse?.baseUrl);
+  put("LANGFUSE_PRIVACY_PRESET", config.langfuse?.privacyPreset);
+
   put("OH_SANDBOX_IMAGE", config.image?.ref);
   put("OH_PULL_POLICY", config.image?.pullPolicy);
 

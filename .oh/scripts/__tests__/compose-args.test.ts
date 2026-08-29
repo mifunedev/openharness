@@ -12,6 +12,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -41,6 +42,15 @@ function printArgv(args: string[] = ["config"]): string[] {
   });
 
   expect(result.stderr).toBe("");
+  expect(result.status).toBe(0);
+  return result.stdout.trimEnd().split("\n");
+}
+
+function printArgvStderrTolerant(args: string[] = ["config"]): string[] {
+  const result = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", ...args], {
+    encoding: "utf8",
+  });
+
   expect(result.status).toBe(0);
   return result.stdout.trimEnd().split("\n");
 }
@@ -175,24 +185,28 @@ describe("scripts/docker-compose.sh", () => {
     expect(argv).toContain(absolute);
   });
 
-  it("migrates a leftover harness.yaml on first run, then never again", () => {
-    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
+  it("migrates a leftover harness.yaml into oh.json on first run, then never again", () => {
+    writeFileSync(
+      path.join(tmp, "harness.yaml"),
+      "sandbox:\n  name: from-yaml\nssh:\n  port: 2345\n",
+    );
 
     const first = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
       encoding: "utf8",
     });
     expect(first.status).toBe(0);
-    expect(first.stderr).toContain("SANDBOX_NAME=from-yaml");
+    expect(first.stderr).toContain("oh.json name = from-yaml");
     expect(existsSync(path.join(tmp, "harness.yaml"))).toBe(false);
     expect(existsSync(path.join(tmp, "harness.yaml.migrated"))).toBe(true);
-    expect(readFileSync(path.join(tmp, ".devcontainer", ".env"), "utf8")).toContain(
-      "SANDBOX_NAME=from-yaml",
-    );
+    expect(JSON.parse(readFileSync(path.join(tmp, "oh.json"), "utf8"))).toEqual({
+      version: 1,
+      name: "from-yaml",
+      access: { sshPort: 2345 },
+    });
+    expect(existsSync(path.join(tmp, ".devcontainer", ".env"))).toBe(false);
     expect(first.stdout.trimEnd().split("\n")).toEqual([
       "docker",
       "compose",
-      "--env-file",
-      path.join(tmp, ".devcontainer", ".env"),
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "config",
@@ -202,8 +216,170 @@ describe("scripts/docker-compose.sh", () => {
       encoding: "utf8",
     });
     expect(second.status).toBe(0);
-    expect(second.stderr).toBe("");
     expect(second.stdout).toBe(first.stdout);
+  });
+
+  it("puts an allow-listed secret from harness.yaml in the root dotenv, never oh.json", () => {
+    mkdirSync(path.join(tmp, ".oh", "cli", "src", "lib"), { recursive: true });
+    writeFileSync(
+      path.join(tmp, ".oh", "cli", "src", "lib", "secrets.ts"),
+      'export const SECRET_KEYS = [\n  "GH_TOKEN",\n  "SANDBOX_NAME",\n] as const;\n',
+    );
+    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: secretish\n");
+
+    const result = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(readFileSync(path.join(tmp, ".env"), "utf8")).toContain("SANDBOX_NAME=secretish");
+    expect(existsSync(path.join(tmp, "oh.json"))).toBe(false);
+  });
+});
+
+describe("scripts/docker-compose.sh --extra-env-file (issue #880)", () => {
+  const rendered = (): string => {
+    const file = path.join(tmp, "rendered.list");
+    writeFileSync(file, "SANDBOX_NAME=rendered\n");
+    return file;
+  };
+
+  it("passes the rendered file FIRST and the root dotenv SECOND, so secrets win", () => {
+    writeFileSync(path.join(tmp, ".env"), "GH_TOKEN=secret\n");
+    const file = rendered();
+
+    const result = spawnSync(
+      "bash",
+      [SCRIPT, "--repo-dir", tmp, "--extra-env-file", file, "--print-argv", "config"],
+      { encoding: "utf8" },
+    );
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(result.stdout.trimEnd().split("\n")).toEqual([
+      "docker",
+      "compose",
+      "--env-file",
+      file,
+      "--env-file",
+      path.join(tmp, ".env"),
+      "-f",
+      path.join(tmp, ".devcontainer", "docker-compose.yml"),
+      "config",
+    ]);
+  });
+
+  it("selects an overlay from the rendered file even when the dotenv is silent", () => {
+    writeFileSync(path.join(tmp, ".env"), "GH_TOKEN=secret\n");
+    const file = path.join(tmp, "rendered.list");
+    writeFileSync(file, "HERMES_DASHBOARD=true\n");
+
+    const result = spawnSync(
+      "bash",
+      [SCRIPT, "--repo-dir", tmp, "--extra-env-file", file, "--print-argv", "config"],
+      { encoding: "utf8" },
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      path.join(tmp, ".devcontainer", "docker-compose.hermes-dashboard.yml"),
+    );
+  });
+
+  it("prefers the root dotenv over a legacy .devcontainer/.env", () => {
+    writeFileSync(path.join(tmp, ".env"), "GH_TOKEN=secret\n");
+    writeFileSync(path.join(tmp, ".devcontainer", ".env"), "GH_TOKEN=legacy\n");
+
+    const argv = printArgv();
+    expect(argv).toContain(path.join(tmp, ".env"));
+    expect(argv).not.toContain(path.join(tmp, ".devcontainer", ".env"));
+  });
+
+  it("falls back to a legacy .devcontainer/.env when no root dotenv exists", () => {
+    writeFileSync(path.join(tmp, ".devcontainer", ".env"), "GH_TOKEN=legacy\n");
+
+    const argv = printArgv();
+    expect(argv).toContain(path.join(tmp, ".devcontainer", ".env"));
+  });
+
+  it("rejects a --extra-env-file that does not exist instead of silently dropping it", () => {
+    const result = spawnSync(
+      "bash",
+      [SCRIPT, "--repo-dir", tmp, "--extra-env-file", path.join(tmp, "absent.list"), "config"],
+      { encoding: "utf8" },
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("does not exist");
+  });
+
+  it("run directly with an oh.json present, notes that non-secret config comes from oh via oh.json", () => {
+    writeFileSync(path.join(tmp, "oh.json"), '{ "version": 1 }\n');
+
+    const result = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("oh.json");
+    expect(result.stderr.trimEnd().split("\n")).toHaveLength(1);
+    expect(result.stdout).not.toContain("--env-file");
+  });
+
+  it("says nothing when oh is driving it", () => {
+    writeFileSync(path.join(tmp, "oh.json"), '{ "version": 1 }\n');
+    const file = rendered();
+
+    const result = spawnSync(
+      "bash",
+      [SCRIPT, "--repo-dir", tmp, "--extra-env-file", file, "--print-argv", "config"],
+      { encoding: "utf8" },
+    );
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+  });
+});
+
+describe("composeOverrides[] resolution order (issue #880)", () => {
+  const seedAll = (): void => {
+    mkdirSync(path.join(tmp, ".oh"), { recursive: true });
+    writeFileSync(
+      path.join(tmp, "oh.json"),
+      JSON.stringify({ version: 1, composeOverrides: ["from-oh-json.yml"] }),
+    );
+    writeFileSync(
+      path.join(tmp, ".oh", "config.json"),
+      JSON.stringify({ composeOverrides: ["from-oh-config.yml"] }),
+    );
+    writeFileSync(
+      path.join(tmp, "config.json"),
+      JSON.stringify({ composeOverrides: ["from-legacy.yml"] }),
+    );
+  };
+
+  it("reads oh.json first, then .oh/config.json, then legacy config.json", () => {
+    seedAll();
+    expect(printArgvStderrTolerant()).toContain(path.join(tmp, "from-oh-json.yml"));
+
+    rmSync(path.join(tmp, "oh.json"));
+    expect(printArgv()).toContain(path.join(tmp, "from-oh-config.yml"));
+
+    rmSync(path.join(tmp, ".oh", "config.json"));
+    expect(printArgv()).toContain(path.join(tmp, "from-legacy.yml"));
+  });
+
+  it("silently applies no overrides when jq is absent — jq stays optional", () => {
+    seedAll();
+    const binDir = path.join(tmp, "nojq");
+    mkdirSync(binDir, { recursive: true });
+    for (const tool of ["awk", "tr", "cat", "grep", "sed", "dirname", "mktemp"]) {
+      const found = spawnSync("bash", ["-c", `command -v ${tool}`], { encoding: "utf8" });
+      if (found.status === 0) symlinkSync(found.stdout.trim(), path.join(binDir, tool));
+    }
+
+    const bash = spawnSync("bash", ["-c", "command -v bash"], { encoding: "utf8" }).stdout.trim();
+    const result = spawnSync(bash, [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
+      encoding: "utf8",
+      env: { ...process.env, PATH: binDir },
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("from-oh-json.yml");
+    expect(result.stdout).toContain(path.join(tmp, ".devcontainer", "docker-compose.yml"));
   });
 });
 

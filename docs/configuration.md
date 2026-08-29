@@ -15,8 +15,13 @@ must never reach `.env`. The split is enforced in code:
 `.oh/cli/src/lib/config-render.ts` refuses to render an allow-listed secret into
 the compose environment.
 
-`oh init` writes both files. `oh config set <field> <value>` edits `oh.json`;
-`oh secret set <KEY>` edits `.env`. Apply a change with `oh stop && oh sandbox`.
+`oh init` writes both files. `oh config show` prints the resolved `oh.json` and
+`oh config set <field> <value>` edits one dotted field in it; `oh secret set
+<KEY>` prompts for a credential with the input hidden and writes it to `.env`,
+and `oh secret list` shows which keys hold a value with the values redacted.
+`oh config set` refuses a secret key and `oh secret set` refuses a non-secret
+key, each pointing at the other command. Apply a change with
+`oh stop && oh sandbox`.
 
 ## How `oh.json` reaches Docker Compose
 
@@ -108,6 +113,18 @@ Recipe: [prebuilt-image deployment](deployment-prebuilt-image.md).
 | --- | --- | --- | --- | --- |
 | `cloud.apiUrl` | string | unset | — | OpenHarness Cloud API base URL used by `oh cloud`. The provisioner key is a secret and lives in `.env`, never here. |
 
+### Langfuse
+
+Tracing settings the Pi harness reads from its own process environment. They are
+not secrets — the Langfuse key pair is, and lives in `.env`. Compose passes both
+into the container's environment, so a value set here reaches Pi on the next
+sandbox start. An export in the sandbox shell still wins for that shell.
+
+| Field | Type | Default | Compose variable | What it does |
+| --- | --- | --- | --- | --- |
+| `langfuse.baseUrl` | string | unset | `LANGFUSE_BASE_URL` | Langfuse host Pi sends traces to, for example `http://langfuse-web:3000`. Takes precedence over `LANGFUSE_HOST`. |
+| `langfuse.privacyPreset` | `"metadata-only"` \| `"prompts-only"` \| `"conversations"` \| `"full-debug"` | unset (compose default `metadata-only`) | `LANGFUSE_PRIVACY_PRESET` | How much of each trace Pi captures. Prefer `metadata-only` unless a broader capture policy is approved. |
+
 ### Compose overlays
 
 | Field | Type | Default | Compose variable | What it does |
@@ -131,9 +148,6 @@ Any other key is rejected by `oh secret set`.
 A few variables are read directly from the environment of one process and are
 not harness configuration at all, so they appear in neither surface:
 
-- `LANGFUSE_BASE_URL` and `LANGFUSE_PRIVACY_PRESET` — shell exports read by the
-  Pi process. See [Langfuse](integrations/langfuse.md) for precedence and
-  privacy guidance.
 - `OH_CLOUD_API_URL`, `OH_CLOUD_CONFIG`, `OH_PROVISION_KEY` — non-persistent
   `oh cloud` overrides. See `.oh/cli/README.md`.
 

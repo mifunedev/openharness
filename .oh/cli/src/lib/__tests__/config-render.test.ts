@@ -32,6 +32,7 @@ function fullConfig(): OhConfig {
     dockerSocket: true,
   };
   config.image = { ref: "ghcr.io/mifunedev/openharness:latest", mode: "image", pullPolicy: "always" };
+  config.langfuse = { baseUrl: "http://langfuse-web:3000", privacyPreset: "metadata-only" };
   return config;
 }
 
@@ -69,6 +70,8 @@ describe("renderComposeEnv", () => {
     expect(text).toContain("SKIP_PNPM_INSTALL=0");
     expect(text).toContain("OH_SANDBOX_IMAGE=ghcr.io/mifunedev/openharness:latest");
     expect(text).toContain("OH_PULL_POLICY=always");
+    expect(text).toContain("LANGFUSE_BASE_URL=http://langfuse-web:3000");
+    expect(text).toContain("LANGFUSE_PRIVACY_PRESET=metadata-only");
   });
 
   it("covers every variable the real compose files interpolate", () => {

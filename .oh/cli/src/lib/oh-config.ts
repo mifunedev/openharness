@@ -52,6 +52,24 @@ export interface CloudSettings {
   apiUrl?: string;
 }
 
+export type LangfusePrivacyPreset =
+  | "metadata-only"
+  | "prompts-only"
+  | "conversations"
+  | "full-debug";
+
+export const LANGFUSE_PRIVACY_PRESETS: readonly LangfusePrivacyPreset[] = [
+  "metadata-only",
+  "prompts-only",
+  "conversations",
+  "full-debug",
+];
+
+export interface LangfuseSettings {
+  baseUrl?: string;
+  privacyPreset?: LangfusePrivacyPreset;
+}
+
 export interface OhConfig {
   version: 1;
   name?: string;
@@ -65,6 +83,7 @@ export interface OhConfig {
   build?: BuildSettings;
   image?: ImageSettings;
   cloud?: CloudSettings;
+  langfuse?: LangfuseSettings;
   composeOverrides?: string[];
   [key: string]: unknown;
 }
@@ -98,6 +117,7 @@ export function defaultOhConfig(name: string): OhConfig {
     build: { skipPnpmInstall: false },
     image: { mode: "build", pullPolicy: "missing" },
     cloud: {},
+    langfuse: {},
     composeOverrides: [],
   };
 }
@@ -197,6 +217,12 @@ export function validateOhConfig(value: unknown): OhConfig {
   const cloud = expectSection(record, "cloud");
   if (cloud) expectString(cloud, "apiUrl", "cloud.");
 
+  const langfuse = expectSection(record, "langfuse");
+  if (langfuse) {
+    expectString(langfuse, "baseUrl", "langfuse.");
+    expectEnum(langfuse, "privacyPreset", "langfuse.", LANGFUSE_PRIVACY_PRESETS);
+  }
+
   if (record.composeOverrides !== undefined) {
     const list = record.composeOverrides;
     if (!Array.isArray(list)) throw fieldError("composeOverrides", "must be an array of strings");
@@ -265,4 +291,110 @@ function expectEnum(
   if (typeof value !== "string" || !allowed.includes(value)) {
     throw fieldError(`${prefix}${key}`, `must be one of ${allowed.join(", ")}`);
   }
+}
+
+export type OhConfigFieldType = "string" | "boolean" | "port" | "enum" | "list";
+
+export interface OhConfigField {
+  path: string;
+  type: OhConfigFieldType;
+  values?: readonly string[];
+}
+
+export const OH_CONFIG_FIELDS: readonly OhConfigField[] = [
+  { path: "name", type: "string" },
+  { path: "timezone", type: "string" },
+  { path: "projectRoot", type: "string" },
+  { path: "git.userName", type: "string" },
+  { path: "git.userEmail", type: "string" },
+  { path: "install.opencode", type: "boolean" },
+  { path: "install.grokBuild", type: "boolean" },
+  { path: "install.deepagents", type: "boolean" },
+  { path: "install.hermes", type: "boolean" },
+  { path: "install.agentBrowser", type: "boolean" },
+  { path: "access.ssh", type: "boolean" },
+  { path: "access.sshPort", type: "port" },
+  { path: "access.sshPasswordAuth", type: "boolean" },
+  { path: "access.sshAuthorizedKeys", type: "string" },
+  { path: "access.dockerSocket", type: "boolean" },
+  { path: "hermesDashboard.enabled", type: "boolean" },
+  { path: "hermesDashboard.port", type: "port" },
+  { path: "cron.agentBin", type: "string" },
+  { path: "build.skipPnpmInstall", type: "boolean" },
+  { path: "image.ref", type: "string" },
+  { path: "image.mode", type: "enum", values: ["build", "image"] },
+  { path: "image.pullPolicy", type: "enum", values: ["missing", "always", "never"] },
+  { path: "cloud.apiUrl", type: "string" },
+  { path: "langfuse.baseUrl", type: "string" },
+  { path: "langfuse.privacyPreset", type: "enum", values: LANGFUSE_PRIVACY_PRESETS },
+  { path: "composeOverrides", type: "list" },
+];
+
+export function findOhConfigField(path: string): OhConfigField | undefined {
+  return OH_CONFIG_FIELDS.find((field) => field.path === path);
+}
+
+export function ohConfigFieldPaths(): string[] {
+  return OH_CONFIG_FIELDS.map((field) => field.path);
+}
+
+export function getOhConfigValue(config: OhConfig, path: string): unknown {
+  let cursor: unknown = config;
+  for (const segment of path.split(".")) {
+    if (!cursor || typeof cursor !== "object") return undefined;
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  return cursor;
+}
+
+export function setOhConfigValue(config: OhConfig, path: string, raw: string): OhConfig {
+  const field = findOhConfigField(path);
+  if (!field) throw new Error(`unknown oh.json field "${path}"`);
+
+  const parsed = coerceFieldValue(field, raw);
+  const segments = path.split(".");
+  const next: OhConfig = { ...config, version: 1 };
+
+  let cursor = next as unknown as Record<string, unknown>;
+  for (const segment of segments.slice(0, -1)) {
+    const existing = cursor[segment];
+    const section =
+      existing && typeof existing === "object" && !Array.isArray(existing)
+        ? { ...(existing as Record<string, unknown>) }
+        : {};
+    cursor[segment] = section;
+    cursor = section;
+  }
+  cursor[segments[segments.length - 1]] = parsed;
+
+  return validateOhConfig(next);
+}
+
+function coerceFieldValue(field: OhConfigField, raw: string): unknown {
+  if (field.type === "boolean") {
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+    throw fieldError(field.path, "must be true or false");
+  }
+  if (field.type === "port") {
+    const port = Number(raw);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw fieldError(field.path, "must be an integer between 1 and 65535");
+    }
+    return port;
+  }
+  if (field.type === "enum") {
+    const allowed = field.values ?? [];
+    if (!allowed.includes(raw)) {
+      throw fieldError(field.path, `must be one of ${allowed.join(", ")}`);
+    }
+    return raw;
+  }
+  if (field.type === "list") {
+    return raw
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry !== "");
+  }
+  return raw;
 }

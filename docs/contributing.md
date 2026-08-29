@@ -17,32 +17,39 @@ git clone --recurse-submodules https://github.com/mifunedev/openharness.git
 cd openharness
 ```
 
-Open Harness has no host-side build step. The orchestrator runs at the project root (Docker + `make`), and all application work happens inside the sandbox container. You only need:
+Open Harness has no host-side build step. The orchestrator runs at the project root, and all application work happens inside the sandbox container. You only need:
 
 - Docker (with `docker compose`)
-- `make`
+- Node.js ≥ 20, to run the `oh` CLI. To install both:
+
+  ```bash
+  curl -fsSL -o get-oh.sh https://oh.mifune.dev/get-oh.sh   # review it first
+  bash get-oh.sh
+  ```
+
+  Or, if you would rather not review it, `curl -fsSL https://oh.mifune.dev/get-oh.sh | bash`.
 - `git` and the GitHub CLI (`gh`)
 
 ### Provision the sandbox
 
-The lifecycle is driven entirely by the root `Makefile`:
+The lifecycle is driven entirely by `oh`:
 
 ```bash
-make sandbox    # provision and start the sandbox (docker compose up -d --build)
-make shell      # enter the sandbox as the `sandbox` user
-make ps         # show service status
-make logs       # tail compose logs
-make stop       # stop the sandbox, preserving volumes
-make destroy    # stop and remove the sandbox (volumes wiped)
-make restart    # restart the service
-make help       # list all targets
+oh sandbox    # provision and start the sandbox (docker compose up -d --build)
+oh shell      # enter the sandbox as the `sandbox` user
+oh ps         # show service status
+oh logs       # tail compose logs
+oh stop       # stop the sandbox, preserving volumes
+oh destroy    # stop and remove the sandbox (volumes wiped)
+oh restart    # restart the service
+oh --help     # list every verb
 ```
 
-A first-run helper is available at `.oh/scripts/install.sh` — it prompts for the values written to `.devcontainer/.env` (GitHub token autodetect, idempotent re-runs) before you call `make sandbox`.
+A first-run helper is available at `.oh/scripts/install.sh` — it prompts for the non-secret values written to `oh.json` and the secrets written to the gitignored root `.env` (GitHub token autodetect, idempotent re-runs) before it calls `oh sandbox`.
 
 ### Onboard inside the sandbox
 
-After `make shell`, start Herdr before any other inside-sandbox setup:
+After `oh shell`, start Herdr before any other inside-sandbox setup:
 
 ```bash
 herdr

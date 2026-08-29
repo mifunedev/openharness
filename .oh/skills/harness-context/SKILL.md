@@ -19,16 +19,18 @@ conventions, git workflow, or where files live.
 1. Read `CLAUDE.md` for the orchestrator contract — what the root-level
    agent does and does not do.
 2. For layout questions, read the per-directory `README.md` files (e.g.
-   `.oh/README.md`, `.oh/crons/README.md`, `.oh/tasks/README.md`,
-   `.oh/scripts/README.md`, `.oh/worktrees/README.md`) and the `How the system
+   `.oh/README.md`, `.oh/tasks/README.md`,
+   `.oh/scripts/README.md`) plus the nested agent guides
+   `.worktrees/AGENTS.md`, `projects/AGENTS.md`, and `crons/AGENTS.md`,
+   and the `How the system
    fits together` section of `AGENTS.md`. There is no single comprehensive
    tree — use the filesystem and the directory READMEs.
-3. For behavioral norms (formerly the `.oh/context/rules/` tier, collapsed into
-   on-demand skills in B-state M4), the canonical homes are now:
+3. For behavioral norms, now collapsed from an always-on tier into on-demand
+   skills, the canonical homes are:
    - `/git` (`.oh/skills/git/SKILL.md`) — issue / branch / commit / PR conventions
    - `/t3` (`.oh/skills/t3/references/sandbox-processes.md`) — tmux sessions for long-running processes
-   - `.oh/context/directory-readme.md` — when a directory needs a README
-   - the `advisor` agent (`.oh/agents/advisor.md`) — pattern for delegating to sub-agents
+   - `references/directory-readme.md` — when a directory needs a README
+   - `/delegate` (`.oh/skills/delegate/SKILL.md`) — wave decomposition and the recursion budget for sub-agents
 4. For skill-listing or skill-source-of-truth questions, load `references/skill-source-of-truth.md` and separate the tracked Open Harness shared skill library (`.oh/skills/*/SKILL.md`, exposed through `.claude/skills`, `.codex/skills`, `.pi/skills`, and Hermes' runtime `.hermes/skills/openharness` symlink) from the active Hermes runtime catalog (`.hermes/skills/` plus bundled/profile skills). Do not present `hermes skills list` as the repo source of truth without this distinction.
 5. For shared-skill path migrations or cross-agent skill wiring, load `references/shared-skills-symlink-migration.md`; update symlinks, runtime boot setup, docs, CI path filters, cron invocations, exact-path eval probes, and fixed-depth support scripts together before declaring the migration done.
 6. For optional sandbox agent/runtime integrations, audit the full runtime/config/auth surface together: compose mounts and env, entrypoint setup/migration, default config seeding, banner sentinels, `.gitignore`, docs/wiki/changelog, and compose config validation. If Hermes is involved, load `references/hermes-state-auth-split.md` for the established single-device project-local runtime (config + auth + sessions all under one `HERMES_HOME`) + shared-skill symlink pattern, and why auth must not be a cross-device symlink.
@@ -40,5 +42,4 @@ conventions, git workflow, or where files live.
 - Short factual answer first, then file references.
 - Lifecycle questions (setup / validate / teardown): cite the relevant
   section of `CLAUDE.md`.
-- Convention questions: cite the owning skill (`.oh/skills/<name>/SKILL.md`)
-  or the relevant `.oh/context/` doc.
+- Convention questions: cite the owning skill (`.oh/skills/<name>/SKILL.md`).

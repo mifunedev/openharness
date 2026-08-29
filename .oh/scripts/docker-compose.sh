@@ -5,13 +5,18 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_DIR=$(cd "$SCRIPT_DIR/../.." && pwd)
 PRINT_ARGV=0
+EXTRA_ENV_FILE=""
 
 usage() {
   cat >&2 <<'EOF'
-Usage: scripts/docker-compose.sh [--repo-dir DIR] [--print-argv] <docker-compose-args...>
+Usage: scripts/docker-compose.sh [--repo-dir DIR] [--extra-env-file FILE]
+                                 [--print-argv] <docker-compose-args...>
 
-Builds the harness docker compose argv from .devcontainer/.env and
-.oh/config.json, then executes `docker compose ...` with the provided args.
+Builds the harness docker compose argv from the repository dotenv and the
+composeOverrides[] list in oh.json, then executes `docker compose ...` with the
+provided args.
+--extra-env-file adds a lower-precedence --env-file ahead of the dotenv; `oh`
+renders the non-secret settings of oh.json into that file.
 --print-argv prints one argv entry per line instead of executing; useful for
 safe diagnostics and tests.
 EOF
@@ -22,6 +27,11 @@ while [ "$#" -gt 0 ]; do
     --repo-dir)
       [ "$#" -ge 2 ] || { usage; exit 2; }
       REPO_DIR=$(cd "$2" && pwd)
+      shift 2
+      ;;
+    --extra-env-file)
+      [ "$#" -ge 2 ] || { usage; exit 2; }
+      EXTRA_ENV_FILE="$2"
       shift 2
       ;;
     --print-argv)
@@ -44,12 +54,13 @@ done
 
 [ "$#" -gt 0 ] || { usage; exit 2; }
 
-ENV_FILE="$REPO_DIR/.devcontainer/.env"
-
 MIGRATOR="$SCRIPT_DIR/migrate-harness-yaml.sh"
 if [ -f "$REPO_DIR/harness.yaml" ] && [ -f "$MIGRATOR" ]; then
   sh "$MIGRATOR" "$REPO_DIR" >&2 || true
 fi
+
+ENV_FILE="$REPO_DIR/.env"
+[ -f "$ENV_FILE" ] || ENV_FILE="$REPO_DIR/.devcontainer/.env"
 
 compose_path() {
   case "$1" in
@@ -65,8 +76,8 @@ truthy() {
   esac
 }
 
-read_env_value() {
-  [ -f "$ENV_FILE" ] || return 0
+read_env_file_value() {
+  [ -f "$2" ] || return 0
   awk -F= -v key="$1" '
     $0 ~ "^[[:space:]]*#" { next }
     $1 == key {
@@ -79,10 +90,36 @@ read_env_value() {
       print val
       exit
     }
-  ' "$ENV_FILE"
+  ' "$2"
 }
 
+read_env_value() {
+  local value=""
+  if [ -n "$EXTRA_ENV_FILE" ]; then
+    value=$(read_env_file_value "$1" "$EXTRA_ENV_FILE")
+    if [ -n "$value" ]; then
+      printf '%s\n' "$value"
+      return 0
+    fi
+  fi
+  read_env_file_value "$1" "$ENV_FILE"
+}
+
+if [ -n "$EXTRA_ENV_FILE" ] && [ ! -f "$EXTRA_ENV_FILE" ]; then
+  printf 'error: --extra-env-file %s does not exist\n' "$EXTRA_ENV_FILE" >&2
+  exit 2
+fi
+
+if [ -z "$EXTRA_ENV_FILE" ] && [ -f "$REPO_DIR/oh.json" ]; then
+  printf 'note: non-secret config comes from oh.json via `oh`; this direct run uses only %s and the compose-file defaults\n' \
+    "${ENV_FILE#"$REPO_DIR"/}" >&2
+fi
+
 args=()
+
+if [ -n "$EXTRA_ENV_FILE" ]; then
+  args+=(--env-file "$EXTRA_ENV_FILE")
+fi
 
 if [ -f "$ENV_FILE" ]; then
   args+=(--env-file "$ENV_FILE")
@@ -131,7 +168,8 @@ if truthy "$ssh_value"; then
   fi
 fi
 
-CONFIG_JSON="$REPO_DIR/.oh/config.json"
+CONFIG_JSON="$REPO_DIR/oh.json"
+[ -f "$CONFIG_JSON" ] || CONFIG_JSON="$REPO_DIR/.oh/config.json"
 [ -f "$CONFIG_JSON" ] || CONFIG_JSON="$REPO_DIR/config.json"
 if command -v jq >/dev/null 2>&1 && [ -f "$CONFIG_JSON" ]; then
   while IFS= read -r override; do

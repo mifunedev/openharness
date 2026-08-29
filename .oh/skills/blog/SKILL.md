@@ -27,7 +27,7 @@ Arguments received: `$ARGUMENTS`
 1. If `$ARGUMENTS` is empty, ask for a one-line scenario and stop.
 2. Parse any explicit flags:
    - `--source <path|url>` — raw notes, transcript, Loom URL, or source folder.
-   - `--target <repo|path>` — blog repo or site root. Treat `/worktrees ...` as repo-relative `.oh/worktrees/...`, never filesystem root.
+   - `--target <repo|path>` — blog repo or site root. Treat `/worktrees ...` as repo-relative `.worktrees/...`, never filesystem root.
    - `--slug <slug>` — target post slug, lowercase kebab-case.
    - `--promo linkedin,x,channels` — also generate a reviewable promotion artifact for social posts and channel blasts; never publish.
    - `--dry-run` — perform audits and propose filename/outline only; write nothing.
@@ -44,7 +44,7 @@ That reference is authoritative for the workflow details. This `SKILL.md` only d
 
 ## Shared rules
 
-- **Use Advisor before drafting.** For non-trivial source material, read `.oh/agents/advisor.md` and obtain a tight implementation briefing/delegate plan before spawning workers or writing the post. If the custom `advisor` agent is unavailable, use a planning-capable agent and require the same 5-field Advisor Briefing contract.
+- **Brief before drafting.** For non-trivial source material, read `/delegate` (`.oh/skills/delegate/SKILL.md`) and obtain a tight implementation briefing and bounded delegate plan before spawning workers or writing the post. Every worker briefing carries the five fields `/delegate` step 2 requires.
 - **Audit all media before publishing.** Every source image/video screenshot must be accounted for as keep/drop/reference-only/missing. For Loom/demo.md sources, use source-faithful image handling: either embed the exact source image URLs or save local copies downloaded from those exact URLs when PR/site rendering would otherwise break. Do not publish unredacted screenshots that expose tokens, OAuth callback URLs, private accounts, hostnames, sensitive usage panels, or unrelated personal UI.
 - **Target conventions win.** Read the target repo's local `AGENTS.md`/`CLAUDE.md` if present, then inspect existing posts and build scripts before writing.
 - **No raw transcript dump.** A blog post needs a hook, narrative structure, concise steps, useful captions, and verified links. Timestamps can inform the outline; they are not the post.

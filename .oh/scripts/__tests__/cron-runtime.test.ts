@@ -14,11 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const SIGHUP_CRONS_DIR = vi.hoisted(() => {
-  const dir = `/tmp/cron-sighup-test-crons-${process.pid}`;
-  process.env.CRONS_DIR = dir;
-  return dir;
-});
+const SIGHUP_CRONS_DIR = `/tmp/cron-sighup-test-crons-${process.pid}`;
 
 import {
   acquireLock,
@@ -433,13 +429,13 @@ describe("buildTmuxWrapper", () => {
       agentBin: "pi",
       promptFile: "/tmp/cron-autopilot-0610-1805.prompt",
       pidFile: "/tmp/cron-autopilot-0610-1805.pid",
-      worktree: "/home/sandbox/harness/.oh/worktrees/cron/cron-autopilot-0610-1805",
+      worktree: "/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805",
     });
     expect(wt).toContain("echo $$ > '/tmp/cron-autopilot-0610-1805.pid';");
     expect(wt).toContain("rm -f '/tmp/cron-autopilot-0610-1805.pid';");
     expect(wt).not.toContain("/tmp/cron-autopilot.pid");
     expect(wt).toContain(
-      "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.oh/worktrees/cron/cron-autopilot-0610-1805';",
+      "CRON_OVERLAP_PIDFILE='/tmp/cron-autopilot-0610-1805.pid' CRON_WORKTREE='/home/sandbox/harness/.worktrees/cron/cron-autopilot-0610-1805';",
     );
   });
 
@@ -1126,13 +1122,31 @@ describe("fallback worktree pruning", () => {
     git(repo, ["add", "README.md"]);
     git(repo, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"]);
 
-    const dirtyWt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-dirty");
-    const cleanWt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-clean");
+    const dirtyWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-dirty");
+    const cleanWt = path.join(repo, ".worktrees", "cron", "cron-autopilot-clean");
     git(repo, ["worktree", "add", "--detach", dirtyWt, "HEAD"]);
     git(repo, ["worktree", "add", "--detach", cleanWt, "HEAD"]);
     writeFileSync(path.join(dirtyWt, "uncommitted.txt"), "salvage me\n");
     return { repo, dirtyWt, cleanWt };
   };
+
+  it("resolves the cron worktree root at the fixed .worktrees/ root", async () => {
+    const repo = path.join(tmp, "envrepo");
+    mkdirSync(path.join(repo, ".worktrees", "cron"), { recursive: true });
+
+    const priorCwd = process.cwd();
+    try {
+      process.chdir(repo);
+
+      vi.resetModules();
+      const runtime = await import("../cron-runtime.ts");
+      expect(runtime.pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
+      expect(existsSync(path.join(repo, ".worktrees", "cron"))).toBe(true);
+    } finally {
+      process.chdir(priorCwd);
+      vi.resetModules();
+    }
+  });
 
   it("reports dirty fallback worktree state including untracked files", () => {
     const { dirtyWt } = initRepoWithFallbackWorktrees();
@@ -1145,7 +1159,7 @@ describe("fallback worktree pruning", () => {
   });
 
   it("treats a matching live tmux session name as fallback worktree liveness", () => {
-    const wt = path.join(tmp, "repo", ".oh/worktrees", "cron", "cron-autopilot-0618-1505");
+    const wt = path.join(tmp, "repo", ".worktrees", "cron", "cron-autopilot-0618-1505");
 
     expect(worktreeInUse(wt, [], ["cron-autopilot-0618-1505"])).toBe(true);
     expect(worktreeInUse(wt, [path.join(wt, "nested")], [])).toBe(true);
@@ -1223,7 +1237,7 @@ esac
   });
 
   const orphanWorktree = (repo: string, name: string): string => {
-    const wt = path.join(repo, ".oh/worktrees", "cron", name);
+    const wt = path.join(repo, ".worktrees", "cron", name);
     git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
     rmSync(path.join(repo, ".git", "worktrees", name), { recursive: true, force: true });
     return wt;
@@ -1231,7 +1245,7 @@ esac
 
   it("does NOT classify a worktree as orphaned when its .git file is unreadable", () => {
     const { repo } = initRepoWithFallbackWorktrees();
-    const wt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-unreadable");
+    const wt = path.join(repo, ".worktrees", "cron", "cron-autopilot-unreadable");
     git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
     const dotGit = path.join(wt, ".git");
     chmodSync(dotGit, 0o000);
@@ -1245,7 +1259,7 @@ esac
 
   it("does NOT classify a worktree as orphaned when its .git file is corrupt", () => {
     const { repo } = initRepoWithFallbackWorktrees();
-    const wt = path.join(repo, ".oh/worktrees", "cron", "cron-autopilot-corrupt");
+    const wt = path.join(repo, ".worktrees", "cron", "cron-autopilot-corrupt");
     git(repo, ["worktree", "add", "--detach", wt, "HEAD"]);
     writeFileSync(path.join(wt, ".git"), "this is not a gitdir pointer\n");
 
@@ -1369,7 +1383,7 @@ describe("SIGHUP reload", () => {
 
   afterEach(() => {
     emptyCronsDir();
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     resetActiveJobs();
     appendSpy().mockClear();
   });
@@ -1385,7 +1399,7 @@ describe("SIGHUP reload", () => {
     let i = 0;
     scheduleAll(tmp, vi.fn(), () => ({ stop: stops[i++] }) as unknown as Cron);
 
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
 
     expect(stops[0]).toHaveBeenCalledTimes(1);
     expect(stops[1]).toHaveBeenCalledTimes(1);
@@ -1393,17 +1407,17 @@ describe("SIGHUP reload", () => {
 
   it("picks up an added cron file and drops a removed one on reload", () => {
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "one.md"), validCron("one", FAR_FUTURE));
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     expect(reloadLines().at(-1)).toContain("1 scheduled, 0 skipped");
 
     appendSpy().mockClear();
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "two.md"), validCron("two", FAR_FUTURE));
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     expect(reloadLines().at(-1)).toContain("2 scheduled, 0 skipped");
 
     appendSpy().mockClear();
     rmSync(path.join(SIGHUP_CRONS_DIR, "one.md"));
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     expect(reloadLines().at(-1)).toContain("1 scheduled, 0 skipped");
   });
 
@@ -1411,30 +1425,30 @@ describe("SIGHUP reload", () => {
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "good.md"), validCron("good", FAR_FUTURE));
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "bad.md"), validCron("bad", "not-a-cron"));
 
-    expect(() => sighupHandler()).not.toThrow();
+    expect(() => sighupHandler(SIGHUP_CRONS_DIR)).not.toThrow();
     expect(reloadLines().at(-1)).toContain("1 scheduled, 1 skipped");
   });
 
   it("writes a RELOAD liveness line via the appendFileSync spy", () => {
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     expect(loggedLines().some((l) => l.includes("\tRELOAD\t"))).toBe(true);
     expect(reloadLines().at(-1)).toContain("\tsystem\tRELOAD\t");
   });
 
   it("does not throw when the prior activeJobs registry is empty", () => {
     resetActiveJobs();
-    expect(() => sighupHandler()).not.toThrow();
+    expect(() => sighupHandler(SIGHUP_CRONS_DIR)).not.toThrow();
     expect(reloadLines()).toHaveLength(1);
   });
 
   it("is re-entrancy-safe: a SIGHUP arriving mid-reload is a no-op", () => {
     writeFileSync(path.join(tmp, "a.md"), validCron("a"));
     const stop = vi.fn(() => {
-      sighupHandler();
+      sighupHandler(SIGHUP_CRONS_DIR);
     });
     scheduleAll(tmp, vi.fn(), () => ({ stop }) as unknown as Cron);
 
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
 
     expect(stop).toHaveBeenCalledTimes(1);
     expect(reloadLines()).toHaveLength(1);

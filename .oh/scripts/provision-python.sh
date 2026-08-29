@@ -74,7 +74,7 @@ fi
 command -v uv >/dev/null 2>&1 || die \
   "uv is not on PATH" \
   "the image installs it to /usr/local/bin/uv; rebuild the sandbox image:" \
-  "  make sandbox"
+  "  oh sandbox"
 
 check_writable() {
   local dir="$1"

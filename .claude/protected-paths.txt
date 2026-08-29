@@ -35,9 +35,6 @@ retro
 .oh/scripts/sandbox-healthcheck.sh
 .oh/scripts/link-providers.sh
 
-# --- Root lifecycle entrypoints ---
-Makefile
-
 # --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
 .oh/install/banner.sh
 .oh/skills/cloudflared/scripts/run.sh
@@ -45,28 +42,16 @@ Makefile
 .devcontainer/Dockerfile
 
 # --- Crons (referenced by .oh/scripts/cron-runtime.ts) ---
-.oh/crons/heartbeat.md
-.oh/crons/cleanup-tasks.md
+crons/heartbeat.md
+crons/cleanup-tasks.md
 .oh/evals/probes/cleanup-tasks-worktree-grooming.sh
 .oh/evals/probes/markitdown-wiki-ingest.sh
-.oh/crons/eval-weekly.md
+crons/eval-weekly.md
 
-# --- Norms folded into skills (formerly .oh/context/rules/, B-state M3+M4) ---
+# --- Norms folded into skills (B-state M3+M4) ---
 .oh/skills/git/SKILL.md
 .oh/skills/t3/references/sandbox-processes.md
-.oh/agents/advisor.md  # advisor delegation + recursive-decomposition norm, now an agent (was .oh/skills/advisor/)
 .oh/skills/spec/references/plan.md
 .oh/skills/spec/references/execute.md
 .oh/skills/spec/references/retro.md
 
-# --- Orchestrator identity layer (session-loaded by AGENTS.md bootloader) ---
-.oh/context/SOUL.md
-.oh/context/IDENTITY.md
-.oh/context/TOOLS.md
-.oh/context/USER.md
-
-# --- Sub-agents invoked by skills ---
-.claude/agents/architect.md
-.claude/agents/critic.md
-.claude/agents/implementer.md
-.claude/agents/pm.md

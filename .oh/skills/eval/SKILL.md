@@ -40,29 +40,19 @@ code by design — this is not a bug.
 
 ## What the runner does
 
-1. **Recover orphaned ablation backups** (M-2): if `.oh/evals/.ablation-active`
-   exists from a crashed ablation, restore each `<target>.bak` before running.
-2. **Discover + run** every probe matching the filters; extract `# tier:` /
+1. **Discover + run** every probe matching the filters; extract `# tier:` /
    `# source:` via the exact header grep.
-3. **Compute the delta** vs the prior `RESULTS.md` row. **First run** (no prior
+2. **Compute the delta** vs the prior `RESULTS.md` row. **First run** (no prior
    row) emits `new-pass`/`new-fail` and raises NO regression without prior state.
-4. **Surface regressions** — any `PASS → (REGRESSION|TIMEOUT|ERROR)` transition is
+3. **Surface regressions** — any `PASS → (REGRESSION|TIMEOUT|ERROR)` transition is
    printed first, naming the probe's `source`.
-5. **Rewrite `RESULTS.md` atomically** — build the full scoreboard into a temp
+4. **Rewrite `RESULTS.md` atomically** — build the full scoreboard into a temp
    sibling file (`RESULTS.md.tmp.$$`) and replace the live file in one `mv -f`
    (never truncate-then-append in place), so a crash or concurrent run can't leave
    a partial scoreboard. Overwrite the row for each probe run; carry prior rows for
    probes not run this invocation from a **pre-write snapshot (`RESULTS_ORIG`)**
    captured before the rewrite — not the live file — so a filtered run never erases
    untouched rows and the scoreboard stays complete.
-
-## Ablation (added by US-006)
-
-`run.sh --ablate <context-file> --probe <id>` runs a probe with and without a
-target context file loaded (reusing `scripts/ablate.sh`'s swap/restore/trap
-mechanics — NOT the `claude -p` oracle) and reports `LOAD-BEARING` (regression on
-removal) or `PRUNABLE`. This is the prune-half of the fitness function. See
-US-006 in `.oh/tasks/context-fitness-evals/prd.md`.
 
 ## When NOT to use
 

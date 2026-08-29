@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import {
   ExecutionSpawnError,
   resolveExecutionTarget,
@@ -8,10 +7,8 @@ import { spawnRunner, type LifecycleRunner } from "../lib/execution/runner.js";
 import type { ExecutionTarget } from "../lib/execution/target.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import {
-  envFilePath,
-  installEnvKey,
+  installFieldPath,
   isInstallFlagEnabled,
-  seedEnvFile,
   setInstallFlag,
 } from "../lib/env-file.js";
 import {
@@ -32,6 +29,7 @@ export interface HarnessOptions {
   cwd?: string;
   run?: LifecycleRunner;
   json?: boolean;
+  env?: NodeJS.ProcessEnv;
 }
 
 export interface HarnessInstallOptions extends HarnessOptions {
@@ -52,9 +50,18 @@ function isReachable(status: string): boolean {
   return status === "ready" || status === "starting";
 }
 
-function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
+function targetFor(
+  root: string,
+  run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
+): ExecutionTarget {
   const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
-  return resolveExecutionTarget({ projectRoot: root, container: name, run });
+  return resolveExecutionTarget({
+    projectRoot: root,
+    container: name,
+    run,
+    ...(env ? { env } : {}),
+  });
 }
 
 async function probeInstalled(
@@ -64,7 +71,7 @@ async function probeInstalled(
   try {
     const r = await target.exec({
       argv: [...entry.verifyArgv],
-      user: entry.installUser,
+      user: "sandbox",
       stdio: "capture",
     });
     return r.exitCode === 0;
@@ -77,10 +84,11 @@ async function probeInstalled(
 async function collectStates(
   root: string,
   run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
   only?: HarnessEntry,
 ): Promise<HarnessState[]> {
   const entries = only ? [only] : [...HARNESS_CATALOG];
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, env);
 
   let reachable = false;
   try {
@@ -89,7 +97,6 @@ async function collectStates(
     if (!(err instanceof ExecutionSpawnError)) throw err;
   }
 
-  const configured = existsSync(envFilePath(root));
   const states: HarnessState[] = [];
   for (const entry of entries) {
     states.push({
@@ -97,9 +104,7 @@ async function collectStates(
       title: entry.title,
       kind: entry.kind,
       enabled:
-        entry.harnessKey === undefined
-          ? null
-          : configured && isInstallFlagEnabled(root, entry.harnessKey),
+        entry.harnessKey === undefined ? null : isInstallFlagEnabled(root, entry.harnessKey),
       installed: reachable ? await probeInstalled(target, entry) : null,
       docs: sourceDocsUrl(entry.docsPath),
     });
@@ -135,7 +140,7 @@ function renderTable(states: HarnessState[], io: HarnessIO): void {
 export async function runHarnessList(opts: HarnessOptions, io: HarnessIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const states = await collectStates(root, run);
+  const states = await collectStates(root, run, opts.env);
   if (opts.json) {
     io.stdout(`${JSON.stringify(states, null, 2)}\n`);
   } else {
@@ -164,7 +169,7 @@ export async function runHarnessStatus(
     if (!only) return unknownHarness(name, io);
   }
 
-  const states = await collectStates(root, run, only);
+  const states = await collectStates(root, run, opts.env, only);
   if (opts.json) {
     io.stdout(`${JSON.stringify(only ? states[0] : states, null, 2)}\n`);
   } else {
@@ -187,25 +192,22 @@ export async function runHarnessInstall(
   if (!opts.noPersist) {
     if (entry.harnessKey === undefined) {
       io.stdout(
-        `${entry.id}: ${entry.kind} harness — no .devcontainer/.env install key, nothing to persist\n`,
+        `${entry.id}: ${entry.kind} harness — no oh.json install field, nothing to persist\n`,
       );
     } else {
-      if (seedEnvFile(root)) {
-        io.stdout("create .devcontainer/.env (from .devcontainer/.example.env)\n");
-      }
-      const key = installEnvKey(entry.harnessKey);
+      const field = installFieldPath(entry.harnessKey);
       const outcome = setInstallFlag(root, entry.harnessKey);
       io.stdout(
         outcome === "already-set"
-          ? `.devcontainer/.env: ${key} already true\n`
-          : `.devcontainer/.env: set ${key}=true (${outcome})\n`,
+          ? `oh.json: ${field} already true\n`
+          : `oh.json: set ${field}=true (${outcome})\n`,
       );
     }
   }
 
   if (opts.persistOnly) return 0;
 
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, opts.env);
   let status: string;
   try {
     status = await target.status();
@@ -245,7 +247,7 @@ export async function runHarnessInstall(
     io.stderr(
       `oh harness: installing ${entry.id} failed (exit ${r.exitCode}).\n` +
         (entry.harnessKey !== undefined && !opts.noPersist
-          ? `.devcontainer/.env keeps ${installEnvKey(entry.harnessKey)}=true — the next image build will install it.\n`
+          ? `oh.json keeps ${installFieldPath(entry.harnessKey)}=true — the next image build will install it.\n`
           : ""),
     );
     return r.exitCode;

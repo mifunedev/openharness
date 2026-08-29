@@ -4,6 +4,8 @@ Status: Draft — companion to [#525](https://github.com/mifunedev/openharness/i
 
 Source: Chen, Wang, Qu, *Recursive Self-Improvement in AI: From Bounded Self-Refinement to Autonomous Research Loops*, [arXiv 2607.07663v1](https://arxiv.org/html/2607.07663v1) (July 2026), 1,250 papers over 2024–2026. Wiki entry: [[recursive-self-improvement-survey]].
 
+Amended 2026-08-29 ([#870](https://github.com/mifunedev/openharness/issues/870)): the `.oh/memory/` tier this RFC cited as a rung-4 instrument and as the harness's capital account has since been deleted. The argument is unchanged; the two citations now name the instruments that survive.
+
 ## 1. Why this survey and not another
 
 The survey's §3.5–3.6 describes what Open Harness is. That section describes an agent that rewrites its own prompts, skills, memory, and orchestration code. That agent validates each change against a fixed benchmark, and a human holds the merge gate. The survey supplies three items this repository lacks:
@@ -30,7 +32,7 @@ The survey's §3.6 assessment applies verbatim: persistence changes which faults
 | **1 — formal** | Sound by construction | None. `shellcheck` and `pnpm -r type-check` are the closest, and neither one is sound. |
 | **2 — execution** | Reliable, incomplete, eventually gamed | `.oh/evals/probes/*.sh` (105 deterministic three-state oracles, run in CI by `ci-harness.yml` and `release.yml`), `/ci-status`, `.oh/cli` unit suites. |
 | **3 — learned judge** | Bounded by the judge's competence; itself an optimization target | `/audit implementation`, `/audit pr`, `/benchmark`, and the rubric scoring behind `.oh/evals/capability/RESULTS.md`. |
-| **4 — intrinsic** | Cheapest, most gameable | `STATUS: COMPLETE` in `progress.txt` — the terminal interface of the one build executor (`firstmate`) — plus every self-reported count in `.oh/memory/<date>/log.md`. |
+| **4 — intrinsic** | Cheapest, most gameable | `STATUS: COMPLETE` in `progress.txt` — the terminal interface of the one build executor (`firstmate`) — plus every self-reported count in a session's own prose. |
 
 Two readings follow the table. Each reading changes what a reviewer trusts.
 
@@ -91,7 +93,7 @@ Three `rfc-selfimprove-roadmap.md` children arrive independently in the survey. 
 | 7 — scoped repair-operator registry ([repair-operator-registry.md](../repair-operator-registry.md)) | **SHARP** (§3.6): constrain the self-modification surface to an artifact a reviewer can audit, diff, and revert. Unbounded evolution cannot separate a systematic logic flaw from variance. |
 | 9/10 — capability benchmark + promotion gate | The Darwin Gödel Machine's empirical-benefit validation loop (§3.5). The survey calls that loop state of the art, because full self-reference stays intractable to evaluate. |
 
-The survey also supplies the strategic reading behind `/retro`, `.oh/memory/`, and the wiki. Process-level improvement is **capital expenditure**. Result-level improvement is **operating expenditure** (§5.5). The harness's memory tiers hold the capital account, and the survey expects that account to compound.
+The survey also supplies the strategic reading behind `/retro` and the wiki. Process-level improvement is **capital expenditure**. Result-level improvement is **operating expenditure** (§5.5). The wiki and the probe suite hold the capital account, and the survey expects that account to compound.
 
 ## 6. Decides vs defers
 

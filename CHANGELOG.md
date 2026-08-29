@@ -8,18 +8,54 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-29
+
+### Added
+- `oh destroy` (a name-typing confirmation, `--yes` for non-TTY) and `oh compose config` close the last two `make`-only verbs, so `oh` is the single lifecycle door ([#879](https://github.com/mifunedev/openharness/issues/879)).
+- Tracked `oh.json` holds every non-secret setting; a gitignored 0600 root `.env` holds only secrets. Adds `oh config show/set`, `oh secret set/list`, and an opt-in `oh config repo` ([#880](https://github.com/mifunedev/openharness/issues/880)).
+- Restore `.oh/agents/` as an empty pack with its `.claude/agents` and `.codex/agents` provider symlinks; no agent is defined in it ([#866](https://github.com/mifunedev/openharness/pull/866)).
+
+### Removed
+- Delete the root `Makefile`. `oh` is the only lifecycle door on the host and inside the sandbox, and every verb runs `.oh/scripts/docker-compose.sh` through the CLI ([#881](https://github.com/mifunedev/openharness/issues/881)).
+- Retire the "host dependencies: Docker, Git, and make — no Node" promise. Host prerequisites are now Docker, Git, and Node >= 20; `get-oh.sh` installs Node when it is missing ([#881](https://github.com/mifunedev/openharness/issues/881)).
+- Retire `.devcontainer/.example.env`, `.oh/config.json`, `~/.config/openharness/`, and the `WORKTREES_DIR`/`PROJECTS_DIR`/`CRONS_DIR` knobs. The layout is now fixed convention ([#880](https://github.com/mifunedev/openharness/issues/880)).
+- Delete the `.oh/context/` always-on tier in full, leaving `AGENTS.md` as the only always-on context. No `SessionStart` hook ever loaded it — prose in `AGENTS.md` asked for it ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Retire `repo-map-contract.sh`, `CB-004`, `repo-orientation/`, and its scorer. `REPO_MAP.md` goes as **unproven**, not disproven: its A/B landed 2026-07-03 and was never run ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Retire the ablation subsystem — `ablate.sh`, `ablate-state-machine.sh`, `context-audit-runner.sh`, `--ablate`. Its allowlist took only the five context files ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Retire `CB-003-retro-identity-cycle.md` and the `DS-020-lens-diversity` dataset, which scored the identity-promotion cycle that no longer exists ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Delete the canonical agent definitions (`.oh/agents/`), `.oh/plans/`, `.oh/handoffs/`, and the accumulated `.oh/tasks/` folders and archive ([#865](https://github.com/mifunedev/openharness/pull/865)).
+
 ### Changed
+- Lock the `oh` CLI's npm version to the harness release version. `oh` is the only lifecycle door now, so its version is the only one a user sees, and `version-parity.sh` keeps the two package.json files and the CHANGELOG heading in agreement.
+- `docs/lifecycle-commands.md` becomes the `oh`-only verb reference, and the `make ...` instructions are swept out of `README.md`, `AGENTS.md`, and `docs/` ([#881](https://github.com/mifunedev/openharness/issues/881)).
+- Collapse the README install fan-out to three paths — npm, the `get-oh.sh` curl bootstrap, and from source. `docs/intro.md` no longer claims there is no host CLI ([#881](https://github.com/mifunedev/openharness/issues/881)).
+- Document the VS Code divergence: "Reopen in Container" applies no compose overlay — no SSH, no docker socket, no Hermes dashboard, no `composeOverrides` ([#881](https://github.com/mifunedev/openharness/issues/881)).
+- Base the sandbox image on `node:22-trixie-slim` and drop the NodeSource vendor script; the `sandbox` user is now pinned to `-u 1000`, the uid the Node image already claims ([#878](https://github.com/mifunedev/openharness/issues/878)).
+- `crons/` carries its operating contract as `AGENTS.md` instead of `README.md`, documenting which cron edits apply at the next fire and which need a SIGHUP reschedule ([#874](https://github.com/mifunedev/openharness/issues/874)).
+- Move cron definitions from `.oh/crons/` to `crons/` at the repo root; `oh init`/`oh update` deliver them through the manifest's new `rootInclude` payload ([#874](https://github.com/mifunedev/openharness/issues/874)).
+- Add `CLAUDE.md` provider-compatibility symlinks beside every nested `AGENTS.md` — `.worktrees/`, `projects/`, and `crons/` — created by `oh init` for equipped repos ([#872](https://github.com/mifunedev/openharness/issues/872)).
+- Move git worktrees to `.worktrees/` at each repository's own root and non-harness clones to `projects/<owner>/<repo>/`, each tracking only an `AGENTS.md` guide ([#872](https://github.com/mifunedev/openharness/issues/872)).
+- `/retro` is now strictly report-only and writes no file; `IDENTITY.md` was its only write target. A graduated lesson is nominated as a candidate probe under `.oh/evals/probes/` instead ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- `/prompt-miner` loses its `IDENTITY.md` proposal target and proposes a probe instead ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Rewrite `context-tier-size-budget.sh` as an `AGENTS.md`-only 9,500 B ratchet, dropping `SINGLE_FILE_SHARE_MAX` — one file in the tier is necessarily 100% of it ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Lower the `capability-benchmark-schema` and `datasets-schema` floors to `>= 2`, matching the retired CB and DS artifacts ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- `oh init` no longer ships `context/**`, so new projects stop scaffolding a directory nothing loads ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Update the `.oh/agents/` references in `docs/glossary.md` and `docs/oh-directory-layout.md` to describe an empty pack and drop the links to deleted agent files ([#867](https://github.com/mifunedev/openharness/pull/867)).
 - Refocus root agent guidance on product identity, glossary, hazards, and code as truth; move build workflow authority into its task skill ([#854](https://github.com/mifunedev/openharness/issues/854)).
 - Upgrade the sandbox base image to `debian:trixie-slim` and move Docker's apt suite to `trixie`; Cloudflare's suite stays on `bookworm` ([#807](https://github.com/mifunedev/openharness/issues/807)).
 - Strip explanatory comments from all tracked code — `.ts`/`.mjs`/`.sh`/`.py` plus `oh-path`, the Dockerfile, the Makefile and `.zshrc` — leaving only machine-read directives ([#837](https://github.com/mifunedev/openharness/pull/837)).
 
 ### Fixed
+- Repoint the eight skill surfaces that still cited the deleted `.oh/agents/advisor.md`; `/delegate` now owns the recursion-budget triple and `skill-paths.sh` guards the dead path ([#870](https://github.com/mifunedev/openharness/issues/870)).
+- Amend `rfc-rsi-survey-mapping.md`, which still cited the deleted `.oh/memory/` tier as a live rung-4 instrument and as the harness's capital account ([#870](https://github.com/mifunedev/openharness/issues/870)).
+- `oh harness install` and `oh tool install` now install live when run inside the sandbox instead of skipping with "sandbox not running"; `list`/`status` report real values instead of `?` ([#861](https://github.com/mifunedev/openharness/issues/861)).
 - The `development` issue closer never fired: `pull_request_target` resolves the workflow from the **default** branch (`main`), where the file does not exist. Swapped to `pull_request` ([#841](https://github.com/mifunedev/openharness/issues/841)).
 - **`uv python install` now works as the `sandbox` user without `sudo`.** `install -d -o sandbox -g sandbox .../uv/tools` chowns the final component only, so the intermediate `.../share/uv` stayed `root:root`.
 - Root cause detail: `uv python install` writes `.../uv/python`, a sibling of `tools` inside that root-owned directory, so it failed with `Permission denied`. Every level is now named explicitly, parents first.
 - The boot-time ownership repair now covers the uv tree. The UID-sync sweep only rewrites paths owned by the *old* sandbox UID, so a root-owned uv directory was never repaired. Existing containers self-heal on restart.
 
 ### Added
+- `oh` detects in-sandbox execution (`OH_EXECUTION_TARGET=local|docker-compose` overrides); `oh sandbox` and `oh runtime install` refuse in-box as host-only ([#861](https://github.com/mifunedev/openharness/issues/861)).
 - `.oh/scripts/verify-sandbox-image.sh` — reusable image verifier for the base, apt suites, sandbox UID/GID, Node/pnpm pins, the Herdr checksum, and required tool versions ([#807](https://github.com/mifunedev/openharness/issues/807)).
 - `.github/workflows/sandbox-compatibility.yml` — Dockerfile-scoped CI that builds and verifies arm64 and one amd64 image with every optional installer ([#807](https://github.com/mifunedev/openharness/issues/807)).
 - `.oh/scripts/provision-python.sh` — idempotent, user-scoped uv/Python provisioning. Drops from root to the target user with `HOME` pinned, installs a managed interpreter and an `ipykernel` venv, and verifies the kernel.

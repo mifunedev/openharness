@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,12 +56,12 @@ function makeRunner(result: RunResult = { status: 0 }): {
 }
 
 describe("compose verbs — the surface gap they close", () => {
-  it("exposes exactly the four non-destructive verbs", () => {
-    expect(composeVerbs()).toEqual(["stop", "restart", "logs", "ps"]);
+  it("exposes every lifecycle verb the single front door has", () => {
+    expect(composeVerbs()).toEqual(["stop", "restart", "logs", "ps", "destroy"]);
   });
 
-  it("does not expose destroy", () => {
-    expect(composeVerbs()).not.toContain("destroy" as ComposeVerb);
+  it("routes destroy through the same table, not a second implementation", () => {
+    expect(composeVerbs()).toContain("destroy" as ComposeVerb);
   });
 });
 
@@ -71,8 +71,9 @@ describe("runComposeVerb", () => {
     ["restart", ["restart"]],
     ["ps", ["ps"]],
     ["logs", ["logs", "-f"]],
+    ["destroy", ["down", "-v"]],
   ] as [ComposeVerb, string[]][])(
-    "runs the vendored script with the %s argv the Makefile uses",
+    "runs the vendored script with the %s compose argv",
     (verb, expected) => {
       const root = makeRepo();
       const { calls, run } = makeRunner();
@@ -130,39 +131,31 @@ describe("help", () => {
     for (const verb of composeVerbs()) expect(text, verb).toContain(`oh ${verb}`);
   });
 
-  it("names the make equivalent, so neither door looks like the only one", () => {
+  it("names no second door and links the verb reference", () => {
     const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     printComposeVerbHelp("stop");
     const text = spy.mock.calls.map((c) => String(c[0])).join("");
-    expect(text).toContain("make stop");
+    expect(text).not.toMatch(/\bmake\b/);
+    expect(text).toContain("oh stop");
     expect(text).toContain(
       "https://github.com/mifunedev/openharness/blob/main/docs/lifecycle-commands.md",
     );
   });
 });
 
-describe("parity with the Makefile", () => {
-  const MAKEFILE = read("Makefile");
-
-  it("has an oh verb for every compose target the Makefile exposes", () => {
-    for (const verb of composeVerbs()) {
-      expect(MAKEFILE, verb).toMatch(new RegExp(`^${verb}:`, "m"));
-    }
+describe("oh is the only front door", () => {
+  it("has no Makefile to mirror", () => {
+    expect(existsSync(join(REPO_ROOT, "Makefile"))).toBe(false);
   });
 
-  it("keeps the Makefile free of direct `docker compose` calls", () => {
-    const recipes = MAKEFILE.split("\n").filter((l) => l.startsWith("\t"));
-    for (const line of recipes) expect(line).not.toContain("docker compose");
-  });
-
-  it("leaves the pinned `make shell` line verbatim", () => {
-    expect(MAKEFILE).toContain("docker exec -it -u $(SHELL_USER) $(SHELL_CONTAINER) zsh");
-  });
-
-  it("documents each make-only target in the mapping doc", () => {
+  it("documents every compose verb in the lifecycle reference", () => {
     const map = read("docs/lifecycle-commands.md");
-    for (const target of ["destroy", "config", "shell"]) {
-      expect(map, target).toContain(`make ${target}`);
-    }
+    for (const verb of composeVerbs()) expect(map, verb).toContain(`\`oh ${verb}`);
+  });
+
+  it("names no `make` lifecycle command in the lifecycle reference", () => {
+    expect(read("docs/lifecycle-commands.md")).not.toMatch(
+      /`make (sandbox|shell|stop|restart|logs|ps|destroy|config|gateway)/,
+    );
   });
 });

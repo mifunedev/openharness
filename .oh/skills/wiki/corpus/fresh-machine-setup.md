@@ -37,9 +37,9 @@ gateway run/verify). Each fact has one canonical doc home, and `quickstart.md` i
 self-sufficient human walkthrough.
 
 ## Detail
-Host prerequisites are Docker (+ Compose), Git, and **make** — the `make sandbox` / `make
-shell` wrappers make `make` non-optional (a long-standing "Docker + Git only" doc gap, now
-fixed). Configuration lives in `.devcontainer/.env` (`SANDBOX_NAME`, `TZ`, `GIT_USER_NAME` /
+Host prerequisites are Docker (+ Compose), Git, and **Node.js >= 20** — `oh` is the only
+lifecycle door and needs Node to run (issue #881 retired the Makefile; `get-oh.sh`
+installs Node when it is missing). Configuration lives in `.devcontainer/.env` (`SANDBOX_NAME`, `TZ`, `GIT_USER_NAME` /
 `GIT_USER_EMAIL`, optional `INSTALL_*` keys) — since 0.4.0 the ONE config surface, read on
 every path including VS Code "Reopen in Container". Secrets live in the same gitignored
 file; nothing is committed.
@@ -58,7 +58,7 @@ short code + URL that works on a headless/remote host, where browser-redirect OA
 typically fails; explicit `--device-auth` CLI flags (e.g. `codex login --device-auth`) are
 equivalents. **DebugMCP** is a separate,
 optional **cross-harness** debugging capability (MCP): it is enabled by the VS Code
-attach-to-container route after `make sandbox`, and any MCP-capable harness can drive it
+attach-to-container route after `oh sandbox`, and any MCP-capable harness can drive it
 (Claude Code and Codex are pre-registered) — it is not a Codex-specific step.
 
 Slack + gateways: the `pi-messenger-bridge` package bridges Slack to Pi; Hermes uses its
@@ -76,9 +76,9 @@ live for this entry. Commands themselves live in `quickstart.md`, not here.
 ```mermaid
 flowchart TD
   subgraph Host
-    S1[1 install docker/git/make] --> S2[2 clone to ~/.openharness]
+    S1[1 install docker/git/node] --> S2[2 clone to ~/.openharness]
     S2 --> S3[3 edit .devcontainer/.env]
-    S3 --> S4[4 make sandbox / make shell]
+    S3 --> S4[4 oh sandbox / oh shell]
   end
   subgraph Sandbox
     S4 --> S5[5 gh auth login over SSH]

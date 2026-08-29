@@ -34,12 +34,15 @@ describe("installer host prerequisite docs", () => {
     expect(install).toContain("git is required to clone or update Open Harness");
   });
 
-  it("installer surfaces make as a soft (non-fatal) lifecycle prerequisite", () => {
+  it("installer requires Node >= 20 and reuses get-oh.sh's ensure_node", () => {
     const install = readRepoFile(".oh", "scripts", "install.sh");
 
-    expect(install).toContain("make (build-essential)");
-    expect(install).toMatch(/command -v make/);
-    expect(install).toContain("make not found");
+    expect(install).toContain("Node.js >= 20");
+    expect(install).toContain('. "$REPO_DIR/.oh/scripts/get-oh.sh"');
+    expect(install).toContain("command -v oh >/dev/null 2>&1 || die");
+    expect(install).not.toMatch(/command -v make/);
+    expect(install).not.toContain("make not found");
+    expect(install).not.toContain("ensure_node() {");
   });
 
   it("refuses to overwrite a sandbox that already exists under the same name", () => {

@@ -48,27 +48,31 @@ oh shell                        # zsh in the running container, as usual
 which the compose file interpolates at `image:`.
 
 `--no-build` on its own suppresses the build and reuses whatever image compose
-already resolves (a previously built `sandbox-<name>`, or a `sandbox.image` set
-in `.devcontainer/.env`) without pinning one — an advanced escape hatch.
+already resolves (a previously built `sandbox-<name>`, or an `image.ref` set in
+`oh.json`) without pinning one — an advanced escape hatch.
 
 ### Which image ref wins (last wins)
 
 ```
 ghcr.io/mifunedev/openharness:latest      (built-in default)
-  └─ .devcontainer/.env  OH_SANDBOX_IMAGE=<ref>   (project default — see .example.env)
+  └─ oh.json  image.ref=<ref>               (project default — see docs/configuration.md)
        └─ oh sandbox --image=<ref>        (per-invocation override)
 ```
 
-Set a durable project default in `.devcontainer/.env`:
+Set a durable project default in `oh.json`:
 
-```yaml
-sandbox:
-  image: ghcr.io/mifunedev/openharness:latest
-  # pull_policy: always   # re-pull on every up (default: missing — pull only if absent)
+```json
+{
+  "image": {
+    "ref": "ghcr.io/mifunedev/openharness:latest",
+    "mode": "image",
+    "pullPolicy": "missing"
+  }
+}
 ```
 
-With `sandbox.image` set, a bare `oh sandbox --image` uses it; add
-`pull_policy: always` to always re-pull `latest`.
+With `image.ref` set, a bare `oh sandbox --image` uses it; set
+`image.pullPolicy` to `"always"` to always re-pull `latest`.
 
 ## What still happens at boot
 
@@ -250,7 +254,7 @@ The image has no `HEALTHCHECK` of its own, so `docker run` won't populate
 `.State.Health` unless you add `--health-cmd`; on the plain `docker run` above,
 skip the wait loop and just exec once `docker ps` shows the container `Up`. The
 compose path (`docker-compose.image-only.yml`) defines the healthcheck, so there
-the wait loop works as written — or use `make shell` / `oh shell`.
+the wait loop works as written — or use `oh shell` / `oh shell`.
 
 ### The same image runs under MicroSandbox
 

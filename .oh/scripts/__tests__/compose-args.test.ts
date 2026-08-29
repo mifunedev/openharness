@@ -12,6 +12,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,7 +20,6 @@ import path from "node:path";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "docker-compose.sh");
-const MAKEFILE = path.join(REPO_ROOT, "Makefile");
 const INSTALL = path.join(REPO_ROOT, ".oh", "scripts", "install.sh");
 
 let tmp: string;
@@ -41,6 +41,15 @@ function printArgv(args: string[] = ["config"]): string[] {
   });
 
   expect(result.stderr).toBe("");
+  expect(result.status).toBe(0);
+  return result.stdout.trimEnd().split("\n");
+}
+
+function printArgvStderrTolerant(args: string[] = ["config"]): string[] {
+  const result = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", ...args], {
+    encoding: "utf8",
+  });
+
   expect(result.status).toBe(0);
   return result.stdout.trimEnd().split("\n");
 }
@@ -175,24 +184,28 @@ describe("scripts/docker-compose.sh", () => {
     expect(argv).toContain(absolute);
   });
 
-  it("migrates a leftover harness.yaml on first run, then never again", () => {
-    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: from-yaml\n");
+  it("migrates a leftover harness.yaml into oh.json on first run, then never again", () => {
+    writeFileSync(
+      path.join(tmp, "harness.yaml"),
+      "sandbox:\n  name: from-yaml\nssh:\n  port: 2345\n",
+    );
 
     const first = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
       encoding: "utf8",
     });
     expect(first.status).toBe(0);
-    expect(first.stderr).toContain("SANDBOX_NAME=from-yaml");
+    expect(first.stderr).toContain("oh.json name = from-yaml");
     expect(existsSync(path.join(tmp, "harness.yaml"))).toBe(false);
     expect(existsSync(path.join(tmp, "harness.yaml.migrated"))).toBe(true);
-    expect(readFileSync(path.join(tmp, ".devcontainer", ".env"), "utf8")).toContain(
-      "SANDBOX_NAME=from-yaml",
-    );
+    expect(JSON.parse(readFileSync(path.join(tmp, "oh.json"), "utf8"))).toEqual({
+      version: 1,
+      name: "from-yaml",
+      access: { sshPort: 2345 },
+    });
+    expect(existsSync(path.join(tmp, ".devcontainer", ".env"))).toBe(false);
     expect(first.stdout.trimEnd().split("\n")).toEqual([
       "docker",
       "compose",
-      "--env-file",
-      path.join(tmp, ".devcontainer", ".env"),
       "-f",
       path.join(tmp, ".devcontainer", "docker-compose.yml"),
       "config",
@@ -202,8 +215,170 @@ describe("scripts/docker-compose.sh", () => {
       encoding: "utf8",
     });
     expect(second.status).toBe(0);
-    expect(second.stderr).toBe("");
     expect(second.stdout).toBe(first.stdout);
+  });
+
+  it("puts an allow-listed secret from harness.yaml in the root dotenv, never oh.json", () => {
+    mkdirSync(path.join(tmp, ".oh", "cli", "src", "lib"), { recursive: true });
+    writeFileSync(
+      path.join(tmp, ".oh", "cli", "src", "lib", "secrets.ts"),
+      'export const SECRET_KEYS = [\n  "GH_TOKEN",\n  "SANDBOX_NAME",\n] as const;\n',
+    );
+    writeFileSync(path.join(tmp, "harness.yaml"), "sandbox:\n  name: secretish\n");
+
+    const result = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(readFileSync(path.join(tmp, ".env"), "utf8")).toContain("SANDBOX_NAME=secretish");
+    expect(existsSync(path.join(tmp, "oh.json"))).toBe(false);
+  });
+});
+
+describe("scripts/docker-compose.sh --extra-env-file (issue #880)", () => {
+  const rendered = (): string => {
+    const file = path.join(tmp, "rendered.list");
+    writeFileSync(file, "SANDBOX_NAME=rendered\n");
+    return file;
+  };
+
+  it("passes the rendered file FIRST and the root dotenv SECOND, so secrets win", () => {
+    writeFileSync(path.join(tmp, ".env"), "GH_TOKEN=secret\n");
+    const file = rendered();
+
+    const result = spawnSync(
+      "bash",
+      [SCRIPT, "--repo-dir", tmp, "--extra-env-file", file, "--print-argv", "config"],
+      { encoding: "utf8" },
+    );
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(result.stdout.trimEnd().split("\n")).toEqual([
+      "docker",
+      "compose",
+      "--env-file",
+      file,
+      "--env-file",
+      path.join(tmp, ".env"),
+      "-f",
+      path.join(tmp, ".devcontainer", "docker-compose.yml"),
+      "config",
+    ]);
+  });
+
+  it("selects an overlay from the rendered file even when the dotenv is silent", () => {
+    writeFileSync(path.join(tmp, ".env"), "GH_TOKEN=secret\n");
+    const file = path.join(tmp, "rendered.list");
+    writeFileSync(file, "HERMES_DASHBOARD=true\n");
+
+    const result = spawnSync(
+      "bash",
+      [SCRIPT, "--repo-dir", tmp, "--extra-env-file", file, "--print-argv", "config"],
+      { encoding: "utf8" },
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      path.join(tmp, ".devcontainer", "docker-compose.hermes-dashboard.yml"),
+    );
+  });
+
+  it("prefers the root dotenv over a legacy .devcontainer/.env", () => {
+    writeFileSync(path.join(tmp, ".env"), "GH_TOKEN=secret\n");
+    writeFileSync(path.join(tmp, ".devcontainer", ".env"), "GH_TOKEN=legacy\n");
+
+    const argv = printArgv();
+    expect(argv).toContain(path.join(tmp, ".env"));
+    expect(argv).not.toContain(path.join(tmp, ".devcontainer", ".env"));
+  });
+
+  it("falls back to a legacy .devcontainer/.env when no root dotenv exists", () => {
+    writeFileSync(path.join(tmp, ".devcontainer", ".env"), "GH_TOKEN=legacy\n");
+
+    const argv = printArgv();
+    expect(argv).toContain(path.join(tmp, ".devcontainer", ".env"));
+  });
+
+  it("rejects a --extra-env-file that does not exist instead of silently dropping it", () => {
+    const result = spawnSync(
+      "bash",
+      [SCRIPT, "--repo-dir", tmp, "--extra-env-file", path.join(tmp, "absent.list"), "config"],
+      { encoding: "utf8" },
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("does not exist");
+  });
+
+  it("run directly with an oh.json present, notes that non-secret config comes from oh via oh.json", () => {
+    writeFileSync(path.join(tmp, "oh.json"), '{ "version": 1 }\n');
+
+    const result = spawnSync("bash", [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("oh.json");
+    expect(result.stderr.trimEnd().split("\n")).toHaveLength(1);
+    expect(result.stdout).not.toContain("--env-file");
+  });
+
+  it("says nothing when oh is driving it", () => {
+    writeFileSync(path.join(tmp, "oh.json"), '{ "version": 1 }\n');
+    const file = rendered();
+
+    const result = spawnSync(
+      "bash",
+      [SCRIPT, "--repo-dir", tmp, "--extra-env-file", file, "--print-argv", "config"],
+      { encoding: "utf8" },
+    );
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+  });
+});
+
+describe("composeOverrides[] resolution order (issue #880)", () => {
+  const seedAll = (): void => {
+    mkdirSync(path.join(tmp, ".oh"), { recursive: true });
+    writeFileSync(
+      path.join(tmp, "oh.json"),
+      JSON.stringify({ version: 1, composeOverrides: ["from-oh-json.yml"] }),
+    );
+    writeFileSync(
+      path.join(tmp, ".oh", "config.json"),
+      JSON.stringify({ composeOverrides: ["from-oh-config.yml"] }),
+    );
+    writeFileSync(
+      path.join(tmp, "config.json"),
+      JSON.stringify({ composeOverrides: ["from-legacy.yml"] }),
+    );
+  };
+
+  it("reads oh.json first, then .oh/config.json, then legacy config.json", () => {
+    seedAll();
+    expect(printArgvStderrTolerant()).toContain(path.join(tmp, "from-oh-json.yml"));
+
+    rmSync(path.join(tmp, "oh.json"));
+    expect(printArgv()).toContain(path.join(tmp, "from-oh-config.yml"));
+
+    rmSync(path.join(tmp, ".oh", "config.json"));
+    expect(printArgv()).toContain(path.join(tmp, "from-legacy.yml"));
+  });
+
+  it("silently applies no overrides when jq is absent — jq stays optional", () => {
+    seedAll();
+    const binDir = path.join(tmp, "nojq");
+    mkdirSync(binDir, { recursive: true });
+    for (const tool of ["awk", "tr", "cat", "grep", "sed", "dirname", "mktemp"]) {
+      const found = spawnSync("bash", ["-c", `command -v ${tool}`], { encoding: "utf8" });
+      if (found.status === 0) symlinkSync(found.stdout.trim(), path.join(binDir, tool));
+    }
+
+    const bash = spawnSync("bash", ["-c", "command -v bash"], { encoding: "utf8" }).stdout.trim();
+    const result = spawnSync(bash, [SCRIPT, "--repo-dir", tmp, "--print-argv", "config"], {
+      encoding: "utf8",
+      env: { ...process.env, PATH: binDir },
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("from-oh-json.yml");
+    expect(result.stdout).toContain(path.join(tmp, ".devcontainer", "docker-compose.yml"));
   });
 });
 
@@ -260,41 +435,63 @@ describe("execution target argv equivalence (issue #733)", () => {
 });
 
 describe("compose helper wiring", () => {
-  it("Makefile uses the shared helper and preserves lifecycle verbs", () => {
-    const text = readFileSync(MAKEFILE, "utf8");
-    expect(text).toContain("COMPOSE           := .oh/scripts/docker-compose.sh");
-    expect(text).toContain("$(COMPOSE) up -d --build");
-    expect(text).toContain("$(COMPOSE) down -v");
-    expect(text).not.toContain("COMPOSE_OVERRIDES");
-    expect(text).not.toContain("HARNESS_YAML_OVERRIDES");
+  it("no Makefile survives to reopen the second door", () => {
+    expect(existsSync(path.join(REPO_ROOT, "Makefile"))).toBe(false);
   });
 
-  it("installer uses the shared helper instead of raw COMPOSE_FILES expansion", () => {
+  it("installer provisions through `oh sandbox`, never through raw compose args", () => {
     const text = readFileSync(INSTALL, "utf8");
-    expect(text).toContain('"$REPO_DIR/.oh/scripts/docker-compose.sh" up -d --build');
+    expect(text).toMatch(/\(\n\s+cd "\$REPO_DIR"\n\s+oh sandbox\n\)/);
+    expect(text).not.toContain('"$REPO_DIR/.oh/scripts/docker-compose.sh" up -d --build');
     expect(text).not.toContain("docker compose $COMPOSE_FILES");
     expect(text).not.toContain("COMPOSE_FILES=\"-f .devcontainer/docker-compose.yml\"");
   });
 
-  it("installer writes every answer to .devcontainer/.env, and the config writes ALWAYS run", () => {
+  it("installer requires Node through get-oh.sh's ensure_node rather than a second copy", () => {
     const text = readFileSync(INSTALL, "utf8");
-    expect(text).toContain("_env_set() {");
-    expect(text).toContain("_env_set SANDBOX_NAME");
-    expect(text).toContain("_env_set GIT_USER_NAME");
+    expect(text).toContain('. "$REPO_DIR/.oh/scripts/get-oh.sh"');
+    expect(text).not.toContain("ensure_node() {");
+    expect(text).not.toContain("install_node_via_nvm() {");
+    expect(text).not.toMatch(/command -v make/);
+  });
+
+  it("installer writes every non-secret answer to oh.json and keeps .env for secrets only", () => {
+    const text = readFileSync(INSTALL, "utf8");
+    expect(text).not.toContain("_env_set");
+    expect(text).toContain("_config_set name");
+    expect(text).toContain("_config_set timezone");
+    expect(text).toContain("_config_set git.userName");
+    expect(text).toContain("_config_set git.userEmail");
+    expect(text).toContain('_config_set "$2" true');
+    expect(text).toContain("_config_set access.dockerSocket");
+    expect(text).toContain("oh config set");
     expect(text).not.toContain("_yaml_set");
     expect(text).not.toContain("_cfg_set");
+    expect(text).not.toContain("example.env");
 
-    expect(text.indexOf("Created .devcontainer/.env from")).toBeLessThan(
-      text.indexOf("_env_set SANDBOX_NAME"),
+    expect(text).toContain('ENV_FILE="$REPO_DIR/.env"');
+    expect(text).toContain('cp "$REPO_DIR/.env.example" "$ENV_FILE"');
+    expect(text).toContain('ln -s ../.env "$DEVCONTAINER_ENV_LINK"');
+    expect(text).toContain('chmod 600 "$ENV_FILE"');
+
+    expect(text.indexOf("Created .env from .env.example")).toBeLessThan(
+      text.indexOf("_config_set name"),
     );
 
-    expect(text).toContain("Existing .devcontainer/.env preserved — updating keys in place");
-    expect(text).toContain("THE CONFIG WRITES ALWAYS RUN");
-
-    expect(text).toContain('_env_set "INSTALL_$1" true');
+    expect(text).toContain("Existing .env preserved — updating keys in place");
 
     expect(text).toContain("migrate-harness-yaml.sh");
 
     expect(text).toContain("GH_TOKEN=");
+  });
+
+  it("installer's next steps name only `oh` verbs", () => {
+    const text = readFileSync(INSTALL, "utf8");
+    const epilogue = text.slice(text.indexOf("Installation complete!"));
+    expect(epilogue).not.toMatch(/\bmake [a-z]/);
+    expect(epilogue).toContain("oh shell");
+    expect(epilogue).toContain("oh destroy");
+    expect(epilogue).toContain("oh gateway");
+    expect(epilogue).toContain("oh --help");
   });
 });

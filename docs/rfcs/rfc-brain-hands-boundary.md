@@ -45,9 +45,8 @@ inside the environment to do its job?"*
 | Subsystem | Side | Why |
 |---|---|---|
 | **The build executor** (`.oh/scripts/firstmate.sh`, the story cycle) | **Brain** | Chooses the next story, decides when the loop terminates. It *invokes* hands; it is not hands. |
-| **Cron** (`.oh/crons/`, the scheduled-agent runtime) | **Brain** | Scheduling and cap enforcement are policy. The work a cron fires may be hands-side; the scheduler is not. |
+| **Cron** (`crons/`, the scheduled-agent runtime) | **Brain** | Scheduling and cap enforcement are policy. The work a cron fires may be hands-side; the scheduler is not. |
 | **Autopilot** (`/autopilot`) | **Brain** | Issue selection, caps, and the merge gate are pure orchestration. |
-| **Memory** (`.oh/memory/`, `.oh/context/`) | **Brain** | Durable knowledge state. Reading and writing it needs no environment. |
 | **Wiki** (`.oh/skills/wiki/corpus/`) | **Brain** | Same: repo-file knowledge state. |
 | **Provisioning / attach / exec** | **Hands** | The definition of the side. |
 | **Evals** (`.oh/evals/probes/`) | **Split — see §3** | Determined per-probe by a rule, not by a list. |

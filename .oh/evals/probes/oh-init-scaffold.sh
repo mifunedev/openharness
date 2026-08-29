@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #531 Phase 2
-# desc: guards the oh init scaffold contract — .oh/templates payload present, runInit exported, cli.ts init dispatch + help, devcontainer workspaceFolder pinned
+# desc: guards the oh init scaffold contract — .oh/templates payload present (secrets-only .env.example, no retired .example.env), init.ts writes oh.json, runInit exported, cli.ts init dispatch + help, devcontainer workspaceFolder pinned
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -18,13 +18,16 @@ fi
 
 fails=()
 
-[[ -f "$TEMPLATES/.devcontainer/.example.env" ]] || fails+=(".oh/templates/.devcontainer/.example.env exists")
+[[ -f "$TEMPLATES/.env.example" ]] || fails+=(".oh/templates/.env.example exists (the secrets-only scaffold template)")
+[[ -e "$TEMPLATES/.devcontainer/.example.env" ]] && fails+=(".oh/templates/.devcontainer/.example.env is retired — secrets live in .oh/templates/.env.example and non-secrets in oh.json")
 [[ -f "$TEMPLATES/AGENTS.md" ]] || fails+=(".oh/templates/AGENTS.md exists")
 [[ -f "$TEMPLATES/gitignore" ]] || fails+=(".oh/templates/gitignore exists")
 [[ -f "$DEVCONTAINER" ]] || fails+=(".oh/templates/.devcontainer/devcontainer.json exists")
 
 if [[ -f "$INIT_CMD" ]]; then
   grep -q 'runInit' "$INIT_CMD" || fails+=(".oh/cli/src/commands/init.ts exports runInit")
+  grep -Fq 'ohConfigPath' "$INIT_CMD" || fails+=(".oh/cli/src/commands/init.ts scaffolds oh.json via ohConfigPath")
+  grep -Fq 'defaultOhConfig' "$INIT_CMD" || fails+=(".oh/cli/src/commands/init.ts seeds a default oh.json via defaultOhConfig")
 fi
 
 if [[ -f "$CLI" ]]; then
@@ -42,5 +45,5 @@ if (( ${#fails[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: oh init scaffold contract — .oh/templates payload present, runInit exported, cli.ts init dispatch + help, devcontainer workspaceFolder pinned" >&2
+echo "PASS: oh init scaffold contract — .oh/templates payload present (secrets-only .env.example, retired .example.env gone), init.ts writes oh.json, runInit exported, cli.ts init dispatch + help, devcontainer workspaceFolder pinned" >&2
 exit 0

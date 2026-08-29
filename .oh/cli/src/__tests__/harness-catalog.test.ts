@@ -15,7 +15,7 @@ const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), "utf8")
 
 const DOCKERFILE = read(".devcontainer/Dockerfile");
 const COMPOSE_YML = read(".devcontainer/docker-compose.yml");
-const EXAMPLE_ENV = read(".devcontainer/.example.env");
+const CONFIG_DOC = read("docs/configuration.md");
 
 function versionPins(argv: readonly string[]): string[] {
   const pins = new Set<string>();
@@ -50,7 +50,7 @@ describe("harness catalog", () => {
 
   it("excludes agent_browser — it shares the INSTALL_* namespace but is not a harness", () => {
     expect(HARNESS_CATALOG.some((h) => h.harnessKey === "agent_browser")).toBe(false);
-    expect(EXAMPLE_ENV).toMatch(/INSTALL_AGENT_BROWSER=/);
+    expect(CONFIG_DOC).toMatch(/^\| `install\.agentBrowser` \|.*`INSTALL_AGENT_BROWSER`/m);
   });
 
   it("documents every harness under docs/harnesses/<id>.md", () => {
@@ -88,9 +88,11 @@ describe("harness catalog", () => {
     );
 
     it.each(flagged.map((h) => [h.id, h] as const))(
-      "%s: key ships documented in .devcontainer/.example.env, the schema document",
+      "%s: key ships documented in docs/configuration.md, the oh.json field reference",
       (_id, h) => {
-        expect(EXAMPLE_ENV).toMatch(new RegExp(`^#\\s*${h.buildArg}=`, "m"));
+        expect(CONFIG_DOC).toMatch(
+          new RegExp(`^\\| \`install\\.[A-Za-z]+\` \\|.*\`${h.buildArg}\``, "m"),
+        );
       },
     );
 

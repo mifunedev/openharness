@@ -76,12 +76,12 @@ Drop, crop, or redact screenshots that expose:
 
 If you cannot safely crop/redact with available tools, do not embed the screenshot. Link the Loom instead or describe the step in prose.
 
-## Step 3 — Advisor briefing and delegate wave
+## Step 3 — Briefing and delegate wave
 
-Before drafting, run the Advisor pattern:
+Before drafting, run the briefing pattern:
 
-1. Read `.oh/agents/advisor.md`.
-2. Ask an expert Advisor to produce:
+1. Read `/delegate` (`.oh/skills/delegate/SKILL.md`).
+2. Produce:
    - the 5-field implementation briefing;
    - a bounded delegate plan, max depth 1;
    - exact start paths and acceptance criteria.
@@ -106,7 +106,7 @@ Do not forward delegate output verbatim into the post. Synthesize it.
 Fact-check all product/process claims against current docs or source files in the target/current repo. For Open Harness demo posts, always check:
 
 - default agent CLIs vs optional image-level installs;
-- `.oh/` casing and `.oh/worktrees/` path;
+- `.oh/` casing and `.worktrees/` path;
 - Docker socket posture (off by default; opt in only on trusted hosts);
 - GitHub auth wording (`gh auth login`, SSH flow, PAT scopes when relevant);
 - VS Code attach vs terminal capabilities, especially port forwarding;

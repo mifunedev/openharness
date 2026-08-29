@@ -16,7 +16,7 @@ usage() {
 | pr | `/audit pr <N> [--repo O/N] [--base B] [--deep] [--proof] [--dry-run]` | `PR-AUDIT-PROMOTABLE` / `PR-AUDIT-BLOCKED` / `PR-AUDIT-UNKNOWN` |
 | prs | `/audit prs [--repo O/N] [filters/actions]` | buckets + `PRS-AUDIT-COMPLETE` / `PRS-AUDIT-PARTIAL` |
 | harness | `/audit harness [--focus area] [--external URL|path] [actions]` | Tier 1/2/3 + Recommended Next 3 Actions |
-| context | `/audit context [all|--baseline|--ablate file]` | `KEEP` / `TRIM` / `DEMOTE` / `CUT` |
+| context | `/audit context [all|--baseline]` | `KEEP` / `TRIM` / `DEMOTE` / `CUT` |
 | skills | `/audit skills [all|root|name]` | `CURRENT` / `STALE` / `BROKEN` / `DELETE` |
 | eval-quality | `/audit eval-quality [all|probes|capability|id]` | `KEEP` / `GROOM` / `CUT` |
 | drift | `/audit drift` | per-class `OK` / aggregate `DRIFT:` |
@@ -95,7 +95,7 @@ case $target in
     [[ $confirm == false || $apply == true ]] || usage
     ;;
   context)
-    case ${#args[@]}:${args[0]:-} in 0:|1:all|1:--baseline) :;; 2:--ablate) [[ -n ${args[1]} && ${args[1]} != --* ]] || usage;; *) usage;; esac
+    case ${#args[@]}:${args[0]:-} in 0:|1:all|1:--baseline) :;; *) usage;; esac
     ;;
   skills) ((${#args[@]} <= 1)) && [[ ${args[0]:-all} =~ ^(all|root|[A-Za-z0-9._-]+)$ ]] || usage;;
   eval-quality) ((${#args[@]} <= 1)) && [[ ${args[0]:-all} =~ ^(all|probes|capability|[A-Za-z0-9._-]+)$ ]] || usage;;

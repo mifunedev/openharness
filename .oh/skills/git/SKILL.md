@@ -119,7 +119,7 @@ Displaced detail has a destination — put it there, not in the entry:
 | Rationale, rejected alternatives | The PR body — the `([#N])` link is the pointer |
 | Task/spec decisions | `.oh/tasks/<slug>/prd.md` |
 | Architecture decisions | `docs/rfcs/` |
-| Durable, generalized lessons | `.oh/context/IDENTITY.md` |
+| Durable, generalized lessons | A minted probe under `.oh/evals/probes/` |
 
 BAD (real entry, 3,579 chars — a design doc wearing a bullet):
 
@@ -139,21 +139,21 @@ Automatic branch-push releases use the matching `## [<VERSION>] - YYYY-MM-DD` se
 
 ## Worktrees
 
-Default path: `.oh/worktrees/<branch>` at project root, configurable with `WORKTREES_DIR` / `paths.worktrees`. Independent project clones (own `.git`, not harness branches) live under `.oh/worktrees/project/<project-name>/<repo>/` by default — see `.oh/worktrees/README.md`.
+Path: `.worktrees/<branch>` at the root of the repository the branch belongs to. A project clone under `projects/` keeps its own worktrees the same way, at `projects/<owner>/<repo>/.worktrees/`. Independent project clones (own `.git`, not harness branches) live under `projects/<owner>/<repo>/`. Both roots are fixed conventions, not settings — see `.worktrees/AGENTS.md` and `projects/AGENTS.md`.
 
 ```bash
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
+WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' .worktrees)"
 mkdir -p "$WORKTREES_ROOT"
 git worktree add "$WORKTREES_ROOT/<branch>" <branch>                # existing branch
 git worktree add -b <prefix>/<issue#>-<short-desc> \
   "$WORKTREES_ROOT/<prefix>/<issue#>-<short-desc>" $BASE            # new branch off $BASE
 ```
 
-Example path: `.oh/worktrees/feat/42-slack-thread-replies`
+Example path: `.worktrees/feat/42-slack-thread-replies`
 
 Cleanup: `git worktree remove "$WORKTREES_ROOT/<branch>"`.
 
-`.oh/worktrees/` gitignored (see `.gitignore`); only `.oh/worktrees/README.md` tracked.
+`.worktrees/` and `projects/` gitignored (see `.gitignore`); only `.worktrees/AGENTS.md` and `projects/AGENTS.md` tracked.
 
 ### Stale worktree policy
 
@@ -271,10 +271,10 @@ If `.claude/skills/ci-status/` exists, invoke `/ci-status` after every `git push
 
 ## Provider Portability
 
-Because not every provider loads `.oh/context/rules/*`, put active instructions in
-skills and use rules files only as compatibility pointers. If you discover a
-provider-specific workflow dependency hiding in a rules file, promote it to a
-skill and leave a short rule file that points to the skill.
+Provider-specific rule files are not loaded by every provider, so put active
+instructions in skills. If you discover a provider-specific workflow dependency
+hiding in a rules file, promote it to a skill and leave a short rule file that
+points to the skill.
 
 ## Workflow
 

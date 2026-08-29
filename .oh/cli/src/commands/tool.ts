@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import {
   ExecutionSpawnError,
   resolveExecutionTarget,
@@ -9,10 +8,8 @@ import { sourceDocsUrl } from "../lib/docs.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import { confirm } from "../lib/prompt.js";
 import {
-  envFilePath,
-  installEnvKey,
+  installFieldPath,
   isInstallFlagEnabled,
-  seedEnvFile,
   setInstallFlag,
 } from "../lib/env-file.js";
 import {
@@ -35,6 +32,7 @@ export interface ToolOptions {
   cwd?: string;
   run?: LifecycleRunner;
   json?: boolean;
+  env?: NodeJS.ProcessEnv;
 }
 
 export interface ToolInstallOptions extends ToolOptions {
@@ -58,9 +56,18 @@ function isReachable(status: string): boolean {
   return status === "ready" || status === "starting";
 }
 
-function targetFor(root: string, run: LifecycleRunner): ExecutionTarget {
+function targetFor(
+  root: string,
+  run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
+): ExecutionTarget {
   const name = configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
-  return resolveExecutionTarget({ projectRoot: root, container: name, run });
+  return resolveExecutionTarget({
+    projectRoot: root,
+    container: name,
+    run,
+    ...(env ? { env } : {}),
+  });
 }
 
 async function tryExec(
@@ -81,7 +88,7 @@ async function probeInstalled(
   target: ExecutionTarget,
   entry: ToolEntry,
 ): Promise<boolean | null> {
-  const r = await tryExec(target, entry.verifyArgv, entry.installUser ?? "sandbox");
+  const r = await tryExec(target, entry.verifyArgv, "sandbox");
   return r === null ? null : r.exitCode === 0;
 }
 
@@ -90,7 +97,7 @@ async function probeVersion(
   entry: ToolEntry,
 ): Promise<string | null> {
   if (entry.versionArgv === undefined) return null;
-  const r = await tryExec(target, entry.versionArgv, entry.installUser ?? "sandbox");
+  const r = await tryExec(target, entry.versionArgv, "sandbox");
   if (r === null || r.exitCode !== 0) return null;
   const first = r.stdout.trim().split("\n")[0] ?? "";
   return first === "" ? null : first;
@@ -99,10 +106,11 @@ async function probeVersion(
 async function collectRows(
   root: string,
   run: LifecycleRunner,
+  env?: NodeJS.ProcessEnv,
   only?: ToolEntry,
 ): Promise<ToolRow[]> {
   const entries = only ? [only] : [...TOOL_CATALOG];
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, env);
 
   let reachable = false;
   try {
@@ -111,7 +119,6 @@ async function collectRows(
     if (!(err instanceof ExecutionSpawnError)) throw err;
   }
 
-  const configured = existsSync(envFilePath(root));
   const rows: ToolRow[] = [];
   for (const entry of entries) {
     const installed = reachable ? await probeInstalled(target, entry) : null;
@@ -120,9 +127,7 @@ async function collectRows(
       title: entry.title,
       kind: entry.kind,
       enabled:
-        entry.toolKey === undefined
-          ? null
-          : configured && isInstallFlagEnabled(root, entry.toolKey),
+        entry.toolKey === undefined ? null : isInstallFlagEnabled(root, entry.toolKey),
       installed,
       version: reachable && installed === true ? await probeVersion(target, entry) : null,
       installable: entry.installArgv !== undefined,
@@ -170,7 +175,7 @@ function renderDetail(rows: ToolRow[], io: ToolIO): void {
 export async function runToolList(opts: ToolOptions, io: ToolIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  const rows = await collectRows(root, run);
+  const rows = await collectRows(root, run, opts.env);
   if (opts.json) {
     io.stdout(`${JSON.stringify(rows, null, 2)}\n`);
   } else {
@@ -199,7 +204,7 @@ export async function runToolStatus(
     if (!only) return unknownTool(name, io);
   }
 
-  const rows = await collectRows(root, run, only);
+  const rows = await collectRows(root, run, opts.env, only);
   if (opts.json) {
     io.stdout(`${JSON.stringify(only ? rows[0] : rows, null, 2)}\n`);
   } else {
@@ -247,21 +252,18 @@ export async function runToolInstall(
   }
 
   if (!opts.noPersist && entry.toolKey !== undefined) {
-    if (seedEnvFile(root)) {
-      io.stdout("create .devcontainer/.env (from .devcontainer/.example.env)\n");
-    }
-    const key = installEnvKey(entry.toolKey);
+    const field = installFieldPath(entry.toolKey);
     const outcome = setInstallFlag(root, entry.toolKey);
     io.stdout(
       outcome === "already-set"
-        ? `.devcontainer/.env: ${key} already true\n`
-        : `.devcontainer/.env: set ${key}=true (${outcome})\n`,
+        ? `oh.json: ${field} already true\n`
+        : `oh.json: set ${field}=true (${outcome})\n`,
     );
   }
 
   if (opts.persistOnly) return 0;
 
-  const target = targetFor(root, run);
+  const target = targetFor(root, run, opts.env);
   let status: string;
   try {
     status = await target.status();
@@ -294,7 +296,7 @@ export async function runToolInstall(
   if (!(await confirmDownload(entry, opts, io))) {
     if (!opts.noPersist && entry.toolKey !== undefined) {
       io.stdout(
-        `.devcontainer/.env keeps ${installEnvKey(entry.toolKey)}=true — the next container start will install it.\n`,
+        `oh.json keeps ${installFieldPath(entry.toolKey)}=true — the next container start will install it.\n`,
       );
     }
     return 1;
@@ -310,7 +312,7 @@ export async function runToolInstall(
     io.stderr(
       `oh tool: installing ${entry.id} failed (exit ${r.exitCode}).\n` +
         (entry.toolKey !== undefined && !opts.noPersist
-          ? `.devcontainer/.env keeps ${installEnvKey(entry.toolKey)}=true — the next container start will retry it.\n`
+          ? `oh.json keeps ${installFieldPath(entry.toolKey)}=true — the next container start will retry it.\n`
           : ""),
     );
     return r.exitCode;

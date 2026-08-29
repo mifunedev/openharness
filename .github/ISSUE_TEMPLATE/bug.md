@@ -27,9 +27,9 @@ assignees: ""
 ## Environment
 
 - **Checkout / branch**: <!-- git branch --show-current; git rev-parse --short HEAD -->
-- **Sandbox / container**: <!-- make ps / docker compose ps / container name -->
+- **Sandbox / container**: <!-- oh ps / container name -->
 - **Agent runtime**: <!-- claude, pi, codex, cron, or other relevant harness runtime -->
-- **Command or workflow**: <!-- make target, script, skill, cron, or GitHub workflow that failed -->
+- **Command or workflow**: <!-- oh verb, script, skill, cron, or GitHub workflow that failed -->
 - **Host context**: <!-- OS, Docker version, browser only if UI/browser behavior is involved -->
 
 ---

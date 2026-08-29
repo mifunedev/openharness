@@ -76,8 +76,7 @@ grep -qF '.claude/commands/<name>.md' "$COMMAND_REF" || fail "command type does 
 RULE_REF="$REFS/rule.md"
 grep -qF '.oh/skills/<name>/SKILL.md' "$RULE_REF" || fail "rule type does not prefer a portable skill"
 grep -qF 'with `paths:`' "$RULE_REF" || fail "rule type does not require path scoping"
-grep -qF '.oh/context/rules/' "$RULE_REF" || fail "rule type omits the collapsed Open Harness rule surface"
-grep -qF 'compatibility pointers only' "$RULE_REF" || fail "rule type does not constrain compatibility pointers"
+grep -qF '`.claude/rules/`' "$RULE_REF" || fail "rule type omits the provider-specific rule surface"
 grep -qF '.claude/rules/<name>.md' "$RULE_REF" || fail "rule type omits the explicit provider-specific exception"
 if grep -qF 'references/skill.md' "$RULE_REF"; then
   fail "rule type delegates authority to a second type reference"

@@ -15,9 +15,8 @@ while IFS= read -r hit; do
   path=${hit%%:*}; rest=${hit#*:}; line=${rest#*:}
   case "$path:$line" in
     .oh/evals/probes/audit-dispatcher-contract.sh:*|.oh/evals/probes/audit-stale-references.sh:*) continue;;
-    .oh/tasks/audit-consolidation/prd.md:*|.oh/tasks/audit-consolidation/prompt.md:*|.oh/tasks/audit-consolidation/reference-inventory.md:*) continue;;
     .oh/skills.lock:*Migrated*provenance*) continue;;
-    .oh/scripts/link-providers.sh:*context-audit-runner.sh*|.oh/skills/audit/references/context.md:*context-audit-*|.oh/skills/audit/scripts/context-audit-runner.sh:*context-audit-*) continue;;
+    .oh/scripts/link-providers.sh:*context-audit-runner.sh*|.oh/skills/audit/references/context.md:*context-audit-*) continue;;
     .oh/skills/audit/references/pr.md:*pr-audit-proof*|.oh/skills/audit/references/prs.md:*pr-audit-proof*) continue;;
     .oh/skills/prompt-miner/scripts/mine-traces.mjs:*pr-audit*) continue;;
   esac
@@ -46,7 +45,7 @@ fi
 canonical_skills='$AUDIT_ROOT/.oh/skills/'
 grep -qF "$canonical_skills" .oh/skills/audit/references/skills.md \
   || { echo 'REGRESSION: skills audit does not scan canonical .oh/skills' >&2; exit 1; }
-for path in AGENTS.md docs/README.md docs/artifact-contract-schema.md .oh/templates/AGENTS.md .oh/crons/heartbeat.md .github/workflows/ci-harness.yml .oh/evals/capability/tasks/CB-001-ship-harness-change.md .oh/skills/benchmark/SKILL.md .oh/skills/spec/references/retro.md .oh/tasks/archive/2026-07-27/audit-consolidation/progress.txt; do
+for path in AGENTS.md docs/README.md docs/artifact-contract-schema.md .oh/templates/AGENTS.md crons/heartbeat.md .github/workflows/ci-harness.yml .oh/evals/capability/tasks/CB-001-ship-harness-change.md .oh/skills/benchmark/SKILL.md .oh/skills/spec/references/retro.md; do
   git ls-files --error-unmatch "$path" >/dev/null || { echo "REGRESSION: stale-reference coverage path missing: $path" >&2; exit 1; }
 done
 echo 'PASS: no active legacy audit references across tracked active surfaces' >&2

@@ -9,7 +9,6 @@ DOC="$ROOT/docs/integrations/slack.md"
 CONNECTING="$ROOT/docs/connecting.md"
 PI_DOC="$ROOT/docs/harnesses/pi.md"
 T3_PROCESSES="$ROOT/.oh/skills/t3/references/sandbox-processes.md"
-ROOT_PACKAGE_AUDIT="$ROOT/.oh/tasks/slack-admin-command-surface/root-package-audit.md"
 MANIFEST="$ROOT/.pi/install/slack-manifest.json"
 TEMPLATE_MANIFEST="$ROOT/.oh/templates/full/.pi/install/slack-manifest.json"
 
@@ -44,9 +43,6 @@ need_literal "$DOC" "plain-text auth trigger" "DM the bot plain text"
 need_literal "$CONNECTING" "connecting doc boundary" "Trust/channel admin is handled by challenge auth plus manifest-backed Slack admin commands, not separate Pi commands."
 need_literal "$PI_DOC" "Pi harness doc boundary" "trusted-user/channel admin is handled by manifest-backed Slack admin commands"
 need_literal "$T3_PROCESSES" "tmux process doc boundary" "Slack trust/channel admin is handled by DM"
-need_literal "$ROOT_PACKAGE_AUDIT" "root package audit artifact" "## Grounded RCA"
-need_literal "$ROOT_PACKAGE_AUDIT" "root package README evidence" "README.md:141 ### Admin commands (in DM with the bot)"
-need_literal "$ROOT_PACKAGE_AUDIT" "root package source evidence" "src/index.ts:275 pi.registerCommand(\"msg-bridge\", {"
 
 reject_regex "$DOC" "old in-session /trusted guidance" 'inside the session.*(/trusted|/channels)'
 reject_regex "$DOC" "old attach guidance" 'run `/msg-bridge`, `/trusted`, or `/channels` inside the session'

@@ -122,13 +122,13 @@ herdr agent start reviewer --cwd /home/sandbox/harness --split right -- claude
 ```
 
 **Open a worktree as a workspace.** Open Harness automation worktrees live under
-`.oh/worktrees/`; Herdr-created ones default to `~/.herdr/worktrees`. Prefer
+`.worktrees/`; Herdr-created ones default to `~/.herdr/worktrees`. Prefer
 opening an existing harness worktree over letting Herdr create one, so
 `/worktrees` conventions keep owning the layout:
 
 ```bash
 herdr worktree list --json | jq -r '.result.worktrees[] | "\(.branch // "detached")\t\(.path)"'
-herdr worktree open --cwd /home/sandbox/harness --path .oh/worktrees/bug/715-pi-langfuse-shutdown --no-focus
+herdr worktree open --cwd /home/sandbox/harness --path .worktrees/bug/715-pi-langfuse-shutdown --no-focus
 ```
 
 Pass `--no-focus` on anything you create in the background — stealing focus

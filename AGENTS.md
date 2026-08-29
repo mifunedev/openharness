@@ -123,7 +123,7 @@ Before implementation, mark each surface **applied** or **not applicable**. Do n
 silently skip a surface.
 
 - **Host and sandbox:** Where must each command and file change occur?
-- **Lifecycle doors:** Does behavior stay aligned across `make` and `oh`?
+- **Lifecycle door:** Does every affected `oh` verb stay aligned?
 - **Canonical and provider surfaces:** Is the change in `.oh/`, and do symlinks still
   resolve?
 - **Root and scaffold:** Does the change affect this orchestrator, initialized
@@ -140,39 +140,30 @@ silently skip a surface.
 
 ## How to work in this repository
 
-At the start of every session, read:
-
-- `.oh/context/SOUL.md`
-- `.oh/context/IDENTITY.md`
-- `.oh/context/TOOLS.md`
-- `.oh/context/REPO_MAP.md`
-- `.oh/context/USER.md`
-
-Before changing a subtree, read each `AGENTS.md` and `CLAUDE.md` from the root through
-the target path. More local instructions win for their subtree. In one directory,
-`AGENTS.md` is canonical. If `AGENTS.md` and a real `CLAUDE.md` conflict in the same
-directory, stop and report the conflict. Use the ancestor helper in
-`.oh/context/REPO_MAP.md` for new or unfamiliar paths.
+This file is the only always-on context. A nested `AGENTS.md` exists only in
+`.worktrees/`, `projects/`, and `crons/`, whose contents run or are checked
+out apart from it. Every other directory uses a `README.md`.
 
 Use the lifecycle in this order:
 
-1. Run `make sandbox` on the host.
-2. Run `make shell`.
+1. Run `oh sandbox` on the host.
+2. Run `oh shell`.
 3. Run `herdr` inside the sandbox.
 4. Run `gh auth login && gh auth setup-git` once from the first Herdr pane.
-5. Run `make ps` on the host to verify the container.
+5. Run `oh ps` on the host to verify the container.
 
-Run `make destroy` only for operator-authorized teardown.
+Run `oh destroy` only for operator-authorized teardown.
 
-In an initialized repository without a Makefile, use the matching `oh` verbs. The
-`make` and `oh` surfaces call `.oh/scripts/docker-compose.sh`. The canonical mapping
-is [`docs/lifecycle-commands.md`](docs/lifecycle-commands.md).
+`oh` is the only lifecycle door, on the host and in the sandbox, and it calls
+`.oh/scripts/docker-compose.sh`. Host prerequisites are Docker, Git, and Node 20 or
+newer. The verb reference is
+[`docs/lifecycle-commands.md`](docs/lifecycle-commands.md).
 
 ## How the system fits together
 
-The host calls `make` or `oh`. Both doors reach `.oh/scripts/docker-compose.sh`,
-which starts the project sandbox from `.devcontainer/`. Inside the sandbox, Herdr
-holds interactive work while named tmux sessions hold unattended infrastructure.
+The host calls `oh`, which reaches `.oh/scripts/docker-compose.sh` and starts the
+project sandbox from `.devcontainer/`. Inside the sandbox, Herdr holds interactive
+work while named tmux sessions hold unattended infrastructure.
 Application agents work on their branches or isolated worktrees. Task-specific
 procedures load only when the current task needs them. Tests and deterministic
 probes verify the control plane against real repository state.
@@ -187,8 +178,7 @@ The repository has one sandbox definition and four control-plane areas:
 - `.oh/tasks/` holds task-specific plans, graphs, progress, and evidence.
 - `.oh/evals/` holds regression probes and capability benchmarks.
 
-Read `.oh/context/REPO_MAP.md` for search routing. Read the nearest directory
-`README.md` before changing unfamiliar machinery.
+Read the nearest directory `README.md` before changing unfamiliar machinery.
 
 ## Taste
 

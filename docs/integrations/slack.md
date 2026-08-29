@@ -26,8 +26,8 @@ Slack.
 
 ## 1. Prerequisites
 
-- Sandbox is running (`make ps` shows the `openharness` container).
-- `pi --version` works inside the sandbox (`make shell` to verify).
+- Sandbox is running (`oh ps` shows the `openharness` container).
+- `pi --version` works inside the sandbox (`oh shell` to verify).
 - A Slack workspace where you can create apps (workspace admin or equivalent).
   If you are on a company Slack that restricts app creation, create a free
   personal workspace at [slack.com/get-started](https://slack.com/get-started)
@@ -148,7 +148,7 @@ On container boot, `.devcontainer/entrypoint.sh` hands off to
 `.pi/bridge/` directory and starts the dedicated `client-slack-pi` tmux session
 loading it via `--extension`. You can also manage it by hand at any time with
 the bare `gateway` command (a boot-installed symlink to that script; equivalently
-`make gateway pi`):
+`oh gateway pi`):
 
 ```bash
 gateway pi              # start (idempotent)
@@ -210,7 +210,7 @@ retry chains fresh and succeeds. It does not patch the npm package.
 ### 4.6 Run and verify (read-only)
 
 Run and check the gateway **from inside the sandbox** — both `gateway <pi|hermes>` and
-`make gateway <pi|hermes>` require `pi`/`hermes` on `PATH`, so they only work in the
+`oh gateway <pi|hermes>` require `pi`/`hermes` on `PATH`, so they only work in the
 container (`.oh/scripts/gateway.sh` errors "run inside the sandbox" otherwise).
 
 ```bash
@@ -255,10 +255,10 @@ gateway status            # show client-slack-pi + client-slack-hermes
 ```
 
 `gateway` is a boot-installed symlink to `.oh/scripts/gateway.sh` (equivalently
-`make gateway pi`). The same command brings up the sibling Hermes gateway
+`oh gateway pi`). The same command brings up the sibling Hermes gateway
 client: `gateway hermes`. Detach an attached session with `Ctrl-b d`. The
 session name `client-slack-pi` follows the `client-` prefix convention in
-[`.oh/context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
+[`.oh/skills/t3/references/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/.oh/skills/t3/references/sandbox-processes.md).
 
 ## 5. Access Control — challenge-based auth
 

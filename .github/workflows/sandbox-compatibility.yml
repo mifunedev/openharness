@@ -47,8 +47,8 @@ jobs:
       - name: Compare fixed Bookworm and Trixie bases
         run: |
           bash .oh/scripts/node-pnpm-parity.sh \
-            debian:bookworm-slim \
-            debian:trixie-slim
+            node:22-bookworm-slim \
+            node:22-trixie-slim
 
   optional-installers-image:
     name: Build one amd64 image with every optional installer

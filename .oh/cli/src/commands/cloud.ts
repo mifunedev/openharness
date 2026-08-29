@@ -1,14 +1,15 @@
 import { readFile } from "node:fs/promises";
-import { askSecret } from "../lib/prompt.js";
-import {
-  cloudConfigPath,
-  readCloudConfig,
-  writeCloudConfig,
-  type CloudConfig,
-} from "../lib/cloud-config.js";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { askSecret, redact } from "../lib/prompt.js";
+import { ohConfigPath, readOhConfig, writeOhConfig, type OhConfig } from "../lib/oh-config.js";
+import { resolveProjectRoot } from "../lib/project.js";
+import { readSecret, setSecret } from "../lib/secrets.js";
 
 const DEFAULT_API_URL = "http://127.0.0.1:3000";
 const DEFAULT_TERMINAL_STATUSES = ["running", "failed", "destroyed"];
+
+export const PROVISION_KEY_SECRET = "OH_CLOUD_PROVISION_KEY";
 
 export const CLOUD_HELP = `oh cloud — Manage OpenHarness Cloud nodes
 
@@ -28,20 +29,25 @@ Usage:
 
 Global options:
   --api-url <url>          API base URL (default: OH_CLOUD_API_URL, OH_API_URL,
-                           or http://127.0.0.1:3000)
-  --provision-key <key>    Admin key (default: OH_PROVISION_KEY or PROVISION_KEY)
+                           oh.json cloud.apiUrl, or http://127.0.0.1:3000)
+  --provision-key <key>    Admin key (default: OH_CLOUD_PROVISION_KEY in the
+                           environment or in the root .env)
   --output <field>         Print one top-level response field instead of JSON
   -h, --help               Show this help
 
 Configuration:
-  oh cloud config securely prompts for the current provisioner key and stores
-  it in ~/.config/openharness/cloud.json with mode 0600. This is the temporary
+  oh cloud config writes cloud.apiUrl to the repository oh.json and securely
+  prompts for the current provisioner key, which it stores as
+  ${PROVISION_KEY_SECRET} in the gitignored root .env. This is the temporary
   credential model until OpenHarness Cloud issues user API tokens.
 
+  Both settings are repository-local, so oh cloud runs inside an
+  OpenHarness-equipped repo. Outside one, pass --api-url and --provision-key.
+
 Environment:
-  OH_CLOUD_CONFIG          Override the saved config file path
   OH_CLOUD_API_URL         Override the OpenHarness Cloud API base URL
-  OH_PROVISION_KEY         Override the saved key (PROVISION_KEY is also accepted)
+  OH_CLOUD_PROVISION_KEY   Override the stored key (OH_PROVISION_KEY and
+                           PROVISION_KEY are also accepted)
 
 Examples:
   oh cloud config
@@ -58,6 +64,7 @@ export interface CloudIO {
   readFile?: (path: string, encoding: BufferEncoding) => Promise<string>;
   sleep?: (milliseconds: number) => Promise<void>;
   askSecret?: (question: string) => Promise<string>;
+  cwd?: string;
 }
 
 export class CloudCliError extends Error {
@@ -357,15 +364,99 @@ async function dispatch(args: string[], options: DispatchOptions): Promise<unkno
   throw new CloudCliError(`unknown nodes action: ${action}`);
 }
 
+interface CloudSettings {
+  apiUrl?: string;
+  provisionKey?: string;
+}
+
+const OUTSIDE_REPO_HINT =
+  "; pass --api-url and --provision-key to run `oh cloud` outside a repo";
+
+function requireRoot(io: CloudIO): string {
+  try {
+    return resolveProjectRoot(io.cwd);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new CloudCliError(`${detail}${OUTSIDE_REPO_HINT}`);
+  }
+}
+
+function legacyCloudConfigPath(env: NodeJS.ProcessEnv): string | undefined {
+  const home = env.HOME ?? env.USERPROFILE;
+  if (!home) return undefined;
+  return join(home, ".config", "openharness", "cloud.json");
+}
+
+function readLegacyCloudConfig(path: string): CloudSettings | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+  } catch {
+    return undefined;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+  const record = parsed as Record<string, unknown>;
+  return {
+    ...(typeof record.apiUrl === "string" ? { apiUrl: record.apiUrl } : {}),
+    ...(typeof record.provisionKey === "string" ? { provisionKey: record.provisionKey } : {}),
+  };
+}
+
+function migrateLegacyCloudConfig(root: string, io: CloudIO, env: NodeJS.ProcessEnv): void {
+  const path = legacyCloudConfigPath(env);
+  if (!path || !existsSync(path)) return;
+
+  const config = readOhConfig(ohConfigPath(root));
+  if (config.cloud?.apiUrl !== undefined) return;
+  if (readSecret(root, PROVISION_KEY_SECRET) !== undefined) return;
+
+  const legacy = readLegacyCloudConfig(path);
+  if (!legacy || (!legacy.apiUrl && !legacy.provisionKey)) return;
+
+  if (legacy.apiUrl) {
+    const next: OhConfig = {
+      ...config,
+      cloud: { ...config.cloud, apiUrl: normalizeApiUrl(legacy.apiUrl) },
+    };
+    writeOhConfig(root, next);
+  }
+  if (legacy.provisionKey) setSecret(root, PROVISION_KEY_SECRET, legacy.provisionKey);
+
+  io.stdout(`Migrated OpenHarness Cloud settings out of ${path}\n`);
+  if (legacy.apiUrl) io.stdout(`  cloud.apiUrl -> ${ohConfigPath(root)}\n`);
+  if (legacy.provisionKey) io.stdout(`  ${PROVISION_KEY_SECRET} -> ${join(root, ".env")}\n`);
+  io.stdout(`${path} is no longer read; delete it when you no longer need the copy.\n`);
+}
+
+function loadCloudSettings(root: string, io: CloudIO, env: NodeJS.ProcessEnv): CloudSettings {
+  migrateLegacyCloudConfig(root, io, env);
+  const config = readOhConfig(ohConfigPath(root));
+  return {
+    ...(config.cloud?.apiUrl ? { apiUrl: config.cloud.apiUrl } : {}),
+    ...(() => {
+      const key = readSecret(root, PROVISION_KEY_SECRET);
+      return key ? { provisionKey: key } : {};
+    })(),
+  };
+}
+
+function envProvisionKey(env: NodeJS.ProcessEnv): string | undefined {
+  return env.OH_CLOUD_PROVISION_KEY ?? env.OH_PROVISION_KEY ?? env.PROVISION_KEY;
+}
+
 async function configureCloud(args: string[], io: CloudIO, env: NodeJS.ProcessEnv): Promise<void> {
-  const path = cloudConfigPath(env);
-  const current = await readCloudConfig(path);
+  const root = requireRoot(io);
+  const current = loadCloudSettings(root, io, env);
+
   if (args[0] === "show") {
     args.shift();
     assertNoExtraArgs(args);
-    io.stdout(`Cloud config: ${path}\n`);
+    io.stdout(`Config: ${ohConfigPath(root)}\n`);
+    io.stdout(`Secrets: ${join(root, ".env")}\n`);
     io.stdout(`API URL: ${current.apiUrl ?? DEFAULT_API_URL}\n`);
-    io.stdout(`Provision credential: ${current.provisionKey ? "configured" : "not configured"}\n`);
+    io.stdout(
+      `Provision credential: ${current.provisionKey ? redact(current.provisionKey) : "not configured"}\n`,
+    );
     return;
   }
 
@@ -384,9 +475,11 @@ async function configureCloud(args: string[], io: CloudIO, env: NodeJS.ProcessEn
   ).trim();
   if (!provisionKey) throw new CloudCliError("provisioner key cannot be empty");
 
-  const config: CloudConfig = { apiUrl, provisionKey };
-  await writeCloudConfig(path, config);
-  io.stdout(`Saved OpenHarness Cloud config to ${path}\n`);
+  const config = readOhConfig(ohConfigPath(root));
+  writeOhConfig(root, { ...config, cloud: { ...config.cloud, apiUrl } });
+  setSecret(root, PROVISION_KEY_SECRET, provisionKey);
+  io.stdout(`Saved cloud.apiUrl to ${ohConfigPath(root)}\n`);
+  io.stdout(`Saved ${PROVISION_KEY_SECRET} to ${join(root, ".env")}\n`);
   io.stdout("Provision credential: configured\n");
 }
 
@@ -404,22 +497,18 @@ async function executeCloud(argv: string[], io: CloudIO): Promise<void> {
     return;
   }
 
-  const saved = await readCloudConfig(cloudConfigPath(env));
+  const flagApiUrl = takeOption(args, "--api-url");
+  const flagProvisionKey = takeOption(args, "--provision-key");
+  const stored =
+    flagProvisionKey && flagApiUrl ? {} : loadCloudSettings(requireRoot(io), io, env);
+
   const apiUrl = normalizeApiUrl(
-    takeOption(args, "--api-url") ??
-      env.OH_CLOUD_API_URL ??
-      env.OH_API_URL ??
-      saved.apiUrl ??
-      DEFAULT_API_URL,
+    flagApiUrl ?? env.OH_CLOUD_API_URL ?? env.OH_API_URL ?? stored.apiUrl ?? DEFAULT_API_URL,
   );
-  const provisionKey =
-    takeOption(args, "--provision-key") ??
-    env.OH_PROVISION_KEY ??
-    env.PROVISION_KEY ??
-    saved.provisionKey;
+  const provisionKey = flagProvisionKey ?? envProvisionKey(env) ?? stored.provisionKey;
   if (!provisionKey) {
     throw new CloudCliError(
-      "no provision credential found. Run `oh cloud config` or set OH_PROVISION_KEY.",
+      `no provision credential found. Run \`oh cloud config\`, set ${PROVISION_KEY_SECRET}, or pass --api-url and --provision-key.`,
     );
   }
 

@@ -19,8 +19,8 @@ export interface CronEntry {
   filePath: string;
 }
 
-const CRONS_DIR = path.resolve(process.env.CRONS_DIR || ".oh/crons");
-const WORKTREES_DIR = process.env.WORKTREES_DIR || ".oh/worktrees";
+const CRONS_DIR = path.resolve("crons");
+const WORKTREES_DIR = ".worktrees";
 const PID_FILE = path.join(CRONS_DIR, ".pid");
 const LOG_FILE = path.join(CRONS_DIR, ".cron.log");
 const AGENT_BIN = process.env.CRON_AGENT_BIN || "claude";
@@ -884,7 +884,7 @@ export function scheduleAll(
   return { scheduled, skipped };
 }
 
-export function sighupHandler(): void {
+export function sighupHandler(dir: string = CRONS_DIR): void {
   if (reloading) return;
   reloading = true;
   try {
@@ -894,7 +894,7 @@ export function sighupHandler(): void {
       } catch {
       }
     }
-    const { scheduled, skipped } = scheduleAll();
+    const { scheduled, skipped } = scheduleAll(dir);
     log("system", "RELOAD", `${scheduled} scheduled, ${skipped} skipped`);
   } finally {
     reloading = false;

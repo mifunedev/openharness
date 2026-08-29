@@ -75,7 +75,7 @@ Create each off the freshly-fetched base, never off local HEAD. Follow `/worktre
 and `/git` for paths and branch names.
 
 ```bash
-git -C "$REPO" worktree add -b "fix/<n>-<slug>" "$WORKTREES_ROOT/<repo>-<n>" origin/"$BASE"
+git -C "$REPO" worktree add -b "fix/<n>-<slug>" "$WORKTREES_ROOT/fix/<n>-<slug>" origin/"$BASE"
 ```
 
 Confirm every worktree reports the same base commit before launching anything.

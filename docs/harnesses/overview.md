@@ -25,6 +25,11 @@ If the sandbox is not running, the command persists the flag, prints a hint, and
 exits 0 — start the sandbox with `oh sandbox` and re-run it, or let the next
 build pick the harness up.
 
+`oh harness` works from inside the sandbox too. There it installs into the
+environment you are already in, and `list`/`status` report the CLIs actually
+present rather than `?`. See
+[Lifecycle commands → Where you are standing when you type `oh`](../lifecycle-commands.md#where-you-are-standing-when-you-type-oh).
+
 Two escape hatches:
 
 | Flag | Effect |
@@ -34,7 +39,7 @@ Two escape hatches:
 
 The manual path still works: uncomment the key in `.devcontainer/.env` (or export the
 `INSTALL_*` build flag in `.devcontainer/.env`) and run
-`make destroy && make sandbox`.
+`oh destroy && oh sandbox`.
 
 ## Supported agents
 
@@ -88,7 +93,7 @@ Two optional surfaces cover most day-to-day use:
 - **Pi+Slack** — chat with the agent from Slack instead of the terminal.
 - **T3 Code** — browser UI on port `3773` driving Claude / Codex / OpenCode.
 
-Each runs in its own named tmux session per [`.oh/context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md). For the two browser surfaces, open them in **VS Code's Simple Browser** (`Ctrl+Shift+P` → `Simple Browser: Show`; `Cmd+Shift+P` on macOS) so the live UI sits in a tab next to the code you're editing.
+Each runs in its own named tmux session per [`.oh/skills/t3/references/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/.oh/skills/t3/references/sandbox-processes.md). For the two browser surfaces, open them in **VS Code's Simple Browser** (`Ctrl+Shift+P` → `Simple Browser: Show`; `Cmd+Shift+P` on macOS) so the live UI sits in a tab next to the code you're editing.
 
 ### Pi+Slack
 

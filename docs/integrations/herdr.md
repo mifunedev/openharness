@@ -8,7 +8,7 @@ After entering the sandbox, make `herdr` your first command:
 
 ```bash
 # host
-make shell
+oh shell
 
 # first command inside the sandbox
 herdr
@@ -34,7 +34,7 @@ herdr integration status
 
 - Use Herdr workspaces, tabs, and panes for interactive setup, agents, tests, servers, and reviews.
 - Detach with `Ctrl-b q`; run `herdr` again to reattach while the container keeps running.
-- Open Harness automation worktrees stay under `.oh/worktrees`; open those paths in Herdr. Herdr-created worktrees default to `~/.herdr/worktrees`.
+- Open Harness automation worktrees stay under `.worktrees`; open those paths in Herdr. Herdr-created worktrees default to `~/.herdr/worktrees`.
 - Cron, Slack gateway, the cron supervisor, and other headless infrastructure remain in their existing tmux sessions. Do not run Herdr inside those managed sessions.
 - A raw shell or direct agent command remains a recovery path if Herdr is unavailable.
 
@@ -43,7 +43,7 @@ herdr integration status
 - `~/.config/herdr` (in the shared `config-dir` volume): configuration, logs, and session metadata.
 - `~/.herdr` (in `herdr-data`): Herdr-created worktrees and related data.
 
-`make stop` and normal rebuilds preserve metadata and layout in these volumes, but stopped containers do not preserve running agent, test, or server processes. `make destroy` runs Compose with `-v` and removes the volumes too.
+`oh stop` and normal rebuilds preserve metadata and layout in these volumes, but stopped containers do not preserve running agent, test, or server processes. `oh destroy` runs Compose with `-v` and removes the volumes too.
 
 ## Troubleshooting
 

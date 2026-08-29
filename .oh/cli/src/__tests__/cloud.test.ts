@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { createCloudApiClient, runCloud, type CloudIO } from "../commands/cloud.js";
-import { cloudConfigPath, readCloudConfig } from "../lib/cloud-config.js";
+import { readOhConfig, ohConfigPath } from "../lib/oh-config.js";
+import { readSecret } from "../lib/secrets.js";
 
 const cleanups: string[] = [];
 
@@ -12,11 +13,35 @@ afterEach(() => {
   while (cleanups.length > 0) rmSync(cleanups.pop()!, { recursive: true, force: true });
 });
 
-function tempConfig(): { dir: string; path: string; env: NodeJS.ProcessEnv } {
+interface Fixture {
+  root: string;
+  home: string;
+  ohJson: string;
+  dotenv: string;
+  legacy: string;
+  env: NodeJS.ProcessEnv;
+}
+
+function tempConfig(): Fixture {
   const dir = mkdtempSync(join(tmpdir(), "oh-cloud-"));
   cleanups.push(dir);
-  const path = join(dir, "config", "cloud.json");
-  return { dir, path, env: { OH_CLOUD_CONFIG: path } };
+  const root = join(dir, "repo");
+  const home = join(dir, "home");
+  mkdirSync(join(root, ".oh"), { recursive: true });
+  mkdirSync(home, { recursive: true });
+  return {
+    root,
+    home,
+    ohJson: ohConfigPath(root),
+    dotenv: join(root, ".env"),
+    legacy: join(home, ".config", "openharness", "cloud.json"),
+    env: { HOME: home },
+  };
+}
+
+function seedLegacy(fixture: Fixture, config: Record<string, unknown>): void {
+  mkdirSync(join(fixture.home, ".config", "openharness"), { recursive: true });
+  writeFileSync(fixture.legacy, `${JSON.stringify({ version: 1, ...config }, null, 2)}\n`);
 }
 
 function response(payload: unknown, status = 200): Response {
@@ -39,35 +64,88 @@ function io(overrides: Partial<CloudIO> = {}): CloudIO & { out: string[]; err: s
 }
 
 describe("cloud config", () => {
-  it("stores a prompted provisioner key in a mode-0600 user config without echoing it", async () => {
+  it("splits a prompted provisioner key into the root dotenv and the URL into oh.json", async () => {
     const fixture = tempConfig();
     const console = io({
       env: fixture.env,
+      cwd: fixture.root,
       askSecret: async () => "temporary-provisioner-secret",
     });
 
     expect(await runCloud(["config"], console)).toBe(0);
-    expect(cloudConfigPath(fixture.env)).toBe(fixture.path);
-    expect(await readCloudConfig(fixture.path)).toEqual({
-      apiUrl: "http://127.0.0.1:3000",
-      provisionKey: "temporary-provisioner-secret",
-    });
-    expect(statSync(fixture.path).mode & 0o777).toBe(0o600);
-    expect(readFileSync(fixture.path, "utf8")).toContain('"version": 1');
+    expect(readOhConfig(fixture.ohJson).cloud).toEqual({ apiUrl: "http://127.0.0.1:3000" });
+    expect(readSecret(fixture.root, "OH_CLOUD_PROVISION_KEY")).toBe("temporary-provisioner-secret");
+    expect(statSync(fixture.dotenv).mode & 0o777).toBe(0o600);
+    expect(readFileSync(fixture.ohJson, "utf8")).not.toContain("temporary-provisioner-secret");
     expect(console.out.join("")).toContain("Provision credential: configured");
     expect(console.out.join("")).not.toContain("temporary-provisioner-secret");
+    expect(readdirSync(fixture.home)).toEqual([]);
   });
 
   it("shows config state without revealing the stored credential", async () => {
     const fixture = tempConfig();
-    const setup = io({ env: fixture.env, askSecret: async () => "secret" });
+    const setup = io({ env: fixture.env, cwd: fixture.root, askSecret: async () => "provisioner-secret-value" });
     await runCloud(["config", "--api-url", "https://cloud.example.test"], setup);
 
-    const console = io({ env: fixture.env });
+    const console = io({ env: fixture.env, cwd: fixture.root });
     expect(await runCloud(["config", "show"], console)).toBe(0);
     expect(console.out.join("")).toContain("API URL: https://cloud.example.test");
-    expect(console.out.join("")).toContain("Provision credential: configured");
-    expect(console.out.join("")).not.toContain("secret");
+    expect(console.out.join("")).toContain("provi******************");
+    expect(console.out.join("")).not.toContain("provisioner-secret-value");
+    expect(readdirSync(fixture.home)).toEqual([]);
+  });
+
+  it("migrates a legacy user config once and leaves the old file in place", async () => {
+    const fixture = tempConfig();
+    seedLegacy(fixture, { apiUrl: "https://legacy.example.test", provisionKey: "legacy-key" });
+
+    const console = io({ env: fixture.env, cwd: fixture.root });
+    expect(await runCloud(["config", "show"], console)).toBe(0);
+
+    expect(readOhConfig(fixture.ohJson).cloud).toEqual({ apiUrl: "https://legacy.example.test" });
+    expect(readSecret(fixture.root, "OH_CLOUD_PROVISION_KEY")).toBe("legacy-key");
+    expect(statSync(fixture.legacy).isFile()).toBe(true);
+    const output = console.out.join("");
+    expect(output).toContain(`Migrated OpenHarness Cloud settings out of ${fixture.legacy}`);
+    expect(output).toContain("is no longer read");
+    expect(output).toContain("API URL: https://legacy.example.test");
+    expect(output).not.toContain("legacy-key");
+
+    const second = io({ env: fixture.env, cwd: fixture.root });
+    expect(await runCloud(["config", "show"], second)).toBe(0);
+    expect(second.out.join("")).not.toContain("Migrated");
+  });
+
+  it("names the flag escape hatch when it runs outside an equipped repo", async () => {
+    const fixture = tempConfig();
+    const console = io({ env: fixture.env, cwd: fixture.home });
+    expect(await runCloud(["nodes", "list"], console)).toBe(1);
+    expect(console.err.join("")).toBe(
+      "oh cloud: not an OpenHarness-equipped repo — run `oh init` first; " +
+        "pass --api-url and --provision-key to run `oh cloud` outside a repo\n",
+    );
+  });
+
+  it("runs outside an equipped repo when both flags are supplied", async () => {
+    const fixture = tempConfig();
+    let call: { url: string; init: RequestInit } | undefined;
+    const console = io({
+      env: fixture.env,
+      cwd: fixture.home,
+      fetch: (async (url: string | URL | Request, init?: RequestInit) => {
+        call = { url: String(url), init: init ?? {} };
+        return response({ ok: true });
+      }) as typeof fetch,
+    });
+    expect(
+      await runCloud(
+        ["--api-url", "https://cloud.example.test", "--provision-key", "flag-key", "nodes", "list"],
+        console,
+      ),
+    ).toBe(0);
+    expect(call?.url).toBe("https://cloud.example.test/api/nodes");
+    expect((call?.init.headers as Record<string, string>)["x-provision-key"]).toBe("flag-key");
+    expect(readdirSync(fixture.home)).toEqual([]);
   });
 });
 
@@ -76,12 +154,13 @@ describe("cloud API commands", () => {
     const fixture = tempConfig();
     await runCloud(
       ["config", "--api-url", "https://cloud.example.test", "--provision-key", "saved-key"],
-      io({ env: fixture.env }),
+      io({ env: fixture.env, cwd: fixture.root }),
     );
 
     const calls: Array<{ url: string; init: RequestInit }> = [];
     const console = io({
       env: fixture.env,
+      cwd: fixture.root,
       fetch: (async (url: string | URL | Request, init?: RequestInit) => {
         calls.push({ url: String(url), init: init ?? {} });
         return response({ id: "node-1", status: "queued" }, 202);
@@ -116,7 +195,8 @@ describe("cloud API commands", () => {
       const fixture = tempConfig();
       let call: { url: string; init: RequestInit } | undefined;
       const console = io({
-        env: { ...fixture.env, OH_PROVISION_KEY: "env-key" },
+        env: { ...fixture.env, OH_CLOUD_PROVISION_KEY: "env-key" },
+        cwd: fixture.root,
         fetch: (async (url: string | URL | Request, init?: RequestInit) => {
           call = { url: String(url), init: init ?? {} };
           return response({ ok: true });
@@ -133,6 +213,7 @@ describe("cloud API commands", () => {
     let body: unknown;
     const console = io({
       env: { ...fixture.env, PROVISION_KEY: "key" },
+      cwd: fixture.root,
       readFile: async () => "ssh-ed25519 AAAA user@example\n",
       fetch: (async (_url: string | URL | Request, init?: RequestInit) => {
         body = JSON.parse(String(init?.body));
@@ -160,6 +241,7 @@ describe("cloud API commands", () => {
     const sleeps: number[] = [];
     const console = io({
       env: { ...fixture.env, OH_PROVISION_KEY: "key" },
+      cwd: fixture.root,
       sleep: async (milliseconds) => { sleeps.push(milliseconds); },
       fetch: (async () => response(nodes.shift())) as typeof fetch,
     });
@@ -187,6 +269,7 @@ describe("cloud API commands", () => {
     const fixture = tempConfig();
     const console = io({
       env: { ...fixture.env, OH_PROVISION_KEY: "wrong" },
+      cwd: fixture.root,
       fetch: (async () => response({ error: "Unauthorized", code: "UNAUTHORIZED" }, 401)) as typeof fetch,
     });
     expect(await runCloud(["nodes", "list"], console)).toBe(1);

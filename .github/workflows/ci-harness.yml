@@ -11,8 +11,8 @@ on:
       - ".oh/**"
       - "docs/**"
       - ".pi/**"
-      - "Makefile"
-      - ".devcontainer/.example.env"
+      - "oh.json"
+      - ".env.example"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -22,8 +22,7 @@ on:
       - ".claude/hooks/**"
       - ".claude/protected-paths.txt"
       - ".oh/hooks/**"
-      - ".oh/crons/**"
-      - ".oh/context/**"
+      - "crons/**"
       - ".devcontainer/**"
       - ".oh/evals/**"
       - "AGENTS.md"
@@ -34,8 +33,8 @@ on:
       - ".oh/**"
       - "docs/**"
       - ".pi/**"
-      - "Makefile"
-      - ".devcontainer/.example.env"
+      - "oh.json"
+      - ".env.example"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -45,8 +44,7 @@ on:
       - ".claude/hooks/**"
       - ".claude/protected-paths.txt"
       - ".oh/hooks/**"
-      - ".oh/crons/**"
-      - ".oh/context/**"
+      - "crons/**"
       - ".devcontainer/**"
       - ".oh/evals/**"
       - "AGENTS.md"
@@ -127,7 +125,7 @@ jobs:
         run: |
           command -v shellcheck >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y shellcheck; }
           shellcheck --version
-          shellcheck -S warning .devcontainer/*.sh .oh/install/*.sh .oh/scripts/*.sh .oh/scripts/ablate.sh .oh/skills/audit/scripts/*.sh .claude/hooks/*.sh .claude/skills/retro/scripts/*.sh
+          shellcheck -S warning .devcontainer/*.sh .oh/install/*.sh .oh/scripts/*.sh .oh/skills/audit/scripts/*.sh .claude/hooks/*.sh .claude/skills/retro/scripts/*.sh
 
       - name: Hadolint Dockerfile
         uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0

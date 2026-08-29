@@ -56,7 +56,7 @@ Gemini CLI sessions.
 ### Local self-hosted setup walkthrough
 
 The following procedure mirrors a working local installation: clone Langfuse as
-an independent project under Open Harness's `.oh/worktrees/project/` namespace,
+an independent project under Open Harness's `projects/` namespace,
 start its Compose stack, attach the existing sandbox to Langfuse's Docker
 network, and configure Pi against the service hostname. The same service can be
 used by Claude Code after completing steps 1–5; see [Claude Code](#claude-code)
@@ -64,26 +64,27 @@ for its plugin configuration.
 
 Commands run from the normal host terminal unless marked **SANDBOX** or **PI**.
 
-#### 1. Clone Langfuse under `.oh/worktrees`
+#### 1. Clone Langfuse under `projects/`
 
 Start from the Open Harness checkout:
 
 ```bash
 cd /path/to/openharness
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
-mkdir -p "$WORKTREES_ROOT/project/langfuse"
+PROJECTS_ROOT="$(bash .oh/scripts/oh-path projects --no-create 2>/dev/null || printf '%s' projects)"
+mkdir -p "$PROJECTS_ROOT/langfuse"
 git clone https://github.com/langfuse/langfuse.git \
-  "$WORKTREES_ROOT/project/langfuse/langfuse"
-cd "$WORKTREES_ROOT/project/langfuse/langfuse"
+  "$PROJECTS_ROOT/langfuse/langfuse"
+cd "$PROJECTS_ROOT/langfuse/langfuse"
 ```
 
 This is an independent repository with its own `.git`, not a harness branch or
-Git worktree. If it is already cloned, update it instead:
+Git worktree. Its own worktrees, if any, live at
+`projects/langfuse/langfuse/.worktrees/`. If it is already cloned, update it instead:
 
 ```bash
 cd /path/to/openharness
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.oh/worktrees}")"
-cd "$WORKTREES_ROOT/project/langfuse/langfuse"
+PROJECTS_ROOT="$(bash .oh/scripts/oh-path projects --no-create 2>/dev/null || printf '%s' projects)"
+cd "$PROJECTS_ROOT/langfuse/langfuse"
 git pull --ff-only
 ```
 
@@ -225,7 +226,7 @@ Enter the Langfuse public key (`pk-lf-...`), secret key (`sk-lf-...`), and
 external Langfuse URL. The package persists them in
 `~/.pi/agent/pi-langfuse/config.json`; in the sandbox, `~/.pi` is on the
 `pi-auth` named volume. When the package writes the file it creates a `0700`
-directory and a `0600` file where POSIX permissions are available. `make destroy`
+directory and a `0600` file where POSIX permissions are available. `oh destroy`
 removes named volumes, including `pi-auth`, so configure again after destroying
 the sandbox.
 
@@ -244,16 +245,24 @@ pi
 `LANGFUSE_HOST` is supported as a fallback name. For an environment-only
 configuration, `LANGFUSE_BASE_URL` wins over `LANGFUSE_HOST`.
 
-`.devcontainer/.env` is Docker Compose interpolation, **not** a file that is
-automatically injected wholesale into Pi. If you keep Langfuse variables there,
-explicitly export them in the shell that launches Pi:
+Set the host and the privacy preset in `oh.json` instead of exporting them by
+hand. `oh` renders `langfuse.baseUrl` and `langfuse.privacyPreset` into the
+Compose environment, and both compose files put them in the sandbox process
+environment, so Pi reads them on every launch:
 
-```bash
-set -a
-source /home/sandbox/harness/.devcontainer/.env
-set +a
-pi
+```json
+{
+  "langfuse": {
+    "baseUrl": "http://langfuse-web:3000",
+    "privacyPreset": "metadata-only"
+  }
+}
 ```
+
+Apply the change with `oh stop && oh sandbox`. The two credentials stay secrets:
+keep `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` in the root dotenv (`oh
+secret set`) or in the saved `~/.pi/agent/pi-langfuse/config.json`, and export
+them in the shell that launches Pi if you use the environment-only path.
 
 ### Pi configuration and privacy precedence
 

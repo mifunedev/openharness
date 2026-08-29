@@ -31,8 +31,14 @@ has '"packages/oh/**"' "oh package path filter"
 has '".oh/scripts/docker-compose.sh"' "compose wrapper path filter"
 has '".oh/scripts/sandbox-boot-smoke.sh"' "boot smoke helper path filter"
 has '".oh/scripts/harness-config.sh"' "harness config helper path filter"
-has '"Makefile"' "Makefile path filter"
-has '".devcontainer/.example.env"' "harness config template path filter"
+has '"oh.json"' "oh.json path filter"
+has '".env.example"' "secrets template path filter"
+if grep -Fq -- '".devcontainer/.example.env"' <<<"$text"; then
+  missing+=("path filter still names the retired .devcontainer/.example.env")
+fi
+for tracked in oh.json .env.example; do
+  [[ -e "$ROOT/$tracked" ]] || missing+=("path filter $tracked names no existing file — it can never match")
+done
 has '".dockerignore"' "dockerignore path filter"
 has '".github/workflows/sandbox-boot-guard.yml"' "workflow self path filter"
 has 'persist-credentials: false' "checkout token persistence disabled"
@@ -80,8 +86,8 @@ else
     phas_regex() { grep -Eq -- "$1" <<<"$parity" || missing+=("compatibility parity job: $2"); }
     phas_regex '^    runs-on: ubuntu-latest$' "does not use the fixed Docker-capable amd64 runner"
     phas 'bash .oh/scripts/node-pnpm-parity.sh \' "does not invoke the Node/pnpm parity script"
-    phas 'debian:bookworm-slim \' "does not fix the baseline to debian:bookworm-slim"
-    phas 'debian:trixie-slim' "does not fix the candidate to debian:trixie-slim"
+    phas 'node:22-bookworm-slim \' "does not fix the baseline to node:22-bookworm-slim"
+    phas 'node:22-trixie-slim' "does not fix the candidate to node:22-trixie-slim"
     if grep -Eq '\$\{\{[[:space:]]*(inputs|github\.event\.inputs)\.' <<<"$parity"; then
       missing+=("compatibility parity job: images come from dispatch inputs instead of fixed values")
     fi

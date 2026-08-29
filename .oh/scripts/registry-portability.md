@@ -249,7 +249,7 @@ opening the registry pull request. That is a documented manual procedure, not an
 automated gate, and it catches drift only on the path that goes through this
 repository.
 
-To close that gap, a scheduled job under `.oh/crons/` would clone the registry
+To close that gap, a scheduled job under `crons/` would clone the registry
 and run the probe armed. That is the only option that also catches a commit made
 directly against the registry, which the publishing step cannot see.
 

@@ -132,21 +132,21 @@ recovery by checking `git status` is clean.
 After cherry-picking, inspect the diff for origin-specific divergences
 that the squash may have overwritten:
 
-**Denver TZ (.oh/crons/heartbeat.md):**
+**Denver TZ (crons/heartbeat.md):**
 ```bash
-git diff HEAD -- .oh/crons/heartbeat.md | grep timezone
+git diff HEAD -- crons/heartbeat.md | grep timezone
 ```
 If the diff shows the TZ value changing, restore origin's intended value
 dynamically — never hardcode a specific TZ string (upstream may use any
 value; the fix would silently no-op if they ever change theirs):
 ```bash
 # Read origin's intended TZ value from origin/development (the source of truth)
-ORIGIN_TZ=$(git show origin/development:.oh/crons/heartbeat.md | grep -i "^timezone:" | head -1 | awk '{print $NF}')
-sed -i "s|^timezone: .*|timezone: $ORIGIN_TZ|" .oh/crons/heartbeat.md
-git add .oh/crons/heartbeat.md
+ORIGIN_TZ=$(git show origin/development:crons/heartbeat.md | grep -i "^timezone:" | head -1 | awk '{print $NF}')
+sed -i "s|^timezone: .*|timezone: $ORIGIN_TZ|" crons/heartbeat.md
+git add crons/heartbeat.md
 ```
-Verify: `git show origin/development:.oh/crons/heartbeat.md | grep timezone` must
-match `grep timezone .oh/crons/heartbeat.md`.
+Verify: `git show origin/development:crons/heartbeat.md | grep timezone` must
+match `grep timezone crons/heartbeat.md`.
 
 **`client-slack-pi` session name:**
 ```bash
@@ -171,7 +171,7 @@ git ls-files --stage .claude/skills
 ## Step 6 — Defer cron-layout-coupled commits
 
 Some upstream commits have probes that hardcode cron filenames from
-upstream's layout (e.g., `.oh/crons/cleanup-tasks.md`, `.oh/crons/eval-weekly.md`)
+upstream's layout (e.g., `crons/cleanup-tasks.md`, `crons/eval-weekly.md`)
 that conflict with origin's layout (those crons were folded into heartbeat
 in origin). These commits WILL regress origin's eval suite.
 

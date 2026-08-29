@@ -1,4 +1,4 @@
-FROM debian:trixie-slim
+FROM node:22-trixie-slim
 
 ARG OH_PROJECT_ROOT=/home/sandbox/harness
 ENV OH_PROJECT_ROOT=${OH_PROJECT_ROOT}
@@ -12,10 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && command -v lsof >/dev/null \
  && command -v htop >/dev/null \
  && command -v telnet >/dev/null \
- && rm -rf /var/lib/apt/lists/*
-
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
- && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
@@ -121,7 +117,8 @@ RUN cd /opt/oh && npm install --no-audit --no-fund && npm run build \
  && chmod +x /opt/oh/dist/oh.js \
  && ln -sf /opt/oh/dist/oh.js /usr/local/bin/oh
 
-RUN useradd -m -s /bin/zsh sandbox \
+RUN userdel -r node 2>/dev/null || true \
+ && useradd -m -u 1000 -s /bin/zsh sandbox \
  && echo "sandbox ALL=(ALL) ALL" > /etc/sudoers.d/sandbox \
  && chmod 0440 /etc/sudoers.d/sandbox \
  && groupadd -f docker && usermod -aG docker sandbox

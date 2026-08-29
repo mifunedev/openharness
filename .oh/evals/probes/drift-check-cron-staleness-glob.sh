@@ -8,7 +8,7 @@
 #       only if the inert set includes the valid cron and excludes invalid
 #       runtime-config fixtures.
 #       This is a behavioral extract-and-run probe (not a text-presence grep): a
-#       revert of Step C-2 to the raw `for f in .oh/crons/*.md` glob flags all
+#       revert of Step C-2 to the raw `for f in crons/*.md` glob flags all
 #       fixtures and flips the probe to REGRESSION.
 set -euo pipefail
 
@@ -41,8 +41,8 @@ if [[ -z "${BLOCK//[[:space:]]/}" ]]; then
   echo "REGRESSION: Step C-2 bash block extraction was empty — heading/fence anchor broken in $SKILL" >&2
   exit 1
 fi
-if ! printf '%s' "$BLOCK" | grep -qF '.oh/crons/*.md'; then
-  echo "REGRESSION: extracted Step C-2 block does not iterate .oh/crons/*.md — wrong block captured" >&2
+if ! printf '%s' "$BLOCK" | grep -qF 'crons/*.md'; then
+  echo "REGRESSION: extracted Step C-2 block does not iterate crons/*.md — wrong block captured" >&2
   exit 1
 fi
 for required in schedule enabled agent tmux worktree preflight RESTART_REQUIRED_FRONTMATTER_FIELDS "frontmatter/config may be stale" "SIGHUP reschedule or runtime restart"; do
@@ -67,9 +67,9 @@ fi
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
-mkdir -p "$WORK/.oh/crons"
+mkdir -p "$WORK/crons"
 
-cat > "$WORK/.oh/crons/aaa-readme.md" <<'EOF_A'
+cat > "$WORK/crons/aaa-readme.md" <<'EOF_A'
 # Crons Directory
 
 Not a cron — a directory README. The frontmatter below is an EXAMPLE inside a
@@ -83,7 +83,7 @@ enabled: true
 ```
 EOF_A
 
-cat > "$WORK/.oh/crons/bbb-valid.md" <<'EOF_B'
+cat > "$WORK/crons/bbb-valid.md" <<'EOF_B'
 ---
 id: bbb-valid
 schedule: "0 * * * *"
@@ -100,7 +100,7 @@ preflight: scripts/example-caps.sh
 Body.
 EOF_B
 
-cat > "$WORK/.oh/crons/ccc-disabled.md" <<'EOF_C'
+cat > "$WORK/crons/ccc-disabled.md" <<'EOF_C'
 ---
 id: ccc-disabled
 schedule: "0 * * * *"
@@ -112,7 +112,7 @@ enabled: false
 Body.
 EOF_C
 
-cat > "$WORK/.oh/crons/ddd-missing-schedule.md" <<'EOF_D'
+cat > "$WORK/crons/ddd-missing-schedule.md" <<'EOF_D'
 ---
 id: ddd-missing-schedule
 enabled: true
@@ -123,7 +123,7 @@ enabled: true
 Body.
 EOF_D
 
-cat > "$WORK/.oh/crons/eee-empty-schedule-bare.md" <<'EOF_E'
+cat > "$WORK/crons/eee-empty-schedule-bare.md" <<'EOF_E'
 ---
 id: eee-empty-schedule-bare
 schedule:
@@ -135,7 +135,7 @@ enabled: true
 Body.
 EOF_E
 
-cat > "$WORK/.oh/crons/fff-empty-schedule-double-quoted.md" <<'EOF_F'
+cat > "$WORK/crons/fff-empty-schedule-double-quoted.md" <<'EOF_F'
 ---
 id: fff-empty-schedule-double-quoted
 schedule: ""
@@ -147,7 +147,7 @@ enabled: true
 Body.
 EOF_F
 
-cat > "$WORK/.oh/crons/ggg-empty-schedule-single-quoted.md" <<'EOF_G'
+cat > "$WORK/crons/ggg-empty-schedule-single-quoted.md" <<'EOF_G'
 ---
 id: ggg-empty-schedule-single-quoted
 schedule: ''
@@ -159,7 +159,7 @@ enabled: true
 Body.
 EOF_G
 
-cat > "$WORK/.oh/crons/hhh-invalid-schedule-not-a-cron.md" <<'EOF_H'
+cat > "$WORK/crons/hhh-invalid-schedule-not-a-cron.md" <<'EOF_H'
 ---
 id: hhh-invalid-schedule-not-a-cron
 schedule: "not-a-cron"
@@ -173,7 +173,7 @@ EOF_H
 
 printf '%s' "$BLOCK" > "$WORK/block.sh"
 
-cat > "$WORK/.oh/crons/iii-invalid-id.md" <<'EOF_I'
+cat > "$WORK/crons/iii-invalid-id.md" <<'EOF_I'
 ---
 id: bad_id
 schedule: "0 * * * *"
@@ -185,7 +185,7 @@ enabled: true
 Body.
 EOF_I
 
-cat > "$WORK/.oh/crons/jjj-id-mismatch.md" <<'EOF_J'
+cat > "$WORK/crons/jjj-id-mismatch.md" <<'EOF_J'
 ---
 id: not-jjj-id-mismatch
 schedule: "0 * * * *"
@@ -197,7 +197,7 @@ enabled: true
 Body.
 EOF_J
 
-cat > "$WORK/.oh/crons/kkk-unsafe-agent.md" <<'EOF_K'
+cat > "$WORK/crons/kkk-unsafe-agent.md" <<'EOF_K'
 ---
 id: kkk-unsafe-agent
 schedule: "0 * * * *"

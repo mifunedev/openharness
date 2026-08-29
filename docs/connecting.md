@@ -10,7 +10,7 @@ The sandbox is a Docker container running on your host (or a remote server). Get
 
 | Option | Command / action | Port forwarding to laptop |
 |--------|-----------------|--------------------------|
-| **A — Terminal** | `make shell` from the host | None — plain shell only |
+| **A — Terminal** | `oh shell` from the host | None — plain shell only |
 | **B — VSCode Attach (local)** | Dev Containers extension → "Attach to Running Container" → `openharness` | Automatic while attached |
 | **C — VSCode Remote-SSH + Attach (remote host)** | SSH into your host in VSCode, then Attach to Container | Automatic while attached |
 | **D — Direct SSH (opt-in)** | `ssh -p 2222 sandbox@localhost` after enabling the sshd overlay | None — SSH shell only (tunnel/proxy separately) |
@@ -19,11 +19,18 @@ The sandbox is a Docker container running on your host (or a remote server). Get
 
 ```bash
 cd ~/.openharness
-make shell
+oh shell
 ```
-Pass an optional container name to attach to a different running container, e.g. `make shell portfolio-advisor` (add `SHELL_USER=<user>` if the target has no `sandbox` user).
+Pass an optional container name to attach to a different running container, e.g. `oh shell portfolio-advisor`. `oh shell` always attaches as the `sandbox` user; if the target container has no such user, use `docker exec -it -u <user> <container> zsh` instead.
 
 You land inside the container as the `sandbox` user. Run `herdr` first, then launch CLI agents and complete interactive setup from its panes. Container ports are **not** forwarded to your laptop — you cannot open `localhost:3000` in your browser via this method alone.
+
+> **Attach, do not "Reopen in Container".** *Dev Containers: Reopen in Container*
+> reads `.devcontainer/devcontainer.json`, which names `docker-compose.yml` alone,
+> so it bypasses `.oh/scripts/docker-compose.sh` and applies **no compose overlays** —
+> no SSH, no host Docker socket, no Hermes dashboard, nothing from
+> `composeOverrides[]`. Provision with `oh sandbox`, then attach. Details:
+> [lifecycle commands](lifecycle-commands.md#vs-code-reopen-in-container-applies-no-overlays).
 
 ### Option B — VSCode Attach to Running Container (local host)
 
@@ -109,11 +116,11 @@ All long-running processes inside the sandbox run in named tmux sessions. The na
 | `agent-` | `agent-watcher`, `agent-batch` | Headless / long-running agent processes (interactive CLIs are foreground, not tmux) |
 | `app-` | `app-api` | Dev servers |
 
-For the full convention see [`.oh/context/rules/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/context/rules/sandbox-processes.md).
+For the full convention see [`.oh/skills/t3/references/sandbox-processes.md`](https://github.com/mifunedev/openharness/blob/development/.oh/skills/t3/references/sandbox-processes.md).
 
 ## End-to-end recipe
 
-This recipe assumes the sandbox is already running (`make ps` confirms the `openharness` container is up). Steps run inside the sandbox unless noted.
+This recipe assumes the sandbox is already running (`oh ps` confirms the `openharness` container is up). Steps run inside the sandbox unless noted.
 
 ### Step 1 — Attach via VSCode
 

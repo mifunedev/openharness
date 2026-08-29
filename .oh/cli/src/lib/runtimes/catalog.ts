@@ -100,7 +100,7 @@ export const RUNTIME_CATALOG: readonly RuntimeEntry[] = Object.freeze([
         minVersion: "2.39",
         probeArgv: Object.freeze(["bash", "-lc", "ldd --version | head -1"]),
         remediation:
-          "Rebuild the sandbox image: .devcontainer/Dockerfile pins debian:trixie-slim, whose glibc clears this floor. Tracked in #805.",
+          "Rebuild the sandbox image: .devcontainer/Dockerfile pins node:22-trixie-slim, whose glibc clears this floor. Tracked in #805.",
       }),
       Object.freeze({
         id: "device",

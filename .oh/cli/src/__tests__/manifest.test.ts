@@ -117,15 +117,20 @@ describe("shouldShip", () => {
 
 
 describe("loadManifest", () => {
-  it("present + valid → returns parsed {include, exclude}", () => {
+  it("present + valid → returns parsed {include, exclude, rootInclude}", () => {
     const dir = mkTmp();
     fs.writeFileSync(
       path.join(dir, "manifest.json"),
-      JSON.stringify({ include: ["cli/**"], exclude: ["**/dist/**"] }),
+      JSON.stringify({
+        include: ["cli/**"],
+        exclude: ["**/dist/**"],
+        rootInclude: ["crons/**"],
+      }),
     );
     expect(loadManifest(dir)).toEqual({
       include: ["cli/**"],
       exclude: ["**/dist/**"],
+      rootInclude: ["crons/**"],
     });
   });
 
@@ -158,7 +163,7 @@ describe("loadManifest", () => {
     expect(loadManifest(dir)).toBeNull();
   });
 
-  it("`include` present but no `exclude` → exclude defaults to []", () => {
+  it("`include` present but no `exclude`/`rootInclude` → both default to []", () => {
     const dir = mkTmp();
     fs.writeFileSync(
       path.join(dir, "manifest.json"),
@@ -167,6 +172,7 @@ describe("loadManifest", () => {
     expect(loadManifest(dir)).toEqual({
       include: ["cli/**", "README.md"],
       exclude: [],
+      rootInclude: [],
     });
   });
 });

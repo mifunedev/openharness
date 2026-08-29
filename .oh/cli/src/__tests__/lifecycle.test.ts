@@ -1,8 +1,22 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+
+vi.mock("node:os", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:os")>();
+  return { ...actual, userInfo: () => ({ ...actual.userInfo(), username: "sandbox", uid: 1000 }) };
+});
+import { dirname, join } from "node:path";
+import {
+  runComposeVerb,
   runGateway,
   runSandbox,
   runShell,
@@ -12,6 +26,10 @@ import {
   type LifecycleRunner,
   type RunResult,
 } from "../commands/lifecycle.js";
+import { ohConfigPath } from "../lib/oh-config.js";
+
+const readOhJson = (root: string): Record<string, never> =>
+  JSON.parse(readFileSync(ohConfigPath(root), "utf8"));
 
 vi.mock("../cli.js", async (importOriginal) => {
   const original = process.exit;
@@ -40,6 +58,7 @@ afterEach(() => {
     rmSync(cleanups.pop()!, { recursive: true, force: true });
   }
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 function makeRepo(): string {
@@ -47,6 +66,10 @@ function makeRepo(): string {
   cleanups.push(d);
   mkdirSync(join(d, ".oh", "scripts"), { recursive: true });
   return d;
+}
+
+function writeOhJson(root: string, body: Record<string, unknown>): void {
+  writeFileSync(ohConfigPath(root), `${JSON.stringify({ version: 1, ...body })}\n`);
 }
 
 function addScript(root: string, name: string): string {
@@ -88,12 +111,103 @@ function captureStdout(fn: () => void): string {
 }
 
 
+describe("oh.json -> compose env wiring (issue #880)", () => {
+  const ohJson = (root: string, body: Record<string, unknown> = { version: 1, name: "wired" }): void => {
+    writeFileSync(join(root, "oh.json"), `${JSON.stringify(body)}\n`);
+  };
+
+  it("renders oh.json into a 0600 temp file outside the repo and passes it as --extra-env-file", async () => {
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    ohJson(root, { version: 1, name: "wired", timezone: "UTC" });
+
+    const seen: { path: string; mode: number; body: string }[] = [];
+    const run: LifecycleRunner = (_cmd, args) => {
+      const i = args.indexOf("--extra-env-file");
+      const path = args[i + 1];
+      const st = statSync(path);
+      seen.push({ path, mode: st.mode & 0o777, body: readFileSync(path, "utf8") });
+      return { status: 0 };
+    };
+
+    expect(await runSandbox({ cwd: root, run }, makeIo().io)).toBe(0);
+    expect(seen).toHaveLength(1);
+    expect(seen[0].mode).toBe(0o600);
+    expect(seen[0].body).toContain("SANDBOX_NAME=wired");
+    expect(seen[0].body).toContain("TZ=UTC");
+    expect(seen[0].path.startsWith(root)).toBe(false);
+  });
+
+  it("removes the rendered file and its directory in a finally, even when provisioning throws", async () => {
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    ohJson(root);
+
+    let rendered = "";
+    const run: LifecycleRunner = (_cmd, args) => {
+      rendered = args[args.indexOf("--extra-env-file") + 1];
+      throw new Error("boom");
+    };
+
+    await expect(runSandbox({ cwd: root, run }, makeIo().io)).rejects.toThrow("boom");
+    expect(rendered).not.toBe("");
+    expect(existsSync(rendered)).toBe(false);
+    expect(existsSync(dirname(rendered))).toBe(false);
+  });
+
+  it("orders the sandbox argv --repo-dir, --extra-env-file, then the compose verb", async () => {
+    const root = makeRepo();
+    const script = addScript(root, "docker-compose.sh");
+    ohJson(root);
+    const { calls, run } = makeRunner();
+
+    expect(await runSandbox({ cwd: root, run }, makeIo().io)).toBe(0);
+    const args = calls[0].args;
+    expect(args.slice(0, 4)).toEqual([script, "--repo-dir", root, "--extra-env-file"]);
+    expect(args.slice(5)).toEqual(["up", "-d", "--build"]);
+    expect(existsSync(args[4])).toBe(false);
+  });
+
+  it("passes no --extra-env-file at all when the repo has no oh.json", async () => {
+    const root = makeRepo();
+    const script = addScript(root, "docker-compose.sh");
+    const { calls, run } = makeRunner();
+
+    expect(await runSandbox({ cwd: root, run }, makeIo().io)).toBe(0);
+    expect(calls[0].args).toEqual([script, "--repo-dir", root, "up", "-d", "--build"]);
+  });
+
+  it("threads the rendered file through every compose verb", async () => {
+    const root = makeRepo();
+    const script = addScript(root, "docker-compose.sh");
+    ohJson(root);
+    const { calls, run } = makeRunner();
+
+    expect(runComposeVerb("ps", { cwd: root, run })).toBe(0);
+    expect(calls[0].args.slice(0, 2)).toEqual([script, "--extra-env-file"]);
+    expect(calls[0].args.slice(3)).toEqual(["ps"]);
+    expect(existsSync(calls[0].args[2])).toBe(false);
+  });
+
+  it("prints the compose argv without provisioning when --print-argv is set", async () => {
+    const root = makeRepo();
+    const script = addScript(root, "docker-compose.sh");
+    ohJson(root);
+    const { calls, run } = makeRunner();
+
+    expect(await runSandbox({ cwd: root, run, printArgv: true }, makeIo().io)).toBe(0);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args.slice(0, 4)).toEqual([script, "--repo-dir", root, "--extra-env-file"]);
+    expect(calls[0].args.slice(5)).toEqual(["--print-argv", "up", "-d", "--build"]);
+  });
+
+});
+
 describe("runSandbox", () => {
   it("delegates the EXACT vendored argv with inherited stdio and returns the child's exit code", async () => {
     const root = makeRepo();
     const script = addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(join(root, ".devcontainer", ".env"), "SANDBOX_NAME=x\nDOCKER_SOCKET=false\n");
     const { calls, run } = makeRunner([{ status: 0 }]);
     const { out, io } = makeIo();
 
@@ -113,48 +227,6 @@ describe("runSandbox", () => {
     addScript(root, "docker-compose.sh");
     const { run } = makeRunner([{ status: 17 }]);
     expect(await runSandbox({ cwd: root, run }, makeIo().io)).toBe(17);
-  });
-
-  it("seeds .devcontainer/.env from .example.env with exactly one operation-log line", async () => {
-    const root = makeRepo();
-    addScript(root, "docker-compose.sh");
-    mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(join(root, ".devcontainer", ".example.env"), "SANDBOX_NAME=seeded\nDOCKER_SOCKET=false\n");
-    const { run } = makeRunner();
-    const { out, io } = makeIo();
-
-    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
-    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe(
-      "SANDBOX_NAME=seeded\nDOCKER_SOCKET=false\n",
-    );
-    expect(out).toEqual(["create .devcontainer/.env (from .devcontainer/.example.env)\n"]);
-  });
-
-  it("seed is a no-op when .devcontainer/.env already exists (never overwritten, no log line)", async () => {
-    const root = makeRepo();
-    addScript(root, "docker-compose.sh");
-    mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(join(root, ".devcontainer", ".env"), "SANDBOX_NAME=mine\nDOCKER_SOCKET=false\n");
-    writeFileSync(join(root, ".devcontainer", ".example.env"), "SANDBOX_NAME=template\n");
-    const { out, io } = makeIo();
-
-    expect(await runSandbox({ cwd: root, run: makeRunner().run }, io)).toBe(0);
-    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe(
-      "SANDBOX_NAME=mine\nDOCKER_SOCKET=false\n",
-    );
-    expect(out).toEqual([]);
-  });
-
-  it("seed is a no-op when no .example.env exists (nothing to copy from)", async () => {
-    const root = makeRepo();
-    addScript(root, "docker-compose.sh");
-    const { calls, run } = makeRunner();
-    const { out, io } = makeIo();
-
-    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
-    expect(existsSync(join(root, ".devcontainer", ".env"))).toBe(false);
-    expect(out).toEqual([]);
-    expect(calls).toHaveLength(1);
   });
 
   it("errors naming the missing docker-compose.sh path (no oh: prefix) without spawning", async () => {
@@ -186,7 +258,7 @@ describe("runSandbox", () => {
     );
   });
 
-  it("prompts and writes DOCKER_SOCKET=true to .devcontainer/.env on yes", async () => {
+  it("prompts and records access.dockerSocket=true in oh.json on yes", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
@@ -203,10 +275,11 @@ describe("runSandbox", () => {
 
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(asked).toHaveLength(1);
-    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toContain("DOCKER_SOCKET=true");
+    expect(readOhJson(root)).toMatchObject({ access: { dockerSocket: true } });
+    expect(existsSync(join(root, ".devcontainer", ".env"))).toBe(false);
   });
 
-  it("records DOCKER_SOCKET=false on no (sticks the choice; no re-prompt later)", async () => {
+  it("records access.dockerSocket=false in oh.json on no", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
@@ -214,14 +287,15 @@ describe("runSandbox", () => {
     const io: LifecycleIO = { stdout: () => {}, stderr: () => {}, ask: async () => "n" };
 
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
-    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toContain("DOCKER_SOCKET=false");
+    expect(readOhJson(root)).toMatchObject({ access: { dockerSocket: false } });
+    expect(existsSync(join(root, ".devcontainer", ".env"))).toBe(false);
   });
 
-  it("does NOT re-prompt when DOCKER_SOCKET is already set in .devcontainer/.env", async () => {
+  it("does NOT re-prompt once access.dockerSocket is answered TRUE in oh.json", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(join(root, ".devcontainer", ".env"), "DOCKER_SOCKET=false\n");
+    writeOhJson(root, { access: { dockerSocket: true } });
     const { run } = makeRunner();
     let asked = 0;
     const io: LifecycleIO = {
@@ -235,14 +309,57 @@ describe("runSandbox", () => {
 
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(asked).toBe(0);
-    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe("DOCKER_SOCKET=false\n");
+    expect(readOhJson(root)).toMatchObject({ access: { dockerSocket: true } });
   });
 
-  it("treats a COMMENTED template line as unconfigured and still prompts", async () => {
+  it("does NOT re-prompt once access.dockerSocket is answered FALSE in oh.json", async () => {
     const root = makeRepo();
     addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(join(root, ".devcontainer", ".env"), "# DOCKER_SOCKET=false\n");
+    writeOhJson(root, { access: { dockerSocket: false } });
+    const { run } = makeRunner();
+    let asked = 0;
+    const io: LifecycleIO = {
+      stdout: () => {},
+      stderr: () => {},
+      ask: async () => {
+        asked++;
+        return "y";
+      },
+    };
+
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(asked).toBe(0);
+    expect(readOhJson(root)).toMatchObject({ access: { dockerSocket: false } });
+  });
+
+  it("asks exactly once across two runs — the answer latches in oh.json (issue #880)", async () => {
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    let asked = 0;
+    const io: LifecycleIO = {
+      stdout: () => {},
+      stderr: () => {},
+      ask: async () => {
+        asked++;
+        return "n";
+      },
+    };
+
+    expect(await runSandbox({ cwd: root, run: makeRunner().run }, io)).toBe(0);
+    expect(asked).toBe(1);
+    expect(readOhJson(root)).toMatchObject({ access: { dockerSocket: false } });
+
+    expect(await runSandbox({ cwd: root, run: makeRunner().run }, io)).toBe(0);
+    expect(asked).toBe(1);
+  });
+
+  it("treats an oh.json WITHOUT access.dockerSocket as unanswered and prompts", async () => {
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeOhJson(root, { name: "no-answer-yet", access: { ssh: false } });
     const { run } = makeRunner();
     let asked = 0;
     const io: LifecycleIO = {
@@ -256,17 +373,40 @@ describe("runSandbox", () => {
 
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(asked).toBe(1);
-    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe("DOCKER_SOCKET=true\n");
+    expect(readOhJson(root)).toMatchObject({ access: { dockerSocket: true } });
+  });
+
+  it("does not read the docker-socket answer out of the secrets dotenv", async () => {
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeFileSync(join(root, ".devcontainer", ".env"), "DOCKER_SOCKET=false\n");
+    const { run } = makeRunner();
+    let asked = 0;
+    const io: LifecycleIO = {
+      stdout: () => {},
+      stderr: () => {},
+      ask: async () => {
+        asked++;
+        return "n";
+      },
+    };
+
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
+    expect(asked).toBe(1);
+    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe("DOCKER_SOCKET=false\n");
+    expect(readOhJson(root)).toMatchObject({ access: { dockerSocket: false } });
   });
 
   it("reads config with ZERO subprocesses — only compose is spawned", async () => {
     const root = makeRepo();
     const composeScript = addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(
-      join(root, ".devcontainer", ".env"),
-      "DOCKER_SOCKET=true\nSANDBOX_NAME=configured\nOH_SANDBOX_IMAGE=ghcr.io/x/y:cfg\n",
-    );
+    writeOhJson(root, {
+      name: "configured",
+      access: { dockerSocket: true },
+      image: { ref: "ghcr.io/x/y:cfg" },
+    });
     const { calls, run } = makeRunner([{ status: 0 }]);
     let asked = 0;
     const io: LifecycleIO = {
@@ -281,7 +421,8 @@ describe("runSandbox", () => {
     expect(await runSandbox({ cwd: root, run }, io)).toBe(0);
     expect(asked).toBe(0);
     expect(calls).toHaveLength(1);
-    expect(calls[0].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--build"]);
+    expect(calls[0].args.slice(0, 4)).toEqual([composeScript, "--repo-dir", root, "--extra-env-file"]);
+    expect(calls[0].args.slice(5)).toEqual(["up", "-d", "--build"]);
   });
 
   it("--image (bare, no OH_SANDBOX_IMAGE) → up -d --no-build + OH_SANDBOX_IMAGE=<default>", async () => {
@@ -299,37 +440,48 @@ describe("runSandbox", () => {
     expect(out.join("")).toContain(`image mode: ${DEFAULT_SANDBOX_IMAGE}`);
   });
 
-  it("--image=<ref> wins over .env OH_SANDBOX_IMAGE (explicit ref short-circuits the read)", async () => {
+  it("--image=<ref> wins over oh.json image.ref (explicit ref short-circuits the read)", async () => {
     const root = makeRepo();
     const composeScript = addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(
-      join(root, ".devcontainer", ".env"),
-      "OH_SANDBOX_IMAGE=ghcr.io/x/y:pinned\nDOCKER_SOCKET=false\n",
-    );
+    writeOhJson(root, { access: { dockerSocket: false }, image: { ref: "ghcr.io/x/y:pinned" } });
     const { calls, run } = makeRunner([{ status: 0 }]);
     const ref = "ghcr.io/mifunedev/openharness:2026.7.5";
 
     expect(await runSandbox({ cwd: root, run, image: true, imageRef: ref }, makeIo().io)).toBe(0);
     expect(calls).toHaveLength(1);
-    expect(calls[0].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--no-build"]);
+    expect(calls[0].args.slice(0, 4)).toEqual([composeScript, "--repo-dir", root, "--extra-env-file"]);
+    expect(calls[0].args.slice(5)).toEqual(["up", "-d", "--no-build"]);
     expect(calls[0].opts.env?.OH_SANDBOX_IMAGE).toBe(ref);
   });
 
-  it("--image (bare) reads OH_SANDBOX_IMAGE from .devcontainer/.env", async () => {
+  it("--image (bare) reads image.ref from oh.json", async () => {
     const root = makeRepo();
     const composeScript = addScript(root, "docker-compose.sh");
     mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(
-      join(root, ".devcontainer", ".env"),
-      "OH_SANDBOX_IMAGE=ghcr.io/x/y:configured\nDOCKER_SOCKET=false\n",
-    );
+    writeOhJson(root, {
+      access: { dockerSocket: false },
+      image: { ref: "ghcr.io/x/y:configured" },
+    });
     const { calls, run } = makeRunner([{ status: 0 }]);
 
     expect(await runSandbox({ cwd: root, run, image: true }, makeIo().io)).toBe(0);
     expect(calls).toHaveLength(1);
-    expect(calls[0].args).toEqual([composeScript, "--repo-dir", root, "up", "-d", "--no-build"]);
+    expect(calls[0].args.slice(0, 4)).toEqual([composeScript, "--repo-dir", root, "--extra-env-file"]);
+    expect(calls[0].args.slice(5)).toEqual(["up", "-d", "--no-build"]);
     expect(calls[0].opts.env?.OH_SANDBOX_IMAGE).toBe("ghcr.io/x/y:configured");
+  });
+
+  it("an ambient OH_SANDBOX_IMAGE beats oh.json, matching compose interpolation", async () => {
+    vi.stubEnv("OH_SANDBOX_IMAGE", "ghcr.io/x/y:ambient");
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    mkdirSync(join(root, ".devcontainer"), { recursive: true });
+    writeOhJson(root, { access: { dockerSocket: false }, image: { ref: "ghcr.io/x/y:from-json" } });
+    const { calls, run } = makeRunner([{ status: 0 }]);
+
+    expect(await runSandbox({ cwd: root, run, image: true }, makeIo().io)).toBe(0);
+    expect(calls[0].opts.env?.OH_SANDBOX_IMAGE).toBe("ghcr.io/x/y:ambient");
   });
 
   it("--no-build alone → up -d --no-build with NO OH_SANDBOX_IMAGE pinned", async () => {
@@ -347,10 +499,10 @@ describe("runSandbox", () => {
 
 
 describe("runShell", () => {
-  it("positional container wins — the .env value is not consulted", () => {
+  it("positional container wins — the configured value is not consulted", () => {
+    vi.stubEnv("SANDBOX_NAME", "");
     const root = makeRepo();
-    mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(join(root, ".devcontainer", ".env"), "SANDBOX_NAME=configured\n");
+    writeOhJson(root, { name: "configured" });
     const { calls, run } = makeRunner([{ status: 0 }]);
 
     expect(runShell({ cwd: root, run, container: "custom-box" }, makeIo().io)).toBe(0);
@@ -363,10 +515,10 @@ describe("runShell", () => {
     ]);
   });
 
-  it("reads SANDBOX_NAME from <root>/.devcontainer/.env, from a nested cwd", () => {
+  it("reads the name from <root>/oh.json, from a nested cwd", () => {
+    vi.stubEnv("SANDBOX_NAME", "");
     const root = makeRepo();
-    mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(join(root, ".devcontainer", ".env"), "SANDBOX_NAME=my-sandbox\n");
+    writeOhJson(root, { name: "my-sandbox" });
     const nested = join(root, "pkg", "web");
     mkdirSync(nested, { recursive: true });
     const { calls, run } = makeRunner([{ status: 0 }]);
@@ -377,17 +529,28 @@ describe("runShell", () => {
     expect(calls[0].args).toEqual(["exec", "-it", "-u", "sandbox", "my-sandbox", "zsh"]);
   });
 
-  it(`falls back to "${DEFAULT_CONTAINER_NAME}" when SANDBOX_NAME is unset`, () => {
+  it(`falls back to "${DEFAULT_CONTAINER_NAME}" when oh.json carries no name`, () => {
+    vi.stubEnv("SANDBOX_NAME", "");
     const root = makeRepo();
-    mkdirSync(join(root, ".devcontainer"), { recursive: true });
-    writeFileSync(join(root, ".devcontainer", ".env"), "GIT_USER_NAME=someone\n");
+    writeOhJson(root, { git: { userName: "someone" } });
     const { calls, run } = makeRunner([{ status: 0 }]);
 
     expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
     expect(calls[0].args[4]).toBe(DEFAULT_CONTAINER_NAME);
   });
 
-  it(`uses "${DEFAULT_CONTAINER_NAME}" when .devcontainer/.env is absent`, () => {
+  it("an ambient SANDBOX_NAME beats oh.json, matching what compose interpolates", () => {
+    vi.stubEnv("SANDBOX_NAME", "from-env");
+    const root = makeRepo();
+    writeOhJson(root, { name: "from-json" });
+    const { calls, run } = makeRunner([{ status: 0 }]);
+
+    expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
+    expect(calls[0].args[4]).toBe("from-env");
+  });
+
+  it(`uses "${DEFAULT_CONTAINER_NAME}" when oh.json is absent`, () => {
+    vi.stubEnv("SANDBOX_NAME", "");
     const root = makeRepo();
     const { calls, run } = makeRunner([{ status: 0 }]);
 
@@ -594,7 +757,6 @@ describe("help surfaces", () => {
     const sandbox = captureStdout(printSandboxHelp);
     expect(sandbox).toContain("oh sandbox");
     expect(sandbox).toContain("docker-compose.sh --repo-dir <root> up -d --build");
-    expect(sandbox).toContain(".devcontainer/.example.env");
 
     const shell = captureStdout(printShellHelp);
     expect(shell).toContain("oh shell [container]");
@@ -605,5 +767,26 @@ describe("help surfaces", () => {
     expect(gateway).toContain("oh gateway <pi|hermes>");
     expect(gateway).toContain("gateway.sh");
     expect(gateway).toContain("OH_PROJECT_ROOT");
+  });
+});
+
+describe("lifecycle inside the sandbox", () => {
+  it("refuses to provision the sandbox from inside it", async () => {
+    vi.stubEnv("OH_EXECUTION_TARGET", "local");
+    const root = makeRepo();
+    addScript(root, "docker-compose.sh");
+    const { calls, run } = makeRunner();
+    const { io, err } = makeIo();
+    expect(await runSandbox({ cwd: root, run }, io)).toBe(1);
+    expect(err.join("")).toContain("already inside the sandbox");
+    expect(calls.length).toBe(0);
+  });
+
+  it("opens a shell locally instead of exec-ing into a container", () => {
+    vi.stubEnv("OH_EXECUTION_TARGET", "local");
+    const root = makeRepo();
+    const { calls, run } = makeRunner();
+    expect(runShell({ cwd: root, run }, makeIo().io)).toBe(0);
+    expect(calls[0].cmd).toBe("zsh");
   });
 });

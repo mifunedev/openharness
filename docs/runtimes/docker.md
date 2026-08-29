@@ -76,7 +76,7 @@ Two harness-specific notes:
   `/var/run/docker.sock` into the sandbox is effectively host root, so it is
   opt-in via `DOCKER_SOCKET` in `.devcontainer/.env`. See
   [security considerations](../security-considerations.md).
-- **The container is the unit of disposal.** `make destroy` removes containers
+- **The container is the unit of disposal.** `oh destroy` removes containers
   and volumes; provider auth persists in named volumes across a rebuild.
 
 ## Related

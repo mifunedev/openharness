@@ -8,7 +8,6 @@ CC_SAFETY_NET_PIN="1.0.6"
 required_files=(
   ".oh/skills/git/SKILL.md"
   ".oh/skills/t3/references/sandbox-processes.md"
-  ".oh/agents/advisor.md"
   ".oh/skills/wiki/references/schema.md"
   ".oh/skills/eval/run.sh"
 )
@@ -18,10 +17,8 @@ required_execs=(
   ".oh/hooks/deny-secret-paths.sh"
   ".oh/hooks/warn-devtcp.sh"
   ".oh/skills/cloudflared/scripts/run.sh"
-  ".oh/skills/audit/scripts/context-audit-runner.sh"
   ".oh/skills/health-check/scripts/scope-preflight.sh"
   ".oh/skills/eval/run.sh"
-  ".oh/skills/retro/scripts/check-identity-duplicates.sh"
   ".oh/skills/retro/scripts/validate-retro-report.sh"
   ".oh/skills/t3/scripts/t3-code.sh"
 )

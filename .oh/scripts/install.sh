@@ -92,15 +92,16 @@ Usage:
   ./.oh/scripts/install.sh [<flags>]
 
 Clones (or pulls) the repo into ~/.openharness, prepares host auth dirs,
-and brings up the sandbox via 'docker compose' — the canonical substrate for
-this installer. A standalone 'oh' CLI is a separate path that equips an
-existing project repo instead (see docs/installation.md).
+installs the 'oh' CLI, and brings up the sandbox with 'oh sandbox'. A bare
+'get-oh.sh' is a separate path that installs only 'oh' and equips an existing
+project repo instead (see docs/installation.md).
 
 Prerequisites:
   Docker with the Compose plugin
   git (used to clone or update Open Harness)
-  make (build-essential) — recommended for the post-install lifecycle
-                           (make shell / make destroy / make help)
+  Node.js >= 20 — required to run 'oh', the only lifecycle door. When it is
+                  missing this installer offers to install nvm + Node 22,
+                  through the same ensure_node that get-oh.sh uses.
 
 Flags:
   -y, --yes            Accept default at any prompt.
@@ -185,10 +186,6 @@ if ! command -v git >/dev/null 2>&1; then
   die "git is required to clone or update Open Harness. Install git from: https://git-scm.com"
 fi
 ok "git $(git --version | awk '{print $3}') — OK"
-
-if ! command -v make >/dev/null 2>&1; then
-  warn "make not found — the sandbox still comes up, but the documented lifecycle (make shell / make destroy / make help) needs it. Install build-essential (Debian/Ubuntu) or Xcode Command Line Tools (macOS)."
-fi
 
 banner "Resolving repository"
 
@@ -297,6 +294,18 @@ if [ -x .oh/scripts/link-providers.sh ]; then
   bash .oh/scripts/link-providers.sh --init
 fi
 
+banner "Installing the 'oh' CLI"
+OH_SKIP_EPILOGUE=1
+export OH_SKIP_EPILOGUE
+# shellcheck source=/dev/null
+if ! . "$REPO_DIR/.oh/scripts/get-oh.sh"; then
+  unset _OH_SOURCED OH_SKIP_EPILOGUE
+  die "Could not install the 'oh' CLI. 'oh' is the only lifecycle door — see docs/installation.md."
+fi
+unset _OH_SOURCED OH_SKIP_EPILOGUE
+command -v oh >/dev/null 2>&1 || die "'oh' is not on PATH after install — expected $OH_BIN_DIR/oh."
+ok "oh $(oh --version 2>/dev/null || echo '(version unavailable)')"
+
 banner "Configuring sandbox"
 
 DEFAULT_NAME=$(basename "$REPO_DIR"); DEFAULT_NAME="${DEFAULT_NAME#.}"
@@ -310,42 +319,59 @@ fi
 
 mkdir -p "$REPO_DIR/.devcontainer"
 
-ENV_FILE="$REPO_DIR/.devcontainer/.env"
-mkdir -p "$REPO_DIR/.devcontainer"
+[ -f "$REPO_DIR/oh.json" ] \
+  || warn "oh.json missing at the repository root — non-secret settings will fall back to compose defaults (see docs/configuration.md)."
+
+ENV_FILE="$REPO_DIR/.env"
 if [ ! -f "$ENV_FILE" ]; then
-  if [ -f "$REPO_DIR/.devcontainer/.example.env" ]; then
-    cp "$REPO_DIR/.devcontainer/.example.env" "$ENV_FILE"
-    chmod 600 "$ENV_FILE" 2>/dev/null || true
-    ok "Created .devcontainer/.env from .devcontainer/.example.env"
+  if [ -f "$REPO_DIR/.env.example" ]; then
+    cp "$REPO_DIR/.env.example" "$ENV_FILE"
+    ok "Created .env from .env.example — every key commented out, so it is inert until you fill one in"
   else
     : > "$ENV_FILE"
-    chmod 600 "$ENV_FILE" 2>/dev/null || true
-    warn ".devcontainer/.example.env missing — sandbox will boot from compose defaults only."
+    warn ".env.example missing — sandbox will boot without any secrets."
   fi
-  __ENV_WAS_NEW=1
+  __FIRST_INSTALL=1
 else
-  ok "Existing .devcontainer/.env preserved — updating keys in place"
-  __ENV_WAS_NEW=0
+  ok "Existing .env preserved — updating keys in place"
+  __FIRST_INSTALL=0
+fi
+chmod 600 "$ENV_FILE" 2>/dev/null || true
+
+DEVCONTAINER_ENV_LINK="$REPO_DIR/.devcontainer/.env"
+if [ ! -L "$DEVCONTAINER_ENV_LINK" ] || [ "$(readlink "$DEVCONTAINER_ENV_LINK")" != "../.env" ]; then
+  rm -f "$DEVCONTAINER_ENV_LINK"
+  ln -s ../.env "$DEVCONTAINER_ENV_LINK"
+  ok "Linked .devcontainer/.env -> ../.env for VS Code \"Reopen in Container\""
 fi
 
 if [ -f "$REPO_DIR/harness.yaml" ] && [ -f "$REPO_DIR/.oh/scripts/migrate-harness-yaml.sh" ]; then
   sh "$REPO_DIR/.oh/scripts/migrate-harness-yaml.sh" "$REPO_DIR"
 fi
 
-_env_set() {
-  [ -n "${2:-}" ] || return 0
-  awk -v key="$1" -v val="$2" '
-    BEGIN { done = 0 }
-    !done && $0 ~ "^" key "=" { print key "=" val; done = 1; next }
-    !done && $0 ~ "^[[:space:]]*#[[:space:]]*" key "=" { print key "=" val; done = 1; next }
-    { print }
-    END { if (!done) print key "=" val }
-  ' "$ENV_FILE" > "$ENV_FILE.oh-tmp" || { rm -f "$ENV_FILE.oh-tmp"; return 1; }
-  mv "$ENV_FILE.oh-tmp" "$ENV_FILE" || return 1
-  ok ".devcontainer/.env: $1"
+_config_get() {
+  ( cd "$REPO_DIR" && oh config show 2>/dev/null ) | node -e '
+    let raw = "";
+    process.stdin.on("data", (d) => { raw += d; });
+    process.stdin.on("end", () => {
+      let value;
+      try {
+        value = process.argv[1]
+          .split(".")
+          .reduce((node, key) => (node === null || node === undefined ? undefined : node[key]), JSON.parse(raw));
+      } catch {
+        value = undefined;
+      }
+      process.stdout.write(value === undefined || value === null ? "" : String(value));
+    });
+  ' "$1"
 }
 
-# THE CONFIG WRITES ALWAYS RUN. They used to sit inside `if [ ! -f .env ]`, so
+_config_set() {
+  [ -n "${2:-}" ] || return 0
+  ( cd "$REPO_DIR" && oh config set "$1" "$2" ) >/dev/null || return 1
+  ok "oh.json: $1"
+}
 
 _sedi() {
   if sed --version >/dev/null 2>&1; then
@@ -361,15 +387,16 @@ _sed_val() {
     | sed 's/&/\\&/g'
 }
 
+banner "Writing non-secret settings to oh.json"
 __TZ="$(cat /etc/timezone 2>/dev/null || echo America/Los_Angeles)"
 __GIT_NAME="$(git config --get user.name 2>/dev/null || true)"
 __GIT_EMAIL="$(git config --get user.email 2>/dev/null || true)"
 
-_env_set SANDBOX_NAME   "$SANDBOX_NAME"
-if [ "$__ENV_WAS_NEW" = "1" ]; then
-  _env_set TZ             "$__TZ"
-  _env_set GIT_USER_NAME  "$__GIT_NAME"
-  _env_set GIT_USER_EMAIL "$__GIT_EMAIL"
+_config_set name "$SANDBOX_NAME"
+if [ "$__FIRST_INSTALL" = "1" ]; then
+  _config_set timezone      "$__TZ"
+  _config_set git.userName  "$__GIT_NAME"
+  _config_set git.userEmail "$__GIT_EMAIL"
 fi
 
 unset __TZ __GIT_NAME __GIT_EMAIL
@@ -380,8 +407,9 @@ if command -v gh >/dev/null 2>&1 && ! grep -qE '^GH_TOKEN=.+' "$ENV_FILE"; then
     banner "Detected host gh token"
     if prompt_yn "Share host gh token with sandbox? (skips in-sandbox 'gh auth login')" y; then
       __GHT_SAFE="$(_sed_val "$__GH_TOKEN_RAW")"
-      _sedi "s|^GH_TOKEN=.*|GH_TOKEN=${__GHT_SAFE}|" "$ENV_FILE"
-      ok "Wrote GH_TOKEN to .devcontainer/.env"
+      _sedi "s|^#\\{0,1\\}[[:space:]]*GH_TOKEN=.*|GH_TOKEN=${__GHT_SAFE}|" "$ENV_FILE"
+      chmod 600 "$ENV_FILE" 2>/dev/null || true
+      ok "Wrote GH_TOKEN to .env"
       __GH_AUTOCONFIGURED=1
       unset __GHT_SAFE
     else
@@ -395,36 +423,38 @@ banner "Optional installs (off by default)"
 _opt_install() {
   local __k="INSTALL_$1"
   if [ "${!__k:-}" = "true" ]; then
-    _env_set "INSTALL_$1" true
+    _config_set "$2" true
     return 0
   fi
-  if grep -qE "^INSTALL_$1=true" "$ENV_FILE"; then
+  if [ "$(_config_get "$2")" = "true" ]; then
     return 0
   fi
   if [ "$ASSUME_YES" = true ] || [ "$ASSUME_NO" = true ] || [ ! -r /dev/tty ]; then
     return 0
   fi
-  if prompt_yn "Install $2?" n; then
-    _env_set "INSTALL_$1" true
+  if prompt_yn "Install $3?" n; then
+    _config_set "$2" true
   fi
 }
-_opt_install HERMES        "Hermes — Nous self-improving agent CLI"
-_opt_install OPENCODE      "OpenCode — OpenAI-OAuth terminal agent"
-_opt_install DEEPAGENTS    "DeepAgents — LangChain multi-provider agent"
-_opt_install GROK_BUILD    "Grok Build — xAI terminal agent"
-_opt_install AGENT_BROWSER "agent-browser + Chromium (~1 GB)"
+_opt_install HERMES        install.hermes      "Hermes — Nous self-improving agent CLI"
+_opt_install OPENCODE      install.opencode    "OpenCode — OpenAI-OAuth terminal agent"
+_opt_install DEEPAGENTS    install.deepagents  "DeepAgents — LangChain multi-provider agent"
+_opt_install GROK_BUILD    install.grokBuild   "Grok Build — xAI terminal agent"
+_opt_install AGENT_BROWSER install.agentBrowser "agent-browser + Chromium (~1 GB)"
 
 banner "Host Docker socket (off by default)"
-if grep -qE '^DOCKER_SOCKET=' "$ENV_FILE"; then
-  ok "DOCKER_SOCKET already set — leaving it alone"
+if [ "$(_config_get access.dockerSocket)" = "true" ]; then
+  ok "access.dockerSocket already true — leaving it alone"
 elif [ "${DOCKER_SOCKET:-}" = "true" ]; then
-  _env_set DOCKER_SOCKET true
-  ok "DOCKER_SOCKET=true (from environment) — host Docker socket will be mounted"
+  _config_set access.dockerSocket true
+  ok "access.dockerSocket=true (from environment) — host Docker socket will be mounted"
 elif [ "$ASSUME_YES" = true ] || [ "$ASSUME_NO" = true ] || [ ! -r /dev/tty ]; then
-  :
+  _config_set access.dockerSocket false
 elif prompt_yn "Mount host Docker socket into the sandbox? (effectively host root — enable only if the agent must drive Docker)" n; then
-  _env_set DOCKER_SOCKET true
-  ok "DOCKER_SOCKET=true — host Docker socket will be mounted"
+  _config_set access.dockerSocket true
+  ok "access.dockerSocket=true — host Docker socket will be mounted"
+else
+  _config_set access.dockerSocket false
 fi
 
 
@@ -432,31 +462,31 @@ banner "Building and starting sandbox"
 printf "${CYAN}==> Building image — ~10 min on cold cache, ~30s on warm cache. Compose output below.${NC}\n"
 (
   cd "$REPO_DIR"
-  "$REPO_DIR/.oh/scripts/docker-compose.sh" up -d --build
+  oh sandbox
 )
 ok "Sandbox '$SANDBOX_NAME' started"
 
 printf "\n${GREEN}Installation complete!${NC}\n\n"
 printf "  ${CYAN}Configuration${NC}\n"
 printf "  ──────────────────────────────────────\n"
-printf "       ${CYAN}.devcontainer/.env${NC}  — your answers were written here. The ONE local\n"
-printf "                             (gitignored) config file, read on every path including\n"
-printf "                             VS Code \"Reopen in Container\".\n"
-printf "       ${CYAN}.devcontainer/.example.env${NC} — the tracked schema: every key, with its default.\n"
-printf "                             Defaults work; edit .env if you want to customize.\n"
+printf "       ${CYAN}oh.json${NC}      — the tracked home for every NON-secret setting. Your\n"
+printf "                      installer answers were written here with 'oh config set'.\n"
+printf "                      Field reference: docs/configuration.md.\n"
+printf "       ${CYAN}.env${NC}         — gitignored and 0600, seeded from the tracked .env.example,\n"
+printf "                      which documents every allow-listed secret. Secrets only;\n"
+printf "                      .devcontainer/.env symlinks to it so VS Code \"Reopen in\n"
+printf "                      Container\" reads the same file.\n"
 printf "\n"
-printf "  ${CYAN}Lifecycle (from %s)${NC}\n" "$REPO_DIR"
+printf "  ${CYAN}Lifecycle — 'oh' is the only front door${NC}\n"
 printf "  ──────────────────────────────────────\n"
 printf "       cd %s\n" "$REPO_DIR"
-printf "       make shell        # enter the sandbox\n"
-printf "                         # then pick your agent: claude, codex, opencode, pi, ...\n"
-printf "       make help         # all targets\n"
-printf "       make destroy      # tear down later\n"
-printf "\n"
-printf "  ${CYAN}VS Code (alternative)${NC}\n"
-printf "  ──────────────────────────────────────\n"
-printf "       Open the repo → Cmd+Shift+P → \"Reopen in Container\"\n"
-
+printf "       oh shell                         # enter the sandbox\n"
+printf "                                        # then pick your agent: claude, codex, opencode, pi, ...\n"
+printf "       oh ps | oh logs | oh restart     # inspect and control it\n"
+printf "       oh stop                          # stop it, keeping the volumes\n"
+printf "       oh destroy                       # tear it down (wipes the volumes)\n"
+printf "       oh --help                        # every subcommand\n"
+printf "       docs/lifecycle-commands.md       # the verb reference\n"
 printf "\n"
 printf "  ${CYAN}Optional capabilities${NC}  (installed live — no rebuild)\n"
 printf "  ──────────────────────────────────────\n"
@@ -465,13 +495,16 @@ printf "       oh harness install opencode      — OpenCode terminal agent\n"
 printf "       oh harness install deepagents    — LangChain DeepAgents\n"
 printf "       oh harness install grok-build    — xAI Grok Build\n"
 printf "       oh tool install agent-browser    — headless Chromium for screenshots / previews (~1 GB)\n"
-printf "                                          (each uncomments the .devcontainer/.env key for you)\n"
+printf "                                          (each flips the matching install.* flag in oh.json)\n"
 printf "\n"
 printf "  ${CYAN}Messaging gateways${NC}\n"
 printf "  ──────────────────────────────────────\n"
-printf "       inside the sandbox:  gateway pi | gateway hermes | gateway status\n"
-printf "       from the host:       make gateway <pi|hermes>\n"
-printf "       details:             docs/integrations/slack.md\n"
+printf "       oh gateway pi | oh gateway hermes | oh gateway status\n"
+printf "       details: docs/integrations/slack.md\n"
+printf "\n"
+printf "  ${CYAN}VS Code (alternative)${NC}\n"
+printf "  ──────────────────────────────────────\n"
+printf "       Open the repo → Cmd+Shift+P → \"Attach to Running Container\"\n"
 
 if [ "${__GH_AUTOCONFIGURED:-0}" = "0" ]; then
   printf "\n"

@@ -72,11 +72,6 @@ git rm -r --cached --ignore-unmatch .oh/tasks/*/  # remove sub-dirs if any leake
 # Research wiki corpus — keep README anchors only
 git checkout upstream/development -- .oh/skills/wiki/corpus/ 2>/dev/null || \
   git checkout upstream/development -- .claude/skills/wiki/corpus/ 2>/dev/null || true
-# Agent identity files — keep public stubs only
-git checkout upstream/development -- .oh/context/IDENTITY.md
-git checkout upstream/development -- .oh/context/SOUL.md
-git checkout upstream/development -- .oh/context/USER.md
-git checkout upstream/development -- .oh/context/TOOLS.md
 # Agent folders (docs/agents/, .oh/tasks/archive/) if present
 git checkout upstream/development -- docs/agents/ 2>/dev/null || true
 # Codex plans / local promotion notes
@@ -85,7 +80,7 @@ git checkout upstream/development -- .codex/plans/ 2>/dev/null || true
 
 Verify each sanitized path is clean:
 ```bash
-git diff upstream/development HEAD -- .oh/tasks/ .oh/context/ .codex/plans/
+git diff upstream/development HEAD -- .oh/tasks/ .codex/plans/
 ```
 Output must be empty. If not, inspect the diff and reset the leaking paths.
 
@@ -116,12 +111,12 @@ Fix any regressions before continuing.
 
 Check upstream's expected timezone for each cron file:
 ```bash
-git grep -n timezone upstream/development -- .oh/crons/
+git grep -n timezone upstream/development -- crons/
 ```
 
 Compare against the merged tree:
 ```bash
-git grep -n timezone -- .oh/crons/
+git grep -n timezone -- crons/
 ```
 
 Do NOT carry origin's `timezone: America/Denver` operator locale into the

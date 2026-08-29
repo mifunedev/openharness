@@ -54,8 +54,8 @@ Read the following before spawning agents. Pass the assembled snapshot to every 
 # Harness structure
 ls "$AUDIT_ROOT/.claude/skills/"
 ls "$AUDIT_ROOT/.claude/agents/" 2>/dev/null || echo "no agents dir"
-ls "$AUDIT_ROOT/.oh/crons/" 2>/dev/null || echo "no crons"
-tail -20 "$AUDIT_ROOT/.oh/crons/.cron.log" 2>/dev/null
+ls "$AUDIT_ROOT/crons/" 2>/dev/null || echo "no crons"
+tail -20 "$AUDIT_ROOT/crons/.cron.log" 2>/dev/null
 ls "$AUDIT_ROOT/.oh/skills/wiki/corpus/" 2>/dev/null | head -20
 
 # Package health
@@ -67,14 +67,6 @@ ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
 
 # Worktrees
 git -C "$AUDIT_ROOT" worktree list 2>/dev/null
-
-# Cross-session operating principles (tracked, shared).
-if [ -r "$AUDIT_ROOT/.oh/context/IDENTITY.md" ]; then
-  printf 'identity: loaded %s\n' "$AUDIT_ROOT/.oh/context/IDENTITY.md"
-  tail -40 "$AUDIT_ROOT/.oh/context/IDENTITY.md"
-else
-  printf 'identity: missing-or-unreadable %s\n' "$AUDIT_ROOT/.oh/context/IDENTITY.md"
-fi
 ```
 
 Assemble a **Context Snapshot** (compact markdown, ~300 words):
@@ -126,7 +118,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Developer onboarding friction** — Read `.devcontainer/`, `Makefile`, `.oh/install/`, `CLAUDE.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
+> 1. **Developer onboarding friction** — Read `.devcontainer/`, `.oh/cli/`, `.oh/install/`, `CLAUDE.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
 >
 > 2. **Skill consistency** — Read every `SKILL.md` under `.claude/skills/`. Check: does each have valid YAML frontmatter (name, description)? Does each follow imperative instructions? Is any referenced nowhere (potentially stale)?
 >
@@ -182,11 +174,11 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Security posture** — Check: is the Docker socket mounted into containers (`/var/run/docker.sock`)? Are any containers running with `--privileged` or `user: root`? Are there default passwords or hardcoded secrets in compose files or entrypoints? Is sudo unrestricted inside the sandbox?
 >
-> 2. **Cron reliability** — Read all cron definitions in `.oh/crons/`. For each: is there a watchdog/restart mechanism? What happens if the cron runtime crashes — does it auto-recover? Is the cron/daemon config present and valid?
+> 2. **Cron reliability** — Read all cron definitions in `crons/`. For each: is there a watchdog/restart mechanism? What happens if the cron runtime crashes — does it auto-recover? Is the cron/daemon config present and valid?
 >
 > 3. **Worktree cleanup** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list`. Identify orphaned agent branches (`agent/*`) with no recent commits (check `git log --since="7 days ago"`). Is there any automated cleanup?
 >
-> 4. **State corruption risks** — Look for: shared files written by multiple agents concurrently (e.g., `.oh/crons/.cron.log`), no file locking on append operations, mid-commit crash scenarios (partial writes to critical files), compose volumes that could diverge.
+> 4. **State corruption risks** — Look for: shared files written by multiple agents concurrently (e.g., `crons/.cron.log`), no file locking on append operations, mid-commit crash scenarios (partial writes to critical files), compose volumes that could diverge.
 >
 > **Return format (Ultra compression):**
 > ```
@@ -208,11 +200,11 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > 1. **Wiki utilization** — List all files under `.oh/skills/wiki/corpus/`. For each, check if it has substantive content (>10 lines) or is a placeholder stub. What percentage is populated?
 >
-> 2. **Cron health** — For each cron definition in `.oh/crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check `.oh/crons/.cron.log` for cron execution traces.
+> 2. **Cron health** — For each cron definition in `crons/`, classify: ACTIVE (recently logged evidence), STALE (defined but no recent log evidence), MISCONFIGURED (broken frontmatter or missing schedule). Check `crons/.cron.log` for cron execution traces.
 >
 > 3. **Agent worktree status** — In the source checkout listed as `AUDIT_ROOT`, run `git worktree list` and `git branch -a | grep agent/`. Classify each: ACTIVE (commits in last 7 days), IDLE (commits 7-30 days ago), ORPHANED (no commits in 30+ days or branch deleted).
 >
-> 5. **Skill usage patterns** — Use the Context Snapshot's `.oh/crons/.cron.log` excerpt plus in-repo references; keep `.claude/skills/` existence checks on `AUDIT_ROOT`. Which skills are referenced by a cron, a workflow, or another skill (evidence of use)? Which exist in `.claude/skills/` but are referenced nowhere (potentially stale or unknown)?
+> 5. **Skill usage patterns** — Use the Context Snapshot's `crons/.cron.log` excerpt plus in-repo references; keep `.claude/skills/` existence checks on `AUDIT_ROOT`. Which skills are referenced by a cron, a workflow, or another skill (evidence of use)? Which exist in `.claude/skills/` but are referenced nowhere (potentially stale or unknown)?
 >
 > **Return format (Ultra compression):**
 > ```
@@ -328,9 +320,8 @@ Return this structured observation to the outer dispatcher; do not report a run 
 | Resource | Path |
 |----------|------|
 | Orchestrator skills | `.claude/skills/` |
-| Crons | `.oh/crons/` |
-| Cron liveness | `.oh/crons/.cron.log` |
-| Operating principles | `.oh/context/IDENTITY.md` |
+| Crons | `crons/` |
+| Cron liveness | `crons/.cron.log` |
 | Wiki | `.oh/skills/wiki/corpus/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |

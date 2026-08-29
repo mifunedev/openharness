@@ -17,7 +17,7 @@ Use this when changing how Open Harness skills are shared across agent runtimes.
 When moving or renaming the canonical skill path, update all path-sensitive callers, not just the symlink:
 
 - CI path filters and runner invocations, e.g. `.github/workflows/*` should watch/use `.oh/skills/**` and `bash .oh/skills/eval/run.sh`.
-- Cron prompts/runbooks that invoke skill scripts, e.g. `.oh/crons/heartbeat.md`.
+- Cron prompts/runbooks that invoke skill scripts, e.g. `crons/heartbeat.md`.
 - Eval probes that assert exact paths or inspect skill fixtures, e.g. `eval-ci-gate` and prompt-miner fixture probes.
 - Docs and runtime README files: `AGENTS.md`, `.hermes/README.md`, `docs/installation.md`, `docs/harnesses/hermes.md`, changelog.
 - The governing skill docs themselves: `harness-context` and its source-of-truth references.

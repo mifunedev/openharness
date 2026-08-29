@@ -56,6 +56,7 @@ services:
       - deepagents-auth:/home/sandbox/.deepagents
       - herdr-data:/home/sandbox/.herdr
       - cloudflared-auth:/home/sandbox/.cloudflared
+      - tailscale-state:/home/sandbox/.tailscale
       - ssh-config:/home/sandbox/.ssh
       # config-dir covers all of ~/.config (gh CLI auth included);
       # entrypoint.sh chowns both dirs to the synced sandbox UID on boot
@@ -80,6 +81,7 @@ services:
       - GH_TOKEN=${GH_TOKEN:-}
       - XAI_API_KEY=${XAI_API_KEY:-}
       - INSTALL_AGENT_BROWSER=${INSTALL_AGENT_BROWSER:-false}
+      - INSTALL_TAILSCALE=${INSTALL_TAILSCALE:-false}
       - SKIP_PNPM_INSTALL=${SKIP_PNPM_INSTALL:-0}
       - INSTALL_HERMES=${INSTALL_HERMES:-false}
       - HERMES_HOME=${OH_PROJECT_ROOT:-/home/sandbox/harness}/.hermes
@@ -111,6 +113,7 @@ volumes:
   deepagents-auth:
   herdr-data:
   cloudflared-auth:
+  tailscale-state:
   ssh-config:
   config-dir:
   cc-safety-net:

@@ -15,18 +15,19 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", ".."
 const read = (p: string): string => readFileSync(join(REPO_ROOT, p), "utf8");
 
 describe("tool catalog shape", () => {
-  it("lists the five known tools", () => {
+  it("lists the six known tools", () => {
     expect(toolIds()).toEqual([
       "agent-browser",
       "herdr",
       "cloudflared",
       "docker-cli",
       "gh",
+      "tailscale",
     ]);
   });
 
-  it("has exactly one installable tool", () => {
-    expect(installableToolIds()).toEqual(["agent-browser"]);
+  it("has exactly two installable tools", () => {
+    expect(installableToolIds()).toEqual(["agent-browser", "tailscale"]);
   });
 
   it("makes every non-installable tool say why", () => {
@@ -49,7 +50,7 @@ describe("tool catalog shape", () => {
 
   it("declares a version probe only where the flag is a safe standard", () => {
     const withVersion = TOOL_CATALOG.filter((t) => t.versionArgv !== undefined).map((t) => t.id);
-    expect(withVersion).toEqual(["cloudflared", "docker-cli", "gh"]);
+    expect(withVersion).toEqual(["cloudflared", "docker-cli", "gh", "tailscale"]);
     for (const t of TOOL_CATALOG) {
       if (t.versionArgv) expect(t.versionArgv, t.id).toEqual([t.binary, "--version"]);
     }
@@ -137,6 +138,76 @@ describe("agent-browser matches the entrypoint that really installs it", () => {
     expect(read(".devcontainer/docker-compose.yml")).toContain("INSTALL_AGENT_BROWSER");
     expect(read("docs/configuration.md")).toMatch(
       /^\| `install\.agentBrowser` \|.*`INSTALL_AGENT_BROWSER`/m,
+    );
+  });
+});
+
+describe("tailscale matches the entrypoint that really installs it", () => {
+  const ts = findTool("tailscale")!;
+  const ENTRYPOINT = read(".devcontainer/entrypoint.sh");
+  const VERSION = "1.102.3";
+  const SHA_AMD64 = "36ddd9b51be57ffc2990cf76323cfa13643bfbb1b8a969f6183fa164741cdef5";
+  const SHA_ARM64 = "a0fa1b154af8c61f862a2259f559f7396d96c0225f4a863eae2333e1546bbe25";
+
+  it("carries the entrypoint guard, not a build arg", () => {
+    expect(ts.entrypointGuard).toBe("INSTALL_TAILSCALE");
+    expect(Object.keys(ts)).not.toContain("buildArg");
+    expect(ts.toolKey).toBe("tailscale");
+    expect(ts.kind).toBe("opt-in");
+  });
+
+  it("is installed by the entrypoint and is ABSENT from the Dockerfile", () => {
+    expect(ENTRYPOINT).toContain("INSTALL_TAILSCALE");
+    expect(read(".devcontainer/Dockerfile")).not.toContain("INSTALL_TAILSCALE");
+  });
+
+  it("pins the same version the entrypoint pins", () => {
+    expect(ts.installArgv!.join(" ")).toContain(`tailscale_${VERSION}_`);
+    expect(ENTRYPOINT).toContain(`tailscale_${VERSION}_`);
+  });
+
+  it("verifies the same per-arch sha256 the entrypoint verifies", () => {
+    const argv = ts.installArgv!.join(" ");
+    for (const sha of [SHA_AMD64, SHA_ARM64]) {
+      expect(argv, sha).toContain(sha);
+      expect(ENTRYPOINT, sha).toContain(sha);
+    }
+    expect(argv).toContain("sha256sum -c -");
+    expect(ENTRYPOINT).toContain("sha256sum -c -");
+  });
+
+  it("downloads from the pinned stable base the entrypoint uses", () => {
+    const base = "https://pkgs.tailscale.com/stable/";
+    expect(ts.installArgv!.join(" ")).toContain(base);
+    expect(ENTRYPOINT).toContain(base);
+  });
+
+  it("installs as root because the binaries land in /usr/local/bin", () => {
+    expect(ts.installUser).toBe("root");
+    expect(ts.installArgv!.join(" ")).toContain("/usr/local/bin/tailscale");
+    expect(ts.installArgv!.join(" ")).toContain("/usr/local/bin/tailscaled");
+  });
+
+  it("never joins a tailnet — installation is not authentication", () => {
+    const argv = ts.installArgv!.join(" ");
+    expect(argv).not.toContain("tailscale up");
+    expect(argv).not.toMatch(/(^|[^d])tailscaled\s+--tun/);
+  });
+
+  it("drops the entrypoint's log cosmetics, which would eat the exit code", () => {
+    const argv = ts.installArgv!.join(" ");
+    expect(argv).not.toContain("[entrypoint]");
+    expect(argv).not.toContain("tail -");
+  });
+
+  it("arms no download gate — the tarball is small", () => {
+    expect(ts.downloadSize).toBeUndefined();
+  });
+
+  it("keeps the env plumbing wired end to end", () => {
+    expect(read(".devcontainer/docker-compose.yml")).toContain("INSTALL_TAILSCALE");
+    expect(read("docs/configuration.md")).toMatch(
+      /^\| `install\.tailscale` \|.*`INSTALL_TAILSCALE`/m,
     );
   });
 });

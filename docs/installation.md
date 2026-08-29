@@ -292,6 +292,7 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 | Hermes | `hermes` | Nous Research's self-improving agent CLI | optional: `oh harness install hermes` |
 | Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | optional: `oh harness install grok-build` |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: `oh tool install agent-browser` |
+| Tailscale | `tailscale` | Private tailnet access for remote/mobile T3 Code (userspace networking; no container capabilities) | optional: `oh tool install tailscale` |
 
 ### Runtimes & package managers
 
@@ -307,6 +308,20 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 `oh tool list` reports which of these are present, and `oh tool status <name>`
 adds a version where the tool has a verified version flag. They are baked into
 the image, so there is nothing to install.
+
+Two tools are **not** baked in and install on demand with `oh tool install <name>`:
+`agent-browser` and `tailscale`. `oh tool install` persists the opt-in in the
+tracked `oh.json` (`install.agentBrowser`, `install.tailscale`) so it survives
+container recreation, and installs into a running sandbox when one is up. Both
+installs are idempotent. If no sandbox is running, only the flag is persisted —
+run `oh sandbox` and the entrypoint installs the tool on boot. Neither needs an
+image rebuild.
+
+Installing `tailscale` places the `tailscale` and `tailscaled` binaries in the
+sandbox and nothing more. It starts no daemon and joins no tailnet. Networking
+activates only when a human starts `tailscaled` in userspace-networking mode and
+runs `tailscale up` interactively — see
+[Connecting → Mobile access over Tailscale](connecting.md#mobile-access-over-tailscale).
 
 | Tool | Purpose |
 |------|---------|
@@ -353,6 +368,7 @@ Auth credentials and Herdr workspace state survive container rebuilds via named 
 - `hermes-auth` → `~/.hermes` (Hermes auth only; non-auth runtime state defaults to project-local `~/harness/.hermes` when Hermes is enabled (`install.hermes: true` in `oh.json`))
 - `grok-auth` → `~/.grok` (all Grok Build user state: auth, config, sessions, memory, skills/plugins, logs; mounted alongside the other agent auth volumes and used by Grok Build when `install.grokBuild: true` in `oh.json`). Cached OAuth/session state in `~/.grok/auth.json` takes precedence over `XAI_API_KEY`; if an API key seems ignored, run `grok logout` or reset the volume.
 - `cloudflared-auth` → `~/.cloudflared` (Cloudflare tunnel credentials, when used)
+- `tailscale-state` → `~/.tailscale` (Tailscale node identity and daemon state, when `install.tailscale: true` in `oh.json`; keeps the node from re-authenticating on every container recreate)
 - `ssh-config` → `~/.ssh` (user SSH keys / known_hosts; entrypoint enforces `chmod 700`)
 - `config-dir` → `~/.config` (all XDG tool config, including the GitHub CLI tokens under `~/.config/gh` and Herdr settings)
 - `herdr-data` → `~/.herdr` (Herdr-created worktrees and related data; session metadata is under `~/.config/herdr`)

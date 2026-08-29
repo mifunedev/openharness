@@ -65,6 +65,20 @@ describe("install flags never reach the secrets dotenv", () => {
     expect(lstatSync(link).isSymbolicLink()).toBe(true);
   });
 
+  it("`oh tool install tailscale --persist-only` writes oh.json and leaves .env byte-identical", async () => {
+    const root = makeRepo();
+    const before = readFileSync(secretsFilePath(root), "utf8");
+    const { io, out } = makeIo();
+
+    expect(await runToolInstall("tailscale", { cwd: root, persistOnly: true }, io)).toBe(0);
+
+    expect(readConfig(root)).toMatchObject({ install: { tailscale: true } });
+    expect(readFileSync(secretsFilePath(root), "utf8")).toBe(before);
+    expect(before).not.toMatch(/INSTALL_/);
+    expect(out.join("")).toContain("oh.json: set install.tailscale=true");
+    expect(out.join("")).not.toContain(".devcontainer/.env");
+  });
+
   it("`oh harness install --persist-only` writes oh.json and leaves .env byte-identical", async () => {
     const root = makeRepo();
     const before = readFileSync(secretsFilePath(root), "utf8");

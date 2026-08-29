@@ -28,6 +28,7 @@ export const INSTALL_FIELDS: Record<string, string> = {
   deepagents: "install.deepagents",
   hermes: "install.hermes",
   agent_browser: "install.agentBrowser",
+  tailscale: "install.tailscale",
 };
 
 export const CONFIG_FIELD_BY_ENV_KEY: Record<string, string> = {
@@ -37,6 +38,7 @@ export const CONFIG_FIELD_BY_ENV_KEY: Record<string, string> = {
   INSTALL_DEEPAGENTS: INSTALL_FIELDS.deepagents,
   INSTALL_HERMES: INSTALL_FIELDS.hermes,
   INSTALL_AGENT_BROWSER: INSTALL_FIELDS.agent_browser,
+  INSTALL_TAILSCALE: INSTALL_FIELDS.tailscale,
 };
 
 export function installFieldPath(key: string): string {

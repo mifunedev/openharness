@@ -9,7 +9,8 @@
     "grokBuild": false,
     "deepagents": false,
     "hermes": false,
-    "agentBrowser": false
+    "agentBrowser": false,
+    "tailscale": false
   },
   "access": {
     "ssh": false,

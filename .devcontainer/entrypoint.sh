@@ -548,6 +548,46 @@ if [ "${INSTALL_AGENT_BROWSER:-false}" = "true" ] && ! command -v agent-browser 
     || echo "[entrypoint] agent-browser install failed — skipping"
 fi
 
+if [ "${INSTALL_TAILSCALE:-false}" = "true" ]; then
+  install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.tailscale 2>/dev/null || true
+
+  if ! command -v tailscale &>/dev/null; then
+    case "$(dpkg --print-architecture)" in
+      amd64)
+        ts_tarball=tailscale_1.102.3_amd64.tgz
+        ts_sha=36ddd9b51be57ffc2990cf76323cfa13643bfbb1b8a969f6183fa164741cdef5
+        ;;
+      arm64)
+        ts_tarball=tailscale_1.102.3_arm64.tgz
+        ts_sha=a0fa1b154af8c61f862a2259f559f7396d96c0225f4a863eae2333e1546bbe25
+        ;;
+      *)
+        ts_tarball=""
+        ts_sha=""
+        ;;
+    esac
+
+    if [ -z "$ts_tarball" ]; then
+      echo "[entrypoint] WARNING: no pinned Tailscale build for $(dpkg --print-architecture) — skipping" >&2
+    else
+      echo "[entrypoint] Installing ${ts_tarball%.tgz} (INSTALL_TAILSCALE=true)..."
+      ts_tmp="$(mktemp -d)"
+      if curl -fsSL "https://pkgs.tailscale.com/stable/${ts_tarball}" -o "$ts_tmp/$ts_tarball" \
+         && echo "${ts_sha}  $ts_tmp/$ts_tarball" | sha256sum -c - \
+         && tar -xzf "$ts_tmp/$ts_tarball" -C "$ts_tmp" \
+         && install -m 0755 "$ts_tmp/${ts_tarball%.tgz}/tailscale" /usr/local/bin/tailscale \
+         && install -m 0755 "$ts_tmp/${ts_tarball%.tgz}/tailscaled" /usr/local/bin/tailscaled; then
+        echo "[entrypoint] ${ts_tarball%.tgz} installed to /usr/local/bin"
+      else
+        echo "[entrypoint] WARNING: Tailscale install failed — skipping" >&2
+      fi
+      rm -rf "$ts_tmp"
+      unset ts_tmp
+    fi
+    unset ts_tarball ts_sha
+  fi
+fi
+
 for hook in /usr/local/bin/*-entrypoint-hook.sh; do
   [ -x "$hook" ] && "$hook"
 done

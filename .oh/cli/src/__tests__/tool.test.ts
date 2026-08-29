@@ -107,6 +107,19 @@ const agentBrowserFlag = (root: string): unknown =>
   (JSON.parse(readFileSync(ohConfigPath(root), "utf8")) as { install?: Record<string, unknown> })
     .install?.agentBrowser;
 
+const tailscaleFlag = (root: string): unknown =>
+  (JSON.parse(readFileSync(ohConfigPath(root), "utf8")) as { install?: Record<string, unknown> })
+    .install?.tailscale;
+
+const absentTailscale = (cmd: string, args: string[]): RunResult | undefined =>
+  isExecOf(cmd, args, "command -v tailscale") ? { status: 1, stdout: "", stderr: "" } : undefined;
+
+const isTailscaleVersionExec = (cmd: string, args: string[]): boolean =>
+  cmd === "docker" && args[0] === "exec" && args.join(" ").includes("tailscale --version");
+
+const isTailscaleInstallCall = (c: RecordedCall): boolean =>
+  c.cmd === "docker" && c.args[0] === "exec" && c.args.some((a) => a.includes("sha256sum -c -"));
+
 describe("oh tool — argument parsing", () => {
   it("shows help with no args", () => {
     const r = parseToolArgs([]);
@@ -163,7 +176,7 @@ describe("oh tool list / status", () => {
     const { io, out } = makeIo();
     expect(await runToolList({ cwd: root, run: liveHost().run }, io)).toBe(0);
     const text = out.join("");
-    for (const id of ["agent-browser", "herdr", "cloudflared", "docker-cli", "gh"]) {
+    for (const id of ["agent-browser", "herdr", "cloudflared", "docker-cli", "gh", "tailscale"]) {
       expect(text, id).toContain(id);
     }
     expect(text).toContain("baked-in");
@@ -339,6 +352,92 @@ describe("oh tool install — the other exits", () => {
     const { io } = makeIo(true);
     expect(await runToolInstall("chromium", { cwd: root, run }, io)).toBe(1);
     expect(calls.length).toBe(0);
+  });
+});
+
+describe("oh tool install tailscale", () => {
+  it("--persist-only writes the flag and execs nothing", async () => {
+    const root = makeRepo();
+    const { calls, run } = liveHost(absentTailscale);
+    const { io, out } = makeIo();
+    expect(await runToolInstall("tailscale", { cwd: root, run, persistOnly: true }, io)).toBe(0);
+    expect(tailscaleFlag(root)).toBe(true);
+    expect(calls.length).toBe(0);
+    expect(out.join("")).toContain("oh.json: set install.tailscale=true");
+  });
+
+  it("execs the pinned install argv as root, with no download prompt", async () => {
+    const root = makeRepo();
+    const { calls, run } = liveHost(absentTailscale);
+    const { io, asked, out } = makeIo(true);
+    expect(await runToolInstall("tailscale", { cwd: root, run }, io)).toBe(0);
+    expect(asked).toEqual([]);
+    const install = calls.find(isTailscaleInstallCall);
+    expect(install).toBeDefined();
+    expect(install!.args.join(" ")).toContain("-u root");
+    expect(install!.args.join(" ")).toContain("pkgs.tailscale.com/stable/");
+    expect(tailscaleFlag(root)).toBe(true);
+    expect(out.join("")).toContain("installed");
+  });
+
+  it("is idempotent — an already-present binary short-circuits", async () => {
+    const root = makeRepo();
+    const { calls, run } = liveHost((cmd, args) =>
+      isExecOf(cmd, args, "command -v tailscale")
+        ? { status: 0, stdout: "", stderr: "" }
+        : undefined,
+    );
+    const { io, out } = makeIo(true);
+    expect(await runToolInstall("tailscale", { cwd: root, run }, io)).toBe(0);
+    expect(calls.some(isTailscaleInstallCall)).toBe(false);
+    expect(out.join("")).toContain("already installed");
+  });
+
+  it("keeps the flag set when the installer fails", async () => {
+    const root = makeRepo();
+    const { run } = liveHost((cmd, args) => {
+      if (isExecOf(cmd, args, "sha256sum -c -")) return { status: 9, stdout: "", stderr: "" };
+      return absentTailscale(cmd, args);
+    });
+    const { io, err } = makeIo(true);
+    expect(await runToolInstall("tailscale", { cwd: root, run }, io)).toBe(9);
+    expect(tailscaleFlag(root)).toBe(true);
+    expect(err.join("")).toContain("next container start");
+  });
+});
+
+describe("oh tool status tailscale", () => {
+  it("reports enabled, installed and version as JSON", async () => {
+    const root = makeRepo();
+    const { run } = liveHost((cmd, args) =>
+      isTailscaleVersionExec(cmd, args)
+        ? { status: 0, stdout: "1.102.3\n  tailscale commit: abc\n", stderr: "" }
+        : undefined,
+    );
+    const { io: persistIo } = makeIo();
+    await runToolInstall("tailscale", { cwd: root, run, persistOnly: true }, persistIo);
+
+    const { io, out } = makeIo();
+    expect(await runToolStatus("tailscale", { cwd: root, run, json: true }, io)).toBe(0);
+    const status = JSON.parse(out.join(""));
+    expect(status.id).toBe("tailscale");
+    expect(status.kind).toBe("opt-in");
+    expect(status.enabled).toBe(true);
+    expect(status.installed).toBe(true);
+    expect(status.version).toBe("1.102.3");
+    expect(status.installable).toBe(true);
+  });
+
+  it("reports not-installed and no version when the binary is absent", async () => {
+    const root = makeRepo();
+    const { calls, run } = liveHost(absentTailscale);
+    const { io, out } = makeIo();
+    await runToolStatus("tailscale", { cwd: root, run, json: true }, io);
+    const status = JSON.parse(out.join(""));
+    expect(status.enabled).toBe(false);
+    expect(status.installed).toBe(false);
+    expect(status.version).toBeNull();
+    expect(calls.some((c) => isTailscaleVersionExec(c.cmd, c.args))).toBe(false);
   });
 });
 

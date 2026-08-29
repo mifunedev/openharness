@@ -104,6 +104,7 @@ describe("install flags", () => {
     expect(installFieldPath("opencode")).toBe("install.opencode");
     expect(installFieldPath("grok_build")).toBe("install.grokBuild");
     expect(installFieldPath("agent_browser")).toBe("install.agentBrowser");
+    expect(installFieldPath("tailscale")).toBe("install.tailscale");
   });
 
   it("writes the flag to oh.json and never to a dotenv", () => {
@@ -114,6 +115,17 @@ describe("install flags", () => {
 
     expect(readConfig(root)).toMatchObject({ install: { hermes: true } });
     expect(isInstallFlagEnabled(root, "hermes")).toBe(true);
+    expectNoDotenv(root);
+  });
+
+  it("writes install.tailscale from the tailscale flag", () => {
+    const root = makeRepo();
+    expect(isInstallFlagEnabled(root, "tailscale")).toBe(false);
+
+    expect(setInstallFlag(root, "tailscale")).toBe("updated");
+
+    expect(readConfig(root)).toMatchObject({ install: { tailscale: true } });
+    expect(isInstallFlagEnabled(root, "tailscale")).toBe(true);
     expectNoDotenv(root);
   });
 
@@ -136,6 +148,13 @@ describe("setEnvValue", () => {
     const root = makeRepo();
     expect(setEnvValue(root, "DOCKER_SOCKET", "true")).toBe("updated");
     expect(readConfig(root)).toMatchObject({ access: { dockerSocket: true } });
+    expectNoDotenv(root);
+  });
+
+  it("routes INSTALL_TAILSCALE to install.tailscale", () => {
+    const root = makeRepo();
+    expect(setEnvValue(root, "INSTALL_TAILSCALE", "true")).toBe("updated");
+    expect(readConfig(root)).toMatchObject({ install: { tailscale: true } });
     expectNoDotenv(root);
   });
 

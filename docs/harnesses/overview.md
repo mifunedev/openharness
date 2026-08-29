@@ -118,8 +118,8 @@ Web UI on `http://localhost:3773` over an already-authenticated provider. Prefer
 Manual terminal fallback:
 
 ```bash
-tmux new-session -d -s harness-t3code 'npx t3 2>&1 | tee /tmp/harness-t3code.log'
-tmux capture-pane -t harness-t3code -p | grep -i pairingUrl
+tmux new-session -d -s agent-t3code 'npx --yes t3 serve 2>&1 | tee /tmp/agent-t3code.log'
+tmux capture-pane -t agent-t3code -p | grep -iE 'pair|token|url'
 ```
 
 Open the printed pairing URL (`http://localhost:3773/pair#token=…`) in the Simple Browser tab. Full setup: [T3 Code](./t3code.md).

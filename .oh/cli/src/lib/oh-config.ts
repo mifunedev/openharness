@@ -19,6 +19,7 @@ export interface InstallFlags {
   deepagents?: boolean;
   hermes?: boolean;
   agentBrowser?: boolean;
+  tailscale?: boolean;
 }
 
 export interface AccessSettings {
@@ -105,6 +106,7 @@ export function defaultOhConfig(name: string): OhConfig {
       deepagents: false,
       hermes: false,
       agentBrowser: false,
+      tailscale: false,
     },
     access: {
       ssh: false,
@@ -181,7 +183,14 @@ export function validateOhConfig(value: unknown): OhConfig {
 
   const install = expectSection(record, "install");
   if (install) {
-    for (const key of ["opencode", "grokBuild", "deepagents", "hermes", "agentBrowser"]) {
+    for (const key of [
+      "opencode",
+      "grokBuild",
+      "deepagents",
+      "hermes",
+      "agentBrowser",
+      "tailscale",
+    ]) {
       expectBoolean(install, key, "install.");
     }
   }
@@ -312,6 +321,7 @@ export const OH_CONFIG_FIELDS: readonly OhConfigField[] = [
   { path: "install.deepagents", type: "boolean" },
   { path: "install.hermes", type: "boolean" },
   { path: "install.agentBrowser", type: "boolean" },
+  { path: "install.tailscale", type: "boolean" },
   { path: "access.ssh", type: "boolean" },
   { path: "access.sshPort", type: "port" },
   { path: "access.sshPasswordAuth", type: "boolean" },

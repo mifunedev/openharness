@@ -4,6 +4,8 @@ Ignored scratch space for git worktrees of this repository. Every repository kee
 its worktrees at its own root, so a project clone under `projects/` has a
 `.worktrees/` of its own that follows the same rules as this one.
 
+`CLAUDE.md` is a provider-compatibility symlink to this file. Edit `AGENTS.md`.
+
 | Subfolder | What lives here |
 | --------- | --------------- |
 | `agent/` | Per-agent checkouts — either a `git worktree` of an `agent/<name>` branch in this repo, or a standalone clone of a repo that adopts the Open Harness shape (including a fork of an orchestrator). |

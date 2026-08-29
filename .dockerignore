@@ -9,7 +9,9 @@
 !.claude/.example.env.claude
 .worktrees/*
 !.worktrees/AGENTS.md
+!.worktrees/CLAUDE.md
 projects/*
 !projects/AGENTS.md
+!projects/CLAUDE.md
 .git/
 node_modules/

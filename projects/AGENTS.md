@@ -8,6 +8,8 @@ Each clone is its own git boundary, with its own remote, branches, CI, and histo
 Never commit into one from the harness root, and never resolve a change here by
 resetting the harness checkout — the two repositories are independent.
 
+`CLAUDE.md` is a provider-compatibility symlink to this file. Edit `AGENTS.md`.
+
 Folder shape mirrors the remote:
 
 ```

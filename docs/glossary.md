@@ -12,7 +12,7 @@ Terms are listed alphabetically below.
 These names describe separate layers, not interchangeable jobs:
 
 - **Model** — The LLM selected by a provider; it proposes text and tool calls, while the surrounding agent, harness, and policy decide where those requests run and what is allowed. See the **model** glossary entry.
-- **Agent / CLI** — The process that wraps a model with tools, instructions, and session state, such as Claude Code, Codex, Pi, or a scoped `.oh/agents/` worker. See the **agent** glossary entry.
+- **Agent / CLI** — The process that wraps a model with tools, instructions, and session state, such as Claude Code, Codex, Pi, or a scoped worker defined under `.oh/agents/`. See the **agent** glossary entry.
 - **Harness** — The repo, Docker sandbox, and `.oh/` control plane that give agents a reproducible workspace and lifecycle. See the **harness** glossary entry.
 - **Loop** — A repeated workflow that the harness drives until a terminal state, such as the `/spec execute` implementation cycle ending after every story passes. See the **loop** and **terminal state** glossary entries.
 - **Policy** — The provider-portable rules, skills, and hooks that constrain agent behavior and tool use. See the **policy** and **tool** glossary entries.
@@ -22,9 +22,10 @@ These names describe separate layers, not interchangeable jobs:
 
 - **agent** — A model-driven worker that reads the workspace and does the task:
   an agent CLI (Claude Code, Codex, Pi, …) running inside the sandbox, or a
-  scoped sub-agent defined under `.oh/agents/` (e.g. `critic`, `implementer`,
-  `pm`) that the orchestrator spawns for a bounded job.
-  Source: [`.oh/agents/`](../.oh/agents/).
+  scoped sub-agent defined under `.oh/agents/` that the orchestrator spawns for
+  a bounded job. No sub-agent ships with the harness today; `.oh/agents/` is the
+  canonical place to define one.
+  Source: [`.oh/agents/README.md`](../.oh/agents/README.md).
 
 - **artifact** — Any inspectable file a workflow stage produces and a later stage
   or a human then consumes. The canonical example is the `.oh/tasks/<slug>/` task
@@ -63,7 +64,7 @@ These names describe separate layers, not interchangeable jobs:
 - **model** — The LLM an agent or CLI uses to produce reasoning, text, and
   tool-call requests. The model is only one part of an agent session; the
   harness, tools, and policy decide where it runs and which actions are allowed.
-  Source: [`.oh/agents/advisor.md`](../.oh/agents/advisor.md).
+  Source: [`docs/harnesses/overview.md`](harnesses/overview.md).
 
 - **orchestrator** — The root-level role that manages the sandbox lifecycle and
   git but does not write application code; its job is provisioning, scaffolding

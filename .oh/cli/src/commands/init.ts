@@ -228,7 +228,7 @@ export async function runInit(
     }
 
     writeClaudeAlias(wr, copyClaude);
-    writeNestedClaudeAliases(wr, templatesDir);
+    writeNestedClaudeAliases(wr, [templatesDir, path.join(sourceOh, "..")]);
 
     const fullTemplates = path.join(templatesDir, "full");
     if (existsSync(fullTemplates) && statSync(fullTemplates).isDirectory()) {
@@ -490,11 +490,13 @@ function linkReport(ctx: WriteCtx, linkRel: string, linkTarget: string): void {
   ctx.stats.created++;
 }
 
-const NESTED_AGENTS_DIRS = [".worktrees", "projects"];
+const NESTED_AGENTS_DIRS = [".worktrees", "projects", "crons"];
 
-function writeNestedClaudeAliases(ctx: WriteCtx, templatesDir: string): void {
+function writeNestedClaudeAliases(ctx: WriteCtx, sourceRoots: string[]): void {
   for (const dir of NESTED_AGENTS_DIRS) {
-    if (!existsSync(path.join(templatesDir, dir, "AGENTS.md"))) continue;
+    const guide = path.join(dir, "AGENTS.md");
+    const shipped = sourceRoots.some((root) => existsSync(path.join(root, guide)));
+    if (!shipped && !existsSync(path.join(ctx.t, guide))) continue;
     linkReport(ctx, `${dir}/CLAUDE.md`, "AGENTS.md");
   }
 }

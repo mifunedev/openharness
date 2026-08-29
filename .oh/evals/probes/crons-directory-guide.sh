@@ -21,6 +21,16 @@ if [[ -f "$ROOT/crons/README.md" ]]; then
   exit 1
 fi
 
+ALIAS="$ROOT/crons/CLAUDE.md"
+if [[ ! -L "$ALIAS" ]]; then
+  echo "REGRESSION: crons/CLAUDE.md must be a provider-compatibility symlink, not a copy" >&2
+  exit 1
+fi
+if [[ "$(readlink "$ALIAS")" != "AGENTS.md" ]]; then
+  echo "REGRESSION: crons/CLAUDE.md must point at the sibling AGENTS.md, got: $(readlink "$ALIAS")" >&2
+  exit 1
+fi
+
 if [[ "$(head -c 3 "$GUIDE")" == "---" ]]; then
   echo "REGRESSION: crons/AGENTS.md opens with frontmatter; the runtime would try to schedule the guide" >&2
   exit 1
@@ -38,5 +48,5 @@ if ! grep -Fq '`.oh/scripts/cron-runtime.ts`' "$GUIDE"; then
   exit 1
 fi
 
-echo "PASS: crons/AGENTS.md is the single cron operating contract, documents the reload rules, and is inert to the scheduler" >&2
+echo "PASS: crons/AGENTS.md is the single cron operating contract, carries its CLAUDE.md symlink, documents the reload rules, and is inert to the scheduler" >&2
 exit 0

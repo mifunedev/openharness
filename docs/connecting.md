@@ -162,14 +162,13 @@ Run it in a named tmux session so it survives a disconnect:
 ```bash
 tmux new-session -d -s agent-tailscaled \
   'tailscaled --tun=userspace-networking \
-              --socket=$HOME/.tailscale/tailscaled.sock \
               --statedir=$HOME/.tailscale'
 ```
 
 ### Step 3 — Join the tailnet
 
 ```bash
-tailscale --socket=$HOME/.tailscale/tailscaled.sock up
+tailscale up
 ```
 
 `tailscale up` prints a login URL. Open it in a browser and approve the node. This is the supported setup: an interactive human login. **Never commit a reusable Tailscale auth key**, and never print one into a log or a tracked file.

@@ -29,7 +29,6 @@ oh tool install tailscale
 
 tmux new-session -d -s agent-tailscaled \
   'tailscaled --tun=userspace-networking \
-              --socket=$HOME/.tailscale/tailscaled.sock \
               --statedir=$HOME/.tailscale 2>&1 | tee /tmp/agent-tailscaled.log'
 
 tailscale up

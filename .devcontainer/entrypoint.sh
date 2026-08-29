@@ -550,6 +550,7 @@ fi
 
 if [ "${INSTALL_TAILSCALE:-false}" = "true" ]; then
   install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.tailscale 2>/dev/null || true
+  install -d -o sandbox -g sandbox -m 0755 /var/run/tailscale 2>/dev/null || true
 
   if ! command -v tailscale &>/dev/null; then
     case "$(dpkg --print-architecture)" in

@@ -105,7 +105,7 @@ node_version_ok() {
 
 tailscaled_hint() {
   cat <<HINT
-       start it in tmux: tmux new-session -d -s ${TAILSCALED_SESSION} 'tailscaled --tun=userspace-networking --socket=\$HOME/.tailscale/tailscaled.sock --statedir=\$HOME/.tailscale'
+       start it in tmux: tmux new-session -d -s ${TAILSCALED_SESSION} 'tailscaled --tun=userspace-networking --statedir=\$HOME/.tailscale'
 HINT
 }
 
@@ -326,7 +326,8 @@ case "$ACTION" in
     fi
 
     mkdir -p "$(dirname "$LOG")"
-    : > "$LOG"
+    (umask 077; : > "$LOG")
+    chmod 600 "$LOG" 2>/dev/null || true
     tmux new-session -d -s "$SESSION" "$(serve_argv) 2>&1 | tee $(printf '%q' "$LOG")"
     echo "Started T3 Code in tmux session: $SESSION"
     echo "Launch command: $(serve_argv)"

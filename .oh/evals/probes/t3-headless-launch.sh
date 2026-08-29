@@ -41,8 +41,6 @@ grep -qE 'tmux new-session -d' "$SCRIPT" \
   || missing+=("$SCRIPT: the server is not launched with 'tmux new-session -d' — it would die with the terminal")
 grep -qF '0.0.0.0' "$SCRIPT" \
   && missing+=("$SCRIPT: mentions 0.0.0.0 — T3 Code must stay on loopback and be reached through the tailnet")
-grep -qF '22.16' "$SCRIPT" \
-  || missing+=("$SCRIPT: no Node 22.16 floor check — t3 serve fails opaquely on the base image's older 22.x")
 
 stub_absent="$WORK/stub-absent"
 mkdir -p "$stub_absent"
@@ -65,6 +63,25 @@ if ((doctor_code == 0)); then
 fi
 grep -qF 'oh tool install tailscale' <<<"$doctor_out" \
   || missing+=("$SCRIPT: 'doctor --tailscale' does not name 'oh tool install tailscale' as the fix (got: ${doctor_out//$'\n'/ })")
+
+stub_oldnode="$WORK/stub-oldnode"
+mkdir -p "$stub_oldnode"
+printf '#!/bin/sh\necho v22.15.0\n' > "$stub_oldnode/node"
+printf '#!/bin/sh\nexit 0\n' > "$stub_oldnode/npx"
+printf '#!/bin/sh\nexit 0\n' > "$stub_oldnode/tmux"
+chmod 0755 "$stub_oldnode"/*
+
+set +e
+oldnode_out="$(env -i PATH="$stub_oldnode" "$BASH_BIN" "$SCRIPT" doctor 2>&1)"
+oldnode_code=$?
+set -e
+if ((oldnode_code == 0)); then
+  missing+=("$SCRIPT: 'doctor' accepted Node v22.15.0 — the Node floor is not enforced at runtime")
+fi
+grep -qF 'v22.15.0' <<<"$oldnode_out" \
+  || missing+=("$SCRIPT: 'doctor' on Node v22.15.0 does not report the offending version (got: ${oldnode_out//$'\n'/ })")
+grep -qF '^22.16 || ^23.11 || >=24.10' <<<"$oldnode_out" \
+  || missing+=("$SCRIPT: 'doctor' on Node v22.15.0 does not name the supported range (got: ${oldnode_out//$'\n'/ })")
 
 stub_present="$WORK/stub-present"
 mkdir -p "$stub_present"

@@ -1,13 +1,39 @@
 # `crons/`
 
 Markdown-frontmatter cron definitions consumed by
-`scripts/cron-runtime.ts`. Each `<id>.md` file declares one scheduled
+`.oh/scripts/cron-runtime.ts`. Each `<id>.md` file declares one scheduled
 job; the runtime scans this directory at boot, schedules every enabled
 job via [Croner](https://github.com/Hexagon/croner), and re-fires the
 file's body as the next prompt to the active agent.
 
-See `scripts/cron-runtime.ts` for the runtime implementation
+These files are **agent instructions, not documentation**. A cron body is a
+prompt an agent executes unattended, on a schedule, with no operator in the
+loop — which is why this directory carries an `AGENTS.md` rather than a
+`README.md`. Read it before writing or editing a cron: the frontmatter
+contract, the failure tokens the runtime logs, and the reload rules below
+are what stand between a bad edit and a job that silently stops firing.
+
+A file here that is not a valid cron is skipped by predicate, not by name:
+`loadCrons` requires a line-1 `---` frontmatter block whose `id` matches the
+filename basename and whose `schedule` parses. This file has no frontmatter,
+so it never enters the scheduled set — the same reason it is safe to drop a
+non-cron doc in here.
+
+See `.oh/scripts/cron-runtime.ts` for the runtime implementation
 (frontmatter parsing, scheduling, overlap/catchup semantics).
+
+## Editing a cron — what takes effect when
+
+| Change | Takes effect |
+| --- | --- |
+| Body (the agent prompt) | Next fire, automatically — the runtime re-reads the file. Logs `BODY_RELOADED`. |
+| Frontmatter (`schedule`, `enabled`, `timezone`, `overlap`, `agent`, `tmux`, `worktree`, `preflight`) | Only after a `SIGHUP` reschedule or a runtime restart. Until then the **old** schedule is live. |
+| Adding or removing a `<id>.md` file | Only after a `SIGHUP` reschedule or a runtime restart. |
+| `.oh/scripts/cron-runtime.ts` itself | Only after a full runtime restart. |
+
+The frontmatter row is the one that bites: an edited `schedule:` looks applied
+in git and is not applied in the runtime. See
+[Reload schedules](#reload-schedules-sighup).
 
 ## File shape
 
@@ -98,14 +124,14 @@ returns before generating a shell wrapper or spawning an agent.
 
 | File | Schedule | Description |
 |------|----------|-------------|
-| `heartbeat.md` | `0 * * * *` (hourly) | Hourly pulse — review memory, surface anything urgent |
+| `heartbeat.md` | `0 * * * *` (hourly) — currently `enabled: false` | Hourly pulse — review memory, surface anything urgent |
 | `cleanup-tasks.md` | `0 23 * * 0` (Sun 23:00 MT) | Weekly `/spec execute` task sweep — archive completed tasks |
 | `eval-weekly.md` | `0 6 * * 0` (Sun 06:00 MT) | Weekly eval suite — run probes, log any regressions to memory |
 | `prompt-miner.md` | `0 5 * * *` (daily 05:00 MT) | Daily prompt-miner — mine 24h of session traces for prompt-quality markers; ship a top finding to the origin fork via `/spec` (opt-in `enabled: false`, cap-gated by `preflight: .oh/skills/prompt-miner/prompt-miner-caps.sh`) |
 
 ## tmux sessions
 
-The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that checks for `cron-system` and starts `scripts/cron-runtime.ts` whenever the runtime session is absent. Inspect it with `tmux attach -t cron-watchdog`; watchdog output tees to `/tmp/cron-watchdog.log`, and the runtime still tees to `/tmp/cron-system.log`. During migration, a legacy `system-cron` session blocks both `cron-watchdog` and `cron-system`; kill `system-cron` and restart/relaunch the sandbox to complete the migration.
+The devcontainer entrypoint starts `cron-watchdog`, a tmux supervisor that checks for `cron-system` and starts `.oh/scripts/cron-runtime.ts` whenever the runtime session is absent. Inspect it with `tmux attach -t cron-watchdog`; watchdog output tees to `/tmp/cron-watchdog.log`, and the runtime still tees to `/tmp/cron-system.log`. During migration, a legacy `system-cron` session blocks both `cron-watchdog` and `cron-system`; kill `system-cron` and restart/relaunch the sandbox to complete the migration.
 
 A job with `tmux: true` in its frontmatter runs each fire in its own detached tmux session instead of an in-process child, so the user can attach to a run, read its scrollback, and reattach later.
 
@@ -121,7 +147,7 @@ Jobs with `tmux` absent or `false` keep the default in-process spawn.
 
 ## Hot-reload
 
-A cron definition's **body** (the agent prompt) hot-reloads at fire time: the runtime re-reads the file just before each fire, so edits take effect at the next scheduled fire without a restart. On a read/parse error, the runtime falls back to the cached boot-time body and logs `BODY_RELOAD_ERR`. When a fire's body differs from the boot-time cached version, a `BODY_RELOADED` line appears in `crons/.cron.log` — this signal recurs on every fire after an edit until the runtime is restarted (which re-baselines). Schedule/frontmatter changes (`schedule`, `enabled`, `timezone`, `overlap`) and added/removed `crons/*.md` files now take effect via a `SIGHUP` reschedule (see [Reload schedules](#reload-schedules-sighup) below) — there is still no auto-watcher, so the reload is operator-triggered. A full runtime restart is only needed for `scripts/cron-runtime.ts` *code* changes. Rollback: remove the `reloadBody` call and restore the two `entry.body` usages in `scripts/cron-runtime.ts`.
+A cron definition's **body** (the agent prompt) hot-reloads at fire time: the runtime re-reads the file just before each fire, so edits take effect at the next scheduled fire without a restart. On a read/parse error, the runtime falls back to the cached boot-time body and logs `BODY_RELOAD_ERR`. When a fire's body differs from the boot-time cached version, a `BODY_RELOADED` line appears in `crons/.cron.log` — this signal recurs on every fire after an edit until the runtime is restarted (which re-baselines). Schedule/frontmatter changes (`schedule`, `enabled`, `timezone`, `overlap`) and added/removed `crons/*.md` files now take effect via a `SIGHUP` reschedule (see [Reload schedules](#reload-schedules-sighup) below) — there is still no auto-watcher, so the reload is operator-triggered. A full runtime restart is only needed for `.oh/scripts/cron-runtime.ts` *code* changes. Rollback: remove the `reloadBody` call and restore the two `entry.body` usages in `.oh/scripts/cron-runtime.ts`.
 
 ## Reload schedules (SIGHUP)
 
@@ -137,7 +163,7 @@ docker exec -u sandbox openharness sh -c 'kill -0 "$(cat crons/.pid)" 2>/dev/nul
 docker exec -u sandbox openharness kill -HUP "$(cat crons/.pid)"
 ```
 
-The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`; the `cron-watchdog` session will relaunch `node --experimental-strip-types scripts/cron-runtime.ts` in a fresh `cron-system` session (the documented start path from `.devcontainer/entrypoint.sh`).
+The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`; the `cron-watchdog` session will relaunch `node --experimental-strip-types .oh/scripts/cron-runtime.ts` in a fresh `cron-system` session (the documented start path from `.devcontainer/entrypoint.sh`).
 
 ## Override
 

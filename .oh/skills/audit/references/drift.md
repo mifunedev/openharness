@@ -243,7 +243,7 @@ only if it passes the predicate below (a leading `---` frontmatter block
 declaring a non-empty `schedule:` key that parses with the same Croner
 constructor used by `scripts/cron-runtime.ts`, not `enabled: false`, valid
 cron id, filename/id match, and safe `agent:` override) — so non-cron docs like
-`crons/README.md` and malformed cron files the runtime logs as `SCHED_INVALID`
+`crons/AGENTS.md` and malformed cron files the runtime logs as `SCHED_INVALID`
 are skipped by the predicate, never mtime-compared, and never counted.
 Qualification is property-based, not a hard-coded name list. The block also
 extracts the restart-required frontmatter field set for the diagnostic line:
@@ -254,7 +254,7 @@ INERT=()
 # scripts/cron-runtime.ts parseCronFile + loadCrons: a file the runtime never
 # loads cannot be "inert". A file qualifies IFF all of:
 #   1. first line is literally '---' (trailing \r stripped, CRLF-safe) — so a
-#      '---' inside a fenced code block (the crons/README.md trap) cannot match,
+#      '---' inside a fenced code block (the crons/AGENTS.md trap) cannot match,
 #   2. a closing '---' delimiter exists on a later line (well-formed frontmatter),
 #   3. the leading frontmatter has a non-empty, anchored, comment-excluding
 #      schedule: key (^[[:space:]]*schedule: — skips '# schedule:' and substring
@@ -264,7 +264,7 @@ INERT=()
 #   6. any agent: override is safe by the runtime's isValidAgentBin() contract,
 #   7. the schedule parses with Croner, matching the runtime's isValidSchedule()
 #      / SCHED_INVALID path so malformed schedules are skipped, not flagged inert.
-# Non-qualifying files (e.g. crons/README.md or invalid schedules) are skipped
+# Non-qualifying files (e.g. crons/AGENTS.md or invalid schedules) are skipped
 # silently — never mtime-compared, never counted toward the inert aggregate. The
 # predicate is property-based: no hard-coded cron name list or count.
 RESTART_REQUIRED_FRONTMATTER_FIELDS="schedule enabled agent tmux worktree preflight"
@@ -410,14 +410,14 @@ this read-only skill.
 
 - Each class prints exactly one summary line when clean: `(A) Framework drift: OK`, `(B) Branch-behind drift: OK`, `(C) Cron-staleness drift: OK`. The `(C) Cron-staleness drift: OK` clean token is unchanged by the predicate — it still prints whenever no schedulable cron is inert.
 - When a class has findings, it prints one or more `DRIFT-CHECK (<letter>): ...` detail lines followed by a `Recommended:` block.
-- Class (C) evaluates only **schedulable cron files** — `crons/*.md` files that pass the Step C-2 predicate (a leading `---` frontmatter block declaring a non-empty, Croner-valid `schedule:` key, not `enabled: false`, valid cron id, filename/id match, and safe `agent:` override). Non-scheduled docs such as `crons/README.md` and malformed schedules the runtime would log as `SCHED_INVALID` are never evaluated, never emitted as a `DRIFT-CHECK (C)` line, and never counted toward the inert aggregate. Qualification is predicate-based, not a hard-coded name list, so a future non-cron file dropped into `crons/` is handled generically. Detail lines name the restart-required field set (`schedule enabled agent tmux worktree preflight`) and say the frontmatter/config may be stale until SIGHUP reschedule or runtime restart.
+- Class (C) evaluates only **schedulable cron files** — `crons/*.md` files that pass the Step C-2 predicate (a leading `---` frontmatter block declaring a non-empty, Croner-valid `schedule:` key, not `enabled: false`, valid cron id, filename/id match, and safe `agent:` override). Non-scheduled docs such as `crons/AGENTS.md` and malformed schedules the runtime would log as `SCHED_INVALID` are never evaluated, never emitted as a `DRIFT-CHECK (C)` line, and never counted toward the inert aggregate. Qualification is predicate-based, not a hard-coded name list, so a future non-cron file dropped into `crons/` is handled generically. Detail lines name the restart-required field set (`schedule enabled agent tmux worktree preflight`) and say the frontmatter/config may be stale until SIGHUP reschedule or runtime restart.
 - When at least one class is non-clean, print a final aggregate line:
 
 ```
 DRIFT: <comma-separated summary of non-clean classes>
 ```
 
-- The aggregate's `cron-staleness drift (N inert file)` term counts only **schedulable cron files**; a non-scheduled doc such as `crons/README.md` never increments it, and any inline example names a real cron (e.g. `crons/heartbeat.md`).
+- The aggregate's `cron-staleness drift (N inert file)` term counts only **schedulable cron files**; a non-scheduled doc such as `crons/AGENTS.md` never increments it, and any inline example names a real cron (e.g. `crons/heartbeat.md`).
 
 Example (all clean):
 

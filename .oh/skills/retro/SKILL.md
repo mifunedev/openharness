@@ -106,7 +106,7 @@ Seed hypotheses by asking, for each subsystem, what *this session* revealed abou
 |-----------|--------------------------------------------------|----------------------------|
 | Continual learning | Did prior lessons get used, ignored, or contradicted? Did anything durable emerge? | `.oh/evals/probes/` |
 | Context compression | Was loaded context bloated/redundant, or did a rule prove load-bearing? | `/audit context` |
-| Reinforcement learning | Did advisor/executor or recursive-decomposition patterns help or hurt? Over/under-delegation? | `.oh/agents/advisor.md` |
+| Reinforcement learning | Did advisor/executor or recursive-decomposition patterns help or hurt? Over/under-delegation? | `/delegate` |
 | Wiki | Did the session surface knowledge that belongs in the wiki, or hit stale/missing entries? | `/wiki ingest`, `/wiki lint` |
 | Docs | Did human-facing doc gaps or inaccuracies surface? | `docs/` (site/blog live in `mifunedev/openharness-web`) |
 

@@ -39,7 +39,7 @@ candidate answers a chunk yields. This skill never re-implements selection — i
 |---|---|---|
 | Recursion **loop** | `/spec execute` | each story re-reads disk = the REPL step — **owned by the active Advisor, never split into another session** |
 | Isolated recursion **branches** | `.worktrees/` (the `/worktrees` skill) | depth-2 sub-trees fork here — **reused by reference, never edited** |
-| Recursion **budget** | `.oh/agents/advisor.md` | the `Max depth N / Max children per level M / Step budget S` triple — `references/recursion-budget.md` points at it and adds a per-run token ceiling |
+| Recursion **budget** | `/delegate` (`.oh/skills/delegate/SKILL.md`) | the `Max depth N / Max children per level M / Step budget S` triple — `references/recursion-budget.md` points at it and adds a per-run token ceiling |
 | Chunk-map **primitive** | `scripts/query-context.mjs` (US-004, this skill) | partitions the artifact without ingesting it |
 | Candidate **selection** | `/weigh` | scores competing per-chunk answers |
 
@@ -57,8 +57,8 @@ candidate answers a chunk yields. This skill never re-implements selection — i
 ## When NOT to use
 
 - **The artifact fits in context.** If a single `Read` covers it, just read it — the
-  recursion tree's token cost exceeds the benefit (see .oh/agents/advisor.md
-  § Anti-patterns, "Recursing for reasoning, not context").
+  recursion tree's token cost exceeds the benefit — recurse for context you cannot
+  hold, not for reasoning you could do in one pass.
 - **You need to *select* among candidates, not decompose an artifact.** That is
   `/weigh` directly.
 - **Sandbox application code.** `/rlm` is harness-infra substrate; it does not write
@@ -119,7 +119,7 @@ artifact, and returns a structured finding for the query.
 The tree is **bounded by the depth / children / step budget** from
 `references/recursion-budget.md` (which points at the `Max depth N / Max children per
 level M / Step budget S` triple in
-`.oh/agents/advisor.md`). A sub-agent MAY itself
+`.oh/skills/delegate/SKILL.md`). A sub-agent MAY itself
 recurse over a sub-span **only** if its briefing carries `Max depth ≥ 2`; it MUST
 decrement `Max depth` for its own grandchildren and reserve one final step for its own
 synthesis. Honor the **per-run token ceiling**: when any budget dimension is hit,
@@ -131,8 +131,7 @@ edits**.
 ### 4. Aggregate — synthesize, piping competing answers through `/weigh`
 
 Integrate the sub-agents' structured returns into one answer to the query (never just
-forward them verbatim — see .oh/agents/advisor.md § Anti-patterns, "Synthesis
-pass-through"). **When a chunk yields competing candidate answers, pipe them through
+forward them verbatim — see § Anti-patterns, "Synthesis pass-through", below). **When a chunk yields competing candidate answers, pipe them through
 `/weigh`** (the `vote`/`best-of-n` method over the candidate cohort) so selection is
 the deterministic-first scorer's job, not an ad-hoc model pick. The `/rlm → /weigh`
 invocation is documented as a contract in `references/recursion-budget.md`.
@@ -155,7 +154,7 @@ or committed. Announce `RESULT: RLM-COMPLETE`.
 - **Ingesting the artifact.** Reading the whole file into context defeats the purpose —
   always go through `query-context.mjs` (`--map` to plan, `--slice`/`--grep` to fetch).
 - **Unbounded recursion.** Depth/children/step/token ceilings are mandatory; a missing
-  `Max depth` means flat execution only (.oh/agents/advisor.md § Recursive decomposition).
+  `Max depth` means flat execution only (`/delegate` § Recursion-authorization gate).
 - **Re-implementing selection.** Competing per-chunk answers go through `/weigh`; do not
   hand-pick a "best" answer in prose.
 - **Taking ownership of execution.** `/spec execute` and `.worktrees/` are reused by
@@ -166,9 +165,9 @@ or committed. Announce `RESULT: RLM-COMPLETE`.
 ## References
 
 - `references/recursion-budget.md` — the depth/children/step ceilings (pointing at
-  the advisor agent), the per-run token ceiling, and the `/rlm → /weigh` contract.
+  `/delegate`), the per-run token ceiling, and the `/rlm → /weigh` contract.
 - `scripts/query-context.mjs` — the `query_context` primitive (chunk-map / slice / grep
   with a max-bytes guard).
-- `.oh/agents/advisor.md` — the recursion budget triple + multi-level protocol this skill bounds its tree by.
+- `.oh/skills/delegate/SKILL.md` — the recursion budget triple + recursion-authorization gate this skill bounds its tree by.
 - `.oh/skills/weigh/SKILL.md` — the selection layer `/rlm` pipes competing answers through.
 - `.claude/plans/there-s-a-whole-snappy-crayon.md` § Layer B — the design this skill implements.

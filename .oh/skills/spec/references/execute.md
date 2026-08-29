@@ -556,7 +556,6 @@ auto-merge.
 | Reviewer evidence doc | `.oh/skills/audit/references/reviewer-evidence-doc.md` | Step 6 — the contract `evidence.md` follows |
 | `/audit pr` skill | `.claude/skills/audit/SKILL.md` | Step 9 — promotable classification (gates the undraft) |
 | `/ci-status` skill | `.claude/skills/ci-status/SKILL.md` | CI verification (subsumed by `/audit pr`'s promotable check) |
-| advisor agent | `.oh/agents/advisor.md` | Step 4 — the Advisor handoff briefing |
 | sandbox-processes norm | `.oh/skills/t3/references/sandbox-processes.md` | Step 4 — session naming for the Advisor |
 | Protected-paths list | `.claude/protected-paths.txt` | Load-bearing items a spec must not propose deleting |
 

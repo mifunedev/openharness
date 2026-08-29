@@ -19,6 +19,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Delete the canonical agent definitions (`.oh/agents/`), `.oh/plans/`, `.oh/handoffs/`, and the accumulated `.oh/tasks/` folders and archive ([#865](https://github.com/mifunedev/openharness/pull/865)).
 
 ### Changed
+- Move cron definitions from `.oh/crons/` to `crons/` at the repo root; `oh init`/`oh update` deliver them through the manifest's new `rootInclude` payload ([#874](https://github.com/mifunedev/openharness/issues/874)).
 - Add `CLAUDE.md` provider-compatibility symlinks beside every nested `AGENTS.md`, created by `oh init` for equipped repos ([#872](https://github.com/mifunedev/openharness/issues/872)).
 - Move git worktrees to `.worktrees/` at each repository's own root and non-harness clones to `projects/<owner>/<repo>/`, each tracking only an `AGENTS.md` guide ([#872](https://github.com/mifunedev/openharness/issues/872)).
 - `/retro` is now strictly report-only and writes no file; `IDENTITY.md` was its only write target. A graduated lesson is nominated as a candidate probe under `.oh/evals/probes/` instead ([#868](https://github.com/mifunedev/openharness/issues/868)).

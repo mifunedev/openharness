@@ -5,7 +5,9 @@ import * as path from "node:path";
 
 import {
   copyOhPayload,
+  copyRootPayload,
   assertDestInTarget,
+  assertDestInRoot,
   type CopyAction,
 } from "../lib/vendor.js";
 import { loadManifest } from "../lib/manifest.js";
@@ -159,5 +161,45 @@ describe("copyOhPayload — skipExisting vs force vs dryRun", () => {
     expect(fs.existsSync(targetOh)).toBe(false);
     expect(res.written).toBeGreaterThan(0);
     expect(actions).toContain("create scripts/foo.sh");
+  });
+});
+
+describe("copyRootPayload", () => {
+  it("ships only rootInclude dirs to the target root, and refuses to escape it", () => {
+    const from = mkTmp();
+    const target = mkTmp();
+    write(from, "crons/heartbeat.md", "beat\n");
+    write(from, "docs/intro.md", "docs\n");
+    write(
+      from,
+      ".oh/manifest.json",
+      JSON.stringify({ include: ["cli/**"], rootInclude: ["crons/**"], exclude: [] }),
+    );
+
+    const manifest = loadManifest(path.join(from, ".oh"));
+    const res = copyRootPayload(from, target, manifest, {});
+
+    expect(fs.existsSync(path.join(target, "crons/heartbeat.md"))).toBe(true);
+    expect(fs.existsSync(path.join(target, "docs/intro.md"))).toBe(false);
+    expect(res.written).toBe(1);
+
+    expect(() =>
+      assertDestInRoot(path.resolve(target, "../evil.md"), target, path.sep),
+    ).toThrow(/refusing to write outside target root/);
+    expect(() =>
+      assertDestInRoot(path.join(target, "crons/x.md"), target, path.sep),
+    ).not.toThrow();
+  });
+
+  it("is a no-op when the manifest declares no rootInclude", () => {
+    const from = mkTmp();
+    const target = mkTmp();
+    write(from, "crons/heartbeat.md", "beat\n");
+
+    expect(copyRootPayload(from, target, { include: ["cli/**"], exclude: [] }, {})).toEqual({
+      written: 0,
+      skipped: 0,
+    });
+    expect(copyRootPayload(from, target, null, {})).toEqual({ written: 0, skipped: 0 });
   });
 });

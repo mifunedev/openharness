@@ -24,7 +24,7 @@ agents:
   hooks: .oh/hooks/
 
 loops:
-  schedules: .oh/crons/
+  schedules: crons/
   task_artifacts: .oh/tasks/
 
 policies:

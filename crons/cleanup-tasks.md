@@ -16,7 +16,7 @@ Per SPEC v0.7 §"Weekly cleanup cron": completed tasks move into the
 dated archive under `.oh/tasks/`; incomplete tasks are left alone with a
 note. The same weekly pass also grooms stale `.worktrees/` branch
 checkouts, but it never touches the durable `.worktrees/agent/`
-namespace, and never looks at the `projects/` clone root at all. `.oh/crons/.cron.log` carries liveness
+namespace, and never looks at the `projects/` clone root at all. `crons/.cron.log` carries liveness
 only — never a `.oh/tasks/` subfolder.
 
 ## Tasks
@@ -34,8 +34,8 @@ only — never a `.oh/tasks/` subfolder.
    cron system's `BLOCKED-OWNED-WIP` owned-surface convention. If that
    scoped status is non-empty, abort: append a note to
    the reply, emit the distinct liveness token to
-   `.oh/crons/.cron.log`
-   (`printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "BLOCKED-TASKS-WIP" | .oh/scripts/locked-append.sh .oh/crons/.cron.log`),
+   `crons/.cron.log`
+   (`printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "BLOCKED-TASKS-WIP" | .oh/scripts/locked-append.sh crons/.cron.log`),
    and stop here — do NOT fall through to step 7's `OK` line. This
    `BLOCKED-TASKS-WIP` token is intentionally distinct from the
    `OK (archived N, skipped M)` success token and the `HEARTBEAT_OK`
@@ -146,9 +146,9 @@ only — never a `.oh/tasks/` subfolder.
      nothing-to-archive case (`N = 0`), and partial runs; complements the
      step-3 `trap`, which also fires on any error/abort exit:
      `bash .oh/scripts/git-maintenance.sh worktree-remove .worktrees/archive/$TODAY 2>/dev/null || true; git worktree prune`.
-   - **Liveness line:** append one liveness line to `.oh/crons/.cron.log` through
+   - **Liveness line:** append one liveness line to `crons/.cron.log` through
      `.oh/scripts/locked-append.sh`:
-     `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M, groomed W worktrees)" | .oh/scripts/locked-append.sh .oh/crons/.cron.log`.
+     `printf '[%s] cleanup-tasks: %s\n' "$(date -Iseconds)" "OK (archived N, skipped M, groomed W worktrees)" | .oh/scripts/locked-append.sh crons/.cron.log`.
      Create the file if it does not exist.
 
 ## Reporting

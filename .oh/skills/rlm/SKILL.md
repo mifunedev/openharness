@@ -50,7 +50,7 @@ candidate answers a chunk yields. This skill never re-implements selection — i
 ## When to use
 
 - `/rlm <artifact> "<query>"` to answer a question over an artifact too large to read
-  whole (a big log under `.oh/crons/.cron.log`, a large corpus file, a whole directory).
+  whole (a big log under `crons/.cron.log`, a large corpus file, a whole directory).
 - As a sub-step of `/weigh` when the cohort being sampled spans a large artifact that
   must itself be decomposed before sampling.
 

@@ -25,7 +25,7 @@ This cron is **opt-in and cap-gated**:
 
 - **Kill-switch**: this cron is currently `enabled: false` in the frontmatter above
   and does not fire. To start it, flip that line to `enabled: true` and reload the
-  runtime (`SIGHUP` — `kill -HUP "$(cat .oh/crons/.pid)"` from inside the
+  runtime (`SIGHUP` — `kill -HUP "$(cat crons/.pid)"` from inside the
   container); disabling again is the same one-line edit + reload. Never delete the
   file (preserves history). The frontmatter `enabled:` value is the single source
   of truth — this paragraph previously claimed the cron shipped disabled while the
@@ -109,7 +109,7 @@ gh pr edit <PR> --repo mifunedev/openharness --add-label prompt-miner
 
 ### 4. Append the liveness line
 
-Append a `.oh/crons/.cron.log` liveness line, resolving the **shared root** under
+Append a `crons/.cron.log` liveness line, resolving the **shared root** under
 worktree mode (the worktree is reaped after the run; humans + heartbeat read the
 root checkout). Mirror the autopilot convention: honor `$CRON_LOG_ROOT` if
 set, else map `$CRON_WORKTREE` back to its shared root, else the current toplevel.
@@ -118,7 +118,7 @@ set, else map `$CRON_WORKTREE` back to its shared root, else the current topleve
 ROOT="${CRON_LOG_ROOT:-$(git -C "${CRON_WORKTREE:-.}" worktree list --porcelain 2>/dev/null | awk 'NR==1 && $1 == "worktree" { sub(/^worktree /,""); print; exit }' || true)}"
 ROOT="${ROOT:-$(git rev-parse --show-toplevel)}"
 printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
-  | "$ROOT/.oh/scripts/locked-append.sh" "$ROOT/.oh/crons/.cron.log"
+  | "$ROOT/.oh/scripts/locked-append.sh" "$ROOT/crons/.cron.log"
 ```
 
 ## Guarantees

@@ -56,7 +56,7 @@ if [[ "$rc" -ne 0 ]]; then
 fi
 if [[ -z "$out" ]]; then
   echo "REGRESSION: engine invoked via symlinked skills dir produced ZERO stdout at exit 0 —" \
-       "the CLI-entrypoint guard no-opped (issue #663). SKILL.md Step 1 and .oh/crons/prompt-miner.md" \
+       "the CLI-entrypoint guard no-opped (issue #663). SKILL.md Step 1 and crons/prompt-miner.md" \
        "both invoke through this path." >&2
   exit 1
 fi

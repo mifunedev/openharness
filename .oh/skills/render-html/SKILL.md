@@ -28,13 +28,13 @@ Common targets in this harness:
 - `/audit harness` tier-ranked report → filterable findings dashboard
 - `/strategic-proposal` council artifact → phase-column roadmap with critic challenges inline
 - `/audit skills` verdict matrix → sortable scoring table with CURRENT/STALE/BROKEN/DELETE badges
-- Weekly digest of cron liveness (`.oh/crons/.cron.log`) → timeline coloured by outcome
+- Weekly digest of cron liveness (`crons/.cron.log`) → timeline coloured by outcome
 
 ## When NOT to use
 
 Skip when the artifact is **source or pipeline input** — Markdown stays the substrate of the harness:
 - PRDs (`.oh/tasks/*/prd.md`), briefings, commit messages, PR bodies, `CHANGELOG.md`
-- The cron liveness trail itself (`.oh/crons/.cron.log`)
+- The cron liveness trail itself (`crons/.cron.log`)
 - Skill/identity sources (`CLAUDE.md`, `.claude/skills/`)
 - Agent-to-agent handoffs (advisor → executor briefings)
 
@@ -123,6 +123,6 @@ Return three lines:
 → $TMPDIR/oh-render/2026-05-18/roadmap-council.html
   (source was the strategic-proposal output already in context)
 
-/render-html week-19-digest --from .oh/crons/.cron.log --intent "what ran this week"
+/render-html week-19-digest --from crons/.cron.log --intent "what ran this week"
 → $TMPDIR/oh-render/2026-05-18/week-19-digest.html
 ```

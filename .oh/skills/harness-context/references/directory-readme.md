@@ -47,7 +47,7 @@ mydir/*
 
 ## Examples in this repo
 
-`.oh/README.md`, `.oh/crons/README.md`, `.oh/tasks/README.md`,
+`.oh/README.md`, `crons/README.md`, `.oh/tasks/README.md`,
 `.oh/scripts/README.md`. The two git-boundary guides are
 `.worktrees/AGENTS.md` and `projects/AGENTS.md`.
 

@@ -42,12 +42,12 @@ must leave them intact.
 
 ### 1. Cron timezone — America/Denver (origin only)
 
-`.oh/crons/heartbeat.md` in origin carries `timezone: America/Denver` (the
+`crons/heartbeat.md` in origin carries `timezone: America/Denver` (the
 operator's locale). Upstream switched its canonical heartbeat to
 `timezone: America/Los_Angeles`.
 
 - **During publish (origin→upstream):** after the no-commit merge, check
-  `git grep timezone upstream/development -- .oh/crons/` to get upstream's
+  `git grep timezone upstream/development -- crons/` to get upstream's
   expected values. Do NOT carry origin's `America/Denver` into the public
   repo. Reconcile to whatever upstream/development has.
 - **During catchup (upstream→origin):** after cherry-picking, check the

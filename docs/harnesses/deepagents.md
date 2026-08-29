@@ -47,7 +47,7 @@ Or set `INSTALL_DEEPAGENTS=true` in `.devcontainer/.env` (legacy).
 Then rebuild/restart the sandbox:
 
 ```bash
-make stop && make sandbox
+oh stop && oh sandbox
 ```
 
 Open Harness installs the upstream CLI during image build via `uv tool
@@ -67,7 +67,7 @@ deepagents -v
 ```
 
 If the command is not found, confirm `INSTALL_DEEPAGENTS=true` is set in
-`.devcontainer/.env`, then rebuild with `make stop && make sandbox`.
+`.devcontainer/.env`, then rebuild with `oh stop && oh sandbox`.
 
 ## Authentication and provider keys
 

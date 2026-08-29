@@ -34,7 +34,7 @@ worktree_path: ".worktrees/agent/<agent-name>"
 ### 1. Provision the agent
 
 ```bash
-make sandbox
+oh sandbox
 ```
 
 This will:
@@ -42,7 +42,7 @@ This will:
 - Build the Docker image and start the sandbox container (`docker compose up -d --build`)
 - Mount the workspace and run the setup script
 
-`make sandbox` does **not** create the per-agent branch or worktree. The `branch` (`agent/<agent-name>`) and `worktree_path` (`.worktrees/agent/<agent-name>`) fields from the Metadata block above are real conventions you create manually with `git worktree add` per the `/git` skill (`.oh/skills/git/SKILL.md`) §Worktrees:
+`oh sandbox` does **not** create the per-agent branch or worktree. The `branch` (`agent/<agent-name>`) and `worktree_path` (`.worktrees/agent/<agent-name>`) fields from the Metadata block above are real conventions you create manually with `git worktree add` per the `/git` skill (`.oh/skills/git/SKILL.md`) §Worktrees:
 
 ```bash
 git worktree add -b agent/<agent-name> .worktrees/agent/<agent-name> development
@@ -51,19 +51,19 @@ git worktree add -b agent/<agent-name> .worktrees/agent/<agent-name> development
 ### 2. Enter the sandbox
 
 ```bash
-make shell <agent-name>
+oh shell <agent-name>
 claude
 ```
 
-The positional argument to `make shell` is the **container name** (defaults to `openharness`, or `SANDBOX_NAME` from `.devcontainer/.env`). Append `SHELL_USER=<user>` to connect as a non-default user, e.g. `make shell <agent-name> SHELL_USER=postgres`.
+The positional argument to `oh shell` is the **container name** (defaults to `openharness`, or `name` in `oh.json`). `oh shell` always connects as the `sandbox` user; use `docker exec -it -u <user> <container> zsh` when you need another one.
 
 ### 3. Verify
 
 Run from the **host** (orchestrator side):
 
-- [ ] Container is running (`make ps`)
+- [ ] Container is running (`oh ps`)
 
-Run **inside the sandbox** (after `make shell <agent-name>`):
+Run **inside the sandbox** (after `oh shell <agent-name>`):
 
 - [ ] Project root is accessible (`ls ~/harness`)
 - [ ] Harness identity lives at the repo root: `AGENTS.md` is present

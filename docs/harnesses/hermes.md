@@ -51,7 +51,7 @@ INSTALL_HERMES=true
 Then rebuild/restart the sandbox:
 
 ```bash
-make stop && make sandbox
+oh stop && oh sandbox
 ```
 
 The executable is installed during image build, not at container boot, so
@@ -79,7 +79,7 @@ bash hermes-install.sh --skip-setup --skip-browser
 
 If you already use [`vet`](https://github.com/vet-run/vet), `vet https://hermes-agent.nousresearch.com/install.sh --skip-setup --skip-browser` gives the installer a fetch, review, and approve gate. `vet` is optional and is not required by Open Harness.
 
-That keeps `make sandbox` non-interactive. User setup remains explicit
+That keeps `oh sandbox` non-interactive. User setup remains explicit
 inside the running sandbox.
 
 ## Authentication
@@ -118,7 +118,7 @@ survive container rebuilds and follow the project directory. The
 project-local runtime contents are ignored by git; do not commit
 secrets from this directory.
 
-`make destroy` stops containers and removes volumes but does not delete
+`oh destroy` stops containers and removes volumes but does not delete
 the bind-mounted `.hermes/` directory from the checkout. Remove that
 directory manually if you want a full Hermes project-state reset.
 
@@ -162,7 +162,7 @@ separate (`hermes gateway setup` for Hermes, the in-session `/msg-bridge` for Pi
 #### Run and verify (read-only)
 
 Run the Hermes gateway **from inside the sandbox** — both `gateway hermes` and
-`make gateway hermes` require `hermes` on `PATH`, so they only work in the container
+`oh gateway hermes` require `hermes` on `PATH`, so they only work in the container
 (`gateway.sh` errors otherwise). The launcher pins `HERMES_HOME` to
 `~/harness/.hermes`, persists Hermes `terminal.cwd` to `~/harness` (override with
 `HERMES_GATEWAY_HOME` / `HERMES_GATEWAY_CWD`), and self-installs Teams webhook deps
@@ -201,7 +201,7 @@ HERMES_DASHBOARD_PORT=9119   # optional; 9119 is the default
 Then rebuild:
 
 ```bash
-make stop && make sandbox
+oh stop && oh sandbox
 ```
 
 `HERMES_DASHBOARD` requires `INSTALL_HERMES=true` to take effect: the dashboard

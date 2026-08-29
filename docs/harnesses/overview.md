@@ -39,7 +39,7 @@ Two escape hatches:
 
 The manual path still works: uncomment the key in `.devcontainer/.env` (or export the
 `INSTALL_*` build flag in `.devcontainer/.env`) and run
-`make destroy && make sandbox`.
+`oh destroy && oh sandbox`.
 
 ## Supported agents
 

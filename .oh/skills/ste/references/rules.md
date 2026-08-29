@@ -319,8 +319,8 @@ Right: 2. Start the stack. `docker compose ps` lists three containers in state `
 State who runs each step and where the step runs. Mark each command as host, container, local, or remote. A command in the wrong context damages the wrong machine.
 
 ```text
-Wrong: Run `make destroy`.
-Right: On the host, run `make destroy`. Never run this command inside the container.
+Wrong: Run `oh destroy`.
+Right: On the host, run `oh destroy`. Never run this command inside the container.
 ```
 
 ### 34. Expose every hidden sequence
@@ -411,7 +411,7 @@ Name the exact loss and the exact scope. Name the volume, branch, account, host,
 
 ```text
 Wrong: Warning: this step is destructive.
-Right: Warning: `make destroy` removes the `openharness` container and every
+Right: Warning: `oh destroy` removes the `openharness` container and every
        named volume of this project. Other Docker projects on the host survive.
 ```
 
@@ -421,7 +421,7 @@ Write every warning as complete sentences. Never compress a warning with an outp
 
 ```text
 Wrong: WARN: destroy = data gone
-Right: Warning: `make destroy` deletes the Postgres data volume. The deletion
+Right: Warning: `oh destroy` deletes the Postgres data volume. The deletion
        removes every local row.
 ```
 
@@ -441,7 +441,7 @@ List each file, volume, branch, table, and remote reference the action removes. 
 
 ```text
 Wrong: The teardown cleans up.
-Right: `make destroy` removes the container `openharness`, the volume
+Right: `oh destroy` removes the container `openharness`, the volume
        `harness_node_modules`, and the network `harness_default`.
 ```
 

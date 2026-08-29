@@ -14,6 +14,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Restore `.oh/agents/` as an empty pack with its `.claude/agents` and `.codex/agents` provider symlinks; no agent is defined in it ([#866](https://github.com/mifunedev/openharness/pull/866)).
 
 ### Removed
+- Delete the root `Makefile`. `oh` is the only lifecycle door on the host and inside the sandbox, and every verb runs `.oh/scripts/docker-compose.sh` through the CLI ([#881](https://github.com/mifunedev/openharness/issues/881)).
+- Retire the "host dependencies: Docker, Git, and make — no Node" promise. Host prerequisites are now Docker, Git, and Node >= 20; `get-oh.sh` installs Node when it is missing ([#881](https://github.com/mifunedev/openharness/issues/881)).
 - Retire `.devcontainer/.example.env`, `.oh/config.json`, `~/.config/openharness/`, and the `WORKTREES_DIR`/`PROJECTS_DIR`/`CRONS_DIR` knobs. The layout is now fixed convention ([#880](https://github.com/mifunedev/openharness/issues/880)).
 - Delete the `.oh/context/` always-on tier in full, leaving `AGENTS.md` as the only always-on context. No `SessionStart` hook ever loaded it — prose in `AGENTS.md` asked for it ([#868](https://github.com/mifunedev/openharness/issues/868)).
 - Retire `repo-map-contract.sh`, `CB-004`, `repo-orientation/`, and its scorer. `REPO_MAP.md` goes as **unproven**, not disproven: its A/B landed 2026-07-03 and was never run ([#868](https://github.com/mifunedev/openharness/issues/868)).
@@ -22,6 +24,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Delete the canonical agent definitions (`.oh/agents/`), `.oh/plans/`, `.oh/handoffs/`, and the accumulated `.oh/tasks/` folders and archive ([#865](https://github.com/mifunedev/openharness/pull/865)).
 
 ### Changed
+- `docs/lifecycle-commands.md` becomes the `oh`-only verb reference, and the `make ...` instructions are swept out of `README.md`, `AGENTS.md`, and `docs/` ([#881](https://github.com/mifunedev/openharness/issues/881)).
+- Collapse the README install fan-out to three paths — npm, the `get-oh.sh` curl bootstrap, and from source. `docs/intro.md` no longer claims there is no host CLI ([#881](https://github.com/mifunedev/openharness/issues/881)).
+- Document the VS Code divergence: "Reopen in Container" applies no compose overlay — no SSH, no docker socket, no Hermes dashboard, no `composeOverrides` ([#881](https://github.com/mifunedev/openharness/issues/881)).
 - Base the sandbox image on `node:22-trixie-slim` and drop the NodeSource vendor script; the `sandbox` user is now pinned to `-u 1000`, the uid the Node image already claims ([#878](https://github.com/mifunedev/openharness/issues/878)).
 - `crons/` carries its operating contract as `AGENTS.md` instead of `README.md`, documenting which cron edits apply at the next fire and which need a SIGHUP reschedule ([#874](https://github.com/mifunedev/openharness/issues/874)).
 - Move cron definitions from `.oh/crons/` to `crons/` at the repo root; `oh init`/`oh update` deliver them through the manifest's new `rootInclude` payload ([#874](https://github.com/mifunedev/openharness/issues/874)).

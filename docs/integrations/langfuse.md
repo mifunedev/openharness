@@ -226,7 +226,7 @@ Enter the Langfuse public key (`pk-lf-...`), secret key (`sk-lf-...`), and
 external Langfuse URL. The package persists them in
 `~/.pi/agent/pi-langfuse/config.json`; in the sandbox, `~/.pi` is on the
 `pi-auth` named volume. When the package writes the file it creates a `0700`
-directory and a `0600` file where POSIX permissions are available. `make destroy`
+directory and a `0600` file where POSIX permissions are available. `oh destroy`
 removes named volumes, including `pi-auth`, so configure again after destroying
 the sandbox.
 

@@ -1,67 +1,43 @@
 ---
-title: "Lifecycle commands: make vs oh"
+title: "Lifecycle commands"
 ---
 
-# Lifecycle commands: `make` vs `oh`
+# Lifecycle commands (`oh`)
 
-`oh` is the front door to the sandbox lifecycle; `make` mirrors it in a source
-checkout that still has a Makefile. This page is the single source of truth for
-which is which. Every other document links here rather than restating the
-table.
+`oh` is the only front door to the sandbox lifecycle. This page is the single
+source of truth for the verbs; every other document links here rather than
+restating them.
 
-**They are not two implementations.** Every compose target — from both doors —
-runs `.oh/scripts/docker-compose.sh`. `make sandbox` calls it directly;
-`oh sandbox` reaches the same script through the Docker Compose execution
-target. The script owns overlay resolution, project naming, and env plumbing.
-Nothing is duplicated except the name you type.
+Every compose verb runs `.oh/scripts/docker-compose.sh`, which owns overlay
+resolution, project naming, and env plumbing. `oh` is the surface; the script is
+the mechanism.
 
-## Which door am I?
+Host prerequisites: **Docker** (with the Compose plugin), **Git**, and
+**Node.js ≥ 20**. Node runs `oh` itself; `get-oh.sh` installs it for you when it
+is missing. Everything else — pnpm, Python, the agent CLIs — lives inside the
+sandbox.
 
-Before the table below can help, you need to know which kind of repo you are
-standing in. That is decided by how you installed, and the two installers are
-**not** alternatives — they solve different problems and neither can do the
-other's job.
+## The verbs
 
-| You want | Install with | Repo you end up in | Lifecycle door |
-|---|---|---|---|
-| An Open Harness sandbox of your own | `install.sh` (the `curl` one-liner) — needs Docker + Git, **no Node** | a clone of this repo at `~/.openharness`, mounted at `/home/sandbox/harness` | `make` |
-| To equip a project you already have | `oh init` — needs **Node ≥ 20** on the host | your own repo, with `.oh/` vendored in and no Makefile, mounted at `/home/sandbox/project` | `oh` |
-
-`install.sh` runs when no repo and no Node exist yet — it checks Docker, clones,
-wires provider symlinks, then configures. `oh init` cannot do that: it needs
-Node already on `PATH` and a repo already present. The reverse holds too —
-`install.sh` can only ever produce a clone of Open Harness, never equip
-`~/my-app`. See `.oh/scripts/install.sh` for the bootstrapper's own statement of
-this split.
-
-## Which one is canonical
-
-It depends on where you are, not on preference.
-
-| Where | Canonical | Why |
-|---|---|---|
-| **On the host, in a source checkout** | `make` | Host prerequisites are Docker, Git, and `make` — deliberately **no Node**. Host `oh` needs Node ≥ 20, so `make` is the one that always works. |
-| **Inside the sandbox** | `oh` | `oh` is baked into the image at `/usr/local/bin/oh`. (`make` is present too, via `build-essential`, but the repo may be mounted anywhere.) |
-| **In a repo equipped by `oh init`** | `oh` | An equipped repo gets the `.oh/` control plane and no Makefile. `oh` is the only door. |
-
-This is why neither surface delegates to the other: making the Makefile call
-`oh` would add Node to the host prerequisites and break the headline promise.
-
-## The mapping
-
-| `make` | `oh` | Runs |
-|---|---|---|
-| `make sandbox` | `oh sandbox` | `docker-compose.sh up -d --build` |
-| `make shell [container]` | `oh shell [container]` | an interactive `zsh` in the container |
-| `make stop` | `oh stop` | `docker-compose.sh stop` |
-| `make restart` | `oh restart` | `docker-compose.sh restart` |
-| `make logs` | `oh logs` | `docker-compose.sh logs -f` |
-| `make ps` | `oh ps` | `docker-compose.sh ps` |
-| `make gateway <pi\|hermes>` | `oh gateway <args…>` | `.oh/scripts/gateway.sh` |
-| `make destroy` | `oh destroy [--yes]` | `docker-compose.sh down -v` — see below |
-| `make config` | `oh compose config` | `docker-compose.sh config` |
-| *(implicit in `make sandbox`)* | *(implicit in `oh sandbox`)* | seeds the gitignored root `.env` from the tracked `.env.example` |
-| — | `oh init` · `oh update` · `oh harness` · `oh runtime` · `oh tool` · `oh cloud` · `oh config <integration>` | no `make` equivalent, by design |
+| Verb | Runs |
+|---|---|
+| `oh init [dir]` | scaffold the `.oh/` control plane, `oh.json`, and `.env` into a repo |
+| `oh sandbox [--image[=<ref>]] [--no-build]` | `docker-compose.sh up -d --build` |
+| `oh shell [container]` | an interactive `zsh` in the container |
+| `oh stop` | `docker-compose.sh stop` — containers down, volumes kept |
+| `oh restart` | `docker-compose.sh restart` |
+| `oh logs` | `docker-compose.sh logs -f` |
+| `oh ps` | `docker-compose.sh ps` |
+| `oh destroy [--yes]` | `docker-compose.sh down -v` — see below |
+| `oh compose config` | `docker-compose.sh config` — the resolved compose file |
+| `oh config show` · `oh config set <field> <value>` | read and write `oh.json` |
+| `oh config repo` · `oh config <integration>` | GitHub-remote and integration wizards |
+| `oh secret set <KEY>` · `oh secret list` | read and write the gitignored root `.env` |
+| `oh gateway <pi\|hermes>` · `oh gateway status` | `.oh/scripts/gateway.sh` |
+| `oh harness` · `oh runtime` · `oh tool` | install and inspect harnesses, runtimes, tooling |
+| `oh update` | upgrade the vendored `.oh/` control plane |
+| `oh cloud` | manage OpenHarness Cloud nodes |
+| `oh --help` · `oh --version` | usage and version |
 
 `oh <verb> -- <args>` forwards extra arguments to `docker compose`, e.g.
 `oh logs -- --tail 50`.
@@ -103,32 +79,33 @@ and `--yes` is absent, `oh destroy` refuses outright rather than assume consent.
 
 ## `oh compose config`, not `oh config`
 
-`oh config` already means *"configure an integration"* (`oh config <name>`), so
-the resolved-compose printer lives under its own namespace: `oh compose config`.
+`oh config` already means *"read, write, or configure configuration"*
+(`oh config show`, `oh config set`, `oh config <integration>`), so the
+resolved-compose printer lives under its own namespace: `oh compose config`.
 That leaves room for further `oh compose <passthrough>` verbs without ever
-colliding with the integration wizards.
+colliding with the config and integration verbs.
 
-## The one deliberate exception
+## VS Code "Reopen in Container" applies no overlays
 
-A probe (`.oh/evals/probes/make-oh-lifecycle-parity.sh`) asserts that every
-`make` target either has an `oh` verb or is named here. The list cannot grow
-silently, and it is now down to one entry.
+Attaching VS Code to a container that `oh sandbox` already started is safe and
+is the recommended editor path — see
+[Connecting to the sandbox](connecting.md).
 
-### `make shell` — the one raw `docker exec`
+**Provisioning** from VS Code is different. *Dev Containers: Reopen in
+Container* reads `.devcontainer/devcontainer.json`, whose `dockerComposeFile`
+lists `docker-compose.yml` and nothing else. It never runs
+`.oh/scripts/docker-compose.sh`, so **no overlay applies on that path**:
 
-`oh shell` routes through the execution target's `attach()`; the Makefile spawns
-`docker exec -it -u … zsh` directly. That is **intentional and pinned**:
-`.oh/evals/probes/execution-target-contract.sh` check C5 asserts that line
-verbatim. The Makefile is host-side orchestration, not work executed inside a
-provisioned environment, so it sits outside the brain/hands contract — the same
-reasoning that keeps `oh gateway` off it. See
-[`rfc-brain-hands-boundary.md`](rfcs/rfc-brain-hands-boundary.md).
+- `access.ssh` → no `docker-compose.ssh.yml`, so no sshd and no published SSH port
+- `access.dockerSocket` → no `docker-compose.docker-sock.yml`, so no host Docker socket
+- `hermesDashboard.enabled` → no `docker-compose.hermes-dashboard.yml`, so no dashboard
+- `composeOverrides[]` → every extra overlay path is ignored
 
-## What is not consolidated, and why
+Secrets still reach that container: compose auto-loads the `.devcontainer/.env`
+beside the compose file, and that file is a symlink to the root `.env`.
+Non-secret `oh.json` settings only reach compose when `oh` renders them, so on
+this path each variable falls back to its default in
+`.devcontainer/docker-compose.yml`.
 
-- **The two `.devcontainer/.env` seeds.** `make sandbox` and the CLI's
-  `seedHarnessYaml()` both copy the example. Unifying them means the Makefile
-  shelling into Node, which the host-prerequisite promise forbids. Two small
-  implementations of one `cp` is the cheaper trade.
-- **The ~60 `make …` references across the docs.** They are correct — `make`
-  stays canonical on the host. A sweep would be churn.
+If you need any overlay, provision with `oh sandbox` and then use *Dev
+Containers: Attach to Running Container* instead of *Reopen in Container*.

@@ -61,6 +61,8 @@ Env vars:
   OH_GITHUB_REPO       Repo for the build fallback (default: mifunedev/openharness)
   OH_GITHUB_REF        Git ref for the build fallback (alias: OH_INSTALL_REF)
   OH_NVM_VERSION       nvm version tag for the Node install (default: v0.40.3)
+  OH_SKIP_EPILOGUE=1   Suppress the closing next-steps block (used when another
+                       installer sources this script for ensure_node + install)
 
 Examples:
   curl -fsSL https://oh.mifune.dev/get-oh.sh | bash -s -- --yes
@@ -68,8 +70,8 @@ Examples:
 HELPEOF
 }
 
-ASSUME_YES="${OH_ASSUME_YES:+true}"; ASSUME_YES="${ASSUME_YES:-false}"
-ASSUME_NO=false
+ASSUME_YES="${ASSUME_YES:-${OH_ASSUME_YES:+true}}"; ASSUME_YES="${ASSUME_YES:-false}"
+ASSUME_NO="${ASSUME_NO:-false}"
 while [ $# -gt 0 ]; do
   case "$1" in
     -y|--yes) ASSUME_YES=true ;;
@@ -212,6 +214,7 @@ banner "Done"
 if [ "$PATH_OK" = "1" ]; then
   ok "oh $("$OH_BIN_DIR/oh" --version 2>/dev/null || echo '(run: oh --version)')"
 fi
+if [ "${OH_SKIP_EPILOGUE:-0}" != "1" ]; then
 cat <<DONEEOF
 
 Next steps:
@@ -222,6 +225,7 @@ Next steps:
 'oh' is a single file at $OH_BIN_DIR/oh — no repo clone was created.
 Upgrade later by re-running get-oh.sh.
 DONEEOF
+fi
 
 if [ "$_OH_SOURCED" = 0 ] && [ "$NEED_PATH" = "1" ]; then
   printf "\n${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}\n"

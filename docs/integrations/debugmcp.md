@@ -30,7 +30,7 @@ server that **any MCP-capable harness** can drive — breakpoints, stepping, var
 inspection, expression evaluation. Claude Code and Codex are pre-registered against it in this
 repo, so either can use it; it is **not** part of any single agent's auth and is unnecessary
 for the pure-terminal path. It becomes available when you take the **VS Code
-attach-to-container route** after `make sandbox` (the operator-attached path is **confirmed
+attach-to-container route** after `oh sandbox` (the operator-attached path is **confirmed
 working** — validated on `oh-remote`, 2026-06-23):
 
 1. **Install the DebugMCP extension on the machine running VS Code** (your laptop, or the

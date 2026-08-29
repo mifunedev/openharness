@@ -38,7 +38,7 @@ INSTALL_GROK_BUILD=true
 Then rebuild/restart the sandbox:
 
 ```bash
-make stop && make sandbox
+oh stop && oh sandbox
 ```
 
 Open Harness uses the upstream installer during image build, pinned to the version verified when this support was added:
@@ -119,7 +119,7 @@ Open Harness mounts the `grok-auth` named volume at `/home/sandbox/.grok` (`~/.g
 - logs
 
 :::warning Volume removal deletes Grok state
-`make destroy` and `docker compose down -v` remove named volumes, including `grok-auth`. Use `make stop` when you want Grok Build state under `~/.grok` to survive.
+`oh destroy` and `docker compose down -v` remove named volumes, including `grok-auth`. Use `oh stop` when you want Grok Build state under `~/.grok` to survive.
 :::
 
 ## Dangerous flags

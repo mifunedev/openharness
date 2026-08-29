@@ -20,7 +20,6 @@ import path from "node:path";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 const SCRIPT = path.join(REPO_ROOT, ".oh", "scripts", "docker-compose.sh");
-const MAKEFILE = path.join(REPO_ROOT, "Makefile");
 const INSTALL = path.join(REPO_ROOT, ".oh", "scripts", "install.sh");
 
 let tmp: string;
@@ -436,27 +435,36 @@ describe("execution target argv equivalence (issue #733)", () => {
 });
 
 describe("compose helper wiring", () => {
-  it("Makefile uses the shared helper and preserves lifecycle verbs", () => {
-    const text = readFileSync(MAKEFILE, "utf8");
-    expect(text).toContain("COMPOSE           := .oh/scripts/docker-compose.sh");
-    expect(text).toContain("$(COMPOSE) up -d --build");
-    expect(text).toContain("$(COMPOSE) down -v");
-    expect(text).not.toContain("COMPOSE_OVERRIDES");
-    expect(text).not.toContain("HARNESS_YAML_OVERRIDES");
+  it("no Makefile survives to reopen the second door", () => {
+    expect(existsSync(path.join(REPO_ROOT, "Makefile"))).toBe(false);
   });
 
-  it("installer uses the shared helper instead of raw COMPOSE_FILES expansion", () => {
+  it("installer provisions through `oh sandbox`, never through raw compose args", () => {
     const text = readFileSync(INSTALL, "utf8");
-    expect(text).toContain('"$REPO_DIR/.oh/scripts/docker-compose.sh" up -d --build');
+    expect(text).toMatch(/\(\n\s+cd "\$REPO_DIR"\n\s+oh sandbox\n\)/);
+    expect(text).not.toContain('"$REPO_DIR/.oh/scripts/docker-compose.sh" up -d --build');
     expect(text).not.toContain("docker compose $COMPOSE_FILES");
     expect(text).not.toContain("COMPOSE_FILES=\"-f .devcontainer/docker-compose.yml\"");
   });
 
-  it("installer seeds the root .env from .env.example, links .devcontainer/.env to it, and the config writes ALWAYS run", () => {
+  it("installer requires Node through get-oh.sh's ensure_node rather than a second copy", () => {
     const text = readFileSync(INSTALL, "utf8");
-    expect(text).toContain("_env_set() {");
-    expect(text).toContain("_env_set SANDBOX_NAME");
-    expect(text).toContain("_env_set GIT_USER_NAME");
+    expect(text).toContain('. "$REPO_DIR/.oh/scripts/get-oh.sh"');
+    expect(text).not.toContain("ensure_node() {");
+    expect(text).not.toContain("install_node_via_nvm() {");
+    expect(text).not.toMatch(/command -v make/);
+  });
+
+  it("installer writes every non-secret answer to oh.json and keeps .env for secrets only", () => {
+    const text = readFileSync(INSTALL, "utf8");
+    expect(text).not.toContain("_env_set");
+    expect(text).toContain("_config_set name");
+    expect(text).toContain("_config_set timezone");
+    expect(text).toContain("_config_set git.userName");
+    expect(text).toContain("_config_set git.userEmail");
+    expect(text).toContain('_config_set "$2" true');
+    expect(text).toContain("_config_set access.dockerSocket");
+    expect(text).toContain("oh config set");
     expect(text).not.toContain("_yaml_set");
     expect(text).not.toContain("_cfg_set");
     expect(text).not.toContain("example.env");
@@ -467,16 +475,23 @@ describe("compose helper wiring", () => {
     expect(text).toContain('chmod 600 "$ENV_FILE"');
 
     expect(text.indexOf("Created .env from .env.example")).toBeLessThan(
-      text.indexOf("_env_set SANDBOX_NAME"),
+      text.indexOf("_config_set name"),
     );
 
     expect(text).toContain("Existing .env preserved — updating keys in place");
-    expect(text).toContain("THE CONFIG WRITES ALWAYS RUN");
-
-    expect(text).toContain('_env_set "INSTALL_$1" true');
 
     expect(text).toContain("migrate-harness-yaml.sh");
 
     expect(text).toContain("GH_TOKEN=");
+  });
+
+  it("installer's next steps name only `oh` verbs", () => {
+    const text = readFileSync(INSTALL, "utf8");
+    const epilogue = text.slice(text.indexOf("Installation complete!"));
+    expect(epilogue).not.toMatch(/\bmake [a-z]/);
+    expect(epilogue).toContain("oh shell");
+    expect(epilogue).toContain("oh destroy");
+    expect(epilogue).toContain("oh gateway");
+    expect(epilogue).toContain("oh --help");
   });
 });

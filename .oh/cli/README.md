@@ -112,9 +112,9 @@ allow-listed secrets. See
 [configuration](https://github.com/mifunedev/openharness/blob/main/docs/configuration.md)
 for the field reference.
 
-These mirror the root `Makefile`'s targets one-for-one and run the same
-`.oh/scripts/docker-compose.sh`. Which one is canonical depends on where you
-are — see [lifecycle commands](https://github.com/mifunedev/openharness/blob/main/docs/lifecycle-commands.md), which also
+`oh` is the only lifecycle door, on the host and in the sandbox, and every verb
+runs `.oh/scripts/docker-compose.sh` — see
+[lifecycle commands](https://github.com/mifunedev/openharness/blob/main/docs/lifecycle-commands.md), which also
 states the confirmation policy `oh destroy` carries.
 
 `oh init` and `oh update` fetch their payload on demand — with no local source they shallow-clone

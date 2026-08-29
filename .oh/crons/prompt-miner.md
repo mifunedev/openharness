@@ -65,7 +65,7 @@ a daily delta, and marker promotion is a property of the corpus rather than of
 any single day.
 
 This writes `$TMPDIR/oh-prompt-miner/<today>/prompt-miner-<date>.md` (+ `.json`). `--report-only`
-**never** edits `.oh/context/IDENTITY.md`. Surface the top mined markers in the
+**never** writes into the repository. Surface the top mined markers in the
 reply so a human can review the run without attaching.
 
 ### 2. Decide: candidate or stop
@@ -124,10 +124,10 @@ printf '[%s]\tprompt-miner\t%s\t%s\n' "$(date -Iseconds)" "<STATUS>" "<msg>" \
 ## Guarantees
 
 - **Never auto-merge.** This cron opens a PR and labels it; a human merges.
-- **Never edit `.oh/context/IDENTITY.md` directly.** Improvements land as
+- **Never edit tracked harness files directly.** Improvements land as
   loop-gated PRs through `/spec` (whose execute node walks retro/compound),
-  never as unattended identity mutations. The interactive `/prompt-miner`
-  Step-4 gate is the only identity-writing path, and it requires human `APPROVE`.
+  never as unattended mutations. The interactive `/prompt-miner` Step-4 gate only
+  proposes a probe, and it requires human `APPROVE`.
 - **Origin-only.** Issue, PR, and ground-truth cross-ref target
   `mifunedev/openharness` / `origin/development` — never `upstream`/`mifunedev`.
 - **Harness-infra scope only** (skills/rules/docs/scripts/crons/wiki).

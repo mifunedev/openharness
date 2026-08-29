@@ -182,7 +182,7 @@ The contrast is the teaching tool: same axis, but the GOOD form's options would 
 |---|---|---|
 | `question` | string | Full question, ends in `?` |
 | `header` | string ≤12 chars | Short chip/tag shown above the question |
-| `options` | array, 2–4 entries | Each has `label` (1–5 words) + `description` (one line, .oh/context/tradeoff). No `Other` — auto-added. |
+| `options` | array, 2–4 entries | Each has `label` (1–5 words) + `description` (one line, states the tradeoff). No `Other` — auto-added. |
 | `multiSelect` | bool, default `false` | `true` when choices aren't mutually exclusive |
 | `questions` | array, 1–4 entries | Multiple questions batch into one tool call |
 

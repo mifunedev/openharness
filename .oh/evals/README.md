@@ -11,7 +11,7 @@ for how lessons map to probes.
 
 | Path | Holds |
 |------|-------|
-| `probes/` | One `<id>.sh` per probe (Tier-A deterministic + `ablation`). |
+| `probes/` | One `<id>.sh` per probe (Tier-A deterministic). |
 | `RESULTS.md` | The benchmark scoreboard — current status per probe id (see schema below). |
 
 ## Probe contract
@@ -37,7 +37,7 @@ exact contract `grep -E '^# (tier|source|desc):'`):
 
 ```sh
 #!/usr/bin/env bash
-# tier: A          # A | ablation
+# tier: A          # A
 # source: retro lesson 2026-06-04          # the lesson/rule this probe closes
 # desc: public mifune.dev is not served by `next dev`
 set -euo pipefail
@@ -71,7 +71,7 @@ run (no prior rows) every probe is emitted as `new-pass`/`new-fail` and NO
 | Column | Meaning |
 |--------|---------|
 | `probe` | probe id (`<id>` of `.oh/evals/probes/<id>.sh`) |
-| `tier` | `A` \| `ablation` |
+| `tier` | `A` |
 | `last-run (UTC)` | timestamp of the most recent `/eval` that ran it |
 | `status` | `PASS` \| `REGRESSION` \| `SKIPPED` \| `TIMEOUT` |
 | `source` | the lesson/rule the probe closes |

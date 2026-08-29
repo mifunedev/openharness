@@ -2,10 +2,10 @@
 
 Author concise guidance that activates for a reliable file scope. Open Harness has
 collapsed its former always-loaded rule tier into provider-portable skills: prefer
-`.oh/skills/<name>/SKILL.md` with `paths:`. Treat `.oh/context/rules/` as a
-compatibility-pointer surface, not a destination for new policy. Create a
-`.claude/rules/<name>.md` file only when the user explicitly requests a
-Claude-specific downstream artifact and local project instructions allow it.
+`.oh/skills/<name>/SKILL.md` with `paths:`. The only remaining rule surface is
+`.claude/rules/`. Create a `.claude/rules/<name>.md` file only when the user
+explicitly requests a Claude-specific downstream artifact and local project
+instructions allow it.
 
 ## Contents
 
@@ -36,8 +36,7 @@ Apply this decision order:
 6. **Multi-step workflow**: use `/builder command`; rules describe behavior, not a
    procedure with side effects.
 
-Do not recreate the removed Open Harness always-on rules tier. The surviving
-`.oh/context/rules/git.md`-style files are compatibility pointers only.
+Do not recreate the removed Open Harness always-on rules tier.
 
 ## Discover the scope
 
@@ -94,7 +93,7 @@ paths:
 
 Rules:
 
-- Write `.claude/rules/<name>.md`, not `.oh/context/rules/<name>.md`.
+- Write `.claude/rules/<name>.md`.
 - Use `paths:` as the only rule-specific frontmatter unless current Claude docs and
   local examples demonstrate otherwise.
 - Omit `paths:` only when the user explicitly wants unconditional Claude-only
@@ -123,8 +122,7 @@ that own the same rule.
 ## Validate
 
 - [ ] Artifact choice follows the decision order and local instructions.
-- [ ] Open Harness guidance lives in `.oh/skills/<name>/SKILL.md` with `paths:`;
-      `.oh/context/rules/` remains compatibility pointers only.
+- [ ] Open Harness guidance lives in `.oh/skills/<name>/SKILL.md` with `paths:`.
 - [ ] `.claude/rules/` is used only for an explicit Claude-specific downstream
       request.
 - [ ] Globs match representative intended files and exclude unrelated ones.

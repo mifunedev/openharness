@@ -45,8 +45,8 @@ content. The contract is non-negotiable:
   read the prompt wording, and never commit the result.
 - All artifacts land in ephemeral scratch under `$TMPDIR`, outside the repo. Never
   stage, commit, or paste a transcript or an `--include-prompt-text` report.
-- The engine never edits `.oh/context/IDENTITY.md`. Only Step 4 of this skill
-  writes there, and only after explicit `APPROVE`.
+- The engine never writes into the repository. Its only outputs are the scratch
+  artifacts under `$TMPDIR`.
 
 ## When to use
 
@@ -176,28 +176,30 @@ then gate it exactly like `/retro` (`.claude/skills/retro/SKILL.md` § 6):
 
 1. **Qualify filter.** Drop any candidate that is a secret, raw command output, a
    step-by-step plan, or anything re-derivable in under a minute.
-2. **Dedup against existing identity.** For each surviving candidate, grep
-   `.oh/context/IDENTITY.md` for the same substance; if it is already captured,
-   link or skip — never double-write (this is the same dedup `/retro` performs in
-   its qualify filter).
+2. **Dedup against existing probes.** For each surviving candidate, grep
+   `.oh/evals/probes/` for a probe that already asserts the same invariant; if it
+   is already captured, link or skip — never double-write (this is the same dedup
+   `/retro` performs in its qualify filter).
 3. **Promotability.** A marker that is merely descriptive ("this corpus shows X
    prompt trait correlates with better `<type>` sessions") is **reported, not
    promoted** — say it in the report and stop there. Only a marker that has
    generalized across many sessions into a prescriptive principle ("always include
-   acceptance criteria") earns a `.oh/context/IDENTITY.md` proposal — and
-   IDENTITY.md is **never** auto-written.
+   acceptance criteria") earns a proposed probe under `.oh/evals/probes/` — and a
+   probe is **never** auto-written.
 4. **Propose, then wait.** Present the block and stop until the user responds:
 
    ```
-   Proposed IDENTITY.md addition(s):
-   - <prescriptive principle> [prompt-miner · <stratum>] — basis: <one clause>
+   Proposed probe(s) under .oh/evals/probes/:
+   - <probe name> asserts <prescriptive principle> [prompt-miner · <stratum>] — basis: <one clause>
 
-   Type APPROVE to write, SKIP to discard any item, or EDIT <n> <new text> to revise.
+   Type APPROVE to record, SKIP to discard any item, or EDIT <n> <new text> to revise.
    ```
 
-5. **Write approved items.** On `APPROVE`, append to `.oh/context/IDENTITY.md`
-   under `## Lessons learned (append-only)`. The file is append-only; never edit
-   existing entries. `--report-only` and `--dry-run` skip this step entirely.
+5. **Record approved items.** On `APPROVE`, add each approved probe proposal to the
+   run report in `$TMPDIR`, beside the weakness records and the ranked marker
+   table. `/prompt-miner` writes no tracked file; an approved proposal becomes a
+   real probe only through `/spec`, which builds and gates it. `--report-only` and
+   `--dry-run` skip this step entirely.
 
 Announce `RESULT: MINING-COMPLETE` once the gate has run.
 
@@ -209,9 +211,8 @@ Announce `RESULT: MINING-COMPLETE` once the gate has run.
   `NO-CORPUS` and stop. Do not manufacture noise-driven markers.
 - **Committing transcripts.** Artifacts are gitignored; never stage them, and never
   commit `--include-prompt-text` output.
-- **Auto-writing identity.** Step 4 is propose-then-confirm. Never write
-  `IDENTITY.md` without an explicit `APPROVE`, and never from a single run's
-  evidence.
+- **Auto-promoting a marker.** Step 4 is propose-then-confirm. Never record a probe
+  proposal without an explicit `APPROVE`, and never from a single run's evidence.
 - **Word-splitting `--weights`.** Always invoke the engine via the `args=($ARGUMENTS)`
   array form so the JSON stays one token.
 - **Inventing a file to save a marker in.** A descriptive marker that does not

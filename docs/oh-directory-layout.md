@@ -24,7 +24,6 @@ Every entry below is present in a fresh clone unless noted otherwise.
 | `skills.lock` | file | Pinned lockfile for the vendored skill pack (`skills.v1` schema). | `.oh/scripts/link-providers.sh` (vendored-pack validation). |
 | `agents/` | dir | Provider-portable sub-agent definitions, one `<name>.md` per agent. Currently empty — no sub-agent ships with the harness. Audit routing belongs to `/audit`, not an agent registry. | Agent providers via symlinks (`.claude/agents` → `.oh/agents`); the Agent tool. |
 | `cli/` | dir | The in-tree `oh` CLI — a standalone npm package built into the image as `/opt/oh`. | `npm --prefix .oh/cli`; the `oh` binary (`oh init` / `oh update`). |
-| `context/` | dir | The always-on identity core read at session start (`SOUL.md`, `IDENTITY.md`, `TOOLS.md`, `USER.md`, `REPO_MAP.md`) plus the collapsed `rules/` provider pointers. | Session start per `AGENTS.md`; symlinked provider surfaces. |
 | `crons/` | dir | Scheduled-agent cron definitions (`heartbeat.md`, `cleanup-tasks.md`, `eval-weekly.md`, `prompt-miner.md`) plus the gitignored runtime `.cron.log`/`.pid`. | `.oh/scripts/cron-runtime.ts`. |
 | `evals/` | dir | The fitness-function suite — regression `probes/` (incl. `cc-safety-net-wiring.sh`, the destructive-command guard wiring probe), the `capability/` benchmark, trajectory `datasets/`, and the `RESULTS.md` scoreboard. | `/eval` and the `.oh/scripts` eval runner. |
 | `hooks/` | dir | Provider-portable **secret-exposure** hook scripts (`deny-env-dump.sh`, `deny-secret-paths.sh`, `notify_slack.sh`, `warn-devtcp.sh`). The complementary **destructive-command** guard (cc-safety-net) is not a script here — it is a global binary baked into the image plus guard-wrapped entries in the provider configs (`.claude/settings.json`, `.codex/hooks.json`, the `npm:cc-safety-net` package in `.pi/settings.json`); see [security-considerations.md §3](security-considerations.md). | Agent providers via symlinks (`.claude/hooks` → `.oh/hooks`). |
@@ -64,4 +63,4 @@ must not be treated as real until a change actually creates them:
 
 - [`.oh/README.md`](../.oh/README.md) — the governing principle and the `.oh/`-vs-root boundary.
 - [Descriptive `.oh/harness.yml` example](harness-manifest.md) — an example-only pointer map over the real `.oh/` surfaces, not a required manifest schema.
-- [`.oh/context/directory-readme.md`](../.oh/context/directory-readme.md) — the README-as-directory-anchor convention.
+- [`.oh/skills/harness-context/references/directory-readme.md`](../.oh/skills/harness-context/references/directory-readme.md) — the README-as-directory-anchor convention.

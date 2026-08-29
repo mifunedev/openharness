@@ -55,3 +55,11 @@ mydir/*
 - Directory's name alone is enough (e.g. `docs/` for product documentation).
 - Directory is auto-managed by tooling and not meant for human
   navigation (e.g. `node_modules/`).
+
+## README or skill
+
+A *description* of what a directory holds stays in that directory's
+`README.md`. A *directive* an agent must follow moves to the skill that owns
+the behavior under `.oh/skills/`, and the README links to it. Only the root
+orchestrator contract lives in `AGENTS.md`. Open Harness has no nested
+`AGENTS.md` files.

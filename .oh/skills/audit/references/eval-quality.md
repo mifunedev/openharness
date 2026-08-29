@@ -27,7 +27,7 @@ Arguments received: `$ARGUMENTS`
 |----------|-------|
 | `all` (default, or empty) | All probes **and** all capability tasks |
 | `probes` | `.oh/evals/probes/*.sh` only |
-| `capability` | `.oh/evals/capability/tasks/CB-*.md` + `repo-orientation` only |
+| `capability` | `.oh/evals/capability/tasks/CB-*.md` only |
 | `<probe-or-task-id>` | A single probe id (e.g. `skill-paths`) or task id (e.g. `CB-001`) |
 
 ### 2. Discover targets
@@ -35,9 +35,8 @@ Arguments received: `$ARGUMENTS`
 Two target classes, discovered from the neutral `.oh/evals/` source tree:
 
 - **Probes** — every `.oh/evals/probes/*.sh`. Id = basename without `.sh`.
-- **Capability tasks** — every `.oh/evals/capability/tasks/CB-*.md` plus the
-  `repo-orientation` workload at `.oh/evals/capability/repo-orientation/`. Id =
-  the `CB-NNN` prefix (or `repo-orientation`).
+- **Capability tasks** — every `.oh/evals/capability/tasks/CB-*.md`. Id = the
+  `CB-NNN` prefix.
 
 > Concrete copy-pasteable discovery + scoring driver blocks and a sample matrix
 > live in **§ Scoring procedure** below.
@@ -102,7 +101,7 @@ Groomable — rewrite to assert the user outcome, not the mechanism.
 violating the held-out discipline in `.oh/evals/capability/README.md`.*
 
 Signal: the task's guarded assertion is now baked into the very file it inspects,
-or the benchmark manifest (`repo-orientation/tasks.json`, a task's fixtures) is
+or the benchmark manifest (a task's fixtures) is
 referenced by non-eval harness code — evidence the harness was special-cased *to*
 the benchmark. Per the capability README, special-casing the harness to ace a
 task corrupts the instrument. **Fatal** — a no-longer-held-out task measures
@@ -243,7 +242,6 @@ RESULTS="$EVALS/RESULTS.md"
 # ── Discover targets ────────────────────────────────────────────────────────
 mapfile -t PROBES < <(ls "$EVALS"/probes/*.sh 2>/dev/null | sort)
 mapfile -t CAPS   < <(ls "$EVALS"/capability/tasks/CB-*.md 2>/dev/null | sort)
-[ -e "$EVALS/capability/repo-orientation" ] && CAPS+=("$EVALS/capability/repo-orientation")
 
 # ── Oracle: persistently-SKIPPED probe ids from the last /eval (RESULTS.md) ──
 # The "always-SKIP" verdict is REAL DATA — the status column, never grep 'exit 2'.
@@ -299,24 +297,22 @@ done
 
 # ── Score capability tasks (checks 1,5,6) ────────────────────────────────────
 for f in "${CAPS[@]}"; do
-  if [ -d "$f" ]; then id="repo-orientation"; else id=$(grep -m1 '^id:' "$f" | awk '{print $2}'); fi
+  id=$(grep -m1 '^id:' "$f" | awk '{print $2}')
   fatal=0; nf=0; flags=""
 
-  if [ "$id" != "repo-orientation" ]; then
-    slug=$(grep -m1 '^slug:' "$f" | awk '{print $2}')
-    # Check 5 — no-longer-held-out (FATAL): executable harness LOGIC (NOT the eval
-    # scorer, NOT docs) hardcodes the task's slug ⇒ the harness was special-cased.
-    if git -C "$ROOT" grep -lF "$slug" -- '.oh/scripts/' '.oh/hooks/' 2>/dev/null \
-         | grep -qviE 'benchmark-score|README'; then fatal=1; flags+="5 "; fi
-    # Check 1 — stale (GROOM): a declared datasets: DS-NNN ref that no longer
-    # resolves under datasets/**/ (datasets are nested dirs, not bare files).
-    for ds in $(grep -m1 '^datasets:' "$f" | grep -oE 'DS-[0-9]+'); do
-      find "$EVALS/datasets" -maxdepth 2 -name "${ds}*" 2>/dev/null | grep -q . \
-        || { nf=$((nf+1)); flags+="1 "; break; }
-    done
-    # Check 6 — too-narrow (GROOM): missing a scoring rubric / success signal
-    grep -qE '^## Rubric|^## Success signal' "$f" || { nf=$((nf+1)); flags+="6 "; }
-  fi
+  slug=$(grep -m1 '^slug:' "$f" | awk '{print $2}')
+  # Check 5 — no-longer-held-out (FATAL): executable harness LOGIC (NOT the eval
+  # scorer, NOT docs) hardcodes the task's slug ⇒ the harness was special-cased.
+  if git -C "$ROOT" grep -lF "$slug" -- '.oh/scripts/' '.oh/hooks/' 2>/dev/null \
+       | grep -qviE 'benchmark-score|README'; then fatal=1; flags+="5 "; fi
+  # Check 1 — stale (GROOM): a declared datasets: DS-NNN ref that no longer
+  # resolves under datasets/**/ (datasets are nested dirs, not bare files).
+  for ds in $(grep -m1 '^datasets:' "$f" | grep -oE 'DS-[0-9]+'); do
+    find "$EVALS/datasets" -maxdepth 2 -name "${ds}*" 2>/dev/null | grep -q . \
+      || { nf=$((nf+1)); flags+="1 "; break; }
+  done
+  # Check 6 — too-narrow (GROOM): missing a scoring rubric / success signal
+  grep -qE '^## Rubric|^## Success signal' "$f" || { nf=$((nf+1)); flags+="6 "; }
 
   v=$(verdict "$fatal" "$nf")
   case "$v" in KEEP) KEEP=$((KEEP+1));; GROOM) GROOM=$((GROOM+1));; CUT) CUT=$((CUT+1));; esac
@@ -356,15 +352,15 @@ fi
 
 ### Sample matrix
 
-Real output against the current tree (80 targets: 75 probes + 4 `CB-*` tasks +
-`repo-orientation`). Only the two probes RESULTS.md records as persistently
+Real output against the current tree (77 targets: 75 probes + 2 `CB-*` tasks).
+Only the two probes RESULTS.md records as persistently
 `SKIPPED` fire the fatal check-3 CUT; every other target is a clean KEEP:
 
 ```
 ## Eval Lint — 2026-07-03
 
 ### Summary
-75 probes + 5 capability tasks scored | KEEP 78 | GROOM 0 | CUT 2
+75 probes + 2 capability tasks scored | KEEP 75 | GROOM 0 | CUT 2
 
 | Target | Class | Flags | Verdict |
 |--------|-------|-------|---------|
@@ -374,9 +370,6 @@ Real output against the current tree (80 targets: 75 probes + 4 `CB-*` tasks +
 | … (73 more probes) …                       | probe | —      | KEEP  |
 | CB-001                                     | task  | —      | KEEP  |
 | CB-002                                     | task  | —      | KEEP  |
-| CB-003                                     | task  | —      | KEEP  |
-| CB-004                                     | task  | —      | KEEP  |
-| repo-orientation                           | task  | —      | KEEP  |
 
 _Check 7 (suite advisory): 75 probes now; capability suite score = mean of task scores…_
 
@@ -419,7 +412,6 @@ byte-identical verdicts (deterministic), and `.oh/evals/` stays unmodified.
 |-------|------|----|
 | Probe | `.oh/evals/probes/*.sh` | basename without `.sh` |
 | Capability task | `.oh/evals/capability/tasks/CB-*.md` | `CB-NNN` prefix |
-| Repo-orientation | `.oh/evals/capability/repo-orientation/` | `repo-orientation` |
 
 ### The seven failure modes
 

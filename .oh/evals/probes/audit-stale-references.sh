@@ -16,7 +16,7 @@ while IFS= read -r hit; do
   case "$path:$line" in
     .oh/evals/probes/audit-dispatcher-contract.sh:*|.oh/evals/probes/audit-stale-references.sh:*) continue;;
     .oh/skills.lock:*Migrated*provenance*) continue;;
-    .oh/scripts/link-providers.sh:*context-audit-runner.sh*|.oh/skills/audit/references/context.md:*context-audit-*|.oh/skills/audit/scripts/context-audit-runner.sh:*context-audit-*) continue;;
+    .oh/scripts/link-providers.sh:*context-audit-runner.sh*|.oh/skills/audit/references/context.md:*context-audit-*) continue;;
     .oh/skills/audit/references/pr.md:*pr-audit-proof*|.oh/skills/audit/references/prs.md:*pr-audit-proof*) continue;;
     .oh/skills/prompt-miner/scripts/mine-traces.mjs:*pr-audit*) continue;;
   esac

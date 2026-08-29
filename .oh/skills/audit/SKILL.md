@@ -6,7 +6,7 @@ description: >-
   drift, and correlated full campaigns. TRIGGER when: audit this task; verify this
   implementation; audit PR N; classify this pull request; audit open PRs; triage
   the PR queue; audit the harness; find harness improvements; audit context budget;
-  ablate this context file; audit skills; find stale or broken skills; lint evals;
+  audit skills; find stale or broken skills; lint evals;
   find Goodharted probes; check framework drift; cron staleness; run a full audit
   campaign; audit everything; cross-target next actions.
 argument-hint: "<implementation|pr|prs|harness|context|skills|eval-quality|drift|full> [target options]"
@@ -31,7 +31,7 @@ usage: /audit <implementation|pr|prs|harness|context|skills|eval-quality|drift|f
 | `pr` | `/audit pr <N> [--repo O/N] [--base B] [--deep] [--proof] [--dry-run]` | `PR-AUDIT-PROMOTABLE` / `PR-AUDIT-BLOCKED` / `PR-AUDIT-UNKNOWN` |
 | `prs` | `/audit prs [--repo O/N] [filters/actions]` | buckets + `PRS-AUDIT-COMPLETE` / `PRS-AUDIT-PARTIAL` |
 | `harness` | `/audit harness [--focus area] [--external URL|path] [actions]` | Tier 1/2/3 + Recommended Next 3 Actions |
-| `context` | `/audit context [all|--baseline|--ablate file]` | `KEEP` / `TRIM` / `DEMOTE` / `CUT` |
+| `context` | `/audit context [all|--baseline]` | `KEEP` / `TRIM` / `DEMOTE` / `CUT` |
 | `skills` | `/audit skills [all|root|name]` | `CURRENT` / `STALE` / `BROKEN` / `DELETE` |
 | `eval-quality` | `/audit eval-quality [all|probes|capability|id]` | `KEEP` / `GROOM` / `CUT` |
 | `drift` | `/audit drift` | per-class `OK` / aggregate `DRIFT:` |

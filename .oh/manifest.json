@@ -4,7 +4,6 @@
     "scripts/**",
     "install/**",
     "templates/**",
-    "context/**",
     "worktrees/README.md",
     "crons/**",
     "evals/**",

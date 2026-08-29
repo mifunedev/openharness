@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #167 — capability benchmark instrument
-# desc: guards the capability-benchmark structural integrity — a README spec, >=3 CB-*.md task specs (each with an `id:` line + `## Task`/`## Success signal`/`## Rubric` sections), a scoreboard with the canonical header, and a scoreboard row per task id — so the harness's progress-ceiling objective anchor can't silently rot
+# desc: guards the capability-benchmark structural integrity — a README spec, >=2 CB-*.md task specs (each with an `id:` line + `## Task`/`## Success signal`/`## Rubric` sections), a scoreboard with the canonical header, and a scoreboard row per task id — so the harness's progress-ceiling objective anchor can't silently rot
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -19,8 +19,8 @@ fails=()
 shopt -s nullglob
 task_files=("$TASKS"/CB-*.md)
 shopt -u nullglob
-if (( ${#task_files[@]} < 3 )); then
-  fails+=("expected >=3 CB-*.md task specs in $TASKS, found ${#task_files[@]}")
+if (( ${#task_files[@]} < 2 )); then
+  fails+=("expected >=2 CB-*.md task specs in $TASKS, found ${#task_files[@]}")
 fi
 
 for f in "${task_files[@]}"; do

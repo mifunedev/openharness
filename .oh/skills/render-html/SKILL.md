@@ -35,7 +35,7 @@ Common targets in this harness:
 Skip when the artifact is **source or pipeline input** — Markdown stays the substrate of the harness:
 - PRDs (`.oh/tasks/*/prd.md`), briefings, commit messages, PR bodies, `CHANGELOG.md`
 - The cron liveness trail itself (`.oh/crons/.cron.log`)
-- Skill/identity sources (`CLAUDE.md`, `.oh/context/`, `.claude/skills/`)
+- Skill/identity sources (`CLAUDE.md`, `.claude/skills/`)
 - Agent-to-agent handoffs (advisor → executor briefings)
 
 If asked to render any of the above, refuse and explain.

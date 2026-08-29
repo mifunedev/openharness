@@ -1,7 +1,7 @@
 # Retro Report Schema
 
-Every non-trivial `/retro` run must emit this structure before the IDENTITY.md
-approval gate. Keep the final line as `STATUS: RETRO-DONE`.
+Every non-trivial `/retro` run must emit this structure. `/retro` writes no
+file; the report is terminal output. Keep the final line as `STATUS: RETRO-DONE`.
 
 ## Required sections
 
@@ -24,15 +24,16 @@ Rules:
 - `Evidence against` is required for every row; write `none found in-session` only after actively checking.
 - `Verdict` must be `supported`, `refuted`, or `inconclusive`.
 - `Confidence` must be `low`, `medium`, or `high`.
-- `Promotion` must be one of `report-only`, `IDENTITY`, or `discarded`.
+- `Promotion` must be one of `report-only`, `probe`, or `discarded`.
 
 ## Promotion candidate format
 
-IDENTITY candidates are the only promotable tier. They must remain prescriptive,
+Probe candidates are the only promotable tier. They nominate a probe under
+`.oh/evals/probes/`; `/retro` never creates it. They must remain prescriptive,
 are rare, and must carry correction-surface metadata:
 
 ```markdown
-Proposed IDENTITY.md addition(s):
+Probe candidates:
 - <principle> [<subsystem> · <confidence> · harden|proceduralize|eval] — probe: <id> | basis: <one clause>
 ```
 
@@ -48,9 +49,9 @@ If `eval` is used, the probe must be `deferred-tier-b` and the line must include
 - **Result**: OP | DRY-RUN | SKIPPED-TRIVIAL
 - **Subsystems**: <which of the 5 produced signals, or focus: name>
 - **Hypotheses**: <total> (supported <n> / refuted <n> / inconclusive <n>)
-- **Promoted**: <n> to IDENTITY.md
+- **Probe candidates**: <n>
 - **Observation**: <one sentence>
 ```
 
-`Promoted` counts the lines actually appended, not the length of the proposal
-list.
+`Probe candidates` counts the lines in the probe-candidate block, not the number
+of hypotheses tested.

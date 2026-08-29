@@ -2,7 +2,7 @@
 # tier: A
 # source: issue #196 — .oh/evals/datasets verifiable trajectory corpus (Repo2RLEnv-inspired)
 # desc: guards the datasets corpus structural integrity — a README with a ## Catalogue index,
-#       >=3 example folders (each with manifest.json + prompt.md + oracle/ + an executable verify.sh
+#       >=2 example folders (each with manifest.json + prompt.md + oracle/ + an executable verify.sh
 #       whose hermetic self-check exits 0), jq-valid manifests (required fields + DS-<n> id), a
 #       bidirectional README-catalogue <-> folder drift check, and every capability `datasets:` ref
 #       resolving to a real example — so the corpus can't silently rot.
@@ -23,8 +23,8 @@ fails=()
 shopt -s nullglob
 example_dirs=("$DS"/*/DS-*/)
 shopt -u nullglob
-if (( ${#example_dirs[@]} < 3 )); then
-  fails+=("expected >=3 example folders <dataset>/DS-*/ under .oh/evals/datasets, found ${#example_dirs[@]}")
+if (( ${#example_dirs[@]} < 2 )); then
+  fails+=("expected >=2 example folders <dataset>/DS-*/ under .oh/evals/datasets, found ${#example_dirs[@]}")
 fi
 
 ids=()

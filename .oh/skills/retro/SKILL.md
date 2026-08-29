@@ -6,24 +6,23 @@ description: |
   Scientific session-closing retrospective: scan the current conversation,
   turn each signal into a falsifiable hypothesis, cite session evidence for
   AND against it, assign a verdict (supported / refuted / inconclusive) and a
-  confidence level, then promote only supported, sufficiently-confident
-  hypotheses into .oh/context/IDENTITY.md behind a propose-then-confirm gate.
+  confidence level, then nominate only supported, sufficiently-confident
+  hypotheses as candidate probes under .oh/evals/probes/.
   Reflects on five learning/knowledge subsystems through the lens of this
   session — continual learning, context compression, reinforcement learning,
   wiki, and docs — and points at the deep-dive lint/audit skills rather than
-  running them. The report is terminal output: /retro writes no file except an
-  approved IDENTITY.md line.
+  running them. The report is terminal output: /retro writes no file.
   TRIGGER when: /retro invoked, or session closing with decisions,
   surprises, or failures worth preserving.
 ---
 
 # Retro
 
-Scientific session-closing retrospective. Turn the current conversation's signals into falsifiable hypotheses, test each against session evidence (for and against), assign a verdict and confidence, and promote only the supported, sufficiently-confident ones — with explicit confirmation — into `.oh/context/IDENTITY.md`.
+Scientific session-closing retrospective. Turn the current conversation's signals into falsifiable hypotheses, test each against session evidence (for and against), assign a verdict and confidence, and nominate only the supported, sufficiently-confident ones as candidate probes under `.oh/evals/probes/`.
 
-`/retro` is **report-only**. It emits its report to the terminal and writes exactly one kind of file change: an approved append to `.oh/context/IDENTITY.md`. There is no durable lessons ledger and no dated run log; code is the source of truth, and a lesson that cannot be argued into IDENTITY.md is spoken once and left in the transcript.
+`/retro` is **report-only**. It emits its report to the terminal and writes no file at all. There is no durable lessons ledger and no dated run log; code is the source of truth, and a lesson that matters graduates to a probe under `.oh/evals/probes/`. A lesson that cannot be argued into a probe is spoken once and left in the transcript.
 
-Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for deterministic checks; use `${CLAUDE_SKILL_DIR}/references/report-schema.md` as the output contract.
+Use the self-contained helper in `${CLAUDE_SKILL_DIR}/scripts/` for deterministic checks; use `${CLAUDE_SKILL_DIR}/references/report-schema.md` as the output contract.
 
 ## When to use
 
@@ -38,7 +37,7 @@ Use the self-contained helpers in `${CLAUDE_SKILL_DIR}/scripts/` for determinist
 - **`/wiki lint`** — health-checks the wiki corpus for staleness and broken links. It curates the wiki, not the session.
 - **Trivial sessions** — if the session contained only mechanical read-only queries or single-command invocations with no surprises, announce the skip and stop.
 
-Key boundary: `/retro` is *session-scoped reflection*. The lint/audit skills above are the *deep-dive tooling* it points at — not what it runs. It is the only skill whose domain is *current-session signals → falsifiable hypotheses → identity*.
+Key boundary: `/retro` is *session-scoped reflection*. The lint/audit skills above are the *deep-dive tooling* it points at — not what it runs. It is the only skill whose domain is *current-session signals → falsifiable hypotheses → probe candidates*.
 
 ## Scope
 
@@ -46,7 +45,7 @@ Current conversation only. `/retro` does not read prior sessions or the `~/.clau
 
 ## Deterministic contract
 
-Before opening the approval gate, produce a report that follows `${CLAUDE_SKILL_DIR}/references/report-schema.md`. At minimum it contains:
+Produce a report that follows `${CLAUDE_SKILL_DIR}/references/report-schema.md`. At minimum it contains:
 
 ```markdown
 ## Session signals
@@ -93,11 +92,11 @@ Every signal from the session passes through four moves before it can become a p
 
 **Promotion rule:**
 
-- Only `supported` + `medium`-or-higher confidence may be proposed for `.oh/context/IDENTITY.md`.
-- IDENTITY.md *additionally* requires cross-session generalization (a single session, however well-supported, is not a principle).
+- Only `supported` + `medium`-or-higher confidence may be nominated as a probe candidate.
+- A probe candidate *additionally* requires cross-session generalization (a single session, however well-supported, is not a principle).
 - `refuted`, `inconclusive`, and any `low`-confidence hypothesis are reported and discarded — never promoted.
 
-A supported, medium-confidence lesson that does **not** generalize has no file to land in. Say it in the report, name the code or doc change that would encode it, and let it go. That is the intended outcome, not a gap.
+A supported, medium-confidence lesson that does **not** generalize has no probe to land in. Say it in the report, name the code or doc change that would encode it, and let it go. That is the intended outcome, not a gap.
 
 ## The five-subsystem lens
 
@@ -105,7 +104,7 @@ Seed hypotheses by asking, for each subsystem, what *this session* revealed abou
 
 | Subsystem | Guiding question (what did this session reveal?) | Lives in / deep-dive skill |
 |-----------|--------------------------------------------------|----------------------------|
-| Continual learning | Did prior identity get used, ignored, or contradicted? Did anything durable emerge? | `.oh/context/IDENTITY.md` |
+| Continual learning | Did prior lessons get used, ignored, or contradicted? Did anything durable emerge? | `.oh/evals/probes/` |
 | Context compression | Was loaded context bloated/redundant, or did a rule prove load-bearing? | `/audit context` |
 | Reinforcement learning | Did advisor/executor or recursive-decomposition patterns help or hurt? Over/under-delegation? | `.oh/agents/advisor.md` |
 | Wiki | Did the session surface knowledge that belongs in the wiki, or hit stale/missing entries? | `/wiki ingest`, `/wiki lint` |
@@ -138,13 +137,13 @@ Discard any surviving hypothesis that matches a row below:
 
 | Discard if | Reason |
 |------------|--------|
-| Contains a secret, token, or credential | IDENTITY.md is committed |
+| Contains a secret, token, or credential | Probes are committed |
 | Is raw stdout or command output | Use interpretation, not transcript |
 | Belongs in a commit message or PR body | Duplication causes drift |
 | Is a step-by-step task plan | Plans belong in `.oh/tasks/<name>/prd.json` |
 | Re-derivable in under a minute | Reading one file answers it — don't memorize |
 
-Also discard any hypothesis already captured, verbatim or in substance, in `.oh/context/IDENTITY.md` — link or skip; never double-write. Finally, drop from promotion every hypothesis whose verdict is `refuted` or `inconclusive`, or whose confidence is `low`.
+Also discard any hypothesis already captured, verbatim or in substance, by an existing probe under `.oh/evals/probes/` — cite the probe id and skip; never double-write. Finally, drop from promotion every hypothesis whose verdict is `refuted` or `inconclusive`, or whose confidence is `low`.
 
 ### 5. Classify survivors
 
@@ -153,9 +152,9 @@ For each surviving hypothesis — now carrying its evidence and confidence — c
 | Tier | Outcome | Criterion |
 |------|---------|-----------|
 | **Report-only** | Named in the report; no file written | Transient or session-scoped: true of this run, not necessarily future ones. |
-| **IDENTITY.md** | `.oh/context/IDENTITY.md` under `## Lessons learned (append-only)` | Graduated principle: applies across contexts, not just this run. Prescriptive tone ("always X"). **Never auto-write.** Propose a diff for approval. |
+| **Probe candidate** | Nominated in the report as a probe under `.oh/evals/probes/`; no file written | Graduated principle: applies across contexts, not just this run. Prescriptive tone ("always X"). |
 
-The test: if you would scope it to "this session" or "this codebase right now," it is report-only. If you would remove the scoping and say "always," it is an IDENTITY.md candidate.
+The test: if you would scope it to "this session" or "this codebase right now," it is report-only. If you would remove the scoping and say "always," it is a probe candidate.
 
 ### 5a. Triage tag — route each promotable lesson to its correction surface
 
@@ -169,7 +168,7 @@ For every lesson that survived to the promotion list (verdict `supported`, confi
 
 **Default away from `eval`.** Proposing the `eval` tag requires an explicit justification note: state why neither `harden` nor `proceduralize` can close the lesson. If no justification is given, demote to `proceduralize` (or `harden` if the lesson is a guardrail).
 
-Each proposed IDENTITY.md line must carry its triage tag and a proposed probe id:
+Each probe candidate line must carry its triage tag and a proposed probe id:
 
 ```
 - <principle> [<subsystem> · <confidence> · harden|proceduralize|eval] — probe: <id> | basis: <one clause>
@@ -177,53 +176,31 @@ Each proposed IDENTITY.md line must carry its triage tag and a proposed probe id
 
 The probe id follows the pattern `<subsystem-slug>-<YYYYMMDD>` (e.g., `context-compression-20260610`). For `eval`-tagged lessons, use `probe: deferred-tier-b` and append the justification note. The probe id is a forward reference — the actual `.oh/evals/probes/<id>.sh` file is created separately and is out of scope for `/retro` itself.
 
-### 6. Propose-then-confirm gate
+### 6. Emit the probe candidates
 
-#### 6a. Filter duplicates, then fix the candidate list
-
-Pipe candidate lines through the self-contained duplicate helper and skip exact/substantive duplicates it reports:
-
-```bash
-printf "%s\n" "<candidate line>" | bash "${CLAUDE_SKILL_DIR}/scripts/check-identity-duplicates.sh"
-```
-
-What survives is the proposal list. Do not change it after this point in the run.
-
-#### 6b. Present the proposal block
-
-Before writing to `.oh/context/IDENTITY.md`, present the proposed additions as a clearly formatted block. Each proposed line shows its `[subsystem · confidence]` tag and a one-clause evidence basis:
+Present the surviving candidates as a clearly formatted block. Each line shows its `[subsystem · confidence]` tag and a one-clause evidence basis:
 
 ```
-Proposed IDENTITY.md addition(s):
+Probe candidates:
 - <prescriptive principle, "always X" or "never Y"> [<subsystem> · <confidence> · harden|proceduralize|eval] — probe: <id> | basis: <one clause>
-
-Type APPROVE to write, SKIP to discard any item, or EDIT <n> <new text> to revise.
 ```
 
-**This block is the last thing you write before your turn ends.** Do not write to IDENTITY.md until the user responds. If `--dry-run` was passed, print the report and the proposal block, then stop — never write IDENTITY.md in dry-run mode.
+Write `- none` when nothing qualified.
 
-`auto-approve` resolves the gate inside the same turn — you present, decide, and write without handing control back. This is the common unattended path (the Advisor running `/spec execute`'s tail).
+This block is a nomination, not a write. `/retro` does not create `.oh/evals/probes/<id>.sh`, and does not write any file. Minting the probe is separate work performed by the operator or a follow-up task.
 
-### 7. Write approved changes
+`--dry-run` and `auto-approve` remain accepted for call-site compatibility — including the Advisor running `/spec execute`'s tail — and produce the same report, because there is nothing to gate.
 
-For each APPROVED item, append under `## Lessons learned (append-only)` in `.oh/context/IDENTITY.md`:
+### 7. Close the report
 
-```markdown
-- **YYYY-MM-DD**: <principle>
-```
-
-The file is append-only. Never edit existing entries.
-
-### 8. Close the report
-
-End with the `## Summary` section and the terminal line. Report what you actually appended in §7, not the length of the proposal list — an operator who answered `SKIP` to two of three items promoted one, not three.
+End with the `## Summary` section and the terminal line. Report the number of lines in the probe-candidate block, not the number of hypotheses tested.
 
 ```markdown
 ## Summary
 - **Result**: OP | DRY-RUN | SKIPPED-TRIVIAL
 - **Subsystems**: <which of the 5 produced signals, or focus: name>
 - **Hypotheses**: <total> (supported <n> / refuted <n> / inconclusive <n>)
-- **Promoted**: <n> to IDENTITY.md
+- **Probe candidates**: <n>
 - **Observation**: <one sentence — strongest supported finding, or no durable patterns>
 
 STATUS: RETRO-DONE
@@ -238,18 +215,18 @@ STATUS: RETRO-DONE
 ## Hypotheses
 | ID | Subsystem | Hypothesis | Evidence for | Evidence against | Verdict | Confidence | Promotion |
 |----|-----------|------------|--------------|------------------|---------|------------|-----------|
-| H1 | continual learning | Multi-step release workflows should be scripted while judgment gates stay explicit. | Repeated command sequences handled release verification and PR cleanup. | Canonical PR choice and /teach prose still required judgment. | supported | high | IDENTITY |
+| H1 | continual learning | Multi-step release workflows should be scripted while judgment gates stay explicit. | Repeated command sequences handled release verification and PR cleanup. | Canonical PR choice and /teach prose still required judgment. | supported | high | probe |
 | H2 | docs | Every workflow gap found this session belongs in docs. | Several gaps were procedural. | Some were already encoded in skills and would duplicate them. | inconclusive | low | discarded |
 
 ## Promotion candidates
-Proposed IDENTITY.md addition(s):
+Probe candidates:
 - Always script the deterministic substeps of a multi-step release workflow and leave the judgment gates explicit. [continual learning · high · proceduralize] — probe: continual-learning-20260618 | basis: release and PR cleanup repeated as command sequences
 
 ## Summary
 - **Result**: OP
 - **Subsystems**: continual learning, docs
 - **Hypotheses**: 2 (supported 1 / refuted 0 / inconclusive 1)
-- **Promoted**: 1 to IDENTITY.md
+- **Probe candidates**: 1
 - **Observation**: Release and PR-cleanup command sequences repeated often enough to be worth scripting.
 
 STATUS: RETRO-DONE
@@ -262,13 +239,13 @@ Claude Code skills cannot self-trigger. True automatic firing at session end wou
 ## Anti-patterns
 
 - **Proposing without filtering.** Running the qualify filter is not optional — a candidate list that hasn't been filtered is not ready to propose.
-- **Writing without confirmation.** IDENTITY.md entries require explicit approval.
-- **Double-writing.** If a lesson already exists in IDENTITY.md, link or skip. Never add a duplicate.
-- **Graduating prematurely.** One session is evidence, not a principle. IDENTITY.md entries need cross-session generalization.
+- **Writing a file.** `/retro` writes nothing. Nominate the probe; never create it, and never append a lesson anywhere.
+- **Double-writing.** If a lesson is already guarded by a probe under `.oh/evals/probes/`, cite the probe id and skip. Never nominate a duplicate.
+- **Graduating prematurely.** One session is evidence, not a principle. A probe candidate needs cross-session generalization.
 - **Reading outside current context.** Do not read external transcripts. Scope is the open conversation only.
 - **Inventing a file to save a lesson in.** A supported lesson that does not generalize is reported and dropped. Do not create a ledger, a dated log, or a scratch note to hold it.
 - **Promoting an unfalsifiable claim.** If no session evidence could refute it, it's not a hypothesis — it cannot be promoted.
-- **Overfitting one session.** Single-session support is not a principle; that is the IDENTITY.md graduation bar.
+- **Overfitting one session.** Single-session support is not a principle; that is the probe-graduation bar.
 - **Confirmation bias.** Every hypothesis must be tested for disconfirming evidence, not just supporting evidence.
 - **Scope creep into the lint tools.** Point at `/audit context`, `/wiki lint`, `/audit skills`, etc.; do not run them inline.
-- **Bypassing the schema/scripts.** The evidence table, duplicate check, and `## Summary` block are part of the contract, not optional formatting.
+- **Bypassing the schema/scripts.** The evidence table, hypothesis verdicts, and `## Summary` block are part of the contract, not optional formatting.

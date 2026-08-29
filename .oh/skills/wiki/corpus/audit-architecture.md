@@ -18,7 +18,6 @@ confidence: confirmed
 - `.oh/skills/audit/scripts/pr-classify.sh:1` — frozen real-GitHub CI evidence/readiness model.
 - `.oh/skills/audit/scripts/implementation-gates.sh:1` — rooted task, focused PR, and non-mutating browser gates.
 - `.oh/skills/audit/references/full.md:1` — campaign composition and synthesis.
-- `.oh/scripts/ablate.sh:1` — shared context/eval recovery state machine.
 
 ## Summary
 `/audit` is one explicit namespace over nine audit targets. It routes to specialized protocols without flattening their native verdicts, while private PR and recovery primitives provide deterministic evidence shared by workflow callers.

@@ -71,7 +71,7 @@ If this fails, log `[strategic-proposal] SKIP: gh CLI not authenticated` → Mem
 ### 2. Gather context
 
 Read the following to build the briefing:
-- `IDENTITY.md` — stack, mission, URLs
+- `AGENTS.md` — stack, mission, URLs
 - `Makefile`, `scripts/`, `install/` — orchestrator entrypoints and provisioning surface
 - `docs/` — GitHub-readable core docs; rendered docs site source lives in `mifunedev/openharness-web`
 - Open issues: `gh api "repos/mifunedev/openharness/issues?state=open&per_page=50"`
@@ -213,4 +213,3 @@ gh issue edit <NUMBER> --repo mifunedev/openharness --body "<council output>"
 | Expert: Agent Systems | `.claude/agents/expert-agent-systems.md` |
 | Strategic Council | `.claude/agents/strategic-council.md` |
 | Strategic Critic | `.claude/agents/strategic-critic.md` |
-| Identity | `IDENTITY.md` |

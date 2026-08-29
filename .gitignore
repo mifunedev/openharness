@@ -16,10 +16,6 @@
 !.oh/tasks/README.md
 !.oh/worktrees/README.md
 
-# Session handoffs are operator-local state; keep only the directory guide tracked.
-.oh/handoffs/*
-!.oh/handoffs/README.md
-
 # Build artifacts
 **/.venv/
 **/node_modules/

@@ -140,19 +140,8 @@ silently skip a surface.
 
 ## How to work in this repository
 
-At the start of every session, read:
-
-- `.oh/context/SOUL.md`
-- `.oh/context/IDENTITY.md`
-- `.oh/context/TOOLS.md`
-- `.oh/context/REPO_MAP.md`
-- `.oh/context/USER.md`
-
-Before changing a subtree, read each `AGENTS.md` and `CLAUDE.md` from the root through
-the target path. More local instructions win for their subtree. In one directory,
-`AGENTS.md` is canonical. If `AGENTS.md` and a real `CLAUDE.md` conflict in the same
-directory, stop and report the conflict. Use the ancestor helper in
-`.oh/context/REPO_MAP.md` for new or unfamiliar paths.
+This file is the only always-on context, and Open Harness does not use nested
+`AGENTS.md` files.
 
 Use the lifecycle in this order:
 
@@ -187,8 +176,7 @@ The repository has one sandbox definition and four control-plane areas:
 - `.oh/tasks/` holds task-specific plans, graphs, progress, and evidence.
 - `.oh/evals/` holds regression probes and capability benchmarks.
 
-Read `.oh/context/REPO_MAP.md` for search routing. Read the nearest directory
-`README.md` before changing unfamiliar machinery.
+Read the nearest directory `README.md` before changing unfamiliar machinery.
 
 ## Taste
 

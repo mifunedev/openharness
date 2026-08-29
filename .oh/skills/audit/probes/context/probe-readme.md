@@ -1,6 +1,6 @@
 ---
 name: probe-readme
-target: directory-readme.md
+target: .oh/skills/harness-context/references/directory-readme.md
 markers:
   - "README.md"
   - "one-line"

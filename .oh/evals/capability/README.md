@@ -83,9 +83,9 @@ bash .oh/evals/capability/run.sh --success PASS --cost-time PARTIAL --unattended
 # --check runs a success-signal probe and records check=PASS|SKIPPED|FAIL as
 # EVIDENCE (never a judgment axis — the operator still supplies the triad);
 # --base <ref> compares against a counterfactual; --dry-run previews without writing.
-bash .oh/evals/capability/run.sh --task CB-004 \
+bash .oh/evals/capability/run.sh --task CB-001 \
   --success PARTIAL --cost-time PARTIAL --unattended PARTIAL \
-  --check 'bash .oh/evals/probes/repo-map-contract.sh'
+  --check 'bash .oh/evals/probes/capability-benchmark-schema.sh'
 ```
 
 The row records the three axes, the task score, and a `Δ <delta> <class> vs
@@ -102,7 +102,6 @@ recomputed `suite score = <n>` comment as the ceiling delta versus the counterfa
 | `README.md` | This spec — the instrument, axes, schema, and discipline. |
 | `run.sh` | The executable runner (see *Runner*): validates operator-supplied axes, scores, computes the baseline delta + machinery-vs-capability class, and overwrites the task's row. |
 | `tasks/CB-NNN-<slug>.md` | One spec per benchmark task: its deliverable, the per-axis rubric, and a pointer to the most-recent real instance. `NNN` is a zero-padded, never-reused id. |
-| `repo-orientation/tasks.json` | Held-out workload manifest for CB-004 repo-orientation A/B scoring. |
 | `RESULTS.md` | The scoreboard. House style mirrors [`../RESULTS.md`](../RESULTS.md): one row per task id, **overwrite the row** each run — git history is the time series, not appended rows. |
 
 A task spec may additionally cite concrete verifiable instances from the **datasets corpus** at [`../datasets/`](../datasets/) via an optional `datasets:` frontmatter array (e.g. `datasets: [DS-001, DS-002]`); the `datasets-schema` probe checks every such ref resolves to a real example folder.
@@ -114,7 +113,7 @@ keep it honest:
 
 - **The task set is held-out.** You do **not** tune the harness *to* the
   benchmark. Improvements target the harness's general capability; the benchmark
-  observes the result. Special-casing the harness to ace `CB-003` corrupts the
+  observes the result. Special-casing the harness to ace `CB-002` corrupts the
   instrument and is forbidden.
 - **Never delete a task to inflate the score.** A `FAIL` is the benchmark working
   as intended — it found a capability the harness lacks. Removing a hard task to

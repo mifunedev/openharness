@@ -40,20 +40,20 @@ awk -F'|' '
     if (against == "") { print "REGRESSION: missing Evidence against" > "/dev/stderr"; exit 1 }
     if (verdict !~ /^(supported|refuted|inconclusive)$/) { print "REGRESSION: bad verdict: " verdict > "/dev/stderr"; exit 1 }
     if (confidence !~ /^(low|medium|high)$/) { print "REGRESSION: bad confidence: " confidence > "/dev/stderr"; exit 1 }
-    if (promotion !~ /^(report-only|IDENTITY|discarded)$/) { print "REGRESSION: bad promotion: " promotion > "/dev/stderr"; exit 1 }
+    if (promotion !~ /^(report-only|probe|discarded)$/) { print "REGRESSION: bad promotion: " promotion > "/dev/stderr"; exit 1 }
     rows++
   }
   END { if (rows < 1) { print "REGRESSION: no hypothesis rows" > "/dev/stderr"; exit 1 } }
 ' "$REPORT"
 
-if grep -q '^Proposed IDENTITY.md addition(s):' "$REPORT"; then
+if grep -q '^Probe candidates:' "$REPORT"; then
   while IFS= read -r cand; do
     [[ "$cand" == "- none" ]] && continue
     if ! grep -Eq '\[[^]]+ · (low|medium|high) · (harden|proceduralize|eval)\] — probe: ' <<<"$cand"; then
-      echo "REGRESSION: IDENTITY candidate missing triage tag or probe id: $cand" >&2
+      echo "REGRESSION: probe candidate missing triage tag or probe id: $cand" >&2
       exit 1
     fi
-  done < <(awk '/^Proposed IDENTITY\.md addition\(s\):/{f=1;next} f&&/^## /{f=0} f&&/^- /{print}' "$REPORT")
+  done < <(awk '/^Probe candidates:/{f=1;next} f&&/^## /{f=0} f&&/^- /{print}' "$REPORT")
 fi
 
 echo "PASS: retro report satisfies deterministic schema" >&2

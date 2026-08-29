@@ -67,14 +67,6 @@ ls "$AUDIT_ROOT/.github/workflows/" 2>/dev/null
 
 # Worktrees
 git -C "$AUDIT_ROOT" worktree list 2>/dev/null
-
-# Cross-session operating principles (tracked, shared).
-if [ -r "$AUDIT_ROOT/.oh/context/IDENTITY.md" ]; then
-  printf 'identity: loaded %s\n' "$AUDIT_ROOT/.oh/context/IDENTITY.md"
-  tail -40 "$AUDIT_ROOT/.oh/context/IDENTITY.md"
-else
-  printf 'identity: missing-or-unreadable %s\n' "$AUDIT_ROOT/.oh/context/IDENTITY.md"
-fi
 ```
 
 Assemble a **Context Snapshot** (compact markdown, ~300 words):
@@ -330,7 +322,6 @@ Return this structured observation to the outer dispatcher; do not report a run 
 | Orchestrator skills | `.claude/skills/` |
 | Crons | `.oh/crons/` |
 | Cron liveness | `.oh/crons/.cron.log` |
-| Operating principles | `.oh/context/IDENTITY.md` |
 | Wiki | `.oh/skills/wiki/corpus/` |
 | Compose | `.devcontainer/docker-compose.yml` |
 | Entrypoint | `.devcontainer/entrypoint.sh` |

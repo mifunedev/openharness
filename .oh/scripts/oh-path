@@ -24,21 +24,19 @@ _script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
 _oh_dir=$(dirname -- "$_script_dir")
 _root=$(dirname -- "$_oh_dir")
 
-_envvar="$(printf '%s' "$_name" | tr 'a-z-' 'A-Z_')_DIR"
-eval "_dir=\${$_envvar:-}"
-
-if [ -z "$_dir" ]; then
-    case "$_name" in
-        worktrees) _dir=".worktrees" ;;
-        projects)  _dir="projects" ;;
-        *)         _dir=".oh/$_name" ;;
-    esac
-fi
-
-case "$_dir" in
-    /*) ;;
-    *) _dir="$_root/$_dir" ;;
+case "$_name" in
+    worktrees) _dir=".worktrees" ;;
+    projects)  _dir="projects" ;;
+    crons)     _dir="crons" ;;
+    agents|skills|hooks|scripts|tasks|evals|templates|install|cli)
+        _dir=".oh/$_name" ;;
+    *)
+        printf 'oh-path: unknown name "%s"\n' "$_name" >&2
+        exit 2
+        ;;
 esac
+
+_dir="$_root/$_dir"
 
 [ "$_create" -eq 1 ] && mkdir -p "$_dir"
 printf '%s\n' "$_dir"

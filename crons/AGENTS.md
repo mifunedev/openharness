@@ -167,8 +167,9 @@ docker exec -u sandbox openharness kill -HUP "$(cat crons/.pid)"
 
 The bare `kill -HUP "$(cat crons/.pid)"` form works only from *inside* the container — the host is a different PID namespace, so the PID in `crons/.pid` (set by `PID_FILE`) does not resolve there. **Escape hatch:** if a reload arms zero crons (e.g. files removed by accident), restart the runtime to restore the last good state — `tmux kill-session -t cron-system`; the `cron-watchdog` session will relaunch `node --experimental-strip-types .oh/scripts/cron-runtime.ts` in a fresh `cron-system` session (the documented start path from `.devcontainer/entrypoint.sh`).
 
-## Override
+## Layout
 
-Set `CRONS_DIR=<path>` to point the runtime at a different directory
-(default: `crons`). Set `WORKTREES_DIR=<path>` to relocate isolated cron
-worktrees and `/worktrees` scratch roots (default: `.worktrees`).
+The runtime always reads `crons/` at the repository root, and isolated cron
+worktrees and `/worktrees` scratch roots always live under `.worktrees/`. These
+locations are a convention, not a setting; `.oh/scripts/oh-path crons` and
+`.oh/scripts/oh-path worktrees` resolve them.

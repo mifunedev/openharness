@@ -183,7 +183,6 @@ INSTALL_DEEPAGENTS=false
 INSTALL_HERMES=false
 INSTALL_GROK_BUILD=false
 INSTALL_AGENT_BROWSER=false
-WORKTREES_DIR=.worktrees
 ```
 
 The template also documents the SSH, Docker-socket, Hermes-dashboard, cron, and
@@ -211,7 +210,6 @@ prebuilt-image keys (all commented out by default). See
 | `INSTALL_DEEPAGENTS` | Set `true` to include DeepAgents in the sandbox image |
 | `INSTALL_HERMES` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
 | `INSTALL_GROK_BUILD` | Set `true` to include Grok Build in the sandbox image; all Grok user state lives in the persisted `~/.grok` volume |
-| `WORKTREES_DIR` | Worktree/project-clone root (default `.worktrees`) |
 
 Apply changes with `make destroy && make sandbox`.
 

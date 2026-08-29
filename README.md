@@ -263,8 +263,7 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 `.devcontainer/.env` is the one configuration file — gitignored, generated from
 tracked `.devcontainer/.example.env`. It holds the sandbox identity, git
-identity, optional `INSTALL_*` builds, directory overrides like `WORKTREES_DIR`,
-the SSH and Docker-socket toggles, and the secrets (`GH_TOKEN`,
+identity, optional `INSTALL_*` builds, the SSH and Docker-socket toggles, and the secrets (`GH_TOKEN`,
 `PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`). Apply changes with
 `make destroy && make sandbox`.
 Full key reference: [Quickstart → Configuration](docs/quickstart.md#configuration).

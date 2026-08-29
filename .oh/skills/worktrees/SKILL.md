@@ -106,7 +106,7 @@ Run first. Every create/remove op needs `$BASE` and `$WORKTREES_ROOT`.
 `$WORKTREES_ROOT` is always `.worktrees/` inside **the repository you are standing
 in** — run this from the harness root for harness branches, or from
 `projects/<owner>/<repo>/` to cut a worktree of that project. `oh-path` resolves the
-`WORKTREES_DIR` override, and only exists at the harness root, so the project case
+fixed root and only exists at the harness root, so the project case
 falls through to the repository toplevel.
 
 ```bash
@@ -114,8 +114,8 @@ BASE=$(git show-ref --verify --quiet refs/heads/development && echo development 
        git show-ref --verify --quiet refs/heads/main && echo main || echo master)
 TOPLEVEL="$(git rev-parse --show-toplevel)"
 if [ -x "$TOPLEVEL/.oh/scripts/oh-path" ]; then
-  WORKTREES_ROOT="$(bash "$TOPLEVEL/.oh/scripts/oh-path" worktrees --no-create 2>/dev/null || printf '%s' "$TOPLEVEL/${WORKTREES_DIR:-.worktrees}")"
-  PROJECTS_ROOT="$(bash "$TOPLEVEL/.oh/scripts/oh-path" projects --no-create 2>/dev/null || printf '%s' "$TOPLEVEL/${PROJECTS_DIR:-projects}")"
+  WORKTREES_ROOT="$(bash "$TOPLEVEL/.oh/scripts/oh-path" worktrees --no-create 2>/dev/null || printf '%s' "$TOPLEVEL/.worktrees")"
+  PROJECTS_ROOT="$(bash "$TOPLEVEL/.oh/scripts/oh-path" projects --no-create 2>/dev/null || printf '%s' "$TOPLEVEL/projects")"
 else
   WORKTREES_ROOT="$TOPLEVEL/.worktrees"
   PROJECTS_ROOT=""

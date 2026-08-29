@@ -14,15 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-vi.hoisted(() => {
-  delete process.env.WORKTREES_DIR;
-});
-
-const SIGHUP_CRONS_DIR = vi.hoisted(() => {
-  const dir = `/tmp/cron-sighup-test-crons-${process.pid}`;
-  process.env.CRONS_DIR = dir;
-  return dir;
-});
+const SIGHUP_CRONS_DIR = `/tmp/cron-sighup-test-crons-${process.pid}`;
 
 import {
   acquireLock,
@@ -1138,30 +1130,20 @@ describe("fallback worktree pruning", () => {
     return { repo, dirtyWt, cleanWt };
   };
 
-  it("resolves the cron worktree root from WORKTREES_DIR, defaulting to .worktrees", async () => {
+  it("resolves the cron worktree root at the fixed .worktrees/ root", async () => {
     const repo = path.join(tmp, "envrepo");
-    mkdirSync(path.join(repo, "custom-wt", "cron"), { recursive: true });
     mkdirSync(path.join(repo, ".worktrees", "cron"), { recursive: true });
 
     const priorCwd = process.cwd();
-    const priorDir = process.env.WORKTREES_DIR;
     try {
       process.chdir(repo);
 
-      delete process.env.WORKTREES_DIR;
       vi.resetModules();
-      const dflt = await import("../cron-runtime.ts");
-      expect(dflt.pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
+      const runtime = await import("../cron-runtime.ts");
+      expect(runtime.pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
       expect(existsSync(path.join(repo, ".worktrees", "cron"))).toBe(true);
-
-      process.env.WORKTREES_DIR = "custom-wt";
-      vi.resetModules();
-      const overridden = await import("../cron-runtime.ts");
-      expect(overridden.pruneAndCountFallbackWorktrees("autopilot")).toBe(0);
     } finally {
       process.chdir(priorCwd);
-      if (priorDir === undefined) delete process.env.WORKTREES_DIR;
-      else process.env.WORKTREES_DIR = priorDir;
       vi.resetModules();
     }
   });
@@ -1401,7 +1383,7 @@ describe("SIGHUP reload", () => {
 
   afterEach(() => {
     emptyCronsDir();
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     resetActiveJobs();
     appendSpy().mockClear();
   });
@@ -1417,7 +1399,7 @@ describe("SIGHUP reload", () => {
     let i = 0;
     scheduleAll(tmp, vi.fn(), () => ({ stop: stops[i++] }) as unknown as Cron);
 
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
 
     expect(stops[0]).toHaveBeenCalledTimes(1);
     expect(stops[1]).toHaveBeenCalledTimes(1);
@@ -1425,17 +1407,17 @@ describe("SIGHUP reload", () => {
 
   it("picks up an added cron file and drops a removed one on reload", () => {
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "one.md"), validCron("one", FAR_FUTURE));
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     expect(reloadLines().at(-1)).toContain("1 scheduled, 0 skipped");
 
     appendSpy().mockClear();
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "two.md"), validCron("two", FAR_FUTURE));
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     expect(reloadLines().at(-1)).toContain("2 scheduled, 0 skipped");
 
     appendSpy().mockClear();
     rmSync(path.join(SIGHUP_CRONS_DIR, "one.md"));
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     expect(reloadLines().at(-1)).toContain("1 scheduled, 0 skipped");
   });
 
@@ -1443,30 +1425,30 @@ describe("SIGHUP reload", () => {
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "good.md"), validCron("good", FAR_FUTURE));
     writeFileSync(path.join(SIGHUP_CRONS_DIR, "bad.md"), validCron("bad", "not-a-cron"));
 
-    expect(() => sighupHandler()).not.toThrow();
+    expect(() => sighupHandler(SIGHUP_CRONS_DIR)).not.toThrow();
     expect(reloadLines().at(-1)).toContain("1 scheduled, 1 skipped");
   });
 
   it("writes a RELOAD liveness line via the appendFileSync spy", () => {
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
     expect(loggedLines().some((l) => l.includes("\tRELOAD\t"))).toBe(true);
     expect(reloadLines().at(-1)).toContain("\tsystem\tRELOAD\t");
   });
 
   it("does not throw when the prior activeJobs registry is empty", () => {
     resetActiveJobs();
-    expect(() => sighupHandler()).not.toThrow();
+    expect(() => sighupHandler(SIGHUP_CRONS_DIR)).not.toThrow();
     expect(reloadLines()).toHaveLength(1);
   });
 
   it("is re-entrancy-safe: a SIGHUP arriving mid-reload is a no-op", () => {
     writeFileSync(path.join(tmp, "a.md"), validCron("a"));
     const stop = vi.fn(() => {
-      sighupHandler();
+      sighupHandler(SIGHUP_CRONS_DIR);
     });
     scheduleAll(tmp, vi.fn(), () => ({ stop }) as unknown as Cron);
 
-    sighupHandler();
+    sighupHandler(SIGHUP_CRONS_DIR);
 
     expect(stop).toHaveBeenCalledTimes(1);
     expect(reloadLines()).toHaveLength(1);

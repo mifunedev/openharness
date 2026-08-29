@@ -34,9 +34,10 @@ BEGIN {
     envmap["ssh.enabled"]           = "SANDBOX_SSH"
     envmap["ssh.port"]              = "SANDBOX_SSH_PORT"
     envmap["ssh.password_auth"]     = "SANDBOX_SSH_PASSWORD_AUTH"
-    envmap["crons.dir"]             = "CRONS_DIR"
     envmap["crons.agent_bin"]       = "CRON_AGENT_BIN"
-    envmap["paths.worktrees"]       = "WORKTREES_DIR"
+    retiredmap["crons.dir"]         = "crons"
+    retiredmap["paths.worktrees"]   = ".worktrees"
+    retiredmap["paths.projects"]    = "projects"
     section  = ""
     list_key = ""
     in_list  = 0
@@ -101,6 +102,8 @@ function clean_value(s) {
         if (val == "") next
         if (mode == "env" && (dotkey in envmap))
             print envmap[dotkey] "=" val
+        if (mode == "retired" && (dotkey in retiredmap) && val != retiredmap[dotkey])
+            print dotkey "=" val "=" retiredmap[dotkey]
     }
 }
 ' "$_yaml"
@@ -108,6 +111,7 @@ function clean_value(s) {
 
 _pairs=$(_parse env)
 _overrides=$(_parse compose-overrides)
+_retired=$(_parse retired)
 
 _env_get() {
     [ -f "$_env" ] || return 0
@@ -170,6 +174,19 @@ if [ -n "$_pairs" ]; then
     _count=$(printf '%s\n' "$_pairs" | grep -c . || true)
 fi
 [ "$_count" -gt 0 ] 2>/dev/null || printf '  (no set keys — nothing to carry over)\n'
+
+if [ -n "$_retired" ]; then
+    printf '%s\n' "$_retired" | while IFS= read -r _row; do
+        [ -n "$_row" ] || continue
+        _rkey=${_row%%=*}
+        _rrest=${_row#*=}
+        _rval=${_rrest%=*}
+        _rfixed=${_rrest##*=}
+        printf '  WARNING %s: %s is no longer honoured. The harness layout is a\n' "$_rkey" "$_rval"
+        printf '          convention, not a setting; this directory is always %s at the\n' "$_rfixed"
+        printf '          repository root. Move any content there.\n'
+    done
+fi
 
 if [ -n "$_overrides" ]; then
     if command -v jq >/dev/null 2>&1; then

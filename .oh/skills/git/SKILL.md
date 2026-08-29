@@ -139,10 +139,10 @@ Automatic branch-push releases use the matching `## [<VERSION>] - YYYY-MM-DD` se
 
 ## Worktrees
 
-Default path: `.worktrees/<branch>` at the root of the repository the branch belongs to, configurable with `WORKTREES_DIR` / `paths.worktrees`. A project clone under `projects/` keeps its own worktrees the same way, at `projects/<owner>/<repo>/.worktrees/`. Independent project clones (own `.git`, not harness branches) live under `projects/<owner>/<repo>/` by default, configurable with `PROJECTS_DIR` — see `.worktrees/AGENTS.md` and `projects/AGENTS.md`.
+Path: `.worktrees/<branch>` at the root of the repository the branch belongs to. A project clone under `projects/` keeps its own worktrees the same way, at `projects/<owner>/<repo>/.worktrees/`. Independent project clones (own `.git`, not harness branches) live under `projects/<owner>/<repo>/`. Both roots are fixed conventions, not settings — see `.worktrees/AGENTS.md` and `projects/AGENTS.md`.
 
 ```bash
-WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' "${WORKTREES_DIR:-.worktrees}")"
+WORKTREES_ROOT="$(bash .oh/scripts/oh-path worktrees --no-create 2>/dev/null || printf '%s' .worktrees)"
 mkdir -p "$WORKTREES_ROOT"
 git worktree add "$WORKTREES_ROOT/<branch>" <branch>                # existing branch
 git worktree add -b <prefix>/<issue#>-<short-desc> \

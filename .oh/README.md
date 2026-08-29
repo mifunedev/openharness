@@ -63,9 +63,9 @@ the bare root paths anymore.
 
 The cron definitions went the other way. They briefly lived at `.oh/crons/` and
 moved back **out** to the repo root as `crons/`, because a schedule authored per
-deployment is operator content, not machinery Open Harness ships. The
-`CRONS_DIR` default is `crons`, and `oh init` / `oh update` deliver them through
-the manifest's `rootInclude` list rather than the `.oh/` payload.
+deployment is operator content, not machinery Open Harness ships. The runtime
+always reads `crons/`, and `oh init` / `oh update` deliver them through the
+manifest's `rootInclude` list rather than the `.oh/` payload.
 
 The relocated task workdirs (`tasks/` → `.oh/tasks/`) moved **without** a
 back-compat symlink — every consumer was repointed to the real `.oh/tasks/` path
@@ -75,10 +75,10 @@ a symlink and nothing reads the bare `tasks/` path anymore.
 
 The ignored worktree root briefly lived at `.oh/worktrees/` and moved back **out**
 to the repo root as `.worktrees/`, with no back-compat symlink in either
-direction. Runtime creation is routed through `WORKTREES_DIR` / `paths.worktrees`
-(default `.worktrees`), and cron worktree isolation uses `.worktrees/cron/`.
+direction. The location is a fixed convention rather than a setting, and cron
+worktree isolation uses `.worktrees/cron/`.
 Clones of non-harness repositories, formerly `.oh/worktrees/project/<owner>/<repo>/`,
-now live at `projects/<owner>/<repo>/` (`PROJECTS_DIR`, default `projects`), and
+now live at `projects/<owner>/<repo>/`, and
 each keeps its own worktrees at `projects/<owner>/<repo>/.worktrees/`. Both roots
 are gitignored except `.worktrees/AGENTS.md` and `projects/AGENTS.md`.
 

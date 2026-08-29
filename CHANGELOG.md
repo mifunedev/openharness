@@ -8,6 +8,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Removed
+- Delete the canonical agent definitions (`.oh/agents/`), `.oh/plans/`, `.oh/handoffs/`, and the accumulated `.oh/tasks/` folders and archive ([#863](https://github.com/mifunedev/openharness/pull/863)).
+
 ### Changed
 - Refocus root agent guidance on product identity, glossary, hazards, and code as truth; move build workflow authority into its task skill ([#854](https://github.com/mifunedev/openharness/issues/854)).
 - Upgrade the sandbox base image to `debian:trixie-slim` and move Docker's apt suite to `trixie`; Cloudflare's suite stays on `bookworm` ([#807](https://github.com/mifunedev/openharness/issues/807)).

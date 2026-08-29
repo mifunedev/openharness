@@ -39,7 +39,8 @@ templates are committed.
   - `.devcontainer/.harness.yaml.env` (`.gitignore:7`) — a derived env artifact from before 0.4.0. Nothing generates it any more; the ignore line stays one release so a stale local copy is never committed.
   - `/.oh/config.json` (`.gitignore:8`) — host-local harness config.
   - `**/auth.json` and `**/.credentials.json` (`.gitignore:63-64`) — provider auth blobs.
-- **Template allowlist:** the *tracked* files are templates that hold no real secrets — e.g. [`.devcontainer/.example.env`](../.devcontainer/.example.env) and `.claude/.example.env.claude`. The operator copies the template to the real (gitignored) `.devcontainer/.env`; `install.sh` writes host defaults there. The `.example.env` header spells this out.
+- **Template allowlist:** the *tracked* files are templates that hold no real secrets — e.g. [`.env.example`](../.env.example) and `.claude/.example.env.claude`. The operator copies `.env.example` to the real (gitignored, mode-`0600`) root `.env`; `install.sh` seeds it and `oh secret set <KEY>` edits one key. `.devcontainer/.env` is a symlink to that file, so VS Code "Reopen in Container" reads the same one. The `.env.example` header spells this out, including the warning that the compose default for `SANDBOX_PASSWORD` (`test1234`) is weak and public and must be overridden on any network-reachable deployment.
+- **Split by kind:** non-secret settings live in the *tracked* [`oh.json`](../oh.json), never in `.env`. The split is enforced in code — `.oh/cli/src/lib/secrets.ts` owns the secret allow-list and `.oh/cli/src/lib/config-render.ts` refuses to render an allow-listed secret into the compose environment. See [Configuration](configuration.md).
 - **In the sandbox:** auth/state persists in Docker **named volumes** (`claude-auth`, `codex-auth`, `pi-auth`, `ssh-config`, `config-dir`, …), not in the repo — see [`.devcontainer/docker-compose.yml:31-41`](../.devcontainer/docker-compose.yml).
 
 **What this does not do:** it does not scan commit *contents* for
@@ -136,7 +137,7 @@ expose to whichever trust level you choose.
 - **Caveat 3 — the optional sshd overlay (RECOMMENDED to configure).** The base
   container publishes **no ports** and runs **no** SSH daemon. The opt-in overlay
   ([`.devcontainer/docker-compose.ssh.yml`](../.devcontainer/docker-compose.ssh.yml),
-  enabled via `SANDBOX_SSH=true` in `.devcontainer/.env`) starts `sshd` and ships a **safe
+  enabled via `access.ssh: true` in `oh.json`) starts `sshd` and ships a **safe
   default posture**: host bind **loopback-only** (`127.0.0.1`), **public-key auth**,
   `PermitRootLogin no`, and password auth **off**. Two operator choices weaken that
   and are your responsibility: switching the bind to `0.0.0.0` (public interface),

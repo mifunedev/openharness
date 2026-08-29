@@ -30,7 +30,7 @@ Every entry below is present in a fresh clone unless noted otherwise.
 | `scripts/` | dir | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `locked-append.sh`, `migrate-harness-yaml.sh`, `link-providers.sh`, `git-maintenance.sh` — the file-invoked destructive-git shim the cc-safety-net guard permits by design, …). | The `Makefile`, CI, `cron-runtime`, and the provider link step. |
 | `skills/` | dir | The vendored provider-portable skill pack (one dir per skill). | Agent providers via symlinks (`.claude/skills`, `.codex/skills`, `.pi/skills` → `.oh/skills`); the Skill tool. |
 | `tasks/` | dir | Spec task workdirs — ephemeral build scratch (`<slug>/prd.md`, `prd.json`, `prompt.md`, `progress.txt`). | `/spec execute`, the `cleanup-tasks` cron, and `/spec`. |
-| `templates/` | dir | The `oh init` scaffold payload (`AGENTS.md`, `gitignore`, `.devcontainer/` incl. `.example.env`, `full/`) materialized into a fresh checkout. | `oh init` (`.oh/cli/src/commands/init.ts`). |
+| `templates/` | dir | The `oh init` scaffold payload (`AGENTS.md`, `gitignore`, `.env.example`, `.devcontainer/`, `full/`) materialized into a fresh checkout. | `oh init` (`.oh/cli/src/commands/init.ts`). |
 
 The root `docs/` directory is project-owned documentation, outside the `.oh/`
 control plane and the `oh init`/`oh update` payload. The manifest omits

@@ -10,9 +10,11 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ### Added
 - `oh destroy` (a name-typing confirmation, `--yes` for non-TTY) and `oh compose config` close the last two `make`-only verbs, so `oh` is the single lifecycle door ([#879](https://github.com/mifunedev/openharness/issues/879)).
+- Tracked `oh.json` holds every non-secret setting; a gitignored 0600 root `.env` holds only secrets. Adds `oh config show/set`, `oh secret set/list`, and an opt-in `oh config repo` ([#880](https://github.com/mifunedev/openharness/issues/880)).
 - Restore `.oh/agents/` as an empty pack with its `.claude/agents` and `.codex/agents` provider symlinks; no agent is defined in it ([#866](https://github.com/mifunedev/openharness/pull/866)).
 
 ### Removed
+- Retire `.devcontainer/.example.env`, `.oh/config.json`, `~/.config/openharness/`, and the `WORKTREES_DIR`/`PROJECTS_DIR`/`CRONS_DIR` knobs. The layout is now fixed convention ([#880](https://github.com/mifunedev/openharness/issues/880)).
 - Delete the `.oh/context/` always-on tier in full, leaving `AGENTS.md` as the only always-on context. No `SessionStart` hook ever loaded it — prose in `AGENTS.md` asked for it ([#868](https://github.com/mifunedev/openharness/issues/868)).
 - Retire `repo-map-contract.sh`, `CB-004`, `repo-orientation/`, and its scorer. `REPO_MAP.md` goes as **unproven**, not disproven: its A/B landed 2026-07-03 and was never run ([#868](https://github.com/mifunedev/openharness/issues/868)).
 - Retire the ablation subsystem — `ablate.sh`, `ablate-state-machine.sh`, `context-audit-runner.sh`, `--ablate`. Its allowlist took only the five context files ([#868](https://github.com/mifunedev/openharness/issues/868)).

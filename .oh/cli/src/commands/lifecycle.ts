@@ -16,14 +16,9 @@ import {
   type RunResult,
 } from "../lib/execution/runner.js";
 import { renderComposeEnv } from "../lib/config-render.js";
-import { ohConfigPath, readOhConfig } from "../lib/oh-config.js";
+import { getOhConfigValue, ohConfigPath, readOhConfig } from "../lib/oh-config.js";
 import { resolveProjectRoot } from "../lib/project.js";
-import {
-  envFilePath,
-  readEnvValue,
-  seedEnvFile,
-  setEnvValue,
-} from "../lib/env-file.js";
+import { setEnvValue } from "../lib/env-file.js";
 import * as prompt from "../lib/prompt.js";
 
 
@@ -85,7 +80,7 @@ export async function withComposeEnvFileAsync<T>(
 export interface SandboxOptions extends LifecycleOptions {
   /** `--image` was passed (run the prebuilt image; implies `--no-build`). */
   image?: boolean;
-  /** Explicit ref from `--image=<ref>`; when set it wins over `.env`. */
+  /** Explicit ref from `--image=<ref>`; when set it wins over `oh.json`. */
   imageRef?: string;
   /** `--no-build` was passed (suppress the local build, reuse an existing image). */
   noBuild?: boolean;
@@ -97,20 +92,28 @@ export const DEFAULT_CONTAINER_NAME = "openharness";
 
 export const DEFAULT_SANDBOX_IMAGE = "ghcr.io/mifunedev/openharness:latest";
 
-function seedConfig(root: string, io: LifecycleIO): void {
-  if (seedEnvFile(root)) {
-    io.stdout("create .devcontainer/.env (from .devcontainer/.example.env)\n");
+function configuredField(root: string, path: string): unknown {
+  const file = ohConfigPath(root);
+  if (!existsSync(file)) return undefined;
+  try {
+    return getOhConfigValue(readOhConfig(file), path);
+  } catch {
+    return undefined;
   }
 }
 
+function configuredString(root: string, path: string): string | undefined {
+  const value = configuredField(root, path);
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+function fromProcessEnv(key: string): string | undefined {
+  const value = process.env[key];
+  return value !== undefined && value !== "" ? value : undefined;
+}
+
 function dockerSocketConfigured(root: string): boolean {
-  const envFile = envFilePath(root);
-  if (!existsSync(envFile)) return false;
-  try {
-    return /^\s*DOCKER_SOCKET=/m.test(readFileSync(envFile, "utf8"));
-  } catch {
-    return false;
-  }
+  return configuredField(root, "access.dockerSocket") !== undefined;
 }
 
 async function maybePromptDockerSocket(root: string, io: LifecycleIO): Promise<void> {
@@ -136,8 +139,8 @@ async function maybePromptDockerSocket(root: string, io: LifecycleIO): Promise<v
   );
 }
 
-function configuredImage(root: string): string | undefined {
-  return readEnvValue(root, "OH_SANDBOX_IMAGE");
+export function configuredImage(root: string): string | undefined {
+  return fromProcessEnv("OH_SANDBOX_IMAGE") ?? configuredString(root, "image.ref");
 }
 
 export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise<number> {
@@ -180,7 +183,6 @@ export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise
     io.stderr(`${new HostOnlyError("`oh sandbox`").message}\n`);
     return 1;
   }
-  seedConfig(root, io);
   await maybePromptDockerSocket(root, io);
   requireLifecycleScript(root, "docker-compose.sh");
 
@@ -213,7 +215,7 @@ export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise
 }
 
 export function configuredContainerName(root: string): string | undefined {
-  return readEnvValue(root, "SANDBOX_NAME");
+  return fromProcessEnv("SANDBOX_NAME") ?? configuredString(root, "name");
 }
 
 export function runShell(opts: ShellOptions, io: LifecycleIO): number {
@@ -302,8 +304,6 @@ export interface DestroyOptions extends LifecycleOptions {
 }
 
 export function destroyConfirmationPhrase(root: string): string {
-  const fromEnv = process.env.SANDBOX_NAME;
-  if (fromEnv !== undefined && fromEnv !== "") return fromEnv;
   return configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
 }
 

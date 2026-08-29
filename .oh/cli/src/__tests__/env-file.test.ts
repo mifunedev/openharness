@@ -1,14 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   assertInRoot,
-  envFilePath,
   installFieldPath,
   isInstallFlagEnabled,
-  readEnvValue,
-  seedEnvFile,
   setConfigField,
   setEnvValue,
   setInstallFlag,
@@ -28,7 +26,14 @@ function makeRepo(): string {
   return d;
 }
 
-const readEnv = (root: string): string => readFileSync(envFilePath(root), "utf8");
+const dotenvPaths = (root: string): string[] => [
+  join(root, ".env"),
+  join(root, ".devcontainer", ".env"),
+];
+
+const expectNoDotenv = (root: string): void => {
+  for (const file of dotenvPaths(root)) expect(existsSync(file)).toBe(false);
+};
 
 const readConfig = (root: string): Record<string, never> =>
   JSON.parse(readFileSync(ohConfigPath(root), "utf8"));
@@ -94,60 +99,6 @@ describe("setKeyInEnv", () => {
   });
 });
 
-describe("readEnvValue", () => {
-  it("reads a live key and treats a commented one as unset", () => {
-    const root = makeRepo();
-    writeFileSync(envFilePath(root), "SANDBOX_NAME=live\n# TZ=America/Denver\n");
-    expect(readEnvValue(root, "SANDBOX_NAME")).toBe("live");
-    expect(readEnvValue(root, "TZ")).toBeUndefined();
-  });
-
-  it("treats an empty value as unset, so a bare `KEY=` never wins a fallback", () => {
-    const root = makeRepo();
-    writeFileSync(envFilePath(root), "GH_TOKEN=\n");
-    expect(readEnvValue(root, "GH_TOKEN")).toBeUndefined();
-  });
-
-  it("strips the enclosing quotes compose also strips", () => {
-    const root = makeRepo();
-    writeFileSync(envFilePath(root), "GIT_USER_NAME='Ada Lovelace'\n");
-    expect(readEnvValue(root, "GIT_USER_NAME")).toBe("Ada Lovelace");
-  });
-
-  it("returns undefined when the file does not exist at all", () => {
-    expect(readEnvValue(makeRepo(), "SANDBOX_NAME")).toBeUndefined();
-  });
-
-  it("is anchored to the ROOT, never the process CWD", () => {
-    const root = makeRepo();
-    writeFileSync(envFilePath(root), "SANDBOX_NAME=anchored\n");
-    const nested = join(root, "pkg", "web");
-    mkdirSync(nested, { recursive: true });
-    const cwd = process.cwd();
-    try {
-      process.chdir(nested);
-      expect(readEnvValue(root, "SANDBOX_NAME")).toBe("anchored");
-    } finally {
-      process.chdir(cwd);
-    }
-  });
-});
-
-describe("seedEnvFile", () => {
-  it("is a no-op when there is no template to copy from", () => {
-    const root = makeRepo();
-    expect(seedEnvFile(root)).toBe(false);
-    expect(existsSync(envFilePath(root))).toBe(false);
-  });
-
-  it("never overwrites an existing file", () => {
-    const root = makeRepo();
-    writeFileSync(envFilePath(root), "MINE=1\n");
-    expect(seedEnvFile(root)).toBe(false);
-    expect(readEnv(root)).toBe("MINE=1\n");
-  });
-});
-
 describe("install flags", () => {
   it("maps an install key to its oh.json field", () => {
     expect(installFieldPath("opencode")).toBe("install.opencode");
@@ -163,8 +114,7 @@ describe("install flags", () => {
 
     expect(readConfig(root)).toMatchObject({ install: { hermes: true } });
     expect(isInstallFlagEnabled(root, "hermes")).toBe(true);
-    expect(existsSync(envFilePath(root))).toBe(false);
-    expect(existsSync(join(root, ".env"))).toBe(false);
+    expectNoDotenv(root);
   });
 
   it("is idempotent — a second call rewrites nothing", () => {
@@ -186,13 +136,13 @@ describe("setEnvValue", () => {
     const root = makeRepo();
     expect(setEnvValue(root, "DOCKER_SOCKET", "true")).toBe("updated");
     expect(readConfig(root)).toMatchObject({ access: { dockerSocket: true } });
-    expect(existsSync(envFilePath(root))).toBe(false);
+    expectNoDotenv(root);
   });
 
   it("refuses a key that has no oh.json field rather than falling back to a dotenv", () => {
     const root = makeRepo();
     expect(() => setEnvValue(root, "GH_TOKEN", "ghp_example")).toThrow(/oh secret set/);
-    expect(existsSync(envFilePath(root))).toBe(false);
+    expectNoDotenv(root);
   });
 });
 
@@ -219,4 +169,31 @@ describe("assertInRoot", () => {
     expect(() => assertInRoot("/etc/passwd", "/repo")).toThrow(/outside the project root/);
     expect(() => assertInRoot("/repo-evil/.env", "/repo")).toThrow(/outside the project root/);
   });
+});
+
+describe("the root dotenv has exactly one writer", () => {
+  const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+  function sourceFiles(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== "__tests__") out.push(...sourceFiles(full));
+      } else if (entry.name.endsWith(".ts")) {
+        out.push(full);
+      }
+    }
+    return out;
+  }
+
+  it("only lib/secrets.ts reaches a dotenv write primitive", () => {
+    const callers = sourceFiles(SRC)
+      .filter((file) => relative(SRC, file) !== "lib/env.ts")
+      .filter((file) => /\b(writeEnvFile|upsertEnvFile)\b/.test(readFileSync(file, "utf8")))
+      .map((file) => relative(SRC, file))
+      .sort();
+    expect(callers).toEqual(["lib/secrets.ts"]);
+  });
+
 });

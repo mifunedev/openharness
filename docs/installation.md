@@ -53,13 +53,14 @@ pull framework updates and open PRs back. Creating the private repo and setting 
 remotes happens **inside the sandbox**, after GitHub auth, so the SSH key generated
 there is the one used for pushes.
 
-1. Clone upstream, materialize/edit local `.devcontainer/.env`, then bring the sandbox up and open a shell:
+1. Clone upstream, edit `oh.json` and the local `.env`, then bring the sandbox up and open a shell:
    ```bash
    git clone --recurse-submodules https://github.com/mifunedev/openharness.git ~/.openharness
    cd ~/.openharness
-   cp .devcontainer/.example.env .devcontainer/.env   # tracked template -> local gitignored config
-   nano .devcontainer/.env   # set SANDBOX_NAME, TZ, GIT_USER_NAME/GIT_USER_EMAIL,
-                       # optional installs — see Quickstart → Configuration. Do this BEFORE building.
+   nano oh.json        # non-secrets: name, timezone, git identity, install.* —
+                       # see Configuration. Do this BEFORE building.
+   cp .env.example .env && chmod 600 .env   # secrets only; gitignored
+   nano .env           # GH_TOKEN, SANDBOX_PASSWORD, … (or use `oh secret set`)
    make sandbox        # build + start the container (~10 min cold)
    make shell          # attach as the sandbox user
    herdr              # first inside-sandbox command
@@ -71,7 +72,16 @@ there is the one used for pushes.
    gh auth setup-git
    ```
 3. Still inside the sandbox, create your own **private** repo, make it `origin`, and
-   add upstream — all over SSH so the key from step 2 is used:
+   keep the upstream you cloned from — all over SSH so the key from step 2 is used:
+   ```bash
+   oh config repo
+   ```
+   `oh config repo` asks for the owner, name, and visibility (default private), then
+   creates the repo, renames the existing `origin` to `openharness`, points `origin`
+   at yours, and pushes. It never runs unless you answer yes in that run: `oh init
+   --yes`, `--dry-run`, and any non-interactive shell skip it. If `gh` is missing or
+   unauthenticated it prints these commands instead of running them — the manual
+   fallback, which names the preserved upstream remote `upstream`:
    ```bash
    gh repo create <your-user>/openharness --private
    git remote set-url origin git@github.com:<your-user>/openharness.git
@@ -108,8 +118,8 @@ The installer:
 
 1. Verifies Docker and git are present (warns if `make`, used by the lifecycle targets, is missing).
 2. Clones the repo into `~/.openharness` (or pulls latest if the directory already exists).
-3. Prompts for `SANDBOX_NAME`, timezone, git identity and optional installs, then writes them all to `.devcontainer/.env`.
-4. Creates `.devcontainer/.env` from `.devcontainer/.example.env` when missing (all keys commented — inert until you edit).
+3. Prompts for `SANDBOX_NAME`, timezone, git identity and optional installs, then writes them to the local dotenv.
+4. Creates the gitignored, mode-`0600` root `.env` from the tracked `.env.example` when missing (all keys commented — inert until you edit), and links `.devcontainer/.env` to it so VS Code "Reopen in Container" reads the same file. Non-secret settings stay in the tracked `oh.json`.
 5. Runs `docker compose -f .devcontainer/docker-compose.yml up -d --build`.
 6. Prints the next-step commands (open a shell, stop, tear down).
 
@@ -160,10 +170,10 @@ cd openharness
 ### 2. Configure the environment
 
 ```bash
-cp .devcontainer/.example.env .devcontainer/.env
+cp .env.example .env && chmod 600 .env
 ```
 
-Edit `.devcontainer/.env` and set your `SANDBOX_NAME` and any optional tokens. See the comments in `.example.env` for all available variables.
+Edit `oh.json` for non-secret settings — `name`, `timezone`, `git`, `install.*`, `access.*` — and `.env` for secrets such as `GH_TOKEN`. See [Configuration](./configuration.md) for the field reference, and the comments in `.env.example` for every allow-listed secret.
 
 ### 3. Build and start the sandbox
 

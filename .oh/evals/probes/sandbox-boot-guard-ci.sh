@@ -32,7 +32,14 @@ has '".oh/scripts/docker-compose.sh"' "compose wrapper path filter"
 has '".oh/scripts/sandbox-boot-smoke.sh"' "boot smoke helper path filter"
 has '".oh/scripts/harness-config.sh"' "harness config helper path filter"
 has '"Makefile"' "Makefile path filter"
-has '".devcontainer/.example.env"' "harness config template path filter"
+has '"oh.json"' "oh.json path filter"
+has '".env.example"' "secrets template path filter"
+if grep -Fq -- '".devcontainer/.example.env"' <<<"$text"; then
+  missing+=("path filter still names the retired .devcontainer/.example.env")
+fi
+for tracked in oh.json .env.example; do
+  [[ -e "$ROOT/$tracked" ]] || missing+=("path filter $tracked names no existing file — it can never match")
+done
 has '".dockerignore"' "dockerignore path filter"
 has '".github/workflows/sandbox-boot-guard.yml"' "workflow self path filter"
 has 'persist-credentials: false' "checkout token persistence disabled"

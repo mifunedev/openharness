@@ -452,19 +452,25 @@ describe("compose helper wiring", () => {
     expect(text).not.toContain("COMPOSE_FILES=\"-f .devcontainer/docker-compose.yml\"");
   });
 
-  it("installer writes every answer to .devcontainer/.env, and the config writes ALWAYS run", () => {
+  it("installer seeds the root .env from .env.example, links .devcontainer/.env to it, and the config writes ALWAYS run", () => {
     const text = readFileSync(INSTALL, "utf8");
     expect(text).toContain("_env_set() {");
     expect(text).toContain("_env_set SANDBOX_NAME");
     expect(text).toContain("_env_set GIT_USER_NAME");
     expect(text).not.toContain("_yaml_set");
     expect(text).not.toContain("_cfg_set");
+    expect(text).not.toContain("example.env");
 
-    expect(text.indexOf("Created .devcontainer/.env from")).toBeLessThan(
+    expect(text).toContain('ENV_FILE="$REPO_DIR/.env"');
+    expect(text).toContain('cp "$REPO_DIR/.env.example" "$ENV_FILE"');
+    expect(text).toContain('ln -s ../.env "$DEVCONTAINER_ENV_LINK"');
+    expect(text).toContain('chmod 600 "$ENV_FILE"');
+
+    expect(text.indexOf("Created .env from .env.example")).toBeLessThan(
       text.indexOf("_env_set SANDBOX_NAME"),
     );
 
-    expect(text).toContain("Existing .devcontainer/.env preserved — updating keys in place");
+    expect(text).toContain("Existing .env preserved — updating keys in place");
     expect(text).toContain("THE CONFIG WRITES ALWAYS RUN");
 
     expect(text).toContain('_env_set "INSTALL_$1" true');

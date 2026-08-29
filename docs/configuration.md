@@ -111,7 +111,7 @@ Recipe: [prebuilt-image deployment](deployment-prebuilt-image.md).
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `cloud.apiUrl` | string | unset | — | OpenHarness Cloud API base URL used by `oh cloud`. The provisioner key is a secret and lives in `.env`, never here. |
+| `cloud.apiUrl` | string | unset | — | OpenHarness Cloud API base URL used by `oh cloud`. The provisioner key is a secret (`OH_CLOUD_PROVISION_KEY`) and lives in `.env`, never here. |
 
 ### Langfuse
 
@@ -148,8 +148,10 @@ Any other key is rejected by `oh secret set`.
 A few variables are read directly from the environment of one process and are
 not harness configuration at all, so they appear in neither surface:
 
-- `OH_CLOUD_API_URL`, `OH_CLOUD_CONFIG`, `OH_PROVISION_KEY` — non-persistent
-  `oh cloud` overrides. See `.oh/cli/README.md`.
+- `OH_CLOUD_API_URL` and `OH_CLOUD_PROVISION_KEY` — non-persistent `oh cloud`
+  overrides for the persisted `cloud.apiUrl` field and the
+  `OH_CLOUD_PROVISION_KEY` secret. `OH_PROVISION_KEY` and `PROVISION_KEY` are
+  accepted as legacy spellings. See `.oh/cli/README.md`.
 
 ## Retired keys
 

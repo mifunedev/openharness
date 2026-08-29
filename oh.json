@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "openharness",
+  "timezone": "America/Los_Angeles",
+  "projectRoot": "/home/sandbox/harness",
+  "git": {},
+  "install": {
+    "opencode": false,
+    "grokBuild": false,
+    "deepagents": false,
+    "hermes": false,
+    "agentBrowser": false
+  },
+  "access": {
+    "ssh": false,
+    "sshPort": 2222,
+    "sshPasswordAuth": false,
+    "dockerSocket": false
+  },
+  "hermesDashboard": { "enabled": false, "port": 9119 },
+  "cron": { "agentBin": "claude" },
+  "build": { "skipPnpmInstall": false },
+  "image": { "mode": "build", "pullPolicy": "missing" },
+  "cloud": {},
+  "langfuse": {},
+  "composeOverrides": []
+}

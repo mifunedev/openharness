@@ -61,6 +61,16 @@ describe("parseConfigArgs", () => {
     });
   });
 
+  it("routes repo as a verb and refuses flags after it", () => {
+    expect(parseConfigArgs(["repo"])).toEqual({
+      ok: true,
+      args: { help: false, integrationHelp: false, verb: "repo" },
+    });
+    const parsed = parseConfigArgs(["repo", "--yes"]);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.error).toMatch(/unexpected argument "--yes"/);
+  });
+
   it("requires both a field and a value", () => {
     const parsed = parseConfigArgs(["set", "access.sshPort"]);
     expect(parsed.ok).toBe(false);

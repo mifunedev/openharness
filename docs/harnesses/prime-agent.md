@@ -109,7 +109,7 @@ stops all of them.
 These are deliberate gaps, not oversights:
 
 - **No image-level install.** There is no `INSTALL_PRIME_AGENT` build arg, no compose auth
-  volume, and no key in `.devcontainer/.example.env`. The harness is `on-demand` only.
+  volume, and no `install.*` field in `oh.json`. The harness is `on-demand` only.
 - **No `/spec execute` provider integration.** `/spec execute` uses the active Advisor
   session and does not launch a provider-specific wrapper; run Prime Agent directly only
   for a bounded, explicitly selected task.

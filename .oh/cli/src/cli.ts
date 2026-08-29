@@ -7,6 +7,7 @@ import { runUpdate } from "./commands/update.js";
 import { runCloud } from "./commands/cloud.js";
 import {
   configFieldList,
+  runConfigRepo,
   runConfigSet,
   runConfigShow,
   type ConfigIO,
@@ -129,6 +130,7 @@ function printConfigHelp(): void {
 Usage:
   oh config show                  Print the resolved oh.json
   oh config set <field> <value>   Set one dotted field, e.g. access.sshPort 2222
+  oh config repo                  Create your own GitHub repo and point origin at it
   oh config <integration>         Run an integration wizard
   oh config <integration> --help
 
@@ -230,9 +232,7 @@ Usage:
   oh sandbox [--image[=<ref>]] [--no-build] [--print-argv]
 
 Works from any subdirectory of an equipped repo (walks up to the nearest
-directory containing .oh/). Seeds .devcontainer/.env from
-.devcontainer/.example.env when the example exists and no .env does, then
-delegates to the vendored compose wrapper:
+directory containing .oh/). Delegates to the vendored compose wrapper:
 
   bash .oh/scripts/docker-compose.sh --repo-dir <root> up -d --build
 
@@ -454,7 +454,7 @@ See ${sourceDocsUrl("docs/lifecycle-commands.md")} for the full mapping.
 `);
 }
 
-export const CONFIG_VERBS = ["show", "set"] as const;
+export const CONFIG_VERBS = ["show", "set", "repo"] as const;
 
 export type ConfigVerb = (typeof CONFIG_VERBS)[number];
 
@@ -490,9 +490,9 @@ export function parseConfigArgs(rest: string[]): ParseResult<ConfigArgs> {
   const verb = head as ConfigVerb;
   if (isHelpFlag(tail[0])) return { ok: true, args: { ...args, help: true } };
 
-  if (verb === "show") {
+  if (verb === "show" || verb === "repo") {
     if (tail.length > 0) {
-      return { ok: false, error: `oh config show: unexpected argument "${tail[0]}"` };
+      return { ok: false, error: `oh config ${verb}: unexpected argument "${tail[0]}"` };
     }
     return { ok: true, args: { ...args, verb } };
   }
@@ -1176,6 +1176,7 @@ async function main(argv: string[]): Promise<number> {
         stderr: (s) => process.stderr.write(s),
       };
       if (a.verb === "show") return await runConfigShow({}, io);
+      if (a.verb === "repo") return await runConfigRepo({}, io);
       return await runConfigSet(a.key as string, a.value as string, {}, io);
     }
 

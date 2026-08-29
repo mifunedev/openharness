@@ -1,6 +1,5 @@
-import { copyFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve, sep } from "node:path";
-import { loadEnvInto } from "./env.js";
 import {
   getOhConfigValue,
   ohConfigPath,
@@ -10,35 +9,10 @@ import {
 } from "./oh-config.js";
 
 
-const ENV_FILE = ".devcontainer/.env";
-const ENV_EXAMPLE = ".devcontainer/.example.env";
-
 export function assertInRoot(dest: string, root: string): void {
   if (!(dest === root || dest.startsWith(root + sep))) {
     throw new Error(`refusing to write outside the project root: ${dest}`);
   }
-}
-
-export function envFilePath(root: string): string {
-  return resolve(root, ENV_FILE);
-}
-
-export function seedEnvFile(root: string): boolean {
-  const dest = envFilePath(root);
-  const example = resolve(root, ENV_EXAMPLE);
-  assertInRoot(dest, root);
-  if (existsSync(dest) || !existsSync(example)) return false;
-  copyFileSync(example, dest);
-  return true;
-}
-
-export function readEnvValue(root: string, key: string): string | undefined {
-  const file = envFilePath(root);
-  if (!existsSync(file)) return undefined;
-  const env: Record<string, string | undefined> = {};
-  loadEnvInto(file, env);
-  const value = env[key]?.trim();
-  return value === undefined || value === "" ? undefined : stripQuotes(value);
 }
 
 function stripQuotes(s: string): string {

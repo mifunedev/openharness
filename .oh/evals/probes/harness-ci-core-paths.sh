@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: #165 — core sandbox config files must trigger harness CI
-# desc: ci-harness.yml push and pull_request path filters must include Makefile and .devcontainer/.example.env
+# desc: ci-harness.yml push and pull_request path filters must include Makefile, oh.json and .env.example, and every required filter must name a path that exists — a filter naming a deleted file silently stops matching
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -33,18 +33,28 @@ extract_paths() {
   ' "$WORKFLOW"
 }
 
+REQUIRED=(Makefile oh.json .env.example)
+
 missing=()
 for event in push pull_request; do
   paths="$(extract_paths "$event")"
-  for required in Makefile .devcontainer/.example.env; do
+  for required in "${REQUIRED[@]}"; do
     if ! grep -Fxq "$required" <<<"$paths"; then
       missing+=("$event.paths:$required")
     fi
   done
+  if grep -Fxq ".devcontainer/.example.env" <<<"$paths"; then
+    missing+=("$event.paths still names the retired .devcontainer/.example.env")
+  fi
+done
+
+for required in "${REQUIRED[@]}"; do
+  [[ -e "$ROOT/$required" ]] \
+    || missing+=("$required is a path filter that names no existing file — it can never match")
 done
 
 if (( ${#missing[@]} == 0 )); then
-  echo "PASS: ci-harness.yml covers Makefile and .devcontainer/.example.env in push.paths and pull_request.paths" >&2
+  echo "PASS: ci-harness.yml covers Makefile, oh.json and .env.example in push.paths and pull_request.paths, each naming a path that exists" >&2
   exit 0
 fi
 

@@ -159,11 +159,12 @@ source instead of the bundled `.oh/templates/`.
   `entrypoint.sh`, and the two client scripts (`client-slack-supervise.sh` /
   `seed-msg-bridge.sh`). Everything the sandbox boots from lives here, in the one
   conventional location — no split, no compat shim.
-- `.devcontainer/.example.env` — the tracked configuration schema. The CI path
-  filters and the `harness-ci-core-paths` / `sandbox-boot-guard-ci` probes pin
-  it beside the compose files it documents. Its local copy,
-  `.devcontainer/.env`, is the one configuration surface; the `harness.yaml`
-  layer that used to sit in front of it was removed in 0.4.0.
+- `oh.json` and `.env.example` — the two authored configuration surfaces, and
+  both live at the repository *root*, not here. Tracked `oh.json` holds every
+  non-secret setting; tracked `.env.example` documents the secrets-only,
+  gitignored root `.env`, to which `.devcontainer/.env` is a symlink. The CI
+  path filters and the `harness-ci-core-paths` / `sandbox-boot-guard-ci` probes
+  pin both. See [`docs/configuration.md`](../docs/configuration.md).
 - `config.json` — relocated *logically* to `.oh/config.json` (now the canonical
   read location); the gitignored file itself is user-local runtime state, and the
   legacy repo-root path still works as a fallback for older installs.

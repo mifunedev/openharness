@@ -25,6 +25,8 @@ import {
   type OhConfig,
 } from "../lib/oh-config.js";
 import { isSecretKey, setSecret } from "../lib/secrets.js";
+import type { LifecycleRunner } from "../lib/execution/runner.js";
+import { runConfigRepo } from "./config.js";
 import * as prompt from "../lib/prompt.js";
 
 export interface InitIO {
@@ -32,6 +34,7 @@ export interface InitIO {
   stderr: (s: string) => void;
   ask?: (q: string) => Promise<string>;
   askSecret?: (q: string) => Promise<string>;
+  isTTY?: boolean;
 }
 
 export interface InitOptions {
@@ -44,6 +47,7 @@ export interface InitOptions {
   minimal?: boolean;
   copyClaude?: boolean;
   verbose?: boolean;
+  run?: LifecycleRunner;
 }
 
 function walkFiles(root: string, dir: string, acc: string[]): void {
@@ -331,6 +335,16 @@ export async function runInit(
     prompt.ok(`Dry run complete — previewed the ${minimal ? "minimal" : "full"} plan, wrote nothing.`);
     prompt.info("Re-run without --dry-run to apply.");
     return 0;
+  }
+
+  const repoStepAllowed =
+    interactive && !dryRun && (io.isTTY ?? process.stdin.isTTY === true);
+  if (repoStepAllowed) {
+    prompt.step(5, 5, "Your own repo (optional)");
+    await runConfigRepo(
+      { cwd: t, run: opts.run },
+      { stdout: io.stdout, stderr: io.stderr, ask: io.ask, isTTY: true },
+    );
   }
 
   const totalOverwritten = vOverwritten + stats.overwritten;
@@ -736,7 +750,7 @@ async function runWizard(
 
   prompt.header("Configure your harness  (press Enter to accept the shown default)");
 
-  prompt.step(1, 4, "Project");
+  prompt.step(1, 5, "Project");
   const name = await askFn("Sandbox name [my-project]:");
   if (name) config.name = name;
 
@@ -749,7 +763,7 @@ async function runWizard(
   const gitEmail = await askFn("Git user email:");
   if (gitEmail) section(config, "git").userEmail = gitEmail;
 
-  prompt.step(2, 4, "Optional installs");
+  prompt.step(2, 5, "Optional installs");
   const installs: { key: string; field: string; desc: string }[] = [
     { key: "opencode", field: "opencode", desc: "OpenCode TUI coding agent" },
     { key: "deepagents", field: "deepagents", desc: "DeepAgents multi-agent runtime" },
@@ -762,7 +776,7 @@ async function runWizard(
     section(config, "install")[inst.field] = yes;
   }
 
-  prompt.step(3, 4, "Access (off by default)");
+  prompt.step(3, 5, "Access (off by default)");
   const sshOn = await confirmWith(askFn, "Enable sshd for direct container SSH?", false);
   section(config, "access").ssh = sshOn;
   if (sshOn) {
@@ -778,7 +792,7 @@ async function runWizard(
   const sockOn = await confirmWith(askFn, "Mount host Docker socket into the sandbox?", false);
   section(config, "access").dockerSocket = sockOn;
 
-  prompt.step(4, 4, "Secrets");
+  prompt.step(4, 5, "Secrets");
   prompt.info("Stored in .env at the project root, which is gitignored — never committed:");
   for (const key of ["GH_TOKEN", "PI_SLACK_BOT_TOKEN", "PI_SLACK_APP_TOKEN"] as const) {
     const value = await askSecretFn(`${key} (blank to skip):`);

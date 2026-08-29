@@ -85,7 +85,7 @@ These names describe separate layers, not interchangeable jobs:
   `.oh/agents/`, `.oh/hooks/`).
 
 - **runtime** — The always-on machinery that wakes the agent on a schedule: a
-  tiny croner that reads scheduled-agent definitions from `.oh/crons/` and fires
+  tiny croner that reads scheduled-agent definitions from `crons/` and fires
   them inside the sandbox.
   Source: [`.oh/scripts/cron-runtime.ts`](../.oh/scripts/cron-runtime.ts).
 

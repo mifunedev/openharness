@@ -35,10 +35,10 @@ sent.
    field in the reply. `run.sh` has already written the durable record to
    `.oh/evals/RESULTS.md`; this cron adds no second copy.
 
-4. **Liveness:** append one liveness line to `.oh/crons/.cron.log` through
+4. **Liveness:** append one liveness line to `crons/.cron.log` through
    `.oh/scripts/locked-append.sh`:
    ```bash
-   printf '[%s] eval-weekly: %s\n' "$(date -Iseconds)" "<OK|REGRESSION(N)>" | .oh/scripts/locked-append.sh .oh/crons/.cron.log
+   printf '[%s] eval-weekly: %s\n' "$(date -Iseconds)" "<OK|REGRESSION(N)>" | .oh/scripts/locked-append.sh crons/.cron.log
    ```
    where the status token is `OK` when no regressions were found, or
    `REGRESSION(N)` (e.g. `REGRESSION(2)`) when N probes regressed.

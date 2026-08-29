@@ -111,12 +111,12 @@ Fix any regressions before continuing.
 
 Check upstream's expected timezone for each cron file:
 ```bash
-git grep -n timezone upstream/development -- .oh/crons/
+git grep -n timezone upstream/development -- crons/
 ```
 
 Compare against the merged tree:
 ```bash
-git grep -n timezone -- .oh/crons/
+git grep -n timezone -- crons/
 ```
 
 Do NOT carry origin's `timezone: America/Denver` operator locale into the

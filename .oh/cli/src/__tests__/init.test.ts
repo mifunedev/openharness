@@ -470,7 +470,8 @@ describe("runInit", () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
     expect(existsSync(join(t, ".oh/context/REPO_MAP.md"))).toBe(false);
-    expect(existsSync(join(t, ".oh/crons/heartbeat.md"))).toBe(true);
+    expect(existsSync(join(t, "crons/heartbeat.md"))).toBe(true);
+    expect(existsSync(join(t, ".oh/crons"))).toBe(false);
     expect(readdirSync(join(t, ".oh/evals")).length).toBeGreaterThan(0);
   });
 
@@ -539,9 +540,10 @@ describe("runInit", () => {
     const m = JSON.parse(readFileSync(join(t, ".oh/manifest.json"), "utf8"));
     expect(m.exclude).toContain("**/.env");
     expect(m.exclude).toContain("**/auth.json");
+    expect(m.rootInclude).toEqual(["crons/**"]);
+    expect(m.include).not.toContain("crons/**");
     expect(m.include).toEqual(
       expect.arrayContaining([
-        "crons/**",
         "evals/**",
         "skills/**",
         "agents/**",

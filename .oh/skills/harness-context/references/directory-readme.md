@@ -47,9 +47,9 @@ mydir/*
 
 ## Examples in this repo
 
-`.oh/README.md`, `.oh/crons/README.md`, `.oh/tasks/README.md`,
-`.oh/scripts/README.md`. The two git-boundary guides are
-`.worktrees/AGENTS.md` and `projects/AGENTS.md`.
+`.oh/README.md`, `.oh/tasks/README.md`, `.oh/scripts/README.md`. The nested
+agent guides are `.worktrees/AGENTS.md`, `projects/AGENTS.md`, and
+`crons/AGENTS.md`.
 
 ## When NOT to add a README
 
@@ -64,8 +64,14 @@ A *description* of what a directory holds stays in that directory's
 the behavior under `.oh/skills/`, and the README links to it. The root
 orchestrator contract lives in `AGENTS.md`.
 
-A nested `AGENTS.md` is reserved for a **git-boundary directory** — `.worktrees/`
-and `projects/`, whose contents are separate checkouts where the root `AGENTS.md`
-is never loaded. Those two carry the guide an agent needs when it lands inside a
-different repository, and they follow the same four-part shape as a README. No
-other directory gets one.
+A nested `AGENTS.md` is reserved for a directory whose contents an agent acts on
+**without the root `AGENTS.md` in context**:
+
+- `.worktrees/` and `projects/` — git boundaries. Their contents are separate
+  checkouts, so the root file is never loaded there.
+- `crons/` — agent instructions. A cron body is a prompt executed unattended on
+  a schedule; the operating contract has to live beside it.
+
+Each follows the same four-part shape as a README. No other directory gets one:
+a directory that a human reads *about* takes a `README.md`, and only a directory
+an agent operates *inside* takes an `AGENTS.md`.

@@ -45,7 +45,7 @@ fi
 canonical_skills='$AUDIT_ROOT/.oh/skills/'
 grep -qF "$canonical_skills" .oh/skills/audit/references/skills.md \
   || { echo 'REGRESSION: skills audit does not scan canonical .oh/skills' >&2; exit 1; }
-for path in AGENTS.md docs/README.md docs/artifact-contract-schema.md .oh/templates/AGENTS.md .oh/crons/heartbeat.md .github/workflows/ci-harness.yml .oh/evals/capability/tasks/CB-001-ship-harness-change.md .oh/skills/benchmark/SKILL.md .oh/skills/spec/references/retro.md; do
+for path in AGENTS.md docs/README.md docs/artifact-contract-schema.md .oh/templates/AGENTS.md crons/heartbeat.md .github/workflows/ci-harness.yml .oh/evals/capability/tasks/CB-001-ship-harness-change.md .oh/skills/benchmark/SKILL.md .oh/skills/spec/references/retro.md; do
   git ls-files --error-unmatch "$path" >/dev/null || { echo "REGRESSION: stale-reference coverage path missing: $path" >&2; exit 1; }
 done
 echo 'PASS: no active legacy audit references across tracked active surfaces' >&2

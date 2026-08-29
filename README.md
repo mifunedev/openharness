@@ -18,7 +18,7 @@
 - **One project, one sandbox.** A single container scoped to a single repo. The agent owns its branch and its workspace; you keep your laptop clean.
 - **Parallel by design.** The worktrees skill fans one sandbox into isolated git worktrees — parallel branches, delegated sub-agents, even other cloned repos.
 - **Remote-first, lights-out.** Runs the same on your laptop or a cloud VM; on a VM it's an unattended software factory — agents build on a schedule, reachable over Slack.
-- **Agents that work while you sleep.** A tiny croner runtime reads `.oh/crons/*.md` markdown and wakes the agent on a schedule.
+- **Agents that work while you sleep.** A tiny croner runtime reads `crons/*.md` markdown and wakes the agent on a schedule.
 - **Host dependencies: Docker, Git, and make.** No Node, no Python, no toolchain rot on your laptop. (`make` runs the `make sandbox` / `make shell` wrappers — see [Prerequisites](docs/installation.md#prerequisites-clone-path). Inside the sandbox the same verbs are `oh sandbox` / `oh shell` — see [lifecycle commands](docs/lifecycle-commands.md).)
 - **Composable infra.** Cherry-pick Cloudflare tunnels, SSH, Caddy gateway, or pack-supplied services via Compose overlays.
 - **Slack-ready.** The `pi-messenger-bridge` package bridges Slack (and other messengers) to a Pi agent — see [docs/integrations/slack.md](docs/integrations/slack.md).
@@ -289,7 +289,7 @@ the image-mode recipe.
 | **Browser** | agent-browser + Chromium (headless) |
 | **One project, one sandbox** | A single container scoped to a single repo and branch |
 | **Worktrees** | One sandbox → many isolated git worktrees: parallel branches, delegated sub-agents, satellite project clones under `projects/` |
-| **Crons** | Markdown-defined schedules in `.oh/crons/*.md` driven by the in-container croner runtime |
+| **Crons** | Markdown-defined schedules in `crons/*.md` driven by the in-container croner runtime |
 | **Multi-agent** | Claude, Codex, Pi by default (Hermes/Grok opt-in); Slack bridging via [pi-messenger-bridge](docs/integrations/slack.md) |
 
 ## 📚 Where to go next

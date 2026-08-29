@@ -23,7 +23,6 @@ is obsolete):
   — exported to the four agent providers via symlinks (`.claude/`, `.codex/`,
   `.pi/`, `.hermes/`): the `oh` CLI (`cli/`), installer + lifecycle scripts
   (`scripts/`), container-install inputs (`install/`), the
-  scheduled-agent cron definitions + runtime log (`crons/`), the
   regression/capability eval suite (`evals/`), the long-term memory + session
   logs (`memory/`), user-local deploy
   config (`config.json`),
@@ -35,8 +34,9 @@ is obsolete):
 - **repo root** — human-facing Markdown docs live under `docs/`, alongside
   everything forced to root by *external* tooling (`.devcontainer/` for the
   devcontainer spec + Docker COPY, `package.json`, `pnpm-*.yaml`, `.github/`,
-  `.husky/`). The scheduled-agent crons remain under `.oh/crons/`, the
-  eval suite under `.oh/evals/`, and the Ralph/spec task workdirs under
+  `.husky/`). The scheduled-agent cron definitions live at the repo root in
+  `crons/` — operator schedule content, not shipped machinery. The
+  eval suite stays under `.oh/evals/`, and the Ralph/spec task workdirs under
   `.oh/tasks/`. The worktree root (`.worktrees/`) and the project-clone root
   (`projects/`) sit at the repo root, because a repository keeps its worktrees at
   its own root and a project clone is a peer repo, not control-plane machinery;
@@ -45,7 +45,7 @@ is obsolete):
 
 ### Relocated into `.oh/` (no back-compat symlinks)
 
-The runtime-machinery directories (`scripts/`, `install/`, `crons/`, `evals/`, `memory/`) moved into `.oh/`
+The runtime-machinery directories (`scripts/`, `install/`, `evals/`, `memory/`) moved into `.oh/`
 **without** back-compat symlinks at the old root paths — every consumer was
 repointed to the real `.oh/…` location:
 
@@ -53,14 +53,19 @@ repointed to the real `.oh/…` location:
 |---|---|
 | `scripts/` | `.oh/scripts/` |
 | `install/` | `.oh/install/` |
-| `crons/` | `.oh/crons/` |
 | `evals/` | `.oh/evals/` |
 
 Every consumer pinning those literals was updated: the skills and cron bodies that
 call `.oh/scripts/locked-append.sh`, the `Makefile`'s `COMPOSE := .oh/scripts/docker-compose.sh`,
 the boot-lint shellcheck glob, vitest's `.oh/scripts/__tests__/**`, the eval probes,
-and the `CRONS_DIR` default (`.oh/crons`) in `docker-compose.yml`, `entrypoint.sh`,
-and `cron-runtime.ts`. Nothing reads the bare root paths anymore.
+in `docker-compose.yml`, `entrypoint.sh`, and `cron-runtime.ts`. Nothing reads
+the bare root paths anymore.
+
+The cron definitions went the other way. They briefly lived at `.oh/crons/` and
+moved back **out** to the repo root as `crons/`, because a schedule authored per
+deployment is operator content, not machinery Open Harness ships. The
+`CRONS_DIR` default is `crons`, and `oh init` / `oh update` deliver them through
+the manifest's `rootInclude` list rather than the `.oh/` payload.
 
 The relocated task workdirs (`tasks/` → `.oh/tasks/`) moved **without** a
 back-compat symlink — every consumer was repointed to the real `.oh/tasks/` path
@@ -112,7 +117,6 @@ The shared skills, agents, and hooks are vendored directly under `.oh/` (`.oh/sk
 | `cli/` | The in-tree `oh` CLI (standalone npm package; built into the image as `/opt/oh`). Old path: `packages/oh/` (no symlink — repointed). |
 | `install/` | Container-install inputs (`.zshrc`, `.tmux.conf`, `banner.sh`, `install.sh` prerequisites) consumed by the Dockerfile + entrypoint. Old path: `install/` (no symlink — repointed). |
 | `scripts/` | Installer, lifecycle, cron-runtime, and eval-support scripts (`docker-compose.sh`, `cron-runtime.ts`, `locked-append.sh`, `harness-config.sh`, …). Old path: `scripts/` (no symlink — repointed). |
-| `crons/` | Scheduled-agent cron definitions (`heartbeat.md`, `cleanup-tasks.md`, `eval-weekly.md`, …) read by `.oh/scripts/cron-runtime.ts`, plus the gitignored runtime `.cron.log`/`.pid`. Old path: `crons/` (no symlink — repointed). |
 | `evals/` | The fitness-function suite — regression probes (`probes/`), capability benchmark (`capability/`), trajectory datasets (`datasets/`), and the `RESULTS.md` scoreboard. Old path: `evals/` (no symlink — repointed). |
 | `patches/` | Vendored pnpm dependency patches (applied at install via `package.json` `patchedDependencies`). |
 | `config.json` | User-local, gitignored `composeOverrides[]` source. Read here first; legacy repo-root `config.json` is honored as a fallback. |
@@ -144,7 +148,7 @@ source instead of the bundled `.oh/templates/`.
 
 | Belongs in `.oh/` | Stays at root |
 |------|------|
-| OpenHarness's own machinery addressed as a unit: the `oh` CLI, installer/lifecycle scripts, container-install inputs, compose config, the scheduled-agent cron definitions (`.oh/crons/`), the fitness-function eval suite (`.oh/evals/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Human-facing Markdown docs (`docs/`) plus surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) |
+| OpenHarness's own machinery addressed as a unit: the `oh` CLI, installer/lifecycle scripts, container-install inputs, compose config, the fitness-function eval suite (`.oh/evals/`), and the Ralph/spec task workdirs (`.oh/tasks/`) | Human-facing Markdown docs (`docs/`) plus the scheduled-agent cron definitions (`crons/`), and surfaces **forced to root by external tooling** (`.devcontainer/`, `package.json`, `pnpm-*.yaml`, `.github/`, `.husky/`) |
 
 ### Why these specifically stay at root
 
@@ -258,7 +262,15 @@ copied or overwritten by `oh init` or `oh update`. The rendered Docusaurus docs
 empty/invalid one — falls back to overlaying **all of `.oh/`**, exactly as
 before, emitting a one-line `legacy mode` warning so the fallback stays visible.
 
-**Boundary is preserved:** the manifest **cannot reach outside `.oh/`**. Its
+**`rootInclude` — the one payload that lands outside `.oh/`.** A second list,
+`rootInclude`, carries globs **relative to the repository root** and writes to
+`<target>/` instead of `<target>/.oh/`. It exists for content that belongs at the
+root of an equipped repo rather than inside the control plane; today it carries
+`crons/**`. It has its own escape guard (`assertDestInRoot`), and it walks only
+the top-level directories its own patterns name — never the whole repo root.
+`exclude` applies to both lists.
+
+**Boundary is preserved:** the `.oh/` payload **cannot reach outside `.oh/`**. Its
 patterns are relative to `.oh/`, and the existing path-escape guard (writes land
 only under `<target>/.oh/`) is **unchanged** — the manifest *narrows* the
 payload, it never widens the write surface. The vendored skill pack
@@ -267,7 +279,8 @@ manifest, so `oh init`/`oh update` carry it into a target with the rest of `.oh/
 
 > **`oh init` seam:** both `oh init` and `oh update` honor this manifest — they
 > vendor only the manifest-shipped `.oh/` payload (via `commands/init.ts`'s
-> `copyOhPayload`), so the skill pack arrives in one shot with no submodule step.
+> `copyOhPayload`) plus the `rootInclude` payload (`copyRootPayload`), so the
+> skill pack arrives in one shot with no submodule step.
 
 ## Pointers
 

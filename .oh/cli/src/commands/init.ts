@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { loadManifest } from "../lib/manifest.js";
-import { copyOhPayload, type CopyReport } from "../lib/vendor.js";
+import { copyOhPayload, copyRootPayload, type CopyReport } from "../lib/vendor.js";
 import { writeEnvFile } from "../lib/env.js";
 import { setKeyInEnv } from "../lib/env-file.js";
 import * as prompt from "../lib/prompt.js";
@@ -175,6 +175,38 @@ export async function runInit(
     vReport,
   );
 
+  const rootReport: CopyReport = (action, rel) => {
+    switch (action) {
+      case "create":
+        report(`create ${rel}`);
+        vCreated++;
+        break;
+      case "overwrite":
+        report(`overwrite ${rel}`);
+        vOverwritten++;
+        break;
+      case "skip-exists":
+        report(`skip ${rel} (exists)`);
+        stats.skipped++;
+        break;
+      case "skip-not-in-payload":
+        if (verbose) report(`skip ${rel} (not in payload)`);
+        vFiltered++;
+        break;
+      case "skip-volatile":
+        if (verbose) report(`skip ${rel} (volatile)`);
+        vFiltered++;
+        break;
+    }
+  };
+  copyRootPayload(
+    path.dirname(sourceOh),
+    t,
+    manifest,
+    { force, dryRun, skipExisting: !force },
+    rootReport,
+  );
+
   if (!minimal) {
     const wr: WriteCtx = { t, dryRun, force, report, stats };
 
@@ -196,7 +228,7 @@ export async function runInit(
     }
 
     writeClaudeAlias(wr, copyClaude);
-    writeNestedClaudeAliases(wr, templatesDir);
+    writeNestedClaudeAliases(wr, [templatesDir, path.join(sourceOh, "..")]);
 
     const fullTemplates = path.join(templatesDir, "full");
     if (existsSync(fullTemplates) && statSync(fullTemplates).isDirectory()) {
@@ -458,11 +490,13 @@ function linkReport(ctx: WriteCtx, linkRel: string, linkTarget: string): void {
   ctx.stats.created++;
 }
 
-const NESTED_AGENTS_DIRS = [".worktrees", "projects"];
+const NESTED_AGENTS_DIRS = [".worktrees", "projects", "crons"];
 
-function writeNestedClaudeAliases(ctx: WriteCtx, templatesDir: string): void {
+function writeNestedClaudeAliases(ctx: WriteCtx, sourceRoots: string[]): void {
   for (const dir of NESTED_AGENTS_DIRS) {
-    if (!existsSync(path.join(templatesDir, dir, "AGENTS.md"))) continue;
+    const guide = path.join(dir, "AGENTS.md");
+    const shipped = sourceRoots.some((root) => existsSync(path.join(root, guide)));
+    if (!shipped && !existsSync(path.join(ctx.t, guide))) continue;
     linkReport(ctx, `${dir}/CLAUDE.md`, "AGENTS.md");
   }
 }

@@ -8,6 +8,8 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-29
+
 ### Added
 - `oh destroy` (a name-typing confirmation, `--yes` for non-TTY) and `oh compose config` close the last two `make`-only verbs, so `oh` is the single lifecycle door ([#879](https://github.com/mifunedev/openharness/issues/879)).
 - Tracked `oh.json` holds every non-secret setting; a gitignored 0600 root `.env` holds only secrets. Adds `oh config show/set`, `oh secret set/list`, and an opt-in `oh config repo` ([#880](https://github.com/mifunedev/openharness/issues/880)).
@@ -24,6 +26,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Delete the canonical agent definitions (`.oh/agents/`), `.oh/plans/`, `.oh/handoffs/`, and the accumulated `.oh/tasks/` folders and archive ([#865](https://github.com/mifunedev/openharness/pull/865)).
 
 ### Changed
+- Lock the `oh` CLI's npm version to the harness release version. `oh` is the only lifecycle door now, so its version is the only one a user sees, and `version-parity.sh` keeps the two package.json files and the CHANGELOG heading in agreement.
 - `docs/lifecycle-commands.md` becomes the `oh`-only verb reference, and the `make ...` instructions are swept out of `README.md`, `AGENTS.md`, and `docs/` ([#881](https://github.com/mifunedev/openharness/issues/881)).
 - Collapse the README install fan-out to three paths — npm, the `get-oh.sh` curl bootstrap, and from source. `docs/intro.md` no longer claims there is no host CLI ([#881](https://github.com/mifunedev/openharness/issues/881)).
 - Document the VS Code divergence: "Reopen in Container" applies no compose overlay — no SSH, no docker socket, no Hermes dashboard, no `composeOverrides` ([#881](https://github.com/mifunedev/openharness/issues/881)).

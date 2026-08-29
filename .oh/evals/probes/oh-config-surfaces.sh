@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
+# source: PR #887 (config split across two authored surfaces — a tracked oh.json and a secrets-only root dotenv — with nothing left under $HOME)
 # desc: the two authored config surfaces stay honest — tracked oh.json holds no allow-listed secret, the root dotenv is gitignored/0600 and holds nothing but allow-listed secrets, .devcontainer/.env is a symlink to ../.env, no live file still depends on the retired .devcontainer/.example.env, and no CLI source relocates config into $HOME
 set -euo pipefail
 

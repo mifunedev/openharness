@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
+# source: PR #827 (installer answers landed in the losing config file); retargeted to the .example.env template by PR #833, then to oh.json by PR #887
 # desc: `oh init --yes` provisions headlessly — zero prompts, a default oh.json, a root .env.example byte-identical to the tracked template, and no secrets dotenv
 set -euo pipefail
 

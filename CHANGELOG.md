@@ -8,6 +8,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Fixed
+- Give the five probes that shipped without one a `# source:` header, so every probe records the lesson it closes and the `source` column in `RESULTS.md` is fully populated ([#889](https://github.com/mifunedev/openharness/issues/889)).
+
 ## [0.5.1] - 2026-08-29
 
 ### Fixed

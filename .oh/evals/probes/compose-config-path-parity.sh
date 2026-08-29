@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # tier: A
+# source: PR #833 (remove harness.yaml — the wrapper and VS Code "Reopen in Container" paths must resolve the same service) 2026-08-26
 # desc: the wrapper path and the VS Code "Reopen in Container" path resolve the same service — the parity harness.yaml made impossible
 set -euo pipefail
 

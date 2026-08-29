@@ -29,7 +29,9 @@ provider_links=(
   ".pi/skills|../.oh/skills"
   ".claude/skills|../.oh/skills"
   ".codex/skills|../.oh/skills"
+  ".claude/agents|../.oh/agents"
   ".claude/hooks|../.oh/hooks"
+  ".codex/agents|../.claude/agents"
   ".prime/agent/skills|../../.oh/skills"
 )
 

@@ -45,7 +45,7 @@ flowchart TD
 
     B -->|Yes| C["Step 2: Deep-think task decomposition"]
     C --> D["Step 3: Build dependency graph"]
-    D --> E["Step 4: Create tasks + compute waves"]
+    D --> E["Step 4: Write run ledger to .oh/tasks/"]
     E --> F{--dry-run?}
     F -->|Yes| DRY["Report: task graph + wave plan"]
     DRY --> MEM_DRY[Memory Protocol]
@@ -126,11 +126,39 @@ Output the wave plan:
 - No circular dependencies (if found, report error and stop)
 - Max 5 concurrent agents per wave (split larger waves into sub-waves)
 
-### 4. Create tasks and track dependencies
+### 4. Write the run ledger
 
-Use `TaskCreate` for each task. Then use `TaskUpdate` with `addBlockedBy` to wire dependencies.
+The task graph is durable state, not conversation state. A delegation outlives a
+context window: `/spec execute` compacts mid-build, sessions die, and another agent
+can pick up the worktree. Write the graph to disk before spawning any worker.
 
-If `--dry-run`, output the full task graph and wave plan, then skip to **Step 9**.
+**Resolve the run directory** as `.oh/tasks/<slug>/`:
+
+- Invoked inside a `/spec execute` task (a `--plan` path under `.oh/tasks/<slug>/`,
+  or that folder is the current task): reuse that `<slug>`.
+- Otherwise: `delegate-<kebab-topic>-<YYYY-MM-DD>`, created if absent.
+
+**Write two files, both owned by this skill:**
+
+| File | Contents |
+|------|----------|
+| `delegate-graph.json` | Every task's ID, title, description, `dependsOn`, files, complexity, model override plus its reason, thinking level, acceptance criteria, assigned wave, and `status` (`pending`/`running`/`completed`/`FAIL`/`BLOCKED`) |
+| `delegate-log.txt` | Append-only run log; one line per wave boundary and per status change |
+
+Never write `prd.json` or `progress.txt`. Those belong to the Advisor
+(`.oh/tasks/README.md`), and `progress.txt` in particular must not be edited by hand.
+This skill's two files sit beside them without collision.
+
+Both live under `.oh/tasks/`, which is gitignored — that is correct for run state.
+Stage them with `git add -f` only when a PR must carry the delegation as evidence.
+
+**Resume rather than restart.** If `delegate-graph.json` already exists in the resolved
+directory, read it first. Re-run only tasks whose status is `pending`, `FAIL`, or
+`BLOCKED`; treat `completed` tasks as done and pass their summaries forward as
+prior-wave context. A resumed run appends to `delegate-log.txt`; it never truncates it.
+
+If `--dry-run`, write neither file — output the full task graph and wave plan, then
+skip to **Step 7**.
 
 ### 5. Execute waves
 
@@ -169,7 +197,9 @@ If any field is missing, either add it or downgrade the task to flat execution (
 
 **b) Collect results**
 
-After all agents in the wave complete, update each task via `TaskUpdate`:
+After all agents in the wave complete, set each task's `status` and `summary` in
+`delegate-graph.json`, then append the wave's outcome to `delegate-log.txt`. Write both
+before spawning the next wave — a crash between waves must leave the graph readable.
 
 | Task | Status | Summary | Files Changed |
 |------|--------|---------|---------------|

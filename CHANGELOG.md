@@ -8,8 +8,12 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Added
+- Add `skills-task-tool-coupling.sh`, a tier-A probe holding the canonical skill pack and the sandbox in agreement about the Claude-Code-only task tools ([#886](https://github.com/mifunedev/openharness/issues/886)).
+
 ### Fixed
 - Give the five probes that shipped without one a `# source:` header, so every probe records the lesson it closes and the `source` column in `RESULTS.md` is fully populated ([#889](https://github.com/mifunedev/openharness/issues/889)).
+- `/delegate` no longer instructs the Claude-Code-only `TaskCreate`/`TaskUpdate` from the provider-shared skill pack; its wave graph persists to a `.oh/tasks/<slug>/` run ledger ([#886](https://github.com/mifunedev/openharness/issues/886)).
 
 ## [0.5.1] - 2026-08-29
 

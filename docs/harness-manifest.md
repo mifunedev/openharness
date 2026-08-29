@@ -5,10 +5,12 @@ file could take if a project wants a local manifest. It is **descriptive, not
 normative**: Open Harness does not require this file, does not validate this
 shape, and does not treat it as a registry-backed schema or conformance target.
 
-The real runtime configuration file today is `.devcontainer/.env`,
-generated from [`.devcontainer/.example.env`](../.devcontainer/.example.env) and read by
-[`docker-compose.sh`](../.oh/scripts/docker-compose.sh). That file controls sandbox
-settings. The example below is only a pointer map over the existing `.oh/`
+The real runtime configuration surfaces today are the tracked
+[`oh.json`](../oh.json) at the repository root, which holds every non-secret
+setting, and the gitignored root `.env`, which holds only secrets and is
+documented by the tracked [`.env.example`](../.env.example). Both are read by
+[`docker-compose.sh`](../.oh/scripts/docker-compose.sh); the field reference is
+[Configuration](configuration.md). The example below is only a pointer map over the existing `.oh/`
 control-plane surfaces described in the [`.oh/` directory layout](oh-directory-layout.md).
 
 ## Minimal example

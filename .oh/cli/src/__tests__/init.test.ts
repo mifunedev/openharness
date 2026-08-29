@@ -76,11 +76,11 @@ describe("runInit", () => {
 
     expect(code).toBe(0);
     expect(existsSync(join(t, ".devcontainer/devcontainer.json"))).toBe(true);
-    expect(existsSync(join(t, ".devcontainer/.example.env"))).toBe(true);
+    expect(existsSync(join(t, ".env.example"))).toBe(true);
     expect(existsSync(join(t, "AGENTS.md"))).toBe(true);
     expect(existsSync(join(t, ".gitignore"))).toBe(true);
     expect(existsSync(join(t, "README.md"))).toBe(false);
-    expect(out.some((l) => l.includes("create .devcontainer/.example.env"))).toBe(true);
+    expect(out.some((l) => l.includes("create .env.example"))).toBe(true);
   });
 
   it("skip-without-force: a second run skips existing files and changes nothing", async () => {
@@ -133,7 +133,7 @@ describe("runInit", () => {
     for (const line of out) {
       expect(line.startsWith("[dry-run] ")).toBe(true);
     }
-    expect(existsSync(join(t, ".devcontainer/.example.env"))).toBe(false);
+    expect(existsSync(join(t, ".env.example"))).toBe(false);
     expect(existsSync(join(t, ".devcontainer/devcontainer.json"))).toBe(false);
     expect(existsSync(join(t, ".gitignore"))).toBe(false);
     expect(existsSync(join(t, "AGENTS.md"))).toBe(false);
@@ -263,7 +263,7 @@ describe("runInit", () => {
     expect(existsSync(join(t, ".oh/README.md"))).toBe(true);
     expect(existsSync(join(t, ".oh/cli/package.json"))).toBe(true);
     expect(existsSync(join(t, ".oh/cli/src/cli.ts"))).toBe(true);
-    expect(existsSync(join(t, ".oh/templates/.devcontainer/.example.env"))).toBe(true);
+    expect(existsSync(join(t, ".oh/templates/.env.example"))).toBe(true);
     expect(existsSync(join(t, ".oh/cli/node_modules"))).toBe(false);
     expect(existsSync(join(t, ".oh/cli/dist"))).toBe(false);
     expect(existsSync(join(t, ".oh/devcontainer"))).toBe(false);
@@ -386,7 +386,7 @@ describe("runInit", () => {
   });
 
 
-  it("wizard: every answer lands in ONE .devcontainer/.env write; untouched lines byte-identical", async () => {
+  it("wizard: non-secrets land in oh.json and secrets land in the root dotenv, no crossover", async () => {
     const t = freshTmp();
     const ask = async (q: string): Promise<string> => {
       if (q.includes("Sandbox name")) return "my-cool-sandbox";
@@ -410,41 +410,49 @@ describe("runInit", () => {
     const code = await runInit(opts(t, { yes: false }), io);
     expect(code).toBe(0);
 
-    const env = readFileSync(join(t, ".devcontainer/.env"), "utf8");
-    expect(env).toMatch(/^SANDBOX_NAME=my-cool-sandbox$/m);
-    expect(env).toMatch(/^TZ=America\/New_York$/m);
-    expect(env).toMatch(/^GIT_USER_NAME=Ada Lovelace$/m);
-    expect(env).toMatch(/^GIT_USER_EMAIL=ada@example.com$/m);
-    expect(env).toMatch(/^INSTALL_AGENT_BROWSER=true$/m);
-    expect(env).toMatch(/^#\s*INSTALL_HERMES=false/m);
-    expect(env).toContain("GH_TOKEN=ghp_supersecrettoken12345");
+    const config = JSON.parse(readFileSync(join(t, "oh.json"), "utf8"));
+    expect(config.version).toBe(1);
+    expect(config.name).toBe("my-cool-sandbox");
+    expect(config.timezone).toBe("America/New_York");
+    expect(config.git).toEqual({ userName: "Ada Lovelace", userEmail: "ada@example.com" });
+    expect(config.install.agentBrowser).toBe(true);
+    expect(config.install.hermes).toBe(false);
+    expect(config.access.ssh).toBe(false);
+    expect(config.access.dockerSocket).toBe(false);
 
-    const envWrites = out.filter((l) => l.includes("update .devcontainer/.env"));
-    expect(envWrites).toHaveLength(1);
+    const configText = readFileSync(join(t, "oh.json"), "utf8");
+    expect(configText).not.toContain("ghp_supersecrettoken12345");
+    expect(configText).not.toContain("GH_TOKEN");
 
-    const tmpl = readFileSync(
-      join(TEMPLATES, ".devcontainer", ".example.env"),
-      "utf8",
-    ).split("\n");
-    const result = env.split("\n");
-    expect(result).toHaveLength(tmpl.length);
-    const touched = new Set([
+    const dotenv = readFileSync(join(t, ".env"), "utf8");
+    expect(dotenv).toMatch(/^GH_TOKEN=ghp_supersecrettoken12345$/m);
+    for (const nonSecret of [
       "SANDBOX_NAME",
       "TZ",
       "GIT_USER_NAME",
       "GIT_USER_EMAIL",
       "INSTALL_AGENT_BROWSER",
-      "GH_TOKEN",
-    ]);
-    for (let i = 0; i < tmpl.length; i++) {
-      const m = tmpl[i].match(/^\s*#?\s*([A-Z0-9_]+)\s*=/);
-      const key = m ? m[1] : undefined;
-      if (key && touched.has(key)) continue;
-      expect(result[i]).toBe(tmpl[i]);
+      "DOCKER_SOCKET",
+    ]) {
+      expect(dotenv).not.toContain(nonSecret);
     }
+
+    expect(out.filter((l) => l.includes("create oh.json"))).toHaveLength(1);
+    expect(out.filter((l) => l.includes("update .env (1 secret)"))).toHaveLength(1);
   });
 
-  it("wizard: --yes skips the wizard even when a reader is injected", async () => {
+  it("wizard: .devcontainer/.env is a symlink to ../.env", async () => {
+    const t = freshTmp();
+    const { io, out } = makeIO();
+    expect(await runInit(opts(t, { yes: true }), io)).toBe(0);
+
+    const link = join(t, ".devcontainer/.env");
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(link)).toBe("../.env");
+    expect(out.some((l) => l.includes("create .devcontainer/.env"))).toBe(true);
+  });
+
+  it("wizard: --yes writes a default oh.json, prompts zero times, and writes no dotenv", async () => {
     const t = freshTmp();
     let asked = 0;
     const io: InitIO = {
@@ -454,15 +462,89 @@ describe("runInit", () => {
         asked++;
         return "should-not-be-asked";
       },
-      askSecret: async () => "",
+      askSecret: async () => {
+        asked++;
+        return "should-not-be-asked";
+      },
     };
     const code = await runInit(opts(t, { yes: true }), io);
 
     expect(code).toBe(0);
     expect(asked).toBe(0);
-    const example = readFileSync(join(t, ".devcontainer/.example.env"), "utf8");
-    expect(example).toMatch(/^#\s*SANDBOX_NAME=/m);
-    expect(existsSync(join(t, ".devcontainer/.env"))).toBe(false);
+    const config = JSON.parse(readFileSync(join(t, "oh.json"), "utf8"));
+    expect(config.version).toBe(1);
+    expect(config.install).toEqual({
+      opencode: false,
+      grokBuild: false,
+      deepagents: false,
+      hermes: false,
+      agentBrowser: false,
+    });
+    expect(existsSync(join(t, ".env"))).toBe(false);
+    expect(lstatSync(join(t, ".devcontainer/.env")).isSymbolicLink()).toBe(true);
+  });
+
+  it("migration: splits a real .devcontainer/.env and preserves an unrecognised key", async () => {
+    const t = freshTmp();
+    mkdirSync(join(t, ".devcontainer"), { recursive: true });
+    const legacy = join(t, ".devcontainer/.env");
+    writeFileSync(
+      legacy,
+      [
+        "SANDBOX_NAME=legacy-box",
+        "INSTALL_HERMES=true",
+        "SANDBOX_SSH_PORT=2299",
+        "GH_TOKEN=ghp_legacytoken",
+        "MY_CUSTOM_THING=keep-me",
+        "",
+      ].join("\n"),
+    );
+
+    const { io, out, err } = makeIO();
+    expect(await runInit(opts(t, { yes: true }), io)).toBe(0);
+
+    const config = JSON.parse(readFileSync(join(t, "oh.json"), "utf8"));
+    expect(config.name).toBe("legacy-box");
+    expect(config.install.hermes).toBe(true);
+    expect(config.access.sshPort).toBe(2299);
+    expect(readFileSync(join(t, "oh.json"), "utf8")).not.toContain("ghp_legacytoken");
+    expect(readFileSync(join(t, "oh.json"), "utf8")).not.toContain("MY_CUSTOM_THING");
+
+    expect(readFileSync(join(t, ".env"), "utf8")).toMatch(/^GH_TOKEN=ghp_legacytoken$/m);
+
+    const joinedErr = err.join("");
+    expect(joinedErr).toContain("MY_CUSTOM_THING");
+    expect(joinedErr).toContain("left in place");
+    expect(joinedErr).not.toContain("SANDBOX_NAME");
+
+    expect(lstatSync(legacy).isFile()).toBe(true);
+    expect(readFileSync(legacy, "utf8")).toContain("MY_CUSTOM_THING=keep-me");
+    expect(out.some((l) => l.includes("keep .devcontainer/.env (not removed)"))).toBe(true);
+  });
+
+  it("migration: a fully-classified legacy file is retired only after confirmation", async () => {
+    const t = freshTmp();
+    mkdirSync(join(t, ".devcontainer"), { recursive: true });
+    const legacy = join(t, ".devcontainer/.env");
+    writeFileSync(legacy, "SANDBOX_NAME=legacy-box\nGH_TOKEN=ghp_legacytoken\n");
+
+    const declined = makeIO();
+    declined.io.ask = async () => "";
+    declined.io.askSecret = async () => "";
+    expect(await runInit(opts(t, { yes: false }), declined.io)).toBe(0);
+    expect(lstatSync(legacy).isFile()).toBe(true);
+    expect(declined.out.some((l) => l.includes("keep .devcontainer/.env (not removed)"))).toBe(
+      true,
+    );
+
+    const accepted = makeIO();
+    accepted.io.ask = async (q: string) => (q.includes("Replace the migrated") ? "y" : "");
+    accepted.io.askSecret = async () => "";
+    expect(await runInit(opts(t, { yes: false, force: true }), accepted.io)).toBe(0);
+    expect(accepted.out.some((l) => l.includes("remove .devcontainer/.env (migrated)"))).toBe(true);
+    expect(lstatSync(join(t, ".devcontainer/.env")).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(join(t, ".devcontainer/.env"))).toBe("../.env");
+    expect(readFileSync(join(t, ".env"), "utf8")).toMatch(/^GH_TOKEN=ghp_legacytoken$/m);
   });
 
 
@@ -526,6 +608,7 @@ describe("runInit", () => {
     const walk = (dir: string): void => {
       for (const e of readdirSync(dir, { withFileTypes: true })) {
         const p = join(dir, e.name);
+        if (e.isSymbolicLink()) continue;
         if (e.isDirectory()) walk(p);
         else if (e.name === ".env" || e.name === "auth.json") offenders.push(p);
       }
@@ -693,7 +776,8 @@ describe("runInit", () => {
       .split("\n")
       .map((l) => l.trimEnd());
     for (const entry of [
-      ".devcontainer/.env",
+      "/.env",
+      "!/.env.example",
       ".claude/.env.claude",
       ".hermes/.env",
       ".hermes/auth.json",

@@ -56,7 +56,7 @@ function makeRepo(sandboxName?: string): string {
   mkdirSync(join(d, ".devcontainer"), { recursive: true });
   writeFileSync(join(d, ".devcontainer", "docker-compose.yml"), COMPOSE_YML);
   if (sandboxName !== undefined) {
-    writeFileSync(join(d, ".devcontainer", ".env"), `SANDBOX_NAME=${sandboxName}\n`);
+    writeFileSync(join(d, "oh.json"), `${JSON.stringify({ version: 1, name: sandboxName })}\n`);
   }
   return d;
 }
@@ -125,7 +125,7 @@ describe("destroy confirmation phrase", () => {
     expect(destroyConfirmationPhrase(makeRepo("from-file"))).toBe("from-env");
   });
 
-  it("falls back to .devcontainer/.env, then to the default", () => {
+  it("falls back to oh.json, then to the default", () => {
     vi.stubEnv("SANDBOX_NAME", "");
     expect(destroyConfirmationPhrase(makeRepo("from-file"))).toBe("from-file");
     expect(destroyConfirmationPhrase(makeRepo())).toBe("openharness");
@@ -194,11 +194,9 @@ describe("oh destroy — the confirmation policy", () => {
     expect(await runDestroy({ cwd: root, run }, io)).toBe(0);
     expect(calls).toHaveLength(1);
     expect(calls[0].cmd).toBe("bash");
-    expect(calls[0].args).toEqual([
-      join(root, ".oh", "scripts", "docker-compose.sh"),
-      "down",
-      "-v",
-    ]);
+    expect(calls[0].args[0]).toBe(join(root, ".oh", "scripts", "docker-compose.sh"));
+    expect(calls[0].args[1]).toBe("--extra-env-file");
+    expect(calls[0].args.slice(3)).toEqual(["down", "-v"]);
   });
 
   it("skips the prompt entirely under --yes", async () => {
@@ -210,7 +208,7 @@ describe("oh destroy — the confirmation policy", () => {
     expect(await runDestroy({ cwd: root, run, yes: true }, io)).toBe(0);
     expect(asked).toHaveLength(0);
     expect(out.join("")).toBe("");
-    expect(calls[0].args.slice(1)).toEqual(["down", "-v"]);
+    expect(calls[0].args.slice(3)).toEqual(["down", "-v"]);
   });
 
   it("propagates the child's exit code", async () => {

@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import {
   ExecutionSpawnError,
   resolveExecutionTarget,
@@ -9,10 +8,8 @@ import { sourceDocsUrl } from "../lib/docs.js";
 import { resolveProjectRoot } from "../lib/project.js";
 import { confirm } from "../lib/prompt.js";
 import {
-  envFilePath,
-  installEnvKey,
+  installFieldPath,
   isInstallFlagEnabled,
-  seedEnvFile,
   setInstallFlag,
 } from "../lib/env-file.js";
 import {
@@ -122,7 +119,6 @@ async function collectRows(
     if (!(err instanceof ExecutionSpawnError)) throw err;
   }
 
-  const configured = existsSync(envFilePath(root));
   const rows: ToolRow[] = [];
   for (const entry of entries) {
     const installed = reachable ? await probeInstalled(target, entry) : null;
@@ -131,9 +127,7 @@ async function collectRows(
       title: entry.title,
       kind: entry.kind,
       enabled:
-        entry.toolKey === undefined
-          ? null
-          : configured && isInstallFlagEnabled(root, entry.toolKey),
+        entry.toolKey === undefined ? null : isInstallFlagEnabled(root, entry.toolKey),
       installed,
       version: reachable && installed === true ? await probeVersion(target, entry) : null,
       installable: entry.installArgv !== undefined,
@@ -258,15 +252,12 @@ export async function runToolInstall(
   }
 
   if (!opts.noPersist && entry.toolKey !== undefined) {
-    if (seedEnvFile(root)) {
-      io.stdout("create .devcontainer/.env (from .devcontainer/.example.env)\n");
-    }
-    const key = installEnvKey(entry.toolKey);
+    const field = installFieldPath(entry.toolKey);
     const outcome = setInstallFlag(root, entry.toolKey);
     io.stdout(
       outcome === "already-set"
-        ? `.devcontainer/.env: ${key} already true\n`
-        : `.devcontainer/.env: set ${key}=true (${outcome})\n`,
+        ? `oh.json: ${field} already true\n`
+        : `oh.json: set ${field}=true (${outcome})\n`,
     );
   }
 
@@ -305,7 +296,7 @@ export async function runToolInstall(
   if (!(await confirmDownload(entry, opts, io))) {
     if (!opts.noPersist && entry.toolKey !== undefined) {
       io.stdout(
-        `.devcontainer/.env keeps ${installEnvKey(entry.toolKey)}=true — the next container start will install it.\n`,
+        `oh.json keeps ${installFieldPath(entry.toolKey)}=true — the next container start will install it.\n`,
       );
     }
     return 1;
@@ -321,7 +312,7 @@ export async function runToolInstall(
     io.stderr(
       `oh tool: installing ${entry.id} failed (exit ${r.exitCode}).\n` +
         (entry.toolKey !== undefined && !opts.noPersist
-          ? `.devcontainer/.env keeps ${installEnvKey(entry.toolKey)}=true — the next container start will retry it.\n`
+          ? `oh.json keeps ${installFieldPath(entry.toolKey)}=true — the next container start will retry it.\n`
           : ""),
     );
     return r.exitCode;

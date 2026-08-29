@@ -479,23 +479,10 @@ if [ -f "$HARNESS/package.json" ] && [ "${SKIP_PNPM_INSTALL:-0}" != "1" ]; then
   fi
 fi
 
-case "${WORKTREES_DIR:-.worktrees}" in
-  /*) WORKTREES_PATH="${WORKTREES_DIR}" ;;
-  *)  WORKTREES_PATH="$HARNESS/${WORKTREES_DIR:-.worktrees}" ;;
-esac
-mkdir -p "$WORKTREES_PATH"
-
-case "${PROJECTS_DIR:-projects}" in
-  /*) PROJECTS_PATH="${PROJECTS_DIR}" ;;
-  *)  PROJECTS_PATH="$HARNESS/${PROJECTS_DIR:-projects}" ;;
-esac
-mkdir -p "$PROJECTS_PATH"
-
-case "${CRONS_DIR:-crons}" in
-  /*) CRONS_PATH="${CRONS_DIR}" ;;
-  *)  CRONS_PATH="$HARNESS/${CRONS_DIR:-crons}" ;;
-esac
-mkdir -p "$CRONS_PATH"
+WORKTREES_PATH="$HARNESS/.worktrees"
+PROJECTS_PATH="$HARNESS/projects"
+CRONS_PATH="$HARNESS/crons"
+mkdir -p "$WORKTREES_PATH" "$PROJECTS_PATH" "$CRONS_PATH"
 if [ -f "$HARNESS/.oh/scripts/cron-runtime.ts" ] && command -v tmux &>/dev/null; then
   if gosu sandbox tmux has-session -t system-cron 2>/dev/null; then
     echo "[entrypoint] legacy system-cron tmux session detected — stopping it before starting cron-watchdog"

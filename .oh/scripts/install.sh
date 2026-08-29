@@ -310,22 +310,30 @@ fi
 
 mkdir -p "$REPO_DIR/.devcontainer"
 
-ENV_FILE="$REPO_DIR/.devcontainer/.env"
-mkdir -p "$REPO_DIR/.devcontainer"
+[ -f "$REPO_DIR/oh.json" ] \
+  || warn "oh.json missing at the repository root — non-secret settings will fall back to compose defaults (see docs/configuration.md)."
+
+ENV_FILE="$REPO_DIR/.env"
 if [ ! -f "$ENV_FILE" ]; then
-  if [ -f "$REPO_DIR/.devcontainer/.example.env" ]; then
-    cp "$REPO_DIR/.devcontainer/.example.env" "$ENV_FILE"
-    chmod 600 "$ENV_FILE" 2>/dev/null || true
-    ok "Created .devcontainer/.env from .devcontainer/.example.env"
+  if [ -f "$REPO_DIR/.env.example" ]; then
+    cp "$REPO_DIR/.env.example" "$ENV_FILE"
+    ok "Created .env from .env.example — every key commented out, so it is inert until you fill one in"
   else
     : > "$ENV_FILE"
-    chmod 600 "$ENV_FILE" 2>/dev/null || true
-    warn ".devcontainer/.example.env missing — sandbox will boot from compose defaults only."
+    warn ".env.example missing — sandbox will boot without any secrets."
   fi
   __ENV_WAS_NEW=1
 else
-  ok "Existing .devcontainer/.env preserved — updating keys in place"
+  ok "Existing .env preserved — updating keys in place"
   __ENV_WAS_NEW=0
+fi
+chmod 600 "$ENV_FILE" 2>/dev/null || true
+
+DEVCONTAINER_ENV_LINK="$REPO_DIR/.devcontainer/.env"
+if [ ! -L "$DEVCONTAINER_ENV_LINK" ] || [ "$(readlink "$DEVCONTAINER_ENV_LINK")" != "../.env" ]; then
+  rm -f "$DEVCONTAINER_ENV_LINK"
+  ln -s ../.env "$DEVCONTAINER_ENV_LINK"
+  ok "Linked .devcontainer/.env -> ../.env for VS Code \"Reopen in Container\""
 fi
 
 if [ -f "$REPO_DIR/harness.yaml" ] && [ -f "$REPO_DIR/.oh/scripts/migrate-harness-yaml.sh" ]; then
@@ -342,7 +350,8 @@ _env_set() {
     END { if (!done) print key "=" val }
   ' "$ENV_FILE" > "$ENV_FILE.oh-tmp" || { rm -f "$ENV_FILE.oh-tmp"; return 1; }
   mv "$ENV_FILE.oh-tmp" "$ENV_FILE" || return 1
-  ok ".devcontainer/.env: $1"
+  chmod 600 "$ENV_FILE" 2>/dev/null || true
+  ok ".env: $1"
 }
 
 # THE CONFIG WRITES ALWAYS RUN. They used to sit inside `if [ ! -f .env ]`, so
@@ -380,8 +389,9 @@ if command -v gh >/dev/null 2>&1 && ! grep -qE '^GH_TOKEN=.+' "$ENV_FILE"; then
     banner "Detected host gh token"
     if prompt_yn "Share host gh token with sandbox? (skips in-sandbox 'gh auth login')" y; then
       __GHT_SAFE="$(_sed_val "$__GH_TOKEN_RAW")"
-      _sedi "s|^GH_TOKEN=.*|GH_TOKEN=${__GHT_SAFE}|" "$ENV_FILE"
-      ok "Wrote GH_TOKEN to .devcontainer/.env"
+      _sedi "s|^#\\{0,1\\}[[:space:]]*GH_TOKEN=.*|GH_TOKEN=${__GHT_SAFE}|" "$ENV_FILE"
+      chmod 600 "$ENV_FILE" 2>/dev/null || true
+      ok "Wrote GH_TOKEN to .env"
       __GH_AUTOCONFIGURED=1
       unset __GHT_SAFE
     else
@@ -439,11 +449,12 @@ ok "Sandbox '$SANDBOX_NAME' started"
 printf "\n${GREEN}Installation complete!${NC}\n\n"
 printf "  ${CYAN}Configuration${NC}\n"
 printf "  ──────────────────────────────────────\n"
-printf "       ${CYAN}.devcontainer/.env${NC}  — your answers were written here. The ONE local\n"
-printf "                             (gitignored) config file, read on every path including\n"
-printf "                             VS Code \"Reopen in Container\".\n"
-printf "       ${CYAN}.devcontainer/.example.env${NC} — the tracked schema: every key, with its default.\n"
-printf "                             Defaults work; edit .env if you want to customize.\n"
+printf "       ${CYAN}oh.json${NC}      — the tracked home for every NON-secret setting. Field\n"
+printf "                      reference: docs/configuration.md.\n"
+printf "       ${CYAN}.env${NC}         — gitignored and 0600, seeded from the tracked .env.example,\n"
+printf "                      which documents every allow-listed secret. Your installer\n"
+printf "                      answers were written here; .devcontainer/.env symlinks to it\n"
+printf "                      so VS Code \"Reopen in Container\" reads the same file.\n"
 printf "\n"
 printf "  ${CYAN}Lifecycle (from %s)${NC}\n" "$REPO_DIR"
 printf "  ──────────────────────────────────────\n"
@@ -465,7 +476,7 @@ printf "       oh harness install opencode      — OpenCode terminal agent\n"
 printf "       oh harness install deepagents    — LangChain DeepAgents\n"
 printf "       oh harness install grok-build    — xAI Grok Build\n"
 printf "       oh tool install agent-browser    — headless Chromium for screenshots / previews (~1 GB)\n"
-printf "                                          (each uncomments the .devcontainer/.env key for you)\n"
+printf "                                          (each flips the matching install.* flag in oh.json)\n"
 printf "\n"
 printf "  ${CYAN}Messaging gateways${NC}\n"
 printf "  ──────────────────────────────────────\n"

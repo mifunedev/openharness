@@ -83,7 +83,12 @@ with `OH_EXECUTION_TARGET=local` or `OH_EXECUTION_TARGET=docker-compose`.
 | Command | What it does |
 |---|---|
 | `oh init [dir]` | Scaffold OpenHarness compat files + the `.oh/` control plane into a repo (default: cwd). |
+| `oh config show` | Print the resolved `oh.json` — every non-secret setting. |
+| `oh config set <field> <value>` | Set one dotted `oh.json` field (`access.sshPort 2200`), validated against the schema. A secret key is refused with a pointer at `oh secret set`. |
+| `oh config repo` | Create a repo on your GitHub account, keep the cloned-from upstream as the `openharness` remote, point `origin` at yours, and push. Asks first and defaults to no; never runs without an interactive yes. |
 | `oh config <integration>` | Configure an integration via an interactive wizard. |
+| `oh secret set <KEY>` | Prompt for the value with the input hidden and write it to the gitignored root `.env` (mode `0600`). The value is never taken from the command line, where shell history would keep it. |
+| `oh secret list` | List the allow-listed keys that hold a value, with the values redacted. |
 | `oh update` | Upgrade only the `.oh/` control plane from a newer source (`--from <dir>` / `--from-remote`); your project source is untouched. |
 | `oh sandbox` | Provision and start the sandbox (`docker compose up -d --build`). |
 | `oh shell [container]` | Open a `zsh` shell in the running sandbox container. |
@@ -93,13 +98,19 @@ with `OH_EXECUTION_TARGET=local` or `OH_EXECUTION_TARGET=docker-compose`.
 | `oh ps` | Show sandbox service status. |
 | `oh destroy [--yes]` | Remove the sandbox and wipe its named volumes (`docker compose down -v`). Names the volumes, then requires you to type the sandbox name; refuses without a TTY unless `--yes` is passed. |
 | `oh compose config` | Print the compose configuration resolved from `.devcontainer/.env` and `.oh/config.json`. |
-| `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `.devcontainer/.env` `INSTALL_*` flag **and** installs into the running sandbox — no rebuild. |
+| `oh harness <list\|install\|status>` | Install and inspect agent CLI harnesses. `install` sets the `oh.json` `install.*` field **and** installs into the running sandbox — no rebuild. |
 | `oh tool <list\|install\|status>` | Install and inspect sandbox tooling that is neither an agent CLI nor a runtime (agent-browser, `gh`, `herdr`, `cloudflared`, Docker CLI). A large download is confirmed first. |
 | `oh runtime <list\|install\|status>` | Report the isolation runtime in use (Docker today) and install MicroSandbox. Measures first and refuses an install that cannot succeed (`--force` overrides). Selects no runtime and writes no config. |
 | `oh gateway <args…>` | Manage a messaging client session (Slack bridge for `pi`/`hermes`). |
 | `oh cloud <args…>` | Configure credentials and manage OpenHarness Cloud SSH keys and nodes. |
 | `oh --version` | Print the CLI version. |
 | `oh --help` | Show help; every subcommand also accepts `--help`. |
+
+`oh.json` and the root `.env` are the only two configuration surfaces: `oh.json` is
+tracked and holds every non-secret setting, `.env` is gitignored and holds only the
+allow-listed secrets. See
+[configuration](https://github.com/mifunedev/openharness/blob/main/docs/configuration.md)
+for the field reference.
 
 These mirror the root `Makefile`'s targets one-for-one and run the same
 `.oh/scripts/docker-compose.sh`. Which one is canonical depends on where you
@@ -124,11 +135,19 @@ oh cloud nodes create --name demo --ssh-key-id <ssh-key-id>
 oh cloud nodes watch <node-id>
 ```
 
-Until OpenHarness Cloud issues user API tokens, `oh cloud config` stores the user-provided
-provisioner key at `~/.config/openharness/cloud.json` with file mode `0600`. The key is never
-printed. `OH_CLOUD_CONFIG` overrides the file path; `OH_CLOUD_API_URL` and
-`OH_PROVISION_KEY` provide non-persistent overrides for automation. Run `oh cloud --help` for
-the complete SSH-key and node lifecycle command set.
+Both settings are repository-local. `oh cloud config` writes the API base URL to `cloud.apiUrl`
+in the tracked `oh.json` and, until OpenHarness Cloud issues user API tokens, stores the
+user-provided provisioner key as `OH_CLOUD_PROVISION_KEY` in the gitignored root `.env`
+(mode `0600`). The key is never printed; `oh cloud config show` redacts it. Nothing is written
+under `$HOME`.
+
+`OH_CLOUD_API_URL` and `OH_CLOUD_PROVISION_KEY` (`OH_PROVISION_KEY` and `PROVISION_KEY` are
+still accepted) provide non-persistent overrides for automation. Because the settings live in
+the repository, `oh cloud` runs inside an OpenHarness-equipped repo; outside one, pass
+`--api-url` and `--provision-key`. On the first `oh cloud` run in a repo, a legacy
+`~/.config/openharness/cloud.json` is migrated into these two homes and then reported as no
+longer read — it is left on disk for you to delete. Run `oh cloud --help` for the complete
+SSH-key and node lifecycle command set.
 
 ## Documentation
 

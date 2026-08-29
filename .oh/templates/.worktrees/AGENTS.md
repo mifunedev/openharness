@@ -13,9 +13,8 @@ its worktrees at its own root, so a project clone under `projects/` has a
 | `cron/` | `cron/<session>` — per-fire isolation worktrees created by `worktree: true` crons. The runtime prunes and reaps these; do not manage them by hand. |
 | `archive/` | `archive/<YYYY-MM-DD>` — weekly cleanup-tasks archive sweeps. |
 
-Lifecycle is `git worktree add` / `git worktree remove`. Override the root with
-`WORKTREES_DIR` when a deployment needs it; `.oh/scripts/oh-path worktrees` resolves
-the effective path.
+Lifecycle is `git worktree add` / `git worktree remove`. The root is always
+`.worktrees/` at the repository root; `.oh/scripts/oh-path worktrees` resolves it.
 
 Clones of repositories that are **not** harnesses do not belong here — they go in
 `projects/`, which is a plain `git clone` namespace rather than a worktree root.

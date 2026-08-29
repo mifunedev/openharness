@@ -36,7 +36,7 @@ if [[ "$(head -c 3 "$GUIDE")" == "---" ]]; then
   exit 1
 fi
 
-for token in "## Editing a cron" "SIGHUP" "BODY_RELOADED" "enabled: false" "CRONS_DIR"; do
+for token in "## Editing a cron" "SIGHUP" "BODY_RELOADED" "enabled: false" "oh-path crons"; do
   if ! grep -Fq "$token" "$GUIDE"; then
     echo "REGRESSION: crons/AGENTS.md does not document: $token" >&2
     exit 1

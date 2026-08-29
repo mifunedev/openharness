@@ -98,7 +98,12 @@ Run these **inside the initial Herdr pane** (`make shell`, then `herdr`). Per-st
 # (SSH remotes use the key directly, so `gh auth setup-git` isn't needed):
 gh auth login
 
-# Create your own PRIVATE repo, point origin at it, add upstream — all over SSH:
+# Create your own PRIVATE repo and point origin at it. `oh config repo` runs the
+# four commands below for you (it asks first, and defaults to no):
+oh config repo
+
+# The manual equivalent, if `gh` is not installed — `oh config repo` keeps the
+# upstream you cloned from as the `openharness` remote instead of `upstream`:
 gh repo create <your-user>/openharness --private
 git remote set-url origin git@github.com:<your-user>/openharness.git
 git remote add upstream git@github.com:mifunedev/openharness.git
@@ -140,11 +145,11 @@ audit-first operators want to read every command before running any of them.
 # a. Clone upstream:
 git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
 
-# b. Materialize local config, then edit it BEFORE building — set SANDBOX_NAME,
-#    TZ, GIT_USER_NAME, GIT_USER_EMAIL, and any optional INSTALL_* keys
-#    (Hermes, agent-browser, …). Secrets go in the same file; it is gitignored.
-cp .devcontainer/.example.env .devcontainer/.env
-nano .devcontainer/.env
+# b. Configure BEFORE building. Non-secret settings — name, timezone, git
+#    identity, optional install.* builds (Hermes, agent-browser, …) — live in
+#    the tracked oh.json. Secrets live in a gitignored, 0600 .env of their own.
+nano oh.json
+cp .env.example .env && chmod 600 .env && nano .env
 
 # c. Build the image, enter the sandbox, then open its primary workspace:
 make sandbox && make shell
@@ -261,21 +266,22 @@ Prefer VS Code or remote SSH? Use the Dev Containers extension's "Attach to Runn
 
 ## ⚙️ Configure (optional)
 
-`.devcontainer/.env` is the one configuration file — gitignored, generated from
-tracked `.devcontainer/.example.env`. It holds the sandbox identity, git
-identity, optional `INSTALL_*` builds, directory overrides like `WORKTREES_DIR`,
-the SSH and Docker-socket toggles, and the secrets (`GH_TOKEN`,
-`PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`). Apply changes with
+Configuration is split by kind across two files at the repository root. Tracked
+`oh.json` holds every non-secret setting — sandbox identity, git identity,
+optional `install.*` builds, the SSH and Docker-socket toggles. A gitignored,
+mode-`0600` `.env` holds nothing but secrets (`GH_TOKEN`, `SANDBOX_PASSWORD`,
+`PI_SLACK_APP_TOKEN`, `PI_SLACK_BOT_TOKEN`, …); the tracked `.env.example`
+documents every allow-listed key. Apply changes with
 `make destroy && make sandbox`.
-Full key reference: [Quickstart → Configuration](docs/quickstart.md#configuration).
+Full field reference: [Configuration](docs/configuration.md).
 
-It is read on **every** path, including VS Code "Reopen in Container" — that path
-loads `.devcontainer/docker-compose.yml` directly, and compose auto-loads the
-`.env` beside it. A `harness.yaml` layer used to sit in front of this file and
-was invisible on exactly that path; it was removed in 0.4.0, and a leftover one
-is migrated into `.env` automatically on the next lifecycle command. Compose
-overlay *paths* are the one thing `.env` cannot express and live in
-`composeOverrides[]` in `.oh/config.json`. See
+Secrets are read on **every** path, including VS Code "Reopen in Container" —
+that path loads `.devcontainer/docker-compose.yml` directly and compose
+auto-loads the `.env` beside it, which is a symlink to the root `.env`. A
+`harness.yaml` layer used to sit in front of these files and was invisible on
+exactly that path; it was removed in 0.4.0, and a leftover one is migrated
+automatically on the next lifecycle command. Compose overlay *paths* live in
+`composeOverrides[]` in `oh.json`. See
 [the prebuilt-image deployment guide](docs/deployment-prebuilt-image.md) for
 the image-mode recipe.
 

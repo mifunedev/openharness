@@ -56,10 +56,9 @@ services:
       - XAI_API_KEY=${XAI_API_KEY:-}
       - OH_PROJECT_ROOT=${OH_PROJECT_ROOT:-/home/sandbox/harness}
       - OH_IMAGE_ONLY=1
-      - CRONS_DIR=${CRONS_DIR:-crons}
       - CRON_AGENT_BIN=${CRON_AGENT_BIN:-claude}
-      - WORKTREES_DIR=${WORKTREES_DIR:-.worktrees}
-      - PROJECTS_DIR=${PROJECTS_DIR:-projects}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-}
+      - LANGFUSE_PRIVACY_PRESET=${LANGFUSE_PRIVACY_PRESET:-metadata-only}
     stdin_open: true
     tty: true
     init: true

@@ -63,9 +63,9 @@ the bare root paths anymore.
 
 The cron definitions went the other way. They briefly lived at `.oh/crons/` and
 moved back **out** to the repo root as `crons/`, because a schedule authored per
-deployment is operator content, not machinery Open Harness ships. The
-`CRONS_DIR` default is `crons`, and `oh init` / `oh update` deliver them through
-the manifest's `rootInclude` list rather than the `.oh/` payload.
+deployment is operator content, not machinery Open Harness ships. The runtime
+always reads `crons/`, and `oh init` / `oh update` deliver them through the
+manifest's `rootInclude` list rather than the `.oh/` payload.
 
 The relocated task workdirs (`tasks/` → `.oh/tasks/`) moved **without** a
 back-compat symlink — every consumer was repointed to the real `.oh/tasks/` path
@@ -75,10 +75,10 @@ a symlink and nothing reads the bare `tasks/` path anymore.
 
 The ignored worktree root briefly lived at `.oh/worktrees/` and moved back **out**
 to the repo root as `.worktrees/`, with no back-compat symlink in either
-direction. Runtime creation is routed through `WORKTREES_DIR` / `paths.worktrees`
-(default `.worktrees`), and cron worktree isolation uses `.worktrees/cron/`.
+direction. The location is a fixed convention rather than a setting, and cron
+worktree isolation uses `.worktrees/cron/`.
 Clones of non-harness repositories, formerly `.oh/worktrees/project/<owner>/<repo>/`,
-now live at `projects/<owner>/<repo>/` (`PROJECTS_DIR`, default `projects`), and
+now live at `projects/<owner>/<repo>/`, and
 each keeps its own worktrees at `projects/<owner>/<repo>/.worktrees/`. Both roots
 are gitignored except `.worktrees/AGENTS.md` and `projects/AGENTS.md`.
 
@@ -159,11 +159,12 @@ source instead of the bundled `.oh/templates/`.
   `entrypoint.sh`, and the two client scripts (`client-slack-supervise.sh` /
   `seed-msg-bridge.sh`). Everything the sandbox boots from lives here, in the one
   conventional location — no split, no compat shim.
-- `.devcontainer/.example.env` — the tracked configuration schema. The CI path
-  filters and the `harness-ci-core-paths` / `sandbox-boot-guard-ci` probes pin
-  it beside the compose files it documents. Its local copy,
-  `.devcontainer/.env`, is the one configuration surface; the `harness.yaml`
-  layer that used to sit in front of it was removed in 0.4.0.
+- `oh.json` and `.env.example` — the two authored configuration surfaces, and
+  both live at the repository *root*, not here. Tracked `oh.json` holds every
+  non-secret setting; tracked `.env.example` documents the secrets-only,
+  gitignored root `.env`, to which `.devcontainer/.env` is a symlink. The CI
+  path filters and the `harness-ci-core-paths` / `sandbox-boot-guard-ci` probes
+  pin both. See [`docs/configuration.md`](../docs/configuration.md).
 - `config.json` — relocated *logically* to `.oh/config.json` (now the canonical
   read location); the gitignored file itself is user-local runtime state, and the
   legacy repo-root path still works as a fallback for older installs.

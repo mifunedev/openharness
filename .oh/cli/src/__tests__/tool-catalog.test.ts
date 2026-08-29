@@ -135,7 +135,9 @@ describe("agent-browser matches the entrypoint that really installs it", () => {
 
   it("keeps the env plumbing wired end to end", () => {
     expect(read(".devcontainer/docker-compose.yml")).toContain("INSTALL_AGENT_BROWSER");
-    expect(read(".devcontainer/.example.env")).toMatch(/^#\s*INSTALL_AGENT_BROWSER=/m);
+    expect(read("docs/configuration.md")).toMatch(
+      /^\| `install\.agentBrowser` \|.*`INSTALL_AGENT_BROWSER`/m,
+    );
   });
 });
 

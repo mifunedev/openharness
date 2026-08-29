@@ -70,7 +70,7 @@ Start from the Open Harness checkout:
 
 ```bash
 cd /path/to/openharness
-PROJECTS_ROOT="$(bash .oh/scripts/oh-path projects --no-create 2>/dev/null || printf '%s' "${PROJECTS_DIR:-projects}")"
+PROJECTS_ROOT="$(bash .oh/scripts/oh-path projects --no-create 2>/dev/null || printf '%s' projects)"
 mkdir -p "$PROJECTS_ROOT/langfuse"
 git clone https://github.com/langfuse/langfuse.git \
   "$PROJECTS_ROOT/langfuse/langfuse"
@@ -83,7 +83,7 @@ Git worktree. Its own worktrees, if any, live at
 
 ```bash
 cd /path/to/openharness
-PROJECTS_ROOT="$(bash .oh/scripts/oh-path projects --no-create 2>/dev/null || printf '%s' "${PROJECTS_DIR:-projects}")"
+PROJECTS_ROOT="$(bash .oh/scripts/oh-path projects --no-create 2>/dev/null || printf '%s' projects)"
 cd "$PROJECTS_ROOT/langfuse/langfuse"
 git pull --ff-only
 ```
@@ -245,16 +245,24 @@ pi
 `LANGFUSE_HOST` is supported as a fallback name. For an environment-only
 configuration, `LANGFUSE_BASE_URL` wins over `LANGFUSE_HOST`.
 
-`.devcontainer/.env` is Docker Compose interpolation, **not** a file that is
-automatically injected wholesale into Pi. If you keep Langfuse variables there,
-explicitly export them in the shell that launches Pi:
+Set the host and the privacy preset in `oh.json` instead of exporting them by
+hand. `oh` renders `langfuse.baseUrl` and `langfuse.privacyPreset` into the
+Compose environment, and both compose files put them in the sandbox process
+environment, so Pi reads them on every launch:
 
-```bash
-set -a
-source /home/sandbox/harness/.devcontainer/.env
-set +a
-pi
+```json
+{
+  "langfuse": {
+    "baseUrl": "http://langfuse-web:3000",
+    "privacyPreset": "metadata-only"
+  }
+}
 ```
+
+Apply the change with `oh stop && oh sandbox`. The two credentials stay secrets:
+keep `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` in the root dotenv (`oh
+secret set`) or in the saved `~/.pi/agent/pi-langfuse/config.json`, and export
+them in the shell that launches Pi if you use the environment-only path.
 
 ### Pi configuration and privacy precedence
 

@@ -22,6 +22,7 @@ export interface DockerComposeTargetOptions {
   run?: LifecycleRunner;
   build?: boolean;
   env?: NodeJS.ProcessEnv;
+  extraEnvFile?: string;
 }
 
 export class DockerComposeExecutionTarget implements ExecutionTarget {
@@ -34,6 +35,7 @@ export class DockerComposeExecutionTarget implements ExecutionTarget {
   private readonly run: LifecycleRunner;
   private readonly build: boolean;
   private readonly env?: NodeJS.ProcessEnv;
+  private readonly extraEnvFile?: string;
 
   constructor(opts: DockerComposeTargetOptions) {
     this.projectRoot = opts.projectRoot;
@@ -41,12 +43,21 @@ export class DockerComposeExecutionTarget implements ExecutionTarget {
     this.run = opts.run ?? spawnRunner;
     this.build = opts.build ?? true;
     this.env = opts.env;
+    this.extraEnvFile = opts.extraEnvFile;
     this.workspace = { hostRoot: opts.projectRoot, targetRoot: opts.projectRoot };
   }
 
   async provision(): Promise<void> {
     const script = this.composeScript();
-    const argv = [script, "--repo-dir", this.projectRoot, "up", "-d", this.build ? "--build" : "--no-build"];
+    const argv = [
+      script,
+      "--repo-dir",
+      this.projectRoot,
+      ...this.extraEnvFileArgs(),
+      "up",
+      "-d",
+      this.build ? "--build" : "--no-build",
+    ];
     const r = this.run("bash", argv, { stdio: "inherit", ...(this.env ? { env: this.env } : {}) });
     assertSpawned(r, `bash ${script}`);
     const code = r.status ?? 1;
@@ -78,7 +89,7 @@ export class DockerComposeExecutionTarget implements ExecutionTarget {
   async capabilities(): Promise<ReadonlySet<ExecutionCapability>> {
     const caps = new Set<ExecutionCapability>(["exec", "pty"]);
     const script = this.composeScript();
-    const r = this.run("bash", [script, "--repo-dir", this.projectRoot, "--print-argv", "config"], {
+    const r = this.run("bash", [script, "--repo-dir", this.projectRoot, ...this.extraEnvFileArgs(), "--print-argv", "config"], {
       stdio: "capture",
     });
     assertSpawned(r, `bash ${script}`);
@@ -122,6 +133,10 @@ export class DockerComposeExecutionTarget implements ExecutionTarget {
     for (const [k, v] of Object.entries(request.env ?? {})) argv.push("-e", `${k}=${v}`);
     argv.push(this.requireContainer(), ...request.argv);
     return argv;
+  }
+
+  private extraEnvFileArgs(): string[] {
+    return this.extraEnvFile === undefined ? [] : ["--extra-env-file", this.extraEnvFile];
   }
 
   private composeScript(): string {

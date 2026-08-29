@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,7 @@ import {
   type RuntimeIO,
 } from "../commands/runtime.js";
 import type { LifecycleRunner, RunResult } from "../lib/execution/runner.js";
+import { defaultOhConfig, ohConfigPath } from "../lib/oh-config.js";
 
 vi.mock("../cli.js", async (importOriginal) => {
   const original = process.exit;
@@ -23,7 +24,6 @@ vi.mock("../cli.js", async (importOriginal) => {
 const { parseRuntimeArgs, printRuntimeHelp, printOhHelp } = await import("../cli.js");
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const REAL_EXAMPLE = join(REPO_ROOT, ".devcontainer", ".example.env");
 
 const cleanups: string[] = [];
 afterEach(() => {
@@ -36,8 +36,7 @@ function makeRepo(): string {
   cleanups.push(d);
   mkdirSync(join(d, ".oh", "scripts"), { recursive: true });
   mkdirSync(join(d, ".devcontainer"), { recursive: true });
-  copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".example.env"));
-  copyFileSync(REAL_EXAMPLE, join(d, ".devcontainer", ".env"));
+  writeFileSync(ohConfigPath(d), `${JSON.stringify(defaultOhConfig("probe"), null, 2)}\n`);
   return d;
 }
 
@@ -452,9 +451,9 @@ describe("oh runtime install — the other exits", () => {
 });
 
 describe("oh runtime never writes configuration", () => {
-  it("leaves .devcontainer/.env byte-identical across every verb", async () => {
+  it("leaves oh.json byte-identical across every verb", async () => {
     const root = makeRepo();
-    const before = readFileSync(join(root, ".devcontainer", ".env"), "utf8");
+    const before = readFileSync(ohConfigPath(root), "utf8");
     const { io } = makeIo();
 
     await runRuntimeList({ cwd: root, run: blockedHost().run }, io);
@@ -462,7 +461,7 @@ describe("oh runtime never writes configuration", () => {
     await runRuntimeInstall("microsandbox", { cwd: root, run: blockedHost().run }, io);
     await runRuntimeInstall("microsandbox", { cwd: root, run: readyHost().run }, io);
 
-    expect(readFileSync(join(root, ".devcontainer", ".env"), "utf8")).toBe(before);
+    expect(readFileSync(ohConfigPath(root), "utf8")).toBe(before);
   });
 });
 

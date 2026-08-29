@@ -60,7 +60,7 @@ This is why neither surface delegates to the other: making the Makefile call
 | `make gateway <pi\|hermes>` | `oh gateway <args…>` | `.oh/scripts/gateway.sh` |
 | `make destroy` | `oh destroy [--yes]` | `docker-compose.sh down -v` — see below |
 | `make config` | `oh compose config` | `docker-compose.sh config` |
-| *(implicit in `make sandbox`)* | *(implicit in `oh sandbox`)* | seeds `.devcontainer/.env` from `.example.env` |
+| *(implicit in `make sandbox`)* | *(implicit in `oh sandbox`)* | seeds the gitignored root `.env` from the tracked `.env.example` |
 | — | `oh init` · `oh update` · `oh harness` · `oh runtime` · `oh tool` · `oh cloud` · `oh config <integration>` | no `make` equivalent, by design |
 
 `oh <verb> -- <args>` forwards extra arguments to `docker compose`, e.g.

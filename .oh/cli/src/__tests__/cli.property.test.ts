@@ -10,8 +10,14 @@ vi.mock("../cli.js", async (importOriginal) => {
   return mod;
 });
 
-const { isHelpFlag, isVersionFlag, parseComposeArgs, parseDestroyArgs } =
-  await import("../cli.js");
+const {
+  isHelpFlag,
+  isVersionFlag,
+  parseComposeArgs,
+  parseConfigArgs,
+  parseDestroyArgs,
+  parseSecretArgs,
+} = await import("../cli.js");
 
 const stringOrUndefined = fc.oneof(fc.string(), fc.constant(undefined));
 
@@ -100,6 +106,39 @@ describe("parseComposeArgs — property tests", () => {
         for (const token of parsed.args.passthrough) {
           expect(rest.indexOf(token)).toBeGreaterThan(rest.indexOf("--"));
         }
+      }),
+    );
+  });
+});
+
+describe("parseConfigArgs — property tests", () => {
+  it("never reports both a verb and an integration", () => {
+    fc.assert(
+      fc.property(fc.array(fc.string(), { maxLength: 4 }), (rest) => {
+        const parsed = parseConfigArgs(rest);
+        if (!parsed.ok) return;
+        const { verb, integration } = parsed.args;
+        expect(verb !== undefined && integration !== undefined).toBe(false);
+        if (verb === "set") {
+          expect(parsed.args.key).toBe(rest[1]);
+          expect(parsed.args.value).toBe(rest[2]);
+        }
+      }),
+    );
+  });
+});
+
+describe("parseSecretArgs — property tests", () => {
+  it("never carries a value alongside the key", () => {
+    fc.assert(
+      fc.property(fc.array(fc.string(), { maxLength: 4 }), (rest) => {
+        const parsed = parseSecretArgs(rest);
+        if (!parsed.ok) return;
+        if (parsed.args.verb === "set") {
+          expect(parsed.args.key).toBe(rest[1]);
+          expect(rest).toHaveLength(2);
+        }
+        expect(Object.keys(parsed.args)).not.toContain("value");
       }),
     );
   });

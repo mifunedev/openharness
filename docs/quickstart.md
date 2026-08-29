@@ -54,13 +54,13 @@ every command before running any of them.
 # 1. Clone upstream:
 git clone https://github.com/mifunedev/openharness.git ~/.openharness && cd ~/.openharness
 
-# 2. Materialize and edit local .devcontainer/.env BEFORE building — set
-#    SANDBOX_NAME, TZ, GIT_USER_NAME, GIT_USER_EMAIL, optional INSTALL_* keys:
-cp .devcontainer/.example.env .devcontainer/.env
-nano .devcontainer/.env
+# 2. Configure BEFORE building. Non-secrets (name, timezone, git identity,
+#    install.*) live in the tracked oh.json; secrets live in a gitignored .env:
+nano oh.json
+cp .env.example .env && chmod 600 .env && nano .env
 
 # 3. Build the image (~10 min cold, ~30s warm). oh sandbox also creates
-#    .devcontainer/.env from the template if you skipped step 2.
+#    .env from .env.example if you skipped step 2.
 make sandbox
 ```
 
@@ -158,67 +158,69 @@ gh auth login && gh auth setup-git
 
 ## Configuration
 
-`.devcontainer/.env` is the **one** configuration file. It is gitignored and
-generated from tracked `.devcontainer/.example.env` — by the installer, by
-`oh init`, or by hand. Every key in the template ships commented out with its
-default shown, so a fresh copy changes nothing; uncomment a key to take it over.
+Configuration lives in **two** files at the repository root, split by kind.
+Tracked `oh.json` holds every non-secret setting. A gitignored, mode-`0600`
+`.env` holds nothing but secrets; the tracked `.env.example` documents every
+allow-listed secret key, commented out, so a fresh copy changes nothing.
+`.devcontainer/.env` is a symlink to that root `.env`.
 
-It works on **every** path. `make ...` and `oh ...` pass it to compose with
-`--env-file`; the VS Code "Reopen in Container" path loads
-`.devcontainer/docker-compose.yml` directly, and compose auto-loads
-`.devcontainer/.env` sitting beside it. (Before 0.4.0 a `harness.yaml` layer sat
-in front of this file and was readable on the first path only, so a key set
-there silently did nothing under VS Code. It was removed; any leftover
-`harness.yaml` is migrated into `.env` automatically on the next lifecycle
-command.)
+Both work on **every** path. `make ...` and `oh ...` render `oh.json` and pass
+it plus `.env` to compose with `--env-file`; the VS Code "Reopen in Container"
+path loads `.devcontainer/docker-compose.yml` directly, and compose auto-loads
+the `.devcontainer/.env` symlink sitting beside it. (Before 0.4.0 a
+`harness.yaml` layer sat in front of the dotenv and was readable on the first
+path only, so a key set there silently did nothing under VS Code. It was
+removed; any leftover `harness.yaml` is migrated automatically on the next
+lifecycle command.)
 
-```bash
-# .devcontainer/.env — non-secret settings (example)
-SANDBOX_NAME=openharness
-TZ=UTC
-GIT_USER_NAME=your-name           # spaces are fine, no quotes needed
-GIT_USER_EMAIL=you@example.com
-INSTALL_OPENCODE=false
-INSTALL_DEEPAGENTS=false
-INSTALL_HERMES=false
-INSTALL_GROK_BUILD=false
-INSTALL_AGENT_BROWSER=false
-WORKTREES_DIR=.worktrees
+```json
+// oh.json — non-secret settings (example)
+{
+  "name": "openharness",
+  "timezone": "UTC",
+  "git": { "userName": "your-name", "userEmail": "you@example.com" },
+  "install": {
+    "opencode": false,
+    "deepagents": false,
+    "hermes": false,
+    "grokBuild": false,
+    "agentBrowser": false
+  }
+}
 ```
 
-The template also documents the SSH, Docker-socket, Hermes-dashboard, cron, and
-prebuilt-image keys (all commented out by default). See
-`.devcontainer/.example.env` for every available key and its default.
+`oh.json` also carries the SSH, Docker-socket, Hermes-dashboard, cron, build,
+and prebuilt-image settings. See [Configuration](./configuration.md) for the
+full field reference, and `oh config set <field> <value>` to edit one field.
 
-**Secrets** — keep in `.devcontainer/.env` only (gitignored):
+**Secrets** — keep in the root `.env` only (gitignored, `0600`); set one with
+`oh secret set <KEY>`:
 
 | Var | Purpose |
 |-----|---------|
 | `GH_TOKEN` | GitHub token for non-interactive auth |
+| `SANDBOX_PASSWORD` | The `sandbox` user's login and `sudo` password — **override the weak compose default on any network-reachable deployment** |
 | `PI_SLACK_APP_TOKEN` | Slack Socket Mode app token (`xapp-`) |
 | `PI_SLACK_BOT_TOKEN` | Slack bot token (`xoxb-`) |
 
-**Non-secret settings** — same file, same format:
+**Non-secret settings** — `oh.json` fields:
 
-| Key | Purpose |
+| Field | Purpose |
 |-----|---------|
-| `SANDBOX_NAME` | Container/compose project name |
-| `TZ` | Container timezone |
-| `GIT_USER_NAME` | Commit author name (spaces OK) |
-| `GIT_USER_EMAIL` | Commit author email |
-| `INSTALL_AGENT_BROWSER` | Set `true` to install Chromium (~1 GB) |
-| `INSTALL_OPENCODE` | Set `true` to include OpenCode in the sandbox image |
-| `INSTALL_DEEPAGENTS` | Set `true` to include DeepAgents in the sandbox image |
-| `INSTALL_HERMES` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
-| `INSTALL_GROK_BUILD` | Set `true` to include Grok Build in the sandbox image; all Grok user state lives in the persisted `~/.grok` volume |
-| `WORKTREES_DIR` | Worktree/project-clone root (default `.worktrees`) |
+| `name` | Container/compose project name |
+| `timezone` | Container timezone |
+| `git.userName` | Commit author name (spaces OK) |
+| `git.userEmail` | Commit author email |
+| `install.agentBrowser` | Set `true` to install Chromium (~1 GB) |
+| `install.opencode` | Set `true` to include OpenCode in the sandbox image |
+| `install.deepagents` | Set `true` to include DeepAgents in the sandbox image |
+| `install.hermes` | Set `true` to include Hermes in the sandbox image; state defaults to `~/harness/.hermes`, auth lives in `~/.hermes` |
+| `install.grokBuild` | Set `true` to include Grok Build in the sandbox image; all Grok user state lives in the persisted `~/.grok` volume |
 
 Apply changes with `make destroy && make sandbox`.
 
 For additional services (databases, tunnels, reverse proxies), add overlay
-paths to `composeOverrides[]` in `.oh/config.json` (gitignored, last wins). A
-list is the one thing `.env` cannot hold, which is why that file survived the
-collapse of every other configuration surface.
+paths to `composeOverrides[]` in `oh.json` (last wins).
 
 ## End-to-end setup walkthrough
 
@@ -238,9 +240,10 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
    git clone --recurse-submodules https://github.com/mifunedev/openharness.git ~/.openharness
    cd ~/.openharness
    ```
-3. **Create/edit `.devcontainer/.env`** — copy `.devcontainer/.example.env`, then set
-   `SANDBOX_NAME`, `TZ`, `GIT_USER_NAME`, `GIT_USER_EMAIL`, and any optional `INSTALL_*`
-   keys (see [Configuration](#configuration) above).
+3. **Edit `oh.json` and create `.env`** — set `name`, `timezone`, `git.userName`,
+   `git.userEmail`, and any optional `install.*` fields in the tracked `oh.json`, then
+   `cp .env.example .env && chmod 600 .env` for secrets (see
+   [Configuration](#configuration) above).
 4. **Build and enter the sandbox**:
    ```bash
    make sandbox        # build + start (~10 min cold)
@@ -255,13 +258,19 @@ cross-provider method is `/login` → **device mode** inside each agent's intera
    ```bash
    gh auth login && gh auth setup-git
    ```
-7. **Create your own private repo**:
+7. **Create your own private repo and point the remotes at it** — one command,
+   which asks first and defaults to no:
+   ```bash
+   oh config repo
+   ```
+   It prompts for owner, repository name, and visibility (default private), then runs
+   `gh repo create`, renames the existing `origin` to `openharness`, adds your repo as
+   `origin`, and pushes. Nothing is created unless you answer yes in that run —
+   `oh init --yes`, `--dry-run`, and piped (non-TTY) runs skip the step entirely.
+8. **Or do it by hand** — the same result without `gh`, keeping upstream as `upstream`
+   ([clone-and-own](./installation.md#clone-and-own-private-origin-and-upstream-recommended)):
    ```bash
    gh repo create <your-user>/openharness --private
-   ```
-8. **Point remotes at your repo + upstream** (SSH, so the step-6 key is used;
-   [clone-and-own](./installation.md#clone-and-own-private-origin-and-upstream-recommended)):
-   ```bash
    git remote set-url origin git@github.com:<your-user>/openharness.git
    git remote add upstream git@github.com:mifunedev/openharness.git
    git push -u origin HEAD

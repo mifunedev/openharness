@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   ExecutionExitError,
@@ -14,13 +15,10 @@ import {
   type LifecycleRunner,
   type RunResult,
 } from "../lib/execution/runner.js";
+import { renderComposeEnv } from "../lib/config-render.js";
+import { getOhConfigValue, ohConfigPath, readOhConfig } from "../lib/oh-config.js";
 import { resolveProjectRoot } from "../lib/project.js";
-import {
-  envFilePath,
-  readEnvValue,
-  seedEnvFile,
-  setEnvValue,
-} from "../lib/env-file.js";
+import { setEnvValue } from "../lib/env-file.js";
 import * as prompt from "../lib/prompt.js";
 
 
@@ -41,33 +39,81 @@ export interface ShellOptions extends LifecycleOptions {
   container?: string;
 }
 
+export const COMPOSE_ENV_DIR_PREFIX = "oh-compose-env-";
+
+function composeEnvDir(): string {
+  return mkdtempSync(join(tmpdir(), COMPOSE_ENV_DIR_PREFIX));
+}
+
+function writeComposeEnv(root: string, dir: string): string {
+  const file = join(dir, "compose.env");
+  writeFileSync(file, renderComposeEnv(readOhConfig(ohConfigPath(root))), {
+    mode: 0o600,
+    encoding: "utf8",
+  });
+  return file;
+}
+
+export function withComposeEnvFile<T>(root: string, fn: (extraArgs: string[]) => T): T {
+  if (!existsSync(ohConfigPath(root))) return fn([]);
+  const dir = composeEnvDir();
+  try {
+    return fn(["--extra-env-file", writeComposeEnv(root, dir)]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+export async function withComposeEnvFileAsync<T>(
+  root: string,
+  fn: (extraArgs: string[]) => Promise<T>,
+): Promise<T> {
+  if (!existsSync(ohConfigPath(root))) return await fn([]);
+  const dir = composeEnvDir();
+  try {
+    return await fn(["--extra-env-file", writeComposeEnv(root, dir)]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export interface SandboxOptions extends LifecycleOptions {
   /** `--image` was passed (run the prebuilt image; implies `--no-build`). */
   image?: boolean;
-  /** Explicit ref from `--image=<ref>`; when set it wins over `.env`. */
+  /** Explicit ref from `--image=<ref>`; when set it wins over `oh.json`. */
   imageRef?: string;
   /** `--no-build` was passed (suppress the local build, reuse an existing image). */
   noBuild?: boolean;
+  /** Print the docker compose argv instead of provisioning anything. */
+  printArgv?: boolean;
 }
 
 export const DEFAULT_CONTAINER_NAME = "openharness";
 
 export const DEFAULT_SANDBOX_IMAGE = "ghcr.io/mifunedev/openharness:latest";
 
-function seedConfig(root: string, io: LifecycleIO): void {
-  if (seedEnvFile(root)) {
-    io.stdout("create .devcontainer/.env (from .devcontainer/.example.env)\n");
+function configuredField(root: string, path: string): unknown {
+  const file = ohConfigPath(root);
+  if (!existsSync(file)) return undefined;
+  try {
+    return getOhConfigValue(readOhConfig(file), path);
+  } catch {
+    return undefined;
   }
 }
 
+function configuredString(root: string, path: string): string | undefined {
+  const value = configuredField(root, path);
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+function fromProcessEnv(key: string): string | undefined {
+  const value = process.env[key];
+  return value !== undefined && value !== "" ? value : undefined;
+}
+
 function dockerSocketConfigured(root: string): boolean {
-  const envFile = envFilePath(root);
-  if (!existsSync(envFile)) return false;
-  try {
-    return /^\s*DOCKER_SOCKET=/m.test(readFileSync(envFile, "utf8"));
-  } catch {
-    return false;
-  }
+  return configuredField(root, "access.dockerSocket") !== undefined;
 }
 
 async function maybePromptDockerSocket(root: string, io: LifecycleIO): Promise<void> {
@@ -93,43 +139,70 @@ async function maybePromptDockerSocket(root: string, io: LifecycleIO): Promise<v
   );
 }
 
-function configuredImage(root: string): string | undefined {
-  return readEnvValue(root, "OH_SANDBOX_IMAGE");
+export function configuredImage(root: string): string | undefined {
+  return fromProcessEnv("OH_SANDBOX_IMAGE") ?? configuredString(root, "image.ref");
 }
 
 export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise<number> {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
-  if (runningInsideSandbox()) {
-    io.stderr(`${new HostOnlyError("`oh sandbox`").message}\n`);
-    return 1;
-  }
-  seedConfig(root, io);
-  await maybePromptDockerSocket(root, io);
-  requireLifecycleScript(root, "docker-compose.sh");
 
   // `--image` implies `--no-build` (skipping the build is the whole point);
   // `--no-build` on its own suppresses the build without pinning an image.
   const useImage = opts.image === true || opts.imageRef !== undefined;
   const useNoBuild = useImage || opts.noBuild === true;
+  const imageRef = useImage
+    ? (opts.imageRef ?? configuredImage(root) ?? DEFAULT_SANDBOX_IMAGE)
+    : undefined;
+  const env: NodeJS.ProcessEnv | undefined =
+    imageRef === undefined ? undefined : { ...process.env, OH_SANDBOX_IMAGE: imageRef };
 
-  let env: NodeJS.ProcessEnv | undefined;
-  if (useImage) {
-    const ref = opts.imageRef ?? configuredImage(root) ?? DEFAULT_SANDBOX_IMAGE;
-    env = { ...process.env, OH_SANDBOX_IMAGE: ref };
-    io.stdout(`image mode: ${ref} (skipping local build)\n`);
+  if (opts.printArgv === true) {
+    const script = requireLifecycleScript(root, "docker-compose.sh");
+    return withComposeEnvFile(root, (extraArgs) => {
+      const r = run(
+        "bash",
+        [
+          script,
+          "--repo-dir",
+          root,
+          ...extraArgs,
+          "--print-argv",
+          "up",
+          "-d",
+          useNoBuild ? "--no-build" : "--build",
+        ],
+        { stdio: "inherit", ...(env ? { env } : {}) },
+      );
+      assertSpawned(r, `bash ${script}`);
+      return r.status ?? 1;
+    });
+  }
+
+  if (runningInsideSandbox()) {
+    io.stderr(`${new HostOnlyError("`oh sandbox`").message}\n`);
+    return 1;
+  }
+  await maybePromptDockerSocket(root, io);
+  requireLifecycleScript(root, "docker-compose.sh");
+
+  if (imageRef !== undefined) {
+    io.stdout(`image mode: ${imageRef} (skipping local build)\n`);
   } else if (useNoBuild) {
     io.stdout("no-build mode: reusing the existing image (skipping local build)\n");
   }
 
-  const target = resolveExecutionTarget({
-    projectRoot: root,
-    run,
-    build: !useNoBuild,
-    ...(env ? { env } : {}),
-  });
   try {
-    await target.provision();
+    await withComposeEnvFileAsync(root, async (extraArgs) => {
+      const target = resolveExecutionTarget({
+        projectRoot: root,
+        run,
+        build: !useNoBuild,
+        ...(extraArgs.length > 0 ? { extraEnvFile: extraArgs[1] } : {}),
+        ...(env ? { env } : {}),
+      });
+      await target.provision();
+    });
     return 0;
   } catch (err) {
     if (err instanceof ExecutionExitError) return err.exitCode;
@@ -142,7 +215,7 @@ export async function runSandbox(opts: SandboxOptions, io: LifecycleIO): Promise
 }
 
 export function configuredContainerName(root: string): string | undefined {
-  return readEnvValue(root, "SANDBOX_NAME");
+  return fromProcessEnv("SANDBOX_NAME") ?? configuredString(root, "name");
 }
 
 export function runShell(opts: ShellOptions, io: LifecycleIO): number {
@@ -187,20 +260,24 @@ export function runComposeVerb(
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
   const script = requireLifecycleScript(root, "docker-compose.sh");
-  const r = run("bash", [script, ...COMPOSE_VERBS[verb], ...extra], {
-    stdio: "inherit",
+  return withComposeEnvFile(root, (extraArgs) => {
+    const r = run("bash", [script, ...extraArgs, ...COMPOSE_VERBS[verb], ...extra], {
+      stdio: "inherit",
+    });
+    assertSpawned(r, `bash ${script} ${verb}`);
+    return r.status ?? 1;
   });
-  assertSpawned(r, `bash ${script} ${verb}`);
-  return r.status ?? 1;
 }
 
 export function runComposeConfig(opts: LifecycleOptions, extra: string[] = []): number {
   const run = opts.run ?? spawnRunner;
   const root = resolveProjectRoot(opts.cwd);
   const script = requireLifecycleScript(root, "docker-compose.sh");
-  const r = run("bash", [script, "config", ...extra], { stdio: "inherit" });
-  assertSpawned(r, `bash ${script} config`);
-  return r.status ?? 1;
+  return withComposeEnvFile(root, (extraArgs) => {
+    const r = run("bash", [script, ...extraArgs, "config", ...extra], { stdio: "inherit" });
+    assertSpawned(r, `bash ${script} config`);
+    return r.status ?? 1;
+  });
 }
 
 export function namedVolumes(root: string): string[] {
@@ -227,8 +304,6 @@ export interface DestroyOptions extends LifecycleOptions {
 }
 
 export function destroyConfirmationPhrase(root: string): string {
-  const fromEnv = process.env.SANDBOX_NAME;
-  if (fromEnv !== undefined && fromEnv !== "") return fromEnv;
   return configuredContainerName(root) ?? DEFAULT_CONTAINER_NAME;
 }
 

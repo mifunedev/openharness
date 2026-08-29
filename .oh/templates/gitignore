@@ -4,7 +4,8 @@
 /harness.yaml
 /harness.yml
 /harness.yaml.migrated
-.devcontainer/.env
+/.env
+!/.env.example
 .claude/.env.claude
 .hermes/.env
 .hermes/auth.json

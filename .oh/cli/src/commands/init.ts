@@ -15,8 +15,18 @@ import {
 import path from "node:path";
 import { loadManifest } from "../lib/manifest.js";
 import { copyOhPayload, copyRootPayload, type CopyReport } from "../lib/vendor.js";
-import { writeEnvFile } from "../lib/env.js";
-import { setKeyInEnv } from "../lib/env-file.js";
+import { loadEnvInto } from "../lib/env.js";
+import {
+  defaultOhConfig,
+  ohConfigPath,
+  readOhConfig,
+  validateOhConfig,
+  writeOhConfig,
+  type OhConfig,
+} from "../lib/oh-config.js";
+import { isSecretKey, setSecret } from "../lib/secrets.js";
+import type { LifecycleRunner } from "../lib/execution/runner.js";
+import { runConfigRepo } from "./config.js";
 import * as prompt from "../lib/prompt.js";
 
 export interface InitIO {
@@ -24,6 +34,7 @@ export interface InitIO {
   stderr: (s: string) => void;
   ask?: (q: string) => Promise<string>;
   askSecret?: (q: string) => Promise<string>;
+  isTTY?: boolean;
 }
 
 export interface InitOptions {
@@ -36,6 +47,7 @@ export interface InitOptions {
   minimal?: boolean;
   copyClaude?: boolean;
   verbose?: boolean;
+  run?: LifecycleRunner;
 }
 
 function walkFiles(root: string, dir: string, acc: string[]): void {
@@ -207,9 +219,9 @@ export async function runInit(
     rootReport,
   );
 
-  if (!minimal) {
-    const wr: WriteCtx = { t, dryRun, force, report, stats };
+  const wr: WriteCtx = { t, dryRun, force, report, stats };
 
+  if (!minimal) {
     writeGenerated(
       wr,
       ".oh/tasks/README.md",
@@ -247,46 +259,75 @@ export async function runInit(
 
   const interactive =
     opts.yes !== true && (process.stdin.isTTY === true || io.ask !== undefined);
+  const askFn = io.ask ?? prompt.ask;
 
-  const answers: WizardAnswers = interactive
-    ? await runWizard(io)
-    : { env: {}, secrets: {} };
+  const configPath = ohConfigPath(t);
+  const config: OhConfig = existsSync(configPath)
+    ? readOhConfig(configPath)
+    : defaultOhConfig(path.basename(t));
+  const secrets: Record<string, string> = {};
 
-  const configVars: Record<string, string> = { ...answers.env, ...answers.secrets };
-  const configKeys = Object.keys(configVars);
-  if (configKeys.length > 0) {
-    const secretCount = Object.keys(answers.secrets).length;
-    const label =
-      secretCount > 0
-        ? `${configKeys.length} keys, ${secretCount} secret${secretCount === 1 ? "" : "s"}`
-        : `${configKeys.length} keys`;
-    if (dryRun) {
-      report(`update .devcontainer/.env (${label})`);
-    } else {
-      const envDir = path.join(t, ".devcontainer");
-      mkdirSync(envDir, { recursive: true });
-      const envPath = path.join(envDir, ".env");
-      const examplePath = path.join(envDir, ".example.env");
-      if (!existsSync(envPath) && existsSync(examplePath)) {
-        copyFileSync(examplePath, envPath);
+  const legacy = readLegacyDevcontainerEnv(t);
+  if (legacy) {
+    for (const [key, value] of legacy.vars) {
+      if (isSecretKey(key)) {
+        secrets[key] = value;
+        legacy.movedSecrets.push(key);
+      } else if (applyEnvToConfig(config, key, value)) {
+        legacy.movedSettings.push(key);
+      } else {
+        legacy.unrecognised.push(key);
       }
-      let content = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
-      const applied: string[] = [];
-      for (const [key, value] of Object.entries(configVars)) {
-        const next = setKeyInEnv(content, key, value).content;
-        if (next !== content) {
-          content = next;
-          applied.push(key);
-        }
-      }
-      writeEnvFile(envPath, content);
-      const appliedSecrets = applied.filter((k) => k in answers.secrets).length;
-      report(
-        `update .devcontainer/.env (${applied.length} keys${
-          appliedSecrets > 0 ? `, ${appliedSecrets} secret${appliedSecrets === 1 ? "" : "s"}` : ""
-        })`,
+    }
+  }
+
+  if (interactive) {
+    await runWizard(io, config, secrets);
+  }
+
+  writeConfigFile(wr, config);
+
+  const secretKeys = Object.keys(secrets).sort();
+  if (secretKeys.length > 0) {
+    if (!dryRun) {
+      for (const key of secretKeys) setSecret(t, key, secrets[key]);
+    }
+    report(`update .env (${secretKeys.length} secret${secretKeys.length === 1 ? "" : "s"})`);
+  }
+
+  if (legacy) {
+    report(
+      `migrate .devcontainer/.env (${legacy.movedSecrets.length} secret${
+        legacy.movedSecrets.length === 1 ? "" : "s"
+      } -> .env, ${legacy.movedSettings.length} setting${
+        legacy.movedSettings.length === 1 ? "" : "s"
+      } -> oh.json)`,
+    );
+    for (const key of legacy.unrecognised) {
+      io.stderr(
+        `oh init: ${key} in .devcontainer/.env is neither an oh.json setting nor a known secret; ` +
+          `left in place — move it yourself, then delete .devcontainer/.env.\n`,
       );
     }
+    const retire =
+      legacy.unrecognised.length === 0 &&
+      !dryRun &&
+      interactive &&
+      (await confirmWith(
+        askFn,
+        "Replace the migrated .devcontainer/.env with a symlink to ../.env?",
+        false,
+      ));
+    if (retire) {
+      rmSync(legacy.path, { force: true });
+      report("remove .devcontainer/.env (migrated)");
+    } else {
+      report("keep .devcontainer/.env (not removed)");
+    }
+  }
+
+  if (!minimal && !isRealFile(path.join(t, ".devcontainer", ".env"))) {
+    linkReport(wr, ".devcontainer/.env", "../.env");
   }
 
   if (dryRun) {
@@ -294,6 +335,16 @@ export async function runInit(
     prompt.ok(`Dry run complete — previewed the ${minimal ? "minimal" : "full"} plan, wrote nothing.`);
     prompt.info("Re-run without --dry-run to apply.");
     return 0;
+  }
+
+  const repoStepAllowed =
+    interactive && !dryRun && (io.isTTY ?? process.stdin.isTTY === true);
+  if (repoStepAllowed) {
+    prompt.step(5, 5, "Your own repo (optional)");
+    await runConfigRepo(
+      { cwd: t, run: opts.run },
+      { stdout: io.stdout, stderr: io.stderr, ask: io.ask, isTTY: true },
+    );
   }
 
   const totalOverwritten = vOverwritten + stats.overwritten;
@@ -316,7 +367,7 @@ export async function runInit(
   prompt.header("Next steps");
   if (!minimal) {
     prompt.ok("Provider skills are live — symlinks resolve into the vendored .oh/skills.");
-    prompt.info("  1. Put secrets in .devcontainer/.env (gitignored — never commit them)");
+    prompt.info("  1. Put secrets in the project-root dotenv (gitignored — never commit them)");
     prompt.info("  2. Build + start the sandbox:  oh sandbox");
     prompt.info("       (or: docker compose -f .devcontainer/docker-compose.yml up -d --build)");
     prompt.info("  3. Connect to the sandbox:  oh shell");
@@ -525,10 +576,158 @@ function writeClaudeAlias(ctx: WriteCtx, copyClaude: boolean): void {
 }
 
 
-interface WizardAnswers {
-  env: Record<string, string>;
-  secrets: Record<string, string>;
+interface LegacyEnv {
+  path: string;
+  vars: [string, string][];
+  movedSecrets: string[];
+  movedSettings: string[];
+  unrecognised: string[];
 }
+
+function isRealFile(file: string): boolean {
+  try {
+    return lstatSync(file).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function readLegacyDevcontainerEnv(t: string): LegacyEnv | undefined {
+  const file = path.join(t, ".devcontainer", ".env");
+  if (!isRealFile(file)) return undefined;
+  const env: Record<string, string | undefined> = {};
+  loadEnvInto(file, env);
+  const vars: [string, string][] = [];
+  for (const [key, raw] of Object.entries(env)) {
+    const value = stripQuotes((raw ?? "").trim());
+    if (value === "") continue;
+    vars.push([key, value]);
+  }
+  if (vars.length === 0) return undefined;
+  vars.sort((a, b) => a[0].localeCompare(b[0]));
+  return { path: file, vars, movedSecrets: [], movedSettings: [], unrecognised: [] };
+}
+
+function stripQuotes(s: string): string {
+  if (s.length >= 2 && ((s[0] === '"' && s.endsWith('"')) || (s[0] === "'" && s.endsWith("'")))) {
+    return s.slice(1, -1);
+  }
+  return s;
+}
+
+function asBool(value: string): boolean {
+  return value === "true" || value === "1" || value === "yes";
+}
+
+function asPort(value: string): number | undefined {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 65535 ? n : undefined;
+}
+
+type ConfigSetter = (config: OhConfig, value: string) => void;
+
+function section<K extends keyof OhConfig>(config: OhConfig, key: K): Record<string, unknown> {
+  const current = config[key];
+  if (current === undefined || current === null || typeof current !== "object") {
+    (config as Record<string, unknown>)[key as string] = {};
+  }
+  return (config as Record<string, unknown>)[key as string] as Record<string, unknown>;
+}
+
+const ENV_TO_CONFIG: Record<string, ConfigSetter> = {
+  SANDBOX_NAME: (c, v) => {
+    c.name = v;
+  },
+  TZ: (c, v) => {
+    c.timezone = v;
+  },
+  OH_PROJECT_ROOT: (c, v) => {
+    c.projectRoot = v;
+  },
+  GIT_USER_NAME: (c, v) => {
+    section(c, "git").userName = v;
+  },
+  GIT_USER_EMAIL: (c, v) => {
+    section(c, "git").userEmail = v;
+  },
+  INSTALL_OPENCODE: (c, v) => {
+    section(c, "install").opencode = asBool(v);
+  },
+  INSTALL_GROK_BUILD: (c, v) => {
+    section(c, "install").grokBuild = asBool(v);
+  },
+  INSTALL_DEEPAGENTS: (c, v) => {
+    section(c, "install").deepagents = asBool(v);
+  },
+  INSTALL_HERMES: (c, v) => {
+    section(c, "install").hermes = asBool(v);
+  },
+  INSTALL_AGENT_BROWSER: (c, v) => {
+    section(c, "install").agentBrowser = asBool(v);
+  },
+  SANDBOX_SSH: (c, v) => {
+    section(c, "access").ssh = asBool(v);
+  },
+  SANDBOX_SSH_PORT: (c, v) => {
+    const port = asPort(v);
+    if (port !== undefined) section(c, "access").sshPort = port;
+  },
+  SANDBOX_SSH_PASSWORD_AUTH: (c, v) => {
+    section(c, "access").sshPasswordAuth = asBool(v);
+  },
+  SANDBOX_SSH_AUTHORIZED_KEYS: (c, v) => {
+    section(c, "access").sshAuthorizedKeys = v;
+  },
+  DOCKER_SOCKET: (c, v) => {
+    section(c, "access").dockerSocket = asBool(v);
+  },
+  HERMES_DASHBOARD: (c, v) => {
+    section(c, "hermesDashboard").enabled = asBool(v);
+  },
+  HERMES_DASHBOARD_PORT: (c, v) => {
+    const port = asPort(v);
+    if (port !== undefined) section(c, "hermesDashboard").port = port;
+  },
+  CRON_AGENT_BIN: (c, v) => {
+    section(c, "cron").agentBin = v;
+  },
+  SKIP_PNPM_INSTALL: (c, v) => {
+    section(c, "build").skipPnpmInstall = asBool(v);
+  },
+  OH_SANDBOX_IMAGE: (c, v) => {
+    section(c, "image").ref = v;
+  },
+  OH_PULL_POLICY: (c, v) => {
+    if (v === "missing" || v === "always" || v === "never") section(c, "image").pullPolicy = v;
+  },
+  OH_CLOUD_API_URL: (c, v) => {
+    section(c, "cloud").apiUrl = v;
+  },
+};
+
+function applyEnvToConfig(config: OhConfig, key: string, value: string): boolean {
+  const setter = ENV_TO_CONFIG[key];
+  if (!setter) return false;
+  setter(config, value);
+  return true;
+}
+
+function writeConfigFile(ctx: WriteCtx, config: OhConfig): void {
+  const dest = ohConfigPath(ctx.t);
+  assertInTarget(dest, ctx.t);
+  const body = `${JSON.stringify(validateOhConfig({ ...config, version: 1 }), null, 2)}\n`;
+  const exists = existsSync(dest);
+  if (exists && readFileSync(dest, "utf8") === body) {
+    ctx.report("skip oh.json (exists)");
+    ctx.stats.skipped++;
+    return;
+  }
+  if (!ctx.dryRun) writeOhConfig(ctx.t, config);
+  ctx.report(exists ? "update oh.json" : "create oh.json");
+  if (exists) ctx.stats.overwritten++;
+  else ctx.stats.created++;
+}
+
 
 async function confirmWith(
   askFn: (q: string) => Promise<string>,
@@ -541,46 +740,49 @@ async function confirmWith(
   return /^y/.test(ans);
 }
 
-async function runWizard(io: InitIO): Promise<WizardAnswers> {
+async function runWizard(
+  io: InitIO,
+  config: OhConfig,
+  secrets: Record<string, string>,
+): Promise<void> {
   const askFn = io.ask ?? prompt.ask;
   const askSecretFn = io.askSecret ?? prompt.askSecret;
-  const env: Record<string, string> = {};
-  const secrets: Record<string, string> = {};
 
   prompt.header("Configure your harness  (press Enter to accept the shown default)");
 
-  prompt.step(1, 4, "Project");
+  prompt.step(1, 5, "Project");
   const name = await askFn("Sandbox name [my-project]:");
-  if (name) env.SANDBOX_NAME = name;
+  if (name) config.name = name;
 
   const tz = await askFn("Timezone [America/Denver]:");
-  if (tz) env.TZ = tz;
+  if (tz) config.timezone = tz;
 
   const gitName = await askFn("Git user name:");
-  if (gitName) env.GIT_USER_NAME = gitName;
+  if (gitName) section(config, "git").userName = gitName;
 
   const gitEmail = await askFn("Git user email:");
-  if (gitEmail) env.GIT_USER_EMAIL = gitEmail;
+  if (gitEmail) section(config, "git").userEmail = gitEmail;
 
-  prompt.step(2, 4, "Optional installs");
-  const installs: { key: string; desc: string }[] = [
-    { key: "opencode", desc: "OpenCode TUI coding agent" },
-    { key: "deepagents", desc: "DeepAgents multi-agent runtime" },
-    { key: "hermes", desc: "Hermes CLI + runtime (build arg + runtime)" },
-    { key: "grok_build", desc: "Grok build tooling" },
-    { key: "agent_browser", desc: "agent-browser + Chromium (~1 GB)" },
+  prompt.step(2, 5, "Optional installs");
+  const installs: { key: string; field: string; desc: string }[] = [
+    { key: "opencode", field: "opencode", desc: "OpenCode TUI coding agent" },
+    { key: "deepagents", field: "deepagents", desc: "DeepAgents multi-agent runtime" },
+    { key: "hermes", field: "hermes", desc: "Hermes CLI + runtime (build arg + runtime)" },
+    { key: "grok_build", field: "grokBuild", desc: "Grok build tooling" },
+    { key: "agent_browser", field: "agentBrowser", desc: "agent-browser + Chromium (~1 GB)" },
   ];
   for (const inst of installs) {
     const yes = await confirmWith(askFn, `Install ${inst.key} — ${inst.desc}?`, false);
-    if (yes) env[`INSTALL_${inst.key.toUpperCase()}`] = "true";
+    section(config, "install")[inst.field] = yes;
   }
 
-  prompt.step(3, 4, "Access (off by default)");
+  prompt.step(3, 5, "Access (off by default)");
   const sshOn = await confirmWith(askFn, "Enable sshd for direct container SSH?", false);
+  section(config, "access").ssh = sshOn;
   if (sshOn) {
-    env.SANDBOX_SSH = "true";
     const sshPort = await askFn("SSH host port [2222]:");
-    if (sshPort) env.SANDBOX_SSH_PORT = sshPort;
+    const port = sshPort ? asPort(sshPort) : undefined;
+    if (port !== undefined) section(config, "access").sshPort = port;
   }
 
   prompt.info(
@@ -588,31 +790,16 @@ async function runWizard(io: InitIO): Promise<WizardAnswers> {
   );
   prompt.info("privileged container that mounts the host filesystem. Enable only if needed.");
   const sockOn = await confirmWith(askFn, "Mount host Docker socket into the sandbox?", false);
-  if (sockOn) {
-    env.DOCKER_SOCKET = "true";
-  }
+  section(config, "access").dockerSocket = sockOn;
 
-  prompt.step(4, 4, "Secrets");
-  prompt.info("Stored in .devcontainer/.env, which is gitignored — never committed:");
-  const gh = await askSecretFn("GH_TOKEN (blank to skip):");
-  if (gh) {
-    secrets.GH_TOKEN = gh;
-    prompt.ok(`GH_TOKEN set (${prompt.redact(gh)})`);
+  prompt.step(4, 5, "Secrets");
+  prompt.info("Stored in .env at the project root, which is gitignored — never committed:");
+  for (const key of ["GH_TOKEN", "PI_SLACK_BOT_TOKEN", "PI_SLACK_APP_TOKEN"] as const) {
+    const value = await askSecretFn(`${key} (blank to skip):`);
+    if (!value) continue;
+    secrets[key] = value;
+    prompt.ok(`${key} set (${prompt.redact(value)})`);
   }
-
-  const slackBot = await askSecretFn("PI_SLACK_BOT_TOKEN (optional, blank to skip):");
-  if (slackBot) {
-    secrets.PI_SLACK_BOT_TOKEN = slackBot;
-    prompt.ok(`PI_SLACK_BOT_TOKEN set (${prompt.redact(slackBot)})`);
-  }
-
-  const slackApp = await askSecretFn("PI_SLACK_APP_TOKEN (optional, blank to skip):");
-  if (slackApp) {
-    secrets.PI_SLACK_APP_TOKEN = slackApp;
-    prompt.ok(`PI_SLACK_APP_TOKEN set (${prompt.redact(slackApp)})`);
-  }
-
-  return { env, secrets };
 }
 
 function appendGitignore(

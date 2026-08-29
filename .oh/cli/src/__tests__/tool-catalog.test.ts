@@ -188,6 +188,11 @@ describe("tailscale matches the entrypoint that really installs it", () => {
     expect(ts.installArgv!.join(" ")).toContain("/usr/local/bin/tailscaled");
   });
 
+  it("pre-creates the socket directory the entrypoint also pre-creates", () => {
+    expect(ts.installArgv!.join(" ")).toContain("/var/run/tailscale");
+    expect(ENTRYPOINT).toContain("/var/run/tailscale");
+  });
+
   it("never joins a tailnet — installation is not authentication", () => {
     const argv = ts.installArgv!.join(" ");
     expect(argv).not.toContain("tailscale up");

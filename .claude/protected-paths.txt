@@ -54,7 +54,6 @@ Makefile
 # --- Norms folded into skills (formerly .oh/context/rules/, B-state M3+M4) ---
 .oh/skills/git/SKILL.md
 .oh/skills/t3/references/sandbox-processes.md
-.oh/agents/advisor.md  # advisor delegation + recursive-decomposition norm, now an agent (was .oh/skills/advisor/)
 .oh/skills/spec/references/plan.md
 .oh/skills/spec/references/execute.md
 .oh/skills/spec/references/retro.md
@@ -64,9 +63,3 @@ Makefile
 .oh/context/IDENTITY.md
 .oh/context/TOOLS.md
 .oh/context/USER.md
-
-# --- Sub-agents invoked by skills ---
-.claude/agents/architect.md
-.claude/agents/critic.md
-.claude/agents/implementer.md
-.claude/agents/pm.md

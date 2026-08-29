@@ -8,7 +8,6 @@ CC_SAFETY_NET_PIN="1.0.6"
 required_files=(
   ".oh/skills/git/SKILL.md"
   ".oh/skills/t3/references/sandbox-processes.md"
-  ".oh/agents/advisor.md"
   ".oh/skills/wiki/references/schema.md"
   ".oh/skills/eval/run.sh"
 )
@@ -30,9 +29,7 @@ provider_links=(
   ".pi/skills|../.oh/skills"
   ".claude/skills|../.oh/skills"
   ".codex/skills|../.oh/skills"
-  ".claude/agents|../.oh/agents"
   ".claude/hooks|../.oh/hooks"
-  ".codex/agents|../.claude/agents"
   ".prime/agent/skills|../../.oh/skills"
 )
 

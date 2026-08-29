@@ -230,14 +230,14 @@ Due to the fact that the cache is sometimes corrupted, you should probably clear
 **Domain:** Warnings and cautions
 **Rules:** warning before command, named loss
 ```text before
-Run `make destroy` to reset the sandbox. Note that this will also remove the volumes and the data in them is deleted permanently, so make sure you have a backup of anything important before you go ahead.
+Run `oh destroy` to reset the sandbox. Note that this will also remove the volumes and the data in them is deleted permanently, so make sure you have a backup of anything important before you go ahead.
 ```
 
 ```text after
-**WARNING:** `make destroy` deletes the `openharness_postgres` volume and every row in the database. The deletion is permanent.
+**WARNING:** `oh destroy` deletes the `openharness_postgres` volume and every row in the database. The deletion is permanent.
 
 1. Back up the database with `pg_dump`.
-2. Run `make destroy`.
+2. Run `oh destroy`.
 ```
 
 **Why:** The warning precedes the command and names the volume and the rows.

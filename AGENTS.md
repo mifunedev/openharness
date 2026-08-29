@@ -123,7 +123,7 @@ Before implementation, mark each surface **applied** or **not applicable**. Do n
 silently skip a surface.
 
 - **Host and sandbox:** Where must each command and file change occur?
-- **Lifecycle doors:** Does behavior stay aligned across `make` and `oh`?
+- **Lifecycle door:** Does every affected `oh` verb stay aligned?
 - **Canonical and provider surfaces:** Is the change in `.oh/`, and do symlinks still
   resolve?
 - **Root and scaffold:** Does the change affect this orchestrator, initialized
@@ -146,23 +146,24 @@ out apart from it. Every other directory uses a `README.md`.
 
 Use the lifecycle in this order:
 
-1. Run `make sandbox` on the host.
-2. Run `make shell`.
+1. Run `oh sandbox` on the host.
+2. Run `oh shell`.
 3. Run `herdr` inside the sandbox.
 4. Run `gh auth login && gh auth setup-git` once from the first Herdr pane.
-5. Run `make ps` on the host to verify the container.
+5. Run `oh ps` on the host to verify the container.
 
-Run `make destroy` only for operator-authorized teardown.
+Run `oh destroy` only for operator-authorized teardown.
 
-In an initialized repository without a Makefile, use the matching `oh` verbs. The
-`make` and `oh` surfaces call `.oh/scripts/docker-compose.sh`. The canonical mapping
-is [`docs/lifecycle-commands.md`](docs/lifecycle-commands.md).
+`oh` is the only lifecycle door, on the host and in the sandbox, and it calls
+`.oh/scripts/docker-compose.sh`. Host prerequisites are Docker, Git, and Node 20 or
+newer. The verb reference is
+[`docs/lifecycle-commands.md`](docs/lifecycle-commands.md).
 
 ## How the system fits together
 
-The host calls `make` or `oh`. Both doors reach `.oh/scripts/docker-compose.sh`,
-which starts the project sandbox from `.devcontainer/`. Inside the sandbox, Herdr
-holds interactive work while named tmux sessions hold unattended infrastructure.
+The host calls `oh`, which reaches `.oh/scripts/docker-compose.sh` and starts the
+project sandbox from `.devcontainer/`. Inside the sandbox, Herdr holds interactive
+work while named tmux sessions hold unattended infrastructure.
 Application agents work on their branches or isolated worktrees. Task-specific
 procedures load only when the current task needs them. Tests and deterministic
 probes verify the control plane against real repository state.

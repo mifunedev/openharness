@@ -254,7 +254,7 @@ The image has no `HEALTHCHECK` of its own, so `docker run` won't populate
 `.State.Health` unless you add `--health-cmd`; on the plain `docker run` above,
 skip the wait loop and just exec once `docker ps` shows the container `Up`. The
 compose path (`docker-compose.image-only.yml`) defines the healthcheck, so there
-the wait loop works as written — or use `make shell` / `oh shell`.
+the wait loop works as written — or use `oh shell` / `oh shell`.
 
 ### The same image runs under MicroSandbox
 

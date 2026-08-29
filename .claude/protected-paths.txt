@@ -35,9 +35,6 @@ retro
 .oh/scripts/sandbox-healthcheck.sh
 .oh/scripts/link-providers.sh
 
-# --- Root lifecycle entrypoints ---
-Makefile
-
 # --- Install / runtime scripts wired into the Dockerfile or sourced at boot ---
 .oh/install/banner.sh
 .oh/skills/cloudflared/scripts/run.sh

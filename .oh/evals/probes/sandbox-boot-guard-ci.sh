@@ -31,7 +31,6 @@ has '"packages/oh/**"' "oh package path filter"
 has '".oh/scripts/docker-compose.sh"' "compose wrapper path filter"
 has '".oh/scripts/sandbox-boot-smoke.sh"' "boot smoke helper path filter"
 has '".oh/scripts/harness-config.sh"' "harness config helper path filter"
-has '"Makefile"' "Makefile path filter"
 has '"oh.json"' "oh.json path filter"
 has '".env.example"' "secrets template path filter"
 if grep -Fq -- '".devcontainer/.example.env"' <<<"$text"; then

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: #165 — core sandbox config files must trigger harness CI
-# desc: ci-harness.yml push and pull_request path filters must include Makefile, oh.json and .env.example, and every required filter must name a path that exists — a filter naming a deleted file silently stops matching
+# desc: ci-harness.yml push and pull_request path filters must include oh.json and .env.example, and every required filter must name a path that exists — a filter naming a deleted file silently stops matching
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -33,7 +33,7 @@ extract_paths() {
   ' "$WORKFLOW"
 }
 
-REQUIRED=(Makefile oh.json .env.example)
+REQUIRED=(oh.json .env.example)
 
 missing=()
 for event in push pull_request; do
@@ -54,7 +54,7 @@ for required in "${REQUIRED[@]}"; do
 done
 
 if (( ${#missing[@]} == 0 )); then
-  echo "PASS: ci-harness.yml covers Makefile, oh.json and .env.example in push.paths and pull_request.paths, each naming a path that exists" >&2
+  echo "PASS: ci-harness.yml covers oh.json and .env.example in push.paths and pull_request.paths, each naming a path that exists" >&2
   exit 0
 fi
 

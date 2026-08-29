@@ -133,7 +133,7 @@ CONDITION → ACTOR → ACTION → OBJECT → EXPECTED RESULT
 ```
 
 ```text after
-If `config.yaml` sets `DOCKER_SOCKET=true`, the operator runs `make sandbox` to
+If `config.yaml` sets `DOCKER_SOCKET=true`, the operator runs `oh sandbox` to
 start the `openharness` container. The container reports `healthy` within 60
 seconds.
 ```

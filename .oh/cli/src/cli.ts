@@ -405,12 +405,11 @@ export function printComposeVerbHelp(verb: ComposeVerb): void {
 Usage:
   oh ${verb} [-- <extra docker compose args>]
 
-Equivalent to \`make ${verb}\` — both run .oh/scripts/docker-compose.sh, which is
-the single implementation. Use whichever is available: \`make\` needs no Node and
-works in a source checkout; \`oh\` works anywhere, including an \`oh init\` repo
-that has no Makefile.
+Runs .oh/scripts/docker-compose.sh, the single implementation. \`oh\` is the only
+lifecycle door and works anywhere: a source checkout, an \`oh init\` repo, or
+inside the sandbox.
 
-See ${sourceDocsUrl("docs/lifecycle-commands.md")} for the full mapping.
+See ${sourceDocsUrl("docs/lifecycle-commands.md")} for every verb.
 `);
 }
 
@@ -420,8 +419,8 @@ export function printDestroyHelp(): void {
 Usage:
   oh destroy [--yes]
 
-Equivalent to \`make destroy\` — both run .oh/scripts/docker-compose.sh with
-\`down -v\`. This is the one destructive lifecycle verb: \`-v\` deletes the named
+Runs .oh/scripts/docker-compose.sh with \`down -v\`. This is the one destructive
+lifecycle verb: \`-v\` deletes the named
 volumes, and those volumes hold every agent CLI login, the gh CLI token, and
 the SSH keys. Use \`oh stop\` when you only want the containers gone.
 
@@ -447,10 +446,10 @@ Subcommands:
   config   Print the compose configuration .oh/scripts/docker-compose.sh
            resolves from .devcontainer/.env and .oh/config.json
 
-Equivalent to \`make config\`. This is namespaced under \`oh compose\` because
-\`oh config <integration>\` already means "run an integration wizard".
+Namespaced under \`oh compose\` because \`oh config <integration>\` already means
+"run an integration wizard", and \`oh config show/set\` reads and writes oh.json.
 
-See ${sourceDocsUrl("docs/lifecycle-commands.md")} for the full mapping.
+See ${sourceDocsUrl("docs/lifecycle-commands.md")} for every verb.
 `);
 }
 

@@ -4,7 +4,7 @@ title: SSH
 
 # SSH
 
-By default you reach the sandbox with `make shell` or VS Code Attach (see
+By default you reach the sandbox with `oh shell` or VS Code Attach (see
 [Connecting to the Sandbox](../connecting.md)) — the base container publishes
 **no ports**. This integration adds an **opt-in `sshd` overlay** so you can
 `ssh` straight into the container, and documents how to front several tenants'
@@ -13,11 +13,11 @@ containers with a single host-side `nginx` reverse proxy on one VM.
 The daemon is **off by default**, binds **loopback-only**, and authenticates by
 **public key** unless you opt into password auth. It runs as a background daemon
 alongside the container's main process, so the cron runtime, healthcheck, and
-`make shell` are unaffected.
+`oh shell` are unaffected.
 
 ## 1. Prerequisites
 
-- Sandbox is provisioned (`make ps` shows your container).
+- Sandbox is provisioned (`oh ps` shows your container).
 - A local SSH keypair (`ssh-keygen -t ed25519` if you don't have one). The
   daemon defaults to key auth; you supply the **public** key.
 
@@ -43,14 +43,14 @@ You can paste multiple keys separated by newlines (or literal `\n`). Apply the
 change with a rebuild:
 
 ```bash
-make destroy && make sandbox
+oh destroy && oh sandbox
 ```
 
-`make sandbox` runs a **port-collision preflight**: if `SANDBOX_SSH_PORT` is
+`oh sandbox` runs a **port-collision preflight**: if `SANDBOX_SSH_PORT` is
 already bound by another container or host process, it aborts *before* creating
 the container and prints the conflict plus the next free port — it never
 silently clobbers a port another tenant is using. Bypass with
-`SANDBOX_SSH_PORT_CHECK=off make sandbox` if you know better. Check any port
+`SANDBOX_SSH_PORT_CHECK=off oh sandbox` if you know better. Check any port
 yourself:
 
 ```bash
@@ -142,7 +142,7 @@ Each tenant's `.devcontainer/.env` sets a unique loopback port, e.g. tenant-1 �
 `ssh.port: 12201`, tenant-2 → `ssh.port: 12202`. Pick a free port per tenant:
 
 ```bash
-bash .oh/scripts/check-host-port.sh 12201   # ensure it's free before `make sandbox`
+bash .oh/scripts/check-host-port.sh 12201   # ensure it's free before `oh sandbox`
 ```
 
 ### (a) Subdomain + port per tenant — simple, no TLS
@@ -233,5 +233,5 @@ wildcard certificate. Most operators are well served by variant (a); reach for
 
 ## See also
 
-- [Connecting to the Sandbox](../connecting.md) — `make shell`, VS Code Attach, ports
+- [Connecting to the Sandbox](../connecting.md) — `oh shell`, VS Code Attach, ports
 - [Security considerations](../security-considerations.md) — exposure posture

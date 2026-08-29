@@ -56,8 +56,7 @@ repointed to the real `.oh/…` location:
 | `evals/` | `.oh/evals/` |
 
 Every consumer pinning those literals was updated: the skills and cron bodies that
-call `.oh/scripts/locked-append.sh`, the `Makefile`'s `COMPOSE := .oh/scripts/docker-compose.sh`,
-the boot-lint shellcheck glob, vitest's `.oh/scripts/__tests__/**`, the eval probes,
+call `.oh/scripts/locked-append.sh`, the boot-lint shellcheck glob, vitest's `.oh/scripts/__tests__/**`, the eval probes,
 in `docker-compose.yml`, `entrypoint.sh`, and `cron-runtime.ts`. Nothing reads
 the bare root paths anymore.
 

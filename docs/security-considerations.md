@@ -112,7 +112,7 @@ event.
   2. **Route the operation through the script:** `bash .oh/scripts/git-maintenance.sh <subcommand>` (`reset-hard <ref>` · `clean` · `branch-delete <branch>` · `worktree-remove <path>` · `push-force <remote> <branch>`). Script-file invocation is not analyzed by the guard, so a legitimate destructive-git op runs while the inline equivalent stays denied. This is how the harness's own automation (the `reset|clean` runner, `/watchdog`, worktree/branch grooming, the `cleanup-tasks` cron) keeps working.
 - **THE PI EXCEPTION.** `CC_SAFETY_NET_OFF=1` does **not** affect pi — pi's guard is a *package extension*, not a command wrapper, so it never reads the env flag. To disable on pi: remove `"npm:cc-safety-net@1.0.6"` from `packages` in [`.pi/settings.json`](../.pi/settings.json) and **restart the pi session**.
 - **Rollout / restart step (required).** The guard binds at process spawn, so long-lived sessions started **before** the guard landed stay unguarded until restarted — without this step they defeat the purpose indefinitely. After the merge and image rebuild:
-  - **Simplest — recreate the container** (restarts every session with the new image + env): `docker compose -f .devcontainer/docker-compose.yml up -d --build` (or `make sandbox`).
+  - **Simplest — recreate the container** (restarts every session with the new image + env): `docker compose -f .devcontainer/docker-compose.yml up -d --build` (or `oh sandbox`).
   - **Or restart the long-lived sessions in place:**
     - `cron-system`: `tmux kill-session -t cron-system` — the `cron-watchdog` supervisor respawns it automatically ([`entrypoint.sh:653-656`](../.devcontainer/entrypoint.sh)).
     - `client-slack-pi` (Slack bridge): `gateway pi --restart` (see [Integrations → Slack](integrations/slack.md)).
@@ -142,7 +142,7 @@ expose to whichever trust level you choose.
   `PermitRootLogin no`, and password auth **off**. Two operator choices weaken that
   and are your responsibility: switching the bind to `0.0.0.0` (public interface),
   and enabling password auth while `SANDBOX_PASSWORD` is still the weak default
-  (`test1234`). A `make sandbox` **port-collision preflight**
+  (`test1234`). A `oh sandbox` **port-collision preflight**
   ([`.oh/scripts/check-host-port.sh`](../.oh/scripts/check-host-port.sh)) refuses
   to create a container on a port already in use, so enabling SSH or adding a tenant
   can't silently clobber another tenant's port. Setup + the nginx multi-tenant recipe:

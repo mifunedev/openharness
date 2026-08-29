@@ -8,7 +8,7 @@ After entering the sandbox, make `herdr` your first command:
 
 ```bash
 # host
-make shell
+oh shell
 
 # first command inside the sandbox
 herdr
@@ -43,7 +43,7 @@ herdr integration status
 - `~/.config/herdr` (in the shared `config-dir` volume): configuration, logs, and session metadata.
 - `~/.herdr` (in `herdr-data`): Herdr-created worktrees and related data.
 
-`make stop` and normal rebuilds preserve metadata and layout in these volumes, but stopped containers do not preserve running agent, test, or server processes. `make destroy` runs Compose with `-v` and removes the volumes too.
+`oh stop` and normal rebuilds preserve metadata and layout in these volumes, but stopped containers do not preserve running agent, test, or server processes. `oh destroy` runs Compose with `-v` and removes the volumes too.
 
 ## Troubleshooting
 

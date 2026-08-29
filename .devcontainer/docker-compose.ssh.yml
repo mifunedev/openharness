@@ -1,6 +1,6 @@
 # sshd overlay — direct SSH into the sandbox container.
 #
-# Included automatically by Makefile/install.sh only when SANDBOX_SSH is truthy
+# Included automatically by .oh/scripts/docker-compose.sh only when SANDBOX_SSH is truthy
 # via `SANDBOX_SSH` in .devcontainer/.env. The host bind
 # stays loopback-only (127.0.0.1) so the daemon is reachable from the host and
 # through a host-side reverse proxy, but not from the public interface by

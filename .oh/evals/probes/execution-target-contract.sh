@@ -3,16 +3,14 @@
 # source: issue #733 (ExecutionTarget contract + Docker Compose adapter) 2026-08-10
 # desc: the execution seam stays provider-neutral — the contract file names no substrate and
 #       declares no snapshot method, the shell verb builds no engine argv of its own, and the
-#       operator-facing Makefile shell line is byte-for-byte unchanged.
+#       operator-facing `oh shell` attach call is byte-for-byte unchanged.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 TARGET="$ROOT/.oh/cli/src/lib/execution/target.ts"
 LIFECYCLE="$ROOT/.oh/cli/src/commands/lifecycle.ts"
-MAKEFILE="$ROOT/Makefile"
 
 [[ -d "$ROOT/.oh/cli/src" ]] || { echo "SKIPPED: missing $ROOT/.oh/cli/src — not a harness source checkout" >&2; exit 2; }
-[[ -f "$MAKEFILE" ]] || { echo "SKIPPED: missing $MAKEFILE — not a harness source checkout" >&2; exit 2; }
 [[ -f "$LIFECYCLE" ]] || { echo "SKIPPED: missing $LIFECYCLE" >&2; exit 2; }
 
 strip_comments() {
@@ -71,9 +69,12 @@ if grep -qF '["exec"' <<<"$flat" || grep -qF '"exec","-it"' <<<"$flat"; then
   missing+=("C4: lifecycle.ts constructs an engine argv literal beginning with \"exec\" — that belongs behind the contract")
 fi
 
-if ! sed 's/^[[:space:]]*//' "$MAKEFILE" |
-  grep -Fxq 'docker exec -it -u $(SHELL_USER) $(SHELL_CONTAINER) zsh'; then
-  missing+=("C5: Makefile no longer contains the verbatim line \`docker exec -it -u \$(SHELL_USER) \$(SHELL_CONTAINER) zsh\`")
+shell_body="$(awk '/export function runShell/,/^}/' <<<"$code")"
+if [[ -z "$shell_body" ]]; then
+  missing+=("C5: runShell has no recognizable body — the \`oh shell\` entry point moved")
+elif ! sed 's/^[[:space:]]*//' <<<"$shell_body" |
+  grep -Fxq 'code = target.attach({ argv: ["zsh"], user: "sandbox" });'; then
+  missing+=("C5: runShell no longer contains the verbatim attach call \`code = target.attach({ argv: [\"zsh\"], user: \"sandbox\" });\` — the operator-facing shell entry changed")
 fi
 
 if ((${#missing[@]})); then
@@ -81,5 +82,5 @@ if ((${#missing[@]})); then
   exit 1
 fi
 
-echo "PASS: target.ts is substrate-neutral with no snapshot method, runShell builds no engine argv, and the Makefile shell line is verbatim intact" >&2
+echo 'PASS: target.ts is substrate-neutral with no snapshot method, runShell builds no engine argv, and the `oh shell` attach call is verbatim intact' >&2
 exit 0

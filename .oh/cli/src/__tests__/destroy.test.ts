@@ -244,7 +244,7 @@ describe("parseDestroyArgs", () => {
   });
 });
 
-describe("oh compose config — the make config gap", () => {
+describe("oh compose config", () => {
   it("parses the config subcommand", () => {
     expect(parseComposeArgs(["config"])).toEqual({
       ok: true,
@@ -323,6 +323,6 @@ describe("destroy help", () => {
     const text = spy.mock.calls.map((c) => String(c[0])).join("");
     expect(text).toContain("type the sandbox name");
     expect(text).toContain("--yes");
-    expect(text).toContain("make destroy");
+    expect(text).not.toMatch(/\bmake\b/);
   });
 });

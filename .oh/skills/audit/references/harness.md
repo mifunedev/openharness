@@ -118,7 +118,7 @@ Launch 4 Agent tool calls **in a single message**. Each receives the Context Sna
 >
 > **Audit areas:**
 >
-> 1. **Developer onboarding friction** — Read `.devcontainer/`, `Makefile`, `.oh/install/`, `CLAUDE.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
+> 1. **Developer onboarding friction** — Read `.devcontainer/`, `.oh/cli/`, `.oh/install/`, `CLAUDE.md`. Count the distinct manual steps required from `git clone` to a working sandbox. Flag any step that is undocumented, error-prone, or requires copy-pasting secrets.
 >
 > 2. **Skill consistency** — Read every `SKILL.md` under `.claude/skills/`. Check: does each have valid YAML frontmatter (name, description)? Does each follow imperative instructions? Is any referenced nowhere (potentially stale)?
 >

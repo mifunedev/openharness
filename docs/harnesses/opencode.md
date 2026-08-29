@@ -32,7 +32,7 @@ Or set `INSTALL_OPENCODE=true` in `.devcontainer/.env` (legacy).
 Then rebuild/restart the sandbox:
 
 ```bash
-make stop && make sandbox
+oh stop && oh sandbox
 ```
 
 Open Harness installs the upstream npm package globally during image build:

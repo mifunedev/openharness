@@ -15,7 +15,7 @@
 #
 # Downstream harness packs and Pi extensions can register additional
 # overlays by appending paths to composeOverrides[] in oh.json;
-# `make sandbox` and `.oh/scripts/install.sh` pick those up via jq.
+# `oh sandbox` and `.oh/scripts/install.sh` pick those up via jq.
 #
 # The host Docker socket is NOT mounted here by default (socket access is
 # effectively host root). It is an opt-in overlay — docker-compose.docker-sock.yml

@@ -63,6 +63,7 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 
 ## Reference
 
+- [Configuration — `oh.json` fields and the secrets split](configuration.md)
 - [Security considerations](security-considerations.md)
 - [Open-core boundary](open-core.md)
 - [Repair-operator registry](repair-operator-registry.md)

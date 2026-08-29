@@ -76,12 +76,12 @@ Drop, crop, or redact screenshots that expose:
 
 If you cannot safely crop/redact with available tools, do not embed the screenshot. Link the Loom instead or describe the step in prose.
 
-## Step 3 — Advisor briefing and delegate wave
+## Step 3 — Briefing and delegate wave
 
-Before drafting, run the Advisor pattern:
+Before drafting, run the briefing pattern:
 
-1. Read `.oh/agents/advisor.md`.
-2. Ask an expert Advisor to produce:
+1. Read `/delegate` (`.oh/skills/delegate/SKILL.md`).
+2. Produce:
    - the 5-field implementation briefing;
    - a bounded delegate plan, max depth 1;
    - exact start paths and acceptance criteria.

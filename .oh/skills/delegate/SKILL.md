@@ -104,7 +104,7 @@ Analyze the plan deeply and produce a structured task list. For each task, deter
 - Tasks that modify the same file or depend on another's output MUST be sequential
 - Every task must have at least one verifiable acceptance criterion
 - Each task must have a **distinct, non-overlapping scope** — do not spawn redundant workers for the same files
-- A task that is itself multi-step and parallelizable MAY recursively delegate via the `Agent` tool — but only if the worker's task description includes explicit `Max depth: N` and `Step budget: N` fields (see `.oh/agents/advisor.md`). Absent those fields, workers stay flat.
+- A task that is itself multi-step and parallelizable MAY recursively delegate via the `Agent` tool — but only if the worker's task description includes explicit `Max depth: N` and `Step budget: N` fields (see **Recursion-authorization gate** in step 5). Absent those fields, workers stay flat.
 
 ### 3. Build dependency graph and compute waves
 
@@ -157,11 +157,15 @@ Worker configuration:
 
 If any worker's task description authorizes recursive delegation (`Max depth: N` with N ≥ 2), confirm before spawning that **all three** fields are present in that worker's briefing:
 
-- `Max depth: N`
-- `Max children per level: M` (M ≤ 5)
-- `Step budget: S`
+This skill owns the triple's semantics; callers cite it rather than forking their own:
 
-If any field is missing, either add it or downgrade the task to flat execution (`Max depth: 1`). Workers without all three fields MUST stay flat — they have no authority to spawn grandchildren regardless of how the task is described in prose. See `.oh/agents/advisor.md` for the full protocol.
+- `Max depth: N` counts edges from the root (child = 1, grandchild = 2). A sub-agent MUST NOT recurse when `Max depth` is absent or `1`. A recursing child passes `Max depth: N−1` to its own grandchildren.
+- `Max children per level: M` is hard-capped at **5**. A child MUST NOT rewrite a sibling's briefing to lift its own depth or scope.
+- `Step budget: S` always reserves at least one final step for the parent's synthesis turn.
+
+These are **prompt-level conventions, not runtime-enforced caps** — nothing rejects a briefing that violates them, so write every briefing to honor them rigorously.
+
+If any field is missing, either add it or downgrade the task to flat execution (`Max depth: 1`). Workers without all three fields MUST stay flat — they have no authority to spawn grandchildren regardless of how the task is described in prose.
 
 **b) Collect results**
 

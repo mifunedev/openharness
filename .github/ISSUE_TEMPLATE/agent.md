@@ -66,4 +66,4 @@ Run from the **host** (orchestrator side):
 Run **inside the sandbox** (after `make shell <agent-name>`):
 
 - [ ] Project root is accessible (`ls ~/harness`)
-- [ ] Harness identity lives at the repo root: `AGENTS.md`, `.oh/context/SOUL.md`, and `.oh/context/IDENTITY.md` are present
+- [ ] Harness identity lives at the repo root: `AGENTS.md` is present

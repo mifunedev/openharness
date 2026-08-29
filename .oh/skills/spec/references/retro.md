@@ -12,8 +12,8 @@ evidence-tested lessons.
 
 **Core principle: compose `/retro`, scoped to this task.** `/retro` already implements the
 scientific session-closing pass — falsifiable hypotheses, evidence for *and* against, a
-verdict + confidence, and a propose-then-confirm promotion into
-`.oh/context/IDENTITY.md`. `retro` is the execution-side application of it: point `/retro`
+verdict + confidence, and a propose-then-confirm nomination of candidate probes under
+`.oh/evals/probes/`. `retro` is the execution-side application of it: point `/retro`
 at the just-built `.oh/tasks/<slug>/` run so the reflection is anchored to that unit's
 artifacts (`prd.md`, `progress.txt`, `prd.json`, the `/audit implementation` evidence)
 rather than the whole ambient session.
@@ -29,7 +29,7 @@ records that the execution stage ran its retro.
 | Arg | Meaning |
 |-----|---------|
 | `<slug>` | The task slug — the retro reads `.oh/tasks/<slug>/` artifacts as its primary signal source. Required. |
-| `--dry-run` | Passed through to `/retro`: report only (`Result: DRY-RUN`); never write `IDENTITY.md`. |
+| `--dry-run` | Passed through to `/retro`: report only (`Result: DRY-RUN`). |
 
 If `.oh/tasks/<slug>/` has no `progress.txt`/`prd.md`, there is no build to reflect on — say so
 and fall back to a plain `/retro` on the session, or skip with a note in the report.
@@ -45,9 +45,6 @@ FAIL→build cycles, and why), and any coupling/constraint the run surfaced. The
 do its scientific pass: form falsifiable hypotheses, test each for and against, assign
 verdict + confidence, and present supported `medium`+ lessons for confirmation before any
 write. Always reports, even on a trivial/no-lesson run.
-
-`retro` does not bypass `/retro`'s confirmation gate — `IDENTITY.md` writes
-still require explicit approval (or are skipped under `--dry-run`).
 
 ---
 

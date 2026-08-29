@@ -25,7 +25,7 @@ candidate diff still earns its example's reward.
 ## Per-example folder layout
 
 Each example lives at `evals/datasets/<dataset>/<DS-id>-<slug>/`. `<dataset>` is
-the trajectory class (`spec-execute-prs`, `retro-cycles`);
+the trajectory class (`spec-execute-prs`);
 `<DS-id>` is the never-reused `DS-NNN` id; `<slug>` is a short kebab label.
 
 | Path | Holds |
@@ -50,7 +50,7 @@ the trajectory class (`spec-execute-prs`, `retro-cycles`);
 |---|---|---|---|
 | `id` | string | yes | `DS-NNN`; matches the folder's `DS-id` and the `## Catalogue` row. |
 | `slug` | string | yes | Kebab label; matches the folder's `<slug>`. |
-| `dataset` | string | yes | Trajectory class: `spec-execute-prs` \| `retro-cycles`. |
+| `dataset` | string | yes | Trajectory class: `spec-execute-prs`. |
 | `title` | string | yes | Human-readable one-line title. |
 | `created` | date | yes | UTC `YYYY-MM-DD` the example was captured. |
 | `source` | object | yes | Provenance. PR examples: `{repo, pr, issue, merge_commit, url}`. Retro examples: `{repo, memory_ref, lesson_date, origin}`. |
@@ -95,7 +95,6 @@ directions; column 1 is the bare `DS-NNN`).
 |---|---|---|---|---|
 | DS-001 | ship-spec-prs † | Add default Pi Monitor support | PR #147 (closes #146) | diff_similarity, artifact_presence |
 | DS-002 | ship-spec-prs † | Run pnpm security audits in CI | PR #172 (closes #171) | diff_similarity, artifact_presence, test_execution |
-| DS-020 | retro-cycles | Brief critics with diverse lenses (retro lesson) | /retro 2026-05-11 -> .oh/context/IDENTITY.md | artifact_presence, diff_similarity |
 
 † **Legacy class name.** `/ship-spec` was absorbed into `/spec execute` and deleted
 (spec-simplification US-003, 2026-08-24). The class for NEW examples is
@@ -110,4 +109,4 @@ would make the record claim a skill that did not exist at capture time. Read the
 - [`../README.md`](../README.md) — the probe suite (the regression **floor**).
 - [`../capability/README.md`](../capability/README.md) — the capability benchmark (the progress **ceiling**).
 - Source inspiration: [huggingface/Repo2RLEnv](https://github.com/huggingface/Repo2RLEnv) — turning a repo's history into verifiable RL environments.
-- `context/directory-readme.md` — the directory-README convention this file follows.
+- `.oh/skills/harness-context/references/directory-readme.md` — the directory-README convention this file follows.

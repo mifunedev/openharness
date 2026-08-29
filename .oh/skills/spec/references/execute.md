@@ -364,7 +364,7 @@ propose-then-confirm gate. Always logs.
 The self-improvement tail (`.oh/skills/spec/SKILL.md`):
 
 - **compound** — promote durable knowledge so it is reused, not re-derived (`/wiki ingest`,
-  `.oh/context/IDENTITY.md`, mint a probe from any guardrail lesson).
+  mint a probe from any guardrail lesson).
 - **compress** — keep the always-loaded context lean and clear (`/audit context`).
 - **benchmark** — confirm the change earned its complexity (`/benchmark`): the `/eval`
   regression floor stays green AND the capability-benchmark ceiling held or moved. It reads

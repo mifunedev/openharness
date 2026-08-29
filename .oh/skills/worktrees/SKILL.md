@@ -13,7 +13,7 @@ allowed-tools: Bash
 
 # Worktrees
 
-Manage `.oh/worktrees/`. Full policy: `/git` § Worktrees; `.oh/context/rules/git.md` is only a compatibility pointer.
+Manage `.oh/worktrees/`. Full policy: `/git` § Worktrees.
 
 ## CHANGE ROUTING — TRACK VS RESET
 

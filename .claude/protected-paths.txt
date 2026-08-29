@@ -51,15 +51,10 @@ Makefile
 .oh/evals/probes/markitdown-wiki-ingest.sh
 .oh/crons/eval-weekly.md
 
-# --- Norms folded into skills (formerly .oh/context/rules/, B-state M3+M4) ---
+# --- Norms folded into skills (B-state M3+M4) ---
 .oh/skills/git/SKILL.md
 .oh/skills/t3/references/sandbox-processes.md
 .oh/skills/spec/references/plan.md
 .oh/skills/spec/references/execute.md
 .oh/skills/spec/references/retro.md
 
-# --- Orchestrator identity layer (session-loaded by AGENTS.md bootloader) ---
-.oh/context/SOUL.md
-.oh/context/IDENTITY.md
-.oh/context/TOOLS.md
-.oh/context/USER.md

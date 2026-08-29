@@ -563,7 +563,7 @@ const USAGE = `usage: mine-traces.mjs [options]
   --no-git                  stub the ground-truth bonus to 0
   --weights <json>          override friction weights (all keys required)
   --out <dir>               output dir (default $TMPDIR/oh-prompt-miner/<UTC-date>/)
-  --report-only             write the report only (no IDENTITY mutation)
+  --report-only             write the report only (no repository mutation)
   --dry-run                 print to stdout; write nothing
   --max-file-mb N          (default 50) skip files larger than this
   --fixtures-dir <dir>      read *.jsonl fixtures from <dir> instead of real traces

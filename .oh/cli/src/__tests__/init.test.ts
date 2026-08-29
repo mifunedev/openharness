@@ -466,10 +466,10 @@ describe("runInit", () => {
   });
 
 
-  it("full (default): vendors context/crons/evals as content", async () => {
+  it("full (default): vendors crons/evals as content, not context", async () => {
     const t = freshTmp();
     expect(await runInit(opts(t, { yes: true }), makeIO().io)).toBe(0);
-    expect(existsSync(join(t, ".oh/context/REPO_MAP.md"))).toBe(true);
+    expect(existsSync(join(t, ".oh/context/REPO_MAP.md"))).toBe(false);
     expect(existsSync(join(t, ".oh/crons/heartbeat.md"))).toBe(true);
     expect(readdirSync(join(t, ".oh/evals")).length).toBeGreaterThan(0);
   });
@@ -541,7 +541,6 @@ describe("runInit", () => {
     expect(m.exclude).toContain("**/auth.json");
     expect(m.include).toEqual(
       expect.arrayContaining([
-        "context/**",
         "crons/**",
         "evals/**",
         "skills/**",
@@ -549,6 +548,7 @@ describe("runInit", () => {
         "hooks/**",
       ]),
     );
+    expect(m.include).not.toContain("context/**");
   });
 
 

@@ -1,13 +1,12 @@
 # Context Audit
 
-Score every file in the default-loaded context set on 4 deterministic dimensions (footprint, load-bearing, integrity, redundancy). Emit KEEP / TRIM / DEMOTE / CUT verdicts and a total token budget. Optionally run the Tier-2 ablation harness to verify a proposed cut is safe.
+Score every file in the default-loaded context set on 4 deterministic dimensions (footprint, load-bearing, integrity, redundancy). Emit KEEP / TRIM / DEMOTE / CUT verdicts and a total token budget.
 
 ## Default-Loaded Set
 
 | Layer | Files | Loaded how |
 |-------|-------|-----------|
-| Bootloader | `CLAUDE.md` | always |
-| Context | `.oh/context/SOUL.md`, `.oh/context/IDENTITY.md`, `.oh/context/TOOLS.md`, `.oh/context/REPO_MAP.md`, `.oh/context/USER.md` | session start |
+| Bootloader | `AGENTS.md` (`CLAUDE.md` is a symlink to it) | always |
 | Skill metadata | frontmatter of all `**/SKILL.md` | always injected |
 
 ## Instructions
@@ -18,9 +17,8 @@ Arguments received: `$ARGUMENTS`
 
 | Argument | Mode |
 |----------|------|
-| empty or `all` | Tier-1 scorecard only |
-| `--baseline` | Tier-1 scorecard + write an ephemeral baseline snapshot under `$TMPDIR/oh-context-audit/YYYY-MM-DD/` |
-| `--ablate <file>` | Tier-1 scorecard + Tier-2 ablation against `<file>` (path relative to harness root) |
+| empty or `all` | Scorecard only |
+| `--baseline` | Scorecard + write an ephemeral baseline snapshot under `$TMPDIR/oh-context-audit/YYYY-MM-DD/` |
 
 ### 2. Inventory the default-loaded set
 
@@ -29,13 +27,7 @@ HARNESS=$AUDIT_ROOT
 TODAY=$(date -u +%Y-%m-%d)
 
 # Enumerate all files and their footprint
-for f in \
-  "$HARNESS/CLAUDE.md" \
-  "$HARNESS/.oh/context/SOUL.md" \
-  "$HARNESS/.oh/context/IDENTITY.md" \
-  "$HARNESS/.oh/context/TOOLS.md" \
-  "$HARNESS/.oh/context/REPO_MAP.md" \
-  "$HARNESS/.oh/context/USER.md"; do
+for f in "$HARNESS/AGENTS.md"; do
   [ -f "$f" ] || continue
   chars=$(wc -c < "$f")
   words=$(wc -w < "$f")
@@ -83,8 +75,6 @@ REFS=$(grep -rl "$FILE_BASE" \
   "$HARNESS/.oh/skills" \
   "$HARNESS/.oh/agents" \
   "$HARNESS/AGENTS.md" \
-  "$HARNESS/CLAUDE.md" \
-  "$HARNESS/.oh/context" \
   "$HARNESS/docs" 2>/dev/null \
   | grep -v "^${f}$" | wc -l)
 ```
@@ -165,9 +155,9 @@ TOTAL = A + B + C + D  (max 8)
 | 7 – 8 | **KEEP** | Signal justified; no action needed |
 | 5 – 6 | **TRIM** | Reduce footprint or remove duplicate sections; stays default-loaded |
 | 3 – 4 | **DEMOTE** | Move to on-demand (session-start explicit read or skill); remove from auto-load |
-| 0 – 2 | **CUT** | Not earning its slot; remove or merge. Run Tier-2 ablation first if B > 0. |
+| 0 – 2 | **CUT** | Not earning its slot; remove or merge. |
 
-### 5. Emit Tier-1 report
+### 5. Emit the report
 
 Print today's date as `YYYY-MM-DD`.
 
@@ -194,33 +184,18 @@ Grand total: ~Z tokens
 
 Omit KEEP files from Recommendations. Use the short filename (e.g. `advisor.md`), not the full path.
 
-### 6. Tier-2 ablation (skip if mode is `all`)
+### 6. Memory Protocol
 
-The canonical caller is `$AUDIT_ROOT/.oh/skills/audit/scripts/context-audit-runner.sh`.
-Use `--baseline` only on explicit request; use `--ablate <relative-file>` for ablation.
-The runner resolves probes from `$AUDIT_ROOT/.oh/skills/audit/probes/context/`, creates
-invocation-scoped temporary results, and calls `.oh/scripts/ablate.sh` for validation,
-locking, versioned sentinel transitions, signal restoration, and startup recovery. Do
-not implement backup, sentinel parsing, locking, or restore in this route.
-
-Ablation preserves the native `SAFE TO CUT` / `SIGNAL DETECTED` verdict. Explicit
-baseline output is ephemeral under `$TMPDIR`; ordinary ablation restores the target
-byte-for-byte and leaves only the structured observation returned to the dispatcher.
-
-### 7. Memory Protocol
-
-Return a structured context observation carrying `AUDIT_RUN_ID`, budget, top finding,
-ablation verdict, and evidence path. Do not report a run record from this route; the outer
-dispatcher prints the one terminal run record.
+Return a structured context observation carrying `AUDIT_RUN_ID`, budget, top finding, and
+evidence path. Do not report a run record from this route; the outer dispatcher prints the
+one terminal run record.
 
 ## Guidelines
 
-- All Tier-1 scoring is deterministic — same shell commands twice produce the same scores. No LLM judgment in Tier 1.
-- Tier-2 ablation uses `trap` to restore the target file even if `claude -p` errors mid-run.
+- All scoring is deterministic — same shell commands twice produce the same scores. No LLM judgment.
 - The skill-metadata aggregate row gets a budget line but no verdict (it's aggregate; verdicts apply per-file only).
-- Tier-2 probe results are probabilistic, not deterministic — `claude -p` is non-deterministic. Run ablation twice if a verdict is borderline.
 - When `--baseline` mode is used, probe outputs are written under `$TMPDIR/oh-context-audit/YYYY-MM-DD/`. That is ephemeral scratch outside the repo — copy a baseline out if you need to keep it.
-- Do not penalize `CLAUDE.md` on Dimension B (load-bearing) because it's the source of truth and may have few inbound citations by design — it doesn't need to be cited; it is the orchestrator instructions.
+- Do not penalize `AGENTS.md` on Dimension B (load-bearing) because it's the source of truth and may have few inbound citations by design — it doesn't need to be cited; it is the orchestrator instructions.
 
 ## Reference
 
@@ -231,7 +206,7 @@ dispatcher prints the one terminal run record.
 | 7–8 | KEEP | No action |
 | 5–6 | TRIM | Edit for concision; remove duplicate sections |
 | 3–4 | DEMOTE | Move to on-demand; remove from auto-load set |
-| 0–2 | CUT | Remove; run Tier-2 ablation first if B score > 0 |
+| 0–2 | CUT | Remove or merge |
 
 ### Probe file format
 
@@ -246,16 +221,6 @@ markers:
 
 <Prompt text — what gets sent to claude -p. One task that requires the target rule to answer correctly.>
 ```
-
-### Ablation runner (standalone)
-
-For running ablation outside a Claude session:
-
-```bash
-.oh/skills/audit/scripts/context-audit-runner.sh --ablate .oh/context/<file>.md
-```
-
-See `runner.sh` in this skill directory.
 
 ### Scoring cheatsheet
 

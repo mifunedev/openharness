@@ -17,34 +17,17 @@ TIMEOUT_SECS=30
 
 FILTER_PROBE=""
 FILTER_TIER=""
-ABLATE_TARGET=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --probe)  FILTER_PROBE="${2:-}"; shift 2 ;;
     --tier)   FILTER_TIER="${2:-}"; shift 2 ;;
-    --ablate) ABLATE_TARGET="${2:-}"; shift 2 ;;
-    -h|--help) echo "usage: run.sh [--probe <id>] [--tier A|ablation] [--ablate <file> --probe <id>]"; exit 0 ;;
+    -h|--help) echo "usage: run.sh [--probe <id>] [--tier A]"; exit 0 ;;
     *) echo "unknown arg: $1" >&2; exit 64 ;;
   esac
 done
 
 tmp=""
 trap '[ -n "$tmp" ] && rm -f "$tmp"' EXIT
-
-# shellcheck source=.oh/scripts/ablate.sh
-source "$ROOT/.oh/scripts/ablate.sh"
-ablate_recover
-
-if [ -n "$ABLATE_TARGET" ]; then
-  [ -n "$FILTER_PROBE" ] || { echo "--ablate requires --probe <id>" >&2; exit 64; }
-  ABL_PROBE="$PROBES_DIR/$FILTER_PROBE.sh"
-  [ -f "$ABL_PROBE" ] || { echo "no such probe: $FILTER_PROBE" >&2; exit 64; }
-  case "$ABLATE_TARGET" in
-    /*) ABL_TGT="$ABLATE_TARGET" ;;
-    *)  ABL_TGT="$ROOT/$ABLATE_TARGET" ;;
-  esac
-  exec bash "$ROOT/.oh/scripts/ablate.sh" "$ABL_TGT" "$ABL_PROBE"
-fi
 
 hdr() { grep -E "^# $1:" "$2" 2>/dev/null | head -1 | sed "s/^# $1:[[:space:]]*//" || true; }
 prior_row() {

@@ -21,10 +21,8 @@ your-project/
     cli/                    #   the `oh` CLI (build: cd .oh/cli && npm run build)
     skills/ agents/ hooks/  #   vendored shared primitives (provider surfaces symlink here)
     scripts/  install/      #   machinery (ralph, link-providers, cron-runtime, ...)
-    context/                #   identity layer (SOUL, IDENTITY, REPO_MAP, ...)
     crons/                  #   scheduled agents (heartbeat, cleanup, ...)
     evals/                  #   probe suite + RESULTS benchmark
-    memory/                 #   long-term lessons (append-only) — seeded empty
     tasks/                  #   per-task spec folders — seeded empty
   src/ ...                  # YOUR application code lives here
 ```

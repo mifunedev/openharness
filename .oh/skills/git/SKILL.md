@@ -119,7 +119,7 @@ Displaced detail has a destination — put it there, not in the entry:
 | Rationale, rejected alternatives | The PR body — the `([#N])` link is the pointer |
 | Task/spec decisions | `.oh/tasks/<slug>/prd.md` |
 | Architecture decisions | `docs/rfcs/` |
-| Durable, generalized lessons | `.oh/context/IDENTITY.md` |
+| Durable, generalized lessons | A minted probe under `.oh/evals/probes/` |
 
 BAD (real entry, 3,579 chars — a design doc wearing a bullet):
 
@@ -271,10 +271,10 @@ If `.claude/skills/ci-status/` exists, invoke `/ci-status` after every `git push
 
 ## Provider Portability
 
-Because not every provider loads `.oh/context/rules/*`, put active instructions in
-skills and use rules files only as compatibility pointers. If you discover a
-provider-specific workflow dependency hiding in a rules file, promote it to a
-skill and leave a short rule file that points to the skill.
+Provider-specific rule files are not loaded by every provider, so put active
+instructions in skills. If you discover a provider-specific workflow dependency
+hiding in a rules file, promote it to a skill and leave a short rule file that
+points to the skill.
 
 ## Workflow
 

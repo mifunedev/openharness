@@ -12,9 +12,18 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Restore `.oh/agents/` as an empty pack with its `.claude/agents` and `.codex/agents` provider symlinks; no agent is defined in it ([#866](https://github.com/mifunedev/openharness/pull/866)).
 
 ### Removed
+- Delete the `.oh/context/` always-on tier in full, leaving `AGENTS.md` as the only always-on context. No `SessionStart` hook ever loaded it — prose in `AGENTS.md` asked for it ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Retire `repo-map-contract.sh`, `CB-004`, `repo-orientation/`, and its scorer. `REPO_MAP.md` goes as **unproven**, not disproven: its A/B landed 2026-07-03 and was never run ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Retire the ablation subsystem — `ablate.sh`, `ablate-state-machine.sh`, `context-audit-runner.sh`, `--ablate`. Its allowlist took only the five context files ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Retire `CB-003-retro-identity-cycle.md` and the `DS-020-lens-diversity` dataset, which scored the identity-promotion cycle that no longer exists ([#868](https://github.com/mifunedev/openharness/issues/868)).
 - Delete the canonical agent definitions (`.oh/agents/`), `.oh/plans/`, `.oh/handoffs/`, and the accumulated `.oh/tasks/` folders and archive ([#865](https://github.com/mifunedev/openharness/pull/865)).
 
 ### Changed
+- `/retro` is now strictly report-only and writes no file; `IDENTITY.md` was its only write target. A graduated lesson is nominated as a candidate probe under `.oh/evals/probes/` instead ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- `/prompt-miner` loses its `IDENTITY.md` proposal target and proposes a probe instead ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Rewrite `context-tier-size-budget.sh` as an `AGENTS.md`-only 9,500 B ratchet, dropping `SINGLE_FILE_SHARE_MAX` — one file in the tier is necessarily 100% of it ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- Lower the `capability-benchmark-schema` and `datasets-schema` floors to `>= 2`, matching the retired CB and DS artifacts ([#868](https://github.com/mifunedev/openharness/issues/868)).
+- `oh init` no longer ships `context/**`, so new projects stop scaffolding a directory nothing loads ([#868](https://github.com/mifunedev/openharness/issues/868)).
 - Update the `.oh/agents/` references in `docs/glossary.md` and `docs/oh-directory-layout.md` to describe an empty pack and drop the links to deleted agent files ([#867](https://github.com/mifunedev/openharness/pull/867)).
 - Refocus root agent guidance on product identity, glossary, hazards, and code as truth; move build workflow authority into its task skill ([#854](https://github.com/mifunedev/openharness/issues/854)).
 - Upgrade the sandbox base image to `debian:trixie-slim` and move Docker's apt suite to `trixie`; Cloudflare's suite stays on `bookworm` ([#807](https://github.com/mifunedev/openharness/issues/807)).

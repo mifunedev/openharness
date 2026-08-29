@@ -23,11 +23,11 @@ conventions, git workflow, or where files live.
    `.oh/scripts/README.md`, `.oh/worktrees/README.md`) and the `How the system
    fits together` section of `AGENTS.md`. There is no single comprehensive
    tree — use the filesystem and the directory READMEs.
-3. For behavioral norms (formerly the `.oh/context/rules/` tier, collapsed into
-   on-demand skills in B-state M4), the canonical homes are now:
+3. For behavioral norms, now collapsed from an always-on tier into on-demand
+   skills, the canonical homes are:
    - `/git` (`.oh/skills/git/SKILL.md`) — issue / branch / commit / PR conventions
    - `/t3` (`.oh/skills/t3/references/sandbox-processes.md`) — tmux sessions for long-running processes
-   - `.oh/context/directory-readme.md` — when a directory needs a README
+   - `references/directory-readme.md` — when a directory needs a README
    - the `advisor` agent (`.oh/agents/advisor.md`) — pattern for delegating to sub-agents
 4. For skill-listing or skill-source-of-truth questions, load `references/skill-source-of-truth.md` and separate the tracked Open Harness shared skill library (`.oh/skills/*/SKILL.md`, exposed through `.claude/skills`, `.codex/skills`, `.pi/skills`, and Hermes' runtime `.hermes/skills/openharness` symlink) from the active Hermes runtime catalog (`.hermes/skills/` plus bundled/profile skills). Do not present `hermes skills list` as the repo source of truth without this distinction.
 5. For shared-skill path migrations or cross-agent skill wiring, load `references/shared-skills-symlink-migration.md`; update symlinks, runtime boot setup, docs, CI path filters, cron invocations, exact-path eval probes, and fixed-depth support scripts together before declaring the migration done.
@@ -40,5 +40,4 @@ conventions, git workflow, or where files live.
 - Short factual answer first, then file references.
 - Lifecycle questions (setup / validate / teardown): cite the relevant
   section of `CLAUDE.md`.
-- Convention questions: cite the owning skill (`.oh/skills/<name>/SKILL.md`)
-  or the relevant `.oh/context/` doc.
+- Convention questions: cite the owning skill (`.oh/skills/<name>/SKILL.md`).

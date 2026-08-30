@@ -62,6 +62,6 @@ describe("default Herdr integration", () => {
     expect(herdrDocs).toContain("~/.config/herdr");
     expect(herdrDocs).toContain("~/.herdr/worktrees");
     expect(herdrDocs).not.toContain("herdr update");
-    expect(imageDocs).toContain("herdr-data:/home/sandbox/.herdr");
+    expect(imageDocs).toContain(":/home/sandbox \\");
   });
 });

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tier: A
 # source: issue #900 (slim the sandbox image) 2026-08-30
-# desc: The baked home seed ships no build caches (~/.npm, ~/.cache/uv are purged before the seed is staged) and the build context excludes .pnpm-store and the .pi build outputs
+# desc: The baked home seed ships no build caches (~/.npm, ~/.cache/uv are purged inside the stage the seed is copied from), /opt/home-seed keeps the 0700 mode of the home it replaces, and the build context excludes .pnpm-store and the .pi build outputs
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -16,34 +16,82 @@ fails=()
 
 instructions="$(grep -nvE '^[[:space:]]*(#|$)' "$DOCKERFILE" || true)"
 
-first_line_matching() {
-  printf '%s\n' "$instructions" | { grep -E "$1" || true; } | head -n1 | cut -d: -f1
-}
+declare -A line_stage=()
+declare -A stage_defined=()
+cur_stage='<unnamed>'
+while IFS= read -r entry; do
+  [[ -n "$entry" ]] || continue
+  ln="${entry%%:*}"
+  text="${entry#*:}"
+  if [[ "$text" =~ ^[[:space:]]*[Ff][Rr][Oo][Mm][[:space:]] ]]; then
+    if [[ "$text" =~ [[:space:]][Aa][Ss][[:space:]]+([A-Za-z0-9_.-]+)[[:space:]]*$ ]]; then
+      cur_stage="${BASH_REMATCH[1]}"
+    else
+      cur_stage='<unnamed>'
+    fi
+    stage_defined["$cur_stage"]=1
+  fi
+  line_stage["$ln"]="$cur_stage"
+done <<< "$instructions"
 
-stage_line="$(first_line_matching '/opt/home-seed')"
+mv_re='^[[:space:]]*RUN[[:space:]]+mv[[:space:]]+/home/sandbox[[:space:]]+/opt/home-seed[[:space:]]*$'
+copy_re='^[[:space:]]*COPY[[:space:]].*--from=([^[:space:]]+).*[[:space:]]/home/sandbox[[:space:]]+/opt/home-seed[[:space:]]*$'
+
+stage_line=""
+seed_stage=""
+seed_form=""
+while IFS= read -r entry; do
+  [[ -n "$entry" ]] || continue
+  ln="${entry%%:*}"
+  text="${entry#*:}"
+  if [[ "$text" =~ $mv_re ]]; then
+    stage_line="$ln"; seed_form="mv"; seed_stage="${line_stage[$ln]}"; break
+  fi
+  if [[ "$text" =~ $copy_re ]]; then
+    stage_line="$ln"; seed_form="copy"; seed_stage="${BASH_REMATCH[1]}"; break
+  fi
+done <<< "$instructions"
 
 if [[ -z "$stage_line" ]]; then
-  fails+=("Dockerfile must stage the baked home at /opt/home-seed (no instruction mentions it)")
-  stage_line=$(( $(wc -l < "$DOCKERFILE") + 1 ))
+  fails+=("Dockerfile must stage the baked home at /opt/home-seed with 'RUN mv /home/sandbox /opt/home-seed' or 'COPY --from=<stage> /home/sandbox /opt/home-seed' (no instruction does)")
+elif [[ "$seed_form" == "copy" && -z "${stage_defined[$seed_stage]:-}" ]]; then
+  fails+=("the /opt/home-seed staging COPY at line $stage_line sources --from=$seed_stage, which is not a stage defined in this Dockerfile; the seed must come from a stage this build produces")
+  stage_line=""
 fi
 
-# Each cache is identified by any spelling that resolves to the same path:
-# the literal path, the $HOME-relative form, or the ENV var the Dockerfile pins.
 npm_cache_re='rm -rf[^;&|]*(/home/sandbox/\.npm|\$\{?HOME\}?/\.npm)([[:space:]]|/|$)'
 uv_cache_re='rm -rf[^;&|]*(/home/sandbox/\.cache/uv|\$\{?HOME\}?/\.cache/uv|\$\{?UV_CACHE_DIR\}?)([[:space:]]|/|$)'
 
 check_purge() {
-  local label="$1" re="$2" line
-  line="$(first_line_matching "$re")"
-  if [[ -z "$line" ]]; then
+  local label="$1" re="$2" entry ln found_any="" ok=""
+  [[ -n "$stage_line" ]] || return 0
+  while IFS= read -r entry; do
+    [[ -n "$entry" ]] || continue
+    ln="${entry%%:*}"
+    [[ "${entry#*:}" =~ $re ]] || continue
+    found_any=1
+    [[ "${line_stage[$ln]}" == "$seed_stage" ]] || continue
+    if [[ "$seed_form" == "mv" ]] && (( ln >= stage_line )); then continue; fi
+    ok=1
+  done <<< "$instructions"
+
+  if [[ -z "$found_any" ]]; then
     fails+=("Dockerfile never removes the $label build cache from /home/sandbox; it ships inside the home seed staged at /opt/home-seed")
-  elif (( line >= stage_line )); then
-    fails+=("Dockerfile removes the $label build cache at line $line, at or after the seed is staged at /opt/home-seed (line $stage_line); the purge must run before staging (and, in a multi-stage build, inside the stage that produces the home)")
+  elif [[ -z "$ok" && "$seed_form" == "mv" ]]; then
+    fails+=("Dockerfile removes the $label build cache at or after the home is staged at /opt/home-seed (line $stage_line); the purge must run before staging")
+  elif [[ -z "$ok" ]]; then
+    fails+=("Dockerfile removes the $label build cache, but not inside the stage '$seed_stage' whose /home/sandbox becomes the seed staged at /opt/home-seed (line $stage_line); a purge in any other stage leaves the shipped seed unchanged")
   fi
 }
 
 check_purge "npm (~/.npm)" "$npm_cache_re"
 check_purge "uv (~/.cache/uv)" "$uv_cache_re"
+
+if [[ -n "$stage_line" ]] \
+   && ! grep -qE 'chmod([[:space:]]+-[^[:space:]]+)*[[:space:]]+0?700[[:space:]]+/opt/home-seed([[:space:]]|$)' "$DOCKERFILE" \
+   && ! grep -qE '^[[:space:]]*COPY[[:space:]].*--chmod=0?700.*[[:space:]]/opt/home-seed([[:space:]]|$)' "$DOCKERFILE"; then
+  fails+=("/opt/home-seed must be mode 0700, matching the 0700 Debian useradd -m home it replaces; 'COPY --from' creates the destination 0755 and --chown does not restore the mode, so the final stage must chmod it")
+fi
 
 ignored() {
   grep -qE "^[[:space:]]*(\*\*/)?$1/?[[:space:]]*$" "$DOCKERIGNORE"
@@ -80,5 +128,5 @@ if (( ${#fails[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: the Dockerfile purges ~/.npm and ~/.cache/uv before the home is staged at /opt/home-seed, and .dockerignore keeps .pnpm-store and the .pi build outputs out of the build context without dropping any tracked .pi file" >&2
+echo "PASS: the Dockerfile purges ~/.npm and ~/.cache/uv inside the stage whose /home/sandbox becomes the seed staged at /opt/home-seed, stages that seed 0700, and .dockerignore keeps .pnpm-store and the .pi build outputs out of the build context without dropping any tracked .pi file" >&2
 exit 0

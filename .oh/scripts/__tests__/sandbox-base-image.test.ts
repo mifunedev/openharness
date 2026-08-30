@@ -13,6 +13,22 @@ describe("sandbox base image", () => {
     expect(dockerfile).not.toContain("deb.nodesource.com");
   });
 
+  it("derives every stage transitively from the pinned base", () => {
+    const froms = dockerfile
+      .split("\n")
+      .filter((line) => /^FROM\s/.test(line))
+      .map((line) => line.trim().split(/\s+/));
+    expect(froms.length).toBeGreaterThan(0);
+
+    const defined = new Set<string>();
+    const foreign: string[] = [];
+    for (const [, image, asKeyword, name] of froms) {
+      if (image !== "node:22-trixie-slim" && !defined.has(image)) foreign.push(image);
+      if (asKeyword?.toLowerCase() === "as" && name) defined.add(name);
+    }
+    expect(foreign).toEqual([]);
+  });
+
   it("tracks Trixie for Docker's apt repository", () => {
     expect(dockerfile).toContain("https://download.docker.com/linux/debian trixie stable");
     expect(dockerfile).not.toContain("https://download.docker.com/linux/debian bookworm stable");

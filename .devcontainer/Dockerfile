@@ -202,6 +202,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 COPY --from=home --chown=sandbox:sandbox /home/sandbox /opt/home-seed
 RUN rm -rf /opt/home-seed/harness /home/sandbox \
+ && chmod 0700 /opt/home-seed \
  && install -d -o sandbox -g sandbox -m 0755 /home/sandbox
 
 WORKDIR ${OH_PROJECT_ROOT}

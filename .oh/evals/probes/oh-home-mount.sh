@@ -52,8 +52,19 @@ if grep -qE '^[[:space:]]*-[[:space:]]*\.\.:' "$COMPOSE_IO"; then
   fails+=("docker-compose.image-only.yml must NOT bind a checkout — the workspace is a directory inside the home mount")
 fi
 
-grep -Eq '^(RUN mv /home/sandbox /opt/home-seed|COPY --from=[^[:space:]]+([[:space:]]+--[^[:space:]]+)*[[:space:]]+/home/sandbox[[:space:]]+/opt/home-seed)' "$DOCKERFILE" \
-  || fails+=("Dockerfile must stage the baked home at /opt/home-seed (RUN mv, or COPY --from=<stage> /home/sandbox /opt/home-seed) so a host bind and a named volume are seeded identically")
+dockerfile_stages="$(grep -oiE '^[[:space:]]*FROM[[:space:]]+[^[:space:]]+[[:space:]]+AS[[:space:]]+[A-Za-z0-9_.-]+[[:space:]]*$' "$DOCKERFILE" | awk '{print $NF}')"
+seed_copy="$(grep -E '^[[:space:]]*COPY[[:space:]].*--from=[^[:space:]]+.*[[:space:]]/home/sandbox[[:space:]]+/opt/home-seed[[:space:]]*$' "$DOCKERFILE" | head -n1)"
+seed_from="$(printf '%s' "$seed_copy" | grep -oE -- '--from=[^[:space:]]+' | head -n1 | cut -d= -f2)"
+
+if grep -Eq '^[[:space:]]*RUN[[:space:]]+mv[[:space:]]+/home/sandbox[[:space:]]+/opt/home-seed[[:space:]]*$' "$DOCKERFILE"; then
+  :
+elif [[ -z "$seed_from" ]]; then
+  fails+=("Dockerfile must stage the baked home at /opt/home-seed (RUN mv, or COPY --from=<stage> /home/sandbox /opt/home-seed) so a host bind and a named volume are seeded identically")
+elif ! printf '%s\n' "$dockerfile_stages" | grep -qxF "$seed_from"; then
+  fails+=("the /opt/home-seed staging COPY sources --from=$seed_from, which is not a stage defined in this Dockerfile; an external image's /home/sandbox is not the home this build bakes")
+elif [[ "$seed_from" == "base" ]]; then
+  fails+=("the /opt/home-seed staging COPY sources --from=base, whose /home/sandbox is bare useradd -m skel; the seed must come from the stage that bakes the dotfiles, agent state, and toolchain homes")
+fi
 grep -Fq 'install -d -o sandbox -g sandbox -m 0755 /home/sandbox' "$DOCKERFILE" \
   || fails+=("Dockerfile must leave /home/sandbox empty after staging the seed (an empty named volume must not auto-copy)")
 grep -Fq 'rm -rf /opt/home-seed/harness' "$DOCKERFILE" \

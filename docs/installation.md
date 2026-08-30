@@ -363,11 +363,13 @@ ownership of everything in it, so never point it at your own host `$HOME`.
 The repository checkout is bind-mounted at `/home/sandbox/harness`, nested
 inside that mount. Its location is fixed, not configurable.
 
-The image ships its baked home at `/opt/home-seed`; on every boot the entrypoint
-copies in only the entries the mount does not already have, never touching an
-existing file or directory — not even its permissions. A fresh mount comes up
-complete, and an image upgrade backfills new files while leaving your state
-alone.
+The image ships its baked home at `/opt/home-seed`. On every boot the entrypoint
+copies in each **top-level** entry the mount does not already have, and never
+touches one it does — not even its permissions. A fresh mount comes up complete;
+an image upgrade adds whatever new top-level entries it introduced (a new agent
+CLI's `~/.newtool`, say) and leaves everything you already have alone. It does
+not merge new files into a directory the mount already has, which is what the
+per-tool volumes did before.
 
 Hermes is split: when Hermes is enabled (`install.hermes: true` in `oh.json`),
 `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/`

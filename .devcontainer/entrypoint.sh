@@ -40,20 +40,13 @@ seed_home() {
   local src="${OH_HOME_SEED_SRC:-/opt/home-seed}"
   [ -d "$src" ] || return 0
   mkdir -p "$dest" || return 1
-  local rel
-  while IFS= read -r -d '' rel; do
-    rel="${rel#./}"
-    if [ -e "$dest/$rel" ] || [ -L "$dest/$rel" ]; then
+  local name
+  while IFS= read -r -d '' name; do
+    if [ -e "$dest/$name" ] || [ -L "$dest/$name" ]; then
       continue
     fi
-    if [ -d "$src/$rel" ] && [ ! -L "$src/$rel" ]; then
-      mkdir "$dest/$rel" || return 1
-      chmod --reference="$src/$rel" "$dest/$rel" || return 1
-      chown --reference="$src/$rel" "$dest/$rel" || return 1
-    else
-      cp -a "$src/$rel" "$dest/$rel" || return 1
-    fi
-  done < <(cd "$src" && find . -mindepth 1 -print0)
+    cp -a "$src/$name" "$dest/$name" || return 1
+  done < <(cd "$src" && find . -mindepth 1 -maxdepth 1 -printf '%P\0')
 }
 # <<< seed_home <<<
 

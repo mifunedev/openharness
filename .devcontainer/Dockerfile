@@ -126,14 +126,14 @@ ENV UV_TOOL_DIR=/home/sandbox/.local/share/uv/tools
 ENV UV_TOOL_BIN_DIR=/home/sandbox/.local/bin
 ENV UV_PYTHON_INSTALL_DIR=/home/sandbox/.local/share/uv/python
 ENV UV_CACHE_DIR=/home/sandbox/.cache/uv
-RUN install -d -o sandbox -g sandbox \
+RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
+ && install -d -o sandbox -g sandbox \
       /home/sandbox/.local \
       /home/sandbox/.local/share \
       /home/sandbox/.local/share/uv \
       /home/sandbox/.cache \
       /home/sandbox/.config \
       /home/sandbox/.herdr \
-      /home/sandbox/.ssh \
       "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR" \
  && chown -R sandbox:sandbox /opt/uv 2>/dev/null || true \
  && if [ -d /usr/local/lib/hermes-agent ]; then chown -R sandbox:sandbox /usr/local/lib/hermes-agent; fi

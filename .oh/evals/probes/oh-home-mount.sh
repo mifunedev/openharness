@@ -93,22 +93,25 @@ else
   [[ -f "$dest_b/.oh-my-zsh/marker" ]] \
     || fails+=("seed sim (b): seed_home must still backfill files the dest lacks, so image upgrades land")
 
-  # (b2) an existing DIRECTORY keeps its mode: a plain `cp -a -n` silently
-  # relaxes ~/.ssh from 0700 to the image's mode on every single boot.
+  # (b2) an existing top-level DIRECTORY is left entirely alone — mode
+  # included. A plain `cp -a -n` skips existing files but still rewrites the
+  # mode of directories, silently relaxing ~/.ssh from 0700 on every boot.
   mkdir -p "$src/.ssh"; chmod 755 "$src/.ssh"
   printf 'baked\n' > "$src/.ssh/known_hosts"
   dest_b2="$simdir/b2"; mkdir -p "$dest_b2/.ssh"; chmod 700 "$dest_b2/.ssh"
   ( set -e; source "$seed_fn_file"; OH_HOME_SEED_SRC="$src" seed_home "$dest_b2" )
   [[ "$(stat -c %a "$dest_b2/.ssh")" == "700" ]] \
     || fails+=("seed sim (b2): seed_home must not rewrite the mode of a directory the home mount already has")
-  [[ -f "$dest_b2/.ssh/known_hosts" ]] \
-    || fails+=("seed sim (b2): seed_home must still backfill into a directory that already exists")
+  [[ ! -e "$dest_b2/.ssh/known_hosts" ]] \
+    || fails+=("seed sim (b2): seed_home must not descend into an existing top-level entry — seeding is per top-level entry, so a whole-tree walk would re-copy the uv cache on every boot")
 
-  # (b3) a directory the mount lacks arrives with the image's own mode
+  # (b3) a top-level directory the mount lacks arrives whole, with its mode
   dest_b3="$simdir/b3"
   ( set -e; source "$seed_fn_file"; OH_HOME_SEED_SRC="$src" seed_home "$dest_b3" )
   [[ "$(stat -c %a "$dest_b3/.ssh")" == "755" ]] \
-    || fails+=("seed sim (b3): a directory absent from the home mount must be created with the seed's mode")
+    || fails+=("seed sim (b3): a directory absent from the home mount must arrive with the seed's mode")
+  [[ -f "$dest_b3/.ssh/known_hosts" ]] \
+    || fails+=("seed sim (b3): a directory absent from the home mount must arrive with its contents")
 
   # (c) idempotent across boots
   ( set -e; source "$seed_fn_file"; OH_HOME_SEED_SRC="$src" seed_home "$dest_a" )
@@ -135,5 +138,5 @@ if (( ${#fails[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: one \${OH_HOME_MOUNT:-workspace} mount at /home/sandbox in both compose files with the per-tool volumes retired and no pinned volume name; the checkout binds at the fixed /home/sandbox/harness; the Dockerfile stages /opt/home-seed and leaves the image home empty; entrypoint prunes \$OH_PROJECT_ROOT instead of -xdev; seed_home seeds, backfills, never clobbers a file or an existing directory's mode, reports write failures, and no-ops without a seed" >&2
+echo "PASS: one \${OH_HOME_MOUNT:-workspace} mount at /home/sandbox in both compose files with the per-tool volumes retired and no pinned volume name; the checkout binds at the fixed /home/sandbox/harness; the Dockerfile stages /opt/home-seed and leaves the image home empty; entrypoint prunes \$OH_PROJECT_ROOT instead of -xdev; seed_home copies whole top-level entries the mount lacks, never touches one it already has (mode included), reports write failures, and no-ops without a seed" >&2
 exit 0

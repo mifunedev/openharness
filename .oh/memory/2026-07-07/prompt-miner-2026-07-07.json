@@ -1,0 +1,1111 @@
+{
+  "manifest": {
+    "generatedAt": "2026-07-07T11:00:22.542Z",
+    "harnessFilter": "all",
+    "window": {
+      "start": "2026-07-06T11:00:22.542Z",
+      "end": "2026-07-07T11:00:22.542Z"
+    },
+    "sessionsScanned": 14,
+    "sessionsRanked": 14,
+    "toolErrorsTotal": 63,
+    "toolResultsTotal": 1170,
+    "malformedLines": 0,
+    "skippedFiles": 0,
+    "weights": {
+      "toolErrorRate": 35,
+      "correctionDensity": 30,
+      "abandoned": 20,
+      "incomplete": 10,
+      "turnBloat": 5,
+      "groundTruthBonus": 15
+    },
+    "scoreModel": "100 - 35*toolErrorRate - 30*correctionDensity - 20*abandoned - 10*incomplete - 5*turnBloat (+15 ground-truth, capped 100)",
+    "includePromptText": false,
+    "reportOnly": true,
+    "minTurns": 2,
+    "attribution": "first"
+  },
+  "markerFeatureKeys": [
+    "lenChars",
+    "lenWords",
+    "startsImperative",
+    "hasFilePath",
+    "hasAcceptanceCriteria",
+    "hasCodeFence",
+    "hasInlineCode",
+    "briefingStructure",
+    "referencesSkill",
+    "mentionsIssuePr",
+    "questionCount",
+    "urlCount",
+    "hedgingCount"
+  ],
+  "sessions": [
+    {
+      "sessionId": "0ee4f14f-ada3-4c14-b177-cab252ead90a",
+      "harness": "claude",
+      "gitBranch": "development",
+      "window": {
+        "firstTs": "2026-07-06T22:40:07.025Z",
+        "lastTs": "2026-07-07T00:29:56.829Z"
+      },
+      "turns": 317,
+      "humanPromptCount": 13,
+      "assistantTurns": 304,
+      "toolResults": 137,
+      "toolErrors": 5,
+      "lastAssistantStop": "end_turn",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "audit",
+      "score": 100,
+      "scoreBreakdown": {
+        "base": 86.8,
+        "groundTruthBonus": 15,
+        "groundTruthReason": "pr-url:github.com/mifunedev/openharness/pull/618",
+        "signals": {
+          "toolErrorRate": 0.0365,
+          "correctionDensity": 0.2308,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 1
+        },
+        "penalties": {
+          "toolErrorRate": 1.28,
+          "correctionDensity": 6.92,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 5
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": true,
+        "reason": "pr-url:github.com/mifunedev/openharness/pull/618"
+      },
+      "features": {
+        "lenChars": 4070,
+        "lenWords": 546,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": false,
+        "hasInlineCode": true,
+        "briefingStructure": true,
+        "referencesSkill": true,
+        "mentionsIssuePr": false,
+        "questionCount": 0,
+        "urlCount": 1,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 215331,
+      "totalOutputTokens": 320474
+    },
+    {
+      "sessionId": "e005fa06-19aa-4bf1-8f69-bb58459617b3",
+      "harness": "claude",
+      "gitBranch": "development",
+      "window": {
+        "firstTs": "2026-07-06T16:08:00.641Z",
+        "lastTs": "2026-07-06T16:46:48.914Z"
+      },
+      "turns": 187,
+      "humanPromptCount": 7,
+      "assistantTurns": 180,
+      "toolResults": 69,
+      "toolErrors": 1,
+      "lastAssistantStop": "end_turn",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "other",
+      "score": 100,
+      "scoreBreakdown": {
+        "base": 85.92,
+        "groundTruthBonus": 15,
+        "groundTruthReason": "pr-url:github.com/mifunedev/openharness/pull/617",
+        "signals": {
+          "toolErrorRate": 0.0145,
+          "correctionDensity": 0.2857,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 1
+        },
+        "penalties": {
+          "toolErrorRate": 0.51,
+          "correctionDensity": 8.57,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 5
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": true,
+        "reason": "pr-url:github.com/mifunedev/openharness/pull/617"
+      },
+      "features": {
+        "lenChars": 4423,
+        "lenWords": 144,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": true,
+        "hasInlineCode": false,
+        "briefingStructure": false,
+        "referencesSkill": false,
+        "mentionsIssuePr": false,
+        "questionCount": 0,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 76406,
+      "totalOutputTokens": 224112
+    },
+    {
+      "sessionId": "019f3aa4-a9b6-76ad-a583-9c58ed1ccbc4",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-07T03:34:57.718Z",
+        "lastTs": "2026-07-07T04:02:37.685Z"
+      },
+      "turns": 33,
+      "humanPromptCount": 1,
+      "assistantTurns": 32,
+      "toolResults": 59,
+      "toolErrors": 2,
+      "lastAssistantStop": "stop",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "other",
+      "score": 98.81,
+      "scoreBreakdown": {
+        "base": 98.81,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0.0339,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "penalties": {
+          "toolErrorRate": 1.19,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 4450,
+        "lenWords": 568,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": false,
+        "hasInlineCode": true,
+        "briefingStructure": true,
+        "referencesSkill": false,
+        "mentionsIssuePr": true,
+        "questionCount": 0,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 111436,
+      "totalOutputTokens": 12059
+    },
+    {
+      "sessionId": "019f3a8e-5ec1-7550-8d41-4f2d7a249459",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-07T03:10:36.737Z",
+        "lastTs": "2026-07-07T03:19:08.578Z"
+      },
+      "turns": 47,
+      "humanPromptCount": 1,
+      "assistantTurns": 46,
+      "toolResults": 75,
+      "toolErrors": 1,
+      "lastAssistantStop": "stop",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "audit",
+      "score": 98.78,
+      "scoreBreakdown": {
+        "base": 98.78,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0.0133,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0.15
+        },
+        "penalties": {
+          "toolErrorRate": 0.47,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0.75
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 9866,
+        "lenWords": 1292,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": true,
+        "hasInlineCode": true,
+        "briefingStructure": true,
+        "referencesSkill": true,
+        "mentionsIssuePr": true,
+        "questionCount": 1,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 94183,
+      "totalOutputTokens": 21189
+    },
+    {
+      "sessionId": "019f3aac-cf8f-772d-8aea-3f03cedd4e25",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-07T03:43:51.696Z",
+        "lastTs": "2026-07-07T03:54:29.541Z"
+      },
+      "turns": 45,
+      "humanPromptCount": 1,
+      "assistantTurns": 44,
+      "toolResults": 70,
+      "toolErrors": 2,
+      "lastAssistantStop": "stop",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "audit",
+      "score": 98.5,
+      "scoreBreakdown": {
+        "base": 98.5,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0.0286,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0.1
+        },
+        "penalties": {
+          "toolErrorRate": 1,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0.5
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 9866,
+        "lenWords": 1292,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": true,
+        "hasInlineCode": true,
+        "briefingStructure": true,
+        "referencesSkill": true,
+        "mentionsIssuePr": true,
+        "questionCount": 1,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 176286,
+      "totalOutputTokens": 29102
+    },
+    {
+      "sessionId": "019f3a96-4401-7855-b44c-b255d70ccab9",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-07T03:19:14.177Z",
+        "lastTs": "2026-07-07T03:43:46.288Z"
+      },
+      "turns": 45,
+      "humanPromptCount": 1,
+      "assistantTurns": 44,
+      "toolResults": 60,
+      "toolErrors": 2,
+      "lastAssistantStop": "stop",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "audit",
+      "score": 98.33,
+      "scoreBreakdown": {
+        "base": 98.33,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0.0333,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0.1
+        },
+        "penalties": {
+          "toolErrorRate": 1.17,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0.5
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 9866,
+        "lenWords": 1292,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": true,
+        "hasInlineCode": true,
+        "briefingStructure": true,
+        "referencesSkill": true,
+        "mentionsIssuePr": true,
+        "questionCount": 1,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 131975,
+      "totalOutputTokens": 16585
+    },
+    {
+      "sessionId": "019f3ab6-a0b8-733b-8889-80fb4f8a2e04",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-07T03:54:35.064Z",
+        "lastTs": "2026-07-07T04:01:13.585Z"
+      },
+      "turns": 35,
+      "humanPromptCount": 1,
+      "assistantTurns": 34,
+      "toolResults": 69,
+      "toolErrors": 5,
+      "lastAssistantStop": "stop",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "audit",
+      "score": 97.46,
+      "scoreBreakdown": {
+        "base": 97.46,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0.0725,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "penalties": {
+          "toolErrorRate": 2.54,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 9866,
+        "lenWords": 1292,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": true,
+        "hasInlineCode": true,
+        "briefingStructure": true,
+        "referencesSkill": true,
+        "mentionsIssuePr": true,
+        "questionCount": 1,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 136801,
+      "totalOutputTokens": 16852
+    },
+    {
+      "sessionId": "019f3abc-cb9c-748a-adfd-082dc4d22b06",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-07T04:01:19.260Z",
+        "lastTs": "2026-07-07T04:07:51.580Z"
+      },
+      "turns": 31,
+      "humanPromptCount": 1,
+      "assistantTurns": 30,
+      "toolResults": 51,
+      "toolErrors": 4,
+      "lastAssistantStop": "stop",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "audit",
+      "score": 97.25,
+      "scoreBreakdown": {
+        "base": 97.25,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0.0784,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "penalties": {
+          "toolErrorRate": 2.75,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 9866,
+        "lenWords": 1292,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": true,
+        "hasInlineCode": true,
+        "briefingStructure": true,
+        "referencesSkill": true,
+        "mentionsIssuePr": true,
+        "questionCount": 1,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 66252,
+      "totalOutputTokens": 17588
+    },
+    {
+      "sessionId": "019f3ac2-dd42-7565-bc48-a7798ccd10ba",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-07T04:07:56.994Z",
+        "lastTs": "2026-07-07T04:15:58.386Z"
+      },
+      "turns": 38,
+      "humanPromptCount": 1,
+      "assistantTurns": 37,
+      "toolResults": 60,
+      "toolErrors": 7,
+      "lastAssistantStop": "stop",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "audit",
+      "score": 95.92,
+      "scoreBreakdown": {
+        "base": 95.92,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0.1167,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "penalties": {
+          "toolErrorRate": 4.08,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 9866,
+        "lenWords": 1292,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": true,
+        "hasInlineCode": true,
+        "briefingStructure": true,
+        "referencesSkill": true,
+        "mentionsIssuePr": true,
+        "questionCount": 1,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 129583,
+      "totalOutputTokens": 19507
+    },
+    {
+      "sessionId": "019f3a90-0e55-79ba-a99b-18ad7344935f",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-07T03:12:27.221Z",
+        "lastTs": "2026-07-07T03:34:52.206Z"
+      },
+      "turns": 64,
+      "humanPromptCount": 1,
+      "assistantTurns": 63,
+      "toolResults": 88,
+      "toolErrors": 11,
+      "lastAssistantStop": "stop",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "other",
+      "score": 92.75,
+      "scoreBreakdown": {
+        "base": 92.75,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0.125,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 0.575
+        },
+        "penalties": {
+          "toolErrorRate": 4.38,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 2.88
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 4450,
+        "lenWords": 568,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": false,
+        "hasInlineCode": true,
+        "briefingStructure": true,
+        "referencesSkill": false,
+        "mentionsIssuePr": true,
+        "questionCount": 0,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 163200,
+      "totalOutputTokens": 38480
+    },
+    {
+      "sessionId": "019f3a02-e012-7d3c-86ca-a5ae584ff9c8",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-07T00:38:14.802Z",
+        "lastTs": "2026-07-07T00:55:42.596Z"
+      },
+      "turns": 119,
+      "humanPromptCount": 1,
+      "assistantTurns": 118,
+      "toolResults": 138,
+      "toolErrors": 10,
+      "lastAssistantStop": "stop",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "audit",
+      "score": 92.46,
+      "scoreBreakdown": {
+        "base": 92.46,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0.0725,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 1
+        },
+        "penalties": {
+          "toolErrorRate": 2.54,
+          "correctionDensity": 0,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 5
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 815,
+        "lenWords": 113,
+        "startsImperative": false,
+        "hasFilePath": false,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": false,
+        "hasInlineCode": false,
+        "briefingStructure": false,
+        "referencesSkill": false,
+        "mentionsIssuePr": true,
+        "questionCount": 0,
+        "urlCount": 1,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 548741,
+      "totalOutputTokens": 27605
+    },
+    {
+      "sessionId": "81c2ae51-092b-4e8c-8194-a37304dceee8",
+      "harness": "claude",
+      "gitBranch": "development",
+      "window": {
+        "firstTs": "2026-07-06T23:32:45.349Z",
+        "lastTs": "2026-07-07T00:35:31.135Z"
+      },
+      "turns": 264,
+      "humanPromptCount": 6,
+      "assistantTurns": 258,
+      "toolResults": 119,
+      "toolErrors": 5,
+      "lastAssistantStop": "end_turn",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "other",
+      "score": 88.53,
+      "scoreBreakdown": {
+        "base": 73.53,
+        "groundTruthBonus": 15,
+        "groundTruthReason": "pr-url:github.com/mifunedev/openharness/pull/619",
+        "signals": {
+          "toolErrorRate": 0.042,
+          "correctionDensity": 0.6667,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 1
+        },
+        "penalties": {
+          "toolErrorRate": 1.47,
+          "correctionDensity": 20,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 5
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": true,
+        "reason": "pr-url:github.com/mifunedev/openharness/pull/619"
+      },
+      "features": {
+        "lenChars": 1944,
+        "lenWords": 269,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": false,
+        "hasInlineCode": true,
+        "briefingStructure": false,
+        "referencesSkill": false,
+        "mentionsIssuePr": true,
+        "questionCount": 4,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 449553,
+      "totalOutputTokens": 338839
+    },
+    {
+      "sessionId": "440d2c2f-e377-4bfb-800c-8450fe845e82",
+      "harness": "claude",
+      "gitBranch": "development",
+      "window": {
+        "firstTs": "2026-07-07T00:32:50.298Z",
+        "lastTs": "2026-07-07T05:12:41.179Z"
+      },
+      "turns": 408,
+      "humanPromptCount": 9,
+      "assistantTurns": 399,
+      "toolResults": 175,
+      "toolErrors": 8,
+      "lastAssistantStop": "end_turn",
+      "abandoned": 0,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "audit",
+      "score": 88.4,
+      "scoreBreakdown": {
+        "base": 73.4,
+        "groundTruthBonus": 15,
+        "groundTruthReason": "commit-in-window",
+        "signals": {
+          "toolErrorRate": 0.0457,
+          "correctionDensity": 0.6667,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 1
+        },
+        "penalties": {
+          "toolErrorRate": 1.6,
+          "correctionDensity": 20,
+          "abandoned": 0,
+          "incomplete": 0,
+          "turnBloat": 5
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": true,
+        "reason": "commit-in-window"
+      },
+      "features": {
+        "lenChars": 1303,
+        "lenWords": 182,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": false,
+        "hasInlineCode": true,
+        "briefingStructure": false,
+        "referencesSkill": true,
+        "mentionsIssuePr": false,
+        "questionCount": 6,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 528490,
+      "totalOutputTokens": 474948
+    },
+    {
+      "sessionId": "019f382d-6893-7a10-bbaf-bb5ddd22b77a",
+      "harness": "pi",
+      "gitBranch": null,
+      "window": {
+        "firstTs": "2026-07-06T16:05:27.827Z",
+        "lastTs": "2026-07-06T16:06:38.401Z"
+      },
+      "turns": 2,
+      "humanPromptCount": 1,
+      "assistantTurns": 1,
+      "toolResults": 0,
+      "toolErrors": 0,
+      "lastAssistantStop": "aborted",
+      "abandoned": 1,
+      "incomplete": 0,
+      "noHumanPrompt": false,
+      "sessionType": "other",
+      "score": 80,
+      "scoreBreakdown": {
+        "base": 80,
+        "groundTruthBonus": 0,
+        "groundTruthReason": "none",
+        "signals": {
+          "toolErrorRate": 0,
+          "correctionDensity": 0,
+          "abandoned": 1,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "penalties": {
+          "toolErrorRate": 0,
+          "correctionDensity": 0,
+          "abandoned": 20,
+          "incomplete": 0,
+          "turnBloat": 0
+        },
+        "weights": {
+          "toolErrorRate": 35,
+          "correctionDensity": 30,
+          "abandoned": 20,
+          "incomplete": 10,
+          "turnBloat": 5,
+          "groundTruthBonus": 15
+        }
+      },
+      "groundTruth": {
+        "hasBonus": false,
+        "reason": "none"
+      },
+      "features": {
+        "lenChars": 509,
+        "lenWords": 48,
+        "startsImperative": false,
+        "hasFilePath": true,
+        "hasAcceptanceCriteria": false,
+        "hasCodeFence": true,
+        "hasInlineCode": false,
+        "briefingStructure": false,
+        "referencesSkill": false,
+        "mentionsIssuePr": false,
+        "questionCount": 0,
+        "urlCount": 0,
+        "hedgingCount": 0
+      },
+      "totalInputTokens": 0,
+      "totalOutputTokens": 0
+    }
+  ],
+  "unranked": [],
+  "weaknesses": [
+    {
+      "weakness_id": "WH-001",
+      "summary": "Recurring tool-call errors surfaced during execution",
+      "frequency": "13/14",
+      "affected_agents": [
+        "claude",
+        "pi"
+      ],
+      "likely_harness_layer": "terminal status",
+      "supporting_traces": [
+        {
+          "sessionId": "019f3a02-e012-7d3c-86ca-a5ae584ff9c8",
+          "harness": "pi",
+          "gitBranch": null
+        },
+        {
+          "sessionId": "019f3a8e-5ec1-7550-8d41-4f2d7a249459",
+          "harness": "pi",
+          "gitBranch": null
+        },
+        {
+          "sessionId": "019f3a90-0e55-79ba-a99b-18ad7344935f",
+          "harness": "pi",
+          "gitBranch": null
+        },
+        {
+          "sessionId": "019f3a96-4401-7855-b44c-b255d70ccab9",
+          "harness": "pi",
+          "gitBranch": null
+        },
+        {
+          "sessionId": "019f3aa4-a9b6-76ad-a583-9c58ed1ccbc4",
+          "harness": "pi",
+          "gitBranch": null
+        },
+        {
+          "sessionId": "019f3aac-cf8f-772d-8aea-3f03cedd4e25",
+          "harness": "pi",
+          "gitBranch": null
+        },
+        {
+          "sessionId": "019f3ab6-a0b8-733b-8889-80fb4f8a2e04",
+          "harness": "pi",
+          "gitBranch": null
+        },
+        {
+          "sessionId": "019f3abc-cb9c-748a-adfd-082dc4d22b06",
+          "harness": "pi",
+          "gitBranch": null
+        },
+        {
+          "sessionId": "019f3ac2-dd42-7565-bc48-a7798ccd10ba",
+          "harness": "pi",
+          "gitBranch": null
+        },
+        {
+          "sessionId": "0ee4f14f-ada3-4c14-b177-cab252ead90a",
+          "harness": "claude",
+          "gitBranch": "development"
+        },
+        {
+          "sessionId": "440d2c2f-e377-4bfb-800c-8450fe845e82",
+          "harness": "claude",
+          "gitBranch": "development"
+        },
+        {
+          "sessionId": "81c2ae51-092b-4e8c-8194-a37304dceee8",
+          "harness": "claude",
+          "gitBranch": "development"
+        },
+        {
+          "sessionId": "e005fa06-19aa-4bf1-8f69-bb58459617b3",
+          "harness": "claude",
+          "gitBranch": "development"
+        }
+      ],
+      "recommended_repair_surface": "verifier"
+    },
+    {
+      "weakness_id": "WH-002",
+      "summary": "Repeated user corrections point to an unclear task handoff",
+      "frequency": "4/14",
+      "affected_agents": [
+        "claude"
+      ],
+      "likely_harness_layer": "handoff",
+      "supporting_traces": [
+        {
+          "sessionId": "0ee4f14f-ada3-4c14-b177-cab252ead90a",
+          "harness": "claude",
+          "gitBranch": "development"
+        },
+        {
+          "sessionId": "440d2c2f-e377-4bfb-800c-8450fe845e82",
+          "harness": "claude",
+          "gitBranch": "development"
+        },
+        {
+          "sessionId": "81c2ae51-092b-4e8c-8194-a37304dceee8",
+          "harness": "claude",
+          "gitBranch": "development"
+        },
+        {
+          "sessionId": "e005fa06-19aa-4bf1-8f69-bb58459617b3",
+          "harness": "claude",
+          "gitBranch": "development"
+        }
+      ],
+      "recommended_repair_surface": "skill rule"
+    }
+  ]
+}

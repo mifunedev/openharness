@@ -38,7 +38,8 @@ describe("devcontainer entrypoint home mount ownership", () => {
     const uidSync = text.indexOf("usermod -u \"$HOST_UID\" sandbox");
 
     expect(seedFn).toBeGreaterThan(-1);
-    expect(text).toContain('cp -a -n "$src/." "$dest/"');
+    expect(text).toContain('if [ -e "$dest/$rel" ] || [ -L "$dest/$rel" ]; then');
+    expect(text).toContain('chmod --reference="$src/$rel" "$dest/$rel"');
     expect(text).toContain('${OH_HOME_SEED_SRC:-/opt/home-seed}');
     expect(seedCall).toBeGreaterThan(seedFn);
     expect(uidSync).toBeGreaterThan(seedCall);

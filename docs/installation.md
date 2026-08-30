@@ -364,9 +364,10 @@ The repository checkout is bind-mounted at `/home/sandbox/harness`, nested
 inside that mount. Its location is fixed, not configurable.
 
 The image ships its baked home at `/opt/home-seed`; on every boot the entrypoint
-copies anything the mount is missing into place without overwriting what is
-already there, so a fresh mount comes up complete and an image upgrade backfills
-new files while leaving your state alone.
+copies in only the entries the mount does not already have, never touching an
+existing file or directory — not even its permissions. A fresh mount comes up
+complete, and an image upgrade backfills new files while leaving your state
+alone.
 
 Hermes is split: when Hermes is enabled (`install.hermes: true` in `oh.json`),
 `HERMES_HOME` defaults to the project-local bind-mounted `~/harness/.hermes/`
@@ -384,12 +385,21 @@ it, and `oh destroy` says so.
 
 Releases before this change kept eleven separate volumes (`claude-auth`,
 `config-dir`, `ssh-config`, and so on). They are not migrated automatically.
-**Before** upgrading, capture the old home from the running container:
+**Before** upgrading, copy the old home out of the still-running container:
 
 ```bash
-docker cp <sandbox-name>:/home/sandbox /srv/openharness-home
+mkdir -p /srv/openharness-home
+docker cp <sandbox-name>:/home/sandbox/. /srv/openharness-home
+rm -rf /srv/openharness-home/harness
 oh config set storage.homePath /srv/openharness-home
 ```
+
+The trailing `/.` matters: without it `docker cp` places the copy at
+`/srv/openharness-home/sandbox/` instead of unpacking its contents, and the
+sandbox comes up freshly seeded as though nothing was migrated. The `rm -rf`
+drops the copy of the repository checkout — `docker cp` reads through the bind
+mount, so the archive includes `harness/` with its `.git` and `node_modules`,
+which can be several GB and is shadowed by the checkout bind at runtime anyway.
 
 Then rebuild. To stay on a Docker-managed volume instead, copy that directory
 into the new volume once:

@@ -5,6 +5,26 @@ import { assertInRoot } from "./env-file.js";
 const OH_CONFIG_FILE = "oh.json";
 const OH_CONFIG_MODE = 0o644;
 
+const RESERVED_HOME_PATHS: readonly string[] = [
+  "/",
+  "/bin",
+  "/boot",
+  "/dev",
+  "/etc",
+  "/home",
+  "/lib",
+  "/opt",
+  "/proc",
+  "/root",
+  "/run",
+  "/sbin",
+  "/srv",
+  "/sys",
+  "/tmp",
+  "/usr",
+  "/var",
+];
+
 export type ImageMode = "build" | "image";
 export type PullPolicy = "missing" | "always" | "never";
 
@@ -180,8 +200,17 @@ export function validateOhConfig(value: unknown): OhConfig {
   if (storage) {
     expectString(storage, "homePath", "storage.");
     const homePath = storage.homePath;
-    if (typeof homePath === "string" && homePath !== "" && !homePath.startsWith("/")) {
-      throw fieldError("storage.homePath", "must be an absolute host path");
+    if (typeof homePath === "string" && homePath !== "") {
+      if (!homePath.startsWith("/")) {
+        throw fieldError("storage.homePath", "must be an absolute host path");
+      }
+      const normalized = homePath.replace(/\/+$/, "") || "/";
+      if (RESERVED_HOME_PATHS.includes(normalized)) {
+        throw fieldError(
+          "storage.homePath",
+          "must be a dedicated directory — the sandbox takes ownership of everything under it",
+        );
+      }
     }
   }
 

@@ -170,12 +170,14 @@ source instead of the bundled `.oh/templates/`.
 
 ## Project-root seam
 
-`OH_PROJECT_ROOT` (default `/home/sandbox/harness`) is the single source of truth for
-the container workspace path. All devcontainer and `.oh/scripts` consumers derive their
-paths from `${OH_PROJECT_ROOT:-/home/sandbox/harness}` rather than the bare literal.
-`HARNESS` is kept as a back-compat alias (`HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"`);
-prefer `$OH_PROJECT_ROOT` in new code. This is Phase 1 of [#531](https://github.com/mifunedev/openharness/issues/531) toward `oh init`.
-The seam contract is guarded by `.oh/evals/probes/project-root-seam.sh`.
+`OH_PROJECT_ROOT` is `/home/sandbox/harness`, fixed. It is no longer configurable:
+the sandbox home is one mount at `/home/sandbox` and the checkout is nested inside
+it, so a relocatable project root buys nothing ([#898](https://github.com/mifunedev/openharness/issues/898)).
+The image pins it (`ENV OH_PROJECT_ROOT=/home/sandbox/harness`), and devcontainer
+and `.oh/scripts` consumers keep reading `${OH_PROJECT_ROOT:-/home/sandbox/harness}`
+rather than the bare literal. `HARNESS` remains a back-compat alias
+(`HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"`); prefer `$OH_PROJECT_ROOT` in new code.
+The fixed definition is guarded by `.oh/evals/probes/worktrees-layout.sh`.
 
 ## devcontainer layout
 

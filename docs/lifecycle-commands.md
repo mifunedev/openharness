@@ -111,5 +111,15 @@ Non-secret `oh.json` settings only reach compose when `oh` renders them, so on
 this path each variable falls back to its default in
 `.devcontainer/docker-compose.yml`.
 
+:::danger `storage.homePath` is ignored on this path
+`OH_HOME_MOUNT` is one of those rendered-only variables, so *Reopen in
+Container* falls back to the Docker-managed `<name>_workspace` volume even when
+`storage.homePath` points the sandbox home at a host directory. That is a
+**second, separate home**: agent logins made through `oh sandbox` are not there,
+and the two diverge silently from then on.
+
+If you set `storage.homePath`, always provision with `oh sandbox` and attach.
+:::
+
 If you need any overlay, provision with `oh sandbox` and then use *Dev
 Containers: Attach to Running Container* instead of *Reopen in Container*.

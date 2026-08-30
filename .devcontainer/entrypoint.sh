@@ -17,31 +17,7 @@ sandbox_ownership() {
 repair_home_mount_ownership() {
   local owner
   owner="$(sandbox_ownership)"
-  echo "[entrypoint] repairing sandbox auth mount ownership as $owner"
-
-  for dir in .claude .codex .pi .prime .grok .deepagents .herdr .cloudflared .config .cc-safety-net .ssh; do
-    if [ -d "/home/sandbox/$dir" ]; then
-      chown -hR "$owner" "/home/sandbox/$dir" 2>/dev/null || true
-      [ "$dir" = ".ssh" ] && chmod 700 "/home/sandbox/$dir" 2>/dev/null || true
-    fi
-  done
-
-  # Legacy Hermes home state may exist from earlier layouts. Do not recurse
-  # into $HERMES_HOME when it points at the bind-mounted checkout; that
-  if [ -d "/home/sandbox/.hermes" ]; then
-    chown -hR "$owner" "/home/sandbox/.hermes" 2>/dev/null || true
-  fi
-
-  for parent in /home/sandbox/.local /home/sandbox/.local/share /home/sandbox/.config; do
-    if [ -d "$parent" ]; then
-      chown -h "$owner" "$parent" 2>/dev/null || true
-    fi
-  done
-
-  OPENCODE_STATE="/home/sandbox/.local/share/opencode"
-  if [ -d "$OPENCODE_STATE" ]; then
-    chown -hR "$owner" "$OPENCODE_STATE" 2>/dev/null || true
-  fi
+  echo "[entrypoint] repairing sandbox home mount ownership as $owner"
 
   install -d -o sandbox -g sandbox \
     /home/sandbox/.local/share/uv \
@@ -49,12 +25,24 @@ repair_home_mount_ownership() {
     /home/sandbox/.local/share/uv/python \
     /home/sandbox/.cache \
     /home/sandbox/.cache/uv 2>/dev/null || true
-  for uv_dir in /home/sandbox/.local/share/uv /home/sandbox/.cache/uv; do
-    if [ -d "$uv_dir" ]; then
-      chown -hR "$owner" "$uv_dir" 2>/dev/null || true
-    fi
-  done
+
+  find /home/sandbox -path "$OH_PROJECT_ROOT" -prune -o \
+    -exec chown -h "$owner" {} + 2>/dev/null || true
+
+  if [ -d /home/sandbox/.ssh ]; then
+    chmod 700 /home/sandbox/.ssh 2>/dev/null || true
+  fi
 }
+
+# >>> seed_home >>>
+seed_home() {
+  local dest="${1:-/home/sandbox}"
+  local src="${OH_HOME_SEED_SRC:-/opt/home-seed}"
+  [ -d "$src" ] || return 0
+  mkdir -p "$dest"
+  cp -a -n "$src/." "$dest/" 2>/dev/null || true
+}
+# <<< seed_home <<<
 
 # >>> seed_workspace_volume >>>
 seed_workspace_volume() {
@@ -85,11 +73,12 @@ seed_workspace_volume() {
 }
 # <<< seed_workspace_volume <<<
 
-repair_home_mount_ownership
-
-# ─── Host UID reconciliation ────────────────────────────────────────
 OH_PROJECT_ROOT="${OH_PROJECT_ROOT:-/home/sandbox/harness}"
 HARNESS="${HARNESS:-$OH_PROJECT_ROOT}"
+
+seed_home /home/sandbox
+
+# ─── Host UID reconciliation ────────────────────────────────────────
 
 uid_reconcile_step() {
   local description="$1"
@@ -131,7 +120,6 @@ elif [ -d "$HARNESS_DIR" ]; then
   fi
   if [ "$HOST_UID" != "$SANDBOX_UID" ]; then
     uid_reconcile_step "set sandbox UID to host UID $HOST_UID" usermod -u "$HOST_UID" sandbox || UID_GID_SYNC_OK=false
-    uid_reconcile_step "repair sandbox-owned files after UID/GID sync" find /home/sandbox -xdev -uid "$SANDBOX_UID" -exec chown -h "$HOST_UID:$HOST_GID" {} + || UID_GID_SYNC_OK=false
     if [ "$UID_GID_SYNC_OK" = "true" ]; then
       echo "[entrypoint] sandbox UID synced to host ($SANDBOX_UID → $HOST_UID, $SANDBOX_GID → $HOST_GID)"
     else

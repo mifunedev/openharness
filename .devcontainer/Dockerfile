@@ -1,7 +1,6 @@
 FROM node:22-trixie-slim
 
-ARG OH_PROJECT_ROOT=/home/sandbox/harness
-ENV OH_PROJECT_ROOT=${OH_PROJECT_ROOT}
+ENV OH_PROJECT_ROOT=/home/sandbox/harness
 
 ENV TZ=America/Denver
 
@@ -132,6 +131,9 @@ RUN install -d -o sandbox -g sandbox \
       /home/sandbox/.local/share \
       /home/sandbox/.local/share/uv \
       /home/sandbox/.cache \
+      /home/sandbox/.config \
+      /home/sandbox/.herdr \
+      /home/sandbox/.ssh \
       "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR" \
  && chown -R sandbox:sandbox /opt/uv 2>/dev/null || true \
  && if [ -d /usr/local/lib/hermes-agent ]; then chown -R sandbox:sandbox /usr/local/lib/hermes-agent; fi
@@ -188,6 +190,10 @@ RUN if [ "${INSTALL_PYTHON_KERNEL}" = "true" ]; then \
 
 COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+
+RUN mv /home/sandbox /opt/home-seed \
+ && rm -rf /opt/home-seed/harness \
+ && install -d -o sandbox -g sandbox -m 0755 /home/sandbox
 
 WORKDIR ${OH_PROJECT_ROOT}
 

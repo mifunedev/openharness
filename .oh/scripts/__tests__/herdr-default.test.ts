@@ -22,20 +22,18 @@ describe("default Herdr integration", () => {
     (composeFile) => {
       const compose = readRepoFile(`.devcontainer/${composeFile}`);
 
-      expect(compose).toContain("herdr-data:/home/sandbox/.herdr");
-      expect(compose).toContain("config-dir:/home/sandbox/.config");
-      expect(compose).not.toContain("/home/sandbox/.config/herdr");
-      expect(compose).not.toContain("/home/sandbox/.config/gh");
-      expect(compose).toMatch(/^  herdr-data:$/m);
-      expect(compose).toMatch(/^  config-dir:$/m);
+      expect(compose).toContain("${OH_HOME_MOUNT:-workspace}:/home/sandbox");
+      expect(compose).not.toContain("/home/sandbox/.herdr");
+      expect(compose).not.toContain("/home/sandbox/.config");
+      expect(compose).toMatch(/^  workspace:$/m);
     },
   );
 
-  it("repairs ownership for Herdr volumes after UID sync", () => {
+  it("repairs ownership for Herdr state after UID sync", () => {
     const entrypoint = readRepoFile(".devcontainer/entrypoint.sh");
 
-    expect(entrypoint).toContain(".herdr");
-    expect(entrypoint).toMatch(/for dir in .* \.config /);
+    expect(entrypoint).toContain('find /home/sandbox -path "$OH_PROJECT_ROOT" -prune -o');
+    expect(entrypoint).toContain('-exec chown -h "$owner" {} +');
   });
 
   it("makes Herdr the first interactive action in canonical onboarding", () => {

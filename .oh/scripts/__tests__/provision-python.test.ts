@@ -112,8 +112,9 @@ describe("entrypoint uv ownership repair", () => {
   it("repairs the uv tree on every boot", () => {
     const text = entrypoint();
     expect(text).toContain("/home/sandbox/.local/share/uv/python");
-    expect(text).toContain('for uv_dir in /home/sandbox/.local/share/uv /home/sandbox/.cache/uv');
-    expect(text).toContain('chown -hR "$owner" "$uv_dir"');
+    expect(text).toContain("/home/sandbox/.cache/uv");
+    expect(text).toContain('find /home/sandbox -path "$OH_PROJECT_ROOT" -prune -o');
+    expect(text).toContain('-exec chown -h "$owner" {} +');
   });
 
   it("runs provisioning after provider links and does not abort boot on failure", () => {

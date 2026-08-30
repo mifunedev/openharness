@@ -334,6 +334,14 @@ export async function runDestroy(opts: DestroyOptions, io: LifecycleIO): Promise
         "login, the gh CLI token, and the SSH keys. Sign-in starts over.\n\n",
     );
 
+    const homePath = readOhConfig(ohConfigPath(root)).storage?.homePath;
+    if (homePath !== undefined && homePath !== "") {
+      io.stdout(
+        `The sandbox home is a host bind at ${homePath}, which \`down -v\` does not\n` +
+          "touch. Remove it yourself if you also want that gone.\n\n",
+      );
+    }
+
     const askFn = io.ask ?? prompt.ask;
     const answer = (await askFn(`Type the sandbox name \`${name}\` to destroy it:`)).trim();
     if (answer !== name) {

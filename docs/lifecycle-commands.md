@@ -67,12 +67,16 @@ configuration, so they stay host-only rather than failing halfway.
 
 ## `oh destroy` and its confirmation policy
 
-`down -v` wipes the named volumes, and those volumes hold provider
+`down -v` wipes the sandbox home volume, and that volume holds provider
 authentication. `oh destroy` is therefore the only lifecycle verb that asks
 before it runs. It names the volumes it is about to delete — read from
 `.devcontainer/docker-compose.yml`, not hardcoded — then requires you to type
 the sandbox name. A blank line, a wrong name, or anything else aborts with a
 non-zero exit and removes nothing.
+
+When `storage.homePath` points the home mount at a host path, `down -v` cannot
+delete it. `oh destroy` says so and leaves the directory in place; remove it
+yourself if you want it gone.
 
 Non-interactive use is gated on an explicit flag. When stdin is not a terminal
 and `--yes` is absent, `oh destroy` refuses outright rather than assume consent.

@@ -40,8 +40,10 @@ herdr integration status
 
 ## Persistence
 
-- `~/.config/herdr` (in the shared `config-dir` volume): configuration, logs, and session metadata.
-- `~/.herdr` (in `herdr-data`): Herdr-created worktrees and related data.
+- `~/.config/herdr`: configuration, logs, and session metadata.
+- `~/.herdr`: Herdr-created worktrees and related data.
+
+Both persist in the single `/home/sandbox` mount.
 
 `oh stop` and normal rebuilds preserve metadata and layout in these volumes, but stopped containers do not preserve running agent, test, or server processes. `oh destroy` runs Compose with `-v` and removes the volumes too.
 

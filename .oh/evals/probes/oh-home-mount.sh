@@ -52,8 +52,8 @@ if grep -qE '^[[:space:]]*-[[:space:]]*\.\.:' "$COMPOSE_IO"; then
   fails+=("docker-compose.image-only.yml must NOT bind a checkout — the workspace is a directory inside the home mount")
 fi
 
-grep -Eq '^RUN mv /home/sandbox /opt/home-seed' "$DOCKERFILE" \
-  || fails+=("Dockerfile must move the baked home to /opt/home-seed so a host bind and a named volume are seeded identically")
+grep -Eq '^(RUN mv /home/sandbox /opt/home-seed|COPY --from=[^[:space:]]+([[:space:]]+--[^[:space:]]+)*[[:space:]]+/home/sandbox[[:space:]]+/opt/home-seed)' "$DOCKERFILE" \
+  || fails+=("Dockerfile must stage the baked home at /opt/home-seed (RUN mv, or COPY --from=<stage> /home/sandbox /opt/home-seed) so a host bind and a named volume are seeded identically")
 grep -Fq 'install -d -o sandbox -g sandbox -m 0755 /home/sandbox' "$DOCKERFILE" \
   || fails+=("Dockerfile must leave /home/sandbox empty after staging the seed (an empty named volume must not auto-copy)")
 grep -Fq 'rm -rf /opt/home-seed/harness' "$DOCKERFILE" \

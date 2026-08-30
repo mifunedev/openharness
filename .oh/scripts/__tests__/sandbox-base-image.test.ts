@@ -8,7 +8,7 @@ const dockerfile = readFileSync(path.join(repoRoot, ".devcontainer/Dockerfile"),
 
 describe("sandbox base image", () => {
   it("builds from the official Node image on Debian Trixie", () => {
-    expect(dockerfile).toMatch(/^FROM node:22-trixie-slim$/m);
+    expect(dockerfile).toMatch(/^FROM node:22-trixie-slim( AS \S+)?$/m);
     expect(dockerfile).not.toContain("debian:bookworm-slim");
     expect(dockerfile).not.toContain("deb.nodesource.com");
   });

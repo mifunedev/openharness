@@ -78,3 +78,9 @@ packages/*/node_modules/
 !.oh/skills/wiki/corpus/raw/
 .oh/skills/wiki/corpus/raw/*
 !.oh/skills/wiki/corpus/raw/README.md
+
+# Per-session agent memory and cron runtime state — local scratch, like the
+# wiki corpus above. Nothing here is tracked on any branch; the operator
+# whitelists an entry with `git add -f` if one is ever worth keeping.
+.oh/memory/
+.oh/crons/

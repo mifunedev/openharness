@@ -115,7 +115,7 @@ remove, so the reason is always printed to stderr and returned in the JSON.
 
   This is what makes a no-op recoverable: the next session, or the operator after
   the fact, can see an escalation was attempted and died in a dead channel. See
-  [`.oh/logs/README.md`](../../logs/README.md).
+  [`.oh/logs/AGENTS.md`](../../logs/AGENTS.md).
 - **Timeout**: `ESCALATE_TIMEOUT` seconds per Slack call, default 10 — an
   unreachable gateway must not hang an unattended session.
 

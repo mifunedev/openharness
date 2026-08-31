@@ -31,8 +31,12 @@ if ((${#failures[@]})); then
   exit 1
 fi
 
-base=""
+# WIKI_LEDGER_BASE overrides the comparison point so the append-only invariant can
+# be exercised against a real mutation rather than only asserted.
+base="${WIKI_LEDGER_BASE:-}"
+[[ -n "$base" ]] && base="$(git -C "$ROOT" rev-parse "$base" 2>/dev/null || true)"
 for cand in development main master; do
+  [[ -n "$base" ]] && break
   if git -C "$ROOT" show-ref --verify --quiet "refs/heads/$cand"; then
     base="$(git -C "$ROOT" merge-base HEAD "$cand" 2>/dev/null || true)"
     [[ -n "$base" ]] && break
@@ -48,13 +52,20 @@ if ! git -C "$ROOT" cat-file -e "$base:$LEDGER_REL" 2>/dev/null; then
   exit 0
 fi
 
+MARKER='<!-- Appended below this line'
+
 records() {
-  # "<id>\t<sha1 of the record block>" for every ## SI-... section
+  # Only the append region counts. Everything above the marker is documentation,
+  # including a worked example whose ids would otherwise collide with real records.
+  awk -v m="$MARKER" 'index($0, m) { seen=1; next } seen { print }' |
+  # One output line per record: "<id>\t<sha1 of the record body>". Body newlines are
+  # folded to \036 inside awk so a multi-line body cannot split the read loop below.
   awk '
-    /^## SI-[0-9]+(-V)?[[:space:]]/ { if (id != "") { print id "\t" body }; id=$2; body=""; next }
-    id != "" { body = body $0 "\n" }
-    END { if (id != "") print id "\t" body }
+    /^## SI-[0-9]+(-V)?[[:space:]]/ { if (id != "") { printf "%s\t%s\n", id, body }; id=$2; body=""; next }
+    id != "" { body = body $0 "\036" }
+    END { if (id != "") printf "%s\t%s\n", id, body }
   ' | while IFS=$'\t' read -r id body; do
+      [[ -n "$id" ]] || continue
       printf '%s\t%s\n' "$id" "$(printf '%s' "$body" | shasum | awk '{print $1}')"
     done
 }

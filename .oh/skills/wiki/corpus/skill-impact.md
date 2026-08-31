@@ -42,7 +42,7 @@ later. Mutating the `PROPOSED` record in place to add a verdict would break
 append-only and make the invariant unenforceable.
 
 ````markdown
-## SI-0001 · YYYY-MM-DD · builder · PROPOSED
+## SI-nnnn · YYYY-MM-DD · builder · PROPOSED
 
 - **proposal**: <one sentence — what changes and why it should help>
 - **target**: <exactly one repo-relative artifact path>
@@ -54,9 +54,9 @@ append-only and make the invariant unenforceable.
 <git diff scoped to the target path>
 ```
 
-## SI-0001-V · YYYY-MM-DD · benchmark · ACCEPTED
+## SI-nnnn-V · YYYY-MM-DD · benchmark · ACCEPTED
 
-- **for**: SI-0001
+- **for**: SI-nnnn
 - **floor**: /eval rc=<n>, <n> regressions (`.oh/evals/RESULTS.md`@<short-sha>)
 - **ceiling**: suite score <before> → <after>; <task> <before> → <after>
 - **verdict**: BENEFICIAL | NOT-BENEFICIAL — ACCEPTED | REJECTED

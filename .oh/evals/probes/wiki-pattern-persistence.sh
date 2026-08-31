@@ -7,8 +7,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CORPUS_REL=".oh/skills/wiki/corpus"
 
-base=""
+# WIKI_PERSISTENCE_BASE overrides the comparison point. It exists so the invariant
+# can actually be exercised against a real revert instead of only asserted: cut a
+# scratch branch, revert the skill change, and run this probe with the pre-revert
+# commit as the base.
+base="${WIKI_PERSISTENCE_BASE:-}"
+[[ -n "$base" ]] && base="$(git -C "$ROOT" rev-parse "$base" 2>/dev/null || true)"
 for cand in development main master; do
+  [[ -n "$base" ]] && break
   if git -C "$ROOT" show-ref --verify --quiet "refs/heads/$cand"; then
     base="$(git -C "$ROOT" merge-base HEAD "$cand" 2>/dev/null || true)"
     [[ -n "$base" ]] && break

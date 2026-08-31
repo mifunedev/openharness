@@ -56,16 +56,15 @@ to; `—` means the field is consumed by the `oh` CLI itself and never rendered.
 
 All off by default. `oh harness install <name>` flips the matching field and
 installs into the running sandbox with no rebuild. The four harness fields map
-to `oh harness` names: `opencode`, `grok-build`, `deepagents`, `hermes`.
+to `oh harness` names: `opencode`, `grok-build`, `hermes`.
 `agentBrowser` and `tailscale` are not harnesses — `oh tool install agent-browser`
 and `oh tool install tailscale` manage them.
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
-| `install.opencode` | boolean | `false` | `INSTALL_OPENCODE` | Build the OpenCode CLI into the image. |
-| `install.grokBuild` | boolean | `false` | `INSTALL_GROK_BUILD` | Build the Grok Build CLI into the image. |
-| `install.deepagents` | boolean | `false` | `INSTALL_DEEPAGENTS` | Build the DeepAgents CLI into the image. |
-| `install.hermes` | boolean | `false` | `INSTALL_HERMES` | Build the Hermes CLI into the image and enable its runtime wiring. |
+| `install.opencode` | boolean | `false` | `INSTALL_OPENCODE` | Install the OpenCode CLI into `~/.local` at boot. `oh harness install opencode` sets it and installs now. |
+| `install.grokBuild` | boolean | `false` | `INSTALL_GROK_BUILD` | Install the Grok Build CLI into `~/.local` at boot. `oh harness install grok-build` sets it and installs now. |
+| `install.hermes` | boolean | `false` | `INSTALL_HERMES` | Install the Hermes CLI into `~/.local` at boot and enable its runtime wiring (skill vendoring, `auth.json`). |
 | `install.agentBrowser` | boolean | `false` | `INSTALL_AGENT_BROWSER` | Install agent-browser and Chromium (about 1 GB). |
 | `install.tailscale` | boolean | `false` | `INSTALL_TAILSCALE` | Install the Tailscale client for private remote access (userspace networking; no container capabilities). |
 

@@ -26,8 +26,34 @@ describe("tool catalog shape", () => {
     ]);
   });
 
-  it("has exactly two installable tools", () => {
-    expect(installableToolIds()).toEqual(["agent-browser", "tailscale"]);
+  it("makes exactly the default and opt-in tools installable", () => {
+    expect(installableToolIds()).toEqual([
+      "agent-browser",
+      "herdr",
+      "cloudflared",
+      "tailscale",
+    ]);
+    for (const t of TOOL_CATALOG) {
+      // A kind:"default" tool is provisioned at boot through `oh tool install`,
+      // so it MUST be installable; a baked-in one must not be.
+      if (t.kind === "default") expect(t.installArgv, t.id).toBeDefined();
+      if (t.kind === "baked-in") expect(t.installArgv, t.id).toBeUndefined();
+    }
+  });
+
+  // #906: commands/tool.ts installs with stdio:"inherit", so local-target.ts
+  // picks plain `sudo --` for a root install — and /etc/sudoers.d/sandbox has
+  // no NOPASSWD. A root-installed default would hang an agent on a password
+  // prompt, and could not be upgraded by the running sandbox afterwards.
+  it("installs every default tool as the sandbox user into the home mount", () => {
+    for (const t of TOOL_CATALOG) {
+      if (t.kind !== "default") continue;
+      expect(t.installUser, t.id).toBe("sandbox");
+      expect(t.installArgv!.join("
+"), t.id).toContain("NPM_USER_PREFIX");
+      expect(t.installArgv!.join("
+"), t.id).toContain("sha256sum -c -");
+    }
   });
 
   it("makes every non-installable tool say why", () => {
@@ -50,7 +76,13 @@ describe("tool catalog shape", () => {
 
   it("declares a version probe only where the flag is a safe standard", () => {
     const withVersion = TOOL_CATALOG.filter((t) => t.versionArgv !== undefined).map((t) => t.id);
-    expect(withVersion).toEqual(["cloudflared", "docker-cli", "gh", "tailscale"]);
+    expect(withVersion).toEqual([
+      "herdr",
+      "cloudflared",
+      "docker-cli",
+      "gh",
+      "tailscale",
+    ]);
     for (const t of TOOL_CATALOG) {
       if (t.versionArgv) expect(t.versionArgv, t.id).toEqual([t.binary, "--version"]);
     }
@@ -61,7 +93,7 @@ describe("tool catalog shape", () => {
     // container to expand, so that one token is exempt. A source-level scan for
     // an interpolating template literal was tried and removed: it cannot tell a
     // JS backtick from a backtick inside prose (`notInstallableReason` has
-    // several), so it passed or failed purely on catalog ORDER.
+    // several), so whether it fired depended on catalog ORDER, not the hazard.
     for (const t of TOOL_CATALOG) {
       for (const argv of [t.installArgv, t.verifyArgv, t.versionArgv]) {
         if (!argv) continue;
@@ -248,8 +280,20 @@ describe("baked-in tools", () => {
 
   it("are each actually in the Dockerfile", () => {
     const dockerfile = read(".devcontainer/Dockerfile");
+    const baked = TOOL_CATALOG.filter((t) => t.kind === "baked-in");
+    expect(baked.length, "no baked-in tool left to check").toBeGreaterThan(0);
+    for (const t of baked) {
+      expect(dockerfile, t.id).toContain(t.binary);
+    }
+  });
+
+  // #906: herdr and cloudflared moved to kind:"default". The inverse of the
+  // check above — a default tool must NOT be in the Dockerfile — lives in
+  // .oh/evals/probes/default-provisioning.sh, which matches on the pinned
+  // project URL rather than the bare binary name.
+  it("no longer claims herdr or cloudflared", () => {
     for (const id of ["herdr", "cloudflared"]) {
-      expect(dockerfile, id).toContain(id);
+      expect(findTool(id)!.kind, id).toBe("default");
     }
   });
 });

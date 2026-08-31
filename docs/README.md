@@ -46,7 +46,6 @@ Open Harness vendors the shared skills/agents/hooks primitive pack directly into
 - [Codex](harnesses/codex.md)
 - [Pi](harnesses/pi.md)
 - [OpenCode](harnesses/opencode.md)
-- [DeepAgents](harnesses/deepagents.md)
 - [Hermes](harnesses/hermes.md)
 - [Grok Build](harnesses/grok-build.md)
 - [T3 Code](harnesses/t3code.md)

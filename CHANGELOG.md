@@ -11,12 +11,23 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Changed
 - **BREAKING:** Persist the sandbox home through one `/home/sandbox` mount, not eleven per-tool volumes; set `storage.homePath` for a host path, else `<name>_workspace` ([#898](https://github.com/mifunedev/openharness/issues/898)).
 - Shrink the sandbox image ~540 MB: drop build caches from the baked home seed, stage the seed once via a builder stage, and keep untracked build output out of the build context ([#900](https://github.com/mifunedev/openharness/issues/900)).
+- **BREAKING:** Stop baking Claude Code, Codex, and Pi into the image; boot installs them into the home mount, so a first boot needs network and runs 60-180s longer ([#904](https://github.com/mifunedev/openharness/issues/904)).
+- **BREAKING:** Stop baking Herdr and cloudflared into the image; both become `kind: "default"` tools installed into `~/.local/bin` at boot from a pinned, checksum-verified binary ([#906](https://github.com/mifunedev/openharness/issues/906)).
+- **BREAKING:** Stop baking OpenCode, Hermes, and Grok Build into the image; `oh harness install <id>` installs them into `~/.local` as the sandbox user ([#908](https://github.com/mifunedev/openharness/issues/908)).
 
 ### Removed
+- Remove the `BAKE_HARNESSES` and `AGENTS` build args along with the image bake they gated; the harness catalog is the only source of truth for what gets installed ([#904](https://github.com/mifunedev/openharness/issues/904)).
+- Remove Cloudflare's apt repository and its bookworm-suite pin from the image; Docker's is now the only third-party apt source ([#906](https://github.com/mifunedev/openharness/issues/906)).
+- Remove the four optional-harness build args and the dead `buildArg` catalog field; the `install.*` keys keep working and now drive boot provisioning ([#908](https://github.com/mifunedev/openharness/issues/908)).
+- **BREAKING:** Retire the DeepAgents harness — `deepagents-cli` is deprecated upstream. `install.deepagents` is no longer a settable oh.json field ([#910](https://github.com/mifunedev/openharness/issues/910)).
 - **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
 
 ### Added
+- Provision the default harnesses into `/home/sandbox/.local` at boot, gated by `OH_PROVISION_HARNESSES`, so `oh harness install` also works from inside the sandbox ([#902](https://github.com/mifunedev/openharness/issues/902)).
 - Add `oh-home-mount.sh`, a tier-A probe holding the single-`$HOME`-mount contract: one mount per compose file, the baked `/opt/home-seed`, and the checkout prune that replaces `-xdev` ([#898](https://github.com/mifunedev/openharness/issues/898)).
+- Assert boot-provisioned harnesses in the boot smoke and reject a baked default harness in `verify-sandbox-image.sh`, so CI exercises the install path ([#904](https://github.com/mifunedev/openharness/issues/904)).
+- Add `oh tool list --defaults` and generalize the boot provisioner over both catalogs as `provision-defaults.sh` (`OH_PROVISION_DEFAULTS`) ([#906](https://github.com/mifunedev/openharness/issues/906)).
+- Fix `oh harness install` hanging on a sudo password prompt inside the sandbox: every harness now installs as the sandbox user, so no install path needs root ([#908](https://github.com/mifunedev/openharness/issues/908)).
 - Add `skills-task-tool-coupling.sh`, a tier-A probe holding the canonical skill pack and the sandbox in agreement about the Claude-Code-only task tools ([#886](https://github.com/mifunedev/openharness/issues/886)).
 - Add `install.tailscale` and `oh tool install tailscale`, an opt-in userspace Tailscale client installed into `~/.local/bin` as the sandbox user, granting no capability ([#858](https://github.com/mifunedev/openharness/issues/858)).
 

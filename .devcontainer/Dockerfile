@@ -28,51 +28,11 @@ RUN install -m 0755 -d /etc/apt/keyrings \
  && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
  && rm -rf /var/lib/apt/lists/*
 
-# Cloudflare publishes no trixie suite (pkg.cloudflare.com/cloudflared/dists/trixie returns HTTP 404);
-# the bookworm package is compatible with trixie, so this suite stays pinned to bookworm.
-RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
-      -o /usr/share/keyrings/cloudflare-main.gpg \
- && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared bookworm main" \
-      > /etc/apt/sources.list.d/cloudflared.list \
- && apt-get update && apt-get install -y --no-install-recommends cloudflared \
- && rm -rf /var/lib/apt/lists/*
-
 RUN BUN_INSTALL=/usr/local curl -fsSL https://bun.sh/install | bash
-
-ARG HERDR_VERSION=0.7.4
-RUN case "$(dpkg --print-architecture)" in \
-      amd64) herdr_arch=x86_64; herdr_sha=bc0fc02d4ba500f9cac2353a43e67fe036785ecca6eb55378e050fac3c103059 ;; \
-      arm64) herdr_arch=aarch64; herdr_sha=544e0002de42806d1ab64ccdef3a7e7414f24717b0b6b022bc9e57d2eefd26a2 ;; \
-      *) echo "Unsupported Herdr architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
-    esac \
- && curl -fsSL "https://github.com/ogulcancelik/herdr/releases/download/v${HERDR_VERSION}/herdr-linux-${herdr_arch}" \
-      -o /usr/local/bin/herdr \
- && echo "${herdr_sha}  /usr/local/bin/herdr" | sha256sum -c - \
- && chmod 0755 /usr/local/bin/herdr \
- && test "$(herdr --version)" = "herdr ${HERDR_VERSION}"
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | env INSTALLER_NO_MODIFY_PATH=1 sh \
  && cp /root/.local/bin/uv /usr/local/bin/uv \
  && cp /root/.local/bin/uvx /usr/local/bin/uvx
-
-ARG INSTALL_HERMES=false
-RUN if [ "${INSTALL_HERMES}" = "true" ]; then \
-      curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
-        | bash -s -- --skip-setup --skip-browser; \
-      rm -rf /root/.hermes; \
-      uv pip install --python /usr/local/lib/hermes-agent/venv/bin/python 'hermes-agent[slack,teams,web,pty]'; \
-    else \
-      echo "Skipping Hermes Agent CLI install (INSTALL_HERMES=false)"; \
-    fi
-
-ARG INSTALL_DEEPAGENTS=false
-RUN export UV_TOOL_DIR=/opt/uv/tools UV_TOOL_BIN_DIR=/usr/local/bin \
- && mkdir -p "$UV_TOOL_DIR" \
- && if [ "${INSTALL_DEEPAGENTS}" = "true" ]; then \
-      uv tool install deepagents-cli; \
-    else \
-      echo "Skipping DeepAgents CLI install (INSTALL_DEEPAGENTS=false)"; \
-    fi
 
 ENV PNPM_HOME="/usr/local/share/pnpm"
 ENV NPM_USER_PREFIX="/home/sandbox/.local"
@@ -82,32 +42,6 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate \
  && pnpm setup --force 2>/dev/null || true
 
 SHELL ["/bin/bash", "-c"]
-
-ARG AGENTS="claude-code,codex,pi-coding-agent"
-ARG INSTALL_OPENCODE=false
-ARG INSTALL_GROK_BUILD=false
-
-RUN set -e; \
-    declare -A PKG=( \
-        [claude-code]=@anthropic-ai/claude-code \
-        [codex]=@openai/codex \
-        [pi-coding-agent]=@earendil-works/pi-coding-agent \
-        [opencode]=opencode-ai \
-    ); \
-    IFS=',' read -ra agents <<< "$AGENTS"; \
-    for a in "${agents[@]}"; do \
-        if [ "$a" = "pi-coding-agent" ]; then continue; fi; \
-        pkg="${PKG[$a]:-}"; \
-        if [ -n "$pkg" ]; then npm install -g "$pkg"; \
-        else echo "Unknown agent: $a"; exit 1; fi; \
-    done; \
-    if [ "${INSTALL_OPENCODE}" = "true" ]; then npm install -g opencode-ai; \
-    else echo "Skipping OpenCode CLI install (INSTALL_OPENCODE=false)"; fi; \
-    if [ "${INSTALL_GROK_BUILD}" = "true" ]; then \
-        curl -fsSL https://x.ai/cli/install.sh | HOME=/opt/grok-build GROK_BIN_DIR=/opt/grok-build/bin bash -s 0.2.39; \
-        ln -sf /opt/grok-build/bin/grok /usr/local/bin/grok; \
-        rm -f /usr/local/bin/agent; \
-    else echo "Skipping Grok Build CLI install (INSTALL_GROK_BUILD=false)"; fi
 
 RUN npm install -g cc-safety-net@1.0.6
 
@@ -128,7 +62,6 @@ ENV UV_PYTHON_INSTALL_DIR=/home/sandbox/.local/share/uv/python
 ENV UV_CACHE_DIR=/home/sandbox/.cache/uv
 
 FROM base AS home
-ARG AGENTS="claude-code,codex,pi-coding-agent"
 RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
  && install -d -o sandbox -g sandbox \
       /home/sandbox/.local \
@@ -139,12 +72,8 @@ RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
       /home/sandbox/.herdr \
       "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR"
 
-RUN set -e; \
-    install -d -o sandbox -g sandbox "$NPM_USER_PREFIX"; \
-    if [[ ",${AGENTS}," == *",pi-coding-agent,"* ]]; then \
-        su - sandbox -c 'npm --prefix "$HOME/.local" install -g --ignore-scripts @earendil-works/pi-coding-agent'; \
-    fi; \
-    rm -rf /home/sandbox/.npm
+RUN install -d -o sandbox -g sandbox "$NPM_USER_PREFIX" \
+ && rm -rf /home/sandbox/.npm
 
 RUN su - sandbox -c "RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" --unattended" \
  && su - sandbox -c "git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions         /home/sandbox/.oh-my-zsh/custom/plugins/zsh-autosuggestions" \
@@ -186,9 +115,6 @@ RUN if [ "${INSTALL_PYTHON_KERNEL}" = "true" ]; then \
  && rm -rf /home/sandbox/.cache/uv
 
 FROM base AS final
-RUN chown -R sandbox:sandbox /opt/uv 2>/dev/null || true \
- && if [ -d /usr/local/lib/hermes-agent ]; then chown -R sandbox:sandbox /usr/local/lib/hermes-agent; fi
-
 RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness","remoteUser":"sandbox"}' > /.devcontainer/devcontainer.json
 
 LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'

@@ -479,7 +479,6 @@ describe("runInit", () => {
     expect(config.install).toEqual({
       opencode: false,
       grokBuild: false,
-      deepagents: false,
       hermes: false,
       agentBrowser: false,
       tailscale: false,

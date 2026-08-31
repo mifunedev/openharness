@@ -39,11 +39,6 @@ services:
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
-      args:
-        INSTALL_OPENCODE: ${INSTALL_OPENCODE:-false}
-        INSTALL_GROK_BUILD: ${INSTALL_GROK_BUILD:-false}
-        INSTALL_DEEPAGENTS: ${INSTALL_DEEPAGENTS:-false}
-        INSTALL_HERMES: ${INSTALL_HERMES:-false}
     volumes:
       - ${OH_HOME_MOUNT:-workspace}:/home/sandbox
       - ..:/home/sandbox/harness
@@ -84,7 +79,12 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 300s
+      # Boot installs the default harnesses AND the default tools (herdr,
+      # cloudflared) into the home mount instead of unpacking them from the
+      # image (entrypoint.sh, bounded by OH_PROVISION_DEFAULTS_TIMEOUT). A cold
+      # first boot on a fresh home mount therefore spends up to 240s downloading
+      # before the control plane is reachable; 600s leaves room for the rest.
+      start_period: 600s
     restart: unless-stopped
 
 volumes:

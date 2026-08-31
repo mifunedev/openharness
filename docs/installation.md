@@ -276,11 +276,34 @@ Project-local Pi packages are loaded from `.pi/settings.json`; the defaults incl
 
 Debian Trixie (slim), the current Debian stable. The `sandbox` user has passwordless sudo.
 
-Docker's apt repository tracks the `trixie` suite. Cloudflare's stays on `bookworm`: Cloudflare publishes no Trixie suite (`pkg.cloudflare.com/cloudflared/dists/trixie` returns HTTP 404) and its Bookworm `cloudflared` package runs on Trixie.
+Docker's apt repository tracks the `trixie` suite, and it is now the only third-party apt source in the image. cloudflared used to force a `bookworm` suite here because Cloudflare publishes no Trixie suite (`pkg.cloudflare.com/cloudflared/dists/trixie` returns HTTP 404); moving it to a pinned, checksum-verified binary in the tool catalog removed that exception.
 
 ### AI agent CLIs
 
-Default CLIs are always present. Optional CLIs are excluded from the default image; `oh harness install <name>` flips the matching `install.*` field in `oh.json` and installs it.
+Default CLIs are not baked into the image. The entrypoint runs
+`.oh/scripts/provision-defaults.sh` on every boot, which installs any missing
+default **harness** (Claude Code, Codex, Pi) and default **tool** (Herdr,
+cloudflared) into `~/.local` — inside the home mount — as the `sandbox` user.
+That is what makes `oh harness install <id>` and `oh tool install <id>` able to
+upgrade one in place: a copy in a root-owned system path is unwritable from a
+running sandbox. Consequences worth knowing:
+
+- A **first boot on a fresh home mount needs network**. Measured at 21s on a
+  GitHub Actions runner; budget 60–180s on a slower link. The compose
+  healthcheck's `start_period` is 600s to cover it.
+- If the network is unreachable the sandbox still comes up as a usable shell,
+  with a warning and no agent CLIs — **and no Herdr**, so `oh shell` lands you in
+  a plain shell and `tmux` is the fallback multiplexer. Re-run
+  `bash .oh/scripts/provision-defaults.sh` once you have network.
+- An existing install is never replaced, so the provisioner is a no-op on every
+  boot after the first. Upgrade deliberately with `oh harness install <id>` or
+  `oh tool install <id>`.
+- Every download is pinned and `sha256sum`-verified before it is installed.
+- npm's cache now lives in the home mount at `~/.npm` and grows across upgrades.
+  `npm cache clean --force` reclaims it.
+- Set `OH_PROVISION_DEFAULTS=false` to skip the step entirely.
+
+Optional CLIs are excluded from the default image; `oh harness install <name>` flips the matching `install.*` field in `oh.json` and installs it.
 
 | Tool | Command | Source | Status |
 |------|---------|--------|--------|
@@ -288,7 +311,6 @@ Default CLIs are always present. Optional CLIs are excluded from the default ima
 | OpenAI Codex | `codex` | OpenAI's coding agent (aliased to `codex --dangerously-bypass-approvals-and-sandbox`) | default |
 | Pi | `pi` | `@earendil-works/pi-coding-agent` — local-first coding agent (was `@mariozechner/pi-coding-agent`, now deprecated) | default |
 | OpenCode | `opencode` | `opencode-ai` — terminal coding agent with OpenAI OAuth support | optional: `oh harness install opencode` |
-| DeepAgents | `deepagents` | LangChain's multi-provider terminal agent (`deepagents-cli` via `uv tool install`) | optional: `oh harness install deepagents` |
 | Hermes | `hermes` | Nous Research's self-improving agent CLI | optional: `oh harness install hermes` |
 | Grok Build | `grok` | xAI's proprietary Grok Build CLI (`@xai-official/grok@0.2.39`, Node >=20) | optional: `oh harness install grok-build` |
 | agent-browser | `agent-browser` | Headless Chromium for web-capable agents | optional: `oh tool install agent-browser` |
@@ -323,15 +345,17 @@ recreate.
 ### DevOps & infrastructure
 
 `oh tool list` reports which of these are present, and `oh tool status <name>`
-adds a version where the tool has a verified version flag. They are baked into
-the image, so there is nothing to install.
+adds a version where the tool has a verified version flag. Herdr and cloudflared
+are `kind: "default"` — provisioned into `~/.local/bin` at boot from a pinned,
+checksum-verified binary, and upgradeable in place. The rest are baked into the
+image, so there is nothing to install.
 
 | Tool | Purpose |
 |------|---------|
-| Herdr (`herdr`) | Default multi-agent terminal workspace; state persists across rebuilds in dedicated volumes |
+| Herdr (`herdr`) | Default multi-agent terminal workspace; provisioned at boot, state and binary both persist in the home mount |
 | Docker CLI + Compose | Container management from inside the sandbox (host docker socket bind-mounted by the base compose) |
 | GitHub CLI (`gh`) | PRs, issues, releases from the terminal |
-| cloudflared | Cloudflare Tunnel client, for exposing a sandbox port (see the `/cloudflared` skill) |
+| cloudflared | Cloudflare Tunnel client, for exposing a sandbox port (see the `/cloudflared` skill); provisioned at boot |
 | tmux | Detachable terminal sessions for long-running agents |
 | croner | Markdown-frontmatter cron scheduler for autonomous agent tasks |
 

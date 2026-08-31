@@ -29,22 +29,22 @@ install:
   grok_build: true
 ```
 
-Or set the legacy build flag in `.devcontainer/.env`:
+Or set the legacy flag in `.devcontainer/.env`:
 
 ```bash
 INSTALL_GROK_BUILD=true
 ```
 
-Then rebuild/restart the sandbox:
+Either way the boot provisioner installs it on the next start — no rebuild:
 
 ```bash
 oh stop && oh sandbox
 ```
 
-Open Harness uses the upstream installer during image build, pinned to the version verified when this support was added:
+Open Harness uses the upstream installer as the `sandbox` user, pinned to the version verified when this support was added, with the binary directed into the home mount:
 
 ```bash
-curl -fsSL https://x.ai/cli/install.sh | bash -s 0.2.39
+curl -fsSL https://x.ai/cli/install.sh | GROK_BIN_DIR="$HOME/.local/bin" bash -s 0.2.39
 ```
 
 Review-first equivalent for manual inspection:
@@ -63,7 +63,7 @@ Verify the install inside the sandbox:
 grok --version
 ```
 
-If `grok` is not found, confirm `INSTALL_GROK_BUILD=true` is set in `.devcontainer/.env` and rebuild.
+If `grok` is not found, run `oh harness install grok-build` — it installs into `~/.local/bin` and sets `install.grokBuild` so a fresh home mount reinstalls it at boot.
 
 ## Authentication
 

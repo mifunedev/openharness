@@ -1,7 +1,13 @@
 import type { OhConfig } from "./oh-config.js";
 import { isSecretKey } from "./secrets.js";
 
-const RETIRED_KEYS = ["WORKTREES_DIR", "PROJECTS_DIR", "CRONS_DIR", "OH_PROJECT_ROOT"] as const;
+const RETIRED_KEYS = [
+  "WORKTREES_DIR",
+  "PROJECTS_DIR",
+  "CRONS_DIR",
+  "OH_PROJECT_ROOT",
+  "INSTALL_DEEPAGENTS",
+] as const;
 
 export interface RenderedVar {
   key: string;
@@ -24,7 +30,6 @@ export function renderComposeVars(config: OhConfig): RenderedVar[] {
 
   put("INSTALL_OPENCODE", config.install?.opencode);
   put("INSTALL_GROK_BUILD", config.install?.grokBuild);
-  put("INSTALL_DEEPAGENTS", config.install?.deepagents);
   put("INSTALL_HERMES", config.install?.hermes);
   put("INSTALL_AGENT_BROWSER", config.install?.agentBrowser);
   put("INSTALL_TAILSCALE", config.install?.tailscale);

@@ -81,7 +81,7 @@ if [ -s "${HOME}/.pi/agent/auth.json" ]; then
 fi
 
 opencode_status="$status_x"
-opencode_detail="not installed — set INSTALL_OPENCODE=true and rebuild"
+opencode_detail="not installed — run: oh harness install opencode"
 if command -v opencode >/dev/null 2>&1; then
   if [ -s "${HOME}/.local/share/opencode/auth.json" ]; then
     opencode_status="$status_ok"
@@ -93,7 +93,7 @@ if command -v opencode >/dev/null 2>&1; then
 fi
 
 grok_status="$status_x"
-grok_detail="not installed — enable via install.grok_build / INSTALL_GROK_BUILD"
+grok_detail="not installed — run: oh harness install grok-build"
 if command -v grok >/dev/null 2>&1; then
   if [ -s "${HOME}/.grok/auth.json" ]; then
     grok_status="$status_ok"
@@ -107,20 +107,8 @@ if command -v grok >/dev/null 2>&1; then
   fi
 fi
 
-deepagents_status="$status_x"
-deepagents_detail="not installed — set INSTALL_DEEPAGENTS=true and rebuild"
-if command -v deepagents >/dev/null 2>&1; then
-  if [ -s "${HOME}/.deepagents/.env" ] || [ -s "${HOME}/.deepagents/config.toml" ]; then
-    deepagents_status="$status_ok"
-    deepagents_detail="configured"
-  else
-    deepagents_status="$status_ok"
-    deepagents_detail="installed — configure ~/.deepagents/.env or run: deepagents"
-  fi
-fi
-
 hermes_status="$status_x"
-hermes_detail="not installed — set INSTALL_HERMES=true and rebuild"
+hermes_detail="not installed — run: oh harness install hermes"
 if command -v hermes >/dev/null 2>&1; then
   if [ -s "${HERMES_HOME:-${OH_PROJECT_ROOT:-/home/sandbox/harness}/.hermes}/auth.json" ]; then
     hermes_status="$status_ok"
@@ -171,7 +159,6 @@ printf '    %-6s %-11s %s\n' "$codex_status"      "codex"       "$codex_detail"
 printf '    %-6s %-11s %s\n' "$opencode_status"   "opencode"    "$opencode_detail"
 printf '    %-6s %-11s %s\n' "$grok_status"       "grok"        "$grok_detail"
 printf '    %-6s %-11s %s\n' "$pi_status"         "pi"          "$pi_detail"
-printf '    %-6s %-11s %s\n' "$deepagents_status" "deepagents"  "$deepagents_detail"
 printf '    %-6s %-11s %s\n' "$hermes_status"     "hermes"      "$hermes_detail"
 [ -n "$dashboard_status" ] && printf '    %-6s %-11s %s\n' "$dashboard_status" "dashboard" "$dashboard_detail"
 printf '    %-6s %-11s %s\n' "$oh_status"         "oh"          "$oh_detail"
@@ -179,7 +166,6 @@ printf '\n'
 shortcuts="claude · codex · pi"
 command -v opencode >/dev/null 2>&1 && shortcuts="$shortcuts · opencode"
 command -v grok >/dev/null 2>&1 && shortcuts="$shortcuts · grok"
-command -v deepagents >/dev/null 2>&1 && shortcuts="$shortcuts · deepagents"
 command -v hermes >/dev/null 2>&1 && shortcuts="$shortcuts · hermes"
 printf '  Recovery commands: %s · tmux attach -t cron-system\n' "$shortcuts"
 printf '\n'

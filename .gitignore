@@ -23,6 +23,9 @@ projects/*
 # Task artifacts are local runtime state; keep only the directory guide tracked.
 .oh/tasks/*
 !.oh/tasks/README.md
+.oh/logs/*
+!.oh/logs/AGENTS.md
+!.oh/logs/CLAUDE.md
 
 # Build artifacts
 **/.venv/

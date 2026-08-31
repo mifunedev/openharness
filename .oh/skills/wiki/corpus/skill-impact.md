@@ -92,3 +92,11 @@ a pattern to cite.
 - **motivating patterns**: [[pattern-wiki-external-model-over-mapping]] — its workaround is that a mapping is complete only when its exclusions are written down in the local vocabulary; the slug-token mismatch is the same defect one level down, a foreign taxonomy left un-translated in the local procedure
 - **proposer**: /builder skill, prompted by the delegated `/wiki compile` run's flagged judgment calls
 - **diff**: `.oh/skills/wiki/references/compile.md` § 3 fan-out and subsystem-token rules, § 4 dual-sha rule
+
+## SI-0003 · 2026-08-31 · builder · PROPOSED
+
+- **proposal**: document fault injection and short-fragment pinning in the probe contract, and mint the two probes that guard them, closing the retro nominations in the same session that nominated them
+- **target**: `.oh/evals/README.md`
+- **motivating patterns**: [[pattern-evals-unexercised-oracle]], [[pattern-evals-prose-literal-pinning]]
+- **proposer**: /builder skill, closing the `/retro` nominations rather than leaving them to decay
+- **diff**: `.oh/evals/README.md` §§ "Fault injection" and "Pinning contract text"; `.oh/evals/probes/continual-learning-20260831.sh`; `.oh/evals/probes/eval-contract-text-20260831.sh`. Both probes had every REGRESSION branch driven against injected faults before landing (5 injections, 5 caught).

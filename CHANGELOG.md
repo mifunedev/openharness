@@ -27,6 +27,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Add a `--patterns` mode to `/wiki query` that filters on `kind:`, reads up to five pattern entries, and ranks them by term-hit count before recency.
 - Add capability task `CB-005` scoring whether a lesson reaches a validated skill change; first real run scores 0.67, moving the suite mean to 1.22 over a changed task set.
 
+### Added
+- Add a fault-injection requirement to the probe contract, plus `continual-learning-20260831` and `eval-contract-text-20260831` guarding it; a probe is not green until its REGRESSION branch has been driven against a broken input.
+
 ### Fixed
 - Fix `/wiki lint` generating the corpus index from the working tree instead of the git-tracked set, which made any untracked scratch entry a `wiki-readme-index.sh` regression.
 - Fix three unresolved `related:` and `[[slug]]` links in the `recursive-language-models` wiki entry, and add the `/wiki lint` check that would have caught them.

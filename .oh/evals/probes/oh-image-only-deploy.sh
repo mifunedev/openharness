@@ -6,11 +6,11 @@
 #   elif, and defines seed_workspace_volume/.image-seeded; a behavioral sim
 #   (fenced function extracted in isolation, no full entrypoint source) proves
 #   fresh-seed, idempotent-reseed, and no-clobber-of-existing-.oh/ behavior;
-#   docker-compose.image-only.yml mounts a named oh_workspace volume, sets
+#   docker-compose.image-only.yml mounts the single home volume, sets
 #   OH_IMAGE_ONLY=1, parameterizes image:, sets pull_policy:, and has neither
 #   build: nor a `..:` bind mount; the primary docker-compose.yml still keeps
 #   its `..:` bind mount (regression floor); the deploy doc has dropped the
-#   "Not yet" placeholder and documents oh_workspace/OH_IMAGE_ONLY; the
+#   "Not yet" placeholder and documents OH_HOME_MOUNT/OH_IMAGE_ONLY; the
 #   Dockerfile (if present) stages /opt/oh-seed for the entrypoint to seed from.
 set -euo pipefail
 
@@ -86,8 +86,8 @@ else
   fi
 fi
 
-grep -Eq '^[[:space:]]*-[[:space:]]*oh_workspace:\$\{OH_PROJECT_ROOT' "$COMPOSE_IO" \
-  || fails+=("docker-compose.image-only.yml must mount a named oh_workspace volume at \${OH_PROJECT_ROOT}")
+grep -Eq '^[[:space:]]*-[[:space:]]*\$\{OH_HOME_MOUNT:-workspace\}:/home/sandbox$' "$COMPOSE_IO" \
+  || fails+=("docker-compose.image-only.yml must mount \${OH_HOME_MOUNT:-workspace} at /home/sandbox")
 grep -Fq 'OH_IMAGE_ONLY=1' "$COMPOSE_IO" \
   || fails+=("docker-compose.image-only.yml must set OH_IMAGE_ONLY=1 in the container environment")
 grep -Eq 'image:[[:space:]]*\$\{OH_SANDBOX_IMAGE' "$COMPOSE_IO" \
@@ -115,8 +115,8 @@ else
   if [[ "${not_yet_count:-0}" -ne 0 ]]; then
     fails+=("deployment-prebuilt-image.md still contains the 'Not yet' placeholder (${not_yet_count} occurrence(s))")
   fi
-  grep -Fq 'oh_workspace' "$DOC" \
-    || fails+=("deployment-prebuilt-image.md must mention oh_workspace")
+  grep -Fq 'OH_HOME_MOUNT' "$DOC" \
+    || fails+=("deployment-prebuilt-image.md must mention OH_HOME_MOUNT")
   grep -Fq 'OH_IMAGE_ONLY' "$DOC" \
     || fails+=("deployment-prebuilt-image.md must mention OH_IMAGE_ONLY")
 fi
@@ -142,5 +142,5 @@ if (( ${#fails[@]} > 0 )); then
   exit 1
 fi
 
-echo "PASS: Flavor B (image-only) contract — entrypoint gates OH_IMAGE_ONLY before the host-UID-sync elif and defines seed_workspace_volume/.image-seeded; behavioral sim confirms fresh-seed, idempotent-reseed, and no-clobber-of-existing-.oh/; docker-compose.image-only.yml mounts oh_workspace, sets OH_IMAGE_ONLY=1, parameterizes image:/pull_policy:, and has no build:/'..:' bind mount; primary docker-compose.yml still binds '..:' (regression floor); deploy doc drops the 'Not yet' placeholder and documents oh_workspace/OH_IMAGE_ONLY; Dockerfile stages /opt/oh-seed" >&2
+echo "PASS: Flavor B (image-only) contract — entrypoint gates OH_IMAGE_ONLY before the host-UID-sync elif and defines seed_workspace_volume/.image-seeded; behavioral sim confirms fresh-seed, idempotent-reseed, and no-clobber-of-existing-.oh/; docker-compose.image-only.yml mounts \${OH_HOME_MOUNT:-workspace} at /home/sandbox, sets OH_IMAGE_ONLY=1, parameterizes image:/pull_policy:, and has no build:/'..:' bind mount; primary docker-compose.yml still binds '..:' (regression floor); deploy doc drops the 'Not yet' placeholder and documents OH_HOME_MOUNT/OH_IMAGE_ONLY; Dockerfile stages /opt/oh-seed" >&2
 exit 0

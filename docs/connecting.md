@@ -118,7 +118,7 @@ This is the supported path for reaching T3 Code from a phone, and the supported 
 
 - No `NET_ADMIN`, no `/dev/net/tun`, no `privileged: true`, no host socket mount. Userspace networking needs none of them, and Tailscale Serve is fully supported in that mode.
 - **No host port is published.** T3 Code stays on container loopback `127.0.0.1:3773`. Tailscale Serve inside the container proxies tailnet HTTPS to that loopback address. A device outside the tailnet has nothing to reach.
-- The only compose changes are one environment variable (`INSTALL_TAILSCALE`) and one named volume (`tailscale-state` → `/home/sandbox/.tailscale`) so the node does not re-authenticate on every container recreate. A named volume grants no capability.
+- The only compose change is one environment variable (`INSTALL_TAILSCALE`). Node identity and daemon state live in `/home/sandbox/.tailscale`, inside the single `/home/sandbox` mount, so the node does not re-authenticate on every container recreate without any per-tool volume.
 - Because the container is the node, the MagicDNS name your phone saved does not change when you move the workspace to another VM.
 
 Installing the binary does **not** join a tailnet. The entrypoint never runs `tailscaled` and never runs `tailscale up`. Joining is an explicit human act.
@@ -224,7 +224,7 @@ Two tmux sessions carry this setup:
 
 Both survive a shell or SSH disconnect. Inspect them with `tmux ls`, attach with `tmux attach -t <session>`, detach with `Ctrl-b d`. `/t3 status` and `/t3 logs` read the T3 session without attaching.
 
-After a container recreate, the tailnet identity is restored from the `tailscale-state` volume, but the daemon is not running: repeat steps 2 and 4. `tailscale up` is not needed again unless you logged out.
+After a container recreate, the tailnet identity is still in `~/.tailscale` inside the home mount, but the daemon is not running: repeat steps 2 and 4. `tailscale up` is not needed again unless you logged out.
 
 ### Revoking access
 

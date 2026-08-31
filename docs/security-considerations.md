@@ -41,7 +41,7 @@ templates are committed.
   - `**/auth.json` and `**/.credentials.json` (`.gitignore:63-64`) — provider auth blobs.
 - **Template allowlist:** the *tracked* files are templates that hold no real secrets — e.g. [`.env.example`](../.env.example) and `.claude/.example.env.claude`. The operator copies `.env.example` to the real (gitignored, mode-`0600`) root `.env`; `install.sh` seeds it and `oh secret set <KEY>` edits one key. `.devcontainer/.env` is a symlink to that file, so VS Code "Reopen in Container" reads the same one. The `.env.example` header spells this out, including the warning that the compose default for `SANDBOX_PASSWORD` (`test1234`) is weak and public and must be overridden on any network-reachable deployment.
 - **Split by kind:** non-secret settings live in the *tracked* [`oh.json`](../oh.json), never in `.env`. The split is enforced in code — `.oh/cli/src/lib/secrets.ts` owns the secret allow-list and `.oh/cli/src/lib/config-render.ts` refuses to render an allow-listed secret into the compose environment. See [Configuration](configuration.md).
-- **In the sandbox:** auth/state persists in Docker **named volumes** (`claude-auth`, `codex-auth`, `pi-auth`, `ssh-config`, `config-dir`, …), not in the repo — see [`.devcontainer/docker-compose.yml:31-41`](../.devcontainer/docker-compose.yml).
+- **In the sandbox:** auth/state persists in the single `/home/sandbox` mount — the named volume `<sandbox-name>_workspace`, or a host path when `storage.homePath` is set — not in the repo. See [`.devcontainer/docker-compose.yml`](../.devcontainer/docker-compose.yml).
 
 **What this does not do:** it does not scan commit *contents* for
 secrets pasted into a tracked file by mistake. That is the job of the
@@ -153,9 +153,9 @@ expose to whichever trust level you choose.
   tracked `oh.json`) adds **no container capability**: `tailscaled` runs inside the
   sandbox in **userspace-networking** mode as the unprivileged `sandbox` user, so
   there is no `NET_ADMIN`, no `/dev/net/tun`, no `privileged: true`, and no host
-  socket mount. The only compose additions are one environment variable
-  (`INSTALL_TAILSCALE`) and one named volume (`tailscale-state` →
-  `/home/sandbox/.tailscale`). **No host port is published** — T3 Code stays on
+  socket mount. The only compose addition is one environment variable
+  (`INSTALL_TAILSCALE`); daemon state lives in `/home/sandbox/.tailscale`,
+  inside the single `/home/sandbox` mount. **No host port is published** — T3 Code stays on
   container loopback `127.0.0.1:3773` and Tailscale Serve proxies tailnet HTTPS to
   it, so a device outside the tailnet has nothing to reach. The posture:
   - **Private tailnet only. Tailscale Funnel is never enabled by default and the

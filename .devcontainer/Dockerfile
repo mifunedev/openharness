@@ -1,7 +1,6 @@
-FROM node:22-trixie-slim
+FROM node:22-trixie-slim AS base
 
-ARG OH_PROJECT_ROOT=/home/sandbox/harness
-ENV OH_PROJECT_ROOT=${OH_PROJECT_ROOT}
+ENV OH_PROJECT_ROOT=/home/sandbox/harness
 
 ENV TZ=America/Denver
 
@@ -127,20 +126,25 @@ ENV UV_TOOL_DIR=/home/sandbox/.local/share/uv/tools
 ENV UV_TOOL_BIN_DIR=/home/sandbox/.local/bin
 ENV UV_PYTHON_INSTALL_DIR=/home/sandbox/.local/share/uv/python
 ENV UV_CACHE_DIR=/home/sandbox/.cache/uv
-RUN install -d -o sandbox -g sandbox \
+
+FROM base AS home
+ARG AGENTS="claude-code,codex,pi-coding-agent"
+RUN install -d -o sandbox -g sandbox -m 0700 /home/sandbox/.ssh \
+ && install -d -o sandbox -g sandbox \
       /home/sandbox/.local \
       /home/sandbox/.local/share \
       /home/sandbox/.local/share/uv \
       /home/sandbox/.cache \
-      "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR" \
- && chown -R sandbox:sandbox /opt/uv 2>/dev/null || true \
- && if [ -d /usr/local/lib/hermes-agent ]; then chown -R sandbox:sandbox /usr/local/lib/hermes-agent; fi
+      /home/sandbox/.config \
+      /home/sandbox/.herdr \
+      "$UV_TOOL_DIR" "$UV_TOOL_BIN_DIR" "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR"
 
 RUN set -e; \
     install -d -o sandbox -g sandbox "$NPM_USER_PREFIX"; \
     if [[ ",${AGENTS}," == *",pi-coding-agent,"* ]]; then \
         su - sandbox -c 'npm --prefix "$HOME/.local" install -g --ignore-scripts @earendil-works/pi-coding-agent'; \
-    fi
+    fi; \
+    rm -rf /home/sandbox/.npm
 
 RUN su - sandbox -c "RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)\" --unattended" \
  && su - sandbox -c "git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions         /home/sandbox/.oh-my-zsh/custom/plugins/zsh-autosuggestions" \
@@ -167,15 +171,9 @@ RUN su - sandbox -c "git config --global --add safe.directory ${OH_PROJECT_ROOT}
 
 RUN echo "cd ${OH_PROJECT_ROOT} 2>/dev/null" >> /home/sandbox/.bashrc
 
-RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness","remoteUser":"sandbox"}' > /.devcontainer/devcontainer.json
-
-LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
-LABEL org.opencontainers.image.licenses="Apache-2.0"
-
 COPY --chown=sandbox:sandbox .oh/install/ /home/sandbox/install/
 RUN chmod +x /home/sandbox/install/*.sh
 
-# boot (entrypoint OH_IMAGE_ONLY / seed_workspace_volume, OH_IMAGE_SEED_SRC).
 COPY --chown=sandbox:sandbox . /opt/oh-seed/
 
 ARG INSTALL_PYTHON_KERNEL=true
@@ -184,10 +182,28 @@ RUN if [ "${INSTALL_PYTHON_KERNEL}" = "true" ]; then \
       su - sandbox -c "OH_PYTHON_VERSION='${OH_PYTHON_VERSION}' bash /opt/oh-seed/.oh/scripts/provision-python.sh"; \
     else \
       echo "Skipping Python kernel provisioning (INSTALL_PYTHON_KERNEL=false)"; \
-    fi
+    fi \
+ && rm -rf /home/sandbox/.cache/uv
+
+FROM base AS final
+RUN chown -R sandbox:sandbox /opt/uv 2>/dev/null || true \
+ && if [ -d /usr/local/lib/hermes-agent ]; then chown -R sandbox:sandbox /usr/local/lib/hermes-agent; fi
+
+RUN mkdir -p /.devcontainer && echo '{"workspaceFolder":"/home/sandbox/harness","remoteUser":"sandbox"}' > /.devcontainer/devcontainer.json
+
+LABEL devcontainer.metadata='[{"remoteUser":"sandbox","workspaceFolder":"/home/sandbox/harness"}]'
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
+# boot (entrypoint OH_IMAGE_ONLY / seed_workspace_volume, OH_IMAGE_SEED_SRC).
+COPY --chown=sandbox:sandbox . /opt/oh-seed/
 
 COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+
+COPY --from=home --chown=sandbox:sandbox /home/sandbox /opt/home-seed
+RUN rm -rf /opt/home-seed/harness /home/sandbox \
+ && chmod 0700 /opt/home-seed \
+ && install -d -o sandbox -g sandbox -m 0755 /home/sandbox
 
 WORKDIR ${OH_PROJECT_ROOT}
 

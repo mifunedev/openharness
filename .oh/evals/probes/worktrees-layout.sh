@@ -103,8 +103,8 @@ if bash .oh/scripts/oh-path definitely-not-a-harness-dir --no-create >/dev/null 
   exit 1
 fi
 
-if ! grep -Fq 'OH_PROJECT_ROOT' .devcontainer/docker-compose.yml; then
-  echo "REGRESSION: OH_PROJECT_ROOT was swept up with the retired layout knobs" >&2
+if ! grep -Fq 'ENV OH_PROJECT_ROOT=/home/sandbox/harness' .devcontainer/Dockerfile; then
+  echo "REGRESSION: OH_PROJECT_ROOT lost its fixed image-level definition" >&2
   exit 1
 fi
 

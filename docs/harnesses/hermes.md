@@ -100,7 +100,7 @@ skills used by Claude, Codex, and Pi visible to Hermes by default.
 
 Auth lives directly inside `HERMES_HOME` (`~/harness/.hermes/auth.json`).
 No symlink or named volume is involved: an earlier design symlinked
-`auth.json` into a home-scoped `hermes-auth` Docker volume, but that
+`auth.json` into a home-scoped Docker volume of its own, but that
 volume sits on a different filesystem from the bind-mounted checkout and
 caused Hermes' atomic-replace writes to fail with `EXDEV`. Keeping auth
 on the same bind-mount device fixes this; the entrypoint heals any

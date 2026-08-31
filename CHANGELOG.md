@@ -8,7 +8,15 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 
 ## [Unreleased]
 
+### Changed
+- **BREAKING:** Persist the sandbox home through one `/home/sandbox` mount, not eleven per-tool volumes; set `storage.homePath` for a host path, else `<name>_workspace` ([#898](https://github.com/mifunedev/openharness/issues/898)).
+- Shrink the sandbox image ~540 MB: drop build caches from the baked home seed, stage the seed once via a builder stage, and keep untracked build output out of the build context ([#900](https://github.com/mifunedev/openharness/issues/900)).
+
+### Removed
+- **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
+
 ### Added
+- Add `oh-home-mount.sh`, a tier-A probe holding the single-`$HOME`-mount contract: one mount per compose file, the baked `/opt/home-seed`, and the checkout prune that replaces `-xdev` ([#898](https://github.com/mifunedev/openharness/issues/898)).
 - Add `skills-task-tool-coupling.sh`, a tier-A probe holding the canonical skill pack and the sandbox in agreement about the Claude-Code-only task tools ([#886](https://github.com/mifunedev/openharness/issues/886)).
 - Add `install.tailscale` and `oh tool install tailscale`, an opt-in userspace Tailscale client installed into `~/.local/bin` as the sandbox user, granting no capability ([#858](https://github.com/mifunedev/openharness/issues/858)).
 

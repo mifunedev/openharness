@@ -366,7 +366,7 @@ describe("oh tool install tailscale", () => {
     expect(out.join("")).toContain("oh.json: set install.tailscale=true");
   });
 
-  it("execs the pinned install argv as root, with no download prompt", async () => {
+  it("execs the pinned install argv as the sandbox user, with no download prompt", async () => {
     const root = makeRepo();
     const { calls, run } = liveHost(absentTailscale);
     const { io, asked, out } = makeIo(true);
@@ -374,7 +374,9 @@ describe("oh tool install tailscale", () => {
     expect(asked).toEqual([]);
     const install = calls.find(isTailscaleInstallCall);
     expect(install).toBeDefined();
-    expect(install!.args.join(" ")).toContain("-u root");
+    // #858/#908: a root install becomes an interactive `sudo` inside the sandbox.
+    expect(install!.args.join(" ")).toContain("-u sandbox");
+    expect(install!.args.join(" ")).not.toContain("-u root");
     expect(install!.args.join(" ")).toContain("pkgs.tailscale.com/stable/");
     expect(tailscaleFlag(root)).toBe(true);
     expect(out.join("")).toContain("installed");

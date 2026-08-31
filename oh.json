@@ -2,8 +2,8 @@
   "version": 1,
   "name": "openharness",
   "timezone": "America/Los_Angeles",
-  "projectRoot": "/home/sandbox/harness",
   "git": {},
+  "storage": {},
   "install": {
     "opencode": false,
     "grokBuild": false,

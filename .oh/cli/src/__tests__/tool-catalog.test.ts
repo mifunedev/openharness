@@ -57,10 +57,19 @@ describe("tool catalog shape", () => {
   });
 
   it("passes argv arrays with no interpolation this process performs", () => {
+    // A `bash -lc` script body legitimately contains ${...} for the shell IN the
+    // container to expand, so that one token is exempt. A source-level scan for
+    // an interpolating template literal was tried and removed: it cannot tell a
+    // JS backtick from a backtick inside prose (`notInstallableReason` has
+    // several), so it passed or failed purely on catalog ORDER.
     for (const t of TOOL_CATALOG) {
       for (const argv of [t.installArgv, t.verifyArgv, t.versionArgv]) {
         if (!argv) continue;
-        for (const token of argv) expect(token, `${t.id}: ${token}`).not.toContain("${");
+        const shellBody = argv[0] === "bash" && argv[1] === "-lc" ? 2 : -1;
+        argv.forEach((token, i) => {
+          if (i === shellBody) return;
+          expect(token, `${t.id}: ${token}`).not.toContain("${");
+        });
       }
     }
   });
@@ -182,14 +191,24 @@ describe("tailscale matches the entrypoint that really installs it", () => {
     expect(ENTRYPOINT).toContain(base);
   });
 
-  it("installs as root because the binaries land in /usr/local/bin", () => {
-    expect(ts.installUser).toBe("root");
-    expect(ts.installArgv!.join(" ")).toContain("/usr/local/bin/tailscale");
-    expect(ts.installArgv!.join(" ")).toContain("/usr/local/bin/tailscaled");
+  // tailscaled runs unprivileged under --tun=userspace-networking, so nothing
+  // here needs root. A root install would hang `oh tool install tailscale` on a
+  // sudo password prompt (commands/tool.ts uses stdio:"inherit", and
+  // /etc/sudoers.d/sandbox has no NOPASSWD), and would put the binaries in an
+  // image-layer path discarded on every container recreate.
+  it("installs as the sandbox user into the home mount", () => {
+    expect(ts.installUser).toBe("sandbox");
+    const argv = ts.installArgv!.join(" ");
+    expect(argv).toContain("NPM_USER_PREFIX");
+    expect(argv).not.toContain("/usr/local/bin/tailscale");
+    expect(argv).not.toContain("/usr/local/bin/tailscaled");
   });
 
-  it("pre-creates the socket directory the entrypoint also pre-creates", () => {
-    expect(ts.installArgv!.join(" ")).toContain("/var/run/tailscale");
+  // /var/run/tailscale is tailscaled's default socket directory and only root
+  // can create it, so it belongs to the entrypoint, not to an install that runs
+  // as the sandbox user.
+  it("leaves the root-owned socket directory to the entrypoint", () => {
+    expect(ts.installArgv!.join(" ")).not.toContain("/var/run/tailscale");
     expect(ENTRYPOINT).toContain("/var/run/tailscale");
   });
 

@@ -115,7 +115,7 @@ describe("named volumes — what destroy is about to delete", () => {
 
   it("reads the real repository's volumes so the prompt cannot drift from compose", () => {
     const root = join(HERE, "..", "..", "..", "..");
-    expect(namedVolumes(root)).toContain("claude-auth");
+    expect(namedVolumes(root)).toContain("workspace");
   });
 });
 

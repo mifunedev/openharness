@@ -9,7 +9,7 @@ import { defaultOhConfig, type OhConfig } from "../oh-config.js";
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "..");
 const DEVCONTAINER = join(REPO_ROOT, ".devcontainer");
 
-const RETIRED = ["WORKTREES_DIR", "PROJECTS_DIR", "CRONS_DIR"];
+const RETIRED = ["WORKTREES_DIR", "PROJECTS_DIR", "CRONS_DIR", "OH_PROJECT_ROOT"];
 
 function composeInterpolatedVars(): string[] {
   const found = new Set<string>();
@@ -24,6 +24,7 @@ function composeInterpolatedVars(): string[] {
 function fullConfig(): OhConfig {
   const config = defaultOhConfig("demo");
   config.git = { userName: "Ada", userEmail: "ada@example.com" };
+  config.storage = { homePath: "/srv/oh-home" };
   config.access = {
     ssh: true,
     sshPort: 2022,
@@ -51,7 +52,7 @@ describe("renderComposeEnv", () => {
     const text = renderComposeEnv(fullConfig());
     expect(text).toContain("SANDBOX_NAME=demo");
     expect(text).toContain("TZ=America/Los_Angeles");
-    expect(text).toContain("OH_PROJECT_ROOT=/home/sandbox/harness");
+    expect(text).toContain("OH_HOME_MOUNT=/srv/oh-home");
     expect(text).toContain("GIT_USER_NAME=Ada");
     expect(text).toContain("GIT_USER_EMAIL=ada@example.com");
     expect(text).toContain("INSTALL_OPENCODE=false");

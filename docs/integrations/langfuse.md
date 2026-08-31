@@ -382,7 +382,7 @@ your self-hosted URL. Other optional fields are `LANGFUSE_USER_ID`,
 
 The plugin installs and is enabled at **user scope**. Configuration is stored by
 Claude's plugin configuration and OS-keychain mechanisms according to upstream.
-Open Harness persists `~/.claude` on the `claude-auth` volume, but OS-keychain
+Open Harness persists `~/.claude` in the `/home/sandbox` mount, but OS-keychain
 availability and persistence are platform-dependent; verify the plugin remains
 configured after a sandbox rebuild. You can enter the same Langfuse key pair in
 Pi and Claude Code, but their saved configurations are independent. Do not put

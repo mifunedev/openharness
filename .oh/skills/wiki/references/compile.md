@@ -90,6 +90,18 @@ GOOD  pattern-eval-probe-provenance-decay
 BAD   pattern-2026-08-31-retro-findings
 ```
 
+The `<subsystem>` token is the **corpus's** subsystem vocabulary — the prefix a
+reader would grep for (`evals`, `wiki`, `docs`, `spec`) — not `/retro`'s
+five-lens taxonomy, which names where a signal was *noticed* rather than what the
+page is about. A lesson noticed through the continual-learning lens about probe
+behavior is `pattern-evals-...`, never `pattern-continual-learning-...`.
+
+**Fan-out.** One retro may legitimately yield several pages when it surfaced
+several distinct modes, but each additional page must carry its own root cause and
+its own workaround. If two candidate pages would share a workaround, they are one
+mode: merge them. If they share a mechanism but their fixes point in opposite
+directions, they are two.
+
 Enumerate existing patterns before writing:
 
 ```bash
@@ -109,6 +121,9 @@ provisional`, a required `## Relevant Source Files`, and `## Detail` carrying
 `sources:` uses the pinned-evidence form `<repo-relative-path>@<short-sha>` — for
 example `.oh/tasks/<slug>/progress.txt@a1b2c3d` or `.oh/evals/RESULTS.md@a1b2c3d`.
 Resolve the sha with `git rev-parse --short HEAD` at the time of the observation.
+When a defect was observed and fixed in the same session, pin **both** shas — the
+before-state is the evidence for the symptom and the after-state is the evidence for
+the workaround. Multiple `sources:` entries are expected, not exceptional.
 
 **`/wiki compile` MUST NOT write a `raw/` snapshot of a `/retro` report.** `raw/`
 holds snapshots of external sources. Persisting retro reports there would recreate

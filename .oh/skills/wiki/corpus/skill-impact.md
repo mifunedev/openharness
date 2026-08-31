@@ -84,3 +84,11 @@ a pattern to cite.
 - **floor**: /eval rc=0, 0 regressions over 112 probes (`.oh/evals/RESULTS.md`@af1c14ec)
 - **ceiling**: suite score 1.50 -> 1.22 — **not a comparable delta.** The suite gained CB-005 in the same change, so the mean is taken over a different task set than the 1.50 it is being compared to. The meaningful number is CB-005's own first score, 0.67, against an honest prior of 0.00.
 - **verdict**: BENEFICIAL — ACCEPTED. The floor held, and the change moved the one axis it targeted from an unmeasured 0.00 to a measured 0.67. Recorded with the caveat above rather than as a clean ceiling rise, because a rise produced by adding a task the harness scores badly on is not the same evidence as a rise on a fixed task set.
+
+## SI-0002 · 2026-08-31 · builder · PROPOSED
+
+- **proposal**: close three ambiguities in `/wiki compile` § 3-4 that a delegated maintainer run hit — the slug subsystem vocabulary, per-retro fan-out, and dual shas for a defect observed and fixed in one session
+- **target**: `.oh/skills/wiki/references/compile.md`
+- **motivating patterns**: [[pattern-wiki-external-model-over-mapping]] — its workaround is that a mapping is complete only when its exclusions are written down in the local vocabulary; the slug-token mismatch is the same defect one level down, a foreign taxonomy left un-translated in the local procedure
+- **proposer**: /builder skill, prompted by the delegated `/wiki compile` run's flagged judgment calls
+- **diff**: `.oh/skills/wiki/references/compile.md` § 3 fan-out and subsystem-token rules, § 4 dual-sha rule

@@ -24,7 +24,8 @@ projects/*
 .oh/tasks/*
 !.oh/tasks/README.md
 .oh/logs/*
-!.oh/logs/README.md
+!.oh/logs/AGENTS.md
+!.oh/logs/CLAUDE.md
 
 # Build artifacts
 **/.venv/

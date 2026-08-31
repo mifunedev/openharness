@@ -23,6 +23,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - **BREAKING:** Retire the DeepAgents harness — `deepagents-cli` is deprecated upstream. `install.deepagents` is no longer a settable oh.json field ([#910](https://github.com/mifunedev/openharness/issues/910)).
 - **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
 
+### Changed
+- `.oh/logs/` carries an `AGENTS.md` with a `CLAUDE.md` symlink instead of a `README.md`, matching the directories whose contents are produced apart from the root context. ([#924](https://github.com/mifunedev/openharness/issues/924))
+
 ### Added
 - Add `/escalate`: an unattended session delivers a human-addressed escalation to the operator's Slack channel. An unavailable channel no-ops loudly rather than failing the session. ([#919](https://github.com/mifunedev/openharness/issues/919))
 - Add `.oh/logs/`, gitignored by default with a tracked README, for records that outlive the session that wrote them; `/escalate` appends every attempt to `escalations.jsonl`. ([#919](https://github.com/mifunedev/openharness/issues/919))

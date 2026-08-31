@@ -14,9 +14,13 @@ fail() { echo "REGRESSION: $*" >&2; exit 1; }
 
 [[ -f $S && -x $S ]] || fail 'escalate script missing or not executable'
 [[ -f $SKILL ]] || fail 'escalate SKILL.md missing'
-[[ -f $ROOT/.oh/logs/README.md ]] || fail '.oh/logs/README.md missing — the log directory has no contract'
+[[ -f $ROOT/.oh/logs/AGENTS.md ]] || fail '.oh/logs/AGENTS.md missing — the log directory has no contract'
+[[ -L $ROOT/.oh/logs/CLAUDE.md && $(readlink "$ROOT/.oh/logs/CLAUDE.md") == AGENTS.md ]] \
+  || fail '.oh/logs/CLAUDE.md must be a symlink to the sibling AGENTS.md'
 grep -Fq '.oh/logs/*' "$ROOT/.gitignore" || fail '.oh/logs contents are not gitignored'
-grep -Fq '!.oh/logs/README.md' "$ROOT/.gitignore" || fail '.oh/logs/README.md is not exempted from the ignore'
+for keep in '!.oh/logs/AGENTS.md' '!.oh/logs/CLAUDE.md'; do
+  grep -Fq "$keep" "$ROOT/.gitignore" || fail "$keep is not exempted from the ignore"
+done
 
 grep -Fq 'Exit 0 is not proof' "$SKILL" || fail 'SKILL.md does not warn that exit 0 is not delivery'
 grep -Fq 'conversations.info' "$SKILL" || fail 'SKILL.md does not document the channel health check'

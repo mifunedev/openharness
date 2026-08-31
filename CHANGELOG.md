@@ -13,12 +13,13 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - Shrink the sandbox image ~540 MB: drop build caches from the baked home seed, stage the seed once via a builder stage, and keep untracked build output out of the build context ([#900](https://github.com/mifunedev/openharness/issues/900)).
 - **BREAKING:** Stop baking Claude Code, Codex, and Pi into the image; boot installs them into the home mount, so a first boot needs network and runs 60-180s longer ([#904](https://github.com/mifunedev/openharness/issues/904)).
 - **BREAKING:** Stop baking Herdr and cloudflared into the image; both become `kind: "default"` tools installed into `~/.local/bin` at boot from a pinned, checksum-verified binary ([#906](https://github.com/mifunedev/openharness/issues/906)).
-- **BREAKING:** Stop baking OpenCode, DeepAgents, Hermes, and Grok Build into the image; `oh harness install <id>` installs them into `~/.local` as the sandbox user ([#908](https://github.com/mifunedev/openharness/issues/908)).
+- **BREAKING:** Stop baking OpenCode, Hermes, and Grok Build into the image; `oh harness install <id>` installs them into `~/.local` as the sandbox user ([#908](https://github.com/mifunedev/openharness/issues/908)).
 
 ### Removed
 - Remove the `BAKE_HARNESSES` and `AGENTS` build args along with the image bake they gated; the harness catalog is the only source of truth for what gets installed ([#904](https://github.com/mifunedev/openharness/issues/904)).
 - Remove Cloudflare's apt repository and its bookworm-suite pin from the image; Docker's is now the only third-party apt source ([#906](https://github.com/mifunedev/openharness/issues/906)).
 - Remove the four optional-harness build args and the dead `buildArg` catalog field; the `install.*` keys keep working and now drive boot provisioning ([#908](https://github.com/mifunedev/openharness/issues/908)).
+- **BREAKING:** Retire the DeepAgents harness — `deepagents-cli` is deprecated upstream. `install.deepagents` is no longer a settable oh.json field ([#910](https://github.com/mifunedev/openharness/issues/910)).
 - **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
 
 ### Added

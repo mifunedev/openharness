@@ -17,7 +17,7 @@ done
 fails=()
 
 RETIRED_VOLUMES=(claude-auth codex-auth pi-auth opencode-auth grok-auth
-  deepagents-auth herdr-data cloudflared-auth ssh-config config-dir
+  herdr-data cloudflared-auth ssh-config config-dir
   cc-safety-net oh_workspace)
 
 for compose in "$COMPOSE_PRIMARY" "$COMPOSE_IO"; do

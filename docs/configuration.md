@@ -56,14 +56,13 @@ to; `—` means the field is consumed by the `oh` CLI itself and never rendered.
 
 All off by default. `oh harness install <name>` flips the matching field and
 installs into the running sandbox with no rebuild. The four harness fields map
-to `oh harness` names: `opencode`, `grok-build`, `deepagents`, `hermes`.
+to `oh harness` names: `opencode`, `grok-build`, `hermes`.
 `agentBrowser` is not a harness — `oh tool install agent-browser` manages it.
 
 | Field | Type | Default | Compose variable | What it does |
 | --- | --- | --- | --- | --- |
 | `install.opencode` | boolean | `false` | `INSTALL_OPENCODE` | Install the OpenCode CLI into `~/.local` at boot. `oh harness install opencode` sets it and installs now. |
 | `install.grokBuild` | boolean | `false` | `INSTALL_GROK_BUILD` | Install the Grok Build CLI into `~/.local` at boot. `oh harness install grok-build` sets it and installs now. |
-| `install.deepagents` | boolean | `false` | `INSTALL_DEEPAGENTS` | Install the DeepAgents CLI into `~/.local` at boot. `oh harness install deepagents` sets it and installs now. |
 | `install.hermes` | boolean | `false` | `INSTALL_HERMES` | Install the Hermes CLI into `~/.local` at boot and enable its runtime wiring (skill vendoring, `auth.json`). |
 | `install.agentBrowser` | boolean | `false` | `INSTALL_AGENT_BROWSER` | Install agent-browser and Chromium (about 1 GB). |
 

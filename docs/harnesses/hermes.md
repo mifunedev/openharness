@@ -11,7 +11,7 @@ container sandboxing across multiple backends, and bridges to chat
 platforms (Telegram, Discord, Slack, WhatsApp, Signal, Email).
 
 Hermes is an **optional harness** in Open Harness. Install it with `oh harness install hermes` (or set `install.hermes` / `INSTALL_HERMES=true`, which the boot provisioner honours); it then sits alongside `claude`, `codex`,
-`pi`, `opencode`, and `deepagents` as a sandbox CLI primitive. See the
+`pi`, and `opencode` as a sandbox CLI primitive. See the
 upstream documentation below for canonical facts about Hermes.
 
 ## Purpose

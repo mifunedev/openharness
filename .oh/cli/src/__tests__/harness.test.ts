@@ -166,7 +166,7 @@ describe("help", () => {
 
   it("names every installable harness so `<name>` is discoverable", () => {
     const help = captureStdout(printHarnessHelp);
-    for (const id of ["claude-code", "codex", "pi", "opencode", "grok-build", "deepagents", "hermes", "t3code"]) {
+    for (const id of ["claude-code", "codex", "pi", "opencode", "grok-build", "hermes", "t3code"]) {
       expect(help).toContain(id);
     }
   });
@@ -287,19 +287,6 @@ describe("runHarnessInstall against the container", () => {
     expect(text(out)).toContain(
       "https://github.com/mifunedev/openharness/blob/main/docs/harnesses/opencode.md",
     );
-  });
-
-  it("installs deepagents as the sandbox user, not root", async () => {
-    const root = makeRepo();
-    const { calls, run } = makeRunner((c, a) => {
-      if (isInspect(c, a)) return running;
-      if (isExecOf(c, a, "--version")) return { status: 1, stdout: "", stderr: "" };
-      return undefined;
-    });
-
-    await runHarnessInstall("deepagents", { cwd: root, run }, makeIo().io);
-    const install = execCalls(calls).find((c) => c.args.includes("deepagents-cli"));
-    expect(install!.args[install!.args.indexOf("-u") + 1]).toBe("sandbox");
   });
 
   it("is a no-op when the binary is already present", async () => {

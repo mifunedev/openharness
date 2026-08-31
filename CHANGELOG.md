@@ -25,6 +25,9 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 - **BREAKING:** Retire the `projectRoot` / `OH_PROJECT_ROOT` config knob — the checkout is fixed at `/home/sandbox/harness`, nested inside the home mount ([#898](https://github.com/mifunedev/openharness/issues/898)).
 
 ### Added
+- Add `/escalate`: an unattended session delivers a human-addressed escalation to the operator's Slack channel. An unavailable channel no-ops loudly rather than failing the session. ([#919](https://github.com/mifunedev/openharness/issues/919))
+- Add `.oh/logs/`, gitignored by default with a tracked README, for records that outlive the session that wrote them; `/escalate` appends every attempt to `escalations.jsonl`. ([#919](https://github.com/mifunedev/openharness/issues/919))
+- Add `escalate-contract.sh`, a tier-A probe: a no-op names its reason, is recorded, and `--dry-run` makes no network call. ([#919](https://github.com/mifunedev/openharness/issues/919))
 - Add gate 5 to `/audit implementation`: fail a promotable change while its diff can still be smaller. Measures net lines and per-function CCN on changed TypeScript via `uvx lizard`. ([#912](https://github.com/mifunedev/openharness/issues/912))
 - Add `audit-slop-gate.sh`, a tier-A probe holding gate 5's termination contract: a finding needs a concrete smaller alternative, and the loop ends on the cap or a non-reducing round. ([#912](https://github.com/mifunedev/openharness/issues/912))
 - Add `/wiki compile`, a `kind: pattern` corpus layer, and an append-only `skill-impact.md` ledger, so a `/retro` lesson becomes a page `/builder` reads before proposing. ([#916](https://github.com/mifunedev/openharness/pull/916))

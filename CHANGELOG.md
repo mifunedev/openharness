@@ -25,7 +25,7 @@ Update policy and release automation live in [`/git`](.claude/skills/git/SKILL.m
 ### Added
 - Add `/wiki compile`, a `kind: pattern` corpus layer, and an append-only `skill-impact.md` ledger so a supported `/retro` lesson becomes a durable page that `/builder` reads before proposing a skill edit.
 - Add a `--patterns` mode to `/wiki query` that filters on `kind:`, reads up to five pattern entries, and ranks them by term-hit count before recency.
-- Add capability task `CB-005` scoring whether a lesson reaches a validated skill change; the suite score drops 1.50 -> 1.00 because the harness scores 0.00 on an axis it previously could not see.
+- Add capability task `CB-005` scoring whether a lesson reaches a validated skill change; first real run scores 0.67, moving the suite mean to 1.22 over a changed task set.
 
 ### Fixed
 - Fix `/wiki lint` generating the corpus index from the working tree instead of the git-tracked set, which made any untracked scratch entry a `wiki-readme-index.sh` regression.

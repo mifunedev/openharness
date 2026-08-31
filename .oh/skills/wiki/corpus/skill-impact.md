@@ -77,3 +77,10 @@ a pattern to cite.
 - **motivating patterns**: [[pattern-wiki-ungated-check-drift]]
 - **proposer**: /builder skill, wiki co-evolution change (branch `skill/wiki-coevolution`)
 - **diff**: `8fab04ab` — `/wiki lint` § 7a plus `.oh/evals/probes/wiki-related-slugs.sh`
+
+## SI-0001-V · 2026-08-31 · benchmark · ACCEPTED
+
+- **for**: SI-0001
+- **floor**: /eval rc=0, 0 regressions over 112 probes (`.oh/evals/RESULTS.md`@af1c14ec)
+- **ceiling**: suite score 1.50 -> 1.22 — **not a comparable delta.** The suite gained CB-005 in the same change, so the mean is taken over a different task set than the 1.50 it is being compared to. The meaningful number is CB-005's own first score, 0.67, against an honest prior of 0.00.
+- **verdict**: BENEFICIAL — ACCEPTED. The floor held, and the change moved the one axis it targeted from an unmeasured 0.00 to a measured 0.67. Recorded with the caveat above rather than as a clean ceiling rise, because a rise produced by adding a task the harness scores badly on is not the same evidence as a rise on a fixed task set.

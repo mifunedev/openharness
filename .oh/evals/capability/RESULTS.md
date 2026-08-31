@@ -14,8 +14,9 @@ inspection; rows are re-scored and overwritten per id by the `run.sh` runner.
 | CB-002 | 2026-06-19 | PASS | PARTIAL | PASS | 1.67 | spec-* workflow (select→plan→execute→merge) ships via /autopilot→/spec to a ready PR with an honest audit gate and no auto-merge; retargeted in #497 from the removed loop-walk; task re-authored 2026-08-24 (US-003) when /ship-spec was absorbed into /spec execute — score predates that re-authoring |
 | CB-003 | 2026-06-15 | PASS | PASS | PARTIAL | 1.67 | **RETIRED** — historical row, no longer scored. Original basis: /retro compounds durable lessons (loop-node-name-pipe-trap, eval-results-new-probe-row); promotion orchestrator-gated. `/retro` is now report-only, so the identity-promotion cycle this task scored no longer exists; the task spec and its `DS-020-lens-diversity` dataset are removed. |
 | CB-004 | 2026-07-03 | PARTIAL | PARTIAL | PARTIAL | 1.00 | **RETIRED — unproven, not disproven.** Original basis: repo-map contract + A/B manifest/scorer exist (#462), but no completed workload-mix token/tool/time benchmark yet · Δ +0.00 machinery-added vs 1.00 baseline · check=PASS. The task spec, its held-out A/B workload manifest, and its scorer all landed 2026-07-03 and the paired A/B workload was **never run once** in the ~2 months they stood — the row held at `Δ +0.00 machinery-added` for that entire span because no measurement was ever taken. The benchmark did not show `.oh/context/REPO_MAP.md` to be useless; it showed nothing at all. `REPO_MAP.md` and this benchmark are removed as **unproven** — for want of evidence in either direction, not against evidence. |
+| CB-005 | 2026-08-31 | FAIL | FAIL | FAIL | 0.00 | **Pre-run baseline.** The lesson->pattern->proposal->verdict chain had no owner past `/retro`'s report before this change; the newest probe carrying `retro lesson` provenance was dated 2026-06-19. Machinery for the chain (`/wiki compile`, `kind: pattern`, `skill-impact.md`) lands in this change; per this task's scoring method a `PASS` may not be claimed by rubric inspection, so the row holds at the honest prior value until one real run is scored.
 
-<!-- live suite score = 1.50 / 2.00 = mean(1.33, 1.67) over the un-retired tasks CB-001, CB-002 · historical four-task suite score was 1.42 = mean(1.33, 1.67, 1.67, 1.00) before CB-003 and CB-004 were retired · PASS=2 PARTIAL=1 FAIL=0; SKIPPED a task only when the capability is absent from the eval environment -->
+<!-- live suite score = 1.00 / 2.00 = mean(1.33, 1.67, 0.00) over the un-retired tasks CB-001, CB-002, CB-005 · the two-task score before CB-005 was added was 1.50 = mean(1.33, 1.67) · historical four-task suite score was 1.42 = mean(1.33, 1.67, 1.67, 1.00) before CB-003 and CB-004 were retired · PASS=2 PARTIAL=1 FAIL=0; SKIPPED a task only when the capability is absent from the eval environment -->
 
 > **Baseline reset — 0.3.0 (autopilot removal).** Every score above was taken
 > while an unattended `autopilot` runner existed. That runner and its `select`
@@ -30,3 +31,9 @@ inspection; rows are re-scored and overwritten per id by the `run.sh` runner.
 > `CB-004` retired as **unproven**: its manifest, scorer, and ablation harness all
 > existed from 2026-07-03, the paired workload was never run, and the harness
 > therefore holds no measurement of `REPO_MAP.md`'s value in either direction.
+
+> **CB-005 lowers the suite score on purpose.** Adding an axis the harness scores
+> `0.00` on drops the mean from 1.50 to 1.00. That is the honest reading, not a
+> regression: the harness was previously blind to whether a lesson ever became a
+> durable artifact, and measuring it for the first time reveals that it did not.
+> A ceiling that only ever rises is measuring the wrong things.

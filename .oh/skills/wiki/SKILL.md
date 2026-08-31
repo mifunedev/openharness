@@ -2,19 +2,19 @@
 name: wiki
 description: |
   Dispatcher for the harness wiki knowledge base — routes the first token of
-  $ARGUMENTS to one of three subcommands: ingest, query, or lint. The corpus
-  lives at .oh/skills/wiki/corpus/ (entity pages) and corpus/raw/ (immutable
-  snapshots), owned by this skill and gitignored-by-default (curated entries are
-  whitelisted into git with `git add -f`). Canonical schema:
-  .oh/skills/wiki/references/schema.md. Full per-subcommand procedures live
-  in references/{ingest,query,lint}.md. Always logs per the Memory Improvement
-  Protocol.
+  $ARGUMENTS to one of four subcommands: ingest, query, lint, or compile. The
+  corpus lives at .oh/skills/wiki/corpus/ (entity pages, kind: source or pattern)
+  and corpus/raw/ (immutable source snapshots), owned by this skill and
+  gitignored-by-default (curated entries are whitelisted into git with
+  `git add -f`). Canonical schema: .oh/skills/wiki/references/schema.md. Full
+  per-subcommand procedures live in references/{ingest,query,lint,compile}.md.
   TRIGGER when: "add to wiki", "capture this page", "snapshot this source",
   "ingest <url|path>", or promoting a sub-agent draft -> ingest; "what does the
   wiki say about X", "find wiki entries for X", "look up X in the wiki" -> query;
   "lint the wiki", "regenerate the wiki index", "find stale/orphaned wiki
-  entries" -> lint.
-argument-hint: "ingest <url|path> [--slug <override>] | ingest --from-draft <slug> [--allow-stale] | query <topic> | lint [--dry-run]"
+  entries" -> lint; "compile the retro into patterns", "what did this run teach",
+  "record this lesson as a pattern" -> compile.
+argument-hint: "ingest <url|path> [--slug <override>] | ingest --from-draft <slug> [--allow-stale] | query <topic> [--patterns] | lint [--dry-run] | compile [--from <path>] [--task <slug>] [--dry-run]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch
 ---
 
@@ -23,15 +23,16 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch
 One parameterized skill over the harness wiki knowledge base. The first token of
 `$ARGUMENTS` selects the operation; the remainder is that subcommand's argument
 string. This dispatcher holds the routing logic and the rules shared by all
-three operations; the full per-subcommand procedure lives in `references/`.
+four operations; the full per-subcommand procedure lives in `references/`.
 
 ## Subcommands
 
 | Subcommand | Argument form | Purpose | Reference |
 |------------|---------------|---------|-----------|
 | `ingest` | `<url\|path> [--slug <override>]` · `--from-draft <slug> [--allow-stale]` | Capture a source or promote a draft into a wiki entity page (the only authorized write path) | `references/ingest.md` |
-| `query` | `<topic>` | Frontmatter OR-search; read top ≤3 matches (by `updated:` desc) into context | `references/query.md` |
-| `lint` | `[--dry-run]` | 5 health checks + atomic `corpus/README.md` index regeneration | `references/lint.md` |
+| `query` | `<topic> [--patterns]` | Frontmatter OR-search over one `kind`; read the top matches into context (≤3 source, ≤5 pattern) | `references/query.md` |
+| `lint` | `[--dry-run]` | 6 health checks + atomic `corpus/README.md` index regeneration | `references/lint.md` |
+| `compile` | `[--from <path>] [--task <slug>] [--dry-run]` | Consolidate a `/retro` report into `kind: pattern` entries (create or patch) | `references/compile.md` |
 
 ## Dispatch
 
@@ -53,6 +54,7 @@ instructions are authoritative — this dispatcher does not restate them):
 | `ingest` | Read `references/ingest.md`; execute it with `$REST` as its argument string. |
 | `query` | Read `references/query.md`; execute it with `$REST` as the `<topic>`. |
 | `lint` | Read `references/lint.md`; execute it with `$REST` (only `--dry-run` is recognized). |
+| `compile` | Read `references/compile.md`; execute it with `$REST` as its argument string. |
 | anything else (incl. empty) | Print the usage line from `argument-hint` and exit 0. Do not guess a subcommand. |
 
 ## Shared rules
@@ -76,8 +78,9 @@ These hold across all three subcommands; the reference docs assume them.
   ```bash
   awk '/^---$/{f=!f; next} f{print}' .oh/skills/wiki/corpus/<slug>.md
   ```
-- **Orchestrator-only write gate**: `ingest` writes (snapshots + entity pages) and
-  `lint`'s `corpus/README.md` regeneration are orchestrator-only. Sub-agents propose
+- **Orchestrator-only write gate**: `ingest` writes (snapshots + entity pages),
+  `compile`'s pattern-page writes, and `lint`'s `corpus/README.md` regeneration are
+  orchestrator-only. Sub-agents propose
   drafts to `$TMPDIR/oh-wiki-drafts/<slug>.md`; the orchestrator promotes via
   `/wiki ingest --from-draft <slug>`. A sub-agent that writes directly to the corpus
   is out of scope and may be reverted.
@@ -88,11 +91,14 @@ These hold across all three subcommands; the reference docs assume them.
 
 - A topic that is a **behavioral norm** ("always do X") → a rule/skill, not the wiki.
 - A **session journal** entry ("this run showed Y") → the run's report, not the wiki.
+  A *recurring failure mode* the run revealed is different: that is a `kind: pattern`
+  entry, written by `compile`, named for the mode rather than the run.
 - **Human-facing prose** → `docs/`, not the wiki (the wiki is LLM-readable synthesis).
 - Full-text body search → direct `grep`; `query` is intentionally frontmatter-only.
 
 ## See Also
 
 - `.oh/skills/wiki/references/schema.md` — canonical schema and authoring rules
-- `.oh/skills/wiki/references/ingest.md` · `query.md` · `lint.md` — full procedures
+- `.oh/skills/wiki/references/ingest.md` · `query.md` · `lint.md` · `compile.md` — full procedures
+- `.oh/skills/wiki/corpus/skill-impact.md` — the skill-change ledger the proposer reads
 - `.oh/evals/probes/wiki-readme-index.sh` — drift guard for the tracked corpus index

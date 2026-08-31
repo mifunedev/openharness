@@ -131,6 +131,13 @@ command for the change under evaluation, e.g.:
 git revert --no-edit <merge-or-commit-sha>     # undo the not-beneficial change, then → repeat
 ```
 
+**The revert never covers `.oh/skills/wiki/corpus/`.** Pattern pages and the
+`skill-impact.md` ledger are excluded from every revert: the knowledge that an
+approach was tried and did not work is the rejected cycle's durable output, and it is
+what stops the same proposal being made again
+(`.oh/skills/wiki/references/schema.md` § 8). Before naming a revert, confirm no
+`corpus/` path appears in its diff.
+
 A `BENEFICIAL` change is kept and the cycle advances to `repeat` (the freshness
 gate), which closes back to `ideate`.
 
@@ -155,8 +162,13 @@ REDIRECT-FLAG: capability suite score flat at <X.XX>/2.00 for <N> cycles while N
 
 - **Score the floor as the ceiling.** A green probe suite is necessary, not
   sufficient. Benefit is the *capability* delta, not "nothing broke".
-- **Mutate.** No revert, no commit, no merge — it emits the verdict and names the
-  revert; the runner/operator acts (single-owner handoff: decided here, acted on elsewhere).
+- **Mutate the code.** No revert, no commit, no merge — it emits the verdict and names
+  the revert; the runner/operator acts (single-owner handoff: decided here, acted on
+  elsewhere). Its one write is appending its own verdict record to
+  `.oh/skills/wiki/corpus/skill-impact.md` — the judgment it just made, and nothing
+  else. Append an `SI-nnnn-V` record for the `SI-nnnn` proposal under evaluation
+  (`for`, `floor`, `ceiling`, `verdict`); never edit the proposal record in place, and
+  never write a record for a change no `/builder` proposal covers.
 - **Fork `/eval` or the instrument.** It composes both; it never reimplements the
   probe runner or re-authors the capability tasks.
 - **Tune the harness to the benchmark.** The task set is held-out

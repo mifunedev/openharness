@@ -18,8 +18,8 @@
                 "Typecheck passes"
             ],
             "priority": 1,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Eleven keys removed from docker-compose.yml; XAI_API_KEY/CRON_AGENT_BIN/LANGFUSE_* removed from image-only.yml; ssh overlay keeps ports: and lost environment:; hermes-dashboard overlay and its docker-compose.sh branch deleted. Headers rewritten."
         },
         {
             "id": "US-002",
@@ -35,8 +35,8 @@
                 "Typecheck passes"
             ],
             "priority": 2,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Both installers deleted; ungated /var/run/tailscale kept. Confirmed installUser:\"sandbox\" on the merged tree before deleting. shellcheck clean."
         },
         {
             "id": "US-003",
@@ -56,8 +56,8 @@
                 "Typecheck passes"
             ],
             "priority": 3,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "oh_config/oh_config_truthy fenced helper added over `oh config show` with per-call fallbacks; Hermes wiring gated on `command -v hermes`; HERMES_HOME parameter dropped; dashboard, pnpm gate, and sshd read oh.json; link-providers.sh presence-gated."
         },
         {
             "id": "US-004",
@@ -71,8 +71,8 @@
                 "Typecheck passes"
             ],
             "priority": 4,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "resolveAgentBin(): CRON_AGENT_BIN, then cron.agentBin via `oh config show`, then \"claude\". Three precedence tests added."
         },
         {
             "id": "US-005",
@@ -88,8 +88,8 @@
                 "Typecheck passes"
             ],
             "priority": 5,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Ten keys plus SANDBOX_SSH_PASSWORD_AUTH/SANDBOX_SSH_AUTHORIZED_KEYS retired; RETIRED_KEYS holds all of them; entrypointGuard removed from tools/catalog.ts. Build and typecheck pass."
         },
         {
             "id": "US-006",
@@ -108,8 +108,8 @@
                 "Typecheck passes"
             ],
             "priority": 6,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Both boundary probes inverted with every zero-exposure assertion kept; ungated-socket check retargeted to indentation; parity probe moved onto SANDBOX_PASSWORD/GIT_USER_NAME. Five mutations verified to exit 1."
         },
         {
             "id": "US-007",
@@ -127,8 +127,8 @@
                 "Typecheck passes"
             ],
             "priority": 7,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "compose-env-boundary.sh added (tier A, 3-state oracle). Mutations verified: INSTALL_*, OH_IMAGE_ONLY, an unlisted key, and an overlay environment: key each exit 1; extra overlay ports stay PASS."
         },
         {
             "id": "US-008",
@@ -144,8 +144,8 @@
                 "Typecheck passes"
             ],
             "priority": 8,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "config-render, tool-catalog, harness-catalog, entrypoint-pnpm-install, sandbox-healthcheck, cron-runtime, compose-args, docs-compose-overlays updated. 976 pass; the 6 remaining compose-args failures reproduce unmodified on development."
         },
         {
             "id": "US-009",
@@ -167,8 +167,8 @@
                 "Typecheck passes"
             ],
             "priority": 9,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "configuration.md, connecting.md, sshd.md, langfuse.md, hermes.md, grok-build.md, opencode.md, overview.md, installation.md, security-considerations.md, lifecycle-commands.md, .oh/README.md, microsandbox.md, the Hermes template README, and CHANGELOG updated. New wiki entry compose-env-boundary; sandbox-dependency-installs revised; index regenerated."
         },
         {
             "id": "US-010",
@@ -186,8 +186,8 @@
                 "Typecheck passes"
             ],
             "priority": 10,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": ".gitignore first, then mountpoint-plus-.oh detection with the branches swapped and the mode logged on both paths; OH_IMAGE_ONLY dropped from image-only.yml. environment: blocks diff to empty."
         },
         {
             "id": "US-011",
@@ -203,8 +203,8 @@
                 "Typecheck passes"
             ],
             "priority": 11,
-            "passes": false,
-            "notes": ""
+            "passes": true,
+            "notes": "Three prose assertions dropped; gate check retargeted to the two-condition detection; deployment-prebuilt-image.md rewritten and its docker run -e removed. Four mutations verified to exit 1."
         }
     ]
 }

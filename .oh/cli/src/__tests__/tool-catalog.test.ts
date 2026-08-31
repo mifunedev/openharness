@@ -75,14 +75,11 @@ describe("tool catalog shape", () => {
   });
 
   it("passes argv arrays with no interpolation this process performs", () => {
-    // The hazard is a JS template literal that Node expands before the argv
-    // ever reaches a shell. A `bash -lc` script body legitimately contains
-    // ${...} for the shell IN the container to expand, so exempt that one
-    // token and forbid backticks in the catalog source instead.
-    expect(
-      read(".oh/cli/src/lib/tools/catalog.ts"),
-      "a template literal with ${...} would be expanded by Node before any shell sees it",
-    ).not.toMatch(/`[^`]*\$\{/s);
+    // A `bash -lc` script body legitimately contains ${...} for the shell IN the
+    // container to expand, so that one token is exempt. A source-level scan for
+    // an interpolating template literal was tried and removed: it cannot tell a
+    // JS backtick from a backtick inside prose (`notInstallableReason` has
+    // several), so whether it fired depended on catalog ORDER, not the hazard.
     for (const t of TOOL_CATALOG) {
       for (const argv of [t.installArgv, t.verifyArgv, t.versionArgv]) {
         if (!argv) continue;
